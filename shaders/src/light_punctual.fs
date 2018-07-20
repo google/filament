@@ -25,7 +25,7 @@ uvec3 getFroxelCoords(const vec3 fragCoords) {
     uvec3 froxelCoord;
 
     froxelCoord.xy = uvec2((fragCoords.xy - frameUniforms.origin.xy) *
-            frameUniforms.oneOverFroxelDimension);
+            vec2(frameUniforms.oneOverFroxelDimension, frameUniforms.oneOverFroxelDimensionY));
 
     froxelCoord.z = uint(max(0.0,
             log2(frameUniforms.zParams.x * fragCoords.z + frameUniforms.zParams.y) *
