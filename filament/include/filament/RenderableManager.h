@@ -54,8 +54,9 @@ public:
     Instance getInstance(utils::Entity e) const noexcept;
 
     struct Bone {
-        math::quatf unitQuaternion;
-        math::float3 translation = {};
+        math::quatf unitQuaternion = { 1, 0, 0, 0 };
+        math::float3 translation = { 0, 0, 0 };
+        float reserved = 0;
     };
 
     class Builder : public BuilderBase<BuilderDetails> {

@@ -132,6 +132,9 @@ void RenderPass::recordDriverCommands(
             // per-renderable uniform
             PrimitiveInfo const& UTILS_RESTRICT info = c->primitive;
             driver.bindUniforms(BindingPoints::PER_RENDERABLE, info.perRenderableUniforms);
+            if (info.perRenderableBones) {
+                driver.bindUniforms(BindingPoints::PER_RENDERABLE_BONES, info.perRenderableBones);
+            }
 
             FMaterialInstance const* const UTILS_RESTRICT mi = info.mi;
             if (UTILS_UNLIKELY(mi != previousMi)) {
@@ -271,6 +274,7 @@ void RenderPass::generateCommandsImpl(uint32_t,
     auto const* const UTILS_RESTRICT soaVisibility      = soa.data<FScene::VISIBILITY_STATE>();
     auto const* const UTILS_RESTRICT soaPrimitives      = soa.data<FScene::PRIMITIVES>();
     auto const* const UTILS_RESTRICT soaUbh             = soa.data<FScene::UBH>();
+    auto const* const UTILS_RESTRICT soaBonesUbh        = soa.data<FScene::BONES_UBH>();
 
     const bool hasShadowing = view->hasShadowing();
     Variant materialVariant;
@@ -321,6 +325,7 @@ void RenderPass::generateCommandsImpl(uint32_t,
 
         cmdColor.key = makeField(soaVisibility[i].priority, PRIORITY_MASK, PRIORITY_SHIFT);
         cmdColor.primitive.perRenderableUniforms = soaUbh[i];
+        cmdColor.primitive.perRenderableBones = soaBonesUbh[i];
         materialVariant.setShadowReceiver(soaVisibility[i].receiveShadows & hasShadowing);
         materialVariant.setSkinning(soaVisibility[i].skinning);
 
@@ -330,6 +335,7 @@ void RenderPass::generateCommandsImpl(uint32_t,
         cmdDepth.key |= makeField(soaVisibility[i].priority, PRIORITY_MASK, PRIORITY_SHIFT);
         cmdDepth.key |= makeField(distanceBits, DISTANCE_BITS_MASK, DISTANCE_BITS_SHIFT);
         cmdDepth.primitive.perRenderableUniforms = soaUbh[i];
+        cmdDepth.primitive.perRenderableBones = soaBonesUbh[i];
         cmdDepth.primitive.materialVariant.setSkinning(soaVisibility[i].skinning);
 
         const bool shadowCaster = soaVisibility[i].castShadows & hasShadowing;

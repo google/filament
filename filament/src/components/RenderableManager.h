@@ -122,6 +122,7 @@ public:
     inline UniformBuffer& getUniformBuffer(Instance instance) noexcept;
 
     inline Handle<HwUniformBuffer> getUbh(Instance instance) const noexcept;
+    inline Handle<HwUniformBuffer> getBonesUbh(Instance instance) const noexcept;
 
 
     inline size_t getLevelCount(Instance instance) const noexcept { return 1; }
@@ -308,6 +309,11 @@ UniformBuffer& FRenderableManager::getUniformBuffer(Instance instance) noexcept 
 
 Handle<HwUniformBuffer> FRenderableManager::getUbh(Instance instance) const noexcept {
     return mManager[instance].uniformsHandle;
+}
+
+Handle<HwUniformBuffer> FRenderableManager::getBonesUbh(Instance instance) const noexcept {
+    std::unique_ptr<Bones> const& bones = mManager[instance].bones;
+    return bones ? bones->handle : Handle<HwUniformBuffer>{};
 }
 
 utils::Slice<FRenderPrimitive> const& FRenderableManager::getRenderPrimitives(
