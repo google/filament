@@ -57,13 +57,13 @@ Many other features have been either prototyped or planned:
 
 ## Documentation
 
-- [Filament](./docs/Filament.md.html), an in-depth explanation of the graphics capabilities and
+- [Filament](https://google.github.io/filament/Filament.md.html), an in-depth explanation of the graphics capabilities and
   implementation of Filament. This document explains the math and reasoning behind most of our
   decisions.
-- [Materials](./docs/Materials.md.html), the full reference documentation for our material system.
+- [Materials](https://google.github.io/filament//Materials.md.html), the full reference documentation for our material system.
   This document explains our different material models, how to use the material compiler `matc` and
   how to write custom materials.
-- [Material Properties](./docs/Material%20Properties.pdf), a reference sheet for the standard
+- [Material Properties](https://google.github.io/filament/Material%20Properties.pdf), a reference sheet for the standard
   material model.
 
 ## Directory structure
