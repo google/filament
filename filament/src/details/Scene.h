@@ -22,16 +22,13 @@
 #include "components/RenderableManager.h"
 #include "components/TransformManager.h"
 
-#include "details/Allocators.h"
 #include "details/Culler.h"
 
 #include <filament/Box.h>
-#include <filament/Frustum.h>
 #include <filament/Scene.h>
 
 #include <utils/compiler.h>
 #include <utils/Entity.h>
-#include <utils/JobSystem.h>
 #include <utils/Slice.h>
 #include <utils/StructureOfArrays.h>
 #include <utils/Range.h>
@@ -52,15 +49,10 @@ class LightData;
 
 class FScene : public Scene {
 public:
-    // the directional light is always stored first in the LightSoA, so we need to account
-    // for that in a few places.
-    static constexpr size_t DIRECTIONAL_LIGHTS_COUNT = 1;
 
-    explicit FScene(FEngine& engine);
-    ~FScene() noexcept;
-
-    void prepare(FEngine& engine, const math::mat4f& worldOriginTansform);
-    void terminate(FEngine& engine);
+    /*
+     * User Public API
+     */
 
     void setSkybox(FSkybox const* skybox) noexcept;
     FSkybox const* getSkybox() const noexcept { return mSkybox; }
@@ -71,16 +63,24 @@ public:
     void addEntity(utils::Entity entity);
     void remove(utils::Entity entity);
 
-    void prepareLights(ArenaScope& arena, const CameraInfo& camera) noexcept;
+    size_t getRenderableCount() const noexcept;
+    size_t getLightCount() const noexcept;
 
-    size_t getRenderableCount() const noexcept {
-        return mRenderableData.size();
-    }
+public:
+    /*
+     * Filaments-scope Public API
+     */
 
-    size_t getLightCount() const noexcept {
-        return mLightData.size();
-    }
+    // the directional light is always stored first in the LightSoA, so we need to account
+    // for that in a few places.
+    static constexpr size_t DIRECTIONAL_LIGHTS_COUNT = 1;
 
+    explicit FScene(FEngine& engine);
+    ~FScene() noexcept;
+    void terminate(FEngine& engine);
+
+    void prepare(const math::mat4f& worldOriginTansform);
+    void prepareLights(const CameraInfo& camera) noexcept;
     void computeBounds(Aabb& castersBox, Aabb& receiversBox, uint32_t visibleLayers) const noexcept;
 
     /*
@@ -158,7 +158,6 @@ public:
     void updateUBOs(utils::Range<uint32_t> visibleRenderables) const noexcept;
 
 private:
-    friend class FView;
     FEngine& mEngine;
     FSkybox const* mSkybox = nullptr;
     FIndirectLight const* mIndirectLight = nullptr;

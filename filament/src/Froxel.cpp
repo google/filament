@@ -138,14 +138,15 @@ void FroxelData::setProjection(const mat4f& projection, float near, float far) n
     }
 }
 
-bool FroxelData::setup(
+bool FroxelData::prepare(
         FEngine::DriverApi& driverApi, ArenaScope& arena, Viewport const& viewport,
         const math::mat4f& projection, float projectionNear, float projectionFar) noexcept {
     setViewport(viewport);
     setProjection(projection, projectionNear, projectionFar);
 
+    bool uniformsNeedUpdating = false;
     if (UTILS_UNLIKELY(mDirtyFlags)) {
-        update();
+        uniformsNeedUpdating = update();
     }
 
     /*
@@ -198,7 +199,7 @@ bool FroxelData::setup(
     memset(mFroxelList.data(), 0xEF, mFroxelList.sizeInBytes());
 #endif
 
-    return mUniformsNeedUpdating;
+    return uniformsNeedUpdating;
 }
 
 void FroxelData::computeFroxelLayout(
@@ -244,7 +245,8 @@ void FroxelData::computeFroxelLayout(
 }
 
 UTILS_NOINLINE
-void FroxelData::update() noexcept {
+bool FroxelData::update() noexcept {
+    bool uniformsNeedUpdating = false;
     if (UTILS_UNLIKELY(mDirtyFlags & VIEWPORT_CHANGED)) {
         Viewport const& viewport = mViewport;
 
@@ -257,7 +259,7 @@ void FroxelData::update() noexcept {
         mClipToFroxelY = (0.5f * viewport.height) / froxelDimension.y;
 
         mOneOverDimension = 1.0f / float2(froxelDimension);
-        mUniformsNeedUpdating = true;
+        uniformsNeedUpdating = true;
 
 #ifndef NDEBUG
         size_t froxelSliceCount = FEngine::CONFIG_FROXEL_SLICE_COUNT;
@@ -458,10 +460,11 @@ void FroxelData::update() noexcept {
             mParamsZ[1] = (1.0f + Pw) / (Pz * mZLightFar);
             mParamsZ[2] = mLinearizer;
         }
-        mUniformsNeedUpdating = true;
+        uniformsNeedUpdating = true;
     }
     assert(mZLightNear >= mNear);
     mDirtyFlags = 0;
+    return uniformsNeedUpdating;
 }
 
 Froxel FroxelData::getFroxelAt(size_t x, size_t y, size_t z) const noexcept {
@@ -481,7 +484,7 @@ Froxel FroxelData::getFroxelAt(size_t x, size_t y, size_t z) const noexcept {
 // plane equation must be normalized, sphere radius must be squared
 // return float4.w <= 0 if no intersection
 UTILS_UNUSED
-static float4 spherePlaneIntersection(float4 s, float4 p) noexcept {
+float4 FroxelData::spherePlaneIntersection(float4 s, float4 p) noexcept {
     const float d = dot(s.xyz, p.xyz) + p.w;
     const float rr = s.w - d*d;
     s.x -= p.x * d;
@@ -493,14 +496,14 @@ static float4 spherePlaneIntersection(float4 s, float4 p) noexcept {
 
 // plane equation must be normalized and have the form {x,0,z,0}, sphere radius must be squared
 // return float4.w <= 0 if no intersection
-static float spherePlaneDistanceSquared(float4 s, float x, float z) noexcept {
+float FroxelData::spherePlaneDistanceSquared(float4 s, float x, float z) noexcept {
     const float d = s.x*x + s.z*z;
     return s.w - d*d;
 }
 
 // plane equation must be normalized and have the form {0,y,z,0}, sphere radius must be squared
 // return float4.w <= 0 if no intersection
-static float4 spherePlaneIntersection(float4 s, float py, float pz) noexcept {
+float4 FroxelData::spherePlaneIntersection(float4 s, float py, float pz) noexcept {
     const float d = s.y*py + s.z*pz;
     const float rr = s.w - d*d;
     s.y -= py * d;
@@ -511,7 +514,7 @@ static float4 spherePlaneIntersection(float4 s, float py, float pz) noexcept {
 
 // plane equation must be normalized and have the form {0,0,1,w}, sphere radius must be squared
 // return float4.w <= 0 if no intersection
-static float4 spherePlaneIntersection(float4 s, float pw) noexcept {
+float4 FroxelData::spherePlaneIntersection(float4 s, float pw) noexcept {
     const float d = s.z + pw;
     const float rr = s.w - d*d;
     s.z -= d;
@@ -521,7 +524,7 @@ static float4 spherePlaneIntersection(float4 s, float pw) noexcept {
 
 // this version returns a false-positive intersection in a small area near the origin
 // of the cone extended outward by the sphere's radius.
-static constexpr bool sphereConeIntersectionFast(
+bool FroxelData::sphereConeIntersectionFast(
         float4 const& sphere, FroxelData::LightParams const& cone) noexcept {
     const float3 u = cone.position - (sphere.w * cone.invSin) * cone.axis;
     float3 d = sphere.xyz - u;
@@ -532,7 +535,7 @@ static constexpr bool sphereConeIntersectionFast(
 }
 
 UTILS_UNUSED
-static constexpr bool sphereConeIntersection(
+bool FroxelData::sphereConeIntersection(
         float4 const& sphere, FroxelData::LightParams const& cone) noexcept {
     if (sphereConeIntersectionFast(sphere, cone)) {
         float3 d = sphere.xyz - cone.position;
@@ -763,159 +766,6 @@ out_of_memory:
 
     // needed record buffer size may change at each frame
     mRecordsBuffer.invalidate(0, (offset + RECORD_BUFFER_WIDTH_MASK) >> RECORD_BUFFER_WIDTH_SHIFT);
-}
-
-void FroxelData::froxelizeAssignRecords(
-        const utils::Slice<uint16_t>& froxelsList,
-        const utils::Slice<FroxelRunEntry>& froxelsListIndices) noexcept {
-
-    SYSTRACE_CALL();
-
-    Slice<FroxelEntry> gpuFroxelEntries(mFroxelBufferUser);
-
-    // Figure out how many lights each froxel has
-    // We don't do this in parallel_for because it would be a lot of atomic_op and we have no
-    // good way to avoid false-sharing of cache-lines.
-
-    // this buffer is pretty large, worth calling memset()
-    memset(gpuFroxelEntries.begin(), 0, gpuFroxelEntries.sizeInBytes());
-
-    for (size_t i = 0, c = froxelsListIndices.size(); i < c; ++i) {
-        // (skip first entry, which is the light's index)
-        const int isSpotLight = froxelsList[froxelsListIndices[i].index] & 1;
-        for (size_t j = froxelsListIndices[i].index + 1,
-                m = froxelsListIndices[i].index + froxelsListIndices[i].count; j < m; ++j) {
-            // increment the light counter (for the right kind of light)
-            FroxelEntry& entry = gpuFroxelEntries[froxelsList[j]];
-            entry.count[isSpotLight] = fast::qinc(entry.count[isSpotLight]);
-            assert(entry.pointLightCount + entry.spotLightCount <= froxelsListIndices.size());
-        }
-    }
-
-    // now that we have the lights counts per froxel, we need to fill-in the offsets
-    size_t offset = updateFroxelOffsets(gpuFroxelEntries);
-
-    // get Slice to our GPU buffer (texture)
-    assert(offset <= mRecordBufferUser.size());
-    Slice<RecordBufferType> gpuFroxelLightRecords(mRecordBufferUser.begin(), uint32_t(offset));
-    std::fill(gpuFroxelLightRecords.begin(), gpuFroxelLightRecords.end(),
-            std::numeric_limits<RecordBufferType>::max());
-
-    // for debugging...
-    constexpr bool SINGLE_THREADED = false;
-
-    auto process = [&froxelsList, &gpuFroxelEntries, &gpuFroxelLightRecords]
-            (FroxelRunEntry const* froxelsListIndices, uint32_t c) {
-
-        // loop through an array of froxel list indices; one list for each light
-        for (size_t i = 0; i < c; ++i) {
-            // retrieve the light infos (index and type), stored in the first entry
-            const uint16_t extra = froxelsList[froxelsListIndices[i].index];
-            const RecordBufferType gpuIndex = RecordBufferType(extra >> 1);
-            const bool isSpotLight = bool(extra & 1);
-
-            // then, loop through this light's froxel list indices
-            for (size_t j = froxelsListIndices[i].index + 1,
-                    m = froxelsListIndices[i].index + froxelsListIndices[i].count; j < m; ++j) {
-                // find the froxel of interest
-                const FroxelEntry& froxel = gpuFroxelEntries[froxelsList[j]];
-
-                // begin / end positions in the Froxel Record Buffer for this light/froxel list
-                const size_t b = froxel.offset + (isSpotLight ? froxel.pointLightCount : 0);
-                const size_t e = b             + (isSpotLight ? froxel.spotLightCount  : froxel.pointLightCount);
-                assert(e <= RECORD_BUFFER_ENTRY_COUNT);
-
-                // NOTE: if we ran out of space in the record buffer, froxel.spotLightCount and
-                // froxel.pointLightCount will be null (and b == e == 0).
-                // This would be handled below in utils::partition_point() which will fail,
-                // however it's not such an uncommon case which could slow things down a lot,
-                // so it's better to just skip it here.
-                if (e == 0) {
-                    continue;
-                }
-
-                // FINALLY, find a space in the list, and add to the list (unless no more space)
-                // use binary search to find the first empty slot -- there could be up to 256
-                // slots to check.
-                auto begin = gpuFroxelLightRecords.data() + b;
-                auto const end = gpuFroxelLightRecords.data() + e;
-try_again:
-                RecordBufferType* const pos = utils::partition_point(begin, end,
-                        [](RecordBufferType a) {
-                            return a < std::numeric_limits<RecordBufferType>::max();
-                        });
-                if (UTILS_UNLIKELY(pos >= end)) {
-                    // NOT FOUND
-                    // it's possible we don't find a space for this light, because:
-                    //      1) we ran out of space in the Froxel Record Buffer
-                    //      2) or, some froxel had more than 256 lights
-                } else {
-                    if (SINGLE_THREADED) {
-                        assert(*pos == std::numeric_limits<RecordBufferType>::max());
-                        *pos = gpuIndex;
-                    } else {
-                        // NOTE: the reinterpret_cast<> here is a bit sketchy, can we do better?
-                        RecordBufferType expected = std::numeric_limits<RecordBufferType>::max();
-                        if (UTILS_UNLIKELY(!std::atomic_compare_exchange_weak_explicit(
-                                reinterpret_cast<std::atomic<RecordBufferType>*>(pos),
-                                &expected, gpuIndex,
-                                std::memory_order_relaxed, std::memory_order_relaxed))) {
-                            // failed, we were competing with another thread, just try again.
-                            begin = pos; // we use cmpexchg_weak, so we can't restart at pos+1
-                            goto try_again;
-                        }
-                    }
-                }
-            }
-        }
-    };
-
-    // now, go over all lights and their froxel list again...
-    // parallelize in batches of 4 lights
-    JobSystem& js = mEngine.getJobSystem();
-    auto job = jobs::parallel_for(js, nullptr, froxelsListIndices,
-            std::cref(process), jobs::CountSplitter<4, SINGLE_THREADED ? 0 : 8>());
-
-    js.runAndWait(job);
-
-#ifndef NDEBUG
-    // there should be no holes in the froxel record buffer
-    for (auto record : gpuFroxelLightRecords) {
-        assert(record != std::numeric_limits<RecordBufferType>::max());
-    }
-#endif
-
-    // froxel buffer is always fully invalidated
-    mFroxelBuffer.invalidate();
-
-    // needed record buffer size may change at each frame
-    mRecordsBuffer.invalidate(0, (offset + RECORD_BUFFER_WIDTH_MASK) >> RECORD_BUFFER_WIDTH_SHIFT);
-}
-
-size_t FroxelData::updateFroxelOffsets(Slice<FroxelData::FroxelEntry>& gpuFroxelEntries) noexcept {
-    // Unfortunately, we have to go through this whole buffer each time, and we need to read
-    // the counts and write the offsets.
-    size_t offset = 0;
-    constexpr size_t const recordsBufferMaxSize = RECORD_BUFFER_ENTRY_COUNT;
-    for (size_t i = 0, c = gpuFroxelEntries.size(); i < c; i++) {
-        auto& entry = gpuFroxelEntries[i];
-        size_t next = offset + entry.pointLightCount + entry.spotLightCount;
-        if (UTILS_LIKELY(next < recordsBufferMaxSize)) {
-            entry.offset = uint16_t(offset);
-            offset = next;
-        } else {
-            // We've ran out of space in the record buffer!
-            // This is catastrophic failure, we have no choice but to turn off all
-            // remaining froxels.
-            // However, since we're visiting the froxels from front to back this affects
-            // the froxels in the distance, which mitigates the problem.
-            memset(&entry, 0, (c - i) * sizeof(FroxelEntry));
-            break;
-        }
-    }
-    // this is always resizing down, by construction
-    assert(offset <= recordsBufferMaxSize);
-    return offset;
 }
 
 static inline float2 project(mat4f const& p, float3 const& v) noexcept {

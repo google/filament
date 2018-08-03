@@ -22,16 +22,17 @@
 #include "details/Camera.h"
 #include "details/Material.h"
 #include "details/Scene.h"
-#include "details/View.h"
 
 #include "driver/DriverApiForward.h"
 
 #include <private/filament/Variant.h>
 
 #include <utils/compiler.h>
-#include <utils/JobSystem.h>
 #include <utils/Slice.h>
-#include <utils/Systrace.h>
+
+namespace utils {
+class JobSystem;
+}
 
 namespace filament {
 namespace details {
@@ -195,16 +196,34 @@ public:
             "Command isn't trivially destructible");
 
 
+    using RenderFlags = uint8_t;
+    static constexpr RenderFlags HAS_SHADOWING          = 0x01;
+    static constexpr RenderFlags HAS_DIRECTIONAL_LIGHT  = 0x02;
+    static constexpr RenderFlags HAS_DYNAMIC_LIGHTING   = 0x04;
+
+
     RenderPass(const char* name) noexcept : mName(name) { }
 
     virtual ~RenderPass() noexcept;
 
+    // appends rendering commands for the given view
     void render(
             FEngine& engine, utils::JobSystem& js,
-            FScene::RenderableSoa const& soa, FView::Range visibleRenderables,
-            uint32_t commandTypeFlags,
-            FView const* view, const CameraInfo& camera, Viewport const& viewport,
+            FScene::RenderableSoa const& soa, utils::Range<uint32_t> visibleRenderables,
+            uint32_t commandTypeFlags, RenderFlags renderFlags,
+            const CameraInfo& camera, Viewport const& viewport,
             utils::GrowingSlice<Command>& commands) noexcept;
+
+private:
+    // Called just before rendering, make sure all needed asynchronous tasks are finished.
+    // Set-up the render-target as needed. At least call driver.beginRenderPass().
+    virtual void beginRenderPass(
+            driver::DriverApi& driver, Viewport const& viewport,
+            const CameraInfo& camera) noexcept = 0;
+
+    // Called just after rendering. Do what you have to do,
+    // but at least call driver.endRenderPass().
+    virtual void endRenderPass(driver::DriverApi& driver, Viewport const& viewport) noexcept = 0;
 
 private:
     friend class FRenderer;
@@ -218,20 +237,13 @@ private:
     static_assert(JOBS_PARALLEL_FOR_COMMANDS_SIZE % utils::CACHELINE_SIZE == 0,
             "Size of Commands jobs must be multiple of a cache-line size");
 
-    virtual bool prepare() noexcept = 0;
-    virtual void beginRenderPass(
-            driver::DriverApi& driver, const CameraInfo& camera,
-            Viewport const& viewport) noexcept = 0;
-    virtual void synchronize(driver::DriverApi& driver) noexcept { }
-    virtual void endRenderPass(driver::DriverApi& driver, Viewport const& viewport) noexcept { }
-
     static inline void generateCommands(uint32_t commandTypeFlags, Command* const commands,
-            FScene::RenderableSoa const& soa, utils::Range<uint32_t> range, FView const* view,
+            FScene::RenderableSoa const& soa, utils::Range<uint32_t> range, RenderFlags renderFlags,
             math::float3 cameraPosition, math::float3 cameraForward) noexcept;
 
     template<uint32_t commandTypeFlags>
     static inline void generateCommandsImpl(uint32_t, Command* commands, FScene::RenderableSoa const& soa,
-            utils::Range<uint32_t> range, FView const* view, math::float3 cameraPosition,
+            utils::Range<uint32_t> range, RenderFlags renderFlags, math::float3 cameraPosition,
             math::float3 cameraForward) noexcept;
 
     static void setupColorCommand(Command& cmdDraw, bool hasDepthPass,
@@ -239,6 +251,9 @@ private:
 
     static void recordDriverCommands(FEngine::DriverApi& driver,
             utils::Slice<Command> const& commands) noexcept;
+
+    static void updateSummedPrimitiveCounts(
+            FScene::RenderableSoa& renderableData, utils::Range<uint32_t> vr) noexcept;
 
     const char* const mName;
 };

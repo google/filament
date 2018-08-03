@@ -64,6 +64,7 @@ FView::FView(FEngine& engine)
     mPerViewSbh = driverApi.createSamplerBuffer(mPerViewSb.getSize());
 
     mPerViewSb.setBuffer(FEngine::PerViewSib::RECORDS, mFroxelizer.getRecordBuffer());
+    mPerViewSb.setBuffer(FEngine::PerViewSib::FROXELS, mFroxelizer.getFroxelBuffer());
 
     if (engine.getDFG()->isValid()) {
         TextureSampler sampler(TextureSampler::MagFilter::LINEAR);
@@ -248,7 +249,6 @@ void FView::setClearTargets(bool color, bool depth, bool stencil) noexcept {
 
 void FView::setVisibleLayers(uint8_t select, uint8_t values) noexcept {
     mVisibleLayers = (mVisibleLayers & ~select) | (values & select);
-    mDirectionalShadowMap.setVisibleLayers(mVisibleLayers);
 }
 
 bool FView::isSkyboxVisible() const noexcept {
@@ -274,14 +274,14 @@ void FView::prepareShadowing(FEngine& engine,
     if (UTILS_UNLIKELY(mHasShadowing)) {
         // compute the frustum for this light
         ShadowMap& shadowMap = mDirectionalShadowMap;
-        shadowMap.update(lightData, 0, scene, mViewingCameraInfo);
+        shadowMap.update(lightData, 0, scene, mViewingCameraInfo, mVisibleLayers);
         if (shadowMap.hasVisibleShadows()) {
             // Cull shadow casters
             Frustum const& frustum = shadowMap.getCamera().getFrustum();
             prepareVisibleShadowCasters(engine.getJobSystem(), renderableData, frustum);
 
             // allocates shadowmap driver resources
-            shadowMap.prepare(engine.getDriverApi(), mPerViewSb);
+            shadowMap.prepare(engine.getDriverApi(), getUs());
 
             mat4f const& lightFromWorldMatrix = shadowMap.getLightSpaceMatrix();
             u.setUniform(offsetof(FEngine::PerViewUib, lightFromWorldMatrix), lightFromWorldMatrix);
@@ -306,7 +306,7 @@ void FView::prepareLighting(
     const CameraInfo& camera = mViewingCameraInfo;
     FScene* const scene = mScene;
 
-    scene->prepareLights(arena, camera);
+    scene->prepareLights(camera);
 
     // here the array of visible lights has been shrunk to CONFIG_MAX_LIGHT_COUNT
     auto const& lightData = scene->getLightData();
@@ -373,10 +373,8 @@ void FView::prepareLighting(
     // Dynamic lighting
     if (mHasDynamicLighting) {
         FroxelData& froxelizer = mFroxelizer;
-        if (froxelizer.setup(driver, arena, viewport, camera.projection, camera.zn, camera.zf)) {
+        if (froxelizer.prepare(driver, arena, viewport, camera.projection, camera.zn, camera.zf)) {
             froxelizer.updateUniforms(u); // update our uniform buffer if needed
-            // if the viewport changed, the froxel texture may have changed too
-            mPerViewSb.setBuffer(FEngine::PerViewSib::FROXELS, froxelizer.getFroxelBuffer());
         }
     }
 }
@@ -444,7 +442,7 @@ void FView::prepare(FEngine& engine, ArenaScope& arena, Viewport const& viewport
      * Gather all information needed to render this scene. Apply the world origin to all
      * objects in the scene.
      */
-    scene->prepare(engine, worldOriginScene);
+    scene->prepare(worldOriginScene);
 
     /*
      * Culling: as soon as possible we perform our camera-culling
@@ -518,6 +516,9 @@ void FView::prepare(FEngine& engine, ArenaScope& arena, Viewport const& viewport
     // upload the renderables's dirty UBOs
     engine.getRenderableManager().prepare(driver,
             renderableData.data<FScene::RENDERABLE_INSTANCE>(), merged);
+
+    // set uniforms and samplers
+    bindPerViewUniformsAndSamplers(driver);
 }
 
 void FView::computeVisibilityMasks(
@@ -710,21 +711,6 @@ void FView::prepareVisibleLights(FLightManager& lcm, utils::JobSystem&, FScene::
     lightData.resize(visibleLightCount);
     mHasDynamicLighting = visibleLightCount > FScene::DIRECTIONAL_LIGHTS_COUNT;
 }
-
-
-void FView::updateSummedPrimitiveCounts(
-        FScene::RenderableSoa& renderableData, Range vr) noexcept {
-    auto const* const UTILS_RESTRICT primitives = renderableData.data<FScene::PRIMITIVES>();
-    uint32_t* const UTILS_RESTRICT summedPrimitiveCount = renderableData.data<FScene::SUMMED_PRIMITIVE_COUNT>();
-    uint32_t count = 0;
-    for (uint32_t i : vr) {
-        summedPrimitiveCount[i] = count;
-        count += primitives[i].size();
-    }
-    // we're guaranteed to have enough space at the end of vr
-    summedPrimitiveCount[vr.last] = count;
-}
-
 
 void FView::updatePrimitivesLod(
         FEngine& engine, const CameraInfo&,

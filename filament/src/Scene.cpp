@@ -21,16 +21,12 @@
 
 #include "details/Culler.h"
 #include "details/Engine.h"
-#include "details/Froxel.h"
 #include "details/IndirectLight.h"
 #include "details/LightData.h"
 #include "details/Skybox.h"
 
 #include <utils/compiler.h>
 #include <utils/EntityManager.h>
-#include <utils/JobSystem.h>
-#include <utils/Panic.h>
-#include <utils/vector.h>
 #include <utils/Range.h>
 #include <utils/Zip2Iterator.h>
 
@@ -53,10 +49,11 @@ FScene::FScene(FEngine& engine) :
 FScene::~FScene() noexcept = default;
 
 
-void FScene::prepare(FEngine& engine, mat4f const& worldOriginTansform) {
+void FScene::prepare(const math::mat4f& worldOriginTansform) {
     // TODO: can we skip this in most cases? Since we rely on indices staying the same,
     //       we could only skip, if nothing changed in the RCM.
 
+    FEngine& engine = mEngine;
     EntityManager& em = engine.getEntityManager();
     FRenderableManager& rcm = engine.getRenderableManager();
     FTransformManager& tcm = engine.getTransformManager();
@@ -170,7 +167,7 @@ void FScene::terminate(FEngine& engine) {
     mGpuLightData->terminate();                // free-up the lights buffer
 }
 
-void FScene::prepareLights(ArenaScope& rootArena, const CameraInfo& camera) noexcept {
+void FScene::prepareLights(const CameraInfo& camera) noexcept {
     FLightManager& lcm = mEngine.getLightManager();
     LightData* const gpuLightData = mGpuLightData.get();
     FScene::LightSoa& lightData = getLightData();
@@ -191,9 +188,8 @@ void FScene::prepareLights(ArenaScope& rootArena, const CameraInfo& camera) noex
     // don't count the directional light
     if (UTILS_UNLIKELY(lightData.size() > CONFIG_MAX_LIGHT_COUNT + DIRECTIONAL_LIGHTS_COUNT)) {
         // pre-compute the lights' distance to the camera, for sorting below.
-        ArenaScope arena(rootArena.getAllocator());
         float3 const position = camera.getPosition();
-        float* const distances = arena.allocate<float>(lightData.size());
+        float distances[CONFIG_MAX_LIGHT_COUNT]; // 1 KiB
         // skip directional light
         for (size_t i = DIRECTIONAL_LIGHTS_COUNT, c = lightData.size(); i < c; ++i) {
             // TODO: this should take spot-light direction into account
@@ -235,6 +231,30 @@ void FScene::addEntity(Entity entity) {
 
 void FScene::remove(Entity entity) {
     mEntities.erase(entity);
+}
+
+size_t FScene::getRenderableCount() const noexcept {
+    FEngine& engine = mEngine;
+    EntityManager& em = engine.getEntityManager();
+    FRenderableManager& rcm = engine.getRenderableManager();
+    size_t count = 0;
+    auto const& entities = mEntities;
+    for (Entity e : entities) {
+        count += em.isAlive(e) && rcm.getInstance(e) ? 1 : 0;
+    }
+    return count;
+}
+
+size_t FScene::getLightCount() const noexcept {
+    FEngine& engine = mEngine;
+    EntityManager& em = engine.getEntityManager();
+    FLightManager& lcm = engine.getLightManager();
+    size_t count = 0;
+    auto const& entities = mEntities;
+    for (Entity e : entities) {
+        count += em.isAlive(e) && lcm.getInstance(e) ? 1 : 0;
+    }
+    return count;
 }
 
 void FScene::setSkybox(FSkybox const* skybox) noexcept {

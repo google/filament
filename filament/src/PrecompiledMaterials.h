@@ -23,9 +23,6 @@
 namespace filament {
 namespace details {
 
-extern const uint8_t DEPTH_PACKAGE[];
-extern const size_t DEPTH_PACKAGE_SIZE;
-
 extern const uint8_t POST_PROCESS_PACKAGE[];
 extern const size_t POST_PROCESS_PACKAGE_SIZE;
 

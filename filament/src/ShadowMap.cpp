@@ -24,10 +24,7 @@
 
 #include <filament/driver/DriverEnums.h>
 
-#include <utils/Slice.h>
-
 #include <limits>
-#include <details/Engine.h>
 
 using namespace math;
 using namespace utils;
@@ -46,9 +43,8 @@ static constexpr bool ENABLE_LISPSM = true;
 ShadowMap::ShadowMap(FEngine& engine) noexcept :
         mEngine(engine),
         mClipSpaceFlipped(engine.getBackend() == Backend::VULKAN) {
-    Shadowing& shadow = mShadows;
-    shadow.camera = mEngine.createCamera(EntityManager::get().create());
-    shadow.debugCamera = mEngine.createCamera(EntityManager::get().create());
+    mCamera = mEngine.createCamera(EntityManager::get().create());
+    mDebugCamera = mEngine.createCamera(EntityManager::get().create());
     FDebugRegistry& debugRegistry = engine.getDebugRegistry();
     debugRegistry.registerProperty("d.shadowmap.focus_shadowcasters", &engine.debug.shadowmap.focus_shadowcasters);
     debugRegistry.registerProperty("d.shadowmap.far_uses_shadowcasters", &engine.debug.shadowmap.far_uses_shadowcasters);
@@ -60,44 +56,42 @@ ShadowMap::ShadowMap(FEngine& engine) noexcept :
 }
 
 ShadowMap::~ShadowMap() {
-    Shadowing& shadow = mShadows;
-    mEngine.destroy(shadow.camera->getEntity());
-    mEngine.destroy(shadow.debugCamera->getEntity());
+    mEngine.destroy(mCamera->getEntity());
+    mEngine.destroy(mDebugCamera->getEntity());
 }
 
 void ShadowMap::prepare(DriverApi& driver, SamplerBuffer& sb) noexcept {
     assert(mShadowMapDimension);
 
-    Shadowing& shadow = mShadows;
     uint32_t dim = mShadowMapDimension;
-    uint32_t currentDimension = shadow.viewport.width + 2;
+    uint32_t currentDimension = mViewport.width + 2;
     if (currentDimension == dim) {
         // nothing to do here.
-        assert(shadow.shadowMapHandle);
+        assert(mShadowMapHandle);
         return;
     }
 
     // destroy the current rendertarget and texture
-    if (shadow.shadowMapRenderTarget) {
-        driver.destroyRenderTarget(shadow.shadowMapRenderTarget);
+    if (mShadowMapRenderTarget) {
+        driver.destroyRenderTarget(mShadowMapRenderTarget);
     }
-    if (shadow.shadowMapHandle) {
-        driver.destroyTexture(shadow.shadowMapHandle);
+    if (mShadowMapHandle) {
+        driver.destroyTexture(mShadowMapHandle);
     }
 
     // allocate new ones...
     // we set a viewport with a 1-texel border for when we index outside of the texture
     // DON'T CHANGE this unless computeLightSpaceMatrix() is updated too.
     // see: computeLightSpaceMatrix()
-    shadow.viewport = { 1, 1, dim - 2, dim - 2 };
+    mViewport = { 1, 1, dim - 2, dim - 2 };
 
-    shadow.shadowMapHandle = driver.createTexture(
+    mShadowMapHandle = driver.createTexture(
             Driver::SamplerType::SAMPLER_2D, 1, Driver::TextureFormat::DEPTH16, 1, dim, dim, 1,
             TextureUsage::DEPTH_ATTACHMENT);
 
-    shadow.shadowMapRenderTarget = driver.createRenderTarget(
+    mShadowMapRenderTarget = driver.createRenderTarget(
             TargetBufferFlags::SHADOW, dim, dim, 1, Driver::TextureFormat::DEPTH16,
-            {}, { shadow.shadowMapHandle }, {});
+            {}, { mShadowMapHandle }, {});
 
     SamplerParams s;
     s.filterMag = SamplerMagFilter::LINEAR;
@@ -105,21 +99,19 @@ void ShadowMap::prepare(DriverApi& driver, SamplerBuffer& sb) noexcept {
     s.compareFunc = SamplerCompareFunc::LE;
     s.compareMode = SamplerCompareMode::COMPARE_TO_TEXTURE;
     s.depthStencil = true;
-    sb.setSampler(FEngine::PerViewSib::SHADOW_MAP, { shadow.shadowMapHandle, s });
+    sb.setSampler(FEngine::PerViewSib::SHADOW_MAP, { mShadowMapHandle, s });
 }
 
 void ShadowMap::terminate(DriverApi& driverApi) noexcept {
-    Shadowing& shadow = mShadows;
-    if (shadow.shadowMapRenderTarget) {
-        driverApi.destroyRenderTarget(shadow.shadowMapRenderTarget);
+    if (mShadowMapRenderTarget) {
+        driverApi.destroyRenderTarget(mShadowMapRenderTarget);
     }
-    if (shadow.shadowMapHandle) {
-        driverApi.destroyTexture(shadow.shadowMapHandle);
+    if (mShadowMapHandle) {
+        driverApi.destroyTexture(mShadowMapHandle);
     }
 }
 
 void ShadowMap::beginRenderPass(DriverApi& driver) const noexcept {
-    Shadowing const& shadow = mShadows;
     RenderPassParams params = {};
     params.clear = TargetBufferFlags::SHADOW;
     params.discardStart = TargetBufferFlags::DEPTH;
@@ -129,14 +121,15 @@ void ShadowMap::beginRenderPass(DriverApi& driver) const noexcept {
     // Disable scissor and viewport to avoid bugs in some drivers where the GPU memory is reloaded
     // needlessly.
     params.clear |= RenderPassParams::IGNORE_SCISSOR | RenderPassParams::IGNORE_VIEWPORT;
-    driver.beginRenderPass(shadow.shadowMapRenderTarget, params);
+    driver.beginRenderPass(mShadowMapRenderTarget, params);
 
-    driver.viewport(shadow.viewport.left, shadow.viewport.bottom,
-            shadow.viewport.width, shadow.viewport.height);
+    driver.viewport(mViewport.left, mViewport.bottom,
+            mViewport.width, mViewport.height);
 }
 
-void ShadowMap::update(const FScene::LightSoa& lightData, size_t index,
-        FScene const* scene, details::CameraInfo const& camera) noexcept {
+void ShadowMap::update(
+        const FScene::LightSoa& lightData, size_t index, FScene const* scene,
+        details::CameraInfo const& camera, uint8_t visibleLayers) noexcept {
     // this is the hard part here, find a good frustum for our camera
 
     auto& lcm = mEngine.getLightManager();
@@ -187,7 +180,8 @@ void ShadowMap::update(const FScene::LightSoa& lightData, size_t index,
         case Type::SUN:
         case Type::DIRECTIONAL:
             computeShadowCameraDirectional(
-                    lightData.elementAt<FScene::DIRECTION>(index), scene, cameraInfo);
+                    lightData.elementAt<FScene::DIRECTION>(index), scene, cameraInfo,
+                    visibleLayers);
             break;
         case Type::FOCUSED_SPOT:
         case Type::SPOT:
@@ -198,11 +192,12 @@ void ShadowMap::update(const FScene::LightSoa& lightData, size_t index,
 }
 
 void ShadowMap::computeShadowCameraDirectional(
-        float3 const& dir, FScene const* scene, CameraInfo const& camera) noexcept {
+        math::float3 const& dir, FScene const* scene, CameraInfo const& camera,
+        uint8_t visibleLayers) noexcept {
 
     // scene bounds in world space
     Aabb wsShadowCastersVolume, wsShadowReceiversVolume;
-    scene->computeBounds(wsShadowCastersVolume, wsShadowReceiversVolume, mVisibleLayers);
+    scene->computeBounds(wsShadowCastersVolume, wsShadowReceiversVolume, visibleLayers);
     if (wsShadowCastersVolume.isEmpty() || wsShadowReceiversVolume.isEmpty()) {
         mHasVisibleShadows = false;
         return;
@@ -382,13 +377,13 @@ void ShadowMap::computeShadowCameraDirectional(
         // Final shadowmap texture transform
         const mat4f St = mat4f(MbMt * S);
 
-        mShadows.texelSizeWs = texelSizeWorldSpace(St, float3{ 0.5f });
-        mShadows.lightSpace = St;
-        mShadows.sceneRange = (zfar - znear);
-        mShadows.camera->setCustomProjection(mat4(S), znear, zfar);
+        mTexelSizeWs = texelSizeWorldSpace(St, float3{ 0.5f });
+        mLightSpace = St;
+        mSceneRange = (zfar - znear);
+        mCamera->setCustomProjection(mat4(S), znear, zfar);
 
         // for the debug camera, we need to undo the world origin
-        mShadows.debugCamera->setCustomProjection(mat4(S * camera.worldOrigin), znear, zfar);
+        mDebugCamera->setCustomProjection(mat4(S * camera.worldOrigin), znear, zfar);
     }
 }
 
