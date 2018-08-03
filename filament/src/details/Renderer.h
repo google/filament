@@ -45,6 +45,7 @@ namespace details {
 
 class FEngine;
 class FView;
+class ShadowMap;
 
 /*
  * A concrete implementation of the Renderer Interface.
@@ -78,17 +79,14 @@ private:
     class ColorPass final : public RenderPass {
         using DriverApi = driver::DriverApi;
         utils::JobSystem& js;
+        utils::JobSystem::Job* jobFroxelize = nullptr;
         FView* const view;
         Handle<HwRenderTarget> const rth;
-        utils::JobSystem::Job* jobFroxelize = nullptr;
-        virtual bool prepare() noexcept override;
-        virtual void beginRenderPass(
-                DriverApi& driver, const CameraInfo& camera,
-                Viewport const& viewport) noexcept override;
-        virtual void synchronize(DriverApi& driver) noexcept override;
+        virtual void beginRenderPass(driver::DriverApi& driver, Viewport const& viewport, const CameraInfo& camera) noexcept override;
         virtual void endRenderPass(DriverApi& driver, Viewport const& viewport) noexcept override;
     public:
-        ColorPass(const char* name, utils::JobSystem& js, FView* view, Handle<HwRenderTarget> const rth);
+        ColorPass(const char* name, utils::JobSystem& js, utils::JobSystem::Job* jobFroxelize,
+                FView* view, Handle<HwRenderTarget> const rth);
         static void renderColorPass(FEngine& engine, utils::JobSystem& js,
                 Handle<HwRenderTarget> const rth,
                 FView* view, Viewport const& scaledViewport,
@@ -99,10 +97,7 @@ private:
     class ShadowPass final : public RenderPass {
         using DriverApi = driver::DriverApi;
         ShadowMap const& shadowMap;
-        virtual bool prepare() noexcept override;
-        virtual void beginRenderPass(
-                DriverApi& driver, const CameraInfo& camera,
-                Viewport const& viewport) noexcept override;
+        virtual void beginRenderPass(driver::DriverApi& driver, Viewport const& viewport, const CameraInfo& camera) noexcept override;
         virtual void endRenderPass(DriverApi& driver, Viewport const& viewport) noexcept override;
     public:
         ShadowPass(const char* name, ShadowMap const& shadowMap) noexcept;

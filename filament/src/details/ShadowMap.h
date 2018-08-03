@@ -27,60 +27,52 @@
 
 #include <filament/Viewport.h>
 
-#include <utils/Slice.h>
-
 #include <math/mat4.h>
 #include <math/vec4.h>
 
 namespace filament {
 namespace details {
 
-class FCamera;
-
 class ShadowMap {
 public:
     explicit ShadowMap(FEngine& engine) noexcept;
     ~ShadowMap();
 
-    void prepare(driver::DriverApi& driver, SamplerBuffer& buffer) noexcept;
-
     void terminate(driver::DriverApi& driverApi) noexcept;
 
-    void setVisibleLayers(uint8_t layers) noexcept { mVisibleLayers = layers; }
-
-    // Whether we need to re-render the shadow map.
-    bool needsRefresh() const noexcept { return true; }
-
-    // Set-up the render target, call before rendering the shadow map.
-    void beginRenderPass(driver::DriverApi& driverApi) const noexcept;
-
     // Call once per frame if the light, scene (or visible layers) or camera changes.
-    // This computes the light camera.
-    void update(const FScene::LightSoa& lightData,
-            size_t index, FScene const* scene, details::CameraInfo const& camera) noexcept;
+    // This computes the light's camera.
+    void update(
+            const FScene::LightSoa& lightData, size_t index, FScene const* scene,
+            details::CameraInfo const& camera, uint8_t visibleLayers) noexcept;
 
     // Do we have visible shadows. Valid after calling update().
     bool hasVisibleShadows() const noexcept { return mHasVisibleShadows; }
 
-    // Returns the light's projection. Valid after calling update().
-    FCamera const& getCamera() const noexcept { return *mShadows.camera; }
+    // Allocates shadow texture based on user parameters (e.g. dimensions)
+    void prepare(driver::DriverApi& driver, SamplerBuffer& buffer) noexcept;
 
-    // Returns the shadow map's viewport. Valid after init().
-    Viewport const& getViewport() const noexcept { return mShadows.viewport; }
+    // Returns the shadow map's viewport. Valid after prepare().
+    Viewport const& getViewport() const noexcept { return mViewport; }
 
     // Computes the transform to use in the shader to access the shadow map.
     // Valid after calling update().
-    math::mat4f const& getLightSpaceMatrix() const noexcept {
-        return mShadows.lightSpace;
-    }
+    math::mat4f const& getLightSpaceMatrix() const noexcept { return mLightSpace; }
 
     // return the size of a texel in world space (pre-warping)
-    float getTexelSizeWorldSpace() const noexcept { return mShadows.texelSizeWs; }
+    float getTexelSizeWorldSpace() const noexcept { return mTexelSizeWs; }
 
     // Returns the shadow map's depth range. Valid after init().
-    float getSceneRange() const noexcept { return mShadows.sceneRange; }
+    float getSceneRange() const noexcept { return mSceneRange; }
 
-    FCamera const& getDebugCamera() const noexcept { return *mShadows.debugCamera; }
+    // Returns the light's projection. Valid after calling update().
+    FCamera const& getCamera() const noexcept { return *mCamera; }
+
+    // Set-up the render target, call before rendering the shadow map.
+    void beginRenderPass(driver::DriverApi& driverApi) const noexcept;
+
+    // use only for debugging
+    FCamera const& getDebugCamera() const noexcept { return *mDebugCamera; }
 
 private:
     struct CameraInfo {
@@ -112,8 +104,9 @@ private:
     // 8 corners, 12 segments w/ 2 intersection max -- all of this twice (8 + 12 * 2) * 2 (768 bytes)
     using FrustumBoxIntersection = std::array<math::float3, 64>;
 
-    void computeShadowCameraDirectional(math::float3 const& direction,
-            FScene const* scene, CameraInfo const& camera) noexcept;
+    void computeShadowCameraDirectional(
+            math::float3 const& direction, FScene const* scene, CameraInfo const& camera,
+            uint8_t visibleLayers) noexcept;
 
     static math::mat4f applyLISPSM(
             CameraInfo const& camera, float dzn, float dzf, const math::mat4f& LMpMv,
@@ -174,25 +167,20 @@ private:
             { 2, 6, 7, 3 },  // top
     };
 
-    struct Shadowing {
-        FCamera* camera = nullptr;
-        FCamera* debugCamera = nullptr;
-        math::mat4f lightSpace;
-        float sceneRange = 0.0f;
-        float texelSizeWs = 0.0f;
+    FCamera* mCamera = nullptr;
+    FCamera* mDebugCamera = nullptr;
+    math::mat4f mLightSpace;
+    float mSceneRange = 0.0f;
+    float mTexelSizeWs = 0.0f;
 
-        // set-up in prepare()
-        Viewport viewport;
-        Handle<HwTexture> shadowMapHandle;
-        Handle<HwRenderTarget> shadowMapRenderTarget;
-    };
-
-    Shadowing mShadows;
+    // set-up in prepare()
+    Viewport mViewport;
+    Handle<HwTexture> mShadowMapHandle;
+    Handle<HwRenderTarget> mShadowMapRenderTarget;
 
     // set-up in update()
     uint32_t mShadowMapDimension = 0;
     bool mHasVisibleShadows = false;
-    uint8_t mVisibleLayers = 0x1; // used in update()
 
     // use a member here (instead of stack) because we don't want to pay the
     // initialization of the float3 each time

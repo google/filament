@@ -470,7 +470,7 @@ TEST(FilamentTest, FroxelData) {
 
     FroxelData froxelData(*engine);
     froxelData.setOptions(5, 100);
-    froxelData.setup(engine->getDriverApi(), scope, vp, p, 5, 100);
+    froxelData.prepare(engine->getDriverApi(), scope, vp, p, 5, 100);
 
     Froxel f = froxelData.getFroxelAt(0,0,0);
 

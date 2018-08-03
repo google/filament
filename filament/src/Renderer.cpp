@@ -140,7 +140,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView* view) {
     }
 
     view->prepare(engine, arena, svp);
-    // TODO: froxelization could actually start now, isntead of in ColorPass::renderColorPass()
+    // TODO: froxelization could actually start now, instead of in ColorPass::renderColorPass()
 
     /*
      * Allocate command buffer.
