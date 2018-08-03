@@ -1,0 +1,113 @@
+uint SPIRV_Cross_bitfieldInsert(uint Base, uint Insert, uint Offset, uint Count)
+{
+    uint Mask = Count == 32 ? 0xffffffff : (((1u << Count) - 1) << (Offset & 31));
+    return (Base & ~Mask) | ((Insert << Offset) & Mask);
+}
+
+uint2 SPIRV_Cross_bitfieldInsert(uint2 Base, uint2 Insert, uint Offset, uint Count)
+{
+    uint Mask = Count == 32 ? 0xffffffff : (((1u << Count) - 1) << (Offset & 31));
+    return (Base & ~Mask) | ((Insert << Offset) & Mask);
+}
+
+uint3 SPIRV_Cross_bitfieldInsert(uint3 Base, uint3 Insert, uint Offset, uint Count)
+{
+    uint Mask = Count == 32 ? 0xffffffff : (((1u << Count) - 1) << (Offset & 31));
+    return (Base & ~Mask) | ((Insert << Offset) & Mask);
+}
+
+uint4 SPIRV_Cross_bitfieldInsert(uint4 Base, uint4 Insert, uint Offset, uint Count)
+{
+    uint Mask = Count == 32 ? 0xffffffff : (((1u << Count) - 1) << (Offset & 31));
+    return (Base & ~Mask) | ((Insert << Offset) & Mask);
+}
+
+uint SPIRV_Cross_bitfieldUExtract(uint Base, uint Offset, uint Count)
+{
+    uint Mask = Count == 32 ? 0xffffffff : ((1 << Count) - 1);
+    return (Base >> Offset) & Mask;
+}
+
+uint2 SPIRV_Cross_bitfieldUExtract(uint2 Base, uint Offset, uint Count)
+{
+    uint Mask = Count == 32 ? 0xffffffff : ((1 << Count) - 1);
+    return (Base >> Offset) & Mask;
+}
+
+uint3 SPIRV_Cross_bitfieldUExtract(uint3 Base, uint Offset, uint Count)
+{
+    uint Mask = Count == 32 ? 0xffffffff : ((1 << Count) - 1);
+    return (Base >> Offset) & Mask;
+}
+
+uint4 SPIRV_Cross_bitfieldUExtract(uint4 Base, uint Offset, uint Count)
+{
+    uint Mask = Count == 32 ? 0xffffffff : ((1 << Count) - 1);
+    return (Base >> Offset) & Mask;
+}
+
+int SPIRV_Cross_bitfieldSExtract(int Base, int Offset, int Count)
+{
+    int Mask = Count == 32 ? -1 : ((1 << Count) - 1);
+    int Masked = (Base >> Offset) & Mask;
+    int ExtendShift = (32 - Count) & 31;
+    return (Masked << ExtendShift) >> ExtendShift;
+}
+
+int2 SPIRV_Cross_bitfieldSExtract(int2 Base, int Offset, int Count)
+{
+    int Mask = Count == 32 ? -1 : ((1 << Count) - 1);
+    int2 Masked = (Base >> Offset) & Mask;
+    int ExtendShift = (32 - Count) & 31;
+    return (Masked << ExtendShift) >> ExtendShift;
+}
+
+int3 SPIRV_Cross_bitfieldSExtract(int3 Base, int Offset, int Count)
+{
+    int Mask = Count == 32 ? -1 : ((1 << Count) - 1);
+    int3 Masked = (Base >> Offset) & Mask;
+    int ExtendShift = (32 - Count) & 31;
+    return (Masked << ExtendShift) >> ExtendShift;
+}
+
+int4 SPIRV_Cross_bitfieldSExtract(int4 Base, int Offset, int Count)
+{
+    int Mask = Count == 32 ? -1 : ((1 << Count) - 1);
+    int4 Masked = (Base >> Offset) & Mask;
+    int ExtendShift = (32 - Count) & 31;
+    return (Masked << ExtendShift) >> ExtendShift;
+}
+
+void comp_main()
+{
+    int signed_value = 0;
+    uint unsigned_value = 0u;
+    int3 signed_values = int3(0, 0, 0);
+    uint3 unsigned_values = uint3(0u, 0u, 0u);
+    int s = SPIRV_Cross_bitfieldSExtract(signed_value, 5, 20);
+    uint u = SPIRV_Cross_bitfieldUExtract(unsigned_value, 6, 21);
+    s = int(SPIRV_Cross_bitfieldInsert(s, 40, 5, 4));
+    u = SPIRV_Cross_bitfieldInsert(u, 60u, 5, 4);
+    u = reversebits(u);
+    s = reversebits(s);
+    int v0 = countbits(u);
+    int v1 = countbits(s);
+    int v2 = firstbithigh(u);
+    int v3 = firstbitlow(s);
+    int3 s_1 = SPIRV_Cross_bitfieldSExtract(signed_values, 5, 20);
+    uint3 u_1 = SPIRV_Cross_bitfieldUExtract(unsigned_values, 6, 21);
+    s_1 = int3(SPIRV_Cross_bitfieldInsert(s_1, int3(40, 40, 40), 5, 4));
+    u_1 = SPIRV_Cross_bitfieldInsert(u_1, uint3(60u, 60u, 60u), 5, 4);
+    u_1 = reversebits(u_1);
+    s_1 = reversebits(s_1);
+    int3 v0_1 = countbits(u_1);
+    int3 v1_1 = countbits(s_1);
+    int3 v2_1 = firstbithigh(u_1);
+    int3 v3_1 = firstbitlow(s_1);
+}
+
+[numthreads(1, 1, 1)]
+void main()
+{
+    comp_main();
+}

@@ -1,0 +1,14 @@
+#version 450
+
+layout(set = 0, binding = 0) uniform texture2D uSampler2D;
+layout(set = 0, binding = 0) uniform texture2DMS uSampler2DMS;
+layout(set = 0, binding = 0) uniform sampler SPIRV_Cross_DummySampler;
+
+void main()
+{
+    ivec2 b = textureSize(sampler2D(uSampler2D, SPIRV_Cross_DummySampler), 0);
+    ivec2 c = textureSize(sampler2DMS(uSampler2DMS, SPIRV_Cross_DummySampler));
+    int l1 = textureQueryLevels(sampler2D(uSampler2D, SPIRV_Cross_DummySampler));
+    int s0 = textureSamples(sampler2DMS(uSampler2DMS, SPIRV_Cross_DummySampler));
+}
+

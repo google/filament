@@ -1,0 +1,18 @@
+#version 310 es
+layout(local_size_x = 1) in;
+
+layout(binding = 0, std430) buffer SSBO0
+{
+   ivec4 inputs[];
+};
+
+layout(binding = 1, std430) buffer SSBO1
+{
+   ivec4 outputs[];
+};
+
+void main()
+{
+   uint ident = gl_GlobalInvocationID.x;
+   outputs[ident] = ivec4(bvec4(inputs[ident] & 0x3));
+}

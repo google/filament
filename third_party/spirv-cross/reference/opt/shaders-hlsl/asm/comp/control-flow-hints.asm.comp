@@ -1,0 +1,32 @@
+RWByteAddressBuffer bar : register(u0);
+RWByteAddressBuffer foo : register(u1);
+
+void comp_main()
+{
+    [unroll]
+    for (int _135 = 0; _135 < 16; )
+    {
+        bar.Store4(_135 * 16 + 0, asuint(asfloat(foo.Load4(_135 * 16 + 0))));
+        _135++;
+        continue;
+    }
+    [loop]
+    for (int _136 = 0; _136 < 16; )
+    {
+        bar.Store4((15 - _136) * 16 + 0, asuint(asfloat(foo.Load4(_136 * 16 + 0))));
+        _136++;
+        continue;
+    }
+    [branch]
+    if (asfloat(bar.Load(160)) > 10.0f)
+    {
+        foo.Store4(320, asuint(5.0f.xxxx));
+    }
+    foo.Store4(320, asuint(20.0f.xxxx));
+}
+
+[numthreads(1, 1, 1)]
+void main()
+{
+    comp_main();
+}

@@ -1,0 +1,63 @@
+#pragma clang diagnostic ignored "-Wmissing-prototypes"
+
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct S0
+{
+    float4 a;
+};
+
+struct S1
+{
+    float4 a;
+};
+
+struct S0_1
+{
+    float4 a;
+};
+
+struct SSBO0
+{
+    S0_1 s0s[1];
+};
+
+struct S1_1
+{
+    float4 a;
+};
+
+struct SSBO1
+{
+    S1_1 s1s[1];
+};
+
+struct SSBO2
+{
+    float4 outputs[1];
+};
+
+float4 overload(thread const S0& s0)
+{
+    return s0.a;
+}
+
+float4 overload(thread const S1& s1)
+{
+    return s1.a;
+}
+
+kernel void main0(device SSBO0& _36 [[buffer(0)]], device SSBO1& _55 [[buffer(1)]], device SSBO2& _66 [[buffer(2)]], uint3 gl_GlobalInvocationID [[thread_position_in_grid]])
+{
+    S0 s0;
+    s0.a = _36.s0s[gl_GlobalInvocationID.x].a;
+    S1 s1;
+    s1.a = _55.s1s[gl_GlobalInvocationID.x].a;
+    S0 param = s0;
+    S1 param_1 = s1;
+    _66.outputs[gl_GlobalInvocationID.x] = overload(param) + overload(param_1);
+}
+

@@ -1,0 +1,56 @@
+#version 310 es
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+
+layout(binding = 0, std430) buffer SSBO0
+{
+    float a;
+    vec2 b;
+    vec3 c;
+    vec4 d;
+} s0;
+
+layout(binding = 1, std430) buffer SSBO1
+{
+    float a;
+    vec2 b;
+    vec3 c;
+    vec4 d;
+} s1;
+
+bool and(bool a, bool b)
+{
+    return !((a && b) || b);
+}
+
+bvec2 and(bvec2 a, bvec2 b)
+{
+    bvec2 _98 = bvec2(a.x && b.x, a.y && b.y);
+    return not(bvec2(_98.x || b.x, _98.y || b.y));
+}
+
+bvec3 and(bvec3 a, bvec3 b)
+{
+    return bvec3(a.x && b.x, a.y && b.y, a.z && b.z);
+}
+
+bvec4 and(bvec4 a, bvec4 b)
+{
+    return bvec4(a.x && b.x, a.y && b.y, a.z && b.z, a.w && b.w);
+}
+
+void main()
+{
+    bool param = isinf(s0.a);
+    bool param_1 = isnan(s1.a);
+    bool b0 = and(param, param_1);
+    bvec2 param_2 = isinf(s0.b);
+    bvec2 param_3 = isnan(s1.b);
+    bvec2 b1 = and(param_2, param_3);
+    bvec3 param_4 = isinf(s0.c);
+    bvec3 param_5 = isnan(s1.c);
+    bvec3 b2 = and(param_4, param_5);
+    bvec4 param_6 = isinf(s0.d);
+    bvec4 param_7 = isnan(s1.d);
+    bvec4 b3 = and(param_6, param_7);
+}
+

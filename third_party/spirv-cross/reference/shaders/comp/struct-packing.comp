@@ -1,0 +1,146 @@
+#version 310 es
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+
+struct S0
+{
+    vec2 a[1];
+    float b;
+};
+
+struct S1
+{
+    vec3 a;
+    float b;
+};
+
+struct S2
+{
+    vec3 a[1];
+    float b;
+};
+
+struct S3
+{
+    vec2 a;
+    float b;
+};
+
+struct S4
+{
+    vec2 c;
+};
+
+struct Content
+{
+    S0 m0s[1];
+    S1 m1s[1];
+    S2 m2s[1];
+    S0 m0;
+    S1 m1;
+    S2 m2;
+    S3 m3;
+    float m4;
+    S4 m3s[8];
+};
+
+struct S0_1
+{
+    vec2 a[1];
+    float b;
+};
+
+struct S1_1
+{
+    vec3 a;
+    float b;
+};
+
+struct S2_1
+{
+    vec3 a[1];
+    float b;
+};
+
+struct S3_1
+{
+    vec2 a;
+    float b;
+};
+
+struct S4_1
+{
+    vec2 c;
+};
+
+struct Content_1
+{
+    S0_1 m0s[1];
+    S1_1 m1s[1];
+    S2_1 m2s[1];
+    S0_1 m0;
+    S1_1 m1;
+    S2_1 m2;
+    S3_1 m3;
+    float m4;
+    S4_1 m3s[8];
+};
+
+layout(binding = 1, std430) restrict buffer SSBO1
+{
+    Content content;
+    Content content1[2];
+    Content content2;
+    mat2 m0;
+    mat2 m1;
+    mat2x3 m2[4];
+    mat3x2 m3;
+    layout(row_major) mat2 m4;
+    layout(row_major) mat2 m5[9];
+    layout(row_major) mat2x3 m6[4][2];
+    layout(row_major) mat3x2 m7;
+    float array[];
+} ssbo_430;
+
+layout(binding = 0, std140) restrict buffer SSBO0
+{
+    Content_1 content;
+    Content_1 content1[2];
+    Content_1 content2;
+    mat2 m0;
+    mat2 m1;
+    mat2x3 m2[4];
+    mat3x2 m3;
+    layout(row_major) mat2 m4;
+    layout(row_major) mat2 m5[9];
+    layout(row_major) mat2x3 m6[4][2];
+    layout(row_major) mat3x2 m7;
+    float array[];
+} ssbo_140;
+
+void main()
+{
+    ssbo_430.content.m0s[0].a[0] = ssbo_140.content.m0s[0].a[0];
+    ssbo_430.content.m0s[0].b = ssbo_140.content.m0s[0].b;
+    ssbo_430.content.m1s[0].a = ssbo_140.content.m1s[0].a;
+    ssbo_430.content.m1s[0].b = ssbo_140.content.m1s[0].b;
+    ssbo_430.content.m2s[0].a[0] = ssbo_140.content.m2s[0].a[0];
+    ssbo_430.content.m2s[0].b = ssbo_140.content.m2s[0].b;
+    ssbo_430.content.m0.a[0] = ssbo_140.content.m0.a[0];
+    ssbo_430.content.m0.b = ssbo_140.content.m0.b;
+    ssbo_430.content.m1.a = ssbo_140.content.m1.a;
+    ssbo_430.content.m1.b = ssbo_140.content.m1.b;
+    ssbo_430.content.m2.a[0] = ssbo_140.content.m2.a[0];
+    ssbo_430.content.m2.b = ssbo_140.content.m2.b;
+    ssbo_430.content.m3.a = ssbo_140.content.m3.a;
+    ssbo_430.content.m3.b = ssbo_140.content.m3.b;
+    ssbo_430.content.m4 = ssbo_140.content.m4;
+    ssbo_430.content.m3s[0].c = ssbo_140.content.m3s[0].c;
+    ssbo_430.content.m3s[1].c = ssbo_140.content.m3s[1].c;
+    ssbo_430.content.m3s[2].c = ssbo_140.content.m3s[2].c;
+    ssbo_430.content.m3s[3].c = ssbo_140.content.m3s[3].c;
+    ssbo_430.content.m3s[4].c = ssbo_140.content.m3s[4].c;
+    ssbo_430.content.m3s[5].c = ssbo_140.content.m3s[5].c;
+    ssbo_430.content.m3s[6].c = ssbo_140.content.m3s[6].c;
+    ssbo_430.content.m3s[7].c = ssbo_140.content.m3s[7].c;
+}
+

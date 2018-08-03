@@ -1,0 +1,421 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 46;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		AA1EE462176059AB0029C7A5 /* SDL_test_common.c in Sources */ = {isa = PBXBuildFile; fileRef = AA1EE454176059AB0029C7A5 /* SDL_test_common.c */; };
+		AA1EE463176059AB0029C7A5 /* SDL_test_compare.c in Sources */ = {isa = PBXBuildFile; fileRef = AA1EE455176059AB0029C7A5 /* SDL_test_compare.c */; };
+		AA1EE464176059AB0029C7A5 /* SDL_test_crc32.c in Sources */ = {isa = PBXBuildFile; fileRef = AA1EE456176059AB0029C7A5 /* SDL_test_crc32.c */; };
+		AA1EE465176059AB0029C7A5 /* SDL_test_font.c in Sources */ = {isa = PBXBuildFile; fileRef = AA1EE457176059AB0029C7A5 /* SDL_test_font.c */; };
+		AA1EE466176059AB0029C7A5 /* SDL_test_fuzzer.c in Sources */ = {isa = PBXBuildFile; fileRef = AA1EE458176059AB0029C7A5 /* SDL_test_fuzzer.c */; };
+		AA1EE467176059AB0029C7A5 /* SDL_test_harness.c in Sources */ = {isa = PBXBuildFile; fileRef = AA1EE459176059AB0029C7A5 /* SDL_test_harness.c */; };
+		AA1EE468176059AB0029C7A5 /* SDL_test_imageBlit.c in Sources */ = {isa = PBXBuildFile; fileRef = AA1EE45A176059AB0029C7A5 /* SDL_test_imageBlit.c */; };
+		AA1EE469176059AB0029C7A5 /* SDL_test_imageBlitBlend.c in Sources */ = {isa = PBXBuildFile; fileRef = AA1EE45B176059AB0029C7A5 /* SDL_test_imageBlitBlend.c */; };
+		AA1EE46A176059AB0029C7A5 /* SDL_test_imageFace.c in Sources */ = {isa = PBXBuildFile; fileRef = AA1EE45C176059AB0029C7A5 /* SDL_test_imageFace.c */; };
+		AA1EE46B176059AB0029C7A5 /* SDL_test_imagePrimitives.c in Sources */ = {isa = PBXBuildFile; fileRef = AA1EE45D176059AB0029C7A5 /* SDL_test_imagePrimitives.c */; };
+		AA1EE46C176059AB0029C7A5 /* SDL_test_imagePrimitivesBlend.c in Sources */ = {isa = PBXBuildFile; fileRef = AA1EE45E176059AB0029C7A5 /* SDL_test_imagePrimitivesBlend.c */; };
+		AA1EE46D176059AB0029C7A5 /* SDL_test_log.c in Sources */ = {isa = PBXBuildFile; fileRef = AA1EE45F176059AB0029C7A5 /* SDL_test_log.c */; };
+		AA1EE46E176059AB0029C7A5 /* SDL_test_md5.c in Sources */ = {isa = PBXBuildFile; fileRef = AA1EE460176059AB0029C7A5 /* SDL_test_md5.c */; };
+		AA1EE46F176059AB0029C7A5 /* SDL_test_random.c in Sources */ = {isa = PBXBuildFile; fileRef = AA1EE461176059AB0029C7A5 /* SDL_test_random.c */; };
+		AAF030011F9009B100B9A9FB /* SDL_test_memory.c in Sources */ = {isa = PBXBuildFile; fileRef = AAF02FFF1F9009B100B9A9FB /* SDL_test_memory.c */; };
+		AAF030021F9009B100B9A9FB /* SDL_test_assert.c in Sources */ = {isa = PBXBuildFile; fileRef = AAF030001F9009B100B9A9FB /* SDL_test_assert.c */; };
+		FA3D99011BC4E5BC002C96C8 /* SDL_test_common.c in Sources */ = {isa = PBXBuildFile; fileRef = AA1EE454176059AB0029C7A5 /* SDL_test_common.c */; };
+		FA3D99021BC4E5BC002C96C8 /* SDL_test_compare.c in Sources */ = {isa = PBXBuildFile; fileRef = AA1EE455176059AB0029C7A5 /* SDL_test_compare.c */; };
+		FA3D99031BC4E5BC002C96C8 /* SDL_test_crc32.c in Sources */ = {isa = PBXBuildFile; fileRef = AA1EE456176059AB0029C7A5 /* SDL_test_crc32.c */; };
+		FA3D99041BC4E5BC002C96C8 /* SDL_test_font.c in Sources */ = {isa = PBXBuildFile; fileRef = AA1EE457176059AB0029C7A5 /* SDL_test_font.c */; };
+		FA3D99051BC4E5BC002C96C8 /* SDL_test_fuzzer.c in Sources */ = {isa = PBXBuildFile; fileRef = AA1EE458176059AB0029C7A5 /* SDL_test_fuzzer.c */; };
+		FA3D99061BC4E5BC002C96C8 /* SDL_test_harness.c in Sources */ = {isa = PBXBuildFile; fileRef = AA1EE459176059AB0029C7A5 /* SDL_test_harness.c */; };
+		FA3D99071BC4E5BC002C96C8 /* SDL_test_imageBlit.c in Sources */ = {isa = PBXBuildFile; fileRef = AA1EE45A176059AB0029C7A5 /* SDL_test_imageBlit.c */; };
+		FA3D99081BC4E5BC002C96C8 /* SDL_test_imageBlitBlend.c in Sources */ = {isa = PBXBuildFile; fileRef = AA1EE45B176059AB0029C7A5 /* SDL_test_imageBlitBlend.c */; };
+		FA3D99091BC4E5BC002C96C8 /* SDL_test_imageFace.c in Sources */ = {isa = PBXBuildFile; fileRef = AA1EE45C176059AB0029C7A5 /* SDL_test_imageFace.c */; };
+		FA3D990A1BC4E5BC002C96C8 /* SDL_test_imagePrimitives.c in Sources */ = {isa = PBXBuildFile; fileRef = AA1EE45D176059AB0029C7A5 /* SDL_test_imagePrimitives.c */; };
+		FA3D990B1BC4E5BC002C96C8 /* SDL_test_imagePrimitivesBlend.c in Sources */ = {isa = PBXBuildFile; fileRef = AA1EE45E176059AB0029C7A5 /* SDL_test_imagePrimitivesBlend.c */; };
+		FA3D990C1BC4E5BC002C96C8 /* SDL_test_log.c in Sources */ = {isa = PBXBuildFile; fileRef = AA1EE45F176059AB0029C7A5 /* SDL_test_log.c */; };
+		FA3D990D1BC4E5BC002C96C8 /* SDL_test_md5.c in Sources */ = {isa = PBXBuildFile; fileRef = AA1EE460176059AB0029C7A5 /* SDL_test_md5.c */; };
+		FA3D990E1BC4E5BC002C96C8 /* SDL_test_random.c in Sources */ = {isa = PBXBuildFile; fileRef = AA1EE461176059AB0029C7A5 /* SDL_test_random.c */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		FA3D98F61BC4E5A2002C96C8 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "include/$(PRODUCT_NAME)";
+			dstSubfolderSpec = 16;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		AA1EE4461760589B0029C7A5 /* libSDL2test.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libSDL2test.a; sourceTree = BUILT_PRODUCTS_DIR; };
+		AA1EE454176059AB0029C7A5 /* SDL_test_common.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = SDL_test_common.c; path = ../../src/test/SDL_test_common.c; sourceTree = "<group>"; };
+		AA1EE455176059AB0029C7A5 /* SDL_test_compare.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = SDL_test_compare.c; path = ../../src/test/SDL_test_compare.c; sourceTree = "<group>"; };
+		AA1EE456176059AB0029C7A5 /* SDL_test_crc32.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = SDL_test_crc32.c; path = ../../src/test/SDL_test_crc32.c; sourceTree = "<group>"; };
+		AA1EE457176059AB0029C7A5 /* SDL_test_font.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = SDL_test_font.c; path = ../../src/test/SDL_test_font.c; sourceTree = "<group>"; };
+		AA1EE458176059AB0029C7A5 /* SDL_test_fuzzer.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = SDL_test_fuzzer.c; path = ../../src/test/SDL_test_fuzzer.c; sourceTree = "<group>"; };
+		AA1EE459176059AB0029C7A5 /* SDL_test_harness.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = SDL_test_harness.c; path = ../../src/test/SDL_test_harness.c; sourceTree = "<group>"; };
+		AA1EE45A176059AB0029C7A5 /* SDL_test_imageBlit.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = SDL_test_imageBlit.c; path = ../../src/test/SDL_test_imageBlit.c; sourceTree = "<group>"; };
+		AA1EE45B176059AB0029C7A5 /* SDL_test_imageBlitBlend.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = SDL_test_imageBlitBlend.c; path = ../../src/test/SDL_test_imageBlitBlend.c; sourceTree = "<group>"; };
+		AA1EE45C176059AB0029C7A5 /* SDL_test_imageFace.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = SDL_test_imageFace.c; path = ../../src/test/SDL_test_imageFace.c; sourceTree = "<group>"; };
+		AA1EE45D176059AB0029C7A5 /* SDL_test_imagePrimitives.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = SDL_test_imagePrimitives.c; path = ../../src/test/SDL_test_imagePrimitives.c; sourceTree = "<group>"; };
+		AA1EE45E176059AB0029C7A5 /* SDL_test_imagePrimitivesBlend.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = SDL_test_imagePrimitivesBlend.c; path = ../../src/test/SDL_test_imagePrimitivesBlend.c; sourceTree = "<group>"; };
+		AA1EE45F176059AB0029C7A5 /* SDL_test_log.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = SDL_test_log.c; path = ../../src/test/SDL_test_log.c; sourceTree = "<group>"; };
+		AA1EE460176059AB0029C7A5 /* SDL_test_md5.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = SDL_test_md5.c; path = ../../src/test/SDL_test_md5.c; sourceTree = "<group>"; };
+		AA1EE461176059AB0029C7A5 /* SDL_test_random.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = SDL_test_random.c; path = ../../src/test/SDL_test_random.c; sourceTree = "<group>"; };
+		AAF02FFF1F9009B100B9A9FB /* SDL_test_memory.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = SDL_test_memory.c; path = ../../src/test/SDL_test_memory.c; sourceTree = "<group>"; };
+		AAF030001F9009B100B9A9FB /* SDL_test_assert.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = SDL_test_assert.c; path = ../../src/test/SDL_test_assert.c; sourceTree = "<group>"; };
+		FA3D98F81BC4E5A2002C96C8 /* libSDL2test-TV.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libSDL2test-TV.a"; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		AA1EE4431760589B0029C7A5 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		FA3D98F51BC4E5A2002C96C8 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		AA1EE43D1760589B0029C7A5 = {
+			isa = PBXGroup;
+			children = (
+				AA1EE453176059770029C7A5 /* Library Source */,
+				AA1EE4471760589B0029C7A5 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		AA1EE4471760589B0029C7A5 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				AA1EE4461760589B0029C7A5 /* libSDL2test.a */,
+				FA3D98F81BC4E5A2002C96C8 /* libSDL2test-TV.a */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		AA1EE453176059770029C7A5 /* Library Source */ = {
+			isa = PBXGroup;
+			children = (
+				AAF030001F9009B100B9A9FB /* SDL_test_assert.c */,
+				AA1EE454176059AB0029C7A5 /* SDL_test_common.c */,
+				AA1EE455176059AB0029C7A5 /* SDL_test_compare.c */,
+				AA1EE456176059AB0029C7A5 /* SDL_test_crc32.c */,
+				AA1EE457176059AB0029C7A5 /* SDL_test_font.c */,
+				AA1EE458176059AB0029C7A5 /* SDL_test_fuzzer.c */,
+				AA1EE459176059AB0029C7A5 /* SDL_test_harness.c */,
+				AA1EE45A176059AB0029C7A5 /* SDL_test_imageBlit.c */,
+				AA1EE45B176059AB0029C7A5 /* SDL_test_imageBlitBlend.c */,
+				AA1EE45C176059AB0029C7A5 /* SDL_test_imageFace.c */,
+				AA1EE45D176059AB0029C7A5 /* SDL_test_imagePrimitives.c */,
+				AA1EE45E176059AB0029C7A5 /* SDL_test_imagePrimitivesBlend.c */,
+				AA1EE45F176059AB0029C7A5 /* SDL_test_log.c */,
+				AA1EE460176059AB0029C7A5 /* SDL_test_md5.c */,
+				AAF02FFF1F9009B100B9A9FB /* SDL_test_memory.c */,
+				AA1EE461176059AB0029C7A5 /* SDL_test_random.c */,
+			);
+			name = "Library Source";
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXHeadersBuildPhase section */
+		AA1EE4441760589B0029C7A5 /* Headers */ = {
+			isa = PBXHeadersBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXHeadersBuildPhase section */
+
+/* Begin PBXNativeTarget section */
+		AA1EE4451760589B0029C7A5 /* SDL2test */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AA1EE44A1760589B0029C7A5 /* Build configuration list for PBXNativeTarget "SDL2test" */;
+			buildPhases = (
+				AA1EE4421760589B0029C7A5 /* Sources */,
+				AA1EE4431760589B0029C7A5 /* Frameworks */,
+				AA1EE4441760589B0029C7A5 /* Headers */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = SDL2test;
+			productName = SDL2test;
+			productReference = AA1EE4461760589B0029C7A5 /* libSDL2test.a */;
+			productType = "com.apple.product-type.library.static";
+		};
+		FA3D98F71BC4E5A2002C96C8 /* SDL2test-TV */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = FA3D99001BC4E5A3002C96C8 /* Build configuration list for PBXNativeTarget "SDL2test-TV" */;
+			buildPhases = (
+				FA3D98F41BC4E5A2002C96C8 /* Sources */,
+				FA3D98F51BC4E5A2002C96C8 /* Frameworks */,
+				FA3D98F61BC4E5A2002C96C8 /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "SDL2test-TV";
+			productName = "SDL2test-TV";
+			productReference = FA3D98F81BC4E5A2002C96C8 /* libSDL2test-TV.a */;
+			productType = "com.apple.product-type.library.static";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		AA1EE43E1760589B0029C7A5 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastUpgradeCheck = 0460;
+				ORGANIZATIONNAME = "Sam Lantinga";
+				TargetAttributes = {
+					FA3D98F71BC4E5A2002C96C8 = {
+						CreatedOnToolsVersion = 7.1;
+					};
+				};
+			};
+			buildConfigurationList = AA1EE4411760589B0029C7A5 /* Build configuration list for PBXProject "SDL2test" */;
+			compatibilityVersion = "Xcode 3.2";
+			developmentRegion = English;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+			);
+			mainGroup = AA1EE43D1760589B0029C7A5;
+			productRefGroup = AA1EE4471760589B0029C7A5 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				AA1EE4451760589B0029C7A5 /* SDL2test */,
+				FA3D98F71BC4E5A2002C96C8 /* SDL2test-TV */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		AA1EE4421760589B0029C7A5 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AA1EE462176059AB0029C7A5 /* SDL_test_common.c in Sources */,
+				AA1EE463176059AB0029C7A5 /* SDL_test_compare.c in Sources */,
+				AA1EE464176059AB0029C7A5 /* SDL_test_crc32.c in Sources */,
+				AA1EE465176059AB0029C7A5 /* SDL_test_font.c in Sources */,
+				AA1EE466176059AB0029C7A5 /* SDL_test_fuzzer.c in Sources */,
+				AAF030021F9009B100B9A9FB /* SDL_test_assert.c in Sources */,
+				AA1EE467176059AB0029C7A5 /* SDL_test_harness.c in Sources */,
+				AA1EE468176059AB0029C7A5 /* SDL_test_imageBlit.c in Sources */,
+				AA1EE469176059AB0029C7A5 /* SDL_test_imageBlitBlend.c in Sources */,
+				AA1EE46A176059AB0029C7A5 /* SDL_test_imageFace.c in Sources */,
+				AA1EE46B176059AB0029C7A5 /* SDL_test_imagePrimitives.c in Sources */,
+				AA1EE46C176059AB0029C7A5 /* SDL_test_imagePrimitivesBlend.c in Sources */,
+				AAF030011F9009B100B9A9FB /* SDL_test_memory.c in Sources */,
+				AA1EE46D176059AB0029C7A5 /* SDL_test_log.c in Sources */,
+				AA1EE46E176059AB0029C7A5 /* SDL_test_md5.c in Sources */,
+				AA1EE46F176059AB0029C7A5 /* SDL_test_random.c in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		FA3D98F41BC4E5A2002C96C8 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				FA3D99011BC4E5BC002C96C8 /* SDL_test_common.c in Sources */,
+				FA3D99021BC4E5BC002C96C8 /* SDL_test_compare.c in Sources */,
+				FA3D99031BC4E5BC002C96C8 /* SDL_test_crc32.c in Sources */,
+				FA3D99041BC4E5BC002C96C8 /* SDL_test_font.c in Sources */,
+				FA3D99051BC4E5BC002C96C8 /* SDL_test_fuzzer.c in Sources */,
+				FA3D99061BC4E5BC002C96C8 /* SDL_test_harness.c in Sources */,
+				FA3D99071BC4E5BC002C96C8 /* SDL_test_imageBlit.c in Sources */,
+				FA3D99081BC4E5BC002C96C8 /* SDL_test_imageBlitBlend.c in Sources */,
+				FA3D99091BC4E5BC002C96C8 /* SDL_test_imageFace.c in Sources */,
+				FA3D990A1BC4E5BC002C96C8 /* SDL_test_imagePrimitives.c in Sources */,
+				FA3D990B1BC4E5BC002C96C8 /* SDL_test_imagePrimitivesBlend.c in Sources */,
+				FA3D990C1BC4E5BC002C96C8 /* SDL_test_log.c in Sources */,
+				FA3D990D1BC4E5BC002C96C8 /* SDL_test_md5.c in Sources */,
+				FA3D990E1BC4E5BC002C96C8 /* SDL_test_random.c in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		AA1EE4481760589B0029C7A5 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				HEADER_SEARCH_PATHS = ../../include;
+				MACOSX_DEPLOYMENT_TARGET = 10.8;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+			};
+			name = Debug;
+		};
+		AA1EE4491760589B0029C7A5 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				HEADER_SEARCH_PATHS = ../../include;
+				MACOSX_DEPLOYMENT_TARGET = 10.8;
+				SDKROOT = iphoneos;
+			};
+			name = Release;
+		};
+		AA1EE44B1760589B0029C7A5 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				EXECUTABLE_PREFIX = lib;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
+		AA1EE44C1760589B0029C7A5 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				EXECUTABLE_PREFIX = lib;
+				IPHONEOS_DEPLOYMENT_TARGET = 8.0;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Release;
+		};
+		FA3D98FE1BC4E5A3002C96C8 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				MTL_ENABLE_DEBUG_INFO = YES;
+				OTHER_LDFLAGS = "-ObjC";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = appletvos;
+				SKIP_INSTALL = YES;
+				TVOS_DEPLOYMENT_TARGET = 9.0;
+			};
+			name = Debug;
+		};
+		FA3D98FF1BC4E5A3002C96C8 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				COPY_PHASE_STRIP = NO;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				OTHER_LDFLAGS = "-ObjC";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = appletvos;
+				SKIP_INSTALL = YES;
+				TVOS_DEPLOYMENT_TARGET = 9.0;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		AA1EE4411760589B0029C7A5 /* Build configuration list for PBXProject "SDL2test" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AA1EE4481760589B0029C7A5 /* Debug */,
+				AA1EE4491760589B0029C7A5 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		AA1EE44A1760589B0029C7A5 /* Build configuration list for PBXNativeTarget "SDL2test" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AA1EE44B1760589B0029C7A5 /* Debug */,
+				AA1EE44C1760589B0029C7A5 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		FA3D99001BC4E5A3002C96C8 /* Build configuration list for PBXNativeTarget "SDL2test-TV" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				FA3D98FE1BC4E5A3002C96C8 /* Debug */,
+				FA3D98FF1BC4E5A3002C96C8 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = AA1EE43E1760589B0029C7A5 /* Project object */;
+}

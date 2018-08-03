@@ -1,0 +1,441 @@
+/*
+ * Copyright (C) 2017 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "MaterialCompiler.h"
+
+#include <functional>
+#include <memory>
+#include <iostream>
+
+#include <filamat/MaterialBuilder.h>
+
+#include "Enums.h"
+#include "MaterialLexeme.h"
+#include "MaterialLexer.h"
+#include "JsonishLexer.h"
+#include "JsonishParser.h"
+#include "ParametersProcessor.h"
+#include "sca/GLSLTools.h"
+#include "sca/GLSLPostProcessor.h"
+
+using namespace utils;
+using namespace filamat;
+using namespace std::placeholders;
+
+namespace matc {
+
+static constexpr const char* CONFIG_KEY_MATERIAL= "material";
+static constexpr const char* CONFIG_KEY_VERTEX_SHADER = "vertex";
+static constexpr const char* CONFIG_KEY_FRAGMENT_SHADER = "fragment";
+static constexpr const char* CONFIG_KEY_TOOL = "tool";
+
+MaterialCompiler::MaterialCompiler() {
+    GLSLTools::init();
+
+    mConfigProcessor[CONFIG_KEY_MATERIAL] = &MaterialCompiler::processMaterial;
+    mConfigProcessor[CONFIG_KEY_VERTEX_SHADER] = &MaterialCompiler::processVertexShader;
+    mConfigProcessor[CONFIG_KEY_FRAGMENT_SHADER] = &MaterialCompiler::processFragmentShader;
+    mConfigProcessor[CONFIG_KEY_TOOL] = &MaterialCompiler::ignoreLexeme;
+
+    mConfigProcessorJSON[CONFIG_KEY_MATERIAL] = &MaterialCompiler::processMaterialJSON;
+    mConfigProcessorJSON[CONFIG_KEY_VERTEX_SHADER] = &MaterialCompiler::processVertexShaderJSON;
+    mConfigProcessorJSON[CONFIG_KEY_FRAGMENT_SHADER] = &MaterialCompiler::processFragmentShaderJSON;
+    mConfigProcessorJSON[CONFIG_KEY_TOOL] = &MaterialCompiler::ignoreLexemeJSON;
+}
+
+MaterialCompiler::~MaterialCompiler() {
+    GLSLTools::terminate();
+}
+
+bool MaterialCompiler::processMaterial(const MaterialLexeme& jsonLexeme,
+        MaterialBuilder& builder) const noexcept  {
+
+    JsonishLexer jlexer;
+    jlexer.lex(jsonLexeme.getStart(), jsonLexeme.getSize(), jsonLexeme.getLine());
+
+    JsonishParser parser(jlexer.getLexemes());
+    std::unique_ptr<JsonishObject> json = parser.parse();
+
+    if (json == nullptr) {
+        std::cerr << "JsonishParser error (see above)." << std::endl;
+        return false;
+    }
+
+    ParametersProcessor parametersProcessor;
+    bool ok = parametersProcessor.process(builder, *json);
+    if (!ok) {
+        std::cerr << "Error while processing material." << std::endl;
+        return false;
+    }
+
+    return true;
+}
+
+bool MaterialCompiler::processVertexShader(const MaterialLexeme& lexeme,
+        MaterialBuilder& builder) const noexcept {
+
+    MaterialLexeme trimedLexeme = lexeme.trimBlockMarkers();
+    std::string shaderStr = trimedLexeme.getStringValue();
+
+    builder.materialVertex(shaderStr.c_str(), trimedLexeme.getLine() + 1);
+    return true;
+}
+
+bool MaterialCompiler::processFragmentShader(const MaterialLexeme& lexeme,
+        MaterialBuilder& builder) const noexcept {
+
+    MaterialLexeme trimedLexeme = lexeme.trimBlockMarkers();
+    std::string shaderStr = trimedLexeme.getStringValue();
+
+    builder.material(shaderStr.c_str(), trimedLexeme.getLine() + 1);
+    return true;
+}
+
+bool MaterialCompiler::ignoreLexeme(const MaterialLexeme& lexeme,
+        MaterialBuilder& builder) const noexcept {
+    return true;
+}
+
+bool MaterialCompiler::processMaterialJSON(const JsonishValue* value,
+        filamat::MaterialBuilder& builder) const noexcept {
+
+    if (!value) {
+        std::cerr << "'material' block does not have a value, one is required." << std::endl;
+        return false;
+    }
+
+    if (value->getType() != JsonishValue::OBJECT) {
+        std::cerr << "'material' block has an invalid type: "
+                << JsonishValue::typeToString(value->getType())
+                << ", should be OBJECT."
+                << std::endl;
+        return false;
+    }
+
+    ParametersProcessor parametersProcessor;
+    bool ok = parametersProcessor.process(builder, *value->toJsonObject());
+    if (!ok) {
+        std::cerr << "Error while processing material." << std::endl;
+        return false;
+    }
+
+    return true;
+}
+
+bool MaterialCompiler::processVertexShaderJSON(const JsonishValue* value,
+        filamat::MaterialBuilder& builder) const noexcept {
+
+    if (!value) {
+        std::cerr << "'vertex' block does not have a value, one is required." << std::endl;
+        return false;
+    }
+
+    if (value->getType() != JsonishValue::STRING) {
+        std::cerr << "'vertex' block has an invalid type: "
+                << JsonishValue::typeToString(value->getType())
+                << ", should be STRING."
+                << std::endl;
+        return false;
+    }
+
+    builder.materialVertex(value->toJsonString()->getString().c_str());
+    return true;
+}
+
+bool MaterialCompiler::processFragmentShaderJSON(const JsonishValue* value,
+        filamat::MaterialBuilder& builder) const noexcept {
+
+    if (!value) {
+        std::cerr << "'fragment' block does not have a value, one is required." << std::endl;
+        return false;
+    }
+
+    if (value->getType() != JsonishValue::STRING) {
+        std::cerr << "'fragment' block has an invalid type: "
+                << JsonishValue::typeToString(value->getType())
+                << ", should be STRING."
+                << std::endl;
+        return false;
+    }
+
+    builder.material(value->toJsonString()->getString().c_str());
+    return true;
+}
+
+bool MaterialCompiler::ignoreLexemeJSON(const JsonishValue* value,
+        filamat::MaterialBuilder& builder) const noexcept {
+    return true;
+}
+
+static bool reflectParameters(const MaterialBuilder& builder) {
+    uint8_t count = builder.getParameterCount();
+    const MaterialBuilder::ParameterList& parameters = builder.getParameters();
+
+    std::cout << "{" << std::endl;
+    std::cout << "  \"parameters\": [" << std::endl;
+    for (uint8_t i = 0; i < count; i++) {
+        const MaterialBuilder::Parameter& parameter = parameters[i];
+        std::cout << "    {" << std::endl;
+        std::cout << "      \"name\": \"" << parameter.name.c_str() << "\"," << std::endl;
+        if (parameter.isSampler) {
+            std::cout << "      \"type\": \"" <<
+                      Enums::toString(parameter.samplerType) << "\"," << std::endl;
+            std::cout << "      \"format\": \"" <<
+                      Enums::toString(parameter.samplerFormat) << "\"," << std::endl;
+            std::cout << "      \"precision\": \"" <<
+                      Enums::toString(parameter.samplerPrecision) << "\"" << std::endl;
+        } else {
+            std::cout << "      \"type\": \"" <<
+                      Enums::toString(parameter.uniformType) << "\"," << std::endl;
+            std::cout << "      \"size\": \"" << parameter.size << "\"" << std::endl;
+        }
+        std::cout << "    }";
+        if (i < count - 1) std::cout << ",";
+        std::cout << std::endl;
+    }
+    std::cout << "  ]" << std::endl;
+    std::cout << "}" << std::endl;
+
+    return true;
+}
+
+bool MaterialCompiler::isValidJsonStart(const char* buffer, size_t size) const noexcept {
+    // Skip all whitespace characters.
+    const char* end = buffer + size;
+    while (buffer != end && isspace(buffer[0])) {
+        buffer++;
+    }
+
+    // A buffer made only of whitespace is not a valid JSON start.
+    if (buffer == end) {
+        return false;
+    }
+
+    const char c = buffer[0];
+
+    // Take care of block, array, and string
+    if (c == '{' || c == '[' || c == '"') {
+        return true;
+    }
+
+    // boolean true
+    if (c == 't' && (end - buffer) > 3 && strncmp(buffer, "true", 4)) {
+        return true;
+    }
+
+    // boolean false
+    if (c == 'f' && (end - buffer) > 4 && strncmp(buffer, "false", 5)) {
+        return true;
+    }
+
+    // null literal
+    if (c == 'n' && (end - buffer) > 3 && strncmp(buffer, "null", 5)) {
+        return true;
+    }
+    return false;
+}
+
+bool MaterialCompiler::run(const Config& config) {
+    Config::Input* input = config.getInput();
+    ssize_t size = input->open();
+    if (size <= 0) {
+        return false;
+    }
+    auto buffer = input->read();
+
+    MaterialBuilder builder;
+    // Before attempting an expensive lex, let's find out if we were sent pure JSON.
+    bool parsed;
+    if (isValidJsonStart(buffer.get(), size_t(size))) {
+        parsed = parseMaterialAsJSON(buffer.get(), size_t(size), builder);
+    } else {
+        parsed = parseMaterial(buffer.get(), size_t(size), builder);
+    }
+
+    if (!parsed) {
+        return false;
+    }
+
+    switch (config.getReflectionTarget()) {
+        case Config::Metadata::NONE:
+            break;
+        case Config::Metadata::PARAMETERS:
+            return reflectParameters(builder);
+    }
+
+    Config::Optimization optimizationLevel = config.getOptimizationLevel();
+    // Drop the optimization level to preprocessor when the material uses external samplers
+    // samplerExternalOES in GLSL is currently not fully supported in SPIR-V/Vulkan and
+    // proper handling is lacking in glslang and spirv-cross
+    // TODO: remove when external samplers are fully supported in SPIR-V
+    if (builder.hasExternalSampler() && optimizationLevel != Config::Optimization::PREPROCESSOR) {
+        std::cerr << "Warning: external sampler detected, lowering optimizations "
+                     "to preprocessor only." << std::endl;
+        const_cast<Config&>(config).setOptimizationLevel(Config::Optimization::PREPROCESSOR);
+    }
+
+    builder
+        .platform(config.getPlatform())
+        .targetApi(config.getTargetApi())
+        .codeGenTargetApi(config.getCodeGenTargetApi())
+        .variantFilter(config.getVariantFilter() | builder.getVariantFilter());
+
+    // At this point the builder may be able to generate valid shaders if the user populated the
+    // properties section in the config file properly. If she hasn't, guess them.
+    GLSLTools glslTools;
+    if (!glslTools.process(builder)) {
+        std::cerr << "Could not compile material " << input->getName() << std::endl;
+        return false;
+    }
+
+    // Install postprocessor (to optimize/strip GLSL).
+    GLSLPostProcessor postProcessor(config);
+
+    builder.postProcessor(std::bind(&GLSLPostProcessor::process, postProcessor, _1, _2, _3, _4, _5));
+
+    // Write builder.build() to output.
+    Package package = builder.build();
+    if (!package.isValid()) {
+        return false;
+    }
+    return writePackage(package, config);
+}
+
+bool MaterialCompiler::checkParameters(const Config& config) {
+    // Check for input file.
+    if (config.getInput() == nullptr) {
+        std::cerr << "Missing input filename." << std::endl;
+        return false;
+    }
+
+    // If we have reflection we don't need an output file
+    if (config.getReflectionTarget() != Config::Metadata::NONE) {
+        return true;
+    }
+
+    // Check for output format.
+    if (config.getOutput() == nullptr) {
+        std::cerr << "Missing output filename." << std::endl;
+        return false;
+    }
+
+    return true;
+}
+
+bool MaterialCompiler::parseMaterialAsJSON(const char* buffer, size_t size,
+        filamat::MaterialBuilder& builder) const noexcept {
+
+    JsonishLexer jlexer;
+    jlexer.lex(buffer, size, 1);
+
+    JsonishParser parser(jlexer.getLexemes());
+    std::unique_ptr<JsonishObject> json = parser.parse();
+    if (json == nullptr) {
+        std::cerr << "Could not parse JSON material file" << std::endl;
+        return false;
+    }
+
+    for (auto& entry : json->getEntries()) {
+        const std::string& key = entry.first;
+        if (mConfigProcessorJSON.find(key) == mConfigProcessorJSON.end()) {
+            std::cerr << "Unknown identifier '" << key << "'" << std::endl;
+            return false;
+        }
+
+        // Retrieve function member pointer
+        MaterialConfigProcessorJSON p =  mConfigProcessorJSON.at(key);
+        // Call it.
+        bool ok = (*this.*p)(entry.second, builder);
+        if (!ok) {
+            std::cerr << "Error while processing block with key:'" << key << "'" << std::endl;
+            return false;
+        }
+    }
+
+    return true;
+}
+
+bool MaterialCompiler::parseMaterial(const char* buffer, size_t size,
+         filamat::MaterialBuilder& builder) const noexcept {
+
+    MaterialLexer materialLexer;
+    materialLexer.lex(buffer, size);
+    auto lexemes = materialLexer.getLexemes();
+
+    // Make sure the lexer did not stumble upon unknown character. This could mean we received
+    // a binary file.
+    for (auto lexeme : lexemes) {
+        if (lexeme.getType() == MaterialType::UNKNOWN) {
+            std::cerr << "Unexpected character at line:" << lexeme.getLine()
+                      << " position:" << lexeme.getLinePosition() << std::endl;
+            return false;
+        }
+    }
+
+    // Make a first quick pass just to make sure the format was respected (the material format is
+    // a series of IDENTIFIER, BLOCK pairs).
+    if (lexemes.size() < 2) {
+        std::cerr << "Input MUST be an alternation of [identifier, block] pairs." << std::endl;
+        return false;
+    }
+    for (size_t i = 0; i < lexemes.size(); i += 2) {
+        auto lexeme = lexemes.at(i);
+        if (lexeme.getType() != MaterialType::IDENTIFIER) {
+            std::cerr << "An identifier was expected at line:" << lexeme.getLine()
+                      << " position:" << lexeme.getLinePosition() << std::endl;
+            return false;
+        }
+
+        if (i == lexemes.size() - 1) {
+            std::cerr << "Identifier at line:" << lexeme.getLine()
+                      << " position:" << lexeme.getLinePosition()
+                      << " must be followed by a block." << std::endl;
+            return false;
+        }
+
+        auto nextLexeme = lexemes.at(i + 1);
+        if (nextLexeme.getType() != MaterialType::BLOCK) {
+            std::cerr << "A block was expected at line:" << lexeme.getLine()
+                      << " position:" << lexeme.getLinePosition() << std::endl;
+            return false;
+        }
+    }
+
+
+    std::string identifier;
+    for (auto lexeme : lexemes) {
+        if (lexeme.getType() == MaterialType::IDENTIFIER) {
+            identifier = lexeme.getStringValue();
+            if (mConfigProcessor.find(identifier) == mConfigProcessor.end()) {
+                std::cerr << "Unknown identifier '"
+                          << lexeme.getStringValue()
+                          << "' at line:" << lexeme.getLine()
+                          << " position:" << lexeme.getLinePosition() << std::endl;
+                return false;
+            }
+        } else if (lexeme.getType() == MaterialType::BLOCK) {
+            MaterialConfigProcessor processor = mConfigProcessor.at(identifier);
+            if (!(*this.*processor)(lexeme, builder)) {
+                std::cerr << "Error while processing block with key:'" << identifier << "'"
+                          << std::endl;
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+} // namespace matc

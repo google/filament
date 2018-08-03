@@ -1,0 +1,70 @@
+#pragma clang diagnostic ignored "-Wunused-variable"
+
+#include <metal_stdlib>
+#include <simd/simd.h>
+#include <metal_atomic>
+
+using namespace metal;
+
+struct SSBO
+{
+    uint u32;
+    int i32;
+};
+
+kernel void main0(device SSBO& ssbo [[buffer(2)]])
+{
+    threadgroup uint shared_u32;
+    threadgroup int shared_i32;
+    uint _16 = atomic_fetch_add_explicit((volatile device atomic_uint*)&ssbo.u32, 1u, memory_order_relaxed);
+    uint _18 = atomic_fetch_or_explicit((volatile device atomic_uint*)&ssbo.u32, 1u, memory_order_relaxed);
+    uint _20 = atomic_fetch_xor_explicit((volatile device atomic_uint*)&ssbo.u32, 1u, memory_order_relaxed);
+    uint _22 = atomic_fetch_and_explicit((volatile device atomic_uint*)&ssbo.u32, 1u, memory_order_relaxed);
+    uint _24 = atomic_fetch_min_explicit((volatile device atomic_uint*)&ssbo.u32, 1u, memory_order_relaxed);
+    uint _26 = atomic_fetch_max_explicit((volatile device atomic_uint*)&ssbo.u32, 1u, memory_order_relaxed);
+    uint _28 = atomic_exchange_explicit((volatile device atomic_uint*)&ssbo.u32, 1u, memory_order_relaxed);
+    uint _32;
+    do
+    {
+        _32 = 10u;
+    } while (!atomic_compare_exchange_weak_explicit((volatile device atomic_uint*)&ssbo.u32, &_32, 2u, memory_order_relaxed, memory_order_relaxed));
+    int _36 = atomic_fetch_add_explicit((volatile device atomic_int*)&ssbo.i32, 1, memory_order_relaxed);
+    int _38 = atomic_fetch_or_explicit((volatile device atomic_int*)&ssbo.i32, 1, memory_order_relaxed);
+    int _40 = atomic_fetch_xor_explicit((volatile device atomic_int*)&ssbo.i32, 1, memory_order_relaxed);
+    int _42 = atomic_fetch_and_explicit((volatile device atomic_int*)&ssbo.i32, 1, memory_order_relaxed);
+    int _44 = atomic_fetch_min_explicit((volatile device atomic_int*)&ssbo.i32, 1, memory_order_relaxed);
+    int _46 = atomic_fetch_max_explicit((volatile device atomic_int*)&ssbo.i32, 1, memory_order_relaxed);
+    int _48 = atomic_exchange_explicit((volatile device atomic_int*)&ssbo.i32, 1, memory_order_relaxed);
+    int _52;
+    do
+    {
+        _52 = 10;
+    } while (!atomic_compare_exchange_weak_explicit((volatile device atomic_int*)&ssbo.i32, &_52, 2, memory_order_relaxed, memory_order_relaxed));
+    shared_u32 = 10u;
+    shared_i32 = 10;
+    uint _57 = atomic_fetch_add_explicit((volatile threadgroup atomic_uint*)&shared_u32, 1u, memory_order_relaxed);
+    uint _58 = atomic_fetch_or_explicit((volatile threadgroup atomic_uint*)&shared_u32, 1u, memory_order_relaxed);
+    uint _59 = atomic_fetch_xor_explicit((volatile threadgroup atomic_uint*)&shared_u32, 1u, memory_order_relaxed);
+    uint _60 = atomic_fetch_and_explicit((volatile threadgroup atomic_uint*)&shared_u32, 1u, memory_order_relaxed);
+    uint _61 = atomic_fetch_min_explicit((volatile threadgroup atomic_uint*)&shared_u32, 1u, memory_order_relaxed);
+    uint _62 = atomic_fetch_max_explicit((volatile threadgroup atomic_uint*)&shared_u32, 1u, memory_order_relaxed);
+    uint _63 = atomic_exchange_explicit((volatile threadgroup atomic_uint*)&shared_u32, 1u, memory_order_relaxed);
+    uint _64;
+    do
+    {
+        _64 = 10u;
+    } while (!atomic_compare_exchange_weak_explicit((volatile threadgroup atomic_uint*)&shared_u32, &_64, 2u, memory_order_relaxed, memory_order_relaxed));
+    int _65 = atomic_fetch_add_explicit((volatile threadgroup atomic_int*)&shared_i32, 1, memory_order_relaxed);
+    int _66 = atomic_fetch_or_explicit((volatile threadgroup atomic_int*)&shared_i32, 1, memory_order_relaxed);
+    int _67 = atomic_fetch_xor_explicit((volatile threadgroup atomic_int*)&shared_i32, 1, memory_order_relaxed);
+    int _68 = atomic_fetch_and_explicit((volatile threadgroup atomic_int*)&shared_i32, 1, memory_order_relaxed);
+    int _69 = atomic_fetch_min_explicit((volatile threadgroup atomic_int*)&shared_i32, 1, memory_order_relaxed);
+    int _70 = atomic_fetch_max_explicit((volatile threadgroup atomic_int*)&shared_i32, 1, memory_order_relaxed);
+    int _71 = atomic_exchange_explicit((volatile threadgroup atomic_int*)&shared_i32, 1, memory_order_relaxed);
+    int _72;
+    do
+    {
+        _72 = 10;
+    } while (!atomic_compare_exchange_weak_explicit((volatile threadgroup atomic_int*)&shared_i32, &_72, 2, memory_order_relaxed, memory_order_relaxed));
+}
+

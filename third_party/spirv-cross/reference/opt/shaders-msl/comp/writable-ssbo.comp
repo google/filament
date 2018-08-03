@@ -1,0 +1,26 @@
+#pragma clang diagnostic ignored "-Wmissing-prototypes"
+
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct myBlock
+{
+    int a;
+    float b;
+};
+
+// Implementation of the GLSL mod() function, which is slightly different than Metal fmod()
+template<typename Tx, typename Ty>
+Tx mod(Tx x, Ty y)
+{
+    return x - y * floor(x / y);
+}
+
+kernel void main0(device myBlock& myStorage [[buffer(0)]])
+{
+    myStorage.a = (myStorage.a + 1) % 256;
+    myStorage.b = mod(myStorage.b + 0.0199999995529651641845703125, 1.0);
+}
+

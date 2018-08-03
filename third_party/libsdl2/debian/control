@@ -1,0 +1,76 @@
+Source: libsdl2
+Priority: optional
+Section: libs
+Maintainer: Debian SDL packages maintainers <pkg-sdl-maintainers@lists.alioth.debian.org>
+Uploaders: Barry deFreese <bdefreese@debian.org>,
+           Sam Hocevar <sho@debian.org>,
+           Manuel A. Fernandez Montecelo <manuel.montezelo@gmail.com>,
+           Felix Geyer <fgeyer@debian.org>,
+           Sam Lantinga <slouken@libsdl.org>
+Standards-Version: 3.9.3
+Build-Depends: debhelper (>= 9),
+               dh-autoreconf,
+               dpkg-dev (>= 1.16.1~),
+               fcitx-libs-dev [linux-any],
+               libasound2-dev [linux-any],
+               libgl1-mesa-dev,
+               libpulse-dev,
+               libudev-dev [linux-any],
+               libdbus-1-dev [linux-any],
+               libibus-1.0-dev[linux-any],
+               libusb2-dev [kfreebsd-any],
+               libusbhid-dev [kfreebsd-any],
+               libx11-dev,
+               libxcursor-dev,
+               libxext-dev,
+               libxi-dev,
+               libxinerama-dev,
+               libxrandr-dev,
+               libxss-dev,
+               libxxf86vm-dev
+Homepage: http://www.libsdl.org/
+
+Package: libsdl2
+Architecture: any
+Multi-Arch: same
+Pre-Depends: ${misc:Pre-Depends}
+Depends: ${misc:Depends},
+         ${shlibs:Depends},
+         libudev0 [linux-any],
+         libdbus-1-3 [linux-any]
+Conflicts: libsdl-1.3-0
+Replaces: libsdl-1.3-0
+Description: Simple DirectMedia Layer
+ SDL is a library that allows programs portable low level access to
+ a video framebuffer, audio output, mouse, and keyboard.
+ .
+ This package contains the shared library, compiled with X11 graphics drivers and OSS, ALSA and PulseAudio sound drivers.
+
+Package: libsdl2-dev
+Section: libdevel
+Architecture: any
+Multi-Arch: same
+Depends: ${misc:Depends},
+         libsdl2 (= ${binary:Version}),
+         libc6-dev,
+         libgl1-mesa-dev
+Conflicts: libsdl-1.3-dev
+Replaces: libsdl-1.3-dev
+Description: Simple DirectMedia Layer development files
+ SDL is a library that allows programs portable low level access to a video
+ framebuffer, audio output, mouse, and keyboard.
+ .
+ This package contains files needed if you wish to use the SDL library in your own programs.
+
+Package: libsdl2-dbg
+Priority: extra
+Section: debug
+Architecture: any
+Multi-Arch: same
+Depends: ${misc:Depends},
+         libsdl2 (= ${binary:Version}),
+Description: Simple DirectMedia Layer debug files
+ SDL is a library that allows programs portable low level access to a video
+ framebuffer, audio output, mouse, and keyboard.
+ .
+ This package contains the debug symbols for the SDL library.

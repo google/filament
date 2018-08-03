@@ -1,0 +1,4 @@
+code/*.{%{cpp}}
+contrib/**/*.{%{cpp}}
+include/**/*.{%{cpp}}
+test/**/*.{%{cpp}}

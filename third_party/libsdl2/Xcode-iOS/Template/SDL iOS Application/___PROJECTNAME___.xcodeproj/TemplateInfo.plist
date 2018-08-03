@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Description</key>
+	<string>This project builds an SDL based project for iPhone OS using C or Objective-C.  It includes everything you need to get up and running with SDL on iPhone.</string>
+	<key>CFBundleIconFile</key>
+	<string>Icon.png</string>
+</dict>
+</plist>

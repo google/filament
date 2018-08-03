@@ -1,0 +1,9 @@
+#version 450
+layout(set = 0, binding = 0) buffer myBlock {
+    int a;
+    float b[1];
+} myStorage;
+void main() {
+    myStorage.a = (myStorage.a + 1) % 256;
+    myStorage.b[gl_LocalInvocationIndex.x] = mod((myStorage.b[gl_LocalInvocationIndex.x] + 0.02), 1.0);
+}

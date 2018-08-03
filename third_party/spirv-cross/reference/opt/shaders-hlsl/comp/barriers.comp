@@ -1,0 +1,26 @@
+static const uint3 gl_WorkGroupSize = uint3(4u, 1u, 1u);
+
+void comp_main()
+{
+    GroupMemoryBarrier();
+    AllMemoryBarrier();
+    DeviceMemoryBarrier();
+    DeviceMemoryBarrier();
+    AllMemoryBarrier();
+    GroupMemoryBarrierWithGroupSync();
+    AllMemoryBarrier();
+    GroupMemoryBarrierWithGroupSync();
+    DeviceMemoryBarrier();
+    GroupMemoryBarrierWithGroupSync();
+    DeviceMemoryBarrier();
+    GroupMemoryBarrierWithGroupSync();
+    AllMemoryBarrier();
+    GroupMemoryBarrierWithGroupSync();
+    GroupMemoryBarrierWithGroupSync();
+}
+
+[numthreads(4, 1, 1)]
+void main()
+{
+    comp_main();
+}

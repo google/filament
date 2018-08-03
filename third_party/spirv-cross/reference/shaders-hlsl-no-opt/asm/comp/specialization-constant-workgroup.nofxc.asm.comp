@@ -1,0 +1,16 @@
+static const uint _5 = 9u;
+static const uint _6 = 4u;
+static const uint3 gl_WorkGroupSize = uint3(_5, 20u, _6);
+
+RWByteAddressBuffer _4 : register(u0);
+
+void comp_main()
+{
+    _4.Store(0, asuint(asfloat(_4.Load(0)) + 1.0f));
+}
+
+[numthreads(9, 20, 4)]
+void main()
+{
+    comp_main();
+}

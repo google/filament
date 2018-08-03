@@ -1,0 +1,25 @@
+build/*
+*/Debug/*
+*/Release/*
+*/ipch/*
+*/x64/*
+*.opensdf
+*.sdf
+*.suo
+*.vcxproj.user
+*.o
+*.obj
+*.exe
+*.pdb
+*.ilk
+*.VC.db
+*.VC.VC.opendb
+
+## Unix executables
+opengl2_example/opengl2_example
+opengl3_example/opengl3_example
+sdl_opengl2_example/sdl_opengl2_example
+sdl_opengl3_example/sdl_opengl3_example
+
+## Dear ImGui Ini files
+imgui.ini

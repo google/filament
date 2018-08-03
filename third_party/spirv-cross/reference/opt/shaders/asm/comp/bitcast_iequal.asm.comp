@@ -1,0 +1,33 @@
+#version 310 es
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+
+layout(binding = 0, std430) buffer _3_5
+{
+    ivec4 _m0;
+    uvec4 _m1;
+} _5;
+
+layout(binding = 1, std430) buffer _4_6
+{
+    uvec4 _m0;
+    ivec4 _m1;
+} _6;
+
+void main()
+{
+    ivec4 _30 = _5._m0;
+    uvec4 _31 = _5._m1;
+    bvec4 _34 = equal(ivec4(_31), _30);
+    bvec4 _35 = equal(_30, ivec4(_31));
+    bvec4 _36 = equal(_31, _31);
+    bvec4 _37 = equal(_30, _30);
+    _6._m0 = mix(uvec4(0u), uvec4(1u), _34);
+    _6._m0 = mix(uvec4(0u), uvec4(1u), _35);
+    _6._m0 = mix(uvec4(0u), uvec4(1u), _36);
+    _6._m0 = mix(uvec4(0u), uvec4(1u), _37);
+    _6._m1 = mix(ivec4(0), ivec4(1), _34);
+    _6._m1 = mix(ivec4(0), ivec4(1), _35);
+    _6._m1 = mix(ivec4(0), ivec4(1), _36);
+    _6._m1 = mix(ivec4(0), ivec4(1), _37);
+}
+

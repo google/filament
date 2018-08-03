@@ -1,0 +1,18 @@
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+kernel void main0(uint gl_LocalInvocationIndex [[thread_index_in_threadgroup]])
+{
+    threadgroup int u;
+    u = 50;
+    if (gl_LocalInvocationIndex == 0u)
+    {
+    }
+    else
+    {
+        u = 20;
+    }
+}
+

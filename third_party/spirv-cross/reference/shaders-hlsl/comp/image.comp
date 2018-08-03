@@ -1,0 +1,71 @@
+RWTexture2D<float> uImageInF : register(u0);
+RWTexture2D<float> uImageOutF : register(u1);
+RWTexture2D<int> uImageInI : register(u2);
+RWTexture2D<int> uImageOutI : register(u3);
+RWTexture2D<uint> uImageInU : register(u4);
+RWTexture2D<uint> uImageOutU : register(u5);
+RWBuffer<float> uImageInBuffer : register(u6);
+RWBuffer<float> uImageOutBuffer : register(u7);
+RWTexture2D<float2> uImageInF2 : register(u8);
+RWTexture2D<float2> uImageOutF2 : register(u9);
+RWTexture2D<int2> uImageInI2 : register(u10);
+RWTexture2D<int2> uImageOutI2 : register(u11);
+RWTexture2D<uint2> uImageInU2 : register(u12);
+RWTexture2D<uint2> uImageOutU2 : register(u13);
+RWBuffer<float2> uImageInBuffer2 : register(u14);
+RWBuffer<float2> uImageOutBuffer2 : register(u15);
+RWTexture2D<float4> uImageInF4 : register(u16);
+RWTexture2D<float4> uImageOutF4 : register(u17);
+RWTexture2D<int4> uImageInI4 : register(u18);
+RWTexture2D<int4> uImageOutI4 : register(u19);
+RWTexture2D<uint4> uImageInU4 : register(u20);
+RWTexture2D<uint4> uImageOutU4 : register(u21);
+RWBuffer<float4> uImageInBuffer4 : register(u22);
+RWBuffer<float4> uImageOutBuffer4 : register(u23);
+RWTexture2D<float4> uImageNoFmtF : register(u24);
+RWTexture2D<uint4> uImageNoFmtU : register(u25);
+RWTexture2D<int4> uImageNoFmtI : register(u26);
+
+static uint3 gl_GlobalInvocationID;
+struct SPIRV_Cross_Input
+{
+    uint3 gl_GlobalInvocationID : SV_DispatchThreadID;
+};
+
+void comp_main()
+{
+    float4 f = uImageInF[int2(gl_GlobalInvocationID.xy)].xxxx;
+    uImageOutF[int2(gl_GlobalInvocationID.xy)] = f.x;
+    int4 i = uImageInI[int2(gl_GlobalInvocationID.xy)].xxxx;
+    uImageOutI[int2(gl_GlobalInvocationID.xy)] = i.x;
+    uint4 u = uImageInU[int2(gl_GlobalInvocationID.xy)].xxxx;
+    uImageOutU[int2(gl_GlobalInvocationID.xy)] = u.x;
+    float4 b = uImageInBuffer[int(gl_GlobalInvocationID.x)].xxxx;
+    uImageOutBuffer[int(gl_GlobalInvocationID.x)] = b.x;
+    float4 f2 = uImageInF2[int2(gl_GlobalInvocationID.xy)].xyyy;
+    uImageOutF2[int2(gl_GlobalInvocationID.xy)] = f2.xy;
+    int4 i2 = uImageInI2[int2(gl_GlobalInvocationID.xy)].xyyy;
+    uImageOutI2[int2(gl_GlobalInvocationID.xy)] = i2.xy;
+    uint4 u2 = uImageInU2[int2(gl_GlobalInvocationID.xy)].xyyy;
+    uImageOutU2[int2(gl_GlobalInvocationID.xy)] = u2.xy;
+    float4 b2 = uImageInBuffer2[int(gl_GlobalInvocationID.x)].xyyy;
+    uImageOutBuffer2[int(gl_GlobalInvocationID.x)] = b2.xy;
+    float4 f4 = uImageInF4[int2(gl_GlobalInvocationID.xy)];
+    uImageOutF4[int2(gl_GlobalInvocationID.xy)] = f4;
+    int4 i4 = uImageInI4[int2(gl_GlobalInvocationID.xy)];
+    uImageOutI4[int2(gl_GlobalInvocationID.xy)] = i4;
+    uint4 u4 = uImageInU4[int2(gl_GlobalInvocationID.xy)];
+    uImageOutU4[int2(gl_GlobalInvocationID.xy)] = u4;
+    float4 b4 = uImageInBuffer4[int(gl_GlobalInvocationID.x)];
+    uImageOutBuffer4[int(gl_GlobalInvocationID.x)] = b4;
+    uImageNoFmtF[int2(gl_GlobalInvocationID.xy)] = b2;
+    uImageNoFmtU[int2(gl_GlobalInvocationID.xy)] = u4;
+    uImageNoFmtI[int2(gl_GlobalInvocationID.xy)] = i4;
+}
+
+[numthreads(1, 1, 1)]
+void main(SPIRV_Cross_Input stage_input)
+{
+    gl_GlobalInvocationID = stage_input.gl_GlobalInvocationID;
+    comp_main();
+}

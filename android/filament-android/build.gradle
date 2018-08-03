@@ -1,0 +1,88 @@
+// This script accepts the following parameters:
+//
+// filament_dist_dir
+//     Path to the Filament distribution/install directory (produced by make/ninja install)
+//
+// Example:
+//     ./gradlew -Pfilament_dist_dir=../../dist-release assembleRelease
+
+buildscript {
+    repositories {
+        google()
+        jcenter()
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:3.0.1'
+    }
+}
+
+allprojects {
+    repositories {
+        google()
+        jcenter()
+    }
+}
+
+apply plugin: 'com.android.library'
+
+def filament_path = file("../../out/release/filament").absolutePath
+if (project.hasProperty("filament_dist_dir")) {
+    filament_path = file("$filament_dist_dir").absolutePath
+}
+
+android {
+    compileSdkVersion 26
+    defaultConfig {
+        minSdkVersion 14
+        targetSdkVersion 26
+        versionCode 1
+        versionName "1.0"
+
+        testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+
+        externalNativeBuild {
+            cmake {
+                arguments.add("-DANDROID_PIE=ON")
+                arguments.add("-DANDROID_PLATFORM=android-24")
+                arguments.add("-DANDROID_STL=c++_static")
+                arguments.add("-DFILAMENT_DIST_DIR=${filament_path}".toString())
+                cppFlags.add("-std=c++14")
+                if (project.hasProperty('extra_cmake_args')) {
+                    arguments.add(extra_cmake_args)
+                }
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    externalNativeBuild {
+        cmake {
+            path "CMakeLists.txt"
+        }
+    }
+
+    sourceSets {
+        main {
+            jni.srcDirs "src/main/cpp"
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+}
+
+dependencies {
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    implementation 'com.android.support:support-annotations:27.0.2'
+}
+
+group = "com.google.android.filament"
+version = "0.1"

@@ -1,0 +1,67 @@
+RWByteAddressBuffer _9 : register(u0, space0);
+
+static uint4 gl_SubgroupEqMask;
+static uint4 gl_SubgroupGeMask;
+static uint4 gl_SubgroupGtMask;
+static uint4 gl_SubgroupLeMask;
+static uint4 gl_SubgroupLtMask;
+void comp_main()
+{
+    _9.Store(0, asuint(float(WaveGetLaneCount())));
+    _9.Store(0, asuint(float(WaveGetLaneIndex())));
+    _9.Store(0, asuint(float4(gl_SubgroupEqMask).x));
+    _9.Store(0, asuint(float4(gl_SubgroupGeMask).x));
+    _9.Store(0, asuint(float4(gl_SubgroupGtMask).x));
+    _9.Store(0, asuint(float4(gl_SubgroupLeMask).x));
+    _9.Store(0, asuint(float4(gl_SubgroupLtMask).x));
+    uint4 _75 = WaveActiveBallot(true);
+    float4 _88 = WaveActiveSum(20.0f.xxxx);
+    int4 _94 = WaveActiveSum(int4(20, 20, 20, 20));
+    float4 _96 = WaveActiveProduct(20.0f.xxxx);
+    int4 _98 = WaveActiveProduct(int4(20, 20, 20, 20));
+    float4 _127 = WavePrefixProduct(_96) * _96;
+    int4 _129 = WavePrefixProduct(_98) * _98;
+}
+
+[numthreads(1, 1, 1)]
+void main()
+{
+    gl_SubgroupEqMask = 1u << (WaveGetLaneIndex() - uint4(0, 32, 64, 96));
+    if (WaveGetLaneIndex() >= 32) gl_SubgroupEqMask.x = 0;
+    if (WaveGetLaneIndex() >= 64 || WaveGetLaneIndex() < 32) gl_SubgroupEqMask.y = 0;
+    if (WaveGetLaneIndex() >= 96 || WaveGetLaneIndex() < 64) gl_SubgroupEqMask.z = 0;
+    if (WaveGetLaneIndex() < 96) gl_SubgroupEqMask.w = 0;
+    gl_SubgroupGeMask = ~((1u << (WaveGetLaneIndex() - uint4(0, 32, 64, 96))) - 1u);
+    if (WaveGetLaneIndex() >= 32) gl_SubgroupGeMask.x = 0u;
+    if (WaveGetLaneIndex() >= 64) gl_SubgroupGeMask.y = 0u;
+    if (WaveGetLaneIndex() >= 96) gl_SubgroupGeMask.z = 0u;
+    if (WaveGetLaneIndex() < 32) gl_SubgroupGeMask.y = ~0u;
+    if (WaveGetLaneIndex() < 64) gl_SubgroupGeMask.z = ~0u;
+    if (WaveGetLaneIndex() < 96) gl_SubgroupGeMask.w = ~0u;
+    uint gt_lane_index = WaveGetLaneIndex() + 1;
+    gl_SubgroupGtMask = ~((1u << (gt_lane_index - uint4(0, 32, 64, 96))) - 1u);
+    if (gt_lane_index >= 32) gl_SubgroupGtMask.x = 0u;
+    if (gt_lane_index >= 64) gl_SubgroupGtMask.y = 0u;
+    if (gt_lane_index >= 96) gl_SubgroupGtMask.z = 0u;
+    if (gt_lane_index >= 128) gl_SubgroupGtMask.w = 0u;
+    if (gt_lane_index < 32) gl_SubgroupGtMask.y = ~0u;
+    if (gt_lane_index < 64) gl_SubgroupGtMask.z = ~0u;
+    if (gt_lane_index < 96) gl_SubgroupGtMask.w = ~0u;
+    uint le_lane_index = WaveGetLaneIndex() + 1;
+    gl_SubgroupLeMask = (1u << (le_lane_index - uint4(0, 32, 64, 96))) - 1u;
+    if (le_lane_index >= 32) gl_SubgroupLeMask.x = ~0u;
+    if (le_lane_index >= 64) gl_SubgroupLeMask.y = ~0u;
+    if (le_lane_index >= 96) gl_SubgroupLeMask.z = ~0u;
+    if (le_lane_index >= 128) gl_SubgroupLeMask.w = ~0u;
+    if (le_lane_index < 32) gl_SubgroupLeMask.y = 0u;
+    if (le_lane_index < 64) gl_SubgroupLeMask.z = 0u;
+    if (le_lane_index < 96) gl_SubgroupLeMask.w = 0u;
+    gl_SubgroupLtMask = (1u << (WaveGetLaneIndex() - uint4(0, 32, 64, 96))) - 1u;
+    if (WaveGetLaneIndex() >= 32) gl_SubgroupLtMask.x = ~0u;
+    if (WaveGetLaneIndex() >= 64) gl_SubgroupLtMask.y = ~0u;
+    if (WaveGetLaneIndex() >= 96) gl_SubgroupLtMask.z = ~0u;
+    if (WaveGetLaneIndex() < 32) gl_SubgroupLtMask.y = 0u;
+    if (WaveGetLaneIndex() < 64) gl_SubgroupLtMask.z = 0u;
+    if (WaveGetLaneIndex() < 96) gl_SubgroupLtMask.w = 0u;
+    comp_main();
+}

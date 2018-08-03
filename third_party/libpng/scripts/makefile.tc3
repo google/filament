@@ -1,0 +1,100 @@
+# Makefile for libpng
+# TurboC/C++ (Note: All modules are compiled in C mode)
+
+# To use, do "make -fmakefile.tc3"
+
+# ----- Turbo C++ 3.0 -----
+
+MODEL=l
+CPPFLAGS=-I..\zlib
+CFLAGS=-O2 -Z -m$(MODEL)
+CC=tcc
+LD=tcc
+LIB=tlib
+LDFLAGS=-m$(MODEL) -L..\zlib
+CP=copy
+
+# Pre-built configuration
+# See scripts\pnglibconf.mak for more options
+!ifndef PNGLIBCONF_H_PREBUILT
+PNGLIBCONF_H_PREBUILT = scripts\pnglibconf.h.prebuilt
+!endif
+
+O=.obj
+E=.exe
+
+# variables
+OBJS1 = png$(O) pngset$(O) pngget$(O) pngrutil$(O) pngtrans$(O) pngwutil$(O)
+OBJS2 = pngmem$(O) pngpread$(O) pngread$(O) pngerror$(O) pngwrite$(O)
+OBJS3 = pngrtran$(O) pngwtran$(O) pngrio$(O) pngwio$(O)
+OBJSL1 = +png$(O) +pngset$(O) +pngget$(O) +pngrutil$(O) +pngtrans$(O)
+OBJSL2 = +pngwutil$(O) +pngmem$(O) +pngpread$(O) +pngread$(O) +pngerror$(O)
+OBJSL3 = +pngwrite$(O) +pngrtran$(O) +pngwtran$(O) +pngrio$(O) +pngwio$(O)
+
+all: libpng$(MODEL).lib pngtest$(E)
+
+pnglibconf.h: $(PNGLIBCONF_H_PREBUILT)
+	$(CP) $(PNGLIBCONF_H_PREBUILT) $@
+
+pngtest: pngtest$(E)
+
+test: pngtest$(E)
+	pngtest$(E)
+
+png$(O): png.h pngconf.h pnglibconf.h pngpriv.h pngstruct.h pnginfo.h pngdebug.h
+		  $(CC) -c $(CPPFLAGS) $(CFLAGS) $*.c
+
+pngset$(O): png.h pngconf.h pnglibconf.h pngpriv.h pngstruct.h pnginfo.h pngdebug.h
+		  $(CC) -c $(CPPFLAGS) $(CFLAGS) $*.c
+
+pngget$(O): png.h pngconf.h pnglibconf.h pngpriv.h pngstruct.h pnginfo.h pngdebug.h
+		  $(CC) -c $(CPPFLAGS) $(CFLAGS) $*.c
+
+pngread$(O): png.h pngconf.h pnglibconf.h pngpriv.h pngstruct.h pnginfo.h pngdebug.h
+		  $(CC) -c $(CPPFLAGS) $(CFLAGS) $*.c
+
+pngpread$(O): png.h pngconf.h pnglibconf.h pngpriv.h pngstruct.h pnginfo.h pngdebug.h
+		  $(CC) -c $(CPPFLAGS) $(CFLAGS) $*.c
+
+pngrtran$(O): png.h pngconf.h pnglibconf.h pngpriv.h pngstruct.h pnginfo.h pngdebug.h
+		  $(CC) -c $(CPPFLAGS) $(CFLAGS) $*.c
+
+pngrutil$(O): png.h pngconf.h pnglibconf.h pngpriv.h pngstruct.h pnginfo.h pngdebug.h
+		  $(CC) -c $(CPPFLAGS) $(CFLAGS) $*.c
+
+pngerror$(O): png.h pngconf.h pnglibconf.h pngpriv.h pngstruct.h pnginfo.h pngdebug.h
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $*.c
+
+pngmem$(O): png.h pngconf.h pnglibconf.h pngpriv.h pngstruct.h pnginfo.h pngdebug.h
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $*.c
+
+pngrio$(O): png.h pngconf.h pnglibconf.h pngpriv.h pngstruct.h pnginfo.h pngdebug.h
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $*.c
+
+pngwio$(O): png.h pngconf.h pnglibconf.h pngpriv.h pngstruct.h pnginfo.h pngdebug.h
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $*.c
+
+pngtest$(O): png.h pngconf.h pnglibconf.h
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $*.c
+
+pngtrans$(O): png.h pngconf.h pnglibconf.h pngpriv.h pngstruct.h pnginfo.h pngdebug.h
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $*.c
+
+pngwrite$(O): png.h pngconf.h pnglibconf.h pngpriv.h pngstruct.h pnginfo.h pngdebug.h
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $*.c
+
+pngwtran$(O): png.h pngconf.h pnglibconf.h pngpriv.h pngstruct.h pnginfo.h pngdebug.h
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $*.c
+
+pngwutil$(O): png.h pngconf.h pnglibconf.h pngpriv.h pngstruct.h pnginfo.h pngdebug.h
+	$(CC) -c $(CPPFLAGS) $(CFLAGS) $*.c
+
+libpng$(MODEL).lib: $(OBJS1) $(OBJS2) $(OBJS3)
+	$(LIB) libpng$(MODEL) +$(OBJSL1)
+	$(LIB) libpng$(MODEL) +$(OBJSL2)
+	$(LIB) libpng$(MODEL) +$(OBJSL3)
+
+pngtest$(E): pngtest$(O) libpng$(MODEL).lib
+	$(LD) $(LDFLAGS) pngtest.obj libpng$(MODEL).lib zlib_$(MODEL).lib
+
+# End of makefile for libpng

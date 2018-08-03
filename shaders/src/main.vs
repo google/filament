@@ -1,0 +1,81 @@
+void main() {
+    // Initialize the inputs to sensible default values, see common_material.vs
+    MaterialVertexInputs material;
+    initMaterialVertex(material);
+
+#if defined(HAS_ATTRIBUTE_TANGENTS)
+    // If the material defines a value for the "normal" property, we need to output
+    // the full orthonormal basis to apply normal mapping
+    #if defined(MATERIAL_HAS_ANISOTROPY) || defined(MATERIAL_HAS_NORMAL)
+        // Extract the normal and tangent in world space from the input quaternion
+        // We encode the orthonormal basis as a quaternion to save space in the attributes
+        toTangentFrame(normalize(mesh_tangents), material.worldNormal, vertex_worldTangent);
+        vertex_worldTangent = objectUniforms.worldFromModelNormalMatrix * vertex_worldTangent;
+        material.worldNormal = objectUniforms.worldFromModelNormalMatrix * material.worldNormal;
+        #if defined(HAS_SKINNING)
+            skinNormal(material.worldNormal, mesh_bone_indices, mesh_bone_weights);
+            skinNormal(vertex_worldTangent, mesh_bone_indices, mesh_bone_weights);
+        #endif
+        // Reconstruct the bitangent from the normal and tangent. We don't bother with
+        // normalization here since we'll do it after interpolation in the fragment stage
+        vertex_worldBitangent = cross(material.worldNormal, vertex_worldTangent) * sign(mesh_tangents.w);
+    #else // MATERIAL_HAS_ANISOTROPY || MATERIAL_HAS_NORMAL
+        // Without anisotropy or normal mapping we only need the normal vector
+        toTangentFrame(normalize(mesh_tangents), material.worldNormal);
+        material.worldNormal = objectUniforms.worldFromModelNormalMatrix * material.worldNormal;
+        #if defined(HAS_SKINNING)
+            skinNormal(material.worldNormal, mesh_bone_indices, mesh_bone_weights);
+        #endif
+    #endif // MATERIAL_HAS_ANISOTROPY || MATERIAL_HAS_NORMAL
+
+#ifdef GEOMETRIC_SPECULAR_AA_NORMAL
+    vertex_worldNormalCentroid = material.worldNormal;
+#endif // GEOMETRIC_SPECULAR_AA_NORMAL
+
+#endif // HAS_ATTRIBUTE_TANGENTS
+
+    // Invoke user code
+    materialVertex(material);
+
+    // Handle built-in interpolated attributes
+#if defined(HAS_ATTRIBUTE_COLOR)
+    vertex_color = material.color;
+#endif
+#if defined(HAS_ATTRIBUTE_UV0)
+    vertex_uv01.xy = material.uv0;
+#endif
+#if defined(HAS_ATTRIBUTE_UV1)
+    vertex_uv01.zw = material.uv1;
+#endif
+
+    // Handle user-defined interpolated attributes
+#if defined(VARIABLE_CUSTOM0)
+    VARIABLE_CUSTOM_AT0 = material.VARIABLE_CUSTOM0;
+#endif
+#if defined(VARIABLE_CUSTOM1)
+    VARIABLE_CUSTOM_AT1 = material.VARIABLE_CUSTOM1;
+#endif
+#if defined(VARIABLE_CUSTOM2)
+    VARIABLE_CUSTOM_AT2 = material.VARIABLE_CUSTOM2;
+#endif
+#if defined(VARIABLE_CUSTOM3)
+    VARIABLE_CUSTOM_AT3 = material.VARIABLE_CUSTOM3;
+#endif
+
+    // The world position can be changed by the user in materialVertex()
+    vertex_worldPosition = material.worldPosition.xyz;
+#ifdef HAS_ATTRIBUTE_TANGENTS
+    vertex_worldNormal = material.worldNormal;
+#endif
+
+#if defined(HAS_SHADOWING) && defined(HAS_DIRECTIONAL_LIGHTING)
+    vertex_lightSpacePosition = getLightSpacePosition(vertex_worldPosition, vertex_worldNormal);
+#endif
+
+#if defined(VERTEX_DOMAIN_DEVICE)
+    // The other vertex domains are handled in initMaterialVertex()->computeWorldPosition()
+    gl_Position = getSkinnedPosition();
+#else
+    gl_Position = getClipFromWorldMatrix() * material.worldPosition;
+#endif
+}

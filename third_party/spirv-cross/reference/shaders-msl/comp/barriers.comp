@@ -1,0 +1,67 @@
+#pragma clang diagnostic ignored "-Wmissing-prototypes"
+
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+constant uint3 gl_WorkGroupSize = uint3(4u, 1u, 1u);
+
+void barrier_shared()
+{
+    threadgroup_barrier(mem_flags::mem_threadgroup);
+}
+
+void full_barrier()
+{
+    threadgroup_barrier(mem_flags::mem_threadgroup);
+}
+
+void buffer_barrier()
+{
+    threadgroup_barrier(mem_flags::mem_none);
+}
+
+void group_barrier()
+{
+    threadgroup_barrier(mem_flags::mem_threadgroup);
+}
+
+void barrier_shared_exec()
+{
+    threadgroup_barrier(mem_flags::mem_threadgroup);
+}
+
+void full_barrier_exec()
+{
+    threadgroup_barrier(mem_flags::mem_threadgroup);
+}
+
+void buffer_barrier_exec()
+{
+    threadgroup_barrier(mem_flags::mem_none);
+}
+
+void group_barrier_exec()
+{
+    threadgroup_barrier(mem_flags::mem_threadgroup);
+}
+
+void exec_barrier()
+{
+    threadgroup_barrier(mem_flags::mem_threadgroup);
+}
+
+kernel void main0()
+{
+    barrier_shared();
+    full_barrier();
+    buffer_barrier();
+    group_barrier();
+    barrier_shared_exec();
+    full_barrier_exec();
+    buffer_barrier_exec();
+    group_barrier_exec();
+    exec_barrier();
+}
+

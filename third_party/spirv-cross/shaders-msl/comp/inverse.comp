@@ -1,0 +1,23 @@
+#version 450
+layout(local_size_x = 1) in;
+
+layout(std430, binding = 0) writeonly buffer MatrixOut
+{
+	mat2 m2out;
+	mat3 m3out;
+	mat4 m4out;
+};
+
+layout(std430, binding = 1) readonly buffer MatrixIn
+{
+	mat2 m2in;
+	mat3 m3in;
+	mat4 m4in;
+};
+
+void main()
+{
+	m2out = inverse(m2in);
+	m3out = inverse(m3in);
+	m4out = inverse(m4in);
+}

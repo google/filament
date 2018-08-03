@@ -1,0 +1,13 @@
+#version 310 es
+layout(local_size_x = 1) in;
+
+layout(std430, binding = 0) buffer SSBO
+{
+	uvec3 outdata;
+};
+
+void main()
+{
+	outdata = gl_NumWorkGroups;
+}
+

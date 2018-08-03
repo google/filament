@@ -1,0 +1,10 @@
+#version 450
+
+layout(set = 0, binding = 0) uniform texture2D uSampler2D;
+layout(set = 0, binding = 0) uniform texture2DMS uSampler2DMS;
+layout(set = 0, binding = 0) uniform sampler SPIRV_Cross_DummySampler;
+
+void main()
+{
+}
+

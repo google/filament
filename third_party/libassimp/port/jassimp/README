@@ -1,0 +1,56 @@
+jassimp
+-------
+
+Java binding for assimp.
+
+The class model used by jassimp is not a one-to-one mapping of assimps class/
+structure model (due to performance considerations). Please read the javadoc
+descriptions of AiMesh and AiWrapperProvider.
+
+The jassimp.lwjgl package contains a LWJGL specific wrapper provider and some
+application examples using this wrapper
+
+
+
+How To Build
+------------
+
+ I) native library, for example by issuing this command in jassimp-native/src:
+
+    $ gcc jassimp.cpp -I/usr/lib/jvm/default/include/ \
+      -I/usr/lib/jvm/default/include/linux -lassimp -shared -fPIC -o libjassimp.so
+
+    libjassimp.so is required at runtime and must be located in java.library.path.
+
+II) Java binding
+    The java library is built using ant. Executing "ant" in the port/jassimp
+    directory should be sufficient to build the library including docs. You
+    still need to build the native library separately, see above
+    
+    The java build is configured to create java 1.6 classes
+
+
+
+Limitations
+-----------
+
+Not all data imports have been tested yet, especially the countless texture
+parameters. If you find bugs please report them.
+
+jassimp supports most of assimps features. Current limitations are
+* only importing scenes is supported. There are some methods that allow a
+  modification of the returned objects, but these should be considered as
+  work in progress. Full blown export support is planned for a future release 
+* no support for mesh animations
+* no support for embedded textures
+* no support for importer configurations
+* some texture related material properties are not exposed via the API but only 
+  accessible by traversing the list of properties. However this limitation is
+  also present in the c-API ...
+
+
+License
+-------
+
+The license for jassimp is the same as the main Assimp license.
+

@@ -1,0 +1,42 @@
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct SSBO
+{
+    float4x4 mvp;
+    float4 in_data[1];
+};
+
+struct SSBO2
+{
+    float4 out_data[1];
+};
+
+kernel void main0(const device SSBO& _24 [[buffer(0)]], device SSBO2& _89 [[buffer(1)]], uint3 gl_GlobalInvocationID [[thread_position_in_grid]])
+{
+    float4 _99;
+    _99 = _24.in_data[gl_GlobalInvocationID.x];
+    for (int _93 = 0; (_93 + 1) < 10; )
+    {
+        _99 *= 2.0;
+        _93 += 2;
+        continue;
+    }
+    float4 _98;
+    _98 = _99;
+    float4 _103;
+    for (uint _94 = 0u; _94 < 16u; _98 = _103, _94++)
+    {
+        _103 = _98;
+        for (uint _100 = 0u; _100 < 30u; )
+        {
+            _103 = _24.mvp * _103;
+            _100++;
+            continue;
+        }
+    }
+    _89.out_data[gl_GlobalInvocationID.x] = _98;
+}
+

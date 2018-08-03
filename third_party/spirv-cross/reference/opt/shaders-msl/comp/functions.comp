@@ -1,0 +1,11 @@
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+kernel void main0()
+{
+    threadgroup int foo[1337];
+    foo[0] = 13;
+}
+

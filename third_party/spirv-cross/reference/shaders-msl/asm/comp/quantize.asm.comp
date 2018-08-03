@@ -1,0 +1,21 @@
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct SSBO0
+{
+    float scalar;
+    float2 vec2_val;
+    float3 vec3_val;
+    float4 vec4_val;
+};
+
+kernel void main0(device SSBO0& _4 [[buffer(0)]])
+{
+    _4.scalar = float(half(_4.scalar));
+    _4.vec2_val = float2(half2(_4.vec2_val));
+    _4.vec3_val = float3(half3(_4.vec3_val));
+    _4.vec4_val = float4(half4(_4.vec4_val));
+}
+

@@ -1,0 +1,27 @@
+WARNING
+=======
+Libpng 1.6 does not use the default run-time library when building static
+library builds of libpng; instead of the shared DLL runtime it uses a static
+runtime.  If you need to change this make sure to change the setting on all the
+relevant projects:
+
+libpng
+zlib
+all the test programs
+
+The runtime library settings for each build are as follows:
+
+           Release        Debug
+DLL         /MD            /MDd
+Library     /MT            /MTd
+
+NOTICE that libpng 1.5 erroneously used /MD for Debug DLL builds; if you used
+the debug builds in your app and you changed your app to use /MD you will need
+to change it to /MDd for libpng 1.6.
+
+The Visual Studio 2010 defaults for a Win32 DLL or Static Library project are
+as follows:
+
+                 Release     Debug
+DLL               /MD         /MDd
+Static Library    /MD         /MDd

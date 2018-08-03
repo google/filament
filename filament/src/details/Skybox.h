@@ -1,0 +1,72 @@
+/*
+ * Copyright (C) 2016 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "upcast.h"
+
+#include "driver/Handle.h"
+
+#include <components/RenderableManager.h>
+
+#include <filament/Skybox.h>
+
+#include <filament/driver/DriverEnums.h>
+
+#include <utils/compiler.h>
+#include <utils/Entity.h>
+
+#ifndef TNT_FILAMENT_DETAILS_SKYBOX_H
+#define TNT_FILAMENT_DETAILS_SKYBOX_H
+
+namespace filament {
+namespace details {
+
+class FEngine;
+class FTexture;
+class FMaterial;
+class FMaterialInstance;
+
+class FSkybox : public Skybox {
+public:
+    FSkybox(FEngine& engine, const Builder& builder) noexcept;
+
+    static FMaterial const* createMaterial(FEngine& engine, driver::TextureFormat format);
+
+    void terminate(FEngine& engine) noexcept;
+
+    utils::Entity getEntity() const noexcept { return mSkybox; }
+
+    void setLayerMask(uint8_t select, uint8_t values) noexcept;
+
+    uint8_t getLayerMask() const noexcept { return mLayerMask; }
+
+private:
+    // we don't own these
+    FTexture const* mSkyboxTexture = nullptr;
+
+    // we own these
+    FMaterialInstance* mSkyboxMaterialInstance = nullptr;
+    utils::Entity mSkybox;
+    FRenderableManager& mRenderableManager;
+    uint8_t mLayerMask = 0x1;
+};
+
+FILAMENT_UPCAST(Skybox)
+
+} // namespace details
+} // namespace filament
+
+
+#endif // TNT_FILAMENT_DETAILS_SKYBOX_H

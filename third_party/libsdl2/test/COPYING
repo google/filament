@@ -1,0 +1,8 @@
+
+The test programs in this directory tree are for demonstrating and
+testing the functionality of the SDL library, and are placed in the
+public domain.
+
+October 28, 1997
+--
+	Sam Lantinga				(slouken@libsdl.org)

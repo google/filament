@@ -1,0 +1,3 @@
+include 'core', 'standalone', 'plugin'
+
+rootProject.name = 'tungsten'

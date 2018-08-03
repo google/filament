@@ -1,0 +1,29 @@
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct SSBO2
+{
+    float4 data4;
+    float4 data5;
+};
+
+struct SSBO0
+{
+    float4 data0;
+    float4 data1;
+};
+
+struct SSBO1
+{
+    float4 data2;
+    float4 data3;
+};
+
+kernel void main0(const device SSBO0& _15 [[buffer(0)]], device SSBO1& _21 [[buffer(1)]], device SSBO2& _10 [[buffer(2)]])
+{
+    _10.data4 = _15.data0 + _21.data2;
+    _10.data5 = _15.data1 + _21.data3;
+}
+

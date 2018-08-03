@@ -1,0 +1,21 @@
+# - Config file for the FooBar package
+# It defines the following variables
+#  FOOBAR_INCLUDE_DIRS - include directories for FooBar
+#  FOOBAR_LIBRARIES    - libraries to link against
+#  FOOBAR_EXECUTABLE   - the bar executable
+
+# Compute paths
+get_filename_component(FOOBAR_CMAKE_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
+if(EXISTS "${FOOBAR_CMAKE_DIR}/CMakeCache.txt")
+  # In build tree
+  include("${FOOBAR_CMAKE_DIR}/FooBarBuildTreeSettings.cmake")
+else()
+  set(FOOBAR_INCLUDE_DIRS "${FOOBAR_CMAKE_DIR}/@CONF_REL_INCLUDE_DIR@")
+endif()
+
+# Our library dependencies (contains definitions for IMPORTED targets)
+include("${FOOBAR_CMAKE_DIR}/FooBarLibraryDepends.cmake")
+
+# These are IMPORTED targets created by FooBarLibraryDepends.cmake
+set(FOOBAR_LIBRARIES foo)
+set(FOOBAR_EXECUTABLE bar)

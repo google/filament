@@ -1,0 +1,11 @@
+TestiPhoneOS.xcodeproj contains targets to compile many of the SDL test programs for iPhone OS.  Most of these test programs work fine, with the following exceptions:
+
+testthread:
+	SIGTERM kills the process immediately without executing the 'kill' function.  The posix standard says this shouldn't happen.  Apple seems intent on having iPhone apps exit promptly when the user requests it, so maybe that's why(?)
+
+testlock:
+	Locks appear to work, but there doesn't appear to be a simple way to send the process SIGINT.
+
+testsprite2: 
+	SDL_CreateTextureFromSurface requests an ARGB pixel format, but iPhone's SDL video driver only supports ABGR.
+

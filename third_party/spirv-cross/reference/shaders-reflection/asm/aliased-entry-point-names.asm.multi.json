@@ -1,0 +1,49 @@
+{
+    "entryPoints" : [
+        {
+            "name" : "main",
+            "mode" : "vert"
+        },
+        {
+            "name" : "main2",
+            "mode" : "vert"
+        },
+        {
+            "name" : "main",
+            "mode" : "frag"
+        },
+        {
+            "name" : "main2",
+            "mode" : "frag"
+        }
+    ],
+    "types" : {
+        "_8" : {
+            "name" : "_8",
+            "members" : [
+                {
+                    "name" : "_m0",
+                    "type" : "vec4"
+                },
+                {
+                    "name" : "_m1",
+                    "type" : "float"
+                },
+                {
+                    "name" : "_m2",
+                    "type" : "float",
+                    "array" : [
+                        1
+                    ]
+                },
+                {
+                    "name" : "_m3",
+                    "type" : "float",
+                    "array" : [
+                        1
+                    ]
+                }
+            ]
+        }
+    }
+}

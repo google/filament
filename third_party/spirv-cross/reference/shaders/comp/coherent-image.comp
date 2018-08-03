@@ -1,0 +1,15 @@
+#version 310 es
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+
+layout(binding = 1, std430) coherent restrict writeonly buffer SSBO
+{
+    ivec4 value;
+} _10;
+
+layout(binding = 3, r32i) uniform coherent restrict readonly mediump iimage2D uImage;
+
+void main()
+{
+    _10.value = imageLoad(uImage, ivec2(10));
+}
+

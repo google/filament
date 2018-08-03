@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+ * zlib.props - location of zlib source
+ *
+ * libpng version 1.6.16 - December 22, 2014
+ *
+ * Copyright (c) 1998-2011 Glenn Randers-Pehrson
+ *
+ * This code is released under the libpng license.
+ * For conditions of distribution and use, see the disclaimer
+ * and license in png.h
+
+ * You must edit this file to record the location of the zlib
+ * source code.
+ -->
+
+<Project ToolsVersion="4.0"
+   xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup Label="Globals">
+    <!-- Place the name of the directory containing the source of zlib used for
+	 debugging in this property.
+
+         The directory need only contain the '.c' and '.h' files from the
+	 source.
+
+	 If you use a relative directory name (as below) then it must be
+	 relative to the project directories; these are one level deeper than
+	 the directories containing this file.
+
+	 If the version of zlib you use does not match that used when the
+	 distribution was built you will get warnings from pngtest that the zlib
+	 versions do not match.  The zlib version used in this build is recorded
+	 below:
+     -->
+    <ZLibSrcDir>..\..\..\..\zlib-1.2.8</ZLibSrcDir>
+
+    <!-- The following line allows compilation for an ARM target with Visual
+         Studio 2012.  Notice that this is not supported by the Visual Studio
+         2012 IDE and that the programs that result cannot be run unless they
+         signed by Microsoft.  This is therefore untested; only Microsoft can
+         test it:
+     -->
+    <WindowsSDKDesktopARMSupport>true</WindowsSDKDesktopARMSupport>
+  </PropertyGroup>
+</Project>

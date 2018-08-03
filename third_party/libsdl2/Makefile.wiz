@@ -1,0 +1,61 @@
+# Makefile to build the pandora SDL library
+WIZSDK = /mythtv/media/devel/toolchains/openwiz/arm-openwiz-linux-gnu
+
+AR	= $(WIZSDK)/bin/arm-openwiz-linux-gnu-ar
+RANLIB	= $(WIZSDK)/bin/arm-openwiz-linux-gnu-ranlib
+CC = $(WIZSDK)/bin/arm-openwiz-linux-gnu-gcc
+CXX = $(WIZSDK)/bin/arm-openwiz-linux-gnu-g++
+STRIP = $(WIZSDK)/bin/arm-openwiz-linux-gnu-strip
+
+CFLAGS  = -Wall -fPIC -I./include -I$(WIZSDK)/include -DWIZ_GLES_LITE
+
+TARGET_STATIC  = libSDL2.a
+TARGET_SHARED  = libSDL2.so
+
+SOURCES = ./src/*.c ./src/audio/*.c ./src/cpuinfo/*.c ./src/events/*.c \
+	./src/file/*.c ./src/stdlib/*.c ./src/thread/*.c ./src/timer/*.c ./src/video/*.c \
+	./src/joystick/*.c ./src/haptic/*.c ./src/video/dummy/*.c ./src/audio/disk/*.c \
+	./src/audio/dummy/*.c ./src/loadso/dlopen/*.c ./src/audio/dsp/*.c \
+	./src/thread/pthread/SDL_systhread.c ./src/thread/pthread/SDL_syssem.c \
+	./src/thread/pthread/SDL_sysmutex.c ./src/thread/pthread/SDL_syscond.c \
+	./src/joystick/linux/*.c ./src/haptic/linux/*.c ./src/timer/unix/*.c \
+	./src/video/pandora/SDL_pandora.o ./src/video/pandora/SDL_pandora_events.o
+	
+
+OBJECTS = $(shell echo $(SOURCES) | sed -e 's,\.c,\.o,g')
+
+all: config_copy $(TARGET_STATIC) $(TARGET_SHARED)
+
+$(TARGET_STATIC): $(OBJECTS)
+	$(AR) crv $@ $^
+	$(RANLIB) $@
+
+$(TARGET_SHARED):
+	$(CC) -shared -Wl,-soname,$(TARGET_SHARED).0 -o $(TARGET_SHARED).0.0.1  $(OBJECTS)
+	ln -s $(TARGET_SHARED).0.0.1 $(TARGET_SHARED).0
+	ln -s $(TARGET_SHARED).0 $(TARGET_SHARED)
+
+config_copy:
+	cp include/SDL_config_wiz.h include/SDL_config.h
+
+clean:
+	rm -f $(TARGET_STATIC) $(TARGET_SHARED)* $(OBJECTS)
+
+install:
+	mkdir -p $(WIZSDK)/lib
+	mkdir -p $(WIZSDK)/include/SDL2
+	cp -f $(TARGET_STATIC) $(WIZSDK)/lib
+	cp -f $(TARGET_SHARED).0.0.1 $(WIZSDK)/lib
+	rm -f $(WIZSDK)/lib/$(TARGET_SHARED).0 $(WIZSDK)/lib/$(TARGET_SHARED)
+	ln -s $(WIZSDK)/lib/$(TARGET_SHARED).0.0.1 $(WIZSDK)/lib/$(TARGET_SHARED).0
+	ln -s $(WIZSDK)/lib/$(TARGET_SHARED).0 $(WIZSDK)/lib/$(TARGET_SHARED)
+
+	cp $(TARGET_STATIC) ../../toolchain/libs
+	cp $(TARGET_SHARED).0.0.1 ../../toolchain/libs
+	rm -f ../../toolchain/libs/$(TARGET_SHARED).0 ../../toolchain/libs/$(TARGET_SHARED)
+	ln -s ../../toolchain/libs/$(TARGET_SHARED).0.0.1 ../../toolchain/libs/$(TARGET_SHARED).0
+	ln -s ../../toolchain/libs/$(TARGET_SHARED).0 ../../toolchain/libs/$(TARGET_SHARED)
+
+	cp $(TARGET_SHARED).0.0.1 ../nehe_demos/build/$(TARGET_SHARED).0
+	cp -f include/*.h $(WIZSDK)/include/SDL2/
+	cp -f include/*.h ../../toolchain/include/SDL2/

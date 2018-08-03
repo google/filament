@@ -1,0 +1,20 @@
+#version 310 es
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+
+layout(binding = 0, std430) buffer SSBO
+{
+    vec4 data;
+    int index;
+} _13;
+
+void main()
+{
+    vec4 _17 = _13.data;
+    vec2 _28 = _17.yz + vec2(10.0);
+    _13.data = vec4(_17.x, _28, _17.w);
+    _13.data = (_17 + _17) + _17;
+    _13.data = _28.xxyy;
+    _13.data = vec4(_28.y);
+    _13.data = vec4((_17.zw + vec2(10.0))[_13.index]);
+}
+

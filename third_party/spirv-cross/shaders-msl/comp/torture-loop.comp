@@ -1,0 +1,40 @@
+#version 310 es
+layout(local_size_x = 1) in;
+
+layout(std430, binding = 0) readonly buffer SSBO
+{
+    mat4 mvp;
+    vec4 in_data[];
+};
+
+layout(std430, binding = 1) writeonly buffer SSBO2
+{
+    vec4 out_data[];
+};
+
+void main()
+{
+    uint ident = gl_GlobalInvocationID.x;
+    vec4 idat = in_data[ident];
+
+    int k = 0;
+
+    // Continue with side effects.
+    while (++k < 10)
+    {
+        idat *= 2.0;
+        k++;
+    }
+
+    // Again used here ...
+    for (uint i = 0u; i < 16u; i++, k++)
+        for (uint j = 0u; j < 30u; j++)
+            idat = mvp * idat;
+
+    do
+    {
+        k++;
+    } while (k > 10);
+    out_data[ident] = idat;
+}
+

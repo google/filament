@@ -1,0 +1,191 @@
+; SPIR-V
+; Version: 1.0
+; Generator: Khronos Glslang Reference Front End; 1
+; Bound: 152
+; Schema: 0
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main"
+               OpExecutionMode %main LocalSize 1 1 1
+               OpSource ESSL 310
+               OpName %main "main"
+               OpName %and_b1_b1_ "and(b1;b1;"
+               OpName %a "a"
+               OpName %b "b"
+               OpName %and_vb2_vb2_ "and(vb2;vb2;"
+               OpName %a_0 "a"
+               OpName %b_0 "b"
+               OpName %and_vb3_vb3_ "and(vb3;vb3;"
+               OpName %a_1 "a"
+               OpName %b_1 "b"
+               OpName %and_vb4_vb4_ "and(vb4;vb4;"
+               OpName %a_2 "a"
+               OpName %b_2 "b"
+               OpName %b0 "b0"
+               OpName %SSBO0 "SSBO0"
+               OpMemberName %SSBO0 0 "a"
+               OpMemberName %SSBO0 1 "b"
+               OpMemberName %SSBO0 2 "c"
+               OpMemberName %SSBO0 3 "d"
+               OpName %s0 "s0"
+               OpName %SSBO1 "SSBO1"
+               OpMemberName %SSBO1 0 "a"
+               OpMemberName %SSBO1 1 "b"
+               OpMemberName %SSBO1 2 "c"
+               OpMemberName %SSBO1 3 "d"
+               OpName %s1 "s1"
+               OpName %param "param"
+               OpName %param_0 "param"
+               OpName %b1 "b1"
+               OpName %param_1 "param"
+               OpName %param_2 "param"
+               OpName %b2 "b2"
+               OpName %param_3 "param"
+               OpName %param_4 "param"
+               OpName %b3 "b3"
+               OpName %param_5 "param"
+               OpName %param_6 "param"
+               OpMemberDecorate %SSBO0 0 Offset 0
+               OpMemberDecorate %SSBO0 1 Offset 8
+               OpMemberDecorate %SSBO0 2 Offset 16
+               OpMemberDecorate %SSBO0 3 Offset 32
+               OpDecorate %SSBO0 BufferBlock
+               OpDecorate %s0 DescriptorSet 0
+               OpDecorate %s0 Binding 0
+               OpMemberDecorate %SSBO1 0 Offset 0
+               OpMemberDecorate %SSBO1 1 Offset 8
+               OpMemberDecorate %SSBO1 2 Offset 16
+               OpMemberDecorate %SSBO1 3 Offset 32
+               OpDecorate %SSBO1 BufferBlock
+               OpDecorate %s1 DescriptorSet 0
+               OpDecorate %s1 Binding 1
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+       %bool = OpTypeBool
+%_ptr_Function_bool = OpTypePointer Function %bool
+          %8 = OpTypeFunction %bool %_ptr_Function_bool %_ptr_Function_bool
+     %v2bool = OpTypeVector %bool 2
+%_ptr_Function_v2bool = OpTypePointer Function %v2bool
+         %15 = OpTypeFunction %v2bool %_ptr_Function_v2bool %_ptr_Function_v2bool
+     %v3bool = OpTypeVector %bool 3
+%_ptr_Function_v3bool = OpTypePointer Function %v3bool
+         %22 = OpTypeFunction %v3bool %_ptr_Function_v3bool %_ptr_Function_v3bool
+     %v4bool = OpTypeVector %bool 4
+%_ptr_Function_v4bool = OpTypePointer Function %v4bool
+         %29 = OpTypeFunction %v4bool %_ptr_Function_v4bool %_ptr_Function_v4bool
+      %float = OpTypeFloat 32
+    %v2float = OpTypeVector %float 2
+    %v3float = OpTypeVector %float 3
+    %v4float = OpTypeVector %float 4
+      %SSBO0 = OpTypeStruct %float %v2float %v3float %v4float
+%_ptr_Uniform_SSBO0 = OpTypePointer Uniform %SSBO0
+         %s0 = OpVariable %_ptr_Uniform_SSBO0 Uniform
+        %int = OpTypeInt 32 1
+        %102 = OpConstant %int 0
+%_ptr_Uniform_float = OpTypePointer Uniform %float
+      %SSBO1 = OpTypeStruct %float %v2float %v3float %v4float
+%_ptr_Uniform_SSBO1 = OpTypePointer Uniform %SSBO1
+         %s1 = OpVariable %_ptr_Uniform_SSBO1 Uniform
+        %117 = OpConstant %int 1
+%_ptr_Uniform_v2float = OpTypePointer Uniform %v2float
+        %129 = OpConstant %int 2
+%_ptr_Uniform_v3float = OpTypePointer Uniform %v3float
+        %141 = OpConstant %int 3
+%_ptr_Uniform_v4float = OpTypePointer Uniform %v4float
+       %main = OpFunction %void None %3
+          %5 = OpLabel
+         %b0 = OpVariable %_ptr_Function_bool Function
+      %param = OpVariable %_ptr_Function_bool Function
+    %param_0 = OpVariable %_ptr_Function_bool Function
+         %b1 = OpVariable %_ptr_Function_v2bool Function
+    %param_1 = OpVariable %_ptr_Function_v2bool Function
+    %param_2 = OpVariable %_ptr_Function_v2bool Function
+         %b2 = OpVariable %_ptr_Function_v3bool Function
+    %param_3 = OpVariable %_ptr_Function_v3bool Function
+    %param_4 = OpVariable %_ptr_Function_v3bool Function
+         %b3 = OpVariable %_ptr_Function_v4bool Function
+    %param_5 = OpVariable %_ptr_Function_v4bool Function
+    %param_6 = OpVariable %_ptr_Function_v4bool Function
+        %104 = OpAccessChain %_ptr_Uniform_float %s0 %102
+        %105 = OpLoad %float %104
+        %106 = OpIsInf %bool %105
+        %110 = OpAccessChain %_ptr_Uniform_float %s1 %102
+        %111 = OpLoad %float %110
+        %112 = OpIsNan %bool %111
+               OpStore %param %106
+               OpStore %param_0 %112
+        %115 = OpFunctionCall %bool %and_b1_b1_ %param %param_0
+               OpStore %b0 %115
+        %119 = OpAccessChain %_ptr_Uniform_v2float %s0 %117
+        %120 = OpLoad %v2float %119
+        %121 = OpIsInf %v2bool %120
+        %122 = OpAccessChain %_ptr_Uniform_v2float %s1 %117
+        %123 = OpLoad %v2float %122
+        %124 = OpIsNan %v2bool %123
+               OpStore %param_1 %121
+               OpStore %param_2 %124
+        %127 = OpFunctionCall %v2bool %and_vb2_vb2_ %param_1 %param_2
+               OpStore %b1 %127
+        %131 = OpAccessChain %_ptr_Uniform_v3float %s0 %129
+        %132 = OpLoad %v3float %131
+        %133 = OpIsInf %v3bool %132
+        %134 = OpAccessChain %_ptr_Uniform_v3float %s1 %129
+        %135 = OpLoad %v3float %134
+        %136 = OpIsNan %v3bool %135
+               OpStore %param_3 %133
+               OpStore %param_4 %136
+        %139 = OpFunctionCall %v3bool %and_vb3_vb3_ %param_3 %param_4
+               OpStore %b2 %139
+        %143 = OpAccessChain %_ptr_Uniform_v4float %s0 %141
+        %144 = OpLoad %v4float %143
+        %145 = OpIsInf %v4bool %144
+        %146 = OpAccessChain %_ptr_Uniform_v4float %s1 %141
+        %147 = OpLoad %v4float %146
+        %148 = OpIsNan %v4bool %147
+               OpStore %param_5 %145
+               OpStore %param_6 %148
+        %151 = OpFunctionCall %v4bool %and_vb4_vb4_ %param_5 %param_6
+               OpStore %b3 %151
+               OpReturn
+               OpFunctionEnd
+ %and_b1_b1_ = OpFunction %bool None %8
+          %a = OpFunctionParameter %_ptr_Function_bool
+          %b = OpFunctionParameter %_ptr_Function_bool
+         %12 = OpLabel
+         %34 = OpLoad %bool %a
+         %35 = OpLoad %bool %b
+         %36 = OpLogicalAnd %bool %34 %35
+         %37 = OpLogicalOr %bool %36 %35
+         %38 = OpLogicalNot %bool %37
+               OpReturnValue %38
+               OpFunctionEnd
+%and_vb2_vb2_ = OpFunction %v2bool None %15
+        %a_0 = OpFunctionParameter %_ptr_Function_v2bool
+        %b_0 = OpFunctionParameter %_ptr_Function_v2bool
+         %19 = OpLabel
+         %39 = OpLoad %v2bool %a_0
+         %41 = OpLoad %v2bool %b_0
+         %48 = OpLogicalAnd %v2bool %39 %41
+         %49 = OpLogicalOr %v2bool %48 %41
+         %50 = OpLogicalNot %v2bool %49
+               OpReturnValue %50
+               OpFunctionEnd
+%and_vb3_vb3_ = OpFunction %v3bool None %22
+        %a_1 = OpFunctionParameter %_ptr_Function_v3bool
+        %b_1 = OpFunctionParameter %_ptr_Function_v3bool
+         %26 = OpLabel
+         %52 = OpLoad %v3bool %a_1
+         %54 = OpLoad %v3bool %b_1
+         %66 = OpLogicalAnd %v3bool %52 %54
+               OpReturnValue %66
+               OpFunctionEnd
+%and_vb4_vb4_ = OpFunction %v4bool None %29
+        %a_2 = OpFunctionParameter %_ptr_Function_v4bool
+        %b_2 = OpFunctionParameter %_ptr_Function_v4bool
+         %33 = OpLabel
+         %70 = OpLoad %v4bool %a_2
+         %72 = OpLoad %v4bool %b_2
+         %74 = OpLogicalAnd %v4bool %70 %72
+               OpReturnValue %74
+               OpFunctionEnd

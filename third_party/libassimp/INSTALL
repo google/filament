@@ -1,0 +1,44 @@
+	
+========================================================================
+Open Asset Import Library (assimp) INSTALL 
+========================================================================
+
+------------------------------
+Getting the documentation
+------------------------------
+
+A regularly-updated copy is available at 
+http://assimp.sourceforge.net/lib_html/index.html
+
+A CHM file is included in the SVN repos: ./doc/AssimpDoc_Html/AssimpDoc.chm.
+To build the doxygen documentation on your own, follow these steps:
+
+a) download & install latest doxygen 
+b) make sure doxygen is in the executable search path
+c) navigate to ./doc
+d) and run 'doxygen'
+
+Open the generated HTML (AssimpDoc_Html/index.html) in the browser of your choice.
+Windows only: To generate the CHM doc, install 'Microsoft HTML Workshop'
+and configure the path to it in the DOXYFILE first. 
+
+------------------------------
+Building Assimp 
+------------------------------
+
+More detailed build instructions can be found in the documentation,
+this section is just for the inpatient among you.
+
+CMake is the preferred build system for Assimp. The minimum required version 
+is 2.6. If you don't have it yet, downloads for CMake can be found on
+http://www.cmake.org/. 
+
+For Unix:
+
+1. cmake CMakeLists.txt -G 'Unix Makefiles'
+2. make
+
+For Windows:
+1. Open a command prompt
+2. cmake CMakeLists.txt
+2. Open your default IDE and build it

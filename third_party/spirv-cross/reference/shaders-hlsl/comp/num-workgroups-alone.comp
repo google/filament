@@ -1,0 +1,16 @@
+RWByteAddressBuffer _10 : register(u0);
+cbuffer SPIRV_Cross_NumWorkgroups : register(b0)
+{
+    uint3 SPIRV_Cross_NumWorkgroups_count : packoffset(c0);
+};
+
+void comp_main()
+{
+    _10.Store3(0, SPIRV_Cross_NumWorkgroups_count);
+}
+
+[numthreads(1, 1, 1)]
+void main()
+{
+    comp_main();
+}

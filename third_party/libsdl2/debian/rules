@@ -1,0 +1,41 @@
+#!/usr/bin/make -f
+
+DEB_HOST_ARCH_CPU ?= $(shell dpkg-architecture -qDEB_HOST_ARCH_CPU)
+DEB_HOST_MULTIARCH ?= $(shell dpkg-architecture -qDEB_HOST_MULTIARCH)
+
+confflags = --disable-rpath --disable-video-directfb \
+            --disable-nas --disable-esd --disable-arts \
+            --disable-alsa-shared --disable-pulseaudio-shared \
+            --disable-x11-shared
+
+%:
+	dh $@ --parallel
+
+override_dh_auto_configure:
+	dh_auto_configure -Bbuilddir/all -- $(confflags)
+
+override_dh_auto_build:
+	dh_auto_build -Bbuilddir/all
+	tar czf debian/examples.tar.gz test
+
+override_dh_auto_install:
+	dh_auto_install -Bbuilddir/all
+
+override_dh_auto_clean:
+	dh_auto_clean -Bbuilddir/all
+	rm -f debian/examples.tar.gz
+
+override_dh_install:
+	dh_install --remaining-packages --fail-missing -XlibSDL2.la
+
+override_dh_installexamples:
+	dh_installexamples -plibsdl2-dev debian/examples.tar.gz
+	dh_installexamples --remaining-packages
+
+override_dh_link:
+	# to address lintian warning
+	# W: libsdl2-2.0-0: dev-pkg-without-shlib-symlink usr/lib/x86_64-linux-gnu/libSDL2-2.0.so.0.0.0 usr/lib/x86_64-linux-gnu/libSDL2-2.0.so
+	dh_link -plibsdl2-dev usr/lib/$(DEB_HOST_MULTIARCH)/libSDL2-2.0.so.0.0.0 usr/lib/$(DEB_HOST_MULTIARCH)/libSDL2-2.0.so
+
+override_dh_strip:
+	dh_strip --dbg-package=libsdl2-dbg

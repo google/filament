@@ -1,0 +1,17 @@
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+constant uint3 gl_WorkGroupSize = uint3(8u, 4u, 2u);
+
+kernel void main0(uint3 gl_LocalInvocationID [[thread_position_in_threadgroup]], uint3 gl_GlobalInvocationID [[thread_position_in_grid]], uint gl_LocalInvocationIndex [[thread_index_in_threadgroup]], uint3 gl_NumWorkGroups [[threadgroups_per_grid]], uint3 gl_WorkGroupID [[threadgroup_position_in_grid]])
+{
+    uint3 local_id = gl_LocalInvocationID;
+    uint3 global_id = gl_GlobalInvocationID;
+    uint local_index = gl_LocalInvocationIndex;
+    uint3 work_group_size = gl_WorkGroupSize;
+    uint3 num_work_groups = gl_NumWorkGroups;
+    uint3 work_group_id = gl_WorkGroupID;
+}
+

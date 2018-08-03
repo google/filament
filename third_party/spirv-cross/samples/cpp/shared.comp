@@ -1,0 +1,36 @@
+#version 310 es
+layout(local_size_x = 64) in;
+
+layout(set = 0, binding = 0, std430) readonly buffer SSBO0
+{
+	float inputs[];
+};
+
+layout(set = 0, binding = 1, std430) writeonly buffer SSBO1
+{
+	float outputs[];
+};
+
+shared float tmp[gl_WorkGroupSize.x];
+
+void main()
+{
+	uint local = gl_LocalInvocationIndex;
+	uint work_group = gl_WorkGroupID.x;
+
+	// Does a trivial parallel reduction through shared memory.
+	tmp[local] = inputs[work_group * gl_WorkGroupSize.x * 2u + local] + inputs[work_group * gl_WorkGroupSize.x * 2u + local + gl_WorkGroupSize.x];
+	memoryBarrierShared();
+	barrier();
+
+	for (uint limit = 32u; limit > 1u; limit >>= 1u)
+	{
+		if (local < limit)
+			tmp[local] = tmp[local] + tmp[local + limit];
+		memoryBarrierShared();
+		barrier();
+	}
+
+	if (local == 0u)
+		outputs[work_group] = tmp[0] + tmp[1];
+}

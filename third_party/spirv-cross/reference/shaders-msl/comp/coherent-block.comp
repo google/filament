@@ -1,0 +1,15 @@
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct SSBO
+{
+    float4 value;
+};
+
+kernel void main0(device SSBO& _10 [[buffer(1)]])
+{
+    _10.value = float4(20.0);
+}
+

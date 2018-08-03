@@ -1,0 +1,19 @@
+===============================================================
+OpenDDL-Parser
+Developers and Contributors
+===============================================================
+
+- Kim Kulling ( kimmi ):
+Founder
+
+- Fredrik Hansson ( FredrikHson ):
+Improvements value interface, serveral bugfixes.
+
+- Henry Read ( henrya2 ):
+Static build option, Interface improvements
+
+- (wise86-android)
+fix several mem-leaks
+
+- Paul Holland ( pkholland ):
+Bugfixes.

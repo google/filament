@@ -1,0 +1,14 @@
+#version 450
+
+invariant gl_Position;
+
+vec4 _main()
+{
+    return vec4(1.0);
+}
+
+void main()
+{
+    gl_Position = _main();
+}
+

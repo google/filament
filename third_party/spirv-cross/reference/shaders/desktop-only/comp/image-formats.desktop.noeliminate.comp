@@ -1,0 +1,47 @@
+#version 450
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+
+layout(binding = 0, rgba32f) uniform readonly writeonly image2D uImg00;
+layout(binding = 1, rgba16f) uniform readonly writeonly image2D uImg01;
+layout(binding = 2, rg32f) uniform readonly writeonly image2D uImg02;
+layout(binding = 3, rg16f) uniform readonly writeonly image2D uImg03;
+layout(binding = 4, r11f_g11f_b10f) uniform readonly writeonly image2D uImg04;
+layout(binding = 5, r32f) uniform readonly writeonly image2D uImg05;
+layout(binding = 6, r16f) uniform readonly writeonly image2D uImg06;
+layout(binding = 7, rgba16) uniform readonly writeonly image2D uImg07;
+layout(binding = 8, rgb10_a2) uniform readonly writeonly image2D uImg08;
+layout(binding = 9, rgba8) uniform readonly writeonly image2D uImg09;
+layout(binding = 10, rg16) uniform readonly writeonly image2D uImg10;
+layout(binding = 11, rg8) uniform readonly writeonly image2D uImg11;
+layout(binding = 12, r16) uniform readonly writeonly image2D uImg12;
+layout(binding = 13, r8) uniform readonly writeonly image2D uImg13;
+layout(binding = 14, rgba16_snorm) uniform readonly writeonly image2D uImg14;
+layout(binding = 15, rgba8_snorm) uniform readonly writeonly image2D uImg15;
+layout(binding = 16, rg16_snorm) uniform readonly writeonly image2D uImg16;
+layout(binding = 17, rg8_snorm) uniform readonly writeonly image2D uImg17;
+layout(binding = 18, r16_snorm) uniform readonly writeonly image2D uImg18;
+layout(binding = 19, r8_snorm) uniform readonly writeonly image2D uImg19;
+layout(binding = 20, rgba32i) uniform readonly writeonly iimage2D uImage20;
+layout(binding = 21, rgba16i) uniform readonly writeonly iimage2D uImage21;
+layout(binding = 22, rgba8i) uniform readonly writeonly iimage2D uImage22;
+layout(binding = 23, rg32i) uniform readonly writeonly iimage2D uImage23;
+layout(binding = 24, rg16i) uniform readonly writeonly iimage2D uImage24;
+layout(binding = 25, rg8i) uniform readonly writeonly iimage2D uImage25;
+layout(binding = 26, r32i) uniform readonly writeonly iimage2D uImage26;
+layout(binding = 27, r16i) uniform readonly writeonly iimage2D uImage27;
+layout(binding = 28, r8i) uniform readonly writeonly iimage2D uImage28;
+layout(binding = 29, rgba32ui) uniform readonly writeonly uimage2D uImage29;
+layout(binding = 30, rgba16ui) uniform readonly writeonly uimage2D uImage30;
+layout(binding = 31, rgb10_a2ui) uniform readonly writeonly uimage2D uImage31;
+layout(binding = 32, rgba8ui) uniform readonly writeonly uimage2D uImage32;
+layout(binding = 33, rg32ui) uniform readonly writeonly uimage2D uImage33;
+layout(binding = 34, rg16ui) uniform readonly writeonly uimage2D uImage34;
+layout(binding = 35, rg8ui) uniform readonly writeonly uimage2D uImage35;
+layout(binding = 36, r32ui) uniform readonly writeonly uimage2D uImage36;
+layout(binding = 37, r16ui) uniform readonly writeonly uimage2D uImage37;
+layout(binding = 38, r8ui) uniform readonly writeonly uimage2D uImage38;
+
+void main()
+{
+}
+

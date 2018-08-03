@@ -1,0 +1,14 @@
+#version 310 es
+layout(local_size_x = 1) in;
+
+layout(std430, binding = 1) writeonly buffer SSBO2
+{
+    mat3 out_data[];
+};
+
+void main()
+{
+    uint ident = gl_GlobalInvocationID.x;
+    out_data[ident] = mat3(vec3(10.0), vec3(20.0), vec3(40.0));
+}
+

@@ -1,0 +1,13 @@
+#version 450
+
+layout(constant_id = 0) const uint s = 10u;
+const bool _13 = (s > 20u);
+const uint _16 = _13 ? 30u : 50u;
+
+layout(location = 0) out float FragColor;
+
+void main()
+{
+    FragColor = float(_16);
+}
+

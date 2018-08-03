@@ -1,0 +1,67 @@
+; SPIR-V
+; Version: 1.0
+; Generator: Khronos Glslang Reference Front End; 1
+; Bound: 38
+; Schema: 0
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %4 "main"
+               OpExecutionMode %4 LocalSize 1 1 1
+               OpSource ESSL 310
+               OpName %4 "main"
+               OpName %10 "SSBO0"
+               OpMemberName %10 0 "scalar"
+               OpMemberName %10 1 "vec2_val"
+               OpMemberName %10 2 "vec3_val"
+               OpMemberName %10 3 "vec4_val"
+               OpName %12 ""
+               OpMemberDecorate %10 0 Offset 0
+               OpMemberDecorate %10 1 Offset 8
+               OpMemberDecorate %10 2 Offset 16
+               OpMemberDecorate %10 3 Offset 32
+               OpDecorate %10 BufferBlock
+               OpDecorate %12 DescriptorSet 0
+               OpDecorate %12 Binding 0
+          %2 = OpTypeVoid
+          %3 = OpTypeFunction %2
+          %6 = OpTypeFloat 32
+          %7 = OpTypeVector %6 2
+          %8 = OpTypeVector %6 3
+          %9 = OpTypeVector %6 4
+         %10 = OpTypeStruct %6 %7 %8 %9
+         %11 = OpTypePointer Uniform %10
+         %12 = OpVariable %11 Uniform
+         %13 = OpTypeInt 32 1
+         %14 = OpConstant %13 0
+         %15 = OpTypePointer Uniform %6
+         %20 = OpConstant %13 1
+         %21 = OpTypePointer Uniform %7
+         %26 = OpConstant %13 2
+         %27 = OpTypePointer Uniform %8
+         %32 = OpConstant %13 3
+         %33 = OpTypePointer Uniform %9
+          %4 = OpFunction %2 None %3
+          %5 = OpLabel
+         %16 = OpAccessChain %15 %12 %14
+         %17 = OpLoad %6 %16
+         %18 = OpQuantizeToF16 %6 %17
+         %19 = OpAccessChain %15 %12 %14
+               OpStore %19 %18
+         %22 = OpAccessChain %21 %12 %20
+         %23 = OpLoad %7 %22
+         %24 = OpQuantizeToF16 %7 %23
+         %25 = OpAccessChain %21 %12 %20
+               OpStore %25 %24
+         %28 = OpAccessChain %27 %12 %26
+         %29 = OpLoad %8 %28
+         %30 = OpQuantizeToF16 %8 %29
+         %31 = OpAccessChain %27 %12 %26
+               OpStore %31 %30
+         %34 = OpAccessChain %33 %12 %32
+         %35 = OpLoad %9 %34
+         %36 = OpQuantizeToF16 %9 %35
+         %37 = OpAccessChain %33 %12 %32
+               OpStore %37 %36
+               OpReturn
+               OpFunctionEnd

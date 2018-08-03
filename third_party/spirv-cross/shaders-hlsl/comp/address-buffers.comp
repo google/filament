@@ -1,0 +1,23 @@
+#version 310 es
+layout(local_size_x = 1) in;
+
+layout(binding = 0, std430) readonly buffer ReadOnlyBuffer
+{
+	vec4 ro;
+} ReadOnly;
+
+layout(binding = 1, std430) buffer ReadWriteBuffer
+{
+	vec4 rw;
+} ReadWrite;
+
+layout(binding = 2, std430) buffer WriteOnlyBuffer 
+{
+	vec4 wo;
+} WriteOnly;
+
+void main()
+{
+	WriteOnly.wo = ReadOnly.ro;
+	ReadWrite.rw += 10.0;
+}

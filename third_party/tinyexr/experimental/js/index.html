@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>TinyEXR to Canvas</title>
+  <script src="tinyexr.js"></script>
+  <style>
+  </style>
+</head>
+<body>
+  <canvas id="imgCanvas"></canvas>
+</body>
+<script>
+  let canvas = document.getElementById('imgCanvas');
+  let ctx = canvas.getContext('2d');
+
+  fetch("./asakusa.exr").then(response => {
+    return response.arrayBuffer();
+  }).then(arrayBuffer => {
+
+    // let exrImg = parseExr(arrayBuffer);
+    let data = new Uint8Array(arrayBuffer);
+    let exrImg = new Module.EXRLoader(data);
+
+    canvas.width  = exrImg.width();
+    canvas.height = exrImg.height();
+    
+    let imageArray = exrImg.getBytes().map(num => {
+      // Convert values to 0-255 range and apply gamma curve
+      return Math.pow(num, 0.44) * 256;
+    });
+    
+    let image8Array = new Uint8ClampedArray(imageArray);
+    let imageData = new ImageData(image8Array, exrImg.width(), exrImg.height());
+    ctx.putImageData(imageData, 0, 0);
+
+  });
+</script>
+</html>

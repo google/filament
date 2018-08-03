@@ -1,0 +1,47 @@
+#version 450
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+
+struct Foo
+{
+    int a;
+    int b;
+    int c;
+};
+
+struct Foo_1
+{
+    int a;
+    int b;
+    int c;
+};
+
+layout(binding = 1, std140) buffer SSBO1
+{
+    layout(offset = 4) int a;
+    layout(offset = 8) int b;
+    layout(offset = 16) Foo foo;
+    layout(offset = 48) int c[8];
+} ssbo1;
+
+layout(binding = 2, std430) buffer SSBO2
+{
+    layout(offset = 4) int a;
+    layout(offset = 8) int b;
+    layout(offset = 16) Foo_1 foo;
+    layout(offset = 48) int c[8];
+} ssbo2;
+
+layout(binding = 0, std140) uniform UBO
+{
+    layout(offset = 4) int a;
+    layout(offset = 8) int b;
+    layout(offset = 16) Foo foo;
+    layout(offset = 48) int c[8];
+} ubo;
+
+void main()
+{
+    ssbo1.a = ssbo2.a;
+    ssbo1.b = ubo.b;
+}
+

@@ -1,0 +1,24 @@
+os: Visual Studio 2015
+
+platform:
+  - Win32
+  - x64
+
+configuration:
+  - Debug
+  - Release
+  
+build_script:
+  - set BOOST_ROOT=C:\Libraries\boost_1_62_0
+  - if %PLATFORM% == Win32 set BOOST_LIBRARYDIR=C:\Libraries\boost_1_62_0\lib32-msvc-14.0
+  - if %PLATFORM% == x64 set BOOST_LIBRARYDIR=C:\Libraries\boost_1_62_0\lib64-msvc-14.0
+  - mkdir build
+  - cd build
+  - if %PLATFORM% == Win32 cmake .. -G"Visual Studio 14 2015"
+  - if %PLATFORM% == x64 cmake .. -G"Visual Studio 14 2015 Win64"
+  - cmake --build . --config %CONFIGURATION%
+  
+test_script: 
+  - set PATH=%PATH%;%BOOST_LIBRARYDIR%
+  - .\%CONFIGURATION%\test_robin_map.exe
+  

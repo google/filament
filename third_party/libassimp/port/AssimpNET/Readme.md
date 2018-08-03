@@ -1,0 +1,1 @@
+See https://code.google.com/p/assimp-net/ and https://github.com/assimp/assimp-net for a Github mirror.

@@ -1,0 +1,29 @@
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct SSBO
+{
+    int a;
+};
+
+kernel void main0(device SSBO& _9 [[buffer(0)]])
+{
+    _9.a += 10;
+    _9.a -= 10;
+    _9.a *= 10;
+    _9.a /= 10;
+    _9.a = _9.a << 2;
+    _9.a = _9.a >> 3;
+    _9.a &= 40;
+    _9.a ^= 10;
+    _9.a %= 40;
+    _9.a |= 1;
+    bool c = false;
+    bool d = true;
+    c = c && d;
+    d = d || c;
+    _9.a = int(c && d);
+}
+

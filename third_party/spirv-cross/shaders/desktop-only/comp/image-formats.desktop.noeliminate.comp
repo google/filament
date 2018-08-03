@@ -1,0 +1,48 @@
+#version 450
+layout(local_size_x = 1) in;
+
+layout(rgba32f, binding = 0) uniform image2D uImg00;
+layout(rgba16f, binding = 1) uniform image2D uImg01;
+layout(rg32f, binding = 2) uniform image2D uImg02;
+layout(rg16f, binding = 3) uniform image2D uImg03;
+layout(r11f_g11f_b10f, binding = 4) uniform image2D uImg04;
+layout(r32f, binding = 5) uniform image2D uImg05;
+layout(r16f, binding = 6) uniform image2D uImg06;
+layout(rgba16, binding = 7) uniform image2D uImg07;
+layout(rgb10_a2, binding = 8) uniform image2D uImg08;
+layout(rgba8, binding = 9) uniform image2D uImg09;
+layout(rg16, binding = 10) uniform image2D uImg10;
+layout(rg8, binding = 11) uniform image2D uImg11;
+layout(r16, binding = 12) uniform image2D uImg12;
+layout(r8, binding = 13) uniform image2D uImg13;
+layout(rgba16_snorm, binding = 14) uniform image2D uImg14;
+layout(rgba8_snorm, binding = 15) uniform image2D uImg15;
+layout(rg16_snorm, binding = 16) uniform image2D uImg16;
+layout(rg8_snorm, binding = 17) uniform image2D uImg17;
+layout(r16_snorm, binding = 18) uniform image2D uImg18;
+layout(r8_snorm, binding = 19) uniform image2D uImg19;
+
+layout(rgba32i, binding = 20) uniform iimage2D uImage20;
+layout(rgba16i, binding = 21) uniform iimage2D uImage21;
+layout(rgba8i, binding = 22) uniform iimage2D uImage22;
+layout(rg32i, binding = 23) uniform iimage2D uImage23;
+layout(rg16i, binding = 24) uniform iimage2D uImage24;
+layout(rg8i, binding = 25) uniform iimage2D uImage25;
+layout(r32i, binding = 26) uniform iimage2D uImage26;
+layout(r16i, binding = 27) uniform iimage2D uImage27;
+layout(r8i, binding = 28) uniform iimage2D uImage28;
+
+layout(rgba32ui, binding = 29) uniform uimage2D uImage29;
+layout(rgba16ui, binding = 30) uniform uimage2D uImage30;
+layout(rgb10_a2ui, binding = 31) uniform uimage2D uImage31;
+layout(rgba8ui, binding = 32) uniform uimage2D uImage32;
+layout(rg32ui, binding = 33) uniform uimage2D uImage33;
+layout(rg16ui, binding = 34) uniform uimage2D uImage34;
+layout(rg8ui, binding = 35) uniform uimage2D uImage35;
+layout(r32ui, binding = 36) uniform uimage2D uImage36;
+layout(r16ui, binding = 37) uniform uimage2D uImage37;
+layout(r8ui, binding = 38) uniform uimage2D uImage38;
+
+void main()
+{
+}

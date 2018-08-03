@@ -1,0 +1,29 @@
+#version 310 es
+layout(local_size_x = 64) in;
+
+layout(set = 0, binding = 0, std430) readonly buffer SSBO0
+{
+	float inputs[];
+};
+
+layout(set = 0, binding = 1, std430) writeonly buffer SSBO1
+{
+	float outputs[];
+};
+
+layout(set = 0, binding = 2, std430) buffer SSBO2
+{
+	uint counter;
+};
+
+void main()
+{
+	// Builds a tightly packed list of all values less than 10.0.
+	// The output order is random.
+	float value = inputs[gl_GlobalInvocationID.x];
+	if (value < 10.0)
+	{
+		uint output_index = atomicAdd(counter, 1u);
+		outputs[output_index] = value;
+	}
+}

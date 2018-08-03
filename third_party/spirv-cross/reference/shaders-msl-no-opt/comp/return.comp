@@ -1,0 +1,36 @@
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct SSBO2
+{
+    float4 out_data[1];
+};
+
+kernel void main0(device SSBO2& _27 [[buffer(1)]], uint3 gl_GlobalInvocationID [[thread_position_in_grid]])
+{
+    uint ident = gl_GlobalInvocationID.x;
+    if (ident == 2u)
+    {
+        _27.out_data[ident] = float4(20.0);
+    }
+    else
+    {
+        if (ident == 4u)
+        {
+            _27.out_data[ident] = float4(10.0);
+            return;
+        }
+    }
+    for (int i = 0; i < 20; i++)
+    {
+        if (i == 10)
+        {
+            break;
+        }
+        return;
+    }
+    _27.out_data[ident] = float4(10.0);
+}
+
