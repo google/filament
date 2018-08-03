@@ -288,8 +288,8 @@ void FRenderableManager::create(const RenderableManager::Builder& UTILS_RESTRICT
                 std::unique_ptr<Bones>& bones = manager[ci].bones;
 
                 bones.reset(new Bones); // FIXME: maybe use a pool allocator
-                bones->bones = UniformBuffer(CONFIG_MAX_BONE_COUNT * 2);
-                bones->handle = driver.createUniformBuffer(CONFIG_MAX_BONE_COUNT * 2);
+                bones->bones = UniformBuffer(CONFIG_MAX_BONE_COUNT * sizeof(Bone));
+                bones->handle = driver.createUniformBuffer(CONFIG_MAX_BONE_COUNT * sizeof(Bone));
             }
         }
         if (builder->mSkinningBoneCount) {

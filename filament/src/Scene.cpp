@@ -120,6 +120,7 @@ void FScene::prepare(FEngine& engine, mat4f const& worldOriginTansform) {
                     worldTransform,
                     rcm.getVisibility(ri),
                     rcm.getUbh(ri),
+                    rcm.getBonesUbh(ri),
                     worldAABB.center,
                     0,
                     rcm.getLayerMask(ri),

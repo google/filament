@@ -171,10 +171,11 @@ public:
         return boolish ? -1llu : 0llu;
     }
 
-    struct PrimitiveInfo { // 24 bytes (20)
+    struct PrimitiveInfo { // 28 bytes
         FMaterialInstance const* mi = nullptr;              // 8 bytes (4)
         Handle<HwRenderPrimitive> primitiveHandle;          // 4 bytes
         Handle<HwUniformBuffer> perRenderableUniforms;      // 4 bytes
+        Handle<HwUniformBuffer> perRenderableBones;         // 4 bytes
         Driver::RasterState rasterState;                    // 4 bytes
         Variant materialVariant;                            // 1 byte
         uint8_t reserved[3] = { };                          // 3 bytes (that helps the compiler)

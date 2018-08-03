@@ -305,6 +305,10 @@ Handle<HwProgram> FMaterial::getProgramSlow(uint8_t variantKey) const noexcept {
             .addSamplerBlock(BindingPoints::PER_VIEW, &SibGenerator::getPerViewSib())
             .addSamplerBlock(BindingPoints::PER_MATERIAL_INSTANCE, &mSamplerInterfaceBlock);
 
+    if (Variant(variantKey).hasSkinning()) {
+        pb.addUniformBlock(BindingPoints::PER_RENDERABLE_BONES, &UibGenerator::getPerRenderableBonesUib());
+    }
+
     auto program = mEngine.getDriverApi().createProgram(std::move(pb));
     assert(program);
 

@@ -92,6 +92,7 @@ public:
         WORLD_TRANSFORM,        // 16 instance of the Transform component
         VISIBILITY_STATE,       //  1 visibility data of the component
         UBH,                    //  4 uniform buffer handle
+        BONES_UBH,              //  4 bones uniform buffer handle
         WORLD_AABB_CENTER,      // 12 world-space bounding box center of the renderable
         VISIBLE_MASK,           //  1 each bit represents a visibility in a pass
 
@@ -108,6 +109,7 @@ public:
             utils::EntityInstance<RenderableManager>,
             math::mat4f,
             FRenderableManager::Visibility,
+            Handle<HwUniformBuffer>,
             Handle<HwUniformBuffer>,
             math::float3,
             Culler::result_type,
