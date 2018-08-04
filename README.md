@@ -9,6 +9,32 @@ Filament is currently used in the
 [Sceneform](https://developers.google.com/ar/develop/java/sceneform/) library both at runtime on
 Android devices and as the renderer inside the Android Studio plugin.
 
+## Documentation
+
+- [Filament](https://google.github.io/filament/Filament.md.html), an in-depth explanation of the graphics capabilities and
+  implementation of Filament. This document explains the math and reasoning behind most of our
+  decisions.
+- [Materials](https://google.github.io/filament//Materials.md.html), the full reference documentation for our material system.
+  This document explains our different material models, how to use the material compiler `matc` and
+  how to write custom materials.
+- [Material Properties](https://google.github.io/filament/Material%20Properties.pdf), a reference sheet for the standard
+  material model.
+
+## Samples
+
+Here are a few sample materials rendered with Filament:
+
+![Brushed copper](docs/images/samples/brushed_copper_2.png)
+![Chess set](docs/images/samples/chess1.png)
+![Environment lighting](docs/images/samples/spheres.png)
+![Material 1](docs/images/samples/material_01.png)
+![Material 2](docs/images/samples/material_02.png)
+![Material 3](docs/images/samples/material_03.png)
+![Material 4](docs/images/samples/material_04.png)
+![Material 6](docs/images/samples/material_06.png)
+![Material 7](docs/images/samples/material_07.png)
+![Material 8](docs/images/samples/material_08.png)
+
 ## Features
 
 ### APIs
@@ -54,17 +80,6 @@ Many other features have been either prototyped or planned:
 - Bloom
 - TAA
 - etc.
-
-## Documentation
-
-- [Filament](https://google.github.io/filament/Filament.md.html), an in-depth explanation of the graphics capabilities and
-  implementation of Filament. This document explains the math and reasoning behind most of our
-  decisions.
-- [Materials](https://google.github.io/filament//Materials.md.html), the full reference documentation for our material system.
-  This document explains our different material models, how to use the material compiler `matc` and
-  how to write custom materials.
-- [Material Properties](https://google.github.io/filament/Material%20Properties.pdf), a reference sheet for the standard
-  material model.
 
 ## Directory structure
 
