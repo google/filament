@@ -205,7 +205,9 @@ Your Linux distribution might default to `gcc` instead of `clang`, if that's the
 ```
 $ mkdir build-release
 $ cd build-release
-$ cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=../dist-linux ..
+# Or use a specific version of clang, for instance /usr/bin/clang-5.0
+$ CC=/usr/bin/clang CXX=/usr/bin/clang++ \
+  cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=../dist-linux ..
 ```
 
 And then invoke `ninja`:
