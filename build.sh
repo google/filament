@@ -22,6 +22,8 @@ function print_help {
     echo "        Always invoke CMake before incremental builds."
     echo "    -i"
     echo "        Install build output"
+    echo "    -j"
+    echo "        Do not compile desktop Java projects"
     echo "    -m"
     echo "        Compile with make instead of ninja."
     echo "    -p [desktop|android|all]"
@@ -72,6 +74,8 @@ ISSUE_DESKTOP_BUILD=true
 ISSUE_ARCHIVES=false
 
 ISSUE_CMAKE_ALWAYS=false
+
+ENABLE_JAVA=ON
 
 INSTALL_COMMAND=
 
@@ -152,6 +156,7 @@ function build_desktop_target {
             -DCMAKE_BUILD_TYPE=$1 \
             -DCMAKE_INSTALL_PREFIX=../${LC_TARGET}/filament \
             -DFILAMENT_REQUIRES_CXXABI=${FILAMENT_REQUIRES_CXXABI} \
+			-DENABLE_JAVA=${ENABLE_JAVA} \
             ../..
     fi
     ${BUILD_COMMAND} ${BUILD_TARGETS}
@@ -317,7 +322,7 @@ function validate_build_command {
 
 pushd `dirname $0` > /dev/null
 
-while getopts ":hacfimp:tv" opt; do
+while getopts ":hacfijmp:tv" opt; do
     case ${opt} in
         h)
             print_help
@@ -335,6 +340,9 @@ while getopts ":hacfimp:tv" opt; do
             ;;
         i)
             INSTALL_COMMAND=install
+            ;;
+        j)
+            ENABLE_JAVA=OFF
             ;;
         m)
             BUILD_GENERATOR="Unix Makefiles"

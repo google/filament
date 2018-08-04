@@ -1,12 +1,33 @@
 cmake_minimum_required(VERSION 3.4.1)
 project(filament-java)
 
+if (NOT ENABLE_JAVA)
+	return()
+endif()
+
+find_package(Java)
+if (NOT Java_FOUND)
+	message(WARNING "JDK not found, skipping Java projects")
+	return()
+endif()
+
+find_package(JNI)
+if (NOT JNI_FOUND)
+	message(WARNING "JNI not found, skipping Java projects")
+	return()
+endif()
+
+if (NOT DEFINED ENV{JAVA_HOME})
+	message(WARNING "The JAVA_HOME environment variable must be set to compile Java projects")
+	message(WARNING "Skipping Java projects")
+	return()
+endif()
+
 # ==================================================================================================
 # JNI bindings
 # ==================================================================================================
 set(TARGET filament-jni)
 
-find_package(JNI REQUIRED)
 include_directories(${JNI_INCLUDE_DIRS})
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
@@ -55,10 +76,6 @@ if (APPLE)
 endif()
 
 add_library(${TARGET} SHARED ${JNI_SOURCE_FILES})
-find_package(JNI)
-if (NOT JNI_FOUND)
-    message(FATAL_ERROR "Unable to find JNI")
-endif()
 target_link_libraries(${TARGET} filament ${JAVA_AWT_LIBRARY})
 
 set(INSTALL_TYPE LIBRARY)
@@ -79,7 +96,6 @@ install(CODE "execute_process(COMMAND ${CMAKE_STRIP} -x ${CMAKE_INSTALL_PREFIX}/
 # ==================================================================================================
 set(TARGET filament-java)
 
-find_package(Java REQUIRED)
 include(UseJava)
 
 set(FILAMENT_JAVA_DIR ${FILAMENT_DIR}/src/main/java/)
