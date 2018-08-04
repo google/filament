@@ -285,14 +285,31 @@ function build_android {
 }
 
 function validate_build_command {
+	set +e
+	# Make sure CMake is installed
+	cmake_binary=`which cmake`
+    if [ ! "$cmake_binary" ]; then
+        echo "Error: could not find cmake, exiting"
+        exit 1
+    fi
+	
     # Make sure Ninja is installed
     if [ "$BUILD_COMMAND" == "ninja" ]; then
-        ninja_binary=`which ninja`
+        ninja_binary=`which ninja2`
         if [ ! "$ninja_binary" ]; then
             echo "Warning: could not find ninja, using make instead"
             BUILD_COMMAND="make"
         fi
     fi
+	# Make sure Make is installed
+    if [ "$BUILD_COMMAND" == "make" ]; then
+        make_binary=`which make`
+        if [ ! "$make_binary" ]; then
+            echo "Error: could not find make, exiting"
+            exit 1
+        fi
+    fi
+	set -e
 }
 
 # Beginning of the script
