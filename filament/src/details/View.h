@@ -125,11 +125,6 @@ public:
     bool hasDynamicLighting() const noexcept { return mHasDynamicLighting; }
     bool hasShadowing() const noexcept { return mHasShadowing & mDirectionalShadowMap.hasVisibleShadows(); }
 
-    void bindPerViewUniformsAndSamplers(FEngine::DriverApi& driver) const noexcept {
-        driver.bindUniforms(BindingPoints::PER_VIEW, getUbh());
-        driver.bindSamplers(BindingPoints::PER_VIEW, getUsh());
-    }
-
     void prepareVisibleRenderables(utils::JobSystem& js, FScene::RenderableSoa& renderableData) const noexcept;
 
     void prepareVisibleShadowCasters(utils::JobSystem& js, FScene::RenderableSoa& renderableData,
@@ -141,9 +136,6 @@ public:
 
     static void cullRenderables(utils::JobSystem& js, FScene::RenderableSoa& renderableData,
                                 Frustum const& frustum, size_t bit) noexcept;
-
-    static void updateSummedPrimitiveCounts(
-            FScene::RenderableSoa& renderableData, Range vr) noexcept;
 
     void setShadowsEnabled(bool enabled) noexcept { mShadowingEnabled = enabled; }
 
@@ -220,6 +212,11 @@ private:
             uint8_t visibleLayers, uint8_t const* layers,
             FRenderableManager::Visibility const* visibility, uint8_t* visibleMask,
             size_t count) const;
+
+    void bindPerViewUniformsAndSamplers(FEngine::DriverApi& driver) const noexcept {
+        driver.bindUniforms(BindingPoints::PER_VIEW, getUbh());
+        driver.bindSamplers(BindingPoints::PER_VIEW, getUsh());
+    }
 
     // we don't inline this one, because the function is quite large and there is not much to
     // gain from inlining.

@@ -51,6 +51,28 @@ public:
     math::float4 planes[6];
 };
 
+//
+// Light UBO           Froxel Record Buffer     per-froxel light list texture
+// {4 x float4}         R_U8  {index into        RG_U16 {offset, point-count, spot-sount}
+// (spot/point            light texture}
+//
+//  +----+                     +-+                     +----+
+// 0|....| <------------+     0| |         +-----------|0221| (e.g. offset=02, 2-point, 1-spot)
+// 1|....|<--------+     \    1| |        /            |    |
+// 2:    :          \     +---2|0|<------+             |    |
+// 3:    : <-------- \--------3|3|                     :    :
+// 4:    :            +------- :1:                     :    :
+//  :    :                     : :                     :    :
+//  :    :                     | |                     |    |
+//  :    :                     | |                     |    |
+//  :    :                     +-+                     |    |
+//  :    :                  65536 max                  +----+
+//  |....|                                          h = num froxels
+//  |....|
+//  +----+
+// 256 lights max
+//
+
 class FroxelData {
 public:
     explicit FroxelData(FEngine& engine);
@@ -58,79 +80,54 @@ public:
 
     void terminate() noexcept;
 
-    bool setup(
+    // gpu buffer containing records. valid after construction.
+    GPUBuffer const& getRecordBuffer() const noexcept { return mRecordsBuffer; }
+
+    // gpu buffer containing froxels. valid after construction.
+    GPUBuffer const& getFroxelBuffer() const noexcept { return mFroxelBuffer; }
+
+    void setOptions(float zLightNear, float zLightFar) noexcept;
+
+    /*
+     * Allocate per-frame data structures for froxelization.
+     *
+     * driverApi         used to allocate memory in the stream
+     * arena             use to allocate per-frame memory
+     * viewport          viewport used to calculate froxel dimensions
+     * projection        camera projection matrix
+     * projectionNear    near plane
+     * projectionFar     far plane
+     *
+     * return true if updateUniforms() needs to be called
+     */
+    bool prepare(
             FEngine::DriverApi& driverApi, ArenaScope& arena, Viewport const& viewport,
             const math::mat4f& projection, float projectionNear, float projectionFar) noexcept;
 
-
     Froxel getFroxelAt(size_t x, size_t y, size_t z) const noexcept;
-
     size_t getFroxelCountX() const noexcept { return mFroxelCountX; }
     size_t getFroxelCountY() const noexcept { return mFroxelCountY; }
     size_t getFroxelCountZ() const noexcept { return mFroxelCountZ; }
 
-    //
-    // Light UBO           Froxel Record Buffer     per-froxel light list texture
-    // {4 x float4}         R_U8  {index into        RG_U16 {offset, point-count, spot-sount}
-    // (spot/point            light texture}
-    //
-    //  +----+                     +-+                     +----+
-    // 0|....| <------------+     0| |         +-----------|0221| (e.g. offset=02, 2-point, 1-spot)
-    // 1|....|<--------+     \    1| |        /            |    |
-    // 2:    :          \     +---2|0|<------+             |    |
-    // 3:    : <-------- \--------3|3|                     :    :
-    // 4:    :            +------- :1:                     :    :
-    //  :    :                     : :                     :    :
-    //  :    :                     | |                     |    |
-    //  :    :                     | |                     |    |
-    //  :    :                     +-+                     |    |
-    //  :    :                  65536 max                  +----+
-    //  |....|                                          h = num froxels
-    //  |....|
-    //  +----+
-    // 256 lights max
-    //
-
     // update Records and Froxels texture with lights data. this is thread-safe.
     void froxelizeLights(math::mat4f const& viewMatrix, const FScene::LightSoa& lightData) noexcept;
 
-    void commit(driver::DriverApi& driverApi);
-
-    GPUBuffer const& getRecordBuffer() const noexcept { return mRecordsBuffer; }
-    GPUBuffer const& getFroxelBuffer() const noexcept { return mFroxelBuffer; }
-
     void updateUniforms(UniformBuffer& u) {
-        if (mUniformsNeedUpdating) {
-            mUniformsNeedUpdating = false;
-            u.setUniform(offsetof(FEngine::PerViewUib, zParams), mParamsZ);
-            u.setUniform(offsetof(FEngine::PerViewUib, fParams), mParamsF);
-            u.setUniform(offsetof(FEngine::PerViewUib, oneOverFroxelDimensionX), mOneOverDimension.x);
-            u.setUniform(offsetof(FEngine::PerViewUib, oneOverFroxelDimensionY), mOneOverDimension.y);
-        }
+        u.setUniform(offsetof(FEngine::PerViewUib, zParams), mParamsZ);
+        u.setUniform(offsetof(FEngine::PerViewUib, fParams), mParamsF);
+        u.setUniform(offsetof(FEngine::PerViewUib, oneOverFroxelDimensionX), mOneOverDimension.x);
+        u.setUniform(offsetof(FEngine::PerViewUib, oneOverFroxelDimensionY), mOneOverDimension.y);
     }
 
-    /*
-     * No user serviceable parts below
-     */
-
-    struct LightParams {
-        math::float3 position;
-        float cosSqr;
-        math::float3 axis;
-        // this must be initialized to indicate this is a point light
-        float invSin = std::numeric_limits<float>::infinity();
-        // radius is not used in the hot loop, so leave it at the end
-        float radius;
-    };
-
-    void froxelizePointAndSpotLight(utils::GrowingSlice<uint16_t>& froxels,
-        math::mat4f const& projection, const LightParams& light) const noexcept;
-
-    void update() noexcept;
-
-    void setOptions(float zLightNear, float zLightFar) noexcept;
+    // send froxel data to GPU
+    void commit(driver::DriverApi& driverApi);
 
 private:
+    struct FroxelRunEntry {
+        uint32_t index;
+        uint32_t count;
+    };
+
     struct FroxelEntry {
         union {
             uint32_t u32;
@@ -147,19 +144,23 @@ private:
         };
     };
 
-    void setViewport(Viewport const& viewport) noexcept;
-    void setProjection(const math::mat4f& projection, float projectionNear, float projectionFar) noexcept;
-
-    static void computeFroxelLayout(
-            math::uint2* dim, uint16_t* countX, uint16_t* countY, uint16_t* countZ,
-            Viewport const& viewport) noexcept;
-
-    static size_t updateFroxelOffsets(utils::Slice<FroxelEntry>& gpuFroxelEntries) noexcept;
-
-    struct FroxelRunEntry {
-        uint32_t index;
-        uint32_t count;
+    struct LightRecord {
+        utils::bitset256 lights;
     };
+
+    struct LightParams {
+        math::float3 position;
+        float cosSqr;
+        math::float3 axis;
+        // this must be initialized to indicate this is a point light
+        float invSin = std::numeric_limits<float>::infinity();
+        // radius is not used in the hot loop, so leave it at the end
+        float radius;
+    };
+
+    void setViewport(Viewport const& viewport) noexcept;
+    void setProjection(const math::mat4f& projection, float near, float far) noexcept;
+    bool update() noexcept;
 
     void froxelizeLoop(
             utils::Slice<uint16_t>& froxelsList,
@@ -167,14 +168,13 @@ private:
             math::mat4f const& viewMatrix,
             const FScene::LightSoa& lightData) noexcept;
 
+    void froxelizePointAndSpotLight(
+            utils::GrowingSlice<uint16_t>& froxels,
+            math::mat4f const& projection, const LightParams& light) const noexcept;
+
     void froxelizeAssignRecordsCompress(
             const utils::Slice<uint16_t>& froxelsList,
             const utils::Slice<FroxelRunEntry>& froxelsListIndices) noexcept;
-
-    void froxelizeAssignRecords(
-            const utils::Slice<uint16_t>& froxelsList,
-            const utils::Slice<FroxelRunEntry>& froxelsListIndices) noexcept;
-
 
     uint16_t getFroxelIndex(size_t ix, size_t iy, size_t iz) const noexcept {
         return uint16_t(ix + (iy * mFroxelCountX) + (iz * mFroxelCountX * mFroxelCountY));
@@ -184,18 +184,22 @@ private:
 
     std::pair<size_t, size_t> clipToIndices(math::float2 const& clip) const noexcept;
 
-    // track if we need to update our internal state before froxelizing
-    uint8_t mDirtyFlags = 0;
-    bool mUniformsNeedUpdating = false;
-    enum {
-        VIEWPORT_CHANGED = 0x01,
-        PROJECTION_CHANGED = 0x02
-    };
+    static void computeFroxelLayout(
+            math::uint2* dim, uint16_t* countX, uint16_t* countY, uint16_t* countZ,
+            Viewport const& viewport) noexcept;
+
+    static math::float4 spherePlaneIntersection(math::float4 s, math::float4 p) noexcept;
+    static float spherePlaneDistanceSquared(math::float4 s, float x, float z) noexcept;
+    static math::float4 spherePlaneIntersection(math::float4 s, float py, float pz) noexcept;
+    static math::float4 spherePlaneIntersection(math::float4 s, float pw) noexcept;
+    static bool sphereConeIntersectionFast(math::float4 const& sphere, FroxelData::LightParams const& cone) noexcept;
+    static bool sphereConeIntersection(math::float4 const& sphere, FroxelData::LightParams const& cone) noexcept;
+
 
     // internal state dependant on the viewport and needed for froxelizing
     FEngine& mEngine;
 
-    LinearAllocatorArena mArena;
+    LinearAllocatorArena mArena;                    // ~256 KiB
 
     float* mDistancesZ = nullptr;                   // max 2.1 MiB (actual: resolution dependant)
     math::float4* mPlanesX = nullptr;
@@ -204,10 +208,6 @@ private:
 
     // This depends on the maximum number of lights (currently 256),and can't be more than 16 bits.
     using RecordBufferType = std::conditional_t<CONFIG_MAX_LIGHT_COUNT <= 255, uint8_t, uint16_t>;
-
-    struct LightRecord {
-        utils::bitset256 lights;
-    };
 
     utils::Slice<FroxelRunEntry> mFroxelListIndices;    // ~2 KiB
     utils::Slice<uint16_t> mFroxelList;                 // ~4 MiB + 510 B
@@ -236,6 +236,13 @@ private:
     float mNear = 0.0f;        // camera near
     float mZLightFar = FEngine::CONFIG_Z_LIGHT_FAR;
     float mZLightNear = FEngine::CONFIG_Z_LIGHT_NEAR;  // light near (first slice)
+
+    // track if we need to update our internal state before froxelizing
+    uint8_t mDirtyFlags = 0;
+    enum {
+        VIEWPORT_CHANGED = 0x01,
+        PROJECTION_CHANGED = 0x02
+    };
 };
 
 } // namespace details
