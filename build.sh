@@ -295,10 +295,11 @@ function validate_build_command {
 	
     # Make sure Ninja is installed
     if [ "$BUILD_COMMAND" == "ninja" ]; then
-        ninja_binary=`which ninja2`
+        ninja_binary=`which ninja`
         if [ ! "$ninja_binary" ]; then
             echo "Warning: could not find ninja, using make instead"
-            BUILD_COMMAND="make"
+            BUILD_GENERATOR="Unix Makefiles"
+			BUILD_COMMAND="make"
         fi
     fi
 	# Make sure Make is installed
