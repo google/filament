@@ -990,7 +990,7 @@ f_{d}(v,h) = \frac{c_{diff}}{\pi}(1 - F(v,h)) \left< \NoL + \frac{w}{(1 + w)} \r
 Where $w$ is a value between 0 and 1 defining by how much the diffuse light should wrap around the terminator. To avoid introducing another parameter, we fix $w = 0.5$. Note that with wrap diffuse lighting, the diffuse term must not be multiplied by $\NoL$. The effect of this cheap
 subsurface scattering approximation can be seen in figure [materialClothSubsurface].
 
-![Figure [materialClothSubsurface]: White cloth (left column) vs white cloth with brown subsurface scatting (right)](images/screenshot_cloth_subsurface.png)
+![Figure [materialClothSubsurface]: White cloth (left column) vs white cloth with brown subsurface scattering (right)](images/screenshot_cloth_subsurface.png)
 
 The complete implementation of our cloth BRDF, including sheen color and optional subsurface scattering, can be found in listing [clothFullBRDF].
 
