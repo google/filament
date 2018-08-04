@@ -1,0 +1,11 @@
+.DS_Store
+.idea
+imgui.ini
+cmake-*
+ImportExecutables-*.cmake
+out
+dist
+dist-*
+toolchains
+filament/docs/html/**
+.vscode
