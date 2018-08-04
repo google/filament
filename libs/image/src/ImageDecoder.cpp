@@ -496,7 +496,7 @@ Image PSDDecoder::decode() {
         uint16_t depth;
         uint16_t mode;
     };
-    #pragma pop()
+    #pragma pack(pop)
 
     static const uint16_t kColorModeRGB = 3;
     static const uint16_t kCompressionRAW = 0;
