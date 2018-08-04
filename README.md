@@ -122,8 +122,11 @@ To build Filament, you must first install the following tools:
 - repo
 - CMake 3.4 (or more recent)
 - clang 5.0 (or more recent)
-- OpenJDK 1.8 (or more recent)
 - [ninja 1.8](https://github.com/ninja-build/ninja/wiki/Pre-built-Ninja-packages) (or more recent)
+
+To build the Java based components of the project you can optionally install (recommended):
+
+- OpenJDK 1.8 (or more recent)
 
 Additional dependencies may be required for your operating system. Please refer to the appropriate
 section below.
@@ -172,6 +175,12 @@ $ ./build.sh debug release
 To install the libraries and executables in `out/debug/` and `out/release/`, add the `-i` flag.
 You can force a clean build by adding the `-c` flag. The script offers more features described
 by executing `build.sh -h`.
+
+You can skip building the Java based components of the projects by using the `-j` flag:
+
+```
+$ ./build.sh -j release
+```
 
 #### Linux
 
