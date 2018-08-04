@@ -156,7 +156,7 @@ function build_desktop_target {
             -DCMAKE_BUILD_TYPE=$1 \
             -DCMAKE_INSTALL_PREFIX=../${LC_TARGET}/filament \
             -DFILAMENT_REQUIRES_CXXABI=${FILAMENT_REQUIRES_CXXABI} \
-			-DENABLE_JAVA=${ENABLE_JAVA} \
+            -DENABLE_JAVA=${ENABLE_JAVA} \
             ../..
     fi
     ${BUILD_COMMAND} ${BUILD_TARGETS}
@@ -290,24 +290,24 @@ function build_android {
 }
 
 function validate_build_command {
-	set +e
-	# Make sure CMake is installed
-	cmake_binary=`which cmake`
+    set +e
+    # Make sure CMake is installed
+    cmake_binary=`which cmake`
     if [ ! "$cmake_binary" ]; then
         echo "Error: could not find cmake, exiting"
         exit 1
     fi
-	
+    
     # Make sure Ninja is installed
     if [ "$BUILD_COMMAND" == "ninja" ]; then
         ninja_binary=`which ninja`
         if [ ! "$ninja_binary" ]; then
             echo "Warning: could not find ninja, using make instead"
             BUILD_GENERATOR="Unix Makefiles"
-			BUILD_COMMAND="make"
+            BUILD_COMMAND="make"
         fi
     fi
-	# Make sure Make is installed
+    # Make sure Make is installed
     if [ "$BUILD_COMMAND" == "make" ]; then
         make_binary=`which make`
         if [ ! "$make_binary" ]; then
@@ -315,7 +315,7 @@ function validate_build_command {
             exit 1
         fi
     fi
-	set -e
+    set -e
 }
 
 # Beginning of the script

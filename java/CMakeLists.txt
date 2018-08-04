@@ -2,25 +2,25 @@ cmake_minimum_required(VERSION 3.4.1)
 project(filament-java)
 
 if (NOT ENABLE_JAVA)
-	return()
+    return()
 endif()
 
 find_package(Java)
 if (NOT Java_FOUND)
-	message(WARNING "JDK not found, skipping Java projects")
-	return()
+    message(WARNING "JDK not found, skipping Java projects")
+    return()
 endif()
 
 find_package(JNI)
 if (NOT JNI_FOUND)
-	message(WARNING "JNI not found, skipping Java projects")
-	return()
+    message(WARNING "JNI not found, skipping Java projects")
+    return()
 endif()
 
 if (NOT DEFINED ENV{JAVA_HOME})
-	message(WARNING "The JAVA_HOME environment variable must be set to compile Java projects")
-	message(WARNING "Skipping Java projects")
-	return()
+    message(WARNING "The JAVA_HOME environment variable must be set to compile Java projects")
+    message(WARNING "Skipping Java projects")
+    return()
 endif()
 
 # ==================================================================================================
