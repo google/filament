@@ -119,7 +119,6 @@ Many other features have been either prototyped or planned:
 
 To build Filament, you must first install the following tools:
 
-- repo
 - CMake 3.4 (or more recent)
 - clang 5.0 (or more recent)
 - [ninja 1.8](https://github.com/ninja-build/ninja/wiki/Pre-built-Ninja-packages) (or more recent)
@@ -260,8 +259,6 @@ Install the following components:
 - [Python 3.7](https://www.python.org/ftp/python/3.7.0/python-3.7.0b1.exe)
 - [Git 2.16.1 or later](https://github.com/git-for-windows/git/releases/download/v2.16.1.windows.4/PortableGit-2.16.1.4-64-bit.7z.exe)
 - [Cmake 3.4](https://cmake.org/files/v3.11/cmake-3.11.0-rc1-win64-x64.msi)
-- [repo](https://storage.googleapis.com/git-repo-downloads/repo), add it to PATH (open the
-  Control Panel > System and Security > System >  Advanced System Settings > Environment variables)
 
 Open an x86_64 VS 2015 terminal (click the start button, type "x86" and select:
 "x86_64 cross tools command prompt for VS 2015").
