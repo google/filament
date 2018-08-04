@@ -43,7 +43,7 @@ Flexibility
 :   A physically based approach must not preclude non-realistic rendering. User interfaces for instance will need unlit materials.
 
 Deployment size
-:   While not directly related to the content of this document, it bears emphasizing our desire to keep the rendering library as small as possible so any application can bundle it without increase the binary to undesirable sizes.
+:   While not directly related to the content of this document, it bears emphasizing our desire to keep the rendering library as small as possible so any application can bundle it without increasing the binary to undesirable sizes.
 
 ## Physically based rendering
 
@@ -136,7 +136,7 @@ However, not all microfacets with a properly oriented normal will contribute ref
 
 ![Figure [microfacetShadowing]: Masking and shadowing of microfacets](images/diagram_shadowing_masking.png)
 
-A microfacet BRDF is heavily influenced by a _roughness_ parameter which describes how smooth (low roughness) or how rough (high roughness) a surface is at a micro level. The smoother the surface, the more facets are aligned and the more pronounced is reflected light. The rougher the surface, the fewer facets are oriented towards the camera and incoming light is scattered away from the camera after reflection, giving a blurry aspect to the specular highlights.
+A microfacet BRDF is heavily influenced by a _roughness_ parameter which describes how smooth (low roughness) or how rough (high roughness) a surface is at a micro level. The smoother the surface, the more facets are aligned and the more pronounced the reflected light is. The rougher the surface, the fewer facets are oriented towards the camera and incoming light is scattered away from the camera after reflection, giving a blurry aspect to the specular highlights.
 
 Figure [roughness] shows surfaces of different roughness and how light interacts with them.
 
@@ -161,7 +161,7 @@ It is important to note that this equation is used to integrate over the hemisph
 
 The diagram above shows that at a macro level, the surfaces is considered flat. This helps simplify our equations by assuming that a shaded fragment lit from a single direction corresponds to a single point at the surface.
 
-At a micro level however, the surface is not flat and we cannot assume a single ray of light anymore (we can however assume that the incident rays are parallel). Since the micro facets will scatter the light in different directions given a bundle of parallel incident rays, we must integrate the surface response over an hemisphere, noted m in the above diagram.
+At a micro level however, the surface is not flat and we cannot assume a single ray of light anymore (we can however assume that the incident rays are parallel). Since the micro facets will scatter the light in different directions given a bundle of parallel incident rays, we must integrate the surface response over a hemisphere, noted m in the above diagram.
 
 It is obviously not practical to compute the full integration over the microfacets hemisphere for each shaded fragment. We will therefore rely on approximations of the integration for both the specular and diffuse components.
 
@@ -189,7 +189,7 @@ Energy conservation is one of the key components of a good BRDF for physically b
 
 ## Specular BRDF
 
-For the specular term, fm is a mirror BRDF that can be modeled with the Fresnel law, noted $F$ in the Cook-Torrance approximation of the microfacet model integration:
+For the specular term, $f_m$ is a mirror BRDF that can be modeled with the Fresnel law, noted $F$ in the Cook-Torrance approximation of the microfacet model integration:
 
 $$\begin{equation}
 f_r(v,l) = \frac{D(h, \alpha) G(v, l, \alpha) F(v, h, f0)}{4(\NoV)(\NoL)}
@@ -276,7 +276,7 @@ $$\begin{equation}
 V(v,l,\alpha) = \frac{0.5}{\NoL \sqrt{(\NoV)^2 (1 - \aa) + \aa} + \NoV \sqrt{(\NoL)^2 (1 - \aa) + \aa}}
 \end{equation}$$
 
-The GLSL implementation of the visibility term, shown in listing [specularV], is a bit more expensive than we would like since it requires two `sqrt`.
+The GLSL implementation of the visibility term, shown in listing [specularV], is a bit more expensive than we would like since it requires two `sqrt` operations.
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 float V_SmithGGXCorrelated(float NoV, float NoL, float linearRoughness) {
@@ -896,7 +896,7 @@ The anisotropic material model encompasses all the parameters previously defined
 **Anisotropy**         | Amount of anisotropy. Scalar between -1 and 1
 [Table [anisotropicParameters]: Anisotropic model parameters]
 
-No further remapping is required. Note that negative values can will align the anisotropy with the bitangent direction instead of the tangent direction. Figure [anisotropyParameter] shows how the anisotropy parameter affect the appearance of a rough metallic surface.
+No further remapping is required. Note that negative values will align the anisotropy with the bitangent direction instead of the tangent direction. Figure [anisotropyParameter] shows how the anisotropy parameter affect the appearance of a rough metallic surface.
 
 ![Figure [anisotropyParameter]: Anisotropy varying from 0.0 (left) to 1.0 (right)](images/materials/anisotropy.png)
 
@@ -914,7 +914,7 @@ No further remapping is required. Note that negative values can will align the a
 
 ## Cloth model
 
-All the material models described previously are designed to simulate dense surfaces, both at a macro and at a micro level. Clothes and fabrics are however often made of loosely connected threads that absorb and scatter incident light. The microfacet BRDFs presented earlier do a poor job at recreating the nature of cloth due to their underlying assumption that a surface is made of random grooves that behave as perfect mirrors. When compared to hard surfaces, cloth is characterized by a softer specular lob with a large falloff and the presence of fuzz lighting, caused by forward/backward scattering. Some fabrics also exhibit two-tone specular colors (velvets for instance).
+All the material models described previously are designed to simulate dense surfaces, both at a macro and at a micro level. Clothes and fabrics are however often made of loosely connected threads that absorb and scatter incident light. The microfacet BRDFs presented earlier do a poor job at recreating the nature of cloth due to their underlying assumption that a surface is made of random grooves that behave as perfect mirrors. When compared to hard surfaces, cloth is characterized by a softer specular lobe with a large falloff and the presence of fuzz lighting, caused by forward/backward scattering. Some fabrics also exhibit two-tone specular colors (velvets for instance).
 
 Figure [materialCloth] shows how a traditional microfacet BRDF fails to capture the appearance of a sample of denim fabric. The surface appears rigid (almost plastic-like), more similar to a tarp than a piece of clothing. This figure also shows how important the softer specular lobe caused by absorption and scattering is to the faithful recreation of the fabric.
 
