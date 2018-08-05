@@ -11,9 +11,9 @@ Android devices and as the renderer inside the Android Studio plugin.
 
 ## Documentation
 
-- [Filament](https://google.github.io/filament/Filament.md.html), an in-depth explanation of the graphics capabilities and
-  implementation of Filament. This document explains the math and reasoning behind most of our
-  decisions.
+- [Filament](https://google.github.io/filament/Filament.md.html), an in-depth explanation of real-time physically
+  based rendering, the graphics capabilities and implementation of Filament. This document explains the math and
+  reasoning behind most of our decisions. This document is a good introduction to PBR for graphics programmers.
 - [Materials](https://google.github.io/filament//Materials.md.html), the full reference documentation for our material system.
   This document explains our different material models, how to use the material compiler `matc` and
   how to write custom materials.
