@@ -169,7 +169,7 @@ It is obviously not practical to compute the full integration over the microface
 
 To better understand some of the equations and behaviors shown below, we must first clearly understand the difference between metallic (conductor) and non-metallic (dielectric) surfaces.
 
-We saw earlier that when incident light hits a surface governed by a BRDF, the light is reflected as two separate component: the diffuse reflectance and the specular reflectance. The modelization of this behavior is straightforward as shown in figure [bsdfBrdf].
+We saw earlier that when incident light hits a surface governed by a BRDF, the light is reflected as two separate components: the diffuse reflectance and the specular reflectance. The modelization of this behavior is straightforward as shown in figure [bsdfBrdf].
 
 ![Figure [bsdfBrdf]: Modelization of the BRDF part of a BSDF](images/diagram_fr_fd.png)
 
@@ -690,7 +690,7 @@ V(l,h) = \frac{1}{4(\LoH)^2}
 
 This masking-shadowing function is not physically based, as shown in [#Heitz14], but its simplicity makes it desirable for real-time rendering.
 
-In summary, our clear coat BRDF is a Cook-Torrance specular microfacet model, with a GGX normal distribution function, a Kelemen visibility function, and a Schlick Fresnel function. Listing [kelemen] show show trivial the GLSL implementation is.
+In summary, our clear coat BRDF is a Cook-Torrance specular microfacet model, with a GGX normal distribution function, a Kelemen visibility function, and a Schlick Fresnel function. Listing [kelemen] show how trivial the GLSL implementation is.
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 float V_Kelemen(float LoH) {
