@@ -264,12 +264,10 @@ Google employees require additional steps which can be found here [go/filawin](h
 Install the following components:
 
 - [Windows 10 SDK](https://developer.microsoft.com/en-us/windows/downloads/windows-10-sdk)
-- [Visual Studio 2015](https://www.visualstudio.com/downloads) (request MSDN membership if
-  needed)
+- [Visual Studio 2015](https://www.visualstudio.com/downloads)
 - [Clang 7 for MSVC](http://prereleases.llvm.org/win-snapshots/LLVM-7.0.0-r323406-win32.exe)
-- [Python 3.7](https://www.python.org/ftp/python/3.7.0/python-3.7.0b1.exe)
 - [Git 2.16.1 or later](https://github.com/git-for-windows/git/releases/download/v2.16.1.windows.4/PortableGit-2.16.1.4-64-bit.7z.exe)
-- [Cmake 3.4](https://cmake.org/files/v3.11/cmake-3.11.0-rc1-win64-x64.msi)
+- [Cmake 3.11 or later](https://cmake.org/files/v3.11/cmake-3.11.0-rc1-win64-x64.msi)
 
 Open an x86_64 VS 2015 terminal (click the start button, type "x86" and select:
 "x86_64 cross tools command prompt for VS 2015").
