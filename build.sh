@@ -315,6 +315,12 @@ function validate_build_command {
             exit 1
         fi
     fi
+	# Make sure we have Java
+    javac_binary=`which javac`
+	if [ "$JAVA_HOME" == "" ] || [ ! "$javac_binary" ]; then
+		echo "Warning: JAVA_HOME is not set, skipping Java projects"
+		ENABLE_JAVA=OFF
+	fi
     set -e
 }
 
