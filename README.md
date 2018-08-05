@@ -376,7 +376,7 @@ Then invoke CMake in a build directory of your choice, inside of filament's dire
 $ mkdir android-build-release-aarch64
 $ cd android-build-release-aarch64
 $ cmake -G Ninja -DCMAKE_TOOLCHAIN_FILE=../build/toolchain-aarch64-linux-android.cmake \
-        -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=../dist ..
+        -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=../out/android-release ..
 ```
 
 And then invoke `ninja`:
@@ -391,9 +391,9 @@ or
 $ ninja install/strip
 ```
 
-This will generate Filament's Android binaries in `dist`. This location is important to build the
-Android Studio projects located in `filament/android`. After install, the library binaries should
-be found in `dist/lib/arm64-v8a`.
+This will generate Filament's Android binaries in `out/android-release`. This location is important
+to build the Android Studio projects located in `filament/android`. After install, the library
+binaries should be found in `out/android-release/lib/arm64-v8a`.
 
 #### ARM 32-bit target (armeabi-v7a)
 
@@ -421,7 +421,7 @@ Then invoke CMake in a build directory of your choice, inside of filament's dire
 $ mkdir android-build-release-arm
 $ cd android-build-release-arm
 $ cmake -G Ninja -DCMAKE_TOOLCHAIN_FILE=../build/toolchain-arm7-linux-android.cmake \
-        -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=../dist ..
+        -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=../out/android-release ..
 ```
 
 And then invoke `ninja`:
@@ -466,7 +466,7 @@ Then invoke CMake in a build directory of your choice, sibling of filament's dir
 $ mkdir android-build-release-x86_64
 $ cd android-build-release-x86_64
 $ cmake -G Ninja -DCMAKE_TOOLCHAIN_FILE=../filament/build/toolchain-x86_64-linux-android.cmake \
-        -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=../dist ..
+        -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=../out/android-release ..
 ```
 
 And then invoke `ninja`:
@@ -511,7 +511,7 @@ Then invoke CMake in a build directory of your choice, sibling of filament's dir
 $ mkdir android-build-release-x86
 $ cd android-build-release-x86
 $ cmake -G Ninja -DCMAKE_TOOLCHAIN_FILE=../filament/build/toolchain-x86-linux-android.cmake \
-        -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=../dist ..
+        -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=../out/android-release ..
 ```
 
 And then invoke `ninja`:
@@ -532,6 +532,15 @@ be found in `dist/lib/x86`.
 
 ### AAR
 
+Before you attempt to build the AAR, make sure you've compiled and installed the native libraries
+as explained in the sections above. You must have the following ABIs built in
+`out/android-release/filament/lib/`:
+
+- `arm64-v8a`
+- `armeabi-v7a`
+- `x86_64`
+- `x86`
+
 To build Filament's AAR simply open the Android Studio project in `android/filament-android`. The
 AAR is a universal AAR that contains all supported build targets:
 
@@ -542,6 +551,16 @@ AAR is a universal AAR that contains all supported build targets:
 
 To filter out unneeded ABIs, rely on the `abiFilters` of the project that links against Filament's
 AAR.
+
+Alternatively you can build the AAR from the command line by executing the following the
+`android/filament-android` directory:
+
+```
+$ ./gradlew -Pfilament_dist_dir=../../out/android-release/filament assembleRelease
+```
+
+The `-Pfilament_dist_dir` can be used to specify a different installation directory (it must match
+the CMake install prefix used in the previous steps).
 
 ### Using Filament's AAR
 
