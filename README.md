@@ -624,7 +624,7 @@ Renderer* renderer = engine->createRenderer();
 To render a frame you must then create a `View`, a `Scene` and a `Camera`:
 
 ```c++
-Camera* = engine->createCamera();
+Camera* camera = engine->createCamera();
 View* view = engine->createView();
 Scene* scene = engine->createScene();
 
