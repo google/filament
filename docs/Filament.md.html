@@ -745,7 +745,7 @@ void BRDF(...) {
     // compute Fd and Fr from standard model
 
     // remapping and linearization of clear coat roughness
-    clearCoatRoughness = mix(0.089, 0.3, clearCoatRoughness);
+    clearCoatRoughness = mix(0.089, 0.6, clearCoatRoughness);
     clearCoatLinearRoughness = clearCoatRoughness * clearCoatRoughness;
 
     // clear coat BRDF
