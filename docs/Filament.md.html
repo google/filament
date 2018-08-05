@@ -1960,12 +1960,10 @@ vec3 evaluateIBL(vec3 n, vec3 v, vec3 diffuseColor, vec3 f0, float roughness) {
 When sampling the IBL, the clear coat layer is calculated as a second specular lobe. This specular lobe is oriented along the view direction since we cannot reasonably integrate over the hemisphere. Listing [clearCoatIBL] demonstrates this approximation in practice. It also shows the energy conservation step. It is important to note that this second specular lobe is computed exactly the same way as the main specular lobe, using the same DFG approximation.
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-vec3 ibl = diffuseColor * indirectDiffuse + indirectSpecular * specularColor;
 float Fc = F_Schlick(0.04, 1.0, shading_NoV) * clearCoat;
 // base layer attenuation for energy compensation
-iblDiffuse  *= 1.0 - Fc;
-iblSpecular *= sq(1.0 - Fc);
-iblSpecular += specularIBL(r, clearCoatRoughness) * Fc;
+vec3 ibl = (iblDiffuse + iblSpecular) * sq(1.0 - Fc)
+        + specularIBL(r, clearCoatRoughness) * Fc;
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 [Listing [clearCoatIBL]: GLSL implementation of the clear coat specular lobe for image-based lighting]
 
