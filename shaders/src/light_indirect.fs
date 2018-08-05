@@ -201,9 +201,10 @@ void evaluateClearCoatIBL(const PixelParams pixel, float specularAO, inout vec3 
 #endif
     // The clear coat layer assumes an IOR of 1.5 (4% reflectance)
     float Fc = F_Schlick(0.04, 1.0, clearCoatNoV) * pixel.clearCoat;
-    Fr *= sq(1.0 - Fc);
+    float attenuation = 1.0 - Fc;
+    Fr *= sq(attenuation);
     Fr += specularIrradiance(clearCoatR, pixel.clearCoatRoughness) * (specularAO * Fc);
-    Fd *= 1.0 - Fc;
+    Fd *= attenuation;
 #endif
 }
 

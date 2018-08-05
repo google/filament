@@ -1,6 +1,5 @@
 #if defined(MATERIAL_HAS_CLEAR_COAT)
-float clearCoatLobe(const PixelParams pixel, const vec3 h, float NoH, float LoH,
-        out float clearCoatFresnel) {
+float clearCoatLobe(const PixelParams pixel, const vec3 h, float NoH, float LoH, out float Fc) {
 
 #if defined(MATERIAL_HAS_NORMAL)
     // If the material has a normal map, we want to use the geometric normal
@@ -11,12 +10,12 @@ float clearCoatLobe(const PixelParams pixel, const vec3 h, float NoH, float LoH,
 #endif
 
     // clear coat specular lobe
-    float Dc = distributionClearCoat(pixel.clearCoatLinearRoughness, clearCoatNoH, h);
-    float Vc = visibilityClearCoat(pixel.clearCoatRoughness, pixel.clearCoatLinearRoughness, LoH);
-    float Fc = F_Schlick(0.04, 1.0, LoH) * pixel.clearCoat; // fix IOR to 1.5
+    float D = distributionClearCoat(pixel.clearCoatLinearRoughness, clearCoatNoH, h);
+    float V = visibilityClearCoat(pixel.clearCoatRoughness, pixel.clearCoatLinearRoughness, LoH);
+    float F = F_Schlick(0.04, 1.0, LoH) * pixel.clearCoat; // fix IOR to 1.5
 
-    clearCoatFresnel = Fc;
-    return Dc * Vc * Fc;
+    Fc = F;
+    return D * V * F;
 }
 #endif
 
@@ -102,17 +101,18 @@ vec3 surfaceShading(const PixelParams pixel, const Light light, float occlusion)
     vec3 Fr = specularLobe(pixel, light, h, NoV, NoL, NoH, LoH);
     vec3 Fd = diffuseLobe(pixel, NoV, NoL, LoH);
 
-    // The energy compensation term is used to counteract the darkening effect
-    // at high roughness
-    vec3 color = Fd + Fr * pixel.energyCompensation;
-
 #if defined(MATERIAL_HAS_CLEAR_COAT)
-    float clearCoatFresnel;
-    float Fcc = clearCoatLobe(pixel, h, NoH, LoH, clearCoatFresnel);
+    float Fc;
+    float clearCoat = clearCoatLobe(pixel, h, NoH, LoH, Fc);
     // Energy compensation and absorption; the clear coat Fresnel term is
     // squared to take into account both entering through and exiting through
     // the clear coat layer
-    color = color * sq(1.0 - clearCoatFresnel) + Fcc;
+    float attenuation = 1.0 - Fc;
+    vec3 color = (Fd + Fr * (pixel.energyCompensation * attenuation)) * attenuation + clearCoat;
+#else
+    // The energy compensation term is used to counteract the darkening effect
+    // at high roughness
+    vec3 color = Fd + Fr * pixel.energyCompensation;
 #endif
 
     return (color * light.colorIntensity.rgb) *

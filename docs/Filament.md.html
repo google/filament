@@ -714,10 +714,10 @@ This correspond to a Fresnel reflectance of 4% that we know is associated with c
 Because we must take into account the loss of energy caused by the addition of the clear coat layer, we can reformulate the BRDF from equation $\ref{brdf}$ thusly:
 
 $$\begin{equation}
-f(v,l)=(\fDiffuse(n,l) + \fSpecular(n,l))(1 - F_c)^2 + f_c(n,l)
+f(v,l)=\fDiffuse(n,l) (1 - F_c) + \fSpecular(n,l) (1 - F_c)^2 + f_c(n,l)
 \end{equation}$$
 
-Where $F_c$ is the Fresnel term of the clear coat BRDF and $f_c$ the clear coat BRDF. The multiplication by $(1 - F_c)^2$ is to remain energy conservative as the light enters and exists the clear coat layer.
+Where $F_c$ is the Fresnel term of the clear coat BRDF and $f_c$ the clear coat BRDF. The multiplication by $(1 - F_c)^2$ of the specular component is to remain energy conservative as the light enters and exists the clear coat layer. The multiplication by $1 - F_c$ of the diffuse component is an attempt at energy conservation.
 
 ### Clear coat parameterization
 
@@ -1962,8 +1962,9 @@ When sampling the IBL, the clear coat layer is calculated as a second specular l
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 float Fc = F_Schlick(0.04, 1.0, shading_NoV) * clearCoat;
 // base layer attenuation for energy compensation
-vec3 ibl = (iblDiffuse + iblSpecular) * sq(1.0 - Fc)
-        + specularIBL(r, clearCoatRoughness) * Fc;
+iblDiffuse  *= 1.0 - Fc;
+iblSpecular *= sq(1.0 - Fc);
+iblSpecular += specularIBL(r, clearCoatRoughness) * Fc;
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 [Listing [clearCoatIBL]: GLSL implementation of the clear coat specular lobe for image-based lighting]
 
