@@ -190,6 +190,10 @@ Make sure you've installed the following dependencies:
 - `libc++abi-dev`
 - `ninja-build`
 
+In addition your distribution might require:
+
+- `libxi-dev`
+
 Then invoke `cmake`:
 
 ```
@@ -216,6 +220,13 @@ $ ninja
 ```
 
 This will build Filament, its tests and samples, and various host tools.
+
+If you experience link errors you must ensure that you are using `libc++abi` by passing this
+extra parameter to `cmake`:
+
+```
+-DFILAMENT_REQUIRES_CXXABI=true
+```
 
 #### macOS
 
