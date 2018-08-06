@@ -265,7 +265,7 @@ Install the following components:
 
 - [Windows 10 SDK](https://developer.microsoft.com/en-us/windows/downloads/windows-10-sdk)
 - [Visual Studio 2015](https://www.visualstudio.com/downloads)
-- [Clang 7 for MSVC](http://prereleases.llvm.org/win-snapshots/LLVM-7.0.0-r323406-win32.exe)
+- [Clang 6](http://releases.llvm.org/download.html)
 - [Git 2.16.1 or later](https://github.com/git-for-windows/git/releases/download/v2.16.1.windows.4/PortableGit-2.16.1.4-64-bit.7z.exe)
 - [Cmake 3.11 or later](https://cmake.org/files/v3.11/cmake-3.11.0-rc1-win64-x64.msi)
 
