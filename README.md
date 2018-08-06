@@ -269,8 +269,7 @@ Install the following components:
 - [Git 2.16.1 or later](https://github.com/git-for-windows/git/releases/download/v2.16.1.windows.4/PortableGit-2.16.1.4-64-bit.7z.exe)
 - [Cmake 3.11 or later](https://cmake.org/files/v3.11/cmake-3.11.0-rc1-win64-x64.msi)
 
-Open an x86_64 VS 2015 terminal (click the start button, type "x86" and select:
-"x86_64 cross tools command prompt for VS 2015").
+Open an VS2015 x64 Native Tools terminal (click the start button, type "x64 native tools" and select: "VS2015 x64 Native Tools Command Prompt").
 
 Create a working directory:
 ```
@@ -291,7 +290,7 @@ Clang:C:/Program Files/LLVM/msbuild-bin/cl.exe
 
 You are now ready to build:
 ```
-> msbuild  TNT.sln /t:material_sandbox /m /p:configuration=Debug /v:d
+> msbuild  TNT.sln /t:material_sandbox /m /p:configuration=Debug
 ```
 
 Run it:
