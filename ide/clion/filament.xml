@@ -1,0 +1,58 @@
+<code_scheme name="Filament" version="173">
+  <option name="RIGHT_MARGIN" value="100" />
+  <Objective-C>
+    <option name="INDENT_NAMESPACE_MEMBERS" value="0" />
+    <option name="FUNCTION_PARAMETERS_NEW_LINE_AFTER_LPAR" value="true" />
+    <option name="FUNCTION_CALL_ARGUMENTS_ALIGN_MULTILINE" value="false" />
+    <option name="SUPERCLASS_LIST_BEFORE_COLON" value="0" />
+    <option name="SPACE_BEFORE_POINTER_IN_DECLARATION" value="false" />
+    <option name="SPACE_AFTER_POINTER_IN_DECLARATION" value="true" />
+    <option name="SPACE_BEFORE_REFERENCE_IN_DECLARATION" value="false" />
+    <option name="SPACE_AFTER_REFERENCE_IN_DECLARATION" value="true" />
+    <option name="USE_MODERN_CASTS" value="false" />
+    <option name="FIELDS_PREFIX" value="m" />
+    <option name="INTRODUCE_AUTO_VARS" value="true" />
+  </Objective-C>
+  <Objective-C-extensions>
+    <file>
+      <option name="com.jetbrains.cidr.lang.util.OCDeclarationKind" value="Import" />
+      <option name="com.jetbrains.cidr.lang.util.OCDeclarationKind" value="Macro" />
+      <option name="com.jetbrains.cidr.lang.util.OCDeclarationKind" value="Typedef" />
+      <option name="com.jetbrains.cidr.lang.util.OCDeclarationKind" value="Enum" />
+      <option name="com.jetbrains.cidr.lang.util.OCDeclarationKind" value="Constant" />
+      <option name="com.jetbrains.cidr.lang.util.OCDeclarationKind" value="Global" />
+      <option name="com.jetbrains.cidr.lang.util.OCDeclarationKind" value="Struct" />
+      <option name="com.jetbrains.cidr.lang.util.OCDeclarationKind" value="FunctionPredecl" />
+      <option name="com.jetbrains.cidr.lang.util.OCDeclarationKind" value="Function" />
+    </file>
+    <class>
+      <option name="com.jetbrains.cidr.lang.util.OCDeclarationKind" value="Property" />
+      <option name="com.jetbrains.cidr.lang.util.OCDeclarationKind" value="Synthesize" />
+      <option name="com.jetbrains.cidr.lang.util.OCDeclarationKind" value="InitMethod" />
+      <option name="com.jetbrains.cidr.lang.util.OCDeclarationKind" value="StaticMethod" />
+      <option name="com.jetbrains.cidr.lang.util.OCDeclarationKind" value="InstanceMethod" />
+      <option name="com.jetbrains.cidr.lang.util.OCDeclarationKind" value="DeallocMethod" />
+    </class>
+    <extensions>
+      <pair source="cpp" header="h" fileNamingConvention="PASCAL_CASE" />
+      <pair source="c" header="h" fileNamingConvention="NONE" />
+    </extensions>
+  </Objective-C-extensions>
+  <codeStyleSettings language="ObjectiveC">
+    <option name="BLANK_LINES_AROUND_METHOD_IN_INTERFACE" value="0" />
+    <option name="ALIGN_MULTILINE_CHAINED_METHODS" value="true" />
+    <option name="SPACE_WITHIN_ARRAY_INITIALIZER_BRACES" value="true" />
+    <option name="SPACE_AFTER_TYPE_CAST" value="false" />
+    <option name="METHOD_CALL_CHAIN_WRAP" value="5" />
+    <option name="PARENTHESES_EXPRESSION_LPAREN_WRAP" value="true" />
+    <option name="BINARY_OPERATION_SIGN_ON_NEXT_LINE" value="true" />
+    <option name="ARRAY_INITIALIZER_LBRACE_ON_NEXT_LINE" value="true" />
+    <option name="IF_BRACE_FORCE" value="1" />
+    <option name="DOWHILE_BRACE_FORCE" value="3" />
+    <option name="WHILE_BRACE_FORCE" value="3" />
+    <option name="FOR_BRACE_FORCE" value="3" />
+    <indentOptions>
+      <option name="LABEL_INDENT_ABSOLUTE" value="true" />
+    </indentOptions>
+  </codeStyleSettings>
+</code_scheme>
