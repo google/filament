@@ -22,7 +22,7 @@
 #include "details/Culler.h"
 #include "details/Engine.h"
 #include "details/IndirectLight.h"
-#include "details/LightData.h"
+#include "details/GpuLightBuffer.h"
 #include "details/Skybox.h"
 
 #include <utils/compiler.h>
@@ -170,7 +170,7 @@ void FScene::terminate(FEngine& engine) {
 
 void FScene::prepareLights(const CameraInfo& camera) noexcept {
     FLightManager& lcm = mEngine.getLightManager();
-    LightData& gpuLightData = mGpuLightData;
+    GpuLightBuffer& gpuLightData = mGpuLightData;
     FScene::LightSoa& lightData = getLightData();
 
     /*
@@ -213,8 +213,8 @@ void FScene::prepareLights(const CameraInfo& camera) noexcept {
     auto const* UTILS_RESTRICT directions   = lightData.data<FScene::DIRECTION>();
     auto const* UTILS_RESTRICT instances    = lightData.data<FScene::LIGHT_INSTANCE>();
     for (size_t i = DIRECTIONAL_LIGHTS_COUNT, c = lightData.size(); i < c; ++i) {
-        LightData::LightIndex gpuIndex = LightData::LightIndex(i - DIRECTIONAL_LIGHTS_COUNT);
-        LightData::LightParameters& lp = gpuLightData.getLightParameters(gpuIndex);
+        GpuLightBuffer::LightIndex gpuIndex = GpuLightBuffer::LightIndex(i - DIRECTIONAL_LIGHTS_COUNT);
+        GpuLightBuffer::LightParameters& lp = gpuLightData.getLightParameters(gpuIndex);
         auto li = instances[i];
         lp.positionFalloff      = { positions[i].xyz, lcm.getSquaredFalloffInv(li) };
         lp.colorIntensity       = { lcm.getColor(li), lcm.getIntensity(li) };

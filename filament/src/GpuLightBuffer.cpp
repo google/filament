@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "details/LightData.h"
+#include "details/GpuLightBuffer.h"
 
 #include "details/Engine.h"
 
@@ -28,28 +28,28 @@ using namespace driver;
 
 namespace details {
 
-LightData::LightData(FEngine& engine) noexcept
+GpuLightBuffer::GpuLightBuffer(FEngine& engine) noexcept
         : mLightsUb(UibGenerator::getLightsUib()) {
     DriverApi& driverApi = engine.getDriverApi();
     mLightUbh = driverApi.createUniformBuffer(mLightsUb.getSize());
     driverApi.bindUniforms(BindingPoints::LIGHTS, mLightUbh);
 }
 
-LightData::~LightData() noexcept = default;
+GpuLightBuffer::~GpuLightBuffer() noexcept = default;
 
-void LightData::terminate(FEngine& engine) {
+void GpuLightBuffer::terminate(FEngine& engine) {
     DriverApi& driverApi = engine.getDriverApi();
     driverApi.destroyUniformBuffer(mLightUbh);
 }
 
-void LightData::commit(FEngine& engine) noexcept {
+void GpuLightBuffer::commit(FEngine& engine) noexcept {
     if (UTILS_UNLIKELY(mLightsUb.isDirty())) {
         commitSlow(engine);
     }
     engine.getDriverApi().bindUniforms(BindingPoints::LIGHTS, mLightUbh);
 }
 
-void LightData::commitSlow(FEngine& engine) noexcept {
+void GpuLightBuffer::commitSlow(FEngine& engine) noexcept {
     DriverApi& driverApi = engine.getDriverApi();
     driverApi.updateUniformBuffer(mLightUbh, UniformBuffer(mLightsUb));
     mLightsUb.clean();

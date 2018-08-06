@@ -76,7 +76,7 @@ set(SRCS
         src/Frustum.cpp
         src/IndexBuffer.cpp
         src/IndirectLight.cpp
-        src/LightData.cpp
+        src/GpuLightBuffer.cpp
         src/Material.cpp
         src/MaterialInstance.cpp
         src/PostProcessManager.cpp
@@ -111,7 +111,7 @@ set(PRIVATE_HDRS
         src/details/Froxel.h
         src/details/IndexBuffer.h
         src/details/IndirectLight.h
-        src/details/LightData.h
+        src/details/GpuLightBuffer.h
         src/details/Material.h
         src/details/MaterialInstance.h
         src/details/RenderPrimitive.h

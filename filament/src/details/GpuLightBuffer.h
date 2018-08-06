@@ -27,7 +27,7 @@ namespace details {
 
 class FEngine;
 
-class LightData {
+class GpuLightBuffer {
 public:
     using LightIndex = uint16_t;
 
@@ -38,17 +38,17 @@ public:
         math::float4 spotScaleOffset;   // { scale, offset, unused, unused }
     };
 
-    explicit LightData(FEngine& engine) noexcept;
+    explicit GpuLightBuffer(FEngine& engine) noexcept;
 
     void commit(FEngine& engine) noexcept;
 
     void terminate(FEngine& engine);
 
-    LightData(LightData const& rhs) = delete;
-    LightData(LightData&& rhs) = delete;
-    LightData& operator=(LightData const& rhs) = delete;
-    LightData& operator=(LightData&& rhs) = delete;
-    ~LightData() noexcept;
+    GpuLightBuffer(GpuLightBuffer const& rhs) = delete;
+    GpuLightBuffer(GpuLightBuffer&& rhs) = delete;
+    GpuLightBuffer& operator=(GpuLightBuffer const& rhs) = delete;
+    GpuLightBuffer& operator=(GpuLightBuffer&& rhs) = delete;
+    ~GpuLightBuffer() noexcept;
 
     LightParameters& getLightParameters(LightIndex h) noexcept {
         // This assumes the layout of the LightsUniforms uniform buffer

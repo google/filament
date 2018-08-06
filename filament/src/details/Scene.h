@@ -23,7 +23,7 @@
 #include "components/TransformManager.h"
 
 #include "details/Culler.h"
-#include "details/LightData.h"
+#include "details/GpuLightBuffer.h"
 
 #include <filament/Box.h>
 #include <filament/Scene.h>
@@ -45,7 +45,7 @@ class FEngine;
 class FIndirectLight;
 class FRenderer;
 class FSkybox;
-class LightData;
+class GpuLightBuffer;
 
 
 class FScene : public Scene {
@@ -162,7 +162,7 @@ private:
     FEngine& mEngine;
     FSkybox const* mSkybox = nullptr;
     FIndirectLight const* mIndirectLight = nullptr;
-    LightData mGpuLightData;
+    GpuLightBuffer mGpuLightData;
 
     // list of Entities in the scene. We use a robin_set<> so we can do efficient removes
     // (a vector<> could work, but removes would be O(n)). robin_set<> iterates almost as
