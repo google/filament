@@ -26,6 +26,7 @@
 #endif
 
 #include <algorithm>
+#include <memory>
 
 #if defined(__linux__)
 
