@@ -17,22 +17,10 @@
 #ifndef TNT_FILAMENT_DETAILS_LIGHTDATA_H
 #define TNT_FILAMENT_DETAILS_LIGHTDATA_H
 
-
-#include "details/Engine.h"
-
-#include <filament/EngineEnums.h>
-#include <filament/LightManager.h>
-
-#include <private/filament/UibGenerator.h>
-
 #include <driver/Handle.h>
 #include <driver/UniformBuffer.h>
 
-#include <utils/compiler.h>
-
 #include <math/vec4.h>
-
-#include <bitset>
 
 namespace filament {
 namespace details {
@@ -52,15 +40,9 @@ public:
 
     explicit LightData(FEngine& engine) noexcept;
 
-    void commit() noexcept {
-        if (UTILS_UNLIKELY(mLightsUb.isDirty())) {
-            commitSlow();
-        }
-        mEngine.getDriverApi().bindUniforms(BindingPoints::LIGHTS, mLightUbh);
-    }
+    void commit(FEngine& engine) noexcept;
 
-    void terminate();
-
+    void terminate(FEngine& engine);
 
     LightData(LightData const& rhs) = delete;
     LightData(LightData&& rhs) = delete;
@@ -68,7 +50,7 @@ public:
     LightData& operator=(LightData&& rhs) = delete;
     ~LightData() noexcept;
 
-    LightParameters& getLightParameters(LightIndex h) {
+    LightParameters& getLightParameters(LightIndex h) noexcept {
         // This assumes the layout of the LightsUniforms uniform buffer
         // it is defined in UibGenerator.cpp
         LightParameters* lights = (LightParameters *)mLightsUb.getBuffer();
@@ -80,10 +62,7 @@ public:
     }
 
 private:
-    void commitSlow() noexcept;
-
-    FEngine& mEngine;
-    UniformInterfaceBlock& mLightUib;
+    void commitSlow(FEngine& engine) noexcept;
     Handle<HwUniformBuffer> mLightUbh;
     mutable UniformBuffer mLightsUb;
 };

@@ -23,6 +23,7 @@
 #include "components/TransformManager.h"
 
 #include "details/Culler.h"
+#include "details/LightData.h"
 
 #include <filament/Box.h>
 #include <filament/Scene.h>
@@ -161,7 +162,7 @@ private:
     FEngine& mEngine;
     FSkybox const* mSkybox = nullptr;
     FIndirectLight const* mIndirectLight = nullptr;
-    std::unique_ptr<LightData> mGpuLightData;
+    LightData mGpuLightData;
 
     // list of Entities in the scene. We use a robin_set<> so we can do efficient removes
     // (a vector<> could work, but removes would be O(n)). robin_set<> iterates almost as
