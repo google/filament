@@ -91,6 +91,7 @@ Many other features have been either prototyped or planned:
   - `docs`:                  Documentation
     - `math`:                Mathematica notebooks used to explore BRDFs, equations, etc.
   - `filament`:              Filament engine
+  - `ide`:                   Configuration files for IDEs (CLion, etc.)
   - `java`:                  Java bindings for Filament libraries
   - `libs`:                  Libraries
     - `bluegl`:                OpenGL bindings for macOS, Linux and Windows
