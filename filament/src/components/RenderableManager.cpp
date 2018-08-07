@@ -241,7 +241,8 @@ FRenderableManager::~FRenderableManager() {
     assert(mManager.getComponentCount() == 0);
 }
 
-void FRenderableManager::create(const RenderableManager::Builder& UTILS_RESTRICT builder, Entity entity) {
+void FRenderableManager::create(
+        const RenderableManager::Builder& UTILS_RESTRICT builder, Entity entity) {
     FEngine& engine = mEngine;
     auto& manager = mManager;
     FEngine::DriverApi& driver = engine.getDriverApi();
@@ -269,7 +270,7 @@ void FRenderableManager::create(const RenderableManager::Builder& UTILS_RESTRICT
         Builder::Entry const * const entries = builder->mEntries;
         FRenderPrimitive* rp = new FRenderPrimitive[builder->mEntriesCount];
         for (size_t i = 0, c = builder->mEntriesCount; i < c; ++i) {
-            rp[i].init(engine, entries[i]);
+            rp[i].init(driver, entries[i]);
         }
         setPrimitives(ci, { rp, size_type(builder->mEntriesCount) });
 

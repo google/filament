@@ -83,10 +83,9 @@ static_assert(RECORD_BUFFER_ENTRY_COUNT <= 65536,
         "RecordBuffer cannot be larger than 65536 entries");
 
 FroxelData::FroxelData(FEngine& engine)
-        : mEngine(engine),
-          mArena("froxel", PER_FROXELDATA_ARENA_SIZE) {
+        : mArena("froxel", PER_FROXELDATA_ARENA_SIZE) {
 
-    DriverApi& driverApi = mEngine.getDriverApi();
+    DriverApi& driverApi = engine.getDriverApi();
 
     // RecordBuffer cannot be larger than 65536 entries, because indices are uint16_t
     GPUBuffer::ElementType type = std::is_same<RecordBufferType, uint8_t>::value
@@ -100,7 +99,7 @@ FroxelData::~FroxelData() {
     // make sure we called terminate()
 }
 
-void FroxelData::terminate() noexcept {
+void FroxelData::terminate(DriverApi& driverApi) noexcept {
     // call reset() on our LinearAllocator arenas
     mArena.reset();
 
@@ -109,7 +108,6 @@ void FroxelData::terminate() noexcept {
     mPlanesX = nullptr;
     mDistancesZ = nullptr;
 
-    DriverApi& driverApi = mEngine.getDriverApi();
     mRecordsBuffer.terminate(driverApi);
     mFroxelBuffer.terminate(driverApi);
 }
@@ -593,7 +591,7 @@ void FroxelData::commit(driver::DriverApi& driverApi) {
 #endif
 }
 
-void FroxelData::froxelizeLights(
+void FroxelData::froxelizeLights(FEngine& engine,
         math::mat4f const& viewMatrix, const FScene::LightSoa& lightData) noexcept {
 
     // note: this is called asynchronously
@@ -603,7 +601,7 @@ void FroxelData::froxelizeLights(
     mFroxelListIndices.set(mFroxelListIndices.data(),
             uint32_t(lightData.size() - FScene::DIRECTIONAL_LIGHTS_COUNT));
 
-    froxelizeLoop(mFroxelList, mFroxelListIndices, viewMatrix, lightData);
+    froxelizeLoop(engine, mFroxelList, mFroxelListIndices, viewMatrix, lightData);
     froxelizeAssignRecordsCompress(mFroxelList, mFroxelListIndices);
 
 #ifndef NDEBUG
@@ -628,15 +626,14 @@ void FroxelData::froxelizeLights(
 #endif
 }
 
-void FroxelData::froxelizeLoop(
-        utils::Slice<uint16_t>& froxelsList,
+void FroxelData::froxelizeLoop(FEngine& engine, utils::Slice<uint16_t>& froxelsList,
         utils::Slice<FroxelRunEntry> froxelsListIndices, mat4f const& viewMatrix,
         const FScene::LightSoa& lightData) noexcept
 {
     SYSTRACE_CALL();
     constexpr bool SINGLE_THREADED = false;
 
-    auto& lcm = mEngine.getLightManager();
+    auto& lcm = engine.getLightManager();
     auto const* UTILS_RESTRICT spheres      = lightData.data<FScene::POSITION_RADIUS>();
     auto const* UTILS_RESTRICT directions   = lightData.data<FScene::DIRECTION>();
     auto const* UTILS_RESTRICT instances    = lightData.data<FScene::LIGHT_INSTANCE>();
@@ -679,7 +676,7 @@ void FroxelData::froxelizeLoop(
     };
 
     // let's do at least 4 lights per Job.
-    JobSystem& js = mEngine.getJobSystem();
+    JobSystem& js = engine.getJobSystem();
     auto job = jobs::parallel_for(js, nullptr,
             1, uint32_t(lightData.size() - FScene::DIRECTIONAL_LIGHTS_COUNT),
             std::cref(process), jobs::CountSplitter<4, SINGLE_THREADED ? 0 : 8>());

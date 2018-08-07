@@ -37,7 +37,7 @@ class FRenderPrimitive {
 public:
     FRenderPrimitive() noexcept = default;
 
-    void init(FEngine& engine, const RenderableManager::Builder::Entry& entry) noexcept;
+    void init(driver::DriverApi& driver, const RenderableManager::Builder::Entry& entry) noexcept;
 
     void set(FEngine& engine, RenderableManager::PrimitiveType type,
             FVertexBuffer* vertices, FIndexBuffer* indices, size_t offset,
