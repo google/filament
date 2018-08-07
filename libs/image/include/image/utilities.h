@@ -17,17 +17,9 @@
 #ifndef IMAGE_UTILITIES_H_
 #define IMAGE_UTILITIES_H_
 
+#include <math/scalar.h>
+
 namespace image {
-
-template <typename T>
-inline T clamp(T v, T min, T max) {
-    return std::max(T(min), std::min(v, T(max)));
-}
-
-template <typename T>
-inline T saturate(T v) {
-    return clamp(v, T(0), T(1));
-}
 
 template <typename T>
 inline math::float4 linearToRGBM(const T& linear) {
@@ -42,7 +34,7 @@ inline math::float4 linearToRGBM(const T& linear) {
 
     float maxComponent = std::max(std::max(RGBM.r, RGBM.g), std::max(RGBM.b, 1e-6f));
     // Don't let M go below 1 in the [0..16] range
-    RGBM.a = clamp(maxComponent, 1.0f / 16.0f, 1.0f);
+    RGBM.a = math::clamp(maxComponent, 1.0f / 16.0f, 1.0f);
     RGBM.a = std::ceil(RGBM.a * 255.0f) / 255.0f;
 
     RGBM.rgb = saturate(RGBM.rgb / RGBM.a);
