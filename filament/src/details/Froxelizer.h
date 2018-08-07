@@ -100,8 +100,9 @@ public:
      *
      * return true if updateUniforms() needs to be called
      */
-    bool prepare(driver::DriverApi& driverApi, ArenaScope& arena, Viewport const& viewport,
-            const math::mat4f& projection, float projectionNear, float projectionFar) noexcept;
+    bool prepare(
+        FEngine::DriverApi& driverApi, ArenaScope& arena, Viewport const& viewport,
+        const math::mat4f& projection) noexcept;
 
     Froxel getFroxelAt(size_t x, size_t y, size_t z) const noexcept;
     size_t getFroxelCountX() const noexcept { return mFroxelCountX; }
@@ -159,7 +160,7 @@ private:
     };
 
     void setViewport(Viewport const& viewport) noexcept;
-    void setProjection(const math::mat4f& projection, float near, float far) noexcept;
+    void setProjection(const math::mat4f& projection) noexcept;
     bool update() noexcept;
 
     void froxelizeLoop(FEngine& engine, utils::Slice<uint16_t>& froxelsList,
@@ -229,7 +230,6 @@ private:
     Viewport mViewport;
     math::float4 mParamsZ = {};
     math::uint4 mParamsF = {};
-    float mNear = 0.0f;        // camera near
     float mZLightFar = FEngine::CONFIG_Z_LIGHT_FAR;
     float mZLightNear = FEngine::CONFIG_Z_LIGHT_NEAR;  // light near (first slice)
 

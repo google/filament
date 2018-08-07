@@ -128,19 +128,18 @@ void Froxelizer::setViewport(Viewport const& viewport) noexcept {
     }
 }
 
-void Froxelizer::setProjection(const mat4f& projection, float near, float far) noexcept {
+void Froxelizer::setProjection(const math::mat4f& projection) noexcept {
     if (UTILS_UNLIKELY(mat4f::fuzzyEqual(mProjection, projection))) {
         mProjection = projection;
-        mNear = near;
         mDirtyFlags |= PROJECTION_CHANGED;
     }
 }
 
 bool Froxelizer::prepare(
         FEngine::DriverApi& driverApi, ArenaScope& arena, Viewport const& viewport,
-        const math::mat4f& projection, float projectionNear, float projectionFar) noexcept {
+        const math::mat4f& projection) noexcept {
     setViewport(viewport);
-    setProjection(projection, projectionNear, projectionFar);
+    setProjection(projection);
 
     bool uniformsNeedUpdating = false;
     if (UTILS_UNLIKELY(mDirtyFlags)) {
@@ -460,7 +459,6 @@ bool Froxelizer::update() noexcept {
         }
         uniformsNeedUpdating = true;
     }
-    assert(mZLightNear >= mNear);
     mDirtyFlags = 0;
     return uniformsNeedUpdating;
 }
@@ -655,7 +653,7 @@ void Froxelizer::froxelizeLoop(FEngine& engine, utils::Slice<uint16_t>& froxelsL
                     .position = (viewMatrix * float4{ spheres[i].xyz, 1 }).xyz, // to view-space
                     .cosSqr = lcm.getCosOuterSquared(li),   // spot only
                     .axis = vn * directions[i],             // spot only
-                    .invSin = lcm.getSinInverse(li),        // spot only
+                    .invSin = lcm.getSinInverse(li),        // infinity for points, 1/sin for spot
                     .radius = spheres[i].w,
             };
 
@@ -813,8 +811,8 @@ void Froxelizer::froxelizePointAndSpotLight(
     // find a reasonable bounding-box in froxel space for the sphere by projecting
     // it's (clipped) bounding-box to clip-space and converting to froxel indices.
     Box aabb = { light.position, light.radius };
-    const float znear = std::min(-mNear, aabb.center.z + aabb.halfExtent.z); // z values are negative
-    const float zfar  =                  aabb.center.z - aabb.halfExtent.z;
+    const float znear = std::min(-mZLightNear, aabb.center.z + aabb.halfExtent.z); // z values are negative
+    const float zfar  =                        aabb.center.z - aabb.halfExtent.z;
 
     float2 xyLeftNear  = project(p, { aabb.center.xy - aabb.halfExtent.xy, znear });
     float2 xyLeftFar   = project(p, { aabb.center.xy - aabb.halfExtent.xy, zfar  });
