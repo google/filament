@@ -34,7 +34,7 @@
 #include "details/Allocators.h"
 #include "details/Material.h"
 #include "details/Camera.h"
-#include "details/Froxel.h"
+#include "details/Froxelizer.h"
 #include "details/Engine.h"
 #include "components/TransformManager.h"
 #include "utils/RangeSet.h"
@@ -468,7 +468,7 @@ TEST(FilamentTest, FroxelData) {
     Viewport vp(0, 0, 1280, 640);
     mat4f p = mat4f::perspective(90, 1.0f, 5, 100, mat4f::Fov::HORIZONTAL);
 
-    FroxelData froxelData(*engine);
+    Froxelizer froxelData(*engine);
     froxelData.setOptions(5, 100);
     froxelData.prepare(engine->getDriverApi(), scope, vp, p, 5, 100);
 

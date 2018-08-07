@@ -23,7 +23,7 @@
 
 #include "details/Allocators.h"
 #include "details/Camera.h"
-#include "details/Froxel.h"
+#include "details/Froxelizer.h"
 #include "details/ShadowMap.h"
 #include "details/Scene.h"
 
@@ -50,7 +50,7 @@ class FEngine;
 class FMaterialInstance;
 class FRenderer;
 class FScene;
-class FroxelData;
+class Froxelizer;
 
 class FView : public View {
 public:
@@ -242,7 +242,7 @@ private:
     CameraInfo mViewingCameraInfo;
     Frustum mCullingFrustum;
 
-    mutable FroxelData mFroxelizer;
+    mutable Froxelizer mFroxelizer;
 
     Viewport mViewport;
     LinearColorA mClearColor;
