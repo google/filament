@@ -372,7 +372,7 @@ void FView::prepareLighting(FEngine& engine, FEngine::DriverApi& driver, ArenaSc
     // Dynamic lighting
     if (mHasDynamicLighting) {
         Froxelizer& froxelizer = mFroxelizer;
-        if (froxelizer.prepare(driver, arena, viewport, camera.projection, camera.zn, camera.zf)) {
+        if (froxelizer.prepare(driver, arena, viewport, camera.projection)) {
             froxelizer.updateUniforms(u); // update our uniform buffer if needed
         }
     }
