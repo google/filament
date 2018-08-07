@@ -516,7 +516,7 @@ TEST(FilamentTest, FroxelData) {
     //tileSize *= 0.25f;
     //froxelData.froxelizePointLight(p, vec4f{ 0, 0, -5, tileSize*tileSize });
 
-    froxelData.terminate();
+    froxelData.terminate(engine->getDriverApi());
     engine->shutdown();
     delete engine;
 }

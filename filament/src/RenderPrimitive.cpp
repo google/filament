@@ -24,12 +24,11 @@
 namespace filament {
 namespace details {
 
-void FRenderPrimitive::init(FEngine& engine,
+void FRenderPrimitive::init(driver::DriverApi& driver,
         const RenderableManager::Builder::Entry& entry) noexcept {
 
     assert(entry.materialInstance);
 
-    FEngine::DriverApi& driver = engine.getDriverApi();
     mHandle = driver.createRenderPrimitive();
     mMaterialInstance = upcast(entry.materialInstance);
     mBlendOrder = entry.blendOrder;

@@ -542,7 +542,7 @@ void FRenderer::ColorPass::renderColorPass(FEngine& engine, JobSystem& js,
 
     // start the froxelization immediately, it has no dependencies
     JobSystem::Job* jobFroxelize = js.createJob(nullptr,
-            [view](JobSystem&, JobSystem::Job*) { view->froxelize(); });
+            [&engine, view](JobSystem&, JobSystem::Job*) { view->froxelize(engine); });
     js.run(jobFroxelize);
 
     CameraInfo const& cameraInfo = view->getCameraInfo();

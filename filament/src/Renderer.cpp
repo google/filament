@@ -139,7 +139,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView* view) {
         return;
     }
 
-    view->prepare(engine, arena, svp);
+    view->prepare(engine, driver, arena, svp);
     // TODO: froxelization could actually start now, instead of in ColorPass::renderColorPass()
 
     /*
