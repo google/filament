@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "details/Froxel.h"
+#include "details/Froxelizer.h"
 
 #include "details/Engine.h"
 #include "details/Scene.h"
@@ -70,7 +70,7 @@ constexpr size_t RECORD_BUFFER_WIDTH_MASK   = RECORD_BUFFER_WIDTH - 1u;
 constexpr size_t RECORD_BUFFER_HEIGHT       = 2048;
 constexpr size_t RECORD_BUFFER_ENTRY_COUNT  = RECORD_BUFFER_WIDTH * RECORD_BUFFER_HEIGHT; // 64K
 
-// Buffer needed for FroxelData internal data structures (~256 KiB)
+// Buffer needed for Froxelizer internal data structures (~256 KiB)
 constexpr size_t PER_FROXELDATA_ARENA_SIZE = sizeof(float4) *
                                                  (FROXEL_BUFFER_ENTRY_COUNT_MAX +
                                                   FROXEL_BUFFER_ENTRY_COUNT_MAX + 3 +
@@ -82,7 +82,7 @@ constexpr size_t PER_FROXELDATA_ARENA_SIZE = sizeof(float4) *
 static_assert(RECORD_BUFFER_ENTRY_COUNT <= 65536,
         "RecordBuffer cannot be larger than 65536 entries");
 
-FroxelData::FroxelData(FEngine& engine)
+Froxelizer::Froxelizer(FEngine& engine)
         : mArena("froxel", PER_FROXELDATA_ARENA_SIZE) {
 
     DriverApi& driverApi = engine.getDriverApi();
@@ -95,11 +95,11 @@ FroxelData::FroxelData(FEngine& engine)
             FROXEL_BUFFER_WIDTH, FROXEL_BUFFER_HEIGHT);
 }
 
-FroxelData::~FroxelData() {
+Froxelizer::~Froxelizer() {
     // make sure we called terminate()
 }
 
-void FroxelData::terminate(DriverApi& driverApi) noexcept {
+void Froxelizer::terminate(DriverApi& driverApi) noexcept {
     // call reset() on our LinearAllocator arenas
     mArena.reset();
 
@@ -112,7 +112,7 @@ void FroxelData::terminate(DriverApi& driverApi) noexcept {
     mFroxelBuffer.terminate(driverApi);
 }
 
-void FroxelData::setOptions(float zLightNear, float zLightFar) noexcept {
+void Froxelizer::setOptions(float zLightNear, float zLightFar) noexcept {
     if (UTILS_UNLIKELY(mZLightNear != zLightNear || mZLightFar != zLightFar)) {
         mZLightNear = zLightNear;
         mZLightFar = zLightFar;
@@ -121,14 +121,14 @@ void FroxelData::setOptions(float zLightNear, float zLightFar) noexcept {
 }
 
 
-void FroxelData::setViewport(Viewport const& viewport) noexcept {
+void Froxelizer::setViewport(Viewport const& viewport) noexcept {
     if (UTILS_UNLIKELY(mViewport != viewport)) {
         mViewport = viewport;
         mDirtyFlags |= VIEWPORT_CHANGED;
     }
 }
 
-void FroxelData::setProjection(const mat4f& projection, float near, float far) noexcept {
+void Froxelizer::setProjection(const mat4f& projection, float near, float far) noexcept {
     if (UTILS_UNLIKELY(mat4f::fuzzyEqual(mProjection, projection))) {
         mProjection = projection;
         mNear = near;
@@ -136,7 +136,7 @@ void FroxelData::setProjection(const mat4f& projection, float near, float far) n
     }
 }
 
-bool FroxelData::prepare(
+bool Froxelizer::prepare(
         FEngine::DriverApi& driverApi, ArenaScope& arena, Viewport const& viewport,
         const math::mat4f& projection, float projectionNear, float projectionFar) noexcept {
     setViewport(viewport);
@@ -200,7 +200,7 @@ bool FroxelData::prepare(
     return uniformsNeedUpdating;
 }
 
-void FroxelData::computeFroxelLayout(
+void Froxelizer::computeFroxelLayout(
         uint2* dim, uint16_t* countX, uint16_t* countY, uint16_t* countZ,
         Viewport const& viewport) noexcept {
 
@@ -243,7 +243,7 @@ void FroxelData::computeFroxelLayout(
 }
 
 UTILS_NOINLINE
-bool FroxelData::update() noexcept {
+bool Froxelizer::update() noexcept {
     bool uniformsNeedUpdating = false;
     if (UTILS_UNLIKELY(mDirtyFlags & VIEWPORT_CHANGED)) {
         Viewport const& viewport = mViewport;
@@ -465,7 +465,7 @@ bool FroxelData::update() noexcept {
     return uniformsNeedUpdating;
 }
 
-Froxel FroxelData::getFroxelAt(size_t x, size_t y, size_t z) const noexcept {
+Froxel Froxelizer::getFroxelAt(size_t x, size_t y, size_t z) const noexcept {
     assert(x < mFroxelCountX);
     assert(y < mFroxelCountY);
     assert(z < mFroxelCountZ);
@@ -482,7 +482,7 @@ Froxel FroxelData::getFroxelAt(size_t x, size_t y, size_t z) const noexcept {
 // plane equation must be normalized, sphere radius must be squared
 // return float4.w <= 0 if no intersection
 UTILS_UNUSED
-float4 FroxelData::spherePlaneIntersection(float4 s, float4 p) noexcept {
+float4 Froxelizer::spherePlaneIntersection(float4 s, float4 p) noexcept {
     const float d = dot(s.xyz, p.xyz) + p.w;
     const float rr = s.w - d*d;
     s.x -= p.x * d;
@@ -494,14 +494,14 @@ float4 FroxelData::spherePlaneIntersection(float4 s, float4 p) noexcept {
 
 // plane equation must be normalized and have the form {x,0,z,0}, sphere radius must be squared
 // return float4.w <= 0 if no intersection
-float FroxelData::spherePlaneDistanceSquared(float4 s, float x, float z) noexcept {
+float Froxelizer::spherePlaneDistanceSquared(float4 s, float x, float z) noexcept {
     const float d = s.x*x + s.z*z;
     return s.w - d*d;
 }
 
 // plane equation must be normalized and have the form {0,y,z,0}, sphere radius must be squared
 // return float4.w <= 0 if no intersection
-float4 FroxelData::spherePlaneIntersection(float4 s, float py, float pz) noexcept {
+float4 Froxelizer::spherePlaneIntersection(float4 s, float py, float pz) noexcept {
     const float d = s.y*py + s.z*pz;
     const float rr = s.w - d*d;
     s.y -= py * d;
@@ -512,7 +512,7 @@ float4 FroxelData::spherePlaneIntersection(float4 s, float py, float pz) noexcep
 
 // plane equation must be normalized and have the form {0,0,1,w}, sphere radius must be squared
 // return float4.w <= 0 if no intersection
-float4 FroxelData::spherePlaneIntersection(float4 s, float pw) noexcept {
+float4 Froxelizer::spherePlaneIntersection(float4 s, float pw) noexcept {
     const float d = s.z + pw;
     const float rr = s.w - d*d;
     s.z -= d;
@@ -522,8 +522,8 @@ float4 FroxelData::spherePlaneIntersection(float4 s, float pw) noexcept {
 
 // this version returns a false-positive intersection in a small area near the origin
 // of the cone extended outward by the sphere's radius.
-bool FroxelData::sphereConeIntersectionFast(
-        float4 const& sphere, FroxelData::LightParams const& cone) noexcept {
+bool Froxelizer::sphereConeIntersectionFast(
+        float4 const& sphere, Froxelizer::LightParams const& cone) noexcept {
     const float3 u = cone.position - (sphere.w * cone.invSin) * cone.axis;
     float3 d = sphere.xyz - u;
     float e = dot(cone.axis, d);
@@ -533,8 +533,8 @@ bool FroxelData::sphereConeIntersectionFast(
 }
 
 UTILS_UNUSED
-bool FroxelData::sphereConeIntersection(
-        float4 const& sphere, FroxelData::LightParams const& cone) noexcept {
+bool Froxelizer::sphereConeIntersection(
+        float4 const& sphere, Froxelizer::LightParams const& cone) noexcept {
     if (sphereConeIntersectionFast(sphere, cone)) {
         float3 d = sphere.xyz - cone.position;
         float e = -dot(cone.axis, d);
@@ -549,7 +549,7 @@ bool FroxelData::sphereConeIntersection(
 
 
 UTILS_NOINLINE
-size_t FroxelData::findSliceZ(float z) const noexcept {
+size_t Froxelizer::findSliceZ(float z) const noexcept {
     // The vastly common case is that z<0, so we always do the math for this case
     // and we "undo" it below otherwise. This works because we're using fast::log2 which
     // doesn't care if given a negative number (we'd have to use abs() otherwise).
@@ -568,7 +568,7 @@ size_t FroxelData::findSliceZ(float z) const noexcept {
     return size_t(clamp(s, 0, mFroxelCountZ - 1));
 }
 
-std::pair<size_t, size_t> FroxelData::clipToIndices(float2 const& clip) const noexcept {
+std::pair<size_t, size_t> Froxelizer::clipToIndices(float2 const& clip) const noexcept {
     // clip coordinates between [-1, 1], conversion to index between [0, count[
     //  = floor((clip + 1) * ((0.5 * dimension) / froxelsize))
     //  = floor((clip + 1) * constant
@@ -579,7 +579,7 @@ std::pair<size_t, size_t> FroxelData::clipToIndices(float2 const& clip) const no
 }
 
 
-void FroxelData::commit(driver::DriverApi& driverApi) {
+void Froxelizer::commit(driver::DriverApi& driverApi) {
     // send data to GPU
     mFroxelBuffer.commit(driverApi, mFroxelBufferUser);
     mRecordsBuffer.commit(driverApi, mRecordBufferUser);
@@ -591,7 +591,7 @@ void FroxelData::commit(driver::DriverApi& driverApi) {
 #endif
 }
 
-void FroxelData::froxelizeLights(FEngine& engine,
+void Froxelizer::froxelizeLights(FEngine& engine,
         math::mat4f const& viewMatrix, const FScene::LightSoa& lightData) noexcept {
 
     // note: this is called asynchronously
@@ -626,7 +626,7 @@ void FroxelData::froxelizeLights(FEngine& engine,
 #endif
 }
 
-void FroxelData::froxelizeLoop(FEngine& engine, utils::Slice<uint16_t>& froxelsList,
+void Froxelizer::froxelizeLoop(FEngine& engine, utils::Slice<uint16_t>& froxelsList,
         utils::Slice<FroxelRunEntry> froxelsListIndices, mat4f const& viewMatrix,
         const FScene::LightSoa& lightData) noexcept
 {
@@ -683,7 +683,7 @@ void FroxelData::froxelizeLoop(FEngine& engine, utils::Slice<uint16_t>& froxelsL
     js.runAndWait(job);
 }
 
-void FroxelData::froxelizeAssignRecordsCompress(
+void Froxelizer::froxelizeAssignRecordsCompress(
         const utils::Slice<uint16_t>& froxelsList,
         const utils::Slice<FroxelRunEntry>& froxelsListIndices) noexcept {
 
@@ -787,10 +787,10 @@ static inline float2 project(mat4f const& p, float3 const& v) noexcept {
     return float2{ x, y } * (1 / w);
 }
 
-void FroxelData::froxelizePointAndSpotLight(
+void Froxelizer::froxelizePointAndSpotLight(
         GrowingSlice<uint16_t>& UTILS_RESTRICT froxels,
         mat4f const& UTILS_RESTRICT p,
-        const FroxelData::LightParams& UTILS_RESTRICT light) const noexcept {
+        const Froxelizer::LightParams& UTILS_RESTRICT light) const noexcept {
 
     if (UTILS_UNLIKELY(light.position.z + light.radius < -mZLightFar)) { // z values are negative
         // This light is fully behind LightFar, it doesn't light anything
