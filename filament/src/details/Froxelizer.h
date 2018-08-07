@@ -122,11 +122,10 @@ public:
     // send froxel data to GPU
     void commit(driver::DriverApi& driverApi);
 
-private:
-    struct FroxelRunEntry {
-        uint32_t index;
-        uint32_t count;
-    };
+
+    /*
+     * Only for testing/debugging...
+     */
 
     struct FroxelEntry {
         union {
@@ -142,6 +141,16 @@ private:
                 };
             };
         };
+    };
+    // This depends on the maximum number of lights (currently 256),and can't be more than 16 bits.
+    using RecordBufferType = std::conditional_t<CONFIG_MAX_LIGHT_COUNT <= 255, uint8_t, uint16_t>;
+    const utils::Slice<FroxelEntry>& getFroxelBufferUser() const { return mFroxelBufferUser; }
+    const utils::Slice<RecordBufferType>& getRecordBufferUser() const { return mRecordBufferUser; }
+
+private:
+    struct FroxelRunEntry {
+        uint32_t index;
+        uint32_t count;
     };
 
     struct LightRecord {
@@ -202,12 +211,11 @@ private:
     math::float4* mPlanesY = nullptr;
     math::float4* mBoundingSpheres = nullptr;
 
-    // This depends on the maximum number of lights (currently 256),and can't be more than 16 bits.
-    using RecordBufferType = std::conditional_t<CONFIG_MAX_LIGHT_COUNT <= 255, uint8_t, uint16_t>;
-
     utils::Slice<FroxelRunEntry> mFroxelListIndices;    // ~2 KiB
     utils::Slice<uint16_t> mFroxelList;                 // ~4 MiB + 510 B
-    utils::Slice<FroxelEntry> mFroxelBufferUser;        // max 32 KiB  (actual: resolution dependant)
+    utils::Slice<FroxelEntry> mFroxelBufferUser;
+
+    // max 32 KiB  (actual: resolution dependant)
     utils::Slice<RecordBufferType> mRecordBufferUser;   // max 64 KiB
     utils::Slice<LightRecord> mLightRecords;            // 256 KiB
 
