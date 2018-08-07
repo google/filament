@@ -55,12 +55,14 @@ set(CAT_COMMAND cat)
 set(DOUBLEQUOTE "\\\"")
 set(OPENP "\\(")
 set(CLOSEP "\\)")
+set(SEMICOLON "\;")
 
 if (WIN32)
     set(CAT_COMMAND type)
     set(DOUBLEQUOTE "^\"")
     set(OPENP "(")
     set(CLOSEP ")")
+    set(SEMICOLON ";")
 endif()
 
 foreach (shader_file ${SHADERS})
@@ -78,13 +80,15 @@ foreach (shader_file ${SHADERS})
     set(output_path "${GENERATION_ROOT}/generated/shaders/${localname}.cpp")
     add_custom_command(
             OUTPUT ${output_path}
-            COMMAND echo "namespace filament {" > ${output_path}
-            COMMAND echo "namespace shaders {" >> ${output_path}
-            COMMAND echo "extern const char ${filename}_${extension}[] = R${DOUBLEQUOTE}FILAMENT__${OPENP}" >> ${output_path}
+            # For cross-platform compatibility, each string passed to echo must be enclosed in
+            # double quotes and contain no spaces
+            COMMAND echo "namespace" "filament" "{" > ${output_path}
+            COMMAND echo "namespace" "shaders" "{" >> ${output_path}
+            COMMAND echo "extern" "const" "char" "${filename}_${extension}[]" "=" "R${DOUBLEQUOTE}FILAMENT__${OPENP}" >> ${output_path}
             COMMAND ${CAT_COMMAND} \"${fullname}\" >> \"${output_path}\"
-            COMMAND echo "${CLOSEP}FILAMENT__${DOUBLEQUOTE}\;" >> ${output_path}
-            COMMAND echo "} // namespace shaders" >> ${output_path}
-            COMMAND echo "} // namespace filament" >> ${output_path}
+            COMMAND echo "${CLOSEP}FILAMENT__${DOUBLEQUOTE}${SEMICOLON}" >> ${output_path}
+            COMMAND echo "}" "//" "namespace" "shaders" >> ${output_path}
+            COMMAND echo "}" "//" "namespace" "filament" >> ${output_path}
             DEPENDS ${shader_file}
             COMMENT "Processing shader ${shader_file}"
     )
