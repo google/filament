@@ -129,12 +129,12 @@ public:
 
         template<size_t ... Is>
         static Type init(StructureRef const& rhs, std::index_sequence<Is...>) {
-            return { rhs.soa->template elementAt<Is>(rhs.index)... };
+            return Type{ rhs.soa->template elementAt<Is>(rhs.index)... };
         }
 
         template<size_t ... Is>
         static Type init(StructureRef&& rhs, std::index_sequence<Is...>) noexcept {
-            return { std::move(rhs.soa->template elementAt<Is>(rhs.index))... };
+            return Type{ std::move(rhs.soa->template elementAt<Is>(rhs.index))... };
         }
 
     public:
