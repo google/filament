@@ -53,9 +53,7 @@ public:
     std::ostream& generateSeparator(std::ostream& out) const;
 
     // generate prolog for the given shader
-    std::ostream& generateProlog(std::ostream& out, ShaderType type,
-            filament::BlendingMode blendingMode = filament::BlendingMode::OPAQUE,
-            bool hasExternalSamplers = false) const;
+    std::ostream& generateProlog(std::ostream& out, ShaderType type, bool hasExternalSamplers) const;
 
     std::ostream& generateEpilog(std::ostream& out) const;
 
@@ -92,8 +90,8 @@ public:
             const filament::UniformInterfaceBlock& uib) const;
 
     // generate samplers
-    std::ostream& generateSamplers(std::ostream& out, ShaderType type, uint8_t firstBinding,
-            const filament::SamplerInterfaceBlock& sib) const;
+    std::ostream& generateSamplers(
+        std::ostream& out, uint8_t firstBinding, const filament::SamplerInterfaceBlock& sib) const;
 
     // generate material properties getters
     std::ostream& generateMaterialProperty(std::ostream& out,

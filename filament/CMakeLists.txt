@@ -144,8 +144,7 @@ set(PRIVATE_HDRS
         src/PrecompiledMaterials.h
         src/RenderPass.h
         src/RenderTargetPool.h
-        src/upcast.h
-)
+        src/upcast.h)
 
 set(MATERIAL_SRCS
         src/materials/defaultMaterial.mat

@@ -198,8 +198,8 @@ In addition your distribution might require:
 Then invoke `cmake`:
 
 ```
-$ mkdir out/cmake-build-release
-$ cd out/cmake-build-release
+$ mkdir out/cmake-release
+$ cd out/cmake-release
 $ cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=../release/filament ../..
 ```
 
@@ -214,8 +214,8 @@ Your Linux distribution might default to `gcc` instead of `clang`, if that's the
 `cmake` with the following command:
 
 ```
-$ mkdir out/cmake-build-release
-$ cd out/cmake-build-release
+$ mkdir out/cmake-release
+$ cd out/cmake-release
 # Or use a specific version of clang, for instance /usr/bin/clang-5.0
 $ CC=/usr/bin/clang CXX=/usr/bin/clang++ \
     cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=../release/filament ../..
@@ -257,8 +257,8 @@ export JAVA_HOME="$(/usr/libexec/java_home)"
 Then run `cmake` and `ninja` to trigger a build:
 
 ```
-$ mkdir out/cmake-build-release
-$ cd out/cmake-build-release
+$ mkdir out/cmake-release
+$ cd out/cmake-release
 $ cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=../release/filament ../..
 $ ninja
 ```
@@ -282,8 +282,8 @@ Open an VS2015 x64 Native Tools terminal (click the start button, type "x64 nati
 
 Create a working directory:
 ```
-> mkdir out/cmake-build-release
-> cd out/cmake-build-release
+> mkdir out/cmake-release
+> cd out/cmake-release
 ```
 
 Create the msBuild project:
