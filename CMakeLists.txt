@@ -218,6 +218,7 @@ if (NOT ANDROID)
     add_subdirectory(${LIBRARIES}/bluegl)
     add_subdirectory(${LIBRARIES}/filagui)
     add_subdirectory(${LIBRARIES}/image)
+    add_subdirectory(${LIBRARIES}/imageio)
 
     add_subdirectory(${FILAMENT}/java)
 

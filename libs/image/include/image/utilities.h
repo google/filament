@@ -17,6 +17,8 @@
 #ifndef IMAGE_UTILITIES_H_
 #define IMAGE_UTILITIES_H_
 
+namespace image {
+
 template <typename T>
 inline T clamp(T v, T min, T max) {
     return std::max(T(min), std::min(v, T(max)));
@@ -122,6 +124,8 @@ inline math::float4 sRGBToLinear(const math::float4& sRGB) {
     }
     linear[3] = sRGB[3];
     return linear;
+}
+
 }
 
 #endif // IMAGE_UTILITIES_H_
