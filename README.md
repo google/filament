@@ -1,6 +1,6 @@
 ![Filament logo](docs/images/filament_logo_small.png)
 
-# Filament__
+# __Filament__
 
 Filament is a physically based rendering engine for Android, Linux, macOS and Windows. This
 rendering engine was designed to be as small as possible and as efficient as possible on Android.
