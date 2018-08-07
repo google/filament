@@ -198,29 +198,10 @@ In addition your distribution might require:
 Then invoke `cmake`:
 
 ```
-$ mkdir build-release
-$ cd build-release
-$ cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=../dist-linux ..
+$ mkdir out/cmake-build-release
+$ cd out/cmake-build-release
+$ cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=../release/filament ../..
 ```
-
-Your Linux distribution might default to `gcc` instead of `clang`, if that's the case invoke
-`cmake` with the following command:
-
-```
-$ mkdir build-release
-$ cd build-release
-# Or use a specific version of clang, for instance /usr/bin/clang-5.0
-$ CC=/usr/bin/clang CXX=/usr/bin/clang++ \
-  cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=../dist-linux ..
-```
-
-And then invoke `ninja`:
-
-```
-$ ninja
-```
-
-This will build Filament, its tests and samples, and various host tools.
 
 If you experience link errors you must ensure that you are using `libc++abi` by passing this
 extra parameter to `cmake`:
@@ -228,6 +209,33 @@ extra parameter to `cmake`:
 ```
 -DFILAMENT_REQUIRES_CXXABI=true
 ```
+
+Your Linux distribution might default to `gcc` instead of `clang`, if that's the case invoke
+`cmake` with the following command:
+
+```
+$ mkdir out/cmake-build-release
+$ cd out/cmake-build-release
+# Or use a specific version of clang, for instance /usr/bin/clang-5.0
+$ CC=/usr/bin/clang CXX=/usr/bin/clang++ \
+    cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=../release/filament ../..
+```
+
+You can also export the `CC` and `CXX` environment variables to always point to `clang`. Another
+solution is to use `update-alternatives` to change the default compiler:
+
+```
+$ update-alternatives --install /usr/bin/cc /usr/bin/clang 100
+$ update-alternatives --install /usr/bin/c++ /usr/bin/clang++ 100
+```
+
+Finally, invoke `ninja`:
+
+```
+$ ninja
+```
+
+This will build Filament, its tests and samples, and various host tools.
 
 #### macOS
 
@@ -249,9 +257,9 @@ export JAVA_HOME="$(/usr/libexec/java_home)"
 Then run `cmake` and `ninja` to trigger a build:
 
 ```
-$ mkdir build-release
-$ cd build-release
-$ cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=../dist-darwin ..
+$ mkdir out/cmake-build-release
+$ cd out/cmake-build-release
+$ cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=../release/filament ../..
 $ ninja
 ```
 
@@ -274,13 +282,13 @@ Open an VS2015 x64 Native Tools terminal (click the start button, type "x64 nati
 
 Create a working directory:
 ```
-> mkdir cmake-windows
-> cd cmake-windows
+> mkdir out/cmake-build-release
+> cd out/cmake-build-release
 ```
 
 Create the msBuild project:
 ```
-> cmake -T"LLVM-vs2014" -G "Visual Studio 14 2015 Win64" ..
+> cmake -T"LLVM-vs2014" -G "Visual Studio 14 2015 Win64" ../..
 ```
 
 Check out the output and make sure Clang for Windows frontend was found. You should see a line
@@ -296,7 +304,7 @@ You are now ready to build:
 
 Run it:
 ```
-> bin\Debug\material_sandbox.exe ..\filament\assets\models\monkey\monkey.obj
+> samples\material_sandbox.exe ..\..\assets\models\monkey\monkey.obj
 ```
 
 #### Tips
@@ -321,7 +329,7 @@ Run it:
 To confirm Filament was properly built, run the following command from the build directory:
 
 ```
-./samples/material_sandbox --ibl=../samples/envs/office ../assets/models/sphere/sphere.obj
+./samples/material_sandbox --ibl=../../samples/envs/office ../../assets/models/sphere/sphere.obj
 ```
 
 ### Android
@@ -373,10 +381,10 @@ $ $SDK/ndk-bundle/build/tools/make_standalone_toolchain.py --arch arm64 --api 24
 Then invoke CMake in a build directory of your choice, inside of filament's directory:
 
 ```
-$ mkdir android-build-release-aarch64
-$ cd android-build-release-aarch64
-$ cmake -G Ninja -DCMAKE_TOOLCHAIN_FILE=../build/toolchain-aarch64-linux-android.cmake \
-        -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=../out/android-release ..
+$ mkdir out/android-build-release-aarch64
+$ cd out/android-build-release-aarch64
+$ cmake -G Ninja -DCMAKE_TOOLCHAIN_FILE=../../build/toolchain-aarch64-linux-android.cmake \
+        -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=../android-release/filament ../..
 ```
 
 And then invoke `ninja`:
@@ -393,7 +401,7 @@ $ ninja install/strip
 
 This will generate Filament's Android binaries in `out/android-release`. This location is important
 to build the Android Studio projects located in `filament/android`. After install, the library
-binaries should be found in `out/android-release/lib/arm64-v8a`.
+binaries should be found in `out/android-release/filament/lib/arm64-v8a`.
 
 #### ARM 32-bit target (armeabi-v7a)
 
@@ -418,10 +426,10 @@ $ $SDK/ndk-bundle/build/tools/make_standalone_toolchain.py --arch arm --api 24 \
 Then invoke CMake in a build directory of your choice, inside of filament's directory:
 
 ```
-$ mkdir android-build-release-arm
-$ cd android-build-release-arm
-$ cmake -G Ninja -DCMAKE_TOOLCHAIN_FILE=../build/toolchain-arm7-linux-android.cmake \
-        -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=../out/android-release ..
+$ mkdir out/android-build-release-arm
+$ cd out/android-build-release-arm
+$ cmake -G Ninja -DCMAKE_TOOLCHAIN_FILE=../../build/toolchain-arm7-linux-android.cmake \
+        -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=../android-release/filament ../..
 ```
 
 And then invoke `ninja`:
@@ -436,9 +444,9 @@ or
 $ ninja install/strip
 ```
 
-This will generate Filament's Android binaries in `dist`. This location is important to build the
-Android Studio projects located in `filament/android`. After install, the library binaries should
-be found in `dist/lib/armeabi-v7a`.
+This will generate Filament's Android binaries in `out/android-release`. This location is important
+to build the Android Studio projects located in `filament/android`. After install, the library
+binaries should be found in `out/android-release/filament/lib/armeabi-v7a`.
 
 #### Intel 64-bit target (x86_64)
 
@@ -463,10 +471,10 @@ $ $SDK/ndk-bundle/build/tools/make_standalone_toolchain.py --arch x86_64 --api 2
 Then invoke CMake in a build directory of your choice, sibling of filament's directory:
 
 ```
-$ mkdir android-build-release-x86_64
-$ cd android-build-release-x86_64
-$ cmake -G Ninja -DCMAKE_TOOLCHAIN_FILE=../filament/build/toolchain-x86_64-linux-android.cmake \
-        -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=../out/android-release ..
+$ mkdir out/android-build-release-x86_64
+$ cd out/android-build-release-x86_64
+$ cmake -G Ninja -DCMAKE_TOOLCHAIN_FILE=../../filament/build/toolchain-x86_64-linux-android.cmake \
+        -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=../out/android-release/filament ../..
 ```
 
 And then invoke `ninja`:
@@ -481,9 +489,9 @@ or
 $ ninja install/strip
 ```
 
-This will generate Filament's Android binaries in `dist`. This location is important to build the
-Android Studio projects located in `filament/android`. After install, the library binaries should
-be found in `dist/lib/x86_64`.
+This will generate Filament's Android binaries in `out/android-release`. This location is important
+to build the Android Studio projects located in `filament/android`. After install, the library
+binaries should be found in `out/android-release/filament/lib/x86_64`.
 
 #### Intel 32-bit target (x86)
 
@@ -508,10 +516,10 @@ $ $SDK/ndk-bundle/build/tools/make_standalone_toolchain.py --arch x86 --api 24 \
 Then invoke CMake in a build directory of your choice, sibling of filament's directory:
 
 ```
-$ mkdir android-build-release-x86
-$ cd android-build-release-x86
-$ cmake -G Ninja -DCMAKE_TOOLCHAIN_FILE=../filament/build/toolchain-x86-linux-android.cmake \
-        -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=../out/android-release ..
+$ mkdir out/android-build-release-x86
+$ cd out/android-build-release-x86
+$ cmake -G Ninja -DCMAKE_TOOLCHAIN_FILE=../../filament/build/toolchain-x86-linux-android.cmake \
+        -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=../out/android-release/filament ../..
 ```
 
 And then invoke `ninja`:
@@ -526,9 +534,9 @@ or
 $ ninja install/strip
 ```
 
-This will generate Filament's Android binaries in `dist`. This location is important to build the
-Android Studio projects located in `filament/android`. After install, the library binaries should
-be found in `dist/lib/x86`.
+This will generate Filament's Android binaries in `out/android-release`. This location is important
+to build the Android Studio projects located in `filament/android`. After install, the library
+binaries should be found in `out/android-release/filament/lib/x86`.
 
 ### AAR
 
@@ -612,7 +620,7 @@ generate a `filamesh ` file from an FBX/OBJ asset, run the `filamesh` tool
 (`./tools/filamesh/filamesh` in your build directory):
 
 ```
-filamesh assets/models/monkey/monkey.obj monkey.filamesh
+filamesh ./assets/models/monkey/monkey.obj monkey.filamesh
 ```
 
 Most samples accept an IBL that must be generated using the `cmgen` tool (`./tools/filamesh/cmgen`
