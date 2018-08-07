@@ -24,7 +24,8 @@ set(PRIVATE_HDRS
         src/eiff/MaterialInterfaceBlockChunk.h
         src/eiff/MaterialSpirvChunk.h
         src/eiff/ShaderEntry.h
-        src/eiff/SimpleFieldChunk.h)
+        src/eiff/SimpleFieldChunk.h
+        src/shaders/Shaders.h)
 
 set(SRCS
         src/eiff/BlobDictionary.cpp
