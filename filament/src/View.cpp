@@ -19,7 +19,7 @@
 #include "details/Engine.h"
 #include "details/Culler.h"
 #include "details/DFG.h"
-#include "details/Froxel.h"
+#include "details/Froxelizer.h"
 #include "details/IndirectLight.h"
 #include "details/MaterialInstance.h"
 #include "details/Renderer.h"
@@ -371,7 +371,7 @@ void FView::prepareLighting(FEngine& engine, FEngine::DriverApi& driver, ArenaSc
 
     // Dynamic lighting
     if (mHasDynamicLighting) {
-        FroxelData& froxelizer = mFroxelizer;
+        Froxelizer& froxelizer = mFroxelizer;
         if (froxelizer.prepare(driver, arena, viewport, camera.projection, camera.zn, camera.zf)) {
             froxelizer.updateUniforms(u); // update our uniform buffer if needed
         }

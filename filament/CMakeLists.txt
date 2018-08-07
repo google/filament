@@ -72,7 +72,7 @@ set(SRCS
         src/Fence.cpp
         src/FrameInfo.cpp
         src/FrameSkipper.cpp
-        src/Froxel.cpp
+        src/Froxelizer.cpp
         src/Frustum.cpp
         src/IndexBuffer.cpp
         src/IndirectLight.cpp
@@ -108,7 +108,7 @@ set(PRIVATE_HDRS
         src/details/Engine.h
         src/details/Fence.h
         src/details/FrameSkipper.h
-        src/details/Froxel.h
+        src/details/Froxelizer.h
         src/details/IndexBuffer.h
         src/details/IndirectLight.h
         src/details/GpuLightBuffer.h
