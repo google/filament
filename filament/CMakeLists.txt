@@ -145,7 +145,7 @@ set(PRIVATE_HDRS
         src/RenderPass.h
         src/RenderTargetPool.h
         src/upcast.h
-)
+        ../libs/filamat/src/shaders/Shaders.h)
 
 set(MATERIAL_SRCS
         src/materials/defaultMaterial.mat

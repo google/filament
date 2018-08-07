@@ -7,8 +7,24 @@ set(PUBLIC_HDR_DIR include)
 # ==================================================================================================
 # Sources and headers
 # ==================================================================================================
-file(GLOB_RECURSE HDRS include/filamat/*.h)
-file(GLOB_RECURSE PRIVATE_HDRS src/*.h)
+set(HDRS
+        include/filamat/MaterialBuilder.h
+        include/filamat/Package.h)
+
+set(PRIVATE_HDRS
+        src/eiff/BlobDictionary.h
+        src/eiff/Chunk.h
+        src/eiff/ChunkContainer.h
+        src/eiff/DictionaryGlslChunk.h
+        src/eiff/DictionarySpirvChunk.h
+        src/eiff/Flattener.h
+        src/eiff/GlslChunk.h
+        src/eiff/LineDictionary.h
+        src/eiff/MaterialGlslChunk.h
+        src/eiff/MaterialInterfaceBlockChunk.h
+        src/eiff/MaterialSpirvChunk.h
+        src/eiff/ShaderEntry.h
+        src/eiff/SimpleFieldChunk.h)
 
 set(SRCS
         src/eiff/BlobDictionary.cpp
@@ -34,9 +50,7 @@ include_directories(${CMAKE_BINARY_DIR})
 add_library(${TARGET} STATIC ${HDRS} ${PRIVATE_HDRS} ${SRCS})
 target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
 
-target_link_libraries(${TARGET} filabridge filaflat utils)
-
-add_dependencies(${TARGET} shaders)
+target_link_libraries(${TARGET} shaders filabridge filaflat utils)
 
 # ==================================================================================================
 # Compiler flags
