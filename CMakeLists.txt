@@ -29,11 +29,6 @@ if (UNIX AND NOT APPLE AND NOT ANDROID)
 endif()
 
 if (WIN32)
-    # .exe and .dll must be together in the same folder to work.
-    set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
-    set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
-    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
-
     # TODO: Figure out why pdb generation messes with incremental compilaton.
     # IN RELEASE_WITH_DEBUG_INFO, generate debug info in .obj, no in pdb.
     set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} /Z7")
@@ -214,6 +209,8 @@ endif()
 if (APPLE)
     add_subdirectory(${EXTERNAL}/moltenvk/tnt)
 endif()
+
+set (FILAMENT_SAMPLES_BINARY_DIR ${PROJECT_BINARY_DIR}/samples)
 
 if (NOT ANDROID)
     add_subdirectory(${FILAMENT}/samples)
