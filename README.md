@@ -317,6 +317,22 @@ Run it:
 - The msBuild project is what is used by Visual Studio behind the scene to build. Building from VS
   or from the command-line is the same thing.
 
+#### Building with Ninja on Windows
+
+Alternatively, you can use [Ninja](https://ninja-build.org/) to build for Windows. An MSVC installation is still necessary.
+
+First, install the dependencies listed under [Windows](#Windows) as well as Ninja. Then open up a VS2015 x64 Native Tools terminal as before. Create a build directory inside Filament and run the following CMake command:
+
+```
+cmake .. -G Ninja -DCMAKE_CXX_COMPILER:PATH="C:\Program Files\LLVM\bin\clang-cl.exe" -DCMAKE_C_COMPILER:PATH="C:\Program Files\LLVM\bin\clang-cl.exe" -DCMAKE_LINKER:PATH="C:\Program Files\LLVM\bin\lld-link.exe" -DCMAKE_BUILD_TYPE=Release
+```
+
+You should then be able to build by invoking Ninja:
+
+```
+ninja
+```
+
 #### Development tips
 
 - Before shipping a binary, make sure you used Release profile and make sure you have no libc/libc++
