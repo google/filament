@@ -195,14 +195,6 @@ private:
             math::uint2* dim, uint16_t* countX, uint16_t* countY, uint16_t* countZ,
             Viewport const& viewport) noexcept;
 
-    static math::float4 spherePlaneIntersection(math::float4 s, math::float4 p) noexcept;
-    static float spherePlaneDistanceSquared(math::float4 s, float x, float z) noexcept;
-    static math::float4 spherePlaneIntersection(math::float4 s, float py, float pz) noexcept;
-    static math::float4 spherePlaneIntersection(math::float4 s, float pw) noexcept;
-    static bool sphereConeIntersectionFast(math::float4 const& sphere, Froxelizer::LightParams const& cone) noexcept;
-    static bool sphereConeIntersection(math::float4 const& sphere, Froxelizer::LightParams const& cone) noexcept;
-
-
     // internal state dependant on the viewport and needed for froxelizing
     LinearAllocatorArena mArena;                    // ~256 KiB
 
