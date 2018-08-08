@@ -45,7 +45,7 @@ using PostProcessCallBack = std::function<bool(
         std::string* /* outputGlsl */,
         std::vector<uint32_t>* /* outputSpirv */ )>;
 
-class MaterialInfo;
+struct MaterialInfo;
 
 class UTILS_PUBLIC MaterialBuilderBase {
 public:
