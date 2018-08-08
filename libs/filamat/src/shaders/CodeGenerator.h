@@ -39,8 +39,9 @@ class UTILS_PRIVATE CodeGenerator {
     using ShaderType = filament::driver::ShaderType;
     using TargetApi = MaterialBuilder::TargetApi;
 public:
-    CodeGenerator(filament::driver::ShaderModel shaderModel, TargetApi targetApi) noexcept
-            : mShaderModel(shaderModel), mTargetApi(targetApi) {
+    CodeGenerator(filament::driver::ShaderModel shaderModel,
+            TargetApi targetApi, TargetApi codeGenTargetApi) noexcept
+            : mShaderModel(shaderModel), mTargetApi(targetApi), mCodeGenTargetApi(codeGenTargetApi) {
         if (targetApi == TargetApi::ALL) {
             utils::slog.e << "Must resolve target API before codegen." << utils::io::endl;
             std::terminate();
@@ -129,6 +130,7 @@ private:
 
     filament::driver::ShaderModel mShaderModel;
     TargetApi mTargetApi;
+    TargetApi mCodeGenTargetApi;
 
     // return type name of uniform  (e.g.: "vec3", "vec4", "float")
     static char const* getUniformTypeName(filament::UniformInterfaceBlock::Type uniformType) noexcept;

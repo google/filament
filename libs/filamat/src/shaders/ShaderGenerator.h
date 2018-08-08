@@ -43,11 +43,13 @@ public:
             size_t vertexLineOffset) noexcept;
 
     const std::string createVertexProgram(filament::driver::ShaderModel sm,
-            MaterialBuilder::TargetApi ta, MaterialInfo const& material, uint8_t variantKey,
+            MaterialBuilder::TargetApi targetApi, MaterialBuilder::TargetApi codeGenTargetApi,
+            MaterialInfo const& material, uint8_t variantKey,
             filament::Interpolation interpolation,
             filament::VertexDomain vertexDomain) const noexcept;
     const std::string createFragmentProgram(filament::driver::ShaderModel sm,
-            MaterialBuilder::TargetApi ta, MaterialInfo const& material, uint8_t variantKey,
+            MaterialBuilder::TargetApi targetApi, MaterialBuilder::TargetApi codeGenTargetApi,
+            MaterialInfo const& material, uint8_t variantKey,
             filament::Interpolation interpolation) const noexcept;
     bool hasCustomDepthShader() const noexcept;
 
@@ -62,11 +64,11 @@ private:
 
 struct ShaderPostProcessGenerator {
     static const std::string createPostProcessVertexProgram(filament::driver::ShaderModel sm,
-            MaterialBuilder::TargetApi ta, filament::PostProcessStage variant,
-            uint8_t firstSampler) noexcept;
+            MaterialBuilder::TargetApi targetApi, MaterialBuilder::TargetApi codeGenTargetApi,
+            filament::PostProcessStage variant, uint8_t firstSampler) noexcept;
     static const std::string createPostProcessFragmentProgram(filament::driver::ShaderModel sm,
-            MaterialBuilder::TargetApi ta, filament::PostProcessStage variant,
-            uint8_t firstSampler) noexcept;
+            MaterialBuilder::TargetApi targetApi, MaterialBuilder::TargetApi codeGenTargetApi,
+            filament::PostProcessStage variant, uint8_t firstSampler) noexcept;
     static void generatePostProcessStageDefines(std::stringstream& vs, CodeGenerator const& cg,
             filament::PostProcessStage variant) noexcept;
 };
