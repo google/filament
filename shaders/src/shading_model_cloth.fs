@@ -21,7 +21,8 @@ vec3 surfaceShading(const PixelParams pixel, const Light light, float occlusion)
     float LoH = saturate(dot(light.l, h));
 
     // specular BRDF
-    float D = distributionCloth(pixel.linearRoughness, NoH);
+    float D = gl_FragCoord.x * frameUniforms.resolution.z < 0.5 ?
+        D_Charlie(pixel.linearRoughness, NoH) : D_Ashikhmin(pixel.linearRoughness, NoH);
     float V = visibilityCloth(shading_NoV, NoL);
     vec3  F = fresnel(pixel.f0, LoH);
     // Ignore pixel.energyCompensation since we use a different BRDF here
@@ -36,7 +37,7 @@ vec3 surfaceShading(const PixelParams pixel, const Light light, float occlusion)
 
     // We multiply the diffuse term by the Fresnel term as discussed in
     // Neubelt and Pettineo 2013, "Crafting a Next-gen Material Pipeline for The Order: 1886"
-    vec3 Fd = (diffuse * (1.0 - F)) * pixel.diffuseColor;
+    vec3 Fd = (diffuse * (1.0 - F_Schlick(0.05, 1.0, LoH))) * pixel.diffuseColor;
 
 #if defined(MATERIAL_HAS_SUBSURFACE_COLOR)
     // Cheap subsurface scatter

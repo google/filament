@@ -181,7 +181,7 @@ vec3 getReflectedVector(const PixelParams pixel, const vec3 n) {
 
 void evaluateClothIndirectDiffuseBRDF(const PixelParams pixel, inout float diffuse) {
 #if defined(SHADING_MODEL_CLOTH)
-    diffuse *= (1.0 - F_Schlick(max3(pixel.f0), 1.0, shading_NoV));
+    diffuse *= (1.0 - F_Schlick(0.05, 1.0, shading_NoV));
 #if defined(MATERIAL_HAS_SUBSURFACE_COLOR)
     // Simulate subsurface scattering with a wrap diffuse term
     diffuse *= Fd_Wrap(shading_NoV, 0.5);

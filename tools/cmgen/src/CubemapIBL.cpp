@@ -285,7 +285,7 @@ static double2 __UNUSED DFV_NoIS(double NoV, double roughness, size_t numSamples
             // Note: remember VoH == LoH  (H is half vector)
             const double v = Visibility(NoV, NoL, linearRoughness) * NoL * (VoH / NoH);
             const double Fc = pow5(1 - VoH);
-            const double d = DistributionGGX(NoH, linearRoughness);
+            const double d = DistributionCharlie(NoH, linearRoughness);
             r.x += d * v * (1.0 - Fc);
             r.y += d * v * Fc;
         }
