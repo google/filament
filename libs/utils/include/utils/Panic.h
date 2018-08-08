@@ -27,6 +27,12 @@
 #else
 #endif
 
+#if defined(_MSC_VER) _
+#	define NO_RETURN(exp) __declspec(noreturn) exp 
+#else
+#	define NO_RETURN(exp) exp __attribute__((noreturn)) 
+#endif
+
 /**
  * @defgroup errors Handling Catastrophic Failures (Panics)
  *
@@ -323,8 +329,7 @@ public:
      * @see PANIC_PRECONDITION, PANIC_POSTCONDITION, PANIC_ARITHMETIC
      * @see setMode()
      */
-    static void panic(char const* function, char const* file, int line, const char* format, ...)
-        __attribute__((noreturn));
+	static NO_RETURN(void panic(char const* function, char const* file, int line, const char* format, ...));
 
     /**
      * Depending on the mode set, either throws an exception of type T with the given reason plus
@@ -338,8 +343,7 @@ public:
      * @see PANIC_PRECONDITION, PANIC_POSTCONDITION, PANIC_ARITHMETIC
      * @see setMode()
      */
-    static inline void panic(char const* function, char const* file, int line, const std::string& s)
-        __attribute__((noreturn)) {
+    static inline NO_RETURN(void panic(char const* function, char const* file, int line, const std::string& s)) {
         panic(function, file, line, s.c_str());
     }
 
@@ -426,6 +430,10 @@ class ArithmeticPanic : public TPanic<ArithmeticPanic> {
 #   define PANIC_FILE(F) (F)
 #else
 #   define PANIC_FILE(F) ""
+#endif
+
+#if defined(_MSC_VER)
+#	define __PRETTY_FUNCTION__ __FUNCTION__
 #endif
 
 /**

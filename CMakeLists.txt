@@ -11,6 +11,10 @@ if (WIN32)
     # when linking against dlls. CL.EXE will not generate .lib without .def file (or without pragma
     # __declspec(dllexport) in front of each functions).
     set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
+	
+	if("${CMAKE_GENERATOR}" MATCHES "Win64")
+		set(MSVC_X64 TRUE)
+	endif()
 endif()
 
 # ==================================================================================================
@@ -67,6 +71,10 @@ set(FILAMENT ${CMAKE_SOURCE_DIR})
 
 # Where our tools are
 set(TOOLS ${CMAKE_SOURCE_DIR}/tools)
+
+if (MSVC)
+	include_directories(${EXTERNAL}/pthread/include)
+endif()
 
 # ==================================================================================================
 # General compiler flags

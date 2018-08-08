@@ -36,6 +36,16 @@
 #include "CubemapSH.h"
 #include "CubemapUtils.h"
 
+#if defined(_MSC_VER)
+__forceinline uint32_t ctz(unsigned long x)
+{
+	unsigned long r = 0;
+	_BitScanReverse(&r, x);
+	return r;
+}
+#define __builtin_ctz ctz
+#endif
+
 using namespace math;
 using namespace image;
 
