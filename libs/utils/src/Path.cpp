@@ -19,6 +19,7 @@
 #include <sstream>
 #include <ostream>
 #include <iterator>
+#include <regex>
 
 #if defined(WIN32)
 #   include <utils/compiler.h>
@@ -116,13 +117,14 @@ Path Path::getParent() const {
 
     std::string result;
 
-    // if our path starts with '/', keep the '/'
-    if (m_path.front() == SEPARATOR) {
-        result.append(SEPARATOR_STR);
+    std::vector<std::string> segments(split());
+
+    // if our path is absolute with a single segment,
+    // be sure to keep the prefix component
+    if (!isAbsolute() || segments.size() > 1) {
+        segments.pop_back(); // peel the last one
     }
 
-    std::vector<std::string> segments(split());
-    segments.pop_back(); // peel the last one
     for (auto const& s : segments) {
         result.append(s).append(SEPARATOR_STR);
     }
@@ -168,10 +170,16 @@ std::vector<std::string> Path::split() const {
     std::vector<std::string> segments;
     if (isEmpty()) return segments;
 
-    if (m_path.front() == SEPARATOR) segments.push_back(SEPARATOR_STR);
-
     size_t current;
     ssize_t next = -1;
+
+    // Matches a leading disk designator (C:\), forward slash (/), or back slash (\)
+    const static std::regex driveDesignationRegex(R"_regex(^([a-zA-Z]:\\|\\|\/))_regex");
+    std::smatch match;
+    if (std::regex_search(m_path, match, driveDesignationRegex)) {
+        segments.push_back(match[0]);
+        next = match[0].length() - 1;
+    }
 
     do {
       current = size_t(next + 1);

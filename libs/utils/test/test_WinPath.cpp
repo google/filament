@@ -49,6 +49,10 @@ TEST(WinPathTest, Sanitization) {
     EXPECT_EQ("out\\bar", r);
 
     // Disk designation
+    r = Path::getCanonicalPath("C:\\");
+    EXPECT_EQ("C:\\", r);
+
+    // Disk designation
     r = Path::getCanonicalPath("C:\\out\\bin");
     EXPECT_EQ("C:\\out\\bin", r);
 
@@ -102,6 +106,10 @@ TEST(WinPathTest, Split) {
     EXPECT_EQ(1, segments.size());
     EXPECT_EQ("\\", segments[0]);
 
+    segments = Path("C:\\").split();
+    EXPECT_EQ(1, segments.size());
+    EXPECT_EQ("C:\\", segments[0]);
+
     segments = Path("\\out\\blue\\bin").split();
     EXPECT_EQ(4, segments.size());
     EXPECT_EQ("\\", segments[0]);
@@ -119,7 +127,7 @@ TEST(WinPathTest, Split) {
 
     segments = Path("C:\\out\\foo/blue\\bin/").split();
     EXPECT_EQ(5, segments.size());
-    EXPECT_EQ("C:", segments[0]);
+    EXPECT_EQ("C:\\", segments[0]);
     EXPECT_EQ("out", segments[1]);
     EXPECT_EQ("foo", segments[2]);
     EXPECT_EQ("blue", segments[3]);
@@ -165,4 +173,39 @@ TEST(WinPathTest, Concatenate) {
     // Unix-style separators work too
     r = root.concat("out/bin/foo/bar");
     EXPECT_EQ("C:\\Volumes\\Replicant\\blue\\out\\bin\\foo\\bar", r.getPath());
+}
+
+TEST(PathTest, GetParent) {
+    std::string r;
+    Path p("C:\\out\\bin");
+    r = p.getParent();
+    EXPECT_EQ("C:\\out\\", r);
+
+    p = "C:\\out\\bin\\";
+    r = p.getParent();
+    EXPECT_EQ("C:\\out\\", r);
+
+    p = "out\\bin";
+    r = p.getParent();
+    EXPECT_EQ("out\\", r);
+
+    p = "out\\bin\\";
+    r = p.getParent();
+    EXPECT_EQ("out\\", r);
+
+    p = "out";
+    r = p.getParent();
+    EXPECT_EQ("", r);
+
+    p = "C:\\out";
+    r = p.getParent();
+    EXPECT_EQ("C:\\", r);
+
+    p = "";
+    r = p.getParent();
+    EXPECT_EQ("", r);
+
+    p = "C:\\";
+    r = p.getParent();
+    EXPECT_EQ("C:\\", r);
 }
