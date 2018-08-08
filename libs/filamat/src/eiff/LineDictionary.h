@@ -21,6 +21,12 @@
 #include <unordered_map>
 #include <vector>
 
+#if defined(_MSC_VER)
+#	define CONSTEXPR_IF_POSSIBLE 
+#else
+#	define CONSTEXPR_IF_POSSIBLE constexpr
+#endif
+
 namespace filamat {
 
 // Establish a line <-> id mapping. Use for shader compression when each shader is sliced in lines
@@ -38,8 +44,8 @@ public:
         return mStorageSize;
     }
 
-    constexpr bool isEmpty() const noexcept {
-        return mStrings.size() == 0;
+	CONSTEXPR_IF_POSSIBLE bool isEmpty() const noexcept {
+        return mStrings.empty();
     }
 
     const std::string& getString(size_t index) const noexcept;

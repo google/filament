@@ -582,7 +582,11 @@ public:
     }
 
     void* allocate(size_t size, size_t alignment = 1) noexcept {
+#	if defined(_MSC_VER)
+		return mArena.alloc(size, alignment, 0);
+#	else
         return mArena.template alloc(size, alignment, 0);
+#	endif
     }
 
     template <typename T>

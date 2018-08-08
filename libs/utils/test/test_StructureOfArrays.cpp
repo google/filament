@@ -70,7 +70,7 @@ TEST(StructureOfArraysTest, Iterator) {
     for (size_t i = 0; i < 8; i++) {
         soa.elementAt<0>(i) = (float)std::rand();
         soa.elementAt<1>(i) = soa.elementAt<0>(i) * 2;
-        soa.elementAt<2>(i) = soa.elementAt<0>(i) * 4;
+		soa.elementAt<2>(i) = TestFloat4(soa.elementAt<0>(i) * 4);
     }
 
     EXPECT_FALSE(std::is_sorted(soa.begin<0>(), soa.end<0>()));
@@ -97,7 +97,7 @@ TEST(StructureOfArraysTest, Simple) {
     for (size_t i = 0; i < 8; i++) {
         soa.elementAt<0>(i) = i;
         soa.elementAt<1>(i) = i * 2;
-        soa.elementAt<2>(i) = i * 4;
+		soa.elementAt<2>(i) = TestFloat4(i * 4);
     }
 
     size_t capacity = soa.capacity();

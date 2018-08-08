@@ -380,7 +380,7 @@ static double2 __UNUSED prefilteredDFG_Karis(double NoV, double roughness) {
     // see https://www.unrealengine.com/blog/physically-based-shading-on-mobile
     const double4 c0(-1.0, -0.0275, -0.572,  0.022);
     const double4 c1( 1.0,  0.0425,  1.040, -0.040);
-    double4 r = roughness * c0 + c1;
+    double4 r = double4(roughness) * c0 + c1;
     float a004 = (float) (std::min(r.x * r.x, exp2(-9.28 * NoV)) * r.x + r.y);
     return double2(-1.04, 1.04) * a004 + double2(r.z, r.w);
 }

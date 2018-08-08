@@ -77,13 +77,13 @@ TEST_F(QuatTest, Constructors) {
     EXPECT_EQ(q5.w, 24);
 
     quat q6;
-    q6 = 12;
+    q6 = quat(12);
     EXPECT_EQ(q6.x, 0);
     EXPECT_EQ(q6.y, 0);
     EXPECT_EQ(q6.z, 0);
     EXPECT_EQ(q6.w, 12);
 
-    quat q7 = 1 + 2_i + 3_j + 4_k;
+    quat q7 = quat(1) + 2_i + 3_j + 4_k;
     EXPECT_EQ(q7.x, 2);
     EXPECT_EQ(q7.y, 3);
     EXPECT_EQ(q7.z, 4);
@@ -126,19 +126,19 @@ TEST_F(QuatTest, Access) {
 TEST_F(QuatTest, UnaryOps) {
     quat q0(1, 2, 3, 4);
 
-    q0 += 1;
+    q0 += quat(1);
     EXPECT_EQ(q0.x, 2);
     EXPECT_EQ(q0.y, 3);
     EXPECT_EQ(q0.z, 4);
     EXPECT_EQ(q0.w, 2);
 
-    q0 -= 1;
+    q0 -= quat(1);
     EXPECT_EQ(q0.x, 2);
     EXPECT_EQ(q0.y, 3);
     EXPECT_EQ(q0.z, 4);
     EXPECT_EQ(q0.w, 1);
 
-    q0 *= 2;
+    q0 *= quat(2);
     EXPECT_EQ(q0.x, 4);
     EXPECT_EQ(q0.y, 6);
     EXPECT_EQ(q0.z, 8);

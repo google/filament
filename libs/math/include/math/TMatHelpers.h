@@ -246,7 +246,7 @@ MATRIX_R MATH_PURE multiply(const MATRIX_A& lhs, const MATRIX_B& rhs) {
 
 // transpose. this handles matrices of matrices
 template <typename MATRIX>
-MATRIX MATH_PURE transpose(const MATRIX& m) {
+constexpr MATRIX MATH_PURE transpose(const MATRIX& m) {
     // for now we only handle square matrix transpose
     static_assert(MATRIX::NUM_COLS == MATRIX::NUM_ROWS, "transpose only supports square matrices");
     MATRIX result(MATRIX::NO_INIT);
@@ -260,7 +260,7 @@ MATRIX MATH_PURE transpose(const MATRIX& m) {
 
 // trace. this handles matrices of matrices
 template <typename MATRIX>
-typename MATRIX::value_type MATH_PURE trace(const MATRIX& m) {
+constexpr typename MATRIX::value_type MATH_PURE trace(const MATRIX& m) {
     static_assert(MATRIX::NUM_COLS == MATRIX::NUM_ROWS, "trace only defined for square matrices");
     typename MATRIX::value_type result(0);
     for (size_t col = 0; col < MATRIX::NUM_COLS; ++col) {
@@ -361,7 +361,7 @@ public:
     BASE<T>& operator /= (T v) {
         BASE<T>& lhs(static_cast< BASE<T>& >(*this));
         for (size_t col = 0; col < BASE<T>::NUM_COLS; ++col) {
-            lhs[col] /= v;
+            lhs[col] /= BASE<T>(v);
         }
         return lhs;
     }
