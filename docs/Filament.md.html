@@ -650,7 +650,7 @@ In addition, here is a quick summary of how to use our material model:
 All materials
 :   **Base color** should be devoid of lighting information, except for micro-occlusion.
 
-    **Metallic** is almost a binary value. Pure conductors have a metallic value of 1 and pure dielectrics have a metallic value of 0. Pure, unweathered and clean materials are however rare in the real world so you should try to use values close to 0 and 1.
+    **Metallic** is almost a binary value. Pure conductors have a metallic value of 1 and pure dielectrics have a metallic value of 0. You should try to use values close at or close to 0 and 1. Interemdiate values are meant for transitions between surface types (metal to rust for instance).
 
 Non-metallic materials
 :   **Base color** represents the reflected color and should be an sRGB value in the range 50-240 (strict range) or 30-240 (tolerant range).
@@ -690,7 +690,7 @@ V(l,h) = \frac{1}{4(\LoH)^2}
 
 This masking-shadowing function is not physically based, as shown in [#Heitz14], but its simplicity makes it desirable for real-time rendering.
 
-In summary, our clear coat BRDF is a Cook-Torrance specular microfacet model, with a GGX normal distribution function, a Kelemen visibility function, and a Schlick Fresnel function. Listing [kelemen] show how trivial the GLSL implementation is.
+In summary, our clear coat BRDF is a Cook-Torrance specular microfacet model, with a GGX normal distribution function, a Kelemen visibility function, and a Schlick Fresnel function. Listing [kelemen] shows how trivial the GLSL implementation is.
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 float V_Kelemen(float LoH) {
@@ -707,7 +707,7 @@ $$\begin{equation}
 \fNormal(1.5) = \frac{(1.5 - 1)^2}{(1.5 + 1)^2} = 0.04
 \end{equation}$$
 
-This correspond to a Fresnel reflectance of 4% that we know is associated with common dielectric materials.
+This corresponds to a Fresnel reflectance of 4% that we know is associated with common dielectric materials.
 
 ### Integration in the surface response
 
@@ -788,7 +788,7 @@ We should also modify the base layer's apparent roughness based based on the IOR
 
 ## Anisotropic model
 
-The standard material model described previously can only describe isotropic surfaces, that is surfaces whose properties are identical in all directions. Many real-world materials, such as brushed metal, can however only be replicated using an anisotropic model.
+The standard material model described previously can only describe isotropic surfaces, that is, surfaces whose properties are identical in all directions. Many real-world materials, such as brushed metal, can, however, only be replicated using an anisotropic model.
 
 ![Figure [anisotropic]: Comparison of isotropic material (left) and anistropic material (right)](images/material_anisotropic.png)
 
@@ -809,7 +809,7 @@ $$
 \end{align*}
 $$
 
-The relationship defined in [#Burley12] is different but offers more pleasant and intuitive results, but slightly more expensive:
+The relationship defined in [#Burley12] is different, offers more pleasant and intuitive results, but is slightly more expensive:
 
 $$
 \begin{align*}
@@ -818,7 +818,7 @@ $$
 \end{align*}
 $$
 
-We instead opted to follow the relationship described in [#Kulla17] as it allows to create sharp highlights:
+We instead opted to follow the relationship described in [#Kulla17] as it allows creation of sharp highlights:
 
 $$
 \begin{align*}
@@ -827,7 +827,7 @@ $$
 \end{align*}
 $$
 
-Note that this NDF requires the tangent and bitangent directions in addition to the normal direction. Since these directions are needed for normal mapping, this may not be an issue.
+Note that this NDF requires the tangent and bitangent directions in addition to the normal direction. Since these directions are already needed for normal mapping, providing them may not be an issue.
 
 The resulting implementation is described in listing [anisotropicBRDF].
 
@@ -914,13 +914,13 @@ No further remapping is required. Note that negative values will align the aniso
 
 ## Cloth model
 
-All the material models described previously are designed to simulate dense surfaces, both at a macro and at a micro level. Clothes and fabrics are however often made of loosely connected threads that absorb and scatter incident light. The microfacet BRDFs presented earlier do a poor job at recreating the nature of cloth due to their underlying assumption that a surface is made of random grooves that behave as perfect mirrors. When compared to hard surfaces, cloth is characterized by a softer specular lobe with a large falloff and the presence of fuzz lighting, caused by forward/backward scattering. Some fabrics also exhibit two-tone specular colors (velvets for instance).
+All the material models described previously are designed to simulate dense surfaces, both at a macro and at a micro level. Clothes and fabrics are however often made of loosely connected threads that absorb and scatter incident light. The microfacet BRDFs presented earlier do a poor job of recreating the nature of cloth due to their underlying assumption that a surface is made of random grooves that behave as perfect mirrors. When compared to hard surfaces, cloth is characterized by a softer specular lobe with a large falloff and the presence of fuzz lighting, caused by forward/backward scattering. Some fabrics also exhibit two-tone specular colors (velvets for instance).
 
 Figure [materialCloth] shows how a traditional microfacet BRDF fails to capture the appearance of a sample of denim fabric. The surface appears rigid (almost plastic-like), more similar to a tarp than a piece of clothing. This figure also shows how important the softer specular lobe caused by absorption and scattering is to the faithful recreation of the fabric.
 
 ![Figure [materialCloth]: Comparison of denim fabric rendered using a traditional microfacet BRDF (left) and our cloth BRDF (right)](images/screenshot_cloth.png)
 
-Velvet is an interesting use case for a cloth material model. As shown in figure [materialVelvet] this type of fabric exhibits strong rim lighting due to forward and backward scattering. These scattering events are caused by fibers standing straight at the surface of the fabric. When the incident light comes from the direction opposite to the view direction, the fibers will forward scatter the light. Similarly, when the incident light from from the same direction as the view direction, the fibers will scatter the light backward.
+Velvet is an interesting use case for a cloth material model. As shown in figure [materialVelvet] this type of fabric exhibits strong rim lighting due to forward and backward scattering. These scattering events are caused by fibers standing straight at the surface of the fabric. When the incident light comes from the direction opposite to the view direction, the fibers will forward-scatter the light. Similarly, when the incident light from from the same direction as the view direction, the fibers will scatter the light backward.
 
 ![Figure [materialVelvet]: Velvet fabric showcasing forward and backward scattering](images/screenshot_cloth_velvet.png)
 
@@ -971,7 +971,7 @@ To offer better control over the appearance of cloth and to give users the abili
 
 ### Cloth diffuse BRDF
 
-Our cloth material model still relies on a Lambertian diffuse BRDF. It is however slightly modified to be energy conservative (akin the energy conservation of our clear coat material model) and offers an optional subsurface scattering term. This extra term is not physically-based and can be used to simulate the scattering, partial absorption and re-emission of light in certain types of fabrics.
+Our cloth material model still relies on a Lambertian diffuse BRDF. It is however slightly modified to be energy conservative (akin to the energy conservation of our clear coat material model) and offers an optional subsurface scattering term. This extra term is not physically-based and can be used to simulate the scattering, partial absorption and re-emission of light in certain types of fabrics.
 
 First, here is the diffuse term without the optional subsurface scattering:
 
@@ -1187,16 +1187,16 @@ Figure [directionalLightTest] shows the effect of lighting a simple scene with a
 
 ![Figure [directionalLightTest]: Series of dielectric materials of varying roughness under a directional light](images/screenshot_directional_light.png)
 
-[^illuminanceMeasures]: Measures taken with an incident light meter (Sekonic L-478D)
+[^illuminanceMeasures]: Measurements taken with an incident light meter (Sekonic L-478D)
 
 ### Punctual lights
 
-Our engine will support two types of punctual lights, commonly found in most if not all rendering engines: point lights and spot lights. These types of lights are traditionally not physically correct for two reasons:
+Our engine will support two types of punctual lights, commonly found in most if not all rendering engines: point lights and spot lights. These types of lights are traditionally physically inaccurate for two reasons:
 
 1. They are truly punctual and infinitesimally small.
 2. They do not follow the [inverse square law](http://en.wikipedia.org/wiki/Inverse-square_law).
 
-The first issue can be addressed with area lights but given the cheaper nature of punctual lights, it is deemed practical to use infinitesimally small punctual lights whenever possible.
+The first issue can be addressed with area lights but, given the cheaper nature of punctual lights it is deemed practical to use infinitesimally small punctual lights whenever possible.
 
 The second issue is easy to fix. For a given punctual light, the perceived intensity decreases proportionally to the square of the distance from the viewer (more precisely, the light receptor).
 

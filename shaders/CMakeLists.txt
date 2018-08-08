@@ -55,28 +55,40 @@ set(CAT_COMMAND cat)
 set(DOUBLEQUOTE "\\\"")
 set(OPENP "\\(")
 set(CLOSEP "\\)")
+set(SEMICOLON "\;")
 
 if (WIN32)
     set(CAT_COMMAND type)
     set(DOUBLEQUOTE "^\"")
     set(OPENP "(")
     set(CLOSEP ")")
+    set(SEMICOLON ";")
 endif()
 
 foreach (shader_file ${SHADERS})
     get_filename_component(localname "${shader_file}" NAME)
-    get_filename_component(fullname "${shader_file}" ABSOLUTE)
+    get_filename_component(filename  "${localname}"   NAME_WE)
+    get_filename_component(extension "${localname}"   EXT)
+    get_filename_component(fullname  "${shader_file}" ABSOLUTE)
+
+    string(SUBSTRING "${extension}" 1 -1 extension)
 
     if (WIN32)
        string(REPLACE "/" "\\" fullname ${fullname})
     endif()
 
-    set(output_path "${GENERATION_ROOT}/generated/shaders/${localname}")
+    set(output_path "${GENERATION_ROOT}/generated/shaders/${localname}.cpp")
     add_custom_command(
             OUTPUT ${output_path}
-            COMMAND echo "R${DOUBLEQUOTE}FILAMENT__${OPENP}" > ${output_path}
+            # For cross-platform compatibility, each string passed to echo must be enclosed in
+            # double quotes and contain no spaces
+            COMMAND echo "namespace" "filament" "{" > ${output_path}
+            COMMAND echo "namespace" "shaders" "{" >> ${output_path}
+            COMMAND echo "extern" "const" "char" "${filename}_${extension}[]" "=" "R${DOUBLEQUOTE}FILAMENT__${OPENP}" >> ${output_path}
             COMMAND ${CAT_COMMAND} \"${fullname}\" >> \"${output_path}\"
-            COMMAND echo "${CLOSEP}FILAMENT__${DOUBLEQUOTE}" >> ${output_path}
+            COMMAND echo "${CLOSEP}FILAMENT__${DOUBLEQUOTE}${SEMICOLON}" >> ${output_path}
+            COMMAND echo "}" "//" "namespace" "shaders" >> ${output_path}
+            COMMAND echo "}" "//" "namespace" "filament" >> ${output_path}
             DEPENDS ${shader_file}
             COMMENT "Processing shader ${shader_file}"
     )
@@ -87,4 +99,4 @@ endforeach()
 # ==================================================================================================
 # Include and target definitions
 # ==================================================================================================
-add_custom_target(${TARGET} DEPENDS ${SHADER_LIST} ${SHADERS})
+add_library(${TARGET} STATIC ${SHADER_LIST} ${SHADERS})

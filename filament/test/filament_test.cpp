@@ -34,7 +34,7 @@
 #include "details/Allocators.h"
 #include "details/Material.h"
 #include "details/Camera.h"
-#include "details/Froxel.h"
+#include "details/Froxelizer.h"
 #include "details/Engine.h"
 #include "components/TransformManager.h"
 #include "utils/RangeSet.h"
@@ -462,15 +462,15 @@ TEST(FilamentTest, FroxelData) {
 
 
     // view-port size is chosen so that we fit exactly a integer # of froxels horizontally
-    // (unfortunatelly there is no way to guarantee it as it depends on the max # of froxel
-    // used by the engine). We do this to infere the value of the left and right most planes
+    // (unfortunately there is no way to guarantee it as it depends on the max # of froxel
+    // used by the engine). We do this to infer the value of the left and right most planes
     // to check if they're computed correctly.
     Viewport vp(0, 0, 1280, 640);
-    mat4f p = mat4f::perspective(90, 1.0f, 5, 100, mat4f::Fov::HORIZONTAL);
+    mat4f p = mat4f::perspective(90, 1.0f, 0.1, 100, mat4f::Fov::HORIZONTAL);
 
-    FroxelData froxelData(*engine);
+    Froxelizer froxelData(*engine);
     froxelData.setOptions(5, 100);
-    froxelData.prepare(engine->getDriverApi(), scope, vp, p, 5, 100);
+    froxelData.prepare(engine->getDriverApi(), scope, vp, p, 0.1, 100);
 
     Froxel f = froxelData.getFroxelAt(0,0,0);
 
@@ -511,12 +511,49 @@ TEST(FilamentTest, FroxelData) {
     // farthest froxel far plane distance always zLightFar
     EXPECT_FLOAT_EQ(        100,-l.planes[Froxel::FAR].w);
 
-    //froxelData.froxelizePointLight(p, vec4f{ 0, 0, -5, 1 });
-    //float tileSize = 5.0f * 80.0f / 640.0f;
-    //tileSize *= 0.25f;
-    //froxelData.froxelizePointLight(p, vec4f{ 0, 0, -5, tileSize*tileSize });
+    // create a dummy point light that can be referenced in LightSoa
+    Entity e = engine->getEntityManager().create();
+    LightManager::Builder(LightManager::Type::POINT).build(*engine, e);
+    LightManager::Instance instance = engine->getLightManager().getInstance(e);
 
-    froxelData.terminate();
+    FScene::LightSoa lights;
+    lights.push_back({}, {}, {}, {});   // first one is always skipped
+    lights.push_back(float4{ 0, 0, -5, 1 }, {}, instance, 1);
+
+    {
+        froxelData.froxelizeLights(*engine, {}, lights);
+        auto const& froxelBuffer = froxelData.getFroxelBufferUser();
+        auto const& recordBuffer = froxelData.getRecordBufferUser();
+        // light straddles the "light near" plane
+        size_t pointCount = 0;
+        for (const auto& entry : froxelBuffer) {
+            EXPECT_LE(entry.pointLightCount, 1);
+            EXPECT_EQ(entry.spotLightCount, 0);
+            pointCount += entry.pointLightCount;
+        }
+        EXPECT_GT(pointCount, 0);
+    }
+
+    {
+        // light doesn't cross any froxel near or far plane
+        lights.elementAt<FScene::POSITION_RADIUS>(1) = float4{ 0, 0, -3, 1 };
+
+        auto pos = lights.elementAt<FScene::POSITION_RADIUS>(1);
+        EXPECT_TRUE(pos == float4( 0, 0, -3, 1 ));
+
+        froxelData.froxelizeLights(*engine, {}, lights);
+        auto const& froxelBuffer = froxelData.getFroxelBufferUser();
+        auto const& recordBuffer = froxelData.getRecordBufferUser();
+        size_t pointCount = 0;
+        for (const auto& entry : froxelBuffer) {
+            EXPECT_LE(entry.pointLightCount, 1);
+            EXPECT_EQ(entry.spotLightCount, 0);
+            pointCount += entry.pointLightCount;
+        }
+        EXPECT_GT(pointCount, 0);
+    }
+
+    froxelData.terminate(engine->getDriverApi());
     engine->shutdown();
     delete engine;
 }

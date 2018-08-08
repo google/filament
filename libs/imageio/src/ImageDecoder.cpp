@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include <image/ImageDecoder.h>
+#include <imageio/ImageDecoder.h>
 
 #include <cstdint>
 #include <istream>
@@ -38,7 +38,7 @@
 
 #include <vector>
 
-#include "utilities.h"
+#include <image/utilities.h>
 
 namespace image {
 
@@ -290,7 +290,7 @@ Image PNGDecoder::decode() {
         uint32_t height = png_get_image_height(mPNG, mInfo);
         size_t rowBytes = png_get_rowbytes(mPNG, mInfo);
 
-        imageData.reset(new uint8_t[width * height * rowBytes]);
+        imageData.reset(new uint8_t[height * rowBytes]);
         std::unique_ptr<png_bytep[]> rowPointers(new png_bytep[height]);
         for (size_t y = 0 ; y < height ; y++) {
             rowPointers[y] = &imageData[y * rowBytes];

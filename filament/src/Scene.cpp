@@ -22,7 +22,7 @@
 #include "details/Culler.h"
 #include "details/Engine.h"
 #include "details/IndirectLight.h"
-#include "details/LightData.h"
+#include "details/GpuLightBuffer.h"
 #include "details/Skybox.h"
 
 #include <utils/compiler.h>
@@ -41,9 +41,9 @@ namespace details {
 // ------------------------------------------------------------------------------------------------
 
 FScene::FScene(FEngine& engine) :
-        mEngine(engine) {
-    mGpuLightData = std::make_unique<LightData>(engine);
-    mIndirectLight = engine.getDefaultIndirectLight();
+        mEngine(engine),
+        mIndirectLight(engine.getDefaultIndirectLight()),
+        mGpuLightData(engine) {
 }
 
 FScene::~FScene() noexcept = default;
@@ -164,12 +164,13 @@ void FScene::updateUBOs(utils::Range<uint32_t> visibleRenderables) const noexcep
 }
 
 void FScene::terminate(FEngine& engine) {
-    mGpuLightData->terminate();                // free-up the lights buffer
+    // free-up the lights buffer
+    mGpuLightData.terminate(engine);
 }
 
 void FScene::prepareLights(const CameraInfo& camera) noexcept {
     FLightManager& lcm = mEngine.getLightManager();
-    LightData* const gpuLightData = mGpuLightData.get();
+    GpuLightBuffer& gpuLightData = mGpuLightData;
     FScene::LightSoa& lightData = getLightData();
 
     /*
@@ -212,8 +213,8 @@ void FScene::prepareLights(const CameraInfo& camera) noexcept {
     auto const* UTILS_RESTRICT directions   = lightData.data<FScene::DIRECTION>();
     auto const* UTILS_RESTRICT instances    = lightData.data<FScene::LIGHT_INSTANCE>();
     for (size_t i = DIRECTIONAL_LIGHTS_COUNT, c = lightData.size(); i < c; ++i) {
-        LightData::LightIndex gpuIndex = LightData::LightIndex(i - DIRECTIONAL_LIGHTS_COUNT);
-        LightData::LightParameters& lp = gpuLightData->getLightParameters(gpuIndex);
+        GpuLightBuffer::LightIndex gpuIndex = GpuLightBuffer::LightIndex(i - DIRECTIONAL_LIGHTS_COUNT);
+        GpuLightBuffer::LightParameters& lp = gpuLightData.getLightParameters(gpuIndex);
         auto li = instances[i];
         lp.positionFalloff      = { positions[i].xyz, lcm.getSquaredFalloffInv(li) };
         lp.colorIntensity       = { lcm.getColor(li), lcm.getIntensity(li) };
@@ -221,8 +222,8 @@ void FScene::prepareLights(const CameraInfo& camera) noexcept {
         lp.spotScaleOffset.xy   = { lcm.getSpotParams(li).scaleOffset };
     }
 
-    gpuLightData->invalidate(0, lightData.size());
-    gpuLightData->commit();
+    gpuLightData.invalidate(0, lightData.size());
+    gpuLightData.commit(mEngine);
 }
 
 void FScene::addEntity(Entity entity) {

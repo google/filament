@@ -73,12 +73,12 @@ public:
 // 256 lights max
 //
 
-class FroxelData {
+class Froxelizer {
 public:
-    explicit FroxelData(FEngine& engine);
-    ~FroxelData();
+    explicit Froxelizer(FEngine& engine);
+    ~Froxelizer();
 
-    void terminate() noexcept;
+    void terminate(driver::DriverApi& driverApi) noexcept;
 
     // gpu buffer containing records. valid after construction.
     GPUBuffer const& getRecordBuffer() const noexcept { return mRecordsBuffer; }
@@ -100,8 +100,7 @@ public:
      *
      * return true if updateUniforms() needs to be called
      */
-    bool prepare(
-            FEngine::DriverApi& driverApi, ArenaScope& arena, Viewport const& viewport,
+    bool prepare(driver::DriverApi& driverApi, ArenaScope& arena, Viewport const& viewport,
             const math::mat4f& projection, float projectionNear, float projectionFar) noexcept;
 
     Froxel getFroxelAt(size_t x, size_t y, size_t z) const noexcept;
@@ -110,7 +109,8 @@ public:
     size_t getFroxelCountZ() const noexcept { return mFroxelCountZ; }
 
     // update Records and Froxels texture with lights data. this is thread-safe.
-    void froxelizeLights(math::mat4f const& viewMatrix, const FScene::LightSoa& lightData) noexcept;
+    void froxelizeLights(FEngine& engine, math::mat4f const& viewMatrix,
+            const FScene::LightSoa& lightData) noexcept;
 
     void updateUniforms(UniformBuffer& u) {
         u.setUniform(offsetof(FEngine::PerViewUib, zParams), mParamsZ);
@@ -122,11 +122,10 @@ public:
     // send froxel data to GPU
     void commit(driver::DriverApi& driverApi);
 
-private:
-    struct FroxelRunEntry {
-        uint32_t index;
-        uint32_t count;
-    };
+
+    /*
+     * Only for testing/debugging...
+     */
 
     struct FroxelEntry {
         union {
@@ -142,6 +141,16 @@ private:
                 };
             };
         };
+    };
+    // This depends on the maximum number of lights (currently 256),and can't be more than 16 bits.
+    using RecordBufferType = std::conditional_t<CONFIG_MAX_LIGHT_COUNT <= 255, uint8_t, uint16_t>;
+    const utils::Slice<FroxelEntry>& getFroxelBufferUser() const { return mFroxelBufferUser; }
+    const utils::Slice<RecordBufferType>& getRecordBufferUser() const { return mRecordBufferUser; }
+
+private:
+    struct FroxelRunEntry {
+        uint32_t index;
+        uint32_t count;
     };
 
     struct LightRecord {
@@ -162,10 +171,8 @@ private:
     void setProjection(const math::mat4f& projection, float near, float far) noexcept;
     bool update() noexcept;
 
-    void froxelizeLoop(
-            utils::Slice<uint16_t>& froxelsList,
-            utils::Slice<FroxelRunEntry> froxelsListIndices,
-            math::mat4f const& viewMatrix,
+    void froxelizeLoop(FEngine& engine, utils::Slice<uint16_t>& froxelsList,
+            utils::Slice<FroxelRunEntry> froxelsListIndices, const math::mat4f& viewMatrix,
             const FScene::LightSoa& lightData) noexcept;
 
     void froxelizePointAndSpotLight(
@@ -188,17 +195,7 @@ private:
             math::uint2* dim, uint16_t* countX, uint16_t* countY, uint16_t* countZ,
             Viewport const& viewport) noexcept;
 
-    static math::float4 spherePlaneIntersection(math::float4 s, math::float4 p) noexcept;
-    static float spherePlaneDistanceSquared(math::float4 s, float x, float z) noexcept;
-    static math::float4 spherePlaneIntersection(math::float4 s, float py, float pz) noexcept;
-    static math::float4 spherePlaneIntersection(math::float4 s, float pw) noexcept;
-    static bool sphereConeIntersectionFast(math::float4 const& sphere, FroxelData::LightParams const& cone) noexcept;
-    static bool sphereConeIntersection(math::float4 const& sphere, FroxelData::LightParams const& cone) noexcept;
-
-
     // internal state dependant on the viewport and needed for froxelizing
-    FEngine& mEngine;
-
     LinearAllocatorArena mArena;                    // ~256 KiB
 
     float* mDistancesZ = nullptr;                   // max 2.1 MiB (actual: resolution dependant)
@@ -206,12 +203,11 @@ private:
     math::float4* mPlanesY = nullptr;
     math::float4* mBoundingSpheres = nullptr;
 
-    // This depends on the maximum number of lights (currently 256),and can't be more than 16 bits.
-    using RecordBufferType = std::conditional_t<CONFIG_MAX_LIGHT_COUNT <= 255, uint8_t, uint16_t>;
-
     utils::Slice<FroxelRunEntry> mFroxelListIndices;    // ~2 KiB
     utils::Slice<uint16_t> mFroxelList;                 // ~4 MiB + 510 B
-    utils::Slice<FroxelEntry> mFroxelBufferUser;        // max 32 KiB  (actual: resolution dependant)
+    utils::Slice<FroxelEntry> mFroxelBufferUser;
+
+    // max 32 KiB  (actual: resolution dependant)
     utils::Slice<RecordBufferType> mRecordBufferUser;   // max 64 KiB
     utils::Slice<LightRecord> mLightRecords;            // 256 KiB
 

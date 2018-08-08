@@ -23,7 +23,7 @@
 
 #include "details/Allocators.h"
 #include "details/Camera.h"
-#include "details/Froxel.h"
+#include "details/Froxelizer.h"
 #include "details/ShadowMap.h"
 #include "details/Scene.h"
 
@@ -50,7 +50,7 @@ class FEngine;
 class FMaterialInstance;
 class FRenderer;
 class FScene;
-class FroxelData;
+class Froxelizer;
 
 class FView : public View {
 public:
@@ -61,7 +61,8 @@ public:
 
     void terminate(FEngine& engine);
 
-    void prepare(FEngine& engine, ArenaScope& arena, Viewport const& viewport) noexcept;
+    void prepare(FEngine& engine, driver::DriverApi& driver, ArenaScope& arena,
+            Viewport const& viewport) noexcept;
 
     void setScene(FScene* scene) { mScene = scene; }
     FScene const* getScene() const noexcept { return mScene; }
@@ -113,11 +114,11 @@ public:
     }
 
     void prepareCamera(const CameraInfo& camera, const Viewport& viewport) const noexcept;
-    void prepareShadowing(
-            FEngine& engine, FScene::RenderableSoa& renderableData, FScene::LightSoa const& lightData) noexcept;
+    void prepareShadowing(FEngine& engine, driver::DriverApi& driver,
+            FScene::RenderableSoa& renderableData, FScene::LightSoa const& lightData) noexcept;
     void prepareLighting(
             FEngine& engine, FEngine::DriverApi& driver, ArenaScope& arena, Viewport const& viewport) noexcept;
-    void froxelize() const noexcept;
+    void froxelize(FEngine& engine) const noexcept;
     void commitUniforms(driver::DriverApi& driverApi) const noexcept;
     void commitFroxels(driver::DriverApi& driverApi) const noexcept;
 
@@ -241,7 +242,7 @@ private:
     CameraInfo mViewingCameraInfo;
     Frustum mCullingFrustum;
 
-    mutable FroxelData mFroxelizer;
+    mutable Froxelizer mFroxelizer;
 
     Viewport mViewport;
     LinearColorA mClearColor;

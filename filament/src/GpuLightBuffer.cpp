@@ -14,14 +14,13 @@
  * limitations under the License.
  */
 
-#include "details/LightData.h"
+#include "details/GpuLightBuffer.h"
 
 #include "details/Engine.h"
 
-#include <private/filament/UibGenerator.h>
+#include <filament/EngineEnums.h>
 
-#include <utils/architecture.h>
-#include <utils/Panic.h>
+#include <private/filament/UibGenerator.h>
 
 namespace filament {
 
@@ -29,25 +28,29 @@ using namespace driver;
 
 namespace details {
 
-LightData::LightData(FEngine& engine) noexcept
-        : mEngine(engine),
-          mLightUib(UibGenerator::getLightsUib()),
-          mLightsUb(mLightUib)
-{
-    DriverApi& driverApi = mEngine.getDriverApi();
-    mLightUbh = driverApi.createUniformBuffer(mLightUib.getSize());
+GpuLightBuffer::GpuLightBuffer(FEngine& engine) noexcept
+        : mLightsUb(UibGenerator::getLightsUib()) {
+    DriverApi& driverApi = engine.getDriverApi();
+    mLightUbh = driverApi.createUniformBuffer(mLightsUb.getSize());
     driverApi.bindUniforms(BindingPoints::LIGHTS, mLightUbh);
 }
 
-LightData::~LightData() noexcept = default;
+GpuLightBuffer::~GpuLightBuffer() noexcept = default;
 
-void LightData::terminate() {
-    DriverApi& driverApi = mEngine.getDriverApi();
+void GpuLightBuffer::terminate(FEngine& engine) {
+    DriverApi& driverApi = engine.getDriverApi();
     driverApi.destroyUniformBuffer(mLightUbh);
 }
 
-void LightData::commitSlow() noexcept {
-    DriverApi& driverApi = mEngine.getDriverApi();
+void GpuLightBuffer::commit(FEngine& engine) noexcept {
+    if (UTILS_UNLIKELY(mLightsUb.isDirty())) {
+        commitSlow(engine);
+    }
+    engine.getDriverApi().bindUniforms(BindingPoints::LIGHTS, mLightUbh);
+}
+
+void GpuLightBuffer::commitSlow(FEngine& engine) noexcept {
+    DriverApi& driverApi = engine.getDriverApi();
     driverApi.updateUniformBuffer(mLightUbh, UniformBuffer(mLightsUb));
     mLightsUb.clean();
 }

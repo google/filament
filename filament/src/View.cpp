@@ -19,7 +19,7 @@
 #include "details/Engine.h"
 #include "details/Culler.h"
 #include "details/DFG.h"
-#include "details/Froxel.h"
+#include "details/Froxelizer.h"
 #include "details/IndirectLight.h"
 #include "details/MaterialInstance.h"
 #include "details/Renderer.h"
@@ -85,7 +85,7 @@ void FView::terminate(FEngine& engine) {
     driverApi.destroyUniformBuffer(mPerViewUbh);
     driverApi.destroySamplerBuffer(mPerViewSbh);
     mDirectionalShadowMap.terminate(driverApi);
-    mFroxelizer.terminate();
+    mFroxelizer.terminate(driverApi);
 }
 
 void FView::setViewport(Viewport const& viewport) noexcept {
@@ -256,9 +256,8 @@ bool FView::isSkyboxVisible() const noexcept {
     return skybox != nullptr && (skybox->getLayerMask() & mVisibleLayers);
 }
 
-void FView::prepareShadowing(FEngine& engine,
-        FScene::RenderableSoa& renderableData,
-        FScene::LightSoa const& lightData) noexcept {
+void FView::prepareShadowing(FEngine& engine, driver::DriverApi& driver,
+        FScene::RenderableSoa& renderableData, FScene::LightSoa const& lightData) noexcept {
     SYSTRACE_CALL();
 
     // setup shadow mapping
@@ -281,7 +280,7 @@ void FView::prepareShadowing(FEngine& engine,
             prepareVisibleShadowCasters(engine.getJobSystem(), renderableData, frustum);
 
             // allocates shadowmap driver resources
-            shadowMap.prepare(engine.getDriverApi(), getUs());
+            shadowMap.prepare(driver, getUs());
 
             mat4f const& lightFromWorldMatrix = shadowMap.getLightSpaceMatrix();
             u.setUniform(offsetof(FEngine::PerViewUib, lightFromWorldMatrix), lightFromWorldMatrix);
@@ -298,8 +297,8 @@ void FView::prepareShadowing(FEngine& engine,
     }
 }
 
-void FView::prepareLighting(
-        FEngine& engine, FEngine::DriverApi& driver, ArenaScope& arena, Viewport const& viewport) noexcept {
+void FView::prepareLighting(FEngine& engine, FEngine::DriverApi& driver, ArenaScope& arena,
+        Viewport const& viewport) noexcept {
     SYSTRACE_CALL();
 
     UniformBuffer& u = getUb();
@@ -372,16 +371,16 @@ void FView::prepareLighting(
 
     // Dynamic lighting
     if (mHasDynamicLighting) {
-        FroxelData& froxelizer = mFroxelizer;
+        Froxelizer& froxelizer = mFroxelizer;
         if (froxelizer.prepare(driver, arena, viewport, camera.projection, camera.zn, camera.zf)) {
             froxelizer.updateUniforms(u); // update our uniform buffer if needed
         }
     }
 }
 
-void FView::prepare(FEngine& engine, ArenaScope& arena, Viewport const& viewport) noexcept {
+void FView::prepare(FEngine& engine, driver::DriverApi& driver, ArenaScope& arena,
+        Viewport const& viewport) noexcept {
     JobSystem& js = engine.getJobSystem();
-    FEngine::DriverApi& driver = engine.getDriverApi();
 
     /*
      * Prepare the scene -- this is where we gather all the objects added to the scene,
@@ -459,7 +458,7 @@ void FView::prepare(FEngine& engine, ArenaScope& arena, Viewport const& viewport
      * (this will set the VISIBLE_SHADOW_CASTER bit)
      */
 
-    prepareShadowing(engine, renderableData, scene->getLightData());
+    prepareShadowing(engine, driver, renderableData, scene->getLightData());
 
     /*
      * partition the array of renderable w.r.t their visibility:
@@ -586,12 +585,12 @@ void FView::prepareCamera(const CameraInfo& camera, const Viewport& viewport) co
     u.setUniform(offsetof(FEngine::PerViewUib, cameraPosition), float3{camera.getPosition()});
 }
 
-void FView::froxelize() const noexcept {
+void FView::froxelize(FEngine& engine) const noexcept {
     SYSTRACE_CALL();
 
     if (mHasDynamicLighting) {
         // froxelize lights
-        mFroxelizer.froxelizeLights(mViewingCameraInfo.view, mScene->getLightData());
+        mFroxelizer.froxelizeLights(engine, mViewingCameraInfo.view, mScene->getLightData());
     }
 }
 
@@ -700,7 +699,7 @@ void FView::prepareVisibleLights(FLightManager& lcm, utils::JobSystem&, FScene::
         }
     }
 
-    // Parition array such that all visible lights appear first
+    // Partition array such that all visible lights appear first
     UTILS_UNUSED_IN_RELEASE auto last =
             std::partition(lightData.begin() + FScene::DIRECTIONAL_LIGHTS_COUNT, lightData.end(),
                     [](auto const& it) {
@@ -712,8 +711,7 @@ void FView::prepareVisibleLights(FLightManager& lcm, utils::JobSystem&, FScene::
     mHasDynamicLighting = visibleLightCount > FScene::DIRECTIONAL_LIGHTS_COUNT;
 }
 
-void FView::updatePrimitivesLod(
-        FEngine& engine, const CameraInfo&,
+void FView::updatePrimitivesLod(FEngine& engine, const CameraInfo&,
         FScene::RenderableSoa& renderableData, Range visibles) noexcept {
     FRenderableManager const& rcm = engine.getRenderableManager();
     for (uint32_t index : visibles) {

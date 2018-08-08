@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.1)
-project(images)
+project(image)
 
 set(TARGET image)
 set(PUBLIC_HDR_DIR include)
@@ -7,13 +7,13 @@ set(PUBLIC_HDR_DIR include)
 # ==================================================================================================
 # Sources and headers
 # ==================================================================================================
-file(GLOB_RECURSE PUBLIC_HDRS ${PUBLIC_HDR_DIR}/${TARGET}/*.h)
+set(PUBLIC_HDRS
+        include/image/Image.h
+        include/image/utilities.h
+)
 
 set(SRCS
         src/Image.cpp
-        src/ImageDecoder.cpp
-        src/ImageEncoder.cpp
-        src/utilities.h
 )
 
 # ==================================================================================================
@@ -23,10 +23,7 @@ include_directories(${PUBLIC_HDR_DIR})
 
 add_library(${TARGET} STATIC ${PUBLIC_HDRS} ${SRCS})
 
-target_link_libraries(${TARGET} PUBLIC math png tinyexr utils z)
-if (WIN32)
-    target_link_libraries(${TARGET} PRIVATE wsock32)
-endif()
+target_link_libraries(${TARGET} PUBLIC math)
 
 target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
 

@@ -503,7 +503,7 @@ JobSystem::Job* parallel_for(JobSystem& js, JobSystem::Job* parent,
     using JobData = details::ParallelForJobData<S, F>;
     JobData jobData(start, count, 0, std::move(functor), splitter);
     return js.createJob<JobData, &JobData::parallelWithJobs>(parent, std::move(jobData));
-};
+}
 
 // parallel jobs with pointer/count
 template<typename T, typename S, typename F>
@@ -515,7 +515,7 @@ JobSystem::Job* parallel_for(JobSystem& js, JobSystem::Job* parent,
     using JobData = details::ParallelForJobData<S, decltype(user)>;
     JobData jobData(0, count, 0, std::move(user), splitter);
     return js.createJob<JobData, &JobData::parallelWithJobs>(parent, std::move(jobData));
-};
+}
 
 
 // parallel jobs with start/count indices + sequential 'reduce'
@@ -530,7 +530,7 @@ JobSystem::Job* parallel_for(JobSystem& js, JobSystem::Job* parent,
         finish(js, parallelJob);
     });
     return wrapper;
-};
+}
 
 // parallel jobs with pointer/count + sequential 'reduce'
 template<typename T, typename S, typename F, typename R>
@@ -547,21 +547,21 @@ JobSystem::Job* parallel_for(JobSystem& js, JobSystem::Job* parent,
         finish(js, parallelJob);
     });
     return wrapper;
-};
+}
 
 // parallel jobs on a Slice<>
 template<typename T, typename S, typename F>
 JobSystem::Job* parallel_for(JobSystem& js, JobSystem::Job* parent,
         utils::Slice<T> slice, F functor, const S& splitter) noexcept {
     return parallel_for(js, parent, slice.data(), slice.size(), functor, splitter);
-};
+}
 
 // parallel jobs on a Slice<> + sequential 'reduce'
 template<typename T, typename S, typename F, typename R>
 JobSystem::Job* parallel_for(JobSystem& js, JobSystem::Job* parent,
         utils::Slice<T> slice, F functor, const S& splitter, R finish) noexcept {
     return parallel_for(js, parent, slice.data(), slice.size(), functor, splitter, finish);
-};
+}
 
 
 template <size_t COUNT, size_t MAX_SPLITS = 12>

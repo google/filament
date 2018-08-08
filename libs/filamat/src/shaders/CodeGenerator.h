@@ -39,8 +39,9 @@ class UTILS_PRIVATE CodeGenerator {
     using ShaderType = filament::driver::ShaderType;
     using TargetApi = MaterialBuilder::TargetApi;
 public:
-    CodeGenerator(filament::driver::ShaderModel shaderModel, TargetApi targetApi) noexcept
-            : mShaderModel(shaderModel), mTargetApi(targetApi) {
+    CodeGenerator(filament::driver::ShaderModel shaderModel,
+            TargetApi targetApi, TargetApi codeGenTargetApi) noexcept
+            : mShaderModel(shaderModel), mTargetApi(targetApi), mCodeGenTargetApi(codeGenTargetApi) {
         if (targetApi == TargetApi::ALL) {
             utils::slog.e << "Must resolve target API before codegen." << utils::io::endl;
             std::terminate();
@@ -53,9 +54,7 @@ public:
     std::ostream& generateSeparator(std::ostream& out) const;
 
     // generate prolog for the given shader
-    std::ostream& generateProlog(std::ostream& out, ShaderType type,
-            filament::BlendingMode blendingMode = filament::BlendingMode::OPAQUE,
-            bool hasExternalSamplers = false) const;
+    std::ostream& generateProlog(std::ostream& out, ShaderType type, bool hasExternalSamplers) const;
 
     std::ostream& generateEpilog(std::ostream& out) const;
 
@@ -92,8 +91,8 @@ public:
             const filament::UniformInterfaceBlock& uib) const;
 
     // generate samplers
-    std::ostream& generateSamplers(std::ostream& out, ShaderType type, uint8_t firstBinding,
-            const filament::SamplerInterfaceBlock& sib) const;
+    std::ostream& generateSamplers(
+        std::ostream& out, uint8_t firstBinding, const filament::SamplerInterfaceBlock& sib) const;
 
     // generate material properties getters
     std::ostream& generateMaterialProperty(std::ostream& out,
@@ -131,6 +130,7 @@ private:
 
     filament::driver::ShaderModel mShaderModel;
     TargetApi mTargetApi;
+    TargetApi mCodeGenTargetApi;
 
     // return type name of uniform  (e.g.: "vec3", "vec4", "float")
     static char const* getUniformTypeName(filament::UniformInterfaceBlock::Type uniformType) noexcept;

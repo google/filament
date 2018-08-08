@@ -136,10 +136,10 @@ JobSystem::JobSystem(size_t threadCount, size_t adoptableThreadsCount) noexcept 
     auto& states = mThreadStates;
 
     #pragma nounroll
-    for (size_t i=0, n= states.size() ; i < n ; i++) {
-        auto &state = states[i];
+    for (size_t i = 0, n = states.size(); i < n; i++) {
+        auto& state = states[i];
         state.rndGen = default_random_engine(rd());
-        state.mask =  uint32_t(1UL << i);
+        state.mask = uint32_t(1UL << i);
         state.js = this;
         if (i < hardwareThreadCount) {
             // don't start a thread of adoptable thread slots

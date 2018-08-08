@@ -20,6 +20,10 @@
 #include <stdio.h>
 #include <memory>
 
+/**
+ * This namespace defines types and free functions for both the core "image" library (minimal
+ * dependencies) as well as the "imageio" library (for loading and saving files).
+ */
 namespace image {
 
 class Image {

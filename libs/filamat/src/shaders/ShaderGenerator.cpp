@@ -140,15 +140,16 @@ ShaderGenerator::ShaderGenerator(
 }
 
 const std::string ShaderGenerator::createVertexProgram(filament::driver::ShaderModel shaderModel,
-        MaterialBuilder::TargetApi targetApi,  MaterialInfo const& material, uint8_t variantKey,
-        filament::Interpolation interpolation, filament::VertexDomain vertexDomain) const noexcept {
+        MaterialBuilder::TargetApi targetApi, MaterialBuilder::TargetApi codeGenTargetApi,
+        MaterialInfo const& material, uint8_t variantKey, filament::Interpolation interpolation,
+        filament::VertexDomain vertexDomain) const noexcept {
     std::stringstream vs;
 
-    const CodeGenerator cg(shaderModel, targetApi);
+    const CodeGenerator cg(shaderModel, targetApi, codeGenTargetApi);
     const bool lit = material.isLit;
     const filament::Variant variant(variantKey);
 
-    cg.generateProlog(vs, ShaderType::VERTEX, material.blendingMode, material.hasExternalSamplers);
+    cg.generateProlog(vs, ShaderType::VERTEX, material.hasExternalSamplers);
 
     if (cg.getShaderModel() >= filament::driver::ShaderModel::GL_CORE_41) {
         // TODO: find a better way to set this, esp. on mobile
@@ -193,7 +194,6 @@ const std::string ShaderGenerator::createVertexProgram(filament::driver::ShaderM
     cg.generateSeparator(vs);
     // TODO: should we generate per-view SIB in the vertex shader?
     cg.generateSamplers(vs,
-            ShaderType::VERTEX,
             material.samplerBindings.getBlockOffset(BindingPoints::PER_MATERIAL_INSTANCE),
             material.sib);
 
@@ -229,16 +229,16 @@ bool ShaderGenerator::hasCustomDepthShader() const noexcept {
 }
 
 const std::string ShaderGenerator::createFragmentProgram(filament::driver::ShaderModel shaderModel,
-        MaterialBuilder::TargetApi targetApi, MaterialInfo const& material, uint8_t variantKey,
+        MaterialBuilder::TargetApi targetApi, MaterialBuilder::TargetApi codeGenTargetApi,
+        MaterialInfo const& material, uint8_t variantKey,
         filament::Interpolation interpolation) const noexcept {
 
-    const CodeGenerator cg(shaderModel, targetApi);
+    const CodeGenerator cg(shaderModel, targetApi, codeGenTargetApi);
     const bool lit = material.isLit;
     const filament::Variant variant(variantKey);
 
     std::stringstream fs;
-    cg.generateProlog(fs, ShaderType::FRAGMENT,
-            material.blendingMode, material.hasExternalSamplers);
+    cg.generateProlog(fs, ShaderType::FRAGMENT, material.hasExternalSamplers);
 
     cg.generateDefine(fs, "IBL_USE_RGBM", filament::CONFIG_IBL_RGBM);
     cg.generateDefine(fs, "IBL_MAX_MIP_LEVEL", std::log2f(filament::CONFIG_IBL_SIZE));
@@ -292,11 +292,10 @@ const std::string ShaderGenerator::createFragmentProgram(filament::driver::Shade
     cg.generateUniforms(fs, ShaderType::FRAGMENT,
             BindingPoints::PER_MATERIAL_INSTANCE, material.uib);
     cg.generateSeparator(fs);
-    cg.generateSamplers(fs, ShaderType::FRAGMENT,
+    cg.generateSamplers(fs,
             material.samplerBindings.getBlockOffset(BindingPoints::PER_VIEW),
             SibGenerator::getPerViewSib());
     cg.generateSamplers(fs,
-            ShaderType::FRAGMENT,
             material.samplerBindings.getBlockOffset(BindingPoints::PER_MATERIAL_INSTANCE),
             material.sib);
 
@@ -336,11 +335,12 @@ const std::string ShaderGenerator::createFragmentProgram(filament::driver::Shade
 }
 
 const std::string ShaderPostProcessGenerator::createPostProcessVertexProgram(
-        filament::driver::ShaderModel sm, MaterialBuilder::TargetApi ta,
-        filament::PostProcessStage variant, uint8_t firstSampler) noexcept {
-    const CodeGenerator cg(sm, ta);
+        filament::driver::ShaderModel sm, MaterialBuilder::TargetApi targetApi,
+        MaterialBuilder::TargetApi codeGenTargetApi, filament::PostProcessStage variant,
+        uint8_t firstSampler) noexcept {
+    const CodeGenerator cg(sm, targetApi, codeGenTargetApi);
     std::stringstream vs;
-    cg.generateProlog(vs, ShaderType::VERTEX);
+    cg.generateProlog(vs, ShaderType::VERTEX, false);
     cg.generateDefine(vs, "LOCATION_POSITION", uint32_t(VertexAttribute::POSITION));
     generatePostProcessStageDefines(vs, cg, variant);
 
@@ -348,7 +348,7 @@ const std::string ShaderPostProcessGenerator::createPostProcessVertexProgram(
             BindingPoints::PER_VIEW, UibGenerator::getPerViewUib());
     cg.generateUniforms(vs, ShaderType::VERTEX,
             BindingPoints::POST_PROCESS, UibGenerator::getPostProcessingUib());
-    cg.generateSamplers(vs, ShaderType::VERTEX,
+    cg.generateSamplers(vs,
             firstSampler, SibGenerator::getPostProcessSib());
 
     cg.generateCommon(vs, ShaderType::VERTEX);
@@ -358,18 +358,19 @@ const std::string ShaderPostProcessGenerator::createPostProcessVertexProgram(
 }
 
 const std::string ShaderPostProcessGenerator::createPostProcessFragmentProgram(
-        filament::driver::ShaderModel sm, MaterialBuilder::TargetApi ta,
-        filament::PostProcessStage variant, uint8_t firstSampler) noexcept {
-    const CodeGenerator cg(sm, ta);
+        filament::driver::ShaderModel sm, MaterialBuilder::TargetApi targetApi,
+        MaterialBuilder::TargetApi codeGenTargetApi, filament::PostProcessStage variant,
+        uint8_t firstSampler) noexcept {
+    const CodeGenerator cg(sm, targetApi, codeGenTargetApi);
     std::stringstream fs;
-    cg.generateProlog(fs, ShaderType::FRAGMENT);
+    cg.generateProlog(fs, ShaderType::FRAGMENT, false);
     generatePostProcessStageDefines(fs, cg, variant);
 
     cg.generateUniforms(fs, ShaderType::FRAGMENT,
             BindingPoints::PER_VIEW, UibGenerator::getPerViewUib());
     cg.generateUniforms(fs, ShaderType::FRAGMENT,
             BindingPoints::POST_PROCESS, UibGenerator::getPostProcessingUib());
-    cg.generateSamplers(fs, ShaderType::FRAGMENT,
+    cg.generateSamplers(fs,
             firstSampler, SibGenerator::getPostProcessSib());
 
     cg.generateCommon(fs, ShaderType::FRAGMENT);

@@ -52,9 +52,6 @@ Package PostprocessMaterialBuilder::build() {
     BlobDictionary spirvDictionary;
     std::vector<uint32_t> spirv;
 
-    GlslEntry glslEntry;
-    SpirvEntry spirvEntry;
-
     // Populate a SamplerBindingMap for the sole purpose of finding where the post-process bindings
     // live within the global namespace of samplers.
     filament::SamplerBindingMap samplerBindingMap;
@@ -67,6 +64,10 @@ Package PostprocessMaterialBuilder::build() {
         const TargetApi targetApi = params.targetApi;
         const TargetApi codeGenTargetApi = params.codeGenTargetApi;
         std::vector<uint32_t>* pSpirv = (targetApi == TargetApi::VULKAN) ? &spirv : nullptr;
+
+        GlslEntry glslEntry;
+        SpirvEntry spirvEntry;
+
         glslEntry.shaderModel = static_cast<uint8_t>(params.shaderModel);
         spirvEntry.shaderModel = static_cast<uint8_t>(params.shaderModel);
 
@@ -76,7 +77,8 @@ Package PostprocessMaterialBuilder::build() {
 
             // Vertex Shader
             std::string vs = ShaderPostProcessGenerator::createPostProcessVertexProgram(
-                    shaderModel, codeGenTargetApi, filament::PostProcessStage(k), firstSampler);
+                    shaderModel, targetApi, codeGenTargetApi,
+                    filament::PostProcessStage(k), firstSampler);
 
             if (mPostprocessorCallback != nullptr) {
                 bool ok = mPostprocessorCallback(vs, filament::driver::ShaderType::VERTEX,
@@ -105,7 +107,8 @@ Package PostprocessMaterialBuilder::build() {
 
             // Fragment Shader
             std::string fs = ShaderPostProcessGenerator::createPostProcessFragmentProgram(
-                    shaderModel, codeGenTargetApi, filament::PostProcessStage(k), firstSampler);
+                    shaderModel, targetApi, codeGenTargetApi,
+                    filament::PostProcessStage(k), firstSampler);
             if (mPostprocessorCallback != nullptr) {
                 bool ok = mPostprocessorCallback(fs, filament::driver::ShaderType::FRAGMENT,
                         shaderModel, &fs, pSpirv);

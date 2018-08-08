@@ -82,13 +82,44 @@ namespace filament {
  *  }
  * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  *
+ * Linux
+ * -----
+ *
+ * Example using SDL:
+ *
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ * SDL_SysWMinfo wmi;
+ * SDL_VERSION(&wmi.version);
+ * SDL_GetWindowWMInfo(sdlWindow, &wmi);
+ * Window nativeWindow = (Window) wmi.info.x11.window;
+ *
+ * using namespace filament;
+ * Engine* engine       = Engine::create();
+ * SwapChain* swapChain = engine->createSwapChain((void*) nativeWindow);
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ *
+ * Windows
+ * -------
+ *
+ * Example using SDL:
+ *
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ * SDL_SysWMinfo wmi;
+ * SDL_VERSION(&wmi.version);
+ * ASSERT_POSTCONDITION(SDL_GetWindowWMInfo(sdlWindow, &wmi), "SDL version unsupported!");
+ * HDC nativeWindow = (HDC) wmi.info.win.hdc;
+ *
+ * using namespace filament;
+ * Engine* engine       = Engine::create();
+ * SwapChain* swapChain = engine->createSwapChain((void*) nativeWindow);
+ * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  *
  * OSX
  * ---
  *
  * On OSX, any `NSView` can be used *directly* as a `nativeWindow` with createSwapChain().
  *
- * Example using SDL:
+ * Example using SDL/Objective-C:
  *
  * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~{.mm}
  *  #include <filament/Engine.h>

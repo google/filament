@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include <image/ImageEncoder.h>
+#include <imageio/ImageEncoder.h>
 
 #include <algorithm>
 #include <cstdint>
@@ -38,7 +38,7 @@
 #include <math/vec3.h>
 #include <math/vec4.h>
 
-#include "utilities.h"
+#include <image/utilities.h>
 
 using namespace math;
 

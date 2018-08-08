@@ -30,11 +30,12 @@ if (APPLE)
 endif (APPLE)
 set(SPIRV_SKIP_EXECUTABLES ON)
 set(SPIRV_SKIP_TESTS ON)
-# End changes
+# End Filament specific changes
 
 project(spirv-tools)
 # Filament specific changes
 # enable_testing()
+# End Filament specific changes
 set(SPIRV_TOOLS "SPIRV-Tools")
 
 include(GNUInstallDirs)
@@ -178,7 +179,9 @@ if(NOT COMMAND find_host_program)
   endmacro()
 endif()
 
-find_host_package(PythonInterp)
+# Filament specific changes
+# find_host_package(PythonInterp)
+# End Filament specific changes
 
 # Check for symbol exports on Linux.
 # At the moment, this check will fail on the OSX build machines for the Android NDK.
@@ -253,28 +256,30 @@ endif(SPIRV_BUILD_COMPRESSION)
 
 # Build pkg-config file
 # Use a first-class target so it's regenerated when relevant files are updated.
-add_custom_target(spirv-tools-pkg-config ALL
-        COMMAND ${CMAKE_COMMAND}
-                      -DCHANGES_FILE=${CMAKE_CURRENT_SOURCE_DIR}/CHANGES
-                      -DTEMPLATE_FILE=${CMAKE_CURRENT_SOURCE_DIR}/cmake/SPIRV-Tools.pc.in
-                      -DOUT_FILE=${CMAKE_CURRENT_BINARY_DIR}/SPIRV-Tools.pc
-                      -DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}
-                      -DCMAKE_INSTALL_LIBDIR=${CMAKE_INSTALL_LIBDIR}
-                      -DCMAKE_INSTALL_INCLUDEDIR=${CMAKE_INSTALL_INCLUDEDIR}
-                      -DSPIRV_LIBRARIES=${SPIRV_LIBRARIES}
-                      -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/write_pkg_config.cmake
-        DEPENDS "CHANGES" "cmake/SPIRV-Tools.pc.in" "cmake/write_pkg_config.cmake")
-add_custom_target(spirv-tools-shared-pkg-config ALL
-        COMMAND ${CMAKE_COMMAND}
-                      -DCHANGES_FILE=${CMAKE_CURRENT_SOURCE_DIR}/CHANGES
-                      -DTEMPLATE_FILE=${CMAKE_CURRENT_SOURCE_DIR}/cmake/SPIRV-Tools-shared.pc.in
-                      -DOUT_FILE=${CMAKE_CURRENT_BINARY_DIR}/SPIRV-Tools-shared.pc
-                      -DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}
-                      -DCMAKE_INSTALL_LIBDIR=${CMAKE_INSTALL_LIBDIR}
-                      -DCMAKE_INSTALL_INCLUDEDIR=${CMAKE_INSTALL_INCLUDEDIR}
-                      -DSPIRV_SHARED_LIBRARIES=${SPIRV_SHARED_LIBRARIES}
-                      -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/write_pkg_config.cmake
-        DEPENDS "CHANGES" "cmake/SPIRV-Tools-shared.pc.in" "cmake/write_pkg_config.cmake")
+# Filament specific changes
+# add_custom_target(spirv-tools-pkg-config ALL
+#         COMMAND ${CMAKE_COMMAND}
+#                       -DCHANGES_FILE=${CMAKE_CURRENT_SOURCE_DIR}/CHANGES
+#                       -DTEMPLATE_FILE=${CMAKE_CURRENT_SOURCE_DIR}/cmake/SPIRV-Tools.pc.in
+#                       -DOUT_FILE=${CMAKE_CURRENT_BINARY_DIR}/SPIRV-Tools.pc
+#                       -DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}
+#                       -DCMAKE_INSTALL_LIBDIR=${CMAKE_INSTALL_LIBDIR}
+#                       -DCMAKE_INSTALL_INCLUDEDIR=${CMAKE_INSTALL_INCLUDEDIR}
+#                       -DSPIRV_LIBRARIES=${SPIRV_LIBRARIES}
+#                       -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/write_pkg_config.cmake
+#         DEPENDS "CHANGES" "cmake/SPIRV-Tools.pc.in" "cmake/write_pkg_config.cmake")
+# add_custom_target(spirv-tools-shared-pkg-config ALL
+#         COMMAND ${CMAKE_COMMAND}
+#                       -DCHANGES_FILE=${CMAKE_CURRENT_SOURCE_DIR}/CHANGES
+#                       -DTEMPLATE_FILE=${CMAKE_CURRENT_SOURCE_DIR}/cmake/SPIRV-Tools-shared.pc.in
+#                       -DOUT_FILE=${CMAKE_CURRENT_BINARY_DIR}/SPIRV-Tools-shared.pc
+#                       -DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}
+#                       -DCMAKE_INSTALL_LIBDIR=${CMAKE_INSTALL_LIBDIR}
+#                       -DCMAKE_INSTALL_INCLUDEDIR=${CMAKE_INSTALL_INCLUDEDIR}
+#                       -DSPIRV_SHARED_LIBRARIES=${SPIRV_SHARED_LIBRARIES}
+#                       -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/write_pkg_config.cmake
+#         DEPENDS "CHANGES" "cmake/SPIRV-Tools-shared.pc.in" "cmake/write_pkg_config.cmake")
+# End Filament specific changes
 
 # Install pkg-config file
 if (ENABLE_SPIRV_TOOLS_INSTALL)

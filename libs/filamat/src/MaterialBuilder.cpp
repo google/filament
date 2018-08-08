@@ -56,7 +56,7 @@ void MaterialBuilderBase::prepare() {
         mShaderModels.set(static_cast<size_t>(ShaderModel::GL_CORE_41));
     }
 
-    // If the code gen taret API was specifically set to Vulkan, generate for Vulkan, otherwise
+    // If the code gen target API was specifically set to Vulkan, generate for Vulkan, otherwise
     // generate for OpenGL (case OPENGL or ALL)
     TargetApi glCodeGenTargetApi = mCodeGenTargetApi != TargetApi::VULKAN ?
             TargetApi::OPENGL : TargetApi::VULKAN;
@@ -437,13 +437,15 @@ Package MaterialBuilder::build() noexcept {
     container.addChild(&hasCustomDepth);
 
     bool errorOccured = false;
-    GlslEntry glslEntry;
-    SpirvEntry spirvEntry;
     for (const auto& params : mCodeGenPermutations) {
         const ShaderModel shaderModel = ShaderModel(params.shaderModel);
         const TargetApi targetApi = params.targetApi;
         const TargetApi codeGenTargetApi = params.codeGenTargetApi;
         std::vector<uint32_t>* pSpirv = (targetApi == TargetApi::VULKAN) ? &spirv : nullptr;
+
+        GlslEntry glslEntry;
+        SpirvEntry spirvEntry;
+
         glslEntry.shaderModel = static_cast<uint8_t>(params.shaderModel);
         spirvEntry.shaderModel = static_cast<uint8_t>(params.shaderModel);
 
@@ -465,7 +467,8 @@ Package MaterialBuilder::build() noexcept {
             if (filament::Variant::filterVariantVertex(v) == k) {
                 // Vertex Shader
                 std::string vs = sg.createVertexProgram(
-                        shaderModel, codeGenTargetApi, info, k, mInterpolation, mVertexDomain);
+                        shaderModel, targetApi, codeGenTargetApi, info, k,
+                        mInterpolation, mVertexDomain);
                 if (mPostprocessorCallback != nullptr) {
                     bool ok = mPostprocessorCallback(vs, filament::driver::ShaderType::VERTEX,
                             shaderModel, &vs, pSpirv);
@@ -496,7 +499,7 @@ Package MaterialBuilder::build() noexcept {
             if (filament::Variant::filterVariantFragment(v) == k) {
                 // Fragment Shader
                 std::string fs = sg.createFragmentProgram(
-                        shaderModel, codeGenTargetApi, info, k, mInterpolation);
+                        shaderModel, targetApi, codeGenTargetApi, info, k, mInterpolation);
                 if (mPostprocessorCallback != nullptr) {
                     bool ok = mPostprocessorCallback(fs, filament::driver::ShaderType::FRAGMENT,
                             shaderModel, &fs, pSpirv);
@@ -572,12 +575,14 @@ const std::string MaterialBuilder::peek(filament::driver::ShaderType type,
 
     for (const auto& params : mCodeGenPermutations) {
         model = ShaderModel(params.shaderModel);
+        const TargetApi targetApi = params.targetApi;
         const TargetApi codeGenTargetApi = params.codeGenTargetApi;
         if (type == filament::driver::ShaderType::VERTEX) {
-            return sg.createVertexProgram(model, codeGenTargetApi, info, 0,
-                    mInterpolation, mVertexDomain);
+            return sg.createVertexProgram(model, targetApi, codeGenTargetApi,
+                    info, 0, mInterpolation, mVertexDomain);
         } else {
-            return sg.createFragmentProgram(model, codeGenTargetApi, info, 0, mInterpolation);
+            return sg.createFragmentProgram(model, targetApi, codeGenTargetApi,
+                    info, 0, mInterpolation);
         }
     }
 

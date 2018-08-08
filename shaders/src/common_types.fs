@@ -6,7 +6,7 @@
 #define MEDIUMP
 #endif
 
-#if defined(TARGET_VULKAN_ENVIRONMENT) || !defined(TARGET_MOBILE)
+#if !defined(TARGET_MOBILE) || defined(CODEGEN_TARGET_VULKAN_ENVIRONMENT)
 #define LAYOUT_LOCATION(x) layout(location = x)
 #else
 #define LAYOUT_LOCATION(x)

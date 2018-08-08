@@ -36,8 +36,7 @@ set(PUBLIC_HDRS
         include/filament/TransformManager.h
         include/filament/VertexBuffer.h
         include/filament/View.h
-        include/filament/Viewport.h
-)
+        include/filament/Viewport.h)
 
 set(SRCS
         src/components/CameraManager.cpp
@@ -72,11 +71,11 @@ set(SRCS
         src/Fence.cpp
         src/FrameInfo.cpp
         src/FrameSkipper.cpp
-        src/Froxel.cpp
+        src/Froxelizer.cpp
         src/Frustum.cpp
         src/IndexBuffer.cpp
         src/IndirectLight.cpp
-        src/LightData.cpp
+        src/GpuLightBuffer.cpp
         src/Material.cpp
         src/MaterialInstance.cpp
         src/PostProcessManager.cpp
@@ -108,10 +107,10 @@ set(PRIVATE_HDRS
         src/details/Engine.h
         src/details/Fence.h
         src/details/FrameSkipper.h
-        src/details/Froxel.h
+        src/details/Froxelizer.h
         src/details/IndexBuffer.h
         src/details/IndirectLight.h
-        src/details/LightData.h
+        src/details/GpuLightBuffer.h
         src/details/Material.h
         src/details/MaterialInstance.h
         src/details/RenderPrimitive.h
@@ -140,12 +139,12 @@ set(PRIVATE_HDRS
         src/driver/UniformBuffer.h
         src/FilamentAPI-impl.h
         src/FrameInfo.h
+        src/Intersections.h
         src/PostProcessManager.h
         src/PrecompiledMaterials.h
         src/RenderPass.h
         src/RenderTargetPool.h
-        src/upcast.h
-)
+        src/upcast.h)
 
 set(MATERIAL_SRCS
         src/materials/defaultMaterial.mat
