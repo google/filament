@@ -16,6 +16,8 @@
 
 #include "details/Froxelizer.h"
 
+#include "Intersections.h"
+
 #include "details/Engine.h"
 #include "details/Scene.h"
 
@@ -479,75 +481,6 @@ Froxel Froxelizer::getFroxelAt(size_t x, size_t y, size_t z) const noexcept {
     return froxel;
 }
 
-// plane equation must be normalized, sphere radius must be squared
-// return float4.w <= 0 if no intersection
-UTILS_UNUSED
-float4 Froxelizer::spherePlaneIntersection(float4 s, float4 p) noexcept {
-    const float d = dot(s.xyz, p.xyz) + p.w;
-    const float rr = s.w - d*d;
-    s.x -= p.x * d;
-    s.y -= p.y * d;
-    s.z -= p.z * d;
-    s.w = rr;   // new-circle/sphere radius is squared
-    return s;
-}
-
-// plane equation must be normalized and have the form {x,0,z,0}, sphere radius must be squared
-// return float4.w <= 0 if no intersection
-float Froxelizer::spherePlaneDistanceSquared(float4 s, float x, float z) noexcept {
-    const float d = s.x*x + s.z*z;
-    return s.w - d*d;
-}
-
-// plane equation must be normalized and have the form {0,y,z,0}, sphere radius must be squared
-// return float4.w <= 0 if no intersection
-float4 Froxelizer::spherePlaneIntersection(float4 s, float py, float pz) noexcept {
-    const float d = s.y*py + s.z*pz;
-    const float rr = s.w - d*d;
-    s.y -= py * d;
-    s.z -= pz * d;
-    s.w = rr;   // new-circle/sphere radius is squared
-    return s;
-}
-
-// plane equation must be normalized and have the form {0,0,1,w}, sphere radius must be squared
-// return float4.w <= 0 if no intersection
-float4 Froxelizer::spherePlaneIntersection(float4 s, float pw) noexcept {
-    const float d = s.z + pw;
-    const float rr = s.w - d*d;
-    s.z -= d;
-    s.w = rr;   // new-circle/sphere radius is squared
-    return s;
-}
-
-// this version returns a false-positive intersection in a small area near the origin
-// of the cone extended outward by the sphere's radius.
-bool Froxelizer::sphereConeIntersectionFast(
-        float4 const& sphere, Froxelizer::LightParams const& cone) noexcept {
-    const float3 u = cone.position - (sphere.w * cone.invSin) * cone.axis;
-    float3 d = sphere.xyz - u;
-    float e = dot(cone.axis, d);
-    float dd = dot(d, d);
-    // we do the e>0 last here to avoid a branch
-    return (e*e >= dd * cone.cosSqr && e>0);
-}
-
-UTILS_UNUSED
-bool Froxelizer::sphereConeIntersection(
-        float4 const& sphere, Froxelizer::LightParams const& cone) noexcept {
-    if (sphereConeIntersectionFast(sphere, cone)) {
-        float3 d = sphere.xyz - cone.position;
-        float e = -dot(cone.axis, d);
-        float dd = dot(d, d);
-        if (e * e >= dd * (1 - cone.cosSqr) && e > 0) {
-            return dd <= sphere.w * sphere.w;
-        }
-        return true;
-    }
-    return false;
-}
-
-
 UTILS_NOINLINE
 size_t Froxelizer::findSliceZ(float z) const noexcept {
     // The vastly common case is that z<0, so we always do the math for this case
@@ -907,7 +840,8 @@ void Froxelizer::froxelizePointAndSpotLight(
                             // if there was an intersection (i.e. it will be overwritten if not).
                             // This allows us to avoid a branch.
                             *pf = fi;
-                            if (sphereConeIntersectionFast(boundingSpheres[fi], light)) {
+                            if (sphereConeIntersectionFast(boundingSpheres[fi],
+                                    light.position, light.axis, light.invSin, light.cosSqr)) {
                                 // see if this froxel intersects the cone
                                 pf++;
                             }
