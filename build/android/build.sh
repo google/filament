@@ -20,8 +20,10 @@ LC_UNAME=`echo $UNAME | tr '[:upper:]' '[:lower:]'`
 #     $BUILD_RELEASE
 if [  "$LC_UNAME" == "linux" ]; then
     source `dirname $0`/../linux/ci-common.sh
+elif [ "$LC_UNAME" == "darwin" ]; then
+    source `dirname $0`/../mac/ci-common.sh
 fi
-source `dirname $0`/../linux/build-common.sh
+source `dirname $0`/../common/build-common.sh
 
 pushd `dirname $0`/../.. > /dev/null
 ./build.sh -p android -c $GENERATE_ARCHIVES $BUILD_DEBUG $BUILD_RELEASE
