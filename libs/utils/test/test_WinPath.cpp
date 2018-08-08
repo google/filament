@@ -116,4 +116,53 @@ TEST(WinPathTest, Split) {
     EXPECT_EQ("foo", segments[2]);
     EXPECT_EQ("blue", segments[3]);
     EXPECT_EQ("bin", segments[4]);
+
+    segments = Path("C:\\out\\foo/blue\\bin/").split();
+    EXPECT_EQ(5, segments.size());
+    EXPECT_EQ("C:", segments[0]);
+    EXPECT_EQ("out", segments[1]);
+    EXPECT_EQ("foo", segments[2]);
+    EXPECT_EQ("blue", segments[3]);
+    EXPECT_EQ("bin", segments[4]);
+}
+
+TEST(WinPathTest, Concatenate) {
+    Path root("C:\\Volumes\\Replicant\\blue");
+
+    Path r;
+    r = root.concat("");
+    EXPECT_EQ("C:\\Volumes\\Replicant\\blue", r.getPath());
+
+    r = root.concat("C:\\out\\bin");
+    EXPECT_EQ("C:\\out\\bin", r.getPath());
+
+    r = root.concat("out\\bin");
+    EXPECT_EQ("C:\\Volumes\\Replicant\\blue\\out\\bin", r.getPath());
+
+    r = root.concat(".");
+    EXPECT_EQ("C:\\Volumes\\Replicant\\blue", r.getPath());
+
+    r = root.concat("..");
+    EXPECT_EQ("C:\\Volumes\\Replicant", r.getPath());
+
+    r = root.concat("C:\\");
+    EXPECT_EQ("C:\\", r.getPath());
+
+    r = root.concat("..\\remote-blue");
+    EXPECT_EQ("C:\\Volumes\\Replicant\\remote-blue", r.getPath());
+
+    r = root.concat("..\\remote-blue");
+    EXPECT_EQ(r, root + Path("../remote-blue"));
+    EXPECT_EQ(r, root + "../remote-blue");
+
+    r = "C:\\out\\bin";
+    r.concatToSelf("../bin");
+    EXPECT_EQ("C:\\out\\bin", r.getPath());
+
+    r += "./resources";
+    EXPECT_EQ("C:\\out\\bin\\resources", r.getPath());
+
+    // Unix-style separators work too
+    r = root.concat("out/bin/foo/bar");
+    EXPECT_EQ("C:\\Volumes\\Replicant\\blue\\out\\bin\\foo\\bar", r.getPath());
 }
