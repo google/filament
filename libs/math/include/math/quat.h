@@ -25,10 +25,6 @@
 #include <stdint.h>
 #include <sys/types.h>
 
-#ifndef PURE
-#define PURE __attribute__((pure))
-#endif
-
 namespace math {
 // -------------------------------------------------------------------------------------
 

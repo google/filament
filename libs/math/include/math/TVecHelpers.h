@@ -29,6 +29,14 @@
 
 #include <math/compiler.h>
 
+#ifndef PURE
+#	if defined(_MSC_VER)
+#		define PURE // MSVC_PORT_TODO : find and insert equivalent of pure functions
+#	else
+#		define PURE __attribute__((pure))
+#	endif
+#endif
+
 namespace math {
 namespace details {
 // -------------------------------------------------------------------------------------

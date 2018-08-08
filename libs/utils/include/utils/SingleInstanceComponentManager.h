@@ -300,11 +300,11 @@ SingleInstanceComponentManager<Elements ... >::removeComponent(Entity e) {
             });
 
             Entity lastEntity = mData.template elementAt<ENTITY_INDEX>(index);
-            map[lastEntity] = index;
+            map[lastEntity] = static_cast<Instance>(index);
         }
         mData.pop_back();
         map.erase(pos);
-        return last;
+        return static_cast<Instance>(last);
     }
     return 0;
 }

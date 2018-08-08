@@ -30,12 +30,17 @@
 #define __has_builtin(x) 0
 #endif
 
-#define UTILS_PUBLIC  __attribute__((visibility("default")))
-
-#ifndef TNT_DEV
-#    define UTILS_PRIVATE __attribute__((visibility("hidden")))
+#if defined(_MSC_VER)
+#	define UTILS_PUBLIC  // MSVC_PORT_TODO : find and insert visibility equivalent
+#	define UTILS_PRIVATE  // MSVC_PORT_TODO : find and insert visibility equivalent
 #else
-#    define UTILS_PRIVATE
+#	define UTILS_PUBLIC  __attribute__((visibility("default")))
+
+#	ifndef TNT_DEV
+#		 define UTILS_PRIVATE __attribute__((visibility("hidden")))
+#	else
+#		define UTILS_PRIVATE
+#	endif
 #endif
 
 /*
@@ -82,7 +87,11 @@
 #if __has_attribute(always_inline)
 #define UTILS_ALWAYS_INLINE __attribute__((always_inline))
 #else
-#define UTILS_ALWAYS_INLINE
+#if defined(_MSC_VER)
+#	define UTILS_ALWAYS_INLINE __forceinline
+#else
+#	define UTILS_ALWAYS_INLINE
+#endif
 #endif
 
 #if __has_attribute(pure)
@@ -102,10 +111,15 @@
 #define UTILS_UNUSED_IN_RELEASE
 #endif
 
-#define UTILS_RESTRICT __restrict__
+#if defined(_MSC_VER)
+#	define UTILS_RESTRICT __restrict
+#	define UTILS_ALIGN_LOOP  { __asm .align 4 } // MSVC_PORT_TODO : align code, 
+#else
+#	define UTILS_RESTRICT __restrict__
+	// TODO: set the proper alignment for the target
+#	define UTILS_ALIGN_LOOP {__asm__ __volatile__(".align 4");}
+#endif
 
-// TODO: set the proper alignment for the target
-#define UTILS_ALIGN_LOOP {__asm__ __volatile__(".align 4");}
 
 #if __has_feature(cxx_thread_local)
 #   ifdef ANDROID

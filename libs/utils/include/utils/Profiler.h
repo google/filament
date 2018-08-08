@@ -23,6 +23,8 @@
 
 #include <chrono>   // note: This is safe (only used inline)
 
+#include "compiler.h"
+
 #if defined(__linux__)
 #   include <unistd.h>
 #   include <sys/ioctl.h>
@@ -32,7 +34,8 @@
 namespace utils {
 
 class Profiler {
-    enum {
+public:
+	enum {
         INSTRUCTIONS    = 0,   // must be zero
         CPU_CYCLES      = 1,
         DCACHE_REFS     = 2,
@@ -45,8 +48,6 @@ class Profiler {
         // Must be last one
         EVENT_COUNT
     };
-
-public:
 
     enum {
         EV_CPU_CYCLES = 1 << CPU_CYCLES,
@@ -79,6 +80,7 @@ public:
     // could return false if performance counters are not supported/enabled
     bool isValid() const { return mCountersFd[0] >= 0; }
 
+	friend class Counters;
     class Counters {
         friend class Profiler;
         uint64_t nr;
@@ -93,7 +95,7 @@ public:
             lhs.nr -= rhs.nr;
             lhs.time_enabled -= rhs.time_enabled;
             lhs.time_running -= rhs.time_running;
-            for (size_t i=0 ; i<EVENT_COUNT ; ++i) {
+            for (size_t i=0 ; i < Profiler::EVENT_COUNT ; ++i) {
                 lhs.counters[i].value -= rhs.counters[i].value;
             }
             return lhs;
@@ -218,7 +220,7 @@ private:
     Profiler() noexcept;
     ~Profiler() noexcept;
 
-    __attribute__((unused)) uint8_t mIds[EVENT_COUNT];
+    UTILS_UNUSED uint8_t mIds[EVENT_COUNT];
     int mCountersFd[EVENT_COUNT];
     uint32_t mEnabledEvents = 0;
 };
