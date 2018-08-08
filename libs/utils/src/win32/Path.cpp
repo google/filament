@@ -63,4 +63,8 @@ std::vector<Path> Path::listContents() const {
     return directory_contents;
 }
 
+bool Path::isAbsolute() const {
+    return !PathIsRelative(m_path.c_str());
+}
+
 } // namespace utils

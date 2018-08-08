@@ -154,9 +154,7 @@ public:
      * @return true if this abstract pathname is not empty
      *         and starts with a leading '/', false otherwise
      */
-    bool isAbsolute() const {
-        return !isEmpty() && m_path.front() == '/';
-    }
+    bool isAbsolute() const;
 
     /**
      * Splits this object's abstract pathname in a vector of file

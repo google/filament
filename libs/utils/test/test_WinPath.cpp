@@ -76,3 +76,18 @@ TEST(PathTest, Sanitization) {
     r = Path::getCanonicalPath("..\\..\\bin");
     EXPECT_EQ("..\\..\\bin", r);
 }
+
+TEST(PathTest, AbsolutePath) {
+    Path cwd = Path::getCurrentDirectory();
+
+    Path p;
+    p = Path("C:\\out\\blue\\bin");
+    EXPECT_TRUE(p.isAbsolute());
+
+    p = p.getAbsolutePath();
+    EXPECT_EQ("C:\\out\\blue\\bin", p.getPath());
+
+    p = Path("../bin").getAbsolutePath();
+    EXPECT_NE(cwd, p);
+    EXPECT_TRUE(p.isAbsolute());
+}

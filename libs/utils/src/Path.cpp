@@ -104,6 +104,13 @@ Path Path::getAbsolutePath() const {
     return getCurrentDirectory().concat(*this);
 }
 
+
+#if !defined(WIN32)
+bool Path::isAbsolute() const {
+    return !isEmpty() && m_path.front() == '/';
+}
+#endif
+
 Path Path::getParent() const {
     if (isEmpty()) return "";
 
