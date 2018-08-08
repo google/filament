@@ -344,7 +344,7 @@ public:
     BASE<T>& operator *= (T v) {
         BASE<T>& lhs(static_cast< BASE<T>& >(*this));
         for (size_t col = 0; col < BASE<T>::NUM_COLS; ++col) {
-            lhs[col] *= v;
+            lhs[col] *= typename BASE<T>::col_type(v);
         }
         return lhs;
     }
@@ -361,7 +361,7 @@ public:
     BASE<T>& operator /= (T v) {
         BASE<T>& lhs(static_cast< BASE<T>& >(*this));
         for (size_t col = 0; col < BASE<T>::NUM_COLS; ++col) {
-            lhs[col] /= BASE<T>(v);
+            lhs[col] /= typename BASE<T>::col_type(v);
         }
         return lhs;
     }

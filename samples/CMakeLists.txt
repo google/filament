@@ -98,10 +98,12 @@ list(APPEND APP_LIBS sample-app)
 # Compiler flags
 # ==================================================================================================
 
-set(COMPILER_FLAGS
-        -Wno-extern-c-compat
-        $<$<NOT:$<PLATFORM_ID:Linux>>:-Wno-address-of-packed-member>
-        $<$<CONFIG:Release>:-ffast-math>)
+if (NOT MSVC)
+	set(COMPILER_FLAGS
+    	    -Wno-extern-c-compat
+        	$<$<NOT:$<PLATFORM_ID:Linux>>:-Wno-address-of-packed-member>
+	        $<$<CONFIG:Release>:-ffast-math>)
+endif()
 
 # ==================================================================================================
 # Test apps

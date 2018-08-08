@@ -214,7 +214,7 @@ static Image toLinearWithAlpha(size_t w, size_t h, size_t bpr,
         T const* p = reinterpret_cast<T const*>(src.get() + y * bpr);
         for (size_t x = 0; x < w; ++x, p += 4) {
             math::float4 sRGB(proc(p[0]), proc(p[1]), proc(p[2]), proc(p[3]));
-            sRGB /= std::numeric_limits<T>::max();
+            sRGB /= math::float4(std::numeric_limits<T>::max());
             *d++ = transform(sRGB);
         }
     }

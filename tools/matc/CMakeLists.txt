@@ -46,9 +46,9 @@ set(COMMON_MATC_LIBS getopt filamat filabridge utils)
 if (APPLE)
     target_link_libraries(${TARGET} ${COMMON_MATC_LIBS}
             glslang SPIRV SPVRemapper SPIRV-Tools-opt spirv-cross-glsl)
-else()
-    target_link_libraries(${TARGET} ${COMMON_MATC_LIBS}
-            -Wl,--start-group glslang SPIRV SPVRemapper SPIRV-Tools-opt spirv-cross-glsl -Wl,--end-group)
+elseif(NOT MSVC)
+	target_link_libraries(${TARGET} ${COMMON_MATC_LIBS}
+			-Wl,--start-group glslang SPIRV SPVRemapper SPIRV-Tools-opt spirv-cross-glsl -Wl,--end-group)
 endif()
 
 # =================================================================================================

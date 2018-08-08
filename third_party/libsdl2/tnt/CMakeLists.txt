@@ -144,17 +144,19 @@ add_library(${TARGET} SHARED ${SRCS})
 # libraries we're linking against
 target_link_libraries(${TARGET} ${EXTRA_LIBS})
 
-target_compile_options(${TARGET}
-    PRIVATE -fvisibility=hidden
-    PRIVATE -msse2
-    PRIVATE -msse
-    PRIVATE -mmmx
-    PRIVATE -Wno-unused-variable
-    PRIVATE -Wno-deprecated-declarations
-    PRIVATE -Wno-switch
-    PRIVATE -Wno-tautological-pointer-compare
-    PRIVATE -Wno-parentheses-equality
-)
+if (NOT MSVC)
+	target_compile_options(${TARGET}
+    	PRIVATE -fvisibility=hidden
+	    PRIVATE -msse2
+    	PRIVATE -msse
+	    PRIVATE -mmmx
+    	PRIVATE -Wno-unused-variable
+	    PRIVATE -Wno-deprecated-declarations
+    	PRIVATE -Wno-switch
+	    PRIVATE -Wno-tautological-pointer-compare
+    	PRIVATE -Wno-parentheses-equality
+	)
+endif()
 
 # specify where the public headers of this library are
 target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})

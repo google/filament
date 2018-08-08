@@ -307,7 +307,7 @@ std::unique_ptr<uint8_t[]> fromLinearToRGBM(const Image& image) {
     for (size_t y = 0; y < h; ++y) {
         float3 const* p = static_cast<float3 const*>(image.getPixelRef(0, y));
         for (size_t x = 0; x < w; ++x, ++p, d += 4) {
-            float4 l(linearToRGBM(*p) * std::numeric_limits<T>::max());
+            float4 l(linearToRGBM(*p) * float4(std::numeric_limits<T>::max()));
             for (size_t i = 0; i < 4; i++) {
                 d[i] = T(l[i]);
             }

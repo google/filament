@@ -312,21 +312,23 @@ include_directories(${SRC_DIR}/code/BoostWorkaround)
 # we're building a library
 add_library(${TARGET} STATIC ${PRIVATE_HDRS} ${PUBLIC_HDRS} ${SRCS})
 
-target_compile_options(${TARGET}
-    PRIVATE -Wno-strict-aliasing
-    PRIVATE -Wno-sign-compare
-    PRIVATE -Wno-unused-const-variable
-    PRIVATE -Wno-unused-variable
-    PRIVATE -Wno-deprecated-declarations
-    PRIVATE -Wno-parentheses
-    PRIVATE -Wno-uninitialized
-    PRIVATE -Wno-strict-overflow
-    PRIVATE -Wno-deprecated-register
-    PRIVATE -Wno-tautological-undefined-compare
-    PRIVATE -Wno-incompatible-pointer-types
-    PRIVATE -Wno-tautological-compare
-    PRIVATE -Wno-undefined-var-template
-)
+if (NOT MSVC)
+	target_compile_options(${TARGET}
+    	PRIVATE -Wno-strict-aliasing
+    	PRIVATE -Wno-sign-compare
+	    PRIVATE -Wno-unused-const-variable
+    	PRIVATE -Wno-unused-variable
+    	PRIVATE -Wno-deprecated-declarations
+    	PRIVATE -Wno-parentheses
+    	PRIVATE -Wno-uninitialized
+    	PRIVATE -Wno-strict-overflow
+    	PRIVATE -Wno-deprecated-register
+    	PRIVATE -Wno-tautological-undefined-compare
+    	PRIVATE -Wno-incompatible-pointer-types
+    	PRIVATE -Wno-tautological-compare
+    	PRIVATE -Wno-undefined-var-template
+	)
+endif()
 
 if (NOT WIN32)
     target_compile_options(${TARGET} PRIVATE -Wno-address-of-packed-member)

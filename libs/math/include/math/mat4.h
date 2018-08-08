@@ -531,7 +531,7 @@ constexpr typename TMat44<T>::col_type PURE operator *(const TMat44<T>& lhs, con
     // Result is initialized to zero.
     typename TMat44<T>::col_type result = {};
     for (size_t col = 0; col < TMat44<T>::NUM_COLS; ++col) {
-        result += lhs[col] * T(rhs[col]);
+        result += typename TMat44<T>::col_type(lhs[col]) * typename TMat44<T>::col_type(rhs[col]);
     }
     return result;
 }
