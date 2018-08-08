@@ -112,12 +112,12 @@
 #endif
 
 #if defined(_MSC_VER)
-#	define UTILS_RESTRICT __restrict
 #	define UTILS_ALIGN_LOOP  { __asm .align 4 } // MSVC_PORT_TODO : align code, 
+#	define UTILS_RESTRICT	// MSVC_PORT_TODO : using __restrict causes syntax error : type qualifier must be after '*' in structureofarrays.h line 169
 #else
-#	define UTILS_RESTRICT __restrict__
 	// TODO: set the proper alignment for the target
 #	define UTILS_ALIGN_LOOP {__asm__ __volatile__(".align 4");}
+#	define UTILS_RESTRICT __restrict__
 #endif
 
 

@@ -44,6 +44,12 @@
 #   define MATH_PURE
 #endif
 
+#if __has_attribute(maybe_unused)
+#	define MATH_UNUSED __attribute__((unused))
+#else
+#	define MATH_UNUSED
+#endif
+
 #ifdef _MSC_VER
 #   define MATH_EMPTY_BASES __declspec(empty_bases)
 #else

@@ -568,12 +568,14 @@ static bool getGlShaderInfo(ChunkContainer container, std::vector<ShaderInfo>* i
             return false;
         }
 
-        info->push_back({
-            .shaderModel = filament::driver::ShaderModel(shaderModelValue),
-            .variant = variantValue,
-            .pipelineStage = filament::driver::ShaderType(pipelineStageValue),
-            .offset = offsetValue
-        });
+		info->emplace_back();
+		{
+			ShaderInfo& shaderInfo = info->back();
+			shaderInfo.shaderModel = filament::driver::ShaderModel(shaderModelValue);
+			shaderInfo.variant = variantValue;
+			shaderInfo.pipelineStage = filament::driver::ShaderType(pipelineStageValue);
+			shaderInfo.offset = offsetValue;
+        }
     }
     return true;
 }
@@ -617,12 +619,14 @@ static bool getVkShaderInfo(ChunkContainer container, std::vector<ShaderInfo>* i
             return false;
         }
 
-        info->push_back({
-            .shaderModel = filament::driver::ShaderModel(shaderModelValue),
-            .variant = variantValue,
-            .pipelineStage = filament::driver::ShaderType(pipelineStageValue),
-            .offset = dictionaryIndex
-        });
+		info->emplace_back();
+		{
+			ShaderInfo& shaderInfo = info->back();
+			shaderInfo.shaderModel = filament::driver::ShaderModel(shaderModelValue);
+			shaderInfo.variant = variantValue;
+			shaderInfo.pipelineStage = filament::driver::ShaderType(pipelineStageValue);
+			shaderInfo.offset = dictionaryIndex;
+        }
     }
     return true;
 }

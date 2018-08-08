@@ -163,13 +163,13 @@ public:
      * Iterating itself is not too costly, as well as dereferencing by reference. However,
      * dereferencing by value is.
      */
-    template<typename CVQualifiedSOA>
+    template<typename CVQualifiedSOAPointer>
     class Iterator {
         friend class StructureOfArraysBase;
-        CVQualifiedSOA* UTILS_RESTRICT soa;
+		CVQualifiedSOAPointer UTILS_RESTRICT soa;
         size_t index;
 
-        Iterator(CVQualifiedSOA* soa, size_t index) : soa(soa), index(index) {}
+        Iterator(CVQualifiedSOAPointer soa, size_t index) : soa(soa), index(index) {}
 
     public:
         using value_type = Structure;
