@@ -38,7 +38,7 @@ namespace filaflat {
 class ChunkContainer;
 class ShaderBuilder;
 
-class MaterialParserDetails;
+struct MaterialParserDetails;
 
 class UTILS_PUBLIC MaterialParser {
 public:
