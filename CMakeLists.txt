@@ -187,17 +187,17 @@ endif()
 # Functions
 # ==================================================================================================
 function(list_licenses OUTPUT MODULES)
-    file(WRITE ${OUTPUT} "R\"FILAMENT__(\n")
     set(_MODULES ${MODULES} ${ARGN})
     foreach(module ${_MODULES})
+	    file(WRITE ${OUTPUT} "R\"FILAMENT__(\n")
         set(license_path "../../third_party/${module}/LICENSE")
         get_filename_component(fullname "${license_path}" ABSOLUTE)
         file(APPEND ${OUTPUT} "License and copyrights for ${module}:\n\n")
         file(READ ${license_path} license)
         file(APPEND ${OUTPUT} ${license})
         file(APPEND ${OUTPUT} "\n\n")
+	    file(APPEND ${OUTPUT} ")FILAMENT__\"\n")
     endforeach()
-    file(APPEND ${OUTPUT} ")FILAMENT__\"\n")
 endfunction(list_licenses)
 
 # ==================================================================================================

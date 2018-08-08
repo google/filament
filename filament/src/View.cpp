@@ -415,24 +415,25 @@ void FView::prepare(FEngine& engine, driver::DriverApi& driver, ArenaScope& aren
 
     const mat4f worldOriginCamera = worldOriginScene;
     const mat4f model{ worldOriginCamera * camera->getModelMatrix() };
-    mViewingCameraInfo = CameraInfo{
-            // projection with infinite z-far
-            .projection         = mat4f{ camera->getProjectionMatrix() },
-            // projection used for culling, with finite z-far
-            .cullingProjection  = mat4f{ camera->getCullingProjectionMatrix() },
-            // camera model matrix -- apply the world origin to it
-            .model              = model,
-            // camera view matrix
-            .view               = FCamera::getViewMatrix(model),
-            // near plane
-            .zn                 = camera->getNear(),
-            // far plane
-            .zf                 = camera->getCullingFar(),
-            // exposure
-            .ev100              = Exposure::ev100(*camera),
-            // world origin transform, use only for debugging
-            .worldOrigin        = worldOriginCamera
-    };
+	mViewingCameraInfo = CameraInfo();
+	{
+		// projection with infinite z-far
+		mViewingCameraInfo.projection = mat4f{ camera->getProjectionMatrix() };
+		// projection used for culling, with finite z-far
+		mViewingCameraInfo.cullingProjection = mat4f{ camera->getCullingProjectionMatrix() };
+		// camera model matrix -- apply the world origin to it
+		mViewingCameraInfo.model = model;
+		// camera view matrix
+		mViewingCameraInfo.view = FCamera::getViewMatrix(model);
+		// near plane
+		mViewingCameraInfo.zn = camera->getNear();
+		// far plane
+		mViewingCameraInfo.zf = camera->getCullingFar();
+		// exposure
+		mViewingCameraInfo.ev100 = Exposure::ev100(*camera);
+		// world origin transform, use only for debugging
+		mViewingCameraInfo.worldOrigin = worldOriginCamera;
+	}
     mCullingFrustum = FCamera::getFrustum(
             mCullingCamera->getCullingProjectionMatrix(),
             FCamera::getViewMatrix(worldOriginScene * mCullingCamera->getModelMatrix()));

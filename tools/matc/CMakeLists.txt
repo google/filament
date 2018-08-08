@@ -43,10 +43,10 @@ target_include_directories(${TARGET} PRIVATE ${filamat_SOURCE_DIR}/src)
 # we need to force archive re-scan on new symbol dependencies via start/end-group.
 # Read more about this here https://eli.thegreenplace.net/2013/07/09/library-order-in-static-linking
 set(COMMON_MATC_LIBS getopt filamat filabridge utils)
-if (APPLE)
+if (APPLE OR MSVC)
     target_link_libraries(${TARGET} ${COMMON_MATC_LIBS}
             glslang SPIRV SPVRemapper SPIRV-Tools-opt spirv-cross-glsl)
-elseif(NOT MSVC)
+else()
 	target_link_libraries(${TARGET} ${COMMON_MATC_LIBS}
 			-Wl,--start-group glslang SPIRV SPVRemapper SPIRV-Tools-opt spirv-cross-glsl -Wl,--end-group)
 endif()

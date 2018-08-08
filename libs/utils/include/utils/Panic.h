@@ -27,7 +27,7 @@
 #else
 #endif
 
-#if defined(_MSC_VER) _
+#if defined(_MSC_VER)
 #	define NO_RETURN(exp) __declspec(noreturn) exp 
 #else
 #	define NO_RETURN(exp) exp __attribute__((noreturn)) 

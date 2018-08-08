@@ -163,7 +163,7 @@ bool Froxelizer::prepare(
     // record buffer (~64 KiB)
     mRecordBufferUser = {
             driverApi.allocatePod<RecordBufferType>(RECORD_BUFFER_ENTRY_COUNT, CACHELINE_SIZE),
-            RECORD_BUFFER_ENTRY_COUNT };
+            static_cast<uint32_t>(RECORD_BUFFER_ENTRY_COUNT) };
 
     /*
      * Temporary allocations for processing all froxel data
@@ -172,12 +172,12 @@ bool Froxelizer::prepare(
     // light records per froxel (~256 KiB)
     mLightRecords = {
             arena.allocate<LightRecord>(FROXEL_BUFFER_ENTRY_COUNT_MAX, CACHELINE_SIZE),
-            FROXEL_BUFFER_ENTRY_COUNT_MAX };
+			static_cast<uint32_t>(FROXEL_BUFFER_ENTRY_COUNT_MAX) };
 
     // indices to the per-light froxel list (~2 KiB)
     mFroxelListIndices = {
             arena.allocate<FroxelRunEntry>(CONFIG_MAX_LIGHT_COUNT, CACHELINE_SIZE),
-            CONFIG_MAX_LIGHT_COUNT };
+			static_cast<uint32_t>(CONFIG_MAX_LIGHT_COUNT) };
 
     // per-light froxel list (~4 MiB)
     constexpr uint32_t EXTRA_DATA = 1;    // to store the index/type of each light
@@ -584,13 +584,14 @@ void Froxelizer::froxelizeLoop(FEngine& engine, utils::Slice<uint16_t>& froxelsL
         for (size_t i = s; i < s + c; ++i) {
             size_t gpuIndex = i - FScene::DIRECTIONAL_LIGHTS_COUNT;
             FLightManager::Instance li = instances[i];
-            LightParams light = {
-                    .position = (viewMatrix * float4{ spheres[i].xyz, 1 }).xyz, // to view-space
-                    .cosSqr = lcm.getCosOuterSquared(li),   // spot only
-                    .axis = vn * directions[i],             // spot only
-                    .invSin = lcm.getSinInverse(li),        // spot only
-                    .radius = spheres[i].w,
-            };
+			LightParams light;
+			{
+				light.position = (viewMatrix * float4{ spheres[i].xyz, 1 }).xyz; // to view-space
+				light.cosSqr = lcm.getCosOuterSquared(li);   // spot only
+				light.axis = vn * directions[i];           // spot only
+				light.invSin = lcm.getSinInverse(li);        // spot only
+				light.radius = spheres[i].w;
+            }
 
             // find froxels affected by this light and record them in the list
             // also record the index of this light as the first entry
@@ -656,11 +657,12 @@ void Froxelizer::froxelizeAssignRecordsCompress(
         reused--;
 #endif
         auto const& b = records[i];
-        const FroxelEntry entry = {
-                .offset = offset,
-                .pointLightCount = uint8_t((b.lights & ~spotLights).count()),
-                .spotLightCount  = uint8_t((b.lights &  spotLights).count())
-        };
+		FroxelEntry entry;
+		{
+			entry.offset = offset;
+			entry.pointLightCount = uint8_t((b.lights & ~spotLights).count());
+			entry.spotLightCount = uint8_t((b.lights &  spotLights).count());
+		}
         const uint8_t lightCount = entry.count[0] + entry.count[1];
         assert(lightCount <= froxelsListIndices.size());
 

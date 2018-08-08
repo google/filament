@@ -355,17 +355,19 @@ set(LINUX_COMPILER_FLAGS
         -fPIC
 )
 
-target_compile_options(${TARGET} PRIVATE
-        -Wall
-        -Wextra -Wno-unused-parameter
-        -Wextra-semi -Wnewline-eof -Wdeprecated -Wundef
-        -Wgnu-conditional-omitted-operand
-        -Wweak-vtables -Wnon-virtual-dtor -Wclass-varargs -Wimplicit-fallthrough
-        -Wover-aligned
-        $<$<CONFIG:Release>:${OPTIMIZATION_FLAGS}>
-        $<$<AND:$<PLATFORM_ID:Darwin>,$<CONFIG:Release>>:${DARWIN_OPTIMIZATION_FLAGS}>
-        $<$<PLATFORM_ID:Linux>:${LINUX_COMPILER_FLAGS}>
-)
+if (NOT MSVC)
+	target_compile_options(${TARGET} PRIVATE
+    	    -Wall
+        	-Wextra -Wno-unused-parameter
+	        -Wextra-semi -Wnewline-eof -Wdeprecated -Wundef
+        	-Wgnu-conditional-omitted-operand
+    	    -Wweak-vtables -Wnon-virtual-dtor -Wclass-varargs -Wimplicit-fallthrough
+	        -Wover-aligned
+    	    $<$<CONFIG:Release>:${OPTIMIZATION_FLAGS}>
+        	$<$<AND:$<PLATFORM_ID:Darwin>,$<CONFIG:Release>>:${DARWIN_OPTIMIZATION_FLAGS}>
+	        $<$<PLATFORM_ID:Linux>:${LINUX_COMPILER_FLAGS}>
+	)
+endif()
 
 target_link_libraries(${TARGET} PRIVATE
         $<$<AND:$<PLATFORM_ID:Linux>,$<CONFIG:Release>>:${LINUX_LINKER_OPTIMIZATION_FLAGS}>
