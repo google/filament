@@ -20,8 +20,8 @@
 
 #include <math/vec3.h>
 
-#include <image/ImageDecoder.h>
-#include <image/ImageEncoder.h>
+#include <imageio/ImageDecoder.h>
+#include <imageio/ImageEncoder.h>
 
 #include <utils/Path.h>
 

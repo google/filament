@@ -6,16 +6,14 @@ set(TARGET skygen)
 # ==================================================================================================
 # Sources and headers
 # ==================================================================================================
-file(GLOB_RECURSE HDRS src/*.h)
-
 set(SRCS src/main.cpp)
 
 # ==================================================================================================
 # Target definitions
 # ==================================================================================================
-add_executable(${TARGET} ${HDRS} ${SRCS})
+add_executable(${TARGET} ${SRCS})
 
-target_link_libraries(${TARGET} PRIVATE math utils z image skylight getopt)
+target_link_libraries(${TARGET} PRIVATE math utils z image imageio skylight getopt)
 
 # ==================================================================================================
 # Compile options and optimizations

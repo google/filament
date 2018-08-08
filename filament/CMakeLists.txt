@@ -36,8 +36,7 @@ set(PUBLIC_HDRS
         include/filament/TransformManager.h
         include/filament/VertexBuffer.h
         include/filament/View.h
-        include/filament/Viewport.h
-)
+        include/filament/Viewport.h)
 
 set(SRCS
         src/components/CameraManager.cpp
@@ -140,6 +139,7 @@ set(PRIVATE_HDRS
         src/driver/UniformBuffer.h
         src/FilamentAPI-impl.h
         src/FrameInfo.h
+        src/Intersections.h
         src/PostProcessManager.h
         src/PrecompiledMaterials.h
         src/RenderPass.h

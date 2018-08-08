@@ -15,7 +15,7 @@ set(SRCS src/main.cpp)
 # ==================================================================================================
 add_executable(${TARGET} ${HDRS} ${SRCS})
 
-target_link_libraries(${TARGET} PRIVATE math utils z image getopt)
+target_link_libraries(${TARGET} PRIVATE math utils z image imageio getopt)
 
 # ==================================================================================================
 # Compile options and optimizations

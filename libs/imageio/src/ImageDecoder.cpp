@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include <image/ImageDecoder.h>
+#include <imageio/ImageDecoder.h>
 
 #include <cstdint>
 #include <istream>
@@ -38,7 +38,7 @@
 
 #include <vector>
 
-#include "utilities.h"
+#include <image/utilities.h>
 
 namespace image {
 
