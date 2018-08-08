@@ -19,6 +19,7 @@
 #include <sstream>
 #include <ostream>
 #include <iterator>
+#include <regex>
 
 #if defined(WIN32)
 #   include <utils/compiler.h>
@@ -104,18 +105,26 @@ Path Path::getAbsolutePath() const {
     return getCurrentDirectory().concat(*this);
 }
 
+
+#if !defined(WIN32)
+bool Path::isAbsolute() const {
+    return !isEmpty() && m_path.front() == '/';
+}
+#endif
+
 Path Path::getParent() const {
     if (isEmpty()) return "";
 
     std::string result;
 
-    // if our path starts with '/', keep the '/'
-    if (m_path.front() == SEPARATOR) {
-        result.append(SEPARATOR_STR);
+    std::vector<std::string> segments(split());
+
+    // if our path is absolute with a single segment,
+    // be sure to keep the prefix component
+    if (!isAbsolute() || segments.size() > 1) {
+        segments.pop_back(); // peel the last one
     }
 
-    std::vector<std::string> segments(split());
-    segments.pop_back(); // peel the last one
     for (auto const& s : segments) {
         result.append(s).append(SEPARATOR_STR);
     }
@@ -161,10 +170,16 @@ std::vector<std::string> Path::split() const {
     std::vector<std::string> segments;
     if (isEmpty()) return segments;
 
-    if (m_path.front() == SEPARATOR) segments.push_back(SEPARATOR_STR);
-
     size_t current;
     ssize_t next = -1;
+
+    // Matches a leading disk designator (C:\), forward slash (/), or back slash (\)
+    const static std::regex driveDesignationRegex(R"_regex(^([a-zA-Z]:\\|\\|\/))_regex");
+    std::smatch match;
+    if (std::regex_search(m_path, match, driveDesignationRegex)) {
+        segments.push_back(match[0]);
+        next = match[0].length() - 1;
+    }
 
     do {
       current = size_t(next + 1);
@@ -179,24 +194,24 @@ std::vector<std::string> Path::split() const {
     return segments;
 }
 
-#if !defined(WIN32)
 std::string Path::getCanonicalPath(const std::string& path) {
     if (path.empty()) return "";
 
     std::vector<std::string> segments;
 
     // If the path starts with a / we must preserve it
-    bool starts_with_slash = path.front() == '/';
+    bool starts_with_slash = path.front() == SEPARATOR;
     // If the path does not end with a / we need to remove the
     // extra / added by the join process
-    bool ends_with_slash = path.back() == '/';
+    bool ends_with_slash = path.back() == SEPARATOR;
 
     size_t current;
     ssize_t next = -1;
 
     do {
         current = size_t(next + 1);
-        next = path.find_first_of("/", current);
+        // Handle both Unix and Windows style separators
+        next = path.find_first_of("/\\", current);
 
         std::string segment(path.substr(current, next - current));
         size_t size = segment.length();
@@ -230,11 +245,11 @@ std::string Path::getCanonicalPath(const std::string& path) {
     // the end that might need to be removed
     std::stringstream clean_path;
     std::copy(segments.begin(), segments.end(),
-            std::ostream_iterator<std::string>(clean_path, "/"));
+            std::ostream_iterator<std::string>(clean_path, SEPARATOR_STR));
     std::string new_path = clean_path.str();
 
     if (starts_with_slash && new_path.empty()) {
-        new_path = "/";
+        new_path = SEPARATOR_STR;
     }
 
     if (!ends_with_slash && new_path.length() > 1) {
@@ -243,7 +258,6 @@ std::string Path::getCanonicalPath(const std::string& path) {
 
     return new_path;
 }
-#endif
 
 bool Path::mkdirRecursive() const {
     if (isEmpty()) {
