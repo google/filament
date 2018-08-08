@@ -51,9 +51,6 @@ std::ostream& CodeGenerator::generateProlog(std::ostream& out, ShaderType type,
             if (hasExternalSamplers) {
                 out << "#extension GL_OES_EGL_image_external_essl3 : require\n\n";
             }
-            if (mTargetApi == TargetApi::VULKAN) {
-                out << "#define TARGET_VULKAN_ENVIRONMENT\n";
-            }
             out << "#define TARGET_MOBILE\n";
             break;
         case ShaderModel::GL_CORE_41:
@@ -61,13 +58,17 @@ std::ostream& CodeGenerator::generateProlog(std::ostream& out, ShaderType type,
                 // Vulkan requires binding specifiers on uniforms and samplers, which were not
                 // supported in the OpenGL 4.1 GLSL profile.
                 out << "#version 450 core\n\n";
-                if (mTargetApi == TargetApi::VULKAN) {
-                    out << "#define TARGET_VULKAN_ENVIRONMENT\n";
-                }
             } else {
                 out << "#version 410 core\n\n";
             }
             break;
+    }
+
+    if (mTargetApi == TargetApi::VULKAN) {
+        out << "#define TARGET_VULKAN_ENVIRONMENT\n";
+    }
+    if (mCodeGenTargetApi == TargetApi::VULKAN) {
+        out << "#define CODEGEN_TARGET_VULKAN_ENVIRONMENT\n";
     }
 
     Precision defaultPrecision = getDefaultPrecision(type);
