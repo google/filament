@@ -91,7 +91,8 @@ install(FILES ${DIST_HDRS} DESTINATION include/${TARGET})
 # ==================================================================================================
 # Test executables
 # ==================================================================================================
-add_executable(test_${TARGET}
+
+set(TEST_SRCS
         test/test_algorithm.cpp
         test/test_Allocators.cpp
         test/test_bitset.cpp
@@ -102,11 +103,16 @@ add_executable(test_${TARGET}
         test/test_JobSystem.cpp
         test/test_StructureOfArrays.cpp
         test/test_utils_main.cpp
-        test/test_Zip2Iterator.cpp)
+        test/test_Zip2Iterator.cpp
+)
 
-# The Path tests are platform-specific, and fail on Windows
-if (NOT WIN32)
-    list(APPEND SRCS test/test_Path.cpp)
+# The Path tests are platform-specific
+if (WIN32)
+    list(APPEND TEST_SRCS test/test_WinPath.cpp)
+else()
+    list(APPEND TEST_SRCS test/test_Path.cpp)
 endif()
+
+add_executable(test_${TARGET} ${TEST_SRCS})
 
 target_link_libraries(test_${TARGET} PRIVATE gtest utils tsl math)

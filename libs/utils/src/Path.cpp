@@ -179,24 +179,24 @@ std::vector<std::string> Path::split() const {
     return segments;
 }
 
-#if !defined(WIN32)
 std::string Path::getCanonicalPath(const std::string& path) {
     if (path.empty()) return "";
 
     std::vector<std::string> segments;
 
     // If the path starts with a / we must preserve it
-    bool starts_with_slash = path.front() == '/';
+    bool starts_with_slash = path.front() == SEPARATOR;
     // If the path does not end with a / we need to remove the
     // extra / added by the join process
-    bool ends_with_slash = path.back() == '/';
+    bool ends_with_slash = path.back() == SEPARATOR;
 
     size_t current;
     ssize_t next = -1;
 
     do {
         current = size_t(next + 1);
-        next = path.find_first_of("/", current);
+        // Handle both Unix and Windows style separators
+        next = path.find_first_of("/\\", current);
 
         std::string segment(path.substr(current, next - current));
         size_t size = segment.length();
@@ -230,11 +230,11 @@ std::string Path::getCanonicalPath(const std::string& path) {
     // the end that might need to be removed
     std::stringstream clean_path;
     std::copy(segments.begin(), segments.end(),
-            std::ostream_iterator<std::string>(clean_path, "/"));
+            std::ostream_iterator<std::string>(clean_path, SEPARATOR_STR));
     std::string new_path = clean_path.str();
 
     if (starts_with_slash && new_path.empty()) {
-        new_path = "/";
+        new_path = SEPARATOR_STR;
     }
 
     if (!ends_with_slash && new_path.length() > 1) {
@@ -243,7 +243,6 @@ std::string Path::getCanonicalPath(const std::string& path) {
 
     return new_path;
 }
-#endif
 
 bool Path::mkdirRecursive() const {
     if (isEmpty()) {

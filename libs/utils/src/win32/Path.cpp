@@ -63,12 +63,4 @@ std::vector<Path> Path::listContents() const {
     return directory_contents;
 }
 
-std::string Path::getCanonicalPath(const std::string& path) {
-    if (path.empty()) return "";
-
-    char canonized[MAX_PATH];
-    PathCanonicalize(canonized, path.c_str());
-    return canonized;
-}
-
 } // namespace utils
