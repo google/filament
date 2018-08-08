@@ -29,7 +29,7 @@
 
 using namespace utils;
 
-TEST(PathTest, Sanitization) {
+TEST(WinPathTest, Sanitization) {
     std::string r;
 
     // An empty path remains empty
@@ -77,7 +77,7 @@ TEST(PathTest, Sanitization) {
     EXPECT_EQ("..\\..\\bin", r);
 }
 
-TEST(PathTest, AbsolutePath) {
+TEST(WinPathTest, AbsolutePath) {
     Path cwd = Path::getCurrentDirectory();
 
     Path p;
@@ -90,4 +90,30 @@ TEST(PathTest, AbsolutePath) {
     p = Path("../bin").getAbsolutePath();
     EXPECT_NE(cwd, p);
     EXPECT_TRUE(p.isAbsolute());
+}
+
+TEST(WinPathTest, Split) {
+    std::vector<std::string> segments;
+
+    segments = Path("").split();
+    EXPECT_EQ(0, segments.size());
+
+    segments = Path("\\").split();
+    EXPECT_EQ(1, segments.size());
+    EXPECT_EQ("\\", segments[0]);
+
+    segments = Path("\\out\\blue\\bin").split();
+    EXPECT_EQ(4, segments.size());
+    EXPECT_EQ("\\", segments[0]);
+    EXPECT_EQ("out", segments[1]);
+    EXPECT_EQ("blue", segments[2]);
+    EXPECT_EQ("bin", segments[3]);
+
+    segments = Path("/out\\foo/blue\\bin/").split();
+    EXPECT_EQ(5, segments.size());
+    EXPECT_EQ("\\", segments[0]);
+    EXPECT_EQ("out", segments[1]);
+    EXPECT_EQ("foo", segments[2]);
+    EXPECT_EQ("blue", segments[3]);
+    EXPECT_EQ("bin", segments[4]);
 }
