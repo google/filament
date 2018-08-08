@@ -1,3 +1,5 @@
+#include <memory>
+
 /*
  * Copyright (C) 2015 The Android Open Source Project
  *
@@ -290,7 +292,7 @@ Image PNGDecoder::decode() {
         uint32_t height = png_get_image_height(mPNG, mInfo);
         size_t rowBytes = png_get_rowbytes(mPNG, mInfo);
 
-        imageData.reset(new uint8_t[height * rowBytes]);
+        imageData = std::make_unique<uint8_t[]>(height * rowBytes);
         std::unique_ptr<png_bytep[]> rowPointers(new png_bytep[height]);
         for (size_t y = 0 ; y < height ; y++) {
             rowPointers[y] = &imageData[y * rowBytes];
@@ -369,8 +371,7 @@ HDRDecoder::HDRDecoder(std::istream& stream)
     : mStream(stream), mStreamStartPos(stream.tellg()) {
 }
 
-HDRDecoder::~HDRDecoder() {
-}
+HDRDecoder::~HDRDecoder() = default;
 
 Image HDRDecoder::decode() {
     try {
@@ -480,8 +481,7 @@ PSDDecoder::PSDDecoder(std::istream& stream)
         : mStream(stream), mStreamStartPos(stream.tellg()) {
 }
 
-PSDDecoder::~PSDDecoder() {
-}
+PSDDecoder::~PSDDecoder() = default;
 
 Image PSDDecoder::decode() {
     #pragma pack(push, 1)
@@ -593,8 +593,7 @@ EXRDecoder::EXRDecoder(std::istream& stream, const std::string& sourceName)
         : mStream(stream), mStreamStartPos(stream.tellg()), mSourceName(sourceName) {
 }
 
-EXRDecoder::~EXRDecoder() {
-}
+EXRDecoder::~EXRDecoder() = default;
 
 Image EXRDecoder::decode() {
     try {

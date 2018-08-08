@@ -81,7 +81,7 @@ void CubemapUtils::equirectangularToCubemap(Cubemap& dst, const image::Image& sr
                 c += Cubemap::sampleAt(src.getSampleRef((uint32_t)xf, (uint32_t)yf));
             }
             c *= iNumSamples;
-            dst.writeAt(data, c);
+            Cubemap::writeAt(data, c);
         }
     });
 }
@@ -92,7 +92,7 @@ void CubemapUtils::downsampleCubemapLevelBoxFilter(Cubemap& dst, const Cubemap& 
             [&](EmptyState&, size_t y, Cubemap::Face f, Cubemap::Texel* data, size_t dim) {
         const image::Image& image(src.getImageForFace(f));
         for (size_t x=0 ; x<dim ; ++x, ++data) {
-            dst.writeAt(data, Cubemap::filterAt(image, x*scale+0.5, y*scale+0.5));
+            Cubemap::writeAt(data, Cubemap::filterAt(image, x*scale+0.5, y*scale+0.5));
         }
     });
 }
@@ -146,9 +146,13 @@ void CubemapUtils::setAllFacesFromCross(Cubemap& cm, const Image& image) {
     CubemapUtils::setFaceFromCross(cm, Cubemap::Face::PZ, image);
 }
 
-Image CubemapUtils::createCubemapImage(size_t dim) {
+Image CubemapUtils::createCubemapImage(size_t dim, bool horizontal) {
     size_t width = 4 * dim;
     size_t height = 3 * dim;
+    if (!horizontal) {
+        std::swap(width, height);
+    }
+
     // always allocate an extra column and row, to allow the cubemap to be "seamless"
     size_t bpr = (width + 1) * sizeof(Cubemap::Texel);
     bpr = (bpr + 31) & ~31;
@@ -170,12 +174,19 @@ std::string CubemapUtils::getFaceName(Cubemap::Face face) {
     }
 }
 
-Cubemap CubemapUtils::create(Image& image, size_t dim) {
+Cubemap CubemapUtils::create(Image& image, size_t dim, bool horizontal) {
     Cubemap cm(dim);
-    Image temp(CubemapUtils::createCubemapImage(dim));
+    Image temp(CubemapUtils::createCubemapImage(dim, horizontal));
     CubemapUtils::setAllFacesFromCross(cm, temp);
     std::swap(image, temp);
     return cm;
+}
+
+void CubemapUtils::copyImage(Image& dst, const Image& src) {
+    assert(dst.getWidth() >= src.getWidth() && dst.getHeight() >= src.getHeight());
+    for (size_t y = 0, my = src.getHeight(); y < my; ++y) {
+        memcpy(dst.getPixelRef(0, y), src.getPixelRef(0, y), src.getBytesPerRow());
+    }
 }
 
 void CubemapUtils::mirrorCubemap(Cubemap& dst, const Cubemap& src) {
@@ -183,7 +194,7 @@ void CubemapUtils::mirrorCubemap(Cubemap& dst, const Cubemap& src) {
             [&](EmptyState&, size_t y, Cubemap::Face f, Cubemap::Texel* data, size_t dim) {
         for (size_t x=0 ; x<dim ; ++x, ++data) {
             const double3 N(dst.getDirectionFor(f, x, y));
-            dst.writeAt(data, src.sampleAt(N * double3{ -N.x, N.y, N.z }));
+            Cubemap::writeAt(data, src.sampleAt(N * double3{ -N.x, N.y, N.z }));
         }
     });
 }
@@ -204,7 +215,7 @@ void CubemapUtils::generateUVGrid(Cubemap const& cml, size_t gridFrequency) {
                 for (size_t x = 0; x < dim; ++x, ++data) {
                     bool grid = bool(((x / gridSize) ^ (y / gridSize)) & 1);
                     Cubemap::Texel t = grid ? colors[(int)f] : 0;
-                    cml.writeAt(data, t);
+                    Cubemap::writeAt(data, t);
                 }
             });
 }
