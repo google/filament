@@ -63,7 +63,12 @@ set(TOOLS ${CMAKE_SOURCE_DIR}/tools)
 # ==================================================================================================
 # General compiler flags
 # ==================================================================================================
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -fstrict-aliasing -Wno-unknown-pragmas -Wno-unused-function")
+set(CXX_STANDARD "-std=c++14")
+if (WIN32)
+    set(CXX_STANDARD "/std:c++14")
+endif()
+
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CXX_STANDARD} -fstrict-aliasing -Wno-unknown-pragmas -Wno-unused-function")
 
 if (WIN32)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_USE_MATH_DEFINES=1")
