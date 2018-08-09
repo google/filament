@@ -34,9 +34,10 @@ vec3 surfaceShading(const PixelParams pixel, const Light light, float occlusion)
     diffuse *= Fd_Wrap(dot(shading_normal, light.l), 0.5);
 #endif
 
-    // We multiply the diffuse term by the Fresnel term as discussed in
+    // We do not multiply the diffuse term by the Fresnel term as discussed in
     // Neubelt and Pettineo 2013, "Crafting a Next-gen Material Pipeline for The Order: 1886"
-    vec3 Fd = (diffuse * (1.0 - F)) * pixel.diffuseColor;
+    // The effect is fairly subtle and not deemed worth the cost for mobile
+    vec3 Fd = diffuse * pixel.diffuseColor;
 
 #if defined(MATERIAL_HAS_SUBSURFACE_COLOR)
     // Cheap subsurface scatter

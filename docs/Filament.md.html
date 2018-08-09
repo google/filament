@@ -963,6 +963,26 @@ float D_Ashikhmin(float linearRoughness, float NoH) {
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 [Listing [clothBRDF]: Implementation of Ashikhmin's velvet NDF in GLSL]
 
+In [#Estevez17] Estevez and Kulla propose a different NDF (called the "Charlie" sheen) that is based on an exponentiated sinusoidal instead of an inverted gaussian. This NDF is appealing for several reasons: its parameterization feels more natural and intuitive, it provides a softer appearance and, as shown in equation $\ref{charlieNDF}$, its implementation is simpler:
+
+$$\begin{equation}\label{charlieNDF}
+D(m) = \frac{(2 + \frac{1}{\alpha}) sin(\theta)^{\frac{1}{\alpha}}}{2 \pi}
+\end{equation}$$
+
+[#Estevez17] also presents a new shadowing term that we omit here because of its cost. We instead rely on the visibility term from [#Neubelt13] (equation ${\ref{clothSpecularBRDF}$).
+The implementation of this NDF is presented in listing [clothCharlieBRDF], optimized to properly fit in half float formats.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+float D_Charlie(float linearRoughness, float NoH) {
+    // Estevez and Kulla 2017, "Production Friendly Microfacet Sheen BRDF"
+    float invAlpha  = 1.0 / linearRoughness;
+    float cos2h = NoH * NoH;
+    float sin2h = max(1.0 - cos2h, 0.0078125); // 2^(-14/2), so sin2h^2 > 0 in fp16
+    return (2.0 + invAlpha) * pow(sin2h, invAlpha * 0.5) / (2.0 * PI);
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+[Listing [clothCharlieBRDF]: Implementation of the "Charlie" NDF in GLSL]
+
 #### Sheen color
 
 To offer better control over the appearance of cloth and to give users the ability to recreate two-tone specular materials, we introduce the ability to directly modify the specular reflectance. Figure [materialClothSheen] shows an example of using the parameter we call "sheen color".
@@ -979,7 +999,7 @@ $$\begin{equation}
 f_{d}(v,h) = \frac{c_{diff}}{\pi}(1 - F(v,h))
 \end{equation}$$
 
-Where $F(v,h)$ is the Fresnel term of the cloth specular BRDF in equation $\ref{clothSpecularBRDF}$.
+Where $F(v,h)$ is the Fresnel term of the cloth specular BRDF in equation $\ref{clothSpecularBRDF}$. In practice we've opted to leave out the $1 - F(v, h)$ term in the diffuse component. The effect is a bit subtle and we deemed it wasn't worth the added cost.
 
 Subsurface scattering is implemented using the wrapped diffuse lighting technique, in its energy conservative form:
 
@@ -1007,7 +1027,7 @@ float diffuse = diffuse(linearRoughness, NoV, NoL, LoH);
 // energy conservative wrap diffuse
 diffuse *= saturate((dot(n, light.l) + 0.5) / 2.25);
 #endif
-vec3 Fd = (diffuse * (1.0 - F)) * pixel.diffuseColor;
+vec3 Fd = diffuse * pixel.diffuseColor;
 
 #if defined(MATERIAL_HAS_SUBSURFACE_COLOR)
 // cheap subsurface scatter
@@ -2011,16 +2031,16 @@ The IBL implementation for the cloth material model is more complicated than for
 
 The approximation we use is purely analytical and was manually fitted against a Monte-Carlo reference shown in figure [clothDFGReference] (using $2^{22}$ samples per data point instead of importance sampling). This visual comparison shows the significant impact the cloth NDF has on the BRDF. Using the standard DFG term would result in widely incorrect results.
 
-![Figure [clothDFGReference]: DFG LUT (left) vs cloth DFG LUT (right)](images/ibl/dfg_cloth.png)
+![Figure [clothDFGReference]: DFG LUT (left) vs Ashikhmin DFG LUT (middle) vs "Charlie" DFG LUT (right)](images/ibl/dfg_cloth.png)
 
 Manual fitting was performed in Mathematica (as shown in figure [clothManualFitting]) and while not perfect, the analytical approximation strikes a decent balance between correctness and runtime cost.
 
 ![Figure [clothManualFitting]: Manual fitting of the DFG term for the cloth NDF](images/ibl/cloth_dfg_approximation.png)
 
-Listing [clothApprox] shows the implementation of the DFG approximation. We also provide the [Mathematica notebook](math/Cloth%20DFG%20Approximation.nb) containing the formulas of our approximation as well as comparisons to the reference LUT.
+Listing [clothApprox] shows the implementation of the DFG approximation for the Ashikhmin NDF. We also provide the [Mathematica notebook](math/Cloth%20DFG%20Approximation.nb) containing the formulas of our approximation as well as comparisons to the reference LUT.
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-vec2 PrefilteredDFG_Cloth(float roughness, float NoV) {
+vec2 PrefilteredDFG_Cloth_Ashikhmin(float roughness, float NoV) {
     const vec4 c0 = vec4(0.24,  0.93, 0.01, 0.20);
     const vec4 c1 = vec4(2.00, -1.30, 0.40, 0.03);
 
@@ -2033,14 +2053,37 @@ vec2 PrefilteredDFG_Cloth(float roughness, float NoV) {
     return vec2(r, r * c1.w);
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-[Listing [clothApprox]: GLSL implementation of the DFG approximation for the cloth NDF]
+[Listing [clothApprox]: GLSL implementation of the DFG approximation for the Ashikhmin cloth NDF]
 
-The remainder of the image-based lighting implementation follows the same steps as the implementation of regular lights, including the optional subsurface scattering term and its wrap diffuse component. The main difference lies in yet another approximation using the largest component of $\fNormal$ to compute the Fresnel component as a scalar instead of a vector. Just as with the clear coat IBL implementation, we cannot integrate over the hemisphere and use the view direction as the dominant light direction to compute the Fresnel term and the wrap diffuse component.
+Listing [clothCharlieApprox] shows the implementation of the DFG approximation for the "Charlie" NDF.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+vec2 PrefilteredDFG_Cloth_Charlie(float roughness, float NoV) {
+    const vec3 c0 = vec3(0.95, 1250.0, 0.0095);
+    const vec4 c1 = vec4(0.04, 0.2, 0.3, 0.2);
+
+    float a = 1.0 - NoV;
+    float b = 1.0 - roughness;
+
+    float n = pow(c1.x + a, 64.0);
+    float e = b - c0.x;
+    float g = exp2(-(e * e) * c0.y);
+    float f = b + c1.y;
+    float a2 = a * a;
+    float a3 = a2 * a;
+    float c = n * g + c1.z * (a + c1.w) * roughness + f * f * a3 * a3 * a2;
+    float r = min(c, 18.0);
+
+    return vec2(r, r * c0.z);
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+[Listing [clothCharlieApprox]: GLSL implementation of the DFG approximation for the "Charlie" cloth NDF]
+
+The remainder of the image-based lighting implementation follows the same steps as the implementation of regular lights, including the optional subsurface scattering term and its wrap diffuse component. Just as with the clear coat IBL implementation, we cannot integrate over the hemisphere and use the view direction as the dominant light direction to compute the wrap diffuse component.
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 float diffuse = Fd_Lambert() * ambientOcclusion;
 #if defined(SHADING_MODEL_CLOTH)
-diffuse *= (1.0 - F_Schlick(max3(f0), 1.0, NoV));
 #if defined(MATERIAL_HAS_SUBSURFACE_COLOR)
 diffuse *= saturate((NoV + 0.5) / 2.25);
 #endif
@@ -3684,6 +3727,8 @@ void main() {
 [#Ashikhmin07]: Michael Ashikhmin and Simon Premoze. 2007. Distribution-based BRDFs.
 
 [#Burley12]: Brent Burley. 2012. Physically Based Shading at Disney. *Physically Based Shading in Film and Game Production, ACM SIGGRAPH 2012 Courses*.
+
+[#Estevez17]: Alejandro Conty Estevez and Christopher Kulla. 2017. Production Friendly Microfacet Sheen BRDF. *SIGGRAPH 2017*.
 
 [#Hammon17]: Earl Hammon. 217. PBR Diffuse Lighting for GGX+Smith Microsurfaces. *GDC 2017*.
 
