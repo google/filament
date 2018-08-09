@@ -46,14 +46,14 @@ public:
 
     void setFlags(uint32_t flags);
 
-    bool isValid() const { return mData != nullptr; };
-    size_t getWidth() const { return mWidth; };
-    size_t getHeight() const { return mHeight; };
-    size_t getBytesPerRow() const { return mBpr; };
-    size_t getBytesPerPixel() const { return mBpp; };
+    bool isValid() const { return mData != nullptr; }
+    size_t getWidth() const { return mWidth; }
+    size_t getHeight() const { return mHeight; }
+    size_t getBytesPerRow() const { return mBpr; }
+    size_t getBytesPerPixel() const { return mBpp; }
     size_t getChannelsCount() const { return mChannels; }
-    uint32_t getFlags() const { return mFlags; };
-    void* getData() const { return mData; };
+    uint32_t getFlags() const { return mFlags; }
+    void* getData() const { return mData; }
 
     void* getPixelRef(size_t x, size_t y) const;
 

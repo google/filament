@@ -19,6 +19,7 @@
 #include <imageio/ImageDecoder.h>
 
 #include <cstdint>
+#include <cstring> // for memcmp
 #include <istream>
 #include <limits>
 #include <memory>
@@ -40,7 +41,7 @@
 
 #include <vector>
 
-#include <image/utilities.h>
+#include <image/ColorSpace.h>
 
 namespace image {
 
@@ -190,39 +191,6 @@ Image ImageDecoder::decode(std::istream& stream, const std::string& sourceName,
 }
 
 // -----------------------------------------------------------------------------------------------
-
-template<typename T, typename PROCESS, typename TRANSFORM>
-static Image toLinear(size_t w, size_t h, size_t bpr,
-        const std::unique_ptr<uint8_t[]>& src, PROCESS proc, TRANSFORM transform) {
-    std::unique_ptr<uint8_t[]> dst(new uint8_t[w * h * sizeof(math::float3)]);
-    math::float3* d = reinterpret_cast<math::float3*>(dst.get());
-    for (size_t y = 0; y < h; ++y) {
-        T const* p = reinterpret_cast<T const*>(src.get() + y * bpr);
-        for (size_t x = 0; x < w; ++x, p += 3) {
-            math::float3 sRGB(proc(p[0]), proc(p[1]), proc(p[2]));
-            sRGB /= std::numeric_limits<T>::max();
-            *d++ = transform(sRGB);
-        }
-    }
-    return Image(std::move(dst), w, h, w * sizeof(math::float3), sizeof(math::float3));
-}
-
-template<typename T, typename PROCESS, typename TRANSFORM>
-static Image toLinearWithAlpha(size_t w, size_t h, size_t bpr,
-        const std::unique_ptr<uint8_t[]>& src, PROCESS proc, TRANSFORM transform) {
-    std::unique_ptr<uint8_t[]> dst(new uint8_t[w * h * sizeof(math::float4)]);
-    math::float4* d = reinterpret_cast<math::float4*>(dst.get());
-    for (size_t y = 0; y < h; ++y) {
-        T const* p = reinterpret_cast<T const*>(src.get() + y * bpr);
-        for (size_t x = 0; x < w; ++x, p += 4) {
-            math::float4 sRGB(proc(p[0]), proc(p[1]), proc(p[2]), proc(p[3]));
-            sRGB /= math::float4(std::numeric_limits<T>::max());
-            *d++ = transform(sRGB);
-        }
-    }
-    return Image(std::move(dst), w, h, w * sizeof(math::float4), sizeof(math::float4), 4);
-}
-
 
 static inline float read32(std::istream& istream) {
     uint32_t data;

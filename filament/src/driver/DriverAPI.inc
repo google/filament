@@ -201,6 +201,9 @@
  * Driver API below...
  */
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-parameter"
+
 DECL_DRIVER_API_2(beginFrame,
         uint64_t, monotonic_clock_ns,
         uint32_t, frameId)
@@ -484,6 +487,7 @@ DECL_DRIVER_API_3(draw,
         Driver::RasterState, rs,
         Driver::RenderPrimitiveHandle, rph)
 
+#pragma clang diagnostic pop
 
 #undef SINGLE_ARG
 #undef PARAM_LIST_ADD

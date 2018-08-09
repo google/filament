@@ -79,7 +79,7 @@ endif()
 option(SPIRV_BUILD_COMPRESSION "Build SPIR-V compressing codec" OFF)
 
 option(SPIRV_WERROR "Enable error on warning" OFF)
-if(("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU") OR ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang"))
+if(("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU") OR (("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang") AND (NOT CMAKE_CXX_SIMULATE_ID STREQUAL "MSVC")))
   set(COMPILER_IS_LIKE_GNU TRUE)
 endif()
 if(${COMPILER_IS_LIKE_GNU})
@@ -179,9 +179,7 @@ if(NOT COMMAND find_host_program)
   endmacro()
 endif()
 
-# Filament specific changes
-# find_host_package(PythonInterp)
-# End Filament specific changes
+find_host_package(PythonInterp)
 
 # Check for symbol exports on Linux.
 # At the moment, this check will fail on the OSX build machines for the Android NDK.

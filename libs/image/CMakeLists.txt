@@ -9,7 +9,7 @@ set(PUBLIC_HDR_DIR include)
 # ==================================================================================================
 set(PUBLIC_HDRS
         include/image/Image.h
-        include/image/utilities.h
+        include/image/ColorSpace.h
 )
 
 set(SRCS
@@ -36,3 +36,9 @@ if (NOT MSVC)
         	$<$<CONFIG:Release>:-ffast-math>
 	)
 endif()
+
+# ==================================================================================================
+# Expose header-only utilities to lean-and-mean client projects.
+# ==================================================================================================
+add_library(image_headers INTERFACE)
+target_include_directories(image_headers INTERFACE ${PUBLIC_HDR_DIR})

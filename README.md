@@ -187,7 +187,7 @@ $ ./build.sh -j release
 Make sure you've installed the following dependencies:
 
 - `libglu1-mesa-dev`
-- `libc++-dev`
+- `libc++-dev` (`libcxx-devel` on Fedora)
 - `libc++abi-dev`
 - `ninja-build`
 
@@ -275,6 +275,7 @@ Install the following components:
 - [Windows 10 SDK](https://developer.microsoft.com/en-us/windows/downloads/windows-10-sdk)
 - [Visual Studio 2015](https://www.visualstudio.com/downloads)
 - [Clang 6](http://releases.llvm.org/download.html)
+- [Python 3.7](https://www.python.org/ftp/python/3.7.0/python-3.7.0.exe)
 - [Git 2.16.1 or later](https://github.com/git-for-windows/git/releases/download/v2.16.1.windows.4/PortableGit-2.16.1.4-64-bit.7z.exe)
 - [Cmake 3.11 or later](https://cmake.org/files/v3.11/cmake-3.11.0-rc1-win64-x64.msi)
 

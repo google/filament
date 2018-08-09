@@ -11,7 +11,7 @@ if (WIN32)
 	
 	if("${CMAKE_GENERATOR}" MATCHES "Win64")
 		set(MSVC_X64 TRUE)
-	endif()
+endif()
 endif()
 
 # ==================================================================================================
@@ -71,13 +71,19 @@ endif()
 # ==================================================================================================
 # General compiler flags
 # ==================================================================================================
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -fstrict-aliasing -Wno-unknown-pragmas -Wno-unused-function")
+
 if (MSVC)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_USE_MATH_DEFINES=1 /wd4068 /wd4996 -D_SILENCE_TR1_NAMESPACE_DEPRECATION_WARNING=1 -D_CRT_SECURE_NO_WARNINGS=1")
 else()
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -fstrict-aliasing -Wno-unknown-pragmas -Wno-unused-function")
 	if (WIN32)
+    	set(CXX_STANDARD "/std:c++14")
     	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_USE_MATH_DEFINES=1")
+	else()
+		set(CXX_STANDARD "-std=c++14")
 	endif()
+
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CXX_STANDARD} -fstrict-aliasing -Wno-unknown-pragmas -Wno-unused-function")
 endif()
 
 if (LINUX)
@@ -110,7 +116,7 @@ endif()
 # Release compiler flags
 # ==================================================================================================
 if (NOT MSVC)
-	set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fomit-frame-pointer -ffunction-sections -fdata-sections")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fomit-frame-pointer -ffunction-sections -fdata-sections")
 endif()
 
 # On Android RELEASE builds, we disable exceptions and RTTI to save some space (about 75 KiB
@@ -208,6 +214,7 @@ add_subdirectory(${EXTERNAL}/libgtest/tnt)
 add_subdirectory(${LIBRARIES}/filabridge)
 add_subdirectory(${LIBRARIES}/filaflat)
 add_subdirectory(${LIBRARIES}/filamat)
+add_subdirectory(${LIBRARIES}/image)
 add_subdirectory(${LIBRARIES}/math)
 add_subdirectory(${LIBRARIES}/utils)
 add_subdirectory(${FILAMENT}/filament)
@@ -230,7 +237,6 @@ if (NOT ANDROID)
 
     add_subdirectory(${LIBRARIES}/bluegl)
     add_subdirectory(${LIBRARIES}/filagui)
-    add_subdirectory(${LIBRARIES}/image)
     add_subdirectory(${LIBRARIES}/imageio)
 
     add_subdirectory(${FILAMENT}/java)

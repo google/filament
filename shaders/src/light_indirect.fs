@@ -23,6 +23,12 @@
 #define IBL_IRRADIANCE                      IBL_IRRADIANCE_SPHERICAL_HARMONICS
 #define IBL_PREFILTERED_DFG                 IBL_PREFILTERED_DFG_LUT
 
+// Cloth DFG approximation
+#define CLOTH_DFG_ASHIKHMIN                 0
+#define CLOTH_DFG_CHARLIE                   1
+
+#define CLOTH_DFG                           CLOTH_DFG_CHARLIE
+
 //------------------------------------------------------------------------------
 // IBL utilities
 //------------------------------------------------------------------------------
@@ -43,12 +49,13 @@ vec2 PrefilteredDFG_LUT(float roughness, float NoV) {
     return textureLod(light_iblDFG, vec2(NoV, roughness), 0.0).rg;
 }
 
+#if CLOTH_DFG == CLOTH_DFG_ASHIKHMIN
 /**
  * Analytical approximation of the pre-filtered DFG terms for the cloth shading
  * model. This approximation is based on the Ashikhmin distribution term and
  * the Neubelt visibility term. See brdf.fs for more details.
  */
-vec2 PrefilteredDFG_Cloth(float roughness, float NoV) {
+vec2 PrefilteredDFG_Cloth_Ashikhmin(float roughness, float NoV) {
     const vec4 c0 = vec4(0.24,  0.93, 0.01, 0.20);
     const vec4 c1 = vec4(2.00, -1.30, 0.40, 0.03);
 
@@ -60,6 +67,34 @@ vec2 PrefilteredDFG_Cloth(float roughness, float NoV) {
 
     return vec2(r, r * c1.w);
 }
+#endif
+
+ #if CLOTH_DFG == CLOTH_DFG_CHARLIE
+/**
+ * Analytical approximation of the pre-filtered DFG terms for the cloth shading
+ * model. This approximation is based on the Estevez & Kulla distribution term
+ * ("Charlie" sheen) and the Neubelt visibility term. See brdf.fs for more
+ * details.
+ */
+vec2 PrefilteredDFG_Cloth_Charlie(float roughness, float NoV) {
+    const vec3 c0 = vec3(0.95, 1250.0, 0.0095);
+    const vec4 c1 = vec4(0.04, 0.2, 0.3, 0.2);
+
+    float a = 1.0 - NoV;
+    float b = 1.0 - roughness;
+
+    float n = pow(c1.x + a, 64.0);
+    float e = b - c0.x;
+    float g = exp2(-(e * e) * c0.y);
+    float f = b + c1.y;
+    float a2 = a * a;
+    float a3 = a2 * a;
+    float c = n * g + c1.z * (a + c1.w) * roughness + f * f * a3 * a3 * a2;
+    float r = min(c, 18.0);
+
+    return vec2(r, r * c0.z);
+}
+#endif
 
 //------------------------------------------------------------------------------
 // IBL environment BRDF dispatch
@@ -67,11 +102,15 @@ vec2 PrefilteredDFG_Cloth(float roughness, float NoV) {
 
 vec2 prefilteredDFG(float roughness, float NoV) {
 #if defined(SHADING_MODEL_CLOTH)
-    return PrefilteredDFG_Cloth(roughness, NoV);
+    #if CLOTH_DFG == CLOTH_DFG_ASHIKHMIN
+        return PrefilteredDFG_Cloth_Ashikhmin(roughness, NoV);
+    #elif CLOTH_DFG == CLOTH_DFG_CHARLIE
+        return PrefilteredDFG_Cloth_Charlie(roughness, NoV);
+    #endif
 #else
-#if IBL_PREFILTERED_DFG == IBL_PREFILTERED_DFG_LUT
-    return PrefilteredDFG_LUT(roughness, NoV);
-#endif
+    #if IBL_PREFILTERED_DFG == IBL_PREFILTERED_DFG_LUT
+        return PrefilteredDFG_LUT(roughness, NoV);
+    #endif
 #endif
 }
 
@@ -181,7 +220,6 @@ vec3 getReflectedVector(const PixelParams pixel, const vec3 n) {
 
 void evaluateClothIndirectDiffuseBRDF(const PixelParams pixel, inout float diffuse) {
 #if defined(SHADING_MODEL_CLOTH)
-    diffuse *= (1.0 - F_Schlick(max3(pixel.f0), 1.0, shading_NoV));
 #if defined(MATERIAL_HAS_SUBSURFACE_COLOR)
     // Simulate subsurface scattering with a wrap diffuse term
     diffuse *= Fd_Wrap(shading_NoV, 0.5);

@@ -315,6 +315,7 @@ target_link_libraries(${TARGET} PUBLIC math)
 target_link_libraries(${TARGET} PUBLIC utils)
 target_link_libraries(${TARGET} PUBLIC filaflat)
 target_link_libraries(${TARGET} PUBLIC filabridge)
+target_link_libraries(${TARGET} PUBLIC image_headers)
 
 if (FILAMENT_SUPPORTS_VULKAN)
     target_link_libraries(${TARGET} PUBLIC bluevk vkmemalloc)
@@ -356,18 +357,29 @@ set(LINUX_COMPILER_FLAGS
 )
 
 if (NOT MSVC)
-	target_compile_options(${TARGET} PRIVATE
-    	    -Wall
-        	-Wextra -Wno-unused-parameter
-	        -Wextra-semi -Wnewline-eof -Wdeprecated -Wundef
-        	-Wgnu-conditional-omitted-operand
+	set(FILAMENT_WARNINGS
+    	    -Wextra -Wno-unused-parameter
+        	-Wextra-semi -Wnewline-eof -Wdeprecated -Wundef
+	        -Wgnu-conditional-omitted-operand
     	    -Wweak-vtables -Wnon-virtual-dtor -Wclass-varargs -Wimplicit-fallthrough
-	        -Wover-aligned
-    	    $<$<CONFIG:Release>:${OPTIMIZATION_FLAGS}>
-        	$<$<AND:$<PLATFORM_ID:Darwin>,$<CONFIG:Release>>:${DARWIN_OPTIMIZATION_FLAGS}>
-	        $<$<PLATFORM_ID:Linux>:${LINUX_COMPILER_FLAGS}>
+        	-Wover-aligned
 	)
 endif()
+
+# clang-cl maps -Wall to -Weverything, which clutters logs with benign -Wc++98-compat warnings
+# Use /W4 instead for clang-cl builds
+if (CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND CMAKE_CXX_SIMULATE_ID STREQUAL "MSVC")
+    set(FILAMENT_WARNINGS ${FILAMENT_WARNINGS} /W4)
+else()
+    set(FILAMENT_WARNINGS ${FILAMENT_WARNINGS} -Wall)
+endif()
+
+target_compile_options(${TARGET} PRIVATE
+        ${FILAMENT_WARNINGS}
+        $<$<CONFIG:Release>:${OPTIMIZATION_FLAGS}>
+        $<$<AND:$<PLATFORM_ID:Darwin>,$<CONFIG:Release>>:${DARWIN_OPTIMIZATION_FLAGS}>
+        $<$<PLATFORM_ID:Linux>:${LINUX_COMPILER_FLAGS}>
+)
 
 target_link_libraries(${TARGET} PRIVATE
         $<$<AND:$<PLATFORM_ID:Linux>,$<CONFIG:Release>>:${LINUX_LINKER_OPTIMIZATION_FLAGS}>
