@@ -33,6 +33,7 @@
 #if defined(_MSC_VER)
 #	define UTILS_PUBLIC  // MSVC_PORT_TODO : find and insert visibility equivalent
 #	define UTILS_PRIVATE  // MSVC_PORT_TODO : find and insert visibility equivalent
+#	define __PRETTY_FUNCTION__ __FUNCTION__
 #else
 #	define UTILS_PUBLIC  __attribute__((visibility("default")))
 

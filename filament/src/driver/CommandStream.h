@@ -333,6 +333,26 @@ PodType* CommandStream::allocatePod(size_t count, size_t alignment) noexcept {
     return static_cast<PodType*>(allocate(count * sizeof(PodType), alignment));
 }
 
+template<typename... ARGS>
+template<void (Driver::*METHOD)(ARGS...)>
+template<std::size_t... I>
+inline void CommandType<void (Driver::*)(ARGS...)>::Command<METHOD>::log(std::index_sequence<I...>) noexcept {
+#if DEBUG_COMMAND_STREAM
+	static_assert(UTILS_HAS_RTTI, "DEBUG_COMMAND_STREAM can only be used with RTTI");
+	std::string command = utils::CallStack::demangleTypeName(typeid(Command).name()).c_str();
+	slog.d << extractMethodName(command) << " : size=" << sizeof(Command) << "\n\t";
+	printParameterPack(slog.d, std::get<I>(mArgs)...);
+	slog.d << io::endl;
+#endif
+}
+
+template<typename... ARGS>
+template<void (Driver::*METHOD)(ARGS...)>
+inline void CommandType<void (Driver::*)(ARGS...)>::Command<METHOD>::log() noexcept {
+	log(std::make_index_sequence<std::tuple_size<SavedParameters>::value>{});
+}
+
+
 } // namespace filament
 
 #endif // TNT_FILAMENT_DRIVER_COMMANDSTREAM_H

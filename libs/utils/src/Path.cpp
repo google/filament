@@ -68,10 +68,16 @@ bool Path::isDirectory() const {
 }
 
 Path Path::concat(const Path& path) const {
-    if (path.isEmpty()) return *this;
-    if (path.isAbsolute()) return path;
-    if (m_path.back() != SEPARATOR) return Path(m_path + SEPARATOR + path.getPath());
-    return Path(m_path + path.getPath());
+    if (path.isEmpty()) 
+		return *this;
+    
+	if (path.isAbsolute()) 
+		return path;
+    
+	if (!m_path.empty() && (m_path.back() != SEPARATOR)) 
+		return Path(m_path + SEPARATOR + path.getPath());
+    
+	return Path(m_path + path.getPath());
 }
 
 void Path::concatToSelf(const Path& path)  {

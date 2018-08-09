@@ -96,20 +96,18 @@ public:
     inline void deallocate(pointer p, size_type) {
         aligned_free(p);
     }
-
-    // stateless allocators are always equal
-    template<typename T, typename U>
-    friend bool
-    operator==(const STLAlignedAllocator<T>& rhs, const STLAlignedAllocator<U>& lhs) {
-        return true;
-    }
-
-    template<typename T, typename U>
-    friend bool
-    operator!=(const STLAlignedAllocator<T>& rhs, const STLAlignedAllocator<U>& lhs) {
-        return false;
-    }
 };
+
+// stateless allocators are always equal
+template<typename T, typename U>
+inline bool operator==(const STLAlignedAllocator<T>& rhs, const STLAlignedAllocator<U>& lhs) {
+	return true;
+}
+
+template<typename T, typename U>
+inline bool operator!=(const STLAlignedAllocator<T>& rhs, const STLAlignedAllocator<U>& lhs) {
+	return false;
+}
 
 } // namespace utils
 
