@@ -71,8 +71,6 @@ endif()
 # ==================================================================================================
 # General compiler flags
 # ==================================================================================================
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -fstrict-aliasing -Wno-unknown-pragmas -Wno-unused-function")
-
 if (MSVC)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_USE_MATH_DEFINES=1 /wd4068 /wd4996 -D_SILENCE_TR1_NAMESPACE_DEPRECATION_WARNING=1 -D_CRT_SECURE_NO_WARNINGS=1")
 else()
