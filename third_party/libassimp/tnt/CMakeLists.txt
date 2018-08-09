@@ -326,6 +326,7 @@ target_compile_options(${TARGET}
     PRIVATE -Wno-incompatible-pointer-types
     PRIVATE -Wno-tautological-compare
     PRIVATE -Wno-undefined-var-template
+    PRIVATE -Wno-pragma-pack
 )
 
 if (NOT WIN32)

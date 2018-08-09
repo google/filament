@@ -157,6 +157,7 @@ target_compile_options(${TARGET}
     PRIVATE -Wno-switch
     PRIVATE -Wno-tautological-pointer-compare
     PRIVATE -Wno-parentheses-equality
+    PRIVATE -Wno-pragma-pack
 )
 
 # specify where the public headers of this library are
