@@ -179,9 +179,7 @@ if(NOT COMMAND find_host_program)
   endmacro()
 endif()
 
-# Filament specific changes
-# find_host_package(PythonInterp)
-# End Filament specific changes
+find_host_package(PythonInterp)
 
 # Check for symbol exports on Linux.
 # At the moment, this check will fail on the OSX build machines for the Android NDK.
