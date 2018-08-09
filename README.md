@@ -187,7 +187,7 @@ $ ./build.sh -j release
 Make sure you've installed the following dependencies:
 
 - `libglu1-mesa-dev`
-- `libc++-dev`
+- `libc++-dev` (`libcxx-devel` on Fedora)
 - `libc++abi-dev`
 - `ninja-build`
 
