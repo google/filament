@@ -44,7 +44,7 @@ public:
 
     void subset(Image const& image, size_t x, size_t y, size_t w, size_t h, uint32_t flags = 0);
 
-    void setFlags(uint32_t flags);
+    void flip(uint32_t flags);
 
     bool isValid() const { return mData != nullptr; }
     size_t getWidth() const { return mWidth; }
@@ -52,12 +52,9 @@ public:
     size_t getBytesPerRow() const { return mBpr; }
     size_t getBytesPerPixel() const { return mBpp; }
     size_t getChannelsCount() const { return mChannels; }
-    uint32_t getFlags() const { return mFlags; }
     void* getData() const { return mData; }
 
     void* getPixelRef(size_t x, size_t y) const;
-
-    void* getSampleRef(size_t x, size_t y) const;
 
 private:
     std::unique_ptr<uint8_t[]> mOwnedData;
@@ -67,21 +64,10 @@ private:
     size_t mBpr = 0;
     size_t mBpp = 0;
     size_t mChannels = 0;
-    uint32_t mFlags = 0;
 };
 
 inline void* Image::getPixelRef(size_t x, size_t y) const {
     return static_cast<uint8_t*>(mData) + y*mBpr + x*mBpp;
-}
-
-inline void* Image::getSampleRef(size_t x, size_t y) const {
-    if (mFlags & FLIP_X) {
-        x = (mWidth-1)-x;
-    }
-    if (mFlags & FLIP_Y) {
-        y = (mHeight-1)-y;
-    }
-    return getPixelRef(x, y);
 }
 
 } // namespace image

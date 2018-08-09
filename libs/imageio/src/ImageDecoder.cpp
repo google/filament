@@ -364,15 +364,13 @@ Image HDRDecoder::decode() {
             } while (true);
         }
 
-        uint32_t flags = 0;
-        if (sx == '-') flags |= Image::FLIP_X;
-
-        // Experimentally, "-Y" means vertical origin at the top, "+Y" at the bottom
-        if (sy == '+') flags |= Image::FLIP_Y;
-
         std::unique_ptr<uint8_t[]> data(new uint8_t[width * height * sizeof(math::float3)]);
         Image image(std::move(data), width, height, width*sizeof(math::float3), sizeof(math::float3));
-        image.setFlags(flags);
+
+        uint32_t flags = 0;
+        if (sx == '-') flags |= Image::FLIP_X;
+        if (sy == '+') flags |= Image::FLIP_Y;
+        image.flip(flags);
 
         uint16_t w;
         uint16_t magic;

@@ -98,7 +98,10 @@ void generateUVGrid(Cubemap const& cml, size_t gridFrequency, size_t dim);
 static void printUsage(char* name) {
     std::string exec_name(utils::Path(name).getName());
     std::string usage(
-            "CMGEN is a command-line tool for generating SH and mipmap levels from a cubemap\n"
+            "CMGEN is a command-line tool for generating SH and mipmap levels from an env map.\n"
+            "Cubemaps and equirectangular formats are both supported, automatically detected \n"
+            "according to the aspect ratio of the source image.\n"
+            "\n"
             "Usages:\n"
             "    CMGEN [options] <input-file>\n"
             "    CMGEN [options] <uv[N]>\n"

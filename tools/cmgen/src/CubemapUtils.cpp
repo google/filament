@@ -34,7 +34,7 @@ void CubemapUtils::clamp(image::Image& src) {
     const size_t height = src.getHeight();
     for (size_t y=0 ; y<height ; ++y) {
         for (size_t x = 0; x < width; ++x) {
-            float3& c = *static_cast<float3*>(src.getSampleRef(x, y));
+            float3& c = *static_cast<float3*>(src.getPixelRef(x, y));
             c.x = std::min(c.x, 256.0f);
             c.y = std::min(c.y, 256.0f);
             c.z = std::min(c.z, 256.0f);
@@ -78,7 +78,7 @@ void CubemapUtils::equirectangularToCubemap(Cubemap& dst, const image::Image& sr
                 yf = (yf + 1) * 0.5f * (height-1);           // range [0, height[
                 // we can't use filterAt() here because it reads past the width/height
                 // which is okay for cubmaps but not for square images
-                c += Cubemap::sampleAt(src.getSampleRef((uint32_t)xf, (uint32_t)yf));
+                c += Cubemap::sampleAt(src.getPixelRef((uint32_t)xf, (uint32_t)yf));
             }
             c *= iNumSamples;
             Cubemap::writeAt(data, c);

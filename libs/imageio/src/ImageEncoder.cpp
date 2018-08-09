@@ -475,18 +475,14 @@ void HDREncoder::encode(const Image& image) {
         size_t width = image.getWidth();
         size_t height = image.getHeight();
 
-        char sx = (image.getFlags() & Image::FLIP_X) ? '-' : '+';
-        // Experimentally, "-Y" means vertical origin at the top, "+Y" at the bottom
-        char sy = (image.getFlags() & Image::FLIP_Y) ? '+' : '-';
-
         mStream << "#?RADIANCE" << std::endl;
         mStream << "# cmgen" << std::endl;
         mStream << "FORMAT=32-bit_rle_rgbe" << std::endl;
         mStream << "GAMMA=" << std::to_string(1) << std::endl;
         mStream << "EXPOSURE=" << std::to_string(0) << std::endl;
         mStream << std::endl;
-        mStream << sy << "Y " << std::to_string(height) << " "
-                << sx << "X " << std::to_string(width) << std::endl;
+        mStream << "-Y " << std::to_string(height) << " "
+                << "+X " << std::to_string(width) << std::endl;
 
         std::unique_ptr<uint8_t[]> rgbe(new uint8_t[width*4]);
         uint8_t* const r = &rgbe[0];
