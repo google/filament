@@ -3,7 +3,7 @@
 <style>img { max-width: 100%; }</style>
 
                    **Filament**
-          Physically-based rendering engine
+          Physically based rendering engine ([GitHub](https://github.com/google/filament))
 
 ![](images/filament_logo.png)
 
@@ -73,7 +73,7 @@ $$
 \newcommand{cosTheta}{\left< \cos \theta \right> }
 $$
 
-The equations found througout this document use the symbols described in table [symbols].
+The equations found throughout this document use the symbols described in table [symbols].
 
 
           Symbol             |           Definition
@@ -637,13 +637,13 @@ The blending and layering of materials is effectively an interpolation of the va
 
 ![Figure [material_interpolation]: Interpolation from shiny chrome (left) to rough red plastic (right)](images/material_interpolation.png)
 
-### Crafting physically-based materials
+### Crafting physically based materials
 
-Designing physically-based materials is fairly easy once you understand the nature of the four main parameters: base color, metallic, roughness and reflectance.
+Designing physically based materials is fairly easy once you understand the nature of the four main parameters: base color, metallic, roughness and reflectance.
 
-We provide a [useful chart/reference guide](./Material%20Properties.pdf) to help artists and developers craft their own physically-based materials.
+We provide a [useful chart/reference guide](./Material%20Properties.pdf) to help artists and developers craft their own physically based materials.
 
-![Crafting physically-based materials](images/material_chart.jpg)
+![Crafting physically based materials](images/material_chart.jpg)
 
 In addition, here is a quick summary of how to use our material model:
 
@@ -991,7 +991,7 @@ To offer better control over the appearance of cloth and to give users the abili
 
 ### Cloth diffuse BRDF
 
-Our cloth material model still relies on a Lambertian diffuse BRDF. It is however slightly modified to be energy conservative (akin to the energy conservation of our clear coat material model) and offers an optional subsurface scattering term. This extra term is not physically-based and can be used to simulate the scattering, partial absorption and re-emission of light in certain types of fabrics.
+Our cloth material model still relies on a Lambertian diffuse BRDF. It is however slightly modified to be energy conservative (akin to the energy conservation of our clear coat material model) and offers an optional subsurface scattering term. This extra term is not physically based and can be used to simulate the scattering, partial absorption and re-emission of light in certain types of fabrics.
 
 First, here is the diffuse term without the optional subsurface scattering:
 
@@ -1579,8 +1579,48 @@ Table [colorTemperatureSamples] presents the correlated color temperature of var
 8,000-10,000         | Partly cloudy sky            | <div style="background-color: #d6e0ff; width: 60px">&nbsp;</div>
 [Table [colorTemperatureSamples]: Normalized correlated color temperatures for common light sources]
 
-## Image based lights
+### Pre-exposed lights
 
+Physically based rendering and physical light units pose an interesting challenge: how to store and handle the large range of values produced by the lighting code? Assuming computations performed at full precision in the shaders, we still want to be able to store the linear output of the lighting pass in a reasonably sized buffer (`RGB16F` or equivalent). The most obvious and easiest way to achieve this is to simply apply the camera exposure (see the Physically based camera section for more information) before writing out the result of the lighting pass. This simple step is shown in listing [preexposedLighting]:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+fragColor = luminance * camera.exposure;
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+[Listing [preexposedLighting]: The output of the lighting pass is pre-exposed to fit in half-float buffers]
+
+This solution solves the storage problem but requires intermediate computations to be performed with single precision floats. We would instead prefer to perform all (or ar least most) of the lighting work using half precision floats instead. Doing so can greatly improve performance and power usage, particularly on mobile devices. Half precision floats are however ill-suited for this kind of work as common illuminance and luminance values (for the sun for instance) can exceed their range. The solution is to simply pre-expose the lights themselves instead of the result of the lighting pass. This can be done efficiently on the CPU if updating a light's constant buffer is cheap. This can also be done on the GPU, as shown in listing [preexposedLights].
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// The inputs must be highp/single precision,
+// both for range (intensity) and precision (exposure)
+// The output is mediump/half precision
+float computePreExposedIntensity(highp float intensity, highp float exposure) {
+    return intensity * exposure;
+}
+
+Light getPointLight(uint index) {
+    Light light;
+    uint lightIndex = // fetch light index;
+
+    // the intensity must be highp/single precision
+    highp vec4 colorIntensity  = lightsUniforms.lights[lightIndex][1];
+
+    // pre-expose the light
+    light.colorIntensity.w = computePreExposedIntensity(
+            colorIntensity.w, frameUniforms.exposure);
+
+    return light;
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+[Listing [preexposedLights]: Pre-exposing lights allows the entire shading pipeline to use half precision floats]
+
+In practice we pre-expose the following lights:
+- Punctual lights (point and spot): on the GPU
+- Directional light: on the CPU
+- IBLs: on the CPU
+- Material emissive: on the GPU
+
+## Image based lights
 
 In real life, light comes from every directions either directly from light sources or indirectly after bouncing of off objects in the environment, being partially absorbed in the process. In a way the whole environment around an object can be seen as a light source. Images, in particular cubemaps, are a great way to encode such an “environment light”. This is called Image Based Lighting (IBL) or sometimes Indirect Lighting.
 
@@ -1598,8 +1638,6 @@ L_{out}(n, v, \Theta) = \int_\Omega  f(l, v, \Theta) L_{\bot}(l) \left< n \cdot 
 
 Note that here we're looking at the behavior of the surface at **macro** level (not to be confused with the micro level equation), which is why it only depends on $\vec n$ and $\vec v$. Essentially, we're applying the BRDF to “point-lights” coming from all directions and encoded in the IBL.
 
-
-
 ### IBL Types ###
 
 There are four common types of IBLs used in modern rendering engines:
@@ -1613,7 +1651,6 @@ There are four common types of IBLs used in modern rendering engines:
 - **Screen space reflection**, used to capture reflections based on the rendered scene (using the previous frame for instance) by ray-marching in the depth buffer. SSR gives great result but can be very expensive.
 
 In addition we must distinguish between static and dynamic IBLs. Implementing a fully dynamic day/night cycle requires for instance to recompute the distant light probes dynamically[^iblTypes1]. Both planar and screen space reflections are inherently dynamic.
-
 
 ### IBL Unit ###
 
@@ -2098,6 +2135,8 @@ vec3 ibl = diffuseColor * indirectDiffuse + indirectSpecular * specularColor;
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 [Listing [clothApprox]: GLSL implementation of the DFG approximation for the cloth NDF]
 
+It is important to note that this only addresses part of the IBL problem. The pre-filtered specular environment maps described earlier are convolved with the standard shading model's BRDF, which differs from the cloth BRDF. To get accurate result we should in theory provide one set of IBLs per BRDF used in the engine. Providing a second set of IBLs is however not practical for our use case so we decided to rely on the existing IBLs instead.
+
 ## Static lighting
 
 [TODO] Spherical-harmonics or spherical-gaussian lightmaps, irradiance volumes, PRT?…
@@ -2179,7 +2218,7 @@ Large scale ambient occlusion is often computed using screen-space techniques su
 
 ### Diffuse occlusion
 
-Morgan McGuire formalizes ambient occlusion in the context of physically-based rendering in [#McGuire10]. In his formulation, McGuire defines an ambient illumination function $ L_a $, which in our case is encoded with spherical harmonics. He also defines a visibility function $V$, with $V(l)=1$ if there is an unoccluded line of sight from the surface in direction $l$, and 0 otherwise.
+Morgan McGuire formalizes ambient occlusion in the context of physically based rendering in [#McGuire10]. In his formulation, McGuire defines an ambient illumination function $ L_a $, which in our case is encoded with spherical harmonics. He also defines a visibility function $V$, with $V(l)=1$ if there is an unoccluded line of sight from the surface in direction $l$, and 0 otherwise.
 
 With these two functions, the ambient term of the rendering equation can be expressed as shown in equation $\ref{diffuseAO}$.
 
@@ -2337,7 +2376,7 @@ The results are visually close to Reoriented Normal Mapping but a careful compar
 
 # Imaging pipeline
 
-The lighting section of this document describes how light interacts with surfaces in the scene in a physically-based manner. To achieve plausible results, we must go a step further and consider the transformations necessary to convert the scene luminance, as computed by our lighting equations, into displayable pixel values.
+The lighting section of this document describes how light interacts with surfaces in the scene in a physically based manner. To achieve plausible results, we must go a step further and consider the transformations necessary to convert the scene luminance, as computed by our lighting equations, into displayable pixel values.
 
 The series of transformations we are going to use form the following imaging pipeline:
 
@@ -2374,9 +2413,9 @@ The series of transformations we are going to use form the following imaging pip
 
 [TODO] Color spaces (ACES, sRGB, Rec. 709, Rec. 2020, etc.), gamma/linear, etc.
 
-## Physically-based camera
+## Physically based camera
 
-The first step in the image transformation process is to use a physically-based camera to properly expose the scene's outgoing luminance.
+The first step in the image transformation process is to use a physically based camera to properly expose the scene's outgoing luminance.
 
 ### Exposure settings
 
@@ -2645,7 +2684,7 @@ vec4 surfaceShading() {
 
 ### Lens flares
 
-[TODO] Notes: there is a physically-based approach to generating lens flares, by tracing rays through the optical assembly of the lens, but we are going to use an image-based approach. This approach is cheaper and has a few welcome benefits such as free emitters occlusion and unlimited light sources support.
+[TODO] Notes: there is a physically based approach to generating lens flares, by tracing rays through the optical assembly of the lens, but we are going to use an image-based approach. This approach is cheaper and has a few welcome benefits such as free emitters occlusion and unlimited light sources support.
 
 ## Filmic post-processing
 
@@ -2885,7 +2924,7 @@ const vec3 debugColors[16] = vec3[](
 
 ### Reference renderings
 
-To validate our implementation against reference renderings, we will use a commercial-grade Open Source physically-based offline path tracer called Mitsuba. Mitsuba offers many different integrators, samplers and material models, which should allow us to provide fair comparisons with our real-time renderer. This path tracer also relies on a simple XML scene description format that should be easy to automatically generate from our own scene descriptions.
+To validate our implementation against reference renderings, we will use a commercial-grade Open Source physically based offline path tracer called Mitsuba. Mitsuba offers many different integrators, samplers and material models, which should allow us to provide fair comparisons with our real-time renderer. This path tracer also relies on a simple XML scene description format that should be easy to automatically generate from our own scene descriptions.
 
 Figure [mistubaReference] and figure [filamentReference] show a simple scene, a perfectly smooth dielectric sphere, rendered respectively with Mitsuba and Filament.
 
