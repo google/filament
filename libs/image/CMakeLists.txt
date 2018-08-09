@@ -9,7 +9,7 @@ set(PUBLIC_HDR_DIR include)
 # ==================================================================================================
 set(PUBLIC_HDRS
         include/image/Image.h
-        include/image/ColorSpace.h
+        include/image/ColorTransform.h
 )
 
 set(SRCS
