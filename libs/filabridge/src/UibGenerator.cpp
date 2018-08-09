@@ -43,7 +43,7 @@ UniformInterfaceBlock& UibGenerator::getPerViewUib() noexcept  {
             .add("lightColorIntensity",     1, UniformInterfaceBlock::Type::FLOAT4)
             .add("sun",                     1, UniformInterfaceBlock::Type::FLOAT4)
             .add("lightDirection",          1, UniformInterfaceBlock::Type::FLOAT3)
-            .add("padding1",                1, UniformInterfaceBlock::Type::FLOAT)
+            .add("fParamsX",                1, UniformInterfaceBlock::Type::UINT)
             // shadow
             .add("shadowBias",              1, UniformInterfaceBlock::Type::FLOAT3)
             .add("oneOverFroxelDimensionY", 1, UniformInterfaceBlock::Type::FLOAT)
