@@ -329,10 +329,9 @@ target_compile_options(${TARGET}
 )
 
 if (NOT WIN32)
-    target_compile_options(${TARGET}
-        PRIVATE -Wno-address-of-packed-member
-        PRIVATE -Wno-pragma-pack
-    )
+    target_compile_options(${TARGET} PRIVATE -Wno-address-of-packed-member)
+else()
+    target_compile_options(${TARGET} PRIVATE -Wno-pragma-pack)
 endif()
 
 # specify where the public headers of this library are
