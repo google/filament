@@ -45,7 +45,7 @@ enum class ShFile {
     SH_NONE, SH_CROSS, SH_TEXT
 };
 static image::ImageEncoder::Format g_format = image::ImageEncoder::Format::PNG;
-static std::string g_compression = "";
+static std::string g_compression;
 static bool g_extract_faces = false;
 static double g_extract_blur = 0.0;
 static utils::Path g_extract_dir;
@@ -137,7 +137,7 @@ static void printUsage(char* name) {
             "   --mirror\n"
             "       Mirrors generated cubemaps for reflections\n\n"
             "   --ibl-samples=numSamples\n"
-            "       Number of samples tu use for IBL integrations (default 1024)\n\n"
+            "       Number of samples to use for IBL integrations (default 1024)\n\n"
             "\n"
             "Private use only:\n"
             "   --ibl-dfg=filename.[exr|hdr|psd|png|rgbm|dds|h|hpp|c|cpp|inc|txt]\n"
@@ -175,27 +175,27 @@ static void license() {
 static int handleCommandLineArgments(int argc, char* argv[]) {
     static constexpr const char* OPTSTR = "hqidf:c:s:x:";
     static const struct option OPTIONS[] = {
-            { "help",                       no_argument, 0, 'h' },
-            { "license",                    no_argument, 0, 'l' },
-            { "quiet",                      no_argument, 0, 'q' },
-            { "format",               required_argument, 0, 'f' },
-            { "compression",          required_argument, 0, 'c' },
-            { "size",                 required_argument, 0, 's' },
-            { "extract",              required_argument, 0, 'e' },
-            { "extract-blur",         required_argument, 0, 'r' },
-            { "sh",                   optional_argument, 0, 'z' },
-            { "sh-output",            required_argument, 0, 'o' },
-            { "sh-irradiance",              no_argument, 0, 'i' },
-            { "sh-shader",                  no_argument, 0, 'b' },
-            { "ibl-is-mipmap",        required_argument, 0, 'y' },
-            { "ibl-ld",               required_argument, 0, 'p' },
-            { "ibl-dfg",              required_argument, 0, 'a' },
-            { "ibl-dfg-multiscatter",       no_argument, 0, 'u' },
-            { "ibl-samples",          required_argument, 0, 'k' },
-            { "deploy",               required_argument, 0, 'x' },
-            { "mirror",                     no_argument, 0, 'm' },
-            { "debug",                      no_argument, 0, 'd' },
-            { 0, 0, 0, 0 }  // termination of the option list
+            { "help",                       no_argument, nullptr, 'h' },
+            { "license",                    no_argument, nullptr, 'l' },
+            { "quiet",                      no_argument, nullptr, 'q' },
+            { "format",               required_argument, nullptr, 'f' },
+            { "compression",          required_argument, nullptr, 'c' },
+            { "size",                 required_argument, nullptr, 's' },
+            { "extract",              required_argument, nullptr, 'e' },
+            { "extract-blur",         required_argument, nullptr, 'r' },
+            { "sh",                   optional_argument, nullptr, 'z' },
+            { "sh-output",            required_argument, nullptr, 'o' },
+            { "sh-irradiance",              no_argument, nullptr, 'i' },
+            { "sh-shader",                  no_argument, nullptr, 'b' },
+            { "ibl-is-mipmap",        required_argument, nullptr, 'y' },
+            { "ibl-ld",               required_argument, nullptr, 'p' },
+            { "ibl-dfg",              required_argument, nullptr, 'a' },
+            { "ibl-dfg-multiscatter",       no_argument, nullptr, 'u' },
+            { "ibl-samples",          required_argument, nullptr, 'k' },
+            { "deploy",               required_argument, nullptr, 'x' },
+            { "mirror",                     no_argument, nullptr, 'm' },
+            { "debug",                      no_argument, nullptr, 'd' },
+            { nullptr, 0, 0, 0 }  // termination of the option list
     };
     int opt;
     int option_index = 0;
@@ -395,6 +395,11 @@ int main(int argc, char* argv[]) {
             std::cerr << "Unsupported image format!" << std::endl;
             exit(0);
         }
+        if (inputImage.getChannelsCount() != 3) {
+            std::cerr << "Input image must be RGB (3 channels)! This image has "
+                      << inputImage.getChannelsCount() << " channels." << std::endl;
+            exit(0);
+        }
 
         CubemapUtils::clamp(inputImage);
 
@@ -404,15 +409,18 @@ int main(int argc, char* argv[]) {
         if ((isPOT(width) && (width * 3 == height * 4)) ||
             (isPOT(height) && (height * 3 == width * 4))) {
             // This is cross cubemap
+            const bool isHorizontal = width > height;
             size_t dim = std::max(height, width) / 4;
-            levels.push_back(Cubemap(dim));
             if (!g_quiet) {
                 std::cout << "Loading cross... " << std::endl;
             }
-            Cubemap& base(levels[0]);
-            CubemapUtils::setAllFacesFromCross(base, inputImage);
-            base.makeSeamless();
-            images.push_back(std::move(inputImage));
+
+            Image temp;
+            Cubemap cml = CubemapUtils::create(temp, dim, isHorizontal);
+            CubemapUtils::copyImage(temp, inputImage);
+            cml.makeSeamless();
+            images.push_back(std::move(temp));
+            levels.push_back(std::move(cml));
         } else if (width == 2 * height) {
             // we assume a spherical (equirectangular) image, which we will convert to a cross image
             size_t dim = g_output_size ? g_output_size : 256;
@@ -429,8 +437,8 @@ int main(int argc, char* argv[]) {
             std::cerr << "Aspect ratio not supported: " << width << "x" << height << std::endl;
             std::cerr << "Supported aspect ratios:" << std::endl;
             std::cerr << "  2:1, lat/long or equirectangular" << std::endl;
-            std::cerr << "  3:4, vertical cross (width must be power of two)" << std::endl;
-            std::cerr << "  4:3, horizontal cross (height must be power of two)" << std::endl;
+            std::cerr << "  3:4, vertical cross (height must be power of two)" << std::endl;
+            std::cerr << "  4:3, horizontal cross (width must be power of two)" << std::endl;
             exit(0);
         }
     } else {

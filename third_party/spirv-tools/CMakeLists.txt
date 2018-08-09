@@ -30,11 +30,12 @@ if (APPLE)
 endif (APPLE)
 set(SPIRV_SKIP_EXECUTABLES ON)
 set(SPIRV_SKIP_TESTS ON)
-# End changes
+# End Filament specific changes
 
 project(spirv-tools)
 # Filament specific changes
 # enable_testing()
+# End Filament specific changes
 set(SPIRV_TOOLS "SPIRV-Tools")
 
 include(GNUInstallDirs)
@@ -178,7 +179,9 @@ if(NOT COMMAND find_host_program)
   endmacro()
 endif()
 
-find_host_package(PythonInterp)
+# Filament specific changes
+# find_host_package(PythonInterp)
+# End Filament specific changes
 
 # Check for symbol exports on Linux.
 # At the moment, this check will fail on the OSX build machines for the Android NDK.
@@ -276,7 +279,7 @@ endif(SPIRV_BUILD_COMPRESSION)
 #                       -DSPIRV_SHARED_LIBRARIES=${SPIRV_SHARED_LIBRARIES}
 #                       -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/write_pkg_config.cmake
 #         DEPENDS "CHANGES" "cmake/SPIRV-Tools-shared.pc.in" "cmake/write_pkg_config.cmake")
-# end Filament specific changes
+# End Filament specific changes
 
 # Install pkg-config file
 if (ENABLE_SPIRV_TOOLS_INSTALL)

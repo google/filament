@@ -60,7 +60,10 @@ public:
     static std::string getFaceName(Cubemap::Face face);
 
     // Create a cubemap object and its backing Image
-    static Cubemap create(image::Image& image, size_t dim);
+    static Cubemap create(image::Image& image, size_t dim, bool horizontal = true);
+
+    // Copy an image
+    static void copyImage(image::Image& dst, const image::Image& src);
 
     // Sets a Cubemap faces from a cross image
     static void setAllFacesFromCross(Cubemap& cm, const image::Image& image);
@@ -73,7 +76,7 @@ public:
 
 private:
     static void setFaceFromCross(Cubemap& cm, Cubemap::Face face, const image::Image& image);
-    static image::Image createCubemapImage(size_t dim);
+    static image::Image createCubemapImage(size_t dim, bool horizontal = true);
 };
 
 // -----------------------------------------------------------------------------------------------
