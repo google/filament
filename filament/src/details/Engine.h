@@ -129,14 +129,14 @@ public:
         math::float4 sun; // cos(sunAngle), sin(sunAngle), 1/(sunAngle*HALO_SIZE-sunAngle), HALO_EXP
 
         math::float3 lightDirection;
-        float padding1;
+        uint32_t fParamsX; // stride-x
 
         math::float3 shadowBias; // constant bias, normal bias, unused
         float oneOverFroxelDimensionY;
 
         math::float4 zParams; // froxel Z parameters
 
-        math::uint2 fParams; // froxelCountX, froxelCountX * froxelCountY
+        math::uint2 fParams; // stride-y, stride-z
         math::float2 origin; // viewport left, viewport bottom
 
         float oneOverFroxelDimensionX;

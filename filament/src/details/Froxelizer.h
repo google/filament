@@ -117,6 +117,7 @@ public:
     size_t getFroxelCountX() const noexcept { return mFroxelCountX; }
     size_t getFroxelCountY() const noexcept { return mFroxelCountY; }
     size_t getFroxelCountZ() const noexcept { return mFroxelCountZ; }
+    size_t getFroxelCount() const noexcept { return mFroxelCount; }
 
     // update Records and Froxels texture with lights data. this is thread-safe.
     void froxelizeLights(FEngine& engine, math::mat4f const& viewMatrix,
@@ -124,7 +125,8 @@ public:
 
     void updateUniforms(UniformBuffer& u) {
         u.setUniform(offsetof(FEngine::PerViewUib, zParams), mParamsZ);
-        u.setUniform(offsetof(FEngine::PerViewUib, fParams), mParamsF);
+        u.setUniform(offsetof(FEngine::PerViewUib, fParams), mParamsF.yz);
+        u.setUniform(offsetof(FEngine::PerViewUib, fParamsX), mParamsF.x);
         u.setUniform(offsetof(FEngine::PerViewUib, oneOverFroxelDimensionX), mOneOverDimension.x);
         u.setUniform(offsetof(FEngine::PerViewUib, oneOverFroxelDimensionY), mOneOverDimension.y);
     }
@@ -224,6 +226,7 @@ private:
     uint16_t mFroxelCountX = 0;
     uint16_t mFroxelCountY = 0;
     uint16_t mFroxelCountZ = 0;
+    uint16_t mFroxelCount = 0;
     math::uint2 mFroxelDimension = {};
 
     math::mat4f mProjection;
@@ -238,7 +241,7 @@ private:
     // needed for update()
     Viewport mViewport;
     math::float4 mParamsZ = {};
-    math::uint4 mParamsF = {};
+    math::uint3 mParamsF = {};
     float mNear = 0.0f;        // camera near
     float mZLightFar = FEngine::CONFIG_Z_LIGHT_FAR;
     float mZLightNear = FEngine::CONFIG_Z_LIGHT_NEAR;  // light near (first slice)

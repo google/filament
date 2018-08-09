@@ -43,7 +43,20 @@ using namespace driver;
 
 namespace details {
 
+/*
+ * This enables froxels to be rectangular which allows us to use a but more froxel
+ * with the same amount of memory in the GPU.
+ * This requires backward compatibility breaking changes in the shaders.
+ */
 static constexpr bool SUPPORTS_NON_SQUARE_FROXELS = false;
+
+/*
+ * This changes the layout of the froxel info on the GPU such that it is more cache friendly,
+ * i.e. the major axis is Z instead of X, because in a given froxel there is more chance to
+ * hit another froxel at the same x,y coordinate.
+ * This requires backward compatibility breaking changes in the shaders.
+ */
+static constexpr bool SUPPORTS_REMAPPED_FROXELS   = false;
 
 // The Froxel buffer is set to FROXEL_BUFFER_WIDTH x n
 // With n limited by the supported texture dimension, which is guaranteed to be at least 2048
@@ -153,10 +166,9 @@ bool Froxelizer::prepare(
      */
 
     // froxel buffer (~32 KiB)
-    const uint32_t maxFroxelCount = FROXEL_BUFFER_WIDTH * FROXEL_BUFFER_HEIGHT;
     mFroxelBufferUser = {
-            driverApi.allocatePod<FroxelEntry>(maxFroxelCount, CACHELINE_SIZE),
-            maxFroxelCount };
+            driverApi.allocatePod<FroxelEntry>(FROXEL_BUFFER_ENTRY_COUNT_MAX, CACHELINE_SIZE),
+            FROXEL_BUFFER_ENTRY_COUNT_MAX };
 
     // record buffer (~64 KiB)
     mRecordBufferUser = {
@@ -184,9 +196,9 @@ bool Froxelizer::prepare(
     assert(mFroxelShardedData.begin());
 
 #ifndef NDEBUG
-    memset(mFroxelBufferUser.data(), 0x55, mFroxelBufferUser.sizeInBytes());
-    memset(mRecordBufferUser.data(), 0xEB, mRecordBufferUser.sizeInBytes());
-    memset(mFroxelShardedData.data(), 0xAA, mFroxelShardedData.sizeInBytes());
+    memset(mFroxelBufferUser.data(),    0x55, mFroxelBufferUser.sizeInBytes());
+    memset(mRecordBufferUser.data(),    0xEB, mRecordBufferUser.sizeInBytes());
+    memset(mFroxelShardedData.data(),   0xFD, mFroxelShardedData.sizeInBytes());
 #endif
 
     return uniformsNeedUpdating;
@@ -266,6 +278,7 @@ bool Froxelizer::update() noexcept {
         mFroxelCountZ = froxelCountZ;
         // froxel count must fit on 16 bits
         const uint16_t froxelCount = uint16_t(froxelCountX * froxelCountY * froxelCountZ);
+        mFroxelCount = froxelCount;
 
         if (mDistancesZ) {
             // this is a LinearAllocator arena, use rewind() instead of free (which is a no op).
@@ -307,8 +320,15 @@ bool Froxelizer::update() noexcept {
         mParamsZ[1] = 0; // updated when camera changes
         mParamsZ[2] = -mLinearizer;
         mParamsZ[3] = mFroxelCountZ;
-        mParamsF[0] = uint32_t(mFroxelCountX);
-        mParamsF[1] = uint32_t(mFroxelCountX * mFroxelCountY);
+        if (SUPPORTS_REMAPPED_FROXELS) {
+            mParamsF.x = uint32_t(mFroxelCountZ);
+            mParamsF.y = uint32_t(mFroxelCountX * mFroxelCountZ);
+            mParamsF.z = 1;
+        } else {
+            mParamsF[0] = 1;
+            mParamsF[1] = uint32_t(mFroxelCountX);
+            mParamsF[2] = uint32_t(mFroxelCountX * mFroxelCountY);
+        }
     }
 
     if (UTILS_UNLIKELY(mDirtyFlags & (PROJECTION_CHANGED | VIEWPORT_CHANGED))) {
@@ -523,8 +543,10 @@ void Froxelizer::froxelizeLights(FEngine& engine,
 #ifndef NDEBUG
     if (lightData.size()) {
         // go through every froxel
-        auto const& gpuFroxelEntries(mFroxelBufferUser);
         auto const& recordBufferUser(mRecordBufferUser);
+        auto gpuFroxelEntries(mFroxelBufferUser);
+        gpuFroxelEntries.set(gpuFroxelEntries.begin(),
+                mFroxelCountX * mFroxelCountY * mFroxelCountZ);
         for (auto const& entry : gpuFroxelEntries) {
             // go through every lights for that froxel
             for (size_t i = 0; i < entry.pointLightCount + entry.spotLightCount; i++) {
@@ -639,14 +661,22 @@ void Froxelizer::froxelizeAssignRecordsCompress() noexcept {
     }
 
     uint16_t offset = 0;
-    Slice<FroxelEntry> gpuFroxelEntries(mFroxelBufferUser);
-    FroxelEntry* const UTILS_RESTRICT froxels = gpuFroxelEntries.data();
-    RecordBufferType* UTILS_RESTRICT froxelRecords = mRecordBufferUser.data();
+    FroxelEntry* const UTILS_RESTRICT froxels = mFroxelBufferUser.data();
+
+    auto remap = [stride = size_t(mFroxelCountX * mFroxelCountY)](size_t i) {
+        if (SUPPORTS_REMAPPED_FROXELS) {
+            // TODO: with the non-square froxel change these would be mask ops instead of divide.
+            i = (i % stride) * FEngine::CONFIG_FROXEL_SLICE_COUNT + (i / stride);
+        }
+        return i;
+    };
+
+    RecordBufferType* const UTILS_RESTRICT froxelRecords = mRecordBufferUser.data();
 
     // how many froxel record entries were reused (for debugging)
     UTILS_UNUSED size_t reused = FROXEL_BUFFER_ENTRY_COUNT_MAX;
 
-    for (size_t i = 0, c = records.size(); i < c;) {
+    for (size_t i = 0, c = getFroxelCount(); i < c;) {
 #ifndef NDEBUG
         reused--;
 #endif
@@ -665,8 +695,8 @@ void Froxelizer::froxelizeAssignRecordsCompress() noexcept {
 #endif
             // note: instead of dropping froxels we could look for similar records we've already
             // filed up.
-            do { // this compiles to memset()
-                froxels[i++].u32 = 0;
+            do { // this compiles to memset() when remap() is identity
+                froxels[remap(i++)].u32 = 0;
             } while(i < c);
             goto out_of_memory;
         }
@@ -697,7 +727,7 @@ void Froxelizer::froxelizeAssignRecordsCompress() noexcept {
 
         // note: we can't use partition_point() here because we're not sorted
         do {
-            froxels[i++].u32 = entry.u32;
+            froxels[remap(i++)].u32 = entry.u32;
         } while(i < c && records[i].lights == b.lights);
     }
 out_of_memory:
