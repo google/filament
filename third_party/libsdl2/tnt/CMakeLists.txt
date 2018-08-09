@@ -157,13 +157,13 @@ target_compile_options(${TARGET}
     PRIVATE -Wno-switch
     PRIVATE -Wno-tautological-pointer-compare
     PRIVATE -Wno-parentheses-equality
-    PRIVATE -Wno-pragma-pack
 )
 
 # specify where the public headers of this library are
 target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
 
 if (WIN32)
+    target_compile_definitions(${TARGET} PRIVATE -Wno-pragma-pack)
     # Windows needs a WinMain static library.
     add_library(${TARGET}main ${SRC_DIR}/main/windows/SDL_windows_main.c)
 endif ()

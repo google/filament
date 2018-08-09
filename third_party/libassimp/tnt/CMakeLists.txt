@@ -326,11 +326,13 @@ target_compile_options(${TARGET}
     PRIVATE -Wno-incompatible-pointer-types
     PRIVATE -Wno-tautological-compare
     PRIVATE -Wno-undefined-var-template
-    PRIVATE -Wno-pragma-pack
 )
 
 if (NOT WIN32)
-    target_compile_options(${TARGET} PRIVATE -Wno-address-of-packed-member)
+    target_compile_options(${TARGET}
+        PRIVATE -Wno-address-of-packed-member
+        PRIVATE -Wno-pragma-pack
+    )
 endif()
 
 # specify where the public headers of this library are
