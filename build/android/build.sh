@@ -18,6 +18,7 @@ LC_UNAME=`echo $UNAME | tr '[:upper:]' '[:lower:]'`
 #     $GENERATE_ARCHIVES
 #     $BUILD_DEBUG
 #     $BUILD_RELEASE
+source `dirname $0`/../common/ci-common.sh
 if [  "$LC_UNAME" == "linux" ]; then
     source `dirname $0`/../linux/ci-common.sh
 elif [ "$LC_UNAME" == "darwin" ]; then

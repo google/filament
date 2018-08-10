@@ -15,6 +15,7 @@ set -x
 #     $GENERATE_ARCHIVES
 #     $BUILD_DEBUG
 #     $BUILD_RELEASE
+source `dirname $0`/../common/ci-common.sh
 source `dirname $0`/ci-common.sh
 source `dirname $0`/../common/build-common.sh
 
