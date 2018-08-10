@@ -25,6 +25,7 @@
 #include "GL/glext.h"
 #include "GL/wglext.h"
 
+#include <utils/Log.h>
 #include <utils/Panic.h>
 
 namespace filament {
@@ -61,7 +62,7 @@ std::unique_ptr<Driver> ContextManagerWGL::createDriver(void* const sharedGLCont
     mHWnd = CreateWindowA("STATIC", "dummy", 0, 0, 0, 1, 1, NULL, NULL, NULL, NULL);
     HDC whdc = mWhdc = GetDC(mHWnd);
     if (whdc == NULL) {
-        slog.e << "CreateWindowA() failed" << io::endl;
+        utils::slog.e << "CreateWindowA() failed" << utils::io::endl;
         goto error;
     }
 
@@ -71,7 +72,7 @@ std::unique_ptr<Driver> ContextManagerWGL::createDriver(void* const sharedGLCont
     // We need a tmp context to retrieve and call wglCreateContextAttribsARB.
     HGLRC tempContext = wglCreateContext(whdc);
     if (!wglMakeCurrent(whdc, tempContext)) {
-        slog.e << "wglMakeCurrent() failed, whdc=" << whdc << ", tempContext=" << tempContext << io::endl;
+        utils::slog.e << "wglMakeCurrent() failed, whdc=" << whdc << ", tempContext=" << tempContext << utils::io::endl;
         goto error;
     }
 
@@ -79,7 +80,7 @@ std::unique_ptr<Driver> ContextManagerWGL::createDriver(void* const sharedGLCont
         (PFNWGLCREATECONTEXTATTRIBSARBPROC)wglGetProcAddress("wglCreateContextAttribsARB");
     mContext = wglCreateContextAttribs(whdc, nullptr, attribs);
     if (!mContext) {
-        slog.e << "wglCreateContextAttribs() failed, whdc=" << whdc << io::endl;
+        utils::slog.e << "wglCreateContextAttribs() failed, whdc=" << whdc << utils::io::endl;
         goto error;
     }
 
@@ -88,7 +89,7 @@ std::unique_ptr<Driver> ContextManagerWGL::createDriver(void* const sharedGLCont
     tempContext = NULL;
 
     if (!wglMakeCurrent(whdc, mContext)) {
-        slog.e << "wglMakeCurrent() failed, whdc=" << whdc << ", mContext=" << mContext << io::endl;
+        utils::slog.e << "wglMakeCurrent() failed, whdc=" << whdc << ", mContext=" << mContext << utils::io::endl;
         goto error;
     }
 
@@ -100,7 +101,7 @@ error:
     if (tempContext) {
         wglDeleteContext(tempContext);
     }
-    terminate():
+    terminate();
     return NULL;
 }
 
@@ -110,11 +111,12 @@ void ContextManagerWGL::terminate() noexcept {
         wglDeleteContext(mContext);
         mContext = NULL;
     }
-    if (mWhdc) {
-        ReleaseHDC(mWhdc);
+    if (mHWnd && mWhdc) {
+        ReleaseDC(mHWnd, mWhdc);
+        DestroyWindow(mHWnd);
+        mHWnd = NULL;
         mWhdc = NULL;
-    }
-    if (mHWnd) {
+    } else if (mHWnd) {
         DestroyWindow(mHWnd);
         mHWnd = NULL;
     }
