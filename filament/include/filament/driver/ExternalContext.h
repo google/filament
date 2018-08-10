@@ -45,7 +45,7 @@ public:
 
     // Creates and and initializes the low-level API (e.g. an OpenGL context or Vulkan instance),
     // then creates the concrete Driver. Returns null on failure.
-    virtual std::unique_ptr<Driver> createDriver(void* const sharedGLContext) noexcept = 0;
+    virtual std::unique_ptr<Driver> createDriver(void* sharedGLContext) noexcept = 0;
 
     virtual ~ExternalContext() noexcept;
 
