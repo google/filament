@@ -1,4 +1,4 @@
-filament/test/test_filament
+filament/test/test_filament --gtest_filter=-FilamentTest.FroxelData
 filament/test/test_filament_exposure
 libs/math/test_math
 libs/utils/test_utils
