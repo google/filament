@@ -68,7 +68,6 @@ private:
     virtual void encode(const Image& image) override;
 
     int chooseColorType(const Image& image) const;
-    uint32_t getChannelsCount() const;
 
     static void cb_error(png_structp png, png_const_charp error);
     static void cb_stream(png_structp png, png_bytep buffer, png_size_t size);
@@ -284,34 +283,20 @@ void PNGEncoder::init() {
 }
 
 int PNGEncoder::chooseColorType(const Image& image) const {
-    size_t channels = image.getChannelsCount();
-    switch (channels) {
-        case 1:
-            return PNG_COLOR_TYPE_GRAY;
-        case 3:
-        default:
-            switch (mFormat) {
-                case PixelFormat::RGBM:
-                    return PNG_COLOR_TYPE_RGBA;
-                default:
-                    return PNG_COLOR_TYPE_RGB;
-            }
-    }
-}
-
-uint32_t PNGEncoder::getChannelsCount() const {
     switch (mFormat) {
         case PixelFormat::RGBM:
-            return 4;
+            return PNG_COLOR_TYPE_RGBA;
         default:
-            return 3;
+            return PNG_COLOR_TYPE_RGB;
     }
 }
 
 void PNGEncoder::encode(const Image& image) {
+    // Since "fromLinearToRGBM" and "fromLinearToRGB" both cast the source data to float3,
+    // we require 3-channel source data.
     size_t srcChannels = image.getChannelsCount();
-    if ((mFormat == PixelFormat::RGBM && srcChannels != 3) ||
-            (srcChannels != 1 && srcChannels != 3)) {
+    if (srcChannels != 3) {
+        std::cerr << "PNGEncoder requires 3 channels." << std::endl;
         return;
     }
 
@@ -333,22 +318,23 @@ void PNGEncoder::encode(const Image& image) {
 
         png_write_info(mPNG, mInfo);
 
-        uint32_t channels = (srcChannels == 1 ? 1 : getChannelsCount());
-
         std::unique_ptr<png_bytep[]> row_pointers(new png_bytep[height]);
         std::unique_ptr<uint8_t[]> data;
+        uint32_t dstChannels;
         switch (mFormat) {
             case PixelFormat::RGBM:
                 data = fromLinearToRGBM<uint8_t>(image);
+                dstChannels = 4;
                 break;
             case PixelFormat::sRGB:
             case PixelFormat::LINEAR_RGB:
                 data = fromLinearToRGB<uint8_t>(image);
+                dstChannels = 3;
                 break;
         }
 
         for (size_t y = 0; y < height; y++) {
-            row_pointers[y] = reinterpret_cast<png_bytep>(&data[y * width * channels *
+            row_pointers[y] = reinterpret_cast<png_bytep>(&data[y * width * dstChannels *
                     sizeof(uint8_t)]);
         }
 
@@ -467,6 +453,7 @@ void HDREncoder::rle(std::ostream& out, uint8_t const* data, size_t length) {
 
 void HDREncoder::encode(const Image& image) {
     if (image.getChannelsCount() != 3) {
+        std::cerr << "HDREncoder requires 3 channels." << std::endl;
         return;
     }
 
@@ -566,6 +553,7 @@ void PSDEncoder::encode(const Image& image) {
     static const uint32_t kToningPreviewExposureGamma = 1;
 
     if (image.getChannelsCount() != 3) {
+        std::cerr << "PSDEncoder requires 3 channels." << std::endl;
         return;
     }
 
@@ -715,6 +703,7 @@ static int toEXRCompression(const std::string& c) {
 
 void EXREncoder::encode(const Image& image) {
     if (image.getChannelsCount() != 3) {
+        std::cerr << "EXREncoder requires 3 channels." << std::endl;
         return;
     }
 
