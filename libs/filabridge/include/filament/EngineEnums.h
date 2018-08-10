@@ -52,8 +52,9 @@ static_assert(BindingPoints::PER_MATERIAL_INSTANCE == BindingPoints::COUNT - 1,
 constexpr size_t MAX_ATTRIBUTE_BUFFERS_COUNT = 8;   // FIXME: should match Driver::MAX_ATTRIBUTE_BUFFER_COUNT
 
 // This value is limited by UBO size, ES3.0 only guarantees 16 KiB.
-// Values <= 255, use less CPU and GPU resources.
-constexpr size_t CONFIG_MAX_LIGHT_COUNT = 255;
+// Values <= 256, use less CPU and GPU resources.
+constexpr size_t CONFIG_MAX_LIGHT_COUNT = 256;
+constexpr size_t CONFIG_MAX_LIGHT_INDEX = CONFIG_MAX_LIGHT_COUNT - 1;
 
 // This value is also limited by UBO size, ES3.0 only guarantees 16 KiB.
 // 256 is enough, but we could use 512 if needed

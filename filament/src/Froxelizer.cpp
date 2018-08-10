@@ -549,7 +549,7 @@ void Froxelizer::froxelizeLights(FEngine& engine,
                 assert(entry.offset + i < RECORD_BUFFER_ENTRY_COUNT);
 
                 size_t lightIndex = recordBufferUser[entry.offset + i];
-                assert(lightIndex < CONFIG_MAX_LIGHT_COUNT);
+                assert(lightIndex <= CONFIG_MAX_LIGHT_INDEX);
 
                 // make sure it corresponds to an existing light
                 assert(lightIndex < lightData.size() - FScene::DIRECTIONAL_LIGHTS_COUNT);
@@ -626,7 +626,7 @@ void Froxelizer::froxelizeAssignRecordsCompress(
     utils::Slice<LightRecord> records(mLightRecords);
     memset(records.data(), 0, records.sizeInBytes());
 
-    bitset256 spotLights;
+    LightRecord::bitset spotLights;
     for (size_t i = 0, c = froxelsListIndices.size(); i < c; ++i) {
         // (skip first entry, which is the light's index)
         const int isSpotLight = froxelsList[froxelsListIndices[i].index] & 1;
@@ -656,12 +656,13 @@ void Froxelizer::froxelizeAssignRecordsCompress(
         reused--;
 #endif
         auto const& b = records[i];
+        // We have a limitation of 255 spot + 255 point lights per froxel.
         const FroxelEntry entry = {
                 .offset = offset,
-                .pointLightCount = uint8_t((b.lights & ~spotLights).count()),
-                .spotLightCount  = uint8_t((b.lights &  spotLights).count())
+                .pointLightCount = (uint8_t)std::min(size_t(255), (b.lights & ~spotLights).count()),
+                .spotLightCount  = (uint8_t)std::min(size_t(255), (b.lights &  spotLights).count())
         };
-        const uint8_t lightCount = entry.count[0] + entry.count[1];
+        const size_t lightCount = entry.count[0] + entry.count[1];
         assert(lightCount <= froxelsListIndices.size());
 
         if (UTILS_UNLIKELY(offset + lightCount >= RECORD_BUFFER_ENTRY_COUNT)) {
@@ -677,11 +678,21 @@ void Froxelizer::froxelizeAssignRecordsCompress(
         }
 
         // iterate the bitfield
+        auto beginPoint = froxelRecords + offset;
+        auto beginSpot  = froxelRecords + offset + entry.count[0];
         b.lights.forEachSetBit([&spotLights,
-                point = froxelRecords + offset,
-                spot = froxelRecords + offset + entry.count[0]](size_t l) mutable {
-                    (spotLights[l] ? *spot++ : *point++) = (RecordBufferType) l;
-                });
+                point = beginPoint, spot = beginSpot, beginPoint, beginSpot]
+                (size_t l) mutable {
+            // make sure to keep this code branch-less
+            const bool isSpot = spotLights[l];
+            auto& p = isSpot ? spot      : point;
+            auto  s = isSpot ? beginSpot : beginPoint;
+            *p = (RecordBufferType)l;
+            // we need to "cancel" the write if we have more than 255 spot or point lights
+            // (this is a limitation of the data type used to store the light counts per froxel)
+            p += (p - s < 255) ? 1 : 0;
+        });
+
         offset += lightCount;
 
         // note: we can't use partition_point() here because we're not sorted
