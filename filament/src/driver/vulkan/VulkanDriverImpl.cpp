@@ -244,10 +244,13 @@ void getSurfaceCaps(VulkanContext& context, VulkanSurfaceContext& sc) {
 }
 
 void createSwapChainAndImages(VulkanContext& context, VulkanSurfaceContext& surfaceContext) {
-    // Pick an image count and format.
+    // Pick an image count and format.  According to section 30.5 of VK 1.1, maxImageCount of zero
+    // apparently means "that there is no limit on the number of images, though there may be limits
+    // related to the total amount of memory used by presentable images."
     uint32_t desiredImageCount = 2;
+    const uint32_t maxImageCount = surfaceContext.surfaceCapabilities.maxImageCount;
     if (desiredImageCount < surfaceContext.surfaceCapabilities.minImageCount ||
-            desiredImageCount > surfaceContext.surfaceCapabilities.maxImageCount) {
+            (maxImageCount != 0 && desiredImageCount > maxImageCount)) {
         utils::slog.e << "Swap chain does not support " << desiredImageCount << " images.\n";
         desiredImageCount = surfaceContext.surfaceCapabilities.minImageCount;
     }
