@@ -23,8 +23,8 @@ namespace filament {
 namespace details {
 
 // per render pass allocations
-// Froxelization needs about 5 MiB. Command buffer needs about 1 MiB.
-static constexpr size_t CONFIG_PER_RENDER_PASS_ARENA_SIZE    = 6 * 1024 * 1024;
+// Froxelization needs about 1 MiB. Command buffer needs about 1 MiB.
+static constexpr size_t CONFIG_PER_RENDER_PASS_ARENA_SIZE    = 2 * 1024 * 1024;
 
 // size of the high-level draw commands buffer (comes from the per-render pass allocator)
 static constexpr size_t CONFIG_PER_FRAME_COMMANDS_SIZE = 1 * 1024 * 1024;

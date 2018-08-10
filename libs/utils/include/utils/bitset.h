@@ -58,6 +58,10 @@ public:
         return storage[n];
     }
 
+    T& getBitsAt(size_t n) noexcept {
+        return storage[n];
+    }
+
     T getValue() const noexcept {
         static_assert(N == 1, "bitfield must only have one storage word");
         return storage[0];

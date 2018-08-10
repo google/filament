@@ -49,16 +49,6 @@ static constexpr bool SUPPORTS_NON_SQUARE_FROXELS = false;
 // With n limited by the supported texture dimension, which is guaranteed to be at least 2048
 // in all version of GLES.
 
-// Max number of froxels limited by:
-// - max texture size [min 2048]
-// - chosen texture width [64]
-// - size of CPU-side indices [16 bits]
-// Also, increasing the number of froxels adds more pressure on the "record buffer" which stores
-// the light indices per froxel. The record buffer is limited to 65536 entries, so with
-// 8192 froxels, we can store 8 lights per froxels assuming they're all used. In practice, some
-// froxels are not used, so we can store more.
-constexpr size_t FROXEL_BUFFER_ENTRY_COUNT_MAX  = 8192;
-
 // Make sure this matches the same constants in shading_lit.fs
 constexpr size_t FROXEL_BUFFER_WIDTH_SHIFT  = 6u;
 constexpr size_t FROXEL_BUFFER_WIDTH        = 1u << FROXEL_BUFFER_WIDTH_SHIFT;
@@ -174,29 +164,21 @@ bool Froxelizer::prepare(
             arena.allocate<LightRecord>(FROXEL_BUFFER_ENTRY_COUNT_MAX, CACHELINE_SIZE),
             FROXEL_BUFFER_ENTRY_COUNT_MAX };
 
-    // indices to the per-light froxel list (~2 KiB)
-    mFroxelListIndices = {
-            arena.allocate<FroxelRunEntry>(CONFIG_MAX_LIGHT_COUNT, CACHELINE_SIZE),
-            CONFIG_MAX_LIGHT_COUNT };
-
-    // per-light froxel list (~4 MiB)
-    constexpr uint32_t EXTRA_DATA = 1;    // to store the index/type of each light
-    const uint32_t froxelListSize = uint32_t(CONFIG_MAX_LIGHT_COUNT) * (maxFroxelCount + EXTRA_DATA);
-    mFroxelList = {
-            arena.allocate<uint16_t>(froxelListSize, CACHELINE_SIZE),
-            froxelListSize };
+    // froxel thread data (~256 KiB)
+    mFroxelThreadData = {
+            arena.allocate<ThreadData>((CONFIG_MAX_LIGHT_COUNT + 63) / 64, CACHELINE_SIZE),
+            (CONFIG_MAX_LIGHT_COUNT + 63) / 64
+    };
 
     assert(mFroxelBufferUser.begin());
     assert(mRecordBufferUser.begin());
     assert(mLightRecords.begin());
-    assert(mFroxelListIndices.begin());
-    assert(mFroxelList.begin());
+    assert(mFroxelThreadData.begin());
 
 #ifndef NDEBUG
     memset(mFroxelBufferUser.data(), 0x55, mFroxelBufferUser.sizeInBytes());
     memset(mRecordBufferUser.data(), 0xEB, mRecordBufferUser.sizeInBytes());
-    memset(mFroxelListIndices.data(), 0xAA, mFroxelListIndices.sizeInBytes());
-    memset(mFroxelList.data(), 0xEF, mFroxelList.sizeInBytes());
+    memset(mFroxelThreadData.data(), 0xAA, mFroxelThreadData.sizeInBytes());
 #endif
 
     return uniformsNeedUpdating;
@@ -519,23 +501,20 @@ void Froxelizer::commit(driver::DriverApi& driverApi) {
 #ifndef NDEBUG
     mFroxelBufferUser.clear();
     mRecordBufferUser.clear();
-    mFroxelListIndices.clear();
-    mFroxelList.clear();
+    mFroxelThreadData.clear();
 #endif
 }
 
 void Froxelizer::froxelizeLights(FEngine& engine,
-        math::mat4f const& viewMatrix, const FScene::LightSoa& lightData) noexcept {
+        math::mat4f const& UTILS_RESTRICT viewMatrix,
+        const FScene::LightSoa& UTILS_RESTRICT lightData) noexcept {
 
     // note: this is called asynchronously
 
-    // now that we know the light count, we can shrink the size of mFroxelListIndices
-    // (account for the extra directional light)
-    mFroxelListIndices.set(mFroxelListIndices.data(),
-            uint32_t(lightData.size() - FScene::DIRECTIONAL_LIGHTS_COUNT));
+    memset(mFroxelThreadData.data(), 0, mFroxelThreadData.sizeInBytes());
 
-    froxelizeLoop(engine, mFroxelList, mFroxelListIndices, viewMatrix, lightData);
-    froxelizeAssignRecordsCompress(mFroxelList, mFroxelListIndices);
+    froxelizeLoop(engine, mFroxelThreadData, viewMatrix, lightData);
+    froxelizeAssignRecordsCompress(mFroxelThreadData);
 
 #ifndef NDEBUG
     if (lightData.size()) {
@@ -559,10 +538,10 @@ void Froxelizer::froxelizeLights(FEngine& engine,
 #endif
 }
 
-void Froxelizer::froxelizeLoop(FEngine& engine, utils::Slice<uint16_t>& froxelsList,
-        utils::Slice<FroxelRunEntry> froxelsListIndices, mat4f const& viewMatrix,
-        const FScene::LightSoa& lightData) noexcept
-{
+void Froxelizer::froxelizeLoop(FEngine& engine,
+        Slice<ThreadData>& UTILS_RESTRICT froxelThreadData,
+        mat4f const& UTILS_RESTRICT viewMatrix,
+        const FScene::LightSoa& UTILS_RESTRICT lightData) noexcept {
     SYSTRACE_CALL();
     constexpr bool SINGLE_THREADED = false;
 
@@ -571,18 +550,14 @@ void Froxelizer::froxelizeLoop(FEngine& engine, utils::Slice<uint16_t>& froxelsL
     auto const* UTILS_RESTRICT directions   = lightData.data<FScene::DIRECTION>();
     auto const* UTILS_RESTRICT instances    = lightData.data<FScene::LIGHT_INSTANCE>();
 
-    auto process = [ this,
-                     spheres, directions, instances,
-                     &froxelsList, &froxelsListIndices, &viewMatrix, &lcm ]
+
+    auto process = [ this, &froxelThreadData,
+                     spheres, directions, instances, &viewMatrix, &lcm ]
             (uint32_t s, uint32_t c) {
-        const uint32_t froxelCount = mFroxelCountX * mFroxelCountY * mFroxelCountZ;
-        constexpr uint32_t EXTRA_DATA = 1;    // to store the index/type of each light
         const mat4f& projection = mProjection;
         const mat3f& vn = viewMatrix.upperLeft();
-        FroxelRunEntry* const UTILS_RESTRICT indices = froxelsListIndices.begin();
 
         for (size_t i = s; i < s + c; ++i) {
-            size_t gpuIndex = i - FScene::DIRECTIONAL_LIGHTS_COUNT;
             FLightManager::Instance li = instances[i];
             LightParams light = {
                     .position = (viewMatrix * float4{ spheres[i].xyz, 1 }).xyz, // to view-space
@@ -592,48 +567,46 @@ void Froxelizer::froxelizeLoop(FEngine& engine, utils::Slice<uint16_t>& froxelsL
                     .radius = spheres[i].w,
             };
 
-            // find froxels affected by this light and record them in the list
-            // also record the index of this light as the first entry
-            FLightManager::Type type = lcm.getType(li);
+            size_t gpuIndex = i - FScene::DIRECTIONAL_LIGHTS_COUNT;
             assert(gpuIndex < (1 << 15));
-            uint16_t extra = (uint16_t(gpuIndex) << 1) | uint16_t(type == FLightManager::Type::POINT ? 0 : 1);
 
-            uint32_t index = uint32_t(gpuIndex * (froxelCount + EXTRA_DATA));
-            GrowingSlice<uint16_t> localFroxelsList(
-                    froxelsList.begin() + index, froxelCount + EXTRA_DATA);
-
-            localFroxelsList.push_back(extra);
-            froxelizePointAndSpotLight(localFroxelsList, projection, light);
-            indices[gpuIndex] = { index, localFroxelsList.size() };
+            ThreadData& threadData = froxelThreadData[gpuIndex / 64];
+            const size_t bit = gpuIndex % 64;
+            const bool isSpot = light.invSin != std::numeric_limits<float>::infinity();
+            threadData[0] |= isSpot << bit;
+            froxelizePointAndSpotLight(threadData, bit, projection, light);
         }
     };
 
-    // let's do at least 4 lights per Job.
+    // we do 64 lights per job
     JobSystem& js = engine.getJobSystem();
     auto job = jobs::parallel_for(js, nullptr,
             1, uint32_t(lightData.size() - FScene::DIRECTIONAL_LIGHTS_COUNT),
-            std::cref(process), jobs::CountSplitter<4, SINGLE_THREADED ? 0 : 8>());
+            std::cref(process), jobs::CountSplitter<64, SINGLE_THREADED ? 0 : 8>());
     js.runAndWait(job);
 }
 
 void Froxelizer::froxelizeAssignRecordsCompress(
-        const utils::Slice<uint16_t>& froxelsList,
-        const utils::Slice<FroxelRunEntry>& froxelsListIndices) noexcept {
+        Slice<ThreadData> const& UTILS_RESTRICT froxelThreadData) noexcept {
 
     SYSTRACE_CALL();
 
-    Slice<FroxelEntry> gpuFroxelEntries(mFroxelBufferUser);
     utils::Slice<LightRecord> records(mLightRecords);
-    memset(records.data(), 0, records.sizeInBytes());
+
+    const size_t threadDataSize = (CONFIG_MAX_LIGHT_COUNT + 63) / 64;
+    assert(records.size() == FROXEL_BUFFER_ENTRY_COUNT_MAX);
+    assert(froxelThreadData.size() == threadDataSize);
 
     LightRecord::bitset spotLights;
-    for (size_t i = 0, c = froxelsListIndices.size(); i < c; ++i) {
-        // (skip first entry, which is the light's index)
-        const int isSpotLight = froxelsList[froxelsListIndices[i].index] & 1;
-        spotLights.set(i, (bool) isSpotLight);
-        for (size_t j = froxelsListIndices[i].index + 1,
-                     m = froxelsListIndices[i].index + froxelsListIndices[i].count; j < m; ++j) {
-            records[froxelsList[j]].lights.set(i);
+    for (size_t i = 0; i < threadDataSize; i++) {
+        spotLights.getBitsAt(i) = froxelThreadData[i][0];
+    }
+
+    // TODO: could we do this in-place? Both data structures have exactly the same size.
+    // this gets very well vectorized...
+    for (size_t j = 1, jc = FROXEL_BUFFER_ENTRY_COUNT_MAX; j < jc; j++) {
+        for (size_t i = 0; i < threadDataSize; i++) {
+            records[j].lights.getBitsAt(i) = froxelThreadData[i][j];
         }
     }
 
@@ -645,6 +618,7 @@ void Froxelizer::froxelizeAssignRecordsCompress(
     // todo: pld in main loop (not easy because variable size steps)
 
     uint16_t offset = 0;
+    Slice<FroxelEntry> gpuFroxelEntries(mFroxelBufferUser);
     FroxelEntry* const UTILS_RESTRICT froxels = gpuFroxelEntries.data();
     RecordBufferType* UTILS_RESTRICT froxelRecords = mRecordBufferUser.data();
 
@@ -663,7 +637,6 @@ void Froxelizer::froxelizeAssignRecordsCompress(
                 .spotLightCount  = (uint8_t)std::min(size_t(255), (b.lights &  spotLights).count())
         };
         const size_t lightCount = entry.count[0] + entry.count[1];
-        assert(lightCount <= froxelsListIndices.size());
 
         if (UTILS_UNLIKELY(offset + lightCount >= RECORD_BUFFER_ENTRY_COUNT)) {
 #ifndef NDEBUG
@@ -732,7 +705,7 @@ static inline float2 project(mat4f const& p, float3 const& v) noexcept {
 }
 
 void Froxelizer::froxelizePointAndSpotLight(
-        GrowingSlice<uint16_t>& UTILS_RESTRICT froxels,
+        ThreadData& froxelThread, size_t bit,
         mat4f const& UTILS_RESTRICT p,
         const Froxelizer::LightParams& UTILS_RESTRICT light) const noexcept {
 
@@ -836,40 +809,27 @@ void Froxelizer::froxelizePointAndSpotLight(
 
                     assert(bx < mFroxelCountX && ex <= mFroxelCountX);
 
-                    // Gross hack (but correct). For some reason (maybe it's right) the compiler
-                    // isn't able to take froxels's attribute outside of the loops below
-                    // (I'm guessing it thinks it is aliasing something), so we do this
-                    // manually, we write our data at the end of the slice and we grow the
-                    // slice later. We can't run past the end of the slice by construction.
-                    uint16_t* pf = froxels.end();
-
-                    uint16_t fi = getFroxelIndex(bx, iy, iz);
+                    // The first entry reserved for type of light, i.e. point/spot
+                    size_t fi = getFroxelIndex(bx, iy, iz) + 1;
                     if (light.invSin != std::numeric_limits<float>::infinity()) {
                         // This is a spotlight (common case)
+                        // this loops gets vectorized (x2 on arm64) w/ clang
                         while (bx != ex) {
-                            // Here we always write the froxel, but we only increment the pointer
-                            // if there was an intersection (i.e. it will be overwritten if not).
-                            // This allows us to avoid a branch.
-                            *pf = fi;
-                            if (sphereConeIntersectionFast(boundingSpheres[fi],
-                                    light.position, light.axis, light.invSin, light.cosSqr)) {
-                                // see if this froxel intersects the cone
-                                pf++;
-                            }
+                            // see if this froxel intersects the cone
+                            bool intersect = sphereConeIntersectionFast(boundingSpheres[fi],
+                                    light.position, light.axis, light.invSin, light.cosSqr);
+                            froxelThread[fi] |= uint64_t(intersect) << bit;
                             ++fi;
                             ++bx;
                         }
                     } else {
-                        // this loops gets vectorized (x8 on arm64) w/ clang
+                        // this loops gets vectorized (x2 on arm64) w/ clang
                         while (bx != ex) {
-                            *pf++ = fi;
+                            froxelThread[fi] |= uint64_t(1) << bit;
                             ++fi;
                             ++bx;
                         }
                     }
-
-                    // fix-up our slice's size
-                    froxels.grow(uint32_t(pf - froxels.end()));
                 }
             }
         }
