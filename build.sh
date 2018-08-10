@@ -329,6 +329,8 @@ function validate_build_command {
 }
 
 function run_test {
+    # The argument might contain flags (--gtest_filter for instance)
+    # Treat $1 with care
     test=$1
     test_name=`basename $1`
     ./out/cmake-debug/$test --gtest_output="xml:out/test-results/$test_name/sponge_log.xml"
@@ -336,7 +338,7 @@ function run_test {
 
 function run_tests {
     while read test; do
-      run_test $test
+        run_test "$test"
     done < build/common/test_list.txt
 }
 
