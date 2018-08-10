@@ -44,7 +44,7 @@ namespace BindingPoints {
     constexpr uint8_t POST_PROCESS            = 4;    // samplers for the post process pass
     constexpr uint8_t PER_MATERIAL_INSTANCE   = 5;    // uniforms/samplers updates per material
     constexpr uint8_t COUNT                   = 6;
-};
+}
 
 static_assert(BindingPoints::PER_MATERIAL_INSTANCE == BindingPoints::COUNT - 1,
         "Dynamically sized sampler buffer must be the last binding point.");
@@ -52,7 +52,8 @@ static_assert(BindingPoints::PER_MATERIAL_INSTANCE == BindingPoints::COUNT - 1,
 constexpr size_t MAX_ATTRIBUTE_BUFFERS_COUNT = 8;   // FIXME: should match Driver::MAX_ATTRIBUTE_BUFFER_COUNT
 
 // This value is limited by UBO size, ES3.0 only guarantees 16 KiB.
-constexpr size_t CONFIG_MAX_LIGHT_COUNT = 256;
+// Values <= 255, use less CPU and GPU resources.
+constexpr size_t CONFIG_MAX_LIGHT_COUNT = 255;
 
 // This value is also limited by UBO size, ES3.0 only guarantees 16 KiB.
 // 256 is enough, but we could use 512 if needed
