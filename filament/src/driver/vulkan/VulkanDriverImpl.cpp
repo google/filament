@@ -129,7 +129,8 @@ void selectPhysicalDevice(VulkanContext& context) {
                 << "(vendor 0x" << utils::io::hex << vendorID << ", "
                 << "device 0x" << deviceID << ", "
                 << "api 0x" << apiVersion << ", "
-                << "driver 0x" << driverVersion << ")" << utils::io::endl;
+                << "driver 0x" << driverVersion << ")"
+                << utils::io::dec << utils::io::endl;
         break;
     }
 }
