@@ -168,7 +168,7 @@ void FScene::terminate(FEngine& engine) {
     mGpuLightData.terminate(engine);
 }
 
-void FScene::prepareLights(const CameraInfo& camera) noexcept {
+void FScene::prepareLights(const CameraInfo& camera, ArenaScope& rootArena) noexcept {
     FLightManager& lcm = mEngine.getLightManager();
     GpuLightBuffer& gpuLightData = mGpuLightData;
     FScene::LightSoa& lightData = getLightData();
@@ -188,9 +188,12 @@ void FScene::prepareLights(const CameraInfo& camera) noexcept {
 
     // don't count the directional light
     if (UTILS_UNLIKELY(lightData.size() > CONFIG_MAX_LIGHT_COUNT + DIRECTIONAL_LIGHTS_COUNT)) {
+        ArenaScope arena(rootArena.getAllocator());
+        float* const UTILS_RESTRICT distances = arena.allocate<float>(lightData.size(), CACHELINE_SIZE);
+
         // pre-compute the lights' distance to the camera, for sorting below.
         float3 const position = camera.getPosition();
-        float distances[CONFIG_MAX_LIGHT_COUNT]; // 1 KiB
+
         // skip directional light
         for (size_t i = DIRECTIONAL_LIGHTS_COUNT, c = lightData.size(); i < c; ++i) {
             // TODO: this should take spot-light direction into account
@@ -207,7 +210,7 @@ void FScene::prepareLights(const CameraInfo& camera) noexcept {
         lightData.resize(std::min(lightData.size(), CONFIG_MAX_LIGHT_COUNT + DIRECTIONAL_LIGHTS_COUNT));
     }
 
-    assert(lightData.size() <= CONFIG_MAX_LIGHT_COUNT + 1);
+    assert(lightData.size() <= CONFIG_MAX_LIGHT_COUNT + DIRECTIONAL_LIGHTS_COUNT);
 
     auto const* UTILS_RESTRICT positions    = lightData.data<FScene::POSITION_RADIUS>();
     auto const* UTILS_RESTRICT directions   = lightData.data<FScene::DIRECTION>();
@@ -222,7 +225,7 @@ void FScene::prepareLights(const CameraInfo& camera) noexcept {
         lp.spotScaleOffset.xy   = { lcm.getSpotParams(li).scaleOffset };
     }
 
-    gpuLightData.invalidate(0, lightData.size());
+    gpuLightData.invalidate(0, lightData.size() - DIRECTIONAL_LIGHTS_COUNT);
     gpuLightData.commit(mEngine);
 }
 
