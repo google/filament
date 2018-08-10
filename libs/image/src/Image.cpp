@@ -77,7 +77,7 @@ void Image::flip(uint32_t flags) {
     if (flags & Image::FLIP_Y) {
         std::unique_ptr<uint8_t[]> tmp(new uint8_t[mBpr]);
         uint8_t* ptmp = tmp.get();
-        for (size_t row = 0; row < mHeight / 2; ++row) {
+        for (size_t row = 0, nrows = mHeight / 2; row < nrows; ++row) {
             uint8_t* a = getptr(0, row);
             uint8_t* b = getptr(0, mHeight - 1 - row);
             memcpy(ptmp, a, mBpr);
@@ -87,8 +87,8 @@ void Image::flip(uint32_t flags) {
     }
     // Our hflip implementation is inefficient, but it's never invoked in the renderer.
     if (flags & Image::FLIP_X) {
-        for (size_t row = 0; row < mHeight; ++row) {
-            for (size_t src = 0; src < mWidth / 2; ++src) {
+        for (size_t row = 0, nrows = mHeight; row < nrows; ++row) {
+            for (size_t src = 0, ncols = mWidth / 2; src < ncols; ++src) {
                 size_t dst = mWidth - 1 - src;
                 std::swap(getref(src, row), getref(dst, row));
             }
