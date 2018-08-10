@@ -168,7 +168,7 @@ elseif (APPLE)
     list(APPEND SRCS src/driver/opengl/ContextManagerCocoa.mm)
 elseif (LINUX)
     list(APPEND SRCS src/driver/opengl/ContextManagerGLX.cpp)
-elseif(WIN32)
+elseif (WIN32)
     list(APPEND SRCS src/driver/opengl/ContextManagerWGL.cpp)
 endif()
 
@@ -366,7 +366,7 @@ set(FILAMENT_WARNINGS
 
 # clang-cl maps -Wall to -Weverything, which clutters logs with benign -Wc++98-compat warnings
 # Use /W4 instead for clang-cl builds
-if (CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND CMAKE_CXX_SIMULATE_ID STREQUAL "MSVC")
+if (CLANG_CL)
     set(FILAMENT_WARNINGS ${FILAMENT_WARNINGS} /W4)
 else()
     set(FILAMENT_WARNINGS ${FILAMENT_WARNINGS} -Wall)
