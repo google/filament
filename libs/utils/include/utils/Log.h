@@ -91,6 +91,7 @@ private:
         SHORT, USHORT, INT, UINT, LONG, ULONG, LONG_LONG, ULONG_LONG, DOUBLE, LONG_DOUBLE
     };
 
+    bool mShowHex = false;
     Priority mPriority;
     const char* getFormat(type t) const noexcept;
 

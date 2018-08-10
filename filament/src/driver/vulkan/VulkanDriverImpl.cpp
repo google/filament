@@ -102,8 +102,34 @@ void selectPhysicalDevice(VulkanContext& context) {
         context.physicalDevice = physicalDevice;
         vkGetPhysicalDeviceFeatures(physicalDevice, &context.physicalDeviceFeatures);
         vkGetPhysicalDeviceMemoryProperties(physicalDevice, &context.memoryProperties);
-        utils::slog.i << "Selected physical device: "
-                << context.physicalDeviceProperties.deviceName << utils::io::endl;
+
+        // Print out some properties of the GPU for diagnostic purposes.
+        //
+        // Ideally, the vendors register their vendor ID's with Khronos so that apps can make an
+        // id => string mapping. However in practice this hasn't happened. At the time of this
+        // writing the gpuinfo database has the following ID's:
+        //
+        //     0x1002 - AMD
+        //     0x1010 - ImgTec
+        //     0x10DE - NVIDIA
+        //     0x13B5 - ARM
+        //     0x5143 - Qualcomm
+        //     0x8086 - INTEL
+        //
+        // Since we don't have any vendor-specific workarounds yet, there's no need to make this
+        // mapping in code. The "deviceName" string informally reveals the marketing name for the
+        // GPU. (e.g., Quadro)
+        const uint32_t apiVersion = context.physicalDeviceProperties.apiVersion;
+        const uint32_t driverVersion = context.physicalDeviceProperties.driverVersion;
+        const uint32_t vendorID = context.physicalDeviceProperties.vendorID;
+        const uint32_t deviceID = context.physicalDeviceProperties.deviceID;
+        utils::slog.i << "Selected physical device '"
+                << context.physicalDeviceProperties.deviceName
+                << "' from " << physicalDeviceCount << " physical devices. "
+                << "(vendor 0x" << utils::io::hex << vendorID << ", "
+                << "device 0x" << deviceID << ", "
+                << "api 0x" << apiVersion << ", "
+                << "driver 0x" << driverVersion << ")" << utils::io::endl;
         break;
     }
 }

@@ -54,16 +54,15 @@ void ostream::Buffer::reset() noexcept {
 
 
 const char* ostream::getFormat(ostream::type t) const noexcept {
-    // TODO: handle oct and hex
     switch (t) {
-        case type::SHORT:       return "%hd";
-        case type::USHORT:      return "%hu";
-        case type::INT:         return "%d";
-        case type::UINT:        return "%u";
-        case type::LONG:        return "%ld";
-        case type::ULONG:       return "%lu";
-        case type::LONG_LONG:   return "%lld";
-        case type::ULONG_LONG:  return "%llu";
+        case type::SHORT:       return mShowHex ? "%hx"  : "%hd";
+        case type::USHORT:      return mShowHex ? "%hx"  : "%hu";
+        case type::INT:         return mShowHex ? "%x"   : "%d";
+        case type::UINT:        return mShowHex ? "%x"   : "%u";
+        case type::LONG:        return mShowHex ? "%lx"  : "%ld";
+        case type::ULONG:       return mShowHex ? "%lx"  : "%lu";
+        case type::LONG_LONG:   return mShowHex ? "%llx" : "%lld";
+        case type::ULONG_LONG:  return mShowHex ? "%llx" : "%llu";
         case type::DOUBLE:      return "%f";
         case type::LONG_DOUBLE: return "%Lf";
     }
@@ -183,10 +182,12 @@ ostream& ostream::flush() noexcept {
 }
 
 ostream& ostream::hex() noexcept {
+    mShowHex = true;
     return *this;
 }
 
 ostream& ostream::dec() noexcept {
+    mShowHex = false;
     return *this;
 }
 
