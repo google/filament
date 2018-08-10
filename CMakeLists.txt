@@ -3,13 +3,6 @@
 # ==================================================================================================
 cmake_minimum_required(VERSION 3.1)
 
-if (WIN32)
-    # On Windows we need to instruct cmake to generate the .def in order to get the .lib required
-    # when linking against dlls. CL.EXE will not generate .lib without .def file (or without pragma
-    # __declspec(dllexport) in front of each functions).
-    set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
-endif()
-
 # ==================================================================================================
 # Project declaration
 # ==================================================================================================
@@ -29,6 +22,11 @@ if (UNIX AND NOT APPLE AND NOT ANDROID)
 endif()
 
 if (WIN32)
+    # On Windows we need to instruct cmake to generate the .def in order to get the .lib required
+    # when linking against dlls. CL.EXE will not generate .lib without .def file (or without pragma
+    # __declspec(dllexport) in front of each functions).
+    set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
+
     # TODO: Figure out why pdb generation messes with incremental compilaton.
     # IN RELEASE_WITH_DEBUG_INFO, generate debug info in .obj, no in pdb.
     set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} /Z7")
@@ -98,6 +96,16 @@ endif()
 if (UNIX AND CMAKE_GENERATOR STREQUAL "Ninja")
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fcolor-diagnostics")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fcolor-diagnostics")
+endif()
+
+# ==================================================================================================
+# Compiler check
+# ==================================================================================================
+if ("${CMAKE_C_COMPILER_ID}" STREQUAL "GNU" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+    message(FATAL_ERROR
+            "The GCC compiler is not supported, please use clang for both C and C++. "
+            "Please refer to README.md for more information.")
+    return()
 endif()
 
 # ==================================================================================================

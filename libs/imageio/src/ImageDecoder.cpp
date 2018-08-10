@@ -41,7 +41,7 @@
 
 #include <vector>
 
-#include <image/ColorSpace.h>
+#include <image/ColorTransform.h>
 
 namespace image {
 

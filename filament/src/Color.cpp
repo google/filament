@@ -16,7 +16,7 @@
 
 #include <filament/Color.h>
 
-#include <image/ColorSpace.h>
+#include <image/ColorTransform.h>
 
 #include <math/mat3.h>
 
