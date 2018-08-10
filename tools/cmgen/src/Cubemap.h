@@ -123,13 +123,6 @@ inline math::double3 Cubemap::getDirectionFor(Face face, double x, double y) con
     double cx = (x * mScale) - 1;
     double cy = 1 - (y * mScale);
 
-    uint32_t flags = getImageForFace(face).getFlags();
-    if (flags & image::Image::FLIP_X) {
-        cx = -cx;
-    }
-    if (flags & image::Image::FLIP_Y) {
-        cy = -cy;
-    }
     math::double3 dir;
     const double l = std::sqrt(cx*cx + cy*cy + 1);
     switch (face) {
@@ -147,7 +140,7 @@ inline Cubemap::Texel const& Cubemap::sampleAt(const math::double3& direction) c
     Cubemap::Address addr(getAddressFor(direction));
     const size_t x = std::min(size_t(addr.s * mDimensions), mDimensions-1);
     const size_t y = std::min(size_t(addr.t * mDimensions), mDimensions-1);
-    return sampleAt(getImageForFace(addr.face).getSampleRef(x, y));
+    return sampleAt(getImageForFace(addr.face).getPixelRef(x, y));
 }
 
 inline Cubemap::Texel Cubemap::filterAt(const math::double3& direction) const {

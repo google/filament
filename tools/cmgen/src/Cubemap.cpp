@@ -156,10 +156,10 @@ Cubemap::Texel Cubemap::filterAt(const image::Image& image, double x, double y) 
     const float v = float(y - y0);
     const float one_minus_u = 1 - u;
     const float one_minus_v = 1 - v;
-    const Texel& c0 = sampleAt(image.getSampleRef(x0, y0));
-    const Texel& c1 = sampleAt(image.getSampleRef(x1, y0));
-    const Texel& c2 = sampleAt(image.getSampleRef(x0, y1));
-    const Texel& c3 = sampleAt(image.getSampleRef(x1, y1));
+    const Texel& c0 = sampleAt(image.getPixelRef(x0, y0));
+    const Texel& c1 = sampleAt(image.getPixelRef(x1, y0));
+    const Texel& c2 = sampleAt(image.getPixelRef(x0, y1));
+    const Texel& c3 = sampleAt(image.getPixelRef(x1, y1));
     return (one_minus_u*one_minus_v)*c0 + (u*one_minus_v)*c1 + (one_minus_u*v)*c2 + (u*v)*c3;
 }
 
