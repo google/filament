@@ -143,8 +143,8 @@ public:
         };
     };
     // This depends on the maximum number of lights (currently 255),and can't be more than 16 bits.
-    static_assert(CONFIG_MAX_LIGHT_COUNT <= std::numeric_limits<uint16_t>::max(), "can't have more than 65535 lights");
-    using RecordBufferType = std::conditional_t<CONFIG_MAX_LIGHT_COUNT <= std::numeric_limits<uint8_t>::max(), uint8_t, uint16_t>;
+    static_assert(CONFIG_MAX_LIGHT_INDEX <= std::numeric_limits<uint16_t>::max(), "can't have more than 65536 lights");
+    using RecordBufferType = std::conditional_t<CONFIG_MAX_LIGHT_INDEX <= std::numeric_limits<uint8_t>::max(), uint8_t, uint16_t>;
     const utils::Slice<FroxelEntry>& getFroxelBufferUser() const { return mFroxelBufferUser; }
     const utils::Slice<RecordBufferType>& getRecordBufferUser() const { return mRecordBufferUser; }
 
@@ -155,7 +155,8 @@ private:
     };
 
     struct LightRecord {
-        utils::bitset256 lights;
+        using bitset = utils::bitset<uint64_t, (CONFIG_MAX_LIGHT_COUNT + 63) / 64>;
+        bitset lights;
     };
 
     struct LightParams {
