@@ -55,7 +55,9 @@ public:
     int getOSVersion() const noexcept final override { return 0; }
 
 private:
-    HGLRC mContext;
+    HGLRC mContext = NULL;
+    HWND mHWnd = NULL;
+    HDC mWhdc = NULL;
 };
 
 using ContextManager = filament::ContextManagerWGL;
