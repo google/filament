@@ -13,6 +13,7 @@ project(TNT)
 # ==================================================================================================
 
 option(ENABLE_JAVA "Compile Java projects, requires a JDK and the JAVA_HOME env var" ON)
+option(MUTE_THIRDPARTY_WARNINGS "Mute all warnings for third party code" ON)
 
 # ==================================================================================================
 # OS specific
@@ -59,6 +60,21 @@ set(FILAMENT ${CMAKE_SOURCE_DIR})
 set(TOOLS ${CMAKE_SOURCE_DIR}/tools)
 
 # ==================================================================================================
+# Compiler check
+# ==================================================================================================
+if ("${CMAKE_C_COMPILER_ID}" STREQUAL "GNU" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+    message(FATAL_ERROR
+            "The GCC compiler is not supported, please use clang for both C and C++. "
+            "Please refer to README.md for more information.")
+    return()
+endif()
+
+# Detect use of the clang-cl.exe frontend, which does not support all of clangs normal options
+if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" AND "${CMAKE_CXX_SIMULATE_ID}" STREQUAL "MSVC")
+    set(CLANG_CL true)
+endif()
+
+# ==================================================================================================
 # General compiler flags
 # ==================================================================================================
 set(CXX_STANDARD "-std=c++14")
@@ -92,25 +108,17 @@ if (CYGWIN)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-exceptions -fno-rtti")
 endif()
 
+if (CLANG_CL)
+    # Since the "secure" replacements that MSVC suggests are not portable, disable
+    # the deprecation warnings. Also disable warnings about use of POSIX functions (i.e. "unlink").
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_DEPRECATE")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_DEPRECATE")
+endif()
+
 # Add colors to ninja builds
 if (UNIX AND CMAKE_GENERATOR STREQUAL "Ninja")
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fcolor-diagnostics")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fcolor-diagnostics")
-endif()
-
-# ==================================================================================================
-# Compiler check
-# ==================================================================================================
-if ("${CMAKE_C_COMPILER_ID}" STREQUAL "GNU" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-    message(FATAL_ERROR
-            "The GCC compiler is not supported, please use clang for both C and C++. "
-            "Please refer to README.md for more information.")
-    return()
-endif()
-
-# Detect use of the clang-cl.exe frontend, which does not support all of clangs normal options
-if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" AND "${CMAKE_CXX_SIMULATE_ID}" STREQUAL "MSVC")
-    set(CLANG_CL true)
 endif()
 
 # ==================================================================================================
@@ -210,11 +218,29 @@ function(list_licenses OUTPUT MODULES)
     file(APPEND ${OUTPUT} ")FILAMENT__\"\n")
 endfunction(list_licenses)
 
+function(include_thirdparty NAME)
+    # Save compiler flags
+    set(_SAVED_CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
+    set(_SAVED_CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+
+    # Disable warnings for third party code
+    if (MUTE_THIRDPARTY_WARNINGS)
+        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-everything")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-everything")
+    endif()
+
+    add_subdirectory(${EXTERNAL}/${NAME})
+
+    # Restore original flags
+    set(CMAKE_C_FLAGS "${_SAVED_CMAKE_C_FLAGS}")
+    set(CMAKE_CXX_FLAGS "${_SAVED_CMAKE_CXX_FLAGS}")
+endfunction(include_thirdparty)
+
 # ==================================================================================================
 # Sub-projects
 # ==================================================================================================
 # Common to all platforms
-add_subdirectory(${EXTERNAL}/libgtest/tnt)
+include_thirdparty(libgtest/tnt)
 add_subdirectory(${LIBRARIES}/filabridge)
 add_subdirectory(${LIBRARIES}/filaflat)
 add_subdirectory(${LIBRARIES}/filamat)
@@ -223,15 +249,15 @@ add_subdirectory(${LIBRARIES}/math)
 add_subdirectory(${LIBRARIES}/utils)
 add_subdirectory(${FILAMENT}/filament)
 add_subdirectory(${FILAMENT}/shaders)
-add_subdirectory(${EXTERNAL}/robin-map/tnt)
+include_thirdparty(robin-map/tnt)
 
 if (FILAMENT_SUPPORTS_VULKAN)
     add_subdirectory(${LIBRARIES}/bluevk)
-    add_subdirectory(${EXTERNAL}/vkmemalloc/tnt)
+    include_thirdparty(vkmemalloc/tnt)
 endif()
 
 if (APPLE)
-    add_subdirectory(${EXTERNAL}/moltenvk/tnt)
+    include_thirdparty(moltenvk/tnt)
 endif()
 
 set (FILAMENT_SAMPLES_BINARY_DIR ${PROJECT_BINARY_DIR}/samples)
@@ -246,19 +272,19 @@ if (NOT ANDROID)
     add_subdirectory(${FILAMENT}/java)
 
     # must come first because of glslang
-    add_subdirectory(${EXTERNAL}/spirv-tools)
+    include_thirdparty(spirv-tools)
 
-    add_subdirectory(${EXTERNAL}/getopt)
-    add_subdirectory(${EXTERNAL}/glslang/tnt)
-    add_subdirectory(${EXTERNAL}/imgui/tnt)
-    add_subdirectory(${EXTERNAL}/libassimp/tnt)
-    add_subdirectory(${EXTERNAL}/libpng/tnt)
-    add_subdirectory(${EXTERNAL}/libsdl2/tnt)
-    add_subdirectory(${EXTERNAL}/libz/tnt)
-    add_subdirectory(${EXTERNAL}/skylight/tnt)
-    add_subdirectory(${EXTERNAL}/spirv-cross/tnt)
-    add_subdirectory(${EXTERNAL}/stb/tnt)
-    add_subdirectory(${EXTERNAL}/tinyexr/tnt)
+    include_thirdparty(getopt)
+    include_thirdparty(glslang/tnt)
+    include_thirdparty(imgui/tnt)
+    include_thirdparty(libassimp/tnt)
+    include_thirdparty(libpng/tnt)
+    include_thirdparty(libsdl2/tnt)
+    include_thirdparty(libz/tnt)
+    include_thirdparty(skylight/tnt)
+    include_thirdparty(spirv-cross/tnt)
+    include_thirdparty(stb/tnt)
+    include_thirdparty(tinyexr/tnt)
 
     add_subdirectory(${TOOLS}/cmgen)
     add_subdirectory(${TOOLS}/filamesh)
