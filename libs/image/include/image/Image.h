@@ -26,6 +26,11 @@
  */
 namespace image {
 
+/**
+ * \deprecated
+ * We are phasing out this class in favor of LinearImage. The latter has a stable and well-defined
+ * pixel format, making it easier to implement image-based algorithms.
+ */
 class Image {
 public:
     Image();

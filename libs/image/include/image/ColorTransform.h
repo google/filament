@@ -18,6 +18,7 @@
 #define IMAGE_COLORSPACE_H_
 
 #include <image/Image.h>
+#include <image/LinearImage.h>
 
 #include <math/scalar.h>
 #include <math/vec3.h>
@@ -188,6 +189,65 @@ std::unique_ptr<uint8_t[]> fromLinearToRGBM(const Image& image) {
     T* d = reinterpret_cast<T*>(dst.get());
     for (size_t y = 0; y < h; ++y) {
         float3 const* p = static_cast<float3 const*>(image.getPixelRef(0, y));
+        for (size_t x = 0; x < w; ++x, ++p, d += 4) {
+            float4 l(linearToRGBM(*p) * std::numeric_limits<T>::max());
+            for (size_t i = 0; i < 4; i++) {
+                d[i] = T(l[i]);
+            }
+        }
+    }
+    return dst;
+}
+
+template <typename T>
+std::unique_ptr<uint8_t[]> fromLinearTosRGB(const LinearImage& image) {
+    using math::float3;
+    size_t w = image.getWidth();
+    size_t h = image.getHeight();
+    size_t channels = image.getChannels();
+    std::unique_ptr<uint8_t[]> dst(new uint8_t[w * h * 3 * sizeof(T)]);
+    T* d = reinterpret_cast<T*>(dst.get());
+    for (size_t y = 0; y < h; ++y) {
+        float3 const* p = reinterpret_cast<float3 const*>(image.getPixelRef(0, y));
+        for (size_t x = 0; x < w; ++x, ++p, d += channels) {
+            float3 l(linearTosRGB(saturate(*p)) * std::numeric_limits<T>::max());
+            for (size_t i = 0; i < 3; i++) {
+                d[i] = T(l[i]);
+            }
+        }
+    }
+    return dst;
+}
+
+template <typename T>
+std::unique_ptr<uint8_t[]> fromLinearToRGB(const LinearImage& image) {
+    using math::float3;
+    size_t w = image.getWidth();
+    size_t h = image.getHeight();
+    size_t channels = image.getChannels();
+    std::unique_ptr<uint8_t[]> dst(new uint8_t[w * h * channels * sizeof(T)]);
+    T* d = reinterpret_cast<T*>(dst.get());
+    for (size_t y = 0; y < h; ++y) {
+        float3 const* p = reinterpret_cast<float3 const*>(image.getPixelRef(0, y));
+        for (size_t x = 0; x < w; ++x, ++p, d += channels) {
+            float3 l(saturate(*p) * std::numeric_limits<T>::max());
+            for (size_t i = 0; i < channels; i++) {
+                d[i] = T(l[i]);
+            }
+        }
+    }
+    return dst;
+}
+
+template <typename T>
+std::unique_ptr<uint8_t[]> fromLinearToRGBM(const LinearImage& image) {
+    using namespace math;
+    size_t w = image.getWidth();
+    size_t h = image.getHeight();
+    std::unique_ptr<uint8_t[]> dst(new uint8_t[w * h * 4 * sizeof(T)]);
+    T* d = reinterpret_cast<T*>(dst.get());
+    for (size_t y = 0; y < h; ++y) {
+        float3 const* p = reinterpret_cast<float3 const*>(image.getPixelRef(0, y));
         for (size_t x = 0; x < w; ++x, ++p, d += 4) {
             float4 l(linearToRGBM(*p) * std::numeric_limits<T>::max());
             for (size_t i = 0; i < 4; i++) {

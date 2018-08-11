@@ -14,6 +14,9 @@ set(PUBLIC_HDRS
 
 set(SRCS
         src/Image.cpp
+        src/LinearImage.cpp
+        src/ImageSampler.cpp
+        src/ImageOps.cpp
 )
 
 # ==================================================================================================
@@ -23,7 +26,7 @@ include_directories(${PUBLIC_HDR_DIR})
 
 add_library(${TARGET} STATIC ${PUBLIC_HDRS} ${SRCS})
 
-target_link_libraries(${TARGET} PUBLIC math)
+target_link_libraries(${TARGET} PUBLIC math utils)
 
 target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
 
@@ -40,3 +43,11 @@ target_compile_options(${TARGET} PRIVATE
 # ==================================================================================================
 add_library(image_headers INTERFACE)
 target_include_directories(image_headers INTERFACE ${PUBLIC_HDR_DIR})
+
+# ==================================================================================================
+# Tests
+# ==================================================================================================
+add_executable(test_${TARGET}
+        tests/test_image.cpp
+)
+target_link_libraries(test_${TARGET} PRIVATE image imageio gtest)
