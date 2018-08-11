@@ -203,8 +203,8 @@ public:
         bool operator< (Iterator const& rhs) const { return (index <  rhs.index); }
 
         // Postfix operator needed by Microsoft STL.
-        Iterator operator++(int) { Iterator it(*this); index++; return it; }
-        Iterator operator--(int) { Iterator it(*this); index--; return it; }
+        const Iterator operator++(int) { Iterator it(*this); index++; return it; }
+        const Iterator operator--(int) { Iterator it(*this); index--; return it; }
     };
 
     iterator begin() noexcept { return { this, 0u }; }
@@ -622,7 +622,7 @@ StructureOfArraysBase<Allocator, Elements...>::StructureRef::assign(
     // implements StructureRef& StructureRef::operator=(Structure const& rhs)
     auto UTILS_UNUSED l = { (soa->elementAt<Is>(index) = std::get<Is>(rhs.elements), 0)... };
     return *this;
-};
+}
 
 template<typename Allocator, typename... Elements>
 template<size_t... Is>

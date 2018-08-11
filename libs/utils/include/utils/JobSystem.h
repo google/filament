@@ -75,7 +75,7 @@ public:
             (CACHELINE_SIZE % sizeof(Job) == 0),
             "A Job must be N cache-lines long or N Jobs must fit in a cache line exactly.");
 
-    JobSystem(size_t threadCount = 0, size_t adoptableThreadsCount = 1) noexcept;
+    explicit JobSystem(size_t threadCount = 0, size_t adoptableThreadsCount = 1) noexcept;
 
     ~JobSystem();
 
@@ -269,7 +269,7 @@ private:
         static constexpr uint32_t m = 0x7fffffffu;
         uint32_t mState; // must be 0 < seed < 0x7fffffff
     public:
-        inline constexpr default_random_engine(uint32_t seed = 1u) noexcept
+        inline constexpr explicit default_random_engine(uint32_t seed = 1u) noexcept
                 : mState(((seed % m) == 0u) ? 1u : seed % m) {
         }
         inline uint32_t operator()() noexcept {

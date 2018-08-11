@@ -194,13 +194,13 @@ public:
 };
 
 template<typename VECTOR, typename INDEX, typename, typename>
-Box RenderableManager::computeAABB(VECTOR const* positions, INDEX const* indices, size_t count,
+Box RenderableManager::computeAABB(VECTOR const* vertices, INDEX const* indices, size_t count,
         size_t stride) noexcept {
     math::float3 bmin(std::numeric_limits<float>::max());
     math::float3 bmax(std::numeric_limits<float>::lowest());
     for (size_t i = 0; i < count; ++i) {
         VECTOR const* p = reinterpret_cast<VECTOR const*>(
-                (char const*)positions + indices[i] * stride);
+                (char const*)vertices + indices[i] * stride);
         const math::float3 v(p->x, p->y, p->z);
         bmin = min(bmin, v);
         bmax = max(bmax, v);
