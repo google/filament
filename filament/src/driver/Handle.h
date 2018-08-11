@@ -55,7 +55,7 @@ public:
 
     HandleBase() noexcept : object(nullid) { }
 
-    explicit HandleBase(no_init) noexcept { }
+    explicit HandleBase(no_init) noexcept { } // NOLINT
 
     explicit HandleBase(HandleId id) noexcept : object(id) {
         assert(object != nullid); // usually means an uninitialized handle is used
@@ -66,7 +66,7 @@ public:
 
 #ifndef NDEBUG
     // implement move ctor and copy operator for safety
-    HandleBase(HandleBase&& rhs) noexcept {
+    HandleBase(HandleBase&& rhs) noexcept : object(nullid) {
         std::swap(object, rhs.object);
     }
     HandleBase& operator = (HandleBase&& rhs) noexcept {
@@ -77,14 +77,16 @@ public:
 
     void clear() noexcept { object = nullid; }
 
-    operator bool() const noexcept { return object != nullid; }
+    explicit operator bool() const noexcept { return object != nullid; }
+
+    bool operator==(const HandleBase& rhs) noexcept { return object == rhs.object; }
+    bool operator!=(const HandleBase& rhs) noexcept { return object != rhs.object; }
 
     // get this handle's handleId
     HandleId getId() const noexcept { return object; }
 
 protected:
     HandleId object;
-
 };
 
 template <typename T>

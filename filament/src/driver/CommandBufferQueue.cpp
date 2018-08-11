@@ -103,7 +103,7 @@ void CommandBufferQueue::flush() noexcept {
 
 std::vector<CommandBufferQueue::Slice> CommandBufferQueue::waitForCommands() const {
     std::unique_lock<utils::Mutex> lock(mLock);
-    while (!mCommandBuffersToExecute.size() && !mExitRequested) {
+    while (mCommandBuffersToExecute.empty() && !mExitRequested) {
         mCondition.wait(lock);
     }
     return std::move(mCommandBuffersToExecute);

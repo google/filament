@@ -110,7 +110,7 @@ UniformInterfaceBlock FEngine::PostProcessingUib::getUib() noexcept {
 }
 
 SamplerInterfaceBlock FEngine::PerViewSib::getSib() noexcept {
-   return SibGenerator::getPerViewSib();
+    return SibGenerator::getPerViewSib();
 }
 
 SamplerInterfaceBlock FEngine::PostProcessSib::getSib() noexcept {
@@ -237,7 +237,7 @@ void FEngine::shutdown() {
     size_t wm = mCommandBufferQueue.getHigWatermark();
     size_t wmpct = wm / (CONFIG_COMMAND_BUFFERS_SIZE / 100);
     slog.d << "CircularBuffer: High watermark "
-            << wm / 1024 << " KiB (" << wmpct << "%)" << io::endl;
+           << wm / 1024 << " KiB (" << wmpct << "%)" << io::endl;
 #endif
 
     DriverApi& driver = getDriverApi();
@@ -348,7 +348,7 @@ int FEngine::loop() {
         mExternalContext = ExternalContext::create(&mBackend);
 #if !defined(NDEBUG)
         slog.d << "FEngine resolved backend: "
-                << (mBackend == driver::Backend::VULKAN ? "Vulkan" : "OpenGL") << io::endl;
+               << (mBackend == driver::Backend::VULKAN ? "Vulkan" : "OpenGL") << io::endl;
 #endif
     }
     mDriver = mExternalContext->createDriver(mSharedGLContext);
@@ -578,7 +578,7 @@ void FEngine::cleanupResourceList(ResourceList<T, L>& list) {
     if (!list.empty()) {
 #ifndef NDEBUG
         slog.d << "cleaning up " << list.size()
-                << " leaked " << CallStack::typeName<T>().c_str() << io::endl;
+               << " leaked " << CallStack::typeName<T>().c_str() << io::endl;
 #endif
         // Move the list (copy-and-clear). We can only modify/access the list from this
         // thread, because it's not thread-safe.
@@ -602,9 +602,9 @@ void FEngine::terminateAndDestroy(const T* ptr, ResourceList<T, L>& list) {
             // object not found, do nothing and log an error on DEBUG builds.
 #ifndef NDEBUG
             slog.d << "object "
-                    << CallStack::typeName<T>().c_str()
-                    << " at " << ptr << " doesn't exist!"
-                    << io::endl;
+                   << CallStack::typeName<T>().c_str()
+                   << " at " << ptr << " doesn't exist!"
+                   << io::endl;
 #endif
         }
     }

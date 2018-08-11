@@ -1313,8 +1313,8 @@ void OpenGLDriver::destroyStream(Driver::StreamHandle sh) {
             if (s->gl.fbo) {
                 glDeleteFramebuffers(1, &s->gl.fbo);
             }
-            for (size_t i = 0; i < GLStream::ROUND_ROBIN_TEXTURE_COUNT; i++) {
-                mContextManager.destroyExternalTextureStorage(s->user_thread.infos[i].ets);
+            for (auto const& info : s->user_thread.infos) {
+                mContextManager.destroyExternalTextureStorage(info.ets);
             }
         }
         destruct(sh, s);

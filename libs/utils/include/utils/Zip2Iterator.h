@@ -79,14 +79,14 @@ public:
     }
 
     // Postfix operator needed by Microsoft C++
-    Zip2Iterator operator++(int) {
+    const Zip2Iterator operator++(int) {
         Zip2Iterator t(*this);
         mIt.first++;
         mIt.second++;
         return t;
     }
 
-    Zip2Iterator operator--(int) {
+    const Zip2Iterator operator--(int) {
         Zip2Iterator t(*this);
         mIt.first--;
         mIt.second--;

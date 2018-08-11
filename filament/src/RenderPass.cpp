@@ -114,7 +114,7 @@ void RenderPass::recordDriverCommands(
         Slice<Command> const& commands) noexcept {
     SYSTRACE_CALL();
 
-    if (commands.size()) {
+    if (!commands.empty()) {
         FMaterialInstance const* UTILS_RESTRICT previousMi = nullptr;
         FMaterial const* UTILS_RESTRICT ma = nullptr;
         Command const* UTILS_RESTRICT c;

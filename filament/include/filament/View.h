@@ -103,7 +103,7 @@ public:
             // this one exists for backward compatibility
         }
 
-        DynamicResolutionOptions(bool enabled) : enabled(enabled) { }
+        explicit DynamicResolutionOptions(bool enabled) : enabled(enabled) { }
 
         math::float2 minScale = math::float2(0.5f);     //!< minimum scale factors in x and y
         math::float2 maxScale = math::float2(1.0f);     //!< maximum scale factors in x and y

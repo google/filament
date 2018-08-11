@@ -81,7 +81,7 @@ public:
     using StringLiteral = const char[N];
 
     template <size_t N>
-    StaticString(StringLiteral<N> const& other) noexcept
+    StaticString(StringLiteral<N> const& other) noexcept // NOLINT(google-explicit-constructor)
         : mString(other),
           mLength(size_type(N - 1)) {
     }
@@ -91,13 +91,12 @@ public:
               mLength(size_type(length)) {
     }
 
-
     template<size_t N>
     StaticString& operator=(StringLiteral<N> const& other) noexcept {
         mString = other;
         mLength = size_type(N - 1);
+        return *this;
     }
-
 
     const_pointer c_str() const noexcept { return mString; }
     const_pointer data() const noexcept { return mString; }

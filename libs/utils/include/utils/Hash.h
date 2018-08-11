@@ -17,6 +17,9 @@
 #ifndef TNT_UTILS_HASH_H
 #define TNT_UTILS_HASH_H
 
+#include <stdint.h>
+#include <stddef.h>
+
 namespace utils {
 namespace hash {
 

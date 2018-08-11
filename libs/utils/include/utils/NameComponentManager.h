@@ -33,7 +33,7 @@ namespace details {
 class SafeString {
 public:
     SafeString() noexcept = default;
-    SafeString(const char* str) noexcept : mCStr(strdup(str)) { }
+    explicit SafeString(const char* str) noexcept : mCStr(strdup(str)) { }
     SafeString(SafeString&& rhs) noexcept : mCStr(rhs.mCStr) { rhs.mCStr = nullptr; }
     SafeString& operator=(SafeString&& rhs) noexcept {
         mCStr = rhs.mCStr;
@@ -53,7 +53,7 @@ class NameComponentManager : public SingleInstanceComponentManager<details::Safe
 public:
     using Instance = EntityInstance<NameComponentManager>;
 
-    NameComponentManager(EntityManager& em);
+    explicit NameComponentManager(EntityManager& em);
     ~NameComponentManager();
 
     using SingleInstanceComponentManager::hasComponent;

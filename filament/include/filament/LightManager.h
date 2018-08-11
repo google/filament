@@ -223,7 +223,7 @@ public:
          *
          * @param type #Type of Light object to create.
          */
-        Builder(Type type) noexcept;
+        explicit Builder(Type type) noexcept;
         Builder(Builder const& rhs) noexcept;
         Builder(Builder&& rhs) noexcept;
         ~Builder() noexcept;
