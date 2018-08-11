@@ -46,7 +46,7 @@ float ev100(float aperture, float shutterSpeed, float sensitivity) noexcept {
     // EV100 = log2((N^2 / t) * (100 / S))
     //
     // Reference: https://en.wikipedia.org/wiki/Exposure_value
-    return static_cast<float>(std::log2((aperture * aperture) / shutterSpeed * 100.0f / sensitivity));
+    return std::log2((aperture * aperture) / shutterSpeed * 100.0f / sensitivity);
 }
 
 float ev100FromLuminance(float luminance) noexcept {
@@ -61,7 +61,7 @@ float ev100FromLuminance(float luminance) noexcept {
     // EV100 = log2(L * 100 / 12.5)
     //
     // Reference: https://en.wikipedia.org/wiki/Exposure_value
-    return static_cast<float>(std::log2(luminance * (100.0f / 12.5f)));
+    return std::log2(luminance * (100.0f / 12.5f));
 }
 
 float ev100FromIlluminance(float illuminance) noexcept {
@@ -78,7 +78,7 @@ float ev100FromIlluminance(float illuminance) noexcept {
     // EV100 = log2(E * 100 / 250)
     //
     // Reference: https://en.wikipedia.org/wiki/Exposure_value
-    return static_cast<float>(std::log2(illuminance * (100.0f / 250.0f)));
+    return std::log2(illuminance * (100.0f / 250.0f));
 }
 
 float exposure(const Camera& c) noexcept {

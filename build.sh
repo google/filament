@@ -34,6 +34,8 @@ function print_help {
     echo "        Restrict the number of make/ninja jobs."
     echo "    -t"
     echo "        Generate the Android toolchain, requires \$ANDROID_HOME to be set."
+    echo "    -u"
+    echo "        Run all unit tests, will trigger a debug build if needed."
     echo "    -v"
     echo "        Add Vulkan support to the Android build."
     echo ""
@@ -74,6 +76,8 @@ ISSUE_DESKTOP_BUILD=true
 ISSUE_ARCHIVES=false
 
 ISSUE_CMAKE_ALWAYS=false
+
+RUN_TESTS=false
 
 ENABLE_JAVA=ON
 
@@ -324,11 +328,25 @@ function validate_build_command {
     set -e
 }
 
+function run_test {
+    # The argument might contain flags (--gtest_filter for instance)
+    # Treat $1 with care
+    test=$1
+    test_name=`basename $1`
+    ./out/cmake-debug/$test --gtest_output="xml:out/test-results/$test_name/sponge_log.xml"
+}
+
+function run_tests {
+    while read test; do
+        run_test "$test"
+    done < build/common/test_list.txt
+}
+
 # Beginning of the script
 
 pushd `dirname $0` > /dev/null
 
-while getopts ":hacfijmp:tv" opt; do
+while getopts ":hacfijmp:tuv" opt; do
     case ${opt} in
         h)
             print_help
@@ -372,6 +390,10 @@ while getopts ":hacfijmp:tv" opt; do
             ;;
         t)
             GENERATE_TOOLCHAINS=true
+            ;;
+        u)
+            ISSUE_DEBUG_BUILD=true
+            RUN_TESTS=true
             ;;
         v)
             VULKAN_ANDROID_OPTION="-DFILAMENT_SUPPORTS_VULKAN=ON"
@@ -431,4 +453,8 @@ fi
 
 if [ "$ISSUE_ANDROID_BUILD" == "true" ]; then
     build_android
+fi
+
+if [ "$RUN_TESTS" == "true" ]; then
+    run_tests
 fi

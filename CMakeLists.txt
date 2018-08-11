@@ -108,10 +108,17 @@ if ("${CMAKE_C_COMPILER_ID}" STREQUAL "GNU" OR "${CMAKE_CXX_COMPILER_ID}" STREQU
     return()
 endif()
 
+# Detect use of the clang-cl.exe frontend, which does not support all of clangs normal options
+if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" AND "${CMAKE_CXX_SIMULATE_ID}" STREQUAL "MSVC")
+    set(CLANG_CL true)
+endif()
+
 # ==================================================================================================
 # Release compiler flags
 # ==================================================================================================
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fomit-frame-pointer -ffunction-sections -fdata-sections")
+if (NOT CLANG_CL)
+    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fomit-frame-pointer -ffunction-sections -fdata-sections")
+endif()
 
 # On Android RELEASE builds, we disable exceptions and RTTI to save some space (about 75 KiB
 # saved by -fno-exception and 10 KiB saved by -fno-rtti).
@@ -132,11 +139,11 @@ set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${EXTRA_SANITIZE_OPTIONS}")
 # Linker flags
 # ==================================================================================================
 # Strip unused sections
-set(GC_SECTIONS "--gc-sections")
-set(B_SYMBOLIC_FUNCTIONS "-Bsymbolic-functions")
+set(GC_SECTIONS "-Wl,--gc-sections")
+set(B_SYMBOLIC_FUNCTIONS "-Wl,-Bsymbolic-functions")
 
 if (APPLE)
-    set(GC_SECTIONS "-dead_strip")
+    set(GC_SECTIONS "-Wl,-dead_strip")
     set(B_SYMBOLIC_FUNCTIONS "")
 
     # tell ranlib to ignore empty compilation units
@@ -145,10 +152,13 @@ if (APPLE)
     # prevents ar from invoking ranlib, let CMake do it
     set(CMAKE_C_ARCHIVE_CREATE   "<CMAKE_AR> qc -S <TARGET> <LINK_FLAGS> <OBJECTS>")
     set(CMAKE_CXX_ARCHIVE_CREATE "<CMAKE_AR> qc -S <TARGET> <LINK_FLAGS> <OBJECTS>")
+elseif (CLANG_CL)
+    set(GC_SECTIONS "")
+    set(B_SYMBOLIC_FUNCTIONS "")
 endif()
 
-set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS}  -Wl,${GC_SECTIONS}")
-set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,${GC_SECTIONS} -Wl,${B_SYMBOLIC_FUNCTIONS}")
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${GC_SECTIONS}")
+set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${GC_SECTIONS} ${B_SYMBOLIC_FUNCTIONS}")
 
 # ==================================================================================================
 # Project flags

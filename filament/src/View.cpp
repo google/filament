@@ -305,7 +305,7 @@ void FView::prepareLighting(FEngine& engine, FEngine::DriverApi& driver, ArenaSc
     const CameraInfo& camera = mViewingCameraInfo;
     FScene* const scene = mScene;
 
-    scene->prepareLights(camera);
+    scene->prepareLights(camera, arena);
 
     // here the array of visible lights has been shrunk to CONFIG_MAX_LIGHT_COUNT
     auto const& lightData = scene->getLightData();
