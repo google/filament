@@ -158,6 +158,10 @@ public:
     const utils::Slice<FroxelEntry>& getFroxelBufferUser() const { return mFroxelBufferUser; }
     const utils::Slice<RecordBufferType>& getRecordBufferUser() const { return mRecordBufferUser; }
 
+    // this is chosen so froxelizePointAndSpotLight() vectorizes 4 froxel tests / spotlight
+    // with 256 lights this implies 8 jobs (256 / 32) for froxelization.
+    using LightGroupType = uint32_t;
+
 private:
     struct LightRecord {
         using bitset = utils::bitset<uint64_t, (CONFIG_MAX_LIGHT_COUNT + 63) / 64>;
@@ -175,22 +179,19 @@ private:
     };
 
     // The first entry always encodes the type of light, i.e. point/spot
-    using ThreadData = std::array<uint64_t, FROXEL_BUFFER_ENTRY_COUNT_MAX + 1>;
-
+    using FroxelThreadData = std::array<LightGroupType, FROXEL_BUFFER_ENTRY_COUNT_MAX + 1>;
 
     void setViewport(Viewport const& viewport) noexcept;
     void setProjection(const math::mat4f& projection, float near, float far) noexcept;
     bool update() noexcept;
 
     void froxelizeLoop(FEngine& engine,
-            utils::Slice<ThreadData>& froxelThreadData,
             const math::mat4f& viewMatrix, const FScene::LightSoa& lightData) noexcept;
 
-    void froxelizeAssignRecordsCompress(
-            utils::Slice<ThreadData> const& froxelThreadData) noexcept;
+    void froxelizeAssignRecordsCompress() noexcept;
 
     void froxelizePointAndSpotLight(
-            ThreadData& froxelThread, size_t bit,
+            FroxelThreadData& froxelThread, size_t bit,
             math::mat4f const& projection, const LightParams& light) const noexcept;
 
     uint16_t getFroxelIndex(size_t ix, size_t iy, size_t iz) const noexcept {
@@ -213,7 +214,7 @@ private:
     math::float4* mPlanesY = nullptr;
     math::float4* mBoundingSpheres = nullptr;
 
-    utils::Slice<ThreadData> mFroxelThreadData;         // 256 KiB w/  256 lights
+    utils::Slice<FroxelThreadData> mFroxelShardedData;  // 256 KiB w/  256 lights
     utils::Slice<FroxelEntry> mFroxelBufferUser;        //  32 KiB w/ 8192 froxels
 
     // max 32 KiB  (actual: resolution dependant)

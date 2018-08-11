@@ -45,11 +45,14 @@ template<typename T, size_t N = 1,
         typename = typename std::enable_if<std::is_integral<T>::value &&
                                            std::is_unsigned<T>::value>::type>
 class bitset {
-    static constexpr T BITS_PER_WORD = sizeof(T) * 8;
-    static constexpr T BIT_COUNT = BITS_PER_WORD * N;
     T storage[N];
 
 public:
+    static constexpr T BITS_PER_WORD = sizeof(T) * 8;
+    static constexpr T BIT_COUNT = BITS_PER_WORD * N;
+    static constexpr T WORLD_COUNT = N;
+    using container_type = T;
+
     bitset() noexcept {
         std::fill(std::begin(storage), std::end(storage), 0);
     }
