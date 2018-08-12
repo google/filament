@@ -100,8 +100,13 @@ list(APPEND APP_LIBS sample-app)
 
 set(COMPILER_FLAGS
         -Wno-extern-c-compat
-        $<$<NOT:$<PLATFORM_ID:Linux>>:-Wno-address-of-packed-member>
-        $<$<CONFIG:Release>:-ffast-math>)
+        $<$<NOT:$<PLATFORM_ID:Linux>>:-Wno-address-of-packed-member>)
+
+if (MSVC OR CLANG_CL)
+    set(COMPILER_FLAGS ${COMPILER_FLAGS} $<$<CONFIG:Release>:/fp:fast>)
+else()
+    set(COMPILER_FLAGS ${COMPILER_FLAGS} $<$<CONFIG:Release>:-ffast-math>)
+endif()
 
 # ==================================================================================================
 # Test apps
