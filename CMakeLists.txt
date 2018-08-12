@@ -59,6 +59,21 @@ set(FILAMENT ${CMAKE_SOURCE_DIR})
 set(TOOLS ${CMAKE_SOURCE_DIR}/tools)
 
 # ==================================================================================================
+# Compiler check
+# ==================================================================================================
+if ("${CMAKE_C_COMPILER_ID}" STREQUAL "GNU" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+    message(FATAL_ERROR
+            "The GCC compiler is not supported, please use clang for both C and C++. "
+            "Please refer to README.md for more information.")
+    return()
+endif()
+
+# Detect use of the clang-cl.exe frontend, which does not support all of clangs normal options
+if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" AND "${CMAKE_CXX_SIMULATE_ID}" STREQUAL "MSVC")
+    set(CLANG_CL true)
+endif()
+
+# ==================================================================================================
 # General compiler flags
 # ==================================================================================================
 set(CXX_STANDARD "-std=c++14")
@@ -92,25 +107,17 @@ if (CYGWIN)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-exceptions -fno-rtti")
 endif()
 
+if (CLANG_CL)
+    # Since the "secure" replacements that MSVC suggests are not portable, disable
+    # the deprecation warnings. Also disable warnings about use of POSIX functions (i.e. "unlink").
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_DEPRECATE")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_DEPRECATE")
+endif()
+
 # Add colors to ninja builds
 if (UNIX AND CMAKE_GENERATOR STREQUAL "Ninja")
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fcolor-diagnostics")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fcolor-diagnostics")
-endif()
-
-# ==================================================================================================
-# Compiler check
-# ==================================================================================================
-if ("${CMAKE_C_COMPILER_ID}" STREQUAL "GNU" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-    message(FATAL_ERROR
-            "The GCC compiler is not supported, please use clang for both C and C++. "
-            "Please refer to README.md for more information.")
-    return()
-endif()
-
-# Detect use of the clang-cl.exe frontend, which does not support all of clangs normal options
-if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" AND "${CMAKE_CXX_SIMULATE_ID}" STREQUAL "MSVC")
-    set(CLANG_CL true)
 endif()
 
 # ==================================================================================================
