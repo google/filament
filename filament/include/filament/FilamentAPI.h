@@ -65,7 +65,7 @@ public:
     // none of these methods must be implemented inline because it's important that their
     // implementation be hidden from the public headers.
     template<typename ... ARGS>
-    BuilderBase(ARGS&& ...) noexcept;
+    explicit BuilderBase(ARGS&& ...) noexcept;
     BuilderBase() noexcept;
     ~BuilderBase() noexcept;
     BuilderBase(BuilderBase const& rhs) noexcept;

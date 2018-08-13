@@ -24,12 +24,11 @@ static constexpr size_t NAME = 0;
 NameComponentManager::NameComponentManager(EntityManager& em) {
 }
 
-NameComponentManager::~NameComponentManager() {
-}
+NameComponentManager::~NameComponentManager() = default;
 
 void NameComponentManager::setName(Instance instance, const char* name) noexcept {
     if (instance) {
-        elementAt<NAME>(instance) = { name };
+        elementAt<NAME>(instance) = details::SafeString{ name };
     }
 }
 

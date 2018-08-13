@@ -47,6 +47,8 @@ FRenderer::FRenderer(FEngine& engine) :
         mEngine(engine),
         mFrameSkipper(engine, 2),
         mFrameInfoManager(engine),
+        mIsRGB16FSupported(false),
+        mIsRGB8Supported(false),
         mPerRenderPassArena(engine.getPerRenderPassAllocator())
 {
 }

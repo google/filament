@@ -61,11 +61,11 @@ public:
      */
     void reset() noexcept;
 
-private:
     CyclicBarrier() = delete;
     CyclicBarrier(const CyclicBarrier&) = delete;
-    CyclicBarrier& operator =(const CyclicBarrier&) = delete;
+    CyclicBarrier& operator=(const CyclicBarrier&) = delete;
 
+private:
     enum class State {
         TRAP, RELEASE
     };

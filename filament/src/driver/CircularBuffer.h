@@ -35,7 +35,7 @@ public:
     //      This must be at least 2*requiredSize to avoid blocking on flush, however
     //      because sometimes the display can get ahead of the render() thread, it's good
     //      to set it to 3*requiredSize to avoid blocking the render thread (usually the UI thread).
-    CircularBuffer(size_t bufferSize);
+    explicit CircularBuffer(size_t bufferSize);
 
     // can't be moved or copy-constructed
     CircularBuffer(CircularBuffer const& rhs) = delete;

@@ -1,5 +1,5 @@
 filament/test/test_filament --gtest_filter=-FilamentTest.FroxelData
-filament/test/test_filament_exposure --gtest_filter=-FilamentExposureTest.SetExposure:FilamentExposureTest.*EV100*
+filament/test/test_filament_exposure --gtest_filter=-FilamentExposureWithEngineTest.SetExposure:FilamentExposureWithEngineTest.ComputeEV100
 libs/math/test_math
 libs/image/test_image
 libs/utils/test_utils

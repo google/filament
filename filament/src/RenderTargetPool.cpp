@@ -53,7 +53,7 @@ RenderTargetPool::Target const* RenderTargetPool::get(
 
     FEngine& engine = *mEngine;
     DriverApi& driver = engine.getDriverApi();
-
+    
     // Since we order the cache by width then by height, we can get a cached
     // entry with a smaller height. Only reuse if both dimensions are higher.
     auto pos = find(&entry);

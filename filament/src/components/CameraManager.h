@@ -41,7 +41,7 @@ class UTILS_PRIVATE FCameraManager : public CameraManager {
 public:
     using Instance = CameraManager::Instance;
 
-    FCameraManager(FEngine& engine) noexcept;
+    explicit FCameraManager(FEngine& engine) noexcept;
 
     ~FCameraManager() noexcept;
 

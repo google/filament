@@ -617,7 +617,7 @@ public:
     struct rebind { using other = STLAllocator<OTHER, ARENA>; };
 
 public:
-    STLAllocator(ARENA& arena) : mArena(arena) { }
+    explicit STLAllocator(ARENA& arena) : mArena(arena) { }
 
     TYPE* allocate(std::size_t n) {
         return static_cast<TYPE *>(mArena.alloc(n * sizeof(n), alignof(TYPE)));

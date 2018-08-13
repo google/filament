@@ -52,7 +52,7 @@ class ShadowMap;
  */
 class FRenderer : public Renderer {
 public:
-    FRenderer(FEngine& engine);
+    explicit FRenderer(FEngine& engine);
     ~FRenderer() noexcept;
 
     void init() noexcept;
@@ -82,13 +82,13 @@ private:
         utils::JobSystem::Job* jobFroxelize = nullptr;
         FView* const view;
         Handle<HwRenderTarget> const rth;
-        virtual void beginRenderPass(driver::DriverApi& driver, Viewport const& viewport, const CameraInfo& camera) noexcept override;
-        virtual void endRenderPass(DriverApi& driver, Viewport const& viewport) noexcept override;
+        void beginRenderPass(driver::DriverApi& driver, Viewport const& viewport, const CameraInfo& camera) noexcept override;
+        void endRenderPass(DriverApi& driver, Viewport const& viewport) noexcept override;
     public:
         ColorPass(const char* name, utils::JobSystem& js, utils::JobSystem::Job* jobFroxelize,
-                FView* view, Handle<HwRenderTarget> const rth);
+                FView* view, Handle<HwRenderTarget> rth);
         static void renderColorPass(FEngine& engine, utils::JobSystem& js,
-                Handle<HwRenderTarget> const rth,
+                Handle<HwRenderTarget> rth,
                 FView* view, Viewport const& scaledViewport,
                 utils::GrowingSlice<Command>& commands) noexcept;
     };
@@ -97,8 +97,8 @@ private:
     class ShadowPass final : public RenderPass {
         using DriverApi = driver::DriverApi;
         ShadowMap const& shadowMap;
-        virtual void beginRenderPass(driver::DriverApi& driver, Viewport const& viewport, const CameraInfo& camera) noexcept override;
-        virtual void endRenderPass(DriverApi& driver, Viewport const& viewport) noexcept override;
+        void beginRenderPass(driver::DriverApi& driver, Viewport const& viewport, const CameraInfo& camera) noexcept override;
+        void endRenderPass(DriverApi& driver, Viewport const& viewport) noexcept override;
     public:
         ShadowPass(const char* name, ShadowMap const& shadowMap) noexcept;
         static void renderShadowMap(FEngine& engine, utils::JobSystem& js,

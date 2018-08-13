@@ -716,8 +716,7 @@ size_t ShadowMap::intersectFrustums(
         float3 const* quadsVertices) noexcept {
 
 #pragma nounroll
-    for (size_t i = 0; i < 12; ++i) {
-        const Segment segment = sBoxSegments[i];
+    for (const Segment segment : sBoxSegments) {
         const float3 s0 = segmentsVertices[segment.v0];
         const float3 s1 = segmentsVertices[segment.v1];
         // each segment should only intersect with 2 quads at most
