@@ -329,9 +329,10 @@ function validate_build_command {
 }
 
 function run_test {
-    # The argument might contain flags (--gtest_filter for instance)
-    # Treat $1 with care
     test=$1
+    # The input string might contain arguments, so we use "set -- $test" to replace $1 with the
+    # first whitespace-separated token in the string.
+    set -- $test
     test_name=`basename $1`
     ./out/cmake-debug/$test --gtest_output="xml:out/test-results/$test_name/sponge_log.xml"
 }
