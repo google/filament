@@ -1,0 +1,550 @@
+/*
+ * Copyright (C) 2018 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include <string>
+#include <map>
+#include <vector>
+
+#include <getopt/getopt.h>
+
+#include <imgui.h>
+
+#include <utils/Path.h>
+
+#include <filament/Engine.h>
+#include <filament/DebugRegistry.h>
+#include <filament/IndirectLight.h>
+#include <filament/LightManager.h>
+#include <filament/Material.h>
+#include <filament/MaterialInstance.h>
+#include <filament/RenderableManager.h>
+#include <filament/Scene.h>
+#include <filament/TransformManager.h>
+#include <filament/View.h>
+
+#include <math/mat3.h>
+#include <math/mat4.h>
+#include <math/vec4.h>
+#include <math/norm.h>
+
+#include "app/Config.h"
+#include "app/IBL.h"
+#include "app/FilamentApp.h"
+#include "app/MeshAssimp.h"
+
+using namespace math;
+using namespace filament;
+using namespace filamat;
+using namespace utils;
+
+static constexpr uint8_t MATERIAL_UNLIT_PACKAGE[] = {
+    #include "generated/material/sandboxUnlit.inc"
+};
+
+static constexpr uint8_t MATERIAL_LIT_PACKAGE[] = {
+    #include "generated/material/sandboxLit.inc"
+};
+
+static constexpr uint8_t MATERIAL_LIT_FADE_PACKAGE[] = {
+    #include "generated/material/sandboxLitFade.inc"
+};
+
+static constexpr uint8_t MATERIAL_LIT_TRANSPARENT_PACKAGE[] = {
+    #include "generated/material/sandboxLitTransparent.inc"
+};
+
+static constexpr uint8_t MATERIAL_SUBSURFACE_PACKAGE[] = {
+    #include "generated/material/sandboxSubsurface.inc"
+};
+
+static constexpr uint8_t MATERIAL_CLOTH_PACKAGE[] = {
+    #include "generated/material/sandboxCloth.inc"
+};
+
+static constexpr uint8_t GROUND_SHADOW_PACKAGE[] = {
+    #include "generated/material/groundShadow.inc"
+};
+
+constexpr uint8_t MATERIAL_MODEL_UNLIT =       0;
+constexpr uint8_t MATERIAL_MODEL_LIT =         1;
+constexpr uint8_t MATERIAL_MODEL_SUBSURFACE =  2;
+constexpr uint8_t MATERIAL_MODEL_CLOTH =       3;
+
+constexpr uint8_t MATERIAL_UNLIT =       0;
+constexpr uint8_t MATERIAL_LIT =         1;
+constexpr uint8_t MATERIAL_SUBSURFACE =  2;
+constexpr uint8_t MATERIAL_CLOTH =       3;
+constexpr uint8_t MATERIAL_TRANSPARENT = 4;
+constexpr uint8_t MATERIAL_FADE =        5;
+constexpr uint8_t MATERIAL_COUNT =       6;
+
+constexpr uint8_t BLENDING_OPAQUE      = 0;
+constexpr uint8_t BLENDING_TRANSPARENT = 1;
+constexpr uint8_t BLENDING_FADE        = 2;
+
+static std::vector<Path> g_filenames;
+
+static Scene* g_scene = nullptr;
+
+std::unique_ptr<MeshAssimp> g_meshSet;
+static std::map<std::string, MaterialInstance*> g_meshMaterialInstances;
+static const Material* g_material[MATERIAL_COUNT];
+static MaterialInstance* g_materialInstance[MATERIAL_COUNT];
+static Entity g_light;
+static bool g_has_directional_light = true;
+
+static sRGBColor g_color = sRGBColor{0.69f, 0.69f, 0.69f};
+static float g_alpha = 1.0f;
+static float g_roughness = 0.6f;
+static float g_metallic = 0.0f;
+static float g_reflectance = 0.5f;
+static float g_clearCoat = 0.0f;
+static float g_clearCoatRoughness = 0.0f;
+static float g_anisotropy = 0.0f;
+static float g_thickness = 1.0f;
+static float g_subsurfacePower = 12.234f;
+static sRGBColor g_subsurfaceColor = sRGBColor{0.0f};
+static sRGBColor g_sheenColor = sRGBColor{0.83f, 0.0f, 0.0f};
+static int g_currentMaterialModel = MATERIAL_MODEL_LIT;
+static int g_currentBlending = BLENDING_OPAQUE;
+static bool g_castShadows = true;
+static sRGBColor g_lightColor = sRGBColor{0.98f, 0.92f, 0.89f};
+static float g_lightIntensity = 110000.0f;
+static float3 g_lightDirection = {0.6f, -1.0f, -0.8f};
+static float g_iblIntensity = 30000.0f;
+static float g_iblRotation = 0.0f;
+static float g_sunHaloSize = 10.0f;
+static float g_sunHaloFalloff = 80.0f;
+static float g_sunAngularRadius = 1.9f;
+static bool g_directional_light_enabled = true;
+
+static Config g_config;
+static bool g_shadowPlane = false;
+
+static void printUsage(char* name) {
+    std::string exec_name(Path(name).getName());
+    std::string usage(
+            "SAMPLE_MATERIAL is an example of clear coat materials\n"
+            "Usage:\n"
+            "    SAMPLE_MATERIAL [options] <mesh files (.obj, .fbx, COLLADA)>\n"
+            "Options:\n"
+            "   --help, -h\n"
+            "       Prints this message\n\n"
+            "   --api, -a\n"
+            "       Specify the backend API: opengl (default) or vulkan\n\n"
+            "   --ibl=<path to cmgen IBL>, -i <path>\n"
+            "       Applies an IBL generated by cmgen's deploy option\n\n"
+            "   --split-view, -v\n"
+            "       Splits the window into 4 views\n\n"
+            "   --scale=[number], -s [number]\n"
+            "       Applies uniform scale\n\n"
+            "   --shadow-plane, -p\n"
+            "       Enable shadow plane\n\n"
+    );
+    const std::string from("SAMPLE_MATERIAL");
+    for (size_t pos = usage.find(from); pos != std::string::npos; pos = usage.find(from, pos)) {
+        usage.replace(pos, from.length(), exec_name);
+    }
+    std::cout << usage;
+}
+
+static int handleCommandLineArgments(int argc, char* argv[], Config* config) {
+    static constexpr const char* OPTSTR = "ha:vps:i:";
+    static const struct option OPTIONS[] = {
+            { "help",       no_argument,       0, 'h' },
+            { "api",        required_argument, 0, 'a' },
+            { "ibl",        required_argument, 0, 'i' },
+            { "split-view", no_argument,       0, 'v' },
+            { "scale",      required_argument, 0, 's' },
+            { "shadow-plane", no_argument,     0, 'p' },
+            { 0, 0, 0, 0 }  // termination of the option list
+    };
+    int opt;
+    int option_index = 0;
+    while ((opt = getopt_long(argc, argv, OPTSTR, OPTIONS, &option_index)) >= 0) {
+        std::string arg(optarg ? optarg : "");
+        switch (opt) {
+            default:
+            case 'h':
+                printUsage(argv[0]);
+                exit(0);
+            case 'a':
+                if (arg == "opengl") {
+                    config->backend = Engine::Backend::OPENGL;
+                } else if (arg == "vulkan") {
+                    config->backend = Engine::Backend::VULKAN;
+                } else {
+                    std::cerr << "Unrecognized backend. Must be 'opengl'|'vulkan'." << std::endl;
+                }
+                break;
+            case 'i':
+                config->iblDirectory = arg;
+                break;
+            case 's':
+                try {
+                    config->scale = std::stof(arg);
+                } catch (std::invalid_argument& e) {
+                    // keep scale of 1.0
+                } catch (std::out_of_range& e) {
+                    // keep scale of 1.0
+                }
+                break;
+            case 'v':
+                config->splitView = true;
+                break;
+            case 'p':
+                g_shadowPlane = true;
+                break;
+        }
+    }
+
+    return optind;
+}
+
+static void cleanup(Engine* engine, View*, Scene*) {
+    for (auto material : g_meshMaterialInstances) {
+        engine->destroy(material.second);
+    }
+
+    for (size_t i = 0; i < MATERIAL_COUNT; i++) {
+        engine->destroy(g_materialInstance[i]);
+    }
+
+    for (size_t i = 0; i < MATERIAL_COUNT; i++) {
+        engine->destroy(g_material[i]);
+    }
+
+    g_meshSet.reset(nullptr);
+
+    engine->destroy(g_light);
+    EntityManager& em = EntityManager::get();
+    em.destroy(g_light);
+}
+
+static void setup(Engine* engine, View*, Scene* scene) {
+    g_scene = scene;
+
+    g_meshSet.reset(new MeshAssimp(*engine, MeshAssimp::TargetApi::OPENGL,
+            MeshAssimp::Platform::DESKTOP));
+
+    Package pkg;
+    g_material[MATERIAL_UNLIT] = Material::Builder()
+            .package((void*) MATERIAL_UNLIT_PACKAGE, sizeof(MATERIAL_UNLIT_PACKAGE))
+            .build(*engine);
+    g_materialInstance[MATERIAL_UNLIT] =
+            g_material[MATERIAL_UNLIT]->createInstance();
+
+    g_material[MATERIAL_LIT] = Material::Builder()
+            .package((void*) MATERIAL_LIT_PACKAGE, sizeof(MATERIAL_LIT_PACKAGE))
+            .build(*engine);
+    g_materialInstance[MATERIAL_LIT] =
+            g_material[MATERIAL_LIT]->createInstance();
+
+    g_material[MATERIAL_TRANSPARENT] = Material::Builder()
+            .package((void*) MATERIAL_LIT_TRANSPARENT_PACKAGE,
+                    sizeof(MATERIAL_LIT_TRANSPARENT_PACKAGE))
+            .build(*engine);
+    g_materialInstance[MATERIAL_TRANSPARENT] =
+            g_material[MATERIAL_TRANSPARENT]->createInstance();
+
+    g_material[MATERIAL_FADE] = Material::Builder()
+            .package((void*) MATERIAL_LIT_FADE_PACKAGE, sizeof(MATERIAL_LIT_FADE_PACKAGE))
+            .build(*engine);
+    g_materialInstance[MATERIAL_FADE] =
+            g_material[MATERIAL_FADE]->createInstance();
+
+    g_material[MATERIAL_SUBSURFACE] = Material::Builder()
+            .package((void*) MATERIAL_SUBSURFACE_PACKAGE, sizeof(MATERIAL_SUBSURFACE_PACKAGE))
+            .build(*engine);
+    g_materialInstance[MATERIAL_SUBSURFACE] =
+            g_material[MATERIAL_SUBSURFACE]->createInstance();
+
+    g_material[MATERIAL_CLOTH] = Material::Builder()
+            .package((void*) MATERIAL_CLOTH_PACKAGE, sizeof(MATERIAL_CLOTH_PACKAGE))
+            .build(*engine);
+    g_materialInstance[MATERIAL_CLOTH] =
+            g_material[MATERIAL_CLOTH]->createInstance();
+
+    for (auto& filename : g_filenames) {
+        g_meshSet->addFromFile(filename, g_meshMaterialInstances);
+    }
+
+    auto& tcm = engine->getTransformManager();
+    auto ei = tcm.getInstance(g_meshSet->getRenderables()[0]);
+    tcm.setTransform(ei, mat4f{ mat3f(g_config.scale), float3(0.0f, 0.0f, -4.0f) } *
+            tcm.getWorldTransform(ei));
+
+    auto& rcm = engine->getRenderableManager();
+    for (auto renderable : g_meshSet->getRenderables()) {
+        auto instance = rcm.getInstance(renderable);
+        if (!instance) continue;
+
+        rcm.setCastShadows(instance, g_castShadows);
+
+        for (size_t i = 0; i < rcm.getPrimitiveCount(instance); i++) {
+            rcm.setMaterialInstanceAt(instance, i, g_materialInstance[MATERIAL_LIT]);
+        }
+
+        scene->addEntity(renderable);
+    }
+
+    g_light = EntityManager::get().create();
+    LightManager::Builder(LightManager::Type::SUN)
+            .color(Color::toLinear<ACCURATE>(g_lightColor))
+            .intensity(g_lightIntensity)
+            .direction(g_lightDirection)
+            .castShadows(true)
+            .sunAngularRadius(g_sunAngularRadius)
+            .sunHaloSize(g_sunHaloSize)
+            .sunHaloFalloff(g_sunHaloFalloff)
+            .build(*engine, g_light);
+    scene->addEntity(g_light);
+
+    if (g_shadowPlane) {
+        EntityManager& em = EntityManager::get();
+        Material* shadowMaterial = Material::Builder()
+                .package((void*) GROUND_SHADOW_PACKAGE, sizeof(GROUND_SHADOW_PACKAGE))
+                .build(*engine);
+
+        const static uint32_t indices[] = {
+                0, 1, 2, 2, 3, 0
+        };
+
+        const static math::float3 vertices[] = {
+                { -10, 0, -10 },
+                { -10, 0,  10 },
+                {  10, 0,  10 },
+                {  10, 0, -10 },
+        };
+
+        short4 tbn = math::packSnorm16(normalize(positive(math::mat3f{
+                float3{1.0f, 0.0f, 0.0f}, float3{0.0f, 0.0f, 1.0f}, float3{0.0f, 1.0f, 0.0f}
+        }.toQuaternion())).xyzw);
+        const static math::short4 normals[] { tbn, tbn, tbn, tbn };
+
+        VertexBuffer* vertexBuffer = VertexBuffer::Builder()
+                .vertexCount(4)
+                .bufferCount(2)
+                .attribute(VertexAttribute::POSITION, 0, VertexBuffer::AttributeType::FLOAT3)
+                .attribute(VertexAttribute::TANGENTS, 1, VertexBuffer::AttributeType::SHORT4)
+                .normalized(VertexAttribute::TANGENTS)
+                .build(*engine);
+
+        vertexBuffer->setBufferAt(*engine, 0, VertexBuffer::BufferDescriptor(
+                vertices, vertexBuffer->getVertexCount() * sizeof(vertices[0])));
+        vertexBuffer->setBufferAt(*engine, 1, VertexBuffer::BufferDescriptor(
+                normals, vertexBuffer->getVertexCount() * sizeof(normals[0])));
+
+        IndexBuffer* indexBuffer = IndexBuffer::Builder()
+                .indexCount(6)
+                .build(*engine);
+
+        indexBuffer->setBuffer(*engine, IndexBuffer::BufferDescriptor(
+                indices, indexBuffer->getIndexCount() * sizeof(uint32_t)));
+
+        Entity planeRenderable = em.create();
+        RenderableManager::Builder(1)
+                .boundingBox({{ 0, 0, 0 },
+                              { 10, 1e-4f, 10 }})
+                .material(0, shadowMaterial->getDefaultInstance())
+                .geometry(0, RenderableManager::PrimitiveType::TRIANGLES,
+                        vertexBuffer, indexBuffer, 0, 6)
+                .culling(false)
+                .receiveShadows(true)
+                .castShadows(false)
+                .build(*engine, planeRenderable);
+
+        scene->addEntity(planeRenderable);
+
+        tcm.setTransform(tcm.getInstance(planeRenderable),
+                math::mat4f::translate(float4{0, -1, -4, 1}));
+    }
+}
+
+static void gui(filament::Engine* engine, filament::View* view) {
+    ImGui::SetNextWindowSize(ImVec2(0.0f, 0.0f));
+    ImGui::Begin("Parameters");
+    {
+        if (ImGui::CollapsingHeader("Material", ImGuiTreeNodeFlags_DefaultOpen)) {
+            ImGui::Combo("model", &g_currentMaterialModel,
+                    "unlit\0lit\0subsurface\0cloth\0\0");
+
+            if (g_currentMaterialModel == MATERIAL_MODEL_LIT) {
+                ImGui::Combo("blending", &g_currentBlending,
+                        "opaque\0transparent\0fade\0\0");
+            }
+
+            ImGui::ColorEdit3("baseColor", &g_color.r);
+
+            if (g_currentMaterialModel > MATERIAL_MODEL_UNLIT) {
+                if (g_currentBlending == BLENDING_TRANSPARENT ||
+                        g_currentBlending == BLENDING_FADE) {
+                    ImGui::SliderFloat("alpha", &g_alpha, 0.0f, 1.0f);
+                }
+                ImGui::SliderFloat("roughness", &g_roughness, 0.0f, 1.0f);
+                if (g_currentMaterialModel != MATERIAL_MODEL_CLOTH) {
+                    ImGui::SliderFloat("metallic", &g_metallic, 0.0f, 1.0f);
+                    ImGui::SliderFloat("reflectance", &g_reflectance, 0.0f, 1.0f);
+                }
+                if (g_currentMaterialModel != MATERIAL_MODEL_CLOTH &&
+                        g_currentMaterialModel != MATERIAL_MODEL_SUBSURFACE) {
+                    ImGui::SliderFloat("clearCoat", &g_clearCoat, 0.0f, 1.0f);
+                    ImGui::SliderFloat("clearCoatRoughness", &g_clearCoatRoughness, 0.0f, 1.0f);
+                    ImGui::SliderFloat("anisotropy", &g_anisotropy, -1.0f, 1.0f);
+                }
+                if (g_currentMaterialModel == MATERIAL_MODEL_SUBSURFACE) {
+                    ImGui::SliderFloat("thickness", &g_thickness, 0.0f, 1.0f);
+                    ImGui::SliderFloat("subsurfacePower", &g_subsurfacePower, 1.0f, 24.0f);
+                    ImGui::ColorEdit3("subsurfaceColor", &g_subsurfaceColor.r);
+                }
+                if (g_currentMaterialModel == MATERIAL_MODEL_CLOTH) {
+                    ImGui::ColorEdit3("sheenColor", &g_sheenColor.r);
+                    ImGui::ColorEdit3("subsurfaceColor", &g_subsurfaceColor.r);
+                }
+            }
+        }
+
+        if (ImGui::CollapsingHeader("Object")) {
+            ImGui::Checkbox("castShadows", &g_castShadows);
+        }
+
+        if (ImGui::CollapsingHeader("Light")) {
+            ImGui::Checkbox("enabled", &g_directional_light_enabled);
+            ImGui::ColorEdit3("color", &g_lightColor.r);
+            ImGui::SliderFloat("lux", &g_lightIntensity, 0.0f, 150000.0f);
+            ImGui::SliderFloat3("direction", &g_lightDirection.x, -1.0f, 1.0f);
+            ImGui::SliderFloat("sunSize", &g_sunAngularRadius, 0.1f, 10.0f);
+            ImGui::SliderFloat("haloSize", &g_sunHaloSize, 1.01f, 40.0f);
+            ImGui::SliderFloat("haloFalloff", &g_sunHaloFalloff, 0.0f, 2048.0f);
+            ImGui::SliderFloat("ibl", &g_iblIntensity, 0.0f, 50000.0f);
+            ImGui::SliderAngle("ibl rotation", &g_iblRotation);
+        }
+
+        if (ImGui::CollapsingHeader("Debug")) {
+            DebugRegistry& debug = engine->getDebugRegistry();
+            ImGui::Checkbox("Light Far uses shadow casters",
+                    debug.getPropertyAddress<bool>("d.shadowmap.far_uses_shadowcasters"));
+            ImGui::Checkbox("Focus shadow casters",
+                    debug.getPropertyAddress<bool>("d.shadowmap.focus_shadowcasters"));
+            bool* lispsm;
+            if (debug.getPropertyAddress<bool>("d.shadowmap.lispsm", &lispsm)) {
+                ImGui::Checkbox("Enable LiSPSM", lispsm);
+                if (*lispsm) {
+                    ImGui::SliderFloat("dzn",
+                            debug.getPropertyAddress<float>("d.shadowmap.dzn"), 0.0f, 1.0f);
+                    ImGui::SliderFloat("dzf",
+                            debug.getPropertyAddress<float>("d.shadowmap.dzf"),-1.0f, 0.0f);
+                }
+            }
+        }
+    }
+    ImGui::End();
+
+    int material = g_currentMaterialModel;
+    if (material == MATERIAL_MODEL_LIT) {
+        if (g_currentBlending == BLENDING_TRANSPARENT) material = MATERIAL_TRANSPARENT;
+        if (g_currentBlending == BLENDING_FADE) material = MATERIAL_FADE;
+    }
+    MaterialInstance* materialInstance = g_materialInstance[material];
+    if (g_currentMaterialModel == MATERIAL_MODEL_UNLIT) {
+        materialInstance->setParameter("baseColor", RgbType::sRGB, g_color);
+    }
+    if (g_currentMaterialModel == MATERIAL_MODEL_LIT) {
+        materialInstance->setParameter("baseColor", RgbType::sRGB, g_color);
+        materialInstance->setParameter("roughness", g_roughness);
+        materialInstance->setParameter("metallic", g_metallic);
+        materialInstance->setParameter("reflectance", g_reflectance);
+        materialInstance->setParameter("clearCoat", g_clearCoat);
+        materialInstance->setParameter("clearCoatRoughness", g_clearCoatRoughness);
+        materialInstance->setParameter("anisotropy", g_anisotropy);
+        if (g_currentBlending != BLENDING_OPAQUE) {
+            materialInstance->setParameter("alpha", g_alpha);
+        }
+    }
+    if (g_currentMaterialModel == MATERIAL_MODEL_SUBSURFACE) {
+        materialInstance->setParameter("baseColor", RgbType::sRGB, g_color);
+        materialInstance->setParameter("roughness", g_roughness);
+        materialInstance->setParameter("metallic", g_metallic);
+        materialInstance->setParameter("reflectance", g_reflectance);
+        materialInstance->setParameter("thickness", g_thickness);
+        materialInstance->setParameter("subsurfacePower", g_subsurfacePower);
+        materialInstance->setParameter("subsurfaceColor", RgbType::sRGB, g_subsurfaceColor);
+    }
+    if (g_currentMaterialModel == MATERIAL_MODEL_CLOTH) {
+        materialInstance->setParameter("baseColor", RgbType::sRGB, g_color);
+        materialInstance->setParameter("roughness", g_roughness);
+        materialInstance->setParameter("sheenColor", RgbType::sRGB, g_sheenColor);
+        materialInstance->setParameter("subsurfaceColor", RgbType::sRGB, g_subsurfaceColor);
+    }
+
+    auto& rcm = engine->getRenderableManager();
+    for (auto renderable : g_meshSet->getRenderables()) {
+        auto instance = rcm.getInstance(renderable);
+        if (!instance) continue;
+        for (size_t i = 0; i < rcm.getPrimitiveCount(instance); i++) {
+            rcm.setMaterialInstanceAt(instance, i, materialInstance);
+        }
+        rcm.setCastShadows(instance, g_castShadows);
+    }
+
+    auto& lcm = engine->getLightManager();
+    auto lightInstance = lcm.getInstance(g_light);
+    lcm.setColor(lightInstance, g_lightColor);
+    lcm.setIntensity(lightInstance, g_lightIntensity);
+    lcm.setDirection(lightInstance, normalize(g_lightDirection));
+    lcm.setSunAngularRadius(lightInstance, g_sunAngularRadius);
+    lcm.setSunHaloSize(lightInstance, g_sunHaloSize);
+    lcm.setSunHaloFalloff(lightInstance, g_sunHaloFalloff);
+
+    if (g_directional_light_enabled && !g_has_directional_light) {
+        g_scene->addEntity(g_light);
+        g_has_directional_light = true;
+    } else if (!g_directional_light_enabled && g_has_directional_light) {
+        g_scene->remove(g_light);
+        g_has_directional_light = false;
+    }
+
+    auto* ibl = FilamentApp::get().getIBL();
+    if (ibl) {
+        ibl->getIndirectLight()->setIntensity(g_iblIntensity);
+        ibl->getIndirectLight()->setRotation(
+                mat3f::rotate(g_iblRotation, float3{ 0, 1, 0 }));
+    }
+}
+
+int main_(Config g_config, std::string filename) {
+    // int option_index = handleCommandLineArgments(argc, argv, &g_config);
+    // int num_args = argc - option_index;
+    // if (num_args < 1) {
+    //     printUsage(argv[0]);
+    //     return 1;
+    // }
+	//
+    // for (int i = option_index; i < argc; i++) {
+    //     utils::Path filename = argv[i];
+    //     if (!filename.exists()) {
+    //         std::cerr << "file " << argv[option_index] << " not found!" << std::endl;
+    //         return 1;
+    //     }
+        g_filenames.push_back(filename);
+    // }
+
+    g_config.title = "Material Sandbox";
+    FilamentApp& filamentApp = FilamentApp::get();
+    filamentApp.run(g_config, setup, cleanup, gui);
+
+    return 0;
+}
