@@ -20,6 +20,8 @@
 #include <image/Image.h>
 #include <image/LinearImage.h>
 
+#include <utils/compiler.h>
+
 #include <math/scalar.h>
 #include <math/vec3.h>
 #include <math/vec4.h>
@@ -206,7 +208,7 @@ std::unique_ptr<uint8_t[]> fromLinearTosRGB(const LinearImage& image) {
     using math::float3;
     size_t w = image.getWidth();
     size_t h = image.getHeight();
-    size_t channels = image.getChannels();
+    UTILS_UNUSED_IN_RELEASE size_t channels = image.getChannels();
     assert(channels >= 3);
     std::unique_ptr<uint8_t[]> dst(new uint8_t[w * h * 3 * sizeof(T)]);
     T* d = reinterpret_cast<T*>(dst.get());
@@ -229,7 +231,7 @@ std::unique_ptr<uint8_t[]> fromLinearToRGB(const LinearImage& image) {
     using math::float3;
     size_t w = image.getWidth();
     size_t h = image.getHeight();
-    size_t channels = image.getChannels();
+    UTILS_UNUSED_IN_RELEASE size_t channels = image.getChannels();
     assert(channels >= 3);
     std::unique_ptr<uint8_t[]> dst(new uint8_t[w * h * 3 * sizeof(T)]);
     T* d = reinterpret_cast<T*>(dst.get());
@@ -252,7 +254,7 @@ std::unique_ptr<uint8_t[]> fromLinearToRGBM(const LinearImage& image) {
     using namespace math;
     size_t w = image.getWidth();
     size_t h = image.getHeight();
-    size_t channels = image.getChannels();
+    UTILS_UNUSED_IN_RELEASE size_t channels = image.getChannels();
     assert(channels >= 3);
     std::unique_ptr<uint8_t[]> dst(new uint8_t[w * h * 4 * sizeof(T)]);
     T* d = reinterpret_cast<T*>(dst.get());
