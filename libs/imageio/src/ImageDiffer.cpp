@@ -26,7 +26,7 @@
 
 namespace image {
 
-// TODO: (1) Remove usage of the old Image class. (2) Remove special treatment of 1-channel data.
+// TODO: Remove special treatment of 1-channel data.
 void updateOrCompare(LinearImage limgResult, const utils::Path& fnameGolden,
         ComparisonMode mode, float epsilon) {
     if (mode == ComparisonMode::SKIP) {
@@ -36,26 +36,15 @@ void updateOrCompare(LinearImage limgResult, const utils::Path& fnameGolden,
     // Regenerate the PNG file at the given path.
     if (mode == ComparisonMode::UPDATE) {
         std::ofstream out(fnameGolden, std::ios::binary | std::ios::trunc);
-        const size_t width = limgResult.getWidth();
-        const size_t height = limgResult.getHeight();
-        const size_t nchan = limgResult.getChannels();
-        const size_t bpp = nchan * sizeof(float), bpr = width * bpp, nbytes = bpr * height;
-        std::unique_ptr<uint8_t[]> data(new uint8_t[nbytes]);
-
         auto format = ImageEncoder::Format::PNG_LINEAR;
-        if (fnameGolden.getExtension() == "rgbm" && nchan == 3) {
+        if (fnameGolden.getExtension() == "rgbm") {
             format = ImageEncoder::Format::RGBM;
         }
-
-        if (nchan != 1) {
-            memcpy(data.get(), limgResult.getPixelRef(), nbytes);
-            Image im(std::move(data), width, height, bpr, bpp, nchan);
-            ImageEncoder::encode(out, format, im, "", fnameGolden);
+        if (limgResult.getChannels() != 1) {
+            ImageEncoder::encode(out, format, limgResult, "", fnameGolden);
         } else {
             auto limg2 = combineChannels({limgResult, limgResult, limgResult});
-            memcpy(data.get(), limg2.getPixelRef(), nbytes);
-            Image im(std::move(data), width, height, bpr, bpp, nchan);
-            ImageEncoder::encode(out, format, im, "", fnameGolden);
+            ImageEncoder::encode(out, format, limg2, "", fnameGolden);
         }
         return;
     }
@@ -63,20 +52,13 @@ void updateOrCompare(LinearImage limgResult, const utils::Path& fnameGolden,
     // Load the PNG file at the given path.
     std::ifstream in(fnameGolden, std::ios::binary);
     ASSERT_PRECONDITION(in, "Unable to open: %s", fnameGolden.c_str());
-    Image imgGolden = ImageDecoder::decode(in, fnameGolden, ImageDecoder::ColorSpace::LINEAR);
-    const size_t width = imgGolden.getWidth(), height = imgGolden.getHeight();
-    const size_t nchan = imgGolden.getChannelsCount();
+    LinearImage limgGolden = ImageDecoder::decode(in, fnameGolden, ImageDecoder::ColorSpace::LINEAR);
 
     // Convert 4-channel RGBM into proper RGB.
-    LinearImage limgGolden;
-    if (fnameGolden.getExtension() == "rgbm" && nchan == 4) {
+    if (fnameGolden.getExtension() == "rgbm" && limgGolden.getChannels() == 4) {
         limgGolden = toLinearFromRGBM(
-                static_cast<math::float4 const*>(imgGolden.getData()),
-                imgGolden.getWidth(), imgGolden.getHeight());
-    } else {
-        limgGolden = LinearImage(width, height, nchan);
-        memcpy(limgGolden.getPixelRef(), imgGolden.getData(),
-                width * height * sizeof(float) * nchan);
+                reinterpret_cast<math::float4 const*>(limgGolden.getPixelRef()),
+                limgGolden.getWidth(), limgGolden.getHeight());
     }
 
     // Expand the result image from L to RGB.
