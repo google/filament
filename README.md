@@ -41,6 +41,7 @@ Here are a few sample materials rendered with Filament:
 
 - Native C++ API for Android, Linux, macOS and Windows
 - Java/JNI API for Android, Linux, macOS and Windows
+- [Python bindings](https://github.com/artometa/pyfilament)
 
 ### Backends
 
