@@ -35,17 +35,15 @@ using namespace filament;
 using namespace filamat;
 using namespace utils;
 
-int add(int i, int j) {
-    return i + j;
-}
-
-extern int main_(Config config, std::vector<std::string> files);
+extern void py_set_mesh(std::vector<std::string> files);
+extern void py_setup(Engine* engine, View*, Scene* scene);
+extern void py_cleanup(Engine* engine, View*, Scene*);
+extern void py_gui(filament::Engine* engine, filament::View* view);
 
 PYBIND11_MODULE(pyfilament, m) {
-    // m.def("add", &add, "A function which adds two numbers");
     py::class_<FilamentApp>(m, "Filament_App")
         .def("run", &FilamentApp::run)
-        .def("get", &FilamentApp::get);
+        .def("get", &FilamentApp::get, py::return_value_policy::reference);
 
     // py::class_<filament::Engine> engine(m, "engine");
     py::enum_<Engine::Backend>(m, "Backend")
@@ -68,7 +66,9 @@ PYBIND11_MODULE(pyfilament, m) {
                 Engine::Backend::OPENGL :
                 Engine::Backend::VULKAN);
             });
-        // .def(py::init<std::string, std::string, float, bool, Engine::Backend>());
 
-    m.def("main", &main_);
+    m.def("set_mesh", &py_set_mesh);
+    m.def("setup", &py_setup);
+    m.def("cleanup", &py_cleanup);
+    m.def("gui", &py_gui);
 }

@@ -27,5 +27,7 @@ if __name__ == "__main__":
     config.ibl_dir = os.path.abspath(args.ibl)
     config.backend = args.api
     print(config.title, config.backend)
-    model = [os.path.abspath(mesh) for mesh in args.mesh]
-    filament.main(config, model)
+    models = [os.path.abspath(mesh) for mesh in args.mesh]
+    filament.set_mesh(models)
+    app = filament.Filament_App.get()
+    app.run(config, filament.setup, filament.cleanup, filament.gui)

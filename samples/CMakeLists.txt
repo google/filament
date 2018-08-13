@@ -4,6 +4,7 @@ project(filament-samples)
 # ==================================================================================================
 # Build materials
 # ==================================================================================================
+
 set(MATERIAL_SRCS
         materials/bakedColor.mat
         materials/bakedTexture.mat

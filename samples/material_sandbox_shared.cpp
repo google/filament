@@ -132,7 +132,7 @@ static bool g_directional_light_enabled = true;
 static Config g_config;
 static bool g_shadowPlane = false;
 
-static void cleanup(Engine* engine, View*, Scene*) {
+void py_cleanup(Engine* engine, View*, Scene*) {
     for (auto material : g_meshMaterialInstances) {
         engine->destroy(material.second);
     }
@@ -152,7 +152,7 @@ static void cleanup(Engine* engine, View*, Scene*) {
     em.destroy(g_light);
 }
 
-static void setup(Engine* engine, View*, Scene* scene) {
+void py_setup(Engine* engine, View*, Scene* scene) {
     g_scene = scene;
 
     g_meshSet.reset(new MeshAssimp(*engine, MeshAssimp::TargetApi::OPENGL,
@@ -292,7 +292,7 @@ static void setup(Engine* engine, View*, Scene* scene) {
     }
 }
 
-static void gui(filament::Engine* engine, filament::View* view) {
+void py_gui(filament::Engine* engine, filament::View* view) {
     ImGui::SetNextWindowSize(ImVec2(0.0f, 0.0f));
     ImGui::Begin("Parameters");
     {
@@ -443,13 +443,7 @@ static void gui(filament::Engine* engine, filament::View* view) {
     }
 }
 
-int main_(Config g_config, std::vector<std::string> files) {
+void py_set_mesh(std::vector<std::string> files) {
     for (auto &file: files)
         g_filenames.push_back(file);
-
-    g_config.title = "Material Sandbox";
-    FilamentApp& filamentApp = FilamentApp::get();
-    filamentApp.run(g_config, setup, cleanup, gui);
-
-    return 0;
 }
