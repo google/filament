@@ -100,7 +100,8 @@ Many other features have been either prototyped or planned:
     - `filaflat`:              Serialization/deserialization library used for materials
     - `filagui`:               Helper library for [Dear ImGui](https://github.com/ocornut/imgui)
     - `filamat`:               Material generation library
-    - `image`:                 Image library, only intended for internal use
+    - `image`:                 Image filtering and simple transforms
+    - `imageio`:               Image file reading / writing, only intended for internal use
     - `math`:                  Math library
     - `utils`:                 Utility library (threads, memory, data structures, etc.)
   - `samples`:               Sample desktop applications

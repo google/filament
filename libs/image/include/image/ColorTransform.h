@@ -18,6 +18,7 @@
 #define IMAGE_COLORSPACE_H_
 
 #include <image/Image.h>
+#include <image/LinearImage.h>
 
 #include <math/scalar.h>
 #include <math/vec3.h>
@@ -190,6 +191,75 @@ std::unique_ptr<uint8_t[]> fromLinearToRGBM(const Image& image) {
         float3 const* p = static_cast<float3 const*>(image.getPixelRef(0, y));
         for (size_t x = 0; x < w; ++x, ++p, d += 4) {
             float4 l(linearToRGBM(*p) * std::numeric_limits<T>::max());
+            for (size_t i = 0; i < 4; i++) {
+                d[i] = T(l[i]);
+            }
+        }
+    }
+    return dst;
+}
+
+// Creates a 3-channel sRGB u8 image from a linear f32 image.
+// The source image can have three or more channels, but only the first three are honored.
+template <typename T>
+std::unique_ptr<uint8_t[]> fromLinearTosRGB(const LinearImage& image) {
+    using math::float3;
+    size_t w = image.getWidth();
+    size_t h = image.getHeight();
+    size_t channels = image.getChannels();
+    assert(channels >= 3);
+    std::unique_ptr<uint8_t[]> dst(new uint8_t[w * h * 3 * sizeof(T)]);
+    T* d = reinterpret_cast<T*>(dst.get());
+    for (size_t y = 0; y < h; ++y) {
+        for (size_t x = 0; x < w; ++x, d += 3) {
+            float3 const* src = reinterpret_cast<float3 const*>(image.getPixelRef(x, y));
+            float3 l(linearTosRGB(saturate(*src)) * std::numeric_limits<T>::max());
+            for (size_t i = 0; i < 3; i++) {
+                d[i] = T(l[i]);
+            }
+        }
+    }
+    return dst;
+}
+
+// Creates a 3-channel RGB u8 image from a f32 image.
+// The source image can have three or more channels, but only the first three are honored.
+template <typename T>
+std::unique_ptr<uint8_t[]> fromLinearToRGB(const LinearImage& image) {
+    using math::float3;
+    size_t w = image.getWidth();
+    size_t h = image.getHeight();
+    size_t channels = image.getChannels();
+    assert(channels >= 3);
+    std::unique_ptr<uint8_t[]> dst(new uint8_t[w * h * 3 * sizeof(T)]);
+    T* d = reinterpret_cast<T*>(dst.get());
+    for (size_t y = 0; y < h; ++y) {
+        for (size_t x = 0; x < w; ++x, d += 3) {
+            float3 const* src = reinterpret_cast<float3 const*>(image.getPixelRef(x, y));
+            float3 l(saturate(*src) * std::numeric_limits<T>::max());
+            for (size_t i = 0; i < 3; i++) {
+                d[i] = T(l[i]);
+            }
+        }
+    }
+    return dst;
+}
+
+// Creates a 4-channel RGBM u8 image from a f32 image.
+// The source image can have three or more channels, but only the first three are honored.
+template <typename T>
+std::unique_ptr<uint8_t[]> fromLinearToRGBM(const LinearImage& image) {
+    using namespace math;
+    size_t w = image.getWidth();
+    size_t h = image.getHeight();
+    size_t channels = image.getChannels();
+    assert(channels >= 3);
+    std::unique_ptr<uint8_t[]> dst(new uint8_t[w * h * 4 * sizeof(T)]);
+    T* d = reinterpret_cast<T*>(dst.get());
+    for (size_t y = 0; y < h; ++y) {
+        for (size_t x = 0; x < w; ++x, d += 4) {
+            float3 const* src = reinterpret_cast<float3 const*>(image.getPixelRef(x, y));
+            float4 l(linearToRGBM(*src) * std::numeric_limits<T>::max());
             for (size_t i = 0; i < 4; i++) {
                 d[i] = T(l[i]);
             }

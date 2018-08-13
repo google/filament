@@ -85,7 +85,7 @@ void Image::flip(uint32_t flags) {
             memcpy(b, ptmp, mBpr);
         }
     }
-    // Our hflip implementation is inefficient, but it's never invoked in the renderer.
+    // Our horizontalFlip implementation is inefficient, but it's never invoked in the renderer.
     if (flags & Image::FLIP_X) {
         for (size_t row = 0, nrows = mHeight; row < nrows; ++row) {
             for (size_t src = 0, ncols = mWidth / 2; src < ncols; ++src) {
