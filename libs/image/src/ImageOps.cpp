@@ -25,12 +25,12 @@ using namespace math;
 
 namespace image {
 
-LinearImage hstack(std::initializer_list<LinearImage> images) {
+LinearImage horizontalStack(std::initializer_list<LinearImage> images) {
     size_t count = images.end() - images.begin();
-    return hstack(images.begin(), count);
+    return horizontalStack(images.begin(), count);
 }
 
-LinearImage hstack(const LinearImage* first, size_t count) {
+LinearImage horizontalStack(const LinearImage* first, size_t count) {
     ASSERT_PRECONDITION(count > 0, "Must supply one or more images for stacking.");
 
     // Compute the final size and allocate memory.
@@ -67,26 +67,26 @@ LinearImage hstack(const LinearImage* first, size_t count) {
     return result;
 }
 
-LinearImage vstack(std::initializer_list<LinearImage> images) {
+LinearImage verticalStack(std::initializer_list<LinearImage> images) {
     size_t count = images.end() - images.begin();
-    return vstack(images.begin(), count);
+    return verticalStack(images.begin(), count);
 }
 
-// To stack images vertically, we transpose them individually, then hstack them, then transpose the
+// To stack images vertically, we transpose them individually, then horizontalStack them, then transpose the
 // result. This is incredibly lazy, but since we use row-major ordering, copying columns would be
 // really painful.
-LinearImage vstack(const LinearImage* first, size_t count) {
+LinearImage verticalStack(const LinearImage* first, size_t count) {
     ASSERT_PRECONDITION(count > 0, "Must supply one or more images for stacking.");
     std::unique_ptr<LinearImage[]> flipped(new LinearImage[count]);
     int i = 0;
     for (size_t c = 0; c < count; ++c) {
         flipped[i++] = transpose(first[c]);
     }
-    auto result = hstack(flipped.get(), count);
+    auto result = horizontalStack(flipped.get(), count);
     return transpose(result);
 }
 
-LinearImage hflip(const LinearImage& image) {
+LinearImage horizontalFlip(const LinearImage& image) {
     const uint32_t width = image.getWidth();
     const uint32_t height = image.getHeight();
     const uint32_t channels = image.getChannels();
@@ -103,7 +103,7 @@ LinearImage hflip(const LinearImage& image) {
     return result;
 }
 
-LinearImage vflip(const LinearImage& image) {
+LinearImage verticalFlip(const LinearImage& image) {
     const uint32_t width = image.getWidth();
     const uint32_t height = image.getHeight();
     const uint32_t channels = image.getChannels();

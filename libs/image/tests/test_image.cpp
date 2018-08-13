@@ -102,7 +102,7 @@ TEST_F(ImageTest, LuminanceFilters) { // NOLINT
     auto grays0 = resampleImage(tiny, 100, 100, Filter::GAUSSIAN_SCALARS);
     auto mag3 = transpose(resampleImage(tiny, 32, 8, Filter::GAUSSIAN_SCALARS));
     auto grays1 = resampleImage(mag3, 100, 100, Filter::NEAREST);
-    updateOrCompare(hstack({grays0, grays1}), "grays.png");
+    updateOrCompare(horizontalStack({grays0, grays1}), "grays.png");
 }
 
 TEST_F(ImageTest, ColorFilters) { // NOLINT
@@ -130,18 +130,18 @@ TEST_F(ImageTest, ColorFilters) { // NOLINT
     auto colorc = magnify(resampleImage(color9, 3, 3, Filter::BOX));
     auto colord = magnify(resampleImage(color9, 1, 1, Filter::BOX));
 
-    auto colors0 = hstack({color2, color3, color4, color5});
-    auto colors1 = hstack({color6b, color7, color8, color9});
-    auto colors2 = hstack({colora, colorb, colorc, colord});
-    auto colors = vstack({colors0, colors1, colors2});
+    auto colors0 = horizontalStack({color2, color3, color4, color5});
+    auto colors1 = horizontalStack({color6b, color7, color8, color9});
+    auto colors2 = horizontalStack({colora, colorb, colorc, colord});
+    auto colors = verticalStack({colors0, colors1, colors2});
 
     // Even more minification tests....
     auto colore = magnify(resampleImage(colors,  5,  5, Filter::DEFAULT));
     auto colorf = magnify(resampleImage(colors, 50, 50, Filter::DEFAULT));
     auto colorg = magnify(resampleImage(colors,  5,  5, Filter::HERMITE));
     auto colorh = magnify(resampleImage(colors, 50, 50, Filter::HERMITE));
-    auto colori = hstack({colore, colorf, colorg, colorh});
-    colors = vstack({colors, colori});
+    auto colori = horizontalStack({colore, colorf, colorg, colorh});
+    colors = verticalStack({colors, colori});
     updateOrCompare(colors, "colors.png");
     ASSERT_EQ(colors.getWidth(), 400);
     ASSERT_EQ(colors.getHeight(), 400);
@@ -157,7 +157,7 @@ TEST_F(ImageTest, ColorFilters) { // NOLINT
     auto blurred2 = resampleImage(color6b, 100, 100, sampler);
     auto blurred3 = resampleImage(color6b, 101, 100, sampler);
     auto blurred4 = resampleImage(color6b,  99, 100, sampler);
-    auto blurred = hstack({blurred0, blurred1, blurred2, blurred3, blurred4});
+    auto blurred = horizontalStack({blurred0, blurred1, blurred2, blurred3, blurred4});
 
     // Test extraction via sourceRegion and subsequent blurring.
     sampler.sourceRegion = {0, 0.25f, 0.25f, 0.5f};
@@ -169,12 +169,12 @@ TEST_F(ImageTest, ColorFilters) { // NOLINT
     auto region2 = resampleImage(colors, 100, 100, sampler);
     auto region3 = resampleImage(colors, 101, 100, sampler);
     auto region4 = resampleImage(colors,  99, 100, sampler);
-    auto region = hstack({region0, region1, region2, region3, region4});
-    blurred = vstack({blurred, region});
+    auto region = horizontalStack({region0, region1, region2, region3, region4});
+    blurred = verticalStack({blurred, region});
     updateOrCompare(blurred, "blurred.png");
 
     // Sample the reddish-white pixel in the post-blurred image.
-    SinglePixel result;
+    SingleSample result;
     computeSingleSample(colors, 0.375, 0.375, &result);
     auto red = int(result[0] * 255.0f);
     auto grn = int(result[1] * 255.0f);
@@ -190,7 +190,7 @@ TEST_F(ImageTest, VectorFilters) { // NOLINT
     auto wrong = resampleImage(toColors(normals), 16, 16, Filter::GAUSSIAN_SCALARS);
     auto right = toColors(resampleImage(normals, 16, 16, Filter::GAUSSIAN_NORMALS));
     auto diff = diffImages(wrong, right);
-    auto atlas = hstack({wrong, right, diff});
+    auto atlas = horizontalStack({wrong, right, diff});
     atlas = resampleImage(atlas, 300, 100, Filter::NEAREST);
     updateOrCompare(atlas, "normals.png");
 }
@@ -200,7 +200,7 @@ TEST_F(ImageTest, DepthFilters) { // NOLINT
     auto wrong = resampleImage(depths, 16, 16, Filter::GAUSSIAN_SCALARS);
     auto right = resampleImage(depths, 16, 16, Filter::MINIMUM);
     auto diff = diffImages(wrong, right);
-    auto atlas = hstack({wrong, right, diff});
+    auto atlas = horizontalStack({wrong, right, diff});
     atlas = resampleImage(atlas, 300, 100, Filter::NEAREST);
     updateOrCompare(atlas, "depths.png");
 }
@@ -211,23 +211,23 @@ TEST_F(ImageTest, ImageOps) { // NOLINT
     };
     LinearImage x22 = [finalize] () {
         auto original = createColorFromAscii("12 34");
-        auto hflipped = finalize(hflip(original));
-        auto vflipped = finalize(vflip(original));
-        return hstack({finalize(original), hflipped, vflipped});
+        auto hflipped = finalize(horizontalFlip(original));
+        auto vflipped = finalize(verticalFlip(original));
+        return horizontalStack({finalize(original), hflipped, vflipped});
     }();
     LinearImage x23 = [finalize] () {
         auto original = createColorFromAscii("123 456");
-        auto hflipped = finalize(hflip(original));
-        auto vflipped = finalize(vflip(original));
-        return hstack({finalize(original), hflipped, vflipped});
+        auto hflipped = finalize(horizontalFlip(original));
+        auto vflipped = finalize(verticalFlip(original));
+        return horizontalStack({finalize(original), hflipped, vflipped});
     }();
     LinearImage x32 = [finalize] () {
         auto original = createColorFromAscii("12 34 56");
-        auto hflipped = finalize(hflip(original));
-        auto vflipped = finalize(vflip(original));
-        return hstack({finalize(original), hflipped, vflipped});
+        auto hflipped = finalize(horizontalFlip(original));
+        auto vflipped = finalize(verticalFlip(original));
+        return horizontalStack({finalize(original), hflipped, vflipped});
     }();
-    auto atlas = vstack({x22, x23, x32});
+    auto atlas = verticalStack({x22, x23, x32});
     updateOrCompare(atlas, "imageops.png");
 }
 

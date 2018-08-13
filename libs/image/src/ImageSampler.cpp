@@ -27,7 +27,7 @@ using namespace image;
 
 namespace {
 
-struct FilterFn {
+struct FilterFunction {
     float (*fn)(float) = nullptr;
     float boundingRadius = 1;
     bool rejectExternalSamples = true;
@@ -35,14 +35,14 @@ struct FilterFn {
 
 constexpr float M_PIf = float(M_PI);
 
-const FilterFn Box {
+const FilterFunction Box {
     .fn = [](float t) { return t <= 0.5f ? 1.0f : 0.0f; },
     .boundingRadius = 1
 };
 
-const FilterFn Nearest { Box.fn, 0.0f };
+const FilterFunction Nearest { Box.fn, 0.0f };
 
-const FilterFn Gaussian {
+const FilterFunction Gaussian {
     .fn = [](float t) {
         if (t >= 2.0) return 0.0f;
         const float scale = 1.0f / std::sqrt(0.5f * M_PIf);
@@ -51,7 +51,7 @@ const FilterFn Gaussian {
     .boundingRadius = 2
 };
 
-const FilterFn Hermite {
+const FilterFunction Hermite {
     .fn = [](float t) {
         if (t >= 1.0f) return 0.0f;
         return 2 * t * t * t - 3 * t * t + 1;
@@ -59,7 +59,7 @@ const FilterFn Hermite {
     .boundingRadius = 1
 };
 
-const FilterFn Mitchell {
+const FilterFunction Mitchell {
     .fn = [](float t) {
         constexpr float B = 1.0f / 3.0f;
         constexpr float C = 1.0f / 3.0f;
@@ -84,7 +84,7 @@ float sinc(float t) {
     return std::sin(M_PIf * t) / (M_PIf * t);
 }
 
-const FilterFn Lanczos {
+const FilterFunction Lanczos {
     .fn = [](float t) {
         if (t >= 1.0f) return 0.0f;
         return sinc(t) * sinc(t);
@@ -117,7 +117,7 @@ using MadProgram = std::vector<MadInstruction>;
 //    x....normalized coord in [0..1] where 0/1 are the outer edges of the range.
 //    i....integer index where 0 is the left-most pixel and n-1 is the right-most pixel.
 void generateMadProgram(uint32_t ntarget, uint32_t nsource, float left, float right,
-        FilterFn filter, float radiusMultiplier, MadProgram* result) {
+        FilterFunction filter, float radiusMultiplier, MadProgram* result) {
     const float dtarget = 1.0f / ntarget;
     const float fnsource = float(nsource) * (right - left);
     const bool minifying = float(ntarget) < fnsource;
@@ -185,8 +185,8 @@ void expandMadProgram(uint32_t nchannels, MadProgram* program) {
     program->swap(result);
 }
 
-FilterFn createFilterFunction(Filter ftype) {
-    FilterFn fn;
+FilterFunction createFilterFunction(Filter ftype) {
+    FilterFunction fn;
     switch (ftype) {
         case Filter::MINIMUM:
         case Filter::BOX:              fn = Box; break;
@@ -218,7 +218,7 @@ LinearImage resampleImage1D(const LinearImage& source, MadProgram* program,
     const uint32_t nchan = source.getChannels();
     const bool mag = twidth > swidth;
     if (filter == Filter::DEFAULT) filter = mag ? Filter::MITCHELL : Filter::LANCZOS;
-    const FilterFn hfn = createFilterFunction(filter);
+    const FilterFunction hfn = createFilterFunction(filter);
 
     // Generate a flat list of multiply-add (MAD) instructions.
     program->clear();
@@ -267,6 +267,10 @@ LinearImage resampleImage1D(const LinearImage& source, MadProgram* program,
 
 namespace image {
 
+SingleSample::~SingleSample() {
+    delete[] data;
+}
+
 LinearImage resampleImage(const LinearImage& source, uint32_t width, uint32_t height,
         const ImageSampler& sampler) {
     ASSERT_PRECONDITION(
@@ -296,7 +300,7 @@ LinearImage resampleImage(const LinearImage& source, uint32_t width, uint32_t he
     });
 }
 
-void computeSingleSample(const LinearImage& source, float x, float y, SinglePixel* result,
+void computeSingleSample(const LinearImage& source, float x, float y, SingleSample* result,
         Filter filter) {
     const float radius = 1.0f;
     const float left = x - radius / source.getWidth();
@@ -306,10 +310,10 @@ void computeSingleSample(const LinearImage& source, float x, float y, SinglePixe
     MadProgram program;
     LinearImage row = transpose(resampleImage1D(source, &program, 1, filter, left, right, radius));
     row = resampleImage1D(row, &program, 1, filter, top, bottom, radius);
-    if (!result->get()) {
-        *result = std::make_unique<float[]>(source.getChannels());
+    if (!result->data) {
+        result->data = new float[source.getChannels()];
     }
-    float* dst = result->get();
+    float* dst = result->data;
     float const* src = row.getPixelRef();
     for (uint32_t c = 0; c < source.getChannels(); ++c) {
         dst[c] = src[c];

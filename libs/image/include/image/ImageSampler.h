@@ -24,7 +24,11 @@ namespace image {
 /**
  * Value of a single point sample, allocated according to the number of image channels.
  */
-using SinglePixel = std::unique_ptr<float[]>;
+struct SingleSample {
+    float& operator[](int index) { return *(data + index); }
+    float* data = nullptr;
+    ~SingleSample();
+};
 
 /**
  * Controls the weighted average used across a window of source samples.
@@ -75,7 +79,7 @@ struct Boundary {
         COLOR,   // Use the specified constant color.
         NEIGHBOR // Sample from an adjacent image.
     } mode = EXCLUDE;
-    SinglePixel color;               // Used only if mode = COLOR
+    SingleSample color;              // Used only if mode = COLOR
     LinearImage* neighbor = nullptr; // Used only if mode = NEIGHBOR
     Orientation orientation;         // Used only if mode = NEIGHBOR
 };
@@ -111,9 +115,9 @@ LinearImage resampleImage(const LinearImage& source, uint32_t width, uint32_t he
  * components into the given output holder.
  *
  * For decent performance, do not call this across the entire image, instead call resampleImage.
- * On the first call, pass in a default SinglePixel to allocate the result holder. For example:
+ * On the first call, pass in a default SingleSample to allocate the result holder. For example:
  *
- *     SinglePixel result;
+ *     SingleSample result;
  *     computeSingleSample(img, 0.5f, 0.5f, &result);
  *     printf("r g b = %f %f %f\n", result[0], result[1], result[2]);
  *     computeSingleSample(img, 0.9f, 0.1f, &result);
@@ -122,7 +126,7 @@ LinearImage resampleImage(const LinearImage& source, uint32_t width, uint32_t he
  * The x y coordinates live in "texture space" such that (0.0f, 0.0f) is the upper-left boundary of
  * the top-left pixel and (+1.0f, +1.0f) is the lower-right boundary of the bottom-right pixel.
  */
-void computeSingleSample(const LinearImage& source, float x, float y, SinglePixel* result,
+void computeSingleSample(const LinearImage& source, float x, float y, SingleSample* result,
         Filter filter = Filter::BOX);
 
 } // namespace image

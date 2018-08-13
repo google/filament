@@ -17,7 +17,7 @@
 #ifndef IMAGE_LINEARIMAGE_H
 #define IMAGE_LINEARIMAGE_H
 
-#include <memory>
+#include <cstdint>
 
 /**
  * Types and free functions for the Filament core imaging library, primarily used for offline tools,
@@ -29,9 +29,11 @@ namespace image {
  * LinearImage is a handle to packed floating point data arranged into a row-major grid.
  *
  * We use this object as input/output for core algorithms that wish to be agnostic of source and
- * destination formats. The underlying pixel data has shared ownership semantics to allow clients to
- * easily pass around the image object without incurring a deep copy. The number of channels is
- * arbitrary (1 or more) but we often use 3-channel images to represent color data.
+ * destination formats. The number of channels is arbitrary (1 or more) but we often use 3-channel
+ * images to represent color data.
+ *
+ * The underlying pixel data has shared ownership semantics to allow clients to easily pass around
+ * the image object without incurring a deep copy. Shared access to pixels is not thread safe.
  *
  * By convention, we do not use channel major order (i.e. planar). However we provide a free
  * function in ImageOps to combine planar data. Pixels are stored such that the row stride is simply
@@ -39,6 +41,8 @@ namespace image {
  */
 class LinearImage {
 public:
+
+    ~LinearImage();
 
     /**
      * Allocates a zeroed-out image.
@@ -48,36 +52,36 @@ public:
     /**
      * Makes a shallow copy with shared pixel data.
      */
-    LinearImage(const LinearImage& that) = default;
+    LinearImage(const LinearImage& that);
     LinearImage& operator=(const LinearImage& that);
 
     /**
      * Creates an empty (invalid) image.
      */
-    LinearImage() : mWidth(0), mHeight(0), mChannels(0) {}
+    LinearImage() : mDataRef(nullptr), mData(nullptr), mWidth(0), mHeight(0), mChannels(0) {}
 
     /**
      * Gets a pointer to the underlying pixel data.
      */
-    float* getPixelRef() { return mData.get(); }
+    float* getPixelRef() { return mData; }
 
     /**
      * Gets a pointer to immutable pixel data.
      */
-    float const* getPixelRef() const { return mData.get(); }
+    float const* getPixelRef() const { return mData; }
 
     /**
      * Gets a pointer to the pixel data at the given column and row. (not bounds checked)
      */
     float* getPixelRef(uint32_t column, uint32_t row) {
-        return mData.get() + (column + row * mWidth) * mChannels;
+        return mData + (column + row * mWidth) * mChannels;
     }
 
     /**
      * Gets a pointer to the immutable pixel data at the given column and row. (not bounds checked)
      */
     float const* getPixelRef(uint32_t column, uint32_t row) const {
-        return mData.get() + (column + row * mWidth) * mChannels;
+        return mData + (column + row * mWidth) * mChannels;
     }
 
     uint32_t getWidth() const { return mWidth; }
@@ -87,10 +91,10 @@ public:
 
 private:
 
-    // Pixel data has shared ownership to facilitate shallow copies and a convenient Python-like API
-    // that allows clients to easily pass around images.
-    std::shared_ptr<float> mData;
+    struct SharedReference;
+    SharedReference* mDataRef = nullptr;
 
+    float* mData;
     uint32_t mWidth;
     uint32_t mHeight;
     uint32_t mChannels;

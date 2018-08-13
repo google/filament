@@ -24,16 +24,16 @@
 namespace image {
 
 // Concatenates images horizontally to create a filmstrip atlas, similar to numpy's hstack.
-LinearImage hstack(std::initializer_list<LinearImage> images);
-LinearImage hstack(LinearImage const* img, size_t count);
+LinearImage horizontalStack(std::initializer_list<LinearImage> images);
+LinearImage horizontalStack(LinearImage const* img, size_t count);
 
 // Concatenates images vertically to create a filmstrip atlas, similar to numpy's vstack.
-LinearImage vstack(std::initializer_list<LinearImage> images);
-LinearImage vstack(LinearImage const* img, size_t count);
+LinearImage verticalStack(std::initializer_list<LinearImage> images);
+LinearImage verticalStack(LinearImage const* img, size_t count);
 
 // Horizontally or vertically mirror the given image.
-LinearImage hflip(const LinearImage& image);
-LinearImage vflip(const LinearImage& image);
+LinearImage horizontalFlip(const LinearImage& image);
+LinearImage verticalFlip(const LinearImage& image);
 
 // Transforms normals (components live in [-1,+1]) into colors (components live in [0,+1]).
 LinearImage vectorsToColors(const LinearImage& image);
