@@ -107,6 +107,18 @@ set(COMPILER_FLAGS
 # Test apps
 # ==================================================================================================
 
+function(add_python_demo NAME)
+    include_directories(${GENERATION_ROOT})
+    pybind11_add_module(
+            pyfilament
+            pyfilament.cpp
+            ${NAME}.cpp
+            app/MeshAssimp.cpp)
+    add_dependencies(pyfilament sample_materials)
+    target_link_libraries(pyfilament PRIVATE ${APP_LIBS} assimp)
+    target_compile_options(pyfilament PRIVATE ${COMPILER_FLAGS})
+endfunction()
+
 function(add_assimp_demo NAME)
     include_directories(${GENERATION_ROOT})
     add_executable(
@@ -132,6 +144,7 @@ endfunction()
 if (NOT ANDROID)
     add_assimp_demo(lightbulb)
     add_assimp_demo(material_sandbox)
+    add_python_demo(material_sandbox_shared)
     add_assimp_demo(sample_full_pbr)
     add_assimp_demo(sample_pbr)
     add_assimp_demo(sample_position_offset)

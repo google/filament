@@ -14,6 +14,7 @@ project(TNT)
 
 option(ENABLE_JAVA "Compile Java projects, requires a JDK and the JAVA_HOME env var" ON)
 
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 # ==================================================================================================
 # OS specific
 # ==================================================================================================
@@ -224,6 +225,7 @@ add_subdirectory(${LIBRARIES}/utils)
 add_subdirectory(${FILAMENT}/filament)
 add_subdirectory(${FILAMENT}/shaders)
 add_subdirectory(${EXTERNAL}/robin-map/tnt)
+add_subdirectory(${EXTERNAL}/pybind11)
 
 if (FILAMENT_SUPPORTS_VULKAN)
     add_subdirectory(${LIBRARIES}/bluevk)
