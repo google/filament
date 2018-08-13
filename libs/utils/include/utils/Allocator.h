@@ -69,7 +69,7 @@ public:
     LinearAllocator(void* begin, void* end) noexcept;
 
     template <typename AREA>
-    LinearAllocator(const AREA& area) : LinearAllocator(area.begin(), area.end()) { }
+    explicit LinearAllocator(const AREA& area) : LinearAllocator(area.begin(), area.end()) { }
 
     // Allocators can't be copied
     LinearAllocator(const LinearAllocator& rhs) = delete;
@@ -118,6 +118,7 @@ public:
 
     void swap(LinearAllocator& rhs) noexcept;
 
+    void *base() noexcept { return mBegin; }
 
     // LinearAllocator shouldn't have a free() method
     // it's only needed to be compatible with STLAllocator<> below
@@ -141,7 +142,7 @@ public:
     HeapAllocator() noexcept = default;
 
     template <typename AREA>
-    HeapAllocator(const AREA&) { }
+    explicit HeapAllocator(const AREA&) { }
 
     // our allocator concept
     void* alloc(size_t size, size_t alignment = alignof(std::max_align_t), size_t extra = 0) {
@@ -162,7 +163,7 @@ public:
     HeapAllocator(HeapAllocator&& rhs) noexcept = default;
     HeapAllocator& operator=(HeapAllocator&& rhs) noexcept = default;
 
-    ~HeapAllocator() noexcept { }
+    ~HeapAllocator() noexcept = default;
 
     void swap(HeapAllocator& rhs) noexcept { }
 };
@@ -180,11 +181,7 @@ public:
 
     void* get() noexcept {
         FreeList* const head = mNext;
-        if (head == nullptr) {
-            // no more space
-            return nullptr;
-        }
-        mNext = head->mNext;
+        mNext = head ? head->mNext : nullptr;
         // this could indicate a use after free
         assert(!mNext || mNext>=mBegin && mNext<mEnd);
         return head;
@@ -197,6 +194,10 @@ public:
         FreeList* const head = static_cast<FreeList*>(p);
         head->mNext = mNext;
         mNext = head;
+    }
+
+    void *getCurrent() noexcept {
+        return mNext;
     }
 
 private:
@@ -235,7 +236,7 @@ public:
     }
 
     template <typename AREA>
-    PoolAllocator(const AREA& area) noexcept
+    explicit PoolAllocator(const AREA& area) noexcept
         : PoolAllocator(area.begin(), area.end()) {
     }
 
@@ -249,6 +250,12 @@ public:
 
     PoolAllocator() noexcept = default;
     ~PoolAllocator() noexcept = default;
+
+    // API specific to this allocator
+
+    void *getCurrent() noexcept {
+        return mFreeList.getCurrent();
+    }
 
 private:
     FreeList mFreeList;
@@ -287,6 +294,7 @@ public:
     HeapArea(HeapArea&& rhs) noexcept = delete;
     HeapArea& operator=(HeapArea&& rhs) noexcept = delete;
 
+    void* data() const noexcept { return mBegin; }
     void* begin() const noexcept { return mBegin; }
     void* end() const noexcept { return mEnd; }
     size_t getSize() const noexcept { return uintptr_t(mEnd) - uintptr_t(mBegin); }
