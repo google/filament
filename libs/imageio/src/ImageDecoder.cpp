@@ -231,6 +231,40 @@ PNGDecoder::~PNGDecoder() {
     png_destroy_read_struct(&mPNG, &mInfo, NULL);
 }
 
+// TODO: remove after migrating imageio to LinearImage
+template<typename T, typename PROCESS, typename TRANSFORM>
+static Image toLinearDeprecated(size_t w, size_t h, size_t bpr,
+        const std::unique_ptr<uint8_t[]>& src, PROCESS proc, TRANSFORM transform) {
+    std::unique_ptr<uint8_t[]> dst(new uint8_t[w * h * sizeof(math::float3)]);
+    math::float3* d = reinterpret_cast<math::float3*>(dst.get());
+    for (size_t y = 0; y < h; ++y) {
+        T const* p = reinterpret_cast<T const*>(src.get() + y * bpr);
+        for (size_t x = 0; x < w; ++x, p += 3) {
+            math::float3 sRGB(proc(p[0]), proc(p[1]), proc(p[2]));
+            sRGB /= std::numeric_limits<T>::max();
+            *d++ = transform(sRGB);
+        }
+    }
+    return Image(std::move(dst), w, h, w * sizeof(math::float3), sizeof(math::float3));
+}
+
+// TODO: remove after migrating imageio to LinearImage
+template<typename T, typename PROCESS, typename TRANSFORM>
+static Image toLinearWithAlphaDeprecated(size_t w, size_t h, size_t bpr,
+        const std::unique_ptr<uint8_t[]>& src, PROCESS proc, TRANSFORM transform) {
+    std::unique_ptr<uint8_t[]> dst(new uint8_t[w * h * sizeof(math::float4)]);
+    math::float4* d = reinterpret_cast<math::float4*>(dst.get());
+    for (size_t y = 0; y < h; ++y) {
+        T const* p = reinterpret_cast<T const*>(src.get() + y * bpr);
+        for (size_t x = 0; x < w; ++x, p += 4) {
+            math::float4 sRGB(proc(p[0]), proc(p[1]), proc(p[2]), proc(p[3]));
+            sRGB /= std::numeric_limits<T>::max();
+            *d++ = transform(sRGB);
+        }
+    }
+    return Image(std::move(dst), w, h, w * sizeof(math::float4), sizeof(math::float4), 4);
+}
+
 Image PNGDecoder::decode() {
     std::unique_ptr<uint8_t[]> imageData;
     try {
@@ -270,22 +304,22 @@ Image PNGDecoder::decode() {
 
         if (colorType == PNG_COLOR_TYPE_RGBA) {
             if (getColorSpace() == ImageDecoder::ColorSpace::SRGB) {
-                return toLinearWithAlpha<uint16_t>(width, height, rowBytes, imageData,
+                return toLinearWithAlphaDeprecated<uint16_t>(width, height, rowBytes, imageData,
                         [ ](uint16_t v) -> uint16_t { return ntohs(v); },
                         sRGBToLinear<math::float4>);
             } else {
-                return toLinearWithAlpha<uint16_t>(width, height, rowBytes, imageData,
+                return toLinearWithAlphaDeprecated<uint16_t>(width, height, rowBytes, imageData,
                         [ ](uint16_t v) -> uint16_t { return ntohs(v); },
                         [ ](const math::float4& color) -> math::float4 { return color; });
             }
         } else {
             // Convert to linear float (PNG 16 stores data in network order (big endian).
             if (getColorSpace() == ImageDecoder::ColorSpace::SRGB) {
-                return toLinear<uint16_t>(width, height, rowBytes, imageData,
+                return toLinearDeprecated<uint16_t>(width, height, rowBytes, imageData,
                         [ ](uint16_t v) -> uint16_t { return ntohs(v); },
                         sRGBToLinear<math::float3>);
             } else {
-                return toLinear<uint16_t>(width, height, rowBytes, imageData,
+                return toLinearDeprecated<uint16_t>(width, height, rowBytes, imageData,
                         [ ](uint16_t v) -> uint16_t { return ntohs(v); },
                         [ ](const math::float3& color) -> math::float3 { return color; });
             }

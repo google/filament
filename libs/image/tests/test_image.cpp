@@ -27,7 +27,9 @@
 
 #include <utils/Panic.h>
 #include <utils/Path.h>
+
 #include <math/vec3.h>
+#include <math/vec4.h>
 
 #include <fstream>
 #include <string>
@@ -35,8 +37,10 @@
 
 using std::istringstream;
 using std::string;
-using math::float3;
 using std::swap;
+
+using math::float3;
+using math::float4;
 
 using namespace image;
 
@@ -226,17 +230,65 @@ TEST_F(ImageTest, ImageOps) { // NOLINT
     updateOrCompare(atlas, "imageops.png");
 }
 
+TEST_F(ImageTest, ColorTransformRGB) { // NOLINT
+    constexpr size_t w = 2;
+    constexpr size_t h = 3;
+    constexpr uint16_t texels[] = {
+        0, 1, 2,
+        3, 4, 5,
+        6, 7, 8,
+        9, 10, 11,
+        12, 13, 14,
+        20000, 40000, 60000,
+    };
+    constexpr size_t bpr = w * sizeof(uint16_t) * 3;
+    std::unique_ptr<uint8_t[]> data(new uint8_t[h * bpr]);
+    memcpy(data.get(), texels, sizeof(texels));
+    LinearImage img = image::toLinear<uint16_t>(w, h, bpr, data, 
+        [ ](uint16_t v) -> uint16_t { return v; },
+        sRGBToLinear<math::float3>);
+    auto pixels = reinterpret_cast<float3*>(img.getPixelRef());
+    ASSERT_NEAR(pixels[0].x, 0.0f, 0.001f);
+    ASSERT_NEAR(pixels[0].y, 0.0f, 0.001f);
+    ASSERT_NEAR(pixels[0].z, 0.0f, 0.001f);
+    ASSERT_NEAR(pixels[5].x, 0.07583023f, 0.001f);
+    ASSERT_NEAR(pixels[5].y, 0.33077413f, 0.001f);
+    ASSERT_NEAR(pixels[5].z, 0.81851715f, 0.001f);
+}
+
+TEST_F(ImageTest, ColorTransformRGBA) { // NOLINT
+    constexpr size_t w = 4;
+    constexpr size_t h = 1;
+    constexpr uint16_t texels[] = {
+        10000, 20000, 40000, 60000,
+        11000, 21000, 41000, 61000,
+        13000, 23000, 43000, 63000,
+        15000, 25000, 45000, 65000,
+    };
+    constexpr size_t bpr = w * sizeof(uint16_t) * 4;
+    std::unique_ptr<uint8_t[]> data(new uint8_t[h * bpr]);
+    memcpy(data.get(), texels, sizeof(texels));
+    LinearImage img = image::toLinearWithAlpha<uint16_t>(w, h, bpr, data, 
+        [ ](uint16_t v) -> uint16_t { return v; },
+        sRGBToLinear<math::float4>);
+    auto pixels = reinterpret_cast<float4*>(img.getPixelRef());
+    ASSERT_NEAR(pixels[3].x, 0.04282892f, 0.001f);
+    ASSERT_NEAR(pixels[3].y, 0.12025354f, 0.001f);
+    ASSERT_NEAR(pixels[3].z, 0.42922019f, 0.001f);
+    ASSERT_NEAR(pixels[3].w, 0.99183642f, 0.001f);
+}
+
 static void printUsage(const char* name) {
-    std::string exec_name(utils::Path(name).getName());
-    std::string usage(
+    string exec_name(utils::Path(name).getName());
+    string usage(
             "TEST is a unit test runner for the Filament image library\n"
             "Usages:\n"
             "    TEST compare <path-to-ref-images> [gtest options]\n"
             "    TEST update  <path-to-ref-images> [gtest options]\n"
             "    TEST [gtest options]\n"
             "\n");
-    const std::string from("TEST");
-    for (size_t pos = usage.find(from); pos != std::string::npos; pos = usage.find(from, pos)) {
+    const string from("TEST");
+    for (size_t pos = usage.find(from); pos != string::npos; pos = usage.find(from, pos)) {
          usage.replace(pos, from.length(), exec_name);
     }
     printf("%s", usage.c_str());
