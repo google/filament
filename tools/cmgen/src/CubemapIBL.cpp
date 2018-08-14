@@ -126,8 +126,7 @@ void CubemapIBL::roughnessFilter(Cubemap& dst,
     // our goal is to use maxNumSamples for which NoL is > 0
     // to achieve this, we might have to try more samples than
     // maxNumSamples
-    size_t sampleIndex = 0;
-    for (size_t sample = 0 ; sample < maxNumSamples; ) {
+    for (size_t sampleIndex = 0, sample = 0 ; sampleIndex < maxNumSamples; sampleIndex++) {
         /*
          *       (sampling)
          *            L         H (never calculated below)
@@ -200,8 +199,6 @@ void CubemapIBL::roughnessFilter(Cubemap& dst,
             cache.push_back({ L, brdf_NoL, lerp, l0, l1 });
             sample++;
         }
-
-        sampleIndex++;
     }
 
     std::for_each(cache.begin(), cache.end(), [weight](CacheEntry& entry){
