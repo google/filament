@@ -4,3 +4,4 @@ libs/math/test_math
 libs/image/test_image compare libs/image/tests/reference/
 libs/utils/test_utils
 tools/matc/test_matc
+tools/cmgen/test_cmgen compare

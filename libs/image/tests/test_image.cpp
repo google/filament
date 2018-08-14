@@ -20,6 +20,7 @@
 #include <image/LinearImage.h>
 
 #include <imageio/ImageDecoder.h>
+#include <imageio/ImageDiffer.h>
 #include <imageio/ImageEncoder.h>
 
 #include <gtest/gtest.h>
@@ -40,12 +41,6 @@ using std::swap;
 using namespace image;
 
 class ImageTest : public testing::Test {};
-
-enum class ComparisonMode {
-    SKIP,
-    COMPARE,
-    UPDATE,
-};
 
 static ComparisonMode g_comparisonMode;
 static utils::Path g_comparisonPath;
@@ -384,55 +379,7 @@ static LinearImage createColorFromAscii(const string& pattern) {
 }
 
 static void updateOrCompare(const LinearImage& limg, const utils::Path& fname) {
-    if (g_comparisonMode == ComparisonMode::SKIP) {
-        return;
-    }
-
-    // Regenerate the PNG file at the given path.
-    // The encoder isn't yet robust for 1-channel data yet, we expand L to RGB.
-    if (g_comparisonMode == ComparisonMode::UPDATE) {
-        std::ofstream out(g_comparisonPath + fname, std::ios::binary | std::ios::trunc);
-        auto format = ImageEncoder::Format::PNG_LINEAR;
-        const size_t width = limg.getWidth(), height = limg.getHeight(), nchan = 3;
-        const size_t bpp = nchan * sizeof(float), bpr = width * bpp, nbytes = bpr * height;
-        std::unique_ptr<uint8_t[]> data(new uint8_t[nbytes]);
-        if (nchan == 3) {
-            memcpy(data.get(), limg.getPixelRef(), nbytes);
-            Image im(std::move(data), width, height, bpr, bpp, nchan);
-            ImageEncoder::encode(out, format, im, "", fname);
-        } else if (nchan == 1) {
-            auto limg2 = combineChannels({limg, limg, limg});
-            memcpy(data.get(), limg2.getPixelRef(), nbytes);
-            Image im(std::move(data), width, height, bpr, bpp, nchan);
-            ImageEncoder::encode(out, format, im, "", fname);
-        } else {
-            ASSERT_PRECONDITION(false, "This test only supports 3-channel and 1-channel images.");
-        }
-        return;
-    }
-
-    // Load the PNG file at the given path.
-    const string fullpath = g_comparisonPath + fname;
-    std::ifstream in(fullpath, std::ios::binary);
-    ASSERT_PRECONDITION(in, "Unable to open: %s", fullpath.c_str());
-    Image img = ImageDecoder::decode(in, g_comparisonPath + fname,
-            ImageDecoder::ColorSpace::LINEAR);
-    const size_t width = img.getWidth(), height = img.getHeight(), nchan = img.getChannelsCount();
-    ASSERT_PRECONDITION(nchan == 3, "This loaded file must be a 3-channel image.");
-
-    // To keep things simple we always store rthe "expected" image in 3-channel format, so here we
-    // expand the "actual" image from L to RGB.
-    LinearImage actual;
-    if (limg.getChannels() == 1) {
-        actual = combineChannels({limg, limg, limg});
-    } else {
-        actual = limg;
-    }
-
-    // Perform a simple comparison of the two images with 0 threshold.
-    LinearImage expected(width, height, 3);
-    memcpy(expected.getPixelRef(), img.getData(), width * height * sizeof(float) * 3);
-    ASSERT_PRECONDITION(compare(actual, expected, 0.0f) == 0, "Image mismatch.");
+    image::updateOrCompare(limg, g_comparisonPath + fname, g_comparisonMode, 0.0f);
 }
 
 static bool solve(float a, float b, float c, float *x0, float *x1) {

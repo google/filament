@@ -446,7 +446,7 @@ int main(int argc, char* argv[]) {
         }
     } else {
         if (!g_quiet) {
-            std::cout << "Generating image..." << std::endl;
+            std::cout << iname << " does not exist; generating UV grid..." << std::endl;
         }
 
         size_t dim = g_output_size ? g_output_size : 256;
