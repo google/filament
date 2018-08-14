@@ -55,11 +55,8 @@ void LinearAllocator::swap(LinearAllocator& rhs) noexcept {
 // FreeList
 // ------------------------------------------------------------------------------------------------
 
-FreeList::FreeList(void* begin, void* end,
+FreeListBase::Node* FreeListBase::init(void* begin, void* end,
         size_t elementSize, size_t alignment, size_t extra) noexcept
-#ifndef NDEBUG
-            : mBegin(begin), mEnd(end)
-#endif
 {
     void* const p = pointermath::align(begin, alignment, extra);
     void* const n = pointermath::align(pointermath::add(p, elementSize), alignment, extra);
@@ -70,18 +67,33 @@ FreeList::FreeList(void* begin, void* end,
     const size_t num = (uintptr_t(end) - uintptr_t(p)) / d;
 
     // set first entry
-    mNext = static_cast<FreeList*>(p);
+    Node* head = static_cast<Node*>(p);
 
     // next entry
-    FreeList* cur = mNext;
+    Node* cur = head;
     for (size_t i=1 ; i<num ; ++i) {
-        FreeList* next = pointermath::add(cur, d);
-        cur->mNext = next;
+        Node* next = pointermath::add(cur, d);
+        cur->next = next;
         cur = next;
     }
     assert(cur < end);
     assert(pointermath::add(cur, d) <= end);
-    cur->mNext = nullptr;
+    cur->next = nullptr;
+    return head;
+}
+
+FreeList::FreeList(void* begin, void* end,
+        size_t elementSize, size_t alignment, size_t extra) noexcept
+        : mHead(init(begin, end, elementSize, alignment, extra))
+#ifndef NDEBUG
+        , mBegin(begin), mEnd(end)
+#endif
+{
+}
+
+AtomicFreeList::AtomicFreeList(void* begin, void* end,
+        size_t elementSize, size_t alignment, size_t extra) noexcept
+        : mHead(init(begin, end, elementSize, alignment, extra)) {
 }
 
 TrackingPolicy::HighWatermark::~HighWatermark() noexcept {
