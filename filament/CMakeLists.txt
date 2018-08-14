@@ -334,18 +334,20 @@ target_link_libraries(${TARGET} PRIVATE
 # ==================================================================================================
 # Compiler flags
 # ==================================================================================================
-set(OPTIMIZATION_FLAGS
+if (MSVC OR CLANG_CL)
+    set(OPTIMIZATION_FLAGS
+        /fp:fast
+    )
+else()
+    set(OPTIMIZATION_FLAGS
         -ffast-math
         -ffp-contract=fast
-# TODO: aggressive vectorization is currently broken on Android
-#        -fslp-vectorize-aggressive
+        # TODO: aggressive vectorization is currently broken on Android
+        #        -fslp-vectorize-aggressive
         -fvisibility=hidden
         -fvisibility-inlines-hidden
-)
-
-if (NOT WIN32)
-    # This is not supported by clang for VS.
-    set(OPTIMIZATION_FLAGS ${OPTIMIZATION_FLAGS} -fstrict-vtable-pointers)
+        -fstrict-vtable-pointers
+    )
 endif()
 
 set(LINUX_LINKER_OPTIMIZATION_FLAGS
@@ -367,9 +369,9 @@ set(FILAMENT_WARNINGS
 # clang-cl maps -Wall to -Weverything, which clutters logs with benign -Wc++98-compat warnings
 # Use /W4 instead for clang-cl builds
 if (CLANG_CL)
-    set(FILAMENT_WARNINGS ${FILAMENT_WARNINGS} /W4)
+    set(FILAMENT_WARNINGS /W4 ${FILAMENT_WARNINGS})
 else()
-    set(FILAMENT_WARNINGS ${FILAMENT_WARNINGS} -Wall)
+    set(FILAMENT_WARNINGS -Wall ${FILAMENT_WARNINGS})
 endif()
 
 target_compile_options(${TARGET} PRIVATE

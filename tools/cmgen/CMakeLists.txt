@@ -36,10 +36,10 @@ target_link_libraries(${TARGET} PRIVATE math utils z image imageio getopt)
 # ==================================================================================================
 # Compile options and optimizations
 # ==================================================================================================
-target_compile_options(${TARGET} PRIVATE -ffast-math)
-
-if (NOT LINUX)
-    target_compile_options(${TARGET} PRIVATE )
+if (MSVC OR CLANG_CL)
+    target_compile_options(${TARGET} PRIVATE /fp:fast)
+else()
+    target_compile_options(${TARGET} PRIVATE -ffast-math)
 endif()
 
 # =================================================================================================

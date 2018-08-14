@@ -148,7 +148,6 @@ add_library(${TARGET} SHARED ${SRCS})
 target_link_libraries(${TARGET} ${EXTRA_LIBS})
 
 target_compile_options(${TARGET}
-    PRIVATE -fvisibility=hidden
     PRIVATE -msse2
     PRIVATE -msse
     PRIVATE -mmmx
@@ -163,7 +162,12 @@ target_compile_options(${TARGET}
 target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
 
 if (WIN32)
-    target_compile_options(${TARGET} PRIVATE -Wno-pragma-pack)
+    # Making this option public because the warning occurs in public headers
+    target_compile_options(${TARGET} PUBLIC -Wno-pragma-pack)
+    target_compile_options(${TARGET} PRIVATE -Wno-unused-local-typedef)
     # Windows needs a WinMain static library.
     add_library(${TARGET}main ${SRC_DIR}/main/windows/SDL_windows_main.c)
-endif ()
+    target_compile_options(${TARGET}main PRIVATE -Wno-pragma-pack)
+else()
+    target_compile_options(${TARGET} PRIVATE -fvisibility=hidden)
+endif()
