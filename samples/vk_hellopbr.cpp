@@ -28,7 +28,6 @@
 using namespace filament;
 using namespace math;
 using Backend = Engine::Backend;
-using TargetApi = MeshAssimp::TargetApi;
 
 struct App {
     utils::Entity light;
@@ -53,8 +52,7 @@ int main(int argc, char** argv) {
         auto& em = utils::EntityManager::get();
 
         // Add geometry into the scene.
-        TargetApi api = config.backend == Backend::VULKAN ? TargetApi::VULKAN : TargetApi::OPENGL;
-        app.meshes = new MeshAssimp(*engine, api, MeshAssimp::Platform::DESKTOP);
+        app.meshes = new MeshAssimp(*engine);
         app.meshes->addFromFile(MODEL_FILE, app.materials);
         auto ti = tcm.getInstance(app.meshes->getRenderables()[0]);
         app.transform = mat4f{ mat3f(1), float3(0, 0, -4) } * tcm.getWorldTransform(ti);

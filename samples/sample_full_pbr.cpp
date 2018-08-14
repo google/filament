@@ -353,8 +353,7 @@ static void setup(Engine* engine, View* view, Scene* scene) {
                 "normalMap", g_normalMap, sampler);
     }
 
-    g_meshSet = std::make_unique<MeshAssimp>(*engine,
-            MeshAssimp::TargetApi::OPENGL, MeshAssimp::Platform::DESKTOP);
+    g_meshSet = std::make_unique<MeshAssimp>(*engine);
     for (auto& filename : g_filenames) {
         g_meshSet->addFromFile(filename, g_materialInstances, true);
     }

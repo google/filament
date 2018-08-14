@@ -125,8 +125,7 @@ static void cleanup(Engine* engine, View* view, Scene* scene) {
 }
 
 static void setup(Engine* engine, View* view, Scene* scene) {
-    g_meshSet.reset(new MeshAssimp(*engine, MeshAssimp::TargetApi::OPENGL,
-            MeshAssimp::Platform::DESKTOP));
+    g_meshSet.reset(new MeshAssimp(*engine));
 
     Package pkg = MaterialBuilder()
             .name("PositionOffset")

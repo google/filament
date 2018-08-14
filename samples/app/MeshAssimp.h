@@ -46,9 +46,7 @@ public:
     using half4 = math::half4;
     using short4 = math::short4;
     using half2 = math::half2;
-    using TargetApi = filamat::MaterialBuilderBase::TargetApi;
-    using Platform = filamat::MaterialBuilderBase::Platform;
-    MeshAssimp(filament::Engine& engine, TargetApi targetApi, Platform platform);
+    explicit MeshAssimp(filament::Engine& engine);
     ~MeshAssimp();
 
     void addFromFile(const utils::Path& path,
@@ -95,8 +93,6 @@ private:
     filament::Material* mDefaultTransparentColorMaterial = nullptr;
 
     std::vector<utils::Entity> mRenderables;
-    TargetApi mTargetApi;
-    Platform mPlatform;
 };
 
 #endif // TNT_FILAMENT_SAMPLE_MESH_ASSIMP_H

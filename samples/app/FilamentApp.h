@@ -59,19 +59,20 @@ public:
     void animate(AnimCallback animation) { mAnimation = animation; }
 
     void run(const Config& config, SetupCallback setup, CleanupCallback cleanup,
-            ImGuiCallback imgui = ImGuiCallback());
+            ImGuiCallback imgui = ImGuiCallback(), size_t width = 1024, size_t height = 640);
 
     filament::Material const* getTransparentMaterial() const noexcept { return mTransparentMaterial; }
     IBL* getIBL() const noexcept { return mIBL.get(); }
 
     void close() { mClosed = true; }
 
-private:
-    FilamentApp();
     FilamentApp(const FilamentApp& rhs) = delete;
     FilamentApp(FilamentApp&& rhs) = delete;
     FilamentApp& operator=(const FilamentApp& rhs) = delete;
     FilamentApp& operator=(FilamentApp&& rhs) = delete;
+
+private:
+    FilamentApp();
 
     class CView {
     public:

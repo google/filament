@@ -48,8 +48,7 @@ static constexpr uint8_t DEFAULT_TRANSPARENT_PACKAGE[] = {
     #include "generated/material/aiDefaultTrans.inc"
 };
 
-MeshAssimp::MeshAssimp(Engine& engine, TargetApi targetApi, Platform platform) : mEngine(engine),
-        mTargetApi(targetApi), mPlatform(platform) {
+MeshAssimp::MeshAssimp(Engine& engine) : mEngine(engine) {
 }
 
 MeshAssimp::~MeshAssimp() {

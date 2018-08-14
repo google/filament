@@ -69,7 +69,7 @@ FilamentApp::~FilamentApp() {
 }
 
 void FilamentApp::run(const Config& config,SetupCallback setupCallback,
-        CleanupCallback cleanupCallback, ImGuiCallback imguiCallback) {
+        CleanupCallback cleanupCallback, ImGuiCallback imguiCallback, size_t width, size_t height) {
     mEngine = Engine::create(config.backend);
 
       mDepthMaterial = Material::Builder()
@@ -83,7 +83,7 @@ void FilamentApp::run(const Config& config,SetupCallback setupCallback,
               .build(*mEngine);
 
     std::unique_ptr<FilamentApp::Window> window(
-            new FilamentApp::Window(this, config, config.title, 1024, 640));
+            new FilamentApp::Window(this, config, config.title, width, height));
 
     std::unique_ptr<Cube> cameraCube(new Cube(*mEngine, mTransparentMaterial, {1,0,0}));
     // we can't cull the light-frustum because it's not applied a rigid transform

@@ -200,8 +200,7 @@ static void cleanup(Engine* engine, View* view, Scene* scene) {
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunused-parameter"
 static void setup(Engine* engine, View* view, Scene* scene) {
-    g_meshSet.reset(new MeshAssimp(*engine, MeshAssimp::TargetApi::OPENGL,
-            MeshAssimp::Platform::DESKTOP));
+    g_meshSet.reset(new MeshAssimp(*engine));
     for (auto& filename : g_filenames) {
         g_meshSet->addFromFile(filename, g_materialLibrary);
     }
