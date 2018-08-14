@@ -170,7 +170,16 @@ public:
 
 // ------------------------------------------------------------------------------------------------
 
-class FreeList {
+class FreeListBase {
+public:
+    struct Node {
+        Node* next;
+    };
+    static Node* init(void* begin, void* end,
+            size_t elementSize, size_t alignment, size_t extra) noexcept;
+};
+
+class FreeList : private FreeListBase {
 public:
     FreeList() noexcept = default;
     FreeList(void* begin, void* end, size_t elementSize, size_t alignment, size_t extra) noexcept;
@@ -180,28 +189,28 @@ public:
     FreeList& operator=(FreeList&& rhs) noexcept = default;
 
     void* get() noexcept {
-        FreeList* const head = mNext;
-        mNext = head ? head->mNext : nullptr;
+        Node* const head = mHead;
+        mHead = head ? head->next : nullptr;
         // this could indicate a use after free
-        assert(!mNext || mNext>=mBegin && mNext<mEnd);
+        assert(!mHead || mHead >= mBegin && mHead < mEnd);
         return head;
     }
 
     void put(void* p) noexcept {
         assert(p);
-        assert(p>=mBegin && p<mEnd);
+        assert(p >= mBegin && p < mEnd);
         // TODO: assert this is one of our pointer (i.e.: it's address match one of ours)
-        FreeList* const head = static_cast<FreeList*>(p);
-        head->mNext = mNext;
-        mNext = head;
+        Node* const head = static_cast<Node*>(p);
+        head->next = mHead;
+        mHead = head;
     }
 
     void *getCurrent() noexcept {
-        return mNext;
+        return mHead;
     }
 
 private:
-    FreeList* mNext = nullptr;
+    Node* mHead = nullptr;
 
 #ifndef NDEBUG
     // These are needed only for debugging...
@@ -210,9 +219,46 @@ private:
 #endif
 };
 
+class AtomicFreeList : private FreeListBase {
+public:
+    AtomicFreeList() noexcept = default;
+    AtomicFreeList(void* begin, void* end,
+            size_t elementSize, size_t alignment, size_t extra) noexcept;
+    AtomicFreeList(const FreeList& rhs) = delete;
+    AtomicFreeList& operator=(const FreeList& rhs) = delete;
+
+    void* get() noexcept {
+        Node* head = mHead.load(std::memory_order_relaxed);
+        while (head && !mHead.compare_exchange_weak(head, head->next,
+                std::memory_order_release, std::memory_order_relaxed)) {
+        }
+        return head;
+    }
+
+    void put(void* p) noexcept {
+        assert(p);
+        Node* head = static_cast<Node*>(p);
+        head->next = mHead.load(std::memory_order_relaxed);
+        while (!mHead.compare_exchange_weak(head->next, head,
+                std::memory_order_release, std::memory_order_relaxed)) {
+        }
+    }
+
+    void* getCurrent() noexcept {
+        return mHead.load(std::memory_order_relaxed);
+    }
+
+private:
+    std::atomic<Node*> mHead;
+};
+
 // ------------------------------------------------------------------------------------------------
 
-template <size_t ELEMENT_SIZE, size_t ALIGNMENT = alignof(std::max_align_t), size_t OFFSET = 0>
+template <
+        size_t ELEMENT_SIZE,
+        size_t ALIGNMENT = alignof(std::max_align_t),
+        size_t OFFSET = 0,
+        typename FREELIST = FreeList>
 class PoolAllocator {
     static_assert(ELEMENT_SIZE >= sizeof(void*), "ELEMENT_SIZE must accommodate at least a pointer");
 public:
@@ -244,10 +290,6 @@ public:
     PoolAllocator(const PoolAllocator& rhs) = delete;
     PoolAllocator& operator=(const PoolAllocator& rhs) = delete;
 
-    // Allocators can be moved
-    PoolAllocator(PoolAllocator&& rhs) noexcept = default;
-    PoolAllocator& operator=(PoolAllocator&& rhs) noexcept = default;
-
     PoolAllocator() noexcept = default;
     ~PoolAllocator() noexcept = default;
 
@@ -258,14 +300,18 @@ public:
     }
 
 private:
-    FreeList mFreeList;
+    FREELIST mFreeList;
 };
 
 #define UTILS_MAX(a,b) ((a) > (b) ? (a) : (b))
 
 template <typename T, size_t OFFSET = 0>
-using ObjectPoolAllocator = PoolAllocator<sizeof(T), \
+using ObjectPoolAllocator = PoolAllocator<sizeof(T),
         UTILS_MAX(alignof(FreeList), alignof(T)), OFFSET>;
+
+template <typename T, size_t OFFSET = 0>
+using ThreadSafeObjectPoolAllocator = PoolAllocator<sizeof(T),
+        UTILS_MAX(alignof(FreeList), alignof(T)), OFFSET, AtomicFreeList>;
 
 
 // ------------------------------------------------------------------------------------------------

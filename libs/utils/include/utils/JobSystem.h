@@ -322,7 +322,7 @@ private:
     utils::Mutex mLock;
     utils::Condition mCondition;
     std::atomic<uint32_t> mActiveJobs = { 0 };
-    utils::Arena<utils::ObjectPoolAllocator<Job>, LockingPolicy::SpinLock> mJobPool;
+    utils::Arena<utils::ThreadSafeObjectPoolAllocator<Job>, LockingPolicy::NoLock> mJobPool;
 
     template <typename T>
     using aligned_vector = std::vector<T, utils::STLAlignedAllocator<T>>;
