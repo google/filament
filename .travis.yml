@@ -1,0 +1,38 @@
+language: cpp
+
+fast_finish: false
+
+matrix:
+  allow_failures:
+    - env: ALLOW_FAILURES=true
+
+  include:
+    - os: linux
+      dist: trusty
+      sudo: required
+      services:
+        - docker
+
+install:
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
+      docker pull ubuntu:bionic;
+      docker run -d --name bionic -dti ubuntu:bionic bash;
+      docker ps -a;
+      docker exec bionic mkdir /build;
+      docker cp . bionic:/build;
+      docker exec bionic apt-get update;
+      docker exec bionic apt-get -y upgrade;
+      docker exec bionic apt-get -y install git wget unzip sudo;
+      docker exec bionic apt-get -y install build-essential software-properties-common cmake clang;
+      docker exec bionic apt-get -y install libglu1-mesa-dev libc++-dev libc++abi-dev ninja-build libxi-dev python3-dev;
+      docker exec bionic apt-get update;
+    elif [[ "$TRAVIS_OS_NAME" == "osx" ]] && [[ "$TOOL" == "cmake" ]]; then
+      echo "No install osx actions--using repo";
+    fi
+
+script:
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then
+      docker exec -t bionic bash -c "cd /build && CC=/usr/bin/clang CXX=/usr/bin/clang++ FILAMENT_REQUIRES_CXXABI=true ./build.sh release";
+    elif  [[ "$TRAVIS_OS_NAME" == "osx" ]]; then
+      ./build.sh release;
+    fi
