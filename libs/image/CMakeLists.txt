@@ -33,10 +33,13 @@ target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
 # ==================================================================================================
 # Compiler flags
 # ==================================================================================================
-target_compile_options(${TARGET} PRIVATE
-        -Wno-deprecated-register
-        $<$<CONFIG:Release>:-ffast-math>
-)
+target_compile_options(${TARGET} PRIVATE -Wno-deprecated-register)
+
+if (MSVC OR CLANG_CL)
+    target_compile_options(${TARGET} PRIVATE $<$<CONFIG:Release>:/fp:fast>)
+else()
+    target_compile_options(${TARGET} PRIVATE $<$<CONFIG:Release>:-ffast-math>)
+endif()
 
 # ==================================================================================================
 # Expose header-only utilities to lean-and-mean client projects.

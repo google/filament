@@ -32,10 +32,12 @@ target_link_libraries(${TARGET} filabridge utils)
 # ==================================================================================================
 # Compiler flags
 # ==================================================================================================
-target_compile_options(${TARGET} PRIVATE
+if (NOT WIN32)
+    target_compile_options(${TARGET} PRIVATE
         -fvisibility=hidden
         $<$<PLATFORM_ID:Linux>:-fPIC>
-)
+    )
+endif()
 
 # ==================================================================================================
 # Installation
