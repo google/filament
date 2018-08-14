@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef IMAGE_COLORSPACE_H_
-#define IMAGE_COLORSPACE_H_
+#ifndef IMAGE_COLORTRANSFORM_H_
+#define IMAGE_COLORTRANSFORM_H_
 
 #include <image/Image.h>
 #include <image/LinearImage.h>
@@ -270,11 +270,14 @@ std::unique_ptr<uint8_t[]> fromLinearToRGBM(const LinearImage& image) {
     return dst;
 }
 
+// Constructs a 3-channel LinearImage from an untyped data blob.
+// The "proc" lambda converts a single color component into a float.
+// The "transform" lambda performs an arbitrary float-to-float transformation.
 template<typename T, typename PROCESS, typename TRANSFORM>
-static Image toLinear(size_t w, size_t h, size_t bpr,
+static LinearImage toLinear(size_t w, size_t h, size_t bpr,
         const std::unique_ptr<uint8_t[]>& src, PROCESS proc, TRANSFORM transform) {
-    std::unique_ptr<uint8_t[]> dst(new uint8_t[w * h * sizeof(math::float3)]);
-    math::float3* d = reinterpret_cast<math::float3*>(dst.get());
+    LinearImage result(w, h, 3);
+    math::float3* d = reinterpret_cast<math::float3*>(result.getPixelRef());
     for (size_t y = 0; y < h; ++y) {
         T const* p = reinterpret_cast<T const*>(src.get() + y * bpr);
         for (size_t x = 0; x < w; ++x, p += 3) {
@@ -283,14 +286,17 @@ static Image toLinear(size_t w, size_t h, size_t bpr,
             *d++ = transform(sRGB);
         }
     }
-    return Image(std::move(dst), w, h, w * sizeof(math::float3), sizeof(math::float3));
+    return result;
 }
 
+// Constructs a 4-channel LinearImage from an untyped data blob.
+// The "proc" lambda converts a single color component into a float.
+// the "transform" lambda performs an arbitrary float-to-float transformation.
 template<typename T, typename PROCESS, typename TRANSFORM>
-static Image toLinearWithAlpha(size_t w, size_t h, size_t bpr,
+static LinearImage toLinearWithAlpha(size_t w, size_t h, size_t bpr,
         const std::unique_ptr<uint8_t[]>& src, PROCESS proc, TRANSFORM transform) {
-    std::unique_ptr<uint8_t[]> dst(new uint8_t[w * h * sizeof(math::float4)]);
-    math::float4* d = reinterpret_cast<math::float4*>(dst.get());
+    LinearImage result(w, h, 4);
+    math::float4* d = reinterpret_cast<math::float4*>(result.getPixelRef());
     for (size_t y = 0; y < h; ++y) {
         T const* p = reinterpret_cast<T const*>(src.get() + y * bpr);
         for (size_t x = 0; x < w; ++x, p += 4) {
@@ -299,9 +305,9 @@ static Image toLinearWithAlpha(size_t w, size_t h, size_t bpr,
             *d++ = transform(sRGB);
         }
     }
-    return Image(std::move(dst), w, h, w * sizeof(math::float4), sizeof(math::float4), 4);
+    return result;
 }
 
 }
 
-#endif // IMAGE_COLORSPACE_H_
+#endif // IMAGE_COLORTRANSFORM_H_
