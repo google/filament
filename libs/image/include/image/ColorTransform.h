@@ -320,7 +320,6 @@ static LinearImage toLinearWithAlpha(size_t w, size_t h, size_t bpr,
     return result;
 }
 
-
 // Constructs a 4-channel LinearImage from an untyped data blob.
 // The "proc" lambda converts a single color component into a float.
 // the "transform" lambda performs an arbitrary float-to-float transformation.
@@ -328,6 +327,18 @@ template<typename T, typename PROCESS, typename TRANSFORM>
 static LinearImage toLinearWithAlpha(size_t w, size_t h, size_t bpr,
         const std::unique_ptr<uint8_t[]>& src, PROCESS proc, TRANSFORM transform) {
     return toLinearWithAlpha<T>(w, h, bpr, src.get(), proc, transform);
+}
+
+// Constructs a 3-channel LinearImage from RGBM data.
+inline LinearImage toLinearFromRGBM(math::float4 const* src, uint32_t w, uint32_t h) {
+    LinearImage result(w, h, 3);
+    math::float3* dst = reinterpret_cast<math::float3*>(result.getPixelRef());
+    for (uint32_t row = 0; row < h; ++row) {
+        for (uint32_t col = 0; col < w; ++col, ++src, ++dst) {
+            *dst = RGBMtoLinear(*src);
+        }
+    }
+    return result;
 }
 
 }
