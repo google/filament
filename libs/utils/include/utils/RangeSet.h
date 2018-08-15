@@ -88,7 +88,8 @@ private:
             assert(mSize < CAPACITY);
             // equivalent to std::move_backward(pos, end(), end() + 1) but we don't want a call to memmove
             iterator e = end();
-            while (pos != e--) {
+            while (pos != e) {
+                --e;
                 e[1] = e[0];
             }
             *pos = value;
