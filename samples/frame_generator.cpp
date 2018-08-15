@@ -86,9 +86,9 @@ static Config g_config;
 static void printUsage(char* name) {
     std::string exec_name(Path(name).getName());
     std::string usage(
-            "SAMPLE_TESTBED tests a material by varying float parameters\n"
+            "SAMPLE_FRAME_GENERATOR tests a material by varying float parameters\n"
             "Usage:\n"
-            "    SAMPLE_TESTBED [options] <mesh files (.obj, .fbx, COLLADA)>\n"
+            "    SAMPLE_FRAME_GENERATOR [options] <mesh files (.obj, .fbx, COLLADA)>\n"
             "\n"
             "This tool loads an object, applies the specified material and renders N\n"
             "frames as specified by the -c flag. For each frame rendered, the material\n"
@@ -120,7 +120,7 @@ static void printUsage(char* name) {
             "   --prefix=[prefix], -x [prefix]\n"
             "       Prefix of the output files\n\n"
     );
-    const std::string from("SAMPLE_TESTBED");
+    const std::string from("SAMPLE_FRAME_GENERATOR");
     for (size_t pos = usage.find(from); pos != std::string::npos; pos = usage.find(from, pos)) {
         usage.replace(pos, from.length(), exec_name);
     }
@@ -402,7 +402,7 @@ int main(int argc, char* argv[]) {
         g_filenames.push_back(filename);
     }
 
-    g_config.title = "Material Sandbox";
+    g_config.title = "Frame Generator";
     FilamentApp& filamentApp = FilamentApp::get();
     filamentApp.run(g_config,
             setup, cleanup, FilamentApp::ImGuiCallback(), render, postRender, 512, 512);

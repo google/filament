@@ -135,9 +135,9 @@ function(add_filamesh_demo NAME)
 endfunction()
 
 if (NOT ANDROID)
+    add_assimp_demo(frame_generator)
     add_assimp_demo(lightbulb)
     add_assimp_demo(material_sandbox)
-    add_assimp_demo(material_testbed)
     add_assimp_demo(sample_full_pbr)
     add_assimp_demo(sample_pbr)
     add_assimp_demo(sample_position_offset)
@@ -149,7 +149,7 @@ if (NOT ANDROID)
     add_filamesh_demo(sample_opacity_mask)
 
     # Sample app specific
-    target_link_libraries(material_testbed PRIVATE image imageio)
+    target_link_libraries(frame_generator PRIVATE image imageio)
 endif()
 
 # ==================================================================================================

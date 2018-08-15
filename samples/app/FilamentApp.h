@@ -49,7 +49,7 @@ public:
     using SetupCallback = std::function<void(filament::Engine*, filament::View*, filament::Scene*)>;
     using CleanupCallback =
             std::function<void(filament::Engine*, filament::View*, filament::Scene*)>;
-    using RenderCallback = std::function<void(filament::Engine*, filament::View*,
+    using PreRenderCallback = std::function<void(filament::Engine*, filament::View*,
             filament::Scene*, filament::Renderer*)>;
     using PostRenderCallback = std::function<void(filament::Engine*, filament::View*,
             filament::Scene*, filament::Renderer*)>;
@@ -63,7 +63,7 @@ public:
     void animate(AnimCallback animation) { mAnimation = animation; }
 
     void run(const Config& config, SetupCallback setup, CleanupCallback cleanup,
-            ImGuiCallback imgui = ImGuiCallback(), RenderCallback render = RenderCallback(),
+            ImGuiCallback imgui = ImGuiCallback(), PreRenderCallback preRender = PreRenderCallback(),
             PostRenderCallback postRender = PostRenderCallback(),
             size_t width = 1024, size_t height = 640);
 

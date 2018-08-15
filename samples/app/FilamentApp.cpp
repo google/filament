@@ -72,7 +72,7 @@ FilamentApp::~FilamentApp() {
 
 void FilamentApp::run(const Config& config,SetupCallback setupCallback,
         CleanupCallback cleanupCallback, ImGuiCallback imguiCallback,
-        RenderCallback render, PostRenderCallback postRender,
+        PreRenderCallback preRender, PostRenderCallback postRender,
         size_t width, size_t height) {
     mEngine = Engine::create(config.backend);
 
@@ -336,10 +336,10 @@ void FilamentApp::run(const Config& config,SetupCallback setupCallback,
 
         Renderer* renderer = window->getRenderer();
 
-        if (render) {
+        if (preRender) {
             for (auto const& view : window->mViews) {
                 if (view.get() != window->mUiView) {
-                    render(mEngine, view->getView(), mScene, renderer);
+                    preRender(mEngine, view->getView(), mScene, renderer);
                 }
             }
         }
