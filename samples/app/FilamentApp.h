@@ -49,6 +49,10 @@ public:
     using SetupCallback = std::function<void(filament::Engine*, filament::View*, filament::Scene*)>;
     using CleanupCallback =
             std::function<void(filament::Engine*, filament::View*, filament::Scene*)>;
+    using PreRenderCallback = std::function<void(filament::Engine*, filament::View*,
+            filament::Scene*, filament::Renderer*)>;
+    using PostRenderCallback = std::function<void(filament::Engine*, filament::View*,
+            filament::Scene*, filament::Renderer*)>;
     using ImGuiCallback = std::function<void(filament::Engine*, filament::View*)>;
     using AnimCallback = std::function<void(filament::Engine*, filament::View*, double now)>;
 
@@ -59,7 +63,9 @@ public:
     void animate(AnimCallback animation) { mAnimation = animation; }
 
     void run(const Config& config, SetupCallback setup, CleanupCallback cleanup,
-            ImGuiCallback imgui = ImGuiCallback(), size_t width = 1024, size_t height = 640);
+            ImGuiCallback imgui = ImGuiCallback(), PreRenderCallback preRender = PreRenderCallback(),
+            PostRenderCallback postRender = PostRenderCallback(),
+            size_t width = 1024, size_t height = 640);
 
     filament::Material const* getTransparentMaterial() const noexcept { return mTransparentMaterial; }
     IBL* getIBL() const noexcept { return mIBL.get(); }

@@ -128,7 +128,7 @@ inline math::float4 sRGBToLinear(const math::float4& sRGB) {
 }
 
 template<typename T>
-T linearToSRGB(const T& sRGB);
+T linearToSRGB(const T& color);
 
 template<>
 inline math::float3 linearToSRGB(const math::float3& color) {
@@ -214,7 +214,8 @@ std::unique_ptr<uint8_t[]> fromLinearTosRGB(const LinearImage& image) {
     T* d = reinterpret_cast<T*>(dst.get());
     for (size_t y = 0; y < h; ++y) {
         for (size_t x = 0; x < w; ++x, d += 3) {
-            float3 const* src = reinterpret_cast<float3 const*>(image.getPixelRef(x, y));
+            float3 const* src = reinterpret_cast<float3 const*>(
+                    image.getPixelRef((uint32_t) x, (uint32_t) y));
             float3 l(linearTosRGB(saturate(*src)) * std::numeric_limits<T>::max());
             for (size_t i = 0; i < 3; i++) {
                 d[i] = T(l[i]);
@@ -237,7 +238,8 @@ std::unique_ptr<uint8_t[]> fromLinearToRGB(const LinearImage& image) {
     T* d = reinterpret_cast<T*>(dst.get());
     for (size_t y = 0; y < h; ++y) {
         for (size_t x = 0; x < w; ++x, d += 3) {
-            float3 const* src = reinterpret_cast<float3 const*>(image.getPixelRef(x, y));
+            float3 const* src = reinterpret_cast<float3 const*>(
+                    image.getPixelRef((uint32_t) x, (uint32_t) y));
             float3 l(saturate(*src) * std::numeric_limits<T>::max());
             for (size_t i = 0; i < 3; i++) {
                 d[i] = T(l[i]);
@@ -260,7 +262,8 @@ std::unique_ptr<uint8_t[]> fromLinearToRGBM(const LinearImage& image) {
     T* d = reinterpret_cast<T*>(dst.get());
     for (size_t y = 0; y < h; ++y) {
         for (size_t x = 0; x < w; ++x, d += 4) {
-            float3 const* src = reinterpret_cast<float3 const*>(image.getPixelRef(x, y));
+            float3 const* src = reinterpret_cast<float3 const*>(
+                    image.getPixelRef((uint32_t) x, (uint32_t) y));
             float4 l(linearToRGBM(*src) * std::numeric_limits<T>::max());
             for (size_t i = 0; i < 4; i++) {
                 d[i] = T(l[i]);
@@ -275,11 +278,11 @@ std::unique_ptr<uint8_t[]> fromLinearToRGBM(const LinearImage& image) {
 // The "transform" lambda performs an arbitrary float-to-float transformation.
 template<typename T, typename PROCESS, typename TRANSFORM>
 static LinearImage toLinear(size_t w, size_t h, size_t bpr,
-        const std::unique_ptr<uint8_t[]>& src, PROCESS proc, TRANSFORM transform) {
-    LinearImage result(w, h, 3);
+            const uint8_t* src, PROCESS proc, TRANSFORM transform) {
+    LinearImage result((uint32_t) w, (uint32_t) h, 3);
     math::float3* d = reinterpret_cast<math::float3*>(result.getPixelRef());
     for (size_t y = 0; y < h; ++y) {
-        T const* p = reinterpret_cast<T const*>(src.get() + y * bpr);
+        T const* p = reinterpret_cast<T const*>(src + y * bpr);
         for (size_t x = 0; x < w; ++x, p += 3) {
             math::float3 sRGB(proc(p[0]), proc(p[1]), proc(p[2]));
             sRGB /= std::numeric_limits<T>::max();
@@ -289,16 +292,25 @@ static LinearImage toLinear(size_t w, size_t h, size_t bpr,
     return result;
 }
 
+// Constructs a 3-channel LinearImage from an untyped data blob.
+// The "proc" lambda converts a single color component into a float.
+// The "transform" lambda performs an arbitrary float-to-float transformation.
+template<typename T, typename PROCESS, typename TRANSFORM>
+static LinearImage toLinear(size_t w, size_t h, size_t bpr,
+        const std::unique_ptr<uint8_t[]>& src, PROCESS proc, TRANSFORM transform) {
+    return toLinear<T>(w, h, bpr, src.get(), proc, transform);
+}
+
 // Constructs a 4-channel LinearImage from an untyped data blob.
 // The "proc" lambda converts a single color component into a float.
 // the "transform" lambda performs an arbitrary float-to-float transformation.
 template<typename T, typename PROCESS, typename TRANSFORM>
 static LinearImage toLinearWithAlpha(size_t w, size_t h, size_t bpr,
-        const std::unique_ptr<uint8_t[]>& src, PROCESS proc, TRANSFORM transform) {
-    LinearImage result(w, h, 4);
+        const uint8_t* src, PROCESS proc, TRANSFORM transform) {
+    LinearImage result((uint32_t) w, (uint32_t) h, 4);
     math::float4* d = reinterpret_cast<math::float4*>(result.getPixelRef());
     for (size_t y = 0; y < h; ++y) {
-        T const* p = reinterpret_cast<T const*>(src.get() + y * bpr);
+        T const* p = reinterpret_cast<T const*>(src + y * bpr);
         for (size_t x = 0; x < w; ++x, p += 4) {
             math::float4 sRGB(proc(p[0]), proc(p[1]), proc(p[2]), proc(p[3]));
             sRGB /= std::numeric_limits<T>::max();
@@ -306,6 +318,16 @@ static LinearImage toLinearWithAlpha(size_t w, size_t h, size_t bpr,
         }
     }
     return result;
+}
+
+
+// Constructs a 4-channel LinearImage from an untyped data blob.
+// The "proc" lambda converts a single color component into a float.
+// the "transform" lambda performs an arbitrary float-to-float transformation.
+template<typename T, typename PROCESS, typename TRANSFORM>
+static LinearImage toLinearWithAlpha(size_t w, size_t h, size_t bpr,
+        const std::unique_ptr<uint8_t[]>& src, PROCESS proc, TRANSFORM transform) {
+    return toLinearWithAlpha<T>(w, h, bpr, src.get(), proc, transform);
 }
 
 }

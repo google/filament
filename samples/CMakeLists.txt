@@ -135,6 +135,7 @@ function(add_filamesh_demo NAME)
 endfunction()
 
 if (NOT ANDROID)
+    add_assimp_demo(frame_generator)
     add_assimp_demo(lightbulb)
     add_assimp_demo(material_sandbox)
     add_assimp_demo(sample_full_pbr)
@@ -146,6 +147,9 @@ if (NOT ANDROID)
     add_filamesh_demo(vk_imgui)
     add_filamesh_demo(sample_normal_map)
     add_filamesh_demo(sample_opacity_mask)
+
+    # Sample app specific
+    target_link_libraries(frame_generator PRIVATE image imageio)
 endif()
 
 # ==================================================================================================

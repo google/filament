@@ -1,3 +1,5 @@
+#include <memory>
+
 /*
  * Copyright (C) 2015 The Android Open Source Project
  *
@@ -69,7 +71,9 @@ FilamentApp::~FilamentApp() {
 }
 
 void FilamentApp::run(const Config& config,SetupCallback setupCallback,
-        CleanupCallback cleanupCallback, ImGuiCallback imguiCallback, size_t width, size_t height) {
+        CleanupCallback cleanupCallback, ImGuiCallback imguiCallback,
+        PreRenderCallback preRender, PostRenderCallback postRender,
+        size_t width, size_t height) {
     mEngine = Engine::create(config.backend);
 
       mDepthMaterial = Material::Builder()
@@ -329,12 +333,30 @@ void FilamentApp::run(const Config& config,SetupCallback setupCallback,
 
         // TODO: we need better timing or use SDL_GL_SetSwapInterval
         SDL_Delay(16);
+
         Renderer* renderer = window->getRenderer();
+
+        if (preRender) {
+            for (auto const& view : window->mViews) {
+                if (view.get() != window->mUiView) {
+                    preRender(mEngine, view->getView(), mScene, renderer);
+                }
+            }
+        }
+
         if (renderer->beginFrame(window->getSwapChain())) {
             for (auto const& view : window->mViews) {
                 renderer->render(view->getView());
             }
             renderer->endFrame();
+        }
+
+        if (postRender) {
+            for (auto const& view : window->mViews) {
+                if (view.get() != window->mUiView) {
+                    postRender(mEngine, view->getView(), mScene, renderer);
+                }
+            }
         }
     }
 
@@ -371,7 +393,7 @@ void FilamentApp::loadIBL(const Config& config) {
             return;
         }
 
-        mIBL.reset(new IBL(*mEngine));
+        mIBL = std::make_unique<IBL>(*mEngine);
         if (!mIBL->loadFromDirectory(iblPath)) {
             std::cerr << "Could not load the specified IBL: " << iblPath << std::endl;
             mIBL.reset(nullptr);
