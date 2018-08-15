@@ -12,15 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef LIBSPIRV_OPT_CCP_PASS_H_
-#define LIBSPIRV_OPT_CCP_PASS_H_
+#ifndef SOURCE_OPT_CCP_PASS_H_
+#define SOURCE_OPT_CCP_PASS_H_
 
-#include "constants.h"
-#include "function.h"
-#include "ir_context.h"
-#include "mem_pass.h"
-#include "module.h"
-#include "propagator.h"
+#include <memory>
+#include <unordered_map>
+
+#include "source/opt/constants.h"
+#include "source/opt/function.h"
+#include "source/opt/ir_context.h"
+#include "source/opt/mem_pass.h"
+#include "source/opt/module.h"
+#include "source/opt/propagator.h"
 
 namespace spvtools {
 namespace opt {
@@ -106,4 +109,4 @@ class CCPPass : public MemPass {
 }  // namespace opt
 }  // namespace spvtools
 
-#endif
+#endif  // SOURCE_OPT_CCP_PASS_H_

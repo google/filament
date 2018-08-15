@@ -12,18 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef LIBSPIRV_OPT_PROPAGATOR_H_
-#define LIBSPIRV_OPT_PROPAGATOR_H_
+#ifndef SOURCE_OPT_PROPAGATOR_H_
+#define SOURCE_OPT_PROPAGATOR_H_
 
 #include <functional>
 #include <queue>
 #include <set>
 #include <unordered_map>
 #include <unordered_set>
+#include <utility>
 #include <vector>
 
-#include "ir_context.h"
-#include "module.h"
+#include "source/opt/ir_context.h"
+#include "source/opt/module.h"
 
 namespace spvtools {
 namespace opt {
@@ -313,4 +314,4 @@ std::ostream& operator<<(std::ostream& str,
 }  // namespace opt
 }  // namespace spvtools
 
-#endif  // LIBSPIRV_OPT_PROPAGATOR_H_
+#endif  // SOURCE_OPT_PROPAGATOR_H_

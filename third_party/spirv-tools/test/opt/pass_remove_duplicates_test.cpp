@@ -13,15 +13,17 @@
 // limitations under the License.
 
 #include <iostream>
+#include <memory>
+#include <string>
+#include <vector>
 
-#include <gmock/gmock.h>
-
+#include "gmock/gmock.h"
 #include "source/opt/build_module.h"
 #include "source/opt/ir_context.h"
 #include "source/opt/pass_manager.h"
 #include "source/opt/remove_duplicates_pass.h"
 #include "source/spirv_constant.h"
-#include "unit_spirv.h"
+#include "test/unit_spirv.h"
 
 namespace spvtools {
 namespace opt {
@@ -59,7 +61,7 @@ class RemoveDuplicatesTest : public ::testing::Test {
     tools_.SetMessageConsumer(consumer_);
   }
 
-  virtual void TearDown() override { error_message_.clear(); }
+  void TearDown() override { error_message_.clear(); }
 
   std::string RunPass(const std::string& text) {
     context_ = spvtools::BuildModule(SPV_ENV_UNIVERSAL_1_2, consumer_, text);

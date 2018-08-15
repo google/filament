@@ -12,11 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "constants.h"
-#include "ir_context.h"
+#include "source/opt/constants.h"
 
 #include <unordered_map>
 #include <vector>
+
+#include "source/opt/ir_context.h"
 
 namespace spvtools {
 namespace opt {

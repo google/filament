@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef SPIRV_TOOLS_LIBSPIRV_H_
-#define SPIRV_TOOLS_LIBSPIRV_H_
+#ifndef INCLUDE_SPIRV_TOOLS_LIBSPIRV_H_
+#define INCLUDE_SPIRV_TOOLS_LIBSPIRV_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -596,4 +596,4 @@ SPIRV_TOOLS_EXPORT spv_result_t spvBinaryParse(
 }
 #endif
 
-#endif  // SPIRV_TOOLS_LIBSPIRV_H_
+#endif  // INCLUDE_SPIRV_TOOLS_LIBSPIRV_H_

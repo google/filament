@@ -15,11 +15,11 @@
 // Test capability dependencies for enums.
 
 #include <tuple>
+#include <vector>
 
 #include "gmock/gmock.h"
-
-#include "enum_set.h"
-#include "unit_spirv.h"
+#include "source/enum_set.h"
+#include "test/unit_spirv.h"
 
 namespace spvtools {
 namespace {

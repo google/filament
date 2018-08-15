@@ -12,12 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "opt/loop_unroller.h"
+#include "source/opt/loop_unroller.h"
+
+#include <limits>
 #include <map>
 #include <memory>
+#include <unordered_map>
 #include <utility>
-#include "opt/ir_builder.h"
-#include "opt/loop_utils.h"
+#include <vector>
+
+#include "source/opt/ir_builder.h"
+#include "source/opt/loop_utils.h"
 
 // Implements loop util unrolling functionality for fully and partially
 // unrolling loops. Given a factor it will duplicate the loop that many times,

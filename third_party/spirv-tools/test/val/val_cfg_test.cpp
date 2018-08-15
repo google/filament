@@ -26,9 +26,9 @@
 
 #include "source/diagnostic.h"
 #include "source/val/validate.h"
-#include "test_fixture.h"
-#include "unit_spirv.h"
-#include "val_fixtures.h"
+#include "test/test_fixture.h"
+#include "test/unit_spirv.h"
+#include "test/val/val_fixtures.h"
 
 namespace spvtools {
 namespace val {
@@ -477,9 +477,10 @@ TEST_P(ValidateCFG, BranchTargetFirstBlockBadSinceEntryBlock) {
 
 TEST_P(ValidateCFG, BranchTargetFirstBlockBadSinceValue) {
   Block entry("entry");
+  entry.SetBody("%undef = OpUndef %voidt\n");
   Block bad("bad");
   Block end("end", SpvOpReturn);
-  Block badvalue("func");  // This referenes the function name.
+  Block badvalue("undef");  // This referenes the OpUndef.
   std::string str = header(GetParam()) +
                     nameOps("entry", "bad", std::make_pair("func", "Main")) +
                     types_consts() +
@@ -493,11 +494,10 @@ TEST_P(ValidateCFG, BranchTargetFirstBlockBadSinceValue) {
 
   CompileSuccessfully(str);
   ASSERT_EQ(SPV_ERROR_INVALID_CFG, ValidateInstructions());
-  EXPECT_THAT(
-      getDiagnosticString(),
-      MatchesRegex("Block\\(s\\) \\{.\\[Main\\]\\} are referenced but not "
-                   "defined in function .\\[Main\\]\n"
-                   "  %Main = OpFunction %void None %10\n"))
+  EXPECT_THAT(getDiagnosticString(),
+              MatchesRegex("Block\\(s\\) \\{..\\} are referenced but not "
+                           "defined in function .\\[Main\\]\n"
+                           "  %Main = OpFunction %void None %10\n"))
       << str;
 }
 

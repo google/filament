@@ -9292,6 +9292,16 @@ string CompilerGLSL::emit_continue_block(uint32_t continue_block)
 	return merge(statements);
 }
 
+void CompilerGLSL::emit_while_loop_initializers(const SPIRBlock &block)
+{
+	// While loops do not take initializers, so declare all of them outside.
+	for (auto &loop_var : block.loop_variables)
+	{
+		auto &var = get<SPIRVariable>(loop_var);
+		statement(variable_decl(var), ";");
+	}
+}
+
 string CompilerGLSL::emit_for_loop_initializers(const SPIRBlock &block)
 {
 	if (block.loop_variables.empty())
@@ -9409,12 +9419,12 @@ bool CompilerGLSL::attempt_emit_loop_header(SPIRBlock &block, SPIRBlock::Method 
 			{
 				// This block may be a dominating block, so make sure we flush undeclared variables before building the for loop header.
 				flush_undeclared_variables(block);
-				emit_block_hints(block);
 
 				// Important that we do this in this order because
 				// emitting the continue block can invalidate the condition expression.
 				auto initializer = emit_for_loop_initializers(block);
 				auto condition = to_expression(block.condition);
+				emit_block_hints(block);
 				if (method != SPIRBlock::MergeToSelectContinueForLoop)
 				{
 					auto continue_block = emit_continue_block(block.continue_block);
@@ -9428,6 +9438,7 @@ bool CompilerGLSL::attempt_emit_loop_header(SPIRBlock &block, SPIRBlock::Method 
 			case SPIRBlock::WhileLoop:
 				// This block may be a dominating block, so make sure we flush undeclared variables before building the while loop header.
 				flush_undeclared_variables(block);
+				emit_while_loop_initializers(block);
 				emit_block_hints(block);
 				statement("while (", to_expression(block.condition), ")");
 				break;
@@ -9482,6 +9493,7 @@ bool CompilerGLSL::attempt_emit_loop_header(SPIRBlock &block, SPIRBlock::Method 
 			}
 
 			case SPIRBlock::WhileLoop:
+				emit_while_loop_initializers(block);
 				emit_block_hints(block);
 				statement("while (", to_expression(child.condition), ")");
 				break;
@@ -9600,6 +9612,7 @@ void CompilerGLSL::emit_block_chain(SPIRBlock &block)
 	else if (continue_type == SPIRBlock::DoWhileLoop)
 	{
 		flush_undeclared_variables(block);
+		emit_while_loop_initializers(block);
 		// We have some temporaries where the loop header is the dominator.
 		// We risk a case where we have code like:
 		// for (;;) { create-temporary; break; } consume-temporary;
@@ -9613,6 +9626,7 @@ void CompilerGLSL::emit_block_chain(SPIRBlock &block)
 	else if (block.merge == SPIRBlock::MergeLoop)
 	{
 		flush_undeclared_variables(block);
+		emit_while_loop_initializers(block);
 
 		// We have a generic loop without any distinguishable pattern like for, while or do while.
 		get<SPIRBlock>(block.continue_block).complex_continue = true;

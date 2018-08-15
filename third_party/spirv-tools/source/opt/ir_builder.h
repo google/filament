@@ -12,13 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef LIBSPIRV_OPT_IR_BUILDER_H_
-#define LIBSPIRV_OPT_IR_BUILDER_H_
+#ifndef SOURCE_OPT_IR_BUILDER_H_
+#define SOURCE_OPT_IR_BUILDER_H_
 
-#include "opt/basic_block.h"
-#include "opt/constants.h"
-#include "opt/instruction.h"
-#include "opt/ir_context.h"
+#include <limits>
+#include <memory>
+#include <utility>
+#include <vector>
+
+#include "source/opt/basic_block.h"
+#include "source/opt/constants.h"
+#include "source/opt/instruction.h"
+#include "source/opt/ir_context.h"
 
 namespace spvtools {
 namespace opt {
@@ -413,4 +418,4 @@ class InstructionBuilder {
 }  // namespace opt
 }  // namespace spvtools
 
-#endif  // LIBSPIRV_OPT_IR_BUILDER_H_
+#endif  // SOURCE_OPT_IR_BUILDER_H_

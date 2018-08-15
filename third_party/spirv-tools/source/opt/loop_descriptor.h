@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef LIBSPIRV_OPT_LOOP_DESCRIPTORS_H_
-#define LIBSPIRV_OPT_LOOP_DESCRIPTORS_H_
+#ifndef SOURCE_OPT_LOOP_DESCRIPTOR_H_
+#define SOURCE_OPT_LOOP_DESCRIPTOR_H_
 
 #include <algorithm>
 #include <cstdint>
@@ -21,12 +21,13 @@
 #include <memory>
 #include <unordered_map>
 #include <unordered_set>
+#include <utility>
 #include <vector>
 
-#include "opt/basic_block.h"
-#include "opt/dominator_analysis.h"
-#include "opt/module.h"
-#include "opt/tree_iterator.h"
+#include "source/opt/basic_block.h"
+#include "source/opt/dominator_analysis.h"
+#include "source/opt/module.h"
+#include "source/opt/tree_iterator.h"
 
 namespace spvtools {
 namespace opt {
@@ -568,4 +569,4 @@ class LoopDescriptor {
 }  // namespace opt
 }  // namespace spvtools
 
-#endif  // LIBSPIRV_OPT_LOOP_DESCRIPTORS_H_
+#endif  // SOURCE_OPT_LOOP_DESCRIPTOR_H_

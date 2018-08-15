@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef LIBSPIRV_UTILS_BIT_VECTOR_H_
-#define LIBSPIRV_UTILS_BIT_VECTOR_H_
+#ifndef SOURCE_UTIL_BIT_VECTOR_H_
+#define SOURCE_UTIL_BIT_VECTOR_H_
 
 #include <cstdint>
 #include <iosfwd>
@@ -116,4 +116,4 @@ class BitVector {
 }  // namespace utils
 }  // namespace spvtools
 
-#endif  // LIBSPIRV_UTILS_BIT_VECTOR_H_
+#endif  // SOURCE_UTIL_BIT_VECTOR_H_

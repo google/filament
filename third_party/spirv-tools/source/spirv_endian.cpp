@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "spirv_endian.h"
+#include "source/spirv_endian.h"
 
 #include <cstring>
 

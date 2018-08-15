@@ -12,11 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "assembly_builder.h"
-#include "gmock/gmock.h"
-#include "pass_fixture.h"
-
 #include <cstdarg>
+#include <string>
+#include <vector>
+
+#include "gmock/gmock.h"
+#include "test/opt/assembly_builder.h"
+#include "test/opt/pass_fixture.h"
 
 namespace spvtools {
 namespace opt {

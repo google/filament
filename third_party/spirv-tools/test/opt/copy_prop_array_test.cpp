@@ -13,11 +13,11 @@
 // limitations under the License.
 
 #include <iostream>
+#include <string>
 
-#include <gmock/gmock.h>
-
-#include "assembly_builder.h"
-#include "pass_fixture.h"
+#include "gmock/gmock.h"
+#include "test/opt/assembly_builder.h"
+#include "test/opt/pass_fixture.h"
 
 namespace spvtools {
 namespace opt {

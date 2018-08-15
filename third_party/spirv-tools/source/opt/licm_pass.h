@@ -15,12 +15,13 @@
 #ifndef SOURCE_OPT_LICM_PASS_H_
 #define SOURCE_OPT_LICM_PASS_H_
 
-#include "opt/basic_block.h"
-#include "opt/instruction.h"
-#include "opt/loop_descriptor.h"
-#include "opt/pass.h"
-
 #include <queue>
+#include <vector>
+
+#include "source/opt/basic_block.h"
+#include "source/opt/instruction.h"
+#include "source/opt/loop_descriptor.h"
+#include "source/opt/pass.h"
 
 namespace spvtools {
 namespace opt {

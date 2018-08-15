@@ -12,16 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "register_pressure.h"
+#include "source/opt/register_pressure.h"
 
+#include <algorithm>
 #include <iterator>
 
-#include "cfg.h"
-#include "def_use_manager.h"
-#include "dominator_tree.h"
-#include "function.h"
-#include "ir_context.h"
-#include "iterator.h"
+#include "source/opt/cfg.h"
+#include "source/opt/def_use_manager.h"
+#include "source/opt/dominator_tree.h"
+#include "source/opt/function.h"
+#include "source/opt/ir_context.h"
+#include "source/opt/iterator.h"
 
 namespace spvtools {
 namespace opt {

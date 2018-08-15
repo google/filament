@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "set_spec_constant_default_value_pass.h"
+#include "source/opt/set_spec_constant_default_value_pass.h"
 
 #include <algorithm>
 #include <cctype>
@@ -20,13 +20,13 @@
 #include <tuple>
 #include <vector>
 
-#include "def_use_manager.h"
-#include "ir_context.h"
-#include "make_unique.h"
+#include "source/opt/def_use_manager.h"
+#include "source/opt/ir_context.h"
+#include "source/opt/type_manager.h"
+#include "source/opt/types.h"
+#include "source/util/make_unique.h"
+#include "source/util/parse_number.h"
 #include "spirv-tools/libspirv.h"
-#include "type_manager.h"
-#include "types.h"
-#include "util/parse_number.h"
 
 namespace spvtools {
 namespace opt {

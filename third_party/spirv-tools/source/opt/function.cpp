@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "function.h"
+#include "source/opt/function.h"
 
 #include <ostream>
 #include <sstream>

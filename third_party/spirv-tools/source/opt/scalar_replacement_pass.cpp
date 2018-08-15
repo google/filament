@@ -12,16 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "scalar_replacement_pass.h"
+#include "source/opt/scalar_replacement_pass.h"
 
-#include "enum_string_mapping.h"
-#include "extensions.h"
-#include "make_unique.h"
-#include "reflect.h"
-#include "types.h"
-
+#include <algorithm>
 #include <queue>
 #include <tuple>
+#include <utility>
+
+#include "source/enum_string_mapping.h"
+#include "source/extensions.h"
+#include "source/opt/reflect.h"
+#include "source/opt/types.h"
+#include "source/util/make_unique.h"
 
 namespace spvtools {
 namespace opt {

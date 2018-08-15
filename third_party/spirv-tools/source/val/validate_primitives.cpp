@@ -35,10 +35,11 @@ spv_result_t PrimitivesPass(ValidationState_t& _, const Instruction* inst) {
     case SpvOpEndPrimitive:
     case SpvOpEmitStreamVertex:
     case SpvOpEndStreamPrimitive:
-      _.current_function().RegisterExecutionModelLimitation(
-          SpvExecutionModelGeometry,
-          std::string(spvOpcodeString(opcode)) +
-              " instructions require Geometry execution model");
+      _.function(inst->function()->id())
+          ->RegisterExecutionModelLimitation(
+              SpvExecutionModelGeometry,
+              std::string(spvOpcodeString(opcode)) +
+                  " instructions require Geometry execution model");
       break;
     default:
       break;

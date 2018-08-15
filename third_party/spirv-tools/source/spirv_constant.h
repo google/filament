@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef LIBSPIRV_SPIRV_CONSTANT_H_
-#define LIBSPIRV_SPIRV_CONSTANT_H_
+#ifndef SOURCE_SPIRV_CONSTANT_H_
+#define SOURCE_SPIRV_CONSTANT_H_
 
-#include "latest_version_spirv_header.h"
+#include "source/latest_version_spirv_header.h"
 #include "spirv-tools/libspirv.h"
 
 // Version number macros.
@@ -97,4 +97,4 @@ typedef enum spv_generator_t {
 // Returns the misc part of the generator word.
 #define SPV_GENERATOR_MISC_PART(WORD) (uint32_t(WORD) & 0xFFFF)
 
-#endif  // LIBSPIRV_SPIRV_CONSTANT_H_
+#endif  // SOURCE_SPIRV_CONSTANT_H_

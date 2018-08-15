@@ -12,14 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "module.h"
+#include "source/opt/module.h"
 
 #include <algorithm>
 #include <cstring>
 #include <ostream>
 
-#include "operand.h"
-#include "reflect.h"
+#include "source/operand.h"
+#include "source/opt/reflect.h"
 
 namespace spvtools {
 namespace opt {

@@ -6,7 +6,7 @@ SamplerComparisonState s2 : register(s2, space2);
 Texture1D <float4> t1 : register(t1, space1);
 Texture2D <float4> t2 : register(t2, space1);
 Texture3D <float4> t3 : register(t1, space2);
-
+Texture3D <float4> ts6 : register(t1, space6);
 StructuredBuffer<float4> t4 : register(t1, space3);
 
 ByteAddressBuffer t5 : register(t2, space3);
@@ -54,6 +54,7 @@ float4 main() : SV_Target0
 
     cb1;
     tb1;
+    ts6;
 
     return 0;
 }

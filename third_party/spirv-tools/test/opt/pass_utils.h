@@ -12,9 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef LIBSPIRV_TEST_OPT_PASS_UTILS_H_
-#define LIBSPIRV_TEST_OPT_PASS_UTILS_H_
+#ifndef TEST_OPT_PASS_UTILS_H_
+#define TEST_OPT_PASS_UTILS_H_
 
+#include <algorithm>
 #include <functional>
 #include <iterator>
 #include <string>
@@ -64,4 +65,4 @@ std::vector<T> Concat(const std::vector<T>& a, const std::vector<T>& b) {
 }  // namespace opt
 }  // namespace spvtools
 
-#endif  // LIBSPIRV_TEST_OPT_PASS_UTILS_H_
+#endif  // TEST_OPT_PASS_UTILS_H_

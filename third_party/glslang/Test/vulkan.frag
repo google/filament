@@ -21,7 +21,7 @@ void badConst()
     sampler3D[4](t3d5, sA[2]);    // ERROR, can't make array
     sampler2D(i2d, s);            // ERROR, image instead of texture
     sampler2D(t3d[1], s);         // ERROR, 3D not 2D
-    sampler2D(t2d, sShadow);      // ERROR, shadow mismatch
+    sampler2D(t2d, sShadow);
     sampler2DShadow(t2d, s);
 }
 

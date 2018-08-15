@@ -12,13 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "id_descriptor.h"
+#include "source/id_descriptor.h"
 
 #include <cassert>
 #include <iostream>
 
-#include "opcode.h"
-#include "operand.h"
+#include "source/opcode.h"
+#include "source/operand.h"
 
 namespace spvtools {
 namespace {

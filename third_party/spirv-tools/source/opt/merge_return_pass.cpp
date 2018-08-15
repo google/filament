@@ -12,13 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "merge_return_pass.h"
+#include "source/opt/merge_return_pass.h"
 
-#include "instruction.h"
-#include "ir_builder.h"
-#include "ir_context.h"
-#include "make_unique.h"
-#include "reflect.h"
+#include <list>
+#include <memory>
+#include <utility>
+
+#include "source/opt/instruction.h"
+#include "source/opt/ir_builder.h"
+#include "source/opt/ir_context.h"
+#include "source/opt/reflect.h"
+#include "source/util/make_unique.h"
 
 namespace spvtools {
 namespace opt {

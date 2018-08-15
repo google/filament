@@ -14,10 +14,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "block_merge_pass.h"
+#include "source/opt/block_merge_pass.h"
 
-#include "ir_context.h"
-#include "iterator.h"
+#include <vector>
+
+#include "source/opt/ir_context.h"
+#include "source/opt/iterator.h"
 
 namespace spvtools {
 namespace opt {

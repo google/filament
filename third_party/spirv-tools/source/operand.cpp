@@ -12,15 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "operand.h"
+#include "source/operand.h"
 
 #include <assert.h>
 #include <string.h>
 #include <algorithm>
 
-#include "macro.h"
-#include "spirv_constant.h"
-#include "spirv_target_env.h"
+#include "source/macro.h"
+#include "source/spirv_constant.h"
+#include "source/spirv_target_env.h"
 
 // For now, assume unified1 contains up to SPIR-V 1.3 and no later
 // SPIR-V version.

@@ -6,7 +6,7 @@ include(GNUInstallDirs)
 
 option(ENABLE_AMD_EXTENSIONS "Enables support of AMD-specific extensions" ON)
 option(ENABLE_NV_EXTENSIONS "Enables support of Nvidia-specific extensions" ON)
-option(ENABLE_OPT "Enables spirv-opt capability if present" ON)
+option(ENABLE_OPT "Enables spirv-opt capability if present" OFFENABLE_OPT)
 
 if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT AND WIN32)
     set(CMAKE_INSTALL_PREFIX "install" CACHE STRING "..." FORCE)
@@ -44,18 +44,19 @@ endif(WIN32)
 function(glslang_set_link_args TARGET)
     # For MinGW compiles, statically link against the GCC and C++ runtimes.
     # This avoids the need to ship those runtimes as DLLs.
-    if(WIN32 AND ${CMAKE_CXX_COMPILER_ID} MATCHES "GNU")
+    if (WIN32 AND ${CMAKE_CXX_COMPILER_ID} MATCHES "GNU")
         set_target_properties(${TARGET} PROPERTIES
                               LINK_FLAGS "-static -static-libgcc -static-libstdc++")
     endif()
 endfunction(glslang_set_link_args)
 
-if(ENABLE_OPT)
-    message(STATUS "SPIR-V optimizer enabled")
-    add_definitions(-DENABLE_OPT)
-elseif(ENABLE_HLSL)
-    message(STATUS "spirv-tools not linked - illegal SPIRV may be generated for HLSL")
-endif()
+# We keep the optimizer disabled, we call it ourselves
+# if(ENABLE_OPT)
+#     message(STATUS "SPIR-V optimizer enabled")
+#     add_definitions(-DENABLE_OPT)
+# elseif(ENABLE_HLSL)
+#     message(STATUS "spirv-tools not linked - illegal SPIRV may be generated for HLSL")
+# endif()
 
 add_subdirectory(../glslang/tnt "${CMAKE_CURRENT_BINARY_DIR}/glslang")
 add_subdirectory(../OGLCompilersDLL/tnt "${CMAKE_CURRENT_BINARY_DIR}/OGLCompilersDLL")

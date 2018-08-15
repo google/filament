@@ -14,8 +14,8 @@
 
 // Contains utils for getting resource utilization
 
-#ifndef LIBSPIRV_UTIL_TIMER_H_
-#define LIBSPIRV_UTIL_TIMER_H_
+#ifndef SOURCE_UTIL_TIMER_H_
+#define SOURCE_UTIL_TIMER_H_
 
 #if defined(SPIRV_TIMER_ENABLED)
 
@@ -389,4 +389,4 @@ class CumulativeTimer : public Timer {
 
 #endif  // defined(SPIRV_TIMER_ENABLED)
 
-#endif  // LIBSPIRV_UTIL_TIMER_H_
+#endif  // SOURCE_UTIL_TIMER_H_

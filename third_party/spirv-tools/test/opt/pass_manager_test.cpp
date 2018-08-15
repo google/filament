@@ -12,13 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "gmock/gmock.h"
-
 #include <initializer_list>
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
 
-#include "module_utils.h"
-#include "opt/make_unique.h"
-#include "pass_fixture.h"
+#include "gmock/gmock.h"
+#include "source/util/make_unique.h"
+#include "test/opt/module_utils.h"
+#include "test/opt/pass_fixture.h"
 
 namespace spvtools {
 namespace opt {

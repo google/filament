@@ -12,20 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "remove_duplicates_pass.h"
-
-#include <cstring>
+#include "source/opt/remove_duplicates_pass.h"
 
 #include <algorithm>
+#include <cstring>
 #include <limits>
+#include <string>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
-#include "decoration_manager.h"
-#include "ir_context.h"
-#include "opcode.h"
-#include "reflect.h"
+#include "source/opcode.h"
+#include "source/opt/decoration_manager.h"
+#include "source/opt/ir_context.h"
+#include "source/opt/reflect.h"
 
 namespace spvtools {
 namespace opt {

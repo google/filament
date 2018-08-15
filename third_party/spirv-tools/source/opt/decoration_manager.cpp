@@ -12,13 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "decoration_manager.h"
+#include "source/opt/decoration_manager.h"
 
 #include <algorithm>
+#include <memory>
 #include <set>
 #include <stack>
+#include <utility>
 
-#include "ir_context.h"
+#include "source/opt/ir_context.h"
 
 namespace spvtools {
 namespace opt {

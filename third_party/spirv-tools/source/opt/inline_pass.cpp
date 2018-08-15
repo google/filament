@@ -14,9 +14,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "inline_pass.h"
+#include "source/opt/inline_pass.h"
 
-#include "cfa.h"
+#include <unordered_set>
+#include <utility>
+
+#include "source/cfa.h"
+#include "source/util/make_unique.h"
 
 // Indices of operands in SPIR-V instructions
 
@@ -333,7 +337,7 @@ void InlinePass::GenInlineCode(
           firstBlock = true;
         }
         // Create first/next block.
-        new_blk_ptr.reset(new BasicBlock(NewLabel(labelId)));
+        new_blk_ptr = MakeUnique<BasicBlock>(NewLabel(labelId));
         if (firstBlock) {
           // Copy contents of original caller block up to call instruction.
           for (auto cii = call_block_itr->begin(); cii != call_inst_itr;
@@ -359,7 +363,7 @@ void InlinePass::GenInlineCode(
             AddBranch(guard_block_id, &new_blk_ptr);
             new_blocks->push_back(std::move(new_blk_ptr));
             // Start the next block.
-            new_blk_ptr.reset(new BasicBlock(NewLabel(guard_block_id)));
+            new_blk_ptr = MakeUnique<BasicBlock>(NewLabel(guard_block_id));
             // Reset the mapping of the callee's entry block to point to
             // the guard block.  Do this so we can fix up phis later on to
             // satisfy dominance.
@@ -380,14 +384,15 @@ void InlinePass::GenInlineCode(
             singleTripLoopHeaderId = this->TakeNextId();
             AddBranch(singleTripLoopHeaderId, &new_blk_ptr);
             new_blocks->push_back(std::move(new_blk_ptr));
-            new_blk_ptr.reset(new BasicBlock(NewLabel(singleTripLoopHeaderId)));
+            new_blk_ptr =
+                MakeUnique<BasicBlock>(NewLabel(singleTripLoopHeaderId));
             returnLabelId = this->TakeNextId();
             singleTripLoopContinueId = this->TakeNextId();
             AddLoopMerge(returnLabelId, singleTripLoopContinueId, &new_blk_ptr);
             uint32_t postHeaderId = this->TakeNextId();
             AddBranch(postHeaderId, &new_blk_ptr);
             new_blocks->push_back(std::move(new_blk_ptr));
-            new_blk_ptr.reset(new BasicBlock(NewLabel(postHeaderId)));
+            new_blk_ptr = MakeUnique<BasicBlock>(NewLabel(postHeaderId));
             multiBlocks = true;
             // Reset the mapping of the callee's entry block to point to
             // the post-header block.  Do this so we can fix up phis later
@@ -429,14 +434,14 @@ void InlinePass::GenInlineCode(
             // to accommodate multiple returns, insert the continue
             // target block now, with a false branch back to the loop header.
             new_blocks->push_back(std::move(new_blk_ptr));
-            new_blk_ptr.reset(
-                new BasicBlock(NewLabel(singleTripLoopContinueId)));
+            new_blk_ptr =
+                MakeUnique<BasicBlock>(NewLabel(singleTripLoopContinueId));
             AddBranchCond(GetFalseId(), singleTripLoopHeaderId, returnLabelId,
                           &new_blk_ptr);
           }
           // Generate the return block.
           new_blocks->push_back(std::move(new_blk_ptr));
-          new_blk_ptr.reset(new BasicBlock(NewLabel(returnLabelId)));
+          new_blk_ptr = MakeUnique<BasicBlock>(NewLabel(returnLabelId));
           multiBlocks = true;
         }
         // Load return value into result id of call, if it exists.

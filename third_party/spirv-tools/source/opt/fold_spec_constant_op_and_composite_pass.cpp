@@ -12,16 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "fold_spec_constant_op_and_composite_pass.h"
+#include "source/opt/fold_spec_constant_op_and_composite_pass.h"
 
 #include <algorithm>
 #include <initializer_list>
 #include <tuple>
 
-#include "constants.h"
-#include "fold.h"
-#include "ir_context.h"
-#include "make_unique.h"
+#include "source/opt/constants.h"
+#include "source/opt/fold.h"
+#include "source/opt/ir_context.h"
+#include "source/util/make_unique.h"
 
 namespace spvtools {
 namespace opt {
@@ -302,9 +302,9 @@ bool IsValidTypeForComponentWiseOperation(const analysis::Type* type) {
   } else if (auto* it = type->AsInteger()) {
     if (it->width() == 32) return true;
   } else if (auto* vt = type->AsVector()) {
-    if (vt->element_type()->AsBool())
+    if (vt->element_type()->AsBool()) {
       return true;
-    else if (auto* vit = vt->element_type()->AsInteger()) {
+    } else if (auto* vit = vt->element_type()->AsInteger()) {
       if (vit->width() == 32) return true;
     }
   }

@@ -16,7 +16,7 @@
 #include <cstdint>
 #include <type_traits>
 
-#include "util/string_utils.h"
+#include "source/util/string_utils.h"
 
 namespace spvtools {
 namespace utils {

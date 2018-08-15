@@ -15,7 +15,7 @@
 #ifndef SOURCE_OPT_LOOP_FUSION_PASS_H_
 #define SOURCE_OPT_LOOP_FUSION_PASS_H_
 
-#include "opt/pass.h"
+#include "source/opt/pass.h"
 
 namespace spvtools {
 namespace opt {

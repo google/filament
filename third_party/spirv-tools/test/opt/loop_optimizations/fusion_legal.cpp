@@ -12,21 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <gmock/gmock.h>
-
 #include <algorithm>
 #include <iterator>
 #include <memory>
 #include <string>
 #include <vector>
 
+#include "gmock/gmock.h"
+#include "source/opt/loop_descriptor.h"
+#include "source/opt/loop_fusion.h"
+#include "test/opt/pass_fixture.h"
+
 #ifdef SPIRV_EFFCEE
 #include "effcee/effcee.h"
 #endif
-
-#include "../pass_fixture.h"
-#include "opt/loop_descriptor.h"
-#include "opt/loop_fusion.h"
 
 namespace spvtools {
 namespace opt {

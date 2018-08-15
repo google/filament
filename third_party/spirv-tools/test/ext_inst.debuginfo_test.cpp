@@ -12,11 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "unit_spirv.h"
+#include <string>
+#include <vector>
 
-#include <gmock/gmock.h>
 #include "DebugInfo.h"
-#include "test_fixture.h"
+#include "gmock/gmock.h"
+#include "test/test_fixture.h"
+#include "test/unit_spirv.h"
 
 // This file tests the correctness of encoding and decoding of instructions
 // involving the DebugInfo extended instruction set.

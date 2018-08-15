@@ -12,16 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef LIBSPIRV_UTIL_FOLD_H_
-#define LIBSPIRV_UTIL_FOLD_H_
+#ifndef SOURCE_OPT_FOLD_H_
+#define SOURCE_OPT_FOLD_H_
 
 #include <cstdint>
 #include <vector>
 
-#include "const_folding_rules.h"
-#include "constants.h"
-#include "def_use_manager.h"
-#include "folding_rules.h"
+#include "source/opt/const_folding_rules.h"
+#include "source/opt/constants.h"
+#include "source/opt/def_use_manager.h"
+#include "source/opt/folding_rules.h"
 
 namespace spvtools {
 namespace opt {
@@ -168,4 +168,4 @@ class InstructionFolder {
 }  // namespace opt
 }  // namespace spvtools
 
-#endif  // LIBSPIRV_UTIL_FOLD_H_
+#endif  // SOURCE_OPT_FOLD_H_

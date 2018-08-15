@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef SPIRV_TOOLS_LOG_H_
-#define SPIRV_TOOLS_LOG_H_
+#ifndef SOURCE_OPT_LOG_H_
+#define SOURCE_OPT_LOG_H_
 
 #include <cstdio>
 #include <cstdlib>
@@ -228,4 +228,4 @@ static_assert(PP_NARGS(0, 0, 0, 0, 0) == 5, "PP_NARGS macro error");
 static_assert(PP_NARGS(1 + 1, 2, 3 / 3) == 3, "PP_NARGS macro error");
 static_assert(PP_NARGS((1, 1), 2, (3, 3)) == 3, "PP_NARGS macro error");
 
-#endif  // SPIRV_TOOLS_LOG_H_
+#endif  // SOURCE_OPT_LOG_H_

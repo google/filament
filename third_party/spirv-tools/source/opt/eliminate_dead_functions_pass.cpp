@@ -12,10 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "eliminate_dead_functions_pass.h"
-#include "ir_context.h"
+#include "source/opt/eliminate_dead_functions_pass.h"
 
 #include <unordered_set>
+
+#include "source/opt/ir_context.h"
 
 namespace spvtools {
 namespace opt {

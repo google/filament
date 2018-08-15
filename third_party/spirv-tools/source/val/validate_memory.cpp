@@ -15,6 +15,8 @@
 #include "source/val/validate.h"
 
 #include <algorithm>
+#include <string>
+#include <vector>
 
 #include "source/opcode.h"
 #include "source/val/instruction.h"
@@ -314,96 +316,87 @@ spv_result_t ValidateCopyMemory(ValidationState_t& _, const Instruction& inst) {
   }
 
   const auto target_pointer_type = _.FindDef(target->type_id());
-  assert(target_pointer_type);
-  const auto target_type = _.FindDef(target_pointer_type->words()[3]);
-  assert(target_type);
-  const auto source_pointer_type = _.FindDef(source->type_id());
-  assert(source_pointer_type);
-  const auto source_type = _.FindDef(source_pointer_type->words()[3]);
-  assert(source_type);
-  if (target_type->id() != source_type->id()) {
-    return _.diag(SPV_ERROR_INVALID_ID, &inst)
-           << "OpCopyMemory Target <id> '" << _.getIdName(source_id)
-           << "'s type does not match Source <id> '"
-           << _.getIdName(source_type->id()) << "'s type.";
-  }
-  return SPV_SUCCESS;
-}
-
-spv_result_t ValidateCopyMemorySized(ValidationState_t& _,
-                                     const Instruction& inst) {
-  const auto target_index = 0;
-  const auto target_id = inst.GetOperandAs<uint32_t>(target_index);
-  const auto target = _.FindDef(target_id);
-  if (!target) {
+  if (!target_pointer_type ||
+      target_pointer_type->opcode() != SpvOpTypePointer) {
     return _.diag(SPV_ERROR_INVALID_ID, &inst)
            << "Target operand <id> '" << _.getIdName(target_id)
-           << "' is not defined.";
-  }
-
-  const auto source_index = 1;
-  const auto source_id = inst.GetOperandAs<uint32_t>(source_index);
-  const auto source = _.FindDef(source_id);
-  if (!source) {
-    return _.diag(SPV_ERROR_INVALID_ID, &inst)
-           << "Source operand <id> '" << _.getIdName(source_id)
-           << "' is not defined.";
-  }
-
-  const auto size_index = 2;
-  const auto size_id = inst.GetOperandAs<uint32_t>(size_index);
-  const auto size = _.FindDef(size_id);
-  if (!size) {
-    return _.diag(SPV_ERROR_INVALID_ID, &inst)
-           << "Size operand <id> '" << _.getIdName(size_id)
-           << "' is not defined.";
-  }
-
-  const auto target_pointer_type = _.FindDef(target->type_id());
-  if (!target_pointer_type ||
-      SpvOpTypePointer != target_pointer_type->opcode()) {
-    return _.diag(SPV_ERROR_INVALID_ID, &inst)
-           << "OpCopyMemorySized Target <id> '" << _.getIdName(target_id)
            << "' is not a pointer.";
   }
+
   const auto source_pointer_type = _.FindDef(source->type_id());
   if (!source_pointer_type ||
-      SpvOpTypePointer != source_pointer_type->opcode()) {
+      source_pointer_type->opcode() != SpvOpTypePointer) {
     return _.diag(SPV_ERROR_INVALID_ID, &inst)
-           << "OpCopyMemorySized Source <id> '" << _.getIdName(source_id)
+           << "Source operand <id> '" << _.getIdName(source_id)
            << "' is not a pointer.";
   }
-  switch (size->opcode()) {
-    // TODO: The following opcode's are assumed to be valid, refer to the
-    // following bug https://cvs.khronos.org/bugzilla/show_bug.cgi?id=13871 for
-    // clarification
-    case SpvOpConstant:
-    case SpvOpSpecConstant: {
-      auto size_type = _.FindDef(size->type_id());
-      assert(size_type);
-      if (SpvOpTypeInt != size_type->opcode()) {
-        return _.diag(SPV_ERROR_INVALID_ID, &inst)
-               << "OpCopyMemorySized Size <id> '" << _.getIdName(size_id)
-               << "'s type is not an integer type.";
-      }
-    } break;
-    case SpvOpVariable: {
-      auto pointer_type = _.FindDef(size->type_id());
-      assert(pointer_type);
-      auto size_type = _.FindDef(pointer_type->type_id());
-      if (!size_type || SpvOpTypeInt != size_type->opcode()) {
-        return _.diag(SPV_ERROR_INVALID_ID, &inst)
-               << "OpCopyMemorySized Size <id> '" << _.getIdName(size_id)
-               << "'s variable type is not an integer type.";
-      }
-    } break;
-    default:
+
+  if (inst.opcode() == SpvOpCopyMemory) {
+    const auto target_type =
+        _.FindDef(target_pointer_type->GetOperandAs<uint32_t>(2));
+    if (!target_type || target_type->opcode() == SpvOpTypeVoid) {
       return _.diag(SPV_ERROR_INVALID_ID, &inst)
-             << "OpCopyMemorySized Size <id> '" << _.getIdName(size_id)
-             << "' is not a constant or variable.";
+             << "Target operand <id> '" << _.getIdName(target_id)
+             << "' cannot be a void pointer.";
+    }
+
+    const auto source_type =
+        _.FindDef(source_pointer_type->GetOperandAs<uint32_t>(2));
+    if (!source_type || source_type->opcode() == SpvOpTypeVoid) {
+      return _.diag(SPV_ERROR_INVALID_ID, &inst)
+             << "Source operand <id> '" << _.getIdName(source_id)
+             << "' cannot be a void pointer.";
+    }
+
+    if (target_type->id() != source_type->id()) {
+      return _.diag(SPV_ERROR_INVALID_ID, &inst)
+             << "Target <id> '" << _.getIdName(source_id)
+             << "'s type does not match Source <id> '"
+             << _.getIdName(source_type->id()) << "'s type.";
+    }
+  } else {
+    const auto size_id = inst.GetOperandAs<uint32_t>(2);
+    const auto size = _.FindDef(size_id);
+    if (!size) {
+      return _.diag(SPV_ERROR_INVALID_ID, &inst)
+             << "Size operand <id> '" << _.getIdName(size_id)
+             << "' is not defined.";
+    }
+
+    const auto size_type = _.FindDef(size->type_id());
+    if (!_.IsIntScalarType(size_type->id())) {
+      return _.diag(SPV_ERROR_INVALID_ID, &inst)
+             << "Size operand <id> '" << _.getIdName(size_id)
+             << "' must be a scalar integer type.";
+    }
+
+    bool is_zero = true;
+    switch (size->opcode()) {
+      case SpvOpConstantNull:
+        return _.diag(SPV_ERROR_INVALID_ID, &inst)
+               << "Size operand <id> '" << _.getIdName(size_id)
+               << "' cannot be a constant zero.";
+      case SpvOpConstant:
+        if (size_type->word(3) == 1 &&
+            size->word(size->words().size() - 1) & 0x80000000) {
+          return _.diag(SPV_ERROR_INVALID_ID, &inst)
+                 << "Size operand <id> '" << _.getIdName(size_id)
+                 << "' cannot have the sign bit set to 1.";
+        }
+        for (size_t i = 3; is_zero && i < size->words().size(); ++i) {
+          is_zero &= (size->word(i) == 0);
+        }
+        if (is_zero) {
+          return _.diag(SPV_ERROR_INVALID_ID, &inst)
+                 << "Size operand <id> '" << _.getIdName(size_id)
+                 << "' cannot be a constant zero.";
+        }
+        break;
+      default:
+        // Cannot infer any other opcodes.
+        break;
+    }
   }
-  // TODO: Check that consant is a least size 1, see the same bug as above for
-  // clarification?
   return SPV_SUCCESS;
 }
 
@@ -574,10 +567,8 @@ spv_result_t ValidateMemoryInstructions(ValidationState_t& _,
       if (auto error = ValidateStore(_, *inst)) return error;
       break;
     case SpvOpCopyMemory:
-      if (auto error = ValidateCopyMemory(_, *inst)) return error;
-      break;
     case SpvOpCopyMemorySized:
-      if (auto error = ValidateCopyMemorySized(_, *inst)) return error;
+      if (auto error = ValidateCopyMemory(_, *inst)) return error;
       break;
     case SpvOpAccessChain:
     case SpvOpInBoundsAccessChain:

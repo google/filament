@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "freeze_spec_constant_value_pass.h"
-#include "ir_context.h"
+#include "source/opt/freeze_spec_constant_value_pass.h"
+#include "source/opt/ir_context.h"
 
 namespace spvtools {
 namespace opt {

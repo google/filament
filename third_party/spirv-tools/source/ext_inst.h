@@ -12,11 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef LIBSPIRV_EXT_INST_H_
-#define LIBSPIRV_EXT_INST_H_
+#ifndef SOURCE_EXT_INST_H_
+#define SOURCE_EXT_INST_H_
 
+#include "source/table.h"
 #include "spirv-tools/libspirv.h"
-#include "table.h"
 
 // Gets the type of the extended instruction set with the specified name.
 spv_ext_inst_type_t spvExtInstImportTypeGet(const char* name);
@@ -37,4 +37,4 @@ spv_result_t spvExtInstTableValueLookup(const spv_ext_inst_table table,
                                         const uint32_t value,
                                         spv_ext_inst_desc* pEntry);
 
-#endif  // LIBSPIRV_EXT_INST_H_
+#endif  // SOURCE_EXT_INST_H_

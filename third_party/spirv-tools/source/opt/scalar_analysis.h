@@ -20,11 +20,12 @@
 #include <map>
 #include <memory>
 #include <unordered_set>
+#include <utility>
 #include <vector>
 
-#include "opt/basic_block.h"
-#include "opt/instruction.h"
-#include "opt/scalar_analysis_nodes.h"
+#include "source/opt/basic_block.h"
+#include "source/opt/instruction.h"
+#include "source/opt/scalar_analysis_nodes.h"
 
 namespace spvtools {
 namespace opt {
@@ -310,4 +311,4 @@ inline std::pair<SExpression, int64_t> operator/(SENode* lhs, SExpression rhs) {
 
 }  // namespace opt
 }  // namespace spvtools
-#endif  // SOURCE_OPT_SCALAR_ANALYSIS_H__
+#endif  // SOURCE_OPT_SCALAR_ANALYSIS_H_

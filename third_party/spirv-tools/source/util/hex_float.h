@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef LIBSPIRV_UTIL_HEX_FLOAT_H_
-#define LIBSPIRV_UTIL_HEX_FLOAT_H_
+#ifndef SOURCE_UTIL_HEX_FLOAT_H_
+#define SOURCE_UTIL_HEX_FLOAT_H_
 
 #include <cassert>
 #include <cctype>
@@ -24,7 +24,7 @@
 #include <sstream>
 #include <vector>
 
-#include "bitutils.h"
+#include "source/util/bitutils.h"
 
 #ifndef __GNUC__
 #define GCC_VERSION 0
@@ -1147,4 +1147,4 @@ inline std::ostream& operator<<<Float16>(std::ostream& os,
 }  // namespace utils
 }  // namespace spvtools
 
-#endif  // LIBSPIRV_UTIL_HEX_FLOAT_H_
+#endif  // SOURCE_UTIL_HEX_FLOAT_H_

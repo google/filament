@@ -12,11 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "combine_access_chains.h"
+#include "source/opt/combine_access_chains.h"
 
-#include "constants.h"
-#include "ir_builder.h"
-#include "ir_context.h"
+#include <utility>
+
+#include "source/opt/constants.h"
+#include "source/opt/ir_builder.h"
+#include "source/opt/ir_context.h"
 
 namespace spvtools {
 namespace opt {

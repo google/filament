@@ -9,7 +9,7 @@ vars = {
   'clang_revision': 'abe5e4f9dc0f1df848c7a0efa05256253e77a7b7',
   'effcee_revision': '04b624799f5a9dbaf3fa1dbed2ba9dce2fc8dcf2',
   'googletest_revision': '98a0d007d7092b72eea0e501bb9ad17908a1a036',
-  'libfuzzer_revision': 'c24c2cd3f4d6130e815b6baff8165e4df440d442',
+  'testing_revision': '340252637e2e7c72c0901dcbeeacfff419e19b59',
   're2_revision': '6cf8ccd82dbaab2668e9b13596c68183c9ecd13f',
   'spirv_headers_revision': 'ff684ffc6a35d2a58f0f63108877d0064ea33feb',
 }
@@ -35,9 +35,9 @@ deps = {
   'external/re2':
       Var('github') + '/google/re2.git@' + Var('re2_revision'),
 
-  'testing/libfuzzer':
-      Var('chromium_git') + '/chromium/src/testing/libfuzzer@' +
-          Var('libfuzzer_revision'),
+  'testing':
+      Var('chromium_git') + '/chromium/src/testing@' +
+          Var('testing_revision'),
 
   'tools/clang':
       Var('chromium_git') + '/chromium/src/tools/clang@' + Var('clang_revision')

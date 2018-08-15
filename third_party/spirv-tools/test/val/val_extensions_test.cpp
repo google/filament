@@ -15,14 +15,15 @@
 // Tests for OpExtension validator rules.
 
 #include <string>
+#include <vector>
 
-#include "enum_string_mapping.h"
-#include "extensions.h"
 #include "gmock/gmock.h"
-#include "spirv_target_env.h"
-#include "test_fixture.h"
-#include "unit_spirv.h"
-#include "val_fixtures.h"
+#include "source/enum_string_mapping.h"
+#include "source/extensions.h"
+#include "source/spirv_target_env.h"
+#include "test/test_fixture.h"
+#include "test/unit_spirv.h"
+#include "test/val/val_fixtures.h"
 
 namespace spvtools {
 namespace val {

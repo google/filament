@@ -12,17 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "private_to_local_pass.h"
+#include "source/opt/private_to_local_pass.h"
 
-#include "ir_context.h"
+#include <memory>
+#include <utility>
+#include <vector>
 
-namespace {
-const uint32_t kVariableStorageClassInIdx = 0;
-const uint32_t kSpvTypePointerTypeIdInIdx = 1;
-}  // namespace
+#include "source/opt/ir_context.h"
 
 namespace spvtools {
 namespace opt {
+namespace {
+
+const uint32_t kVariableStorageClassInIdx = 0;
+const uint32_t kSpvTypePointerTypeIdInIdx = 1;
+
+}  // namespace
 
 Pass::Status PrivateToLocalPass::Process() {
   bool modified = false;

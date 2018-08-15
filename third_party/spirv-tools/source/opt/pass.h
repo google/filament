@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef LIBSPIRV_OPT_PASS_H_
-#define LIBSPIRV_OPT_PASS_H_
+#ifndef SOURCE_OPT_PASS_H_
+#define SOURCE_OPT_PASS_H_
 
 #include <algorithm>
 #include <map>
@@ -22,10 +22,10 @@
 #include <unordered_set>
 #include <utility>
 
-#include "basic_block.h"
-#include "def_use_manager.h"
-#include "ir_context.h"
-#include "module.h"
+#include "source/opt/basic_block.h"
+#include "source/opt/def_use_manager.h"
+#include "source/opt/ir_context.h"
+#include "source/opt/module.h"
 #include "spirv-tools/libspirv.hpp"
 
 namespace spvtools {
@@ -162,4 +162,4 @@ class Pass {
 }  // namespace opt
 }  // namespace spvtools
 
-#endif  // LIBSPIRV_OPT_PASS_H_
+#endif  // SOURCE_OPT_PASS_H_

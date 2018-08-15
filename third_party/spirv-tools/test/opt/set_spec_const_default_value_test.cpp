@@ -12,9 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "pass_fixture.h"
+#include <vector>
 
-#include <gmock/gmock.h>
+#include "gmock/gmock.h"
+#include "test/opt/pass_fixture.h"
 
 namespace spvtools {
 namespace opt {

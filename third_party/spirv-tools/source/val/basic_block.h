@@ -12,17 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef LIBSPIRV_VAL_BASICBLOCK_H_
-#define LIBSPIRV_VAL_BASICBLOCK_H_
-
-#include "latest_version_spirv_header.h"
+#ifndef SOURCE_VAL_BASIC_BLOCK_H_
+#define SOURCE_VAL_BASIC_BLOCK_H_
 
 #include <cstdint>
-
 #include <bitset>
 #include <functional>
 #include <memory>
 #include <vector>
+
+#include "source/latest_version_spirv_header.h"
 
 namespace spvtools {
 namespace val {
@@ -245,4 +244,4 @@ bool operator!=(const BasicBlock::DominatorIterator& lhs,
 }  // namespace val
 }  // namespace spvtools
 
-#endif  /// LIBSPIRV_VAL_BASICBLOCK_H_
+#endif  // SOURCE_VAL_BASIC_BLOCK_H_

@@ -17,11 +17,12 @@
 #include <sstream>
 #include <string>
 
-#include "latest_version_spirv_header.h"
-#include "test_fixture.h"
+#include "source/latest_version_spirv_header.h"
+#include "test/test_fixture.h"
 #include "tools/stats/stats_analyzer.h"
 
 namespace spvtools {
+namespace stats {
 namespace {
 
 // Fills |stats| with some synthetic header stats, as if aggregated from 100
@@ -169,4 +170,5 @@ TEST(StatsAnalyzer, OpcodeMarkov) {
 }
 
 }  // namespace
+}  // namespace stats
 }  // namespace spvtools

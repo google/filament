@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef SPIRV_TOOLS_COMP_MARKV_MODEL_FACTORY_H_
-#define SPIRV_TOOLS_COMP_MARKV_MODEL_FACTORY_H_
+#ifndef TOOLS_COMP_MARKV_MODEL_FACTORY_H_
+#define TOOLS_COMP_MARKV_MODEL_FACTORY_H_
 
 #include <memory>
 
@@ -34,4 +34,4 @@ std::unique_ptr<MarkvModel> CreateMarkvModel(MarkvModelType type);
 }  // namespace comp
 }  // namespace spvtools
 
-#endif  // SPIRV_TOOLS_COMP_MARKV_MODEL_FACTORY_H_
+#endif  // TOOLS_COMP_MARKV_MODEL_FACTORY_H_

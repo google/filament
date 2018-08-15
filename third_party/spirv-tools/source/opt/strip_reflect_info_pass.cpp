@@ -12,12 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "strip_reflect_info_pass.h"
+#include "source/opt/strip_reflect_info_pass.h"
 
 #include <cstring>
+#include <vector>
 
-#include "instruction.h"
-#include "ir_context.h"
+#include "source/opt/instruction.h"
+#include "source/opt/ir_context.h"
 
 namespace spvtools {
 namespace opt {

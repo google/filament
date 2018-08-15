@@ -12,12 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef LIBSPIRV_OPT_CFG_CLEANUP_PASS_H_
-#define LIBSPIRV_OPT_CFG_CLEANUP_PASS_H_
+#ifndef SOURCE_OPT_CFG_CLEANUP_PASS_H_
+#define SOURCE_OPT_CFG_CLEANUP_PASS_H_
 
-#include "function.h"
-#include "mem_pass.h"
-#include "module.h"
+#include "source/opt/function.h"
+#include "source/opt/mem_pass.h"
+#include "source/opt/module.h"
 
 namespace spvtools {
 namespace opt {
@@ -37,4 +37,4 @@ class CFGCleanupPass : public MemPass {
 }  // namespace opt
 }  // namespace spvtools
 
-#endif
+#endif  // SOURCE_OPT_CFG_CLEANUP_PASS_H_

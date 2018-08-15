@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "util/parse_number.h"
+#include "source/util/parse_number.h"
 
 #include <functional>
 #include <iomanip>
@@ -21,7 +21,8 @@
 #include <string>
 #include <tuple>
 
-#include "util/hex_float.h"
+#include "source/util/hex_float.h"
+#include "source/util/make_unique.h"
 
 namespace spvtools {
 namespace utils {
@@ -34,7 +35,7 @@ class ErrorMsgStream {
  public:
   explicit ErrorMsgStream(std::string* error_msg_sink)
       : error_msg_sink_(error_msg_sink) {
-    if (error_msg_sink_) stream_.reset(new std::ostringstream());
+    if (error_msg_sink_) stream_ = MakeUnique<std::ostringstream>();
   }
   ~ErrorMsgStream() {
     if (error_msg_sink_ && stream_) *error_msg_sink_ = stream_->str();

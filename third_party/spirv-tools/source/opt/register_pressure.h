@@ -12,16 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef LIBSPIRV_OPT_REGISTER_PRESSURE_H_
-#define LIBSPIRV_OPT_REGISTER_PRESSURE_H_
+#ifndef SOURCE_OPT_REGISTER_PRESSURE_H_
+#define SOURCE_OPT_REGISTER_PRESSURE_H_
 
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
 #include <vector>
 
-#include "function.h"
-#include "types.h"
+#include "source/opt/function.h"
+#include "source/opt/types.h"
 
 namespace spvtools {
 namespace opt {
@@ -193,4 +193,4 @@ class LivenessAnalysis {
 }  // namespace opt
 }  // namespace spvtools
 
-#endif  // ! LIBSPIRV_OPT_REGISTER_PRESSURE_H_
+#endif  // SOURCE_OPT_REGISTER_PRESSURE_H_

@@ -19,9 +19,8 @@
 #include <vector>
 
 #include "spirv-tools/libspirv.h"
+#include "tools/cfg/bin_to_dot.h"
 #include "tools/io.h"
-
-#include "bin_to_dot.h"
 
 // Prints a program usage message to stdout.
 static void print_usage(const char* argv0) {

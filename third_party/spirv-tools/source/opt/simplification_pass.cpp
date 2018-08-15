@@ -12,13 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "simplification_pass.h"
+#include "source/opt/simplification_pass.h"
 
 #include <set>
 #include <unordered_set>
 #include <vector>
 
-#include "fold.h"
+#include "source/opt/fold.h"
 
 namespace spvtools {
 namespace opt {

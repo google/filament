@@ -12,12 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef LIBSPIRV_OPT_ELIMINATE_DEAD_CONSTANT_PASS_H_
-#define LIBSPIRV_OPT_ELIMINATE_DEAD_CONSTANT_PASS_H_
+#ifndef SOURCE_OPT_ELIMINATE_DEAD_CONSTANT_PASS_H_
+#define SOURCE_OPT_ELIMINATE_DEAD_CONSTANT_PASS_H_
 
-#include "ir_context.h"
-#include "module.h"
-#include "pass.h"
+#include "source/opt/ir_context.h"
+#include "source/opt/module.h"
+#include "source/opt/pass.h"
 
 namespace spvtools {
 namespace opt {
@@ -32,4 +32,4 @@ class EliminateDeadConstantPass : public Pass {
 }  // namespace opt
 }  // namespace spvtools
 
-#endif  // LIBSPIRV_OPT_ELIMINATE_DEAD_CONSTANT_PASS_H_
+#endif  // SOURCE_OPT_ELIMINATE_DEAD_CONSTANT_PASS_H_

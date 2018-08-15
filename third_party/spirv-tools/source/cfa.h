@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef SPVTOOLS_CFA_H_
-#define SPVTOOLS_CFA_H_
+#ifndef SOURCE_CFA_H_
+#define SOURCE_CFA_H_
 
 #include <algorithm>
 #include <cassert>
@@ -344,4 +344,4 @@ void CFA<BB>::ComputeAugmentedCFG(
 
 }  // namespace spvtools
 
-#endif  // SPVTOOLS_CFA_H_
+#endif  // SOURCE_CFA_H_

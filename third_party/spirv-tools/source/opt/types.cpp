@@ -18,7 +18,8 @@
 #include <sstream>
 #include <unordered_set>
 
-#include "types.h"
+#include "source/opt/types.h"
+#include "source/util/make_unique.h"
 
 namespace spvtools {
 namespace opt {
@@ -95,9 +96,9 @@ bool Type::IsUniqueType(bool allowVariablePointers) const {
 std::unique_ptr<Type> Type::Clone() const {
   std::unique_ptr<Type> type;
   switch (kind_) {
-#define DeclareKindCase(kind)                \
-  case k##kind:                              \
-    type.reset(new kind(*this->As##kind())); \
+#define DeclareKindCase(kind)                   \
+  case k##kind:                                 \
+    type = MakeUnique<kind>(*this->As##kind()); \
     break;
     DeclareKindCase(Void);
     DeclareKindCase(Bool);

@@ -14,9 +14,10 @@
 
 #include <algorithm>
 #include <sstream>
+#include <utility>
 
 #include "gmock/gmock.h"
-#include "unit_spirv.h"
+#include "test/unit_spirv.h"
 
 namespace spvtools {
 namespace {

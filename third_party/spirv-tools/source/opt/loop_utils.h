@@ -14,11 +14,14 @@
 
 #ifndef SOURCE_OPT_LOOP_UTILS_H_
 #define SOURCE_OPT_LOOP_UTILS_H_
+
 #include <list>
 #include <memory>
+#include <unordered_map>
 #include <vector>
-#include "opt/ir_context.h"
-#include "opt/loop_descriptor.h"
+
+#include "source/opt/ir_context.h"
+#include "source/opt/loop_descriptor.h"
 
 namespace spvtools {
 

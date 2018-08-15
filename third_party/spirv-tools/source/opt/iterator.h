@@ -12,13 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef LIBSPIRV_OPT_ITERATOR_H_
-#define LIBSPIRV_OPT_ITERATOR_H_
+#ifndef SOURCE_OPT_ITERATOR_H_
+#define SOURCE_OPT_ITERATOR_H_
 
 #include <cstddef>  // for ptrdiff_t
 #include <iterator>
 #include <memory>
 #include <type_traits>
+#include <utility>
 #include <vector>
 
 namespace spvtools {
@@ -354,4 +355,4 @@ inline
 }  // namespace opt
 }  // namespace spvtools
 
-#endif  // LIBSPIRV_OPT_ITERATOR_H_
+#endif  // SOURCE_OPT_ITERATOR_H_

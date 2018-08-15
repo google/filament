@@ -12,12 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "value_number_table.h"
+#include "source/opt/value_number_table.h"
 
 #include <algorithm>
 
-#include "cfg.h"
-#include "ir_context.h"
+#include "source/opt/cfg.h"
+#include "source/opt/ir_context.h"
 
 namespace spvtools {
 namespace opt {

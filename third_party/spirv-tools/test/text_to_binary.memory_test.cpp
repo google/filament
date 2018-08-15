@@ -15,12 +15,13 @@
 // Assembler tests for instructions in the "Memory Instructions" section of
 // the SPIR-V spec.
 
-#include "unit_spirv.h"
-
 #include <sstream>
+#include <string>
+#include <vector>
 
 #include "gmock/gmock.h"
-#include "test_fixture.h"
+#include "test/test_fixture.h"
+#include "test/unit_spirv.h"
 
 namespace spvtools {
 namespace {
