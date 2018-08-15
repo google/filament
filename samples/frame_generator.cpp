@@ -28,12 +28,14 @@
 #include <utils/Path.h>
 
 #include <filament/driver/PixelBufferDescriptor.h>
+#include <filament/Color.h>
 #include <filament/Engine.h>
 #include <filament/LightManager.h>
 #include <filament/Material.h>
 #include <filament/MaterialInstance.h>
 #include <filament/RenderableManager.h>
 #include <filament/Scene.h>
+#include <filament/Skybox.h>
 #include <filament/TransformManager.h>
 #include <filament/View.h>
 
@@ -69,11 +71,13 @@ static std::vector<char> g_materialBuffer;
 static Path g_materialPath;
 static Path g_paramsPath;
 static bool g_lightOn = false;
+static bool g_skyboxOn = true;
 static int g_materialVariantCount = 1;
 static int g_currentFrame = 0;
 static std::atomic_int g_savedFrames(0);
 static std::vector<Param> g_parameters;
 static std::string g_prefix;
+static uint32_t g_clearColor = 0x000000;
 
 std::unique_ptr<MeshAssimp> g_meshSet;
 static std::map<std::string, MaterialInstance*> g_meshMaterialInstances;
@@ -119,6 +123,10 @@ static void printUsage(char* name) {
             "       Turn on the directional light\n\n"
             "   --prefix=[prefix], -x [prefix]\n"
             "       Prefix of the output files\n\n"
+            "   --skybox-off, -y\n"
+            "       Hide the skybox, showing the clear color\n\n"
+            "   --clear-color=0xRRGGBB, -b 0xRRGGBB\n"
+            "       Set the clear color\n\n"
     );
     const std::string from("SAMPLE_FRAME_GENERATOR");
     for (size_t pos = usage.find(from); pos != std::string::npos; pos = usage.find(from, pos)) {
@@ -128,17 +136,19 @@ static void printUsage(char* name) {
 }
 
 static int handleCommandLineArgments(int argc, char* argv[], Config* config) {
-    static constexpr const char* OPTSTR = "ha:s:li:m:c:p:x:";
+    static constexpr const char* OPTSTR = "ha:s:li:m:c:p:x:yb:";
     static const struct option OPTIONS[] = {
-            { "help",       no_argument,       nullptr, 'h' },
-            { "api",        required_argument, nullptr, 'a' },
-            { "ibl",        required_argument, nullptr, 'i' },
-            { "scale",      required_argument, nullptr, 's' },
-            { "material",   required_argument, nullptr, 'm' },
-            { "params",     required_argument, nullptr, 'p' },
-            { "count",      required_argument, nullptr, 'c' },
-            { "light-on",   no_argument,       nullptr, 'l' },
-            { "prefix",     required_argument, nullptr, 'x' },
+            { "help",        no_argument,       nullptr, 'h' },
+            { "api",         required_argument, nullptr, 'a' },
+            { "ibl",         required_argument, nullptr, 'i' },
+            { "scale",       required_argument, nullptr, 's' },
+            { "material",    required_argument, nullptr, 'm' },
+            { "params",      required_argument, nullptr, 'p' },
+            { "count",       required_argument, nullptr, 'c' },
+            { "light-on",    no_argument,       nullptr, 'l' },
+            { "skybox-off",  no_argument,       nullptr, 'y' },
+            { "prefix",      required_argument, nullptr, 'x' },
+            { "clear-color", required_argument, nullptr, 'b' },
             { nullptr, 0, nullptr, 0 }  // termination of the option list
     };
     int opt;
@@ -171,6 +181,15 @@ static int handleCommandLineArgments(int argc, char* argv[], Config* config) {
                     // keep scale of 1.0
                 }
                 break;
+            case 'b':
+                try {
+                    g_clearColor = (uint32_t) std::stoul(arg, nullptr, 16);
+                } catch (std::invalid_argument& e) {
+                    // keep default color
+                } catch (std::out_of_range& e) {
+                    // keep default color
+                }
+                break;
             case 'm':
                 g_materialPath = arg;
                 break;
@@ -183,6 +202,8 @@ static int handleCommandLineArgments(int argc, char* argv[], Config* config) {
             case 'l':
                 g_lightOn = true;
                 break;
+            case 'y':
+                g_skyboxOn = false;
             case 'c':
                 try {
                     g_materialVariantCount = std::min(std::max(1, std::stoi(arg)), 256);
@@ -251,7 +272,7 @@ static void readParameters() {
     }
 }
 
-static void setup(Engine* engine, View*, Scene* scene) {
+static void setup(Engine* engine, View* view, Scene* scene) {
     g_meshSet = std::make_unique<MeshAssimp>(*engine);
 
     readMaterial(engine);
@@ -300,6 +321,17 @@ static void setup(Engine* engine, View*, Scene* scene) {
     for (const auto& p : g_parameters) {
         g_materialInstance->setParameter(p.name.c_str(), p.start);
     }
+
+    if (!g_skyboxOn) {
+        FilamentApp::get().getIBL()->getSkybox()->setLayerMask(0xff, 0x00);
+    }
+
+    view->setClearColor(Color::toLinear({
+        ((g_clearColor >> 16) & 0xFF) / 255.0f,
+        ((g_clearColor >>  8) & 0xFF) / 255.0f,
+        ((g_clearColor      ) & 0xFF) / 255.0f,
+        1.0f
+    }));
 }
 
 template<typename T>
