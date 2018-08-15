@@ -16,6 +16,7 @@
 
 #include <imageio/ImageDiffer.h>
 
+#include <image/ColorTransform.h>
 #include <image/ImageOps.h>
 #include <imageio/ImageDecoder.h>
 #include <imageio/ImageEncoder.h>
@@ -35,12 +36,17 @@ void updateOrCompare(LinearImage limgResult, const utils::Path& fnameGolden,
     // Regenerate the PNG file at the given path.
     if (mode == ComparisonMode::UPDATE) {
         std::ofstream out(fnameGolden, std::ios::binary | std::ios::trunc);
-        auto format = ImageEncoder::Format::PNG_LINEAR;
         const size_t width = limgResult.getWidth();
         const size_t height = limgResult.getHeight();
         const size_t nchan = limgResult.getChannels();
         const size_t bpp = nchan * sizeof(float), bpr = width * bpp, nbytes = bpr * height;
         std::unique_ptr<uint8_t[]> data(new uint8_t[nbytes]);
+
+        auto format = ImageEncoder::Format::PNG_LINEAR;
+        if (fnameGolden.getExtension() == "rgbm" && nchan == 3) {
+            format = ImageEncoder::Format::RGBM;
+        }
+
         if (nchan != 1) {
             memcpy(data.get(), limgResult.getPixelRef(), nbytes);
             Image im(std::move(data), width, height, bpr, bpp, nchan);
@@ -60,8 +66,18 @@ void updateOrCompare(LinearImage limgResult, const utils::Path& fnameGolden,
     Image imgGolden = ImageDecoder::decode(in, fnameGolden, ImageDecoder::ColorSpace::LINEAR);
     const size_t width = imgGolden.getWidth(), height = imgGolden.getHeight();
     const size_t nchan = imgGolden.getChannelsCount();
-    LinearImage limgGolden(width, height, nchan);
-    memcpy(limgGolden.getPixelRef(), imgGolden.getData(), width * height * sizeof(float) * nchan);
+
+    // Convert 4-channel RGBM into proper RGB.
+    LinearImage limgGolden;
+    if (fnameGolden.getExtension() == "rgbm" && nchan == 4) {
+        limgGolden = toLinearFromRGBM(
+                static_cast<math::float4 const*>(imgGolden.getData()),
+                imgGolden.getWidth(), imgGolden.getHeight());
+    } else {
+        limgGolden = LinearImage(width, height, nchan);
+        memcpy(limgGolden.getPixelRef(), imgGolden.getData(),
+                width * height * sizeof(float) * nchan);
+    }
 
     // Expand the result image from L to RGB.
     if (limgResult.getChannels() == 1) {
