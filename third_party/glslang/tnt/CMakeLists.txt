@@ -44,7 +44,7 @@ endif(WIN32)
 function(glslang_set_link_args TARGET)
     # For MinGW compiles, statically link against the GCC and C++ runtimes.
     # This avoids the need to ship those runtimes as DLLs.
-    if(WIN32 AND ${CMAKE_CXX_COMPILER_ID} MATCHES "GNU")
+    if (WIN32 AND ${CMAKE_CXX_COMPILER_ID} MATCHES "GNU")
         set_target_properties(${TARGET} PROPERTIES
                               LINK_FLAGS "-static -static-libgcc -static-libstdc++")
     endif()
