@@ -171,32 +171,36 @@ void CubemapIBL::roughnessFilter(Cubemap& dst,
         const double LoH = dot(L, H);
 #endif
 
-        // pre-filtered importance sampling
-        // see: "Real-time Shading with Filtered Importance Sampling", Jaroslav Krivanek
-        // see: "GPU-Based Importance Sampling, GPU Gems 3", Mark Colbert
-
-        // K is a LOD bias that allows a bit of overlapping between samples
-        // log4(K)=1 empirically works well with box-filtered mipmaps
-        constexpr float K = 4;
-
-        // OmegaS is is the solid-angle of an important sample (i.e. how much surface
-        // of the sphere it represents). It obviously is function of the PDF.
-        const double pdf = DistributionGGX(NoH, linearRoughness) / 4;
-        const double omegaS = 1 / (numSamples * pdf);
-
-        // The LOD is given by: max[ log4(Os/Op) + K, 0 ]
-        const double l = float(log4(omegaS) - log4(omegaP) + log4(K));
-        const float mipLevel = clamp(float(l), 0.0f, maxLevelf);
-
         if (NoL > 0) {
+            // pre-filtered importance sampling
+            // see: "Real-time Shading with Filtered Importance Sampling", Jaroslav Krivanek
+            // see: "GPU-Based Importance Sampling, GPU Gems 3", Mark Colbert
+
+            // K is a LOD bias that allows a bit of overlapping between samples
+            // log4(K)=1 empirically works well with box-filtered mipmaps
+            constexpr float K = 4;
+
+            // OmegaS is is the solid-angle of an important sample (i.e. how much surface
+            // of the sphere it represents). It obviously is function of the PDF.
+            const double pdf = DistributionGGX(NoH, linearRoughness) / 4;
+            const double omegaS = 1 / (numSamples * pdf);
+
+            // The LOD is given by: max[ log4(Os/Op) + K, 0 ]
+            const double l = float(log4(omegaS) - log4(omegaP) + log4(K));
+            const float mipLevel = clamp(float(l), 0.0f, maxLevelf);
+
             const double V = Visibility(NoV, NoL, linearRoughness);
             const double F = Fresnel(1, 0, LoH);
             const float brdf_NoL = float(F * V * NoL);
+
             weight += brdf_NoL;
+
             uint8_t l0 = uint8_t(mipLevel);
             uint8_t l1 = uint8_t(std::min(maxLevel, size_t(l0 + 1)));
             float lerp = mipLevel - l0;
+
             cache.push_back({ L, brdf_NoL, lerp, l0, l1 });
+
             sample++;
         }
     }
