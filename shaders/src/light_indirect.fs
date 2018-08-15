@@ -173,7 +173,7 @@ vec3 getSpecularDominantDirection(vec3 n, vec3 r, float linearRoughness) {
 }
 
 vec3 specularDFG(const PixelParams pixel) {
-#if defined(SHADING_MODEL_CLOTH)
+#if defined(SHADING_MODEL_CLOTH) || !defined(USE_MULTIPLE_SCATTERING_COMPENSATION)
     return pixel.f0 * pixel.dfg.x + pixel.dfg.y;
 #else
     return mix(pixel.dfg.xxx, pixel.dfg.yyy, pixel.f0);

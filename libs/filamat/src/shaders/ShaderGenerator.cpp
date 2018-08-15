@@ -85,16 +85,16 @@ static void generateVertexDomain(const CodeGenerator& cg, std::stringstream& vs,
 static size_t countLines(const std::stringstream& ss) noexcept {
     std::string s = ss.str();
     size_t lines = 0;
-    for (size_t i = 0; i < s.length(); i++) {
-        if (s[i] == '\n') lines++;
+    for (char i : s) {
+        if (i == '\n') lines++;
     }
     return lines;
 }
 
 static size_t countLines(const utils::CString& s) noexcept {
     size_t lines = 0;
-    for (size_t i = 0; i < s.length(); i++) {
-        if (s[i] == '\n') lines++;
+    for (char i : s) {
+        if (i == '\n') lines++;
     }
     return lines;
 }
