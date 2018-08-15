@@ -19,8 +19,8 @@
 #include <utility>
 
 #include "gmock/gmock.h"
-#include "unit_spirv.h"
-#include "val_fixtures.h"
+#include "test/unit_spirv.h"
+#include "test/val/val_fixtures.h"
 
 namespace spvtools {
 namespace val {
@@ -522,6 +522,17 @@ TEST_F(ValidateData, missing_forward_pointer_decl) {
   std::string str = header_with_addresses + R"(
 %uintt = OpTypeInt 32 0
 %3 = OpTypeStruct %fwd_ptrt %uintt
+)";
+  CompileSuccessfully(str.c_str());
+  ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("must first be declared using OpTypeForwardPointer"));
+}
+
+TEST_F(ValidateData, missing_forward_pointer_decl_self_reference) {
+  std::string str = header_with_addresses + R"(
+%uintt = OpTypeInt 32 0
+%3 = OpTypeStruct %3 %uintt
 )";
   CompileSuccessfully(str.c_str());
   ASSERT_EQ(SPV_ERROR_INVALID_ID, ValidateInstructions());

@@ -12,12 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "def_use_manager.h"
+#include "source/opt/def_use_manager.h"
 
 #include <iostream>
 
-#include "log.h"
-#include "reflect.h"
+#include "source/opt/log.h"
+#include "source/opt/reflect.h"
 
 namespace spvtools {
 namespace opt {

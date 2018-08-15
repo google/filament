@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "text_handler.h"
+#include "source/text_handler.h"
 
 #include <algorithm>
 #include <cassert>
@@ -20,15 +20,15 @@
 #include <cstring>
 #include <tuple>
 
-#include "assembly_grammar.h"
-#include "binary.h"
-#include "ext_inst.h"
-#include "instruction.h"
-#include "opcode.h"
-#include "text.h"
-#include "util/bitutils.h"
-#include "util/hex_float.h"
-#include "util/parse_number.h"
+#include "source/assembly_grammar.h"
+#include "source/binary.h"
+#include "source/ext_inst.h"
+#include "source/instruction.h"
+#include "source/opcode.h"
+#include "source/text.h"
+#include "source/util/bitutils.h"
+#include "source/util/hex_float.h"
+#include "source/util/parse_number.h"
 
 namespace spvtools {
 namespace {
@@ -107,9 +107,9 @@ spv_result_t getWord(spv_text text, spv_position position, std::string* word) {
       return SPV_SUCCESS;
     }
     const char ch = text->str[position->index];
-    if (ch == '\\')
+    if (ch == '\\') {
       escaping = !escaping;
-    else {
+    } else {
       switch (ch) {
         case '"':
           if (!escaping) quoting = !quoting;

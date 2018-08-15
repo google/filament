@@ -12,15 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef LIBSPIRV_TEST_LINK_LINK_TEST
-#define LIBSPIRV_TEST_LINK_LINK_TEST
+#ifndef TEST_LINK_LINKER_FIXTURE_H_
+#define TEST_LINK_LINKER_FIXTURE_H_
 
 #include <iostream>
+#include <string>
+#include <vector>
 
 #include "source/spirv_constant.h"
-#include "unit_spirv.h"
-
 #include "spirv-tools/linker.hpp"
+#include "test/unit_spirv.h"
 
 namespace spvtest {
 
@@ -60,7 +61,7 @@ class LinkerTest : public ::testing::Test {
     tools_.SetMessageConsumer(consumer);
   }
 
-  virtual void TearDown() override { error_message_.clear(); }
+  void TearDown() override { error_message_.clear(); }
 
   // Assembles each of the given strings into SPIR-V binaries before linking
   // them together. SPV_ERROR_INVALID_TEXT is returned if the assembling failed
@@ -121,4 +122,4 @@ class LinkerTest : public ::testing::Test {
 
 }  // namespace spvtest
 
-#endif  // LIBSPIRV_TEST_LINK_LINK_TEST
+#endif  // TEST_LINK_LINKER_FIXTURE_H_

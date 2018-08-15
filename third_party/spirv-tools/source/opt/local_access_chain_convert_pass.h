@@ -14,20 +14,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef LIBSPIRV_OPT_LOCAL_ACCESS_CHAIN_CONVERT_PASS_H_
-#define LIBSPIRV_OPT_LOCAL_ACCESS_CHAIN_CONVERT_PASS_H_
+#ifndef SOURCE_OPT_LOCAL_ACCESS_CHAIN_CONVERT_PASS_H_
+#define SOURCE_OPT_LOCAL_ACCESS_CHAIN_CONVERT_PASS_H_
 
 #include <algorithm>
 #include <map>
+#include <memory>
 #include <queue>
+#include <string>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
+#include <vector>
 
-#include "basic_block.h"
-#include "def_use_manager.h"
-#include "mem_pass.h"
-#include "module.h"
+#include "source/opt/basic_block.h"
+#include "source/opt/def_use_manager.h"
+#include "source/opt/mem_pass.h"
+#include "source/opt/module.h"
 
 namespace spvtools {
 namespace opt {
@@ -83,11 +86,12 @@ class LocalAccessChainConvertPass : public MemPass {
       const Instruction* ptrInst, uint32_t valId,
       std::vector<std::unique_ptr<Instruction>>* newInsts);
 
-  // For the (constant index) access chain |ptrInst|, create an
-  // equivalent load and extract. Append to |newInsts|.
-  uint32_t GenAccessChainLoadReplacement(
-      const Instruction* ptrInst,
-      std::vector<std::unique_ptr<Instruction>>* newInsts);
+  // For the (constant index) access chain |address_inst|, create an
+  // equivalent load and extract that replaces |original_load|.  The result id
+  // of the extract will be the same as the original result id of
+  // |original_load|.
+  void ReplaceAccessChainLoad(const Instruction* address_inst,
+                              Instruction* original_load);
 
   // Return true if all indices of access chain |acp| are OpConstant integers
   bool IsConstantIndexAccessChain(const Instruction* acp) const;
@@ -123,4 +127,4 @@ class LocalAccessChainConvertPass : public MemPass {
 }  // namespace opt
 }  // namespace spvtools
 
-#endif  // LIBSPIRV_OPT_LOCAL_ACCESS_CHAIN_CONVERT_PASS_H_
+#endif  // SOURCE_OPT_LOCAL_ACCESS_CHAIN_CONVERT_PASS_H_

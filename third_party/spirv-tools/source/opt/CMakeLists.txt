@@ -67,7 +67,6 @@ add_library(SPIRV-Tools-opt
   loop_unroller.h
   loop_utils.h
   loop_unswitch_pass.h
-  make_unique.h
   mem_pass.h
   merge_return_pass.h
   module.h

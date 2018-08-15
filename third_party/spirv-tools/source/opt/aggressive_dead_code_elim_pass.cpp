@@ -15,14 +15,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "aggressive_dead_code_elim_pass.h"
+#include "source/opt/aggressive_dead_code_elim_pass.h"
 
-#include "cfa.h"
-#include "iterator.h"
-#include "latest_version_glsl_std_450_header.h"
-#include "reflect.h"
-
+#include <memory>
 #include <stack>
+
+#include "source/cfa.h"
+#include "source/latest_version_glsl_std_450_header.h"
+#include "source/opt/iterator.h"
+#include "source/opt/reflect.h"
 
 namespace spvtools {
 namespace opt {

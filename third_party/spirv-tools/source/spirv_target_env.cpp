@@ -12,11 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "source/spirv_target_env.h"
+
 #include <cassert>
 #include <cstring>
 
+#include "source/spirv_constant.h"
 #include "spirv-tools/libspirv.h"
-#include "spirv_constant.h"
 
 const char* spvTargetEnvDescription(spv_target_env env) {
   switch (env) {

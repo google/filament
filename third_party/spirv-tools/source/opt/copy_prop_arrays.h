@@ -12,10 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef LIBSPIRV_OPT_COPY_PROP_H_
-#define LIBSPIRV_OPT_COPY_PROP_H_
+#ifndef SOURCE_OPT_COPY_PROP_ARRAYS_H_
+#define SOURCE_OPT_COPY_PROP_ARRAYS_H_
 
-#include "mem_pass.h"
+#include <memory>
+#include <vector>
+
+#include "source/opt/mem_pass.h"
 
 namespace spvtools {
 namespace opt {
@@ -225,4 +228,4 @@ class CopyPropagateArrays : public MemPass {
 }  // namespace opt
 }  // namespace spvtools
 
-#endif  // LIBSPIRV_OPT_COPY_PROP_H_
+#endif  // SOURCE_OPT_COPY_PROP_ARRAYS_H_

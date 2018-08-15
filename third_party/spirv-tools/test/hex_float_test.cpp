@@ -15,14 +15,16 @@
 #include <cfloat>
 #include <cmath>
 #include <cstdio>
+#include <limits>
 #include <sstream>
 #include <string>
 #include <tuple>
+#include <utility>
+#include <vector>
 
-#include <gmock/gmock.h>
-
+#include "gmock/gmock.h"
 #include "source/util/hex_float.h"
-#include "unit_spirv.h"
+#include "test/unit_spirv.h"
 
 namespace spvtools {
 namespace utils {

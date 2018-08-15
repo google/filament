@@ -19,7 +19,7 @@
 #include <tuple>
 
 #include "gmock/gmock.h"
-#include "val_fixtures.h"
+#include "test/val/val_fixtures.h"
 
 namespace spvtools {
 namespace val {

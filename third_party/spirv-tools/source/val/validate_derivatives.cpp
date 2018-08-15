@@ -16,6 +16,8 @@
 
 #include "source/val/validate.h"
 
+#include <string>
+
 #include "source/diagnostic.h"
 #include "source/opcode.h"
 #include "source/val/instruction.h"
@@ -52,10 +54,12 @@ spv_result_t DerivativesPass(ValidationState_t& _, const Instruction* inst) {
                << spvOpcodeString(opcode);
       }
 
-      _.current_function().RegisterExecutionModelLimitation(
-          SpvExecutionModelFragment, std::string(
-              "Derivative instructions require Fragment execution model: ") +
-          spvOpcodeString(opcode));
+      _.function(inst->function()->id())
+          ->RegisterExecutionModelLimitation(
+              SpvExecutionModelFragment,
+              std::string("Derivative instructions require Fragment execution "
+                          "model: ") +
+                  spvOpcodeString(opcode));
       break;
     }
 

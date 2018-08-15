@@ -12,14 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef LIBSPIRV_TEXT_H_
-#define LIBSPIRV_TEXT_H_
+#ifndef SOURCE_TEXT_H_
+#define SOURCE_TEXT_H_
 
 #include <string>
 
-#include "operand.h"
+#include "source/operand.h"
+#include "source/spirv_constant.h"
 #include "spirv-tools/libspirv.h"
-#include "spirv_constant.h"
 
 typedef enum spv_literal_type_t {
   SPV_LITERAL_TYPE_INT_32,
@@ -50,4 +50,4 @@ typedef struct spv_literal_t {
 // which are then stripped.
 spv_result_t spvTextToLiteral(const char* text, spv_literal_t* literal);
 
-#endif  // LIBSPIRV_TEXT_H_
+#endif  // SOURCE_TEXT_H_

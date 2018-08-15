@@ -12,12 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef LIBSPIRV_EXTENSIONS_H_
-#define LIBSPIRV_EXTENSIONS_H_
+#ifndef SOURCE_EXTENSIONS_H_
+#define SOURCE_EXTENSIONS_H_
 
 #include <string>
 
-#include "enum_set.h"
+#include "source/enum_set.h"
 #include "spirv-tools/libspirv.h"
 
 namespace spvtools {
@@ -37,4 +37,4 @@ std::string ExtensionSetToString(const ExtensionSet& extensions);
 
 }  // namespace spvtools
 
-#endif  // LIBSPIRV_EXTENSIONS_H_
+#endif  // SOURCE_EXTENSIONS_H_

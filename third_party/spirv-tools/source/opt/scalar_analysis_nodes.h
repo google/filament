@@ -19,7 +19,8 @@
 #include <memory>
 #include <string>
 #include <vector>
-#include "opt/tree_iterator.h"
+
+#include "source/opt/tree_iterator.h"
 
 namespace spvtools {
 namespace opt {

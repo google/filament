@@ -12,12 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "opt/licm_pass.h"
-#include "opt/module.h"
-#include "opt/pass.h"
+#include "source/opt/licm_pass.h"
 
 #include <queue>
 #include <utility>
+
+#include "source/opt/module.h"
+#include "source/opt/pass.h"
 
 namespace spvtools {
 namespace opt {

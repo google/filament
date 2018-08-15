@@ -12,18 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef LIBSPIRV_OPT_PASS_MANAGER_H_
-#define LIBSPIRV_OPT_PASS_MANAGER_H_
+#ifndef SOURCE_OPT_PASS_MANAGER_H_
+#define SOURCE_OPT_PASS_MANAGER_H_
 
 #include <memory>
 #include <ostream>
+#include <utility>
 #include <vector>
 
-#include "log.h"
-#include "module.h"
-#include "pass.h"
+#include "source/opt/log.h"
+#include "source/opt/module.h"
+#include "source/opt/pass.h"
 
-#include "ir_context.h"
+#include "source/opt/ir_context.h"
 #include "spirv-tools/libspirv.hpp"
 
 namespace spvtools {
@@ -127,4 +128,4 @@ inline const MessageConsumer& PassManager::consumer() const {
 }  // namespace opt
 }  // namespace spvtools
 
-#endif  // LIBSPIRV_OPT_PASS_MANAGER_H_
+#endif  // SOURCE_OPT_PASS_MANAGER_H_

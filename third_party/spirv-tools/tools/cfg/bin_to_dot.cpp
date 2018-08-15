@@ -12,15 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "bin_to_dot.h"
+#include "tools/cfg/bin_to_dot.h"
 
 #include <cassert>
 #include <iostream>
 #include <utility>
 #include <vector>
 
-#include "assembly_grammar.h"
-#include "name_mapper.h"
+#include "source/assembly_grammar.h"
+#include "source/name_mapper.h"
 
 namespace {
 

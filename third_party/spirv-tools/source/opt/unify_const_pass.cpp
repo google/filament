@@ -12,14 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "unify_const_pass.h"
+#include "source/opt/unify_const_pass.h"
 
+#include <memory>
 #include <unordered_map>
 #include <utility>
+#include <vector>
 
-#include "def_use_manager.h"
-#include "ir_context.h"
-#include "make_unique.h"
+#include "source/opt/def_use_manager.h"
+#include "source/opt/ir_context.h"
+#include "source/util/make_unique.h"
 
 namespace spvtools {
 namespace opt {

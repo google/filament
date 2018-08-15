@@ -12,14 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "opt/loop_fusion.h"
+#include "source/opt/loop_fusion.h"
 
 #include <algorithm>
 #include <vector>
 
-#include "opt/ir_context.h"
-#include "opt/loop_dependence.h"
-#include "opt/loop_descriptor.h"
+#include "source/opt/ir_context.h"
+#include "source/opt/loop_dependence.h"
+#include "source/opt/loop_descriptor.h"
 
 namespace spvtools {
 namespace opt {

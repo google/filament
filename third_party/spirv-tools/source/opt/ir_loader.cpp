@@ -12,10 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "ir_loader.h"
+#include "source/opt/ir_loader.h"
 
-#include "log.h"
-#include "reflect.h"
+#include <utility>
+
+#include "source/opt/log.h"
+#include "source/opt/reflect.h"
+#include "source/util/make_unique.h"
 
 namespace spvtools {
 namespace opt {
@@ -48,7 +51,7 @@ bool IrLoader::AddInstruction(const spv_parsed_instruction_t* inst) {
       Error(consumer_, src, loc, "function inside function");
       return false;
     }
-    function_.reset(new Function(std::move(spv_inst)));
+    function_ = MakeUnique<Function>(std::move(spv_inst));
   } else if (opcode == SpvOpFunctionEnd) {
     if (function_ == nullptr) {
       Error(consumer_, src, loc,
@@ -71,7 +74,7 @@ bool IrLoader::AddInstruction(const spv_parsed_instruction_t* inst) {
       Error(consumer_, src, loc, "OpLabel inside basic block");
       return false;
     }
-    block_.reset(new BasicBlock(std::move(spv_inst)));
+    block_ = MakeUnique<BasicBlock>(std::move(spv_inst));
   } else if (IsTerminatorInst(opcode)) {
     if (function_ == nullptr) {
       Error(consumer_, src, loc, "terminator instruction outside function");

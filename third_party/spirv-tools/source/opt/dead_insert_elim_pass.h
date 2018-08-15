@@ -14,20 +14,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef LIBSPIRV_OPT_DEAD_INSERT_ELIM_PASS_H_
-#define LIBSPIRV_OPT_DEAD_INSERT_ELIM_PASS_H_
+#ifndef SOURCE_OPT_DEAD_INSERT_ELIM_PASS_H_
+#define SOURCE_OPT_DEAD_INSERT_ELIM_PASS_H_
 
 #include <algorithm>
 #include <map>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
+#include <vector>
 
-#include "basic_block.h"
-#include "def_use_manager.h"
-#include "ir_context.h"
-#include "mem_pass.h"
-#include "module.h"
+#include "source/opt/basic_block.h"
+#include "source/opt/def_use_manager.h"
+#include "source/opt/ir_context.h"
+#include "source/opt/mem_pass.h"
+#include "source/opt/module.h"
 
 namespace spvtools {
 namespace opt {
@@ -85,4 +86,4 @@ class DeadInsertElimPass : public MemPass {
 }  // namespace opt
 }  // namespace spvtools
 
-#endif  // LIBSPIRV_OPT_DEAD_INSERT_ELIM_PASS_H_
+#endif  // SOURCE_OPT_DEAD_INSERT_ELIM_PASS_H_

@@ -12,13 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <gmock/gmock.h>
+#include <string>
+
+#include "gmock/gmock.h"
+#include "test/opt/pass_fixture.h"
 
 #ifdef SPIRV_EFFCEE
 #include "effcee/effcee.h"
 #endif
-
-#include "../pass_fixture.h"
 
 namespace spvtools {
 namespace opt {

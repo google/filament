@@ -13,7 +13,21 @@
 # limitations under the License.
 
 if(SPIRV_BUILD_COMPRESSION)
-  add_library(SPIRV-Tools-comp markv_codec.cpp)
+  add_library(SPIRV-Tools-comp
+      bit_stream.cpp
+      bit_stream.h
+      huffman_codec.h
+      markv_codec.cpp
+      markv_codec.h
+      markv.cpp
+      markv.h
+      markv_decoder.cpp
+      markv_decoder.h
+      markv_encoder.cpp
+      markv_encoder.h
+      markv_logger.h
+      move_to_front.h
+      move_to_front.cpp)
 
   spvtools_default_compile_options(SPIRV-Tools-comp)
   target_include_directories(SPIRV-Tools-comp

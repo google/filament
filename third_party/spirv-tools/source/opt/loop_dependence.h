@@ -26,10 +26,10 @@
 #include <utility>
 #include <vector>
 
-#include "opt/instruction.h"
-#include "opt/ir_context.h"
-#include "opt/loop_descriptor.h"
-#include "opt/scalar_analysis.h"
+#include "source/opt/instruction.h"
+#include "source/opt/ir_context.h"
+#include "source/opt/loop_descriptor.h"
+#include "source/opt/scalar_analysis.h"
 
 namespace spvtools {
 namespace opt {
@@ -555,4 +555,4 @@ class LoopDependenceAnalysis {
 }  // namespace opt
 }  // namespace spvtools
 
-#endif  // SOURCE_OPT_LOOP_DEPENDENCE_H__
+#endif  // SOURCE_OPT_LOOP_DEPENDENCE_H_

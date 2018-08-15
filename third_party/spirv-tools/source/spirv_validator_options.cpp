@@ -15,7 +15,7 @@
 #include <cassert>
 #include <cstring>
 
-#include "spirv_validator_options.h"
+#include "source/spirv_validator_options.h"
 
 bool spvParseUniversalLimitsOptions(const char* s, spv_validator_limit* type) {
   auto match = [s](const char* b) {

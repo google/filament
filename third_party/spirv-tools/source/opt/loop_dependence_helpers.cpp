@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "opt/loop_dependence.h"
+#include "source/opt/loop_dependence.h"
 
 #include <ostream>
 #include <set>
@@ -21,10 +21,10 @@
 #include <utility>
 #include <vector>
 
-#include "opt/basic_block.h"
-#include "opt/instruction.h"
-#include "opt/scalar_analysis.h"
-#include "opt/scalar_analysis_nodes.h"
+#include "source/opt/basic_block.h"
+#include "source/opt/instruction.h"
+#include "source/opt/scalar_analysis.h"
+#include "source/opt/scalar_analysis_nodes.h"
 
 namespace spvtools {
 namespace opt {

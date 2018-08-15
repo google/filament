@@ -14,10 +14,9 @@
 
 #include <string>
 
-#include <gmock/gmock.h>
-
-#include "../pass_fixture.h"
-#include "opt/licm_pass.h"
+#include "gmock/gmock.h"
+#include "source/opt/licm_pass.h"
+#include "test/opt/pass_fixture.h"
 
 namespace spvtools {
 namespace opt {

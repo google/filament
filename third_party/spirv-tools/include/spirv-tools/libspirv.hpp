@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef SPIRV_TOOLS_LIBSPIRV_HPP_
-#define SPIRV_TOOLS_LIBSPIRV_HPP_
+#ifndef INCLUDE_SPIRV_TOOLS_LIBSPIRV_HPP_
+#define INCLUDE_SPIRV_TOOLS_LIBSPIRV_HPP_
 
 #include <functional>
 #include <memory>
@@ -182,4 +182,4 @@ class SpirvTools {
 
 }  // namespace spvtools
 
-#endif  // SPIRV_TOOLS_LIBSPIRV_HPP_
+#endif  // INCLUDE_SPIRV_TOOLS_LIBSPIRV_HPP_

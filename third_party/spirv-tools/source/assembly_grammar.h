@@ -12,14 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef LIBSPIRV_ASSEMBLY_GRAMMAR_H_
-#define LIBSPIRV_ASSEMBLY_GRAMMAR_H_
+#ifndef SOURCE_ASSEMBLY_GRAMMAR_H_
+#define SOURCE_ASSEMBLY_GRAMMAR_H_
 
-#include "enum_set.h"
-#include "latest_version_spirv_header.h"
-#include "operand.h"
+#include "source/enum_set.h"
+#include "source/latest_version_spirv_header.h"
+#include "source/operand.h"
+#include "source/table.h"
 #include "spirv-tools/libspirv.h"
-#include "table.h"
 
 namespace spvtools {
 
@@ -135,4 +135,4 @@ class AssemblyGrammar {
 
 }  // namespace spvtools
 
-#endif  // LIBSPIRV_ASSEMBLY_GRAMMAR_H_
+#endif  // SOURCE_ASSEMBLY_GRAMMAR_H_

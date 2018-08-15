@@ -15,10 +15,10 @@
 // Assembler tests for instructions in the "Barrier Instructions" section
 // of the SPIR-V spec.
 
-#include "unit_spirv.h"
+#include "test/unit_spirv.h"
 
 #include "gmock/gmock.h"
-#include "test_fixture.h"
+#include "test/test_fixture.h"
 
 namespace spvtools {
 namespace {

@@ -13,14 +13,16 @@
 // limitations under the License.
 
 #include <iostream>
+#include <memory>
+#include <string>
+#include <vector>
 
-#include <gmock/gmock.h>
-
+#include "gmock/gmock.h"
 #include "source/opt/build_module.h"
 #include "source/opt/decoration_manager.h"
 #include "source/opt/ir_context.h"
 #include "source/spirv_constant.h"
-#include "unit_spirv.h"
+#include "test/unit_spirv.h"
 
 namespace spvtools {
 namespace opt {
@@ -61,7 +63,7 @@ class DecorationManagerTest : public ::testing::Test {
     tools_.SetMessageConsumer(consumer_);
   }
 
-  virtual void TearDown() override { error_message_.clear(); }
+  void TearDown() override { error_message_.clear(); }
 
   DecorationManager* GetDecorationManager(const std::string& text) {
     context_ = BuildModule(SPV_ENV_UNIVERSAL_1_2, consumer_, text);

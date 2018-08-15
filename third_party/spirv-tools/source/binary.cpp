@@ -12,24 +12,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "binary.h"
+#include "source/binary.h"
 
 #include <algorithm>
 #include <cassert>
 #include <cstring>
 #include <iterator>
 #include <limits>
+#include <string>
 #include <unordered_map>
 #include <vector>
 
-#include "assembly_grammar.h"
-#include "diagnostic.h"
-#include "ext_inst.h"
-#include "latest_version_spirv_header.h"
-#include "opcode.h"
-#include "operand.h"
-#include "spirv_constant.h"
-#include "spirv_endian.h"
+#include "source/assembly_grammar.h"
+#include "source/diagnostic.h"
+#include "source/ext_inst.h"
+#include "source/latest_version_spirv_header.h"
+#include "source/opcode.h"
+#include "source/operand.h"
+#include "source/spirv_constant.h"
+#include "source/spirv_endian.h"
 
 spv_result_t spvBinaryHeaderGet(const spv_const_binary binary,
                                 const spv_endianness_t endian,

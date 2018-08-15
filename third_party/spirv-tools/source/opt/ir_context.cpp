@@ -12,13 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "ir_context.h"
-#include "latest_version_glsl_std_450_header.h"
-#include "log.h"
-#include "mem_pass.h"
-#include "reflect.h"
+#include "source/opt/ir_context.h"
 
 #include <cstring>
+
+#include "source/latest_version_glsl_std_450_header.h"
+#include "source/opt/log.h"
+#include "source/opt/mem_pass.h"
+#include "source/opt/reflect.h"
 
 namespace spvtools {
 namespace opt {
@@ -191,7 +192,7 @@ bool IRContext::ReplaceAllUsesWith(uint32_t before, uint32_t after) {
       user->SetInOperand(in_operand_pos, {after});
     }
     AnalyzeUses(user);
-  };
+  }
 
   return true;
 }

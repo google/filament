@@ -40,12 +40,15 @@ endfunction()
 if (NOT ${SPIRV_SKIP_EXECUTABLES})
   add_spvtools_tool(TARGET spirv-as SRCS as/as.cpp LIBS ${SPIRV_TOOLS})
   add_spvtools_tool(TARGET spirv-dis SRCS dis/dis.cpp LIBS ${SPIRV_TOOLS})
-  add_spvtools_tool(TARGET spirv-val SRCS val/val.cpp LIBS ${SPIRV_TOOLS})
-  add_spvtools_tool(TARGET spirv-opt SRCS opt/opt.cpp LIBS SPIRV-Tools-opt ${SPIRV_TOOLS})
+  add_spvtools_tool(TARGET spirv-val SRCS val/val.cpp util/cli_consumer.cpp LIBS ${SPIRV_TOOLS})
+  add_spvtools_tool(TARGET spirv-opt SRCS opt/opt.cpp util/cli_consumer.cpp LIBS SPIRV-Tools-opt ${SPIRV_TOOLS})
   add_spvtools_tool(TARGET spirv-link SRCS link/linker.cpp LIBS SPIRV-Tools-link ${SPIRV_TOOLS})
   add_spvtools_tool(TARGET spirv-stats
 	            SRCS stats/stats.cpp
-		         stats/stats_analyzer.cpp
+		               stats/stats_analyzer.cpp
+                   stats/stats_analyzer.h
+                   stats/spirv_stats.cpp
+                   stats/spirv_stats.h
 		    LIBS ${SPIRV_TOOLS})
   add_spvtools_tool(TARGET spirv-cfg
                     SRCS cfg/cfg.cpp

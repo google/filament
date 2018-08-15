@@ -15,16 +15,18 @@
 #include <algorithm>
 #include <iostream>
 #include <set>
+#include <string>
+#include <vector>
 
 #include "gmock/gmock.h"
-#include "util/move_to_front.h"
+#include "source/comp/move_to_front.h"
 
 namespace spvtools {
-namespace utils {
+namespace comp {
 namespace {
 
 // Class used to test the inner workings of MoveToFront.
-class MoveToFrontTester : public MoveToFront<uint32_t> {
+class MoveToFrontTester : public MoveToFront {
  public:
   // Inserts the value in the internal tree data structure. For testing only.
   void TestInsert(uint32_t val) { InsertNode(CreateNode(val, val)); }
@@ -821,122 +823,6 @@ TEST(MoveToFront, LargerScale) {
   ASSERT_EQ(1000u, value);
 }
 
-TEST(MoveToFront, String) {
-  MoveToFront<std::string> mtf;
-
-  EXPECT_TRUE(mtf.Insert("AAA"));
-  EXPECT_TRUE(mtf.Insert("BBB"));
-  EXPECT_TRUE(mtf.Insert("CCC"));
-  EXPECT_FALSE(mtf.Insert("AAA"));
-
-  EXPECT_TRUE(mtf.HasValue("AAA"));
-  EXPECT_FALSE(mtf.HasValue("DDD"));
-
-  std::string value;
-  EXPECT_TRUE(mtf.ValueFromRank(2, &value));
-  EXPECT_EQ("BBB", value);
-
-  EXPECT_TRUE(mtf.ValueFromRank(2, &value));
-  EXPECT_EQ("CCC", value);
-
-  uint32_t rank = 0;
-  EXPECT_TRUE(mtf.RankFromValue("AAA", &rank));
-  EXPECT_EQ(3u, rank);
-
-  EXPECT_FALSE(mtf.ValueFromRank(0, &value));
-  EXPECT_FALSE(mtf.RankFromValue("ABC", &rank));
-  EXPECT_FALSE(mtf.Remove("ABC"));
-
-  EXPECT_TRUE(mtf.Remove("AAA"));
-  EXPECT_FALSE(mtf.Remove("AAA"));
-  EXPECT_FALSE(mtf.RankFromValue("AAA", &rank));
-
-  EXPECT_TRUE(mtf.Insert("AAA"));
-  EXPECT_TRUE(mtf.RankFromValue("AAA", &rank));
-  EXPECT_EQ(1u, rank);
-
-  EXPECT_TRUE(mtf.Promote("BBB"));
-  EXPECT_TRUE(mtf.RankFromValue("BBB", &rank));
-  EXPECT_EQ(1u, rank);
-}
-
-TEST(MultiMoveToFront, Empty) {
-  MultiMoveToFront<std::string> multi_mtf;
-
-  uint32_t rank = 0;
-  std::string value;
-
-  EXPECT_EQ(0u, multi_mtf.GetSize(1001));
-  EXPECT_FALSE(multi_mtf.RankFromValue(1001, "AAA", &rank));
-  EXPECT_FALSE(multi_mtf.ValueFromRank(1001, 1, &value));
-  EXPECT_FALSE(multi_mtf.HasValue(1001, "AAA"));
-  EXPECT_FALSE(multi_mtf.Remove(1001, "AAA"));
-}
-
-TEST(MultiMoveToFront, TwoSequences) {
-  MultiMoveToFront<std::string> multi_mtf;
-
-  uint32_t rank = 0;
-  std::string value;
-
-  EXPECT_TRUE(multi_mtf.Insert(1001, "AAA"));
-
-  EXPECT_EQ(1u, multi_mtf.GetSize(1001));
-  EXPECT_EQ(0u, multi_mtf.GetSize(1002));
-  EXPECT_TRUE(multi_mtf.HasValue(1001, "AAA"));
-  EXPECT_FALSE(multi_mtf.HasValue(1002, "AAA"));
-
-  EXPECT_TRUE(multi_mtf.RankFromValue(1001, "AAA", &rank));
-  EXPECT_EQ(1u, rank);
-  EXPECT_FALSE(multi_mtf.RankFromValue(1002, "AAA", &rank));
-
-  EXPECT_TRUE(multi_mtf.ValueFromRank(1001, rank, &value));
-  EXPECT_EQ("AAA", value);
-  EXPECT_FALSE(multi_mtf.ValueFromRank(1002, rank, &value));
-
-  EXPECT_TRUE(multi_mtf.Insert(1001, "BBB"));
-
-  EXPECT_EQ(2u, multi_mtf.GetSize(1001));
-  EXPECT_EQ(0u, multi_mtf.GetSize(1002));
-  EXPECT_TRUE(multi_mtf.HasValue(1001, "BBB"));
-  EXPECT_FALSE(multi_mtf.HasValue(1002, "BBB"));
-
-  EXPECT_TRUE(multi_mtf.RankFromValue(1001, "BBB", &rank));
-  EXPECT_EQ(1u, rank);
-  EXPECT_FALSE(multi_mtf.RankFromValue(1002, "BBB", &rank));
-
-  EXPECT_TRUE(multi_mtf.ValueFromRank(1001, rank, &value));
-  EXPECT_EQ("BBB", value);
-  EXPECT_FALSE(multi_mtf.ValueFromRank(1002, rank, &value));
-
-  EXPECT_TRUE(multi_mtf.Insert(1002, "AAA"));
-
-  EXPECT_EQ(2u, multi_mtf.GetSize(1001));
-  EXPECT_EQ(1u, multi_mtf.GetSize(1002));
-  EXPECT_TRUE(multi_mtf.HasValue(1002, "AAA"));
-
-  EXPECT_TRUE(multi_mtf.RankFromValue(1002, "AAA", &rank));
-  EXPECT_EQ(1u, rank);
-
-  EXPECT_TRUE(multi_mtf.RankFromValue(1001, "AAA", &rank));
-  EXPECT_EQ(2u, rank);
-
-  multi_mtf.Promote("BBB");
-
-  EXPECT_TRUE(multi_mtf.RankFromValue(1001, "BBB", &rank));
-  EXPECT_EQ(1u, rank);
-
-  EXPECT_TRUE(multi_mtf.Insert(1002, "CCC"));
-  EXPECT_TRUE(multi_mtf.RankFromValue(1002, "CCC", &rank));
-  EXPECT_EQ(1u, rank);
-
-  multi_mtf.Promote("AAA");
-  EXPECT_TRUE(multi_mtf.RankFromValue(1001, "AAA", &rank));
-  EXPECT_EQ(1u, rank);
-  EXPECT_TRUE(multi_mtf.RankFromValue(1002, "AAA", &rank));
-  EXPECT_EQ(1u, rank);
-}
-
 }  // namespace
-}  // namespace utils
+}  // namespace comp
 }  // namespace spvtools

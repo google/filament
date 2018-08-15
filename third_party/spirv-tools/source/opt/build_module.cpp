@@ -12,12 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "build_module.h"
+#include "source/opt/build_module.h"
 
-#include "ir_context.h"
-#include "ir_loader.h"
-#include "make_unique.h"
-#include "table.h"
+#include <utility>
+#include <vector>
+
+#include "source/opt/ir_context.h"
+#include "source/opt/ir_loader.h"
+#include "source/table.h"
+#include "source/util/make_unique.h"
 
 namespace spvtools {
 namespace {

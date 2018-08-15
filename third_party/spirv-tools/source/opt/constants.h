@@ -12,21 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef LIBSPIRV_OPT_CONSTANTS_H_
-#define LIBSPIRV_OPT_CONSTANTS_H_
+#ifndef SOURCE_OPT_CONSTANTS_H_
+#define SOURCE_OPT_CONSTANTS_H_
 
 #include <cinttypes>
+#include <map>
 #include <memory>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
 #include <vector>
 
-#include "make_unique.h"
-#include "module.h"
-#include "type_manager.h"
-#include "types.h"
-#include "util/hex_float.h"
+#include "source/opt/module.h"
+#include "source/opt/type_manager.h"
+#include "source/opt/types.h"
+#include "source/util/hex_float.h"
+#include "source/util/make_unique.h"
 
 namespace spvtools {
 namespace opt {
@@ -116,7 +117,7 @@ class Constant {
   int64_t GetS64() const;
 
   // Returns true if the constant is a zero or a composite containing 0s.
-  virtual bool IsZero() const { return false; };
+  virtual bool IsZero() const { return false; }
 
   const Type* type() const { return type_; }
 
@@ -480,10 +481,11 @@ struct ConstantEqual {
       const auto& composite2 = c2->AsCompositeConstant();
       return composite2 &&
              composite1->GetComponents() == composite2->GetComponents();
-    } else if (c1->AsNullConstant())
+    } else if (c1->AsNullConstant()) {
       return c2->AsNullConstant() != nullptr;
-    else
+    } else {
       assert(false && "Tried to compare two invalid Constant instances.");
+    }
     return false;
   }
 };
@@ -684,4 +686,4 @@ class ConstantManager {
 }  // namespace opt
 }  // namespace spvtools
 
-#endif  // LIBSPIRV_OPT_CONSTANTS_H_
+#endif  // SOURCE_OPT_CONSTANTS_H_

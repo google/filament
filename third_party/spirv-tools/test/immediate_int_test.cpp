@@ -16,10 +16,9 @@
 #include <string>
 #include <vector>
 
-#include <gmock/gmock.h>
-
+#include "gmock/gmock.h"
 #include "source/util/bitutils.h"
-#include "test_fixture.h"
+#include "test/test_fixture.h"
 
 namespace spvtools {
 namespace utils {

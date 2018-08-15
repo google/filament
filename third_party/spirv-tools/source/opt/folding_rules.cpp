@@ -12,12 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "folding_rules.h"
+#include "source/opt/folding_rules.h"
 
 #include <limits>
+#include <memory>
+#include <utility>
 
-#include "ir_context.h"
-#include "latest_version_glsl_std_450_header.h"
+#include "source/latest_version_glsl_std_450_header.h"
+#include "source/opt/ir_context.h"
 
 namespace spvtools {
 namespace opt {

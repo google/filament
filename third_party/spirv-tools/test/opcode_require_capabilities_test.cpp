@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "unit_spirv.h"
+#include "test/unit_spirv.h"
 
-#include "enum_set.h"
+#include "source/enum_set.h"
 
 namespace spvtools {
 namespace {

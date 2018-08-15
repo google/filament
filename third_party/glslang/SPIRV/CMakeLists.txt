@@ -3,6 +3,7 @@ set(SOURCES
     InReadableOrder.cpp
     Logger.cpp
     SpvBuilder.cpp
+    SpvPostProcess.cpp
     doc.cpp
     disassemble.cpp)
 

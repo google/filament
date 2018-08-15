@@ -12,14 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "diagnostic.h"
+#include "source/diagnostic.h"
 
 #include <cassert>
 #include <cstring>
 #include <iostream>
 #include <sstream>
+#include <utility>
 
-#include "table.h"
+#include "source/table.h"
 
 // Diagnostic API
 
@@ -57,14 +58,14 @@ spv_result_t spvDiagnosticPrint(const spv_diagnostic diagnostic) {
               << diagnostic->position.column + 1 << ": " << diagnostic->error
               << "\n";
     return SPV_SUCCESS;
-  } else {
-    // NOTE: Assume this is a binary position
-    std::cerr << "error: ";
-    if (diagnostic->position.index > 0)
-      std::cerr << diagnostic->position.index << ": ";
-    std::cerr << diagnostic->error << "\n";
-    return SPV_SUCCESS;
   }
+
+  // NOTE: Assume this is a binary position
+  std::cerr << "error: ";
+  if (diagnostic->position.index > 0)
+    std::cerr << diagnostic->position.index << ": ";
+  std::cerr << diagnostic->error << "\n";
+  return SPV_SUCCESS;
 }
 
 namespace spvtools {

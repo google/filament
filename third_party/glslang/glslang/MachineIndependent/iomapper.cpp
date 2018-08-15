@@ -331,8 +331,14 @@ struct TResolverInOutAdaptor
                                                       ent.symbol->getType(),
                                                       ent.live);
         } else {
-            TString errorMsg = "Invalid shader In/Out variable semantic: ";
-            errorMsg += ent.symbol->getType().getQualifier().semanticName;
+            TString errorMsg;
+            if (ent.symbol->getType().getQualifier().semanticName != nullptr) {
+                errorMsg = "Invalid shader In/Out variable semantic: ";
+                errorMsg += ent.symbol->getType().getQualifier().semanticName;
+            } else {
+                errorMsg = "Invalid shader In/Out variable: ";
+                errorMsg += ent.symbol->getName();
+            }
             infoSink.info.message(EPrefixInternalError, errorMsg.c_str());
             error = true;
         }

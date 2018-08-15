@@ -14,13 +14,19 @@
 
 #include "spirv-tools/optimizer.hpp"
 
-#include "build_module.h"
-#include "log.h"
-#include "make_unique.h"
-#include "pass_manager.h"
-#include "passes.h"
-#include "reduce_load_size.h"
-#include "simplification_pass.h"
+#include <memory>
+#include <string>
+#include <unordered_map>
+#include <utility>
+#include <vector>
+
+#include "source/opt/build_module.h"
+#include "source/opt/log.h"
+#include "source/opt/pass_manager.h"
+#include "source/opt/passes.h"
+#include "source/opt/reduce_load_size.h"
+#include "source/opt/simplification_pass.h"
+#include "source/util/make_unique.h"
 
 namespace spvtools {
 
@@ -442,6 +448,22 @@ bool Optimizer::RegisterPassFromFlag(const std::string& flag) {
 bool Optimizer::Run(const uint32_t* original_binary,
                     const size_t original_binary_size,
                     std::vector<uint32_t>* optimized_binary) const {
+  return Run(original_binary, original_binary_size, optimized_binary,
+             ValidatorOptions());
+}
+
+bool Optimizer::Run(const uint32_t* original_binary,
+                    const size_t original_binary_size,
+                    std::vector<uint32_t>* optimized_binary,
+                    const ValidatorOptions& options,
+                    bool skip_validation) const {
+  spvtools::SpirvTools tools(impl_->target_env);
+  tools.SetMessageConsumer(impl_->pass_manager.consumer());
+  if (!skip_validation &&
+      !tools.Validate(original_binary, original_binary_size, options)) {
+    return false;
+  }
+
   std::unique_ptr<opt::IRContext> context = BuildModule(
       impl_->target_env, consumer(), original_binary, original_binary_size);
   if (context == nullptr) return false;

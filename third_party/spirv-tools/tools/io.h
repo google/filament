@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef LIBSPIRV_TOOLS_IO_H_
-#define LIBSPIRV_TOOLS_IO_H_
+#ifndef TOOLS_IO_H_
+#define TOOLS_IO_H_
 
 #include <cstdint>
 #include <cstdio>
@@ -79,4 +79,4 @@ bool WriteFile(const char* filename, const char* mode, const T* data,
   return true;
 }
 
-#endif  // LIBSPIRV_TOOLS_IO_H_
+#endif  // TOOLS_IO_H_

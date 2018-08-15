@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "name_mapper.h"
+#include "source/name_mapper.h"
 
 #include <algorithm>
 #include <cassert>
@@ -24,8 +24,8 @@
 
 #include "spirv-tools/libspirv.h"
 
-#include "latest_version_spirv_header.h"
-#include "parsed_operand.h"
+#include "source/latest_version_spirv_header.h"
+#include "source/parsed_operand.h"
 
 namespace spvtools {
 namespace {

@@ -22,6 +22,7 @@
 #include "source/spirv_validator_options.h"
 #include "spirv-tools/libspirv.hpp"
 #include "tools/io.h"
+#include "tools/util/cli_consumer.h"
 
 void print_usage(char* argv0) {
   printf(
@@ -164,28 +165,7 @@ int main(int argc, char** argv) {
   if (!ReadFile<uint32_t>(inFile, "rb", &contents)) return 1;
 
   spvtools::SpirvTools tools(target_env);
-  tools.SetMessageConsumer([](spv_message_level_t level, const char*,
-                              const spv_position_t& position,
-                              const char* message) {
-    switch (level) {
-      case SPV_MSG_FATAL:
-      case SPV_MSG_INTERNAL_ERROR:
-      case SPV_MSG_ERROR:
-        std::cerr << "error: line " << position.index << ": " << message
-                  << std::endl;
-        break;
-      case SPV_MSG_WARNING:
-        std::cout << "warning: line " << position.index << ": " << message
-                  << std::endl;
-        break;
-      case SPV_MSG_INFO:
-        std::cout << "info: line " << position.index << ": " << message
-                  << std::endl;
-        break;
-      default:
-        break;
-    }
-  });
+  tools.SetMessageConsumer(spvtools::utils::CLIMessageConsumer);
 
   bool succeed = tools.Validate(contents.data(), contents.size(), options);
 

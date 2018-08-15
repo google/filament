@@ -12,21 +12,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "opt/loop_descriptor.h"
+#include "source/opt/loop_descriptor.h"
+
 #include <algorithm>
 #include <iostream>
+#include <limits>
+#include <stack>
 #include <type_traits>
 #include <utility>
 #include <vector>
 
-#include "constants.h"
-#include "opt/cfg.h"
-#include "opt/dominator_tree.h"
-#include "opt/ir_builder.h"
-#include "opt/ir_context.h"
-#include "opt/iterator.h"
-#include "opt/make_unique.h"
-#include "opt/tree_iterator.h"
+#include "source/opt/cfg.h"
+#include "source/opt/constants.h"
+#include "source/opt/dominator_tree.h"
+#include "source/opt/ir_builder.h"
+#include "source/opt/ir_context.h"
+#include "source/opt/iterator.h"
+#include "source/opt/tree_iterator.h"
+#include "source/util/make_unique.h"
 
 namespace spvtools {
 namespace opt {

@@ -17,6 +17,8 @@
 #include "source/val/validate.h"
 
 #include <sstream>
+#include <string>
+#include <vector>
 
 #include "source/diagnostic.h"
 #include "source/latest_version_glsl_std_450_header.h"
@@ -742,10 +744,11 @@ spv_result_t ExtInstPass(ValidationState_t& _, const Instruction* inst) {
           }
         }
 
-        _.current_function().RegisterExecutionModelLimitation(
-            SpvExecutionModelFragment,
-            ext_inst_name() +
-                std::string(" requires Fragment execution model"));
+        _.function(inst->function()->id())
+            ->RegisterExecutionModelLimitation(
+                SpvExecutionModelFragment,
+                ext_inst_name() +
+                    std::string(" requires Fragment execution model"));
         break;
       }
 

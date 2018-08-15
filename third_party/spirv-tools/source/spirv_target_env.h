@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef LIBSPIRV_SPIRV_TARGET_ENV_H_
-#define LIBSPIRV_SPIRV_TARGET_ENV_H_
+#ifndef SOURCE_SPIRV_TARGET_ENV_H_
+#define SOURCE_SPIRV_TARGET_ENV_H_
 
 #include "spirv-tools/libspirv.h"
 
@@ -27,4 +27,4 @@ bool spvIsVulkanEnv(spv_target_env env);
 // Returns the version number for the given SPIR-V target environment.
 uint32_t spvVersionForTargetEnv(spv_target_env env);
 
-#endif  // LIBSPIRV_SPIRV_TARGET_ENV_H_
+#endif  // SOURCE_SPIRV_TARGET_ENV_H_

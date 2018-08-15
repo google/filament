@@ -12,8 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <string>
+#include <tuple>
+
 #include "gmock/gmock.h"
-#include "val_fixtures.h"
+#include "test/val/val_fixtures.h"
 
 namespace spvtools {
 namespace val {

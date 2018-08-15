@@ -19,6 +19,7 @@
 #include <string>
 #include <unordered_map>
 #include <utility>
+#include <vector>
 
 #include "source/diagnostic.h"
 #include "source/opcode.h"
@@ -599,21 +600,14 @@ spv_result_t CheckDecorationsOfEntryPoints(ValidationState_t& vstate) {
     for (const auto& desc : descs) {
       for (auto interface : desc.interfaces) {
         Instruction* var_instr = vstate.FindDef(interface);
-        if (SpvOpVariable != var_instr->opcode()) {
+        if (!var_instr || SpvOpVariable != var_instr->opcode()) {
           return vstate.diag(SPV_ERROR_INVALID_ID, var_instr)
                  << "Interfaces passed to OpEntryPoint must be of type "
                     "OpTypeVariable. Found Op"
                  << spvOpcodeString(var_instr->opcode()) << ".";
         }
-        const uint32_t ptr_id = var_instr->word(1);
-        Instruction* ptr_instr = vstate.FindDef(ptr_id);
-        // It is guaranteed (by validator ID checks) that ptr_instr is
-        // OpTypePointer. Word 3 of this instruction is the type being pointed
-        // to.
-        const uint32_t type_id = ptr_instr->word(3);
-        Instruction* type_instr = vstate.FindDef(type_id);
-        const auto storage_class =
-            static_cast<SpvStorageClass>(var_instr->word(3));
+        const SpvStorageClass storage_class =
+            var_instr->GetOperandAs<SpvStorageClass>(2);
         if (storage_class != SpvStorageClassInput &&
             storage_class != SpvStorageClassOutput) {
           return vstate.diag(SPV_ERROR_INVALID_ID, var_instr)
@@ -623,6 +617,14 @@ spv_result_t CheckDecorationsOfEntryPoints(ValidationState_t& vstate) {
                  << storage_class << " for Entry Point id " << entry_point
                  << ".";
         }
+
+        const uint32_t ptr_id = var_instr->word(1);
+        Instruction* ptr_instr = vstate.FindDef(ptr_id);
+        // It is guaranteed (by validator ID checks) that ptr_instr is
+        // OpTypePointer. Word 3 of this instruction is the type being pointed
+        // to.
+        const uint32_t type_id = ptr_instr->word(3);
+        Instruction* type_instr = vstate.FindDef(type_id);
         if (type_instr && SpvOpTypeStruct == type_instr->opcode() &&
             isBuiltInStruct(type_id, vstate)) {
           if (storage_class == SpvStorageClassInput) ++num_builtin_inputs;

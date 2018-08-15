@@ -12,12 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "opt/value_number_table.h"
+#include <string>
 
-#include "assembly_builder.h"
 #include "gmock/gmock.h"
-#include "opt/build_module.h"
-#include "pass_fixture.h"
+#include "source/opt/build_module.h"
+#include "source/opt/value_number_table.h"
+#include "test/opt/assembly_builder.h"
+#include "test/opt/pass_fixture.h"
 
 namespace spvtools {
 namespace opt {

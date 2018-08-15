@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef SPIRV_TOOLS_DISASSEMBLE_H_
-#define SPIRV_TOOLS_DISASSEMBLE_H_
+#ifndef SOURCE_DISASSEMBLE_H_
+#define SOURCE_DISASSEMBLE_H_
 
 #include <string>
 
@@ -35,4 +35,4 @@ std::string spvInstructionBinaryToText(const spv_target_env env,
 
 }  // namespace spvtools
 
-#endif  // SPIRV_TOOLS_DISASSEMBLE_H_
+#endif  // SOURCE_DISASSEMBLE_H_

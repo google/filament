@@ -549,6 +549,7 @@ protected:
 	void find_static_extensions();
 
 	std::string emit_for_loop_initializers(const SPIRBlock &block);
+	void emit_while_loop_initializers(const SPIRBlock &block);
 	bool for_loop_initializers_are_same_type(const SPIRBlock &block);
 	bool optimize_read_modify_write(const SPIRType &type, const std::string &lhs, const std::string &rhs);
 	void fixup_image_load_store_access();

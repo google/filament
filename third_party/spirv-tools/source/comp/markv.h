@@ -1,4 +1,4 @@
-// Copyright (c) 2017 Google Inc.
+// Copyright (c) 2018 Google LLC
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -18,17 +18,15 @@
 // make it more similar to other compressed SPIR-V files to further improve
 // compression of the dataset.
 
-#ifndef SPIRV_TOOLS_MARKV_HPP_
-#define SPIRV_TOOLS_MARKV_HPP_
+#ifndef SOURCE_COMP_MARKV_H_
+#define SOURCE_COMP_MARKV_H_
 
-#include <string>
-#include <vector>
-
-#include "comp/markv_model.h"
 #include "spirv-tools/libspirv.hpp"
 
 namespace spvtools {
 namespace comp {
+
+class MarkvModel;
 
 struct MarkvCodecOptions {
   bool validate_spirv_binary = false;
@@ -73,4 +71,4 @@ spv_result_t MarkvToSpirv(
 }  // namespace comp
 }  // namespace spvtools
 
-#endif  // SPIRV_TOOLS_MARKV_HPP_
+#endif  // SOURCE_COMP_MARKV_H_

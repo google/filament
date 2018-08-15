@@ -18,8 +18,8 @@
 #include <string>
 
 #include "gmock/gmock.h"
-#include "unit_spirv.h"
-#include "val_fixtures.h"
+#include "test/unit_spirv.h"
+#include "test/val/val_fixtures.h"
 
 namespace spvtools {
 namespace val {
@@ -339,8 +339,8 @@ OpFunctionEnd)";
   return ss.str();
 }
 
-std::string GetShaderHeader(
-    const std::string& capabilities_and_extensions = "") {
+std::string GetShaderHeader(const std::string& capabilities_and_extensions = "",
+                            bool include_entry_point = true) {
   std::ostringstream ss;
   ss << R"(
 OpCapability Shader
@@ -348,10 +348,18 @@ OpCapability Int64
 )";
 
   ss << capabilities_and_extensions;
+  if (!include_entry_point) {
+    ss << "OpCapability Linkage";
+  }
 
   ss << R"(
 OpMemoryModel Logical GLSL450
-OpEntryPoint Fragment %main "main"
+)";
+
+  if (include_entry_point) {
+    ss << "OpEntryPoint Fragment %main \"main\"";
+  }
+  ss << R"(
 %void = OpTypeVoid
 %func = OpTypeFunction %void
 %bool = OpTypeBool
@@ -365,7 +373,7 @@ OpEntryPoint Fragment %main "main"
 }
 
 TEST_F(ValidateImage, TypeImageWrongSampledType) {
-  const std::string code = GetShaderHeader() + R"(
+  const std::string code = GetShaderHeader("", false) + R"(
 %img_type = OpTypeImage %bool 2D 0 0 0 1 Unknown
 )";
 
@@ -380,6 +388,11 @@ TEST_F(ValidateImage, TypeImageWrongSampledType) {
 TEST_F(ValidateImage, TypeImageVoidSampledTypeVulkan) {
   const std::string code = GetShaderHeader() + R"(
 %img_type = OpTypeImage %void 2D 0 0 0 1 Unknown
+%void_func = OpTypeFunction %void
+%main = OpFunction %void None %void_func
+%main_lab = OpLabel
+OpReturn
+OpFunctionEnd
 )";
 
   const spv_target_env env = SPV_ENV_VULKAN_1_0;
@@ -393,6 +406,11 @@ TEST_F(ValidateImage, TypeImageVoidSampledTypeVulkan) {
 TEST_F(ValidateImage, TypeImageU64SampledTypeVulkan) {
   const std::string code = GetShaderHeader() + R"(
 %img_type = OpTypeImage %u64 2D 0 0 0 1 Unknown
+%void_func = OpTypeFunction %void
+%main = OpFunction %void None %void_func
+%main_lab = OpLabel
+OpReturn
+OpFunctionEnd
 )";
 
   const spv_target_env env = SPV_ENV_VULKAN_1_0;
@@ -404,7 +422,7 @@ TEST_F(ValidateImage, TypeImageU64SampledTypeVulkan) {
 }
 
 TEST_F(ValidateImage, TypeImageWrongDepth) {
-  const std::string code = GetShaderHeader() + R"(
+  const std::string code = GetShaderHeader("", false) + R"(
 %img_type = OpTypeImage %f32 2D 3 0 0 1 Unknown
 )";
 
@@ -415,7 +433,7 @@ TEST_F(ValidateImage, TypeImageWrongDepth) {
 }
 
 TEST_F(ValidateImage, TypeImageWrongArrayed) {
-  const std::string code = GetShaderHeader() + R"(
+  const std::string code = GetShaderHeader("", false) + R"(
 %img_type = OpTypeImage %f32 2D 0 2 0 1 Unknown
 )";
 
@@ -426,7 +444,7 @@ TEST_F(ValidateImage, TypeImageWrongArrayed) {
 }
 
 TEST_F(ValidateImage, TypeImageWrongMS) {
-  const std::string code = GetShaderHeader() + R"(
+  const std::string code = GetShaderHeader("", false) + R"(
 %img_type = OpTypeImage %f32 2D 0 0 2 1 Unknown
 )";
 
@@ -437,7 +455,7 @@ TEST_F(ValidateImage, TypeImageWrongMS) {
 }
 
 TEST_F(ValidateImage, TypeImageWrongSampled) {
-  const std::string code = GetShaderHeader() + R"(
+  const std::string code = GetShaderHeader("", false) + R"(
 %img_type = OpTypeImage %f32 2D 0 0 0 3 Unknown
 )";
 
@@ -448,8 +466,9 @@ TEST_F(ValidateImage, TypeImageWrongSampled) {
 }
 
 TEST_F(ValidateImage, TypeImageWrongSampledForSubpassData) {
-  const std::string code = GetShaderHeader("OpCapability InputAttachment\n") +
-                           R"(
+  const std::string code =
+      GetShaderHeader("OpCapability InputAttachment\n", false) +
+      R"(
 %img_type = OpTypeImage %f32 SubpassData 0 0 0 1 Unknown
 )";
 
@@ -460,8 +479,9 @@ TEST_F(ValidateImage, TypeImageWrongSampledForSubpassData) {
 }
 
 TEST_F(ValidateImage, TypeImageWrongFormatForSubpassData) {
-  const std::string code = GetShaderHeader("OpCapability InputAttachment\n") +
-                           R"(
+  const std::string code =
+      GetShaderHeader("OpCapability InputAttachment\n", false) +
+      R"(
 %img_type = OpTypeImage %f32 SubpassData 0 0 0 2 Rgba32f
 )";
 
@@ -472,7 +492,7 @@ TEST_F(ValidateImage, TypeImageWrongFormatForSubpassData) {
 }
 
 TEST_F(ValidateImage, TypeSampledImageNotImage) {
-  const std::string code = GetShaderHeader() + R"(
+  const std::string code = GetShaderHeader("", false) + R"(
 %simg_type = OpTypeSampledImage %f32
 )";
 

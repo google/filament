@@ -153,6 +153,7 @@ public:
 		uint32_t msl_version = make_msl_version(1, 2);
 		uint32_t texel_buffer_texture_width = 4096; // Width of 2D Metal textures used as 1D texel buffers
 		bool enable_point_size_builtin = true;
+		bool disable_rasterization = false;
 		bool resolve_specialized_array_lengths = true;
 
 		bool is_ios()
@@ -201,6 +202,13 @@ public:
 	void set_msl_options(const Options &opts)
 	{
 		msl_options = opts;
+	}
+
+	// Provide feedback to calling API to allow runtime to disable pipeline
+	// rasterization if vertex shader requires rasterization to be disabled.
+	bool get_is_rasterization_disabled() const
+	{
+		return is_rasterization_disabled && (get_entry_point().model == spv::ExecutionModelVertex);
 	}
 
 	// An enum of SPIR-V functions that are implemented in additional
@@ -375,6 +383,7 @@ protected:
 	uint32_t stage_uniforms_var_id = 0;
 	bool needs_vertex_idx_arg = false;
 	bool needs_instance_idx_arg = false;
+	bool is_rasterization_disabled = false;
 	std::string qual_pos_var_name;
 	std::string stage_in_var_name = "in";
 	std::string stage_out_var_name = "out";
@@ -394,11 +403,13 @@ protected:
 
 		bool handle(spv::Op opcode, const uint32_t *args, uint32_t length) override;
 		CompilerMSL::SPVFuncImpl get_spv_func_impl(spv::Op opcode, const uint32_t *args);
+		void check_resource_write(uint32_t var_id);
 
 		CompilerMSL &compiler;
 		std::unordered_map<uint32_t, uint32_t> result_types;
 		bool suppress_missing_prototypes = false;
 		bool uses_atomics = false;
+		bool uses_resource_write = false;
 	};
 
 	// Sorts the members of a SPIRType and associated Meta info based on a settable sorting

@@ -12,8 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "copy_prop_arrays.h"
-#include "ir_builder.h"
+#include "source/opt/copy_prop_arrays.h"
+
+#include <utility>
+
+#include "source/opt/ir_builder.h"
 
 namespace spvtools {
 namespace opt {

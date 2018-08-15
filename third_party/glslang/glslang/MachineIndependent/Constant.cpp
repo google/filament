@@ -184,7 +184,7 @@ TIntermTyped* TIntermConstantUnion::fold(TOperator op, const TIntermTyped* right
                 else if (leftUnionArray[i].getDConst() > 0.0)
                     newConstArray[i].setDConst((double)INFINITY);
                 else if (leftUnionArray[i].getDConst() < 0.0)
-                    newConstArray[i].setDConst((double)-INFINITY);
+                    newConstArray[i].setDConst(-(double)INFINITY);
                 else
                     newConstArray[i].setDConst((double)NAN);
                 break;
@@ -223,8 +223,8 @@ TIntermTyped* TIntermConstantUnion::fold(TOperator op, const TIntermTyped* right
             case EbtInt:
                 if (rightUnionArray[i] == 0)
                     newConstArray[i].setIConst(0x7FFFFFFF);
-                else if (rightUnionArray[i].getIConst() == -1 && leftUnionArray[i].getIConst() == -(int)0x80000000)
-                    newConstArray[i].setIConst(-(int)0x80000000);
+                else if (rightUnionArray[i].getIConst() == -1 && leftUnionArray[i].getIConst() == (int)-0x80000000ll)
+                    newConstArray[i].setIConst((int)-0x80000000ll);
                 else
                     newConstArray[i].setIConst(leftUnionArray[i].getIConst() / rightUnionArray[i].getIConst());
                 break;
@@ -239,8 +239,8 @@ TIntermTyped* TIntermConstantUnion::fold(TOperator op, const TIntermTyped* right
             case EbtInt64:
                 if (rightUnionArray[i] == 0ll)
                     newConstArray[i].setI64Const(0x7FFFFFFFFFFFFFFFll);
-                else if (rightUnionArray[i].getI64Const() == -1 && leftUnionArray[i].getI64Const() == -0x8000000000000000ll)
-                    newConstArray[i].setI64Const(-0x8000000000000000ll);
+                else if (rightUnionArray[i].getI64Const() == -1 && leftUnionArray[i].getI64Const() == (long long)-0x8000000000000000ll)
+                    newConstArray[i].setI64Const((long long)-0x8000000000000000ll);
                 else
                     newConstArray[i].setI64Const(leftUnionArray[i].getI64Const() / rightUnionArray[i].getI64Const());
                 break;

@@ -12,9 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <gmock/gmock.h>
-#include <gtest/gtest.h>
+#include <string>
+#include <utility>
+#include <vector>
 
+#include "gmock/gmock.h"
+#include "gtest/gtest.h"
 #include "spirv-tools/optimizer.hpp"
 #include "spirv/1.1/spirv.h"
 
@@ -23,6 +26,15 @@ namespace {
 
 using ::testing::ContainerEq;
 using ::testing::HasSubstr;
+
+// Return a string that contains the minimum instructions needed to form
+// a valid module.  Other instructions can be appended to this string.
+std::string Header() {
+  return R"(OpCapability Shader
+OpCapability Linkage
+OpMemoryModel Logical GLSL450
+)";
+}
 
 TEST(CppInterface, SuccessfulRoundTrip) {
   const std::string input_text = "%2 = OpSizeOf %1 %3\n";
@@ -127,10 +139,6 @@ TEST(CppInterface, DisassembleOverloads) {
 }
 
 TEST(CppInterface, SuccessfulValidation) {
-  const std::string input_text = R"(
-    OpCapability Shader
-    OpCapability Linkage
-    OpMemoryModel Logical GLSL450)";
   SpirvTools t(SPV_ENV_UNIVERSAL_1_1);
   int invocation_count = 0;
   t.SetMessageConsumer([&invocation_count](spv_message_level_t, const char*,
@@ -139,19 +147,15 @@ TEST(CppInterface, SuccessfulValidation) {
   });
 
   std::vector<uint32_t> binary;
-  EXPECT_TRUE(t.Assemble(input_text, &binary));
+  EXPECT_TRUE(t.Assemble(Header(), &binary));
   EXPECT_TRUE(t.Validate(binary));
   EXPECT_EQ(0, invocation_count);
 }
 
 TEST(CppInterface, ValidateOverloads) {
-  const std::string input_text = R"(
-    OpCapability Shader
-    OpCapability Linkage
-    OpMemoryModel Logical GLSL450)";
   SpirvTools t(SPV_ENV_UNIVERSAL_1_1);
   std::vector<uint32_t> binary;
-  EXPECT_TRUE(t.Assemble(input_text, &binary));
+  EXPECT_TRUE(t.Assemble(Header(), &binary));
 
   { EXPECT_TRUE(t.Validate(binary)); }
   { EXPECT_TRUE(t.Validate(binary.data(), binary.size())); }
@@ -179,11 +183,9 @@ TEST(CppInterface, ValidateEmptyModule) {
 // with the given number of members.
 std::string MakeModuleHavingStruct(int num_members) {
   std::stringstream os;
-  os << R"(OpCapability Shader
-           OpCapability Linkage
-           OpMemoryModel Logical GLSL450
-      %1 = OpTypeInt 32 0
-      %2 = OpTypeStruct)";
+  os << Header();
+  os << R"(%1 = OpTypeInt 32 0
+           %2 = OpTypeStruct)";
   for (int i = 0; i < num_members; i++) os << " %1";
   return os.str();
 }
@@ -217,8 +219,8 @@ TEST(CppInterface, ValidateWithOptionsFail) {
 
 // Checks that after running the given optimizer |opt| on the given |original|
 // source code, we can get the given |optimized| source code.
-void CheckOptimization(const char* original, const char* optimized,
-                       const Optimizer& opt) {
+void CheckOptimization(const std::string& original,
+                       const std::string& optimized, const Optimizer& opt) {
   SpirvTools t(SPV_ENV_UNIVERSAL_1_1);
   std::vector<uint32_t> original_binary;
   ASSERT_TRUE(t.Assemble(original, &original_binary));
@@ -239,29 +241,31 @@ TEST(CppInterface, OptimizeEmptyModule) {
 
   Optimizer o(SPV_ENV_UNIVERSAL_1_1);
   o.RegisterPass(CreateStripDebugInfoPass());
-  EXPECT_TRUE(o.Run(binary.data(), binary.size(), &binary));
+
+  // Fails to validate.
+  EXPECT_FALSE(o.Run(binary.data(), binary.size(), &binary));
 }
 
 TEST(CppInterface, OptimizeModifiedModule) {
   Optimizer o(SPV_ENV_UNIVERSAL_1_1);
   o.RegisterPass(CreateStripDebugInfoPass());
-  CheckOptimization("OpSource GLSL 450", "", o);
+  CheckOptimization(Header() + "OpSource GLSL 450", Header(), o);
 }
 
 TEST(CppInterface, OptimizeMulitplePasses) {
-  const char* original_text =
-      "OpSource GLSL 450 "
-      "OpDecorate %true SpecId 1 "
-      "%bool = OpTypeBool "
-      "%true = OpSpecConstantTrue %bool";
+  std::string original_text = Header() +
+                              "OpSource GLSL 450 "
+                              "OpDecorate %true SpecId 1 "
+                              "%bool = OpTypeBool "
+                              "%true = OpSpecConstantTrue %bool";
 
   Optimizer o(SPV_ENV_UNIVERSAL_1_1);
   o.RegisterPass(CreateStripDebugInfoPass())
       .RegisterPass(CreateFreezeSpecConstantValuePass());
 
-  const char* expected_text =
-      "%bool = OpTypeBool\n"
-      "%true = OpConstantTrue %bool\n";
+  std::string expected_text = Header() +
+                              "%bool = OpTypeBool\n"
+                              "%true = OpConstantTrue %bool\n";
 
   CheckOptimization(original_text, expected_text, o);
 }
@@ -276,7 +280,7 @@ TEST(CppInterface, OptimizeReassignPassToken) {
   token = CreateStripDebugInfoPass();
 
   CheckOptimization(
-      "OpSource GLSL 450", "",
+      Header() + "OpSource GLSL 450", Header(),
       Optimizer(SPV_ENV_UNIVERSAL_1_1).RegisterPass(std::move(token)));
 }
 
@@ -285,7 +289,7 @@ TEST(CppInterface, OptimizeMoveConstructPassToken) {
   Optimizer::PassToken token2(std::move(token1));
 
   CheckOptimization(
-      "OpSource GLSL 450", "",
+      Header() + "OpSource GLSL 450", Header(),
       Optimizer(SPV_ENV_UNIVERSAL_1_1).RegisterPass(std::move(token2)));
 }
 
@@ -295,14 +299,14 @@ TEST(CppInterface, OptimizeMoveAssignPassToken) {
   token2 = std::move(token1);
 
   CheckOptimization(
-      "OpSource GLSL 450", "",
+      Header() + "OpSource GLSL 450", Header(),
       Optimizer(SPV_ENV_UNIVERSAL_1_1).RegisterPass(std::move(token2)));
 }
 
 TEST(CppInterface, OptimizeSameAddressForOriginalOptimizedBinary) {
   SpirvTools t(SPV_ENV_UNIVERSAL_1_1);
   std::vector<uint32_t> binary;
-  ASSERT_TRUE(t.Assemble("OpSource GLSL 450", &binary));
+  ASSERT_TRUE(t.Assemble(Header() + "OpSource GLSL 450", &binary));
 
   EXPECT_TRUE(Optimizer(SPV_ENV_UNIVERSAL_1_1)
                   .RegisterPass(CreateStripDebugInfoPass())
@@ -310,7 +314,7 @@ TEST(CppInterface, OptimizeSameAddressForOriginalOptimizedBinary) {
 
   std::string optimized_text;
   EXPECT_TRUE(t.Disassemble(binary, &optimized_text));
-  EXPECT_EQ("", optimized_text);
+  EXPECT_EQ(Header(), optimized_text);
 }
 
 // TODO(antiagainst): tests for SetMessageConsumer().

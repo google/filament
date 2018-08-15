@@ -15,6 +15,7 @@
 #include "source/val/validate.h"
 
 #include <algorithm>
+#include <vector>
 
 #include "source/diagnostic.h"
 #include "source/val/function.h"

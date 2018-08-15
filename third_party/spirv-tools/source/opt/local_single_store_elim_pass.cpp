@@ -14,11 +14,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "local_single_store_elim_pass.h"
+#include "source/opt/local_single_store_elim_pass.h"
 
-#include "cfa.h"
-#include "iterator.h"
-#include "latest_version_glsl_std_450_header.h"
+#include "source/cfa.h"
+#include "source/latest_version_glsl_std_450_header.h"
+#include "source/opt/iterator.h"
 
 namespace spvtools {
 namespace opt {

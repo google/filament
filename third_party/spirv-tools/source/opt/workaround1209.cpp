@@ -12,10 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "workaround1209.h"
+#include "source/opt/workaround1209.h"
 
 #include <list>
+#include <memory>
 #include <stack>
+#include <utility>
 
 namespace spvtools {
 namespace opt {

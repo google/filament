@@ -2437,7 +2437,13 @@ bool Compiler::execution_is_noop(const SPIRBlock &from, const SPIRBlock &to) con
 		if (!start->ops.empty())
 			return false;
 
-		start = &get<SPIRBlock>(start->next_block);
+		auto &next = get<SPIRBlock>(start->next_block);
+		// Flushing phi variables does not count as noop.
+		for (auto &phi : next.phi_variables)
+			if (phi.parent == start->self)
+				return false;
+
+		start = &next;
 	}
 }
 

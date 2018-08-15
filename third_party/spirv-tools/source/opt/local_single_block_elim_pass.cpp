@@ -14,13 +14,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "local_single_block_elim_pass.h"
+#include "source/opt/local_single_block_elim_pass.h"
 
-#include "iterator.h"
+#include <vector>
+
+#include "source/opt/iterator.h"
 
 namespace spvtools {
 namespace opt {
-
 namespace {
 
 const uint32_t kStoreValIdInIdx = 1;
@@ -77,6 +78,7 @@ bool LocalSingleBlockLoadStoreElimPass::LocalSingleBlockLoadStoreElim(
             if (prev_store != var2store_.end() &&
                 instructions_to_save.count(prev_store->second) == 0) {
               instructions_to_kill.push_back(prev_store->second);
+              modified = true;
             }
 
             bool kill_store = false;

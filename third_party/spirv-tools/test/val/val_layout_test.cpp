@@ -14,15 +14,18 @@
 
 // Validation tests for Logical Layout
 
+#include <algorithm>
 #include <functional>
 #include <sstream>
 #include <string>
+#include <tuple>
 #include <utility>
+#include <vector>
 
 #include "gmock/gmock.h"
 #include "source/diagnostic.h"
-#include "unit_spirv.h"
-#include "val_fixtures.h"
+#include "test/unit_spirv.h"
+#include "test/val/val_fixtures.h"
 
 namespace spvtools {
 namespace val {
@@ -492,6 +495,21 @@ TEST_F(ValidateEntryPoint, FunctionIsTargetOfEntryPointAndFunctionCallBad) {
       getDiagnosticString(),
       HasSubstr("A function (1) may not be targeted by both an OpEntryPoint "
                 "instruction and an OpFunctionCall instruction."));
+}
+
+// Invalid. Must be within a function to make a function call.
+TEST_F(ValidateEntryPoint, FunctionCallOutsideFunctionBody) {
+  std::string spirv = R"(
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpName %variableName "variableName"
+         %34 = OpFunctionCall %variableName %1
+      )";
+  CompileSuccessfully(spirv);
+  EXPECT_EQ(SPV_ERROR_INVALID_LAYOUT, ValidateInstructions());
+  EXPECT_THAT(getDiagnosticString(),
+              HasSubstr("FunctionCall must happen within a function body."));
 }
 
 // Valid. Module with a function but no entry point is valid when Linkage

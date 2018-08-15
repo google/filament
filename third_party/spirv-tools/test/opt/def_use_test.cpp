@@ -13,18 +13,21 @@
 // limitations under the License.
 
 #include <memory>
+#include <string>
+#include <unordered_map>
 #include <unordered_set>
+#include <utility>
+#include <vector>
 
-#include <gmock/gmock.h>
-#include <gtest/gtest.h>
-
-#include "opt/build_module.h"
-#include "opt/def_use_manager.h"
-#include "opt/ir_context.h"
-#include "opt/module.h"
-#include "pass_fixture.h"
-#include "pass_utils.h"
+#include "gmock/gmock.h"
+#include "gtest/gtest.h"
+#include "source/opt/build_module.h"
+#include "source/opt/def_use_manager.h"
+#include "source/opt/ir_context.h"
+#include "source/opt/module.h"
 #include "spirv-tools/libspirv.hpp"
+#include "test/opt/pass_fixture.h"
+#include "test/opt/pass_utils.h"
 
 namespace spvtools {
 namespace opt {

@@ -14,26 +14,28 @@
 
 #include "spirv-tools/linker.hpp"
 
+#include <algorithm>
 #include <cstdio>
 #include <cstring>
-
-#include <algorithm>
 #include <iostream>
+#include <memory>
+#include <string>
 #include <unordered_map>
 #include <unordered_set>
+#include <utility>
 #include <vector>
 
-#include "assembly_grammar.h"
-#include "diagnostic.h"
-#include "opt/build_module.h"
-#include "opt/compact_ids_pass.h"
-#include "opt/decoration_manager.h"
-#include "opt/ir_loader.h"
-#include "opt/make_unique.h"
-#include "opt/pass_manager.h"
-#include "opt/remove_duplicates_pass.h"
+#include "source/assembly_grammar.h"
+#include "source/diagnostic.h"
+#include "source/opt/build_module.h"
+#include "source/opt/compact_ids_pass.h"
+#include "source/opt/decoration_manager.h"
+#include "source/opt/ir_loader.h"
+#include "source/opt/pass_manager.h"
+#include "source/opt/remove_duplicates_pass.h"
+#include "source/spirv_target_env.h"
+#include "source/util/make_unique.h"
 #include "spirv-tools/libspirv.hpp"
-#include "spirv_target_env.h"
 
 namespace spvtools {
 namespace {

@@ -12,12 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <gmock/gmock.h>
+#include <string>
+#include <vector>
 
+#include "gmock/gmock.h"
 #include "spirv-tools/libspirv.hpp"
 #include "spirv-tools/optimizer.hpp"
-
-#include "pass_fixture.h"
+#include "test/opt/pass_fixture.h"
 
 namespace spvtools {
 namespace opt {
@@ -25,10 +26,20 @@ namespace {
 
 using ::testing::Eq;
 
+// Return a string that contains the minimum instructions needed to form
+// a valid module.  Other instructions can be appended to this string.
+std::string Header() {
+  return R"(OpCapability Shader
+OpCapability Linkage
+OpMemoryModel Logical GLSL450
+)";
+}
+
 TEST(Optimizer, CanRunNullPassWithDistinctInputOutputVectors) {
   SpirvTools tools(SPV_ENV_UNIVERSAL_1_0);
   std::vector<uint32_t> binary_in;
-  tools.Assemble("OpName %foo \"foo\"\n%foo = OpTypeVoid", &binary_in);
+  tools.Assemble(Header() + "OpName %foo \"foo\"\n%foo = OpTypeVoid",
+                 &binary_in);
 
   Optimizer opt(SPV_ENV_UNIVERSAL_1_0);
   opt.RegisterPass(CreateNullPass());
@@ -37,13 +48,15 @@ TEST(Optimizer, CanRunNullPassWithDistinctInputOutputVectors) {
 
   std::string disassembly;
   tools.Disassemble(binary_out.data(), binary_out.size(), &disassembly);
-  EXPECT_THAT(disassembly, Eq("OpName %foo \"foo\"\n%foo = OpTypeVoid\n"));
+  EXPECT_THAT(disassembly,
+              Eq(Header() + "OpName %foo \"foo\"\n%foo = OpTypeVoid\n"));
 }
 
 TEST(Optimizer, CanRunTransformingPassWithDistinctInputOutputVectors) {
   SpirvTools tools(SPV_ENV_UNIVERSAL_1_0);
   std::vector<uint32_t> binary_in;
-  tools.Assemble("OpName %foo \"foo\"\n%foo = OpTypeVoid", &binary_in);
+  tools.Assemble(Header() + "OpName %foo \"foo\"\n%foo = OpTypeVoid",
+                 &binary_in);
 
   Optimizer opt(SPV_ENV_UNIVERSAL_1_0);
   opt.RegisterPass(CreateStripDebugInfoPass());
@@ -52,7 +65,7 @@ TEST(Optimizer, CanRunTransformingPassWithDistinctInputOutputVectors) {
 
   std::string disassembly;
   tools.Disassemble(binary_out.data(), binary_out.size(), &disassembly);
-  EXPECT_THAT(disassembly, Eq("%void = OpTypeVoid\n"));
+  EXPECT_THAT(disassembly, Eq(Header() + "%void = OpTypeVoid\n"));
 }
 
 TEST(Optimizer, CanRunNullPassWithAliasedVectors) {
@@ -72,7 +85,7 @@ TEST(Optimizer, CanRunNullPassWithAliasedVectors) {
 TEST(Optimizer, CanRunNullPassWithAliasedVectorDataButDifferentSize) {
   SpirvTools tools(SPV_ENV_UNIVERSAL_1_0);
   std::vector<uint32_t> binary;
-  tools.Assemble("OpName %foo \"foo\"\n%foo = OpTypeVoid", &binary);
+  tools.Assemble(Header() + "OpName %foo \"foo\"\n%foo = OpTypeVoid", &binary);
 
   Optimizer opt(SPV_ENV_UNIVERSAL_1_0);
   opt.RegisterPass(CreateNullPass());
@@ -87,13 +100,14 @@ TEST(Optimizer, CanRunNullPassWithAliasedVectorDataButDifferentSize) {
 
   std::string disassembly;
   tools.Disassemble(binary.data(), binary.size(), &disassembly);
-  EXPECT_THAT(disassembly, Eq("OpName %foo \"foo\"\n%foo = OpTypeVoid\n"));
+  EXPECT_THAT(disassembly,
+              Eq(Header() + "OpName %foo \"foo\"\n%foo = OpTypeVoid\n"));
 }
 
 TEST(Optimizer, CanRunTransformingPassWithAliasedVectors) {
   SpirvTools tools(SPV_ENV_UNIVERSAL_1_0);
   std::vector<uint32_t> binary;
-  tools.Assemble("OpName %foo \"foo\"\n%foo = OpTypeVoid", &binary);
+  tools.Assemble(Header() + "OpName %foo \"foo\"\n%foo = OpTypeVoid", &binary);
 
   Optimizer opt(SPV_ENV_UNIVERSAL_1_0);
   opt.RegisterPass(CreateStripDebugInfoPass());
@@ -101,7 +115,7 @@ TEST(Optimizer, CanRunTransformingPassWithAliasedVectors) {
 
   std::string disassembly;
   tools.Disassemble(binary.data(), binary.size(), &disassembly);
-  EXPECT_THAT(disassembly, Eq("%void = OpTypeVoid\n"));
+  EXPECT_THAT(disassembly, Eq(Header() + "%void = OpTypeVoid\n"));
 }
 
 TEST(Optimizer, CanValidateFlags) {

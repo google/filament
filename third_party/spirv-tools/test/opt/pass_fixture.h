@@ -12,25 +12,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef LIBSPIRV_TEST_OPT_PASS_FIXTURE_H_
-#define LIBSPIRV_TEST_OPT_PASS_FIXTURE_H_
+#ifndef TEST_OPT_PASS_FIXTURE_H_
+#define TEST_OPT_PASS_FIXTURE_H_
 
 #include <iostream>
+#include <memory>
 #include <string>
 #include <tuple>
+#include <utility>
 #include <vector>
 
-#include <gtest/gtest.h>
+#include "gtest/gtest.h"
+#include "source/opt/build_module.h"
+#include "source/opt/pass_manager.h"
+#include "source/opt/passes.h"
+#include "source/util/make_unique.h"
+#include "spirv-tools/libspirv.hpp"
 
 #ifdef SPIRV_EFFCEE
 #include "effcee/effcee.h"
 #endif
-
-#include "opt/build_module.h"
-#include "opt/make_unique.h"
-#include "opt/pass_manager.h"
-#include "opt/passes.h"
-#include "spirv-tools/libspirv.hpp"
 
 namespace spvtools {
 namespace opt {
@@ -190,7 +191,7 @@ class PassTest : public TestT {
 
   // Renews the pass manager, including clearing all previously added passes.
   void RenewPassManger() {
-    manager_.reset(new PassManager());
+    manager_ = MakeUnique<PassManager>();
     manager_->SetMessageConsumer(consumer_);
   }
 
@@ -242,4 +243,4 @@ class PassTest : public TestT {
 }  // namespace opt
 }  // namespace spvtools
 
-#endif  // LIBSPIRV_TEST_OPT_PASS_FIXTURE_H_
+#endif  // TEST_OPT_PASS_FIXTURE_H_

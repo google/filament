@@ -12,18 +12,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "strength_reduction_pass.h"
+#include "source/opt/strength_reduction_pass.h"
 
 #include <algorithm>
 #include <cstdio>
 #include <cstring>
+#include <memory>
 #include <unordered_map>
 #include <unordered_set>
+#include <utility>
+#include <vector>
 
-#include "def_use_manager.h"
-#include "ir_context.h"
-#include "log.h"
-#include "reflect.h"
+#include "source/opt/def_use_manager.h"
+#include "source/opt/ir_context.h"
+#include "source/opt/log.h"
+#include "source/opt/reflect.h"
 
 namespace {
 // Count the number of trailing zeros in the binary representation of

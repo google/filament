@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "ext_inst.h"
+#include "source/ext_inst.h"
 
 #include <cassert>
 #include <cstring>
@@ -22,14 +22,14 @@
 // TODO(dneto): DebugInfo.h should probably move to SPIRV-Headers.
 #include "DebugInfo.h"
 
-#include "latest_version_glsl_std_450_header.h"
-#include "latest_version_opencl_std_header.h"
-#include "macro.h"
-#include "spirv_definition.h"
+#include "source/latest_version_glsl_std_450_header.h"
+#include "source/latest_version_opencl_std_header.h"
+#include "source/macro.h"
+#include "source/spirv_definition.h"
 
-#include "debuginfo.insts.inc"     // defines opencl_entries
-#include "glsl.std.450.insts.inc"  // defines glsl_entries
-#include "opencl.std.insts.inc"    // defines opencl_entries
+#include "debuginfo.insts.inc"
+#include "glsl.std.450.insts.inc"
+#include "opencl.std.insts.inc"
 
 #include "spv-amd-gcn-shader.insts.inc"
 #include "spv-amd-shader-ballot.insts.inc"

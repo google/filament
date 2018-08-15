@@ -15,12 +15,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "dead_branch_elim_pass.h"
+#include "source/opt/dead_branch_elim_pass.h"
 
-#include "cfa.h"
-#include "ir_context.h"
-#include "iterator.h"
-#include "make_unique.h"
+#include <list>
+#include <memory>
+#include <vector>
+
+#include "source/cfa.h"
+#include "source/opt/ir_context.h"
+#include "source/opt/iterator.h"
+#include "source/util/make_unique.h"
 
 namespace spvtools {
 namespace opt {

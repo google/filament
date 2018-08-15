@@ -12,16 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "type_manager.h"
+#include "source/opt/type_manager.h"
 
+#include <algorithm>
 #include <cassert>
 #include <cstring>
 #include <utility>
 
-#include "ir_context.h"
-#include "log.h"
-#include "make_unique.h"
-#include "reflect.h"
+#include "source/opt/ir_context.h"
+#include "source/opt/log.h"
+#include "source/opt/reflect.h"
+#include "source/util/make_unique.h"
 
 namespace spvtools {
 namespace opt {
@@ -205,10 +206,10 @@ uint32_t TypeManager::GetTypeInstruction(const Type* type) {
   id = context()->TakeNextId();
   RegisterType(id, *type);
   switch (type->kind()) {
-#define DefineParameterlessCase(kind)                                  \
-  case Type::k##kind:                                                  \
-    typeInst.reset(new Instruction(context(), SpvOpType##kind, 0, id,  \
-                                   std::initializer_list<Operand>{})); \
+#define DefineParameterlessCase(kind)                                     \
+  case Type::k##kind:                                                     \
+    typeInst = MakeUnique<Instruction>(context(), SpvOpType##kind, 0, id, \
+                                       std::initializer_list<Operand>{}); \
     break;
     DefineParameterlessCase(Void);
     DefineParameterlessCase(Bool);
@@ -221,43 +222,43 @@ uint32_t TypeManager::GetTypeInstruction(const Type* type) {
     DefineParameterlessCase(NamedBarrier);
 #undef DefineParameterlessCase
     case Type::kInteger:
-      typeInst.reset(new Instruction(
+      typeInst = MakeUnique<Instruction>(
           context(), SpvOpTypeInt, 0, id,
           std::initializer_list<Operand>{
               {SPV_OPERAND_TYPE_LITERAL_INTEGER, {type->AsInteger()->width()}},
               {SPV_OPERAND_TYPE_LITERAL_INTEGER,
-               {(type->AsInteger()->IsSigned() ? 1u : 0u)}}}));
+               {(type->AsInteger()->IsSigned() ? 1u : 0u)}}});
       break;
     case Type::kFloat:
-      typeInst.reset(new Instruction(
+      typeInst = MakeUnique<Instruction>(
           context(), SpvOpTypeFloat, 0, id,
           std::initializer_list<Operand>{
-              {SPV_OPERAND_TYPE_LITERAL_INTEGER, {type->AsFloat()->width()}}}));
+              {SPV_OPERAND_TYPE_LITERAL_INTEGER, {type->AsFloat()->width()}}});
       break;
     case Type::kVector: {
       uint32_t subtype = GetTypeInstruction(type->AsVector()->element_type());
-      typeInst.reset(
-          new Instruction(context(), SpvOpTypeVector, 0, id,
-                          std::initializer_list<Operand>{
-                              {SPV_OPERAND_TYPE_ID, {subtype}},
-                              {SPV_OPERAND_TYPE_LITERAL_INTEGER,
-                               {type->AsVector()->element_count()}}}));
+      typeInst =
+          MakeUnique<Instruction>(context(), SpvOpTypeVector, 0, id,
+                                  std::initializer_list<Operand>{
+                                      {SPV_OPERAND_TYPE_ID, {subtype}},
+                                      {SPV_OPERAND_TYPE_LITERAL_INTEGER,
+                                       {type->AsVector()->element_count()}}});
       break;
     }
     case Type::kMatrix: {
       uint32_t subtype = GetTypeInstruction(type->AsMatrix()->element_type());
-      typeInst.reset(
-          new Instruction(context(), SpvOpTypeMatrix, 0, id,
-                          std::initializer_list<Operand>{
-                              {SPV_OPERAND_TYPE_ID, {subtype}},
-                              {SPV_OPERAND_TYPE_LITERAL_INTEGER,
-                               {type->AsMatrix()->element_count()}}}));
+      typeInst =
+          MakeUnique<Instruction>(context(), SpvOpTypeMatrix, 0, id,
+                                  std::initializer_list<Operand>{
+                                      {SPV_OPERAND_TYPE_ID, {subtype}},
+                                      {SPV_OPERAND_TYPE_LITERAL_INTEGER,
+                                       {type->AsMatrix()->element_count()}}});
       break;
     }
     case Type::kImage: {
       const Image* image = type->AsImage();
       uint32_t subtype = GetTypeInstruction(image->sampled_type());
-      typeInst.reset(new Instruction(
+      typeInst = MakeUnique<Instruction>(
           context(), SpvOpTypeImage, 0, id,
           std::initializer_list<Operand>{
               {SPV_OPERAND_TYPE_ID, {subtype}},
@@ -272,32 +273,32 @@ uint32_t TypeManager::GetTypeInstruction(const Type* type) {
               {SPV_OPERAND_TYPE_SAMPLER_IMAGE_FORMAT,
                {static_cast<uint32_t>(image->format())}},
               {SPV_OPERAND_TYPE_ACCESS_QUALIFIER,
-               {static_cast<uint32_t>(image->access_qualifier())}}}));
+               {static_cast<uint32_t>(image->access_qualifier())}}});
       break;
     }
     case Type::kSampledImage: {
       uint32_t subtype =
           GetTypeInstruction(type->AsSampledImage()->image_type());
-      typeInst.reset(new Instruction(
+      typeInst = MakeUnique<Instruction>(
           context(), SpvOpTypeSampledImage, 0, id,
-          std::initializer_list<Operand>{{SPV_OPERAND_TYPE_ID, {subtype}}}));
+          std::initializer_list<Operand>{{SPV_OPERAND_TYPE_ID, {subtype}}});
       break;
     }
     case Type::kArray: {
       uint32_t subtype = GetTypeInstruction(type->AsArray()->element_type());
-      typeInst.reset(new Instruction(
+      typeInst = MakeUnique<Instruction>(
           context(), SpvOpTypeArray, 0, id,
           std::initializer_list<Operand>{
               {SPV_OPERAND_TYPE_ID, {subtype}},
-              {SPV_OPERAND_TYPE_ID, {type->AsArray()->LengthId()}}}));
+              {SPV_OPERAND_TYPE_ID, {type->AsArray()->LengthId()}}});
       break;
     }
     case Type::kRuntimeArray: {
       uint32_t subtype =
           GetTypeInstruction(type->AsRuntimeArray()->element_type());
-      typeInst.reset(new Instruction(
+      typeInst = MakeUnique<Instruction>(
           context(), SpvOpTypeRuntimeArray, 0, id,
-          std::initializer_list<Operand>{{SPV_OPERAND_TYPE_ID, {subtype}}}));
+          std::initializer_list<Operand>{{SPV_OPERAND_TYPE_ID, {subtype}}});
       break;
     }
     case Type::kStruct: {
@@ -306,7 +307,8 @@ uint32_t TypeManager::GetTypeInstruction(const Type* type) {
       for (auto ty : structTy->element_types()) {
         ops.push_back(Operand(SPV_OPERAND_TYPE_ID, {GetTypeInstruction(ty)}));
       }
-      typeInst.reset(new Instruction(context(), SpvOpTypeStruct, 0, id, ops));
+      typeInst =
+          MakeUnique<Instruction>(context(), SpvOpTypeStruct, 0, id, ops);
       break;
     }
     case Type::kOpaque: {
@@ -316,21 +318,21 @@ uint32_t TypeManager::GetTypeInstruction(const Type* type) {
       std::vector<uint32_t> words(size / 4 + 1, 0);
       char* dst = reinterpret_cast<char*>(words.data());
       strncpy(dst, opaque->name().c_str(), size);
-      typeInst.reset(
-          new Instruction(context(), SpvOpTypeOpaque, 0, id,
-                          std::initializer_list<Operand>{
-                              {SPV_OPERAND_TYPE_LITERAL_STRING, words}}));
+      typeInst = MakeUnique<Instruction>(
+          context(), SpvOpTypeOpaque, 0, id,
+          std::initializer_list<Operand>{
+              {SPV_OPERAND_TYPE_LITERAL_STRING, words}});
       break;
     }
     case Type::kPointer: {
       const Pointer* pointer = type->AsPointer();
       uint32_t subtype = GetTypeInstruction(pointer->pointee_type());
-      typeInst.reset(new Instruction(
+      typeInst = MakeUnique<Instruction>(
           context(), SpvOpTypePointer, 0, id,
           std::initializer_list<Operand>{
               {SPV_OPERAND_TYPE_STORAGE_CLASS,
                {static_cast<uint32_t>(pointer->storage_class())}},
-              {SPV_OPERAND_TYPE_ID, {subtype}}}));
+              {SPV_OPERAND_TYPE_ID, {subtype}}});
       break;
     }
     case Type::kFunction: {
@@ -341,24 +343,25 @@ uint32_t TypeManager::GetTypeInstruction(const Type* type) {
       for (auto ty : function->param_types()) {
         ops.push_back(Operand(SPV_OPERAND_TYPE_ID, {GetTypeInstruction(ty)}));
       }
-      typeInst.reset(new Instruction(context(), SpvOpTypeFunction, 0, id, ops));
+      typeInst =
+          MakeUnique<Instruction>(context(), SpvOpTypeFunction, 0, id, ops);
       break;
     }
     case Type::kPipe:
-      typeInst.reset(new Instruction(
+      typeInst = MakeUnique<Instruction>(
           context(), SpvOpTypePipe, 0, id,
           std::initializer_list<Operand>{
               {SPV_OPERAND_TYPE_ACCESS_QUALIFIER,
-               {static_cast<uint32_t>(type->AsPipe()->access_qualifier())}}}));
+               {static_cast<uint32_t>(type->AsPipe()->access_qualifier())}}});
       break;
     case Type::kForwardPointer:
-      typeInst.reset(new Instruction(
+      typeInst = MakeUnique<Instruction>(
           context(), SpvOpTypeForwardPointer, 0, 0,
           std::initializer_list<Operand>{
               {SPV_OPERAND_TYPE_ID, {type->AsForwardPointer()->target_id()}},
               {SPV_OPERAND_TYPE_STORAGE_CLASS,
                {static_cast<uint32_t>(
-                   type->AsForwardPointer()->storage_class())}}}));
+                   type->AsForwardPointer()->storage_class())}}});
       break;
     default:
       assert(false && "Unexpected type");
@@ -447,7 +450,8 @@ Type* TypeManager::RebuildType(const Type& type) {
 #define DefineNoSubtypeCase(kind)             \
   case Type::k##kind:                         \
     rebuilt_ty.reset(type.Clone().release()); \
-    break;
+    return type_pool_.insert(std::move(rebuilt_ty)).first->get();
+
     DefineNoSubtypeCase(Void);
     DefineNoSubtypeCase(Bool);
     DefineNoSubtypeCase(Integer);
@@ -465,45 +469,44 @@ Type* TypeManager::RebuildType(const Type& type) {
     case Type::kVector: {
       const Vector* vec_ty = type.AsVector();
       const Type* ele_ty = vec_ty->element_type();
-      rebuilt_ty.reset(
-          new Vector(RebuildType(*ele_ty), vec_ty->element_count()));
+      rebuilt_ty =
+          MakeUnique<Vector>(RebuildType(*ele_ty), vec_ty->element_count());
       break;
     }
     case Type::kMatrix: {
       const Matrix* mat_ty = type.AsMatrix();
       const Type* ele_ty = mat_ty->element_type();
-      rebuilt_ty.reset(
-          new Matrix(RebuildType(*ele_ty), mat_ty->element_count()));
+      rebuilt_ty =
+          MakeUnique<Matrix>(RebuildType(*ele_ty), mat_ty->element_count());
       break;
     }
     case Type::kImage: {
       const Image* image_ty = type.AsImage();
       const Type* ele_ty = image_ty->sampled_type();
-      rebuilt_ty.reset(new Image(RebuildType(*ele_ty), image_ty->dim(),
-                                 image_ty->depth(), image_ty->is_arrayed(),
-                                 image_ty->is_multisampled(),
-                                 image_ty->sampled(), image_ty->format(),
-                                 image_ty->access_qualifier()));
+      rebuilt_ty =
+          MakeUnique<Image>(RebuildType(*ele_ty), image_ty->dim(),
+                            image_ty->depth(), image_ty->is_arrayed(),
+                            image_ty->is_multisampled(), image_ty->sampled(),
+                            image_ty->format(), image_ty->access_qualifier());
       break;
     }
     case Type::kSampledImage: {
       const SampledImage* image_ty = type.AsSampledImage();
       const Type* ele_ty = image_ty->image_type();
-      rebuilt_ty.reset(
-
-          new SampledImage(RebuildType(*ele_ty)));
+      rebuilt_ty = MakeUnique<SampledImage>(RebuildType(*ele_ty));
       break;
     }
     case Type::kArray: {
       const Array* array_ty = type.AsArray();
       const Type* ele_ty = array_ty->element_type();
-      rebuilt_ty.reset(new Array(RebuildType(*ele_ty), array_ty->LengthId()));
+      rebuilt_ty =
+          MakeUnique<Array>(RebuildType(*ele_ty), array_ty->LengthId());
       break;
     }
     case Type::kRuntimeArray: {
       const RuntimeArray* array_ty = type.AsRuntimeArray();
       const Type* ele_ty = array_ty->element_type();
-      rebuilt_ty.reset(new RuntimeArray(RebuildType(*ele_ty)));
+      rebuilt_ty = MakeUnique<RuntimeArray>(RebuildType(*ele_ty));
       break;
     }
     case Type::kStruct: {
@@ -513,7 +516,7 @@ Type* TypeManager::RebuildType(const Type& type) {
       for (const auto* ele_ty : struct_ty->element_types()) {
         subtypes.push_back(RebuildType(*ele_ty));
       }
-      rebuilt_ty.reset(new Struct(subtypes));
+      rebuilt_ty = MakeUnique<Struct>(subtypes);
       Struct* rebuilt_struct = rebuilt_ty->AsStruct();
       for (auto pair : struct_ty->element_decorations()) {
         uint32_t index = pair.first;
@@ -528,8 +531,8 @@ Type* TypeManager::RebuildType(const Type& type) {
     case Type::kPointer: {
       const Pointer* pointer_ty = type.AsPointer();
       const Type* ele_ty = pointer_ty->pointee_type();
-      rebuilt_ty.reset(
-          new Pointer(RebuildType(*ele_ty), pointer_ty->storage_class()));
+      rebuilt_ty = MakeUnique<Pointer>(RebuildType(*ele_ty),
+                                       pointer_ty->storage_class());
       break;
     }
     case Type::kFunction: {
@@ -540,13 +543,13 @@ Type* TypeManager::RebuildType(const Type& type) {
       for (const auto* param_ty : function_ty->param_types()) {
         param_types.push_back(RebuildType(*param_ty));
       }
-      rebuilt_ty.reset(new Function(RebuildType(*ret_ty), param_types));
+      rebuilt_ty = MakeUnique<Function>(RebuildType(*ret_ty), param_types);
       break;
     }
     case Type::kForwardPointer: {
       const ForwardPointer* forward_ptr_ty = type.AsForwardPointer();
-      rebuilt_ty.reset(new ForwardPointer(forward_ptr_ty->target_id(),
-                                          forward_ptr_ty->storage_class()));
+      rebuilt_ty = MakeUnique<ForwardPointer>(forward_ptr_ty->target_id(),
+                                              forward_ptr_ty->storage_class());
       const Pointer* target_ptr = forward_ptr_ty->target_pointer();
       if (target_ptr) {
         rebuilt_ty->AsForwardPointer()->SetTargetPointer(

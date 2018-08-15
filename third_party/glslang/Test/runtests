@@ -56,7 +56,7 @@ fi
 # entry point renaming tests
 #
 echo Running entry-point renaming tests
-$EXE -i -H -V -D -Od -e main_in_spv --ku --source-entrypoint main -Od hlsl.entry.rename.frag > $TARGETDIR/hlsl.entry.rename.frag.out
+$EXE -i -H -V -D -Od --entry-point main_in_spv --ku --source-entrypoint main -Od hlsl.entry.rename.frag > $TARGETDIR/hlsl.entry.rename.frag.out
 diff -b $BASEDIR/hlsl.entry.rename.frag.out $TARGETDIR/hlsl.entry.rename.frag.out || HASERROR=1
 
 #
@@ -112,7 +112,7 @@ diff -b $BASEDIR/hlsl.explicitDescriptorSet-2.frag.out $TARGETDIR/hlsl.explicitD
 # Testing per-descriptor-set IO map shift
 #
 echo 'Testing per-descriptor-set IO map shift'
-$EXE -e main --hlsl-iomap --ssb 10 1 15 2 --stb 20 --stb 25 2 --suavb 30 --suavb 40 2 --sub 50 6 -i -q -D -Od -V hlsl.shift.per-set.frag > $TARGETDIR/hlsl.shift.per-set.frag.out || HASERROR=1
+$EXE -e main --hlsl-iomap --ssb 10 1 15 2 --stb 20 --stb 25 2 --stb 70 6 --suavb 30 --suavb 40 2 --sub 50 6 -i -q -D -Od -V hlsl.shift.per-set.frag > $TARGETDIR/hlsl.shift.per-set.frag.out || HASERROR=1
 diff -b $BASEDIR/hlsl.shift.per-set.frag.out $TARGETDIR/hlsl.shift.per-set.frag.out || HASERROR=1
 
 #

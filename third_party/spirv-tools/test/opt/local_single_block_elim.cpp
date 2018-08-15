@@ -13,8 +13,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "pass_fixture.h"
-#include "pass_utils.h"
+#include <string>
+
+#include "test/opt/pass_fixture.h"
+#include "test/opt/pass_utils.h"
 
 namespace spvtools {
 namespace opt {
@@ -980,6 +982,83 @@ OpFunctionEnd
   SetAssembleOptions(SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS);
   SinglePassRunAndCheck<LocalSingleBlockLoadStoreElimPass>(
       predefs_before + before, predefs_before + after, true, true);
+}
+
+// Test that that an unused OpAccessChain between two store does does not
+// hinders the removal of the first store.  We need to check this because
+// local-access-chain-convert does always remove the OpAccessChain instructions
+// that become dead.
+
+TEST_F(LocalSingleBlockLoadStoreElimTest,
+       StoreElimIfInterveningUnusedAccessChain) {
+  const std::string predefs =
+      R"(OpCapability Shader
+%1 = OpExtInstImport "GLSL.std.450"
+OpMemoryModel Logical GLSL450
+OpEntryPoint Fragment %main "main" %BaseColor0 %Idx %BaseColor1 %OutColor
+OpExecutionMode %main OriginUpperLeft
+OpSource GLSL 450
+OpName %main "main"
+OpName %v "v"
+OpName %BaseColor0 "BaseColor0"
+OpName %Idx "Idx"
+OpName %BaseColor1 "BaseColor1"
+OpName %OutColor "OutColor"
+OpDecorate %BaseColor0 Location 0
+OpDecorate %Idx Flat
+OpDecorate %Idx Location 2
+OpDecorate %BaseColor1 Location 1
+OpDecorate %OutColor Location 0
+%void = OpTypeVoid
+%10 = OpTypeFunction %void
+%float = OpTypeFloat 32
+%v4float = OpTypeVector %float 4
+%_ptr_Function_v4float = OpTypePointer Function %v4float
+%_ptr_Input_v4float = OpTypePointer Input %v4float
+%BaseColor0 = OpVariable %_ptr_Input_v4float Input
+%_ptr_Function_float = OpTypePointer Function %float
+%int = OpTypeInt 32 1
+%_ptr_Input_int = OpTypePointer Input %int
+%Idx = OpVariable %_ptr_Input_int Input
+%BaseColor1 = OpVariable %_ptr_Input_v4float Input
+%float_0_100000001 = OpConstant %float 0.100000001
+%19 = OpConstantComposite %v4float %float_0_100000001 %float_0_100000001 %float_0_100000001 %float_0_100000001
+%_ptr_Output_v4float = OpTypePointer Output %v4float
+%OutColor = OpVariable %_ptr_Output_v4float Output
+)";
+
+  const std::string before =
+      R"(%main = OpFunction %void None %10
+%21 = OpLabel
+%v = OpVariable %_ptr_Function_v4float Function
+%22 = OpLoad %v4float %BaseColor0
+OpStore %v %22
+%23 = OpLoad %int %Idx
+%24 = OpAccessChain %_ptr_Function_float %v %23
+%26 = OpLoad %v4float %BaseColor1
+%27 = OpFAdd %v4float %26 %19
+OpStore %v %27
+OpReturn
+OpFunctionEnd
+)";
+
+  const std::string after =
+      R"(%main = OpFunction %void None %10
+%21 = OpLabel
+%v = OpVariable %_ptr_Function_v4float Function
+%22 = OpLoad %v4float %BaseColor0
+%23 = OpLoad %int %Idx
+%24 = OpAccessChain %_ptr_Function_float %v %23
+%26 = OpLoad %v4float %BaseColor1
+%27 = OpFAdd %v4float %26 %19
+OpStore %v %27
+OpReturn
+OpFunctionEnd
+)";
+
+  SetAssembleOptions(SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS);
+  SinglePassRunAndCheck<LocalSingleBlockLoadStoreElimPass>(
+      predefs + before, predefs + after, true, true);
 }
 // TODO(greg-lunarg): Add tests to verify handling of these cases:
 //

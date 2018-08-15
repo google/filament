@@ -12,15 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "opt/instruction.h"
-#include "opt/ir_context.h"
+#include <memory>
+#include <string>
+#include <vector>
 
 #include "gmock/gmock.h"
-
-#include "pass_fixture.h"
-#include "pass_utils.h"
+#include "source/opt/instruction.h"
+#include "source/opt/ir_context.h"
 #include "spirv-tools/libspirv.h"
-#include "unit_spirv.h"
+#include "test/opt/pass_fixture.h"
+#include "test/opt/pass_utils.h"
+#include "test/unit_spirv.h"
 
 namespace spvtools {
 namespace opt {

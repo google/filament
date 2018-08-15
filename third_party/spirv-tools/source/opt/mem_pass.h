@@ -14,8 +14,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef LIBSPIRV_OPT_MEM_PASS_H_
-#define LIBSPIRV_OPT_MEM_PASS_H_
+#ifndef SOURCE_OPT_MEM_PASS_H_
+#define SOURCE_OPT_MEM_PASS_H_
 
 #include <algorithm>
 #include <list>
@@ -25,11 +25,11 @@
 #include <unordered_set>
 #include <utility>
 
-#include "basic_block.h"
-#include "def_use_manager.h"
-#include "dominator_analysis.h"
-#include "module.h"
-#include "pass.h"
+#include "source/opt/basic_block.h"
+#include "source/opt/def_use_manager.h"
+#include "source/opt/dominator_analysis.h"
+#include "source/opt/module.h"
+#include "source/opt/pass.h"
 
 namespace spvtools {
 namespace opt {
@@ -160,4 +160,4 @@ class MemPass : public Pass {
 }  // namespace opt
 }  // namespace spvtools
 
-#endif  // LIBSPIRV_OPT_MEM_PASS_H_
+#endif  // SOURCE_OPT_MEM_PASS_H_

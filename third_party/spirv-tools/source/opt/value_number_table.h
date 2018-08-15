@@ -12,12 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef LIBSPIRV_OPT_VALUE_NUMBER_TABLE_H_
-#define LIBSPIRV_OPT_VALUE_NUMBER_TABLE_H_
+#ifndef SOURCE_OPT_VALUE_NUMBER_TABLE_H_
+#define SOURCE_OPT_VALUE_NUMBER_TABLE_H_
 
 #include <cstdint>
 #include <unordered_map>
-#include "instruction.h"
+
+#include "source/opt/instruction.h"
 
 namespace spvtools {
 namespace opt {
@@ -87,4 +88,4 @@ class ValueNumberTable {
 }  // namespace opt
 }  // namespace spvtools
 
-#endif  // LIBSPIRV_OPT_VALUE_NUMBER_TABLE_H_
+#endif  // SOURCE_OPT_VALUE_NUMBER_TABLE_H_

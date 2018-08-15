@@ -16,6 +16,8 @@
 
 #include "source/val/validate.h"
 
+#include <vector>
+
 #include "source/diagnostic.h"
 #include "source/opcode.h"
 #include "source/val/instruction.h"

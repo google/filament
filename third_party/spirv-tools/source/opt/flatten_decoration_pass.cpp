@@ -12,13 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "flatten_decoration_pass.h"
-#include "ir_context.h"
+#include "source/opt/flatten_decoration_pass.h"
 
 #include <cassert>
+#include <memory>
 #include <unordered_map>
 #include <unordered_set>
+#include <utility>
 #include <vector>
+
+#include "source/opt/ir_context.h"
 
 namespace spvtools {
 namespace opt {

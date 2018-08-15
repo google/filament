@@ -14,7 +14,8 @@
 
 #ifndef SOURCE_OPT_LOOP_UNROLLER_H_
 #define SOURCE_OPT_LOOP_UNROLLER_H_
-#include "opt/pass.h"
+
+#include "source/opt/pass.h"
 
 namespace spvtools {
 namespace opt {

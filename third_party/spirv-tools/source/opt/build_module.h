@@ -12,14 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef SPIRV_TOOLS_OPT_BUILD_MODULE_H_
-#define SPIRV_TOOLS_OPT_BUILD_MODULE_H_
+#ifndef SOURCE_OPT_BUILD_MODULE_H_
+#define SOURCE_OPT_BUILD_MODULE_H_
 
 #include <memory>
 #include <string>
 
-#include "ir_context.h"
-#include "module.h"
+#include "source/opt/ir_context.h"
+#include "source/opt/module.h"
 #include "spirv-tools/libspirv.hpp"
 
 namespace spvtools {
@@ -43,4 +43,4 @@ std::unique_ptr<opt::IRContext> BuildModule(
 
 }  // namespace spvtools
 
-#endif  // SPIRV_TOOLS_OPT_BUILD_MODULE_H_
+#endif  // SOURCE_OPT_BUILD_MODULE_H_

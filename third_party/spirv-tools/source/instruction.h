@@ -12,13 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef LIBSPIRV_INSTRUCTION_H_
-#define LIBSPIRV_INSTRUCTION_H_
+#ifndef SOURCE_INSTRUCTION_H_
+#define SOURCE_INSTRUCTION_H_
 
 #include <cstdint>
 #include <vector>
 
-#include "latest_version_spirv_header.h"
+#include "source/latest_version_spirv_header.h"
 #include "spirv-tools/libspirv.h"
 
 // Describes an instruction.
@@ -46,4 +46,4 @@ inline void spvInstructionAddWord(spv_instruction_t* inst, uint32_t value) {
   inst->words.push_back(value);
 }
 
-#endif  // LIBSPIRV_INSTRUCTION_H_
+#endif  // SOURCE_INSTRUCTION_H_

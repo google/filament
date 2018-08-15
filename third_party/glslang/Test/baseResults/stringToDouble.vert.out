@@ -1,5 +1,6 @@
 stringToDouble.vert
 Shader version: 460
+Requested GL_KHX_shader_explicit_arithmetic_types_float16
 0:? Sequence
 0:3  Function Definition: main( ( global void)
 0:3    Function Parameters: 
@@ -440,10 +441,80 @@ Shader version: 460
 0:95          Constant:
 0:95            5.7089907708238e+45
 0:97      Sequence
-0:97        move second child to first child ( temp double)
-0:97          'pi' ( temp double)
+0:97        move second child to first child ( temp float)
+0:97          'pi1' ( temp float)
 0:97          Constant:
 0:97            3.141593
+0:98      Sequence
+0:98        move second child to first child ( temp float)
+0:98          'pi2' ( temp float)
+0:98          Constant:
+0:98            3.141593
+0:99      Sequence
+0:99        move second child to first child ( temp float)
+0:99          'pi3' ( temp float)
+0:99          Constant:
+0:99            3.141593
+0:101      Sequence
+0:101        move second child to first child ( temp double)
+0:101          'dpi1' ( temp double)
+0:101          Constant:
+0:101            3.141593
+0:102      Sequence
+0:102        move second child to first child ( temp double)
+0:102          'dpi2' ( temp double)
+0:102          Constant:
+0:102            3.141593
+0:103      Sequence
+0:103        move second child to first child ( temp double)
+0:103          'dpi3' ( temp double)
+0:103          Constant:
+0:103            3.141593
+0:105      Sequence
+0:105        move second child to first child ( temp float)
+0:105          'dfpi1' ( temp float)
+0:105          Constant:
+0:105            3.141593
+0:106      Sequence
+0:106        move second child to first child ( temp float)
+0:106          'dfpi2' ( temp float)
+0:106          Constant:
+0:106            3.141593
+0:107      Sequence
+0:107        move second child to first child ( temp float)
+0:107          'dfpi3' ( temp float)
+0:107          Constant:
+0:107            3.141593
+0:109      Sequence
+0:109        move second child to first child ( temp double)
+0:109          'lfpi1' ( temp double)
+0:109          Constant:
+0:109            3.141593
+0:110      Sequence
+0:110        move second child to first child ( temp double)
+0:110          'lfpi2' ( temp double)
+0:110          Constant:
+0:110            3.141593
+0:111      Sequence
+0:111        move second child to first child ( temp double)
+0:111          'lfpi3' ( temp double)
+0:111          Constant:
+0:111            3.141593
+0:113      Sequence
+0:113        move second child to first child ( temp double)
+0:113          'hfpi1' ( temp double)
+0:113          Constant:
+0:113            3.141593
+0:114      Sequence
+0:114        move second child to first child ( temp double)
+0:114          'hfpi2' ( temp double)
+0:114          Constant:
+0:114            3.141593
+0:115      Sequence
+0:115        move second child to first child ( temp double)
+0:115          'hfpi3' ( temp double)
+0:115          Constant:
+0:115            3.141593
 0:?   Linker Objects
 0:?     'gl_VertexID' ( gl_VertexId int VertexId)
 0:?     'gl_InstanceID' ( gl_InstanceId int InstanceId)
@@ -453,6 +524,7 @@ Linked vertex stage:
 
 
 Shader version: 460
+Requested GL_KHX_shader_explicit_arithmetic_types_float16
 0:? Sequence
 0:3  Function Definition: main( ( global void)
 0:3    Function Parameters: 
@@ -893,10 +965,80 @@ Shader version: 460
 0:95          Constant:
 0:95            5.7089907708238e+45
 0:97      Sequence
-0:97        move second child to first child ( temp double)
-0:97          'pi' ( temp double)
+0:97        move second child to first child ( temp float)
+0:97          'pi1' ( temp float)
 0:97          Constant:
 0:97            3.141593
+0:98      Sequence
+0:98        move second child to first child ( temp float)
+0:98          'pi2' ( temp float)
+0:98          Constant:
+0:98            3.141593
+0:99      Sequence
+0:99        move second child to first child ( temp float)
+0:99          'pi3' ( temp float)
+0:99          Constant:
+0:99            3.141593
+0:101      Sequence
+0:101        move second child to first child ( temp double)
+0:101          'dpi1' ( temp double)
+0:101          Constant:
+0:101            3.141593
+0:102      Sequence
+0:102        move second child to first child ( temp double)
+0:102          'dpi2' ( temp double)
+0:102          Constant:
+0:102            3.141593
+0:103      Sequence
+0:103        move second child to first child ( temp double)
+0:103          'dpi3' ( temp double)
+0:103          Constant:
+0:103            3.141593
+0:105      Sequence
+0:105        move second child to first child ( temp float)
+0:105          'dfpi1' ( temp float)
+0:105          Constant:
+0:105            3.141593
+0:106      Sequence
+0:106        move second child to first child ( temp float)
+0:106          'dfpi2' ( temp float)
+0:106          Constant:
+0:106            3.141593
+0:107      Sequence
+0:107        move second child to first child ( temp float)
+0:107          'dfpi3' ( temp float)
+0:107          Constant:
+0:107            3.141593
+0:109      Sequence
+0:109        move second child to first child ( temp double)
+0:109          'lfpi1' ( temp double)
+0:109          Constant:
+0:109            3.141593
+0:110      Sequence
+0:110        move second child to first child ( temp double)
+0:110          'lfpi2' ( temp double)
+0:110          Constant:
+0:110            3.141593
+0:111      Sequence
+0:111        move second child to first child ( temp double)
+0:111          'lfpi3' ( temp double)
+0:111          Constant:
+0:111            3.141593
+0:113      Sequence
+0:113        move second child to first child ( temp double)
+0:113          'hfpi1' ( temp double)
+0:113          Constant:
+0:113            3.141593
+0:114      Sequence
+0:114        move second child to first child ( temp double)
+0:114          'hfpi2' ( temp double)
+0:114          Constant:
+0:114            3.141593
+0:115      Sequence
+0:115        move second child to first child ( temp double)
+0:115          'hfpi3' ( temp double)
+0:115          Constant:
+0:115            3.141593
 0:?   Linker Objects
 0:?     'gl_VertexID' ( gl_VertexId int VertexId)
 0:?     'gl_InstanceID' ( gl_InstanceId int InstanceId)

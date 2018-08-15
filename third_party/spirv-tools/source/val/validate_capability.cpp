@@ -17,6 +17,7 @@
 #include "source/val/validate.h"
 
 #include <cassert>
+#include <string>
 #include <unordered_set>
 
 #include "source/diagnostic.h"

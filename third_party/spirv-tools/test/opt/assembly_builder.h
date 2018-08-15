@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef LIBSPIRV_TEST_OPT_ASSEMBLY_BUILDER
-#define LIBSPIRV_TEST_OPT_ASSEMBLY_BUILDER
+#ifndef TEST_OPT_ASSEMBLY_BUILDER_H_
+#define TEST_OPT_ASSEMBLY_BUILDER_H_
 
 #include <algorithm>
 #include <cstdint>
@@ -263,4 +263,4 @@ class AssemblyBuilder {
 }  // namespace opt
 }  // namespace spvtools
 
-#endif  // LIBSPIRV_TEST_OPT_ASSEMBLY_BUILDER
+#endif  // TEST_OPT_ASSEMBLY_BUILDER_H_

@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef LIBSPIRV_ID_DESCRIPTOR_H_
-#define LIBSPIRV_ID_DESCRIPTOR_H_
+#ifndef SOURCE_ID_DESCRIPTOR_H_
+#define SOURCE_ID_DESCRIPTOR_H_
 
 #include <unordered_map>
 #include <vector>
@@ -60,4 +60,4 @@ class IdDescriptorCollection {
 
 }  // namespace spvtools
 
-#endif  // LIBSPIRV_ID_DESCRIPTOR_H_
+#endif  // SOURCE_ID_DESCRIPTOR_H_

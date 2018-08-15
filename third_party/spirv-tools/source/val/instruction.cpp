@@ -12,40 +12,33 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "val/instruction.h"
+#include "source/val/instruction.h"
 
 #include <utility>
 
 namespace spvtools {
 namespace val {
 
-#define OPERATOR(OP)                                                 \
-  bool operator OP(const Instruction& lhs, const Instruction& rhs) { \
-    return lhs.id() OP rhs.id();                                     \
-  }                                                                  \
-  bool operator OP(const Instruction& lhs, uint32_t rhs) {           \
-    return lhs.id() OP rhs;                                          \
-  }
-
-OPERATOR(<)
-OPERATOR(==)
-#undef OPERATOR
-
-Instruction::Instruction(const spv_parsed_instruction_t* inst,
-                         Function* defining_function,
-                         BasicBlock* defining_block)
+Instruction::Instruction(const spv_parsed_instruction_t* inst)
     : words_(inst->words, inst->words + inst->num_words),
       operands_(inst->operands, inst->operands + inst->num_operands),
       inst_({words_.data(), inst->num_words, inst->opcode, inst->ext_inst_type,
              inst->type_id, inst->result_id, operands_.data(),
-             inst->num_operands}),
-      line_num_(0),
-      function_(defining_function),
-      block_(defining_block),
-      uses_() {}
+             inst->num_operands}) {}
 
 void Instruction::RegisterUse(const Instruction* inst, uint32_t index) {
   uses_.push_back(std::make_pair(inst, index));
+}
+
+bool operator<(const Instruction& lhs, const Instruction& rhs) {
+  return lhs.id() < rhs.id();
+}
+bool operator<(const Instruction& lhs, uint32_t rhs) { return lhs.id() < rhs; }
+bool operator==(const Instruction& lhs, const Instruction& rhs) {
+  return lhs.id() == rhs.id();
+}
+bool operator==(const Instruction& lhs, uint32_t rhs) {
+  return lhs.id() == rhs;
 }
 
 }  // namespace val

@@ -15,19 +15,20 @@
 // This file defines the language constructs for representing a SPIR-V
 // module in memory.
 
-#ifndef LIBSPIRV_OPT_BASIC_BLOCK_H_
-#define LIBSPIRV_OPT_BASIC_BLOCK_H_
+#ifndef SOURCE_OPT_BASIC_BLOCK_H_
+#define SOURCE_OPT_BASIC_BLOCK_H_
 
 #include <functional>
 #include <iterator>
 #include <memory>
 #include <ostream>
+#include <string>
 #include <utility>
 #include <vector>
 
-#include "instruction.h"
-#include "instruction_list.h"
-#include "iterator.h"
+#include "source/opt/instruction.h"
+#include "source/opt/instruction_list.h"
+#include "source/opt/iterator.h"
 
 namespace spvtools {
 namespace opt {
@@ -316,4 +317,4 @@ inline void BasicBlock::ForEachPhiInst(
 }  // namespace opt
 }  // namespace spvtools
 
-#endif  // LIBSPIRV_OPT_BASIC_BLOCK_H_
+#endif  // SOURCE_OPT_BASIC_BLOCK_H_

@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef LIBSPIRV_SPIRV_VALIDATOR_OPTIONS_H_
-#define LIBSPIRV_SPIRV_VALIDATOR_OPTIONS_H_
+#ifndef SOURCE_SPIRV_VALIDATOR_OPTIONS_H_
+#define SOURCE_SPIRV_VALIDATOR_OPTIONS_H_
 
 #include "spirv-tools/libspirv.h"
 
@@ -51,4 +51,4 @@ struct spv_validator_options_t {
   bool skip_block_layout;
 };
 
-#endif  // LIBSPIRV_SPIRV_VALIDATOR_OPTIONS_H_
+#endif  // SOURCE_SPIRV_VALIDATOR_OPTIONS_H_

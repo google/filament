@@ -12,21 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <gmock/gmock.h>
-
 #include <array>
 #include <memory>
 #include <set>
 #include <string>
 #include <vector>
 
-#include "../assembly_builder.h"
-#include "../function_utils.h"
-#include "../pass_fixture.h"
-#include "../pass_utils.h"
-#include "opt/dominator_analysis.h"
-#include "opt/iterator.h"
-#include "opt/pass.h"
+#include "gmock/gmock.h"
+#include "source/opt/dominator_analysis.h"
+#include "source/opt/iterator.h"
+#include "source/opt/pass.h"
+#include "test/opt/assembly_builder.h"
+#include "test/opt/function_utils.h"
+#include "test/opt/pass_fixture.h"
+#include "test/opt/pass_utils.h"
 
 namespace spvtools {
 namespace opt {

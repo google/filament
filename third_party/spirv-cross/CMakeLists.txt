@@ -72,7 +72,7 @@ macro(spirv_cross_add_library name config_name)
       PUBLIC_HEADER DESTINATION include/spirv_cross)
   install(FILES ${hdrs} DESTINATION include/spirv_cross)
   install(EXPORT ${config_name}Config DESTINATION share/${config_name}/cmake)
-  export(TARGETS ${targets} FILE ${config_name}Config.cmake)
+  export(TARGETS ${name} FILE ${config_name}Config.cmake)
 endmacro()
 
 

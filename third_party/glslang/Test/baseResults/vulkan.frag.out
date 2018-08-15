@@ -15,7 +15,6 @@ ERROR: 0:19: 'sampler2D' : sampler-constructor second argument must be a scalar 
 ERROR: 0:21: 'sampler3D' : sampler-constructor cannot make an array of samplers 
 ERROR: 0:22: 'sampler2D' : sampler-constructor first argument must be a scalar textureXXX type 
 ERROR: 0:23: 'sampler2D' : sampler-constructor first argument must match type and dimensionality of constructor type 
-ERROR: 0:24: 'sampler2D' : sampler-constructor second argument presence of shadow must match constructor presence of shadow 
 ERROR: 0:28: 'sampler2D' : sampler/image types can only be used in uniform variables or function parameters: s2D
 ERROR: 0:29: 'sampler3D' : sampler-constructor cannot make an array of samplers 
 ERROR: 0:29: 'sampler3D' : sampler/image types can only be used in uniform variables or function parameters: s3d
@@ -55,7 +54,7 @@ ERROR: 0:101: 'noise1' : no matching overloaded function found
 ERROR: 0:102: 'noise2' : no matching overloaded function found 
 ERROR: 0:103: 'noise3' : no matching overloaded function found 
 ERROR: 0:104: 'noise4' : no matching overloaded function found 
-ERROR: 54 compilation errors.  No code generated.
+ERROR: 53 compilation errors.  No code generated.
 
 
 ERROR: Linking fragment stage: Only one push_constant block is allowed per stage

@@ -17,12 +17,13 @@
 #include <functional>
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "gmock/gmock.h"
 #include "source/comp/markv.h"
-#include "test_fixture.h"
+#include "test/test_fixture.h"
+#include "test/unit_spirv.h"
 #include "tools/comp/markv_model_factory.h"
-#include "unit_spirv.h"
 
 namespace spvtools {
 namespace comp {
