@@ -260,7 +260,7 @@ void CubemapSH::renderSH(const Cubemap& cm,
         for (size_t x=0 ; x<dim ; ++x, ++data) {
             double3 s(cm.getDirectionFor(f, x, y));
             computeShBasis(SHb.data(), numBands, s);
-            double3 c;
+            double3 c = 0;
             for (size_t i=0 ; i<numCoefs ; i++) {
                 c += sh[i] * (K[i] * SHb[i]);
             }
@@ -336,7 +336,7 @@ void CubemapSH::renderPreScaledSH3Bands(
             [&](CubemapUtils::EmptyState&, size_t y, Cubemap::Face f, Cubemap::Texel* data, size_t dim) {
         for (size_t x=0 ; x<dim ; ++x, ++data) {
             double3 s(cm.getDirectionFor(f, x, y));
-            double3 c;
+            double3 c = 0;
             c += sh[0];
             c += sh[1] * s.y;
             c += sh[2] * s.z;
