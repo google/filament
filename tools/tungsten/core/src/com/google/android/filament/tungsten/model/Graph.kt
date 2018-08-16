@@ -150,12 +150,8 @@ data class Graph(
     fun graphByAddingNodeAtLocation(node: Node, x: Float, y: Float) =
             this.copy(nodes = nodes + node.copy(x = x, y = y))
 
-    fun graphByReplacingNode(oldNode: Node, newNode: Node): Graph {
-        if (nodes.contains(oldNode)) {
-            return this.copy(nodes = nodes - oldNode + newNode)
-        }
-        return this
-    }
+    fun graphByReplacingNode(oldNode: Node, newNode: Node) =
+            graphByReplacingNodes(mapOf(oldNode to newNode))
 
     fun graphByChangingProperty(property: Node.PropertyHandle, value: Property<*>): Graph {
         val node = nodeMap[property.nodeId] ?: return this
@@ -167,6 +163,11 @@ data class Graph(
 
     fun graphByMovingNode(node: Node, x: Float, y: Float) =
             graphByReplacingNode(node, node.copy(x = x, y = y))
+
+    fun graphByReplacingNodes(nodeMap: Map<Node, Node>): Graph {
+        val newNodes = nodes.map { n -> nodeMap[n] ?: n }
+        return this.copy(nodes = newNodes)
+    }
 
     fun graphByFormingConnection(connection: Connection) =
             this.copy(connections = connections + connection)

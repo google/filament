@@ -48,6 +48,7 @@ public final class GraphCompiler {
     private final Map<Slot, Expression> mCompiledVariableMap = new HashMap<>();
     private final Set<Node> mUncompiledNodes;
     private boolean mShouldAppendCode = true;
+    private final Map<Node, Node> mOldToNewNodeMap = new HashMap<>();
 
     public GraphCompiler(@NotNull Graph graph) {
         mGraph = graph;
@@ -74,7 +75,8 @@ public final class GraphCompiler {
         String materialDefinition =
                 GraphFormatter.formatMaterialSection(mRequiredAttributes, mParameters)
                 + fragmentSection;
-        return new CompiledGraph(materialDefinition, mPropertyParameterMap, mCompiledVariableMap);
+        return new CompiledGraph(materialDefinition, mPropertyParameterMap, mCompiledVariableMap,
+                mOldToNewNodeMap);
     }
 
     /**
@@ -100,7 +102,12 @@ public final class GraphCompiler {
             throw new RuntimeException("Output slot references node that does not exist in graph.");
         }
         mUncompiledNodes.remove(connectedNode);
-        connectedNode.getCompileFunction().invoke(connectedNode, this);
+        Node newNode = connectedNode.getCompileFunction().invoke(connectedNode, this);
+
+        // We've received a new node while compiling, take note of it.
+        if (newNode != connectedNode) {
+            mOldToNewNodeMap.put(connectedNode, newNode);
+        }
 
         // Verify that the connected node has set it's output variable
         compiledExpression = mCompiledVariableMap.get(outputSlot);
