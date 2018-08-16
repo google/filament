@@ -120,6 +120,8 @@ Many other features have been either prototyped or planned:
 
 ## Building Filament
 
+### Prerequisites
+
 To build Filament, you must first install the following tools:
 
 - CMake 3.4 (or more recent)
@@ -142,6 +144,9 @@ To build Filament for Android you must also install the following:
 ### Environment variables
 
 Make sure the environment variable `ANDROID_HOME` points to the location of your Android SDK.
+
+By default our build system will attempt to compile the Java bindings. To do so, the environment
+variable `JAVA_HOME` should point to the location of your JDK.
 
 ### IDE
 
@@ -178,13 +183,18 @@ To install the libraries and executables in `out/debug/` and `out/release/`, add
 You can force a clean build by adding the `-c` flag. The script offers more features described
 by executing `build.sh -h`.
 
-You can skip building the Java based components of the projects by using the `-j` flag:
+### Disabling Java builds
+
+By default our build system will attempt to compile the Java bindings. If you wish to skip this
+compilation step simply pass the `-j` flag to `build.sh`:
 
 ```
 $ ./build.sh -j release
 ```
 
-#### Linux
+If you use CMake directly instead of the build script, pass `-DENABLE_JAVA=OFF` to CMake instead.
+
+### Linux
 
 Make sure you've installed the following dependencies:
 
@@ -239,7 +249,7 @@ $ ninja
 
 This will build Filament, its tests and samples, and various host tools.
 
-#### macOS
+### macOS
 
 To compile Filament you must have the most recent version of Xcode installed and you need to
 make sure the command line tools are setup by running:
