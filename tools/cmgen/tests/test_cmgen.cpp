@@ -27,15 +27,19 @@
 
 #include <utils/Panic.h>
 #include <utils/Path.h>
+
 #include <math/vec3.h>
 
 #include <cstdlib>
 #include <fstream>
+#include <regex>
 #include <string>
 #include <sstream>
+#include <streambuf>
 
 using std::string;
 using utils::Path;
+using namespace math;
 
 using namespace image;
 
@@ -43,7 +47,7 @@ class CmgenTest : public testing::Test {};
 
 static ComparisonMode g_comparisonMode;
 
-static void checkFileExistence(string path) {
+static void checkFileExistence(const string& path) {
     std::ifstream s(path.c_str(), std::ios::binary);
     if (!s) {
         std::cerr << "ERROR file does not exist: " << path << std::endl;
@@ -51,21 +55,47 @@ static void checkFileExistence(string path) {
     }
 }
 
+// Reads the entire content of the specified file
+static string readFile(const Path& inputPath) {
+    std::ifstream t(inputPath);
+    string s;
+
+    // Pre-allocate the memory
+    t.seekg(0, std::ios::end);
+    s.reserve((size_t) t.tellg());
+    t.seekg(0, std::ios::beg);
+
+    // Copy the file content into the string
+    s.assign((std::istreambuf_iterator<char>(t)), std::istreambuf_iterator<char>());
+    return std::move(s);
+}
+
+// This spawns cmgen, telling it to process the environment map located at "inputPath".
+// The supplied parameters are passed to cmgen as is. The commandSuffix is added at
+// the end of the command line; it is useful to redirect the output to a file for instance
+static void launchTool(string inputPath,
+        const string& parameters = "", const string& commandSuffix = "") {
+    const string executableFolder = Path::getCurrentExecutable().getParent();
+    inputPath = Path::getCurrentDirectory() + inputPath;
+
+    std::cout << "Running cmgen on " << inputPath << std::endl;
+    checkFileExistence(inputPath);
+    string cmdline = executableFolder + "cmgen " + parameters +
+            " " + inputPath + " " + commandSuffix;
+    ASSERT_EQ(std::system(cmdline.c_str()), 0);
+}
+
 // This spawns cmgen, telling it to process the environment map located at "inputPath". It creates
 // an output folder in the same location as the test executable, which lets us avoid polluting our
 // local source tree with output files. The given "resultPath" points the specific newly-generated
 // output image that we'd like to compare or update, and the "goldenPath" points to the golden image
 // (which lives in our source tree).
-static void spawnTool(string inputPath, string resultPath, string goldenPath) {
+static void processEnvMap(string inputPath, string resultPath, string goldenPath) {
     const string executableFolder = Path::getCurrentExecutable().getParent();
-    inputPath = Path::getCurrentDirectory() + inputPath;
     resultPath = Path::getCurrentExecutable().getParent() + resultPath;
     goldenPath = Path::getCurrentDirectory() + goldenPath;
 
-    std::cout << "Running cmgen on " << inputPath << std::endl;
-    checkFileExistence(inputPath);
-    string cmdline = executableFolder + "cmgen -x " + executableFolder + " " + inputPath;
-    ASSERT_EQ(std::system(cmdline.c_str()), 0);
+    launchTool(std::move(inputPath), "-x " + executableFolder);
 
     std::cout << "Reading result image from " << resultPath << std::endl;
     checkFileExistence(resultPath);
@@ -75,29 +105,58 @@ static void spawnTool(string inputPath, string resultPath, string goldenPath) {
     ASSERT_EQ(resultImage.getChannelsCount(), 4);
     LinearImage resultLImage = toLinearFromRGBM(
             static_cast<math::float4 const*>(resultImage.getData()),
-            resultImage.getWidth(), resultImage.getHeight());
+            (uint32_t) resultImage.getWidth(), (uint32_t) resultImage.getHeight());
 
     std::cout << "Golden image is at " << goldenPath << std::endl;
     updateOrCompare(resultLImage, goldenPath, g_comparisonMode, 0.01f);
+}
+
+static void compareSh(const string& content, const string& regex,
+        const float3& match, float epsilon = 1e-7f) {
+    std::smatch smatch;
+    if (std::regex_search(content, smatch, std::regex(regex))) {
+        float3 sh(std::stof(smatch[1]), std::stof(smatch[2]), std::stof(smatch[3]));
+        ASSERT_TRUE(all(lessThan(abs(sh - match), float3{epsilon})));
+    }
+}
+
+TEST_F(CmgenTest, SphericalHarmonics) { // NOLINT
+    const string inputPath = "assets/environments/white_furnace/white_furnace.exr";
+    const string resultPath = Path::getCurrentExecutable().getParent() + "white_furnace_sh.txt";
+    launchTool(inputPath, "--sh=3 --sh-shader", "> " + resultPath);
+
+    string content = readFile(resultPath);
+    string vec3(R"(\(\s+([-+0-9.]+),\s+([-+0-9.]+),\s+([-+0-9.]+)\); // )");
+
+    compareSh(content, vec3 + "L00",  float3{3.14159265f});
+    compareSh(content, vec3 + "L1-1", float3{0.0f});
+    compareSh(content, vec3 + "L10",  float3{0.0f});
+    compareSh(content, vec3 + "L11",  float3{0.0f});
+    compareSh(content, vec3 + "L2-2", float3{0.0f});
+    compareSh(content, vec3 + "L2-1", float3{0.0f});
+    compareSh(content, vec3 + "L20",  float3{0.0f});
+    compareSh(content, vec3 + "L21",  float3{0.0f});
+    compareSh(content, vec3 + "L22",  float3{0.0f});
 }
 
 TEST_F(CmgenTest, HdrLatLong) { // NOLINT
     const string inputPath = "assets/environments/white_furnace/white_furnace.exr";
     const string resultPath = "white_furnace/nx.rgbm";
     const string goldenPath = "samples/envs/white_furnace/nx.rgbm";
-    spawnTool(inputPath, resultPath, goldenPath);
+    processEnvMap(inputPath, resultPath, goldenPath);
 }
 
 TEST_F(CmgenTest, LdrCrossCube) { // NOLINT
     const string inputPath = "tools/cmgen/tests/Footballfield/Footballfield.png";
     const string resultPath = "Footballfield/m3_nx.rgbm";
     const string goldenPath = "tools/cmgen/tests/Footballfield/m3_nx.rgbm";
-    spawnTool(inputPath, resultPath, goldenPath);
+    processEnvMap(inputPath, resultPath, goldenPath);
 }
 
 int main(int argc, char** argv) {
     ::testing::InitGoogleTest(&argc, argv);
     if (argc != 2) {
+        std::cerr << "test_cmgen [compare|update]" << std::endl;
         return 1;
     }
     string command(argv[1]);
