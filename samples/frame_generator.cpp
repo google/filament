@@ -311,7 +311,7 @@ static void setup(Engine* engine, View* view, Scene* scene) {
             .color(Color::toLinear<ACCURATE>(sRGBColor{0.98f, 0.92f, 0.89f}))
             .intensity(110000.0f)
             .direction({0.6f, -1.0f, -0.8f})
-            .castShadows(true)
+            //.castShadows(true)
             .build(*engine, g_light);
 
     if (g_lightOn) {
@@ -323,7 +323,8 @@ static void setup(Engine* engine, View* view, Scene* scene) {
     }
 
     if (!g_skyboxOn) {
-        FilamentApp::get().getIBL()->getSkybox()->setLayerMask(0xff, 0x00);
+        auto ibl = FilamentApp::get().getIBL();
+        if (ibl) ibl->getSkybox()->setLayerMask(0xff, 0x00);
     }
 
     view->setClearColor(Color::toLinear({
