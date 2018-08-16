@@ -290,5 +290,5 @@ endif()
 
 # Generate exported executables for cross-compiled builds (Android)
 if (NOT CMAKE_CROSSCOMPILING)
-    export(TARGETS matc cmgen FILE ${CMAKE_SOURCE_DIR}/${IMPORT_EXECUTABLES_DIR}/ImportExecutables-${CMAKE_BUILD_TYPE}.cmake)
+    export(TARGETS matc cmgen FILE ${FILAMENT}/${IMPORT_EXECUTABLES_DIR}/ImportExecutables-${CMAKE_BUILD_TYPE}.cmake)
 endif()
