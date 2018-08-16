@@ -47,16 +47,16 @@ endif()
 #  Paths
 # ==================================================================================================
 # Where our external libs are
-set(EXTERNAL ${CMAKE_SOURCE_DIR}/third_party)
+set(EXTERNAL ${CMAKE_CURRENT_SOURCE_DIR}/third_party)
 
 # Where our libraries are
-set(LIBRARIES ${CMAKE_SOURCE_DIR}/libs)
+set(LIBRARIES ${CMAKE_CURRENT_SOURCE_DIR}/libs)
 
 # Where our filament code is
-set(FILAMENT ${CMAKE_SOURCE_DIR})
+set(FILAMENT ${CMAKE_CURRENT_SOURCE_DIR})
 
 # Where our tools are
-set(TOOLS ${CMAKE_SOURCE_DIR}/tools)
+set(TOOLS ${CMAKE_CURRENT_SOURCE_DIR}/tools)
 
 # ==================================================================================================
 # Compiler check
