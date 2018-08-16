@@ -61,11 +61,22 @@ set(TOOLS ${CMAKE_SOURCE_DIR}/tools)
 # ==================================================================================================
 # Compiler check
 # ==================================================================================================
-if ("${CMAKE_C_COMPILER_ID}" STREQUAL "GNU" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-    message(FATAL_ERROR
-            "The GCC compiler is not supported, please use clang for both C and C++. "
-            "Please refer to README.md for more information.")
-    return()
+set(MIN_CLANG_VERSION "5.0")
+
+if (CMAKE_C_COMPILER_ID MATCHES "Clang")
+    if (CMAKE_C_COMPILER_VERSION VERSION_LESS MIN_CLANG_VERSION)
+        message(SEND_ERROR "Detected C compiler Clang ${CMAKE_C_COMPILER_VERSION} < ${MIN_CLANG_VERSION}")
+    endif()
+else()
+    message(SEND_ERROR "Detected C compiler ${CMAKE_C_COMPILER_ID} is unsupported")
+endif()
+
+if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS MIN_CLANG_VERSION)
+        message(SEND_ERROR "Detected CXX compiler Clang ${CMAKE_CXX_COMPILER_VERSION} < ${MIN_CLANG_VERSION}")
+    endif()
+else()
+    message(SEND_ERROR "Detected CXX compiler ${CMAKE_CXX_COMPILER_ID} is unsupported")
 endif()
 
 # Detect use of the clang-cl.exe frontend, which does not support all of clangs normal options
