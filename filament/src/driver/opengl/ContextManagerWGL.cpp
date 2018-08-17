@@ -77,7 +77,7 @@ std::unique_ptr<Driver> ContextManagerWGL::createDriver(void* const sharedGLCont
     }
 
     PFNWGLCREATECONTEXTATTRIBSARBPROC wglCreateContextAttribs =
-        (PFNWGLCREATECONTEXTATTRIBSARBPROC)wglGetProcAddress("wglCreateContextAttribsARB");
+            (PFNWGLCREATECONTEXTATTRIBSARBPROC) wglGetProcAddress("wglCreateContextAttribsARB");
     mContext = wglCreateContextAttribs(whdc, nullptr, attribs);
     if (!mContext) {
         utils::slog.e << "wglCreateContextAttribs() failed, whdc=" << whdc << utils::io::endl;

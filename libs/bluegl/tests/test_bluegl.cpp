@@ -20,29 +20,6 @@
 
 #include "OpenGLSupport.hpp"
 
-const char * GetGLErrorStr(GLenum err)
-{
-    switch (err)
-    {
-        case GL_NO_ERROR:          return "No error";
-        case GL_INVALID_ENUM:      return "Invalid enum";
-        case GL_INVALID_VALUE:     return "Invalid value";
-        case GL_INVALID_OPERATION: return "Invalid operation";
-        case GL_STACK_OVERFLOW:    return "Stack overflow";
-        case GL_STACK_UNDERFLOW:   return "Stack underflow";
-        case GL_OUT_OF_MEMORY:     return "Out of memory";
-        default:                   return "Unknown error";
-    }
-}
-
-void checkError() {
-    const GLenum err = glGetError();
-    if (GL_NO_ERROR == err)
-        return;
-
-    std::cout << "GL Error: " << GetGLErrorStr(err) << std::endl;
-}
-
 namespace bluegl {
 
 TEST(BlueGLTest, Initialization) {
@@ -53,6 +30,7 @@ TEST(BlueGLTest, Initialization) {
 TEST(BlueGLTest, GetVersion) {
     EXPECT_EQ(0, bind());
     gl::OpenGLContext context = gl::createOpenGLContext();
+    gl::setCurrentOpenGLContext(context);
 
     GLint major = 0, minor = 0;
     glGetIntegerv(GL_MAJOR_VERSION, &major);
@@ -98,16 +76,18 @@ TEST(BlueGLTest, CallOpenGLDoubleInit) {
     unbind();
 }
 
-TEST(BlueGLTest, CallBindAndGetBinded) {
+TEST(BlueGLTest, CallBindAndGetBound) {
+    EXPECT_EQ(0, bind());
     gl::OpenGLContext context = gl::createOpenGLContext();
-    bind();
-    GLuint texId;
+    gl::setCurrentOpenGLContext(context);
+
+    GLuint texId = 0;
     glGenTextures(1, &texId);
     glBindTexture(GL_TEXTURE_2D, texId);
 
-    GLint bindedTexId;
-    glGetIntegerv(GL_TEXTURE_BINDING_2D, &bindedTexId);
-    EXPECT_TRUE(texId == bindedTexId);
+    GLint boundTexId = -1; // different from texId, just to be sure
+    glGetIntegerv(GL_TEXTURE_BINDING_2D, &boundTexId);
+    ASSERT_EQ(texId, boundTexId);
 
     gl::destroyOpenGLContext(context);
     unbind();
