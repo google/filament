@@ -214,7 +214,7 @@ std::unique_ptr<uint8_t[]> fromLinearTosRGB(const LinearImage& image) {
     T* d = reinterpret_cast<T*>(dst.get());
     for (size_t y = 0; y < h; ++y) {
         for (size_t x = 0; x < w; ++x, d += 3) {
-            float3 const* src = image.get<float3>((uint32_t) x, (uint32_t) y);
+            auto src = image.get<float3>((uint32_t) x, (uint32_t) y);
             float3 l(linearTosRGB(saturate(*src)) * std::numeric_limits<T>::max());
             for (size_t i = 0; i < 3; i++) {
                 d[i] = T(l[i]);
@@ -237,7 +237,7 @@ std::unique_ptr<uint8_t[]> fromLinearToRGB(const LinearImage& image) {
     T* d = reinterpret_cast<T*>(dst.get());
     for (size_t y = 0; y < h; ++y) {
         for (size_t x = 0; x < w; ++x, d += 3) {
-            float3 const* src = image.get<float3>((uint32_t) x, (uint32_t) y);
+            auto src = image.get<float3>((uint32_t) x, (uint32_t) y);
             float3 l(saturate(*src) * std::numeric_limits<T>::max());
             for (size_t i = 0; i < 3; i++) {
                 d[i] = T(l[i]);
@@ -260,7 +260,7 @@ std::unique_ptr<uint8_t[]> fromLinearToRGBM(const LinearImage& image) {
     T* d = reinterpret_cast<T*>(dst.get());
     for (size_t y = 0; y < h; ++y) {
         for (size_t x = 0; x < w; ++x, d += 4) {
-            float3 const* src = image.get<float3>((uint32_t) x, (uint32_t) y);
+            auto src = image.get<float3>((uint32_t) x, (uint32_t) y);
             float4 l(linearToRGBM(*src) * std::numeric_limits<T>::max());
             for (size_t i = 0; i < 4; i++) {
                 d[i] = T(l[i]);
@@ -296,7 +296,7 @@ template<typename T, typename PROCESS, typename TRANSFORM>
 static LinearImage toLinear(size_t w, size_t h, size_t bpr,
             const uint8_t* src, PROCESS proc, TRANSFORM transform) {
     LinearImage result((uint32_t) w, (uint32_t) h, 3);
-    math::float3* d = result.get<math::float3>();
+    auto d = result.get<math::float3>();
     for (size_t y = 0; y < h; ++y) {
         T const* p = reinterpret_cast<T const*>(src + y * bpr);
         for (size_t x = 0; x < w; ++x, p += 3) {
@@ -324,7 +324,7 @@ template<typename T, typename PROCESS, typename TRANSFORM>
 static LinearImage toLinearWithAlpha(size_t w, size_t h, size_t bpr,
         const uint8_t* src, PROCESS proc, TRANSFORM transform) {
     LinearImage result((uint32_t) w, (uint32_t) h, 4);
-    math::float4* d = reinterpret_cast<math::float4*>(result.getPixelRef());
+    auto d = result.get<math::float4>();
     for (size_t y = 0; y < h; ++y) {
         T const* p = reinterpret_cast<T const*>(src + y * bpr);
         for (size_t x = 0; x < w; ++x, p += 4) {
@@ -348,7 +348,7 @@ static LinearImage toLinearWithAlpha(size_t w, size_t h, size_t bpr,
 // Constructs a 3-channel LinearImage from RGBM data.
 inline LinearImage toLinearFromRGBM(math::float4 const* src, uint32_t w, uint32_t h) {
     LinearImage result(w, h, 3);
-    math::float3* dst = result.get<math::float3>();
+    auto dst = result.get<math::float3>();
     for (uint32_t row = 0; row < h; ++row) {
         for (uint32_t col = 0; col < w; ++col, ++src, ++dst) {
             *dst = RGBMtoLinear(*src);

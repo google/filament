@@ -216,7 +216,7 @@ void prefilter(const LinearImage& normal, const size_t mipLevel, LinearImage& ou
     const size_t sampleCount = 1u << mipLevel;
 
     for (size_t y = 0; y < height; y++) {
-        auto* outputRow = output.get<float3>(0, y);
+        auto outputRow = output.get<float3>(0, y);
         for (size_t x = 0; x < width; x++, outputRow++) {
             const float2 uv = (float2(x, y) + 0.5f) / float2(width, height);
             const float2 pos = uv * normal.getWidth();
@@ -234,9 +234,9 @@ void prefilter(const LinearImage& normal, const LinearImage& roughness, const si
     const size_t sampleCount = 1u << mipLevel;
 
     for (size_t y = 0; y < height; y++) {
-        auto* outputRow = output.get<float3>(0, y);
+        auto outputRow = output.get<float3>(0, y);
         for (size_t x = 0; x < width; x++, outputRow++) {
-            const float3* data = roughness.get<float3>(x, y);
+            auto data = roughness.get<float3>(x, y);
             if (FIRST_MIP) {
                 *outputRow = *data;
             } else {
@@ -355,7 +355,7 @@ int main(int argc, char* argv[]) {
             LinearImage image(w, h, 3);
 
             for (size_t y = 0; y < h; y++) {
-                auto* dst = image.get<float3>(0, y);
+                auto dst = image.get<float3>(0, y);
                 for (size_t x = 0; x < w; x++, dst++) {
                     float3 aa = *prevMip->get<float3>(x * 2,     y * 2);
                     float3 ba = *prevMip->get<float3>(x * 2 + 1, y * 2);

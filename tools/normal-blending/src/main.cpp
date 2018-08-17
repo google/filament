@@ -217,9 +217,9 @@ void blend(const LinearImage& normal, const LinearImage& detail, LinearImage out
     const size_t height = output.getHeight();
 
     for (size_t y = 0; y < height; y++) {
-        float3 const* normalRow = normal.get<float3>(0, y);
-        float3 const* detailRow = detail.get<float3>(0, y);
-        float3* outputRow = output.get<float3>(0, y);
+        auto normalRow = normal.get<float3>(0, y);
+        auto detailRow = detail.get<float3>(0, y);
+        auto outputRow = output.get<float3>(0, y);
 
         for (size_t x = 0; x < width; x++, normalRow++, detailRow++, outputRow++) {
             // Reoriented Normal Mapping
