@@ -38,6 +38,9 @@ LinearImage verticalFlip(const LinearImage& image);
 // Transforms normals (components live in [-1,+1]) into colors (components live in [0,+1]).
 LinearImage vectorsToColors(const LinearImage& image);
 
+// Creates a single-channel image by extracting the selected channel.
+LinearImage extractChannel(const LinearImage& image, uint32_t channel);
+
 // Constructs a multi-channel image by copying data from a sequence of single-channel images.
 LinearImage combineChannels(std::initializer_list<LinearImage> images);
 LinearImage combineChannels(LinearImage const* img, size_t count);

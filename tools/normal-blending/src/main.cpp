@@ -34,7 +34,7 @@ static image::ImageEncoder::Format g_format = image::ImageEncoder::Format::PNG;
 static bool g_formatSpecified = false;
 static std::string g_compression = "";
 
-static void blend(const Image& normal, const Image& detail, Image& output);
+static void blend(const LinearImage& normal, const LinearImage& detail, LinearImage output);
 
 static void printUsage(const char* name) {
     std::string execName(utils::Path(name).getName());
@@ -159,7 +159,7 @@ int main(int argc, char* argv[]) {
 
     // make sure we load the normal maps as linear data
     std::ifstream inputStream(normalMap, std::ios::binary);
-    Image normalImage = ImageDecoder::decode(inputStream, normalMap,
+    LinearImage normalImage = ImageDecoder::decode(inputStream, normalMap,
             ImageDecoder::ColorSpace::LINEAR);
     if (!normalImage.isValid()) {
         std::cerr << "The input normal map is invalid: " << normalMap << std::endl;
@@ -168,7 +168,7 @@ int main(int argc, char* argv[]) {
     inputStream.close();
 
     inputStream.open(detailMap, std::ios::binary);
-    Image detailImage = ImageDecoder::decode(inputStream, detailMap,
+    LinearImage detailImage = ImageDecoder::decode(inputStream, detailMap,
             ImageDecoder::ColorSpace::LINEAR);
     if (!detailImage.isValid()) {
         std::cerr << "The detail normal map is invalid: " << detailMap << std::endl;
@@ -189,9 +189,7 @@ int main(int argc, char* argv[]) {
 
     size_t width = normalImage.getWidth();
     size_t height = normalImage.getHeight();
-
-    std::unique_ptr<uint8_t[]> buffer(new uint8_t[width * height * sizeof(float3)]);
-    Image image(std::move(buffer), width, height, width * sizeof(float3), sizeof(float3));
+    LinearImage image(width, height, 3);
 
     blend(normalImage, detailImage, image);
 
@@ -214,14 +212,14 @@ int main(int argc, char* argv[]) {
     }
 }
 
-void blend(const Image& normal, const Image& detail, Image& output) {
+void blend(const LinearImage& normal, const LinearImage& detail, LinearImage output) {
     const size_t width = output.getWidth();
     const size_t height = output.getHeight();
 
     for (size_t y = 0; y < height; y++) {
-        float3* normalRow = static_cast<float3*>(normal.getPixelRef(0, y));
-        float3* detailRow = static_cast<float3*>(detail.getPixelRef(0, y));
-        float3* outputRow = static_cast<float3*>(output.getPixelRef(0, y));
+        auto normalRow = normal.get<float3>(0, y);
+        auto detailRow = detail.get<float3>(0, y);
+        auto outputRow = output.get<float3>(0, y);
 
         for (size_t x = 0; x < width; x++, normalRow++, detailRow++, outputRow++) {
             // Reoriented Normal Mapping

@@ -42,6 +42,7 @@
 #include <vector>
 
 #include <image/ColorTransform.h>
+#include <image/ImageOps.h>
 
 namespace image {
 
@@ -60,7 +61,7 @@ private:
     void init();
 
     // ImageDecoder::Decoder interface
-    virtual Image decode() override;
+    virtual LinearImage decode() override;
 
     static void cb_error(png_structp, png_const_charp);
     static void cb_stream(png_structp png, png_bytep buffer, png_size_t size);
@@ -89,7 +90,7 @@ private:
     HDRDecoder& operator=(const HDRDecoder&) = delete;
 
     // ImageDecoder::Decoder interface
-    virtual Image decode() override;
+    virtual LinearImage decode() override;
 
     static const char sigRadiance[];
     static const char sigRGBE[];
@@ -112,7 +113,7 @@ private:
     PSDDecoder& operator = (const PSDDecoder&) = delete;
 
     // ImageDecoder::Decoder interface
-    virtual Image decode() override;
+    virtual LinearImage decode() override;
 
     static const char sig[];
     std::istream& mStream;
@@ -134,7 +135,7 @@ private:
     EXRDecoder& operator = (const EXRDecoder&) = delete;
 
     // ImageDecoder::Decoder interface
-    virtual Image decode() override;
+    virtual LinearImage decode() override;
 
     static const char sig[];
     std::istream& mStream;
@@ -144,7 +145,7 @@ private:
 
 // -----------------------------------------------------------------------------------------------
 
-Image ImageDecoder::decode(std::istream& stream, const std::string& sourceName,
+LinearImage ImageDecoder::decode(std::istream& stream, const std::string& sourceName,
         ColorSpace sourceSpace) {
 
     Format format = Format::NONE;
@@ -168,7 +169,7 @@ Image ImageDecoder::decode(std::istream& stream, const std::string& sourceName,
     std::unique_ptr<Decoder> decoder;
     switch (format) {
         case Format::NONE:
-            return Image();
+            return LinearImage();
         case Format::PNG:
             decoder.reset(PNGDecoder::create(stream));
             decoder->setColorSpace(sourceSpace);
@@ -265,7 +266,7 @@ static Image toLinearWithAlphaDeprecated(size_t w, size_t h, size_t bpr,
     return Image(std::move(dst), w, h, w * sizeof(math::float4), sizeof(math::float4), 4);
 }
 
-Image PNGDecoder::decode() {
+LinearImage PNGDecoder::decode() {
     std::unique_ptr<uint8_t[]> imageData;
     try {
         mInfo = png_create_info_struct(mPNG);
@@ -304,22 +305,22 @@ Image PNGDecoder::decode() {
 
         if (colorType == PNG_COLOR_TYPE_RGBA) {
             if (getColorSpace() == ImageDecoder::ColorSpace::SRGB) {
-                return toLinearWithAlphaDeprecated<uint16_t>(width, height, rowBytes, imageData,
+                return toLinearWithAlpha<uint16_t>(width, height, rowBytes, imageData,
                         [ ](uint16_t v) -> uint16_t { return ntohs(v); },
                         sRGBToLinear<math::float4>);
             } else {
-                return toLinearWithAlphaDeprecated<uint16_t>(width, height, rowBytes, imageData,
+                return toLinearWithAlpha<uint16_t>(width, height, rowBytes, imageData,
                         [ ](uint16_t v) -> uint16_t { return ntohs(v); },
                         [ ](const math::float4& color) -> math::float4 { return color; });
             }
         } else {
             // Convert to linear float (PNG 16 stores data in network order (big endian).
             if (getColorSpace() == ImageDecoder::ColorSpace::SRGB) {
-                return toLinearDeprecated<uint16_t>(width, height, rowBytes, imageData,
+                return toLinear<uint16_t>(width, height, rowBytes, imageData,
                         [ ](uint16_t v) -> uint16_t { return ntohs(v); },
                         sRGBToLinear<math::float3>);
             } else {
-                return toLinearDeprecated<uint16_t>(width, height, rowBytes, imageData,
+                return toLinear<uint16_t>(width, height, rowBytes, imageData,
                         [ ](uint16_t v) -> uint16_t { return ntohs(v); },
                         [ ](const math::float3& color) -> math::float3 { return color; });
             }
@@ -330,7 +331,7 @@ Image PNGDecoder::decode() {
         mStream.seekg(mStreamStartPos);
         imageData.release();
     }
-    return Image();
+    return LinearImage();
 }
 
 void PNGDecoder::cb_stream(png_structp png, png_bytep buffer, png_size_t size) {
@@ -375,7 +376,7 @@ HDRDecoder::HDRDecoder(std::istream& stream)
 
 HDRDecoder::~HDRDecoder() = default;
 
-Image HDRDecoder::decode() {
+LinearImage HDRDecoder::decode() {
     try {
         float gamma;
         float exposure;
@@ -398,13 +399,11 @@ Image HDRDecoder::decode() {
             } while (true);
         }
 
-        std::unique_ptr<uint8_t[]> data(new uint8_t[width * height * sizeof(math::float3)]);
-        Image image(std::move(data), width, height, width*sizeof(math::float3), sizeof(math::float3));
+        LinearImage image(width, height, 3);
 
         uint32_t flags = 0;
-        if (sx == '-') flags |= Image::FLIP_X;
-        if (sy == '+') flags |= Image::FLIP_Y;
-        image.flip(flags);
+        if (sx == '-') image = horizontalFlip(image);
+        if (sy == '+') image = verticalFlip(image);
 
         uint16_t w;
         uint16_t magic;
@@ -447,7 +446,7 @@ Image HDRDecoder::decode() {
             uint8_t const* g = &rgbe[width];
             uint8_t const* b = &rgbe[2*width];
             uint8_t const* e = &rgbe[3*width];
-            math::float3* i = static_cast<math::float3*>(image.getPixelRef(0, y));
+            math::float3* i = reinterpret_cast<math::float3*>(image.getPixelRef(0, y));
             // (rgb/256) * 2^(e-128)
             for (size_t x=0 ; x<width ; x++, r++, g++, b++, e++) {
                 math::float3 v(r[0], g[0], b[0]);
@@ -461,7 +460,7 @@ Image HDRDecoder::decode() {
         std::cerr << "Runtime error while decoding HDR: " << e.what() << std::endl;
         mStream.seekg(mStreamStartPos);
     }
-    return Image();
+    return LinearImage();
 }
 
 // -----------------------------------------------------------------------------------------------
@@ -483,7 +482,7 @@ PSDDecoder::PSDDecoder(std::istream& stream)
 
 PSDDecoder::~PSDDecoder() = default;
 
-Image PSDDecoder::decode() {
+LinearImage PSDDecoder::decode() {
     #pragma pack(push, 1)
     // IMPORTANT NOTE: PSD files use big endian storage
     struct Header {
@@ -542,15 +541,13 @@ Image PSDDecoder::decode() {
             throw std::runtime_error("compressed images are not supported");
         }
 
-        std::unique_ptr<uint8_t[]> data(new uint8_t[width * height * sizeof(math::float3)]);
-        Image image(std::move(data), width, height,
-                    width * sizeof(math::float3), sizeof(math::float3));
+        LinearImage image(width, height, 3);
 
         if (depth == 32) {
             for (size_t i = 0; i < 3; i++) {
                 for (size_t y = 0; y < height; y++) {
                     for (size_t x = 0; x < width; x++) {
-                        math::float3& pixel = *static_cast<math::float3*>(image.getPixelRef(x, y));
+                        math::float3& pixel = *reinterpret_cast<math::float3*>(image.getPixelRef(x, y));
                         pixel[i] = read32(mStream);
                     }
                 }
@@ -559,7 +556,7 @@ Image PSDDecoder::decode() {
             for (size_t i = 0; i < 3; i++) {
                 for (size_t y = 0; y < height; y++) {
                     for (size_t x = 0; x < width; x++) {
-                        math::float3& pixel = *static_cast<math::float3*>(image.getPixelRef(x, y));
+                        math::float3& pixel = *reinterpret_cast<math::float3*>(image.getPixelRef(x, y));
                         pixel[i] = read16(mStream);
                     }
                 }
@@ -573,7 +570,7 @@ Image PSDDecoder::decode() {
         mStream.seekg(mStreamStartPos);
     }
 
-    return Image();
+    return LinearImage();
 }
 
 // -----------------------------------------------------------------------------------------------
@@ -595,7 +592,7 @@ EXRDecoder::EXRDecoder(std::istream& stream, const std::string& sourceName)
 
 EXRDecoder::~EXRDecoder() = default;
 
-Image EXRDecoder::decode() {
+LinearImage EXRDecoder::decode() {
     try {
         // copy the EXR data in memory
         std::vector<unsigned char> src;
@@ -614,19 +611,17 @@ Image EXRDecoder::decode() {
         if (ret != TINYEXR_SUCCESS) {
             std::cerr << "Could not decode OpenEXR: " << error << std::endl;
             mStream.seekg(mStreamStartPos);
-            return Image();
+            return LinearImage();
         }
 
         src.resize(0);
 
-        std::unique_ptr<uint8_t[]> data(new uint8_t[width * height * sizeof(math::float3)]);
-        Image image(std::move(data), static_cast<size_t>(width), static_cast<size_t>(height),
-                    width * sizeof(math::float3), sizeof(math::float3));
+        LinearImage image(width, height, 3);
 
         size_t i = 0;
         for (size_t y = 0; y < height; y++) {
             for (size_t x = 0; x < width; x++) {
-                math::float3& pixel = *static_cast<math::float3*>(image.getPixelRef(x, y));
+                math::float3& pixel = *reinterpret_cast<math::float3*>(image.getPixelRef(x, y));
                 pixel.r = rgba[i++];
                 pixel.g = rgba[i++];
                 pixel.b = rgba[i++];
@@ -642,7 +637,7 @@ Image EXRDecoder::decode() {
         mStream.seekg(mStreamStartPos);
     }
 
-    return Image();
+    return LinearImage();
 }
 
 } // namespace image
