@@ -80,7 +80,7 @@ public:
         for (size_t i = 0; i < N; i++) {
             T v = storage[i];
             while (v) {
-                T k = (BITS_PER_WORD - 1) - utils::clz(v);
+                T k = utils::ctz(v);
                 v &= ~(T(1) << k);
                 exec(size_t(k + BITS_PER_WORD * i));
             }
