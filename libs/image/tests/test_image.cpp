@@ -247,7 +247,7 @@ TEST_F(ImageTest, ColorTransformRGB) { // NOLINT
     LinearImage img = image::toLinear<uint16_t>(w, h, bpr, data, 
         [ ](uint16_t v) -> uint16_t { return v; },
         sRGBToLinear<math::float3>);
-    auto pixels = reinterpret_cast<float3*>(img.getPixelRef());
+    auto pixels = img.get<float3>();
     ASSERT_NEAR(pixels[0].x, 0.0f, 0.001f);
     ASSERT_NEAR(pixels[0].y, 0.0f, 0.001f);
     ASSERT_NEAR(pixels[0].z, 0.0f, 0.001f);

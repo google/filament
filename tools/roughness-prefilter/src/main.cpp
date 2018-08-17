@@ -187,8 +187,7 @@ float solveVMF(const float2& pos, const size_t sampleCount, const float roughnes
         for (size_t x = 0; x < sampleCount; x++) {
             float2 offset(topLeft + float2(x, y));
             float2 samplePos(floor(pos + offset) + 0.5f);
-            float3 sampleNormal = *reinterpret_cast<float3 const*>(
-                    normal.getPixelRef(size_t(samplePos.x), size_t(samplePos.y)));
+            float3 sampleNormal = *normal.get<float3>(size_t(samplePos.x), size_t(samplePos.y));
             sampleNormal = sampleNormal * 2.0f - 1.0f;
 
             averageNormal += normalize(sampleNormal);
@@ -217,7 +216,7 @@ void prefilter(const LinearImage& normal, const size_t mipLevel, LinearImage& ou
     const size_t sampleCount = 1u << mipLevel;
 
     for (size_t y = 0; y < height; y++) {
-        auto* outputRow = reinterpret_cast<float3*>(output.getPixelRef(0, y));
+        auto outputRow = output.get<float3>(0, y);
         for (size_t x = 0; x < width; x++, outputRow++) {
             const float2 uv = (float2(x, y) + 0.5f) / float2(width, height);
             const float2 pos = uv * normal.getWidth();
@@ -235,9 +234,9 @@ void prefilter(const LinearImage& normal, const LinearImage& roughness, const si
     const size_t sampleCount = 1u << mipLevel;
 
     for (size_t y = 0; y < height; y++) {
-        auto* outputRow = reinterpret_cast<float3*>(output.getPixelRef(0, y));
+        auto outputRow = output.get<float3>(0, y);
         for (size_t x = 0; x < width; x++, outputRow++) {
-            const float3* data = reinterpret_cast<float3 const*>(roughness.getPixelRef(x, y));
+            auto data = roughness.get<float3>(x, y);
             if (FIRST_MIP) {
                 *outputRow = *data;
             } else {
@@ -356,12 +355,12 @@ int main(int argc, char* argv[]) {
             LinearImage image(w, h, 3);
 
             for (size_t y = 0; y < h; y++) {
-                auto* dst = reinterpret_cast<float3*>(image.getPixelRef(0, y));
+                auto dst = image.get<float3>(0, y);
                 for (size_t x = 0; x < w; x++, dst++) {
-                    float3 aa = *reinterpret_cast<float3*>(prevMip->getPixelRef(x * 2,     y * 2));
-                    float3 ba = *reinterpret_cast<float3*>(prevMip->getPixelRef(x * 2 + 1, y * 2));
-                    float3 ab = *reinterpret_cast<float3*>(prevMip->getPixelRef(x * 2,     y * 2 + 1));
-                    float3 bb = *reinterpret_cast<float3*>(prevMip->getPixelRef(x * 2 + 1, y * 2 + 1));
+                    float3 aa = *prevMip->get<float3>(x * 2,     y * 2);
+                    float3 ba = *prevMip->get<float3>(x * 2 + 1, y * 2);
+                    float3 ab = *prevMip->get<float3>(x * 2,     y * 2 + 1);
+                    float3 bb = *prevMip->get<float3>(x * 2 + 1, y * 2 + 1);
                     *dst = (aa + ba + ab + bb) / 4.0f;
                 }
             }
@@ -392,7 +391,7 @@ int main(int argc, char* argv[]) {
                         prefilter<true>(normalImage, mipImages.at(0), 0, image);
                     }
                 } else {
-                    std::fill_n(reinterpret_cast<float3*>(image.getPixelRef()), w * h, float3(g_roughness));
+                    std::fill_n(image.get<float3>(), w * h, float3(g_roughness));
                 }
             } else {
                 if (hasRoughnessMap) {
