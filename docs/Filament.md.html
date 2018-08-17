@@ -3035,7 +3035,7 @@ $$\begin{equation}\label{fresnelComplexIOR}
 
 To compute the specular color of a material we need to evaluate the complex Fresnel equation at each spectral sample of complex IOR over the visible spectrum. For each spectral sample, we obtain a spectral reflectance sample. To find the RGB color at normal incidence, we must multiply each sample by the CIE XYZ CMFs (color matching functions) and the spectral power distribution of the desired illuminant. We choose the standard illuminant D65 because we want to compute a color in the sRGB color space.
 
-We then sum (integrate) and normalize all the samples to obtain $\fNormal$ in the XYZ color space. After normalization the final XYZ value should have $Y = 1$. From there, a simple color space conversion yields a linear sRGB color or a non-linear sRGB color after applying the opto-electronic transfer function (OETF, commonly known as "gamma" curve). Note that for some materials such as gold the final sRGB color might fall out of gamut. We use a simple normalization step as a cheap form of gamut remapping but it would be interesting to consider computing values in a color space with a wider gamut (for instance BT.2020).
+We then sum (integrate) and normalize all the samples to obtain $\fNormal$ in the XYZ color space. From there, a simple color space conversion yields a linear sRGB color or a non-linear sRGB color after applying the opto-electronic transfer function (OETF, commonly known as "gamma" curve). Note that for some materials such as gold the final sRGB color might fall out of gamut. We use a simple normalization step as a cheap form of gamut remapping but it would be interesting to consider computing values in a color space with a wider gamut (for instance BT.2020).
 
 To achieve the desired result we used the ICE 1931 2 degrees CMFs, from 360nm to 830nm at 1nm intervals ([source](http://cvrl.ioo.ucl.ac.uk/cmfs.htm)), and the CIE Standard Illuminant D65 relative spectral power distribution, from 300nm to 830nm, at 5nm intervals ([source](https://cielab.xyz/pdf/CIE_sel_colorimetric_tables.xls)).
 
@@ -3065,7 +3065,7 @@ const size_t CIE_D65_COUNT = 107;
 const float CIE_D65[CIE_D65_COUNT] = { ... };
 
 struct Sample {
-    float w; // wavelength
+    float w = 0.0f; // wavelength
     std::complex<float> ior; // complex IOR, n + ik
 };
 
@@ -3131,7 +3131,7 @@ static float3 computeColor(const std::vector<Sample>& samples) {
         y += CIE_XYZ[i].y * d65;
     }
 
-    // Normalize so Y=1
+    // Normalize so that 100% reflectance at every wavelength yields Y=1
     xyz /= y;
 
     float3 linear = XYZ_to_sRGB(xyz);
@@ -3144,7 +3144,7 @@ static float3 computeColor(const std::vector<Sample>& samples) {
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 [Listing [specularColorImpl]: C++ implementation to compute the base color of a metallic surface from spectral data]
 
-Special thanks to Naty Hoffman for private discussions on this topic.
+Special thanks to Naty Hoffman for his valuable help on this topic.
 
 ## Importance sampling for the IBL
 
