@@ -110,19 +110,20 @@ OpenGLContext createOpenGLContext() {
     // The attributes don't really matter here but we choose a configuration
     // that would make sense if we were to perform actual rendering
     CGLPixelFormatAttribute attributes[] = {
-        kCGLPFAColorSize,   (CGLPixelFormatAttribute) 24,
-        kCGLPFAAlphaSize,   (CGLPixelFormatAttribute)  8,
-        kCGLPFAAccelerated, (CGLPixelFormatAttribute)  0
+        kCGLPFAOpenGLProfile, (CGLPixelFormatAttribute) kCGLOGLPVersion_GL4_Core,
+        kCGLPFAColorSize,     (CGLPixelFormatAttribute) 24,
+        kCGLPFAAlphaSize,     (CGLPixelFormatAttribute)  8,
+        kCGLPFAAccelerated,   (CGLPixelFormatAttribute)  0
     };
 
-    GLint virtual_screen_count;
-    CGLPixelFormatObj pixel_format;
-    (*g_cgl.choosePixelFormat)(attributes, &pixel_format, &virtual_screen_count);
+    GLint pixelFormatCount;
+    CGLPixelFormatObj pixelFormat;
+    (*g_cgl.choosePixelFormat)(attributes, &pixelFormat, &pixelFormatCount);
 
     OpenGLContext context;
-    (*g_cgl.createContext)(pixel_format, nullptr, (CGLContextObj*) &context);
+    (*g_cgl.createContext)(pixelFormat, nullptr, (CGLContextObj*) &context);
 
-    (*g_cgl.destroyPixelFormat)(pixel_format);
+    (*g_cgl.destroyPixelFormat)(pixelFormat);
 
     return context;
 }
@@ -210,7 +211,7 @@ OpenGLContext createOpenGLContext() {
 void setCurrentOpenGLContext(OpenGLContext context) {
     wglLocalContext* wContext = static_cast<wglLocalContext*>(context);
     HDC hdc = GetDC(wContext->hwnd);
-    wglMakeCurrent (hdc, wContext->context);
+    wglMakeCurrent(hdc, wContext->context);
 }
 
 void destroyOpenGLContext(OpenGLContext context) {
