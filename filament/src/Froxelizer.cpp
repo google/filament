@@ -841,20 +841,16 @@ void Froxelizer::froxelizePointAndSpotLight(
                     if (light.invSin != std::numeric_limits<float>::infinity()) {
                         // This is a spotlight (common case)
                         // this loops gets vectorized (on arm64) w/ clang
-                        while (bx != ex) {
+                        while (bx++ != ex) {
                             // see if this froxel intersects the cone
                             bool intersect = sphereConeIntersectionFast(boundingSpheres[fi - 1],
                                     light.position, light.axis, light.invSin, light.cosSqr);
-                            froxelThread[fi] |= LightGroupType(intersect) << bit;
-                            ++fi;
-                            ++bx;
+                            froxelThread[fi++] |= LightGroupType(intersect) << bit;
                         }
                     } else {
                         // this loops gets vectorized (on arm64) w/ clang
-                        while (bx != ex) {
-                            froxelThread[fi] |= LightGroupType(1) << bit;
-                            ++fi;
-                            ++bx;
+                        while (bx++ != ex) {
+                            froxelThread[fi++] |= LightGroupType(1) << bit;
                         }
                     }
                 }
