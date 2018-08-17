@@ -44,15 +44,24 @@ public:
 
     union {
         T v[SIZE];
-        struct { T x, y, z, w; };
-        struct { T s, t, p, q; };
-        struct { T r, g, b, a; };
-        TVec2<T> xy;
-        TVec2<T> st;
-        TVec2<T> rg;
-        TVec3<T> xyz;
-        TVec3<T> stp;
-        TVec3<T> rgb;
+        TVec2<T> xy, st, rg;
+        TVec3<T> xyz, stp, rgb;
+        struct {
+            union { T x, s, r; };
+            union {
+                TVec2<T> yz, tp, gb;
+                TVec3<T> yzw, tpq, gba;
+                struct {
+                    union { T y, t, g; };
+                    union {
+                        TVec2<T> zw, pq, ba;
+                        struct { T z, w; };
+                        struct { T p, q; };
+                        struct { T b, a; };
+                    };
+                };
+            };
+        };
     };
 
     inline constexpr size_type size() const { return SIZE; }
