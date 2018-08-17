@@ -618,7 +618,7 @@ void Froxelizer::froxelizeAssignRecordsCompress() noexcept {
         using container_type = LightRecord::bitset::container_type;
         constexpr size_t r = sizeof(container_type) / sizeof(LightGroupType);
         container_type b = froxelThreadData[i * r][0];
-        for (size_t k = 1; k < r; k++) {
+        for (size_t k = 0; k < r; k++) {
             b |= (container_type(froxelThreadData[i * r + k][0]) << (LIGHT_PER_GROUP * k));
         }
         spotLights.getBitsAt(i) = b;
@@ -631,10 +631,10 @@ void Froxelizer::froxelizeAssignRecordsCompress() noexcept {
             using container_type = LightRecord::bitset::container_type;
             constexpr size_t r = sizeof(container_type) / sizeof(LightGroupType);
             container_type b = froxelThreadData[i * r][j];
-            for (size_t k = 1; k < r; k++) {
+            for (size_t k = 0; k < r; k++) {
                 b |= (container_type(froxelThreadData[i * r + k][j]) << (LIGHT_PER_GROUP * k));
             }
-            records[j].lights.getBitsAt(i) = b;
+            records[j - 1].lights.getBitsAt(i) = b;
         }
     }
 
@@ -748,7 +748,7 @@ void Froxelizer::froxelizePointAndSpotLight(
 
 #ifdef DEBUG_FROXEL
     const size_t x0 = 0;
-    const size_t x1 = mFroxelCountX - 1;
+    const size_t x1 = mFroxelCountX;
     const size_t y0 = 0;
     const size_t y1 = mFroxelCountY - 1;
     const size_t z0 = 0;
@@ -841,20 +841,16 @@ void Froxelizer::froxelizePointAndSpotLight(
                     if (light.invSin != std::numeric_limits<float>::infinity()) {
                         // This is a spotlight (common case)
                         // this loops gets vectorized (on arm64) w/ clang
-                        while (bx != ex) {
+                        while (bx++ != ex) {
                             // see if this froxel intersects the cone
-                            bool intersect = sphereConeIntersectionFast(boundingSpheres[fi],
+                            bool intersect = sphereConeIntersectionFast(boundingSpheres[fi - 1],
                                     light.position, light.axis, light.invSin, light.cosSqr);
-                            froxelThread[fi] |= LightGroupType(intersect) << bit;
-                            ++fi;
-                            ++bx;
+                            froxelThread[fi++] |= LightGroupType(intersect) << bit;
                         }
                     } else {
                         // this loops gets vectorized (on arm64) w/ clang
-                        while (bx != ex) {
-                            froxelThread[fi] |= LightGroupType(1) << bit;
-                            ++fi;
-                            ++bx;
+                        while (bx++ != ex) {
+                            froxelThread[fi++] |= LightGroupType(1) << bit;
                         }
                     }
                 }

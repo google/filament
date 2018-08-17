@@ -45,12 +45,24 @@ public:
 
     union {
         T v[SIZE];
-        struct { T x, y, z; };
-        struct { T s, t, p; };
-        struct { T r, g, b; };
         TVec2<T> xy;
         TVec2<T> st;
         TVec2<T> rg;
+        struct {
+            union {
+                T x;
+                T s;
+                T r;
+            };
+            union {
+                struct { T y, z; };
+                struct { T t, p; };
+                struct { T g, b; };
+                TVec2<T> yz;
+                TVec2<T> tp;
+                TVec2<T> gb;
+            };
+        };
     };
 
     inline constexpr size_type size() const { return SIZE; }
