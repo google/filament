@@ -122,7 +122,7 @@ static void generateSky(LinearImage image) {
 
             size_t y0 = size_t(d);
             for (size_t y = y0; y < y0 + c; y++) {
-                float3* UTILS_RESTRICT data = reinterpret_cast<float3*>(image.getPixelRef(0, y));
+                float3* UTILS_RESTRICT data = image.get<float3>(0, y);
 
                 float v = (y + 0.5f) / h;
                 float theta = float(M_PI * v);
@@ -194,7 +194,7 @@ static void generateSky(LinearImage image) {
     const size_t h = image.getHeight();
 
     for (size_t y = 0; y < h; y++) {
-        float3* UTILS_RESTRICT data = reinterpret_cast<float3*>(image.getPixelRef(0, y));
+        float3* UTILS_RESTRICT data = image.get<float3>(0, y);
         for (size_t x = 0; x < w; x++, data++) {
             *data *= hdrScale;
             if (g_tonemap) {

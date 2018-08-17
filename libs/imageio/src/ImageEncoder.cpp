@@ -503,7 +503,7 @@ void HDREncoder::encode(const LinearImage& image) {
         for (size_t y=0 ; y<height ; y++) {
             // convert one scanline to RGBE
             uint8_t p[4];
-            float3 const* data = reinterpret_cast<float3 const*>(image.getPixelRef(0, y));
+            float3 const* data = image.get<float3>(0, y);
             for (size_t x=0 ; x<width ; ++x, ++data) {
                 float2rgbe(p, *data);
                 r[x] = p[0];
@@ -660,7 +660,7 @@ void PSDEncoder::encode(const LinearImage& image) {
         if (depth == 32) {
             for (size_t channel = 0; channel < 3; channel++) {
                 for (size_t y = 0; y < height; y++) {
-                    const float3* data = reinterpret_cast<float3 const*>(image.getPixelRef(0, y));
+                    const float3* data = image.get<float3>(0, y);
                     for (size_t x = 0; x < width; x++) {
                         write32(mStream, (*data)[channel]);
                         data++;
@@ -670,7 +670,7 @@ void PSDEncoder::encode(const LinearImage& image) {
         } else {
             for (size_t channel = 0; channel < 3; channel++) {
                 for (size_t y = 0; y < height; y++) {
-                    const float3* data = reinterpret_cast<float3 const*>(image.getPixelRef(0, y));
+                    const float3* data = image.get<float3>(0, y);
                     for (size_t x = 0; x < width; x++) {
                         write16(mStream, linearTosRGB((*data)[channel]));
                         data++;
@@ -746,7 +746,7 @@ void EXREncoder::encode(const LinearImage& image) {
 
         size_t i = 0;
         for (size_t y = 0; y < height; y++) {
-            const float3* data = reinterpret_cast<float3 const*>(image.getPixelRef(0, y));
+            const float3* data = image.get<float3>(0, y);
             for (size_t x = 0; x < width; x++, data++) {
                 r[i] = data->r;
                 g[i] = data->g;
@@ -954,7 +954,7 @@ void DDSEncoder::encode(const LinearImage& image) {
                 switch (mFormat) {
                     case PixelFormat::sRGB:
                         for (size_t y = 0; y < height; y++) {
-                            const float* data = reinterpret_cast<float const*>(image.getPixelRef(0, y));
+                            const float* data = image.getPixelRef(0, y);
                             for (size_t x = 0; x < width; x++) {
                                 uint8_t b = (uint8_t) (linearTosRGB(saturate(*data)) * 255);
                                 mStream.write((const char*) &b, 1);
@@ -964,7 +964,7 @@ void DDSEncoder::encode(const LinearImage& image) {
                         break;
                     case PixelFormat::LINEAR_RGB:
                         for (size_t y = 0; y < height; y++) {
-                            const float* data = reinterpret_cast<float const*>(image.getPixelRef(0, y));
+                            const float* data = image.getPixelRef(0, y);
                             for (size_t x = 0; x < width; x++) {
                                 uint8_t b = (uint8_t) (saturate(*data) * 255);
                                 mStream.write((const char*) &b, 1);
@@ -977,7 +977,7 @@ void DDSEncoder::encode(const LinearImage& image) {
             }
             case DXGI_FORMAT_R16_FLOAT: {
                 for (size_t y = 0; y < height; y++) {
-                    const float* data = reinterpret_cast<float const*>(image.getPixelRef(0, y));
+                    const float* data = image.getPixelRef(0, y);
                     for (size_t x = 0; x < width; x++) {
                         math::half p = math::half(*data);
                         mStream.write((const char*) &p, 2);
@@ -988,7 +988,7 @@ void DDSEncoder::encode(const LinearImage& image) {
             }
             case DXGI_FORMAT_R32_FLOAT: {
                 for (size_t y = 0; y < height; y++) {
-                    const float* data = reinterpret_cast<float const*>(image.getPixelRef(0, y));
+                    const float* data = image.getPixelRef(0, y);
                     mStream.write((const char*) data, width * sizeof(float));
                 }
                 break;
@@ -1046,7 +1046,7 @@ void DDSEncoder::encode(const LinearImage& image) {
                 switch (mFormat) {
                     case PixelFormat::sRGB:
                         for (size_t y = 0; y < height; y++) {
-                            const float3* data = reinterpret_cast<float3 const*>(image.getPixelRef(0, y));
+                            const float3* data = image.get<float3>(0, y);
                             for (size_t x = 0; x < width; x++) {
                                 uint8_t r = (uint8_t) (linearTosRGB(saturate(data->r)) * 255);
                                 uint8_t g = (uint8_t) (linearTosRGB(saturate(data->g)) * 255);
@@ -1060,7 +1060,7 @@ void DDSEncoder::encode(const LinearImage& image) {
                         break;
                     case PixelFormat::LINEAR_RGB:
                         for (size_t y = 0; y < height; y++) {
-                            const float3* data = reinterpret_cast<float3 const*>(image.getPixelRef(0, y));
+                            const float3* data = image.get<float3>(0, y);
                             for (size_t x = 0; x < width; x++) {
                                 uint8_t r = (uint8_t) (saturate(data->r) * 255);
                                 uint8_t g = (uint8_t) (saturate(data->g) * 255);
@@ -1076,7 +1076,7 @@ void DDSEncoder::encode(const LinearImage& image) {
             }
             case DXGI_FORMAT_R16G16B16A16_FLOAT: {
                 for (size_t y = 0; y < height; y++) {
-                    const float3* data = reinterpret_cast<float3 const*>(image.getPixelRef(0, y));
+                    const float3* data = image.get<float3>(0, y);
                     for (size_t x = 0; x < width; x++) {
                         half4 p = half4(half3(*data), 1);
                         mStream.write((const char*) &p, sizeof(ushort4));
@@ -1087,7 +1087,7 @@ void DDSEncoder::encode(const LinearImage& image) {
             }
             case DXGI_FORMAT_R32G32B32A32_FLOAT: {
                 for (size_t y = 0; y < height; y++) {
-                    const float3* data = reinterpret_cast<float3 const*>(image.getPixelRef(0, y));
+                    const float3* data = image.get<float3>(0, y);
                     for (size_t x = 0; x < width; x++) {
                         float4 p = float4(3.0f, 3.0f, 3.0f, 1.0f);
                         mStream.write((const char*) &p, sizeof(float4));
