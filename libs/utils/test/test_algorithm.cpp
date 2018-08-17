@@ -27,6 +27,11 @@ static inline T count_leading_zeros(T v) noexcept {
     return utils::clz(v);
 }
 
+template <typename T>
+static inline T count_trailing_zeros(T v) noexcept {
+    return utils::ctz(v);
+}
+
 TEST(AlgorithmTest, details_clz) {
     for (uint64_t i = 1, j = 63; i < 64; i *= 2, j--) {
         EXPECT_EQ(j, details::clz(i));
@@ -52,6 +57,28 @@ TEST(AlgorithmTest, clz) {
         EXPECT_EQ(j, details::clz(i));
         EXPECT_EQ(j, details::clz(i|1));
         EXPECT_EQ(j, count_leading_zeros(i));
+    }
+}
+
+TEST(AlgorithmTest, details_ctz) {
+    for (uint64_t i = 1, j = 0; i < 64; i *= 2, j++) {
+        EXPECT_EQ(j, details::ctz(i));
+    }
+    for (uint32_t i = 1, j = 0; i < 32; i *= 2, j++) {
+        EXPECT_EQ(j, details::ctz(i));
+    }
+}
+
+TEST(AlgorithmTest, ctz) {
+    for (uint64_t i = 1, j = 0; i < 64; i *= 2, j++) {
+        EXPECT_EQ(j, ctz(i));
+        EXPECT_EQ(j, details::ctz(i));
+        EXPECT_EQ(j, count_trailing_zeros(i));
+    }
+    for (uint32_t i = 1, j = 0; i < 32; i *= 2, j++) {
+        EXPECT_EQ(j, ctz(i));
+        EXPECT_EQ(j, details::ctz(i));
+        EXPECT_EQ(j, count_trailing_zeros(i));
     }
 }
 
