@@ -326,7 +326,7 @@ The amount of light reflected depends not only on the viewing angle, but also on
 
 ![Figure [fresnelLake]: The Fresnel effect is particularly evident on large bodies of water](images/photo_fresnel_lake.jpg)
 
-More formally, the Fresnel term defines how light reflects and refracts at the interface between two different media. [#Schlick94] describes an inexpensive approximation of the Fresnel term for the Cook-Torrance specular BRDF:
+More formally, the Fresnel term defines how light reflects and refracts at the interface between two different media, or the ratio of reflected and transmitted energy. [#Schlick94] describes an inexpensive approximation of the Fresnel term for the Cook-Torrance specular BRDF:
 
 $$\begin{equation}
 F_{Schlick}(v,h,\fNormal,\fGrazing) = \fNormal + (\fGrazing - \fNormal)(1 - \VoH)^5
