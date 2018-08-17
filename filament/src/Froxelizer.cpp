@@ -626,7 +626,7 @@ void Froxelizer::froxelizeAssignRecordsCompress() noexcept {
 
     // this gets very well vectorized...
     utils::Slice<LightRecord> records(mLightRecords);
-    for (size_t j = 1, jc = FROXEL_BUFFER_ENTRY_COUNT_MAX; j < jc; j++) {
+    for (size_t j = 0, jc = FROXEL_BUFFER_ENTRY_COUNT_MAX; j < jc; j++) {
         for (size_t i = 0; i < LightRecord::bitset::WORLD_COUNT; i++) {
             using container_type = LightRecord::bitset::container_type;
             constexpr size_t r = sizeof(container_type) / sizeof(LightGroupType);
@@ -748,7 +748,7 @@ void Froxelizer::froxelizePointAndSpotLight(
 
 #ifdef DEBUG_FROXEL
     const size_t x0 = 0;
-    const size_t x1 = mFroxelCountX - 1;
+    const size_t x1 = mFroxelCountX;
     const size_t y0 = 0;
     const size_t y1 = mFroxelCountY - 1;
     const size_t z0 = 0;
@@ -843,7 +843,7 @@ void Froxelizer::froxelizePointAndSpotLight(
                         // this loops gets vectorized (on arm64) w/ clang
                         while (bx != ex) {
                             // see if this froxel intersects the cone
-                            bool intersect = sphereConeIntersectionFast(boundingSpheres[fi],
+                            bool intersect = sphereConeIntersectionFast(boundingSpheres[fi - 1],
                                     light.position, light.axis, light.invSin, light.cosSqr);
                             froxelThread[fi] |= LightGroupType(intersect) << bit;
                             ++fi;
