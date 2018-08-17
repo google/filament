@@ -100,12 +100,12 @@ static void processEnvMap(string inputPath, string resultPath, string goldenPath
     std::cout << "Reading result image from " << resultPath << std::endl;
     checkFileExistence(resultPath);
     std::ifstream resultStream(resultPath.c_str(), std::ios::binary);
-    Image resultImage = ImageDecoder::decode(resultStream, resultPath);
+    LinearImage resultImage = ImageDecoder::decode(resultStream, resultPath);
     ASSERT_EQ(resultImage.isValid(), true);
-    ASSERT_EQ(resultImage.getChannelsCount(), 4);
+    ASSERT_EQ(resultImage.getChannels(), 4);
     LinearImage resultLImage = toLinearFromRGBM(
-            static_cast<math::float4 const*>(resultImage.getData()),
-            (uint32_t) resultImage.getWidth(), (uint32_t) resultImage.getHeight());
+            reinterpret_cast<math::float4 const*>(resultImage.getPixelRef()),
+            resultImage.getWidth(), resultImage.getHeight());
 
     std::cout << "Golden image is at " << goldenPath << std::endl;
     updateOrCompare(resultLImage, goldenPath, g_comparisonMode, 0.01f);

@@ -17,9 +17,10 @@
 #ifndef IMAGE_IMAGEDECODER_H_
 #define IMAGE_IMAGEDECODER_H_
 
+#include <iosfwd>
 #include <string>
 
-#include <image/Image.h>
+#include <image/LinearImage.h>
 
 namespace image {
 
@@ -30,12 +31,12 @@ public:
         SRGB
     };
 
-    static Image decode(std::istream& stream, const std::string& sourceName,
+    static LinearImage decode(std::istream& stream, const std::string& sourceName,
             ColorSpace sourceSpace = ColorSpace::SRGB);
 
     class Decoder {
     public:
-        virtual Image decode() = 0;
+        virtual LinearImage decode() = 0;
         virtual ~Decoder() = default;
 
         ColorSpace getColorSpace() const noexcept {

@@ -128,6 +128,19 @@ LinearImage vectorsToColors(const LinearImage& image) {
     return result;
 }
 
+LinearImage extractChannel(const LinearImage& source, uint32_t channel) {
+    const uint32_t width = source.getWidth(), height = source.getHeight();
+    const uint32_t nchan = source.getChannels();
+    ASSERT_PRECONDITION(channel < nchan, "Channel is out of range.");
+    LinearImage result(width, height, 1);
+    auto src = source.getPixelRef();
+    auto dst = result.getPixelRef();
+    for (uint32_t n = 0, npixels = width * height; n < npixels; ++n, ++dst, src += nchan) {
+        dst[0] = src[channel];
+    }
+    return result;
+}
+
 LinearImage combineChannels(std::initializer_list<LinearImage> images) {
     size_t count = images.end() - images.begin();
     return combineChannels(images.begin(), count);

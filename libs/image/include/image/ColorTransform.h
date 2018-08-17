@@ -273,6 +273,25 @@ std::unique_ptr<uint8_t[]> fromLinearToRGBM(const LinearImage& image) {
     return dst;
 }
 
+// Creates a packed single-channel integer-based image from a floating-point image.
+// For example if T is uint8_t, then this performs a transformation from [0,1] to [0,255].
+template <typename T>
+std::unique_ptr<uint8_t[]> fromLinearToGrayscale(const LinearImage& image) {
+    const size_t w = image.getWidth();
+    const size_t h = image.getHeight();
+    assert(image.getChannels() == 1);
+    std::unique_ptr<uint8_t[]> dst(new uint8_t[w * h * sizeof(T)]);
+    T* d = reinterpret_cast<T*>(dst.get());
+    for (size_t y = 0; y < h; ++y) {
+        float const* p = image.getPixelRef(0, y);
+        for (size_t x = 0; x < w; ++x, ++p, ++d) {
+            const float gray = math::saturate(*p) * std::numeric_limits<T>::max();
+            d[0] = T(gray);
+        }
+    }
+    return dst;
+}
+
 // Constructs a 3-channel LinearImage from an untyped data blob.
 // The "proc" lambda converts a single color component into a float.
 // The "transform" lambda performs an arbitrary float-to-float transformation.

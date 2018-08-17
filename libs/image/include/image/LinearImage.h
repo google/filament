@@ -88,6 +88,7 @@ public:
     uint32_t getHeight() const { return mHeight; }
     uint32_t getChannels() const { return mChannels; }
     void reset() { *this = LinearImage(); }
+    bool isValid() const { return mData; }
 
 private:
 
