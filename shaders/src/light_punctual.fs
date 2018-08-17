@@ -42,7 +42,7 @@ uvec3 getFroxelCoords(const vec3 fragCoords) {
  */
 uint getFroxelIndex(const vec3 fragCoords) {
     uvec3 froxelCoord = getFroxelCoords(fragCoords);
-    return froxelCoord.x +
+    return froxelCoord.x * frameUniforms.fParamsX +
            froxelCoord.y * frameUniforms.fParams.x +
            froxelCoord.z * frameUniforms.fParams.y;
 }
