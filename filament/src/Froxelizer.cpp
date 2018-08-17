@@ -618,7 +618,7 @@ void Froxelizer::froxelizeAssignRecordsCompress() noexcept {
         using container_type = LightRecord::bitset::container_type;
         constexpr size_t r = sizeof(container_type) / sizeof(LightGroupType);
         container_type b = froxelThreadData[i * r][0];
-        for (size_t k = 1; k < r; k++) {
+        for (size_t k = 0; k < r; k++) {
             b |= (container_type(froxelThreadData[i * r + k][0]) << (LIGHT_PER_GROUP * k));
         }
         spotLights.getBitsAt(i) = b;
@@ -626,15 +626,15 @@ void Froxelizer::froxelizeAssignRecordsCompress() noexcept {
 
     // this gets very well vectorized...
     utils::Slice<LightRecord> records(mLightRecords);
-    for (size_t j = 0, jc = FROXEL_BUFFER_ENTRY_COUNT_MAX; j < jc; j++) {
+    for (size_t j = 1, jc = FROXEL_BUFFER_ENTRY_COUNT_MAX; j < jc; j++) {
         for (size_t i = 0; i < LightRecord::bitset::WORLD_COUNT; i++) {
             using container_type = LightRecord::bitset::container_type;
             constexpr size_t r = sizeof(container_type) / sizeof(LightGroupType);
             container_type b = froxelThreadData[i * r][j];
-            for (size_t k = 1; k < r; k++) {
+            for (size_t k = 0; k < r; k++) {
                 b |= (container_type(froxelThreadData[i * r + k][j]) << (LIGHT_PER_GROUP * k));
             }
-            records[j].lights.getBitsAt(i) = b;
+            records[j - 1].lights.getBitsAt(i) = b;
         }
     }
 
