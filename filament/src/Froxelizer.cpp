@@ -56,7 +56,7 @@ static constexpr bool SUPPORTS_NON_SQUARE_FROXELS = false;
  * hit another froxel at the same x,y coordinate.
  * This requires backward compatibility breaking changes in the shaders.
  */
-static constexpr bool SUPPORTS_REMAPPED_FROXELS   = false;
+static constexpr bool SUPPORTS_REMAPPED_FROXELS    = true;
 
 // The Froxel buffer is set to FROXEL_BUFFER_WIDTH x n
 // With n limited by the supported texture dimension, which is guaranteed to be at least 2048
