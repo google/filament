@@ -27,9 +27,7 @@ namespace filament {
 class ContextManagerDummy final : public driver::ContextManagerGL {
 public:
 
-    std::unique_ptr<Driver> createDriver(void* const sharedGLContext) noexcept override {
-        return nullptr;
-    }
+    std::unique_ptr<Driver> createDriver(void* const sharedGLContext) noexcept override;
     void terminate() noexcept override { }
 
     SwapChain* createSwapChain(void* nativewindow, uint64_t& flags) noexcept final override {
@@ -59,6 +57,8 @@ public:
 
     int getOSVersion() const noexcept final override { return 0; }
 };
+
+using ContextManager = filament::ContextManagerDummy;
 
 } // namespace filament
 

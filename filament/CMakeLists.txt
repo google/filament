@@ -170,6 +170,8 @@ elseif (LINUX)
     list(APPEND SRCS src/driver/opengl/ContextManagerGLX.cpp)
 elseif (WIN32)
     list(APPEND SRCS src/driver/opengl/ContextManagerWGL.cpp)
+else()
+    list(APPEND SRCS src/driver/opengl/ContextManagerDummy.cpp)
 endif()
 
 # ==================================================================================================
