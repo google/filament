@@ -163,9 +163,9 @@ math::float2 FView::updateScale(duration frameTime) noexcept {
 
         // apply a median filter to get a good representation of the frame time of the last
         // N frames.
-        std::array<duration, 30> median;
+        std::array<duration, 30> median; // NOLINT -- it's initialized below
         size_t size = std::min(history.size(), median.size());
-        std::copy_n(history.begin(), size, median.begin());
+        std::uninitialized_copy_n(history.begin(), size, median.begin());
         std::sort(median.begin(), median.begin() + size);
         duration filteredFrameTime = median[size / 2];
 
@@ -305,7 +305,7 @@ void FView::prepareLighting(FEngine& engine, FEngine::DriverApi& driver, ArenaSc
     const CameraInfo& camera = mViewingCameraInfo;
     FScene* const scene = mScene;
 
-    scene->prepareLights(camera, arena);
+    scene->prepareDynamicLights(camera, arena);
 
     // here the array of visible lights has been shrunk to CONFIG_MAX_LIGHT_COUNT
     auto const& lightData = scene->getLightData();

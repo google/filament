@@ -83,7 +83,7 @@ public:
     void terminate(FEngine& engine);
 
     void prepare(const math::mat4f& worldOriginTansform);
-    void prepareLights(const CameraInfo& camera, ArenaScope& arena) noexcept;
+    void prepareDynamicLights(const CameraInfo& camera, ArenaScope& arena) noexcept;
     void computeBounds(Aabb& castersBox, Aabb& receiversBox, uint32_t visibleLayers) const noexcept;
 
     /*
