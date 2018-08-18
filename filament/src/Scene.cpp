@@ -168,58 +168,47 @@ void FScene::terminate(FEngine& engine) {
     mGpuLightData.terminate(engine);
 }
 
-void FScene::prepareLights(const CameraInfo& camera, ArenaScope& rootArena) noexcept {
+void FScene::prepareDynamicLights(const CameraInfo& camera, ArenaScope& rootArena) noexcept {
     FLightManager& lcm = mEngine.getLightManager();
     GpuLightBuffer& gpuLightData = mGpuLightData;
     FScene::LightSoa& lightData = getLightData();
 
     /*
      * Here we copy our lights data into the GPU buffer, some lights might be left out if there
-     * are more than the GPU buffer allows (i.e. 255).
+     * are more than the GPU buffer allows (i.e. 256).
      *
-     * Sorting light by distance to the camera for dropping the ones in excess doesn't
-     * work well because a light far from the camera could light an object close to it
-     * (e.g. a search light).
-     *
-     * When we have too many lights, there is nothing better we can do though.
-     * However, when the froxelization "record buffer" runs out of space, it's better to drop
-     * froxels far from the camera instead. This would happen during froxelization.
+     * We always sort lights by distance to the camera plane so that:
+     * - we can build light trees
+     * - lights farther from the camera are dropped when in excess
+     *   (note this doesn't work well, e.g. for search-lights)
      */
 
-    // don't count the directional light
-    if (UTILS_UNLIKELY(lightData.size() > CONFIG_MAX_LIGHT_COUNT + DIRECTIONAL_LIGHTS_COUNT)) {
-        ArenaScope arena(rootArena.getAllocator());
-        float* const UTILS_RESTRICT distances = arena.allocate<float>(lightData.size(), CACHELINE_SIZE);
+    ArenaScope arena(rootArena.getAllocator());
+    float* const UTILS_RESTRICT distances = arena.allocate<float>(lightData.size(), CACHELINE_SIZE);
 
-        // pre-compute the lights' distance to the camera, for sorting below.
-        float3 const position = camera.getPosition();
-
-        // skip directional light
-        for (size_t i = DIRECTIONAL_LIGHTS_COUNT, c = lightData.size(); i < c; ++i) {
-            // TODO: this should take spot-light direction into account
-            // TODO: maybe we could also take the intensity into account
-            float4 s = lightData.elementAt<FScene::POSITION_RADIUS>(i);
-            distances[i] = std::max(0.0f, length(position - s.xyz) - s.w);
-        }
-
-        // skip directional light
-        Zip2Iterator<FScene::LightSoa::iterator, float*> b = { lightData.begin(), distances };
-        std::sort(b + DIRECTIONAL_LIGHTS_COUNT, b + lightData.size(),
-                [](auto const& lhs, auto const& rhs) { return lhs.second < rhs.second; });
-
-        lightData.resize(std::min(lightData.size(), CONFIG_MAX_LIGHT_COUNT + DIRECTIONAL_LIGHTS_COUNT));
+    // pre-compute the lights' distance to the camera plane, for sorting below,
+    // skipping the directional light.
+    float4 const* const UTILS_RESTRICT spheres = lightData.data<FScene::POSITION_RADIUS>();
+    for (size_t i = DIRECTIONAL_LIGHTS_COUNT, c = lightData.size(); i < c; ++i) {
+        float4 p = camera.view * spheres[i].xyz;
+        distances[i] = std::max(0.0f, -p.z);
     }
 
-    assert(lightData.size() <= CONFIG_MAX_LIGHT_COUNT + DIRECTIONAL_LIGHTS_COUNT);
+    // skip directional light
+    Zip2Iterator<FScene::LightSoa::iterator, float*> b = { lightData.begin(), distances };
+    std::sort(b + DIRECTIONAL_LIGHTS_COUNT, b + lightData.size(),
+            [](auto const& lhs, auto const& rhs) { return lhs.second < rhs.second; });
 
-    auto const* UTILS_RESTRICT positions    = lightData.data<FScene::POSITION_RADIUS>();
+    // drop excess lights
+    lightData.resize(std::min(lightData.size(), CONFIG_MAX_LIGHT_COUNT + DIRECTIONAL_LIGHTS_COUNT));
+
     auto const* UTILS_RESTRICT directions   = lightData.data<FScene::DIRECTION>();
     auto const* UTILS_RESTRICT instances    = lightData.data<FScene::LIGHT_INSTANCE>();
     for (size_t i = DIRECTIONAL_LIGHTS_COUNT, c = lightData.size(); i < c; ++i) {
         GpuLightBuffer::LightIndex gpuIndex = GpuLightBuffer::LightIndex(i - DIRECTIONAL_LIGHTS_COUNT);
         GpuLightBuffer::LightParameters& lp = gpuLightData.getLightParameters(gpuIndex);
         auto li = instances[i];
-        lp.positionFalloff      = { positions[i].xyz, lcm.getSquaredFalloffInv(li) };
+        lp.positionFalloff      = { spheres[i].xyz, lcm.getSquaredFalloffInv(li) };
         lp.colorIntensity       = { lcm.getColor(li), lcm.getIntensity(li) };
         lp.directionIES         = { directions[i], 0 };
         lp.spotScaleOffset.xy   = { lcm.getSpotParams(li).scaleOffset };
