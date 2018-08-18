@@ -534,10 +534,10 @@ void Froxelizer::commit(driver::DriverApi& driverApi) {
 }
 
 void Froxelizer::froxelizeLights(FEngine& engine,
-        math::mat4f const& UTILS_RESTRICT viewMatrix,
+        CameraInfo const& UTILS_RESTRICT camera,
         const FScene::LightSoa& UTILS_RESTRICT lightData) noexcept {
     // note: this is called asynchronously
-    froxelizeLoop(engine, viewMatrix, lightData);
+    froxelizeLoop(engine, camera, lightData);
     froxelizeAssignRecordsCompress();
 
 #ifndef NDEBUG
@@ -565,7 +565,7 @@ void Froxelizer::froxelizeLights(FEngine& engine,
 }
 
 void Froxelizer::froxelizeLoop(FEngine& engine,
-        mat4f const& UTILS_RESTRICT viewMatrix,
+        const CameraInfo& UTILS_RESTRICT camera,
         const FScene::LightSoa& UTILS_RESTRICT lightData) noexcept {
     SYSTRACE_CALL();
 
@@ -578,17 +578,17 @@ void Froxelizer::froxelizeLoop(FEngine& engine,
     auto const* UTILS_RESTRICT instances    = lightData.data<FScene::LIGHT_INSTANCE>();
 
     auto process = [ this, &froxelThreadData,
-                     spheres, directions, instances, &viewMatrix, &lcm ]
+                     spheres, directions, instances, &camera, &lcm ]
             (size_t count, size_t offset, size_t stride) {
 
         const mat4f& projection = mProjection;
-        const mat3f& vn = viewMatrix.upperLeft();
+        const mat3f& vn = camera.view.upperLeft();
 
         for (size_t i = offset; i < count; i += stride) {
             const size_t j = i + FScene::DIRECTIONAL_LIGHTS_COUNT;
             FLightManager::Instance li = instances[j];
             LightParams light = {
-                    .position = (viewMatrix * float4{ spheres[j].xyz, 1 }).xyz, // to view-space
+                    .position = (camera.view * float4{ spheres[j].xyz, 1 }).xyz, // to view-space
                     .cosSqr = lcm.getCosOuterSquared(li),   // spot only
                     .axis = vn * directions[j],             // spot only
                     .invSin = lcm.getSinInverse(li),        // spot only
