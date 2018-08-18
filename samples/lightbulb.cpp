@@ -59,6 +59,7 @@ static Entity g_light1;
 static Entity g_light2;
 static Entity g_light3;
 static Entity g_light4;
+static Entity g_light5;
 static Entity g_discoBallEntity;
 static std::vector<Entity> g_discoBallLights;
 static float g_discoAngle = 0;
@@ -181,10 +182,12 @@ static void cleanup(Engine* engine, View* view, Scene* scene) {
         engine->destroy(g_light2);
         engine->destroy(g_light3);
         engine->destroy(g_light4);
+        engine->destroy(g_light5);
         em.destroy(g_light1);
         em.destroy(g_light2);
         em.destroy(g_light3);
         em.destroy(g_light4);
+        em.destroy(g_light5);
     }
 
     for (Entity e : g_discoBallLights) {
@@ -239,6 +242,7 @@ static void setup(Engine* engine, View* view, Scene* scene) {
         g_light2 = em.create();
         g_light3 = em.create();
         g_light4 = em.create();
+        g_light5 = em.create();
 
         LightManager::Builder(LightManager::Type::POINT)
                 .color(Color::toLinear<ACCURATE>(sRGBColor(0.98f, 0.92f, 0.89f)))
@@ -266,11 +270,20 @@ static void setup(Engine* engine, View* view, Scene* scene) {
                 .position({ 0.0f, 1.5f, -3.5f })
                 .falloff(2.0f)
                 .build(*engine, g_light4);
+        LightManager::Builder(LightManager::Type::FOCUSED_SPOT)
+                .color(Color::toLinear<ACCURATE>(sRGBColor(0.12f, 0.98f, 0.19f)))
+                .intensity(2000.0f, LightManager::EFFICIENCY_LED)
+                .position({ 0.6f, 0.6f, -3.2f })
+                .direction({  1.0f, 0.0f, 0.0f })
+                .spotLightCone(static_cast<float>(M_PI / 8), static_cast<float>((M_PI / 8) * 1.1))
+                .falloff(4.0f)
+                .build(*engine, g_light5);
 
         scene->addEntity(g_light1);
         scene->addEntity(g_light2);
         scene->addEntity(g_light3);
         scene->addEntity(g_light4);
+        scene->addEntity(g_light5);
     }
 
     if (g_discoBall) {

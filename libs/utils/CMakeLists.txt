@@ -104,6 +104,7 @@ set(TEST_SRCS
         test/test_StructureOfArrays.cpp
         test/test_utils_main.cpp
         test/test_Zip2Iterator.cpp
+        test/test_BinaryTreeArray.cpp
 )
 
 # The Path tests are platform-specific

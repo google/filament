@@ -24,6 +24,7 @@
 #include <filament/Viewport.h>
 
 #include <utils/Allocator.h>
+#include <utils/BinaryTreeArray.h>
 #include <utils/Systrace.h>
 
 #include <math/mat4.h>
@@ -904,6 +905,61 @@ void Froxelizer::froxelizePointAndSpotLight(
             }
         }
     }
+}
+
+
+void Froxelizer::computeLightTree(
+        const Froxelizer::LightRecord& lights,
+        const CameraInfo& camera,
+        const FScene::LightSoa& lightData) const noexcept {
+
+    // TODO: store in real array passed as argument
+    struct Node {
+        float min, max;
+        uint16_t next;
+    };
+    Node array[256];
+
+    // get light list for bitfield
+    RecordBufferType indices[CONFIG_MAX_LIGHT_COUNT];
+    RecordBufferType* last = indices;
+    lights.lights.forEachSetBit([&last](size_t l) {
+        *last++ = RecordBufferType(l);
+    });
+
+    // number of lights in this record
+    size_t count = std::min(lightData.size() - 1u, size_t(last - indices));
+
+    // the width of the tree is the next power-of-two (if not already a power of two)
+    size_t w = 1u << (log2i(count) + (utils::popcount(count) == 1 ? 0 : 1));
+
+    // height of the tree
+    size_t h = log2i(w) + 1u;
+
+    auto const* UTILS_RESTRICT spheres = lightData.data<FScene::POSITION_RADIUS>() + 1;
+    BinaryTreeArray::traverse(h,
+            [&array, &camera, spheres, indices, count]
+            (size_t index, size_t parent, size_t col, size_t next) {
+                float min = 1.0;
+                float max = 0.0;
+                if (col < count) {
+                    auto s = spheres[indices[col]];
+                    float4 c = camera.view * s.xyz; // camera points towards the -z axis
+                    float4 n = c + float4{ 0, 0, s.w, 0 };
+                    float4 f = c - float4{ 0, 0, s.w, 0 };
+                    n = camera.projection * n;
+                    f = camera.projection * f;
+                    min = (n.w > camera.zn) ? ((n.z / n.w + 1.0f) * 0.5f) : 0.0f;
+                    max = (f.w < camera.zf) ? ((f.z / f.w + 1.0f) * 0.5f) : 1.0f;
+                }
+                array[index] = Node{ min, max, (uint16_t)next };
+            },
+            [&array](size_t index, size_t parent, size_t l, size_t r, size_t next) {
+                array[index] = Node{
+                        std::min(array[l].min, array[r].min),
+                        std::max(array[l].max, array[r].max),
+                        (uint16_t)next };
+            });
 }
 
 } // namespace details
