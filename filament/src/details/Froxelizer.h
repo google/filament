@@ -196,6 +196,11 @@ private:
             FroxelThreadData& froxelThread, size_t bit,
             math::mat4f const& projection, const LightParams& light) const noexcept;
 
+    void computeLightTree(
+            LightRecord const& lights,
+            const CameraInfo& camera,
+            const FScene::LightSoa& lightData) const noexcept;
+
     uint16_t getFroxelIndex(size_t ix, size_t iy, size_t iz) const noexcept {
         return uint16_t(ix + (iy * mFroxelCountX) + (iz * mFroxelCountX * mFroxelCountY));
     }

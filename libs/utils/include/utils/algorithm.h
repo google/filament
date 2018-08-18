@@ -155,6 +155,12 @@ uint8_t UTILS_ALWAYS_INLINE popcount(uint8_t x) noexcept {
     return (uint8_t)popcount((unsigned int)x);
 }
 
+template<typename T,
+        typename = std::enable_if_t<std::is_integral<T>::value && std::is_unsigned<T>::value>>
+constexpr inline UTILS_PUBLIC UTILS_PURE
+T log2i(T x) noexcept {
+    return (sizeof(x) * 8 - 1u) - clz(x);
+}
 
 /*
  * branch-less version of std::lower_bound and std::upper_bound.
