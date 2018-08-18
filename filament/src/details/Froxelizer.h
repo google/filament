@@ -120,7 +120,7 @@ public:
     size_t getFroxelCount() const noexcept { return mFroxelCount; }
 
     // update Records and Froxels texture with lights data. this is thread-safe.
-    void froxelizeLights(FEngine& engine, math::mat4f const& viewMatrix,
+    void froxelizeLights(FEngine& engine, CameraInfo const& camera,
             const FScene::LightSoa& lightData) noexcept;
 
     void updateUniforms(UniformBuffer& u) {
@@ -188,7 +188,7 @@ private:
     bool update() noexcept;
 
     void froxelizeLoop(FEngine& engine,
-            const math::mat4f& viewMatrix, const FScene::LightSoa& lightData) noexcept;
+            const CameraInfo& camera, const FScene::LightSoa& lightData) noexcept;
 
     void froxelizeAssignRecordsCompress() noexcept;
 

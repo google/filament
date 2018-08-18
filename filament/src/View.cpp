@@ -590,7 +590,7 @@ void FView::froxelize(FEngine& engine) const noexcept {
 
     if (mHasDynamicLighting) {
         // froxelize lights
-        mFroxelizer.froxelizeLights(engine, mViewingCameraInfo.view, mScene->getLightData());
+        mFroxelizer.froxelizeLights(engine, mViewingCameraInfo, mScene->getLightData());
     }
 }
 
