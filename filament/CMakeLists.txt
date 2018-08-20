@@ -162,7 +162,9 @@ endif()
 # OS specific
 # ==================================================================================================
 # Here set the architecture specific sources
-if (ANDROID)
+if (USE_EXTERNAL_GLES3)
+    # Experimental feature; clients provide their own Context Manager.
+elseif (ANDROID)
     list(APPEND SRCS src/driver/opengl/ContextManagerEGL.cpp)
 elseif (APPLE)
     list(APPEND SRCS src/driver/opengl/ContextManagerCocoa.mm)

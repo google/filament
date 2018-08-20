@@ -17,27 +17,37 @@
 #include <filament/driver/ExternalContext.h>
 
 #if defined(ANDROID)
-    #include "driver/opengl/ContextManagerEGL.h"
+    #ifndef USE_EXTERNAL_GLES3
+        #include "driver/opengl/ContextManagerEGL.h"
+    #endif
     #if defined (FILAMENT_DRIVER_SUPPORTS_VULKAN)
         #include "driver/vulkan/ContextManagerVkAndroid.h"
     #endif
 #elif defined(__APPLE__)
-    #include "driver/opengl/ContextManagerCocoa.h"
+    #ifndef USE_EXTERNAL_GLES3
+        #include "driver/opengl/ContextManagerCocoa.h"
+    #endif
     #if defined (FILAMENT_DRIVER_SUPPORTS_VULKAN)
         #include "driver/vulkan/ContextManagerVkCocoa.h"
     #endif
 #elif defined(__linux__)
-    #include "driver/opengl/ContextManagerGLX.h"
+    #ifndef USE_EXTERNAL_GLES3
+        #include "driver/opengl/ContextManagerGLX.h"
+    #endif
     #if defined (FILAMENT_DRIVER_SUPPORTS_VULKAN)
         #include "driver/vulkan/ContextManagerVkLinux.h"
     #endif
 #elif defined(WIN32)
-    #include "driver/opengl/ContextManagerWGL.h"
+    #ifndef USE_EXTERNAL_GLES3
+        #include "driver/opengl/ContextManagerWGL.h"
+    #endif
     #if defined (FILAMENT_DRIVER_SUPPORTS_VULKAN)
         #include "driver/vulkan/ContextManagerVkWindows.h"
     #endif
 #else
-    #include "driver/opengl/ContextManagerDummy.h"
+    #ifndef USE_EXTERNAL_GLES3
+        #include "driver/opengl/ContextManagerDummy.h"
+    #endif
 #endif
 
 namespace filament {
@@ -72,7 +82,9 @@ ExternalContext* ExternalContext::create(Backend* backend) noexcept {
             return nullptr;
         #endif
     }
-    #if defined(ANDROID)
+    #if defined(USE_EXTERNAL_GLES3)
+        return nullptr;
+    #elif defined(ANDROID)
         return new ContextManagerEGL();
     #elif defined(__APPLE__)
         return new ContextManagerCocoa();

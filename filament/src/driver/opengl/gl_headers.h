@@ -17,7 +17,7 @@
 #ifndef TNT_FILAMENT_DRIVER_GL_HEADERS_H
 #define TNT_FILAMENT_DRIVER_GL_HEADERS_H
 
-#ifdef ANDROID
+#if defined(ANDROID) || defined(USE_EXTERNAL_GLES3)
 
     #include <GLES3/gl31.h>
     #include <GLES2/gl2ext.h>
