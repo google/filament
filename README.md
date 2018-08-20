@@ -2,8 +2,9 @@
 
 # Filament
 
-Filament is a physically based rendering engine for Android, Linux, macOS and Windows. This
-rendering engine was designed to be as small as possible and as efficient as possible on Android.
+Filament is a real-time physically based rendering engine for Android, Linux, macOS and Windows.
+This rendering engine was designed to be as small as possible and as efficient as possible
+on Android.
 
 Filament is currently used in the
 [Sceneform](https://developers.google.com/ar/develop/java/sceneform/) library both at runtime on
@@ -11,14 +12,15 @@ Android devices and as the renderer inside the Android Studio plugin.
 
 ## Documentation
 
-- [Filament](https://google.github.io/filament/Filament.md.html), an in-depth explanation of real-time physically
-  based rendering, the graphics capabilities and implementation of Filament. This document explains the math and
-  reasoning behind most of our decisions. This document is a good introduction to PBR for graphics programmers.
-- [Materials](https://google.github.io/filament//Materials.md.html), the full reference documentation for our material system.
-  This document explains our different material models, how to use the material compiler `matc` and
-  how to write custom materials.
-- [Material Properties](https://google.github.io/filament/Material%20Properties.pdf), a reference sheet for the standard
-  material model.
+- [Filament](https://google.github.io/filament/Filament.md.html), an in-depth explanation of
+  real-time physically based rendering, the graphics capabilities and implementation of Filament.
+  This document explains the math and reasoning behind most of our decisions. This document is a
+  good introduction to PBR for graphics programmers.
+- [Materials](https://google.github.io/filament//Materials.md.html), the full reference
+  documentation for our material system. This document explains our different material models, how
+  to use the material compiler `matc` and how to write custom materials.
+- [Material Properties](https://google.github.io/filament/Material%20Properties.pdf), a reference
+  sheet for the standard material model.
 
 ## Samples
 
