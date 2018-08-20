@@ -679,6 +679,11 @@ void Froxelizer::froxelizeAssignRecordsCompress() noexcept {
 
     for (size_t i = 0, c = getFroxelCount(); i < c;) {
         LightRecord b = records[i];
+        if (b.lights.none()) {
+            froxels[remap(i++)].u32 = 0;
+            continue;
+        }
+
         // We have a limitation of 255 spot + 255 point lights per froxel.
         FroxelEntry entry = {
                 .offset = offset,
