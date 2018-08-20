@@ -14,6 +14,8 @@ project(TNT)
 
 option(ENABLE_JAVA "Compile Java projects, requires a JDK and the JAVA_HOME env var" ON)
 
+option(USE_EXTERNAL_GLES3 "Experimental: Compile filament against OpenGL ES 3" OFF)
+
 # ==================================================================================================
 # OS specific
 # ==================================================================================================
@@ -93,6 +95,10 @@ if (WIN32)
 endif()
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CXX_STANDARD} -fstrict-aliasing -Wno-unknown-pragmas -Wno-unused-function")
+
+if (USE_EXTERNAL_GLES3)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_EXTERNAL_GLES3")
+endif()
 
 if (WIN32)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_USE_MATH_DEFINES=1")
