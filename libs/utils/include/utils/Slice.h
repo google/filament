@@ -60,16 +60,16 @@ public:
     Slice& operator=(Slice const& rhs) noexcept = default;
     Slice& operator=(Slice&& rhs) noexcept = default;
 
-    template <typename Iter>
+    template<typename Iter>
     void set(Iter begin, size_type count) UTILS_RESTRICT noexcept {
         mBegin = &*begin;
         mEndOffset = size_type(count);
     }
 
-    template <typename Iter>
+    template<typename Iter>
     void set(Iter begin, Iter end) UTILS_RESTRICT noexcept {
         mBegin = &*begin;
-        mEndOffset = size_type(end-begin);
+        mEndOffset = size_type(end - begin);
     }
 
     void swap(Slice& rhs) UTILS_RESTRICT noexcept {
@@ -83,8 +83,8 @@ public:
     }
 
     // size
-    size_type size() const UTILS_RESTRICT noexcept { return mEndOffset; }
-    size_type sizeInBytes() const UTILS_RESTRICT noexcept { return size() * sizeof(T); }
+    size_t size() const UTILS_RESTRICT noexcept { return mEndOffset; }
+    size_t sizeInBytes() const UTILS_RESTRICT noexcept { return size() * sizeof(T); }
     bool empty() const UTILS_RESTRICT noexcept { return size() == 0; }
 
     // iterators
@@ -96,21 +96,21 @@ public:
     const_iterator cend() const UTILS_RESTRICT noexcept { return this->end(); }
 
     // data access
-    reference operator[](size_type n) UTILS_RESTRICT noexcept {
+    reference operator[](size_t n) UTILS_RESTRICT noexcept {
         assert(n < size());
         return mBegin[n];
     }
 
-    const_reference operator[](size_type n) const UTILS_RESTRICT noexcept {
+    const_reference operator[](size_t n) const UTILS_RESTRICT noexcept {
         assert(n < size());
         return mBegin[n];
     }
 
-    reference at(size_type n) UTILS_RESTRICT noexcept {
+    reference at(size_t n) UTILS_RESTRICT noexcept {
         return operator[](n);
     }
 
-    const_reference at(size_type n) const UTILS_RESTRICT noexcept {
+    const_reference at(size_t n) const UTILS_RESTRICT noexcept {
         return operator[](n);
     }
 

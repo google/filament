@@ -141,11 +141,23 @@ public:
     }
 
     bool any() const noexcept {
-        T r = storage[0];
-        for (size_t i = 1; i < N; ++i) {
-            r |= storage[i];
+#if defined(TNT_UTILS_BITSET_USE_NEON)
+        if (BIT_COUNT % 128 == 0) {
+            uint64x2_t const* const p = (uint64x2_t const*) storage;
+            uint64x2_t r = p[0];
+            for (size_t i = 1; i < BIT_COUNT / 128; ++i) {
+                r |= p[i];
+            }
+            return bool(r[0] | r[1]);
+        } else
+#endif
+        {
+            T r = storage[0];
+            for (size_t i = 1; i < N; ++i) {
+                r |= storage[i];
+            }
+            return bool(r);
         }
-        return bool(r);
     }
 
     bool none() const noexcept {
@@ -153,11 +165,23 @@ public:
     }
 
     bool all() const noexcept {
-        T r = storage[0];
-        for (size_t i = 1; i < N; ++i) {
-            r &= storage[i];
+#if defined(TNT_UTILS_BITSET_USE_NEON)
+        if (BIT_COUNT % 128 == 0) {
+            uint64x2_t const* const p = (uint64x2_t const*) storage;
+            uint64x2_t r = p[0];
+            for (size_t i = 1; i < BIT_COUNT / 128; ++i) {
+                r &= p[i];
+            }
+            return T(~(r[0] & r[1])) == T(0);
+        } else
+#endif
+        {
+            T r = storage[0];
+            for (size_t i = 1; i < N; ++i) {
+                r &= storage[i];
+            }
+            return T(~r) == T(0);
         }
-        return T(~r) == T(0);
     }
 
     bool operator!=(const bitset& b) const noexcept {
