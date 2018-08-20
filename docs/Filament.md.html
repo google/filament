@@ -561,15 +561,20 @@ n_{ior} = \frac{2}{1 - \sqrt{\fNormal}} - 1
 Table [commonMatReflectance] describes acceptable Fresnel reflectance values for various types of materials (no real world material has a value under 2%).
 
 
-          Material         |    Reflectance
---------------------------:|:---------------------
-Glass                      | 3.5%
-Water                      | 2%
-Common liquids             | 2% to 4%
-Common gemstones           | 5% to 16%
-Other dielectric materials | 2% to 5%
-Default value              | 4%
-[Table [commonMatReflectance]: Reflectance of common materials]
+          Material         |    Reflectance   |   Linear value
+--------------------------:|:-----------------|:----------------
+Water                      | 2%               | 0.35
+Fabric                     | 4% to 5.6%       | 0.5 to 0.59
+Common liquids             | 2% to 4%         | 0.35 to 0.5
+Common gemstones           | 5% to 16%        | 0.56 to 1.0
+Plastics, glass            | 4% to 5%         | 0.5 to 0.56
+Other dielectric materials | 2% to 5%         | 0.35 to 0.56
+Eyes                       | 2.5%             | 0.39
+Skin                       | 2.8%             | 0.42
+Hair                       | 4.6%             | 0.54
+Teeth                      | 5.8%             | 0.6
+Default value              | 4%               | 0.5
+[Table [commonMatReflectance]: Reflectance of common materials (source: Real Time Rendering 4th Edition)]
 
 Table [fNormalMetals] lists the $\fNormal$ values for a few metals. The values are given in sRGB and must be used as the base color in our material model. Please refer to the annex, section [Specular color], for an explanation of how these sRGB colors are computed from measured data.
 
