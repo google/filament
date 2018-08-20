@@ -236,11 +236,14 @@ $ CC=/usr/bin/clang CXX=/usr/bin/clang++ \
 ```
 
 You can also export the `CC` and `CXX` environment variables to always point to `clang`. Another
-solution is to use `update-alternatives` to change the default compiler:
+solution is to use `update-alternatives` to both change the default compiler, and point to a
+specific version of clang:
 
 ```
-$ update-alternatives --install /usr/bin/cc /usr/bin/clang 100
-$ update-alternatives --install /usr/bin/c++ /usr/bin/clang++ 100
+$ update-alternatives --install /usr/bin/cc cc /usr/bin/clang 100
+$ update-alternatives --install /usr/bin/c++ c++ /usr/bin/clang++ 100
+$ update-alternatives --install /usr/bin/clang clang /usr/bin/clang-5.0 100
+$ update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-5.0 100
 ```
 
 Finally, invoke `ninja`:
