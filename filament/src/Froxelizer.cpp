@@ -663,7 +663,8 @@ void Froxelizer::froxelizeAssignRecordsCompress() noexcept {
     uint16_t offset = 0;
     FroxelEntry* const UTILS_RESTRICT froxels = mFroxelBufferUser.data();
 
-    auto remap = [stride = size_t(mFroxelCountX * mFroxelCountY)](size_t i) {
+    const size_t froxelCountX = mFroxelCountX;
+    auto remap = [stride = size_t(froxelCountX * mFroxelCountY)](size_t i) -> size_t {
         if (SUPPORTS_REMAPPED_FROXELS) {
             // TODO: with the non-square froxel change these would be mask ops instead of divide.
             i = (i % stride) * FEngine::CONFIG_FROXEL_SLICE_COUNT + (i / stride);
@@ -674,15 +675,12 @@ void Froxelizer::froxelizeAssignRecordsCompress() noexcept {
     RecordBufferType* const UTILS_RESTRICT froxelRecords = mRecordBufferUser.data();
 
     // how many froxel record entries were reused (for debugging)
-    UTILS_UNUSED size_t reused = FROXEL_BUFFER_ENTRY_COUNT_MAX;
+    UTILS_UNUSED size_t reused = 0;
 
     for (size_t i = 0, c = getFroxelCount(); i < c;) {
-#ifndef NDEBUG
-        reused--;
-#endif
-        auto const& b = records[i];
+        LightRecord b = records[i];
         // We have a limitation of 255 spot + 255 point lights per froxel.
-        const FroxelEntry entry = {
+        FroxelEntry entry = {
                 .offset = offset,
                 .pointLightCount = (uint8_t)std::min(size_t(255), (b.lights & ~spotLights).count()),
                 .spotLightCount  = (uint8_t)std::min(size_t(255), (b.lights &  spotLights).count())
@@ -725,10 +723,24 @@ void Froxelizer::froxelizeAssignRecordsCompress() noexcept {
 
         offset += lightCount;
 
-        // note: we can't use partition_point() here because we're not sorted
+#ifndef NDEBUG
+        if (lightCount) { reused--; }
+#endif
         do {
+#ifndef NDEBUG
+            if (lightCount) { reused++; }
+#endif
             froxels[remap(i++)].u32 = entry.u32;
-        } while(i < c && records[i].lights == b.lights);
+            if (i >= c) break;
+
+            if (records[i].lights != b.lights && i >= froxelCountX) {
+                // if this froxel record doesn't match the previous one on its left,
+                // we re-try with the record above it, which saves many froxel records
+                // (north of 10% in practice).
+                b = records[i - froxelCountX];
+                entry.u32 = froxels[remap(i - froxelCountX)].u32;
+            }
+        } while(records[i].lights == b.lights);
     }
 out_of_memory:
 
