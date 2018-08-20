@@ -473,6 +473,36 @@ void BRDF(...) {
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 [Listing [glslBRDF]: Evaluation of the BRDF in GLSL]
 
+## Improving the BRDFs
+
+We mentioned in section [Energy conservation] that energy conservation is one of the key components of a good BRDF. Unfortunately the BRDFs explored previously suffer from two problems that we will examine below.
+
+### Energy gain in diffuse reflectance
+
+The Lambert diffuse BRDF does not account for the light that reflects at the surface and that is therefore not able to participe in the diffuse scattering event.
+
+[TODO: talk about the issue with fr+fd]
+
+### Energy loss in specular reflectance
+
+The Cook-Torrance BRDF we presented earlier attempts to model several events at the microfacet level but does so by accounting for a single bounce of light. This approximation can cause a loss of energy at high roughness. Figure [singleVsMultiBounce] shows why this loss of energy occurs. In the single bounce (or single scattering) model, a ray of light hitting the surface can be reflected back onto another microfacet and thus be discarded because of the masking and shadowing term. If we however account for multiple bounces (multiple scattering), the same ray of light might escape the microfacet field and be reflected back towards the viewer.
+
+![Figure [singleVsMultiBounce]: Single scattering (left) vs multiple scattering](images/diagram_single_vs_multi_scatter.png)
+
+Based on this simple explanation, we can intuitively deduce that the rougher a surface is, the higher the chances are that energy gets lost because of the failure to account for multiple scaterring events. This loss of energy appears to darken rough materials. Metallic surfaces are particularly affected because all of their reflectance is specular. This darkening effect is illustrated in figure [metallicRoughEnergyLoss]. With multiple scattering energy conservation can be achieved, as shown in figure [metallicRoughEnergyConservation].
+
+![Figure [metallicRoughEnergyLoss]: Darkening increases with roughness due to single scattering](images/material_metallic_energy_loss.png)
+
+![Figure [metallicRoughEnergyConservation]: Energy conservation with multiple scattering](images/material_metallic_energy_conservation.png)
+
+We can use a white furnace, a uniform lighting environment set to pure white, to validate the energy conservative property of a BRDF. When energy conservation is achieved, a purely reflective metallic surface ($\fNormal = 1$) should be indistinguishable from the background, no matter the roughness of said surface. Figure [whiteFurnaceLoss] shows what such a surface looks like with the specular BRDF presented in the previous sections. The loss of energy as the roughness increases is obvious. In contrast, figure [whiteFurnaceConservation] shows that accounting for multiple scattering events addressed the energy loss.
+
+![Figure [whiteFurnaceLoss]: Darkening increases with roughness due to single scattering](images/material_furnace_energy_loss.png)
+
+![Figure [whiteFurnaceConservation]: Energy conservation with multiple scattering](images/material_furnace_energy_conservation.png)
+
+[TODO: Refer to Heitz' paper, refer to Kulla's paper, refer to Stephen Hill's blog]
+
 ## Parameterization
 
 Disney's material model described in [#Burley12] is a good starting point but its numerous parameters makes it impractical for real-time implementations. In addition, we would like our standard material model to be easy to understand and easy to use for both artists and developers.
