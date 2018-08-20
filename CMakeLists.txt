@@ -14,7 +14,7 @@ project(TNT)
 
 option(ENABLE_JAVA "Compile Java projects, requires a JDK and the JAVA_HOME env var" ON)
 
-option(USE_EXTERNAL_GLES3 "Experimental: Compile filament against OpenGL ES 3" OFF)
+option(USE_EXTERNAL_GLES3 "Experimental: Compile Filament against OpenGL ES 3" OFF)
 
 # ==================================================================================================
 # OS specific
