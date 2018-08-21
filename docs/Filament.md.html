@@ -495,13 +495,55 @@ Based on this simple explanation, we can intuitively deduce that the rougher a s
 
 ![Figure [metallicRoughEnergyConservation]: Energy conservation with multiple scattering](images/material_metallic_energy_conservation.png)
 
-We can use a white furnace, a uniform lighting environment set to pure white, to validate the energy conservative property of a BRDF. When energy conservation is achieved, a purely reflective metallic surface ($\fNormal = 1$) should be indistinguishable from the background, no matter the roughness of said surface. Figure [whiteFurnaceLoss] shows what such a surface looks like with the specular BRDF presented in the previous sections. The loss of energy as the roughness increases is obvious. In contrast, figure [whiteFurnaceConservation] shows that accounting for multiple scattering events addressed the energy loss.
+We can use a white furnace, a uniform lighting environment set to pure white, to validate the energy conservative property of a BRDF. When energy conservation is achieved, a purely reflective metallic surface ($\fNormal = 1$) should be indistinguishable from the background, no matter the roughness of said surface. Figure [whiteFurnaceLoss] shows what such a surface looks like with the specular BRDF presented in the previous sections. The loss of energy as the roughness increases is obvious. In contrast, figure [whiteFurnaceConservation] shows that accounting for multiple scattering events addresses the energy loss.
 
 ![Figure [whiteFurnaceLoss]: Darkening increases with roughness due to single scattering](images/material_furnace_energy_loss.png)
 
 ![Figure [whiteFurnaceConservation]: Energy conservation with multiple scattering](images/material_furnace_energy_conservation.png)
 
-[TODO: Refer to Heitz' paper, refer to Kulla's paper, refer to Stephen Hill's blog]
+Multiple scattering microfacet BRDFs are discussed in depth in [#Heitz16]. Unfortunately this paper only presents a stochastic evaluation of the multiple scattering BRDF. This solution is therefore not suitable for real-time rendering. Kulla and Conty present a different approach in [#Kulla17]. Their idea is to add an energy compensation term as an additional BRDF lobe show in equation $\ref{energyCompensationLobe}$:
+
+$$\begin{equation}\label{energyCompensationLobe}
+f_{ms}(l,v) = \frac{(1 - E(l)) (1 - E(v)) F_{avg}^2 E_{avg}}{\pi (1 - E_{avg}) (1 - F_{avg}(1 - E_{avg}))}
+\end{equation}$$
+
+Where $E$ is the directional albedo of the specular BRDF $f_r$, with $\fNormal$ set to 1:
+
+$$\begin{equation}
+E(l) = \int_{\Omega} f(l,v) (\NoV) dv
+\end{equation}$$
+
+The term $E_{avg}$ is the cosine-weighted average of $E$:
+
+$$\begin{equation}
+E_{avg} = 2 \int_0^1 E(\mu) \mu d\mu
+\end{equation}$$
+
+Similarly, $F_{avg}$ is the cosine-weighted average of the Fresnel term:
+
+$$\begin{equation}
+F_{avg} = 2 \int_0^1 F(\mu) \mu d\mu
+\end{equation}$$
+
+Both terms $E$ and $E_{avg}$ can be precomputed and stored in lookup tables. while $F_{avg}$ can be greatly simplified when the Shlick approximation is used:
+
+$$\begin{equation}\label{averageFresnel}
+F_{avg} = \frac{1 + 20 \fNormal}{21}
+\end{equation}$$
+
+In [#Lagarde18], with credit to Emmanuel Turquin, Lagarde and Golubev make the observation that equation $\ref{averageFresnel}$ can be simplified to $\fNormal$. They also propose to apply energy compensation by adding a scaled GGX specular lobe:
+
+$$\begin{equation}\label{energyCompensation}
+f_{ms}(l,v) = f_r(l,v) + \fNormal \frac{1 - E(l)}{E(l)} f_r(l,v)
+\end{equation}$$
+
+The key insight is that $E(l)$ can not only be precomputed but also shared with image-based lighting preintegration. The multiple-scattering energy compensation formula thus becomes:
+
+$$\begin{equation}
+f = f_r(l,v) + \fNormal \left( \frac{1}{r} - 1 \right) f_r(l,v)
+\end{equation}$$
+
+
 
 ## Parameterization
 
@@ -604,7 +646,7 @@ Skin                       | 2.8%             | 0.42
 Hair                       | 4.6%             | 0.54
 Teeth                      | 5.8%             | 0.6
 Default value              | 4%               | 0.5
-[Table [commonMatReflectance]: Reflectance of common materials (source: Real Time Rendering 4th Edition)]
+[Table [commonMatReflectance]: Reflectance of common materials (source: Real-Time Rendering 4th Edition)]
 
 Table [fNormalMetals] lists the $\fNormal$ values for a few metals. The values are given in sRGB and must be used as the base color in our material model. Please refer to the annex, section [Specular color], for an explanation of how these sRGB colors are computed from measured data.
 
@@ -3935,6 +3977,9 @@ void main() {
 
 # Revisions
 
+August 21, 2018: BRDF improvements
+- Added section [Energy loss in specular reflectance] on how to compensate for loss of energy at high roughness
+
 August 17, 2018: Specular color
  - Added section [Specular color] to explain how the base color of various metals is computed
  
@@ -3959,12 +4004,14 @@ August 3, 2018: First public version
 
 [#Burley12]: Brent Burley. 2012. Physically Based Shading at Disney. *Physically Based Shading in Film and Game Production, ACM SIGGRAPH 2012 Courses*.
 
-[#Estevez17]: Alejandro Conty Estevez and Christopher Kulla. 2017. Production Friendly Microfacet Sheen BRDF. *SIGGRAPH 2017*.
+[#Estevez17]: Alejandro Conty Estevez and Christopher Kulla. 2017. Production Friendly Microfacet Sheen BRDF. *ACM SIGGRAPH 2017*.
 
 [#Hammon17]: Earl Hammon. 217. PBR Diffuse Lighting for GGX+Smith Microsurfaces. *GDC 2017*.
 
 [#Heitz14]: Eric Heitz. 2014. Understanding the Masking-Shadowing Function
 in Microfacet-Based BRDFs. *Journal of Computer Graphics Techniques*, 3 (2).
+
+[#Heitz16]: Eric Heitz et al. 2016. Multiple-Scattering Microfacet BSDFs with the Smith Model. *ACM SIGGRAPH 2016*.
 
 [#Hill12]: Colin Barré-Brisebois and Stephen Hill. 2012. Blending in Detail. http://blog.selfshadow.com/publications/blending-in-detail/
 
@@ -3981,6 +4028,8 @@ in Microfacet-Based BRDFs. *Journal of Computer Graphics Techniques*, 3 (2).
 [#Kulla17]: Christopher Kulla and Alejandro Conty. 2017. Revisiting Physically Based Shading at Imageworks. *ACM SIGGRAPH 2017*
 
 [#Lagarde14]: Sébastien Lagarde and Charles de Rousiers. 2014. Moving Frostbite to PBR. *Physically Based Shading in Theory and Practice, ACM SIGGRAPH 2014 Courses*.
+
+[#Lagarde18]: Sébastien Lagarde and Evgenii Golubev. 2018. The road toward unified rendering with Unity’s high definition rendering pipeline. *Advances in Real-Time Rendering in Games, ACM SIGGRAPH 2018 Courses*.
 
 [#Lazarov13]: Dimitar Lazarov. 2013. Physically-Based Shading in Call of Duty: Black Ops. *Physically Based Shading in Theory and Practice, ACM SIGGRAPH 2013 Courses*.
 
