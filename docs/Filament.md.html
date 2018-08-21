@@ -485,23 +485,23 @@ The Lambert diffuse BRDF does not account for the light that reflects at the sur
 
 ### Energy loss in specular reflectance
 
-The Cook-Torrance BRDF we presented earlier attempts to model several events at the microfacet level but does so by accounting for a single bounce of light. This approximation can cause a loss of energy at high roughness. Figure [singleVsMultiBounce] shows why this loss of energy occurs. In the single bounce (or single scattering) model, a ray of light hitting the surface can be reflected back onto another microfacet and thus be discarded because of the masking and shadowing term. If we however account for multiple bounces (multiple scattering), the same ray of light might escape the microfacet field and be reflected back towards the viewer.
+The Cook-Torrance BRDF we presented earlier attempts to model several events at the microfacet level but does so by accounting for a single bounce of light. This approximation can cause a loss of energy at high roughness. Figure [singleVsMultiBounce] shows why this loss of energy occurs. In the single bounce (or single scattering) model, a ray of light hitting the surface can be reflected back onto another microfacet and thus be discarded because of the masking and shadowing term. If we however account for multiple bounces (multiscattering), the same ray of light might escape the microfacet field and be reflected back towards the viewer.
 
-![Figure [singleVsMultiBounce]: Single scattering (left) vs multiple scattering](images/diagram_single_vs_multi_scatter.png)
+![Figure [singleVsMultiBounce]: Single scattering (left) vs multiscattering](images/diagram_single_vs_multi_scatter.png)
 
-Based on this simple explanation, we can intuitively deduce that the rougher a surface is, the higher the chances are that energy gets lost because of the failure to account for multiple scaterring events. This loss of energy appears to darken rough materials. Metallic surfaces are particularly affected because all of their reflectance is specular. This darkening effect is illustrated in figure [metallicRoughEnergyLoss]. With multiple scattering energy conservation can be achieved, as shown in figure [metallicRoughEnergyConservation].
+Based on this simple explanation, we can intuitively deduce that the rougher a surface is, the higher the chances are that energy gets lost because of the failure to account for multiple scaterring events. This loss of energy appears to darken rough materials. Metallic surfaces are particularly affected because all of their reflectance is specular. This darkening effect is illustrated in figure [metallicRoughEnergyLoss]. With multiscattering energy conservation can be achieved, as shown in figure [metallicRoughEnergyConservation].
 
 ![Figure [metallicRoughEnergyLoss]: Darkening increases with roughness due to single scattering](images/material_metallic_energy_loss.png)
 
-![Figure [metallicRoughEnergyConservation]: Energy conservation with multiple scattering](images/material_metallic_energy_conservation.png)
+![Figure [metallicRoughEnergyConservation]: Energy conservation with multiscattering](images/material_metallic_energy_conservation.png)
 
-We can use a white furnace, a uniform lighting environment set to pure white, to validate the energy conservative property of a BRDF. When energy conservation is achieved, a purely reflective metallic surface ($\fNormal = 1$) should be indistinguishable from the background, no matter the roughness of said surface. Figure [whiteFurnaceLoss] shows what such a surface looks like with the specular BRDF presented in the previous sections. The loss of energy as the roughness increases is obvious. In contrast, figure [whiteFurnaceConservation] shows that accounting for multiple scattering events addresses the energy loss.
+We can use a white furnace, a uniform lighting environment set to pure white, to validate the energy conservative property of a BRDF. When energy conservation is achieved, a purely reflective metallic surface ($\fNormal = 1$) should be indistinguishable from the background, no matter the roughness of said surface. Figure [whiteFurnaceLoss] shows what such a surface looks like with the specular BRDF presented in the previous sections. The loss of energy as the roughness increases is obvious. In contrast, figure [whiteFurnaceConservation] shows that accounting for multiscattering events addresses the energy loss.
 
 ![Figure [whiteFurnaceLoss]: Darkening increases with roughness due to single scattering](images/material_furnace_energy_loss.png)
 
-![Figure [whiteFurnaceConservation]: Energy conservation with multiple scattering](images/material_furnace_energy_conservation.png)
+![Figure [whiteFurnaceConservation]: Energy conservation with multiscattering](images/material_furnace_energy_conservation.png)
 
-Multiple scattering microfacet BRDFs are discussed in depth in [#Heitz16]. Unfortunately this paper only presents a stochastic evaluation of the multiple scattering BRDF. This solution is therefore not suitable for real-time rendering. Kulla and Conty present a different approach in [#Kulla17]. Their idea is to add an energy compensation term as an additional BRDF lobe show in equation $\ref{energyCompensationLobe}$:
+Multiple-scattering microfacet BRDFs are discussed in depth in [#Heitz16]. Unfortunately this paper only presents a stochastic evaluation of the multiscattering BRDF. This solution is therefore not suitable for real-time rendering. Kulla and Conty present a different approach in [#Kulla17]. Their idea is to add an energy compensation term as an additional BRDF lobe shown in equation $\ref{energyCompensationLobe}$:
 
 $$\begin{equation}\label{energyCompensationLobe}
 f_{ms}(l,v) = \frac{(1 - E(l)) (1 - E(v)) F_{avg}^2 E_{avg}}{\pi (1 - E_{avg}) (1 - F_{avg}(1 - E_{avg}))}
@@ -534,16 +534,31 @@ F_{avg} = \frac{1 + 20 \fNormal}{21}
 In [#Lagarde18], with credit to Emmanuel Turquin, Lagarde and Golubev make the observation that equation $\ref{averageFresnel}$ can be simplified to $\fNormal$. They also propose to apply energy compensation by adding a scaled GGX specular lobe:
 
 $$\begin{equation}\label{energyCompensation}
-f_{ms}(l,v) = f_r(l,v) + \fNormal \frac{1 - E(l)}{E(l)} f_r(l,v)
+f_{ms}(l,v) = \fNormal \frac{1 - E(l)}{E(l)} f_r(l,v)
 \end{equation}$$
 
-The key insight is that $E(l)$ can not only be precomputed but also shared with image-based lighting preintegration. The multiple-scattering energy compensation formula thus becomes:
+The key insight is that $E(l)$ can not only be precomputed but also shared with image-based lighting pre-integration. The multiscattering energy compensation formula thus becomes:
+
+$$\begin{equation}\label{scaledEnergyCompensationLobe}
+f(l,v) = f_r(l,v) + \fNormal \left( \frac{1}{r} - 1 \right) f_r(l,v)
+\end{equation}$$
+
+Where $r$ is defined as:
 
 $$\begin{equation}
-f = f_r(l,v) + \fNormal \left( \frac{1}{r} - 1 \right) f_r(l,v)
+r = \int_{\Omega} D(l,v) V(l,v) \left< \NoL \right> dl
 \end{equation}$$
 
+We can implement specular energy compensation at a negligible cost if we store $r$ in the DFG lookup table presented in section [Image based lights]. Listing [energyCompensationImpl] shows that the implementation is a direct conversion of equation $\ref{scaledEnergyCompensationLobe}$.
 
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+vec3 energyCompensation = 1.0 + f0 * (1.0 / dfg.y - 1.0);
+// Scale the specular lobe to account for multiscattering
+Fr *= pixel.energyCompensation;
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+[Listing [energyCompensationImpl]: Implementation of the energy compensation specular lobe]
+
+Please refer to section [Image based lights] and section [Pre-integration for multiscattering] to learn how the DFG lookup table is derived and computed.
 
 ## Parameterization
 
@@ -1862,8 +1877,8 @@ $$\begin{equation}\label{iblDFV}
 
 $$
 \begin{align*}
- F(l, v, f_0) &= f_0 + (f_{90} - f_0) F_c(h) \qquad \text{with} \; F_c(h) = (1- \LoH)^5 \\
-              &= f_0 (1 - F_c(h)) + f_{90} F_c(h) \\
+F(l, v, f_0) &= f_0 + (f_{90} - f_0) F_c(h) \qquad \text{with} \; F_c(h) = (1- \LoH)^5 \\
+             &= f_0 (1 - F_c(h)) + f_{90} F_c(h) \\
 \\
 DV(h, \alpha) &= D(l, v, \alpha) V(l, v, \alpha)
 \end{align*}
@@ -1877,12 +1892,10 @@ $$
 
 This expression can easily be precomputed in two 2D tables, as it depends only on $\NoV$ and $\alpha$:
 
-$$
-\begin{align*}
-DFV_1(\NoV, \alpha) &= \int_\Omega \big(1 - F_c(h)\big) DV(h, \alpha) \left< \NoL \right> dl \\
-DFV_2(\NoV, \alpha) &= \int_\Omega F_c(h) DV(h, \alpha) \left< \NoL \right> dl \\
-\end{align*}
-$$
+$$\begin{equation}\label{DFV1DFV2}
+DFV_1(\NoV, \alpha) = \int_\Omega \big(1 - F_c(h)\big) DV(h, \alpha) \left< \NoL \right> dl \\
+DFV_2(\NoV, \alpha) = \int_\Omega F_c(h) DV(h, \alpha) \left< \NoL \right> dl
+\end{equation}$$
 
 $$\begin{equation}\label{specularBRDFIntegrationConstant}
 L_{out}^{constant}(n, v, \Theta) = L_{\bot}^{constant}\bigg[
@@ -1950,9 +1963,7 @@ $$
 radiance_{out} = (\color{red}{BRDF \ast \bar{\Lt}}) \times (\color{blue}{BRDF^{simplified} \ast \Lt})
 $$
 
-
 An interesting point to note is that if we simplified the BRDF a bit more by assuming no fresnel and no shadowing/masking, i.e. $F()=V()=1$ we would find the expression of Brian Karis's "split-sum" approximation, and $K(\alpha)$ would match Karis's empirical normalization factor exactly.
-
 
 ##### Discrete Domain #####
 
@@ -1984,7 +1995,7 @@ $$
 \end{align*}
 $$
 
-Both $DFV_1$ and $DFV_2$ can either be pre-calculated in a regular 2D texture indexed by $ (\NoV, \alpha) $ and sampled bilinearly, or computed at runtime using an analytic approximation of the surfaces. See sample code in the annex. The pre-calculated textures are shown in table [textureDFG].
+Both $DFV_1$ and $DFV_2$ can either be pre-calculated in a regular 2D texture indexed by $ (\NoV, \alpha) $ and sampled bilinearly, or computed at runtime using an analytic approximation of the surfaces. See sample code in the annex. The pre-calculated textures are shown in table [textureDFG]. A C++ implementation of the pre-computation can be found in section [Precomputing L for image-based lighting].
 
 
 $DFG_1$                  | $DFG_2$                  | ${ DFG_1, DFG_2, 0 }$
@@ -2026,14 +2037,14 @@ vec3 ibl(vec3 n, vec3 v, vec3 diffuseColor, vec3 f0, float roughness) {
     vec3 r = reflect(n);
     vec3 Ld = textureCube(irradianceEnvMap, r) * diffuseColor;
     vec3 Lld = textureCube(prefilteredEnvMap, r, computeLODFromRoughness(roughness));
-    vec2 Ldfg = texture2D(dfgLut, vec2(dot(n,v), roughness * roughness)).xy;
+    vec2 Ldfg = texture2D(dfgLut, vec2(dot(n, v), roughness)).xy;
     vec3 Lr =  (f0 * Ldfg.x + Ldfg.y) * Lld;
     return Ld + Lr;
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 [Listing [iblEvaluation]: GLSL implementation of image based lighting evaluation]
 
-We can however save a couple of texture lookups by using [Spherical Harmonics] instead of an irradiance cubemap and the analytical approximation of the $DFG$ LUT, as shown in listing [optimizedIblEvaluation].
+We can however save a couple of texture lookups by using Spherical Harmonics instead of an irradiance cubemap and the analytical approximation of the $DFG$ LUT, as shown in listing [optimizedIblEvaluation].
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 vec3 irradianceSH(vec3 n) {
@@ -2100,6 +2111,54 @@ vec3 evaluateIBL(vec3 n, vec3 v, vec3 diffuseColor, vec3 f0, float roughness) {
 [^iblDiffuse2]: $\Omega_s$ can be approximated by $\frac{2\pi}{6 \cdot width \cdot height}$ for a cubemap
 
 [^iblDiffuse3]: $O(12\,n^2\,m^2)$, with $n$ and $m$ respectively the dimensions of the environment and the precomputed cubemap
+
+### Pre-integration for multiscattering ###
+
+In section [Energy loss in specular reflectance] we discussed how to use a second scaled specular lobe to compensate for the energy loss due to only acounting for a single scattering event in our BRDF. This energy compensation lobe is scaled by a term that depends on $r$ defined in the following way:
+
+$$\begin{equation}
+r = \int_{\Omega} D(l,v) V(l,v) \left< \NoL \right> dl
+\end{equation}$$
+
+This equality is very similar to the terms $DFV_1$ and $DFV_2$ seen in equation $\ref{DFV1DFV2}$. Starting from equation $\ref{iblDFV}$ we can rewrite these two terms to match our definition of $r$. Recall that:
+
+$$\begin{equation}
+\Lout(n,v,\Theta) = \Lt^{constant} \int_\Omega D(l, v, \alpha) F(l, v, f_0, f_{90}) V(l, v, \alpha) \left< \NoL \right> dl
+\end{equation}$$
+
+With the Shlick Fresnel approximation we can instead write:
+
+$$\begin{align*}
+DFG &= \int_\Omega (\fNormal + (1 - \fNormal) (1 - \left< \LoH \right>)^5) D(l, v, \alpha) V(l, v, \alpha) \left< \NoL \right> dl \\
+DFG &= (1 - \fNormal) \int_\Omega (1 - \left< \LoH \right>)^5 D(l, v, \alpha) V(l, v, \alpha) \left< \NoL \right> dl +
+\fNormal \int_\Omega D(l, v, \alpha) V(l, v, \alpha) \left< \NoL \right> dl \\
+DFG &= (1 - \fNormal) DFV_1(\NoV, \alpha) + \fNormal DFV_2(\NoV, \alpha) \\
+\end{align*}$$
+
+Where:
+
+$$\begin{align*}
+DFV_1(\NoV, \alpha) &= \int_\Omega (1 - \left< \LoH \right>)^5 D(l, v, \alpha) V(l, v, \alpha) \left< \NoL \right> dl \\
+DFV_2(\NoV, \alpha) &= \int_\Omega D(l, v, \alpha) V(l, v, \alpha) \left< \NoL \right> dl
+\end{align*}$$
+
+These two new $DFV$ terms simply need to replace the ones used in the implementation shown in section [Precomputing L for image-based lighting]:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+float Fc = pow(1 - VoH, 5.0f);
+r.x += Gv * Fc;
+r.y += Gv;
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+[Listing [multiscatterIBLPreintegration]: C++ implementation of the $L_{DFG}$ term for multiscattering]
+
+To perform the reconstruction we need to slightly modify listing [multiscatterIBLEvaluation]:
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+vec2 dfg = textureLod(dfgLut, vec2(dot(n, v), roughness), 0.0).xy;
+// (1 - f0) * dfg.x + f0 * dfg.y
+vec3 specularColor = mix(dfg.xxx, dfg.yyy, f0);
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+[Listing [multiscatterIBLEvaluation]: GLSL implementation of image based lighting evaluation, with multiscattering LUT]
 
 ### Clear coat ###
 
@@ -3376,29 +3435,29 @@ float GDFG(float NoV, float NoL, float a) {
 
 float2 DFG(float NoV, float a) {
     float3 V;
-    V.x = sqrt(1.f - NoV*NoV);
-    V.y = 0;
+    V.x = sqrt(1.0f - NoV*NoV);
+    V.y = 0.0f;
     V.z = NoV;
 
-    float2 r = 0;
-    for (uint i = 0 ; i < sampleCount ; i++) {
+    float2 r = 0.0f;
+    for (uint i = 0; i < sampleCount; i++) {
         float2 Xi = hammersley(i, sampleCount);
         float3 H = importanceSampleGGX(Xi, a, N);       
-        float3 L = 2 * dot(V, H)*H - V;
+        float3 L = 2.0f * dot(V, H) * H - V;
 
         float VoH = saturate(dot(V, H));
-        float NoL = saturate( L.z );
-        float NoH = saturate( H.z );
+        float NoL = saturate(L.z);
+        float NoH = saturate(H.z);
 
-        if (NoL > 0) {
+        if (NoL > 0.0f) {
             float G = GDFG(NoV, NoL, a);
             float Gv = G * VoH / NoH;
-            float Fc = pow(1-VoH, 5.f);
-            r.x += (1-Fc) * Gv;
-            r.y += Fc * Gv;
+            float Fc = pow(1 - VoH, 5.0f);
+            r.x += Gv * (1 - Fc);
+            r.y += Gv * Fc;
         }
     }
-    return r * (1.f / sampleCount);
+    return r * (1.0f / sampleCount);
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 [C++ implementation of the $ L_{DFG} $ term]
