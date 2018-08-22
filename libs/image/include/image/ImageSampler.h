@@ -129,6 +129,28 @@ LinearImage resampleImage(const LinearImage& source, uint32_t width, uint32_t he
 void computeSingleSample(const LinearImage& source, float x, float y, SingleSample* result,
         Filter filter = Filter::BOX);
 
+/**
+ * Generates a sequence of miplevels using the requested filter. To determine the number of mips
+ * it would take to get down to 1x1, see getMipmapCount.
+ *
+ * Source image need not be power-of-two. In the result vector, the half-size image is returned at
+ * index 0, the quarter-size image is at index 1, etc. Please note that the original-sized image is
+ * not included.
+ */
+void generateMipmaps(const LinearImage& source, Filter, LinearImage* result, uint32_t mipCount);
+
+/**
+ * Returns the number of miplevels it would take to downsample the given image down to 1x1. This
+ * number does not include the original image (i.e. mip 0).
+ */
+uint32_t getMipmapCount(const LinearImage& source);
+
+/**
+ * Given the string name of a filter, converts it to uppercase and returns the corresponding
+ * enum value. If no corresponding enumerant exists, returns DEFAULT.
+ */
+Filter filterFromString(const char* name);
+
 } // namespace image
 
 #endif /* IMAGE_IMAGESAMPLER_H */
