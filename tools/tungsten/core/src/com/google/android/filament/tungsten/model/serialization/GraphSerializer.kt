@@ -16,9 +16,11 @@
 
 package com.google.android.filament.tungsten.model.serialization
 
-import com.google.android.filament.tungsten.model.ConnectionModel
-import com.google.android.filament.tungsten.model.MaterialGraphModel
-import com.google.android.filament.tungsten.model.NodeModel
+import com.google.android.filament.tungsten.model.Connection
+import com.google.android.filament.tungsten.model.Graph
+import com.google.android.filament.tungsten.model.Node
+import com.google.android.filament.tungsten.model.NodeId
+import java.awt.Point
 
 /**
  * An interface used by GraphSerializer that maps classes of NodeModels into String type identifiers
@@ -27,50 +29,33 @@ import com.google.android.filament.tungsten.model.NodeModel
  */
 interface INodeFactory {
 
-    fun createNodeForTypeIdentifier(typeIdentifier: String): NodeModel?
-
-    fun typeIdentifierForNode(node: NodeModel): String?
+    fun createNodeForTypeIdentifier(typeIdentifier: String, id: NodeId): Node?
 }
 
 const val GRAPH_VERSION = "0.1"
-const val ROOT_NODE_ID = 0
 
 object GraphSerializer {
 
     fun serialize(
-        graph: MaterialGraphModel,
+        graph: Graph,
         editorData: Map<String, Any>,
-        nodeFactory: INodeFactory,
         serializer: ISerializer = JsonSerializer()
     ): String {
-        // Assign a unique id to each of the nodes in the graph (starting at 1)
-        val nodeToId = mutableMapOf<NodeModel, Int>()
-
-        val nodesToSerialize = mutableListOf<Node>()
-        for ((index, node) in graph.nodes.withIndex()) {
-            // The root node has a special id of 0
-            val nodeId = if (node == graph.rootNode) ROOT_NODE_ID else index + 1
-
-            nodeToId[node] = nodeId
-
-            val typeIdentifier = nodeFactory.typeIdentifierForNode(node)
-            if (typeIdentifier != null) {
-                nodesToSerialize.add(Node(typeIdentifier, nodeId, node.position))
-            }
+        val nodesToSerialize = graph.nodes.map { n ->
+            NodeSchema(n.type, n.id, Point(n.x.toInt(), n.y.toInt()))
         }
 
-        val connectionsToSerialize = mutableListOf<Connection>()
-        for (connection in graph.connections) {
-            val fromId = nodeToId[connection.outputSlot.node]
-            val fromSlot = connection.outputSlot.label
-            val toId = nodeToId[connection.inputSlot.node]
-            val toSlot = connection.inputSlot.label
-            if (fromId != null && toId != null && fromSlot != null && toSlot != null) {
-                connectionsToSerialize.add(Connection(fromId, fromSlot, toId, toSlot))
-            }
+        val connectionsToSerialize = graph.connections.map { c ->
+            val fromId = c.outputSlot.nodeId
+            val fromSlot = c.outputSlot.name
+            val toId = c.inputSlot.nodeId
+            val toSlot = c.inputSlot.name
+            ConnectionSchema(fromId, fromSlot, toId, toSlot)
         }
+
         return serializer.serialize(
-                Graph(nodesToSerialize, connectionsToSerialize, GRAPH_VERSION, editorData)
+                GraphSchema(nodesToSerialize, graph.rootNodeId, connectionsToSerialize,
+                        GRAPH_VERSION, editorData)
         )
     }
 
@@ -78,47 +63,26 @@ object GraphSerializer {
         data: String,
         nodeFactory: INodeFactory,
         deserializer: IDeserializer = JsonDeserializer()
-    ): Pair<MaterialGraphModel, Map<String, Any>> {
-        val graph = MaterialGraphModel()
-        val idToNode = HashMap<Int, NodeModel>()
-        val (nodes, connections, _, editor) = deserializer.deserialize(data)
+    ): Pair<Graph, Map<String, Any>> {
+        val (nodes, rootNode, connections, _, editor) = deserializer.deserialize(data)
 
-        for (node in nodes) {
-            val newNode = nodeFactory.createNodeForTypeIdentifier(node.type)
-            if (newNode != null) {
-                if (node.id == ROOT_NODE_ID) {
-                    graph.rootNode = newNode
-                }
-                node.position?.let { p -> newNode.setPosition(p.x, p.y) }
-                graph.addNode(newNode)
-                idToNode[node.id] = newNode
-            }
+        val nodesInGraph = nodes.mapNotNull { n ->
+            val newNode = nodeFactory.createNodeForTypeIdentifier(n.type, n.id)
+            val position = n.position ?: Point(0, 0)
+            newNode?.copy(x = position.x.toFloat(), y = position.y.toFloat())
         }
 
-        for (connection in connections) {
-            val fromNode = idToNode[connection.from.id]
-            val outputSlotName = connection.from.name
-            val toNode = idToNode[connection.to.id]
-            val inputSlotName = connection.to.name
+        val nodeMap = nodesInGraph.associateBy { n -> n.id }
 
-            // Ensure we have two valid nodes
-            if (fromNode == null || toNode == null) {
-                break
-            }
-
-            // Ensure we have two valid slots
-            val outputSlot = fromNode.getOutputSlot(outputSlotName)
-            val inputSlot = toNode.getInputSlot(inputSlotName)
-            if (outputSlot == null || inputSlot == null) {
-                break
-            }
-
-            inputSlot.connectTo(outputSlot)
-
-            val newConnection = ConnectionModel(outputSlot, inputSlot)
-            graph.createConnection(newConnection)
+        val connectionsInGraph = connections.mapNotNull { c ->
+            // Only add connections if they refer to valid nodes in the graph
+            if (c.from.id in nodeMap && c.to.id in nodeMap)
+            Connection(Node.OutputSlot(c.from.id, c.from.name),
+                    Node.InputSlot(c.to.id, c.to.name)) else null
         }
 
+        val graph = Graph(nodes = nodesInGraph, rootNodeId = rootNode,
+                connections = connectionsInGraph)
         return Pair(graph, editor)
     }
 }

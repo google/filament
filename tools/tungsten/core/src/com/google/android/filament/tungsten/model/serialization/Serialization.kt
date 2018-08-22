@@ -23,16 +23,16 @@ import com.google.gson.JsonSerializer
 
 interface ISerializer {
 
-    fun serialize(graph: Graph): String
+    fun serialize(graph: GraphSchema): String
 }
 
 interface IDeserializer {
 
-    fun deserialize(data: String): Graph
+    fun deserialize(data: String): GraphSchema
 }
 
 // Serialize Slot as an array: [5, "foobar"]
-val slotSerializer: JsonSerializer<Slot> = JsonSerializer { src, _, _ ->
+val slotSerializer: JsonSerializer<SlotSchema> = JsonSerializer { src, _, _ ->
     val pairArray = JsonArray()
     pairArray.add(src.id)
     pairArray.add(src.name)
@@ -40,18 +40,18 @@ val slotSerializer: JsonSerializer<Slot> = JsonSerializer { src, _, _ ->
 }
 
 // Deserialize Slot from an array: [5, "foobar"]
-val slotDeserializer: JsonDeserializer<Slot> = JsonDeserializer { element, _, _ ->
+val slotDeserializer: JsonDeserializer<SlotSchema> = JsonDeserializer { element, _, _ ->
     val o = element.asJsonArray
     val id = o.get(0).asInt
     val slot = o.get(1).asString
-    Slot(id, slot)
+    SlotSchema(id, slot)
 }
 
 class JsonSerializer : ISerializer {
 
-    override fun serialize(graph: Graph): String {
+    override fun serialize(graph: GraphSchema): String {
         val gsonBuilder = GsonBuilder()
-        gsonBuilder.registerTypeAdapter(Slot::class.java, slotSerializer)
+        gsonBuilder.registerTypeAdapter(SlotSchema::class.java, slotSerializer)
         val gson = gsonBuilder.create()
         return gson.toJson(graph)
     }
@@ -59,10 +59,10 @@ class JsonSerializer : ISerializer {
 
 class JsonDeserializer : IDeserializer {
 
-    override fun deserialize(data: String): Graph {
+    override fun deserialize(data: String): GraphSchema {
         val gsonBuilder = GsonBuilder()
-        gsonBuilder.registerTypeAdapter(Slot::class.java, slotDeserializer)
+        gsonBuilder.registerTypeAdapter(SlotSchema::class.java, slotDeserializer)
         val gson = gsonBuilder.create()
-        return gson.fromJson(data, Graph::class.java)
+        return gson.fromJson(data, GraphSchema::class.java)
     }
 }
