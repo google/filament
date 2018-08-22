@@ -147,9 +147,9 @@ uint32_t getMipmapCount(const LinearImage& source);
 
 /**
  * Given the string name of a filter, converts it to uppercase and returns the corresponding
- * enum value. If no corresponding enumerant exists, returns DEFAULT and sets valid to false.
+ * enum value. If no corresponding enumerant exists, returns DEFAULT.
  */
-Filter filterFromString(const char* name, bool* valid = nullptr);
+Filter filterFromString(const char* name);
 
 } // namespace image
 

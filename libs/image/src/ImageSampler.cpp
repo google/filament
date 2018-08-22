@@ -347,7 +347,7 @@ uint32_t getMipmapCount(const LinearImage& source) {
     return count;
 }
 
-Filter filterFromString(const char* rawname, bool* valid) {
+Filter filterFromString(const char* rawname) {
     using namespace utils;
     using namespace std;
     static const unordered_map<StaticString, Filter> map = {
@@ -363,16 +363,7 @@ Filter filterFromString(const char* rawname, bool* valid) {
     string name = rawname;
     for (auto& c: name) c = toupper((unsigned char) c);
     auto iter = map.find({ name.c_str(), name.size() });
-    if (iter == map.end())  {
-        if (valid) {
-            *valid = false;
-        }
-        return Filter::DEFAULT;
-    }
-    if (valid) {
-        *valid = true;
-    }
-    return iter->second;
+    return iter == map.end() ? Filter::DEFAULT : iter->second;
 }
 
 } // namespace image

@@ -33,11 +33,17 @@ using namespace utils;
 
 static ImageEncoder::Format g_format = ImageEncoder::Format::PNG_LINEAR;
 static bool g_formatSpecified = false;
+static bool g_createGallery = false;
 static string g_compression = "";
 static Filter g_filter = Filter::DEFAULT;
 
 static const char* USAGE = R"TXT(
 MIPGEN generates mipmaps for an image down to the 1x1 level.
+
+Output filenames are generated using the specified printf pattern.
+For example, "mip%2d.png" would generate mip01.png, mip02.png, etc.
+Note that miplevel 0 is not generated since it is the original image.
+
 Usage:
     MIPGEN [options] <input_file> <output_pattern>
 
@@ -46,6 +52,8 @@ Options:
        print this message
    --license
        print copyright and license information
+   --gallery, -g
+       generate HTML gallery for review purposes (mipmap.html)
    --format=[exr|hdr|rgbm|psd|png|dds], -f [exr|hdr|rgbm|psd|png|dds]
        specify output file format, inferred from output pattern if omitted
    --kernel=[box|nearest|hermite|gaussian|normals|mitchell|lanczos|min], -k [filter]
@@ -59,7 +67,7 @@ Options:
            DDS: 8, 16 (default), 32
 
 Example:
-    MIPGEN --kernel=hermite grassland.png mip_%03d.png
+    MIPGEN -g --kernel=hermite grassland.png mip_%03d.png
 )TXT";
 
 static const char* HTML_PREFIX = R"HTML(<!DOCTYPE html>
@@ -98,10 +106,11 @@ static void license() {
 }
 
 static int handleArguments(int argc, char* argv[]) {
-    static constexpr const char* OPTSTR = "hlf:c:k:";
+    static constexpr const char* OPTSTR = "hlgf:c:k:";
     static const struct option OPTIONS[] = {
             { "help",                 no_argument, 0, 'h' },
             { "license",              no_argument, 0, 'l' },
+            { "gallery",              no_argument, 0, 'g' },
             { "format",         required_argument, 0, 'f' },
             { "compression",    required_argument, 0, 'c' },
             { "kernel",         required_argument, 0, 'k' },
@@ -121,12 +130,16 @@ static int handleArguments(int argc, char* argv[]) {
             case 'l':
                 license();
                 exit(0);
+            case 'g':
+                g_createGallery = true;
+                break;
             case 'k': {
                 bool isvalid;
-                g_filter = filterFromString(arg.c_str(), &isvalid);
-                if (!isvalid) {
-                    cerr << "Warning: unknown filter: " << arg << endl;
+                g_filter = filterFromString(arg.c_str());
+                if (g_filter == Filter::DEFAULT) {
+                    cerr << "Warning: unrecognized filter, falling back to DEFAULT." << endl;
                 }
+                break;
             }
             case 'f':
                 if (arg == "png") {
@@ -196,7 +209,7 @@ int main(int argc, char* argv[]) {
     for (auto image: miplevels) {
         int result = snprintf(path, sizeof(path), outputPattern.c_str(), mip++);
         if (result < 0 || result >= sizeof(path)) {
-            puts("Output pattern is too long.");
+            cerr << "Output pattern is too long." << endl;
             exit(1);
         }
         ofstream outputStream(path, ios::binary | ios::trunc);
@@ -211,30 +224,32 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    puts("Generating mipmaps.html...");
-    char tag[256];
-    mip = 1;
-    const char* pattern = R"(<image src="%s" width="%dpx" height="%dpx">)";
-    const uint32_t width = sourceImage.getWidth();
-    const uint32_t height = sourceImage.getHeight();
-    ofstream html("mipmaps.html", ios::trunc);
-    html << HTML_PREFIX;
-    int result = snprintf(tag, sizeof(tag), pattern, inputPath.c_str(), width, height);
-    if (result < 0 || result >= sizeof(tag)) {
-        puts("Output pattern is too long.");
-        exit(1);
-    }
-    html << tag << std::endl;
-    for (auto image: miplevels) {
-        snprintf(path, sizeof(path), outputPattern.c_str(), mip++);
-        result = snprintf(tag, sizeof(tag), pattern, path, width, height);
+    if (g_createGallery) {
+        puts("Generating mipmaps.html...");
+        char tag[256];
+        mip = 1;
+        const char* pattern = R"(<image src="%s" width="%dpx" height="%dpx">)";
+        const uint32_t width = sourceImage.getWidth();
+        const uint32_t height = sourceImage.getHeight();
+        ofstream html("mipmaps.html", ios::trunc);
+        html << HTML_PREFIX;
+        int result = snprintf(tag, sizeof(tag), pattern, inputPath.c_str(), width, height);
         if (result < 0 || result >= sizeof(tag)) {
-            puts("Output pattern is too long.");
+            cerr << "Output pattern is too long." << endl;
             exit(1);
         }
         html << tag << std::endl;
+        for (auto image: miplevels) {
+            snprintf(path, sizeof(path), outputPattern.c_str(), mip++);
+            result = snprintf(tag, sizeof(tag), pattern, path, width, height);
+            if (result < 0 || result >= sizeof(tag)) {
+                cerr << "Output pattern is too long." << endl;
+                exit(1);
+            }
+            html << tag << std::endl;
+        }
+        html << HTML_SUFFIX;
     }
-    html << HTML_SUFFIX;
-    html.close();
+
     puts("Done.");
 }
