@@ -531,10 +531,16 @@ $$\begin{equation}\label{averageFresnel}
 F_{avg} = \frac{1 + 20 \fNormal}{21}
 \end{equation}$$
 
+This new lobe is combined with the original single scattering lobe, previously noted $f_r$:
+
+$$\begin{equation}
+f_{r}(l,v) = f_{ss}(l,v) + f_{ms}(l,v)
+\end{equation}$$
+
 In [#Lagarde18], with credit to Emmanuel Turquin, Lagarde and Golubev make the observation that equation $\ref{averageFresnel}$ can be simplified to $\fNormal$. They also propose to apply energy compensation by adding a scaled GGX specular lobe:
 
 $$\begin{equation}\label{energyCompensation}
-f_{ms}(l,v) = \fNormal \frac{1 - E(l)}{E(l)} f_r(l,v)
+f_{ms}(l,v) = \fNormal \frac{1 - E(l)}{E(l)} f_{ss}(l,v)
 \end{equation}$$
 
 The key insight is that $E(l)$ can not only be precomputed but also shared with image-based lighting pre-integration. The multiscattering energy compensation formula thus becomes:
