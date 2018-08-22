@@ -939,7 +939,7 @@ void Froxelizer::computeLightTree(
     auto const* UTILS_RESTRICT spheres = lightData.data<FScene::POSITION_RADIUS>() + 1;
     BinaryTreeArray::traverse(h,
             [&array, &camera, spheres, indices, count]
-            (size_t index, size_t parent, size_t col, size_t next) {
+            (size_t index, size_t col, size_t next) {
                 float min = 1.0;
                 float max = 0.0;
                 if (col < count) {
@@ -954,7 +954,7 @@ void Froxelizer::computeLightTree(
                 }
                 array[index] = Node{ min, max, (uint16_t)next };
             },
-            [&array](size_t index, size_t parent, size_t l, size_t r, size_t next) {
+            [&array](size_t index, size_t l, size_t r, size_t next) {
                 array[index] = Node{
                         std::min(array[l].min, array[r].min),
                         std::max(array[l].max, array[r].max),
