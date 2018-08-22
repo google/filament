@@ -30,10 +30,10 @@ TEST(BinaryTreeArray, basic) {
     Node array[256];
 
     BinaryTreeArray::traverse(1,
-            [&array](size_t index, size_t parent, size_t col, size_t next) {
+            [&array](size_t index, size_t col, size_t next) {
                 array[index] = Node{ index, next };
             },
-            [&array](size_t index, size_t parent, size_t l, size_t r, size_t next) {
+            [&array](size_t index, size_t l, size_t r, size_t next) {
                 array[index] = Node{ index, next };
             });
 
@@ -42,10 +42,10 @@ TEST(BinaryTreeArray, basic) {
 
 
     BinaryTreeArray::traverse(2,
-            [&array](size_t index, size_t parent, size_t col, size_t next) {
+            [&array](size_t index, size_t col, size_t next) {
                 array[index] = Node{ index, next };
             },
-            [&array](size_t index, size_t parent, size_t l, size_t r, size_t next) {
+            [&array](size_t index, size_t l, size_t r, size_t next) {
                 array[index] = Node{ index, next };
             });
 
@@ -60,10 +60,10 @@ TEST(BinaryTreeArray, basic) {
 
 
     BinaryTreeArray::traverse(3,
-            [&array](size_t index, size_t parent, size_t col, size_t next) {
+            [&array](size_t index, size_t col, size_t next) {
                 array[index] = Node{ index, next };
             },
-            [&array](size_t index, size_t parent, size_t l, size_t r, size_t next) {
+            [&array](size_t index, size_t l, size_t r, size_t next) {
                 array[index] = Node{ index, next };
             });
 
@@ -90,10 +90,10 @@ TEST(BinaryTreeArray, basic) {
 
 
     BinaryTreeArray::traverse(4,
-            [&array](size_t index, size_t parent, size_t col, size_t next) {
+            [&array](size_t index, size_t col, size_t next) {
                 array[index] = Node{ index, next };
             },
-            [&array](size_t index, size_t parent, size_t l, size_t r, size_t next) {
+            [&array](size_t index, size_t l, size_t r, size_t next) {
                 array[index] = Node{ index, next };
             });
 
