@@ -16,7 +16,11 @@
 
 package com.google.android.filament.tungsten.compiler
 
-import com.google.android.filament.tungsten.model.NodeModel
+import com.google.android.filament.tungsten.model.Node
+import com.google.android.filament.tungsten.model.NodeId
+import com.google.android.filament.tungsten.model.createAdderNode
+import com.google.android.filament.tungsten.model.createFloat3ConstantNode
+import com.google.android.filament.tungsten.model.createShaderNode
 import com.google.android.filament.tungsten.model.serialization.INodeFactory
 
 class NodeRegistry : INodeFactory {
@@ -28,7 +32,7 @@ class NodeRegistry : INodeFactory {
     private data class NodeEntry(
         val label: String,
         val typeIdentifier: String,
-        val clazz: Class<out NodeModel>
+        val factoryFunction: (id: NodeId) -> Node
     )
 
     private val mNodes: List<NodeEntry>
@@ -37,28 +41,23 @@ class NodeRegistry : INodeFactory {
 
     init {
         mNodes = listOf(
-                NodeEntry("Add", "add", AddNode::class.java),
-                NodeEntry("Constant", "constant", Float3ConstantNode::class.java),
-                NodeEntry("Shader", "shader", ShaderNode::class.java)
+                NodeEntry("Add", "adder", createAdderNode),
+                NodeEntry("Constant", "float3Constant", createFloat3ConstantNode),
+                NodeEntry("Shader", "shader", createShaderNode)
         )
         nodeLabelsForMenu = mNodes
                 // The ShaderNode should not be visible in menus
-                .filter { node -> node.clazz != ShaderNode::class.java }
+                .filter { node -> node.factoryFunction != createShaderNode }
                 .map { node -> node.label }
     }
 
-    fun createNodeForLabel(label: String): NodeModel? {
+    fun createNodeForLabel(label: String, id: NodeId): Node? {
         val entry = mNodes.find { node -> node.label == label }
-        return entry?.clazz?.getConstructor()?.newInstance()
+        return entry?.factoryFunction?.invoke(id)
     }
 
-    override fun createNodeForTypeIdentifier(typeIdentifier: String): NodeModel? {
+    override fun createNodeForTypeIdentifier(typeIdentifier: String, id: NodeId): Node? {
         val entry = mNodes.find { node -> node.typeIdentifier == typeIdentifier }
-        return entry?.clazz?.getConstructor()?.newInstance()
-    }
-
-    override fun typeIdentifierForNode(node: NodeModel): String? {
-        val entry = mNodes.find { n -> n.clazz == node.javaClass }
-        return entry?.typeIdentifier
+        return entry?.factoryFunction?.invoke(id)
     }
 }
