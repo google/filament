@@ -278,6 +278,35 @@ TEST_F(ImageTest, ColorTransformRGBA) { // NOLINT
     ASSERT_NEAR(pixels[3].w, 0.99183642f, 0.001f);
 }
 
+TEST_F(ImageTest, Mipmaps) { // NOLINT
+    Filter filter = filterFromString("HERMITE");
+    ASSERT_EQ(filter, Filter::HERMITE);
+
+    // Miplevels: 5x10, 2x5, 1x2, 1x1.
+    LinearImage src = createColorFromAscii(
+            "44444 41014 40704 41014 44444 44444 41014 40704 41014 44444");
+    uint32_t count = getMipmapCount(src);
+    ASSERT_EQ(count, 3);
+    std::vector<LinearImage> mips(count);
+    generateMipmaps(src, filter, mips.data(), count);
+    updateOrCompare(src, "mip0_5x10.png");
+    for (uint32_t index = 0; index < count; ++index) {
+        updateOrCompare(mips[index], "mip" + std::to_string(index + 1) + "_5x10.png");
+    }
+
+    // Test color space with a classic RED => GREEN color gradient.
+    src = createColorFromAscii("12");
+    src = resampleImage(src, 200, 100, Filter::NEAREST);
+    count = getMipmapCount(src);
+    ASSERT_EQ(count, 7);
+    mips.resize(count);
+    generateMipmaps(src, filter, mips.data(), count);
+    updateOrCompare(src, "mip0_200x100.png");
+    for (uint32_t index = 0; index < count; ++index) {
+        updateOrCompare(mips[index], "mip" + std::to_string(index + 1) + "_200x100.png");
+    }
+}
+
 static void printUsage(const char* name) {
     string exec_name(utils::Path(name).getName());
     string usage(
