@@ -24,16 +24,19 @@ TEST(BinaryTreeArray, basic) {
 
 
     struct Node {
-        size_t index;
-        size_t next;
+        size_t index = 0;
+        size_t next = 0;
+        bool visited = 0;
     };
     Node array[256];
 
     BinaryTreeArray::traverse(1,
             [&array](size_t index, size_t col, size_t next) {
-                array[index] = Node{ index, next };
+                array[index] = Node{ index, next, true };
             },
             [&array](size_t index, size_t l, size_t r, size_t next) {
+                EXPECT_TRUE(array[l].visited);
+                EXPECT_TRUE(array[r].visited);
                 array[index] = Node{ index, next };
             });
 
