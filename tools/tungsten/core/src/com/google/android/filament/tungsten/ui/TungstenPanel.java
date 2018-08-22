@@ -18,8 +18,7 @@ package com.google.android.filament.tungsten.ui;
 
 import com.google.android.filament.tungsten.MaterialManager;
 import com.google.android.filament.tungsten.compiler.NodeRegistry;
-import com.google.android.filament.tungsten.compiler.ShaderNode;
-import com.google.android.filament.tungsten.model.MaterialGraphModel;
+import com.google.android.filament.tungsten.model.Graph;
 import com.google.android.filament.tungsten.properties.PropertiesPanel;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
@@ -43,10 +42,7 @@ public class TungstenPanel extends JPanel {
         JTextArea materialSource = new JTextArea();
         materialSource.setEditable(false);
 
-        MaterialGraphModel model = new MaterialGraphModel();
-        ShaderNode shaderNode = new ShaderNode();
-        model.addNode(shaderNode);
-        model.setRootNode(shaderNode);
+        Graph model = new Graph();
         MaterialGraphComponent materialGraph = new MaterialGraphComponent();
 
         PropertiesPanel propertiesPanel = new PropertiesPanel();
