@@ -14,13 +14,6 @@
  * limitations under the License.
  */
 
-package com.google.android.filament.tungsten.compiler;
+package com.google.android.filament.tungsten.compiler
 
-public class Variable {
-
-    public final String symbol;
-
-    public Variable(String symbol) {
-        this.symbol = symbol;
-    }
-}
+class Expression(val symbol: String)
