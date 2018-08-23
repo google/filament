@@ -109,6 +109,12 @@ public:
     Path getParent() const;
 
     /**
+     * Returns ancestor path where "0" is the immediate parent.
+     * @return a new path containing the ancestor of this path
+     */
+    Path getAncestor(int n) const;
+
+    /**
      * Returns the name of the file or directory represented by
      * this abstract pathname.
      *

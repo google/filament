@@ -131,6 +131,14 @@ Path Path::getParent() const {
     return getCanonicalPath(result);
 }
 
+Path Path::getAncestor(int n) const {
+    Path result = getParent();
+    while (n--) {
+        result = result.getParent();
+    }
+    return result;
+}
+
 std::string Path::getName() const {
     if (isEmpty()) return "";
 

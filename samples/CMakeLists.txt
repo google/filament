@@ -188,17 +188,3 @@ if (LINUX OR APPLE)
     add_assimp_demo(vk_vbotest)
     add_assimp_demo(vk_viewtest)
 endif()
-
-# ==================================================================================================
-# Copy Assets
-# ==================================================================================================
-
-file(COPY ../third_party/textures DESTINATION ${PROJECT_BINARY_DIR})
-add_custom_target(textures ALL DEPENDS textures)
-add_dependencies(filament textures)
-
-file(COPY ../assets DESTINATION ${PROJECT_BINARY_DIR}
-        PATTERN "reference" EXCLUDE
-        PATTERN "environments" EXCLUDE)
-add_custom_target(assets ALL DEPENDS assets)
-add_dependencies(filament assets)
