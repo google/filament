@@ -183,13 +183,10 @@ void FScene::prepareDynamicLights(const CameraInfo& camera, ArenaScope& rootAren
     ArenaScope arena(rootArena.getAllocator());
     float* const UTILS_RESTRICT distances = arena.allocate<float>(lightData.size(), CACHELINE_SIZE);
 
-    // pre-compute the lights' distance to the camera plane, for sorting below,
-    // skipping the directional light.
+    // pre-compute the lights' distance to the camera plane, for sorting below
+    // - we don't skip the directional light, because we don't care, it's ignored during sorting
     float4 const* const UTILS_RESTRICT spheres = lightData.data<FScene::POSITION_RADIUS>();
-    for (size_t i = DIRECTIONAL_LIGHTS_COUNT, c = lightData.size(); i < c; ++i) {
-        float4 p = camera.view * spheres[i].xyz;
-        distances[i] = std::max(0.0f, -p.z);
-    }
+    computeLightCameraPlaneDistances(distances, camera, spheres, lightData.size());
 
     // skip directional light
     Zip2Iterator<FScene::LightSoa::iterator, float*> b = { lightData.begin(), distances };
@@ -217,6 +214,26 @@ void FScene::prepareDynamicLights(const CameraInfo& camera, ArenaScope& rootAren
 
     gpuLightData.invalidate(0, lightData.size() - DIRECTIONAL_LIGHTS_COUNT);
     gpuLightData.commit(mEngine);
+}
+
+// These methods need to exist so clang honors the __restrict__ keyword, which in turn
+// produces much better vectorization. The ALWAYS_INLINE keyword makes sure we actually don't
+// pay the price of the call!
+UTILS_ALWAYS_INLINE
+void FScene::computeLightCameraPlaneDistances(
+        float* UTILS_RESTRICT const distances,
+        CameraInfo const& UTILS_RESTRICT camera,
+        float4 const* UTILS_RESTRICT const spheres, size_t count) noexcept {
+
+    // without this, the vectorization is less efficient
+    // we're guaranteed to have a multiple of 4 lights (at least)
+    count = uint32_t(count + 3u) & ~3u;
+
+    for (size_t i = 0 ; i < count; i++) {
+        const float4 sphere = spheres[i];
+        const float4 center = camera.view * sphere.xyz; // camera points towards the -z axis
+        distances[i] = -center.z > 0.0f ? -center.z : 0.0f; // std::max() prevents vectorization (???)
+    }
 }
 
 // These methods need to exist so clang honors the __restrict__ keyword, which in turn
