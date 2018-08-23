@@ -25,8 +25,8 @@ private val adderNodeCompile = fun(node: Node, compiler: GraphCompiler): Node {
     val a = compiler.compileAndRetrieveVariable(node.getInputSlot("a"))
     val b = compiler.compileAndRetrieveVariable(node.getInputSlot("b"))
 
-    val aExpression = a?.symbol ?: "float3(0.0f, 0.0f, 0.0f)"
-    val bExpression = b?.symbol ?: "float3(0.0f, 0.0f, 0.0f)"
+    val aExpression = a?.symbol ?: "float3(0.0, 0.0, 0.0)"
+    val bExpression = b?.symbol ?: "float3(0.0, 0.0, 0.0)"
 
     val temp = compiler.getNewTemporaryVariableName("adder")
     compiler.addCodeToMaterialFunctionBody("float3 $temp = $aExpression + $bExpression;\n")

@@ -30,7 +30,7 @@ class GraphCompilerTest {
      */
 
     @Test
-    fun test_compileSingleNode() {
+    fun `Compile single node`() {
         val adderNode = createAdderNode(0)
         val graph = Graph(nodes = listOf(adderNode), rootNodeId = adderNode.id)
         val compiler = GraphCompiler(graph)
@@ -38,7 +38,7 @@ class GraphCompilerTest {
     }
 
     @Test
-    fun test_compileTwoNodes() {
+    fun `Compile two nodes with connections`() {
         val constantNodeA = createFloat3ConstantNode(0)
         val constantNodeB = createFloat3ConstantNode(1)
         val adderNode = createAdderNode(2)

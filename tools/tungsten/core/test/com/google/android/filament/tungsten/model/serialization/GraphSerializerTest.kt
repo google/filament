@@ -36,7 +36,7 @@ class GraphSerializerTest {
     }
 
     @Test
-    fun test_EmptyModel() {
+    fun `Serialize empty model`() {
         val graph = Graph()
         val serialized = GraphSerializer.serialize(graph, emptyMap())
         val (deserialized, _) = GraphSerializer.deserialize(serialized, mockNodeFactory)
@@ -44,14 +44,14 @@ class GraphSerializerTest {
     }
 
     @Test
-    fun test_EditorData() {
+    fun `Serialize editor data`() {
         val serialized = GraphSerializer.serialize(Graph(), mapOf("foo" to "bar"))
         val (_, editorData) = GraphSerializer.deserialize(serialized, mockNodeFactory)
         assertEquals(mapOf("foo" to "bar"), editorData)
     }
 
     @Test
-    fun test_NodesAndConnections() {
+    fun `Serialize nodes and connections`() {
         val first = createMockNode(0)
         val second = first.copy(id = 1)
         val root = first.copy(id = 2)
@@ -76,7 +76,7 @@ class GraphSerializerTest {
      * graph.
      */
     @Test
-    fun test_ConnectionNotRegistered() {
+    fun `Serialize connection with unknown node type`() {
         val first = createMockNode(0)
         val root = createMockNode(1).copy(type = "unknown type")
 

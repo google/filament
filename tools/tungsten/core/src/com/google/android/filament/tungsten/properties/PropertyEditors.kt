@@ -21,6 +21,7 @@ import com.google.android.filament.tungsten.model.PropertyValue
 import java.awt.Color
 import javax.swing.JColorChooser
 import javax.swing.JComponent
+import kotlin.math.roundToInt
 
 sealed class PropertyEditor {
 
@@ -36,19 +37,19 @@ internal class ColorChooser(value: Float3) : PropertyEditor() {
 
     override fun setValue(v: PropertyValue) {
         val value = v as Float3
-        component.setColor((value.x * 255.0f).toInt(), (value.y * 255.0f).toInt(),
-                (value.z * 255.0f).toInt())
+        component.setColor((value.x * 255.0f).roundToInt(), (value.y * 255.0f).roundToInt(),
+                (value.z * 255.0f).roundToInt())
     }
 
     init {
         val initialColor = Color(value.x, value.y, value.z)
         component = JColorChooser(initialColor)
-        component.selectionModel.addChangeListener({
+        component.selectionModel.addChangeListener {
             val newValue = value.copy(
                     x = component.color.red / 255.0f,
                     y = component.color.green / 255.0f,
                     z = component.color.blue / 255.0f)
             valueChanged(newValue)
-        })
+        }
     }
 }
