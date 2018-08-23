@@ -22,7 +22,7 @@ import org.junit.Test
 class GraphFileTest {
 
     @Test
-    fun test_extractToolBlockMissing() {
+    fun `Extract missing tool block`() {
         assertEquals("", GraphFile.extractToolBlockFromMaterialFile("""
             |material {
             |   ...
@@ -35,7 +35,7 @@ class GraphFileTest {
     }
 
     @Test
-    fun test_extractToolBlockEmpty() {
+    fun `Extract empty tool block`() {
         assertEquals("", GraphFile.extractToolBlockFromMaterialFile("""
             |material {
             |   ...
@@ -50,7 +50,7 @@ class GraphFileTest {
     }
 
     @Test
-    fun test_extractToolExtraWhitespace() {
+    fun `Extract tool block with extra whitespace`() {
         assertEquals("\nfoobar\n", GraphFile.extractToolBlockFromMaterialFile("""
             |material {
             |   ...
@@ -67,7 +67,7 @@ class GraphFileTest {
     }
 
     @Test
-    fun test_extractToolBlockWithJson() {
+    fun `Extract tool block with JSON`() {
         assertEquals("\n  {\"foo\":\"bar\",\"fizz\":[\"buzz\", 1]}\n",
                 GraphFile.extractToolBlockFromMaterialFile("""
             |material {
@@ -85,7 +85,7 @@ class GraphFileTest {
     }
 
     @Test
-    fun test_addToolBlock() {
+    fun `Add tool block`() {
         assertEquals("""
             |content
             |

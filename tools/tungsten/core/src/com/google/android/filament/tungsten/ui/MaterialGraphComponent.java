@@ -18,57 +18,59 @@ package com.google.android.filament.tungsten.ui;
 
 import static com.google.android.filament.tungsten.ui.ConnectionLineKt.arbitraryPoint;
 import static com.google.android.filament.tungsten.ui.ConnectionLineKt.slotPoint;
+import static com.google.android.filament.tungsten.ui.RenderNodeKt.renderNode;
 
 import com.google.android.filament.tungsten.SwingHelper;
-import com.google.android.filament.tungsten.model.ConnectionModel;
-import com.google.android.filament.tungsten.model.InputSlotModel;
-import com.google.android.filament.tungsten.model.NodeModel;
-import com.google.android.filament.tungsten.model.OutputSlotModel;
-import com.google.android.filament.tungsten.model.SelectionModel;
-import com.google.android.filament.tungsten.model.SlotModel;
+import com.google.android.filament.tungsten.model.Connection;
+import com.google.android.filament.tungsten.model.Graph;
+import com.google.android.filament.tungsten.model.Node;
+import com.google.android.filament.tungsten.model.Slot;
 import java.awt.Component;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
-import java.awt.Point;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import javax.swing.JComponent;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 public class MaterialGraphComponent extends JComponent implements TungstenMouseListener {
 
-    private final TungstenEventManager mEventManager;
+    private final TungstenEventManager mEventManager = new TungstenEventManager(this);
     private MaterialNode mNodeBeingDragged;
-    private SelectionModel mPreviousSelectionModel = new SelectionModel();
+    private List<Integer> mPreviousSelectionModel = new ArrayList<>();
     private boolean mIsConnecting = false;
 
     // A connection is "in progress" when a user has started dragging from a slot
     private ConnectionLine mInProgressConnectionLine = null;
 
     // The slot the user started dragging from when forming a connection
-    private SlotModel mInProgressOriginSlot;
+    @Nullable
+    private Slot mInProgressOriginSlot = null;
 
-    private final List<ConnectionLine> mConnectionLines;
+    private final List<ConnectionLine> mConnectionLines = new ArrayList<>();
     private GraphPresenter mPresenter;
 
-    // Maps between the NodeModels we receive and our views
-    private final Map<NodeModel, MaterialNode> mModelViewMap;
+    // Stores the current node views being shown
+    private final Map<Node, MaterialNode> mNodeViews = new HashMap<>();
+
+    // Stores the current graph displayed in the component, or null if one hasn't been rendered yet
+    @Nullable
+    private Graph mGraph = null;
 
     // Maps between the SlotModels we receive and the NodeSlot views
-    private final Map<SlotModel, NodeSlot> mSlotMap;
+    private Map<Slot, NodeSlot> mSlotMap = new HashMap<>();
 
     // Maps between the ConnectionModels we receive and our views
-    private final Map<ConnectionModel, ConnectionLine> mConnectionViewMap;
+    private final Map<Connection, ConnectionLine> mConnectionViewMap = new HashMap<>();
 
     public MaterialGraphComponent() {
-        mConnectionLines = new ArrayList<>();
-        mModelViewMap = new HashMap<>();
-        mConnectionViewMap = new HashMap<>();
-        mSlotMap = new HashMap<>();
-        mEventManager = new TungstenEventManager(this);
         addMouseMotionListener(mEventManager);
         addMouseListener(mEventManager);
     }
@@ -77,41 +79,52 @@ public class MaterialGraphComponent extends JComponent implements TungstenMouseL
         mPresenter = presenter;
     }
 
-    public void addNode(NodeModel node) {
-        MaterialNode nodeView = new MaterialNode(node);
-
-        for (InputSlotModel slot : node.getInputSlots()) {
-            NodeSlot slotView = nodeView.addSlot(slot);
-            mSlotMap.put(slot, slotView);
-        }
-        for (OutputSlotModel slot : node.getOutputSlots()) {
-            NodeSlot slotView = nodeView.addSlot(slot);
-            mSlotMap.put(slot, slotView);
-        }
-
-        mModelViewMap.put(node, nodeView);
-        Point position = node.getPosition();
-        nodeView.setBounds(position.x, position.y, 200, 100);
-        add(nodeView);
-        revalidate();
-        repaint();
-    }
-
-    public void addConnection(ConnectionModel connection) {
-        NodeSlot inputSlot =  mSlotMap.get(connection.getInputSlot());
-        NodeSlot outputSlot =  mSlotMap.get(connection.getOutputSlot());
-
-        if (inputSlot == null || outputSlot == null) {
+    public void render(@NotNull Graph graph) {
+        // Because graphs are immutable, if the graph we previously rendered is the same graph
+        // object, we have no work to do.
+        if (mGraph == graph) {
             return;
         }
 
-        ConnectionLine line = new ConnectionLine(slotPoint(outputSlot), slotPoint(inputSlot));
+        // The strategy here is to create new MaterialNodes for any new nodes in the graph, and
+        // remove any MaterialNodes that are no longer present in the graph.
+        Set<MaterialNode> nodesToRemove = new HashSet<>(mNodeViews.values());
 
-        mConnectionLines.add(line);
-        mConnectionViewMap.put(connection, line);
+        for (Node node : graph.getNodes()) {
+            MaterialNode currentNodeView = mNodeViews.get(node);
+            if (currentNodeView != null) {
+                nodesToRemove.remove(currentNodeView);
+                continue;
+            }
+            // If we don't have a view for this node yet, create a new one by calling renderNode
+            MaterialNode nodeView = renderNode(node, mSlotMap);
+            nodeView.setSelected(graph.isNodeSelected(node));
+            mNodeViews.put(node, nodeView);
+            add(nodeView);
+        }
+
+        // Remove whichever nodes are no longer present in the graph.
+        for (MaterialNode node : nodesToRemove) {
+            mNodeViews.remove(node.getModel());
+            remove(node);
+        }
+
+        // Create a connection line for each connection in the graph.
+        mConnectionLines.clear();
+        mConnectionViewMap.clear();
+        for (Connection connection : graph.getConnections()) {
+            Node.OutputSlot outputSlot = connection.getOutputSlot();
+            Node.InputSlot inputSlot = connection.getInputSlot();
+            ConnectionLine line = new ConnectionLine(slotPoint(outputSlot, this),
+                    slotPoint(inputSlot, this));
+            mConnectionLines.add(line);
+            mConnectionViewMap.put(connection, line);
+        }
 
         revalidate();
         repaint();
+
+        mGraph = graph;
     }
 
     @Override
@@ -199,18 +212,38 @@ public class MaterialGraphComponent extends JComponent implements TungstenMouseL
         mConnectionLines.forEach(connection -> connection.paint(g2d));
     }
 
+    @Nullable
+    NodeSlot getSlotViewForSlot(@NotNull Slot slot) {
+        return mSlotMap.get(slot);
+    }
+
     private void nodeSlotDragStarted(NodeSlot slot) {
         // If the user starts dragging on an input slot that already has a connection, remove the
         // previous connection
-        for (ConnectionModel connection : mConnectionViewMap.keySet()) {
-            if (connection.getInputSlot() == slot.getModel()) {
+        assert mGraph != null;
+        for (Connection connection : mGraph.getConnections()) {
+            if (connection.getInputSlot().equals(slot.getModel())) {
+                // First, remove the connection view
+                ConnectionLine connectionLine = mConnectionViewMap.remove(connection);
+                if (connectionLine == null) {
+                    return;
+                }
+                mConnectionLines.remove(connectionLine);
+                mInProgressConnectionLine = connectionLine;
+
+                // Create an in-progress connection by disconnecting the destination
+                mInProgressOriginSlot = connection.getOutputSlot();
+                mIsConnecting = true;
+
                 mPresenter.connectionDisconnectedAtInput(connection);
+
                 return;
             }
         }
 
         // Create a new connection line to represent this new "in progress" connection
-        mInProgressConnectionLine = new ConnectionLine(slotPoint(slot), slotPoint(slot));
+        mInProgressConnectionLine = new ConnectionLine(slotPoint(slot.getModel(), this),
+                slotPoint(slot.getModel(), this));
         mInProgressOriginSlot = slot.getModel();
         mIsConnecting = true;
         repaint();
@@ -222,7 +255,7 @@ public class MaterialGraphComponent extends JComponent implements TungstenMouseL
         }
         // Depending on what type of slot the user is dragging from, the mouse is updating the
         // input or output point
-        if (mInProgressOriginSlot instanceof InputSlotModel) {
+        if (mInProgressOriginSlot instanceof Node.InputSlot) {
             mInProgressConnectionLine.setOutputPoint(arbitraryPoint(e.getX(), e.getY()));
         } else {
             mInProgressConnectionLine.setInputPoint(arbitraryPoint(e.getX(), e.getY()));
@@ -231,49 +264,25 @@ public class MaterialGraphComponent extends JComponent implements TungstenMouseL
     }
 
     private void nodeSlotDragEnded(NodeSlot slot) {
-        SlotModel output = mInProgressOriginSlot;
-        SlotModel input = slot.getModel();
+        Slot output = mInProgressOriginSlot;
+        Slot input = slot.getModel();
 
         mIsConnecting = false;
 
         // If the user started dragging on an input slot, they're connecting the nodes "backwards"
         // from input to output, so swap output and input.
-        if (mInProgressOriginSlot instanceof InputSlotModel) {
-            SlotModel temp = output;
+        if (mInProgressOriginSlot instanceof Node.InputSlot) {
+            Slot temp = output;
             output = input;
             input = temp;
         }
 
-        ConnectionModel newConnectionModel = new ConnectionModel((OutputSlotModel) output,
-                (InputSlotModel)input);
+        Node.OutputSlot outputSlot = (Node.OutputSlot) output;
+        Node.InputSlot inputSlot = (Node.InputSlot) input;
+        Connection newConnectionModel = new Connection(outputSlot, inputSlot);
 
         mPresenter.connectionCreated(newConnectionModel);
 
-        repaint();
-    }
-
-    /**
-     * A partially-removed connection means that one end of a connection is not connected. This
-     * happens when the user drags on an input slot that already has a connection as if to "move"
-     * the connection to a different slot.
-     */
-    public void disconnectConnectionAtInput(ConnectionModel model) {
-        ConnectionLine connection = mConnectionViewMap.get(model);
-
-        if (connection == null) {
-            return;
-        }
-
-        // First, remove the connection view
-        mConnectionViewMap.remove(model);
-        mConnectionLines.remove(connection);
-
-        mInProgressConnectionLine = connection;
-
-        // Create an in-progress connection by disconnecting the destination
-        mInProgressOriginSlot = model.getOutputSlot();
-
-        mIsConnecting = true;
         repaint();
     }
 
@@ -295,12 +304,12 @@ public class MaterialGraphComponent extends JComponent implements TungstenMouseL
     private void selectNode(MaterialNode node) {
         resetNodeSelections();
         node.setSelected(true);
-        notifySelectionIfChanged(new SelectionModel(Collections.singletonList(node.getModel())));
+        notifySelectionIfChanged(Collections.singletonList(node.getModel().getId()));
     }
 
     private void deselectNodes() {
         resetNodeSelections();
-        notifySelectionIfChanged(new SelectionModel());
+        notifySelectionIfChanged(Collections.emptyList());
     }
 
     /**
@@ -308,16 +317,16 @@ public class MaterialGraphComponent extends JComponent implements TungstenMouseL
      * selection in order to avoid notifying the presenter twice for the same selection (e.g. if the
      * user continuously clicks on the same node)
      */
-    private void notifySelectionIfChanged(SelectionModel selectionModel) {
-        if (selectionModel.equals(mPreviousSelectionModel)) {
+    private void notifySelectionIfChanged(List<Integer> selectedNodes) {
+        if (selectedNodes.equals(mPreviousSelectionModel)) {
             return;
         }
-        mPresenter.selectionChanged(selectionModel);
-        mPreviousSelectionModel = selectionModel;
+        mPresenter.selectionChanged(selectedNodes);
+        mPreviousSelectionModel = selectedNodes;
     }
 
     private void resetNodeSelections() {
-        for (MaterialNode node : mModelViewMap.values()) {
+        for (MaterialNode node : mNodeViews.values()) {
             node.setSelected(false);
         }
     }

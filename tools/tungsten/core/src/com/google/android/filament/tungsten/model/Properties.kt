@@ -14,24 +14,10 @@
  * limitations under the License.
  */
 
-package com.google.android.filament.tungsten.model;
+package com.google.android.filament.tungsten.model
 
-import com.google.android.filament.tungsten.compiler.Variable;
+sealed class PropertyValue
 
-public class OutputSlotModel extends SlotModel {
+data class Float3(val x: Float = 0.0f, val y: Float = 0.0f, val z: Float = 0.0f) : PropertyValue()
 
-    // Once this slot is compiled, its Variable will be cached here
-    private Variable mVariable;
-
-    public OutputSlotModel(String label, NodeModel node) {
-        super(label, node);
-    }
-
-    public Variable getVariable() {
-        return mVariable;
-    }
-
-    public void setVariable(Variable variable) {
-        mVariable = variable;
-    }
-}
+data class Property(val name: String, val value: PropertyValue)

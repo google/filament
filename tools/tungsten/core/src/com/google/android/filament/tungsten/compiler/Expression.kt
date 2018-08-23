@@ -14,15 +14,6 @@
  * limitations under the License.
  */
 
-package com.google.android.filament.tungsten.model;
+package com.google.android.filament.tungsten.compiler
 
-public class SlotModel {
-
-    public final String label;
-    public final NodeModel node;
-
-    public SlotModel(String label, NodeModel node) {
-        this.label = label;
-        this.node = node;
-    }
-}
+class Expression(val symbol: String)

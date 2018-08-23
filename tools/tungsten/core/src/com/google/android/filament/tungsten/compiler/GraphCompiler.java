@@ -16,42 +16,86 @@
 
 package com.google.android.filament.tungsten.compiler;
 
-import com.google.android.filament.tungsten.model.NodeModel;
+import com.google.android.filament.tungsten.model.Connection;
+import com.google.android.filament.tungsten.model.Graph;
+import com.google.android.filament.tungsten.model.Node;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * GraphCompiler takes a a graph of connected NodeModels and generates filament shader code.
  */
-public class GraphCompiler {
+public final class GraphCompiler {
 
-    private int mTextureNumber;
-    private StringBuilder mMaterialFunctionBodyBuilder;
-    private final List<String> mRequiredAttributes;
-    private final List<Parameter> mParameters;
-    private final LinkedHashMap<String, String> mGlobalFunctions;
-    private final Map<String, Integer> mVariableNameMap;
+    private int mTextureNumber = 1;
+    private StringBuilder mMaterialFunctionBodyBuilder = new StringBuilder();
+    private final List<String> mRequiredAttributes = new ArrayList<>();
+    private final List<Parameter> mParameters = new ArrayList<>();
+    private final LinkedHashMap<String, String> mGlobalFunctions = new LinkedHashMap<>();
+    private final Map<String, Integer> mVariableNameMap = new HashMap<>();
 
-    public GraphCompiler() {
-        mMaterialFunctionBodyBuilder = new StringBuilder();
-        mRequiredAttributes = new ArrayList<>();
-        mParameters = new ArrayList<>();
-        mGlobalFunctions = new LinkedHashMap<>();
-        mVariableNameMap = new HashMap<>();
-        reset();
+    private final @NotNull Graph mGraph;
+    private final @NotNull Node mRootNode;
+    private final Map<Node.InputSlot, Connection> mConnectionMap = new HashMap<>();
+    private final Map<Node.OutputSlot, Expression> mCompiledVariableMap = new HashMap<>();
+
+    public GraphCompiler(@NotNull Graph graph) {
+        mGraph = graph;
+        mRootNode = Objects.requireNonNull(mGraph.getRootNode());
     }
 
-    public String compileGraph(NodeModel rootNode) {
-        rootNode.compile(this);
+    @NotNull
+    public String compileGraph() {
+        mRootNode.getCompileFunction().invoke(mRootNode, this);
         String fragmentSection = GraphFormatter.formatFragmentSection(mGlobalFunctions.values(),
                 mMaterialFunctionBodyBuilder.toString());
-        String finalResult = GraphFormatter.formatMaterialSection(mRequiredAttributes, mParameters)
+        return GraphFormatter.formatMaterialSection(mRequiredAttributes, mParameters)
                 + fragmentSection;
-        invalidate(rootNode);
-        return finalResult;
+    }
+
+    /**
+     * Compile the Node connected to InputSlot and retrieve its Expression entry.
+     * @return null, if the InputSlot is not connected to any OutputSlot, otherwise an Expression.
+     */
+    @Nullable
+    public Expression compileAndRetrieveVariable(@NotNull Node.InputSlot slot) {
+        Node.OutputSlot outputSlot = mGraph.getOutputSlotConnectedToInput(slot);
+        if (outputSlot == null) {
+            return null;
+        }
+
+        // Check if we've already compiled
+        Expression compiledExpression = mCompiledVariableMap.get(outputSlot);
+        if (compiledExpression != null) {
+            return compiledExpression;
+        }
+
+        // Compile the connected node
+        Node connectedNode = mGraph.getNodeForOutputSlot(outputSlot);
+        if (connectedNode == null) {
+            throw new RuntimeException("Output slot references node that does not exist in graph.");
+        }
+        connectedNode.getCompileFunction().invoke(connectedNode, this);
+
+        // Verify that the connected node has set it's output variable
+        compiledExpression = mCompiledVariableMap.get(outputSlot);
+        if (compiledExpression == null) {
+            throw new RuntimeException(
+                    "Output node did not set an output Expression on output slot: " + outputSlot);
+        }
+
+        return compiledExpression;
+    }
+
+    public void setExpressionForOutputSlot(@NotNull Node.OutputSlot slot,
+            @NotNull Expression expression) {
+        mCompiledVariableMap.put(slot, expression);
     }
 
     /**
@@ -142,19 +186,5 @@ public class GraphCompiler {
 
     private String allocateNewParameterName() {
         return "texture" + mTextureNumber++;
-    }
-
-    private void invalidate(NodeModel rootNode) {
-        rootNode.invalidate();
-        reset();
-    }
-
-    private void reset() {
-        mTextureNumber = 1;
-        mRequiredAttributes.clear();
-        mParameters.clear();
-        mGlobalFunctions.clear();
-        mVariableNameMap.clear();
-        mMaterialFunctionBodyBuilder.setLength(0);
     }
 }
