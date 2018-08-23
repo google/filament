@@ -14,15 +14,9 @@
  * limitations under the License.
  */
 
-package com.google.android.filament.tungsten.compiler;
+package com.google.android.filament.tungsten.compiler
 
-class Parameter {
-
-    final String type;
-    final String name;
-
-    Parameter(String type, String name) {
-        this.type = type;
-        this.name = name;
-    }
-}
+data class CompiledGraph(
+    // The Filament material definition that is fed into matc
+    val materialDefinition: String
+)

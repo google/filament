@@ -16,7 +16,6 @@
 
 package com.google.android.filament.tungsten.compiler;
 
-import com.google.android.filament.tungsten.model.Connection;
 import com.google.android.filament.tungsten.model.Graph;
 import com.google.android.filament.tungsten.model.Node;
 import java.util.ArrayList;
@@ -42,7 +41,6 @@ public final class GraphCompiler {
 
     private final @NotNull Graph mGraph;
     private final @NotNull Node mRootNode;
-    private final Map<Node.InputSlot, Connection> mConnectionMap = new HashMap<>();
     private final Map<Node.OutputSlot, Expression> mCompiledVariableMap = new HashMap<>();
 
     public GraphCompiler(@NotNull Graph graph) {
@@ -51,12 +49,14 @@ public final class GraphCompiler {
     }
 
     @NotNull
-    public String compileGraph() {
+    public CompiledGraph compileGraph() {
         mRootNode.getCompileFunction().invoke(mRootNode, this);
         String fragmentSection = GraphFormatter.formatFragmentSection(mGlobalFunctions.values(),
                 mMaterialFunctionBodyBuilder.toString());
-        return GraphFormatter.formatMaterialSection(mRequiredAttributes, mParameters)
-                + fragmentSection;
+        String materialDefinition =
+                GraphFormatter.formatMaterialSection(mRequiredAttributes, mParameters) +
+                        fragmentSection;
+        return new CompiledGraph(materialDefinition);
     }
 
     /**

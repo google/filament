@@ -158,7 +158,7 @@ public class GraphPresenter implements IPropertiesPresenter {
             return;
         }
         GraphCompiler compiler = new GraphCompiler(mModel);
-        mCompiledGraph = compiler.compileGraph();
+        mCompiledGraph = compiler.compileGraph().getMaterialDefinition();
         mMaterialSource.setText(mCompiledGraph);
 
         CompletableFuture<Material> futureMaterial = mMaterialManager

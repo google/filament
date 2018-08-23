@@ -99,8 +99,8 @@ final class GraphFormatter {
 
     private static String formatParameterSource(Parameter p) {
         return indent("{\n"
-                + "    type : " + p.type + ",\n"
-                + "    name : " + p.name + "\n"
+                + "    type : " + p.getType() + ",\n"
+                + "    name : " + p.getName() + "\n"
                 + "}", 4);
     }
 }
