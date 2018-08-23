@@ -28,6 +28,8 @@
 #include <filament/VertexBuffer.h>
 #include <filament/View.h>
 
+#include <utils/Path.h>
+
 struct ImDrawData;
 
 namespace filagui {
@@ -42,7 +44,7 @@ public:
     using Callback = std::function<void(filament::Engine*, filament::View*)>;
 
     // The constructor creates its own Scene and places it in the given View.
-    ImGuiHelper(filament::Engine* engine, filament::View* view);
+    ImGuiHelper(filament::Engine* engine, filament::View* view, const utils::Path& fontPath);
     ~ImGuiHelper();
 
     // Informs ImGui of the current display size, as well as the pixel ratio for high DPI displays.

@@ -47,8 +47,8 @@ struct App {
     GroundPlane plane;
 };
 
-static const char* MODEL_FILE = "samples/assets/models/monkey/monkey.obj";
-static const char* IBL_FOLDER = "../samples/envs/office";
+static const char* MODEL_FILE = "assets/models/monkey/monkey.obj";
+static const char* IBL_FOLDER = "envs/office";
 
 static constexpr bool ENABLE_SHADOWS = true;
 static constexpr uint8_t GROUND_SHADOW_PACKAGE[] = {
@@ -59,7 +59,7 @@ static GroundPlane createGroundPlane(Engine* engine);
 
 static const Config config {
     .title = "shadowtest",
-    .iblDirectory = IBL_FOLDER,
+    .iblDirectory = FilamentApp::getRootPath() + IBL_FOLDER,
     .scale = 1,
     .splitView = false,
     .backend = Backend::VULKAN,
@@ -75,7 +75,7 @@ int main(int argc, char** argv) {
 
         // Add geometry into the scene.
         app.meshes = new MeshAssimp(*engine);
-        app.meshes->addFromFile(MODEL_FILE, app.materials);
+        app.meshes->addFromFile(FilamentApp::getRootPath() + MODEL_FILE, app.materials);
         auto ti = tcm.getInstance(app.meshes->getRenderables()[0]);
         app.transform = mat4f{ mat3f(1), float3(0, 0, -4) } * tcm.getWorldTransform(ti);
         for (auto renderable : app.meshes->getRenderables()) {

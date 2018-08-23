@@ -36,14 +36,14 @@ struct App {
     mat4f transform;
 };
 
-static const char* MODEL_FILE = "samples/assets/models/monkey/monkey.obj";
-static const char* IBL_FOLDER = "../samples/envs/office";
+static const char* MODEL_FILE = "assets/models/monkey/monkey.obj";
+static const char* IBL_FOLDER = "envs/office";
 
 int main(int argc, char** argv) {
     Config config;
     config.title = "hellopbr";
     config.backend = Backend::VULKAN;
-    config.iblDirectory = IBL_FOLDER;
+    config.iblDirectory = FilamentApp::getRootPath() + IBL_FOLDER;
 
     App app;
     auto setup = [config, &app](Engine* engine, View* view, Scene* scene) {
@@ -53,7 +53,7 @@ int main(int argc, char** argv) {
 
         // Add geometry into the scene.
         app.meshes = new MeshAssimp(*engine);
-        app.meshes->addFromFile(MODEL_FILE, app.materials);
+        app.meshes->addFromFile(FilamentApp::getRootPath() + MODEL_FILE, app.materials);
         auto ti = tcm.getInstance(app.meshes->getRenderables()[0]);
         app.transform = mat4f{ mat3f(1), float3(0, 0, -4) } * tcm.getWorldTransform(ti);
         for (auto renderable : app.meshes->getRenderables()) {

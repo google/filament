@@ -81,14 +81,13 @@ int main() {
     auto setup = [&app](Engine* engine, View* view, Scene* scene) {
 
         // Load texture
-        Path path = Path::getCurrentExecutable().getParent() +
-                "textures/Moss_01/Moss_01_Color.png";
+        Path path = FilamentApp::getRootPath() + "third_party/textures/Moss_01/Moss_01_Color.png";
         if (!path.exists()) {
             std::cerr << "The texture " << path << " does not exist" << std::endl;
             exit(1);
         }
         int w, h, n;
-        unsigned char* data = stbi_load(path.getAbsolutePath().c_str(), &w, &h, &n, 4);
+        unsigned char* data = stbi_load(path.c_str(), &w, &h, &n, 4);
         if (data == nullptr) {
             std::cerr << "The texture " << path << " could not be loaded" << std::endl;
             exit(1);

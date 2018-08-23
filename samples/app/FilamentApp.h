@@ -27,6 +27,8 @@
 #include <filament/Engine.h>
 #include <filament/Viewport.h>
 
+#include <utils/Path.h>
+
 #include "CameraManipulator.h"
 #include "Config.h"
 #include "IBL.h"
@@ -76,6 +78,13 @@ public:
     FilamentApp(FilamentApp&& rhs) = delete;
     FilamentApp& operator=(const FilamentApp& rhs) = delete;
     FilamentApp& operator=(FilamentApp&& rhs) = delete;
+
+    // Returns the path to the Filament root for loading assets. This is determined from the
+    // executable folder, which allows users to launch samples from any folder.
+    static const utils::Path& getRootPath() {
+        static const utils::Path root = utils::Path::getCurrentExecutable().getParent();
+        return root;
+    }
 
 private:
     FilamentApp();
