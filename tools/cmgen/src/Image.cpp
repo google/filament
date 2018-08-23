@@ -16,9 +16,7 @@
 
 #include <utility>
 
-#include <image/Image.h>
-
-namespace image {
+#include "Image.h"
 
 Image::Image() {
 }
@@ -95,5 +93,3 @@ void Image::flip(uint32_t flags) {
         }
     }
 }
-
-} // namespace image

@@ -38,7 +38,7 @@ void Cubemap::resetDimensions(size_t dim) {
     }
 }
 
-void Cubemap::setImageForFace(Face face, const image::Image& image) {
+void Cubemap::setImageForFace(Face face, const Image& image) {
     mFaces[size_t(face)].set(image);
 }
 
@@ -145,7 +145,7 @@ void Cubemap::makeSeamless() {
     }
 }
 
-Cubemap::Texel Cubemap::filterAt(const image::Image& image, double x, double y) {
+Cubemap::Texel Cubemap::filterAt(const Image& image, double x, double y) {
     const size_t x0 = size_t(x);
     const size_t y0 = size_t(y);
     // we allow ourselves to read past the width/height of the Image because the data is valid
@@ -167,12 +167,12 @@ Cubemap::Texel Cubemap::trilinearFilterAt(const Cubemap& l0, const Cubemap& l1, 
         const double3& L)
 {
     Cubemap::Address addr(getAddressFor(L));
-    const image::Image& i0 = l0.getImageForFace(addr.face);
+    const Image& i0 = l0.getImageForFace(addr.face);
     double x0 = std::min(addr.s * l0.mDimensions, l0.mUpperBound);
     double y0 = std::min(addr.t * l0.mDimensions, l0.mUpperBound);
     float3 c0(filterAt(i0, x0, y0));
     if (&l0 != &l1) {
-        const image::Image& i1 = l1.getImageForFace(addr.face);
+        const Image& i1 = l1.getImageForFace(addr.face);
         double x1 = std::min(addr.s * l1.mDimensions, l1.mUpperBound);
         double y1 = std::min(addr.t * l1.mDimensions, l1.mUpperBound);
         c0 += lerp * (filterAt(i1, x1, y1) - c0);
