@@ -37,7 +37,7 @@ struct App {
 };
 
 static const char* MODEL_FILE = "assets/models/monkey/monkey.obj";
-static const char* IBL_FOLDER = "samples/envs/office";
+static const char* IBL_FOLDER = "envs/office";
 
 int main(int argc, char** argv) {
     Config config;

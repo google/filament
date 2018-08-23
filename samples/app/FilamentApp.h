@@ -79,10 +79,10 @@ public:
     FilamentApp& operator=(const FilamentApp& rhs) = delete;
     FilamentApp& operator=(FilamentApp&& rhs) = delete;
 
-    // Returns the path to the Filament root for loading assets. For now this is determined by
-    // looking up from the executable folder, which allows users to launch samples from any folder.
+    // Returns the path to the Filament root for loading assets. This is determined from the
+    // executable folder, which allows users to launch samples from any folder.
     static const utils::Path& getRootPath() {
-        static const utils::Path root = utils::Path::getCurrentExecutable().getAncestor(3);
+        static const utils::Path root = utils::Path::getCurrentExecutable().getParent();
         return root;
     }
 
