@@ -180,6 +180,18 @@ private:
         float radius;
     };
 
+    struct LightTreeNode {
+        float min;          // lights z-range min
+        float max;          // lights z-range max
+
+        uint16_t next;      // next node when range test fails
+        uint16_t offset;    // offset in record buffer
+
+        uint8_t isLeaf;
+        uint8_t count;      // light count in record buffer
+        uint16_t reserved;
+    };
+
     // The first entry always encodes the type of light, i.e. point/spot
     using FroxelThreadData = std::array<LightGroupType, FROXEL_BUFFER_ENTRY_COUNT_MAX + 1>;
 
@@ -192,14 +204,12 @@ private:
 
     void froxelizeAssignRecordsCompress() noexcept;
 
-    void froxelizePointAndSpotLight(
-            FroxelThreadData& froxelThread, size_t bit,
+    void froxelizePointAndSpotLight(FroxelThreadData& froxelThread, size_t bit,
             math::mat4f const& projection, const LightParams& light) const noexcept;
 
-    void computeLightTree(
-            LightRecord const& lights,
-            const CameraInfo& camera,
-            const FScene::LightSoa& lightData) const noexcept;
+    static void computeLightTree(LightTreeNode* lightTree,
+            utils::Slice<RecordBufferType> const& lightList,
+            const FScene::LightSoa& lightData, size_t lightRecordsOffset) noexcept;
 
     uint16_t getFroxelIndex(size_t ix, size_t iy, size_t iz) const noexcept {
         return uint16_t(ix + (iy * mFroxelCountX) + (iz * mFroxelCountX * mFroxelCountY));
