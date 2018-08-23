@@ -2,6 +2,8 @@
 // Material parameters
 //------------------------------------------------------------------------------
 
+// These variables should be in a struct but some GPU drivers ignore the
+// precision qualifier on individual struct members
 HIGHP mat3  shading_tangentToWorld; // TBN matrix
 HIGHP vec3  shading_position;       // position of the fragment in world space
       vec3  shading_view;           // normalized vector from the fragment to the eye
