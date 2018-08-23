@@ -190,6 +190,18 @@ VKAPI_ATTR VkBool32 VKAPI_CALL MyDebugReportCallback(
     {
         return VK_FALSE;
     }
+
+    /*
+    "Mapping an image with layout VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL can result in undefined behavior if this memory is used by the device. Only GENERAL or PREINITIALIZED should be used."
+    Ignoring because we map entire VkDeviceMemory blocks, where different types of
+    images and buffers may end up together, especially on GPUs with unified memory
+    like Intel.
+    */
+    if(strstr(pMessage, "Mapping an image with layout") != nullptr &&
+        strstr(pMessage, "can result in undefined behavior if this memory is used by the device") != nullptr)
+    {
+        return VK_FALSE;
+    }
     
     switch(flags)
     {
@@ -573,7 +585,7 @@ static void CreateTexture(uint32_t sizeX, uint32_t sizeY)
 
 struct UniformBufferObject
 {
-    mathfu::vec4_packed ModelViewProj[4];
+    mat4 ModelViewProj;
 };
 
 static void RegisterDebugCallbacks()
@@ -1573,18 +1585,16 @@ static void DrawFrame()
         VK_PIPELINE_BIND_POINT_GRAPHICS,
         g_hPipeline);
 
-    mathfu::mat4 view = mathfu::mat4::LookAt(
-        mathfu::kZeros3f,
-        mathfu::vec3(0.f, -2.f, 4.f),
-        mathfu::kAxisY3f);
-    mathfu::mat4 proj = mathfu::mat4::Perspective(
+    mat4 view = mat4::LookAt(
+        vec3(0.f, 0.f, 0.f),
+        vec3(0.f, -2.f, 4.f),
+        vec3(0.f, 1.f, 0.f));
+    mat4 proj = mat4::Perspective(
         1.0471975511966f, // 60 degrees
         (float)g_Extent.width / (float)g_Extent.height,
         0.1f,
-        1000.f,
-        -1.f);
-    //proj[1][1] *= -1.f;
-    mathfu::mat4 viewProj = proj * view;
+        1000.f);
+    mat4 viewProj = view * proj;
 
     vkCmdBindDescriptorSets(
         hCommandBuffer,
@@ -1596,17 +1606,11 @@ static void DrawFrame()
         0,
         nullptr);
 
-    float rotationAngle = (float)GetTickCount() * 0.001f * (float)M_PI * 0.2f;
-    mathfu::mat3 model_3 = mathfu::mat3::RotationY(rotationAngle);
-    mathfu::mat4 model_4 = mathfu::mat4(
-        model_3(0, 0), model_3(0, 1), model_3(0, 2), 0.f,
-        model_3(1, 0), model_3(1, 1), model_3(1, 2), 0.f,
-        model_3(2, 0), model_3(2, 1), model_3(2, 2), 0.f,
-        0.f, 0.f, 0.f, 1.f);
-    mathfu::mat4 modelViewProj = viewProj * model_4;
+    float rotationAngle = (float)GetTickCount() * 0.001f * (float)PI * 0.2f;
+    mat4 model = mat4::RotationY(rotationAngle);
 
     UniformBufferObject ubo = {};
-    modelViewProj.Pack(ubo.ModelViewProj);
+    ubo.ModelViewProj = model * viewProj;
     vkCmdPushConstants(hCommandBuffer, g_hPipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(UniformBufferObject), &ubo);
 
     VkBuffer vertexBuffers[] = { g_hVertexBuffer };
