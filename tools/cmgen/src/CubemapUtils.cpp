@@ -23,7 +23,7 @@
 using namespace math;
 using namespace image;
 
-void CubemapUtils::clamp(image::Image& src) {
+void CubemapUtils::clamp(Image& src) {
     // We clamp all values to 256 which correspond to the maximum value (before
     // gamma compression) that we can store in RGBM.
     // This clamping is necessary because:
@@ -42,7 +42,7 @@ void CubemapUtils::clamp(image::Image& src) {
     }
 }
 
-void CubemapUtils::equirectangularToCubemap(Cubemap& dst, const image::Image& src) {
+void CubemapUtils::equirectangularToCubemap(Cubemap& dst, const Image& src) {
     const size_t width = src.getWidth();
     const size_t height = src.getHeight();
     const double r = width * 0.5 * M_1_PI;
@@ -90,7 +90,7 @@ void CubemapUtils::downsampleCubemapLevelBoxFilter(Cubemap& dst, const Cubemap& 
     size_t scale = src.getDimensions() / dst.getDimensions();
     process<EmptyState>(dst,
             [&](EmptyState&, size_t y, Cubemap::Face f, Cubemap::Texel* data, size_t dim) {
-        const image::Image& image(src.getImageForFace(f));
+        const Image& image(src.getImageForFace(f));
         for (size_t x=0 ; x<dim ; ++x, ++data) {
             Cubemap::writeAt(data, Cubemap::filterAt(image, x*scale+0.5, y*scale+0.5));
         }

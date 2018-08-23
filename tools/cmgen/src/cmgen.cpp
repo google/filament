@@ -24,7 +24,6 @@
 #include <math/scalar.h>
 #include <math/vec4.h>
 
-#include <image/Image.h>
 #include <imageio/ImageDecoder.h>
 #include <imageio/ImageEncoder.h>
 
@@ -36,6 +35,7 @@
 #include "CubemapIBL.h"
 #include "CubemapSH.h"
 #include "CubemapUtils.h"
+#include "Image.h"
 
 using namespace math;
 using namespace image;
