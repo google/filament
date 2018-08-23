@@ -1,7 +1,8 @@
 This folder was created as follows:
 
-curl -L -O https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator/archive/8a5ba7.zip
-unzip 8a5ba7.zip
+curl -L -O https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator/archive/62c009.zip
+unzip 62c009.zip
 mv VulkanMemoryAllocator-* vkmemalloc
 cd vkmemalloc
 rm -rf bin docs media premake third_party tools
+rsync -r ./ ~/github/filament/third_party/vkmemalloc/ --delete --exclude tnt

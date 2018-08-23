@@ -21,7 +21,9 @@
 #pragma clang diagnostic ignored "-Wundef"
 #pragma clang diagnostic ignored "-Wunused-variable"
 #pragma clang diagnostic ignored "-Wmissing-field-initializers"
+#pragma clang diagnostic ignored "-Wtautological-compare"
 #define VMA_IMPLEMENTATION
+#include <cstdio>
 #include "vk_mem_alloc.h"
 #pragma clang diagnostic pop
 
