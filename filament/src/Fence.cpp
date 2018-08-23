@@ -66,6 +66,7 @@ FenceStatus FFence::waitAndDestroy(FFence* fence, Mode mode) noexcept {
 
 UTILS_NOINLINE
 FenceStatus FFence::wait(Mode mode, uint64_t timeout) noexcept {
+    assert(UTILS_HAS_THREADING);
     FEngine& engine = mEngine;
 
     if (mode == Mode::FLUSH) {

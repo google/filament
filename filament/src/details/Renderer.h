@@ -131,12 +131,12 @@ private:
 
     // keep a reference to our engine
     FEngine& mEngine;
-    FrameSkipper mFrameSkipper;
+    std::unique_ptr<FrameSkipper> mFrameSkipper;
     Handle<HwRenderTarget> mRenderTarget;
     FSwapChain* mSwapChain = nullptr;
     size_t mCommandsHighWatermark = 0;
     uint32_t mFrameId = 0;
-    FrameInfoManager mFrameInfoManager;
+    std::unique_ptr<FrameInfoManager> mFrameInfoManager;
     bool mIsRGB16FSupported : 1;
     bool mIsRGB8Supported : 1;
 

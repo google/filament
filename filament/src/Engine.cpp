@@ -79,6 +79,14 @@ FEngine* FEngine::create(Backend backend, ExternalContext* externalContext, void
     // initialize all fields that need an instance of FEngine
     // (this cannot be done safely in the ctor)
 
+    if (!UTILS_HAS_THREADING) {
+        instance->mExternalContext = ExternalContext::create(&instance->mBackend);
+        instance->mDriver = instance->mExternalContext->createDriver(sharedGLContext);
+        instance->init();
+        instance->tick();
+        return instance;
+    }
+
     // start the driver thread
     instance->mDriverThread = std::thread(&FEngine::loop, instance);
 
@@ -699,6 +707,18 @@ void* FEngine::streamAlloc(size_t size, size_t alignment) noexcept {
     return getDriverApi().allocate(size, alignment);
 }
 
+void FEngine::tick() noexcept {
+    ASSERT_PRECONDITION(!UTILS_HAS_THREADING, "Tick is meant only for single-threaded platforms.");
+    mCommandBufferQueue.flush();
+    auto buffers = mCommandBufferQueue.waitForCommands();
+    for (auto& item : buffers) {
+        if (UTILS_LIKELY(item.begin)) {
+            mCommandStream.execute(item.begin);
+            mCommandBufferQueue.releaseBuffer(item);
+        }
+    }
+}
+
 // ---------------------------------------------------------------------------------------------
 
 EnginePerformanceTest::~EnginePerformanceTest() noexcept = default;
@@ -869,6 +889,10 @@ TransformManager& Engine::getTransformManager() noexcept {
 
 void* Engine::streamAlloc(size_t size, size_t alignment) noexcept {
     return upcast(this)->streamAlloc(size, alignment);
+}
+
+void Engine::tick() noexcept {
+    return upcast(this)->tick();
 }
 
 DebugRegistry& Engine::getDebugRegistry() noexcept {

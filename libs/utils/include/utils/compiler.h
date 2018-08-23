@@ -72,6 +72,11 @@
 #   define UTILS_HAS_HYPER_THREADING 0
 #endif
 
+#if defined(__EMSCRIPTEN__)
+#   define UTILS_HAS_THREADING 0
+#else
+#   define UTILS_HAS_THREADING 1
+#endif
 
 #if __has_attribute(noinline)
 #define UTILS_NOINLINE __attribute__((noinline))

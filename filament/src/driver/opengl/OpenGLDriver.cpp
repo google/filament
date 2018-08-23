@@ -815,6 +815,7 @@ void OpenGLDriver::createVertexBuffer(
 
     GLsizei n = GLsizei(vb->bufferCount);
     glGenBuffers(n, vb->gl.buffers.data());
+    assert(vb->gl.buffers[0]);
 
     for (GLsizei i = 0; i < n; i++) {
         // figure out the size needed for each buffer
@@ -872,6 +873,7 @@ void OpenGLDriver::createUniformBuffer(Driver::UniformBufferHandle ubh, size_t s
 
     GLUniformBuffer* ub = construct<GLUniformBuffer>(ubh, size);
     glGenBuffers(1, &ub->gl.ubo);
+    assert(ub->gl.ubo);
     bindBuffer(GL_UNIFORM_BUFFER, ub->gl.ubo);
     glBufferData(GL_UNIFORM_BUFFER, size, nullptr, GL_DYNAMIC_DRAW);
     CHECK_GL_ERROR(utils::slog.e)

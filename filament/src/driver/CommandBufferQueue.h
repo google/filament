@@ -28,7 +28,7 @@
 namespace filament {
 
 /*
- * A produdcer-consumer command queue that uses a CircularBuffer as main storage
+ * A producer-consumer command queue that uses a CircularBuffer as main storage
  */
 class CommandBufferQueue {
     struct Slice {

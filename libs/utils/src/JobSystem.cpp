@@ -109,7 +109,7 @@ JobSystem::JobSystem(size_t threadCount, size_t adoptableThreadsCount) noexcept
 {
     SYSTRACE_ENABLE();
 
-    if (threadCount == 0) {
+    if (threadCount == 0 && UTILS_HAS_THREADING) {
         // default value, system dependant
         size_t hwThreads = std::thread::hardware_concurrency();
         if (UTILS_HAS_HYPER_THREADING) {

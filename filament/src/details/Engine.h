@@ -343,6 +343,8 @@ public:
         return mDebugRegistry;
     }
 
+    void tick() noexcept;
+
 private:
     FEngine(Backend backend, ExternalContext* externalContext, void* sharedGLContext);
     void init();

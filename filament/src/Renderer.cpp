@@ -45,8 +45,10 @@ namespace details {
 
 FRenderer::FRenderer(FEngine& engine) :
         mEngine(engine),
-        mFrameSkipper(engine, 2),
-        mFrameInfoManager(engine),
+        #if UTILS_HAS_THREADING
+        mFrameSkipper(new FrameSkipper(engine, 2)),
+        mFrameInfoManager(new FrameInfoManager(engine)),
+        #endif
         mIsRGB16FSupported(false),
         mIsRGB8Supported(false),
         mPerRenderPassArena(engine.getPerRenderPassAllocator())
@@ -58,7 +60,9 @@ void FRenderer::init() noexcept {
     mRenderTarget = driver.createDefaultRenderTarget();
     mIsRGB16FSupported = driver.isRenderTargetFormatSupported(driver::TextureFormat::RGB16F);
     mIsRGB8Supported = driver.isRenderTargetFormatSupported(driver::TextureFormat::RGB8);
-    mFrameInfoManager.run();
+    if (mFrameInfoManager) {
+        mFrameInfoManager->run();
+    }
 }
 
 FRenderer::~FRenderer() noexcept {
@@ -84,7 +88,9 @@ void FRenderer::terminate(FEngine& engine) {
     // that all pending commands have been executed (as they could reference data in this
     // instance, e.g. Fences, Callbacks, etc...)
     Fence::waitAndDestroy(engine.createFence());
-    mFrameInfoManager.terminate();
+    if (mFrameInfoManager) {
+        mFrameInfoManager->terminate();
+    }
 }
 
 void FRenderer::render(FView const* view) {
@@ -126,7 +132,8 @@ void FRenderer::renderJob(ArenaScope& arena, FView* view) {
 
     Viewport const& vp = view->getViewport();
     const bool hasPostProcess = view->hasPostProcessPass();
-    float2 scale = view->updateScale(mFrameInfoManager.getLastFrameTime());
+    float2 scale = UTILS_LIKELY(mFrameInfoManager) ?
+            view->updateScale(mFrameInfoManager->getLastFrameTime()) : 1.0f;
     bool mUseFXAA = view->getAntiAliasing() == View::AntiAliasing::FXAA;
     if (!hasPostProcess) {
         // dynamic scaling and FXAA are part of the post-process phase and can't happen if
@@ -233,7 +240,9 @@ bool FRenderer::beginFrame(FSwapChain* swapChain) {
     assert(swapChain);
 
     mFrameId++;
-    mFrameInfoManager.beginFrame(mFrameId);
+    if (UTILS_LIKELY(mFrameInfoManager)) {
+        mFrameInfoManager->beginFrame(mFrameId);
+    }
 
     { // scope for frame id trace
         char buf[64];
@@ -253,8 +262,8 @@ bool FRenderer::beginFrame(FSwapChain* swapChain) {
     driver.beginFrame(
             uint64_t(std::chrono::steady_clock::now().time_since_epoch().count()), mFrameId);
 
-    if (mFrameSkipper.skipFrameNeeded()) {
-        mFrameInfoManager.cancelFrame();
+    if (UTILS_LIKELY(mFrameSkipper) && mFrameSkipper->skipFrameNeeded()) {
+        mFrameInfoManager->cancelFrame();
         driver.endFrame(mFrameId);
         engine.flush();
         return false;
@@ -277,9 +286,12 @@ void FRenderer::endFrame() {
     // the buffer form another thread, which is currently not allowed.
     driver.debugThreading();
 
-    FrameInfoManager& frameInfoManager = mFrameInfoManager;
-    frameInfoManager.endFrame();
-    mFrameSkipper.endFrame();
+    if (UTILS_LIKELY(mFrameInfoManager)) {
+        mFrameInfoManager->endFrame();
+    }
+    if (UTILS_LIKELY(mFrameSkipper)) {
+        mFrameSkipper->endFrame();
+    }
 
     driver.endFrame(mFrameId);
 
@@ -302,9 +314,9 @@ void FRenderer::endFrame() {
     js.wait(job);
 
 
-#if EXTRA_TIMING_INFO
-    if (UTILS_UNLIKELY(frameInfoManager.isLapRecordsEnabled())) {
-        auto history = frameInfoManager.getHistory();
+#if EXTRA_TIMING_INFO and UTILS_HAS_THREADING
+    if (UTILS_UNLIKELY(mFrameInfoManager->isLapRecordsEnabled())) {
+        auto history = mFrameInfoManager->getHistory();
         FrameInfo const& info = history.back();
         FrameInfo::duration rendering   = info.laps[FrameInfo::LAP_0]  - info.laps[FrameInfo::START];
         FrameInfo::duration postprocess = info.laps[FrameInfo::FINISH] - info.laps[FrameInfo::LAP_0];
