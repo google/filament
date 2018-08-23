@@ -12,6 +12,7 @@ set(HDRS
     src/CubemapIBL.h
     src/CubemapSH.h
     src/CubemapUtils.h
+    src/Image.h
     src/ProgressUpdater.h
     src/utilities.h
 )
@@ -22,6 +23,7 @@ set(SRCS
     src/CubemapIBL.cpp
     src/CubemapSH.cpp
     src/CubemapUtils.cpp
+    src/Image.cpp
     src/JobQueue.cpp
     src/ProgressUpdater.cpp
 )
