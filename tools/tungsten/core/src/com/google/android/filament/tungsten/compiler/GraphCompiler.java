@@ -36,6 +36,7 @@ public final class GraphCompiler {
     private final List<String> mRequiredAttributes = new ArrayList<>();
     private final List<Parameter> mParameters = new ArrayList<>();
     private final Map<String, Integer> mParameterNumberMap = new HashMap<>();
+    private final Map<Node.PropertyHandle, Parameter> mPropertyParameterMap = new HashMap<>();
     private final LinkedHashMap<String, String> mGlobalFunctions = new LinkedHashMap<>();
     private final Map<String, Integer> mVariableNameMap = new HashMap<>();
 
@@ -56,7 +57,7 @@ public final class GraphCompiler {
         String materialDefinition =
                 GraphFormatter.formatMaterialSection(mRequiredAttributes, mParameters) +
                         fragmentSection;
-        return new CompiledGraph(materialDefinition);
+        return new CompiledGraph(materialDefinition, mPropertyParameterMap);
     }
 
     /**
@@ -123,6 +124,16 @@ public final class GraphCompiler {
         Parameter parameter = new Parameter(type, parameterName);
         mParameters.add(parameter);
         return parameter;
+    }
+
+    /**
+    * Associates a material parameter with a Node's property. After the graph is compiled, this
+    * mapping between parameters and properties is returned so that adjustments to a property
+    * can affect the appropriate material parameter.
+    */
+    public void associateParameterWithProperty(@NotNull Parameter parameter,
+            @NotNull Node.PropertyHandle property) {
+        mPropertyParameterMap.put(property, parameter);
     }
 
     /**

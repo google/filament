@@ -16,7 +16,12 @@
 
 package com.google.android.filament.tungsten.compiler
 
+import com.google.android.filament.tungsten.model.Node
+
 data class CompiledGraph(
     // The Filament material definition that is fed into matc
-    val materialDefinition: String
+    val materialDefinition: String,
+
+    // Maps a Node's property to the associated material parameter it controls
+    val parameterMap: Map<Node.PropertyHandle, Parameter>
 )
