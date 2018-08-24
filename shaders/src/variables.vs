@@ -27,7 +27,7 @@ layout(location = LOCATION_BONE_WEIGHTS) in vec4 mesh_bone_weights;
 LAYOUT_LOCATION(4) out HIGHP vec3 vertex_worldPosition;
 #if defined(HAS_ATTRIBUTE_TANGENTS)
 LAYOUT_LOCATION(5) SHADING_INTERPOLATION out MEDIUMP vec3 vertex_worldNormal;
-#if defined(MATERIAL_HAS_ANISOTROPY) || defined(MATERIAL_HAS_NORMAL)
+#if defined(MATERIAL_HAS_ANISOTROPY) || defined(MATERIAL_HAS_NORMAL) || defined(MATERIAL_HAS_CLEAR_COAT_NORMAL)
 LAYOUT_LOCATION(6) SHADING_INTERPOLATION out MEDIUMP vec3 vertex_worldTangent;
 LAYOUT_LOCATION(7) SHADING_INTERPOLATION out MEDIUMP vec3 vertex_worldBitangent;
 #endif
