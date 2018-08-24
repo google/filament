@@ -125,6 +125,10 @@ public final class Filament {
         mFilamentThread.start();
     }
 
+    public void assertIsFilamentThread() {
+        assert Thread.currentThread().equals(mFilamentThread);
+    }
+
     private void drainJobQueue() {
         while (!mJobQueue.isEmpty()) {
             Task task = mJobQueue.poll();

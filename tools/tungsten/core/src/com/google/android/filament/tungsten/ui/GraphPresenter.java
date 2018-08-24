@@ -18,14 +18,18 @@ package com.google.android.filament.tungsten.ui;
 
 import com.google.android.filament.Material;
 import com.google.android.filament.MaterialInstance;
+import com.google.android.filament.tungsten.Filament;
 import com.google.android.filament.tungsten.MaterialManager;
+import com.google.android.filament.tungsten.compiler.CompiledGraph;
 import com.google.android.filament.tungsten.compiler.GraphCompiler;
 import com.google.android.filament.tungsten.compiler.NodeRegistry;
+import com.google.android.filament.tungsten.compiler.Parameter;
 import com.google.android.filament.tungsten.model.Connection;
 import com.google.android.filament.tungsten.model.Graph;
 import com.google.android.filament.tungsten.model.GraphInitializer;
 import com.google.android.filament.tungsten.model.Node;
 import com.google.android.filament.tungsten.model.Property;
+import com.google.android.filament.tungsten.model.PropertyType;
 import com.google.android.filament.tungsten.model.serialization.GraphFile;
 import com.google.android.filament.tungsten.model.serialization.GraphSerializer;
 import com.google.android.filament.tungsten.model.serialization.JsonDeserializer;
@@ -34,13 +38,14 @@ import com.google.android.filament.tungsten.properties.IPropertiesPresenter;
 import com.google.android.filament.tungsten.properties.PropertiesPanel;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import javax.swing.JTextArea;
+import org.jetbrains.annotations.Nullable;
 
 public class GraphPresenter implements IPropertiesPresenter {
 
     // Views
-    private Graph mModel;
     private final MaterialGraphComponent mGraphView;
     private final PreviewMeshPanel mPreviewMeshPanel;
     private final JTextArea mMaterialSource;
@@ -51,7 +56,12 @@ public class GraphPresenter implements IPropertiesPresenter {
     private final MaterialManager mMaterialManager;
     private final TungstenFile mFile;
 
-    private String mCompiledGraph;
+    private CompiledGraph mCompiledGraph;
+
+    private Graph mModel;
+
+    // Only accessed from Filament thread
+    @Nullable private MaterialInstance mCurrentMaterialInstance = null;
 
     public GraphPresenter(Graph model, MaterialGraphComponent graphView,
             PreviewMeshPanel previewMeshPanel, JTextArea materialSource,
@@ -116,7 +126,29 @@ public class GraphPresenter implements IPropertiesPresenter {
         mModel = mModel.graphByChangingProperty(handle, property);
         mGraphView.render(mModel);
         mPropertiesPanel.showPropertiesForNode(mModel.getSelectedNodes().get(0));
-        recompileGraph();
+
+        // Graph property changes trigger a full recompilation of the graph, while material
+        // parameter changes trigger only a material parameter update on the current material
+        // instance.
+        if (property.getType() == PropertyType.GRAPH_PROPERTY) {
+            recompileGraph();
+        } else if (property.getType() == PropertyType.MATERIAL_PARAMETER) {
+            Parameter parameter = mCompiledGraph.getParameterMap().get(handle);
+            if (parameter == null) {
+                return;
+            }
+            Filament.getInstance().runOnFilamentThread(engine -> {
+                if (mCurrentMaterialInstance == null) {
+                    return;
+                }
+                // This check prevents us from setting a property on a newer material instance that
+                // may no longer have that property.
+                if (mCurrentMaterialInstance.getMaterial().hasParameter(parameter.getName())) {
+                    property.getValue().applyToMaterialInstance(mCurrentMaterialInstance,
+                            parameter.getName());
+                }
+            });
+        }
     }
 
     /**
@@ -158,19 +190,39 @@ public class GraphPresenter implements IPropertiesPresenter {
             return;
         }
         GraphCompiler compiler = new GraphCompiler(mModel);
-        mCompiledGraph = compiler.compileGraph().getMaterialDefinition();
-        mMaterialSource.setText(mCompiledGraph);
+        mCompiledGraph = compiler.compileGraph();
+        mMaterialSource.setText(mCompiledGraph.getMaterialDefinition());
 
         CompletableFuture<Material> futureMaterial = mMaterialManager
-                .compileMaterial(mCompiledGraph);
+                .compileMaterial(mCompiledGraph.getMaterialDefinition());
 
         serializeAndSave();
 
+        final CompiledGraph compiledGraph = mCompiledGraph;
+        final Graph graph = mModel;
         futureMaterial.thenAccept(newMaterial -> {
-            // The returned future will always be completed on the main thread, so
-            // we're safe to call filament methods here.
-            MaterialInstance newMaterialInstance = newMaterial.createInstance();
-            mPreviewMeshPanel.updateMaterial(newMaterialInstance);
+            Filament.getInstance().assertIsFilamentThread();
+
+            mCurrentMaterialInstance = newMaterial.createInstance();
+            mPreviewMeshPanel.updateMaterial(mCurrentMaterialInstance);
+
+            // For all parameters present in the compiled graph, update them based on the current
+            // value in our model.
+            for (Map.Entry<Node.PropertyHandle, Parameter> entry
+                    : compiledGraph.getParameterMap().entrySet()) {
+
+                Node.PropertyHandle handle = entry.getKey();
+                Parameter parameter = entry.getValue();
+
+                Property nodeProperty = graph.getNodeProperty(handle);
+                if (nodeProperty == null) {
+                    continue;
+                }
+                if (mCurrentMaterialInstance.getMaterial().hasParameter(parameter.getName())) {
+                    nodeProperty.getValue()
+                            .applyToMaterialInstance(mCurrentMaterialInstance, parameter.getName());
+                }
+            }
         });
     }
 
@@ -181,7 +233,8 @@ public class GraphPresenter implements IPropertiesPresenter {
         String serializedGraph = GraphSerializer.INSTANCE.serialize(mModel, Collections.emptyMap(),
                 new JsonSerializer());
         String materialDefinition =
-                GraphFile.INSTANCE.addToolBlockToMaterialFile(mCompiledGraph, serializedGraph);
+                GraphFile.INSTANCE.addToolBlockToMaterialFile(
+                mCompiledGraph.getMaterialDefinition(), serializedGraph);
         mFile.write(materialDefinition, success -> {
             if (!success) {
                 // TODO: propagate this error to the user somehow in the UI
