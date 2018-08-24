@@ -172,6 +172,11 @@ public class LightManager {
         }
     }
 
+    @NonNull
+    public Type getType(@EntityInstance int i) {
+        return Type.values()[nGetType(mNativeObject, i)];
+    }
+
     public void setPosition(@EntityInstance int i, float x, float y, float z) {
         nSetPosition(mNativeObject, i, x, y, z);
     }
@@ -283,6 +288,8 @@ public class LightManager {
     private static native void nBuilderHaloSize(long nativeBuilder, float haloSize);
     private static native void nBuilderHaloFalloff(long nativeBuilder, float haloFalloff);
 
+
+    private static native int nGetType(long nativeLightManager, int i);
     private static native void nSetPosition(long nativeLightManager, int i, float x, float y, float z);
     private static native void nGetPosition(long nativeLightManager, int i, float[] out);
     private static native void nSetDirection(long nativeLightManager, int i, float x, float y, float z);
