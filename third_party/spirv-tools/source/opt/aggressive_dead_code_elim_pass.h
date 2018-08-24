@@ -114,7 +114,7 @@ class AggressiveDCEPass : public MemPass {
   // Add branch to |labelId| to end of block |bp|.
   void AddBranch(uint32_t labelId, BasicBlock* bp);
 
-  // Add all break and continue branches in the loop associated with
+  // Add all break and continue branches in the construct associated with
   // |mergeInst| to worklist if not already live
   void AddBreaksAndContinuesToWorklist(Instruction* mergeInst);
 

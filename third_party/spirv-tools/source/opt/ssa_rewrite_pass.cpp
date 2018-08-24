@@ -452,6 +452,11 @@ bool SSARewriter::ApplyReplacements() {
     pass_->context()->set_instr_block(&*phi_inst, phi_candidate->bb());
     auto insert_it = phi_candidate->bb()->begin();
     insert_it.InsertBefore(std::move(phi_inst));
+
+    pass_->context()->get_decoration_mgr()->CloneDecorations(
+        phi_candidate->var_id(), phi_candidate->result_id(),
+        {SpvDecorationRelaxedPrecision});
+
     modified = true;
   }
 

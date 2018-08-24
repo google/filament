@@ -1,0 +1,19 @@
+.clang_complete
+.ycm_extra_conf.py*
+*.pyc
+compile_commands.json
+/build/
+/buildtools/
+/external/googletest
+/external/effcee
+/external/re2
+/out
+/TAGS
+/third_party/llvm-build/
+/testing
+/tools/clang/
+/utils/clang-format-diff.py
+
+# Vim
+[._]*.s[a-w][a-z]
+*~

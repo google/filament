@@ -130,6 +130,17 @@ class DeadBranchElimPass : public MemPass {
   // Reorders blocks in reachable functions so that they satisfy dominator
   // block ordering rules.
   void FixBlockOrder();
+
+  // Return the first branch instruction that is a conditional branch to
+  // |merge_block_id|. Returns |nullptr| if not such branch exists. If there are
+  // multiple such branches, the first one is the one that would be executed
+  // first when running the code.  That is, the one that dominates all of the
+  // others.
+  //
+  // |start_block_id| must be a block whose innermost containing merge construct
+  // has |merge_block_id| as the merge block.
+  Instruction* FindFirstExitFromSelectionMerge(uint32_t start_block_id,
+                                               uint32_t merge_block_id);
 };
 
 }  // namespace opt

@@ -25,7 +25,7 @@ namespace opt {
 // See optimizer.hpp for documentation.
 class FlattenDecorationPass : public Pass {
  public:
-  const char* name() const override { return "flatten-decoration"; }
+  const char* name() const override { return "flatten-decorations"; }
   Status Process() override;
 };
 

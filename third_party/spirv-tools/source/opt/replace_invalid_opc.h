@@ -28,7 +28,7 @@ namespace opt {
 // value, the instruction will simply be deleted.
 class ReplaceInvalidOpcodePass : public Pass {
  public:
-  const char* name() const override { return "replace-invalid-opcodes"; }
+  const char* name() const override { return "replace-invalid-opcode"; }
   Status Process() override;
 
  private:

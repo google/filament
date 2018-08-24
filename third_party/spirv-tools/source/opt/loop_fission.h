@@ -55,7 +55,7 @@ class LoopFissionPass : public Pass {
                   bool split_multiple_times = true)
       : split_criteria_(functor), split_multiple_times_(split_multiple_times) {}
 
-  const char* name() const override { return "Loop Fission"; }
+  const char* name() const override { return "loop-fission"; }
 
   Pass::Status Process() override;
 

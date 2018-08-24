@@ -119,7 +119,7 @@ Optimizer& Optimizer::RegisterLegalizationPasses() {
           .RegisterPass(CreateLocalSingleBlockLoadStoreElimPass())
           .RegisterPass(CreateLocalSingleStoreElimPass())
           .RegisterPass(CreateAggressiveDCEPass())
-          // Split up aggragates so they are easier to deal with.
+          // Split up aggregates so they are easier to deal with.
           .RegisterPass(CreateScalarReplacementPass(0))
           // Remove loads and stores so everything is in intermediate values.
           // Takes care of copy propagation of non-members.
@@ -348,7 +348,7 @@ bool Optimizer::RegisterPassFromFlag(const std::string& flag) {
     if (pass_args.size() == 0) {
       RegisterPass(CreateScalarReplacementPass());
     } else {
-      uint32_t limit = atoi(pass_args.c_str());
+      int limit = atoi(pass_args.c_str());
       if (limit > 0) {
         RegisterPass(CreateScalarReplacementPass(limit));
       } else {
@@ -409,7 +409,7 @@ bool Optimizer::RegisterPassFromFlag(const std::string& flag) {
           CreateLoopFusionPass(static_cast<size_t>(max_registers_per_loop)));
     } else {
       Error(consumer(), nullptr, {},
-            "--loop-fusion must be have a positive integer argument");
+            "--loop-fusion must have a positive integer argument");
       return false;
     }
   } else if (pass_name == "loop-unroll") {
@@ -418,15 +418,24 @@ bool Optimizer::RegisterPassFromFlag(const std::string& flag) {
     RegisterPass(CreateVectorDCEPass());
   } else if (pass_name == "loop-unroll-partial") {
     int factor = (pass_args.size() > 0) ? atoi(pass_args.c_str()) : 0;
-    if (factor != 0) {
+    if (factor > 0) {
       RegisterPass(CreateLoopUnrollPass(false, factor));
     } else {
       Error(consumer(), nullptr, {},
-            "--loop-unroll-partial must have a non-0 integer argument");
+            "--loop-unroll-partial must have a positive integer argument");
       return false;
     }
   } else if (pass_name == "loop-peeling") {
     RegisterPass(CreateLoopPeelingPass());
+  } else if (pass_name == "loop-peeling-threshold") {
+    int factor = (pass_args.size() > 0) ? atoi(pass_args.c_str()) : 0;
+    if (factor > 0) {
+      opt::LoopPeelingPass::SetLoopPeelingThreshold(factor);
+    } else {
+      Error(consumer(), nullptr, {},
+            "--loop-peeling-threshold must have a positive integer argument");
+      return false;
+    }
   } else if (pass_name == "ccp") {
     RegisterPass(CreateCCPPass());
   } else if (pass_name == "O") {

@@ -862,7 +862,7 @@ std::tuple<bool, bool, uint32_t> ValidationState_t::EvalInt32IfConst(
   assert(inst);
   const uint32_t type = inst->type_id();
 
-  if (!IsIntScalarType(type) || GetBitWidth(type) != 32) {
+  if (type == 0 || !IsIntScalarType(type) || GetBitWidth(type) != 32) {
     return std::make_tuple(false, false, 0);
   }
 

@@ -91,6 +91,12 @@ class DecorationManager {
   // This function does not check if the id |to| is already decorated.
   void CloneDecorations(uint32_t from, uint32_t to);
 
+  // Same as above, but only clone the decoration if the decoration operand is
+  // in |decorations_to_copy|.  This function has the extra restriction that
+  // |from| and |to| must not be an object, not a type.
+  void CloneDecorations(uint32_t from, uint32_t to,
+                        const std::vector<SpvDecoration>& decorations_to_copy);
+
   // Informs the decoration manager of a new decoration that it needs to track.
   void AddDecoration(Instruction* inst);
 

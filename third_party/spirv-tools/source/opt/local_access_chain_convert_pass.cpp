@@ -78,6 +78,8 @@ void LocalAccessChainConvertPass::ReplaceAccessChainLoad(
   uint32_t varPteTypeId;
   const uint32_t ldResultId =
       BuildAndAppendVarLoad(address_inst, &varId, &varPteTypeId, &new_inst);
+  context()->get_decoration_mgr()->CloneDecorations(
+      original_load->result_id(), ldResultId, {SpvDecorationRelaxedPrecision});
   original_load->InsertBefore(std::move(new_inst));
 
   // Rewrite |original_load| into an extract.
@@ -103,6 +105,8 @@ void LocalAccessChainConvertPass::GenAccessChainStoreReplacement(
   uint32_t varPteTypeId;
   const uint32_t ldResultId =
       BuildAndAppendVarLoad(ptrInst, &varId, &varPteTypeId, newInsts);
+  context()->get_decoration_mgr()->CloneDecorations(
+      varId, ldResultId, {SpvDecorationRelaxedPrecision});
 
   // Build and append Insert
   const uint32_t insResultId = TakeNextId();
@@ -112,6 +116,9 @@ void LocalAccessChainConvertPass::GenAccessChainStoreReplacement(
   AppendConstantOperands(ptrInst, &ins_in_opnds);
   BuildAndAppendInst(SpvOpCompositeInsert, varPteTypeId, insResultId,
                      ins_in_opnds, newInsts);
+
+  context()->get_decoration_mgr()->CloneDecorations(
+      varId, insResultId, {SpvDecorationRelaxedPrecision});
 
   // Build and append Store
   BuildAndAppendInst(SpvOpStore, 0, 0,
