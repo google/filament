@@ -22,6 +22,8 @@
 
 #include <math/fast.h>
 #include <math/scalar.h>
+#include <filament/LightManager.h>
+
 
 using namespace math;
 using namespace utils;
@@ -421,6 +423,10 @@ void LightManager::setSunHaloFalloff(Instance i, float haloFalloff) noexcept {
 
 float LightManager::getSunHaloFalloff(Instance i) const noexcept {
     return upcast(this)->getSunHaloFalloff(i);
+}
+
+LightManager::Type LightManager::getType(LightManager::Instance i) const noexcept {
+    return upcast(this)->getType(i);
 }
 
 } // namespace filament
