@@ -25,7 +25,7 @@ import com.google.android.filament.tungsten.model.Connection;
 import com.google.android.filament.tungsten.model.Graph;
 import com.google.android.filament.tungsten.model.GraphInitializer;
 import com.google.android.filament.tungsten.model.Node;
-import com.google.android.filament.tungsten.model.PropertyValue;
+import com.google.android.filament.tungsten.model.Property;
 import com.google.android.filament.tungsten.model.serialization.GraphFile;
 import com.google.android.filament.tungsten.model.serialization.GraphSerializer;
 import com.google.android.filament.tungsten.model.serialization.JsonDeserializer;
@@ -112,8 +112,8 @@ public class GraphPresenter implements IPropertiesPresenter {
      * Action from the view that lets us know a NodeProperty's value has changed.
      */
     @Override
-    public void propertyChanged(int nodeId, String propertyName, PropertyValue value) {
-        mModel = mModel.graphByChangingProperty(nodeId, propertyName, value);
+    public void propertyChanged(Node.PropertyHandle handle, Property property) {
+        mModel = mModel.graphByChangingProperty(handle, property);
         mGraphView.render(mModel);
         mPropertiesPanel.showPropertiesForNode(mModel.getSelectedNodes().get(0));
         recompileGraph();
