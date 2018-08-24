@@ -22,10 +22,7 @@
 #include <filament/RenderableManager.h>
 #include <filament/TransformManager.h>
 
-#include <filamat/MaterialBuilder.h>
-
 using namespace math;
-using namespace filamat;
 using namespace filament;
 
 const uint32_t Cube::mIndices[] = {
@@ -140,8 +137,4 @@ Cube::~Cube() {
     utils::EntityManager& em = utils::EntityManager::get();
     em.destroy(mSolidRenderable);
     em.destroy(mWireFrameRenderable);
-}
-
-VertexBuffer* Cube::getVertexBuffer() {
-    return mVertexBuffer;
 }
