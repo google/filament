@@ -43,8 +43,6 @@ public:
     void mapFrustum(filament::Engine& engine, math::mat4 const& transform);
     void mapAabb(filament::Engine& engine, filament::Box const& box);
 
-    filament::VertexBuffer* getVertexBuffer();
-
 private:
     static constexpr size_t WIREFRAME_OFFSET = 3*2*6;
     static const uint32_t mIndices[];

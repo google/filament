@@ -49,6 +49,10 @@ using namespace filagui;
 using namespace math;
 using namespace utils;
 
+static constexpr uint8_t AI_DEFAULT_MAT_PACKAGE[] = {
+    #include "generated/material/aiDefaultMat.inc"
+};
+
 static constexpr uint8_t TRANSPARENT_COLOR_PACKAGE[] = {
     #include "generated/material/transparentColor.inc"
 };
@@ -84,6 +88,10 @@ void FilamentApp::run(const Config& config,SetupCallback setupCallback,
 
       mTransparentMaterial = Material::Builder()
               .package((void*) TRANSPARENT_COLOR_PACKAGE, sizeof(TRANSPARENT_COLOR_PACKAGE))
+              .build(*mEngine);
+
+      mDefaultMaterial = Material::Builder()
+              .package((void*) AI_DEFAULT_MAT_PACKAGE, sizeof(AI_DEFAULT_MAT_PACKAGE))
               .build(*mEngine);
 
     std::unique_ptr<FilamentApp::Window> window(
@@ -374,6 +382,7 @@ void FilamentApp::run(const Config& config,SetupCallback setupCallback,
     mIBL.reset();
     mEngine->destroy(mDepthMI);
     mEngine->destroy(mDepthMaterial);
+    mEngine->destroy(mDefaultMaterial);
     mEngine->destroy(mTransparentMaterial);
     mEngine->destroy(mScene);
     Engine::destroy(&mEngine);
