@@ -104,7 +104,7 @@ static int handleCommandLineArgments(int argc, char* argv[], Config* config) {
             { "split-view",             no_argument,       nullptr, 'v' },
             { "scale",                  required_argument, nullptr, 's' },
             { "normal-map",             required_argument, nullptr, 'n' },
-            { "clear-coat-normal-map",  required_argument, nullptr, 'n' },
+            { "clear-coat-normal-map",  required_argument, nullptr, 'c' },
             { "basecolor-map",          required_argument, nullptr, 'b' },
             { nullptr, 0, nullptr, 0 }  // termination of the option list
     };
@@ -265,7 +265,6 @@ static void setup(Engine* engine, View*, Scene* scene) {
             .set(Property::BASE_COLOR)
             .set(Property::METALLIC)
             .set(Property::ROUGHNESS)
-            .set(Property::CLEAR_COAT)
             .material(shader.c_str())
             .shading(Shading::LIT);
 
@@ -280,6 +279,7 @@ static void setup(Engine* engine, View*, Scene* scene) {
         builder
             .require(VertexAttribute::UV0)
             .parameter(MaterialBuilder::SamplerType::SAMPLER_2D, "clearCoatNormalMap")
+            .set(Property::CLEAR_COAT)
             .set(Property::CLEAR_COAT_NORMAL);
     }
 
