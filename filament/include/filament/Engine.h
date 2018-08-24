@@ -338,10 +338,9 @@ public:
    /**
      * Invokes one iteration of the render loop, used only on single-threaded platforms.
      * 
-     * Note that the OpenGL context that was created during Engine construction needs to be
-     * current at the time that this is called.
+     * This should be called every time the windowing system needs to paint (e.g. at 60 Hz).
      */
-    void tick() noexcept;
+    void execute();
 
     DebugRegistry& getDebugRegistry() noexcept;
 

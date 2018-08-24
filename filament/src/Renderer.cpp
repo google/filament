@@ -45,10 +45,8 @@ namespace details {
 
 FRenderer::FRenderer(FEngine& engine) :
         mEngine(engine),
-        #if UTILS_HAS_THREADING
-        mFrameSkipper(new FrameSkipper(engine, 2)),
-        mFrameInfoManager(new FrameInfoManager(engine)),
-        #endif
+        mFrameSkipper(engine, 2),
+        mFrameInfoManager(engine),
         mIsRGB16FSupported(false),
         mIsRGB8Supported(false),
         mPerRenderPassArena(engine.getPerRenderPassAllocator())
@@ -60,8 +58,8 @@ void FRenderer::init() noexcept {
     mRenderTarget = driver.createDefaultRenderTarget();
     mIsRGB16FSupported = driver.isRenderTargetFormatSupported(driver::TextureFormat::RGB16F);
     mIsRGB8Supported = driver.isRenderTargetFormatSupported(driver::TextureFormat::RGB8);
-    if (mFrameInfoManager) {
-        mFrameInfoManager->run();
+    if (UTILS_HAS_THREADING) {
+        mFrameInfoManager.run();
     }
 }
 
@@ -87,9 +85,13 @@ void FRenderer::terminate(FEngine& engine) {
     // before we can destroy this Renderer's resources, we must make sure
     // that all pending commands have been executed (as they could reference data in this
     // instance, e.g. Fences, Callbacks, etc...)
-    Fence::waitAndDestroy(engine.createFence());
-    if (mFrameInfoManager) {
-        mFrameInfoManager->terminate();
+    if (UTILS_HAS_THREADING) {
+        Fence::waitAndDestroy(engine.createFence());
+        mFrameInfoManager.terminate();
+    } else {
+        // In single threaded mode, allow recently-created objects (e.g. no-op fences in Skipper)
+        // to initialize themselves, otherwise the engine tries to destroy invalid handles.
+        engine.execute();
     }
 }
 
@@ -132,8 +134,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView* view) {
 
     Viewport const& vp = view->getViewport();
     const bool hasPostProcess = view->hasPostProcessPass();
-    float2 scale = UTILS_LIKELY(mFrameInfoManager) ?
-            view->updateScale(mFrameInfoManager->getLastFrameTime()) : 1.0f;
+    float2 scale = view->updateScale(mFrameInfoManager.getLastFrameTime());
     bool mUseFXAA = view->getAntiAliasing() == View::AntiAliasing::FXAA;
     if (!hasPostProcess) {
         // dynamic scaling and FXAA are part of the post-process phase and can't happen if
@@ -240,8 +241,8 @@ bool FRenderer::beginFrame(FSwapChain* swapChain) {
     assert(swapChain);
 
     mFrameId++;
-    if (UTILS_LIKELY(mFrameInfoManager)) {
-        mFrameInfoManager->beginFrame(mFrameId);
+    if (UTILS_HAS_THREADING) {
+        mFrameInfoManager.beginFrame(mFrameId);
     }
 
     { // scope for frame id trace
@@ -262,8 +263,8 @@ bool FRenderer::beginFrame(FSwapChain* swapChain) {
     driver.beginFrame(
             uint64_t(std::chrono::steady_clock::now().time_since_epoch().count()), mFrameId);
 
-    if (UTILS_LIKELY(mFrameSkipper) && mFrameSkipper->skipFrameNeeded()) {
-        mFrameInfoManager->cancelFrame();
+    if (mFrameSkipper.skipFrameNeeded()) {
+        mFrameInfoManager.cancelFrame();
         driver.endFrame(mFrameId);
         engine.flush();
         return false;
@@ -282,16 +283,17 @@ void FRenderer::endFrame() {
     FEngine::DriverApi& driver = engine.getDriverApi();
     RenderTargetPool& rtp = engine.getRenderTargetPool();
 
-    // on debug builds this helps catching cases where we're writing to
-    // the buffer form another thread, which is currently not allowed.
-    driver.debugThreading();
+    FrameInfoManager& frameInfoManager = mFrameInfoManager;
 
-    if (UTILS_LIKELY(mFrameInfoManager)) {
-        mFrameInfoManager->endFrame();
+    if (UTILS_HAS_THREADING) {
+
+        // on debug builds this helps catching cases where we're writing to
+        // the buffer form another thread, which is currently not allowed.
+        driver.debugThreading();
+
+        frameInfoManager.endFrame();
     }
-    if (UTILS_LIKELY(mFrameSkipper)) {
-        mFrameSkipper->endFrame();
-    }
+    mFrameSkipper.endFrame();
 
     driver.endFrame(mFrameId);
 
@@ -314,9 +316,9 @@ void FRenderer::endFrame() {
     js.wait(job);
 
 
-#if EXTRA_TIMING_INFO and UTILS_HAS_THREADING
-    if (UTILS_UNLIKELY(mFrameInfoManager->isLapRecordsEnabled())) {
-        auto history = mFrameInfoManager->getHistory();
+#if EXTRA_TIMING_INFO
+    if (UTILS_UNLIKELY(frameInfoManager.isLapRecordsEnabled())) {
+        auto history = frameInfoManager.getHistory();
         FrameInfo const& info = history.back();
         FrameInfo::duration rendering   = info.laps[FrameInfo::LAP_0]  - info.laps[FrameInfo::START];
         FrameInfo::duration postprocess = info.laps[FrameInfo::FINISH] - info.laps[FrameInfo::LAP_0];

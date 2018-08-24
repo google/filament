@@ -74,16 +74,19 @@ static std::mutex sEnginesLock;
 FEngine* FEngine::create(Backend backend, ExternalContext* externalContext, void* sharedGLContext) {
     FEngine* instance = new FEngine(backend, externalContext, sharedGLContext);
 
-    slog.i << "FEngine (" << sizeof(void*) * 8 << " bits) created at " << instance << io::endl;
+    slog.i << "FEngine (" << sizeof(void*) * 8 << " bits) created at " << instance << " "
+            << "(threading is " << (UTILS_HAS_THREADING ? "enabled)" : "disabled)") << io::endl;
 
     // initialize all fields that need an instance of FEngine
     // (this cannot be done safely in the ctor)
 
+    // Normally we launch a thread and create the context and Driver from there (see FEngine::loop).
+    // In the single-threaded case, we do so in the here and now.
     if (!UTILS_HAS_THREADING) {
         instance->mExternalContext = ExternalContext::create(&instance->mBackend);
         instance->mDriver = instance->mExternalContext->createDriver(sharedGLContext);
         instance->init();
-        instance->tick();
+        instance->execute();
         return instance;
     }
 
@@ -300,13 +303,18 @@ void FEngine::shutdown() {
 
     // There might be commands added by the terminate() calls
     flushCommandBuffer(mCommandBufferQueue);
+    if (!UTILS_HAS_THREADING) {
+        execute();
+    }
 
     /*
      * terminate the rendering engine
      */
 
     mCommandBufferQueue.requestExit();
-    mDriverThread.join();
+    if (UTILS_HAS_THREADING) {
+        mDriverThread.join();
+    }
     mTerminated = true;
 
     // detach this thread from the jobsystem
@@ -370,28 +378,18 @@ int FEngine::loop() {
     JobSystem::setThreadName("FEngine::loop");
     JobSystem::setThreadPriority(JobSystem::Priority::DISPLAY);
 
-    // FIXME: we should do this based on the CPUs we actually have
-    uint32_t affinityMask = (std::thread::hardware_concurrency() >= 6) ? 0xF0 : 0;
-
-    auto& commandBufferQueue = mCommandBufferQueue;
     while (true) {
-        // wait until we get command buffers to be executed (or thread exit requested)
-        auto buffers = commandBufferQueue.waitForCommands();
-        if (UTILS_UNLIKELY(!buffers.size())) {
-            break;
-        }
+
+        // FIXME: we should do this based on the CPUs we actually have
+        uint32_t affinityMask = (std::thread::hardware_concurrency() >= 6) ? 0xF0 : 0;
 
         if (affinityMask) {
             // looks like thread affinity needs to be reset regularly (on Android)
             JobSystem::setThreadAffinity(affinityMask);
         }
 
-        // execute all command buffers
-        for (auto& item : buffers) {
-            if (UTILS_LIKELY(item.begin)) {
-                mCommandStream.execute(item.begin);
-                mCommandBufferQueue.releaseBuffer(item);
-            }
+        if (!execute()) {
+            break;
         }
     }
 
@@ -707,16 +705,23 @@ void* FEngine::streamAlloc(size_t size, size_t alignment) noexcept {
     return getDriverApi().allocate(size, alignment);
 }
 
-void FEngine::tick() noexcept {
-    ASSERT_PRECONDITION(!UTILS_HAS_THREADING, "Tick is meant only for single-threaded platforms.");
-    mCommandBufferQueue.flush();
+bool FEngine::execute() {
+
+    // wait until we get command buffers to be executed (or thread exit requested)
     auto buffers = mCommandBufferQueue.waitForCommands();
+    if (UTILS_UNLIKELY(!buffers.size())) {
+        return false;
+    }
+
+    // execute all command buffers
     for (auto& item : buffers) {
         if (UTILS_LIKELY(item.begin)) {
             mCommandStream.execute(item.begin);
             mCommandBufferQueue.releaseBuffer(item);
         }
     }
+
+    return true;
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -891,8 +896,12 @@ void* Engine::streamAlloc(size_t size, size_t alignment) noexcept {
     return upcast(this)->streamAlloc(size, alignment);
 }
 
-void Engine::tick() noexcept {
-    return upcast(this)->tick();
+// The external-facing execute does a flush, and is meant only for single-threaded environments.
+// It also discards the boolean return value, which would otherwise indicate a thread exit.
+void Engine::execute() {
+    ASSERT_PRECONDITION(!UTILS_HAS_THREADING, "Execute is meant for single-threaded platforms.");
+    upcast(this)->flush();
+    upcast(this)->execute();
 }
 
 DebugRegistry& Engine::getDebugRegistry() noexcept {

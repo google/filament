@@ -205,7 +205,7 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
     while (!mClosed) {
 
         if (!UTILS_HAS_THREADING) {
-            mEngine->tick();
+            mEngine->execute();
         }
 
         // Allow the app to animate the scene if desired.

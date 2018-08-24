@@ -77,7 +77,7 @@ void CommandBufferQueue::flush() noexcept {
     mFreeSpace -= used;
     const size_t requiredSize = mRequiredSize;
 
-#if !defined(NDEBUG) || !UTILS_HAS_THREADING
+#ifndef NDEBUG
     size_t totalUsed = circularBuffer.size() - mFreeSpace;
     mHighWatermark = std::max(mHighWatermark, totalUsed);
     if (UTILS_UNLIKELY(totalUsed > requiredSize)) {
