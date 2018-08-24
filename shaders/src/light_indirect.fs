@@ -229,10 +229,10 @@ void evaluateClothIndirectDiffuseBRDF(const PixelParams pixel, inout float diffu
 
 void evaluateClearCoatIBL(const PixelParams pixel, float specularAO, inout vec3 Fd, inout vec3 Fr) {
 #if defined(MATERIAL_HAS_CLEAR_COAT)
-#if defined(MATERIAL_HAS_NORMAL)
+#if defined(MATERIAL_HAS_NORMAL) || defined(MATERIAL_HAS_CLEAR_COAT_NORMAL)
     // We want to use the geometric normal for the clear coat layer
-    float clearCoatNoV = abs(dot(shading_tangentToWorld[2], shading_view)) + FLT_EPS;
-    vec3 clearCoatR = reflect(-shading_view, shading_tangentToWorld[2]);
+    float clearCoatNoV = abs(dot(shading_clearCoatNormal, shading_view)) + FLT_EPS;
+    vec3 clearCoatR = reflect(-shading_view, shading_clearCoatNormal);
 #else
     float clearCoatNoV = shading_NoV;
     vec3 clearCoatR = shading_reflected;

@@ -6,7 +6,7 @@ void main() {
 #if defined(HAS_ATTRIBUTE_TANGENTS)
     // If the material defines a value for the "normal" property, we need to output
     // the full orthonormal basis to apply normal mapping
-    #if defined(MATERIAL_HAS_ANISOTROPY) || defined(MATERIAL_HAS_NORMAL)
+    #if defined(MATERIAL_HAS_ANISOTROPY) || defined(MATERIAL_HAS_NORMAL) || defined(MATERIAL_HAS_CLEAR_COAT_NORMAL)
         // Extract the normal and tangent in world space from the input quaternion
         // We encode the orthonormal basis as a quaternion to save space in the attributes
         toTangentFrame(normalize(mesh_tangents), material.worldNormal, vertex_worldTangent);

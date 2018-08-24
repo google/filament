@@ -33,7 +33,7 @@ namespace filament {
         FLAT                    // flat interpolation
     };
 
-    static constexpr size_t MATERIAL_PROPERTIES_COUNT = 15;
+    static constexpr size_t MATERIAL_PROPERTIES_COUNT = 16;
     enum class Property : uint8_t {
         BASE_COLOR,              // float4, all shading models
         ROUGHNESS,               // float,  lit shading models only
@@ -42,6 +42,7 @@ namespace filament {
         AMBIENT_OCCLUSION,       // float,  lit shading models only, except subsurface and cloth
         CLEAR_COAT,              // float,  lit shading models only, except subsurface and cloth
         CLEAR_COAT_ROUGHNESS,    // float,  lit shading models only, except subsurface and cloth
+        CLEAR_COAT_NORMAL,       // float,  lit shading models only, except subsurface and cloth
         ANISOTROPY,              // float,  lit shading models only, except subsurface and cloth
         ANISOTROPY_DIRECTION,    // float3, lit shading models only, except subsurface and cloth
         THICKNESS,               // float,  subsurface shading model only
