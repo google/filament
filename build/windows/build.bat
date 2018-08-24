@@ -38,6 +38,6 @@ if errorlevel 1 exit /b %errorlevel%
 
 :: Create an archive
 dir .\install
-7z a -ttar -so ..\filament-release.tar .\install\* | 7z a -si ..\filament.tgz
+7z a -ttar -so ..\filament-release.tar .\install\* | 7z a -si ..\filament-windows.tgz
 
 echo Done!
