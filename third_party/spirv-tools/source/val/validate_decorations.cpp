@@ -665,13 +665,12 @@ spv_result_t CheckDecorationsOfEntryPoints(ValidationState_t& vstate) {
 }
 
 spv_result_t CheckDescriptorSetArrayOfArrays(ValidationState_t& vstate) {
-  for (const auto& def : vstate.all_definitions()) {
-    const auto inst = def.second;
-    if (SpvOpVariable != inst->opcode()) continue;
+  for (const auto& inst : vstate.ordered_instructions()) {
+    if (SpvOpVariable != inst.opcode()) continue;
 
     // Verify this variable is a DescriptorSet
     bool has_descriptor_set = false;
-    for (const auto& decoration : vstate.id_decorations(def.first)) {
+    for (const auto& decoration : vstate.id_decorations(inst.id())) {
       if (SpvDecorationDescriptorSet == decoration.dec_type()) {
         has_descriptor_set = true;
         break;
@@ -679,7 +678,7 @@ spv_result_t CheckDescriptorSetArrayOfArrays(ValidationState_t& vstate) {
     }
     if (!has_descriptor_set) continue;
 
-    const auto* ptrInst = vstate.FindDef(inst->word(1));
+    const auto* ptrInst = vstate.FindDef(inst.word(1));
     assert(SpvOpTypePointer == ptrInst->opcode());
 
     // Check for a first level array
@@ -693,7 +692,7 @@ spv_result_t CheckDescriptorSetArrayOfArrays(ValidationState_t& vstate) {
     const auto secondaryTypePtr = vstate.FindDef(typePtr->word(2));
     if (SpvOpTypeRuntimeArray == secondaryTypePtr->opcode() ||
         SpvOpTypeArray == secondaryTypePtr->opcode()) {
-      return vstate.diag(SPV_ERROR_INVALID_ID, inst)
+      return vstate.diag(SPV_ERROR_INVALID_ID, &inst)
              << "Only a single level of array is allowed for descriptor "
                 "set variables";
     }
@@ -783,10 +782,9 @@ void ComputeMemberConstraintsForArray(MemberConstraints* constraints,
 }
 
 spv_result_t CheckDecorationsOfBuffers(ValidationState_t& vstate) {
-  for (const auto& def : vstate.all_definitions()) {
-    const auto inst = def.second;
-    const auto& words = inst->words();
-    if (SpvOpVariable == inst->opcode()) {
+  for (const auto& inst : vstate.ordered_instructions()) {
+    const auto& words = inst.words();
+    if (SpvOpVariable == inst.opcode()) {
       // For storage class / decoration combinations, see Vulkan 14.5.4 "Offset
       // and Stride Assignment".
       const auto storageClass = words[3];

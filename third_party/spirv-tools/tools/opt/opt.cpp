@@ -138,7 +138,7 @@ Options (in lexicographical order):
   --eliminate-dead-functions
                Deletes functions that cannot be reached from entry points or
                exported functions.
-  --eliminate-dead-insert
+  --eliminate-dead-inserts
                Deletes unreferenced inserts into composites, most notably
                unused stores to vector components, that are not removed by
                aggressive dead code elimination.
@@ -383,10 +383,20 @@ bool ReadFlagsFromFile(const char* oconfig_flag,
     return false;
   }
 
-  while (!input_file.eof()) {
-    std::string flag;
-    input_file >> flag;
-    if (flag.length() > 0 && flag[0] != '#') {
+  std::string line;
+  while (std::getline(input_file, line)) {
+    // Ignore empty lines and lines starting with the comment marker '#'.
+    if (line.length() == 0 || line[0] == '#') {
+      continue;
+    }
+
+    // Tokenize the line.  Add all found tokens to the list of found flags. This
+    // mimics the way the shell will parse whitespace on the command line. NOTE:
+    // This does not support quoting and it is not intended to.
+    std::istringstream iss(line);
+    while (!iss.eof()) {
+      std::string flag;
+      iss >> flag;
       file_flags->push_back(flag);
     }
   }

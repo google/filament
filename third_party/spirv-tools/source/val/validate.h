@@ -141,6 +141,9 @@ spv_result_t ValidateBuiltIns(const ValidationState_t& _);
 /// Validates type instructions.
 spv_result_t TypePass(ValidationState_t& _, const Instruction* inst);
 
+/// Validates constant instructions.
+spv_result_t ConstantPass(ValidationState_t& _, const Instruction* inst);
+
 /// Validates correctness of arithmetic instructions.
 spv_result_t ArithmeticsPass(ValidationState_t& _, const Instruction* inst);
 

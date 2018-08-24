@@ -228,6 +228,21 @@ action("spvtools_generators_inc") {
   ]
 }
 
+action("spvtools_build_version") {
+  script = "utils/update_build_version.py"
+
+  src_dir = "."
+  inc_file = "${target_gen_dir}/build-version.inc"
+
+  outputs = [
+    inc_file,
+  ]
+  args = [
+    rebase_path(src_dir, root_build_dir),
+    rebase_path(inc_file, root_build_dir),
+  ]
+}
+
 spvtools_core_tables("unified1") {
   version = "unified1"
 }
@@ -364,6 +379,7 @@ static_library("spvtools_val") {
     "source/val/validate_capability.cpp",
     "source/val/validate_cfg.cpp",
     "source/val/validate_composites.cpp",
+    "source/val/validate_constants.cpp",
     "source/val/validate_conversion.cpp",
     "source/val/validate_datarules.cpp",
     "source/val/validate_debug.cpp",
@@ -725,4 +741,16 @@ if (spirv_tools_standalone) {
       "test/fuzzers",
     ]
   }
+}
+
+executable("spirv-as") {
+  sources = [
+    "source/software_version.cpp",
+    "tools/as/as.cpp",
+  ]
+  deps = [
+    ":spvtools",
+    ":spvtools_build_version",
+  ]
+  configs += [ ":spvtools_config" ]
 }
