@@ -40,6 +40,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicReference;
 import javax.swing.JTextArea;
 import org.jetbrains.annotations.Nullable;
 
@@ -58,15 +59,15 @@ public class GraphPresenter implements IPropertiesPresenter {
 
     private CompiledGraph mCompiledGraph;
 
-    private Graph mModel;
+    // Technically volatile is enough here b/c the Filament thread only ever reads
+    private AtomicReference<Graph> mModel = new AtomicReference<>();
 
     // Only accessed from Filament thread
     @Nullable private MaterialInstance mCurrentMaterialInstance = null;
 
-    public GraphPresenter(Graph model, MaterialGraphComponent graphView,
-            PreviewMeshPanel previewMeshPanel, JTextArea materialSource,
-            PropertiesPanel propertiesPanel, MaterialManager materialManager, TungstenFile file) {
-        mModel = model;
+    public GraphPresenter(MaterialGraphComponent graphView, PreviewMeshPanel previewMeshPanel,
+            JTextArea materialSource, PropertiesPanel propertiesPanel,
+            MaterialManager materialManager, TungstenFile file) {
         mGraphView = graphView;
         mPreviewMeshPanel = previewMeshPanel;
         mMaterialSource = materialSource;
@@ -82,8 +83,8 @@ public class GraphPresenter implements IPropertiesPresenter {
      * Action from the view that lets us know a connection between two nodes has been created.
      */
     public void connectionCreated(Connection connection) {
-        mModel = mModel.graphByFormingConnection(connection);
-        mGraphView.render(mModel);
+        mModel.getAndUpdate(graph -> graph.graphByFormingConnection(connection));
+        mGraphView.render(mModel.get());
         recompileGraph();
     }
 
@@ -91,8 +92,8 @@ public class GraphPresenter implements IPropertiesPresenter {
      * Action from the view that lets us know a connection between two nodes has been removed.
      */
     public void connectionDisconnectedAtInput(Connection connection) {
-        mModel = mModel.graphByRemovingConnection(connection);
-        mGraphView.render(mModel);
+        mModel.getAndUpdate(graph -> graph.graphByRemovingConnection(connection));
+        mGraphView.render(mModel.get());
         recompileGraph();
     }
 
@@ -100,21 +101,21 @@ public class GraphPresenter implements IPropertiesPresenter {
      * Action from the view that lets us know the selection of nodes has changed.
      */
     public void selectionChanged(List<Integer> selectedNodes) {
-        mModel = mModel.graphByChangingSelection(selectedNodes);
-        mGraphView.render(mModel);
+        mModel.getAndUpdate(graph -> graph.graphByChangingSelection(selectedNodes));
+        mGraphView.render(mModel.get());
         if (selectedNodes.size() != 1) {
             mPropertiesPanel.showNone();
             return;
         }
-        mPropertiesPanel.showPropertiesForNode(mModel.getNodeWithId(selectedNodes.get(0)));
+        mPropertiesPanel.showPropertiesForNode(mModel.get().getNodeWithId(selectedNodes.get(0)));
     }
 
     /**
      * Action from the view that lets us know a node has been dragged to a new location.
      */
     public void nodeMoved(Node node, int x, int y) {
-        mModel = mModel.graphByMovingNode(node, x, y);
-        mGraphView.render(mModel);
+        mModel.getAndUpdate(graph -> graph.graphByMovingNode(node, x, y));
+        mGraphView.render(mModel.get());
         serializeAndSave();
     }
 
@@ -123,9 +124,9 @@ public class GraphPresenter implements IPropertiesPresenter {
      */
     @Override
     public void propertyChanged(Node.PropertyHandle handle, Property property) {
-        mModel = mModel.graphByChangingProperty(handle, property);
-        mGraphView.render(mModel);
-        mPropertiesPanel.showPropertiesForNode(mModel.getSelectedNodes().get(0));
+        mModel.getAndUpdate(graph -> graph.graphByChangingProperty(handle, property));
+        mGraphView.render(mModel.get());
+        mPropertiesPanel.showPropertiesForNode(mModel.get().getSelectedNodes().get(0));
 
         // Graph property changes trigger a full recompilation of the graph, while material
         // parameter changes trigger only a material parameter update on the current material
@@ -155,13 +156,13 @@ public class GraphPresenter implements IPropertiesPresenter {
      * Action from the popup menu that lets us know an item has been clicked.
      */
     public void popupMenuItemSelected(String name, int x, int y) {
-        Node newNode = mNodeRegistry.createNodeForLabel(name, mModel.getNewNodeId());
+        Node newNode = mNodeRegistry.createNodeForLabel(name, mModel.get().getNewNodeId());
         if (newNode == null) {
             return;
         }
-        mModel = mModel.graphByAddingNodeAtLocation(newNode, x, y);
+        mModel.getAndUpdate(graph -> graph.graphByAddingNodeAtLocation(newNode, x, y));
         serializeAndSave();
-        mGraphView.render(mModel);
+        mGraphView.render(mModel.get());
     }
 
     private void loadModelFromFile(TungstenFile file) {
@@ -173,23 +174,23 @@ public class GraphPresenter implements IPropertiesPresenter {
             }
             String toolBlock = GraphFile.INSTANCE.extractToolBlockFromMaterialFile(contents);
             if (toolBlock.isEmpty()) {
-                mModel = GraphInitializer.INSTANCE.getInitialGraphState();
+                mModel.set(GraphInitializer.INSTANCE.getInitialGraphState());
                 recompileGraph();
-                mGraphView.render(mModel);
+                mGraphView.render(mModel.get());
                 return;
             }
-            mModel = GraphSerializer.INSTANCE.deserialize(
-                    toolBlock, mNodeRegistry, new JsonDeserializer()).getFirst();
-            mGraphView.render(mModel);
+            mModel.set(GraphSerializer.INSTANCE.deserialize(
+                    toolBlock, mNodeRegistry, new JsonDeserializer()).getFirst());
+            mGraphView.render(mModel.get());
             recompileGraph();
         });
     }
 
     private void recompileGraph() {
-        if (mModel.getRootNode() == null) {
+        if (mModel.get().getRootNode() == null) {
             return;
         }
-        GraphCompiler compiler = new GraphCompiler(mModel);
+        GraphCompiler compiler = new GraphCompiler(mModel.get());
         mCompiledGraph = compiler.compileGraph();
         mMaterialSource.setText(mCompiledGraph.getMaterialDefinition());
 
@@ -199,7 +200,6 @@ public class GraphPresenter implements IPropertiesPresenter {
         serializeAndSave();
 
         final CompiledGraph compiledGraph = mCompiledGraph;
-        final Graph graph = mModel;
         futureMaterial.thenAccept(newMaterial -> {
             Filament.getInstance().assertIsFilamentThread();
 
@@ -214,7 +214,7 @@ public class GraphPresenter implements IPropertiesPresenter {
                 Node.PropertyHandle handle = entry.getKey();
                 Parameter parameter = entry.getValue();
 
-                Property nodeProperty = graph.getNodeProperty(handle);
+                Property nodeProperty = mModel.get().getNodeProperty(handle);
                 if (nodeProperty == null) {
                     continue;
                 }
@@ -230,8 +230,8 @@ public class GraphPresenter implements IPropertiesPresenter {
         if (mCompiledGraph == null) {
             return;
         }
-        String serializedGraph = GraphSerializer.INSTANCE.serialize(mModel, Collections.emptyMap(),
-                new JsonSerializer());
+        String serializedGraph = GraphSerializer.INSTANCE.serialize(mModel.get(),
+                Collections.emptyMap(), new JsonSerializer());
         String materialDefinition =
                 GraphFile.INSTANCE.addToolBlockToMaterialFile(
                 mCompiledGraph.getMaterialDefinition(), serializedGraph);
