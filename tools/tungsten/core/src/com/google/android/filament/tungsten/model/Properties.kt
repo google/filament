@@ -16,8 +16,27 @@
 
 package com.google.android.filament.tungsten.model
 
-sealed class PropertyValue
+import com.google.android.filament.MaterialInstance
 
-data class Float3(val x: Float = 0.0f, val y: Float = 0.0f, val z: Float = 0.0f) : PropertyValue()
+sealed class PropertyValue {
 
-data class Property(val name: String, val value: PropertyValue)
+    abstract fun applyToMaterialInstance(materialInstance: MaterialInstance, name: String)
+}
+
+data class Float3(val x: Float = 0.0f, val y: Float = 0.0f, val z: Float = 0.0f) : PropertyValue() {
+
+    override fun applyToMaterialInstance(materialInstance: MaterialInstance, name: String) {
+        materialInstance.setParameter(name, x, y, z)
+    }
+}
+
+enum class PropertyType {
+    GRAPH_PROPERTY,
+    MATERIAL_PARAMETER
+}
+
+data class Property(
+    val name: String,
+    val value: PropertyValue,
+    val type: PropertyType = PropertyType.GRAPH_PROPERTY
+)
