@@ -758,14 +758,20 @@ that creates a native window with SDL2 and initializes the Filament engine, rend
 ### Java on Linux, macOS and Windows
 
 After building Filament, you can use `filament-java.jar` and its companion `filament-jni` native
-library to use Filament in desktop Java applications. You can use Filament either with AWT or
-Swing, using respectively a `FilamentCanvas` or a `FilamentPanel`.
+library to use Filament in desktop Java applications.
+
+You must always first initialize Filament by calling `Filament.init()`.
+
+You can use Filament either with AWT or Swing, using respectively a `FilamentCanvas` or a
+`FilamentPanel`.
 
 Following the steps above (how to use Filament from native code), create an `Engine` and a
 `Renderer`, but instead of calling `beginFrame` and `endFrame` on the renderer itself, call
 these methods on `FilamentCanvas` or `FilamentPanel`.
 
 ### Android
+
+You must always first initialize Filament by calling `Filament.init()`.
 
 Rendering with Filament on Android is similar to rendering from native code (the APIs are largely
 the same across languages). You can render into a `Surface` by passing a `Surface` to the
