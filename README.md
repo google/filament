@@ -154,6 +154,8 @@ Make sure the environment variable `ANDROID_HOME` points to the location of your
 By default our build system will attempt to compile the Java bindings. To do so, the environment
 variable `JAVA_HOME` should point to the location of your JDK.
 
+When building for WebGL, you'll also need to set `EMSDK`. See [WebAssembly](#WebAssembly).
+
 ### IDE
 
 We recommend using CLion to develop for Filament. Simply open the root directory's CMakeList.txt
@@ -655,6 +657,26 @@ productFlavors {
     }
 }
 ```
+
+### WebAssembly
+
+As an experimental feature, the core Filament library can be cross-compiled to WebAssembly from
+either macOS or Linux. To get started, do the following only once:
+
+```
+cd <your chosen home for the emscripten SDK>
+curl -L https://github.com/juj/emsdk/archive/0d8576c.zip > emsdk.zip
+unzip emsdk.zip
+mv emsdk-* emsdk
+cd emsdk
+./emsdk update
+./emsdk install sdk-1.38.11-64bit
+./emsdk activate sdk-1.38.11-64bit
+export EMSDK=$PWD
+```
+
+The last line in the above snippet is required so that our build script can find the Emscripten SDK.
+After this you can invoke our standard build script with `-p webgl`.
 
 ## Running the samples
 

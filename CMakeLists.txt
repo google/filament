@@ -19,7 +19,7 @@ option(USE_EXTERNAL_GLES3 "Experimental: Compile Filament against OpenGL ES 3" O
 # ==================================================================================================
 # OS specific
 # ==================================================================================================
-if (UNIX AND NOT APPLE AND NOT ANDROID)
+if (UNIX AND NOT APPLE AND NOT ANDROID AND NOT WEBGL)
     set(LINUX TRUE)
 endif()
 
@@ -146,7 +146,7 @@ endif()
 
 # On Android RELEASE builds, we disable exceptions and RTTI to save some space (about 75 KiB
 # saved by -fno-exception and 10 KiB saved by -fno-rtti).
-if (ANDROID)
+if (ANDROID OR WEBGL)
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fno-exceptions -fno-rtti")
 endif()
 
@@ -184,6 +184,10 @@ endif()
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${GC_SECTIONS}")
 set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${GC_SECTIONS} ${B_SYMBOLIC_FUNCTIONS}")
 
+if (WEBGL)
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -s USE_WEBGL2=1")
+endif()
+
 # ==================================================================================================
 # Project flags
 # ==================================================================================================
@@ -197,7 +201,7 @@ endif()
 # it at run time. On Android, the build does not include Vulkan support unless CMake is invoked
 # with -DFILAMENT_SUPPORTS_VULKAN=ON.
 # Vulkan is not supported on Windows.
-if (ANDROID OR WIN32)
+if (ANDROID OR WIN32 OR WEBGL)
     option(FILAMENT_SUPPORTS_VULKAN "Include the Vulkan backend" OFF)
 else()
     option(FILAMENT_SUPPORTS_VULKAN "Include the Vulkan backend" ON)
@@ -260,7 +264,7 @@ endif()
 
 set (FILAMENT_SAMPLES_BINARY_DIR ${PROJECT_BINARY_DIR}/samples)
 
-if (NOT ANDROID)
+if (NOT ANDROID AND NOT WEBGL)
     add_subdirectory(${FILAMENT}/samples)
 
     add_subdirectory(${LIBRARIES}/bluegl)
@@ -295,7 +299,7 @@ if (NOT ANDROID)
     add_subdirectory(${TOOLS}/specular-color)
 endif()
 
-# Generate exported executables for cross-compiled builds (Android)
+# Generate exported executables for cross-compiled builds (Android and WebGL)
 if (NOT CMAKE_CROSSCOMPILING)
     export(TARGETS matc cmgen FILE ${FILAMENT}/${IMPORT_EXECUTABLES_DIR}/ImportExecutables-${CMAKE_BUILD_TYPE}.cmake)
 endif()

@@ -51,7 +51,7 @@ target_include_directories(image_headers INTERFACE ${PUBLIC_HDR_DIR})
 # ==================================================================================================
 # Tests
 # ==================================================================================================
-if (NOT ANDROID)
+if (NOT ANDROID AND NOT WEBGL)
     add_executable(test_${TARGET} tests/test_image.cpp)
     target_link_libraries(test_${TARGET} PRIVATE image imageio gtest)
 endif()
