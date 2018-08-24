@@ -1,11 +1,9 @@
+# Filament
+
 <img alt="Android" src="build/img/android.png" width="20px" height="20px" hspace="2px"/>![Android Build Status](https://filament-build.storage.googleapis.com/badges/build_status_android.svg)
 <img alt="Linux" src="build/img/linux.png" width="20px" height="20px" hspace="2px"/>![Linux Build Status](https://filament-build.storage.googleapis.com/badges/build_status_linux.svg)
 <img alt="macOS" src="build/img/macos.png" width="20px" height="20px" hspace="2px"/>![MacOS Build Status](https://filament-build.storage.googleapis.com/badges/build_status_mac.svg)
 <img alt="Windows" src="build/img/windows.png" width="20px" height="20px" hspace="2px"/>![Windows Build Status](https://filament-build.storage.googleapis.com/badges/build_status_windows.svg)
-
-![Filament logo](docs/images/filament_logo_small.png)
-
-# Filament
 
 Filament is a real-time physically based rendering engine for Android, Linux, macOS and Windows.
 This rendering engine was designed to be as small as possible and as efficient as possible
