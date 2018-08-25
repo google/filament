@@ -45,7 +45,8 @@ class PropertiesPanel : JPanel() {
         for ((property, editor) in node.properties.zip(editors)) {
             editor.setValue(property.value)
             editor.valueChanged = { newValue ->
-                p.propertyChanged(node.id, property.name, newValue)
+                p.propertyChanged(node.getPropertyHandle(property.name),
+                        property.copy(value = newValue))
             }
             add(editor.component)
         }

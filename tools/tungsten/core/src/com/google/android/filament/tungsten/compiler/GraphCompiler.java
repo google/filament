@@ -16,7 +16,6 @@
 
 package com.google.android.filament.tungsten.compiler;
 
-import com.google.android.filament.tungsten.model.Connection;
 import com.google.android.filament.tungsten.model.Graph;
 import com.google.android.filament.tungsten.model.Node;
 import java.util.ArrayList;
@@ -33,16 +32,16 @@ import org.jetbrains.annotations.Nullable;
  */
 public final class GraphCompiler {
 
-    private int mTextureNumber = 1;
     private StringBuilder mMaterialFunctionBodyBuilder = new StringBuilder();
     private final List<String> mRequiredAttributes = new ArrayList<>();
     private final List<Parameter> mParameters = new ArrayList<>();
+    private final Map<String, Integer> mParameterNumberMap = new HashMap<>();
+    private final Map<Node.PropertyHandle, Parameter> mPropertyParameterMap = new HashMap<>();
     private final LinkedHashMap<String, String> mGlobalFunctions = new LinkedHashMap<>();
     private final Map<String, Integer> mVariableNameMap = new HashMap<>();
 
     private final @NotNull Graph mGraph;
     private final @NotNull Node mRootNode;
-    private final Map<Node.InputSlot, Connection> mConnectionMap = new HashMap<>();
     private final Map<Node.OutputSlot, Expression> mCompiledVariableMap = new HashMap<>();
 
     public GraphCompiler(@NotNull Graph graph) {
@@ -51,12 +50,14 @@ public final class GraphCompiler {
     }
 
     @NotNull
-    public String compileGraph() {
+    public CompiledGraph compileGraph() {
         mRootNode.getCompileFunction().invoke(mRootNode, this);
         String fragmentSection = GraphFormatter.formatFragmentSection(mGlobalFunctions.values(),
                 mMaterialFunctionBodyBuilder.toString());
-        return GraphFormatter.formatMaterialSection(mRequiredAttributes, mParameters)
-                + fragmentSection;
+        String materialDefinition =
+                GraphFormatter.formatMaterialSection(mRequiredAttributes, mParameters) +
+                        fragmentSection;
+        return new CompiledGraph(materialDefinition, mPropertyParameterMap);
     }
 
     /**
@@ -111,18 +112,28 @@ public final class GraphCompiler {
     }
 
     /**
-     * Called by a NodeModel subclass to add a new material parameter.
+     * Called by a node's compile function to add a new material parameter.
      * The parameter will be added to the material source's "parameters" section.
      *
      * @param type The type of parameter
-     * @return A String representing the name of the parameter variable that the node should use
-     * in its source.
+     * @return A String with the unique name of the parameter that the node should use in code.
      */
-    public String addParameter(String type) {
-        String parameterName = allocateNewParameterName();
-        mParameters.add(new Parameter(type, parameterName));
-        // todo: Handle parameters other than sampler parameters
-        return "materialParams_" + parameterName;
+    @NotNull
+    public Parameter addParameter(@NotNull String type, @NotNull String name) {
+        String parameterName = allocateNewParameterName(name);
+        Parameter parameter = new Parameter(type, parameterName);
+        mParameters.add(parameter);
+        return parameter;
+    }
+
+    /**
+    * Associates a material parameter with a Node's property. After the graph is compiled, this
+    * mapping between parameters and properties is returned so that adjustments to a property
+    * can affect the appropriate material parameter.
+    */
+    public void associateParameterWithProperty(@NotNull Parameter parameter,
+            @NotNull Node.PropertyHandle property) {
+        mPropertyParameterMap.put(property, parameter);
     }
 
     /**
@@ -184,7 +195,16 @@ public final class GraphCompiler {
         provideFunctionDefinition(symbolName, String.format(format, args));
     }
 
-    private String allocateNewParameterName() {
-        return "texture" + mTextureNumber++;
+    /**
+     * Appends an integer to a parameter name to ensure globally-unique names.
+     */
+    private String allocateNewParameterName(String name) {
+        Integer parameterNumber =
+                mParameterNumberMap.computeIfPresent(name, (s, integer) -> integer + 1);
+        if (parameterNumber == null) {
+            parameterNumber = 0;
+            mParameterNumberMap.putIfAbsent(name, parameterNumber);
+        }
+        return name + parameterNumber;
     }
 }

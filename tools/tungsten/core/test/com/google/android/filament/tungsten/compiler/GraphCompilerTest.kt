@@ -17,9 +17,11 @@
 package com.google.android.filament.tungsten.compiler
 
 import com.google.android.filament.tungsten.model.Graph
+import com.google.android.filament.tungsten.model.Node
 import com.google.android.filament.tungsten.model.createAdderNode
 import com.google.android.filament.tungsten.model.createFloat3ConstantNode
 import com.google.android.filament.tungsten.model.createShaderNode
+import org.junit.Assert.assertNotEquals
 import org.junit.Test
 
 class GraphCompilerTest {
@@ -56,4 +58,16 @@ class GraphCompilerTest {
         val compiler = GraphCompiler(graph)
         compiler.compileGraph()
     }
+
+    @Test
+    fun `multiple material parameters have unique names`() {
+        val compiler = GraphCompiler(createMockGraph())
+        val first = compiler.addParameter("float3", "parameter")
+        val second = compiler.addParameter("float3", "parameter")
+        assertNotEquals(first, second)
+    }
+
+    private fun createMockGraph() = Graph(
+            nodes = listOf(Node(id = 0, type = "node")),
+            rootNodeId = 0)
 }

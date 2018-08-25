@@ -14,15 +14,14 @@
  * limitations under the License.
  */
 
-package com.google.android.filament.tungsten.compiler;
+package com.google.android.filament.tungsten.compiler
 
-class Parameter {
+import com.google.android.filament.tungsten.model.Node
 
-    final String type;
-    final String name;
+data class CompiledGraph(
+    // The Filament material definition that is fed into matc
+    val materialDefinition: String,
 
-    Parameter(String type, String name) {
-        this.type = type;
-        this.name = name;
-    }
-}
+    // Maps a Node's property to the associated material parameter it controls
+    val parameterMap: Map<Node.PropertyHandle, Parameter>
+)
