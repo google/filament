@@ -63,13 +63,9 @@ data class Node(
         }
     }
 
-    fun getInputSlot(name: String): InputSlot {
-        return InputSlot(id, name)
-    }
+    fun getInputSlot(name: String) = InputSlot(id, name)
 
-    fun getOutputSlot(name: String): OutputSlot {
-        return OutputSlot(id, name)
-    }
+    fun getOutputSlot(name: String) = OutputSlot(id, name)
 }
 
 class ConnectionMapper {
@@ -117,50 +113,31 @@ data class Graph(
     /**
      * Returns the next available NodeId for this graph.
      */
-    fun getNewNodeId(): NodeId {
-        return nodes.size
-    }
+    fun getNewNodeId() = nodes.size
 
-    fun getRootNode(): Node? {
-        return nodeMap[rootNodeId]
-    }
+    fun getRootNode() = nodeMap[rootNodeId]
 
-    fun getNodeWithId(id: NodeId): Node? {
-        return nodeMap[id]
-    }
+    fun getNodeWithId(id: NodeId) = nodeMap[id]
 
-    fun getOutputSlotConnectedToInput(slot: Node.InputSlot): Node.OutputSlot? {
-        return connectionMap[slot]
-    }
+    fun getOutputSlotConnectedToInput(slot: Node.InputSlot) = connectionMap[slot]
 
-    fun isNodeSelected(node: Node): Boolean {
-        return selection.contains(node.id)
-    }
+    fun isNodeSelected(node: Node) = selection.contains(node.id)
 
-    fun getNodeForOutputSlot(slot: Node.OutputSlot): Node? {
-        return nodeMap[slot.nodeId]
-    }
+    fun getNodeForOutputSlot(slot: Node.OutputSlot) = nodeMap[slot.nodeId]
 
-    fun getSelectedNodes(): List<Node> {
-        return nodes.filter { n -> selection.contains(n.id) }
-    }
+    fun getSelectedNodes() = nodes.filter { n -> selection.contains(n.id) }
 
     /**
      * The following convenience methods return a new copy of the graph with certain attributes
      * modified.
      */
 
-    fun graphByAddingNode(node: Node): Graph {
-        return this.copy(nodes = nodes + node)
-    }
+    fun graphByAddingNode(node: Node) = this.copy(nodes = nodes + node)
 
-    fun graphByChangingSelection(selection: List<NodeId>): Graph {
-        return this.copy(selection = selection)
-    }
+    fun graphByChangingSelection(selection: List<NodeId>) = this.copy(selection = selection)
 
-    fun graphByAddingNodeAtLocation(node: Node, x: Float, y: Float): Graph {
-        return this.copy(nodes = nodes + node.copy(x = x, y = y))
-    }
+    fun graphByAddingNodeAtLocation(node: Node, x: Float, y: Float) =
+            this.copy(nodes = nodes + node.copy(x = x, y = y))
 
     fun graphByReplacingNode(oldNode: Node, newNode: Node): Graph {
         if (nodes.contains(oldNode)) {
@@ -177,15 +154,12 @@ data class Graph(
         return graphByReplacingNode(node, node.copy(properties = newProperties))
     }
 
-    fun graphByMovingNode(node: Node, x: Float, y: Float): Graph {
-        return graphByReplacingNode(node, node.copy(x = x, y = y))
-    }
+    fun graphByMovingNode(node: Node, x: Float, y: Float) =
+            graphByReplacingNode(node, node.copy(x = x, y = y))
 
-    fun graphByFormingConnection(connection: Connection): Graph {
-        return this.copy(connections = connections + connection)
-    }
+    fun graphByFormingConnection(connection: Connection) =
+            this.copy(connections = connections + connection)
 
-    fun graphByRemovingConnection(connection: Connection): Graph {
-        return this.copy(connections = connections - connection)
-    }
+    fun graphByRemovingConnection(connection: Connection) =
+            this.copy(connections = connections - connection)
 }
