@@ -202,10 +202,10 @@ function build_webgl_with_target {
         ISSUE_CMAKE_ALWAYS=true
     fi
     if [ ! -d "CMakeFiles" ] || [ "$ISSUE_CMAKE_ALWAYS" == "true" ]; then
-        source $EMSDK/emsdk_env.sh
+        source ${EMSDK}/emsdk_env.sh
         cmake \
             -G "$BUILD_GENERATOR" \
-            -DCMAKE_TOOLCHAIN_FILE=$EMSCRIPTEN/cmake/Modules/Platform/Emscripten.cmake \
+            -DCMAKE_TOOLCHAIN_FILE=${EMSCRIPTEN}/cmake/Modules/Platform/Emscripten.cmake \
             -DCMAKE_BUILD_TYPE=$1 \
             -DCMAKE_INSTALL_PREFIX=../webgl-${LC_TARGET}/filament \
             -DWEBGL=1 \
@@ -312,7 +312,7 @@ function build_android {
 
     if [ "$ISSUE_DEBUG_BUILD" == "true" ]; then
         ./gradlew -Pfilament_dist_dir=../../out/android-debug/filament assembleDebug \
-            -Pextra_cmake_args=$VULKAN_ANDROID_OPTION
+            -Pextra_cmake_args=${VULKAN_ANDROID_OPTION}
 
         if [ "$INSTALL_COMMAND" ]; then
             echo "Installing out/filament-android-debug.aar..."
@@ -322,7 +322,7 @@ function build_android {
 
     if [ "$ISSUE_RELEASE_BUILD" == "true" ]; then
         ./gradlew -Pfilament_dist_dir=../../out/android-release/filament assembleRelease \
-            -Pextra_cmake_args=$VULKAN_ANDROID_OPTION
+            -Pextra_cmake_args=${VULKAN_ANDROID_OPTION}
 
         if [ "$INSTALL_COMMAND" ]; then
             echo "Installing out/filament-android-release.aar..."
@@ -379,7 +379,7 @@ function run_test {
     # first whitespace-separated token in the string.
     set -- $test
     test_name=`basename $1`
-    ./out/cmake-debug/$test --gtest_output="xml:out/test-results/$test_name/sponge_log.xml"
+    ./out/cmake-debug/${test} --gtest_output="xml:out/test-results/$test_name/sponge_log.xml"
 }
 
 function run_tests {
