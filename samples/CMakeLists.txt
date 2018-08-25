@@ -178,7 +178,7 @@ endif()
 # Build Vulkan Executables
 # ==================================================================================================
 
-if (LINUX OR APPLE)
+if (FILAMENT_SUPPORTS_VULKAN)
     add_assimp_demo(vk_strobecolor)
     add_assimp_demo(vk_hellotriangle)
     add_assimp_demo(vk_depthtesting)

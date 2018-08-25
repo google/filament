@@ -26,7 +26,7 @@ function print_help {
     echo "        Do not compile desktop Java projects"
     echo "    -m"
     echo "        Compile with make instead of ninja."
-    echo "    -p [desktop|android|all]"
+    echo "    -p [desktop|android|webgl|all]"
     echo "        Platform(s) to build, defaults to desktop."
     echo "        Building android will automatically generate the toolchains if needed and"
     echo "        perform a partial desktop build."
@@ -72,6 +72,7 @@ ISSUE_RELEASE_BUILD=false
 
 ISSUE_ANDROID_BUILD=false
 ISSUE_DESKTOP_BUILD=true
+ISSUE_WEBGL_BUILD=false
 
 ISSUE_ARCHIVES=false
 
@@ -188,6 +189,45 @@ function build_desktop {
 
     if [ "$ISSUE_RELEASE_BUILD" == "true" ]; then
         build_desktop_target "Release" "$1"
+    fi
+}
+
+function build_webgl_with_target {
+    local LC_TARGET=`echo $1 | tr '[:upper:]' '[:lower:]'`
+    echo "Building WebGL $LC_TARGET..."
+    mkdir -p out/cmake-webgl-${LC_TARGET}
+    cd out/cmake-webgl-${LC_TARGET}
+    if [ ! "$BUILD_TARGETS" ]; then
+        BUILD_TARGETS=${BUILD_CUSTOM_TARGETS}
+        ISSUE_CMAKE_ALWAYS=true
+    fi
+    if [ ! -d "CMakeFiles" ] || [ "$ISSUE_CMAKE_ALWAYS" == "true" ]; then
+        source $EMSDK/emsdk_env.sh
+        cmake \
+            -G "$BUILD_GENERATOR" \
+            -DCMAKE_TOOLCHAIN_FILE=$EMSCRIPTEN/cmake/Modules/Platform/Emscripten.cmake \
+            -DCMAKE_BUILD_TYPE=$1 \
+            -DCMAKE_INSTALL_PREFIX=../webgl-${LC_TARGET}/filament \
+            -DWEBGL=1 \
+            ../..
+        ${BUILD_COMMAND} ${BUILD_TARGETS}
+    fi
+    cd ../..
+}
+
+function build_webgl {
+    # Supress intermediate desktop tools install
+    OLD_INSTALL_COMMAND=${INSTALL_COMMAND}
+    INSTALL_COMMAND=
+    build_desktop "${HOST_TOOLS}"
+    INSTALL_COMMAND=${OLD_INSTALL_COMMAND}
+
+    if [ "$ISSUE_DEBUG_BUILD" == "true" ]; then
+        build_webgl_with_target "Debug"
+    fi
+
+    if [ "$ISSUE_RELEASE_BUILD" == "true" ]; then
+        build_webgl_with_target "Release"
     fi
 }
 
@@ -325,6 +365,11 @@ function validate_build_command {
         echo "Warning: JAVA_HOME is not set, skipping Java projects"
         ENABLE_JAVA=OFF
     fi
+    # If building a WebAssembly module, ensure we know where Emscripten lives.
+    if [ "$EMSDK" == "" ] && [ "$ISSUE_WEBGL_BUILD" == "true" ]; then
+        echo "Error: EMSDK is not set, exiting"
+        exit 1
+    fi
     set -e
 }
 
@@ -378,14 +423,22 @@ while getopts ":hacfijmp:tuv" opt; do
                 desktop)
                     ISSUE_ANDROID_BUILD=false
                     ISSUE_DESKTOP_BUILD=true
+                    ISSUE_WEBGL_BUILD=false
                 ;;
                 android)
                     ISSUE_ANDROID_BUILD=true
                     ISSUE_DESKTOP_BUILD=false
+                    ISSUE_WEBGL_BUILD=false
+                ;;
+                webgl)
+                    ISSUE_ANDROID_BUILD=false
+                    ISSUE_DESKTOP_BUILD=false
+                    ISSUE_WEBGL_BUILD=true
                 ;;
                 all)
                     ISSUE_ANDROID_BUILD=true
                     ISSUE_DESKTOP_BUILD=true
+                    ISSUE_WEBGL_BUILD=false
                 ;;
             esac
             ;;
@@ -454,6 +507,10 @@ fi
 
 if [ "$ISSUE_ANDROID_BUILD" == "true" ]; then
     build_android
+fi
+
+if [ "$ISSUE_WEBGL_BUILD" == "true" ]; then
+    build_webgl
 fi
 
 if [ "$RUN_TESTS" == "true" ]; then
