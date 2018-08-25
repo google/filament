@@ -13,6 +13,16 @@ Filament is currently used in the
 [Sceneform](https://developers.google.com/ar/develop/java/sceneform/) library both at runtime on
 Android devices and as the renderer inside the Android Studio plugin.
 
+## Download
+
+[Download Filament releases](https://github.com/google/filament/releases) to access stable builds.
+
+If you prefer to live on the edge, you can download continuous builds directly:
+- [Android](https://filament-build.storage.googleapis.com/badges/build_link_android.html)
+- [Linux](https://filament-build.storage.googleapis.com/badges/build_link_linux.html)
+- [macOS](https://filament-build.storage.googleapis.com/badges/build_link_mac.html)
+- [Windows](https://filament-build.storage.googleapis.com/badges/build_link_windows.html)
+
 ## Documentation
 
 - [Filament](https://google.github.io/filament/Filament.md.html), an in-depth explanation of
