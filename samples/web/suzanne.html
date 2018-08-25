@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<title>Filament</title>
+<link href="favicon.png" rel="icon" type="image/x-icon"/>
+<meta name=viewport content='width=device-width,initial-scale=1'>
+<style>
+body {
+    margin: 0;
+    overflow: hidden;
+}
+#filament-canvas {
+    width: 100vw;
+    height: 100vh;
+}
+</style>
+<canvas id="filament-canvas"></canvas>
+<script src="suzanne.js"></script>
+<script src="filaweb.js"></script>
+<script>
+load({
+    'albedo': load_texture('assets/models/monkey/albedo.png'),
+    'metallic': load_texture('assets/models/monkey/metallic.png'),
+    'roughness': load_texture('assets/models/monkey/roughness.png'),
+    'normal': load_texture('assets/models/monkey/normal.png'),
+    'ao': load_texture('assets/models/monkey/ao.png'),
+    'mesh': load_file('assets/models/monkey/mesh.filamesh')
+});
+</script>

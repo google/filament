@@ -264,6 +264,10 @@ endif()
 
 set (FILAMENT_SAMPLES_BINARY_DIR ${PROJECT_BINARY_DIR}/samples)
 
+if (WEBGL)
+    add_subdirectory(${FILAMENT}/samples/web)
+endif()
+
 if (NOT ANDROID AND NOT WEBGL)
     add_subdirectory(${FILAMENT}/samples)
 
