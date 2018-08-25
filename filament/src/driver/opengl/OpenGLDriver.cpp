@@ -2368,7 +2368,7 @@ GLuint OpenGLDriver::getSamplerSlow(driver::SamplerParams params) const noexcept
 }
 
 void OpenGLDriver::insertEventMarker(char const* string, size_t len) {
-#if GL_EXT_debug_marker
+#ifdef GL_EXT_debug_marker
     if (ext.EXT_debug_marker) {
         glInsertEventMarkerEXT(GLsizei(len ? len : strlen(string)), string);
     }
@@ -2376,7 +2376,7 @@ void OpenGLDriver::insertEventMarker(char const* string, size_t len) {
 }
 
 void OpenGLDriver::pushGroupMarker(char const* string,  size_t len) {
-#if GL_EXT_debug_marker
+#ifdef GL_EXT_debug_marker
     if (ext.EXT_debug_marker) {
         glPushGroupMarkerEXT(GLsizei(len ? len : strlen(string)), string);
     }
@@ -2384,7 +2384,7 @@ void OpenGLDriver::pushGroupMarker(char const* string,  size_t len) {
 }
 
 void OpenGLDriver::popGroupMarker(int) {
-#if GL_EXT_debug_marker
+#ifdef GL_EXT_debug_marker
     if (ext.EXT_debug_marker) {
         glPopGroupMarkerEXT();
     }

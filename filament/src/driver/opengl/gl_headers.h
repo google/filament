@@ -31,7 +31,7 @@
 #ifdef GL_OES_EGL_image
         extern PFNGLEGLIMAGETARGETTEXTURE2DOESPROC glEGLImageTargetTexture2DOES;
 #endif
-#if GL_EXT_debug_marker
+#ifdef GL_EXT_debug_marker
         extern PFNGLINSERTEVENTMARKEREXTPROC glInsertEventMarkerEXT;
         extern PFNGLPUSHGROUPMARKEREXTPROC glPushGroupMarkerEXT;
         extern PFNGLPOPGROUPMARKEREXTPROC glPopGroupMarkerEXT;

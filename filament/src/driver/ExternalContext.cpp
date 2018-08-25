@@ -44,6 +44,8 @@
     #if defined (FILAMENT_DRIVER_SUPPORTS_VULKAN)
         #include "driver/vulkan/ContextManagerVkWindows.h"
     #endif
+#elif defined(__EMSCRIPTEN__)
+    #include "driver/opengl/ContextManagerWebGL.h"
 #else
     #ifndef USE_EXTERNAL_GLES3
         #include "driver/opengl/ContextManagerDummy.h"
@@ -92,6 +94,8 @@ ExternalContext* ExternalContext::create(Backend* backend) noexcept {
         return new ContextManagerGLX();
     #elif defined(WIN32)
         return new ContextManagerWGL();
+    #elif defined(__EMSCRIPTEN__)
+        return new ContextManagerWebGL();
     #else
         return new ContextManagerDummy();
     #endif
