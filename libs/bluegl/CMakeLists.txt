@@ -54,6 +54,8 @@ if (WIN32)
     target_link_libraries(${TARGET} PRIVATE opengl32 gdi32)
 endif()
 
+install(TARGETS ${TARGET} ARCHIVE DESTINATION lib/${DIST_DIR})
+
 # Build the tests...
 add_executable(test_${TARGET}
     tests/OpenGLSupport.cpp
