@@ -42,5 +42,6 @@ endif()
 # ==================================================================================================
 # Installation
 # ==================================================================================================
-install(DIRECTORY ${PUBLIC_HDR_DIR}/filaflat DESTINATION include)
+# We do not need filaflat headers in the install directory
+# install(DIRECTORY ${PUBLIC_HDR_DIR}/filaflat DESTINATION include)
 install(TARGETS ${TARGET} ARCHIVE DESTINATION lib/${DIST_DIR})
