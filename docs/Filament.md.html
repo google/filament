@@ -230,7 +230,7 @@ $$\begin{equation}
 G(v,l,\alpha) = G_1(l,\alpha) G_1(v,\alpha)
 \end{equation}$$
 
-$G_1$ can in turn follow several models, and is commonly set to he GGX formulation:
+$G_1$ can in turn follow several models, and is commonly set to the GGX formulation:
 
 $$\begin{equation}
 G_1(v,\alpha) = G_{GGX}(v,\alpha) = \frac{2 (\NoV)}{\NoV + \sqrt{\aa + (1 - \aa) (\NoV)^2}}
@@ -525,7 +525,7 @@ $$\begin{equation}
 F_{avg} = 2 \int_0^1 F(\mu) \mu d\mu
 \end{equation}$$
 
-Both terms $E$ and $E_{avg}$ can be precomputed and stored in lookup tables. while $F_{avg}$ can be greatly simplified when the Shlick approximation is used:
+Both terms $E$ and $E_{avg}$ can be precomputed and stored in lookup tables. while $F_{avg}$ can be greatly simplified when the Schlick approximation is used:
 
 $$\begin{equation}\label{averageFresnel}
 F_{avg} = \frac{1 + 20 \fNormal}{21}
@@ -2134,7 +2134,7 @@ $$\begin{equation}
 \Lout(n,v,\Theta) = \Lt^{constant} \int_\Omega D(l, v, \alpha) F(l, v, f_0, f_{90}) V(l, v, \alpha) \left< \NoL \right> dl
 \end{equation}$$
 
-With the Shlick Fresnel approximation we can instead write:
+With the Schlick Fresnel approximation we can instead write:
 
 $$\begin{align*}
 DFG &= \int_\Omega (\fNormal + (1 - \fNormal) (1 - \left< \LoH \right>)^5) D(l, v, \alpha) V(l, v, \alpha) \left< \NoL \right> dl \\
