@@ -18,8 +18,12 @@
 #define TNT_FILAMENT_SAMPLES_FILAWEB_H
 
 #include <filament/Engine.h>
+#include <filament/IndirectLight.h>
 #include <filament/Renderer.h>
 #include <filament/Scene.h>
+#include <filament/Skybox.h>
+#include <filament/Texture.h>
+#include <filament/View.h>
 #include <filament/Viewport.h>
 
 #include <chrono>
@@ -30,15 +34,30 @@
 
 namespace filaweb {
 
+// Filaweb defines three kinds of assets: raw files, single-mip textures, and cubemaps.
+// For simplicity all three kinds are represented with a single struct.
 struct Asset {
     std::unique_ptr<uint8_t[]> data;
     uint32_t nbytes;
     uint32_t width;
     uint32_t height;
+    uint32_t envMipCount;
+    std::unique_ptr<Asset> envShCoeffs;
+    std::unique_ptr<Asset[]> envFaces;
 };
 
-static Asset getTexture(const char* name);
-static Asset getRawFile(const char* name);
+Asset getRawFile(const char* name);
+Asset getTexture(const char* name);
+Asset getCubemap(const char* name);
+
+struct SkyLight {
+    math::float3 bands[9];
+    filament::Texture* texture;
+    filament::IndirectLight const* indirectLight;
+    filament::Skybox* skybox;
+};
+
+SkyLight getSkyLight(filament::Engine& engine, const char* name);
 
 class Application {
 public:
@@ -60,10 +79,8 @@ public:
         mSwapChain = mEngine->createSwapChain(nullptr);
         mScene = mEngine->createScene();
         mRenderer = mEngine->createRenderer();
-        mCamera = mEngine->createCamera();
         mView = mEngine->createView();
         mView->setScene(mScene);
-        mView->setCamera(mCamera);
         setup(mEngine, mView, mScene);
     }
 
@@ -89,70 +106,9 @@ private:
     Scene* mScene = nullptr;
     View* mView = nullptr;
     filament::Renderer* mRenderer = nullptr;
-    filament::Camera* mCamera = nullptr;
     filament::SwapChain* mSwapChain = nullptr;
     AnimCallback mAnimation;
 };
-
-extern "C" void render() {
-    Application::get()->render();
-}
-
-extern "C" void resize(uint32_t width, uint32_t height) {
-    Application::get()->resize(width, height);
-}
-
-static Asset getRawFile(const char* name) {
-    // Obtain size from JavaScript.
-    uint32_t nbytes;
-    EM_ASM({
-        var nbytes = $0 >> 2;
-        var name = UTF8ToString($1);
-        HEAP32[nbytes] = assets[name].data.byteLength;
-    }, &nbytes, name);
-
-    // Move the data from JavaScript.
-    uint8_t* data = new uint8_t[nbytes];
-    EM_ASM({
-        var data = $0 >> 2;
-        var name = UTF8ToString($1);
-        HEAP32.set(assets[name].data, data);
-        assets[name].data = null;
-    }, data, name);
-    printf("%s: %d bytes\n", name, nbytes);
-    return {
-        .data = decltype(Asset::data)(data),
-        .nbytes = nbytes
-    };
-}
-
-static Asset getTexture(const char* name) {
-    // Obtain image dimensions from JavaScript.
-    uint32_t dims[2];
-    EM_ASM({
-        var dims = $0 >> 2;
-        var name = UTF8ToString($1);
-        HEAP32[dims] = assets[name].width;
-        HEAP32[dims+1] = assets[name].height;
-    }, dims, name);
-    const uint8_t nbytes = dims[0] * dims[1] * 4;
-
-    // Move the data from JavaScript.
-    uint8_t* texels = new uint8_t[nbytes];
-    EM_ASM({
-        var texels = $0 >> 2;
-        var name = UTF8ToString($1);
-        HEAP32.set(assets[name].data, texels);
-        assets[name].data = null;
-    }, texels, name);
-    printf("%s: %d x %d\n", name, dims[0], dims[1]);
-    return {
-        .data = decltype(Asset::data)(texels),
-        .nbytes = nbytes,
-        .width = dims[0],
-        .height = dims[1]
-    };
-}
 
 }  // namespace filaweb
 

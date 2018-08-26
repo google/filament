@@ -2356,7 +2356,8 @@ GLuint OpenGLDriver::getSamplerSlow(driver::SamplerParams params) const noexcept
     glSamplerParameteri(s, GL_TEXTURE_WRAP_R,       getWrapMode(params.wrapR));
     glSamplerParameteri(s, GL_TEXTURE_COMPARE_MODE, getTextureCompareMode(params.compareMode));
     glSamplerParameteri(s, GL_TEXTURE_COMPARE_FUNC, getTextureCompareFunc(params.compareFunc));
-#ifdef GL_EXT_texture_filter_anisotropic
+// TODO: Why does this fail with WebGL 2.0? The run-time check should suffice.
+#if defined(GL_EXT_texture_filter_anisotropic) && !defined(__EMSCRIPTEN__)
     if (ext.texture_filter_anisotropic) {
         GLfloat anisotropy = float(1 << params.anisotropyLog2);
         glSamplerParameterf(s, GL_TEXTURE_MAX_ANISOTROPY_EXT, std::min(mMaxAnisotropy, anisotropy));

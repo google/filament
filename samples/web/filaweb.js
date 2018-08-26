@@ -52,13 +52,13 @@ function canvas_resize() {
     _resize((w * pr) | 0, (h * pr) | 0 );
 }
 
-function load_file(url) {
+function load_rawfile(url) {
     let promise = new Promise((success, failure) => {
         fetch(url).then(resp => {
             resp.arrayBuffer().then(filedata => success({
-                kind: 'file',
+                kind: 'rawfile',
                 name: url,
-                data: filedata
+                data: new Uint8Array(filedata)
             }));
         });
     });
@@ -81,15 +81,51 @@ function load_texture(url) {
             context2d.width = img.width;
             context2d.height = img.height;
             context2d.drawImage(img, 0, 0);
-            let imgdata = context2d.getImageData(0, 0, img.width, img.height).data.buffer;
+            var imgdata = context2d.getImageData(0, 0, img.width, img.height).data.buffer;
             success({
                 kind: 'image',
                 name: url,
-                data: new Uint32Array(imgdata),
+                data: new Uint8Array(imgdata),
                 width: img.width,
                 height: img.height
             });
-        };
+        }
+    });
+    return promise;
+}
+
+function load_cubemap(urlprefix, nmips) {
+    let promises = {};
+    let name = '';
+    promises['sh.txt'] = load_rawfile(urlprefix + 'sh.txt');
+    for (let i = 0; i < nmips; i++) {
+        name = 'm' + i + '_px.rgbm';
+        promises[name] = load_texture(urlprefix + name);
+        name = 'm' + i + '_nx.rgbm';
+        promises[name] = load_texture(urlprefix + name);
+        name = 'm' + i + '_py.rgbm';
+        promises[name] = load_texture(urlprefix + name);
+        name = 'm' + i + '_ny.rgbm';
+        promises[name] = load_texture(urlprefix + name);
+        name = 'm' + i + '_pz.rgbm';
+        promises[name] = load_texture(urlprefix + name);
+        name = 'm' + i + '_nz.rgbm';
+        promises[name] = load_texture(urlprefix + name);
+    }
+    let numberRemaining = Object.keys(promises).length;
+    var promise = new Promise((success) => {
+        for (let name in promises) {
+            promises[name].then((result) => {
+                assets[urlprefix + name] = result;
+                if (--numberRemaining == 0) {
+                    success({
+                        kind: 'cubemap',
+                        name: urlprefix,
+                        nmips: nmips,
+                    });
+                }
+            });
+        }
     });
     return promise;
 }

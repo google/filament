@@ -6,6 +6,7 @@ project(web-samples)
 # ==================================================================================================
 
 set(MATERIAL_SRCS
+        ../materials/texturedLit.mat
         ../materials/bakedColor.mat)
 
 if (CMAKE_CROSSCOMPILING)
@@ -75,13 +76,23 @@ copy_assets("." favicon.png)
 set(EXPORTS "'_launch','_main','_render','_resize'")
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -s EXPORTED_FUNCTIONS=[${EXPORTS}]")
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -s ALLOW_MEMORY_GROWTH=1")
+if (CMAKE_BUILD_TYPE MATCHES Debug)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s ASSERTIONS=2")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s SAFE_HEAP=1 ")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -s DEMANGLE_SUPPORT=1")
+endif()
 
 function(add_demo NAME)
     include_directories(${GENERATION_ROOT})
-    add_executable(${NAME} ${NAME}.cpp ../app/MeshIO.cpp filaweb.h)
+    add_executable(${NAME} ${NAME}.cpp
+            filamesh.h
+            filamesh.cpp
+            filaweb.h
+            filaweb.cpp)
     add_dependencies(${NAME} sample_materials)
     target_link_libraries(${NAME} PRIVATE filament math filamat utils)
     copy_assets("." ${NAME}.html)
 endfunction()
 
 add_demo(suzanne)
+add_demo(triangle)

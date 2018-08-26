@@ -17,11 +17,12 @@ body {
 <script src="filaweb.js"></script>
 <script>
 load({
-    'albedo': load_texture('assets/models/monkey/albedo.png'),
-    'metallic': load_texture('assets/models/monkey/metallic.png'),
+    'albedo':    load_texture('assets/models/monkey/albedo.png'),
+    'metallic':  load_texture('assets/models/monkey/metallic.png'),
     'roughness': load_texture('assets/models/monkey/roughness.png'),
-    'normal': load_texture('assets/models/monkey/normal.png'),
-    'ao': load_texture('assets/models/monkey/ao.png'),
-    'mesh': load_file('assets/models/monkey/mesh.filamesh')
+    'normal':    load_texture('assets/models/monkey/normal.png'),
+    'ao':        load_texture('assets/models/monkey/ao.png'),
+    'mesh':      load_rawfile('assets/models/monkey/mesh.filamesh'),
+    'desert':    load_cubemap('envs/desert/', 9)
 });
 </script>

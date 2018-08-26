@@ -16,6 +16,7 @@
 
 #include <filament/Engine.h>
 #include <filament/IndexBuffer.h>
+#include <filament/LightManager.h>
 #include <filament/Material.h>
 #include <filament/MaterialInstance.h>
 #include <filament/RenderableManager.h>
@@ -24,91 +25,173 @@
 #include <filament/VertexBuffer.h>
 #include <filament/View.h>
 
+#include <math/vec3.h>
+
+#include <utils/Entity.h>
+#include <utils/EntityManager.h>
+
+#include "filamesh.h"
 #include "filaweb.h"
 
-#include <cmath>
-
 using namespace filament;
+using namespace math;
 using namespace std;
+using namespace utils;
 
-using utils::Entity;
-using utils::EntityManager;
+using MagFilter = TextureSampler::MagFilter;
+using WrapMode = TextureSampler::WrapMode;
+using Format = Texture::InternalFormat;
 
 struct SuzanneApp {
-    VertexBuffer* vb;
-    IndexBuffer* ib;
+    Filamesh filamesh;
     Material* mat;
+    MaterialInstance* mi;
     Camera* cam;
-    Entity renderable;
+    Entity sun;
+    Entity ptlight[4];
 };
 
-struct Vertex {
-    math::float2 position;
-    uint32_t color;
-};
-
-static const Vertex TRIANGLE_VERTICES[3] = {
-    {{1, 0}, 0xffff0000u},
-    {{cos(M_PI * 2 / 3), sin(M_PI * 2 / 3)}, 0xff00ff00u},
-    {{cos(M_PI * 4 / 3), sin(M_PI * 4 / 3)}, 0xff0000ffu},
-};
-
-static constexpr uint16_t TRIANGLE_INDICES[3] = { 0, 1, 2 };
-
-static constexpr uint8_t BAKED_COLOR_PACKAGE[] = {
-    #include "generated/material/bakedColor.inc"
+static constexpr uint8_t MATERIAL_LIT_PACKAGE[] = {
+    #include "generated/material/texturedLit.inc"
 };
 
 static SuzanneApp app;
 
+static Texture* setTextureParameter(Engine& engine, filaweb::Asset& asset, string name,
+        TextureSampler const &sampler, Format internalFormat) {
+
+    const auto destructor = [](void* buffer, size_t size, void* user) {
+        auto asset = (filaweb::Asset*) user;
+        asset->data.reset();
+    };
+
+    Texture::PixelBufferDescriptor pb(
+            asset.data.get(), asset.nbytes, Texture::Format::RGBA, Texture::Type::UBYTE,
+            destructor, &asset);
+
+    // TODO: Since we use a Canvas 2D to decode textures, they are always 4-component. We should
+    // manually reshape the data here to improve footprint.
+    if (internalFormat == Format::R8) {
+        internalFormat = Format::RGBA8;
+    }
+
+    auto texture = Texture::Builder()
+            .width(asset.width)
+            .height(asset.height)
+            .sampler(Texture::Sampler::SAMPLER_2D)
+            .format(internalFormat)
+            .build(engine);
+
+    texture->setImage(engine, 0, std::move(pb));
+    app.mi->setParameter(name.c_str(), texture, sampler);
+    return texture;
+}
+
 void setup(Engine* engine, View* view, Scene* scene) {
-    view->setClearColor({0.1, 0.125, 0.25, 1.0});
-    view->setPostProcessingEnabled(false);
-    view->setDepthPrepass(filament::View::DepthPrepass::DISABLED);
-    static_assert(sizeof(Vertex) == 12, "Strange vertex size.");
-    app.vb = VertexBuffer::Builder()
-            .vertexCount(3)
-            .bufferCount(1)
-            .attribute(VertexAttribute::POSITION, 0, VertexBuffer::AttributeType::FLOAT2, 0, 12)
-            .attribute(VertexAttribute::COLOR, 0, VertexBuffer::AttributeType::UBYTE4, 8, 12)
-            .normalized(VertexAttribute::COLOR)
-            .build(*engine);
-    app.vb->setBufferAt(*engine, 0,
-            VertexBuffer::BufferDescriptor(TRIANGLE_VERTICES, 36, nullptr));
-    app.ib = IndexBuffer::Builder()
-            .indexCount(3)
-            .bufferType(IndexBuffer::IndexType::USHORT)
-            .build(*engine);
-    app.ib->setBuffer(*engine,
-            IndexBuffer::BufferDescriptor(TRIANGLE_INDICES, 6, nullptr));
+
+    // Create material.
     app.mat = Material::Builder()
-            .package((void*) BAKED_COLOR_PACKAGE, sizeof(BAKED_COLOR_PACKAGE))
+            .package((void*) MATERIAL_LIT_PACKAGE, sizeof(MATERIAL_LIT_PACKAGE))
             .build(*engine);
-    app.renderable = EntityManager::get().create();
-    RenderableManager::Builder(1)
-            .boundingBox({{ -1, -1, -1 }, { 1, 1, 1 }})
-            .material(0, app.mat->getDefaultInstance())
-            .geometry(0, RenderableManager::PrimitiveType::TRIANGLES, app.vb, app.ib, 0, 3)
-            .culling(false)
-            .receiveShadows(false)
-            .castShadows(false)
-            .build(*engine, app.renderable);
-    scene->addEntity(app.renderable);
+    app.mi = app.mat->createInstance();
+    app.mi->setParameter("clearCoat", 0.0f);
+
+    // Move raw asset data from JavaScript to C++ static storage. Their held data will be freed via
+    // BufferDescriptor callbacks after Filament creates the corresponding GPU objects.
+    static auto mesh = filaweb::getRawFile("mesh");
+    static auto albedo = filaweb::getTexture("albedo");
+    static auto metallic = filaweb::getTexture("metallic");
+    static auto roughness = filaweb::getTexture("roughness");
+    static auto normal = filaweb::getTexture("normal");
+    static auto ao = filaweb::getTexture("ao");
+
+    // Create mesh.
+    printf("%s: %d bytes\n", "mesh", mesh.nbytes);
+    const uint8_t* mdata = mesh.data.get();
+    const auto destructor = [](void* buffer, size_t size, void* user) {
+        auto asset = (filaweb::Asset*) user;
+        asset->data.reset();
+    };
+    app.filamesh = decodeMesh(*engine, mdata, 0, app.mi, destructor, &mesh);
+    scene->addEntity(app.filamesh->renderable);
+
+    // Create textures.
+    TextureSampler sampler(MagFilter::LINEAR, WrapMode::CLAMP_TO_EDGE);
+    auto setTexture = [engine, sampler] (filaweb::Asset& asset, const char* name, Format format) {
+        printf("%s: %d x %d\n", name, asset.width, asset.height);
+        setTextureParameter(*engine, asset, name, sampler, format);
+    };
+    setTexture(albedo, "albedo", Format::SRGB8_A8);
+    setTexture(metallic, "metallic", Format::R8);
+    setTexture(roughness, "roughness", Format::R8);
+    setTexture(normal, "normal", Format::RGBA8);
+    setTexture(ao, "ao", Format::R8);
+
+    // Create the sun.
+    auto& em = EntityManager::get();
+    app.sun = em.create();
+    LightManager::Builder(LightManager::Type::SUN)
+            .color(Color::toLinear<ACCURATE>({ 0.98f, 0.92f, 0.89f }))
+            .intensity(110000)
+            .direction({ 0.7, -1, -0.8 })
+            .sunAngularRadius(1.2f)
+            .castShadows(true)
+            .build(*engine, app.sun);
+    scene->addEntity(app.sun);
+
+    // Create point lights.
+    LightManager::Builder(LightManager::Type::POINT)
+            .color(Color::toLinear<ACCURATE>({0.98f, 0.92f, 0.89f}))
+            .intensity(LightManager::EFFICIENCY_LED, 300.0f)
+            .position({0.0f, -0.2f, -3.0f})
+            .falloff(4.0f)
+            .build(*engine, app.ptlight[0]);
+    LightManager::Builder(LightManager::Type::POINT)
+            .color(Color::toLinear<ACCURATE>({0.98f, 0.12f, 0.19f}))
+            .intensity(LightManager::EFFICIENCY_LED, 200.0f)
+            .position({0.6f, 0.6f, -3.2f})
+            .falloff(2.0f)
+            .build(*engine, app.ptlight[1]);
+    LightManager::Builder(LightManager::Type::POINT)
+            .color(Color::toLinear<ACCURATE>({0.18f, 0.12f, 0.89f}))
+            .intensity(LightManager::EFFICIENCY_LED, 200.0f)
+            .position({-0.6f, 0.6f, -3.2f})
+            .falloff(2.0f)
+            .build(*engine, app.ptlight[2]);
+    LightManager::Builder(LightManager::Type::POINT)
+            .color(Color::toLinear<ACCURATE>({0.88f, 0.82f, 0.29f}))
+            .intensity(LightManager::EFFICIENCY_LED, 200.0f)
+            .position({0.0f, 1.5f, -3.5f})
+            .falloff(2.0f)
+            .build(*engine, app.ptlight[3]);
+    scene->addEntity(app.ptlight[0]);
+    scene->addEntity(app.ptlight[1]);
+    scene->addEntity(app.ptlight[2]);
+    scene->addEntity(app.ptlight[3]);
+
+    //  Create sky box and image-based light source.
+    auto skylight = filaweb::getSkyLight(*engine, "desert");
+    scene->setIndirectLight(skylight.indirectLight);
+    scene->setSkybox(skylight.skybox);
+
     app.cam = engine->createCamera();
+    app.cam->setExposure(16.0f, 1 / 125.0f, 100.0f);
+    app.cam->lookAt(float3{0}, float3{0, 0, -4});
     view->setCamera(app.cam);
+    view->setClearColor({0.1, 0.125, 0.25, 1.0});
 };
 
 void animate(Engine* engine, View* view, double now) {
-    constexpr float ZOOM = 1.5f;
-    const uint32_t w = view->getViewport().width;
-    const uint32_t h = view->getViewport().height;
-    const float aspect = (float) w / h;
-    app.cam->setProjection(Camera::Projection::ORTHO,
-        -aspect * ZOOM, aspect * ZOOM,
-        -ZOOM, ZOOM, 0, 1);
+
+    const uint32_t width = view->getViewport().width;
+    const uint32_t height = view->getViewport().height;
+    double ratio = double(width) / height;
+    app.cam->setProjection(45.0, ratio, 0.1, 50.0, Camera::Fov::VERTICAL);
+
     auto& tcm = engine->getTransformManager();
-    tcm.setTransform(tcm.getInstance(app.renderable),
-            math::mat4f::rotate(now, math::float3{0, 0, 1}));
+    tcm.setTransform(tcm.getInstance(app.filamesh->renderable),
+        mat4f{mat3f{1.0}, float3{0.0f, 0.0f, -4.0f}} *
+        mat4f::rotate(now, math::float3{0, 1, 0}));
 };
 
 void gui(filament::Engine* engine, filament::View*) {
@@ -117,16 +200,10 @@ void gui(filament::Engine* engine, filament::View*) {
 // This is called only after the JavaScript layer has created a WebGL 2.0 context and all assets
 // have been downloaded.
 extern "C" void launch() {
-
-    auto albedo = filaweb::getTexture("albedo");
-    albedo.data.reset();
-
-    auto mesh = filaweb::getRawFile("mesh");
-    mesh.data.reset();
-
     filaweb::Application::get()->run(setup, gui, animate);
 }
 
 // The main() entry point is implicitly called after JIT compilation, but potentially before the
 // WebGL context has been created or assets have finished loading.
 int main() { }
+
