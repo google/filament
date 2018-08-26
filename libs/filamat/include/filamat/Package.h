@@ -63,9 +63,7 @@ public:
     Package(const Package& other) = delete;
 
     ~Package() {
-        if (mPayload != nullptr) {
-            free(mPayload);
-        }
+        free(mPayload);
     }
 
     uint8_t* getData() const noexcept {
