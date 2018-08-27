@@ -172,7 +172,7 @@ static GroundPlane createGroundPlane(Engine* engine) {
         .build(*engine, renderable);
 
     auto& tcm = engine->getTransformManager();
-    tcm.setTransform(tcm.getInstance(renderable), mat4f::translate(float4{0, -1, -4, 1}));
+    tcm.setTransform(tcm.getInstance(renderable), mat4f::translate(float3{0, -1, -4}));
     return {
         .vb = vertexBuffer,
         .ib = indexBuffer,

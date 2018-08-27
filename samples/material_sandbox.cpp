@@ -368,7 +368,7 @@ static void setup(Engine* engine, View*, Scene* scene) {
         scene->addEntity(planeRenderable);
 
         tcm.setTransform(tcm.getInstance(planeRenderable),
-                math::mat4f::translate(float4{0, -1, -4, 1}));
+                math::mat4f::translate(float3{0, -1, -4}));
     }
 }
 
