@@ -21,6 +21,7 @@
 #include <math/TMatHelpers.h>
 #include <math/vec3.h>
 
+#include <limits.h>
 #include <stdint.h>
 #include <sys/types.h>
 
