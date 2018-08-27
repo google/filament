@@ -120,7 +120,7 @@ JobSystem::JobSystem(size_t threadCount, size_t adoptableThreadsCount) noexcept
             threadCount = hwThreads - 1;
         }
     }
-    threadCount = std::min(size_t(32), threadCount);
+    threadCount = std::min(size_t(UTILS_HAS_THREADING ? 32 : 0), threadCount);
 
     mThreadStates = aligned_vector<ThreadState>(threadCount + adoptableThreadsCount);
     mThreadCount = uint16_t(threadCount);
