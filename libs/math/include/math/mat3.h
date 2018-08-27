@@ -268,27 +268,27 @@ public:
             size_t storageSize = sizeof(int16_t));
 
     template <typename A>
-    static constexpr TMat33 translate(const TVec2<A>& t) {
+    static constexpr TMat33 translate(const TVec3<A>& t) {
         TMat33 r;
-        r[2] = TVec3<T>{ t, 1 };
+        r[2] = t;
         return r;
     }
 
     template <typename A>
     static constexpr TMat33 translate(A t) {
         TMat33 r;
-        r[2] = TVec3<T>{ t, t, 1 };
+        r[2] = TVec3<T>{ t };
         return r;
     }
 
     template <typename A>
-    static constexpr TMat33 scale(const TVec2<A>& s) {
-        return TMat33{ TVec3<T>{ s, 1 } };
+    static constexpr TMat33 scale(const TVec3<A>& s) {
+        return TMat33{ s };
     }
 
     template <typename A>
     static constexpr TMat33 scale(A s) {
-        return TMat33{ TVec3<T>{ s, s, 1 } };
+        return TMat33{ TVec3<T>{ s } };
     }
 };
 
