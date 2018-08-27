@@ -20,8 +20,6 @@
 
 #include <filament/Fence.h>
 
-#include <utils/Panic.h>
-
 namespace filament {
 
 using namespace driver;
@@ -68,8 +66,6 @@ FenceStatus FFence::waitAndDestroy(FFence* fence, Mode mode) noexcept {
 
 UTILS_NOINLINE
 FenceStatus FFence::wait(Mode mode, uint64_t timeout) noexcept {
-    ASSERT_PRECONDITION(UTILS_HAS_THREADING || timeout == 0, "Non-zero timeout requires threads.");
-
     FEngine& engine = mEngine;
 
     if (mode == Mode::FLUSH) {
