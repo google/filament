@@ -233,9 +233,7 @@ $$\begin{equation}
 Since both $n$ and $h$ are unit vectors, $|n \times h|^2 = 1 - (\NoH)^2$. This allows us to compute $1 - (\NoH)^2$ directly with half precision floats by using a simple cross product. Listing [specularDfp16] shows the final optimized implementation.
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-#define MEDIUMP_FLT_MIN    0.00006103515625
 #define MEDIUMP_FLT_MAX    65504.0
-#define FLT_EPS            MEDIUMP_FLT_MIN
 #define saturateMediump(x) min(x, MEDIUMP_FLT_MAX)
 
 float D_GGX(float linearRoughness, float NoH, const vec3 h) {
