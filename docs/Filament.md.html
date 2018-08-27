@@ -236,8 +236,8 @@ Since both $n$ and $h$ are unit vectors, $|n \times h|^2 = 1 - (\NoH)^2$. This a
 #define MEDIUMP_FLT_MAX    65504.0
 #define saturateMediump(x) min(x, MEDIUMP_FLT_MAX)
 
-float D_GGX(float linearRoughness, float NoH, const vec3 h) {
-    vec3 NxH = cross(shading_normal, h);
+float D_GGX(float linearRoughness, float NoH, const vec3 n, const vec3 h) {
+    vec3 NxH = cross(n, h);
     float a = NoH * linearRoughness;
     float k = linearRoughness / (dot(NxH, NxH) + a * a);
     float d = k * k * (1.0 / PI);
