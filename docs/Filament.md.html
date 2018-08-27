@@ -215,12 +215,38 @@ The GLSL implementation of the NDF, shown in listing [specularD], is simple and 
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 float D_GGX(float NoH, float linearRoughness) {
-    float a2 = linearRoughness * linearRoughness;
-    float f = (NoH * a2 - NoH) * NoH + 1.0;
-    return a2 / (PI * f * f);
+    float a = NoH * linearRoughness;
+    float k = linearRoughness / (1.0 - NoH * NoH + a * a);
+    return k * k * (1.0 / PI);
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 [Listing [specularD]: Implementation of the specular D term in GLSL]
+
+We can improve this implementation by using half precision floats. This optimization requires changes to the original equation as there are two problems when computing $1 - (\NoH)^2$ in half-floats. First, this computation suffers from floating point cancellation when $(\NoH)^2$ is close to 1 (highlights). Secondly $\NoH$ does not have enough precision around 1.
+
+The solution involves Lagrange's identiy:
+
+$$\begin{equation}
+| a \times b |^2 = |a|^2 |b|^2 - (a \cdot b)^2
+\end{equation}$$
+
+Since both $n$ and $h$ are unit vectors, $|n \times h|^2 = 1 - (\NoH)^2$. This allows us to compute $1 - (\NoH)^2$ directly with half precision floats by using a simple cross product. Listing [specularDfp16] shows the final optimized implementation.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#define MEDIUMP_FLT_MIN    0.00006103515625
+#define MEDIUMP_FLT_MAX    65504.0
+#define FLT_EPS            MEDIUMP_FLT_MIN
+#define saturateMediump(x) min(x, MEDIUMP_FLT_MAX)
+
+float D_GGX(float linearRoughness, float NoH, const vec3 h) {
+    vec3 NxH = cross(shading_normal, h);
+    float a = NoH * linearRoughness;
+    float k = linearRoughness / (dot(NxH, NxH) + a * a);
+    float d = k * k * (1.0 / PI);
+    return saturateMediump(d);
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+[Listing [specularDfp16]: Implementation of the specular D term in GLSL optimized for fp16]
 
 ### Geometric shadowing (specular G)
 
@@ -1079,7 +1105,7 @@ $$\begin{equation}\label{charlieNDF}
 D(m) = \frac{(2 + \frac{1}{\alpha}) sin(\theta)^{\frac{1}{\alpha}}}{2 \pi}
 \end{equation}$$
 
-[#Estevez17] also presents a new shadowing term that we omit here because of its cost. We instead rely on the visibility term from [#Neubelt13] (equation ${\ref{clothSpecularBRDF}$).
+[#Estevez17] also presents a new shadowing term that we omit here because of its cost. We instead rely on the visibility term from [#Neubelt13] (shown in equation $\ref{clothSpecularBRDF}$ above).
 The implementation of this NDF is presented in listing [clothCharlieBRDF], optimized to properly fit in half float formats.
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
