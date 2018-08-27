@@ -66,7 +66,7 @@ MeshAssimp::~MeshAssimp() {
 template<typename T>
 struct State {
     std::vector<T> state;
-    State(std::vector<T>&& state) : state(state) { }
+    explicit State(std::vector<T>&& state) : state(state) { }
     static void free(void* buffer, size_t size, void* user) {
         auto* const that = (State<T>*)user;
         delete that;
@@ -98,9 +98,9 @@ void MeshAssimp::addFromFile(const Path& path,
         mVertexBuffer = VertexBuffer::Builder()
                 .vertexCount((uint32_t)positions.size())
                 .bufferCount(3)
-                .attribute(VertexAttribute::POSITION, 0, VertexBuffer::AttributeType::HALF4)
-                .attribute(VertexAttribute::TANGENTS, 1, VertexBuffer::AttributeType::SHORT4)
-                .attribute(VertexAttribute::UV0,      2, VertexBuffer::AttributeType::HALF2)
+                .attribute(VertexAttribute::POSITION,     0, VertexBuffer::AttributeType::HALF4)
+                .attribute(VertexAttribute::TANGENTS,     1, VertexBuffer::AttributeType::SHORT4)
+                .attribute(VertexAttribute::UV0,          2, VertexBuffer::AttributeType::HALF2)
                 .normalized(VertexAttribute::TANGENTS)
                 .build(mEngine);
 
@@ -110,17 +110,17 @@ void MeshAssimp::addFromFile(const Path& path,
         auto is = new State<uint32_t>(std::move(indices));
 
         mVertexBuffer->setBufferAt(mEngine, 0,
-                VertexBuffer::BufferDescriptor(ps->data(), ps->size(), ps->free, ps));
+                VertexBuffer::BufferDescriptor(ps->data(), ps->size(), State<half4>::free, ps));
 
         mVertexBuffer->setBufferAt(mEngine, 1,
-                VertexBuffer::BufferDescriptor(ns->data(), ns->size(), ns->free, ns));
+                VertexBuffer::BufferDescriptor(ns->data(), ns->size(), State<short4>::free, ns));
 
         mVertexBuffer->setBufferAt(mEngine, 2,
-                VertexBuffer::BufferDescriptor(ts->data(), ts->size(), ts->free, ts));
+                VertexBuffer::BufferDescriptor(ts->data(), ts->size(), State<half2>::free, ts));
 
-        mIndexBuffer = IndexBuffer::Builder().indexCount(uint32_t(indices.size())).build(mEngine);
+        mIndexBuffer = IndexBuffer::Builder().indexCount(uint32_t(is->size())).build(mEngine);
         mIndexBuffer->setBuffer(mEngine,
-                IndexBuffer::BufferDescriptor(is->data(), is->size(), is->free, is));
+                IndexBuffer::BufferDescriptor(is->data(), is->size(), State<uint32_t>::free, is));
     }
 
     mDefaultColorMaterial = Material::Builder()
@@ -291,8 +291,8 @@ bool MeshAssimp::setFromFile(const Path& file,
                     for (size_t j = 0; j < numVertices; j++) {
                         quatf q = mat3f::packTangentFrame({tangents[j], bitangents[j], normals[j]});
                         outTangents.push_back(packSnorm16(q.xyzw));
-                        outTexCoords.push_back(half2(texCoords[j].xy));
-                        outPositions.push_back(half4(positions[j], 1.0_h));
+                        outTexCoords.emplace_back(texCoords[j].xy);
+                        outPositions.emplace_back(positions[j], 1.0_h);
                     }
 
                     // all faces should be triangles since we configure assimp to triangulate faces
