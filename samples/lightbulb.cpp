@@ -299,7 +299,7 @@ static void setup(Engine* engine, View* view, Scene* scene) {
         slog.d << "light count = " << n << io::endl;
 
         Entity discoBall = em.create();
-        tcm.create(discoBall, {}, mat4f::translate(float4{ 0, 3, -14, 1 }));
+        tcm.create(discoBall, {}, mat4f::translate(float3{ 0, 3, -14 }));
         auto parent = tcm.getInstance(discoBall);
 
         for (size_t i = 0, c = n; i < c; i++) {
@@ -404,7 +404,7 @@ static void setup(Engine* engine, View* view, Scene* scene) {
         scene->addEntity(planeRenderable);
 
         tcm.setTransform(tcm.getInstance(planeRenderable),
-                math::mat4f::translate(float4{0, -1, -4, 1}));
+                math::mat4f::translate(float3{0, -1, -4}));
     }
 }
 #pragma clang diagnostic pop
@@ -434,7 +434,7 @@ int main(int argc, char* argv[]) {
         filamentApp.animate([lastTime](filament::Engine* engine, filament::View*, double now) mutable {
             auto& tcm = engine->getTransformManager();
             tcm.setTransform(tcm.getInstance(g_discoBallEntity),
-                    mat4f::translate(float4{ 0, 2, -4, 1 }) *
+                    mat4f::translate(float3{ 0, 2, -4, }) *
                     mat4f::rotate(g_discoAngle, float3{ 0, 1, 0 })
             );
             if (lastTime != 0) {

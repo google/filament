@@ -266,6 +266,30 @@ public:
      */
     static constexpr TQuaternion<T> packTangentFrame(const TMat33& m,
             size_t storageSize = sizeof(int16_t));
+
+    template <typename A>
+    static constexpr TMat33 translate(const TVec2<A>& t) {
+        TMat33 r;
+        r[2] = TVec3<T>{ t, 1 };
+        return r;
+    }
+
+    template <typename A>
+    static constexpr TMat33 translate(A t) {
+        TMat33 r;
+        r[2] = TVec3<T>{ t, t, 1 };
+        return r;
+    }
+
+    template <typename A>
+    static constexpr TMat33 scale(const TVec2<A>& s) {
+        return TMat33{ TVec3<T>{ s, 1 } };
+    }
+
+    template <typename A>
+    static constexpr TMat33 scale(A s) {
+        return TMat33{ TVec3<T>{ s, s, 1 } };
+    }
 };
 
 // ----------------------------------------------------------------------------------------

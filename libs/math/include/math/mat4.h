@@ -318,6 +318,30 @@ public:
     inline constexpr TMat33<T> upperLeft() const {
         return TMat33<T>(m_value[0].xyz, m_value[1].xyz, m_value[2].xyz);
     }
+
+    template <typename A>
+    static constexpr TMat44 translate(const TVec3<A>& t) {
+        TMat44 r;
+        r[3] = TVec4<T>{ t, 1 };
+        return r;
+    }
+
+    template <typename A>
+    static constexpr TMat44 translate(A t) {
+        TMat44 r;
+        r[3] = TVec4<T>{ t, t, t, 1 };
+        return r;
+    }
+
+    template <typename A>
+    static constexpr TMat44 scale(const TVec3<A>& s) {
+        return TMat44{ TVec4<T>{ s, 1 } };
+    }
+
+    template <typename A>
+    static constexpr TMat44 scale(A s) {
+        return TMat44{ TVec4<T>{ s, s, s, 1 } };
+    }
 };
 
 // ----------------------------------------------------------------------------------------
