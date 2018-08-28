@@ -31,7 +31,7 @@ private val adderNodeCompile = fun(node: Node, compiler: GraphCompiler): Node {
     val temp = compiler.getNewTemporaryVariableName("adder")
     compiler.addCodeToMaterialFunctionBody("float3 $temp = $aExpression + $bExpression;\n")
 
-    compiler.setExpressionForOutputSlot(outputSlot, Expression(temp))
+    compiler.setExpressionForOutputSlot(outputSlot, Expression(temp, 3))
 
     return node
 }
@@ -65,7 +65,7 @@ private val constantFloat3NodeCompile = fun(node: Node, compiler: GraphCompiler)
     compiler.addCodeToMaterialFunctionBody(
             "float3 $outputVariable = float3(${color.x}, ${color.y}, ${color.z});\n")
 
-    compiler.setExpressionForOutputSlot(outputSlot, Expression(outputVariable))
+    compiler.setExpressionForOutputSlot(outputSlot, Expression(outputVariable, 3))
     return node
 }
 
@@ -73,7 +73,7 @@ private val float3ParameterNodeCompile = fun(node: Node, compiler: GraphCompiler
     val parameter = compiler.addParameter("float3", "float3Parameter")
     compiler.associateParameterWithProperty(parameter, node.getPropertyHandle("value"))
     compiler.setExpressionForOutputSlot(node.getOutputSlot("result"),
-            Expression("materialParams.${parameter.name}"))
+            Expression("materialParams.${parameter.name}", 3))
     return node
 }
 

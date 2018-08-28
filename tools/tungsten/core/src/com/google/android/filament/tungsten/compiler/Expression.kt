@@ -16,4 +16,7 @@
 
 package com.google.android.filament.tungsten.compiler
 
-class Expression(val symbol: String)
+class Expression(
+    val symbol: String,
+    val dimensions: Int
+)

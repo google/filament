@@ -65,6 +65,7 @@ public final class GraphCompiler {
      * @return null, if the InputSlot is not connected to any OutputSlot, otherwise an Expression.
      */
     @Nullable
+    // todo: rename to compileAndRetrieveExpression
     public Expression compileAndRetrieveVariable(@NotNull Node.InputSlot slot) {
         Node.OutputSlot outputSlot = mGraph.getOutputSlotConnectedToInput(slot);
         if (outputSlot == null) {
