@@ -1533,7 +1533,7 @@ $$\begin{equation}\label{photometricLightEvaluation}
 L_{out} = f(v,l) \frac{I}{d^2} \left< \NoL \right> \Psi(l)
 \end{equation}$$
 
-The term $ \Psi(l) $ is the photometric attenuation function. It depends on the light evector, but also on the direction of the light. Spot lights already possess a direction vector but we need to introduce one for photometric point lights as well.
+The term $ \Psi(l) $ is the photometric attenuation function. It depends on the light vector, but also on the direction of the light. Spot lights already possess a direction vector but we need to introduce one for photometric point lights as well.
 
 The photometric attenuation function can be easily implemented in GLSL by adding a new attenuation factor to the implementation of punctual lights (listing [glslPunctualLight]). The modified implementation is show in listing [glslPhotometricPunctualLight].
 
