@@ -85,6 +85,21 @@ private val float3ParameterNodeCompile = fun(node: Node, compiler: GraphCompiler
     compiler.associateParameterWithProperty(parameter, node.getPropertyHandle("value"))
     compiler.setExpressionForSlot(node.getOutputSlot("result"),
             Expression("materialParams.${parameter.name}", 3))
+
+    return node
+}
+
+private val constantFloat2NodeCompile = fun(node: Node, compiler: GraphCompiler): Node {
+    val outputSlot = node.getOutputSlot("result")
+
+    val color = (node.properties[0].value as Float3)
+
+    val outputVariable = compiler.getNewTemporaryVariableName("float2Constant")
+    compiler.addCodeToMaterialFunctionBody(
+            "float2 $outputVariable = float2(${color.x}, ${color.y});\n")
+
+    compiler.setExpressionForSlot(outputSlot, Expression(outputVariable, 2))
+
     return node
 }
 
@@ -115,6 +130,16 @@ val createFloat3ParameterNode = fun(id: NodeId): Node {
         compileFunction = float3ParameterNodeCompile,
         outputSlots = listOf("result"),
         properties = listOf(Property("value", Float3(), PropertyType.MATERIAL_PARAMETER))
+    )
+}
+
+val createFloat2ConstantNode = fun(id: NodeId): Node {
+    return Node(
+            id = id,
+            type = "float2Constant",
+            compileFunction = constantFloat2NodeCompile,
+            outputSlots = listOf("result"),
+            properties = listOf(Property("value", Float3()))
     )
 }
 
