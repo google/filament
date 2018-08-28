@@ -2601,7 +2601,7 @@ The first step in the image transformation process is to use a physically based 
 
 Because we use photometric units throughout the lighting pipeline, the light reaching the camera is an energy expressed in luminance $L$, in $cd.m^{-2}$. Light incident to the camera sensor can cover a large range of values, from $10^{-5}cd.m^{-2}$ for starlight to $10^{9}cd.m^{-2}$ for the sun. Since we obviously cannot manipulate and even less record such a large range of values, we need to remap them.
 
-This range remapping is done in a camera by exposing the sensor for a certain time. To maximize the use of the limited range of the sensor, the scene's light range is centered around the "middle grey", a value halfway between black and white. The exposition is therefore achieved by manipulating, either manually or automatically, 3 settings:
+This range remapping is done in a camera by exposing the sensor for a certain time. To maximize the use of the limited range of the sensor, the scene's light range is centered around the "middle gray", a value halfway between black and white. The exposition is therefore achieved by manipulating, either manually or automatically, 3 settings:
 
 - Aperture
 - Shutter speed
@@ -2702,7 +2702,7 @@ E = 2^{EV_{100}} \times 3.4
 
 #### Exposure compensation
 
-Even though an exposure value actually indicates combinations of camera settings, it is often used by photographers to describe light intensity. This is why cameras let photographers apply an exposure compensation to over or under-expose an image. This setting can be used for artistic control but also to achieve proper exposure (snow for instance will be exposed for as 18% middle-grey).
+Even though an exposure value actually indicates combinations of camera settings, it is often used by photographers to describe light intensity. This is why cameras let photographers apply an exposure compensation to over or under-expose an image. This setting can be used for artistic control but also to achieve proper exposure (snow for instance will be exposed for as 18% middle-gray).
 
 Applying an exposure compensation $EC$ is a simple as adding an offset to the exposure value, as shown in equation $ \ref{ec} $.
 
