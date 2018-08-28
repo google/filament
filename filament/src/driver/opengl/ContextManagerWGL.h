@@ -58,6 +58,7 @@ private:
     HGLRC mContext = NULL;
     HWND mHWnd = NULL;
     HDC mWhdc = NULL;
+    PIXELFORMATDESCRIPTOR mPfd = {};
 };
 
 using ContextManager = filament::ContextManagerWGL;
