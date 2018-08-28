@@ -3106,9 +3106,9 @@ const vec3 debugColors[16] = vec3[](
 
 To validate our implementation against reference renderings, we will use a commercial-grade Open Source physically based offline path tracer called Mitsuba. Mitsuba offers many different integrators, samplers and material models, which should allow us to provide fair comparisons with our real-time renderer. This path tracer also relies on a simple XML scene description format that should be easy to automatically generate from our own scene descriptions.
 
-Figure [mistubaReference] and figure [filamentReference] show a simple scene, a perfectly smooth dielectric sphere, rendered respectively with Mitsuba and Filament.
+Figure [mitsubaReference] and figure [filamentReference] show a simple scene, a perfectly smooth dielectric sphere, rendered respectively with Mitsuba and Filament.
 
-![Figure [mistubaReference]: Rendered in 2048x1440 in 1 minute and 42 seconds on a 12 core 2013 MacPro](images/screenshot_ref_mitsuba.jpg)
+![Figure [mitsubaReference]: Rendered in 2048x1440 in 1 minute and 42 seconds on a 12 core 2013 MacPro](images/screenshot_ref_mitsuba.jpg)
 
 ![Figure [filamentReference]: Rendered in 2048x1440 with MSAA 4x at 60 fps on a Nexus 9 device (Tegra K1 GPU)](images/screenshot_ref_filament.jpg)
 
@@ -3744,7 +3744,7 @@ double factorial(size_t n, size_t d ) {
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-## Sample validation scene for Mistuba
+## Sample validation scene for Mitsuba
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 &lt;scene version="0.5.0"&gt;
