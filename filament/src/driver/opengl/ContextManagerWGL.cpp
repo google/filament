@@ -33,7 +33,7 @@ namespace filament {
 using namespace driver;
 
 std::unique_ptr<Driver> ContextManagerWGL::createDriver(void* const sharedGLContext) noexcept {
-    PIXELFORMATDESCRIPTOR pfd = {
+    mPfd = {
         sizeof(PIXELFORMATDESCRIPTOR),
         1,
         PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER,    // Flags
@@ -66,8 +66,8 @@ std::unique_ptr<Driver> ContextManagerWGL::createDriver(void* const sharedGLCont
         goto error;
     }
 
-    int pixelFormat = ChoosePixelFormat(whdc, &pfd);
-    SetPixelFormat(whdc, pixelFormat, &pfd);
+    int pixelFormat = ChoosePixelFormat(whdc, &mPfd);
+    SetPixelFormat(whdc, pixelFormat, &mPfd);
 
     // We need a tmp context to retrieve and call wglCreateContextAttribsARB.
     HGLRC tempContext = wglCreateContext(whdc);
@@ -128,6 +128,10 @@ ExternalContext::SwapChain* ContextManagerWGL::createSwapChain(void* nativeWindo
     HDC hdc = (HDC) nativeWindow;
     ASSERT_POSTCONDITION_NON_FATAL(hdc,
             "Unable to create the SwapChain (nativeWindow = %p)", nativeWindow);
+
+	// We have to match pixel formats across the HDC and HGLRC (mContext)
+    int pixelFormat = ChoosePixelFormat(hdc, &mPfd);
+    SetPixelFormat(hdc, pixelFormat, &mPfd);
 
     SwapChain* swapChain = (SwapChain *)hdc;
     return swapChain;
