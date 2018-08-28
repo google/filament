@@ -1097,7 +1097,7 @@ float D_Ashikhmin(float linearRoughness, float NoH) {
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 [Listing [clothBRDF]: Implementation of Ashikhmin's velvet NDF in GLSL]
 
-In [#Estevez17] Estevez and Kulla propose a different NDF (called the "Charlie" sheen) that is based on an exponentiated sinusoidal instead of an inverted gaussian. This NDF is appealing for several reasons: its parameterization feels more natural and intuitive, it provides a softer appearance and, as shown in equation $\ref{charlieNDF}$, its implementation is simpler:
+In [#Estevez17] Estevez and Kulla propose a different NDF (called the "Charlie" sheen) that is based on an exponentiated sinusoidal instead of an inverted Gaussian. This NDF is appealing for several reasons: its parameterization feels more natural and intuitive, it provides a softer appearance and, as shown in equation $\ref{charlieNDF}$, its implementation is simpler:
 
 $$\begin{equation}\label{charlieNDF}
 D(m) = \frac{(2 + \frac{1}{\alpha}) sin(\theta)^{\frac{1}{\alpha}}}{2 \pi}
