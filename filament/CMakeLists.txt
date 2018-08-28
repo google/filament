@@ -344,6 +344,9 @@ if (MSVC OR CLANG_CL)
     set(OPTIMIZATION_FLAGS
         /fp:fast
     )
+elseif(WEBGL)
+    # Avoid strict-vtable-pointers here, it is broken in WebAssembly.
+    set(OPTIMIZATION_FLAGS -fvisibility=hidden -fvisibility-inlines-hidden)
 else()
     set(OPTIMIZATION_FLAGS
         -ffast-math

@@ -1773,12 +1773,20 @@ void OpenGLDriver::setRenderPrimitiveBuffer(Driver::RenderPrimitiveHandle rph,
                 uint8_t bi = eb->attributes[i].buffer;
                 assert(bi != 0xFF);
                 bindBuffer(GL_ARRAY_BUFFER, eb->gl.buffers[bi]);
-                glVertexAttribPointer(GLuint(i),
-                        getComponentCount(eb->attributes[i].type),
-                        getComponentType(eb->attributes[i].type),
-                        getNormalization(eb->attributes[i].normalized),
-                        eb->attributes[i].stride,
-                        (void*)uintptr_t(eb->attributes[i].offset));
+                if (UTILS_UNLIKELY(eb->attributes[i].flags & Attribute::FLAG_INTEGER_TARGET)) {
+                    glVertexAttribIPointer(GLuint(i),
+                            getComponentCount(eb->attributes[i].type),
+                            getComponentType(eb->attributes[i].type),
+                            eb->attributes[i].stride,
+                            (void*) uintptr_t(eb->attributes[i].offset));
+                } else {
+                    glVertexAttribPointer(GLuint(i),
+                            getComponentCount(eb->attributes[i].type),
+                            getComponentType(eb->attributes[i].type),
+                            getNormalization(eb->attributes[i].flags & Attribute::FLAG_NORMALIZED),
+                            eb->attributes[i].stride,
+                            (void*) uintptr_t(eb->attributes[i].offset));
+                }
 
                 enableVertexAttribArray(GLuint(i));
             } else {
@@ -2356,7 +2364,8 @@ GLuint OpenGLDriver::getSamplerSlow(driver::SamplerParams params) const noexcept
     glSamplerParameteri(s, GL_TEXTURE_WRAP_R,       getWrapMode(params.wrapR));
     glSamplerParameteri(s, GL_TEXTURE_COMPARE_MODE, getTextureCompareMode(params.compareMode));
     glSamplerParameteri(s, GL_TEXTURE_COMPARE_FUNC, getTextureCompareFunc(params.compareFunc));
-#ifdef GL_EXT_texture_filter_anisotropic
+// TODO: Why does this fail with WebGL 2.0? The run-time check should suffice.
+#if defined(GL_EXT_texture_filter_anisotropic) && !defined(__EMSCRIPTEN__)
     if (ext.texture_filter_anisotropic) {
         GLfloat anisotropy = float(1 << params.anisotropyLog2);
         glSamplerParameterf(s, GL_TEXTURE_MAX_ANISOTROPY_EXT, std::min(mMaxAnisotropy, anisotropy));
