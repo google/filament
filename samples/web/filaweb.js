@@ -79,7 +79,8 @@ function load_texture(url) {
             context2d.canvas.width = img.width;
             context2d.canvas.height = img.height;
             context2d.width = img.width;
-            context2d.height = img.height;
+            context2d.height = img.height
+            context2d.globalCompositeOperation = 'copy';
             context2d.drawImage(img, 0, 0);
             var imgdata = context2d.getImageData(0, 0, img.width, img.height).data.buffer;
             success({
@@ -99,31 +100,15 @@ function load_cubemap(urlprefix, nmips) {
     let name = '';
     promises['sh.txt'] = load_rawfile(urlprefix + 'sh.txt');
     for (let i = 0; i < nmips; i++) {
-        name = 'm' + i + '_px.rgbm';
-        promises[name] = load_texture(urlprefix + name);
-        name = 'm' + i + '_nx.rgbm';
-        promises[name] = load_texture(urlprefix + name);
-        name = 'm' + i + '_py.rgbm';
-        promises[name] = load_texture(urlprefix + name);
-        name = 'm' + i + '_ny.rgbm';
-        promises[name] = load_texture(urlprefix + name);
-        name = 'm' + i + '_pz.rgbm';
-        promises[name] = load_texture(urlprefix + name);
-        name = 'm' + i + '_nz.rgbm';
+        for (let face of 'px nx py ny pz nz'.split(' ')) {
+            name = 'm' + i + '_' + face + '.rgbm';
+            promises[name] = load_texture(urlprefix + name);
+        }
+    }
+    for (let face of 'px nx py ny pz nz'.split(' ')) {
+        name = face + '.png';
         promises[name] = load_texture(urlprefix + name);
     }
-    name = 'px.png';
-    promises[name] = load_texture(urlprefix + name);
-    name = 'nx.png';
-    promises[name] = load_texture(urlprefix + name);
-    name = 'py.png';
-    promises[name] = load_texture(urlprefix + name);
-    name = 'ny.png';
-    promises[name] = load_texture(urlprefix + name);
-    name = 'pz.png';
-    promises[name] = load_texture(urlprefix + name);
-    name = 'nz.png';
-    promises[name] = load_texture(urlprefix + name);
     let numberRemaining = Object.keys(promises).length;
     var promise = new Promise((success) => {
         for (let name in promises) {

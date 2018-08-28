@@ -76,12 +76,9 @@ add_custom_command(
     MAIN_DEPENDENCY ${source_mesh}
     DEPENDS filamesh)
 
-# Next build two cubemaps: (1) a single miplevel of a slightly large blurry PNG for the skybox, and
-# (2) all miplevels for an RGBM (which is PNG in disguise) for the IBL.
-
-# TODO: invoke cmgen only once and simply use RGBM everywhere. The only reason we're using PNG for
-# the skybox is to work around an RGBM coloration issue, probably something wrong in how we're
-# decoding the alpha channel for images in the web app.
+# Next build two cubemaps:
+#  (1) single miplevel of blurry skybox (png)
+#  (2) all miplevels for the IBL (rgbm)
 
 set(source_envmap "${CMAKE_CURRENT_SOURCE_DIR}/../../assets/environments/desert/desert.exr")
 
