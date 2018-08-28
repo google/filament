@@ -21,13 +21,15 @@
 
 namespace filament {
 
+// Update hasIntegerTarget() in VertexBuffer when adding an attribute that will
+// be read as integers in the shaders
 enum VertexAttribute : uint8_t {
     POSITION        = 0, // XYZ position (float3)
     TANGENTS        = 1, // tangent, bitangent and normal, encoded as a quaternion (float4)
     COLOR           = 2, // vertex color (float4)
     UV0             = 3, // texture coordinates (float2)
     UV1             = 4, // texture coordinates (float2)
-    BONE_INDICES    = 5, // indices of 4 bones (uvec4)
+    BONE_INDICES    = 5, // indices of 4 bones, as unsigned integers (uvec4)
     BONE_WEIGHTS    = 6, // weights of the 4 bones (normalized float4)
 };
 

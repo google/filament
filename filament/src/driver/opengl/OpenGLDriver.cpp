@@ -1773,12 +1773,20 @@ void OpenGLDriver::setRenderPrimitiveBuffer(Driver::RenderPrimitiveHandle rph,
                 uint8_t bi = eb->attributes[i].buffer;
                 assert(bi != 0xFF);
                 bindBuffer(GL_ARRAY_BUFFER, eb->gl.buffers[bi]);
-                glVertexAttribPointer(GLuint(i),
-                        getComponentCount(eb->attributes[i].type),
-                        getComponentType(eb->attributes[i].type),
-                        getNormalization(eb->attributes[i].normalized),
-                        eb->attributes[i].stride,
-                        (void*)uintptr_t(eb->attributes[i].offset));
+                if (UTILS_UNLIKELY(eb->attributes[i].flags & Attribute::FLAG_INTEGER_TARGET)) {
+                    glVertexAttribIPointer(GLuint(i),
+                            getComponentCount(eb->attributes[i].type),
+                            getComponentType(eb->attributes[i].type),
+                            eb->attributes[i].stride,
+                            (void*) uintptr_t(eb->attributes[i].offset));
+                } else {
+                    glVertexAttribPointer(GLuint(i),
+                            getComponentCount(eb->attributes[i].type),
+                            getComponentType(eb->attributes[i].type),
+                            getNormalization(eb->attributes[i].flags & Attribute::FLAG_NORMALIZED),
+                            eb->attributes[i].stride,
+                            (void*) uintptr_t(eb->attributes[i].offset));
+                }
 
                 enableVertexAttribArray(GLuint(i));
             } else {
