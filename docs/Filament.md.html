@@ -570,7 +570,7 @@ f_{ms}(l,v) = \fNormal \frac{1 - E(l)}{E(l)} f_{ss}(l,v)
 The key insight is that $E(l)$ can not only be precomputed but also shared with image-based lighting pre-integration. The multiscattering energy compensation formula thus becomes:
 
 $$\begin{equation}\label{scaledEnergyCompensationLobe}
-f(l,v) = f_r(l,v) + \fNormal \left( \frac{1}{r} - 1 \right) f_r(l,v)
+f_r(l,v) = f_{ss}(l,v) + \fNormal \left( \frac{1}{r} - 1 \right) f_{ss}(l,v)
 \end{equation}$$
 
 Where $r$ is defined as:
