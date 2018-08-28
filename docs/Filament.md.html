@@ -3351,7 +3351,7 @@ Typically, $ (\zeta_{\phi},\zeta_{\theta}) $ are chosen using the Hammersely uni
 
 ### Pre-filtered importance sampling
 
-Importance sampling considers only the PDF to generate important directions; in particular, it is oblivious to the actual content of the IBL. If the latter contains high frequencies in areas without a lot of samples, the integration won’t be accurate. This can be somewhat mitigated by using a technique called _pre-filtered importance sampling_, in addition this allows the integral to converge with much less samples.
+Importance sampling considers only the PDF to generate important directions; in particular, it is oblivious to the actual content of the IBL. If the latter contains high frequencies in areas without a lot of samples, the integration won’t be accurate. This can be somewhat mitigated by using a technique called _pre-filtered importance sampling_, in addition this allows the integral to converge with many fewer samples.
 
 Pre-filtered importance sampling uses several images of the environment increasingly low-pass filtered. This is typically implemented very efficiently with mipmaps and a box filter. The LOD is selected based on the sample importance, that is, low probability samples use a higher LOD index (more filtered).
 
