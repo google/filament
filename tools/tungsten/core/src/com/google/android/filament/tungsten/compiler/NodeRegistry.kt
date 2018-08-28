@@ -20,6 +20,7 @@ import com.google.android.filament.tungsten.model.Node
 import com.google.android.filament.tungsten.model.NodeId
 import com.google.android.filament.tungsten.model.createAdderNode
 import com.google.android.filament.tungsten.model.createFloat3ConstantNode
+import com.google.android.filament.tungsten.model.createFloat3ParameterNode
 import com.google.android.filament.tungsten.model.createShaderNode
 import com.google.android.filament.tungsten.model.serialization.INodeFactory
 
@@ -43,6 +44,7 @@ class NodeRegistry : INodeFactory {
         mNodes = listOf(
                 NodeEntry("Add", "adder", createAdderNode),
                 NodeEntry("Constant", "float3Constant", createFloat3ConstantNode),
+                NodeEntry("Float3 parameter", "float3Parameter", createFloat3ParameterNode),
                 NodeEntry("Shader", "shader", createShaderNode)
         )
         nodeLabelsForMenu = mNodes

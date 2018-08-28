@@ -60,10 +60,10 @@ class PropertiesPanel : JPanel() {
      */
     private fun createEditorsForNode(node: Node) {
         editorCache.computeIfAbsent(node.id) { _ ->
-            node.properties.map { (_, value) ->
-                when (value) {
+            node.properties.map { property ->
+                when (property.value) {
                     // Each PropertyValue type has a 1:1 mapping to a PropertyEditor
-                    is Float3 -> ColorChooser(value)
+                    is Float3 -> ColorChooser(property.value)
                 }
             }
         }
