@@ -3,8 +3,8 @@ set -e
 
 # NDK API level
 API_LEVEL=24
-# Host tools required by Android builds
-HOST_TOOLS="matc cmgen"
+# Host tools required by Android and WebGL builds
+HOST_TOOLS="matc cmgen filamesh"
 
 function print_help {
     local SELF_NAME=`basename $0`
