@@ -32,7 +32,7 @@ foreach (mat_src ${MATERIAL_SRCS})
     add_custom_command(
             OUTPUT ${output_path}
             COMMAND matc ${MATC_FLAGS} -p ${MATC_TARGET} -m material -f header
-            -o ${output_path} ${fullname}
+                    -o ${output_path} ${fullname}
             MAIN_DEPENDENCY ${mat_src}
             DEPENDS matc
             COMMENT "Compiling material ${mat_src} to ${output_path}")
