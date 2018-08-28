@@ -224,7 +224,7 @@ float D_GGX(float NoH, float linearRoughness) {
 
 We can improve this implementation by using half precision floats. This optimization requires changes to the original equation as there are two problems when computing $1 - (\NoH)^2$ in half-floats. First, this computation suffers from floating point cancellation when $(\NoH)^2$ is close to 1 (highlights). Secondly $\NoH$ does not have enough precision around 1.
 
-The solution involves Lagrange's identiy:
+The solution involves Lagrange's identity:
 
 $$\begin{equation}
 | a \times b |^2 = |a|^2 |b|^2 - (a \cdot b)^2
