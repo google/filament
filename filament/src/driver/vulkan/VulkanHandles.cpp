@@ -667,7 +667,7 @@ void VulkanRenderPrimitive::setBuffers(VulkanVertexBuffer* vertexBuffer,
         varray.attributes[bufferIndex] = {
             .location = attribIndex, // matches the GLSL layout specifier
             .binding = bufferIndex,  // matches the position within vkCmdBindVertexBuffers
-            .format = getVkFormat(attrib.type, attrib.normalized),
+            .format = getVkFormat(attrib.type, attrib.flags & Driver::Attribute::FLAG_NORMALIZED),
             .offset = 0
         };
         varray.buffers[bufferIndex] = {
