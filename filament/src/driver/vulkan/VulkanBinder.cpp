@@ -57,7 +57,7 @@ VulkanBinder::VulkanBinder() : mDefaultRasterState(createDefaultRasterState()) {
     mShaderStages[1].pName = "main";
     resetBindings();
 
-	mDescriptorKey = {};
+    mDescriptorKey = {};
 }
 
 VulkanBinder::~VulkanBinder() {
