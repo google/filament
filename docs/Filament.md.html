@@ -1818,7 +1818,7 @@ The sections below will discuss the techniques used to accelerate the evaluation
 
 #### Diffuse BRDF integration ####
 
-Using the lambertian BRDF[^iblDiffuse1], we get the radiance:
+Using the Lambertian BRDF[^iblDiffuse1], we get the radiance:
 
 $$
 \begin{align*}
@@ -1840,7 +1840,7 @@ The irradiance integral $\Ed$ can be trivially, albeit slowly[^iblDiffuse3], pre
 
 ![Figure [iblOriginal]: Image-based environment](images/ibl/ibl_river_roughness_m0.png style="max-width:100%;")
 
-![Figure [iblIrradiance]: Image-based irradiance map using the lambertian BRDF](images/ibl/ibl_irradiance.png style="max-width:100%;")
+![Figure [iblIrradiance]: Image-based irradiance map using the Lambertian BRDF](images/ibl/ibl_irradiance.png style="max-width:100%;")
 
 However, the irradiance can also be approximated very closely by a decomposition into Spherical Harmonics (SH, described in more details in the Spherical Harmonics section) and calculated at runtime cheaply. It is usually best to avoid texture fetches on mobile and free-up a texture unit. Even if it is stored into a cubemap, it is orders of magnitude faster to pre-compute the integral using SH decomposition followed by a rendering.
 
