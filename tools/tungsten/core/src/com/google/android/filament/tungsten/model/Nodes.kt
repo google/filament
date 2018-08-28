@@ -18,6 +18,8 @@ package com.google.android.filament.tungsten.model
 
 import com.google.android.filament.tungsten.compiler.GraphCompiler
 import com.google.android.filament.tungsten.compiler.Expression
+import com.google.android.filament.tungsten.compiler.Literal
+import com.google.android.filament.tungsten.compiler.trim
 
 private val adderNodeCompile = fun(node: Node, compiler: GraphCompiler): Node {
     val outputSlot = node.getOutputSlot("result")
@@ -25,16 +27,18 @@ private val adderNodeCompile = fun(node: Node, compiler: GraphCompiler): Node {
     val a = compiler.compileAndRetrieveExpression(node.getInputSlot("a"))
     val b = compiler.compileAndRetrieveExpression(node.getInputSlot("b"))
 
-    val aExpression = a?.symbol ?: "float3(0.0, 0.0, 0.0)"
-    val bExpression = b?.symbol ?: "float3(0.0, 0.0, 0.0)"
+    // Trim the expressions so that they're the same dimension.
+    val (aExpression, bExpression) = trim(a ?: Literal(4), b ?: Literal(4))
 
-    compiler.setExpressionForSlot(node.getInputSlot("a"), Expression("", 3))
-    compiler.setExpressionForSlot(node.getInputSlot("b"), Expression("", 3))
+    compiler.setExpressionForSlot(node.getInputSlot("a"), aExpression)
+    compiler.setExpressionForSlot(node.getInputSlot("b"), bExpression)
 
     val temp = compiler.getNewTemporaryVariableName("adder")
-    compiler.addCodeToMaterialFunctionBody("float3 $temp = $aExpression + $bExpression;\n")
+    val resultDimensions = aExpression.dimensions
+    compiler.addCodeToMaterialFunctionBody(
+            "float$resultDimensions $temp = $aExpression + $bExpression;\n")
 
-    compiler.setExpressionForSlot(outputSlot, Expression(temp, 3))
+    compiler.setExpressionForSlot(outputSlot, Expression(temp, resultDimensions))
 
     return node
 }
@@ -45,16 +49,18 @@ private val shaderNodeCompile = fun(node: Node, compiler: GraphCompiler): Node {
     val roughness = compiler.compileAndRetrieveExpression(node.getInputSlot("roughness"))
 
     if (baseColor != null) {
-        compiler.addCodeToMaterialFunctionBody("material.baseColor.rgb = ${baseColor.symbol};\n")
-        compiler.setExpressionForSlot(node.getInputSlot("baseColor"), baseColor)
+        compiler.addCodeToMaterialFunctionBody("material.baseColor.rgb = ${baseColor.rgb};\n")
+        compiler.setExpressionForSlot(node.getInputSlot("baseColor"), baseColor.rgb)
     }
 
     if (metallic != null) {
-        compiler.addCodeToMaterialFunctionBody("material.metallic = ${metallic.symbol};\n")
+        compiler.addCodeToMaterialFunctionBody("material.metallic = ${metallic.r};\n")
+        compiler.setExpressionForSlot(node.getInputSlot("metallic"), metallic.r)
     }
 
     if (roughness != null) {
-        compiler.addCodeToMaterialFunctionBody("material.roughness = ${roughness.symbol};\n")
+        compiler.addCodeToMaterialFunctionBody("material.roughness = ${roughness.r};\n")
+        compiler.setExpressionForSlot(node.getInputSlot("roughness"), roughness.r)
     }
 
     return node
