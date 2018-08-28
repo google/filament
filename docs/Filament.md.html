@@ -2508,7 +2508,7 @@ Given the nature of normal maps (XYZ components stored in tangent space), it is 
 
 Colin Barré-Brisebois and Stephen Hill propose in [#Hill12] a mathematically sound solution called *Reoriented Normal Mapping*, which consists in rotating the basis of the detail map onto the normal from the base map. This technique relies on the shortest arc quaternion to apply the rotation, which greatly simplifies thanks to the properties of the tangent space.
 
-Following the simplificationss described in [#Hill12], we can produce the GLSL implementation shown in listing [reorientedNormalMapping].
+Following the simplifications described in [#Hill12], we can produce the GLSL implementation shown in listing [reorientedNormalMapping].
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 vec3 t = texture(baseMap,   uv).xyz * vec3( 2.0,  2.0, 2.0) + vec3(-1.0, -1.0,  0.0);
