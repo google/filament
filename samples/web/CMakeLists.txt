@@ -69,8 +69,9 @@ copy_assets("../../assets/models" monkey)
 
 # Convert OBJ into a simple binary format.
 set(source_mesh "${CMAKE_CURRENT_SOURCE_DIR}/../../assets/models/monkey/monkey.obj")
+set(target_mesh "public/monkey/mesh.filamesh")
 add_custom_command(
-    OUTPUT public/monkey/mesh.filamesh
+    OUTPUT ${target_mesh}
     COMMAND filamesh ${source_mesh} public/monkey/mesh.filamesh
     MAIN_DEPENDENCY ${source_mesh}
     DEPENDS filamesh)
@@ -83,16 +84,27 @@ add_custom_command(
 # decoding the alpha channel for images in the web app.
 
 set(source_envmap "${CMAKE_CURRENT_SOURCE_DIR}/../../assets/environments/desert/desert.exr")
+
+foreach(FACE nx ny nz px py pz)
+    set(target_skybox ${target_skybox} public/desert/${FACE}.png)
+    foreach(MIP 0 1 2 3 4 5 6 7 8)
+        set(target_envmap ${target_envmap} public/desert/m${MIP}_${FACE}.rgbm)
+    endforeach()
+endforeach()
+
 add_custom_command(
-    OUTPUT public/desert/m0_nx.rgbm
+    OUTPUT ${target_envmap}
     COMMAND cmgen -x public --format=rgbm --size=256 ${source_envmap} 
     MAIN_DEPENDENCY ${source_envmap}
     DEPENDS cmgen)
+
 add_custom_command(
-    OUTPUT public/desert/nx.png
+    OUTPUT ${target_skybox}
     COMMAND cmgen -x public --format=png --size=512 --extract-blur=0.1 ${source_envmap} 
     MAIN_DEPENDENCY ${source_envmap}
     DEPENDS cmgen)
+
+add_custom_target(sample_assets DEPENDS ${target_mesh} ${target_envmap} ${target_skybox})
 
 # ==================================================================================================
 # For each demo, build a pair of wasm/js files and copy over an HTML file.
@@ -113,11 +125,8 @@ function(add_demo NAME)
             filamesh.h
             filamesh.cpp
             filaweb.h
-            filaweb.cpp
-            public/monkey/mesh.filamesh
-            public/desert/m0_nx.rgbm
-            public/desert/nx.png)
-    add_dependencies(${NAME} sample_materials)
+            filaweb.cpp)
+    add_dependencies(${NAME} sample_materials sample_assets)
     target_link_libraries(${NAME} PRIVATE filament math filamat utils)
 
     # Copy the generated js and wasm files into the public folder, as well as the app-specific
