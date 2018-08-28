@@ -2146,7 +2146,7 @@ vec3 evaluateIBL(vec3 n, vec3 v, vec3 diffuseColor, vec3 f0, float roughness) {
 
 ### Pre-integration for multiscattering ###
 
-In section [Energy loss in specular reflectance] we discussed how to use a second scaled specular lobe to compensate for the energy loss due to only acounting for a single scattering event in our BRDF. This energy compensation lobe is scaled by a term that depends on $r$ defined in the following way:
+In section [Energy loss in specular reflectance] we discussed how to use a second scaled specular lobe to compensate for the energy loss due to only accounting for a single scattering event in our BRDF. This energy compensation lobe is scaled by a term that depends on $r$ defined in the following way:
 
 $$\begin{equation}
 r = \int_{\Omega} D(l,v) V(l,v) \left< \NoL \right> dl
