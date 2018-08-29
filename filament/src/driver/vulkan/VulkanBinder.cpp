@@ -56,6 +56,8 @@ VulkanBinder::VulkanBinder() : mDefaultRasterState(createDefaultRasterState()) {
     mShaderStages[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
     mShaderStages[1].pName = "main";
     resetBindings();
+
+    mDescriptorKey = {};
 }
 
 VulkanBinder::~VulkanBinder() {
