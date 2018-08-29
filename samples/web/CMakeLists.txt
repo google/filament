@@ -46,14 +46,14 @@ add_custom_target(sample_materials DEPENDS ${MATERIAL_BINS})
 #
 # The goal is to create a "public" folder that can be the root of a simple file server:
 #
-#    /suzanne.js         built by em++
-#    /suzanne.wasm       built by em++
-#    /suzanne.html       copied from REPO/samples/web
-#    /filaweb.js         copied from REPO/samples/web
-#    /favicon.png        copied from REPO/samples/web
-#    /monkey/*.png       copied from REPO/assets/models
-#    /monkey/*.filamesh  built by filamesh
-#    /desert/*           built by cmgen
+#    /suzanne.js                   built by em++
+#    /suzanne.wasm                 built by em++
+#    /suzanne.html                 copied from REPO/samples/web
+#    /filaweb.js                   copied from REPO/samples/web
+#    /favicon.png                  copied from REPO/samples/web
+#    /monkey/*.png                 copied from REPO/assets/models
+#    /monkey/*.filamesh            built by filamesh
+#    /syferfontein_18d_clear_2k/*  built by cmgen
 #
 # ==================================================================================================
 
@@ -80,12 +80,12 @@ add_custom_command(
 #  (1) single miplevel of blurry skybox (png)
 #  (2) all miplevels for the IBL (rgbm)
 
-set(source_envmap "${CMAKE_CURRENT_SOURCE_DIR}/../../assets/environments/desert/desert.exr")
+set(source_envmap "${CMAKE_CURRENT_SOURCE_DIR}/../../third_party/environments/syferfontein_18d_clear_2k.hdr")
 
 foreach(FACE nx ny nz px py pz)
-    set(target_skybox ${target_skybox} public/desert/${FACE}.png)
+    set(target_skybox ${target_skybox} public/syferfontein_18d_clear_2k/${FACE}.png)
     foreach(MIP 0 1 2 3 4 5 6 7 8)
-        set(target_envmap ${target_envmap} public/desert/m${MIP}_${FACE}.rgbm)
+        set(target_envmap ${target_envmap} public/syferfontein_18d_clear_2k/m${MIP}_${FACE}.rgbm)
     endforeach()
 endforeach()
 

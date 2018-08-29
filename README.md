@@ -125,6 +125,8 @@ Many other features have been either prototyped or planned:
   - `samples`:               Sample desktop applications
   - `shaders`:               Shaders used by `filamat` and `matc`
   - `third_party`:           External libraries and assets
+    - `environments`:        Environment maps under CC0 license that can be used with `cmgen`
+    - `textures`:            Textures under CC0 license
   - `tools`:                 Host tools
     - `cmgen`:               Image-based lighting asset generator
     - `filamesh`:            Mesh converter
@@ -833,6 +835,12 @@ $ doxygen docs/doxygen/filament.doxygen
 ```
 
 Finally simply open `docs/html/index.html` in your web browser.
+
+## Assets
+
+To get started you can use the textures and environment maps found respectively in
+`third_party/textures` and `third_party/environments`. These assets are under CC0 license. Please
+refer to their respective `URL.txt` files to know more about the original authors.
 
 ## Dependencies
 
