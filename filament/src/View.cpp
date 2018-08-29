@@ -832,6 +832,10 @@ void View::setPostProcessingEnabled(bool enabled) noexcept {
     upcast(this)->setPostProcessingEnabled(enabled);
 }
 
+bool View::isPostProcessingEnabled() const noexcept {
+    return upcast(this)->hasPostProcessPass();
+}
+
 void View::setDepthPrepass(View::DepthPrepass prepass) noexcept {
     upcast(this)->setDepthPrepass(prepass);
 }

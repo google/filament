@@ -135,6 +135,10 @@ public class UiHelper {
         mRenderCallback = renderCallback;
     }
 
+    public RendererCallback getRenderCallback() {
+        return mRenderCallback;
+    }
+
     /**
      * Free resources associated to the native window specified in attachTo().
      */
