@@ -314,7 +314,8 @@ Install the following components:
 - [Git 2.16.1 or later](https://github.com/git-for-windows/git/releases/download/v2.16.1.windows.4/PortableGit-2.16.1.4-64-bit.7z.exe)
 - [Cmake 3.11 or later](https://cmake.org/files/v3.11/cmake-3.11.0-rc1-win64-x64.msi)
 
-Open an VS2015 x64 Native Tools terminal (click the start button, type "x64 native tools" and select: "VS2015 x64 Native Tools Command Prompt").
+Open an VS2015 x64 Native Tools terminal (click the start button, type "x64 native tools" and
+select: "VS2015 x64 Native Tools Command Prompt").
 
 Create a working directory:
 ```
