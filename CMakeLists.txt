@@ -264,6 +264,10 @@ endif()
 
 set (FILAMENT_SAMPLES_BINARY_DIR ${PROJECT_BINARY_DIR}/samples)
 
+if (WEBGL)
+    add_subdirectory(${FILAMENT}/samples/web)
+endif()
+
 if (NOT ANDROID AND NOT WEBGL)
     add_subdirectory(${FILAMENT}/samples)
 
@@ -301,5 +305,5 @@ endif()
 
 # Generate exported executables for cross-compiled builds (Android and WebGL)
 if (NOT CMAKE_CROSSCOMPILING)
-    export(TARGETS matc cmgen FILE ${FILAMENT}/${IMPORT_EXECUTABLES_DIR}/ImportExecutables-${CMAKE_BUILD_TYPE}.cmake)
+    export(TARGETS matc cmgen filamesh FILE ${FILAMENT}/${IMPORT_EXECUTABLES_DIR}/ImportExecutables-${CMAKE_BUILD_TYPE}.cmake)
 endif()

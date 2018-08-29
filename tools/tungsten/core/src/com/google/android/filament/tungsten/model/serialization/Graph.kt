@@ -19,7 +19,12 @@ package com.google.android.filament.tungsten.model.serialization
 import com.google.android.filament.tungsten.model.NodeId
 import java.awt.Point
 
-data class NodeSchema(val type: String, val id: NodeId, val position: Point? = Point(0, 0))
+data class NodeSchema(
+    val type: String,
+    val id: NodeId,
+    val position: Point? = Point(0, 0),
+    val properties: Map<String, Any>?
+)
 
 data class SlotSchema(val id: NodeId, val name: String)
 

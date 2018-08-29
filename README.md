@@ -166,7 +166,7 @@ Make sure the environment variable `ANDROID_HOME` points to the location of your
 By default our build system will attempt to compile the Java bindings. To do so, the environment
 variable `JAVA_HOME` should point to the location of your JDK.
 
-When building for WebGL, you'll also need to set `EMSDK`. See [WebAssembly](#WebAssembly).
+When building for WebGL, you'll also need to set `EMSDK`. See [WebAssembly](#webassembly).
 
 ### IDE
 
@@ -673,7 +673,7 @@ productFlavors {
 ### WebAssembly
 
 As an experimental feature, the core Filament library can be cross-compiled to WebAssembly from
-either macOS or Linux. To get started, do the following only once:
+either macOS or Linux. To get started, install the Emscripten SDK as follows:
 
 ```
 cd <your chosen home for the emscripten SDK>
@@ -689,6 +689,11 @@ export EMSDK=$PWD
 
 The last line in the above snippet is required so that our build script can find the Emscripten SDK.
 After this you can invoke our standard build script with `-p webgl`.
+
+Invoking the [easy build](#easy-build) script with `-p webgl` creates a `public` folder in
+`out/cmake-web-release/samples/web`. This folder can be used as the root of a simple static web
+server. Each sample app has its own handwritten html file, wasm file, and js loader. Additionally
+the public folder contains meshes, textures, and the tiny `filaweb.js` library.
 
 ## Running the samples
 

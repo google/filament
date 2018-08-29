@@ -576,11 +576,13 @@ LinearImage EXRDecoder::decode() {
         int ret = LoadEXRFromMemory(&rgba, &width, &height, src.data(), src.size(), &error);
         if (ret != TINYEXR_SUCCESS) {
             std::cerr << "Could not decode OpenEXR: " << error << std::endl;
+            FreeEXRErrorMessage(error);
             mStream.seekg(mStreamStartPos);
             return LinearImage();
         }
 
-        src.resize(0);
+        src.clear();
+        src.shrink_to_fit();
 
         LinearImage image(width, height, 3);
 
@@ -595,6 +597,8 @@ LinearImage EXRDecoder::decode() {
                 i++;
             }
         }
+
+        free(rgba);
 
         return image;
     } catch(std::runtime_error& e) {
