@@ -28,7 +28,7 @@ public class View {
     private String mName;
     private Scene mScene;
     private Camera mCamera;
-    private Viewport mViewport;
+    private Viewport mViewport = new Viewport(0, 0, 0, 0);
     private DynamicResolutionOptions mDynamicResolution;
     private DepthPrepass mDepthPrepass = DepthPrepass.DEFAULT;
 
@@ -100,7 +100,7 @@ public class View {
                 mViewport.left, mViewport.bottom, mViewport.width, mViewport.height);
     }
 
-    @Nullable
+    @NonNull
     public Viewport getViewport() {
         return mViewport;
     }
@@ -179,6 +179,14 @@ public class View {
         nSetDepthPrepass(getNativeObject(), depthPrepass.value);
     }
 
+    public boolean isPostProcessingEnabled() {
+        return nIsPostProcessingEnabled(getNativeObject());
+    }
+
+    public void setPostProcessingEnabled(boolean enabled) {
+        nSetPostProcessingEnabled(getNativeObject(), enabled);
+    }
+
     public void setDynamicLightingOptions(float zLightNear, float zLightFar) {
         nSetDynamicLightingOptions(getNativeObject(), zLightNear, zLightFar);
     }
@@ -222,4 +230,6 @@ public class View {
             float minScale, float maxScale, int history);
     private static native void nSetDynamicLightingOptions(long nativeView, float zLightNear, float zLightFar);
     private static native void nSetDepthPrepass(long nativeView, int value);
+    private static native void nSetPostProcessingEnabled(long nativeView, boolean enabled);
+    private static native boolean nIsPostProcessingEnabled(long nativeView);
 }

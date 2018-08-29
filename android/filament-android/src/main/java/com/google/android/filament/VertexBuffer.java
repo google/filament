@@ -93,7 +93,7 @@ public class VertexBuffer {
 
         @NonNull
         public Builder attribute(@NonNull VertexAttribute attribute,
-                @IntRange(from = 1) int bufferIndex, @NonNull AttributeType attributeType,
+                @IntRange(from = 0) int bufferIndex, @NonNull AttributeType attributeType,
                 @IntRange(from = 0) int byteOffset, @IntRange(from = 0) int byteStride) {
             nBuilderAttribute(mNativeBuilder, attribute.ordinal(), bufferIndex,
                     attributeType.ordinal(), byteOffset, byteStride);
@@ -102,7 +102,7 @@ public class VertexBuffer {
 
         @NonNull
         public Builder attribute(@NonNull VertexAttribute attribute,
-                @IntRange(from = 1) int bufferIndex, @NonNull AttributeType attributeType) {
+                @IntRange(from = 0) int bufferIndex, @NonNull AttributeType attributeType) {
             return attribute(attribute, bufferIndex, attributeType, 0, 0 );
         }
 

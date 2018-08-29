@@ -101,6 +101,8 @@ Many other features have been either prototyped or planned:
 
 - `filament`:                Filament engine and its supporting libraries and tools
   - `android`:               Android libraries and projects
+    - `filament-android`:    Filament library (AAR) for Android
+    - `samples`:             Android-specific Filament samples
   - `art`:                   Source for various artworks (logos, PDF manuals, etc.)
   - `assets`:                3D assets to use with sample applications
   - `build`:                 CMake build scripts
@@ -123,6 +125,8 @@ Many other features have been either prototyped or planned:
   - `samples`:               Sample desktop applications
   - `shaders`:               Shaders used by `filamat` and `matc`
   - `third_party`:           External libraries and assets
+    - `environments`:        Environment maps under CC0 license that can be used with `cmgen`
+    - `textures`:            Textures under CC0 license
   - `tools`:                 Host tools
     - `cmgen`:               Image-based lighting asset generator
     - `filamesh`:            Mesh converter
@@ -312,7 +316,8 @@ Install the following components:
 - [Git 2.16.1 or later](https://github.com/git-for-windows/git/releases/download/v2.16.1.windows.4/PortableGit-2.16.1.4-64-bit.7z.exe)
 - [Cmake 3.11 or later](https://cmake.org/files/v3.11/cmake-3.11.0-rc1-win64-x64.msi)
 
-Open an VS2015 x64 Native Tools terminal (click the start button, type "x64 native tools" and select: "VS2015 x64 Native Tools Command Prompt").
+Open an VS2015 x64 Native Tools terminal (click the start button, type "x64 native tools" and
+select: "VS2015 x64 Native Tools Command Prompt").
 
 Create a working directory:
 ```
@@ -808,6 +813,8 @@ these methods on `FilamentCanvas` or `FilamentPanel`.
 
 ### Android
 
+See `android/samples` for examples of how to use Filament on Android.
+
 You must always first initialize Filament by calling `Filament.init()`.
 
 Rendering with Filament on Android is similar to rendering from native code (the APIs are largely
@@ -828,6 +835,12 @@ $ doxygen docs/doxygen/filament.doxygen
 ```
 
 Finally simply open `docs/html/index.html` in your web browser.
+
+## Assets
+
+To get started you can use the textures and environment maps found respectively in
+`third_party/textures` and `third_party/environments`. These assets are under CC0 license. Please
+refer to their respective `URL.txt` files to know more about the original authors.
 
 ## Dependencies
 

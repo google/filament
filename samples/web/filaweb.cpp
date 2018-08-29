@@ -159,7 +159,8 @@ SkyLight getSkyLight(Engine& engine, const char* name) {
 
     // Pull the data out of JavaScript.
     static auto asset = filaweb::getCubemap(name);
-    printf("desert: %d x %d, %d mips\n", asset.width, asset.height, asset.envMipCount);
+    printf("syferfontein_18d_clear_2k: %d x %d, %d mips\n",
+            asset.width, asset.height, asset.envMipCount);
 
     // Parse the coefficients.
     std::istringstream shReader((const char*) asset.envShCoeffs->data.get());

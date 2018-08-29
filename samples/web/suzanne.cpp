@@ -170,7 +170,7 @@ void setup(Engine* engine, View* view, Scene* scene) {
     scene->addEntity(app.ptlight[3]);
 
     //  Create sky box and image-based light source.
-    auto skylight = filaweb::getSkyLight(*engine, "desert");
+    auto skylight = filaweb::getSkyLight(*engine, "syferfontein_18d_clear_2k");
     scene->setIndirectLight(skylight.indirectLight);
     scene->setSkybox(skylight.skybox);
 

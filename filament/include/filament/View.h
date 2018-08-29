@@ -395,6 +395,7 @@ public:
      */
     void setPostProcessingEnabled(bool enabled) noexcept;
 
+    bool isPostProcessingEnabled() const noexcept;
 
     // for debugging...
 
