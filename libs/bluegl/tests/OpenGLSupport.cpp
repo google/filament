@@ -110,19 +110,20 @@ OpenGLContext createOpenGLContext() {
     // The attributes don't really matter here but we choose a configuration
     // that would make sense if we were to perform actual rendering
     CGLPixelFormatAttribute attributes[] = {
-        kCGLPFAColorSize,   (CGLPixelFormatAttribute) 24,
-        kCGLPFAAlphaSize,   (CGLPixelFormatAttribute)  8,
-        kCGLPFAAccelerated, (CGLPixelFormatAttribute)  0
+        kCGLPFAOpenGLProfile, (CGLPixelFormatAttribute) kCGLOGLPVersion_GL4_Core,
+        kCGLPFAColorSize,     (CGLPixelFormatAttribute) 24,
+        kCGLPFAAlphaSize,     (CGLPixelFormatAttribute)  8,
+        kCGLPFAAccelerated,   (CGLPixelFormatAttribute)  0
     };
 
-    GLint virtual_screen_count;
-    CGLPixelFormatObj pixel_format;
-    (*g_cgl.choosePixelFormat)(attributes, &pixel_format, &virtual_screen_count);
+    GLint pixelFormatCount;
+    CGLPixelFormatObj pixelFormat;
+    (*g_cgl.choosePixelFormat)(attributes, &pixelFormat, &pixelFormatCount);
 
     OpenGLContext context;
-    (*g_cgl.createContext)(pixel_format, nullptr, (CGLContextObj*) &context);
+    (*g_cgl.createContext)(pixelFormat, nullptr, (CGLContextObj*) &context);
 
-    (*g_cgl.destroyPixelFormat)(pixel_format);
+    (*g_cgl.destroyPixelFormat)(pixelFormat);
 
     return context;
 }
@@ -144,10 +145,14 @@ void destroyOpenGLContext(OpenGLContext context) {
 #include "GL/wglext.h"
 
 struct wglLocalContext {
-    wglLocalContext(HWND ohwnd, HGLRC ocontext) : hwnd(ohwnd), context(ocontext){};
+    wglLocalContext(HWND ohwnd, HDC owhdc, HGLRC ocontext) :
+            hwnd(ohwnd), whdc(owhdc), context(ocontext) {
+    };
     HWND hwnd;
+    HDC whdc;
     HGLRC context;
 };
+
 bool loadLibraries() {
     return true;
 }
@@ -157,7 +162,6 @@ bool unloadLibraries() {
 }
 
 OpenGLContext createOpenGLContext() {
-
     if (!loadLibraries()) return nullptr;
 
     PIXELFORMATDESCRIPTOR pfd = {
@@ -179,43 +183,45 @@ OpenGLContext createOpenGLContext() {
             0, 0, 0
     };
 
-    HWND hwnd= CreateWindowA("STATIC", "dummy", 0, 0, 0, 100, 100, NULL, NULL, NULL, NULL);
-    HDC hdc = GetDC(hwnd);
-
-    int pixelFormat = ChoosePixelFormat(hdc, &pfd);
-    SetPixelFormat(hdc, pixelFormat, &pfd);
-
     int attribs[] = {
             WGL_CONTEXT_MAJOR_VERSION_ARB, 4,
             WGL_CONTEXT_MINOR_VERSION_ARB, 1,
-            WGL_CONTEXT_FLAGS_ARB, WGL_CONTEXT_PROFILE_MASK_ARB  ,
+            WGL_CONTEXT_FLAGS_ARB, WGL_CONTEXT_PROFILE_MASK_ARB,
             0
     };
 
+    HWND hwnd = CreateWindowA("STATIC", "dummy", 0, 0, 0, 1, 1, NULL, NULL, NULL, NULL);
+    HDC whdc = GetDC(hwnd);
+
+    int pixelFormat = ChoosePixelFormat(whdc, &pfd);
+    SetPixelFormat(whdc, pixelFormat, &pfd);
+
     // We need a tmp context to retrieve and call wglCreateContextAttribsARB.
-    HGLRC tempContext = wglCreateContext(hdc);
-    wglMakeCurrent(hdc, tempContext);
+    HGLRC tempContext = wglCreateContext(whdc);
+    wglMakeCurrent(whdc, tempContext);
 
     PFNWGLCREATECONTEXTATTRIBSARBPROC wglCreateContextAttribs =
-            (PFNWGLCREATECONTEXTATTRIBSARBPROC)wglGetProcAddress("wglCreateContextAttribsARB");
-    HGLRC context = wglCreateContextAttribs(hdc, nullptr, attribs);
+            (PFNWGLCREATECONTEXTATTRIBSARBPROC) wglGetProcAddress("wglCreateContextAttribsARB");
+    HGLRC context = wglCreateContextAttribs(whdc, nullptr, attribs);
 
     wglMakeCurrent(NULL, NULL);
     wglDeleteContext(tempContext);
-    wglMakeCurrent(hdc, context);
+    wglMakeCurrent(whdc, context);
 
-    return new wglLocalContext(hwnd, context);
+    return new wglLocalContext(hwnd, whdc, context);
 }
 
 void setCurrentOpenGLContext(OpenGLContext context) {
     wglLocalContext* wContext = static_cast<wglLocalContext*>(context);
     HDC hdc = GetDC(wContext->hwnd);
-    wglMakeCurrent (hdc, wContext->context);
+    wglMakeCurrent(hdc, wContext->context);
 }
 
 void destroyOpenGLContext(OpenGLContext context) {
     wglLocalContext* wContext = static_cast<wglLocalContext*>(context);
+    wglMakeCurrent(NULL, NULL);
     wglDeleteContext(wContext->context);
+    ReleaseDC(wContext->hwnd, wContext->whdc);
     DestroyWindow(wContext->hwnd);
     delete static_cast<wglLocalContext*>(context);
     unloadLibraries();

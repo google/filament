@@ -38,31 +38,31 @@ public:
 
     ContextManagerEGL() noexcept;
 
-    std::unique_ptr<Driver> createDriver(void* const sharedGLContext) noexcept override;
+    std::unique_ptr<Driver> createDriver(void* sharedGLContext) noexcept override;
     void terminate() noexcept override;
 
-    SwapChain* createSwapChain(void* nativewindow, uint64_t& flags) noexcept final override;
-    void destroySwapChain(SwapChain* swapChain) noexcept final override;
-    void makeCurrent(SwapChain* swapChain) noexcept final override;
-    void commit(SwapChain* swapChain) noexcept final override;
+    SwapChain* createSwapChain(void* nativewindow, uint64_t& flags) noexcept final;
+    void destroySwapChain(SwapChain* swapChain) noexcept final;
+    void makeCurrent(SwapChain* swapChain) noexcept final;
+    void commit(SwapChain* swapChain) noexcept final;
 
-    bool canCreateFence() noexcept final override { return true; }
-    Fence* createFence() noexcept final override;
-    void destroyFence(Fence* fence) noexcept final override;
-    driver::FenceStatus waitFence(Fence* fence, uint64_t timeout) noexcept final override;
+    bool canCreateFence() noexcept final { return true; }
+    Fence* createFence() noexcept final;
+    void destroyFence(Fence* fence) noexcept final;
+    driver::FenceStatus waitFence(Fence* fence, uint64_t timeout) noexcept final;
 
-    Stream* createStream(void* nativeStream) noexcept final override;
-    void destroyStream(Stream* stream) noexcept final override;
-    void attach(Stream* stream, intptr_t tname) noexcept final override;
-    void detach(Stream* stream) noexcept final override;
-    void updateTexImage(Stream* stream) noexcept final override;
+    Stream* createStream(void* nativeStream) noexcept final;
+    void destroyStream(Stream* stream) noexcept final;
+    void attach(Stream* stream, intptr_t tname) noexcept final;
+    void detach(Stream* stream) noexcept final;
+    void updateTexImage(Stream* stream) noexcept final;
 
-    ExternalTexture* createExternalTextureStorage() noexcept final override;
+    ExternalTexture* createExternalTextureStorage() noexcept final;
     void reallocateExternalStorage(ExternalTexture* ets,
-            uint32_t w, uint32_t h, driver::TextureFormat format) noexcept final override;
-    void destroyExternalTextureStorage(ExternalTexture* ets) noexcept final override;
+            uint32_t w, uint32_t h, driver::TextureFormat format) noexcept final;
+    void destroyExternalTextureStorage(ExternalTexture* ets) noexcept final;
 
-    int getOSVersion() const noexcept final override;
+    int getOSVersion() const noexcept final;
 
 private:
     EGLBoolean makeCurrent(EGLSurface surface) noexcept;

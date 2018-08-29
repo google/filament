@@ -24,20 +24,23 @@
 
 using namespace filament;
 
-class FilamentExposureTest : public ::testing::Test {
+class FilamentExposureWithEngineTest : public ::testing::Test {
 protected:
-    virtual void SetUp() {
+    void SetUp() override {
         engine = Engine::create(Engine::Backend::OPENGL);
     }
 
-    virtual void TearDown() {
+    void TearDown() override {
         Engine::destroy(&engine);
     }
 
-    Engine* engine;
+    Engine* engine = nullptr;
 };
 
-TEST_F(FilamentExposureTest, SetExposure) {
+class FilamentExposureTest : public ::testing::Test {
+};
+
+TEST_F(FilamentExposureWithEngineTest, SetExposure) {
     using namespace filament;
 
     Camera* camera = engine->createCamera();
@@ -62,7 +65,7 @@ TEST_F(FilamentExposureTest, SetExposure) {
     engine->destroy(camera);
 }
 
-TEST_F(FilamentExposureTest, ComputeEV100) {
+TEST_F(FilamentExposureWithEngineTest, ComputeEV100) {
     using namespace filament;
 
     Camera* camera = engine->createCamera();

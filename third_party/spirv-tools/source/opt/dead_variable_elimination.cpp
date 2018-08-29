@@ -12,10 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "dead_variable_elimination.h"
+#include "source/opt/dead_variable_elimination.h"
 
-#include "ir_context.h"
-#include "reflect.h"
+#include <vector>
+
+#include "source/opt/ir_context.h"
+#include "source/opt/reflect.h"
 
 namespace spvtools {
 namespace opt {

@@ -14,13 +14,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "mem_pass.h"
+#include "source/opt/mem_pass.h"
 
-#include "basic_block.h"
-#include "cfa.h"
-#include "dominator_analysis.h"
-#include "ir_context.h"
-#include "iterator.h"
+#include <memory>
+#include <set>
+#include <vector>
+
+#include "source/cfa.h"
+#include "source/opt/basic_block.h"
+#include "source/opt/dominator_analysis.h"
+#include "source/opt/ir_context.h"
+#include "source/opt/iterator.h"
 
 namespace spvtools {
 namespace opt {

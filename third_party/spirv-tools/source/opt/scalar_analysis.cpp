@@ -12,14 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "opt/scalar_analysis.h"
+#include "source/opt/scalar_analysis.h"
 
 #include <algorithm>
 #include <functional>
 #include <string>
 #include <utility>
 
-#include "opt/ir_context.h"
+#include "source/opt/ir_context.h"
 
 // Transforms a given scalar operation instruction into a DAG representation.
 //

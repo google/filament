@@ -12,11 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <utility>
 #include <vector>
 
 #include "gmock/gmock.h"
-
-#include "util/small_vector.h"
+#include "source/util/small_vector.h"
 
 namespace spvtools {
 namespace utils {

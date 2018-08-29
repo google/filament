@@ -3,8 +3,8 @@ set -e
 
 # NDK API level
 API_LEVEL=24
-# Host tools required by Android builds
-HOST_TOOLS="matc cmgen"
+# Host tools required by Android and WebGL builds
+HOST_TOOLS="matc cmgen filamesh"
 
 function print_help {
     local SELF_NAME=`basename $0`
@@ -26,7 +26,7 @@ function print_help {
     echo "        Do not compile desktop Java projects"
     echo "    -m"
     echo "        Compile with make instead of ninja."
-    echo "    -p [desktop|android|all]"
+    echo "    -p [desktop|android|webgl|all]"
     echo "        Platform(s) to build, defaults to desktop."
     echo "        Building android will automatically generate the toolchains if needed and"
     echo "        perform a partial desktop build."
@@ -34,6 +34,8 @@ function print_help {
     echo "        Restrict the number of make/ninja jobs."
     echo "    -t"
     echo "        Generate the Android toolchain, requires \$ANDROID_HOME to be set."
+    echo "    -u"
+    echo "        Run all unit tests, will trigger a debug build if needed."
     echo "    -v"
     echo "        Add Vulkan support to the Android build."
     echo ""
@@ -70,10 +72,13 @@ ISSUE_RELEASE_BUILD=false
 
 ISSUE_ANDROID_BUILD=false
 ISSUE_DESKTOP_BUILD=true
+ISSUE_WEBGL_BUILD=false
 
 ISSUE_ARCHIVES=false
 
 ISSUE_CMAKE_ALWAYS=false
+
+RUN_TESTS=false
 
 ENABLE_JAVA=ON
 
@@ -187,6 +192,45 @@ function build_desktop {
     fi
 }
 
+function build_webgl_with_target {
+    local LC_TARGET=`echo $1 | tr '[:upper:]' '[:lower:]'`
+    echo "Building WebGL $LC_TARGET..."
+    mkdir -p out/cmake-webgl-${LC_TARGET}
+    cd out/cmake-webgl-${LC_TARGET}
+    if [ ! "$BUILD_TARGETS" ]; then
+        BUILD_TARGETS=${BUILD_CUSTOM_TARGETS}
+        ISSUE_CMAKE_ALWAYS=true
+    fi
+    if [ ! -d "CMakeFiles" ] || [ "$ISSUE_CMAKE_ALWAYS" == "true" ]; then
+        source ${EMSDK}/emsdk_env.sh
+        cmake \
+            -G "$BUILD_GENERATOR" \
+            -DCMAKE_TOOLCHAIN_FILE=${EMSCRIPTEN}/cmake/Modules/Platform/Emscripten.cmake \
+            -DCMAKE_BUILD_TYPE=$1 \
+            -DCMAKE_INSTALL_PREFIX=../webgl-${LC_TARGET}/filament \
+            -DWEBGL=1 \
+            ../..
+        ${BUILD_COMMAND} ${BUILD_TARGETS}
+    fi
+    cd ../..
+}
+
+function build_webgl {
+    # Supress intermediate desktop tools install
+    OLD_INSTALL_COMMAND=${INSTALL_COMMAND}
+    INSTALL_COMMAND=
+    build_desktop "${HOST_TOOLS}"
+    INSTALL_COMMAND=${OLD_INSTALL_COMMAND}
+
+    if [ "$ISSUE_DEBUG_BUILD" == "true" ]; then
+        build_webgl_with_target "Debug"
+    fi
+
+    if [ "$ISSUE_RELEASE_BUILD" == "true" ]; then
+        build_webgl_with_target "Release"
+    fi
+}
+
 function build_android_target {
     local LC_TARGET=`echo $1 | tr '[:upper:]' '[:lower:]'`
     local ARCH=$2
@@ -268,7 +312,7 @@ function build_android {
 
     if [ "$ISSUE_DEBUG_BUILD" == "true" ]; then
         ./gradlew -Pfilament_dist_dir=../../out/android-debug/filament assembleDebug \
-            -Pextra_cmake_args=$VULKAN_ANDROID_OPTION
+            -Pextra_cmake_args=${VULKAN_ANDROID_OPTION}
 
         if [ "$INSTALL_COMMAND" ]; then
             echo "Installing out/filament-android-debug.aar..."
@@ -278,7 +322,7 @@ function build_android {
 
     if [ "$ISSUE_RELEASE_BUILD" == "true" ]; then
         ./gradlew -Pfilament_dist_dir=../../out/android-release/filament assembleRelease \
-            -Pextra_cmake_args=$VULKAN_ANDROID_OPTION
+            -Pextra_cmake_args=${VULKAN_ANDROID_OPTION}
 
         if [ "$INSTALL_COMMAND" ]; then
             echo "Installing out/filament-android-release.aar..."
@@ -321,14 +365,34 @@ function validate_build_command {
         echo "Warning: JAVA_HOME is not set, skipping Java projects"
         ENABLE_JAVA=OFF
     fi
+    # If building a WebAssembly module, ensure we know where Emscripten lives.
+    if [ "$EMSDK" == "" ] && [ "$ISSUE_WEBGL_BUILD" == "true" ]; then
+        echo "Error: EMSDK is not set, exiting"
+        exit 1
+    fi
     set -e
+}
+
+function run_test {
+    test=$1
+    # The input string might contain arguments, so we use "set -- $test" to replace $1 with the
+    # first whitespace-separated token in the string.
+    set -- $test
+    test_name=`basename $1`
+    ./out/cmake-debug/${test} --gtest_output="xml:out/test-results/$test_name/sponge_log.xml"
+}
+
+function run_tests {
+    while read test; do
+        run_test "$test"
+    done < build/common/test_list.txt
 }
 
 # Beginning of the script
 
 pushd `dirname $0` > /dev/null
 
-while getopts ":hacfijmp:tv" opt; do
+while getopts ":hacfijmp:tuv" opt; do
     case ${opt} in
         h)
             print_help
@@ -359,19 +423,31 @@ while getopts ":hacfijmp:tv" opt; do
                 desktop)
                     ISSUE_ANDROID_BUILD=false
                     ISSUE_DESKTOP_BUILD=true
+                    ISSUE_WEBGL_BUILD=false
                 ;;
                 android)
                     ISSUE_ANDROID_BUILD=true
                     ISSUE_DESKTOP_BUILD=false
+                    ISSUE_WEBGL_BUILD=false
+                ;;
+                webgl)
+                    ISSUE_ANDROID_BUILD=false
+                    ISSUE_DESKTOP_BUILD=false
+                    ISSUE_WEBGL_BUILD=true
                 ;;
                 all)
                     ISSUE_ANDROID_BUILD=true
                     ISSUE_DESKTOP_BUILD=true
+                    ISSUE_WEBGL_BUILD=false
                 ;;
             esac
             ;;
         t)
             GENERATE_TOOLCHAINS=true
+            ;;
+        u)
+            ISSUE_DEBUG_BUILD=true
+            RUN_TESTS=true
             ;;
         v)
             VULKAN_ANDROID_OPTION="-DFILAMENT_SUPPORTS_VULKAN=ON"
@@ -431,4 +507,12 @@ fi
 
 if [ "$ISSUE_ANDROID_BUILD" == "true" ]; then
     build_android
+fi
+
+if [ "$ISSUE_WEBGL_BUILD" == "true" ]; then
+    build_webgl
+fi
+
+if [ "$RUN_TESTS" == "true" ]; then
+    run_tests
 fi

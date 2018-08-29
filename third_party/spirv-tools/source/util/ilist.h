@@ -12,15 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef LIBSPIRV_OPT_ILIST_H_
-#define LIBSPIRV_OPT_ILIST_H_
+#ifndef SOURCE_UTIL_ILIST_H_
+#define SOURCE_UTIL_ILIST_H_
 
 #include <cassert>
 #include <memory>
 #include <type_traits>
 #include <vector>
 
-#include "ilist_node.h"
+#include "source/util/ilist_node.h"
 
 namespace spvtools {
 namespace utils {
@@ -362,4 +362,4 @@ void IntrusiveList<NodeType>::Check(NodeType* start) {
 }  // namespace utils
 }  // namespace spvtools
 
-#endif  // LIBSPIRV_OPT_ILIST_H_
+#endif  // SOURCE_UTIL_ILIST_H_

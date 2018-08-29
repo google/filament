@@ -17,7 +17,7 @@
 #ifndef TNT_FILAMENT_DRIVER_GL_HEADERS_H
 #define TNT_FILAMENT_DRIVER_GL_HEADERS_H
 
-#ifdef ANDROID
+#if defined(ANDROID) || defined(USE_EXTERNAL_GLES3) || defined(__EMSCRIPTEN__)
 
     #include <GLES3/gl31.h>
     #include <GLES2/gl2ext.h>
@@ -31,7 +31,7 @@
 #ifdef GL_OES_EGL_image
         extern PFNGLEGLIMAGETARGETTEXTURE2DOESPROC glEGLImageTargetTexture2DOES;
 #endif
-#if GL_EXT_debug_marker
+#ifdef GL_EXT_debug_marker
         extern PFNGLINSERTEVENTMARKEREXTPROC glInsertEventMarkerEXT;
         extern PFNGLPUSHGROUPMARKEREXTPROC glPushGroupMarkerEXT;
         extern PFNGLPOPGROUPMARKEREXTPROC glPopGroupMarkerEXT;

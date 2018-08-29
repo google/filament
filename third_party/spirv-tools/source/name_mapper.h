@@ -12,15 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef LIBSPIRV_NAME_MAPPER_H_
-#define LIBSPIRV_NAME_MAPPER_H_
+#ifndef SOURCE_NAME_MAPPER_H_
+#define SOURCE_NAME_MAPPER_H_
 
 #include <functional>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
 
-#include "assembly_grammar.h"
+#include "source/assembly_grammar.h"
 #include "spirv-tools/libspirv.h"
 
 namespace spvtools {
@@ -119,4 +119,4 @@ class FriendlyNameMapper {
 
 }  // namespace spvtools
 
-#endif  // _LIBSPIRV_NAME_MAPPER_H_
+#endif  // SOURCE_NAME_MAPPER_H_

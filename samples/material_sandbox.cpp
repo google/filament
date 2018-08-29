@@ -50,31 +50,31 @@ using namespace filament;
 using namespace filamat;
 using namespace utils;
 
-static constexpr uint8_t MATERIAL_UNLIT_PACKAGE[] = {
+static const uint8_t MATERIAL_UNLIT_PACKAGE[] = {
     #include "generated/material/sandboxUnlit.inc"
 };
 
-static constexpr uint8_t MATERIAL_LIT_PACKAGE[] = {
+static const uint8_t MATERIAL_LIT_PACKAGE[] = {
     #include "generated/material/sandboxLit.inc"
 };
 
-static constexpr uint8_t MATERIAL_LIT_FADE_PACKAGE[] = {
+static const uint8_t MATERIAL_LIT_FADE_PACKAGE[] = {
     #include "generated/material/sandboxLitFade.inc"
 };
 
-static constexpr uint8_t MATERIAL_LIT_TRANSPARENT_PACKAGE[] = {
+static const uint8_t MATERIAL_LIT_TRANSPARENT_PACKAGE[] = {
     #include "generated/material/sandboxLitTransparent.inc"
 };
 
-static constexpr uint8_t MATERIAL_SUBSURFACE_PACKAGE[] = {
+static const uint8_t MATERIAL_SUBSURFACE_PACKAGE[] = {
     #include "generated/material/sandboxSubsurface.inc"
 };
 
-static constexpr uint8_t MATERIAL_CLOTH_PACKAGE[] = {
+static const uint8_t MATERIAL_CLOTH_PACKAGE[] = {
     #include "generated/material/sandboxCloth.inc"
 };
 
-static constexpr uint8_t GROUND_SHADOW_PACKAGE[] = {
+static const uint8_t GROUND_SHADOW_PACKAGE[] = {
     #include "generated/material/groundShadow.inc"
 };
 
@@ -137,7 +137,7 @@ static bool g_shadowPlane = false;
 static void printUsage(char* name) {
     std::string exec_name(Path(name).getName());
     std::string usage(
-            "SAMPLE_MATERIAL is an example of clear coat materials\n"
+            "SAMPLE_MATERIAL showcases all material models\n"
             "Usage:\n"
             "    SAMPLE_MATERIAL [options] <mesh files (.obj, .fbx, COLLADA)>\n"
             "Options:\n"
@@ -164,13 +164,13 @@ static void printUsage(char* name) {
 static int handleCommandLineArgments(int argc, char* argv[], Config* config) {
     static constexpr const char* OPTSTR = "ha:vps:i:";
     static const struct option OPTIONS[] = {
-            { "help",       no_argument,       0, 'h' },
-            { "api",        required_argument, 0, 'a' },
-            { "ibl",        required_argument, 0, 'i' },
-            { "split-view", no_argument,       0, 'v' },
-            { "scale",      required_argument, 0, 's' },
-            { "shadow-plane", no_argument,     0, 'p' },
-            { 0, 0, 0, 0 }  // termination of the option list
+            { "help",       no_argument,       nullptr, 'h' },
+            { "api",        required_argument, nullptr, 'a' },
+            { "ibl",        required_argument, nullptr, 'i' },
+            { "split-view", no_argument,       nullptr, 'v' },
+            { "scale",      required_argument, nullptr, 's' },
+            { "shadow-plane", no_argument,     nullptr, 'p' },
+            { nullptr, 0, nullptr, 0 }  // termination of the option list
     };
     int opt;
     int option_index = 0;
@@ -219,12 +219,12 @@ static void cleanup(Engine* engine, View*, Scene*) {
         engine->destroy(material.second);
     }
 
-    for (size_t i = 0; i < MATERIAL_COUNT; i++) {
-        engine->destroy(g_materialInstance[i]);
+    for (auto& i : g_materialInstance) {
+        engine->destroy(i);
     }
 
-    for (size_t i = 0; i < MATERIAL_COUNT; i++) {
-        engine->destroy(g_material[i]);
+    for (auto& i : g_material) {
+        engine->destroy(i);
     }
 
     g_meshSet.reset(nullptr);
@@ -237,10 +237,8 @@ static void cleanup(Engine* engine, View*, Scene*) {
 static void setup(Engine* engine, View*, Scene* scene) {
     g_scene = scene;
 
-    g_meshSet.reset(new MeshAssimp(*engine, MeshAssimp::TargetApi::OPENGL,
-            MeshAssimp::Platform::DESKTOP));
+    g_meshSet = std::make_unique<MeshAssimp>(*engine);
 
-    Package pkg;
     g_material[MATERIAL_UNLIT] = Material::Builder()
             .package((void*) MATERIAL_UNLIT_PACKAGE, sizeof(MATERIAL_UNLIT_PACKAGE))
             .build(*engine);
@@ -370,11 +368,11 @@ static void setup(Engine* engine, View*, Scene* scene) {
         scene->addEntity(planeRenderable);
 
         tcm.setTransform(tcm.getInstance(planeRenderable),
-                math::mat4f::translate(float4{0, -1, -4, 1}));
+                math::mat4f::translate(float3{0, -1, -4}));
     }
 }
 
-static void gui(filament::Engine* engine, filament::View* view) {
+static void gui(filament::Engine* engine, filament::View*) {
     ImGui::SetNextWindowSize(ImVec2(0.0f, 0.0f));
     ImGui::Begin("Parameters");
     {

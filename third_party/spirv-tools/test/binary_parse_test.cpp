@@ -12,16 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <algorithm>
+#include <limits>
 #include <sstream>
 #include <string>
 #include <vector>
 
 #include "gmock/gmock.h"
-#include "latest_version_opencl_std_header.h"
-#include "source/message.h"
+#include "source/latest_version_opencl_std_header.h"
 #include "source/table.h"
-#include "test_fixture.h"
-#include "unit_spirv.h"
+#include "test/test_fixture.h"
+#include "test/unit_spirv.h"
 
 // Returns true if two spv_parsed_operand_t values are equal.
 // To use this operator, this definition must appear in the same namespace

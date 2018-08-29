@@ -39,13 +39,15 @@
 // some Phi instructions may be dead
 // (https://en.wikipedia.org/wiki/Static_single_assignment_form).
 
-#include "ssa_rewrite_pass.h"
-#include "cfg.h"
-#include "make_unique.h"
-#include "mem_pass.h"
-#include "opcode.h"
+#include "source/opt/ssa_rewrite_pass.h"
 
+#include <memory>
 #include <sstream>
+
+#include "source/opcode.h"
+#include "source/opt/cfg.h"
+#include "source/opt/mem_pass.h"
+#include "source/util/make_unique.h"
 
 // Debug logging (0: Off, 1-N: Verbosity level).  Replace this with the
 // implementation done for
@@ -450,6 +452,11 @@ bool SSARewriter::ApplyReplacements() {
     pass_->context()->set_instr_block(&*phi_inst, phi_candidate->bb());
     auto insert_it = phi_candidate->bb()->begin();
     insert_it.InsertBefore(std::move(phi_inst));
+
+    pass_->context()->get_decoration_mgr()->CloneDecorations(
+        phi_candidate->var_id(), phi_candidate->result_id(),
+        {SpvDecorationRelaxedPrecision});
+
     modified = true;
   }
 

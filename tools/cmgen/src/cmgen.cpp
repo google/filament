@@ -35,6 +35,7 @@
 #include "CubemapIBL.h"
 #include "CubemapSH.h"
 #include "CubemapUtils.h"
+#include "Image.h"
 
 #if defined(_MSC_VER)
 __forceinline uint32_t ctz(unsigned long x)
@@ -100,6 +101,8 @@ static void extractCubemapFaces(const utils::Path& iname, const Cubemap& cm, con
 static void outputSh(std::ostream& out, const std::unique_ptr<math::double3[]>& sh, size_t numBands);
 static void outputSpectrum(std::ostream& out, const std::unique_ptr<math::double3[]>& sh,
         size_t numBands);
+static void saveImage(const std::string& path, ImageEncoder::Format format, const Image& image,
+        const std::string& compression);
 
 // -----------------------------------------------------------------------------------------------
 
@@ -108,7 +111,10 @@ void generateUVGrid(Cubemap const& cml, size_t gridFrequency, size_t dim);
 static void printUsage(char* name) {
     std::string exec_name(utils::Path(name).getName());
     std::string usage(
-            "CMGEN is a command-line tool for generating SH and mipmap levels from a cubemap\n"
+            "CMGEN is a command-line tool for generating SH and mipmap levels from an env map.\n"
+            "Cubemaps and equirectangular formats are both supported, automatically detected \n"
+            "according to the aspect ratio of the source image.\n"
+            "\n"
             "Usages:\n"
             "    CMGEN [options] <input-file>\n"
             "    CMGEN [options] <uv[N]>\n"
@@ -400,21 +406,26 @@ int main(int argc, char* argv[]) {
             std::cout << "Decoding image..." << std::endl;
         }
         std::ifstream input_stream(iname.getPath(), std::ios::binary);
-        Image inputImage = ImageDecoder::decode(input_stream, iname.getPath());
-        if (!inputImage.isValid()) {
-            std::cerr << "Unsupported image format!" << std::endl;
-            exit(0);
+        LinearImage linputImage = ImageDecoder::decode(input_stream, iname.getPath());
+        if (!linputImage.isValid()) {
+            std::cerr << "Unable to open image: " << iname.getPath() << std::endl;
+            exit(1);
         }
-        if (inputImage.getChannelsCount() != 3) {
+        if (linputImage.getChannels() != 3) {
             std::cerr << "Input image must be RGB (3 channels)! This image has "
-                      << inputImage.getChannelsCount() << " channels." << std::endl;
-            exit(0);
+                      << linputImage.getChannels() << " channels." << std::endl;
+            exit(1);
         }
+
+        // Convert from LinearImage to the deprecated Image object which is used throughout cmgen.
+        std::unique_ptr<uint8_t[]> buf(new uint8_t[
+                linputImage.getWidth() * linputImage.getHeight() * sizeof(float3)]);
+        const size_t width = linputImage.getWidth(), height = linputImage.getHeight();
+        const size_t bpp = sizeof(float) * 3, bpr = bpp * width;
+        memcpy(buf.get(), linputImage.getPixelRef(), height * bpr);
+        Image inputImage(std::move(buf), width, height, bpr, bpp);
 
         CubemapUtils::clamp(inputImage);
-
-        size_t width = inputImage.getWidth();
-        size_t height = inputImage.getHeight();
 
         if ((isPOT(width) && (width * 3 == height * 4)) ||
             (isPOT(height) && (height * 3 == width * 4))) {
@@ -453,7 +464,7 @@ int main(int argc, char* argv[]) {
         }
     } else {
         if (!g_quiet) {
-            std::cout << "Generating image..." << std::endl;
+            std::cout << iname << " does not exist; generating UV grid..." << std::endl;
         }
 
         size_t dim = g_output_size ? g_output_size : 256;
@@ -595,10 +606,8 @@ void sphericalHarmonics(const utils::Path& iname, const Cubemap& inputCubemap) {
             }
 
             if (g_sh_file == ShFile::SH_CROSS) {
-                std::ofstream outputStream(g_sh_filename, std::ios::binary | std::ios::trunc);
-                ImageEncoder::encode(outputStream,
-                        ImageEncoder::chooseFormat(g_sh_filename.getName()),
-                        image, g_compression, g_sh_filename);
+                saveImage(g_sh_filename, ImageEncoder::chooseFormat(g_sh_filename.getName()),
+                        image, g_compression);
             }
             if (g_sh_file == ShFile::SH_TEXT) {
                 std::ofstream outputStream(g_sh_filename, std::ios::trunc);
@@ -616,9 +625,7 @@ void sphericalHarmonics(const utils::Path& iname, const Cubemap& inputCubemap) {
                 std::string basename = iname.getNameWithoutExtension();
                 utils::Path filePath =
                         outputDir + (basename + "_sh" + (g_sh_irradiance ? "_i" : "_r") + ".png");
-                std::ofstream outputStream(filePath, std::ios::binary | std::ios::trunc);
-                ImageEncoder::encode(outputStream, ImageEncoder::Format::PNG, image, "",
-                        filePath.getPath());
+                saveImage(filePath, ImageEncoder::Format::PNG, image, "");
             }
 
             { // save a file with the "other one" (irradiance or radiance)
@@ -627,9 +634,7 @@ void sphericalHarmonics(const utils::Path& iname, const Cubemap& inputCubemap) {
                 std::string basename = iname.getNameWithoutExtension();
                 utils::Path filePath =
                         outputDir + (basename + "_sh" + (!g_sh_irradiance ? "_i" : "_r") + ".png");
-                std::ofstream outputStream(filePath, std::ios::binary | std::ios::trunc);
-                ImageEncoder::encode(outputStream, ImageEncoder::Format::PNG, image, "",
-                        filePath.getPath());
+                saveImage(filePath, ImageEncoder::Format::PNG, image, "");
             }
         }
     }
@@ -684,10 +689,7 @@ void iblMipmapPrefilter(const utils::Path& iname,
             std::string ext = ImageEncoder::chooseExtension(debug_format);
             std::string basename = iname.getNameWithoutExtension();
             utils::Path filePath = outputDir + (basename + "_is_m" + (std::to_string(level) + ext));
-
-            std::ofstream outputStream(filePath, std::ios::binary | std::ios::trunc);
-            ImageEncoder::encode(outputStream, debug_format, img,
-                                 g_compression, filePath.getPath());
+            saveImage(filePath, debug_format, img, g_compression);
         }
 
         std::string ext = ImageEncoder::chooseExtension(g_format);
@@ -695,9 +697,7 @@ void iblMipmapPrefilter(const utils::Path& iname,
             Cubemap::Face face = (Cubemap::Face)i;
             std::string filename = outputDir
                     + ("is_m" + std::to_string(level) + "_" + CubemapUtils::getFaceName(face) + ext);
-            std::ofstream outputStream(filename, std::ios::binary | std::ios::trunc);
-            ImageEncoder::encode(outputStream, g_format, dst.getImageForFace(face),
-                                 g_compression, filename);
+            saveImage(filename, g_format, dst.getImageForFace(face), g_compression);
         }
     }
 }
@@ -744,10 +744,7 @@ void iblRoughnessPrefilter(const utils::Path& iname,
             std::string ext = ImageEncoder::chooseExtension(debug_format);
             std::string basename = iname.getNameWithoutExtension();
             utils::Path filePath = outputDir + (basename + "_roughness_m" + (std::to_string(level) + ext));
-
-            std::ofstream outputStream(filePath, std::ios::binary | std::ios::trunc);
-            ImageEncoder::encode(outputStream, debug_format, image,
-                                 g_compression, filePath.getPath());
+            saveImage(filePath, debug_format, image, g_compression);
         }
 
         std::string ext = ImageEncoder::chooseExtension(g_format);
@@ -755,9 +752,7 @@ void iblRoughnessPrefilter(const utils::Path& iname,
             Cubemap::Face face = (Cubemap::Face) j;
             std::string filename = outputDir
                     + ("m" + std::to_string(level) + "_" + CubemapUtils::getFaceName(face) + ext);
-            std::ofstream outputStream(filename, std::ios::binary | std::ios::trunc);
-            ImageEncoder::encode(outputStream, g_format, dst.getImageForFace(face),
-                                 g_compression, filename);
+            saveImage(filename, g_format, dst.getImageForFace(face), g_compression);
         }
     }
 }
@@ -811,9 +806,8 @@ void iblLutDfg(const utils::Path& filename, size_t size, bool multiscatter) {
         outputStream.flush();
         outputStream.close();
     } else {
-        std::ofstream outputStream(filename, std::ios::binary | std::ios::trunc);
         ImageEncoder::Format format = ImageEncoder::chooseFormat(filename.getName(), true);
-        ImageEncoder::encode(outputStream, format, image, g_compression, filename.getPath());
+        saveImage(filename, format, image, g_compression);
     }
 }
 
@@ -826,8 +820,23 @@ void extractCubemapFaces(const utils::Path& iname, const Cubemap& cm, const util
     for (size_t i=0 ; i<6 ; i++) {
         Cubemap::Face face = (Cubemap::Face)i;
         std::string filename(outputDir + (CubemapUtils::getFaceName(face) + ext));
-        std::ofstream outputStream(filename, std::ios::binary | std::ios::trunc);
-        ImageEncoder::encode(outputStream, g_format, cm.getImageForFace(face),
-                             g_compression, filename);
+        saveImage(filename, g_format, cm.getImageForFace(face), g_compression);
     }
+}
+
+static void saveImage(const std::string& path, ImageEncoder::Format format, const Image& image,
+        const std::string& compression) {
+    std::ofstream outputStream(path, std::ios::binary | std::ios::trunc);
+    LinearImage linearImage(image.getWidth(), image.getHeight(), 3);
+
+    // Copy row by row since the image has padding.
+    assert(image.getBytesPerPixel() == 12);
+    const size_t w = image.getWidth(), h = image.getHeight();
+    for (size_t row = 0; row < h; ++row) {
+        float* dst = linearImage.getPixelRef(0, row);
+        float const* src = static_cast<float const*>(image.getPixelRef(0, row));
+        memcpy(dst, src, w * 12);
+    }
+
+    ImageEncoder::encode(outputStream, format, linearImage, compression, path);
 }

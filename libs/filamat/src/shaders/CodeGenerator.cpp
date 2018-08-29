@@ -441,6 +441,7 @@ char const* CodeGenerator::getConstantName(Property property) noexcept {
         case Property::AMBIENT_OCCLUSION:    return "AMBIENT_OCCLUSION";
         case Property::CLEAR_COAT:           return "CLEAR_COAT";
         case Property::CLEAR_COAT_ROUGHNESS: return "CLEAR_COAT_ROUGHNESS";
+        case Property::CLEAR_COAT_NORMAL:    return "CLEAR_COAT_NORMAL";
         case Property::ANISOTROPY:           return "ANISOTROPY";
         case Property::ANISOTROPY_DIRECTION: return "ANISOTROPY_DIRECTION";
         case Property::THICKNESS:            return "THICKNESS";

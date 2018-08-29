@@ -30,7 +30,9 @@ else()
     message(FATAL_ERROR "Plateform not supported. BlueGL supports Windows, Linux, and MacOS X.")
 endif()
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility=hidden")
+if (NOT WIN32)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fvisibility=hidden")
+endif()
 
 # Only linux, clang doesn't want to use a shared library that is not PIC.
 # /usr/bin/ld: ../bluegl/libbluegl.a(BlueGL.cpp.o): relocation R_X86_64_32S
@@ -51,6 +53,8 @@ target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
 if (WIN32)
     target_link_libraries(${TARGET} PRIVATE opengl32 gdi32)
 endif()
+
+install(TARGETS ${TARGET} ARCHIVE DESTINATION lib/${DIST_DIR})
 
 # Build the tests...
 add_executable(test_${TARGET}

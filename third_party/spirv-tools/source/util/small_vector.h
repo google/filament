@@ -12,14 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef LIBSPIRV_UTILS_SMALL_VECTOR_H_
-#define LIBSPIRV_UTILS_SMALL_VECTOR_H_
+#ifndef SOURCE_UTIL_SMALL_VECTOR_H_
+#define SOURCE_UTIL_SMALL_VECTOR_H_
 
 #include <cassert>
 #include <iostream>
+#include <memory>
+#include <utility>
 #include <vector>
 
-#include "opt/make_unique.h"
+#include "source/util/make_unique.h"
 
 namespace spvtools {
 namespace utils {
@@ -53,7 +55,7 @@ class SmallVector {
 
   SmallVector(const std::vector<T>& vec) : SmallVector() {
     if (vec.size() > small_size) {
-      large_data_.reset(new std::vector<T>(vec));
+      large_data_ = MakeUnique<std::vector<T>>(vec);
     } else {
       size_ = vec.size();
       for (uint32_t i = 0; i < size_; i++) {
@@ -64,7 +66,7 @@ class SmallVector {
 
   SmallVector(std::vector<T>&& vec) : SmallVector() {
     if (vec.size() > small_size) {
-      large_data_.reset(new std::vector<T>(std::move(vec)));
+      large_data_ = MakeUnique<std::vector<T>>(std::move(vec));
     } else {
       size_ = vec.size();
       for (uint32_t i = 0; i < size_; i++) {
@@ -80,7 +82,7 @@ class SmallVector {
         new (small_data_ + (size_++)) T(std::move(*it));
       }
     } else {
-      large_data_.reset(new std::vector<T>(std::move(init_list)));
+      large_data_ = MakeUnique<std::vector<T>>(std::move(init_list));
     }
   }
 
@@ -98,7 +100,7 @@ class SmallVector {
       if (large_data_) {
         *large_data_ = *that.large_data_;
       } else {
-        large_data_.reset(new std::vector<T>(*that.large_data_));
+        large_data_ = MakeUnique<std::vector<T>>(*that.large_data_);
       }
     } else {
       large_data_.reset(nullptr);
@@ -424,7 +426,7 @@ class SmallVector {
   // be access through |large_data|.
   void MoveToLargeData() {
     assert(!large_data_);
-    large_data_.reset(new std::vector<T>());
+    large_data_ = MakeUnique<std::vector<T>>();
     for (size_t i = 0; i < size_; ++i) {
       large_data_->emplace_back(std::move(small_data_[i]));
     }
@@ -461,4 +463,4 @@ class SmallVector {
 }  // namespace utils
 }  // namespace spvtools
 
-#endif  // LIBSPIRV_UTILS_SMALL_VECTOR_H_
+#endif  // SOURCE_UTIL_SMALL_VECTOR_H_

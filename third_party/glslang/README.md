@@ -105,8 +105,8 @@ cd $BUILD_DIR
 For building on Linux:
 
 ```bash
-cmake -DCMAKE_BUILD_TYPE={Debug|Release|RelWithDebInfo} \
-      -DCMAKE_INSTALL_PREFIX="$(pwd)/install" $SOURCE_DIR
+cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="$(pwd)/install" $SOURCE_DIR
+# "Release" (for CMAKE_BUILD_TYPE) could also be "Debug" or "RelWithDebInfo"
 ```
 
 For building on Windows:
@@ -125,8 +125,8 @@ The CMake GUI also works for Windows (version 3.4.1 tested).
 make -j4 install
 
 # for Windows:
-cmake --build . --config {Release|Debug|MinSizeRel|RelWithDebInfo} \
-      --target install
+cmake --build . --config Release --target install
+# "Release" (for --config) could also be "Debug", "MinSizeRel", or "RelWithDebInfo"
 ```
 
 If using MSVC, after running CMake to configure, use the

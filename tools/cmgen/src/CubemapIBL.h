@@ -23,9 +23,7 @@
 
 class Cubemap;
 
-namespace image {
 class Image;
-}
 
 class CubemapIBL {
 public:
@@ -35,7 +33,7 @@ public:
     static void roughnessFilter(Cubemap& dst,
             const std::vector<Cubemap>& levels, double linearRoughness, size_t maxNumSamples = 1024);
 
-    static void DFG(image::Image& dst, bool multiscatter = false);
+    static void DFG(Image& dst, bool multiscatter = false);
 
     static void brdf(Cubemap& dst, double linearRoughness);
 };

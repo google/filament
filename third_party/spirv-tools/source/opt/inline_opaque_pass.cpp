@@ -14,11 +14,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "inline_opaque_pass.h"
+#include "source/opt/inline_opaque_pass.h"
+
+#include <utility>
 
 namespace spvtools {
 namespace opt {
-
 namespace {
 
 const uint32_t kTypePointerTypeIdInIdx = 1;

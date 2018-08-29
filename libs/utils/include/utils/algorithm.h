@@ -50,6 +50,23 @@ constexpr inline T clz(T x) noexcept {
     }
     return (sizeof(T) * CHAR_BIT) - details::popcount(x);
 }
+
+template<typename T>
+constexpr inline T ctz(T x) noexcept {
+    static_assert(sizeof(T) <= sizeof(uint64_t), "details::ctz() only support up to 64 bits");
+    T c = sizeof(T) * 8;
+    x &= -signed(x);
+    if (x) c--;
+    if (sizeof(T) * 8 > 32) { // if() only needed to quash compiler warnings
+        if (x & 0x00000000FFFFFFFF) c -= 32;
+    }
+    if (x & 0x0000FFFF) c -= 16;
+    if (x & 0x00FF00FF) c -= 8;
+    if (x & 0x0F0F0F0F) c -= 4;
+    if (x & 0x33333333) c -= 2;
+    if (x & 0x55555555) c -= 1;
+    return c;
+}
 } // namespace details
 
 constexpr inline UTILS_PUBLIC UTILS_PURE
@@ -79,6 +96,32 @@ unsigned long long UTILS_ALWAYS_INLINE clz(unsigned long long x) noexcept {
 #endif
 }
 
+constexpr inline UTILS_PUBLIC UTILS_PURE
+unsigned int UTILS_ALWAYS_INLINE ctz(unsigned int x) noexcept {
+#if __has_builtin(__builtin_ctz)
+    return __builtin_ctz(x);
+#else
+    return details::ctz(x);
+#endif
+}
+
+constexpr inline UTILS_PUBLIC UTILS_PURE
+unsigned long UTILS_ALWAYS_INLINE ctz(unsigned long x) noexcept {
+#if __has_builtin(__builtin_ctzl)
+    return __builtin_ctzl(x);
+#else
+    return details::ctz(x);
+#endif
+}
+
+constexpr inline UTILS_PUBLIC UTILS_PURE
+unsigned long long UTILS_ALWAYS_INLINE ctz(unsigned long long x) noexcept {
+#if __has_builtin(__builtin_ctzll)
+    return __builtin_ctzll(x);
+#else
+    return details::ctz(x);
+#endif
+}
 
 constexpr inline UTILS_PUBLIC UTILS_PURE
 unsigned int UTILS_ALWAYS_INLINE popcount(unsigned int x) noexcept {
@@ -112,6 +155,12 @@ uint8_t UTILS_ALWAYS_INLINE popcount(uint8_t x) noexcept {
     return (uint8_t)popcount((unsigned int)x);
 }
 
+template<typename T,
+        typename = std::enable_if_t<std::is_integral<T>::value && std::is_unsigned<T>::value>>
+constexpr inline UTILS_PUBLIC UTILS_PURE
+T log2i(T x) noexcept {
+    return (sizeof(x) * 8 - 1u) - clz(x);
+}
 
 /*
  * branch-less version of std::lower_bound and std::upper_bound.

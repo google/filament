@@ -9,9 +9,6 @@ CXX_VERSION=5.0.2
 # CI runs on Ubuntu 14.04, we need to install clang-5.0 and th
 # appropriate libc++ ourselves
 if [ "$KOKORO_BUILD_ID" ]; then
-    echo "Running job $KOKORO_JOB_NAME"
-    TARGET=`echo "$KOKORO_JOB_NAME" | awk -F "/" '{print $NF}'`
-
     sudo ln -s /usr/include/x86_64-linux-gnu/asm /usr/include/asm
 
     sudo apt-add-repository "deb http://apt.llvm.org/trusty/ llvm-toolchain-trusty-$CLANG_VERSION main"

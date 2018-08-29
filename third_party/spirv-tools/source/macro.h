@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef LIBSPIRV_MACRO_H_
-#define LIBSPIRV_MACRO_H_
+#ifndef SOURCE_MACRO_H_
+#define SOURCE_MACRO_H_
 
 // Evaluates to the number of elements of array A.
 //
@@ -22,4 +22,4 @@
 // std::array::size.
 #define ARRAY_SIZE(A) (static_cast<uint32_t>(sizeof(A) / sizeof(A[0])))
 
-#endif  // LIBSPIRV_MACRO_H_
+#endif  // SOURCE_MACRO_H_

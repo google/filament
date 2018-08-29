@@ -15,12 +15,15 @@
 // Assembler tests for instructions in the "Extension Instruction" section
 // of the SPIR-V spec.
 
-#include "unit_spirv.h"
+#include <string>
+#include <tuple>
+#include <vector>
 
 #include "gmock/gmock.h"
-#include "latest_version_glsl_std_450_header.h"
-#include "latest_version_opencl_std_header.h"
-#include "test_fixture.h"
+#include "source/latest_version_glsl_std_450_header.h"
+#include "source/latest_version_opencl_std_header.h"
+#include "test/test_fixture.h"
+#include "test/unit_spirv.h"
 
 namespace spvtools {
 namespace {

@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef LIBSPIRV_SPIRV_ENDIAN_H_
-#define LIBSPIRV_SPIRV_ENDIAN_H_
+#ifndef SOURCE_SPIRV_ENDIAN_H_
+#define SOURCE_SPIRV_ENDIAN_H_
 
 #include "spirv-tools/libspirv.h"
 
@@ -34,4 +34,4 @@ spv_result_t spvBinaryEndianness(const spv_const_binary binary,
 // Returns true if the given endianness matches the host's native endiannes.
 bool spvIsHostEndian(spv_endianness_t endian);
 
-#endif  // LIBSPIRV_SPIRV_ENDIAN_H_
+#endif  // SOURCE_SPIRV_ENDIAN_H_

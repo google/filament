@@ -12,15 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "basic_block.h"
-#include "function.h"
-#include "ir_context.h"
-#include "module.h"
-#include "reflect.h"
-
-#include "make_unique.h"
+#include "source/opt/basic_block.h"
 
 #include <ostream>
+
+#include "source/opt/function.h"
+#include "source/opt/ir_context.h"
+#include "source/opt/module.h"
+#include "source/opt/reflect.h"
+#include "source/util/make_unique.h"
 
 namespace spvtools {
 namespace opt {

@@ -15,7 +15,7 @@ float GetValue(thread const EmptyStructTest& self)
     return 0.0;
 }
 
-float GetValue_1(thread const EmptyStructTest& self)
+float GetValue_1(EmptyStructTest self)
 {
     return 0.0;
 }

@@ -12,13 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "decoration_manager.h"
+#include "source/opt/decoration_manager.h"
 
 #include <algorithm>
+#include <memory>
 #include <set>
 #include <stack>
+#include <utility>
 
-#include "ir_context.h"
+#include "source/opt/ir_context.h"
 
 namespace spvtools {
 namespace opt {
@@ -398,6 +400,47 @@ void DecorationManager::CloneDecorations(uint32_t from, uint32_t to) {
   }
 }
 
+void DecorationManager::CloneDecorations(
+    uint32_t from, uint32_t to,
+    const std::vector<SpvDecoration>& decorations_to_copy) {
+  const auto decoration_list = id_to_decoration_insts_.find(from);
+  if (decoration_list == id_to_decoration_insts_.end()) return;
+  auto context = module_->context();
+  for (Instruction* inst : decoration_list->second.direct_decorations) {
+    if (std::find(decorations_to_copy.begin(), decorations_to_copy.end(),
+                  inst->GetSingleWordInOperand(1)) ==
+        decorations_to_copy.end()) {
+      continue;
+    }
+
+    // Clone decoration and change |target-id| to |to|.
+    std::unique_ptr<Instruction> new_inst(inst->Clone(module_->context()));
+    new_inst->SetInOperand(0, {to});
+    module_->AddAnnotationInst(std::move(new_inst));
+    auto decoration_iter = --module_->annotation_end();
+    context->AnalyzeUses(&*decoration_iter);
+  }
+
+  // We need to copy the list of instructions as ForgetUses and AnalyzeUses are
+  // going to modify it.
+  std::vector<Instruction*> indirect_decorations =
+      decoration_list->second.indirect_decorations;
+  for (Instruction* inst : indirect_decorations) {
+    switch (inst->opcode()) {
+      case SpvOpGroupDecorate:
+        CloneDecorations(inst->GetSingleWordInOperand(0), to,
+                         decorations_to_copy);
+        break;
+      case SpvOpGroupMemberDecorate: {
+        assert(false && "The source id is not suppose to be a type.");
+        break;
+      }
+      default:
+        assert(false && "Unexpected decoration instruction");
+    }
+  }
+}
+
 void DecorationManager::RemoveDecoration(Instruction* inst) {
   const auto remove_from_container = [inst](std::vector<Instruction*>& v) {
     v.erase(std::remove(v.begin(), v.end(), inst), v.end());
@@ -431,7 +474,6 @@ void DecorationManager::RemoveDecoration(Instruction* inst) {
       break;
   }
 }
-
 }  // namespace analysis
 }  // namespace opt
 }  // namespace spvtools

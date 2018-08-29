@@ -12,11 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "cfg.h"
-#include "cfa.h"
-#include "ir_builder.h"
-#include "ir_context.h"
-#include "module.h"
+#include "source/opt/cfg.h"
+
+#include <memory>
+#include <utility>
+
+#include "source/cfa.h"
+#include "source/opt/ir_builder.h"
+#include "source/opt/ir_context.h"
+#include "source/opt/module.h"
 
 namespace spvtools {
 namespace opt {

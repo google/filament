@@ -36,7 +36,7 @@ namespace utils {
 
 class IBL {
 public:
-    IBL(filament::Engine& engine);
+    explicit IBL(filament::Engine& engine);
     ~IBL();
 
     bool loadFromDirectory(const utils::Path& path);

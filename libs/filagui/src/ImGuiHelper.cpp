@@ -31,7 +31,6 @@
 #include <filament/Texture.h>
 #include <filament/TransformManager.h>
 #include <utils/EntityManager.h>
-#include <utils/Path.h>
 
 using namespace math;
 using namespace filament;
@@ -43,14 +42,14 @@ static const uint8_t UI_BLIT_PACKAGE[] = {
     #include "generated/material/uiBlit.inc"
 };
 
-ImGuiHelper::ImGuiHelper(Engine* engine, filament::View* view) : mEngine(engine), mView(view) {
+ImGuiHelper::ImGuiHelper(Engine* engine, filament::View* view, const Path& fontPath) :
+        mEngine(engine), mView(view) {
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
 
-    // Try loading Roboto from assets/fonts (relative to the executable).  If this fails, ImGui
-    // will silently fall back to proggy.
-    std::string fpath = Path::getCurrentExecutable().getParent() + "assets/fonts/Roboto-Medium.ttf";
-    io.Fonts->AddFontFromFileTTF(fpath.c_str(), 16.0f);
+    // If the given font path is invalid, ImGui will silently fall back to proggy, which is a
+    // tiny "pixel art" texture that is compiled into the library.
+    io.Fonts->AddFontFromFileTTF(fontPath.c_str(), 16.0f);
 
     // Create the grayscale texture that ImGui uses for its glyph atlas.
     static unsigned char* pixels;

@@ -18,9 +18,9 @@
 
 #include <algorithm>
 #include <cassert>
-
 #include <sstream>
 #include <string>
+#include <vector>
 
 #include "source/binary.h"
 #include "source/diagnostic.h"

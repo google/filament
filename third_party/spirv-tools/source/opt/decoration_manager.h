@@ -12,16 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef LIBSPIRV_OPT_DECORATION_MANAGER_H_
-#define LIBSPIRV_OPT_DECORATION_MANAGER_H_
+#ifndef SOURCE_OPT_DECORATION_MANAGER_H_
+#define SOURCE_OPT_DECORATION_MANAGER_H_
 
 #include <functional>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
-#include "instruction.h"
-#include "module.h"
+#include "source/opt/instruction.h"
+#include "source/opt/module.h"
 
 namespace spvtools {
 namespace opt {
@@ -91,6 +91,12 @@ class DecorationManager {
   // This function does not check if the id |to| is already decorated.
   void CloneDecorations(uint32_t from, uint32_t to);
 
+  // Same as above, but only clone the decoration if the decoration operand is
+  // in |decorations_to_copy|.  This function has the extra restriction that
+  // |from| and |to| must not be an object, not a type.
+  void CloneDecorations(uint32_t from, uint32_t to,
+                        const std::vector<SpvDecoration>& decorations_to_copy);
+
   // Informs the decoration manager of a new decoration that it needs to track.
   void AddDecoration(Instruction* inst);
 
@@ -133,4 +139,4 @@ class DecorationManager {
 }  // namespace opt
 }  // namespace spvtools
 
-#endif  // LIBSPIRV_OPT_DECORATION_MANAGER_H_
+#endif  // SOURCE_OPT_DECORATION_MANAGER_H_

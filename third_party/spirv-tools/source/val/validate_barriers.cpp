@@ -16,6 +16,8 @@
 
 #include "source/val/validate.h"
 
+#include <string>
+
 #include "source/diagnostic.h"
 #include "source/opcode.h"
 #include "source/spirv_constant.h"
@@ -56,8 +58,9 @@ spv_result_t ValidateExecutionScope(ValidationState_t& _,
 
     if (_.context()->target_env != SPV_ENV_VULKAN_1_0 &&
         value != SpvScopeSubgroup) {
-      _.current_function().RegisterExecutionModelLimitation(
-          [](SpvExecutionModel model, std::string* message) {
+      _.function(inst->function()->id())
+          ->RegisterExecutionModelLimitation([](SpvExecutionModel model,
+                                                std::string* message) {
             if (model == SpvExecutionModelFragment ||
                 model == SpvExecutionModelVertex ||
                 model == SpvExecutionModelGeometry ||
@@ -198,21 +201,22 @@ spv_result_t BarriersPass(ValidationState_t& _, const Instruction* inst) {
     case SpvOpControlBarrier: {
       if (spvVersionForTargetEnv(_.context()->target_env) <
           SPV_SPIRV_VERSION_WORD(1, 3)) {
-        _.current_function().RegisterExecutionModelLimitation(
-            [](SpvExecutionModel model, std::string* message) {
-              if (model != SpvExecutionModelTessellationControl &&
-                  model != SpvExecutionModelGLCompute &&
-                  model != SpvExecutionModelKernel) {
-                if (message) {
-                  *message =
-                      "OpControlBarrier requires one of the following "
-                      "Execution "
-                      "Models: TessellationControl, GLCompute or Kernel";
-                }
-                return false;
-              }
-              return true;
-            });
+        _.function(inst->function()->id())
+            ->RegisterExecutionModelLimitation(
+                [](SpvExecutionModel model, std::string* message) {
+                  if (model != SpvExecutionModelTessellationControl &&
+                      model != SpvExecutionModelGLCompute &&
+                      model != SpvExecutionModelKernel) {
+                    if (message) {
+                      *message =
+                          "OpControlBarrier requires one of the following "
+                          "Execution "
+                          "Models: TessellationControl, GLCompute or Kernel";
+                    }
+                    return false;
+                  }
+                  return true;
+                });
       }
 
       const uint32_t execution_scope = inst->word(1);

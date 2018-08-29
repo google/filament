@@ -28,6 +28,7 @@ std::unordered_map<std::string, Property> Enums::mStringToProperty = {
         { "ambientOcclusion",    Property::AMBIENT_OCCLUSION },
         { "clearCoat",           Property::CLEAR_COAT },
         { "clearCoatRoughness",  Property::CLEAR_COAT_ROUGHNESS },
+        { "clearCoatNormal",     Property::CLEAR_COAT_NORMAL },
         { "anisotropy",          Property::ANISOTROPY },
         { "anisotropyDirection", Property::ANISOTROPY_DIRECTION },
         { "thickness",           Property::THICKNESS },

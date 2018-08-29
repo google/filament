@@ -24,6 +24,7 @@
 #include <thread>
 #include <vector>
 
+#include <utils/Allocator.h>
 #include <utils/architecture.h>
 #include <utils/Condition.h>
 #include <utils/Log.h>
@@ -53,9 +54,9 @@ public:
 
     using JobFunc = void(*)(void*, JobSystem&, Job*);
 
-    class Job {
+    class alignas(CACHELINE_SIZE) Job { // NOLINT(cppcoreguidelines-pro-type-member-init)
     public:
-        Job() noexcept { }
+        Job() noexcept {} // = default;
         Job(const Job&) = delete;
         Job(Job&&) = delete;
 
@@ -75,7 +76,7 @@ public:
             (CACHELINE_SIZE % sizeof(Job) == 0),
             "A Job must be N cache-lines long or N Jobs must fit in a cache line exactly.");
 
-    JobSystem(size_t threadCount = 0, size_t adoptableThreadsCount = 1) noexcept;
+    explicit JobSystem(size_t threadCount = 0, size_t adoptableThreadsCount = 1) noexcept;
 
     ~JobSystem();
 
@@ -92,18 +93,13 @@ public:
     // part of a Jobsystem.
     static JobSystem* getJobSystem() noexcept;
 
-    // Free-up all allocated jobs (without calling destructors)
-    // Make sure to call this when all call to wait() have returned.
-    // Also clears the master job
-    void reset() noexcept;
-
-    // resets a job
-    void reset(Job* job) noexcept;
-
     // If a parent is not specified when creating a job, that job will automatically take the
     // master job as a parent.
     // The master job is reset when calling reset()
-    Job* setMasterJob(Job* job) noexcept { return (mMasterJob = job); }
+    Job* setMasterJob(Job* job) noexcept { return mMasterJob = job; }
+
+    // Clears the master job
+    void reset() noexcept { mMasterJob = nullptr; }
 
 
     // NOTE: All methods below must be called from the same thread and that thread must be
@@ -241,7 +237,6 @@ public:
     void finish(Job* job) noexcept;
 
     // for debugging
-    size_t getJobWatermark() const noexcept { return mJobWaterMark; }
     friend utils::io::ostream& operator << (utils::io::ostream& out, JobSystem const& js);
 
 
@@ -269,7 +264,7 @@ private:
         static constexpr uint32_t m = 0x7fffffffu;
         uint32_t mState; // must be 0 < seed < 0x7fffffff
     public:
-        inline constexpr default_random_engine(uint32_t seed = 1u) noexcept
+        inline constexpr explicit default_random_engine(uint32_t seed = 1u) noexcept
                 : mState(((seed % m) == 0u) ? 1u : seed % m) {
         }
         inline uint32_t operator()() noexcept {
@@ -305,27 +300,29 @@ private:
     void loop(ThreadState* threadState) noexcept;
     bool execute(JobSystem::ThreadState& state) noexcept;
 
-    void put(WorkQueue& workQueue, Job* job) noexcept { workQueue.push(jobToIndex(job)); }
-    Job* pop(WorkQueue& workQueue) noexcept { return indexToJob(workQueue.pop()); }
-    Job* steal(WorkQueue& workQueue) noexcept { return indexToJob(workQueue.steal()); }
-
-    Job* indexToJob(size_t index) {
-        assert(index <= MAX_JOB_COUNT);
-        return !index ? nullptr : (&mJobStorage[0] - 1) + index;
+    void put(WorkQueue& workQueue, Job* job) noexcept {
+        size_t index = job - mJobStorageBase;
+        assert(index >= 0 && index < MAX_JOB_COUNT);
+        workQueue.push(uint16_t(index + 1));
     }
 
-    uint16_t jobToIndex(Job const* job) const {
-        // we offset index by +1 so b/c workQueue returns 0 on failure
-        size_t index = job - (&mJobStorage[0] - 1);
-        assert(index > 0 && index <= MAX_JOB_COUNT);
-        return uint16_t(index);
+    Job* pop(WorkQueue& workQueue) noexcept {
+        size_t index = workQueue.pop();
+        assert(index <= MAX_JOB_COUNT);
+        return !index ? nullptr : (mJobStorageBase - 1) + index;
+    }
+
+    Job* steal(WorkQueue& workQueue) noexcept {
+        size_t index = workQueue.steal();
+        assert(index <= MAX_JOB_COUNT);
+        return !index ? nullptr : (mJobStorageBase - 1) + index;
     }
 
     // these have thread contention, keep them together
     utils::Mutex mLock;
     utils::Condition mCondition;
     std::atomic<uint32_t> mActiveJobs = { 0 };
-    std::atomic<uint16_t> mNextJobIndex = { 0 };
+    utils::Arena<utils::ThreadSafeObjectPoolAllocator<Job>, LockingPolicy::NoLock> mJobPool;
 
     template <typename T>
     using aligned_vector = std::vector<T, utils::STLAlignedAllocator<T>>;
@@ -340,12 +337,10 @@ private:
     aligned_vector<ThreadState> mThreadStates;          // actual data is stored offline
     std::atomic<bool> mExitRequested = { 0 };           // this one is almost never written
     std::atomic<uint16_t> mAdoptedThreads = { 0 };      // this one is almost never written
-    Job* mJobStorage = nullptr;
-    uint16_t mThreadCount = 0;
-    uint8_t mParallelSplitCount = 0;
+    Job* const mJobStorageBase;                         // Base for conversion to indices
+    uint16_t mThreadCount = 0;                          // total # of threads in the pool
+    uint8_t mParallelSplitCount = 0;                    // # of split allowable in parallel_for
     Job* mMasterJob = nullptr;
-
-    size_t mJobWaterMark = 0;
 
     static UTILS_DECLARE_TLS(ThreadState *) sThreadState;
 };

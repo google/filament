@@ -54,8 +54,9 @@ struct Range {
 
         const_iterator& operator++() { ++value; return *this; }
         const_iterator& operator--() { --value; return *this; }
-        const_iterator operator++(int) { const_iterator t(value); value++; return t; }
-        const_iterator operator--(int) { const_iterator t(value); value--; return t; }
+
+        const const_iterator operator++(int) { const_iterator t(value); value++; return t; }
+        const const_iterator operator--(int) { const_iterator t(value); value--; return t; }
 
         const_iterator operator+(size_t rhs) const { return { value + rhs }; }
         const_iterator operator+(size_t rhs)       { return { value + rhs }; }

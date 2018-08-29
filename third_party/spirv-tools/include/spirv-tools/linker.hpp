@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef SPIRV_TOOLS_LINKER_HPP_
-#define SPIRV_TOOLS_LINKER_HPP_
+#ifndef INCLUDE_SPIRV_TOOLS_LINKER_HPP_
+#define INCLUDE_SPIRV_TOOLS_LINKER_HPP_
 
 #include <cstdint>
 
@@ -94,4 +94,4 @@ spv_result_t Link(const Context& context, const uint32_t* const* binaries,
 
 }  // namespace spvtools
 
-#endif  // SPIRV_TOOLS_LINKER_HPP_
+#endif  // INCLUDE_SPIRV_TOOLS_LINKER_HPP_

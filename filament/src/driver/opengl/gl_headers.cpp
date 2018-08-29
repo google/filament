@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#ifdef ANDROID
+#if defined(ANDROID) || defined(USE_EXTERNAL_GLES3) || defined(__EMSCRIPTEN__)
 
 #include <EGL/egl.h>
 #include <GLES3/gl31.h>

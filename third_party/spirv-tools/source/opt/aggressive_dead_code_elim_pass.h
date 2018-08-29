@@ -14,21 +14,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef LIBSPIRV_OPT_AGGRESSIVE_DCE_PASS_H_
-#define LIBSPIRV_OPT_AGGRESSIVE_DCE_PASS_H_
+#ifndef SOURCE_OPT_AGGRESSIVE_DEAD_CODE_ELIM_PASS_H_
+#define SOURCE_OPT_AGGRESSIVE_DEAD_CODE_ELIM_PASS_H_
 
-#include <util/bit_vector.h>
 #include <algorithm>
+#include <list>
 #include <map>
 #include <queue>
+#include <string>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
+#include <vector>
 
-#include "basic_block.h"
-#include "def_use_manager.h"
-#include "mem_pass.h"
-#include "module.h"
+#include "source/opt/basic_block.h"
+#include "source/opt/def_use_manager.h"
+#include "source/opt/mem_pass.h"
+#include "source/opt/module.h"
+#include "source/util/bit_vector.h"
 
 namespace spvtools {
 namespace opt {
@@ -111,7 +114,7 @@ class AggressiveDCEPass : public MemPass {
   // Add branch to |labelId| to end of block |bp|.
   void AddBranch(uint32_t labelId, BasicBlock* bp);
 
-  // Add all break and continue branches in the loop associated with
+  // Add all break and continue branches in the construct associated with
   // |mergeInst| to worklist if not already live
   void AddBreaksAndContinuesToWorklist(Instruction* mergeInst);
 
@@ -186,4 +189,4 @@ class AggressiveDCEPass : public MemPass {
 }  // namespace opt
 }  // namespace spvtools
 
-#endif  // LIBSPIRV_OPT_AGGRESSIVE_DCE_PASS_H_
+#endif  // SOURCE_OPT_AGGRESSIVE_DEAD_CODE_ELIM_PASS_H_

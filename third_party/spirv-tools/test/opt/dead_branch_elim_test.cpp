@@ -13,8 +13,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "pass_fixture.h"
-#include "pass_utils.h"
+#include <string>
+
+#include "test/opt/pass_fixture.h"
+#include "test/opt/pass_utils.h"
 
 namespace spvtools {
 namespace opt {
@@ -2091,6 +2093,105 @@ OpFunctionEnd
 )";
 
   SinglePassRunAndMatch<DeadBranchElimPass>(text, true);
+}
+
+TEST_F(DeadBranchElimTest, SelectionMergeWithEarlyExit1) {
+  // Checks  that if a selection merge construct contains a conditional branch
+  // to the merge node, then the OpSelectionMerge instruction is positioned
+  // correctly.
+  const std::string predefs = R"(
+OpCapability Shader
+%1 = OpExtInstImport "GLSL.std.450"
+OpMemoryModel Logical GLSL450
+OpEntryPoint Fragment %main "main"
+OpExecutionMode %main OriginUpperLeft
+OpSource GLSL 140
+%void = OpTypeVoid
+%func_type = OpTypeFunction %void
+%bool = OpTypeBool
+%true = OpConstantTrue %bool
+%undef_bool = OpUndef %bool
+)";
+
+  const std::string body =
+      R"(
+; CHECK: OpFunction
+; CHECK-NEXT: OpLabel
+; CHECK-NEXT: OpBranch [[taken_branch:%\w+]]
+; CHECK-NEXT: [[taken_branch]] = OpLabel
+; CHECK-NEXT: OpSelectionMerge [[merge:%\w+]]
+; CHECK-NEXT: OpBranchConditional {{%\w+}} [[merge]] {{%\w+}}
+%main = OpFunction %void None %func_type
+%entry_bb = OpLabel
+OpSelectionMerge %outer_merge None
+OpBranchConditional %true %bb1 %bb3
+%bb1 = OpLabel
+OpBranchConditional %undef_bool %outer_merge %bb2
+%bb2 = OpLabel
+OpBranch %outer_merge
+%bb3 = OpLabel
+OpBranch %outer_merge
+%outer_merge = OpLabel
+OpReturn
+OpFunctionEnd
+)";
+
+  SinglePassRunAndMatch<DeadBranchElimPass>(predefs + body, true);
+}
+
+TEST_F(DeadBranchElimTest, SelectionMergeWithEarlyExit2) {
+  // Checks  that if a selection merge construct contains a conditional branch
+  // to the merge node, then the OpSelectionMerge instruction is positioned
+  // correctly.
+  const std::string predefs = R"(
+OpCapability Shader
+%1 = OpExtInstImport "GLSL.std.450"
+OpMemoryModel Logical GLSL450
+OpEntryPoint Fragment %main "main"
+OpExecutionMode %main OriginUpperLeft
+OpSource GLSL 140
+%void = OpTypeVoid
+%func_type = OpTypeFunction %void
+%bool = OpTypeBool
+%true = OpConstantTrue %bool
+%undef_bool = OpUndef %bool
+)";
+
+  const std::string body =
+      R"(
+; CHECK: OpFunction
+; CHECK-NEXT: OpLabel
+; CHECK-NEXT: OpBranch [[bb1:%\w+]]
+; CHECK-NEXT: [[bb1]] = OpLabel
+; CHECK-NEXT: OpSelectionMerge [[inner_merge:%\w+]]
+; CHECK: [[inner_merge]] = OpLabel
+; CHECK-NEXT: OpSelectionMerge [[outer_merge:%\w+]]
+; CHECK-NEXT: OpBranchConditional {{%\w+}} [[outer_merge]:%\w+]] {{%\w+}}
+; CHECK: [[outer_merge]] = OpLabel
+; CHECK-NEXT: OpReturn
+%main = OpFunction %void None %func_type
+%entry_bb = OpLabel
+OpSelectionMerge %outer_merge None
+OpBranchConditional %true %bb1 %bb5
+%bb1 = OpLabel
+OpSelectionMerge %inner_merge None
+OpBranchConditional %undef_bool %bb2 %bb3
+%bb2 = OpLabel
+OpBranch %inner_merge
+%bb3 = OpLabel
+OpBranch %inner_merge
+%inner_merge = OpLabel
+OpBranchConditional %undef_bool %outer_merge %bb4
+%bb4 = OpLabel
+OpBranch %outer_merge
+%bb5 = OpLabel
+OpBranch %outer_merge
+%outer_merge = OpLabel
+OpReturn
+OpFunctionEnd
+)";
+
+  SinglePassRunAndMatch<DeadBranchElimPass>(predefs + body, true);
 }
 #endif
 

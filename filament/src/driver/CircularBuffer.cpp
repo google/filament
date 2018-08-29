@@ -16,9 +16,12 @@
 
 #include "driver/CircularBuffer.h"
 
-#if !defined(WIN32)
+#if !defined(WIN32) && !defined(__EMSCRIPTEN__)
 #    include <sys/mman.h>
 #    include <unistd.h>
+#    define HAS_MMAP 1
+#else
+#    define HAS_MMAP 0
 #endif
 
 #include <stdio.h>
@@ -26,12 +29,6 @@
 #include <utils/ashmem.h>
 #include <utils/Log.h>
 #include <utils/Panic.h>
-
-#if defined(WIN32)
-#    define HAS_MMAP 0
-#else
-#    define HAS_MMAP 1
-#endif
 
 using namespace utils;
 

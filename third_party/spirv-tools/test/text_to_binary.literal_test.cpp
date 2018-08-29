@@ -14,7 +14,9 @@
 
 // Assembler tests for literal numbers and literal strings.
 
-#include "test_fixture.h"
+#include <string>
+
+#include "test/test_fixture.h"
 
 namespace spvtools {
 namespace {

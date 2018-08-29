@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "text.h"
+#include "source/text.h"
 
 #include <algorithm>
 #include <cassert>
@@ -21,26 +21,27 @@
 #include <cstdlib>
 #include <cstring>
 #include <memory>
+#include <set>
 #include <sstream>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
-#include "assembly_grammar.h"
-#include "binary.h"
-#include "diagnostic.h"
-#include "ext_inst.h"
-#include "instruction.h"
-#include "message.h"
-#include "opcode.h"
-#include "operand.h"
+#include "source/assembly_grammar.h"
+#include "source/binary.h"
+#include "source/diagnostic.h"
+#include "source/ext_inst.h"
+#include "source/instruction.h"
+#include "source/opcode.h"
+#include "source/operand.h"
+#include "source/spirv_constant.h"
+#include "source/spirv_target_env.h"
+#include "source/table.h"
+#include "source/text_handler.h"
+#include "source/util/bitutils.h"
+#include "source/util/parse_number.h"
 #include "spirv-tools/libspirv.h"
-#include "spirv_constant.h"
-#include "spirv_target_env.h"
-#include "table.h"
-#include "text_handler.h"
-#include "util/bitutils.h"
-#include "util/parse_number.h"
 
 bool spvIsValidIDCharacter(const char value) {
   return value == '_' || 0 != ::isalnum(value);

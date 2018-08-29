@@ -47,6 +47,8 @@ FRenderer::FRenderer(FEngine& engine) :
         mEngine(engine),
         mFrameSkipper(engine, 2),
         mFrameInfoManager(engine),
+        mIsRGB16FSupported(false),
+        mIsRGB8Supported(false),
         mPerRenderPassArena(engine.getPerRenderPassAllocator())
 {
 }
@@ -56,7 +58,9 @@ void FRenderer::init() noexcept {
     mRenderTarget = driver.createDefaultRenderTarget();
     mIsRGB16FSupported = driver.isRenderTargetFormatSupported(driver::TextureFormat::RGB16F);
     mIsRGB8Supported = driver.isRenderTargetFormatSupported(driver::TextureFormat::RGB8);
-    mFrameInfoManager.run();
+    if (UTILS_HAS_THREADING) {
+        mFrameInfoManager.run();
+    }
 }
 
 FRenderer::~FRenderer() noexcept {
@@ -81,8 +85,14 @@ void FRenderer::terminate(FEngine& engine) {
     // before we can destroy this Renderer's resources, we must make sure
     // that all pending commands have been executed (as they could reference data in this
     // instance, e.g. Fences, Callbacks, etc...)
-    Fence::waitAndDestroy(engine.createFence());
-    mFrameInfoManager.terminate();
+    if (UTILS_HAS_THREADING) {
+        Fence::waitAndDestroy(engine.createFence());
+        mFrameInfoManager.terminate();
+    } else {
+        // In single threaded mode, allow recently-created objects (e.g. no-op fences in Skipper)
+        // to initialize themselves, otherwise the engine tries to destroy invalid handles.
+        engine.execute();
+    }
 }
 
 void FRenderer::render(FView const* view) {
@@ -231,7 +241,9 @@ bool FRenderer::beginFrame(FSwapChain* swapChain) {
     assert(swapChain);
 
     mFrameId++;
-    mFrameInfoManager.beginFrame(mFrameId);
+    if (UTILS_HAS_THREADING) {
+        mFrameInfoManager.beginFrame(mFrameId);
+    }
 
     { // scope for frame id trace
         char buf[64];
@@ -271,12 +283,16 @@ void FRenderer::endFrame() {
     FEngine::DriverApi& driver = engine.getDriverApi();
     RenderTargetPool& rtp = engine.getRenderTargetPool();
 
-    // on debug builds this helps catching cases where we're writing to
-    // the buffer form another thread, which is currently not allowed.
-    driver.debugThreading();
-
     FrameInfoManager& frameInfoManager = mFrameInfoManager;
-    frameInfoManager.endFrame();
+
+    if (UTILS_HAS_THREADING) {
+
+        // on debug builds this helps catching cases where we're writing to
+        // the buffer form another thread, which is currently not allowed.
+        driver.debugThreading();
+
+        frameInfoManager.endFrame();
+    }
     mFrameSkipper.endFrame();
 
     driver.endFrame(mFrameId);

@@ -107,46 +107,9 @@ spv_result_t ProcessExtensions(void* user_data,
 spv_result_t ProcessInstruction(void* user_data,
                                 const spv_parsed_instruction_t* inst) {
   ValidationState_t& _ = *(reinterpret_cast<ValidationState_t*>(user_data));
-  if (static_cast<SpvOp>(inst->opcode) == SpvOpEntryPoint) {
-    const auto entry_point = inst->words[2];
-    const SpvExecutionModel execution_model = SpvExecutionModel(inst->words[1]);
-    const char* str =
-        reinterpret_cast<const char*>(inst->words + inst->operands[2].offset);
-    ValidationState_t::EntryPointDescription desc;
-    desc.name = str;
-    std::vector<uint32_t> interfaces;
-    for (int i = 3; i < inst->num_operands; ++i) {
-      desc.interfaces.push_back(inst->words[inst->operands[i].offset]);
-    }
-    _.RegisterEntryPoint(entry_point, execution_model, std::move(desc));
-  }
-  if (static_cast<SpvOp>(inst->opcode) == SpvOpFunctionCall) {
-    _.AddFunctionCallTarget(inst->words[3]);
-  }
 
   auto* instruction = _.AddOrderedInstruction(inst);
   _.RegisterDebugInstruction(instruction);
-
-  if (auto error = CapabilityPass(_, instruction)) return error;
-  if (auto error = IdPass(_, instruction)) return error;
-  if (auto error = DataRulesPass(_, instruction)) return error;
-  if (auto error = ModuleLayoutPass(_, instruction)) return error;
-  if (auto error = CfgPass(_, instruction)) return error;
-  if (auto error = InstructionPass(_, instruction)) return error;
-  if (auto error = TypeUniquePass(_, instruction)) return error;
-  if (auto error = ArithmeticsPass(_, instruction)) return error;
-  if (auto error = CompositesPass(_, instruction)) return error;
-  if (auto error = ConversionPass(_, instruction)) return error;
-  if (auto error = DerivativesPass(_, instruction)) return error;
-  if (auto error = LogicalsPass(_, instruction)) return error;
-  if (auto error = BitwisePass(_, instruction)) return error;
-  if (auto error = ExtInstPass(_, instruction)) return error;
-  if (auto error = ImagePass(_, instruction)) return error;
-  if (auto error = AtomicsPass(_, instruction)) return error;
-  if (auto error = BarriersPass(_, instruction)) return error;
-  if (auto error = PrimitivesPass(_, instruction)) return error;
-  if (auto error = LiteralsPass(_, instruction)) return error;
-  if (auto error = NonUniformPass(_, instruction)) return error;
 
   return SPV_SUCCESS;
 }
@@ -193,6 +156,49 @@ UNUSED(void PrintDotGraph(ValidationState_t& _, Function func)) {
   }
 }
 
+spv_result_t ValidateForwardDecls(ValidationState_t& _) {
+  if (_.unresolved_forward_id_count() == 0) return SPV_SUCCESS;
+
+  std::stringstream ss;
+  std::vector<uint32_t> ids = _.UnresolvedForwardIds();
+
+  std::transform(
+      std::begin(ids), std::end(ids),
+      std::ostream_iterator<std::string>(ss, " "),
+      bind(&ValidationState_t::getIdName, std::ref(_), std::placeholders::_1));
+
+  auto id_str = ss.str();
+  return _.diag(SPV_ERROR_INVALID_ID, nullptr)
+         << "The following forward referenced IDs have not been defined:\n"
+         << id_str.substr(0, id_str.size() - 1);
+}
+
+// Entry point validation. Based on 2.16.1 (Universal Validation Rules) of the
+// SPIRV spec:
+// * There is at least one OpEntryPoint instruction, unless the Linkage
+//   capability is being used.
+// * No function can be targeted by both an OpEntryPoint instruction and an
+//   OpFunctionCall instruction.
+spv_result_t ValidateEntryPoints(ValidationState_t& _) {
+  _.ComputeFunctionToEntryPointMapping();
+
+  if (_.entry_points().empty() && !_.HasCapability(SpvCapabilityLinkage)) {
+    return _.diag(SPV_ERROR_INVALID_BINARY, nullptr)
+           << "No OpEntryPoint instruction was found. This is only allowed if "
+              "the Linkage capability is being used.";
+  }
+  for (const auto& entry_point : _.entry_points()) {
+    if (_.IsFunctionCallTarget(entry_point)) {
+      return _.diag(SPV_ERROR_INVALID_BINARY, _.FindDef(entry_point))
+             << "A function (" << entry_point
+             << ") may not be targeted by both an OpEntryPoint instruction and "
+                "an OpFunctionCall instruction.";
+    }
+  }
+
+  return SPV_SUCCESS;
+}
+
 spv_result_t ValidateBinaryUsingContextAndValidationState(
     const spv_context_t& context, const uint32_t* words, const size_t num_words,
     spv_diagnostic* pDiagnostic, ValidationState_t* vstate) {
@@ -236,16 +242,61 @@ spv_result_t ValidateBinaryUsingContextAndValidationState(
     return error;
   }
 
-  for (size_t i = 0; i < vstate->ordered_instructions().size(); ++i) {
-    const auto& instruction = vstate->ordered_instructions()[i];
+  for (auto& instruction : vstate->ordered_instructions()) {
+    {
+      // In order to do this work outside of Process Instruction we need to be
+      // able to, briefly, de-const the instruction.
+      Instruction* inst = const_cast<Instruction*>(&instruction);
 
+      if (inst->opcode() == SpvOpEntryPoint) {
+        const auto entry_point = inst->GetOperandAs<uint32_t>(1);
+        const auto execution_model = inst->GetOperandAs<SpvExecutionModel>(0);
+        const char* str = reinterpret_cast<const char*>(
+            inst->words().data() + inst->operand(2).offset);
+
+        ValidationState_t::EntryPointDescription desc;
+        desc.name = str;
+
+        std::vector<uint32_t> interfaces;
+        for (size_t j = 3; j < inst->operands().size(); ++j)
+          desc.interfaces.push_back(inst->word(inst->operand(j).offset));
+
+        vstate->RegisterEntryPoint(entry_point, execution_model,
+                                   std::move(desc));
+      }
+      if (inst->opcode() == SpvOpFunctionCall) {
+        if (!vstate->in_function_body()) {
+          return vstate->diag(SPV_ERROR_INVALID_LAYOUT, &instruction)
+                 << "A FunctionCall must happen within a function body.";
+        }
+
+        vstate->AddFunctionCallTarget(inst->GetOperandAs<uint32_t>(2));
+      }
+
+      if (vstate->in_function_body()) {
+        inst->set_function(&(vstate->current_function()));
+        inst->set_block(vstate->current_function().current_block());
+
+        if (vstate->in_block() && spvOpcodeIsBlockTerminator(inst->opcode())) {
+          vstate->current_function().current_block()->set_terminator(inst);
+        }
+      }
+
+      if (auto error = IdPass(*vstate, inst)) return error;
+    }
+
+    if (auto error = CapabilityPass(*vstate, &instruction)) return error;
+    if (auto error = DataRulesPass(*vstate, &instruction)) return error;
+    if (auto error = ModuleLayoutPass(*vstate, &instruction)) return error;
+    if (auto error = CfgPass(*vstate, &instruction)) return error;
+    if (auto error = InstructionPass(*vstate, &instruction)) return error;
+
+    // Now that all of the checks are done, update the state.
+    {
+      Instruction* inst = const_cast<Instruction*>(&instruction);
+      vstate->RegisterInstruction(inst);
+    }
     if (auto error = UpdateIdUse(*vstate, &instruction)) return error;
-    if (auto error = ValidateMemoryInstructions(*vstate, &instruction))
-      return error;
-
-    // Validate the preconditions involving adjacent instructions. e.g. SpvOpPhi
-    // must only be preceeded by SpvOpLabel, SpvOpPhi, or SpvOpLine.
-    if (auto error = ValidateAdjacency(*vstate, i)) return error;
   }
 
   if (!vstate->has_memory_model_specified())
@@ -256,54 +307,61 @@ spv_result_t ValidateBinaryUsingContextAndValidationState(
     return vstate->diag(SPV_ERROR_INVALID_LAYOUT, nullptr)
            << "Missing OpFunctionEnd at end of module.";
 
-  // TODO(umar): Add validation checks which require the parsing of the entire
-  // module. Use the information from the ProcessInstruction pass to make the
-  // checks.
-  if (vstate->unresolved_forward_id_count() > 0) {
-    std::stringstream ss;
-    std::vector<uint32_t> ids = vstate->UnresolvedForwardIds();
+  // Catch undefined forward references before performing further checks.
+  if (auto error = ValidateForwardDecls(*vstate)) return error;
 
-    transform(std::begin(ids), std::end(ids),
-              std::ostream_iterator<std::string>(ss, " "),
-              bind(&ValidationState_t::getIdName, std::ref(*vstate),
-                   std::placeholders::_1));
+  // Validate individual opcodes.
+  for (size_t i = 0; i < vstate->ordered_instructions().size(); ++i) {
+    auto& instruction = vstate->ordered_instructions()[i];
 
-    auto id_str = ss.str();
-    return vstate->diag(SPV_ERROR_INVALID_ID, nullptr)
-           << "The following forward referenced IDs have not been defined:\n"
-           << id_str.substr(0, id_str.size() - 1);
+    // Keep these passes in the order they appear in the SPIR-V specification
+    // sections to maintain test consistency.
+    // Miscellaneous
+    if (auto error = DebugPass(*vstate, &instruction)) return error;
+    if (auto error = AnnotationPass(*vstate, &instruction)) return error;
+    if (auto error = ExtInstPass(*vstate, &instruction)) return error;
+    if (auto error = ModeSettingPass(*vstate, &instruction)) return error;
+    if (auto error = TypePass(*vstate, &instruction)) return error;
+    if (auto error = ConstantPass(*vstate, &instruction)) return error;
+    if (auto error = ValidateMemoryInstructions(*vstate, &instruction))
+      return error;
+    if (auto error = FunctionPass(*vstate, &instruction)) return error;
+    if (auto error = ImagePass(*vstate, &instruction)) return error;
+    if (auto error = ConversionPass(*vstate, &instruction)) return error;
+    if (auto error = CompositesPass(*vstate, &instruction)) return error;
+    if (auto error = ArithmeticsPass(*vstate, &instruction)) return error;
+    if (auto error = BitwisePass(*vstate, &instruction)) return error;
+    if (auto error = LogicalsPass(*vstate, &instruction)) return error;
+    if (auto error = ControlFlowPass(*vstate, &instruction)) return error;
+    if (auto error = DerivativesPass(*vstate, &instruction)) return error;
+    if (auto error = AtomicsPass(*vstate, &instruction)) return error;
+    if (auto error = PrimitivesPass(*vstate, &instruction)) return error;
+    if (auto error = BarriersPass(*vstate, &instruction)) return error;
+    // Group
+    // Device-Side Enqueue
+    // Pipe
+    if (auto error = NonUniformPass(*vstate, &instruction)) return error;
+
+    if (auto error = LiteralsPass(*vstate, &instruction)) return error;
+    // Validate the preconditions involving adjacent instructions. e.g. SpvOpPhi
+    // must only be preceeded by SpvOpLabel, SpvOpPhi, or SpvOpLine.
+    if (auto error = ValidateAdjacency(*vstate, i)) return error;
   }
 
-  vstate->ComputeFunctionToEntryPointMapping();
-
+  if (auto error = ValidateEntryPoints(*vstate)) return error;
   // CFG checks are performed after the binary has been parsed
   // and the CFGPass has collected information about the control flow
   if (auto error = PerformCfgChecks(*vstate)) return error;
   if (auto error = CheckIdDefinitionDominateUse(*vstate)) return error;
   if (auto error = ValidateDecorations(*vstate)) return error;
   if (auto error = ValidateInterfaces(*vstate)) return error;
+  // TODO(dsinclair): Restructure ValidateBuiltins so we can move into the
+  // for() above as it loops over all ordered_instructions internally.
   if (auto error = ValidateBuiltIns(*vstate)) return error;
-
-  // Entry point validation. Based on 2.16.1 (Universal Validation Rules) of the
-  // SPIRV spec:
-  // * There is at least one OpEntryPoint instruction, unless the Linkage
-  // capability is being used.
-  // * No function can be targeted by both an OpEntryPoint instruction and an
-  // OpFunctionCall instruction.
-  if (vstate->entry_points().empty() &&
-      !vstate->HasCapability(SpvCapabilityLinkage)) {
-    return vstate->diag(SPV_ERROR_INVALID_BINARY, nullptr)
-           << "No OpEntryPoint instruction was found. This is only allowed if "
-              "the Linkage capability is being used.";
-  }
-  for (const auto& entry_point : vstate->entry_points()) {
-    if (vstate->IsFunctionCallTarget(entry_point)) {
-      return vstate->diag(SPV_ERROR_INVALID_BINARY,
-                          vstate->FindDef(entry_point))
-             << "A function (" << entry_point
-             << ") may not be targeted by both an OpEntryPoint instruction and "
-                "an OpFunctionCall instruction.";
-    }
+  // These checks must be performed after individual opcode checks because
+  // those checks register the limitation checked here.
+  for (const auto inst : vstate->ordered_instructions()) {
+    if (auto error = ValidateExecutionLimitations(*vstate, &inst)) return error;
   }
 
   // NOTE: Copy each instruction for easier processing

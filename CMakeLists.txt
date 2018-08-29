@@ -3,17 +3,6 @@
 # ==================================================================================================
 cmake_minimum_required(VERSION 3.1)
 
-if (WIN32)
-    # On Windows we need to instruct cmake to generate the .def in order to get the .lib required
-    # when linking against dlls. CL.EXE will not generate .lib without .def file (or without pragma
-    # __declspec(dllexport) in front of each functions).
-    set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
-	
-	if("${CMAKE_GENERATOR}" MATCHES "Win64")
-		set(MSVC_X64 TRUE)
-endif()
-endif()
-
 # ==================================================================================================
 # Project declaration
 # ==================================================================================================
@@ -25,14 +14,25 @@ project(TNT)
 
 option(ENABLE_JAVA "Compile Java projects, requires a JDK and the JAVA_HOME env var" ON)
 
+option(USE_EXTERNAL_GLES3 "Experimental: Compile Filament against OpenGL ES 3" OFF)
+
 # ==================================================================================================
 # OS specific
 # ==================================================================================================
-if (UNIX AND NOT APPLE AND NOT ANDROID)
+if (UNIX AND NOT APPLE AND NOT ANDROID AND NOT WEBGL)
     set(LINUX TRUE)
 endif()
 
 if (WIN32)
+	if (MSVC AND ("${CMAKE_GENERATOR}" MATCHES "Win64"))
+		set(MSVC_X64 TRUE)
+	endif()
+
+    # On Windows we need to instruct cmake to generate the .def in order to get the .lib required
+    # when linking against dlls. CL.EXE will not generate .lib without .def file (or without pragma
+    # __declspec(dllexport) in front of each functions).
+    set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
+
     # TODO: Figure out why pdb generation messes with incremental compilaton.
     # IN RELEASE_WITH_DEBUG_INFO, generate debug info in .obj, no in pdb.
     set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} /Z7")
@@ -53,35 +53,66 @@ endif()
 #  Paths
 # ==================================================================================================
 # Where our external libs are
-set(EXTERNAL ${CMAKE_SOURCE_DIR}/third_party)
+set(EXTERNAL ${CMAKE_CURRENT_SOURCE_DIR}/third_party)
 
 # Where our libraries are
-set(LIBRARIES ${CMAKE_SOURCE_DIR}/libs)
+set(LIBRARIES ${CMAKE_CURRENT_SOURCE_DIR}/libs)
 
 # Where our filament code is
-set(FILAMENT ${CMAKE_SOURCE_DIR})
+set(FILAMENT ${CMAKE_CURRENT_SOURCE_DIR})
 
 # Where our tools are
-set(TOOLS ${CMAKE_SOURCE_DIR}/tools)
+set(TOOLS ${CMAKE_CURRENT_SOURCE_DIR}/tools)
 
 if (MSVC)
 	include_directories(${EXTERNAL}/pthread/include)
 endif()
 
 # ==================================================================================================
+# Compiler check
+# ==================================================================================================
+set(MIN_CLANG_VERSION "5.0")
+
+if (CMAKE_C_COMPILER_ID MATCHES "Clang")
+    if (CMAKE_C_COMPILER_VERSION VERSION_LESS MIN_CLANG_VERSION)
+        message(FATAL_ERROR "Detected C compiler Clang ${CMAKE_C_COMPILER_VERSION} < ${MIN_CLANG_VERSION}")
+    endif()
+elseif (NOT MSVC)
+    message(FATAL_ERROR "Detected C compiler ${CMAKE_C_COMPILER_ID} is unsupported")
+endif()
+
+if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS MIN_CLANG_VERSION)
+        message(FATAL_ERROR "Detected CXX compiler Clang ${CMAKE_CXX_COMPILER_VERSION} < ${MIN_CLANG_VERSION}")
+    endif()
+elseif (NOT MSVC)
+    message(FATAL_ERROR "Detected CXX compiler ${CMAKE_CXX_COMPILER_ID} is unsupported")
+endif()
+
+# Detect use of the clang-cl.exe frontend, which does not support all of clangs normal options
+if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" AND "${CMAKE_CXX_SIMULATE_ID}" STREQUAL "MSVC")
+    set(CLANG_CL true)
+endif()
+
+# ==================================================================================================
 # General compiler flags
 # ==================================================================================================
 if (MSVC)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_USE_MATH_DEFINES=1 /wd4068 /wd4996 -D_SILENCE_TR1_NAMESPACE_DEPRECATION_WARNING=1 -D_CRT_SECURE_NO_WARNINGS=1")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_USE_MATH_DEFINES=1 /wd4068 /wd4996 /wd4820 /wd4625 /wd4626 /wd5026 /wd5027 /wd4324 /wd4774 /wd4514 -D_SILENCE_TR1_NAMESPACE_DEPRECATION_WARNING=1 -D_CRT_SECURE_NO_WARNINGS=1")
 else()
-	if (WIN32)
-    	set(CXX_STANDARD "/std:c++14")
+if (WIN32)
+    set(CXX_STANDARD "/std:c++14")
     	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_USE_MATH_DEFINES=1")
 	else()
 		set(CXX_STANDARD "-std=c++14")
-	endif()
+endif()
 
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CXX_STANDARD} -fstrict-aliasing -Wno-unknown-pragmas -Wno-unused-function")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CXX_STANDARD} -fstrict-aliasing -Wno-unknown-pragmas -Wno-unused-function")
+
+if (USE_EXTERNAL_GLES3)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_EXTERNAL_GLES3")
+endif()
+
 endif()
 
 if (LINUX)
@@ -104,6 +135,13 @@ if (CYGWIN)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-exceptions -fno-rtti")
 endif()
 
+if (CLANG_CL)
+    # Since the "secure" replacements that MSVC suggests are not portable, disable
+    # the deprecation warnings. Also disable warnings about use of POSIX functions (i.e. "unlink").
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_DEPRECATE")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_DEPRECATE")
+endif()
+
 # Add colors to ninja builds
 if (UNIX AND CMAKE_GENERATOR STREQUAL "Ninja")
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fcolor-diagnostics")
@@ -113,13 +151,13 @@ endif()
 # ==================================================================================================
 # Release compiler flags
 # ==================================================================================================
-if (NOT MSVC)
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fomit-frame-pointer -ffunction-sections -fdata-sections")
+if (NOT MSVC AND NOT CLANG_CL)
+    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fomit-frame-pointer -ffunction-sections -fdata-sections")
 endif()
 
 # On Android RELEASE builds, we disable exceptions and RTTI to save some space (about 75 KiB
 # saved by -fno-exception and 10 KiB saved by -fno-rtti).
-if (ANDROID)
+if (ANDROID OR WEBGL)
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fno-exceptions -fno-rtti")
 endif()
 
@@ -136,11 +174,11 @@ set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${EXTRA_SANITIZE_OPTIONS}")
 # Linker flags
 # ==================================================================================================
 # Strip unused sections
-set(GC_SECTIONS "--gc-sections")
-set(B_SYMBOLIC_FUNCTIONS "-Bsymbolic-functions")
+set(GC_SECTIONS "-Wl,--gc-sections")
+set(B_SYMBOLIC_FUNCTIONS "-Wl,-Bsymbolic-functions")
 
 if (APPLE)
-    set(GC_SECTIONS "-dead_strip")
+    set(GC_SECTIONS "-Wl,-dead_strip")
     set(B_SYMBOLIC_FUNCTIONS "")
 
     # tell ranlib to ignore empty compilation units
@@ -149,10 +187,17 @@ if (APPLE)
     # prevents ar from invoking ranlib, let CMake do it
     set(CMAKE_C_ARCHIVE_CREATE   "<CMAKE_AR> qc -S <TARGET> <LINK_FLAGS> <OBJECTS>")
     set(CMAKE_CXX_ARCHIVE_CREATE "<CMAKE_AR> qc -S <TARGET> <LINK_FLAGS> <OBJECTS>")
+elseif (CLANG_CL)
+    set(GC_SECTIONS "")
+    set(B_SYMBOLIC_FUNCTIONS "")
 endif()
 
-set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS}  -Wl,${GC_SECTIONS}")
-set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,${GC_SECTIONS} -Wl,${B_SYMBOLIC_FUNCTIONS}")
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${GC_SECTIONS}")
+set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${GC_SECTIONS} ${B_SYMBOLIC_FUNCTIONS}")
+
+if (WEBGL)
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -s USE_WEBGL2=1")
+endif()
 
 # ==================================================================================================
 # Project flags
@@ -167,7 +212,7 @@ endif()
 # it at run time. On Android, the build does not include Vulkan support unless CMake is invoked
 # with -DFILAMENT_SUPPORTS_VULKAN=ON.
 # Vulkan is not supported on Windows.
-if (ANDROID OR WIN32)
+if (ANDROID OR WIN32 OR WEBGL)
     option(FILAMENT_SUPPORTS_VULKAN "Include the Vulkan backend" OFF)
 else()
     option(FILAMENT_SUPPORTS_VULKAN "Include the Vulkan backend" ON)
@@ -230,7 +275,11 @@ endif()
 
 set (FILAMENT_SAMPLES_BINARY_DIR ${PROJECT_BINARY_DIR}/samples)
 
-if (NOT ANDROID)
+if (WEBGL)
+    add_subdirectory(${FILAMENT}/samples/web)
+endif()
+
+if (NOT ANDROID AND NOT WEBGL)
     add_subdirectory(${FILAMENT}/samples)
 
     add_subdirectory(${LIBRARIES}/bluegl)
@@ -246,8 +295,8 @@ if (NOT ANDROID)
     add_subdirectory(${EXTERNAL}/glslang/tnt)
     add_subdirectory(${EXTERNAL}/imgui/tnt)
     add_subdirectory(${EXTERNAL}/libassimp/tnt)
-    add_subdirectory(${EXTERNAL}/libpng/tnt)
     add_subdirectory(${EXTERNAL}/libsdl2/tnt)
+    add_subdirectory(${EXTERNAL}/libpng/tnt)
     add_subdirectory(${EXTERNAL}/libz/tnt)
     add_subdirectory(${EXTERNAL}/skylight/tnt)
     add_subdirectory(${EXTERNAL}/spirv-cross/tnt)
@@ -258,13 +307,14 @@ if (NOT ANDROID)
     add_subdirectory(${TOOLS}/filamesh)
     add_subdirectory(${TOOLS}/matc)
     add_subdirectory(${TOOLS}/matinfo)
+    add_subdirectory(${TOOLS}/mipgen)
     add_subdirectory(${TOOLS}/normal-blending)
     add_subdirectory(${TOOLS}/roughness-prefilter)
     add_subdirectory(${TOOLS}/skygen)
     add_subdirectory(${TOOLS}/specular-color)
 endif()
 
-# Generate exported executables for cross-compiled builds (Android)
+# Generate exported executables for cross-compiled builds (Android and WebGL)
 if (NOT CMAKE_CROSSCOMPILING)
-    export(TARGETS matc cmgen FILE ${CMAKE_SOURCE_DIR}/${IMPORT_EXECUTABLES_DIR}/ImportExecutables-${CMAKE_BUILD_TYPE}.cmake)
+    export(TARGETS matc cmgen filamesh FILE ${FILAMENT}/${IMPORT_EXECUTABLES_DIR}/ImportExecutables-${CMAKE_BUILD_TYPE}.cmake)
 endif()

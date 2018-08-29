@@ -16,7 +16,7 @@
 
 #include "gmock/gmock.h"
 
-#include "util/bit_vector.h"
+#include "source/util/bit_vector.h"
 
 namespace spvtools {
 namespace utils {

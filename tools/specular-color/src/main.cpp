@@ -700,7 +700,7 @@ static float illuminantD65(float w) {
 }
 
 struct Sample {
-    float w; // wavelength
+    float w = 0.0f; // wavelength
     std::complex<float> ior; // complex IOR, n + ik
 };
 
@@ -847,16 +847,16 @@ void printColor(const float3& linear) {
     std::cout << std::endl;
 
     std::cout << std::setfill(' ') << std::setw(8) << "sRGB: ";
-    std::cout << std::setprecision(3) << int(sRGB.r * 255.0f) << ", ";
-    std::cout << std::setprecision(3) << int(sRGB.g * 255.0f) << ", ";
-    std::cout << std::setprecision(3) << int(sRGB.b * 255.0f);
+    std::cout << std::setprecision(3) << int(sRGB.r * 255.99f) << ", ";
+    std::cout << std::setprecision(3) << int(sRGB.g * 255.99f) << ", ";
+    std::cout << std::setprecision(3) << int(sRGB.b * 255.99f);
     std::cout << std::endl;
 
     std::cout << std::setfill(' ') << std::setw(8) << "hex: ";
     std::cout << "#";
-    std::cout << std::hex << std::setfill('0') << std::setw(2) << int(sRGB.r * 255.0f);
-    std::cout << std::hex << std::setfill('0') << std::setw(2) << int(sRGB.g * 255.0f);
-    std::cout << std::hex << std::setfill('0') << std::setw(2) << int(sRGB.b * 255.0f);
+    std::cout << std::hex << std::setfill('0') << std::setw(2) << int(sRGB.r * 255.99f);
+    std::cout << std::hex << std::setfill('0') << std::setw(2) << int(sRGB.g * 255.99f);
+    std::cout << std::hex << std::setfill('0') << std::setw(2) << int(sRGB.b * 255.99f);
     std::cout << std::endl;
 }
 

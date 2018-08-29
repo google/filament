@@ -1,3 +1,5 @@
+#include <memory>
+
 /*
  * Copyright (C) 2015 The Android Open Source Project
  *
@@ -47,7 +49,11 @@ using namespace filagui;
 using namespace math;
 using namespace utils;
 
-static constexpr uint8_t TRANSPARENT_COLOR_PACKAGE[] = {
+static const uint8_t AI_DEFAULT_MAT_PACKAGE[] = {
+    #include "generated/material/aiDefaultMat.inc"
+};
+
+static const uint8_t TRANSPARENT_COLOR_PACKAGE[] = {
     #include "generated/material/transparentColor.inc"
 };
 
@@ -68,22 +74,26 @@ FilamentApp::~FilamentApp() {
     SDL_Quit();
 }
 
-void FilamentApp::run(const Config& config,SetupCallback setupCallback,
-        CleanupCallback cleanupCallback, ImGuiCallback imguiCallback) {
-    mEngine = Engine::create(config.backend);
-
-      mDepthMaterial = Material::Builder()
-              .package((void*) DEPTH_VISUALIZER_PACKAGE, sizeof(DEPTH_VISUALIZER_PACKAGE))
-              .build(*mEngine);
-
-      mDepthMI = mDepthMaterial->createInstance();
-
-      mTransparentMaterial = Material::Builder()
-              .package((void*) TRANSPARENT_COLOR_PACKAGE, sizeof(TRANSPARENT_COLOR_PACKAGE))
-              .build(*mEngine);
-
+void FilamentApp::run(const Config& config, SetupCallback setupCallback,
+        CleanupCallback cleanupCallback, ImGuiCallback imguiCallback,
+        PreRenderCallback preRender, PostRenderCallback postRender,
+        size_t width, size_t height) {
     std::unique_ptr<FilamentApp::Window> window(
-            new FilamentApp::Window(this, config, config.title, 1024, 640));
+            new FilamentApp::Window(this, config, config.title, width, height));
+
+    mDepthMaterial = Material::Builder()
+            .package((void*) DEPTH_VISUALIZER_PACKAGE, sizeof(DEPTH_VISUALIZER_PACKAGE))
+            .build(*mEngine);
+
+    mDepthMI = mDepthMaterial->createInstance();
+
+    mDefaultMaterial = Material::Builder()
+            .package((void*) AI_DEFAULT_MAT_PACKAGE, sizeof(AI_DEFAULT_MAT_PACKAGE))
+            .build(*mEngine);
+            
+    mTransparentMaterial = Material::Builder()
+            .package((void*) TRANSPARENT_COLOR_PACKAGE, sizeof(TRANSPARENT_COLOR_PACKAGE))
+            .build(*mEngine);
 
     std::unique_ptr<Cube> cameraCube(new Cube(*mEngine, mTransparentMaterial, {1,0,0}));
     // we can't cull the light-frustum because it's not applied a rigid transform
@@ -151,7 +161,8 @@ void FilamentApp::run(const Config& config,SetupCallback setupCallback,
     setupCallback(mEngine, window->mMainView->getView(), mScene);
 
     if (imguiCallback) {
-        mImGuiHelper = std::make_unique<ImGuiHelper>(mEngine, window->mUiView->getView());
+        mImGuiHelper = std::make_unique<ImGuiHelper>(mEngine, window->mUiView->getView(),
+            getRootPath() + "assets/fonts/Roboto-Medium.ttf");
         ImGuiIO& io = ImGui::GetIO();
         #ifdef WIN32
             SDL_SysWMinfo wmInfo;
@@ -192,6 +203,10 @@ void FilamentApp::run(const Config& config,SetupCallback setupCallback,
     bool mousePressed[3] = { false };
 
     while (!mClosed) {
+
+        if (!UTILS_HAS_THREADING) {
+            mEngine->execute();
+        }
 
         // Allow the app to animate the scene if desired.
         if (mAnimation) {
@@ -329,12 +344,30 @@ void FilamentApp::run(const Config& config,SetupCallback setupCallback,
 
         // TODO: we need better timing or use SDL_GL_SetSwapInterval
         SDL_Delay(16);
+
         Renderer* renderer = window->getRenderer();
+
+        if (preRender) {
+            for (auto const& view : window->mViews) {
+                if (view.get() != window->mUiView) {
+                    preRender(mEngine, view->getView(), mScene, renderer);
+                }
+            }
+        }
+
         if (renderer->beginFrame(window->getSwapChain())) {
             for (auto const& view : window->mViews) {
                 renderer->render(view->getView());
             }
             renderer->endFrame();
+        }
+
+        if (postRender) {
+            for (auto const& view : window->mViews) {
+                if (view.get() != window->mUiView) {
+                    postRender(mEngine, view->getView(), mScene, renderer);
+                }
+            }
         }
     }
 
@@ -351,6 +384,7 @@ void FilamentApp::run(const Config& config,SetupCallback setupCallback,
     mIBL.reset();
     mEngine->destroy(mDepthMI);
     mEngine->destroy(mDepthMaterial);
+    mEngine->destroy(mDefaultMaterial);
     mEngine->destroy(mTransparentMaterial);
     mEngine->destroy(mScene);
     Engine::destroy(&mEngine);
@@ -371,7 +405,7 @@ void FilamentApp::loadIBL(const Config& config) {
             return;
         }
 
-        mIBL.reset(new IBL(*mEngine));
+        mIBL = std::make_unique<IBL>(*mEngine);
         if (!mIBL->loadFromDirectory(iblPath)) {
             std::cerr << "Could not load the specified IBL: " << iblPath << std::endl;
             mIBL.reset(nullptr);
@@ -391,9 +425,13 @@ FilamentApp::Window::Window(FilamentApp* filamentApp,
         : mFilamentApp(filamentApp) {
     const int x = SDL_WINDOWPOS_CENTERED;
     const int y = SDL_WINDOWPOS_CENTERED;
-    const uint32_t windowFlags = SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE
-            | SDL_WINDOW_ALLOW_HIGHDPI | SDL_WINDOW_OPENGL;
+    const uint32_t windowFlags = SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI;
     mWindow = SDL_CreateWindow(title.c_str(), x, y, (int) w, (int) h, windowFlags);
+
+    // Create the Engine after the window in case this happens to be a single-threaded platform.
+    // For single-threaded platforms, we need to ensure that Filament's OpenGL context is current,
+    // rather than the one created by SDL.
+    mFilamentApp->mEngine = Engine::create(config.backend);
 
     // HACK: We don't use SDL's 2D rendering functionality, but by invoking it we cause
     // SDL to create a Metal backing layer, which allows us to run Vulkan apps via MoltenVK.

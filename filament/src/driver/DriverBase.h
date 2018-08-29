@@ -48,7 +48,7 @@ struct HwBase {
 struct HwVertexBuffer : public HwBase {
     static constexpr size_t MAX_ATTRIBUTE_BUFFER_COUNT = Driver::MAX_ATTRIBUTE_BUFFER_COUNT;
 
-    Driver::AttributeArray attributes;    // 8*6
+    Driver::AttributeArray attributes;    // 8*8
     uint32_t vertexCount;                 //   4
     uint8_t bufferCount;                  //   1
     uint8_t attributeCount;               //   1
@@ -88,19 +88,19 @@ struct HwProgram : public HwBase {
 #if defined(NDEBUG)
     HwProgram(const utils::CString& name) noexcept { }
 #else
-    HwProgram(const utils::CString& name) noexcept : name(name) { }
+    explicit HwProgram(const utils::CString& name) noexcept : name(name) { }
     utils::CString name;
 #endif
 };
 
 struct HwSamplerBuffer : public HwBase {
-    HwSamplerBuffer(size_t size) noexcept : sb(new SamplerBuffer(size)) { }
+    explicit HwSamplerBuffer(size_t size) noexcept : sb(new SamplerBuffer(size)) { }
     // NOTE: we have to use out-of-line allocation here because the size of a Handle<> is limited
     std::unique_ptr<SamplerBuffer> sb;
 };
 
 struct HwUniformBuffer : public HwBase {
-    HwUniformBuffer(size_t size) noexcept : ub(size) { }
+    explicit HwUniformBuffer(size_t size) noexcept : ub(size) { }
     UniformBuffer ub;
 };
 
@@ -135,7 +135,7 @@ struct HwSwapChain : public HwBase {
 
 struct HwStream : public HwBase {
     HwStream() = default;
-    HwStream(driver::ExternalContext::Stream* stream) : stream(stream) { }
+    explicit HwStream(driver::ExternalContext::Stream* stream) : stream(stream) { }
     driver::ExternalContext::Stream* stream = nullptr;
     uint32_t width = 0;
     uint32_t height = 0;
@@ -149,14 +149,14 @@ class DriverBase : public Driver {
 public:
     DriverBase() = delete;
     explicit DriverBase(Dispatcher* dispatcher) noexcept;
-    ~DriverBase() noexcept;
+    ~DriverBase() noexcept override;
 
     static SamplerFormat getSamplerFormat(TextureFormat format) noexcept;
     static SamplerPrecision getSamplerPrecision(TextureFormat format) noexcept;
 
-    void purge() noexcept override final;
+    void purge() noexcept final;
 
-    Dispatcher& getDispatcher() noexcept override final { return *mDispatcher; }
+    Dispatcher& getDispatcher() noexcept final { return *mDispatcher; }
 
     // --------------------------------------------------------------------------------------------
     // Privates

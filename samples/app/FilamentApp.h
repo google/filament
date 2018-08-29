@@ -27,6 +27,8 @@
 #include <filament/Engine.h>
 #include <filament/Viewport.h>
 
+#include <utils/Path.h>
+
 #include "CameraManipulator.h"
 #include "Config.h"
 #include "IBL.h"
@@ -49,6 +51,10 @@ public:
     using SetupCallback = std::function<void(filament::Engine*, filament::View*, filament::Scene*)>;
     using CleanupCallback =
             std::function<void(filament::Engine*, filament::View*, filament::Scene*)>;
+    using PreRenderCallback = std::function<void(filament::Engine*, filament::View*,
+            filament::Scene*, filament::Renderer*)>;
+    using PostRenderCallback = std::function<void(filament::Engine*, filament::View*,
+            filament::Scene*, filament::Renderer*)>;
     using ImGuiCallback = std::function<void(filament::Engine*, filament::View*)>;
     using AnimCallback = std::function<void(filament::Engine*, filament::View*, double now)>;
 
@@ -59,19 +65,30 @@ public:
     void animate(AnimCallback animation) { mAnimation = animation; }
 
     void run(const Config& config, SetupCallback setup, CleanupCallback cleanup,
-            ImGuiCallback imgui = ImGuiCallback());
+            ImGuiCallback imgui = ImGuiCallback(), PreRenderCallback preRender = PreRenderCallback(),
+            PostRenderCallback postRender = PostRenderCallback(),
+            size_t width = 1024, size_t height = 640);
 
+    filament::Material const* getDefaultMaterial() const noexcept { return mDefaultMaterial; }
     filament::Material const* getTransparentMaterial() const noexcept { return mTransparentMaterial; }
     IBL* getIBL() const noexcept { return mIBL.get(); }
 
     void close() { mClosed = true; }
 
-private:
-    FilamentApp();
     FilamentApp(const FilamentApp& rhs) = delete;
     FilamentApp(FilamentApp&& rhs) = delete;
     FilamentApp& operator=(const FilamentApp& rhs) = delete;
     FilamentApp& operator=(FilamentApp&& rhs) = delete;
+
+    // Returns the path to the Filament root for loading assets. This is determined from the
+    // executable folder, which allows users to launch samples from any folder.
+    static const utils::Path& getRootPath() {
+        static const utils::Path root = utils::Path::getCurrentExecutable().getParent();
+        return root;
+    }
+
+private:
+    FilamentApp();
 
     class CView {
     public:
@@ -177,6 +194,7 @@ private:
     bool mClosed = false;
     uint64_t mTime = 0;
 
+    filament::Material const* mDefaultMaterial = nullptr;
     filament::Material const* mTransparentMaterial = nullptr;
     filament::Material const* mDepthMaterial = nullptr;
     filament::MaterialInstance* mDepthMI = nullptr;

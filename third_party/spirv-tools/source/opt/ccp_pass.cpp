@@ -16,13 +16,16 @@
 //
 //      Constant propagation with conditional branches,
 //      Wegman and Zadeck, ACM TOPLAS 13(2):181-210.
-#include "ccp_pass.h"
-#include "fold.h"
-#include "function.h"
-#include "module.h"
-#include "propagator.h"
+
+#include "source/opt/ccp_pass.h"
 
 #include <algorithm>
+#include <limits>
+
+#include "source/opt/fold.h"
+#include "source/opt/function.h"
+#include "source/opt/module.h"
+#include "source/opt/propagator.h"
 
 namespace spvtools {
 namespace opt {

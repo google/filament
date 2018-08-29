@@ -14,16 +14,16 @@
 
 #include <algorithm>
 #include <cstring>
+#include <string>
 #include <utility>
 #include <vector>
 
 #include "gmock/gmock.h"
-
 #include "source/spirv_constant.h"
 #include "source/util/bitutils.h"
 #include "source/util/hex_float.h"
-#include "test_fixture.h"
-#include "unit_spirv.h"
+#include "test/test_fixture.h"
+#include "test/unit_spirv.h"
 
 namespace spvtools {
 namespace {

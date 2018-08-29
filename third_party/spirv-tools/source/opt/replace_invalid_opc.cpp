@@ -12,9 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "replace_invalid_opc.h"
+#include "source/opt/replace_invalid_opc.h"
 
 #include <bitset>
+#include <vector>
 
 namespace spvtools {
 namespace opt {

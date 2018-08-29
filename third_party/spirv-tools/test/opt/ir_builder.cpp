@@ -12,22 +12,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <gmock/gmock.h>
-#include <gtest/gtest.h>
 #include <algorithm>
+#include <memory>
+#include <string>
 #include <vector>
+
+#include "gmock/gmock.h"
+#include "gtest/gtest.h"
+#include "source/opt/basic_block.h"
+#include "source/opt/build_module.h"
+#include "source/opt/instruction.h"
+#include "source/opt/ir_builder.h"
+#include "source/opt/type_manager.h"
+#include "spirv-tools/libspirv.hpp"
 
 #ifdef SPIRV_EFFCEE
 #include "effcee/effcee.h"
 #endif
-
-#include "opt/basic_block.h"
-#include "opt/ir_builder.h"
-
-#include "opt/build_module.h"
-#include "opt/instruction.h"
-#include "opt/type_manager.h"
-#include "spirv-tools/libspirv.hpp"
 
 namespace spvtools {
 namespace opt {

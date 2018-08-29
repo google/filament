@@ -103,11 +103,11 @@ void JobSystem::setThreadAffinity(uint32_t mask) noexcept {
 #endif
 }
 
-JobSystem::JobSystem(size_t threadCount, size_t adoptableThreadsCount) noexcept {
+JobSystem::JobSystem(size_t threadCount, size_t adoptableThreadsCount) noexcept
+    : mJobPool("JobSystem Job pool", MAX_JOB_COUNT * sizeof(Job)),
+      mJobStorageBase(static_cast<Job *>(mJobPool.getAllocator().getCurrent()))
+{
     SYSTRACE_ENABLE();
-
-    void* p = aligned_alloc(MAX_JOB_COUNT * sizeof(Job), CACHELINE_SIZE);
-    mJobStorage = (Job*)p;
 
     if (threadCount == 0) {
         // default value, system dependant
@@ -120,7 +120,7 @@ JobSystem::JobSystem(size_t threadCount, size_t adoptableThreadsCount) noexcept 
             threadCount = hwThreads - 1;
         }
     }
-    threadCount = std::min(size_t(32), threadCount);
+    threadCount = std::min(size_t(UTILS_HAS_THREADING ? 32 : 0), threadCount);
 
     mThreadStates = aligned_vector<ThreadState>(threadCount + adoptableThreadsCount);
     mThreadCount = uint16_t(threadCount);
@@ -128,7 +128,6 @@ JobSystem::JobSystem(size_t threadCount, size_t adoptableThreadsCount) noexcept 
 
     // this is pitty these are not compile-time checks (C++17 supports it apparently)
     assert(mExitRequested.is_lock_free());
-    assert(mNextJobIndex.is_lock_free());
     assert(Job().runningJobCount.is_lock_free());
 
     std::random_device rd;
@@ -158,8 +157,6 @@ JobSystem::~JobSystem() {
             state.thread.join();
         }
     }
-
-    aligned_free(mJobStorage);
 }
 
 JobSystem* JobSystem::getJobSystem() noexcept {
@@ -194,12 +191,7 @@ inline JobSystem::ThreadState& JobSystem::getState() noexcept {
 }
 
 JobSystem::Job* JobSystem::allocateJob() noexcept {
-    size_t index = mNextJobIndex.fetch_add(1, std::memory_order_relaxed);
-    if (UTILS_UNLIKELY(index >= MAX_JOB_COUNT)) {
-        mNextJobIndex.fetch_sub(1, std::memory_order_relaxed);
-        return nullptr;
-    }
-    return new(&mJobStorage[index]) Job();
+    return mJobPool.make<Job>();
 }
 
 inline JobSystem::ThreadState& JobSystem::getStateToStealFrom(JobSystem::ThreadState& state) noexcept {
@@ -270,8 +262,9 @@ JobSystem::Job* JobSystem::create(JobSystem::Job* parent, JobFunc func) noexcept
         if (parent) {
             // can't create a child job of a terminated parent
             assert(parent->runningJobCount.load(std::memory_order_relaxed) > 0);
+
             parent->runningJobCount.fetch_add(1, std::memory_order_relaxed);
-            index = parent - &mJobStorage[0];
+            index = parent - mJobStorageBase;
             assert(index < MAX_JOB_COUNT);
         }
         job->function = func;
@@ -281,20 +274,12 @@ JobSystem::Job* JobSystem::create(JobSystem::Job* parent, JobFunc func) noexcept
     return job;
 }
 
-void JobSystem::reset(JobSystem::Job* job) noexcept {
-    JobSystem::Job* parent = job->parent ? &mJobStorage[job->parent] : mMasterJob;
-    if (parent) {
-        assert(parent->runningJobCount.load(std::memory_order_relaxed) > 0);
-        parent->runningJobCount.fetch_add(1, std::memory_order_relaxed);
-    }
-    job->runningJobCount.store(1, std::memory_order_relaxed);
-}
-
 void JobSystem::finish(Job* job) noexcept {
     SYSTRACE_CALL();
 
     // terminate this job and notify its parent
-    Job* const storage = mJobStorage;
+    auto& jobPool = mJobPool;
+    Job* const storage = mJobStorageBase;
     do {
         // std::memory_order_release here is needed to synchronize with JobSystem::wait()
         // which needs to "see" all changes that happened before the job terminated.
@@ -304,13 +289,17 @@ void JobSystem::finish(Job* job) noexcept {
             // there is still work (e.g.: children), we're done.
             break;
         }
-        job = job->parent == 0x7FFF ? nullptr : &storage[job->parent];
+        Job* const parent = job->parent == 0x7FFF ? nullptr : &storage[job->parent];
+        // destroy this job...
+        jobPool.destroy(job);
+        // ... and check the parent
+        job = parent;
     } while (job);
 
 #if __ARM_ARCH_7A__
     // on ARMv7a SEL is needed
-        __dsb(0xA);     // ISHST = 0xA (b1010)
-        UTILS_SIGNAL_EVENT();
+    __dsb(0xA);     // ISHST = 0xA (b1010)
+    UTILS_SIGNAL_EVENT();
 #endif
 }
 
@@ -390,13 +379,6 @@ void JobSystem::emancipate() {
     ASSERT_PRECONDITION(state, "this thread is not an adopted thread");
     ASSERT_PRECONDITION(state->js == this, "this thread is not adopted by us");
     sThreadState = nullptr;
-}
-
-void JobSystem::reset() noexcept {
-    assert(!mActiveJobs.load(std::memory_order_relaxed));
-    mJobWaterMark = std::max(mJobWaterMark, (size_t)mNextJobIndex.load(std::memory_order_relaxed));
-    mNextJobIndex.store(0, std::memory_order_relaxed);
-    mMasterJob = nullptr;
 }
 
 io::ostream& operator<<(io::ostream& out, JobSystem const& js) {

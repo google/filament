@@ -14,8 +14,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "local_access_chain_convert_pass.h"
+#include "source/opt/local_access_chain_convert_pass.h"
 
+#include "ir_builder.h"
 #include "ir_context.h"
 #include "iterator.h"
 
@@ -69,24 +70,31 @@ void LocalAccessChainConvertPass::AppendConstantOperands(
   });
 }
 
-uint32_t LocalAccessChainConvertPass::GenAccessChainLoadReplacement(
-    const Instruction* ptrInst,
-    std::vector<std::unique_ptr<Instruction>>* newInsts) {
+void LocalAccessChainConvertPass::ReplaceAccessChainLoad(
+    const Instruction* address_inst, Instruction* original_load) {
   // Build and append load of variable in ptrInst
+  std::vector<std::unique_ptr<Instruction>> new_inst;
   uint32_t varId;
   uint32_t varPteTypeId;
   const uint32_t ldResultId =
-      BuildAndAppendVarLoad(ptrInst, &varId, &varPteTypeId, newInsts);
+      BuildAndAppendVarLoad(address_inst, &varId, &varPteTypeId, &new_inst);
+  context()->get_decoration_mgr()->CloneDecorations(
+      original_load->result_id(), ldResultId, {SpvDecorationRelaxedPrecision});
+  original_load->InsertBefore(std::move(new_inst));
 
-  // Build and append Extract
-  const uint32_t extResultId = TakeNextId();
-  const uint32_t ptrPteTypeId = GetPointeeTypeId(ptrInst);
-  std::vector<Operand> ext_in_opnds = {
-      {spv_operand_type_t::SPV_OPERAND_TYPE_ID, {ldResultId}}};
-  AppendConstantOperands(ptrInst, &ext_in_opnds);
-  BuildAndAppendInst(SpvOpCompositeExtract, ptrPteTypeId, extResultId,
-                     ext_in_opnds, newInsts);
-  return extResultId;
+  // Rewrite |original_load| into an extract.
+  Instruction::OperandList new_operands;
+
+  // copy the result id and the type id to the new operand list.
+  new_operands.emplace_back(original_load->GetOperand(0));
+  new_operands.emplace_back(original_load->GetOperand(1));
+
+  new_operands.emplace_back(
+      Operand({spv_operand_type_t::SPV_OPERAND_TYPE_ID, {ldResultId}}));
+  AppendConstantOperands(address_inst, &new_operands);
+  original_load->SetOpcode(SpvOpCompositeExtract);
+  original_load->ReplaceOperands(new_operands);
+  context()->UpdateDefUse(original_load);
 }
 
 void LocalAccessChainConvertPass::GenAccessChainStoreReplacement(
@@ -97,6 +105,8 @@ void LocalAccessChainConvertPass::GenAccessChainStoreReplacement(
   uint32_t varPteTypeId;
   const uint32_t ldResultId =
       BuildAndAppendVarLoad(ptrInst, &varId, &varPteTypeId, newInsts);
+  context()->get_decoration_mgr()->CloneDecorations(
+      varId, ldResultId, {SpvDecorationRelaxedPrecision});
 
   // Build and append Insert
   const uint32_t insResultId = TakeNextId();
@@ -106,6 +116,9 @@ void LocalAccessChainConvertPass::GenAccessChainStoreReplacement(
   AppendConstantOperands(ptrInst, &ins_in_opnds);
   BuildAndAppendInst(SpvOpCompositeInsert, varPteTypeId, insResultId,
                      ins_in_opnds, newInsts);
+
+  context()->get_decoration_mgr()->CloneDecorations(
+      varId, insResultId, {SpvDecorationRelaxedPrecision});
 
   // Build and append Store
   BuildAndAppendInst(SpvOpStore, 0, 0,
@@ -200,13 +213,7 @@ bool LocalAccessChainConvertPass::ConvertLocalAccessChains(Function* func) {
           if (!IsNonPtrAccessChain(ptrInst->opcode())) break;
           if (!IsTargetVar(varId)) break;
           std::vector<std::unique_ptr<Instruction>> newInsts;
-          uint32_t replId = GenAccessChainLoadReplacement(ptrInst, &newInsts);
-          context()->KillNamesAndDecorates(&*ii);
-          context()->ReplaceAllUsesWith(ii->result_id(), replId);
-          dead_instructions.push_back(&*ii);
-          ++ii;
-          ii = ii.InsertBefore(std::move(newInsts));
-          ++ii;
+          ReplaceAccessChainLoad(ptrInst, &*ii);
           modified = true;
         } break;
         case SpvOpStore: {

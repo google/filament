@@ -14,11 +14,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "local_ssa_elim_pass.h"
+#include "source/opt/local_ssa_elim_pass.h"
 
-#include "cfa.h"
-#include "iterator.h"
-#include "ssa_rewrite_pass.h"
+#include "source/cfa.h"
+#include "source/opt/iterator.h"
+#include "source/opt/ssa_rewrite_pass.h"
 
 namespace spvtools {
 namespace opt {

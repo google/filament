@@ -14,19 +14,21 @@
 
 // This file contains utility functions for spv_parsed_operand_t.
 
-#include "parsed_operand.h"
+#include "source/parsed_operand.h"
 
 #include <cassert>
-#include "util/hex_float.h"
+#include "source/util/hex_float.h"
 
 namespace spvtools {
 
 void EmitNumericLiteral(std::ostream* out, const spv_parsed_instruction_t& inst,
                         const spv_parsed_operand_t& operand) {
-  assert(operand.type == SPV_OPERAND_TYPE_LITERAL_INTEGER ||
-         operand.type == SPV_OPERAND_TYPE_TYPED_LITERAL_NUMBER);
-  assert(1 <= operand.num_words);
-  assert(operand.num_words <= 2);
+  if (operand.type != SPV_OPERAND_TYPE_LITERAL_INTEGER &&
+      operand.type != SPV_OPERAND_TYPE_TYPED_LITERAL_NUMBER)
+    return;
+  if (operand.num_words < 1) return;
+  // TODO(dneto): Support more than 64-bits at a time.
+  if (operand.num_words > 2) return;
 
   const uint32_t word = inst.words[operand.offset];
   if (operand.num_words == 1) {
@@ -47,7 +49,7 @@ void EmitNumericLiteral(std::ostream* out, const spv_parsed_instruction_t& inst,
         }
         break;
       default:
-        assert(false && "Unreachable");
+        break;
     }
   } else if (operand.num_words == 2) {
     // Multi-word numbers are presented with lower order words first.
@@ -65,11 +67,8 @@ void EmitNumericLiteral(std::ostream* out, const spv_parsed_instruction_t& inst,
         *out << spvtools::utils::FloatProxy<double>(bits);
         break;
       default:
-        assert(false && "Unreachable");
+        break;
     }
-  } else {
-    // TODO(dneto): Support more than 64-bits at a time.
-    assert(false && "Unhandled");
   }
 }
 }  // namespace spvtools

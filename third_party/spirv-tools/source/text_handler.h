@@ -12,19 +12,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef LIBSPIRV_TEXT_HANDLER_H_
-#define LIBSPIRV_TEXT_HANDLER_H_
+#ifndef SOURCE_TEXT_HANDLER_H_
+#define SOURCE_TEXT_HANDLER_H_
 
 #include <iomanip>
+#include <set>
 #include <sstream>
+#include <string>
 #include <type_traits>
 #include <unordered_map>
+#include <utility>
 
-#include "diagnostic.h"
-#include "instruction.h"
-#include "message.h"
+#include "source/diagnostic.h"
+#include "source/instruction.h"
+#include "source/text.h"
 #include "spirv-tools/libspirv.h"
-#include "text.h"
 
 namespace spvtools {
 
@@ -259,4 +261,4 @@ class AssemblyContext {
 
 }  // namespace spvtools
 
-#endif  // _LIBSPIRV_TEXT_HANDLER_H_
+#endif  // SOURCE_TEXT_HANDLER_H_

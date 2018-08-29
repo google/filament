@@ -14,7 +14,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "inline_exhaustive_pass.h"
+#include "source/opt/inline_exhaustive_pass.h"
+
+#include <utility>
 
 namespace spvtools {
 namespace opt {

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "val/function.h"
+#include "source/val/function.h"
 
 #include <cassert>
 
@@ -22,10 +22,10 @@
 #include <unordered_set>
 #include <utility>
 
-#include "cfa.h"
-#include "val/basic_block.h"
-#include "val/construct.h"
-#include "validate.h"
+#include "source/cfa.h"
+#include "source/val/basic_block.h"
+#include "source/val/construct.h"
+#include "source/val/validate.h"
 
 namespace spvtools {
 namespace val {

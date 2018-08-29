@@ -14,9 +14,10 @@
 
 // Validation tests for WebGPU env specific checks
 
-#include <gmock/gmock.h>
+#include <string>
 
-#include "val_fixtures.h"
+#include "gmock/gmock.h"
+#include "test/val/val_fixtures.h"
 
 namespace spvtools {
 namespace val {

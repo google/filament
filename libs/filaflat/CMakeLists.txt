@@ -32,13 +32,16 @@ target_link_libraries(${TARGET} filabridge utils)
 # ==================================================================================================
 # Compiler flags
 # ==================================================================================================
-target_compile_options(${TARGET} PRIVATE
+if (NOT WIN32)
+    target_compile_options(${TARGET} PRIVATE
         -fvisibility=hidden
         $<$<PLATFORM_ID:Linux>:-fPIC>
-)
+    )
+endif()
 
 # ==================================================================================================
 # Installation
 # ==================================================================================================
-install(DIRECTORY ${PUBLIC_HDR_DIR}/filaflat DESTINATION include)
+# We do not need filaflat headers in the install directory
+# install(DIRECTORY ${PUBLIC_HDR_DIR}/filaflat DESTINATION include)
 install(TARGETS ${TARGET} ARCHIVE DESTINATION lib/${DIST_DIR})

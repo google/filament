@@ -62,12 +62,13 @@ gl_FragCoord origin is upper left
 0:56        'anon@1' (layout( binding=7 row_major std430) readonly buffer block{layout( row_major std430) buffer int tb1})
 0:56        Constant:
 0:56          0 (const uint)
-0:58      Branch: Return with expression
-0:58        Constant:
-0:58          0.000000
-0:58          0.000000
-0:58          0.000000
-0:58          0.000000
+0:57      'ts6' (layout( set=6 binding=1) uniform texture3D)
+0:59      Branch: Return with expression
+0:59        Constant:
+0:59          0.000000
+0:59          0.000000
+0:59          0.000000
+0:59          0.000000
 0:34  Function Definition: main( ( temp void)
 0:34    Function Parameters: 
 0:?     Sequence
@@ -80,6 +81,7 @@ gl_FragCoord origin is upper left
 0:?     't1' (layout( set=1 binding=1) uniform texture1D)
 0:?     't2' (layout( set=1 binding=2) uniform texture2D)
 0:?     't3' (layout( set=2 binding=1) uniform texture3D)
+0:?     'ts6' (layout( set=6 binding=1) uniform texture3D)
 0:?     't4' (layout( set=3 binding=1 row_major std430) readonly buffer block{layout( row_major std430) buffer unsized 1-element array of 4-component vector of float @data})
 0:?     't5' (layout( set=3 binding=2 row_major std430) readonly buffer block{layout( row_major std430) buffer unsized 1-element array of uint @data})
 0:?     't6' (layout( set=3 binding=3 rgba32f) uniform textureBuffer)
@@ -162,12 +164,13 @@ gl_FragCoord origin is upper left
 0:56        'anon@1' (layout( binding=7 row_major std430) readonly buffer block{layout( row_major std430) buffer int tb1})
 0:56        Constant:
 0:56          0 (const uint)
-0:58      Branch: Return with expression
-0:58        Constant:
-0:58          0.000000
-0:58          0.000000
-0:58          0.000000
-0:58          0.000000
+0:57      'ts6' (layout( set=6 binding=1) uniform texture3D)
+0:59      Branch: Return with expression
+0:59        Constant:
+0:59          0.000000
+0:59          0.000000
+0:59          0.000000
+0:59          0.000000
 0:34  Function Definition: main( ( temp void)
 0:34    Function Parameters: 
 0:?     Sequence
@@ -180,6 +183,7 @@ gl_FragCoord origin is upper left
 0:?     't1' (layout( set=1 binding=1) uniform texture1D)
 0:?     't2' (layout( set=1 binding=2) uniform texture2D)
 0:?     't3' (layout( set=2 binding=1) uniform texture3D)
+0:?     'ts6' (layout( set=6 binding=1) uniform texture3D)
 0:?     't4' (layout( set=3 binding=1 row_major std430) readonly buffer block{layout( row_major std430) buffer unsized 1-element array of 4-component vector of float @data})
 0:?     't5' (layout( set=3 binding=2 row_major std430) readonly buffer block{layout( row_major std430) buffer unsized 1-element array of uint @data})
 0:?     't6' (layout( set=3 binding=3 rgba32f) uniform textureBuffer)
@@ -212,6 +216,7 @@ u5.@data: offset 0, type 1405, size 0, index 2, binding -1, stages 16
 u6.@data: offset 0, type 1406, size 1, index 3, binding -1, stages 16
 cb1: offset 0, type 1404, size 1, index 4, binding -1, stages 16
 tb1: offset 0, type 1404, size 1, index 5, binding -1, stages 16
+ts6: offset -1, type 8b5f, size 1, index -1, binding 71, stages 16
 
 Uniform block reflection:
 t4: offset -1, type ffffffff, size 0, index -1, binding 21, stages 0

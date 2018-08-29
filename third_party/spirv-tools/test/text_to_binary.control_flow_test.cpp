@@ -16,13 +16,13 @@
 // SPIR-V spec.
 
 #include <sstream>
+#include <string>
 #include <tuple>
 #include <vector>
 
-#include "unit_spirv.h"
-
 #include "gmock/gmock.h"
-#include "test_fixture.h"
+#include "test/test_fixture.h"
+#include "test/unit_spirv.h"
 
 namespace spvtools {
 namespace {

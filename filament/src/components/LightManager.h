@@ -38,7 +38,7 @@ class FLightManager : public LightManager {
 public:
     using Instance = LightManager::Instance;
 
-    FLightManager(FEngine& engine) noexcept;
+    explicit FLightManager(FEngine& engine) noexcept;
     ~FLightManager();
 
     void init(FEngine& engine) noexcept;

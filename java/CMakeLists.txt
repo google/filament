@@ -30,7 +30,11 @@ set(TARGET filament-jni)
 
 include_directories(${JNI_INCLUDE_DIRS})
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
+set(CXX_STANDARD "-std=c++14")
+if (WIN32)
+    set(CXX_STANDARD "/std:c++14")
+endif()
+
 set(FILAMENT_DIR ../android/filament-android)
 
 set(JNI_SOURCE_FILES

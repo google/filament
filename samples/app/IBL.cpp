@@ -100,7 +100,7 @@ bool IBL::loadCubemapLevel(filament::Texture** texture, const utils::Path& path,
         }
         stbi_info(facePath.getAbsolutePath().c_str(), &w, &h, nullptr);
         if (w != h) {
-            std::cerr << "with != height" << std::endl;
+            std::cerr << "width != height" << std::endl;
             return false;
         }
 

@@ -12,21 +12,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef SPIRV_TOOLS_DEAD_VARIABLE_ELIMINATION_H
-#define SPIRV_TOOLS_DEAD_VARIABLE_ELIMINATION_H
+#ifndef SOURCE_OPT_DEAD_VARIABLE_ELIMINATION_H_
+#define SOURCE_OPT_DEAD_VARIABLE_ELIMINATION_H_
 
 #include <climits>
 #include <unordered_map>
 
-#include "decoration_manager.h"
-#include "mem_pass.h"
+#include "source/opt/decoration_manager.h"
+#include "source/opt/mem_pass.h"
 
 namespace spvtools {
 namespace opt {
 
 class DeadVariableElimination : public MemPass {
  public:
-  const char* name() const override { return "dead-variable-elimination"; }
+  const char* name() const override { return "eliminate-dead-variables"; }
   Status Process() override;
 
   IRContext::Analysis GetPreservedAnalyses() override {
@@ -52,4 +52,4 @@ class DeadVariableElimination : public MemPass {
 }  // namespace opt
 }  // namespace spvtools
 
-#endif  // SPIRV_TOOLS_DEAD_VARIABLE_ELIMINATION_H
+#endif  // SOURCE_OPT_DEAD_VARIABLE_ELIMINATION_H_

@@ -102,8 +102,11 @@ void CommandBufferQueue::flush() noexcept {
 }
 
 std::vector<CommandBufferQueue::Slice> CommandBufferQueue::waitForCommands() const {
+    if (!UTILS_HAS_THREADING) {
+        return std::move(mCommandBuffersToExecute);
+    }
     std::unique_lock<utils::Mutex> lock(mLock);
-    while (!mCommandBuffersToExecute.size() && !mExitRequested) {
+    while (mCommandBuffersToExecute.empty() && !mExitRequested) {
         mCondition.wait(lock);
     }
     return std::move(mCommandBuffersToExecute);

@@ -23,10 +23,9 @@
 #include <math/vec3.h>
 #include <math/vec2.h>
 
-#include <image/Image.h>
-
 #include <utils/compiler.h>
 
+#include "Image.h"
 #include "utilities.h"
 
 class Cubemap {
@@ -52,8 +51,8 @@ public:
 
     void resetDimensions(size_t dim);
 
-    void setImageForFace(Face face, const image::Image& image);
-    inline const image::Image& getImageForFace(Face face) const;
+    void setImageForFace(Face face, const Image& image);
+    inline const Image& getImageForFace(Face face) const;
 
     inline math::double2 center(size_t x, size_t y) const;
 
@@ -63,7 +62,7 @@ public:
     inline Texel const& sampleAt(const math::double3& direction) const;
     inline Texel        filterAt(const math::double3& direction) const;
 
-    static Texel filterAt(const image::Image& image, double x, double y);
+    static Texel filterAt(const Image& image, double x, double y);
 
     static Texel trilinearFilterAt(const Cubemap& c0, const Cubemap& c1, double lerp,
             const math::double3& direction);
@@ -100,11 +99,11 @@ private:
     size_t mDimensions = 0;
     double mScale = 1;
     double mUpperBound = 0;
-    image::Image mFaces[6];
+    Image mFaces[6];
     Geometry mGeometry = Geometry::HORIZONTAL_CROSS;
 };
 
-inline const image::Image& Cubemap::getImageForFace(Face face) const {
+inline const Image& Cubemap::getImageForFace(Face face) const {
     return mFaces[int(face)];
 }
 
@@ -123,13 +122,6 @@ inline math::double3 Cubemap::getDirectionFor(Face face, double x, double y) con
     double cx = (x * mScale) - 1;
     double cy = 1 - (y * mScale);
 
-    uint32_t flags = getImageForFace(face).getFlags();
-    if (flags & image::Image::FLIP_X) {
-        cx = -cx;
-    }
-    if (flags & image::Image::FLIP_Y) {
-        cy = -cy;
-    }
     math::double3 dir;
     const double l = std::sqrt(cx*cx + cy*cy + 1);
     switch (face) {
@@ -147,7 +139,7 @@ inline Cubemap::Texel const& Cubemap::sampleAt(const math::double3& direction) c
     Cubemap::Address addr(getAddressFor(direction));
     const size_t x = std::min(size_t(addr.s * mDimensions), mDimensions-1);
     const size_t y = std::min(size_t(addr.t * mDimensions), mDimensions-1);
-    return sampleAt(getImageForFace(addr.face).getSampleRef(x, y));
+    return sampleAt(getImageForFace(addr.face).getPixelRef(x, y));
 }
 
 inline Cubemap::Texel Cubemap::filterAt(const math::double3& direction) const {

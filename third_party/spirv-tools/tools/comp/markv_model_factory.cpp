@@ -12,9 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "markv_model_factory.h"
+#include "tools/comp/markv_model_factory.h"
 
-#include "markv_model_shader.h"
+#include "source/util/make_unique.h"
+#include "tools/comp/markv_model_shader.h"
 
 namespace spvtools {
 namespace comp {
@@ -23,15 +24,15 @@ std::unique_ptr<MarkvModel> CreateMarkvModel(MarkvModelType type) {
   std::unique_ptr<MarkvModel> model;
   switch (type) {
     case kMarkvModelShaderLite: {
-      model.reset(new MarkvModelShaderLite());
+      model = MakeUnique<MarkvModelShaderLite>();
       break;
     }
     case kMarkvModelShaderMid: {
-      model.reset(new MarkvModelShaderMid());
+      model = MakeUnique<MarkvModelShaderMid>();
       break;
     }
     case kMarkvModelShaderMax: {
-      model.reset(new MarkvModelShaderMax());
+      model = MakeUnique<MarkvModelShaderMax>();
       break;
     }
     case kMarkvModelUnknown: {

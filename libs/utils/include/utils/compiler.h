@@ -35,13 +35,13 @@
 #	define UTILS_PRIVATE  // MSVC_PORT_TODO : find and insert visibility equivalent
 #	define __PRETTY_FUNCTION__ __FUNCTION__
 #else
-#	define UTILS_PUBLIC  __attribute__((visibility("default")))
+#define UTILS_PUBLIC  __attribute__((visibility("default")))
 
-#	ifndef TNT_DEV
-#		 define UTILS_PRIVATE __attribute__((visibility("hidden")))
-#	else
-#		define UTILS_PRIVATE
-#	endif
+#ifndef TNT_DEV
+#    define UTILS_PRIVATE __attribute__((visibility("hidden")))
+#else
+#    define UTILS_PRIVATE
+#endif
 #endif
 
 /*
@@ -78,6 +78,11 @@
 #   define UTILS_HAS_HYPER_THREADING 0
 #endif
 
+#if defined(__EMSCRIPTEN__)
+#   define UTILS_HAS_THREADING 0
+#else
+#   define UTILS_HAS_THREADING 1
+#endif
 
 #if __has_attribute(noinline)
 #define UTILS_NOINLINE __attribute__((noinline))
@@ -91,7 +96,7 @@
 #if defined(_MSC_VER)
 #	define UTILS_ALWAYS_INLINE __forceinline
 #else
-#	define UTILS_ALWAYS_INLINE
+#define UTILS_ALWAYS_INLINE
 #endif
 #endif
 
@@ -113,14 +118,17 @@
 #endif
 
 #if defined(_MSC_VER)
-#	define UTILS_ALIGN_LOOP // MSVC_PORT_TODO : align code, 
 #	define UTILS_RESTRICT	// MSVC_PORT_TODO : using __restrict causes syntax error : type qualifier must be after '*' in structureofarrays.h line 169
 #else
-	// TODO: set the proper alignment for the target
-#	define UTILS_ALIGN_LOOP {__asm__ __volatile__(".align 4");}
-#	define UTILS_RESTRICT __restrict__
+#   define UTILS_RESTRICT __restrict__
 #endif
 
+// TODO: set the proper alignment for the target
+#if !defined(__EMSCRIPTEN__) && !defined(_MSC_VER)
+#   define UTILS_ALIGN_LOOP { __asm__ __volatile__(".align 4"); }
+#else
+#   define UTILS_ALIGN_LOOP
+#endif
 
 #if __has_feature(cxx_thread_local)
 #   ifdef ANDROID

@@ -12,12 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <gmock/gmock.h>
-#include <gtest/gtest.h>
 #include <algorithm>
+#include <memory>
+#include <string>
 
-#include "opt/build_module.h"
-#include "opt/ir_context.h"
+#include "gmock/gmock.h"
+#include "gtest/gtest.h"
+#include "source/opt/build_module.h"
+#include "source/opt/ir_context.h"
 
 namespace spvtools {
 namespace opt {

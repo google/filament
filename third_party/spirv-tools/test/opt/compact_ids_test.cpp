@@ -12,13 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <gmock/gmock.h>
+#include <memory>
+#include <string>
+#include <vector>
 
+#include "gmock/gmock.h"
 #include "spirv-tools/libspirv.hpp"
 #include "spirv-tools/optimizer.hpp"
-
-#include "pass_fixture.h"
-#include "pass_utils.h"
+#include "test/opt/pass_fixture.h"
+#include "test/opt/pass_utils.h"
 
 namespace spvtools {
 namespace opt {
@@ -105,7 +107,7 @@ OpMemoryModel Logical Simple
 OpEntryPoint GLCompute %100 "main"
 %200 = OpTypeVoid
 %300 = OpTypeFunction %200
-%100 = OpFunction %300 None %200
+%100 = OpFunction %200 None %300
 %400 = OpLabel
 OpReturn
 OpFunctionEnd
@@ -134,7 +136,7 @@ OpMemoryModel Logical Simple
 OpEntryPoint GLCompute %1 "main"
 %2 = OpTypeVoid
 %3 = OpTypeFunction %2
-%1 = OpFunction %3 None %2
+%1 = OpFunction %2 None %3
 %4 = OpLabel
 OpReturn
 OpFunctionEnd
@@ -149,7 +151,7 @@ OpMemoryModel Logical Simple
 OpEntryPoint GLCompute %100 "main"
 %200 = OpTypeVoid
 %300 = OpTypeFunction %200
-%100 = OpFunction %300 None %200
+%100 = OpFunction %200 None %300
 %400 = OpLabel
 OpReturn
 OpFunctionEnd
@@ -183,7 +185,7 @@ OpMemoryModel Logical Simple
 OpEntryPoint GLCompute %1 "main"
 %2 = OpTypeVoid
 %3 = OpTypeFunction %2
-%1 = OpFunction %3 None %2
+%1 = OpFunction %2 None %3
 %4 = OpLabel
 OpReturn
 OpFunctionEnd

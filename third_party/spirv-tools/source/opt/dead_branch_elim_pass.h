@@ -14,8 +14,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef LIBSPIRV_OPT_DEAD_BRANCH_ELIM_PASS_H_
-#define LIBSPIRV_OPT_DEAD_BRANCH_ELIM_PASS_H_
+#ifndef SOURCE_OPT_DEAD_BRANCH_ELIM_PASS_H_
+#define SOURCE_OPT_DEAD_BRANCH_ELIM_PASS_H_
 
 #include <algorithm>
 #include <map>
@@ -23,11 +23,12 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
+#include <vector>
 
-#include "basic_block.h"
-#include "def_use_manager.h"
-#include "mem_pass.h"
-#include "module.h"
+#include "source/opt/basic_block.h"
+#include "source/opt/def_use_manager.h"
+#include "source/opt/mem_pass.h"
+#include "source/opt/module.h"
 
 namespace spvtools {
 namespace opt {
@@ -129,9 +130,20 @@ class DeadBranchElimPass : public MemPass {
   // Reorders blocks in reachable functions so that they satisfy dominator
   // block ordering rules.
   void FixBlockOrder();
+
+  // Return the first branch instruction that is a conditional branch to
+  // |merge_block_id|. Returns |nullptr| if not such branch exists. If there are
+  // multiple such branches, the first one is the one that would be executed
+  // first when running the code.  That is, the one that dominates all of the
+  // others.
+  //
+  // |start_block_id| must be a block whose innermost containing merge construct
+  // has |merge_block_id| as the merge block.
+  Instruction* FindFirstExitFromSelectionMerge(uint32_t start_block_id,
+                                               uint32_t merge_block_id);
 };
 
 }  // namespace opt
 }  // namespace spvtools
 
-#endif  // LIBSPIRV_OPT_DEAD_BRANCH_ELIM_PASS_H_
+#endif  // SOURCE_OPT_DEAD_BRANCH_ELIM_PASS_H_

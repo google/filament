@@ -12,15 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef LIBSPIRV_OPT_MERGE_RETURN_PASS_H_
-#define LIBSPIRV_OPT_MERGE_RETURN_PASS_H_
+#ifndef SOURCE_OPT_MERGE_RETURN_PASS_H_
+#define SOURCE_OPT_MERGE_RETURN_PASS_H_
 
-#include "basic_block.h"
-#include "function.h"
-#include "mem_pass.h"
-
+#include <unordered_map>
 #include <unordered_set>
 #include <vector>
+
+#include "source/opt/basic_block.h"
+#include "source/opt/function.h"
+#include "source/opt/mem_pass.h"
 
 namespace spvtools {
 namespace opt {
@@ -208,24 +209,42 @@ class MergeReturnPass : public MemPass {
   // |AddReturnFlag| and |AddReturnValue| must have already been called.
   void BranchToBlock(BasicBlock* block, uint32_t target);
 
-  // Returns true if we need to pridicate |block| where |tail_block| is the
+  // Returns true if we need to predicate |block| where |tail_block| is the
   // merge point.  (See |PredicateBlocks|).  There is no need to predicate if
   // there is no code that could be executed.
   bool RequiresPredication(const BasicBlock* block,
                            const BasicBlock* tail_block) const;
 
-  // For every basic block that is reachable from a basic block in
-  // |return_blocks|, extra code is added to jump around any code that should
-  // not be executed because the original code would have already returned. This
-  // involves adding new selections constructs to jump around these
-  // instructions.
-  void PredicateBlocks(const std::vector<BasicBlock*>& return_blocks);
+  // For every basic block that is reachable from |return_block|, extra code is
+  // added to jump around any code that should not be executed because the
+  // original code would have already returned. This involves adding new
+  // selections constructs to jump around these instructions.
+  //
+  // If new blocks that are created will be added to |order|.  This way a call
+  // can traverse these new block in structured order.
+  void PredicateBlocks(BasicBlock* return_block,
+                       std::unordered_set<BasicBlock*>* pSet,
+                       std::list<BasicBlock*>* order);
+
+  // Add a conditional branch at the start of |block| that either jumps to
+  // |merge_block| or the original code in |block| depending on the value in
+  // |return_flag_|.
+  //
+  // If new blocks that are created will be added to |order|.  This way a call
+  // can traverse these new block in structured order.
+  void BreakFromConstruct(BasicBlock* block, BasicBlock* merge_block,
+                          std::unordered_set<BasicBlock*>* predicated,
+                          std::list<BasicBlock*>* order);
 
   // Add the predication code (see |PredicateBlocks|) to |tail_block| if it
   // requires predication.  |tail_block| and any new blocks that are known to
   // not require predication will be added to |predicated|.
+  //
+  // If new blocks that are created will be added to |order|.  This way a call
+  // can traverse these new block in structured order.
   void PredicateBlock(BasicBlock* block, BasicBlock* tail_block,
-                      std::unordered_set<BasicBlock*>* predicated);
+                      std::unordered_set<BasicBlock*>* predicated,
+                      std::list<BasicBlock*>* order);
 
   // Add an |OpReturn| or |OpReturnValue| to the end of |block|.  If an
   // |OpReturnValue| is needed, the return value is loaded from |return_value_|.
@@ -268,7 +287,18 @@ class MergeReturnPass : public MemPass {
     }
   }
 
+  // Modifies existing OpPhi instruction in |target| block to account for the
+  // new edge from |new_source|.  The value for that edge will be an Undef. If
+  // |target| only had a single predecessor, then it is marked as needing new
+  // phi nodes.  See |MarkForNewPhiNodes|.
+  void UpdatePhiNodes(BasicBlock* new_source, BasicBlock* target);
+
   StructuredControlState& CurrentState() { return state_.back(); }
+
+  // Inserts |new_element| into |list| after the first occurrence of |element|.
+  // |element| must be in |list| at least once.
+  void InsertAfterElement(BasicBlock* element, BasicBlock* new_element,
+                          std::list<BasicBlock*>* list);
 
   // A stack used to keep track of the innermost contain loop and selection
   // constructs.
@@ -292,6 +322,7 @@ class MergeReturnPass : public MemPass {
   // The basic block that is suppose to become the contain the only return value
   // after processing the current function.
   BasicBlock* final_return_block_;
+
   // This map contains the set of nodes that use to have a single predcessor,
   // but now have more.  They will need new OpPhi nodes.  For each of the nodes,
   // it is mapped to it original single predcessor.  It is assumed there are no
@@ -302,4 +333,4 @@ class MergeReturnPass : public MemPass {
 }  // namespace opt
 }  // namespace spvtools
 
-#endif  // LIBSPIRV_OPT_MERGE_RETURN_PASS_H_
+#endif  // SOURCE_OPT_MERGE_RETURN_PASS_H_

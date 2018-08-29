@@ -14,13 +14,13 @@
 
 #include <algorithm>
 #include <memory>
+#include <utility>
 #include <vector>
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-
-#include "opt/instruction.h"
-#include "opt/instruction_list.h"
+#include "source/opt/instruction.h"
+#include "source/opt/instruction_list.h"
 
 namespace spvtools {
 namespace opt {

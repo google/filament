@@ -13,19 +13,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef LIBSPIRV_OPT_INSTRUCTION_LIST_H_
-#define LIBSPIRV_OPT_INSTRUCTION_LIST_H_
+#ifndef SOURCE_OPT_INSTRUCTION_LIST_H_
+#define SOURCE_OPT_INSTRUCTION_LIST_H_
 
 #include <cassert>
 #include <functional>
+#include <memory>
 #include <utility>
 #include <vector>
 
-#include "instruction.h"
-#include "operand.h"
-#include "util/ilist.h"
-
-#include "latest_version_spirv_header.h"
+#include "source/latest_version_spirv_header.h"
+#include "source/operand.h"
+#include "source/opt/instruction.h"
+#include "source/util/ilist.h"
 #include "spirv-tools/libspirv.h"
 
 namespace spvtools {
@@ -127,4 +127,4 @@ void InstructionList::clear() {
 }  // namespace opt
 }  // namespace spvtools
 
-#endif  // LIBSPIRV_OPT_INSTRUCTION_LIST_H_
+#endif  // SOURCE_OPT_INSTRUCTION_LIST_H_

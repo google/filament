@@ -18,15 +18,15 @@
 #include <vector>
 
 #include "gtest/gtest.h"
-#include "latest_version_spirv_header.h"
+#include "source/latest_version_spirv_header.h"
 
-#include "enum_set.h"
-#include "extensions.h"
-#include "spirv_validator_options.h"
-#include "val/construct.h"
-#include "val/function.h"
-#include "val/validation_state.h"
-#include "val/validate.h"
+#include "source/enum_set.h"
+#include "source/extensions.h"
+#include "source/spirv_validator_options.h"
+#include "source/val/construct.h"
+#include "source/val/function.h"
+#include "source/val/validate.h"
+#include "source/val/validation_state.h"
 
 namespace spvtools {
 namespace val {

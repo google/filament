@@ -13,10 +13,11 @@
 // limitations under the License.
 
 #include <algorithm>
+#include <string>
 #include <vector>
 
-#include "latest_version_glsl_std_450_header.h"
-#include "unit_spirv.h"
+#include "source/latest_version_glsl_std_450_header.h"
+#include "test/unit_spirv.h"
 
 namespace spvtools {
 namespace {

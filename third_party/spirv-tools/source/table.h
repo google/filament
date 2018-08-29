@@ -12,13 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef LIBSPIRV_TABLE_H_
-#define LIBSPIRV_TABLE_H_
+#ifndef SOURCE_TABLE_H_
+#define SOURCE_TABLE_H_
 
-#include "latest_version_spirv_header.h"
+#include "source/latest_version_spirv_header.h"
 
-#include "extensions.h"
-#include "message.h"
+#include "source/extensions.h"
 #include "spirv-tools/libspirv.hpp"
 
 typedef struct spv_opcode_desc_t {
@@ -130,4 +129,4 @@ spv_result_t spvOperandTableGet(spv_operand_table* table, spv_target_env env);
 // Populates *table with entries for env.
 spv_result_t spvExtInstTableGet(spv_ext_inst_table* table, spv_target_env env);
 
-#endif  // LIBSPIRV_TABLE_H_
+#endif  // SOURCE_TABLE_H_

@@ -12,10 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef BIN_TO_DOT_H_
-#define BIN_TO_DOT_H_
+#ifndef TOOLS_CFG_BIN_TO_DOT_H_
+#define TOOLS_CFG_BIN_TO_DOT_H_
 
 #include <iostream>
+
 #include "spirv-tools/libspirv.h"
 
 // Dumps the control flow graph for the given module to the output stream.
@@ -24,4 +25,4 @@ spv_result_t BinaryToDot(const spv_const_context context, const uint32_t* words,
                          size_t num_words, std::iostream* out,
                          spv_diagnostic* diagnostic);
 
-#endif  // BIN_TO_DOT_H_
+#endif  // TOOLS_CFG_BIN_TO_DOT_H_

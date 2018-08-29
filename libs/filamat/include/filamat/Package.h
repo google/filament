@@ -34,7 +34,7 @@ public:
     Package() = default;
 
     // Regular constructor
-    Package(size_t size) : mSize(size) {
+    explicit Package(size_t size) : mSize(size) {
         mPayload = (uint8_t*) calloc(1, size);
         assert(mPayload != nullptr);
     }
@@ -63,9 +63,7 @@ public:
     Package(const Package& other) = delete;
 
     ~Package() {
-        if (mPayload != nullptr) {
-            free(mPayload);
-        }
+        free(mPayload);
     }
 
     uint8_t* getData() const noexcept {

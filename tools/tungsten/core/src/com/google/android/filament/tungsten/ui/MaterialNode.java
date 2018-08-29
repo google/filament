@@ -17,9 +17,8 @@
 package com.google.android.filament.tungsten.ui;
 
 import com.google.android.filament.tungsten.SwingHelper;
-import com.google.android.filament.tungsten.model.NodeModel;
-import com.google.android.filament.tungsten.model.SlotModel;
-import java.awt.Color;
+import com.google.android.filament.tungsten.model.Node;
+import com.google.android.filament.tungsten.model.Slot;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import javax.swing.BorderFactory;
@@ -36,10 +35,10 @@ public class MaterialNode extends JPanel {
     private static final int ARC_RADIUS = 10;
     private static final int BORDER_THICKNESS = 2;
 
-    private final NodeModel mModel;
+    private final Node mModel;
     private boolean mSelected = false;
 
-    public MaterialNode(NodeModel model) {
+    public MaterialNode(Node model) {
         mModel = model;
         setOpaque(false);
         setBorder(BorderFactory.createEmptyBorder(PADDING, PADDING, PADDING, PADDING));
@@ -51,12 +50,12 @@ public class MaterialNode extends JPanel {
         repaint();
     }
 
-    NodeModel getModel() {
+    Node getModel() {
         return mModel;
     }
 
-    NodeSlot addSlot(SlotModel model) {
-        NodeSlot nodeSlot = new NodeSlot(model, this);
+    NodeSlot addSlot(Slot model, String label) {
+        NodeSlot nodeSlot = new NodeSlot(model, label, this);
         add(nodeSlot);
         validate();
         repaint();

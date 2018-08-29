@@ -455,7 +455,7 @@ mat4f ShadowMap::applyLISPSM(CameraInfo const& camera, float dzn, float dzf, mat
         };
 
         const mat4f Wp = warpFrustum(nopt, nopt + d);
-        const mat4f Wv = mat4f::translate(float4{ -p, 1 });
+        const mat4f Wv = mat4f::translate(-p);
         W = Wp * Wv;
     }
     return W;
@@ -717,8 +717,7 @@ size_t ShadowMap::intersectFrustums(
         float3 const* quadsVertices) noexcept {
 
 #pragma nounroll
-    for (size_t i = 0; i < 12; ++i) {
-        const Segment segment = sBoxSegments[i];
+    for (const Segment segment : sBoxSegments) {
         const float3 s0 = segmentsVertices[segment.v0];
         const float3 s1 = segmentsVertices[segment.v1];
         // each segment should only intersect with 2 quads at most

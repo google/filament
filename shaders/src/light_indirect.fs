@@ -173,7 +173,7 @@ vec3 getSpecularDominantDirection(vec3 n, vec3 r, float linearRoughness) {
 }
 
 vec3 specularDFG(const PixelParams pixel) {
-#if defined(SHADING_MODEL_CLOTH)
+#if defined(SHADING_MODEL_CLOTH) || !defined(USE_MULTIPLE_SCATTERING_COMPENSATION)
     return pixel.f0 * pixel.dfg.x + pixel.dfg.y;
 #else
     return mix(pixel.dfg.xxx, pixel.dfg.yyy, pixel.f0);
@@ -229,10 +229,10 @@ void evaluateClothIndirectDiffuseBRDF(const PixelParams pixel, inout float diffu
 
 void evaluateClearCoatIBL(const PixelParams pixel, float specularAO, inout vec3 Fd, inout vec3 Fr) {
 #if defined(MATERIAL_HAS_CLEAR_COAT)
-#if defined(MATERIAL_HAS_NORMAL)
+#if defined(MATERIAL_HAS_NORMAL) || defined(MATERIAL_HAS_CLEAR_COAT_NORMAL)
     // We want to use the geometric normal for the clear coat layer
-    float clearCoatNoV = abs(dot(shading_tangentToWorld[2], shading_view)) + FLT_EPS;
-    vec3 clearCoatR = reflect(-shading_view, shading_tangentToWorld[2]);
+    float clearCoatNoV = abs(dot(shading_clearCoatNormal, shading_view)) + FLT_EPS;
+    vec3 clearCoatR = reflect(-shading_view, shading_clearCoatNormal);
 #else
     float clearCoatNoV = shading_NoV;
     vec3 clearCoatR = shading_reflected;

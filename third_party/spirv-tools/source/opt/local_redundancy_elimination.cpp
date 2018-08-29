@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "local_redundancy_elimination.h"
+#include "source/opt/local_redundancy_elimination.h"
 
-#include "value_number_table.h"
+#include "source/opt/value_number_table.h"
 
 namespace spvtools {
 namespace opt {

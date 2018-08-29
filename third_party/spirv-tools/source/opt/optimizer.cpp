@@ -14,13 +14,19 @@
 
 #include "spirv-tools/optimizer.hpp"
 
-#include "build_module.h"
-#include "log.h"
-#include "make_unique.h"
-#include "pass_manager.h"
-#include "passes.h"
-#include "reduce_load_size.h"
-#include "simplification_pass.h"
+#include <memory>
+#include <string>
+#include <unordered_map>
+#include <utility>
+#include <vector>
+
+#include "source/opt/build_module.h"
+#include "source/opt/log.h"
+#include "source/opt/pass_manager.h"
+#include "source/opt/passes.h"
+#include "source/opt/reduce_load_size.h"
+#include "source/opt/simplification_pass.h"
+#include "source/util/make_unique.h"
 
 namespace spvtools {
 
@@ -113,7 +119,7 @@ Optimizer& Optimizer::RegisterLegalizationPasses() {
           .RegisterPass(CreateLocalSingleBlockLoadStoreElimPass())
           .RegisterPass(CreateLocalSingleStoreElimPass())
           .RegisterPass(CreateAggressiveDCEPass())
-          // Split up aggragates so they are easier to deal with.
+          // Split up aggregates so they are easier to deal with.
           .RegisterPass(CreateScalarReplacementPass(0))
           // Remove loads and stores so everything is in intermediate values.
           // Takes care of copy propagation of non-members.
@@ -342,7 +348,7 @@ bool Optimizer::RegisterPassFromFlag(const std::string& flag) {
     if (pass_args.size() == 0) {
       RegisterPass(CreateScalarReplacementPass());
     } else {
-      uint32_t limit = atoi(pass_args.c_str());
+      int limit = atoi(pass_args.c_str());
       if (limit > 0) {
         RegisterPass(CreateScalarReplacementPass(limit));
       } else {
@@ -403,7 +409,7 @@ bool Optimizer::RegisterPassFromFlag(const std::string& flag) {
           CreateLoopFusionPass(static_cast<size_t>(max_registers_per_loop)));
     } else {
       Error(consumer(), nullptr, {},
-            "--loop-fusion must be have a positive integer argument");
+            "--loop-fusion must have a positive integer argument");
       return false;
     }
   } else if (pass_name == "loop-unroll") {
@@ -412,15 +418,24 @@ bool Optimizer::RegisterPassFromFlag(const std::string& flag) {
     RegisterPass(CreateVectorDCEPass());
   } else if (pass_name == "loop-unroll-partial") {
     int factor = (pass_args.size() > 0) ? atoi(pass_args.c_str()) : 0;
-    if (factor != 0) {
+    if (factor > 0) {
       RegisterPass(CreateLoopUnrollPass(false, factor));
     } else {
       Error(consumer(), nullptr, {},
-            "--loop-unroll-partial must have a non-0 integer argument");
+            "--loop-unroll-partial must have a positive integer argument");
       return false;
     }
   } else if (pass_name == "loop-peeling") {
     RegisterPass(CreateLoopPeelingPass());
+  } else if (pass_name == "loop-peeling-threshold") {
+    int factor = (pass_args.size() > 0) ? atoi(pass_args.c_str()) : 0;
+    if (factor > 0) {
+      opt::LoopPeelingPass::SetLoopPeelingThreshold(factor);
+    } else {
+      Error(consumer(), nullptr, {},
+            "--loop-peeling-threshold must have a positive integer argument");
+      return false;
+    }
   } else if (pass_name == "ccp") {
     RegisterPass(CreateCCPPass());
   } else if (pass_name == "O") {
@@ -442,6 +457,22 @@ bool Optimizer::RegisterPassFromFlag(const std::string& flag) {
 bool Optimizer::Run(const uint32_t* original_binary,
                     const size_t original_binary_size,
                     std::vector<uint32_t>* optimized_binary) const {
+  return Run(original_binary, original_binary_size, optimized_binary,
+             ValidatorOptions());
+}
+
+bool Optimizer::Run(const uint32_t* original_binary,
+                    const size_t original_binary_size,
+                    std::vector<uint32_t>* optimized_binary,
+                    const ValidatorOptions& options,
+                    bool skip_validation) const {
+  spvtools::SpirvTools tools(impl_->target_env);
+  tools.SetMessageConsumer(impl_->pass_manager.consumer());
+  if (!skip_validation &&
+      !tools.Validate(original_binary, original_binary_size, options)) {
+    return false;
+  }
+
   std::unique_ptr<opt::IRContext> context = BuildModule(
       impl_->target_env, consumer(), original_binary, original_binary_size);
   if (context == nullptr) return false;

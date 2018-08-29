@@ -24,7 +24,6 @@ SPVTOOLS_SRC_FILES := \
 		source/table.cpp \
 		source/text.cpp \
 		source/text_handler.cpp \
-		source/util/bit_stream.cpp \
 		source/util/bit_vector.cpp \
 		source/util/parse_number.cpp \
 		source/util/string_utils.cpp \
@@ -36,6 +35,7 @@ SPVTOOLS_SRC_FILES := \
 		source/val/validation_state.cpp \
 		source/val/validate.cpp \
 		source/val/validate_adjacency.cpp \
+		source/val/validate_annotation.cpp \
 		source/val/validate_arithmetics.cpp \
 		source/val/validate_atomics.cpp \
 		source/val/validate_barriers.cpp \
@@ -44,22 +44,27 @@ SPVTOOLS_SRC_FILES := \
 		source/val/validate_capability.cpp \
 		source/val/validate_cfg.cpp \
 		source/val/validate_composites.cpp \
+		source/val/validate_constants.cpp \
 		source/val/validate_conversion.cpp \
 		source/val/validate_datarules.cpp \
+		source/val/validate_debug.cpp \
 		source/val/validate_decorations.cpp \
 		source/val/validate_derivatives.cpp \
 		source/val/validate_ext_inst.cpp \
+		source/val/validate_execution_limitations.cpp \
+		source/val/validate_function.cpp \
 		source/val/validate_id.cpp \
 		source/val/validate_image.cpp \
 		source/val/validate_interfaces.cpp \
 		source/val/validate_instruction.cpp \
 		source/val/validate_memory.cpp \
+		source/val/validate_mode_setting.cpp \
 		source/val/validate_layout.cpp \
 		source/val/validate_literals.cpp \
 		source/val/validate_logicals.cpp \
 		source/val/validate_non_uniform.cpp \
 		source/val/validate_primitives.cpp \
-		source/val/validate_type_unique.cpp
+		source/val/validate_type.cpp
 
 SPVTOOLS_OPT_SRC_FILES := \
 		source/opt/aggressive_dead_code_elim_pass.cpp \
@@ -305,7 +310,6 @@ include $(CLEAR_VARS)
 LOCAL_MODULE := SPIRV-Tools
 LOCAL_C_INCLUDES := \
 		$(LOCAL_PATH)/include \
-		$(LOCAL_PATH)/source \
 		$(LOCAL_PATH)/external/spirv-headers/include \
 		$(SPVTOOLS_OUT_PATH)
 LOCAL_EXPORT_C_INCLUDES := \

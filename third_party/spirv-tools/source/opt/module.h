@@ -12,17 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef LIBSPIRV_OPT_MODULE_H_
-#define LIBSPIRV_OPT_MODULE_H_
+#ifndef SOURCE_OPT_MODULE_H_
+#define SOURCE_OPT_MODULE_H_
 
 #include <functional>
 #include <memory>
 #include <utility>
 #include <vector>
 
-#include "function.h"
-#include "instruction.h"
-#include "iterator.h"
+#include "source/opt/function.h"
+#include "source/opt/instruction.h"
+#include "source/opt/iterator.h"
 
 namespace spvtools {
 namespace opt {
@@ -473,4 +473,4 @@ inline Module::const_iterator Module::cend() const {
 }  // namespace opt
 }  // namespace spvtools
 
-#endif  // LIBSPIRV_OPT_MODULE_H_
+#endif  // SOURCE_OPT_MODULE_H_

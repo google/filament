@@ -12,28 +12,34 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef SPIRV_TOOLS_IR_CONTEXT_H
-#define SPIRV_TOOLS_IR_CONTEXT_H
-
-#include "assembly_grammar.h"
-#include "cfg.h"
-#include "constants.h"
-#include "decoration_manager.h"
-#include "def_use_manager.h"
-#include "dominator_analysis.h"
-#include "feature_manager.h"
-#include "fold.h"
-#include "loop_descriptor.h"
-#include "module.h"
-#include "register_pressure.h"
-#include "scalar_analysis.h"
-#include "type_manager.h"
-#include "value_number_table.h"
+#ifndef SOURCE_OPT_IR_CONTEXT_H_
+#define SOURCE_OPT_IR_CONTEXT_H_
 
 #include <algorithm>
 #include <iostream>
 #include <limits>
+#include <map>
+#include <memory>
+#include <unordered_map>
 #include <unordered_set>
+#include <utility>
+#include <vector>
+
+#include "source/assembly_grammar.h"
+#include "source/opt/cfg.h"
+#include "source/opt/constants.h"
+#include "source/opt/decoration_manager.h"
+#include "source/opt/def_use_manager.h"
+#include "source/opt/dominator_analysis.h"
+#include "source/opt/feature_manager.h"
+#include "source/opt/fold.h"
+#include "source/opt/loop_descriptor.h"
+#include "source/opt/module.h"
+#include "source/opt/register_pressure.h"
+#include "source/opt/scalar_analysis.h"
+#include "source/opt/type_manager.h"
+#include "source/opt/value_number_table.h"
+#include "source/util/make_unique.h"
 
 namespace spvtools {
 namespace opt {
@@ -262,14 +268,14 @@ class IRContext {
       BuildDecorationManager();
     }
     return decoration_mgr_.get();
-  };
+  }
 
   // Returns a pointer to the constant manager.  If no constant manager has been
   // created yet, it creates one.  NOTE: Once created, the constant manager
   // remains active and it is never re-built.
   analysis::ConstantManager* get_constant_mgr() {
     if (!constant_mgr_)
-      constant_mgr_.reset(new analysis::ConstantManager(this));
+      constant_mgr_ = MakeUnique<analysis::ConstantManager>(this);
     return constant_mgr_.get();
   }
 
@@ -278,7 +284,7 @@ class IRContext {
   // is never re-built.
   analysis::TypeManager* get_type_mgr() {
     if (!type_mgr_)
-      type_mgr_.reset(new analysis::TypeManager(consumer(), this));
+      type_mgr_ = MakeUnique<analysis::TypeManager>(consumer(), this);
     return type_mgr_.get();
   }
 
@@ -445,7 +451,7 @@ class IRContext {
 
   const InstructionFolder& get_instruction_folder() {
     if (!inst_folder_) {
-      inst_folder_.reset(new InstructionFolder(this));
+      inst_folder_ = MakeUnique<InstructionFolder>(this);
     }
     return *inst_folder_;
   }
@@ -453,7 +459,7 @@ class IRContext {
  private:
   // Builds the def-use manager from scratch, even if it was already valid.
   void BuildDefUseManager() {
-    def_use_mgr_.reset(new analysis::DefUseManager(module()));
+    def_use_mgr_ = MakeUnique<analysis::DefUseManager>(module());
     valid_analyses_ = valid_analyses_ | kAnalysisDefUse;
   }
 
@@ -471,30 +477,30 @@ class IRContext {
   }
 
   void BuildDecorationManager() {
-    decoration_mgr_.reset(new analysis::DecorationManager(module()));
+    decoration_mgr_ = MakeUnique<analysis::DecorationManager>(module());
     valid_analyses_ = valid_analyses_ | kAnalysisDecorations;
   }
 
   void BuildCFG() {
-    cfg_.reset(new CFG(module()));
+    cfg_ = MakeUnique<CFG>(module());
     valid_analyses_ = valid_analyses_ | kAnalysisCFG;
   }
 
   void BuildScalarEvolutionAnalysis() {
-    scalar_evolution_analysis_.reset(new ScalarEvolutionAnalysis(this));
+    scalar_evolution_analysis_ = MakeUnique<ScalarEvolutionAnalysis>(this);
     valid_analyses_ = valid_analyses_ | kAnalysisScalarEvolution;
   }
 
   // Builds the liveness analysis from scratch, even if it was already valid.
   void BuildRegPressureAnalysis() {
-    reg_pressure_.reset(new LivenessAnalysis(this));
+    reg_pressure_ = MakeUnique<LivenessAnalysis>(this);
     valid_analyses_ = valid_analyses_ | kAnalysisRegisterPressure;
   }
 
   // Builds the value number table analysis from scratch, even if it was already
   // valid.
   void BuildValueNumberTable() {
-    vn_table_.reset(new ValueNumberTable(this));
+    vn_table_ = MakeUnique<ValueNumberTable>(this);
     valid_analyses_ = valid_analyses_ | kAnalysisValueNumberTable;
   }
 
@@ -516,7 +522,7 @@ class IRContext {
 
   // Analyzes the features in the owned module. Builds the manager if required.
   void AnalyzeFeatures() {
-    feature_mgr_.reset(new FeatureManager(grammar_));
+    feature_mgr_ = MakeUnique<FeatureManager>(grammar_);
     feature_mgr_->Analyze(module());
   }
 
@@ -827,7 +833,7 @@ void IRContext::UpdateDefUse(Instruction* inst) {
 }
 
 void IRContext::BuildIdToNameMap() {
-  id_to_name_.reset(new std::multimap<uint32_t, Instruction*>());
+  id_to_name_ = MakeUnique<std::multimap<uint32_t, Instruction*>>();
   for (Instruction& debug_inst : debugs2()) {
     if (debug_inst.opcode() == SpvOpMemberName ||
         debug_inst.opcode() == SpvOpName) {
@@ -849,4 +855,4 @@ IRContext::GetNames(uint32_t id) {
 }  // namespace opt
 }  // namespace spvtools
 
-#endif  // SPIRV_TOOLS_IR_CONTEXT_H
+#endif  // SOURCE_OPT_IR_CONTEXT_H_

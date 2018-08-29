@@ -15,6 +15,7 @@
 #include "source/val/validate.h"
 
 #include <algorithm>
+#include <vector>
 
 #include "source/diagnostic.h"
 #include "source/val/function.h"
@@ -34,7 +35,8 @@ bool is_interface_variable(const Instruction* inst) {
 
 // Checks that \c var is listed as an interface in all the entry points that use
 // it.
-spv_result_t check_interface_variable(ValidationState_t& _, Instruction* var) {
+spv_result_t check_interface_variable(ValidationState_t& _,
+                                      const Instruction* var) {
   std::vector<const Function*> functions;
   std::vector<const Instruction*> uses;
   for (auto use : var->uses()) {
@@ -97,10 +99,9 @@ spv_result_t check_interface_variable(ValidationState_t& _, Instruction* var) {
 }  // namespace
 
 spv_result_t ValidateInterfaces(ValidationState_t& _) {
-  for (auto pair : _.all_definitions()) {
-    auto inst = pair.second;
-    if (is_interface_variable(inst)) {
-      if (auto error = check_interface_variable(_, inst)) {
+  for (auto& inst : _.ordered_instructions()) {
+    if (is_interface_variable(&inst)) {
+      if (auto error = check_interface_variable(_, &inst)) {
         return error;
       }
     }

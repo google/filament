@@ -12,10 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef LIBSPIRV_PARSED_OPERAND_H_
-#define LIBSPIRV_PARSED_OPERAND_H_
+#ifndef SOURCE_PARSED_OPERAND_H_
+#define SOURCE_PARSED_OPERAND_H_
 
 #include <ostream>
+
 #include "spirv-tools/libspirv.h"
 
 namespace spvtools {
@@ -29,4 +30,4 @@ void EmitNumericLiteral(std::ostream* out, const spv_parsed_instruction_t& inst,
 
 }  // namespace spvtools
 
-#endif  // LIBSPIRV_BINARY_H_
+#endif  // SOURCE_PARSED_OPERAND_H_

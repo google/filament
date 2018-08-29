@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "opt/scalar_analysis.h"
+#include "source/opt/scalar_analysis.h"
 
 #include <functional>
 #include <map>

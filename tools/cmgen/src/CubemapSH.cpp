@@ -16,16 +16,13 @@
 
 #include "CubemapSH.h"
 
-#include "math/mat4.h"
+#include <math/mat4.h>
 
 #include "Cubemap.h"
 #include "CubemapUtils.h"
 #include "utilities.h"
 
 using namespace math;
-
-
-
 
 // -----------------------------------------------------------------------------------------------
 // A few useful utilities
@@ -185,14 +182,15 @@ void CubemapSH::computeShBasis(
 std::unique_ptr<double3[]> CubemapSH::computeSH(const Cubemap& cm, size_t numBands, bool irradiance) {
 
     const size_t numCoefs = numBands*numBands;
-    std::unique_ptr<double3[]> SH(new double3[numCoefs]);
+    std::unique_ptr<double3[]> SH(new double3[numCoefs]{});
 
     struct State {
-        State() { }
+        State() = default;
         explicit State(size_t numCoefs) : numCoefs(numCoefs) { }
+
         State& operator=(State const & rhs) {
-            SH.reset(new double3[rhs.numCoefs]);
-            SHb.reset(new double[rhs.numCoefs]);
+            SH.reset(new double3[rhs.numCoefs]{}); // NOLINT(modernize-make-unique)
+            SHb.reset(new double[rhs.numCoefs]{}); // NOLINT(modernize-make-unique)
             return *this;
         }
         size_t numCoefs = 0;
@@ -262,7 +260,7 @@ void CubemapSH::renderSH(const Cubemap& cm,
         for (size_t x=0 ; x<dim ; ++x, ++data) {
             double3 s(cm.getDirectionFor(f, x, y));
             computeShBasis(SHb.data(), numBands, s);
-            double3 c;
+            double3 c = 0;
             for (size_t i=0 ; i<numCoefs ; i++) {
                 c += sh[i] * (K[i] * SHb[i]);
             }
@@ -279,8 +277,9 @@ void CubemapSH::renderSH(const Cubemap& cm,
 std::unique_ptr<double3[]> CubemapSH::computeIrradianceSH3Bands(const Cubemap& cm) {
 
     const size_t numCoefs = 9;
-    std::unique_ptr<double3[]> SH(new double3[numCoefs]);
-    std::unique_ptr<double[]> A(new double[numCoefs]);
+
+    std::unique_ptr<double3[]> SH(new double3[numCoefs]{});
+    std::unique_ptr<double[]> A(new double[numCoefs]{});
 
     const double c0 = computeTruncatedCosSh(0);
     const double c1 = computeTruncatedCosSh(1);
@@ -296,7 +295,7 @@ std::unique_ptr<double3[]> CubemapSH::computeIrradianceSH3Bands(const Cubemap& c
     A[8] = sq(M_2_SQRTPI / 8) * 15  * c2;
 
     struct State {
-        double3 SH[9];
+        double3 SH[9] = { };
     };
 
     CubemapUtils::process<State>(cm,
@@ -337,7 +336,7 @@ void CubemapSH::renderPreScaledSH3Bands(
             [&](CubemapUtils::EmptyState&, size_t y, Cubemap::Face f, Cubemap::Texel* data, size_t dim) {
         for (size_t x=0 ; x<dim ; ++x, ++data) {
             double3 s(cm.getDirectionFor(f, x, y));
-            double3 c;
+            double3 c = 0;
             c += sh[0];
             c += sh[1] * s.y;
             c += sh[2] * s.z;
@@ -382,7 +381,7 @@ double __UNUSED CubemapSH::Legendre(ssize_t l, ssize_t m, double x) {
 }
 
 // Only used for debugging
-double CubemapSH::TSH(int l, int m, const double3& d) {
+double __UNUSED CubemapSH::TSH(int l, int m, const double3& d) {
     if (l==0 && m==0) {
         return 1 / (2*sqrt(M_PI));
     } else if (l==1 && m==-1) {
@@ -405,7 +404,7 @@ double CubemapSH::TSH(int l, int m, const double3& d) {
     return 0;
 }
 
-void CubemapSH::printShBase(std::ostream& out, int l, int m) {
+void __UNUSED CubemapSH::printShBase(std::ostream& out, int l, int m) {
     if (l<3 && std::abs(m) <= l) {
         const char* d = nullptr;
         double c = 0;

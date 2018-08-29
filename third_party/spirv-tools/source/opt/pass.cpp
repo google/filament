@@ -14,9 +14,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "pass.h"
+#include "source/opt/pass.h"
 
-#include "iterator.h"
+#include "source/opt/iterator.h"
 
 namespace spvtools {
 namespace opt {

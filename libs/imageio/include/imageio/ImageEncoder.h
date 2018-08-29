@@ -20,7 +20,7 @@
 #include <iosfwd>
 #include <string>
 
-#include <image/Image.h>
+#include <image/LinearImage.h>
 
 namespace image {
 
@@ -43,7 +43,7 @@ public:
     };
 
     // the encode function only expects images that store pixels as floats
-    static void encode(std::ostream& stream, Format format, const Image& image,
+    static void encode(std::ostream& stream, Format format, const LinearImage& image,
             const std::string& compression, const std::string& destName);
 
     static Format chooseFormat(const std::string& name, bool forceLinear = false);
@@ -51,7 +51,7 @@ public:
 
     class Encoder {
     public:
-        virtual void encode(const Image& image) = 0;
+        virtual void encode(const LinearImage& image) = 0;
         virtual ~Encoder() = default;
     };
 };

@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef SPIRV_TOOLS_MARKV_MODEL_SHADER_H_
-#define SPIRV_TOOLS_MARKV_MODEL_SHADER_H_
+#ifndef TOOLS_COMP_MARKV_MODEL_SHADER_H_
+#define TOOLS_COMP_MARKV_MODEL_SHADER_H_
 
 #include "source/comp/markv_model.h"
 
@@ -44,4 +44,4 @@ class MarkvModelShaderMax : public MarkvModel {
 }  // namespace comp
 }  // namespace spvtools
 
-#endif  // SPIRV_TOOLS_MARKV_MODEL_SHADER_H_
+#endif  // TOOLS_COMP_MARKV_MODEL_SHADER_H_

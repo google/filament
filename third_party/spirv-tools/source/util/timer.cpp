@@ -14,7 +14,7 @@
 
 #if defined(SPIRV_TIMER_ENABLED)
 
-#include "util/timer.h"
+#include "source/util/timer.h"
 
 #include <sys/resource.h>
 #include <sys/time.h>

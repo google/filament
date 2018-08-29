@@ -51,7 +51,7 @@ namespace filament {
  *
  *  // set its transform
  *  auto i = tcm.getInstance(object);
- *  tcm.setTransform(i, mat4f::translate(0, 0, -1));
+ *  tcm.setTransform(i, mat4f::translate({ 0, 0, -1 }));
  *
  *  // destroy the transform component
  *  tcm.destroy(object);

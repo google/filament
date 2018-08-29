@@ -15,12 +15,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "dead_branch_elim_pass.h"
+#include "source/opt/dead_branch_elim_pass.h"
 
-#include "cfa.h"
-#include "ir_context.h"
-#include "iterator.h"
-#include "make_unique.h"
+#include <list>
+#include <memory>
+#include <vector>
+
+#include "source/cfa.h"
+#include "source/opt/ir_context.h"
+#include "source/opt/iterator.h"
+#include "source/util/make_unique.h"
 
 namespace spvtools {
 namespace opt {
@@ -155,7 +159,16 @@ bool DeadBranchElimPass::MarkLiveBlocks(
       context()->KillInst(terminator);
       Instruction* mergeInst = block->GetMergeInst();
       if (mergeInst && mergeInst->opcode() == SpvOpSelectionMerge) {
-        context()->KillInst(mergeInst);
+        Instruction* first_break = FindFirstExitFromSelectionMerge(
+            live_lab_id, mergeInst->GetSingleWordInOperand(0));
+        if (first_break == nullptr) {
+          context()->KillInst(mergeInst);
+        } else {
+          mergeInst->RemoveFromList();
+          first_break->InsertBefore(std::unique_ptr<Instruction>(mergeInst));
+          context()->set_instr_block(mergeInst,
+                                     context()->get_instr_block(first_break));
+        }
       }
       stack.push_back(GetParentBlock(live_lab_id));
     } else {
@@ -419,6 +432,35 @@ Pass::Status DeadBranchElimPass::Process() {
   bool modified = ProcessReachableCallTree(pfn, context());
   if (modified) FixBlockOrder();
   return modified ? Status::SuccessWithChange : Status::SuccessWithoutChange;
+}
+
+Instruction* DeadBranchElimPass::FindFirstExitFromSelectionMerge(
+    uint32_t start_block_id, uint32_t merge_block_id) {
+  // To find the "first" exit, we follow branches looking for a conditional
+  // branch that is not in a nested construct and is not the header of a new
+  // construct.  We follow the control flow from |start_block_id| to find the
+  // first one.
+  while (start_block_id != merge_block_id) {
+    BasicBlock* start_block = context()->get_instr_block(start_block_id);
+    Instruction* branch = start_block->terminator();
+    uint32_t next_block_id = 0;
+    switch (branch->opcode()) {
+      case SpvOpBranchConditional:
+      case SpvOpSwitch:
+        next_block_id = start_block->MergeBlockIdIfAny();
+        if (next_block_id == 0) {
+          return branch;
+        }
+        break;
+      case SpvOpBranch:
+        next_block_id = branch->GetSingleWordInOperand(0);
+        break;
+      default:
+        return nullptr;
+    }
+    start_block_id = next_block_id;
+  }
+  return nullptr;
 }
 
 }  // namespace opt

@@ -49,7 +49,7 @@ public:
         return mIdentity;
     }
 
-    operator bool() const noexcept { return !isNull(); }
+    explicit operator bool() const noexcept { return !isNull(); }
 
 private:
     friend class EntityManager;
@@ -57,7 +57,7 @@ private:
     friend struct std::hash<Entity>;
     using Type = uint32_t;
 
-    Entity(Type identity) noexcept : mIdentity(identity) { }
+    explicit Entity(Type identity) noexcept : mIdentity(identity) { }
 
     Type mIdentity = 0;
 };

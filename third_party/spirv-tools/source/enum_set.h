@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef LIBSPIRV_ENUM_SET_H
-#define LIBSPIRV_ENUM_SET_H
+#ifndef SOURCE_ENUM_SET_H_
+#define SOURCE_ENUM_SET_H_
 
 #include <cstdint>
 #include <functional>
@@ -21,7 +21,8 @@
 #include <set>
 #include <utility>
 
-#include "latest_version_spirv_header.h"
+#include "source/latest_version_spirv_header.h"
+#include "source/util/make_unique.h"
 
 namespace spvtools {
 
@@ -152,7 +153,7 @@ class EnumSet {
   // allocated if one doesn't exist yet.  Returns overflow_set_.
   OverflowSetType& Overflow() {
     if (overflow_.get() == nullptr) {
-      overflow_.reset(new OverflowSetType);
+      overflow_ = MakeUnique<OverflowSetType>();
     }
     return *overflow_;
   }
@@ -169,4 +170,4 @@ using CapabilitySet = EnumSet<SpvCapability>;
 
 }  // namespace spvtools
 
-#endif  // LIBSPIRV_ENUM_SET_H
+#endif  // SOURCE_ENUM_SET_H_

@@ -21,15 +21,15 @@
 
 namespace filament {
 
-constexpr uint32_t ATTRIBUTE_INDEX_COUNT = 5;
-
+// Update hasIntegerTarget() in VertexBuffer when adding an attribute that will
+// be read as integers in the shaders
 enum VertexAttribute : uint8_t {
     POSITION        = 0, // XYZ position (float3)
     TANGENTS        = 1, // tangent, bitangent and normal, encoded as a quaternion (float4)
     COLOR           = 2, // vertex color (float4)
     UV0             = 3, // texture coordinates (float2)
     UV1             = 4, // texture coordinates (float2)
-    BONE_INDICES    = 5, // indices of 4 bones (uvec4)
+    BONE_INDICES    = 5, // indices of 4 bones, as unsigned integers (uvec4)
     BONE_WEIGHTS    = 6, // weights of the 4 bones (normalized float4)
 };
 
@@ -44,15 +44,18 @@ namespace BindingPoints {
     constexpr uint8_t POST_PROCESS            = 4;    // samplers for the post process pass
     constexpr uint8_t PER_MATERIAL_INSTANCE   = 5;    // uniforms/samplers updates per material
     constexpr uint8_t COUNT                   = 6;
-};
+}
 
 static_assert(BindingPoints::PER_MATERIAL_INSTANCE == BindingPoints::COUNT - 1,
         "Dynamically sized sampler buffer must be the last binding point.");
 
-constexpr size_t MAX_ATTRIBUTE_BUFFERS_COUNT = 8;   // FIXME: should match Driver::MAX_ATTRIBUTE_BUFFER_COUNT
+constexpr uint32_t ATTRIBUTE_INDEX_COUNT = 7;
+constexpr size_t MAX_ATTRIBUTE_BUFFERS_COUNT = 8; // FIXME: should match Driver::MAX_ATTRIBUTE_BUFFER_COUNT
 
 // This value is limited by UBO size, ES3.0 only guarantees 16 KiB.
+// Values <= 256, use less CPU and GPU resources.
 constexpr size_t CONFIG_MAX_LIGHT_COUNT = 256;
+constexpr size_t CONFIG_MAX_LIGHT_INDEX = CONFIG_MAX_LIGHT_COUNT - 1;
 
 // This value is also limited by UBO size, ES3.0 only guarantees 16 KiB.
 // 256 is enough, but we could use 512 if needed

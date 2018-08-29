@@ -21,7 +21,7 @@ set(MATERIAL_SRCS
         materials/transparentColor.mat)
 
 if (CMAKE_CROSSCOMPILING)
-    set(IMPORT_EXECUTABLES ${CMAKE_SOURCE_DIR}/${IMPORT_EXECUTABLES_DIR}/ImportExecutables-${CMAKE_BUILD_TYPE}.cmake)
+    set(IMPORT_EXECUTABLES ${FILAMENT}/${IMPORT_EXECUTABLES_DIR}/ImportExecutables-${CMAKE_BUILD_TYPE}.cmake)
     include(${IMPORT_EXECUTABLES})
 endif()
 
@@ -69,7 +69,8 @@ set(APP_SRCS
         app/FilamentApp.cpp
         app/IBL.cpp
         app/Image.cpp
-        app/IcoSphere.cpp)
+        app/IcoSphere.cpp
+        app/Sphere.cpp)
 
 if (APPLE)
     list(APPEND APP_SRCS app/NativeWindowHelperCocoa.mm)
@@ -99,10 +100,13 @@ list(APPEND APP_LIBS sample-app)
 # ==================================================================================================
 
 if (NOT MSVC)
-	set(COMPILER_FLAGS
-    	    -Wno-extern-c-compat
-        	$<$<NOT:$<PLATFORM_ID:Linux>>:-Wno-address-of-packed-member>
-	        $<$<CONFIG:Release>:-ffast-math>)
+	set(COMPILER_FLAGS -Wno-extern-c-compat $<$<NOT:$<PLATFORM_ID:Linux>>:-Wno-address-of-packed-member>)
+endif()
+
+if (MSVC OR CLANG_CL)
+    set(COMPILER_FLAGS ${COMPILER_FLAGS} $<$<CONFIG:Release>:/fp:fast>)
+else()
+    set(COMPILER_FLAGS ${COMPILER_FLAGS} $<$<CONFIG:Release>:-ffast-math>)
 endif()
 
 # ==================================================================================================
@@ -132,6 +136,7 @@ function(add_filamesh_demo NAME)
 endfunction()
 
 if (NOT ANDROID)
+    add_assimp_demo(frame_generator)
     add_assimp_demo(lightbulb)
     add_assimp_demo(material_sandbox)
     add_assimp_demo(sample_full_pbr)
@@ -143,6 +148,9 @@ if (NOT ANDROID)
     add_filamesh_demo(vk_imgui)
     add_filamesh_demo(sample_normal_map)
     add_filamesh_demo(sample_opacity_mask)
+
+    # Sample app specific
+    target_link_libraries(frame_generator PRIVATE image imageio)
 endif()
 
 # ==================================================================================================
@@ -170,7 +178,7 @@ endif()
 # Build Vulkan Executables
 # ==================================================================================================
 
-if (LINUX OR APPLE)
+if (FILAMENT_SUPPORTS_VULKAN)
     add_assimp_demo(vk_strobecolor)
     add_assimp_demo(vk_hellotriangle)
     add_assimp_demo(vk_depthtesting)
@@ -184,6 +192,15 @@ endif()
 
 # ==================================================================================================
 # Copy Assets
+#
+# This creates a structure like:
+#
+#    /lightbulb (etc)  sample app executable
+#    /assets/fonts     copied from REPO/assets
+#    /assets/models    copied from REPO/assets
+#    /textures         copied from REPO/third_party
+#    /envs             copied from REPO/samples/envs
+#
 # ==================================================================================================
 
 file(COPY ../third_party/textures DESTINATION ${PROJECT_BINARY_DIR})
@@ -195,3 +212,7 @@ file(COPY ../assets DESTINATION ${PROJECT_BINARY_DIR}
         PATTERN "environments" EXCLUDE)
 add_custom_target(assets ALL DEPENDS assets)
 add_dependencies(filament assets)
+
+file(COPY ../samples/envs DESTINATION ${PROJECT_BINARY_DIR})
+add_custom_target(envs ALL DEPENDS envs)
+add_dependencies(filament envs)

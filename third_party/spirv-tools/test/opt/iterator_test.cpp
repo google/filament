@@ -17,8 +17,8 @@
 
 #include "gmock/gmock.h"
 
-#include "opt/iterator.h"
-#include "opt/make_unique.h"
+#include "source/opt/iterator.h"
+#include "source/util/make_unique.h"
 
 namespace spvtools {
 namespace opt {

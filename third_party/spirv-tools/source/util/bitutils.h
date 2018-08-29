@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef LIBSPIRV_UTIL_BITUTILS_H_
-#define LIBSPIRV_UTIL_BITUTILS_H_
+#ifndef SOURCE_UTIL_BITUTILS_H_
+#define SOURCE_UTIL_BITUTILS_H_
 
 #include <cstdint>
 #include <cstring>
@@ -93,4 +93,4 @@ size_t CountSetBits(T word) {
 }  // namespace utils
 }  // namespace spvtools
 
-#endif  // LIBSPIRV_UTIL_BITUTILS_H_
+#endif  // SOURCE_UTIL_BITUTILS_H_

@@ -12,6 +12,7 @@ set(HDRS
     src/CubemapIBL.h
     src/CubemapSH.h
     src/CubemapUtils.h
+    src/Image.h
     src/ProgressUpdater.h
     src/utilities.h
 )
@@ -22,6 +23,7 @@ set(SRCS
     src/CubemapIBL.cpp
     src/CubemapSH.cpp
     src/CubemapUtils.cpp
+    src/Image.cpp
     src/JobQueue.cpp
     src/ProgressUpdater.cpp
 )
@@ -36,10 +38,10 @@ target_link_libraries(${TARGET} PRIVATE math utils z image imageio getopt)
 # ==================================================================================================
 # Compile options and optimizations
 # ==================================================================================================
-target_compile_options(${TARGET} PRIVATE -ffast-math)
-
-if (NOT LINUX)
-    target_compile_options(${TARGET} PRIVATE )
+if (MSVC OR CLANG_CL)
+    target_compile_options(${TARGET} PRIVATE /fp:fast)
+else()
+    target_compile_options(${TARGET} PRIVATE -ffast-math)
 endif()
 
 # =================================================================================================
@@ -54,3 +56,11 @@ target_include_directories(${TARGET} PRIVATE ${GENERATION_ROOT})
 # Installation
 # ==================================================================================================
 install(TARGETS ${TARGET} RUNTIME DESTINATION bin)
+
+# ==================================================================================================
+# Tests
+# ==================================================================================================
+if (NOT ANDROID)
+    add_executable(test_${TARGET} tests/test_cmgen.cpp)
+    target_link_libraries(test_${TARGET} PRIVATE image imageio gtest)
+endif()

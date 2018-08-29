@@ -15,10 +15,12 @@
 // Tests for OpExtension validator rules.
 
 #include <string>
+#include <utility>
+#include <vector>
 
-#include "enum_string_mapping.h"
-#include "extensions.h"
 #include "gtest/gtest.h"
+#include "source/enum_string_mapping.h"
+#include "source/extensions.h"
 
 namespace spvtools {
 namespace {

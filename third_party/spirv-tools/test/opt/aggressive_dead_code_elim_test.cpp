@@ -13,9 +13,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "assembly_builder.h"
-#include "pass_fixture.h"
-#include "pass_utils.h"
+#include <string>
+#include <vector>
+
+#include "test/opt/assembly_builder.h"
+#include "test/opt/pass_fixture.h"
+#include "test/opt/pass_utils.h"
 
 namespace spvtools {
 namespace opt {
@@ -5763,6 +5766,51 @@ OpFunctionEnd
 
   SetAssembleOptions(SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS);
   SinglePassRunAndCheck<AggressiveDCEPass>(test, result, true, true);
+}
+
+TEST_F(AggressiveDCETest, StructuredIfWithConditionalExit) {
+  // We are able to remove "local2" because it is not loaded, but have to keep
+  // the stores to "local1".
+  const std::string test =
+      R"(OpCapability Shader
+%1 = OpExtInstImport "GLSL.std.450"
+OpMemoryModel Logical GLSL450
+OpEntryPoint Fragment %main "main"
+OpExecutionMode %main OriginUpperLeft
+OpSource GLSL 140
+OpSourceExtension "GL_GOOGLE_cpp_style_line_directive"
+OpSourceExtension "GL_GOOGLE_include_directive"
+OpName %main "main"
+OpName %a "a"
+%void = OpTypeVoid
+%5 = OpTypeFunction %void
+%int = OpTypeInt 32 1
+%_ptr_Uniform_int = OpTypePointer Uniform %int
+%int_0 = OpConstant %int 0
+%bool = OpTypeBool
+%int_100 = OpConstant %int 100
+%int_1 = OpConstant %int 1
+%a = OpVariable %_ptr_Uniform_int Uniform
+%main = OpFunction %void None %5
+%12 = OpLabel
+%13 = OpLoad %int %a
+%14 = OpSGreaterThan %bool %13 %int_0
+OpSelectionMerge %15 None
+OpBranchConditional %14 %16 %15
+%16 = OpLabel
+%17 = OpLoad %int %a
+%18 = OpSLessThan %bool %17 %int_100
+OpBranchConditional %18 %19 %15
+%19 = OpLabel
+OpStore %a %int_1
+OpBranch %15
+%15 = OpLabel
+OpReturn
+OpFunctionEnd
+)";
+
+  SetAssembleOptions(SPV_TEXT_TO_BINARY_OPTION_PRESERVE_NUMERIC_IDS);
+  SinglePassRunAndCheck<AggressiveDCEPass>(test, test, true, true);
 }
 // TODO(greg-lunarg): Add tests to verify handling of these cases:
 //

@@ -12,13 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef LIBSPIRV_UTIL_FOLDING_RULES_H_
-#define LIBSPIRV_UTIL_FOLDING_RULES_H_
+#ifndef SOURCE_OPT_FOLDING_RULES_H_
+#define SOURCE_OPT_FOLDING_RULES_H_
 
 #include <cstdint>
+#include <unordered_map>
 #include <vector>
 
-#include "constants.h"
+#include "source/opt/constants.h"
 
 namespace spvtools {
 namespace opt {
@@ -75,4 +76,4 @@ class FoldingRules {
 }  // namespace opt
 }  // namespace spvtools
 
-#endif  // LIBSPIRV_UTIL_FOLDING_RULES_H_
+#endif  // SOURCE_OPT_FOLDING_RULES_H_

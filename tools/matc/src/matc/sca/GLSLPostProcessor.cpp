@@ -284,7 +284,6 @@ void GLSLPostProcessor::fullOptimization(const TShader& tShader,
 
 void GLSLPostProcessor::registerPerformancePasses(Optimizer& optimizer) const {
     optimizer
-            // This pass can cause unncessary promotion to highp, disable for now
             .RegisterPass(CreateMergeReturnPass())
             .RegisterPass(CreateInlineExhaustivePass())
             .RegisterPass(CreateAggressiveDCEPass())
@@ -302,6 +301,7 @@ void GLSLPostProcessor::registerPerformancePasses(Optimizer& optimizer) const {
             .RegisterPass(CreateCCPPass())
             .RegisterPass(CreateAggressiveDCEPass())
             .RegisterPass(CreateRedundancyEliminationPass())
+            .RegisterPass(CreateCombineAccessChainsPass())
             .RegisterPass(CreateSimplificationPass())
             .RegisterPass(CreateVectorDCEPass())
             .RegisterPass(CreateDeadInsertElimPass())
@@ -320,7 +320,6 @@ void GLSLPostProcessor::registerPerformancePasses(Optimizer& optimizer) const {
 
 void GLSLPostProcessor::registerSizePasses(Optimizer& optimizer) const {
     optimizer
-            // This pass can cause unncessary promotion to highp, disable for now
             .RegisterPass(CreateMergeReturnPass())
             .RegisterPass(CreateInlineExhaustivePass())
             .RegisterPass(CreateAggressiveDCEPass())

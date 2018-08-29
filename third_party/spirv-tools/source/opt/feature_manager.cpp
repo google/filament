@@ -12,11 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "feature_manager.h"
+#include "source/opt/feature_manager.h"
+
 #include <queue>
 #include <stack>
+#include <string>
 
-#include "enum_string_mapping.h"
+#include "source/enum_string_mapping.h"
 
 namespace spvtools {
 namespace opt {

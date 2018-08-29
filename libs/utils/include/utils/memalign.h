@@ -17,6 +17,9 @@
 #ifndef TNT_UTILS_MEMALIGN_H
 #define TNT_UTILS_MEMALIGN_H
 
+#include <cstddef>
+#include <type_traits>
+
 #include <assert.h>
 #include <stddef.h>
 #include <stdlib.h>
@@ -85,7 +88,7 @@ public:
     inline STLAlignedAllocator() noexcept = default;
 
     template<typename T>
-    inline STLAlignedAllocator(const STLAlignedAllocator<T>&) noexcept {}
+    inline explicit STLAlignedAllocator(const STLAlignedAllocator<T>&) noexcept {}
 
     inline ~STLAlignedAllocator() noexcept = default;
 

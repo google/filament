@@ -16,9 +16,8 @@
 
 package com.google.android.filament.tungsten.ui;
 
-import com.google.android.filament.tungsten.model.InputSlotModel;
-import com.google.android.filament.tungsten.model.OutputSlotModel;
-import com.google.android.filament.tungsten.model.SlotModel;
+import com.google.android.filament.tungsten.model.Node;
+import com.google.android.filament.tungsten.model.Slot;
 import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Point;
@@ -38,30 +37,32 @@ class NodeSlot extends JComponent {
     private static final int TEXT_PAD = 5;
     private static final int SLOT_CIRCLE_RADIUS = 10;
 
-    private final SlotModel mModel;
+    private final Slot mModel;
     private final MaterialNode mParent;
     private final SlotCircle mSlotCircle;
+    private final String mLabel;
 
-    NodeSlot(SlotModel model, MaterialNode parent) {
+    NodeSlot(Slot model, String label, MaterialNode parent) {
         mModel = model;
         mParent = parent;
         mSlotCircle = new SlotCircle();
         mSlotCircle.setMaximumSize(new Dimension(SLOT_CIRCLE_RADIUS, SLOT_CIRCLE_RADIUS));
+        mLabel = label;
         setLayout(new BoxLayout(this, BoxLayout.X_AXIS));
         setOpaque(false);
         addComponents();
     }
 
-    SlotModel getModel() {
+    Slot getModel() {
         return mModel;
     }
 
     boolean isOutputSlot() {
-        return (mModel instanceof OutputSlotModel);
+        return (mModel instanceof Node.OutputSlot);
     }
 
     boolean isInputSlot() {
-        return (mModel instanceof InputSlotModel);
+        return (mModel instanceof Node.InputSlot);
     }
 
     MaterialNode getParentMaterialNode() {
@@ -90,7 +91,7 @@ class NodeSlot extends JComponent {
     }
 
     private List<Component> createComponents() {
-        JLabel label = new JLabel(mModel.label);
+        JLabel label = new JLabel(mLabel);
         label.setForeground(ColorScheme.INSTANCE.getSlotLabel());
         List<Component> components = Arrays.asList(
                 mSlotCircle,

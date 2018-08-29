@@ -12,17 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "val/validation_state.h"
+#include "source/val/validation_state.h"
 
 #include <cassert>
 #include <stack>
+#include <utility>
 
-#include "opcode.h"
+#include "source/opcode.h"
+#include "source/spirv_target_env.h"
+#include "source/val/basic_block.h"
+#include "source/val/construct.h"
+#include "source/val/function.h"
 #include "spirv-tools/libspirv.h"
-#include "spirv_target_env.h"
-#include "val/basic_block.h"
-#include "val/construct.h"
-#include "val/function.h"
 
 namespace spvtools {
 namespace val {
@@ -320,6 +321,12 @@ const Function* ValidationState_t::function(uint32_t id) const {
   return it->second;
 }
 
+Function* ValidationState_t::function(uint32_t id) {
+  auto it = id_to_function_.find(id);
+  if (it == id_to_function_.end()) return nullptr;
+  return it->second;
+}
+
 bool ValidationState_t::in_function_body() const { return in_function_; }
 
 bool ValidationState_t::in_block() const {
@@ -455,17 +462,7 @@ spv_result_t ValidationState_t::RegisterFunctionEnd() {
 
 Instruction* ValidationState_t::AddOrderedInstruction(
     const spv_parsed_instruction_t* inst) {
-  if (in_function_body()) {
-    ordered_instructions_.emplace_back(inst, &current_function(),
-                                       current_function().current_block());
-    if (in_block() &&
-        spvOpcodeIsBlockTerminator(static_cast<SpvOp>(inst->opcode))) {
-      current_function().current_block()->set_terminator(
-          &ordered_instructions_.back());
-    }
-  } else {
-    ordered_instructions_.emplace_back(inst, nullptr, nullptr);
-  }
+  ordered_instructions_.emplace_back(inst);
   ordered_instructions_.back().SetLineNum(ordered_instructions_.size());
   return &ordered_instructions_.back();
 }
@@ -865,7 +862,7 @@ std::tuple<bool, bool, uint32_t> ValidationState_t::EvalInt32IfConst(
   assert(inst);
   const uint32_t type = inst->type_id();
 
-  if (!IsIntScalarType(type) || GetBitWidth(type) != 32) {
+  if (type == 0 || !IsIntScalarType(type) || GetBitWidth(type) != 32) {
     return std::make_tuple(false, false, 0);
   }
 

@@ -12,16 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "vector_dce.h"
+#include "source/opt/vector_dce.h"
 
-namespace {
-const uint32_t kExtractCompositeIdInIdx = 0;
-const uint32_t kInsertObjectIdInIdx = 0;
-const uint32_t kInsertCompositeIdInIdx = 1;
-}  // namespace
+#include <utility>
 
 namespace spvtools {
 namespace opt {
+namespace {
+
+const uint32_t kExtractCompositeIdInIdx = 0;
+const uint32_t kInsertObjectIdInIdx = 0;
+const uint32_t kInsertCompositeIdInIdx = 1;
+
+}  // namespace
 
 Pass::Status VectorDCE::Process() {
   bool modified = false;

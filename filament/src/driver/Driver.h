@@ -50,9 +50,6 @@ class Dispatcher;
 
 class Driver {
 public:
-    static std::unique_ptr<Driver>
-    create(driver::ExternalContext* externalContext, void* sharedGLContext) noexcept;
-
     // constants
     static constexpr size_t MAX_ATTRIBUTE_BUFFER_COUNT = 8;
 
@@ -103,11 +100,13 @@ public:
     using StreamHandle          = Handle<HwStream>;
 
     struct Attribute {
+        static constexpr uint8_t FLAG_NORMALIZED     = 0x1;
+        static constexpr uint8_t FLAG_INTEGER_TARGET = 0x2;
         uint32_t offset = 0;
         uint8_t stride = 0;
         uint8_t buffer = 0xFF;
         ElementType type = ElementType::BYTE;
-        bool normalized = false;
+        uint8_t flags = 0x0;
     };
 
     using AttributeArray = std::array<Attribute, MAX_ATTRIBUTE_BUFFER_COUNT>;
@@ -211,7 +210,7 @@ public:
     static size_t getElementTypeSize(ElementType type) noexcept;
 
     // This is here to be compatible with CommandStream (nice for debugging)
-    inline void queueCommand(std::function<void()> command) {
+    inline void queueCommand(const std::function<void()>& command) {
         command();
     }
 

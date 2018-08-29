@@ -38,5 +38,4 @@ if (NOT ANDROID)
     target_link_libraries(test_bluevk PRIVATE dl bluevk sdl2)
 endif()
 
-install(DIRECTORY ${PUBLIC_HDR_DIR}/bluevk DESTINATION include)
 install(TARGETS ${TARGET} ARCHIVE DESTINATION lib/${DIST_DIR})

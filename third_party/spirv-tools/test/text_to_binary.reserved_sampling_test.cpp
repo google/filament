@@ -14,10 +14,11 @@
 
 // Validation tests for illegal instructions
 
-#include "unit_spirv.h"
+#include <string>
 
 #include "gmock/gmock.h"
-#include "test_fixture.h"
+#include "test/test_fixture.h"
+#include "test/unit_spirv.h"
 
 namespace spvtools {
 namespace {

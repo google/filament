@@ -124,6 +124,7 @@ MaterialBuilder& MaterialBuilder::set(Property p) noexcept {
         case Property::AMBIENT_OCCLUSION:
         case Property::CLEAR_COAT:
         case Property::CLEAR_COAT_ROUGHNESS:
+        case Property::CLEAR_COAT_NORMAL:
         case Property::ANISOTROPY:
         case Property::ANISOTROPY_DIRECTION:
         case Property::THICKNESS:

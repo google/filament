@@ -12,19 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Contains utils for reading, writing and debug printing bit streams.
-
+#include <algorithm>
 #include <map>
 #include <sstream>
 #include <string>
 #include <unordered_map>
+#include <utility>
+#include <vector>
 
 #include "gmock/gmock.h"
-#include "util/bit_stream.h"
-#include "util/huffman_codec.h"
+#include "source/comp/bit_stream.h"
+#include "source/comp/huffman_codec.h"
 
 namespace spvtools {
-namespace utils {
+namespace comp {
 namespace {
 
 const std::map<std::string, uint32_t>& GetTestSet() {
@@ -312,5 +313,5 @@ TEST(Huffman, CreateFromTextU64) {
 }
 
 }  // namespace
-}  // namespace utils
+}  // namespace comp
 }  // namespace spvtools

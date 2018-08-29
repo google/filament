@@ -12,14 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import("//build_overrides/spirv_tools.gni")
+
 import("//testing/test.gni")
 import("//build_overrides/build.gni")
 
-if (build_with_chromium) {
-  spirv_headers = "//third_party/spirv-headers/src"
-} else {
-  spirv_headers = "external/spirv-headers"
-}
+spirv_headers = spirv_tools_spirv_headers_dir
 
 template("spvtools_core_tables") {
   assert(defined(invoker.version), "Need version in $target_name generation.")
@@ -230,6 +228,21 @@ action("spvtools_generators_inc") {
   ]
 }
 
+action("spvtools_build_version") {
+  script = "utils/update_build_version.py"
+
+  src_dir = "."
+  inc_file = "${target_gen_dir}/build-version.inc"
+
+  outputs = [
+    inc_file,
+  ]
+  args = [
+    rebase_path(src_dir, root_build_dir),
+    rebase_path(inc_file, root_build_dir),
+  ]
+}
+
 spvtools_core_tables("unified1") {
   version = "unified1"
 }
@@ -264,7 +277,6 @@ config("spvtools_config") {
   include_dirs = [
     ".",
     "include",
-    "source",
     "$target_gen_dir",
     "${spirv_headers}/include",
   ]
@@ -304,7 +316,6 @@ static_library("spvtools") {
     "source/instruction.h",
     "source/libspirv.cpp",
     "source/macro.h",
-    "source/message.cpp",
     "source/name_mapper.cpp",
     "source/name_mapper.h",
     "source/opcode.cpp",
@@ -329,16 +340,13 @@ static_library("spvtools") {
     "source/text.h",
     "source/text_handler.cpp",
     "source/text_handler.h",
-    "source/util/bit_stream.cpp",
-    "source/util/bit_stream.h",
     "source/util/bit_vector.cpp",
     "source/util/bit_vector.h",
     "source/util/bitutils.h",
     "source/util/hex_float.h",
-    "source/util/hufman_codec.h",
     "source/util/ilist.h",
     "source/util/ilist_node.h",
-    "source/util/move_to_front.h",
+    "source/util/make_unique.h",
     "source/util/parse_number.cpp",
     "source/util/parse_number.h",
     "source/util/small_vector.h",
@@ -362,6 +370,7 @@ static_library("spvtools_val") {
     "source/val/validate.cpp",
     "source/val/validate.h",
     "source/val/validate_adjacency.cpp",
+    "source/val/validate_annotation.cpp",
     "source/val/validate_arithmetics.cpp",
     "source/val/validate_atomics.cpp",
     "source/val/validate_barriers.cpp",
@@ -370,11 +379,15 @@ static_library("spvtools_val") {
     "source/val/validate_capability.cpp",
     "source/val/validate_cfg.cpp",
     "source/val/validate_composites.cpp",
+    "source/val/validate_constants.cpp",
     "source/val/validate_conversion.cpp",
     "source/val/validate_datarules.cpp",
+    "source/val/validate_debug.cpp",
     "source/val/validate_decorations.cpp",
     "source/val/validate_derivatives.cpp",
+    "source/val/validate_execution_limitations.cpp",
     "source/val/validate_ext_inst.cpp",
+    "source/val/validate_function.cpp",
     "source/val/validate_id.cpp",
     "source/val/validate_image.cpp",
     "source/val/validate_instruction.cpp",
@@ -383,9 +396,10 @@ static_library("spvtools_val") {
     "source/val/validate_literals.cpp",
     "source/val/validate_logicals.cpp",
     "source/val/validate_memory.cpp",
+    "source/val/validate_mode_setting.cpp",
     "source/val/validate_non_uniform.cpp",
     "source/val/validate_primitives.cpp",
-    "source/val/validate_type_unique.cpp",
+    "source/val/validate_type.cpp",
     "source/val/validation_state.cpp",
   ]
 
@@ -414,6 +428,8 @@ static_library("spvtools_opt") {
     "source/opt/cfg.h",
     "source/opt/cfg_cleanup_pass.cpp",
     "source/opt/cfg_cleanup_pass.h",
+    "source/opt/combine_access_chains.cpp",
+    "source/opt/combine_access_chains.h",
     "source/opt/common_uniform_elim_pass.cpp",
     "source/opt/common_uniform_elim_pass.h",
     "source/opt/compact_ids_pass.cpp",
@@ -508,7 +524,6 @@ static_library("spvtools_opt") {
     "source/opt/loop_unswitch_pass.h",
     "source/opt/loop_utils.cpp",
     "source/opt/loop_utils.h",
-    "source/opt/make_unique.h",
     "source/opt/mem_pass.cpp",
     "source/opt/mem_pass.h",
     "source/opt/merge_return_pass.cpp",
@@ -587,86 +602,42 @@ group("SPIRV-Tools") {
 }
 
 if (!build_with_chromium) {
+  googletest_dir = spirv_tools_googletest_dir
+
+  config("gtest_config") {
+    include_dirs = [
+      "${googletest_dir}/googletest",
+      "${googletest_dir}/googletest/include",
+    ]
+  }
+
   static_library("gtest") {
     testonly = true
-
-    defines = [
-      # In order to allow regex matches in gtest to be shared between Windows
-      # and other systems, we tell gtest to always use its internal engine.
-      "GTEST_HAS_POSIX_RE=0",
-
-      # Enables C++11 features.
-      "GTEST_LANG_CXX11=1",
-
-      # Prevents gtest from including both <tr1/tuple> and <tuple>.
-      "GTEST_HAS_TR1_TUPLE=0",
-    ]
-
     sources = [
-      "external/googletest/googletest/include/gtest/gtest-death-test.h",
-      "external/googletest/googletest/include/gtest/gtest-message.h",
-      "external/googletest/googletest/include/gtest/gtest-param-test.h",
-      "external/googletest/googletest/include/gtest/gtest-printers.h",
-      "external/googletest/googletest/include/gtest/gtest-spi.h",
-      "external/googletest/googletest/include/gtest/gtest-test-part.h",
-      "external/googletest/googletest/include/gtest/gtest-typed-test.h",
-      "external/googletest/googletest/include/gtest/gtest.h",
-      "external/googletest/googletest/include/gtest/gtest_pred_impl.h",
-      "external/googletest/googletest/include/gtest/internal/gtest-death-test-internal.h",
-      "external/googletest/googletest/include/gtest/internal/gtest-filepath.h",
-      "external/googletest/googletest/include/gtest/internal/gtest-internal.h",
-      "external/googletest/googletest/include/gtest/internal/gtest-linked_ptr.h",
-      "external/googletest/googletest/include/gtest/internal/gtest-param-util-generated.h",
-      "external/googletest/googletest/include/gtest/internal/gtest-param-util.h",
-      "external/googletest/googletest/include/gtest/internal/gtest-port.h",
-      "external/googletest/googletest/include/gtest/internal/gtest-string.h",
-      "external/googletest/googletest/include/gtest/internal/gtest-tuple.h",
-      "external/googletest/googletest/include/gtest/internal/gtest-type-util.h",
-      "external/googletest/googletest/src/gtest-death-test.cc",
-      "external/googletest/googletest/src/gtest-filepath.cc",
-      "external/googletest/googletest/src/gtest-internal-inl.h",
-      "external/googletest/googletest/src/gtest-port.cc",
-      "external/googletest/googletest/src/gtest-printers.cc",
-      "external/googletest/googletest/src/gtest-test-part.cc",
-      "external/googletest/googletest/src/gtest-typed-test.cc",
-      "external/googletest/googletest/src/gtest.cc",
+      "${googletest_dir}/googletest/src/gtest-all.cc",
     ]
+    public_configs = [ ":gtest_config" ]
+  }
 
+  config("gmock_config") {
     include_dirs = [
-      "external/googletest/googletest/include",
-      "external/googletest/googletest/",
+      "${googletest_dir}/googlemock",
+      "${googletest_dir}/googlemock/include",
+      "${googletest_dir}/googletest/include",
     ]
-
-    configs -= [ "//build/config/compiler:chromium_code" ]
-    configs += [ "//build/config/compiler:no_chromium_code" ]
+    if (is_clang) {
+      # TODO: Can remove this if/when the issue is fixed.
+      # https://github.com/google/googletest/issues/533
+      cflags = [ "-Wno-inconsistent-missing-override" ]
+    }
   }
 
   static_library("gmock") {
     testonly = true
     sources = [
-      "external/googletest/googlemock/include/gmock/gmock-actions.h",
-      "external/googletest/googlemock/include/gmock/gmock-cardinalities.h",
-      "external/googletest/googlemock/include/gmock/gmock-generated-actions.h",
-      "external/googletest/googlemock/include/gmock/gmock-generated-function-mockers.h",
-      "external/googletest/googlemock/include/gmock/gmock-generated-matchers.h",
-      "external/googletest/googlemock/include/gmock/gmock-generated-nice-strict.h",
-      "external/googletest/googlemock/include/gmock/gmock-matchers.h",
-      "external/googletest/googlemock/include/gmock/gmock-spec-builders.h",
-      "external/googletest/googlemock/include/gmock/gmock.h",
-      "external/googletest/googlemock/include/gmock/internal/gmock-generated-internal-utils.h",
-      "external/googletest/googlemock/include/gmock/internal/gmock-internal-utils.h",
-      "external/googletest/googlemock/include/gmock/internal/gmock-port.h",
-      "external/googletest/googlemock/src/gmock-cardinalities.cc",
-      "external/googletest/googlemock/src/gmock-internal-utils.cc",
-      "external/googletest/googlemock/src/gmock-matchers.cc",
-      "external/googletest/googlemock/src/gmock-spec-builders.cc",
-      "external/googletest/googlemock/src/gmock.cc",
+      "${googletest_dir}/googlemock/src/gmock-all.cc",
     ]
-
-    include_dirs = [
-      "external/googletest/googletest/include",
-      "external/googletest/googlemock/include",
-    ]
+    public_configs = [ ":gmock_config" ]
   }
 }
 
@@ -739,6 +710,8 @@ test("spvtools_test") {
 
   deps = [
     ":spvtools",
+    ":spvtools_language_header_unified1",
+    ":spvtools_val",
   ]
 
   if (build_with_chromium) {
@@ -752,13 +725,7 @@ test("spvtools_test") {
       ":gmock",
       ":gtest",
     ]
-
-    sources += [ "external/googletest/googletest/src/gtest_main.cc" ]
-
-    include_dirs = [
-      "external/googletest/googletest/include",
-      "external/googletest/googlemock/include",
-    ]
+    sources += [ "${googletest_dir}/googletest/src/gtest_main.cc" ]
   }
 
   configs += [
@@ -767,11 +734,23 @@ test("spvtools_test") {
   ]
 }
 
-if (!build_with_chromium) {
+if (spirv_tools_standalone) {
   group("fuzzers") {
     testonly = true
     deps = [
-      "//testing/fuzzers",
+      "test/fuzzers",
     ]
   }
+}
+
+executable("spirv-as") {
+  sources = [
+    "source/software_version.cpp",
+    "tools/as/as.cpp",
+  ]
+  deps = [
+    ":spvtools",
+    ":spvtools_build_version",
+  ]
+  configs += [ ":spvtools_config" ]
 }

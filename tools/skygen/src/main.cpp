@@ -23,6 +23,7 @@
 #include <math/scalar.h>
 #include <math/vec3.h>
 
+#include <image/LinearImage.h>
 #include <imageio/ImageEncoder.h>
 
 #include <utils/JobSystem.h>
@@ -83,7 +84,7 @@ static float angleBetween(float thetav, float phiv, float theta, float phi) {
     return acosf(cosGamma);
 }
 
-static void generateSky(const Image& image) {
+static void generateSky(LinearImage image) {
     printf("Sky parameters\n");
     printf("    Elevation: %.2f°\n", g_elevation * 180.0 * M_1_PI);
     printf("    Azimuth:   %.2f°\n", g_azimuth * 180.0 * M_1_PI);
@@ -121,7 +122,7 @@ static void generateSky(const Image& image) {
 
             size_t y0 = size_t(d);
             for (size_t y = y0; y < y0 + c; y++) {
-                float3* UTILS_RESTRICT data = static_cast<float3*>(image.getPixelRef(0, y));
+                float3* UTILS_RESTRICT data = image.get<float3>(0, y);
 
                 float v = (y + 0.5f) / h;
                 float theta = float(M_PI * v);
@@ -193,7 +194,7 @@ static void generateSky(const Image& image) {
     const size_t h = image.getHeight();
 
     for (size_t y = 0; y < h; y++) {
-        float3* UTILS_RESTRICT data = static_cast<float3*>(image.getPixelRef(0, y));
+        float3* UTILS_RESTRICT data = image.get<float3>(0, y);
         for (size_t x = 0; x < w; x++, data++) {
             *data *= hdrScale;
             if (g_tonemap) {
@@ -389,10 +390,9 @@ int main(int argc, char* argv[]) {
     const uint32_t height = std::max(1u, g_outputWidth >> 1);
 
     // allocate map
-    const size_t size = width * height * sizeof(float3);
-    std::unique_ptr<uint8_t[]> buffer(new uint8_t[size]);
-    Image image(std::move(buffer), width, height, width * sizeof(float3), sizeof(float3), 3);
+    LinearImage image(width, height, 3);
 
+    // render the sky and sun disk
     generateSky(image);
 
     // write the environment map to disk

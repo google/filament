@@ -12,14 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "pass_manager.h"
+#include "source/opt/pass_manager.h"
 
 #include <iostream>
+#include <string>
 #include <vector>
 
-#include "ir_context.h"
+#include "source/opt/ir_context.h"
+#include "source/util/timer.h"
 #include "spirv-tools/libspirv.hpp"
-#include "util/timer.h"
 
 namespace spvtools {
 

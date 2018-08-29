@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef LIBSPIRV_OPT_LOOP_FISSION_H_
-#define LIBSPIRV_OPT_LOOP_FISSION_H_
+#ifndef SOURCE_OPT_LOOP_FISSION_H_
+#define SOURCE_OPT_LOOP_FISSION_H_
 
 #include <algorithm>
 #include <cstdint>
@@ -21,12 +21,12 @@
 #include <utility>
 #include <vector>
 
-#include "cfg.h"
-#include "module.h"
-#include "opt/loop_dependence.h"
-#include "opt/loop_utils.h"
-#include "pass.h"
-#include "tree_iterator.h"
+#include "source/opt/cfg.h"
+#include "source/opt/loop_dependence.h"
+#include "source/opt/loop_utils.h"
+#include "source/opt/module.h"
+#include "source/opt/pass.h"
+#include "source/opt/tree_iterator.h"
 
 namespace spvtools {
 namespace opt {
@@ -55,7 +55,7 @@ class LoopFissionPass : public Pass {
                   bool split_multiple_times = true)
       : split_criteria_(functor), split_multiple_times_(split_multiple_times) {}
 
-  const char* name() const override { return "Loop Fission"; }
+  const char* name() const override { return "loop-fission"; }
 
   Pass::Status Process() override;
 
@@ -75,4 +75,4 @@ class LoopFissionPass : public Pass {
 }  // namespace opt
 }  // namespace spvtools
 
-#endif  // LIBSPIRV_OPT_LOOP_FISSION_H_
+#endif  // SOURCE_OPT_LOOP_FISSION_H_

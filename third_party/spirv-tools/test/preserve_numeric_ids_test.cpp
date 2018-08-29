@@ -18,7 +18,7 @@
 
 #include "source/text.h"
 #include "source/text_handler.h"
-#include "test_fixture.h"
+#include "test/test_fixture.h"
 
 namespace spvtools {
 namespace {

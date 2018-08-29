@@ -2,10 +2,15 @@
 
 <style>img { max-width: 100%; }</style>
 
-                   **Filament Materials**
-            Crafting physically-based materials
-
 ![](images/filament_logo.png)
+
+# About
+
+This document is part of the [Filament project](https://github.com/google/filament). To report errors in this document please use the [project's issue tracker](https://github.com/google/filament/issues).
+
+## Authors
+
+- [Romain Guy](https://github.com/romainguy), [@romainguy](https://twitter.com/romainguy)
 
 # Overview
 
@@ -78,6 +83,7 @@ in table [standardProperties].
 **anisotropyDirection** | Local surface direction
 **ambientOcclusion**    | Defines how much of the ambient light is accessible to a surface point. It is a per-pixel shadowing factor between 0.0 and 1.0
 **normal**              | A detail normal used to perturb the surface using _bump mapping_ (_normal mapping_)
+**clearCoatNormal**     | A detail normal used to perturb the clear coat layer using _bump mapping_ (_normal mapping_)
 **emissive**            | Additional diffuse albedo to simulate emissive surfaces (such as neons, etc.) This property is mostly useful in an HDR pipeline with a bloom pass
 [Table [standardProperties]: Properties of the standard model]
 
@@ -95,6 +101,7 @@ The type and range of each property is described in table [standardPropertiesTyp
 **anisotropyDirection** | float3   |  [0..1]                  | Linear RGB, encodes a direction vector in tangent space
 **ambientOcclusion**    | float    |  [0..1]                  |
 **normal**              | float3   |  [0..1]                  | Linear RGB, encodes a direction vector in tangent space
+**clearCoatNormal**     | float3   |  [0..1]                  | Linear RGB, encodes a direction vector in tangent space
 **emissive**            | float4   |  rgb=[0..1], a=[-n..n]   | Alpha is the exposure compensation
 [Table [standardPropertiesTypes]: Range and type of the standard model's properties]
 
@@ -139,14 +146,14 @@ Metals (conductors)
 
     Metal  |        sRGB         |  Hexadecimal |               Color
 ----------:|:-------------------:|:------------:|-------------------------------------------------------
-Silver     | 0.98, 0.98, 0.96    | #faf9f5     | <div style="background-color: #faf9f5; width: 60px">&nbsp;</div>
-Aluminum   | 0.96, 0.96, 0.96    | #f4f5f5     | <div style="background-color: #f4f5f5; width: 60px">&nbsp;</div>
-Titanium   | 0.81, 0.78, 0.76    | #cec8c2     | <div style="background-color: #cec8c2; width: 60px">&nbsp;</div>
-Iron       | 0.76, 0.74, 0.73    | #c0bdba     | <div style="background-color: #c0bdba; width: 60px">&nbsp;</div>
-Platinum   | 0.84, 0.82, 0.79    | #d6d1c8     | <div style="background-color: #d6d1c8; width: 60px">&nbsp;</div>
-Gold       | 1.00, 0.87, 0.62    | #fedc9d     | <div style="background-color: #fedc9d; width: 60px">&nbsp;</div>
-Brass      | 0.96, 0.89, 0.68    | #f4e4ad     | <div style="background-color: #f4e4ad; width: 60px">&nbsp;</div>
-Copper     | 0.98, 0.85, 0.72    | #fbd8b8     | <div style="background-color: #fbd8b8; width: 60px">&nbsp;</div>
+Silver     | 0.97, 0.96, 0.91    | #f7f4e8     | <div style="background-color: #faf9f5; width: 60px">&nbsp;</div>
+Aluminum   | 0.91, 0.92, 0.92    | #e8eaea     | <div style="background-color: #f4f5f5; width: 60px">&nbsp;</div>
+Titanium   | 0.76, 0.73, 0.69    | #c1baaf     | <div style="background-color: #cec8c2; width: 60px">&nbsp;</div>
+Iron       | 0.77, 0.78, 0.78    | #c4c6c6     | <div style="background-color: #c0bdba; width: 60px">&nbsp;</div>
+Platinum   | 0.83, 0.81, 0.78    | #d3cec6     | <div style="background-color: #d6d1c8; width: 60px">&nbsp;</div>
+Gold       | 1.00, 0.85, 0.57    | #ffd891     | <div style="background-color: #fedc9d; width: 60px">&nbsp;</div>
+Brass      | 0.98, 0.90, 0.59    | #f9e596     | <div style="background-color: #f4e4ad; width: 60px">&nbsp;</div>
+Copper     | 0.97, 0.74, 0.62    | #f7bc9e     | <div style="background-color: #fbd8b8; width: 60px">&nbsp;</div>
 [Table [baseColorsConductors]: `baseColor` for common metals]
 
 ### Metallic
@@ -212,14 +219,19 @@ Table [commonMatReflectance] describes acceptable reflectance values for various
 (no real world material has a value under 2%).
 
 
-          Material         |      Reflectance      |   Property value
---------------------------:|:---------------------:|:------------------
-Glass                      | 3.5%                  | 0.46
-Water                      | 2%                    | 0.35
-Common liquids             | 2% to 4%              | 0.35 to 0.5
-Common gemstones           | 8% to 16%             | 0.70 to 1.0
-Other dielectric materials | 2% to 5%              | 0.35 to 0.56
-Default value              | 4%                    | 0.50
+          Material         |    Reflectance   |  Property value
+--------------------------:|:-----------------|:----------------
+Water                      | 2%               | 0.35
+Fabric                     | 4% to 5.6%       | 0.5 to 0.59
+Common liquids             | 2% to 4%         | 0.35 to 0.5
+Common gemstones           | 5% to 16%        | 0.56 to 1.0
+Plastics, glass            | 4% to 5%         | 0.5 to 0.56
+Other dielectric materials | 2% to 5%         | 0.35 to 0.56
+Eyes                       | 2.5%             | 0.39
+Skin                       | 2.8%             | 0.42
+Hair                       | 4.6%             | 0.54
+Teeth                      | 5.8%             | 0.6
+Default value              | 4%               | 0.5
 [Table [commonMatReflectance]: Reflectance of common materials]
 
 ### Clear coat
@@ -331,6 +343,17 @@ and with (right)](images/screenshot_normal_mapping.jpg)
 
 !!! Warning
     Using a normal map increases the runtime cost of the material model.
+    
+### Clear coat normal
+
+The `clearCoatNormal` property defines the normal of the clear coat layer at a given point. It
+behaves otherwise like the `normal` property.
+
+![Figure [clearCoatNormalMapped]: A material with a clear coat normal
+map and a surface normal map](images/screenshot_clear_coat_normal.jpg)
+
+!!! Warning
+    Using a clear coat normal map increases the runtime cost of the material model.
 
 ### Emissive
 
@@ -1234,6 +1257,7 @@ struct MaterialInputs {
     // not available when the shading model is subsurface or cloth
     float  clearCoat;           // default: 1.0
     float  clearCoatRoughness;  // default: 0.0
+    float3 clearCoatNormal;     // default: float3(0.0, 0.0, 1.0)
     float  anisotropy;          // default: 0.0
     float3 anisotropyDirection; // default: float3(1.0, 0.0, 0.0)
 

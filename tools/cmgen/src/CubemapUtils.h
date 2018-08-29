@@ -17,11 +17,10 @@
 #ifndef SRC_CUBEMAPUTILS_H_
 #define SRC_CUBEMAPUTILS_H_
 
-#include <image/Image.h>
-
 #include <utils/JobSystem.h>
 
 #include "Cubemap.h"
+#include "Image.h"
 
 class CubemapUtils {
 public:
@@ -48,10 +47,10 @@ public:
             const STATE& prototype = STATE());
 
     // Convert equirectangular Image to a Cubemap
-    static void equirectangularToCubemap(Cubemap& dst, const image::Image& src);
+    static void equirectangularToCubemap(Cubemap& dst, const Image& src);
 
     // clamp image to acceptable range
-    static void clamp(image::Image& src);
+    static void clamp(Image& src);
 
     // Downsample a cubemap
     static void downsampleCubemapLevelBoxFilter(Cubemap& dst, const Cubemap& src);
@@ -60,13 +59,13 @@ public:
     static std::string getFaceName(Cubemap::Face face);
 
     // Create a cubemap object and its backing Image
-    static Cubemap create(image::Image& image, size_t dim, bool horizontal = true);
+    static Cubemap create(Image& image, size_t dim, bool horizontal = true);
 
     // Copy an image
-    static void copyImage(image::Image& dst, const image::Image& src);
+    static void copyImage(Image& dst, const Image& src);
 
     // Sets a Cubemap faces from a cross image
-    static void setAllFacesFromCross(Cubemap& cm, const image::Image& image);
+    static void setAllFacesFromCross(Cubemap& cm, const Image& image);
 
     static void mirrorCubemap(Cubemap& dst, const Cubemap& src);
 
@@ -75,8 +74,8 @@ public:
     static void generateUVGrid(Cubemap const& cml, size_t gridFrequency);
 
 private:
-    static void setFaceFromCross(Cubemap& cm, Cubemap::Face face, const image::Image& image);
-    static image::Image createCubemapImage(size_t dim, bool horizontal = true);
+    static void setFaceFromCross(Cubemap& cm, Cubemap::Face face, const Image& image);
+    static Image createCubemapImage(size_t dim, bool horizontal = true);
 };
 
 // -----------------------------------------------------------------------------------------------
@@ -106,7 +105,7 @@ void CubemapUtils::process( const Cubemap& cm,
                 [ faceIndex, &states, f, &cm, &dim, &proc ]
                         (utils::JobSystem& js, utils::JobSystem::Job* parent) {
                     STATE& s = states[faceIndex];
-                    const image::Image& image(cm.getImageForFace(f));
+                    const Image& image(cm.getImageForFace(f));
 
                     auto parallelJobTask = [ &image, &proc, &s, dim, f ](size_t y0, size_t c) {
                         for (size_t y = y0; y < y0 + c; y++) {

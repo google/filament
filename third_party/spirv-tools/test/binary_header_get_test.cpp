@@ -13,7 +13,7 @@
 // limitations under the License.
 
 #include "source/spirv_constant.h"
-#include "unit_spirv.h"
+#include "test/unit_spirv.h"
 
 namespace spvtools {
 namespace {

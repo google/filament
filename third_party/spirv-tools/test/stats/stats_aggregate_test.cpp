@@ -15,12 +15,14 @@
 // Tests for unique type declaration rules validator.
 
 #include <string>
+#include <unordered_map>
 
-#include "source/spirv_stats.h"
-#include "test_fixture.h"
-#include "unit_spirv.h"
+#include "test/test_fixture.h"
+#include "test/unit_spirv.h"
+#include "tools/stats/spirv_stats.h"
 
 namespace spvtools {
+namespace stats {
 namespace {
 
 using spvtest::ScopedContext;
@@ -431,54 +433,6 @@ OpMemoryModel Logical GLSL450
   EXPECT_EQ(1u, stats.s64_constant_hist.at(-64));
 }
 
-TEST(AggregateStats, IdDescriptor) {
-  const std::string code1 = R"(
-OpCapability Addresses
-OpCapability Kernel
-OpCapability GenericPointer
-OpCapability Linkage
-OpMemoryModel Physical32 OpenCL
-%u32 = OpTypeInt 32 0
-%f32 = OpTypeFloat 32
-%1 = OpConstant %f32 1
-%2 = OpConstant %f32 1
-%3 = OpConstant %u32 32
-)";
-
-  const std::string code2 = R"(
-OpCapability Shader
-OpCapability Linkage
-OpMemoryModel Logical GLSL450
-%f32 = OpTypeFloat 32
-%u32 = OpTypeInt 32 0
-%1 = OpConstant %f32 1
-%2 = OpConstant %f32 3
-%3 = OpConstant %u32 32
-)";
-
-  const uint32_t kF32 = 1951208733;
-  const uint32_t kU32 = 2430404313;
-  const uint32_t kF32_1 = 296981500;
-  const uint32_t kF32_3 = 1450415100;
-  const uint32_t kU32_32 = 827246872;
-
-  SpirvStats stats;
-
-  CompileAndAggregateStats(code1, &stats);
-
-  {
-    const std::unordered_map<uint32_t, uint32_t> expected = {
-        {kF32, 3}, {kU32, 2}, {kF32_1, 2}, {kU32_32, 1}};
-    EXPECT_EQ(expected, stats.id_descriptor_hist);
-  }
-
-  CompileAndAggregateStats(code2, &stats);
-  {
-    const std::unordered_map<uint32_t, uint32_t> expected = {
-        {kF32, 6}, {kU32, 4}, {kF32_1, 3}, {kF32_3, 1}, {kU32_32, 2}};
-    EXPECT_EQ(expected, stats.id_descriptor_hist);
-  }
-}
-
 }  // namespace
+}  // namespace stats
 }  // namespace spvtools

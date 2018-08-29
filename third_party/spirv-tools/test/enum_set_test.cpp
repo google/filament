@@ -12,11 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <algorithm>
+#include <utility>
 #include <vector>
-#include "gmock/gmock.h"
 
-#include "enum_set.h"
-#include "unit_spirv.h"
+#include "gmock/gmock.h"
+#include "source/enum_set.h"
+#include "test/unit_spirv.h"
 
 namespace spvtools {
 namespace {

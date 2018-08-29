@@ -77,10 +77,10 @@ struct RenderPassParams {
     };
     static constexpr uint8_t DEPENDENCY_BY_REGION = 1; // see "framebuffer-local" in Vulkan spec.
     // Viewport (16 bytes)
-    int32_t left;
-    int32_t bottom;
-    uint32_t width;
-    uint32_t height;
+    int32_t left = 0;
+    int32_t bottom = 0;
+    uint32_t width = 0;
+    uint32_t height = 0;
     // Clear values (32 bytes)
     math::float4 clearColor = {};
     double clearDepth = 1.0;

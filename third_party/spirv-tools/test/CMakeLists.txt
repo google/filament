@@ -198,21 +198,29 @@ add_spvtools_unittest(
 add_spvtools_unittest(
   TARGET bit_stream
   SRCS bit_stream.cpp
+      ${CMAKE_CURRENT_SOURCE_DIR}/../source/comp/bit_stream.cpp
+      ${CMAKE_CURRENT_SOURCE_DIR}/../source/comp/bit_stream.h
   LIBS ${SPIRV_TOOLS})
 
 add_spvtools_unittest(
   TARGET huffman_codec
   SRCS huffman_codec.cpp
+      ${CMAKE_CURRENT_SOURCE_DIR}/../source/comp/bit_stream.cpp
+      ${CMAKE_CURRENT_SOURCE_DIR}/../source/comp/bit_stream.h
+      ${CMAKE_CURRENT_SOURCE_DIR}/../source/comp/huffman_codec.h
   LIBS ${SPIRV_TOOLS})
 
 add_spvtools_unittest(
   TARGET move_to_front
   SRCS move_to_front_test.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../source/comp/move_to_front.h
+    ${CMAKE_CURRENT_SOURCE_DIR}/../source/comp/move_to_front.cpp
   LIBS ${SPIRV_TOOLS})
 
 add_subdirectory(comp)
 add_subdirectory(link)
 add_subdirectory(opt)
 add_subdirectory(stats)
+add_subdirectory(tools)
 add_subdirectory(util)
 add_subdirectory(val)

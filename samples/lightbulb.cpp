@@ -38,6 +38,7 @@
 #include "app/MeshAssimp.h"
 #include "app/Cube.h"
 #include "app/IcoSphere.h"
+#include "app/Sphere.h"
 
 using namespace math;
 using namespace filament;
@@ -53,14 +54,11 @@ static std::vector<Path> g_filenames;
 std::map<std::string, MaterialInstance*> g_materialLibrary;
 std::unique_ptr<MeshAssimp> g_meshSet;
 std::unique_ptr<Cube> g_meshAabb;
-static Entity g_light;
-// optional lights
-static Entity g_light1;
-static Entity g_light2;
-static Entity g_light3;
-static Entity g_light4;
+
+static std::vector<Sphere> g_spheres;
+static std::vector<Entity> g_lights;
+
 static Entity g_discoBallEntity;
-static std::vector<Entity> g_discoBallLights;
 static float g_discoAngle = 0;
 static float g_discoAngularSpeed = 0.25f * float(M_PI);  // rad/s
 
@@ -68,6 +66,7 @@ static Config g_config;
 static bool g_moreLights = false;
 static bool g_shadowPlane = false;
 static bool g_discoBall = false;
+
 
 static void printUsage(char* name) {
     std::string exec_name(Path(name).getName());
@@ -174,20 +173,9 @@ static void cleanup(Engine* engine, View* view, Scene* scene) {
 
     auto& em = EntityManager::get();
 
-    engine->destroy(g_light);
-    em.destroy(g_light);
-    if (g_moreLights) {
-        engine->destroy(g_light1);
-        engine->destroy(g_light2);
-        engine->destroy(g_light3);
-        engine->destroy(g_light4);
-        em.destroy(g_light1);
-        em.destroy(g_light2);
-        em.destroy(g_light3);
-        em.destroy(g_light4);
-    }
+    g_spheres.clear();
 
-    for (Entity e : g_discoBallLights) {
+    for (Entity e : g_lights) {
         engine->destroy(e);
         em.destroy(e);
     }
@@ -200,8 +188,7 @@ static void cleanup(Engine* engine, View* view, Scene* scene) {
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunused-parameter"
 static void setup(Engine* engine, View* view, Scene* scene) {
-    g_meshSet.reset(new MeshAssimp(*engine, MeshAssimp::TargetApi::OPENGL,
-            MeshAssimp::Platform::DESKTOP));
+    g_meshSet.reset(new MeshAssimp(*engine));
     for (auto& filename : g_filenames) {
         g_meshSet->addFromFile(filename, g_materialLibrary);
     }
@@ -224,7 +211,7 @@ static void setup(Engine* engine, View* view, Scene* scene) {
     }
 
     auto& em = EntityManager::get();
-    g_light = em.create();
+    g_lights.push_back(em.create());
 
     LightManager::Builder(LightManager::Type::SUN)
             .color(Color::toLinear<ACCURATE>(sRGBColor(0.98f, 0.92f, 0.89f)))
@@ -232,21 +219,22 @@ static void setup(Engine* engine, View* view, Scene* scene) {
             .direction({ 0.7, -1, -0.8 })
             .sunAngularRadius(1.9f)
             .castShadows(true)
-            .build(*engine, g_light);
-    scene->addEntity(g_light);
+            .build(*engine, g_lights.back());
+    scene->addEntity(g_lights.back());
 
     if (g_moreLights) {
-        g_light1 = em.create();
-        g_light2 = em.create();
-        g_light3 = em.create();
-        g_light4 = em.create();
 
+        auto& lcm = engine->getLightManager();
+
+        g_lights.push_back(em.create());
         LightManager::Builder(LightManager::Type::POINT)
                 .color(Color::toLinear<ACCURATE>(sRGBColor(0.98f, 0.92f, 0.89f)))
                 .intensity(1000.0f, LightManager::EFFICIENCY_LED)
                 .position({ 0.0f, -0.2f, -3.0f })
                 .falloff(4.0f)
-                .build(*engine, g_light1);
+                .build(*engine, g_lights.back());
+
+        g_lights.push_back(em.create());
         LightManager::Builder(LightManager::Type::FOCUSED_SPOT)
                 .color(Color::toLinear<ACCURATE>(sRGBColor(0.98f, 0.12f, 0.19f)))
                 .intensity(2000.0f, LightManager::EFFICIENCY_LED)
@@ -254,53 +242,92 @@ static void setup(Engine* engine, View* view, Scene* scene) {
                 .direction({ -1.0f, 0.0f, 0.0f })
                 .spotLightCone(static_cast<float>(M_PI / 8), static_cast<float>((M_PI / 8) * 1.1))
                 .falloff(4.0f)
-                .build(*engine, g_light2);
+                .build(*engine, g_lights.back());
+
+        g_lights.push_back(em.create());
         LightManager::Builder(LightManager::Type::POINT)
                 .color(Color::toLinear<ACCURATE>(sRGBColor(0.18f, 0.12f, 0.89f)))
                 .intensity(1000.0f, LightManager::EFFICIENCY_LED)
-                .position({ -0.6f, 0.6f, -3.2f })
+                .position({ -0.6f, 0.3f, -3.2f })
                 .falloff(2.0f)
-                .build(*engine, g_light3);
+                .build(*engine, g_lights.back());
+
+        g_lights.push_back(em.create());
         LightManager::Builder(LightManager::Type::POINT)
                 .color(Color::toLinear<ACCURATE>(sRGBColor(0.88f, 0.82f, 0.29f)))
                 .intensity(1000.0f, LightManager::EFFICIENCY_LED)
                 .position({ 0.0f, 1.5f, -3.5f })
                 .falloff(2.0f)
-                .build(*engine, g_light4);
+                .build(*engine, g_lights.back());
 
-        scene->addEntity(g_light1);
-        scene->addEntity(g_light2);
-        scene->addEntity(g_light3);
-        scene->addEntity(g_light4);
+        g_lights.push_back(em.create());
+        LightManager::Builder(LightManager::Type::FOCUSED_SPOT)
+                .color(Color::toLinear<ACCURATE>(sRGBColor(0.12f, 0.98f, 0.19f)))
+                .intensity(2000.0f, LightManager::EFFICIENCY_LED)
+                .position({ 0.0f, 0.6f, -3.2f })
+                .direction({  1.0f, 0.0f, 0.0f })
+                .spotLightCone(static_cast<float>(M_PI / 8), static_cast<float>((M_PI / 8) * 1.1))
+                .falloff(4.0f)
+                .build(*engine, g_lights.back());
+
+        for (const auto& light : g_lights) {
+            scene->addEntity(light);
+            const LightManager::Instance& instance = lcm.getInstance(light);
+            if (!lcm.isDirectional(instance)) {
+                g_spheres.emplace_back(*engine, FilamentApp::get().getDefaultMaterial());
+                g_spheres.back()
+                         .setRadius(0.025f)
+                         .setPosition(lcm.getPosition(instance));
+
+                auto mi = g_spheres.back().getMaterialInstance();
+                mi->setParameter("baseColor", RgbaType::LINEAR, LinearColorA{ lcm.getColor(instance), 1.0f });
+                mi->setParameter("roughness", 0.2f);
+                mi->setParameter("metallic", 0.0f);
+            }
+        }
+
+        for (const auto& sphere : g_spheres) {
+            scene->addEntity(sphere.getSolidRenderable());
+        }
     }
 
     if (g_discoBall) {
         IcoSphere sphere(2);
         auto const& vertices = sphere.getVertices();
-        g_discoBallLights.resize(vertices.size());
-        auto n = g_discoBallLights.size();
+        auto n = vertices.size();
+        g_lights.resize(g_lights.size() + n);
         slog.d << "light count = " << n << io::endl;
-        em.create(n, g_discoBallLights.data());
 
         Entity discoBall = em.create();
-        tcm.create(discoBall, {}, mat4f::translate(float4{ 0, 3, -14, 1 }));
+        tcm.create(discoBall, {}, mat4f::translate(float3{ 0, 3, -14 }));
         auto parent = tcm.getInstance(discoBall);
 
         for (size_t i = 0, c = n; i < c; i++) {
+            g_lights.push_back(em.create());
             LightManager::Builder(LightManager::Type::FOCUSED_SPOT)
                     .color(abs(vertices[i]))
                     .intensity(1000.0f, LightManager::EFFICIENCY_HALOGEN)
                     .direction(vertices[i])
                     .spotLightCone(0.0174f * 0.5f, 0.0174f * 2.0f)
                     .falloff(20.0f)
-                    .build(*engine, g_discoBallLights[i]);
+                    .build(*engine, g_lights.back());
 
-            tcm.create(g_discoBallLights[i], parent, {});
+            tcm.create(g_lights.back(), parent, {});
 
-            scene->addEntity(g_discoBallLights[i]);
+            scene->addEntity(g_lights.back());
         }
         g_discoBallEntity = discoBall;
-   }
+
+        g_spheres.emplace_back(*engine, FilamentApp::get().getDefaultMaterial());
+        g_spheres.back().setRadius(0.2f);
+        auto mi = g_spheres.back().getMaterialInstance();
+        mi->setParameter("baseColor", RgbaType::LINEAR, LinearColorA{ 1, 1, 1, 1 });
+        mi->setParameter("roughness", 0.01f);
+        mi->setParameter("metallic", 1.0f);
+        scene->addEntity(g_spheres.back().getSolidRenderable());
+        // parent the sphere representing the disco ball to the discoball transform -- w00t.
+        tcm.setParent(tcm.getInstance(g_spheres.back().getSolidRenderable()), tcm.getInstance(discoBall));
+    }
 
     g_meshAabb.reset(new Cube(*engine, FilamentApp::get().getTransparentMaterial(), {0,0,1}));
 
@@ -377,7 +404,7 @@ static void setup(Engine* engine, View* view, Scene* scene) {
         scene->addEntity(planeRenderable);
 
         tcm.setTransform(tcm.getInstance(planeRenderable),
-                math::mat4f::translate(float4{0, -1, -4, 1}));
+                math::mat4f::translate(float3{0, -1, -4}));
     }
 }
 #pragma clang diagnostic pop
@@ -407,7 +434,7 @@ int main(int argc, char* argv[]) {
         filamentApp.animate([lastTime](filament::Engine* engine, filament::View*, double now) mutable {
             auto& tcm = engine->getTransformManager();
             tcm.setTransform(tcm.getInstance(g_discoBallEntity),
-                    mat4f::translate(float4{ 0, 2, -4, 1 }) *
+                    mat4f::translate(float3{ 0, 2, -4, }) *
                     mat4f::rotate(g_discoAngle, float3{ 0, 1, 0 })
             );
             if (lastTime != 0) {

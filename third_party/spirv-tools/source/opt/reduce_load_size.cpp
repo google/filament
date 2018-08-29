@@ -12,18 +12,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "reduce_load_size.h"
-#include <util/bit_vector.h>
+#include "source/opt/reduce_load_size.h"
 
-#include "instruction.h"
-#include "ir_builder.h"
-#include "ir_context.h"
+#include <set>
+#include <vector>
+
+#include "source/opt/instruction.h"
+#include "source/opt/ir_builder.h"
+#include "source/opt/ir_context.h"
+#include "source/util/bit_vector.h"
 
 namespace {
+
 const uint32_t kExtractCompositeIdInIdx = 0;
 const uint32_t kVariableStorageClassInIdx = 0;
 const uint32_t kLoadPointerInIdx = 0;
 const double kThreshold = 0.9;
+
 }  // namespace
 
 namespace spvtools {

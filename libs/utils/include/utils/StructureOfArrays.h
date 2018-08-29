@@ -203,8 +203,8 @@ public:
         bool operator< (Iterator const& rhs) const { return (index <  rhs.index); }
 
         // Postfix operator needed by Microsoft STL.
-        Iterator operator++(int) { Iterator it(*this); index++; return it; }
-        Iterator operator--(int) { Iterator it(*this); index--; return it; }
+        const Iterator operator++(int) { Iterator it(*this); index++; return it; }
+        const Iterator operator--(int) { Iterator it(*this); index--; return it; }
     };
 
     iterator begin() noexcept { return { this, 0u }; }
@@ -459,13 +459,25 @@ public:
         UTILS_ALWAYS_INLINE constexpr Type const* operator &() const noexcept {
             return &soa.elementAt<E>(i);
         }
-        // assignment to the field
+		// assignment to the field
+#	if (_MSC_VER)
+		// workaround for compiler internal error in Visual Studio 15.8.x
+		UTILS_ALWAYS_INLINE constexpr SoA::TypeAt<E> const& operator = (const SoA::TypeAt<E>& other) noexcept
+		{
+			return (soa.elementAt<E>(i) = other);
+		}
+		UTILS_ALWAYS_INLINE constexpr SoA::TypeAt<E> const& operator = (SoA::TypeAt<E>&& other) noexcept
+		{
+			return (soa.elementAt<E>(i) = other);
+		}
+#	else
         UTILS_ALWAYS_INLINE constexpr Type const& operator = (Type const& other) noexcept {
             return (soa.elementAt<E>(i) = other);
         }
         UTILS_ALWAYS_INLINE constexpr Type const& operator = (Type&& other) noexcept {
             return (soa.elementAt<E>(i) = other);
         }
+#	endif
         // comparisons
         UTILS_ALWAYS_INLINE constexpr bool operator==(Type const& other) const {
             return (soa.elementAt<E>(i) == other);
@@ -622,7 +634,7 @@ StructureOfArraysBase<Allocator, Elements...>::StructureRef::assign(
     // implements StructureRef& StructureRef::operator=(Structure const& rhs)
     auto UTILS_UNUSED l = { (soa->elementAt<Is>(index) = std::get<Is>(rhs.elements), 0)... };
     return *this;
-};
+}
 
 template<typename Allocator, typename... Elements>
 template<size_t... Is>

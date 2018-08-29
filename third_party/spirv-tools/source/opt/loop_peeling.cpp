@@ -19,13 +19,13 @@
 #include <unordered_set>
 #include <vector>
 
-#include "ir_builder.h"
-#include "ir_context.h"
-#include "loop_descriptor.h"
-#include "loop_peeling.h"
-#include "loop_utils.h"
-#include "scalar_analysis.h"
-#include "scalar_analysis_nodes.h"
+#include "source/opt/ir_builder.h"
+#include "source/opt/ir_context.h"
+#include "source/opt/loop_descriptor.h"
+#include "source/opt/loop_peeling.h"
+#include "source/opt/loop_utils.h"
+#include "source/opt/scalar_analysis.h"
+#include "source/opt/scalar_analysis_nodes.h"
 
 namespace spvtools {
 namespace opt {

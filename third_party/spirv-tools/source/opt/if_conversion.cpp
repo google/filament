@@ -12,9 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "if_conversion.h"
+#include "source/opt/if_conversion.h"
 
-#include "value_number_table.h"
+#include <memory>
+#include <vector>
+
+#include "source/opt/value_number_table.h"
 
 namespace spvtools {
 namespace opt {

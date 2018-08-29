@@ -12,12 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "opt/loop_fusion_pass.h"
+#include "source/opt/loop_fusion_pass.h"
 
-#include "opt/ir_context.h"
-#include "opt/loop_descriptor.h"
-#include "opt/loop_fusion.h"
-#include "opt/register_pressure.h"
+#include "source/opt/ir_context.h"
+#include "source/opt/loop_descriptor.h"
+#include "source/opt/loop_fusion.h"
+#include "source/opt/register_pressure.h"
 
 namespace spvtools {
 namespace opt {

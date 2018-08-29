@@ -217,9 +217,9 @@ set(SPIRV_SOURCES
   ${spirv-tools_SOURCE_DIR}/include/spirv-tools/libspirv.h
 
   ${CMAKE_CURRENT_SOURCE_DIR}/util/bitutils.h
-  ${CMAKE_CURRENT_SOURCE_DIR}/util/bit_stream.h
   ${CMAKE_CURRENT_SOURCE_DIR}/util/bit_vector.h
   ${CMAKE_CURRENT_SOURCE_DIR}/util/hex_float.h
+  ${CMAKE_CURRENT_SOURCE_DIR}/util/make_unique.h
   ${CMAKE_CURRENT_SOURCE_DIR}/util/parse_number.h
   ${CMAKE_CURRENT_SOURCE_DIR}/util/small_vector.h
   ${CMAKE_CURRENT_SOURCE_DIR}/util/string_utils.h
@@ -254,7 +254,6 @@ set(SPIRV_SOURCES
   ${CMAKE_CURRENT_SOURCE_DIR}/text_handler.h
   ${CMAKE_CURRENT_SOURCE_DIR}/val/validate.h
 
-  ${CMAKE_CURRENT_SOURCE_DIR}/util/bit_stream.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/util/bit_vector.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/util/parse_number.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/util/string_utils.cpp
@@ -267,7 +266,6 @@ set(SPIRV_SOURCES
   ${CMAKE_CURRENT_SOURCE_DIR}/extensions.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/id_descriptor.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/libspirv.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/message.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/name_mapper.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/opcode.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/operand.cpp
@@ -275,7 +273,6 @@ set(SPIRV_SOURCES
   ${CMAKE_CURRENT_SOURCE_DIR}/print.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/software_version.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/spirv_endian.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/spirv_stats.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/spirv_target_env.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/spirv_validator_options.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/table.cpp
@@ -283,6 +280,7 @@ set(SPIRV_SOURCES
   ${CMAKE_CURRENT_SOURCE_DIR}/text_handler.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/val/validate.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/val/validate_adjacency.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/val/validate_annotation.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/val/validate_arithmetics.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/val/validate_atomics.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/val/validate_barriers.cpp
@@ -291,11 +289,15 @@ set(SPIRV_SOURCES
   ${CMAKE_CURRENT_SOURCE_DIR}/val/validate_capability.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/val/validate_cfg.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/val/validate_composites.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/val/validate_constants.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/val/validate_conversion.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/val/validate_datarules.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/val/validate_debug.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/val/validate_decorations.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/val/validate_derivatives.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/val/validate_ext_inst.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/val/validate_execution_limitations.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/val/validate_function.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/val/validate_id.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/val/validate_image.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/val/validate_interfaces.cpp
@@ -304,9 +306,10 @@ set(SPIRV_SOURCES
   ${CMAKE_CURRENT_SOURCE_DIR}/val/validate_literals.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/val/validate_logicals.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/val/validate_memory.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/val/validate_mode_setting.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/val/validate_non_uniform.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/val/validate_primitives.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/val/validate_type_unique.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/val/validate_type.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/val/decoration.h
   ${CMAKE_CURRENT_SOURCE_DIR}/val/basic_block.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/val/construct.cpp

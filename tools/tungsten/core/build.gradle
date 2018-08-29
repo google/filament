@@ -34,6 +34,12 @@ dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.2.51"
 }
 
+test {
+    testLogging {
+        showStandardStreams = true
+    }
+}
+
 repositories {
     jcenter()
 }

@@ -12,11 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "dominator_analysis.h"
+#include "source/opt/dominator_analysis.h"
 
 #include <unordered_set>
 
-#include "ir_context.h"
+#include "source/opt/ir_context.h"
 
 namespace spvtools {
 namespace opt {

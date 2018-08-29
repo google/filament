@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef LIBSPIRV_DIAGNOSTIC_H_
-#define LIBSPIRV_DIAGNOSTIC_H_
+#ifndef SOURCE_DIAGNOSTIC_H_
+#define SOURCE_DIAGNOSTIC_H_
 
 #include <sstream>
 #include <string>
@@ -76,4 +76,4 @@ std::string spvResultToString(spv_result_t res);
 
 }  // namespace spvtools
 
-#endif  // LIBSPIRV_DIAGNOSTIC_H_
+#endif  // SOURCE_DIAGNOSTIC_H_

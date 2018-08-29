@@ -22,6 +22,8 @@
 
 #include <math/vec3.h>
 
+#include <image/ImageOps.h>
+
 #include <imageio/ImageDecoder.h>
 #include <imageio/ImageEncoder.h>
 
@@ -176,7 +178,7 @@ inline bool isPOT(size_t x) {
 }
 
 float solveVMF(const float2& pos, const size_t sampleCount, const float roughness,
-        const Image& normal) {
+        const LinearImage& normal) {
 
     float3 averageNormal(0.0f);
     float2 topLeft(-float(sampleCount) / 2.0f + 0.5f);
@@ -185,8 +187,7 @@ float solveVMF(const float2& pos, const size_t sampleCount, const float roughnes
         for (size_t x = 0; x < sampleCount; x++) {
             float2 offset(topLeft + float2(x, y));
             float2 samplePos(floor(pos + offset) + 0.5f);
-            float3 sampleNormal = *static_cast<float3*>(
-                    normal.getPixelRef(size_t(samplePos.x), size_t(samplePos.y)));
+            float3 sampleNormal = *normal.get<float3>(size_t(samplePos.x), size_t(samplePos.y));
             sampleNormal = sampleNormal * 2.0f - 1.0f;
 
             averageNormal += normalize(sampleNormal);
@@ -209,13 +210,13 @@ float solveVMF(const float2& pos, const size_t sampleCount, const float roughnes
     return std::sqrt(roughness * roughness + (2.0f / kappa));
 }
 
-void prefilter(const Image& normal, const size_t mipLevel, Image& output) {
+void prefilter(const LinearImage& normal, const size_t mipLevel, LinearImage& output) {
     const size_t width = output.getWidth();
     const size_t height = output.getHeight();
     const size_t sampleCount = 1u << mipLevel;
 
     for (size_t y = 0; y < height; y++) {
-        auto* outputRow = static_cast<float3*>(output.getPixelRef(0, y));
+        auto outputRow = output.get<float3>(0, y);
         for (size_t x = 0; x < width; x++, outputRow++) {
             const float2 uv = (float2(x, y) + 0.5f) / float2(width, height);
             const float2 pos = uv * normal.getWidth();
@@ -226,15 +227,16 @@ void prefilter(const Image& normal, const size_t mipLevel, Image& output) {
 }
 
 template<bool FIRST_MIP>
-void prefilter(const Image& normal, const Image& roughness, const size_t mipLevel, Image& output) {
+void prefilter(const LinearImage& normal, const LinearImage& roughness, const size_t mipLevel,
+        LinearImage& output) {
     const size_t width = output.getWidth();
     const size_t height = output.getHeight();
     const size_t sampleCount = 1u << mipLevel;
 
     for (size_t y = 0; y < height; y++) {
-        auto* outputRow = static_cast<float3*>(output.getPixelRef(0, y));
+        auto outputRow = output.get<float3>(0, y);
         for (size_t x = 0; x < width; x++, outputRow++) {
-            const float3* data = static_cast<float3*>(roughness.getPixelRef(x, y));
+            auto data = roughness.get<float3>(x, y);
             if (FIRST_MIP) {
                 *outputRow = *data;
             } else {
@@ -265,7 +267,7 @@ int main(int argc, char* argv[]) {
 
     // make sure we load the normal maps as linear data
     std::ifstream inputStream(normalMap, std::ios::binary);
-    Image normalImage = ImageDecoder::decode(inputStream, normalMap,
+    LinearImage normalImage = ImageDecoder::decode(inputStream, normalMap,
             ImageDecoder::ColorSpace::LINEAR);
     inputStream.close();
 
@@ -281,8 +283,8 @@ int main(int argc, char* argv[]) {
         exit(1);
     }
 
-    Image roughnessImage;
-    std::vector<Image> mipImages;
+    LinearImage roughnessImage;
+    std::vector<LinearImage> mipImages;
     bool hasRoughnessMap = false;
 
     if (!g_roughnessMap.isEmpty()) {
@@ -330,13 +332,13 @@ int main(int argc, char* argv[]) {
     const size_t height = hasRoughnessMap ? roughnessImage.getHeight() : normalImage.getHeight();
     const size_t mipLevels = size_t(std::log2f(width)) + 1;
 
-    size_t channels = 3;
+    bool exportGrayscale = false;
     switch (g_format) {
         case ImageEncoder::Format::DDS:
         case ImageEncoder::Format::DDS_LINEAR:
         case ImageEncoder::Format::PNG:
         case ImageEncoder::Format::PNG_LINEAR:
-            channels = 1;
+            exportGrayscale = true;
             break;
         default:
             break;
@@ -344,23 +346,21 @@ int main(int argc, char* argv[]) {
 
     if (hasRoughnessMap) {
         mipImages.push_back(std::move(roughnessImage));
-        Image* prevMip = &mipImages.at(0);
+        LinearImage* prevMip = &mipImages.at(0);
 
         for (size_t i = 1; i <= mipLevels; i++) {
             const size_t w = width >> i;
             const size_t h = height >> i;
 
-            const size_t size = w * h * sizeof(float3);
-            std::unique_ptr<uint8_t[]> buffer(new uint8_t[size]);
-            Image image(std::move(buffer), w, h, w * sizeof(float3), sizeof(float3), channels);
+            LinearImage image(w, h, 3);
 
             for (size_t y = 0; y < h; y++) {
-                auto* dst = static_cast<float3*>(image.getPixelRef(0, y));
+                auto dst = image.get<float3>(0, y);
                 for (size_t x = 0; x < w; x++, dst++) {
-                    float3 aa = *static_cast<float3*>(prevMip->getPixelRef(x * 2,     y * 2));
-                    float3 ba = *static_cast<float3*>(prevMip->getPixelRef(x * 2 + 1, y * 2));
-                    float3 ab = *static_cast<float3*>(prevMip->getPixelRef(x * 2,     y * 2 + 1));
-                    float3 bb = *static_cast<float3*>(prevMip->getPixelRef(x * 2 + 1, y * 2 + 1));
+                    float3 aa = *prevMip->get<float3>(x * 2,     y * 2);
+                    float3 ba = *prevMip->get<float3>(x * 2 + 1, y * 2);
+                    float3 ab = *prevMip->get<float3>(x * 2,     y * 2 + 1);
+                    float3 bb = *prevMip->get<float3>(x * 2 + 1, y * 2 + 1);
                     *dst = (aa + ba + ab + bb) / 4.0f;
                 }
             }
@@ -376,23 +376,22 @@ int main(int argc, char* argv[]) {
     JobSystem::Job* parent = js.createJob();
     for (size_t i = 0; i < mipLevels; i++) {
         JobSystem::Job* mip = jobs::createJob(js, parent,
-                [&normalImage, &mipImages, outputMap, i, width, height, channels, hasRoughnessMap]() {
+                [&normalImage, &mipImages, outputMap, i, width, height, exportGrayscale, hasRoughnessMap]() {
             const size_t w = width >> i;
             const size_t h = height >> i;
 
-            const size_t size = w * h * sizeof(float3);
-            std::unique_ptr<uint8_t[]> buffer(new uint8_t[size]);
-            Image image(std::move(buffer), w, h, w * sizeof(float3), sizeof(float3), channels);
+            LinearImage image(w, h, 3);
 
             if (i == 0) {
                 if (hasRoughnessMap) {
-                    if (mipImages.at(0).getBytesPerRow() == image.getBytesPerRow()) {
-                        memcpy(image.getData(), mipImages.at(0).getData(), size);
+                    if (mipImages.at(0).getWidth() == image.getWidth()) {
+                        const size_t size = image.getWidth() * image.getHeight() * 12;
+                        memcpy(image.getPixelRef(), mipImages.at(0).getPixelRef(), size);
                     } else {
                         prefilter<true>(normalImage, mipImages.at(0), 0, image);
                     }
                 } else {
-                    std::fill_n(static_cast<float3*>(image.getData()), w * h, float3(g_roughness));
+                    std::fill_n(image.get<float3>(), w * h, float3(g_roughness));
                 }
             } else {
                 if (hasRoughnessMap) {
@@ -410,13 +409,16 @@ int main(int argc, char* argv[]) {
             std::ofstream outputStream(out, std::ios::binary | std::ios::trunc);
             if (!outputStream.good()) {
                 std::cerr << "The output file cannot be opened: " << out << std::endl;
-            } else {
-                ImageEncoder::encode(outputStream, g_format, image, g_compression, out.getPath());
-                outputStream.close();
-                if (!outputStream.good()) {
-                    std::cerr << "An error occurred while writing the output file: " << out <<
-                            std::endl;
-                }
+                return;
+            }
+            if (exportGrayscale) {
+                image = extractChannel(image, 0);
+            }
+            ImageEncoder::encode(outputStream, g_format, image, g_compression, out.getPath());
+            outputStream.close();
+            if (!outputStream.good()) {
+                std::cerr << "An error occurred while writing the output file: " << out <<
+                        std::endl;
             }
         });
         js.run(mip);

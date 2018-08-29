@@ -47,32 +47,34 @@ public:
 
     Slice<const BufferRange> getRanges() const { return { mStorage.cbegin(), mStorage.cend() }; }
 
-    BufferRange const* begin() const noexcept { return &*mStorage.begin(); }
-    BufferRange const* end() const noexcept { return &*mStorage.end(); }
-    BufferRange const* cbegin() const noexcept { return &*mStorage.cbegin(); }
-    BufferRange const* cend() const noexcept { return &*mStorage.cend(); }
+    BufferRange const* begin() const noexcept { return mStorage.data(); }
+    BufferRange const* end() const noexcept { return mStorage.data() + mStorage.size(); }
+    BufferRange const* cbegin() const noexcept { return mStorage.data(); }
+    BufferRange const* cend() const noexcept { return mStorage.data() + mStorage.size(); }
     BufferRange const& operator[](size_t i) const noexcept { return mStorage[i]; }
 
 private:
     // Fixed capacity vector
-    template <typename TYPE, size_t CAPACITY,
-            typename = typename std::enable_if< std::is_pod<TYPE>::value >::type>
+    template<typename TYPE, size_t CAPACITY,
+            typename = typename std::enable_if<std::is_pod<TYPE>::value>::type>
     class vector {
         std::array<TYPE, RANGE_COUNT> mElements;
         uint32_t mSize = 0;
-        using iterator       = typename std::array<TYPE, CAPACITY>::iterator;
-        using const_iterator = typename std::array<TYPE, CAPACITY>::const_iterator;
         using value_type     = typename std::array<TYPE, CAPACITY>::value_type;
+        using iterator       = value_type*;
+        using const_iterator = value_type const*;
 
     public:
         bool empty() const noexcept { return size() == 0; }
         size_t size() const noexcept { return mSize; }
         size_t capacity() const noexcept { return CAPACITY; }
-        iterator begin() { return mElements.begin(); }
+        value_type *data() { return mElements.data(); }
+        value_type const *data() const { return mElements.data(); }
+        iterator begin() { return mElements.data(); }
         iterator end() { return begin() + mSize; }
-        const_iterator begin() const { return mElements.begin(); }
+        const_iterator begin() const { return mElements.data(); }
         const_iterator end() const { return begin() + mSize; }
-        const_iterator cbegin() const { return mElements.cbegin(); }
+        const_iterator cbegin() const { return mElements.data(); }
         const_iterator cend() const { return cbegin() + mSize; }
         value_type const& operator[](size_t i) const noexcept { return mElements[i]; }
         value_type& operator[](size_t i)  noexcept { return mElements[i]; }
@@ -86,7 +88,8 @@ private:
             assert(mSize < CAPACITY);
             // equivalent to std::move_backward(pos, end(), end() + 1) but we don't want a call to memmove
             iterator e = end();
-            while (pos != e--) {
+            while (pos != e) {
+                --e;
                 e[1] = e[0];
             }
             *pos = value;

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "pass_utils.h"
+#include "test/opt/pass_utils.h"
 
 #include <algorithm>
 #include <sstream>

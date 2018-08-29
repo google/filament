@@ -73,6 +73,16 @@ public:
 // 256 lights max
 //
 
+// Max number of froxels limited by:
+// - max texture size [min 2048]
+// - chosen texture width [64]
+// - size of CPU-side indices [16 bits]
+// Also, increasing the number of froxels adds more pressure on the "record buffer" which stores
+// the light indices per froxel. The record buffer is limited to 65536 entries, so with
+// 8192 froxels, we can store 8 lights per froxels assuming they're all used. In practice, some
+// froxels are not used, so we can store more.
+static constexpr size_t FROXEL_BUFFER_ENTRY_COUNT_MAX = 8192;
+
 class Froxelizer {
 public:
     explicit Froxelizer(FEngine& engine);
@@ -107,14 +117,16 @@ public:
     size_t getFroxelCountX() const noexcept { return mFroxelCountX; }
     size_t getFroxelCountY() const noexcept { return mFroxelCountY; }
     size_t getFroxelCountZ() const noexcept { return mFroxelCountZ; }
+    size_t getFroxelCount() const noexcept { return mFroxelCount; }
 
     // update Records and Froxels texture with lights data. this is thread-safe.
-    void froxelizeLights(FEngine& engine, math::mat4f const& viewMatrix,
+    void froxelizeLights(FEngine& engine, CameraInfo const& camera,
             const FScene::LightSoa& lightData) noexcept;
 
     void updateUniforms(UniformBuffer& u) {
         u.setUniform(offsetof(FEngine::PerViewUib, zParams), mParamsZ);
-        u.setUniform(offsetof(FEngine::PerViewUib, fParams), mParamsF);
+        u.setUniform(offsetof(FEngine::PerViewUib, fParams), mParamsF.yz);
+        u.setUniform(offsetof(FEngine::PerViewUib, fParamsX), mParamsF.x);
         u.setUniform(offsetof(FEngine::PerViewUib, oneOverFroxelDimensionX), mOneOverDimension.x);
         u.setUniform(offsetof(FEngine::PerViewUib, oneOverFroxelDimensionY), mOneOverDimension.y);
     }
@@ -142,19 +154,20 @@ public:
             };
         };
     };
-    // This depends on the maximum number of lights (currently 256),and can't be more than 16 bits.
-    using RecordBufferType = std::conditional_t<CONFIG_MAX_LIGHT_COUNT <= 255, uint8_t, uint16_t>;
+    // This depends on the maximum number of lights (currently 255),and can't be more than 16 bits.
+    static_assert(CONFIG_MAX_LIGHT_INDEX <= std::numeric_limits<uint16_t>::max(), "can't have more than 65536 lights");
+    using RecordBufferType = std::conditional_t<CONFIG_MAX_LIGHT_INDEX <= std::numeric_limits<uint8_t>::max(), uint8_t, uint16_t>;
     const utils::Slice<FroxelEntry>& getFroxelBufferUser() const { return mFroxelBufferUser; }
     const utils::Slice<RecordBufferType>& getRecordBufferUser() const { return mRecordBufferUser; }
 
-private:
-    struct FroxelRunEntry {
-        uint32_t index;
-        uint32_t count;
-    };
+    // this is chosen so froxelizePointAndSpotLight() vectorizes 4 froxel tests / spotlight
+    // with 256 lights this implies 8 jobs (256 / 32) for froxelization.
+    using LightGroupType = uint32_t;
 
+private:
     struct LightRecord {
-        utils::bitset256 lights;
+        using bitset = utils::bitset<uint64_t, (CONFIG_MAX_LIGHT_COUNT + 63) / 64>;
+        bitset lights;
     };
 
     struct LightParams {
@@ -167,21 +180,36 @@ private:
         float radius;
     };
 
+    struct LightTreeNode {
+        float min;          // lights z-range min
+        float max;          // lights z-range max
+
+        uint16_t next;      // next node when range test fails
+        uint16_t offset;    // offset in record buffer
+
+        uint8_t isLeaf;
+        uint8_t count;      // light count in record buffer
+        uint16_t reserved;
+    };
+
+    // The first entry always encodes the type of light, i.e. point/spot
+    using FroxelThreadData = std::array<LightGroupType, FROXEL_BUFFER_ENTRY_COUNT_MAX + 1>;
+
     void setViewport(Viewport const& viewport) noexcept;
     void setProjection(const math::mat4f& projection, float near, float far) noexcept;
     bool update() noexcept;
 
-    void froxelizeLoop(FEngine& engine, utils::Slice<uint16_t>& froxelsList,
-            utils::Slice<FroxelRunEntry> froxelsListIndices, const math::mat4f& viewMatrix,
-            const FScene::LightSoa& lightData) noexcept;
+    void froxelizeLoop(FEngine& engine,
+            const CameraInfo& camera, const FScene::LightSoa& lightData) noexcept;
 
-    void froxelizePointAndSpotLight(
-            utils::GrowingSlice<uint16_t>& froxels,
+    void froxelizeAssignRecordsCompress() noexcept;
+
+    void froxelizePointAndSpotLight(FroxelThreadData& froxelThread, size_t bit,
             math::mat4f const& projection, const LightParams& light) const noexcept;
 
-    void froxelizeAssignRecordsCompress(
-            const utils::Slice<uint16_t>& froxelsList,
-            const utils::Slice<FroxelRunEntry>& froxelsListIndices) noexcept;
+    static void computeLightTree(LightTreeNode* lightTree,
+            utils::Slice<RecordBufferType> const& lightList,
+            const FScene::LightSoa& lightData, size_t lightRecordsOffset) noexcept;
 
     uint16_t getFroxelIndex(size_t ix, size_t iy, size_t iz) const noexcept {
         return uint16_t(ix + (iy * mFroxelCountX) + (iz * mFroxelCountX * mFroxelCountY));
@@ -203,17 +231,17 @@ private:
     math::float4* mPlanesY = nullptr;
     math::float4* mBoundingSpheres = nullptr;
 
-    utils::Slice<FroxelRunEntry> mFroxelListIndices;    // ~2 KiB
-    utils::Slice<uint16_t> mFroxelList;                 // ~4 MiB + 510 B
-    utils::Slice<FroxelEntry> mFroxelBufferUser;
+    utils::Slice<FroxelThreadData> mFroxelShardedData;  // 256 KiB w/  256 lights
+    utils::Slice<FroxelEntry> mFroxelBufferUser;        //  32 KiB w/ 8192 froxels
 
     // max 32 KiB  (actual: resolution dependant)
-    utils::Slice<RecordBufferType> mRecordBufferUser;   // max 64 KiB
-    utils::Slice<LightRecord> mLightRecords;            // 256 KiB
+    utils::Slice<RecordBufferType> mRecordBufferUser;   //  64 KiB
+    utils::Slice<LightRecord> mLightRecords;            // 256 KiB w/ 256 lights
 
     uint16_t mFroxelCountX = 0;
     uint16_t mFroxelCountY = 0;
     uint16_t mFroxelCountZ = 0;
+    uint16_t mFroxelCount = 0;
     math::uint2 mFroxelDimension = {};
 
     math::mat4f mProjection;
@@ -228,7 +256,7 @@ private:
     // needed for update()
     Viewport mViewport;
     math::float4 mParamsZ = {};
-    math::uint4 mParamsF = {};
+    math::uint3 mParamsF = {};
     float mNear = 0.0f;        // camera near
     float mZLightFar = FEngine::CONFIG_Z_LIGHT_FAR;
     float mZLightNear = FEngine::CONFIG_Z_LIGHT_NEAR;  // light near (first slice)

@@ -17,9 +17,9 @@
 #include <string>
 
 #include "gmock/gmock.h"
-#include "spirv_validator_options.h"
-#include "unit_spirv.h"
-#include "val_fixtures.h"
+#include "source/spirv_validator_options.h"
+#include "test/unit_spirv.h"
+#include "test/val/val_fixtures.h"
 
 namespace spvtools {
 namespace val {

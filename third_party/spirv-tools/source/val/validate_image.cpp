@@ -16,6 +16,8 @@
 
 #include "source/val/validate.h"
 
+#include <string>
+
 #include "source/diagnostic.h"
 #include "source/opcode.h"
 #include "source/spirv_target_env.h"
@@ -116,7 +118,7 @@ bool IsImplicitLod(SpvOp opcode) {
       return true;
     default:
       break;
-  };
+  }
   return false;
 }
 
@@ -133,7 +135,7 @@ bool IsExplicitLod(SpvOp opcode) {
       return true;
     default:
       break;
-  };
+  }
   return false;
 }
 
@@ -152,7 +154,7 @@ bool IsProj(SpvOp opcode) {
       return true;
     default:
       break;
-  };
+  }
   return false;
 }
 
@@ -225,7 +227,7 @@ spv_result_t ValidateImageOperands(ValidationState_t& _,
     return _.diag(SPV_ERROR_INVALID_DATA, inst)
            << "Image Operands Offset, ConstOffset, ConstOffsets cannot be used "
            << "together";
-  };
+  }
 
   const bool is_implicit_lod = IsImplicitLod(opcode);
   const bool is_explicit_lod = IsExplicitLod(opcode);
@@ -236,7 +238,7 @@ spv_result_t ValidateImageOperands(ValidationState_t& _,
     if (!is_implicit_lod) {
       return _.diag(SPV_ERROR_INVALID_DATA, inst)
              << "Image Operand Bias can only be used with ImplicitLod opcodes";
-    };
+    }
 
     const uint32_t type_id = _.GetTypeId(inst->word(word_index++));
     if (!_.IsFloatScalarType(type_id)) {
@@ -263,7 +265,7 @@ spv_result_t ValidateImageOperands(ValidationState_t& _,
       return _.diag(SPV_ERROR_INVALID_DATA, inst)
              << "Image Operand Lod can only be used with ExplicitLod opcodes "
              << "and OpImageFetch";
-    };
+    }
 
     if (mask & SpvImageOperandsGradMask) {
       return _.diag(SPV_ERROR_INVALID_DATA, inst)
@@ -303,7 +305,7 @@ spv_result_t ValidateImageOperands(ValidationState_t& _,
     if (!is_explicit_lod) {
       return _.diag(SPV_ERROR_INVALID_DATA, inst)
              << "Image Operand Grad can only be used with ExplicitLod opcodes";
-    };
+    }
 
     const uint32_t dx_type_id = _.GetTypeId(inst->word(word_index++));
     const uint32_t dy_type_id = _.GetTypeId(inst->word(word_index++));
@@ -463,7 +465,7 @@ spv_result_t ValidateImageOperands(ValidationState_t& _,
       return _.diag(SPV_ERROR_INVALID_DATA, inst)
              << "Image Operand MinLod can only be used with ImplicitLod "
              << "opcodes or together with Image Operand Grad";
-    };
+    }
 
     const uint32_t type_id = _.GetTypeId(inst->word(word_index++));
     if (!_.IsFloatScalarType(type_id)) {
@@ -1093,10 +1095,11 @@ spv_result_t ValidateImageRead(ValidationState_t& _, const Instruction* inst) {
              << "Image Dim SubpassData cannot be used with ImageSparseRead";
     }
 
-    _.current_function().RegisterExecutionModelLimitation(
-        SpvExecutionModelFragment,
-        std::string("Dim SubpassData requires Fragment execution model: ") +
-            spvOpcodeString(opcode));
+    _.function(inst->function()->id())
+        ->RegisterExecutionModelLimitation(
+            SpvExecutionModelFragment,
+            std::string("Dim SubpassData requires Fragment execution model: ") +
+                spvOpcodeString(opcode));
   }
 
   if (_.GetIdOpcode(info.sampled_type) != SpvOpTypeVoid) {
@@ -1279,7 +1282,7 @@ spv_result_t ValidateImageQuerySizeLod(ValidationState_t& _,
     default:
       return _.diag(SPV_ERROR_INVALID_DATA, inst)
              << "Image 'Dim' must be 1D, 2D, 3D or Cube";
-  };
+  }
 
   if (info.multisampled != 0) {
     return _.diag(SPV_ERROR_INVALID_DATA, inst) << "Image 'MS' must be 0";
@@ -1350,7 +1353,7 @@ spv_result_t ValidateImageQuerySize(ValidationState_t& _,
     default:
       return _.diag(SPV_ERROR_INVALID_DATA, inst)
           << "Image 'Dim' must be Buffer, 2D, 3D or Rect";
-  };
+  }
 
 
   if (info.multisampled != 0) {
@@ -1385,9 +1388,10 @@ spv_result_t ValidateImageQueryFormatOrOrder(ValidationState_t& _,
 
 spv_result_t ValidateImageQueryLod(ValidationState_t& _,
                                    const Instruction* inst) {
-  _.current_function().RegisterExecutionModelLimitation(
-      SpvExecutionModelFragment,
-      "OpImageQueryLod requires Fragment execution model");
+  _.function(inst->function()->id())
+      ->RegisterExecutionModelLimitation(
+          SpvExecutionModelFragment,
+          "OpImageQueryLod requires Fragment execution model");
 
   const uint32_t result_type = inst->type_id();
   if (!_.IsFloatVectorType(result_type)) {
@@ -1510,9 +1514,10 @@ spv_result_t ValidateImageSparseTexelsResident(ValidationState_t& _,
 spv_result_t ImagePass(ValidationState_t& _, const Instruction* inst) {
   const SpvOp opcode = inst->opcode();
   if (IsImplicitLod(opcode)) {
-    _.current_function().RegisterExecutionModelLimitation(
-        SpvExecutionModelFragment,
-        "ImplicitLod instructions require Fragment execution model");
+    _.function(inst->function()->id())
+        ->RegisterExecutionModelLimitation(
+            SpvExecutionModelFragment,
+            "ImplicitLod instructions require Fragment execution model");
   }
 
   switch (opcode) {

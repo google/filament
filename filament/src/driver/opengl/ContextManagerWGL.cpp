@@ -25,14 +25,44 @@
 #include "GL/glext.h"
 #include "GL/wglext.h"
 
+#include <utils/Log.h>
 #include <utils/Panic.h>
+
+namespace {
+
+void reportLastWindowsError() {
+    LPSTR lpMessageBuffer;
+    DWORD dwError = GetLastError();
+
+    if (dwError == 0) {
+        return;
+    }
+
+    FormatMessage(
+        FORMAT_MESSAGE_ALLOCATE_BUFFER |
+        FORMAT_MESSAGE_FROM_SYSTEM |
+        FORMAT_MESSAGE_IGNORE_INSERTS,
+        nullptr,
+        dwError,
+        MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+        lpMessageBuffer,
+        0, nullptr
+	);
+
+    utils::slog.e << "Windows error code: " << dwError << ". " << lpMessageBuffer
+            << utils::io::endl;
+
+    LocalFree(lpMessageBuffer);
+}
+
+} // namespace
 
 namespace filament {
 
 using namespace driver;
 
 std::unique_ptr<Driver> ContextManagerWGL::createDriver(void* const sharedGLContext) noexcept {
-    PIXELFORMATDESCRIPTOR pfd = {
+    mPfd = {
         sizeof(PIXELFORMATDESCRIPTOR),
         1,
         PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER,    // Flags
@@ -51,69 +81,127 @@ std::unique_ptr<Driver> ContextManagerWGL::createDriver(void* const sharedGLCont
         0, 0, 0
     };
 
-    HWND hWnd= CreateWindowA("STATIC", "dummy", 0, 0, 0, 1, 1, NULL, NULL, NULL, NULL);
-    HDC whdc = GetDC(hWnd);
-
-    int pixelFormat = ChoosePixelFormat(whdc, &pfd);
-    SetPixelFormat(whdc, pixelFormat, &pfd);
-
     int attribs[] = {
         WGL_CONTEXT_MAJOR_VERSION_ARB, 4,
         WGL_CONTEXT_MINOR_VERSION_ARB, 1,
-        WGL_CONTEXT_FLAGS_ARB, WGL_CONTEXT_PROFILE_MASK_ARB  ,
+        WGL_CONTEXT_FLAGS_ARB, WGL_CONTEXT_PROFILE_MASK_ARB,
         0
     };
 
+    mHWnd = CreateWindowA("STATIC", "dummy", 0, 0, 0, 1, 1, NULL, NULL, NULL, NULL);
+    HDC whdc = mWhdc = GetDC(mHWnd);
+    if (whdc == NULL) {
+        utils::slog.e << "CreateWindowA() failed" << utils::io::endl;
+        goto error;
+    }
+
+    int pixelFormat = ChoosePixelFormat(whdc, &mPfd);
+    SetPixelFormat(whdc, pixelFormat, &mPfd);
+
     // We need a tmp context to retrieve and call wglCreateContextAttribsARB.
     HGLRC tempContext = wglCreateContext(whdc);
-    wglMakeCurrent(whdc, tempContext);
+    if (!wglMakeCurrent(whdc, tempContext)) {
+        utils::slog.e << "wglMakeCurrent() failed, whdc=" << whdc << ", tempContext=" << tempContext << utils::io::endl;
+        goto error;
+    }
 
     PFNWGLCREATECONTEXTATTRIBSARBPROC wglCreateContextAttribs =
-        (PFNWGLCREATECONTEXTATTRIBSARBPROC)wglGetProcAddress("wglCreateContextAttribsARB");
+            (PFNWGLCREATECONTEXTATTRIBSARBPROC) wglGetProcAddress("wglCreateContextAttribsARB");
     mContext = wglCreateContextAttribs(whdc, nullptr, attribs);
+    if (!mContext) {
+        utils::slog.e << "wglCreateContextAttribs() failed, whdc=" << whdc << utils::io::endl;
+        goto error;
+    }
 
     wglMakeCurrent(NULL, NULL);
     wglDeleteContext(tempContext);
-    wglMakeCurrent(whdc, mContext);
+    tempContext = NULL;
+
+    if (!wglMakeCurrent(whdc, mContext)) {
+        utils::slog.e << "wglMakeCurrent() failed, whdc=" << whdc << ", mContext=" << mContext << utils::io::endl;
+        goto error;
+    }
 
     int result = bluegl::bind();
     ASSERT_POSTCONDITION(!result, "Unable to load OpenGL entry points.");
     return OpenGLDriver::create(this, sharedGLContext);
+
+error:
+    if (tempContext) {
+        wglDeleteContext(tempContext);
+    }
+    reportLastWindowsError();
+    terminate();
+    return NULL;
 }
 
 void ContextManagerWGL::terminate() noexcept {
+    wglMakeCurrent(NULL, NULL);
+    if (mContext) {
+        wglDeleteContext(mContext);
+        mContext = NULL;
+    }
+    if (mHWnd && mWhdc) {
+        ReleaseDC(mHWnd, mWhdc);
+        DestroyWindow(mHWnd);
+        mHWnd = NULL;
+        mWhdc = NULL;
+    } else if (mHWnd) {
+        DestroyWindow(mHWnd);
+        mHWnd = NULL;
+    }
     bluegl::unbind();
 }
 
 ExternalContext::SwapChain* ContextManagerWGL::createSwapChain(void* nativeWindow, uint64_t& flags) noexcept {
-    return (SwapChain*) nativeWindow;
+    // on Windows, the nativeWindow maps directly to a HDC
+    HDC hdc = (HDC) nativeWindow;
+    if (!ASSERT_POSTCONDITION_NON_FATAL(hdc,
+            "Unable to create the SwapChain (nativeWindow = %p)", nativeWindow)) {
+        reportLastWindowsError();
+    }
+
+	// We have to match pixel formats across the HDC and HGLRC (mContext)
+    int pixelFormat = ChoosePixelFormat(hdc, &mPfd);
+    SetPixelFormat(hdc, pixelFormat, &mPfd);
+
+    SwapChain* swapChain = (SwapChain *)hdc;
+    return swapChain;
 }
 
 void ContextManagerWGL::destroySwapChain(ExternalContext::SwapChain* swapChain) noexcept {
+    // make this swapChain not current (by making a dummy one current)
+    wglMakeCurrent(mWhdc, mContext);
 }
 
 void ContextManagerWGL::makeCurrent(ExternalContext::SwapChain* swapChain) noexcept {
     HDC hdc = (HDC)(swapChain);
-    wglMakeCurrent(hdc, mContext);
+    if (hdc != NULL) {
+        BOOL success = wglMakeCurrent(hdc, mContext);
+        if (!ASSERT_POSTCONDITION_NON_FATAL(success, "wglMakeCurrent() failed. hdc = %p", hdc)) {
+            reportLastWindowsError();
+            wglMakeCurrent(0, NULL);
+        }
+    }
 }
 
 void ContextManagerWGL::commit(ExternalContext::SwapChain* swapChain) noexcept {
     HDC hdc = (HDC)(swapChain);
-    SwapBuffers(hdc);
+    if (hdc != NULL) {
+        SwapBuffers(hdc);
+    }
 }
 
 //TODO Implement WGL fences
 ExternalContext::Fence* ContextManagerWGL::createFence() noexcept {
-    Fence* f = new Fence();
-    return f;
+    return nullptr;
 }
 
 void ContextManagerWGL::destroyFence(Fence* fence) noexcept {
-    delete fence;
 }
 
 driver::FenceStatus ContextManagerWGL::waitFence(Fence* fence, uint64_t timeout) noexcept {
-    return driver::FenceStatus::CONDITION_SATISFIED;
+    return driver::FenceStatus::ERROR;
 }
 
 } // namespace filament

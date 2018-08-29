@@ -12,13 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "extensions.h"
+#include "source/extensions.h"
 
 #include <cassert>
 #include <sstream>
 #include <string>
 
-#include "enum_string_mapping.h"
+#include "source/enum_string_mapping.h"
 
 namespace spvtools {
 

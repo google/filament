@@ -13,7 +13,7 @@ set(SRCS src/main.cpp)
 # ==================================================================================================
 add_executable(${TARGET} ${SRCS})
 
-target_link_libraries(${TARGET} filaflat filabridge utils getopt SPIRV spirv-cross-glsl)
+target_link_libraries(${TARGET} filaflat filabridge utils getopt SPIRV SPIRV-Tools spirv-cross-glsl)
 
 # glslang contains a copy of the SPIRV headers, so let's just use those. The leading ".." in the
 # following variable refers to the project name that we define in glslang/tnt, and the trailing ".."
@@ -32,3 +32,4 @@ target_include_directories(${TARGET} PRIVATE ${GENERATION_ROOT})
 # Installation
 # ==================================================================================================
 install(TARGETS ${TARGET} RUNTIME DESTINATION bin)
+install(FILES "README.md" DESTINATION docs/ RENAME "${TARGET}.md")

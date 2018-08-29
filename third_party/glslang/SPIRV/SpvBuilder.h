@@ -295,13 +295,14 @@ public:
 
     void createNoResultOp(Op);
     void createNoResultOp(Op, Id operand);
-    void createNoResultOp(Op, const std::vector<Id>& operands);
+    void createNoResultOp(Op, const std::vector<IdImmediate>& operands);
     void createControlBarrier(Scope execution, Scope memory, MemorySemanticsMask);
     void createMemoryBarrier(unsigned executionScope, unsigned memorySemantics);
     Id createUnaryOp(Op, Id typeId, Id operand);
     Id createBinOp(Op, Id typeId, Id operand1, Id operand2);
     Id createTriOp(Op, Id typeId, Id operand1, Id operand2, Id operand3);
     Id createOp(Op, Id typeId, const std::vector<Id>& operands);
+    Id createOp(Op, Id typeId, const std::vector<IdImmediate>& operands);
     Id createFunctionCall(spv::Function*, const std::vector<spv::Id>&);
     Id createSpecConstantOp(Op, Id typeId, const std::vector<spv::Id>& operands, const std::vector<unsigned>& literals);
 
@@ -563,9 +564,15 @@ public:
     // based on the type of the base and the chain of dereferences.
     Id accessChainGetInferredType();
 
-    // Remove OpDecorate instructions whose operands are defined in unreachable
-    // blocks.
-    void eliminateDeadDecorations();
+    // Add capabilities, extensions, remove unneeded decorations, etc., 
+    // based on the resulting SPIR-V.
+    void postProcess();
+
+    // Hook to visit each instruction in a block in a function
+    void postProcess(Instruction& inst);
+    // Hook to visit each instruction in a reachable block in a function.
+    void postProcessReachable(Instruction& inst);
+
     void dump(std::vector<unsigned int>&) const;
 
     void createBranch(Block* block);

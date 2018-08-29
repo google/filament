@@ -223,7 +223,7 @@ public:
          *
          * @param type #Type of Light object to create.
          */
-        Builder(Type type) noexcept;
+        explicit Builder(Type type) noexcept;
         Builder(Builder const& rhs) noexcept;
         Builder(Builder&& rhs) noexcept;
         ~Builder() noexcept;
@@ -436,6 +436,40 @@ public:
     static constexpr float EFFICIENCY_HALOGEN      = 0.0707f;   //!< Typical efficiency of an halogen light bulb (7.0%)
     static constexpr float EFFICIENCY_FLUORESCENT  = 0.0878f;   //!< Typical efficiency of a fluorescent light bulb (8.7%)
     static constexpr float EFFICIENCY_LED          = 0.1171f;   //!< Typical efficiency of a LED light bulb (11.7%)
+
+    Type getType(Instance i) const noexcept;
+
+    /**
+     * Helper function that returns if a light is a directional light
+     *
+     * @param i     Instance of the component obtained from getInstance().
+     * @return      true is this light is a type of directional light
+     */
+    inline bool isDirectional(Instance i) const noexcept {
+        Type type = getType(i);
+        return type == Type::DIRECTIONAL || type == Type::SUN;
+    }
+
+    /**
+     * Helper function that returns if a light is a point light
+     *
+     * @param i     Instance of the component obtained from getInstance().
+     * @return      true is this light is a type of point light
+     */
+    inline bool isPointLight(Instance i) const noexcept {
+        return getType(i) == Type::POINT;
+    }
+
+    /**
+     * Helper function that returns if a light is a spot light
+     *
+     * @param i     Instance of the component obtained from getInstance().
+     * @return      true is this light is a type of spot light
+     */
+    inline bool isSpotLight(Instance i) const noexcept {
+        Type type = getType(i);
+        return type == Type::SPOT || type == Type::FOCUSED_SPOT;
+    }
 
     /**
      * Dynamically updates the light's position.

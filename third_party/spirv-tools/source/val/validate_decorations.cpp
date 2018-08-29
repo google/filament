@@ -19,6 +19,7 @@
 #include <string>
 #include <unordered_map>
 #include <utility>
+#include <vector>
 
 #include "source/diagnostic.h"
 #include "source/opcode.h"
@@ -599,21 +600,14 @@ spv_result_t CheckDecorationsOfEntryPoints(ValidationState_t& vstate) {
     for (const auto& desc : descs) {
       for (auto interface : desc.interfaces) {
         Instruction* var_instr = vstate.FindDef(interface);
-        if (SpvOpVariable != var_instr->opcode()) {
+        if (!var_instr || SpvOpVariable != var_instr->opcode()) {
           return vstate.diag(SPV_ERROR_INVALID_ID, var_instr)
                  << "Interfaces passed to OpEntryPoint must be of type "
                     "OpTypeVariable. Found Op"
                  << spvOpcodeString(var_instr->opcode()) << ".";
         }
-        const uint32_t ptr_id = var_instr->word(1);
-        Instruction* ptr_instr = vstate.FindDef(ptr_id);
-        // It is guaranteed (by validator ID checks) that ptr_instr is
-        // OpTypePointer. Word 3 of this instruction is the type being pointed
-        // to.
-        const uint32_t type_id = ptr_instr->word(3);
-        Instruction* type_instr = vstate.FindDef(type_id);
-        const auto storage_class =
-            static_cast<SpvStorageClass>(var_instr->word(3));
+        const SpvStorageClass storage_class =
+            var_instr->GetOperandAs<SpvStorageClass>(2);
         if (storage_class != SpvStorageClassInput &&
             storage_class != SpvStorageClassOutput) {
           return vstate.diag(SPV_ERROR_INVALID_ID, var_instr)
@@ -623,6 +617,14 @@ spv_result_t CheckDecorationsOfEntryPoints(ValidationState_t& vstate) {
                  << storage_class << " for Entry Point id " << entry_point
                  << ".";
         }
+
+        const uint32_t ptr_id = var_instr->word(1);
+        Instruction* ptr_instr = vstate.FindDef(ptr_id);
+        // It is guaranteed (by validator ID checks) that ptr_instr is
+        // OpTypePointer. Word 3 of this instruction is the type being pointed
+        // to.
+        const uint32_t type_id = ptr_instr->word(3);
+        Instruction* type_instr = vstate.FindDef(type_id);
         if (type_instr && SpvOpTypeStruct == type_instr->opcode() &&
             isBuiltInStruct(type_id, vstate)) {
           if (storage_class == SpvStorageClassInput) ++num_builtin_inputs;
@@ -663,13 +665,12 @@ spv_result_t CheckDecorationsOfEntryPoints(ValidationState_t& vstate) {
 }
 
 spv_result_t CheckDescriptorSetArrayOfArrays(ValidationState_t& vstate) {
-  for (const auto& def : vstate.all_definitions()) {
-    const auto inst = def.second;
-    if (SpvOpVariable != inst->opcode()) continue;
+  for (const auto& inst : vstate.ordered_instructions()) {
+    if (SpvOpVariable != inst.opcode()) continue;
 
     // Verify this variable is a DescriptorSet
     bool has_descriptor_set = false;
-    for (const auto& decoration : vstate.id_decorations(def.first)) {
+    for (const auto& decoration : vstate.id_decorations(inst.id())) {
       if (SpvDecorationDescriptorSet == decoration.dec_type()) {
         has_descriptor_set = true;
         break;
@@ -677,7 +678,7 @@ spv_result_t CheckDescriptorSetArrayOfArrays(ValidationState_t& vstate) {
     }
     if (!has_descriptor_set) continue;
 
-    const auto* ptrInst = vstate.FindDef(inst->word(1));
+    const auto* ptrInst = vstate.FindDef(inst.word(1));
     assert(SpvOpTypePointer == ptrInst->opcode());
 
     // Check for a first level array
@@ -691,7 +692,7 @@ spv_result_t CheckDescriptorSetArrayOfArrays(ValidationState_t& vstate) {
     const auto secondaryTypePtr = vstate.FindDef(typePtr->word(2));
     if (SpvOpTypeRuntimeArray == secondaryTypePtr->opcode() ||
         SpvOpTypeArray == secondaryTypePtr->opcode()) {
-      return vstate.diag(SPV_ERROR_INVALID_ID, inst)
+      return vstate.diag(SPV_ERROR_INVALID_ID, &inst)
              << "Only a single level of array is allowed for descriptor "
                 "set variables";
     }
@@ -781,10 +782,9 @@ void ComputeMemberConstraintsForArray(MemberConstraints* constraints,
 }
 
 spv_result_t CheckDecorationsOfBuffers(ValidationState_t& vstate) {
-  for (const auto& def : vstate.all_definitions()) {
-    const auto inst = def.second;
-    const auto& words = inst->words();
-    if (SpvOpVariable == inst->opcode()) {
+  for (const auto& inst : vstate.ordered_instructions()) {
+    const auto& words = inst.words();
+    if (SpvOpVariable == inst.opcode()) {
       // For storage class / decoration combinations, see Vulkan 14.5.4 "Offset
       // and Stride Assignment".
       const auto storageClass = words[3];

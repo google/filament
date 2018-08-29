@@ -13,7 +13,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "pass_fixture.h"
+#include <string>
+
+#include "test/opt/pass_fixture.h"
 
 namespace spvtools {
 namespace opt {

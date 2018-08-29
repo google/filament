@@ -75,11 +75,11 @@ public:
      */
     size_t getCount() const noexcept;
 
-private:
     CountDownLatch() = delete;
     CountDownLatch(const CountDownLatch&) = delete;
-    CountDownLatch& operator =(const CountDownLatch&) = delete;
+    CountDownLatch& operator=(const CountDownLatch&) = delete;
 
+private:
     uint32_t m_initial_count;
     uint32_t m_remaining_count;
     mutable Mutex m_lock;
