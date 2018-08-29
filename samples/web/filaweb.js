@@ -79,7 +79,7 @@ function load_texture(url) {
             context2d.canvas.width = img.width;
             context2d.canvas.height = img.height;
             context2d.width = img.width;
-            context2d.height = img.height
+            context2d.height = img.height;
             context2d.globalCompositeOperation = 'copy';
             context2d.drawImage(img, 0, 0);
             var imgdata = context2d.getImageData(0, 0, img.width, img.height).data.buffer;
