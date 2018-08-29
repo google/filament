@@ -23,7 +23,6 @@ import java.awt.Color
 import java.awt.Graphics2D
 import java.awt.geom.GeneralPath
 import java.awt.geom.Point2D
-import javax.swing.SwingUtilities
 
 /**
  * Endpoint provides either a start or end point to a ConnectionLine.
@@ -32,10 +31,13 @@ typealias Endpoint = () -> Point2D.Double?
 
 internal fun slotPoint(slot: Slot, graph: MaterialGraphComponent): Endpoint {
     return fun (): Point2D.Double? {
-        val slotView = graph.getSlotViewForSlot(slot) ?: return null
-        val centerPoint = SwingUtilities.convertPoint(slotView, slotView.centerPoint,
-                slotView.parentMaterialNode.parent)
-        return Point2D.Double(centerPoint.x.toDouble(), centerPoint.y.toDouble())
+        val graphView = graph.graphView ?: return null
+        val slotView = graph.getSlotCircleForSlot(slot) ?: return null
+        val centerPoint = convertPoint(slotView, slotView.centerPoint, graphView)
+        if (centerPoint != null) {
+            return Point2D.Double(centerPoint.x, centerPoint.y)
+        }
+        return null
     }
 }
 

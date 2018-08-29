@@ -26,13 +26,12 @@ import java.awt.Graphics2D
 import java.awt.event.MouseEvent
 import java.util.ArrayList
 import java.util.HashMap
-import java.util.HashSet
 import javax.swing.JComponent
 
 class MaterialGraphComponent : JComponent(), TungstenMouseListener {
 
     private val mEventManager = TungstenEventManager(this)
-    private var mNodeBeingDragged: MaterialNode? = null
+    private var mNodeBeingDragged: NodeView? = null
     private var mPreviousSelectionModel: List<Int> = ArrayList()
     private var mIsConnecting = false
 
@@ -46,13 +45,15 @@ class MaterialGraphComponent : JComponent(), TungstenMouseListener {
     private var mPresenter: GraphPresenter? = null
 
     // Stores the current node views being shown
-    private val mNodeViews = HashMap<Node, MaterialNode>()
+    private val mNodeViews = mutableListOf<NodeView>()
 
     // Stores the current graph displayed in the component, or null if one hasn't been rendered yet
     private var mGraph: Graph? = null
 
+    internal var graphView: GraphView? = null
+
     // Maps between the SlotModels we receive and the NodeSlot views
-    private val mSlotMap = HashMap<Slot, NodeSlot>()
+    private val mSlotMap = HashMap<Slot, SlotCircle>()
 
     // Maps between the ConnectionModels we receive and our views
     private val mConnectionViewMap = HashMap<Connection, ConnectionLine>()
@@ -66,6 +67,59 @@ class MaterialGraphComponent : JComponent(), TungstenMouseListener {
         mPresenter = presenter
     }
 
+    private fun renderGraph(graph: Graph): GraphView {
+        mSlotMap.clear()
+
+        val renderSlot = { node: Node, slotName: String, isInput: Boolean ->
+            val slotHandle = if (isInput) {
+                node.getInputSlot(slotName)
+            } else {
+                node.getOutputSlot(slotName)
+            }
+            val expression = graph.expressionMap[slotHandle]
+            val slotView = SlotView(
+                    label = slotName,
+                    isInput = isInput,
+                    onConnectionDragStart = { this.nodeSlotDragStarted(slotHandle) },
+                    onConnectionDragEnd = { this.nodeSlotDragEnded(slotHandle) }
+            )
+            mSlotMap[slotHandle] = slotView.circle
+            slotView
+        }
+
+        val renderNode = { node: Node ->
+            NodeView(
+                    x = node.x,
+                    y = node.y,
+                    inputSlots = node.inputSlots.map { slotName ->
+                        renderSlot(node, slotName, true)
+                    },
+                    outputSlots = node.outputSlots.map { slotName ->
+                        renderSlot(node, slotName, false)
+                    },
+                    isSelected = graph.isNodeSelected(node),
+                    nodeDragStarted = { view ->
+                        mNodeBeingDragged = view
+                        notifySelectionIfChanged(listOf(node.id))
+                    },
+                    nodeDragStopped = { view ->
+                        // We've just finished dragging a node, so alert the presenter
+                        mPresenter?.nodeMoved(node, view.x.toInt(), view.y.toInt())
+                        mNodeBeingDragged = null
+                    },
+                    nodeClicked = {
+                        notifySelectionIfChanged(listOf(node.id))
+                    }
+            )
+        }
+
+        return GraphView(
+                nodes = graph.nodes.map { renderNode(it) },
+                width = this.width.toFloat(),
+                height = this.height.toFloat()
+        )
+    }
+
     fun render(graph: Graph) {
         // Because graphs are immutable, if the graph we previously rendered is the same graph
         // object, we have no work to do.
@@ -73,28 +127,11 @@ class MaterialGraphComponent : JComponent(), TungstenMouseListener {
             return
         }
 
-        // The strategy here is to create new MaterialNodes for any new nodes in the graph, and
-        // remove any MaterialNodes that are no longer present in the graph.
-        val nodesToRemove = HashSet(mNodeViews.values)
+        val graphView = renderGraph(graph)
+        this.graphView = graphView
 
-        for (node in graph.nodes) {
-            val currentNodeView = mNodeViews[node]
-            if (currentNodeView != null) {
-                nodesToRemove.remove(currentNodeView)
-                continue
-            }
-            // If we don't have a view for this node yet, create a new one by calling renderNode
-            val nodeView = renderNode(node, mSlotMap)
-            nodeView.setSelected(graph.isNodeSelected(node))
-            mNodeViews[node] = nodeView
-            add(nodeView)
-        }
-
-        // Remove whichever nodes are no longer present in the graph.
-        for (node in nodesToRemove) {
-            mNodeViews.remove(node.model)
-            remove(node)
-        }
+        mNodeViews.clear()
+        mNodeViews.addAll(graphView.nodes)
 
         // Create a connection line for each connection in the graph.
         mConnectionLines.clear()
@@ -116,38 +153,33 @@ class MaterialGraphComponent : JComponent(), TungstenMouseListener {
 
     override fun mousePressed(e: MouseEvent) {
         // Check if we've clicked on a MaterialNode.
-        val componentUnderMouse = getComponentAt(e.point)
-        if (componentUnderMouse !is MaterialNode) {
+        val node = graphView?.let { graphView ->
+            val view = findViewAt(graphView, e.point)
+            view as? NodeView?
+        }
+        if (node == null) {
             // If we didn't click on a MaterialNode, clear the selection
             deselectNodes()
             return
         }
 
-        selectNode(componentUnderMouse)
+        node.nodeClicked()
     }
 
     override fun mouseDragStarted(e: MouseEvent) {
         // If we've started dragging over a slot circle, we've started forming a new connection
-        val slot = eventIsOverSlotCircle(e)
-        if (slot != null) {
-            nodeSlotDragStarted(slot)
-            return
-        }
+        val graphView = graphView ?: return
+        val view = findViewAt(graphView, e.point) ?: return
 
-        // If we're not dragging over a SlotCircle, check if we're dragging a MaterialNode
-        val componentUnderMouse = getComponentAt(e.point)
-        if (componentUnderMouse is MaterialNode) {
-            mNodeBeingDragged = componentUnderMouse
-            selectNode(mNodeBeingDragged!!)
+        when (view) {
+            is SlotCircle -> view.parent.onConnectionDragStart(view.parent)
+            is NodeView -> view.nodeDragStarted(view)
         }
     }
 
     override fun mouseDragEnded(e: MouseEvent) {
-        if (mNodeBeingDragged != null) {
-            // We've just finished dragging a node, so alert the presenter
-            mPresenter!!.nodeMoved(mNodeBeingDragged!!.model, mNodeBeingDragged!!.x,
-                    mNodeBeingDragged!!.y)
-            mNodeBeingDragged = null
+        mNodeBeingDragged?.let { nodeView ->
+            nodeView.nodeDragStopped(nodeView)
         }
 
         if (!mIsConnecting) {
@@ -155,20 +187,21 @@ class MaterialGraphComponent : JComponent(), TungstenMouseListener {
         }
         mIsConnecting = false
 
-        // If we've finished dragging over a SlotCircle, we might be forming a new connection
-        val slot = eventIsOverSlotCircle(e)
-        if (slot != null) {
-            nodeSlotDragEnded(slot)
-        }
-
         repaint()
+
+        val graphView = graphView ?: return
+        val view = findViewAt(graphView, e.point) ?: return
+
+        when (view) {
+            is SlotCircle -> view.parent.onConnectionDragEnd(view.parent)
+        }
     }
 
     override fun mouseDragged(e: MouseEvent) {
-        if (mNodeBeingDragged != null) {
-            // Update the location of the node being dragged by the mouse
-            mNodeBeingDragged!!.setLocation(mNodeBeingDragged!!.x + mEventManager.mouseDeltaX,
-                    mNodeBeingDragged!!.y + mEventManager.mouseDeltaY)
+        val node = mNodeBeingDragged
+        if (node != null) {
+            node.x += mEventManager.mouseDeltaX
+            node.y += mEventManager.mouseDeltaY
             repaint()
             return
         }
@@ -186,24 +219,28 @@ class MaterialGraphComponent : JComponent(), TungstenMouseListener {
         g2d.color = ColorScheme.background
         g2d.fillRect(0, 0, width, height)
 
+        // Render graph
+        graphView?.let { graphView -> layoutHierarchy(graphView) }
+
         // If we're currently connecting two slots, draw the connection
-        if (mIsConnecting && mInProgressConnectionLine != null) {
-            mInProgressConnectionLine!!.paint(g2d)
+        if (mIsConnecting) {
+            mInProgressConnectionLine?.paint(g2d)
         }
 
         mConnectionLines.forEach { connection -> connection.paint(g2d) }
+
+        // Render graph
+        graphView?.let { graphView -> renderHierarchy(graphView, g2d) }
     }
 
-    internal fun getSlotViewForSlot(slot: Slot): NodeSlot? {
-        return mSlotMap[slot]
-    }
+    internal fun getSlotCircleForSlot(slot: Slot) = mSlotMap[slot]
 
-    private fun nodeSlotDragStarted(slot: NodeSlot) {
+    private fun nodeSlotDragStarted(slot: Slot) {
         // If the user starts dragging on an input slot that already has a connection, remove the
         // previous connection
-        assert(mGraph != null)
-        for (connection in mGraph!!.connections) {
-            if (connection.inputSlot == slot.model) {
+        val graph = mGraph ?: return
+        for (connection in graph.connections) {
+            if (connection.inputSlot == slot) {
                 // First, remove the connection view
                 val connectionLine = mConnectionViewMap.remove(connection) ?: return
                 mConnectionLines.remove(connectionLine)
@@ -213,16 +250,16 @@ class MaterialGraphComponent : JComponent(), TungstenMouseListener {
                 mInProgressOriginSlot = connection.outputSlot
                 mIsConnecting = true
 
-                mPresenter!!.connectionDisconnectedAtInput(connection)
+                mPresenter?.connectionDisconnectedAtInput(connection)
 
                 return
             }
         }
 
         // Create a new connection line to represent this new "in progress" connection
-        mInProgressConnectionLine = ConnectionLine(slotPoint(slot.model, this),
-                slotPoint(slot.model, this))
-        mInProgressOriginSlot = slot.model
+        mInProgressConnectionLine = ConnectionLine(slotPoint(slot, this),
+                slotPoint(slot, this))
+        mInProgressOriginSlot = slot
         mIsConnecting = true
         repaint()
     }
@@ -234,16 +271,16 @@ class MaterialGraphComponent : JComponent(), TungstenMouseListener {
         // Depending on what type of slot the user is dragging from, the mouse is updating the
         // input or output point
         if (mInProgressOriginSlot is Node.InputSlot) {
-            mInProgressConnectionLine!!.outputPoint = arbitraryPoint(e.x.toDouble(), e.y.toDouble())
+            mInProgressConnectionLine?.outputPoint = arbitraryPoint(e.x.toDouble(), e.y.toDouble())
         } else {
-            mInProgressConnectionLine!!.inputPoint = arbitraryPoint(e.x.toDouble(), e.y.toDouble())
+            mInProgressConnectionLine?.inputPoint = arbitraryPoint(e.x.toDouble(), e.y.toDouble())
         }
         repaint()
     }
 
-    private fun nodeSlotDragEnded(slot: NodeSlot) {
-        var output = mInProgressOriginSlot
-        var input = slot.model
+    private fun nodeSlotDragEnded(slot: Slot) {
+        var output = mInProgressOriginSlot ?: return
+        var input = slot
 
         mIsConnecting = false
 
@@ -255,33 +292,16 @@ class MaterialGraphComponent : JComponent(), TungstenMouseListener {
             input = temp
         }
 
-        val outputSlot = output as Node.OutputSlot?
-        val inputSlot = input as Node.InputSlot
-        val newConnectionModel = Connection(outputSlot!!, inputSlot)
+        val outputSlot = output as? Node.OutputSlot ?: return
+        val inputSlot = input as? Node.InputSlot ?: return
+        val newConnectionModel = Connection(outputSlot, inputSlot)
 
-        mPresenter!!.connectionCreated(newConnectionModel)
+        mPresenter?.connectionCreated(newConnectionModel)
 
         repaint()
     }
 
-    /**
-     * Check if the event is over a slot circle. If it is, return the corresponding NodeSlot.
-     */
-    private fun eventIsOverSlotCircle(e: MouseEvent): NodeSlot? {
-        val componentUnderEvent = findComponentAt(e.point) ?: return null
-        return if (componentUnderEvent is SlotCircle) {
-            componentUnderEvent.parent as NodeSlot
-        } else null
-    }
-
-    private fun selectNode(node: MaterialNode) {
-        resetNodeSelections()
-        node.setSelected(true)
-        notifySelectionIfChanged(listOf(node.model.id))
-    }
-
     private fun deselectNodes() {
-        resetNodeSelections()
         notifySelectionIfChanged(emptyList())
     }
 
@@ -294,13 +314,7 @@ class MaterialGraphComponent : JComponent(), TungstenMouseListener {
         if (selectedNodes == mPreviousSelectionModel) {
             return
         }
-        mPresenter!!.selectionChanged(selectedNodes)
+        mPresenter?.selectionChanged(selectedNodes)
         mPreviousSelectionModel = selectedNodes
-    }
-
-    private fun resetNodeSelections() {
-        for (node in mNodeViews.values) {
-            node.setSelected(false)
-        }
     }
 }
