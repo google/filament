@@ -4,8 +4,7 @@
 // The command used to compile this material is:
 // matc -p mobile -a opengl -O -o app/src/main/assets/baked_color.filamat app/src/materials/baked_color.mat
 //
-// When Filament is updated all compiled materials should be regenerated. It is highly recommended
-// to integrate matc with your build system.
+// See build.gradle for an example of how to compile materials automatically
 // Please refer to the documentation for more information about matc and the materials system.
 
 material {
@@ -19,9 +18,6 @@ material {
 
     // This material disables all lighting
     shadingModel : unlit,
-
-    // Both faces of the model's triangles are visible
-    culling : none,
 }
 
 fragment {

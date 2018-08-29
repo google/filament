@@ -169,7 +169,7 @@ class MainActivity : Activity() {
     }
 
     private fun loadMaterial() {
-        readAsset("baked_color.filamat")?.let {
+        readAsset("materials/baked_color.filamat")?.let {
             material = Material.Builder().payload(it, it.remaining()).build(engine)
         }
     }
