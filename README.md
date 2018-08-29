@@ -101,6 +101,8 @@ Many other features have been either prototyped or planned:
 
 - `filament`:                Filament engine and its supporting libraries and tools
   - `android`:               Android libraries and projects
+    - `filament-android`:    Filament library (AAR) for Android
+    - `samples`:             Android-specific Filament samples
   - `art`:                   Source for various artworks (logos, PDF manuals, etc.)
   - `assets`:                3D assets to use with sample applications
   - `build`:                 CMake build scripts
@@ -807,6 +809,8 @@ Following the steps above (how to use Filament from native code), create an `Eng
 these methods on `FilamentCanvas` or `FilamentPanel`.
 
 ### Android
+
+See `android/samples` for examples of how to use Filament on Android.
 
 You must always first initialize Filament by calling `Filament.init()`.
 
