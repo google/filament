@@ -98,7 +98,7 @@ endif()
 # General compiler flags
 # ==================================================================================================
 if (MSVC)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_USE_MATH_DEFINES=1 /wd4068 /wd4996 /wd4820 /wd4625 /wd4626 /wd5026 /wd5027 /wd4324 /wd4774 /wd4514 -D_SILENCE_TR1_NAMESPACE_DEPRECATION_WARNING=1 -D_CRT_SECURE_NO_WARNINGS=1")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_USE_MATH_DEFINES=1 /wd4068 /wd4996 /wd4820 /wd4623 /wd4625 /wd4626 /wd5026 /wd5027 /wd4324 /wd4774 /wd4514 -D_SILENCE_TR1_NAMESPACE_DEPRECATION_WARNING=1 -D_CRT_SECURE_NO_WARNINGS=1")
 else()
 if (WIN32)
     set(CXX_STANDARD "/std:c++14")
