@@ -101,6 +101,7 @@ Many other features have been either prototyped or planned:
 
 - `filament`:                Filament engine and its supporting libraries and tools
   - `android`:               Android libraries and projects
+    - `build`:               Custom Gradle tasks for Android builds
     - `filament-android`:    Filament library (AAR) for Android
     - `samples`:             Android-specific Filament samples
   - `art`:                   Source for various artworks (logos, PDF manuals, etc.)
@@ -409,7 +410,7 @@ Filament can be built for the following architectures:
 Note that the main target is the ARM 64-bit target. Our implementation is optimized first and
 foremost for `arm64-v8a`.
 
-#### Easy build
+#### Easy Android build
 
 The easiest way to build Filament for Android is to use `build.sh` and the
 `-p android` flag. For instance to build the release target:
