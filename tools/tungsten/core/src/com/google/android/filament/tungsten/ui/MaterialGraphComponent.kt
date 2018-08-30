@@ -78,7 +78,8 @@ class MaterialGraphComponent : JComponent(), TungstenMouseListener {
             }
             val expression = graph.expressionMap[slotHandle]
             val slotView = SlotView(
-                    label = slotName,
+                    label = if (expression != null)
+                        "$slotName (${expression.dimensions})" else slotName,
                     isInput = isInput,
                     onConnectionDragStart = { this.nodeSlotDragStarted(slotHandle) },
                     onConnectionDragEnd = { this.nodeSlotDragEnded(slotHandle) }
