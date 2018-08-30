@@ -21,10 +21,12 @@ import com.google.android.filament.tungsten.model.Node;
 import com.google.android.filament.tungsten.model.Slot;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -44,20 +46,34 @@ public final class GraphCompiler {
     private final @NotNull Graph mGraph;
     private final @NotNull Node mRootNode;
     private final Map<Slot, Expression> mCompiledVariableMap = new HashMap<>();
+    private final Set<Node> mUncompiledNodes;
+    private boolean mShouldAppendCode = true;
 
     public GraphCompiler(@NotNull Graph graph) {
         mGraph = graph;
         mRootNode = Objects.requireNonNull(mGraph.getRootNode());
+        mUncompiledNodes = new HashSet<>(graph.getNodes());
     }
 
     @NotNull
     public CompiledGraph compileGraph() {
+        mUncompiledNodes.remove(mRootNode);
         mRootNode.getCompileFunction().invoke(mRootNode, this);
+
+        // Compile the rest of the nodes in the graph that aren't necessarily connected to the
+        // root node. These nodes should not contribute any code to the material definition.
+        mShouldAppendCode = false;
+        while (!mUncompiledNodes.isEmpty()) {
+            Node next = mUncompiledNodes.iterator().next();
+            mUncompiledNodes.remove(next);
+            next.getCompileFunction().invoke(next, this);
+        }
+
         String fragmentSection = GraphFormatter.formatFragmentSection(mGlobalFunctions.values(),
                 mMaterialFunctionBodyBuilder.toString());
         String materialDefinition =
-                GraphFormatter.formatMaterialSection(mRequiredAttributes, mParameters) +
-                        fragmentSection;
+                GraphFormatter.formatMaterialSection(mRequiredAttributes, mParameters)
+                + fragmentSection;
         return new CompiledGraph(materialDefinition, mPropertyParameterMap, mCompiledVariableMap);
     }
 
@@ -83,6 +99,7 @@ public final class GraphCompiler {
         if (connectedNode == null) {
             throw new RuntimeException("Output slot references node that does not exist in graph.");
         }
+        mUncompiledNodes.remove(connectedNode);
         connectedNode.getCompileFunction().invoke(connectedNode, this);
 
         // Verify that the connected node has set it's output variable
@@ -152,6 +169,9 @@ public final class GraphCompiler {
      * @param code code to be concatenated to the material function body.
      */
     public void addCodeToMaterialFunctionBody(String code) {
+        if (!mShouldAppendCode) {
+            return;
+        }
         mMaterialFunctionBodyBuilder.append(code);
     }
 

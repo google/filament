@@ -161,6 +161,7 @@ public class GraphPresenter implements IPropertiesPresenter {
             return;
         }
         mModel.getAndUpdate(graph -> graph.graphByAddingNodeAtLocation(newNode, x, y));
+        recompileGraph();
         serializeAndSave();
         mGraphView.render(mModel.get());
     }
