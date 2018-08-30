@@ -1,68 +1,10 @@
-// This script accepts the following parameters:
-//
-// filament_tools_dir
-//     Path to the Filament distribution/install directory for desktop
-//     (produced by make/ninja install). This directory must contain bin/matc
-//
-// Example:
-//     ./gradlew -Pfilament_tools_dir=../../dist-release assembleDebug
-
 apply plugin: 'com.android.application'
 apply plugin: 'kotlin-android'
 apply plugin: 'kotlin-android-extensions'
 
-def filamentToolsPath = file("../../../../out/release/filament")
-if (project.hasProperty("filament_tools_dir")) {
-    filamentToolsPath = file("$filament_tools_dir")
-}
+apply from: '../../../build/filament-tasks.gradle'
 
-// Custom task to compile material files using matc
-// This task handles incremental builds
-class MaterialCompiler extends DefaultTask {
-    @Input
-    File matcPath
-
-    @SuppressWarnings("GroovyUnusedDeclaration")
-    @InputDirectory
-    File inputDir
-
-    @OutputDirectory
-    File outputDir
-
-    @SuppressWarnings("GroovyUnusedDeclaration")
-    @TaskAction
-    void execute(IncrementalTaskInputs inputs) {
-        if (!inputs.incremental) {
-            project.delete(project.fileTree(outputDir).matching { include '*.filamat' })
-        }
-
-        inputs.outOfDate { InputFileDetails outOfDate ->
-            def file = outOfDate.file
-            project.exec {
-                executable "${matcPath}/bin/matc"
-                args('-O', '-p', 'mobile', '-o', getOutputFile(file), file)
-            }
-        }
-
-        inputs.removed { InputFileDetails removed ->
-            getOutputFile(removed.file).delete()
-        }
-    }
-
-    File getOutputFile(final File file) {
-        return new File(outputDir, file.name[0..file.name.lastIndexOf('.')] + 'filamat')
-    }
-}
-
-task compileMaterials(type: MaterialCompiler) {
-    group 'Filament'
-    description 'Compile materials'
-
-    inputDir = file("src/materials")
-    outputDir = file("src/main/assets/materials")
-    matcPath = filamentToolsPath
-}
-build.dependsOn compileMaterials
+preBuild.dependsOn compileMaterials
 
 android {
     compileSdkVersion 28

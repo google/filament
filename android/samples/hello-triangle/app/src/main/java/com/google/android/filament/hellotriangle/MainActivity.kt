@@ -152,20 +152,7 @@ class MainActivity : Activity() {
         // Add the entity to the scene to render it
         scene.addEntity(renderable)
 
-        // Animate the triangle
-        animator.interpolator = LinearInterpolator()
-        animator.duration = 4000
-        animator.repeatMode = ValueAnimator.RESTART
-        animator.repeatCount = ValueAnimator.INFINITE
-        animator.addUpdateListener(object : ValueAnimator.AnimatorUpdateListener {
-            val transformMatrix = FloatArray(16)
-            override fun onAnimationUpdate(a: ValueAnimator) {
-                Matrix.setRotateM(transformMatrix, 0, -(a.animatedValue as Float), 0.0f, 0.0f, 1.0f)
-                val tcm = engine.transformManager
-                tcm.setTransform(tcm.getInstance(renderable), transformMatrix)
-            }
-        })
-        animator.start()
+        startAnimation()
     }
 
     private fun loadMaterial() {
@@ -237,6 +224,23 @@ class MainActivity : Activity() {
                 .bufferType(IndexBuffer.Builder.IndexType.USHORT)
                 .build(engine)
         indexBuffer.setBuffer(engine, indexData)
+    }
+
+    private fun startAnimation() {
+        // Animate the triangle
+        animator.interpolator = LinearInterpolator()
+        animator.duration = 4000
+        animator.repeatMode = ValueAnimator.RESTART
+        animator.repeatCount = ValueAnimator.INFINITE
+        animator.addUpdateListener(object : ValueAnimator.AnimatorUpdateListener {
+            val transformMatrix = FloatArray(16)
+            override fun onAnimationUpdate(a: ValueAnimator) {
+                Matrix.setRotateM(transformMatrix, 0, -(a.animatedValue as Float), 0.0f, 0.0f, 1.0f)
+                val tcm = engine.transformManager
+                tcm.setTransform(tcm.getInstance(renderable), transformMatrix)
+            }
+        })
+        animator.start()
     }
 
     override fun onResume() {
