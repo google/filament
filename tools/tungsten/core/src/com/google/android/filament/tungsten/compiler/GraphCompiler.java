@@ -58,7 +58,7 @@ public final class GraphCompiler {
         String materialDefinition =
                 GraphFormatter.formatMaterialSection(mRequiredAttributes, mParameters) +
                         fragmentSection;
-        return new CompiledGraph(materialDefinition, mPropertyParameterMap);
+        return new CompiledGraph(materialDefinition, mPropertyParameterMap, mCompiledVariableMap);
     }
 
     /**
