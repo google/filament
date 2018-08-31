@@ -164,7 +164,7 @@ class MainActivity : Activity() {
                 // Intensity of the sun in lux on a clear day
                 .intensity(110_000.0f)
                 // The direction is normalized on our behalf
-                .direction(0.0f, -0.5f, 1.0f)
+                .direction(0.0f, -0.5f, -1.0f)
                 .castShadows(true)
                 .build(engine, light)
 
@@ -177,7 +177,7 @@ class MainActivity : Activity() {
         camera.setExposure(16.0f, 1.0f / 125.0f, 100.0f)
 
         // Move the camera back to see the object
-        camera.lookAt(0.0, 3.0, -4.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0)
+        camera.lookAt(0.0, 3.0, 4.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0)
 
         startAnimation()
     }
