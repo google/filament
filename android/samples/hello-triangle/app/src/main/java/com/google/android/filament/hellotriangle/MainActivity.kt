@@ -265,7 +265,7 @@ class MainActivity : Activity() {
         Fence.waitAndDestroy(engine.createFence(Fence.Type.SOFT), Fence.Mode.FLUSH)
 
         // Cleanup all resources
-        engine.renderableManager.destroy(renderable)
+        engine.destroyEntity(renderable)
         engine.destroyRenderer(renderer)
         engine.destroyVertexBuffer(vertexBuffer)
         engine.destroyIndexBuffer(indexBuffer)

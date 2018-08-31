@@ -48,18 +48,18 @@ public class EntityManager {
     public int[] create(@IntRange(from = 1) int n) {
         if (n < 1) throw new ArrayIndexOutOfBoundsException("n must be at least 1");
         int[] entities = new int[n];
-        nCreate(mNativeObject, n, entities);
+        nCreateArray(mNativeObject, n, entities);
         return entities;
     }
 
     @NonNull
     public int[] create(@Entity @NonNull int[] entities) {
-        nCreate(mNativeObject, entities.length, entities);
+        nCreateArray(mNativeObject, entities.length, entities);
         return entities;
     }
 
     public void destroy(@Entity @NonNull int[] entities) {
-        nDestroy(mNativeObject, entities.length, entities);
+        nDestroyArray(mNativeObject, entities.length, entities);
     }
 
     public boolean isAlive(@Entity int entity) {
@@ -67,9 +67,9 @@ public class EntityManager {
     }
 
     private static native long nGetEntityManager();
-    private static native void nCreate(long nativeEntityManager, int n, int[] entities);
+    private static native void nCreateArray(long nativeEntityManager, int n, int[] entities);
     private static native int nCreate(long nativeEntityManager);
-    private static native void nDestroy(long nativeEntityManager, int n, int[] entities);
+    private static native void nDestroyArray(long nativeEntityManager, int n, int[] entities);
     private static native void nDestroy(long nativeEntityManager, int entity);
     private static native boolean nIsAlive(long nativeEntityManager, int entity);
 }
