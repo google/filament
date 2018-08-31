@@ -502,7 +502,7 @@ static void gui(filament::Engine* engine, filament::View*) {
     auto lightInstance = lcm.getInstance(g_light);
     lcm.setColor(lightInstance, g_lightColor);
     lcm.setIntensity(lightInstance, g_lightIntensity);
-    lcm.setDirection(lightInstance, normalize(g_lightDirection));
+    lcm.setDirection(lightInstance, g_lightDirection);
     lcm.setSunAngularRadius(lightInstance, g_sunAngularRadius);
     lcm.setSunHaloSize(lightInstance, g_sunHaloSize);
     lcm.setSunHaloFalloff(lightInstance, g_sunHaloFalloff);

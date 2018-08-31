@@ -46,6 +46,7 @@ add_library(filament-jni SHARED
       src/main/cpp/LightManager.cpp
       src/main/cpp/Material.cpp
       src/main/cpp/MaterialInstance.cpp
+      src/main/cpp/MathUtils.cpp
       src/main/cpp/RenderableManager.cpp
       src/main/cpp/Renderer.cpp
       src/main/cpp/Scene.cpp
