@@ -127,7 +127,6 @@ typedef uint64_t size_t;
 typedef uint8_t FBool;
 #endif
 
-#pragma pack(push, 1)
 typedef struct {
   const char *name;
   uint8_t is_sampler;
@@ -146,8 +145,6 @@ typedef struct {
   size_t pz;
   size_t nz;
 } FFaceOffsets;
-
-#pragma pack(pop)
 
 // Must be in sync with BufferDescriptor::Callback
 typedef void(__cdecl *FFreeBufferFn)(void *buffer, size_t buffer_size, void *user);
@@ -826,7 +823,6 @@ APIEXPORT void APICALL Filament_Texture_SetExternalImage(FTexture *texture, FEng
 APIEXPORT void APICALL Filament_Texture_SetExternalStream(FTexture *texture, FEngine *engine, FStream *stream);
 APIEXPORT void APICALL Filament_Texture_GenerateMipmaps(FTexture *texture, FEngine *engine);
 
-#pragma pack(push, 1)
 typedef struct {
   FSamplerMagFilter filterMag;
   FSamplerMinFilter filterMin;
@@ -837,7 +833,6 @@ typedef struct {
   FSamplerCompareMode compareMode;
   FSamplerCompareFunc compareFunc;
 } FSamplerParams;
-#pragma pack(pop)
 
 // Samplers are represented as their driver-side representation, which is a 32-bit packaged integer
 APIEXPORT FTextureSampler APICALL Filament_TextureSampler_Create(FSamplerParams *params);

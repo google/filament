@@ -90,20 +90,15 @@ int Filament_Material_GetParameterCount(Material *material) {
   return material->getParameterCount();
 }
 
-static_assert(sizeof(FParameter) == 16, "static size is wrong");
-
-void Filament_Material_GetParameters(Material *material,
-                                     FParameter *paramsOut,
-                                     int count) {
+void Filament_Material_GetParameters(Material *material, FParameter *paramsOut, int count) {
   auto parameters = std::make_unique<Material::ParameterInfo[]>(count);
   size_t received = material->getParameters(&parameters[0], (size_t) count);
   assert(received == count);
   for (int i = 0; i < count; i++) {
     auto &paramIn = parameters[i];
     auto &paramOut = paramsOut[i];
-    printf("NAME: %s\n", paramIn.name);
     paramOut.name = paramIn.name;
-    paramOut.is_sampler = paramIn.isSampler;
+    paramOut.is_sampler = (uint8_t) (paramIn.isSampler);
     if (paramIn.isSampler) {
       paramOut.type = paramIn.type;
     } else {
@@ -119,6 +114,6 @@ uint32_t Filament_Material_GetRequiredAttributes(Material *material) {
 }
 
 FBool Filament_Material_HasParameter(Material *material,
-                                    const char *name) {
+                                     const char *name) {
   return material->hasParameter(name);
 }
