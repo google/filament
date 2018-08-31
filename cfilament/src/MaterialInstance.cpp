@@ -80,7 +80,7 @@ void Filament_MaterialInstance_SetParameterFloat4(MaterialInstance *instance, ch
 
 void Filament_MaterialInstance_SetBooleanParameterArray(
     MaterialInstance *instance, char *name, FBool *v, size_t count) {
-  instance->setParameter(name, v, count);
+  instance->setParameter(name, (bool*) v, count);
 }
 
 void Filament_MaterialInstance_SetIntParameterArray(
