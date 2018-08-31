@@ -9,6 +9,8 @@
 
 import java.nio.file.Paths
 import org.gradle.internal.os.OperatingSystem
+import org.gradle.api.logging.Logger;
+import org.gradle.api.logging.LogLevel;
 
 def filamentToolsPath = file("../../../../out/release/filament")
 if (project.hasProperty("filament_tools_dir")) {
@@ -22,6 +24,31 @@ def matcFullPath = matc.collect { path -> Paths.get(filamentToolsPath.absolutePa
 if (!matcFullPath.any { path -> file(path).exists() }) {
     throw new StopActionException("No matc binary could be found in " + filamentToolsPath +
             "/bin. Ensure Filament has been built/installed before building this app.")
+}
+
+
+class LogOutputStream extends ByteArrayOutputStream {
+    private final Logger logger;
+    private final LogLevel level;
+
+    public LogOutputStream(Logger logger, LogLevel level) {
+        this.logger = logger;
+        this.level = level;
+    }
+
+    public Logger getLogger() {
+        return logger;
+    }
+
+    public LogLevel getLevel() {
+        return level;
+    }
+
+    @Override
+    public void flush() {
+        logger.log(level, toString());
+        reset();
+    }
 }
 
 // Custom task to compile material files using matc
@@ -46,7 +73,17 @@ class MaterialCompiler extends DefaultTask {
 
         inputs.outOfDate { InputFileDetails outOfDate ->
             def file = outOfDate.file
+
+            def out = new LogOutputStream(logger, LogLevel.INFO)
+            def err = new LogOutputStream(logger, LogLevel.ERROR)
+
+            def header = ("Compiling material " + file + "\n").getBytes()
+            err.write(header)
+            out.write(header)
+
             project.exec {
+                standardOutput out
+                errorOutput err
                 executable "${matcPath}"
                 args('-O', '-p', 'mobile', '-o', getOutputFile(file), file)
             }
