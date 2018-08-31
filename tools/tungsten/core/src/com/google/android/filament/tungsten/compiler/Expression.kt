@@ -27,9 +27,7 @@ open class Expression(
     val rgb get() = conform(3)
     val rgba get() = conform(4)
 
-    override fun toString(): String {
-        return symbol
-    }
+    override fun toString() = symbol
 
     private fun conform(components: Int): Expression {
         if (dimensions == components) return this
@@ -66,13 +64,9 @@ private fun createFloatLiteral(dimensions: Int): String {
 class Literal(dimensions: Int) : Expression(
         dimensions = dimensions, symbol = createFloatLiteral(dimensions)) {
 
-    override fun shorten(components: Int): Expression {
-        return Literal(dimensions = components)
-    }
+    override fun shorten(components: Int) = Literal(dimensions = components)
 
-    override fun lengthen(components: Int): Expression {
-        return Literal(dimensions = components)
-    }
+    override fun lengthen(components: Int) = Literal(dimensions = components)
 }
 
 /**
