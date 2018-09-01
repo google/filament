@@ -30,7 +30,6 @@ internal object IoUtils {
         }
     }
 
-    @Throws(IOException::class)
     fun readIntLE(input: InputStream): Int {
         return input.read() and 0xff or (
                 input.read() and 0xff shl 8) or (
@@ -38,14 +37,12 @@ internal object IoUtils {
                 input.read() and 0xff shl 24)
     }
 
-    @Throws(IOException::class)
     fun readFloat32LE(input: InputStream): Float {
         val bytes = ByteArray(4)
         input.read(bytes, 0, 4)
         return ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN).float
     }
 
-    @Throws(IOException::class)
     fun readUIntLE(input: InputStream): Long {
         return readIntLE(input).toLong() and 0xFFFFFFFFL
     }

@@ -35,3 +35,9 @@ $ ./gradlew -Pfilament_tools_dir=../../dist-release assembleDebug
 
 Due to issues with composite builds in Android Studio 3.1, it is highly recommended to use
 Android Studio 3.2 to open this project.
+
+## Compiling
+
+To compile and run each sample make sure you have selected the appropriate build variant
+(arm7, arm8, x86 or x86_64). If you are not sure you can simply select the "universal"
+variant which includes all the other ones.

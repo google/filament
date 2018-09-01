@@ -30,7 +30,6 @@ import com.google.android.filament.RenderableManager.*
 import com.google.android.filament.VertexBuffer.*
 import com.google.android.filament.android.UiHelper
 
-import java.io.IOException
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.channels.Channels
@@ -183,7 +182,7 @@ class MainActivity : Activity() {
     }
 
     private fun loadMaterial() {
-        readAsset("materials/lit.filamat")?.let {
+        readUncompressedAsset("materials/lit.filamat").let {
             material = Material.Builder().payload(it, it.remaining()).build(engine)
         }
     }
@@ -411,24 +410,16 @@ class MainActivity : Activity() {
         }
     }
 
-    private fun readAsset(assetName: String): ByteBuffer? {
-        var dst: ByteBuffer? = null
-        try {
-            assets.openFd(assetName).use { fd ->
-                val input = fd.createInputStream()
+    private fun readUncompressedAsset(assetName: String): ByteBuffer {
+        assets.openFd(assetName).use { fd ->
+            val input = fd.createInputStream()
+            val dst = ByteBuffer.allocate(fd.length.toInt())
 
-                dst = ByteBuffer.allocate(fd.length.toInt())
+            val src = Channels.newChannel(input)
+            src.read(dst)
+            src.close()
 
-                val src = Channels.newChannel(input)
-
-                src.read(dst)
-                src.close()
-                dst!!.rewind()
-            }
-        } catch (e: IOException) {
-            e.printStackTrace()
+            return dst.apply { rewind() }
         }
-
-        return dst
     }
 }

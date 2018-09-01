@@ -38,7 +38,28 @@ private fun peekSize(assets: AssetManager, name: String): Pair<Int, Int> {
     return opts.outWidth to opts.outHeight
 }
 
-fun loadIbl(assets: AssetManager, name: String, engine: Engine): IndirectLight {
+data class Ibl(val indirectLight: IndirectLight,
+               val indirectLightTexture: Texture,
+               val skybox: Skybox,
+               val skyboxTexture: Texture)
+
+fun loadIbl(assets: AssetManager, name: String, engine: Engine): Ibl {
+    val (ibl, iblTexture) = loadIndirectLight(assets, name, engine)
+    val (skybox, skyboxTexture) = loadSkybox(assets, name, engine)
+    return Ibl(ibl, iblTexture, skybox, skyboxTexture)
+}
+
+fun destroyIbl(engine: Engine, ibl: Ibl) {
+    engine.destroySkybox(ibl.skybox)
+    engine.destroyTexture(ibl.skyboxTexture)
+    engine.destroyIndirectLight(ibl.indirectLight)
+    engine.destroyTexture(ibl.indirectLightTexture)
+}
+
+private fun loadIndirectLight(
+        assets: AssetManager,
+        name: String,
+        engine: Engine): Pair<IndirectLight, Texture> {
     val (w, h) = peekSize(assets, "$name/nx.rgbm")
     val texture = Texture.Builder()
             .width(w)
@@ -58,27 +79,27 @@ fun loadIbl(assets: AssetManager, name: String, engine: Engine): IndirectLight {
             .reflections(texture)
             .irradiance(3, sphericalHarmonics)
             .intensity(30_000.0f)
-            .build(engine)
+            .build(engine) to texture
 }
 
 private fun loadSphericalHarmonics(assets: AssetManager, name: String): FloatArray {
+    val re = Regex("""\(\s*([+-]?\d+\.\d+),\s*([+-]?\d+\.\d+),\s*([+-]?\d+\.\d+)\);""")
     // 3 bands = 9 RGB coefficients, so 9 * 3 floats
     val sphericalHarmonics = FloatArray(9 * 3)
-    val input = BufferedReader(InputStreamReader(assets.open("$name/sh.txt")))
-    val re = Regex("""\(\s*([+-]?\d+\.\d+),\s*([+-]?\d+\.\d+),\s*([+-]?\d+\.\d+)\);""")
-    (0 until 9).forEach { i ->
-        val line = input.readLine()
-        re.find(line)?.let {
-            sphericalHarmonics[i * 3] = it.groups[1]?.value?.toFloat() ?: 0.0f
-            sphericalHarmonics[i * 3 + 1] = it.groups[2]?.value?.toFloat() ?: 0.0f
-            sphericalHarmonics[i * 3 + 2] = it.groups[3]?.value?.toFloat() ?: 0.0f
+    BufferedReader(InputStreamReader(assets.open("$name/sh.txt"))).use { input ->
+        (0 until 9).forEach { i ->
+            val line = input.readLine()
+            re.find(line)?.let {
+                sphericalHarmonics[i * 3] = it.groups[1]?.value?.toFloat() ?: 0.0f
+                sphericalHarmonics[i * 3 + 1] = it.groups[2]?.value?.toFloat() ?: 0.0f
+                sphericalHarmonics[i * 3 + 2] = it.groups[3]?.value?.toFloat() ?: 0.0f
+            }
         }
     }
-    input.close()
     return sphericalHarmonics
 }
 
-fun loadSkybox(assets: AssetManager, name: String, engine: Engine): Skybox {
+private fun loadSkybox(assets: AssetManager, name: String, engine: Engine): Pair<Skybox, Texture> {
     val (w, h) = peekSize(assets, "$name/nx.rgbm")
     val texture = Texture.Builder()
             .width(w)
@@ -90,27 +111,31 @@ fun loadSkybox(assets: AssetManager, name: String, engine: Engine): Skybox {
 
     loadCubemap(texture, assets, name, engine)
 
-    return Skybox.Builder().environment(texture).build(engine)
+    return Skybox.Builder().environment(texture).build(engine) to texture
 }
 
-private fun loadCubemap(texture: Texture, assets: AssetManager, name: String,
-        engine: Engine, prefix: String = "", level: Int = 0) {
+private fun loadCubemap(texture: Texture,
+                        assets: AssetManager,
+                        name: String,
+                        engine: Engine,
+                        prefix: String = "",
+                        level: Int = 0) {
+    // This is important, in the RGBM format the alpha channel does not encode
+    // opacity but a scale factor (to represent HDR data). We must tell Android
+    // to not premultiply the RGB channels by the alpha channel
+    val opts = BitmapFactory.Options().apply { inPremultiplied = false }
 
     // RGBM is always 4 bytes per pixel
     val faceSize = texture.getWidth(level) * texture.getHeight(level) * 4
     val offsets = IntArray(6) { it * faceSize }
-
-    val opts = BitmapFactory.Options().apply { inPremultiplied = false }
-
+    // Allocate enough memory for all the cubemap faces
     val storage = ByteBuffer.allocateDirect(faceSize * 6)
 
-    val suffix = arrayOf("px", "nx", "py", "ny", "pz", "nz")
-    (0 until 6).forEach {
-        val input = assets.open("$name/$prefix${suffix[it]}.rgbm")
-        val bitmap = BitmapFactory.decodeStream(input, null, opts)
-        input.close()
-
-        bitmap?.copyPixelsToBuffer(storage)
+    arrayOf("px", "nx", "py", "ny", "pz", "nz").forEachIndexed { i, suffix ->
+        assets.open("$name/$prefix$suffix.rgbm").use {
+            val bitmap = BitmapFactory.decodeStream(it, null, opts)
+            bitmap?.copyPixelsToBuffer(storage)
+        }
     }
 
     // Rewind the texture buffer

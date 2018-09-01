@@ -27,7 +27,6 @@ import android.view.animation.LinearInterpolator
 import com.google.android.filament.*
 import com.google.android.filament.android.UiHelper
 
-import java.io.IOException
 import java.nio.ByteBuffer
 import java.nio.channels.Channels
 import kotlin.math.PI
@@ -67,8 +66,7 @@ class MainActivity : Activity() {
     private lateinit var materialInstance: MaterialInstance
 
     private lateinit var mesh: Mesh
-    private lateinit var skybox: Skybox
-    private lateinit var indirectLight: IndirectLight
+    private lateinit var ibl: Ibl
 
     // Filament entity representing a renderable object
     @Entity private var light = 0
@@ -133,10 +131,9 @@ class MainActivity : Activity() {
         loadMaterial()
         setupMaterial()
         loadImageBasedLight()
-        loadSkybox()
 
-        scene.setSkybox(skybox)
-        scene.setIndirectLight(indirectLight)
+        scene.setSkybox(ibl.skybox)
+        scene.setIndirectLight(ibl.indirectLight)
 
         // This map can contain named materials that will map to the material names
         // loaded from the filamesh file. The material called "DefaultMaterial" is
@@ -185,7 +182,7 @@ class MainActivity : Activity() {
     }
 
     private fun loadMaterial() {
-        readUncompressedAsset("materials/clear_coat.filamat")?.let {
+        readUncompressedAsset("materials/clear_coat.filamat").let {
             material = Material.Builder().payload(it, it.remaining()).build(engine)
         }
     }
@@ -200,12 +197,8 @@ class MainActivity : Activity() {
     }
 
     private fun loadImageBasedLight() {
-        indirectLight = loadIbl(assets, "envs/flower_road_2k", engine)
-        indirectLight.intensity = 40_000.0f
-    }
-
-    private fun loadSkybox() {
-        skybox = loadSkybox(assets, "envs/flower_road_2k", engine)
+        ibl = loadIbl(assets, "envs/flower_road_2k", engine)
+        ibl.indirectLight.intensity = 40_000.0f
     }
 
     private fun startAnimation() {
@@ -243,15 +236,12 @@ class MainActivity : Activity() {
         Fence.waitAndDestroy(engine.createFence(Fence.Type.SOFT), Fence.Mode.FLUSH)
 
         // Cleanup all resources
+        destroyMesh(engine, mesh)
+        destroyIbl(engine, ibl)
         engine.destroyEntity(light)
-        engine.destroyEntity(mesh.renderable)
         engine.destroyRenderer(renderer)
-        engine.destroyVertexBuffer(mesh.vertexBuffer)
-        engine.destroyIndexBuffer(mesh.indexBuffer)
         engine.destroyMaterialInstance(materialInstance)
         engine.destroyMaterial(material)
-        engine.destroySkybox(skybox)
-        engine.destroyIndirectLight(indirectLight)
         engine.destroyView(view)
         engine.destroyScene(scene)
         engine.destroyCamera(camera)
@@ -260,7 +250,6 @@ class MainActivity : Activity() {
         // (components), not the entity itself
         val entityManager = EntityManager.get()
         entityManager.destroy(light)
-        entityManager.destroy(mesh.renderable)
 
         // Destroying the engine will free up any resource you may have forgotten
         // to destroy, but it's recommended to do the cleanup properly
@@ -309,24 +298,16 @@ class MainActivity : Activity() {
         }
     }
 
-    private fun readUncompressedAsset(assetName: String): ByteBuffer? {
-        var dst: ByteBuffer? = null
-        try {
-            assets.openFd(assetName).use { fd ->
-                val input = fd.createInputStream()
+    private fun readUncompressedAsset(assetName: String): ByteBuffer {
+        assets.openFd(assetName).use { fd ->
+            val input = fd.createInputStream()
+            val dst = ByteBuffer.allocate(fd.length.toInt())
 
-                dst = ByteBuffer.allocate(fd.length.toInt())
+            val src = Channels.newChannel(input)
+            src.read(dst)
+            src.close()
 
-                val src = Channels.newChannel(input)
-                src.read(dst)
-                src.close()
-
-                dst!!.rewind()
-            }
-        } catch (e: IOException) {
-            e.printStackTrace()
+            return dst.apply { rewind() }
         }
-
-        return dst
     }
 }

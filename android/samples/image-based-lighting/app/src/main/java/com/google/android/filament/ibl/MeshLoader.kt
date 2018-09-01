@@ -26,15 +26,51 @@ import com.google.android.filament.VertexBuffer.VertexAttribute.*
 import com.google.android.filament.ibl.IoUtils.readFloat32LE
 import com.google.android.filament.ibl.IoUtils.readUIntLE
 
-import java.io.IOException
 import java.io.InputStream
 import java.nio.charset.Charset
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.channels.Channels
+import java.nio.channels.ReadableByteChannel
 
-const val FILAMESH_FILE_IDENTIFIER = "FILAMESH"
-const val MAX_UINT32 = 4294967295
+data class Mesh(
+        @Entity val renderable: Int,
+        val indexBuffer: IndexBuffer,
+        val vertexBuffer: VertexBuffer,
+        val aabb: Box)
+
+fun destroyMesh(engine: Engine, mesh: Mesh) {
+    engine.destroyEntity(mesh.renderable)
+    engine.destroyIndexBuffer(mesh.indexBuffer)
+    engine.destroyVertexBuffer(mesh.vertexBuffer)
+    EntityManager.get().destroy(mesh.renderable)
+}
+
+fun loadMesh(assets: AssetManager, name: String,
+             materials: Map<String, MaterialInstance>, engine: Engine): Mesh {
+    // See tools/filamesh/README.md for a description of the filamesh file format
+    assets.open(name).use { input ->
+        val header = readHeader(input)
+
+        val channel = Channels.newChannel(input)
+        val vertexBufferData = readSizedData(channel, header.verticesSizeInBytes)
+        val indexBufferData = readSizedData(channel, header.indicesSizeInBytes)
+
+        val parts = readParts(header, input)
+        val definedMaterials = readMaterials(input)
+
+        val indexBuffer = createIndexBuffer(engine, header, indexBufferData)
+        val vertexBuffer = createVertexBuffer(engine, header, vertexBufferData)
+
+        val renderable = createRenderable(
+                engine, header, indexBuffer, vertexBuffer, parts, definedMaterials, materials)
+
+        return Mesh(renderable, indexBuffer, vertexBuffer, header.aabb)
+    }
+}
+
+private const val FILAMESH_FILE_IDENTIFIER = "FILAMESH"
+private const val MAX_UINT32 = 4294967295
 
 private class Header {
     var valid = false
@@ -68,7 +104,6 @@ private class Part {
     var aabb = Box()
 }
 
-@Throws(IOException::class)
 private fun readMagicNumber(input: InputStream): Boolean {
     val temp = ByteArray(FILAMESH_FILE_IDENTIFIER.length)
     input.read(temp)
@@ -76,7 +111,6 @@ private fun readMagicNumber(input: InputStream): Boolean {
     return tempS == FILAMESH_FILE_IDENTIFIER
 }
 
-@Throws(IOException::class)
 private fun readHeader(input: InputStream): Header {
     val header = Header()
 
@@ -111,26 +145,17 @@ private fun readHeader(input: InputStream): Header {
     return header
 }
 
-data class Mesh(@Entity val renderable: Int,
-        val vertexBuffer: VertexBuffer, val indexBuffer: IndexBuffer, val aabb: Box)
 
-fun loadMesh(assets: AssetManager, name: String,
-             materials: Map<String, MaterialInstance>, engine: Engine): Mesh {
-    val input = assets.open(name)
-    val header = readHeader(input)
-    val channel = Channels.newChannel(input)
+private fun readSizedData(channel: ReadableByteChannel, sizeInBytes: Long): ByteBuffer {
+    val buffer = ByteBuffer.allocateDirect(sizeInBytes.toInt())
+    buffer.order(ByteOrder.LITTLE_ENDIAN)
+    channel.read(buffer)
+    buffer.flip()
+    return buffer
+}
 
-    val vertexBufferData = ByteBuffer.allocateDirect(header.verticesSizeInBytes.toInt())
-    vertexBufferData.order(ByteOrder.LITTLE_ENDIAN)
-    channel.read(vertexBufferData)
-    vertexBufferData.flip()
-
-    val indexBufferData = ByteBuffer.allocateDirect(header.indicesSizeInBytes.toInt())
-    indexBufferData.order(ByteOrder.LITTLE_ENDIAN)
-    channel.read(indexBufferData)
-    indexBufferData.flip()
-
-    val parts = List(header.parts.toInt()) {
+private fun readParts(header: Header, input: InputStream): List<Part> {
+    return List(header.parts.toInt()) {
         val p = Part()
         p.offset = readUIntLE(input)
         p.indexCount = readUIntLE(input)
@@ -142,29 +167,33 @@ fun loadMesh(assets: AssetManager, name: String,
                 readFloat32LE(input), readFloat32LE(input), readFloat32LE(input))
         p
     }
+}
 
-    val definedMaterials = List(readUIntLE(input).toInt()) {
+private fun readMaterials(input: InputStream): List<String> {
+    return List(readUIntLE(input).toInt()) {
         val data = ByteArray(readUIntLE(input).toInt())
         input.read(data)
         // Skip null terminator
         input.skip(1)
         data.toString(Charset.forName("UTF-8"))
     }
+}
 
-    IoUtils.safelyClose(input)
-
+private fun createIndexBuffer(engine: Engine, header: Header, data: ByteBuffer): IndexBuffer {
     val indexType = if (header.indices16Bit != 0L) {
         IndexBuffer.Builder.IndexType.USHORT
     } else {
         IndexBuffer.Builder.IndexType.UINT
     }
 
-    val indexBuffer = IndexBuffer.Builder()
+    return IndexBuffer.Builder()
             .bufferType(indexType)
             .indexCount(header.totalIndices.toInt())
             .build(engine)
-    indexBuffer.setBuffer(engine, indexBufferData)
+            .apply { setBuffer(engine, data) }
+}
 
+private fun createVertexBuffer(engine: Engine, header: Header, data: ByteBuffer): VertexBuffer {
     val vertexBufferBuilder = VertexBuffer.Builder()
             .bufferCount(1)
             .vertexCount(header.totalVertices.toInt())
@@ -184,14 +213,28 @@ fun loadMesh(assets: AssetManager, name: String,
                 .attribute(UV1, 0, HALF2, header.uv1Offset.toInt(), header.uv1Stride.toInt())
     }
 
-    val vertexBuffer = vertexBufferBuilder.build(engine)
-    vertexBuffer.setBufferAt(engine, 0, vertexBufferData)
+    return vertexBufferBuilder.build(engine).apply { setBufferAt(engine, 0, data) }
+}
+
+private fun createRenderable(
+        engine: Engine,
+        header: Header,
+        indexBuffer: IndexBuffer,
+        vertexBuffer: VertexBuffer,
+        parts: List<Part>,
+        definedMaterials: List<String>,
+        materials: Map<String, MaterialInstance>): Int {
 
     val builder = RenderableManager.Builder(header.parts.toInt()).boundingBox(header.aabb)
+
     (0 until header.parts.toInt()).forEach { i ->
-        builder.geometry(i, RenderableManager.PrimitiveType.TRIANGLES,
-                vertexBuffer, indexBuffer, parts[i].offset.toInt(),
-                parts[i].minIndex.toInt(), parts[i].maxIndex.toInt(),
+        builder.geometry(i,
+                RenderableManager.PrimitiveType.TRIANGLES,
+                vertexBuffer,
+                indexBuffer,
+                parts[i].offset.toInt(),
+                parts[i].minIndex.toInt(),
+                parts[i].maxIndex.toInt(),
                 parts[i].indexCount.toInt())
 
         // Find a material in the supplied material map, otherwise we fall back to
@@ -202,8 +245,5 @@ fun loadMesh(assets: AssetManager, name: String,
         } ?: builder.material(i, materials["DefaultMaterial"]!!)
     }
 
-    val renderable = EntityManager.get().create()
-    builder.build(engine, renderable)
-
-    return Mesh(renderable, vertexBuffer, indexBuffer, header.aabb)
+    return EntityManager.get().create().apply { builder.build(engine, this) }
 }

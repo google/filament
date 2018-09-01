@@ -46,9 +46,15 @@ public class IndirectLight {
         @NonNull
         public Builder irradiance(@IntRange(from=1, to=3) int bands, @NonNull float[] sh) {
             switch (bands) {
-                case 1: if (sh.length < 1*3) throw new ArrayIndexOutOfBoundsException("1 band SH, array must be at least 1 x float3"); else break;
-                case 2: if (sh.length < 4*3) throw new ArrayIndexOutOfBoundsException("2 bands SH, array must be at least 4 x float3"); else break;
-                case 3: if (sh.length < 9*3) throw new ArrayIndexOutOfBoundsException("3 bands SH, array must be at least 9 x float3"); else break;
+                case 1: if (sh.length < 3)
+                        throw new ArrayIndexOutOfBoundsException(
+                            "1 band SH, array must be at least 1 x float3"); else break;
+                case 2: if (sh.length < 4 * 3)
+                        throw new ArrayIndexOutOfBoundsException(
+                            "2 bands SH, array must be at least 4 x float3"); else break;
+                case 3: if (sh.length < 9 * 3)
+                        throw new ArrayIndexOutOfBoundsException(
+                            "3 bands SH, array must be at least 9 x float3"); else break;
                 default: throw new IllegalArgumentException("bands must be 1, 2 or 3");
             }
             nIrradiance(mNativeBuilder, bands, sh);
