@@ -3,8 +3,9 @@
 This directory contains several sample Android applications that demonstrate how to use the
 Filament APIs:
 
--  `hello-triangle`: Minimal example showing how to setup a rendering surface for Filament
--  `lit-cube`: Shows how to create a light and a mesh with the attributes required for lighting
+- `hello-triangle`: Minimal example showing how to setup a rendering surface for Filament
+- `lit-cube`: Shows how to create a light and a mesh with the attributes required for lighting
+- `image-based-lighting`: Demonstrates how to create image-based lights and load complex meshes 
 
 ## Prerequisites
 
