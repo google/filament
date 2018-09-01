@@ -18,6 +18,7 @@ package com.google.android.filament.tungsten.compiler;
 
 import com.google.android.filament.tungsten.model.Graph;
 import com.google.android.filament.tungsten.model.Node;
+import com.google.android.filament.tungsten.model.Slot;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -42,7 +43,7 @@ public final class GraphCompiler {
 
     private final @NotNull Graph mGraph;
     private final @NotNull Node mRootNode;
-    private final Map<Node.OutputSlot, Expression> mCompiledVariableMap = new HashMap<>();
+    private final Map<Slot, Expression> mCompiledVariableMap = new HashMap<>();
 
     public GraphCompiler(@NotNull Graph graph) {
         mGraph = graph;
@@ -65,7 +66,7 @@ public final class GraphCompiler {
      * @return null, if the InputSlot is not connected to any OutputSlot, otherwise an Expression.
      */
     @Nullable
-    public Expression compileAndRetrieveVariable(@NotNull Node.InputSlot slot) {
+    public Expression compileAndRetrieveExpression(@NotNull Node.InputSlot slot) {
         Node.OutputSlot outputSlot = mGraph.getOutputSlotConnectedToInput(slot);
         if (outputSlot == null) {
             return null;
@@ -94,8 +95,7 @@ public final class GraphCompiler {
         return compiledExpression;
     }
 
-    public void setExpressionForOutputSlot(@NotNull Node.OutputSlot slot,
-            @NotNull Expression expression) {
+    public void setExpressionForSlot(@NotNull Slot slot, @NotNull Expression expression) {
         mCompiledVariableMap.put(slot, expression);
     }
 

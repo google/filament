@@ -18,39 +18,49 @@ package com.google.android.filament.tungsten.model
 
 import com.google.android.filament.tungsten.compiler.GraphCompiler
 import com.google.android.filament.tungsten.compiler.Expression
+import com.google.android.filament.tungsten.compiler.Literal
+import com.google.android.filament.tungsten.compiler.trim
 
 private val adderNodeCompile = fun(node: Node, compiler: GraphCompiler): Node {
     val outputSlot = node.getOutputSlot("result")
 
-    val a = compiler.compileAndRetrieveVariable(node.getInputSlot("a"))
-    val b = compiler.compileAndRetrieveVariable(node.getInputSlot("b"))
+    val a = compiler.compileAndRetrieveExpression(node.getInputSlot("a"))
+    val b = compiler.compileAndRetrieveExpression(node.getInputSlot("b"))
 
-    val aExpression = a?.symbol ?: "float3(0.0, 0.0, 0.0)"
-    val bExpression = b?.symbol ?: "float3(0.0, 0.0, 0.0)"
+    // Trim the expressions so that they're the same dimension.
+    val (aExpression, bExpression) = trim(a ?: Literal(4), b ?: Literal(4))
+
+    compiler.setExpressionForSlot(node.getInputSlot("a"), aExpression)
+    compiler.setExpressionForSlot(node.getInputSlot("b"), bExpression)
 
     val temp = compiler.getNewTemporaryVariableName("adder")
-    compiler.addCodeToMaterialFunctionBody("float3 $temp = $aExpression + $bExpression;\n")
+    val resultDimensions = aExpression.dimensions
+    compiler.addCodeToMaterialFunctionBody(
+            "float$resultDimensions $temp = $aExpression + $bExpression;\n")
 
-    compiler.setExpressionForOutputSlot(outputSlot, Expression(temp))
+    compiler.setExpressionForSlot(outputSlot, Expression(temp, resultDimensions))
 
     return node
 }
 
 private val shaderNodeCompile = fun(node: Node, compiler: GraphCompiler): Node {
-    val baseColor = compiler.compileAndRetrieveVariable(node.getInputSlot("baseColor"))
-    val metallic = compiler.compileAndRetrieveVariable(node.getInputSlot("metallic"))
-    val roughness = compiler.compileAndRetrieveVariable(node.getInputSlot("roughness"))
+    val baseColor = compiler.compileAndRetrieveExpression(node.getInputSlot("baseColor"))
+    val metallic = compiler.compileAndRetrieveExpression(node.getInputSlot("metallic"))
+    val roughness = compiler.compileAndRetrieveExpression(node.getInputSlot("roughness"))
 
     if (baseColor != null) {
-        compiler.addCodeToMaterialFunctionBody("material.baseColor.rgb = ${baseColor.symbol};\n")
+        compiler.addCodeToMaterialFunctionBody("material.baseColor.rgb = ${baseColor.rgb};\n")
+        compiler.setExpressionForSlot(node.getInputSlot("baseColor"), baseColor.rgb)
     }
 
     if (metallic != null) {
-        compiler.addCodeToMaterialFunctionBody("material.metallic = ${metallic.symbol};\n")
+        compiler.addCodeToMaterialFunctionBody("material.metallic = ${metallic.r};\n")
+        compiler.setExpressionForSlot(node.getInputSlot("metallic"), metallic.r)
     }
 
     if (roughness != null) {
-        compiler.addCodeToMaterialFunctionBody("material.roughness = ${roughness.symbol};\n")
+        compiler.addCodeToMaterialFunctionBody("material.roughness = ${roughness.r};\n")
+        compiler.setExpressionForSlot(node.getInputSlot("roughness"), roughness.r)
     }
 
     return node
@@ -65,15 +75,31 @@ private val constantFloat3NodeCompile = fun(node: Node, compiler: GraphCompiler)
     compiler.addCodeToMaterialFunctionBody(
             "float3 $outputVariable = float3(${color.x}, ${color.y}, ${color.z});\n")
 
-    compiler.setExpressionForOutputSlot(outputSlot, Expression(outputVariable))
+    compiler.setExpressionForSlot(outputSlot, Expression(outputVariable, 3))
+
     return node
 }
 
 private val float3ParameterNodeCompile = fun(node: Node, compiler: GraphCompiler): Node {
     val parameter = compiler.addParameter("float3", "float3Parameter")
     compiler.associateParameterWithProperty(parameter, node.getPropertyHandle("value"))
-    compiler.setExpressionForOutputSlot(node.getOutputSlot("result"),
-            Expression("materialParams.${parameter.name}"))
+    compiler.setExpressionForSlot(node.getOutputSlot("result"),
+            Expression("materialParams.${parameter.name}", 3))
+
+    return node
+}
+
+private val constantFloat2NodeCompile = fun(node: Node, compiler: GraphCompiler): Node {
+    val outputSlot = node.getOutputSlot("result")
+
+    val color = (node.properties[0].value as Float3)
+
+    val outputVariable = compiler.getNewTemporaryVariableName("float2Constant")
+    compiler.addCodeToMaterialFunctionBody(
+            "float2 $outputVariable = float2(${color.x}, ${color.y});\n")
+
+    compiler.setExpressionForSlot(outputSlot, Expression(outputVariable, 2))
+
     return node
 }
 
@@ -104,6 +130,16 @@ val createFloat3ParameterNode = fun(id: NodeId): Node {
         compileFunction = float3ParameterNodeCompile,
         outputSlots = listOf("result"),
         properties = listOf(Property("value", Float3(), PropertyType.MATERIAL_PARAMETER))
+    )
+}
+
+val createFloat2ConstantNode = fun(id: NodeId): Node {
+    return Node(
+            id = id,
+            type = "float2Constant",
+            compileFunction = constantFloat2NodeCompile,
+            outputSlots = listOf("result"),
+            properties = listOf(Property("value", Float3()))
     )
 }
 
