@@ -4,6 +4,14 @@ apply plugin: 'kotlin-android-extensions'
 
 apply from: '../../../build/filament-tasks.gradle'
 
+compileMaterials {
+    group 'Filament'
+    description 'Compile materials'
+
+    inputDir = file("src/main/materials")
+    outputDir = file("src/main/assets/materials")
+}
+
 preBuild.dependsOn compileMaterials
 
 android {

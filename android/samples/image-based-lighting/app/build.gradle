@@ -12,12 +12,30 @@ compileMaterials {
     outputDir = file("src/main/assets/materials")
 }
 
+compileMesh {
+    group 'Filament'
+    description 'Compile mesh'
+
+    inputFile = file("../../../../third_party/shader_ball/shader_ball.obj")
+    outputDir = file("src/main/assets/models")
+}
+
+generateIbl {
+    group 'Filament'
+    description 'Generate IBL'
+
+    inputFile = file("../../../../third_party/environments/flower_road_2k.hdr")
+    outputDir = file("src/main/assets/envs")
+}
+
 preBuild.dependsOn compileMaterials
+preBuild.dependsOn compileMesh
+preBuild.dependsOn generateIbl
 
 android {
     compileSdkVersion 28
     defaultConfig {
-        applicationId "com.google.android.filament.litcube"
+        applicationId "com.google.android.filament.ibl"
         minSdkVersion 21
         targetSdkVersion 28
         versionCode 1
