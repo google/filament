@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 The Android Open Source Project
+ * Copyright (C) 2018 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,53 +25,53 @@ using namespace filament;
 using namespace driver;
 
 VertexBuffer::Builder *Filament_VertexBuffer_CreateBuilder() {
-  return new VertexBuffer::Builder();
+    return new VertexBuffer::Builder();
 }
 
 void Filament_VertexBuffer_DestroyBuilder(VertexBuffer::Builder *builder) {
-  delete builder;
+    delete builder;
 }
 
 void Filament_VertexBuffer_BuilderVertexCount(
-    VertexBuffer::Builder *builder, uint32_t vertexCount) {
-  builder->vertexCount(vertexCount);
+        VertexBuffer::Builder *builder, uint32_t vertexCount) {
+    builder->vertexCount(vertexCount);
 }
 
 void Filament_VertexBuffer_BuilderBufferCount(
-    VertexBuffer::Builder *builder, uint8_t bufferCount) {
-  builder->bufferCount(bufferCount);
+        VertexBuffer::Builder *builder, uint8_t bufferCount) {
+    builder->bufferCount(bufferCount);
 }
 
 void Filament_VertexBuffer_BuilderAttribute(
-    VertexBuffer::Builder *builder, VertexAttribute attribute,
-    uint8_t bufferIndex, VertexBuffer::AttributeType attributeType,
-    uint32_t byteOffset, uint8_t byteStride) {
-  builder->attribute(attribute, bufferIndex, attributeType, byteOffset,
-                     byteStride);
+        VertexBuffer::Builder *builder, VertexAttribute attribute,
+        uint8_t bufferIndex, VertexBuffer::AttributeType attributeType,
+        uint32_t byteOffset, uint8_t byteStride) {
+    builder->attribute(attribute, bufferIndex, attributeType, byteOffset,
+            byteStride);
 }
 
 void Filament_VertexBuffer_BuilderNormalized(
-    VertexBuffer::Builder *builder, VertexAttribute attribute) {
-  builder->normalized(attribute);
+        VertexBuffer::Builder *builder, VertexAttribute attribute) {
+    builder->normalized(attribute);
 }
 
 VertexBuffer *Filament_VertexBuffer_BuilderBuild(VertexBuffer::Builder *builder, Engine *engine) {
-  return builder->build(*engine);
+    return builder->build(*engine);
 }
 
 int Filament_VertexBuffer_GetVertexCount(VertexBuffer *vertexBuffer) {
-  return vertexBuffer->getVertexCount();
+    return vertexBuffer->getVertexCount();
 }
 
 int Filament_VertexBuffer_SetBufferAt(
-    VertexBuffer *vertexBuffer, Engine *engine, uint8_t bufferIndex, void *data,
-    uint32_t sizeInBytes, uint32_t destOffsetInBytes, FFreeBufferFn freeBuffer,
-    void *freeBufferArg) {
-  BufferDescriptor desc(data, sizeInBytes,
-                        (BufferDescriptor::Callback) freeBuffer, freeBufferArg);
+        VertexBuffer *vertexBuffer, Engine *engine, uint8_t bufferIndex, void *data,
+        uint32_t sizeInBytes, uint32_t destOffsetInBytes, FFreeBufferFn freeBuffer,
+        void *freeBufferArg) {
+    BufferDescriptor desc(data, sizeInBytes,
+            (BufferDescriptor::Callback) freeBuffer, freeBufferArg);
 
-  vertexBuffer->setBufferAt(*engine, bufferIndex, std::move(desc),
-                            destOffsetInBytes, sizeInBytes);
+    vertexBuffer->setBufferAt(*engine, bufferIndex, std::move(desc),
+            destOffsetInBytes, sizeInBytes);
 
-  return 0;
+    return 0;
 }

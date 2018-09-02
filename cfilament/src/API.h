@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 The Android Open Source Project
+ * Copyright (C) 2018 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,8 @@
  * limitations under the License.
  */
 
-#pragma once
+#ifndef TNT_CFILAMENT_API_H
+#define TNT_CFILAMENT_API_H
 
 #define CFILAMENT_SKIP_DECL
 
@@ -34,6 +35,7 @@ using FLinearColor = filament::LinearColor;
 using FLinearColorA = filament::LinearColorA;
 
 // We cannot use forward declarations for nested enums and classes, sadly.
+#include <filament/driver/DriverEnums.h>
 #include <filament/Camera.h>
 #include <filament/Fence.h>
 #include <filament/MaterialEnums.h>
@@ -91,39 +93,39 @@ using FAntiAliasing = filament::View::AntiAliasing;
 using FDepthPrepass = filament::View::DepthPrepass;
 
 namespace filament {
-  class Engine;
+    class Engine;
 
-  class SwapChain;
+    class SwapChain;
 
-  class View;
+    class View;
 
-  class Renderer;
+    class Renderer;
 
-  class Scene;
+    class Scene;
 
-  class Stream;
+    class Stream;
 
-  class IndexBuffer;
+    class IndexBuffer;
 
-  class VertexBuffer;
+    class VertexBuffer;
 
-  class IndirectLight;
+    class IndirectLight;
 
-  class Material;
+    class Material;
 
-  class MaterialInstance;
+    class MaterialInstance;
 
-  class Skybox;
+    class Skybox;
 
-  class Texture;
+    class Texture;
 
-  class TransformManager;
+    class TransformManager;
 
-  class LightManager;
+    class LightManager;
 
-  class RenderableManager;
+    class RenderableManager;
 
-  class Frustum;
+    class Frustum;
 }
 
 using FEngine = filament::Engine;
@@ -157,6 +159,9 @@ static_assert(sizeof(uint32_t) == sizeof(FEntity), "Size of Entity should be 32-
 #include <cfilament.h>
 
 #include <utils/Entity.h>
+
 inline utils::Entity convertEntity(FEntity entity) {
-  return *reinterpret_cast<utils::Entity *>(&entity);
+    return *reinterpret_cast<utils::Entity *>(&entity);
 }
+
+#endif // TNT_CFILAMENT_API_H

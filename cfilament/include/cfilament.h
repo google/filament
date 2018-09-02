@@ -26,6 +26,8 @@
 #define APICALL
 #endif
 
+// When BUILD_CFILAMENT (which is defined by CMAKE automatically) is defined, we mark
+// all our functions to be exported. Otherwise we try to mark them as imported.
 #ifdef BUILD_CFILAMENT
 
 #ifdef _MSC_VER
@@ -42,13 +44,24 @@
 #define APIEXPORT
 #endif
 
-#endif
+#endif // BUILD_CFILAMENT
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-// We use forward declarations for consumers to hide the actual types
+// Extra markers for code-introspection to denote out and inout arguments
+#ifdef FILAMENT_PARSING_IDL
+#define FARGOUT __attribute__((annotate("out")))
+#define FARGINOUT __attribute__((annotate("inout")))
+#else
+#define FARGOUT
+#define FARGINOUT
+#endif // FILAMENT_PARSING_IDL
+
+// We use forward declarations for consumers to hide the actual types, but when
+// the actual wrapper functions are compiled, these declarations are aliased to
+// the real filament types they represent. This is controlled by this define.
 #ifndef CFILAMENT_SKIP_DECL
 typedef struct FCamera FCamera;
 typedef struct FMat4 FMat4;
@@ -93,6 +106,7 @@ typedef int FEntity;
 // These must match the base of the respective enum class
 typedef int FCameraProjection;
 typedef int FCameraFov;
+typedef uint8_t FBackend;
 typedef uint8_t FFenceType;
 typedef uint8_t FFenceMode;
 typedef int8_t FFenceStatus;
@@ -125,76 +139,78 @@ typedef uint8_t FSamplerCompareFunc;
 typedef uint32_t FTextureSampler;
 typedef uint64_t size_t;
 typedef uint8_t FBool;
-#endif
+#endif // CFILAMENT_SKIP_DECL
 
-typedef struct {
-  const char *name;
-  uint8_t is_sampler;
-  FMaterialParameterType type;
-  FMaterialSamplerType sampler_type;
-  int count;
-  FMaterialPrecision precision;
+// Equivalent to Material::ParameterInfo
+typedef struct FParameter {
+    const char *name;
+    uint8_t is_sampler;
+    FMaterialParameterType type;
+    FMaterialSamplerType sampler_type;
+    int count;
+    FMaterialPrecision precision;
 } FParameter;
 
 // Equivalent to driver::FaceOffsets
-typedef struct {
-  size_t px;
-  size_t nx;
-  size_t py;
-  size_t ny;
-  size_t pz;
-  size_t nz;
+typedef struct FFaceOffsets {
+    size_t px;
+    size_t nx;
+    size_t py;
+    size_t ny;
+    size_t pz;
+    size_t nz;
 } FFaceOffsets;
 
 // Must be in sync with BufferDescriptor::Callback
 typedef void(__cdecl *FFreeBufferFn)(void *buffer, size_t buffer_size, void *user);
 
-APIEXPORT void APICALL Filament_Colors_Cct(float temperature, FLinearColor *color);
-APIEXPORT void APICALL Filament_Colors_IlluminantD(float temperature, FLinearColor *color);
+APIEXPORT void APICALL Filament_Colors_Cct(float temperature, FARGOUT FLinearColor *color);
+APIEXPORT void APICALL Filament_Colors_IlluminantD(float temperature, FARGOUT FLinearColor *color);
 
 /**************************************************************************************************
  * filament::Camera
  *************************************************************************************************/
 APIEXPORT void APICALL Filament_Camera_SetProjectionFrustum(FCamera *camera,
-                                                            FCameraProjection projection,
-                                                            double left, double right,
-                                                            double bottom, double top,
-                                                            double near, double far);
+        FCameraProjection projection,
+        double left, double right,
+        double bottom, double top,
+        double near, double far);
 APIEXPORT void APICALL Filament_Camera_SetProjectionFov(FCamera *camera,
-                                                        double fovInDegrees, double aspect,
-                                                        double near, double far,
-                                                        FCameraFov fov);
+        double fovInDegrees, double aspect,
+        double near, double far,
+        FCameraFov fov);
 APIEXPORT void APICALL Filament_Camera_SetProjectionLens(FCamera *camera,
-                                                         double focalLength, double near, double far);
+        double focalLength, double near, double far);
 APIEXPORT void APICALL Filament_Camera_SetProjectionMatrix(FCamera *camera,
-                                                           FMat4 *matrix,
-                                                           double near, double far);
-APIEXPORT void APICALL Filament_Camera_GetProjectionMatrix(FCamera *camera, FMat4 *matrixOut);
-APIEXPORT void APICALL Filament_Camera_GetCullingProjectionMatrix(FCamera *camera, FMat4 *matrixOut);
+        FMat4 *matrix,
+        double near, double far);
+APIEXPORT void APICALL Filament_Camera_GetProjectionMatrix(FCamera *camera, FARGOUT FMat4 *matrixOut);
+APIEXPORT void APICALL Filament_Camera_GetCullingProjectionMatrix(FCamera *camera, FARGOUT FMat4 *matrixOut);
 APIEXPORT float APICALL Filament_Camera_GetNear(FCamera *camera);
 APIEXPORT float APICALL Filament_Camera_GetCullingFar(FCamera *camera);
 APIEXPORT void APICALL Filament_Camera_SetModelMatrix(FCamera *camera, FMat4f *matrix);
 APIEXPORT void APICALL Filament_Camera_LookAt(FCamera *camera, FFloat3 *eye, FFloat3 *center, FFloat3 *up);
-APIEXPORT void APICALL Filament_Camera_GetModelMatrix(FCamera *camera, FMat4f *matrixOut);
-APIEXPORT void APICALL Filament_Camera_GetViewMatrix(FCamera *camera, FMat4f *matrixOut);
-APIEXPORT void APICALL Filament_Camera_GetPosition(FCamera *camera, FFloat3 *vectorOut);
-APIEXPORT void APICALL Filament_Camera_GetLeftVector(FCamera *camera, FFloat3 *vectorOut);
-APIEXPORT void APICALL Filament_Camera_GetUpVector(FCamera *camera, FFloat3 *vectorOut);
-APIEXPORT void APICALL Filament_Camera_GetForwardVector(FCamera *camera, FFloat3 *vectorOut);
-APIEXPORT void APICALL Filament_Camera_GetFrustum(FCamera *camera, FFrustum *frustumOut);
+APIEXPORT void APICALL Filament_Camera_GetModelMatrix(FCamera *camera, FARGOUT FMat4f *matrixOut);
+APIEXPORT void APICALL Filament_Camera_GetViewMatrix(FCamera *camera, FARGOUT FMat4f *matrixOut);
+APIEXPORT void APICALL Filament_Camera_GetPosition(FCamera *camera, FARGOUT FFloat3 *vectorOut);
+APIEXPORT void APICALL Filament_Camera_GetLeftVector(FCamera *camera, FARGOUT FFloat3 *vectorOut);
+APIEXPORT void APICALL Filament_Camera_GetUpVector(FCamera *camera, FARGOUT FFloat3 *vectorOut);
+APIEXPORT void APICALL Filament_Camera_GetForwardVector(FCamera *camera, FARGOUT FFloat3 *vectorOut);
+APIEXPORT void APICALL Filament_Camera_GetFrustum(FCamera *camera, FARGOUT FFrustum *frustumOut);
 APIEXPORT FEntity APICALL Filament_Camera_GetEntity(FCamera *camera);
 APIEXPORT void APICALL Filament_Camera_SetExposure(FCamera *camera, float aperture,
-                                                   float shutterSpeed, float sensitivity);
+        float shutterSpeed, float sensitivity);
 APIEXPORT float APICALL Filament_Camera_GetAperture(FCamera *camera);
 APIEXPORT float APICALL Filament_Camera_GetShutterSpeed(FCamera *camera);
 APIEXPORT float APICALL Filament_Camera_GetSensitivity(FCamera *camera);
-APIEXPORT void APICALL Filament_Camera_InverseProjection(FMat4 *projection, FMat4 *invertedOut);
-APIEXPORT void APICALL Filament_Camera_InverseProjectionF(FMat4f *projection, FMat4f *invertedOut);
+APIEXPORT void APICALL Filament_Camera_InverseProjection(FMat4 *projection, FARGOUT FMat4 *invertedOut);
+APIEXPORT void APICALL Filament_Camera_InverseProjectionF(FMat4f *projection, FARGOUT FMat4f *invertedOut);
 
 /**************************************************************************************************
  * filament::Engine
  *************************************************************************************************/
-APIEXPORT FEngine *APICALL Filament_Engine_CreateEngine(void *sharedContext);
+APIEXPORT FEngine *APICALL Filament_Engine_Create(FBackend backend);
+APIEXPORT FEngine *APICALL Filament_Engine_CreateShared(FBackend backend, void *sharedGlContext);
 APIEXPORT void APICALL Filament_Engine_DestroyEngine(FEngine *engine);
 
 // SwapChain
@@ -265,15 +281,15 @@ APIEXPORT FIndexBufferBuilder *APICALL Filament_IndexBuffer_CreateBuilder();
 APIEXPORT void APICALL
 Filament_IndexBuffer_DestroyBuilder(FIndexBufferBuilder *builder);
 APIEXPORT void APICALL Filament_IndexBuffer_BuilderIndexCount(
-    FIndexBufferBuilder *builder, uint32_t indexCount);
+        FIndexBufferBuilder *builder, uint32_t indexCount);
 APIEXPORT void APICALL Filament_IndexBuffer_BuilderBufferType(
-    FIndexBufferBuilder *builder, FIndexBufferIndexType indexType);
+        FIndexBufferBuilder *builder, FIndexBufferIndexType indexType);
 APIEXPORT FIndexBuffer *APICALL
 Filament_IndexBuffer_BuilderBuild(FIndexBufferBuilder *builder, FEngine *engine);
 APIEXPORT int APICALL Filament_IndexBuffer_GetIndexCount(FIndexBuffer *indexBuffer);
 APIEXPORT int APICALL Filament_IndexBuffer_SetBuffer(
-    FIndexBuffer *vertexBuffer, FEngine *engine, void *data, uint32_t sizeInBytes,
-    uint32_t destOffsetInBytes, FFreeBufferFn freeBuffer, void *freeBufferArg);
+        FIndexBuffer *vertexBuffer, FEngine *engine, void *data, uint32_t sizeInBytes,
+        uint32_t destOffsetInBytes, FFreeBufferFn freeBuffer, void *freeBufferArg);
 
 /**************************************************************************************************
  * filament::IndirectLight
@@ -286,32 +302,32 @@ APIEXPORT FIndirectLight *APICALL
 Filament_IndirectLight_BuilderBuild(FIndirectLightBuilder *builder, FEngine *engine);
 
 APIEXPORT void APICALL Filament_IndirectLight_BuilderReflections(
-    FIndirectLightBuilder *builder, FTexture *texture);
+        FIndirectLightBuilder *builder, FTexture *texture);
 
 APIEXPORT void APICALL Filament_IndirectLight_Irradiance(FIndirectLightBuilder *builder,
-                                                         uint8_t bands,
-                                                         FFloat3 *sh);
+        uint8_t bands,
+        FFloat3 *sh);
 
 APIEXPORT void APICALL Filament_IndirectLight_IrradianceAsTexture(
-    FIndirectLightBuilder *builder, FTexture *texture);
+        FIndirectLightBuilder *builder, FTexture *texture);
 
 APIEXPORT void APICALL Filament_IndirectLight_Intensity(FIndirectLightBuilder *builder,
-                                                        float envIntensity);
+        float envIntensity);
 
 APIEXPORT void APICALL Filament_IndirectLight_Rotation(FIndirectLightBuilder *builder,
-                                                       float v0, float v1, float v2,
-                                                       float v3, float v4, float v5,
-                                                       float v6, float v7, float v8);
+        float v0, float v1, float v2,
+        float v3, float v4, float v5,
+        float v6, float v7, float v8);
 
 APIEXPORT void APICALL Filament_IndirectLight_SetIntensity(FIndirectLight *indirectLight,
-                                                           float intensity);
+        float intensity);
 
 APIEXPORT float APICALL Filament_IndirectLight_GetIntensity(FIndirectLight *indirectLight);
 
 APIEXPORT void APICALL Filament_IndirectLight_SetRotation(FIndirectLight *indirectLight,
-                                                          float v0, float v1, float v2,
-                                                          float v3, float v4, float v5,
-                                                          float v6, float v7, float v8);
+        float v0, float v1, float v2,
+        float v3, float v4, float v5,
+        float v6, float v7, float v8);
 
 /**************************************************************************************************
  * filament::LightManager
@@ -329,8 +345,8 @@ APIEXPORT void APICALL Filament_LightManager_DestroyBuilder(FLightManagerBuilder
 APIEXPORT void APICALL Filament_LightManager_BuilderCastShadows(FLightManagerBuilder *builder, FBool enable);
 
 APIEXPORT void APICALL Filament_LightManager_BuilderShadowOptions(
-    FLightManagerBuilder *builder, uint32_t mapSize, float constantBias,
-    float normalBias, float shadowFar);
+        FLightManagerBuilder *builder, uint32_t mapSize, float constantBias,
+        float normalBias, float shadowFar);
 
 APIEXPORT void APICALL
 Filament_LightManager_BuilderCastLight(FLightManagerBuilder *builder, FBool enabled);
@@ -344,76 +360,76 @@ APIEXPORT void APICALL Filament_LightManager_BuilderColor(FLightManagerBuilder *
 APIEXPORT void APICALL Filament_LightManager_BuilderIntensity(FLightManagerBuilder *builder, float intensity);
 
 APIEXPORT void APICALL Filament_LightManager_BuilderIntensityWatts(
-    FLightManagerBuilder *builder, float watts, float efficiency);
+        FLightManagerBuilder *builder, float watts, float efficiency);
 
 APIEXPORT void APICALL
 Filament_LightManager_BuilderFalloff(FLightManagerBuilder *builder, float radius);
 
 APIEXPORT void APICALL Filament_LightManager_BuilderSpotLightCone(
-    FLightManagerBuilder *builder, float inner, float outer);
+        FLightManagerBuilder *builder, float inner, float outer);
 
 APIEXPORT void APICALL Filament_LightManager_BuilderAngularRadius(
-    FLightManagerBuilder *builder, float angularRadius);
+        FLightManagerBuilder *builder, float angularRadius);
 
 APIEXPORT void APICALL
 Filament_LightManager_BuilderHaloSize(FLightManagerBuilder *builder, float haloSize);
 
 APIEXPORT void APICALL Filament_LightManager_BuilderHaloFalloff(
-    FLightManagerBuilder *builder, float haloFalloff);
+        FLightManagerBuilder *builder, float haloFalloff);
 
 APIEXPORT FBool APICALL Filament_LightManager_BuilderBuild(FLightManagerBuilder *builder,
-                                                           FEngine *engine,
-                                                           FEntity entity);
+        FEngine *engine,
+        FEntity entity);
 
 APIEXPORT void APICALL Filament_LightManager_SetPosition(FLightManager *lm, int i,
-                                                         FFloat3 *position);
+        FFloat3 *position);
 
 APIEXPORT void APICALL Filament_LightManager_GetPosition(FLightManager *lm, int i,
-                                                         FFloat3 *out);
+        FFloat3 *out);
 
 APIEXPORT void APICALL Filament_LightManager_SetDirection(FLightManager *lm, int i,
-                                                          FFloat3 *direction);
+        FFloat3 *direction);
 
 APIEXPORT void APICALL Filament_LightManager_GetDirection(FLightManager *lm, int i,
-                                                          FFloat3 *out);
+        FFloat3 *out);
 
 APIEXPORT void APICALL Filament_LightManager_SetColor(FLightManager *lm, int i,
-                                                      float linearR, float linearG,
-                                                      float linearB);
+        float linearR, float linearG,
+        float linearB);
 
 APIEXPORT void APICALL Filament_LightManager_GetColor(FLightManager *lm, int i,
-                                                      FFloat3 *out);
+        FFloat3 *out);
 
 APIEXPORT void APICALL Filament_LightManager_SetIntensity(FLightManager *lm, int i,
-                                                          float intensity);
+        float intensity);
 
 APIEXPORT void APICALL Filament_LightManager_SetIntensityWatts(FLightManager *lm, int i,
-                                                               float watts,
-                                                               float efficiency);
+        float watts,
+        float efficiency);
 
 APIEXPORT float APICALL Filament_LightManager_GetIntensity(FLightManager *lm, int i);
 
 APIEXPORT void APICALL Filament_LightManager_SetFalloff(FLightManager *lm, int i,
-                                                        float falloff);
+        float falloff);
 
 APIEXPORT float APICALL Filament_LightManager_GetFalloff(FLightManager *lm, int i);
 
 APIEXPORT void APICALL Filament_LightManager_SetSpotLightCone(FLightManager *lm, int i,
-                                                              float inner, float outer);
+        float inner, float outer);
 
 APIEXPORT void APICALL Filament_LightManager_SetSunAngularRadius(FLightManager *lm, int i,
-                                                                 float angularRadius);
+        float angularRadius);
 
 APIEXPORT float APICALL Filament_LightManager_GetSunAngularRadius(FLightManager *lm,
-                                                                  int i);
+        int i);
 
 APIEXPORT void APICALL Filament_LightManager_SetSunHaloSize(FLightManager *lm, int i,
-                                                            float haloSize);
+        float haloSize);
 
 APIEXPORT float APICALL Filament_LightManager_GetHaloSize(FLightManager *lm, int i);
 
 APIEXPORT void APICALL Filament_LightManager_SetSunHaloFalloff(FLightManager *lm, int i,
-                                                               float haloFalloff);
+        float haloFalloff);
 
 APIEXPORT float APICALL Filament_LightManager_GetHaloFalloff(FLightManager *lm, int i);
 
@@ -421,7 +437,7 @@ APIEXPORT float APICALL Filament_LightManager_GetHaloFalloff(FLightManager *lm, 
  * filament::Material
  *************************************************************************************************/
 APIEXPORT FMaterial *APICALL Filament_Material_BuilderBuild(FEngine *engine, void *buffer,
-                                                            int size);
+        int size);
 
 APIEXPORT FMaterialInstance *APICALL
 Filament_Material_GetDefaultInstance(FMaterial *material);
@@ -469,7 +485,7 @@ APIEXPORT void APICALL
 Filament_MaterialInstance_SetParameterBool3(FMaterialInstance *instance, char *name, FBool x, FBool y, FBool z);
 APIEXPORT void APICALL
 Filament_MaterialInstance_SetParameterBool4(FMaterialInstance *instance, char *name, FBool x, FBool y, FBool z,
-                                            FBool w);
+        FBool w);
 APIEXPORT void APICALL Filament_MaterialInstance_SetParameterInt(FMaterialInstance *instance, char *name, int x);
 APIEXPORT void APICALL
 Filament_MaterialInstance_SetParameterInt2(FMaterialInstance *instance, char *name, int x, int y);
@@ -484,7 +500,7 @@ APIEXPORT void APICALL
 Filament_MaterialInstance_SetParameterFloat3(FMaterialInstance *instance, char *name, float x, float y, float z);
 APIEXPORT void APICALL
 Filament_MaterialInstance_SetParameterFloat4(FMaterialInstance *instance, char *name, float x, float y, float z,
-                                             float w);
+        float w);
 APIEXPORT void APICALL
 Filament_MaterialInstance_SetBooleanParameterArray(FMaterialInstance *instance, char *name, FBool *v, size_t count);
 APIEXPORT void APICALL
@@ -494,8 +510,8 @@ Filament_MaterialInstance_SetFloatParameterArray(FMaterialInstance *instance, ch
 APIEXPORT void APICALL
 Filament_MaterialInstance_SetParameterTexture(FMaterialInstance *instance, char *name, FTexture *texture, int sampler_);
 APIEXPORT void APICALL Filament_MaterialInstance_SetScissor(FMaterialInstance *instance,
-                                                            uint32_t left, uint32_t bottom,
-                                                            uint32_t width, uint32_t height);
+        uint32_t left, uint32_t bottom,
+        uint32_t width, uint32_t height);
 APIEXPORT void APICALL Filament_MaterialInstance_UnsetScissor(FMaterialInstance *instance);
 
 /**************************************************************************************************
@@ -507,94 +523,94 @@ APIEXPORT void APICALL Filament_RenderableManager_Destroy(FRenderableManager *rm
 APIEXPORT FRenderableManagerBuilder *APICALL Filament_RenderableManager_CreateBuilder(size_t count);
 APIEXPORT void APICALL Filament_RenderableManager_DestroyBuilder(FRenderableManagerBuilder *builder);
 APIEXPORT FBool APICALL Filament_RenderableManager_BuilderBuild(
-    FRenderableManagerBuilder *builder, FEngine *engine, FEntity entity);
+        FRenderableManagerBuilder *builder, FEngine *engine, FEntity entity);
 APIEXPORT void APICALL Filament_RenderableManager_BuilderGeometry1(
-    FRenderableManagerBuilder *builder, size_t index,
-    FPrimitiveType primitiveType, FVertexBuffer *vertexBuffer,
-    FIndexBuffer *indexBuffer);
+        FRenderableManagerBuilder *builder, size_t index,
+        FPrimitiveType primitiveType, FVertexBuffer *vertexBuffer,
+        FIndexBuffer *indexBuffer);
 APIEXPORT void APICALL Filament_RenderableManager_BuilderGeometry2(
-    FRenderableManagerBuilder *builder, size_t index,
-    FPrimitiveType primitiveType, FVertexBuffer *vertexBuffer,
-    FIndexBuffer *indexBuffer, size_t offset, size_t count);
+        FRenderableManagerBuilder *builder, size_t index,
+        FPrimitiveType primitiveType, FVertexBuffer *vertexBuffer,
+        FIndexBuffer *indexBuffer, size_t offset, size_t count);
 APIEXPORT void APICALL Filament_RenderableManager_BuilderGeometry3(
-    FRenderableManagerBuilder *builder, size_t index,
-    FPrimitiveType primitiveType, FVertexBuffer *vertexBuffer,
-    FIndexBuffer *indexBuffer, size_t offset, size_t minIndex, size_t maxIndex,
-    size_t count);
+        FRenderableManagerBuilder *builder, size_t index,
+        FPrimitiveType primitiveType, FVertexBuffer *vertexBuffer,
+        FIndexBuffer *indexBuffer, size_t offset, size_t minIndex, size_t maxIndex,
+        size_t count);
 APIEXPORT void APICALL Filament_RenderableManager_BuilderMaterial(
-    FRenderableManagerBuilder *builder, size_t index,
-    FMaterialInstance *materialInstance);
+        FRenderableManagerBuilder *builder, size_t index,
+        FMaterialInstance *materialInstance);
 APIEXPORT void APICALL Filament_RenderableManager_BuilderBlendOrder(
-    FRenderableManagerBuilder *builder, size_t index, uint16_t blendOrder);
+        FRenderableManagerBuilder *builder, size_t index, uint16_t blendOrder);
 APIEXPORT void APICALL Filament_RenderableManager_BuilderBoundingBox(
-    FRenderableManagerBuilder *builder, FBox *box);
+        FRenderableManagerBuilder *builder, FBox *box);
 APIEXPORT void APICALL Filament_RenderableManager_BuilderLayerMask(
-    FRenderableManagerBuilder *builder, uint8_t select, uint8_t value);
+        FRenderableManagerBuilder *builder, uint8_t select, uint8_t value);
 APIEXPORT void APICALL Filament_RenderableManager_BuilderPriority(
-    FRenderableManagerBuilder *builder, uint8_t priority);
+        FRenderableManagerBuilder *builder, uint8_t priority);
 APIEXPORT void APICALL Filament_RenderableManager_BuilderCulling(
-    FRenderableManagerBuilder *builder, FBool enabled);
+        FRenderableManagerBuilder *builder, FBool enabled);
 APIEXPORT void APICALL Filament_RenderableManager_BuilderCastShadows(
-    FRenderableManagerBuilder *builder, FBool enabled);
+        FRenderableManagerBuilder *builder, FBool enabled);
 APIEXPORT void APICALL Filament_RenderableManager_BuilderReceiveShadows(
-    FRenderableManagerBuilder *builder, FBool enabled);
+        FRenderableManagerBuilder *builder, FBool enabled);
 APIEXPORT void APICALL Filament_RenderableManager_BuilderSkinning(
-    FRenderableManagerBuilder *builder, size_t boneCount);
+        FRenderableManagerBuilder *builder, size_t boneCount);
 APIEXPORT int APICALL Filament_RenderableManager_BuilderSkinningBones(
-    FRenderableManagerBuilder *builder, FRenderableManagerBone *bones,
-    size_t boneCount);
+        FRenderableManagerBuilder *builder, FRenderableManagerBone *bones,
+        size_t boneCount);
 APIEXPORT int APICALL Filament_RenderableManager_SetBonesAsMatrices(
-    FRenderableManager *rm, uint32_t i, FMat4f *matrices, size_t boneCount,
-    size_t offset);
+        FRenderableManager *rm, uint32_t i, FMat4f *matrices, size_t boneCount,
+        size_t offset);
 APIEXPORT int APICALL Filament_RenderableManager_SetBonesAsQuaternions(
-    FRenderableManager *rm, uint32_t i, FRenderableManagerBone *bones,
-    size_t boneCount, size_t offset);
+        FRenderableManager *rm, uint32_t i, FRenderableManagerBone *bones,
+        size_t boneCount, size_t offset);
 APIEXPORT void APICALL Filament_RenderableManager_SetAxisAlignedBoundingBox(
-    FRenderableManager *rm, uint32_t i, float cx, float cy, float cz, float ex,
-    float ey, float ez);
+        FRenderableManager *rm, uint32_t i, float cx, float cy, float cz, float ex,
+        float ey, float ez);
 APIEXPORT void APICALL Filament_RenderableManager_SetLayerMask(FRenderableManager *rm,
-                                                               uint32_t i,
-                                                               uint8_t select,
-                                                               uint8_t value);
+        uint32_t i,
+        uint8_t select,
+        uint8_t value);
 APIEXPORT void APICALL Filament_RenderableManager_SetPriority(FRenderableManager *rm,
-                                                              uint32_t i,
-                                                              uint8_t priority);
+        uint32_t i,
+        uint8_t priority);
 APIEXPORT void APICALL Filament_RenderableManager_SetCastShadows(FRenderableManager *rm,
-                                                                 uint32_t i,
-                                                                 FBool enabled);
+        uint32_t i,
+        FBool enabled);
 APIEXPORT void APICALL Filament_RenderableManager_SetReceiveShadows(
-    FRenderableManager *rm, uint32_t i, FBool enabled);
+        FRenderableManager *rm, uint32_t i, FBool enabled);
 APIEXPORT FBool APICALL Filament_RenderableManager_IsShadowCaster(FRenderableManager *rm,
-                                                                  uint32_t i);
+        uint32_t i);
 APIEXPORT FBool APICALL Filament_RenderableManager_IsShadowReceiver(FRenderableManager *rm,
-                                                                    uint32_t i);
+        uint32_t i);
 APIEXPORT void APICALL Filament_RenderableManager_GetAxisAlignedBoundingBox(
-    FRenderableManager *rm, uint32_t i, FBox *aabbOut);
+        FRenderableManager *rm, uint32_t i, FBox *aabbOut);
 APIEXPORT int APICALL Filament_RenderableManager_GetPrimitiveCount(FRenderableManager *rm,
-                                                                   uint32_t i);
+        uint32_t i);
 APIEXPORT void APICALL Filament_RenderableManager_SetMaterialInstanceAt(
-    FRenderableManager *rm, uint32_t i, size_t primitiveIndex,
-    FMaterialInstance *materialInstance);
+        FRenderableManager *rm, uint32_t i, size_t primitiveIndex,
+        FMaterialInstance *materialInstance);
 APIEXPORT void APICALL Filament_RenderableManager_SetGeometryAt1(
-    FRenderableManager *rm, uint32_t i, size_t primitiveIndex,
-    FPrimitiveType primitiveType, FVertexBuffer *vertexBuffer,
-    FIndexBuffer *indexBuffer, size_t offset, size_t count);
+        FRenderableManager *rm, uint32_t i, size_t primitiveIndex,
+        FPrimitiveType primitiveType, FVertexBuffer *vertexBuffer,
+        FIndexBuffer *indexBuffer, size_t offset, size_t count);
 APIEXPORT void APICALL Filament_RenderableManager_SetGeometryAt2(
-    FRenderableManager *rm, uint32_t i, size_t primitiveIndex,
-    FPrimitiveType primitiveType, size_t offset,
-    size_t count);
+        FRenderableManager *rm, uint32_t i, size_t primitiveIndex,
+        FPrimitiveType primitiveType, size_t offset,
+        size_t count);
 APIEXPORT void APICALL Filament_RenderableManager_SetBlendOrderAt(FRenderableManager *rm,
-                                                                  uint32_t i,
-                                                                  size_t primitiveIndex,
-                                                                  uint16_t blendOrder);
+        uint32_t i,
+        size_t primitiveIndex,
+        uint16_t blendOrder);
 APIEXPORT uint32_t APICALL Filament_RenderableManager_GetEnabledAttributesAt(
-    FRenderableManager *rm, uint32_t i, size_t primitiveIndex);
+        FRenderableManager *rm, uint32_t i, size_t primitiveIndex);
 
 /**************************************************************************************************
  * filament::Renderer
  *************************************************************************************************/
 APIEXPORT FBool APICALL Filament_Renderer_BeginFrame(FRenderer *renderer,
-                                                     FSwapChain *swapChain);
+        FSwapChain *swapChain);
 
 APIEXPORT void APICALL Filament_Renderer_EndFrame(FRenderer *renderer);
 
@@ -606,7 +622,7 @@ APIEXPORT void APICALL Filament_Renderer_Render(FRenderer *renderer, FView *view
 APIEXPORT void APICALL Filament_Scene_SetSkybox(FScene *scene, FSkybox *skybox);
 
 APIEXPORT void APICALL Filament_Scene_SetIndirectLight(FScene *scene,
-                                                       FIndirectLight *indirectLight);
+        FIndirectLight *indirectLight);
 
 APIEXPORT void APICALL Filament_Scene_AddEntity(FScene *scene, FEntity entity);
 
@@ -620,32 +636,32 @@ APIEXPORT int APICALL Filament_Scene_GetLightCount(FScene *scene);
  * filament::TransformManager
  *************************************************************************************************/
 APIEXPORT FBool APICALL Filament_TransformManager_HasComponent(FTransformManager *tm,
-                                                               FEntity entity);
+        FEntity entity);
 
 APIEXPORT int APICALL Filament_TransformManager_GetInstance(FTransformManager *tm,
-                                                            FEntity entity);
+        FEntity entity);
 
 APIEXPORT int APICALL Filament_TransformManager_CreateUninitialized(FTransformManager *tm,
-                                                                    FEntity entity);
+        FEntity entity);
 
 APIEXPORT int APICALL Filament_TransformManager_Create(FTransformManager *tm,
-                                                       FEntity entity, int parent,
-                                                       FMat4f *localTransform);
+        FEntity entity, int parent,
+        FMat4f *localTransform);
 
 APIEXPORT void APICALL Filament_TransformManager_Destroy(FTransformManager *tm,
-                                                         FEntity entity);
+        FEntity entity);
 
 APIEXPORT void APICALL Filament_TransformManager_SetParent(FTransformManager *tm, int i,
-                                                           int newParent);
+        int newParent);
 
 APIEXPORT void APICALL Filament_TransformManager_SetTransform(
-    FTransformManager *tm, int i, FMat4f *localTransform);
+        FTransformManager *tm, int i, FMat4f *localTransform);
 
 APIEXPORT void APICALL Filament_TransformManager_GetTransform(
-    FTransformManager *tm, int i, FMat4f *outLocalTransform);
+        FTransformManager *tm, int i, FMat4f *outLocalTransform);
 
 APIEXPORT void APICALL Filament_TransformManager_GetWorldTransform(
-    FTransformManager *tm, int i, FMat4f *outWorldTransform);
+        FTransformManager *tm, int i, FMat4f *outWorldTransform);
 
 APIEXPORT void APICALL
 Filament_TransformManager_OpenLocalTransformTransaction(FTransformManager *tm);
@@ -662,18 +678,18 @@ APIEXPORT void APICALL
 Filament_VertexBuffer_DestroyBuilder(FVertexBufferBuilder *builder);
 
 APIEXPORT void APICALL Filament_VertexBuffer_BuilderVertexCount(
-    FVertexBufferBuilder *builder, uint32_t vertexCount);
+        FVertexBufferBuilder *builder, uint32_t vertexCount);
 
 APIEXPORT void APICALL Filament_VertexBuffer_BuilderBufferCount(
-    FVertexBufferBuilder *builder, uint8_t bufferCount);
+        FVertexBufferBuilder *builder, uint8_t bufferCount);
 
 APIEXPORT void APICALL Filament_VertexBuffer_BuilderAttribute(
-    FVertexBufferBuilder *builder, FVertexAttribute attribute,
-    uint8_t bufferIndex, FElementType attributeType,
-    uint32_t byteOffset, uint8_t byteStride);
+        FVertexBufferBuilder *builder, FVertexAttribute attribute,
+        uint8_t bufferIndex, FElementType attributeType,
+        uint32_t byteOffset, uint8_t byteStride);
 
 APIEXPORT void APICALL Filament_VertexBuffer_BuilderNormalized(
-    FVertexBufferBuilder *builder, FVertexAttribute attribute);
+        FVertexBufferBuilder *builder, FVertexAttribute attribute);
 
 APIEXPORT FVertexBuffer *APICALL
 Filament_VertexBuffer_BuilderBuild(FVertexBufferBuilder *builder, FEngine *engine);
@@ -681,9 +697,9 @@ Filament_VertexBuffer_BuilderBuild(FVertexBufferBuilder *builder, FEngine *engin
 APIEXPORT int APICALL Filament_VertexBuffer_GetVertexCount(FVertexBuffer *vertexBuffer);
 
 APIEXPORT int APICALL Filament_VertexBuffer_SetBufferAt(
-    FVertexBuffer *vertexBuffer, FEngine *engine, uint8_t bufferIndex, void *data,
-    uint32_t sizeInBytes, uint32_t destOffsetInBytes, FFreeBufferFn freeBuffer,
-    void *freeBufferArg);
+        FVertexBuffer *vertexBuffer, FEngine *engine, uint8_t bufferIndex, void *data,
+        uint32_t sizeInBytes, uint32_t destOffsetInBytes, FFreeBufferFn freeBuffer,
+        void *freeBufferArg);
 
 /**************************************************************************************************
  * filament::View
@@ -697,17 +713,17 @@ APIEXPORT void APICALL Filament_View_SetScene(FView *view, FScene *scene);
 APIEXPORT void APICALL Filament_View_SetCamera(FView *view, FCamera *camera);
 
 APIEXPORT void APICALL Filament_View_SetViewport(FView *view, int left, int bottom,
-                                                 uint32_t width, uint32_t height);
+        uint32_t width, uint32_t height);
 
 APIEXPORT void APICALL Filament_View_SetClearColor(FView *view, FLinearColorA color);
 
 APIEXPORT void APICALL Filament_View_GetClearColor(FView *view, FLinearColorA *colorOut);
 
 APIEXPORT void APICALL Filament_View_SetClearTargets(FView *view, FBool color, FBool depth,
-                                                     FBool stencil);
+        FBool stencil);
 
 APIEXPORT void APICALL Filament_View_SetVisibleLayers(FView *view, uint8_t select,
-                                                      uint8_t value);
+        uint8_t value);
 
 APIEXPORT void APICALL Filament_View_SetShadowsEnabled(FView *view, FBool enabled);
 
@@ -716,33 +732,33 @@ APIEXPORT void APICALL Filament_View_SetSampleCount(FView *view, uint8_t count);
 APIEXPORT uint8_t APICALL Filament_View_GetSampleCount(FView *view);
 
 APIEXPORT void APICALL Filament_View_SetAntiAliasing(FView *view,
-                                                     FAntiAliasing type);
+        FAntiAliasing type);
 
 APIEXPORT FAntiAliasing APICALL Filament_View_GetAntiAliasing(FView *view);
 
-typedef struct {
-  FBool enabled;
-  FBool homogeneousScaling;
-  float targetFrameTimeMilli;
-  float headRoomRatio;
-  float scaleRate;
-  float minScale;
-  float maxScale;
-  uint8_t history;
+typedef struct FDynamicResolutionOptions {
+    FBool enabled;
+    FBool homogeneousScaling;
+    float targetFrameTimeMilli;
+    float headRoomRatio;
+    float scaleRate;
+    float minScale;
+    float maxScale;
+    uint8_t history;
 } FDynamicResolutionOptions;
 
 APIEXPORT void APICALL Filament_View_SetDynamicResolutionOptions(
-    FView *view, FDynamicResolutionOptions optionsIn);
+        FView *view, FDynamicResolutionOptions *optionsIn);
 
 APIEXPORT void APICALL Filament_View_GetDynamicResolutionOptions(
-    FView *view, FDynamicResolutionOptions *optionsOut);
+        FView *view, FDynamicResolutionOptions *optionsOut);
 
 APIEXPORT void APICALL Filament_View_SetDynamicLightingOptions(FView *view,
-                                                               float zLightNear,
-                                                               float zLightFar);
+        float zLightNear,
+        float zLightFar);
 
 APIEXPORT void APICALL Filament_View_SetDepthPrepass(FView *view,
-                                                     FDepthPrepass value);
+        FDepthPrepass value);
 
 /**************************************************************************************************
  * filament::Skybox
@@ -767,30 +783,30 @@ APIEXPORT void APICALL Filament_Stream_Builder_Height(FStreamBuilder *builder, u
 APIEXPORT FStream *APICALL Filament_Stream_Builder_Build(FStreamBuilder *builder, FEngine *engine);
 
 typedef struct {
-  void *buffer;
-  size_t size;
-  FPixelDataFormat format;
-  FPixelDataType type;
-  uint8_t alignment;
-  uint32_t left;
-  uint32_t top;
-  uint32_t stride;
-  FFreeBufferFn freeBufferCallback;
-  void *freeBufferArg;
+    void *buffer;
+    size_t size;
+    FPixelDataFormat format;
+    FPixelDataType type;
+    uint8_t alignment;
+    uint32_t left;
+    uint32_t top;
+    uint32_t stride;
+    FFreeBufferFn freeBufferCallback;
+    void *freeBufferArg;
 } FPixelBufferDescriptor;
 
 APIEXPORT FBool APICALL Filament_Stream_IsNativeStream(FStream *stream);
 APIEXPORT void APICALL Filament_Stream_SetDimensions(FStream *stream, uint32_t width, uint32_t height);
 APIEXPORT void APICALL Filament_Stream_ReadPixels(FStream *stream, uint32_t xoffset, uint32_t yoffset,
-                                                  uint32_t width, uint32_t height,
-                                                  FPixelBufferDescriptor *buffer);
+        uint32_t width, uint32_t height,
+        FPixelBufferDescriptor *buffer);
 
 /**************************************************************************************************
  * filament::Texture
  *************************************************************************************************/
 APIEXPORT FBool APICALL Filament_Texture_IsFormatSupported(FEngine *engine, FTextureFormat format);
 APIEXPORT size_t APICALL Filament_Texture_ComputeDataSize(FPixelDataFormat format, FPixelDataType type,
-                                                          size_t stride, size_t height, size_t alignment);
+        size_t stride, size_t height, size_t alignment);
 
 APIEXPORT FTextureBuilder *APICALL Filament_Texture_Builder_Create();
 APIEXPORT void APICALL Filament_Texture_Builder_Destroy(FTextureBuilder *builder);
@@ -810,28 +826,28 @@ APIEXPORT size_t APICALL Filament_Texture_GetLevels(FTexture *texture);
 APIEXPORT FSamplerType APICALL Filament_Texture_GetTarget(FTexture *texture);
 APIEXPORT FTextureFormat APICALL Filament_Texture_GetFormat(FTexture *texture);
 APIEXPORT void APICALL Filament_Texture_SetImage(FTexture *texture, FEngine *engine,
-                                                 size_t level,
-                                                 FPixelBufferDescriptor *buffer);
+        size_t level,
+        FPixelBufferDescriptor *buffer);
 APIEXPORT void APICALL Filament_Texture_SetSubImage(FTexture *texture, FEngine *engine,
-                                                    size_t level,
-                                                    uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
-                                                    FPixelBufferDescriptor *buffer);
+        size_t level,
+        uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
+        FPixelBufferDescriptor *buffer);
 APIEXPORT void APICALL Filament_Texture_SetCubeImage(FTexture *texture, FEngine *engine,
-                                                     size_t level,
-                                                     FPixelBufferDescriptor *buffer, FFaceOffsets *faceOffsets);
+        size_t level,
+        FPixelBufferDescriptor *buffer, FFaceOffsets *faceOffsets);
 APIEXPORT void APICALL Filament_Texture_SetExternalImage(FTexture *texture, FEngine *engine, void *image);
 APIEXPORT void APICALL Filament_Texture_SetExternalStream(FTexture *texture, FEngine *engine, FStream *stream);
 APIEXPORT void APICALL Filament_Texture_GenerateMipmaps(FTexture *texture, FEngine *engine);
 
 typedef struct {
-  FSamplerMagFilter filterMag;
-  FSamplerMinFilter filterMin;
-  FSamplerWrapMode wrapS;
-  FSamplerWrapMode wrapT;
-  FSamplerWrapMode wrapR;
-  float anisotropy;
-  FSamplerCompareMode compareMode;
-  FSamplerCompareFunc compareFunc;
+    FSamplerMagFilter filterMag;
+    FSamplerMinFilter filterMin;
+    FSamplerWrapMode wrapS;
+    FSamplerWrapMode wrapT;
+    FSamplerWrapMode wrapR;
+    float anisotropy;
+    FSamplerCompareMode compareMode;
+    FSamplerCompareFunc compareFunc;
 } FSamplerParams;
 
 // Samplers are represented as their driver-side representation, which is a 32-bit packaged integer
@@ -841,5 +857,8 @@ APIEXPORT void APICALL Filament_TextureSampler_GetParams(FTextureSampler sampler
 #ifdef __cplusplus
 };
 #endif
+
+#undef FARGOUT
+#undef FARGINOUT
 
 #endif // __CFILAMENT_H__

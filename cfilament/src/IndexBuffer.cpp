@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 The Android Open Source Project
+ * Copyright (C) 2018 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,37 +26,37 @@ using namespace filament;
 using namespace driver;
 
 IndexBuffer::Builder *Filament_IndexBuffer_CreateBuilder() {
-  return new IndexBuffer::Builder();
+    return new IndexBuffer::Builder();
 }
 
 void Filament_IndexBuffer_DestroyBuilder(IndexBuffer::Builder *builder) {
-  delete builder;
+    delete builder;
 }
 
 void Filament_IndexBuffer_BuilderIndexCount(IndexBuffer::Builder *builder, uint32_t indexCount) {
-  builder->indexCount(indexCount);
+    builder->indexCount(indexCount);
 }
 
 void Filament_IndexBuffer_BuilderBufferType(IndexBuffer::Builder *builder, IndexBuffer::IndexType indexType) {
-  builder->bufferType(indexType);
+    builder->bufferType(indexType);
 }
 
 IndexBuffer *Filament_IndexBuffer_BuilderBuild(IndexBuffer::Builder *builder, Engine *engine) {
-  return builder->build(*engine);
+    return builder->build(*engine);
 }
 
 int Filament_IndexBuffer_GetIndexCount(IndexBuffer *indexBuffer) {
-  return indexBuffer->getIndexCount();
+    return indexBuffer->getIndexCount();
 }
 
 int Filament_IndexBuffer_SetBuffer(
-    IndexBuffer *vertexBuffer, Engine *engine, void *data, uint32_t sizeInBytes,
-    uint32_t destOffsetInBytes, FFreeBufferFn freeBuffer, void *freeBufferArg) {
-  BufferDescriptor desc(data, sizeInBytes,
-                        (BufferDescriptor::Callback) freeBuffer, freeBufferArg);
+        IndexBuffer *vertexBuffer, Engine *engine, void *data, uint32_t sizeInBytes,
+        uint32_t destOffsetInBytes, FFreeBufferFn freeBuffer, void *freeBufferArg) {
+    BufferDescriptor desc(data, sizeInBytes,
+            (BufferDescriptor::Callback) freeBuffer, freeBufferArg);
 
-  vertexBuffer->setBuffer(*engine, std::move(desc), destOffsetInBytes,
-                          sizeInBytes);
+    vertexBuffer->setBuffer(*engine, std::move(desc), destOffsetInBytes,
+            sizeInBytes);
 
-  return 0;
+    return 0;
 }

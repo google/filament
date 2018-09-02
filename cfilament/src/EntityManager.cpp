@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 The Android Open Source Project
+ * Copyright (C) 2018 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,26 +21,26 @@
 using namespace utils;
 
 static EntityManager &GetEntityManager() {
-  static EntityManager &sEntityManager = EntityManager::get();
-  return sEntityManager;
+    static EntityManager &sEntityManager = EntityManager::get();
+    return sEntityManager;
 }
 
 void Filament_EntityManager_CreateEntities(FEntity *entities, int count) {
-  GetEntityManager().create((size_t) count, reinterpret_cast<Entity *>(entities));
+    GetEntityManager().create((size_t) count, reinterpret_cast<Entity *>(entities));
 }
 
 int Filament_EntityManager_CreateEntity() {
-  return GetEntityManager().create().getId();
+    return GetEntityManager().create().getId();
 }
 
 void Filament_EntityManager_DestroyEntities(FEntity *entities, int count) {
-  GetEntityManager().destroy((size_t) count, reinterpret_cast<Entity *>(entities));
+    GetEntityManager().destroy((size_t) count, reinterpret_cast<Entity *>(entities));
 }
 
 void Filament_EntityManager_DestroyEntity(FEntity entity) {
-  GetEntityManager().destroy(convertEntity(entity));
+    GetEntityManager().destroy(convertEntity(entity));
 }
 
 FBool Filament_EntityManager_IsAlive(FEntity entity) {
-  return GetEntityManager().isAlive(convertEntity(entity));
+    return GetEntityManager().isAlive(convertEntity(entity));
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 The Android Open Source Project
+ * Copyright (C) 2018 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,26 +22,26 @@ using namespace filament;
 using namespace utils;
 
 void Filament_Scene_SetSkybox(Scene *scene, Skybox *skybox) {
-  scene->setSkybox(skybox);
+    scene->setSkybox(skybox);
 }
 
 void Filament_Scene_SetIndirectLight(Scene *scene,
-                                     IndirectLight *indirectLight) {
-  scene->setIndirectLight(indirectLight);
+        IndirectLight *indirectLight) {
+    scene->setIndirectLight(indirectLight);
 }
 
 void Filament_Scene_AddEntity(Scene *scene, Entity entity) {
-  scene->addEntity(entity);
+    scene->addEntity(entity);
 }
 
 void Filament_Scene_Remove(Scene *scene, Entity entity) {
-  scene->remove(entity);
+    scene->remove(entity);
 }
 
 int Filament_Scene_GetRenderableCount(Scene *scene) {
-  return scene->getRenderableCount();
+    return scene->getRenderableCount();
 }
 
 int Filament_Scene_GetLightCount(Scene *scene) {
-  return scene->getLightCount();
+    return scene->getLightCount();
 }
