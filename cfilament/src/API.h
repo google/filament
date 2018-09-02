@@ -128,6 +128,7 @@ namespace filament {
     class Frustum;
 }
 
+using FBackend = filament::driver::Backend;
 using FEngine = filament::Engine;
 using FSwapChain = filament::SwapChain;
 using FView = filament::View;
