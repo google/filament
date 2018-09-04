@@ -29,20 +29,12 @@ enum MaterialType {
 
 class MaterialLexeme final: public Lexeme<MaterialType> {
 public:
-    static const char* getTypeString(MaterialType type) {
-        switch (type) {
-            case BLOCK: return "BLOCK";
-            case IDENTIFIER: return "IDENTIFIER";
-            case UNKNOWN: return "UNKNOWN";
-        }
-    }
-
     MaterialLexeme(MaterialType type, const char* start, const char* end, size_t line, size_t pos) :
             Lexeme(type, start, end, line, pos) {
     }
 
     MaterialLexeme trimBlockMarkers() const {
-        return MaterialLexeme(mType, mStart + 1, mEnd - 1, mLineNumber, mPosition);
+        return { mType, mStart + 1, mEnd - 1, mLineNumber, mPosition };
     }
 };
 

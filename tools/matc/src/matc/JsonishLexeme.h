@@ -63,7 +63,7 @@ public:
         }
         const char *start = (*mStart == '"') ? mStart + 1 : mStart;
         const char *end = (*mEnd == '"') ? mEnd - 1 : mEnd;
-        return JsonLexeme(mType, start, end, mLineNumber, mPosition);
+        return { mType, start, end, mLineNumber, mPosition };
     }
 
 };

@@ -27,7 +27,7 @@ namespace matc {
 template <class T>
 class Lexer {
 public:
-    virtual ~Lexer() {}
+    virtual ~Lexer() = default;
 
     void lex(const char* text, size_t size, size_t lineOffset = 1) {
         mCursor = text;
@@ -101,15 +101,14 @@ protected:
     // this method was called. This method can return false if it wishes lexing to stop.
     virtual bool readLexeme() noexcept = 0;
 
-    inline void skipWhiteSpace() {
+    void skipWhiteSpace() {
         while (mCursor < mEnd && isWhiteSpaceCharacter(*mCursor)) {
             consume();
         }
 
         // If a comment marker is detected "//", skip until the next return
         // carriage is encountered.
-        if (hasMore() && *mCursor == '/' && mCursor < (mEnd - 1)
-                && *(mCursor+1) == '/') {
+        if (hasMore() && *mCursor == '/' && mCursor < (mEnd - 1) && *(mCursor + 1) == '/') {
             skipUntilEndOfLine();
             skipWhiteSpace();
         }
@@ -120,7 +119,7 @@ protected:
     std::vector<T> mLexemes;
 
     size_t mLineCounter = 1;
-    size_t mLinePosition;
+    size_t mLinePosition = 0;
 };
 }
 

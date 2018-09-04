@@ -20,22 +20,26 @@ namespace matc {
 
 void MaterialLexer::readBlock() noexcept {
     size_t braceCount = 0;
-     while(hasMore()) {
+     while (hasMore()) {
+         skipWhiteSpace();
+
          if (*mCursor == '{') {
              braceCount++;
          }  else if (*mCursor == '}') {
              braceCount--;
          }
+
          if (braceCount == 0) {
              consume();
              break;
          }
+
          consume();
      }
 }
 
 void MaterialLexer::readIdentifier() noexcept {
-    while(hasMore() && isAphaNumericCharacter(*mCursor)) {
+    while (hasMore() && isAphaNumericCharacter(*mCursor)) {
         consume();
     }
 }
@@ -45,8 +49,7 @@ void MaterialLexer::readUnknown() noexcept {
 }
 
 bool MaterialLexer::peek(MaterialType* type) const noexcept {
-    if (!hasMore())
-        return false;
+    if (!hasMore()) return false;
 
     char c = *mCursor;
     if (isAlphaCharacter(c)) {
@@ -56,6 +59,7 @@ bool MaterialLexer::peek(MaterialType* type) const noexcept {
     } else {
         *type = MaterialType::UNKNOWN;
     }
+
     return true;
 }
 
@@ -72,16 +76,15 @@ bool MaterialLexer::readLexeme() noexcept {
     size_t line = getLine();
     size_t cursor = getCursor();
     switch (nextMaterialType) {
-        case MaterialType::BLOCK :     readBlock();       break;
-        case MaterialType::IDENTIFIER: readIdentifier();  break;
-        case MaterialType::UNKNOWN:    readUnknown();     break;
-        default  :
+        case MaterialType::BLOCK :     readBlock();      break;
+        case MaterialType::IDENTIFIER: readIdentifier(); break;
+        case MaterialType::UNKNOWN:    readUnknown();    break;
+        default:
             break;
     }
-    mLexemes.push_back(MaterialLexeme(
-            nextMaterialType, lexemeStart, mCursor - 1, line, cursor));
+    mLexemes.emplace_back(nextMaterialType, lexemeStart, mCursor - 1, line, cursor);
 
-    return (nextMaterialType != UNKNOWN);
+    return nextMaterialType != UNKNOWN;
 }
 
 } // namespace matc
