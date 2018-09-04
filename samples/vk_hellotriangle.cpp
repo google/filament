@@ -43,13 +43,13 @@ struct App {
 
 struct Vertex {
     math::float2 position;
-    uint32_t color;
+    math::int4 color;
 };
 
 static const Vertex TRIANGLE_VERTICES[3] = {
-    {{1, 0}, 0xffff0000u},
-    {{cos(M_PI * 2 / 3), sin(M_PI * 2 / 3)}, 0xff00ff00u},
-    {{cos(M_PI * 4 / 3), sin(M_PI * 4 / 3)}, 0xff0000ffu},
+    {{1, 0}, {1, 1, 0, 1}},
+    {{cos(M_PI * 2 / 3), sin(M_PI * 2 / 3)}, {1, 0, 1, 1}},
+    {{cos(M_PI * 4 / 3), sin(M_PI * 4 / 3)}, {1, 0, 0, 1}},
 };
 
 static constexpr uint16_t TRIANGLE_INDICES[3] = { 0, 1, 2 };
@@ -58,26 +58,25 @@ static constexpr uint8_t BAKED_COLOR_PACKAGE[] = {
     #include "generated/material/bakedColor.inc"
 };
 
-int main() {
+int main(int argc, char *argv[]) {
     Config config;
     config.title = "hellotriangle";
-    config.backend = Engine::Backend::VULKAN;
+    config.backend = Engine::Backend::OPENGL;
 
     App app;
     auto setup = [&app](Engine* engine, View* view, Scene* scene) {
         view->setClearColor({0.1, 0.125, 0.25, 1.0});
         view->setPostProcessingEnabled(false);
         view->setDepthPrepass(filament::View::DepthPrepass::DISABLED);
-        static_assert(sizeof(Vertex) == 12, "Strange vertex size.");
+        static_assert(sizeof(Vertex) == 24, "Strange vertex size.");
         app.vb = VertexBuffer::Builder()
                 .vertexCount(3)
                 .bufferCount(1)
-                .attribute(VertexAttribute::POSITION, 0, VertexBuffer::AttributeType::FLOAT2, 0, 12)
-                .attribute(VertexAttribute::COLOR, 0, VertexBuffer::AttributeType::UBYTE4, 8, 12)
-                .normalized(VertexAttribute::COLOR)
+                .attribute(VertexAttribute::POSITION, 0, VertexBuffer::AttributeType::FLOAT2, 0, sizeof(Vertex))
+                .attribute(VertexAttribute::COLOR, 0, VertexBuffer::AttributeType::INT4, 8, sizeof(Vertex))
                 .build(*engine);
         app.vb->setBufferAt(*engine, 0,
-                VertexBuffer::BufferDescriptor(TRIANGLE_VERTICES, 36, nullptr));
+                VertexBuffer::BufferDescriptor(TRIANGLE_VERTICES, sizeof(Vertex) * 3, nullptr));
         app.ib = IndexBuffer::Builder()
                 .indexCount(3)
                 .bufferType(IndexBuffer::IndexType::USHORT)

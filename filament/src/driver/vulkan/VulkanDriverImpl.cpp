@@ -556,6 +556,7 @@ VkFormat getVkFormat(ElementType type, bool normalized) {
         case ElementType::USHORT4: return VK_FORMAT_R16G16B16A16_UINT;
         case ElementType::HALF4: return VK_FORMAT_R16G16B16A16_SFLOAT;
         case ElementType::FLOAT4: return VK_FORMAT_R32G32B32A32_SFLOAT;
+        case ElementType::INT4: return VK_FORMAT_R32G32B32A32_SINT;
     }
     return VK_FORMAT_UNDEFINED;
 }

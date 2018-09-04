@@ -191,6 +191,7 @@ enum class ElementType : uint8_t {
     HALF2,
     HALF3,
     HALF4,
+    INT4
 };
 
 enum class Usage : uint8_t {

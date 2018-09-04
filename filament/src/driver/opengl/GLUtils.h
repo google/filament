@@ -70,6 +70,7 @@ constexpr inline GLuint getComponentCount(filament::driver::ElementType type) no
         case ElementType::UBYTE4:
         case ElementType::SHORT4:
         case ElementType::USHORT4:
+        case ElementType::INT4:
             return 4;
     }
 }
@@ -106,6 +107,7 @@ constexpr inline GLenum getComponentType(filament::driver::ElementType type) noe
         case ElementType::USHORT4:
             return GL_UNSIGNED_SHORT;
         case ElementType::INT:
+        case ElementType::INT4:
             return GL_INT;
         case ElementType::UINT:
             return GL_UNSIGNED_INT;
