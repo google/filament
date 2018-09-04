@@ -11316,13 +11316,6 @@ int LoadEXRFromMemory(float **out_rgba, int *width, int *height,
     return ret;
   }
 
-  // This utility function does not yet support tiled images.
-  if (exr_image.tiles) {
-    ret = TINYEXR_ERROR_UNSUPPORTED_FORMAT;
-    tinyexr::SetErrorMessage("Tiled EXR images are not yet supported", err);
-    return ret;
-  }
-
   // RGBA
   int idxR = -1;
   int idxG = -1;
