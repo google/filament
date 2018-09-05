@@ -62,16 +62,14 @@ public final class GraphCompiler {
 
     @NotNull
     public CompiledGraph compileGraph() {
-        mUncompiledNodes.remove(mRootNode);
-        mRootNode.getCompileFunction().invoke(mRootNode, this);
+        compileNode(mRootNode);
 
         // Compile the rest of the nodes in the graph that aren't necessarily connected to the
         // root node. These nodes should not contribute any code to the material definition.
         mShouldAppendCode = false;
         while (!mUncompiledNodes.isEmpty()) {
             Node next = mUncompiledNodes.iterator().next();
-            mUncompiledNodes.remove(next);
-            next.getCompileFunction().invoke(next, this);
+            compileNode(next);
         }
 
         String fragmentSection = GraphFormatter.formatFragmentSection(mGlobalFunctions.values(),
@@ -105,13 +103,7 @@ public final class GraphCompiler {
         if (connectedNode == null) {
             throw new RuntimeException("Output slot references node that does not exist in graph.");
         }
-        mUncompiledNodes.remove(connectedNode);
-        Node newNode = connectedNode.getCompileFunction().invoke(connectedNode, this);
-
-        // We've received a new node while compiling, take note of it.
-        if (newNode != connectedNode) {
-            mOldToNewNodeMap.put(connectedNode, newNode);
-        }
+        compileNode(connectedNode);
 
         // Verify that the connected node has set it's output variable
         compiledExpression = mCompiledVariableMap.get(outputSlot);
@@ -230,6 +222,16 @@ public final class GraphCompiler {
      */
     public void provideFunctionDefinition(String symbolName, String format, Object... args) {
         provideFunctionDefinition(symbolName, String.format(format, args));
+    }
+
+    private void compileNode(Node node) {
+        mUncompiledNodes.remove(node);
+        Node newNode = node.getCompileFunction().invoke(node, this);
+
+        // We've received a new node while compiling, take note of it.
+        if (newNode != node) {
+            mOldToNewNodeMap.put(node, newNode);
+        }
     }
 
     /**
