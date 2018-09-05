@@ -41,4 +41,9 @@ class ExpressionTest {
         assertEquals("float2(0.0, 0.0)", "${Literal(4).rg}")
         assertEquals("float3(0.0, 0.0, 0.0)", "${Literal(1).rgb}")
     }
+
+    @Test
+    fun `create a float literal of dimension 1`() {
+        assertEquals("float(0.0)", "${Literal(1).r}")
+    }
 }
