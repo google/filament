@@ -19,6 +19,7 @@ package com.google.android.filament.tungsten.properties
 import com.google.android.filament.tungsten.model.Float3
 import com.google.android.filament.tungsten.model.Node
 import com.google.android.filament.tungsten.model.NodeId
+import com.google.android.filament.tungsten.model.StringValue
 import javax.swing.JPanel
 
 class PropertiesPanel : JPanel() {
@@ -64,6 +65,7 @@ class PropertiesPanel : JPanel() {
                 when (property.value) {
                     // Each PropertyValue type has a 1:1 mapping to a PropertyEditor
                     is Float3 -> ColorChooser(property.value)
+                    is StringValue -> MultipleChoice(property.value, listOf("one", "two", "three"))
                 }
             }
         }

@@ -148,7 +148,8 @@ val createShaderNode = fun(id: NodeId): Node {
         id = id,
         type = "shader",
         compileFunction = shaderNodeCompile,
-        inputSlots = listOf("baseColor", "metallic", "roughness"))
+        inputSlots = listOf("baseColor", "emissive"),
+        properties = listOf(Property("materialModel", StringValue("unlit"))))
 }
 
 object GraphInitializer {

@@ -20,7 +20,7 @@ import com.google.android.filament.MaterialInstance
 
 sealed class PropertyValue {
 
-    abstract fun applyToMaterialInstance(materialInstance: MaterialInstance, name: String)
+    open fun applyToMaterialInstance(materialInstance: MaterialInstance, name: String) { }
 
     /**
      * Serialize this value into a Kotlin List, Map, String, or Number
@@ -46,6 +46,16 @@ data class Float3(val x: Float = 0.0f, val y: Float = 0.0f, val z: Float = 0.0f)
         val (x, y, z) = value
         if (x !is Number || y !is Number || z !is Number) return this
         return Float3(x.toFloat(), y.toFloat(), z.toFloat())
+    }
+}
+
+data class StringValue(val value: String) : PropertyValue() {
+
+    override fun serialize() = value
+
+    override fun deserialize(value: Any): PropertyValue {
+        if (value !is String) return this
+        return StringValue(value)
     }
 }
 
