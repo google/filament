@@ -110,6 +110,7 @@ void setupPunctualLight(inout Light light, const HIGHP vec4 positionFalloff) {
     HIGHP vec3 posToLight = positionFalloff.xyz - worldPosition;
     light.l = normalize(posToLight);
     light.attenuation = getDistanceAttenuation(posToLight, positionFalloff.w);
+    light.NoL = saturate(dot(shading_normal, light.l));
 }
 
 /**
@@ -186,7 +187,13 @@ void evaluatePunctualLights(const PixelParams pixel, inout vec3 color) {
     // Iterate point lights
     for ( ; index < end; index++) {
         Light light = getPointLight(index);
+#if defined(MATERIAL_CAN_SKIP_LIGHTING)
+        if (light.NoL > 0.0) {
+            color.rgb += surfaceShading(pixel, light, 1.0);
+        }
+#else
         color.rgb += surfaceShading(pixel, light, 1.0);
+#endif
     }
 
     end += froxel.spotCount;
@@ -194,6 +201,12 @@ void evaluatePunctualLights(const PixelParams pixel, inout vec3 color) {
     // Iterate spotlights
     for ( ; index < end; index++) {
         Light light = getSpotLight(index);
+#if defined(MATERIAL_CAN_SKIP_LIGHTING)
+        if (light.NoL > 0.0) {
+            color.rgb += surfaceShading(pixel, light, 1.0);
+        }
+#else
         color.rgb += surfaceShading(pixel, light, 1.0);
+#endif
     }
 }

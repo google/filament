@@ -22,16 +22,25 @@ Light getDirectionalLight() {
     light.colorIntensity = frameUniforms.lightColorIntensity;
     light.l = sampleSunAreaLight(frameUniforms.lightDirection);
     light.attenuation = 1.0;
+    light.NoL = saturate(dot(shading_normal, light.l));
     return light;
 }
 
 void evaluateDirectionalLight(const PixelParams pixel, inout vec3 color) {
     Light light = getDirectionalLight();
+
     float visibility = 1.0;
-#ifdef HAS_SHADOWING
-    // TODO: don't compute when NoL < 0.0
-    visibility = shadow(light_shadowMap, getLightSpacePosition());
+#if defined(HAS_SHADOWING)
+    if (light.NoL > 0.0) {
+        visibility = shadow(light_shadowMap, getLightSpacePosition());
+    } else {
+#if defined(MATERIAL_CAN_SKIP_LIGHTING)
+        return;
 #endif
-    // TODO: skip when visibility == 0.0 (shading model dependent)
+    }
+#elif defined(MATERIAL_CAN_SKIP_LIGHTING)
+    if (light.NoL <= 0.0) return;
+#endif
+
     color.rgb += surfaceShading(pixel, light, visibility);
 }
