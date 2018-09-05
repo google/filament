@@ -20,6 +20,7 @@ import com.google.android.filament.tungsten.model.Graph;
 import com.google.android.filament.tungsten.model.Node;
 import com.google.android.filament.tungsten.model.Slot;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -37,6 +38,7 @@ public final class GraphCompiler {
 
     private StringBuilder mMaterialFunctionBodyBuilder = new StringBuilder();
     private final List<String> mRequiredAttributes = new ArrayList<>();
+    private String mShadingModel = "unlit";
     private final List<Parameter> mParameters = new ArrayList<>();
     private final Map<String, Integer> mParameterNumberMap = new HashMap<>();
     private final Map<Node.PropertyHandle, Parameter> mPropertyParameterMap = new HashMap<>();
@@ -49,6 +51,8 @@ public final class GraphCompiler {
     private final Set<Node> mUncompiledNodes;
     private boolean mShouldAppendCode = true;
     private final Map<Node, Node> mOldToNewNodeMap = new HashMap<>();
+    private final List<String> validShadingModels =
+            Arrays.asList("lit", "unlit", "cloth", "subsurface");
 
     public GraphCompiler(@NotNull Graph graph) {
         mGraph = graph;
@@ -73,8 +77,8 @@ public final class GraphCompiler {
         String fragmentSection = GraphFormatter.formatFragmentSection(mGlobalFunctions.values(),
                 mMaterialFunctionBodyBuilder.toString());
         String materialDefinition =
-                GraphFormatter.formatMaterialSection(mRequiredAttributes, mParameters)
-                + fragmentSection;
+                GraphFormatter.formatMaterialSection(mRequiredAttributes, mParameters,
+                mShadingModel) + fragmentSection;
         return new CompiledGraph(materialDefinition, mPropertyParameterMap, mCompiledVariableMap,
                 mOldToNewNodeMap);
     }
@@ -132,6 +136,12 @@ public final class GraphCompiler {
     public void requireAttribute(String requirement) {
         if (!mRequiredAttributes.contains(requirement)) {
             mRequiredAttributes.add(requirement);
+        }
+    }
+
+    public void setShadingModel(String shadingModel) {
+        if (validShadingModels.contains(shadingModel)) {
+            mShadingModel = shadingModel;
         }
     }
 
