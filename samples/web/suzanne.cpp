@@ -140,6 +140,7 @@ void setup(Engine* engine, View* view, Scene* scene) {
     scene->addEntity(app.sun);
 
     // Create point lights.
+    em.create(4, app.ptlight);
     LightManager::Builder(LightManager::Type::POINT)
             .color(Color::toLinear<ACCURATE>({0.98f, 0.92f, 0.89f}))
             .intensity(LightManager::EFFICIENCY_LED, 300.0f)
