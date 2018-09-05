@@ -111,8 +111,10 @@ set(EXPORTS "'_launch','_main','_render','_resize'")
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -s EXPORTED_FUNCTIONS=[${EXPORTS}]")
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -s ALLOW_MEMORY_GROWTH=1")
 if (CMAKE_BUILD_TYPE MATCHES Debug)
+    # Note that emcc offers a SAFE_HEAP=1 option to perform extra memory checks. Ideally we would
+    # enable it for debug builds, but currently it triggers an abort due to the custom memory
+    # alignments that Filament uses for various objects. This merits further investigation.
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s ASSERTIONS=2")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s SAFE_HEAP=1 ")
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -s DEMANGLE_SUPPORT=1")
 endif()
 
