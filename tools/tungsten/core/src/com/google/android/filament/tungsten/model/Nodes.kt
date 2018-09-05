@@ -46,7 +46,8 @@ private val adderNodeCompile = fun(node: Node, compiler: GraphCompiler): Node {
 }
 
 private val UNLIT_INPUTS = listOf("baseColor", "emissive")
-private val LIT_INPUTS = listOf("baseColor", "metallic", "roughness")
+private val LIT_INPUTS = listOf("baseColor", "metallic", "roughness", "reflectance", "clearCoat",
+        "clearCoatRoughness", "ambientOcclusion", "emissive")
 
 private val inputSlotsForShadingModel = { shadingModel: String ->
     when (shadingModel) {
@@ -57,25 +58,46 @@ private val inputSlotsForShadingModel = { shadingModel: String ->
 }
 
 private val shaderNodeCompile = fun(node: Node, compiler: GraphCompiler): Node {
-    val baseColor = compiler.compileAndRetrieveExpression(node.getInputSlot("baseColor"))
-    val metallic = compiler.compileAndRetrieveExpression(node.getInputSlot("metallic"))
-    val roughness = compiler.compileAndRetrieveExpression(node.getInputSlot("roughness"))
-
     val shadingModel = (node.properties[0].value as StringValue).value
+    compiler.setShadingModel(shadingModel)
 
-    if (baseColor != null) {
-        compiler.addCodeToMaterialFunctionBody("material.baseColor.rgb = ${baseColor.rgb};\n")
-        compiler.setExpressionForSlot(node.getInputSlot("baseColor"), baseColor.rgb)
+    val compileMaterialInput = { name: String, dimensions: Int, shouldProvideDefault: Boolean ->
+        val inputSlot = node.getInputSlot(name)
+        val connectedExpression = compiler.compileAndRetrieveExpression(inputSlot)
+        val isConnected = connectedExpression != null
+        val expression = connectedExpression ?: Literal(dimensions)
+
+        // Conform the expression to match the dimensionality of the material input.
+        val conformedExpression = expression.conform(dimensions)
+
+        // Some inputs, like clearCoat, affect shader code generation if they're set in GLSL. For
+        // these, shouldProvideDefault is set to false so that no code is added to set the material
+        // input.
+        if (isConnected || shouldProvideDefault) {
+            compiler.addCodeToMaterialFunctionBody("material.$name = $conformedExpression;\n")
+        }
+        compiler.setExpressionForSlot(inputSlot, conformedExpression)
     }
 
-    if (metallic != null) {
-        compiler.addCodeToMaterialFunctionBody("material.metallic = ${metallic.r};\n")
-        compiler.setExpressionForSlot(node.getInputSlot("metallic"), metallic.r)
+    // Compile inputs common to all shading models.
+    val compileCommonInputs = {
+        compileMaterialInput("baseColor", 4, true)
+        compileMaterialInput("emissive", 4, true)
     }
 
-    if (roughness != null) {
-        compiler.addCodeToMaterialFunctionBody("material.roughness = ${roughness.r};\n")
-        compiler.setExpressionForSlot(node.getInputSlot("roughness"), roughness.r)
+    // Compile inputs unique to the "lit" shading model.
+    val compileLitInputs = {
+        compileMaterialInput("metallic", 1, true)
+        compileMaterialInput("roughness", 1, true)
+        compileMaterialInput("reflectance", 1, true)
+        compileMaterialInput("clearCoat", 1, false)
+        compileMaterialInput("clearCoatRoughness", 1, false)
+        compileMaterialInput("ambientOcclusion", 1, true)
+    }
+
+    compileCommonInputs()
+    when (shadingModel) {
+        "lit" -> compileLitInputs()
     }
 
     // If the input slots have changed, return a new node.

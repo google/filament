@@ -29,7 +29,7 @@ open class Expression(
 
     override fun toString() = symbol
 
-    private fun conform(components: Int): Expression {
+    fun conform(components: Int): Expression {
         if (dimensions == components) return this
         return if (dimensions > components) {
             shorten(components)
