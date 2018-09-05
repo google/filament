@@ -16,6 +16,7 @@
 
 package com.google.android.filament.tungsten.model
 
+import com.google.android.filament.tungsten.compiler.Expression
 import com.google.android.filament.tungsten.compiler.GraphCompiler
 import kotlin.reflect.KProperty
 
@@ -99,7 +100,10 @@ data class Graph(
     val nodes: List<Node> = emptyList(),
     val rootNodeId: NodeId? = null,
     val selection: List<NodeId> = emptyList(),
-    val connections: List<Connection> = emptyList()
+    val connections: List<Connection> = emptyList(),
+
+    // Maps from slots to their corresponding Expressions.
+    val expressionMap: Map<Slot, Expression> = emptyMap()
 ) {
 
     /**
@@ -169,4 +173,7 @@ data class Graph(
 
     fun graphByRemovingConnection(connection: Connection) =
             this.copy(connections = connections - connection)
+
+    fun graphBySettingExpressionMap(expressionMap: Map<Slot, Expression>) =
+            this.copy(expressionMap = expressionMap)
 }

@@ -17,11 +17,15 @@
 package com.google.android.filament.tungsten.compiler
 
 import com.google.android.filament.tungsten.model.Node
+import com.google.android.filament.tungsten.model.Slot
 
 data class CompiledGraph(
     // The Filament material definition that is fed into matc
     val materialDefinition: String,
 
     // Maps a Node's property to the associated material parameter it controls
-    val parameterMap: Map<Node.PropertyHandle, Parameter>
+    val parameterMap: Map<Node.PropertyHandle, Parameter>,
+
+    // Maps a Slot to its corresponding Expression
+    val expressionMap: Map<Slot, Expression>
 )
