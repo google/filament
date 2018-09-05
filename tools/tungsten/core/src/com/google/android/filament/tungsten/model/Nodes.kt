@@ -45,10 +45,23 @@ private val adderNodeCompile = fun(node: Node, compiler: GraphCompiler): Node {
     return node
 }
 
+private val UNLIT_INPUTS = listOf("baseColor", "emissive")
+private val LIT_INPUTS = listOf("baseColor", "metallic", "roughness")
+
+private val inputSlotsForShadingModel = { shadingModel: String ->
+    when (shadingModel) {
+        "unlit" -> UNLIT_INPUTS
+        "lit" -> LIT_INPUTS
+        else -> emptyList()
+    }
+}
+
 private val shaderNodeCompile = fun(node: Node, compiler: GraphCompiler): Node {
     val baseColor = compiler.compileAndRetrieveExpression(node.getInputSlot("baseColor"))
     val metallic = compiler.compileAndRetrieveExpression(node.getInputSlot("metallic"))
     val roughness = compiler.compileAndRetrieveExpression(node.getInputSlot("roughness"))
+
+    val shadingModel = (node.properties[0].value as StringValue).value
 
     if (baseColor != null) {
         compiler.addCodeToMaterialFunctionBody("material.baseColor.rgb = ${baseColor.rgb};\n")
@@ -65,7 +78,8 @@ private val shaderNodeCompile = fun(node: Node, compiler: GraphCompiler): Node {
         compiler.setExpressionForSlot(node.getInputSlot("roughness"), roughness.r)
     }
 
-    return node
+    // If the input slots have changed, return a new node.
+    return node.nodeBySettingInputSlots(inputSlotsForShadingModel(shadingModel))
 }
 
 private val constantFloat3NodeCompile = fun(node: Node, compiler: GraphCompiler): Node {
@@ -160,7 +174,7 @@ val createShaderNode = fun(id: NodeId): Node {
         id = id,
         type = "shader",
         compileFunction = shaderNodeCompile,
-        inputSlots = listOf("baseColor", "emissive"),
+        inputSlots = inputSlotsForShadingModel("unlit"),
         properties = listOf(Property(
             name = "materialModel",
             value = StringValue("unlit"),

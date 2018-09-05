@@ -71,6 +71,9 @@ data class Node(
     fun getInputSlot(name: String) = InputSlot(id, name)
 
     fun getOutputSlot(name: String) = OutputSlot(id, name)
+
+    fun nodeBySettingInputSlots(newInputs: List<String>) =
+            if (inputSlots === newInputs) this else copy(inputSlots = newInputs)
 }
 
 class ConnectionMapper {
