@@ -17,6 +17,7 @@ struct Light {
     vec4 colorIntensity;  // rgb, pre-exposed intensity
     vec3 l;
     float attenuation;
+    float NoL;
 };
 
 struct PixelParams {

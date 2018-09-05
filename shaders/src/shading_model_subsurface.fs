@@ -8,7 +8,7 @@
 vec3 surfaceShading(const PixelParams pixel, const Light light, float occlusion) {
     vec3 h = normalize(shading_view + light.l);
 
-    float NoL = saturate(dot(shading_normal, light.l));
+    float NoL = light.NoL;
     float NoH = saturate(dot(shading_normal, h));
     float LoH = saturate(dot(light.l, h));
 
