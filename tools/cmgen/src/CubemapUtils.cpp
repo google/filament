@@ -194,7 +194,7 @@ void CubemapUtils::mirrorCubemap(Cubemap& dst, const Cubemap& src) {
             [&](EmptyState&, size_t y, Cubemap::Face f, Cubemap::Texel* data, size_t dim) {
         for (size_t x=0 ; x<dim ; ++x, ++data) {
             const double3 N(dst.getDirectionFor(f, x, y));
-            Cubemap::writeAt(data, src.sampleAt(N * double3{ -N.x, N.y, N.z }));
+            Cubemap::writeAt(data, src.sampleAt(double3{ -N.x, N.y, N.z }));
         }
     });
 }
