@@ -47,7 +47,7 @@ private val adderNodeCompile = fun(node: Node, compiler: GraphCompiler): Node {
 
 private val UNLIT_INPUTS = listOf("baseColor", "emissive")
 private val LIT_INPUTS = listOf("baseColor", "metallic", "roughness", "reflectance", "clearCoat",
-        "clearCoatRoughness", "ambientOcclusion", "emissive")
+        "clearCoatRoughness", "anisotropy", "anisotropyDirection", "ambientOcclusion", "emissive")
 
 private val inputSlotsForShadingModel = { shadingModel: String ->
     when (shadingModel) {
@@ -89,6 +89,8 @@ private val shaderNodeCompile = fun(node: Node, compiler: GraphCompiler): Node {
         compileMaterialInput("reflectance", 1)
         compileMaterialInput("clearCoat", 1)
         compileMaterialInput("clearCoatRoughness", 1)
+        compileMaterialInput("anisotropy", 1)
+        compileMaterialInput("anisotropyDirection", 3)
         compileMaterialInput("ambientOcclusion", 1)
     }
 
