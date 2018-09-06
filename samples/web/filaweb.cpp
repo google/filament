@@ -19,6 +19,11 @@
 #include <string>
 #include <sstream>
 
+#define STB_IMAGE_IMPLEMENTATION
+#define STBI_NO_STDIO
+#define STBI_ONLY_PNG
+#include <stb_image.h>
+
 using namespace filament;
 using namespace std;
 
@@ -56,31 +61,20 @@ Asset getRawFile(const char* name) {
 }
 
 Asset getTexture(const char* name) {
-    // Obtain image dimensions from JavaScript.
-    uint32_t dims[2];
-    EM_ASM({
-        var dims = $0 >> 2;
-        var name = UTF8ToString($1);
-        HEAP32[dims] = assets[name].width;
-        HEAP32[dims+1] = assets[name].height;
-    }, dims, name);
-    const uint32_t nbytes = dims[0] * dims[1] * 4;
-
-    // Move the data from JavaScript.
+    Asset result = getRawFile(name);
+    int width, height, ncomp;
+    stbi_info_from_memory(result.data.get(), result.nbytes, &width, &height, &ncomp);
+    const uint32_t nbytes = width * height * 4;
     uint8_t* texels = new uint8_t[nbytes];
-    EM_ASM({
-        var texels = $0;
-        var name = UTF8ToString($1);
-        var nbytes = $2;
-        HEAPU8.set(assets[name].data, texels);
-        assets[name].data = null;
-    }, texels, name, nbytes);
-
+    stbi_uc* decoded = stbi_load_from_memory(result.data.get(), result.nbytes, &width, &height,
+            &ncomp, 4);
+    memcpy(texels, decoded, nbytes);
+    stbi_image_free(decoded);
     return {
         .data = decltype(Asset::data)(texels),
         .nbytes = nbytes,
-        .width = dims[0],
-        .height = dims[1]
+        .width = uint32_t(width),
+        .height = uint32_t(height)
     };
 }
 
@@ -95,17 +89,6 @@ Asset getCubemap(const char* name) {
         stringToUTF8(assets[name].name, prefix, 127);
         HEAP32[nmips] = assets[name].nmips;
     }, &nmips, name, &prefix[0]);
-
-    // Obtain dimensions of a face from miplevel 0.
-    uint32_t dims[2];
-    EM_ASM({
-        var dims = $0 >> 2;
-        var name = UTF8ToString($1);
-        var face = UTF8ToString($2);
-        var key = assets[name].name + face;
-        HEAP32[dims] = assets[key].width;
-        HEAP32[dims+1] = assets[key].height;
-    }, dims, name, "m0_px.rgbm");
 
     // Build a flat list of mips for each cubemap face.
     Asset* envFaces = new Asset[nmips * 6];
@@ -130,12 +113,12 @@ Asset getCubemap(const char* name) {
         string key = string(prefix) + suffix;
         skyFaces[i++] = getTexture(key.c_str());
     };
-    get("px.png");
-    get("nx.png");
-    get("py.png");
-    get("ny.png");
-    get("pz.png");
-    get("nz.png");
+    get("px.rgbm");
+    get("nx.rgbm");
+    get("py.rgbm");
+    get("ny.rgbm");
+    get("pz.rgbm");
+    get("nz.rgbm");
 
     // Load the spherical harmonics coefficients.
     Asset* shCoeffs = new Asset;
@@ -145,8 +128,8 @@ Asset getCubemap(const char* name) {
     return {
         .data = decltype(Asset::data)(),
         .nbytes = 0,
-        .width = dims[0],
-        .height = dims[1],
+        .width = envFaces[0].width,
+        .height = envFaces[0].height,
         .envMipCount = nmips,
         .envShCoeffs = decltype(Asset::envShCoeffs)(shCoeffs),
         .envFaces = decltype(Asset::envFaces)(envFaces),
