@@ -66,35 +66,8 @@ function load_rawfile(url) {
     return promise;
 }
 
-let context2d = document.createElement('canvas').getContext('2d');
-
-// This function does PNG decoding (or JPEG, or whatever), which allows us to avoid including a
-// texture decoder (such as stb_image) in the WebAssembly module. It always returns RGBA8 data,
-// regardless of how it is stored in the image file.
-function load_texture(url) {
-    let promise = new Promise((success, failure) => {
-        let img = new Image();
-        img.src = url;
-        img.onerror = failure;
-        img.onload = () => {
-            context2d.canvas.width = img.width;
-            context2d.canvas.height = img.height;
-            context2d.width = img.width;
-            context2d.height = img.height;
-            context2d.globalCompositeOperation = 'copy';
-            context2d.drawImage(img, 0, 0);
-            var imgdata = context2d.getImageData(0, 0, img.width, img.height).data.buffer;
-            success({
-                kind: 'image',
-                name: url,
-                data: new Uint8Array(imgdata),
-                width: img.width,
-                height: img.height
-            });
-        }
-    });
-    return promise;
-}
+// The C++ layer uses STB to decode the PNG contents into RGBA data.
+let load_texture = load_rawfile;
 
 function load_cubemap(urlprefix, nmips) {
     let promises = {};
@@ -107,7 +80,7 @@ function load_cubemap(urlprefix, nmips) {
         }
     }
     for (let face of 'px nx py ny pz nz'.split(' ')) {
-        name = face + '.png';
+        name = face + '.rgbm';
         promises[name] = load_texture(urlprefix + name);
     }
     let numberRemaining = Object.keys(promises).length;

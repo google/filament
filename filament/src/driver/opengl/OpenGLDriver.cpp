@@ -1539,7 +1539,7 @@ void OpenGLDriver::beginRenderPass(Driver::RenderTargetHandle rth,
 
         // glInvalidateFramebuffer appeared on GLES 3.0 and GL4.3, for simplicity we just
         // ignore it on GL (rather than having to do a runtime check).
-        if (GLES31_HEADERS && !!bugs.disable_invalidate_framebuffer) {
+        if (GLES31_HEADERS && !bugs.disable_invalidate_framebuffer) {
             std::array<GLenum, 3> attachments;
             GLsizei attachmentCount = getAttachments(attachments, rt, discardFlags);
             if (attachmentCount) {
