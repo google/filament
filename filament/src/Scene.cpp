@@ -133,6 +133,7 @@ void FScene::prepare(const math::mat4f& worldOriginTansform) {
                     float3 d = lcm.getLocalDirection(li);
                     // using the inverse-transpose handles non-uniform scaling
                     d = normalize(transpose(inverse(worldTransform.upperLeft())) * d);
+                    lightData.elementAt<FScene::POSITION_RADIUS>(0) = float4{ 0, 0, 0, std::numeric_limits<float>::infinity() };
                     lightData.elementAt<FScene::DIRECTION>(0)       = d;
                     lightData.elementAt<FScene::LIGHT_INSTANCE>(0)  = li;
                 }
@@ -148,6 +149,13 @@ void FScene::prepare(const math::mat4f& worldOriginTansform) {
                         float4{ p.xyz, lcm.getRadius(li) }, d, li, {}, {});
             }
         }
+    }
+
+    // some elements past the end of the array will be accessed by SIMD code, we need to make
+    // sure the data is valid enough as not to produce errors such as divide-by-zero
+    // (e.g. in computeLightRanges())
+    for (size_t i = lightData.size(), e = (lightData.size() + 3) & ~3; i < e; i++) {
+        new(lightData.data<POSITION_RADIUS>() + i) float4{ 0, 0, 0, 1 };
     }
 }
 
@@ -198,7 +206,7 @@ void FScene::prepareDynamicLights(const CameraInfo& camera, ArenaScope& rootAren
 
     // compute the light ranges (needed when building light trees)
     float2* const zrange = lightData.data<FScene::SCREEN_SPACE_Z_RANGE>();
-    computeLightRanges(zrange, camera, spheres, lightData.size());
+    computeLightRanges(zrange, camera, spheres + DIRECTIONAL_LIGHTS_COUNT, lightData.size() - DIRECTIONAL_LIGHTS_COUNT);
 
     auto const* UTILS_RESTRICT directions   = lightData.data<FScene::DIRECTION>();
     auto const* UTILS_RESTRICT instances    = lightData.data<FScene::LIGHT_INSTANCE>();
