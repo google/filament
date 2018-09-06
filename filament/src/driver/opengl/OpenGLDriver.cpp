@@ -142,6 +142,8 @@ OpenGLDriver::OpenGLDriver(ContextManagerGL* externalContext) noexcept
     } else if (strstr(renderer, "Tegra") || strstr(renderer, "GeForce") || strstr(renderer, "NV")) {
     } else if (strstr(renderer, "Vivante")) {
     } else if (strstr(renderer, "AMD") || strstr(renderer, "ATI")) {
+    } else if (strstr(renderer, "Mozilla")) {
+        bugs.disable_invalidate_framebuffer = true;
     }
 
     // Figure out if we have the extension we need
@@ -1537,7 +1539,7 @@ void OpenGLDriver::beginRenderPass(Driver::RenderTargetHandle rth,
 
         // glInvalidateFramebuffer appeared on GLES 3.0 and GL4.3, for simplicity we just
         // ignore it on GL (rather than having to do a runtime check).
-        if (GLES31_HEADERS) {
+        if (GLES31_HEADERS && !!bugs.disable_invalidate_framebuffer) {
             std::array<GLenum, 3> attachments;
             GLsizei attachmentCount = getAttachments(attachments, rt, discardFlags);
             if (attachmentCount) {
@@ -1619,7 +1621,7 @@ void OpenGLDriver::endRenderPass(int) {
     const TargetBufferFlags discardFlags = (TargetBufferFlags) mRenderPassParams.discardEnd;
     // glInvalidateFramebuffer appeared on GLES 3.0 and GL4.3, for simplicity we just
     // ignore it on GL (rather than having to do a runtime check).
-    if (GLES31_HEADERS) {
+    if (GLES31_HEADERS && !bugs.disable_invalidate_framebuffer) {
         // we wouldn't have to bind the framebuffer if we had glInvalidateNamedFramebuffer()
         GLRenderTarget* rt = handle_cast<GLRenderTarget*>(mRenderPassTarget);
         bindFramebuffer(GL_FRAMEBUFFER, rt->gl.fbo);
