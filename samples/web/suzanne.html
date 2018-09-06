@@ -1,28 +1,35 @@
 <!DOCTYPE html>
-<title>Filament</title>
-<link href="favicon.png" rel="icon" type="image/x-icon"/>
-<meta name=viewport content='width=device-width,initial-scale=1'>
-<style>
-body {
-    margin: 0;
-    overflow: hidden;
-}
-#filament-canvas {
-    width: 100vw;
-    height: 100vh;
-}
-</style>
-<canvas id="filament-canvas"></canvas>
-<script src="suzanne.js"></script>
-<script src="filaweb.js"></script>
-<script>
-load({
-    'albedo':                    load_texture('monkey/albedo.png'),
-    'metallic':                  load_texture('monkey/metallic.png'),
-    'roughness':                 load_texture('monkey/roughness.png'),
-    'normal':                    load_texture('monkey/normal.png'),
-    'ao':                        load_texture('monkey/ao.png'),
-    'mesh':                      load_rawfile('monkey/mesh.filamesh'),
-    'syferfontein_18d_clear_2k': load_cubemap('syferfontein_18d_clear_2k/', 9)
-});
-</script>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Suzanne</title>
+    <link href="favicon.png" rel="icon" type="image/x-icon"/>
+    <meta name=viewport content='width=device-width,initial-scale=1'>
+    <style>
+    body {
+        margin: 0;
+        overflow: hidden;
+    }
+    #filament-canvas {
+        width: 100vw;
+        height: 100vh;
+    }
+    </style>
+</head>
+<body>
+    <canvas id="filament-canvas"></canvas>
+    <script src="suzanne.js"></script>
+    <script src="filaweb.js"></script>
+    <script>
+    load({
+        'albedo':                    load_texture('monkey/albedo.png'),
+        'metallic':                  load_texture('monkey/metallic.png'),
+        'roughness':                 load_texture('monkey/roughness.png'),
+        'normal':                    load_texture('monkey/normal.png'),
+        'ao':                        load_texture('monkey/ao.png'),
+        'mesh':                      load_rawfile('monkey/mesh.filamesh'),
+        'syferfontein_18d_clear_2k': load_cubemap('syferfontein_18d_clear_2k/', 9)
+    });
+    </script>
+</body>
+</html>

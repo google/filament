@@ -19,7 +19,8 @@ Module.postRun = function() {
         majorVersion: 2,
         minorVersion: 0,
         antialias: false,
-        depth: false
+        depth: false,
+        alpha: false
     });
     GL.makeContextCurrent(ctx);
     context_ready = true;
