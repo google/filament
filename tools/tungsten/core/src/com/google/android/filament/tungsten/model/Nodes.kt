@@ -20,6 +20,8 @@ import com.google.android.filament.tungsten.compiler.GraphCompiler
 import com.google.android.filament.tungsten.compiler.Expression
 import com.google.android.filament.tungsten.compiler.Literal
 import com.google.android.filament.tungsten.compiler.trim
+import com.google.android.filament.tungsten.properties.ColorChooser
+import com.google.android.filament.tungsten.properties.MultipleChoice
 
 private val adderNodeCompile = fun(node: Node, compiler: GraphCompiler): Node {
     val outputSlot = node.getOutputSlot("result")
@@ -119,7 +121,10 @@ val createFloat3ConstantNode = fun(id: NodeId): Node {
         type = "float3Constant",
         compileFunction = constantFloat3NodeCompile,
         outputSlots = listOf("result"),
-        properties = listOf(Property("value", Float3()))
+        properties = listOf(Property(
+            name = "value",
+            value = Float3(),
+            editorFactory = ::ColorChooser))
     )
 }
 
@@ -129,17 +134,24 @@ val createFloat3ParameterNode = fun(id: NodeId): Node {
         type = "float3Parameter",
         compileFunction = float3ParameterNodeCompile,
         outputSlots = listOf("result"),
-        properties = listOf(Property("value", Float3(), PropertyType.MATERIAL_PARAMETER))
+        properties = listOf(Property(
+            name = "value",
+            value = Float3(),
+            type = PropertyType.MATERIAL_PARAMETER,
+            editorFactory = ::ColorChooser))
     )
 }
 
 val createFloat2ConstantNode = fun(id: NodeId): Node {
     return Node(
-            id = id,
-            type = "float2Constant",
-            compileFunction = constantFloat2NodeCompile,
-            outputSlots = listOf("result"),
-            properties = listOf(Property("value", Float3()))
+        id = id,
+        type = "float2Constant",
+        compileFunction = constantFloat2NodeCompile,
+        outputSlots = listOf("result"),
+        properties = listOf(Property(
+            name = "value",
+            value = Float3(),
+            editorFactory = ::ColorChooser))
     )
 }
 
@@ -149,7 +161,10 @@ val createShaderNode = fun(id: NodeId): Node {
         type = "shader",
         compileFunction = shaderNodeCompile,
         inputSlots = listOf("baseColor", "emissive"),
-        properties = listOf(Property("materialModel", StringValue("unlit"))))
+        properties = listOf(Property(
+            name = "materialModel",
+            value = StringValue("unlit"),
+            editorFactory = { MultipleChoice(it, listOf("lit", "unlit")) })))
 }
 
 object GraphInitializer {

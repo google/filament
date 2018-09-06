@@ -48,7 +48,7 @@ data class Node(
     val outputSlots: List<String> = emptyList(),
     val inputSlots: List<String> = emptyList(),
 
-    val properties: List<Property> = emptyList()
+    val properties: List<Property<*>> = emptyList()
 ) {
 
     data class InputSlot(val nodeId: NodeId, val name: String) : Slot()
@@ -157,7 +157,7 @@ data class Graph(
         return this
     }
 
-    fun graphByChangingProperty(property: Node.PropertyHandle, value: Property): Graph {
+    fun graphByChangingProperty(property: Node.PropertyHandle, value: Property<*>): Graph {
         val node = nodeMap[property.nodeId] ?: return this
         val newProperties = node.properties.map {
             p -> if (p.name == property.name) value else p

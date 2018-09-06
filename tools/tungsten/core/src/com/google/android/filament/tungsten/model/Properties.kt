@@ -17,6 +17,7 @@
 package com.google.android.filament.tungsten.model
 
 import com.google.android.filament.MaterialInstance
+import com.google.android.filament.tungsten.properties.PropertyEditor
 
 sealed class PropertyValue {
 
@@ -41,7 +42,7 @@ data class Float3(val x: Float = 0.0f, val y: Float = 0.0f, val z: Float = 0.0f)
 
     override fun serialize() = listOf(x, y, z)
 
-    override fun deserialize(value: Any): PropertyValue {
+    override fun deserialize(value: Any): Float3 {
         if (value !is List<*> || value.size < 3) return this
         val (x, y, z) = value
         if (x !is Number || y !is Number || z !is Number) return this
@@ -53,7 +54,7 @@ data class StringValue(val value: String) : PropertyValue() {
 
     override fun serialize() = value
 
-    override fun deserialize(value: Any): PropertyValue {
+    override fun deserialize(value: Any): StringValue {
         if (value !is String) return this
         return StringValue(value)
     }
@@ -64,8 +65,20 @@ enum class PropertyType {
     MATERIAL_PARAMETER
 }
 
-data class Property(
+data class Property<T : PropertyValue>(
     val name: String,
-    val value: PropertyValue,
-    val type: PropertyType = PropertyType.GRAPH_PROPERTY
-)
+    val value: T,
+    val type: PropertyType = PropertyType.GRAPH_PROPERTY,
+
+    // Construct an appropriate PropertyEditor for this property.
+    val editorFactory: (T) -> PropertyEditor
+) {
+
+    fun callEditorFactory(): PropertyEditor = this.editorFactory.invoke(value)
+}
+
+fun <T : PropertyValue> copyPropertyWithValue(
+    p: Property<T>,
+    value: PropertyValue
+): Property<*> =
+        Property(name = p.name, value = value as T, type = p.type, editorFactory = p.editorFactory)
