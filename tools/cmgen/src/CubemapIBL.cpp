@@ -108,6 +108,34 @@ void CubemapIBL::roughnessFilter(Cubemap& dst,
     const size_t dim0 = base.getDimensions();
     const float omegaP = float((4 * M_PI) / (6 * dim0 * dim0));
 
+    ProgressUpdater updater(1);
+    std::atomic_uint progress = {0};
+
+    if (linearRoughness == 0) {
+        if (!g_quiet) {
+            updater.start();
+        }
+        CubemapUtils::process<CubemapUtils::EmptyState>(dst, [&, quiet = g_quiet]
+                (CubemapUtils::EmptyState&, size_t y, Cubemap::Face f, Cubemap::Texel* data, size_t dim) {
+                    size_t p = progress.fetch_add(1, std::memory_order_relaxed) + 1;
+                    if (!quiet) {
+                        updater.update(0, p, dim * 6);
+                    }
+                    const Cubemap& cm = levels[0];
+                    for (size_t x = 0; x < dim; ++x, ++data) {
+                        const double2 p(dst.center(x, y));
+                        const double3 N(dst.getDirectionFor(f, p.x, p.y));
+                        // FIXME: we should pick the proper LOD here and do trilinear filtering
+                        Cubemap::writeAt(data, cm.sampleAt(N));
+                    }
+                });
+        if (!g_quiet) {
+            updater.stop();
+        }
+        return;
+    }
+
+
     // be careful w/ the size of this structure, the smaller the better
     struct CacheEntry {
         double3 L;
@@ -214,12 +242,10 @@ void CubemapIBL::roughnessFilter(Cubemap& dst,
         return lhs.brdf_NoL < rhs.brdf_NoL;
     });
 
-    ProgressUpdater updater(1);
     if (!g_quiet) {
         updater.start();
     }
 
-    std::atomic_uint progress = {0};
     CubemapUtils::process<CubemapUtils::EmptyState>(dst,
             [ &, quiet=g_quiet ](CubemapUtils::EmptyState&, size_t y, Cubemap::Face f, Cubemap::Texel* data,
                     size_t dim) {
@@ -227,17 +253,6 @@ void CubemapIBL::roughnessFilter(Cubemap& dst,
         size_t p = progress.fetch_add(1, std::memory_order_relaxed) + 1;
         if (!quiet) {
             updater.update(0, p, dim * 6);
-        }
-
-        if (linearRoughness == 0) {
-            const Cubemap& cm = levels[0];
-            for (size_t x=0 ; x<dim ; ++x, ++data) {
-                const double2 p(dst.center(x, y));
-                const double3 N(dst.getDirectionFor(f, p.x, p.y));
-                // FIXME: we should pick the proper LOD here and do trilinear filtering
-                Cubemap::writeAt(data, cm.sampleAt(N));
-            }
-            return;
         }
 
         mat3 R;
