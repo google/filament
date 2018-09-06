@@ -77,27 +77,21 @@ add_custom_command(
     DEPENDS filamesh)
 
 # Next build two cubemaps:
-#  (1) single miplevel of blurry skybox (png)
-#  (2) all miplevels for the IBL (rgbm)
+#  (1) single miplevel of blurry skybox
+#  (2) all miplevels for the IBL
 
 set(source_envmap "${CMAKE_CURRENT_SOURCE_DIR}/../../third_party/environments/syferfontein_18d_clear_2k.hdr")
 
 foreach(FACE nx ny nz px py pz)
-    set(target_skybox ${target_skybox} public/syferfontein_18d_clear_2k/${FACE}.png)
+    set(target_skybox ${target_skybox} public/syferfontein_18d_clear_2k/${FACE}.rgbm)
     foreach(MIP 0 1 2 3 4 5 6 7 8)
         set(target_envmap ${target_envmap} public/syferfontein_18d_clear_2k/m${MIP}_${FACE}.rgbm)
     endforeach()
 endforeach()
 
 add_custom_command(
-    OUTPUT ${target_envmap}
-    COMMAND cmgen -x public --format=rgbm --size=256 ${source_envmap} 
-    MAIN_DEPENDENCY ${source_envmap}
-    DEPENDS cmgen)
-
-add_custom_command(
-    OUTPUT ${target_skybox}
-    COMMAND cmgen -x public --format=png --size=512 --extract-blur=0.1 ${source_envmap} 
+    OUTPUT ${target_skybox} ${target_envmap}
+    COMMAND cmgen -x public --format=rgbm --size=512 --extract-blur=0.1 ${source_envmap}
     MAIN_DEPENDENCY ${source_envmap}
     DEPENDS cmgen)
 
@@ -126,7 +120,7 @@ function(add_demo NAME)
             filaweb.h
             filaweb.cpp)
     add_dependencies(${NAME} sample_materials sample_assets)
-    target_link_libraries(${NAME} PRIVATE filament math filamat utils)
+    target_link_libraries(${NAME} PRIVATE filament math utils stb)
 
     # Copy the generated js and wasm files into the public folder, as well as the app-specific
     # manually-written HTML file.
