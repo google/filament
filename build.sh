@@ -212,6 +212,16 @@ function build_webgl_with_target {
             ../..
         ${BUILD_COMMAND} ${BUILD_TARGETS}
     fi
+
+    if [ -d "samples/web/public" ]; then
+        if [ "$ISSUE_ARCHIVES" == "true" ]; then
+            echo "Generating out/filament-${LC_TARGET}-web.tgz..."
+            cd samples/web/public
+            tar -czvf ../../../../filament-${LC_TARGET}-web.tgz .
+            cd -
+        fi
+    fi
+
     cd ../..
 }
 
