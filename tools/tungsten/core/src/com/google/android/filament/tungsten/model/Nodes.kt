@@ -61,7 +61,7 @@ private val shaderNodeCompile = fun(node: Node, compiler: GraphCompiler): Node {
     val shadingModel = (node.properties[0].value as StringValue).value
     compiler.setShadingModel(shadingModel)
 
-    val compileMaterialInput = { name: String, dimensions: Int, shouldProvideDefault: Boolean ->
+    val compileMaterialInput = { name: String, dimensions: Int ->
         val inputSlot = node.getInputSlot(name)
         val connectedExpression = compiler.compileAndRetrieveExpression(inputSlot)
         val isConnected = connectedExpression != null
@@ -70,10 +70,7 @@ private val shaderNodeCompile = fun(node: Node, compiler: GraphCompiler): Node {
         // Conform the expression to match the dimensionality of the material input.
         val conformedExpression = expression.conform(dimensions)
 
-        // Some inputs, like clearCoat, affect shader code generation if they're set in GLSL. For
-        // these, shouldProvideDefault is set to false so that no code is added to set the material
-        // input.
-        if (isConnected || shouldProvideDefault) {
+        if (isConnected) {
             compiler.addCodeToMaterialFunctionBody("material.$name = $conformedExpression;\n")
         }
         compiler.setExpressionForSlot(inputSlot, conformedExpression)
@@ -81,18 +78,18 @@ private val shaderNodeCompile = fun(node: Node, compiler: GraphCompiler): Node {
 
     // Compile inputs common to all shading models.
     val compileCommonInputs = {
-        compileMaterialInput("baseColor", 4, true)
-        compileMaterialInput("emissive", 4, true)
+        compileMaterialInput("baseColor", 4)
+        compileMaterialInput("emissive", 4)
     }
 
     // Compile inputs unique to the "lit" shading model.
     val compileLitInputs = {
-        compileMaterialInput("metallic", 1, true)
-        compileMaterialInput("roughness", 1, true)
-        compileMaterialInput("reflectance", 1, true)
-        compileMaterialInput("clearCoat", 1, false)
-        compileMaterialInput("clearCoatRoughness", 1, false)
-        compileMaterialInput("ambientOcclusion", 1, true)
+        compileMaterialInput("metallic", 1)
+        compileMaterialInput("roughness", 1)
+        compileMaterialInput("reflectance", 1)
+        compileMaterialInput("clearCoat", 1)
+        compileMaterialInput("clearCoatRoughness", 1)
+        compileMaterialInput("ambientOcclusion", 1)
     }
 
     compileCommonInputs()
