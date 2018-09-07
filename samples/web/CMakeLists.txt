@@ -10,8 +10,6 @@ set(MATERIAL_SRCS
         ../materials/bakedColor.mat)
 
 if (CMAKE_CROSSCOMPILING)
-    set(IMPORT_EXECUTABLES ${FILAMENT}/${IMPORT_EXECUTABLES_DIR})
-    set(IMPORT_EXECUTABLES ${IMPORT_EXECUTABLES}/ImportExecutables-${CMAKE_BUILD_TYPE}.cmake)
     include(${IMPORT_EXECUTABLES})
 endif()
 
