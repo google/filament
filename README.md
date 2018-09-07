@@ -340,12 +340,12 @@ Clang:C:/Program Files/LLVM/msbuild-bin/cl.exe
 
 You are now ready to build:
 ```
-> msbuild  TNT.sln /t:material_sandbox /m /p:configuration=Debug
+> msbuild  TNT.sln /t:material_sandbox /m /p:configuration=Release
 ```
 
 Run it:
 ```
-> samples\material_sandbox.exe ..\..\assets\models\monkey\monkey.obj
+> samples\Release\lightbulb.exe ..\..\assets\models\monkey\monkey.obj
 ```
 
 #### Tips
@@ -353,7 +353,7 @@ Run it:
 - To troubleshoot an issue, use verbose mode via `/v:d` flag.
 - To build a specific project, use `/t:NAME` flag (e.g: `/t:material_sandbox`).
 - To build using more than one core, use parallel build flag: `/m`.
-- To build a specific profile, used `/p:configuration=` (e.g: `/p:configuration=Debug`,
+- To build a specific profile, use `/p:configuration=` (e.g: `/p:configuration=Debug`,
   `/p:configuration=Release`, and `/p:configuration=RelWithDebInfo`).
 - The msBuild project is what is used by Visual Studio behind the scene to build. Building from VS
   or from the command-line is the same thing.
