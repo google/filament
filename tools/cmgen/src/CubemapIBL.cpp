@@ -154,7 +154,7 @@ void CubemapIBL::roughnessFilter(Cubemap& dst,
     // our goal is to use maxNumSamples for which NoL is > 0
     // to achieve this, we might have to try more samples than
     // maxNumSamples
-    for (size_t sampleIndex = 0, sample = 0 ; sampleIndex < maxNumSamples; sampleIndex++) {
+    for (size_t sampleIndex = 0 ; sampleIndex < maxNumSamples; sampleIndex++) {
         /*
          *       (sampling)
          *            L         H (never calculated below)
@@ -228,8 +228,6 @@ void CubemapIBL::roughnessFilter(Cubemap& dst,
             float lerp = mipLevel - l0;
 
             cache.push_back({ L, brdf_NoL, lerp, l0, l1 });
-
-            sample++;
         }
     }
 
@@ -257,12 +255,12 @@ void CubemapIBL::roughnessFilter(Cubemap& dst,
 
         mat3 R;
         const size_t numSamples = cache.size();
-        for (size_t x=0 ; x<dim ; ++x, ++data) {
+        for (size_t x = 0; x < dim; ++x, ++data) {
             const double2 p(dst.center(x, y));
             const double3 N(dst.getDirectionFor(f, p.x, p.y));
 
             // center the cone around the normal (handle case of normal close to up)
-            const double3 up = std::abs(N.z)<0.999 ? double3(0,0,1) : double3(1,0,0);
+            const double3 up = std::abs(N.z) < 0.999 ? double3(0, 0, 1) : double3(1, 0, 0);
             R[0] = normalize(cross(up, N));
             R[1] = cross(N, R[0]);
             R[2] = N;
