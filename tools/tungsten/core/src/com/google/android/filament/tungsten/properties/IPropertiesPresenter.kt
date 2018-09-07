@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-package com.google.android.filament.tungsten.properties;
+package com.google.android.filament.tungsten.properties
 
-import com.google.android.filament.tungsten.model.Node;
-import com.google.android.filament.tungsten.model.Property;
+import com.google.android.filament.tungsten.model.Node
+import com.google.android.filament.tungsten.model.Property
 
-public interface IPropertiesPresenter {
+interface IPropertiesPresenter {
 
-    void propertyChanged(Node.PropertyHandle handle, Property property);
+    fun propertyChanged(handle: Node.PropertyHandle, property: Property<*>)
 }

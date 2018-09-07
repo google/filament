@@ -88,12 +88,10 @@ internal data class NodeView(
 
     override val children = inputSlots + outputSlots
 
-    init {
-        width = NODE_WIDTH
-        height = NODE_HEIGHT
-    }
-
     override fun layout() {
+        width = NODE_WIDTH
+        height = maxOf((inputSlots.size + outputSlots.size) * SLOT_HEIGHT + 2 * SLOT_MARGIN,
+                NODE_HEIGHT)
         inputSlots.forEachIndexed { index, slot ->
             slot.x = SLOT_MARGIN
             slot.y = SLOT_MARGIN + index * SLOT_HEIGHT
@@ -111,12 +109,12 @@ internal data class NodeView(
     override fun render(g2d: Graphics2D) {
         if (isSelected) {
             g2d.color = ColorScheme.nodeSelected
-            g2d.fillRoundRect(0, 0, NODE_WIDTH.toInt(), NODE_HEIGHT.toInt(), ARC_RADIUS, ARC_RADIUS)
+            g2d.fillRoundRect(0, 0, width.toInt(), height.toInt(), ARC_RADIUS, ARC_RADIUS)
         }
         g2d.color = ColorScheme.nodeBackground
         g2d.fillRoundRect(BORDER_THICKNESS, BORDER_THICKNESS,
-                (NODE_WIDTH - 2 * BORDER_THICKNESS).toInt(),
-                (NODE_HEIGHT - 2 * BORDER_THICKNESS).toInt(), ARC_RADIUS, ARC_RADIUS)
+                (width - 2 * BORDER_THICKNESS).toInt(),
+                (height - 2 * BORDER_THICKNESS).toInt(), ARC_RADIUS, ARC_RADIUS)
     }
 }
 
