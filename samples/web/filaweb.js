@@ -1,6 +1,8 @@
 let assets = {};
 let assets_ready = false;
 let context_ready = false;
+let previous_mouse_buttons = 0;
+let queued_mouse_events = [];
 
 // This is usually (not always) called before the wasm has finished JIT compiling.
 async function load(promises) {
@@ -34,11 +36,33 @@ function maybe_launch() {
         _launch();
         canvas_resize();
         window.addEventListener("resize", canvas_resize);
-        canvas_render();    
+        window.addEventListener("wheel", canvas_mouse);
+        window.addEventListener("mousemove", canvas_mouse);
+        window.addEventListener("mousedown", canvas_mouse);
+        window.addEventListener("mouseup", canvas_mouse);
+        canvas_render();
     }
 }
 
+// Update a tiny queue of mouse events. We don't send them to WASM immediately because ImGui detects
+// click events by looking for three consecutive frames of down-up-down.
+function canvas_mouse(evt) {
+    let args = [evt.clientX, evt.clientY, evt.deltaX || 0, evt.deltaY || 0, evt.buttons];
+    if (evt.buttons != previous_mouse_buttons || queued_mouse_events.length == 0) {
+        queued_mouse_events.push(args);
+    } else {
+        // Clobber the previous event if the button state doesn't change, there's no point in
+        // creating latency.
+        queued_mouse_events[queued_mouse_events.length - 1] = args;
+    }
+    previous_mouse_buttons = evt.buttons;
+}
+
 function canvas_render() {
+    if (queued_mouse_events.length > 0) {
+        let args = queued_mouse_events.splice(0, 1)[0];
+        _mouse(args[0], args[1], args[2], args[3], args[4]);
+    }
     _render();
     window.requestAnimationFrame(canvas_render);
 }
