@@ -65,35 +65,42 @@ copy_assets("." filaweb.js)
 copy_assets("." favicon.png)
 copy_assets("../../assets/models" monkey)
 
-# Convert OBJ into a simple binary format.
-set(source_mesh "${CMAKE_CURRENT_SOURCE_DIR}/../../assets/models/monkey/monkey.obj")
-set(target_mesh "public/monkey/mesh.filamesh")
-add_custom_command(
-    OUTPUT ${target_mesh}
-    COMMAND filamesh ${source_mesh} public/monkey/mesh.filamesh
-    MAIN_DEPENDENCY ${source_mesh}
-    DEPENDS filamesh)
+# Convert OBJ files into filamesh files.
+function(add_mesh SOURCE TARGET)
+    set(source_mesh "${CMAKE_CURRENT_SOURCE_DIR}/../../${SOURCE}")
+    set(target_mesh "public/${TARGET}")
+    set(target_meshes ${target_meshes} ${target_mesh} PARENT_SCOPE)
+    add_custom_command(
+        OUTPUT ${target_mesh}
+        COMMAND filamesh ${source_mesh} ${target_mesh}
+        MAIN_DEPENDENCY ${source_mesh}
+        DEPENDS filamesh)
+endfunction()
 
-# Next build two cubemaps:
-#  (1) single miplevel of blurry skybox
-#  (2) all miplevels for the IBL
+add_mesh("assets/models/monkey/monkey.obj" "monkey/mesh.filamesh")
+add_mesh("third_party/shader_ball/shader_ball.obj" "shaderball/mesh.filamesh")
 
-set(source_envmap "${CMAKE_CURRENT_SOURCE_DIR}/../../third_party/environments/syferfontein_18d_clear_2k.hdr")
-
-foreach(FACE nx ny nz px py pz)
-    set(target_skybox ${target_skybox} public/syferfontein_18d_clear_2k/${FACE}.rgbm)
-    foreach(MIP 0 1 2 3 4 5 6 7 8)
-        set(target_envmap ${target_envmap} public/syferfontein_18d_clear_2k/m${MIP}_${FACE}.rgbm)
+function(add_envmap SOURCE TARGET)
+    set(source_envmap "${CMAKE_CURRENT_SOURCE_DIR}/../../${SOURCE}")
+    foreach(FACE nx ny nz px py pz)
+        set(target_skybox ${target_skybox} ${TARGET}/${FACE}.rgbm)
+        foreach(MIP 0 1 2 3 4 5 6 7 8)
+            set(target_envmap ${target_envmap} ${TARGET}/m${MIP}_${FACE}.rgbm)
+        endforeach()
     endforeach()
-endforeach()
+    set(target_skyboxes ${target_skyboxes} ${target_skybox} PARENT_SCOPE)
+    add_custom_command(
+        OUTPUT ${target_skybox} ${target_envmap}
+        COMMAND cmgen -x public --format=rgbm --size=512 --extract-blur=0.1 ${source_envmap}
+        MAIN_DEPENDENCY ${source_envmap}
+        DEPENDS cmgen)
+    set(target_envmaps ${target_envmaps} ${target_envmap} PARENT_SCOPE)
+endfunction()
 
-add_custom_command(
-    OUTPUT ${target_skybox} ${target_envmap}
-    COMMAND cmgen -x public --format=rgbm --size=512 --extract-blur=0.1 ${source_envmap}
-    MAIN_DEPENDENCY ${source_envmap}
-    DEPENDS cmgen)
+add_envmap("third_party/environments/syferfontein_18d_clear_2k.hdr" "public/syferfontein_18d_clear_2k")
+add_envmap("third_party/environments/pillars_2k.hdr" "public/pillars_2k")
 
-add_custom_target(sample_assets DEPENDS ${target_mesh} ${target_envmap} ${target_skybox})
+add_custom_target(sample_assets DEPENDS ${target_meshes} ${target_envmaps} ${target_skyboxes})
 
 # ==================================================================================================
 # For each demo, build a pair of wasm/js files and copy over an HTML file.
@@ -118,7 +125,7 @@ function(add_demo NAME)
             filaweb.h
             filaweb.cpp)
     add_dependencies(${NAME} sample_materials sample_assets)
-    target_link_libraries(${NAME} PRIVATE filament math utils stb)
+    target_link_libraries(${NAME} PRIVATE filament filagui math utils stb)
 
     # Copy the generated js and wasm files into the public folder, as well as the app-specific
     # manually-written HTML file.

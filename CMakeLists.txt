@@ -274,8 +274,12 @@ endif()
 set (FILAMENT_SAMPLES_BINARY_DIR ${PROJECT_BINARY_DIR}/samples)
 
 if (WEBGL)
-    add_subdirectory(${EXTERNAL}/stb/tnt)
     add_subdirectory(${FILAMENT}/samples/web)
+
+    add_subdirectory(${LIBRARIES}/filagui)
+
+    add_subdirectory(${EXTERNAL}/imgui/tnt)
+    add_subdirectory(${EXTERNAL}/stb/tnt)
 endif()
 
 if (NOT ANDROID AND NOT WEBGL)
