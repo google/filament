@@ -283,6 +283,118 @@ void CubemapIBL::roughnessFilter(Cubemap& dst,
     }
 }
 
+void CubemapIBL::diffuseIrradiance(Cubemap& dst, const std::vector<Cubemap>& levels, size_t maxNumSamples)
+{
+    const float numSamples = maxNumSamples;
+    const float inumSamples = 1.0f / numSamples;
+    const size_t maxLevel = levels.size()-1;
+    const float maxLevelf = maxLevel;
+    const Cubemap& base(levels[0]);
+    const size_t dim0 = base.getDimensions();
+    const float omegaP = float((4 * M_PI) / (6 * dim0 * dim0));
+
+    ProgressUpdater updater(1);
+    std::atomic_uint progress = {0};
+
+
+    struct CacheEntry {
+        double3 L;
+        float lerp;
+        uint8_t l0;
+        uint8_t l1;
+    };
+
+    std::vector<CacheEntry> cache;
+    cache.reserve(maxNumSamples);
+
+    // precompute everything that only depends on the sample #
+    for (size_t sampleIndex = 0, sample = 0 ; sampleIndex < maxNumSamples; sampleIndex++) {
+        /*
+         *       (sampling)
+         *            L
+         *            .\
+         *            . \
+         *            .  \
+         *            .   \
+         *         ---|----o------------> n
+         *           n.L
+         */
+
+        // get Hammersley distribution for the half-sphere
+        const double2 u = hammersley(uint32_t(sampleIndex), inumSamples);
+        const double3 L = hemisphereCosSample(u);
+        const double3 N = { 0, 0, 1 };
+        const double NoL = dot(N, L);
+
+        if (NoL > 0) {
+            // pre-filtered importance sampling
+            // see: "Real-time Shading with Filtered Importance Sampling", Jaroslav Krivanek
+            // see: "GPU-Based Importance Sampling, GPU Gems 3", Mark Colbert
+
+            // K is a LOD bias that allows a bit of overlapping between samples
+            // log4(K)=1 empirically works well with box-filtered mipmaps
+            constexpr float K = 4;
+
+            // OmegaS is is the solid-angle of an important sample (i.e. how much surface
+            // of the sphere it represents). It obviously is function of the PDF.
+            double pdf = NoL / M_PI;
+            const double omegaS = 1.0 / (numSamples * pdf);
+
+            // The LOD is given by: max[ log4(Os/Op) + K, 0 ]
+            const double l = float(log4(omegaS) - log4(omegaP) + log4(K));
+            const float mipLevel = clamp(float(l), 0.0f, maxLevelf);
+
+            uint8_t l0 = uint8_t(mipLevel);
+            uint8_t l1 = uint8_t(std::min(maxLevel, size_t(l0 + 1)));
+            float lerp = mipLevel - l0;
+
+            cache.push_back({ L, lerp, l0, l1 });
+        }
+    }
+
+    if (!g_quiet) {
+        updater.start();
+    }
+
+    CubemapUtils::process<CubemapUtils::EmptyState>(dst,
+            [ &, quiet=g_quiet ](CubemapUtils::EmptyState&, size_t y, Cubemap::Face f, Cubemap::Texel* data,
+                    size_t dim) {
+
+        size_t p = progress.fetch_add(1, std::memory_order_relaxed) + 1;
+        if (!quiet) {
+            updater.update(0, p, dim * 6);
+        }
+
+        mat3 R;
+        const size_t numSamples = cache.size();
+        for (size_t x = 0; x < dim; ++x, ++data) {
+            const double2 p(dst.center(x, y));
+            const double3 N(dst.getDirectionFor(f, p.x, p.y));
+
+            // center the cone around the normal (handle case of normal close to up)
+            const double3 up = std::abs(N.z) < 0.999 ? double3(0, 0, 1) : double3(1, 0, 0);
+            R[0] = normalize(cross(up, N));
+            R[1] = cross(N, R[0]);
+            R[2] = N;
+
+            float3 Li = 0;
+            for (size_t sample = 0; sample < numSamples; sample++) {
+                const CacheEntry& e = cache[sample];
+                const double3 L(R * e.L);
+                const Cubemap& cmBase = levels[e.l0];
+                const Cubemap& next = levels[e.l1];
+                const float3 c0 = Cubemap::trilinearFilterAt(cmBase, next, e.lerp, L);
+                Li += c0;
+            }
+            Cubemap::writeAt(data, Cubemap::Texel(Li * inumSamples * M_PI));
+        }
+    });
+
+    if (!g_quiet) {
+        updater.stop();
+    }
+}
+
 // Not importance-sampled
 static double2 __UNUSED DFV_NoIS(double NoV, double roughness, size_t numSamples) {
     double2 r = 0;
