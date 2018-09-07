@@ -35,8 +35,8 @@ function maybe_launch() {
     if (assets_ready && context_ready) {
         _launch();
         canvas_resize();
+        window.addEventListener("resize", canvas_resize);
         let canvas = document.getElementById('filament-canvas');
-        canvas.addEventListener("resize", canvas_resize);
         canvas.addEventListener("wheel", canvas_mouse);
         canvas.addEventListener("pointermove", canvas_mouse);
         canvas.addEventListener("pointerdown", canvas_mouse);
