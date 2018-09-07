@@ -239,6 +239,15 @@ function(list_licenses OUTPUT MODULES)
 endfunction(list_licenses)
 
 # ==================================================================================================
+# Configuration for CMAKE_CROSSCOMPILING.
+# ==================================================================================================
+if (WEBGL)
+    set(IMPORT_EXECUTABLES ${FILAMENT}/${IMPORT_EXECUTABLES_DIR}/ImportExecutables-Release.cmake)
+else()
+    set(IMPORT_EXECUTABLES ${FILAMENT}/${IMPORT_EXECUTABLES_DIR}/ImportExecutables-${CMAKE_BUILD_TYPE}.cmake)
+endif()
+
+# ==================================================================================================
 # Sub-projects
 # ==================================================================================================
 # Common to all platforms
@@ -306,5 +315,5 @@ endif()
 
 # Generate exported executables for cross-compiled builds (Android and WebGL)
 if (NOT CMAKE_CROSSCOMPILING)
-    export(TARGETS matc cmgen filamesh FILE ${FILAMENT}/${IMPORT_EXECUTABLES_DIR}/ImportExecutables-${CMAKE_BUILD_TYPE}.cmake)
+    export(TARGETS matc cmgen filamesh FILE ${IMPORT_EXECUTABLES})
 endif()

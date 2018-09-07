@@ -21,7 +21,6 @@ set(MATERIAL_SRCS
         materials/transparentColor.mat)
 
 if (CMAKE_CROSSCOMPILING)
-    set(IMPORT_EXECUTABLES ${FILAMENT}/${IMPORT_EXECUTABLES_DIR}/ImportExecutables-${CMAKE_BUILD_TYPE}.cmake)
     include(${IMPORT_EXECUTABLES})
 endif()
 
