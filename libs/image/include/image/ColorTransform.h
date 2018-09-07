@@ -201,7 +201,7 @@ std::unique_ptr<uint8_t[]> fromLinearToRGBM(const LinearImage& image) {
     for (size_t y = 0; y < h; ++y) {
         for (size_t x = 0; x < w; ++x, d += 4) {
             auto src = image.get<float3>((uint32_t) x, (uint32_t) y);
-            float4 l(linearToRGBM(*src) * std::numeric_limits<T>::max());
+            float4 l(linearToRGBM(*src) * math::float4(std::numeric_limits<T>::max()));
             for (size_t i = 0; i < 4; i++) {
                 d[i] = T(l[i]);
             }
@@ -269,7 +269,7 @@ static LinearImage toLinearWithAlpha(size_t w, size_t h, size_t bpr,
         T const* p = reinterpret_cast<T const*>(src + y * bpr);
         for (size_t x = 0; x < w; ++x, p += 4) {
             math::float4 sRGB(proc(p[0]), proc(p[1]), proc(p[2]), proc(p[3]));
-            sRGB /= std::numeric_limits<T>::max();
+            sRGB /= math::float4(std::numeric_limits<T>::max());
             *d++ = transform(sRGB);
         }
     }

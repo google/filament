@@ -21,16 +21,19 @@
 #include <limits>
 #include <type_traits>
 
-#ifdef __cplusplus
-#   define LIKELY( exp )    (__builtin_expect( !!(exp), true ))
-#   define UNLIKELY( exp )  (__builtin_expect( !!(exp), false ))
+#if (_MSC_VER)
+#	define LIKELY(exp) (exp) // MSVC_PORT_TODO : MSVC seem to not have equivalent
+#	define UNLIKELY(exp) (exp) // MSVC_PORT_TODO : MSVC seem to not have equivalent
+#	define MAKE_CONSTEXPR(e) (e)
 #else
-#   define LIKELY( exp )    (__builtin_expect( !!(exp), 1 ))
-#   define UNLIKELY( exp )  (__builtin_expect( !!(exp), 0 ))
-#endif
-
-#ifndef MAKE_CONSTEXPR
-#define MAKE_CONSTEXPR(e) __builtin_constant_p(e) ? (e) : (e)
+#	ifdef __cplusplus
+#	   define LIKELY( exp )    (__builtin_expect( !!(exp), true ))
+#	   define UNLIKELY( exp )  (__builtin_expect( !!(exp), false ))
+#	else
+#	   define LIKELY( exp )    (__builtin_expect( !!(exp), 1 ))
+#	   define UNLIKELY( exp )  (__builtin_expect( !!(exp), 0 ))
+#	endif
+#	define MAKE_CONSTEXPR(e) __builtin_constant_p(e) ? (e) : (e)
 #endif
 
 namespace math {

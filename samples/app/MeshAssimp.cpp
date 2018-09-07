@@ -40,11 +40,11 @@ using namespace filamat;
 using namespace math;
 using namespace utils;
 
-static constexpr uint8_t DEFAULT_MATERIAL_PACKAGE[] = {
+static const uint8_t DEFAULT_MATERIAL_PACKAGE[] = {
     #include "generated/material/aiDefaultMat.inc"
 };
 
-static constexpr uint8_t DEFAULT_TRANSPARENT_PACKAGE[] = {
+static const uint8_t DEFAULT_TRANSPARENT_PACKAGE[] = {
     #include "generated/material/aiDefaultTrans.inc"
 };
 

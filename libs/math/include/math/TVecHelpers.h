@@ -29,6 +29,20 @@
 
 #include <math/compiler.h>
 
+#ifndef PURE
+#	if defined(_MSC_VER)
+#		define PURE // MSVC_PORT_TODO : find and insert equivalent of pure functions
+#	else
+#		define PURE __attribute__((pure))
+#	endif
+#endif
+
+#if defined(_MSC_VER)
+#	define CONSTEXPR_IF_POSSIBLE 
+#else
+#	define CONSTEXPR_IF_POSSIBLE constexpr
+#endif
+
 namespace math {
 namespace details {
 // -------------------------------------------------------------------------------------
@@ -55,7 +69,7 @@ public:
      * element type.
      */
     template<typename OTHER>
-    VECTOR<T>& operator +=(const VECTOR<OTHER>& v) {
+	constexpr VECTOR<T>& operator +=(const VECTOR<OTHER>& v) {
         VECTOR<T>& lhs = static_cast<VECTOR<T>&>(*this);
         for (size_t i = 0; i < lhs.size(); i++) {
             lhs[i] += v[i];
@@ -63,7 +77,7 @@ public:
         return lhs;
     }
     template<typename OTHER>
-    VECTOR<T>& operator -=(const VECTOR<OTHER>& v) {
+	constexpr VECTOR<T>& operator -=(const VECTOR<OTHER>& v) {
         VECTOR<T>& lhs = static_cast<VECTOR<T>&>(*this);
         for (size_t i = 0; i < lhs.size(); i++) {
             lhs[i] -= v[i];
@@ -76,14 +90,14 @@ public:
      * like "vector *= scalar" by letting the compiler implicitly convert a scalar
      * to a vector (assuming the BASE<T> allows it).
      */
-    VECTOR<T>& operator +=(const VECTOR<T>& v) {
+	constexpr VECTOR<T>& operator +=(const VECTOR<T>& v) {
         VECTOR<T>& lhs = static_cast<VECTOR<T>&>(*this);
         for (size_t i = 0; i < lhs.size(); i++) {
             lhs[i] += v[i];
         }
         return lhs;
     }
-    VECTOR<T>& operator -=(const VECTOR<T>& v) {
+	constexpr VECTOR<T>& operator -=(const VECTOR<T>& v) {
         VECTOR<T>& lhs = static_cast<VECTOR<T>&>(*this);
         for (size_t i = 0; i < lhs.size(); i++) {
             lhs[i] -= v[i];
@@ -136,7 +150,7 @@ public:
      * element type.
      */
     template<typename OTHER>
-    VECTOR<T>& operator *=(const VECTOR<OTHER>& v) {
+    constexpr VECTOR<T>& operator *=(const VECTOR<OTHER>& v) {
         VECTOR<T>& lhs = static_cast<VECTOR<T>&>(*this);
         for (size_t i = 0; i < lhs.size(); i++) {
             lhs[i] *= v[i];
@@ -144,7 +158,7 @@ public:
         return lhs;
     }
     template<typename OTHER>
-    VECTOR<T>& operator /=(const VECTOR<OTHER>& v) {
+	constexpr VECTOR<T>& operator /=(const VECTOR<OTHER>& v) {
         VECTOR<T>& lhs = static_cast<VECTOR<T>&>(*this);
         for (size_t i = 0; i < lhs.size(); i++) {
             lhs[i] /= v[i];
@@ -157,14 +171,14 @@ public:
      * like "vector *= scalar" by letting the compiler implicitly convert a scalar
      * to a vector (assuming the BASE<T> allows it).
      */
-    VECTOR<T>& operator *=(const VECTOR<T>& v) {
+	constexpr VECTOR<T>& operator *=(const VECTOR<T>& v) {
         VECTOR<T>& lhs = static_cast<VECTOR<T>&>(*this);
         for (size_t i = 0; i < lhs.size(); i++) {
             lhs[i] *= v[i];
         }
         return lhs;
     }
-    VECTOR<T>& operator /=(const VECTOR<T>& v) {
+	constexpr VECTOR<T>& operator /=(const VECTOR<T>& v) {
         VECTOR<T>& lhs = static_cast<VECTOR<T>&>(*this);
         for (size_t i = 0; i < lhs.size(); i++) {
             lhs[i] /= v[i];
@@ -392,11 +406,11 @@ public:
         return r;
     }
 
-    friend inline constexpr T MATH_PURE norm(const VECTOR<T>& lv) {
+    friend inline CONSTEXPR_IF_POSSIBLE T MATH_PURE norm(const VECTOR<T>& lv) {
         return std::sqrt(dot(lv, lv));
     }
 
-    friend inline constexpr T MATH_PURE length(const VECTOR<T>& lv) {
+    friend inline CONSTEXPR_IF_POSSIBLE T MATH_PURE length(const VECTOR<T>& lv) {
         return norm(lv);
     }
 

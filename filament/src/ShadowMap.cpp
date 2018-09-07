@@ -153,17 +153,18 @@ void ShadowMap::update(
         }
     }
 
-    CameraInfo cameraInfo = {
-            .projection = projection,
-            .model = camera.model,
-            .view = camera.view,
-            .zn = camera.zn,
-            .zf = camera.zf,
-            .dzn = std::max(0.0f, params.shadowNearHint - camera.zn),
-            .dzf = std::max(0.0f, camera.zf - params.shadowFarHint),
-            .frustum = Frustum(projection * camera.view),
-            .worldOrigin = camera.worldOrigin
-    };
+	CameraInfo cameraInfo;
+	{
+		cameraInfo.projection = projection;
+		cameraInfo.model = camera.model;
+		cameraInfo.view = camera.view;
+		cameraInfo.zn = camera.zn;
+		cameraInfo.zf = camera.zf;
+		cameraInfo.dzn = std::max(0.0f, params.shadowNearHint - camera.zn);
+		cameraInfo.dzf = std::max(0.0f, camera.zf - params.shadowFarHint);
+		cameraInfo.frustum = Frustum(projection * camera.view);
+		cameraInfo.worldOrigin = camera.worldOrigin;
+	}
 
     // debugging...
     const float dz = cameraInfo.zf - cameraInfo.zn;

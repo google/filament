@@ -47,12 +47,12 @@ void Frustum::setProjection(const mat4f& pv) {
 
     // NOTE: for our box/frustum intersection routine normalizing these vectors is not required
     // however, they must be normalized for the sphere/frustum tests.
-    l *= 1 / length(l.xyz);
-    r *= 1 / length(r.xyz);
-    b *= 1 / length(b.xyz);
-    t *= 1 / length(t.xyz);
-    n *= 1 / length(n.xyz);
-    f *= 1 / length(f.xyz);
+    l *= float4(1 / length(l.xyz));
+    r *= float4(1 / length(r.xyz));
+    b *= float4(1 / length(b.xyz));
+    t *= float4(1 / length(t.xyz));
+    n *= float4(1 / length(n.xyz));
+    f *= float4(1 / length(f.xyz));
 
     mPlanes[0] = l;
     mPlanes[1] = r;

@@ -68,7 +68,7 @@ struct Vertex {
     Vertex(const float3& position, const quatf& tangents, const float4& color, const float3& uv0):
             position(position, 1.0_h),
             tangents(packSnorm16(tangents.xyzw)),
-            color(clamp(color, 0.0f, 1.0f) * 255.0f),
+            color(clamp(color, 0.0f, 1.0f) * float4(255.0f)),
             uv0(uv0.xy) {
     }
 

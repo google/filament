@@ -36,11 +36,13 @@ void SamplerBindingMap::populate(SamplerInterfaceBlock* perMaterialSib) {
         if (sib) {
             auto sibFields = sib->getSamplerInfoList();
             for (auto sInfo : sibFields) {
-                addSampler({
-                    .blockIndex = blockIndex,
-                    .localOffset = sInfo.offset,
-                    .globalOffset = offset++,
-                });
+				filament::SamplerBindingInfo samplerBindingInfo;
+				{
+					samplerBindingInfo.blockIndex = blockIndex;
+					samplerBindingInfo.localOffset = sInfo.offset;
+					samplerBindingInfo.globalOffset = offset++;
+				}
+                addSampler(samplerBindingInfo);
             }
         }
     }

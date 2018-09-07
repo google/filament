@@ -22,6 +22,11 @@
 #include <stdint.h>
 #include <sys/types.h>
 
+#if defined(_MSC_VER)
+#	define IMPLICIT_IF_POSSIBLE explicit
+#else
+#	define IMPLICIT_IF_POSSIBLE 
+#endif
 
 namespace math {
 // -------------------------------------------------------------------------------------
@@ -84,8 +89,9 @@ public:
     constexpr TVec4() = default;
 
     // handles implicit conversion to a tvec4. must not be explicit.
+	// explicit added only for MS Visual Studio compiler
     template<typename A, typename = typename std::enable_if<std::is_arithmetic<A>::value >::type>
-    constexpr TVec4(A v) : x(v), y(v), z(v), w(v) { }
+	IMPLICIT_IF_POSSIBLE constexpr TVec4(A v) : x(v), y(v), z(v), w(v) { }
 
     template<typename A, typename B, typename C, typename D>
     constexpr TVec4(A x, B y, C z, D w) : x(x), y(y), z(z), w(w) { }
@@ -97,8 +103,7 @@ public:
     constexpr TVec4(const TVec3<A>& v, B w) : x(v.x), y(v.y), z(v.z), w(w) { }
 
     template<typename A>
-    explicit
-    constexpr TVec4(const TVec4<A>& v) : x(v.x), y(v.y), z(v.z), w(v.w) { }
+    explicit constexpr TVec4(const TVec4<A>& v) : x(v.x), y(v.y), z(v.z), w(v.w) { }
 };
 
 }  // namespace details

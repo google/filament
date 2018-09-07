@@ -24,6 +24,10 @@ if (UNIX AND NOT APPLE AND NOT ANDROID AND NOT WEBGL)
 endif()
 
 if (WIN32)
+	if (MSVC AND ("${CMAKE_GENERATOR}" MATCHES "Win64"))
+		set(MSVC_X64 TRUE)
+	endif()
+
     # On Windows we need to instruct cmake to generate the .def in order to get the .lib required
     # when linking against dlls. CL.EXE will not generate .lib without .def file (or without pragma
     # __declspec(dllexport) in front of each functions).
@@ -60,6 +64,10 @@ set(FILAMENT ${CMAKE_CURRENT_SOURCE_DIR})
 # Where our tools are
 set(TOOLS ${CMAKE_CURRENT_SOURCE_DIR}/tools)
 
+if (MSVC)
+	include_directories(${EXTERNAL}/pthread/include)
+endif()
+
 # ==================================================================================================
 # Compiler check
 # ==================================================================================================
@@ -69,7 +77,7 @@ if (CMAKE_C_COMPILER_ID MATCHES "Clang")
     if (CMAKE_C_COMPILER_VERSION VERSION_LESS MIN_CLANG_VERSION)
         message(FATAL_ERROR "Detected C compiler Clang ${CMAKE_C_COMPILER_VERSION} < ${MIN_CLANG_VERSION}")
     endif()
-else()
+elseif (NOT MSVC)
     message(FATAL_ERROR "Detected C compiler ${CMAKE_C_COMPILER_ID} is unsupported")
 endif()
 
@@ -77,7 +85,7 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS MIN_CLANG_VERSION)
         message(FATAL_ERROR "Detected CXX compiler Clang ${CMAKE_CXX_COMPILER_VERSION} < ${MIN_CLANG_VERSION}")
     endif()
-else()
+elseif (NOT MSVC)
     message(FATAL_ERROR "Detected CXX compiler ${CMAKE_CXX_COMPILER_ID} is unsupported")
 endif()
 
@@ -89,9 +97,14 @@ endif()
 # ==================================================================================================
 # General compiler flags
 # ==================================================================================================
-set(CXX_STANDARD "-std=c++14")
+if (MSVC)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_USE_MATH_DEFINES=1 /wd4068 /wd4996 /wd4820 /wd4623 /wd4625 /wd4626 /wd5026 /wd5027 /wd4324 /wd4774 /wd4514 -D_SILENCE_TR1_NAMESPACE_DEPRECATION_WARNING=1 -D_CRT_SECURE_NO_WARNINGS=1")
+else()
 if (WIN32)
     set(CXX_STANDARD "/std:c++14")
+    	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_USE_MATH_DEFINES=1")
+	else()
+		set(CXX_STANDARD "-std=c++14")
 endif()
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CXX_STANDARD} -fstrict-aliasing -Wno-unknown-pragmas -Wno-unused-function")
@@ -100,8 +113,6 @@ if (USE_EXTERNAL_GLES3)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DUSE_EXTERNAL_GLES3")
 endif()
 
-if (WIN32)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_USE_MATH_DEFINES=1")
 endif()
 
 if (LINUX)
@@ -140,7 +151,7 @@ endif()
 # ==================================================================================================
 # Release compiler flags
 # ==================================================================================================
-if (NOT CLANG_CL)
+if (NOT MSVC AND NOT CLANG_CL)
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fomit-frame-pointer -ffunction-sections -fdata-sections")
 endif()
 
@@ -225,17 +236,17 @@ endif()
 # Functions
 # ==================================================================================================
 function(list_licenses OUTPUT MODULES)
-    file(WRITE ${OUTPUT} "R\"FILAMENT__(\n")
     set(_MODULES ${MODULES} ${ARGN})
     foreach(module ${_MODULES})
+	    file(WRITE ${OUTPUT} "R\"FILAMENT__(\n")
         set(license_path "../../third_party/${module}/LICENSE")
         get_filename_component(fullname "${license_path}" ABSOLUTE)
         file(APPEND ${OUTPUT} "License and copyrights for ${module}:\n\n")
         file(READ ${license_path} license)
         file(APPEND ${OUTPUT} ${license})
         file(APPEND ${OUTPUT} "\n\n")
+	    file(APPEND ${OUTPUT} ")FILAMENT__\"\n")
     endforeach()
-    file(APPEND ${OUTPUT} ")FILAMENT__\"\n")
 endfunction(list_licenses)
 
 # ==================================================================================================
@@ -294,8 +305,8 @@ if (NOT ANDROID AND NOT WEBGL)
     add_subdirectory(${EXTERNAL}/glslang/tnt)
     add_subdirectory(${EXTERNAL}/imgui/tnt)
     add_subdirectory(${EXTERNAL}/libassimp/tnt)
-    add_subdirectory(${EXTERNAL}/libpng/tnt)
     add_subdirectory(${EXTERNAL}/libsdl2/tnt)
+    add_subdirectory(${EXTERNAL}/libpng/tnt)
     add_subdirectory(${EXTERNAL}/libz/tnt)
     add_subdirectory(${EXTERNAL}/skylight/tnt)
     add_subdirectory(${EXTERNAL}/spirv-cross/tnt)

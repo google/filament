@@ -50,7 +50,13 @@ extern "C" {
 #define APIENTRYP APIENTRY *
 #endif
 #ifndef GLAPI
-#define GLAPI extern
+
+#	if defined(_MSC_VER)
+#		define GLAPI __declspec(dllexport)
+#	else
+#		define GLAPI extern
+#	endif
+
 #endif
 
 /* glcorearb.h is for use with OpenGL core profile implementations.

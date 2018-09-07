@@ -605,15 +605,15 @@ void FRenderer::ShadowPass::renderShadowMap(FEngine& engine, JobSystem& js,
     Viewport const& viewport = shadowMap.getViewport();
     FCamera const& camera = shadowMap.getCamera();
 
-    CameraInfo cameraInfo = {
-            .projection         = mat4f{ camera.getProjectionMatrix() },
-            .cullingProjection  = mat4f{ camera.getCullingProjectionMatrix() },
-            .model              = camera.getModelMatrix(),
-            .view               = camera.getViewMatrix(),
-            .zn                 = camera.getNear(),
-            .zf                 = camera.getCullingFar(),
-    };
-
+	CameraInfo cameraInfo;
+	{
+		cameraInfo.projection = mat4f{ camera.getProjectionMatrix() };
+		cameraInfo.cullingProjection = mat4f{ camera.getCullingProjectionMatrix() };
+		cameraInfo.model = camera.getModelMatrix();
+		cameraInfo.view = camera.getViewMatrix();
+		cameraInfo.zn = camera.getNear();
+		cameraInfo.zf = camera.getCullingFar();
+	};
     // populate the RenderPrimitive array with the proper LOD
     view->updatePrimitivesLod(engine, cameraInfo, soa, vr);
 

@@ -25,8 +25,18 @@
 #include <stdint.h>
 #include <sys/types.h>
 
+#if defined(_MSC_VER)
+#	define IMPLICIT_IF_POSSIBLE explicit
+#else
+#	define IMPLICIT_IF_POSSIBLE 
+#endif
+
 #ifndef PURE
-#define PURE __attribute__((pure))
+#	if defined(_MSC_VER)
+#		define PURE // MSVC_PORT_TODO : find and insert equivalent of pure functions
+#	else
+#		define PURE __attribute__((pure))
+#	endif
 #endif
 
 namespace math {
@@ -97,8 +107,9 @@ public:
     constexpr TQuaternion() : x(0), y(0), z(0), w(0) { }
 
     // handles implicit conversion to a tvec4. must not be explicit.
-    template<typename A>
-    constexpr TQuaternion(A w) : x(0), y(0), z(0), w(w) {
+	// explicit added only for MS Visual Studio compiler
+	template<typename A>
+	IMPLICIT_IF_POSSIBLE constexpr TQuaternion(A w) : x(0), y(0), z(0), w(w) {
         static_assert(std::is_arithmetic<A>::value, "requires arithmetic type");
     }
 
@@ -126,7 +137,7 @@ public:
     // constructs a quaternion from an axis and angle
     template <typename A, typename B>
     constexpr static TQuaternion PURE fromAxisAngle(const TVec3<A>& axis, B angle) {
-        return TQuaternion(std::sin(angle*0.5) * normalize(axis), std::cos(angle*0.5));
+        return TQuaternion(std::sin(angle * 0.5) * normalize(axis), std::cos(angle * 0.5));
     }
 };
 

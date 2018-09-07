@@ -313,7 +313,11 @@ TEST(AllocatorTest, STLAllocator) {
         vector.clear();
 #else
         // Disabled under windows due to incompatibility between clang and Microsoft STL.
+#	if defined(_MSC_VER)
+#		pragma message("Custom Allocator Test Disabled.")
+#	else
 #       warning "Custom Allocator Test Disabled."
+#	endif
 #endif
     }
 

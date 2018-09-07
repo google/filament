@@ -358,15 +358,17 @@ static LinearImage createNormalMap(uint32_t size) {
     LinearImage result(size, size, 3);
     auto vectors = (float3*) result.getPixelRef();
     const float invsize = 1.0f / size;
-    const Sphere sphere {
-        .center = float3(0.5, 0.5, 0.0),
-        .radius2 = 0.15
+	Sphere sphere;
+	{
+		sphere.center = float3(0.5, 0.5, 0.0);
+		sphere.radius2 = 0.15;
     };
     for (uint32_t n = 0; n < size * size; ++n) {
         const uint32_t row = n / size, col = n % size;
-        const Ray ray {
-            .orig = { (col + 0.5f) * invsize, 1.0f - (row + 0.5f) * invsize, 1 },
-            .dir = {0, 0, -1}
+		Ray ray;
+		{
+			ray.orig = { (col + 0.5f) * invsize, 1.0f - (row + 0.5f) * invsize, 1 };
+			ray.dir = { 0, 0, -1 };
         };
         float t;
         bool isect = intersect(ray, sphere, &t);
@@ -384,15 +386,17 @@ static LinearImage createDepthMap(uint32_t size) {
     LinearImage result(size, size, 1);
     auto depths = result.getPixelRef();
     const float invsize = 1.0f / size;
-    const Sphere sphere {
-        .center = float3(0.5, 0.5, 0.0),
-        .radius2 = 0.15
+	Sphere sphere;
+	{
+		sphere.center = float3(0.5, 0.5, 0.0);
+        sphere.radius2 = 0.15;
     };
     for (uint32_t n = 0; n < size * size; ++n) {
         const uint32_t row = n / size, col = n % size;
-        const Ray ray {
-            .orig = { (col + 0.5f) * invsize, 1.0f - (row + 0.5f) * invsize, 1 },
-            .dir = {0, 0, -1}
+		Ray ray;
+		{
+			ray.orig = { (col + 0.5f) * invsize, 1.0f - (row + 0.5f) * invsize, 1 };
+			ray.dir = { 0, 0, -1 };
         };
         float t;
         bool isect = intersect(ray, sphere, &t);

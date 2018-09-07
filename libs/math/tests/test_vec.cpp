@@ -115,25 +115,25 @@ TEST_F(VecTest, Access) {
 TEST_F(VecTest, UnaryOps) {
     double4 v0(1, 2, 3, 4);
 
-    v0 += 1;
+    v0 += double4(1);
     EXPECT_EQ(v0.x, 2);
     EXPECT_EQ(v0.y, 3);
     EXPECT_EQ(v0.z, 4);
     EXPECT_EQ(v0.w, 5);
 
-    v0 -= 1;
+    v0 -= double4(1);
     EXPECT_EQ(v0.x, 1);
     EXPECT_EQ(v0.y, 2);
     EXPECT_EQ(v0.z, 3);
     EXPECT_EQ(v0.w, 4);
 
-    v0 *= 2;
+    v0 *= double4(2);
     EXPECT_EQ(v0.x, 2);
     EXPECT_EQ(v0.y, 4);
     EXPECT_EQ(v0.z, 6);
     EXPECT_EQ(v0.w, 8);
 
-    v0 /= 2;
+    v0 /= double4(2);
     EXPECT_EQ(v0.x, 1);
     EXPECT_EQ(v0.y, 2);
     EXPECT_EQ(v0.z, 3);
@@ -216,13 +216,13 @@ TEST_F(VecTest, ArithmeticOps) {
     EXPECT_EQ(v2.z, 33);
     EXPECT_EQ(v2.w, 44);
 
-    v0 = v1 * 2;
+    v0 = v1 * double4(2);
     EXPECT_EQ(v0.x, 20);
     EXPECT_EQ(v0.y, 40);
     EXPECT_EQ(v0.z, 60);
     EXPECT_EQ(v0.w, 80);
 
-    v0 = 2 * v1;
+    v0 = double4(2) * v1;
     EXPECT_EQ(v0.x, 20);
     EXPECT_EQ(v0.y, 40);
     EXPECT_EQ(v0.z, 60);

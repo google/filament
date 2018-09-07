@@ -63,6 +63,16 @@ endif()
 if (WIN32)
     # Needed for shlwapi.h (GetModuleFileName)
     target_link_libraries(${TARGET} PUBLIC Shlwapi)
+
+	# link pthreads in Visual Studio
+	if (MSVC)
+		if (MSVC_X64)
+			target_link_libraries(${TARGET} PUBLIC ${EXTERNAL}/pthread/lib/x64/pthreadVC2.lib)
+		else()
+			target_link_libraries(${TARGET} PUBLIC ${EXTERNAL}/pthread/lib/x86/pthreadVC2.lib)
+		endif()
+	endif()
+
 endif()
 
 if (LINUX)

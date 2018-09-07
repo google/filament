@@ -49,6 +49,10 @@ inline math::double2 hammersley(uint32_t i, float iN) {
     return { i * iN, bits * tof };
 }
 
-#define __UNUSED __attribute__((__unused__))
+#if defined(_MSC_VER)
+#	define __UNUSED
+#else
+#	define __UNUSED __attribute__((__unused__))
+#endif
 
 #endif /* SRC_UTILITIES_H_ */

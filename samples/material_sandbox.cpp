@@ -50,31 +50,31 @@ using namespace filament;
 using namespace filamat;
 using namespace utils;
 
-static constexpr uint8_t MATERIAL_UNLIT_PACKAGE[] = {
+static const uint8_t MATERIAL_UNLIT_PACKAGE[] = {
     #include "generated/material/sandboxUnlit.inc"
 };
 
-static constexpr uint8_t MATERIAL_LIT_PACKAGE[] = {
+static const uint8_t MATERIAL_LIT_PACKAGE[] = {
     #include "generated/material/sandboxLit.inc"
 };
 
-static constexpr uint8_t MATERIAL_LIT_FADE_PACKAGE[] = {
+static const uint8_t MATERIAL_LIT_FADE_PACKAGE[] = {
     #include "generated/material/sandboxLitFade.inc"
 };
 
-static constexpr uint8_t MATERIAL_LIT_TRANSPARENT_PACKAGE[] = {
+static const uint8_t MATERIAL_LIT_TRANSPARENT_PACKAGE[] = {
     #include "generated/material/sandboxLitTransparent.inc"
 };
 
-static constexpr uint8_t MATERIAL_SUBSURFACE_PACKAGE[] = {
+static const uint8_t MATERIAL_SUBSURFACE_PACKAGE[] = {
     #include "generated/material/sandboxSubsurface.inc"
 };
 
-static constexpr uint8_t MATERIAL_CLOTH_PACKAGE[] = {
+static const uint8_t MATERIAL_CLOTH_PACKAGE[] = {
     #include "generated/material/sandboxCloth.inc"
 };
 
-static constexpr uint8_t GROUND_SHADOW_PACKAGE[] = {
+static const uint8_t GROUND_SHADOW_PACKAGE[] = {
     #include "generated/material/groundShadow.inc"
 };
 

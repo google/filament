@@ -30,6 +30,9 @@ using namespace image;
 namespace {
 
 struct FilterFunction {
+	FilterFunction() = default;
+	FilterFunction(float(*fn_)(float), float br) : fn(fn_), boundingRadius(br) { }
+
     float (*fn)(float) = nullptr;
     float boundingRadius = 1;
     bool rejectExternalSamples = true;
@@ -38,31 +41,31 @@ struct FilterFunction {
 constexpr float M_PIf = float(M_PI);
 
 const FilterFunction Box {
-    .fn = [](float t) { return t <= 0.5f ? 1.0f : 0.0f; },
-    .boundingRadius = 1
+    [](float t) { return t <= 0.5f ? 1.0f : 0.0f; },
+    1.0f
 };
 
 const FilterFunction Nearest { Box.fn, 0.0f };
 
-const FilterFunction Gaussian {
-    .fn = [](float t) {
+const FilterFunction Gaussian = {
+    [](float t) {
         if (t >= 2.0) return 0.0f;
         const float scale = 1.0f / std::sqrt(0.5f * M_PIf);
         return std::exp(-2.0f * t * t) * scale;
     },
-    .boundingRadius = 2
+    2.0f
 };
 
 const FilterFunction Hermite {
-    .fn = [](float t) {
+    [](float t) {
         if (t >= 1.0f) return 0.0f;
         return 2 * t * t * t - 3 * t * t + 1;
     },
-    .boundingRadius = 1
+    1.0f
 };
 
 const FilterFunction Mitchell {
-    .fn = [](float t) {
+    [](float t) {
         constexpr float B = 1.0f / 3.0f;
         constexpr float C = 1.0f / 3.0f;
         constexpr float P0 = (  6 - 2*B       ) / 6.0f;
@@ -77,7 +80,7 @@ const FilterFunction Mitchell {
         if (t >= 1.0f) return Q0 + Q1*t + Q2*t*t + Q3*t*t*t;
         return P0 + P1*t + P2*t*t + P3*t*t*t;
     },
-    .boundingRadius = 2
+    2.0f,
 };
 
 // Not bothering with a fast approximation since we cache results for each row.
@@ -87,11 +90,11 @@ float sinc(float t) {
 }
 
 const FilterFunction Lanczos {
-    .fn = [](float t) {
+    [](float t) {
         if (t >= 1.0f) return 0.0f;
         return sinc(t) * sinc(t);
     },
-    .boundingRadius = 1
+    1.0f
 };
 
 // Describes a Multiply-Add operation: target[targetIndex] += source[sourceIndex] * weight.
@@ -294,12 +297,11 @@ LinearImage resampleImage(const LinearImage& source, uint32_t width, uint32_t he
     return result;
 }
 
-LinearImage resampleImage(const LinearImage& source, uint32_t width, uint32_t height,
-        Filter filter) {
-    return resampleImage(source, width, height, ImageSampler {
-        .horizontalFilter = filter,
-        .verticalFilter = filter
-    });
+LinearImage resampleImage(const LinearImage& source, uint32_t width, uint32_t height, Filter filter) {
+	ImageSampler smp;
+	smp.horizontalFilter = filter;
+	smp.verticalFilter = filter;
+	return resampleImage(source, width, height, smp);
 }
 
 void computeSingleSample(const LinearImage& source, float x, float y, SingleSample* result,

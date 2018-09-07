@@ -378,7 +378,9 @@ private:
         }
     }
 
-    // Try to keep the State structure sorted by data-access patterns
+	static constexpr const size_t TEXTURE_TARGET_COUNT = 5;
+
+	// Try to keep the State structure sorted by data-access patterns
     struct State {
         GLuint draw_fbo = 0;
         GLuint read_fbo = 0;
@@ -421,7 +423,7 @@ private:
                 GLuint sampler = 0;
                 struct {
                     GLuint texture_id = 0;
-                } targets[5];
+                } targets[TEXTURE_TARGET_COUNT];
             } units[MAX_TEXTURE_UNITS];
         } textures;
 
@@ -440,8 +442,8 @@ private:
         } pack;
 
         struct {
-            vec4gli scissor = 0;
-            vec4gli viewport = 0;
+			vec4gli scissor = {};
+			vec4gli viewport = {};
         } window;
 
         struct {
@@ -451,9 +453,6 @@ private:
         } clears;
 
     } state;
-
-    static constexpr const size_t TEXTURE_TARGET_COUNT =
-            sizeof(state.textures.units[0].targets) / sizeof(state.textures.units[0].targets[0]);
 
     Driver::RasterState mRasterState;
 

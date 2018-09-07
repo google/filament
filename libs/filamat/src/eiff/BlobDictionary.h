@@ -21,6 +21,12 @@
 #include <unordered_map>
 #include <vector>
 
+#if defined(_MSC_VER)
+#	define CONSTEXPR_IF_POSSIBLE 
+#else
+#	define CONSTEXPR_IF_POSSIBLE constexpr
+#endif
+
 namespace filamat {
 
 // Establish a blob <-> id mapping. Note that std::string may binary data with null characters.
@@ -35,12 +41,12 @@ public:
     size_t getBlobCount() const;
 
     // Returns the total storage size, assuming that each blob is prefixed with a 64-bit size.
-    constexpr size_t getSize() const noexcept {
+	CONSTEXPR_IF_POSSIBLE size_t getSize() const noexcept {
         return mStorageSize + 8 * getBlobCount();
     }
 
-    constexpr bool isEmpty() const noexcept {
-        return mBlobs.size() == 0;
+	CONSTEXPR_IF_POSSIBLE bool isEmpty() const noexcept {
+		return mBlobs.empty();
     }
 
     const std::string& getBlob(size_t index) const noexcept;

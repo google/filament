@@ -49,11 +49,11 @@ using namespace filagui;
 using namespace math;
 using namespace utils;
 
-static constexpr uint8_t AI_DEFAULT_MAT_PACKAGE[] = {
+static const uint8_t AI_DEFAULT_MAT_PACKAGE[] = {
     #include "generated/material/aiDefaultMat.inc"
 };
 
-static constexpr uint8_t TRANSPARENT_COLOR_PACKAGE[] = {
+static const uint8_t TRANSPARENT_COLOR_PACKAGE[] = {
     #include "generated/material/transparentColor.inc"
 };
 
@@ -617,7 +617,7 @@ void FilamentApp::Window::configureCamerasForWindow() {
 FilamentApp::CView::CView(Renderer& renderer, std::string name)
         : engine(*renderer.getEngine()), mName(name) {
     view = engine.createView();
-    view->setClearColor({ 0 });
+    view->setClearColor(LinearColorA(0.0f, 0.0f, 0.0f, 0.0f));
     view->setName(name.c_str());
 }
 

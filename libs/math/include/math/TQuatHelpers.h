@@ -27,6 +27,12 @@
 #include <math/compiler.h>
 #include <math/vec3.h>
 
+#if defined(_MSC_VER)
+#	define CONSTEXPR_IF_POSSIBLE 
+#else
+#	define CONSTEXPR_IF_POSSIBLE constexpr
+#endif
+
 namespace math {
 namespace details {
 // -------------------------------------------------------------------------------------
@@ -54,7 +60,7 @@ public:
      * element type.
      */
     template <typename OTHER>
-    QUATERNION<T>& operator *= (const QUATERNION<OTHER>& r) {
+    constexpr QUATERNION<T>& operator *= (const QUATERNION<OTHER>& r) {
         QUATERNION<T>& q = static_cast<QUATERNION<T>&>(*this);
         q = q * r;
         return q;
@@ -62,14 +68,14 @@ public:
 
     /* compound assignment products by a scalar
      */
-    QUATERNION<T>& operator *= (T v) {
+	constexpr QUATERNION<T>& operator *= (T v) {
         QUATERNION<T>& lhs = static_cast<QUATERNION<T>&>(*this);
         for (size_t i = 0; i < QUATERNION<T>::size(); i++) {
             lhs[i] *= v;
         }
         return lhs;
     }
-    QUATERNION<T>& operator /= (T v) {
+	constexpr QUATERNION<T>& operator /= (T v) {
         QUATERNION<T>& lhs = static_cast<QUATERNION<T>&>(*this);
         for (size_t i = 0; i < QUATERNION<T>::size(); i++) {
             lhs[i] /= v;
@@ -128,14 +134,13 @@ public:
     friend inline
     constexpr QUATERNION<T> MATH_PURE operator *(QUATERNION<T> q, T scalar) {
         // don't pass q by reference because we need a copy anyways
-        return q *= scalar;
+        return q *= QUATERNION<T>(scalar);
     }
     friend inline
     constexpr QUATERNION<T> MATH_PURE operator *(T scalar, QUATERNION<T> q) {
         // don't pass q by reference because we need a copy anyways
-        return q *= scalar;
+        return q *= QUATERNION<T>(scalar);
     }
-
     friend inline
     constexpr QUATERNION<T> MATH_PURE operator /(QUATERNION<T> q, T scalar) {
         // don't pass q by reference because we need a copy anyways
@@ -171,13 +176,13 @@ public:
                p.w * q.w;
     }
 
-    friend inline
-    constexpr T MATH_PURE norm(const QUATERNION<T>& q) {
+    friend inline 
+	CONSTEXPR_IF_POSSIBLE T MATH_PURE norm(const QUATERNION<T>& q) {
         return std::sqrt( dot(q, q) );
     }
 
     friend inline
-    constexpr T MATH_PURE length(const QUATERNION<T>& q) {
+	CONSTEXPR_IF_POSSIBLE T MATH_PURE length(const QUATERNION<T>& q) {
         return norm(q);
     }
 
@@ -230,7 +235,7 @@ public:
     friend inline
     QUATERNION<T> MATH_PURE log(const QUATERNION<T>& q) {
         const T nq(norm(q));
-        return QUATERNION<T>((std::acos(q.w/nq)/norm(q.xyz))*q.xyz, log(nq));
+        return QUATERNION<T>((std::acos(q.w/nq)/norm(q.xyz))*q.xyz, std::log(nq));
     }
 
     friend inline
@@ -245,7 +250,7 @@ public:
     QUATERNION<T> MATH_PURE slerp(const QUATERNION<T>& p, const QUATERNION<T>& q, T t) {
         // could also be computed as: pow(q * inverse(p), t) * p;
         const T d = dot(p, q);
-        const T npq = sqrt(dot(p, p) * dot(q, q));  // ||p|| * ||q||
+        const T npq = std::sqrt(dot(p, p) * dot(q, q));  // ||p|| * ||q||
         const T a = std::acos(std::abs(d) / npq);
         const T a0 = a * (1 - t);
         const T a1 = a * t;

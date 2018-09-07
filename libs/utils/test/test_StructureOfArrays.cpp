@@ -70,7 +70,7 @@ TEST(StructureOfArraysTest, Iterator) {
     for (size_t i = 0; i < 8; i++) {
         soa.elementAt<0>(i) = (float)std::rand();
         soa.elementAt<1>(i) = soa.elementAt<0>(i) * 2;
-        soa.elementAt<2>(i) = soa.elementAt<0>(i) * 4;
+		soa.elementAt<2>(i) = TestFloat4(soa.elementAt<0>(i) * 4);
     }
 
     EXPECT_FALSE(std::is_sorted(soa.begin<0>(), soa.end<0>()));
@@ -97,7 +97,7 @@ TEST(StructureOfArraysTest, Simple) {
     for (size_t i = 0; i < 8; i++) {
         soa.elementAt<0>(i) = i;
         soa.elementAt<1>(i) = i * 2;
-        soa.elementAt<2>(i) = i * 4;
+		soa.elementAt<2>(i) = TestFloat4(i * 4);
     }
 
     size_t capacity = soa.capacity();
@@ -127,7 +127,7 @@ TEST(StructureOfArraysTest, Simple) {
     for (size_t i = 0; i < 4; i++) {
         EXPECT_EQ(i    , soa.elementAt<0>(i));
         EXPECT_EQ(i * 2, soa.elementAt<1>(i));
-        EXPECT_EQ(i * 4, soa.elementAt<2>(i));
+        EXPECT_EQ(TestFloat4(i * 4), soa.elementAt<2>(i));
     }
 
     // check we can add a few elements
@@ -141,7 +141,7 @@ TEST(StructureOfArraysTest, Simple) {
     for (size_t i = 0; i < 4; i++) {
         EXPECT_EQ(i    , soa.elementAt<0>(i));
         EXPECT_EQ(i * 2, soa.elementAt<1>(i));
-        EXPECT_EQ(i * 4, soa.elementAt<2>(i));
+        EXPECT_EQ(TestFloat4(i * 4), soa.elementAt<2>(i));
     }
 
 
@@ -163,7 +163,7 @@ TEST(StructureOfArraysTest, Simple) {
     for (size_t i = 0; i < 4; i++) {
         EXPECT_EQ(i    , soa.elementAt<0>(i));
         EXPECT_EQ(i * 2, soa.elementAt<1>(i));
-        EXPECT_EQ(i * 4, soa.elementAt<2>(i));
+        EXPECT_EQ(TestFloat4(i * 4), soa.elementAt<2>(i));
     }
 
     soa.push_back(0.0f, 1.0, destroyedFloat4);

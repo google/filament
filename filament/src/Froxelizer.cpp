@@ -169,12 +169,12 @@ bool Froxelizer::prepare(
     // froxel buffer (~32 KiB)
     mFroxelBufferUser = {
             driverApi.allocatePod<FroxelEntry>(FROXEL_BUFFER_ENTRY_COUNT_MAX, CACHELINE_SIZE),
-            FROXEL_BUFFER_ENTRY_COUNT_MAX };
+            uint32_t(FROXEL_BUFFER_ENTRY_COUNT_MAX) };
 
     // record buffer (~64 KiB)
     mRecordBufferUser = {
             driverApi.allocatePod<RecordBufferType>(RECORD_BUFFER_ENTRY_COUNT, CACHELINE_SIZE),
-            RECORD_BUFFER_ENTRY_COUNT };
+			uint32_t(RECORD_BUFFER_ENTRY_COUNT) };
 
     /*
      * Temporary allocations for processing all froxel data
@@ -183,7 +183,7 @@ bool Froxelizer::prepare(
     // light records per froxel (~256 KiB)
     mLightRecords = {
             arena.allocate<LightRecord>(FROXEL_BUFFER_ENTRY_COUNT_MAX, CACHELINE_SIZE),
-            FROXEL_BUFFER_ENTRY_COUNT_MAX };
+            uint32_t(FROXEL_BUFFER_ENTRY_COUNT_MAX) };
 
     // froxel thread data (~256 KiB)
     mFroxelShardedData = {
@@ -197,8 +197,8 @@ bool Froxelizer::prepare(
     assert(mFroxelShardedData.begin());
 
 #ifndef NDEBUG
-    memset(mFroxelBufferUser.data(),    0x55, mFroxelBufferUser.sizeInBytes());
-    memset(mRecordBufferUser.data(),    0xEB, mRecordBufferUser.sizeInBytes());
+    memset(mFroxelBufferUser.data(), 0x55, mFroxelBufferUser.sizeInBytes());
+    memset(mRecordBufferUser.data(), 0xEB, mRecordBufferUser.sizeInBytes());
     memset(mFroxelShardedData.data(),   0xFD, mFroxelShardedData.sizeInBytes());
 #endif
 
@@ -588,12 +588,13 @@ void Froxelizer::froxelizeLoop(FEngine& engine,
         for (size_t i = offset; i < count; i += stride) {
             const size_t j = i + FScene::DIRECTIONAL_LIGHTS_COUNT;
             FLightManager::Instance li = instances[j];
-            LightParams light = {
-                    .position = (camera.view * float4{ spheres[j].xyz, 1 }).xyz, // to view-space
-                    .cosSqr = lcm.getCosOuterSquared(li),   // spot only
-                    .axis = vn * directions[j],             // spot only
-                    .invSin = lcm.getSinInverse(li),        // spot only
-                    .radius = spheres[j].w,
+			LightParams light;
+			{
+				light.position = (camera.view * float4{ spheres[j].xyz, 1 }).xyz; // to view-space
+				light.cosSqr = lcm.getCosOuterSquared(li);						  // spot only
+				light.axis = vn * directions[j];								  // spot only
+				light.invSin = lcm.getSinInverse(li);							  // spot only
+				light.radius = spheres[j].w;
             };
 
             const size_t group = i % GROUP_COUNT;
@@ -683,13 +684,14 @@ void Froxelizer::froxelizeAssignRecordsCompress() noexcept {
         if (b.lights.none()) {
             froxels[remap(i++)].u32 = 0;
             continue;
-        }
+		}
 
         // We have a limitation of 255 spot + 255 point lights per froxel.
-        FroxelEntry entry = {
-                .offset = offset,
-                .pointLightCount = (uint8_t)std::min(size_t(255), (b.lights & ~spotLights).count()),
-                .spotLightCount  = (uint8_t)std::min(size_t(255), (b.lights &  spotLights).count())
+		FroxelEntry entry;
+		{
+			entry.offset = offset;
+            entry.pointLightCount = (uint8_t)std::min(size_t(255), (b.lights & ~spotLights).count());
+            entry.spotLightCount  = (uint8_t)std::min(size_t(255), (b.lights &  spotLights).count());
         };
         const size_t lightCount = entry.count[0] + entry.count[1];
 
@@ -725,7 +727,7 @@ void Froxelizer::froxelizeAssignRecordsCompress() noexcept {
             // we need to "cancel" the write if we have more than 255 spot or point lights
             // (this is a limitation of the data type used to store the light counts per froxel)
             p += (p - s < 255) ? 1 : 0;
-        });
+                });
 
         offset += lightCount;
 
@@ -890,22 +892,22 @@ void Froxelizer::froxelizePointAndSpotLight(
                         // This is a spotlight (common case)
                         // this loops gets vectorized (on arm64) w/ clang
                         while (bx++ != ex) {
-                            // see if this froxel intersects the cone
+                                // see if this froxel intersects the cone
                             bool intersect = sphereConeIntersectionFast(boundingSpheres[fi - 1],
                                     light.position, light.axis, light.invSin, light.cosSqr);
                             froxelThread[fi++] |= LightGroupType(intersect) << bit;
-                        }
+                            }
                     } else {
                         // this loops gets vectorized (on arm64) w/ clang
                         while (bx++ != ex) {
                             froxelThread[fi++] |= LightGroupType(1) << bit;
+                        }
                         }
                     }
                 }
             }
         }
     }
-}
 
 /*
  *
@@ -936,25 +938,27 @@ void Froxelizer::computeLightTree(
                 // indices[] cannot be accessed past 'col'
                 const float min = (col < count) ? zrange[indices[col]].x : 1.0f;
                 const float max = (col < count) ? zrange[indices[col]].y : 0.0f;
-                lightTree[index] = {
-                        .min = min,
-                        .max = max,
-                        .next = uint16_t(next),
-                        .offset = uint16_t(lightRecordsOffset + col),
-                        .isLeaf = 1,
-                        .count = 1,
-                        .reserved = 0,
-                };
+				lightTree[index];
+				{
+					lightTree[index].min = min;
+					lightTree[index].max = max;
+					lightTree[index].next = uint16_t(next);
+					lightTree[index].offset = uint16_t(lightRecordsOffset + col);
+					lightTree[index].isLeaf = 1;
+					lightTree[index].count = 1;
+					lightTree[index].reserved = 0;
+				}
             },
             [lightTree](size_t index, size_t l, size_t r, size_t next) {
-                lightTree[index] = {
-                        .min = std::min(lightTree[l].min, lightTree[r].min),
-                        .max = std::max(lightTree[l].max, lightTree[r].max),
-                        .next = uint16_t(next),
-                        .offset = 0,
-                        .isLeaf = 0,
-                        .count = 0,
-                        .reserved = 0,
+				lightTree[index];
+				{
+					lightTree[index].min = std::min(lightTree[l].min, lightTree[r].min);
+					lightTree[index].max = std::max(lightTree[l].max, lightTree[r].max);
+					lightTree[index].next = uint16_t(next);
+					lightTree[index].offset = 0;
+					lightTree[index].isLeaf = 0;
+					lightTree[index].count = 0;
+					lightTree[index].reserved = 0;
                 };
             });
 }
