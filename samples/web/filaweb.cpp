@@ -179,8 +179,10 @@ SkyLight getSkyLight(Engine& engine, const char* name) {
         offsets.nz = faceSize * 5;
         Texture::PixelBufferDescriptor buffer(
                 malloc(faceSize * 6), faceSize * 6,
-                Texture::Format::RGBM, Texture::Type::UBYTE);
-                // (Texture::PixelBufferDescriptor::Callback) &free // TODO: why does this crash?
+                Texture::Format::RGBM, Texture::Type::UBYTE,
+                [](void* buffer, size_t size, void* user) {
+                    free(buffer);
+                }, /* user = */ nullptr);
         uint8_t* pixels = static_cast<uint8_t*>(buffer.buffer);
         auto& px = asset.envFaces[i++];
         auto& nx = asset.envFaces[i++];
@@ -229,8 +231,10 @@ SkyLight getSkyLight(Engine& engine, const char* name) {
         offsets.nz = faceSize * 5;
         Texture::PixelBufferDescriptor buffer(
                 malloc(faceSize * 6), faceSize * 6,
-                Texture::Format::RGBA, Texture::Type::UBYTE);
-                // (Texture::PixelBufferDescriptor::Callback) &free // TODO: why does this crash?
+                Texture::Format::RGBA, Texture::Type::UBYTE,
+                [](void* buffer, size_t size, void* user) {
+                    free(buffer);
+                }, /* user = */ nullptr);
         uint8_t* pixels = static_cast<uint8_t*>(buffer.buffer);
         i = 0;
         auto& px = asset.skyFaces[i++];
