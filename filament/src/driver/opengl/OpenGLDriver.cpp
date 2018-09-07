@@ -887,6 +887,10 @@ void OpenGLDriver::textureStorage(OpenGLDriver::GLTexture* t,
     bindTexture(MAX_TEXTURE_UNITS - 1, t->gl.target, t, t->gl.targetIndex);
     activeTexture(MAX_TEXTURE_UNITS - 1);
 
+    // The default min filtering is GL_NEAREST_MIPMAP_LINEAR, but allocated
+    // textures don't have mipmaps.
+    glTexParameteri(t->gl.target, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+
     switch (t->gl.target) {
         case GL_TEXTURE_2D:
         case GL_TEXTURE_CUBE_MAP:
