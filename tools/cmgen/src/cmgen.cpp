@@ -614,8 +614,8 @@ void sphericalHarmonics(const utils::Path& iname, const Cubemap& inputCubemap) {
             { // save a file with what we just calculated (radiance or irradiance)
                 std::string basename = iname.getNameWithoutExtension();
                 utils::Path filePath =
-                        outputDir + (basename + "_sh" + (g_sh_irradiance ? "_i" : "_r") + ".png");
-                saveImage(filePath, ImageEncoder::Format::PNG, image, "");
+                        outputDir + (basename + "_sh" + (g_sh_irradiance ? "_i" : "_r") + ".hdr");
+                saveImage(filePath, ImageEncoder::Format::HDR, image, "");
             }
 
             { // save a file with the "other one" (irradiance or radiance)
@@ -623,8 +623,8 @@ void sphericalHarmonics(const utils::Path& iname, const Cubemap& inputCubemap) {
                 CubemapSH::renderSH(cm, sh, g_sh_compute);
                 std::string basename = iname.getNameWithoutExtension();
                 utils::Path filePath =
-                        outputDir + (basename + "_sh" + (!g_sh_irradiance ? "_i" : "_r") + ".png");
-                saveImage(filePath, ImageEncoder::Format::PNG, image, "");
+                        outputDir + (basename + "_sh" + (!g_sh_irradiance ? "_i" : "_r") + ".hdr");
+                saveImage(filePath, ImageEncoder::Format::HDR, image, "");
             }
         }
     }
@@ -675,7 +675,7 @@ void iblMipmapPrefilter(const utils::Path& iname,
         Cubemap const& dst(levels[level]);
         Image const& img(images[level]);
         if (g_debug) {
-            ImageEncoder::Format debug_format = ImageEncoder::Format::PNG;
+            ImageEncoder::Format debug_format = ImageEncoder::Format::HDR;
             std::string ext = ImageEncoder::chooseExtension(debug_format);
             std::string basename = iname.getNameWithoutExtension();
             utils::Path filePath = outputDir + (basename + "_is_m" + (std::to_string(level) + ext));
@@ -730,7 +730,7 @@ void iblRoughnessPrefilter(const utils::Path& iname,
         CubemapIBL::roughnessFilter(dst, levels, linear_roughness, numSamples);
 
         if (g_debug) {
-            ImageEncoder::Format debug_format = ImageEncoder::Format::PNG;
+            ImageEncoder::Format debug_format = ImageEncoder::Format::HDR;
             std::string ext = ImageEncoder::chooseExtension(debug_format);
             std::string basename = iname.getNameWithoutExtension();
             utils::Path filePath = outputDir + (basename + "_roughness_m" + (std::to_string(level) + ext));
