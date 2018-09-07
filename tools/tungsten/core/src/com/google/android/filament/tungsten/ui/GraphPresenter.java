@@ -195,13 +195,16 @@ public class GraphPresenter implements IPropertiesPresenter {
         mCompiledGraph = compiler.compileGraph();
         mMaterialSource.setText(mCompiledGraph.getMaterialDefinition());
 
-        // Update the model with the newly compiled expression map.
-        mModel.getAndUpdate(
-                graph -> graph.graphBySettingExpressionMap(mCompiledGraph.getExpressionMap()));
-        mGraphView.render(mModel.get());
-
         CompletableFuture<Material> futureMaterial = mMaterialManager
                 .compileMaterial(mCompiledGraph.getMaterialDefinition());
+
+        // Update the model with the newly compiled expression map and replace any modified nodes.
+        mModel.getAndUpdate(
+                graph -> graph
+                    .graphBySettingExpressionMap(mCompiledGraph.getExpressionMap())
+                    .graphByReplacingNodes(mCompiledGraph.getOldToNewNodeMap()));
+
+        mGraphView.render(mModel.get());
 
         serializeAndSave();
 

@@ -27,5 +27,11 @@ data class CompiledGraph(
     val parameterMap: Map<Node.PropertyHandle, Parameter>,
 
     // Maps a Slot to its corresponding Expression
-    val expressionMap: Map<Slot, Expression>
+    val expressionMap: Map<Slot, Expression>,
+
+    /**
+     * Nodes can change during compilation. This maps from Nodes in the graph pre-compilation to
+     * equivalent nodes post-compilation.
+     */
+    val oldToNewNodeMap: Map<Node, Node>
 )

@@ -20,6 +20,7 @@ import com.google.android.filament.tungsten.model.Graph;
 import com.google.android.filament.tungsten.model.Node;
 import com.google.android.filament.tungsten.model.Slot;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -37,6 +38,7 @@ public final class GraphCompiler {
 
     private StringBuilder mMaterialFunctionBodyBuilder = new StringBuilder();
     private final List<String> mRequiredAttributes = new ArrayList<>();
+    private String mShadingModel = "unlit";
     private final List<Parameter> mParameters = new ArrayList<>();
     private final Map<String, Integer> mParameterNumberMap = new HashMap<>();
     private final Map<Node.PropertyHandle, Parameter> mPropertyParameterMap = new HashMap<>();
@@ -48,6 +50,9 @@ public final class GraphCompiler {
     private final Map<Slot, Expression> mCompiledVariableMap = new HashMap<>();
     private final Set<Node> mUncompiledNodes;
     private boolean mShouldAppendCode = true;
+    private final Map<Node, Node> mOldToNewNodeMap = new HashMap<>();
+    private final List<String> validShadingModels =
+            Arrays.asList("lit", "unlit", "cloth", "subsurface");
 
     public GraphCompiler(@NotNull Graph graph) {
         mGraph = graph;
@@ -57,24 +62,23 @@ public final class GraphCompiler {
 
     @NotNull
     public CompiledGraph compileGraph() {
-        mUncompiledNodes.remove(mRootNode);
-        mRootNode.getCompileFunction().invoke(mRootNode, this);
+        compileNode(mRootNode);
 
         // Compile the rest of the nodes in the graph that aren't necessarily connected to the
         // root node. These nodes should not contribute any code to the material definition.
         mShouldAppendCode = false;
         while (!mUncompiledNodes.isEmpty()) {
             Node next = mUncompiledNodes.iterator().next();
-            mUncompiledNodes.remove(next);
-            next.getCompileFunction().invoke(next, this);
+            compileNode(next);
         }
 
         String fragmentSection = GraphFormatter.formatFragmentSection(mGlobalFunctions.values(),
                 mMaterialFunctionBodyBuilder.toString());
         String materialDefinition =
-                GraphFormatter.formatMaterialSection(mRequiredAttributes, mParameters)
-                + fragmentSection;
-        return new CompiledGraph(materialDefinition, mPropertyParameterMap, mCompiledVariableMap);
+                GraphFormatter.formatMaterialSection(mRequiredAttributes, mParameters,
+                mShadingModel) + fragmentSection;
+        return new CompiledGraph(materialDefinition, mPropertyParameterMap, mCompiledVariableMap,
+                mOldToNewNodeMap);
     }
 
     /**
@@ -99,8 +103,7 @@ public final class GraphCompiler {
         if (connectedNode == null) {
             throw new RuntimeException("Output slot references node that does not exist in graph.");
         }
-        mUncompiledNodes.remove(connectedNode);
-        connectedNode.getCompileFunction().invoke(connectedNode, this);
+        compileNode(connectedNode);
 
         // Verify that the connected node has set it's output variable
         compiledExpression = mCompiledVariableMap.get(outputSlot);
@@ -125,6 +128,12 @@ public final class GraphCompiler {
     public void requireAttribute(String requirement) {
         if (!mRequiredAttributes.contains(requirement)) {
             mRequiredAttributes.add(requirement);
+        }
+    }
+
+    public void setShadingModel(String shadingModel) {
+        if (validShadingModels.contains(shadingModel)) {
+            mShadingModel = shadingModel;
         }
     }
 
@@ -213,6 +222,16 @@ public final class GraphCompiler {
      */
     public void provideFunctionDefinition(String symbolName, String format, Object... args) {
         provideFunctionDefinition(symbolName, String.format(format, args));
+    }
+
+    private void compileNode(Node node) {
+        mUncompiledNodes.remove(node);
+        Node newNode = node.getCompileFunction().invoke(node, this);
+
+        // We've received a new node while compiling, take note of it.
+        if (newNode != node) {
+            mOldToNewNodeMap.put(node, newNode);
+        }
     }
 
     /**
