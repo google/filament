@@ -29,7 +29,7 @@ set(GENERATION_ROOT ${CMAKE_CURRENT_BINARY_DIR})
 file(MAKE_DIRECTORY "${GENERATION_ROOT}/generated/material/")
 
 # Target system.
-if (ANDROID)
+if (ANDROID OR WEBGL)
     set(MATC_TARGET mobile)
 else()
     set(MATC_TARGET desktop)

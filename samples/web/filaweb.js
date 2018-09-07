@@ -50,7 +50,7 @@ function canvas_resize() {
     let h = window.innerHeight;
     canvas.width = (w * pr) | 0;
     canvas.height = (h * pr) | 0;
-    _resize((w * pr) | 0, (h * pr) | 0 );
+    _resize((w * pr) | 0, (h * pr) | 0, pr);
 }
 
 function load_rawfile(url) {

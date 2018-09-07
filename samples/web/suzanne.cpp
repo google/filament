@@ -170,7 +170,7 @@ void setup(Engine* engine, View* view, Scene* scene) {
     scene->addEntity(app.ptlight[2]);
     scene->addEntity(app.ptlight[3]);
 
-    //  Create sky box and image-based light source.
+    // Create skybox and image-based light source.
     auto skylight = filaweb::getSkyLight(*engine, "syferfontein_18d_clear_2k");
     scene->setIndirectLight(skylight.indirectLight);
     scene->setSkybox(skylight.skybox);
@@ -194,13 +194,10 @@ void animate(Engine* engine, View* view, double now) {
         mat4f::rotate(now, math::float3{0, 1, 0}));
 };
 
-void gui(filament::Engine* engine, filament::View*) {
-};
-
 // This is called only after the JavaScript layer has created a WebGL 2.0 context and all assets
 // have been downloaded.
 extern "C" void launch() {
-    filaweb::Application::get()->run(setup, gui, animate);
+    filaweb::Application::get()->run(setup, animate);
 }
 
 // The main() entry point is implicitly called after JIT compilation, but potentially before the

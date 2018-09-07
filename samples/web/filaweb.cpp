@@ -31,8 +31,8 @@ extern "C" void render() {
     filaweb::Application::get()->render();
 }
 
-extern "C" void resize(uint32_t width, uint32_t height) {
-    filaweb::Application::get()->resize(width, height);
+extern "C" void resize(uint32_t width, uint32_t height, double pixelRatio) {
+    filaweb::Application::get()->resize(width, height, pixelRatio);
 }
 
 namespace filaweb {
@@ -142,8 +142,7 @@ SkyLight getSkyLight(Engine& engine, const char* name) {
 
     // Pull the data out of JavaScript.
     static auto asset = filaweb::getCubemap(name);
-    printf("syferfontein_18d_clear_2k: %d x %d, %d mips\n",
-            asset.width, asset.height, asset.envMipCount);
+    printf("%s: %d x %d, %d mips\n", name,  asset.width, asset.height, asset.envMipCount);
 
     // Parse the coefficients.
     std::istringstream shReader((const char*) asset.envShCoeffs->data.get());

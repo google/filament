@@ -48,6 +48,7 @@ public:
     ~ImGuiHelper();
 
     // Informs ImGui of the current display size, as well as the pixel ratio for high DPI displays.
+    // The display size is given in terms of virtual pixels, not physical pixels.
     void setDisplaySize(int width, int height, float scaleX = 0.0f, float scaleY = 0.0f);
 
     // This does not actually "render" in the sense of issuing OpenGL commands,

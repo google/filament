@@ -49,7 +49,9 @@ ImGuiHelper::ImGuiHelper(Engine* engine, filament::View* view, const Path& fontP
 
     // If the given font path is invalid, ImGui will silently fall back to proggy, which is a
     // tiny "pixel art" texture that is compiled into the library.
-    io.Fonts->AddFontFromFileTTF(fontPath.c_str(), 16.0f);
+    if (!fontPath.isEmpty()) {
+        io.Fonts->AddFontFromFileTTF(fontPath.c_str(), 16.0f);
+    }
 
     // Create the grayscale texture that ImGui uses for its glyph atlas.
     static unsigned char* pixels;
@@ -306,12 +308,14 @@ void ImGuiHelper::populateVertexData(size_t bufferIndex, size_t vbSizeInBytes, v
 }
 
 void ImGuiHelper::syncThreads() {
+#if UTILS_HAS_THREADING
     if (!mHasSynced) {
         // This is called only when ImGui needs to grow a vertex buffer, which occurs a few times
         // after launching and rarely (if ever) after that.
         Fence::waitAndDestroy(mEngine->createFence());
         mHasSynced = true;
     }
+#endif
 }
 
 } // namespace filagui

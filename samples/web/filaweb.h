@@ -17,6 +17,9 @@
 #ifndef TNT_FILAMENT_SAMPLES_FILAWEB_H
 #define TNT_FILAMENT_SAMPLES_FILAWEB_H
 
+#include <filagui/ImGuiHelper.h>
+
+#include <filament/Camera.h>
 #include <filament/Engine.h>
 #include <filament/IndirectLight.h>
 #include <filament/Renderer.h>
@@ -59,6 +62,8 @@ struct SkyLight {
 
 SkyLight getSkyLight(filament::Engine& engine, const char* name);
 
+static const auto NoopCallback = [](filament::Engine*, filament::View*) {};
+
 class Application {
 public:
     using Engine = filament::Engine;
@@ -73,19 +78,35 @@ public:
         return &app;
     }
 
-    void run(SetupCallback setup, ImGuiCallback imgui, AnimCallback animation) {
+    void run(SetupCallback setup, AnimCallback animation, ImGuiCallback imgui = NoopCallback) {
         mAnimation = animation;
+        mGuiCallback = imgui;
         mEngine = Engine::create(Engine::Backend::OPENGL);
         mSwapChain = mEngine->createSwapChain(nullptr);
         mScene = mEngine->createScene();
         mRenderer = mEngine->createRenderer();
         mView = mEngine->createView();
         mView->setScene(mScene);
+        mGuiCam = mEngine->createCamera();
+        mGuiView = mEngine->createView();
+        mGuiView->setClearTargets(false, false, false);
+        mGuiView->setRenderTarget(View::TargetBufferFlags::DEPTH_AND_STENCIL);
+        mGuiView->setPostProcessingEnabled(false);
+        mGuiView->setShadowsEnabled(false);
+        mGuiView->setCamera(mGuiCam);
+        mGuiHelper = new filagui::ImGuiHelper(mEngine, mGuiView, "");
         setup(mEngine, mView, mScene);
     }
 
-    void resize(uint32_t width, uint32_t height) {
+    void resize(uint32_t width, uint32_t height, double pixelRatio) {
+        mPixelRatio = pixelRatio;
         mView->setViewport({0, 0, width, height});
+        mGuiView->setViewport({0, 0, width, height});
+        mGuiCam->setProjection(filament::Camera::Projection::ORTHO,
+            0.0, width / pixelRatio,
+            height / pixelRatio, 0.0,
+            0.0, 1.0);
+        mGuiHelper->setDisplaySize(width / pixelRatio, height / pixelRatio, pixelRatio, pixelRatio);
     }
 
     void render() {
@@ -93,8 +114,16 @@ public:
             std::chrono::system_clock::now().time_since_epoch() /
             std::chrono::milliseconds(1);
         mAnimation(mEngine, mView, milliseconds_since_epoch / 1000.0);
+        mGuiCallback(mEngine, mView);
+    
+        double now = milliseconds_since_epoch / 1000.0;
+        static double previous = now;
+        mGuiHelper->render(now - previous, mGuiCallback);
+        previous = now;
+
         if (mRenderer->beginFrame(mSwapChain)) {
             mRenderer->render(mView);
+            mRenderer->render(mGuiView);
             mRenderer->endFrame();
         }
         mEngine->execute();
@@ -102,12 +131,17 @@ public:
 
 private:
     Application() { }
+    filagui::ImGuiHelper* mGuiHelper = nullptr;
     Engine* mEngine = nullptr;
     Scene* mScene = nullptr;
     View* mView = nullptr;
+    View* mGuiView = nullptr;
+    filament::Camera* mGuiCam = nullptr;
     filament::Renderer* mRenderer = nullptr;
     filament::SwapChain* mSwapChain = nullptr;
     AnimCallback mAnimation;
+    ImGuiCallback mGuiCallback;
+    double mPixelRatio = 1.0;
 };
 
 }  // namespace filaweb
