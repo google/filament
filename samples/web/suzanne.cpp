@@ -174,6 +174,8 @@ void setup(Engine* engine, View* view, Scene* scene) {
     auto skylight = filaweb::getSkyLight(*engine, "syferfontein_18d_clear_2k");
     scene->setIndirectLight(skylight.indirectLight);
     scene->setSkybox(skylight.skybox);
+    skylight.indirectLight->setRotation(
+            mat3f::rotate(M_PI, float3{ 0, 1, 0 }));
 
     app.cam = engine->createCamera();
     app.cam->setExposure(16.0f, 1 / 125.0f, 100.0f);

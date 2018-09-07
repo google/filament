@@ -58,7 +58,7 @@ Asset getCubemap(const char* name);
 
 struct SkyLight {
     math::float3 bands[9];
-    filament::IndirectLight const* indirectLight;
+    filament::IndirectLight* indirectLight;
     filament::Skybox* skybox;
 };
 

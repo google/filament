@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <title>Triangle</title>
+    <title>Sandbox</title>
     <link href="favicon.png" rel="icon" type="image/x-icon"/>
     <meta name="viewport" content="width=device-width,user-scalable=no,initial-scale=1">
     <style>
@@ -19,10 +19,13 @@
 </head>
 <body>
     <canvas id="filament-canvas"></canvas>
-    <script src="triangle.js"></script>
+    <script src="sandbox.js"></script>
     <script src="filaweb.js"></script>
     <script>
-    load({});
+    load({
+        'mesh':       load_rawfile('shaderball/mesh.filamesh'),
+        'pillars_2k': load_cubemap('pillars_2k/', 9)
+    });
     </script>
 </body>
 </html>

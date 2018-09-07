@@ -147,3 +147,4 @@ endfunction()
 
 add_demo(suzanne)
 add_demo(triangle)
+add_demo(sandbox)
