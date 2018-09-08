@@ -243,6 +243,7 @@ endfunction(list_licenses)
 # ==================================================================================================
 # Common to all platforms
 add_subdirectory(${EXTERNAL}/libgtest/tnt)
+add_subdirectory(${LIBRARIES}/cfilament)
 add_subdirectory(${LIBRARIES}/filabridge)
 add_subdirectory(${LIBRARIES}/filaflat)
 add_subdirectory(${LIBRARIES}/filamat)
@@ -250,7 +251,6 @@ add_subdirectory(${LIBRARIES}/image)
 add_subdirectory(${LIBRARIES}/math)
 add_subdirectory(${LIBRARIES}/utils)
 add_subdirectory(${FILAMENT}/filament)
-add_subdirectory(${FILAMENT}/cfilament)
 add_subdirectory(${FILAMENT}/shaders)
 add_subdirectory(${EXTERNAL}/robin-map/tnt)
 
