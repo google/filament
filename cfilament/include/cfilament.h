@@ -52,11 +52,16 @@ extern "C" {
 
 // Extra markers for code-introspection to denote out and inout arguments
 #ifdef FILAMENT_PARSING_IDL
+// Mark pointers as buffers that we only every write to
 #define FARGOUT __attribute__((annotate("out")))
+// Mark pointers as buffers that are both read/written
 #define FARGINOUT __attribute__((annotate("inout")))
+// Used to mark void* as opaque handles instead of buffers that we read/write
+#define FARGOPAQUE __attribute__((annotate("opaque")))
 #else
 #define FARGOUT
 #define FARGINOUT
+#define FARGOPAQUE
 #endif // FILAMENT_PARSING_IDL
 
 // We use forward declarations for consumers to hide the actual types, but when
@@ -162,7 +167,7 @@ typedef struct FFaceOffsets {
 } FFaceOffsets;
 
 // Must be in sync with BufferDescriptor::Callback
-typedef void(__cdecl *FFreeBufferFn)(void *buffer, size_t buffer_size, void *user);
+typedef void(__cdecl *FFreeBufferFn)(void *buffer, size_t buffer_size, FARGOPAQUE void *user);
 
 APIEXPORT void APICALL Filament_Colors_Cct(float temperature, FARGOUT FLinearColor *color);
 APIEXPORT void APICALL Filament_Colors_IlluminantD(float temperature, FARGOUT FLinearColor *color);
@@ -210,11 +215,11 @@ APIEXPORT void APICALL Filament_Camera_InverseProjectionF(FMat4f *projection, FA
  * filament::Engine
  *************************************************************************************************/
 APIEXPORT FEngine *APICALL Filament_Engine_Create(FBackend backend);
-APIEXPORT FEngine *APICALL Filament_Engine_CreateShared(FBackend backend, void *sharedGlContext);
+APIEXPORT FEngine *APICALL Filament_Engine_CreateShared(FBackend backend, FARGOPAQUE void *sharedGlContext);
 APIEXPORT void APICALL Filament_Engine_DestroyEngine(FEngine *engine);
 
 // SwapChain
-APIEXPORT FSwapChain *APICALL Filament_Engine_CreateSwapChain(FEngine *engine, void *surface, uint64_t flags);
+APIEXPORT FSwapChain *APICALL Filament_Engine_CreateSwapChain(FEngine *engine, FARGOPAQUE void *surface, uint64_t flags);
 APIEXPORT void APICALL Filament_Engine_DestroySwapChain(FEngine *engine, FSwapChain *swapChain);
 
 // FView
@@ -289,7 +294,7 @@ Filament_IndexBuffer_BuilderBuild(FIndexBufferBuilder *builder, FEngine *engine)
 APIEXPORT int APICALL Filament_IndexBuffer_GetIndexCount(FIndexBuffer *indexBuffer);
 APIEXPORT int APICALL Filament_IndexBuffer_SetBuffer(
         FIndexBuffer *vertexBuffer, FEngine *engine, void *data, uint32_t sizeInBytes,
-        uint32_t destOffsetInBytes, FFreeBufferFn freeBuffer, void *freeBufferArg);
+        uint32_t destOffsetInBytes, FFreeBufferFn freeBuffer, FARGOPAQUE void *freeBufferArg);
 
 /**************************************************************************************************
  * filament::IndirectLight
@@ -699,7 +704,7 @@ APIEXPORT int APICALL Filament_VertexBuffer_GetVertexCount(FVertexBuffer *vertex
 APIEXPORT int APICALL Filament_VertexBuffer_SetBufferAt(
         FVertexBuffer *vertexBuffer, FEngine *engine, uint8_t bufferIndex, void *data,
         uint32_t sizeInBytes, uint32_t destOffsetInBytes, FFreeBufferFn freeBuffer,
-        void *freeBufferArg);
+        FARGOPAQUE void *freeBufferArg);
 
 /**************************************************************************************************
  * filament::View
@@ -792,7 +797,7 @@ typedef struct {
     uint32_t top;
     uint32_t stride;
     FFreeBufferFn freeBufferCallback;
-    void *freeBufferArg;
+    FARGOPAQUE void *freeBufferArg;
 } FPixelBufferDescriptor;
 
 APIEXPORT FBool APICALL Filament_Stream_IsNativeStream(FStream *stream);
@@ -860,5 +865,6 @@ APIEXPORT void APICALL Filament_TextureSampler_GetParams(FTextureSampler sampler
 
 #undef FARGOUT
 #undef FARGINOUT
+#undef FARGOPAQUE
 
 #endif // __CFILAMENT_H__
