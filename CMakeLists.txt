@@ -252,6 +252,7 @@ endif()
 # ==================================================================================================
 # Common to all platforms
 add_subdirectory(${EXTERNAL}/libgtest/tnt)
+add_subdirectory(${LIBRARIES}/cfilament)
 add_subdirectory(${LIBRARIES}/filabridge)
 add_subdirectory(${LIBRARIES}/filaflat)
 add_subdirectory(${LIBRARIES}/filamat)
