@@ -5,9 +5,15 @@ project(web-samples)
 # Build materials into inc files.
 # ==================================================================================================
 
-set(MATERIAL_SRCS
-        ../materials/texturedLit.mat
-        ../materials/bakedColor.mat)
+set(MATERIAL_NAMES
+        sandboxCloth
+        sandboxLit
+        sandboxLitFade
+        sandboxLitTransparent
+        sandboxSubsurface
+        sandboxUnlit
+        texturedLit
+        bakedColor)
 
 if (CMAKE_CROSSCOMPILING)
     include(${IMPORT_EXECUTABLES})
@@ -23,7 +29,8 @@ set(GENERATION_ROOT ${CMAKE_CURRENT_BINARY_DIR})
 file(MAKE_DIRECTORY "${GENERATION_ROOT}/generated/material/")
 
 set(MATERIAL_BINS)
-foreach (mat_src ${MATERIAL_SRCS})
+foreach (NAME ${MATERIAL_NAMES})
+    set(mat_src "../materials/${NAME}.mat")
     get_filename_component(localname "${mat_src}" NAME_WE)
     get_filename_component(fullname "${mat_src}" ABSOLUTE)
     set(output_path "${GENERATION_ROOT}/generated/material/${localname}.inc")
@@ -106,7 +113,7 @@ add_custom_target(sample_assets DEPENDS ${target_meshes} ${target_envmaps} ${tar
 # For each demo, build a pair of wasm/js files and copy over an HTML file.
 # ==================================================================================================
 
-set(EXPORTS "'_launch','_main','_render','_resize'")
+set(EXPORTS "'_launch','_main','_render','_resize','_mouse'")
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -s EXPORTED_FUNCTIONS=[${EXPORTS}]")
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -s ALLOW_MEMORY_GROWTH=1")
 if (CMAKE_BUILD_TYPE MATCHES Debug)

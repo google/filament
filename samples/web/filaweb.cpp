@@ -35,6 +35,14 @@ extern "C" void resize(uint32_t width, uint32_t height, double pixelRatio) {
     filaweb::Application::get()->resize(width, height, pixelRatio);
 }
 
+extern "C" void mouse(int x, int y, int wx, int wy, int buttons) {
+    // We are careful not to pass down negative numbers, doing so would cause a numeric
+    // representation exception in WebAssembly.
+    x = std::max(0, x);
+    y = std::max(0, y);
+    filaweb::Application::get()->mouse(x, y, wx, wy, buttons);
+}
+
 namespace filaweb {
 
 Asset getRawFile(const char* name) {
