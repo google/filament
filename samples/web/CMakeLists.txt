@@ -127,6 +127,7 @@ endif()
 function(add_demo NAME)
     include_directories(${GENERATION_ROOT})
     add_executable(${NAME} ${NAME}.cpp
+            ../app/CameraManipulator.cpp
             filamesh.h
             filamesh.cpp
             filaweb.h
