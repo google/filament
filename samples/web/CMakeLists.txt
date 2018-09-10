@@ -98,7 +98,7 @@ function(add_envmap SOURCE TARGET)
     set(target_skyboxes ${target_skyboxes} ${target_skybox} PARENT_SCOPE)
     add_custom_command(
         OUTPUT ${target_skybox} ${target_envmap}
-        COMMAND cmgen -x public --format=rgbm --size=512 --extract-blur=0.1 ${source_envmap}
+        COMMAND cmgen -x public --format=rgbm --size=256 --extract-blur=0.1 ${source_envmap}
         MAIN_DEPENDENCY ${source_envmap}
         DEPENDS cmgen)
     set(target_envmaps ${target_envmaps} ${target_envmap} PARENT_SCOPE)
