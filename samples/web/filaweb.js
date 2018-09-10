@@ -35,17 +35,18 @@ function maybe_launch() {
     if (assets_ready && context_ready) {
         _launch();
         canvas_resize();
-        window.addEventListener("resize", canvas_resize);
-        window.addEventListener("wheel", canvas_mouse);
-        window.addEventListener("mousemove", canvas_mouse);
-        window.addEventListener("mousedown", canvas_mouse);
-        window.addEventListener("mouseup", canvas_mouse);
+        let canvas = document.getElementById('filament-canvas');
+        canvas.addEventListener("resize", canvas_resize);
+        canvas.addEventListener("wheel", canvas_mouse);
+        canvas.addEventListener("pointermove", canvas_mouse);
+        canvas.addEventListener("pointerdown", canvas_mouse);
+        canvas.addEventListener("pointerup", canvas_mouse);
         canvas_render();
     }
 }
 
-// Update a tiny queue of mouse events. We don't send them to WASM immediately because ImGui detects
-// click events by looking for three consecutive frames of down-up-down.
+// Update a tiny queue of pointer events. We don't send them to WASM immediately because ImGui
+// detects click events by looking for three consecutive frames of down-up-down.
 function canvas_mouse(evt) {
     let args = [evt.clientX, evt.clientY, evt.deltaX || 0, evt.deltaY || 0, evt.buttons];
     if (evt.buttons != previous_mouse_buttons || queued_mouse_events.length == 0) {
