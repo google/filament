@@ -146,9 +146,14 @@ private val textureSampleCompile = fun(node: Node, compiler: GraphCompiler): Nod
     val parameter = compiler.addParameter("sampler2d", "texture")
     compiler.associateParameterWithProperty(parameter, node.getPropertyHandle("textureSource"))
 
+    // If nothing is connected to the UV input, default to getUV0()
+    val uvs = compiler.compileAndRetrieveExpression(node.getInputSlot("uv"))?.rg
+            ?: Expression("getUV0()", 2)
+    compiler.setExpressionForSlot(node.getInputSlot("uv"), uvs)
+
     val outputVariable = compiler.getNewTemporaryVariableName("textureSample")
     compiler.addCodeToMaterialFunctionBody(
-            "float4 $outputVariable = texture(materialParams_${parameter.name}, getUV0());\n", 4)
+            "float4 $outputVariable = texture(materialParams_${parameter.name}, $uvs);\n", 4)
     compiler.setExpressionForSlot(node.getOutputSlot("out"),
             Expression(outputVariable, 4))
 
@@ -160,6 +165,7 @@ val createTextureSampleNode = fun(id: NodeId) =
             id = id,
             type = "textureSample",
             compileFunction = textureSampleCompile,
+            inputSlots = listOf("uv"),
             outputSlots = listOf("out"),
             properties = listOf(Property(
                 name = "textureSource",
