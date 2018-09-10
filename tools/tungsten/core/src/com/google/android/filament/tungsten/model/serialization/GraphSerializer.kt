@@ -43,9 +43,10 @@ object GraphSerializer {
         serializer: ISerializer = JsonSerializer()
     ): String {
         val nodesToSerialize = graph.nodes.map { n ->
-            val properties = n.properties.associate { p ->
-                p.name to p.value.serialize()
-            }
+            val properties = n.properties.mapNotNull {
+                val serialized = it.value.serialize()
+                if (serialized == null) null else it.name to serialized
+            }.toMap()
             NodeSchema(n.type, n.id, Point(n.x.toInt(), n.y.toInt()), properties)
         }
 
