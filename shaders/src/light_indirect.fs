@@ -195,7 +195,7 @@ vec3 specularDFG(const PixelParams pixel) {
  *   direction to match reference renderings when the roughness increases
  */
 
-vec3 getReflectedVector(const vec3 v, const PixelParams pixel, const vec3 n) {
+vec3 getReflectedVector(const PixelParams pixel, const vec3 v, const vec3 n) {
 #if defined(MATERIAL_HAS_ANISOTROPY)
     vec3  anisotropyDirection = pixel.anisotropy >= 0.0 ? pixel.anisotropicB : pixel.anisotropicT;
     vec3  anisotropicTangent  = cross(anisotropyDirection, v);
@@ -212,7 +212,7 @@ vec3 getReflectedVector(const vec3 v, const PixelParams pixel, const vec3 n) {
 
 vec3 getReflectedVector(const PixelParams pixel, const vec3 n) {
 #if defined(MATERIAL_HAS_ANISOTROPY)
-    vec3 r = getReflectedVector(shading_view, pixel, n);
+    vec3 r = getReflectedVector(pixel, shading_view, n);
 #else
     vec3 r = shading_reflected;
 #endif
@@ -224,12 +224,19 @@ vec3 getReflectedVector(const PixelParams pixel, const vec3 n) {
 //------------------------------------------------------------------------------
 
 #if IBL_INTEGRATION == IBL_INTEGRATION_IMPORTANCE_SAMPLING
-vec3 importanceSampleIBL(vec3 v, float NoV, const PixelParams pixel) {
-    mat3 R = shading_tangentToWorld;
-    float linearRoughness = pixel.linearRoughness;
-    float aa = linearRoughness * linearRoughness;
+vec3 importanceSampleIBL(vec3 n, vec3 v, float NoV, const PixelParams pixel) {
 
-    const float omegaP = (4.0 * PI) / (6.0 * 256.0 * 256.0);
+    mat3 R;
+    vec3 up = abs(n.z) < 0.999 ? vec3(0.0, 0.0, 1.0) : vec3(1.0, 0.0, 0.0);
+    R[0] = normalize(cross(up, n));
+    R[1] = cross(n, R[0]);
+    R[2] = n;
+
+    float linearRoughness = pixel.linearRoughness;
+    float a2 = linearRoughness * linearRoughness;
+
+    const float dim = float(1 << uint(IBL_MAX_MIP_LEVEL));
+    const float omegaP = (4.0 * PI) / (6.0 * dim * dim);
     const float invOmegaP = 1.0 / omegaP;
     const float K = 4.0;
 
@@ -254,16 +261,16 @@ vec3 importanceSampleIBL(vec3 v, float NoV, const PixelParams pixel) {
 
         // Importance sampling D_GGX
         float phi = 2.0 * PI * u.x;
-        float cosTheta2 = (1.0 - u.y) / (1.0 + (aa - 1.0) * u.y);
+        float cosTheta2 = (1.0 - u.y) / (1.0 + (a2 - 1.0) * u.y);
         float cosTheta = sqrt(cosTheta2);
         float sinTheta = sqrt(1.0 - cosTheta2);
 
-        vec3 H = R * vec3(cos(phi) * sinTheta, sin(phi) * sinTheta, cosTheta);
-        float VoH = dot(v, H);
+        vec3 h = R * vec3(cos(phi) * sinTheta, sin(phi) * sinTheta, cosTheta);
+        float VoH = dot(v, h);
 
         // since anisotropy doesn't work with prefiltering, we use the same "faux" anisotropy
         // we do when we use the prefiltered cubemap
-        vec3 L = getReflectedVector(v, pixel, H);
+        vec3 l = getReflectedVector(pixel, v, h);
 
         // Compute this sample's contribution to the brdf
         float NoL = 2.0 * cosTheta2 - 1.0;
@@ -272,7 +279,7 @@ vec3 importanceSampleIBL(vec3 v, float NoV, const PixelParams pixel) {
             float NoH = max(cosTheta,  0.0);
 
             // PDF inverse (we must use D_GGX() here, which is used to generate samples
-            float ipdf = (4.0 * VoH) / (D_GGX(linearRoughness, NoH, H) * NoH);
+            float ipdf = (4.0 * VoH) / (D_GGX(linearRoughness, NoH, h) * NoH);
 
             // see: "Real-time Shading with Filtered Importance Sampling", Jaroslav Krivanek
             // prefiltering doesn't work with anisotropy
@@ -280,14 +287,14 @@ vec3 importanceSampleIBL(vec3 v, float NoV, const PixelParams pixel) {
             float mipLevel = clamp(log2(K * omegaS * invOmegaP) * 0.5, 0.0, IBL_MAX_MIP_LEVEL);
 
             // BRDF to evaluate
-            float D = distribution(linearRoughness, NoH, H);
+            float D = distribution(linearRoughness, NoH, h);
             float V = visibility(pixel.roughness, linearRoughness, NoV, NoL, VoH);
             vec3  F = fresnel(pixel.f0, VoH);
 
             // integral
             vec3 Fr = F * (D * V * ipdf * NoL);
 
-            vec3 env = decodeDataForIBL(textureLod(light_iblSpecular, L, mipLevel));
+            vec3 env = decodeDataForIBL(textureLod(light_iblSpecular, l, mipLevel));
             indirectSpecular += (Fr * env) * invNumSamples;
         }
     }
@@ -370,7 +377,7 @@ void evaluateIBL(const MaterialInputs material, const PixelParams pixel, inout v
 #if IBL_INTEGRATION == IBL_INTEGRATION_PREFILTERED_CUBEMAP
     Fr = specularDFG(pixel) * specularIrradiance(r, pixel.roughness);
 #elif IBL_INTEGRATION == IBL_INTEGRATION_IMPORTANCE_SAMPLING
-    Fr = importanceSampleIBL(shading_view, shading_NoV, pixel);
+    Fr = importanceSampleIBL(n, shading_view, shading_NoV, pixel);
 #endif
     Fr *= specularAO * pixel.energyCompensation;
 
