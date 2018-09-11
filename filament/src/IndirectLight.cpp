@@ -23,6 +23,9 @@
 
 #include <utils/Panic.h>
 
+#define IBL_INTEGRATION_PREFILTERED_CUBEMAP         0
+#define IBL_INTEGRATION_IMPORTANCE_SAMPLING         1
+#define IBL_INTEGRATION                             IBL_INTEGRATION_PREFILTERED_CUBEMAP
 
 using namespace math;
 
@@ -91,6 +94,9 @@ IndirectLight* IndirectLight::Builder::build(Engine& engine) {
                 mImpl->mReflectionsMap->getLevels() == 1,
                 "reflection map must be 256x256 and have 9 mipmap levels")) {
             return nullptr;
+        }
+        if (IBL_INTEGRATION == IBL_INTEGRATION_IMPORTANCE_SAMPLING) {
+            mImpl->mReflectionsMap->generateMipmaps(engine);
         }
     }
 

@@ -29,6 +29,12 @@
 
 #define CLOTH_DFG                           CLOTH_DFG_CHARLIE
 
+// IBL integration algorithm
+#define IBL_INTEGRATION_PREFILTERED_CUBEMAP         0
+#define IBL_INTEGRATION_IMPORTANCE_SAMPLING         1
+#define IBL_INTEGRATION_IMPORTANCE_SAMPLING_COUNT   32
+#define IBL_INTEGRATION                             IBL_INTEGRATION_PREFILTERED_CUBEMAP
+
 //------------------------------------------------------------------------------
 // IBL utilities
 //------------------------------------------------------------------------------
@@ -180,6 +186,115 @@ vec3 specularDFG(const PixelParams pixel) {
 #endif
 }
 
+/**
+ * Returns the reflected vector at the current shading point. The reflected vector
+ * return by this function might be different from shading_reflected:
+ * - For anisotropic material, we bend the reflection vector to simulate
+ *   anisotropic indirect lighting
+ * - The reflected vector may be modified to point towards the dominant specular
+ *   direction to match reference renderings when the roughness increases
+ */
+
+vec3 getReflectedVector(const vec3 v, const PixelParams pixel, const vec3 n) {
+#if defined(MATERIAL_HAS_ANISOTROPY)
+    vec3  anisotropyDirection = pixel.anisotropy >= 0.0 ? pixel.anisotropicB : pixel.anisotropicT;
+    vec3  anisotropicTangent  = cross(anisotropyDirection, v);
+    vec3  anisotropicNormal   = cross(anisotropicTangent, anisotropyDirection);
+    float bendFactor          = abs(pixel.anisotropy) * saturate(5.0 * pixel.roughness);
+    vec3  bentNormal          = normalize(mix(n, anisotropicNormal, bendFactor));
+
+    vec3 r = reflect(-v, bentNormal);
+#else
+    vec3 r = reflect(-v, n);
+#endif
+    return r;
+}
+
+vec3 getReflectedVector(const PixelParams pixel, const vec3 n) {
+#if defined(MATERIAL_HAS_ANISOTROPY)
+    vec3 r = getReflectedVector(shading_view, pixel, n);
+#else
+    vec3 r = shading_reflected;
+#endif
+    return getSpecularDominantDirection(n, r, pixel.linearRoughness);
+}
+
+//------------------------------------------------------------------------------
+// Prefiltered importance sampling
+//------------------------------------------------------------------------------
+
+#if IBL_INTEGRATION == IBL_INTEGRATION_IMPORTANCE_SAMPLING
+vec3 importanceSampleIBL(vec3 v, float NoV, const PixelParams pixel) {
+    mat3 R = shading_tangentToWorld;
+    float linearRoughness = pixel.linearRoughness;
+    float aa = linearRoughness * linearRoughness;
+
+    const float omegaP = (4.0 * PI) / (6.0 * 256.0 * 256.0);
+    const float invOmegaP = 1.0 / omegaP;
+    const float K = 4.0;
+
+    // IMPORTANT: Keep numSample = 1 << numSampleBits
+    const uint numSamples = IBL_INTEGRATION_IMPORTANCE_SAMPLING_COUNT;
+    const uint numSampleBits = uint(log2(float(numSamples)));
+    const float invNumSamples = 1.0 / float(numSamples);
+
+    vec3 indirectSpecular = vec3(0.0);
+    for (uint i = 0; i < numSamples; i++) {
+        // Compute hammersley sequence
+        // this is very inefficient here because we don't have
+        // logical bit operations in ES2.x.
+        // TODO: these should come from uniforms
+        uint t = i;
+        uint bits = 0;
+        for (uint j = 0; j < numSampleBits; j++) {
+            bits = bits * 2 + (t - (2 * (t / 2)));
+            t /= 2;
+        }
+        vec2 u = vec2(float(i), float(bits)) * invNumSamples;
+
+        // Importance sampling D_GGX
+        float phi = 2.0 * PI * u.x;
+        float cosTheta2 = (1.0 - u.y) / (1.0 + (aa - 1.0) * u.y);
+        float cosTheta = sqrt(cosTheta2);
+        float sinTheta = sqrt(1.0 - cosTheta2);
+
+        vec3 H = R * vec3(cos(phi) * sinTheta, sin(phi) * sinTheta, cosTheta);
+        float VoH = dot(v, H);
+
+        // since anisotropy doesn't work with prefiltering, we use the same "faux" anisotropy
+        // we do when we use the prefiltered cubemap
+        vec3 L = getReflectedVector(v, pixel, H);
+
+        // Compute this sample's contribution to the brdf
+        float NoL = 2.0 * cosTheta2 - 1.0;
+        if (NoL > 0.0) {
+            VoH = max(VoH, 0.0);
+            float NoH = max(cosTheta,  0.0);
+
+            // PDF inverse (we must use D_GGX() here, which is used to generate samples
+            float ipdf = (4.0 * VoH) / (D_GGX(linearRoughness, NoH, H) * NoH);
+
+            // see: "Real-time Shading with Filtered Importance Sampling", Jaroslav Krivanek
+            // prefiltering doesn't work with anisotropy
+            float omegaS = invNumSamples * ipdf;
+            float mipLevel = clamp(log2(K * omegaS * invOmegaP) * 0.5, 0.0, IBL_MAX_MIP_LEVEL);
+
+            // BRDF to evaluate
+            float D = distribution(linearRoughness, NoH, H);
+            float V = visibility(pixel.roughness, linearRoughness, NoV, NoL, VoH);
+            vec3  F = fresnel(pixel.f0, VoH);
+
+            // integral
+            vec3 Fr = F * (D * V * ipdf * NoL);
+
+            vec3 env = decodeDataForIBL(textureLod(light_iblSpecular, L, mipLevel));
+            indirectSpecular += (Fr * env) * invNumSamples;
+        }
+    }
+    return indirectSpecular;
+}
+#endif
+
 //------------------------------------------------------------------------------
 // IBL evaluation
 //------------------------------------------------------------------------------
@@ -193,29 +308,6 @@ float computeSpecularAO(float NoV, float ao, float roughness) {
 #else
     return 1.0;
 #endif
-}
-
-/**
- * Returns the reflected vector at the current shading point. The reflected vector
- * return by this function might be different from shading_reflected:
- * - For anisotropic material, we bend the reflection vector to simulate
- *   anisotropic indirect lighting
- * - The reflected vector may be modified to point towards the dominant specular
- *   direction to match reference renderings when the roughness increases
- */
-vec3 getReflectedVector(const PixelParams pixel, const vec3 n) {
-#if defined(MATERIAL_HAS_ANISOTROPY)
-    vec3  anisotropyDirection = pixel.anisotropy >= 0.0 ? pixel.anisotropicB : pixel.anisotropicT;
-    vec3  anisotropicTangent  = cross(anisotropyDirection, shading_view);
-    vec3  anisotropicNormal   = cross(anisotropicTangent, anisotropyDirection);
-    float bendFactor          = abs(pixel.anisotropy) * saturate(5.0 * pixel.roughness);
-    vec3  bentNormal          = normalize(mix(n, anisotropicNormal, bendFactor));
-
-    vec3 r = reflect(-shading_view, bentNormal);
-#else
-    vec3 r = shading_reflected;
-#endif
-    return getSpecularDominantDirection(n, r, pixel.linearRoughness);
 }
 
 void evaluateClothIndirectDiffuseBRDF(const PixelParams pixel, inout float diffuse) {
@@ -274,8 +366,13 @@ void evaluateIBL(const MaterialInputs material, const PixelParams pixel, inout v
     vec3 Fd = pixel.diffuseColor * diffuseIrradiance * diffuseBRDF;
 
     // specular indirect
-    vec3 Fr = specularDFG(pixel) * specularIrradiance(r, pixel.roughness) * specularAO;
-    Fr *= pixel.energyCompensation;
+    vec3 Fr;
+#if IBL_INTEGRATION == IBL_INTEGRATION_PREFILTERED_CUBEMAP
+    Fr = specularDFG(pixel) * specularIrradiance(r, pixel.roughness);
+#elif IBL_INTEGRATION == IBL_INTEGRATION_IMPORTANCE_SAMPLING
+    Fr = importanceSampleIBL(shading_view, shading_NoV, pixel);
+#endif
+    Fr *= specularAO * pixel.energyCompensation;
 
     evaluateClearCoatIBL(pixel, specularAO, Fd, Fr);
     evaluateSubsurfaceIBL(pixel, diffuseIrradiance, Fd, Fr);
