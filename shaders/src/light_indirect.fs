@@ -224,14 +224,8 @@ vec3 getReflectedVector(const PixelParams pixel, const vec3 n) {
 //------------------------------------------------------------------------------
 
 #if IBL_INTEGRATION == IBL_INTEGRATION_IMPORTANCE_SAMPLING
-vec3 importanceSampleIBL(vec3 n, vec3 v, float NoV, const PixelParams pixel) {
-
-    mat3 R;
-    vec3 up = abs(n.z) < 0.999 ? vec3(0.0, 0.0, 1.0) : vec3(1.0, 0.0, 0.0);
-    R[0] = normalize(cross(up, n));
-    R[1] = cross(n, R[0]);
-    R[2] = n;
-
+vec3 importanceSampleIBL(const PixelParams pixel, mat3 tangentToWorld, vec3 v, float NoV) {
+    vec3 n = tangentToWorld[2];
     float linearRoughness = pixel.linearRoughness;
     float a2 = linearRoughness * linearRoughness;
 
@@ -265,7 +259,7 @@ vec3 importanceSampleIBL(vec3 n, vec3 v, float NoV, const PixelParams pixel) {
         float cosTheta = sqrt(cosTheta2);
         float sinTheta = sqrt(1.0 - cosTheta2);
 
-        vec3 h = R * vec3(cos(phi) * sinTheta, sin(phi) * sinTheta, cosTheta);
+        vec3 h = tangentToWorld * vec3(cos(phi) * sinTheta, sin(phi) * sinTheta, cosTheta);
         float VoH = dot(v, h);
 
         // since anisotropy doesn't work with prefiltering, we use the same "faux" anisotropy
@@ -377,7 +371,7 @@ void evaluateIBL(const MaterialInputs material, const PixelParams pixel, inout v
 #if IBL_INTEGRATION == IBL_INTEGRATION_PREFILTERED_CUBEMAP
     Fr = specularDFG(pixel) * specularIrradiance(r, pixel.roughness);
 #elif IBL_INTEGRATION == IBL_INTEGRATION_IMPORTANCE_SAMPLING
-    Fr = importanceSampleIBL(n, shading_view, shading_NoV, pixel);
+    Fr = importanceSampleIBL(pixel, shading_tangentToWorld, shading_view, shading_NoV);
 #endif
     Fr *= specularAO * pixel.energyCompensation;
 
