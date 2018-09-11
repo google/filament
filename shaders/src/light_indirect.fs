@@ -267,7 +267,7 @@ void evaluateIBL(const MaterialInputs material, const PixelParams pixel, inout v
     float specularAO = computeSpecularAO(shading_NoV, ao, pixel.roughness);
 
     // diffuse indirect
-    float diffuseBRDF = Fd_Lambert() * ao;
+    float diffuseBRDF = ao; // Fd_Lambert() is baked in the SH below
     evaluateClothIndirectDiffuseBRDF(pixel, diffuseBRDF);
 
     vec3 diffuseIrradiance = diffuseIrradiance(n);

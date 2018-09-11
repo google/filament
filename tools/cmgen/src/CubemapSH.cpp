@@ -226,7 +226,7 @@ std::unique_ptr<double3[]> CubemapSH::computeSH(const Cubemap& cm, size_t numBan
 
     // precompute the scaling factor K
     for (size_t l = 0; l < numBands; l++) {
-        const double truncatedCosSh = irradiance ? computeTruncatedCosSh(size_t(l)) : 1;
+        const double truncatedCosSh = irradiance ? (computeTruncatedCosSh(size_t(l)) * M_1_PI) : 1;
         double K = Kml(0, l);
         SH[SHindex(0, l)] *= K * truncatedCosSh;
         for (size_t m = 1; m <= l; m++) {
@@ -284,15 +284,15 @@ std::unique_ptr<double3[]> CubemapSH::computeIrradianceSH3Bands(const Cubemap& c
     const double c0 = computeTruncatedCosSh(0);
     const double c1 = computeTruncatedCosSh(1);
     const double c2 = computeTruncatedCosSh(2);
-    A[0] = sq(M_2_SQRTPI / 4)       * c0;
-    A[1] = sq(M_2_SQRTPI / 4) * 3   * c1;
-    A[2] = sq(M_2_SQRTPI / 4) * 3   * c1;
-    A[3] = sq(M_2_SQRTPI / 4) * 3   * c1;
-    A[4] = sq(M_2_SQRTPI / 4) * 15  * c2;
-    A[5] = sq(M_2_SQRTPI / 4) * 15  * c2;
-    A[6] = sq(M_2_SQRTPI / 8) * 5   * c2;
-    A[7] = sq(M_2_SQRTPI / 4) * 15  * c2;
-    A[8] = sq(M_2_SQRTPI / 8) * 15  * c2;
+    A[0] = (M_1_PI * M_1_PI / 4)       * c0;
+    A[1] = (M_1_PI * M_1_PI / 4) * 3   * c1;
+    A[2] = (M_1_PI * M_1_PI / 4) * 3   * c1;
+    A[3] = (M_1_PI * M_1_PI / 4) * 3   * c1;
+    A[4] = (M_1_PI * M_1_PI / 4) * 15  * c2;
+    A[5] = (M_1_PI * M_1_PI / 4) * 15  * c2;
+    A[6] = (M_1_PI * M_1_PI /16) * 5   * c2;
+    A[7] = (M_1_PI * M_1_PI / 4) * 15  * c2;
+    A[8] = (M_1_PI * M_1_PI /16) * 15  * c2;
 
     struct State {
         double3 SH[9] = { };
