@@ -61,7 +61,7 @@ static constexpr uint8_t BAKED_COLOR_PACKAGE[] = {
 int main(int argc, char *argv[]) {
     Config config;
     config.title = "hellotriangle";
-    config.backend = Engine::Backend::OPENGL;
+    config.backend = Engine::Backend::VULKAN;
 
     App app;
     auto setup = [&app](Engine* engine, View* view, Scene* scene) {
