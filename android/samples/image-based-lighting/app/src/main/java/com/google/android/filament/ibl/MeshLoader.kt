@@ -23,9 +23,6 @@ import com.google.android.filament.*
 import com.google.android.filament.VertexBuffer.AttributeType.*
 import com.google.android.filament.VertexBuffer.VertexAttribute.*
 
-import com.google.android.filament.ibl.IoUtils.readFloat32LE
-import com.google.android.filament.ibl.IoUtils.readUIntLE
-
 import java.io.InputStream
 import java.nio.charset.Charset
 import java.nio.ByteBuffer
