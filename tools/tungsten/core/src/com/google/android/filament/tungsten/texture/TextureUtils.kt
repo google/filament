@@ -21,11 +21,16 @@ import com.google.android.filament.Texture
 
 import javax.imageio.ImageIO
 import java.awt.image.BufferedImage
+import java.awt.image.BufferedImage.TYPE_3BYTE_BGR
+import java.awt.image.BufferedImage.TYPE_4BYTE_ABGR
+import java.awt.image.BufferedImage.TYPE_4BYTE_ABGR_PRE
+import java.awt.image.BufferedImage.TYPE_INT_ARGB
+import java.awt.image.BufferedImage.TYPE_INT_ARGB_PRE
+import java.awt.image.BufferedImage.TYPE_INT_BGR
 import java.awt.image.DataBufferByte
 import java.io.File
 import java.io.IOException
 import java.nio.ByteBuffer
-import java.nio.ByteOrder
 
 private fun Texture.InternalFormat.toSrgb(): Texture.InternalFormat {
     return when (this) {
@@ -79,11 +84,10 @@ object TextureUtils {
 
     private fun loadTextureFromImage(engine: Engine, img: BufferedImage): Texture? {
         val data = img.data.dataBuffer as DataBufferByte
-        val pixels = data.data
 
         val (internalFormat, textureFormat) = decideTextureFormat(img)
 
-        flipComponents(img.colorModel.numComponents, pixels)
+        flipComponentsIfNecessary(img)
 
         val texture = Texture.Builder()
                 .width(img.width)
@@ -92,8 +96,7 @@ object TextureUtils {
                 .sampler(Texture.Sampler.SAMPLER_2D)
                 .build(engine)
 
-        val buf = ByteBuffer.wrap(pixels)
-        buf.order(ByteOrder.BIG_ENDIAN)
+        val buf = ByteBuffer.wrap(data.data)
 
         val desc = Texture.PixelBufferDescriptor(buf, textureFormat, Texture.Type.UBYTE)
 
@@ -102,8 +105,25 @@ object TextureUtils {
         return texture
     }
 
-    private fun flipComponents(numComponents: Int, pixels: ByteArray) {
-        if (numComponents == 4) {
+    private fun flipComponentsIfNecessary(img: BufferedImage) {
+        val data = img.data.dataBuffer as DataBufferByte
+        val pixels = data.data
+        val components = img.colorModel.numComponents
+
+        // Only flip components if they are specified in non-RGBA order.
+        val typesToFlip = listOf(
+                TYPE_INT_ARGB,
+                TYPE_INT_ARGB_PRE,
+                TYPE_INT_BGR,
+                TYPE_3BYTE_BGR,
+                TYPE_4BYTE_ABGR,
+                TYPE_4BYTE_ABGR_PRE
+        )
+        if (!typesToFlip.contains(img.type)) {
+            return
+        }
+
+        if (components == 4) {
             // ABGR -> RGBA
             assert(pixels.size % 4 == 0)
             var i = 0
@@ -119,8 +139,8 @@ object TextureUtils {
                 i += 4
             }
         }
-        if (numComponents == 3) {
-            // ABGR -> RGBA
+        if (components == 3) {
+            // BGR -> RGB
             assert(pixels.size % 3 == 0)
             var i = 0
             while (i < pixels.size) {
