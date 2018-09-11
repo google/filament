@@ -138,7 +138,7 @@ function(add_demo NAME)
     # manually-written HTML file.
     add_custom_command(
         OUTPUT ${PROJECT_BINARY_DIR}/public/${NAME}.js
-        DEPENDS ${NAME} ${PROJECT_BINARY_DIR}/${NAME}.js
+        DEPENDS ${NAME} ${PROJECT_BINARY_DIR}/${NAME}.js ${CMAKE_CURRENT_SOURCE_DIR}/${NAME}.html
         COMMAND cmake -E copy ${CMAKE_CURRENT_SOURCE_DIR}/${NAME}.html ${PROJECT_BINARY_DIR}/public
         COMMAND cmake -E copy ${PROJECT_BINARY_DIR}/${NAME}.* ${PROJECT_BINARY_DIR}/public)
     add_custom_target(${NAME}_public ALL DEPENDS ${PROJECT_BINARY_DIR}/public/${NAME}.js)
