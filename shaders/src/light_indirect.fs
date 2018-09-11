@@ -224,7 +224,7 @@ vec3 getReflectedVector(const PixelParams pixel, const vec3 n) {
 //------------------------------------------------------------------------------
 
 #if IBL_INTEGRATION == IBL_INTEGRATION_IMPORTANCE_SAMPLING
-vec3 importanceSampleIBL(const PixelParams pixel, mat3 tangentToWorld, vec3 v, float NoV) {
+vec3 isEvaluateIBL(const PixelParams pixel, mat3 tangentToWorld, vec3 v, float NoV) {
     vec3 n = tangentToWorld[2];
     float linearRoughness = pixel.linearRoughness;
     float a2 = linearRoughness * linearRoughness;
@@ -294,6 +294,37 @@ vec3 importanceSampleIBL(const PixelParams pixel, mat3 tangentToWorld, vec3 v, f
     }
     return indirectSpecular;
 }
+
+void isEvaluateClearCoatIBL(const PixelParams pixel, float specularAO, inout vec3 Fd, inout vec3 Fr) {
+#if defined(MATERIAL_HAS_CLEAR_COAT)
+#if defined(MATERIAL_HAS_NORMAL) || defined(MATERIAL_HAS_CLEAR_COAT_NORMAL)
+    // We want to use the geometric normal for the clear coat layer
+    float clearCoatNoV = abs(dot(shading_clearCoatNormal, shading_view)) + FLT_EPS;
+    // compute clear coat tangent space
+    mat3 tangentToWorld;
+    vec3 up = abs(shading_clearCoatNormal.z) < 0.999 ? vec3(0.0, 0.0, 1.0) : vec3(1.0, 0.0, 0.0);
+    tangentToWorld[0] = normalize(cross(up, shading_clearCoatNormal));
+    tangentToWorld[1] = cross(shading_clearCoatNormal, tangentToWorld[0]);
+    tangentToWorld[2] = shading_clearCoatNormal;
+#else
+    float clearCoatNoV = shading_NoV;
+    mat3 tangentToWorld = shading_tangentToWorld;
+#endif
+    // The clear coat layer assumes an IOR of 1.5 (4% reflectance)
+    float Fc = F_Schlick(0.04, 1.0, clearCoatNoV) * pixel.clearCoat;
+    float attenuation = 1.0 - Fc;
+    Fd *= attenuation;
+    Fr *= sq(attenuation);
+
+    PixelParams p;
+    p.roughness = pixel.clearCoatRoughness;
+    p.f0 = vec3(0.04);
+    p.linearRoughness = p.roughness * p.roughness;
+    p.anisotropy = 0.0;
+    Fr += isEvaluateIBL(p, tangentToWorld, shading_view, clearCoatNoV) * (specularAO * pixel.clearCoat);
+#endif
+}
+
 #endif
 
 //------------------------------------------------------------------------------
@@ -370,12 +401,13 @@ void evaluateIBL(const MaterialInputs material, const PixelParams pixel, inout v
     vec3 Fr;
 #if IBL_INTEGRATION == IBL_INTEGRATION_PREFILTERED_CUBEMAP
     Fr = specularDFG(pixel) * specularIrradiance(r, pixel.roughness);
-#elif IBL_INTEGRATION == IBL_INTEGRATION_IMPORTANCE_SAMPLING
-    Fr = importanceSampleIBL(pixel, shading_tangentToWorld, shading_view, shading_NoV);
-#endif
     Fr *= specularAO * pixel.energyCompensation;
-
     evaluateClearCoatIBL(pixel, specularAO, Fd, Fr);
+#elif IBL_INTEGRATION == IBL_INTEGRATION_IMPORTANCE_SAMPLING
+    Fr = isEvaluateIBL(pixel, shading_tangentToWorld, shading_view, shading_NoV);
+    Fr *= specularAO * pixel.energyCompensation;
+    isEvaluateClearCoatIBL(pixel, specularAO, Fd, Fr);
+#endif
     evaluateSubsurfaceIBL(pixel, diffuseIrradiance, Fd, Fr);
 
     // Note: iblLuminance is already premultiplied by the exposure
