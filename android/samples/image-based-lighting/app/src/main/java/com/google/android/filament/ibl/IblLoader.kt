@@ -30,14 +30,6 @@ import java.nio.ByteBuffer
 
 import kotlin.math.log2
 
-private fun peekSize(assets: AssetManager, name: String): Pair<Int, Int> {
-    val input = assets.open(name)
-    val opts = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-    BitmapFactory.decodeStream(input, null, opts)
-    input.close()
-    return opts.outWidth to opts.outHeight
-}
-
 data class Ibl(val indirectLight: IndirectLight,
                val indirectLightTexture: Texture,
                val skybox: Skybox,
@@ -54,6 +46,14 @@ fun destroyIbl(engine: Engine, ibl: Ibl) {
     engine.destroyTexture(ibl.skyboxTexture)
     engine.destroyIndirectLight(ibl.indirectLight)
     engine.destroyTexture(ibl.indirectLightTexture)
+}
+
+private fun peekSize(assets: AssetManager, name: String): Pair<Int, Int> {
+    val input = assets.open(name)
+    val opts = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+    BitmapFactory.decodeStream(input, null, opts)
+    input.close()
+    return opts.outWidth to opts.outHeight
 }
 
 private fun loadIndirectLight(
