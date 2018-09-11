@@ -337,7 +337,7 @@ void CubemapIBL::diffuseIrradiance(Cubemap& dst, const std::vector<Cubemap>& lev
 
             // OmegaS is is the solid-angle of an important sample (i.e. how much surface
             // of the sphere it represents). It obviously is function of the PDF.
-            double pdf = NoL / M_PI;
+            double pdf = NoL * M_1_PI;
             const double omegaS = 1.0 / (numSamples * pdf);
 
             // The LOD is given by: max[ log4(Os/Op) + K, 0 ]
@@ -386,7 +386,7 @@ void CubemapIBL::diffuseIrradiance(Cubemap& dst, const std::vector<Cubemap>& lev
                 const float3 c0 = Cubemap::trilinearFilterAt(cmBase, next, e.lerp, L);
                 Li += c0;
             }
-            Cubemap::writeAt(data, Cubemap::Texel(Li * inumSamples * M_PI));
+            Cubemap::writeAt(data, Cubemap::Texel(Li * inumSamples));
         }
     });
 
