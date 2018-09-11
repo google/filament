@@ -48,6 +48,9 @@ function maybe_launch() {
 // Update a tiny queue of pointer events. We don't send them to WASM immediately because ImGui
 // detects click events by looking for three consecutive frames of down-up-down.
 function canvas_mouse(evt) {
+    if (evt.pointerType == 'touch' && !evt.isPrimary) {
+        return;
+    }
     let args = [evt.clientX, evt.clientY, evt.deltaX || 0, evt.deltaY || 0, evt.buttons];
     if (evt.buttons != previous_mouse_buttons || queued_mouse_events.length == 0) {
         queued_mouse_events.push(args);
