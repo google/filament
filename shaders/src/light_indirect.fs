@@ -260,7 +260,6 @@ vec3 isEvaluateIBL(const PixelParams pixel, mat3 tangentToWorld, vec3 v, float N
         float sinTheta = sqrt(1.0 - cosTheta2);
 
         vec3 h = tangentToWorld * vec3(cos(phi) * sinTheta, sin(phi) * sinTheta, cosTheta);
-        float VoH = dot(v, h);
 
         // since anisotropy doesn't work with prefiltering, we use the same "faux" anisotropy
         // we do when we use the prefiltered cubemap
@@ -269,11 +268,11 @@ vec3 isEvaluateIBL(const PixelParams pixel, mat3 tangentToWorld, vec3 v, float N
         // Compute this sample's contribution to the brdf
         float NoL = 2.0 * cosTheta2 - 1.0;
         if (NoL > 0.0) {
-            VoH = max(VoH, 0.0);
-            float NoH = max(cosTheta,  0.0);
+            float LoH = max(dot(l, h), 0.0);
+            float NoH = cosTheta;
 
             // PDF inverse (we must use D_GGX() here, which is used to generate samples
-            float ipdf = (4.0 * VoH) / (D_GGX(linearRoughness, NoH, h) * NoH);
+            float ipdf = (4.0 * LoH) / (D_GGX(linearRoughness, NoH, h) * NoH);
 
             // see: "Real-time Shading with Filtered Importance Sampling", Jaroslav Krivanek
             // prefiltering doesn't work with anisotropy
@@ -282,8 +281,8 @@ vec3 isEvaluateIBL(const PixelParams pixel, mat3 tangentToWorld, vec3 v, float N
 
             // BRDF to evaluate
             float D = distribution(linearRoughness, NoH, h);
-            float V = visibility(pixel.roughness, linearRoughness, NoV, NoL, VoH);
-            vec3  F = fresnel(pixel.f0, VoH);
+            float V = visibility(pixel.roughness, linearRoughness, NoV, NoL, LoH);
+            vec3  F = fresnel(pixel.f0, LoH);
 
             // integral
             vec3 Fr = F * (D * V * ipdf * NoL);
