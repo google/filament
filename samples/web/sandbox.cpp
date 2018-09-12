@@ -14,16 +14,16 @@
  * limitations under the License.
  */
 
-#include <filament/DebugRegistry.h>
+#include "../material_sandbox.h"
+
+#include "filamesh.h"
+#include "filaweb.h"
+
 #include <filament/Engine.h>
-#include <filament/IndexBuffer.h>
-#include <filament/LightManager.h>
 #include <filament/Material.h>
 #include <filament/MaterialInstance.h>
 #include <filament/RenderableManager.h>
 #include <filament/Scene.h>
-#include <filament/TransformManager.h>
-#include <filament/VertexBuffer.h>
 #include <filament/View.h>
 
 #include <math/vec3.h>
@@ -32,9 +32,7 @@
 
 #include <imgui.h>
 
-#include "filamesh.h"
-#include "filaweb.h"
-#include "../material_sandbox.h"
+#include <chrono>
 
 using namespace filament;
 using namespace filagui;

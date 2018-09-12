@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+#include "filaweb.h"
+
 #include <filament/Engine.h>
 #include <filament/IndexBuffer.h>
 #include <filament/Material.h>
@@ -23,8 +25,6 @@
 #include <filament/TransformManager.h>
 #include <filament/VertexBuffer.h>
 #include <filament/View.h>
-
-#include "filaweb.h"
 
 #include <cmath>
 

@@ -14,6 +14,9 @@
  * limitations under the License.
  */
 
+#include "filamesh.h"
+#include "filaweb.h"
+
 #include <filament/Engine.h>
 #include <filament/IndexBuffer.h>
 #include <filament/LightManager.h>
@@ -25,13 +28,10 @@
 #include <filament/VertexBuffer.h>
 #include <filament/View.h>
 
-#include <math/vec3.h>
-
 #include <utils/Entity.h>
 #include <utils/EntityManager.h>
 
-#include "filamesh.h"
-#include "filaweb.h"
+#include <math/vec3.h>
 
 using namespace filament;
 using namespace math;
