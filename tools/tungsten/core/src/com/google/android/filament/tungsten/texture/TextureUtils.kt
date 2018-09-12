@@ -83,7 +83,7 @@ object TextureUtils {
     }
 
     private fun loadTextureFromImage(engine: Engine, img: BufferedImage): Texture? {
-        val data = img.data.dataBuffer as DataBufferByte
+        val data = img.raster.dataBuffer as DataBufferByte
 
         val (internalFormat, textureFormat) = decideTextureFormat(img)
 
@@ -106,7 +106,7 @@ object TextureUtils {
     }
 
     private fun flipComponentsIfNecessary(img: BufferedImage) {
-        val data = img.data.dataBuffer as DataBufferByte
+        val data = img.raster.dataBuffer as DataBufferByte
         val pixels = data.data
         val components = img.colorModel.numComponents
 
