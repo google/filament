@@ -17,7 +17,11 @@
 package com.google.android.filament.tungsten.model
 
 import com.google.android.filament.MaterialInstance
+import com.google.android.filament.TextureSampler
+import com.google.android.filament.tungsten.Filament
 import com.google.android.filament.tungsten.properties.PropertyEditor
+import com.google.android.filament.tungsten.texture.TextureCache
+import java.io.File
 
 sealed class PropertyValue {
 
@@ -26,7 +30,7 @@ sealed class PropertyValue {
     /**
      * Serialize this value into a Kotlin List, Map, String, or Number
      */
-    abstract fun serialize(): Any
+    abstract fun serialize(): Any?
 
     /**
      * Deserialize into a new PropertyValue
@@ -57,6 +61,32 @@ data class StringValue(val value: String) : PropertyValue() {
     override fun deserialize(value: Any): StringValue {
         if (value !is String) return this
         return StringValue(value)
+    }
+}
+
+data class TextureFile(val file: File? = null) : PropertyValue() {
+
+    override fun serialize() = file?.canonicalPath
+
+    private val textureFuture = if (file != null) {
+        TextureCache.getTextureForFile(file)
+    } else {
+        TextureCache.getDefaultTexture()
+    }
+
+    override fun deserialize(value: Any): PropertyValue {
+        if (value !is String) return this
+        return TextureFile(File(value))
+    }
+
+    override fun applyToMaterialInstance(materialInstance: MaterialInstance, name: String) {
+        textureFuture.thenApply { texture ->
+            Filament.getInstance().assertIsFilamentThread()
+            val sampler = TextureSampler()
+            materialInstance.setParameter(name, texture, sampler)
+        }.exceptionally { e ->
+            println("Error loading texture: ${e.message}")
+        }
     }
 }
 

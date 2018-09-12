@@ -19,13 +19,17 @@ package com.google.android.filament.tungsten.properties
 import com.google.android.filament.tungsten.model.Float3
 import com.google.android.filament.tungsten.model.PropertyValue
 import com.google.android.filament.tungsten.model.StringValue
+import com.google.android.filament.tungsten.model.TextureFile
 import java.awt.Color
+import javax.swing.JButton
 import javax.swing.JColorChooser
 import javax.swing.JComboBox
 import javax.swing.JComponent
+import javax.swing.JFileChooser
+import javax.swing.JPanel
 import kotlin.math.roundToInt
 
-sealed class PropertyEditor {
+abstract class PropertyEditor {
 
     abstract val component: JComponent
     var valueChanged: (newValue: PropertyValue) -> Unit = { }
@@ -69,5 +73,27 @@ internal class MultipleChoice(value: StringValue, choices: List<String>) : Prope
     override fun setValue(v: PropertyValue) {
         val newValue = v as? StringValue ?: return
         component.selectedItem = newValue.value
+    }
+}
+
+internal class TextureFileChooser(textureFile: TextureFile) : PropertyEditor() {
+
+    override val component: JPanel = JPanel()
+    private val fileChooser = JFileChooser()
+
+    override fun setValue(v: PropertyValue) {
+        // no-op
+    }
+
+    init {
+        val button = JButton("Choose file...")
+        component.add(button)
+
+        button.addActionListener {
+            val result = fileChooser.showOpenDialog(component)
+            if (result == JFileChooser.APPROVE_OPTION) {
+                valueChanged(TextureFile(fileChooser.selectedFile))
+            }
+        }
     }
 }

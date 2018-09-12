@@ -22,6 +22,7 @@ import com.google.android.filament.tungsten.compiler.Literal
 import com.google.android.filament.tungsten.compiler.trim
 import com.google.android.filament.tungsten.properties.ColorChooser
 import com.google.android.filament.tungsten.properties.MultipleChoice
+import com.google.android.filament.tungsten.properties.TextureFileChooser
 
 private val adderNodeCompile = fun(node: Node, compiler: GraphCompiler): Node {
     val outputSlot = node.getOutputSlot("result")
@@ -139,6 +140,40 @@ private val constantFloat2NodeCompile = fun(node: Node, compiler: GraphCompiler)
 
     return node
 }
+
+private val textureSampleCompile = fun(node: Node, compiler: GraphCompiler): Node {
+    compiler.requireAttribute("uv0")
+    val parameter = compiler.addParameter("sampler2d", "texture")
+    compiler.associateParameterWithProperty(parameter, node.getPropertyHandle("textureSource"))
+
+    // If nothing is connected to the UV input, default to getUV0()
+    val uvs = compiler.compileAndRetrieveExpression(node.getInputSlot("uv"))?.rg
+            ?: Expression("getUV0()", 2)
+    compiler.setExpressionForSlot(node.getInputSlot("uv"), uvs)
+
+    val outputVariable = compiler.getNewTemporaryVariableName("textureSample")
+    compiler.addCodeToMaterialFunctionBody(
+            "float4 $outputVariable = texture(materialParams_${parameter.name}, $uvs);\n", 4)
+    compiler.setExpressionForSlot(node.getOutputSlot("out"),
+            Expression(outputVariable, 4))
+
+    return node
+}
+
+val createTextureSampleNode = fun(id: NodeId) =
+        Node(
+            id = id,
+            type = "textureSample",
+            compileFunction = textureSampleCompile,
+            inputSlots = listOf("uv"),
+            outputSlots = listOf("out"),
+            properties = listOf(Property(
+                name = "textureSource",
+                value = TextureFile(),
+                type = PropertyType.MATERIAL_PARAMETER,
+                editorFactory = ::TextureFileChooser
+            ))
+        )
 
 val createAdderNode = fun(id: NodeId): Node {
     return Node(

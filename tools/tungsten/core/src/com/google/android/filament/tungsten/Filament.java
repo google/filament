@@ -20,6 +20,7 @@ import com.google.android.filament.Engine;
 import com.google.android.filament.FilamentPanel;
 import com.google.android.filament.Renderer;
 import com.google.android.filament.View;
+import com.google.android.filament.tungsten.texture.TextureCache;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
@@ -92,6 +93,7 @@ public final class Filament {
 
     public void shutdown() {
         try {
+            TextureCache.INSTANCE.shutdownAndDestroyTextures();
             runImmediatelyOnFilamentThread((Engine e) -> {
                 // Before shutting down, drain the queue of any remaining jobs. Some jobs that deal
                 // with cleanup might still remain and we want to ensure these all run.
