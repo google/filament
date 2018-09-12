@@ -224,8 +224,15 @@ vec3 getReflectedVector(const PixelParams pixel, const vec3 n) {
 //------------------------------------------------------------------------------
 
 #if IBL_INTEGRATION == IBL_INTEGRATION_IMPORTANCE_SAMPLING
-vec3 isEvaluateIBL(const PixelParams pixel, mat3 tangentToWorld, vec3 v, float NoV) {
-    vec3 n = tangentToWorld[2];
+vec3 isEvaluateIBL(const PixelParams pixel, vec3 n, vec3 v, float NoV) {
+
+    // TODO: for a true anisotropic brdf, we need a real tangent space
+    mat3 tangentToWorld;
+    vec3 up = abs(n.z) < 0.999 ? vec3(0.0, 0.0, 1.0) : vec3(1.0, 0.0, 0.0);
+    tangentToWorld[0] = normalize(cross(up, n));
+    tangentToWorld[1] = cross(n, tangentToWorld[0]);
+    tangentToWorld[2] = n;
+
     float linearRoughness = pixel.linearRoughness;
     float a2 = linearRoughness * linearRoughness;
 
@@ -266,7 +273,7 @@ vec3 isEvaluateIBL(const PixelParams pixel, mat3 tangentToWorld, vec3 v, float N
         vec3 l = getReflectedVector(pixel, v, h);
 
         // Compute this sample's contribution to the brdf
-        float NoL = 2.0 * cosTheta2 - 1.0;
+        float NoL = dot(n, l);
         if (NoL > 0.0) {
             float LoH = max(dot(l, h), 0.0);
             float NoH = cosTheta;
@@ -299,15 +306,10 @@ void isEvaluateClearCoatIBL(const PixelParams pixel, float specularAO, inout vec
 #if defined(MATERIAL_HAS_NORMAL) || defined(MATERIAL_HAS_CLEAR_COAT_NORMAL)
     // We want to use the geometric normal for the clear coat layer
     float clearCoatNoV = abs(dot(shading_clearCoatNormal, shading_view)) + FLT_EPS;
-    // compute clear coat tangent space
-    mat3 tangentToWorld;
-    vec3 up = abs(shading_clearCoatNormal.z) < 0.999 ? vec3(0.0, 0.0, 1.0) : vec3(1.0, 0.0, 0.0);
-    tangentToWorld[0] = normalize(cross(up, shading_clearCoatNormal));
-    tangentToWorld[1] = cross(shading_clearCoatNormal, tangentToWorld[0]);
-    tangentToWorld[2] = shading_clearCoatNormal;
+    vec3 clearCoatNormal = shading_clearCoatNormal;
 #else
     float clearCoatNoV = shading_NoV;
-    mat3 tangentToWorld = shading_tangentToWorld;
+    vec3 clearCoatNormal = shading_normal;
 #endif
     // The clear coat layer assumes an IOR of 1.5 (4% reflectance)
     float Fc = F_Schlick(0.04, 1.0, clearCoatNoV) * pixel.clearCoat;
@@ -320,7 +322,7 @@ void isEvaluateClearCoatIBL(const PixelParams pixel, float specularAO, inout vec
     p.f0 = vec3(0.04);
     p.linearRoughness = p.roughness * p.roughness;
     p.anisotropy = 0.0;
-    Fr += isEvaluateIBL(p, tangentToWorld, shading_view, clearCoatNoV) * (specularAO * pixel.clearCoat);
+    Fr += isEvaluateIBL(p, clearCoatNormal, shading_view, clearCoatNoV) * (specularAO * pixel.clearCoat);
 #endif
 }
 
@@ -403,7 +405,7 @@ void evaluateIBL(const MaterialInputs material, const PixelParams pixel, inout v
     Fr *= specularAO * pixel.energyCompensation;
     evaluateClearCoatIBL(pixel, specularAO, Fd, Fr);
 #elif IBL_INTEGRATION == IBL_INTEGRATION_IMPORTANCE_SAMPLING
-    Fr = isEvaluateIBL(pixel, shading_tangentToWorld, shading_view, shading_NoV);
+    Fr = isEvaluateIBL(pixel, shading_normal, shading_view, shading_NoV);
     Fr *= specularAO * pixel.energyCompensation;
     isEvaluateClearCoatIBL(pixel, specularAO, Fd, Fr);
 #endif

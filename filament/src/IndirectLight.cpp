@@ -96,6 +96,8 @@ IndirectLight* IndirectLight::Builder::build(Engine& engine) {
             return nullptr;
         }
         if (IBL_INTEGRATION == IBL_INTEGRATION_IMPORTANCE_SAMPLING) {
+            // FIXME: this doesn't work because IBLs are encoded as RGBM with a gamma of 0.5
+            // this produces mipmap levels that are too dark
             mImpl->mReflectionsMap->generateMipmaps(engine);
         }
     }
