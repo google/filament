@@ -225,10 +225,10 @@ vec3 getReflectedVector(const PixelParams pixel, const vec3 n) {
 
 #if IBL_INTEGRATION == IBL_INTEGRATION_IMPORTANCE_SAMPLING
 vec3 isEvaluateIBL(const PixelParams pixel, vec3 n, vec3 v, float NoV) {
-
-    // TODO: for a true anisotropic brdf, we need a real tangent space
-    mat3 tangentToWorld;
+    // TODO: for a true anisotropic BRDF, we need a real tangent space
     vec3 up = abs(n.z) < 0.999 ? vec3(0.0, 0.0, 1.0) : vec3(1.0, 0.0, 0.0);
+
+    mat3 tangentToWorld;
     tangentToWorld[0] = normalize(cross(up, n));
     tangentToWorld[1] = cross(n, tangentToWorld[0]);
     tangentToWorld[2] = n;
@@ -248,10 +248,9 @@ vec3 isEvaluateIBL(const PixelParams pixel, vec3 n, vec3 v, float NoV) {
 
     vec3 indirectSpecular = vec3(0.0);
     for (uint i = 0; i < numSamples; i++) {
-        // Compute hammersley sequence
-        // this is very inefficient here because we don't have
-        // logical bit operations in ES2.x.
+        // Compute Hammersley sequence
         // TODO: these should come from uniforms
+        // TODO: we should do this with logical bit operations
         uint t = i;
         uint bits = 0;
         for (uint j = 0; j < numSampleBits; j++) {
@@ -268,7 +267,7 @@ vec3 isEvaluateIBL(const PixelParams pixel, vec3 n, vec3 v, float NoV) {
 
         vec3 h = tangentToWorld * vec3(cos(phi) * sinTheta, sin(phi) * sinTheta, cosTheta);
 
-        // since anisotropy doesn't work with prefiltering, we use the same "faux" anisotropy
+        // Since anisotropy doesn't work with prefiltering, we use the same "faux" anisotropy
         // we do when we use the prefiltered cubemap
         vec3 l = getReflectedVector(pixel, v, h);
 
@@ -278,26 +277,25 @@ vec3 isEvaluateIBL(const PixelParams pixel, vec3 n, vec3 v, float NoV) {
             float LoH = max(dot(l, h), 0.0);
             float NoH = cosTheta;
 
-            // PDF inverse (we must use D_GGX() here, which is used to generate samples
+            // PDF inverse (we must use D_GGX() here, which is used to generate samples)
             float ipdf = (4.0 * LoH) / (D_GGX(linearRoughness, NoH, h) * NoH);
 
-            // see: "Real-time Shading with Filtered Importance Sampling", Jaroslav Krivanek
-            // prefiltering doesn't work with anisotropy
+            // See: "Real-time Shading with Filtered Importance Sampling", Jaroslav Krivanek
+            // Prefiltering doesn't work with anisotropy
             float omegaS = invNumSamples * ipdf;
             float mipLevel = clamp(log2(K * omegaS * invOmegaP) * 0.5, 0.0, IBL_MAX_MIP_LEVEL);
 
-            // BRDF to evaluate
             float D = distribution(linearRoughness, NoH, h);
             float V = visibility(pixel.roughness, linearRoughness, NoV, NoL, LoH);
             vec3  F = fresnel(pixel.f0, LoH);
 
-            // integral
             vec3 Fr = F * (D * V * ipdf * NoL);
 
             vec3 env = decodeDataForIBL(textureLod(light_iblSpecular, l, mipLevel));
             indirectSpecular += (Fr * env) * invNumSamples;
         }
     }
+
     return indirectSpecular;
 }
 
@@ -322,10 +320,11 @@ void isEvaluateClearCoatIBL(const PixelParams pixel, float specularAO, inout vec
     p.f0 = vec3(0.04);
     p.linearRoughness = p.roughness * p.roughness;
     p.anisotropy = 0.0;
-    Fr += isEvaluateIBL(p, clearCoatNormal, shading_view, clearCoatNoV) * (specularAO * pixel.clearCoat);
+
+    vec3 clearCoatLobe = isEvaluateIBL(p, clearCoatNormal, shading_view, clearCoatNoV);
+    Fr += clearCoatLobe * (specularAO * pixel.clearCoat);
 #endif
 }
-
 #endif
 
 //------------------------------------------------------------------------------
