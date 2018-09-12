@@ -17,14 +17,16 @@
 #ifndef TNT_FILAMENT_SAMPLES_MATERIAL_SANDBOX_H
 #define TNT_FILAMENT_SAMPLES_MATERIAL_SANDBOX_H
 
-#include <math/vec3.h>
+#include <filament/Color.h>
+#include <filament/Engine.h>
+#include <filament/LightManager.h>
+#include <filament/Material.h>
+#include <filament/MaterialInstance.h>
 
 #include <utils/Entity.h>
 #include <utils/EntityManager.h>
 
-#include <filament/Color.h>
-#include <filament/Material.h>
-#include <filament/MaterialInstance.h>
+#include <math/vec3.h>
 
 static constexpr uint8_t MATERIAL_UNLIT_PACKAGE[] = {
     #include "generated/material/sandboxUnlit.inc"
