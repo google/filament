@@ -19,6 +19,8 @@ package com.google.android.filament.tungsten.ui;
 import com.google.android.filament.tungsten.MaterialManager;
 import com.google.android.filament.tungsten.compiler.NodeRegistry;
 import com.google.android.filament.tungsten.properties.PropertiesPanel;
+import com.google.android.filament.tungsten.ui.preview.PreviewMeshPanel;
+
 import java.awt.BorderLayout;
 import java.awt.Dimension;
 import javax.swing.JPanel;

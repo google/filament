@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.android.filament.tungsten.ui
+package com.google.android.filament.tungsten.ui.preview
 
 import com.curiouscreature.kotlin.math.Float2
 import com.curiouscreature.kotlin.math.Float3
@@ -34,7 +34,7 @@ private fun rotateVector(rx: Float, ry: Float, v: Float3): Float3 {
     return matrix.times(Float4(v)).xyz
 }
 
-class CameraManipulator(private val camera: Camera) {
+internal class CameraManipulator(private val camera: Camera) {
 
     private var cameraTranslation = Float3(z = START_RADIUS)
     private var cameraRotation = Float3()

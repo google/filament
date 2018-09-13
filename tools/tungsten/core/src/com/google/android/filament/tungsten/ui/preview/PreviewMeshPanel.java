@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.android.filament.tungsten.ui;
+package com.google.android.filament.tungsten.ui.preview;
 
 import com.google.android.filament.Box;
 import com.google.android.filament.Camera;
@@ -34,6 +34,7 @@ import com.google.android.filament.filamesh.Filamesh;
 import com.google.android.filament.filamesh.FilameshLoader;
 import com.google.android.filament.tungsten.Filament;
 import com.google.android.filament.tungsten.MathUtils;
+
 import java.awt.BorderLayout;
 import java.awt.GraphicsDevice;
 import java.awt.GraphicsEnvironment;
@@ -64,7 +65,7 @@ public class PreviewMeshPanel extends JPanel {
     private PreviewCamera mPreviewCamera;
     private Filament.Viewer mViewer;
 
-    PreviewMeshPanel() {
+    public PreviewMeshPanel() {
         // On Windows D3D seems to mess with our OpenGLContext, this disable it.
         System.setProperty("sun.java2d.d3d", "false");
 
@@ -124,7 +125,7 @@ public class PreviewMeshPanel extends JPanel {
         });
     }
 
-    void updateMaterial(MaterialInstance newMaterialInstance) {
+    public void updateMaterial(MaterialInstance newMaterialInstance) {
         Filament.getInstance().runOnFilamentThread((Engine engine) -> {
             mMeshRenderable = engine.getRenderableManager().getInstance(mMeshEntity);
             engine.getRenderableManager().setMaterialInstanceAt(mMeshRenderable, 0,
@@ -132,7 +133,7 @@ public class PreviewMeshPanel extends JPanel {
         });
     }
 
-    void destroy() {
+    public void destroy() {
         Filament.getInstance().removeViewer(mViewer);
         Filament.getInstance().runOnFilamentThread((Engine engine) -> {
             engine.destroyRenderer(mRenderer);
