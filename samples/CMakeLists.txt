@@ -156,7 +156,8 @@ endif()
 # Copy the MoltenVK dylibs and JSON on MacOS
 # ==================================================================================================
 
-if (APPLE)
+if (APPLE AND NOT Vulkan_LIBRARY)
+    message(STATUS "No Vulkan SDK was found, using prebuilt MoltenVK.")
     set(MOLTENVK_DIR "../third_party/moltenvk")
     configure_file(
             ${MOLTENVK_DIR}/libvulkan.1.dylib

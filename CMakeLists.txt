@@ -248,6 +248,19 @@ else()
 endif()
 
 # ==================================================================================================
+# Try to find Vulkan if the SDK is installed, otherwise fall back to the bundled version.
+# This needs to stay in our top-level CMakeLists because it sets up variables that are used by the
+# "bluevk" and "samples" targets.
+# ==================================================================================================
+
+find_library(Vulkan_LIBRARY NAMES vulkan HINTS "$ENV{VULKAN_SDK}/lib" "$ENV{VULKAN_SDK}/macOS/lib")
+if (Vulkan_LIBRARY)
+    set(Vulkan_FOUND ON)
+    message(STATUS "Found Vulkan library in SDK: ${Vulkan_LIBRARY}.")
+    add_definitions(-DFILAMENT_VKLIBRARY_PATH=\"${Vulkan_LIBRARY}\")
+endif()
+
+# ==================================================================================================
 # Sub-projects
 # ==================================================================================================
 # Common to all platforms
