@@ -199,9 +199,12 @@ static double __UNUSED VisibilityAshikhmin(double NoV, double NoL, double a) {
  *             4 ∑ F(h) V(v) <n•l>    N
  *
  *
- *            ∑ F(h) V(v) <n•l> L(h)
- *    Er() = ------------------------
- *            ∑ F(h) V(v) <n•l>
+ *  +-----------------------------------+
+ *  |          ∑ F(h) V(v) <n•l> L(h)   |
+ *  |  Er() = ------------------------  |
+ *  |          ∑ F(h) V(v) <n•l>        |
+ *  +-----------------------------------+
+ *
  */
 
 void CubemapIBL::roughnessFilter(Cubemap& dst,
@@ -365,6 +368,92 @@ void CubemapIBL::roughnessFilter(Cubemap& dst,
     }
 }
 
+/*
+ *
+ * Importance sampling
+ * -------------------
+ *
+ * Important samples are chosen to integrate cos(theta) over the hemisphere.
+ *
+ * All calculations are made in tangent space, with n = [0 0 1]
+ *
+ *                      l (important sample)
+ *                     /.
+ *                    / .
+ *                   /  .
+ *                  /   .
+ *         --------o----+-------> n (direction)
+ *                   cos(theta)
+ *                    = n•l
+ *
+ *
+ *  'direction' is given as an input parameter, and serves as tge z direction of the tangent space.
+ *
+ *  l = important_sample_cos()
+ *
+ *  n•l = [0 0 1] • l = l.z
+ *
+ *           n•l
+ *  pdf() = -----
+ *           PI
+ *
+ *
+ * Pre-filtered importance sampling
+ * --------------------------------
+ *
+ *  see: "Real-time Shading with Filtered Importance Sampling", Jaroslav Krivanek
+ *  see: "GPU-Based Importance Sampling, GPU Gems 3", Mark Colbert
+ *
+ *
+ *                   Ωs
+ *     lod = log4(K ----)
+ *                   Ωp
+ *
+ *     log4(K) = 1, works well for box filters
+ *     K = 4
+ *
+ *             1
+ *     Ωs = ---------, solid-angle of an important sample
+ *           N * pdf
+ *
+ *              4 PI
+ *     Ωp ~ --------------, solid-angle of a sample in the base cubemap
+ *           texel_count
+ *
+ *
+ * Evaluating the integral
+ * -----------------------
+ *
+ * We are trying to evaluate the following integral:
+ * (we pre-multiply by PI to avoid a 1/PI in the shader)
+ *
+ *                       /
+ *             Ed() = PI | L(s) <n•l> ds
+ *                       /
+ *                       Ω
+ *
+ * For this, we're using importance sampling:
+ *
+ *                    PI     L(l)
+ *            Ed() = ---- ∑ ------- <n•l>
+ *                    N   l   pdf
+ *
+ *
+ *  It results that:
+ *
+ *            PI           n•l
+ *    Ed() = ---- ∑ L(l) ------  <n•l>
+ *            N   l        PI
+ *
+ *
+ *  +----------------------+
+ *  |          1           |
+ *  |  Ed() = ---- ∑ L(l)  |
+ *  |          N   l       |
+ *  +----------------------+
+ *
+ */
+
 void CubemapIBL::diffuseIrradiance(Cubemap& dst, const std::vector<Cubemap>& levels, size_t maxNumSamples)
 {
     const float numSamples = maxNumSamples;
@@ -391,17 +480,6 @@ void CubemapIBL::diffuseIrradiance(Cubemap& dst, const std::vector<Cubemap>& lev
 
     // precompute everything that only depends on the sample #
     for (size_t sampleIndex = 0, sample = 0 ; sampleIndex < maxNumSamples; sampleIndex++) {
-        /*
-         *       (sampling)
-         *            L
-         *            .\
-         *            . \
-         *            .  \
-         *            .   \
-         *         ---|----o------------> n
-         *           n.L
-         */
-
         // get Hammersley distribution for the half-sphere
         const double2 u = hammersley(uint32_t(sampleIndex), inumSamples);
         const double3 L = hemisphereCosSample(u);
@@ -409,20 +487,10 @@ void CubemapIBL::diffuseIrradiance(Cubemap& dst, const std::vector<Cubemap>& lev
         const double NoL = dot(N, L);
 
         if (NoL > 0) {
-            // pre-filtered importance sampling
-            // see: "Real-time Shading with Filtered Importance Sampling", Jaroslav Krivanek
-            // see: "GPU-Based Importance Sampling, GPU Gems 3", Mark Colbert
-
-            // K is a LOD bias that allows a bit of overlapping between samples
-            // log4(K)=1 empirically works well with box-filtered mipmaps
-            constexpr float K = 4;
-
-            // OmegaS is is the solid-angle of an important sample (i.e. how much surface
-            // of the sphere it represents). It obviously is function of the PDF.
             double pdf = NoL * M_1_PI;
-            const double omegaS = 1.0 / (numSamples * pdf);
 
-            // The LOD is given by: max[ log4(Os/Op) + K, 0 ]
+            constexpr float K = 4;
+            const double omegaS = 1.0 / (numSamples * pdf);
             const double l = float(log4(omegaS) - log4(omegaP) + log4(K));
             const float mipLevel = clamp(float(l), 0.0f, maxLevelf);
 
@@ -515,7 +583,7 @@ static double2 __UNUSED DFV_NoIS(double NoV, double roughness, size_t numSamples
  *                    / .
  *                   /  .
  *                  /   .
- *         --------o----+-------> n [0 0 1]
+ *         --------o----+-------> n
  *                   cos(theta)
  *                    = n•h
  *
@@ -579,9 +647,11 @@ static double2 __UNUSED DFV_NoIS(double NoV, double roughness, size_t numSamples
  *            N  h                     D(h) <n•h>
  *
  *
- *            4                  <v•h>
- *    Er() = --- ∑ F(h) V(v, l) ------- <n•l>
- *            N  h               <n•h>
+ *  +-------------------------------------------+
+ *  |          4                  <v•h>         |
+ *  |  Er() = --- ∑ F(h) V(v, l) ------- <n•l>  |
+ *  |          N  h               <n•h>         |
+ *  +-------------------------------------------+
  *
  */
 
