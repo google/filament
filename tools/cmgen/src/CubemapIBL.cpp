@@ -81,7 +81,7 @@ static double __UNUSED DistributionCharlie(double NoH, double linearRoughness) {
 
 static double Fresnel(double f0, double f90, double LoH) {
     const double Fc = pow5(1 - LoH);
-    return f0*(1 - Fc) + f90*Fc;
+    return f0 * (1 - Fc) + f90 * Fc;
 }
 
 static double Visibility(double NoV, double NoL, double a) {
@@ -157,7 +157,7 @@ void CubemapIBL::roughnessFilter(Cubemap& dst,
     for (size_t sampleIndex = 0 ; sampleIndex < maxNumSamples; sampleIndex++) {
         /*
          *       (sampling)
-         *            L         H (never calculated below)
+         *            L         H
          *            .\       /.
          *            . \     / .
          *            .  \   /  .
@@ -419,7 +419,88 @@ static double2 __UNUSED DFV_NoIS(double NoV, double roughness, size_t numSamples
     return r * (M_PI * 4.0 / numSamples);
 }
 
-// Importance-sampled
+/*
+ *
+ * Importance sampling
+ * -------------------
+ *
+ * All calculations are made in tangent space, with n = [0 0 1]
+ *
+ *                      h (important sample)
+ *                     /.
+ *                    / .
+ *                   /  .
+ *                  /   .
+ *         --------o----+-------> n [0 0 1]
+ *                   cos(theta)
+ *                    = n•h
+ *
+ *  h is micro facet's normal
+ *  l is the reflection of v around h, l = reflect(-v, h)  ==>  v•h = l•h
+ *
+ *  n•v is given as an input parameter at runtime
+ *
+ *  Since n = [0 0 1], we also have v.z = n•v
+ *
+ *  Since we need to compute v•h, we chose v as below. This choice only affects the
+ *  computation of v•h (and therefore the fresnel term too), but doesn't affect
+ *  n•l, which only relies on l.z (which itself only relies on v.z, i.e.: n•v)
+ *
+ *      | sqrt(1 - (n•v)^2)     (sin)
+ *  v = | 0
+ *      | n•v                   (cos)
+ *
+ *
+ *  h = important_sample_ggx()
+ *
+ *  l = reflect(-v, h) = 2 * v•h * h - v;
+ *
+ *  n•l = [0 0 1] • l = l.z
+ *
+ *  n•h = [0 0 1] • l = h.z
+ *
+ *
+ *
+ * Evaluating the integral
+ * -----------------------
+ *
+ * We are trying to evaluate the following integral:
+ *
+ *                    /
+ *             Er() = | fr(s) <n•l> ds
+ *                    /
+ *                    Ω
+ *
+ * For this, we're using importance sampling:
+ *
+ *                    1     fr(h)
+ *            Er() = --- ∑ ------- <n•l>
+ *                    N  h   pdf
+ *
+ * with:
+ *
+ *            fr() = D(h) F(h) V(v, l)
+ *
+ *            pdf() = D(h) <n•h> J(h)
+ *
+ *                       1
+ *            J(h) = ----------
+ *                    4 <v•h>
+ *
+ *
+ *  It results that:
+ *
+ *            1                        4 <v•h>
+ *    Er() = --- ∑ D(h) F(h) V(v, l) ------------ <n•l>
+ *            N  h                     D(h) <n•h>
+ *
+ *
+ *            4                  <v•h>
+ *    Er() = --- ∑ F(h) V(v, l) ------- <n•l>
+ *            N  h               <n•h>
+ *
+ */
+
 static double2 DFV(double NoV, double roughness, size_t numSamples) {
     double2 r = 0;
     const double linearRoughness = roughness * roughness;
@@ -432,7 +513,28 @@ static double2 DFV(double NoV, double roughness, size_t numSamples) {
         const double NoL = saturate(L.z);
         const double NoH = saturate(H.z);
         if (NoL > 0) {
-            // Note: remember VoH == LoH  (H is half vector)
+            /*
+             * Fc = (1 - V•H)^5
+             * F(h) = f0*(1 - Fc) + f90*Fc
+             *
+             * f0 and f90 are known at runtime, but thankfully can be factored out, allowing us
+             * to split the integral in two terms and store both terms separately in a LUT.
+             *
+             * At runtime, we can reconstruct Er() exactly as below:
+             *
+             *            4                      <v•h>
+             *   DFV.x = --- ∑ (1 - Fc) V(v, l) ------- <n•l>
+             *            N  h                   <n•h>
+             *
+             *
+             *            4                      <v•h>
+             *   DFV.y = --- ∑ (    Fc) V(v, l) ------- <n•l>
+             *            N  h                   <n•h>
+             *
+             *
+             *   Er() = f0 * DFV.x + f90 * DFV.y
+             *
+             */
             const double v = Visibility(NoV, NoL, linearRoughness) * NoL * (VoH / NoH);
             const double Fc = pow5(1 - VoH);
             r.x += v * (1.0 - Fc);
@@ -446,29 +548,41 @@ static double2 DFV_Multiscatter(double NoV, double roughness, size_t numSamples)
     double2 r = 0;
     const double linearRoughness = roughness * roughness;
     const double3 V(std::sqrt(1 - NoV * NoV), 0, NoV);
-    for (size_t i=0 ; i<numSamples ; i++) {
+    for (size_t i = 0; i < numSamples; i++) {
         const double2 u = hammersley(uint32_t(i), 1.0f / numSamples);
         const double3 H = hemisphereImportanceSampleDggx(u, linearRoughness);
-        const double3 L = 2 * dot(V, H)*H - V;
+        const double3 L = 2 * dot(V, H) * H - V;
         const double VoH = saturate(dot(V, H));
         const double NoL = saturate(L.z);
         const double NoH = saturate(H.z);
         if (NoL > 0) {
-            // Note: remember VoH == LoH  (H is half vector)
             const double v = Visibility(NoV, NoL, linearRoughness) * NoL * (VoH / NoH);
             const double Fc = pow5(1 - VoH);
-            // This looks different from the computation performed in DFV() but the
-            // result is the same in the shader. With DFV() we would traditionally
-            // do the following per fragment:
-            //
-            // vec2 dfg = sampleEnv(...);
-            // return f0 * dfg.x + dfg.y;
-            //
-            // With the multi-scattering formulation we instead do the following per
-            // fragment:
-            //
-            // vec2 dfg = sampleEnv(...);
-            // return mix(dfg.xxx, dfg.yyy, f0)
+            /*
+             * Assuming f90 = 1
+             *   Fc = (1 - V•H)^5
+             *   F(h) = f0*(1 - Fc) + Fc
+             *
+             * f0 and f90 are known at runtime, but thankfully can be factored out, allowing us
+             * to split the integral in two terms and store both terms separately in a LUT.
+             *
+             * At runtime, we can reconstruct Er() exactly as below:
+             *
+             *            4                <v•h>
+             *   DFV.x = --- ∑ Fc V(v, l) ------- <n•l>
+             *            N  h             <n•h>
+             *
+             *
+             *            4                <v•h>
+             *   DFV.y = --- ∑    V(v, l) ------- <n•l>
+             *            N  h             <n•h>
+             *
+             *
+             *   Er() = (1 - f0) * DFV.x + f0 * DFV.y
+             *
+             *        = mix(DFV.xxx, DFV.yyy, f0)
+             *
+             */
             r.x += v * Fc;
             r.y += v;
         }
