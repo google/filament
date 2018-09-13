@@ -32,6 +32,8 @@ dependencies {
     implementation files("../../../dist/lib/filament-java.jar")
     implementation 'com.google.code.gson:gson:2.8.5'
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.2.51"
+
+    implementation project(':kotlin-math')
 }
 
 test {
