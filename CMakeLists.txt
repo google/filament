@@ -253,11 +253,13 @@ endif()
 # "bluevk" and "samples" targets.
 # ==================================================================================================
 
-find_library(Vulkan_LIBRARY NAMES vulkan HINTS "$ENV{VULKAN_SDK}/lib" "$ENV{VULKAN_SDK}/macOS/lib")
-if (Vulkan_LIBRARY)
-    set(Vulkan_FOUND ON)
-    message(STATUS "Found Vulkan library in SDK: ${Vulkan_LIBRARY}.")
-    add_definitions(-DFILAMENT_VKLIBRARY_PATH=\"${Vulkan_LIBRARY}\")
+if (FILAMENT_SUPPORTS_VULKAN AND APPLE)
+    find_library(Vulkan_LIBRARY NAMES vulkan HINTS "$ENV{VULKAN_SDK}/lib" "$ENV{VULKAN_SDK}/macOS/lib")
+    if (Vulkan_LIBRARY)
+        set(Vulkan_FOUND ON)
+        message(STATUS "Found Vulkan library in SDK: ${Vulkan_LIBRARY}.")
+        add_definitions(-DFILAMENT_VKLIBRARY_PATH=\"${Vulkan_LIBRARY}\")
+    endif()
 endif()
 
 # ==================================================================================================
