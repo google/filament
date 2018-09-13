@@ -29,8 +29,8 @@ namespace filament {
         constexpr Variant(uint8_t key) noexcept : key(key) { }
 
 
-        // DIL: Directional Lighting
-        // DYL: Dynamic Lighting
+        // DIR: Directional Lighting
+        // DYN: Dynamic Lighting
         // SRE: Shadow Receiver
         // SKN: Skinning
         //
