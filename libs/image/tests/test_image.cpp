@@ -15,6 +15,7 @@
  */
 
 #include <image/ColorTransform.h>
+#include <image/KtxBundle.h>
 #include <image/ImageOps.h>
 #include <image/ImageSampler.h>
 #include <image/LinearImage.h>
@@ -34,10 +35,12 @@
 #include <fstream>
 #include <string>
 #include <sstream>
+#include <vector>
 
 using std::istringstream;
 using std::string;
 using std::swap;
+using std::vector;
 
 using math::float3;
 using math::float4;
@@ -287,7 +290,7 @@ TEST_F(ImageTest, Mipmaps) { // NOLINT
             "44444 41014 40704 41014 44444 44444 41014 40704 41014 44444");
     uint32_t count = getMipmapCount(src);
     ASSERT_EQ(count, 3);
-    std::vector<LinearImage> mips(count);
+    vector<LinearImage> mips(count);
     generateMipmaps(src, filter, mips.data(), count);
     updateOrCompare(src, "mip0_5x10.png");
     for (uint32_t index = 0; index < count; ++index) {
@@ -304,6 +307,58 @@ TEST_F(ImageTest, Mipmaps) { // NOLINT
     updateOrCompare(src, "mip0_200x100.png");
     for (uint32_t index = 0; index < count; ++index) {
         updateOrCompare(mips[index], "mip" + std::to_string(index + 1) + "_200x100.png");
+    }
+}
+
+TEST_F(ImageTest, Ktx) { // NOLINT
+    uint8_t foo[] = {1, 2, 3};
+    uint8_t* data;
+    uint32_t size;
+    KtxBundle nascent(2, 1, true);
+    ASSERT_EQ(nascent.getNumMipLevels(), 2);
+    ASSERT_EQ(nascent.getArrayLength(), 1);
+    ASSERT_TRUE(nascent.isCubemap());
+    ASSERT_FALSE(nascent.getBlob({0, 0, 0}, &data, &size));
+    ASSERT_TRUE(nascent.setBlob({0, 0, 0}, foo, sizeof(foo)));
+    ASSERT_TRUE(nascent.getBlob({0, 0, 0}, &data, &size));
+    ASSERT_EQ(size, sizeof(foo));
+
+    const uint32_t KTX_HEADER_SIZE = 16 * 4;
+
+    auto getFileSize = [](const char* filename) {
+        std::ifstream in(filename, std::ifstream::ate | std::ifstream::binary);
+        return in.tellg();
+    };
+
+    if (g_comparisonMode == ComparisonMode::COMPARE) {
+        const auto path = g_comparisonPath + "conftestimage_R11_EAC.ktx";
+        const auto fileSize = getFileSize(path.c_str());
+        ASSERT_GT(fileSize, 0);
+        vector<uint8_t> buffer(fileSize);
+        std::ifstream in(path, std::ifstream::in);
+        ASSERT_TRUE(in.read((char*) buffer.data(), fileSize));
+        KtxBundle deserialized(buffer.data(), buffer.size());
+
+        ASSERT_EQ(deserialized.getNumMipLevels(), 1);
+        ASSERT_EQ(deserialized.getArrayLength(), 1);
+        ASSERT_EQ(deserialized.isCubemap(), false);
+        ASSERT_EQ(deserialized.getInfo().pixelWidth, 64);
+        ASSERT_EQ(deserialized.getInfo().pixelHeight, 32);
+        ASSERT_EQ(deserialized.getInfo().pixelDepth, 0);
+
+        data = nullptr;
+        size = 0;
+        ASSERT_TRUE(deserialized.getBlob({0, 0, 0}, &data, &size));
+        ASSERT_EQ(size, 1024);
+        ASSERT_NE(data, nullptr);
+
+        uint32_t serializedSize = deserialized.getSerializedLength();
+        ASSERT_EQ(serializedSize, KTX_HEADER_SIZE + sizeof(uint32_t) + 1024);
+        ASSERT_EQ(serializedSize, fileSize);
+
+        vector<uint8_t> reserialized(serializedSize);
+        ASSERT_TRUE(deserialized.serialize(reserialized.data(), serializedSize));
+        ASSERT_EQ(reserialized, buffer);
     }
 }
 

@@ -9,15 +9,17 @@ set(PUBLIC_HDR_DIR include)
 # ==================================================================================================
 set(PUBLIC_HDRS
         include/image/ColorTransform.h
-        include/image/LinearImage.h
-        include/image/ImageSampler.h
         include/image/ImageOps.h
+        include/image/ImageSampler.h
+        include/image/KtxBundle.h
+        include/image/LinearImage.h
 )
 
 set(SRCS
-        src/LinearImage.cpp
-        src/ImageSampler.cpp
         src/ImageOps.cpp
+        src/ImageSampler.cpp
+        src/KtxBundle.cpp
+        src/LinearImage.cpp
 )
 
 # ==================================================================================================
