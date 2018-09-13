@@ -135,11 +135,11 @@ static double __UNUSED VisibilityAshikhmin(double NoV, double NoL, double a) {
  *      = 2(n•h)^2 - 1
  *
  *
- *  pdf() = D(h) <n•h> J(h)
+ *  pdf() = D(h) <n•h> |J(h)|
  *
- *             1
- *  J(h) = ----------
- *          4 <v•h>
+ *               1
+ *  |J(h)| = ----------
+ *            4 <v•h>
  *
  *
  * Pre-filtered importance sampling
@@ -612,11 +612,11 @@ static double2 __UNUSED DFV_NoIS(double NoV, double roughness, size_t numSamples
  *  n•h = [0 0 1] • l = h.z
  *
  *
- *  pdf() = D(h) <n•h> J(h)
+ *  pdf() = D(h) <n•h> |J(h)|
  *
- *             1
- *  J(h) = ----------
- *          4 <v•h>
+ *               1
+ *  |J(h)| = ----------
+ *            4 <v•h>
  *
  *
  * Evaluating the integral
