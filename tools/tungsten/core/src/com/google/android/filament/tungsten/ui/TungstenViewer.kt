@@ -68,7 +68,11 @@ class TungstenViewer(camera: Camera, val previewMeshPanel: PreviewMeshPanel)
         })
         previewMeshPanel.addMouseWheelListener { e ->
             e?.let { mouseWheelEvent ->
-                manipulator.dolly(-mouseWheelEvent.preciseWheelRotation.toFloat() /
+                // Swing reports wheel events caused by a physical wheel (opposed to a trackpad)
+                // with an inverted sign. Flip it so it feels more intuitive.
+                val causedByWheel = mouseWheelEvent.wheelRotation != 0
+                val multiplier = if(causedByWheel) 1 else -1
+                manipulator.dolly(multiplier * mouseWheelEvent.preciseWheelRotation.toFloat() /
                         previewMeshPanel.width, DOLLY_MULTIPLIER)
             }
         }
