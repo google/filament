@@ -97,6 +97,113 @@ static double __UNUSED VisibilityAshikhmin(double NoV, double NoL, double a) {
     return 1 / (4 * (NoL + NoV - NoL * NoV));
 }
 
+
+/*
+ *
+ * Importance sampling GGX - Trowbridge-Reitz
+ * ------------------------------------------
+ *
+ * Important samples are chosen to integrate Dggx() * cos(theta) over the hemisphere.
+ *
+ * All calculations are made in tangent space, with n = [0 0 1]
+ *
+ *             l        h (important sample)
+ *             .\      /.
+ *             . \    / .
+ *             .  \  /  .
+ *             .   \/   .
+ *         ----+---o----+-------> n [0 0 1]
+ *     cos(2*theta)     cos(theta)
+ *        = n•l            = n•h
+ *
+ *  v = n
+ *
+ *  h is micro facet's normal
+ *
+ *  l is the reflection of v (i.e.: n) around h  ==>  n•h = l•h = v•h
+ *
+ *  h = important_sample_ggx()
+ *
+ *  n•h = [0 0 1]•h = h.z
+ *
+ *  l = reflect(-n, h)
+ *    = 2 * (n•h) * h - n;
+ *
+ *  n•l = cos(2 * theta)
+ *      = cos(theta)^2 - sin(theta)^2
+ *      = (n•h)^2 - (1 - (n•h)^2)
+ *      = 2(n•h)^2 - 1
+ *
+ *
+ *  pdf() = D(h) <n•h> J(h)
+ *
+ *             1
+ *  J(h) = ----------
+ *          4 <v•h>
+ *
+ *
+ * Pre-filtered importance sampling
+ * --------------------------------
+ *
+ *  see: "Real-time Shading with Filtered Importance Sampling", Jaroslav Krivanek
+ *  see: "GPU-Based Importance Sampling, GPU Gems 3", Mark Colbert
+ *
+ *
+ *                   Ωs
+ *     lod = log4(K ----)
+ *                   Ωp
+ *
+ *     log4(K) = 1, works well for box filters
+ *     K = 4
+ *
+ *             1
+ *     Ωs = ---------, solid-angle of an important sample
+ *           N * pdf
+ *
+ *              4 PI
+ *     Ωp ~ --------------, solid-angle of a sample in the base cubemap
+ *           texel_count
+ *
+ *
+ * Evaluating the integral
+ * -----------------------
+ *
+ *                    K     fr(h)
+ *            Er() = --- ∑ ------- L(h) <n•l>
+ *                    N  h   pdf
+ *
+ * with:
+ *
+ *            fr() = D(h) F(h) V(l)
+ *
+ *                       N
+ *            K = -----------------
+ *                    fr(h)
+ *                 ∑ ------- <n•l>
+ *                 h   pdf
+ *
+ *
+ *  It results that:
+ *
+ *            K                     4 <v•h>
+ *    Er() = --- ∑ D(h) F(h) V(l) ------------ L(h) <n•l>
+ *            N  h                  D(h) <n•h>
+ *
+ *
+ *              K
+ *    Er() = 4 --- ∑ F(h) V(v) L(h) <n•l>
+ *              N  h
+ *
+ *                  N                 4
+ *    Er() = ----------------------- --- ∑ F(h) V(v) L(h) <n•l>
+ *             4 ∑ F(h) V(v) <n•l>    N
+ *
+ *
+ *            ∑ F(h) V(v) <n•l> L(h)
+ *    Er() = ------------------------
+ *            ∑ F(h) V(v) <n•l>
+ */
+
 void CubemapIBL::roughnessFilter(Cubemap& dst,
         const std::vector<Cubemap>& levels, double linearRoughness, size_t maxNumSamples)
 {
@@ -155,27 +262,11 @@ void CubemapIBL::roughnessFilter(Cubemap& dst,
     // to achieve this, we might have to try more samples than
     // maxNumSamples
     for (size_t sampleIndex = 0 ; sampleIndex < maxNumSamples; sampleIndex++) {
-        /*
-         *       (sampling)
-         *            L         H
-         *            .\       /.
-         *            . \     / .
-         *            .  \   /  .
-         *            .   \ /   .
-         *         ---|----o----|-------> n
-         *    cos(2*theta)    cos(theta)
-         *       = n.L           = n.H
-         *
-         * Note: NoH == LoH
-         * (H is the half-angle between L and V, and V == N)
-         *
-         */
 
         // get Hammersley distribution for the half-sphere
         const double2 u = hammersley(uint32_t(sampleIndex), inumSamples);
 
         // Importance sampling GGX - Trowbridge-Reitz
-        // This corresponds to integrating Dggx()*cos(theta) over the hemisphere
         const double3 H = hemisphereImportanceSampleDggx(u, linearRoughness);
 
 #if 0
@@ -200,20 +291,11 @@ void CubemapIBL::roughnessFilter(Cubemap& dst,
 #endif
 
         if (NoL > 0) {
-            // pre-filtered importance sampling
-            // see: "Real-time Shading with Filtered Importance Sampling", Jaroslav Krivanek
-            // see: "GPU-Based Importance Sampling, GPU Gems 3", Mark Colbert
+            const double pdf = DistributionGGX(NoH, linearRoughness) / 4;
 
             // K is a LOD bias that allows a bit of overlapping between samples
-            // log4(K)=1 empirically works well with box-filtered mipmaps
             constexpr float K = 4;
-
-            // OmegaS is is the solid-angle of an important sample (i.e. how much surface
-            // of the sphere it represents). It obviously is function of the PDF.
-            const double pdf = DistributionGGX(NoH, linearRoughness) / 4;
             const double omegaS = 1 / (numSamples * pdf);
-
-            // The LOD is given by: max[ log4(Os/Op) + K, 0 ]
             const double l = float(log4(omegaS) - log4(omegaP) + log4(K));
             const float mipLevel = clamp(float(l), 0.0f, maxLevelf);
 
@@ -421,8 +503,10 @@ static double2 __UNUSED DFV_NoIS(double NoV, double roughness, size_t numSamples
 
 /*
  *
- * Importance sampling
- * -------------------
+ * Importance sampling GGX - Trowbridge-Reitz
+ * ------------------------------------------
+ *
+ * Important samples are chosen to integrate Dggx() * cos(theta) over the hemisphere.
  *
  * All calculations are made in tangent space, with n = [0 0 1]
  *
@@ -460,6 +544,12 @@ static double2 __UNUSED DFV_NoIS(double NoV, double roughness, size_t numSamples
  *  n•h = [0 0 1] • l = h.z
  *
  *
+ *  pdf() = D(h) <n•h> J(h)
+ *
+ *             1
+ *  J(h) = ----------
+ *          4 <v•h>
+ *
  *
  * Evaluating the integral
  * -----------------------
@@ -480,12 +570,6 @@ static double2 __UNUSED DFV_NoIS(double NoV, double roughness, size_t numSamples
  * with:
  *
  *            fr() = D(h) F(h) V(v, l)
- *
- *            pdf() = D(h) <n•h> J(h)
- *
- *                       1
- *            J(h) = ----------
- *                    4 <v•h>
  *
  *
  *  It results that:
