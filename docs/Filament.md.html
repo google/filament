@@ -266,7 +266,7 @@ $$\begin{equation}
 G(v,l,\alpha) = \frac{2 (\NoL)}{\NoL + \sqrt{\aa + (1 - \aa) (\NoL)^2}} \frac{2 (\NoV)}{\NoV + \sqrt{\aa + (1 - \aa) (\NoV)^2}}
 \end{equation}$$
 
-We can observe that the dividends $2 (n \cdot l)$ and $2 (n \cdot v)$ allow us to simplify the original function $f_r$ by introducing a visibility function $V$:
+We can observe that the dividends $2 (\NoL)$ and $2 (n \cdot v)$ allow us to simplify the original function $f_r$ by introducing a visibility function $V$:
 
 $$\begin{equation}
 f_r(v,l) = D(h, \alpha) V(v, l, \alpha) F(v, h, f_0)
@@ -1770,7 +1770,7 @@ The whole environment contributes light to a given point on the object's surface
 The radiance $L_{out}$ resulting from the interaction between an image based light's (IBL) irradiance and a material model (BRDF) $f(\Theta)$[^ibl1] is computed as follows:
 
 $$\begin{equation}
-L_{out}(n, v, \Theta) = \int_\Omega  f(l, v, \Theta) L_{\bot}(l) \left< n \cdot l\right> dl 
+L_{out}(n, v, \Theta) = \int_\Omega  f(l, v, \Theta) L_{\bot}(l) \left< \NoL \right> dl 
 \end{equation}$$ 
 
 Note that here we're looking at the behavior of the surface at **macro** level (not to be confused with the micro level equation), which is why it only depends on $\vec n$ and $\vec v$. Essentially, we're applying the BRDF to “point-lights” coming from all directions and encoded in the IBL.
@@ -1824,10 +1824,10 @@ Using the Lambertian BRDF[^iblDiffuse1], we get the radiance:
 $$
 \begin{align*}
    f_d(\sigma) &= \frac{\sigma}{\pi} \\
-L_d(n, \sigma) &= \int_{\Omega} f_d(\sigma) L_{\bot}(l) \left< n \cdot l \right> dl \\
-               &= \frac{\sigma}{\pi} \int_{\Omega} L_{\bot}(l) \left< n \cdot l \right> dl \\
+L_d(n, \sigma) &= \int_{\Omega} f_d(\sigma) L_{\bot}(l) \left< \NoL \right> dl \\
+               &= \frac{\sigma}{\pi} \int_{\Omega} L_{\bot}(l) \left< \NoL \right> dl \\
                &= \frac{\sigma}{\pi} E_d(n) \quad \text{with the irradiance} \; 
-        E_d(n) = \int_{\Omega} L_{\bot}(l) \left< n \cdot l \right> dl
+        E_d(n) = \int_{\Omega} L_{\bot}(l) \left< \NoL \right> dl
 \end{align*}
 $$
 
@@ -1901,6 +1901,94 @@ $$\begin{equation}
 This expression depends on $\vec v$, $\alpha$, $\fNormal$ and $\fGrazing$ inside the integral, which makes its evaluation extremely costly and unsuitable for real-time on mobile (even using pre-filtered importance sampling). 
 
 ##### Simplifying the BRDF integration #####
+
+Since there is no closed-form or an easy way to compute the $\Lout$ integral, we use a simplified
+equation instead, $\hat{I}$, whereby we assume that $v = n$, that is the view direction $v$ is always
+equal to the surface normal $n$. Clearly, this assumption will break all view-dependant effects of 
+the convolution, such as the increased blur in reflections closer to the viewer 
+(a.k.a. stretchy reflections). 
+
+Such a simplification would also have a severe impact on constant environments, such as the white 
+furnace, because it would affect the magnitude of the the constant (i.e. DC) term of the result. We
+can at least correct for that by using a scale factor, $K$, in our simplified integral, which,
+when chosen properly will make sure the average irradiance stay correct.
+
+    - $I$ is our original integral, i.e.: $I(g) = \int_\Omega g(l) \left< \NoL \right> \partial l$
+    - $\hat{I}$ is the simplified integral where $v = n$
+    - $K$ is a scale factor that ensures the average irradiance is unchanged by $\hat{I}$
+    - $\tilde{I}$ is our final approximation of $I$, $\tilde{I} = \hat{I} \times K$ 
+
+
+Mathematically,
+
+$$\begin{equation}
+I( f(\Theta) \Lt ) \approx \tilde{I}( f(\Theta) \Lt )                       \\
+\tilde{I}( f(\Theta) \Lt ) = K \times \hat{I}( f(\Theta) \Lt )              \\
+K = \frac{I(f(\Theta))}{\hat{I}(f(\Theta))}
+\end{equation}$$ 
+
+
+From the equation above we can see that $\tilde{I}$ is equivalent to $I$  when $\Lt$ is a constant,
+and yields the correct result:
+
+$$\begin{align*}
+\tilde{I}(f(\Theta)\Lt^{constant}) &= \Lt^{constant} \hat{I}(f(\Theta)) \frac{I(f(\Theta))}{\hat{I}(f(\Theta))} \\
+                                   &= \Lt^{constant} I(f(\Theta))                                               \\
+                                   &= I(f(\Theta)\Lt^{constant})
+\end{align*}$$
+
+
+Similarly, we can also demonstrate that the result is correct when $v = n$, since in that case $I = \hat{I}$:
+
+$$\begin{align*}
+\tilde{I}(f(\Theta)\Lt) &= I(f(\Theta)\Lt) \frac{I(f(\Theta))}{I(f(\Theta))}    \\
+                        &= I(f(\Theta)\Lt)
+\end{align*}$$
+
+Finally, we can show that the scale factor $K$ satisfies our average irradiance requirement,
+plugging $\Lt = \bar{\Lt} + (\Lt - \bar{\Lt})$ into $\tilde{I}$, we get:
+
+$$\begin{align*}
+\tilde{I}(f(\Theta)\Lt) &= \tilde{I}[f(\Theta) \times (\bar{\Lt} + (\Lt - \bar{\Lt}))]                                      \\
+                        &= K \times \hat{I}[f(\Theta)\times (\bar{\Lt} + (\Lt - \bar{\Lt}))]                                \\
+                        &= K \times [\hat{I}(f(\Theta)\bar{\Lt}) + \hat{I}(f(\Theta) \times (\Lt - \bar{\Lt}))]             \\ 
+                        &= K \times \hat{I}(f(\Theta)\bar{\Lt}) + K \times \hat{I}(f(\Theta) \times (\Lt - \bar{\Lt}))      \\
+                        &= \tilde{I}(f(\Theta)\bar{\Lt}) + \tilde{I}(f(\Theta) \times (\Lt - \bar{\Lt}))                    \\
+                        &= I(f(\Theta)\bar{\Lt}) + \tilde{I}(f(\Theta) \times (\Lt - \bar{\Lt}))
+\end{align*}$$
+
+The above result shows that the average irradiance is computed correctly, i.e.: $I(f(\Theta)\bar{\Lt})$.
+
+A way to think about this approximation is that it splits the radiance $\Lt$ in two parts, 
+the average $\bar{\Lt}$ and the detla from the average $\Lt - \bar{\Lt}$ and computes the correct
+integration on the average part and adds the simplified integration on the delta part:
+
+$$\begin{equation}
+approximation(\Lt) = correct(\bar{\Lt}) + simplified(\Lt - \bar{\Lt})
+\end{equation}$$ 
+
+
+
+Now, let's look at each term:
+
+$$\begin{equation}
+\hat{I}(f(n, \alpha) \Lt) = \int_\Omega f(l, n, \alpha) \Lt(l) \left< \NoL \right> \partial l
+\end{equation}$$
+
+$$\begin{equation}
+I(f(n, v, \alpha)) = \int_\Omega f(l, n, v, \alpha) \left< \NoL \right> \partial l
+\end{equation}$$
+
+$$\begin{equation}
+\hat{I}(f(n, \alpha)) = \int_\Omega f(l, n, \alpha) \left< \NoL \right> \partial l
+\end{equation}$$
+
+
+All three of these equations can be easily pre-calculated and stored in look-up tables, we will show
+how below.
+ 
+
+
 
 In order to find a suitable approximation, let's first look at the special case where $\Lt(l) = \Lt^{constant}$:
 
