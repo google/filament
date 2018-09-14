@@ -154,6 +154,11 @@ vec3 F_Schlick(const vec3 f0, float f90, float VoH) {
     return f0 + (f90 - f0) * pow5(1.0 - VoH);
 }
 
+vec3 F_Schlick(const vec3 f0, float VoH) {
+    float f = pow(1.0 - VoH, 5.0);
+    return f + f0 * (1.0 - f);
+}
+
 float F_Schlick(float f0, float f90, float VoH) {
     return f0 + (f90 - f0) * pow5(1.0 - VoH);
 }
@@ -179,7 +184,7 @@ float visibility(float roughness, float linearRoughness, float NoV, float NoL, f
 vec3 fresnel(const vec3 f0, float LoH) {
 #if BRDF_SPECULAR_F == SPECULAR_F_SCHLICK
 #if defined(TARGET_MOBILE)
-    return F_Schlick(f0, 1.0, LoH);
+    return F_Schlick(f0, LoH); // f90 = 1.0
 #else
     float f90 = saturate(dot(f0, vec3(50.0 * 0.33)));
     return F_Schlick(f0, f90, LoH);
