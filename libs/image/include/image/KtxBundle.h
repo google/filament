@@ -18,6 +18,7 @@
 #define IMAGE_KTXBUNDLE_H
 
 #include <cstdint>
+#include <memory>
 
 namespace image {
 
@@ -127,7 +128,7 @@ private:
     uint32_t mNumMipLevels;
     uint32_t mArrayLength;
     uint32_t mNumCubeFaces;
-    KtxBlobList* mBlobs = nullptr;
+    std::unique_ptr<KtxBlobList> mBlobs;
 };
 
 } // namespace image
