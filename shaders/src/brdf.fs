@@ -151,8 +151,7 @@ float V_Neubelt(float NoV, float NoL) {
 
 vec3 F_Schlick(const vec3 f0, float f90, float VoH) {
     // Schlick 1994, "An Inexpensive BRDF Model for Physically-Based Rendering"
-    float f = pow5(1.0 - VoH);
-    return f + f0 * (f90 - f);
+    return f0 + (f90 - f0) * pow5(1.0 - VoH);
 }
 
 float F_Schlick(float f0, float f90, float VoH) {
