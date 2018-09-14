@@ -1902,16 +1902,16 @@ This expression depends on $\vec v$, $\alpha$, $\fNormal$ and $\fGrazing$ inside
 
 ##### Simplifying the BRDF integration #####
 
-Since there is no closed-form or an easy way to compute the $\Lout$ integral, we use a simplified
-equation instead, $\hat{I}$, whereby we assume that $v = n$, that is the view direction $v$ is always
+Since there is no closed-form solution or an easy way to compute the $\Lout$ integral, we use a simplified
+equation instead: $\hat{I}$, whereby we assume that $v = n$, that is the view direction $v$ is always
 equal to the surface normal $n$. Clearly, this assumption will break all view-dependant effects of 
 the convolution, such as the increased blur in reflections closer to the viewer 
 (a.k.a. stretchy reflections). 
 
 Such a simplification would also have a severe impact on constant environments, such as the white 
 furnace, because it would affect the magnitude of the the constant (i.e. DC) term of the result. We
-can at least correct for that by using a scale factor, $K$, in our simplified integral, which,
-when chosen properly will make sure the average irradiance stay correct.
+can at least correct for that by using a scale factor, $K$, in our simplified integral, which
+will make sure the average irradiance stay correct when chosen properly.
 
     - $I$ is our original integral, i.e.: $I(g) = \int_\Omega g(l) \left< \NoL \right> \partial l$
     - $\hat{I}$ is the simplified integral where $v = n$
@@ -1919,7 +1919,9 @@ when chosen properly will make sure the average irradiance stay correct.
     - $\tilde{I}$ is our final approximation of $I$, $\tilde{I} = \hat{I} \times K$ 
 
 
-Mathematically,
+Because $I$ is an integral multiplications can be distributed over it. i.e.: $I(g()f()) = I(g())I(f())$.
+
+Armed with that,
 
 $$\begin{equation}
 I( f(\Theta) \Lt ) \approx \tilde{I}( f(\Theta) \Lt )                       \\
@@ -1945,23 +1947,23 @@ $$\begin{align*}
                         &= I(f(\Theta)\Lt)
 \end{align*}$$
 
-Finally, we can show that the scale factor $K$ satisfies our average irradiance requirement,
-plugging $\Lt = \bar{\Lt} + (\Lt - \bar{\Lt})$ into $\tilde{I}$, we get:
+Finally, we can show that the scale factor $K$ satisfies our average irradiance ($\bar{\Lt}$)
+requirement by plugging $\Lt = \bar{\Lt} + (\Lt - \bar{\Lt}) = \bar{\Lt} + \Delta\Lt$ into $\tilde{I}$:
 
 $$\begin{align*}
-\tilde{I}(f(\Theta)\Lt) &= \tilde{I}[f(\Theta) \times (\bar{\Lt} + (\Lt - \bar{\Lt}))]                                      \\
-                        &= K \times \hat{I}[f(\Theta)\times (\bar{\Lt} + (\Lt - \bar{\Lt}))]                                \\
-                        &= K \times [\hat{I}(f(\Theta)\bar{\Lt}) + \hat{I}(f(\Theta) \times (\Lt - \bar{\Lt}))]             \\ 
-                        &= K \times \hat{I}(f(\Theta)\bar{\Lt}) + K \times \hat{I}(f(\Theta) \times (\Lt - \bar{\Lt}))      \\
-                        &= \tilde{I}(f(\Theta)\bar{\Lt}) + \tilde{I}(f(\Theta) \times (\Lt - \bar{\Lt}))                    \\
-                        &= I(f(\Theta)\bar{\Lt}) + \tilde{I}(f(\Theta) \times (\Lt - \bar{\Lt}))
+\tilde{I}(f(\Theta)\Lt) &= \tilde{I}\left[f\left(\Theta\right) \left(\bar{\Lt} + \Delta\Lt\right)\right] \\
+                        &= K \times \hat{I}\left[f\left(\Theta\right) \left(\bar{\Lt} + \Delta\Lt\right)\right] \\
+                        &= K \times \left[\hat{I}\left(f\left(\Theta\right)\bar{\Lt}\right) + \hat{I}\left(f\left(\Theta\right)\Delta\Lt\right)\right] \\ 
+                        &= K \times \hat{I}\left(f\left(\Theta\right)\bar{\Lt}\right) + K \times \hat{I}\left(f\left(\Theta\right) \Delta\Lt\right) \\
+                        &= \tilde{I}\left(f\left(\Theta\right)\bar{\Lt}\right) + \tilde{I}\left(f\left(\Theta\right) \Delta\Lt\right) \\
+                        &= I\left(f\left(\Theta\right)\bar{\Lt}\right) + \tilde{I}\left(f\left(\Theta\right) \Delta\Lt\right)
 \end{align*}$$
 
 The above result shows that the average irradiance is computed correctly, i.e.: $I(f(\Theta)\bar{\Lt})$.
 
 A way to think about this approximation is that it splits the radiance $\Lt$ in two parts, 
-the average $\bar{\Lt}$ and the detla from the average $\Lt - \bar{\Lt}$ and computes the correct
-integration on the average part and adds the simplified integration on the delta part:
+the average $\bar{\Lt}$ and the delta from the average $\Lt - \bar{\Lt}$ and computes the correct
+integration of the average part then adds the simplified integration of the delta part:
 
 $$\begin{equation}
 approximation(\Lt) = correct(\bar{\Lt}) + simplified(\Lt - \bar{\Lt})
@@ -1984,8 +1986,8 @@ $$\begin{equation}
 \end{equation}$$
 
 
-All three of these equations can be easily pre-calculated and stored in look-up tables, we will show
-how below.
+All three of these equations can be easily pre-calculated and stored in look-up tables, as explained 
+below.
  
 
 
