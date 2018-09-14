@@ -974,9 +974,10 @@ float D_GGX_Anisotropic(float NoH, const vec3 h,
     float ToH = dot(t, h);
     float BoH = dot(b, h);
     float a2 = at * ab;
-    vec3 v = vec3(ab * ToH, at * BoH, a2 * NoH);
-    // sq(x) returns x^2
-    return a2 * sq(a2 / dot(v, v)) * (1.0 / PI);
+    highp vec3 v = vec3(ab * ToH, at * BoH, a2 * NoH);
+    highp float v2 = dot(v, v);
+    float w2 = a2 / v2;
+    return a2 * w2 * w2 * (1.0 / PI);
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 [Listing [anisotropicBRDF]: Implementation of Burley's anisotropic NDF in GLSL]
