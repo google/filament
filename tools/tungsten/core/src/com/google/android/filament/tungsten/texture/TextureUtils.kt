@@ -30,6 +30,7 @@ import java.awt.image.BufferedImage.TYPE_INT_BGR
 import java.awt.image.DataBufferByte
 import java.io.File
 import java.io.IOException
+import java.io.InputStream
 import java.nio.ByteBuffer
 
 private fun Texture.InternalFormat.toSrgb(): Texture.InternalFormat {
@@ -39,6 +40,8 @@ private fun Texture.InternalFormat.toSrgb(): Texture.InternalFormat {
         else -> this
     }
 }
+
+data class ImageInfo(val width: Int, val height: Int)
 
 object TextureUtils {
 
@@ -63,7 +66,7 @@ object TextureUtils {
         return texture ?: throw RuntimeException("Could not load default texture")
     }
 
-    fun loadTexture(engine: Engine, file: File, colorSpace: ColorSpaceStrategy): Texture? {
+    fun loadTextureFromFile(engine: Engine, file: File, colorSpace: ColorSpaceStrategy): Texture? {
         val img = try {
             ImageIO.read(file) ?: return null
         } catch (e: IOException) {
@@ -73,6 +76,17 @@ object TextureUtils {
         }
 
         return loadTextureFromImage(engine, img, colorSpace)
+    }
+
+    fun loadImageBufferFromStream(stream: InputStream): Pair<ByteBuffer, ImageInfo>? {
+        val img = try {
+            ImageIO.read(stream) ?: return null
+        } catch (e: IOException) {
+            System.err.println("Could not parse image from InputStream.")
+            e.printStackTrace()
+            return null
+        }
+        return Pair(loadImageBuffer(img), ImageInfo(img.width, img.height))
     }
 
     /**
@@ -96,6 +110,12 @@ object TextureUtils {
             else -> Texture.InternalFormat.RGBA8 to Texture.Format.RGBA
         }
         return (if (isSrgb) internalFormat.toSrgb() else internalFormat) to textureFormat
+    }
+
+    private fun loadImageBuffer(img: BufferedImage): ByteBuffer {
+        val data = img.raster.dataBuffer as DataBufferByte
+        flipComponentsIfNecessary(img)
+        return ByteBuffer.wrap(data.data)
     }
 
     private fun loadTextureFromImage(

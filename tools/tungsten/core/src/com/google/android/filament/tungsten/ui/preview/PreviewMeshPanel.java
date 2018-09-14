@@ -92,8 +92,6 @@ public class PreviewMeshPanel extends JPanel {
             mCamera.setProjection(90.0, 1.3, 0.1, 200.0, Camera.Fov.HORIZONTAL);
             mCamera.lookAt(1.5f, 1.5f, 1.5f, 0, 0, 0, 0, 1, 0);
 
-            mSun = LightHelpers.addSun(engine, mScene);
-            mPointLight = LightHelpers.addPointLight(engine, mScene);
             mIndirectLight = LightHelpers.addIndirectLight(engine, mScene);
 
             loadMesh(engine, mScene, mVertexBuffer, mIndexBuffer);
@@ -147,8 +145,6 @@ public class PreviewMeshPanel extends JPanel {
             EntityManager.get().destroy(mMeshEntity);
             engine.getRenderableManager().destroy(mMeshEntity);
             engine.getTransformManager().destroy(mMeshTransform);
-            engine.getLightManager().destroy(mSun);
-            engine.getLightManager().destroy(mPointLight);
         });
     }
 
