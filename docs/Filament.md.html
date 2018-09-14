@@ -1843,6 +1843,18 @@ The irradiance integral $\Ed$ can be trivially, albeit slowly[^iblDiffuse3], pre
 
 ![Figure [iblIrradiance]: Image-based irradiance map using the Lambertian BRDF](images/ibl/ibl_irradiance.png style="max-width:100%;")
 
+
+[^ibl1]: $\Theta$ represents the parameters of the material model $f$, i.e.: _roughness_, albedo and so on...
+
+[^iblTypes1]: This can be done through blending of static probes or by spreading the workload over time
+
+[^iblDiffuse1]: The Lambertian BRDF doesn't depend on $\vec l$, $\vec v$ or $\theta$, so $L_d(n,v,\theta) \equiv L_d(n,\sigma)$
+
+[^iblDiffuse2]: $\Omega_s$ can be approximated by $\frac{2\pi}{6 \cdot width \cdot height}$ for a cubemap
+
+[^iblDiffuse3]: $O(12\,n^2\,m^2)$, with $n$ and $m$ respectively the dimensions of the environment and the precomputed cubemap
+
+
 However, the irradiance can also be approximated very closely by a decomposition into Spherical Harmonics (SH, described in more details in the Spherical Harmonics section) and calculated at runtime cheaply. It is usually best to avoid texture fetches on mobile and free-up a texture unit. Even if it is stored into a cubemap, it is orders of magnitude faster to pre-compute the integral using SH decomposition followed by a rendering.
 
 SH decomposition is similar in concept to a Fourier transform, it expresses the signal over an orthonormal base in the frequency domain. The properties that interests us most are:
@@ -1888,17 +1900,22 @@ Additionally, because of the pre-scaling by $K_l^m$, the SH coefficients can be 
 As we've seen above, the radiance $\Lout$ resulting from the interaction between an IBL's irradiance and a BRDF is:
 
 $$\begin{equation}\label{specularBRDFIntegration}
-\Lout(n, v, \Theta) = \int_\Omega f(l, v, \Theta) \Lt(l) \left< \NoL \right> dl 
+\Lout(n, v, \Theta) = \int_\Omega f(l, v, \Theta) \Lt(l) \left< \NoL \right> \partial l 
 \end{equation}$$ 
 
-We recognize the convolution of $\Lt$ by $f(l, v, \Theta) \left< \NoL \right>$, i.e.: the IBL is filtered by the BRDF.
+We recognize the convolution of $\Lt$ by $f(l, v, \Theta) \left< \NoL \right>$, 
+i.e.: the environment is *filtered* using the BRDF as a kernel. Indeed at higher roughness, 
+specular reflections look more *blurry*.
+ 
 Plugging the expression of $f$ in equation $\ref{specularBRDFIntegration}$, we obtain:
 
 $$\begin{equation}
-\Lout(n,v,\Theta) = \int_\Omega D(l, v, \alpha) F(l, v, f_0, f_{90}) V(l, v, \alpha) \left< \NoL \right> \Lt(l) dl
+\Lout(n,v,\Theta) = \int_\Omega D(l, v, \alpha) F(l, v, f_0, f_{90}) V(l, v, \alpha) \left< \NoL \right> \Lt(l) \partial l
 \end{equation}$$ 
 
-This expression depends on $\vec v$, $\alpha$, $\fNormal$ and $\fGrazing$ inside the integral, which makes its evaluation extremely costly and unsuitable for real-time on mobile (even using pre-filtered importance sampling). 
+This expression depends on $v$, $\alpha$, $f_0$ and $f_{90}$ inside the integral, 
+which makes its evaluation extremely costly and unsuitable for real-time on mobile 
+(even using pre-filtered importance sampling). 
 
 ##### Simplifying the BRDF integration #####
 
@@ -1962,7 +1979,7 @@ $$\begin{align*}
 The above result shows that the average irradiance is computed correctly, i.e.: $I(f(\Theta)\bar{\Lt})$.
 
 A way to think about this approximation is that it splits the radiance $\Lt$ in two parts, 
-the average $\bar{\Lt}$ and the delta from the average $\Lt - \bar{\Lt}$ and computes the correct
+the average $\bar{\Lt}$ and the delta from the average $\Delta\Lt$ and computes the correct
 integration of the average part then adds the simplified integration of the delta part:
 
 $$\begin{equation}
@@ -1973,16 +1990,10 @@ approximation(\Lt) = correct(\bar{\Lt}) + simplified(\Lt - \bar{\Lt})
 
 Now, let's look at each term:
 
-$$\begin{equation}
-\hat{I}(f(n, \alpha) \Lt) = \int_\Omega f(l, n, \alpha) \Lt(l) \left< \NoL \right> \partial l
-\end{equation}$$
-
-$$\begin{equation}
-I(f(n, v, \alpha)) = \int_\Omega f(l, n, v, \alpha) \left< \NoL \right> \partial l
-\end{equation}$$
-
-$$\begin{equation}
-\hat{I}(f(n, \alpha)) = \int_\Omega f(l, n, \alpha) \left< \NoL \right> \partial l
+$$\begin{equation}\label{iblPartialEquations}
+\hat{I}(f(n, \alpha) \Lt) = \int_\Omega f(l, n, \alpha) \Lt(l) \left< \NoL \right> \partial l   \\
+\hat{I}(f(n, \alpha))     = \int_\Omega f(l, n, \alpha)        \left< \NoL \right> \partial l   \\
+I(f(n, v, \alpha))        = \int_\Omega f(l, n, v, \alpha)     \left< \NoL \right> \partial l
 \end{equation}$$
 
 
@@ -1990,135 +2001,120 @@ All three of these equations can be easily pre-calculated and stored in look-up 
 below.
  
 
-
-
-In order to find a suitable approximation, let's first look at the special case where $\Lt(l) = \Lt^{constant}$:
-
-$$\begin{equation}\label{iblDFV}
-\Lout(n,v,\Theta) = \Lt^{constant} \int_\Omega D(l, v, \alpha) F(l, v, f_0, f_{90}) V(l, v, \alpha) \left< \NoL \right> dl
-\end{equation}$$
-
-$$
-\begin{align*}
-F(l, v, f_0) &= f_0 + (f_{90} - f_0) F_c(h) \qquad \text{with} \; F_c(h) = (1- \LoH)^5 \\
-             &= f_0 (1 - F_c(h)) + f_{90} F_c(h) \\
-\\
-DV(h, \alpha) &= D(l, v, \alpha) V(l, v, \alpha)
-\end{align*}
-$$
-
-Plugging $F$ into equation $\ref{iblDFV}$:
-
-$$
-\Lout(n,v,\Theta) = \Lt^{constant} \Bigg[f_0 \int_\Omega \big(1-F_c(h) \big) DV(h, \alpha) \left< \NoL \right> + \, f_{90} \int_\Omega F_c(h) DV(h, \alpha) \left< \NoL \right> \Bigg]
-$$
-
-This expression can easily be precomputed in two 2D tables, as it depends only on $\NoV$ and $\alpha$:
-
-$$\begin{equation}\label{DFV1DFV2}
-DFV_1(\NoV, \alpha) = \int_\Omega \big(1 - F_c(h)\big) DV(h, \alpha) \left< \NoL \right> dl \\
-DFV_2(\NoV, \alpha) = \int_\Omega F_c(h) DV(h, \alpha) \left< \NoL \right> dl
-\end{equation}$$
-
-$$\begin{equation}\label{specularBRDFIntegrationConstant}
-L_{out}^{constant}(n, v, \Theta) = L_{\bot}^{constant}\bigg[
-                                             f_0    \color{red}{DFV_1(\NoV, \alpha)} + 
-                                             f_{90} \color{red}{DFV_2(\NoV, \alpha)}    \bigg]
-\end{equation}$$ 
-
-This result is **exact** only when $\Lt$ is constant and known, or more precisely, it gives the radiance contributed by the **average of the irradiance** (i.e.: the D.C. term).
-
-Now, let's look at the general case, where $\Lt$ isn't constant:
-
-$$\begin{equation}\label{specularBRDFIntegrationExpanded}
-\Lout(n, v, \Theta) = \int_\Omega D(h, \alpha) F(l, v, f_0, f_{90}) V(h, \alpha) \left< \NoL \right> \Lt(l) dl
-\end{equation}$$ 
-
-
-Since we can't compute this integral in real-time, we're simply going to assumes:
-
-- $\vec v = \vec n$ : this is assuming we're looking at the surface in the direction of its normal
-- $f_{90} = 0$ 
-
-
-Equation $ \ref{specularBRDFIntegrationExpanded} $ simplifies greatly to:
-
-$$
-\begin{align*}
-LD(n, \alpha) &=     \int_\Omega F(l, n, f_0) V(h, \alpha) D(h, \alpha) \left< \NoL \right> \Lt(l) dl \\
-              &= f_0 \int_\Omega (1 - F_c(h)) V(h, \alpha) D(h, \alpha) \left< \NoL \right> \Lt(l) dl \\
-\end{align*}
-$$
-
-Now, let's look at the behavior of this expression when $\Lt(l) = \Lt^{constant}$
-
-$$\begin{equation}\label{specularLD}
-LD^{constant}(n, \alpha) = \Lt^{constant} \color{red}{ f_0 \int_\Omega (1 - F_c(h)) V(h, \alpha) D(h, \alpha) \left< \NoL \right> dl }
-\end{equation}$$ 
-
-This scales $ \Lt^{constant} $ (i.e.: the D.C. term of the irradiance) by a factor : 
-
-$$
-K(\alpha) = f_0 \int_\Omega (1 - F_c(h)) V(h, \alpha) D(h, \alpha) \left< \NoL \right> dl
-$$
-
-By multiplying together equation $ \ref{specularBRDFIntegrationConstant} $ with $\Lt^{constant} = 1$ and equation $ \ref{specularLD} $ normalized by $K(\alpha)$, we obtain:
-
-$$
-\Lout(n,v,\alpha,f_0,f_{90}) = 
-	\big[ f_0 \color{red}{DFV_1(\NoV, \alpha)} + f_{90} \color{red}{DFV_2(\NoV, \alpha)} \big] 
-			\times \color{blue}{\frac{1}{K(\alpha)}LD(n, \alpha)}
-$$
-
-This expression is exact when the irradiance is constant. In fact, it is **exact for the D.C. component of the irradiance**. It is also exact when $\vec v = \vec n$.
-
-$ \color{blue}{\frac{1}{K(\alpha)}LD(n, \alpha)} $ can easily be precomputed into a mip-mapped cubemap where each mipmap level contains the radiance for a different value of $\alpha$. Also note that $f_0$ being a constant, it disappears entirely from $LD()$ and $K(\alpha)$.
-
-$$
-\Lout^{simplified}(n, \alpha) = \color{blue}{\frac{1}{K(\alpha)}LD(n, \alpha)}
-$$
-
-Note that because we assumed that $\vec v = \vec n$, we're losing the "stretchy reflections" at grazing angles.
-
-In essence, we're filtering (convolving) the IBL by a simplified BRDF that doesn't affect the average irradiance (D.C. term of IBL) thanks to the normalization factor $K(\alpha)$, then we scale the result by the magnitude of the radiance corresponding to a constant irradiance of value 1.0:
-
-$$
-radiance_{out} = (\color{red}{BRDF \ast \bar{\Lt}}) \times (\color{blue}{BRDF^{simplified} \ast \Lt})
-$$
-
-An interesting point to note is that if we simplified the BRDF a bit more by assuming no fresnel and no shadowing/masking, i.e. $F()=V()=1$ we would find the expression of Brian Karis's "split-sum" approximation, and $K(\alpha)$ would match Karis's empirical normalization factor exactly.
-
 ##### Discrete Domain #####
 
-Recall that we have:
+In the discrete domain the equations in \ref{iblPartialEquations} become:
+
+$$\begin{equation}
+\hat{I}(f(n, \alpha) \Lt) \equiv \frac{1}{N}\sum_{\forall \, i \in image} f(l_i, n, \alpha) \Lt(l_i) \left<\NoL\right>  \\
+\hat{I}(f(n, \alpha))     \equiv \frac{1}{N}\sum_{\forall \, i \in image} f(l_i, n, \alpha)          \left<\NoL\right>  \\
+I(f(n, v, \alpha))        \equiv \frac{1}{N}\sum_{\forall \, i \in image} f(l_i, n, v, \alpha)       \left<\NoL\right>
+\end{equation}$$
+
+However, in practice we're using _importance sampling_ which needs to take de $pdf$ of the distribution
+into account and adds a term $\frac{\left<\VoH\right>}{D(h_i, \alpha)\left<\NoH\right>}$.
+See Importance Sampling For The IBL section:
+
+$$\begin{equation}\label{iblImportanceSampling}
+\hat{I}(f(n, \alpha) \Lt) \equiv \frac{4}{N}\sum_i^N f(l_i, n, \alpha)    \frac{\left<\VoH\right>}{D(h_i, \alpha)\left<\NoH\right>} \Lt(l_i) \left<\NoL\right>  \\
+\hat{I}(f(n, \alpha))     \equiv \frac{4}{N}\sum_i^N f(l_i, n, \alpha)    \frac{\left<\VoH\right>}{D(h_i, \alpha)\left<\NoH\right>}          \left<\NoL\right>  \\
+I(f(n, v, \alpha))        \equiv \frac{4}{N}\sum_i^N f(l_i, n, v, \alpha) \frac{\left<\VoH\right>}{D(h_i, \alpha)\left<\NoH\right>}          \left<\NoL\right>
+\end{equation}$$
+
+
+Recalling that for $\hat{I}$, we assume that $v = n$, equations \ref{iblImportanceSampling},
+simplifies to:
+
+$$\begin{equation}
+\hat{I}(f(n, \alpha) \Lt) \equiv \frac{4}{N}\sum_i^N \frac{f(l_i, n,    \alpha)}{D(h_i, \alpha)} \Lt(l_i) \left<\NoL\right>  \\
+\hat{I}(f(n, \alpha))     \equiv \frac{4}{N}\sum_i^N \frac{f(l_i, n,    \alpha)}{D(h_i, \alpha)}          \left<\NoL\right>  \\
+I(f(n, v, \alpha))        \equiv \frac{4}{N}\sum_i^N \frac{f(l_i, n, v, \alpha)}{D(h_i, \alpha)} \frac{\left<\VoH\right>}{\left<\NoH\right>} \left<\NoL\right>
+\end{equation}$$
+
+Then, the first two equations can be merged together such that $LD(n, \alpha) = \frac{\hat{I}(f(n, \alpha) \Lt)}{\hat{I}(f(n, \alpha))}$
+
+$$\begin{equation}\label{iblLD}
+LD(n, \alpha)       \equiv \frac{\sum_i^N \frac{f(l_i, n, \alpha)}{D(h_i, \alpha)} \Lt(l_i) \left<\NoL\right>}{\sum_i^N \frac{f(l_i, n, \alpha)}{D(h_i, \alpha)}\left<\NoL\right>}
+\end{equation}$$
+$$\begin{equation}\label{iblDFV}
+I(f(n, v, \alpha))  \equiv \frac{4}{N}\sum_i^N \frac{f(l_i, n, v, \alpha)}{D(h_i, \alpha)} \frac{\left<\VoH\right>}{\left<\NoH\right>} \left<\NoL\right>
+\end{equation}$$
+
+Note that at this point, we could almost compute both remaining equations off-line. The only difficulty
+is that we don't know $f_0$ nor $f_{90}$ when we precompute those integrals. We will see below that
+we can incorporate these terms at runtime for equation \ref{iblDFV}, alas, this is not possible for
+equation \ref{iblLD} and we have to assume $f_0 = f_{90} = 1$ (i.e.: the fresnel term always evaluates to 1).
+
+Let's substitute $f$ in equations \ref{iblLD} and \ref{iblDFV}:
+
+$$\begin{equation}
+f(l_i, n, \alpha) = D(h_i, \alpha)F(f_0, f_{90}, \left<\VoH\right>)V(l_i, v, \alpha)
+\end{equation}$$
+
+The first simplification is that the term $D(h_i, \alpha)$ in the brdf cancels out with the
+denominator (which came from the $pdf$ due to importance sampling).
+
+$$\begin{equation}
+LD(n, \alpha)       \equiv \frac{\sum_i^N V(l_i, v, \alpha)\left<\NoL\right>\Lt(l_i) }{\sum_i^N V(l_i, v, \alpha)\left<\NoL\right>}
+\end{equation}$$
+$$\begin{equation}\label{iblFV}
+I(f(n, v, \alpha))  \equiv \frac{4}{N}\sum_i^N \color{green}{F(f_0, f_{90}, \left<\VoH\right>)} V(l_i, v, \alpha)\frac{\left<\VoH\right>}{\left<\NoH\right>} \left<\NoL\right>
+\end{equation}$$
+
+Now, let's substitute the fresnel term into equation \ref{iblFV}:
+
+$$\begin{equation}
+F(f_0, f_{90}, \left<\VoH\right>) = f_0 (1 - F_c(\left<\VoH\right>)) + f_{90} F_c(\left<\VoH\right>) \\
+F_c(\left<\VoH\right>) = (1 - \left<\VoH\right>)^5
+\end{equation}$$
+
+
+$$\begin{equation}
+I(f(n, v, \alpha))  \equiv \frac{4}{N}\sum_i^N \left[\color{green}{f_0 (1 - F_c(\left<\VoH\right>)) + f_{90} F_c(\left<\VoH\right>)}\right] V(l_i, v, \alpha)\frac{\left<\VoH\right>}{\left<\NoH\right>} \left<\NoL\right> \\
+\end{equation}$$
 
 $$
 \begin{align*}
-\Lout(n,v,\alpha,f_0,f_{90}) &= 
-	\big[ f_0 \color{red}{DFV_1(\NoV, \alpha)} + f_{90} \color{red}{DFV_2(\NoV, \alpha)} \big] 
-			\times \color{blue}{\frac{1}{K(\alpha)}LD(n, \alpha)} \\
-         DFV_1(\NoV, \alpha) &= \int_\Omega \big(1 - F_c(h)\big) D(l, v, \alpha) V(l, v, \alpha) \left< \NoL \right> dl \\
-         DFV_2(\NoV, \alpha) &= \int_\Omega F_c(h) D(l, v, \alpha) V(l, v, \alpha) \left< \NoL \right> dl \\
-               LD_{v=n}(n, \alpha) &= \int_\Omega (1 - F_c(h)) V(h, \alpha) D(h, \alpha) \left< \NoL \right> \Lt(l) dl \\
-			       K_{v=n}(\alpha) &= \int_\Omega (1 - F_c(h)) V(h, \alpha) D(h, \alpha) \left< \NoL \right> dl \\
+I(f(n, v, \alpha))  \equiv & \color{green}{f_0   } \frac{4}{N}\sum_i^N  \color{green}{(1 - F_c(\left<\VoH\right>))} V(l_i, v, \alpha)\frac{\left<\VoH\right>}{\left<\NoH\right>} \left<\NoL\right> \\
+                    +      & \color{green}{f_{90}} \frac{4}{N}\sum_i^N  \color{green}{     F_c(\left<\VoH\right>) } V(l_i, v, \alpha)\frac{\left<\VoH\right>}{\left<\NoH\right>} \left<\NoL\right>
 \end{align*}
 $$
 
-Converting the $DFV$ and $LD$ terms defined above into the discrete domain, using _importance sampling_ (see [Importance Sampling] for the IBL):
+
+And finally, we extract the equations that can be calculated off-line (i.e.: the part that doesn't 
+depend on the runtime parameters $f_0$ and $f_{90}$):
+
+$$\begin{equation}\label{iblAllEquations}
+DFG_1(\alpha, \left<\NoV\right>) = \frac{4}{N}\sum_i^N  \color{green}{(1 - F_c(\left<\VoH\right>))} V(l_i, v, \alpha)\frac{\left<\VoH\right>}{\left<\NoH\right>} \left<\NoL\right> \\
+DFG_2(\alpha, \left<\NoV\right>) = \frac{4}{N}\sum_i^N  \color{green}{     F_c(\left<\VoH\right>) } V(l_i, v, \alpha)\frac{\left<\VoH\right>}{\left<\NoH\right>} \left<\NoL\right> \\
+I(f(n, v, \alpha))  \equiv   \color{green}{f_0} \color{red}{DFG_1(\alpha, \left<\NoV\right>)} + \color{green}{f_{90}} \color{red}{DFG_2(\alpha, \left<\NoV\right>)}
+\end{equation}$$
+
+
+Notice that $DFG_1$ and $DFG_2$ only depend on $\NoV$, that is the angle between the normal $n$ and
+the view direction $v$. This is true because the integral is symmetrical with respect to $n$. 
+When integrating, we can choose any $v$ we please as long as it satisfies $\NoV$ 
+(e.g.: when calculating $\VoH$).
+
+
+Putting everything back together:
 
 $$
 \begin{align*}
-         DFV_1(n, v, \alpha) &= \frac{4}{N}\sum_i^N \big(1 - F_c(h)\big) V(l_i, v, \alpha) \frac{\left< v \cdot h_i \right>}{\left< n \cdot h_i \right>} \left< n \cdot l_i \right> \\
-         DFV_2(n, v, \alpha) &= \frac{4}{N}\sum_i^N          F_c(h)      V(l_i, v, \alpha) \frac{\left< v \cdot h_i \right>}{\left< n \cdot h_i \right>} \left< n \cdot l_i \right> \\
-			       K(\alpha) &= \frac{1}{N}\sum_i^N \frac{(1 - F_c(h)) V(h, \alpha) D(h, \alpha)}{ D(h, \alpha)J(h)\left< n \cdot h_i \right> } \left< n \cdot l_i \right> \\
-			                 &= \frac{4}{N}\sum_i^N (1 - F_c(h)) V(h, \alpha) \left< n \cdot l_i \right> \\
-               LD(n, \alpha) &= \color{blue}{\frac{1}{K(\alpha)}} \frac{4}{N} \sum_i^N (1 - F_c(h)) V(h, \alpha) \Lt(l) \left< n \cdot l_i \right> \\
-			                 &= \frac{\sum_i^N (1 - F_c(h)) V(h, \alpha) \left< n \cdot l_i \right> \Lt(l)}
-							         {\sum_i^N (1 - F_c(h)) V(h, \alpha) \left< n \cdot l_i \right>}
-\end{align*}
+\Lout(n,v,\alpha,f_0,f_{90})     &\simeq \big[ f_0 \color{red}{DFG_1(\NoV, \alpha)} + f_{90} \color{red}{DFG_2(\NoV, \alpha)} \big] \times LD(n, \alpha) \\
+DFG_1(\alpha, \left<\NoV\right>) &=      \frac{4}{N}\sum_i^N  \color{green}{(1 - F_c(\left<\VoH\right>))} V(l_i, v, \alpha)\frac{\left<\VoH\right>}{\left<\NoH\right>} \left<\NoL\right> \\
+DFG_2(\alpha, \left<\NoV\right>) &=      \frac{4}{N}\sum_i^N  \color{green}{     F_c(\left<\VoH\right>) } V(l_i, v, \alpha)\frac{\left<\VoH\right>}{\left<\NoH\right>} \left<\NoL\right> \\
+LD(n, \alpha)                    &=      \frac{\sum_i^N V(l_i, n, \alpha)\left<\NoL\right>\Lt(l_i) }{\sum_i^N V(l_i, n, \alpha)\left<\NoL\right>}
+\end{align*}     
 $$
 
-Both $DFV_1$ and $DFV_2$ can either be pre-calculated in a regular 2D texture indexed by $ (\NoV, \alpha) $ and sampled bilinearly, or computed at runtime using an analytic approximation of the surfaces. See sample code in the annex. The pre-calculated textures are shown in table [textureDFG]. A C++ implementation of the pre-computation can be found in section [Precomputing L for image-based lighting].
+#### The $DFG_1$ and $DFG_2$ term visualized ####
+
+Both $DFG_1$ and $DFG_2$ can either be pre-calculated in a regular 2D texture indexed by $(\NoV, \alpha)$ 
+and sampled bilinearly, or computed at runtime using an analytic approximation of the surfaces. 
+See sample code in the annex. 
+The pre-calculated textures are shown in table [textureDFG]. 
+A C++ implementation of the pre-computation can be found in section [Precomputing L for image-based lighting].
 
 
 $DFG_1$                  | $DFG_2$                  | ${ DFG_1, DFG_2, 0 }$
@@ -2127,9 +2123,17 @@ $DFG_1$                  | $DFG_2$                  | ${ DFG_1, DFG_2, 0 }$
 [Table [textureDFG]: Y axis: $\alpha$. X axis: $cos \theta$]
 
 
-$DFV_1$ and $DFV_2$  are conveniently within the $ [0, 1] $ range however 8-bits textures can cause problems. Unfortunately, on mobile, 16-bits or float textures are not ubiquitous and there are a limited number of samplers. Despite the attractive simplicity of the shader code using a texture, it might be better to use an analytic approximation. Note that since we only need to store two terms, OpenGL ES 3.0's RG16F texture format is a good candidate.
+$DFG_1$ and $DFG_2$  are conveniently within the $[0, 1]$ range, however 8-bits textures don't have
+enough precision and will cause problems. 
+Unfortunately, on mobile, 16-bits or float textures are not ubiquitous and there are a limited 
+number of samplers. 
+Despite the attractive simplicity of the shader code using a texture, it might be better to use an 
+analytic approximation. Note however that since we only need to store two terms, 
+OpenGL ES 3.0's RG16F texture format is a good candidate.
 
-Such analytic approximation is described in [#Karis14], itself based on [#Lazarov13]. [#Narkowicz14] is another interesting approximation. Table [textureApproxDFG] presents a visual representation of these approximations.
+Such analytic approximation is described in [#Karis14], itself based on [#Lazarov13]. 
+[#Narkowicz14] is another interesting approximation. 
+Table [textureApproxDFG] presents a visual representation of these approximations.
 
 $DFG_1$                         | $DFG_2$                         | ${ DFG_1, DFG_2, 0 }$
 --------------------------------|---------------------------------|----------------------
@@ -2137,7 +2141,14 @@ $DFG_1$                         | $DFG_2$                         | ${ DFG_1, DF
 [Table [textureApproxDFG]: Y axis: $\alpha$. X axis: $cos \theta$]
 
 
-#### The LD term visualized ####
+#### The $LD$ term visualized ####
+
+$LD$ is the convolution of the environment by a function that only depends on the roughness $\alpha$.
+$LD$ can conveniently be stored in a mip-mapped cubemap where increasing LODs receive the environment
+pre-filtered with increasing $\alpha$.
+
+See an example below:
+
 
 ![$\alpha=0.0$](images/ibl/ibl_river_roughness_m0.png style="max-width:100%;")
 ![$\alpha=0.2$](images/ibl/ibl_river_roughness_m1.png style="max-width:100%;")
@@ -2149,25 +2160,26 @@ $DFG_1$                         | $DFG_2$                         | ${ DFG_1, DF
 
 Figure [iblVisualized] shows how indirect lighting interacts with dielectrics and conductors. Direct lighting was removed for illustration purposes.
 
-![Figure [iblVisualized]: Anisotropic reflections with varying roughness, metallicness, etc.](images/ibl/ibl_visualization.jpg)
+![Figure [iblVisualized]: Indirect diffuse and specular decomposition](images/ibl/ibl_visualization.jpg)
 
 #### IBL evaluation implementation ####
 
 Listing [iblEvaluation] presents a GLSL implementation to evaluate the IBL, using the various textures described in the previous sections. 
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-vec3 ibl(vec3 n, vec3 v, vec3 diffuseColor, vec3 f0, float roughness) {
+vec3 ibl(vec3 n, vec3 v, vec3 diffuseColor, vec3 f0, vec3 f90, float roughness) {
     vec3 r = reflect(n);
     vec3 Ld = textureCube(irradianceEnvMap, r) * diffuseColor;
     vec3 Lld = textureCube(prefilteredEnvMap, r, computeLODFromRoughness(roughness));
     vec2 Ldfg = texture2D(dfgLut, vec2(dot(n, v), roughness)).xy;
-    vec3 Lr =  (f0 * Ldfg.x + Ldfg.y) * Lld;
+    vec3 Lr =  (f0 * Ldfg.x + f90 * Ldfg.y) * Lld;
     return Ld + Lr;
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 [Listing [iblEvaluation]: GLSL implementation of image based lighting evaluation]
 
-We can however save a couple of texture lookups by using Spherical Harmonics instead of an irradiance cubemap and the analytical approximation of the $DFG$ LUT, as shown in listing [optimizedIblEvaluation].
+We can however save a couple of texture lookups by using Spherical Harmonics instead of an 
+irradiance cubemap and the analytical approximation of the $DFG$ LUT, as shown in listing [optimizedIblEvaluation].
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 vec3 irradianceSH(vec3 n) {
@@ -2204,14 +2216,14 @@ vec3 evaluateSpecularIBL(vec3 r, float roughness) {
     return decodeEnvironmentMap(textureCubeLodEXT(environmentMap, r, lod));
 }
 
-vec3 evaluateIBL(vec3 n, vec3 v, vec3 diffuseColor, vec3 f0, float roughness) {
+vec3 evaluateIBL(vec3 n, vec3 v, vec3 diffuseColor, vec3 f0, vec3 f90, float roughness) {
     float NoV = max(dot(n, v), 0.0);
     vec3 r = reflect(-v, n);
 
     // Specular indirect
     vec3 indirectSpecular = evaluateSpecularIBL(r, roughness);
     vec2 env = prefilteredDFG(NoV, roughness);
-    vec3 specularColor = f0 * env.x + env.y;
+    vec3 specularColor = f0 * env.x + f90 * env.y;
 
     // Diffuse indirect
     // We multiply by the Lambertian BRDF to compute radiance from irradiance
@@ -2225,47 +2237,39 @@ vec3 evaluateIBL(vec3 n, vec3 v, vec3 diffuseColor, vec3 f0, float roughness) {
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 [Listing [optimizedIblEvaluation]: GLSL implementation of image based lighting evaluation]
 
-[^ibl1]: $\Theta$ represents the parameters of the material model $f$, i.e.: _roughness_, albedo and so on...
 
-[^iblTypes1]: This can be done through blending of static probes or by spreading the workload over time
+#### Pre-integration for multiscattering ####
 
-[^iblDiffuse1]: The Lambertian BRDF doesn't depend on $\vec l$, $\vec v$ or $\theta$, so $L_d(n,v,\theta) \equiv L_d(n,\sigma)$
-
-[^iblDiffuse2]: $\Omega_s$ can be approximated by $\frac{2\pi}{6 \cdot width \cdot height}$ for a cubemap
-
-[^iblDiffuse3]: $O(12\,n^2\,m^2)$, with $n$ and $m$ respectively the dimensions of the environment and the precomputed cubemap
-
-### Pre-integration for multiscattering ###
-
-In section [Energy loss in specular reflectance] we discussed how to use a second scaled specular lobe to compensate for the energy loss due to only accounting for a single scattering event in our BRDF. This energy compensation lobe is scaled by a term that depends on $r$ defined in the following way:
+In section [Energy loss in specular reflectance] we discussed how to use a second scaled specular lobe 
+to compensate for the energy loss due to only accounting for a single scattering event in our BRDF.
+This energy compensation lobe is scaled by a term that depends on $r$ defined in the following way:
 
 $$\begin{equation}
-r = \int_{\Omega} D(l,v) V(l,v) \left< \NoL \right> dl
+r = \int_{\Omega} D(l,v) V(l,v) \left< \NoL \right> \partial l
 \end{equation}$$
 
-This equality is very similar to the terms $DFV_1$ and $DFV_2$ seen in equation $\ref{DFV1DFV2}$. Starting from equation $\ref{iblDFV}$ we can rewrite these two terms to match our definition of $r$. Recall that:
+Or, evaluated with importance sampling (See Importance Sampling For The IBL section):
 
 $$\begin{equation}
-\Lout(n,v,\Theta) = \Lt^{constant} \int_\Omega D(l, v, \alpha) F(l, v, f_0, f_{90}) V(l, v, \alpha) \left< \NoL \right> dl
+r \equiv  \frac{4}{N}\sum_i^N  V(l_i, v, \alpha)\frac{\left<\VoH\right>}{\left<\NoH\right>} \left<\NoL\right>
 \end{equation}$$
 
-With the Schlick Fresnel approximation we can instead write:
+This equality is very similar to the terms $DFG_1$ and $DFG_2$ seen in equation $\ref{iblAllEquations}$.
+In fact, it's the same, except without the Fresnel term.
 
-$$\begin{align*}
-DFG &= \int_\Omega (\fNormal + (1 - \fNormal) (1 - \left< \LoH \right>)^5) D(l, v, \alpha) V(l, v, \alpha) \left< \NoL \right> dl \\
-DFG &= (1 - \fNormal) \int_\Omega (1 - \left< \LoH \right>)^5 D(l, v, \alpha) V(l, v, \alpha) \left< \NoL \right> dl +
-\fNormal \int_\Omega D(l, v, \alpha) V(l, v, \alpha) \left< \NoL \right> dl \\
-DFG &= (1 - \fNormal) DFV_1(\NoV, \alpha) + \fNormal DFV_2(\NoV, \alpha) \\
-\end{align*}$$
+By making the further assumption that $f_{90} = 1$, we can rewrite $DFG_1$ and $DFG_2$ and the
+$\Lout$ reconstruction:
 
-Where:
+$$
+\begin{align*}
+\Lout(n,v,\alpha,f_0)                           &\simeq \big[ (1 - f_0) \color{red}{DFG_1^{multiscatter}(\NoV, \alpha)} + f_0 \color{red}{DFG_2^{multiscatter}(\NoV, \alpha)} \big] \times LD(n, \alpha) \\
+DFG_1^{multiscatter}(\alpha, \left<\NoV\right>) &=      \frac{4}{N}\sum_i^N  \color{green}{F_c(\left<\VoH\right>)} V(l_i, v, \alpha)\frac{\left<\VoH\right>}{\left<\NoH\right>} \left<\NoL\right> \\
+DFG_2^{multiscatter}(\alpha, \left<\NoV\right>) &=      \frac{4}{N}\sum_i^N                                        V(l_i, v, \alpha)\frac{\left<\VoH\right>}{\left<\NoH\right>} \left<\NoL\right> \\
+LD(n, \alpha)                                   &=      \frac{\sum_i^N V(l_i, n, \alpha)\left<\NoL\right>\Lt(l_i) }{\sum_i^N V(l_i, n, \alpha)\left<\NoL\right>}
+\end{align*}     
+$$
 
-$$\begin{align*}
-DFV_1(\NoV, \alpha) &= \int_\Omega (1 - \left< \LoH \right>)^5 D(l, v, \alpha) V(l, v, \alpha) \left< \NoL \right> dl \\
-DFV_2(\NoV, \alpha) &= \int_\Omega D(l, v, \alpha) V(l, v, \alpha) \left< \NoL \right> dl
-\end{align*}$$
-
-These two new $DFV$ terms simply need to replace the ones used in the implementation shown in section [Precomputing L for image-based lighting]:
+These two new $DFG$ terms simply need to replace the ones used in the implementation shown in section [Precomputing L for image-based lighting]:
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 float Fc = pow(1 - VoH, 5.0f);
@@ -2282,6 +2286,27 @@ vec2 dfg = textureLod(dfgLut, vec2(dot(n, v), roughness), 0.0).xy;
 vec3 specularColor = mix(dfg.xxx, dfg.yyy, f0);
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 [Listing [multiscatterIBLEvaluation]: GLSL implementation of image based lighting evaluation, with multiscattering LUT]
+
+
+#### Summary ####
+
+In order to calculate the specular contribution of distant image-based lights, we had to make a few
+approximations:
+
+    - $v = n$, by far the assumption contributing to the largest error when integrating the
+      non-constant part of the IBL. This results in the complete loss of roughness anisotropy
+      with respect to the view point.
+      
+    - Roughness contribution for the non-constant part of the IBL is quantized and trilinear filtering
+      is used to interpolate between these levels. This is most visible at low roughnes (e.g.: around 0.25
+      for a 9 LODs cubemap).
+      
+    - No Fresnel for the non-constant part of the IBL.
+      
+    - Schlick's Fresnel
+    
+    - $f_{90} = 1$ in the multiscattering case.
+
 
 ### Clear coat ###
 
