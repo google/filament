@@ -117,6 +117,7 @@ static double __UNUSED VisibilityAshikhmin(double NoV, double NoL, double a) {
  *        = n•l            = n•h
  *
  *  v = n
+ *  f0 = f90 = 1
  *
  *  h is micro facet's normal
  *
@@ -174,7 +175,7 @@ static double __UNUSED VisibilityAshikhmin(double NoV, double NoL, double a) {
  *
  * with:
  *
- *            fr() = D(h) F(h) V(l)
+ *            fr() = D(h) V(l)
  *
  *                       N
  *            K = -----------------
@@ -185,25 +186,25 @@ static double __UNUSED VisibilityAshikhmin(double NoV, double NoL, double a) {
  *
  *  It results that:
  *
- *            K                     4 <v•h>
- *    Er() = --- ∑ D(h) F(h) V(l) ------------ L(h) <n•l>
- *            N  h                  D(h) <n•h>
+ *            K                4 <v•h>
+ *    Er() = --- ∑ D(h) V(l) ------------ L(h) <n•l>
+ *            N  h             D(h) <n•h>
  *
  *
  *              K
- *    Er() = 4 --- ∑ F(h) V(v) L(h) <n•l>
+ *    Er() = 4 --- ∑ V(v) L(h) <n•l>
  *              N  h
  *
  *                  N                 4
- *    Er() = ----------------------- --- ∑ F(h) V(v) L(h) <n•l>
- *             4 ∑ F(h) V(v) <n•l>    N
+ *    Er() = ----------------------- --- ∑ V(v) L(h) <n•l>
+ *             4 ∑ V(v) <n•l>    N
  *
  *
- *  +-----------------------------------+
- *  |          ∑ F(h) V(v) <n•l> L(h)   |
- *  |  Er() = ------------------------  |
- *  |          ∑ F(h) V(v) <n•l>        |
- *  +-----------------------------------+
+ *  +------------------------------+
+ *  |          ∑ V(v) <n•l> L(h)   |
+ *  |  Er() = -------------------  |
+ *  |          ∑ V(v) <n•l>        |
+ *  +------------------------------+
  *
  */
 
@@ -283,14 +284,12 @@ void CubemapIBL::roughnessFilter(Cubemap& dst,
         const double NoH = dot(N, H);
         const double NoH2 = NoH * NoH;
         const double NoV = dot(N, V);
-        const double LoH = dot(L, H);
 #else
         const double NoV = 1;
         const double NoH = H.z;
         const double NoH2 = H.z*H.z;
         const double NoL = 2*NoH2 - 1;
         const double3 L(2*NoH*H.x, 2*NoH*H.y, NoL);
-        const double LoH = dot(L, H);
 #endif
 
         if (NoL > 0) {
@@ -303,8 +302,7 @@ void CubemapIBL::roughnessFilter(Cubemap& dst,
             const float mipLevel = clamp(float(l), 0.0f, maxLevelf);
 
             const double V = Visibility(NoV, NoL, linearRoughness);
-            const double F = Fresnel(1, 0, LoH);
-            const float brdf_NoL = float(F * V * NoL);
+            const float brdf_NoL = float(V * NoL);
 
             weight += brdf_NoL;
 
