@@ -53,9 +53,7 @@ struct KtxBlobList {
     std::vector<Blob> blobs;
 };
 
-KtxBundle::~KtxBundle() {
-    delete mBlobs;
-}
+KtxBundle::~KtxBundle() = default;
 
 KtxBundle::KtxBundle(uint32_t numMipLevels, uint32_t arrayLength, bool isCubemap) :
         mBlobs(new KtxBlobList) {
