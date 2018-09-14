@@ -81,9 +81,15 @@ float D_GGX(float linearRoughness, float NoH, const vec3 h) {
 
 float D_GGX_Anisotropic(float at, float ab, float ToH, float BoH, float NoH) {
     // Burley 2012, "Physically-Based Shading at Disney"
+
+    // The values at and ab are roughness^2, a2 is therefore roughness^4
+    // The dot product below computes roughness^8. We cannot fit in fp16 without clamping
+    // the roughness to too high values so we perform the dot product and the division in fp32
     float a2 = at * ab;
-    vec3 d = vec3(ab * ToH, at * BoH, a2 * NoH);
-    return saturateMediump(a2 * sq(a2 / dot(d, d)) * (1.0 / PI));
+    HIGHP vec3 d = vec3(ab * ToH, at * BoH, a2 * NoH);
+    HIGHP float d2 = dot(d, d);
+    float b2 = a2 / d2;
+    return a2 * b2 * b2 * (1.0 / PI);
 }
 
 float D_Ashikhmin(float linearRoughness, float NoH) {
