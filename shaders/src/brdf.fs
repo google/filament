@@ -31,11 +31,11 @@
 
 #if defined(TARGET_MOBILE)
 #define BRDF_SPECULAR_D             SPECULAR_D_GGX
-#define BRDF_SPECULAR_V             SPECULAR_V_SMITH_GGX
+#define BRDF_SPECULAR_V             SPECULAR_V_SMITH_GGX_FAST
 #define BRDF_SPECULAR_F             SPECULAR_F_SCHLICK
 #else
 #define BRDF_SPECULAR_D             SPECULAR_D_GGX
-#define BRDF_SPECULAR_V             SPECULAR_V_SMITH_GGX_FAST
+#define BRDF_SPECULAR_V             SPECULAR_V_SMITH_GGX
 #define BRDF_SPECULAR_F             SPECULAR_F_SCHLICK
 #endif
 
