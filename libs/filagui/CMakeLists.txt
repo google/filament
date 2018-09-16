@@ -18,7 +18,6 @@ set(SRCS
 # ==================================================================================================
 
 if (CMAKE_CROSSCOMPILING)
-    set(IMPORT_EXECUTABLES ${FILAMENT}/${IMPORT_EXECUTABLES_DIR}/ImportExecutables-${CMAKE_BUILD_TYPE}.cmake)
     include(${IMPORT_EXECUTABLES})
 endif()
 
@@ -30,7 +29,7 @@ set(GENERATION_ROOT ${CMAKE_CURRENT_BINARY_DIR})
 file(MAKE_DIRECTORY "${GENERATION_ROOT}/generated/material/")
 
 # Target system.
-if (ANDROID)
+if (ANDROID OR WEBGL)
     set(MATC_TARGET mobile)
 else()
     set(MATC_TARGET desktop)

@@ -2,6 +2,18 @@
 // Material parameters
 //------------------------------------------------------------------------------
 
+// Decide if we can skip lighting when dot(n, l) <= 0.0
+#if defined(SHADING_MODEL_CLOTH)
+#if !defined(MATERIAL_HAS_SUBSURFACE_COLOR)
+    #define MATERIAL_CAN_SKIP_LIGHTING
+#endif
+#elif defined(SHADING_MODEL_SUBSURFACE)
+    // Cannot skip lighting
+#else
+    #define MATERIAL_CAN_SKIP_LIGHTING
+#endif
+
+
 // These variables should be in a struct but some GPU drivers ignore the
 // precision qualifier on individual struct members
 HIGHP mat3  shading_tangentToWorld;   // TBN matrix

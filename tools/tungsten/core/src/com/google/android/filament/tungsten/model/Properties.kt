@@ -17,15 +17,20 @@
 package com.google.android.filament.tungsten.model
 
 import com.google.android.filament.MaterialInstance
+import com.google.android.filament.TextureSampler
+import com.google.android.filament.tungsten.Filament
+import com.google.android.filament.tungsten.properties.PropertyEditor
+import com.google.android.filament.tungsten.texture.TextureCache
+import java.io.File
 
 sealed class PropertyValue {
 
-    abstract fun applyToMaterialInstance(materialInstance: MaterialInstance, name: String)
+    open fun applyToMaterialInstance(materialInstance: MaterialInstance, name: String) { }
 
     /**
      * Serialize this value into a Kotlin List, Map, String, or Number
      */
-    abstract fun serialize(): Any
+    abstract fun serialize(): Any?
 
     /**
      * Deserialize into a new PropertyValue
@@ -41,11 +46,47 @@ data class Float3(val x: Float = 0.0f, val y: Float = 0.0f, val z: Float = 0.0f)
 
     override fun serialize() = listOf(x, y, z)
 
-    override fun deserialize(value: Any): PropertyValue {
+    override fun deserialize(value: Any): Float3 {
         if (value !is List<*> || value.size < 3) return this
         val (x, y, z) = value
         if (x !is Number || y !is Number || z !is Number) return this
         return Float3(x.toFloat(), y.toFloat(), z.toFloat())
+    }
+}
+
+data class StringValue(val value: String) : PropertyValue() {
+
+    override fun serialize() = value
+
+    override fun deserialize(value: Any): StringValue {
+        if (value !is String) return this
+        return StringValue(value)
+    }
+}
+
+data class TextureFile(val file: File? = null) : PropertyValue() {
+
+    override fun serialize() = file?.canonicalPath
+
+    private val textureFuture = if (file != null) {
+        TextureCache.getTextureForFile(file)
+    } else {
+        TextureCache.getDefaultTexture()
+    }
+
+    override fun deserialize(value: Any): PropertyValue {
+        if (value !is String) return this
+        return TextureFile(File(value))
+    }
+
+    override fun applyToMaterialInstance(materialInstance: MaterialInstance, name: String) {
+        textureFuture.thenApply { texture ->
+            Filament.getInstance().assertIsFilamentThread()
+            val sampler = TextureSampler()
+            materialInstance.setParameter(name, texture, sampler)
+        }.exceptionally { e ->
+            println("Error loading texture: ${e.message}")
+        }
     }
 }
 
@@ -54,8 +95,20 @@ enum class PropertyType {
     MATERIAL_PARAMETER
 }
 
-data class Property(
+data class Property<T : PropertyValue>(
     val name: String,
-    val value: PropertyValue,
-    val type: PropertyType = PropertyType.GRAPH_PROPERTY
-)
+    val value: T,
+    val type: PropertyType = PropertyType.GRAPH_PROPERTY,
+
+    // Construct an appropriate PropertyEditor for this property.
+    val editorFactory: (T) -> PropertyEditor
+) {
+
+    fun callEditorFactory(): PropertyEditor = this.editorFactory.invoke(value)
+}
+
+fun <T : PropertyValue> copyPropertyWithValue(
+    p: Property<T>,
+    value: PropertyValue
+): Property<*> =
+        Property(name = p.name, value = value as T, type = p.type, editorFactory = p.editorFactory)

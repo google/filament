@@ -81,7 +81,7 @@ static double __UNUSED DistributionCharlie(double NoH, double linearRoughness) {
 
 static double Fresnel(double f0, double f90, double LoH) {
     const double Fc = pow5(1 - LoH);
-    return f0*(1 - Fc) + f90*Fc;
+    return f0 * (1 - Fc) + f90 * Fc;
 }
 
 static double Visibility(double NoV, double NoL, double a) {
@@ -97,6 +97,116 @@ static double __UNUSED VisibilityAshikhmin(double NoV, double NoL, double a) {
     return 1 / (4 * (NoL + NoV - NoL * NoV));
 }
 
+
+/*
+ *
+ * Importance sampling GGX - Trowbridge-Reitz
+ * ------------------------------------------
+ *
+ * Important samples are chosen to integrate Dggx() * cos(theta) over the hemisphere.
+ *
+ * All calculations are made in tangent space, with n = [0 0 1]
+ *
+ *             l        h (important sample)
+ *             .\      /.
+ *             . \    / .
+ *             .  \  /  .
+ *             .   \/   .
+ *         ----+---o----+-------> n [0 0 1]
+ *     cos(2*theta)     cos(theta)
+ *        = n•l            = n•h
+ *
+ *  v = n
+ *
+ *  h is micro facet's normal
+ *
+ *  l is the reflection of v (i.e.: n) around h  ==>  n•h = l•h = v•h
+ *
+ *  h = important_sample_ggx()
+ *
+ *  n•h = [0 0 1]•h = h.z
+ *
+ *  l = reflect(-n, h)
+ *    = 2 * (n•h) * h - n;
+ *
+ *  n•l = cos(2 * theta)
+ *      = cos(theta)^2 - sin(theta)^2
+ *      = (n•h)^2 - (1 - (n•h)^2)
+ *      = 2(n•h)^2 - 1
+ *
+ *
+ *  pdf() = D(h) <n•h> |J(h)|
+ *
+ *               1
+ *  |J(h)| = ----------
+ *            4 <v•h>
+ *
+ *
+ * Pre-filtered importance sampling
+ * --------------------------------
+ *
+ *  see: "Real-time Shading with Filtered Importance Sampling", Jaroslav Krivanek
+ *  see: "GPU-Based Importance Sampling, GPU Gems 3", Mark Colbert
+ *
+ *
+ *                   Ωs
+ *     lod = log4(K ----)
+ *                   Ωp
+ *
+ *     log4(K) = 1, works well for box filters
+ *     K = 4
+ *
+ *             1
+ *     Ωs = ---------, solid-angle of an important sample
+ *           N * pdf
+ *
+ *              4 PI
+ *     Ωp ~ --------------, solid-angle of a sample in the base cubemap
+ *           texel_count
+ *
+ *
+ * Evaluating the integral
+ * -----------------------
+ *
+ *                    K     fr(h)
+ *            Er() = --- ∑ ------- L(h) <n•l>
+ *                    N  h   pdf
+ *
+ * with:
+ *
+ *            fr() = D(h) F(h) V(l)
+ *
+ *                       N
+ *            K = -----------------
+ *                    fr(h)
+ *                 ∑ ------- <n•l>
+ *                 h   pdf
+ *
+ *
+ *  It results that:
+ *
+ *            K                     4 <v•h>
+ *    Er() = --- ∑ D(h) F(h) V(l) ------------ L(h) <n•l>
+ *            N  h                  D(h) <n•h>
+ *
+ *
+ *              K
+ *    Er() = 4 --- ∑ F(h) V(v) L(h) <n•l>
+ *              N  h
+ *
+ *                  N                 4
+ *    Er() = ----------------------- --- ∑ F(h) V(v) L(h) <n•l>
+ *             4 ∑ F(h) V(v) <n•l>    N
+ *
+ *
+ *  +-----------------------------------+
+ *  |          ∑ F(h) V(v) <n•l> L(h)   |
+ *  |  Er() = ------------------------  |
+ *  |          ∑ F(h) V(v) <n•l>        |
+ *  +-----------------------------------+
+ *
+ */
+
 void CubemapIBL::roughnessFilter(Cubemap& dst,
         const std::vector<Cubemap>& levels, double linearRoughness, size_t maxNumSamples)
 {
@@ -107,6 +217,34 @@ void CubemapIBL::roughnessFilter(Cubemap& dst,
     const Cubemap& base(levels[0]);
     const size_t dim0 = base.getDimensions();
     const float omegaP = float((4 * M_PI) / (6 * dim0 * dim0));
+
+    ProgressUpdater updater(1);
+    std::atomic_uint progress = {0};
+
+    if (linearRoughness == 0) {
+        if (!g_quiet) {
+            updater.start();
+        }
+        CubemapUtils::process<CubemapUtils::EmptyState>(dst, [&, quiet = g_quiet]
+                (CubemapUtils::EmptyState&, size_t y, Cubemap::Face f, Cubemap::Texel* data, size_t dim) {
+                    size_t p = progress.fetch_add(1, std::memory_order_relaxed) + 1;
+                    if (!quiet) {
+                        updater.update(0, p, dim * 6);
+                    }
+                    const Cubemap& cm = levels[0];
+                    for (size_t x = 0; x < dim; ++x, ++data) {
+                        const double2 p(dst.center(x, y));
+                        const double3 N(dst.getDirectionFor(f, p.x, p.y));
+                        // FIXME: we should pick the proper LOD here and do trilinear filtering
+                        Cubemap::writeAt(data, cm.sampleAt(N));
+                    }
+                });
+        if (!g_quiet) {
+            updater.stop();
+        }
+        return;
+    }
+
 
     // be careful w/ the size of this structure, the smaller the better
     struct CacheEntry {
@@ -126,28 +264,12 @@ void CubemapIBL::roughnessFilter(Cubemap& dst,
     // our goal is to use maxNumSamples for which NoL is > 0
     // to achieve this, we might have to try more samples than
     // maxNumSamples
-    for (size_t sampleIndex = 0, sample = 0 ; sampleIndex < maxNumSamples; sampleIndex++) {
-        /*
-         *       (sampling)
-         *            L         H (never calculated below)
-         *            .\       /.
-         *            . \     / .
-         *            .  \   /  .
-         *            .   \ /   .
-         *         ---|----o----|-------> n
-         *    cos(2*theta)    cos(theta)
-         *       = n.L           = n.H
-         *
-         * Note: NoH == LoH
-         * (H is the half-angle between L and V, and V == N)
-         *
-         */
+    for (size_t sampleIndex = 0 ; sampleIndex < maxNumSamples; sampleIndex++) {
 
         // get Hammersley distribution for the half-sphere
         const double2 u = hammersley(uint32_t(sampleIndex), inumSamples);
 
         // Importance sampling GGX - Trowbridge-Reitz
-        // This corresponds to integrating Dggx()*cos(theta) over the hemisphere
         const double3 H = hemisphereImportanceSampleDggx(u, linearRoughness);
 
 #if 0
@@ -172,20 +294,11 @@ void CubemapIBL::roughnessFilter(Cubemap& dst,
 #endif
 
         if (NoL > 0) {
-            // pre-filtered importance sampling
-            // see: "Real-time Shading with Filtered Importance Sampling", Jaroslav Krivanek
-            // see: "GPU-Based Importance Sampling, GPU Gems 3", Mark Colbert
+            const double pdf = DistributionGGX(NoH, linearRoughness) / 4;
 
             // K is a LOD bias that allows a bit of overlapping between samples
-            // log4(K)=1 empirically works well with box-filtered mipmaps
             constexpr float K = 4;
-
-            // OmegaS is is the solid-angle of an important sample (i.e. how much surface
-            // of the sphere it represents). It obviously is function of the PDF.
-            const double pdf = DistributionGGX(NoH, linearRoughness) / 4;
             const double omegaS = 1 / (numSamples * pdf);
-
-            // The LOD is given by: max[ log4(Os/Op) + K, 0 ]
             const double l = float(log4(omegaS) - log4(omegaP) + log4(K));
             const float mipLevel = clamp(float(l), 0.0f, maxLevelf);
 
@@ -200,8 +313,6 @@ void CubemapIBL::roughnessFilter(Cubemap& dst,
             float lerp = mipLevel - l0;
 
             cache.push_back({ L, brdf_NoL, lerp, l0, l1 });
-
-            sample++;
         }
     }
 
@@ -214,12 +325,10 @@ void CubemapIBL::roughnessFilter(Cubemap& dst,
         return lhs.brdf_NoL < rhs.brdf_NoL;
     });
 
-    ProgressUpdater updater(1);
     if (!g_quiet) {
         updater.start();
     }
 
-    std::atomic_uint progress = {0};
     CubemapUtils::process<CubemapUtils::EmptyState>(dst,
             [ &, quiet=g_quiet ](CubemapUtils::EmptyState&, size_t y, Cubemap::Face f, Cubemap::Texel* data,
                     size_t dim) {
@@ -229,25 +338,14 @@ void CubemapIBL::roughnessFilter(Cubemap& dst,
             updater.update(0, p, dim * 6);
         }
 
-        if (linearRoughness == 0) {
-            const Cubemap& cm = levels[0];
-            for (size_t x=0 ; x<dim ; ++x, ++data) {
-                const double2 p(dst.center(x, y));
-                const double3 N(dst.getDirectionFor(f, p.x, p.y));
-                // FIXME: we should pick the proper LOD here and do trilinear filtering
-                Cubemap::writeAt(data, cm.sampleAt(N));
-            }
-            return;
-        }
-
         mat3 R;
         const size_t numSamples = cache.size();
-        for (size_t x=0 ; x<dim ; ++x, ++data) {
+        for (size_t x = 0; x < dim; ++x, ++data) {
             const double2 p(dst.center(x, y));
             const double3 N(dst.getDirectionFor(f, p.x, p.y));
 
             // center the cone around the normal (handle case of normal close to up)
-            const double3 up = std::abs(N.z)<0.999 ? double3(0,0,1) : double3(1,0,0);
+            const double3 up = std::abs(N.z) < 0.999 ? double3(0, 0, 1) : double3(1, 0, 0);
             R[0] = normalize(cross(up, N));
             R[1] = cross(N, R[0]);
             R[2] = N;
@@ -262,6 +360,183 @@ void CubemapIBL::roughnessFilter(Cubemap& dst,
                 Li += c0 * e.brdf_NoL;
             }
             Cubemap::writeAt(data, Cubemap::Texel(Li));
+        }
+    });
+
+    if (!g_quiet) {
+        updater.stop();
+    }
+}
+
+/*
+ *
+ * Importance sampling
+ * -------------------
+ *
+ * Important samples are chosen to integrate cos(theta) over the hemisphere.
+ *
+ * All calculations are made in tangent space, with n = [0 0 1]
+ *
+ *                      l (important sample)
+ *                     /.
+ *                    / .
+ *                   /  .
+ *                  /   .
+ *         --------o----+-------> n (direction)
+ *                   cos(theta)
+ *                    = n•l
+ *
+ *
+ *  'direction' is given as an input parameter, and serves as tge z direction of the tangent space.
+ *
+ *  l = important_sample_cos()
+ *
+ *  n•l = [0 0 1] • l = l.z
+ *
+ *           n•l
+ *  pdf() = -----
+ *           PI
+ *
+ *
+ * Pre-filtered importance sampling
+ * --------------------------------
+ *
+ *  see: "Real-time Shading with Filtered Importance Sampling", Jaroslav Krivanek
+ *  see: "GPU-Based Importance Sampling, GPU Gems 3", Mark Colbert
+ *
+ *
+ *                   Ωs
+ *     lod = log4(K ----)
+ *                   Ωp
+ *
+ *     log4(K) = 1, works well for box filters
+ *     K = 4
+ *
+ *             1
+ *     Ωs = ---------, solid-angle of an important sample
+ *           N * pdf
+ *
+ *              4 PI
+ *     Ωp ~ --------------, solid-angle of a sample in the base cubemap
+ *           texel_count
+ *
+ *
+ * Evaluating the integral
+ * -----------------------
+ *
+ * We are trying to evaluate the following integral:
+ * (we pre-multiply by PI to avoid a 1/PI in the shader)
+ *
+ *                       /
+ *             Ed() = PI | L(s) <n•l> ds
+ *                       /
+ *                       Ω
+ *
+ * For this, we're using importance sampling:
+ *
+ *                    PI     L(l)
+ *            Ed() = ---- ∑ ------- <n•l>
+ *                    N   l   pdf
+ *
+ *
+ *  It results that:
+ *
+ *            PI           n•l
+ *    Ed() = ---- ∑ L(l) ------  <n•l>
+ *            N   l        PI
+ *
+ *
+ *  +----------------------+
+ *  |          1           |
+ *  |  Ed() = ---- ∑ L(l)  |
+ *  |          N   l       |
+ *  +----------------------+
+ *
+ */
+
+void CubemapIBL::diffuseIrradiance(Cubemap& dst, const std::vector<Cubemap>& levels, size_t maxNumSamples)
+{
+    const float numSamples = maxNumSamples;
+    const float inumSamples = 1.0f / numSamples;
+    const size_t maxLevel = levels.size()-1;
+    const float maxLevelf = maxLevel;
+    const Cubemap& base(levels[0]);
+    const size_t dim0 = base.getDimensions();
+    const float omegaP = float((4 * M_PI) / (6 * dim0 * dim0));
+
+    ProgressUpdater updater(1);
+    std::atomic_uint progress = {0};
+
+
+    struct CacheEntry {
+        double3 L;
+        float lerp;
+        uint8_t l0;
+        uint8_t l1;
+    };
+
+    std::vector<CacheEntry> cache;
+    cache.reserve(maxNumSamples);
+
+    // precompute everything that only depends on the sample #
+    for (size_t sampleIndex = 0, sample = 0 ; sampleIndex < maxNumSamples; sampleIndex++) {
+        // get Hammersley distribution for the half-sphere
+        const double2 u = hammersley(uint32_t(sampleIndex), inumSamples);
+        const double3 L = hemisphereCosSample(u);
+        const double3 N = { 0, 0, 1 };
+        const double NoL = dot(N, L);
+
+        if (NoL > 0) {
+            double pdf = NoL * M_1_PI;
+
+            constexpr float K = 4;
+            const double omegaS = 1.0 / (numSamples * pdf);
+            const double l = float(log4(omegaS) - log4(omegaP) + log4(K));
+            const float mipLevel = clamp(float(l), 0.0f, maxLevelf);
+
+            uint8_t l0 = uint8_t(mipLevel);
+            uint8_t l1 = uint8_t(std::min(maxLevel, size_t(l0 + 1)));
+            float lerp = mipLevel - l0;
+
+            cache.push_back({ L, lerp, l0, l1 });
+        }
+    }
+
+    if (!g_quiet) {
+        updater.start();
+    }
+
+    CubemapUtils::process<CubemapUtils::EmptyState>(dst,
+            [ &, quiet=g_quiet ](CubemapUtils::EmptyState&, size_t y, Cubemap::Face f, Cubemap::Texel* data,
+                    size_t dim) {
+
+        size_t p = progress.fetch_add(1, std::memory_order_relaxed) + 1;
+        if (!quiet) {
+            updater.update(0, p, dim * 6);
+        }
+
+        mat3 R;
+        const size_t numSamples = cache.size();
+        for (size_t x = 0; x < dim; ++x, ++data) {
+            const double2 p(dst.center(x, y));
+            const double3 N(dst.getDirectionFor(f, p.x, p.y));
+
+            // center the cone around the normal (handle case of normal close to up)
+            const double3 up = std::abs(N.z) < 0.999 ? double3(0, 0, 1) : double3(1, 0, 0);
+            R[0] = normalize(cross(up, N));
+            R[1] = cross(N, R[0]);
+            R[2] = N;
+
+            float3 Li = 0;
+            for (size_t sample = 0; sample < numSamples; sample++) {
+                const CacheEntry& e = cache[sample];
+                const double3 L(R * e.L);
+                const Cubemap& cmBase = levels[e.l0];
+                const Cubemap& next = levels[e.l1];
+                const float3 c0 = Cubemap::trilinearFilterAt(cmBase, next, e.lerp, L);
+                Li += c0;
+            }
+            Cubemap::writeAt(data, Cubemap::Texel(Li * inumSamples));
         }
     });
 
@@ -294,7 +569,92 @@ static double2 __UNUSED DFV_NoIS(double NoV, double roughness, size_t numSamples
     return r * (M_PI * 4.0 / numSamples);
 }
 
-// Importance-sampled
+/*
+ *
+ * Importance sampling GGX - Trowbridge-Reitz
+ * ------------------------------------------
+ *
+ * Important samples are chosen to integrate Dggx() * cos(theta) over the hemisphere.
+ *
+ * All calculations are made in tangent space, with n = [0 0 1]
+ *
+ *                      h (important sample)
+ *                     /.
+ *                    / .
+ *                   /  .
+ *                  /   .
+ *         --------o----+-------> n
+ *                   cos(theta)
+ *                    = n•h
+ *
+ *  h is micro facet's normal
+ *  l is the reflection of v around h, l = reflect(-v, h)  ==>  v•h = l•h
+ *
+ *  n•v is given as an input parameter at runtime
+ *
+ *  Since n = [0 0 1], we also have v.z = n•v
+ *
+ *  Since we need to compute v•h, we chose v as below. This choice only affects the
+ *  computation of v•h (and therefore the fresnel term too), but doesn't affect
+ *  n•l, which only relies on l.z (which itself only relies on v.z, i.e.: n•v)
+ *
+ *      | sqrt(1 - (n•v)^2)     (sin)
+ *  v = | 0
+ *      | n•v                   (cos)
+ *
+ *
+ *  h = important_sample_ggx()
+ *
+ *  l = reflect(-v, h) = 2 * v•h * h - v;
+ *
+ *  n•l = [0 0 1] • l = l.z
+ *
+ *  n•h = [0 0 1] • l = h.z
+ *
+ *
+ *  pdf() = D(h) <n•h> |J(h)|
+ *
+ *               1
+ *  |J(h)| = ----------
+ *            4 <v•h>
+ *
+ *
+ * Evaluating the integral
+ * -----------------------
+ *
+ * We are trying to evaluate the following integral:
+ *
+ *                    /
+ *             Er() = | fr(s) <n•l> ds
+ *                    /
+ *                    Ω
+ *
+ * For this, we're using importance sampling:
+ *
+ *                    1     fr(h)
+ *            Er() = --- ∑ ------- <n•l>
+ *                    N  h   pdf
+ *
+ * with:
+ *
+ *            fr() = D(h) F(h) V(v, l)
+ *
+ *
+ *  It results that:
+ *
+ *            1                        4 <v•h>
+ *    Er() = --- ∑ D(h) F(h) V(v, l) ------------ <n•l>
+ *            N  h                     D(h) <n•h>
+ *
+ *
+ *  +-------------------------------------------+
+ *  |          4                  <v•h>         |
+ *  |  Er() = --- ∑ F(h) V(v, l) ------- <n•l>  |
+ *  |          N  h               <n•h>         |
+ *  +-------------------------------------------+
+ *
+ */
+
 static double2 DFV(double NoV, double roughness, size_t numSamples) {
     double2 r = 0;
     const double linearRoughness = roughness * roughness;
@@ -307,7 +667,28 @@ static double2 DFV(double NoV, double roughness, size_t numSamples) {
         const double NoL = saturate(L.z);
         const double NoH = saturate(H.z);
         if (NoL > 0) {
-            // Note: remember VoH == LoH  (H is half vector)
+            /*
+             * Fc = (1 - V•H)^5
+             * F(h) = f0*(1 - Fc) + f90*Fc
+             *
+             * f0 and f90 are known at runtime, but thankfully can be factored out, allowing us
+             * to split the integral in two terms and store both terms separately in a LUT.
+             *
+             * At runtime, we can reconstruct Er() exactly as below:
+             *
+             *            4                      <v•h>
+             *   DFV.x = --- ∑ (1 - Fc) V(v, l) ------- <n•l>
+             *            N  h                   <n•h>
+             *
+             *
+             *            4                      <v•h>
+             *   DFV.y = --- ∑ (    Fc) V(v, l) ------- <n•l>
+             *            N  h                   <n•h>
+             *
+             *
+             *   Er() = f0 * DFV.x + f90 * DFV.y
+             *
+             */
             const double v = Visibility(NoV, NoL, linearRoughness) * NoL * (VoH / NoH);
             const double Fc = pow5(1 - VoH);
             r.x += v * (1.0 - Fc);
@@ -321,29 +702,41 @@ static double2 DFV_Multiscatter(double NoV, double roughness, size_t numSamples)
     double2 r = 0;
     const double linearRoughness = roughness * roughness;
     const double3 V(std::sqrt(1 - NoV * NoV), 0, NoV);
-    for (size_t i=0 ; i<numSamples ; i++) {
+    for (size_t i = 0; i < numSamples; i++) {
         const double2 u = hammersley(uint32_t(i), 1.0f / numSamples);
         const double3 H = hemisphereImportanceSampleDggx(u, linearRoughness);
-        const double3 L = 2 * dot(V, H)*H - V;
+        const double3 L = 2 * dot(V, H) * H - V;
         const double VoH = saturate(dot(V, H));
         const double NoL = saturate(L.z);
         const double NoH = saturate(H.z);
         if (NoL > 0) {
-            // Note: remember VoH == LoH  (H is half vector)
             const double v = Visibility(NoV, NoL, linearRoughness) * NoL * (VoH / NoH);
             const double Fc = pow5(1 - VoH);
-            // This looks different from the computation performed in DFV() but the
-            // result is the same in the shader. With DFV() we would traditionally
-            // do the following per fragment:
-            //
-            // vec2 dfg = sampleEnv(...);
-            // return f0 * dfg.x + dfg.y;
-            //
-            // With the multi-scattering formulation we instead do the following per
-            // fragment:
-            //
-            // vec2 dfg = sampleEnv(...);
-            // return mix(dfg.xxx, dfg.yyy, f0)
+            /*
+             * Assuming f90 = 1
+             *   Fc = (1 - V•H)^5
+             *   F(h) = f0*(1 - Fc) + Fc
+             *
+             * f0 and f90 are known at runtime, but thankfully can be factored out, allowing us
+             * to split the integral in two terms and store both terms separately in a LUT.
+             *
+             * At runtime, we can reconstruct Er() exactly as below:
+             *
+             *            4                <v•h>
+             *   DFV.x = --- ∑ Fc V(v, l) ------- <n•l>
+             *            N  h             <n•h>
+             *
+             *
+             *            4                <v•h>
+             *   DFV.y = --- ∑    V(v, l) ------- <n•l>
+             *            N  h             <n•h>
+             *
+             *
+             *   Er() = (1 - f0) * DFV.x + f0 * DFV.y
+             *
+             *        = mix(DFV.xxx, DFV.yyy, f0)
+             *
+             */
             r.x += v * Fc;
             r.y += v;
         }

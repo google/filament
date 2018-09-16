@@ -212,15 +212,28 @@ function build_webgl_with_target {
             ../..
         ${BUILD_COMMAND} ${BUILD_TARGETS}
     fi
+
+    if [ -d "samples/web/public" ]; then
+        if [ "$ISSUE_ARCHIVES" == "true" ]; then
+            echo "Generating out/filament-${LC_TARGET}-web.tgz..."
+            cd samples/web/public
+            tar -czvf ../../../../filament-${LC_TARGET}-web.tgz .
+            cd -
+        fi
+    fi
+
     cd ../..
 }
 
 function build_webgl {
-    # Supress intermediate desktop tools install
-    OLD_INSTALL_COMMAND=${INSTALL_COMMAND}
-    INSTALL_COMMAND=
+    # For the host tools, supress install and always use Release.
+    OLD_INSTALL_COMMAND=${INSTALL_COMMAND}; INSTALL_COMMAND=
+    OLD_ISSUE_DEBUG_BUILD=${ISSUE_DEBUG_BUILD}; ISSUE_DEBUG_BUILD=false
+    OLD_ISSUE_RELEASE_BUILD=${ISSUE_RELEASE_BUILD}; ISSUE_RELEASE_BUILD=true
     build_desktop "${HOST_TOOLS}"
     INSTALL_COMMAND=${OLD_INSTALL_COMMAND}
+    ISSUE_DEBUG_BUILD=${OLD_ISSUE_DEBUG_BUILD}
+    ISSUE_RELEASE_BUILD=${OLD_ISSUE_RELEASE_BUILD}
 
     if [ "$ISSUE_DEBUG_BUILD" == "true" ]; then
         build_webgl_with_target "Debug"

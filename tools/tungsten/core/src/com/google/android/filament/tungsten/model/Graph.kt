@@ -16,6 +16,7 @@
 
 package com.google.android.filament.tungsten.model
 
+import com.google.android.filament.tungsten.compiler.Expression
 import com.google.android.filament.tungsten.compiler.GraphCompiler
 import kotlin.reflect.KProperty
 
@@ -47,7 +48,7 @@ data class Node(
     val outputSlots: List<String> = emptyList(),
     val inputSlots: List<String> = emptyList(),
 
-    val properties: List<Property> = emptyList()
+    val properties: List<Property<*>> = emptyList()
 ) {
 
     data class InputSlot(val nodeId: NodeId, val name: String) : Slot()
@@ -70,6 +71,9 @@ data class Node(
     fun getInputSlot(name: String) = InputSlot(id, name)
 
     fun getOutputSlot(name: String) = OutputSlot(id, name)
+
+    fun nodeBySettingInputSlots(newInputs: List<String>) =
+            if (inputSlots === newInputs) this else copy(inputSlots = newInputs)
 }
 
 class ConnectionMapper {
@@ -99,7 +103,10 @@ data class Graph(
     val nodes: List<Node> = emptyList(),
     val rootNodeId: NodeId? = null,
     val selection: List<NodeId> = emptyList(),
-    val connections: List<Connection> = emptyList()
+    val connections: List<Connection> = emptyList(),
+
+    // Maps from slots to their corresponding Expressions.
+    val expressionMap: Map<Slot, Expression> = emptyMap()
 ) {
 
     /**
@@ -146,14 +153,10 @@ data class Graph(
     fun graphByAddingNodeAtLocation(node: Node, x: Float, y: Float) =
             this.copy(nodes = nodes + node.copy(x = x, y = y))
 
-    fun graphByReplacingNode(oldNode: Node, newNode: Node): Graph {
-        if (nodes.contains(oldNode)) {
-            return this.copy(nodes = nodes - oldNode + newNode)
-        }
-        return this
-    }
+    fun graphByReplacingNode(oldNode: Node, newNode: Node) =
+            graphByReplacingNodes(mapOf(oldNode to newNode))
 
-    fun graphByChangingProperty(property: Node.PropertyHandle, value: Property): Graph {
+    fun graphByChangingProperty(property: Node.PropertyHandle, value: Property<*>): Graph {
         val node = nodeMap[property.nodeId] ?: return this
         val newProperties = node.properties.map {
             p -> if (p.name == property.name) value else p
@@ -164,9 +167,17 @@ data class Graph(
     fun graphByMovingNode(node: Node, x: Float, y: Float) =
             graphByReplacingNode(node, node.copy(x = x, y = y))
 
+    fun graphByReplacingNodes(nodeMap: Map<Node, Node>): Graph {
+        val newNodes = nodes.map { n -> nodeMap[n] ?: n }
+        return this.copy(nodes = newNodes)
+    }
+
     fun graphByFormingConnection(connection: Connection) =
             this.copy(connections = connections + connection)
 
     fun graphByRemovingConnection(connection: Connection) =
             this.copy(connections = connections - connection)
+
+    fun graphBySettingExpressionMap(expressionMap: Map<Slot, Expression>) =
+            this.copy(expressionMap = expressionMap)
 }

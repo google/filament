@@ -516,6 +516,10 @@ private:
         // Some drivers require the GL_TEXTURE_EXTERNAL_OES target to be bound when
         // the texture image changes, even if it's already bound to that texture
         bool texture_external_needs_rebind = false;
+
+        // Some web browsers seem to immediately clear the default framebuffer when calling
+        // glInvalidateFramebuffer with WebGL 2.0
+        bool disable_invalidate_framebuffer = false;
     } bugs;
 
     void attachStream(GLTexture* t, GLStream* stream) noexcept;

@@ -1,3 +1,5 @@
-include 'core', 'standalone', 'plugin'
+include 'core', 'standalone', 'plugin', 'kotlin-math'
+
+project(':kotlin-math').projectDir = new File('third_party/kotlin-math')
 
 rootProject.name = 'tungsten'

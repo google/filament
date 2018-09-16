@@ -45,55 +45,16 @@
 #include "app/FilamentApp.h"
 #include "app/MeshAssimp.h"
 
+#include "material_sandbox.h"
+
 using namespace math;
 using namespace filament;
 using namespace filamat;
 using namespace utils;
 
-static constexpr uint8_t MATERIAL_UNLIT_PACKAGE[] = {
-    #include "generated/material/sandboxUnlit.inc"
-};
-
-static constexpr uint8_t MATERIAL_LIT_PACKAGE[] = {
-    #include "generated/material/sandboxLit.inc"
-};
-
-static constexpr uint8_t MATERIAL_LIT_FADE_PACKAGE[] = {
-    #include "generated/material/sandboxLitFade.inc"
-};
-
-static constexpr uint8_t MATERIAL_LIT_TRANSPARENT_PACKAGE[] = {
-    #include "generated/material/sandboxLitTransparent.inc"
-};
-
-static constexpr uint8_t MATERIAL_SUBSURFACE_PACKAGE[] = {
-    #include "generated/material/sandboxSubsurface.inc"
-};
-
-static constexpr uint8_t MATERIAL_CLOTH_PACKAGE[] = {
-    #include "generated/material/sandboxCloth.inc"
-};
-
 static constexpr uint8_t GROUND_SHADOW_PACKAGE[] = {
     #include "generated/material/groundShadow.inc"
 };
-
-constexpr uint8_t MATERIAL_MODEL_UNLIT =       0;
-constexpr uint8_t MATERIAL_MODEL_LIT =         1;
-constexpr uint8_t MATERIAL_MODEL_SUBSURFACE =  2;
-constexpr uint8_t MATERIAL_MODEL_CLOTH =       3;
-
-constexpr uint8_t MATERIAL_UNLIT =       0;
-constexpr uint8_t MATERIAL_LIT =         1;
-constexpr uint8_t MATERIAL_SUBSURFACE =  2;
-constexpr uint8_t MATERIAL_CLOTH =       3;
-constexpr uint8_t MATERIAL_TRANSPARENT = 4;
-constexpr uint8_t MATERIAL_FADE =        5;
-constexpr uint8_t MATERIAL_COUNT =       6;
-
-constexpr uint8_t BLENDING_OPAQUE      = 0;
-constexpr uint8_t BLENDING_TRANSPARENT = 1;
-constexpr uint8_t BLENDING_FADE        = 2;
 
 static std::vector<Path> g_filenames;
 
@@ -101,36 +62,7 @@ static Scene* g_scene = nullptr;
 
 std::unique_ptr<MeshAssimp> g_meshSet;
 static std::map<std::string, MaterialInstance*> g_meshMaterialInstances;
-static const Material* g_material[MATERIAL_COUNT];
-static MaterialInstance* g_materialInstance[MATERIAL_COUNT];
-static Entity g_light;
-static bool g_has_directional_light = true;
-
-static sRGBColor g_color = sRGBColor{0.69f, 0.69f, 0.69f};
-static float g_alpha = 1.0f;
-static float g_roughness = 0.6f;
-static float g_metallic = 0.0f;
-static float g_reflectance = 0.5f;
-static float g_clearCoat = 0.0f;
-static float g_clearCoatRoughness = 0.0f;
-static float g_anisotropy = 0.0f;
-static float g_thickness = 1.0f;
-static float g_subsurfacePower = 12.234f;
-static sRGBColor g_subsurfaceColor = sRGBColor{0.0f};
-static sRGBColor g_sheenColor = sRGBColor{0.83f, 0.0f, 0.0f};
-static int g_currentMaterialModel = MATERIAL_MODEL_LIT;
-static int g_currentBlending = BLENDING_OPAQUE;
-static bool g_castShadows = true;
-static sRGBColor g_lightColor = sRGBColor{0.98f, 0.92f, 0.89f};
-static float g_lightIntensity = 110000.0f;
-static float3 g_lightDirection = {0.6f, -1.0f, -0.8f};
-static float g_iblIntensity = 30000.0f;
-static float g_iblRotation = 0.0f;
-static float g_sunHaloSize = 10.0f;
-static float g_sunHaloFalloff = 80.0f;
-static float g_sunAngularRadius = 1.9f;
-static bool g_directional_light_enabled = true;
-
+static SandboxParameters g_params;
 static Config g_config;
 static bool g_shadowPlane = false;
 
@@ -219,19 +151,19 @@ static void cleanup(Engine* engine, View*, Scene*) {
         engine->destroy(material.second);
     }
 
-    for (auto& i : g_materialInstance) {
+    for (auto& i : g_params.materialInstance) {
         engine->destroy(i);
     }
 
-    for (auto& i : g_material) {
+    for (auto& i : g_params.material) {
         engine->destroy(i);
     }
 
     g_meshSet.reset(nullptr);
 
-    engine->destroy(g_light);
+    engine->destroy(g_params.light);
     EntityManager& em = EntityManager::get();
-    em.destroy(g_light);
+    em.destroy(g_params.light);
 }
 
 static void setup(Engine* engine, View*, Scene* scene) {
@@ -239,42 +171,7 @@ static void setup(Engine* engine, View*, Scene* scene) {
 
     g_meshSet = std::make_unique<MeshAssimp>(*engine);
 
-    g_material[MATERIAL_UNLIT] = Material::Builder()
-            .package((void*) MATERIAL_UNLIT_PACKAGE, sizeof(MATERIAL_UNLIT_PACKAGE))
-            .build(*engine);
-    g_materialInstance[MATERIAL_UNLIT] =
-            g_material[MATERIAL_UNLIT]->createInstance();
-
-    g_material[MATERIAL_LIT] = Material::Builder()
-            .package((void*) MATERIAL_LIT_PACKAGE, sizeof(MATERIAL_LIT_PACKAGE))
-            .build(*engine);
-    g_materialInstance[MATERIAL_LIT] =
-            g_material[MATERIAL_LIT]->createInstance();
-
-    g_material[MATERIAL_TRANSPARENT] = Material::Builder()
-            .package((void*) MATERIAL_LIT_TRANSPARENT_PACKAGE,
-                    sizeof(MATERIAL_LIT_TRANSPARENT_PACKAGE))
-            .build(*engine);
-    g_materialInstance[MATERIAL_TRANSPARENT] =
-            g_material[MATERIAL_TRANSPARENT]->createInstance();
-
-    g_material[MATERIAL_FADE] = Material::Builder()
-            .package((void*) MATERIAL_LIT_FADE_PACKAGE, sizeof(MATERIAL_LIT_FADE_PACKAGE))
-            .build(*engine);
-    g_materialInstance[MATERIAL_FADE] =
-            g_material[MATERIAL_FADE]->createInstance();
-
-    g_material[MATERIAL_SUBSURFACE] = Material::Builder()
-            .package((void*) MATERIAL_SUBSURFACE_PACKAGE, sizeof(MATERIAL_SUBSURFACE_PACKAGE))
-            .build(*engine);
-    g_materialInstance[MATERIAL_SUBSURFACE] =
-            g_material[MATERIAL_SUBSURFACE]->createInstance();
-
-    g_material[MATERIAL_CLOTH] = Material::Builder()
-            .package((void*) MATERIAL_CLOTH_PACKAGE, sizeof(MATERIAL_CLOTH_PACKAGE))
-            .build(*engine);
-    g_materialInstance[MATERIAL_CLOTH] =
-            g_material[MATERIAL_CLOTH]->createInstance();
+    createInstances(g_params, *engine);
 
     for (auto& filename : g_filenames) {
         g_meshSet->addFromFile(filename, g_meshMaterialInstances);
@@ -290,26 +187,16 @@ static void setup(Engine* engine, View*, Scene* scene) {
         auto instance = rcm.getInstance(renderable);
         if (!instance) continue;
 
-        rcm.setCastShadows(instance, g_castShadows);
+        rcm.setCastShadows(instance, g_params.castShadows);
 
         for (size_t i = 0; i < rcm.getPrimitiveCount(instance); i++) {
-            rcm.setMaterialInstanceAt(instance, i, g_materialInstance[MATERIAL_LIT]);
+            rcm.setMaterialInstanceAt(instance, i, g_params.materialInstance[MATERIAL_LIT]);
         }
 
         scene->addEntity(renderable);
     }
 
-    g_light = EntityManager::get().create();
-    LightManager::Builder(LightManager::Type::SUN)
-            .color(Color::toLinear<ACCURATE>(g_lightColor))
-            .intensity(g_lightIntensity)
-            .direction(g_lightDirection)
-            .castShadows(true)
-            .sunAngularRadius(g_sunAngularRadius)
-            .sunHaloSize(g_sunHaloSize)
-            .sunHaloFalloff(g_sunHaloFalloff)
-            .build(*engine, g_light);
-    scene->addEntity(g_light);
+    scene->addEntity(g_params.light);
 
     if (g_shadowPlane) {
         EntityManager& em = EntityManager::get();
@@ -373,62 +260,63 @@ static void setup(Engine* engine, View*, Scene* scene) {
 }
 
 static void gui(filament::Engine* engine, filament::View*) {
+    auto& params = g_params;
     ImGui::SetNextWindowSize(ImVec2(0.0f, 0.0f));
     ImGui::Begin("Parameters");
     {
         if (ImGui::CollapsingHeader("Material", ImGuiTreeNodeFlags_DefaultOpen)) {
-            ImGui::Combo("model", &g_currentMaterialModel,
+            ImGui::Combo("model", &params.currentMaterialModel,
                     "unlit\0lit\0subsurface\0cloth\0\0");
 
-            if (g_currentMaterialModel == MATERIAL_MODEL_LIT) {
-                ImGui::Combo("blending", &g_currentBlending,
+            if (params.currentMaterialModel == MATERIAL_MODEL_LIT) {
+                ImGui::Combo("blending", &params.currentBlending,
                         "opaque\0transparent\0fade\0\0");
             }
 
-            ImGui::ColorEdit3("baseColor", &g_color.r);
+            ImGui::ColorEdit3("baseColor", &params.color.r);
 
-            if (g_currentMaterialModel > MATERIAL_MODEL_UNLIT) {
-                if (g_currentBlending == BLENDING_TRANSPARENT ||
-                        g_currentBlending == BLENDING_FADE) {
-                    ImGui::SliderFloat("alpha", &g_alpha, 0.0f, 1.0f);
+            if (params.currentMaterialModel > MATERIAL_MODEL_UNLIT) {
+                if (params.currentBlending == BLENDING_TRANSPARENT ||
+                        params.currentBlending == BLENDING_FADE) {
+                    ImGui::SliderFloat("alpha", &params.alpha, 0.0f, 1.0f);
                 }
-                ImGui::SliderFloat("roughness", &g_roughness, 0.0f, 1.0f);
-                if (g_currentMaterialModel != MATERIAL_MODEL_CLOTH) {
-                    ImGui::SliderFloat("metallic", &g_metallic, 0.0f, 1.0f);
-                    ImGui::SliderFloat("reflectance", &g_reflectance, 0.0f, 1.0f);
+                ImGui::SliderFloat("roughness", &params.roughness, 0.0f, 1.0f);
+                if (params.currentMaterialModel != MATERIAL_MODEL_CLOTH) {
+                    ImGui::SliderFloat("metallic", &params.metallic, 0.0f, 1.0f);
+                    ImGui::SliderFloat("reflectance", &params.reflectance, 0.0f, 1.0f);
                 }
-                if (g_currentMaterialModel != MATERIAL_MODEL_CLOTH &&
-                        g_currentMaterialModel != MATERIAL_MODEL_SUBSURFACE) {
-                    ImGui::SliderFloat("clearCoat", &g_clearCoat, 0.0f, 1.0f);
-                    ImGui::SliderFloat("clearCoatRoughness", &g_clearCoatRoughness, 0.0f, 1.0f);
-                    ImGui::SliderFloat("anisotropy", &g_anisotropy, -1.0f, 1.0f);
+                if (params.currentMaterialModel != MATERIAL_MODEL_CLOTH &&
+                        params.currentMaterialModel != MATERIAL_MODEL_SUBSURFACE) {
+                    ImGui::SliderFloat("clearCoat", &params.clearCoat, 0.0f, 1.0f);
+                    ImGui::SliderFloat("clearCoatRoughness", &params.clearCoatRoughness, 0.0f, 1.0f);
+                    ImGui::SliderFloat("anisotropy", &params.anisotropy, -1.0f, 1.0f);
                 }
-                if (g_currentMaterialModel == MATERIAL_MODEL_SUBSURFACE) {
-                    ImGui::SliderFloat("thickness", &g_thickness, 0.0f, 1.0f);
-                    ImGui::SliderFloat("subsurfacePower", &g_subsurfacePower, 1.0f, 24.0f);
-                    ImGui::ColorEdit3("subsurfaceColor", &g_subsurfaceColor.r);
+                if (params.currentMaterialModel == MATERIAL_MODEL_SUBSURFACE) {
+                    ImGui::SliderFloat("thickness", &params.thickness, 0.0f, 1.0f);
+                    ImGui::SliderFloat("subsurfacePower", &params.subsurfacePower, 1.0f, 24.0f);
+                    ImGui::ColorEdit3("subsurfaceColor", &params.subsurfaceColor.r);
                 }
-                if (g_currentMaterialModel == MATERIAL_MODEL_CLOTH) {
-                    ImGui::ColorEdit3("sheenColor", &g_sheenColor.r);
-                    ImGui::ColorEdit3("subsurfaceColor", &g_subsurfaceColor.r);
+                if (params.currentMaterialModel == MATERIAL_MODEL_CLOTH) {
+                    ImGui::ColorEdit3("sheenColor", &params.sheenColor.r);
+                    ImGui::ColorEdit3("subsurfaceColor", &params.subsurfaceColor.r);
                 }
             }
         }
 
         if (ImGui::CollapsingHeader("Object")) {
-            ImGui::Checkbox("castShadows", &g_castShadows);
+            ImGui::Checkbox("castShadows", &params.castShadows);
         }
 
         if (ImGui::CollapsingHeader("Light")) {
-            ImGui::Checkbox("enabled", &g_directional_light_enabled);
-            ImGui::ColorEdit3("color", &g_lightColor.r);
-            ImGui::SliderFloat("lux", &g_lightIntensity, 0.0f, 150000.0f);
-            ImGui::SliderFloat3("direction", &g_lightDirection.x, -1.0f, 1.0f);
-            ImGui::SliderFloat("sunSize", &g_sunAngularRadius, 0.1f, 10.0f);
-            ImGui::SliderFloat("haloSize", &g_sunHaloSize, 1.01f, 40.0f);
-            ImGui::SliderFloat("haloFalloff", &g_sunHaloFalloff, 0.0f, 2048.0f);
-            ImGui::SliderFloat("ibl", &g_iblIntensity, 0.0f, 50000.0f);
-            ImGui::SliderAngle("ibl rotation", &g_iblRotation);
+            ImGui::Checkbox("enabled", &params.directionalLightEnabled);
+            ImGui::ColorEdit3("color", &params.lightColor.r);
+            ImGui::SliderFloat("lux", &params.lightIntensity, 0.0f, 150000.0f);
+            ImGui::SliderFloat3("direction", &params.lightDirection.x, -1.0f, 1.0f);
+            ImGui::SliderFloat("sunSize", &params.sunAngularRadius, 0.1f, 10.0f);
+            ImGui::SliderFloat("haloSize", &params.sunHaloSize, 1.01f, 40.0f);
+            ImGui::SliderFloat("haloFalloff", &params.sunHaloFalloff, 0.0f, 2048.0f);
+            ImGui::SliderFloat("ibl", &params.iblIntensity, 0.0f, 50000.0f);
+            ImGui::SliderAngle("ibl rotation", &params.iblRotation);
         }
 
         if (ImGui::CollapsingHeader("Debug")) {
@@ -451,42 +339,7 @@ static void gui(filament::Engine* engine, filament::View*) {
     }
     ImGui::End();
 
-    int material = g_currentMaterialModel;
-    if (material == MATERIAL_MODEL_LIT) {
-        if (g_currentBlending == BLENDING_TRANSPARENT) material = MATERIAL_TRANSPARENT;
-        if (g_currentBlending == BLENDING_FADE) material = MATERIAL_FADE;
-    }
-    MaterialInstance* materialInstance = g_materialInstance[material];
-    if (g_currentMaterialModel == MATERIAL_MODEL_UNLIT) {
-        materialInstance->setParameter("baseColor", RgbType::sRGB, g_color);
-    }
-    if (g_currentMaterialModel == MATERIAL_MODEL_LIT) {
-        materialInstance->setParameter("baseColor", RgbType::sRGB, g_color);
-        materialInstance->setParameter("roughness", g_roughness);
-        materialInstance->setParameter("metallic", g_metallic);
-        materialInstance->setParameter("reflectance", g_reflectance);
-        materialInstance->setParameter("clearCoat", g_clearCoat);
-        materialInstance->setParameter("clearCoatRoughness", g_clearCoatRoughness);
-        materialInstance->setParameter("anisotropy", g_anisotropy);
-        if (g_currentBlending != BLENDING_OPAQUE) {
-            materialInstance->setParameter("alpha", g_alpha);
-        }
-    }
-    if (g_currentMaterialModel == MATERIAL_MODEL_SUBSURFACE) {
-        materialInstance->setParameter("baseColor", RgbType::sRGB, g_color);
-        materialInstance->setParameter("roughness", g_roughness);
-        materialInstance->setParameter("metallic", g_metallic);
-        materialInstance->setParameter("reflectance", g_reflectance);
-        materialInstance->setParameter("thickness", g_thickness);
-        materialInstance->setParameter("subsurfacePower", g_subsurfacePower);
-        materialInstance->setParameter("subsurfaceColor", RgbType::sRGB, g_subsurfaceColor);
-    }
-    if (g_currentMaterialModel == MATERIAL_MODEL_CLOTH) {
-        materialInstance->setParameter("baseColor", RgbType::sRGB, g_color);
-        materialInstance->setParameter("roughness", g_roughness);
-        materialInstance->setParameter("sheenColor", RgbType::sRGB, g_sheenColor);
-        materialInstance->setParameter("subsurfaceColor", RgbType::sRGB, g_subsurfaceColor);
-    }
+    MaterialInstance* materialInstance = updateInstances(params, *engine);
 
     auto& rcm = engine->getRenderableManager();
     for (auto renderable : g_meshSet->getRenderables()) {
@@ -495,31 +348,22 @@ static void gui(filament::Engine* engine, filament::View*) {
         for (size_t i = 0; i < rcm.getPrimitiveCount(instance); i++) {
             rcm.setMaterialInstanceAt(instance, i, materialInstance);
         }
-        rcm.setCastShadows(instance, g_castShadows);
+        rcm.setCastShadows(instance, params.castShadows);
     }
 
-    auto& lcm = engine->getLightManager();
-    auto lightInstance = lcm.getInstance(g_light);
-    lcm.setColor(lightInstance, g_lightColor);
-    lcm.setIntensity(lightInstance, g_lightIntensity);
-    lcm.setDirection(lightInstance, g_lightDirection);
-    lcm.setSunAngularRadius(lightInstance, g_sunAngularRadius);
-    lcm.setSunHaloSize(lightInstance, g_sunHaloSize);
-    lcm.setSunHaloFalloff(lightInstance, g_sunHaloFalloff);
-
-    if (g_directional_light_enabled && !g_has_directional_light) {
-        g_scene->addEntity(g_light);
-        g_has_directional_light = true;
-    } else if (!g_directional_light_enabled && g_has_directional_light) {
-        g_scene->remove(g_light);
-        g_has_directional_light = false;
+    if (params.directionalLightEnabled && !params.hasDirectionalLight) {
+        g_scene->addEntity(params.light);
+        params.hasDirectionalLight = true;
+    } else if (!params.directionalLightEnabled && params.hasDirectionalLight) {
+        g_scene->remove(params.light);
+        params.hasDirectionalLight = false;
     }
 
     auto* ibl = FilamentApp::get().getIBL();
     if (ibl) {
-        ibl->getIndirectLight()->setIntensity(g_iblIntensity);
+        ibl->getIndirectLight()->setIntensity(params.iblIntensity);
         ibl->getIndirectLight()->setRotation(
-                mat3f::rotate(g_iblRotation, float3{ 0, 1, 0 }));
+                mat3f::rotate(params.iblRotation, float3{ 0, 1, 0 }));
     }
 }
 

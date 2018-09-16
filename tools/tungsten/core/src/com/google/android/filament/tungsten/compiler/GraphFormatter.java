@@ -45,7 +45,7 @@ final class GraphFormatter {
     }
 
     static String formatMaterialSection(Collection<String> attributes,
-            Collection<Parameter> parameters) {
+            Collection<Parameter> parameters, String shadingModel) {
         StringBuilder builder = new StringBuilder();
         for (String attribute : attributes) {
             builder.append(indent(attribute, BODY_CODE_INDENT_AMOUNT)).append("\n");
@@ -58,7 +58,7 @@ final class GraphFormatter {
                 + "    requires : [\n"
                 + attributeText
                 + "    ],\n"
-                + "    shadingModel : unlit\n"
+                + "    shadingModel : \"" + shadingModel + "\"\n"
                 + "}\n"
                 + "\n";
     }

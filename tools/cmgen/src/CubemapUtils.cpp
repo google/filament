@@ -194,7 +194,7 @@ void CubemapUtils::mirrorCubemap(Cubemap& dst, const Cubemap& src) {
             [&](EmptyState&, size_t y, Cubemap::Face f, Cubemap::Texel* data, size_t dim) {
         for (size_t x=0 ; x<dim ; ++x, ++data) {
             const double3 N(dst.getDirectionFor(f, x, y));
-            Cubemap::writeAt(data, src.sampleAt(N * double3{ -N.x, N.y, N.z }));
+            Cubemap::writeAt(data, src.sampleAt(double3{ -N.x, N.y, N.z }));
         }
     });
 }
@@ -234,10 +234,10 @@ void CubemapUtils::generateUVGrid(Cubemap const& cml, size_t gridFrequency) {
  *   -1              1
  *
  *
- * The quadran (-1,1)-(x,y) is projected onto the unit sphere
+ * The quadrant (-1,1)-(x,y) is projected onto the unit sphere
  *
  */
-static inline double sphereQuadranArea(double x, double y) {
+static inline double sphereQuadrantArea(double x, double y) {
     return std::atan2(x*y, std::sqrt(x*x + y*y + 1));
 }
 
@@ -249,9 +249,9 @@ double CubemapUtils::solidAngle(size_t dim, size_t u, size_t v) {
     const double y0 = t - iDim;
     const double x1 = s + iDim;
     const double y1 = t + iDim;
-    double solidAngle = sphereQuadranArea(x0, y0) -
-                        sphereQuadranArea(x0, y1) -
-                        sphereQuadranArea(x1, y0) +
-                        sphereQuadranArea(x1, y1);
+    double solidAngle = sphereQuadrantArea(x0, y0) -
+                        sphereQuadrantArea(x0, y1) -
+                        sphereQuadrantArea(x1, y0) +
+                        sphereQuadrantArea(x1, y1);
     return solidAngle;
 }

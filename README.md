@@ -4,6 +4,7 @@
 <img alt="Linux" src="build/img/linux.png" width="20px" height="20px" hspace="2px"/>[![Linux Build Status](https://filament-build.storage.googleapis.com/badges/build_status_linux.svg)](https://filament-build.storage.googleapis.com/badges/build_link_linux.html)
 <img alt="macOS" src="build/img/macos.png" width="20px" height="20px" hspace="2px"/>[![MacOS Build Status](https://filament-build.storage.googleapis.com/badges/build_status_mac.svg)](https://filament-build.storage.googleapis.com/badges/build_link_mac.html)
 <img alt="Windows" src="build/img/windows.png" width="20px" height="20px" hspace="2px"/>[![Windows Build Status](https://filament-build.storage.googleapis.com/badges/build_status_windows.svg)](https://filament-build.storage.googleapis.com/badges/build_link_windows.html)
+<img alt="Web" src="build/img/web.png" width="20px" height="20px" hspace="2px"/>[![Web Build Status](https://filament-build.storage.googleapis.com/badges/build_status_web.svg)](https://filament-build.storage.googleapis.com/badges/build_link_web.html)
 
 Filament is a real-time physically based rendering engine for Android, Linux, macOS and Windows.
 This rendering engine was designed to be as small as possible and as efficient as possible
@@ -339,12 +340,12 @@ Clang:C:/Program Files/LLVM/msbuild-bin/cl.exe
 
 You are now ready to build:
 ```
-> msbuild  TNT.sln /t:material_sandbox /m /p:configuration=Debug
+> msbuild  TNT.sln /t:material_sandbox /m /p:configuration=Release
 ```
 
 Run it:
 ```
-> samples\material_sandbox.exe ..\..\assets\models\monkey\monkey.obj
+> samples\Release\lightbulb.exe ..\..\assets\models\monkey\monkey.obj
 ```
 
 #### Tips
@@ -352,7 +353,7 @@ Run it:
 - To troubleshoot an issue, use verbose mode via `/v:d` flag.
 - To build a specific project, use `/t:NAME` flag (e.g: `/t:material_sandbox`).
 - To build using more than one core, use parallel build flag: `/m`.
-- To build a specific profile, used `/p:configuration=` (e.g: `/p:configuration=Debug`,
+- To build a specific profile, use `/p:configuration=` (e.g: `/p:configuration=Debug`,
   `/p:configuration=Release`, and `/p:configuration=RelWithDebInfo`).
 - The msBuild project is what is used by Visual Studio behind the scene to build. Building from VS
   or from the command-line is the same thing.

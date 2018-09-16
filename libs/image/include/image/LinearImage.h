@@ -17,7 +17,6 @@
 #ifndef IMAGE_LINEARIMAGE_H
 #define IMAGE_LINEARIMAGE_H
 
-#include <cassert>
 #include <cstdint>
 
 /**

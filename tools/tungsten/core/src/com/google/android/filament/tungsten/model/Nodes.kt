@@ -20,6 +20,9 @@ import com.google.android.filament.tungsten.compiler.GraphCompiler
 import com.google.android.filament.tungsten.compiler.Expression
 import com.google.android.filament.tungsten.compiler.Literal
 import com.google.android.filament.tungsten.compiler.trim
+import com.google.android.filament.tungsten.properties.ColorChooser
+import com.google.android.filament.tungsten.properties.MultipleChoice
+import com.google.android.filament.tungsten.properties.TextureFileChooser
 
 private val adderNodeCompile = fun(node: Node, compiler: GraphCompiler): Node {
     val outputSlot = node.getOutputSlot("result")
@@ -43,27 +46,62 @@ private val adderNodeCompile = fun(node: Node, compiler: GraphCompiler): Node {
     return node
 }
 
+private val UNLIT_INPUTS = listOf("baseColor", "emissive")
+private val LIT_INPUTS = listOf("baseColor", "metallic", "roughness", "reflectance", "clearCoat",
+        "clearCoatRoughness", "anisotropy", "anisotropyDirection", "ambientOcclusion", "emissive")
+
+private val inputSlotsForShadingModel = { shadingModel: String ->
+    when (shadingModel) {
+        "unlit" -> UNLIT_INPUTS
+        "lit" -> LIT_INPUTS
+        else -> emptyList()
+    }
+}
+
 private val shaderNodeCompile = fun(node: Node, compiler: GraphCompiler): Node {
-    val baseColor = compiler.compileAndRetrieveExpression(node.getInputSlot("baseColor"))
-    val metallic = compiler.compileAndRetrieveExpression(node.getInputSlot("metallic"))
-    val roughness = compiler.compileAndRetrieveExpression(node.getInputSlot("roughness"))
+    val shadingModel = (node.properties[0].value as StringValue).value
+    compiler.setShadingModel(shadingModel)
 
-    if (baseColor != null) {
-        compiler.addCodeToMaterialFunctionBody("material.baseColor.rgb = ${baseColor.rgb};\n")
-        compiler.setExpressionForSlot(node.getInputSlot("baseColor"), baseColor.rgb)
+    val compileMaterialInput = { name: String, dimensions: Int ->
+        val inputSlot = node.getInputSlot(name)
+        val connectedExpression = compiler.compileAndRetrieveExpression(inputSlot)
+        val isConnected = connectedExpression != null
+        val expression = connectedExpression ?: Literal(dimensions)
+
+        // Conform the expression to match the dimensionality of the material input.
+        val conformedExpression = expression.conform(dimensions)
+
+        if (isConnected) {
+            compiler.addCodeToMaterialFunctionBody("material.$name = $conformedExpression;\n")
+        }
+        compiler.setExpressionForSlot(inputSlot, conformedExpression)
     }
 
-    if (metallic != null) {
-        compiler.addCodeToMaterialFunctionBody("material.metallic = ${metallic.r};\n")
-        compiler.setExpressionForSlot(node.getInputSlot("metallic"), metallic.r)
+    // Compile inputs common to all shading models.
+    val compileCommonInputs = {
+        compileMaterialInput("baseColor", 4)
+        compileMaterialInput("emissive", 4)
     }
 
-    if (roughness != null) {
-        compiler.addCodeToMaterialFunctionBody("material.roughness = ${roughness.r};\n")
-        compiler.setExpressionForSlot(node.getInputSlot("roughness"), roughness.r)
+    // Compile inputs unique to the "lit" shading model.
+    val compileLitInputs = {
+        compileMaterialInput("metallic", 1)
+        compileMaterialInput("roughness", 1)
+        compileMaterialInput("reflectance", 1)
+        compileMaterialInput("clearCoat", 1)
+        compileMaterialInput("clearCoatRoughness", 1)
+        compileMaterialInput("anisotropy", 1)
+        compileMaterialInput("anisotropyDirection", 3)
+        compileMaterialInput("ambientOcclusion", 1)
     }
 
-    return node
+    compileCommonInputs()
+    when (shadingModel) {
+        "lit" -> compileLitInputs()
+    }
+
+    // If the input slots have changed, return a new node.
+    return node.nodeBySettingInputSlots(inputSlotsForShadingModel(shadingModel))
 }
 
 private val constantFloat3NodeCompile = fun(node: Node, compiler: GraphCompiler): Node {
@@ -103,6 +141,40 @@ private val constantFloat2NodeCompile = fun(node: Node, compiler: GraphCompiler)
     return node
 }
 
+private val textureSampleCompile = fun(node: Node, compiler: GraphCompiler): Node {
+    compiler.requireAttribute("uv0")
+    val parameter = compiler.addParameter("sampler2d", "texture")
+    compiler.associateParameterWithProperty(parameter, node.getPropertyHandle("textureSource"))
+
+    // If nothing is connected to the UV input, default to getUV0()
+    val uvs = compiler.compileAndRetrieveExpression(node.getInputSlot("uv"))?.rg
+            ?: Expression("getUV0()", 2)
+    compiler.setExpressionForSlot(node.getInputSlot("uv"), uvs)
+
+    val outputVariable = compiler.getNewTemporaryVariableName("textureSample")
+    compiler.addCodeToMaterialFunctionBody(
+            "float4 $outputVariable = texture(materialParams_${parameter.name}, $uvs);\n", 4)
+    compiler.setExpressionForSlot(node.getOutputSlot("out"),
+            Expression(outputVariable, 4))
+
+    return node
+}
+
+val createTextureSampleNode = fun(id: NodeId) =
+        Node(
+            id = id,
+            type = "textureSample",
+            compileFunction = textureSampleCompile,
+            inputSlots = listOf("uv"),
+            outputSlots = listOf("out"),
+            properties = listOf(Property(
+                name = "textureSource",
+                value = TextureFile(),
+                type = PropertyType.MATERIAL_PARAMETER,
+                editorFactory = ::TextureFileChooser
+            ))
+        )
+
 val createAdderNode = fun(id: NodeId): Node {
     return Node(
         id = id,
@@ -119,7 +191,10 @@ val createFloat3ConstantNode = fun(id: NodeId): Node {
         type = "float3Constant",
         compileFunction = constantFloat3NodeCompile,
         outputSlots = listOf("result"),
-        properties = listOf(Property("value", Float3()))
+        properties = listOf(Property(
+            name = "value",
+            value = Float3(),
+            editorFactory = ::ColorChooser))
     )
 }
 
@@ -129,17 +204,24 @@ val createFloat3ParameterNode = fun(id: NodeId): Node {
         type = "float3Parameter",
         compileFunction = float3ParameterNodeCompile,
         outputSlots = listOf("result"),
-        properties = listOf(Property("value", Float3(), PropertyType.MATERIAL_PARAMETER))
+        properties = listOf(Property(
+            name = "value",
+            value = Float3(),
+            type = PropertyType.MATERIAL_PARAMETER,
+            editorFactory = ::ColorChooser))
     )
 }
 
 val createFloat2ConstantNode = fun(id: NodeId): Node {
     return Node(
-            id = id,
-            type = "float2Constant",
-            compileFunction = constantFloat2NodeCompile,
-            outputSlots = listOf("result"),
-            properties = listOf(Property("value", Float3()))
+        id = id,
+        type = "float2Constant",
+        compileFunction = constantFloat2NodeCompile,
+        outputSlots = listOf("result"),
+        properties = listOf(Property(
+            name = "value",
+            value = Float3(),
+            editorFactory = ::ColorChooser))
     )
 }
 
@@ -148,7 +230,11 @@ val createShaderNode = fun(id: NodeId): Node {
         id = id,
         type = "shader",
         compileFunction = shaderNodeCompile,
-        inputSlots = listOf("baseColor", "metallic", "roughness"))
+        inputSlots = inputSlotsForShadingModel("unlit"),
+        properties = listOf(Property(
+            name = "materialModel",
+            value = StringValue("unlit"),
+            editorFactory = { MultipleChoice(it, listOf("lit", "unlit")) })))
 }
 
 object GraphInitializer {

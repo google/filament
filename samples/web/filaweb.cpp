@@ -19,6 +19,15 @@
 #include <string>
 #include <sstream>
 
+#include <imgui.h>
+
+#define STB_IMAGE_IMPLEMENTATION
+#define STBI_NO_STDIO
+#define STBI_ONLY_PNG
+#include <stb_image.h>
+
+#include <emscripten.h>
+
 using namespace filament;
 using namespace std;
 
@@ -26,11 +35,106 @@ extern "C" void render() {
     filaweb::Application::get()->render();
 }
 
-extern "C" void resize(uint32_t width, uint32_t height) {
-    filaweb::Application::get()->resize(width, height);
+extern "C" void resize(uint32_t width, uint32_t height, double pixelRatio) {
+    filaweb::Application::get()->resize(width, height, pixelRatio);
+}
+
+extern "C" void mouse(int x, int y, int wx, int wy, int buttons) {
+    // We are careful not to pass down negative numbers, doing so would cause a numeric
+    // representation exception in WebAssembly.
+    x = std::max(0, x);
+    y = std::max(0, y);
+    filaweb::Application::get()->mouse(x, y, wx, wy, buttons);
 }
 
 namespace filaweb {
+
+void Application::run(SetupCallback setup, AnimCallback animation, ImGuiCallback imgui) {
+    mAnimation = animation;
+    mGuiCallback = imgui;
+    mEngine = Engine::create(Engine::Backend::OPENGL);
+    mSwapChain = mEngine->createSwapChain(nullptr);
+    mScene = mEngine->createScene();
+    mRenderer = mEngine->createRenderer();
+    mView = mEngine->createView();
+    mView->setScene(mScene);
+    mGuiCam = mEngine->createCamera();
+    mGuiView = mEngine->createView();
+    mGuiView->setClearTargets(false, false, false);
+    mGuiView->setRenderTarget(View::TargetBufferFlags::DEPTH_AND_STENCIL);
+    mGuiView->setPostProcessingEnabled(false);
+    mGuiView->setShadowsEnabled(false);
+    mGuiView->setCamera(mGuiCam);
+    mGuiHelper = new filagui::ImGuiHelper(mEngine, mGuiView, "");
+    setup(mEngine, mView, mScene);
+
+    // File I/O in WebAssembly does not exist, so tell ImGui to not bother with the ini file.
+    ImGui::GetIO().IniFilename = nullptr;
+}
+
+void Application::resize(uint32_t width, uint32_t height, double pixelRatio) {
+    mPixelRatio = pixelRatio;
+    mView->setViewport({0, 0, width, height});
+    mGuiView->setViewport({0, 0, width, height});
+    mManipulator.setViewport(width, height);
+    mGuiCam->setProjection(filament::Camera::Projection::ORTHO,
+            0.0, width / pixelRatio,
+            height / pixelRatio, 0.0,
+            0.0, 1.0);
+    mGuiHelper->setDisplaySize(width / pixelRatio, height / pixelRatio, pixelRatio, pixelRatio);
+}
+
+void Application::mouse(uint32_t x, uint32_t y, int32_t wx, int32_t wy, uint16_t buttons) {
+    // First, pass the current pointer state to ImGui.
+    auto& io = ImGui::GetIO();
+    if (wx > 0) io.MouseWheelH += 1;
+    if (wx < 0) io.MouseWheelH -= 1;
+    if (wy > 0) io.MouseWheel += 1;
+    if (wy < 0) io.MouseWheel -= 1;
+    io.MousePos.x = x;
+    io.MousePos.y = y;
+    io.MouseDown[0] = buttons & 1;
+    io.MouseDown[1] = buttons & 2;
+    io.MouseDown[2] = buttons & 4;
+
+    // Negate Y before pushing values to the manipulator.
+    y = -y;
+    wy = -wy;
+
+    // Pass values to the camera manipulator to enable dolly and rotate.
+    // We do not call call track() because two-button mouse usage is less useful on web.
+    using namespace math;
+    static double2 previousMousePosition = double2(x, y);
+    static uint16_t previousMouseButtons = buttons;
+    double2 delta = double2(x, y) - previousMousePosition;
+    previousMousePosition = double2(x, y);
+    mManipulator.dolly(wy);
+    if (!io.WantCaptureMouse && buttons == 1 && buttons == previousMouseButtons) {
+        mManipulator.rotate(delta);
+    }
+    previousMouseButtons = buttons;
+}
+
+void Application::render() {
+    using namespace std::chrono;
+
+    mManipulator.updateCameraTransform();
+
+    auto milliseconds_since_epoch = system_clock::now().time_since_epoch() / milliseconds(1);
+    mAnimation(mEngine, mView, milliseconds_since_epoch / 1000.0);
+
+    double now = milliseconds_since_epoch / 1000.0;
+    static double previous = now;
+    mGuiHelper->render(now - previous, mGuiCallback);
+    previous = now;
+
+    if (mRenderer->beginFrame(mSwapChain)) {
+        mRenderer->render(mView);
+        mRenderer->render(mGuiView);
+        mRenderer->endFrame();
+    }
+    mEngine->execute();
+}
 
 Asset getRawFile(const char* name) {
     // Obtain size from JavaScript.
@@ -56,31 +160,20 @@ Asset getRawFile(const char* name) {
 }
 
 Asset getTexture(const char* name) {
-    // Obtain image dimensions from JavaScript.
-    uint32_t dims[2];
-    EM_ASM({
-        var dims = $0 >> 2;
-        var name = UTF8ToString($1);
-        HEAP32[dims] = assets[name].width;
-        HEAP32[dims+1] = assets[name].height;
-    }, dims, name);
-    const uint32_t nbytes = dims[0] * dims[1] * 4;
-
-    // Move the data from JavaScript.
+    Asset result = getRawFile(name);
+    int width, height, ncomp;
+    stbi_info_from_memory(result.data.get(), result.nbytes, &width, &height, &ncomp);
+    const uint32_t nbytes = width * height * 4;
     uint8_t* texels = new uint8_t[nbytes];
-    EM_ASM({
-        var texels = $0;
-        var name = UTF8ToString($1);
-        var nbytes = $2;
-        HEAPU8.set(assets[name].data, texels);
-        assets[name].data = null;
-    }, texels, name, nbytes);
-
+    stbi_uc* decoded = stbi_load_from_memory(result.data.get(), result.nbytes, &width, &height,
+            &ncomp, 4);
+    memcpy(texels, decoded, nbytes);
+    stbi_image_free(decoded);
     return {
         .data = decltype(Asset::data)(texels),
         .nbytes = nbytes,
-        .width = dims[0],
-        .height = dims[1]
+        .width = uint32_t(width),
+        .height = uint32_t(height)
     };
 }
 
@@ -95,17 +188,6 @@ Asset getCubemap(const char* name) {
         stringToUTF8(assets[name].name, prefix, 127);
         HEAP32[nmips] = assets[name].nmips;
     }, &nmips, name, &prefix[0]);
-
-    // Obtain dimensions of a face from miplevel 0.
-    uint32_t dims[2];
-    EM_ASM({
-        var dims = $0 >> 2;
-        var name = UTF8ToString($1);
-        var face = UTF8ToString($2);
-        var key = assets[name].name + face;
-        HEAP32[dims] = assets[key].width;
-        HEAP32[dims+1] = assets[key].height;
-    }, dims, name, "m0_px.rgbm");
 
     // Build a flat list of mips for each cubemap face.
     Asset* envFaces = new Asset[nmips * 6];
@@ -130,12 +212,12 @@ Asset getCubemap(const char* name) {
         string key = string(prefix) + suffix;
         skyFaces[i++] = getTexture(key.c_str());
     };
-    get("px.png");
-    get("nx.png");
-    get("py.png");
-    get("ny.png");
-    get("pz.png");
-    get("nz.png");
+    get("px.rgbm");
+    get("nx.rgbm");
+    get("py.rgbm");
+    get("ny.rgbm");
+    get("pz.rgbm");
+    get("nz.rgbm");
 
     // Load the spherical harmonics coefficients.
     Asset* shCoeffs = new Asset;
@@ -145,8 +227,8 @@ Asset getCubemap(const char* name) {
     return {
         .data = decltype(Asset::data)(),
         .nbytes = 0,
-        .width = dims[0],
-        .height = dims[1],
+        .width = envFaces[0].width,
+        .height = envFaces[0].height,
         .envMipCount = nmips,
         .envShCoeffs = decltype(Asset::envShCoeffs)(shCoeffs),
         .envFaces = decltype(Asset::envFaces)(envFaces),
@@ -159,8 +241,7 @@ SkyLight getSkyLight(Engine& engine, const char* name) {
 
     // Pull the data out of JavaScript.
     static auto asset = filaweb::getCubemap(name);
-    printf("syferfontein_18d_clear_2k: %d x %d, %d mips\n",
-            asset.width, asset.height, asset.envMipCount);
+    printf("%s: %d x %d, %d mips\n", name,  asset.width, asset.height, asset.envMipCount);
 
     // Parse the coefficients.
     std::istringstream shReader((const char*) asset.envShCoeffs->data.get());
@@ -196,8 +277,10 @@ SkyLight getSkyLight(Engine& engine, const char* name) {
         offsets.nz = faceSize * 5;
         Texture::PixelBufferDescriptor buffer(
                 malloc(faceSize * 6), faceSize * 6,
-                Texture::Format::RGBM, Texture::Type::UBYTE);
-                // (Texture::PixelBufferDescriptor::Callback) &free // TODO: why does this crash?
+                Texture::Format::RGBM, Texture::Type::UBYTE,
+                [](void* buffer, size_t size, void* user) {
+                    free(buffer);
+                }, /* user = */ nullptr);
         uint8_t* pixels = static_cast<uint8_t*>(buffer.buffer);
         auto& px = asset.envFaces[i++];
         auto& nx = asset.envFaces[i++];
@@ -232,7 +315,7 @@ SkyLight getSkyLight(Engine& engine, const char* name) {
         .width(size)
         .height(size)
         .levels(1)
-        .format(Texture::InternalFormat::RGBA8)
+        .format(Texture::InternalFormat::RGBM)
         .sampler(Texture::Sampler::SAMPLER_CUBEMAP)
         .build(engine);
     {
@@ -246,8 +329,10 @@ SkyLight getSkyLight(Engine& engine, const char* name) {
         offsets.nz = faceSize * 5;
         Texture::PixelBufferDescriptor buffer(
                 malloc(faceSize * 6), faceSize * 6,
-                Texture::Format::RGBA, Texture::Type::UBYTE);
-                // (Texture::PixelBufferDescriptor::Callback) &free // TODO: why does this crash?
+                Texture::Format::RGBA, Texture::Type::UBYTE,
+                [](void* buffer, size_t size, void* user) {
+                    free(buffer);
+                }, /* user = */ nullptr);
         uint8_t* pixels = static_cast<uint8_t*>(buffer.buffer);
         i = 0;
         auto& px = asset.skyFaces[i++];

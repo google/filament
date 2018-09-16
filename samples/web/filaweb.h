@@ -17,6 +17,11 @@
 #ifndef TNT_FILAMENT_SAMPLES_FILAWEB_H
 #define TNT_FILAMENT_SAMPLES_FILAWEB_H
 
+#include "../app/CameraManipulator.h"
+
+#include <filagui/ImGuiHelper.h>
+
+#include <filament/Camera.h>
 #include <filament/Engine.h>
 #include <filament/IndirectLight.h>
 #include <filament/Renderer.h>
@@ -26,11 +31,7 @@
 #include <filament/View.h>
 #include <filament/Viewport.h>
 
-#include <chrono>
 #include <functional>
-#include <memory>
-
-#include <emscripten.h>
 
 namespace filaweb {
 
@@ -53,11 +54,13 @@ Asset getCubemap(const char* name);
 
 struct SkyLight {
     math::float3 bands[9];
-    filament::IndirectLight const* indirectLight;
+    filament::IndirectLight* indirectLight;
     filament::Skybox* skybox;
 };
 
 SkyLight getSkyLight(filament::Engine& engine, const char* name);
+
+static const auto NoopCallback = [](filament::Engine*, filament::View*) {};
 
 class Application {
 public:
@@ -73,41 +76,27 @@ public:
         return &app;
     }
 
-    void run(SetupCallback setup, ImGuiCallback imgui, AnimCallback animation) {
-        mAnimation = animation;
-        mEngine = Engine::create(Engine::Backend::OPENGL);
-        mSwapChain = mEngine->createSwapChain(nullptr);
-        mScene = mEngine->createScene();
-        mRenderer = mEngine->createRenderer();
-        mView = mEngine->createView();
-        mView->setScene(mScene);
-        setup(mEngine, mView, mScene);
-    }
+    void run(SetupCallback setup, AnimCallback animation, ImGuiCallback imgui = NoopCallback);
+    void resize(uint32_t width, uint32_t height, double pixelRatio);
+    void mouse(uint32_t x, uint32_t y, int32_t wx, int32_t wy, uint16_t buttons);
+    void render();
 
-    void resize(uint32_t width, uint32_t height) {
-        mView->setViewport({0, 0, width, height});
-    }
-
-    void render() {
-        auto milliseconds_since_epoch =
-            std::chrono::system_clock::now().time_since_epoch() /
-            std::chrono::milliseconds(1);
-        mAnimation(mEngine, mView, milliseconds_since_epoch / 1000.0);
-        if (mRenderer->beginFrame(mSwapChain)) {
-            mRenderer->render(mView);
-            mRenderer->endFrame();
-        }
-        mEngine->execute();
-    }
+    CameraManipulator& getManipulator() { return mManipulator; }
 
 private:
     Application() { }
+    filagui::ImGuiHelper* mGuiHelper = nullptr;
     Engine* mEngine = nullptr;
     Scene* mScene = nullptr;
     View* mView = nullptr;
+    View* mGuiView = nullptr;
+    filament::Camera* mGuiCam = nullptr;
     filament::Renderer* mRenderer = nullptr;
     filament::SwapChain* mSwapChain = nullptr;
+    CameraManipulator mManipulator;
     AnimCallback mAnimation;
+    ImGuiCallback mGuiCallback;
+    double mPixelRatio = 1.0;
 };
 
 }  // namespace filaweb

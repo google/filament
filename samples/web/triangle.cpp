@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+#include "filaweb.h"
+
 #include <filament/Engine.h>
 #include <filament/IndexBuffer.h>
 #include <filament/Material.h>
@@ -24,12 +26,9 @@
 #include <filament/VertexBuffer.h>
 #include <filament/View.h>
 
-#include "filaweb.h"
-
 #include <cmath>
 
 using namespace filament;
-using namespace std;
 
 using utils::Entity;
 using utils::EntityManager;
@@ -111,13 +110,10 @@ void animate(Engine* engine, View* view, double now) {
             math::mat4f::rotate(now, math::float3{0, 0, 1}));
 };
 
-void gui(filament::Engine* engine, filament::View*) {
-};
-
 // This is called only after the JavaScript layer has created a WebGL 2.0 context and all assets
 // have been downloaded.
 extern "C" void launch() {
-    filaweb::Application::get()->run(setup, gui, animate);
+    filaweb::Application::get()->run(setup, animate);
 }
 
 // The main() entry point is implicitly called after JIT compilation, but potentially before the

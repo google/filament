@@ -14,25 +14,25 @@
  * limitations under the License.
  */
 
-package com.google.android.filament.tungsten.ui;
+package com.google.android.filament.ibl
 
-import com.google.android.filament.tungsten.SwingHelper;
-import java.awt.Color;
-import java.awt.Graphics;
-import java.awt.Graphics2D;
-import javax.swing.JPanel;
+import java.io.InputStream
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
 
-class SlotCircle extends JPanel {
+fun readIntLE(input: InputStream): Int {
+    return input.read() and 0xff or (
+            input.read() and 0xff shl 8) or (
+            input.read() and 0xff shl 16) or (
+            input.read() and 0xff shl 24)
+}
 
-    SlotCircle() {
-        setOpaque(false);
-    }
+fun readFloat32LE(input: InputStream): Float {
+    val bytes = ByteArray(4)
+    input.read(bytes, 0, 4)
+    return ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN).float
+}
 
-    @Override
-    protected void paintComponent(Graphics g) {
-        Graphics2D g2d = (Graphics2D) g;
-        SwingHelper.setRenderingHints(g2d);
-        g2d.setColor(ColorScheme.INSTANCE.getSlotCircle());
-        g2d.fillOval(0, 0, getWidth(), getHeight());
-    }
+fun readUIntLE(input: InputStream): Long {
+    return readIntLE(input).toLong() and 0xFFFFFFFFL
 }

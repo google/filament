@@ -160,6 +160,7 @@ const std::string ShaderGenerator::createVertexProgram(filament::driver::ShaderM
     bool litVariants = lit || (!lit && material.hasShadowMultiplier);
     cg.generateDefine(vs, "HAS_DIRECTIONAL_LIGHTING", litVariants && variant.hasDirectionalLighting());
     cg.generateDefine(vs, "HAS_SHADOWING", litVariants && variant.hasShadowReceiver());
+    cg.generateDefine(vs, "HAS_SHADOW_MULTIPLIER", material.hasShadowMultiplier);
     cg.generateDefine(vs, "HAS_SKINNING", variant.hasSkinning());
     cg.generateDefine(vs, getShadingDefine(material.shading), true);
     generateMaterialDefines(vs, cg, mProperties);
@@ -252,6 +253,7 @@ const std::string ShaderGenerator::createFragmentProgram(filament::driver::Shade
     cg.generateDefine(fs, "HAS_DIRECTIONAL_LIGHTING", litVariants && variant.hasDirectionalLighting());
     cg.generateDefine(fs, "HAS_DYNAMIC_LIGHTING", litVariants && variant.hasDynamicLighting());
     cg.generateDefine(fs, "HAS_SHADOWING", litVariants && variant.hasShadowReceiver());
+    cg.generateDefine(fs, "HAS_SHADOW_MULTIPLIER", material.hasShadowMultiplier);
 
     // material defines
     cg.generateDefine(fs, "MATERIAL_IS_DOUBLE_SIDED", material.isDoubleSided);

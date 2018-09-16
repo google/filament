@@ -87,20 +87,20 @@ bool MaterialCompiler::processMaterial(const MaterialLexeme& jsonLexeme,
 bool MaterialCompiler::processVertexShader(const MaterialLexeme& lexeme,
         MaterialBuilder& builder) const noexcept {
 
-    MaterialLexeme trimedLexeme = lexeme.trimBlockMarkers();
-    std::string shaderStr = trimedLexeme.getStringValue();
+    MaterialLexeme trimmedLexeme = lexeme.trimBlockMarkers();
+    std::string shaderStr = trimmedLexeme.getStringValue();
 
-    builder.materialVertex(shaderStr.c_str(), trimedLexeme.getLine() + 1);
+    builder.materialVertex(shaderStr.c_str(), trimmedLexeme.getLine() + 1);
     return true;
 }
 
 bool MaterialCompiler::processFragmentShader(const MaterialLexeme& lexeme,
         MaterialBuilder& builder) const noexcept {
 
-    MaterialLexeme trimedLexeme = lexeme.trimBlockMarkers();
-    std::string shaderStr = trimedLexeme.getStringValue();
+    MaterialLexeme trimmedLexeme = lexeme.trimBlockMarkers();
+    std::string shaderStr = trimmedLexeme.getStringValue();
 
-    builder.material(shaderStr.c_str(), trimedLexeme.getLine() + 1);
+    builder.material(shaderStr.c_str(), trimmedLexeme.getLine() + 1);
     return true;
 }
 
@@ -175,7 +175,7 @@ bool MaterialCompiler::processFragmentShaderJSON(const JsonishValue* value,
     return true;
 }
 
-bool MaterialCompiler::ignoreLexemeJSON(const JsonishValue* value,
+bool MaterialCompiler::ignoreLexemeJSON(const JsonishValue*,
         filamat::MaterialBuilder& builder) const noexcept {
     return true;
 }
@@ -189,18 +189,18 @@ static bool reflectParameters(const MaterialBuilder& builder) {
     for (uint8_t i = 0; i < count; i++) {
         const MaterialBuilder::Parameter& parameter = parameters[i];
         std::cout << "    {" << std::endl;
-        std::cout << "      \"name\": \"" << parameter.name.c_str() << "\"," << std::endl;
+        std::cout << R"(      "name": ")" << parameter.name.c_str() << "\"," << std::endl;
         if (parameter.isSampler) {
-            std::cout << "      \"type\": \"" <<
+            std::cout << R"(      "type": ")" <<
                       Enums::toString(parameter.samplerType) << "\"," << std::endl;
-            std::cout << "      \"format\": \"" <<
+            std::cout << R"(      "format": ")" <<
                       Enums::toString(parameter.samplerFormat) << "\"," << std::endl;
-            std::cout << "      \"precision\": \"" <<
+            std::cout << R"(      "precision": ")" <<
                       Enums::toString(parameter.samplerPrecision) << "\"" << std::endl;
         } else {
-            std::cout << "      \"type\": \"" <<
+            std::cout << R"(      "type": ")" <<
                       Enums::toString(parameter.uniformType) << "\"," << std::endl;
-            std::cout << "      \"size\": \"" << parameter.size << "\"" << std::endl;
+            std::cout << R"(      "size": ")" << parameter.size << "\"" << std::endl;
         }
         std::cout << "    }";
         if (i < count - 1) std::cout << ",";
@@ -232,20 +232,17 @@ bool MaterialCompiler::isValidJsonStart(const char* buffer, size_t size) const n
     }
 
     // boolean true
-    if (c == 't' && (end - buffer) > 3 && strncmp(buffer, "true", 4)) {
+    if (c == 't' && (end - buffer) > 3 && strncmp(buffer, "true", 4) != 0) {
         return true;
     }
 
     // boolean false
-    if (c == 'f' && (end - buffer) > 4 && strncmp(buffer, "false", 5)) {
+    if (c == 'f' && (end - buffer) > 4 && strncmp(buffer, "false", 5) != 0) {
         return true;
     }
 
     // null literal
-    if (c == 'n' && (end - buffer) > 3 && strncmp(buffer, "null", 5)) {
-        return true;
-    }
-    return false;
+    return c == 'n' && (end - buffer) > 3 && strncmp(buffer, "null", 5) != 0;
 }
 
 bool MaterialCompiler::run(const Config& config) {

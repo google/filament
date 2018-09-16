@@ -239,6 +239,30 @@ function(list_licenses OUTPUT MODULES)
 endfunction(list_licenses)
 
 # ==================================================================================================
+# Configuration for CMAKE_CROSSCOMPILING.
+# ==================================================================================================
+if (WEBGL)
+    set(IMPORT_EXECUTABLES ${FILAMENT}/${IMPORT_EXECUTABLES_DIR}/ImportExecutables-Release.cmake)
+else()
+    set(IMPORT_EXECUTABLES ${FILAMENT}/${IMPORT_EXECUTABLES_DIR}/ImportExecutables-${CMAKE_BUILD_TYPE}.cmake)
+endif()
+
+# ==================================================================================================
+# Try to find Vulkan if the SDK is installed, otherwise fall back to the bundled version.
+# This needs to stay in our top-level CMakeLists because it sets up variables that are used by the
+# "bluevk" and "samples" targets.
+# ==================================================================================================
+
+if (FILAMENT_SUPPORTS_VULKAN AND APPLE)
+    find_library(Vulkan_LIBRARY NAMES vulkan HINTS "$ENV{VULKAN_SDK}/lib" "$ENV{VULKAN_SDK}/macOS/lib")
+    if (Vulkan_LIBRARY)
+        set(Vulkan_FOUND ON)
+        message(STATUS "Found Vulkan library in SDK: ${Vulkan_LIBRARY}.")
+        add_definitions(-DFILAMENT_VKLIBRARY_PATH=\"${Vulkan_LIBRARY}\")
+    endif()
+endif()
+
+# ==================================================================================================
 # Sub-projects
 # ==================================================================================================
 # Common to all platforms
@@ -266,6 +290,11 @@ set (FILAMENT_SAMPLES_BINARY_DIR ${PROJECT_BINARY_DIR}/samples)
 
 if (WEBGL)
     add_subdirectory(${FILAMENT}/samples/web)
+
+    add_subdirectory(${LIBRARIES}/filagui)
+
+    add_subdirectory(${EXTERNAL}/imgui/tnt)
+    add_subdirectory(${EXTERNAL}/stb/tnt)
 endif()
 
 if (NOT ANDROID AND NOT WEBGL)
@@ -305,5 +334,5 @@ endif()
 
 # Generate exported executables for cross-compiled builds (Android and WebGL)
 if (NOT CMAKE_CROSSCOMPILING)
-    export(TARGETS matc cmgen filamesh FILE ${FILAMENT}/${IMPORT_EXECUTABLES_DIR}/ImportExecutables-${CMAKE_BUILD_TYPE}.cmake)
+    export(TARGETS matc cmgen filamesh FILE ${IMPORT_EXECUTABLES})
 endif()

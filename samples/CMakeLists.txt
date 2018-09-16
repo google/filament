@@ -21,7 +21,6 @@ set(MATERIAL_SRCS
         materials/transparentColor.mat)
 
 if (CMAKE_CROSSCOMPILING)
-    set(IMPORT_EXECUTABLES ${FILAMENT}/${IMPORT_EXECUTABLES_DIR}/ImportExecutables-${CMAKE_BUILD_TYPE}.cmake)
     include(${IMPORT_EXECUTABLES})
 endif()
 
@@ -157,7 +156,8 @@ endif()
 # Copy the MoltenVK dylibs and JSON on MacOS
 # ==================================================================================================
 
-if (APPLE)
+if (APPLE AND NOT Vulkan_LIBRARY)
+    message(STATUS "No Vulkan SDK was found, using prebuilt MoltenVK.")
     set(MOLTENVK_DIR "../third_party/moltenvk")
     configure_file(
             ${MOLTENVK_DIR}/libvulkan.1.dylib

@@ -28,26 +28,25 @@ using namespace matc::ASTUtils;
 
 class MaterialLexer: public ::testing::Test {
 protected:
-  MaterialLexer() {
-  }
-
-  virtual ~MaterialLexer() {
-  }
+    MaterialLexer() = default;
+    ~MaterialLexer() = default;
 };
 
 class TestMaterialCompiler {
 public:
-    TestMaterialCompiler(const matc::MaterialCompiler& materialCompiler) :
+    explicit TestMaterialCompiler(const matc::MaterialCompiler& materialCompiler) :
             mMaterialCompiler(materialCompiler) {}
 
     bool parseMaterial(const char* buffer, size_t size, filamat::MaterialBuilder& builder)
             const noexcept{
         return mMaterialCompiler.parseMaterial(buffer, size, builder);
     }
+
     bool parseMaterialAsJSON(const char* buffer, size_t size, filamat::MaterialBuilder& builder)
             const noexcept{
         return mMaterialCompiler.parseMaterialAsJSON(buffer, size, builder);
     }
+
 private:
     const matc::MaterialCompiler& mMaterialCompiler;
 };
@@ -86,6 +85,21 @@ static std::string materialSourceWithTool(R"(
     }
 )");
 
+static std::string materialSourceWithCommentedBraces(R"(
+    material {
+        name : "Filament Default Material",
+        shadingModel : unlit
+    }
+
+    fragment {
+        void material(inout MaterialInputs material) {
+            prepareMaterial(material);
+            // if (test) {
+            material.baseColor.rgb = vec3(0.8); // if (test) {
+        }
+    }
+)");
+
 TEST_F(MaterialLexer, NormalMaterialLexing) {
     matc::MaterialLexer materialLexer;
     materialLexer.lex(materialSource.c_str(), materialSource.size(), 1);
@@ -108,6 +122,14 @@ TEST_F(MaterialLexer, MaterialCompilerWithToolSection) {
     TestMaterialCompiler compiler(rawCompiler);
     filamat::MaterialBuilder unused;
     bool result = compiler.parseMaterial(materialSourceWithTool.c_str(), materialSourceWithTool.size(), unused);
+    EXPECT_EQ(result, true);
+}
+
+TEST_F(MaterialLexer, MaterialCompilerWithCommentedBraces) {
+    matc::MaterialCompiler rawCompiler;
+    TestMaterialCompiler compiler(rawCompiler);
+    filamat::MaterialBuilder unused;
+    bool result = compiler.parseMaterial(materialSourceWithCommentedBraces.c_str(), materialSourceWithCommentedBraces.size(), unused);
     EXPECT_EQ(result, true);
 }
 
@@ -207,7 +229,7 @@ TEST_F(MaterialLexer, JsonMaterialLexingAndParsing) {
     jsonishLexer.lex(jsonMaterialSource.c_str(), jsonMaterialSource.size(), 1);
     auto lexemes = jsonishLexer.getLexemes();
 
-    EXPECT_TRUE(lexemes.size() > 0);
+    EXPECT_TRUE(!lexemes.empty());
 
     matc::JsonishParser jsonishParser(lexemes);
     std::unique_ptr<matc::JsonishObject> root = jsonishParser.parse();

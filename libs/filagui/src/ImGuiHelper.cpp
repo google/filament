@@ -49,7 +49,9 @@ ImGuiHelper::ImGuiHelper(Engine* engine, filament::View* view, const Path& fontP
 
     // If the given font path is invalid, ImGui will silently fall back to proggy, which is a
     // tiny "pixel art" texture that is compiled into the library.
-    io.Fonts->AddFontFromFileTTF(fontPath.c_str(), 16.0f);
+    if (!fontPath.isEmpty()) {
+        io.Fonts->AddFontFromFileTTF(fontPath.c_str(), 16.0f);
+    }
 
     // Create the grayscale texture that ImGui uses for its glyph atlas.
     static unsigned char* pixels;
@@ -284,7 +286,9 @@ void ImGuiHelper::populateVertexData(size_t bufferIndex, size_t vbSizeInBytes, v
     memcpy(vbFilamentData, vbImguiData, nVbBytes);
     mVertexBuffers[bufferIndex]->setBufferAt(*mEngine, 0,
             VertexBuffer::BufferDescriptor(vbFilamentData, nVbBytes,
-            (VertexBuffer::BufferDescriptor::Callback) free));
+                [](void* buffer, size_t size, void* user) {
+                    free(buffer);
+                }, /* user = */ nullptr));
 
     // Create a new index buffer if the size isn't large enough, then copy the ImGui data into
     // a staging area since Filament's render thread might consume the data at any time.
@@ -298,16 +302,20 @@ void ImGuiHelper::populateVertexData(size_t bufferIndex, size_t vbSizeInBytes, v
     memcpy(ibFilamentData, ibImguiData, nIbBytes);
     mIndexBuffers[bufferIndex]->setBuffer(*mEngine,
             IndexBuffer::BufferDescriptor(ibFilamentData, nIbBytes,
-            (IndexBuffer::BufferDescriptor::Callback) free));
+                [](void* buffer, size_t size, void* user) {
+                    free(buffer);
+                }, /* user = */ nullptr));
 }
 
 void ImGuiHelper::syncThreads() {
+#if UTILS_HAS_THREADING
     if (!mHasSynced) {
         // This is called only when ImGui needs to grow a vertex buffer, which occurs a few times
         // after launching and rarely (if ever) after that.
         Fence::waitAndDestroy(mEngine->createFence());
         mHasSynced = true;
     }
+#endif
 }
 
 } // namespace filagui
