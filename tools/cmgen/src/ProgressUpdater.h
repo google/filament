@@ -21,6 +21,7 @@
 #include <iostream>
 #include <vector>
 #include <thread>
+#include <condition_variable>
 
 #include "JobQueue.h"
 
