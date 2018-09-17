@@ -195,7 +195,7 @@ int main(int argc, char* argv[]) {
     LinearImage sourceImage = ImageDecoder::decode(inputStream, inputPath.getPath());
     if (!sourceImage.isValid()) {
         cerr << "Unable to open image: " << inputPath.getPath() << endl;
-        exit(1);
+        return 1;
     }
 
     puts("Generating miplevels...");
@@ -210,16 +210,20 @@ int main(int argc, char* argv[]) {
         int result = snprintf(path, sizeof(path), outputPattern.c_str(), mip++);
         if (result < 0 || result >= sizeof(path)) {
             cerr << "Output pattern is too long." << endl;
-            exit(1);
+            return 1;
         }
         ofstream outputStream(path, ios::binary | ios::trunc);
         if (!outputStream) {
             cerr << "The output file cannot be opened: " << path << endl;
         } else {
-            ImageEncoder::encode(outputStream, g_format, image, g_compression, path);
+            if (!ImageEncoder::encode(outputStream, g_format, image, g_compression, path)) {
+                cerr << "An error occurred while encoding the image." << endl;
+                return 1;
+            }
             outputStream.close();
             if (!outputStream) {
                 cerr << "An error occurred while writing the output file: " << path << endl;
+                return 1;
             }
         }
     }
@@ -236,7 +240,7 @@ int main(int argc, char* argv[]) {
         int result = snprintf(tag, sizeof(tag), pattern, inputPath.c_str(), width, height);
         if (result < 0 || result >= sizeof(tag)) {
             cerr << "Output pattern is too long." << endl;
-            exit(1);
+            return 1;
         }
         html << tag << std::endl;
         for (auto image: miplevels) {
@@ -244,7 +248,7 @@ int main(int argc, char* argv[]) {
             result = snprintf(tag, sizeof(tag), pattern, path, width, height);
             if (result < 0 || result >= sizeof(tag)) {
                 cerr << "Output pattern is too long." << endl;
-                exit(1);
+                return 1;
             }
             html << tag << std::endl;
         }

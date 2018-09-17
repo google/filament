@@ -42,8 +42,8 @@ public:
                     // Default: 16 bit
     };
 
-    // the encode function only expects images that store pixels as floats
-    static void encode(std::ostream& stream, Format format, const LinearImage& image,
+    // Consumes linear floating-point data, returns false if unable to encode.
+    static bool encode(std::ostream& stream, Format format, const LinearImage& image,
             const std::string& compression, const std::string& destName);
 
     static Format chooseFormat(const std::string& name, bool forceLinear = false);
@@ -51,7 +51,7 @@ public:
 
     class Encoder {
     public:
-        virtual void encode(const LinearImage& image) = 0;
+        virtual bool encode(const LinearImage& image) = 0;
         virtual ~Encoder() = default;
     };
 };

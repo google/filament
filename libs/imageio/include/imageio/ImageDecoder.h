@@ -31,6 +31,7 @@ public:
         SRGB
     };
 
+    // Returns linear floating-point data, or a non-valid image if an error occured.
     static LinearImage decode(std::istream& stream, const std::string& sourceName,
             ColorSpace sourceSpace = ColorSpace::SRGB);
 
