@@ -886,5 +886,7 @@ static void saveImage(const std::string& path, ImageEncoder::Format format, cons
         memcpy(dst, src, w * 12);
     }
 
-    ImageEncoder::encode(outputStream, format, linearImage, compression, path);
+    if (!ImageEncoder::encode(outputStream, format, linearImage, compression, path)) {
+        exit(1);
+    }
 }
