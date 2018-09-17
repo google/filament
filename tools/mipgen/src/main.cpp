@@ -14,8 +14,10 @@
  * limitations under the License.
  */
 
+#include <image/ColorTransform.h>
 #include <image/ImageOps.h>
 #include <image/ImageSampler.h>
+#include <image/KtxBundle.h>
 #include <image/LinearImage.h>
 
 #include <imageio/ImageDecoder.h>
@@ -38,13 +40,17 @@ static bool g_createGallery = false;
 static string g_compression = "";
 static Filter g_filter = Filter::DEFAULT;
 static bool g_stripAlpha = false;
+static bool g_ktxContainer = false;
 
 static const char* USAGE = R"TXT(
 MIPGEN generates mipmaps for an image down to the 1x1 level.
 
-Output filenames are generated using the specified printf pattern.
-For example, "mip%2d.png" would generate mip01.png, mip02.png, etc.
-Note that miplevel 0 is not generated since it is the original image.
+The <output_pattern> argument is a printf-style pattern.
+For example, "mip%2d.png" generates mip01.png, mip02.png, etc.
+Miplevel 0 is not generated since it is the original image.
+
+If the output format is a container format like KTX, then
+<output_pattern> is simply a filename.
 
 Usage:
     MIPGEN [options] <input_file> <output_pattern>
@@ -56,10 +62,10 @@ Options:
        print copyright and license information
    --gallery, -g
        generate HTML gallery for review purposes (mipmap.html)
-   --format=[exr|hdr|rgbm|psd|png|dds], -f [exr|hdr|rgbm|psd|png|dds]
+   --format=[exr|hdr|rgbm|psd|png|dds|ktx], -f [exr|hdr|rgbm|psd|png|dds|ktx]
        specify output file format, inferred from output pattern if omitted
    --kernel=[box|nearest|hermite|gaussian|normals|mitchell|lanczos|min], -k [filter]
-       specify filter kernel type (defaults to LANCZOS)
+       specify filter kernel type (defaults to lanczos)
    --strip-alpha
        ignore the alpha component of the input image
    --compression=COMPRESSION, -c COMPRESSION
@@ -174,6 +180,10 @@ static int handleArguments(int argc, char* argv[]) {
                     g_format = ImageEncoder::Format::DDS_LINEAR;
                     g_formatSpecified = true;
                 }
+                if (arg == "ktx") {
+                    g_ktxContainer = true;
+                    g_formatSpecified = true;
+                }
                 break;
             case 'c':
                 g_compression = arg;
@@ -193,14 +203,18 @@ int main(int argc, char* argv[]) {
     }
     Path inputPath(argv[optionIndex++]);
     string outputPattern(argv[optionIndex]);
-    if (!g_formatSpecified) {
-        constexpr bool forceLinear = true;
+    if (Path(outputPattern).getExtension() == "ktx") {
+        g_ktxContainer = true;
+        g_formatSpecified = true;
+    } else if (!g_formatSpecified) {
+        constexpr bool forceLinear = true; // Please, not for grayscale...
         g_format = ImageEncoder::chooseFormat(outputPattern, forceLinear);
     }
 
     puts("Reading image...");
     ifstream inputStream(inputPath.getPath(), ios::binary);
-    LinearImage sourceImage = ImageDecoder::decode(inputStream, inputPath.getPath());
+    LinearImage sourceImage = ImageDecoder::decode(inputStream, inputPath.getPath(),
+            ImageDecoder::ColorSpace::SRGB);
     if (!sourceImage.isValid()) {
         cerr << "Unable to open image: " << inputPath.getPath() << endl;
         return 1;
@@ -216,6 +230,34 @@ int main(int argc, char* argv[]) {
     uint32_t count = getMipmapCount(sourceImage);
     vector<LinearImage> miplevels(count);
     generateMipmaps(sourceImage, g_filter, miplevels.data(), count);
+
+    if (g_ktxContainer) {
+        puts("Writing KTX file to disk...");
+        KtxBundle container(miplevels.size(), 1, false);
+        container.info() = {
+            .endianness = KtxBundle::ENDIAN_DEFAULT,
+            .glType = KtxBundle::UNSIGNED_BYTE,
+            .glTypeSize = 3,
+            .glFormat = KtxBundle::RGB,
+            .glInternalFormat = KtxBundle::RGB,
+            .glBaseInternalFormat = KtxBundle::RGB,
+            .pixelWidth = miplevels[0].getWidth(),
+            .pixelHeight = miplevels[0].getHeight(),
+            .pixelDepth = 1,
+        };
+        uint32_t mip = 0;
+        for (auto image : miplevels) {
+            auto data = fromLinearTosRGB<uint8_t>(image);
+            container.setBlob({mip++, 0, 0}, data.get(), image.getWidth() * image.getHeight() * 3);
+        }
+        vector<uint8_t> fileContents(container.getSerializedLength());
+        container.serialize(fileContents.data(), fileContents.size());
+        ofstream outputStream(outputPattern, ios::out | ios::binary);
+        outputStream.write((const char*) fileContents.data(), fileContents.size());
+        outputStream.close();
+        puts("Done.");
+        return 0;
+    }
 
     puts("Writing image files to disk...");
     char path[256];
