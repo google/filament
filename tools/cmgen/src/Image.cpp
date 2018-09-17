@@ -15,6 +15,7 @@
  */
 
 #include <utility>
+#include <cstring>
 
 #include "Image.h"
 
