@@ -17,6 +17,7 @@
 #ifndef SRC_PROGRESS_UPDATER_H
 #define SRC_PROGRESS_UPDATER_H
 
+#include <condition_variable>
 #include <iomanip>
 #include <iostream>
 #include <vector>
