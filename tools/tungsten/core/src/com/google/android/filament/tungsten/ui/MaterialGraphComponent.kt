@@ -153,6 +153,10 @@ class MaterialGraphComponent : JComponent(), TungstenMouseListener {
             mConnectionViewMap[connection] = line
         }
 
+        // Layout the rendered views so they have accurate bounds. This must be done here and not in
+        // paintComponent, as paintComponent might not be called immediately.
+        layoutHierarchy(graphView)
+
         revalidate()
         repaint()
 
@@ -232,9 +236,6 @@ class MaterialGraphComponent : JComponent(), TungstenMouseListener {
         // Paint background
         g2d.color = ColorScheme.background
         g2d.fillRect(0, 0, width, height)
-
-        // Render graph
-        graphView?.let { graphView -> layoutHierarchy(graphView) }
 
         // If we're currently connecting two slots, draw the connection
         if (mIsConnecting) {
