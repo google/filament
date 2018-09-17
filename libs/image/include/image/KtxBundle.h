@@ -123,6 +123,25 @@ public:
      */
     bool setBlob(KtxBlobIndex index, uint8_t const* data, uint32_t size);
 
+    // The following constants help clients populate the "info" struct. Most of them have corollary
+    // constants in the OpenGL headers.
+
+    static constexpr uint32_t RED = 0x1903;
+    static constexpr uint32_t RG = 0x8227;
+    static constexpr uint32_t RGB = 0x1907;
+    static constexpr uint32_t RGBA = 0x1908;
+    static constexpr uint32_t BGR = 0x80E0;
+    static constexpr uint32_t BGRA = 0x80E1;
+    static constexpr uint32_t LUMINANCE = 0x1909;
+    static constexpr uint32_t LUMINANCE_ALPHA = 0x190A;
+
+    static constexpr uint32_t UNSIGNED_BYTE = 0x1401;
+    static constexpr uint32_t UNSIGNED_SHORT = 0x1403;
+    static constexpr uint32_t HALF_FLOAT = 0x140B;
+    static constexpr uint32_t FLOAT = 0x1406;
+
+    static constexpr uint32_t ENDIAN_DEFAULT = 0x04030201;
+
 private:
     image::KtxInfo mInfo = {};
     uint32_t mNumMipLevels;
