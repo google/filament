@@ -20,6 +20,7 @@ import com.google.android.filament.tungsten.SwingHelper
 import com.google.android.filament.tungsten.model.Connection
 import com.google.android.filament.tungsten.model.Graph
 import com.google.android.filament.tungsten.model.Node
+import com.google.android.filament.tungsten.model.NodeId
 import com.google.android.filament.tungsten.model.Slot
 import java.awt.Graphics
 import java.awt.Graphics2D
@@ -31,7 +32,7 @@ import javax.swing.JComponent
 class MaterialGraphComponent : JComponent(), TungstenMouseListener {
 
     private val mEventManager = TungstenEventManager(this)
-    private var mNodeBeingDragged: NodeView? = null
+    private var mNodeBeingDragged: NodeId? = null
     private var mPreviousSelectionModel: List<Int> = ArrayList()
     private var mIsConnecting = false
 
@@ -52,6 +53,9 @@ class MaterialGraphComponent : JComponent(), TungstenMouseListener {
 
     internal var graphView: GraphView? = null
 
+    // Maps between the Nodes and the associated NodeViews that represent them
+    private val nodeMap = HashMap<NodeId, NodeView>()
+
     // Maps between the SlotModels we receive and the NodeSlot views
     private val mSlotMap = HashMap<Slot, SlotCircle>()
 
@@ -69,6 +73,7 @@ class MaterialGraphComponent : JComponent(), TungstenMouseListener {
 
     private fun renderGraph(graph: Graph): GraphView {
         mSlotMap.clear()
+        nodeMap.clear()
 
         val renderSlot = { node: Node, slotName: String, isInput: Boolean ->
             val slotHandle = if (isInput) {
@@ -89,7 +94,7 @@ class MaterialGraphComponent : JComponent(), TungstenMouseListener {
         }
 
         val renderNode = { node: Node ->
-            NodeView(
+            val nodeView = NodeView(
                     x = node.x,
                     y = node.y,
                     inputSlots = node.inputSlots.map { slotName ->
@@ -100,7 +105,7 @@ class MaterialGraphComponent : JComponent(), TungstenMouseListener {
                     },
                     isSelected = graph.isNodeSelected(node),
                     nodeDragStarted = { view ->
-                        mNodeBeingDragged = view
+                        mNodeBeingDragged = node.id
                         notifySelectionIfChanged(listOf(node.id))
                     },
                     nodeDragStopped = { view ->
@@ -112,6 +117,8 @@ class MaterialGraphComponent : JComponent(), TungstenMouseListener {
                         notifySelectionIfChanged(listOf(node.id))
                     }
             )
+            nodeMap[node.id] = nodeView
+            nodeView
         }
 
         return GraphView(
@@ -146,6 +153,10 @@ class MaterialGraphComponent : JComponent(), TungstenMouseListener {
             mConnectionViewMap[connection] = line
         }
 
+        // Layout the rendered views so they have accurate bounds. This must be done here and not in
+        // paintComponent, as paintComponent might not be called immediately.
+        layoutHierarchy(graphView)
+
         revalidate()
         repaint()
 
@@ -179,8 +190,11 @@ class MaterialGraphComponent : JComponent(), TungstenMouseListener {
     }
 
     override fun mouseDragEnded(e: MouseEvent) {
-        mNodeBeingDragged?.let { nodeView ->
-            nodeView.nodeDragStopped(nodeView)
+        mNodeBeingDragged?.let { nodeId ->
+            val nodeView = nodeMap[nodeId]
+            if (nodeView != null) {
+                nodeView.nodeDragStopped(nodeView)
+            }
         }
 
         if (!mIsConnecting) {
@@ -199,12 +213,15 @@ class MaterialGraphComponent : JComponent(), TungstenMouseListener {
     }
 
     override fun mouseDragged(e: MouseEvent) {
-        val node = mNodeBeingDragged
-        if (node != null) {
-            node.x += mEventManager.mouseDeltaX
-            node.y += mEventManager.mouseDeltaY
-            repaint()
-            return
+        val nodeId = mNodeBeingDragged
+        if (nodeId != null) {
+            val nodeView = nodeMap[nodeId]
+            if (nodeView != null) {
+                nodeView.x += mEventManager.mouseDeltaX
+                nodeView.y += mEventManager.mouseDeltaY
+                repaint()
+                return
+            }
         }
 
         nodeSlotDragged(e)
@@ -219,9 +236,6 @@ class MaterialGraphComponent : JComponent(), TungstenMouseListener {
         // Paint background
         g2d.color = ColorScheme.background
         g2d.fillRect(0, 0, width, height)
-
-        // Render graph
-        graphView?.let { graphView -> layoutHierarchy(graphView) }
 
         // If we're currently connecting two slots, draw the connection
         if (mIsConnecting) {
