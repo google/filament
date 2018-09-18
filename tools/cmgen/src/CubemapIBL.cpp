@@ -118,6 +118,7 @@ static double __UNUSED VisibilityAshikhmin(double NoV, double NoL, double a) {
  *
  *  v = n
  *  f0 = f90 = 1
+ *  V = 1
  *
  *  h is micro facet's normal
  *
@@ -175,7 +176,7 @@ static double __UNUSED VisibilityAshikhmin(double NoV, double NoL, double a) {
  *
  * with:
  *
- *            fr() = D(h) V(l)
+ *            fr() = D(h)
  *
  *                       N
  *            K = -----------------
@@ -186,24 +187,24 @@ static double __UNUSED VisibilityAshikhmin(double NoV, double NoL, double a) {
  *
  *  It results that:
  *
- *            K                4 <v•h>
- *    Er() = --- ∑ D(h) V(l) ------------ L(h) <n•l>
- *            N  h             D(h) <n•h>
+ *            K           4 <v•h>
+ *    Er() = --- ∑ D(h) ------------ L(h) <n•l>
+ *            N  h        D(h) <n•h>
  *
  *
  *              K
- *    Er() = 4 --- ∑ V(v) L(h) <n•l>
+ *    Er() = 4 --- ∑ L(h) <n•l>
  *              N  h
  *
- *                  N                 4
- *    Er() = ----------------------- --- ∑ V(v) L(h) <n•l>
- *             4 ∑ V(v) <n•l>    N
+ *                  N       4
+ *    Er() = ------------- --- ∑ V(v) <n•l>
+ *             4 ∑ <n•l>    N
  *
  *
  *  +------------------------------+
- *  |          ∑ V(v) <n•l> L(h)   |
- *  |  Er() = -------------------  |
- *  |          ∑ V(v) <n•l>        |
+ *  |          ∑ <n•l> L(h)        |
+ *  |  Er() = --------------       |
+ *  |            ∑ <n•l>           |
  *  +------------------------------+
  *
  */
@@ -301,8 +302,7 @@ void CubemapIBL::roughnessFilter(Cubemap& dst,
             const double l = float(log4(omegaS) - log4(omegaP) + log4(K));
             const float mipLevel = clamp(float(l), 0.0f, maxLevelf);
 
-            const double V = Visibility(NoV, NoL, linearRoughness);
-            const float brdf_NoL = float(V * NoL);
+            const float brdf_NoL = float(NoL);
 
             weight += brdf_NoL;
 
