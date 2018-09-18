@@ -737,12 +737,17 @@ void iblRoughnessPrefilter(const utils::Path& iname,
                 numSamples *= 2;
             }
         }
-        const double roughness = saturate(level / (numLevels - 1.0));
-        const double linear_roughness = roughness * roughness;
+
+        const double lod = saturate(level / (numLevels - 1.0));
+        // map the lod to a linear_roughness,  here we're using ^2, but other mappings are possible.
+        // ==> lod = sqrt(linear_roughness)
+        const double linear_roughness = lod * lod;
         if (!g_quiet) {
-            std::cout << "Level " << level << ", roughness = " <<
-                      std::setprecision(3) << roughness << ", roughness(lin) = " << linear_roughness
-                      << std::endl;
+            std::cout << "Level " << level <<
+                    std::setprecision(3)
+                    << ", roughness(lin) = " << linear_roughness
+                    << ", roughness = " << sqrt(linear_roughness)
+                    << std::endl;
         }
         Image image;
         Cubemap dst = CubemapUtils::create(image, dim);
