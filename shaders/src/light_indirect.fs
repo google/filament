@@ -51,8 +51,9 @@ vec3 decodeDataForIBL(const vec4 data) {
 // IBL prefiltered DFG term implementations
 //------------------------------------------------------------------------------
 
-vec2 PrefilteredDFG_LUT(float roughness, float NoV) {
-    return textureLod(light_iblDFG, vec2(NoV, roughness), 0.0).rg;
+vec2 PrefilteredDFG_LUT(float coord, float NoV) {
+    // coord = sqrt(linear_roughness), which is the mapping used by cmgen.
+    return textureLod(light_iblDFG, vec2(NoV, coord), 0.0).rg;
 }
 
 #if CLOTH_DFG == CLOTH_DFG_ASHIKHMIN
@@ -115,6 +116,7 @@ vec2 prefilteredDFG(float roughness, float NoV) {
     #endif
 #else
     #if IBL_PREFILTERED_DFG == IBL_PREFILTERED_DFG_LUT
+        // PrefilteredDFG_LUT() takes a coordinate, which is sqrt(linear_roughness) = roughness
         return PrefilteredDFG_LUT(roughness, NoV);
     #endif
 #endif
@@ -157,7 +159,7 @@ vec3 diffuseIrradiance(const vec3 n) {
 //------------------------------------------------------------------------------
 
 vec3 specularIrradiance(const vec3 r, float roughness) {
-    // lod = nb_mips * sqrt(linear_roughness)
+    // lod = lod_count * sqrt(linear_roughness), which is the mapping used by cmgen
     // where linear_roughness = roughness^2
     // using all the mip levels requires seamless cubemap sampling
     float lod = IBL_MAX_MIP_LEVEL * roughness;
@@ -165,7 +167,7 @@ vec3 specularIrradiance(const vec3 r, float roughness) {
 }
 
 vec3 specularIrradiance(const vec3 r, float roughness, float offset) {
-    float lod = IBL_MAX_MIP_LEVEL * roughness;
+    float lod = IBL_MAX_MIP_LEVEL * roughness * roughness;
     return decodeDataForIBL(textureLod(light_iblSpecular, r, lod + offset));
 }
 

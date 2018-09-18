@@ -653,9 +653,8 @@ static double2 __UNUSED DFV_NoIS(double NoV, double roughness, size_t numSamples
  *
  */
 
-static double2 DFV(double NoV, double roughness, size_t numSamples) {
+static double2 DFV(double NoV, double linearRoughness, size_t numSamples) {
     double2 r = 0;
-    const double linearRoughness = roughness * roughness;
     const double3 V(std::sqrt(1 - NoV * NoV), 0, NoV);
     for (size_t i=0 ; i<numSamples ; i++) {
         const double2 u = hammersley(uint32_t(i), 1.0f / numSamples);
@@ -696,9 +695,8 @@ static double2 DFV(double NoV, double roughness, size_t numSamples) {
     return r * (4.0 / numSamples);
 }
 
-static double2 DFV_Multiscatter(double NoV, double roughness, size_t numSamples) {
+static double2 DFV_Multiscatter(double NoV, double linearRoughness, size_t numSamples) {
     double2 r = 0;
-    const double linearRoughness = roughness * roughness;
     const double3 V(std::sqrt(1 - NoV * NoV), 0, NoV);
     for (size_t i = 0; i < numSamples; i++) {
         const double2 u = hammersley(uint32_t(i), 1.0f / numSamples);
@@ -813,12 +811,16 @@ void CubemapIBL::DFG(Image& dst, bool multiscatter) {
                 for (size_t y = y0; y < y0 + c; y++) {
                     Cubemap::Texel* UTILS_RESTRICT data =
                             static_cast<Cubemap::Texel*>(dst.getPixelRef(0, y));
-                    // const double roughness = double((height-1) - y) / (height-1);
-                    const double roughness = saturate((height - y + 0.5) / height);
+
+                    const double coord = saturate((height - y + 0.5) / height);
+                    // map the coordinate in the texture to a linear_roughness,
+                    // here we're using ^2, but other mappings are possible.
+                    // ==> coord = sqrt(linear_roughness)
+                    const double linear_roughness = coord * coord;
                     for (size_t x = 0; x < height; x++, data++) {
                         // const double NoV = double(x) / (width-1);
                         const double NoV = saturate((x + 0.5) / width);
-                        float3 r = { dfvFunction(NoV, roughness, 1024), 0 };
+                        float3 r = { dfvFunction(NoV, linear_roughness, 1024), 0 };
                         *data = r;
                     }
                 }
