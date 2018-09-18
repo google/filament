@@ -25,7 +25,7 @@ public final class LightHelpers {
     private LightHelpers() { }
 
     static IndirectLight addIndirectLight(Engine engine, Scene scene) {
-        Ibl i = new Ibl(engine, "ibls/venice_sunset");
+        Ibl i = new Ibl(engine, "ibls/venetian_crossroads_2k");
         IndirectLight ibl =
                 new IndirectLight.Builder()
                 .irradiance(3, i.getIrradiance())
