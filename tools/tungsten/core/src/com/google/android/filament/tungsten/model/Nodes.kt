@@ -47,8 +47,9 @@ private val adderNodeCompile = fun(node: Node, compiler: GraphCompiler): Node {
 }
 
 private val UNLIT_INPUTS = listOf("baseColor", "emissive")
-private val LIT_INPUTS = listOf("baseColor", "metallic", "roughness", "reflectance", "clearCoat",
-        "clearCoatRoughness", "anisotropy", "anisotropyDirection", "ambientOcclusion", "emissive")
+private val LIT_INPUTS = listOf("normal", "baseColor", "metallic", "roughness", "reflectance",
+        "clearCoat", "clearCoatRoughness", "anisotropy", "anisotropyDirection", "ambientOcclusion",
+        "emissive")
 
 private val inputSlotsForShadingModel = { shadingModel: String ->
     when (shadingModel) {
@@ -63,6 +64,11 @@ private val shaderNodeCompile = fun(node: Node, compiler: GraphCompiler): Node {
     compiler.setShadingModel(shadingModel)
 
     val compileMaterialInput = { name: String, dimensions: Int ->
+        // The "normal" input is special, and its code must go before the call to prepareMaterial().
+        if (name == "normal") {
+            compiler.setCurrentCodeSection(GraphCompiler.CodeSection.BEFORE_PREPARE_MATERIAL)
+        }
+
         val inputSlot = node.getInputSlot(name)
         val connectedExpression = compiler.compileAndRetrieveExpression(inputSlot)
         val isConnected = connectedExpression != null
@@ -75,6 +81,8 @@ private val shaderNodeCompile = fun(node: Node, compiler: GraphCompiler): Node {
             compiler.addCodeToMaterialFunctionBody("material.$name = $conformedExpression;\n")
         }
         compiler.setExpressionForSlot(inputSlot, conformedExpression)
+
+        compiler.setCurrentCodeSection(GraphCompiler.CodeSection.AFTER_PREPARE_MATERIAL)
     }
 
     // Compile inputs common to all shading models.
@@ -95,6 +103,11 @@ private val shaderNodeCompile = fun(node: Node, compiler: GraphCompiler): Node {
         compileMaterialInput("ambientOcclusion", 1)
     }
 
+    if (shadingModel == "lit") {
+        // "normal" must be compiled first. If it has any dependencies that are connected to other
+        // inputs, we need to ensure their code comes before prepareMaterial()
+        compileMaterialInput("normal", 3)
+    }
     compileCommonInputs()
     when (shadingModel) {
         "lit" -> compileLitInputs()
