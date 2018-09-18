@@ -36,7 +36,19 @@ import org.jetbrains.annotations.Nullable;
  */
 public final class GraphCompiler {
 
+    public enum CodeSection {
+        AFTER_PREPARE_MATERIAL,
+        BEFORE_PREPARE_MATERIAL
+    }
+
+    // Material function source text before the "prepareMaterial" call
+    private StringBuilder mMaterialFunctionPrologue = new StringBuilder();
+
+    // Material function source text after the "prepareMaterial" call
     private StringBuilder mMaterialFunctionBodyBuilder = new StringBuilder();
+
+    private CodeSection mCurrentCodeSection = CodeSection.AFTER_PREPARE_MATERIAL;
+
     private final List<String> mRequiredAttributes = new ArrayList<>();
     private String mShadingModel = "unlit";
     private final List<Parameter> mParameters = new ArrayList<>();
@@ -73,7 +85,7 @@ public final class GraphCompiler {
         }
 
         String fragmentSection = GraphFormatter.formatFragmentSection(mGlobalFunctions.values(),
-                mMaterialFunctionBodyBuilder.toString());
+                mMaterialFunctionPrologue.toString(), mMaterialFunctionBodyBuilder.toString());
         String materialDefinition =
                 GraphFormatter.formatMaterialSection(mRequiredAttributes, mParameters,
                 mShadingModel) + fragmentSection;
@@ -181,7 +193,20 @@ public final class GraphCompiler {
         if (!mShouldAppendCode) {
             return;
         }
-        mMaterialFunctionBodyBuilder.append(code);
+        if (mCurrentCodeSection == CodeSection.AFTER_PREPARE_MATERIAL) {
+            mMaterialFunctionBodyBuilder.append(code);
+        } else if (mCurrentCodeSection == CodeSection.BEFORE_PREPARE_MATERIAL) {
+            mMaterialFunctionPrologue.append(code);
+        }
+    }
+
+    /**
+     * Set the state of this GraphCompiler to output code to a specific section of the material
+     * function body: either before the call to prepareMaterial(), or after.
+     * The state persists until setCurrentCodeSection is called again.
+     */
+    public void setCurrentCodeSection(CodeSection section) {
+        mCurrentCodeSection = section;
     }
 
     /**
