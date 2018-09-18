@@ -17,17 +17,21 @@
 package com.google.android.filament.tungsten.properties
 
 import com.google.android.filament.tungsten.model.Float3
+import com.google.android.filament.tungsten.model.FloatValue
 import com.google.android.filament.tungsten.model.PropertyValue
 import com.google.android.filament.tungsten.model.StringValue
 import com.google.android.filament.tungsten.model.TextureFile
 import com.google.android.filament.tungsten.texture.TextureUtils
 import java.awt.Color
+import java.text.NumberFormat
 import javax.swing.JButton
 import javax.swing.JColorChooser
 import javax.swing.JComboBox
 import javax.swing.JComponent
 import javax.swing.JFileChooser
+import javax.swing.JFormattedTextField
 import javax.swing.JPanel
+import javax.swing.JSlider
 import kotlin.math.roundToInt
 
 abstract class PropertyEditor {
@@ -36,6 +40,71 @@ abstract class PropertyEditor {
     var valueChanged: (newValue: PropertyValue) -> Unit = { }
 
     abstract fun setValue(v: PropertyValue)
+}
+
+/**
+ * Set the value of a JSlider without causing any changeListeners to trigger.
+ */
+fun JSlider.quietlySetValue(v: Int) {
+    val changeListeners = this.changeListeners
+    for (changeListener in changeListeners) {
+        this.removeChangeListener(changeListener)
+    }
+    this.value = v
+    for (changeListener in changeListeners) {
+        this.addChangeListener(changeListener)
+    }
+}
+
+internal class FloatSlider(initialValue: FloatValue) : PropertyEditor() {
+
+    private val scaleFactor = 1000
+
+    override val component: JPanel = JPanel()
+    private val slider: JSlider
+    private val field: JFormattedTextField
+
+    private var currentValue: Float = initialValue.v
+
+    override fun setValue(v: PropertyValue) {
+        val value = v as FloatValue
+        currentValue = value.v
+        field.value = currentValue
+        slider.quietlySetValue((currentValue * scaleFactor).roundToInt())
+    }
+
+    init {
+        slider = JSlider(0, scaleFactor, (initialValue.v * scaleFactor).roundToInt())
+        slider.addChangeListener {
+            if (!slider.valueIsAdjusting) {
+                currentValue = slider.value.toFloat() / scaleFactor
+                updateValue()
+            }
+        }
+
+        val format = NumberFormat.getNumberInstance()
+        format.maximumFractionDigits = 5
+        field = JFormattedTextField(format)
+        field.columns = 10
+        field.value = initialValue.v
+
+        field.addActionListener {
+            val newValue = field.value as? Number
+            newValue?.let { v ->
+                currentValue = v.toFloat()
+                updateValue()
+            }
+        }
+
+        component.add(slider)
+        component.add(field)
+    }
+
+    private fun updateValue() {
+        slider.quietlySetValue((currentValue * scaleFactor).roundToInt())
+        field.value = currentValue
+        valueChanged(FloatValue(currentValue))
+    }
 }
 
 internal class ColorChooser(value: Float3) : PropertyEditor() {

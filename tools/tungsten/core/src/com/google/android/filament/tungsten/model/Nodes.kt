@@ -21,6 +21,7 @@ import com.google.android.filament.tungsten.compiler.Expression
 import com.google.android.filament.tungsten.compiler.Literal
 import com.google.android.filament.tungsten.compiler.trim
 import com.google.android.filament.tungsten.properties.ColorChooser
+import com.google.android.filament.tungsten.properties.FloatSlider
 import com.google.android.filament.tungsten.properties.MultipleChoice
 import com.google.android.filament.tungsten.properties.TextureFileChooser
 
@@ -140,6 +141,18 @@ private val float3ParameterNodeCompile = fun(node: Node, compiler: GraphCompiler
     return node
 }
 
+private val constantFloatNodeCompile = fun(node: Node, compiler: GraphCompiler): Node {
+    val value = (node.properties[0].value as FloatValue)
+
+    val outputVariable = compiler.getNewTemporaryVariableName("floatConstant")
+    compiler.addCodeToMaterialFunctionBody("float $outputVariable = ${value.v};\n")
+
+    val outputSlot = node.getOutputSlot("out")
+    compiler.setExpressionForSlot(outputSlot, Expression(outputVariable, 1))
+
+    return node
+}
+
 private val constantFloat2NodeCompile = fun(node: Node, compiler: GraphCompiler): Node {
     val outputSlot = node.getOutputSlot("result")
 
@@ -224,6 +237,19 @@ val createFloat3ParameterNode = fun(id: NodeId): Node {
             editorFactory = ::ColorChooser))
     )
 }
+
+val createFloatConstantNode = fun(id: NodeId) =
+    Node(
+        id = id,
+        type = "floatConstant",
+        compileFunction = constantFloatNodeCompile,
+        outputSlots = listOf("out"),
+        properties = listOf(Property(
+            name = "value",
+            value = FloatValue(),
+            editorFactory = ::FloatSlider
+        ))
+    )
 
 val createFloat2ConstantNode = fun(id: NodeId): Node {
     return Node(
