@@ -1335,7 +1335,7 @@ float NoL = clamp(dot(n, l), 0.0, 1.0);
 // lightIntensity is the illuminance
 // at perpendicular incidence in lux
 float illuminance = lightIntensity * NoL;
-float luminance = BSDF(v, l) * illuminance;
+vec3 luminance = BSDF(v, l) * illuminance;
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 [Listing [glslDirectionalLight]: Implementation of directional lights in GLSL]
 
@@ -1489,7 +1489,7 @@ vec3 evaluatePunctualLight() {
     attenuation  = getSquareFalloffAttenuation(posToLight, lightInvRadius);
     attenuation *= getSpotAngleAttenuation(l, lightDir, innerAngle, outerAngle);
 
-    float luminance = (BSDF(v, l) * lightIntensity * attenuation * NoL) * lightColor;
+    vec3 luminance = (BSDF(v, l) * lightIntensity * attenuation * NoL) * lightColor;
     return luminance;
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
