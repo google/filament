@@ -87,9 +87,9 @@ endfunction()
 
 add_ktxfiles("assets/models/monkey/albedo.png" "monkey/albedo.ktx" "")
 add_ktxfiles("assets/models/monkey/normal.png" "monkey/normal.ktx" "--kernel=NORMALS")
-add_ktxfiles("assets/models/monkey/roughness.png" "monkey/roughness.ktx" "")
-add_ktxfiles("assets/models/monkey/metallic.png" "monkey/metallic.ktx" "")
-add_ktxfiles("assets/models/monkey/ao.png" "monkey/ao.ktx" "")
+add_ktxfiles("assets/models/monkey/roughness.png" "monkey/roughness.ktx" "--grayscale")
+add_ktxfiles("assets/models/monkey/metallic.png" "monkey/metallic.ktx" "--grayscale")
+add_ktxfiles("assets/models/monkey/ao.png" "monkey/ao.ktx" "--grayscale")
 
 # Convert OBJ files into filamesh files.
 function(add_mesh SOURCE TARGET)

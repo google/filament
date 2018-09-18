@@ -40,6 +40,7 @@ static bool g_createGallery = false;
 static string g_compression = "";
 static Filter g_filter = Filter::DEFAULT;
 static bool g_stripAlpha = false;
+static bool g_grayscale = false;
 static bool g_ktxContainer = false;
 
 static const char* USAGE = R"TXT(
@@ -60,8 +61,10 @@ Options:
        print this message
    --license
        print copyright and license information
-   --gallery, -g
-       generate HTML gallery for review purposes (mipmap.html)
+   --page, -p
+       generate HTML page for review purposes (mipmap.html)
+   --grayscale, -g
+       create a single-channel image and do not perform gamma correction
    --format=[exr|hdr|rgbm|psd|png|dds|ktx], -f [exr|hdr|rgbm|psd|png|dds|ktx]
        specify output file format, inferred from output pattern if omitted
    --kernel=[box|nearest|hermite|gaussian|normals|mitchell|lanczos|min], -k [filter]
@@ -116,11 +119,12 @@ static void license() {
 }
 
 static int handleArguments(int argc, char* argv[]) {
-    static constexpr const char* OPTSTR = "hlgf:c:k:s";
+    static constexpr const char* OPTSTR = "hlgpf:c:k:s";
     static const struct option OPTIONS[] = {
             { "help",                 no_argument, 0, 'h' },
             { "license",              no_argument, 0, 'l' },
-            { "gallery",              no_argument, 0, 'g' },
+            { "grayscale",            no_argument, 0, 'g' },
+            { "page",                 no_argument, 0, 'p' },
             { "format",         required_argument, 0, 'f' },
             { "compression",    required_argument, 0, 'c' },
             { "kernel",         required_argument, 0, 'k' },
@@ -142,6 +146,9 @@ static int handleArguments(int argc, char* argv[]) {
                 license();
                 exit(0);
             case 'g':
+                g_grayscale = true;
+                break;
+            case 'p':
                 g_createGallery = true;
                 break;
             case 'k': {
@@ -207,7 +214,7 @@ int main(int argc, char* argv[]) {
         g_ktxContainer = true;
         g_formatSpecified = true;
     } else if (!g_formatSpecified) {
-        constexpr bool forceLinear = true; // Please, not for grayscale...
+        const bool forceLinear = !g_grayscale;
         g_format = ImageEncoder::chooseFormat(outputPattern, forceLinear);
     }
 
@@ -225,6 +232,9 @@ int main(int argc, char* argv[]) {
         auto b = extractChannel(sourceImage, 2);
         sourceImage = combineChannels({r, g, b});
     }
+    if (g_grayscale) {
+        sourceImage = extractChannel(sourceImage, 0);
+    }
 
     puts("Generating miplevels...");
     uint32_t count = getMipmapCount(sourceImage);
@@ -235,7 +245,7 @@ int main(int argc, char* argv[]) {
         puts("Writing KTX file to disk...");
         // The libimage API does not include the original image in the mip array,
         // which might make sense when generating individual files, but for a KTX
-        // bundle, we want to include level 0, so add 1 the KTX level count.
+        // bundle, we want to include level 0, so add 1 to the KTX level count.
         KtxBundle container(1 + miplevels.size(), 1, false);
         container.info() = {
             .endianness = KtxBundle::ENDIAN_DEFAULT,
@@ -246,11 +256,19 @@ int main(int argc, char* argv[]) {
             .glBaseInternalFormat = KtxBundle::RGB,
             .pixelWidth = sourceImage.getWidth(),
             .pixelHeight = sourceImage.getHeight(),
-            .pixelDepth = 1,
+            .pixelDepth = 0,
         };
+        if (g_grayscale) {
+            auto& info = container.info();
+            info.glTypeSize = 1;
+            info.glFormat =
+            info.glInternalFormat =
+            info.glBaseInternalFormat = KtxBundle::LUMINANCE;
+        }
         uint32_t mip = 0;
         auto delinearize = [&container, &mip](const LinearImage& image) {
-            auto data = fromLinearTosRGB<uint8_t>(image);
+            auto data = g_grayscale ? fromLinearToGrayscale<uint8_t>(image) :
+                fromLinearTosRGB<uint8_t>(image);
             container.setBlob({mip++, 0, 0}, data.get(),
                     image.getWidth() * image.getHeight() * container.info().glTypeSize);
         };
