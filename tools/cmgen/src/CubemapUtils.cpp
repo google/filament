@@ -208,13 +208,14 @@ void CubemapUtils::generateUVGrid(Cubemap const& cml, size_t gridFrequency) {
             { 0, 0, 1 }, // bk
             { 1, 1, 0 }, // fr
     };
+    const float uvGridHDRIntensity = 5.0f;
     size_t gridSize = cml.getDimensions() / gridFrequency;
     CubemapUtils::process<CubemapUtils::EmptyState>(cml,
             [ & ](CubemapUtils::EmptyState&,
                     size_t y, Cubemap::Face f, Cubemap::Texel* data, size_t dim) {
                 for (size_t x = 0; x < dim; ++x, ++data) {
                     bool grid = bool(((x / gridSize) ^ (y / gridSize)) & 1);
-                    Cubemap::Texel t = grid ? colors[(int)f] : 0;
+                    Cubemap::Texel t = grid ? colors[(int)f] * uvGridHDRIntensity : 0;
                     Cubemap::writeAt(data, t);
                 }
             });
