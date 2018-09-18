@@ -233,7 +233,10 @@ int main(int argc, char* argv[]) {
 
     if (g_ktxContainer) {
         puts("Writing KTX file to disk...");
-        KtxBundle container(miplevels.size(), 1, false);
+        // The libimage API does not include the original image in the mip array,
+        // which might make sense when generating individual files, but for a KTX
+        // bundle, we want to include level 0, so add 1 the KTX level count.
+        KtxBundle container(1 + miplevels.size(), 1, false);
         container.info() = {
             .endianness = KtxBundle::ENDIAN_DEFAULT,
             .glType = KtxBundle::UNSIGNED_BYTE,
@@ -241,14 +244,19 @@ int main(int argc, char* argv[]) {
             .glFormat = KtxBundle::RGB,
             .glInternalFormat = KtxBundle::RGB,
             .glBaseInternalFormat = KtxBundle::RGB,
-            .pixelWidth = miplevels[0].getWidth(),
-            .pixelHeight = miplevels[0].getHeight(),
+            .pixelWidth = sourceImage.getWidth(),
+            .pixelHeight = sourceImage.getHeight(),
             .pixelDepth = 1,
         };
         uint32_t mip = 0;
-        for (auto image : miplevels) {
+        auto delinearize = [&container, &mip](const LinearImage& image) {
             auto data = fromLinearTosRGB<uint8_t>(image);
-            container.setBlob({mip++, 0, 0}, data.get(), image.getWidth() * image.getHeight() * 3);
+            container.setBlob({mip++, 0, 0}, data.get(),
+                    image.getWidth() * image.getHeight() * container.info().glTypeSize);
+        };
+        delinearize(sourceImage);
+        for (auto image : miplevels) {
+            delinearize(image);
         }
         vector<uint8_t> fileContents(container.getSerializedLength());
         container.serialize(fileContents.data(), fileContents.size());
