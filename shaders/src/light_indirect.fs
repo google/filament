@@ -242,20 +242,20 @@ vec3 isEvaluateIBL(const PixelParams pixel, vec3 n, vec3 v, float NoV) {
     const float K = 4.0;
 
     // IMPORTANT: Keep numSample = 1 << numSampleBits
-    const uint numSamples = IBL_INTEGRATION_IMPORTANCE_SAMPLING_COUNT;
+    const uint numSamples = uint(IBL_INTEGRATION_IMPORTANCE_SAMPLING_COUNT);
     const uint numSampleBits = uint(log2(float(numSamples)));
     const float invNumSamples = 1.0 / float(numSamples);
 
     vec3 indirectSpecular = vec3(0.0);
-    for (uint i = 0; i < numSamples; i++) {
+    for (uint i = 0u; i < numSamples; i++) {
         // Compute Hammersley sequence
         // TODO: these should come from uniforms
         // TODO: we should do this with logical bit operations
         uint t = i;
-        uint bits = 0;
-        for (uint j = 0; j < numSampleBits; j++) {
-            bits = bits * 2 + (t - (2 * (t / 2)));
-            t /= 2;
+        uint bits = 0u;
+        for (uint j = 0u; j < numSampleBits; j++) {
+            bits = bits * 2u + (t - (2u * (t / 2u)));
+            t /= 2u;
         }
         vec2 u = vec2(float(i), float(bits)) * invNumSamples;
 
