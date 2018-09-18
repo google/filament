@@ -42,17 +42,28 @@ private fun Texture.InternalFormat.toSrgb(): Texture.InternalFormat {
 
 object TextureUtils {
 
+    enum class ColorSpaceStrategy {
+        // Use the profile present in the image file, defaulting to sRGB if none exists.
+        USE_FILE_PROFILE,
+
+        // Always assume an sRGB color space.
+        FORCE_SRGB,
+
+        // Always assume a non-sRGB color space.
+        FORCE_LINEAR
+    }
+
     fun createDefaultTexture(engine: Engine): Texture {
         val stream = javaClass.classLoader.getResourceAsStream("checkerboard.png")
         val texture = stream?.let { s ->
             ImageIO.read(s)?.let {
-                img -> loadTextureFromImage(engine, img)
+                img -> loadTextureFromImage(engine, img, ColorSpaceStrategy.FORCE_LINEAR)
             }
         }
         return texture ?: throw RuntimeException("Could not load default texture")
     }
 
-    fun loadTexture(engine: Engine, file: File): Texture? {
+    fun loadTexture(engine: Engine, file: File, colorSpace: ColorSpaceStrategy): Texture? {
         val img = try {
             ImageIO.read(file) ?: return null
         } catch (e: IOException) {
@@ -61,7 +72,7 @@ object TextureUtils {
             return null
         }
 
-        return loadTextureFromImage(engine, img)
+        return loadTextureFromImage(engine, img, colorSpace)
     }
 
     /**
@@ -69,9 +80,14 @@ object TextureUtils {
      * texture formats to use.
      */
     private fun decideTextureFormat(
-        img: BufferedImage
+        img: BufferedImage,
+        colorSpace: ColorSpaceStrategy
     ): Pair<Texture.InternalFormat, Texture.Format> {
-        val isSrgb = img.colorModel.colorSpace.isCS_sRGB
+        val isSrgb = when (colorSpace) {
+            ColorSpaceStrategy.FORCE_LINEAR -> false
+            ColorSpaceStrategy.FORCE_SRGB -> true
+            ColorSpaceStrategy.USE_FILE_PROFILE -> img.colorModel.colorSpace.isCS_sRGB
+        }
         val (internalFormat, textureFormat) = when (img.colorModel.numComponents) {
             1 -> Texture.InternalFormat.R8 to Texture.Format.R
             2 -> Texture.InternalFormat.RG8 to Texture.Format.RG
@@ -82,10 +98,14 @@ object TextureUtils {
         return (if (isSrgb) internalFormat.toSrgb() else internalFormat) to textureFormat
     }
 
-    private fun loadTextureFromImage(engine: Engine, img: BufferedImage): Texture? {
+    private fun loadTextureFromImage(
+        engine: Engine,
+        img: BufferedImage,
+        colorSpace: ColorSpaceStrategy
+    ): Texture? {
         val data = img.raster.dataBuffer as DataBufferByte
 
-        val (internalFormat, textureFormat) = decideTextureFormat(img)
+        val (internalFormat, textureFormat) = decideTextureFormat(img, colorSpace)
 
         flipComponentsIfNecessary(img)
 

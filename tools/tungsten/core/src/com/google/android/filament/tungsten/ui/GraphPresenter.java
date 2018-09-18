@@ -134,6 +134,7 @@ public class GraphPresenter implements IPropertiesPresenter {
         if (property.getType() == PropertyType.GRAPH_PROPERTY) {
             recompileGraph();
         } else if (property.getType() == PropertyType.MATERIAL_PARAMETER) {
+            serializeAndSave();
             Parameter parameter = mCompiledGraph.getParameterMap().get(handle);
             if (parameter == null) {
                 return;
@@ -162,7 +163,6 @@ public class GraphPresenter implements IPropertiesPresenter {
         }
         mModel.getAndUpdate(graph -> graph.graphByAddingNodeAtLocation(newNode, x, y));
         recompileGraph();
-        serializeAndSave();
         mGraphView.render(mModel.get());
     }
 
