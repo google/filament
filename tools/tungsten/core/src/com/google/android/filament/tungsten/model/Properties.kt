@@ -21,6 +21,7 @@ import com.google.android.filament.TextureSampler
 import com.google.android.filament.tungsten.Filament
 import com.google.android.filament.tungsten.properties.PropertyEditor
 import com.google.android.filament.tungsten.texture.TextureCache
+import com.google.android.filament.tungsten.texture.TextureUtils
 import java.io.File
 
 sealed class PropertyValue {
@@ -64,19 +65,44 @@ data class StringValue(val value: String) : PropertyValue() {
     }
 }
 
-data class TextureFile(val file: File? = null) : PropertyValue() {
+data class TextureFile(
+    val file: File? = null,
+    val colorSpace: TextureUtils.ColorSpaceStrategy =
+            TextureUtils.ColorSpaceStrategy.USE_FILE_PROFILE
+) : PropertyValue() {
 
-    override fun serialize() = file?.canonicalPath
+    override fun serialize(): Any? {
+        file ?: return null
+        return mapOf(
+            "path" to file.canonicalPath,
+            "colorSpace" to colorSpace.name
+        )
+    }
 
     private val textureFuture = if (file != null) {
-        TextureCache.getTextureForFile(file)
+        TextureCache.getTextureForFile(file, colorSpace)
     } else {
         TextureCache.getDefaultTexture()
     }
 
     override fun deserialize(value: Any): PropertyValue {
-        if (value !is String) return this
-        return TextureFile(File(value))
+        if (value !is Map<*, *>) return this
+
+        val path = value["path"] as? String
+        val file = if (path != null) {
+            File(path)
+        } else {
+            null
+        }
+
+        val colorSpaceString = value["colorSpace"] as? String
+        val colorSpace = if (colorSpaceString != null) {
+            TextureUtils.ColorSpaceStrategy.valueOf(colorSpaceString)
+        } else {
+            TextureUtils.ColorSpaceStrategy.USE_FILE_PROFILE
+        }
+
+        return TextureFile(file, colorSpace)
     }
 
     override fun applyToMaterialInstance(materialInstance: MaterialInstance, name: String) {

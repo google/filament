@@ -20,6 +20,7 @@ import com.google.android.filament.tungsten.model.Float3
 import com.google.android.filament.tungsten.model.PropertyValue
 import com.google.android.filament.tungsten.model.StringValue
 import com.google.android.filament.tungsten.model.TextureFile
+import com.google.android.filament.tungsten.texture.TextureUtils
 import java.awt.Color
 import javax.swing.JButton
 import javax.swing.JColorChooser
@@ -62,7 +63,7 @@ internal class ColorChooser(value: Float3) : PropertyEditor() {
 
 internal class MultipleChoice(value: StringValue, choices: List<String>) : PropertyEditor() {
 
-    override val component: JComboBox<String> = JComboBox<String>(choices.toTypedArray())
+    override val component = JComboBox<String>(choices.toTypedArray())
 
     init {
         component.addActionListener {
@@ -76,24 +77,51 @@ internal class MultipleChoice(value: StringValue, choices: List<String>) : Prope
     }
 }
 
-internal class TextureFileChooser(textureFile: TextureFile) : PropertyEditor() {
+internal class TextureFileChooser(initialValue: TextureFile) : PropertyEditor() {
+
+    private val colorSpaceToLabel = linkedMapOf(
+        TextureUtils.ColorSpaceStrategy.FORCE_SRGB to "sRGB",
+        TextureUtils.ColorSpaceStrategy.FORCE_LINEAR to "Linear",
+        TextureUtils.ColorSpaceStrategy.USE_FILE_PROFILE to "Use embedded file profile"
+    )
 
     override val component: JPanel = JPanel()
     private val fileChooser = JFileChooser()
+    private val colorSpaceChooser = JComboBox<String>(colorSpaceToLabel.values.toTypedArray())
+
+    private var textureFile = initialValue
 
     override fun setValue(v: PropertyValue) {
-        // no-op
+        val newValue = v as? TextureFile ?: return
+        textureFile = v
+        colorSpaceChooser.selectedItem = colorSpaceToLabel[newValue.colorSpace]
     }
 
     init {
         val button = JButton("Choose file...")
+
+        colorSpaceChooser.selectedItem = colorSpaceToLabel[initialValue.colorSpace]
+
         component.add(button)
+        component.add(colorSpaceChooser)
 
         button.addActionListener {
             val result = fileChooser.showOpenDialog(component)
             if (result == JFileChooser.APPROVE_OPTION) {
-                valueChanged(TextureFile(fileChooser.selectedFile))
+                textureFile = textureFile.copy(file = fileChooser.selectedFile)
+                valueChanged(textureFile)
             }
+        }
+
+        colorSpaceChooser.addActionListener {
+            val newColorSpace = when (colorSpaceChooser.selectedIndex) {
+                0 -> TextureUtils.ColorSpaceStrategy.FORCE_SRGB
+                1 -> TextureUtils.ColorSpaceStrategy.FORCE_LINEAR
+                2 -> TextureUtils.ColorSpaceStrategy.USE_FILE_PROFILE
+                else -> TextureUtils.ColorSpaceStrategy.USE_FILE_PROFILE
+            }
+            textureFile = textureFile.copy(colorSpace = newColorSpace)
+            valueChanged(textureFile)
         }
     }
 }
