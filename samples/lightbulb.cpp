@@ -364,9 +364,14 @@ static void setup(Engine* engine, View* view, Scene* scene) {
                 {  10, 0, -10 },
         };
 
-        short4 tbn = math::packSnorm16(normalize(positive(math::mat3f{
-                float3{1.0f, 0.0f, 0.0f}, float3{0.0f, 0.0f, 1.0f}, float3{0.0f, 1.0f, 0.0f}
-        }.toQuaternion())).xyzw);
+        short4 tbn = math::packSnorm16(
+                mat3f::packTangentFrame(
+                        math::mat3f{
+                                float3{ 1.0f, 0.0f, 0.0f }, float3{ 0.0f, 0.0f, 1.0f },
+                                float3{ 0.0f, 1.0f, 0.0f }
+                        }
+                ).xyzw);
+
         const static math::short4 normals[] { tbn, tbn, tbn, tbn };
 
         VertexBuffer* vertexBuffer = VertexBuffer::Builder()
