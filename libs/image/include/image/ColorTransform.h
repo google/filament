@@ -164,6 +164,24 @@ std::unique_ptr<uint8_t[]> fromLinearTosRGB(const LinearImage& image) {
     return dst;
 }
 
+// Creates a 1-channel sRGB image from a floating-point image.
+template <typename T>
+std::unique_ptr<uint8_t[]> fromLinearToGrayscale_sRGB(const LinearImage& image) {
+    const size_t w = image.getWidth();
+    const size_t h = image.getHeight();
+    assert(image.getChannels() == 1);
+    std::unique_ptr<uint8_t[]> dst(new uint8_t[w * h * sizeof(T)]);
+    T* d = reinterpret_cast<T*>(dst.get());
+    for (size_t y = 0; y < h; ++y) {
+        float const* p = image.getPixelRef(0, y);
+        for (size_t x = 0; x < w; ++x, ++p, ++d) {
+            const float gray = math::saturate(linearTosRGB(*p)) * std::numeric_limits<T>::max();
+            d[0] = T(gray);
+        }
+    }
+    return dst;
+}
+
 // Creates a 3-channel RGB u8 image from a f32 image.
 // The source image can have three or more channels, but only the first three are honored.
 template <typename T>

@@ -42,6 +42,7 @@ static Filter g_filter = Filter::DEFAULT;
 static bool g_stripAlpha = false;
 static bool g_grayscale = false;
 static bool g_ktxContainer = false;
+static bool g_linearized = false;
 
 static const char* USAGE = R"TXT(
 MIPGEN generates mipmaps for an image down to the 1x1 level.
@@ -59,8 +60,10 @@ Usage:
 Options:
    --help, -h
        print this message
-   --license
+   --license, -L
        print copyright and license information
+   --linear, -l
+       assume that image pixels are already linearized
    --page, -p
        generate HTML page for review purposes (mipmap.html)
    --grayscale, -g
@@ -119,10 +122,11 @@ static void license() {
 }
 
 static int handleArguments(int argc, char* argv[]) {
-    static constexpr const char* OPTSTR = "hlgpf:c:k:s";
+    static constexpr const char* OPTSTR = "hLlgpf:c:k:s";
     static const struct option OPTIONS[] = {
             { "help",                 no_argument, 0, 'h' },
-            { "license",              no_argument, 0, 'l' },
+            { "license",              no_argument, 0, 'L' },
+            { "linear",               no_argument, 0, 'l' },
             { "grayscale",            no_argument, 0, 'g' },
             { "page",                 no_argument, 0, 'p' },
             { "format",         required_argument, 0, 'f' },
@@ -142,9 +146,12 @@ static int handleArguments(int argc, char* argv[]) {
             case 'h':
                 printUsage(argv[0]);
                 exit(0);
-            case 'l':
+            case 'L':
                 license();
                 exit(0);
+            case 'l':
+                g_linearized = true;
+                break;
             case 'g':
                 g_grayscale = true;
                 break;
@@ -214,8 +221,7 @@ int main(int argc, char* argv[]) {
         g_ktxContainer = true;
         g_formatSpecified = true;
     } else if (!g_formatSpecified) {
-        const bool forceLinear = !g_grayscale;
-        g_format = ImageEncoder::chooseFormat(outputPattern, forceLinear);
+        g_format = ImageEncoder::chooseFormat(outputPattern, !g_linearized);
     }
 
     puts("Reading image...");
@@ -266,15 +272,23 @@ int main(int argc, char* argv[]) {
             info.glBaseInternalFormat = KtxBundle::LUMINANCE;
         }
         uint32_t mip = 0;
-        auto delinearize = [&container, &mip](const LinearImage& image) {
-            auto data = g_grayscale ? fromLinearToGrayscale<uint8_t>(image) :
-                fromLinearTosRGB<uint8_t>(image);
+        auto addLevel = [&container, &mip](const LinearImage& image) {
+            std::unique_ptr<uint8_t[]> data;
+            if (g_grayscale && g_linearized) {
+                data = fromLinearToGrayscale<uint8_t>(image);
+            } else if (g_grayscale) {
+                data = fromLinearToGrayscale_sRGB<uint8_t>(image);
+            } else if (g_linearized) {
+                data = fromLinearToRGB<uint8_t>(image);
+            } else {
+                data = fromLinearTosRGB<uint8_t>(image);
+            }
             container.setBlob({mip++, 0, 0}, data.get(),
                     image.getWidth() * image.getHeight() * container.info().glTypeSize);
         };
-        delinearize(sourceImage);
+        addLevel(sourceImage);
         for (auto image : miplevels) {
-            delinearize(image);
+            addLevel(image);
         }
         vector<uint8_t> fileContents(container.getSerializedLength());
         container.serialize(fileContents.data(), fileContents.size());
