@@ -58,21 +58,30 @@ static constexpr uint8_t MATERIAL_LIT_PACKAGE[] = {
 static SuzanneApp app;
 
 static Texture* setTextureParameter(Engine& engine, filaweb::Asset& asset, string name,
-        TextureSampler const &sampler, Format internalFormat) {
+        TextureSampler const &sampler) {
 
     const auto destructor = [](void* buffer, size_t size, void* user) {
         auto asset = (filaweb::Asset*) user;
         asset->data.reset();
     };
 
-    Texture::PixelBufferDescriptor pb(
-            asset.data.get(), asset.nbytes, Texture::Format::RGBA, Texture::Type::UBYTE,
-            destructor, &asset);
+    Texture::Format format;
+    switch (asset.channels) {
+        case 1: format = Texture::Format::R; break;
+        case 2: format = Texture::Format::RG; break;
+        case 3: format = Texture::Format::RGB; break;
+        case 4: format = Texture::Format::RGBA; break;
+    }
 
-    // TODO: Since we use a Canvas 2D to decode textures, they are always 4-component. We should
-    // manually reshape the data here to improve footprint.
-    if (internalFormat == Format::R8) {
-        internalFormat = Format::RGBA8;
+    Texture::PixelBufferDescriptor pb(
+            asset.data.get(), asset.nbytes, format, Texture::Type::UBYTE, destructor, &asset);
+
+    Format internalFormat;
+    switch (asset.channels) {
+        case 1: internalFormat = Format::R8; break;
+        case 2: internalFormat = Format::RG8; break;
+        case 3: internalFormat = Format::SRGB8; break;
+        case 4: internalFormat = Format::SRGB8_A8; break;
     }
 
     auto texture = Texture::Builder()
@@ -117,15 +126,15 @@ void setup(Engine* engine, View* view, Scene* scene) {
 
     // Create textures.
     TextureSampler sampler(MagFilter::LINEAR, WrapMode::CLAMP_TO_EDGE);
-    auto setTexture = [engine, sampler] (filaweb::Asset& asset, const char* name, Format format) {
+    auto setTexture = [engine, sampler] (filaweb::Asset& asset, const char* name) {
         printf("%s: %d x %d\n", name, asset.width, asset.height);
-        setTextureParameter(*engine, asset, name, sampler, format);
+        setTextureParameter(*engine, asset, name, sampler);
     };
-    setTexture(albedo, "albedo", Format::SRGB8_A8);
-    setTexture(metallic, "metallic", Format::R8);
-    setTexture(roughness, "roughness", Format::R8);
-    setTexture(normal, "normal", Format::RGBA8);
-    setTexture(ao, "ao", Format::R8);
+    setTexture(albedo, "albedo");
+    setTexture(metallic, "metallic");
+    setTexture(roughness, "roughness");
+    setTexture(normal, "normal");
+    setTexture(ao, "ao");
 
     // Create the sun.
     auto& em = EntityManager::get();
