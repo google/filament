@@ -47,6 +47,7 @@ struct Asset {
     std::unique_ptr<Asset> envShCoeffs;
     std::unique_ptr<Asset[]> envFaces;
     std::unique_ptr<Asset[]> skyFaces;
+    char url[256];
 };
 
 Asset getRawFile(const char* name);

@@ -143,13 +143,16 @@ void Application::render() {
 }
 
 Asset getRawFile(const char* name) {
-    // Obtain size from JavaScript.
+    // Obtain size and URL from JavaScript.
+    Asset result = {};
     uint32_t nbytes;
     EM_ASM({
         var nbytes = $0 >> 2;
         var name = UTF8ToString($1);
         HEAP32[nbytes] = assets[name].data.byteLength;
-    }, &nbytes, name);
+        stringToUTF8(assets[name].url, $2, $3);
+
+    }, &nbytes, name, &result.url[0], sizeof(result.url));
 
     // Move the data from JavaScript.
     uint8_t* data = new uint8_t[nbytes];
@@ -159,13 +162,12 @@ Asset getRawFile(const char* name) {
         HEAPU8.set(assets[name].data, data);
         assets[name].data = null;
     }, data, name);
-    return {
-        .data = decltype(Asset::data)(data),
-        .nbytes = nbytes
-    };
+    result.data = decltype(Asset::data)(data);
+    result.nbytes = nbytes;
+    return result;
 }
 
-static Asset getPngTexture(const Asset& rawfile, const char* name) {
+static Asset getPngTexture(const Asset& rawfile) {
     int width, height, ncomp;
     stbi_info_from_memory(rawfile.data.get(), rawfile.nbytes, &width, &height, &ncomp);
     const uint32_t nbytes = width * height * 4;
@@ -183,7 +185,7 @@ static Asset getPngTexture(const Asset& rawfile, const char* name) {
     };
 }
 
-static Asset getKtxTexture(const Asset& rawfile, const char* name) {
+static Asset getKtxTexture(const Asset& rawfile) {
     KtxBundle bundle(rawfile.data.get(), rawfile.nbytes);
     uint8_t* blobData;
     uint32_t blobSize;
@@ -202,11 +204,12 @@ static Asset getKtxTexture(const Asset& rawfile, const char* name) {
 
 Asset getTexture(const char* name) {
     Asset rawfile = getRawFile(name);
-    string extension = Path(name).getExtension();
+    string extension = Path(rawfile.url).getExtension();
+    fflush(stdout);
     if (extension == "png" || extension == "rgbm") {
-        return getPngTexture(rawfile, name);
+        return getPngTexture(rawfile);
     }
-    return getKtxTexture(rawfile, name);
+    return getKtxTexture(rawfile);
 }
 
 Asset getCubemap(const char* name) {

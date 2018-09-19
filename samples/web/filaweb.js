@@ -86,7 +86,7 @@ function load_rawfile(url) {
         fetch(url).then(resp => {
             resp.arrayBuffer().then(filedata => success({
                 kind: 'rawfile',
-                name: url,
+                url: url,
                 data: new Uint8Array(filedata)
             }));
         });

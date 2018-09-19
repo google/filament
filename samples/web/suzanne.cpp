@@ -185,6 +185,7 @@ void setup(Engine* engine, View* view, Scene* scene) {
     scene->setSkybox(skylight.skybox);
     skylight.indirectLight->setRotation(
             mat3f::rotate(M_PI, float3{ 0, 1, 0 }));
+    skylight.indirectLight->setIntensity(100000);
 
     app.cam = engine->createCamera();
     app.cam->setExposure(16.0f, 1 / 125.0f, 100.0f);
