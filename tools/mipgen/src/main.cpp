@@ -277,7 +277,7 @@ int main(int argc, char* argv[]) {
             if (g_grayscale && g_linearized) {
                 data = fromLinearToGrayscale<uint8_t>(image);
             } else if (g_grayscale) {
-                data = fromLinearToGrayscale_sRGB<uint8_t>(image);
+                data = fromLinearTosRGB<uint8_t, 1>(image);
             } else if (g_linearized) {
                 data = fromLinearToRGB<uint8_t>(image);
             } else {

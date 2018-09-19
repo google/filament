@@ -141,42 +141,24 @@ inline math::float3 linearToSRGB(const math::float3& color) {
     return sRGBColor;
 }
 
-// Creates a 3-channel sRGB u8 image from a linear f32 image.
-// The source image can have three or more channels, but only the first three are honored.
-template <typename T>
+// Creates a n-channel sRGB image from a linear floating-point image.
+// The source image can have more than N channels, but only the first N are honored.
+template <typename T, int N = 3>
 std::unique_ptr<uint8_t[]> fromLinearTosRGB(const LinearImage& image) {
-    using math::float3;
-    size_t w = image.getWidth();
-    size_t h = image.getHeight();
-    UTILS_UNUSED_IN_RELEASE size_t channels = image.getChannels();
-    assert(channels >= 3);
-    std::unique_ptr<uint8_t[]> dst(new uint8_t[w * h * 3 * sizeof(T)]);
-    T* d = reinterpret_cast<T*>(dst.get());
-    for (size_t y = 0; y < h; ++y) {
-        for (size_t x = 0; x < w; ++x, d += 3) {
-            auto src = image.get<float3>((uint32_t) x, (uint32_t) y);
-            float3 l(linearTosRGB(saturate(*src)) * std::numeric_limits<T>::max());
-            for (size_t i = 0; i < 3; i++) {
-                d[i] = T(l[i]);
-            }
-        }
-    }
-    return dst;
-}
-
-// Creates a 1-channel sRGB image from a floating-point image.
-template <typename T>
-std::unique_ptr<uint8_t[]> fromLinearToGrayscale_sRGB(const LinearImage& image) {
     const size_t w = image.getWidth();
     const size_t h = image.getHeight();
-    assert(image.getChannels() == 1);
-    std::unique_ptr<uint8_t[]> dst(new uint8_t[w * h * sizeof(T)]);
+    const size_t nchan = image.getChannels();
+    assert(nchan >= N);
+    std::unique_ptr<uint8_t[]> dst(new uint8_t[w * h * N * sizeof(T)]);
     T* d = reinterpret_cast<T*>(dst.get());
     for (size_t y = 0; y < h; ++y) {
         float const* p = image.getPixelRef(0, y);
-        for (size_t x = 0; x < w; ++x, ++p, ++d) {
-            const float gray = math::saturate(linearTosRGB(*p)) * std::numeric_limits<T>::max();
-            d[0] = T(gray);
+        for (size_t x = 0; x < w; ++x, p += nchan, d += N) {
+            for (int n = 0; n < N; n++) {
+                float source = linearTosRGB(p[n]);
+                float target = math::saturate(source) * std::numeric_limits<T>::max();
+                d[n] = T(target);
+            }
         }
     }
     return dst;
