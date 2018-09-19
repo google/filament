@@ -18,12 +18,14 @@ package com.google.android.filament.tungsten.compiler
 
 import com.google.android.filament.tungsten.model.Node
 import com.google.android.filament.tungsten.model.NodeId
-import com.google.android.filament.tungsten.model.createAdderNode
+import com.google.android.filament.tungsten.model.createAddNode
 import com.google.android.filament.tungsten.model.createFloat2ConstantNode
 import com.google.android.filament.tungsten.model.createFloat3ConstantNode
 import com.google.android.filament.tungsten.model.createFloat3ParameterNode
 import com.google.android.filament.tungsten.model.createFloatConstantNode
+import com.google.android.filament.tungsten.model.createMultiplyNode
 import com.google.android.filament.tungsten.model.createShaderNode
+import com.google.android.filament.tungsten.model.createSubtractNode
 import com.google.android.filament.tungsten.model.createTextureSampleNode
 import com.google.android.filament.tungsten.model.serialization.INodeFactory
 
@@ -45,7 +47,9 @@ class NodeRegistry : INodeFactory {
 
     init {
         mNodes = listOf(
-                NodeEntry("Add", "adder", createAdderNode),
+                NodeEntry("Add", "add", createAddNode),
+                NodeEntry("Subtract", "subtract", createSubtractNode),
+                NodeEntry("Multiply", "multiply", createMultiplyNode),
                 NodeEntry("Constant float", "floatConstant", createFloatConstantNode),
                 NodeEntry("Constant float2", "float2Constant", createFloat2ConstantNode),
                 NodeEntry("Constant float3", "float3Constant", createFloat3ConstantNode),
