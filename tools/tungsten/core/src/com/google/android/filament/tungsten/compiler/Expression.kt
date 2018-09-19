@@ -56,9 +56,11 @@ open class Expression(
     }
 }
 
+fun floatTypeName(dimensions: Int) = if (dimensions > 1) "float$dimensions" else "float"
+
 private fun createFloatLiteral(dimensions: Int): String {
     val zeroes = "0.0, ".repeat(maxOf(dimensions - 1, 0)) + "0.0"
-    val typeName = if (dimensions > 1) "float$dimensions" else "float"
+    val typeName = floatTypeName(dimensions)
     return "$typeName($zeroes)"
 }
 

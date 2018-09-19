@@ -19,85 +19,10 @@ package com.google.android.filament.tungsten.model
 import com.google.android.filament.tungsten.compiler.GraphCompiler
 import com.google.android.filament.tungsten.compiler.Expression
 import com.google.android.filament.tungsten.compiler.Literal
-import com.google.android.filament.tungsten.compiler.trim
 import com.google.android.filament.tungsten.properties.ColorChooser
 import com.google.android.filament.tungsten.properties.FloatSlider
 import com.google.android.filament.tungsten.properties.MultipleChoice
 import com.google.android.filament.tungsten.properties.TextureFileChooser
-
-// A function that takes two expressions and prepares them for a math operation.
-data class ResolvedExpressions(
-   val a: Expression,
-   val b: Expression,
-   val resultDimensionality: Int
-)
-typealias ExpressionResolver = (Expression?, Expression?) -> ResolvedExpressions
-
-typealias Operation = (Expression, Expression) -> String
-
-/**
- * Create a math node compile function with a given operation.
- * Assumes two input slots, "a" and "b", and a single output, "out".
- */
-private fun createMathCompileFunction(
-    expressionResolver: ExpressionResolver,
-    operation: Operation,
-    temporaryVariable: String): CompileFunction {
-
-    return { node, compiler ->
-        val a = compiler.compileAndRetrieveExpression(node.getInputSlot("a"))
-        val b = compiler.compileAndRetrieveExpression(node.getInputSlot("b"))
-
-        val (aExpr, bExpr, resultDimensionality) = expressionResolver(a, b)
-
-        compiler.setExpressionForSlot(node.getInputSlot("a"), aExpr)
-        compiler.setExpressionForSlot(node.getInputSlot("b"), bExpr)
-
-        // todo: what if resultDimensionality is 1?
-        val temp = compiler.getNewTemporaryVariableName(temporaryVariable)
-        compiler.addCodeToMaterialFunctionBody(
-                "float$resultDimensionality $temp = ${operation(aExpr, bExpr)};\n")
-
-        val output = node.getOutputSlot("out")
-        compiler.setExpressionForSlot(output, Expression(temp, resultDimensionality))
-
-        node
-    }
-}
-
-/**
- * Trims two expressions to be the same dimensionality, preferring the one with fewer dimensions.
- * If one of the inputs is a single float, neither input is modified, allowing for a scalar
- * operations.
- */
-internal fun resolveInputExpressions(a: Expression?, b: Expression?): ResolvedExpressions {
-    val aExpr = a ?: Literal(4)
-    val bExpr = b ?: Literal(4)
-    val (trimmedA, trimmedB) = if (aExpr.dimensions > 1 && bExpr.dimensions > 1) {
-        trim(aExpr, bExpr)
-    } else {
-        Pair(aExpr, bExpr)
-    }
-    return ResolvedExpressions(trimmedA, trimmedB, maxOf(trimmedA.dimensions, trimmedB.dimensions))
-}
-
-private val subtractNodeCompile = createMathCompileFunction(
-    ::resolveInputExpressions,
-    { a, b -> "$a - $b" },
-    "subtract"
-)
-
-private val addNodeCompile = createMathCompileFunction(
-    ::resolveInputExpressions,
-    { a, b -> "$a + $b" },
-    "add"
-)
-
-private val multiplyNodeCompile  = createMathCompileFunction(
-    ::resolveInputExpressions,
-    { a, b -> "$a * $b" },
-    "multiply"
-)
 
 private val UNLIT_INPUTS = listOf("baseColor", "emissive")
 private val LIT_INPUTS = listOf("normal", "baseColor", "metallic", "roughness", "reflectance",
@@ -251,33 +176,6 @@ val createTextureSampleNode = fun(id: NodeId) =
                 type = PropertyType.MATERIAL_PARAMETER,
                 editorFactory = ::TextureFileChooser
             ))
-        )
-
-val createAddNode = fun(id: NodeId) =
-    Node(
-        id = id,
-        type = "add",
-        compileFunction = addNodeCompile,
-        inputSlots = listOf("a", "b"),
-        outputSlots = listOf("out")
-    )
-
-val createSubtractNode = fun(id: NodeId) =
-    Node(
-        id = id,
-        type = "subtract",
-        compileFunction = subtractNodeCompile,
-        inputSlots = listOf("a", "b"),
-        outputSlots = listOf("out")
-    )
-
-val createMultiplyNode = fun(id: NodeId) =
-        Node(
-            id = id ,
-            type = "multiply",
-            compileFunction = multiplyNodeCompile,
-            inputSlots = listOf("a", "b"),
-            outputSlots = listOf("out")
         )
 
 val createFloat3ConstantNode = fun(id: NodeId): Node {

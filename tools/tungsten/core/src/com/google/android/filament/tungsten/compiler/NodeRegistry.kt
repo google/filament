@@ -19,6 +19,7 @@ package com.google.android.filament.tungsten.compiler
 import com.google.android.filament.tungsten.model.Node
 import com.google.android.filament.tungsten.model.NodeId
 import com.google.android.filament.tungsten.model.createAddNode
+import com.google.android.filament.tungsten.model.createDivideNode
 import com.google.android.filament.tungsten.model.createFloat2ConstantNode
 import com.google.android.filament.tungsten.model.createFloat3ConstantNode
 import com.google.android.filament.tungsten.model.createFloat3ParameterNode
@@ -50,6 +51,7 @@ class NodeRegistry : INodeFactory {
                 NodeEntry("Add", "add", createAddNode),
                 NodeEntry("Subtract", "subtract", createSubtractNode),
                 NodeEntry("Multiply", "multiply", createMultiplyNode),
+                NodeEntry("Divide", "divide", createDivideNode),
                 NodeEntry("Constant float", "floatConstant", createFloatConstantNode),
                 NodeEntry("Constant float2", "float2Constant", createFloat2ConstantNode),
                 NodeEntry("Constant float3", "float3Constant", createFloat3ConstantNode),
