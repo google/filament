@@ -25,8 +25,13 @@ typealias FutureTexture = CompletableFuture<Texture>
 
 object TextureCache {
 
+    private data class TextureCacheKey(
+        val canonicalPath: String,
+        val colorSpace: TextureUtils.ColorSpaceStrategy
+    )
+
     // Maps from canonical file path to Filament Texture
-    private val cache = mutableMapOf<String, FutureTexture>()
+    private val cache = mutableMapOf<TextureCacheKey, FutureTexture>()
     private var defaultTexture: Texture? = null
 
     // Only accessed from Filament thread
@@ -37,11 +42,12 @@ object TextureCache {
      * Loads the image into a Filament texture and returns a future that will be completed when the
      * texture loads successfully or completed exceptionally if an error occurs.
      */
-    fun getTextureForFile(file: File): FutureTexture {
-        cache.computeIfAbsent(file.canonicalPath) {
-            createTextureForImageSource(file)
+    fun getTextureForFile(file: File, colorSpace: TextureUtils.ColorSpaceStrategy): FutureTexture {
+        val key = TextureCacheKey(file.canonicalPath, colorSpace)
+        cache.computeIfAbsent(key) {
+            createTextureForImageSource(file, colorSpace)
         }
-        return cache[file.canonicalPath] ?: getDefaultTexture()
+        return cache[key] ?: getDefaultTexture()
     }
 
     fun getDefaultTexture(): FutureTexture {
@@ -56,6 +62,14 @@ object TextureCache {
         return futureTexture
     }
 
+    /*
+     * Keep track of texture and delete when Filament shutdownAndDestroyTextures is called.
+     */
+    fun addTextureForRemoval(texture: Texture) {
+        Filament.getInstance().assertIsFilamentThread()
+        textures.add(texture)
+    }
+
     /**
      * Delete all cached textures and disallow any additional texture caching.
      */
@@ -68,11 +82,14 @@ object TextureCache {
         }
     }
 
-    private fun createTextureForImageSource(imageSource: File): FutureTexture {
+    private fun createTextureForImageSource(
+        imageSource: File,
+        colorSpace: TextureUtils.ColorSpaceStrategy
+    ): FutureTexture {
         val futureTexture = FutureTexture()
         Filament.getInstance().runOnFilamentThread { engine ->
             if (!allowNewTextures) return@runOnFilamentThread
-            val texture = TextureUtils.loadTexture(engine, imageSource)
+            val texture = TextureUtils.loadTextureFromFile(engine, imageSource, colorSpace)
             if (texture != null) {
                 futureTexture.complete(texture)
                 textures.add(texture)

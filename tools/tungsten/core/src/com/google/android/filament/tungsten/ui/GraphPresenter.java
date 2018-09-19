@@ -42,6 +42,8 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
 import javax.swing.JTextArea;
+
+import com.google.android.filament.tungsten.ui.preview.PreviewMeshPanel;
 import org.jetbrains.annotations.Nullable;
 
 public class GraphPresenter implements IPropertiesPresenter {
@@ -134,6 +136,7 @@ public class GraphPresenter implements IPropertiesPresenter {
         if (property.getType() == PropertyType.GRAPH_PROPERTY) {
             recompileGraph();
         } else if (property.getType() == PropertyType.MATERIAL_PARAMETER) {
+            serializeAndSave();
             Parameter parameter = mCompiledGraph.getParameterMap().get(handle);
             if (parameter == null) {
                 return;
@@ -162,7 +165,6 @@ public class GraphPresenter implements IPropertiesPresenter {
         }
         mModel.getAndUpdate(graph -> graph.graphByAddingNodeAtLocation(newNode, x, y));
         recompileGraph();
-        serializeAndSave();
         mGraphView.render(mModel.get());
     }
 

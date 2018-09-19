@@ -2046,6 +2046,9 @@ is that we don't know $f_0$ nor $f_{90}$ when we precompute those integrals. We 
 we can incorporate these terms at runtime for equation \ref{iblDFV}, alas, this is not possible for
 equation \ref{iblLD} and we have to assume $f_0 = f_{90} = 1$ (i.e.: the fresnel term always evaluates to 1).
 
+We also have to deal with the visibility term of the brdf, in practice keeping it yields to slightly
+worst results compared to the ground truth, so we also set $V = 1$.
+
 Let's substitute $f$ in equations \ref{iblLD} and \ref{iblDFV}:
 
 $$\begin{equation}
@@ -2053,10 +2056,11 @@ f(l_i, n, \alpha) = D(h_i, \alpha)F(f_0, f_{90}, \left<\VoH\right>)V(l_i, v, \al
 \end{equation}$$
 
 The first simplification is that the term $D(h_i, \alpha)$ in the brdf cancels out with the
-denominator (which came from the $pdf$ due to importance sampling).
+denominator (which came from the $pdf$ due to importance sampling) and F and V disappear since we
+assume their value is 1. 
 
 $$\begin{equation}
-LD(n, \alpha)       \equiv \frac{\sum_i^N V(l_i, v, \alpha)\left<\NoL\right>\Lt(l_i) }{\sum_i^N V(l_i, v, \alpha)\left<\NoL\right>}
+LD(n, \alpha)       \equiv \frac{\sum_i^N V(l_i, v, \alpha)\left<\NoL\right>\Lt(l_i) }{\sum_i^N \left<\NoL\right>}
 \end{equation}$$
 $$\begin{equation}\label{iblFV}
 I(f(n, v, \alpha))  \equiv \frac{4}{N}\sum_i^N \color{green}{F(f_0, f_{90}, \left<\VoH\right>)} V(l_i, v, \alpha)\frac{\left<\VoH\right>}{\left<\NoH\right>} \left<\NoL\right>
@@ -2105,7 +2109,7 @@ $$
 \Lout(n,v,\alpha,f_0,f_{90})     &\simeq \big[ f_0 \color{red}{DFG_1(\NoV, \alpha)} + f_{90} \color{red}{DFG_2(\NoV, \alpha)} \big] \times LD(n, \alpha) \\
 DFG_1(\alpha, \left<\NoV\right>) &=      \frac{4}{N}\sum_i^N  \color{green}{(1 - F_c(\left<\VoH\right>))} V(l_i, v, \alpha)\frac{\left<\VoH\right>}{\left<\NoH\right>} \left<\NoL\right> \\
 DFG_2(\alpha, \left<\NoV\right>) &=      \frac{4}{N}\sum_i^N  \color{green}{     F_c(\left<\VoH\right>) } V(l_i, v, \alpha)\frac{\left<\VoH\right>}{\left<\NoH\right>} \left<\NoL\right> \\
-LD(n, \alpha)                    &=      \frac{\sum_i^N V(l_i, n, \alpha)\left<\NoL\right>\Lt(l_i) }{\sum_i^N V(l_i, n, \alpha)\left<\NoL\right>}
+LD(n, \alpha)                    &=      \frac{\sum_i^N V(l_i, n, \alpha)\left<\NoL\right>\Lt(l_i) }{\sum_i^N \left<\NoL\right>}
 \end{align*}     
 $$
 
@@ -2146,7 +2150,7 @@ $DFG_1$                         | $DFG_2$                         | ${ DFG_1, DF
 
 $LD$ is the convolution of the environment by a function that only depends on the roughness $\alpha$.
 $LD$ can conveniently be stored in a mip-mapped cubemap where increasing LODs receive the environment
-pre-filtered with increasing $\alpha$.
+pre-filtered with increasing roughness $\alpha$.
 
 See an example below:
 
@@ -2297,16 +2301,34 @@ approximations:
     - $v = n$, by far the assumption contributing to the largest error when integrating the
       non-constant part of the IBL. This results in the complete loss of roughness anisotropy
       with respect to the view point.
-      
+
     - Roughness contribution for the non-constant part of the IBL is quantized and trilinear filtering
-      is used to interpolate between these levels. This is most visible at low roughnes (e.g.: around 0.25
+      is used to interpolate between these levels. This is most visible at low roughnes (e.g.: around 0.0625
       for a 9 LODs cubemap).
-      
+
     - No Fresnel for the non-constant part of the IBL.
-      
+
+    - Visibility = 1 for the non-constant part of the IBL.
+
     - Schlick's Fresnel
-    
+
     - $f_{90} = 1$ in the multiscattering case.
+
+
+![Figure [iblPrefilterVsImportanceSampling]:
+Comparison between importance-sampled reference (top) and prefiltered IBL (middle).](images/ibl/ibl_prefilter_vs_reference.png)
+
+![Figure [iblStretchyReflectionLoss]:
+Error in reflections due to assuming $v = n$ (bottom) -- loss of "stretchy reflections".](images/ibl/ibl_stretchy_reflections_error.png)
+
+![Figure [iblRoughnessInLods0]:
+Error due to storing the roughness in cubemaps LODs at roughness = 0.0625 (i.e.: sampling exactly between levels).
+Notice how instead of bluring we see a "cross-fade" between two blurs.](images/ibl/ibl_trilinear_0.png)
+
+![Figure [iblRoughnessInLods1]:
+Error due to storing the roughness in cubemaps LODs at roughness = 0.125 (i.e.: sampling exactly level 1).
+When the roughness closely matches a LOD, The error due to trilinear filtering in the cubemap is
+reduced. Notice the errors due to $v = n$ at grazing angles.](images/ibl/ibl_trilinear_1.png)
 
 
 ### Clear coat ###
@@ -3439,19 +3461,36 @@ $$\begin{equation}\label{iblSampling}
 \Lout(n,v,\Theta) \equiv \frac{1}{N} \sum_{i}^{N} f(l_{i}^{uniform},v,\Theta) L_{\perp}(l_i) \left< n \cdot l_i^{uniform} \right>
 \end{equation}$$
 
-Unfortunately, we would need too many samples to evaluate this integral. A technique commonly used is to choose samples that are more "important" more often, this is called _importance sampling_. In our case we'll use the probability density function (PDF) of the BRDF as the distribution of samples.
+Unfortunately, we would need too many samples to evaluate this integral. A technique commonly used
+is to choose samples that are more "important" more often, this is called _importance sampling_.
+In our case we'll use the distribution of micro-facets normals, $D_{ggx}$, as the distribution of
+important samples.
 
-The evaluation of $ \Lout(n,v,\Theta) $ with importance sampling is presented in equation $\ref{iblImportanceSampling}$.
+The evaluation of $ \Lout(n,v,\Theta) $ with importance sampling is presented in equation $\ref{annexIblImportanceSampling}$.
 
-$$\begin{equation}\label{iblImportanceSampling}
+$$\begin{equation}\label{annexIblImportanceSampling}
 \Lout(n,v,\Theta) \equiv \frac{1}{N} \sum_{i}^{N} \frac{f(l_{i},v,\Theta)}{p(l_i,v,\Theta)} L_{\perp}(l_i) \left< n \cdot l_i \right>
 \end{equation}$$
 
-In equation $\ref{iblImportanceSampling}$, $p$ is the probability density function (PDF) of the BRDF $f$, and $l_i$ represents the _important direction samples_ with that BRDF. These samples depend on $v$ and $\alpha$. The definition of the PDF and its Jacobian (the transform from $h$ to $l$) is shown in equation $\ref{iblPDF}$.
+In equation $\ref{annexIblImportanceSampling}$, $p$ is the probability density function (PDF) of the
+distribution of _important direction samples_ $l_i$. These samples depend on $h_i$, $v$ and $\alpha$.
+The definition of the PDF is shown in equation $\ref{iblPDF}$.
+
+$h_i$ is given by the distribution we chose, see section [Choosing important directions] for more details.
+
+The _important direction samples_ $l_i$ are calculated as the reflection of $v$ around $h_i$, and therefore
+**do not** have the same PDF as $h_i$. The PDF of a transformed distribution is given by:
+
+$$\begin{equation}
+p(T_r(x)) = p(x) |J(T_r)|
+\end{equation}$$
+
+Where $|J(T_r)|$ is the determinant of the Jacobian of the transform. In our case we're considering
+the transform from $h_i$ to $l_i$ and the determinant of its Jacobian is given in \ref{iblPDF}.
 
 $$\begin{equation}\label{iblPDF}
-p(l,v,\Theta) = D(h,\alpha) \left< \NoH \right> J(h) \\
-J(h) = \frac{1}{4 \left< \VoH \right>}
+p(l,v,\Theta) = D(h,\alpha) \left< \NoH \right> |J_{h \rightarrow l}| \\
+|J_{h \rightarrow l}| = \frac{1}{4 \left< \VoH \right>}
 \end{equation}$$
 
 ### Choosing important directions
@@ -3591,7 +3630,7 @@ float2 DFG(float NoV, float a) {
     float2 r = 0.0f;
     for (uint i = 0; i < sampleCount; i++) {
         float2 Xi = hammersley(i, sampleCount);
-        float3 H = importanceSampleGGX(Xi, a, N);       
+        float3 H = importanceSampleGGX(Xi, a, N);
         float3 L = 2.0f * dot(V, H) * H - V;
 
         float VoH = saturate(dot(V, H));
@@ -3745,7 +3784,7 @@ void computeShBasis(
     }
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-[Listing [nonNormalizedSHBasis]: C++ implementation to compute a non-normalized SH basis] 
+[Listing [nonNormalizedSHBasis]: C++ implementation to compute a non-normalized SH basis]
 
 SH bases $y^m_l(s)$ for the first 3 bands:
 
@@ -4190,7 +4229,7 @@ August 21, 2018: Multiscattering
 
 August 17, 2018: Specular color
  - Added section [Specular color] to explain how the base color of various metals is computed
- 
+
 August 15, 2018: Fresnel
  - Added a description of the Fresnel effect in section [Fresnel (specular F)]
 
@@ -4199,7 +4238,7 @@ August 9, 2018: Lighting
 
 August 7, 2018: Cloth model
  - Added description of the "Charlie" NDF
- 
+
 August 3, 2018: First public version
 
 # Bibliography
