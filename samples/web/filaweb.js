@@ -94,7 +94,6 @@ function load_rawfile(url) {
     return promise;
 }
 
-// The C++ layer uses STB to decode the PNG contents into RGBA data.
 let load_texture = load_rawfile;
 
 function load_cubemap(urlprefix, nmips) {

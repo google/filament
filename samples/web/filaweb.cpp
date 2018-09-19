@@ -19,6 +19,8 @@
 #include <string>
 #include <sstream>
 
+#include <utils/Path.h>
+
 #include <imgui.h>
 
 #define STB_IMAGE_IMPLEMENTATION
@@ -28,8 +30,12 @@
 
 #include <emscripten.h>
 
+#include <image/KtxBundle.h>
+
 using namespace filament;
+using namespace image;
 using namespace std;
+using namespace utils;
 
 extern "C" void render() {
     filaweb::Application::get()->render();
@@ -159,13 +165,12 @@ Asset getRawFile(const char* name) {
     };
 }
 
-Asset getTexture(const char* name) {
-    Asset result = getRawFile(name);
+static Asset getPngTexture(const Asset& rawfile, const char* name) {
     int width, height, ncomp;
-    stbi_info_from_memory(result.data.get(), result.nbytes, &width, &height, &ncomp);
+    stbi_info_from_memory(rawfile.data.get(), rawfile.nbytes, &width, &height, &ncomp);
     const uint32_t nbytes = width * height * 4;
     uint8_t* texels = new uint8_t[nbytes];
-    stbi_uc* decoded = stbi_load_from_memory(result.data.get(), result.nbytes, &width, &height,
+    stbi_uc* decoded = stbi_load_from_memory(rawfile.data.get(), rawfile.nbytes, &width, &height,
             &ncomp, 4);
     memcpy(texels, decoded, nbytes);
     stbi_image_free(decoded);
@@ -173,8 +178,35 @@ Asset getTexture(const char* name) {
         .data = decltype(Asset::data)(texels),
         .nbytes = nbytes,
         .width = uint32_t(width),
-        .height = uint32_t(height)
+        .height = uint32_t(height),
+        .channels = 4
     };
+}
+
+static Asset getKtxTexture(const Asset& rawfile, const char* name) {
+    KtxBundle bundle(rawfile.data.get(), rawfile.nbytes);
+    uint8_t* blobData;
+    uint32_t blobSize;
+    bundle.getBlob({}, &blobData, &blobSize);
+    uint8_t* texels = new uint8_t[blobSize];
+    memcpy(texels, blobData, blobSize);
+    const KtxInfo& info = bundle.getInfo();
+    return {
+        .data = decltype(Asset::data)(texels),
+        .nbytes = blobSize,
+        .width = info.pixelWidth,
+        .height = info.pixelHeight,
+        .channels = info.glTypeSize
+    };
+}
+
+Asset getTexture(const char* name) {
+    Asset rawfile = getRawFile(name);
+    string extension = Path(name).getExtension();
+    if (extension == "png" || extension == "rgbm") {
+        return getPngTexture(rawfile, name);
+    }
+    return getKtxTexture(rawfile, name);
 }
 
 Asset getCubemap(const char* name) {
