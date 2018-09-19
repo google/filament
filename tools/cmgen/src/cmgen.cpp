@@ -14,15 +14,16 @@
  * limitations under the License.
  */
 
-#include <algorithm>
 #include <cmath>
-#include <iostream>
 #include <fstream>
-
 #include <iomanip>
+#include <iostream>
+#include <sstream>
 
 #include <math/scalar.h>
 #include <math/vec4.h>
+
+#include <image/KtxBundle.h>
 
 #include <imageio/ImageDecoder.h>
 #include <imageio/ImageEncoder.h>
@@ -46,6 +47,7 @@ enum class ShFile {
     SH_NONE, SH_CROSS, SH_TEXT
 };
 static image::ImageEncoder::Format g_format = image::ImageEncoder::Format::PNG;
+static bool g_ktxContainer = false;
 static std::string g_compression;
 static bool g_extract_faces = false;
 static double g_extract_blur = 0.0;
@@ -98,6 +100,7 @@ static void outputSpectrum(std::ostream& out, const std::unique_ptr<math::double
         size_t numBands);
 static void saveImage(const std::string& path, ImageEncoder::Format format, const Image& image,
         const std::string& compression);
+static LinearImage toLinearImage(const Image& image);
 
 // -----------------------------------------------------------------------------------------------
 
@@ -127,7 +130,7 @@ static void printUsage(char* name) {
             "       Print copyright and license information\n\n"
             "   --quiet, -q\n"
             "       Quiet mode. Suppress all non-error output\n\n"
-            "   --format=[exr|hdr|psd|rgbm|png|dds], -f [exr|hdr|psd|rgbm|png|dds]\n"
+            "   --format=[exr|hdr|psd|rgbm|png|dds|ktx], -f [exr|hdr|psd|rgbm|png|dds|ktx]\n"
             "       Specify output file format\n\n"
             "   --compression=COMPRESSION, -c COMPRESSION\n"
             "       Format specific compression:\n"
@@ -253,6 +256,10 @@ static int handleCommandLineArgments(int argc, char* argv[]) {
                 }
                 if (arg == "dds") {
                     g_format = ImageEncoder::Format::DDS_LINEAR;
+                    format_specified = true;
+                }
+                if (arg == "ktx") {
+                    g_ktxContainer = true;
                     format_specified = true;
                 }
                 break;
@@ -726,7 +733,23 @@ void iblRoughnessPrefilter(const utils::Path& iname,
     const size_t baseExp = __builtin_ctz(g_output_size ? g_output_size : 256);
     size_t numSamples = g_num_samples;
     const size_t numLevels = baseExp + 1;
-    for (ssize_t i=baseExp ; i>=0 ; --i) {
+
+    // It's convenient to create an empty KTX bundle on the stack in this scope, regardless of
+    // whether KTX is requested. It does not consume memory if empty.
+    KtxBundle container(numLevels, 1, true);
+    container.info() = {
+        .endianness = KtxBundle::ENDIAN_DEFAULT,
+        .glType = KtxBundle::UNSIGNED_BYTE,
+        .glTypeSize = 4,
+        .glFormat = KtxBundle::RGBA,
+        .glInternalFormat = KtxBundle::RGBA,
+        .glBaseInternalFormat = KtxBundle::RGBA,
+        .pixelWidth = 1U << baseExp,
+        .pixelHeight = 1U << baseExp,
+        .pixelDepth = 0,
+    };
+
+    for (ssize_t i = baseExp; i >= 0; --i) {
         const size_t dim = 1U << (DEBUG_FULL_RESOLUTION ? baseExp : i);
         const size_t level = baseExp - i;
         if (level >= 2) {
@@ -762,12 +785,34 @@ void iblRoughnessPrefilter(const utils::Path& iname,
         }
 
         std::string ext = ImageEncoder::chooseExtension(g_format);
+
+        if (g_ktxContainer) {
+            for (uint32_t j = 0; j < 6; j++) {
+                KtxBlobIndex blobIndex {(uint32_t) level, 0, j};
+                LinearImage image = toLinearImage(dst.getImageForFace((Cubemap::Face) j));
+                auto uintData = fromLinearToRGBM<uint8_t>(image);
+                container.setBlob(blobIndex, uintData.get(), dim * dim * 4);
+            }
+            continue;
+        }
+
         for (size_t j = 0; j < 6; j++) {
             Cubemap::Face face = (Cubemap::Face) j;
             std::string filename = outputDir
                     + ("m" + std::to_string(level) + "_" + CubemapUtils::getFaceName(face) + ext);
             saveImage(filename, g_format, dst.getImageForFace(face), g_compression);
         }
+    }
+
+    if (g_ktxContainer) {
+        using namespace std;
+        vector<uint8_t> fileContents(container.getSerializedLength());
+        container.serialize(fileContents.data(), fileContents.size());
+        string filename = iname.getNameWithoutExtension() + "_ibl.ktx";
+        auto fullpath = outputDir + filename;
+        ofstream outputStream(fullpath.c_str(), ios::out | ios::binary);
+        outputStream.write((const char*) fileContents.data(), fileContents.size());
+        outputStream.close();
     }
 }
 
@@ -869,17 +914,47 @@ void extractCubemapFaces(const utils::Path& iname, const Cubemap& cm, const util
     if (!outputDir.exists()) {
         outputDir.mkdirRecursive();
     }
+
+    if (g_ktxContainer) {
+        using namespace std;
+        const uint32_t dim = cm.getDimensions();
+        KtxBundle container(1, 1, true);
+        container.info() = {
+            .endianness = KtxBundle::ENDIAN_DEFAULT,
+            .glType = KtxBundle::UNSIGNED_BYTE,
+            .glTypeSize = 4,
+            .glFormat = KtxBundle::RGBA,
+            .glInternalFormat = KtxBundle::RGBA,
+            .glBaseInternalFormat = KtxBundle::RGBA,
+            .pixelWidth = dim,
+            .pixelHeight = dim,
+            .pixelDepth = 0,
+        };
+        for (uint32_t j = 0; j < 6; j++) {
+            LinearImage image = toLinearImage(cm.getImageForFace((Cubemap::Face) j));
+            auto uintData = fromLinearToRGBM<uint8_t>(image);
+            container.setBlob({0, 0, j}, uintData.get(), dim * dim * 4);
+        }
+        string filename = iname.getNameWithoutExtension() + "_skybox.ktx";
+        auto fullpath = outputDir + filename;
+        vector<uint8_t> fileContents(container.getSerializedLength());
+        container.serialize(fileContents.data(), fileContents.size());
+        ofstream outputStream(fullpath.c_str(), ios::out | ios::binary);
+        outputStream.write((const char*) fileContents.data(), fileContents.size());
+        outputStream.close();
+        return;
+    }
+
     std::string ext = ImageEncoder::chooseExtension(g_format);
-    for (size_t i=0 ; i<6 ; i++) {
-        Cubemap::Face face = (Cubemap::Face)i;
+    for (size_t i = 0; i < 6; i++) {
+        Cubemap::Face face = (Cubemap::Face) i;
         std::string filename(outputDir + (CubemapUtils::getFaceName(face) + ext));
         saveImage(filename, g_format, cm.getImageForFace(face), g_compression);
     }
 }
 
-static void saveImage(const std::string& path, ImageEncoder::Format format, const Image& image,
-        const std::string& compression) {
-    std::ofstream outputStream(path, std::ios::binary | std::ios::trunc);
+// Converts a cmgen Image into a libimage LinearImage
+static LinearImage toLinearImage(const Image& image) {
     LinearImage linearImage(image.getWidth(), image.getHeight(), 3);
 
     // Copy row by row since the image has padding.
@@ -890,8 +965,13 @@ static void saveImage(const std::string& path, ImageEncoder::Format format, cons
         float const* src = static_cast<float const*>(image.getPixelRef(0, row));
         memcpy(dst, src, w * 12);
     }
+    return linearImage;
+}
 
-    if (!ImageEncoder::encode(outputStream, format, linearImage, compression, path)) {
+static void saveImage(const std::string& path, ImageEncoder::Format format, const Image& image,
+        const std::string& compression) {
+    std::ofstream outputStream(path, std::ios::binary | std::ios::trunc);
+    if (!ImageEncoder::encode(outputStream, format, toLinearImage(image), compression, path)) {
         exit(1);
     }
 }
