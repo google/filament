@@ -3461,19 +3461,36 @@ $$\begin{equation}\label{iblSampling}
 \Lout(n,v,\Theta) \equiv \frac{1}{N} \sum_{i}^{N} f(l_{i}^{uniform},v,\Theta) L_{\perp}(l_i) \left< n \cdot l_i^{uniform} \right>
 \end{equation}$$
 
-Unfortunately, we would need too many samples to evaluate this integral. A technique commonly used is to choose samples that are more "important" more often, this is called _importance sampling_. In our case we'll use the probability density function (PDF) of the BRDF as the distribution of samples.
+Unfortunately, we would need too many samples to evaluate this integral. A technique commonly used 
+is to choose samples that are more "important" more often, this is called _importance sampling_. 
+In our case we'll use $D_{ggx}\left< \NoH \right>$ as probability density function (PDF) for our samples.
 
-The evaluation of $ \Lout(n,v,\Theta) $ with importance sampling is presented in equation $\ref{iblImportanceSampling}$.
+The evaluation of $ \Lout(n,v,\Theta) $ with importance sampling is presented in equation $\ref{annexIblImportanceSampling}$.
 
-$$\begin{equation}\label{iblImportanceSampling}
+$$\begin{equation}\label{annexIblImportanceSampling}
 \Lout(n,v,\Theta) \equiv \frac{1}{N} \sum_{i}^{N} \frac{f(l_{i},v,\Theta)}{p(l_i,v,\Theta)} L_{\perp}(l_i) \left< n \cdot l_i \right>
 \end{equation}$$
 
-In equation $\ref{iblImportanceSampling}$, $p$ is the probability density function (PDF) of the BRDF $f$, and $l_i$ represents the _important direction samples_ with that BRDF. These samples depend on $v$ and $\alpha$. The definition of the PDF and its Jacobian (the transform from $h$ to $l$) is shown in equation $\ref{iblPDF}$.
+In equation $\ref{annexIblImportanceSampling}$, $p$ is the probability density function (PDF) of the 
+samples, and $l_i$ represents the _important direction samples_. These samples depend on $h_i$, $v$ and $\alpha$. 
+The definition of the PDF is shown in equation $\ref{iblPDF}$.
+
+$h_i$ is given by the PDF we chose, here $D_{ggx}\left< \NoH \right>$ from a uniform distribution,
+see section [Choosing important directions] for more details.
+
+The _important direction samples_ $l_i$ are calculated as the reflection of $v$ around $h_i$, and therefore
+**do not** have the same PDF as $h_i$. The PDF of a transformed distribution is given by:
+
+$$\begin{equation}
+p(T_r(x)) = p(x) |J(T_r)|
+\end{equation}$$
+
+Where $|J(T_r)|$ is the determinant of the Jacobian of the transform. In our case we're considering
+the transform from $h_i$ to $l_i$ and the determinant of its Jacobian is given in \ref{iblPDF}.
 
 $$\begin{equation}\label{iblPDF}
-p(l,v,\Theta) = D(h,\alpha) \left< \NoH \right> J(h) \\
-J(h) = \frac{1}{4 \left< \VoH \right>}
+p(l,v,\Theta) = D(h,\alpha) \left< \NoH \right> |J_{h \rightarrow l}| \\
+|J_{h \rightarrow l}| = \frac{1}{4 \left< \VoH \right>}
 \end{equation}$$
 
 ### Choosing important directions
