@@ -3461,9 +3461,10 @@ $$\begin{equation}\label{iblSampling}
 \Lout(n,v,\Theta) \equiv \frac{1}{N} \sum_{i}^{N} f(l_{i}^{uniform},v,\Theta) L_{\perp}(l_i) \left< n \cdot l_i^{uniform} \right>
 \end{equation}$$
 
-Unfortunately, we would need too many samples to evaluate this integral. A technique commonly used 
-is to choose samples that are more "important" more often, this is called _importance sampling_. 
-In our case we'll use $D_{ggx}\left< \NoH \right>$ as probability density function (PDF) for our samples.
+Unfortunately, we would need too many samples to evaluate this integral. A technique commonly used
+is to choose samples that are more "important" more often, this is called _importance sampling_.
+In our case we'll use the distribution of micro-facets normals, $D_{ggx}$, as the distribution of
+important samples.
 
 The evaluation of $ \Lout(n,v,\Theta) $ with importance sampling is presented in equation $\ref{annexIblImportanceSampling}$.
 
@@ -3471,12 +3472,11 @@ $$\begin{equation}\label{annexIblImportanceSampling}
 \Lout(n,v,\Theta) \equiv \frac{1}{N} \sum_{i}^{N} \frac{f(l_{i},v,\Theta)}{p(l_i,v,\Theta)} L_{\perp}(l_i) \left< n \cdot l_i \right>
 \end{equation}$$
 
-In equation $\ref{annexIblImportanceSampling}$, $p$ is the probability density function (PDF) of the 
-samples, and $l_i$ represents the _important direction samples_. These samples depend on $h_i$, $v$ and $\alpha$. 
+In equation $\ref{annexIblImportanceSampling}$, $p$ is the probability density function (PDF) of the
+distribution of _important direction samples_ $l_i$. These samples depend on $h_i$, $v$ and $\alpha$.
 The definition of the PDF is shown in equation $\ref{iblPDF}$.
 
-$h_i$ is given by the PDF we chose, here $D_{ggx}\left< \NoH \right>$ from a uniform distribution,
-see section [Choosing important directions] for more details.
+$h_i$ is given by the distribution we chose, see section [Choosing important directions] for more details.
 
 The _important direction samples_ $l_i$ are calculated as the reflection of $v$ around $h_i$, and therefore
 **do not** have the same PDF as $h_i$. The PDF of a transformed distribution is given by:
@@ -3630,7 +3630,7 @@ float2 DFG(float NoV, float a) {
     float2 r = 0.0f;
     for (uint i = 0; i < sampleCount; i++) {
         float2 Xi = hammersley(i, sampleCount);
-        float3 H = importanceSampleGGX(Xi, a, N);       
+        float3 H = importanceSampleGGX(Xi, a, N);
         float3 L = 2.0f * dot(V, H) * H - V;
 
         float VoH = saturate(dot(V, H));
@@ -3784,7 +3784,7 @@ void computeShBasis(
     }
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-[Listing [nonNormalizedSHBasis]: C++ implementation to compute a non-normalized SH basis] 
+[Listing [nonNormalizedSHBasis]: C++ implementation to compute a non-normalized SH basis]
 
 SH bases $y^m_l(s)$ for the first 3 bands:
 
@@ -4229,7 +4229,7 @@ August 21, 2018: Multiscattering
 
 August 17, 2018: Specular color
  - Added section [Specular color] to explain how the base color of various metals is computed
- 
+
 August 15, 2018: Fresnel
  - Added a description of the Fresnel effect in section [Fresnel (specular F)]
 
@@ -4238,7 +4238,7 @@ August 9, 2018: Lighting
 
 August 7, 2018: Cloth model
  - Added description of the "Charlie" NDF
- 
+
 August 3, 2018: First public version
 
 # Bibliography
