@@ -6,18 +6,21 @@ __Note: Tungsten is still a work-in-progress and is not ready for public at-larg
 
 ## Prerequisites
 
-Before building Tungsten, you'll need to first build Filament. See Filament's [README](../../README.md) for instructions. Be sure to run `make install` (or the equivalent for your chosen build system) to install Filament binaries to the `dist` folder at the root of Filament. Tungsten relies on `filament-java.jar`, `libfilament-jni` and `matc` in the appropriate directories under `dist`:
+Before building Tungsten, you'll need to first build Filament. See Filament's [README](../../README.md) for instructions. Be sure to run `make install` (or the equivalent for your chosen build system) to install Filament binaries to the `dist` folder at the root of Filament. Tungsten relies on `filament-java.jar`, `libfilament-jni`, and tools such as `matc` and `cmgen` in the appropriate directories under `dist`:
 
 ```
 Filament
 |-- dist
 |   |-- bin
 |       |-- matc
+|       |-- cmgen
 |   |-- lib
 |       |-- x86_64
 |           |-- libfilament-jni.*
 |       filament-java.jar
 ```
+
+The location of this directory can be changed by updating the `filament_tools_dir` property inside of `gradle.properties`.
 
 You'll also need Java 8 in order to use Tungsten. Tungsten is supported on Windows, Mac, and Linux.
 

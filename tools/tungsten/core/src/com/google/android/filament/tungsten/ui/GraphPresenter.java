@@ -42,6 +42,8 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
 import javax.swing.JTextArea;
+
+import com.google.android.filament.tungsten.ui.preview.PreviewMeshPanel;
 import org.jetbrains.annotations.Nullable;
 
 public class GraphPresenter implements IPropertiesPresenter {

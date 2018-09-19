@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.android.filament.tungsten.ui;
+package com.google.android.filament.tungsten.ui.preview;
 
 import com.google.android.filament.Camera;
 

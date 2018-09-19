@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.android.filament.tungsten.ui
+package com.google.android.filament.tungsten.ui.preview
 
 import com.curiouscreature.kotlin.math.Float2
 import com.google.android.filament.Camera
@@ -29,7 +29,7 @@ private const val DOLLY_MULTIPLIER = 5.0f
 
 private fun MouseEvent.toFloat2() = Float2(this.x.toFloat(), this.y.toFloat())
 
-class TungstenViewer(camera: Camera, val previewMeshPanel: PreviewMeshPanel)
+internal class TungstenViewer(camera: Camera, val previewMeshPanel: PreviewMeshPanel)
     : Filament.Viewer() {
 
     private val previewCamera = PreviewCamera(camera)
@@ -71,7 +71,7 @@ class TungstenViewer(camera: Camera, val previewMeshPanel: PreviewMeshPanel)
                 // Swing reports wheel events caused by a physical wheel (opposed to a trackpad)
                 // with an inverted sign. Flip it so it feels more intuitive.
                 val causedByWheel = mouseWheelEvent.wheelRotation != 0
-                val multiplier = if(causedByWheel) 1 else -1
+                val multiplier = if (causedByWheel) 1 else -1
                 manipulator.dolly(multiplier * mouseWheelEvent.preciseWheelRotation.toFloat() /
                         previewMeshPanel.width, DOLLY_MULTIPLIER)
             }

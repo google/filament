@@ -7,3 +7,4 @@ build/
 .externalNativeBuild
 out/
 *.iml
+/core/resources/ibls

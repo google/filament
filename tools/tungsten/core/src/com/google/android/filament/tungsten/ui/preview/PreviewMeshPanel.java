@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.android.filament.tungsten.ui;
+package com.google.android.filament.tungsten.ui.preview;
 
 import com.google.android.filament.Box;
 import com.google.android.filament.Camera;
@@ -34,6 +34,7 @@ import com.google.android.filament.filamesh.Filamesh;
 import com.google.android.filament.filamesh.FilameshLoader;
 import com.google.android.filament.tungsten.Filament;
 import com.google.android.filament.tungsten.MathUtils;
+
 import java.awt.BorderLayout;
 import java.awt.GraphicsDevice;
 import java.awt.GraphicsEnvironment;
@@ -64,7 +65,7 @@ public class PreviewMeshPanel extends JPanel {
     private PreviewCamera mPreviewCamera;
     private Filament.Viewer mViewer;
 
-    PreviewMeshPanel() {
+    public PreviewMeshPanel() {
         // On Windows D3D seems to mess with our OpenGLContext, this disable it.
         System.setProperty("sun.java2d.d3d", "false");
 
@@ -91,8 +92,6 @@ public class PreviewMeshPanel extends JPanel {
             mCamera.setProjection(90.0, 1.3, 0.1, 200.0, Camera.Fov.HORIZONTAL);
             mCamera.lookAt(1.5f, 1.5f, 1.5f, 0, 0, 0, 0, 1, 0);
 
-            mSun = LightHelpers.addSun(engine, mScene);
-            mPointLight = LightHelpers.addPointLight(engine, mScene);
             mIndirectLight = LightHelpers.addIndirectLight(engine, mScene);
 
             loadMesh(engine, mScene, mVertexBuffer, mIndexBuffer);
@@ -124,7 +123,7 @@ public class PreviewMeshPanel extends JPanel {
         });
     }
 
-    void updateMaterial(MaterialInstance newMaterialInstance) {
+    public void updateMaterial(MaterialInstance newMaterialInstance) {
         Filament.getInstance().runOnFilamentThread((Engine engine) -> {
             mMeshRenderable = engine.getRenderableManager().getInstance(mMeshEntity);
             engine.getRenderableManager().setMaterialInstanceAt(mMeshRenderable, 0,
@@ -132,7 +131,7 @@ public class PreviewMeshPanel extends JPanel {
         });
     }
 
-    void destroy() {
+    public void destroy() {
         Filament.getInstance().removeViewer(mViewer);
         Filament.getInstance().runOnFilamentThread((Engine engine) -> {
             engine.destroyRenderer(mRenderer);
@@ -146,8 +145,6 @@ public class PreviewMeshPanel extends JPanel {
             EntityManager.get().destroy(mMeshEntity);
             engine.getRenderableManager().destroy(mMeshEntity);
             engine.getTransformManager().destroy(mMeshTransform);
-            engine.getLightManager().destroy(mSun);
-            engine.getLightManager().destroy(mPointLight);
         });
     }
 

@@ -9,6 +9,8 @@ plugins {
     id 'org.jetbrains.kotlin.jvm' version '1.2.51'
 }
 
+apply from: '../../../android/build/filament-tasks.gradle'
+
 sourceSets {
     main {
         java {
@@ -35,6 +37,16 @@ dependencies {
 
     implementation project(':kotlin-math')
 }
+
+generateIbl {
+    group 'Tungsten'
+    description 'Generate a preview IBL'
+
+    inputFile = file("../../../third_party/environments/venetian_crossroads_2k.hdr")
+    outputDir = file("resources/ibls")
+}
+
+processResources.dependsOn generateIbl
 
 test {
     testLogging {
