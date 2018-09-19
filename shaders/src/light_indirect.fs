@@ -32,8 +32,10 @@
 // IBL integration algorithm
 #define IBL_INTEGRATION_PREFILTERED_CUBEMAP         0
 #define IBL_INTEGRATION_IMPORTANCE_SAMPLING         1
-#define IBL_INTEGRATION_IMPORTANCE_SAMPLING_COUNT   32
+
 #define IBL_INTEGRATION                             IBL_INTEGRATION_PREFILTERED_CUBEMAP
+
+#define IBL_INTEGRATION_IMPORTANCE_SAMPLING_COUNT   64
 
 //------------------------------------------------------------------------------
 // IBL utilities
