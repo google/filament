@@ -31,6 +31,12 @@ Example:
 $ ./gradlew -Pfilament_tools_dir=../../dist-release assembleDebug
 ```
 
+## Important: SDK location
+
+Make sure each project contains a `local.properties` file with the `sdk.dir` property pointing
+to your installation of the Android SDK. This includes the project `filament-android` in the
+parent directory.
+
 ## Android Studio
 
 Due to issues with composite builds in Android Studio 3.1, it is highly recommended to use
