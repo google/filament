@@ -198,7 +198,7 @@ std::unique_ptr<double3[]> CubemapSH::computeSH(const Cubemap& cm, size_t numBan
         std::unique_ptr<double[]> SHb;
     } prototype(numCoefs);
 
-    CubemapUtils::process<State>(cm,
+    CubemapUtils::process<State>(const_cast<Cubemap&>(cm),
             [&](State& state, size_t y, Cubemap::Face f, Cubemap::Texel const* data, size_t dim) {
         for (size_t x=0 ; x<dim ; ++x, ++data) {
 
@@ -239,7 +239,7 @@ std::unique_ptr<double3[]> CubemapSH::computeSH(const Cubemap& cm, size_t numBan
     return SH;
 }
 
-void CubemapSH::renderSH(const Cubemap& cm,
+void CubemapSH::renderSH(Cubemap& cm,
         const std::unique_ptr<double3[]>& sh, size_t numBands)
 {
     const size_t numCoefs = numBands*numBands;
@@ -298,7 +298,7 @@ std::unique_ptr<double3[]> CubemapSH::computeIrradianceSH3Bands(const Cubemap& c
         double3 SH[9] = { };
     };
 
-    CubemapUtils::process<State>(cm,
+    CubemapUtils::process<State>(const_cast<Cubemap&>(cm),
             [&](State& state, size_t y, Cubemap::Face f, Cubemap::Texel const* data, size_t dim) {
         for (size_t x=0 ; x<dim ; ++x, ++data) {
 
@@ -314,11 +314,11 @@ std::unique_ptr<double3[]> CubemapSH::computeIrradianceSH3Bands(const Cubemap& c
             state.SH[1] += color * A[1] * s.y;
             state.SH[2] += color * A[2] * s.z;
             state.SH[3] += color * A[3] * s.x;
-            state.SH[4] += color * A[4] * s.y*s.x;
-            state.SH[5] += color * A[5] * s.y*s.z;
-            state.SH[6] += color * A[6] * (3*s.z*s.z - 1);
-            state.SH[7] += color * A[7] * s.z*s.x;
-            state.SH[8] += color * A[8] * (s.x*s.x - s.y*s.y);
+            state.SH[4] += color * A[4] * s.y * s.x;
+            state.SH[5] += color * A[5] * s.y * s.z;
+            state.SH[6] += color * A[6] * (3 * s.z * s.z - 1);
+            state.SH[7] += color * A[7] * s.z * s.x;
+            state.SH[8] += color * A[8] * (s.x * s.x - s.y * s.y);
         }
     },
     [&](State& state) {
@@ -331,7 +331,7 @@ std::unique_ptr<double3[]> CubemapSH::computeIrradianceSH3Bands(const Cubemap& c
 }
 
 void CubemapSH::renderPreScaledSH3Bands(
-        const Cubemap& cm, const std::unique_ptr<math::double3[]>& sh) {
+        Cubemap& cm, const std::unique_ptr<math::double3[]>& sh) {
     CubemapUtils::process<CubemapUtils::EmptyState>(cm,
             [&](CubemapUtils::EmptyState&, size_t y, Cubemap::Face f, Cubemap::Texel* data, size_t dim) {
         for (size_t x=0 ; x<dim ; ++x, ++data) {
@@ -341,11 +341,11 @@ void CubemapSH::renderPreScaledSH3Bands(
             c += sh[1] * s.y;
             c += sh[2] * s.z;
             c += sh[3] * s.x;
-            c += sh[4] * s.y*s.x;
-            c += sh[5] * s.y*s.z;
-            c += sh[6] * (3*s.z*s.z - 1);
-            c += sh[7] * s.z*s.x;
-            c += sh[8] * (s.x*s.x - s.y*s.y);
+            c += sh[4] * s.y * s.x;
+            c += sh[5] * s.y * s.z;
+            c += sh[6] * (3 * s.z * s.z - 1);
+            c += sh[7] * s.z * s.x;
+            c += sh[8] * (s.x * s.x - s.y * s.y);
             Cubemap::writeAt(data, Cubemap::Texel(c));
         }
     });
