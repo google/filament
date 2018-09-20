@@ -85,12 +85,12 @@ class MaterialCompiler extends DefaultTask {
         inputs.outOfDate { InputFileDetails outOfDate ->
             def file = outOfDate.file
 
-            def out = new LogOutputStream(logger, LogLevel.INFO)
+            def out = new LogOutputStream(logger, LogLevel.LIFECYCLE)
             def err = new LogOutputStream(logger, LogLevel.ERROR)
 
             def header = ("Compiling material " + file + "\n").getBytes()
-            err.write(header)
             out.write(header)
+            out.flush()
 
             project.exec {
                 standardOutput out
@@ -137,12 +137,12 @@ class IblGenerator extends DefaultTask {
         inputs.outOfDate { InputFileDetails outOfDate ->
             def file = outOfDate.file
 
-            def out = new LogOutputStream(logger, LogLevel.INFO)
+            def out = new LogOutputStream(logger, LogLevel.LIFECYCLE)
             def err = new LogOutputStream(logger, LogLevel.ERROR)
 
             def header = ("Generating IBL " + file + "\n").getBytes()
-            err.write(header)
             out.write(header)
+            out.flush()
 
             project.exec {
                 standardOutput out
@@ -196,12 +196,12 @@ class MeshCompiler extends DefaultTask {
         inputs.outOfDate { InputFileDetails outOfDate ->
             def file = outOfDate.file
 
-            def out = new LogOutputStream(logger, LogLevel.INFO)
+            def out = new LogOutputStream(logger, LogLevel.LIFECYCLE)
             def err = new LogOutputStream(logger, LogLevel.ERROR)
 
             def header = ("Compiling mesh " + file + "\n").getBytes()
-            err.write(header)
             out.write(header)
+            out.flush()
 
             project.exec {
                 standardOutput out
