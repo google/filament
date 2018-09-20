@@ -256,6 +256,32 @@ vec3 importanceSamplingNdfDggx(vec2 u, float linearRoughness) {
     return vec3(cos(phi) * sinTheta, sin(phi) * sinTheta, cosTheta);
 }
 
+vec3 importanceSamplingVNdfDggx(vec2 u, float linearRoughness, vec3 v) {
+    // See: "A Simpler and Exact Sampling Routine for the GGX Distribution of Visible Normals", Eric Heitz
+    float alpha = linearRoughness;
+
+    // stretch view
+    v = normalize(vec3(alpha * v.x, alpha * v.y, v.z));
+
+    // orthonormal basis
+    vec3 t = (v.z < 0.999) ? normalize(cross(v, vec3(0.0, 0.0, 1.0))) : vec3(1.0, 0.0, 0.0);
+    vec3 b = cross(t, v);
+
+    // sample point with polar coordinates (r, phi)
+    float a = 1.0 / (1.0 + v.z);
+    float r = sqrt(u.x);
+    float phi = (u.y < a) ? u.y / a * PI : PI + (u.y - a) / (1.0 - a) * PI;
+    float p1 = r * cos(phi);
+    float p2 = r * sin(phi) * ((u.y < a) ? 1.0 : v.z);
+
+    // compute normal
+    vec3 h = p1 * t + p2 * b + sqrt(max(0.0, 1.0 - p1*p1 - p2*p2)) * v;
+
+    // unstretch
+    h = normalize(vec3(alpha * h.x, alpha * h.y, max(0.0, h.z)));
+    return h;
+}
+
 float prefilteredImportanceSampling(float ipdf) {
     // See: "Real-time Shading with Filtered Importance Sampling", Jaroslav Krivanek
     // Prefiltering doesn't work with anisotropy
