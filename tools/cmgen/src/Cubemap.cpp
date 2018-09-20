@@ -33,7 +33,7 @@ void Cubemap::resetDimensions(size_t dim) {
     mDimensions = dim;
     mScale = 2.0 / dim;
     mUpperBound = std::nextafter(mDimensions, 0);
-    for (size_t i=0 ; i<6 ; i++) {
+    for (size_t i = 0; i < 6; i++) {
         mFaces[i].reset();
     }
 }
@@ -179,6 +179,7 @@ Cubemap::Texel Cubemap::filterAt(const Image& image, double x, double y) {
     // and contain the "seamless" data.
     size_t x1 = x0 + 1;
     size_t y1 = y0 + 1;
+
     const float u = float(x - x0);
     const float v = float(y - y0);
     const float one_minus_u = 1 - u;

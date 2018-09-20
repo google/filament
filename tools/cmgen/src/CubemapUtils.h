@@ -49,6 +49,8 @@ public:
     // Convert equirectangular Image to a Cubemap
     static void equirectangularToCubemap(Cubemap& dst, const Image& src);
 
+    static void cubemapToEquirectangular(Image& dst, const Cubemap& src);
+
     // Convert h or v cross Image to a Cubemap
     static void crossToCubemap(Cubemap& dst, const Image& src);
 
