@@ -57,7 +57,7 @@ static constexpr uint8_t MATERIAL_LIT_PACKAGE[] = {
 
 static SuzanneApp app;
 
-static Texture* setTextureParameter(Engine& engine, filaweb::Asset& asset, string name,
+static Texture* setTextureParameter(Engine& engine, filaweb::Asset& asset, string name, bool linear,
         TextureSampler const &sampler) {
 
     const auto destructor = [](void* buffer, size_t size, void* user) {
@@ -80,8 +80,8 @@ static Texture* setTextureParameter(Engine& engine, filaweb::Asset& asset, strin
     switch (asset.channels) {
         case 1: internalFormat = Format::R8; break;
         case 2: internalFormat = Format::RG8; break;
-        case 3: internalFormat = Format::SRGB8; break;
-        case 4: internalFormat = Format::SRGB8_A8; break;
+        case 3: internalFormat = linear ? Format::RGB8 : Format::SRGB8; break;
+        case 4: internalFormat = linear ? Format::RGBA8 : Format::SRGB8_A8; break;
     }
 
     auto texture = Texture::Builder()
@@ -126,15 +126,15 @@ void setup(Engine* engine, View* view, Scene* scene) {
 
     // Create textures.
     TextureSampler sampler(MagFilter::LINEAR, WrapMode::CLAMP_TO_EDGE);
-    auto setTexture = [engine, sampler] (filaweb::Asset& asset, const char* name) {
+    auto setTexture = [engine, sampler] (filaweb::Asset& asset, const char* name, bool linear) {
         printf("%s: %d x %d\n", name, asset.width, asset.height);
-        setTextureParameter(*engine, asset, name, sampler);
+        setTextureParameter(*engine, asset, name, linear, sampler);
     };
-    setTexture(albedo, "albedo");
-    setTexture(metallic, "metallic");
-    setTexture(roughness, "roughness");
-    setTexture(normal, "normal");
-    setTexture(ao, "ao");
+    setTexture(albedo, "albedo", false);
+    setTexture(metallic, "metallic", false);
+    setTexture(roughness, "roughness", false);
+    setTexture(normal, "normal", true);
+    setTexture(ao, "ao", false);
 
     // Create the sun.
     auto& em = EntityManager::get();

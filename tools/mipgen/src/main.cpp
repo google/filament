@@ -227,7 +227,7 @@ int main(int argc, char* argv[]) {
     puts("Reading image...");
     ifstream inputStream(inputPath.getPath(), ios::binary);
     LinearImage sourceImage = ImageDecoder::decode(inputStream, inputPath.getPath(),
-            ImageDecoder::ColorSpace::SRGB);
+            g_linearized ? ImageDecoder::ColorSpace::LINEAR : ImageDecoder::ColorSpace::SRGB);
     if (!sourceImage.isValid()) {
         cerr << "Unable to open image: " << inputPath.getPath() << endl;
         return 1;
