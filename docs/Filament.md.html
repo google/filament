@@ -2137,7 +2137,8 @@ analytic approximation. Note however that since we only need to store two terms,
 OpenGL ES 3.0's RG16F texture format is a good candidate.
 
 Such analytic approximation is described in [#Karis14], itself based on [#Lazarov13]. 
-[#Narkowicz14] is another interesting approximation. 
+[#Narkowicz14] is another interesting approximation. Note that these two approximations are not
+compatible with the energy compensation term presented in section [Pre-integration for multiscattering].
 Table [textureApproxDFG] presents a visual representation of these approximations.
 
 $DFG_1$                         | $DFG_2$                         | ${ DFG_1, DFG_2, 0 }$
@@ -2176,7 +2177,7 @@ vec3 ibl(vec3 n, vec3 v, vec3 diffuseColor, vec3 f0, vec3 f90, float roughness) 
     vec3 r = reflect(n);
     vec3 Ld = textureCube(irradianceEnvMap, r) * diffuseColor;
     vec3 Lld = textureCube(prefilteredEnvMap, r, computeLODFromRoughness(roughness));
-    vec2 Ldfg = texture2D(dfgLut, vec2(dot(n, v), roughness)).xy;
+    vec2 Ldfg = textureLod(dfgLut, vec2(dot(n, v), roughness), 0.0).xy;
     vec3 Lr =  (f0 * Ldfg.x + f90 * Ldfg.y) * Lld;
     return Ld + Lr;
 }
@@ -2202,6 +2203,9 @@ vec3 irradianceSH(vec3 n) {
         + sphericalHarmonics[8] * (n.x * n.x - n.y * n.y);
 }
 
+// NOTE: this approximation is not valid if the energy compensation term
+// for multiscattering is applied. We use the DFG LUT solution to implement
+// multiscattering
 vec2 prefilteredDFG(float NoV, float roughness) {
     // Karis' approximation based on Lazarov's
     const vec4 c0 = vec4(-1.0, -0.0275, -0.572,  0.022);
@@ -2211,6 +2215,13 @@ vec2 prefilteredDFG(float NoV, float roughness) {
     return vec2(-1.04, 1.04) * a004 + r.zw;
     // Zioma's approximation based on Karis
     // return vec2(1.0, pow(1.0 - max(roughness, NoV), 3.0));
+}
+
+// NOTE: this is the DFG LUT implementation of the function above
+vec2 prefilteredDFG_LUT(float coord, float NoV) {
+    // coord = sqrt(linear_roughness), which is the mapping used by the
+    // IBL prefiltering code when computing the mipmaps
+    return textureLod(dfgLut, vec2(NoV, coord), 0.0).rg;
 }
 
 vec3 evaluateSpecularIBL(vec3 r, float roughness) {
@@ -2227,13 +2238,14 @@ vec3 evaluateIBL(vec3 n, vec3 v, vec3 diffuseColor, vec3 f0, vec3 f90, float rou
 
     // Specular indirect
     vec3 indirectSpecular = evaluateSpecularIBL(r, roughness);
-    vec2 env = prefilteredDFG(NoV, roughness);
+    vec2 env = prefilteredDFG_LUT(NoV, roughness);
     vec3 specularColor = f0 * env.x + f90 * env.y;
 
     // Diffuse indirect
     // We multiply by the Lambertian BRDF to compute radiance from irradiance
     // With the Disney BRDF we would have to remove the Fresnel term that
-    // depends on NoL (it would be rolled into the SH)
+    // depends on NoL (it would be rolled into the SH). The Lambertian BRDF
+    // can be baked directly in the SH to save a multiplication here
     vec3 indirectDiffuse = max(irradianceSH(n), 0.0) * Fd_Lambert();
 
     // Indirect contribution
