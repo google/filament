@@ -50,8 +50,12 @@ enum class ShFile {
 static const size_t DFG_LUT_DEFAULT_SIZE = 128;
 static const size_t IBL_DEFAULT_SIZE = 256;
 
+enum class OutputType {
+    FACES, KTX, EQUIRECT
+};
+
 static image::ImageEncoder::Format g_format = image::ImageEncoder::Format::PNG;
-static bool g_ktx_output = false;
+static OutputType g_type = OutputType::FACES;
 static std::string g_compression;
 static bool g_extract_faces = false;
 static double g_extract_blur = 0.0;
@@ -136,8 +140,10 @@ static void printUsage(char* name) {
             "       Print copyright and license information\n\n"
             "   --quiet, -q\n"
             "       Quiet mode. Suppress all non-error output\n\n"
+            "   --type=[faces|equirect|ktx], -t [cubemap|equirect|ktx]\n"
+            "       Specify output type (default: cubemap)\n\n"
             "   --format=[exr|hdr|psd|rgbm|png|dds|ktx], -f [exr|hdr|psd|rgbm|png|dds|ktx]\n"
-            "       Specify output file format\n\n"
+            "       Specify output file format. ktx implies -type=ktx.\n\n"
             "   --compression=COMPRESSION, -c COMPRESSION\n"
             "       Format specific compression:\n"
             "           PNG: Ignored\n"
@@ -195,11 +201,12 @@ static void license() {
 }
 
 static int handleCommandLineArgments(int argc, char* argv[]) {
-    static constexpr const char* OPTSTR = "hqidf:c:s:x:";
+    static constexpr const char* OPTSTR = "hqidt:f:c:s:x:";
     static const struct option OPTIONS[] = {
             { "help",                       no_argument, nullptr, 'h' },
             { "license",                    no_argument, nullptr, 'l' },
             { "quiet",                      no_argument, nullptr, 'q' },
+            { "type",                 required_argument, nullptr, 't' },
             { "format",               required_argument, nullptr, 'f' },
             { "compression",          required_argument, nullptr, 'c' },
             { "size",                 required_argument, nullptr, 's' },
@@ -224,6 +231,8 @@ static int handleCommandLineArgments(int argc, char* argv[]) {
     int option_index = 0;
     int num_sh_bands = 3;
     bool format_specified = false;
+    bool type_specified = false;
+    bool ktx_format_requested = false;
     while ((opt = getopt_long(argc, argv, OPTSTR, OPTIONS, &option_index)) >= 0) {
         std::string arg(optarg ? optarg : "");
         switch (opt) {
@@ -238,6 +247,20 @@ static int handleCommandLineArgments(int argc, char* argv[]) {
                 break;
             case 'q':
                 g_quiet = true;
+                break;
+            case 't':
+                if (arg == "faces") {
+                    g_type = OutputType::FACES;
+                    type_specified = true;
+                }
+                if (arg == "ktx") {
+                    g_type = OutputType::KTX;
+                    type_specified = true;
+                }
+                if (arg == "equirect") {
+                    g_type = OutputType::EQUIRECT;
+                    type_specified = true;
+                }
                 break;
             case 'f':
                 if (arg == "png") {
@@ -265,7 +288,7 @@ static int handleCommandLineArgments(int argc, char* argv[]) {
                     format_specified = true;
                 }
                 if (arg == "ktx") {
-                    g_ktx_output = true;
+                    ktx_format_requested = true;
                     format_specified = true;
                 }
                 break;
@@ -351,6 +374,15 @@ static int handleCommandLineArgments(int argc, char* argv[]) {
                 g_mirror = true;
                 break;
         }
+    }
+
+    if (ktx_format_requested) {
+        g_type = OutputType::KTX;
+        type_specified = true;
+    }
+
+    if (g_deploy && !type_specified) {
+        g_type = OutputType::FACES;
     }
 
     if (g_deploy && !format_specified) {
@@ -560,7 +592,7 @@ int main(int argc, char* argv[]) {
             if (!g_quiet) {
                 std::cout << "Blurring..." << std::endl;
             }
-            const double linear_roughness = g_extract_blur*g_extract_blur;
+            const double linear_roughness = g_extract_blur * g_extract_blur;
             const size_t dim = g_output_size ? g_output_size : cm.getDimensions();
             Image image;
             Cubemap blurred = CubemapUtils::create(image, dim);
@@ -715,6 +747,17 @@ void iblMipmapPrefilter(const utils::Path& iname,
         }
 
         std::string ext = ImageEncoder::chooseExtension(g_format);
+
+        if (g_type == OutputType::EQUIRECT) {
+            size_t dim = dst.getDimensions();
+            std::unique_ptr<uint8_t[]> buf(new uint8_t[dim * 2 * dim * sizeof(float3)]);
+            Image image(std::move(buf), dim * 2, dim, dim * 2 * sizeof(float3), sizeof(float3));
+            CubemapUtils::cubemapToEquirectangular(image, dst);
+            std::string filename = outputDir + ("is_m" + std::to_string(level) + ext);
+            saveImage(filename, g_format, image, g_compression);
+            continue;
+        }
+
         for (size_t i = 0; i < 6; i++) {
             Cubemap::Face face = (Cubemap::Face)i;
             std::string filename = outputDir
@@ -781,6 +824,7 @@ void iblRoughnessPrefilter(const utils::Path& iname,
         Image image;
         Cubemap dst = CubemapUtils::create(image, dim);
         CubemapIBL::roughnessFilter(dst, levels, linear_roughness, numSamples);
+        dst.makeSeamless();
 
         if (g_debug) {
             ImageEncoder::Format debug_format = ImageEncoder::Format::HDR;
@@ -792,8 +836,17 @@ void iblRoughnessPrefilter(const utils::Path& iname,
 
         std::string ext = ImageEncoder::chooseExtension(g_format);
 
-        if (g_ktx_output) {
+        if (g_type == OutputType::KTX) {
             exportKtxFaces(container, level, dst);
+            continue;
+        }
+
+        if (g_type == OutputType::EQUIRECT) {
+            std::unique_ptr<uint8_t[]> buf(new uint8_t[dim * 2 * dim * sizeof(float3)]);
+            Image image(std::move(buf), dim * 2, dim, dim * 2 * sizeof(float3), sizeof(float3));
+            CubemapUtils::cubemapToEquirectangular(image, dst);
+            std::string filename = outputDir + ("m" + std::to_string(level) + ext);
+            saveImage(filename, g_format, image, g_compression);
             continue;
         }
 
@@ -805,7 +858,7 @@ void iblRoughnessPrefilter(const utils::Path& iname,
         }
     }
 
-    if (g_ktx_output) {
+    if (g_type == OutputType::KTX) {
         using namespace std;
         if (g_coefficients) {
             ostringstream sstr;
@@ -926,7 +979,7 @@ void extractCubemapFaces(const utils::Path& iname, const Cubemap& cm, const util
         outputDir.mkdirRecursive();
     }
 
-    if (g_ktx_output) {
+    if (g_type == OutputType::KTX) {
         using namespace std;
         const uint32_t dim = cm.getDimensions();
         KtxBundle container(1, 1, true);
@@ -953,6 +1006,17 @@ void extractCubemapFaces(const utils::Path& iname, const Cubemap& cm, const util
     }
 
     std::string ext = ImageEncoder::chooseExtension(g_format);
+
+    if (g_type == OutputType::EQUIRECT) {
+        size_t dim = cm.getDimensions();
+        std::unique_ptr<uint8_t[]> buf(new uint8_t[dim * 2 * dim * sizeof(float3)]);
+        Image image(std::move(buf), dim * 2, dim, dim * 2 * sizeof(float3), sizeof(float3));
+        CubemapUtils::cubemapToEquirectangular(image, cm);
+        std::string filename = outputDir + ("skybox" + ext);
+        saveImage(filename, g_format, image, g_compression);
+        return;
+    }
+
     for (size_t i = 0; i < 6; i++) {
         Cubemap::Face face = (Cubemap::Face) i;
         std::string filename(outputDir + (CubemapUtils::getFaceName(face) + ext));

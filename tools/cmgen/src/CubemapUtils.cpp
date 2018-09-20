@@ -16,6 +16,8 @@
 
 #include "CubemapUtils.h"
 
+#include <utils/JobSystem.h>
+
 #include <math/mat4.h>
 
 #include <algorithm>
@@ -24,6 +26,7 @@
 
 using namespace math;
 using namespace image;
+using namespace utils;
 
 void CubemapUtils::clamp(Image& src) {
     // We clamp all values to 256 which correspond to the maximum value (before
@@ -103,6 +106,38 @@ void CubemapUtils::equirectangularToCubemap(Cubemap& dst, const Image& src) {
     });
 }
 
+void CubemapUtils::cubemapToEquirectangular(Image& dst, const Cubemap& src) {
+    const double w = dst.getWidth();
+    const double h = dst.getHeight();
+    auto parallelJobTask = [&](size_t j0, size_t count) {
+        for (size_t j = j0; j < j0 + count; j++) {
+            for (size_t i = 0; i < w; i++) {
+                float3 c = 0;
+                const size_t numSamples = 64; // TODO: how to chose numsamples
+                for (size_t sample = 0; sample < numSamples; sample++) {
+                    const double2 u = hammersley(uint32_t(sample), 1.0f / numSamples);
+                    double x = 2.0 * (i + u.x) / w - 1.0;
+                    double y = 1.0 - 2.0 * (j + u.y) / h;
+                    double theta = x * M_PI;
+                    double phi = y * M_PI * 0.5;
+                    double3 s = {
+                            std::cos(phi) * std::sin(theta),
+                            std::sin(phi),
+                            std::cos(phi) * std::cos(theta) };
+                    c += src.filterAt(s);
+                }
+                Cubemap::writeAt(dst.getPixelRef(i, j), c * (1.0 / numSamples));
+            }
+        }
+    };
+
+    JobSystem& js = getJobSystem();
+    auto job = jobs::parallel_for(js, nullptr, 0, uint32_t(h),
+            std::ref(parallelJobTask), jobs::CountSplitter<1, 8>());
+    js.runAndWait(job);
+    js.reset();
+}
+
 void CubemapUtils::crossToCubemap(Cubemap& dst, const Image& src) {
     process<EmptyState>(dst,
             [&](EmptyState&, size_t iy, Cubemap::Face f, Cubemap::Texel* data, size_t dimension) {
@@ -152,6 +187,7 @@ void CubemapUtils::crossToCubemap(Cubemap& dst, const Image& src) {
                 }
             });
 }
+
 
 void CubemapUtils::downsampleCubemapLevelBoxFilter(Cubemap& dst, const Cubemap& src) {
     size_t scale = src.getDimensions() / dst.getDimensions();
