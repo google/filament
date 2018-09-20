@@ -228,6 +228,48 @@ vec3 getReflectedVector(const PixelParams pixel, const vec3 n) {
 //------------------------------------------------------------------------------
 
 #if IBL_INTEGRATION == IBL_INTEGRATION_IMPORTANCE_SAMPLING
+
+vec2 hammersley(uint index) {
+    // Compute Hammersley sequence
+    // TODO: these should come from uniforms
+    // TODO: we should do this with logical bit operations
+    const uint numSamples = uint(IBL_INTEGRATION_IMPORTANCE_SAMPLING_COUNT);
+    const uint numSampleBits = uint(log2(float(numSamples)));
+    const float invNumSamples = 1.0 / float(numSamples);
+    uint i = uint(index);
+    uint t = i;
+    uint bits = 0u;
+    for (uint j = 0u; j < numSampleBits; j++) {
+        bits = bits * 2u + (t - (2u * (t / 2u)));
+        t /= 2u;
+    }
+    return vec2(float(i), float(bits)) * invNumSamples;
+}
+
+vec3 importanceSamplingNdfDggx(vec2 u, float linearRoughness) {
+    // Importance sampling D_GGX
+    float a2 = linearRoughness * linearRoughness;
+    float phi = 2.0 * PI * u.x;
+    float cosTheta2 = (1.0 - u.y) / (1.0 + (a2 - 1.0) * u.y);
+    float cosTheta = sqrt(cosTheta2);
+    float sinTheta = sqrt(1.0 - cosTheta2);
+    return vec3(cos(phi) * sinTheta, sin(phi) * sinTheta, cosTheta);
+}
+
+float prefilteredImportanceSampling(float ipdf) {
+    // See: "Real-time Shading with Filtered Importance Sampling", Jaroslav Krivanek
+    // Prefiltering doesn't work with anisotropy
+    const float numSamples = float(IBL_INTEGRATION_IMPORTANCE_SAMPLING_COUNT);
+    const float invNumSamples = 1.0 / float(numSamples);
+    const float dim = float(1u << uint(IBL_MAX_MIP_LEVEL));
+    const float omegaP = (4.0 * PI) / (6.0 * dim * dim);
+    const float invOmegaP = 1.0 / omegaP;
+    const float K = 4.0;
+    float omegaS = invNumSamples * ipdf;
+    float mipLevel = clamp(log2(K * omegaS * invOmegaP) * 0.5, 0.0, IBL_MAX_MIP_LEVEL);
+    return mipLevel;
+}
+
 vec3 isEvaluateIBL(const PixelParams pixel, vec3 n, vec3 v, float NoV) {
     // TODO: for a true anisotropic BRDF, we need a real tangent space
     vec3 up = abs(n.z) < 0.999 ? vec3(0.0, 0.0, 1.0) : vec3(1.0, 0.0, 0.0);
@@ -240,36 +282,13 @@ vec3 isEvaluateIBL(const PixelParams pixel, vec3 n, vec3 v, float NoV) {
     float linearRoughness = pixel.linearRoughness;
     float a2 = linearRoughness * linearRoughness;
 
-    const float dim = float(1 << uint(IBL_MAX_MIP_LEVEL));
-    const float omegaP = (4.0 * PI) / (6.0 * dim * dim);
-    const float invOmegaP = 1.0 / omegaP;
-    const float K = 4.0;
-
-    // IMPORTANT: Keep numSample = 1 << numSampleBits
     const uint numSamples = uint(IBL_INTEGRATION_IMPORTANCE_SAMPLING_COUNT);
-    const uint numSampleBits = uint(log2(float(numSamples)));
     const float invNumSamples = 1.0 / float(numSamples);
 
     vec3 indirectSpecular = vec3(0.0);
     for (uint i = 0u; i < numSamples; i++) {
-        // Compute Hammersley sequence
-        // TODO: these should come from uniforms
-        // TODO: we should do this with logical bit operations
-        uint t = i;
-        uint bits = 0u;
-        for (uint j = 0u; j < numSampleBits; j++) {
-            bits = bits * 2u + (t - (2u * (t / 2u)));
-            t /= 2u;
-        }
-        vec2 u = vec2(float(i), float(bits)) * invNumSamples;
-
-        // Importance sampling D_GGX
-        float phi = 2.0 * PI * u.x;
-        float cosTheta2 = (1.0 - u.y) / (1.0 + (a2 - 1.0) * u.y);
-        float cosTheta = sqrt(cosTheta2);
-        float sinTheta = sqrt(1.0 - cosTheta2);
-
-        vec3 h = tangentToWorld * vec3(cos(phi) * sinTheta, sin(phi) * sinTheta, cosTheta);
+        vec2 u = hammersley(i);
+        vec3 h = tangentToWorld * importanceSamplingNdfDggx(u, linearRoughness);
 
         // Since anisotropy doesn't work with prefiltering, we use the same "faux" anisotropy
         // we do when we use the prefiltered cubemap
@@ -278,26 +297,23 @@ vec3 isEvaluateIBL(const PixelParams pixel, vec3 n, vec3 v, float NoV) {
         // Compute this sample's contribution to the brdf
         float NoL = dot(n, l);
         if (NoL > 0.0) {
+            float NoH = dot(n, h);
             float LoH = max(dot(l, h), 0.0);
-            float NoH = cosTheta;
 
             // PDF inverse (we must use D_GGX() here, which is used to generate samples)
             float ipdf = (4.0 * LoH) / (D_GGX(linearRoughness, NoH, h) * NoH);
 
-            // See: "Real-time Shading with Filtered Importance Sampling", Jaroslav Krivanek
-            // Prefiltering doesn't work with anisotropy
-            float omegaS = invNumSamples * ipdf;
-            float mipLevel = clamp(log2(K * omegaS * invOmegaP) * 0.5, 0.0, IBL_MAX_MIP_LEVEL);
+            float mipLevel = prefilteredImportanceSampling(ipdf);
+
+            // we use texture() instead of textureLod() to take advantage of mipmapping
+            vec3 L = decodeDataForIBL(texture(light_iblSpecular, l, mipLevel));
 
             float D = distribution(linearRoughness, NoH, h);
             float V = visibility(pixel.roughness, linearRoughness, NoV, NoL, LoH);
             vec3  F = fresnel(pixel.f0, LoH);
+            vec3 Fr = F * (D * V * NoL * ipdf * invNumSamples);
 
-            vec3 Fr = F * (D * V * ipdf * NoL);
-
-            // we use texture() instead of textureLod() to take advantage of mipmapping
-            vec3 env = decodeDataForIBL(texture(light_iblSpecular, l, mipLevel));
-            indirectSpecular += (Fr * env) * invNumSamples;
+            indirectSpecular += (Fr * L);
         }
     }
 
