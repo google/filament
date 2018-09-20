@@ -131,7 +131,7 @@ private fun loadCubemap(texture: Texture,
     // Allocate enough memory for all the cubemap faces
     val storage = ByteBuffer.allocateDirect(faceSize * 6)
 
-    arrayOf("px", "nx", "py", "ny", "pz", "nz").forEachIndexed { i, suffix ->
+    arrayOf("px", "nx", "py", "ny", "pz", "nz").forEachIndexed { _, suffix ->
         assets.open("$name/$prefix$suffix.rgbm").use {
             val bitmap = BitmapFactory.decodeStream(it, null, opts)
             bitmap?.copyPixelsToBuffer(storage)
