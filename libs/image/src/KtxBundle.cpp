@@ -22,8 +22,6 @@
 
 namespace {
 
-using Blob = std::vector<uint8_t>;
-
 struct SerializationHeader {
     uint8_t magic[12];
     image::KtxInfo info;
@@ -48,9 +46,47 @@ const uint8_t MAGIC[] = {0xab, 0x4b, 0x54, 0x58, 0x20, 0x31, 0x31, 0xbb, 0x0d, 0
 
 namespace image  {
 
-// This little wrapper exists so that we can keep STL out of the interface.
+// Extremely simple contiguous storage for an array of blobs. Assumes that the total number of blobs
+// is relatively small compared to the size of each blob, and that resizing individual blobs does
+// not occur frequently.
 struct KtxBlobList {
-    std::vector<Blob> blobs;
+    std::vector<uint8_t> blobs;
+    std::vector<uint32_t> sizes;
+
+    // Obtains a pointer to the given blob.
+    uint8_t* get(uint32_t blobIndex) {
+        uint8_t* result = blobs.data();
+        for (uint32_t i = 0; i < blobIndex; ++i) {
+            result += sizes[i];
+        }
+        return result;
+    }
+
+    // Resizes the blob at the given index by building a new contiguous array and swapping.
+    void resize(uint32_t blobIndex, uint32_t newSize) {
+        uint32_t preSize = 0;
+        uint32_t postSize = 0;
+        for (uint32_t i = 0; i < sizes.size(); ++i) {
+            if (i < blobIndex) {
+                preSize += sizes[i];
+            } else if (i > blobIndex) {
+                postSize += sizes[i];
+            }
+        }
+        uint32_t oldSize = sizes[blobIndex];
+        std::vector<uint8_t> newBlobs(blobs.size() + newSize - oldSize);
+        uint8_t const* src = blobs.data();
+        uint8_t* dst = newBlobs.data();
+        memcpy(dst, src, preSize);
+        src += preSize;
+        dst += preSize;
+        memcpy(dst, src, std::min(oldSize, newSize));
+        src += oldSize;
+        dst += newSize;
+        memcpy(dst, src, postSize);
+        sizes[blobIndex] = newSize;
+        blobs.swap(newBlobs);
+    }
 };
 
 KtxBundle::~KtxBundle() = default;
@@ -60,7 +96,7 @@ KtxBundle::KtxBundle(uint32_t numMipLevels, uint32_t arrayLength, bool isCubemap
     mNumMipLevels = numMipLevels;
     mArrayLength = arrayLength;
     mNumCubeFaces = isCubemap ? 6 : 1;
-    mBlobs->blobs.resize(numMipLevels * arrayLength * mNumCubeFaces);
+    mBlobs->sizes.resize(numMipLevels * arrayLength * mNumCubeFaces);
 }
 
 KtxBundle::KtxBundle(uint8_t const* bytes, uint32_t nbytes) : mBlobs(new KtxBlobList) {
@@ -78,7 +114,7 @@ KtxBundle::KtxBundle(uint8_t const* bytes, uint32_t nbytes) : mBlobs(new KtxBlob
     mNumMipLevels = header->numberOfMipmapLevels ? header->numberOfMipmapLevels : 1;
     mArrayLength = header->numberOfArrayElements ? header->numberOfArrayElements : 1;
     mNumCubeFaces = header->numberOfFaces ? header->numberOfFaces : 1;
-    mBlobs->blobs.resize(mNumMipLevels * mArrayLength * mNumCubeFaces);
+    mBlobs->sizes.resize(mNumMipLevels * mArrayLength * mNumCubeFaces);
 
     // For now, we discard the key-value metadata. Note that this may be useful for storing
     // spherical harmonics coefficients.
@@ -103,13 +139,16 @@ KtxBundle::KtxBundle(uint8_t const* bytes, uint32_t nbytes) : mBlobs(new KtxBlob
     const uint32_t facesPerMip = mArrayLength * mNumCubeFaces;
 
     // Extract blobs from the serialized byte stream.
+    const uint32_t totalSize = nbytes - (pdata - bytes);
+    mBlobs->blobs.resize(totalSize);
     for (uint32_t mipmap = 0; mipmap < mNumMipLevels; ++mipmap) {
         const uint32_t imageSize = *((uint32_t const*) pdata);
         const uint32_t faceSize = isNonArrayCube ? imageSize : (imageSize / facesPerMip);
         pdata += sizeof(imageSize);
+        memcpy(mBlobs->get(flatten(this, {mipmap, 0, 0})), pdata, imageSize);
         for (uint32_t layer = 0; layer < mArrayLength; ++layer) {
             for (uint32_t face = 0; face < mNumCubeFaces; ++face) {
-                setBlob({mipmap, layer, face}, pdata, faceSize);
+                mBlobs->sizes[flatten(this, {mipmap, layer, face})] = faceSize;
                 pdata += faceSize;
                 pdata += cubePadding;
             }
@@ -180,12 +219,12 @@ uint32_t KtxBundle::getSerializedLength() const {
         size_t blobSize = 0;
         for (uint32_t layer = 0; layer < mArrayLength; ++layer) {
             for (uint32_t face = 0; face < mNumCubeFaces; ++face) {
-                auto& blob = mBlobs->blobs[flatten(this, {mipmap, layer, face})];
+                uint32_t thisBlobSize = mBlobs->sizes[flatten(this, {mipmap, layer, face})];
                 if (blobSize == 0) {
-                    blobSize = blob.size();
+                    blobSize = thisBlobSize;
                 }
-                ASSERT_PRECONDITION(blobSize == blob.size(), "Inconsistent blob sizes within LOD");
-                total += blobSize;
+                ASSERT_PRECONDITION(blobSize == thisBlobSize, "Inconsistent blob sizes within LOD");
+                total += thisBlobSize;
             }
         }
     }
@@ -197,12 +236,13 @@ bool KtxBundle::getBlob(KtxBlobIndex index, uint8_t** data, uint32_t* size) cons
             index.cubeFace >= mNumCubeFaces) {
         return false;
     }
-    auto& blob = mBlobs->blobs[flatten(this, index)];
-    if (blob.empty()) {
+    uint32_t flatIndex = flatten(this, index);
+    auto blobSize = mBlobs->sizes[flatIndex];
+    if (blobSize == 0) {
         return false;
     }
-    *data = blob.data();
-    *size = blob.size();
+    *data = mBlobs->get(flatIndex);
+    *size = blobSize;
     return true;
 }
 
@@ -211,9 +251,12 @@ bool KtxBundle::setBlob(KtxBlobIndex index, uint8_t const* data, uint32_t size) 
             index.cubeFace >= mNumCubeFaces) {
         return false;
     }
-    auto& blob = mBlobs->blobs[flatten(this, index)];
-    blob.resize(size);
-    memcpy(blob.data(), data, size);
+    uint32_t flatIndex = flatten(this, index);
+    uint32_t blobSize = mBlobs->sizes[flatIndex];
+    if (blobSize != size) {
+        mBlobs->resize(flatIndex, size);
+    }
+    memcpy(mBlobs->get(flatIndex), data, size);
     return true;
 }
 
