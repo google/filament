@@ -145,17 +145,15 @@ void Application::render() {
 Asset getRawFile(const char* name) {
     // Obtain size and URL from JavaScript.
     Asset result = {};
-    uint32_t nbytes;
     EM_ASM({
         var nbytes = $0 >> 2;
         var name = UTF8ToString($1);
         HEAP32[nbytes] = assets[name].data.byteLength;
         stringToUTF8(assets[name].url, $2, $3);
-
-    }, &nbytes, name, &result.url[0], sizeof(result.url));
+    }, &result.nbytes, name, &result.url[0], sizeof(result.url));
 
     // Move the data from JavaScript.
-    uint8_t* data = new uint8_t[nbytes];
+    uint8_t* data = new uint8_t[result.nbytes];
     EM_ASM({
         var data = $0;
         var name = UTF8ToString($1);
@@ -163,7 +161,6 @@ Asset getRawFile(const char* name) {
         assets[name].data = null;
     }, data, name);
     result.data = decltype(Asset::data)(data);
-    result.nbytes = nbytes;
     return result;
 }
 
