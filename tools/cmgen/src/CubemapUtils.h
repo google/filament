@@ -41,7 +41,7 @@ public:
 
     template<typename STATE>
     static void process(
-            const Cubemap& cm,
+            Cubemap& cm,
             ScanlineProc<STATE> proc,
             ReduceProc<STATE> reduce = [](STATE&){},
             const STATE& prototype = STATE());
@@ -71,7 +71,7 @@ public:
 
     static double solidAngle(size_t dim, size_t u, size_t v);
 
-    static void generateUVGrid(Cubemap const& cml, size_t gridFrequency);
+    static void generateUVGrid(Cubemap& cml, size_t gridFrequency);
 
 private:
     static void setFaceFromCross(Cubemap& cm, Cubemap::Face face, const Image& image);
@@ -81,11 +81,11 @@ private:
 // -----------------------------------------------------------------------------------------------
 
 template<typename STATE>
-void CubemapUtils::process( const Cubemap& cm,
+void CubemapUtils::process(
+        Cubemap& cm,
         CubemapUtils::ScanlineProc<STATE> proc,
         ReduceProc<STATE> reduce,
-        const STATE& prototype)
-{
+        const STATE& prototype) {
     using namespace utils;
 
     JobSystem& js = getJobSystem();
@@ -102,12 +102,12 @@ void CubemapUtils::process( const Cubemap& cm,
     for (size_t faceIndex = 0; faceIndex < 6; faceIndex++) {
         const Cubemap::Face f = (Cubemap::Face)faceIndex;
         JobSystem::Job* face = jobs::createJob(js, parent,
-                [ faceIndex, &states, f, &cm, &dim, &proc ]
+                [faceIndex, &states, f, &cm, &dim, &proc]
                         (utils::JobSystem& js, utils::JobSystem::Job* parent) {
                     STATE& s = states[faceIndex];
-                    const Image& image(cm.getImageForFace(f));
+                    Image& image(cm.getImageForFace(f));
 
-                    auto parallelJobTask = [ &image, &proc, &s, dim, f ](size_t y0, size_t c) {
+                    auto parallelJobTask = [&image, &proc, &s, dim, f](size_t y0, size_t c) {
                         for (size_t y = y0; y < y0 + c; y++) {
                             Cubemap::Texel* data =
                                     static_cast<Cubemap::Texel*>(image.getPixelRef(0, y));

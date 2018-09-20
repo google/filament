@@ -53,6 +53,7 @@ public:
 
     void setImageForFace(Face face, const Image& image);
     inline const Image& getImageForFace(Face face) const;
+    inline Image& getImageForFace(Face face);
 
     inline math::double2 center(size_t x, size_t y) const;
 
@@ -104,6 +105,10 @@ private:
 };
 
 inline const Image& Cubemap::getImageForFace(Face face) const {
+    return mFaces[int(face)];
+}
+
+inline Image& Cubemap::getImageForFace(Face face) {
     return mFaces[int(face)];
 }
 

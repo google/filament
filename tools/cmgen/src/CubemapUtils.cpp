@@ -199,7 +199,7 @@ void CubemapUtils::mirrorCubemap(Cubemap& dst, const Cubemap& src) {
     });
 }
 
-void CubemapUtils::generateUVGrid(Cubemap const& cml, size_t gridFrequency) {
+void CubemapUtils::generateUVGrid(Cubemap& cml, size_t gridFrequency) {
     Cubemap::Texel const colors[6] = {
             { 1, 0, 0 }, // l
             { 0, 1, 1 }, // r

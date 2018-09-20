@@ -38,7 +38,8 @@ public:
     /*
      * Render given spherical harmonics into a cubemap
      */
-    static void renderSH(const Cubemap& cm,
+    static void renderSH(
+            Cubemap& cm,
             const std::unique_ptr<math::double3[]>& sh, size_t numBands);
 
     /*
@@ -50,7 +51,7 @@ public:
     /*
      * Render pre-scaled irrandiance SH
      */
-    static void renderPreScaledSH3Bands(const Cubemap& cm, const std::unique_ptr<math::double3[]>& sh);
+    static void renderPreScaledSH3Bands(Cubemap& cm, const std::unique_ptr<math::double3[]>& sh);
 
     static size_t getShIndex(ssize_t m, size_t l) {
         return SHindex(m, l);
