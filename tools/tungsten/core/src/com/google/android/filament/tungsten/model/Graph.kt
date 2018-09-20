@@ -28,6 +28,7 @@ data class Connection(
 abstract class Slot
 
 typealias NodeId = Int
+typealias CompileFunction = (Node, GraphCompiler) -> Node
 
 /**
  * An immutable Node in the graph.
@@ -42,7 +43,7 @@ data class Node(
 
     // A node's compile function generates code by calling methods on a GraphCompiler. The function
     // can return a new node if compilation has changed properties of the node itself.
-    val compileFunction: (Node, GraphCompiler) -> Node = { n, _ -> n },
+    val compileFunction: CompileFunction = { n, _ -> n },
 
     // Input and output slots of a node are represented by a String name.
     val outputSlots: List<String> = emptyList(),

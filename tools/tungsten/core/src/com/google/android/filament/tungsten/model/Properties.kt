@@ -39,6 +39,20 @@ sealed class PropertyValue {
     abstract fun deserialize(value: Any): PropertyValue
 }
 
+data class FloatValue(val v: Float = 0.0f) : PropertyValue() {
+
+    override fun applyToMaterialInstance(materialInstance: MaterialInstance, name: String) {
+        materialInstance.setParameter(name, v)
+    }
+
+    override fun serialize() = v
+
+    override fun deserialize(value: Any): PropertyValue {
+        if (value !is Number) return this
+        return FloatValue(value.toFloat())
+    }
+}
+
 data class Float3(val x: Float = 0.0f, val y: Float = 0.0f, val z: Float = 0.0f) : PropertyValue() {
 
     override fun applyToMaterialInstance(materialInstance: MaterialInstance, name: String) {
