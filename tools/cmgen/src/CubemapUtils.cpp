@@ -47,6 +47,14 @@ void CubemapUtils::equirectangularToCubemap(Cubemap& dst, const Image& src) {
     const size_t height = src.getHeight();
     const double r = width * 0.5 * M_1_PI;
 
+    auto toRectilinear = [width, height](double3 s) -> double2 {
+        double xf = std::atan2(s.x, s.z) * M_1_PI;   // range [-1.0, 1.0]
+        double yf = std::asin(s.y) * (2 * M_1_PI);   // range [-1.0, 1.0]
+        xf = (xf + 1.0) * 0.5 * (width  - 1);        // range [0, width [
+        yf = (1.0 - yf) * 0.5 * (height - 1);        // range [0, height[
+        return double2(xf, yf);
+    };
+
     process<EmptyState>(dst,
             [&](EmptyState&, size_t y, Cubemap::Face f, Cubemap::Texel* data, size_t dim) {
         for (size_t x=0 ; x<dim ; ++x, ++data) {
@@ -54,33 +62,40 @@ void CubemapUtils::equirectangularToCubemap(Cubemap& dst, const Image& src) {
             // x = cos(phi) sin(theta)
             // y = sin(phi)
             // z = cos(phi) cos(theta)
-            const double3 s0(dst.getDirectionFor(f, x, y));
-            const double t0 = std::atan2(s0.x, s0.z);
-            const double p0 = std::asin(s0.y);
-            const double3 s1(dst.getDirectionFor(f, x+1, y+1));
-            const double t1 = std::atan2(s1.x, s1.z);
-            const double p1 = std::asin(s1.y);
-            const double dt = std::abs(t1 - t0);
-            const double dp = std::abs(p1 - p0);
-            const double dx = std::abs(r*dt);
-            const double dy = std::abs(r*dp*s0.y);
-            const size_t numSamples = (size_t const)std::ceil(std::max(dx, dy));
-            const float iNumSamples = 1.0f / numSamples;
 
+            // here we try to figure out how many samples we need, by evaluating the surface
+            // (in pixels) in the equirectangular -- we take the bounding box of the
+            // projection of the cubemap texel's corners.
+
+            auto pos0 = toRectilinear(dst.getDirectionFor(f, x + 0.0, y + 0.0)); // make sure to use the double version
+            auto pos1 = toRectilinear(dst.getDirectionFor(f, x + 1.0, y + 0.0)); // make sure to use the double version
+            auto pos2 = toRectilinear(dst.getDirectionFor(f, x + 0.0, y + 1.0)); // make sure to use the double version
+            auto pos3 = toRectilinear(dst.getDirectionFor(f, x + 1.0, y + 1.0)); // make sure to use the double version
+            const double minx = std::min(pos0.x, std::min(pos1.x, std::min(pos2.x, pos3.x)));
+            const double maxx = std::max(pos0.x, std::max(pos1.x, std::max(pos2.x, pos3.x)));
+            const double miny = std::min(pos0.y, std::min(pos1.y, std::min(pos2.y, pos3.y)));
+            const double maxy = std::max(pos0.y, std::max(pos1.y, std::max(pos2.y, pos3.y)));
+            const double dx = std::max(1.0, maxx - minx);
+            const double dy = std::max(1.0, maxy - miny);
+            const size_t numSamples = size_t(dx * dy);
+
+            const float iNumSamples = 1.0f / numSamples;
             float3 c = 0;
             for (size_t sample = 0; sample < numSamples; sample++) {
                 // Generate numSamples in our destination pixels and map them to input pixels
                 const double2 h = hammersley(uint32_t(sample), iNumSamples);
                 const double3 s(dst.getDirectionFor(f, x + h.x, y + h.y));
-                float xf = float(std::atan2(s.x, s.z) * M_1_PI);   // range [-1.0, 1.0]
-                float yf = float(std::asin(s.y) * (2 * M_1_PI));   // range [-1.0, 1.0]
-                xf = (xf + 1) * 0.5f * (width -1);           // range [0, width [
-                yf = (1 - yf) * 0.5f * (height-1);           // range [0, height[
+                auto pos = toRectilinear(s);
+
                 // we can't use filterAt() here because it reads past the width/height
                 // which is okay for cubmaps but not for square images
-                c += Cubemap::sampleAt(src.getPixelRef((uint32_t)xf, (uint32_t)yf));
+
+                // TODO: the sample should be weighed by the area it covers in the cubemap texel
+
+                c += Cubemap::sampleAt(src.getPixelRef((uint32_t)pos.x, (uint32_t)pos.y));
             }
             c *= iNumSamples;
+
             Cubemap::writeAt(data, c);
         }
     });
