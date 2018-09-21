@@ -175,27 +175,18 @@ static Asset getPngTexture(const Asset& rawfile) {
     stbi_image_free(decoded);
     return {
         .data = decltype(Asset::data)(texels),
+        .ktx = {},
         .nbytes = nbytes,
         .width = uint32_t(width),
-        .height = uint32_t(height),
-        .channels = 4
+        .height = uint32_t(height)
     };
 }
 
 static Asset getKtxTexture(const Asset& rawfile) {
-    KtxBundle bundle(rawfile.data.get(), rawfile.nbytes);
-    uint8_t* blobData;
-    uint32_t blobSize;
-    bundle.getBlob({}, &blobData, &blobSize);
-    uint8_t* texels = new uint8_t[blobSize];
-    memcpy(texels, blobData, blobSize);
-    const KtxInfo& info = bundle.getInfo();
+    KtxBundle* bundle = new KtxBundle(rawfile.data.get(), rawfile.nbytes);
     return {
-        .data = decltype(Asset::data)(texels),
-        .nbytes = blobSize,
-        .width = info.pixelWidth,
-        .height = info.pixelHeight,
-        .channels = info.glTypeSize
+        .data = {},
+        .ktx = decltype(Asset::ktx)(bundle)
     };
 }
 
@@ -257,7 +248,8 @@ Asset getCubemap(const char* name) {
     *shCoeffs = getRawFile(key.c_str());
 
     return {
-        .data = decltype(Asset::data)(),
+        .data = {},
+        .ktx = {},
         .nbytes = 0,
         .width = envFaces[0].width,
         .height = envFaces[0].height,
@@ -270,6 +262,7 @@ Asset getCubemap(const char* name) {
 
 SkyLight getSkyLight(Engine& engine, const char* name) {
     SkyLight result;
+    using size_t = std::size_t;
 
     // Pull the data out of JavaScript.
     static auto asset = filaweb::getCubemap(name);
