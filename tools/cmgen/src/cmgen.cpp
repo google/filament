@@ -789,7 +789,8 @@ void iblRoughnessPrefilter(const utils::Path& iname,
         if (g_ktxContainer) {
             for (uint32_t j = 0; j < 6; j++) {
                 KtxBlobIndex blobIndex {(uint32_t) level, 0, j};
-                LinearImage image = toLinearImage(dst.getImageForFace((Cubemap::Face) j));
+                // Cubemap::Face has a slightly different ordering than GL / KTX, hence the xor.
+                LinearImage image = toLinearImage(dst.getImageForFace((Cubemap::Face) (j^1)));
                 auto uintData = fromLinearToRGBM<uint8_t>(image);
                 container.setBlob(blobIndex, uintData.get(), dim * dim * 4);
             }
@@ -931,7 +932,8 @@ void extractCubemapFaces(const utils::Path& iname, const Cubemap& cm, const util
             .pixelDepth = 0,
         };
         for (uint32_t j = 0; j < 6; j++) {
-            LinearImage image = toLinearImage(cm.getImageForFace((Cubemap::Face) j));
+            // Cubemap::Face has a slightly different ordering than GL / KTX, hence the xor.
+            LinearImage image = toLinearImage(cm.getImageForFace((Cubemap::Face) (j^1)));
             auto uintData = fromLinearToRGBM<uint8_t>(image);
             container.setBlob({0, 0, j}, uintData.get(), dim * dim * 4);
         }
