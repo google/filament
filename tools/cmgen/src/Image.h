@@ -37,19 +37,11 @@ public:
     Image(std::unique_ptr<uint8_t[]> data, size_t w, size_t h,
           size_t bpr, size_t bpp, size_t channels = 3);
 
-    enum {
-        FLIP_X = 0x1,
-        FLIP_Y = 0x2,
-        FLIP_XY = FLIP_X | FLIP_Y
-    };
-
     void reset();
 
     void set(Image const& image);
 
-    void subset(Image const& image, size_t x, size_t y, size_t w, size_t h, uint32_t flags = 0);
-
-    void flip(uint32_t flags);
+    void subset(Image const& image, size_t x, size_t y, size_t w, size_t h);
 
     bool isValid() const { return mData != nullptr; }
     size_t getWidth() const { return mWidth; }
