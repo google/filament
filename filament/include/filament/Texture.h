@@ -279,6 +279,8 @@ public:
     /**
      * Specify all six images of a cube map level.
      *
+     * This method follows exactly the OpenGL conventions.
+     *
      * @param engine        Engine this texture is associated to.
      * @param level         Level to set the image for.
      * @param buffer        Client-side buffer containing the images to set.
