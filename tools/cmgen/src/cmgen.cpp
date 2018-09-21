@@ -149,8 +149,8 @@ static void printUsage(char* name) {
             "       Extract faces of the cubemap into <dir>\n\n"
             "   --extract-blur=roughness\n"
             "       Blurs the cubemap before saving the faces using the roughness blur\n\n"
-            "   --mirror\n"
-            "       Mirrors generated cubemaps for reflections\n\n"
+            "   --no-mirror\n"
+            "       Skip mirroring of generated cubemaps (for assets with mirroring already backed in)\n\n"
             "   --ibl-samples=numSamples\n"
             "       Number of samples to use for IBL integrations (default 1024)\n\n"
             "\n"
@@ -211,7 +211,7 @@ static int handleCommandLineArgments(int argc, char* argv[]) {
             { "ibl-dfg-multiscatter",       no_argument, nullptr, 'u' },
             { "ibl-samples",          required_argument, nullptr, 'k' },
             { "deploy",               required_argument, nullptr, 'x' },
-            { "mirror",                     no_argument, nullptr, 'm' },
+            { "no-mirror",                  no_argument, nullptr, 'm' },
             { "debug",                      no_argument, nullptr, 'd' },
             { nullptr, 0, 0, 0 }  // termination of the option list
     };
@@ -449,7 +449,6 @@ int main(int argc, char* argv[]) {
             Image temp;
             Cubemap cml = CubemapUtils::create(temp, dim, isHorizontal);
             CubemapUtils::copyImage(temp, inputImage);
-            cml.makeSeamless();
             images.push_back(std::move(temp));
             levels.push_back(std::move(cml));
         } else if (width == 2 * height) {
@@ -461,7 +460,6 @@ int main(int argc, char* argv[]) {
             Image temp;
             Cubemap cml = CubemapUtils::create(temp, dim);
             CubemapUtils::equirectangularToCubemap(cml, inputImage);
-            cml.makeSeamless();
             images.push_back(std::move(temp));
             levels.push_back(std::move(cml));
         } else {
@@ -492,35 +490,32 @@ int main(int argc, char* argv[]) {
             CubemapUtils::generateUVGrid(cml, 1);
         }
 
-        cml.makeSeamless();
         images.push_back(std::move(temp));
         levels.push_back(std::move(cml));
     }
 
-    // Now generate all the mipmap levels
-    generateMipmaps(levels, images);
-
+    // we mirror by default -- the mirror option in fact un-mirrors.
+    g_mirror = !g_mirror;
     if (g_mirror) {
         if (!g_quiet) {
             std::cout << "Mirroring..." << std::endl;
         }
-
-        std::vector<Cubemap> mirrorLevels;
-        std::vector<Image> mirrorImages;
-
-        for (auto& level : levels) {
-            Image temp;
-            Cubemap cml = CubemapUtils::create(temp, level.getDimensions());
-            CubemapUtils::mirrorCubemap(cml, level);
-            cml.makeSeamless();
-
-            mirrorImages.push_back(std::move(temp));
-            mirrorLevels.push_back(std::move(cml));
+        Image temp;
+        Cubemap cml = CubemapUtils::create(temp, levels[0].getDimensions());
+        CubemapUtils::mirrorCubemap(cml, levels[0]);
+        std::swap(levels[0], cml);
+        std::swap(images[0], temp);
+    } else {
+        if (!g_quiet) {
+            std::cout << "Skipped mirroring." << std::endl;
         }
-
-        std::swap(levels, mirrorLevels);
-        std::swap(images, mirrorImages);
     }
+
+    // make the cubemap seamless
+    levels[0].makeSeamless();
+
+    // Now generate all the mipmap levels
+    generateMipmaps(levels, images);
 
     if (g_sh_compute) {
         if (!g_quiet) {
