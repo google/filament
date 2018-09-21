@@ -54,8 +54,7 @@ void Image::set(Image const& image) {
     mData = image.mData;
 }
 
-void Image::subset(Image const& image,
-        size_t x, size_t y, size_t w, size_t h, uint32_t flags) {
+void Image::subset(Image const& image, size_t x, size_t y, size_t w, size_t h) {
     mOwnedData.release();
     mWidth = w;
     mHeight = h;
@@ -63,34 +62,4 @@ void Image::subset(Image const& image,
     mBpp = image.mBpp;
     mChannels = image.mChannels;
     mData = static_cast<uint8_t*>(image.getPixelRef(x, y));
-}
-
-void Image::flip(uint32_t flags) {
-    // We verified that these lambdas get inlined by clang in release builds.
-    auto getptr = [this](size_t x, size_t y) -> uint8_t* {
-        return static_cast<uint8_t*>(mData) + y*mBpr + x*mBpp;
-    };
-    auto getref = [this, getptr](size_t x, size_t y) -> uint8_t& {
-        return *(getptr(x, y));
-    };
-    if (flags & Image::FLIP_Y) {
-        std::unique_ptr<uint8_t[]> tmp(new uint8_t[mBpr]);
-        uint8_t* ptmp = tmp.get();
-        for (size_t row = 0, nrows = mHeight / 2; row < nrows; ++row) {
-            uint8_t* a = getptr(0, row);
-            uint8_t* b = getptr(0, mHeight - 1 - row);
-            memcpy(ptmp, a, mBpr);
-            memcpy(a, b, mBpr);
-            memcpy(b, ptmp, mBpr);
-        }
-    }
-    // Our horizontalFlip implementation is inefficient, but it's never invoked in the renderer.
-    if (flags & Image::FLIP_X) {
-        for (size_t row = 0, nrows = mHeight; row < nrows; ++row) {
-            for (size_t src = 0, ncols = mWidth / 2; src < ncols; ++src) {
-                size_t dst = mWidth - 1 - src;
-                std::swap(getref(src, row), getref(dst, row));
-            }
-        }
-    }
 }

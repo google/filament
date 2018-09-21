@@ -103,7 +103,6 @@ void CubemapUtils::setFaceFromCross(Cubemap& cm, Cubemap::Face face, const Image
     size_t dim = cm.getDimensions();
     size_t x = 0;
     size_t y = 0;
-    uint32_t flags = 0;
     switch (face) {
         case Cubemap::Face::NX:
             x = 0, y = dim;
@@ -119,8 +118,8 @@ void CubemapUtils::setFaceFromCross(Cubemap& cm, Cubemap::Face face, const Image
             break;
         case Cubemap::Face::NZ:
             if (image.getHeight() > image.getWidth()) {
+                // NOTE: In the past we flipped XY here, not sure why. May need to revisit.
                 x = dim, y = 3*dim;
-                flags = Image::FLIP_XY;
             } else {
                 x = 3*dim, y = dim;
             }
@@ -130,7 +129,7 @@ void CubemapUtils::setFaceFromCross(Cubemap& cm, Cubemap::Face face, const Image
             break;
     }
     Image subImage;
-    subImage.subset(image, x, y, dim, dim, flags);
+    subImage.subset(image, x, y, dim, dim);
     cm.setImageForFace(face, subImage);
 }
 
