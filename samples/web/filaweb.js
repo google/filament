@@ -96,12 +96,12 @@ function load_rawfile(url) {
 
 let load_texture = load_rawfile;
 
-function load_cubemap(name) {
+function load_cubemap(name, suffix) {
     let urlprefix = name + '/';
     let promises = {};
     promises['sh.txt'] = load_rawfile(urlprefix + 'sh.txt');
-    promises['ibl'] = load_rawfile(urlprefix + name + '_ibl.ktx');
-    promises['skybox'] = load_rawfile(urlprefix + name + '_skybox.ktx');
+    promises['ibl'] = load_rawfile(urlprefix + name + '_ibl' + suffix);
+    promises['skybox'] = load_rawfile(urlprefix + name + '_skybox' + suffix);
     let numberRemaining = Object.keys(promises).length;
     var promise = new Promise((success) => {
         for (let key in promises) {
