@@ -201,12 +201,12 @@ void CubemapUtils::mirrorCubemap(Cubemap& dst, const Cubemap& src) {
 
 void CubemapUtils::generateUVGrid(Cubemap& cml, size_t gridFrequency) {
     Cubemap::Texel const colors[6] = {
-            { 1, 0, 0 }, // l
-            { 0, 1, 1 }, // r
-            { 0, 1, 0 }, // b
-            { 1, 0, 1 }, // t
-            { 0, 0, 1 }, // bk
-            { 1, 1, 0 }, // fr
+            { 1, 0, 0 }, // -X /  l  - red
+            { 1, 1, 1 }, // +X /  r  - white
+            { 0, 1, 0 }, // -Y /  b  - green
+            { 0, 0, 1 }, // +Y /  t  - blue
+            { 1, 0, 1 }, // -Z / bk - magenta
+            { 1, 1, 0 }, // +z / fr - yellow
     };
     const float uvGridHDRIntensity = 5.0f;
     size_t gridSize = cml.getDimensions() / gridFrequency;
