@@ -59,11 +59,11 @@ static SuzanneApp app;
 
 static Texture* setTextureParameter(Engine& engine, filaweb::Asset& asset, string name, bool linear,
         TextureSampler const &sampler) {
-    const auto& info = asset.ktx->getInfo();
+    const auto& info = asset.texture->getInfo();
 
     const auto destructor = [](void* buffer, size_t size, void* user) {
         auto asset = (filaweb::Asset*) user;
-        asset->ktx.reset();
+        asset->texture.reset();
     };
 
     Texture::Format format;
@@ -76,7 +76,7 @@ static Texture* setTextureParameter(Engine& engine, filaweb::Asset& asset, strin
 
     uint8_t* data;
     uint32_t nbytes;
-    asset.ktx->getBlob({}, &data, &nbytes);
+    asset.texture->getBlob({}, &data, &nbytes);
     Texture::PixelBufferDescriptor pb(data, nbytes, format, Texture::Type::UBYTE, destructor,
             &asset);
 
@@ -119,11 +119,11 @@ void setup(Engine* engine, View* view, Scene* scene) {
     static auto ao = filaweb::getTexture("ao");
 
     // Create mesh.
-    printf("%s: %d bytes\n", "mesh", mesh.nbytes);
-    const uint8_t* mdata = mesh.data.get();
+    printf("%s: %d bytes\n", "mesh", mesh.rawSize);
+    const uint8_t* mdata = mesh.rawData.get();
     const auto destructor = [](void* buffer, size_t size, void* user) {
         auto asset = (filaweb::Asset*) user;
-        asset->data.reset();
+        asset->rawData.reset();
     };
     app.filamesh = decodeMesh(*engine, mdata, 0, app.mi, destructor, &mesh);
     scene->addEntity(app.filamesh->renderable);
