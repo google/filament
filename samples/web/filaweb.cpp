@@ -201,59 +201,29 @@ Asset getTexture(const char* name) {
 }
 
 Asset getCubemap(const char* name) {
-    // Obtain number of miplevels and prefix string.
-    uint32_t nmips;
-    char prefix[128] = {};
-    EM_ASM({
-        var nmips = $0 >> 2;
-        var name = UTF8ToString($1);
-        var prefix = $2;
-        stringToUTF8(assets[name].name, prefix, 127);
-        HEAP32[nmips] = assets[name].nmips;
-    }, &nmips, name, &prefix[0]);
+    string prefix = string(name) + "/";
 
-    // Build a flat list of mips for each cubemap face.
-    Asset* envFaces = new Asset[nmips * 6];
-    for (uint32_t mip = 0, i = 0; mip < nmips; ++mip) {
-        const string mipPrefix = string(prefix) + string("m") + to_string(mip) + "_";
-        auto get = [&](const char* suffix) {
-            string key = mipPrefix + suffix;
-            envFaces[i++] = getTexture(key.c_str());
-        };
-        get("px.rgbm");
-        get("nx.rgbm");
-        get("py.rgbm");
-        get("ny.rgbm");
-        get("pz.rgbm");
-        get("nz.rgbm");
-    }
+    // Deserialize the KtxBundle for the IBL.
+    Asset* envFaces = new Asset;
+    string key = prefix + "ibl";
+    *envFaces = getKtxTexture(getRawFile(key.c_str()));
 
     // Ditto but for the blurry sky.
-    Asset* skyFaces = new Asset[6];
-    uint32_t i = 0;
-    auto get = [&](const char* suffix) {
-        string key = string(prefix) + suffix;
-        skyFaces[i++] = getTexture(key.c_str());
-    };
-    get("px.rgbm");
-    get("nx.rgbm");
-    get("py.rgbm");
-    get("ny.rgbm");
-    get("pz.rgbm");
-    get("nz.rgbm");
+    Asset* skyFaces = new Asset;
+    key = prefix + "skybox";
+    *skyFaces = getKtxTexture(getRawFile(key.c_str()));
 
     // Load the spherical harmonics coefficients.
     Asset* shCoeffs = new Asset;
-    string key = string(prefix) + string("sh.txt");
+    key = prefix + "sh.txt";
     *shCoeffs = getRawFile(key.c_str());
 
     return {
         .data = {},
         .ktx = {},
         .nbytes = 0,
-        .width = envFaces[0].width,
-        .height = envFaces[0].height,
-        .envMipCount = nmips,
+        .width = 0,
+        .height = 0,
         .envShCoeffs = decltype(Asset::envShCoeffs)(shCoeffs),
         .envFaces = decltype(Asset::envFaces)(envFaces),
         .skyFaces = decltype(Asset::skyFaces)(skyFaces),
@@ -266,7 +236,6 @@ SkyLight getSkyLight(Engine& engine, const char* name) {
 
     // Pull the data out of JavaScript.
     static auto asset = filaweb::getCubemap(name);
-    printf("%s: %d x %d, %d mips\n", name,  asset.width, asset.height, asset.envMipCount);
 
     // Parse the coefficients.
     std::istringstream shReader((const char*) asset.envShCoeffs->data.get());
@@ -282,16 +251,18 @@ SkyLight getSkyLight(Engine& engine, const char* name) {
     }
 
     // Copy over the miplevels for the indirect light.
+    auto info = asset.envFaces->ktx->getInfo();
+    uint32_t nmips = asset.envFaces->ktx->getNumMipLevels();
     Texture* texture = Texture::Builder()
-        .width(asset.width)
-        .height(asset.height)
-        .levels(asset.envMipCount)
+        .width(info.pixelWidth)
+        .height(info.pixelHeight)
+        .levels(nmips)
         .format(Texture::InternalFormat::RGBM)
         .sampler(Texture::Sampler::SAMPLER_CUBEMAP)
         .build(engine);
-    size_t size = asset.width;
+    size_t size = info.pixelWidth;
     uint32_t i = 0;
-    for (uint32_t mip = 0; mip < asset.envMipCount; ++mip, size >>= 1) {
+    for (uint32_t mip = 0; mip < nmips; ++mip, size >>= 1) {
         const size_t faceSize = size * size * 4;
         Texture::FaceOffsets offsets;
         offsets.px = faceSize * 0;
@@ -306,27 +277,14 @@ SkyLight getSkyLight(Engine& engine, const char* name) {
                 [](void* buffer, size_t size, void* user) {
                     free(buffer);
                 }, /* user = */ nullptr);
-        uint8_t* pixels = static_cast<uint8_t*>(buffer.buffer);
-        auto& px = asset.envFaces[i++];
-        auto& nx = asset.envFaces[i++];
-        auto& py = asset.envFaces[i++];
-        auto& ny = asset.envFaces[i++];
-        auto& pz = asset.envFaces[i++];
-        auto& nz = asset.envFaces[i++];
-        memcpy(pixels + offsets.px, px.data.get(), faceSize);
-        memcpy(pixels + offsets.nx, nx.data.get(), faceSize);
-        memcpy(pixels + offsets.py, py.data.get(), faceSize);
-        memcpy(pixels + offsets.ny, ny.data.get(), faceSize);
-        memcpy(pixels + offsets.pz, pz.data.get(), faceSize);
-        memcpy(pixels + offsets.nz, nz.data.get(), faceSize);
-        px.data.reset();
-        nx.data.reset();
-        py.data.reset();
-        ny.data.reset();
-        pz.data.reset();
-        nz.data.reset();
+        uint8_t* pbdPixels = static_cast<uint8_t*>(buffer.buffer);
+        uint8_t* ktxPixels;
+        uint32_t ktxSize;
+        asset.envFaces->ktx->getBlob({mip}, &ktxPixels, &ktxSize);
+        memcpy(pbdPixels, ktxPixels, faceSize * 6);
         texture->setImage(engine, mip, std::move(buffer), offsets);
     }
+    asset.envFaces->ktx.reset();
 
     result.indirectLight = IndirectLight::Builder()
         .reflections(texture)
@@ -335,7 +293,8 @@ SkyLight getSkyLight(Engine& engine, const char* name) {
         .build(engine);
 
     // Copy a single miplevel for the blurry skybox
-    size = asset.skyFaces[0].width;
+    info = asset.skyFaces->ktx->getInfo();
+    size = info.pixelWidth;
     Texture* skybox = Texture::Builder()
         .width(size)
         .height(size)
@@ -358,28 +317,14 @@ SkyLight getSkyLight(Engine& engine, const char* name) {
                 [](void* buffer, size_t size, void* user) {
                     free(buffer);
                 }, /* user = */ nullptr);
-        uint8_t* pixels = static_cast<uint8_t*>(buffer.buffer);
-        i = 0;
-        auto& px = asset.skyFaces[i++];
-        auto& nx = asset.skyFaces[i++];
-        auto& py = asset.skyFaces[i++];
-        auto& ny = asset.skyFaces[i++];
-        auto& pz = asset.skyFaces[i++];
-        auto& nz = asset.skyFaces[i++];
-        memcpy(pixels + offsets.px, px.data.get(), faceSize);
-        memcpy(pixels + offsets.nx, nx.data.get(), faceSize);
-        memcpy(pixels + offsets.py, py.data.get(), faceSize);
-        memcpy(pixels + offsets.ny, ny.data.get(), faceSize);
-        memcpy(pixels + offsets.pz, pz.data.get(), faceSize);
-        memcpy(pixels + offsets.nz, nz.data.get(), faceSize);
-        px.data.reset();
-        nx.data.reset();
-        py.data.reset();
-        ny.data.reset();
-        pz.data.reset();
-        nz.data.reset();
+        uint8_t* pbdPixels = static_cast<uint8_t*>(buffer.buffer);
+        uint8_t* ktxPixels;
+        uint32_t ktxSize;
+        asset.skyFaces->ktx->getBlob({}, &ktxPixels, &ktxSize);
+        memcpy(pbdPixels, ktxPixels, faceSize * 6);
         skybox->setImage(engine, 0, std::move(buffer), offsets);
     }
+    asset.skyFaces->ktx.reset();
     result.skybox = Skybox::Builder().environment(skybox).build(engine);
 
     return result;

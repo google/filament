@@ -107,23 +107,19 @@ add_mesh("third_party/shader_ball/shader_ball.obj" "shaderball/mesh.filamesh")
 # Generate IBL and skybox images using cmgen.
 function(add_envmap SOURCE TARGET)
     set(source_envmap "${CMAKE_CURRENT_SOURCE_DIR}/../../${SOURCE}")
-    foreach(FACE nx ny nz px py pz)
-        set(target_skybox ${target_skybox} ${TARGET}/${FACE}.rgbm)
-        foreach(MIP 0 1 2 3 4 5 6 7 8)
-            set(target_envmap ${target_envmap} ${TARGET}/m${MIP}_${FACE}.rgbm)
-        endforeach()
-    endforeach()
+    set(target_skybox "public/${TARGET}/${TARGET}_skybox.ktx")
+    set(target_envmap "public/${TARGET}/${TARGET}_ibl.ktx")
     set(target_skyboxes ${target_skyboxes} ${target_skybox} PARENT_SCOPE)
+    set(target_envmaps ${target_envmaps} ${target_envmap} PARENT_SCOPE)
     add_custom_command(
         OUTPUT ${target_skybox} ${target_envmap}
-        COMMAND cmgen -x public --format=rgbm --size=256 --extract-blur=0.1 ${source_envmap}
+        COMMAND cmgen -x public --format=ktx --size=256 --extract-blur=0.1 ${source_envmap}
         MAIN_DEPENDENCY ${source_envmap}
         DEPENDS cmgen)
-    set(target_envmaps ${target_envmaps} ${target_envmap} PARENT_SCOPE)
 endfunction()
 
-add_envmap("third_party/environments/syferfontein_18d_clear_2k.hdr" "public/syferfontein_18d_clear_2k")
-add_envmap("third_party/environments/pillars_2k.hdr" "public/pillars_2k")
+add_envmap("third_party/environments/syferfontein_18d_clear_2k.hdr" "syferfontein_18d_clear_2k")
+add_envmap("third_party/environments/pillars_2k.hdr" "pillars_2k")
 
 add_custom_target(sample_assets DEPENDS
     ${target_ktxfiles}
