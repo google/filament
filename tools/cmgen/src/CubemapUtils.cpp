@@ -51,14 +51,14 @@ void CubemapUtils::equirectangularToCubemap(Cubemap& dst, const Image& src) {
             [&](EmptyState&, size_t y, Cubemap::Face f, Cubemap::Texel* data, size_t dim) {
         for (size_t x=0 ; x<dim ; ++x, ++data) {
             // calculate how many samples we need based on dx, dy in the source
-            // x =  cos(phi) sin(theta)
-            // y = -sin(phi)
-            // z = -cos(phi) cos(theta)
+            // x = cos(phi) sin(theta)
+            // y = sin(phi)
+            // z = cos(phi) cos(theta)
             const double3 s0(dst.getDirectionFor(f, x, y));
-            const double t0 = std::atan2(s0.x, -s0.z);
+            const double t0 = std::atan2(s0.x, s0.z);
             const double p0 = std::asin(s0.y);
             const double3 s1(dst.getDirectionFor(f, x+1, y+1));
-            const double t1 = std::atan2(s1.x, -s1.z);
+            const double t1 = std::atan2(s1.x, s1.z);
             const double p1 = std::asin(s1.y);
             const double dt = std::abs(t1 - t0);
             const double dp = std::abs(p1 - p0);
@@ -72,10 +72,10 @@ void CubemapUtils::equirectangularToCubemap(Cubemap& dst, const Image& src) {
                 // Generate numSamples in our destination pixels and map them to input pixels
                 const double2 h = hammersley(uint32_t(sample), iNumSamples);
                 const double3 s(dst.getDirectionFor(f, x + h.x, y + h.y));
-                float xf = float(std::atan2(s.x, -s.z) * M_1_PI);   // range [-1.0, 1.0]
-                float yf = float(std::asin(-s.y) * (2 * M_1_PI));   // range [-1.0, 1.0]
+                float xf = float(std::atan2(s.x, s.z) * M_1_PI);   // range [-1.0, 1.0]
+                float yf = float(std::asin(s.y) * (2 * M_1_PI));   // range [-1.0, 1.0]
                 xf = (xf + 1) * 0.5f * (width -1);           // range [0, width [
-                yf = (yf + 1) * 0.5f * (height-1);           // range [0, height[
+                yf = (1 - yf) * 0.5f * (height-1);           // range [0, height[
                 // we can't use filterAt() here because it reads past the width/height
                 // which is okay for cubmaps but not for square images
                 c += Cubemap::sampleAt(src.getPixelRef((uint32_t)xf, (uint32_t)yf));
