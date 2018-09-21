@@ -61,7 +61,7 @@ void setup(Engine* engine, View* view, Scene* scene) {
     app.params.lightDirection.x = 1;
     app.params.lightDirection.y = -1;
     app.params.lightDirection.z = -0.4;
-    app.params.iblRotation = 109 * M_PI / 180;
+    app.params.iblRotation = 289 * M_PI / 180;
 
     // These initial values look pretty nice with the shaderball.
     app.params.clearCoat = 0.7f;
