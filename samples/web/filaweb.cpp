@@ -191,6 +191,7 @@ Asset getTexture(const char* name) {
     if (extension == "png" || extension == "rgbm") {
         return getPngTexture(rawfile);
     }
+    // Do not check for KTX here, sometimes we use an alternate file extension.
     return getKtxTexture(rawfile);
 }
 
