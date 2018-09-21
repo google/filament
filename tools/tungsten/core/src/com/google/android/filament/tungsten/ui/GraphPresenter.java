@@ -18,14 +18,18 @@ package com.google.android.filament.tungsten.ui;
 
 import com.google.android.filament.Material;
 import com.google.android.filament.MaterialInstance;
+import com.google.android.filament.tungsten.Filament;
 import com.google.android.filament.tungsten.MaterialManager;
+import com.google.android.filament.tungsten.compiler.CompiledGraph;
 import com.google.android.filament.tungsten.compiler.GraphCompiler;
 import com.google.android.filament.tungsten.compiler.NodeRegistry;
-import com.google.android.filament.tungsten.compiler.ShaderNode;
-import com.google.android.filament.tungsten.model.ConnectionModel;
-import com.google.android.filament.tungsten.model.MaterialGraphModel;
-import com.google.android.filament.tungsten.model.NodeModel;
-import com.google.android.filament.tungsten.model.SelectionModel;
+import com.google.android.filament.tungsten.compiler.Parameter;
+import com.google.android.filament.tungsten.model.Connection;
+import com.google.android.filament.tungsten.model.Graph;
+import com.google.android.filament.tungsten.model.GraphInitializer;
+import com.google.android.filament.tungsten.model.Node;
+import com.google.android.filament.tungsten.model.Property;
+import com.google.android.filament.tungsten.model.PropertyType;
 import com.google.android.filament.tungsten.model.serialization.GraphFile;
 import com.google.android.filament.tungsten.model.serialization.GraphSerializer;
 import com.google.android.filament.tungsten.model.serialization.JsonDeserializer;
@@ -33,37 +37,43 @@ import com.google.android.filament.tungsten.model.serialization.JsonSerializer;
 import com.google.android.filament.tungsten.properties.IPropertiesPresenter;
 import com.google.android.filament.tungsten.properties.PropertiesPanel;
 import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Consumer;
-import java.util.regex.Pattern;
+import java.util.concurrent.atomic.AtomicReference;
 import javax.swing.JTextArea;
+
+import com.google.android.filament.tungsten.ui.preview.PreviewMeshPanel;
+import org.jetbrains.annotations.Nullable;
 
 public class GraphPresenter implements IPropertiesPresenter {
 
     // Views
-    private MaterialGraphModel mModel;
     private final MaterialGraphComponent mGraphView;
     private final PreviewMeshPanel mPreviewMeshPanel;
     private final JTextArea mMaterialSource;
     private final PropertiesPanel mPropertiesPanel;
 
     // Dependencies
-    private final GraphCompiler mGraphCompiler;
     private final NodeRegistry mNodeRegistry;
     private final MaterialManager mMaterialManager;
     private final TungstenFile mFile;
 
-    private String mCompiledGraph;
+    private CompiledGraph mCompiledGraph;
 
-    public GraphPresenter(MaterialGraphModel model, MaterialGraphComponent graphView,
-            PreviewMeshPanel previewMeshPanel, JTextArea materialSource,
-            PropertiesPanel propertiesPanel, MaterialManager materialManager, TungstenFile file) {
-        mModel = model;
+    // Technically volatile is enough here b/c the Filament thread only ever reads
+    private AtomicReference<Graph> mModel = new AtomicReference<>();
+
+    // Only accessed from Filament thread
+    @Nullable private MaterialInstance mCurrentMaterialInstance = null;
+
+    public GraphPresenter(MaterialGraphComponent graphView, PreviewMeshPanel previewMeshPanel,
+            JTextArea materialSource, PropertiesPanel propertiesPanel,
+            MaterialManager materialManager, TungstenFile file) {
         mGraphView = graphView;
         mPreviewMeshPanel = previewMeshPanel;
         mMaterialSource = materialSource;
         mPropertiesPanel = propertiesPanel;
-        mGraphCompiler = new GraphCompiler();
         mMaterialManager = materialManager;
         mNodeRegistry = new NodeRegistry();
         mFile = file;
@@ -74,40 +84,40 @@ public class GraphPresenter implements IPropertiesPresenter {
     /**
      * Action from the view that lets us know a connection between two nodes has been created.
      */
-    public void connectionCreated(ConnectionModel connection) {
-        mModel.createConnection(connection);
-        mGraphView.addConnection(connection);
-        connection.getInputSlot().connectTo(connection.getOutputSlot());
+    public void connectionCreated(Connection connection) {
+        mModel.getAndUpdate(graph -> graph.graphByFormingConnection(connection));
+        mGraphView.render(mModel.get());
         recompileGraph();
     }
 
     /**
      * Action from the view that lets us know a connection between two nodes has been removed.
      */
-    public void connectionDisconnectedAtInput(ConnectionModel connection) {
-        mModel.removeConnection(connection);
-        mGraphView.disconnectConnectionAtInput(connection);
-        connection.getInputSlot().removeConnection();
+    public void connectionDisconnectedAtInput(Connection connection) {
+        mModel.getAndUpdate(graph -> graph.graphByRemovingConnection(connection));
+        mGraphView.render(mModel.get());
         recompileGraph();
     }
 
     /**
      * Action from the view that lets us know the selection of nodes has changed.
      */
-    public void selectionChanged(SelectionModel selection) {
-        mModel.setSelection(selection);
-        if (selection.getSelectionCount() != 1) {
+    public void selectionChanged(List<Integer> selectedNodes) {
+        mModel.getAndUpdate(graph -> graph.graphByChangingSelection(selectedNodes));
+        mGraphView.render(mModel.get());
+        if (selectedNodes.size() != 1) {
             mPropertiesPanel.showNone();
             return;
         }
-        mPropertiesPanel.showPropertiesForNode(selection.getNodes().get(0));
+        mPropertiesPanel.showPropertiesForNode(mModel.get().getNodeWithId(selectedNodes.get(0)));
     }
 
     /**
      * Action from the view that lets us know a node has been dragged to a new location.
      */
-    public void nodeMoved(NodeModel node, int x, int y) {
-        node.setPosition(x, y);
+    public void nodeMoved(Node node, int x, int y) {
+        mModel.getAndUpdate(graph -> graph.graphByMovingNode(node, x, y));
+        mGraphView.render(mModel.get());
         serializeAndSave();
     }
 
@@ -115,19 +125,47 @@ public class GraphPresenter implements IPropertiesPresenter {
      * Action from the view that lets us know a NodeProperty's value has changed.
      */
     @Override
-    public void propertyChanged() {
-        recompileGraph();
+    public void propertyChanged(Node.PropertyHandle handle, Property property) {
+        mModel.getAndUpdate(graph -> graph.graphByChangingProperty(handle, property));
+        mGraphView.render(mModel.get());
+        mPropertiesPanel.showPropertiesForNode(mModel.get().getSelectedNodes().get(0));
+
+        // Graph property changes trigger a full recompilation of the graph, while material
+        // parameter changes trigger only a material parameter update on the current material
+        // instance.
+        if (property.getType() == PropertyType.GRAPH_PROPERTY) {
+            recompileGraph();
+        } else if (property.getType() == PropertyType.MATERIAL_PARAMETER) {
+            serializeAndSave();
+            Parameter parameter = mCompiledGraph.getParameterMap().get(handle);
+            if (parameter == null) {
+                return;
+            }
+            Filament.getInstance().runOnFilamentThread(engine -> {
+                if (mCurrentMaterialInstance == null) {
+                    return;
+                }
+                // This check prevents us from setting a property on a newer material instance that
+                // may no longer have that property.
+                if (mCurrentMaterialInstance.getMaterial().hasParameter(parameter.getName())) {
+                    property.getValue().applyToMaterialInstance(mCurrentMaterialInstance,
+                            parameter.getName());
+                }
+            });
+        }
     }
 
     /**
      * Action from the popup menu that lets us know an item has been clicked.
      */
     public void popupMenuItemSelected(String name, int x, int y) {
-        NodeModel newNode = mNodeRegistry.createNodeForLabel(name);
-        newNode.setPosition(x, y);
-        mModel.addNode(newNode);
-        mGraphView.addNode(newNode);
-        serializeAndSave();
+        Node newNode = mNodeRegistry.createNodeForLabel(name, mModel.get().getNewNodeId());
+        if (newNode == null) {
+            return;
+        }
+        mModel.getAndUpdate(graph -> graph.graphByAddingNodeAtLocation(newNode, x, y));
+        recompileGraph();
+        mGraphView.render(mModel.get());
     }
 
     private void loadModelFromFile(TungstenFile file) {
@@ -139,56 +177,75 @@ public class GraphPresenter implements IPropertiesPresenter {
             }
             String toolBlock = GraphFile.INSTANCE.extractToolBlockFromMaterialFile(contents);
             if (toolBlock.isEmpty()) {
-                mModel = new MaterialGraphModel();
-                ShaderNode shaderNode = new ShaderNode();
-                mModel.addNode(shaderNode);
-                mModel.setRootNode(shaderNode);
-                addInitialNodes();
+                mModel.set(GraphInitializer.INSTANCE.getInitialGraphState());
                 recompileGraph();
+                mGraphView.render(mModel.get());
                 return;
             }
-            mModel = GraphSerializer.INSTANCE.deserialize(
-                    toolBlock, mNodeRegistry, new JsonDeserializer()).getFirst();
-            addInitialNodes();
+            mModel.set(GraphSerializer.INSTANCE.deserialize(
+                    toolBlock, mNodeRegistry, new JsonDeserializer()).getFirst());
+            mGraphView.render(mModel.get());
             recompileGraph();
         });
     }
 
-    private void addInitialNodes() {
-        for (NodeModel node : mModel.getNodes()) {
-            mGraphView.addNode(node);
-        }
-        for (ConnectionModel connection : mModel.getConnections()) {
-            mGraphView.addConnection(connection);
-        }
-    }
-
-
     private void recompileGraph() {
-        if (mModel.getRootNode() == null) {
+        if (mModel.get().getRootNode() == null) {
             return;
         }
-        mCompiledGraph = mGraphCompiler.compileGraph(mModel.getRootNode());
-        mMaterialSource.setText(mCompiledGraph);
+        GraphCompiler compiler = new GraphCompiler(mModel.get());
+        mCompiledGraph = compiler.compileGraph();
+        mMaterialSource.setText(mCompiledGraph.getMaterialDefinition());
 
         CompletableFuture<Material> futureMaterial = mMaterialManager
-                .compileMaterial(mCompiledGraph);
+                .compileMaterial(mCompiledGraph.getMaterialDefinition());
+
+        // Update the model with the newly compiled expression map and replace any modified nodes.
+        mModel.getAndUpdate(
+                graph -> graph
+                    .graphBySettingExpressionMap(mCompiledGraph.getExpressionMap())
+                    .graphByReplacingNodes(mCompiledGraph.getOldToNewNodeMap()));
+
+        mGraphView.render(mModel.get());
 
         serializeAndSave();
 
+        final CompiledGraph compiledGraph = mCompiledGraph;
         futureMaterial.thenAccept(newMaterial -> {
-            // The returned future will always be completed on the main thread, so
-            // we're safe to call filament methods here.
-            MaterialInstance newMaterialInstance = newMaterial.createInstance();
-            mPreviewMeshPanel.updateMaterial(newMaterialInstance);
+            Filament.getInstance().assertIsFilamentThread();
+
+            mCurrentMaterialInstance = newMaterial.createInstance();
+            mPreviewMeshPanel.updateMaterial(mCurrentMaterialInstance);
+
+            // For all parameters present in the compiled graph, update them based on the current
+            // value in our model.
+            for (Map.Entry<Node.PropertyHandle, Parameter> entry
+                    : compiledGraph.getParameterMap().entrySet()) {
+
+                Node.PropertyHandle handle = entry.getKey();
+                Parameter parameter = entry.getValue();
+
+                Property nodeProperty = mModel.get().getNodeProperty(handle);
+                if (nodeProperty == null) {
+                    continue;
+                }
+                if (mCurrentMaterialInstance.getMaterial().hasParameter(parameter.getName())) {
+                    nodeProperty.getValue()
+                            .applyToMaterialInstance(mCurrentMaterialInstance, parameter.getName());
+                }
+            }
         });
     }
 
     private void serializeAndSave() {
-        String serializedGraph = GraphSerializer.INSTANCE.serialize(
-                mModel, Collections.emptyMap(), mNodeRegistry, new JsonSerializer());
+        if (mCompiledGraph == null) {
+            return;
+        }
+        String serializedGraph = GraphSerializer.INSTANCE.serialize(mModel.get(),
+                Collections.emptyMap(), new JsonSerializer());
         String materialDefinition =
-                GraphFile.INSTANCE.addToolBlockToMaterialFile(mCompiledGraph, serializedGraph);
+                GraphFile.INSTANCE.addToolBlockToMaterialFile(
+                mCompiledGraph.getMaterialDefinition(), serializedGraph);
         mFile.write(materialDefinition, success -> {
             if (!success) {
                 // TODO: propagate this error to the user somehow in the UI

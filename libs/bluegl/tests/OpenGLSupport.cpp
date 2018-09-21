@@ -191,7 +191,7 @@ OpenGLContext createOpenGLContext() {
     };
 
     HWND hwnd = CreateWindowA("STATIC", "dummy", 0, 0, 0, 1, 1, NULL, NULL, NULL, NULL);
-    HDC whdc = mWhdc = GetDC(hwnd);
+    HDC whdc = GetDC(hwnd);
 
     int pixelFormat = ChoosePixelFormat(whdc, &pfd);
     SetPixelFormat(whdc, pixelFormat, &pfd);
@@ -202,11 +202,11 @@ OpenGLContext createOpenGLContext() {
 
     PFNWGLCREATECONTEXTATTRIBSARBPROC wglCreateContextAttribs =
             (PFNWGLCREATECONTEXTATTRIBSARBPROC) wglGetProcAddress("wglCreateContextAttribsARB");
-    HGLRC context = wglCreateContextAttribs(hdc, nullptr, attribs);
+    HGLRC context = wglCreateContextAttribs(whdc, nullptr, attribs);
 
     wglMakeCurrent(NULL, NULL);
     wglDeleteContext(tempContext);
-    wglMakeCurrent(hdc, context);
+    wglMakeCurrent(whdc, context);
 
     return new wglLocalContext(hwnd, whdc, context);
 }

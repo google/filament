@@ -155,6 +155,13 @@ Java_com_google_android_filament_LightManager_nBuilderBuild(JNIEnv *env, jclass 
     return jboolean(builder->build(*engine, (Entity &) entity) == LightManager::Builder::Success);
 }
 
+extern "C" JNIEXPORT jint JNICALL
+Java_com_google_android_filament_LightManager_nGetType(JNIEnv* env,
+        jclass type, jlong nativeLightManager, jint i) {
+    LightManager *lm = (LightManager *) nativeLightManager;
+    return (jint)lm->getType((LightManager::Instance) i);
+}
+
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_LightManager_nSetPosition(JNIEnv *env, jclass type,
         jlong nativeLightManager, jint i, jfloat x, jfloat y, jfloat z) {

@@ -54,14 +54,15 @@ static void generateMaterialDefines(std::ostream& os, const CodeGenerator& cg,
     cg.generateMaterialProperty(os, Property::AMBIENT_OCCLUSION,    properties[ 4]);
     cg.generateMaterialProperty(os, Property::CLEAR_COAT,           properties[ 5]);
     cg.generateMaterialProperty(os, Property::CLEAR_COAT_ROUGHNESS, properties[ 6]);
-    cg.generateMaterialProperty(os, Property::ANISOTROPY,           properties[ 7]);
-    cg.generateMaterialProperty(os, Property::ANISOTROPY_DIRECTION, properties[ 8]);
-    cg.generateMaterialProperty(os, Property::THICKNESS,            properties[ 9]);
-    cg.generateMaterialProperty(os, Property::SUBSURFACE_POWER,     properties[10]);
-    cg.generateMaterialProperty(os, Property::SUBSURFACE_COLOR,     properties[11]);
-    cg.generateMaterialProperty(os, Property::SHEEN_COLOR,          properties[12]);
-    cg.generateMaterialProperty(os, Property::EMISSIVE,             properties[13]);
-    cg.generateMaterialProperty(os, Property::NORMAL,               properties[14]);
+    cg.generateMaterialProperty(os, Property::CLEAR_COAT_NORMAL,    properties[ 7]);
+    cg.generateMaterialProperty(os, Property::ANISOTROPY,           properties[ 8]);
+    cg.generateMaterialProperty(os, Property::ANISOTROPY_DIRECTION, properties[ 9]);
+    cg.generateMaterialProperty(os, Property::THICKNESS,            properties[10]);
+    cg.generateMaterialProperty(os, Property::SUBSURFACE_POWER,     properties[11]);
+    cg.generateMaterialProperty(os, Property::SUBSURFACE_COLOR,     properties[12]);
+    cg.generateMaterialProperty(os, Property::SHEEN_COLOR,          properties[13]);
+    cg.generateMaterialProperty(os, Property::EMISSIVE,             properties[14]);
+    cg.generateMaterialProperty(os, Property::NORMAL,               properties[15]);
 }
 
 static void generateVertexDomain(const CodeGenerator& cg, std::stringstream& vs,
@@ -159,6 +160,7 @@ const std::string ShaderGenerator::createVertexProgram(filament::driver::ShaderM
     bool litVariants = lit || (!lit && material.hasShadowMultiplier);
     cg.generateDefine(vs, "HAS_DIRECTIONAL_LIGHTING", litVariants && variant.hasDirectionalLighting());
     cg.generateDefine(vs, "HAS_SHADOWING", litVariants && variant.hasShadowReceiver());
+    cg.generateDefine(vs, "HAS_SHADOW_MULTIPLIER", material.hasShadowMultiplier);
     cg.generateDefine(vs, "HAS_SKINNING", variant.hasSkinning());
     cg.generateDefine(vs, getShadingDefine(material.shading), true);
     generateMaterialDefines(vs, cg, mProperties);
@@ -251,6 +253,7 @@ const std::string ShaderGenerator::createFragmentProgram(filament::driver::Shade
     cg.generateDefine(fs, "HAS_DIRECTIONAL_LIGHTING", litVariants && variant.hasDirectionalLighting());
     cg.generateDefine(fs, "HAS_DYNAMIC_LIGHTING", litVariants && variant.hasDynamicLighting());
     cg.generateDefine(fs, "HAS_SHADOWING", litVariants && variant.hasShadowReceiver());
+    cg.generateDefine(fs, "HAS_SHADOW_MULTIPLIER", material.hasShadowMultiplier);
 
     // material defines
     cg.generateDefine(fs, "MATERIAL_IS_DOUBLE_SIDED", material.isDoubleSided);

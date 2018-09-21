@@ -142,6 +142,8 @@ OpenGLDriver::OpenGLDriver(ContextManagerGL* externalContext) noexcept
     } else if (strstr(renderer, "Tegra") || strstr(renderer, "GeForce") || strstr(renderer, "NV")) {
     } else if (strstr(renderer, "Vivante")) {
     } else if (strstr(renderer, "AMD") || strstr(renderer, "ATI")) {
+    } else if (strstr(renderer, "Mozilla")) {
+        bugs.disable_invalidate_framebuffer = true;
     }
 
     // Figure out if we have the extension we need
@@ -1537,7 +1539,7 @@ void OpenGLDriver::beginRenderPass(Driver::RenderTargetHandle rth,
 
         // glInvalidateFramebuffer appeared on GLES 3.0 and GL4.3, for simplicity we just
         // ignore it on GL (rather than having to do a runtime check).
-        if (GLES31_HEADERS) {
+        if (GLES31_HEADERS && !bugs.disable_invalidate_framebuffer) {
             std::array<GLenum, 3> attachments;
             GLsizei attachmentCount = getAttachments(attachments, rt, discardFlags);
             if (attachmentCount) {
@@ -1619,7 +1621,7 @@ void OpenGLDriver::endRenderPass(int) {
     const TargetBufferFlags discardFlags = (TargetBufferFlags) mRenderPassParams.discardEnd;
     // glInvalidateFramebuffer appeared on GLES 3.0 and GL4.3, for simplicity we just
     // ignore it on GL (rather than having to do a runtime check).
-    if (GLES31_HEADERS) {
+    if (GLES31_HEADERS && !bugs.disable_invalidate_framebuffer) {
         // we wouldn't have to bind the framebuffer if we had glInvalidateNamedFramebuffer()
         GLRenderTarget* rt = handle_cast<GLRenderTarget*>(mRenderPassTarget);
         bindFramebuffer(GL_FRAMEBUFFER, rt->gl.fbo);
@@ -1773,12 +1775,20 @@ void OpenGLDriver::setRenderPrimitiveBuffer(Driver::RenderPrimitiveHandle rph,
                 uint8_t bi = eb->attributes[i].buffer;
                 assert(bi != 0xFF);
                 bindBuffer(GL_ARRAY_BUFFER, eb->gl.buffers[bi]);
-                glVertexAttribPointer(GLuint(i),
-                        getComponentCount(eb->attributes[i].type),
-                        getComponentType(eb->attributes[i].type),
-                        getNormalization(eb->attributes[i].normalized),
-                        eb->attributes[i].stride,
-                        (void*)uintptr_t(eb->attributes[i].offset));
+                if (UTILS_UNLIKELY(eb->attributes[i].flags & Attribute::FLAG_INTEGER_TARGET)) {
+                    glVertexAttribIPointer(GLuint(i),
+                            getComponentCount(eb->attributes[i].type),
+                            getComponentType(eb->attributes[i].type),
+                            eb->attributes[i].stride,
+                            (void*) uintptr_t(eb->attributes[i].offset));
+                } else {
+                    glVertexAttribPointer(GLuint(i),
+                            getComponentCount(eb->attributes[i].type),
+                            getComponentType(eb->attributes[i].type),
+                            getNormalization(eb->attributes[i].flags & Attribute::FLAG_NORMALIZED),
+                            eb->attributes[i].stride,
+                            (void*) uintptr_t(eb->attributes[i].offset));
+                }
 
                 enableVertexAttribArray(GLuint(i));
             } else {
@@ -2356,7 +2366,8 @@ GLuint OpenGLDriver::getSamplerSlow(driver::SamplerParams params) const noexcept
     glSamplerParameteri(s, GL_TEXTURE_WRAP_R,       getWrapMode(params.wrapR));
     glSamplerParameteri(s, GL_TEXTURE_COMPARE_MODE, getTextureCompareMode(params.compareMode));
     glSamplerParameteri(s, GL_TEXTURE_COMPARE_FUNC, getTextureCompareFunc(params.compareFunc));
-#ifdef GL_EXT_texture_filter_anisotropic
+// TODO: Why does this fail with WebGL 2.0? The run-time check should suffice.
+#if defined(GL_EXT_texture_filter_anisotropic) && !defined(__EMSCRIPTEN__)
     if (ext.texture_filter_anisotropic) {
         GLfloat anisotropy = float(1 << params.anisotropyLog2);
         glSamplerParameterf(s, GL_TEXTURE_MAX_ANISOTROPY_EXT, std::min(mMaxAnisotropy, anisotropy));
@@ -2368,7 +2379,7 @@ GLuint OpenGLDriver::getSamplerSlow(driver::SamplerParams params) const noexcept
 }
 
 void OpenGLDriver::insertEventMarker(char const* string, size_t len) {
-#if GL_EXT_debug_marker
+#ifdef GL_EXT_debug_marker
     if (ext.EXT_debug_marker) {
         glInsertEventMarkerEXT(GLsizei(len ? len : strlen(string)), string);
     }
@@ -2376,7 +2387,7 @@ void OpenGLDriver::insertEventMarker(char const* string, size_t len) {
 }
 
 void OpenGLDriver::pushGroupMarker(char const* string,  size_t len) {
-#if GL_EXT_debug_marker
+#ifdef GL_EXT_debug_marker
     if (ext.EXT_debug_marker) {
         glPushGroupMarkerEXT(GLsizei(len ? len : strlen(string)), string);
     }
@@ -2384,7 +2395,7 @@ void OpenGLDriver::pushGroupMarker(char const* string,  size_t len) {
 }
 
 void OpenGLDriver::popGroupMarker(int) {
-#if GL_EXT_debug_marker
+#ifdef GL_EXT_debug_marker
     if (ext.EXT_debug_marker) {
         glPopGroupMarkerEXT();
     }

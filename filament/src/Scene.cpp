@@ -133,11 +133,9 @@ void FScene::prepare(const math::mat4f& worldOriginTansform) {
                     float3 d = lcm.getLocalDirection(li);
                     // using the inverse-transpose handles non-uniform scaling
                     d = normalize(transpose(inverse(worldTransform.upperLeft())) * d);
-                    // TODO: allow lightData.front() = { ... } syntax
-                    lightData.elementAt<FScene::POSITION_RADIUS>(0) = {};
+                    lightData.elementAt<FScene::POSITION_RADIUS>(0) = float4{ 0, 0, 0, std::numeric_limits<float>::infinity() };
                     lightData.elementAt<FScene::DIRECTION>(0)       = d;
                     lightData.elementAt<FScene::LIGHT_INSTANCE>(0)  = li;
-                    lightData.elementAt<FScene::VISIBILITY>(0)      = {};
                 }
             } else {
                 const float4 p = worldTransform * float4{ lcm.getLocalPosition(li), 1 };
@@ -148,9 +146,16 @@ void FScene::prepare(const math::mat4f& worldOriginTansform) {
                     d = normalize(transpose(inverse(worldTransform.upperLeft())) * d);
                 }
                 lightData.push_back_unsafe(
-                        float4{ p.xyz, lcm.getRadius(li) }, d, li, {});
+                        float4{ p.xyz, lcm.getRadius(li) }, d, li, {}, {});
             }
         }
+    }
+
+    // some elements past the end of the array will be accessed by SIMD code, we need to make
+    // sure the data is valid enough as not to produce errors such as divide-by-zero
+    // (e.g. in computeLightRanges())
+    for (size_t i = lightData.size(), e = (lightData.size() + 3) & ~3; i < e; i++) {
+        new(lightData.data<POSITION_RADIUS>() + i) float4{ 0, 0, 0, 1 };
     }
 }
 
@@ -168,58 +173,48 @@ void FScene::terminate(FEngine& engine) {
     mGpuLightData.terminate(engine);
 }
 
-void FScene::prepareLights(const CameraInfo& camera, ArenaScope& rootArena) noexcept {
+void FScene::prepareDynamicLights(const CameraInfo& camera, ArenaScope& rootArena) noexcept {
     FLightManager& lcm = mEngine.getLightManager();
     GpuLightBuffer& gpuLightData = mGpuLightData;
     FScene::LightSoa& lightData = getLightData();
 
     /*
      * Here we copy our lights data into the GPU buffer, some lights might be left out if there
-     * are more than the GPU buffer allows (i.e. 255).
+     * are more than the GPU buffer allows (i.e. 256).
      *
-     * Sorting light by distance to the camera for dropping the ones in excess doesn't
-     * work well because a light far from the camera could light an object close to it
-     * (e.g. a search light).
-     *
-     * When we have too many lights, there is nothing better we can do though.
-     * However, when the froxelization "record buffer" runs out of space, it's better to drop
-     * froxels far from the camera instead. This would happen during froxelization.
+     * We always sort lights by distance to the camera plane so that:
+     * - we can build light trees
+     * - lights farther from the camera are dropped when in excess
+     *   (note this doesn't work well, e.g. for search-lights)
      */
 
-    // don't count the directional light
-    if (UTILS_UNLIKELY(lightData.size() > CONFIG_MAX_LIGHT_COUNT + DIRECTIONAL_LIGHTS_COUNT)) {
-        ArenaScope arena(rootArena.getAllocator());
-        float* const UTILS_RESTRICT distances = arena.allocate<float>(lightData.size(), CACHELINE_SIZE);
+    ArenaScope arena(rootArena.getAllocator());
+    float* const UTILS_RESTRICT distances = arena.allocate<float>(lightData.size(), CACHELINE_SIZE);
 
-        // pre-compute the lights' distance to the camera, for sorting below.
-        float3 const position = camera.getPosition();
+    // pre-compute the lights' distance to the camera plane, for sorting below
+    // - we don't skip the directional light, because we don't care, it's ignored during sorting
+    float4 const* const UTILS_RESTRICT spheres = lightData.data<FScene::POSITION_RADIUS>();
+    computeLightCameraPlaneDistances(distances, camera, spheres, lightData.size());
 
-        // skip directional light
-        for (size_t i = DIRECTIONAL_LIGHTS_COUNT, c = lightData.size(); i < c; ++i) {
-            // TODO: this should take spot-light direction into account
-            // TODO: maybe we could also take the intensity into account
-            float4 s = lightData.elementAt<FScene::POSITION_RADIUS>(i);
-            distances[i] = std::max(0.0f, length(position - s.xyz) - s.w);
-        }
+    // skip directional light
+    Zip2Iterator<FScene::LightSoa::iterator, float*> b = { lightData.begin(), distances };
+    std::sort(b + DIRECTIONAL_LIGHTS_COUNT, b + lightData.size(),
+            [](auto const& lhs, auto const& rhs) { return lhs.second < rhs.second; });
 
-        // skip directional light
-        Zip2Iterator<FScene::LightSoa::iterator, float*> b = { lightData.begin(), distances };
-        std::sort(b + DIRECTIONAL_LIGHTS_COUNT, b + lightData.size(),
-                [](auto const& lhs, auto const& rhs) { return lhs.second < rhs.second; });
+    // drop excess lights
+    lightData.resize(std::min(lightData.size(), CONFIG_MAX_LIGHT_COUNT + DIRECTIONAL_LIGHTS_COUNT));
 
-        lightData.resize(std::min(lightData.size(), CONFIG_MAX_LIGHT_COUNT + DIRECTIONAL_LIGHTS_COUNT));
-    }
+    // compute the light ranges (needed when building light trees)
+    float2* const zrange = lightData.data<FScene::SCREEN_SPACE_Z_RANGE>();
+    computeLightRanges(zrange, camera, spheres + DIRECTIONAL_LIGHTS_COUNT, lightData.size() - DIRECTIONAL_LIGHTS_COUNT);
 
-    assert(lightData.size() <= CONFIG_MAX_LIGHT_COUNT + DIRECTIONAL_LIGHTS_COUNT);
-
-    auto const* UTILS_RESTRICT positions    = lightData.data<FScene::POSITION_RADIUS>();
     auto const* UTILS_RESTRICT directions   = lightData.data<FScene::DIRECTION>();
     auto const* UTILS_RESTRICT instances    = lightData.data<FScene::LIGHT_INSTANCE>();
     for (size_t i = DIRECTIONAL_LIGHTS_COUNT, c = lightData.size(); i < c; ++i) {
         GpuLightBuffer::LightIndex gpuIndex = GpuLightBuffer::LightIndex(i - DIRECTIONAL_LIGHTS_COUNT);
         GpuLightBuffer::LightParameters& lp = gpuLightData.getLightParameters(gpuIndex);
         auto li = instances[i];
-        lp.positionFalloff      = { positions[i].xyz, lcm.getSquaredFalloffInv(li) };
+        lp.positionFalloff      = { spheres[i].xyz, lcm.getSquaredFalloffInv(li) };
         lp.colorIntensity       = { lcm.getColor(li), lcm.getIntensity(li) };
         lp.directionIES         = { directions[i], 0 };
         lp.spotScaleOffset.xy   = { lcm.getSpotParams(li).scaleOffset };
@@ -227,6 +222,58 @@ void FScene::prepareLights(const CameraInfo& camera, ArenaScope& rootArena) noex
 
     gpuLightData.invalidate(0, lightData.size() - DIRECTIONAL_LIGHTS_COUNT);
     gpuLightData.commit(mEngine);
+}
+
+// These methods need to exist so clang honors the __restrict__ keyword, which in turn
+// produces much better vectorization. The ALWAYS_INLINE keyword makes sure we actually don't
+// pay the price of the call!
+UTILS_ALWAYS_INLINE
+void FScene::computeLightCameraPlaneDistances(
+        float* UTILS_RESTRICT const distances,
+        CameraInfo const& UTILS_RESTRICT camera,
+        float4 const* UTILS_RESTRICT const spheres, size_t count) noexcept {
+
+    // without this, the vectorization is less efficient
+    // we're guaranteed to have a multiple of 4 lights (at least)
+    count = uint32_t(count + 3u) & ~3u;
+
+    for (size_t i = 0 ; i < count; i++) {
+        const float4 sphere = spheres[i];
+        const float4 center = camera.view * sphere.xyz; // camera points towards the -z axis
+        distances[i] = -center.z > 0.0f ? -center.z : 0.0f; // std::max() prevents vectorization (???)
+    }
+}
+
+// These methods need to exist so clang honors the __restrict__ keyword, which in turn
+// produces much better vectorization. The ALWAYS_INLINE keyword makes sure we actually don't
+// pay the price of the call!
+UTILS_ALWAYS_INLINE
+void FScene::computeLightRanges(
+        float2* UTILS_RESTRICT const zrange,
+        CameraInfo const& UTILS_RESTRICT camera,
+        float4 const* UTILS_RESTRICT const spheres, size_t count) noexcept {
+
+    // without this clang seems to assume the src and dst might overlap even if they're
+    // restricted.
+    // we're guaranteed to have a multiple of 4 lights (at least)
+    count = uint32_t(count + 3u) & ~3u;
+
+    for (size_t i = 0 ; i < count; i++) {
+        // this loop gets vectorized x4
+        const float4 sphere = spheres[i];
+        const float4 center = camera.view * sphere.xyz; // camera points towards the -z axis
+        float4 n = center + float4{ 0, 0, sphere.w, 0 };
+        float4 f = center - float4{ 0, 0, sphere.w, 0 };
+        // project to clip space
+        n = camera.projection * n;
+        f = camera.projection * f;
+        // convert to NDC
+        const float min = (n.w > camera.zn) ? (n.z / n.w) : -1.0f;
+        const float max = (f.w < camera.zf) ? (f.z / f.w) :  1.0f;
+        // convert to screen space
+        zrange[i].x = (min + 1.0f) * 0.5f;
+        zrange[i].y = (max + 1.0f) * 0.5f;
+    }
 }
 
 void FScene::addEntity(Entity entity) {

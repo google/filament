@@ -91,312 +91,6 @@ class idUsage {
   helper
 
 template <>
-bool idUsage::isValid<SpvOpConstantTrue>(const spv_instruction_t* inst,
-                                         const spv_opcode_desc) {
-  auto resultTypeIndex = 1;
-  auto resultType = module_.FindDef(inst->words[resultTypeIndex]);
-  if (!resultType || SpvOpTypeBool != resultType->opcode()) {
-    DIAG(resultType) << "OpConstantTrue Result Type <id> '"
-                     << module_.getIdName(inst->words[resultTypeIndex])
-                     << "' is not a boolean type.";
-    return false;
-  }
-  return true;
-}
-
-template <>
-bool idUsage::isValid<SpvOpConstantFalse>(const spv_instruction_t* inst,
-                                          const spv_opcode_desc) {
-  auto resultTypeIndex = 1;
-  auto resultType = module_.FindDef(inst->words[resultTypeIndex]);
-  if (!resultType || SpvOpTypeBool != resultType->opcode()) {
-    DIAG(resultType) << "OpConstantFalse Result Type <id> '"
-                     << module_.getIdName(inst->words[resultTypeIndex])
-                     << "' is not a boolean type.";
-    return false;
-  }
-  return true;
-}
-
-template <>
-bool idUsage::isValid<SpvOpConstantComposite>(const spv_instruction_t* inst,
-                                              const spv_opcode_desc) {
-  auto resultTypeIndex = 1;
-  auto resultType = module_.FindDef(inst->words[resultTypeIndex]);
-  if (!resultType || !spvOpcodeIsComposite(resultType->opcode())) {
-    DIAG(resultType) << "OpConstantComposite Result Type <id> '"
-                     << module_.getIdName(inst->words[resultTypeIndex])
-                     << "' is not a composite type.";
-    return false;
-  }
-
-  auto constituentCount = inst->words.size() - 3;
-  switch (resultType->opcode()) {
-    case SpvOpTypeVector: {
-      auto componentCount = resultType->words()[3];
-      if (componentCount != constituentCount) {
-        // TODO: Output ID's on diagnostic
-        DIAG(module_.FindDef(inst->words.back()))
-            << "OpConstantComposite Constituent <id> count does not match "
-               "Result Type <id> '"
-            << module_.getIdName(resultType->id())
-            << "'s vector component count.";
-        return false;
-      }
-      auto componentType = module_.FindDef(resultType->words()[2]);
-      assert(componentType);
-      for (size_t constituentIndex = 3; constituentIndex < inst->words.size();
-           constituentIndex++) {
-        auto constituent = module_.FindDef(inst->words[constituentIndex]);
-        if (!constituent ||
-            !spvOpcodeIsConstantOrUndef(constituent->opcode())) {
-          DIAG(constituent) << "OpConstantComposite Constituent <id> '"
-                            << module_.getIdName(inst->words[constituentIndex])
-                            << "' is not a constant or undef.";
-          return false;
-        }
-        auto constituentResultType = module_.FindDef(constituent->type_id());
-        if (!constituentResultType ||
-            componentType->opcode() != constituentResultType->opcode()) {
-          DIAG(constituent) << "OpConstantComposite Constituent <id> '"
-                            << module_.getIdName(inst->words[constituentIndex])
-                            << "'s type does not match Result Type <id> '"
-                            << module_.getIdName(resultType->id())
-                            << "'s vector element type.";
-          return false;
-        }
-      }
-    } break;
-    case SpvOpTypeMatrix: {
-      auto columnCount = resultType->words()[3];
-      if (columnCount != constituentCount) {
-        // TODO: Output ID's on diagnostic
-        DIAG(module_.FindDef(inst->words.back()))
-            << "OpConstantComposite Constituent <id> count does not match "
-               "Result Type <id> '"
-            << module_.getIdName(resultType->id()) << "'s matrix column count.";
-        return false;
-      }
-
-      auto columnType = module_.FindDef(resultType->words()[2]);
-      assert(columnType);
-      auto componentCount = columnType->words()[3];
-      auto componentType = module_.FindDef(columnType->words()[2]);
-      assert(componentType);
-
-      for (size_t constituentIndex = 3; constituentIndex < inst->words.size();
-           constituentIndex++) {
-        auto constituent = module_.FindDef(inst->words[constituentIndex]);
-        if (!constituent || !(SpvOpConstantComposite == constituent->opcode() ||
-                              SpvOpUndef == constituent->opcode())) {
-          // The message says "... or undef" because the spec does not say
-          // undef is a constant.
-          DIAG(constituent) << "OpConstantComposite Constituent <id> '"
-                            << module_.getIdName(inst->words[constituentIndex])
-                            << "' is not a constant composite or undef.";
-          return false;
-        }
-        auto vector = module_.FindDef(constituent->type_id());
-        assert(vector);
-        if (columnType->opcode() != vector->opcode()) {
-          DIAG(constituent) << "OpConstantComposite Constituent <id> '"
-                            << module_.getIdName(inst->words[constituentIndex])
-                            << "' type does not match Result Type <id> '"
-                            << module_.getIdName(resultType->id())
-                            << "'s matrix column type.";
-          return false;
-        }
-        auto vectorComponentType = module_.FindDef(vector->words()[2]);
-        assert(vectorComponentType);
-        if (componentType->id() != vectorComponentType->id()) {
-          DIAG(constituent)
-              << "OpConstantComposite Constituent <id> '"
-              << module_.getIdName(inst->words[constituentIndex])
-              << "' component type does not match Result Type <id> '"
-              << module_.getIdName(resultType->id())
-              << "'s matrix column component type.";
-          return false;
-        }
-        if (componentCount != vector->words()[3]) {
-          DIAG(constituent)
-              << "OpConstantComposite Constituent <id> '"
-              << module_.getIdName(inst->words[constituentIndex])
-              << "' vector component count does not match Result Type <id> '"
-              << module_.getIdName(resultType->id())
-              << "'s vector component count.";
-          return false;
-        }
-      }
-    } break;
-    case SpvOpTypeArray: {
-      auto elementType = module_.FindDef(resultType->words()[2]);
-      assert(elementType);
-      auto length = module_.FindDef(resultType->words()[3]);
-      assert(length);
-      if (length->words()[3] != constituentCount) {
-        DIAG(module_.FindDef(inst->words.back()))
-            << "OpConstantComposite Constituent count does not match "
-               "Result Type <id> '"
-            << module_.getIdName(resultType->id()) << "'s array length.";
-        return false;
-      }
-      for (size_t constituentIndex = 3; constituentIndex < inst->words.size();
-           constituentIndex++) {
-        auto constituent = module_.FindDef(inst->words[constituentIndex]);
-        if (!constituent ||
-            !spvOpcodeIsConstantOrUndef(constituent->opcode())) {
-          DIAG(constituent) << "OpConstantComposite Constituent <id> '"
-                            << module_.getIdName(inst->words[constituentIndex])
-                            << "' is not a constant or undef.";
-          return false;
-        }
-        auto constituentType = module_.FindDef(constituent->type_id());
-        assert(constituentType);
-        if (elementType->id() != constituentType->id()) {
-          DIAG(constituent) << "OpConstantComposite Constituent <id> '"
-                            << module_.getIdName(inst->words[constituentIndex])
-                            << "'s type does not match Result Type <id> '"
-                            << module_.getIdName(resultType->id())
-                            << "'s array element type.";
-          return false;
-        }
-      }
-    } break;
-    case SpvOpTypeStruct: {
-      auto memberCount = resultType->words().size() - 2;
-      if (memberCount != constituentCount) {
-        DIAG(resultType) << "OpConstantComposite Constituent <id> '"
-                         << module_.getIdName(inst->words[resultTypeIndex])
-                         << "' count does not match Result Type <id> '"
-                         << module_.getIdName(resultType->id())
-                         << "'s struct member count.";
-        return false;
-      }
-      for (uint32_t constituentIndex = 3, memberIndex = 2;
-           constituentIndex < inst->words.size();
-           constituentIndex++, memberIndex++) {
-        auto constituent = module_.FindDef(inst->words[constituentIndex]);
-        if (!constituent ||
-            !spvOpcodeIsConstantOrUndef(constituent->opcode())) {
-          DIAG(constituent) << "OpConstantComposite Constituent <id> '"
-                            << module_.getIdName(inst->words[constituentIndex])
-                            << "' is not a constant or undef.";
-          return false;
-        }
-        auto constituentType = module_.FindDef(constituent->type_id());
-        assert(constituentType);
-
-        auto memberType = module_.FindDef(resultType->words()[memberIndex]);
-        assert(memberType);
-        if (memberType->id() != constituentType->id()) {
-          DIAG(constituent)
-              << "OpConstantComposite Constituent <id> '"
-              << module_.getIdName(inst->words[constituentIndex])
-              << "' type does not match the Result Type <id> '"
-              << module_.getIdName(resultType->id()) << "'s member type.";
-          return false;
-        }
-      }
-    } break;
-    default: { assert(0 && "Unreachable!"); } break;
-  }
-  return true;
-}
-
-template <>
-bool idUsage::isValid<SpvOpConstantSampler>(const spv_instruction_t* inst,
-                                            const spv_opcode_desc) {
-  auto resultTypeIndex = 1;
-  auto resultType = module_.FindDef(inst->words[resultTypeIndex]);
-  if (!resultType || SpvOpTypeSampler != resultType->opcode()) {
-    DIAG(resultType) << "OpConstantSampler Result Type <id> '"
-                     << module_.getIdName(inst->words[resultTypeIndex])
-                     << "' is not a sampler type.";
-    return false;
-  }
-  return true;
-}
-
-// True if instruction defines a type that can have a null value, as defined by
-// the SPIR-V spec.  Tracks composite-type components through module to check
-// nullability transitively.
-bool IsTypeNullable(const std::vector<uint32_t>& instruction,
-                    const ValidationState_t& module) {
-  uint16_t opcode;
-  uint16_t word_count;
-  spvOpcodeSplit(instruction[0], &word_count, &opcode);
-  switch (static_cast<SpvOp>(opcode)) {
-    case SpvOpTypeBool:
-    case SpvOpTypeInt:
-    case SpvOpTypeFloat:
-    case SpvOpTypePointer:
-    case SpvOpTypeEvent:
-    case SpvOpTypeDeviceEvent:
-    case SpvOpTypeReserveId:
-    case SpvOpTypeQueue:
-      return true;
-    case SpvOpTypeArray:
-    case SpvOpTypeMatrix:
-    case SpvOpTypeVector: {
-      auto base_type = module.FindDef(instruction[2]);
-      return base_type && IsTypeNullable(base_type->words(), module);
-    }
-    case SpvOpTypeStruct: {
-      for (size_t elementIndex = 2; elementIndex < instruction.size();
-           ++elementIndex) {
-        auto element = module.FindDef(instruction[elementIndex]);
-        if (!element || !IsTypeNullable(element->words(), module)) return false;
-      }
-      return true;
-    }
-    default:
-      return false;
-  }
-}
-
-template <>
-bool idUsage::isValid<SpvOpConstantNull>(const spv_instruction_t* inst,
-                                         const spv_opcode_desc) {
-  auto resultTypeIndex = 1;
-  auto resultType = module_.FindDef(inst->words[resultTypeIndex]);
-  if (!resultType || !IsTypeNullable(resultType->words(), module_)) {
-    DIAG(resultType) << "OpConstantNull Result Type <id> '"
-                     << module_.getIdName(inst->words[resultTypeIndex])
-                     << "' cannot have a null value.";
-    return false;
-  }
-  return true;
-}
-
-template <>
-bool idUsage::isValid<SpvOpSpecConstantTrue>(const spv_instruction_t* inst,
-                                             const spv_opcode_desc) {
-  auto resultTypeIndex = 1;
-  auto resultType = module_.FindDef(inst->words[resultTypeIndex]);
-  if (!resultType || SpvOpTypeBool != resultType->opcode()) {
-    DIAG(resultType) << "OpSpecConstantTrue Result Type <id> '"
-                     << module_.getIdName(inst->words[resultTypeIndex])
-                     << "' is not a boolean type.";
-    return false;
-  }
-  return true;
-}
-
-template <>
-bool idUsage::isValid<SpvOpSpecConstantFalse>(const spv_instruction_t* inst,
-                                              const spv_opcode_desc) {
-  auto resultTypeIndex = 1;
-  auto resultType = module_.FindDef(inst->words[resultTypeIndex]);
-  if (!resultType || SpvOpTypeBool != resultType->opcode()) {
-    DIAG(resultType) << "OpSpecConstantFalse Result Type <id> '"
-                     << module_.getIdName(inst->words[resultTypeIndex])
-                     << "' is not a boolean type.";
-    return false;
-  }
-  return true;
-}
-
-template <>
 bool idUsage::isValid<SpvOpSampledImage>(const spv_instruction_t* inst,
                                          const spv_opcode_desc) {
   auto resultTypeIndex = 2;
@@ -445,202 +139,6 @@ bool idUsage::isValid<SpvOpSampledImage>(const spv_instruction_t* inst,
   return true;
 }
 
-template <>
-bool idUsage::isValid<SpvOpSpecConstantComposite>(const spv_instruction_t* inst,
-                                                  const spv_opcode_desc) {
-  // The result type must be a composite type.
-  auto resultTypeIndex = 1;
-  auto resultType = module_.FindDef(inst->words[resultTypeIndex]);
-  if (!resultType || !spvOpcodeIsComposite(resultType->opcode())) {
-    DIAG(resultType) << "OpSpecConstantComposite Result Type <id> '"
-                     << module_.getIdName(inst->words[resultTypeIndex])
-                     << "' is not a composite type.";
-    return false;
-  }
-  // Validation checks differ based on the type of composite type.
-  auto constituentCount = inst->words.size() - 3;
-  switch (resultType->opcode()) {
-    // For Vectors, the following must be met:
-    // * Number of constituents in the result type and the vector must match.
-    // * All the components of the vector must have the same type (or specialize
-    // to the same type). OpConstant and OpSpecConstant are allowed.
-    // To check that condition, we check each supplied value argument's type
-    // against the element type of the result type.
-    case SpvOpTypeVector: {
-      auto componentCount = resultType->words()[3];
-      if (componentCount != constituentCount) {
-        DIAG(module_.FindDef(inst->words.back()))
-            << "OpSpecConstantComposite Constituent <id> count does not match "
-               "Result Type <id> '"
-            << module_.getIdName(resultType->id())
-            << "'s vector component count.";
-        return false;
-      }
-      auto componentType = module_.FindDef(resultType->words()[2]);
-      assert(componentType);
-      for (size_t constituentIndex = 3; constituentIndex < inst->words.size();
-           constituentIndex++) {
-        auto constituent = module_.FindDef(inst->words[constituentIndex]);
-        if (!constituent ||
-            !spvOpcodeIsConstantOrUndef(constituent->opcode())) {
-          DIAG(constituent) << "OpSpecConstantComposite Constituent <id> '"
-                            << module_.getIdName(inst->words[constituentIndex])
-                            << "' is not a constant or undef.";
-          return false;
-        }
-        auto constituentResultType = module_.FindDef(constituent->type_id());
-        if (!constituentResultType ||
-            componentType->opcode() != constituentResultType->opcode()) {
-          DIAG(constituent) << "OpSpecConstantComposite Constituent <id> '"
-                            << module_.getIdName(inst->words[constituentIndex])
-                            << "'s type does not match Result Type <id> '"
-                            << module_.getIdName(resultType->id())
-                            << "'s vector element type.";
-          return false;
-        }
-      }
-      break;
-    }
-    case SpvOpTypeMatrix: {
-      auto columnCount = resultType->words()[3];
-      if (columnCount != constituentCount) {
-        DIAG(module_.FindDef(inst->words.back()))
-            << "OpSpecConstantComposite Constituent <id> count does not match "
-               "Result Type <id> '"
-            << module_.getIdName(resultType->id()) << "'s matrix column count.";
-        return false;
-      }
-
-      auto columnType = module_.FindDef(resultType->words()[2]);
-      assert(columnType);
-      auto componentCount = columnType->words()[3];
-      auto componentType = module_.FindDef(columnType->words()[2]);
-      assert(componentType);
-
-      for (size_t constituentIndex = 3; constituentIndex < inst->words.size();
-           constituentIndex++) {
-        auto constituent = module_.FindDef(inst->words[constituentIndex]);
-        auto constituentOpCode = constituent->opcode();
-        if (!constituent || !(SpvOpSpecConstantComposite == constituentOpCode ||
-                              SpvOpConstantComposite == constituentOpCode ||
-                              SpvOpUndef == constituentOpCode)) {
-          // The message says "... or undef" because the spec does not say
-          // undef is a constant.
-          DIAG(constituent) << "OpSpecConstantComposite Constituent <id> '"
-                            << module_.getIdName(inst->words[constituentIndex])
-                            << "' is not a constant composite or undef.";
-          return false;
-        }
-        auto vector = module_.FindDef(constituent->type_id());
-        assert(vector);
-        if (columnType->opcode() != vector->opcode()) {
-          DIAG(constituent) << "OpSpecConstantComposite Constituent <id> '"
-                            << module_.getIdName(inst->words[constituentIndex])
-                            << "' type does not match Result Type <id> '"
-                            << module_.getIdName(resultType->id())
-                            << "'s matrix column type.";
-          return false;
-        }
-        auto vectorComponentType = module_.FindDef(vector->words()[2]);
-        assert(vectorComponentType);
-        if (componentType->id() != vectorComponentType->id()) {
-          DIAG(constituent)
-              << "OpSpecConstantComposite Constituent <id> '"
-              << module_.getIdName(inst->words[constituentIndex])
-              << "' component type does not match Result Type <id> '"
-              << module_.getIdName(resultType->id())
-              << "'s matrix column component type.";
-          return false;
-        }
-        if (componentCount != vector->words()[3]) {
-          DIAG(constituent)
-              << "OpSpecConstantComposite Constituent <id> '"
-              << module_.getIdName(inst->words[constituentIndex])
-              << "' vector component count does not match Result Type <id> '"
-              << module_.getIdName(resultType->id())
-              << "'s vector component count.";
-          return false;
-        }
-      }
-      break;
-    }
-    case SpvOpTypeArray: {
-      auto elementType = module_.FindDef(resultType->words()[2]);
-      assert(elementType);
-      auto length = module_.FindDef(resultType->words()[3]);
-      assert(length);
-      if (length->words()[3] != constituentCount) {
-        DIAG(module_.FindDef(inst->words.back()))
-            << "OpSpecConstantComposite Constituent count does not match "
-               "Result Type <id> '"
-            << module_.getIdName(resultType->id()) << "'s array length.";
-        return false;
-      }
-      for (size_t constituentIndex = 3; constituentIndex < inst->words.size();
-           constituentIndex++) {
-        auto constituent = module_.FindDef(inst->words[constituentIndex]);
-        if (!constituent ||
-            !spvOpcodeIsConstantOrUndef(constituent->opcode())) {
-          DIAG(constituent) << "OpSpecConstantComposite Constituent <id> '"
-                            << module_.getIdName(inst->words[constituentIndex])
-                            << "' is not a constant or undef.";
-          return false;
-        }
-        auto constituentType = module_.FindDef(constituent->type_id());
-        assert(constituentType);
-        if (elementType->id() != constituentType->id()) {
-          DIAG(constituent) << "OpSpecConstantComposite Constituent <id> '"
-                            << module_.getIdName(inst->words[constituentIndex])
-                            << "'s type does not match Result Type <id> '"
-                            << module_.getIdName(resultType->id())
-                            << "'s array element type.";
-          return false;
-        }
-      }
-      break;
-    }
-    case SpvOpTypeStruct: {
-      auto memberCount = resultType->words().size() - 2;
-      if (memberCount != constituentCount) {
-        DIAG(resultType) << "OpSpecConstantComposite Constituent <id> '"
-                         << module_.getIdName(inst->words[resultTypeIndex])
-                         << "' count does not match Result Type <id> '"
-                         << module_.getIdName(resultType->id())
-                         << "'s struct member count.";
-        return false;
-      }
-      for (uint32_t constituentIndex = 3, memberIndex = 2;
-           constituentIndex < inst->words.size();
-           constituentIndex++, memberIndex++) {
-        auto constituent = module_.FindDef(inst->words[constituentIndex]);
-        if (!constituent ||
-            !spvOpcodeIsConstantOrUndef(constituent->opcode())) {
-          DIAG(constituent) << "OpSpecConstantComposite Constituent <id> '"
-                            << module_.getIdName(inst->words[constituentIndex])
-                            << "' is not a constant or undef.";
-          return false;
-        }
-        auto constituentType = module_.FindDef(constituent->type_id());
-        assert(constituentType);
-
-        auto memberType = module_.FindDef(resultType->words()[memberIndex]);
-        assert(memberType);
-        if (memberType->id() != constituentType->id()) {
-          DIAG(constituent)
-              << "OpSpecConstantComposite Constituent <id> '"
-              << module_.getIdName(inst->words[constituentIndex])
-              << "' type does not match the Result Type <id> '"
-              << module_.getIdName(resultType->id()) << "'s member type.";
-          return false;
-        }
-      }
-      break;
-    }
-    default: { assert(0 && "Unreachable!"); } break;
-  }
-  return true;
-}
-
 bool idUsage::isValid(const spv_instruction_t* inst) {
   spv_opcode_desc opcodeEntry = nullptr;
   if (spvOpcodeTableValueLookup(targetEnv, opcodeTable, inst->opcode,
@@ -650,14 +148,6 @@ bool idUsage::isValid(const spv_instruction_t* inst) {
   case Spv##OpCode:  \
     return isValid<Spv##OpCode>(inst, opcodeEntry);
   switch (inst->opcode) {
-    CASE(OpConstantTrue)
-    CASE(OpConstantFalse)
-    CASE(OpConstantComposite)
-    CASE(OpConstantSampler)
-    CASE(OpConstantNull)
-    CASE(OpSpecConstantTrue)
-    CASE(OpSpecConstantFalse)
-    CASE(OpSpecConstantComposite)
     CASE(OpSampledImage)
     // Other composite opcodes are validated in validate_composites.cpp.
     // Arithmetic opcodes are validated in validate_arithmetics.cpp.
@@ -695,24 +185,27 @@ spv_result_t UpdateIdUse(ValidationState_t& _, const Instruction* inst) {
 /// NOTE: This function does NOT check module scoped functions which are
 /// checked during the initial binary parse in the IdPass below
 spv_result_t CheckIdDefinitionDominateUse(const ValidationState_t& _) {
-  std::unordered_set<const Instruction*> phi_instructions;
-  for (const auto& definition : _.all_definitions()) {
-    // Check only those definitions defined in a function
-    if (const Function* func = definition.second->function()) {
-      if (const BasicBlock* block = definition.second->block()) {
+  std::vector<const Instruction*> phi_instructions;
+  std::unordered_set<uint32_t> phi_ids;
+  for (const auto& inst : _.ordered_instructions()) {
+    if (inst.id() == 0) continue;
+    if (const Function* func = inst.function()) {
+      if (const BasicBlock* block = inst.block()) {
         if (!block->reachable()) continue;
         // If the Id is defined within a block then make sure all references to
         // that Id appear in a blocks that are dominated by the defining block
-        for (auto& use_index_pair : definition.second->uses()) {
+        for (auto& use_index_pair : inst.uses()) {
           const Instruction* use = use_index_pair.first;
           if (const BasicBlock* use_block = use->block()) {
             if (use_block->reachable() == false) continue;
             if (use->opcode() == SpvOpPhi) {
-              phi_instructions.insert(use);
+              if (phi_ids.insert(use->id()).second) {
+                phi_instructions.push_back(use);
+              }
             } else if (!block->dominates(*use->block())) {
               return _.diag(SPV_ERROR_INVALID_ID, use_block->label())
-                     << "ID " << _.getIdName(definition.first)
-                     << " defined in block " << _.getIdName(block->id())
+                     << "ID " << _.getIdName(inst.id()) << " defined in block "
+                     << _.getIdName(block->id())
                      << " does not dominate its use in block "
                      << _.getIdName(use_block->id());
             }
@@ -722,13 +215,12 @@ spv_result_t CheckIdDefinitionDominateUse(const ValidationState_t& _) {
         // If the Ids defined within a function but not in a block(i.e. function
         // parameters, block ids), then make sure all references to that Id
         // appear within the same function
-        for (auto use : definition.second->uses()) {
-          const Instruction* inst = use.first;
-          if (inst->function() && inst->function() != func) {
+        for (auto use : inst.uses()) {
+          const Instruction* user = use.first;
+          if (user->function() && user->function() != func) {
             return _.diag(SPV_ERROR_INVALID_ID, _.FindDef(func->id()))
-                   << "ID " << _.getIdName(definition.first)
-                   << " used in function "
-                   << _.getIdName(inst->function()->id())
+                   << "ID " << _.getIdName(inst.id()) << " used in function "
+                   << _.getIdName(user->function()->id())
                    << " is used outside of it's defining function "
                    << _.getIdName(func->id());
           }

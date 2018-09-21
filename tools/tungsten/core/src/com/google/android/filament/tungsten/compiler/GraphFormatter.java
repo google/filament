@@ -30,7 +30,7 @@ final class GraphFormatter {
     private GraphFormatter() { }
 
     static String formatFragmentSection(Collection<String> globalFunctions,
-            String materialFunctionBody) {
+            String materialFunctionBodyPrologue, String materialFunctionBody) {
         StringBuilder functions = new StringBuilder();
         for (String functionBody : globalFunctions) {
             functions.append(indent(functionBody, FUNCTION_INDENT_AMOUNT));
@@ -39,13 +39,13 @@ final class GraphFormatter {
         return "fragment {\n"
                 + functions.toString()
                 + "    void material(inout MaterialInputs material) {\n"
-                + formatMaterialFunctionBody(materialFunctionBody)
+                + formatMaterialFunctionBody(materialFunctionBodyPrologue ,materialFunctionBody)
                 + "    }\n"
                 + "}";
     }
 
     static String formatMaterialSection(Collection<String> attributes,
-            Collection<Parameter> parameters) {
+            Collection<Parameter> parameters, String shadingModel) {
         StringBuilder builder = new StringBuilder();
         for (String attribute : attributes) {
             builder.append(indent(attribute, BODY_CODE_INDENT_AMOUNT)).append("\n");
@@ -58,7 +58,7 @@ final class GraphFormatter {
                 + "    requires : [\n"
                 + attributeText
                 + "    ],\n"
-                + "    shadingModel : unlit\n"
+                + "    shadingModel : \"" + shadingModel + "\"\n"
                 + "}\n"
                 + "\n";
     }
@@ -75,9 +75,10 @@ final class GraphFormatter {
         return t.replaceAll("\n(?!$)", "\n" + spaces);  // indent remaining non-empty lines
     }
 
-    private static String formatMaterialFunctionBody(String code) {
-        return indent("prepareMaterial(material);\n", BODY_CODE_INDENT_AMOUNT)
-                + indent(code, BODY_CODE_INDENT_AMOUNT);
+    private static String formatMaterialFunctionBody(String prologue, String epilogue) {
+        return indent(prologue, BODY_CODE_INDENT_AMOUNT)
+                + indent("prepareMaterial(material);\n", BODY_CODE_INDENT_AMOUNT)
+                + indent(epilogue, BODY_CODE_INDENT_AMOUNT);
     }
 
     private static String formatParameters(Collection<Parameter> parameters) {
@@ -99,8 +100,8 @@ final class GraphFormatter {
 
     private static String formatParameterSource(Parameter p) {
         return indent("{\n"
-                + "    type : " + p.type + ",\n"
-                + "    name : " + p.name + "\n"
+                + "    type : " + p.getType() + ",\n"
+                + "    name : " + p.getName() + "\n"
                 + "}", 4);
     }
 }

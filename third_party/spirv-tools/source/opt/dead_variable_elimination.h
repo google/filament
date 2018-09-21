@@ -26,7 +26,7 @@ namespace opt {
 
 class DeadVariableElimination : public MemPass {
  public:
-  const char* name() const override { return "dead-variable-elimination"; }
+  const char* name() const override { return "eliminate-dead-variables"; }
   Status Process() override;
 
   IRContext::Analysis GetPreservedAnalyses() override {

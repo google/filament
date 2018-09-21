@@ -65,7 +65,7 @@ private:
     void init();
 
     // ImageEncoder::Encoder interface
-    virtual void encode(const LinearImage& image) override;
+    virtual bool encode(const LinearImage& image) override;
 
     int chooseColorType(const LinearImage& image) const;
     uint32_t getChannelsCount() const;
@@ -98,7 +98,7 @@ private:
     HDREncoder& operator = (const HDREncoder&) = delete;
 
     // ImageEncoder::Encoder interface
-    virtual void encode(const LinearImage& image) override;
+    virtual bool encode(const LinearImage& image) override;
 
     static void float2rgbe(uint8_t rgbe[4], const math::float3& color);
     static size_t countRepeats(uint8_t const* data, size_t length);
@@ -123,7 +123,7 @@ private:
     PSDEncoder& operator = (const PSDEncoder&) = delete;
 
     // ImageEncoder::Encoder interface
-    virtual void encode(const LinearImage& image) override;
+    virtual bool encode(const LinearImage& image) override;
 
     std::ostream& mStream;
     std::streampos mStreamStartPos;
@@ -147,7 +147,7 @@ private:
     EXREncoder& operator = (const EXREncoder&) = delete;
 
     // ImageEncoder::Encoder interface
-    virtual void encode(const LinearImage& image) override;
+    virtual bool encode(const LinearImage& image) override;
 
     std::ostream& mStream;
     std::streampos mStreamStartPos;
@@ -175,7 +175,7 @@ private:
     DDSEncoder& operator = (const DDSEncoder&) = delete;
 
     // ImageEncoder::Encoder interface
-    virtual void encode(const LinearImage& image) override;
+    virtual bool encode(const LinearImage& image) override;
 
     std::ostream& mStream;
     std::streampos mStreamStartPos;
@@ -185,7 +185,7 @@ private:
 
 // ------------------------------------------------------------------------------------------------
 
-void ImageEncoder::encode(std::ostream& stream, Format format, const LinearImage& image,
+bool ImageEncoder::encode(std::ostream& stream, Format format, const LinearImage& image,
         const std::string& compression, const std::string& destName) {
     std::unique_ptr<Encoder> encoder;
     switch(format) {
@@ -309,12 +309,12 @@ uint32_t PNGEncoder::getChannelsCount() const {
     }
 }
 
-void PNGEncoder::encode(const LinearImage& image) {
+bool PNGEncoder::encode(const LinearImage& image) {
     size_t srcChannels = image.getChannels();
     if ((mFormat == PixelFormat::RGBM && srcChannels != 3) ||
             (srcChannels != 1 && srcChannels != 3)) {
         std::cerr << "Cannot encode PNG: " << srcChannels << " channels." << std::endl;
-        return;
+        return false;
     }
 
     try {
@@ -367,7 +367,9 @@ void PNGEncoder::encode(const LinearImage& image) {
         // reset the stream, like we found it
         std::cerr << "Runtime error while encoding PNG: " << e.what() << std::endl;
         mStream.seekp(mStreamStartPos);
+        return false;
     }
+    return true;
 }
 
 void PNGEncoder::cb_stream(png_structp png, png_bytep buffer, png_size_t size) {
@@ -473,9 +475,9 @@ void HDREncoder::rle(std::ostream& out, uint8_t const* data, size_t length) {
     }
 }
 
-void HDREncoder::encode(const LinearImage& image) {
+bool HDREncoder::encode(const LinearImage& image) {
     if (image.getChannels() != 3) {
-        return;
+        return false;
     }
 
     try {
@@ -524,7 +526,9 @@ void HDREncoder::encode(const LinearImage& image) {
         // reset the stream, like we found it
         std::cerr << "Runtime error while encoding HDR: " << e.what() << std::endl;
         mStream.seekp(mStreamStartPos);
+        return false;
     }
+    return true;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -567,14 +571,14 @@ static inline void write8i(std::ostream& stream, uint8_t v) {
     stream.write(reinterpret_cast<const char*>(&v), sizeof(uint8_t));
 }
 
-void PSDEncoder::encode(const LinearImage& image) {
+bool PSDEncoder::encode(const LinearImage& image) {
     static const uint16_t kColorModeRGB = 3;
     static const uint16_t kCompressionRAW = 0;
     // preview mode: 0 = highlight compression, 1 = exposure & gamma
     static const uint32_t kToningPreviewExposureGamma = 1;
 
     if (image.getChannels() != 3) {
-        return;
+        return false;
     }
 
     try {
@@ -684,7 +688,9 @@ void PSDEncoder::encode(const LinearImage& image) {
         // reset the stream, like we found it
         std::cerr << "Runtime error while encoding PSD: " << e.what() << std::endl;
         mStream.seekp(mStreamStartPos);
+        return false;
     }
+    return true;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -721,9 +727,9 @@ static int toEXRCompression(const std::string& c) {
     throw std::runtime_error("unknown compression scheme " + c);
 }
 
-void EXREncoder::encode(const LinearImage& image) {
+bool EXREncoder::encode(const LinearImage& image) {
     if (image.getChannels() != 3) {
-        return;
+        return false;
     }
 
     try {
@@ -798,7 +804,9 @@ void EXREncoder::encode(const LinearImage& image) {
         // reset the stream, like we found it
         std::cerr << "Runtime error while encoding EXR: " << e.what() << std::endl;
         mStream.seekp(mStreamStartPos);
+        return false;
     }
+    return true;
 }
 
 //-------------------------------------------------------------------------------------------------
@@ -915,7 +923,7 @@ static uint32_t chooseDXGIFormat(const LinearImage& image, const std::string& co
     return formats[image.getChannels() - 1][index];
 }
 
-void DDSEncoder::encode(const LinearImage& image) {
+bool DDSEncoder::encode(const LinearImage& image) {
     try {
         size_t width = image.getWidth();
         size_t height = image.getHeight();
@@ -1105,7 +1113,9 @@ void DDSEncoder::encode(const LinearImage& image) {
         // reset the stream, like we found it
         std::cerr << "Runtime error while encoding PSD: " << e.what() << std::endl;
         mStream.seekp(mStreamStartPos);
+        return false;
     }
+    return true;
 }
 
 } // namespace image

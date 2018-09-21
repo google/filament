@@ -484,8 +484,8 @@ void FRenderableManager::setBones(Instance ci,
         Bone const* UTILS_RESTRICT transforms, size_t boneCount, size_t offset) noexcept {
     if (ci) {
         std::unique_ptr<Bones> const& bones = mManager[ci].bones;
+        assert(bones && offset + boneCount <= bones->count);
         if (bones) {
-            assert(offset + boneCount <= bones->count);
             boneCount = std::min(boneCount, bones->count - offset);
             Bone* UTILS_RESTRICT out = (Bone*)bones->bones.invalidateUniforms(
                     offset * sizeof(Bone),
@@ -499,8 +499,8 @@ void FRenderableManager::setBones(Instance ci,
         math::mat4f const* UTILS_RESTRICT transforms, size_t boneCount, size_t offset) noexcept {
     if (ci) {
         std::unique_ptr<Bones> const& bones = mManager[ci].bones;
+        assert(bones && offset + boneCount <= bones->count);
         if (bones) {
-            assert(offset + boneCount <= bones->count);
             boneCount = std::min(boneCount, bones->count - offset);
             Bone* UTILS_RESTRICT out = (Bone*)bones->bones.invalidateUniforms(
                     offset * sizeof(Bone),

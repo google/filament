@@ -16,70 +16,63 @@
 
 package com.google.android.filament.tungsten.model.serialization
 
-import com.google.android.filament.tungsten.model.ConnectionModel
-import com.google.android.filament.tungsten.model.InputSlotModel
-import com.google.android.filament.tungsten.model.MaterialGraphModel
-import com.google.android.filament.tungsten.model.NodeModel
-import com.google.android.filament.tungsten.model.OutputSlotModel
+import com.google.android.filament.tungsten.model.Float3
+import com.google.android.filament.tungsten.model.Graph
+import com.google.android.filament.tungsten.model.Node
+import com.google.android.filament.tungsten.model.NodeId
+import com.google.android.filament.tungsten.model.Property
+import com.google.android.filament.tungsten.model.copyPropertyWithValue
+import com.google.android.filament.tungsten.properties.ColorChooser
 import org.junit.Assert.assertEquals
-import org.junit.Before
 import org.junit.Test
-import org.mockito.Mockito.`when`
-import org.mockito.Mockito.mock
-import org.mockito.Mockito.reset
 
 /**
- * These test cases perform round-trip serialization. A MaterialGraphModel is serialized to a
- * String, then deserialized back to a MaterialGraphModel. The result is verified to contain the
- * correct nodes and connections.
+ * These test cases perform round-trip serialization. A Graph is serialized to a String, then
+ * deserialized back to a Graph. The result is verified to equal the original.
  */
 class GraphSerializerTest {
 
-    private val mockNodeModels = ArrayList<NodeModel>()
-    private val mockConnections = ArrayList<ConnectionModel>()
+    private val mockNodeFactory = object : INodeFactory {
 
-    private val graphModel = mock(MaterialGraphModel::class.java)
-    private val nodeFactory = mock(INodeFactory::class.java)
-
-    @Before
-    fun setUp() {
-        `when`(graphModel.nodes).thenReturn(mockNodeModels)
-        `when`(graphModel.connections).thenReturn(mockConnections)
-        mockNodeModels.clear()
-        reset(nodeFactory)
+        override fun createNodeForTypeIdentifier(typeIdentifier: String, id: NodeId): Node? {
+            return if (typeIdentifier == "node") createMockNode(id) else null
+        }
     }
 
     @Test
-    fun test_EmptyModel() {
-        val (deserialized, _) = serializeDeserialize()
-        assertEquals(0, deserialized.nodes.size)
-        assertEquals(0, deserialized.connections.size)
+    fun `Serialize empty model`() {
+        val graph = Graph()
+        val serialized = GraphSerializer.serialize(graph, emptyMap())
+        val (deserialized, _) = GraphSerializer.deserialize(serialized, mockNodeFactory)
+        assertEquals(graph, deserialized)
     }
 
     @Test
-    fun test_EditorData() {
-        val (_, editor) = serializeDeserialize(editorData = mapOf(Pair("foo", "bar")))
-        assertEquals("bar", editor["foo"])
+    fun `Serialize editor data`() {
+        val serialized = GraphSerializer.serialize(Graph(), mapOf("foo" to "bar"))
+        val (_, editorData) = GraphSerializer.deserialize(serialized, mockNodeFactory)
+        assertEquals(mapOf("foo" to "bar"), editorData)
     }
 
     @Test
-    fun test_NodesAndConnections() {
-        val first = addMockNodeWithIdentifier("first")
-        val second = addMockNodeWithIdentifier("second")
-        val root = addMockNodeWithIdentifier("third", isRoot = true)
+    fun `Serialize nodes and connections`() {
+        val first = createMockNode(0)
+        val second = first.copy(id = 1)
+        val root = first.copy(id = 2)
 
-        connectNodes(first, second)
-        connectNodes(second, root)
+        val graph = Graph(
+                nodes = listOf(first, second, root),
+                rootNodeId = root.id,
+                connections = listOf(
+                        first.getOutputSlot("output") to second.getInputSlot("input"),
+                        second.getOutputSlot("output") to root.getInputSlot("input")
+                )
+        )
 
-        val (deserialized, _) = serializeDeserialize()
+        val serialized = GraphSerializer.serialize(graph, emptyMap())
+        val (deserialized, _) = GraphSerializer.deserialize(serialized, mockNodeFactory)
 
-        // Assert that the nodes are connected
-        assertEquals(2, deserialized.connections.size)
-        verifyConnection(deserialized, 0, first, second)
-        verifyConnection(deserialized, 1, second, root)
-
-        // Assert that the root node has been set correctly
-        assertEquals(root, deserialized.rootNode)
+        assertEquals(graph, deserialized)
     }
 
     /**
@@ -87,92 +80,51 @@ class GraphSerializerTest {
      * graph.
      */
     @Test
-    fun test_ConnectionNotRegistered() {
-        val first = addMockNodeWithIdentifier("first")
-        val second = addMockNodeWithIdentifier("notRegistered", register = false)
-        connectNodes(first, second)
+    fun `Serialize connection with unknown node type`() {
+        val first = createMockNode(0)
+        val root = createMockNode(1).copy(type = "unknown type")
 
-        val (deserialized, _) = serializeDeserialize()
+        val graph = Graph(
+                nodes = listOf(first, root),
+                rootNodeId = root.id,
+                connections = listOf(first.getOutputSlot("output") to root.getInputSlot("input")))
 
-        assertEquals(0, deserialized.connections.size)
+        val serialized = GraphSerializer.serialize(graph, emptyMap())
+        val (deserialized, _) = GraphSerializer.deserialize(serialized, mockNodeFactory)
+
         assertEquals(1, deserialized.nodes.size)
-        assertEquals(first, deserialized.nodes[0])
-    }
-
-    /**
-     * Serialize two nodes and a connection from an output slot to an unrecognized input slot. The
-     * nodes should still be serialized, but not the connection.
-     */
-    @Test
-    fun test_TwoNodesOneConnectionBadSlotName() {
-        val first = addMockNodeWithIdentifier("first")
-        val second = addMockNodeWithIdentifier("second")
-        connectNodes(first, second)
-
-        val serializer = JsonSerializer()
-        val serialized = serializer.serialize(Graph(listOf(Node("first", 1), Node("second", 2)),
-                listOf(Connection(1, "output", 2, "bad slot")), "1.0"))
-
-        val (deserialized, _) = GraphSerializer.deserialize(serialized, nodeFactory)
-
-        // There should not be any connections and 2 nodes
+        assertEquals(graph.nodes[0], deserialized.nodes[0])
         assertEquals(0, deserialized.connections.size)
-        assertEquals(2, deserialized.nodes.size)
-        assertEquals(first, deserialized.nodes[0])
-        assertEquals(second, deserialized.nodes[1])
     }
 
-    private fun serializeDeserialize(
-        editorData: Map<String, Any> = emptyMap()
-    ): Pair<MaterialGraphModel, Map<String, Any>> {
-        val serialized = GraphSerializer.serialize(graphModel, editorData, nodeFactory)
-        return GraphSerializer.deserialize(serialized, nodeFactory)
+    @Test
+    fun `Serialize a property`() {
+        val node = createMockNode(0).copy()
+
+        // Create a graph with a non-default property value
+        val graph = Graph(
+                nodes = listOf(node),
+                rootNodeId = 0
+        ).graphByChangingProperty(node.getPropertyHandle("mockProperty"),
+                copyPropertyWithValue(mockProperty, Float3(1.0f, 2.0f, 3.0f)))
+
+        val serialized = GraphSerializer.serialize(graph, emptyMap())
+        val (deserialized, _) = GraphSerializer.deserialize(serialized, mockNodeFactory)
+
+        assertEquals(graph, deserialized)
     }
 
-    private fun verifyConnection(
-        deserialized: MaterialGraphModel,
-        index: Int,
-        first: NodeModel,
-        second: NodeModel
-    ) {
-        assertEquals(first, deserialized.connections[index].outputSlot.node)
-        assertEquals(second, deserialized.connections[index].inputSlot.node)
-        assertEquals("output", deserialized.connections[index].outputSlot.label)
-        assertEquals("input", deserialized.connections[index].inputSlot.label)
-        assertEquals(deserialized.connections[index].outputSlot,
-                deserialized.connections[index].inputSlot.connectedSlot)
-    }
+    private val mockProperty = Property(
+        name = "mockProperty",
+        value = Float3(),
+        editorFactory = ::ColorChooser
+    )
 
-    private fun connectNodes(first: NodeModel, second: NodeModel) {
-        val conn = ConnectionModel(first.getOutputSlot("output"), second.getInputSlot("input"))
-        mockConnections.add(conn)
-        graphModel.createConnection(conn)
-    }
-
-    private fun addMockNodeWithIdentifier(
-        typeIdentifier: String,
-        isRoot: Boolean = false,
-        register: Boolean = true
-    ): NodeModel {
-        val node = createMockNode()
-        mockNodeModels.add(node)
-        if (isRoot) {
-            `when`(graphModel.rootNode).thenReturn(node)
-        }
-        if (register) {
-            `when`(nodeFactory.createNodeForTypeIdentifier(typeIdentifier)).thenReturn(node)
-            `when`(nodeFactory.typeIdentifierForNode(node)).thenReturn(typeIdentifier)
-        }
-        return node
-    }
-
-    /**
-     * Create a mock node with 2 slots: "input" and "output".
-     */
-    private fun createMockNode(): NodeModel {
-        val node = mock(NodeModel::class.java)
-        `when`(node.getInputSlot("input")).thenReturn(InputSlotModel("input", node))
-        `when`(node.getOutputSlot("output")).thenReturn(OutputSlotModel("output", node))
-        return node
-    }
+    private fun createMockNode(id: NodeId) = Node(
+        id = id,
+        type = "node",
+        inputSlots = listOf("input"),
+        outputSlots = listOf("output"),
+        properties = listOf(mockProperty)
+    )
 }

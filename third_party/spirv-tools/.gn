@@ -13,8 +13,8 @@
 # limitations under the License.
 
 buildconfig = "//build/config/BUILDCONFIG.gn"
-secondary_source = "//build/secondary/"
 
 default_args = {
+  clang_use_chrome_plugins = false
   use_custom_libcxx = false
 }

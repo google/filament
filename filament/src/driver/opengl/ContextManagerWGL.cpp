@@ -28,12 +28,41 @@
 #include <utils/Log.h>
 #include <utils/Panic.h>
 
+namespace {
+
+void reportLastWindowsError() {
+    LPSTR lpMessageBuffer;
+    DWORD dwError = GetLastError();
+
+    if (dwError == 0) {
+        return;
+    }
+
+    FormatMessage(
+        FORMAT_MESSAGE_ALLOCATE_BUFFER |
+        FORMAT_MESSAGE_FROM_SYSTEM |
+        FORMAT_MESSAGE_IGNORE_INSERTS,
+        nullptr,
+        dwError,
+        MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+        lpMessageBuffer,
+        0, nullptr
+	);
+
+    utils::slog.e << "Windows error code: " << dwError << ". " << lpMessageBuffer
+            << utils::io::endl;
+
+    LocalFree(lpMessageBuffer);
+}
+
+} // namespace
+
 namespace filament {
 
 using namespace driver;
 
 std::unique_ptr<Driver> ContextManagerWGL::createDriver(void* const sharedGLContext) noexcept {
-    PIXELFORMATDESCRIPTOR pfd = {
+    mPfd = {
         sizeof(PIXELFORMATDESCRIPTOR),
         1,
         PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER,    // Flags
@@ -66,8 +95,8 @@ std::unique_ptr<Driver> ContextManagerWGL::createDriver(void* const sharedGLCont
         goto error;
     }
 
-    int pixelFormat = ChoosePixelFormat(whdc, &pfd);
-    SetPixelFormat(whdc, pixelFormat, &pfd);
+    int pixelFormat = ChoosePixelFormat(whdc, &mPfd);
+    SetPixelFormat(whdc, pixelFormat, &mPfd);
 
     // We need a tmp context to retrieve and call wglCreateContextAttribsARB.
     HGLRC tempContext = wglCreateContext(whdc);
@@ -101,6 +130,7 @@ error:
     if (tempContext) {
         wglDeleteContext(tempContext);
     }
+    reportLastWindowsError();
     terminate();
     return NULL;
 }
@@ -126,8 +156,14 @@ void ContextManagerWGL::terminate() noexcept {
 ExternalContext::SwapChain* ContextManagerWGL::createSwapChain(void* nativeWindow, uint64_t& flags) noexcept {
     // on Windows, the nativeWindow maps directly to a HDC
     HDC hdc = (HDC) nativeWindow;
-    ASSERT_POSTCONDITION_NON_FATAL(hdc,
-            "Unable to create the SwapChain (nativeWindow = %p)", nativeWindow);
+    if (!ASSERT_POSTCONDITION_NON_FATAL(hdc,
+            "Unable to create the SwapChain (nativeWindow = %p)", nativeWindow)) {
+        reportLastWindowsError();
+    }
+
+	// We have to match pixel formats across the HDC and HGLRC (mContext)
+    int pixelFormat = ChoosePixelFormat(hdc, &mPfd);
+    SetPixelFormat(hdc, pixelFormat, &mPfd);
 
     SwapChain* swapChain = (SwapChain *)hdc;
     return swapChain;
@@ -143,6 +179,7 @@ void ContextManagerWGL::makeCurrent(ExternalContext::SwapChain* swapChain) noexc
     if (hdc != NULL) {
         BOOL success = wglMakeCurrent(hdc, mContext);
         if (!ASSERT_POSTCONDITION_NON_FATAL(success, "wglMakeCurrent() failed. hdc = %p", hdc)) {
+            reportLastWindowsError();
             wglMakeCurrent(0, NULL);
         }
     }

@@ -21,7 +21,7 @@ void computeShadingParams() {
     n = gl_FrontFacing ? n : -n;
 #endif
 
-#if defined(MATERIAL_HAS_ANISOTROPY) || defined(MATERIAL_HAS_NORMAL)
+#if defined(MATERIAL_HAS_ANISOTROPY) || defined(MATERIAL_HAS_NORMAL) || defined(MATERIAL_HAS_CLEAR_COAT_NORMAL)
     // Re-normalize post-interpolation values
     shading_tangentToWorld = mat3(
             normalize(vertex_worldTangent), normalize(vertex_worldBitangent), normalize(n));
@@ -44,14 +44,21 @@ void computeShadingParams() {
  * the material compiler) after setting a value for MaterialInputs.normal.
  */
 void prepareMaterial(const MaterialInputs material) {
+#if defined(HAS_ATTRIBUTE_TANGENTS)
 #if defined(MATERIAL_HAS_NORMAL)
     shading_normal = normalize(shading_tangentToWorld * material.normal);
-#elif defined(HAS_ATTRIBUTE_TANGENTS)
+#else
     shading_normal = shading_tangentToWorld[2];
 #endif
-
-#if defined(HAS_ATTRIBUTE_TANGENTS)
     shading_NoV = abs(dot(shading_normal, shading_view)) + FLT_EPS;
     shading_reflected = reflect(-shading_view, shading_normal);
+
+#if defined(MATERIAL_HAS_CLEAR_COAT)
+#if defined(MATERIAL_HAS_CLEAR_COAT_NORMAL)
+    shading_clearCoatNormal = normalize(shading_tangentToWorld * material.clearCoatNormal);
+#else
+    shading_clearCoatNormal = shading_tangentToWorld[2];
+#endif
+#endif
 #endif
 }

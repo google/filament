@@ -343,6 +343,7 @@ void VulkanUniformBuffer::loadFromCpu(const void* cpuData, uint32_t numBytes) {
     vmaMapMemory(mContext.allocator, stage->memory, &mapped);
     memcpy(mapped, cpuData, numBytes);
     vmaUnmapMemory(mContext.allocator, stage->memory);
+    vmaFlushAllocation(mContext.allocator, stage->memory, 0, numBytes);
 
     // Create and submit a one-off command buffer to allow uploading outside a frame.
     VkCommandBuffer cmdbuffer;
@@ -497,6 +498,7 @@ void VulkanTexture::load2DImage(PixelBufferDescriptor&& data, uint32_t width, ui
     vmaMapMemory(mContext.allocator, stage->memory, &mapped);
     memcpy(mapped, cpuData, numBytes);
     vmaUnmapMemory(mContext.allocator, stage->memory);
+    vmaFlushAllocation(mContext.allocator, stage->memory, 0, numBytes);
 
     // Create a copy-to-device functor because we might need to defer it.
     auto copyToDevice = [this, stage, width, height, miplevel] (VkCommandBuffer cmd) {
@@ -529,6 +531,7 @@ void VulkanTexture::loadCubeImage(PixelBufferDescriptor&& data,  const FaceOffse
     vmaMapMemory(mContext.allocator, stage->memory, &mapped);
     memcpy(mapped, cpuData, numBytes);
     vmaUnmapMemory(mContext.allocator, stage->memory);
+    vmaFlushAllocation(mContext.allocator, stage->memory, 0, numBytes);
 
     // Create a copy-to-device functor because we might need to defer it.
     auto copyToDevice = [this, faceOffsets, stage, miplevel] (VkCommandBuffer cmd) {
@@ -664,7 +667,7 @@ void VulkanRenderPrimitive::setBuffers(VulkanVertexBuffer* vertexBuffer,
         varray.attributes[bufferIndex] = {
             .location = attribIndex, // matches the GLSL layout specifier
             .binding = bufferIndex,  // matches the position within vkCmdBindVertexBuffers
-            .format = getVkFormat(attrib.type, attrib.normalized),
+            .format = getVkFormat(attrib.type, attrib.flags & Driver::Attribute::FLAG_NORMALIZED),
             .offset = 0
         };
         varray.buffers[bufferIndex] = {

@@ -168,6 +168,8 @@ elseif (ANDROID)
     list(APPEND SRCS src/driver/opengl/ContextManagerEGL.cpp)
 elseif (APPLE)
     list(APPEND SRCS src/driver/opengl/ContextManagerCocoa.mm)
+elseif (WEBGL)
+    list(APPEND SRCS src/driver/opengl/ContextManagerWebGL.cpp)
 elseif (LINUX)
     list(APPEND SRCS src/driver/opengl/ContextManagerGLX.cpp)
 elseif (WIN32)
@@ -216,7 +218,6 @@ endif()
 # ==================================================================================================
 
 if (CMAKE_CROSSCOMPILING)
-    set(IMPORT_EXECUTABLES ${FILAMENT}/${IMPORT_EXECUTABLES_DIR}/ImportExecutables-${CMAKE_BUILD_TYPE}.cmake)
     include(${IMPORT_EXECUTABLES})
 endif()
 
@@ -225,7 +226,7 @@ set(GENERATION_ROOT ${CMAKE_CURRENT_BINARY_DIR})
 file(MAKE_DIRECTORY "${GENERATION_ROOT}/generated/material/")
 
 # Target system.
-if (ANDROID)
+if (ANDROID OR WEBGL)
     set(MATC_TARGET mobile)
 else()
     set(MATC_TARGET desktop)
@@ -342,6 +343,9 @@ if (MSVC OR CLANG_CL)
     set(OPTIMIZATION_FLAGS
         /fp:fast
     )
+elseif(WEBGL)
+    # Avoid strict-vtable-pointers here, it is broken in WebAssembly.
+    set(OPTIMIZATION_FLAGS -fvisibility=hidden -fvisibility-inlines-hidden)
 else()
     set(OPTIMIZATION_FLAGS
         -ffast-math
@@ -395,6 +399,7 @@ target_link_libraries(${TARGET} PRIVATE
 set(INSTALL_TYPE ARCHIVE)
 install(TARGETS ${TARGET} ${INSTALL_TYPE} DESTINATION lib/${DIST_DIR})
 install(DIRECTORY ${PUBLIC_HDR_DIR}/filament DESTINATION include)
+install(FILES "README.md" DESTINATION .)
 
 # ==================================================================================================
 # Sub-projects

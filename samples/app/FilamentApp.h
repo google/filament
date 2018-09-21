@@ -27,6 +27,8 @@
 #include <filament/Engine.h>
 #include <filament/Viewport.h>
 
+#include <utils/Path.h>
+
 #include "CameraManipulator.h"
 #include "Config.h"
 #include "IBL.h"
@@ -67,6 +69,7 @@ public:
             PostRenderCallback postRender = PostRenderCallback(),
             size_t width = 1024, size_t height = 640);
 
+    filament::Material const* getDefaultMaterial() const noexcept { return mDefaultMaterial; }
     filament::Material const* getTransparentMaterial() const noexcept { return mTransparentMaterial; }
     IBL* getIBL() const noexcept { return mIBL.get(); }
 
@@ -76,6 +79,13 @@ public:
     FilamentApp(FilamentApp&& rhs) = delete;
     FilamentApp& operator=(const FilamentApp& rhs) = delete;
     FilamentApp& operator=(FilamentApp&& rhs) = delete;
+
+    // Returns the path to the Filament root for loading assets. This is determined from the
+    // executable folder, which allows users to launch samples from any folder.
+    static const utils::Path& getRootPath() {
+        static const utils::Path root = utils::Path::getCurrentExecutable().getParent();
+        return root;
+    }
 
 private:
     FilamentApp();
@@ -184,6 +194,7 @@ private:
     bool mClosed = false;
     uint64_t mTime = 0;
 
+    filament::Material const* mDefaultMaterial = nullptr;
     filament::Material const* mTransparentMaterial = nullptr;
     filament::Material const* mDepthMaterial = nullptr;
     filament::MaterialInstance* mDepthMI = nullptr;

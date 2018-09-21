@@ -296,11 +296,33 @@ SetupWindowData(_THIS, SDL_Window * window, HWND hwnd, HWND parent, SDL_bool cre
     return 0;
 }
 
+void 
+WIN_EnableDPIAwareness()
+{
+    HMODULE shCore = LoadLibraryA("Shcore.dll");
+    if (shCore)
+    {
+        typedef HRESULT(*SetProcessDpiAwarenessFunc)(PROCESS_DPI_AWARENESS);
 
+        SetProcessDpiAwarenessFunc setProcessDpiAwareness =
+            (SetProcessDpiAwarenessFunc)GetProcAddress(shCore, "SetProcessDpiAwareness");
+
+        if (setProcessDpiAwareness != NULL)
+        {
+            setProcessDpiAwareness(PROCESS_PER_MONITOR_DPI_AWARE);
+        }
+
+        FreeLibrary(shCore);
+    }
+}
 
 int
 WIN_CreateWindow(_THIS, SDL_Window * window)
 {
+    if (window->flags & SDL_WINDOW_ALLOW_HIGHDPI) {
+        WIN_EnableDPIAwareness();
+    }
+
     HWND hwnd, parent = NULL;
     DWORD style = STYLE_BASIC;
     int x, y;

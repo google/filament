@@ -21,6 +21,7 @@
 #include <math/TMatHelpers.h>
 #include <math/vec3.h>
 
+#include <limits.h>
 #include <stdint.h>
 #include <sys/types.h>
 
@@ -266,6 +267,30 @@ public:
      */
     static constexpr TQuaternion<T> packTangentFrame(const TMat33& m,
             size_t storageSize = sizeof(int16_t));
+
+    template <typename A>
+    static constexpr TMat33 translate(const TVec3<A>& t) {
+        TMat33 r;
+        r[2] = t;
+        return r;
+    }
+
+    template <typename A>
+    static constexpr TMat33 translate(A t) {
+        TMat33 r;
+        r[2] = TVec3<T>{ t };
+        return r;
+    }
+
+    template <typename A>
+    static constexpr TMat33 scale(const TVec3<A>& s) {
+        return TMat33{ s };
+    }
+
+    template <typename A>
+    static constexpr TMat33 scale(A s) {
+        return TMat33{ TVec3<T>{ s } };
+    }
 };
 
 // ----------------------------------------------------------------------------------------

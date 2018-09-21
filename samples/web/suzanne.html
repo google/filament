@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Suzanne</title>
+    <link href="favicon.png" rel="icon" type="image/x-icon"/>
+    <meta name="viewport" content="width=device-width,user-scalable=no,initial-scale=1">
+    <style>
+    body {
+        margin: 0;
+        overflow: hidden;
+    }
+    #filament-canvas {
+        touch-action: none;
+        width: 100%;
+        height: 100%;
+    }
+    </style>
+</head>
+<body>
+    <canvas id="filament-canvas"></canvas>
+    <script src="suzanne.js"></script>
+    <script src="filaweb.js"></script>
+    <script>
+    load({
+        'albedo':                    load_rawfile('monkey/albedo.ktx'),
+        'metallic':                  load_rawfile('monkey/metallic.ktx'),
+        'roughness':                 load_rawfile('monkey/roughness.ktx'),
+        'normal':                    load_rawfile('monkey/normal.ktx'),
+        'ao':                        load_rawfile('monkey/ao.ktx'),
+        'mesh':                      load_rawfile('monkey/mesh.filamesh'),
+        'syferfontein_18d_clear_2k': load_cubemap('syferfontein_18d_clear_2k/', 9)
+    });
+    </script>
+</body>
+</html>

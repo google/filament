@@ -17,23 +17,27 @@
 package com.google.android.filament.tungsten.ui
 
 import com.google.android.filament.tungsten.SwingHelper
+import com.google.android.filament.tungsten.model.Slot
 import java.awt.BasicStroke
 import java.awt.Color
 import java.awt.Graphics2D
 import java.awt.geom.GeneralPath
 import java.awt.geom.Point2D
-import javax.swing.SwingUtilities
 
 /**
  * Endpoint provides either a start or end point to a ConnectionLine.
  */
-typealias Endpoint = () -> Point2D.Double
+typealias Endpoint = () -> Point2D.Double?
 
-internal fun slotPoint(slot: NodeSlot): Endpoint {
-    return {
-        val centerPoint = SwingUtilities.convertPoint(slot, slot.centerPoint,
-                slot.parentMaterialNode.parent)
-        Point2D.Double(centerPoint.x.toDouble(), centerPoint.y.toDouble())
+internal fun slotPoint(slot: Slot, graph: MaterialGraphComponent): Endpoint {
+    return fun (): Point2D.Double? {
+        val graphView = graph.graphView ?: return null
+        val slotView = graph.getSlotCircleForSlot(slot) ?: return null
+        val centerPoint = convertPoint(slotView, slotView.centerPoint, graphView)
+        if (centerPoint != null) {
+            return Point2D.Double(centerPoint.x, centerPoint.y)
+        }
+        return null
     }
 }
 
@@ -56,8 +60,8 @@ class ConnectionLine(from: Endpoint, to: Endpoint) {
         SwingHelper.setRenderingHints(g2d)
         g2d.color = ColorScheme.connectionLine
 
-        val originPoint = outputPoint()
-        val destinationPoint = inputPoint()
+        val originPoint = outputPoint() ?: return
+        val destinationPoint = inputPoint() ?: return
 
         val deltaX = Math.abs(destinationPoint.getX() - originPoint.getX())
 

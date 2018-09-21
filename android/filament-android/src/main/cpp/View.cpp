@@ -21,8 +21,8 @@
 using namespace filament;
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_View_nSetName(JNIEnv* env, jclass, jlong nativeView,
-        jstring name_) {
+Java_com_google_android_filament_View_nSetName(JNIEnv* env, jclass,
+        jlong nativeView, jstring name_) {
     View* view = (View*) nativeView;
     const char* name = env->GetStringUTFChars(name_, 0);
     view->setName(name);
@@ -30,38 +30,39 @@ Java_com_google_android_filament_View_nSetName(JNIEnv* env, jclass, jlong native
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_View_nSetScene(JNIEnv*, jclass, jlong nativeView,
-        jlong nativeScene) {
+Java_com_google_android_filament_View_nSetScene(JNIEnv*, jclass,
+        jlong nativeView, jlong nativeScene) {
     View* view = (View*) nativeView;
     Scene* scene = (Scene*) nativeScene;
     view->setScene(scene);
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_View_nSetCamera(JNIEnv*, jclass, jlong nativeView,
-        jlong nativeCamera) {
+Java_com_google_android_filament_View_nSetCamera(JNIEnv*, jclass,
+        jlong nativeView, jlong nativeCamera) {
     View* view = (View*) nativeView;
     Camera* camera = (Camera*) nativeCamera;
     view->setCamera(camera);
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_View_nSetViewport(JNIEnv*, jclass, jlong nativeView,
-        jint left, jint bottom, jint width, jint height) {
+Java_com_google_android_filament_View_nSetViewport(JNIEnv*, jclass,
+        jlong nativeView, jint left, jint bottom, jint width, jint height) {
     View* view = (View*) nativeView;
     view->setViewport({left, bottom, (uint32_t) width, (uint32_t) height});
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_View_nSetClearColor(JNIEnv*, jclass, jlong nativeView,
+Java_com_google_android_filament_View_nSetClearColor(JNIEnv*, jclass,
+        jlong nativeView,
         jfloat linearR, jfloat linearG, jfloat linearB, jfloat linearA) {
     View* view = (View*) nativeView;
     view->setClearColor({linearR, linearG, linearB, linearA});
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_View_nGetClearColor(JNIEnv* env, jclass, jlong nativeView,
-        jfloatArray out_) {
+Java_com_google_android_filament_View_nGetClearColor(JNIEnv* env, jclass,
+        jlong nativeView, jfloatArray out_) {
     View* view = (View*) nativeView;
     jfloat* out = env->GetFloatArrayElements(out_, NULL);
     auto linearColor = view->getClearColor();
@@ -73,35 +74,36 @@ Java_com_google_android_filament_View_nGetClearColor(JNIEnv* env, jclass, jlong 
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_View_nSetClearTargets(JNIEnv*, jclass, jlong nativeView,
-        jboolean color, jboolean depth, jboolean stencil) {
+Java_com_google_android_filament_View_nSetClearTargets(JNIEnv*, jclass,
+        jlong nativeView, jboolean color, jboolean depth, jboolean stencil) {
     View* view = (View*) nativeView;
     view->setClearTargets(color, depth, stencil);
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_View_nSetVisibleLayers(JNIEnv*, jclass, jlong nativeView,
-        jint select, jint value) {
+Java_com_google_android_filament_View_nSetVisibleLayers(JNIEnv*, jclass,
+        jlong nativeView, jint select, jint value) {
     View* view = (View*) nativeView;
     view->setVisibleLayers((uint8_t) select, (uint8_t) value);
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_View_nSetShadowsEnabled(JNIEnv*, jclass, jlong nativeView,
-        jboolean enabled) {
+Java_com_google_android_filament_View_nSetShadowsEnabled(JNIEnv*, jclass,
+        jlong nativeView, jboolean enabled) {
     View* view = (View*) nativeView;
     view->setShadowsEnabled(enabled);
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_View_nSetSampleCount(JNIEnv*, jclass, jlong nativeView,
-        jint count) {
+Java_com_google_android_filament_View_nSetSampleCount(JNIEnv*, jclass,
+        jlong nativeView, jint count) {
     View* view = (View*) nativeView;
     view->setSampleCount((uint8_t) count);
 }
 
 extern "C" JNIEXPORT jint JNICALL
-Java_com_google_android_filament_View_nGetSampleCount(JNIEnv*, jclass, jlong nativeView) {
+Java_com_google_android_filament_View_nGetSampleCount(JNIEnv*, jclass,
+        jlong nativeView) {
     View* view = (View*) nativeView;
     return view->getSampleCount();
 }
@@ -114,14 +116,15 @@ Java_com_google_android_filament_View_nSetAntiAliasing(JNIEnv*, jclass,
 }
 
 extern "C" JNIEXPORT jint JNICALL
-Java_com_google_android_filament_View_nGetAntiAliasing(JNIEnv*, jclass, jlong nativeView) {
+Java_com_google_android_filament_View_nGetAntiAliasing(JNIEnv*, jclass,
+        jlong nativeView) {
     View* view = (View*) nativeView;
     return (jint)view->getAntiAliasing();
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_View_nSetDynamicResolutionOptions(JNIEnv *env, jclass,
-        jlong nativeView, jboolean enabled, jboolean homogeneousScaling,
+Java_com_google_android_filament_View_nSetDynamicResolutionOptions(JNIEnv*,
+        jclass, jlong nativeView, jboolean enabled, jboolean homogeneousScaling,
         jfloat targetFrameTimeMilli, jfloat headRoomRatio, jfloat scaleRate,
         jfloat minScale, jfloat maxScale, jint history) {
     View* view = (View*) nativeView;
@@ -149,4 +152,18 @@ Java_com_google_android_filament_View_nSetDepthPrepass(JNIEnv *env,
         jclass, jlong nativeView, jint value) {
     View* view = (View*) nativeView;
     view->setDepthPrepass(View::DepthPrepass(value));
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_View_nSetPostProcessingEnabled(JNIEnv*,
+        jclass, jlong nativeView, jboolean enabled) {
+    View* view = (View*) nativeView;
+    view->setPostProcessingEnabled(enabled);
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_google_android_filament_View_nIsPostProcessingEnabled(JNIEnv*,
+        jclass, jlong nativeView) {
+    View* view = (View*) nativeView;
+    return view->isPostProcessingEnabled();
 }

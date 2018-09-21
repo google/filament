@@ -57,11 +57,13 @@ static std::vector<MeshIO::Mesh> g_meshes;
 static const Material* g_material;
 static Entity g_light;
 static Texture* g_normalMap = nullptr;
+static Texture* g_clearCoatNormalMap = nullptr;
 static Texture* g_baseColorMap = nullptr;
 
 static Config g_config;
 static struct NormalConfig {
     std::string normalMap;
+    std::string clearCoatNormalMap;
     std::string baseColorMap;
 } g_normalConfig;
 
@@ -82,7 +84,9 @@ static void printUsage(char* name) {
             "       Applies uniform scale\n\n"
             "   --normal-map=<path to PNG/JPG/BMP/GIF/TGA/PSD>, -n <path>\n"
             "       Normal map to apply to the loaded meshes\n\n"
-            "   --basecolor-map=<path to PNG/JPG/BMP/GIF/TGA/PSD>, -c <path>\n"
+            "   --clear-coatnormal-map=<path to PNG/JPG/BMP/GIF/TGA/PSD>, -c <path>\n"
+            "       Normal map to apply to the clear coat layer\n\n"
+            "   --basecolor-map=<path to PNG/JPG/BMP/GIF/TGA/PSD>, -b <path>\n"
             "       Base color map to apply to the loaded meshes\n\n"
     );
     const std::string from("SAMPLE_NORMAL_MAP");
@@ -93,15 +97,16 @@ static void printUsage(char* name) {
 }
 
 static int handleCommandLineArgments(int argc, char* argv[], Config* config) {
-    static constexpr const char* OPTSTR = "hi:vs:n:a:c:";
+    static constexpr const char* OPTSTR = "hi:vs:n:a:c:b:";
     static const struct option OPTIONS[] = {
-            { "help",           no_argument,       0, 'h' },
-            { "ibl",            required_argument, 0, 'i' },
-            { "split-view",     no_argument,       0, 'v' },
-            { "scale",          required_argument, 0, 's' },
-            { "normal-map",     required_argument, 0, 'n' },
-            { "basecolor-map",  required_argument, 0, 'c' },
-            { 0, 0, 0, 0 }  // termination of the option list
+            { "help",                   no_argument,       nullptr, 'h' },
+            { "ibl",                    required_argument, nullptr, 'i' },
+            { "split-view",             no_argument,       nullptr, 'v' },
+            { "scale",                  required_argument, nullptr, 's' },
+            { "normal-map",             required_argument, nullptr, 'n' },
+            { "clear-coat-normal-map",  required_argument, nullptr, 'c' },
+            { "basecolor-map",          required_argument, nullptr, 'b' },
+            { nullptr, 0, nullptr, 0 }  // termination of the option list
     };
     int opt;
     int option_index = 0;
@@ -131,6 +136,9 @@ static int handleCommandLineArgments(int argc, char* argv[], Config* config) {
                 g_normalConfig.normalMap = arg;
                 break;
             case 'c':
+                g_normalConfig.clearCoatNormalMap = arg;
+                break;
+            case 'b':
                 g_normalConfig.baseColorMap = arg;
                 break;
         }
@@ -139,8 +147,9 @@ static int handleCommandLineArgments(int argc, char* argv[], Config* config) {
     return optind;
 }
 
-static void cleanup(Engine* engine, View* view, Scene* scene) {
+static void cleanup(Engine* engine, View*, Scene*) {
     engine->destroy(g_normalMap);
+    engine->destroy(g_clearCoatNormalMap);
     for (auto material : g_materialInstances) {
         engine->destroy(material.second);
     }
@@ -156,14 +165,14 @@ static void cleanup(Engine* engine, View* view, Scene* scene) {
     em.destroy(g_light);
 }
 
-void loadNormalMap(Engine* engine) {
-    if (!g_normalConfig.normalMap.empty()) {
-        Path path(g_normalConfig.normalMap);
-        if (path.exists()) {
+void loadNormalMap(Engine* engine, Texture** normalMap, const std::string& path) {
+    if (!path.empty()) {
+        Path p(path);
+        if (p.exists()) {
             int w, h, n;
-            unsigned char* data = stbi_load(path.getAbsolutePath().c_str(), &w, &h, &n, 3);
+            unsigned char* data = stbi_load(p.getAbsolutePath().c_str(), &w, &h, &n, 3);
             if (data != nullptr) {
-                g_normalMap = Texture::Builder()
+                *normalMap = Texture::Builder()
                         .width(uint32_t(w))
                         .height(uint32_t(h))
                         .levels(0xff)
@@ -172,13 +181,13 @@ void loadNormalMap(Engine* engine) {
                 Texture::PixelBufferDescriptor buffer(data, size_t(w * h * 3),
                         Texture::Format::RGB, Texture::Type::UBYTE,
                         (driver::BufferDescriptor::Callback)&stbi_image_free);
-                g_normalMap->setImage(*engine, 0, std::move(buffer));
-                g_normalMap->generateMipmaps(*engine);
+                (*normalMap)->setImage(*engine, 0, std::move(buffer));
+                (*normalMap)->generateMipmaps(*engine);
             } else {
-                std::cout << "The normal map " << path << " could not be loaded" << std::endl;
+                std::cout << "The normal map " << p << " could not be loaded" << std::endl;
             }
         } else {
-            std::cout << "The normal map " << path << " does not exist" << std::endl;
+            std::cout << "The normal map " << p << " does not exist" << std::endl;
         }
     }
 }
@@ -210,17 +219,23 @@ void loadBaseColorMap(Engine* engine) {
     }
 }
 
-static void setup(Engine* engine, View* view, Scene* scene) {
-    loadNormalMap(engine);
+static void setup(Engine* engine, View*, Scene* scene) {
+    loadNormalMap(engine, &g_normalMap, g_normalConfig.normalMap);
+    loadNormalMap(engine, &g_clearCoatNormalMap, g_normalConfig.clearCoatNormalMap);
     loadBaseColorMap(engine);
 
     bool hasNormalMap = g_normalMap != nullptr;
+    bool hasClearCoatNormalMap = g_clearCoatNormalMap != nullptr;
     bool hasBaseColorMap = g_baseColorMap != nullptr;
 
     std::string shader = R"SHADER(
         void material(inout MaterialInputs material) {
         #if defined(MATERIAL_HAS_NORMAL)
             material.normal = texture(materialParams_normalMap, getUV0()).xyz * 2.0 - 1.0;
+        #endif
+        #if defined(MATERIAL_HAS_CLEAR_COAT_NORMAL)
+            material.clearCoatNormal =
+                    texture(materialParams_clearCoatNormalMap, getUV0()).xyz * 2.0 - 1.0;
         #endif
             prepareMaterial(material);
     )SHADER";
@@ -233,11 +248,16 @@ static void setup(Engine* engine, View* view, Scene* scene) {
         )SHADER";
     } else {
         shader += R"SHADER(
-            material.baseColor.rgb = float3(0.93, 0.51, 0.34);
+            material.baseColor.rgb = float3(0.48, 0.0, 0.0);
             material.metallic = 1.0;
-            material.roughness = 0.3;
+            material.roughness = 0.7;
         )SHADER";
     }
+
+    if (hasClearCoatNormalMap) {
+        shader += "    material.clearCoat = 1.0;\n";
+    }
+
     shader += "}\n";
 
     MaterialBuilder builder = MaterialBuilder()
@@ -253,6 +273,14 @@ static void setup(Engine* engine, View* view, Scene* scene) {
             .require(VertexAttribute::UV0)
             .parameter(MaterialBuilder::SamplerType::SAMPLER_2D, "normalMap")
             .set(Property::NORMAL);
+    }
+
+    if (hasClearCoatNormalMap) {
+        builder
+            .require(VertexAttribute::UV0)
+            .parameter(MaterialBuilder::SamplerType::SAMPLER_2D, "clearCoatNormalMap")
+            .set(Property::CLEAR_COAT)
+            .set(Property::CLEAR_COAT_NORMAL);
     }
 
     if (hasBaseColorMap) {
@@ -274,12 +302,17 @@ static void setup(Engine* engine, View* view, Scene* scene) {
     if (hasNormalMap) {
         g_materialInstances["DefaultMaterial"]->setParameter("normalMap", g_normalMap, sampler);
     }
+    if (hasClearCoatNormalMap) {
+        g_materialInstances["DefaultMaterial"]->setParameter(
+                "clearCoatNormalMap", g_clearCoatNormalMap, sampler);
+    }
     if (hasBaseColorMap) {
-        g_materialInstances["DefaultMaterial"]->setParameter("baseColorMap", g_baseColorMap, sampler);
+        g_materialInstances["DefaultMaterial"]->setParameter(
+                "baseColorMap", g_baseColorMap, sampler);
     }
 
     auto& tcm = engine->getTransformManager();
-    for (auto filename : g_filenames) {
+    for (const auto& filename : g_filenames) {
         MeshIO::Mesh mesh  = MeshIO::loadMeshFromFile(engine, filename, g_materialInstances);
         if (mesh.renderable) {
             auto ei = tcm.getInstance(mesh.renderable);

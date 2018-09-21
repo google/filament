@@ -24,6 +24,7 @@
 #include <filament/Viewport.h>
 
 #include <utils/Allocator.h>
+#include <utils/BinaryTreeArray.h>
 #include <utils/Systrace.h>
 
 #include <math/mat4.h>
@@ -534,10 +535,10 @@ void Froxelizer::commit(driver::DriverApi& driverApi) {
 }
 
 void Froxelizer::froxelizeLights(FEngine& engine,
-        math::mat4f const& UTILS_RESTRICT viewMatrix,
+        CameraInfo const& UTILS_RESTRICT camera,
         const FScene::LightSoa& UTILS_RESTRICT lightData) noexcept {
     // note: this is called asynchronously
-    froxelizeLoop(engine, viewMatrix, lightData);
+    froxelizeLoop(engine, camera, lightData);
     froxelizeAssignRecordsCompress();
 
 #ifndef NDEBUG
@@ -565,7 +566,7 @@ void Froxelizer::froxelizeLights(FEngine& engine,
 }
 
 void Froxelizer::froxelizeLoop(FEngine& engine,
-        mat4f const& UTILS_RESTRICT viewMatrix,
+        const CameraInfo& UTILS_RESTRICT camera,
         const FScene::LightSoa& UTILS_RESTRICT lightData) noexcept {
     SYSTRACE_CALL();
 
@@ -578,17 +579,17 @@ void Froxelizer::froxelizeLoop(FEngine& engine,
     auto const* UTILS_RESTRICT instances    = lightData.data<FScene::LIGHT_INSTANCE>();
 
     auto process = [ this, &froxelThreadData,
-                     spheres, directions, instances, &viewMatrix, &lcm ]
+                     spheres, directions, instances, &camera, &lcm ]
             (size_t count, size_t offset, size_t stride) {
 
         const mat4f& projection = mProjection;
-        const mat3f& vn = viewMatrix.upperLeft();
+        const mat3f& vn = camera.view.upperLeft();
 
         for (size_t i = offset; i < count; i += stride) {
             const size_t j = i + FScene::DIRECTIONAL_LIGHTS_COUNT;
             FLightManager::Instance li = instances[j];
             LightParams light = {
-                    .position = (viewMatrix * float4{ spheres[j].xyz, 1 }).xyz, // to view-space
+                    .position = (camera.view * float4{ spheres[j].xyz, 1 }).xyz, // to view-space
                     .cosSqr = lcm.getCosOuterSquared(li),   // spot only
                     .axis = vn * directions[j],             // spot only
                     .invSin = lcm.getSinInverse(li),        // spot only
@@ -904,6 +905,58 @@ void Froxelizer::froxelizePointAndSpotLight(
             }
         }
     }
+}
+
+/*
+ *
+ * lightTree            output the light tree structure there (must be large enough to hold a complete tree)
+ * lightList            list if lights
+ * lightData            scene's light data SoA
+ * lightRecordsOffset   offset in the record buffer where to find the light list
+ */
+void Froxelizer::computeLightTree(
+        LightTreeNode* lightTree,
+        utils::Slice<RecordBufferType> const& lightList,
+        const FScene::LightSoa& lightData,
+        size_t lightRecordsOffset) noexcept {
+
+    // number of lights in this record
+    const size_t count = lightList.size();
+
+    // the width of the tree is the next power-of-two (if not already a power of two)
+    const size_t w = 1u << (log2i(count) + (utils::popcount(count) == 1 ? 0 : 1));
+
+    // height of the tree
+    const size_t h = log2i(w) + 1u;
+
+    auto const* UTILS_RESTRICT zrange = lightData.data<FScene::SCREEN_SPACE_Z_RANGE>() + 1;
+    BinaryTreeArray::traverse(h,
+            [lightTree, lightRecordsOffset, zrange, indices = lightList.data(), count]
+            (size_t index, size_t col, size_t next) {
+                // indices[] cannot be accessed past 'col'
+                const float min = (col < count) ? zrange[indices[col]].x : 1.0f;
+                const float max = (col < count) ? zrange[indices[col]].y : 0.0f;
+                lightTree[index] = {
+                        .min = min,
+                        .max = max,
+                        .next = uint16_t(next),
+                        .offset = uint16_t(lightRecordsOffset + col),
+                        .isLeaf = 1,
+                        .count = 1,
+                        .reserved = 0,
+                };
+            },
+            [lightTree](size_t index, size_t l, size_t r, size_t next) {
+                lightTree[index] = {
+                        .min = std::min(lightTree[l].min, lightTree[r].min),
+                        .max = std::max(lightTree[l].max, lightTree[r].max),
+                        .next = uint16_t(next),
+                        .offset = 0,
+                        .isLeaf = 0,
+                        .count = 0,
+                        .reserved = 0,
+                };
+            });
 }
 
 } // namespace details

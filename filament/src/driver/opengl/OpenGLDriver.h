@@ -43,8 +43,8 @@ class OpenGLProgram;
 class OpenGLBlitter;
 
 class OpenGLDriver final : public DriverBase {
-    inline OpenGLDriver(driver::ContextManagerGL* external_context) noexcept;
-    virtual ~OpenGLDriver() noexcept;
+    inline explicit OpenGLDriver(driver::ContextManagerGL* external_context) noexcept;
+    ~OpenGLDriver() noexcept final;
 
 public:
     static std::unique_ptr<Driver> create(
@@ -81,7 +81,7 @@ public:
             GLuint texture_id;
             GLenum target;
             GLenum internalFormat;
-            mutable GLsync fence = 0;
+            mutable GLsync fence = nullptr;
 
             // texture parameters go here too
             GLfloat anisotropy = 1.0;
@@ -97,7 +97,7 @@ public:
         inline DebugMarker(OpenGLDriver& driver, const char* string) noexcept : driver(driver) {
             const char* const begin = string + sizeof("virtual void filament::OpenGLDriver::") - 1;
             const char* const end = strchr(begin, '(');
-            driver.pushGroupMarker(begin, size_t(end - begin));
+            driver.pushGroupMarker(begin, end - begin);
         }
         inline ~DebugMarker() noexcept {
             driver.popGroupMarker();
@@ -176,8 +176,11 @@ public:
 
     void useProgram(GLuint program) noexcept;
 
+    OpenGLDriver(OpenGLDriver const&) = delete;
+    OpenGLDriver& operator=(OpenGLDriver const&) = delete;
+
 private:
-    ShaderModel getShaderModel() const noexcept override final;
+    ShaderModel getShaderModel() const noexcept final;
 
     /*
      * Driver interface
@@ -207,7 +210,7 @@ private:
         utils::PoolAllocator<128, 32>   mPool2;
     public:
         static constexpr size_t MIN_ALIGNMENT_SHIFT = 4;
-        HandleAllocator(const utils::HeapArea& area);
+        explicit HandleAllocator(const utils::HeapArea& area);
         void* alloc(size_t size, size_t alignment, size_t extra = 0) noexcept;
         void free(void* p, size_t size) noexcept;
     };
@@ -252,16 +255,13 @@ private:
         return static_cast<Dp>(static_cast<void *>(base + offset));
     }
 
-private:
     typedef math::details::TVec4<GLint> vec4gli;
 
     friend class OpenGLProgram;
-    OpenGLDriver(OpenGLDriver const&) = delete;
-    OpenGLDriver& operator = (OpenGLDriver const&) = delete;
 
     /* Extension management... */
 
-    using MustCastToRightType = void (*)(void);
+    using MustCastToRightType = void (*)();
     using GetProcAddressType = MustCastToRightType (*)(const char* name);
     GetProcAddressType getProcAddress = nullptr;
 
@@ -314,7 +314,7 @@ private:
     inline void activeTexture(GLuint unit) noexcept;
     inline void bindTexture(GLuint unit, GLuint target, GLTexture const* t) noexcept;
     inline void bindTexture(GLuint unit, GLuint target, GLTexture const* t, size_t targetIndex) noexcept;
-    inline void bindTexture(GLuint unit, GLuint target, GLuint texId) noexcept;
+    inline void UTILS_UNUSED bindTexture(GLuint unit, GLuint target, GLuint texId) noexcept;
            void bindTexture(GLuint unit, GLuint target, GLuint texId, size_t targetIndex) noexcept;
 
     inline void unbindTexture(GLenum target, GLuint id) noexcept;
@@ -440,8 +440,8 @@ private:
         } pack;
 
         struct {
-            vec4gli scissor;
-            vec4gli viewport;
+            vec4gli scissor = 0;
+            vec4gli viewport = 0;
         } window;
 
         struct {
@@ -516,6 +516,10 @@ private:
         // Some drivers require the GL_TEXTURE_EXTERNAL_OES target to be bound when
         // the texture image changes, even if it's already bound to that texture
         bool texture_external_needs_rebind = false;
+
+        // Some web browsers seem to immediately clear the default framebuffer when calling
+        // glInvalidateFramebuffer with WebGL 2.0
+        bool disable_invalidate_framebuffer = false;
     } bugs;
 
     void attachStream(GLTexture* t, GLStream* stream) noexcept;
@@ -582,7 +586,7 @@ constexpr size_t OpenGLDriver::getIndexForBufferTarget(GLenum target) noexcept {
         case GL_UNIFORM_BUFFER:             index =11; break;
         default: index = 12; break; // should never happen
     }
-    assert(index < 12 && index < sizeof(state.buffers.targets)/sizeof(state.buffers.targets[0]));
+    assert(index < 12 && index < sizeof(state.buffers.targets)/sizeof(state.buffers.targets[0])); // NOLINT(misc-redundant-expression)
     return index;
 }
 
@@ -602,7 +606,7 @@ void OpenGLDriver::bindTexture(GLuint unit, GLuint target, GLTexture const* t, s
     bindTexture(unit, target, t->gl.texture_id, targetIndex);
 }
 
-void OpenGLDriver::bindTexture(GLuint unit, GLuint target, GLuint texId) noexcept {
+void UTILS_UNUSED OpenGLDriver::bindTexture(GLuint unit, GLuint target, GLuint texId) noexcept {
     bindTexture(unit, target, texId, getIndexForTextureTarget(target));
 }
 

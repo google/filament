@@ -20,6 +20,7 @@
 #include <utils/Panic.h>
 
 #include <algorithm>
+#include <memory>
 
 using namespace math;
 

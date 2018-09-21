@@ -2,12 +2,30 @@
 // Material parameters
 //------------------------------------------------------------------------------
 
-HIGHP mat3  shading_tangentToWorld; // TBN matrix
-HIGHP vec3  shading_position;       // position of the fragment in world space
-      vec3  shading_view;           // normalized vector from the fragment to the eye
-      vec3  shading_normal;         // normalized normal, in world space
-      vec3  shading_reflected;      // reflection of view about normal
-      float shading_NoV;            // dot(normal, view), always strictly > 0
+// Decide if we can skip lighting when dot(n, l) <= 0.0
+#if defined(SHADING_MODEL_CLOTH)
+#if !defined(MATERIAL_HAS_SUBSURFACE_COLOR)
+    #define MATERIAL_CAN_SKIP_LIGHTING
+#endif
+#elif defined(SHADING_MODEL_SUBSURFACE)
+    // Cannot skip lighting
+#else
+    #define MATERIAL_CAN_SKIP_LIGHTING
+#endif
+
+
+// These variables should be in a struct but some GPU drivers ignore the
+// precision qualifier on individual struct members
+HIGHP mat3  shading_tangentToWorld;   // TBN matrix
+HIGHP vec3  shading_position;         // position of the fragment in world space
+      vec3  shading_view;             // normalized vector from the fragment to the eye
+      vec3  shading_normal;           // normalized normal, in world space
+      vec3  shading_reflected;        // reflection of view about normal
+      float shading_NoV;              // dot(normal, view), always strictly > 0
+
+#if defined(MATERIAL_HAS_CLEAR_COAT)
+      vec3  shading_clearCoatNormal;  // normalized clear coat layer normal, in world space
+#endif
 
 /** @public-api */
 HIGHP mat3 getWorldTangentFrame() {
@@ -73,6 +91,9 @@ struct MaterialInputs {
 #if defined(MATERIAL_HAS_NORMAL)
     vec3  normal;
 #endif
+#if defined(MATERIAL_HAS_CLEAR_COAT) && defined(MATERIAL_HAS_CLEAR_COAT_NORMAL)
+    vec3  clearCoatNormal;
+#endif
 };
 
 void initMaterial(out MaterialInputs material) {
@@ -112,5 +133,8 @@ void initMaterial(out MaterialInputs material) {
 
 #if defined(MATERIAL_HAS_NORMAL)
     material.normal = vec3(0.0, 0.0, 1.0);
+#endif
+#if defined(MATERIAL_HAS_CLEAR_COAT) && defined(MATERIAL_HAS_CLEAR_COAT_NORMAL)
+    material.clearCoatNormal = vec3(0.0, 0.0, 1.0);
 #endif
 }

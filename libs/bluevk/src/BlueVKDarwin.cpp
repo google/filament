@@ -28,12 +28,18 @@ static const char* VKLIBRARY_PATH = "libvulkan.1.dylib";
 static void* module = nullptr;
 
 bool loadLibrary() {
+
+#ifndef FILAMENT_VKLIBRARY_PATH
     // Rather than looking in the working directory, look for the dylib in the same folder that the
     // executable lives in. This allows MacOS users to run Vulkan-based Filament apps from anywhere.
     const Path executableFolder = Path::getCurrentExecutable().getParent();
     const Path dylibPath = executableFolder.concat(VKLIBRARY_PATH);
     const Path jsonPath = executableFolder.concat("MoltenVK_icd.json");
     setenv("VK_ICD_FILENAMES", jsonPath.c_str(), 1);
+#else
+    const Path dylibPath = FILAMENT_VKLIBRARY_PATH;
+#endif
+
     module = dlopen(dylibPath.c_str(), RTLD_NOW | RTLD_LOCAL);
     return module != nullptr;
 }

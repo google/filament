@@ -1719,6 +1719,45 @@ TEST_F(LocalSSAElimTest, CompositeExtractProblem) {
 
   SinglePassRunAndMatch<SSARewritePass>(spv_asm, true);
 }
+
+// Test that the RelaxedPrecision decoration on the variable to added to the
+// result of the OpPhi instruction.
+TEST_F(LocalSSAElimTest, DecoratedVariable) {
+  const std::string spv_asm = R"(
+; CHECK: OpDecorate [[var:%\w+]] RelaxedPrecision
+; CHECK: OpDecorate [[phi_id:%\w+]] RelaxedPrecision
+; CHECK: [[phi_id]] = OpPhi
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %2 "main"
+               OpDecorate %v RelaxedPrecision
+       %void = OpTypeVoid
+     %func_t = OpTypeFunction %void
+       %bool = OpTypeBool
+       %true = OpConstantTrue %bool
+       %int  = OpTypeInt 32 0
+      %int_p = OpTypePointer Function %int
+      %int_1 = OpConstant %int 1
+      %int_0 = OpConstant %int 0
+          %2 = OpFunction %void None %func_t
+         %33 = OpLabel
+         %v  = OpVariable %int_p Function
+               OpSelectionMerge %merge None
+               OpBranchConditional %true %l1 %l2
+         %l1 = OpLabel
+               OpStore %v %int_1
+               OpBranch %merge
+         %l2 = OpLabel
+               OpStore %v %int_0
+               OpBranch %merge
+      %merge = OpLabel
+         %ld = OpLoad %int %v
+               OpReturn
+               OpFunctionEnd)";
+
+  SinglePassRunAndMatch<SSARewritePass>(spv_asm, true);
+}
 #endif
 
 // TODO(greg-lunarg): Add tests to verify handling of these cases:

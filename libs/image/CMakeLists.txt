@@ -8,15 +8,18 @@ set(PUBLIC_HDR_DIR include)
 # Sources and headers
 # ==================================================================================================
 set(PUBLIC_HDRS
-        include/image/Image.h
         include/image/ColorTransform.h
+        include/image/ImageOps.h
+        include/image/ImageSampler.h
+        include/image/KtxBundle.h
+        include/image/LinearImage.h
 )
 
 set(SRCS
-        src/Image.cpp
-        src/LinearImage.cpp
-        src/ImageSampler.cpp
         src/ImageOps.cpp
+        src/ImageSampler.cpp
+        src/KtxBundle.cpp
+        src/LinearImage.cpp
 )
 
 # ==================================================================================================
@@ -50,7 +53,7 @@ target_include_directories(image_headers INTERFACE ${PUBLIC_HDR_DIR})
 # ==================================================================================================
 # Tests
 # ==================================================================================================
-if (NOT ANDROID)
+if (NOT ANDROID AND NOT WEBGL)
     add_executable(test_${TARGET} tests/test_image.cpp)
     target_link_libraries(test_${TARGET} PRIVATE image imageio gtest)
 endif()

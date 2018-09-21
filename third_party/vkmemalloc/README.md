@@ -41,6 +41,7 @@ Additional features:
 - Configuration: Fill optional members of CreateInfo structure to provide custom CPU memory allocator, pointers to Vulkan functions and other parameters.
 - Customization: Predefine appropriate macros to provide your own implementation of all external facilities used by the library, from assert, mutex, and atomic, to vector and linked list. 
 - Support for memory mapping, reference-counted internally. Support for persistently mapped memory: Just allocate with appropriate flag and you get access to mapped pointer.
+- Support for non-coherent memory. Functions that flush/invalidate memory. nonCoherentAtomSize is respected automatically.
 - Custom memory pools: Create a pool with desired parameters (e.g. fixed or limited maximum size) and allocate memory out of it.
 - Support for VK_KHR_dedicated_allocation extension: Just enable it and it will be used automatically by the library.
 - Defragmentation: Call one function and let the library move data around to free some memory blocks and make your allocations better compacted.
@@ -49,6 +50,8 @@ Additional features:
 - Debug annotations: Associate string with name or opaque pointer to your own data with every allocation.
 - JSON dump: Obtain a string in JSON format with detailed map of internal state, including list of allocations and gaps between them.
 - Convert this JSON dump into a picture to visualize your memory. See [tools/VmaDumpVis](tools/VmaDumpVis/README.md).
+- Debugging incorrect memory usage: Enable initialization of all allocated memory with a bit pattern to detect usage of uninitialized or freed memory. Enable validation of a magic number before and after every allocation to detect out-of-bounds memory corruption.
+- Record and replay sequence of calls to library functions to a file to check correctness, measure performance, and gather statistics.
 
 # Prequisites
 
@@ -98,5 +101,4 @@ See **[Documentation](https://gpuopen-librariesandsdks.github.io/VulkanMemoryAll
 
 - **[Awesome Vulkan](https://github.com/vinjn/awesome-vulkan)** - a curated list of awesome Vulkan libraries, debuggers and resources.
 - **[PyVMA](https://github.com/realitix/pyvma)** - Python wrapper for this library. Author: Jean-Sébastien B. (@realitix). License: Apache 2.0.
-- **[vma_sample_sdl](https://github.com/rextimmy/vma_sample_sdl)** - SDL port of the sample app of this library (with the goal of running it on multiple platforms, including MacOS). Author: @rextimmy. License: MIT.
 - **[vulkan-malloc](https://github.com/dylanede/vulkan-malloc)** - Vulkan memory allocation library for Rust. Based on version 1 of this library. Author: Dylan Ede (@dylanede). License: MIT / Apache 2.0.

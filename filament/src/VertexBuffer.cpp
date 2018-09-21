@@ -33,6 +33,10 @@ struct VertexBuffer::BuilderDetails {
     uint8_t mBufferCount = 0;
 };
 
+static bool hasIntegerTarget(VertexAttribute attribute) {
+    return attribute == BONE_INDICES;
+}
+
 using BuilderType = VertexBuffer;
 BuilderType::Builder::Builder() noexcept = default;
 BuilderType::Builder::~Builder() noexcept = default;
@@ -81,6 +85,9 @@ VertexBuffer::Builder& VertexBuffer::Builder::attribute(VertexAttribute attribut
         entry.offset = byteOffset;
         entry.stride = byteStride;
         entry.type = attributeType;
+        if (hasIntegerTarget(attribute)) {
+            entry.flags |= Driver::Attribute::FLAG_INTEGER_TARGET;
+        }
         mImpl->mDeclaredAttributes.set(attribute);
     }
     return *this;
@@ -89,7 +96,7 @@ VertexBuffer::Builder& VertexBuffer::Builder::attribute(VertexAttribute attribut
 VertexBuffer::Builder& VertexBuffer::Builder::normalized(VertexAttribute attribute) noexcept {
     if (size_t(attribute) < MAX_ATTRIBUTE_BUFFERS_COUNT) {
         AttributeData& entry = mImpl->mAttributes[attribute];
-        entry.normalized = true;
+        entry.flags |= Driver::Attribute::FLAG_NORMALIZED;
     }
     return *this;
 }
@@ -132,8 +139,8 @@ FVertexBuffer::FVertexBuffer(FEngine& engine, const VertexBuffer::Builder& build
             attributeArray[i].offset = attributes[i].offset;
             attributeArray[i].stride = attributes[i].stride;
             attributeArray[i].buffer = attributes[i].buffer;
-            attributeArray[i].type = attributes[i].type;
-            attributeArray[i].normalized = attributes[i].normalized;
+            attributeArray[i].type   = attributes[i].type;
+            attributeArray[i].flags  = attributes[i].flags;
         }
     }
 

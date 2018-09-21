@@ -339,6 +339,23 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerClearCoatRoughness) {
     expected.insert(filamat::MaterialBuilder::Property::CLEAR_COAT_ROUGHNESS);
     EXPECT_EQ(expected, properties);
 }
+TEST_F(MaterialCompiler, StaticCodeAnalyzerClearCoatNormal) {
+    std::string shaderCode(R"(
+        void material(inout MaterialInputs material) {
+            prepareMaterial(material);
+            material.clearCoatNormal = vec3(1.0, 1.0, 1.0);
+        }
+    )");
+
+    filamat::MaterialBuilder builder = makeBuilder(shaderCode);
+    builder.shading(filamat::MaterialBuilder::Shading::LIT);
+    matc::GLSLTools glslTools;
+    matc::GLSLTools::PropertySet properties;
+    glslTools.findProperties(builder, properties);
+    matc::GLSLTools::PropertySet expected;
+    expected.insert(filamat::MaterialBuilder::Property::CLEAR_COAT_NORMAL);
+    EXPECT_EQ(expected, properties);
+}
 TEST_F(MaterialCompiler, StaticCodeAnalyzerThickness) {
     std::string shaderCode(R"(
         void material(inout MaterialInputs material) {

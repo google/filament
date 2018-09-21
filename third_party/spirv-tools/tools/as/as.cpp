@@ -27,7 +27,7 @@ void print_usage(char* argv0) {
 Usage: %s [options] [<filename>]
 
 The SPIR-V assembly text is read from <filename>.  If no file is specified,
-or if the filename is "-", then the binary is read from standard input.
+or if the filename is "-", then the assembly text is read from standard input.
 The SPIR-V binary module is written to file "out.spv", unless the -o option
 is used.
 

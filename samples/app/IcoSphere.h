@@ -37,10 +37,9 @@ public:
 
     using TriangleList = std::vector<Triangle>;
     using VertexList = std::vector<math::float3>;
-    using Lookup = std::map<std::pair<Index, Index>, Index>;
     using IndexedMesh = std::pair<VertexList, TriangleList>;
 
-    IcoSphere(size_t subdivisions);
+    explicit IcoSphere(size_t subdivisions);
 
     IndexedMesh const& getMesh() const { return mMesh; }
     VertexList const& getVertices() const { return mMesh.first; }
@@ -50,6 +49,7 @@ private:
     static const IcoSphere::VertexList sVertices;
     static const IcoSphere::TriangleList sTriangles;
 
+    using Lookup = std::map<std::pair<Index, Index>, Index>;
     Index vertex_for_edge(Lookup& lookup, VertexList& vertices, Index first, Index second);
     TriangleList subdivide(VertexList& vertices, TriangleList const& triangles);
     IndexedMesh make_icosphere(int subdivisions);

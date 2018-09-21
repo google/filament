@@ -322,7 +322,7 @@ spv_result_t ValidateBinaryUsingContextAndValidationState(
     if (auto error = ExtInstPass(*vstate, &instruction)) return error;
     if (auto error = ModeSettingPass(*vstate, &instruction)) return error;
     if (auto error = TypePass(*vstate, &instruction)) return error;
-    // Constants
+    if (auto error = ConstantPass(*vstate, &instruction)) return error;
     if (auto error = ValidateMemoryInstructions(*vstate, &instruction))
       return error;
     if (auto error = FunctionPass(*vstate, &instruction)) return error;

@@ -232,40 +232,6 @@ PNGDecoder::~PNGDecoder() {
     png_destroy_read_struct(&mPNG, &mInfo, NULL);
 }
 
-// TODO: remove after migrating imageio to LinearImage
-template<typename T, typename PROCESS, typename TRANSFORM>
-static Image toLinearDeprecated(size_t w, size_t h, size_t bpr,
-        const std::unique_ptr<uint8_t[]>& src, PROCESS proc, TRANSFORM transform) {
-    std::unique_ptr<uint8_t[]> dst(new uint8_t[w * h * sizeof(math::float3)]);
-    math::float3* d = reinterpret_cast<math::float3*>(dst.get());
-    for (size_t y = 0; y < h; ++y) {
-        T const* p = reinterpret_cast<T const*>(src.get() + y * bpr);
-        for (size_t x = 0; x < w; ++x, p += 3) {
-            math::float3 sRGB(proc(p[0]), proc(p[1]), proc(p[2]));
-            sRGB /= std::numeric_limits<T>::max();
-            *d++ = transform(sRGB);
-        }
-    }
-    return Image(std::move(dst), w, h, w * sizeof(math::float3), sizeof(math::float3));
-}
-
-// TODO: remove after migrating imageio to LinearImage
-template<typename T, typename PROCESS, typename TRANSFORM>
-static Image toLinearWithAlphaDeprecated(size_t w, size_t h, size_t bpr,
-        const std::unique_ptr<uint8_t[]>& src, PROCESS proc, TRANSFORM transform) {
-    std::unique_ptr<uint8_t[]> dst(new uint8_t[w * h * sizeof(math::float4)]);
-    math::float4* d = reinterpret_cast<math::float4*>(dst.get());
-    for (size_t y = 0; y < h; ++y) {
-        T const* p = reinterpret_cast<T const*>(src.get() + y * bpr);
-        for (size_t x = 0; x < w; ++x, p += 4) {
-            math::float4 sRGB(proc(p[0]), proc(p[1]), proc(p[2]), proc(p[3]));
-            sRGB /= std::numeric_limits<T>::max();
-            *d++ = transform(sRGB);
-        }
-    }
-    return Image(std::move(dst), w, h, w * sizeof(math::float4), sizeof(math::float4), 4);
-}
-
 LinearImage PNGDecoder::decode() {
     std::unique_ptr<uint8_t[]> imageData;
     try {
@@ -610,11 +576,13 @@ LinearImage EXRDecoder::decode() {
         int ret = LoadEXRFromMemory(&rgba, &width, &height, src.data(), src.size(), &error);
         if (ret != TINYEXR_SUCCESS) {
             std::cerr << "Could not decode OpenEXR: " << error << std::endl;
+            FreeEXRErrorMessage(error);
             mStream.seekg(mStreamStartPos);
             return LinearImage();
         }
 
-        src.resize(0);
+        src.clear();
+        src.shrink_to_fit();
 
         LinearImage image(width, height, 3);
 
@@ -629,6 +597,8 @@ LinearImage EXRDecoder::decode() {
                 i++;
             }
         }
+
+        free(rgba);
 
         return image;
     } catch(std::runtime_error& e) {

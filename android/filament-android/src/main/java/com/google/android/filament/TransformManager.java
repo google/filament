@@ -42,8 +42,9 @@ public class TransformManager {
     }
 
     @EntityInstance
-    public int create(@Entity int entity, @EntityInstance int parent, @Nullable @Size(min = 16) float[] localTransform) {
-        return nCreate(mNativeObject, entity, parent, localTransform);
+    public int create(@Entity int entity, @EntityInstance int parent,
+            @Nullable @Size(min = 16) float[] localTransform) {
+        return nCreateArray(mNativeObject, entity, parent, localTransform);
     }
 
     public void destroy(@Entity int entity) {
@@ -54,14 +55,18 @@ public class TransformManager {
         nSetParent(mNativeObject, i, newParent);
     }
 
-    public void setTransform(@EntityInstance int i,  @NonNull @Size(min = 16) float[] localTransform) {
-        if (localTransform.length < 16) throw new ArrayIndexOutOfBoundsException("Array length must be at least 16");
+    public void setTransform(@EntityInstance int i,
+            @NonNull @Size(min = 16) float[] localTransform) {
+        if (localTransform.length < 16) {
+            throw new ArrayIndexOutOfBoundsException("Array length must be at least 16");
+        }
         nSetTransform(mNativeObject, i, localTransform);
     }
 
     @NonNull
     @Size(min = 16)
-    public float[] getTransform(@EntityInstance int i, @Nullable @Size(min = 16) float[] outLocalTransform) {
+    public float[] getTransform(@EntityInstance int i,
+            @Nullable @Size(min = 16) float[] outLocalTransform) {
         outLocalTransform = assertMat4f(outLocalTransform);
         nGetTransform(mNativeObject, i, outLocalTransform);
         return outLocalTransform;
@@ -69,7 +74,8 @@ public class TransformManager {
 
     @NonNull
     @Size(min = 16)
-    public float[] getWorldTransform(@EntityInstance int i, @Nullable @Size(min = 16) float[] outWorldTransform) {
+    public float[] getWorldTransform(@EntityInstance int i,
+            @Nullable @Size(min = 16) float[] outWorldTransform) {
         outWorldTransform = assertMat4f(outWorldTransform);
         nGetWorldTransform(mNativeObject, i, outWorldTransform);
         return outWorldTransform;
@@ -95,7 +101,7 @@ public class TransformManager {
     private static native boolean nHasComponent(long nativeTransformManager, int entity);
     private static native int nGetInstance(long nativeTransformManager, int entity);
     private static native int nCreate(long nativeTransformManager, int entity);
-    private static native int nCreate(long mNativeObject, int entity, int parent, float[] localTransform);
+    private static native int nCreateArray(long mNativeObject, int entity, int parent, float[] localTransform);
     private static native void nDestroy(long nativeTransformManager, int entity);
     private static native void nSetParent(long nativeTransformManager, int i, int newParent);
     private static native void nSetTransform(long nativeTransformManager, int i, float[] localTransform);

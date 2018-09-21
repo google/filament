@@ -48,6 +48,7 @@ void VulkanBuffer::loadFromCpu(const void* cpuData, uint32_t byteOffset, uint32_
     vmaMapMemory(mContext.allocator, stage->memory, &mapped);
     memcpy(mapped, cpuData, numBytes);
     vmaUnmapMemory(mContext.allocator, stage->memory);
+    vmaFlushAllocation(mContext.allocator, stage->memory, byteOffset, numBytes);
 
     // Create and submit a one-off command buffer to allow uploading outside a frame.
     VkCommandBuffer cmdbuffer;

@@ -17,7 +17,6 @@
 #ifndef IMAGE_COLORTRANSFORM_H_
 #define IMAGE_COLORTRANSFORM_H_
 
-#include <image/Image.h>
 #include <image/LinearImage.h>
 
 #include <utils/compiler.h>
@@ -142,82 +141,23 @@ inline math::float3 linearToSRGB(const math::float3& color) {
     return sRGBColor;
 }
 
-template <typename T>
-std::unique_ptr<uint8_t[]> fromLinearTosRGB(const Image& image) {
-    using math::float3;
-    size_t w = image.getWidth();
-    size_t h = image.getHeight();
-    size_t channels = image.getChannelsCount();
-    std::unique_ptr<uint8_t[]> dst(new uint8_t[w * h * 3 * sizeof(T)]);
-    T* d = reinterpret_cast<T*>(dst.get());
-    for (size_t y = 0; y < h; ++y) {
-        float3 const* p = static_cast<float3 const*>(image.getPixelRef(0, y));
-        for (size_t x = 0; x < w; ++x, ++p, d += channels) {
-            float3 l(linearTosRGB(saturate(*p)) * std::numeric_limits<T>::max());
-            for (size_t i = 0; i < 3; i++) {
-                d[i] = T(l[i]);
-            }
-        }
-    }
-    return dst;
-}
-
-template <typename T>
-std::unique_ptr<uint8_t[]> fromLinearToRGB(const Image& image) {
-    using math::float3;
-    size_t w = image.getWidth();
-    size_t h = image.getHeight();
-    size_t channels = image.getChannelsCount();
-    std::unique_ptr<uint8_t[]> dst(new uint8_t[w * h * channels * sizeof(T)]);
-    T* d = reinterpret_cast<T*>(dst.get());
-    for (size_t y = 0; y < h; ++y) {
-        float3 const* p = static_cast<float3 const*>(image.getPixelRef(0, y));
-        for (size_t x = 0; x < w; ++x, ++p, d += channels) {
-            float3 l(saturate(*p) * std::numeric_limits<T>::max());
-            for (size_t i = 0; i < channels; i++) {
-                d[i] = T(l[i]);
-            }
-        }
-    }
-    return dst;
-}
-
-template <typename T>
-std::unique_ptr<uint8_t[]> fromLinearToRGBM(const Image& image) {
-    using namespace math;
-    size_t w = image.getWidth();
-    size_t h = image.getHeight();
-    std::unique_ptr<uint8_t[]> dst(new uint8_t[w * h * 4 * sizeof(T)]);
-    T* d = reinterpret_cast<T*>(dst.get());
-    for (size_t y = 0; y < h; ++y) {
-        float3 const* p = static_cast<float3 const*>(image.getPixelRef(0, y));
-        for (size_t x = 0; x < w; ++x, ++p, d += 4) {
-            float4 l(linearToRGBM(*p) * std::numeric_limits<T>::max());
-            for (size_t i = 0; i < 4; i++) {
-                d[i] = T(l[i]);
-            }
-        }
-    }
-    return dst;
-}
-
-// Creates a 3-channel sRGB u8 image from a linear f32 image.
-// The source image can have three or more channels, but only the first three are honored.
-template <typename T>
+// Creates a n-channel sRGB image from a linear floating-point image.
+// The source image can have more than N channels, but only the first N are honored.
+template <typename T, int N = 3>
 std::unique_ptr<uint8_t[]> fromLinearTosRGB(const LinearImage& image) {
-    using math::float3;
-    size_t w = image.getWidth();
-    size_t h = image.getHeight();
-    UTILS_UNUSED_IN_RELEASE size_t channels = image.getChannels();
-    assert(channels >= 3);
-    std::unique_ptr<uint8_t[]> dst(new uint8_t[w * h * 3 * sizeof(T)]);
+    const size_t w = image.getWidth();
+    const size_t h = image.getHeight();
+    const size_t nchan = image.getChannels();
+    assert(nchan >= N);
+    std::unique_ptr<uint8_t[]> dst(new uint8_t[w * h * N * sizeof(T)]);
     T* d = reinterpret_cast<T*>(dst.get());
     for (size_t y = 0; y < h; ++y) {
-        for (size_t x = 0; x < w; ++x, d += 3) {
-            auto src = image.get<float3>((uint32_t) x, (uint32_t) y);
-            float3 l(linearTosRGB(saturate(*src)) * std::numeric_limits<T>::max());
-            for (size_t i = 0; i < 3; i++) {
-                d[i] = T(l[i]);
+        float const* p = image.getPixelRef(0, y);
+        for (size_t x = 0; x < w; ++x, p += nchan, d += N) {
+            for (int n = 0; n < N; n++) {
+                float source = linearTosRGB(p[n]);
+                float target = math::saturate(source) * std::numeric_limits<T>::max();
+                d[n] = T(target);
             }
         }
     }
@@ -357,6 +297,6 @@ inline LinearImage toLinearFromRGBM(math::float4 const* src, uint32_t w, uint32_
     return result;
 }
 
-}
+}  // namespace Image
 
 #endif // IMAGE_COLORTRANSFORM_H_

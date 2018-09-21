@@ -16,21 +16,28 @@
 
 package com.google.android.filament.tungsten.model.serialization
 
+import com.google.android.filament.tungsten.model.NodeId
 import java.awt.Point
 
-data class Node(val type: String, val id: Int, val position: Point? = Point(0, 0))
+data class NodeSchema(
+    val type: String,
+    val id: NodeId,
+    val position: Point? = Point(0, 0),
+    val properties: Map<String, Any>?
+)
 
-data class Slot(val id: Int, val name: String)
+data class SlotSchema(val id: NodeId, val name: String)
 
-data class Connection(val from: Slot, val to: Slot) {
+data class ConnectionSchema(val from: SlotSchema, val to: SlotSchema) {
 
-    constructor(fromId: Int, fromSlot: String, toId: Int, toSlot: String):
-            this(Slot(fromId, fromSlot), Slot(toId, toSlot))
+    constructor(fromId: NodeId, fromSlot: String, toId: NodeId, toSlot: String):
+            this(SlotSchema(fromId, fromSlot), SlotSchema(toId, toSlot))
 }
 
-data class Graph(
-    val nodes: List<Node>,
-    val connections: List<Connection>,
+data class GraphSchema(
+    val nodes: List<NodeSchema>,
+    val rootNode: NodeId?,
+    val connections: List<ConnectionSchema>,
     val version: String,
     val editor: Map<String, Any> = emptyMap()
 )

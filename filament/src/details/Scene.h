@@ -83,7 +83,7 @@ public:
     void terminate(FEngine& engine);
 
     void prepare(const math::mat4f& worldOriginTansform);
-    void prepareLights(const CameraInfo& camera, ArenaScope& arena) noexcept;
+    void prepareDynamicLights(const CameraInfo& camera, ArenaScope& arena) noexcept;
     void computeBounds(Aabb& castersBox, Aabb& receiversBox, uint32_t visibleLayers) const noexcept;
 
     /*
@@ -145,14 +145,16 @@ public:
         POSITION_RADIUS,
         DIRECTION,
         LIGHT_INSTANCE,
-        VISIBILITY
+        VISIBILITY,
+        SCREEN_SPACE_Z_RANGE
     };
 
     using LightSoa = utils::StructureOfArrays<
             math::float4,
             math::float3,
             FLightManager::Instance,
-            Culler::result_type
+            Culler::result_type,
+            math::float2
     >;
 
     LightSoa const& getLightData() const noexcept { return mLightData; }
@@ -161,6 +163,12 @@ public:
     void updateUBOs(utils::Range<uint32_t> visibleRenderables) const noexcept;
 
 private:
+    static inline void computeLightRanges(math::float2* zrange,
+            CameraInfo const& camera, const math::float4* spheres, size_t count) noexcept;
+
+    static inline void computeLightCameraPlaneDistances(float* distances,
+            const CameraInfo& camera, const math::float4* spheres, size_t count) noexcept;
+
     FEngine& mEngine;
     FSkybox const* mSkybox = nullptr;
     FIndirectLight const* mIndirectLight = nullptr;

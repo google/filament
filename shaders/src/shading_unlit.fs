@@ -31,6 +31,8 @@ vec4 evaluateMaterial(const MaterialInputs material) {
 #else
     color = vec4(0.0);
 #endif
+#elif defined(HAS_SHADOW_MULTIPLIER)
+    color = vec4(0.0);
 #endif
 
     return color;

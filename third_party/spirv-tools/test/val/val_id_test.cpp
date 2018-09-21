@@ -1592,7 +1592,7 @@ TEST_F(ValidateIdWithMessage, OpSpecConstantCompositeArrayGood) {
 TEST_F(ValidateIdWithMessage, OpSpecConstantCompositeArrayNumComponentsBad) {
   std::string spirv = kGLSL450MemoryModel + R"(
 %1 = OpTypeInt 32 0
-%2 = OpSpecConstant %1 4
+%2 = OpConstant %1 4
 %3 = OpTypeArray %1 %2
 %4 = OpSpecConstantComposite %3 %2 %2 %2)";
   CompileSuccessfully(spirv.c_str());

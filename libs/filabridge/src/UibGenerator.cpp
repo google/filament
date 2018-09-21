@@ -34,7 +34,7 @@ UniformInterfaceBlock& UibGenerator::getPerViewUib() noexcept  {
             .add("clipFromWorldMatrix",     1, UniformInterfaceBlock::Type::MAT4, Precision::HIGH)
             .add("lightFromWorldMatrix",    1, UniformInterfaceBlock::Type::MAT4, Precision::HIGH)
             // view
-            .add("resolution",              1, UniformInterfaceBlock::Type::FLOAT4)
+            .add("resolution",              1, UniformInterfaceBlock::Type::FLOAT4, Precision::HIGH)
             // camera
             .add("cameraPosition",          1, UniformInterfaceBlock::Type::FLOAT3, Precision::HIGH)
             // time

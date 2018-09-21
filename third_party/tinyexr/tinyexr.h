@@ -2518,10 +2518,10 @@ tinfl_status tinfl_decompress(tinfl_decompressor *r,
   tinfl_status status = TINFL_STATUS_FAILED;
   mz_uint32 num_bits, dist, counter, num_extra;
   tinfl_bit_buf_t bit_buf;
-  const mz_uint8 *pIn_buf_cur = pIn_buf_next,
-                 *const pIn_buf_end = pIn_buf_next + *pIn_buf_size;
-  mz_uint8 *pOut_buf_cur = pOut_buf_next,
-           *const pOut_buf_end = pOut_buf_next + *pOut_buf_size;
+  const mz_uint8 *pIn_buf_cur = pIn_buf_next, *const pIn_buf_end =
+                                                  pIn_buf_next + *pIn_buf_size;
+  mz_uint8 *pOut_buf_cur = pOut_buf_next, *const pOut_buf_end =
+                                              pOut_buf_next + *pOut_buf_size;
   size_t out_buf_size_mask =
              (decomp_flags & TINFL_FLAG_USING_NON_WRAPPING_OUTPUT_BUF)
                  ? (size_t)-1
@@ -2938,8 +2938,9 @@ void *tinfl_decompress_mem_to_heap(const void *pSrc_buf, size_t src_buf_len,
     tinfl_status status = tinfl_decompress(
         &decomp, (const mz_uint8 *)pSrc_buf + src_buf_ofs, &src_buf_size,
         (mz_uint8 *)pBuf, pBuf ? (mz_uint8 *)pBuf + *pOut_len : NULL,
-        &dst_buf_size, (flags & ~TINFL_FLAG_HAS_MORE_INPUT) |
-                           TINFL_FLAG_USING_NON_WRAPPING_OUTPUT_BUF);
+        &dst_buf_size,
+        (flags & ~TINFL_FLAG_HAS_MORE_INPUT) |
+            TINFL_FLAG_USING_NON_WRAPPING_OUTPUT_BUF);
     if ((status < 0) || (status == TINFL_STATUS_NEEDS_MORE_INPUT)) {
       MZ_FREE(pBuf);
       *pOut_len = 0;
@@ -2992,9 +2993,8 @@ int tinfl_decompress_mem_to_callback(const void *pIn_buf, size_t *pIn_buf_size,
     tinfl_status status =
         tinfl_decompress(&decomp, (const mz_uint8 *)pIn_buf + in_buf_ofs,
                          &in_buf_size, pDict, pDict + dict_ofs, &dst_buf_size,
-                         (flags &
-                          ~(TINFL_FLAG_HAS_MORE_INPUT |
-                            TINFL_FLAG_USING_NON_WRAPPING_OUTPUT_BUF)));
+                         (flags & ~(TINFL_FLAG_HAS_MORE_INPUT |
+                                    TINFL_FLAG_USING_NON_WRAPPING_OUTPUT_BUF)));
     in_buf_ofs += in_buf_size;
     if ((dst_buf_size) &&
         (!(*pPut_buf_func)(pDict + dict_ofs, (int)dst_buf_size, pPut_buf_user)))
@@ -3119,7 +3119,9 @@ static const mz_uint8 s_tdefl_large_dist_extra[128] = {
 
 // Radix sorts tdefl_sym_freq[] array by 16-bit key m_key. Returns ptr to sorted
 // values.
-typedef struct { mz_uint16 m_key, m_sym_index; } tdefl_sym_freq;
+typedef struct {
+  mz_uint16 m_key, m_sym_index;
+} tdefl_sym_freq;
 static tdefl_sym_freq *tdefl_radix_sort_syms(mz_uint num_syms,
                                              tdefl_sym_freq *pSyms0,
                                              tdefl_sym_freq *pSyms1) {
@@ -5263,9 +5265,10 @@ mz_bool mz_zip_reader_file_stat(mz_zip_archive *pZip, mz_uint file_index,
   n = MZ_READ_LE16(p + MZ_ZIP_CDH_COMMENT_LEN_OFS);
   n = MZ_MIN(n, MZ_ZIP_MAX_ARCHIVE_FILE_COMMENT_SIZE - 1);
   pStat->m_comment_size = n;
-  memcpy(pStat->m_comment, p + MZ_ZIP_CENTRAL_DIR_HEADER_SIZE +
-                               MZ_READ_LE16(p + MZ_ZIP_CDH_FILENAME_LEN_OFS) +
-                               MZ_READ_LE16(p + MZ_ZIP_CDH_EXTRA_LEN_OFS),
+  memcpy(pStat->m_comment,
+         p + MZ_ZIP_CENTRAL_DIR_HEADER_SIZE +
+             MZ_READ_LE16(p + MZ_ZIP_CDH_FILENAME_LEN_OFS) +
+             MZ_READ_LE16(p + MZ_ZIP_CDH_EXTRA_LEN_OFS),
          n);
   pStat->m_comment[n] = '\0';
 
@@ -7239,7 +7242,21 @@ static bool ReadAttribute(std::string *name, std::string *type,
   tinyexr::swap4(reinterpret_cast<unsigned int *>(&data_len));
 
   if (data_len == 0) {
-    return false;
+    if ((*type).compare("string") == 0) {
+      // Accept empty string attribute.
+
+      marker += sizeof(uint32_t);
+      size -= sizeof(uint32_t);
+
+      *marker_size = name_len + 1 + type_len + 1 + sizeof(uint32_t);
+
+      data->resize(1);
+      (*data)[0] = '\0';
+
+      return true;
+    } else {
+      return false;
+    }
   }
 
   marker += sizeof(uint32_t);
@@ -9573,6 +9590,7 @@ bool CompressZfp(std::vector<unsigned char> *outBuf, unsigned int *outSize,
 // -----------------------------------------------------------------
 //
 
+// TODO(syoyo): Refactor function arguments.
 static bool DecodePixelData(/* out */ unsigned char **out_images,
                             const int *requested_pixel_types,
                             const unsigned char *data_ptr, size_t data_len,
@@ -9622,6 +9640,8 @@ static bool DecodePixelData(/* out */ unsigned char **out_images,
             FP16 hf;
 
             // hf.u = line_ptr[u];
+            // use `cpy` to avoid unaligned memory access when compiler's
+            // optimization is on.
             tinyexr::cpy2(&(hf.u), line_ptr + u);
 
             tinyexr::swap2(reinterpret_cast<unsigned short *>(&hf.u));
@@ -10056,37 +10076,73 @@ static bool DecodePixelData(/* out */ unsigned char **out_images,
 #endif
   } else if (compression_type == TINYEXR_COMPRESSIONTYPE_NONE) {
     for (size_t c = 0; c < num_channels; c++) {
-      if (channels[c].pixel_type == TINYEXR_PIXELTYPE_HALF) {
-        const unsigned short *line_ptr =
-            reinterpret_cast<const unsigned short *>(
-                data_ptr +
-                c * static_cast<size_t>(width) * sizeof(unsigned short));
+      for (size_t v = 0; v < static_cast<size_t>(num_lines); v++) {
+        if (channels[c].pixel_type == TINYEXR_PIXELTYPE_HALF) {
+          const unsigned short *line_ptr =
+              reinterpret_cast<const unsigned short *>(
+                  data_ptr + v * pixel_data_size * size_t(width) +
+                  channel_offset_list[c] * static_cast<size_t>(width));
 
-        if (requested_pixel_types[c] == TINYEXR_PIXELTYPE_HALF) {
-          unsigned short *outLine =
-              reinterpret_cast<unsigned short *>(out_images[c]);
-          if (line_order == 0) {
-            outLine += y * x_stride;
+          if (requested_pixel_types[c] == TINYEXR_PIXELTYPE_HALF) {
+            unsigned short *outLine =
+                reinterpret_cast<unsigned short *>(out_images[c]);
+            if (line_order == 0) {
+              outLine += (y + v) * x_stride;
+            } else {
+              outLine += (height - 1 - (y + v)) * x_stride;
+            }
+
+            for (int u = 0; u < width; u++) {
+              tinyexr::FP16 hf;
+
+              // hf.u = line_ptr[u];
+              tinyexr::cpy2(&(hf.u), line_ptr + u);
+
+              tinyexr::swap2(reinterpret_cast<unsigned short *>(&hf.u));
+
+              outLine[u] = hf.u;
+            }
+          } else if (requested_pixel_types[c] == TINYEXR_PIXELTYPE_FLOAT) {
+            float *outLine = reinterpret_cast<float *>(out_images[c]);
+            if (line_order == 0) {
+              outLine += (y + v) * x_stride;
+            } else {
+              outLine += (height - 1 - (y + v)) * x_stride;
+            }
+
+            if (reinterpret_cast<const unsigned char *>(line_ptr + width) >
+                (data_ptr + data_len)) {
+              // Insufficient data size
+              return false;
+            }
+
+            for (int u = 0; u < width; u++) {
+              tinyexr::FP16 hf;
+
+              // address may not be aliged. use byte-wise copy for safety.#76
+              // hf.u = line_ptr[u];
+              tinyexr::cpy2(&(hf.u), line_ptr + u);
+
+              tinyexr::swap2(reinterpret_cast<unsigned short *>(&hf.u));
+
+              tinyexr::FP32 f32 = half_to_float(hf);
+
+              outLine[u] = f32.f;
+            }
           } else {
-            outLine += (height - 1 - y) * x_stride;
+            assert(0);
+            return false;
           }
+        } else if (channels[c].pixel_type == TINYEXR_PIXELTYPE_FLOAT) {
+          const float *line_ptr = reinterpret_cast<const float *>(
+              data_ptr + v * pixel_data_size * size_t(width) +
+              channel_offset_list[c] * static_cast<size_t>(width));
 
-          for (int u = 0; u < width; u++) {
-            tinyexr::FP16 hf;
-
-            // hf.u = line_ptr[u];
-            tinyexr::cpy2(&(hf.u), line_ptr + u);
-
-            tinyexr::swap2(reinterpret_cast<unsigned short *>(&hf.u));
-
-            outLine[u] = hf.u;
-          }
-        } else if (requested_pixel_types[c] == TINYEXR_PIXELTYPE_FLOAT) {
           float *outLine = reinterpret_cast<float *>(out_images[c]);
           if (line_order == 0) {
-            outLine += y * x_stride;
+            outLine += (y + v) * x_stride;
           } else {
-            outLine += (height - 1 - y) * x_stride;
+            outLine += (height - 1 - (y + v)) * x_stride;
           }
 
           if (reinterpret_cast<const unsigned char *>(line_ptr + width) >
@@ -10096,71 +10152,40 @@ static bool DecodePixelData(/* out */ unsigned char **out_images,
           }
 
           for (int u = 0; u < width; u++) {
-            tinyexr::FP16 hf;
+            float val;
+            tinyexr::cpy4(&val, line_ptr + u);
 
-            // address may not be aliged. use byte-wise copy for safety.#76
-            // hf.u = line_ptr[u];
-            tinyexr::cpy2(&(hf.u), line_ptr + u);
+            tinyexr::swap4(reinterpret_cast<unsigned int *>(&val));
 
-            tinyexr::swap2(reinterpret_cast<unsigned short *>(&hf.u));
-
-            tinyexr::FP32 f32 = half_to_float(hf);
-
-            outLine[u] = f32.f;
+            outLine[u] = val;
           }
-        } else {
-          assert(0);
-          return false;
-        }
-      } else if (channels[c].pixel_type == TINYEXR_PIXELTYPE_FLOAT) {
-        const float *line_ptr = reinterpret_cast<const float *>(
-            data_ptr + c * static_cast<size_t>(width) * sizeof(float));
+        } else if (channels[c].pixel_type == TINYEXR_PIXELTYPE_UINT) {
+          const unsigned int *line_ptr = reinterpret_cast<const unsigned int *>(
+              data_ptr + v * pixel_data_size * size_t(width) +
+              channel_offset_list[c] * static_cast<size_t>(width));
 
-        float *outLine = reinterpret_cast<float *>(out_images[c]);
-        if (line_order == 0) {
-          outLine += y * x_stride;
-        } else {
-          outLine += (height - 1 - y) * x_stride;
-        }
-
-        if (reinterpret_cast<const unsigned char *>(line_ptr + width) >
-            (data_ptr + data_len)) {
-          // Insufficient data size
-          return false;
-        }
-
-        for (int u = 0; u < width; u++) {
-          float val;
-          tinyexr::cpy4(&val, line_ptr + u);
-
-          tinyexr::swap4(reinterpret_cast<unsigned int *>(&val));
-
-          outLine[u] = val;
-        }
-      } else if (channels[c].pixel_type == TINYEXR_PIXELTYPE_UINT) {
-        const unsigned int *line_ptr = reinterpret_cast<const unsigned int *>(
-            data_ptr + c * static_cast<size_t>(width) * sizeof(unsigned int));
-
-        unsigned int *outLine = reinterpret_cast<unsigned int *>(out_images[c]);
-        if (line_order == 0) {
-          outLine += y * x_stride;
-        } else {
-          outLine += (height - 1 - y) * x_stride;
-        }
-
-        for (int u = 0; u < width; u++) {
-          if (reinterpret_cast<const unsigned char *>(line_ptr + u) >=
-              (data_ptr + data_len)) {
-            // Corrupsed data?
-            return false;
+          unsigned int *outLine =
+              reinterpret_cast<unsigned int *>(out_images[c]);
+          if (line_order == 0) {
+            outLine += (y + v) * x_stride;
+          } else {
+            outLine += (height - 1 - (y + v)) * x_stride;
           }
 
-          unsigned int val;
-          tinyexr::cpy4(&val, line_ptr + u);
+          for (int u = 0; u < width; u++) {
+            if (reinterpret_cast<const unsigned char *>(line_ptr + u) >=
+                (data_ptr + data_len)) {
+              // Corrupsed data?
+              return false;
+            }
 
-          tinyexr::swap4(reinterpret_cast<unsigned int *>(&val));
+            unsigned int val;
+            tinyexr::cpy4(&val, line_ptr + u);
 
-          outLine[u] = val;
+            tinyexr::swap4(reinterpret_cast<unsigned int *>(&val));
+
+            outLine[u] = val;
+          }
         }
       }
     }
@@ -10666,7 +10691,8 @@ static void ConvertHeader(EXRHeader *exr_header, const HeaderInfo &info) {
 
 static int DecodeChunk(EXRImage *exr_image, const EXRHeader *exr_header,
                        const std::vector<tinyexr::tinyexr_uint64> &offsets,
-                       const unsigned char *head, const size_t size, std::string *err) {
+                       const unsigned char *head, const size_t size,
+                       std::string *err) {
   int num_channels = exr_header->num_channels;
 
   int num_scanline_blocks = 1;
@@ -11031,7 +11057,6 @@ static int DecodeEXRImage(EXRImage *exr_image, const EXRHeader *exr_header,
         free(exr_image->images);
         exr_image->images = NULL;
       }
-
     }
 
     return ret;
@@ -11226,9 +11251,7 @@ int ParseEXRHeaderFromMemory(EXRHeader *exr_header, const EXRVersion *version,
   }
 
   if (size < tinyexr::kEXRVersionSize) {
-    tinyexr::SetErrorMessage(
-        "Insufficient header/data size.\n",
-        err);
+    tinyexr::SetErrorMessage("Insufficient header/data size.\n", err);
     return TINYEXR_ERROR_INVALID_DATA;
   }
 
@@ -11333,18 +11356,53 @@ int LoadEXRFromMemory(float **out_rgba, int *width, int *height,
       malloc(4 * sizeof(float) * static_cast<size_t>(exr_image.width) *
              static_cast<size_t>(exr_image.height)));
 
-  for (int i = 0; i < exr_image.width * exr_image.height; i++) {
-    (*out_rgba)[4 * i + 0] =
-        reinterpret_cast<float **>(exr_image.images)[idxR][i];
-    (*out_rgba)[4 * i + 1] =
-        reinterpret_cast<float **>(exr_image.images)[idxG][i];
-    (*out_rgba)[4 * i + 2] =
-        reinterpret_cast<float **>(exr_image.images)[idxB][i];
-    if (idxA != -1) {
-      (*out_rgba)[4 * i + 3] =
-          reinterpret_cast<float **>(exr_image.images)[idxA][i];
-    } else {
-      (*out_rgba)[4 * i + 3] = 1.0;
+  if (exr_header.tiled) {
+    for (int it = 0; it < exr_image.num_tiles; it++) {
+      for (int j = 0; j < exr_header.tile_size_y; j++)
+        for (int i = 0; i < exr_header.tile_size_x; i++) {
+          const int ii =
+              exr_image.tiles[it].offset_x * exr_header.tile_size_x + i;
+          const int jj =
+              exr_image.tiles[it].offset_y * exr_header.tile_size_y + j;
+          const int idx = ii + jj * exr_image.width;
+
+          // out of region check.
+          if (ii >= exr_image.width) {
+            continue;
+          }
+          if (jj >= exr_image.height) {
+            continue;
+          }
+          const int srcIdx = i + j * exr_header.tile_size_x;
+          unsigned char **src = exr_image.tiles[it].images;
+          (*out_rgba)[4 * idx + 0] =
+              reinterpret_cast<float **>(src)[idxR][srcIdx];
+          (*out_rgba)[4 * idx + 1] =
+              reinterpret_cast<float **>(src)[idxG][srcIdx];
+          (*out_rgba)[4 * idx + 2] =
+              reinterpret_cast<float **>(src)[idxB][srcIdx];
+          if (idxA != -1) {
+            (*out_rgba)[4 * idx + 3] =
+                reinterpret_cast<float **>(src)[idxA][srcIdx];
+          } else {
+            (*out_rgba)[4 * idx + 3] = 1.0;
+          }
+        }
+    }
+  } else {
+    for (int i = 0; i < exr_image.width * exr_image.height; i++) {
+      (*out_rgba)[4 * i + 0] =
+          reinterpret_cast<float **>(exr_image.images)[idxR][i];
+      (*out_rgba)[4 * i + 1] =
+          reinterpret_cast<float **>(exr_image.images)[idxG][i];
+      (*out_rgba)[4 * i + 2] =
+          reinterpret_cast<float **>(exr_image.images)[idxB][i];
+      if (idxA != -1) {
+        (*out_rgba)[4 * i + 3] =
+            reinterpret_cast<float **>(exr_image.images)[idxA][i];
+      } else {
+        (*out_rgba)[4 * i + 3] = 1.0;
+      }
     }
   }
 
@@ -11382,7 +11440,8 @@ int LoadEXRImageFromFile(EXRImage *exr_image, const EXRHeader *exr_header,
   fseek(fp, 0, SEEK_SET);
 
   if (filesize < 16) {
-    tinyexr::SetErrorMessage("File size too short " + std::string(filename), err);
+    tinyexr::SetErrorMessage("File size too short " + std::string(filename),
+                             err);
     return TINYEXR_ERROR_INVALID_FILE;
   }
 
@@ -11839,8 +11898,8 @@ size_t SaveEXRImageToMemory(const EXRImage *exr_image,
     } else if (exr_header->compression_type == TINYEXR_COMPRESSIONTYPE_PIZ) {
 #if TINYEXR_USE_PIZ
       unsigned int bufLen =
-          1024 + static_cast<unsigned int>(
-                     1.2 * static_cast<unsigned int>(
+          8192 + static_cast<unsigned int>(
+                     2 * static_cast<unsigned int>(
                                buf.size()));  // @fixme { compute good bound. }
       std::vector<unsigned char> block(bufLen);
       unsigned int outSize = static_cast<unsigned int>(block.size());
@@ -12501,8 +12560,7 @@ int ParseEXRMultipartHeaderFromMemory(EXRHeader ***exr_headers,
   }
 
   if (size < tinyexr::kEXRVersionSize) {
-    tinyexr::SetErrorMessage(
-        "Data size too short", err);
+    tinyexr::SetErrorMessage("Data size too short", err);
     return TINYEXR_ERROR_INVALID_DATA;
   }
 

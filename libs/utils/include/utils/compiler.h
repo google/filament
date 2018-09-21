@@ -72,6 +72,11 @@
 #   define UTILS_HAS_HYPER_THREADING 0
 #endif
 
+#if defined(__EMSCRIPTEN__)
+#   define UTILS_HAS_THREADING 0
+#else
+#   define UTILS_HAS_THREADING 1
+#endif
 
 #if __has_attribute(noinline)
 #define UTILS_NOINLINE __attribute__((noinline))
@@ -105,7 +110,11 @@
 #define UTILS_RESTRICT __restrict__
 
 // TODO: set the proper alignment for the target
+#ifndef __EMSCRIPTEN__
 #define UTILS_ALIGN_LOOP {__asm__ __volatile__(".align 4");}
+#else
+#define UTILS_ALIGN_LOOP
+#endif
 
 #if __has_feature(cxx_thread_local)
 #   ifdef ANDROID

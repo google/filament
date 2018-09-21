@@ -252,6 +252,30 @@ public:
         }
         return result != 0;
     }
+
+    template <typename A>
+    static constexpr TMat22 translate(const TVec2<A>& t) {
+        TMat22 r;
+        r[2] = t;
+        return r;
+    }
+
+    template <typename A>
+    static constexpr TMat22 translate(A t) {
+        TMat22 r;
+        r[1] = TVec2<T>{ t };
+        return r;
+    }
+
+    template <typename A>
+    static constexpr TMat22 scale(const TVec2<A>& s) {
+        return TMat22{ s };
+    }
+
+    template <typename A>
+    static constexpr TMat22 scale(A s) {
+        return TMat22{ TVec2<T>{ s, s } };
+    }
 };
 
 // ----------------------------------------------------------------------------------------
