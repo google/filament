@@ -19,6 +19,8 @@
 
 #include "../app/CameraManipulator.h"
 
+#include <image/KtxBundle.h>
+
 #include <filagui/ImGuiHelper.h>
 
 #include <filament/Camera.h>
@@ -35,14 +37,14 @@
 
 namespace filaweb {
 
-// Filaweb defines three kinds of assets: raw files, single-mip textures, and cubemaps.
+// Filaweb defines three kinds of assets: raw files, textures, and cubemaps.
 // For simplicity all three kinds are represented with a single struct.
 struct Asset {
     std::unique_ptr<uint8_t[]> data;
+    std::unique_ptr<image::KtxBundle> ktx;
     uint32_t nbytes;
     uint32_t width;
     uint32_t height;
-    uint32_t channels;
     uint32_t envMipCount;
     std::unique_ptr<Asset> envShCoeffs;
     std::unique_ptr<Asset[]> envFaces;

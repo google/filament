@@ -59,25 +59,29 @@ static SuzanneApp app;
 
 static Texture* setTextureParameter(Engine& engine, filaweb::Asset& asset, string name, bool linear,
         TextureSampler const &sampler) {
+    const auto& info = asset.ktx->getInfo();
 
     const auto destructor = [](void* buffer, size_t size, void* user) {
         auto asset = (filaweb::Asset*) user;
-        asset->data.reset();
+        asset->ktx.reset();
     };
 
     Texture::Format format;
-    switch (asset.channels) {
+    switch (info.glTypeSize) {
         case 1: format = Texture::Format::R; break;
         case 2: format = Texture::Format::RG; break;
         case 3: format = Texture::Format::RGB; break;
         case 4: format = Texture::Format::RGBA; break;
     }
 
-    Texture::PixelBufferDescriptor pb(
-            asset.data.get(), asset.nbytes, format, Texture::Type::UBYTE, destructor, &asset);
+    uint8_t* data;
+    uint32_t nbytes;
+    asset.ktx->getBlob({}, &data, &nbytes);
+    Texture::PixelBufferDescriptor pb(data, nbytes, format, Texture::Type::UBYTE, destructor,
+            &asset);
 
     Format internalFormat;
-    switch (asset.channels) {
+    switch (info.glTypeSize) {
         case 1: internalFormat = Format::R8; break;
         case 2: internalFormat = Format::RG8; break;
         case 3: internalFormat = linear ? Format::RGB8 : Format::SRGB8; break;
@@ -85,8 +89,8 @@ static Texture* setTextureParameter(Engine& engine, filaweb::Asset& asset, strin
     }
 
     auto texture = Texture::Builder()
-            .width(asset.width)
-            .height(asset.height)
+            .width(info.pixelWidth)
+            .height(info.pixelHeight)
             .sampler(Texture::Sampler::SAMPLER_2D)
             .format(internalFormat)
             .build(engine);
@@ -127,7 +131,6 @@ void setup(Engine* engine, View* view, Scene* scene) {
     // Create textures.
     TextureSampler sampler(MagFilter::LINEAR, WrapMode::CLAMP_TO_EDGE);
     auto setTexture = [engine, sampler] (filaweb::Asset& asset, const char* name, bool linear) {
-        printf("%s: %d x %d\n", name, asset.width, asset.height);
         setTextureParameter(*engine, asset, name, linear, sampler);
     };
     setTexture(albedo, "albedo", false);
