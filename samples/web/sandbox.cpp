@@ -79,10 +79,10 @@ void setup(Engine* engine, View* view, Scene* scene) {
     static auto mesh = filaweb::getRawFile("mesh");
 
     // Create mesh.
-    const uint8_t* mdata = mesh.data.get();
+    const uint8_t* mdata = mesh.rawData.get();
     const auto destructor = [](void* buffer, size_t size, void* user) {
         auto asset = (filaweb::Asset*) user;
-        asset->data.reset();
+        asset->rawData.reset();
     };
     MaterialInstance* materialInstance = app.params.materialInstance[MATERIAL_LIT];
     app.filamesh = decodeMesh(*engine, mdata, 0, materialInstance, destructor, &mesh);

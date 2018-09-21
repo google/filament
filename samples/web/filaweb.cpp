@@ -150,49 +150,43 @@ Asset getRawFile(const char* name) {
         var name = UTF8ToString($1);
         HEAP32[nbytes] = assets[name].data.byteLength;
         stringToUTF8(assets[name].url, $2, $3);
-    }, &result.nbytes, name, &result.url[0], sizeof(result.url));
+    }, &result.rawSize, name, &result.rawUrl[0], sizeof(result.rawUrl));
 
     // Move the data from JavaScript.
-    uint8_t* data = new uint8_t[result.nbytes];
+    uint8_t* data = new uint8_t[result.rawSize];
     EM_ASM({
         var data = $0;
         var name = UTF8ToString($1);
         HEAPU8.set(assets[name].data, data);
         assets[name].data = null;
     }, data, name);
-    result.data = decltype(Asset::data)(data);
+    result.rawData = decltype(Asset::rawData)(data);
     return result;
 }
 
 static Asset getPngTexture(const Asset& rawfile) {
     int width, height, ncomp;
-    stbi_info_from_memory(rawfile.data.get(), rawfile.nbytes, &width, &height, &ncomp);
+    stbi_info_from_memory(rawfile.rawData.get(), rawfile.rawSize, &width, &height, &ncomp);
     const uint32_t nbytes = width * height * 4;
-    uint8_t* texels = new uint8_t[nbytes];
-    stbi_uc* decoded = stbi_load_from_memory(rawfile.data.get(), rawfile.nbytes, &width, &height,
-            &ncomp, 4);
-    memcpy(texels, decoded, nbytes);
+    stbi_uc* decoded = stbi_load_from_memory(rawfile.rawData.get(), rawfile.rawSize, &width,
+            &height, &ncomp, 4);
+    Asset result = {};
+    result.texture.reset(new KtxBundle(1, 1, false));
+    result.texture->setBlob({}, decoded, nbytes);
     stbi_image_free(decoded);
-    return {
-        .data = decltype(Asset::data)(texels),
-        .ktx = {},
-        .nbytes = nbytes,
-        .width = uint32_t(width),
-        .height = uint32_t(height)
-    };
+    return result;
+
 }
 
 static Asset getKtxTexture(const Asset& rawfile) {
-    KtxBundle* bundle = new KtxBundle(rawfile.data.get(), rawfile.nbytes);
-    return {
-        .data = {},
-        .ktx = decltype(Asset::ktx)(bundle)
-    };
+    Asset result = {};
+    result.texture.reset(new KtxBundle(rawfile.rawData.get(), rawfile.rawSize));
+    return result;
 }
 
 Asset getTexture(const char* name) {
     Asset rawfile = getRawFile(name);
-    string extension = Path(rawfile.url).getExtension();
+    string extension = Path(rawfile.rawUrl).getExtension();
     fflush(stdout);
     if (extension == "png" || extension == "rgbm") {
         return getPngTexture(rawfile);
@@ -218,16 +212,11 @@ Asset getCubemap(const char* name) {
     key = prefix + "sh.txt";
     *shCoeffs = getRawFile(key.c_str());
 
-    return {
-        .data = {},
-        .ktx = {},
-        .nbytes = 0,
-        .width = 0,
-        .height = 0,
-        .envShCoeffs = decltype(Asset::envShCoeffs)(shCoeffs),
-        .envFaces = decltype(Asset::envFaces)(envFaces),
-        .skyFaces = decltype(Asset::skyFaces)(skyFaces),
-    };
+    Asset result = {};
+    result.envShCoeffs.reset(shCoeffs);
+    result.envIBL.reset(envFaces);
+    result.envSky.reset(skyFaces);
+    return result;
 }
 
 SkyLight getSkyLight(Engine& engine, const char* name) {
@@ -238,7 +227,7 @@ SkyLight getSkyLight(Engine& engine, const char* name) {
     static auto asset = filaweb::getCubemap(name);
 
     // Parse the coefficients.
-    std::istringstream shReader((const char*) asset.envShCoeffs->data.get());
+    std::istringstream shReader((const char*) asset.envShCoeffs->rawData.get());
     shReader >> std::skipws;
     std::string line;
     for (size_t i = 0; i < 9; i++) {
@@ -251,8 +240,8 @@ SkyLight getSkyLight(Engine& engine, const char* name) {
     }
 
     // Copy over the miplevels for the indirect light.
-    auto info = asset.envFaces->ktx->getInfo();
-    uint32_t nmips = asset.envFaces->ktx->getNumMipLevels();
+    auto info = asset.envIBL->texture->getInfo();
+    uint32_t nmips = asset.envIBL->texture->getNumMipLevels();
     Texture* texture = Texture::Builder()
         .width(info.pixelWidth)
         .height(info.pixelHeight)
@@ -280,11 +269,11 @@ SkyLight getSkyLight(Engine& engine, const char* name) {
         uint8_t* pbdPixels = static_cast<uint8_t*>(buffer.buffer);
         uint8_t* ktxPixels;
         uint32_t ktxSize;
-        asset.envFaces->ktx->getBlob({mip}, &ktxPixels, &ktxSize);
+        asset.envIBL->texture->getBlob({mip}, &ktxPixels, &ktxSize);
         memcpy(pbdPixels, ktxPixels, faceSize * 6);
         texture->setImage(engine, mip, std::move(buffer), offsets);
     }
-    asset.envFaces->ktx.reset();
+    asset.envIBL->texture.reset();
 
     result.indirectLight = IndirectLight::Builder()
         .reflections(texture)
@@ -293,7 +282,7 @@ SkyLight getSkyLight(Engine& engine, const char* name) {
         .build(engine);
 
     // Copy a single miplevel for the blurry skybox
-    info = asset.skyFaces->ktx->getInfo();
+    info = asset.envSky->texture->getInfo();
     size = info.pixelWidth;
     Texture* skybox = Texture::Builder()
         .width(size)
@@ -320,11 +309,11 @@ SkyLight getSkyLight(Engine& engine, const char* name) {
         uint8_t* pbdPixels = static_cast<uint8_t*>(buffer.buffer);
         uint8_t* ktxPixels;
         uint32_t ktxSize;
-        asset.skyFaces->ktx->getBlob({}, &ktxPixels, &ktxSize);
+        asset.envSky->texture->getBlob({}, &ktxPixels, &ktxSize);
         memcpy(pbdPixels, ktxPixels, faceSize * 6);
         skybox->setImage(engine, 0, std::move(buffer), offsets);
     }
-    asset.skyFaces->ktx.reset();
+    asset.envSky->texture.reset();
     result.skybox = Skybox::Builder().environment(skybox).build(engine);
 
     return result;

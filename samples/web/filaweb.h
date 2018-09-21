@@ -37,18 +37,16 @@
 
 namespace filaweb {
 
-// Filaweb defines three kinds of assets: raw files, textures, and cubemaps.
+// Filaweb defines three kinds of assets: textures, environments, and raw files.
 // For simplicity all three kinds are represented with a single struct.
 struct Asset {
-    std::unique_ptr<uint8_t[]> data;
-    std::unique_ptr<image::KtxBundle> ktx;
-    uint32_t nbytes;
-    uint32_t width;
-    uint32_t height;
+    std::unique_ptr<image::KtxBundle> texture;
     std::unique_ptr<Asset> envShCoeffs;
-    std::unique_ptr<Asset> envFaces;
-    std::unique_ptr<Asset> skyFaces;
-    char url[256];
+    std::unique_ptr<Asset> envIBL;
+    std::unique_ptr<Asset> envSky;
+    std::unique_ptr<uint8_t[]> rawData;
+    uint32_t rawSize;
+    char rawUrl[256];
 };
 
 Asset getRawFile(const char* name);
