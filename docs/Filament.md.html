@@ -3314,25 +3314,51 @@ The biggest difference is visible at grazing angles, which is most likely explai
 
 ## Coordinates systems
 
-### Main coordinates system
+### World coordinates system
 
 Filament uses a Y-up, right-handed coordinate system.
 
 ![Figure [coordinates]: Red +X, green +Y, blue +Z (rendered in Marmoset Toolbag).](images/screenshot_coordinates.jpg)
 
+
+### Camera coordinates system
+
+Filament's `Camera` look towards its local -Z axis. That is, when placing a camera in the world
+without any transform applied to it, the camera looks down the world's -Z axis.
+
+
 ### Cubemaps coordinates system
 
-All the cubemaps used in Filament (environment background, reflection probes, etc.) will follow the OpenGL convention for faces alignment show in figure [cubemapCoordinates].
+All cubemaps used in Filament through the `Texture` class follow the OpenGL convention for faces alignment shown in figure [cubemapCoordinates].
 
 ![Figure [cubemapCoordinates]: Horizontal cross representation of a cubemap following the OpenGL faces alignment convention.](images/screenshot_cubemap_coordinates.png)
 
-#### Equirectangular environment maps
+Note that environment background and reflection probes are mirrored (see section [Mirroring]).
 
-To convert equirectangular environment maps to horizontal/vertical cross cubemaps we position the +Z face in the center of the source rectilinear environment map.
 
 #### Mirroring
 
-To simplify the rendering of reflections, cubemaps will be stored mirrored on the X axis. This means that cubemaps used as environment backgrounds need to be mirrored again at runtime. An easy way to achieve for skyboxes is to use textured back faces.
+To simplify the rendering of reflections, IBL cubemaps are stored mirrored on the X axis. This is
+the default behaviour of the `cmgen` tool. This means that IBL cubemaps used as environment 
+background need to be mirrored again at runtime. 
+An easy way to achieve this for skyboxes is to use textured back faces. Filament's `Skybox` class does
+this by default.
+
+
+#### Equirectangular environment maps
+
+To convert equirectangular environment maps to horizontal/vertical cross cubemaps we position the
++Z face in the center of the source rectilinear environment map.
+
+
+#### World space orientation of environment maps and Skyboxes
+
+When using the `IndirectLight` and `Skybox` classes, the specified cubemap is oriented such that its 
+-Z face points towards the +Z axis of the world (this is because filament assumes mirrored cubemaps, 
+see section [Mirroring]). However, because environments and skyboxes are expected to be pre-mirrored, 
+their -Z (back) face points towards the world's -Z axis as expected (and the camera looks toward that 
+direction by default, see section [Camera coordinates system]).
+
 
 # Annex
 
