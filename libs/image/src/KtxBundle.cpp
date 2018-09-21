@@ -144,8 +144,9 @@ KtxBundle::KtxBundle(uint8_t const* bytes, uint32_t nbytes) : mBlobs(new KtxBlob
     for (uint32_t mipmap = 0; mipmap < mNumMipLevels; ++mipmap) {
         const uint32_t imageSize = *((uint32_t const*) pdata);
         const uint32_t faceSize = isNonArrayCube ? imageSize : (imageSize / facesPerMip);
+        const uint32_t levelSize = faceSize * mNumCubeFaces * mArrayLength;
         pdata += sizeof(imageSize);
-        memcpy(mBlobs->get(flatten(this, {mipmap, 0, 0})), pdata, imageSize);
+        memcpy(mBlobs->get(flatten(this, {mipmap, 0, 0})), pdata, levelSize);
         for (uint32_t layer = 0; layer < mArrayLength; ++layer) {
             for (uint32_t face = 0; face < mNumCubeFaces; ++face) {
                 mBlobs->sizes[flatten(this, {mipmap, layer, face})] = faceSize;
