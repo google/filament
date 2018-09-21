@@ -964,7 +964,7 @@ static void saveImage(const std::string& path, ImageEncoder::Format format, cons
 }
 
 static void exportKtxFaces(KtxBundle& container, uint32_t miplevel, const Cubemap& cm) {
-    const uint32_t dim = cm.getDimensions() >> miplevel;
+    const uint32_t dim = cm.getDimensions();
     for (uint32_t j = 0; j < 6; j++) {
         KtxBlobIndex blobIndex {(uint32_t) miplevel, 0, j};
         Cubemap::Face face;
