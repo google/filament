@@ -101,6 +101,7 @@ static void outputSpectrum(std::ostream& out, const std::unique_ptr<math::double
 static void saveImage(const std::string& path, ImageEncoder::Format format, const Image& image,
         const std::string& compression);
 static LinearImage toLinearImage(const Image& image);
+static void exportKtxFaces(KtxBundle& container, uint32_t miplevel, const Cubemap& cm);
 
 // -----------------------------------------------------------------------------------------------
 
@@ -787,13 +788,7 @@ void iblRoughnessPrefilter(const utils::Path& iname,
         std::string ext = ImageEncoder::chooseExtension(g_format);
 
         if (g_ktxContainer) {
-            for (uint32_t j = 0; j < 6; j++) {
-                KtxBlobIndex blobIndex {(uint32_t) level, 0, j};
-                // Cubemap::Face has a slightly different ordering than GL / KTX, hence the xor.
-                LinearImage image = toLinearImage(dst.getImageForFace((Cubemap::Face) (j^1)));
-                auto uintData = fromLinearToRGBM<uint8_t>(image);
-                container.setBlob(blobIndex, uintData.get(), dim * dim * 4);
-            }
+            exportKtxFaces(container, level, dst);
             continue;
         }
 
@@ -931,12 +926,7 @@ void extractCubemapFaces(const utils::Path& iname, const Cubemap& cm, const util
             .pixelHeight = dim,
             .pixelDepth = 0,
         };
-        for (uint32_t j = 0; j < 6; j++) {
-            // Cubemap::Face has a slightly different ordering than GL / KTX, hence the xor.
-            LinearImage image = toLinearImage(cm.getImageForFace((Cubemap::Face) (j^1)));
-            auto uintData = fromLinearToRGBM<uint8_t>(image);
-            container.setBlob({0, 0, j}, uintData.get(), dim * dim * 4);
-        }
+        exportKtxFaces(container, 0, cm);
         string filename = iname.getNameWithoutExtension() + "_skybox.ktx";
         auto fullpath = outputDir + filename;
         vector<uint8_t> fileContents(container.getSerializedLength());
@@ -975,5 +965,24 @@ static void saveImage(const std::string& path, ImageEncoder::Format format, cons
     std::ofstream outputStream(path, std::ios::binary | std::ios::trunc);
     if (!ImageEncoder::encode(outputStream, format, toLinearImage(image), compression, path)) {
         exit(1);
+    }
+}
+
+static void exportKtxFaces(KtxBundle& container, uint32_t miplevel, const Cubemap& cm) {
+    const uint32_t dim = cm.getDimensions() >> miplevel;
+    for (uint32_t j = 0; j < 6; j++) {
+        KtxBlobIndex blobIndex {(uint32_t) miplevel, 0, j};
+        Cubemap::Face face;
+        switch (j) {
+            case 0: face = Cubemap::Face::PX; break;
+            case 1: face = Cubemap::Face::NX; break;
+            case 2: face = Cubemap::Face::PY; break;
+            case 3: face = Cubemap::Face::NY; break;
+            case 4: face = Cubemap::Face::PZ; break;
+            case 5: face = Cubemap::Face::NZ; break;
+        }
+        LinearImage image = toLinearImage(cm.getImageForFace(face));
+        auto uintData = fromLinearToRGBM<uint8_t>(image);
+        container.setBlob(blobIndex, uintData.get(), dim * dim * 4);
     }
 }
