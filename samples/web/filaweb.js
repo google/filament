@@ -96,30 +96,21 @@ function load_rawfile(url) {
 
 let load_texture = load_rawfile;
 
-function load_cubemap(urlprefix, nmips) {
+function load_cubemap(name) {
+    let urlprefix = name + '/';
     let promises = {};
-    let name = '';
     promises['sh.txt'] = load_rawfile(urlprefix + 'sh.txt');
-    for (let i = 0; i < nmips; i++) {
-        for (let face of 'px nx py ny pz nz'.split(' ')) {
-            name = 'm' + i + '_' + face + '.rgbm';
-            promises[name] = load_texture(urlprefix + name);
-        }
-    }
-    for (let face of 'px nx py ny pz nz'.split(' ')) {
-        name = face + '.rgbm';
-        promises[name] = load_texture(urlprefix + name);
-    }
+    promises['ibl'] = load_rawfile(urlprefix + name + '_ibl.ktx');
+    promises['skybox'] = load_rawfile(urlprefix + name + '_skybox.ktx');
     let numberRemaining = Object.keys(promises).length;
     var promise = new Promise((success) => {
-        for (let name in promises) {
-            promises[name].then((result) => {
-                assets[urlprefix + name] = result;
+        for (let key in promises) {
+            promises[key].then((result) => {
+                assets[urlprefix + key] = result;
                 if (--numberRemaining == 0) {
                     success({
                         kind: 'cubemap',
                         name: urlprefix,
-                        nmips: nmips,
                     });
                 }
             });

@@ -45,10 +45,9 @@ struct Asset {
     uint32_t nbytes;
     uint32_t width;
     uint32_t height;
-    uint32_t envMipCount;
     std::unique_ptr<Asset> envShCoeffs;
-    std::unique_ptr<Asset[]> envFaces;
-    std::unique_ptr<Asset[]> skyFaces;
+    std::unique_ptr<Asset> envFaces;
+    std::unique_ptr<Asset> skyFaces;
     char url[256];
 };
 
