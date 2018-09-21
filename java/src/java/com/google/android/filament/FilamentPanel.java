@@ -197,6 +197,11 @@ public class FilamentPanel extends JPanel implements FilamentTarget {
         if (mNativeSurface == null) {
             return;
         }
+
+        // Previous frames using this surface may still be in the pipeline, so we must wait for
+        // them to finish.
+        engine.flushAndWait();
+
         mNativeSurface.dispose();
         engine.destroySwapChain(mSwapChain);
     }
