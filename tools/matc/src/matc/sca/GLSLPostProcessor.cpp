@@ -149,6 +149,7 @@ bool GLSLPostProcessor::process(const std::string& inputShader,
         mShLang = EShLangFragment;
     }
 
+    glslang::TProgram program;
     TShader tShader(mShLang);
 
     // The cleaner must be declared after the TShader to prevent ASAN failures.
@@ -166,10 +167,17 @@ bool GLSLPostProcessor::process(const std::string& inputShader,
         return false;
     }
 
+    program.addShader(&tShader);
+    bool linkOk = program.link(msg);
+    if (!linkOk) {
+        std::cerr << tShader.getInfoLog() << std::endl;
+        return false;
+    }
+
     switch (mConfig.getOptimizationLevel()) {
         case Config::Optimization::NONE:
             if (mSpirvOutput) {
-                GlslangToSpv(*tShader.getIntermediate(), *mSpirvOutput);
+                GlslangToSpv(*program.getIntermediate(mShLang), *mSpirvOutput);
             } else {
                 std::cerr << "GLSL post-processor invoked with optimization level NONE"
                         << std::endl;
