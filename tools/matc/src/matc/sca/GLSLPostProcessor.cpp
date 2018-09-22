@@ -149,7 +149,7 @@ bool GLSLPostProcessor::process(const std::string& inputShader,
         mShLang = EShLangFragment;
     }
 
-    glslang::TProgram program;
+    TProgram program;
     TShader tShader(mShLang);
 
     // The cleaner must be declared after the TShader to prevent ASAN failures.
