@@ -482,12 +482,16 @@ int main(int argc, char* argv[]) {
         unsigned int p = 0;
         std::string name = iname.getNameWithoutExtension();
         if (sscanf(name.c_str(), "uv%u", &p) == 1) {
-            CubemapUtils::generateUVGrid(cml, p);
+            CubemapUtils::generateUVGrid(cml, p, p);
+        } else if (sscanf(name.c_str(), "u%u", &p) == 1) {
+            CubemapUtils::generateUVGrid(cml, p, 1);
+        } else if (sscanf(name.c_str(), "v%u", &p) == 1) {
+            CubemapUtils::generateUVGrid(cml, 1, p);
         } else if (sscanf(name.c_str(), "brdf%u", &p) == 1) {
             double linear_roughness = sq(p / std::log2(dim));
             CubemapIBL::brdf(cml, linear_roughness);
         } else {
-            CubemapUtils::generateUVGrid(cml, 1);
+            CubemapUtils::generateUVGrid(cml, 1, 1);
         }
 
         images.push_back(std::move(temp));
