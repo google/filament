@@ -219,16 +219,19 @@ void GLSLPostProcessor::preprocessOptimization(glslang::TShader& tShader,
     }
 
     if (mSpirvOutput) {
+        TProgram program;
         TShader spirvShader(mShLang);
         const char* shaderCString = glsl.c_str();
         spirvShader.setStrings(&shaderCString, 1);
         GLSLTools::prepareShaderParser(spirvShader, mShLang, mLangVersion,
                 mConfig.getOptimizationLevel());
         ok = spirvShader.parse(&DefaultTBuiltInResource, mLangVersion, false, msg);
-        if (!ok) {
+        program.addShader(&spirvShader);
+        bool linkOk = program.link(msg);
+        if (!ok || !linkOk) {
             std::cerr << spirvShader.getInfoLog() << std::endl;
         } else {
-            GlslangToSpv(*spirvShader.getIntermediate(), *mSpirvOutput);
+            GlslangToSpv(*program.getIntermediate(mShLang), *mSpirvOutput);
         }
     }
 
