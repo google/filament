@@ -295,7 +295,8 @@ vec3 isEvaluateIBL(const PixelParams pixel, vec3 n, vec3 v, float NoV) {
 
             vec3 Fr = F * (D * V * ipdf * NoL);
 
-            vec3 env = decodeDataForIBL(textureLod(light_iblSpecular, l, mipLevel));
+            // we use texture() instead of textureLod() to take advantage of mipmapping
+            vec3 env = decodeDataForIBL(texture(light_iblSpecular, l, mipLevel));
             indirectSpecular += (Fr * env) * invNumSamples;
         }
     }
