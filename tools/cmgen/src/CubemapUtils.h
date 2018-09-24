@@ -71,7 +71,7 @@ public:
 
     static double solidAngle(size_t dim, size_t u, size_t v);
 
-    static void generateUVGrid(Cubemap& cml, size_t gridFrequency);
+    static void generateUVGrid(Cubemap& cml, size_t gridFrequencyX, size_t gridFrequencyY);
 
 private:
     static void setFaceFromCross(Cubemap& cm, Cubemap::Face face, const Image& image);

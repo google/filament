@@ -213,7 +213,7 @@ void CubemapUtils::mirrorCubemap(Cubemap& dst, const Cubemap& src) {
     });
 }
 
-void CubemapUtils::generateUVGrid(Cubemap& cml, size_t gridFrequency) {
+void CubemapUtils::generateUVGrid(Cubemap& cml, size_t gridFrequencyX, size_t gridFrequencyY) {
     Cubemap::Texel const colors[6] = {
             { 1, 0, 0 }, // -X /  l  - red
             { 1, 1, 1 }, // +X /  r  - white
@@ -223,12 +223,13 @@ void CubemapUtils::generateUVGrid(Cubemap& cml, size_t gridFrequency) {
             { 1, 1, 0 }, // +z / fr - yellow
     };
     const float uvGridHDRIntensity = 5.0f;
-    size_t gridSize = cml.getDimensions() / gridFrequency;
+    size_t gridSizeX = cml.getDimensions() / gridFrequencyX;
+    size_t gridSizeY = cml.getDimensions() / gridFrequencyY;
     CubemapUtils::process<CubemapUtils::EmptyState>(cml,
             [ & ](CubemapUtils::EmptyState&,
                     size_t y, Cubemap::Face f, Cubemap::Texel* data, size_t dim) {
                 for (size_t x = 0; x < dim; ++x, ++data) {
-                    bool grid = bool(((x / gridSize) ^ (y / gridSize)) & 1);
+                    bool grid = bool(((x / gridSizeX) ^ (y / gridSizeY)) & 1);
                     Cubemap::Texel t = grid ? colors[(int)f] * uvGridHDRIntensity : 0;
                     Cubemap::writeAt(data, t);
                 }
