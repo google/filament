@@ -168,6 +168,8 @@ bool GLSLPostProcessor::process(const std::string& inputShader,
     }
 
     program.addShader(&tShader);
+    // Even though we only have a single shader stage, linking is still necessary to finalize
+    // SPIR-V types
     bool linkOk = program.link(msg);
     if (!linkOk) {
         std::cerr << tShader.getInfoLog() << std::endl;
@@ -227,6 +229,8 @@ void GLSLPostProcessor::preprocessOptimization(glslang::TShader& tShader,
                 mConfig.getOptimizationLevel());
         ok = spirvShader.parse(&DefaultTBuiltInResource, mLangVersion, false, msg);
         program.addShader(&spirvShader);
+        // Even though we only have a single shader stage, linking is still necessary to finalize
+        // SPIR-V types
         bool linkOk = program.link(msg);
         if (!ok || !linkOk) {
             std::cerr << spirvShader.getInfoLog() << std::endl;
