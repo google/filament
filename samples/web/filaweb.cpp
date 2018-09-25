@@ -229,15 +229,8 @@ SkyLight getSkyLight(Engine& engine, const char* name) {
     }
     std::istringstream shReader(shtext);
     shReader >> std::skipws;
-    std::string line;
     for (size_t i = 0; i < 9; i++) {
-        std::getline(shReader, line);
-        int n = sscanf(line.c_str(), "(%f,%f,%f)",
-                &result.bands[i].r, &result.bands[i].g, &result.bands[i].b);
-        if (n != 3) {
-            cerr << name << " has faulty spherical harmonics coefficients." << endl;
-            abort();
-        }
+        shReader >> result.bands[i].r >> result.bands[i].g >> result.bands[i].b;
     }
 
     // Copy over the miplevels for the indirect light.
