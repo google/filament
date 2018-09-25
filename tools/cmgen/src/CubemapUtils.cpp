@@ -101,6 +101,56 @@ void CubemapUtils::equirectangularToCubemap(Cubemap& dst, const Image& src) {
     });
 }
 
+void CubemapUtils::crossToCubemap(Cubemap& dst, const Image& src) {
+    process<EmptyState>(dst,
+            [&](EmptyState&, size_t iy, Cubemap::Face f, Cubemap::Texel* data, size_t dimension) {
+                for (size_t ix = 0; ix < dimension; ++ix, ++data) {
+                    // find offsets from face
+                    size_t x = ix;
+                    size_t y = iy;
+                    size_t dx = 0;
+                    size_t dy = 0;
+                    size_t dim = std::max(src.getHeight(), src.getWidth()) / 4;
+
+                    switch (f) {
+                        case Cubemap::Face::NX:
+                            dx = 0, dy = dim;
+                            break;
+                        case Cubemap::Face::PX:
+                            dx = 2 * dim, dy = dim;
+                            break;
+                        case Cubemap::Face::NY:
+                            dx = dim, dy = 2 * dim;
+                            break;
+                        case Cubemap::Face::PY:
+                            dx = dim, dy = 0;
+                            break;
+                        case Cubemap::Face::NZ:
+                            if (src.getHeight() > src.getWidth()) {
+                                dx = dim, dy = 3 * dim;
+                                x = dimension - 1 - ix;
+                                y = dimension - 1 - iy;
+                            } else {
+                                dx = 3 * dim, dy = dim;
+                            }
+                            break;
+                        case Cubemap::Face::PZ:
+                            dx = dim, dy = dim;
+                            break;
+                    }
+
+                    size_t sampleCount = std::max(1lu, dim / dimension);
+                    sampleCount = std::min(256lu, sampleCount * sampleCount);
+                    for (size_t i = 0; i < sampleCount; i++) {
+                        const double2 h = hammersley(uint32_t(i), 1.0f / sampleCount);
+                        size_t u = dx + size_t((x + h.x) * dim / dimension);
+                        size_t v = dy + size_t((y + h.y) * dim / dimension);
+                        Cubemap::writeAt(data, Cubemap::sampleAt(src.getPixelRef(u, v)));
+                    }
+                }
+            });
+}
+
 void CubemapUtils::downsampleCubemapLevelBoxFilter(Cubemap& dst, const Cubemap& src) {
     size_t scale = src.getDimensions() / dst.getDimensions();
     process<EmptyState>(dst,
@@ -123,21 +173,16 @@ void CubemapUtils::setFaceFromCross(Cubemap& cm, Cubemap::Face face, const Image
             x = 0, y = dim;
             break;
         case Cubemap::Face::PX:
-            x = 2*dim, y = dim;
+            x = 2 * dim, y = dim;
             break;
         case Cubemap::Face::NY:
-            x = dim, y = 2*dim;
+            x = dim, y = 2 * dim;
             break;
         case Cubemap::Face::PY:
             x = dim, y = 0;
             break;
         case Cubemap::Face::NZ:
-            if (image.getHeight() > image.getWidth()) {
-                // NOTE: In the past we flipped XY here, not sure why. May need to revisit.
-                x = dim, y = 3*dim;
-            } else {
-                x = 3*dim, y = dim;
-            }
+            x = 3 * dim, y = dim;
             break;
         case Cubemap::Face::PZ:
             x = dim, y = dim;
@@ -149,9 +194,6 @@ void CubemapUtils::setFaceFromCross(Cubemap& cm, Cubemap::Face face, const Image
 }
 
 void CubemapUtils::setAllFacesFromCross(Cubemap& cm, const Image& image) {
-    cm.setGeometry(image.getHeight() > image.getWidth()
-                   ? Cubemap::Geometry::VERTICAL_CROSS
-                   : Cubemap::Geometry::HORIZONTAL_CROSS);
     CubemapUtils::setFaceFromCross(cm, Cubemap::Face::NX, image);
     CubemapUtils::setFaceFromCross(cm, Cubemap::Face::PX, image);
     CubemapUtils::setFaceFromCross(cm, Cubemap::Face::NY, image);
@@ -194,13 +236,6 @@ Cubemap CubemapUtils::create(Image& image, size_t dim, bool horizontal) {
     CubemapUtils::setAllFacesFromCross(cm, temp);
     std::swap(image, temp);
     return cm;
-}
-
-void CubemapUtils::copyImage(Image& dst, const Image& src) {
-    assert(dst.getWidth() >= src.getWidth() && dst.getHeight() >= src.getHeight());
-    for (size_t y = 0, my = src.getHeight(); y < my; ++y) {
-        memcpy(dst.getPixelRef(0, y), src.getPixelRef(0, y), src.getBytesPerRow());
-    }
 }
 
 void CubemapUtils::mirrorCubemap(Cubemap& dst, const Cubemap& src) {

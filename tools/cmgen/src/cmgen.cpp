@@ -440,15 +440,14 @@ int main(int argc, char* argv[]) {
         if ((isPOT(width) && (width * 3 == height * 4)) ||
             (isPOT(height) && (height * 3 == width * 4))) {
             // This is cross cubemap
-            const bool isHorizontal = width > height;
-            size_t dim = std::max(height, width) / 4;
+            size_t dim = g_output_size ? g_output_size : 256;
             if (!g_quiet) {
                 std::cout << "Loading cross... " << std::endl;
             }
 
             Image temp;
-            Cubemap cml = CubemapUtils::create(temp, dim, isHorizontal);
-            CubemapUtils::copyImage(temp, inputImage);
+            Cubemap cml = CubemapUtils::create(temp, dim);
+            CubemapUtils::crossToCubemap(cml, inputImage);
             images.push_back(std::move(temp));
             levels.push_back(std::move(cml));
         } else if (width == 2 * height) {

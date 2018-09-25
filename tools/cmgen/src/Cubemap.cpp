@@ -95,7 +95,6 @@ Cubemap::Address Cubemap::getAddressFor(const double3& r) {
  * right or bottom. This works well with cubemaps stored as a cross in memory.
  */
 void Cubemap::makeSeamless() {
-    Geometry geometry = mGeometry;
     size_t dim = getDimensions();
     auto stitch = [ & ](void* dst, size_t incDst, void const* src, ssize_t incSrc) {
         for (size_t i = 0; i < dim; ++i) {
@@ -108,41 +107,26 @@ void Cubemap::makeSeamless() {
     const size_t bpr = getImageForFace(Face::NX).getBytesPerRow();
     const size_t bpp = getImageForFace(Face::NX).getBytesPerPixel();
 
-    if (geometry == Geometry::HORIZONTAL_CROSS ||
-        geometry == Geometry::VERTICAL_CROSS) {
-        stitch(  getImageForFace(Face::NX).getPixelRef(0, dim), bpp,
-                getImageForFace(Face::NY).getPixelRef(0, dim - 1), -bpr);
+    stitch(getImageForFace(Face::NX).getPixelRef(0, dim), bpp,
+            getImageForFace(Face::NY).getPixelRef(0, dim - 1), -bpr);
 
-        stitch(  getImageForFace(Face::PY).getPixelRef(dim, 0), bpr,
-                getImageForFace(Face::PX).getPixelRef(dim - 1, 0), -bpp);
+    stitch(getImageForFace(Face::PY).getPixelRef(dim, 0), bpr,
+            getImageForFace(Face::PX).getPixelRef(dim - 1, 0), -bpp);
 
-        stitch(  getImageForFace(Face::PX).getPixelRef(0, dim), bpp,
-                getImageForFace(Face::NY).getPixelRef(dim - 1, 0), bpr);
+    stitch(getImageForFace(Face::PX).getPixelRef(0, dim), bpp,
+            getImageForFace(Face::NY).getPixelRef(dim - 1, 0), bpr);
 
-        stitch(  getImageForFace(Face::NY).getPixelRef(dim, 0), bpr,
-                getImageForFace(Face::PX).getPixelRef(0, dim - 1), bpp);
+    stitch(getImageForFace(Face::NY).getPixelRef(dim, 0), bpr,
+            getImageForFace(Face::PX).getPixelRef(0, dim - 1), bpp);
 
-        if (geometry == Geometry::HORIZONTAL_CROSS) { // horizontal cross
-            stitch(  getImageForFace(Face::NZ).getPixelRef(0, dim), bpp,
-                    getImageForFace(Face::NY).getPixelRef(dim - 1, dim - 1), -bpp);
+    stitch(getImageForFace(Face::NZ).getPixelRef(0, dim), bpp,
+            getImageForFace(Face::NY).getPixelRef(dim - 1, dim - 1), -bpp);
 
-            stitch(  getImageForFace(Face::NZ).getPixelRef(dim, 0), bpr,
-                    getImageForFace(Face::NX).getPixelRef(0, 0), bpr);
+    stitch(getImageForFace(Face::NZ).getPixelRef(dim, 0), bpr,
+            getImageForFace(Face::NX).getPixelRef(0, 0), bpr);
 
-            stitch(  getImageForFace(Face::NY).getPixelRef(0, dim), bpp,
-                    getImageForFace(Face::NZ).getPixelRef(dim - 1, dim - 1), -bpp);
-
-        } else {
-            stitch(  getImageForFace(Face::NZ).getPixelRef(0, dim), bpp,
-                    getImageForFace(Face::PY).getPixelRef(0, dim - 1), bpp);
-
-            stitch(  getImageForFace(Face::NZ).getPixelRef(dim, 0), bpr,
-                    getImageForFace(Face::PX).getPixelRef(dim - 1, dim - 1), -bpr);
-
-            stitch(  getImageForFace(Face::PX).getPixelRef(dim, 0), bpr,
-                    getImageForFace(Face::NZ).getPixelRef(dim - 1, dim - 1), -bpr);
-        }
-    }
+    stitch(getImageForFace(Face::NY).getPixelRef(0, dim), bpp,
+            getImageForFace(Face::NZ).getPixelRef(dim - 1, dim - 1), -bpp);
 }
 
 Cubemap::Texel Cubemap::filterAt(const Image& image, double x, double y) {
