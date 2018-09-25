@@ -6,9 +6,8 @@
 <img alt="Windows" src="build/img/windows.png" width="20px" height="20px" hspace="2px"/>[![Windows Build Status](https://filament-build.storage.googleapis.com/badges/build_status_windows.svg)](https://filament-build.storage.googleapis.com/badges/build_link_windows.html)
 <img alt="Web" src="build/img/web.png" width="20px" height="20px" hspace="2px"/>[![Web Build Status](https://filament-build.storage.googleapis.com/badges/build_status_web.svg)](https://filament-build.storage.googleapis.com/badges/build_link_web.html)
 
-Filament is a real-time physically based rendering engine for Android, Linux, macOS and Windows.
-This rendering engine was designed to be as small as possible and as efficient as possible
-on Android.
+Filament is a real-time physically based rendering engine for Android, Linux, macOS, Windows, and
+WebGL. It is designed to be as small as possible and as efficient as possible on Android.
 
 Filament is currently used in the
 [Sceneform](https://developers.google.com/ar/develop/java/sceneform/) library both at runtime on
@@ -18,12 +17,8 @@ Android devices and as the renderer inside the Android Studio plugin.
 
 [Download Filament releases](https://github.com/google/filament/releases) to access stable builds.
 
-If you prefer to live on the edge, you can download continuous builds directly:
-- [Android](https://filament-build.storage.googleapis.com/badges/build_link_android.html)
-- [Linux](https://filament-build.storage.googleapis.com/badges/build_link_linux.html)
-- [macOS](https://filament-build.storage.googleapis.com/badges/build_link_mac.html)
-- [Windows](https://filament-build.storage.googleapis.com/badges/build_link_windows.html)
-- [WebAssembly](https://filament-build.storage.googleapis.com/badges/build_link_web.html)
+If you prefer to live on the edge, you can download a continuous build by clicking one of the build
+badges above.
 
 ## Documentation
 
