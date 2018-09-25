@@ -248,6 +248,11 @@ bool KtxBundle::serialize(uint8_t* destination, uint32_t numBytes) const {
 
 uint32_t KtxBundle::getSerializedLength() const {
     uint32_t total = sizeof(SerializationHeader);
+    for (const auto& iter : mMetadata->keyvals) {
+        const uint32_t kvsize = iter.first.size() + 1 + iter.second.size();
+        const uint32_t kvpadding = 3 - ((kvsize + 3) % 4);
+        total += sizeof(uint32_t) + kvsize + kvpadding;
+    }
     for (uint32_t mipmap = 0; mipmap < mNumMipLevels; ++mipmap) {
         total += sizeof(uint32_t);
         size_t blobSize = 0;
