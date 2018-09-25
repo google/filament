@@ -22,8 +22,10 @@
 
 #include <math/vec3.h>
 
+#include <image/ColorTransform.h>
 #include <image/ImageOps.h>
 #include <image/ImageSampler.h>
+#include <image/KtxBundle.h>
 
 #include <imageio/ImageDecoder.h>
 #include <imageio/ImageEncoder.h>
@@ -39,6 +41,7 @@ using namespace utils;
 
 static ImageEncoder::Format g_format = ImageEncoder::Format::PNG_LINEAR;
 static bool g_formatSpecified = false;
+static bool g_ktxContainer = false;
 static bool g_linearOutput = false;
 static std::string g_compression;
 
@@ -72,7 +75,7 @@ static void printUsage(const char* name) {
             "       desired constant roughness, ignored if --roughness-map is specified\n\n"
             "   --roughness-map=<input-roughness-map>, -m <input-roughness-map>\n"
             "       input roughness map\n\n"
-            "   --format=[exr|hdr|psd|png|dds], -f [exr|hdr|psd|png|dds]\n"
+            "   --format=[exr|hdr|psd|png|dds|ktx], -f [exr|hdr|psd|png|dds|ktx]\n"
             "       specify output file format, inferred from file name if omitted\n\n"
             "   --compression=COMPRESSION, -c COMPRESSION\n"
             "       format specific compression:\n"
@@ -145,6 +148,10 @@ static int handleArguments(int argc, char* argv[]) {
                 }
                 if (arg == "dds") {
                     g_format = ImageEncoder::Format::DDS_LINEAR;
+                    g_formatSpecified = true;
+                }
+                if (arg == "ktx") {
+                    g_ktxContainer = true;
                     g_formatSpecified = true;
                 }
                 break;
@@ -316,7 +323,8 @@ int main(int argc, char* argv[]) {
 
         if (roughnessImage.getWidth() != normalImage.getWidth() ||
                 roughnessImage.getHeight() != normalImage.getHeight()) {
-            std::cerr << "The input normal and roughness maps must have the same dimensions" << std::endl;
+            std::cerr << "The input normal and roughness maps must have the same dimensions"
+                    << std::endl;
             exit(1);
         }
 
@@ -344,10 +352,29 @@ int main(int argc, char* argv[]) {
     JobSystem js;
     js.adopt();
 
+    // For thread safety, we allocate each KTX blob now, before invoking the job system.
+    image::KtxBundle bundle(mipLevels, 1, false);
+    if (g_ktxContainer) {
+        bundle.info() = {
+            .endianness = KtxBundle::ENDIAN_DEFAULT,
+            .glType = KtxBundle::UNSIGNED_BYTE,
+            .glTypeSize = 1,
+            .glFormat = KtxBundle::LUMINANCE,
+            .glInternalFormat = KtxBundle::LUMINANCE,
+            .glBaseInternalFormat = KtxBundle::LUMINANCE,
+            .pixelWidth = (uint32_t) width,
+            .pixelHeight = (uint32_t) height,
+            .pixelDepth = 0,
+        };
+        for (uint32_t i = 0; i < mipLevels; i++) {
+            bundle.allocateBlob({i}, (width >> i) * (height >> i));
+        }
+    }
+
     JobSystem::Job* parent = js.createJob();
     for (size_t i = 0; i < mipLevels; i++) {
-        JobSystem::Job* mip = jobs::createJob(js, parent,
-                [&normalImage, &mipImages, outputMap, i, width, height, hasRoughnessMap]() {
+        JobSystem::Job* mip = jobs::createJob(js, parent, [&bundle, &normalImage, &mipImages,
+                outputMap, i, width, height, hasRoughnessMap]() {
             const size_t w = width >> i;
             const size_t h = height >> i;
 
@@ -372,6 +399,17 @@ int main(int argc, char* argv[]) {
                 }
             }
 
+            if (g_ktxContainer) {
+                std::unique_ptr<uint8_t[]> data;
+                if (g_linearOutput) {
+                    data = image::fromLinearToGrayscale<uint8_t>(image);
+                } else {
+                    data = image::fromLinearTosRGB<uint8_t, 1>(image);
+                }
+                bundle.setBlob({(uint32_t) i}, data.get(), w * h);
+                return;
+            }
+
             const std::string ext = outputMap.getExtension();
             const std::string name = outputMap.getNameWithoutExtension();
             Path out = Path(outputMap.getParent()).concat(
@@ -392,4 +430,13 @@ int main(int argc, char* argv[]) {
         js.run(mip);
     }
     js.runAndWait(parent);
+
+    if (g_ktxContainer) {
+        using namespace std;
+        vector<uint8_t> fileContents(bundle.getSerializedLength());
+        bundle.serialize(fileContents.data(), fileContents.size());
+        ofstream outputStream(outputMap.c_str(), ios::out | ios::binary);
+        outputStream.write((const char*) fileContents.data(), fileContents.size());
+        outputStream.close();
+    }
 }
