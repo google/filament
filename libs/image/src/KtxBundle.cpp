@@ -315,4 +315,15 @@ bool KtxBundle::setBlob(KtxBlobIndex index, uint8_t const* data, uint32_t size) 
     return true;
 }
 
+bool KtxBundle::allocateBlob(KtxBlobIndex index, uint32_t size) {
+    if (index.mipLevel >= mNumMipLevels || index.arrayIndex >= mArrayLength ||
+            index.cubeFace >= mNumCubeFaces) {
+        return false;
+    }
+    uint32_t flatIndex = flatten(this, index);
+    uint32_t blobSize = mBlobs->sizes[flatIndex];
+    mBlobs->resize(flatIndex, size);
+    return true;
+}
+
 }  // namespace image

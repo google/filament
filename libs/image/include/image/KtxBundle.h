@@ -130,6 +130,12 @@ public:
      */
     bool setBlob(KtxBlobIndex index, uint8_t const* data, uint32_t size);
 
+    /**
+     * Allocates the blob at the given index to the given number of bytes. This allows subsequent
+     * calls to setBlob to be thread-safe.
+     */
+    bool allocateBlob(KtxBlobIndex index, uint32_t size);
+
     // The following constants help clients populate the "info" struct. Most of them have corollary
     // constants in the OpenGL headers.
 
