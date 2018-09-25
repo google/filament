@@ -41,6 +41,7 @@ struct KtxBlobIndex {
 };
 
 struct KtxBlobList;
+struct KtxMetadata;
 
 /**
  * KtxBundle is a structured set of opaque data blobs that can be passed straight to the GPU, such
@@ -97,6 +98,12 @@ public:
     KtxInfo& info() { return mInfo; }
 
     /**
+     * Gets or sets key/value metadata.
+     */
+    const char* getMetadata(const char* key, size_t* valueSize = nullptr) const;
+    void setMetadata(const char* key, const char* value);
+
+    /**
      * Gets the number of miplevels (this is never zero).
      */
     uint32_t getNumMipLevels() const { return mNumMipLevels; }
@@ -148,6 +155,7 @@ private:
     uint32_t mArrayLength;
     uint32_t mNumCubeFaces;
     std::unique_ptr<KtxBlobList> mBlobs;
+    std::unique_ptr<KtxMetadata> mMetadata;
 };
 
 } // namespace image

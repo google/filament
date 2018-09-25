@@ -322,6 +322,7 @@ TEST_F(ImageTest, Ktx) { // NOLINT
     ASSERT_TRUE(nascent.setBlob({0, 0, 0}, foo, sizeof(foo)));
     ASSERT_TRUE(nascent.getBlob({0, 0, 0}, &data, &size));
     ASSERT_EQ(size, sizeof(foo));
+    ASSERT_EQ(nascent.getMetadata("foo"), nullptr);
 
     const uint32_t KTX_HEADER_SIZE = 16 * 4;
 
@@ -359,6 +360,18 @@ TEST_F(ImageTest, Ktx) { // NOLINT
         vector<uint8_t> reserialized(serializedSize);
         ASSERT_TRUE(deserialized.serialize(reserialized.data(), serializedSize));
         ASSERT_EQ(reserialized, buffer);
+
+        deserialized.setMetadata("foo", "bar");
+        string val(deserialized.getMetadata("foo"));
+        ASSERT_EQ(val, "bar");
+
+        serializedSize = deserialized.getSerializedLength();
+        reserialized.resize(serializedSize);
+        ASSERT_TRUE(deserialized.serialize(reserialized.data(), serializedSize));
+
+        KtxBundle bundleWithMetadata(reserialized.data(), reserialized.size());
+        val = string(bundleWithMetadata.getMetadata("foo"));
+        ASSERT_EQ(val, "bar");
     }
 }
 
