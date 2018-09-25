@@ -26,8 +26,6 @@ import java.lang.RuntimeException
 import java.nio.ByteBuffer
 import kotlin.math.log2
 
-private fun faceName(mip: Int, face: String) = "m${mip}_$face.rgbm"
-
 private const val float = """([0-9-.]+)"""
 private val pattern = Regex("""\(\s*$float\s*,\s*$float\s*,\s*$float\s*\);""")
 
@@ -51,15 +49,15 @@ internal class Ibl(val engine: Engine, private val pathPrefix: String) {
     val irradiance: FloatArray
 
     init {
-        environmentMap = loadCubemapLevel(null, 0)
+        environmentMap = loadCubemapLevel(null, 0, "m0_")
         TextureCache.addTextureForRemoval(environmentMap)
         for (i in 1 until environmentMap.levels) {
             println("Loading level $i")
-            loadCubemapLevel(environmentMap, i)
+            loadCubemapLevel(environmentMap, i, "m${i}_")
         }
 
-        // Use the highest-level mip as the skybox texture.
-        skyboxTexture = loadCubemapLevel(null, 0)
+        // Use non-prefixed images as skybox textures.
+        skyboxTexture = loadCubemapLevel(null, 0, "")
         TextureCache.addTextureForRemoval(skyboxTexture)
         skybox = loadSkybox()
 
@@ -81,7 +79,7 @@ internal class Ibl(val engine: Engine, private val pathPrefix: String) {
         return parseSphereHarmonics(contents)
     }
 
-    private fun loadCubemapLevel(texture: Texture?, level: Int): Texture {
+    private fun loadCubemapLevel(texture: Texture?, level: Int, facePrefix: String): Texture {
         require(texture != null || level == 0)
 
         val cubemapFaces = listOf("px", "nx", "py", "ny", "pz", "nz")
@@ -89,7 +87,7 @@ internal class Ibl(val engine: Engine, private val pathPrefix: String) {
         val faceOffsets = IntArray(6)
 
         val rawBuffers = cubemapFaces.map { face ->
-            val path = pathPrefix + "/" + faceName(level, face)
+            val path = "$pathPrefix/$facePrefix$face.rgbm"
             val stream: InputStream = javaClass.classLoader.getResourceAsStream(path)
                     ?: throw RuntimeException("Could not get stream for cubemap face $path.")
 
@@ -109,7 +107,11 @@ internal class Ibl(val engine: Engine, private val pathPrefix: String) {
         val size = firstFaceInfo.width
 
         // Assuming that size is a PO2
-        val levels = (log2(size.toFloat()) + 1).toInt()
+        val levels = if (facePrefix != "") {
+            (log2(size.toFloat()) + 1).toInt()
+        } else {
+            1
+        }
 
         // Allocate a byte buffer large enough to hold all the faces
         val buffer = ByteBuffer.allocate(size * size * 4 * 6)
