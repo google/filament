@@ -806,7 +806,12 @@ void iblRoughnessPrefilter(const utils::Path& iname,
         using namespace std;
         if (g_coefficients) {
             ostringstream sstr;
-            outputSh(sstr, g_coefficients, g_sh_compute);
+            for (ssize_t l = 0; l < g_sh_compute; l++) {
+                for (ssize_t m = -l; m <= l; m++) {
+                    auto v = g_coefficients[CubemapSH::getShIndex(m, (size_t) l)];
+                    sstr << v.r << " " << v.g << " " << v.b << "\n";
+                }
+            }
             container.setMetadata("sh", sstr.str().c_str());
         }
         vector<uint8_t> fileContents(container.getSerializedLength());
