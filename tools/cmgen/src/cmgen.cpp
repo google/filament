@@ -47,7 +47,7 @@ enum class ShFile {
     SH_NONE, SH_CROSS, SH_TEXT
 };
 static image::ImageEncoder::Format g_format = image::ImageEncoder::Format::PNG;
-static bool g_ktxContainer = false;
+static bool g_ktx_output = false;
 static std::string g_compression;
 static bool g_extract_faces = false;
 static double g_extract_blur = 0.0;
@@ -64,6 +64,7 @@ static bool g_sh_shader = false;
 static bool g_sh_irradiance = false;
 static ShFile g_sh_file = ShFile::SH_NONE;
 static utils::Path g_sh_filename;
+static std::unique_ptr<math::double3[]> g_coefficients;
 
 static bool g_is_mipmap = false;
 static utils::Path g_is_mipmap_dir;
@@ -260,7 +261,7 @@ static int handleCommandLineArgments(int argc, char* argv[]) {
                     format_specified = true;
                 }
                 if (arg == "ktx") {
-                    g_ktxContainer = true;
+                    g_ktx_output = true;
                     format_specified = true;
                 }
                 break;
@@ -654,6 +655,8 @@ void sphericalHarmonics(const utils::Path& iname, const Cubemap& inputCubemap) {
             }
         }
     }
+    // Stash the computed coefficients in case we need to use them at a later stage (e.g. KTX gen)
+    g_coefficients = std::move(sh);
 }
 
 void outputSh(std::ostream& out,
@@ -786,7 +789,7 @@ void iblRoughnessPrefilter(const utils::Path& iname,
 
         std::string ext = ImageEncoder::chooseExtension(g_format);
 
-        if (g_ktxContainer) {
+        if (g_ktx_output) {
             exportKtxFaces(container, level, dst);
             continue;
         }
@@ -799,8 +802,13 @@ void iblRoughnessPrefilter(const utils::Path& iname,
         }
     }
 
-    if (g_ktxContainer) {
+    if (g_ktx_output) {
         using namespace std;
+        if (g_coefficients) {
+            ostringstream sstr;
+            outputSh(sstr, g_coefficients, g_sh_compute);
+            container.setMetadata("sh", sstr.str().c_str());
+        }
         vector<uint8_t> fileContents(container.getSerializedLength());
         container.serialize(fileContents.data(), fileContents.size());
         string filename = iname.getNameWithoutExtension() + "_ibl.ktx";
@@ -910,7 +918,7 @@ void extractCubemapFaces(const utils::Path& iname, const Cubemap& cm, const util
         outputDir.mkdirRecursive();
     }
 
-    if (g_ktxContainer) {
+    if (g_ktx_output) {
         using namespace std;
         const uint32_t dim = cm.getDimensions();
         KtxBundle container(1, 1, true);

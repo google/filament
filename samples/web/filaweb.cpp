@@ -208,13 +208,7 @@ Asset getCubemap(const char* name) {
     key = prefix + "skybox";
     *skyFaces = getKtxTexture(getRawFile(key.c_str()));
 
-    // Load the spherical harmonics coefficients.
-    Asset* shCoeffs = new Asset;
-    key = prefix + "sh.txt";
-    *shCoeffs = getRawFile(key.c_str());
-
     Asset result = {};
-    result.envShCoeffs.reset(shCoeffs);
     result.envIBL.reset(envFaces);
     result.envSky.reset(skyFaces);
     return result;
@@ -228,7 +222,12 @@ SkyLight getSkyLight(Engine& engine, const char* name) {
     static auto asset = filaweb::getCubemap(name);
 
     // Parse the coefficients.
-    std::istringstream shReader((const char*) asset.envShCoeffs->rawData.get());
+    const char* shtext = asset.envIBL->texture->getMetadata("sh");
+    if (!shtext) {
+        cerr << name << " is missing spherical harmonics coefficients." << endl;
+        abort();
+    }
+    std::istringstream shReader(shtext);
     shReader >> std::skipws;
     std::string line;
     for (size_t i = 0; i < 9; i++) {
@@ -236,6 +235,7 @@ SkyLight getSkyLight(Engine& engine, const char* name) {
         int n = sscanf(line.c_str(), "(%f,%f,%f)",
                 &result.bands[i].r, &result.bands[i].g, &result.bands[i].b);
         if (n != 3) {
+            cerr << name << " has faulty spherical harmonics coefficients." << endl;
             abort();
         }
     }
