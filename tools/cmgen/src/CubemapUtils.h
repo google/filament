@@ -49,6 +49,9 @@ public:
     // Convert equirectangular Image to a Cubemap
     static void equirectangularToCubemap(Cubemap& dst, const Image& src);
 
+    // Convert h or v cross Image to a Cubemap
+    static void crossToCubemap(Cubemap& dst, const Image& src);
+
     // clamp image to acceptable range
     static void clamp(Image& src);
 
@@ -60,9 +63,6 @@ public:
 
     // Create a cubemap object and its backing Image
     static Cubemap create(Image& image, size_t dim, bool horizontal = true);
-
-    // Copy an image
-    static void copyImage(Image& dst, const Image& src);
 
     // Sets a Cubemap faces from a cross image
     static void setAllFacesFromCross(Cubemap& cm, const Image& image);
