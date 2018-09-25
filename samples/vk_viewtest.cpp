@@ -34,7 +34,7 @@ struct App {
 static const math::float2 TRIANGLE_VERTICES[3] = { {1, 0}, {-0.5, 0.866}, {-0.5, -0.866} };
 static constexpr uint16_t TRIANGLE_INDICES[3] = { 0, 1, 2 };
 
-int main() {
+int main(int argc, char** argv) {
     Config config;
     config.title = "viewtest";
     config.backend = Engine::Backend::VULKAN;

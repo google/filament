@@ -72,7 +72,7 @@ static constexpr uint8_t BAKED_TEXTURE_PACKAGE[] = {
     #include "generated/material/bakedTexture.inc"
 };
 
-int main() {
+int main(int argc, char** argv) {
     Config config;
     config.title = "texturedquad";
     config.backend = Engine::Backend::VULKAN;
