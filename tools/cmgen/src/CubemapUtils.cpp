@@ -141,8 +141,8 @@ void CubemapUtils::crossToCubemap(Cubemap& dst, const Image& src) {
                             break;
                     }
 
-                    size_t sampleCount = std::max(1lu, dim / dimension);
-                    sampleCount = std::min(256lu, sampleCount * sampleCount);
+                    size_t sampleCount = std::max(size_t(1), dim / dimension);
+                    sampleCount = std::min(size_t(256), sampleCount * sampleCount);
                     for (size_t i = 0; i < sampleCount; i++) {
                         const double2 h = hammersley(uint32_t(i), 1.0f / sampleCount);
                         size_t u = dx + size_t((x + h.x) * dim / dimension);
