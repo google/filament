@@ -46,6 +46,10 @@ using namespace image;
 enum class ShFile {
     SH_NONE, SH_CROSS, SH_TEXT
 };
+
+static const size_t DFG_LUT_DEFAULT_SIZE = 128;
+static const size_t IBL_DEFAULT_SIZE = 256;
+
 static image::ImageEncoder::Format g_format = image::ImageEncoder::Format::PNG;
 static bool g_ktxContainer = false;
 static std::string g_compression;
@@ -93,7 +97,7 @@ static void iblDiffuseIrradiance(const utils::Path& iname, const std::vector<Cub
         const utils::Path& dir);
 static void iblMipmapPrefilter(const utils::Path& iname, const std::vector<Image>& images,
         const std::vector<Cubemap>& levels, const utils::Path& dir);
-static void iblLutDfg(const utils::Path& filename, size_t size = 128, bool multiscatter = false);
+static void iblLutDfg(const utils::Path& filename, size_t size, bool multiscatter = false);
 static void extractCubemapFaces(const utils::Path& iname, const Cubemap& cm, const utils::Path& dir);
 static void outputSh(std::ostream& out, const std::unique_ptr<math::double3[]>& sh, size_t numBands);
 static void outputSpectrum(std::ostream& out, const std::unique_ptr<math::double3[]>& sh,
@@ -370,7 +374,7 @@ int main(int argc, char* argv[]) {
         if (!g_quiet) {
             std::cout << "Generating IBL DFG LUT..." << std::endl;
         }
-        size_t size = g_output_size ? g_output_size : 128;
+        size_t size = g_output_size ? g_output_size : DFG_LUT_DEFAULT_SIZE;
         iblLutDfg(g_dfg_filename, size, g_dfg_multiscatter);
         if (num_args < 1) return 0;
     }
@@ -440,7 +444,7 @@ int main(int argc, char* argv[]) {
         if ((isPOT(width) && (width * 3 == height * 4)) ||
             (isPOT(height) && (height * 3 == width * 4))) {
             // This is cross cubemap
-            size_t dim = g_output_size ? g_output_size : 256;
+            size_t dim = g_output_size ? g_output_size : IBL_DEFAULT_SIZE;
             if (!g_quiet) {
                 std::cout << "Loading cross... " << std::endl;
             }
@@ -452,7 +456,7 @@ int main(int argc, char* argv[]) {
             levels.push_back(std::move(cml));
         } else if (width == 2 * height) {
             // we assume a spherical (equirectangular) image, which we will convert to a cross image
-            size_t dim = g_output_size ? g_output_size : 256;
+            size_t dim = g_output_size ? g_output_size : IBL_DEFAULT_SIZE;
             if (!g_quiet) {
                 std::cout << "Converting equirectangular image... " << std::endl;
             }
@@ -474,7 +478,7 @@ int main(int argc, char* argv[]) {
             std::cout << iname << " does not exist; generating UV grid..." << std::endl;
         }
 
-        size_t dim = g_output_size ? g_output_size : 256;
+        size_t dim = g_output_size ? g_output_size : IBL_DEFAULT_SIZE;
         Image temp;
         Cubemap cml = CubemapUtils::create(temp, dim);
 
@@ -729,7 +733,7 @@ void iblRoughnessPrefilter(const utils::Path& iname,
     // This is useful for debugging.
     const bool DEBUG_FULL_RESOLUTION = false;
 
-    const size_t baseExp = __builtin_ctz(g_output_size ? g_output_size : 256);
+    const size_t baseExp = __builtin_ctz(g_output_size ? g_output_size : IBL_DEFAULT_SIZE);
     size_t numSamples = g_num_samples;
     const size_t numLevels = baseExp + 1;
 
@@ -817,7 +821,7 @@ void iblDiffuseIrradiance(const utils::Path& iname,
         outputDir.mkdirRecursive();
     }
 
-    const size_t baseExp = __builtin_ctz(g_output_size ? g_output_size : 256);
+    const size_t baseExp = __builtin_ctz(g_output_size ? g_output_size : IBL_DEFAULT_SIZE);
     size_t numSamples = g_num_samples;
     const size_t dim = 1U << baseExp;
     Image image;

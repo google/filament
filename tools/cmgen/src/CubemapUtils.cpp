@@ -16,9 +16,11 @@
 
 #include "CubemapUtils.h"
 
-#include <string.h>
-
 #include <math/mat4.h>
+
+#include <algorithm>
+
+#include <string.h>
 
 using namespace math;
 using namespace image;
