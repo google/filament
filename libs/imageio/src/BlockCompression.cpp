@@ -40,6 +40,41 @@ AstcTexture astcCompress(const LinearImage& original, AstcConfig config) {
         first = false;
     }
 
+    // Check the validity of the given block size.
+
+    AstcFormat format;
+    if (config.blocksize == math::ushort2 {4, 4}) {
+        format = config.srgb ? AstcFormat::SRGB8_ALPHA8_ASTC_4x4 : AstcFormat::RGBA_ASTC_4x4;
+    } else if (config.blocksize == math::ushort2 {5, 4}) {
+        format = config.srgb ? AstcFormat::SRGB8_ALPHA8_ASTC_5x4 : AstcFormat::RGBA_ASTC_5x4;
+    } else if (config.blocksize == math::ushort2 {5, 5}) {
+        format = config.srgb ? AstcFormat::SRGB8_ALPHA8_ASTC_5x5 : AstcFormat::RGBA_ASTC_5x5;
+    } else if (config.blocksize == math::ushort2 {6, 5}) {
+        format = config.srgb ? AstcFormat::SRGB8_ALPHA8_ASTC_6x5 : AstcFormat::RGBA_ASTC_6x5;
+    } else if (config.blocksize == math::ushort2 {6, 6}) {
+        format = config.srgb ? AstcFormat::SRGB8_ALPHA8_ASTC_6x6 : AstcFormat::RGBA_ASTC_6x6;
+    } else if (config.blocksize == math::ushort2 {8, 5}) {
+        format = config.srgb ? AstcFormat::SRGB8_ALPHA8_ASTC_8x5 : AstcFormat::RGBA_ASTC_8x5;
+    } else if (config.blocksize == math::ushort2 {8, 6}) {
+        format = config.srgb ? AstcFormat::SRGB8_ALPHA8_ASTC_8x6 : AstcFormat::RGBA_ASTC_8x6;
+    } else if (config.blocksize == math::ushort2 {8, 8}) {
+        format = config.srgb ? AstcFormat::SRGB8_ALPHA8_ASTC_8x8 : AstcFormat::RGBA_ASTC_8x8;
+    } else if (config.blocksize == math::ushort2 {10, 5}) {
+        format = config.srgb ? AstcFormat::SRGB8_ALPHA8_ASTC_10x5 : AstcFormat::RGBA_ASTC_10x5;
+    } else if (config.blocksize == math::ushort2 {10, 6}) {
+        format = config.srgb ? AstcFormat::SRGB8_ALPHA8_ASTC_10x6 : AstcFormat::RGBA_ASTC_10x6;
+    } else if (config.blocksize == math::ushort2 {10, 8}) {
+        format = config.srgb ? AstcFormat::SRGB8_ALPHA8_ASTC_10x8 : AstcFormat::RGBA_ASTC_10x8;
+    } else if (config.blocksize == math::ushort2 {10, 10}) {
+        format = config.srgb ? AstcFormat::SRGB8_ALPHA8_ASTC_10x10 : AstcFormat::RGBA_ASTC_10x10;
+    } else if (config.blocksize == math::ushort2 {12, 10}) {
+        format = config.srgb ? AstcFormat::SRGB8_ALPHA8_ASTC_12x10 : AstcFormat::RGBA_ASTC_12x10;
+    } else if (config.blocksize == math::ushort2 {12, 12}) {
+        format = config.srgb ? AstcFormat::SRGB8_ALPHA8_ASTC_12x12 : AstcFormat::RGBA_ASTC_12x12;
+    } else {
+        return {};
+    }
+
     // Create an input image for the ARM encoder in a format that it can consume.
     // It expects four-channel data, so we extend or curtail the channel count in a reasonable way.
     // The encoder can take half-floats or bytes, but we always give it half-floats.
@@ -93,13 +128,16 @@ AstcTexture astcCompress(const LinearImage& original, AstcConfig config) {
         }
     }
 
-    // Determine the block size based on the bit rate.
+    // Determine the bitrate based on the specified block size.
 
-    int xdim_2d, ydim_2d;
-    int xdim_3d, ydim_3d, zdim_3d;
-    find_closest_blockdim_2d(config.bitrate, &xdim_2d, &ydim_2d, 0);
-    find_closest_blockdim_3d(config.bitrate, &xdim_3d, &ydim_3d, &zdim_3d, 0);
+    int xdim_2d = config.blocksize.x, ydim_2d = config.blocksize.y;
     const float log10_texels_2d = std::log((float)(xdim_2d * ydim_2d)) / std::log(10.0f);
+    const float bitrate = 128.0 / (xdim_2d * ydim_2d);
+
+    // We do not fully support 3D textures yet, but we include some of the 3D config params anyway.
+
+    int xdim_3d, ydim_3d, zdim_3d;
+    find_closest_blockdim_3d(bitrate, &xdim_3d, &ydim_3d, &zdim_3d, 0);
     const float log10_texels_3d = std::log((float)(xdim_3d * ydim_3d * zdim_3d)) / log(10.0f);
 
     // Set up presets.
@@ -173,11 +211,6 @@ AstcTexture astcCompress(const LinearImage& original, AstcConfig config) {
     int xdim = xdim_2d, ydim = ydim_2d, zdim = 1;
     expand_block_artifact_suppression(xdim, ydim, zdim, &ewp);
 
-    // To help with debugging, dump the encoding settings in a format similar to the astcenc tool
-    printf("2D Block size: %dx%d (%.2f bpp)\n", xdim_2d, ydim_2d, 128.0 / (xdim_2d * ydim_2d));
-    printf("3D Block size: %dx%dx%d (%.2f bpp)\n",
-            xdim_3d, ydim_3d, zdim_3d, 128.0 / (xdim_3d * ydim_3d * zdim_3d));
-
     // Perform compression.
 
     constexpr int threadcount = 1; // TODO: set this thread count
@@ -200,8 +233,8 @@ AstcTexture astcCompress(const LinearImage& original, AstcConfig config) {
 
     destroy_image(input_image);
 
-    return AstcTexture {
-        .gl_internal_format = 0, // TODO: figure out the correct GL enum here
+    return {
+        .format = format,
         .size = size,
         .data = decltype(AstcTexture::data)(buffer)
     };
@@ -215,7 +248,7 @@ AstcConfig astcParseOptionString(const string& configString) {
     }
     string quality = configString.substr(0, _1);
     string semantic = configString.substr(_1 + 1, _2 - _1 - 1);
-    string bitrate = configString.substr(_2 + 1);
+    string blocksize = configString.substr(_2 + 1);
     AstcConfig config;
     if (quality == "veryfast") {
         config.quality = AstcPreset::VERYFAST;
@@ -239,7 +272,13 @@ AstcConfig astcParseOptionString(const string& configString) {
     } else {
         return {};
     }
-    config.bitrate = std::stof(bitrate);
+
+    const size_t _x = blocksize.find('x');
+    if (_x == string::npos) {
+        return {};
+    }
+    config.blocksize[0] = std::stoi(blocksize.substr(0, _x));
+    config.blocksize[1] = std::stoi(blocksize.substr(_x + 1));
     return config;
 }
 

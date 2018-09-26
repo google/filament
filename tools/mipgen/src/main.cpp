@@ -20,6 +20,7 @@
 #include <image/KtxBundle.h>
 #include <image/LinearImage.h>
 
+#include <imageio/BlockCompression.h>
 #include <imageio/ImageDecoder.h>
 #include <imageio/ImageEncoder.h>
 
@@ -72,18 +73,21 @@ Options:
        specify output file format, inferred from output pattern if omitted
    --kernel=[box|nearest|hermite|gaussian|normals|mitchell|lanczos|min], -k [filter]
        specify filter kernel type (defaults to lanczos)
+       the "normals" filter may automatically change the compression scheme
    --strip-alpha
        ignore the alpha component of the input image
    --compression=COMPRESSION, -c COMPRESSION
        format specific compression:
+           KTX: astc_[fast/thorough]_[ldr/hdr]_WxH, where WxH is a valid block size
            PNG: Ignored
            Radiance: Ignored
            Photoshop: 16 (default), 32
            OpenEXR: RAW, RLE, ZIPS, ZIP, PIZ (default)
            DDS: 8, 16 (default), 32
 
-Example:
+Examples:
     MIPGEN -g --kernel=hermite grassland.png mip_%03d.png
+    MIPGEN -f ktx --compression=astc_fast_ldr_4x4 grassland.png mips.ktx
 )TXT";
 
 static const char* HTML_PREFIX = R"HTML(<!DOCTYPE html>
@@ -271,9 +275,35 @@ int main(int argc, char* argv[]) {
             info.glInternalFormat =
             info.glBaseInternalFormat = KtxBundle::LUMINANCE;
         }
+        AstcConfig astcConfig {};
+        if (!g_compression.empty()) {
+            if (g_compression.substr(0, 5) == "astc_") {
+                string suffix = g_compression.substr(5);
+                astcConfig = astcParseOptionString(suffix);
+                auto block = astcConfig.blocksize;
+                printf("Compressing with blocksize = %dx%d\n", block[0], block[1]);
+            }
+            if (astcConfig.blocksize[0] == 0) {
+                cerr << "Unrecognized compression: " << g_compression << endl;
+                return 1;
+            }
+        }
         uint32_t mip = 0;
-        auto addLevel = [&container, &mip](const LinearImage& image) {
+        auto addLevel = [&container, &mip, astcConfig, inputPath](const LinearImage& image) {
             std::unique_ptr<uint8_t[]> data;
+            if (astcConfig.blocksize[0] > 0) {
+                // The ASTC encoder calls exit(1) if it fails, so it's very useful to print some
+                // source image information here for when this is invoked from a build script.
+                // Note that the encoder has limitations in terms of image size.
+                printf("Starting ASTC compression for %s (%dx%d)\n", inputPath.getName().c_str(),
+                        image.getWidth(), image.getHeight());
+                AstcTexture tex = astcCompress(image, astcConfig);
+                // Add newline here because the ASTC encoder has a progress indicator that issues a
+                // carriage return without a line feed.
+                putc('\n', stdout);
+                container.setBlob({mip++}, tex.data.get(), tex.size);
+                return;
+            }
             if (g_grayscale && g_linearized) {
                 data = fromLinearToGrayscale<uint8_t>(image);
             } else if (g_grayscale) {
