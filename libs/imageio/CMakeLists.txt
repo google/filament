@@ -28,7 +28,7 @@ add_library(${TARGET} STATIC ${PUBLIC_HDRS} ${SRCS})
 
 target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
 
-target_link_libraries(${TARGET} PUBLIC image math png tinyexr utils z)
+target_link_libraries(${TARGET} PUBLIC image math png tinyexr utils z astcenc)
 if (WIN32)
     target_link_libraries(${TARGET} PRIVATE wsock32)
 endif()
