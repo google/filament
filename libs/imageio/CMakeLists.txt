@@ -8,12 +8,14 @@ set(PUBLIC_HDR_DIR include)
 # Sources and headers
 # ==================================================================================================
 set(PUBLIC_HDRS
+        include/imageio/BlockCompression.h
         include/imageio/ImageDecoder.h
         include/imageio/ImageDiffer.h
         include/imageio/ImageEncoder.h
 )
 
 set(SRCS
+        src/BlockCompression.cpp
         src/ImageDecoder.cpp
         src/ImageDiffer.cpp
         src/ImageEncoder.cpp
