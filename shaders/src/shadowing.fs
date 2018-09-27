@@ -77,9 +77,12 @@ float ShadowSample_Hard(const lowp sampler2DShadow map, const vec2 size, const v
 #endif
 
 #if SHADOW_SAMPLING_METHOD == SHADOW_SAMPLING_PCF_LOW
-float ShadowSample_PCF_Low(const lowp sampler2DShadow map, const vec2 size, const vec3 position) {
+float ShadowSample_PCF_Low(const lowp sampler2DShadow map, const vec2 size, vec3 position) {
     //  Castaño, 2013, "Shadow Mapping Summary Part 1"
     vec2 texelSize = vec2(1.0) / size;
+
+    // clamp position to avoid overflows below, which cause some GPUs to abort
+    position.xy = clamp(position.xy, vec2(-1.0), vec2(2.0));
 
     vec2 offset = vec2(0.5);
     vec2 uv = (position.xy * size) + offset;
@@ -111,9 +114,12 @@ float ShadowSample_PCF_Low(const lowp sampler2DShadow map, const vec2 size, cons
 #endif
 
 #if SHADOW_SAMPLING_METHOD == SHADOW_SAMPLING_PCF_MEDIUM
-float ShadowSample_PCF_Medium(const lowp sampler2DShadow map, const vec2 size, const vec3 position) {
+float ShadowSample_PCF_Medium(const lowp sampler2DShadow map, const vec2 size, vec3 position) {
     //  Castaño, 2013, "Shadow Mapping Summary Part 1"
     vec2 texelSize = vec2(1.0) / size;
+
+    // clamp position to avoid overflows below, which cause some GPUs to abort
+    position.xy = clamp(position.xy, vec2(-1.0), vec2(2.0));
 
     vec2 offset = vec2(0.5);
     vec2 uv = (position.xy * size) + offset;
@@ -151,9 +157,12 @@ float ShadowSample_PCF_Medium(const lowp sampler2DShadow map, const vec2 size, c
 #endif
 
 #if SHADOW_SAMPLING_METHOD == SHADOW_SAMPLING_PCF_HIGH
-float ShadowSample_PCF_High(const lowp sampler2DShadow map, const vec2 size, const vec3 position) {
+float ShadowSample_PCF_High(const lowp sampler2DShadow map, const vec2 size, vec3 position) {
     //  Castaño, 2013, "Shadow Mapping Summary Part 1"
     vec2 texelSize = vec2(1.0) / size;
+
+    // clamp position to avoid overflows below, which cause some GPUs to abort
+    position.xy = clamp(position.xy, vec2(-1.0), vec2(2.0));
 
     vec2 offset = vec2(0.5);
     vec2 uv = (position.xy * size) + offset;
