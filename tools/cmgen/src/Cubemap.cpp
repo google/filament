@@ -123,10 +123,10 @@ void Cubemap::makeSeamless() {
     auto corners = [ & ](Face face) {
         size_t L = D - 1;
         Image& image = getImageForFace(face);
-        *getTexel(image,  -1, -1) = (*getTexel(image, 0, 0) + *getTexel(image,  -1, 0) + *getTexel(image, 0,  -1)) / 3;
-        *getTexel(image, L+1, -1) = (*getTexel(image, L, 0) + *getTexel(image, L+1, 0) + *getTexel(image, 0,  -1)) / 3;
-        *getTexel(image, -1, L+1) = (*getTexel(image, 0, L) + *getTexel(image,  -1, 0) + *getTexel(image, 0, L+1)) / 3;
-        *getTexel(image, L+1,L+1) = (*getTexel(image, L, L) + *getTexel(image, L+1, 0) + *getTexel(image, 0, L+1)) / 3;
+        *getTexel(image,  -1,  -1) = (*getTexel(image, 0, 0) + *getTexel(image,  -1,  0) + *getTexel(image, 0,    -1)) / 3;
+        *getTexel(image, L+1,  -1) = (*getTexel(image, L, 0) + *getTexel(image,   L, -1) + *getTexel(image, L+1,   0)) / 3;
+        *getTexel(image,  -1, L+1) = (*getTexel(image, 0, L) + *getTexel(image,  -1,  L) + *getTexel(image, 0,   L+1)) / 3;
+        *getTexel(image, L+1, L+1) = (*getTexel(image, L, L) + *getTexel(image, L+1,  L) + *getTexel(image, L+1,   L)) / 3;
     };
 
     // +Y / Top
@@ -161,7 +161,7 @@ void Cubemap::makeSeamless() {
     stitch( Face::NZ, -1,  0,  bpr, Face::PX,  D-1,  0,    bpr);      // left
     stitch( Face::NZ,  0, -1,  bpp, Face::PY,  D-1,  0,   -bpp);      // top
     stitch( Face::NZ,  D,  0,  bpr, Face::NX,  0,    0,    bpr);      // right
-    stitch( Face::NZ,  0,  D,  bpp, Face::NY,  D-1,  0,   -bpp);      // bottom
+    stitch( Face::NZ,  0,  D,  bpp, Face::NY,  D-1,  D-1, -bpp);      // bottom
     corners(Face::NZ);
 
     // -Y / Bottom
