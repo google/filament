@@ -17,7 +17,7 @@ target_link_libraries(${TARGET} PRIVATE math utils z image imageio getopt stb)
 # =================================================================================================
 # Licenses
 # ==================================================================================================
-set(MODULE_LICENSES getopt libpng tinyexr libz astcenc)
+set(MODULE_LICENSES getopt libpng tinyexr libz astcenc stb)
 set(GENERATION_ROOT ${CMAKE_CURRENT_BINARY_DIR}/generated)
 list_licenses(${GENERATION_ROOT}/licenses/licenses.inc ${MODULE_LICENSES})
 target_include_directories(${TARGET} PRIVATE ${GENERATION_ROOT})
