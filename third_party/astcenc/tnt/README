@@ -16,6 +16,7 @@ mv license.txt LICENSE
 rm Source/stb_image.c Source/imgdiff.cpp
 sed -i "" 's/stb_image.c/stb_image.h/g' Source/astc_stb_tga.cpp
 sed -i "" 's/main/standalone_main/g' Source/astc_toplevel.cpp
+add #if 0 to astc_image_load_store.cpp
 
 #
 # Copy modified source into the Filament repo.

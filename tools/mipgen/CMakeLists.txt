@@ -12,12 +12,12 @@ set(SRCS src/main.cpp)
 # Target definitions
 # ==================================================================================================
 add_executable(${TARGET} ${SRCS})
-target_link_libraries(${TARGET} PRIVATE math utils z image imageio getopt stb)
+target_link_libraries(${TARGET} PRIVATE math utils z image imageio getopt)
 
 # =================================================================================================
 # Licenses
 # ==================================================================================================
-set(MODULE_LICENSES getopt libpng tinyexr libz astcenc stb)
+set(MODULE_LICENSES getopt libpng tinyexr libz astcenc)
 set(GENERATION_ROOT ${CMAKE_CURRENT_BINARY_DIR}/generated)
 list_licenses(${GENERATION_ROOT}/licenses/licenses.inc ${MODULE_LICENSES})
 target_include_directories(${TARGET} PRIVATE ${GENERATION_ROOT})

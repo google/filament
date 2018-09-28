@@ -1261,7 +1261,7 @@ void compute_error_metrics(int compute_hdr_error_metrics, int input_components, 
 	This image loader will choose one based on filename.
 */
 
-
+#if 0
 
 astc_codec_image *astc_codec_load_image(const char *input_filename, int padding, int *load_result)
 {
@@ -1453,3 +1453,20 @@ int astc_codec_store_image(const astc_codec_image * output_image, const char *ou
 
 	return store_result;
 }
+
+#else
+
+astc_codec_image *astc_codec_load_image(const char *input_filename, int padding, int *load_result) {
+	return nullptr;
+}
+
+int astc_codec_store_image(const astc_codec_image * output_image, const char *output_filename,
+		int bitness, const char **format_string) {
+	return 0;
+}
+
+int get_output_filename_enforced_bitness(const char *output_filename) {
+	return 0;
+}
+
+#endif

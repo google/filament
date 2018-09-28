@@ -24,7 +24,6 @@ set(SOURCES
     ${SRCDIR}/astc_percentile_tables.cpp
     ${SRCDIR}/astc_pick_best_endpoint_format.cpp
     ${SRCDIR}/astc_quantization.cpp
-    ${SRCDIR}/astc_stb_tga.cpp
     ${SRCDIR}/astc_toplevel.cpp
     ${SRCDIR}/astc_symbolic_physical.cpp
     ${SRCDIR}/astc_weight_align.cpp
@@ -41,6 +40,6 @@ add_definitions(-Wno-tautological-compare)
 
 add_library(${TARGET} STATIC ${SOURCES})
 
-target_link_libraries(${TARGET} LINK_PUBLIC stb)
+target_link_libraries(${TARGET} LINK_PUBLIC)
 
 target_include_directories (${TARGET} PUBLIC ${HDRDIR})
