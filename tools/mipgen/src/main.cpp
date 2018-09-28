@@ -31,6 +31,9 @@
 #include <fstream>
 #include <iostream>
 
+#define STB_IMAGE_IMPLEMENTATION
+#include <stb_image.h>
+
 using namespace image;
 using namespace std;
 using namespace utils;
@@ -163,7 +166,6 @@ static int handleArguments(int argc, char* argv[]) {
                 g_createGallery = true;
                 break;
             case 'k': {
-                bool isvalid;
                 g_filter = filterFromString(arg.c_str());
                 if (g_filter == Filter::DEFAULT) {
                     cerr << "Warning: unrecognized filter, falling back to DEFAULT." << endl;
