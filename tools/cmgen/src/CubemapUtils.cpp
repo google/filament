@@ -191,7 +191,7 @@ void CubemapUtils::setFaceFromCross(Cubemap& cm, Cubemap::Face face, const Image
             break;
     }
     Image subImage;
-    subImage.subset(image, x + 1, y + 1, dim, dim);
+    subImage.subset(image, x + 1, y + 1, dim - 2, dim - 2);
     cm.setImageForFace(face, subImage);
 }
 
@@ -205,13 +205,13 @@ void CubemapUtils::setAllFacesFromCross(Cubemap& cm, const Image& image) {
 }
 
 Image CubemapUtils::createCubemapImage(size_t dim, bool horizontal) {
+    // always allocate 2 extra column and row / face, to allow the cubemap to be "seamless"
     size_t width = 4 * (dim + 2);
     size_t height = 3 * (dim + 2);
     if (!horizontal) {
         std::swap(width, height);
     }
 
-    // always allocate an extra column and row, to allow the cubemap to be "seamless"
     size_t bpr = width * sizeof(Cubemap::Texel);
     bpr = (bpr + 31) & ~31;
     size_t bufSize = bpr * height;
