@@ -167,7 +167,7 @@ void CubemapUtils::downsampleCubemapLevelBoxFilter(Cubemap& dst, const Cubemap& 
 // ------------------------------------------------------------------------------------------------
 
 void CubemapUtils::setFaceFromCross(Cubemap& cm, Cubemap::Face face, const Image& image) {
-    size_t dim = cm.getDimensions();
+    size_t dim = cm.getDimensions() + 2; // 2 extra per image, for seemlessness
     size_t x = 0;
     size_t y = 0;
     switch (face) {
@@ -191,7 +191,7 @@ void CubemapUtils::setFaceFromCross(Cubemap& cm, Cubemap::Face face, const Image
             break;
     }
     Image subImage;
-    subImage.subset(image, x, y, dim, dim);
+    subImage.subset(image, x + 1, y + 1, dim, dim);
     cm.setImageForFace(face, subImage);
 }
 
@@ -205,16 +205,16 @@ void CubemapUtils::setAllFacesFromCross(Cubemap& cm, const Image& image) {
 }
 
 Image CubemapUtils::createCubemapImage(size_t dim, bool horizontal) {
-    size_t width = 4 * dim;
-    size_t height = 3 * dim;
+    size_t width = 4 * (dim + 2);
+    size_t height = 3 * (dim + 2);
     if (!horizontal) {
         std::swap(width, height);
     }
 
     // always allocate an extra column and row, to allow the cubemap to be "seamless"
-    size_t bpr = (width + 1) * sizeof(Cubemap::Texel);
+    size_t bpr = width * sizeof(Cubemap::Texel);
     bpr = (bpr + 31) & ~31;
-    size_t bufSize = bpr * (height + 1);
+    size_t bufSize = bpr * height;
     std::unique_ptr<uint8_t[]> data(new uint8_t[bufSize]);
     memset(data.get(), 0, bufSize);
     Image image(std::move(data), width, height, bpr, sizeof(Cubemap::Texel));
