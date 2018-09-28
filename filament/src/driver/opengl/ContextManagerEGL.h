@@ -46,6 +46,8 @@ public:
     void makeCurrent(SwapChain* swapChain) noexcept final;
     void commit(SwapChain* swapChain) noexcept final;
 
+    void setPresentationTime(long time) noexcept final;
+
     bool canCreateFence() noexcept final { return true; }
     Fence* createFence() noexcept final;
     void destroyFence(Fence* fence) noexcept final;

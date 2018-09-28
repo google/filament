@@ -70,6 +70,8 @@ public:
     // swap draw buffers (i.e. for double-buffered rendering).
     virtual void commit(SwapChain* swapChain) noexcept = 0;
 
+    virtual void setPresentationTime(long time) noexcept = 0;
+
     virtual bool canCreateFence() noexcept { return false; }
     virtual Fence* createFence() noexcept = 0;
     virtual void destroyFence(Fence* fence) noexcept = 0;

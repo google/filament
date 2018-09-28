@@ -63,6 +63,9 @@ using namespace utils;
 namespace filament {
 using namespace driver;
 
+using PFNEGLGETNATIVECLIENTBUFFERANDROIDPROC =
+    EGLClientBuffer(EGLAPIENTRYP)(const AHardwareBuffer* buffer);
+
 // The Android NDK doesn't exposes extensions, fake it with eglGetProcAddress
 namespace glext {
 UTILS_PRIVATE PFNEGLCREATESYNCKHRPROC eglCreateSyncKHR;
@@ -71,6 +74,7 @@ UTILS_PRIVATE PFNEGLCLIENTWAITSYNCKHRPROC eglClientWaitSyncKHR;
 UTILS_PRIVATE PFNEGLCREATEIMAGEKHRPROC eglCreateImageKHR;
 UTILS_PRIVATE PFNEGLDESTROYIMAGEKHRPROC eglDestroyImageKHR;
 UTILS_PRIVATE PFNEGLGETNATIVECLIENTBUFFERANDROIDPROC eglGetNativeClientBufferANDROID;
+UTILS_PRIVATE PFNEGLPRESENTATIONTIMEANDROIDPROC eglPresentationTimeANDROID;
 }
 using namespace glext;
 
@@ -524,6 +528,7 @@ std::unique_ptr<Driver> ContextManagerEGL::createDriver(void* const sharedGLCont
     eglCreateImageKHR = (PFNEGLCREATEIMAGEKHRPROC) eglGetProcAddress("eglCreateImageKHR");
     eglDestroyImageKHR = (PFNEGLDESTROYIMAGEKHRPROC) eglGetProcAddress("eglDestroyImageKHR");
     eglGetNativeClientBufferANDROID = (PFNEGLGETNATIVECLIENTBUFFERANDROIDPROC) eglGetProcAddress("eglGetNativeClientBufferANDROID");
+    eglPresentationTimeANDROID = (PFNEGLPRESENTATIONTIMEANDROIDPROC) eglGetProcAddress("eglPresentationTimeANDROID");
 
     EGLint configsCount;
     EGLint configAttribs[] = {
@@ -675,6 +680,15 @@ void ContextManagerEGL::makeCurrent(ExternalContext::SwapChain* swapChain) noexc
     EGLSurface sur = (EGLSurface) swapChain;
     if (sur != EGL_NO_SURFACE) {
         makeCurrent(sur);
+    }
+}
+
+void ContextManagerEGL::setPresentationTime(long time) noexcept {
+    if (mCurrentSurface != EGL_NO_SURFACE) {
+      eglPresentationTimeANDROID(
+                        mEGLDisplay,
+                        mCurrentSurface,
+                        time);
     }
 }
 
