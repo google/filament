@@ -21,6 +21,7 @@
 #include <math/mat4.h>
 
 #include <algorithm>
+#include <cmath>
 
 #include <string.h>
 
@@ -125,6 +126,42 @@ void CubemapUtils::cubemapToEquirectangular(Image& dst, const Cubemap& src) {
                             std::sin(phi),
                             std::cos(phi) * std::cos(theta) };
                     c += src.filterAt(s);
+                }
+                Cubemap::writeAt(dst.getPixelRef(i, j), c * (1.0 / numSamples));
+            }
+        }
+    };
+
+    JobSystem& js = getJobSystem();
+    auto job = jobs::parallel_for(js, nullptr, 0, uint32_t(h),
+            std::ref(parallelJobTask), jobs::CountSplitter<1, 8>());
+    js.runAndWait(job);
+    js.reset();
+}
+
+void CubemapUtils::cubemapToOctahedron(Image& dst, const Cubemap& src) {
+    const double w = dst.getWidth();
+    const double h = dst.getHeight();
+    auto parallelJobTask = [&](size_t j0, size_t count) {
+        for (size_t j = j0; j < j0 + count; j++) {
+            for (size_t i = 0; i < w; i++) {
+                float3 c = 0;
+                const size_t numSamples = 64; // TODO: how to chose numsamples
+                for (size_t sample = 0; sample < numSamples; sample++) {
+                    const double2 u = hammersley(uint32_t(sample), 1.0f / numSamples);
+                    double x = 2.0 * (i + u.x) / w - 1.0;
+                    double z = 2.0 * (j + u.y) / h - 1.0;
+                    double y;
+                    if (std::abs(z) > (1.0 - std::abs(x))) {
+                        double u = x < 0 ? std::abs(z) - 1 : 1 - std::abs(z);
+                        double v = z < 0 ? std::abs(x) - 1 : 1 - std::abs(x);
+                        x = u;
+                        z = v;
+                        y = (std::abs(x) + std::abs(z)) - 1.0;
+                    } else {
+                        y = 1.0 - (std::abs(x) + std::abs(z));
+                    }
+                    c += src.filterAt({x, y, z});
                 }
                 Cubemap::writeAt(dst.getPixelRef(i, j), c * (1.0 / numSamples));
             }

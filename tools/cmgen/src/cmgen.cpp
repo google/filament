@@ -51,7 +51,7 @@ static const size_t DFG_LUT_DEFAULT_SIZE = 128;
 static const size_t IBL_DEFAULT_SIZE = 256;
 
 enum class OutputType {
-    FACES, KTX, EQUIRECT
+    FACES, KTX, EQUIRECT, OCTAHEDRON
 };
 
 static image::ImageEncoder::Format g_format = image::ImageEncoder::Format::PNG;
@@ -140,7 +140,7 @@ static void printUsage(char* name) {
             "       Print copyright and license information\n\n"
             "   --quiet, -q\n"
             "       Quiet mode. Suppress all non-error output\n\n"
-            "   --type=[faces|equirect|ktx], -t [cubemap|equirect|ktx]\n"
+            "   --type=[faces|equirect|octahedron|ktx], -t [cubemap|equirect|octahedron|ktx]\n"
             "       Specify output type (default: cubemap)\n\n"
             "   --format=[exr|hdr|psd|rgbm|png|dds|ktx], -f [exr|hdr|psd|rgbm|png|dds|ktx]\n"
             "       Specify output file format. ktx implies -type=ktx.\n\n"
@@ -259,6 +259,10 @@ static int handleCommandLineArgments(int argc, char* argv[]) {
                 }
                 if (arg == "equirect") {
                     g_type = OutputType::EQUIRECT;
+                    type_specified = true;
+                }
+                if (arg == "octahedron") {
+                    g_type = OutputType::OCTAHEDRON;
                     type_specified = true;
                 }
                 break;
@@ -758,6 +762,16 @@ void iblMipmapPrefilter(const utils::Path& iname,
             continue;
         }
 
+        if (g_type == OutputType::OCTAHEDRON) {
+            size_t dim = dst.getDimensions();
+            std::unique_ptr<uint8_t[]> buf(new uint8_t[dim * dim * sizeof(float3)]);
+            Image image(std::move(buf), dim, dim, dim * sizeof(float3), sizeof(float3));
+            CubemapUtils::cubemapToOctahedron(image, dst);
+            std::string filename = outputDir + ("is_m" + std::to_string(level) + ext);
+            saveImage(filename, g_format, image, g_compression);
+            continue;
+        }
+
         for (size_t i = 0; i < 6; i++) {
             Cubemap::Face face = (Cubemap::Face)i;
             std::string filename = outputDir
@@ -845,6 +859,15 @@ void iblRoughnessPrefilter(const utils::Path& iname,
             std::unique_ptr<uint8_t[]> buf(new uint8_t[dim * 2 * dim * sizeof(float3)]);
             Image image(std::move(buf), dim * 2, dim, dim * 2 * sizeof(float3), sizeof(float3));
             CubemapUtils::cubemapToEquirectangular(image, dst);
+            std::string filename = outputDir + ("m" + std::to_string(level) + ext);
+            saveImage(filename, g_format, image, g_compression);
+            continue;
+        }
+
+        if (g_type == OutputType::OCTAHEDRON) {
+            std::unique_ptr<uint8_t[]> buf(new uint8_t[dim * dim * sizeof(float3)]);
+            Image image(std::move(buf), dim, dim, dim * sizeof(float3), sizeof(float3));
+            CubemapUtils::cubemapToOctahedron(image, dst);
             std::string filename = outputDir + ("m" + std::to_string(level) + ext);
             saveImage(filename, g_format, image, g_compression);
             continue;
@@ -1012,6 +1035,16 @@ void extractCubemapFaces(const utils::Path& iname, const Cubemap& cm, const util
         std::unique_ptr<uint8_t[]> buf(new uint8_t[dim * 2 * dim * sizeof(float3)]);
         Image image(std::move(buf), dim * 2, dim, dim * 2 * sizeof(float3), sizeof(float3));
         CubemapUtils::cubemapToEquirectangular(image, cm);
+        std::string filename = outputDir + ("skybox" + ext);
+        saveImage(filename, g_format, image, g_compression);
+        return;
+    }
+
+    if (g_type == OutputType::OCTAHEDRON) {
+        size_t dim = cm.getDimensions();
+        std::unique_ptr<uint8_t[]> buf(new uint8_t[dim * dim * sizeof(float3)]);
+        Image image(std::move(buf), dim, dim, dim * sizeof(float3), sizeof(float3));
+        CubemapUtils::cubemapToOctahedron(image, cm);
         std::string filename = outputDir + ("skybox" + ext);
         saveImage(filename, g_format, image, g_compression);
         return;
