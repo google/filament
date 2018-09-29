@@ -36,7 +36,7 @@
         extern PFNGLPUSHGROUPMARKEREXTPROC glPushGroupMarkerEXT;
         extern PFNGLPOPGROUPMARKEREXTPROC glPopGroupMarkerEXT;
 #endif
-    };
+    }
 
     using namespace glext;
 

@@ -31,7 +31,7 @@ namespace filament {
 class UniformInterfaceBlock;
 class SamplerInterfaceBlock;
 class SamplerBindingMap;
-};
+}
 
 namespace filaflat {
 

@@ -33,7 +33,7 @@ PFNGLINSERTEVENTMARKEREXTPROC glInsertEventMarkerEXT;
 PFNGLPUSHGROUPMARKEREXTPROC glPushGroupMarkerEXT;
 PFNGLPOPGROUPMARKEREXTPROC glPopGroupMarkerEXT;
 #endif
-};
+}
 
 using namespace glext;
 

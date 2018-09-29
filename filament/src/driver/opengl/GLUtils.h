@@ -361,7 +361,7 @@ constexpr /* inline */ GLenum getInternalFormat(filament::driver::TextureFormat 
             return 0;
 #endif
     }
-};
+}
 
 } // namespace GLUtils
 } // namespace filament
