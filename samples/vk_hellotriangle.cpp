@@ -58,7 +58,7 @@ static constexpr uint8_t BAKED_COLOR_PACKAGE[] = {
     #include "generated/material/bakedColor.inc"
 };
 
-int main() {
+int main(int argc, char** argv) {
     Config config;
     config.title = "hellotriangle";
     config.backend = Engine::Backend::VULKAN;

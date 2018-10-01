@@ -77,6 +77,26 @@ static Texture* setTextureParameter(Engine& engine, filaweb::Asset& asset, strin
     uint8_t* data;
     uint32_t nbytes;
     asset.texture->getBlob({}, &data, &nbytes);
+
+    // Compressed textures in KTX always have a glFormat of 0.
+    if (info.glFormat == 0) {
+        assert(info.pixelWidth == info.pixelHeight);
+        driver::CompressedPixelDataType datatype = filaweb::toPixelDataType(info.glInternalFormat);
+        driver::TextureFormat texformat = filaweb::toTextureFormat(info.glInternalFormat);
+        Texture::PixelBufferDescriptor pb(data, nbytes, datatype, nbytes, destructor, &asset);
+
+        auto texture = Texture::Builder()
+                .width(info.pixelWidth)
+                .height(info.pixelHeight)
+                .sampler(Texture::Sampler::SAMPLER_2D)
+                .format(texformat)
+                .build(engine);
+
+        texture->setImage(engine, 0, std::move(pb));
+        app.mi->setParameter(name.c_str(), texture, sampler);
+        return texture;
+    }
+
     Texture::PixelBufferDescriptor pb(data, nbytes, format, Texture::Type::UBYTE, destructor,
             &asset);
 

@@ -18,7 +18,9 @@
 
 #include <utils/Panic.h>
 
+#include <string>
 #include <vector>
+#include <unordered_map>
 
 namespace {
 
@@ -45,6 +47,11 @@ const uint8_t MAGIC[] = {0xab, 0x4b, 0x54, 0x58, 0x20, 0x31, 0x31, 0xbb, 0x0d, 0
 }
 
 namespace image  {
+
+// This little wrapper lets us avoid having an STL container in the header file.
+struct KtxMetadata {
+    std::unordered_map<std::string, std::string> keyvals;
+};
 
 // Extremely simple contiguous storage for an array of blobs. Assumes that the total number of blobs
 // is relatively small compared to the size of each blob, and that resizing individual blobs does
@@ -92,14 +99,15 @@ struct KtxBlobList {
 KtxBundle::~KtxBundle() = default;
 
 KtxBundle::KtxBundle(uint32_t numMipLevels, uint32_t arrayLength, bool isCubemap) :
-        mBlobs(new KtxBlobList) {
+        mBlobs(new KtxBlobList), mMetadata(new KtxMetadata) {
     mNumMipLevels = numMipLevels;
     mArrayLength = arrayLength;
     mNumCubeFaces = isCubemap ? 6 : 1;
     mBlobs->sizes.resize(numMipLevels * arrayLength * mNumCubeFaces);
 }
 
-KtxBundle::KtxBundle(uint8_t const* bytes, uint32_t nbytes) : mBlobs(new KtxBlobList) {
+KtxBundle::KtxBundle(uint8_t const* bytes, uint32_t nbytes) :
+        mBlobs(new KtxBlobList), mMetadata(new KtxMetadata) {
     ASSERT_PRECONDITION(sizeof(SerializationHeader) <= nbytes, "KTX buffer is too small");
 
     // First, "parse" the header by casting it to a struct.
@@ -116,15 +124,18 @@ KtxBundle::KtxBundle(uint8_t const* bytes, uint32_t nbytes) : mBlobs(new KtxBlob
     mNumCubeFaces = header->numberOfFaces ? header->numberOfFaces : 1;
     mBlobs->sizes.resize(mNumMipLevels * mArrayLength * mNumCubeFaces);
 
-    // For now, we discard the key-value metadata. Note that this may be useful for storing
-    // spherical harmonics coefficients.
+    // We use std::string to store both the key and the value. Note that the spec says the value can
+    // be a binary blob that contains null characters.
     uint8_t const* pdata = bytes + sizeof(SerializationHeader);
     uint8_t const* end = pdata + header->bytesOfKeyValueData;
     while (pdata < end) {
         const uint32_t keyAndValueByteSize = *((uint32_t const*) pdata);
-        pdata += sizeof(keyAndValueByteSize);
-        // ...this is a good spot for stashing the keyAndValue block...
+        pdata += sizeof(uint32_t);
+        std::string key((const char*) pdata);
+        uint8_t const* pval = pdata + key.size() + 1;
         pdata += keyAndValueByteSize;
+        std::string val((const char*) pval, (const char*) pdata);
+        mMetadata->keyvals.insert({key, val});
         const uint32_t paddingSize = 3 - ((keyAndValueByteSize + 3) % 4);
         pdata += paddingSize;
     }
@@ -145,7 +156,7 @@ KtxBundle::KtxBundle(uint8_t const* bytes, uint32_t nbytes) : mBlobs(new KtxBlob
         const uint32_t imageSize = *((uint32_t const*) pdata);
         const uint32_t faceSize = isNonArrayCube ? imageSize : (imageSize / facesPerMip);
         const uint32_t levelSize = faceSize * mNumCubeFaces * mArrayLength;
-        pdata += sizeof(imageSize);
+        pdata += sizeof(uint32_t);
         memcpy(mBlobs->get(flatten(this, {mipmap, 0, 0})), pdata, levelSize);
         for (uint32_t layer = 0; layer < mArrayLength; ++layer) {
             for (uint32_t face = 0; face < mNumCubeFaces; ++face) {
@@ -175,12 +186,34 @@ bool KtxBundle::serialize(uint8_t* destination, uint32_t numBytes) const {
     // For simplicity, KtxBundle does not allow non-zero array length, but to be conformant we
     // should set this field to zero for non-array textures.
     if (mArrayLength == 1) {
-        header.numberOfArrayElements =  0;
+        header.numberOfArrayElements = 0;
+    }
+
+    // Compute space required for metadata, padding up to 4-byte alignment.
+    for (const auto& iter : mMetadata->keyvals) {
+        const uint32_t kvsize = iter.first.size() + 1 + iter.second.size();
+        const uint32_t kvpadding = 3 - ((kvsize + 3) % 4);
+        header.bytesOfKeyValueData += sizeof(uint32_t) + kvsize + kvpadding;
     }
 
     // Copy the header into the destination memory.
     memcpy(destination, &header, sizeof(header));
     uint8_t* pdata = destination + sizeof(SerializationHeader);
+
+    // Write out the metadata. Note that keys are null-terminated strings: they are constructed from
+    // C strings, and we obtain their contents with c_str(). Values are binary strings: they are
+    // constructed from begin-end pairs, and we obtain their contents with data().
+    for (const auto& iter : mMetadata->keyvals) {
+        const uint32_t kvsize = iter.first.size() + 1 + iter.second.size();
+        const uint32_t kvpadding = 3 - ((kvsize + 3) % 4);
+        memcpy(pdata, &kvsize, sizeof(uint32_t));
+        pdata += sizeof(uint32_t);
+        memcpy(pdata, iter.first.c_str(), iter.first.size() + 1);
+        pdata += iter.first.size() + 1;
+        memcpy(pdata, iter.second.data(), iter.second.size());
+        pdata += iter.second.size();
+        pdata += kvpadding;
+    }
 
     // One aspect of the KTX spec is that the semantics differ for non-array cubemaps.
     const bool isNonArrayCube = mNumCubeFaces > 1 && mArrayLength == 1;
@@ -215,6 +248,11 @@ bool KtxBundle::serialize(uint8_t* destination, uint32_t numBytes) const {
 
 uint32_t KtxBundle::getSerializedLength() const {
     uint32_t total = sizeof(SerializationHeader);
+    for (const auto& iter : mMetadata->keyvals) {
+        const uint32_t kvsize = iter.first.size() + 1 + iter.second.size();
+        const uint32_t kvpadding = 3 - ((kvsize + 3) % 4);
+        total += sizeof(uint32_t) + kvsize + kvpadding;
+    }
     for (uint32_t mipmap = 0; mipmap < mNumMipLevels; ++mipmap) {
         total += sizeof(uint32_t);
         size_t blobSize = 0;
@@ -230,6 +268,22 @@ uint32_t KtxBundle::getSerializedLength() const {
         }
     }
     return total;
+}
+
+const char* KtxBundle::getMetadata(const char* key, size_t* valueSize) const {
+    auto iter = mMetadata->keyvals.find(key);
+    if (iter == mMetadata->keyvals.end()) {
+        return nullptr;
+    }
+    if (valueSize) {
+        *valueSize = iter->second.size();
+    }
+    // This returns data() rather than c_str() because values need not be null terminated.
+    return iter->second.data();
+}
+
+void KtxBundle::setMetadata(const char* key, const char* value) {
+    mMetadata->keyvals.insert({key, value});
 }
 
 bool KtxBundle::getBlob(KtxBlobIndex index, uint8_t** data, uint32_t* size) const {
@@ -258,6 +312,17 @@ bool KtxBundle::setBlob(KtxBlobIndex index, uint8_t const* data, uint32_t size) 
         mBlobs->resize(flatIndex, size);
     }
     memcpy(mBlobs->get(flatIndex), data, size);
+    return true;
+}
+
+bool KtxBundle::allocateBlob(KtxBlobIndex index, uint32_t size) {
+    if (index.mipLevel >= mNumMipLevels || index.arrayIndex >= mArrayLength ||
+            index.cubeFace >= mNumCubeFaces) {
+        return false;
+    }
+    uint32_t flatIndex = flatten(this, index);
+    uint32_t blobSize = mBlobs->sizes[flatIndex];
+    mBlobs->resize(flatIndex, size);
     return true;
 }
 

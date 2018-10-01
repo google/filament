@@ -22,7 +22,10 @@
 
 #include <math/vec3.h>
 
+#include <image/ColorTransform.h>
 #include <image/ImageOps.h>
+#include <image/ImageSampler.h>
+#include <image/KtxBundle.h>
 
 #include <imageio/ImageDecoder.h>
 #include <imageio/ImageEncoder.h>
@@ -38,6 +41,7 @@ using namespace utils;
 
 static ImageEncoder::Format g_format = ImageEncoder::Format::PNG_LINEAR;
 static bool g_formatSpecified = false;
+static bool g_ktxContainer = false;
 static bool g_linearOutput = false;
 static std::string g_compression;
 
@@ -71,7 +75,7 @@ static void printUsage(const char* name) {
             "       desired constant roughness, ignored if --roughness-map is specified\n\n"
             "   --roughness-map=<input-roughness-map>, -m <input-roughness-map>\n"
             "       input roughness map\n\n"
-            "   --format=[exr|hdr|psd|png|dds], -f [exr|hdr|psd|png|dds]\n"
+            "   --format=[exr|hdr|psd|png|dds|ktx], -f [exr|hdr|psd|png|dds|ktx]\n"
             "       specify output file format, inferred from file name if omitted\n\n"
             "   --compression=COMPRESSION, -c COMPRESSION\n"
             "       format specific compression:\n"
@@ -146,6 +150,10 @@ static int handleArguments(int argc, char* argv[]) {
                     g_format = ImageEncoder::Format::DDS_LINEAR;
                     g_formatSpecified = true;
                 }
+                if (arg == "ktx") {
+                    g_ktxContainer = true;
+                    g_formatSpecified = true;
+                }
                 break;
             case 'c':
                 g_compression = arg;
@@ -216,12 +224,12 @@ void prefilter(const LinearImage& normal, const size_t mipLevel, LinearImage& ou
     const size_t sampleCount = 1u << mipLevel;
 
     for (size_t y = 0; y < height; y++) {
-        auto outputRow = output.get<float3>(0, y);
+        auto outputRow = output.get<float>(0, y);
         for (size_t x = 0; x < width; x++, outputRow++) {
             const float2 uv = (float2(x, y) + 0.5f) / float2(width, height);
             const float2 pos = uv * normal.getWidth();
             const float roughness = g_roughness;
-            *outputRow = float3(solveVMF(pos, sampleCount, roughness, normal));
+            *outputRow = solveVMF(pos, sampleCount, roughness, normal);
         }
     }
 }
@@ -234,15 +242,15 @@ void prefilter(const LinearImage& normal, const LinearImage& roughness, const si
     const size_t sampleCount = 1u << mipLevel;
 
     for (size_t y = 0; y < height; y++) {
-        auto outputRow = output.get<float3>(0, y);
+        auto outputRow = output.get<float>(0, y);
         for (size_t x = 0; x < width; x++, outputRow++) {
-            auto data = roughness.get<float3>(x, y);
+            auto data = roughness.get<float>(x, y);
             if (FIRST_MIP) {
                 *outputRow = *data;
             } else {
                 const float2 uv = (float2(x, y) + 0.5f) / float2(width, height);
                 const float2 pos = uv * normal.getWidth();
-                *outputRow = float3(solveVMF(pos, sampleCount, data->r, normal));
+                *outputRow = solveVMF(pos, sampleCount, *data, normal);
             }
         }
     }
@@ -315,9 +323,12 @@ int main(int argc, char* argv[]) {
 
         if (roughnessImage.getWidth() != normalImage.getWidth() ||
                 roughnessImage.getHeight() != normalImage.getHeight()) {
-            std::cerr << "The input normal and roughness maps must have the same dimensions" << std::endl;
+            std::cerr << "The input normal and roughness maps must have the same dimensions"
+                    << std::endl;
             exit(1);
         }
+
+        roughnessImage = extractChannel(roughnessImage, 0);
     }
 
     if (!g_formatSpecified) {
@@ -332,66 +343,53 @@ int main(int argc, char* argv[]) {
     const size_t height = hasRoughnessMap ? roughnessImage.getHeight() : normalImage.getHeight();
     const size_t mipLevels = size_t(std::log2f(width)) + 1;
 
-    bool exportGrayscale = false;
-    switch (g_format) {
-        case ImageEncoder::Format::DDS:
-        case ImageEncoder::Format::DDS_LINEAR:
-        case ImageEncoder::Format::PNG:
-        case ImageEncoder::Format::PNG_LINEAR:
-            exportGrayscale = true;
-            break;
-        default:
-            break;
-    }
-
     if (hasRoughnessMap) {
-        mipImages.push_back(std::move(roughnessImage));
-        LinearImage* prevMip = &mipImages.at(0);
-
-        for (size_t i = 1; i <= mipLevels; i++) {
-            const size_t w = width >> i;
-            const size_t h = height >> i;
-
-            LinearImage image(w, h, 3);
-
-            for (size_t y = 0; y < h; y++) {
-                auto dst = image.get<float3>(0, y);
-                for (size_t x = 0; x < w; x++, dst++) {
-                    float3 aa = *prevMip->get<float3>(x * 2,     y * 2);
-                    float3 ba = *prevMip->get<float3>(x * 2 + 1, y * 2);
-                    float3 ab = *prevMip->get<float3>(x * 2,     y * 2 + 1);
-                    float3 bb = *prevMip->get<float3>(x * 2 + 1, y * 2 + 1);
-                    *dst = (aa + ba + ab + bb) / 4.0f;
-                }
-            }
-
-            mipImages.push_back(std::move(image));
-            prevMip = &mipImages.at(i);
-        }
+        mipImages.resize(mipLevels);
+        mipImages[0] = roughnessImage;
+        image::generateMipmaps(roughnessImage, image::Filter::BOX, &mipImages[1], mipLevels - 1);
     }
 
     JobSystem js;
     js.adopt();
 
+    // For thread safety, we allocate each KTX blob now, before invoking the job system.
+    image::KtxBundle bundle(mipLevels, 1, false);
+    if (g_ktxContainer) {
+        bundle.info() = {
+            .endianness = KtxBundle::ENDIAN_DEFAULT,
+            .glType = KtxBundle::UNSIGNED_BYTE,
+            .glTypeSize = 1,
+            .glFormat = KtxBundle::LUMINANCE,
+            .glInternalFormat = KtxBundle::LUMINANCE,
+            .glBaseInternalFormat = KtxBundle::LUMINANCE,
+            .pixelWidth = (uint32_t) width,
+            .pixelHeight = (uint32_t) height,
+            .pixelDepth = 0,
+        };
+        for (uint32_t i = 0; i < mipLevels; i++) {
+            bundle.allocateBlob({i}, (width >> i) * (height >> i));
+        }
+    }
+
     JobSystem::Job* parent = js.createJob();
     for (size_t i = 0; i < mipLevels; i++) {
-        JobSystem::Job* mip = jobs::createJob(js, parent,
-                [&normalImage, &mipImages, outputMap, i, width, height, exportGrayscale, hasRoughnessMap]() {
+        JobSystem::Job* mip = jobs::createJob(js, parent, [&bundle, &normalImage, &mipImages,
+                outputMap, i, width, height, hasRoughnessMap]() {
             const size_t w = width >> i;
             const size_t h = height >> i;
 
-            LinearImage image(w, h, 3);
+            LinearImage image(w, h, 1);
 
             if (i == 0) {
                 if (hasRoughnessMap) {
                     if (mipImages.at(0).getWidth() == image.getWidth()) {
-                        const size_t size = image.getWidth() * image.getHeight() * 12;
+                        const size_t size = image.getWidth() * image.getHeight() * sizeof(float);
                         memcpy(image.getPixelRef(), mipImages.at(0).getPixelRef(), size);
                     } else {
                         prefilter<true>(normalImage, mipImages.at(0), 0, image);
                     }
                 } else {
-                    std::fill_n(image.get<float3>(), w * h, float3(g_roughness));
+                    std::fill_n(image.get<float>(), w * h, g_roughness);
                 }
             } else {
                 if (hasRoughnessMap) {
@@ -399,6 +397,17 @@ int main(int argc, char* argv[]) {
                 } else {
                     prefilter(normalImage, i, image);
                 }
+            }
+
+            if (g_ktxContainer) {
+                std::unique_ptr<uint8_t[]> data;
+                if (g_linearOutput) {
+                    data = image::fromLinearToGrayscale<uint8_t>(image);
+                } else {
+                    data = image::fromLinearTosRGB<uint8_t, 1>(image);
+                }
+                bundle.setBlob({(uint32_t) i}, data.get(), w * h);
+                return;
             }
 
             const std::string ext = outputMap.getExtension();
@@ -411,9 +420,6 @@ int main(int argc, char* argv[]) {
                 std::cerr << "The output file cannot be opened: " << out << std::endl;
                 return;
             }
-            if (exportGrayscale) {
-                image = extractChannel(image, 0);
-            }
             ImageEncoder::encode(outputStream, g_format, image, g_compression, out.getPath());
             outputStream.close();
             if (!outputStream.good()) {
@@ -424,4 +430,13 @@ int main(int argc, char* argv[]) {
         js.run(mip);
     }
     js.runAndWait(parent);
+
+    if (g_ktxContainer) {
+        using namespace std;
+        vector<uint8_t> fileContents(bundle.getSerializedLength());
+        bundle.serialize(fileContents.data(), fileContents.size());
+        ofstream outputStream(outputMap.c_str(), ios::out | ios::binary);
+        outputStream.write((const char*) fileContents.data(), fileContents.size());
+        outputStream.close();
+    }
 }

@@ -2149,9 +2149,19 @@ $DFG_1$                         | $DFG_2$                         | ${ DFG_1, DF
 
 #### The $LD$ term visualized ####
 
-$LD$ is the convolution of the environment by a function that only depends on the roughness $\alpha$.
+$LD$ is the convolution of the environment by a function that only depends on the $\alpha$ parameter
+(itself related to the roughness, see section [Roughness remapping and clamping]).
 $LD$ can conveniently be stored in a mip-mapped cubemap where increasing LODs receive the environment
-pre-filtered with increasing roughness $\alpha$.
+pre-filtered with increasing roughness. This works well because this convolution is a
+powerful low-pass filter. To make good use of each mipmap level, it is necessary to remap
+$\alpha$; we find that using a power remapping with $\gamma = 2$ works well and is convenient.
+
+$$
+\begin{align*}
+    \alpha       &= roughness^2                        \\
+    lod_{\alpha} &= \alpha^{\frac{1}{2}} = roughness   \\
+\end{align*}
+$$
 
 See an example below:
 
@@ -2308,7 +2318,7 @@ vec3 specularColor = mix(dfg.xxx, dfg.yyy, f0);
 #### Summary ####
 
 In order to calculate the specular contribution of distant image-based lights, we had to make a few
-approximations:
+approximations and compromises:
 
     - $v = n$, by far the assumption contributing to the largest error when integrating the
       non-constant part of the IBL. This results in the complete loss of roughness anisotropy
@@ -2317,6 +2327,11 @@ approximations:
     - Roughness contribution for the non-constant part of the IBL is quantized and trilinear filtering
       is used to interpolate between these levels. This is most visible at low roughnes (e.g.: around 0.0625
       for a 9 LODs cubemap).
+
+    - Because mipmap levels are used to store the pre-integrated environment, they can't be used for
+      texture minification, as they ought to. This can causes aliasing or moiré artifacts in high frequency 
+      regions or the environment at low roughness and/or distant or small objects. 
+      This can also impact performance due to the resulting poor cache access pattern. 
 
     - No Fresnel for the non-constant part of the IBL.
 
@@ -2339,8 +2354,12 @@ Notice how instead of bluring we see a "cross-fade" between two blurs.](images/i
 
 ![Figure [iblRoughnessInLods1]:
 Error due to storing the roughness in cubemaps LODs at roughness = 0.125 (i.e.: sampling exactly level 1).
-When the roughness closely matches a LOD, The error due to trilinear filtering in the cubemap is
+When the roughness closely matches a LOD, the error due to trilinear filtering in the cubemap is
 reduced. Notice the errors due to $v = n$ at grazing angles.](images/ibl/ibl_trilinear_1.png)
+
+![Figure [iblMoirePattern]:
+Moiré pattern due to texture minification on a metallic sphere at $\alpha = 0$
+using an environment made of colored vertical stripes (skybox hidden).](images/ibl/ibl_no_mipmaping.png)
 
 
 ### Clear coat ###
@@ -3314,25 +3333,52 @@ The biggest difference is visible at grazing angles, which is most likely explai
 
 ## Coordinates systems
 
-### Main coordinates system
+### World coordinates system
 
 Filament uses a Y-up, right-handed coordinate system.
 
 ![Figure [coordinates]: Red +X, green +Y, blue +Z (rendered in Marmoset Toolbag).](images/screenshot_coordinates.jpg)
 
+
+### Camera coordinates system
+
+Filament's Camera looks towards its local -Z axis. That is, when placing a camera in the world
+without any transform applied to it, the camera looks down the world's -Z axis.
+
+
 ### Cubemaps coordinates system
 
-All the cubemaps used in Filament (environment background, reflection probes, etc.) will follow the OpenGL convention for faces alignment show in figure [cubemapCoordinates].
+All cubemaps used in Filament follow the OpenGL convention for face
+alignment shown in figure [cubemapCoordinates].
 
 ![Figure [cubemapCoordinates]: Horizontal cross representation of a cubemap following the OpenGL faces alignment convention.](images/screenshot_cubemap_coordinates.png)
 
-#### Equirectangular environment maps
+Note that environment background and reflection probes are mirrored (see section [Mirroring]).
 
-To convert equirectangular environment maps to horizontal/vertical cross cubemaps we position the +Z face in the center of the source rectilinear environment map.
 
 #### Mirroring
 
-To simplify the rendering of reflections, cubemaps will be stored mirrored on the X axis. This means that cubemaps used as environment backgrounds need to be mirrored again at runtime. An easy way to achieve for skyboxes is to use textured back faces.
+To simplify the rendering of reflections, IBL cubemaps are stored mirrored on the X axis. This is
+the default behaviour of the `cmgen` tool. This means that an IBL cubemap used as environment 
+background needs to be mirrored again at runtime. 
+An easy way to achieve this for skyboxes is to use textured back faces. Filament does
+this by default.
+
+
+#### Equirectangular environment maps
+
+To convert equirectangular environment maps to horizontal/vertical cross cubemaps we position the
++Z face in the center of the source rectilinear environment map.
+
+
+#### World space orientation of environment maps and Skyboxes
+
+When specifying a skybox or an IBL in Filament, the specified cubemap is oriented such that its 
+-Z face points towards the +Z axis of the world (this is because filament assumes mirrored cubemaps, 
+see section [Mirroring]). However, because environments and skyboxes are expected to be pre-mirrored, 
+their -Z (back) face points towards the world's -Z axis as expected (and the camera looks toward that 
+direction by default, see section [Camera coordinates system]).
+
 
 # Annex
 

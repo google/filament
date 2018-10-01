@@ -41,6 +41,7 @@ struct KtxBlobIndex {
 };
 
 struct KtxBlobList;
+struct KtxMetadata;
 
 /**
  * KtxBundle is a structured set of opaque data blobs that can be passed straight to the GPU, such
@@ -97,6 +98,12 @@ public:
     KtxInfo& info() { return mInfo; }
 
     /**
+     * Gets or sets key/value metadata.
+     */
+    const char* getMetadata(const char* key, size_t* valueSize = nullptr) const;
+    void setMetadata(const char* key, const char* value);
+
+    /**
      * Gets the number of miplevels (this is never zero).
      */
     uint32_t getNumMipLevels() const { return mNumMipLevels; }
@@ -123,6 +130,12 @@ public:
      */
     bool setBlob(KtxBlobIndex index, uint8_t const* data, uint32_t size);
 
+    /**
+     * Allocates the blob at the given index to the given number of bytes. This allows subsequent
+     * calls to setBlob to be thread-safe.
+     */
+    bool allocateBlob(KtxBlobIndex index, uint32_t size);
+
     // The following constants help clients populate the "info" struct. Most of them have corollary
     // constants in the OpenGL headers.
 
@@ -142,12 +155,18 @@ public:
 
     static constexpr uint32_t ENDIAN_DEFAULT = 0x04030201;
 
+    static constexpr uint32_t RGB_S3TC_DXT1 = 0x83F0;
+    static constexpr uint32_t RGBA_S3TC_DXT1 = 0x83F1;
+    static constexpr uint32_t RGBA_S3TC_DXT3 = 0x83F2;
+    static constexpr uint32_t RGBA_S3TC_DXT5 = 0x83F3;
+
 private:
     image::KtxInfo mInfo = {};
     uint32_t mNumMipLevels;
     uint32_t mArrayLength;
     uint32_t mNumCubeFaces;
     std::unique_ptr<KtxBlobList> mBlobs;
+    std::unique_ptr<KtxMetadata> mMetadata;
 };
 
 } // namespace image

@@ -149,6 +149,7 @@ bool GLSLPostProcessor::process(const std::string& inputShader,
         mShLang = EShLangFragment;
     }
 
+    TProgram program;
     TShader tShader(mShLang);
 
     // The cleaner must be declared after the TShader to prevent ASAN failures.
@@ -166,10 +167,19 @@ bool GLSLPostProcessor::process(const std::string& inputShader,
         return false;
     }
 
+    program.addShader(&tShader);
+    // Even though we only have a single shader stage, linking is still necessary to finalize
+    // SPIR-V types
+    bool linkOk = program.link(msg);
+    if (!linkOk) {
+        std::cerr << tShader.getInfoLog() << std::endl;
+        return false;
+    }
+
     switch (mConfig.getOptimizationLevel()) {
         case Config::Optimization::NONE:
             if (mSpirvOutput) {
-                GlslangToSpv(*tShader.getIntermediate(), *mSpirvOutput);
+                GlslangToSpv(*program.getIntermediate(mShLang), *mSpirvOutput);
             } else {
                 std::cerr << "GLSL post-processor invoked with optimization level NONE"
                         << std::endl;
@@ -211,16 +221,21 @@ void GLSLPostProcessor::preprocessOptimization(glslang::TShader& tShader,
     }
 
     if (mSpirvOutput) {
+        TProgram program;
         TShader spirvShader(mShLang);
         const char* shaderCString = glsl.c_str();
         spirvShader.setStrings(&shaderCString, 1);
         GLSLTools::prepareShaderParser(spirvShader, mShLang, mLangVersion,
                 mConfig.getOptimizationLevel());
         ok = spirvShader.parse(&DefaultTBuiltInResource, mLangVersion, false, msg);
-        if (!ok) {
+        program.addShader(&spirvShader);
+        // Even though we only have a single shader stage, linking is still necessary to finalize
+        // SPIR-V types
+        bool linkOk = program.link(msg);
+        if (!ok || !linkOk) {
             std::cerr << spirvShader.getInfoLog() << std::endl;
         } else {
-            GlslangToSpv(*spirvShader.getIntermediate(), *mSpirvOutput);
+            GlslangToSpv(*program.getIntermediate(mShLang), *mSpirvOutput);
         }
     }
 

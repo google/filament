@@ -23,13 +23,14 @@
     <script src="filaweb.js"></script>
     <script>
     load({
-        'albedo':                    load_rawfile('monkey/albedo.ktx'),
+        'albedo':                    use_s3tc ? load_rawfile('monkey/albedo_s3tc.ktx') :
+                                                load_rawfile('monkey/albedo.ktx'),
         'metallic':                  load_rawfile('monkey/metallic.ktx'),
         'roughness':                 load_rawfile('monkey/roughness.ktx'),
         'normal':                    load_rawfile('monkey/normal.ktx'),
         'ao':                        load_rawfile('monkey/ao.ktx'),
         'mesh':                      load_rawfile('monkey/mesh.filamesh'),
-        'syferfontein_18d_clear_2k': load_cubemap('syferfontein_18d_clear_2k')
+        'syferfontein_18d_clear_2k': load_cubemap('syferfontein_18d_clear_2k', '.ktx')
     });
     </script>
 </body>

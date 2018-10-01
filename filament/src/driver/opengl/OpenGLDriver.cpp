@@ -235,6 +235,7 @@ void OpenGLDriver::initExtensionsGLES(GLint major, GLint minor, std::set<StaticS
     ext.OES_EGL_image_external_essl3 = hasExtension(exts, "GL_OES_EGL_image_external_essl3");
     ext.EXT_debug_marker = hasExtension(exts, "GL_EXT_debug_marker");
     ext.EXT_color_buffer_half_float = hasExtension(exts, "GL_EXT_color_buffer_half_float");
+    ext.texture_compression_s3tc = hasExtension(exts, "WEBGL_compressed_texture_s3tc");
 }
 
 void OpenGLDriver::initExtensionsGL(GLint major, GLint minor, std::set<StaticString> const& exts) {

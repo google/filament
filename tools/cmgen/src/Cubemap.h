@@ -78,15 +78,8 @@ public:
 
     size_t getDimensions() const;
 
-    enum class Geometry {
-        HORIZONTAL_CROSS,
-        VERTICAL_CROSS,
-    };
-    void setGeometry(Geometry geometry) { mGeometry = geometry; }
-    Geometry getGeometry() const { return mGeometry; }
     void makeSeamless();
 
-private:
     struct Address {
         Face face;
         double s = 0;
@@ -97,11 +90,11 @@ private:
     // (this is why this is private)
     static Address getAddressFor(const math::double3& direction);
 
+private:
     size_t mDimensions = 0;
     double mScale = 1;
     double mUpperBound = 0;
     Image mFaces[6];
-    Geometry mGeometry = Geometry::HORIZONTAL_CROSS;
 };
 
 inline const Image& Cubemap::getImageForFace(Face face) const {

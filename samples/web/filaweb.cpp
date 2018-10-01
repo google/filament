@@ -16,9 +16,6 @@
 
 #include "filaweb.h"
 
-#include <string>
-#include <sstream>
-
 #include <utils/Path.h>
 
 #include <imgui.h>
@@ -31,6 +28,9 @@
 #include <emscripten.h>
 
 #include <image/KtxBundle.h>
+
+#include <string>
+#include <sstream>
 
 using namespace filament;
 using namespace image;
@@ -191,6 +191,7 @@ Asset getTexture(const char* name) {
     if (extension == "png" || extension == "rgbm") {
         return getPngTexture(rawfile);
     }
+    // Do not check for KTX here, sometimes we use an alternate file extension.
     return getKtxTexture(rawfile);
 }
 
@@ -207,13 +208,7 @@ Asset getCubemap(const char* name) {
     key = prefix + "skybox";
     *skyFaces = getKtxTexture(getRawFile(key.c_str()));
 
-    // Load the spherical harmonics coefficients.
-    Asset* shCoeffs = new Asset;
-    key = prefix + "sh.txt";
-    *shCoeffs = getRawFile(key.c_str());
-
     Asset result = {};
-    result.envShCoeffs.reset(shCoeffs);
     result.envIBL.reset(envFaces);
     result.envSky.reset(skyFaces);
     return result;
@@ -227,16 +222,15 @@ SkyLight getSkyLight(Engine& engine, const char* name) {
     static auto asset = filaweb::getCubemap(name);
 
     // Parse the coefficients.
-    std::istringstream shReader((const char*) asset.envShCoeffs->rawData.get());
+    const char* shtext = asset.envIBL->texture->getMetadata("sh");
+    if (!shtext) {
+        cerr << name << " is missing spherical harmonics coefficients." << endl;
+        abort();
+    }
+    std::istringstream shReader(shtext);
     shReader >> std::skipws;
-    std::string line;
     for (size_t i = 0; i < 9; i++) {
-        std::getline(shReader, line);
-        int n = sscanf(line.c_str(), "(%f,%f,%f)",
-                &result.bands[i].r, &result.bands[i].g, &result.bands[i].b);
-        if (n != 3) {
-            abort();
-        }
+        shReader >> result.bands[i].r >> result.bands[i].g >> result.bands[i].b;
     }
 
     // Copy over the miplevels for the indirect light.
@@ -317,6 +311,28 @@ SkyLight getSkyLight(Engine& engine, const char* name) {
     result.skybox = Skybox::Builder().environment(skybox).build(engine);
 
     return result;
+}
+
+filament::driver::CompressedPixelDataType toPixelDataType(uint32_t format) {
+    using DstFormat = filament::driver::CompressedPixelDataType;
+    switch (format) {
+        case KtxBundle::RGB_S3TC_DXT1: return DstFormat::DXT1_RGB;
+        case KtxBundle::RGBA_S3TC_DXT1: return DstFormat::DXT1_RGBA;
+        case KtxBundle::RGBA_S3TC_DXT3: return DstFormat::DXT3_RGBA;
+        case KtxBundle::RGBA_S3TC_DXT5: return DstFormat::DXT5_RGBA;
+    }
+    return (filament::driver::CompressedPixelDataType) 0xffff;
+}
+
+filament::driver::TextureFormat toTextureFormat(uint32_t format) {
+    using DstFormat = filament::driver::TextureFormat;
+    switch (format) {
+        case KtxBundle::RGB_S3TC_DXT1: return DstFormat::DXT1_RGB;
+        case KtxBundle::RGBA_S3TC_DXT1: return DstFormat::DXT1_RGBA;
+        case KtxBundle::RGBA_S3TC_DXT3: return DstFormat::DXT3_RGBA;
+        case KtxBundle::RGBA_S3TC_DXT5: return DstFormat::DXT5_RGBA;
+    }
+    return (filament::driver::TextureFormat) 0xffff;
 }
 
 }  // namespace filaweb

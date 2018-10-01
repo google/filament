@@ -33,7 +33,7 @@ void Cubemap::resetDimensions(size_t dim) {
     mDimensions = dim;
     mScale = 2.0 / dim;
     mUpperBound = std::nextafter(mDimensions, 0);
-    for (size_t i=0 ; i<6 ; i++) {
+    for (size_t i = 0; i < 6; i++) {
         mFaces[i].reset();
     }
 }
@@ -95,54 +95,81 @@ Cubemap::Address Cubemap::getAddressFor(const double3& r) {
  * right or bottom. This works well with cubemaps stored as a cross in memory.
  */
 void Cubemap::makeSeamless() {
-    Geometry geometry = mGeometry;
     size_t dim = getDimensions();
-    auto stitch = [ & ](void* dst, size_t incDst, void const* src, ssize_t incSrc) {
-        for (size_t i = 0; i < dim; ++i) {
-            *(Texel*)dst = *(Texel*)src;
-            dst = ((uint8_t*)dst + incDst);
-            src = ((uint8_t*)src + incSrc);
-        }
-    };
+    size_t D = dim;
 
+    // here we assume that all faces share the same underlying image
     const size_t bpr = getImageForFace(Face::NX).getBytesPerRow();
     const size_t bpp = getImageForFace(Face::NX).getBytesPerPixel();
 
-    if (geometry == Geometry::HORIZONTAL_CROSS ||
-        geometry == Geometry::VERTICAL_CROSS) {
-        stitch(  getImageForFace(Face::NX).getPixelRef(0, dim), bpp,
-                getImageForFace(Face::NY).getPixelRef(0, dim - 1), -bpr);
+    auto getTexel = [](Image& image, ssize_t x, ssize_t y) -> Texel* {
+        return (Texel*)((uint8_t*)image.getData() + x * image.getBytesPerPixel() + y * image.getBytesPerRow());
+    };
 
-        stitch(  getImageForFace(Face::PY).getPixelRef(dim, 0), bpr,
-                getImageForFace(Face::PX).getPixelRef(dim - 1, 0), -bpp);
-
-        stitch(  getImageForFace(Face::PX).getPixelRef(0, dim), bpp,
-                getImageForFace(Face::NY).getPixelRef(dim - 1, 0), bpr);
-
-        stitch(  getImageForFace(Face::NY).getPixelRef(dim, 0), bpr,
-                getImageForFace(Face::PX).getPixelRef(0, dim - 1), bpp);
-
-        if (geometry == Geometry::HORIZONTAL_CROSS) { // horizontal cross
-            stitch(  getImageForFace(Face::NZ).getPixelRef(0, dim), bpp,
-                    getImageForFace(Face::NY).getPixelRef(dim - 1, dim - 1), -bpp);
-
-            stitch(  getImageForFace(Face::NZ).getPixelRef(dim, 0), bpr,
-                    getImageForFace(Face::NX).getPixelRef(0, 0), bpr);
-
-            stitch(  getImageForFace(Face::NY).getPixelRef(0, dim), bpp,
-                    getImageForFace(Face::NZ).getPixelRef(dim - 1, dim - 1), -bpp);
-
-        } else {
-            stitch(  getImageForFace(Face::NZ).getPixelRef(0, dim), bpp,
-                    getImageForFace(Face::PY).getPixelRef(0, dim - 1), bpp);
-
-            stitch(  getImageForFace(Face::NZ).getPixelRef(dim, 0), bpr,
-                    getImageForFace(Face::PX).getPixelRef(dim - 1, dim - 1), -bpr);
-
-            stitch(  getImageForFace(Face::PX).getPixelRef(dim, 0), bpr,
-                    getImageForFace(Face::NZ).getPixelRef(dim - 1, dim - 1), -bpr);
+    auto stitch = [ & ](
+            Face faceDst, ssize_t xdst, ssize_t ydst, size_t incDst,
+            Face faceSrc, size_t xsrc, size_t ysrc, ssize_t incSrc) {
+        Image& imageDst = getImageForFace(faceDst);
+        Image& imageSrc = getImageForFace(faceSrc);
+        Texel* dst = getTexel(imageDst, xdst, ydst);
+        Texel* src = getTexel(imageSrc, xsrc, ysrc);
+        for (size_t i = 0; i < dim; ++i) {
+            *dst = *src;
+            dst = (Texel*)((uint8_t*)dst + incDst);
+            src = (Texel*)((uint8_t*)src + incSrc);
         }
-    }
+    };
+
+    auto corners = [ & ](Face face) {
+        size_t L = D - 1;
+        Image& image = getImageForFace(face);
+        *getTexel(image,  -1,  -1) = (*getTexel(image, 0, 0) + *getTexel(image,  -1,  0) + *getTexel(image, 0,    -1)) / 3;
+        *getTexel(image, L+1,  -1) = (*getTexel(image, L, 0) + *getTexel(image,   L, -1) + *getTexel(image, L+1,   0)) / 3;
+        *getTexel(image,  -1, L+1) = (*getTexel(image, 0, L) + *getTexel(image,  -1,  L) + *getTexel(image, 0,   L+1)) / 3;
+        *getTexel(image, L+1, L+1) = (*getTexel(image, L, L) + *getTexel(image, L+1,  L) + *getTexel(image, L+1,   L)) / 3;
+    };
+
+    // +Y / Top
+    stitch( Face::PY, -1,  0,  bpr, Face::NX,  0,    0,    bpp);      // left
+    stitch( Face::PY,  0, -1,  bpp, Face::NZ,  D-1,  0,   -bpp);      // top
+    stitch( Face::PY,  D,  0,  bpr, Face::PX,  D-1,  0,   -bpp);      // right
+    stitch( Face::PY,  0,  D,  bpp, Face::PZ,  0,    0,    bpp);      // bottom
+    corners(Face::PY);
+
+    // -X / Left
+    stitch( Face::NX, -1,  0,  bpr, Face::NZ,  D-1,  0,    bpr);      // left
+    stitch( Face::NX,  0, -1,  bpp, Face::PY,  0,    0,    bpr);      // top
+    stitch( Face::NX,  D,  0,  bpr, Face::PZ,  0,    0,    bpr);      // right
+    stitch( Face::NX,  0,  D,  bpp, Face::NY,  0,    D-1, -bpr);      // bottom
+    corners(Face::NX);
+
+    // +Z / Front
+    stitch( Face::PZ, -1,  0,  bpr, Face::NX,  D-1,  0,    bpr);      // left
+    stitch( Face::PZ,  0, -1,  bpp, Face::PY,  0,    D-1,  bpp);      // top
+    stitch( Face::PZ,  D,  0,  bpr, Face::PX,  0,    0,    bpr);      // right
+    stitch( Face::PZ,  0,  D,  bpp, Face::NY,  0,    0,    bpp);      // bottom
+    corners(Face::PZ);
+
+    // +X / Right
+    stitch( Face::PX, -1,  0,  bpr, Face::PZ,  D-1,  0,    bpr);      // left
+    stitch( Face::PX,  0, -1,  bpp, Face::PY,  D-1,  D-1, -bpr);      // top
+    stitch( Face::PX,  D,  0,  bpr, Face::NZ,  0,    0,    bpr);      // right
+    stitch( Face::PX,  0,  D,  bpp, Face::NY,  D-1,  0,    bpr);      // bottom
+    corners(Face::PX);
+
+    // -Z / Back
+    stitch( Face::NZ, -1,  0,  bpr, Face::PX,  D-1,  0,    bpr);      // left
+    stitch( Face::NZ,  0, -1,  bpp, Face::PY,  D-1,  0,   -bpp);      // top
+    stitch( Face::NZ,  D,  0,  bpr, Face::NX,  0,    0,    bpr);      // right
+    stitch( Face::NZ,  0,  D,  bpp, Face::NY,  D-1,  D-1, -bpp);      // bottom
+    corners(Face::NZ);
+
+    // -Y / Bottom
+    stitch( Face::NY, -1,  0,  bpr, Face::NX,  D-1,  D-1, -bpp);      // left
+    stitch( Face::NY,  0, -1,  bpp, Face::PZ,  0,    D-1,  bpp);      // top
+    stitch( Face::NY,  D,  0,  bpr, Face::PX,  0,    D-1,  bpp);      // right
+    stitch( Face::NY,  0,  D,  bpp, Face::NZ,  D-1,  D-1, -bpp);      // bottom
+    corners(Face::NY);
 }
 
 Cubemap::Texel Cubemap::filterAt(const Image& image, double x, double y) {
@@ -152,6 +179,7 @@ Cubemap::Texel Cubemap::filterAt(const Image& image, double x, double y) {
     // and contain the "seamless" data.
     size_t x1 = x0 + 1;
     size_t y1 = y0 + 1;
+
     const float u = float(x - x0);
     const float v = float(y - y0);
     const float one_minus_u = 1 - u;
