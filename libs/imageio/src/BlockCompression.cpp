@@ -22,13 +22,18 @@
 
 #include <astcenc.h>
 
+#define STB_DXT_IMPLEMENTATION
+#include <stb_dxt.h>
+
 using namespace image;
 
 using std::string;
 
 namespace image {
 
-AstcTexture astcCompress(const LinearImage& original, AstcConfig config) {
+static LinearImage extendToFourChannels(LinearImage source);
+
+CompressedTexture astcCompress(const LinearImage& original, AstcConfig config) {
 
     // If this is the first time, initialize the ARM encoder tables.
 
@@ -42,35 +47,36 @@ AstcTexture astcCompress(const LinearImage& original, AstcConfig config) {
 
     // Check the validity of the given block size.
 
-    AstcFormat format;
+    using Format = CompressedFormat;
+    Format format;
     if (config.blocksize == math::ushort2 {4, 4}) {
-        format = config.srgb ? AstcFormat::SRGB8_ALPHA8_ASTC_4x4 : AstcFormat::RGBA_ASTC_4x4;
+        format = config.srgb ? Format::SRGB8_ALPHA8_ASTC_4x4 : Format::RGBA_ASTC_4x4;
     } else if (config.blocksize == math::ushort2 {5, 4}) {
-        format = config.srgb ? AstcFormat::SRGB8_ALPHA8_ASTC_5x4 : AstcFormat::RGBA_ASTC_5x4;
+        format = config.srgb ? Format::SRGB8_ALPHA8_ASTC_5x4 : Format::RGBA_ASTC_5x4;
     } else if (config.blocksize == math::ushort2 {5, 5}) {
-        format = config.srgb ? AstcFormat::SRGB8_ALPHA8_ASTC_5x5 : AstcFormat::RGBA_ASTC_5x5;
+        format = config.srgb ? Format::SRGB8_ALPHA8_ASTC_5x5 : Format::RGBA_ASTC_5x5;
     } else if (config.blocksize == math::ushort2 {6, 5}) {
-        format = config.srgb ? AstcFormat::SRGB8_ALPHA8_ASTC_6x5 : AstcFormat::RGBA_ASTC_6x5;
+        format = config.srgb ? Format::SRGB8_ALPHA8_ASTC_6x5 : Format::RGBA_ASTC_6x5;
     } else if (config.blocksize == math::ushort2 {6, 6}) {
-        format = config.srgb ? AstcFormat::SRGB8_ALPHA8_ASTC_6x6 : AstcFormat::RGBA_ASTC_6x6;
+        format = config.srgb ? Format::SRGB8_ALPHA8_ASTC_6x6 : Format::RGBA_ASTC_6x6;
     } else if (config.blocksize == math::ushort2 {8, 5}) {
-        format = config.srgb ? AstcFormat::SRGB8_ALPHA8_ASTC_8x5 : AstcFormat::RGBA_ASTC_8x5;
+        format = config.srgb ? Format::SRGB8_ALPHA8_ASTC_8x5 : Format::RGBA_ASTC_8x5;
     } else if (config.blocksize == math::ushort2 {8, 6}) {
-        format = config.srgb ? AstcFormat::SRGB8_ALPHA8_ASTC_8x6 : AstcFormat::RGBA_ASTC_8x6;
+        format = config.srgb ? Format::SRGB8_ALPHA8_ASTC_8x6 : Format::RGBA_ASTC_8x6;
     } else if (config.blocksize == math::ushort2 {8, 8}) {
-        format = config.srgb ? AstcFormat::SRGB8_ALPHA8_ASTC_8x8 : AstcFormat::RGBA_ASTC_8x8;
+        format = config.srgb ? Format::SRGB8_ALPHA8_ASTC_8x8 : Format::RGBA_ASTC_8x8;
     } else if (config.blocksize == math::ushort2 {10, 5}) {
-        format = config.srgb ? AstcFormat::SRGB8_ALPHA8_ASTC_10x5 : AstcFormat::RGBA_ASTC_10x5;
+        format = config.srgb ? Format::SRGB8_ALPHA8_ASTC_10x5 : Format::RGBA_ASTC_10x5;
     } else if (config.blocksize == math::ushort2 {10, 6}) {
-        format = config.srgb ? AstcFormat::SRGB8_ALPHA8_ASTC_10x6 : AstcFormat::RGBA_ASTC_10x6;
+        format = config.srgb ? Format::SRGB8_ALPHA8_ASTC_10x6 : Format::RGBA_ASTC_10x6;
     } else if (config.blocksize == math::ushort2 {10, 8}) {
-        format = config.srgb ? AstcFormat::SRGB8_ALPHA8_ASTC_10x8 : AstcFormat::RGBA_ASTC_10x8;
+        format = config.srgb ? Format::SRGB8_ALPHA8_ASTC_10x8 : Format::RGBA_ASTC_10x8;
     } else if (config.blocksize == math::ushort2 {10, 10}) {
-        format = config.srgb ? AstcFormat::SRGB8_ALPHA8_ASTC_10x10 : AstcFormat::RGBA_ASTC_10x10;
+        format = config.srgb ? Format::SRGB8_ALPHA8_ASTC_10x10 : Format::RGBA_ASTC_10x10;
     } else if (config.blocksize == math::ushort2 {12, 10}) {
-        format = config.srgb ? AstcFormat::SRGB8_ALPHA8_ASTC_12x10 : AstcFormat::RGBA_ASTC_12x10;
+        format = config.srgb ? Format::SRGB8_ALPHA8_ASTC_12x10 : Format::RGBA_ASTC_12x10;
     } else if (config.blocksize == math::ushort2 {12, 12}) {
-        format = config.srgb ? AstcFormat::SRGB8_ALPHA8_ASTC_12x12 : AstcFormat::RGBA_ASTC_12x12;
+        format = config.srgb ? Format::SRGB8_ALPHA8_ASTC_12x12 : Format::RGBA_ASTC_12x12;
     } else {
         return {};
     }
@@ -79,43 +85,9 @@ AstcTexture astcCompress(const LinearImage& original, AstcConfig config) {
     // It expects four-channel data, so we extend or curtail the channel count in a reasonable way.
     // The encoder can take half-floats or bytes, but we always give it half-floats.
 
-    LinearImage source = original;
+    LinearImage source = extendToFourChannels(original);
     const uint32_t width = source.getWidth();
     const uint32_t height = source.getHeight();
-    auto createEmptyImage = [width, height](float value) {
-        auto result = LinearImage(width, height, 1);
-        float* pixels = result.getPixelRef(0, 0);
-        std::fill(pixels, pixels + width * height, value);
-        return result;
-    };
-    switch (source.getChannels()) {
-        case 4: break;
-        case 1: {
-            auto l = image::extractChannel(source, 0);
-            auto a = createEmptyImage(1.0f);
-            source = image::combineChannels({l, l, l, a});
-        }
-        case 2: {
-            auto l = image::extractChannel(source, 0);
-            auto a = image::extractChannel(source, 1);
-            source = image::combineChannels({l, l, l, a});
-        }
-        case 3: {
-            auto r = image::extractChannel(source, 0);
-            auto g = image::extractChannel(source, 1);
-            auto b = image::extractChannel(source, 2);
-            auto a = createEmptyImage(1.0f);
-            source = image::combineChannels({r, g, b, a});
-        }
-        default: {
-            auto r = image::extractChannel(source, 0);
-            auto g = image::extractChannel(source, 1);
-            auto b = image::extractChannel(source, 2);
-            auto a = image::extractChannel(source, 3);
-            source = image::combineChannels({r, g, b, a});
-        }
-    }
-
     astc_codec_image* input_image = allocate_image(16, width, height, 1, 0);
     for (int y = 0; y < height; y++) {
         auto imagedata16 = input_image->imagedata16[0][y];
@@ -236,7 +208,7 @@ AstcTexture astcCompress(const LinearImage& original, AstcConfig config) {
     return {
         .format = format,
         .size = size,
-        .data = decltype(AstcTexture::data)(buffer)
+        .data = decltype(CompressedTexture::data)(buffer)
     };
 }
 
@@ -280,6 +252,106 @@ AstcConfig astcParseOptionString(const string& configString) {
     config.blocksize[0] = std::stoi(blocksize.substr(0, _x));
     config.blocksize[1] = std::stoi(blocksize.substr(_x + 1));
     return config;
+}
+
+static uint32_t imin(uint32_t a, uint32_t b) {
+    return (a < b) ? a : b;
+}
+
+static void extract4x4RGBA(uint8_t* dst, const LinearImage& source, uint32_t x0, uint32_t y0) {
+    const uint32_t maxx = source.getWidth() - 1;
+    const uint32_t maxy = source.getHeight() - 1;
+    for (uint32_t y = y0, y1 = y0 + 4; y < y1; ++y) {
+        for (uint32_t x = x0, x1 = x0 + 4; x < x1; ++x, dst += 4) {
+            int clamped_x = imin(maxx, x);
+            int clamped_y = imin(maxy, y);
+            float const* rgba = source.getPixelRef(clamped_x, clamped_y);
+            dst[0] = (uint8_t) (rgba[0] * 255.0f);
+            dst[1] = (uint8_t) (rgba[1] * 255.0f);
+            dst[2] = (uint8_t) (rgba[2] * 255.0f);
+            dst[3] = (uint8_t) (rgba[3] * 255.0f);
+        }
+    }
+}
+
+// Our S3TC / DXT encoder uses the STB implementation by Fabian Giesen.
+//
+// Due to limitations in STB, this only supports the following formats:
+//  - DXT1 with no alpha (16 input pixels in 64 bits of output, 6:1)
+//  - DXT5 with alpha (16 input pixels into 128 bits of output, 4:1)
+//
+// TODO: investigate using something more capable than STB (eg AMD Compressenator, bimg, libsquish)
+CompressedTexture s3tcCompress(const LinearImage& original, S3tcConfig config) {
+    const bool dxt5 = config.format == CompressedFormat::RGBA_S3TC_DXT5;
+    LinearImage source = extendToFourChannels(original);
+    uint8_t block[64];
+    uint32_t xblocks = (source.getWidth() + 3) / 4;
+    uint32_t yblocks = (source.getHeight() + 3) / 4;
+    uint32_t size = xblocks * yblocks * (dxt5 ? 16 : 8);
+    uint8_t* buffer = new uint8_t[size];
+    uint8_t* dst = buffer;
+    for (int y = 0, h = source.getHeight(); y < h; y += 4) {
+        for (int x = 0, w = source.getWidth(); x < w; x += 4) {
+            extract4x4RGBA(block, source, x, y);
+            stb_compress_dxt_block(dst, block, dxt5, 8);
+            dst += dxt5 ? 16 : 8;
+        }
+    }
+    return {
+        .format = config.format,
+        .size = size,
+        .data = decltype(CompressedTexture::data)(buffer)
+    };
+}
+
+S3tcConfig s3tcParseOptionString(const std::string& options) {
+    if (options == "rgb_dxt1") {
+        return {CompressedFormat::RGB_S3TC_DXT1, false};
+    }
+    if (options == "rgba_dxt5") {
+        return {CompressedFormat::RGBA_S3TC_DXT5, false};
+    }
+    return {};
+}
+
+static LinearImage extendToFourChannels(LinearImage original) {
+    LinearImage source = original;
+    const uint32_t width = source.getWidth();
+    const uint32_t height = source.getHeight();
+    auto createEmptyImage = [width, height](float value) {
+        auto result = LinearImage(width, height, 1);
+        float* pixels = result.getPixelRef(0, 0);
+        std::fill(pixels, pixels + width * height, value);
+        return result;
+    };
+    switch (source.getChannels()) {
+        case 4: break;
+        case 1: {
+            auto l = image::extractChannel(source, 0);
+            auto a = createEmptyImage(1.0f);
+            source = image::combineChannels({l, l, l, a});
+        }
+        case 2: {
+            auto l = image::extractChannel(source, 0);
+            auto a = image::extractChannel(source, 1);
+            source = image::combineChannels({l, l, l, a});
+        }
+        case 3: {
+            auto r = image::extractChannel(source, 0);
+            auto g = image::extractChannel(source, 1);
+            auto b = image::extractChannel(source, 2);
+            auto a = createEmptyImage(1.0f);
+            source = image::combineChannels({r, g, b, a});
+        }
+        default: {
+            auto r = image::extractChannel(source, 0);
+            auto g = image::extractChannel(source, 1);
+            auto b = image::extractChannel(source, 2);
+            auto a = image::extractChannel(source, 3);
+            source = image::combineChannels({r, g, b, a});
+        }
+    }
+    return source;
 }
 
 } // namespace image

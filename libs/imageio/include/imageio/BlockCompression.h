@@ -56,7 +56,18 @@ struct AstcConfig {
     bool srgb;
 };
 
-enum class AstcFormat {
+enum class CompressedFormat {
+    INVALID = 0,
+
+    RGB_S3TC_DXT1 = 0x83F0,
+    RGBA_S3TC_DXT1 = 0x83F1,
+    RGBA_S3TC_DXT3 = 0x83F2,
+    RGBA_S3TC_DXT5 = 0x83F3,
+    SRGB_S3TC_DXT1 = 0x8C4C,
+    SRGB_ALPHA_S3TC_DXT1 = 0x8C4D,
+    SRGB_ALPHA_S3TC_DXT3 = 0x8C4E,
+    SRGB_ALPHA_S3TC_DXT5 = 0x8C4F,
+
     RGBA_ASTC_4x4 = 0x93B0,
     RGBA_ASTC_5x4 = 0x93B1,
     RGBA_ASTC_5x5 = 0x93B2,
@@ -87,23 +98,36 @@ enum class AstcFormat {
     SRGB8_ALPHA8_ASTC_12x12 = 0x93DD,
 };
 
-// Represents the result of compression, including which of the 28 internal formats that the
-// encoder finally settled on, based on the hints supplied in AstcConfig.
-struct AstcTexture {
-    const AstcFormat format;
+// Represents the opaque result of compression and the chosen texture format.
+struct CompressedTexture {
+    const CompressedFormat format;
     const uint32_t size;
     std::unique_ptr<uint8_t[]> data;
 };
 
 // Uses the CPU to compress a linear image (1 to 4 channels) into an ASTC texture. The 16-byte
 // header block that ARM uses in their file format is not included.
-AstcTexture astcCompress(const LinearImage& source, AstcConfig config);
+CompressedTexture astcCompress(const LinearImage& source, AstcConfig config);
 
 // Parses a simple underscore-delimited string to produce an ASTC compression configuration. This
 // makes it easy to incorporate the compression API into command-line tools. If the string is
 // malformed, this returns a config with a 0x0 blocksize. Example strings: fast_ldr_4x4,
 // thorough_normals_6x6, veryfast_hdr_12x10
 AstcConfig astcParseOptionString(const std::string& options);
+
+// Informs the S3TC encoder of the desired output.
+struct S3tcConfig {
+    CompressedFormat format;
+    bool srgb;
+};
+
+// Uses the CPU to compress a linear image (1 to 4 channels) into an S3TC texture.
+CompressedTexture s3tcCompress(const LinearImage& source, S3tcConfig config);
+
+// Parses an underscore-delimited string to produce an S3TC compression configuration. Currently
+// this only accepts "rgb_dxt1" and "rgba_dxt5". If the string is malformed, this returns a config
+// with an invalid format.
+S3tcConfig s3tcParseOptionString(const std::string& options);
 
 } // namespace image
 

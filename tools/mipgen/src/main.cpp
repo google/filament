@@ -78,7 +78,9 @@ Options:
        ignore the alpha component of the input image
    --compression=COMPRESSION, -c COMPRESSION
        format specific compression:
-           KTX: astc_[fast/thorough]_[ldr/hdr]_WxH, where WxH is a valid block size
+           KTX:
+             astc_[fast|thorough]_[ldr|hdr]_WxH, where WxH is a valid block size
+             st3c_rgb_dxt1, st3c_rgba_dxt5
            PNG: Ignored
            Radiance: Ignored
            Photoshop: 16 (default), 32
@@ -256,7 +258,8 @@ int main(int argc, char* argv[]) {
         // which might make sense when generating individual files, but for a KTX
         // bundle, we want to include level 0, so add 1 to the KTX level count.
         KtxBundle container(1 + miplevels.size(), 1, false);
-        container.info() = {
+        auto& info = container.info();
+        info = {
             .endianness = KtxBundle::ENDIAN_DEFAULT,
             .glType = KtxBundle::UNSIGNED_BYTE,
             .glTypeSize = 3,
@@ -268,27 +271,34 @@ int main(int argc, char* argv[]) {
             .pixelDepth = 0,
         };
         if (g_grayscale) {
-            auto& info = container.info();
             info.glTypeSize = 1;
             info.glFormat =
             info.glInternalFormat =
             info.glBaseInternalFormat = KtxBundle::LUMINANCE;
         }
         AstcConfig astcConfig {};
+        S3tcConfig s3tcConfig {};
         if (!g_compression.empty()) {
             if (g_compression.substr(0, 5) == "astc_") {
                 string suffix = g_compression.substr(5);
                 astcConfig = astcParseOptionString(suffix);
-                auto block = astcConfig.blocksize;
-                printf("Compressing with blocksize = %dx%d\n", block[0], block[1]);
+            } else if (g_compression.substr(0, 5) == "s3tc_") {
+                string suffix = g_compression.substr(5);
+                s3tcConfig = s3tcParseOptionString(suffix);
             }
-            if (astcConfig.blocksize[0] == 0) {
+            if (astcConfig.blocksize[0] == 0 && s3tcConfig.format == CompressedFormat::INVALID) {
                 cerr << "Unrecognized compression: " << g_compression << endl;
                 return 1;
             }
+            // The KTX spec says the following for compressed textures: glTypeSize should 1,
+            // glFormat should be 0, and glBaseInternalFormat should be RED, RG, RGB, or RGBA.
+            // The glInternalFormat field is the only field that specifies the actual format.
+            info.glTypeSize = 1;
+            info.glFormat = 0;
+            info.glBaseInternalFormat = KtxBundle::RGBA;
         }
         uint32_t mip = 0;
-        auto addLevel = [&container, &mip, astcConfig, inputPath](const LinearImage& image) {
+        auto addLevel = [&](const LinearImage& image) {
             std::unique_ptr<uint8_t[]> data;
             if (astcConfig.blocksize[0] > 0) {
                 // The ASTC encoder calls exit(1) if it fails, so it's very useful to print some
@@ -296,11 +306,20 @@ int main(int argc, char* argv[]) {
                 // Note that the encoder has limitations in terms of image size.
                 printf("Starting ASTC compression for %s (%dx%d)\n", inputPath.getName().c_str(),
                         image.getWidth(), image.getHeight());
-                AstcTexture tex = astcCompress(image, astcConfig);
+                CompressedTexture tex = astcCompress(image, astcConfig);
                 // Add newline here because the ASTC encoder has a progress indicator that issues a
                 // carriage return without a line feed.
                 putc('\n', stdout);
                 container.setBlob({mip++}, tex.data.get(), tex.size);
+                info.glInternalFormat = (uint32_t) tex.format;
+                return;
+            }
+            if (s3tcConfig.format != CompressedFormat::INVALID) {
+                printf("Starting S3TC compression for %s (%dx%d)\n", inputPath.getName().c_str(),
+                        image.getWidth(), image.getHeight());
+                CompressedTexture tex = s3tcCompress(image, s3tcConfig);
+                container.setBlob({mip++}, tex.data.get(), tex.size);
+                info.glInternalFormat = (uint32_t) tex.format;
                 return;
             }
             if (g_grayscale && g_linearized) {
