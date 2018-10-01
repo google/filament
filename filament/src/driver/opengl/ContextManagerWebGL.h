@@ -42,6 +42,8 @@ public:
     void destroyFence(Fence* fence) noexcept final override;
     driver::FenceStatus waitFence(Fence* fence, uint64_t timeout) noexcept final override;
 
+    void setPresentationTime(long time) noexcept final override {}
+
     Stream* createStream(void* nativeStream) noexcept final override { return nullptr; }
     void destroyStream(Stream* stream) noexcept final override {}
     void attach(Stream* stream, intptr_t tname) noexcept final override {}

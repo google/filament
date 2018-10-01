@@ -45,6 +45,8 @@ public:
         return driver::FenceStatus::ERROR;
     }
 
+    void setPresentationTime(long time) noexcept final override {}
+
     Stream* createStream(void* nativeStream) noexcept final { return nullptr; }
     void destroyStream(Stream* stream) noexcept final {}
     void attach(Stream* stream, intptr_t tname) noexcept final {}

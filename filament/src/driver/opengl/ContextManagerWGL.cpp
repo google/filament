@@ -192,9 +192,6 @@ void ContextManagerWGL::commit(ExternalContext::SwapChain* swapChain) noexcept {
     }
 }
 
-void ContextManagerWGL::setPresentationTime(long time) noexcept {
-}
-
 //TODO Implement WGL fences
 ExternalContext::Fence* ContextManagerWGL::createFence() noexcept {
     return nullptr;
