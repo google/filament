@@ -37,11 +37,11 @@ public:
     void makeCurrent(SwapChain* swapChain) noexcept override;
     void commit(SwapChain* swapChain) noexcept override;
 
-    void setPresentationTime(long time) noexcept override;
-
     Fence* createFence() noexcept override;
     void destroyFence(Fence* fence) noexcept override;
     driver::FenceStatus waitFence(Fence* fence, uint64_t timeout) noexcept override;
+
+    void setPresentationTime(long time) noexcept final override {}
 
     Stream* createStream(void* nativeStream) noexcept final override { return nullptr; }
     void destroyStream(Stream* stream) noexcept final override {}

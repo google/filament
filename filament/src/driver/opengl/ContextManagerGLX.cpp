@@ -179,9 +179,6 @@ void ContextManagerGLX::commit(ExternalContext::SwapChain* swapChain) noexcept {
     g_glx.swapBuffers(mGLXDisplay, (GLXDrawable)swapChain);
 }
 
-void ContextManagerGLX::setPresentationTime(long time) noexcept {
-}
-
 //TODO Implement GLX fences
 ExternalContext::Fence* ContextManagerGLX::createFence() noexcept {
     Fence* f = new Fence();
