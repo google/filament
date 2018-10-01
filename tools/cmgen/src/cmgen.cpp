@@ -140,7 +140,7 @@ static void printUsage(char* name) {
             "       Print copyright and license information\n\n"
             "   --quiet, -q\n"
             "       Quiet mode. Suppress all non-error output\n\n"
-            "   --type=[faces|equirect|octahedron|ktx], -t [cubemap|equirect|octahedron|ktx]\n"
+            "   --type=[cubemap|equirect|octahedron|ktx], -t [cubemap|equirect|octahedron|ktx]\n"
             "       Specify output type (default: cubemap)\n\n"
             "   --format=[exr|hdr|psd|rgbm|png|dds|ktx], -f [exr|hdr|psd|rgbm|png|dds|ktx]\n"
             "       Specify output file format. ktx implies -type=ktx.\n\n"
@@ -249,7 +249,7 @@ static int handleCommandLineArgments(int argc, char* argv[]) {
                 g_quiet = true;
                 break;
             case 't':
-                if (arg == "faces") {
+                if (arg == "cubemap") {
                     g_type = OutputType::FACES;
                     type_specified = true;
                 }
@@ -257,7 +257,7 @@ static int handleCommandLineArgments(int argc, char* argv[]) {
                     g_type = OutputType::KTX;
                     type_specified = true;
                 }
-                if (arg == "equirect") {
+                if ((arg == "equirect") || (arg == "equirectangular")) {
                     g_type = OutputType::EQUIRECT;
                     type_specified = true;
                 }
