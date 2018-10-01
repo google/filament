@@ -76,13 +76,15 @@ std::unique_ptr<Driver> OpenGLDriver::create(
             return {};
         }
 
-        if (GLES31_HEADERS) { // we're at least on OpenGL ES 3.1 headers
+        if (GLES31_HEADERS) {
+            // we require GLES 3.1 headers, but we support GLES 3.0
             if (UTILS_UNLIKELY(!(major >= 3 && minor >= 0))) {
                 PANIC_LOG("OpenGL ES 3.0 minimum needed (current %d.%d)", major, minor);
                 goto cleanup;
 
             }
-        } else if (GL41_HEADERS) { // we're at least on OpenGL 4.1 headers
+        } else if (GL41_HEADERS) {
+            // we require GL 4.1 headers and minimum version
             if (UTILS_UNLIKELY(!((major == 4 && minor >= 1) || major > 4))) {
                 PANIC_LOG("OpenGL 4.1 minimum needed (current %d.%d)", major, minor);
                 goto cleanup;
@@ -159,16 +161,20 @@ OpenGLDriver::OpenGLDriver(ContextManagerGL* externalContext) noexcept
     }
 
     ShaderModel shaderModel = ShaderModel::UNKNOWN;
-    if (GLES31_HEADERS) { // we're at least on OpenGL ES 3.1 headers
+    if (GLES31_HEADERS) {
         if (major == 3 && minor >= 0) {
             shaderModel = ShaderModel::GL_ES_30;
         }
+        if (major == 3 && minor >= 1) {
+            features.multisample_texture = true;
+        }
         initExtensionsGLES(major, minor, exts);
-    } else if (GL41_HEADERS) { // we're at least on OpenGL 4.1 headers
+    } else if (GL41_HEADERS) {
         if (major == 4 && minor >= 1) {
             shaderModel = ShaderModel::GL_CORE_41;
         }
         initExtensionsGL(major, minor, exts);
+        features.multisample_texture = true;
     };
     mShaderModel = shaderModel;
 
@@ -236,6 +242,7 @@ void OpenGLDriver::initExtensionsGLES(GLint major, GLint minor, std::set<StaticS
     ext.EXT_debug_marker = hasExtension(exts, "GL_EXT_debug_marker");
     ext.EXT_color_buffer_half_float = hasExtension(exts, "GL_EXT_color_buffer_half_float");
     ext.texture_compression_s3tc = hasExtension(exts, "WEBGL_compressed_texture_s3tc");
+    ext.EXT_multisampled_render_to_texture = hasExtension(exts, "GL_EXT_multisampled_render_to_texture");
 }
 
 void OpenGLDriver::initExtensionsGL(GLint major, GLint minor, std::set<StaticString> const& exts) {
@@ -962,9 +969,18 @@ void OpenGLDriver::createTexture(Driver::TextureHandle th, SamplerType target, u
         }
 
         if (t->samples > 1) {
-            // multi-sample texture on GL 3.2 / GLES 3.1 and above
-            t->gl.targetIndex = (uint8_t)
-                    getIndexForTextureTarget(t->gl.target = GL_TEXTURE_2D_MULTISAMPLE);
+            if (features.multisample_texture) {
+                // multi-sample texture on GL 3.2 / GLES 3.1 and above
+                t->gl.targetIndex = (uint8_t)
+                        getIndexForTextureTarget(t->gl.target = GL_TEXTURE_2D_MULTISAMPLE);
+            } else {
+                // Turn off multi-sampling for that texture. This works because we're always only
+                // doing a resolve-blit (as opposed to doing a manual resolve in the shader -- i.e.:
+                // we're never attempt to use a multisample sampler).
+                // When EXT_multisampled_render_to_texture is available, we handle  it in
+                // framebufferTexture() below; if not, the resolve-blit becomes superfluous,
+                // but at least it works.
+            }
         }
 
         textureStorage(t, w, h, depth);
@@ -980,11 +996,25 @@ void OpenGLDriver::framebufferTexture(Driver::TargetBufferInfo& binfo,
     assert(t->target != SamplerType::SAMPLER_EXTERNAL);
 
     bindFramebuffer(GL_FRAMEBUFFER, rt->gl.fbo);
-    // NOTE: on GL3.2 / GLES3.1 and above multisample is handled when creating the texture
     switch (t->target) {
         case SamplerType::SAMPLER_2D:
-            glFramebufferTexture2D(GL_FRAMEBUFFER, attachment,
-                    t->gl.target, t->gl.texture_id, binfo.level);
+#if GLES31_HEADERS
+            if (t->samples > 1 && !features.multisample_texture && ext.EXT_multisampled_render_to_texture) {
+                // we have a multi-sample texture, but multi-sampled textures are not supported,
+                // however, we have EXT_multisampled_render_to_texture -- phew.
+                // In that case, we create a multi-sampled framebuffer into our regular texture.
+                // Resolve happens automatically when sampling the texture.
+                glext::glFramebufferTexture2DMultisampleEXT(GL_FRAMEBUFFER,
+                        attachment, t->gl.target, t->gl.texture_id, binfo.level, t->samples);
+            } else
+#endif
+            {
+                // on GL3.2 / GLES3.1 and above multisample is handled when creating the texture.
+                // If multisampled textures are not supported and we end-up here, things should
+                // still work, albeit without MSAA.
+                glFramebufferTexture2D(GL_FRAMEBUFFER, attachment,
+                        t->gl.target, t->gl.texture_id, binfo.level);
+            }
             break;
         case SamplerType::SAMPLER_CUBEMAP: {
             GLenum target = getCubemapTarget(binfo.face);
@@ -1053,6 +1083,21 @@ void OpenGLDriver::createRenderTarget(Driver::RenderTargetHandle rth,
 
     GLRenderTarget* rt = construct<GLRenderTarget>(rth);
     glGenFramebuffers(1, &rt->gl.fbo);
+
+    /*
+     * Special case for GLES 3.0 (i.e. multi-sample texture not supported):
+     * When we get here, textures can't be multi-sample and we can't create a framebuffer with
+     * heterogeneous attachments. In that case, we have no choice but to set the sample count to 1.
+     *
+     * However, if EXT_multisampled_render_to_texture is supported, the situation is different
+     * because we can now create a framebuffer with a multi-sampled attachment for that texture.
+     */
+    if (samples > 1 && !features.multisample_texture && !ext.EXT_multisampled_render_to_texture) {
+        if (color.handle || depth.handle || stencil.handle) {
+            // do this only if a texture is used (in which case they'll all be single-sample)
+            samples = 1;
+        }
+    }
 
     rt->width = width;
     rt->height = height;

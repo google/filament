@@ -218,7 +218,6 @@ enum class PixelDataFormat : uint8_t {
     RGBM,
     DEPTH_COMPONENT,
     DEPTH_STENCIL,
-    STENCIL_INDEX,
     ALPHA
 };
 

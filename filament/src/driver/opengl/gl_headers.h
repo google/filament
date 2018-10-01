@@ -36,6 +36,9 @@
         extern PFNGLPUSHGROUPMARKEREXTPROC glPushGroupMarkerEXT;
         extern PFNGLPOPGROUPMARKEREXTPROC glPopGroupMarkerEXT;
 #endif
+#if GL_EXT_multisampled_render_to_texture
+        extern PFNGLFRAMEBUFFERTEXTURE2DMULTISAMPLEEXTPROC glFramebufferTexture2DMultisampleEXT;
+#endif
     }
 
     using namespace glext;
@@ -65,12 +68,6 @@
 #define GL41_HEADERS true
 #else
 #define GL41_HEADERS false
-#endif
-
-#if defined(GL_VERSION_4_5)
-#define GL45_HEADERS true
-#else
-#define GL45_HEADERS false
 #endif
 
 #endif // TNT_FILAMENT_DRIVER_GL_HEADERS_H

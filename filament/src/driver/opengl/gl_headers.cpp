@@ -33,6 +33,9 @@ PFNGLINSERTEVENTMARKEREXTPROC glInsertEventMarkerEXT;
 PFNGLPUSHGROUPMARKEREXTPROC glPushGroupMarkerEXT;
 PFNGLPOPGROUPMARKEREXTPROC glPopGroupMarkerEXT;
 #endif
+#if GL_EXT_multisampled_render_to_texture
+PFNGLFRAMEBUFFERTEXTURE2DMULTISAMPLEEXTPROC glFramebufferTexture2DMultisampleEXT;
+#endif
 }
 
 using namespace glext;
@@ -69,6 +72,11 @@ public:
         glPopGroupMarkerEXT =
                 (PFNGLPOPGROUPMARKEREXTPROC)eglGetProcAddress(
                         "glPopGroupMarkerEXT");
+#endif
+#if GL_EXT_multisampled_render_to_texture
+        glFramebufferTexture2DMultisampleEXT =
+                (PFNGLFRAMEBUFFERTEXTURE2DMULTISAMPLEEXTPROC)eglGetProcAddress(
+                        "glFramebufferTexture2DMultisampleEXT");
 #endif
     }
 } instance;

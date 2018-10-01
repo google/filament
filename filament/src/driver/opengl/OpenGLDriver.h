@@ -412,7 +412,7 @@ private:
             struct {
                 GLuint buffers[MAX_BUFFER_BINDINGS] = { 0 };
                 GLuint genericBinding = 0;
-            } targets[13];
+            } targets[8];
         } buffers;
 
         struct {
@@ -486,6 +486,11 @@ private:
     mutable tsl::robin_map<uint32_t, GLuint> mSamplerMap;
     mutable std::vector<GLTexture*> mExternalStreams;
 
+    // features supported by this version of GL or GLES
+    struct {
+        bool multisample_texture = false;
+    } features;
+
     // supported extensions detected at runtime
     struct {
         bool texture_compression_s3tc = false;
@@ -495,6 +500,7 @@ private:
         bool OES_EGL_image_external_essl3 = false;
         bool EXT_debug_marker = false;
         bool EXT_color_buffer_half_float = false;
+        bool EXT_multisampled_render_to_texture = false;
     } ext;
 
     struct {
@@ -556,16 +562,15 @@ constexpr size_t OpenGLDriver::getIndexForCap(GLenum cap) noexcept {
         case GL_DITHER:                         index =  5; break;
         case GL_SAMPLE_ALPHA_TO_COVERAGE:       index =  6; break;
         case GL_SAMPLE_COVERAGE:                index =  7; break;
-        case GL_SAMPLE_MASK:                    index =  8; break;
-        case GL_POLYGON_OFFSET_FILL:            index =  9; break;
-        case GL_PRIMITIVE_RESTART_FIXED_INDEX:  index = 10; break;
-        case GL_RASTERIZER_DISCARD:             index = 11; break;
+        case GL_POLYGON_OFFSET_FILL:            index =  8; break;
+        case GL_PRIMITIVE_RESTART_FIXED_INDEX:  index =  9; break;
+        case GL_RASTERIZER_DISCARD:             index = 10; break;
 #ifdef GL_ARB_seamless_cube_map
-        case GL_TEXTURE_CUBE_MAP_SEAMLESS:      index = 12; break;
+        case GL_TEXTURE_CUBE_MAP_SEAMLESS:      index = 11; break;
 #endif
-        default: index = 13; break; // should never happen
+        default: index = 12; break; // should never happen
     }
-    assert(index < 13 && index < state.enables.caps.size());
+    assert(index < 12 && index < state.enables.caps.size());
     return index;
 }
 
@@ -573,20 +578,16 @@ constexpr size_t OpenGLDriver::getIndexForBufferTarget(GLenum target) noexcept {
     size_t index = 0;
     switch (target) {
         case GL_ARRAY_BUFFER:               index = 0; break;
-        case GL_ATOMIC_COUNTER_BUFFER:      index = 1; break;
-        case GL_COPY_READ_BUFFER:           index = 2; break;
-        case GL_COPY_WRITE_BUFFER:          index = 3; break;
-        case GL_DRAW_INDIRECT_BUFFER:       index = 4; break;
-        case GL_DISPATCH_INDIRECT_BUFFER:   index = 5; break;
-        case GL_ELEMENT_ARRAY_BUFFER:       index = 6; break;
-        case GL_PIXEL_PACK_BUFFER:          index = 7; break;
-        case GL_PIXEL_UNPACK_BUFFER:        index = 8; break;
-        case GL_SHADER_STORAGE_BUFFER:      index = 9; break;
-        case GL_TRANSFORM_FEEDBACK_BUFFER:  index =10; break;
-        case GL_UNIFORM_BUFFER:             index =11; break;
-        default: index = 12; break; // should never happen
+        case GL_COPY_READ_BUFFER:           index = 1; break;
+        case GL_COPY_WRITE_BUFFER:          index = 2; break;
+        case GL_ELEMENT_ARRAY_BUFFER:       index = 3; break;
+        case GL_PIXEL_PACK_BUFFER:          index = 4; break;
+        case GL_PIXEL_UNPACK_BUFFER:        index = 5; break;
+        case GL_TRANSFORM_FEEDBACK_BUFFER:  index = 6; break;
+        case GL_UNIFORM_BUFFER:             index = 7; break;
+        default: index = 8; break; // should never happen
     }
-    assert(index < 12 && index < sizeof(state.buffers.targets)/sizeof(state.buffers.targets[0])); // NOLINT(misc-redundant-expression)
+    assert(index < 8 && index < sizeof(state.buffers.targets)/sizeof(state.buffers.targets[0])); // NOLINT(misc-redundant-expression)
     return index;
 }
 
