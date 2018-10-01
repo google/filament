@@ -21,6 +21,7 @@ for (let ext of Module.ctx.getSupportedExtensions()) {
     if (ext == "WEBGL_compressed_texture_s3tc") {
         use_s3tc = true;
     } else if (ext == "WEBGL_compressed_texture_astc") {
+        Module.ctx.getExtension('WEBGL_compressed_texture_astc');
         use_astc = true;
     } else if (ext == "WEBGL_compressed_texture_etc1") {
         use_etc1 = true;
