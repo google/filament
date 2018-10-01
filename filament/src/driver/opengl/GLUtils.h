@@ -223,7 +223,6 @@ constexpr inline GLenum getFormat(filament::driver::PixelDataFormat format) noex
         case PixelDataFormat::RGBM:             return GL_RGBA;
         case PixelDataFormat::DEPTH_COMPONENT:  return GL_DEPTH_COMPONENT;
         case PixelDataFormat::DEPTH_STENCIL:    return GL_DEPTH_STENCIL;
-        case PixelDataFormat::STENCIL_INDEX:    return GL_STENCIL_INDEX;
         case PixelDataFormat::ALPHA:            return GL_ALPHA;
     }
 }
