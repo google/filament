@@ -565,20 +565,45 @@ std::unique_ptr<Driver> ContextManagerEGL::createDriver(void* const sharedGLCont
     EGLConfig eglConfig = nullptr;
 
     // find an opaque config
-    if (!eglChooseConfig(mEGLDisplay, configAttribs, &mEGLConfig, 1, &configsCount) ||
-            configsCount == 0) {
+    if (!eglChooseConfig(mEGLDisplay, configAttribs, &mEGLConfig, 1, &configsCount)) {
         logEglError("eglChooseConfig");
         goto error;
+    }
+
+    if (configsCount == 0) {
+      // warn and retry without EGL_RECORDABLE_ANDROID
+      logEglError("eglChooseConfig failed to find opaque config with EGL_RECORDABLE_ANDROID.  Continuing without EGL_RECORDABLE_ANDROID.");
+      configAttribs[10] = EGL_RECORDABLE_ANDROID;
+      configAttribs[11] = EGL_DONT_CARE;
+      if (!eglChooseConfig(mEGLDisplay, configAttribs, &mEGLConfig, 1, &configsCount) ||
+              configsCount == 0) {
+          logEglError("eglChooseConfig");
+          goto error;
+      }
     }
 
     // find a transparent config
     configAttribs[8] = EGL_ALPHA_SIZE;
     configAttribs[9] = 8;
     if (!eglChooseConfig(mEGLDisplay, configAttribs, &mEGLTransparentConfig, 1, &configsCount) ||
-            configsCount == 0) {
+            (configAttribs[11] == EGL_DONT_CARE && configsCount == 0)) {
         logEglError("eglChooseConfig");
         goto error;
     }
+
+    if (configsCount == 0) {
+      // warn and retry without EGL_RECORDABLE_ANDROID
+      logEglError("eglChooseConfig failed to find transparent config with EGL_RECORDABLE_ANDROID.  Continuing without EGL_RECORDABLE_ANDROID.");
+      // this is not fatal
+      configAttribs[10] = EGL_RECORDABLE_ANDROID;
+      configAttribs[11] = EGL_DONT_CARE;
+      if (!eglChooseConfig(mEGLDisplay, configAttribs, &mEGLTransparentConfig, 1, &configsCount) ||
+              configsCount == 0) {
+          logEglError("eglChooseConfig");
+          goto error;
+      }
+    }
+
 
     if (!extensions.has("EGL_KHR_no_config_context")) {
         // if we have the EGL_KHR_no_config_context, we don't need to worry about the config
