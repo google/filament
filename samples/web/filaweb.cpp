@@ -16,9 +16,6 @@
 
 #include "filaweb.h"
 
-#include <string>
-#include <sstream>
-
 #include <utils/Path.h>
 
 #include <imgui.h>
@@ -31,6 +28,9 @@
 #include <emscripten.h>
 
 #include <image/KtxBundle.h>
+
+#include <string>
+#include <sstream>
 
 using namespace filament;
 using namespace image;
@@ -311,6 +311,28 @@ SkyLight getSkyLight(Engine& engine, const char* name) {
     result.skybox = Skybox::Builder().environment(skybox).build(engine);
 
     return result;
+}
+
+filament::driver::CompressedPixelDataType toPixelDataType(uint32_t format) {
+    using DstFormat = filament::driver::CompressedPixelDataType;
+    switch (format) {
+        case KtxBundle::RGB_S3TC_DXT1: return DstFormat::DXT1_RGB;
+        case KtxBundle::RGBA_S3TC_DXT1: return DstFormat::DXT1_RGBA;
+        case KtxBundle::RGBA_S3TC_DXT3: return DstFormat::DXT3_RGBA;
+        case KtxBundle::RGBA_S3TC_DXT5: return DstFormat::DXT5_RGBA;
+    }
+    return (filament::driver::CompressedPixelDataType) 0xffff;
+}
+
+filament::driver::TextureFormat toTextureFormat(uint32_t format) {
+    using DstFormat = filament::driver::TextureFormat;
+    switch (format) {
+        case KtxBundle::RGB_S3TC_DXT1: return DstFormat::DXT1_RGB;
+        case KtxBundle::RGBA_S3TC_DXT1: return DstFormat::DXT1_RGBA;
+        case KtxBundle::RGBA_S3TC_DXT3: return DstFormat::DXT3_RGBA;
+        case KtxBundle::RGBA_S3TC_DXT5: return DstFormat::DXT5_RGBA;
+    }
+    return (filament::driver::TextureFormat) 0xffff;
 }
 
 }  // namespace filaweb

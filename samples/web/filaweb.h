@@ -60,6 +60,9 @@ struct SkyLight {
 
 SkyLight getSkyLight(filament::Engine& engine, const char* name);
 
+filament::driver::CompressedPixelDataType toPixelDataType(uint32_t format);
+filament::driver::TextureFormat toTextureFormat(uint32_t format);
+
 static const auto NoopCallback = [](filament::Engine*, filament::View*) {};
 
 class Application {

@@ -4,6 +4,29 @@ let context_ready = false;
 let previous_mouse_buttons = 0;
 let queued_mouse_events = [];
 
+let use_astc = false;
+let use_s3tc = false;
+let use_etc1 = false;
+
+let canvas = document.getElementById('filament-canvas');
+let ctx = GL.createContext(canvas, {
+    majorVersion: 2,
+    minorVersion: 0,
+    antialias: false,
+    depth: false,
+    alpha: false
+});
+GL.makeContextCurrent(ctx);
+for (let ext of Module.ctx.getSupportedExtensions()) {
+    if (ext == "WEBGL_compressed_texture_s3tc") {
+        use_s3tc = true;
+    } else if (ext == "WEBGL_compressed_texture_astc") {
+        use_astc = true;
+    } else if (ext == "WEBGL_compressed_texture_etc1") {
+        use_etc1 = true;
+    }
+}
+
 // This is usually (not always) called before the wasm has finished JIT compiling.
 async function load(promises) {
     for (let name in promises) {
@@ -13,18 +36,8 @@ async function load(promises) {
     maybe_launch();
 }
 
-// This is called as soon as the wasm has finished JIT compilation. We also create the WebGL 2.0
-// context here.
+// This is called as soon as the wasm has finished JIT compilation.
 Module.postRun = function() {
-    let canvas = document.getElementById('filament-canvas');
-    let ctx = GL.createContext(canvas, {
-        majorVersion: 2,
-        minorVersion: 0,
-        antialias: false,
-        depth: false,
-        alpha: false
-    });
-    GL.makeContextCurrent(ctx);
     context_ready = true;
     maybe_launch();
 }

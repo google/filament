@@ -84,6 +84,8 @@ function(add_ktxfiles SOURCE TARGET EXTRA_ARGS)
 endfunction()
 
 add_ktxfiles("assets/models/monkey/albedo.png" "monkey/albedo.ktx" "")
+add_ktxfiles("assets/models/monkey/albedo.png" "monkey/albedo_astc.ktx" "--compression=astc_fast_ldr_4x4")
+add_ktxfiles("assets/models/monkey/albedo.png" "monkey/albedo_s3tc.ktx" "--compression=s3tc_rgb_dxt1")
 add_ktxfiles("assets/models/monkey/normal.png" "monkey/normal.ktx" "--kernel=NORMALS;--linear")
 add_ktxfiles("assets/models/monkey/roughness.png" "monkey/roughness.ktx" "--grayscale")
 add_ktxfiles("assets/models/monkey/metallic.png" "monkey/metallic.ktx" "--grayscale")

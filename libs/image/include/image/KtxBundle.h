@@ -155,6 +155,11 @@ public:
 
     static constexpr uint32_t ENDIAN_DEFAULT = 0x04030201;
 
+    static constexpr uint32_t RGB_S3TC_DXT1 = 0x83F0;
+    static constexpr uint32_t RGBA_S3TC_DXT1 = 0x83F1;
+    static constexpr uint32_t RGBA_S3TC_DXT3 = 0x83F2;
+    static constexpr uint32_t RGBA_S3TC_DXT5 = 0x83F3;
+
 private:
     image::KtxInfo mInfo = {};
     uint32_t mNumMipLevels;
