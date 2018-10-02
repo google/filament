@@ -66,14 +66,6 @@ static Texture* setTextureParameter(Engine& engine, filaweb::Asset& asset, strin
         asset->texture.reset();
     };
 
-    Texture::Format format;
-    switch (info.glTypeSize) {
-        case 1: format = Texture::Format::R; break;
-        case 2: format = Texture::Format::RG; break;
-        case 3: format = Texture::Format::RGB; break;
-        case 4: format = Texture::Format::RGBA; break;
-    }
-
     uint8_t* data;
     uint32_t nbytes;
     asset.texture->getBlob({}, &data, &nbytes);
@@ -95,6 +87,14 @@ static Texture* setTextureParameter(Engine& engine, filaweb::Asset& asset, strin
         texture->setImage(engine, 0, std::move(pb));
         app.mi->setParameter(name.c_str(), texture, sampler);
         return texture;
+    }
+
+    Texture::Format format;
+    switch (info.glTypeSize) {
+        case 1: format = Texture::Format::R; break;
+        case 2: format = Texture::Format::RG; break;
+        case 3: format = Texture::Format::RGB; break;
+        case 4: format = Texture::Format::RGBA; break;
     }
 
     Texture::PixelBufferDescriptor pb(data, nbytes, format, Texture::Type::UBYTE, destructor,

@@ -348,6 +348,16 @@ T toFilamentEnum(uint32_t format) {
         case KtxBundle::SRGB8_ALPHA8_ASTC_10x10: return T::SRGB8_ALPHA8_ASTC_10x10;
         case KtxBundle::SRGB8_ALPHA8_ASTC_12x10: return T::SRGB8_ALPHA8_ASTC_12x10;
         case KtxBundle::SRGB8_ALPHA8_ASTC_12x12: return T::SRGB8_ALPHA8_ASTC_12x12;
+        case KtxBundle::R11_EAC: return T::EAC_R11;
+        case KtxBundle::SIGNED_R11_EAC: return T::EAC_R11_SIGNED;
+        case KtxBundle::RG11_EAC: return T::EAC_RG11;
+        case KtxBundle::SIGNED_RG11_EAC: return T::EAC_RG11_SIGNED;
+        case KtxBundle::RGB8_ETC2: return T::ETC2_RGB8;
+        case KtxBundle::SRGB8_ETC2: return T::ETC2_SRGB8;
+        case KtxBundle::RGB8_ALPHA1_ETC2: return T::ETC2_RGB8_A1;
+        case KtxBundle::SRGB8_ALPHA1_ETC: return T::ETC2_SRGB8_A1;
+        case KtxBundle::RGBA8_ETC2_EAC: return T::ETC2_EAC_RGBA8;
+        case KtxBundle::SRGB8_ALPHA8_ETC2_EAC: return T::ETC2_EAC_SRGBA8;
     }
     return (T) 0xffff;
 }
