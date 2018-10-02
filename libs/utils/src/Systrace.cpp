@@ -15,6 +15,7 @@
  */
 
 #include <utils/Systrace.h>
+#include <utils/Log.h>
 
 #if defined(ANDROID)
 
@@ -46,7 +47,7 @@ static pthread_once_t atrace_once_control = PTHREAD_ONCE_INIT;
 void Systrace::init_once() noexcept {
     sMarkerFd = open("/sys/kernel/debug/tracing/trace_marker", O_WRONLY | O_CLOEXEC);
     if (UTILS_UNLIKELY(sMarkerFd == -1)) {
-        fprintf(stderr, "Error opening trace file: %s (%d)", strerror(errno), errno);
+        slog.e << "Error opening trace file: " << strerror(errno) << " (" << errno << ")" << io::endl;
     } else {
         sIsTracingAvailable = true;
     }
@@ -99,7 +100,7 @@ void Systrace::begin_body(int fd, int pid, const char* name) noexcept {
          * it is impossible for name_len to be < 0 if len >= sizeof(buf). */    \
         int name_len = strlen(name) - (len - sizeof(buf)) - 1;                  \
         /* Truncate the name to make the message fit. */                        \
-        fprintf(stderr, "Truncated name in %s: %s\n", __FUNCTION__, name);      \
+        slog.e << "Truncated name in " << __FUNCTION__ << ": " << name << io::endl; \
         len = snprintf(buf, sizeof(buf), format_begin "%.*s" format_end, pid,   \
             name_len, name, value);                                             \
     }                                                                           \
