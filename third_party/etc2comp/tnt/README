@@ -1,0 +1,27 @@
+This folder was created as follows:
+
+(1)
+
+    curl -L -O https://github.com/google/etc2comp/archive/9cd0f9c.zip
+    unzip 9cd0f9c.zip
+    mv etc2comp-* etc2comp
+
+(2)
+
+Remove the outer IF block and the EtcTool line from CMakeLists.txt
+
+(3)
+
+Add this line to EtcLib/CMakeLists.txt:
+
+    target_include_directories(EtcLib PUBLIC Etc EtcCodec)
+
+The above line exposes the public header to downstream projects; it's the "Modern CMake"
+alternative to the existing lines:
+
+    include_directories(./Etc)
+    include_directories(./EtcCodec)
+
+See:
+
+    https://cliutils.gitlab.io/modern-cmake/chapters/intro/dodonot.html

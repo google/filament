@@ -77,7 +77,6 @@ public:
             case PixelDataFormat::RG:
             case PixelDataFormat::RG_INTEGER:
             case PixelDataFormat::DEPTH_STENCIL:
-            case PixelDataFormat::STENCIL_INDEX:
                 n = 2;
                 break;
             case PixelDataFormat::RGB:

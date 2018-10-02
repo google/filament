@@ -135,11 +135,11 @@ void FRenderer::renderJob(ArenaScope& arena, FView* view) {
     Viewport const& vp = view->getViewport();
     const bool hasPostProcess = view->hasPostProcessPass();
     float2 scale = view->updateScale(mFrameInfoManager.getLastFrameTime());
-    bool mUseFXAA = view->getAntiAliasing() == View::AntiAliasing::FXAA;
+    bool useFXAA = view->getAntiAliasing() == View::AntiAliasing::FXAA;
     if (!hasPostProcess) {
         // dynamic scaling and FXAA are part of the post-process phase and can't happen if
         // it's disabled.
-        mUseFXAA = false;
+        useFXAA = false;
         scale = 1.0f;
     }
 
@@ -213,9 +213,9 @@ void FRenderer::renderJob(ArenaScope& arena, FView* view) {
         Handle<HwProgram> toneMappingProgram = engine.getPostProcessProgram(
                 translucent ? PostProcessStage::TONE_MAPPING_TRANSLUCENT
                             : PostProcessStage::TONE_MAPPING_OPAQUE);
-        ppm.pass(mUseFXAA ? TextureFormat::RGBA8 : ldrFormat, toneMappingProgram);
+        ppm.pass(useFXAA ? TextureFormat::RGBA8 : ldrFormat, toneMappingProgram);
 
-        if (mUseFXAA) {
+        if (useFXAA) {
             Handle<HwProgram> antiAliasingProgram = engine.getPostProcessProgram(
                     translucent ? PostProcessStage::ANTI_ALIASING_TRANSLUCENT
                                 : PostProcessStage::ANTI_ALIASING_OPAQUE);
