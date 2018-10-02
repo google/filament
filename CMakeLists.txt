@@ -310,6 +310,7 @@ if (NOT ANDROID AND NOT WEBGL)
     add_subdirectory(${EXTERNAL}/spirv-tools)
 
     add_subdirectory(${EXTERNAL}/astcenc/tnt)
+    add_subdirectory(${EXTERNAL}/etc2comp)
     add_subdirectory(${EXTERNAL}/getopt)
     add_subdirectory(${EXTERNAL}/glslang/tnt)
     add_subdirectory(${EXTERNAL}/imgui/tnt)
