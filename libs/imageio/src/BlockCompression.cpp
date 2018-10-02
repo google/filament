@@ -21,6 +21,7 @@
 #include <cmath>
 
 #include <astcenc.h>
+#include <Etc.h>
 
 #define STB_DXT_IMPLEMENTATION
 #include <stb_dxt.h>
@@ -312,6 +313,103 @@ S3tcConfig s3tcParseOptionString(const std::string& options) {
         return {CompressedFormat::RGBA_S3TC_DXT5, false};
     }
     return {};
+}
+
+CompressedTexture etcCompress(const LinearImage& original, EtcConfig config) {
+    LinearImage source = extendToFourChannels(original);
+    constexpr int threadcount = 1; // TODO: set this thread count
+    Etc::Image::Format etcformat;
+    switch (config.format) {
+        case CompressedFormat::R11_EAC: etcformat = Etc::Image::Format::R11; break;
+        case CompressedFormat::SIGNED_R11_EAC: etcformat = Etc::Image::Format::SIGNED_R11; break;
+        case CompressedFormat::RG11_EAC: etcformat = Etc::Image::Format::RG11; break;
+        case CompressedFormat::SIGNED_RG11_EAC: etcformat = Etc::Image::Format::SIGNED_RG11; break;
+        case CompressedFormat::RGB8_ETC2: etcformat = Etc::Image::Format::RGB8; break;
+        case CompressedFormat::SRGB8_ETC2: etcformat = Etc::Image::Format::SRGB8; break;
+        case CompressedFormat::RGB8_ALPHA1_ETC2: etcformat = Etc::Image::Format::RGB8A1; break;
+        case CompressedFormat::SRGB8_ALPHA1_ETC: etcformat = Etc::Image::Format::SRGB8A1; break;
+        case CompressedFormat::RGBA8_ETC2_EAC: etcformat = Etc::Image::Format::RGBA8; break;
+        case CompressedFormat::SRGB8_ALPHA8_ETC2_EAC: etcformat = Etc::Image::Format::SRGBA8; break;
+        default: return {};
+    }
+    Etc::ErrorMetric etcmetric;
+    switch (config.metric) {
+        case EtcErrorMetric::RGBA: etcmetric = Etc::RGBA; break;
+        case EtcErrorMetric::RGBX: etcmetric = Etc::RGBX; break;
+        case EtcErrorMetric::REC709: etcmetric = Etc::REC709; break;
+        case EtcErrorMetric::NUMERIC: etcmetric = Etc::NUMERIC; break;
+        case EtcErrorMetric::NORMALXYZ: etcmetric = Etc::NORMALXYZ; break;
+        default: return {};
+    }
+    unsigned char *paucEncodingBits;
+    unsigned int uiEncodingBitsBytes;
+    unsigned int uiExtendedWidth;
+    unsigned int uiExtendedHeight;
+    int iEncodingTime_ms;
+
+    // The etc2comp API doesn't tell you that you need to free paucEncodingBits, but they have a
+    // commented-out "delete[] m_paucEncodingBits" in their Image destructor, which is essentially
+    // what our unique_ptr wrapper does (CompressedTexture::data).
+
+    Etc::Encode(source.getPixelRef(0, 0),
+        source.getWidth(), source.getHeight(),
+        etcformat,
+        etcmetric,
+        config.effort,
+        threadcount,
+        1024,
+        &paucEncodingBits, &uiEncodingBitsBytes,
+        &uiExtendedWidth, &uiExtendedHeight,
+        &iEncodingTime_ms);
+
+    return {
+        .format = config.format,
+        .size = uiEncodingBitsBytes,
+        .data = decltype(CompressedTexture::data)(paucEncodingBits)
+    };
+}
+
+EtcConfig etcParseOptionString(const std::string& options) {
+    EtcConfig result {};
+    const size_t _2 = options.rfind('_');
+    const size_t _1 = options.rfind('_', _2 - 1);
+    std::string sformat = options.substr(0, _1);
+    std::string smetric = options.substr(_1 + 1, _2 - _1 - 1);
+    std::string seffort = options.substr(_2 + 1);
+    if (sformat == "r11") {
+        result.format = CompressedFormat::R11_EAC;
+    } else if (sformat == "signed_r11") {
+        result.format = CompressedFormat::SIGNED_R11_EAC;
+    } else if (sformat == "rg11") {
+        result.format = CompressedFormat::RG11_EAC;
+    } else if (sformat == "signed_rg11") {
+        result.format = CompressedFormat::SIGNED_RG11_EAC;
+    } else if (sformat == "rgb8") {
+        result.format = CompressedFormat::RGB8_ETC2;
+    } else if (sformat == "srgb8") {
+        result.format = CompressedFormat::SRGB8_ETC2;
+    } else if (sformat == "rgb8_alpha") {
+        result.format = CompressedFormat::RGB8_ALPHA1_ETC2;
+    } else if (sformat == "srgb8_alpha") {
+        result.format = CompressedFormat::SRGB8_ALPHA1_ETC;
+    } else if (sformat == "rgba8_etc2") {
+        result.format = CompressedFormat::RGBA8_ETC2_EAC;
+    } else if (sformat == "srgb8_alpha8_etc2") {
+        result.format = CompressedFormat::SRGB8_ALPHA8_ETC2_EAC;
+    }
+    if (smetric == "rgba") {
+        result.metric = EtcErrorMetric::RGBA;
+    } else if (smetric == "rgbx") {
+        result.metric = EtcErrorMetric::RGBX;
+    } else if (smetric == "rec709") {
+        result.metric = EtcErrorMetric::REC709;
+    } else if (smetric == "numeric") {
+        result.metric = EtcErrorMetric::NUMERIC;
+    } else if (smetric == "normalxyz") {
+        result.metric = EtcErrorMetric::NORMALXYZ;
+    }
+    result.effort = std::stoi(seffort);
+    return result;
 }
 
 static LinearImage extendToFourChannels(LinearImage original) {

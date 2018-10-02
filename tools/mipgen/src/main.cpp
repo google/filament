@@ -81,6 +81,11 @@ Options:
            KTX:
              astc_[fast|thorough]_[ldr|hdr]_WxH, where WxH is a valid block size
              st3c_rgb_dxt1, st3c_rgba_dxt5
+             etc_FORMAT_METRIC_EFFORT
+               FORMAT is r11, signed_r11, rg11, signed_rg11, rgb8, srgb8, rgb8_alpha
+                         srgb8_alpha, rgba8, or srgb8_alpha8
+               METRIC is rgba, rgbx, rec709, numeric, or normalxyz
+               EFFORT is an integer between 0 and 100
            PNG: Ignored
            Radiance: Ignored
            Photoshop: 16 (default), 32
@@ -90,6 +95,7 @@ Options:
 Examples:
     MIPGEN -g --kernel=hermite grassland.png mip_%03d.png
     MIPGEN -f ktx --compression=astc_fast_ldr_4x4 grassland.png mips.ktx
+    MIPGEN -f ktx --compression=etc_rgb_rgba_40 grassland.png mips.ktx
 )TXT";
 
 static const char* HTML_PREFIX = R"HTML(<!DOCTYPE html>
@@ -278,15 +284,17 @@ int main(int argc, char* argv[]) {
         }
         AstcConfig astcConfig {};
         S3tcConfig s3tcConfig {};
+        EtcConfig etcConfig {};
         if (!g_compression.empty()) {
             if (g_compression.substr(0, 5) == "astc_") {
-                string suffix = g_compression.substr(5);
-                astcConfig = astcParseOptionString(suffix);
+                astcConfig = astcParseOptionString(g_compression.substr(5));
             } else if (g_compression.substr(0, 5) == "s3tc_") {
-                string suffix = g_compression.substr(5);
-                s3tcConfig = s3tcParseOptionString(suffix);
+                s3tcConfig = s3tcParseOptionString(g_compression.substr(5));
+            } else if (g_compression.substr(0, 4) == "etc_") {
+                etcConfig = etcParseOptionString(g_compression.substr(4));
             }
-            if (astcConfig.blocksize[0] == 0 && s3tcConfig.format == CompressedFormat::INVALID) {
+            if (astcConfig.blocksize[0] == 0 && s3tcConfig.format == CompressedFormat::INVALID
+                    && etcConfig.format == CompressedFormat::INVALID) {
                 cerr << "Unrecognized compression: " << g_compression << endl;
                 return 1;
             }
@@ -318,6 +326,14 @@ int main(int argc, char* argv[]) {
                 printf("Starting S3TC compression for %s (%dx%d)\n", inputPath.getName().c_str(),
                         image.getWidth(), image.getHeight());
                 CompressedTexture tex = s3tcCompress(image, s3tcConfig);
+                container.setBlob({mip++}, tex.data.get(), tex.size);
+                info.glInternalFormat = (uint32_t) tex.format;
+                return;
+            }
+            if (etcConfig.format != CompressedFormat::INVALID) {
+                printf("Starting ETC compression for %s (%dx%d)\n", inputPath.getName().c_str(),
+                        image.getWidth(), image.getHeight());
+                CompressedTexture tex = etcCompress(image, etcConfig);
                 container.setBlob({mip++}, tex.data.get(), tex.size);
                 info.glInternalFormat = (uint32_t) tex.format;
                 return;
