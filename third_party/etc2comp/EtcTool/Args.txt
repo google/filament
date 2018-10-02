@@ -1,0 +1,7 @@
+C:\Users\BSI\Desktop\etc2comp\googleTest.png
+-format RGB8
+-errormetric rgba
+-output ../../EncodedImages/googleTest.ktx
+-analyze ../../Analysis/googleTest
+-verbose
+-effort 0
