@@ -313,26 +313,51 @@ SkyLight getSkyLight(Engine& engine, const char* name) {
     return result;
 }
 
-filament::driver::CompressedPixelDataType toPixelDataType(uint32_t format) {
-    using DstFormat = filament::driver::CompressedPixelDataType;
+template<typename T>
+T toFilamentEnum(uint32_t format) {
     switch (format) {
-        case KtxBundle::RGB_S3TC_DXT1: return DstFormat::DXT1_RGB;
-        case KtxBundle::RGBA_S3TC_DXT1: return DstFormat::DXT1_RGBA;
-        case KtxBundle::RGBA_S3TC_DXT3: return DstFormat::DXT3_RGBA;
-        case KtxBundle::RGBA_S3TC_DXT5: return DstFormat::DXT5_RGBA;
+        case KtxBundle::RGB_S3TC_DXT1: return T::DXT1_RGB;
+        case KtxBundle::RGBA_S3TC_DXT1: return T::DXT1_RGBA;
+        case KtxBundle::RGBA_S3TC_DXT3: return T::DXT3_RGBA;
+        case KtxBundle::RGBA_S3TC_DXT5: return T::DXT5_RGBA;
+        case KtxBundle::RGBA_ASTC_4x4: return T::RGBA_ASTC_4x4;
+        case KtxBundle::RGBA_ASTC_5x4: return T::RGBA_ASTC_5x4;
+        case KtxBundle::RGBA_ASTC_5x5: return T::RGBA_ASTC_5x5;
+        case KtxBundle::RGBA_ASTC_6x5: return T::RGBA_ASTC_6x5;
+        case KtxBundle::RGBA_ASTC_6x6: return T::RGBA_ASTC_6x6;
+        case KtxBundle::RGBA_ASTC_8x5: return T::RGBA_ASTC_8x5;
+        case KtxBundle::RGBA_ASTC_8x6: return T::RGBA_ASTC_8x6;
+        case KtxBundle::RGBA_ASTC_8x8: return T::RGBA_ASTC_8x8;
+        case KtxBundle::RGBA_ASTC_10x5: return T::RGBA_ASTC_10x5;
+        case KtxBundle::RGBA_ASTC_10x6: return T::RGBA_ASTC_10x6;
+        case KtxBundle::RGBA_ASTC_10x8: return T::RGBA_ASTC_10x8;
+        case KtxBundle::RGBA_ASTC_10x10: return T::RGBA_ASTC_10x10;
+        case KtxBundle::RGBA_ASTC_12x10: return T::RGBA_ASTC_12x10;
+        case KtxBundle::RGBA_ASTC_12x12: return T::RGBA_ASTC_12x12;
+        case KtxBundle::SRGB8_ALPHA8_ASTC_4x4: return T::SRGB8_ALPHA8_ASTC_4x4;
+        case KtxBundle::SRGB8_ALPHA8_ASTC_5x4: return T::SRGB8_ALPHA8_ASTC_5x4;
+        case KtxBundle::SRGB8_ALPHA8_ASTC_5x5: return T::SRGB8_ALPHA8_ASTC_5x5;
+        case KtxBundle::SRGB8_ALPHA8_ASTC_6x5: return T::SRGB8_ALPHA8_ASTC_6x5;
+        case KtxBundle::SRGB8_ALPHA8_ASTC_6x6: return T::SRGB8_ALPHA8_ASTC_6x6;
+        case KtxBundle::SRGB8_ALPHA8_ASTC_8x5: return T::SRGB8_ALPHA8_ASTC_8x5;
+        case KtxBundle::SRGB8_ALPHA8_ASTC_8x6: return T::SRGB8_ALPHA8_ASTC_8x6;
+        case KtxBundle::SRGB8_ALPHA8_ASTC_8x8: return T::SRGB8_ALPHA8_ASTC_8x8;
+        case KtxBundle::SRGB8_ALPHA8_ASTC_10x5: return T::SRGB8_ALPHA8_ASTC_10x5;
+        case KtxBundle::SRGB8_ALPHA8_ASTC_10x6: return T::SRGB8_ALPHA8_ASTC_10x6;
+        case KtxBundle::SRGB8_ALPHA8_ASTC_10x8: return T::SRGB8_ALPHA8_ASTC_10x8;
+        case KtxBundle::SRGB8_ALPHA8_ASTC_10x10: return T::SRGB8_ALPHA8_ASTC_10x10;
+        case KtxBundle::SRGB8_ALPHA8_ASTC_12x10: return T::SRGB8_ALPHA8_ASTC_12x10;
+        case KtxBundle::SRGB8_ALPHA8_ASTC_12x12: return T::SRGB8_ALPHA8_ASTC_12x12;
     }
-    return (filament::driver::CompressedPixelDataType) 0xffff;
+    return (T) 0xffff;
+}
+
+filament::driver::CompressedPixelDataType toPixelDataType(uint32_t format) {
+    return toFilamentEnum<filament::driver::CompressedPixelDataType>(format);
 }
 
 filament::driver::TextureFormat toTextureFormat(uint32_t format) {
-    using DstFormat = filament::driver::TextureFormat;
-    switch (format) {
-        case KtxBundle::RGB_S3TC_DXT1: return DstFormat::DXT1_RGB;
-        case KtxBundle::RGBA_S3TC_DXT1: return DstFormat::DXT1_RGBA;
-        case KtxBundle::RGBA_S3TC_DXT3: return DstFormat::DXT3_RGBA;
-        case KtxBundle::RGBA_S3TC_DXT5: return DstFormat::DXT5_RGBA;
-    }
-    return (filament::driver::TextureFormat) 0xffff;
+    return toFilamentEnum<filament::driver::TextureFormat>(format);
 }
 
 }  // namespace filaweb

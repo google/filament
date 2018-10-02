@@ -160,6 +160,35 @@ public:
     static constexpr uint32_t RGBA_S3TC_DXT3 = 0x83F2;
     static constexpr uint32_t RGBA_S3TC_DXT5 = 0x83F3;
 
+    static constexpr uint32_t RGBA_ASTC_4x4 = 0x93B0;
+    static constexpr uint32_t RGBA_ASTC_5x4 = 0x93B1;
+    static constexpr uint32_t RGBA_ASTC_5x5 = 0x93B2;
+    static constexpr uint32_t RGBA_ASTC_6x5 = 0x93B3;
+    static constexpr uint32_t RGBA_ASTC_6x6 = 0x93B4;
+    static constexpr uint32_t RGBA_ASTC_8x5 = 0x93B5;
+    static constexpr uint32_t RGBA_ASTC_8x6 = 0x93B6;
+    static constexpr uint32_t RGBA_ASTC_8x8 = 0x93B7;
+    static constexpr uint32_t RGBA_ASTC_10x5 = 0x93B8;
+    static constexpr uint32_t RGBA_ASTC_10x6 = 0x93B9;
+    static constexpr uint32_t RGBA_ASTC_10x8 = 0x93BA;
+    static constexpr uint32_t RGBA_ASTC_10x10 = 0x93BB;
+    static constexpr uint32_t RGBA_ASTC_12x10 = 0x93BC;
+    static constexpr uint32_t RGBA_ASTC_12x12 = 0x93BD;
+    static constexpr uint32_t SRGB8_ALPHA8_ASTC_4x4 = 0x93D0;
+    static constexpr uint32_t SRGB8_ALPHA8_ASTC_5x4 = 0x93D1;
+    static constexpr uint32_t SRGB8_ALPHA8_ASTC_5x5 = 0x93D2;
+    static constexpr uint32_t SRGB8_ALPHA8_ASTC_6x5 = 0x93D3;
+    static constexpr uint32_t SRGB8_ALPHA8_ASTC_6x6 = 0x93D4;
+    static constexpr uint32_t SRGB8_ALPHA8_ASTC_8x5 = 0x93D5;
+    static constexpr uint32_t SRGB8_ALPHA8_ASTC_8x6 = 0x93D6;
+    static constexpr uint32_t SRGB8_ALPHA8_ASTC_8x8 = 0x93D7;
+    static constexpr uint32_t SRGB8_ALPHA8_ASTC_10x5 = 0x93D8;
+    static constexpr uint32_t SRGB8_ALPHA8_ASTC_10x6 = 0x93D9;
+    static constexpr uint32_t SRGB8_ALPHA8_ASTC_10x8 = 0x93DA;
+    static constexpr uint32_t SRGB8_ALPHA8_ASTC_10x10 = 0x93DB;
+    static constexpr uint32_t SRGB8_ALPHA8_ASTC_12x10 = 0x93DC;
+    static constexpr uint32_t SRGB8_ALPHA8_ASTC_12x12 = 0x93DD;
+
 private:
     image::KtxInfo mInfo = {};
     uint32_t mNumMipLevels;
