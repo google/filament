@@ -63,9 +63,6 @@ using namespace utils;
 namespace filament {
 using namespace driver;
 
-using PFNEGLGETNATIVECLIENTBUFFERANDROIDPROC =
-    EGLClientBuffer(EGLAPIENTRYP)(const AHardwareBuffer* buffer);
-
 // The Android NDK doesn't exposes extensions, fake it with eglGetProcAddress
 namespace glext {
 UTILS_PRIVATE PFNEGLCREATESYNCKHRPROC eglCreateSyncKHR;
