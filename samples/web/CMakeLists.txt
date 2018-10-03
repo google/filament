@@ -85,7 +85,7 @@ endfunction()
 
 set(ETC_R11_ARGS "--grayscale;--compression=etc_r11_numeric_40")
 
-# TODO: Instead of "rgb8" we should be using "rg11", but that causes an assertion etc2comp.
+# TODO: Instead of "rgb8" we should be using "rg11", but that causes an assertion in etc2comp.
 set(ETC_NORMALS_ARGS "--kernel=NORMALS;--linear;--compression=etc_rgb8_normalxyz_40")
 
 add_ktxfiles("assets/models/monkey/albedo.png" "monkey/albedo.ktx" "")

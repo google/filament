@@ -58,8 +58,6 @@ struct KtxMetadata;
  * decoding.
  * 
  *     https://www.khronos.org/opengles/sdk/tools/KTX/file_format_spec/
- *
- * WARNING: for now, this class discards the arbitrary key/value data that can be embedded in KTX.
  */
 class KtxBundle {
 public:

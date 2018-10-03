@@ -60,31 +60,47 @@ static SuzanneApp app;
 static Texture* setTextureParameter(Engine& engine, filaweb::Asset& asset, string name, bool linear,
         TextureSampler const &sampler) {
     const auto& info = asset.texture->getInfo();
+    const uint32_t nmips = asset.texture->getNumMipLevels();
 
-    const auto destructor = [](void* buffer, size_t size, void* user) {
-        auto asset = (filaweb::Asset*) user;
-        asset->texture.reset();
+    // This little structure tracks how many miplevels have been uploaded to the GPU so that we can
+    // free the CPU memory at the right time.
+    struct Uploader {
+        filaweb::Asset* asset;
+        uint32_t refcount;
+    };
+
+    Uploader* uploader = new Uploader {&asset, nmips};
+
+    const auto destroy = [](void* buffer, size_t size, void* user) {
+        auto uploader = (Uploader*) user;
+        if (--uploader->refcount == 0) {
+            uploader->asset->texture.reset();
+            delete uploader;
+        }
     };
 
     uint8_t* data;
     uint32_t nbytes;
-    asset.texture->getBlob({}, &data, &nbytes);
 
     // Compressed textures in KTX always have a glFormat of 0.
     if (info.glFormat == 0) {
         assert(info.pixelWidth == info.pixelHeight);
         driver::CompressedPixelDataType datatype = filaweb::toPixelDataType(info.glInternalFormat);
         driver::TextureFormat texformat = filaweb::toTextureFormat(info.glInternalFormat);
-        Texture::PixelBufferDescriptor pb(data, nbytes, datatype, nbytes, destructor, &asset);
 
         auto texture = Texture::Builder()
                 .width(info.pixelWidth)
                 .height(info.pixelHeight)
+                .levels(nmips)
                 .sampler(Texture::Sampler::SAMPLER_2D)
                 .format(texformat)
                 .build(engine);
 
-        texture->setImage(engine, 0, std::move(pb));
+        for (uint32_t level = 0; level < nmips; ++level) {
+            asset.texture->getBlob({level}, &data, &nbytes);
+            Texture::PixelBufferDescriptor pb(data, nbytes, datatype, nbytes, destroy, uploader);
+            texture->setImage(engine, level, std::move(pb));
+        }
         app.mi->setParameter(name.c_str(), texture, sampler);
         return texture;
     }
@@ -97,9 +113,6 @@ static Texture* setTextureParameter(Engine& engine, filaweb::Asset& asset, strin
         case 4: format = Texture::Format::RGBA; break;
     }
 
-    Texture::PixelBufferDescriptor pb(data, nbytes, format, Texture::Type::UBYTE, destructor,
-            &asset);
-
     Format internalFormat;
     switch (info.glTypeSize) {
         case 1: internalFormat = Format::R8; break;
@@ -111,11 +124,18 @@ static Texture* setTextureParameter(Engine& engine, filaweb::Asset& asset, strin
     auto texture = Texture::Builder()
             .width(info.pixelWidth)
             .height(info.pixelHeight)
+            .levels(nmips)
             .sampler(Texture::Sampler::SAMPLER_2D)
             .format(internalFormat)
             .build(engine);
 
-    texture->setImage(engine, 0, std::move(pb));
+    for (uint32_t level = 0; level < nmips; ++level) {
+        asset.texture->getBlob({level}, &data, &nbytes);
+        Texture::PixelBufferDescriptor pb(data, nbytes, format, Texture::Type::UBYTE,
+                destroy, uploader);
+        texture->setImage(engine, level, std::move(pb));
+    }
+
     app.mi->setParameter(name.c_str(), texture, sampler);
     return texture;
 }
@@ -149,7 +169,8 @@ void setup(Engine* engine, View* view, Scene* scene) {
     scene->addEntity(app.filamesh->renderable);
 
     // Create textures.
-    TextureSampler sampler(MagFilter::LINEAR, WrapMode::CLAMP_TO_EDGE);
+    TextureSampler sampler(TextureSampler::MinFilter::LINEAR_MIPMAP_LINEAR, MagFilter::LINEAR,
+            WrapMode::REPEAT);
     auto setTexture = [engine, sampler] (filaweb::Asset& asset, const char* name, bool linear) {
         setTextureParameter(*engine, asset, name, linear, sampler);
     };
