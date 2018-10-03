@@ -28,7 +28,7 @@
 #include "driver/opengl/OpenGLProgram.h"
 #include "driver/opengl/OpenGLBlitter.h"
 
-#include <filament/driver/ExternalContext.h>
+#include <filament/driver/Platform.h>
 
 // change to true to display all GL extensions in the console on start-up
 #define DEBUG_PRINT_EXTENSIONS false
@@ -59,10 +59,10 @@ namespace filament {
 using namespace driver;
 using namespace GLUtils;
 
-std::unique_ptr<Driver> OpenGLDriver::create(
-        ContextManagerGL* const externalContext, void* const sharedGLContext) noexcept {
-    assert(externalContext);
-    ContextManagerGL* const ec = externalContext;
+Driver* OpenGLDriver::create(
+        OpenGLPlatform* const platform, void* const sharedGLContext) noexcept {
+    assert(platform);
+    OpenGLPlatform* const ec = platform;
 
     { // here we check we're on a supported version of GL before initializing the driver
         GLint major = 0, minor = 0;
@@ -93,14 +93,14 @@ std::unique_ptr<Driver> OpenGLDriver::create(
     }
 
     OpenGLDriver* const driver = new OpenGLDriver(ec);
-    return std::unique_ptr<Driver>(driver);
+    return driver;
 }
 
-OpenGLDriver::OpenGLDriver(ContextManagerGL* externalContext) noexcept
+OpenGLDriver::OpenGLDriver(OpenGLPlatform* platform) noexcept
         : DriverBase(new ConcreteDispatcher<OpenGLDriver>(this)),
           mHandleArena("Handles", 2U * 1024U * 1024U), // TODO: set the amount in configuration
           mSamplerMap(32),
-          mContextManager(*externalContext) {
+          mContextManager(*platform) {
     state.enables.caps.set(getIndexForCap(GL_DITHER));
     state.vao.p = &mDefaultVAO;
 
@@ -1376,7 +1376,7 @@ void OpenGLDriver::destroyStream(Driver::StreamHandle sh) {
 
 Handle<HwStream> OpenGLDriver::createStream(void* nativeStream) {
     Handle<HwStream> sh( allocateHandle(sizeof(GLStream)) );
-    ExternalContext::Stream* stream = mContextManager.createStream(nativeStream);
+    Platform::Stream* stream = mContextManager.createStream(nativeStream);
     construct<GLStream>(sh, stream);
     return sh;
 }
@@ -2237,7 +2237,7 @@ void OpenGLDriver::updateStream(GLTexture* t, driver::DriverApi* driver) noexcep
                 info.width = s->width;
                 info.height = s->height;
 
-                ExternalContext::ExternalTexture* ets = s->user_thread.infos[s->user_thread.cur].ets;
+                Platform::ExternalTexture* ets = s->user_thread.infos[s->user_thread.cur].ets;
                 mContextManager.reallocateExternalStorage(ets, info.width, info.height,
                         TextureFormat::RGB8);
 
@@ -2521,7 +2521,7 @@ void OpenGLDriver::readPixels(Driver::RenderTargetHandle src,
 void OpenGLDriver::beginFrame(uint64_t monotonic_clock_ns, uint32_t frameId) {
     insertEventMarker("beginFrame");
     if (UTILS_UNLIKELY(!mExternalStreams.empty())) {
-        driver::ContextManagerGL& contextManager = mContextManager;
+        driver::OpenGLPlatform& contextManager = mContextManager;
         const size_t index = getIndexForTextureTarget(GL_TEXTURE_EXTERNAL_OES);
         for (GLTexture const* t : mExternalStreams) {
             assert(t && t->hwStream);

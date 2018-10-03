@@ -21,7 +21,7 @@
 #include <filament/Fence.h>
 #include <filament/SwapChain.h>
 
-#include <filament/driver/ExternalContext.h>
+#include <filament/driver/Platform.h>
 
 #include <utils/compiler.h>
 #include <utils/EntityManager.h>
@@ -142,29 +142,29 @@ class TransformManager;
  */
 class UTILS_PUBLIC Engine {
 public:
-    using ExternalContext = driver::ExternalContext;
+    using Platform = driver::Platform;
     using Backend = driver::Backend;
 
     /**
      * Creates an instance of Engine
      *
-     * @param externalContext   A pointer to an object that implements ExternalContext. If this is
-     *                          provided, then this object is used to manage the hardware context
-     *                          (e.g. OpenGL) lifecycle for filament.
+     * @param platform          A pointer to an object that implements Platform. If this is
+     *                          provided, then this object is used to create the hardware context
+     *                          and expose platform features to it.
      *
-     *                          If not provided (or nullptr is used), an appropriate hardware
-     *                          context is created automatically.
+     *                          If not provided (or nullptr is used), an appropriate Platform
+     *                          is created automatically.
      *
      *                          All methods of this interface are called from filament's
      *                          render thread, which is different from the main thread.
      *
-     *                          The lifetime of \p externalContext must exceed the life time of
+     *                          The lifetime of \p platform must exceed the lifetime of
      *                          the Engine object.
      *
      *  @param sharedGLContext  A platform-dependant OpenGL context used as a shared context
      *                          when creating filament's internal context.
      *                          Setting this parameter will force filament to use the OpenGL
-     *                          implementation (instead of Vulkaan for instance).
+     *                          implementation (instead of Vulkan for instance).
      *
      *
      * @return A pointer to the newly created Engine, or nullptr if the Engine couldn't be created.
@@ -180,7 +180,7 @@ public:
      * This method is thread-safe.
      */
     static Engine* create(Backend backend = Backend::DEFAULT,
-            ExternalContext* externalContext = nullptr, void* sharedGLContext = nullptr);
+            Platform* platform = nullptr, void* sharedGLContext = nullptr);
 
     /**
      * Destroy the Engine instance and all associated resources.

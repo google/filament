@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "driver/vulkan/ContextManagerVkAndroid.h"
+#include "driver/vulkan/PlatformVkAndroid.h"
 
 #include "VulkanDriver.h"
 
@@ -29,7 +29,7 @@ namespace filament {
 
 using namespace driver;
 
-std::unique_ptr<Driver> ContextManagerVkAndroid::createDriver(void* const sharedContext) noexcept {
+std::unique_ptr<Driver> PlatformVkAndroid::createDriver(void* const sharedContext) noexcept {
     ASSERT_PRECONDITION(sharedContext == nullptr, "Vulkan does not support shared contexts.");
     static const char* requestedExtensions[] = {
         "VK_KHR_surface",
@@ -42,7 +42,7 @@ std::unique_ptr<Driver> ContextManagerVkAndroid::createDriver(void* const shared
             sizeof(requestedExtensions) / sizeof(requestedExtensions[0]));
 }
 
-void* ContextManagerVkAndroid::createVkSurfaceKHR(void* nativeWindow, void* vkinstance,
+void* PlatformVkAndroid::createVkSurfaceKHR(void* nativeWindow, void* vkinstance,
         uint32_t* width, uint32_t* height) noexcept {
     const VkInstance instance = (VkInstance) vkinstance;
     ANativeWindow* aNativeWindow = (ANativeWindow*) nativeWindow;

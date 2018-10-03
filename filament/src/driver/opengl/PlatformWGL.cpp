@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "driver/opengl/ContextManagerWGL.h"
+#include "driver/opengl/PlatformWGL.h"
 
 #include <Wingdi.h>
 
@@ -61,7 +61,7 @@ namespace filament {
 
 using namespace driver;
 
-std::unique_ptr<Driver> ContextManagerWGL::createDriver(void* const sharedGLContext) noexcept {
+Driver* PlatformWGL::createDriver(void* const sharedGLContext) noexcept {
     mPfd = {
         sizeof(PIXELFORMATDESCRIPTOR),
         1,
@@ -135,7 +135,7 @@ error:
     return NULL;
 }
 
-void ContextManagerWGL::terminate() noexcept {
+void PlatformWGL::terminate() noexcept {
     wglMakeCurrent(NULL, NULL);
     if (mContext) {
         wglDeleteContext(mContext);
@@ -153,7 +153,7 @@ void ContextManagerWGL::terminate() noexcept {
     bluegl::unbind();
 }
 
-ExternalContext::SwapChain* ContextManagerWGL::createSwapChain(void* nativeWindow, uint64_t& flags) noexcept {
+Platform::SwapChain* PlatformWGL::createSwapChain(void* nativeWindow, uint64_t& flags) noexcept {
     // on Windows, the nativeWindow maps directly to a HDC
     HDC hdc = (HDC) nativeWindow;
     if (!ASSERT_POSTCONDITION_NON_FATAL(hdc,
@@ -169,12 +169,12 @@ ExternalContext::SwapChain* ContextManagerWGL::createSwapChain(void* nativeWindo
     return swapChain;
 }
 
-void ContextManagerWGL::destroySwapChain(ExternalContext::SwapChain* swapChain) noexcept {
+void PlatformWGL::destroySwapChain(Platform::SwapChain* swapChain) noexcept {
     // make this swapChain not current (by making a dummy one current)
     wglMakeCurrent(mWhdc, mContext);
 }
 
-void ContextManagerWGL::makeCurrent(ExternalContext::SwapChain* swapChain) noexcept {
+void PlatformWGL::makeCurrent(Platform::SwapChain* swapChain) noexcept {
     HDC hdc = (HDC)(swapChain);
     if (hdc != NULL) {
         BOOL success = wglMakeCurrent(hdc, mContext);
@@ -185,7 +185,7 @@ void ContextManagerWGL::makeCurrent(ExternalContext::SwapChain* swapChain) noexc
     }
 }
 
-void ContextManagerWGL::commit(ExternalContext::SwapChain* swapChain) noexcept {
+void PlatformWGL::commit(Platform::SwapChain* swapChain) noexcept {
     HDC hdc = (HDC)(swapChain);
     if (hdc != NULL) {
         SwapBuffers(hdc);
@@ -193,14 +193,14 @@ void ContextManagerWGL::commit(ExternalContext::SwapChain* swapChain) noexcept {
 }
 
 //TODO Implement WGL fences
-ExternalContext::Fence* ContextManagerWGL::createFence() noexcept {
+Platform::Fence* PlatformWGL::createFence() noexcept {
     return nullptr;
 }
 
-void ContextManagerWGL::destroyFence(Fence* fence) noexcept {
+void PlatformWGL::destroyFence(Fence* fence) noexcept {
 }
 
-driver::FenceStatus ContextManagerWGL::waitFence(Fence* fence, uint64_t timeout) noexcept {
+driver::FenceStatus PlatformWGL::waitFence(Fence* fence, uint64_t timeout) noexcept {
     return driver::FenceStatus::ERROR;
 }
 

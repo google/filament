@@ -14,23 +14,23 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_DRIVER_OPENGL_CONTEXT_MANAGER_WEBGL_H
-#define TNT_FILAMENT_DRIVER_OPENGL_CONTEXT_MANAGER_WEBGL_H
+#ifndef TNT_FILAMENT_DRIVER_OPENGL_PLATFORM_WEBGL_H
+#define TNT_FILAMENT_DRIVER_OPENGL_PLATFORM_WEBGL_H
 
 #include <stdint.h>
 
 #include <filament/driver/DriverEnums.h>
-#include <filament/driver/ExternalContext.h>
+#include <filament/driver/Platform.h>
 
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
 
 namespace filament {
 
-class ContextManagerWebGL final : public driver::ContextManagerGL {
+class PlatformWebGL final : public driver::OpenGLPlatform {
 public:
 
-    std::unique_ptr<Driver> createDriver(void* const sharedGLContext) noexcept override;
+    Driver* createDriver(void* const sharedGLContext) noexcept override;
     void terminate() noexcept override;
 
     SwapChain* createSwapChain(void* nativewindow, uint64_t& flags) noexcept final override;
@@ -58,8 +58,6 @@ public:
     int getOSVersion() const noexcept final override { return 0; }
 };
 
-using ContextManager = filament::ContextManagerWebGL;
-
 } // namespace filament
 
-#endif // TNT_FILAMENT_DRIVER_OPENGL_CONTEXT_MANAGER_WEBGL_H
+#endif // TNT_FILAMENT_DRIVER_OPENGL_PLATFORM_WEBGL_H

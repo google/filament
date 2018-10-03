@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "driver/opengl/ContextManagerGLX.h"
+#include "driver/opengl/PlatformGLX.h"
 
 #include <utils/Log.h>
 #include <utils/Panic.h>
@@ -101,7 +101,7 @@ namespace filament {
 
 using namespace driver;
 
-std::unique_ptr<Driver> ContextManagerGLX::createDriver(void* const sharedGLContext) noexcept {
+Driver* PlatformGLX::createDriver(void* const sharedGLContext) noexcept {
     loadLibraries();
     // Get the display device
     mGLXDisplay = g_x11.openDisplay(NULL);
@@ -151,7 +151,7 @@ std::unique_ptr<Driver> ContextManagerGLX::createDriver(void* const sharedGLCont
     return OpenGLDriver::create(this, sharedGLContext);
 }
 
-void ContextManagerGLX::terminate() noexcept {
+void PlatformGLX::terminate() noexcept {
     g_glx.setCurrentContext(mGLXDisplay, None, None, nullptr);
     g_glx.destroyPbuffer(mGLXDisplay, mDummySurface);
     g_glx.destroyContext(mGLXDisplay, mGLXContext);
@@ -159,7 +159,7 @@ void ContextManagerGLX::terminate() noexcept {
     bluegl::unbind();
 }
 
-ExternalContext::SwapChain* ContextManagerGLX::createSwapChain(
+Platform::SwapChain* PlatformGLX::createSwapChain(
         void* nativeWindow, uint64_t& flags) noexcept {
 
     // Transparent swap chain is not supported
@@ -167,29 +167,29 @@ ExternalContext::SwapChain* ContextManagerGLX::createSwapChain(
     return (SwapChain*) nativeWindow;
 }
 
-void ContextManagerGLX::destroySwapChain(ExternalContext::SwapChain* /*swapChain*/) noexcept {
+void PlatformGLX::destroySwapChain(Platform::SwapChain* /*swapChain*/) noexcept {
 }
 
-void ContextManagerGLX::makeCurrent(ExternalContext::SwapChain* swapChain) noexcept {
+void PlatformGLX::makeCurrent(Platform::SwapChain* swapChain) noexcept {
     g_glx.setCurrentContext(mGLXDisplay,
             (GLXDrawable) swapChain, (GLXDrawable) swapChain, mGLXContext);
 }
 
-void ContextManagerGLX::commit(ExternalContext::SwapChain* swapChain) noexcept {
+void PlatformGLX::commit(Platform::SwapChain* swapChain) noexcept {
     g_glx.swapBuffers(mGLXDisplay, (GLXDrawable)swapChain);
 }
 
-//TODO Implement GLX fences
-ExternalContext::Fence* ContextManagerGLX::createFence() noexcept {
+// TODO Implement GLX fences
+Platform::Fence* PlatformGLX::createFence() noexcept {
     Fence* f = new Fence();
     return f;
 }
 
-void ContextManagerGLX::destroyFence(Fence* fence) noexcept {
+void PlatformGLX::destroyFence(Fence* fence) noexcept {
     delete fence;
 }
 
-driver::FenceStatus ContextManagerGLX::waitFence(Fence* fence, uint64_t timeout) noexcept {
+driver::FenceStatus PlatformGLX::waitFence(Fence* fence, uint64_t timeout) noexcept {
     return driver::FenceStatus::CONDITION_SATISFIED;
 }
 

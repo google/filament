@@ -14,41 +14,41 @@
  * limitations under the License.
  */
 
-#include <filament/driver/ExternalContext.h>
+#include <filament/driver/Platform.h>
 
 #if defined(ANDROID)
     #ifndef USE_EXTERNAL_GLES3
-        #include "driver/opengl/ContextManagerEGL.h"
+        #include "driver/opengl/PlatformEGL.h"
     #endif
     #if defined (FILAMENT_DRIVER_SUPPORTS_VULKAN)
-        #include "driver/vulkan/ContextManagerVkAndroid.h"
+        #include "driver/vulkan/PlatformVkAndroid.h"
     #endif
 #elif defined(__APPLE__)
     #ifndef USE_EXTERNAL_GLES3
-        #include "driver/opengl/ContextManagerCocoa.h"
+        #include "driver/opengl/PlatformCocoaGL.h"
     #endif
     #if defined (FILAMENT_DRIVER_SUPPORTS_VULKAN)
-        #include "driver/vulkan/ContextManagerVkCocoa.h"
+        #include "driver/vulkan/PlatformVkCocoa.h"
     #endif
 #elif defined(__linux__)
     #ifndef USE_EXTERNAL_GLES3
-        #include "driver/opengl/ContextManagerGLX.h"
+        #include "driver/opengl/PlatformGLX.h"
     #endif
     #if defined (FILAMENT_DRIVER_SUPPORTS_VULKAN)
-        #include "driver/vulkan/ContextManagerVkLinux.h"
+        #include "driver/vulkan/PlatformVkLinux.h"
     #endif
 #elif defined(WIN32)
     #ifndef USE_EXTERNAL_GLES3
-        #include "driver/opengl/ContextManagerWGL.h"
+        #include "driver/opengl/PlatformWGL.h"
     #endif
     #if defined (FILAMENT_DRIVER_SUPPORTS_VULKAN)
-        #include "driver/vulkan/ContextManagerVkWindows.h"
+        #include "driver/vulkan/PlatformVkWindows.h"
     #endif
 #elif defined(__EMSCRIPTEN__)
-    #include "driver/opengl/ContextManagerWebGL.h"
+    #include "driver/opengl/PlatformWebGL.h"
 #else
     #ifndef USE_EXTERNAL_GLES3
-        #include "driver/opengl/ContextManagerDummy.h"
+        #include "driver/opengl/PlatformDummyGL.h"
     #endif
 #endif
 
@@ -56,16 +56,16 @@ namespace filament {
 namespace driver {
 
 // this generates the vtable in this translation unit
-ExternalContext::~ExternalContext() noexcept = default;
+Platform::~Platform() noexcept = default;
 
-ContextManagerGL::~ContextManagerGL() noexcept = default;
+OpenGLPlatform::~OpenGLPlatform() noexcept = default;
 
-ContextManagerVk::~ContextManagerVk() noexcept = default;
+VulkanPlatform::~VulkanPlatform() noexcept = default;
 
-// Creates the platform-specific ExternalContext object. The caller takes ownership and is
+// Creates the platform-specific Platform object. The caller takes ownership and is
 // responsible for destroying it. Initialization of the backend API is deferred until
 // createDriver(). The passed-in backend hint is replaced with the resolved backend.
-ExternalContext* ExternalContext::create(Backend* backend) noexcept {
+Platform* Platform::create(Backend* backend) noexcept {
     assert(backend);
     if (*backend == Backend::DEFAULT) {
         *backend = Backend::OPENGL;
@@ -73,13 +73,13 @@ ExternalContext* ExternalContext::create(Backend* backend) noexcept {
     if (*backend == Backend::VULKAN) {
         #if defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
             #if defined(ANDROID)
-                return new ContextManagerVkAndroid();
+                return new PlatformVkAndroid();
             #elif defined(__linux__)
-                return new ContextManagerVkLinux();
+                return new PlatformVkLinux();
             #elif defined(__APPLE__)
-                return new ContextManagerVkCocoa();
+                return new PlatformVkCocoa();
             #elif defined(WIN32)
-                return new ContextManagerVkWindows();
+                return new PlatformVkWindows();
             #else
                 return nullptr;
             #endif
@@ -90,23 +90,23 @@ ExternalContext* ExternalContext::create(Backend* backend) noexcept {
     #if defined(USE_EXTERNAL_GLES3)
         return nullptr;
     #elif defined(ANDROID)
-        return new ContextManagerEGL();
+        return new PlatformEGL();
     #elif defined(__APPLE__)
-        return new ContextManagerCocoa();
+        return new PlatformCocoaGL();
     #elif defined(__linux__)
-        return new ContextManagerGLX();
+        return new PlatformGLX();
     #elif defined(WIN32)
-        return new ContextManagerWGL();
+        return new PlatformWGL();
     #elif defined(__EMSCRIPTEN__)
-        return new ContextManagerWebGL();
+        return new PlatformWebGL();
     #else
-        return new ContextManagerDummy();
+        return new PlatformDummyGL();
     #endif
     return nullptr;
 }
 
-// destroys an ExternalContext create by create()
-void ExternalContext::destroy(ExternalContext** context) noexcept {
+// destroys an Platform create by create()
+void Platform::destroy(Platform** context) noexcept {
     delete *context;
     *context = nullptr;
 }
