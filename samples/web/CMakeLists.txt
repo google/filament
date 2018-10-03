@@ -85,10 +85,14 @@ endfunction()
 
 set(ETC_R11_ARGS "--grayscale;--compression=etc_r11_numeric_40")
 
+# TODO: Instead of "rgb8" we should be using "rg11", but that causes an assertion etc2comp.
+set(ETC_NORMALS_ARGS "--kernel=NORMALS;--linear;--compression=etc_rgb8_normalxyz_40")
+
 add_ktxfiles("assets/models/monkey/albedo.png" "monkey/albedo.ktx" "")
 add_ktxfiles("assets/models/monkey/albedo.png" "monkey/albedo_astc.ktx" "--compression=astc_fast_ldr_4x4")
 add_ktxfiles("assets/models/monkey/albedo.png" "monkey/albedo_s3tc.ktx" "--compression=s3tc_rgb_dxt1")
 add_ktxfiles("assets/models/monkey/normal.png" "monkey/normal.ktx" "--kernel=NORMALS;--linear")
+add_ktxfiles("assets/models/monkey/normal.png" "monkey/normal_etc.ktx" "${ETC_NORMALS_ARGS}")
 add_ktxfiles("assets/models/monkey/roughness.png" "monkey/roughness.ktx" "--grayscale")
 add_ktxfiles("assets/models/monkey/roughness.png" "monkey/roughness_etc.ktx" "${ETC_R11_ARGS}")
 add_ktxfiles("assets/models/monkey/metallic.png" "monkey/metallic.ktx" "--grayscale")
