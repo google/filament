@@ -41,13 +41,14 @@ public:
         uintptr_t image;
     };
 
-    // Creates and and initializes the low-level API (e.g. an OpenGL context or Vulkan instance),
-    // then creates the concrete Driver. Returns null on failure.
-    virtual std::unique_ptr<Driver> createDriver(void* sharedGLContext) noexcept = 0;
+    virtual int getOSVersion() const noexcept = 0;
 
     virtual ~ExternalContext() noexcept;
 
-    virtual int getOSVersion() const noexcept = 0;
+protected:
+    // Creates and and initializes the low-level API (e.g. an OpenGL context or Vulkan instance),
+    // then creates the concrete Driver. Returns null on failure.
+    virtual std::unique_ptr<Driver> createDriver(void* sharedGLContext) noexcept = 0;
 
 private:
     friend class details::FEngine;
@@ -57,7 +58,7 @@ private:
 
 class UTILS_PUBLIC ContextManagerGL : public ExternalContext {
 public:
-    virtual ~ContextManagerGL() noexcept;
+    ~ContextManagerGL() noexcept override;
 
     // Called to destroy the OpenGL context. This should clean up any windows
     // or buffers from initialization.
@@ -104,7 +105,7 @@ public:
 
 class UTILS_PUBLIC ContextManagerVk : public ExternalContext {
 public:
-    virtual ~ContextManagerVk() noexcept;
+    ~ContextManagerVk() noexcept override;
 
     // Given a Vulkan instance and native window handle, creates the platform-specific surface.
     virtual void* createVkSurfaceKHR(void* nativeWindow, void* instance,
