@@ -83,8 +83,13 @@ FEngine* FEngine::create(Backend backend, ExternalContext* externalContext, void
     // Normally we launch a thread and create the context and Driver from there (see FEngine::loop).
     // In the single-threaded case, we do so in the here and now.
     if (!UTILS_HAS_THREADING) {
-        instance->mExternalContext = ExternalContext::create(&instance->mBackend);
-        instance->mDriver = instance->mExternalContext->createDriver(sharedGLContext);
+        // we don't own the external context at that point, set it to null
+        instance->mExternalContext = nullptr;
+        if (externalContext == nullptr) {
+            externalContext = ExternalContext::create(&instance->mBackend);
+            instance->mExternalContext = externalContext;
+        }
+        instance->mDriver = externalContext->createDriver(sharedGLContext);
         instance->init();
         instance->execute();
         return instance;
@@ -315,10 +320,13 @@ void FEngine::shutdown() {
     if (UTILS_HAS_THREADING) {
         mDriverThread.join();
     }
-    mTerminated = true;
 
     // detach this thread from the jobsystem
     mJobSystem.emancipate();
+
+    ExternalContext::destroy(&mExternalContext);
+
+    mTerminated = true;
 }
 
 void FEngine::prepare() {
@@ -360,14 +368,19 @@ void FEngine::flush() {
 // -----------------------------------------------------------------------------------------------
 
 int FEngine::loop() {
-    if (mExternalContext == nullptr) {
-        mExternalContext = ExternalContext::create(&mBackend);
+    // we don't own the external context at that point, set it to null
+    ExternalContext* externalContext = mExternalContext;
+    mExternalContext = nullptr;
+
+    if (externalContext == nullptr) {
+        externalContext = ExternalContext::create(&mBackend);
+        mExternalContext = externalContext;
 #if !defined(NDEBUG)
         slog.d << "FEngine resolved backend: "
                << (mBackend == driver::Backend::VULKAN ? "Vulkan" : "OpenGL") << io::endl;
 #endif
     }
-    mDriver = mExternalContext->createDriver(mSharedGLContext);
+    mDriver = externalContext->createDriver(mSharedGLContext);
     mDriverBarrier.latch();
     if (UTILS_UNLIKELY(!mDriver)) {
         // if we get here, it's because the driver couldn't be initialized and the problem has

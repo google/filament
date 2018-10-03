@@ -24,6 +24,9 @@
 #include <utils/compiler.h>
 
 namespace filament {
+namespace details {
+class FEngine;
+}
 
 class Driver;
 
@@ -38,11 +41,6 @@ public:
         uintptr_t image;
     };
 
-    // Creates the platform-specific ExternalContext object. The caller takes ownership and is
-    // responsible for destroying it. Initialization of the backend API is deferred until
-    // createDriver(). The passed-in backend hint is replaced with the resolved backend.
-    static ExternalContext* create(driver::Backend* backendHint) noexcept;
-
     // Creates and and initializes the low-level API (e.g. an OpenGL context or Vulkan instance),
     // then creates the concrete Driver. Returns null on failure.
     virtual std::unique_ptr<Driver> createDriver(void* sharedGLContext) noexcept = 0;
@@ -50,6 +48,11 @@ public:
     virtual ~ExternalContext() noexcept;
 
     virtual int getOSVersion() const noexcept = 0;
+
+private:
+    friend class details::FEngine;
+    static ExternalContext* create(driver::Backend* backendHint) noexcept;
+    static void destroy(ExternalContext** context) noexcept;
 };
 
 class UTILS_PUBLIC ContextManagerGL : public ExternalContext {

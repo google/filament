@@ -62,6 +62,9 @@ ContextManagerGL::~ContextManagerGL() noexcept = default;
 
 ContextManagerVk::~ContextManagerVk() noexcept = default;
 
+// Creates the platform-specific ExternalContext object. The caller takes ownership and is
+// responsible for destroying it. Initialization of the backend API is deferred until
+// createDriver(). The passed-in backend hint is replaced with the resolved backend.
 ExternalContext* ExternalContext::create(Backend* backend) noexcept {
     assert(backend);
     if (*backend == Backend::DEFAULT) {
@@ -100,6 +103,12 @@ ExternalContext* ExternalContext::create(Backend* backend) noexcept {
         return new ContextManagerDummy();
     #endif
     return nullptr;
+}
+
+// destroys an ExternalContext create by create()
+void ExternalContext::destroy(ExternalContext** context) noexcept {
+    delete *context;
+    *context = nullptr;
 }
 
 } // namespace driver
