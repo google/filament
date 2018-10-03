@@ -17,9 +17,11 @@
 #ifndef TNT_UTILS_ENTITY_H
 #define TNT_UTILS_ENTITY_H
 
-#include <stdint.h>
-
+// FIXME: could we get rid of <functional>
 #include <functional>
+
+#include <stdint.h>
+#include <stddef.h>
 
 namespace utils {
 
@@ -71,9 +73,8 @@ template<>
 struct hash<utils::Entity> {
     typedef utils::Entity argument_type;
     typedef size_t result_type;
-
     result_type operator()(argument_type const& e) const {
-        return std::hash<utils::Entity::Type>{}(e.getId());
+        return e.getId();
     }
 };
 

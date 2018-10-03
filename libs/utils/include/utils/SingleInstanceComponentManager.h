@@ -17,17 +17,16 @@
 #ifndef TNT_UTILS_SINGLEINSTANCECOMPONENTMANAGER_H
 #define TNT_UTILS_SINGLEINSTANCECOMPONENTMANAGER_H
 
-// FIXME: get rid of this STL headers
+#include <utils/compiler.h>
+#include <utils/Entity.h>
+#include <utils/EntityManager.h>
+#include <utils/StructureOfArrays.h>
+
 #include <tsl/robin_map.h>
 
 #include <assert.h>
 #include <stddef.h>
 #include <stdint.h>
-
-#include <utils/compiler.h>
-#include <utils/Entity.h>
-#include <utils/EntityManager.h>
-#include <utils/StructureOfArrays.h>
 
 namespace utils {
 

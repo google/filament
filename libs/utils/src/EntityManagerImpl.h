@@ -19,15 +19,16 @@
 
 #include <utils/EntityManager.h>
 
-#include <deque>
-#include <mutex>
-#include <set>
-
 #include <utils/compiler.h>
 #include <utils/Entity.h>
 #include <utils/Mutex.h>
 
 #include <tsl/robin_set.h>
+
+#include <deque>
+#include <mutex>
+#include <set>
+
 
 namespace utils {
 
