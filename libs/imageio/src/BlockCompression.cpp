@@ -19,6 +19,7 @@
 #include <image/ImageOps.h>
 
 #include <cmath>
+#include <thread>
 
 #include <astcenc.h>
 #include <Etc.h>
@@ -186,7 +187,7 @@ CompressedTexture astcCompress(const LinearImage& original, AstcConfig config) {
 
     // Perform compression.
 
-    constexpr int threadcount = 1; // TODO: set this thread count
+    const int threadcount = std::thread::hardware_concurrency();
     constexpr astc_decode_mode decode_mode = DECODE_LDR; // TODO: honor the config semantic
     constexpr swizzlepattern swz_encode = { 0, 1, 2, 3 };
     constexpr swizzlepattern swz_decode = { 0, 1, 2, 3 };
@@ -317,7 +318,7 @@ S3tcConfig s3tcParseOptionString(const std::string& options) {
 
 CompressedTexture etcCompress(const LinearImage& original, EtcConfig config) {
     LinearImage source = extendToFourChannels(original);
-    constexpr int threadcount = 1; // TODO: set this thread count
+    const int threadcount = std::thread::hardware_concurrency();
     Etc::Image::Format etcformat;
     switch (config.format) {
         case CompressedFormat::R11_EAC: etcformat = Etc::Image::Format::R11; break;

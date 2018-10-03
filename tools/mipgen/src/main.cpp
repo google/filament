@@ -80,7 +80,7 @@ Options:
        format specific compression:
            KTX:
              astc_[fast|thorough]_[ldr|hdr]_WxH, where WxH is a valid block size
-             st3c_rgb_dxt1, st3c_rgba_dxt5
+             s3tc_rgb_dxt1, s3tc_rgba_dxt5
              etc_FORMAT_METRIC_EFFORT
                FORMAT is r11, signed_r11, rg11, signed_rg11, rgb8, srgb8, rgb8_alpha
                          srgb8_alpha, rgba8, or srgb8_alpha8
