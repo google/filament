@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-#include "driver/opengl/ContextManagerCocoa.h"
+#include "driver/opengl/PlatformCocoaGL.h"
 
 #include <OpenGL/OpenGL.h>
 #include <Cocoa/Cocoa.h>
 
 #include "driver/DriverBase.h"
 
-#include <filament/driver/ExternalContext.h>
+#include <filament/driver/Platform.h>
 
 #include <utils/Panic.h>
 
@@ -31,20 +31,20 @@ namespace filament {
 
 using namespace driver;
 
-struct ContextManagerCocoaImpl {
+struct PlatformCocoaGLImpl {
     NSOpenGLContext* mGLContext = nullptr;
     NSView* mCurrentView = nullptr;
 };
 
-ContextManagerCocoa::ContextManagerCocoa()
-        : pImpl(new ContextManagerCocoaImpl) {
+PlatformCocoaGL::PlatformCocoaGL()
+        : pImpl(new PlatformCocoaGLImpl) {
 }
 
-ContextManagerCocoa::~ContextManagerCocoa() noexcept {
+PlatformCocoaGL::~PlatformCocoaGL() noexcept {
     delete pImpl;
 }
 
-std::unique_ptr<Driver> ContextManagerCocoa::createDriver(void* const sharedGLContext) noexcept {
+Driver* PlatformCocoaGL::createDriver(void* sharedContext) noexcept {
     // NSOpenGLPFAColorSize: when unspecified, a format that matches the screen is preferred
     NSOpenGLPixelFormatAttribute pixelFormatAttributes[] = {
             NSOpenGLPFAOpenGLProfile, NSOpenGLProfileVersion3_2Core,
@@ -54,7 +54,7 @@ std::unique_ptr<Driver> ContextManagerCocoa::createDriver(void* const sharedGLCo
             0, 0,
     };
 
-    NSOpenGLContext* shareContext = (NSOpenGLContext*)sharedGLContext;
+    NSOpenGLContext* shareContext = (NSOpenGLContext*)sharedContext;
     NSOpenGLPixelFormat* pixelFormat = [[NSOpenGLPixelFormat alloc] initWithAttributes:pixelFormatAttributes];
     NSOpenGLContext* nsOpenGLContext = [[NSOpenGLContext alloc] initWithFormat:pixelFormat shareContext:shareContext];
     [pixelFormat release];
@@ -67,24 +67,24 @@ std::unique_ptr<Driver> ContextManagerCocoa::createDriver(void* const sharedGLCo
 
     int result = bluegl::bind();
     ASSERT_POSTCONDITION(!result, "Unable to load OpenGL entry points.");
-    return OpenGLDriver::create(this, sharedGLContext);
+    return OpenGLDriver::create(this, sharedContext);
 }
 
-void ContextManagerCocoa::terminate() noexcept {
+void PlatformCocoaGL::terminate() noexcept {
     [pImpl->mGLContext release];
     bluegl::unbind();
 }
 
-ExternalContext::SwapChain* ContextManagerCocoa::createSwapChain(void* nativewindow, uint64_t& flags) noexcept {
+Platform::SwapChain* PlatformCocoaGL::createSwapChain(void* nativewindow, uint64_t& flags) noexcept {
     // Transparent swap chain is not supported
     flags &= ~driver::SWAP_CHAIN_CONFIG_TRANSPARENT;
     return (SwapChain*) nativewindow;
 }
 
-void ContextManagerCocoa::destroySwapChain(ExternalContext::SwapChain* swapChain) noexcept {
+void PlatformCocoaGL::destroySwapChain(Platform::SwapChain* swapChain) noexcept {
 }
 
-void ContextManagerCocoa::makeCurrent(ExternalContext::SwapChain* swapChain) noexcept {
+void PlatformCocoaGL::makeCurrent(Platform::SwapChain* swapChain) noexcept {
     NSView *nsView = (NSView*) swapChain;
     if (pImpl->mCurrentView != nsView) {
         pImpl->mCurrentView = nsView;
@@ -105,7 +105,7 @@ void ContextManagerCocoa::makeCurrent(ExternalContext::SwapChain* swapChain) noe
     [pImpl->mGLContext update];
 }
 
-void ContextManagerCocoa::commit(ExternalContext::SwapChain* swapChain) noexcept {
+void PlatformCocoaGL::commit(Platform::SwapChain* swapChain) noexcept {
     [pImpl->mGLContext flushBuffer];
 }
 

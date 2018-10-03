@@ -180,7 +180,7 @@ public:
 
 public:
     static FEngine* create(Backend backend = Backend::DEFAULT,
-            ExternalContext* externalContext = nullptr, void* sharedGLContext = nullptr);
+            Platform* platform = nullptr, void* sharedGLContext = nullptr);
 
     ~FEngine() noexcept;
 
@@ -346,7 +346,7 @@ public:
     bool execute();
 
 private:
-    FEngine(Backend backend, ExternalContext* externalContext, void* sharedGLContext);
+    FEngine(Backend backend, Platform* platform, void* sharedGLContext);
     void init();
 
     int loop();
@@ -361,10 +361,10 @@ private:
     Handle<HwProgram> createPostProcessProgram(filaflat::MaterialParser& parser,
             driver::ShaderModel model, PostProcessStage stage) const noexcept;
 
-    std::unique_ptr<Driver> mDriver;
+    Driver* mDriver = nullptr;
 
     Backend mBackend;
-    ExternalContext* mExternalContext = nullptr;
+    Platform* mPlatform = nullptr;
     void* mSharedGLContext = nullptr;
     bool mTerminated = false;
     Handle<HwRenderPrimitive> mFullScreenTriangleRph;

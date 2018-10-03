@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "driver/opengl/ContextManagerEGL.h"
+#include "driver/opengl/PlatformEGL.h"
 
 #include <jni.h>
 
@@ -75,7 +75,7 @@ UTILS_PRIVATE PFNEGLPRESENTATIONTIMEANDROIDPROC eglPresentationTimeANDROID;
 }
 using namespace glext;
 
-using EGLStream = ExternalContext::Stream;
+using EGLStream = Platform::Stream;
 
 // ---------------------------------------------------------------------------------------------
 // Utilities
@@ -294,7 +294,7 @@ struct GraphicBufferWrapper { GraphicBuffer* graphicBuffer; };
 } // namespace ndk
 using namespace ndk;
 
-struct EGLExternalTexture : public ExternalContext::ExternalTexture {
+struct EGLExternalTexture : public Platform::ExternalTexture {
     AHardwareBuffer* hardwareBuffer = nullptr;
     GraphicBufferWrapper* graphicBufferWrapper = nullptr;
 };
@@ -491,12 +491,12 @@ private:
 
 // ---------------------------------------------------------------------------------------------
 
-ContextManagerEGL::ContextManagerEGL() noexcept
+PlatformEGL::PlatformEGL() noexcept
         : mExternalStreamManager(ExternalStreamManagerAndroid::get()),
           mExternalTextureManager(ExternalTextureManagerAndroid::get()) {
 }
 
-std::unique_ptr<Driver> ContextManagerEGL::createDriver(void* const sharedGLContext) noexcept {
+Driver* PlatformEGL::createDriver(void* sharedContext) noexcept {
     char scratch[PROP_VALUE_MAX + 1];
     int length = __system_property_get("ro.build.version.release", scratch);
     int androidVersion = length >= 0 ? atoi(scratch) : 1;
@@ -553,7 +553,7 @@ std::unique_ptr<Driver> ContextManagerEGL::createDriver(void* const sharedGLCont
 #ifdef NDEBUG
     // When we don't have a shared context and we're in release mode, we always activate the
     // EGL_KHR_create_context_no_error extension.
-    if (!sharedGLContext && extensions.has("EGL_KHR_create_context_no_error")) {
+    if (!sharedContext && extensions.has("EGL_KHR_create_context_no_error")) {
         contextAttribs[2] = EGL_CONTEXT_OPENGL_NO_ERROR_KHR;
         contextAttribs[3] = EGL_TRUE;
     }
@@ -617,14 +617,14 @@ std::unique_ptr<Driver> ContextManagerEGL::createDriver(void* const sharedGLCont
         goto error;
     }
 
-    mEGLContext = eglCreateContext(mEGLDisplay, eglConfig, (EGLContext)sharedGLContext, contextAttribs);
-    if (mEGLContext == EGL_NO_CONTEXT && sharedGLContext &&
+    mEGLContext = eglCreateContext(mEGLDisplay, eglConfig, (EGLContext)sharedContext, contextAttribs);
+    if (mEGLContext == EGL_NO_CONTEXT && sharedContext &&
         extensions.has("EGL_KHR_create_context_no_error")) {
         // context creation could fail because of EGL_CONTEXT_OPENGL_NO_ERROR_KHR
         // not matching the sharedContext. Try with it.
         contextAttribs[2] = EGL_CONTEXT_OPENGL_NO_ERROR_KHR;
         contextAttribs[3] = EGL_TRUE;
-        mEGLContext = eglCreateContext(mEGLDisplay, eglConfig, (EGLContext)sharedGLContext, contextAttribs);
+        mEGLContext = eglCreateContext(mEGLDisplay, eglConfig, (EGLContext)sharedContext, contextAttribs);
     }
     if (UTILS_UNLIKELY(mEGLContext == EGL_NO_CONTEXT)) {
         // eglCreateContext failed
@@ -639,7 +639,7 @@ std::unique_ptr<Driver> ContextManagerEGL::createDriver(void* const sharedGLCont
     }
 
     // success!!
-    return OpenGLDriver::create(this, sharedGLContext);
+    return OpenGLDriver::create(this, sharedContext);
 
 error:
     // if we're here, we've failed
@@ -659,7 +659,7 @@ error:
     return nullptr;
 }
 
-EGLBoolean ContextManagerEGL::makeCurrent(EGLSurface surface) noexcept {
+EGLBoolean PlatformEGL::makeCurrent(EGLSurface surface) noexcept {
     if (UTILS_UNLIKELY((surface != mCurrentSurface))) {
         mCurrentSurface = surface;
         return eglMakeCurrent(mEGLDisplay, surface, surface, mEGLContext);
@@ -667,7 +667,7 @@ EGLBoolean ContextManagerEGL::makeCurrent(EGLSurface surface) noexcept {
     return EGL_TRUE;
 }
 
-void ContextManagerEGL::terminate() noexcept {
+void PlatformEGL::terminate() noexcept {
     eglMakeCurrent(mEGLDisplay, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
     eglDestroySurface(mEGLDisplay, mEGLDummySurface);
     eglDestroyContext(mEGLDisplay, mEGLContext);
@@ -675,7 +675,7 @@ void ContextManagerEGL::terminate() noexcept {
     eglReleaseThread();
 }
 
-ExternalContext::SwapChain* ContextManagerEGL::createSwapChain(
+Platform::SwapChain* PlatformEGL::createSwapChain(
         void* nativeWindow, uint64_t& flags) noexcept {
     EGLSurface sur = eglCreateWindowSurface(mEGLDisplay,
             (flags & driver::SWAP_CHAIN_CONFIG_TRANSPARENT) ? mEGLTransparentConfig : mEGLConfig,
@@ -691,7 +691,7 @@ ExternalContext::SwapChain* ContextManagerEGL::createSwapChain(
     return (SwapChain*)sur;
 }
 
-void ContextManagerEGL::destroySwapChain(ExternalContext::SwapChain* swapChain) noexcept {
+void PlatformEGL::destroySwapChain(Platform::SwapChain* swapChain) noexcept {
     EGLSurface sur = (EGLSurface) swapChain;
     if (sur != EGL_NO_SURFACE) {
         makeCurrent(mEGLDummySurface);
@@ -699,14 +699,14 @@ void ContextManagerEGL::destroySwapChain(ExternalContext::SwapChain* swapChain) 
     }
 }
 
-void ContextManagerEGL::makeCurrent(ExternalContext::SwapChain* swapChain) noexcept {
+void PlatformEGL::makeCurrent(Platform::SwapChain* swapChain) noexcept {
     EGLSurface sur = (EGLSurface) swapChain;
     if (sur != EGL_NO_SURFACE) {
         makeCurrent(sur);
     }
 }
 
-void ContextManagerEGL::setPresentationTime(long time) noexcept {
+void PlatformEGL::setPresentationTime(long time) noexcept {
     if (mCurrentSurface != EGL_NO_SURFACE) {
       eglPresentationTimeANDROID(
                         mEGLDisplay,
@@ -715,14 +715,14 @@ void ContextManagerEGL::setPresentationTime(long time) noexcept {
     }
 }
 
-void ContextManagerEGL::commit(ExternalContext::SwapChain* swapChain) noexcept {
+void PlatformEGL::commit(Platform::SwapChain* swapChain) noexcept {
     EGLSurface sur = (EGLSurface) swapChain;
     if (sur != EGL_NO_SURFACE) {
         eglSwapBuffers(mEGLDisplay, sur);
     }
 }
 
-ExternalContext::Fence* ContextManagerEGL::createFence() noexcept {
+Platform::Fence* PlatformEGL::createFence() noexcept {
     Fence* f = nullptr;
 #ifdef EGL_KHR_reusable_sync
     f = (Fence*) eglCreateSyncKHR(mEGLDisplay, EGL_SYNC_FENCE_KHR, nullptr);
@@ -730,7 +730,7 @@ ExternalContext::Fence* ContextManagerEGL::createFence() noexcept {
     return f;
 }
 
-void ContextManagerEGL::destroyFence(ExternalContext::Fence* fence) noexcept {
+void PlatformEGL::destroyFence(Platform::Fence* fence) noexcept {
 #ifdef EGL_KHR_reusable_sync
     EGLSyncKHR sync = (EGLSyncKHR) fence;
     if (sync != EGL_NO_SYNC_KHR) {
@@ -739,8 +739,8 @@ void ContextManagerEGL::destroyFence(ExternalContext::Fence* fence) noexcept {
 #endif
 }
 
-driver::FenceStatus ContextManagerEGL::waitFence(
-        ExternalContext::Fence* fence, uint64_t timeout) noexcept {
+driver::FenceStatus PlatformEGL::waitFence(
+        Platform::Fence* fence, uint64_t timeout) noexcept {
 #ifdef EGL_KHR_reusable_sync
     EGLSyncKHR sync = (EGLSyncKHR) fence;
     if (sync != EGL_NO_SYNC_KHR) {
@@ -756,32 +756,32 @@ driver::FenceStatus ContextManagerEGL::waitFence(
     return FenceStatus::ERROR;
 }
 
-ExternalContext::Stream* ContextManagerEGL::createStream(void* nativeStream) noexcept {
+Platform::Stream* PlatformEGL::createStream(void* nativeStream) noexcept {
     return  mExternalStreamManager.acquire(static_cast<jobject>(nativeStream));
 }
 
-void ContextManagerEGL::destroyStream(ExternalContext::Stream* stream) noexcept {
+void PlatformEGL::destroyStream(Platform::Stream* stream) noexcept {
     mExternalStreamManager.release(static_cast<EGLStream*>(stream));
 }
 
-void ContextManagerEGL::attach(Stream* stream, intptr_t tname) noexcept {
+void PlatformEGL::attach(Stream* stream, intptr_t tname) noexcept {
     mExternalStreamManager.attach(static_cast<EGLStream*>(stream), tname);
 }
 
-void ContextManagerEGL::detach(Stream* stream) noexcept {
+void PlatformEGL::detach(Stream* stream) noexcept {
     mExternalStreamManager.detach(static_cast<EGLStream*>(stream));
 }
 
-void ContextManagerEGL::updateTexImage(Stream* stream) noexcept {
+void PlatformEGL::updateTexImage(Stream* stream) noexcept {
     mExternalStreamManager.updateTexImage(static_cast<EGLStream*>(stream));
 }
 
-ExternalContext::ExternalTexture* ContextManagerEGL::createExternalTextureStorage() noexcept {
+Platform::ExternalTexture* PlatformEGL::createExternalTextureStorage() noexcept {
     return mExternalTextureManager.create();
 }
 
-void ContextManagerEGL::reallocateExternalStorage(
-        ExternalContext::ExternalTexture* externalTexture,
+void PlatformEGL::reallocateExternalStorage(
+        Platform::ExternalTexture* externalTexture,
         uint32_t w, uint32_t h, driver::TextureFormat format) noexcept {
     if (externalTexture) {
         EGLExternalTexture* ets = static_cast<EGLExternalTexture*>(externalTexture);
@@ -790,15 +790,15 @@ void ContextManagerEGL::reallocateExternalStorage(
     }
 }
 
-void ContextManagerEGL::destroyExternalTextureStorage(
-        ExternalContext::ExternalTexture* externalTexture) noexcept {
+void PlatformEGL::destroyExternalTextureStorage(
+        Platform::ExternalTexture* externalTexture) noexcept {
     if (externalTexture) {
         EGLExternalTexture* ets = static_cast<EGLExternalTexture*>(externalTexture);
         mExternalTextureManager.destroy(ets, mEGLDisplay);
     }
 }
 
-int ContextManagerEGL::getOSVersion() const noexcept {
+int PlatformEGL::getOSVersion() const noexcept {
     return mOSVersion;
 }
 

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "driver/vulkan/ContextManagerVkCocoa.h"
+#include "driver/vulkan/PlatformVkCocoa.h"
 
 #include "VulkanDriver.h"
 
@@ -36,14 +36,14 @@ namespace filament {
 
 using namespace driver;
 
-std::unique_ptr<Driver> ContextManagerVkCocoa::createDriver(void* const sharedContext) noexcept {
+Driver* PlatformVkCocoa::createDriver(void* sharedContext) noexcept {
     ASSERT_PRECONDITION(sharedContext == nullptr, "Vulkan does not support shared contexts.");
     static const char* requestedExtensions[] = {"VK_KHR_surface", "VK_MVK_macos_surface"};
     return VulkanDriver::create(this, requestedExtensions,
             sizeof(requestedExtensions) / sizeof(requestedExtensions[0]));
 }
 
-void* ContextManagerVkCocoa::createVkSurfaceKHR(void* nativeWindow, void* instance,
+void* PlatformVkCocoa::createVkSurfaceKHR(void* nativeWindow, void* instance,
         uint32_t* width, uint32_t* height) noexcept {
     // Obtain the CAMetalLayer-backed view.
     NSView* nsview = (NSView*) nativeWindow;

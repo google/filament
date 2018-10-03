@@ -14,17 +14,17 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_DRIVER_VULKAN_CONTEXTMANAGERVKANDROID_H
-#define TNT_FILAMENT_DRIVER_VULKAN_CONTEXTMANAGERVKANDROID_H
+#ifndef TNT_FILAMENT_DRIVER_VULKAN_PLATFORM_VK_WINDOWS_H
+#define TNT_FILAMENT_DRIVER_VULKAN_PLATFORM_VK_WINDOWS_H
 
 #include <stdint.h>
 
 #include <filament/driver/DriverEnums.h>
-#include <filament/driver/ExternalContext.h>
+#include <filament/driver/Platform.h>
 
 namespace filament {
 
-class ContextManagerVkAndroid final : public driver::ContextManagerVk {
+class PlatformVkWindows final : public driver::VulkanPlatform {
 public:
 
     std::unique_ptr<Driver> createDriver(void* const sharedContext) noexcept override;
@@ -33,8 +33,11 @@ public:
             uint32_t* width, uint32_t* height) noexcept override;
 
     int getOSVersion() const noexcept override { return 0; }
+
+private:
+
 };
 
 } // namespace filament
 
-#endif // TNT_FILAMENT_DRIVER_VULKAN_CONTEXTMANAGERVKANDROID_H
+#endif // TNT_FILAMENT_DRIVER_VULKAN_PLATFORM_VK_WINDOWS_H

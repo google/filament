@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_DRIVER_OPENGL_CONTEXT_MANAGER_GLX_H
-#define TNT_FILAMENT_DRIVER_OPENGL_CONTEXT_MANAGER_GLX_H
+#ifndef TNT_FILAMENT_DRIVER_OPENGL_PLATFORM_GLX_H
+#define TNT_FILAMENT_DRIVER_OPENGL_PLATFORM_GLX_H
 
 #include <stdint.h>
 
@@ -23,14 +23,14 @@
 #include <GL/glx.h>
 
 #include <filament/driver/DriverEnums.h>
-#include <filament/driver/ExternalContext.h>
+#include <filament/driver/Platform.h>
 
 namespace filament {
 
-class ContextManagerGLX final : public driver::ContextManagerGL {
+class PlatformGLX final : public driver::OpenGLPlatform {
 public:
 
-    std::unique_ptr<Driver> createDriver(void* const sharedGLContext) noexcept override;
+    Driver* createDriver(void* const sharedGLContext) noexcept override;
 
     void terminate() noexcept override;
 
@@ -65,8 +65,6 @@ private:
     GLXPbuffer mDummySurface;
 };
 
-using ContextManager = filament::ContextManagerGLX;
-
 } // namespace filament
 
-#endif // TNT_FILAMENT_DRIVER_OPENGL_CONTEXT_MANAGER_GLX_H
+#endif // TNT_FILAMENT_DRIVER_OPENGL_PLATFORM_GLX_H

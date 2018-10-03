@@ -14,44 +14,44 @@
  * limitations under the License.
  */
 
-#include "driver/opengl/ContextManagerWebGL.h"
+#include "driver/opengl/PlatformWebGL.h"
 #include "driver/opengl/OpenGLDriver.h"
 
 namespace filament {
 
 using namespace driver;
 
-std::unique_ptr<Driver> ContextManagerWebGL::createDriver(void* const sharedGLContext) noexcept {
+Driver* PlatformWebGL::createDriver(void* const sharedGLContext) noexcept {
     return OpenGLDriver::create(this, sharedGLContext);
 }
 
-void ContextManagerWebGL::terminate() noexcept {
+void PlatformWebGL::terminate() noexcept {
 }
 
-ExternalContext::SwapChain* ContextManagerWebGL::createSwapChain(
+Platform::SwapChain* PlatformWebGL::createSwapChain(
         void* nativeWindow, uint64_t& flags) noexcept {
     return (SwapChain*) nativeWindow;
 }
 
-void ContextManagerWebGL::destroySwapChain(ExternalContext::SwapChain* swapChain) noexcept {
+void PlatformWebGL::destroySwapChain(Platform::SwapChain* swapChain) noexcept {
 }
 
-void ContextManagerWebGL::makeCurrent(ExternalContext::SwapChain* swapChain) noexcept {
+void PlatformWebGL::makeCurrent(Platform::SwapChain* swapChain) noexcept {
 }
 
-void ContextManagerWebGL::commit(ExternalContext::SwapChain* swapChain) noexcept {
+void PlatformWebGL::commit(Platform::SwapChain* swapChain) noexcept {
 }
 
-ExternalContext::Fence* ContextManagerWebGL::createFence() noexcept {
+Platform::Fence* PlatformWebGL::createFence() noexcept {
     Fence* f = new Fence();
     return f;
 }
 
-void ContextManagerWebGL::destroyFence(Fence* fence) noexcept {
+void PlatformWebGL::destroyFence(Fence* fence) noexcept {
     delete fence;
 }
 
-driver::FenceStatus ContextManagerWebGL::waitFence(Fence* fence, uint64_t timeout) noexcept {
+driver::FenceStatus PlatformWebGL::waitFence(Fence* fence, uint64_t timeout) noexcept {
     return driver::FenceStatus::CONDITION_SATISFIED;
 }
 
