@@ -25,6 +25,7 @@
 #include <math/vec3.h>
 #include <math/vec4.h>
 
+// FIXME: could we get rid of <utility>
 #include <utility>
 
 #include <stdint.h>

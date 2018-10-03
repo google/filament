@@ -20,8 +20,6 @@
 #include <assert.h>
 #include <stdint.h>
 
-#include <mutex>
-
 #include <utils/Entity.h>
 
 namespace utils {

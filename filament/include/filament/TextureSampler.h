@@ -21,8 +21,7 @@
 
 #include <utils/compiler.h>
 
-#include <algorithm>
-#include <cmath>
+#include <math.h>
 
 namespace filament {
 
@@ -86,7 +85,8 @@ public:
 
     // Amount of anisotropy, should be a power-of-two.
     void setAnisotropy(float anisotropy) noexcept {
-        mSamplerParams.anisotropyLog2 = uint8_t(std::min(7, std::ilogbf(std::abs(anisotropy))));
+        const int log2 = ilogbf(fabsf(anisotropy));
+        mSamplerParams.anisotropyLog2 = uint8_t(log2 < 7 ? log2 : 7);
     }
 
     void setCompareMode(CompareMode mode, CompareFunc func = CompareFunc::LE) noexcept {

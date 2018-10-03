@@ -120,6 +120,9 @@ private:
 - other headers are sorted in reverse order of their layering, that is, lower layer headers last
 - within a layer, headers are sorted alphabetically
 - strive for implementing one class per file
+- `STL` limited in public headers to:
+    - `type_traits`
+    - `limits`
 
 *Sorting the headers is important to help catching missing `#include` directives.*
 
