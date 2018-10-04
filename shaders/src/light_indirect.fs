@@ -264,7 +264,8 @@ vec3 importanceSamplingVNdfDggx(vec2 u, float linearRoughness, vec3 v) {
     v = normalize(vec3(alpha * v.x, alpha * v.y, v.z));
 
     // orthonormal basis
-    vec3 t = (v.z < 0.999) ? normalize(cross(v, vec3(0.0, 0.0, 1.0))) : vec3(1.0, 0.0, 0.0);
+    vec3 up = abs(v.z) < 0.9999 ? vec3(0.0, 0.0, 1.0) : vec3(1.0, 0.0, 0.0);
+    vec3 t = normalize(cross(up, v));
     vec3 b = cross(t, v);
 
     // sample point with polar coordinates (r, phi)
@@ -298,7 +299,7 @@ float prefilteredImportanceSampling(float ipdf) {
 
 vec3 isEvaluateIBL(const PixelParams pixel, vec3 n, vec3 v, float NoV) {
     // TODO: for a true anisotropic BRDF, we need a real tangent space
-    vec3 up = abs(n.z) < 0.999 ? vec3(0.0, 0.0, 1.0) : vec3(1.0, 0.0, 0.0);
+    vec3 up = abs(n.z) < 0.9999 ? vec3(0.0, 0.0, 1.0) : vec3(1.0, 0.0, 0.0);
 
     mat3 tangentToWorld;
     tangentToWorld[0] = normalize(cross(up, n));

@@ -52,9 +52,9 @@ bool IBL::loadFromDirectory(const utils::Path& path) {
         shReader >> std::skipws;
 
         std::string line;
-        for (size_t i = 0; i < 9; i++) {
+        for (float3& band : mBands) {
             std::getline(shReader, line);
-            int n = sscanf(line.c_str(), "(%f,%f,%f)", &mBands[i].r, &mBands[i].g, &mBands[i].b);
+            int n = sscanf(line.c_str(), "(%f,%f,%f)", &band.r, &band.g, &band.b); // NOLINT(cert-err34-c)
             if (n != 3) return false;
         }
     } else {
@@ -62,11 +62,11 @@ bool IBL::loadFromDirectory(const utils::Path& path) {
     }
 
     // Read mip-mapped cubemap
-    if (!loadCubemapLevel(&mTexture, path, 0, "m0_")) return false;
+    const std::string prefix = "m";
+    if (!loadCubemapLevel(&mTexture, path, 0, prefix + "0_")) return false;
     size_t numLevels = mTexture->getLevels();
     for (size_t i = 1; i<numLevels; i++) {
-        std::string levelPrefix = "m";
-        levelPrefix += std::to_string(i) + "_";
+        const std::string levelPrefix = prefix + std::to_string(i) + "_";
         if (!loadCubemapLevel(&mTexture, path, i, levelPrefix)) return false;
     }
 
@@ -106,15 +106,15 @@ bool IBL::loadCubemapLevel(filament::Texture** texture, const utils::Path& path,
 
         size = (size_t)w;
 
-        if (levelPrefix != "") {
+        if (!levelPrefix.empty()) {
             numLevels = (size_t)std::log2(size) + 1;
         }
 
         if (level == 0) {
             *texture = Texture::Builder()
-                    .width(size)
-                    .height(size)
-                    .levels(numLevels)
+                    .width((uint32_t)size)
+                    .height((uint32_t)size)
+                    .levels((uint8_t)numLevels)
                     .format(Texture::InternalFormat::RGBM)
                     .sampler(Texture::Sampler::SAMPLER_CUBEMAP)
                     .build(mEngine);
