@@ -235,24 +235,29 @@ void FRenderer::renderJob(ArenaScope& arena, FView* view) {
     recordHighWatermark(commands);
 }
 
-void FRenderer::mirrorFrame(FSwapChain* toSwapChain, FView const* toView, FView const* fromView) {
+void FRenderer::mirrorFrame(FSwapChain* dstSwapChain, Viewport const* dstViewport, Viewport const* srcViewport) {
     SYSTRACE_CALL();
 
     assert(mSwapChain);
-    assert(toSwapChain);
+    assert(dstSwapChain);
     FEngine& engine = getEngine();
     FEngine::DriverApi& driver = engine.getDriverApi();
-    Viewport const& fromVp = fromView->getViewport();
-    Viewport const& toVp = toView->getViewport();
 
     const Handle<HwRenderTarget> viewRenderTarget = getRenderTarget();
 
-    toSwapChain->makeCurrent(driver, mSwapChain);
-    driver.blit(TargetBufferFlags::COLOR,
-                viewRenderTarget, toVp.left, toVp.bottom, toVp.width, toVp.height,
-                viewRenderTarget, fromVp.left, fromVp.bottom, fromVp.width, fromVp.height);
-    toSwapChain->commit(driver);
+    // Set the current swap chain as the read surface, and the destination
+    // swap chain as the draw surface so that blitting between default render
+    // targets results in a frame copy from the current frame to the
+    // destination.
+    driver.makeCurrent(dstSwapChain->getHwHandle(), mSwapChain->getHwHandle());
 
+    driver.blit(TargetBufferFlags::COLOR,
+                viewRenderTarget, dstViewport->left, dstViewport->bottom, dstViewport->width, dstViewport->height,
+                viewRenderTarget, srcViewport->left, srcViewport->bottom, srcViewport->width, srcViewport->height);
+    dstSwapChain->commit(driver);
+
+    // Reset the context and read/draw surface4w to the current surface so that
+    // frame rendering can continue or complete.
     mSwapChain->makeCurrent(driver);
 }
 
@@ -408,8 +413,8 @@ bool Renderer::beginFrame(SwapChain* swapChain) {
     return upcast(this)->beginFrame(upcast(swapChain));
 }
 
-void Renderer::mirrorFrame(SwapChain* toSwapChain, View const* toView, View const* fromView) {
-    upcast(this)->mirrorFrame(upcast(toSwapChain), upcast(toView), upcast(fromView));
+void Renderer::mirrorFrame(SwapChain* dstSwapChain, Viewport const* dstViewport, Viewport const* srcViewport) {
+    upcast(this)->mirrorFrame(upcast(dstSwapChain), dstViewport, srcViewport);
 }
 
 void Renderer::readPixels(uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,

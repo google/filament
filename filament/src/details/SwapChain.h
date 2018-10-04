@@ -39,10 +39,6 @@ public:
         driverApi.makeCurrent(mSwapChain, mSwapChain);
     }
 
-    void makeCurrent(driver::DriverApi& driverApi, FSwapChain* readSwapChain) noexcept {
-        driverApi.makeCurrent(mSwapChain, readSwapChain->mSwapChain);
-    }
-
     void commit(driver::DriverApi& driverApi) noexcept {
         driverApi.commit(mSwapChain);
     }
@@ -53,6 +49,10 @@ public:
 
     constexpr bool isTransparent() const noexcept {
         return (mConfigFlags & CONFIG_TRANSPARENT) != 0;
+    }
+
+    Handle<HwSwapChain> getHwHandle() const noexcept {
+      return mSwapChain;
     }
 
 private:

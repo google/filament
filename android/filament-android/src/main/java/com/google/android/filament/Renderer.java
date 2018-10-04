@@ -54,9 +54,11 @@ public class Renderer {
      * This method MUST be called before endFrame.
      */
     public void mirrorFrame(
-            @NonNull SwapChain toSwapChain, @NonNull View toView, @NonNull View fromView) {
-        nMirrorFrame(getNativeObject(), toSwapChain.getNativeObject(),
-                toView.getNativeObject(), fromView.getNativeObject());
+            @NonNull SwapChain dstSwapChain, @NonNull Viewport dstViewport,
+            @NonNull Viewport srcViewport) {
+        nMirrorFrame(getNativeObject(), dstSwapChain.getNativeObject(),
+                dstViewport.left, dstViewport.bottom, dstViewport.width, dstViewport.height,
+                srcViewport.left, srcViewport.bottom, srcViewport.width, srcViewport.height);
     }
 
     /**
@@ -97,8 +99,9 @@ public class Renderer {
     private static native boolean nBeginFrame(long nativeRenderer, long nativeSwapChain);
     private static native void nEndFrame(long nativeRenderer);
     private static native void nRender(long nativeRenderer, long nativeView);
-    private static native void nMirrorFrame(long nativeRenderer, long nativeToSwapChain,
-            long nativeToView, long nativeFromView);
+    private static native void nMirrorFrame(long nativeRenderer, long nativeDstSwapChain,
+            int dstLeft, int dstBottom, int dstWidth, int dstHeight,
+            int srcLeft, int srcBottom, int srcWidth, int srcHeight);
     private static native int nReadPixels(long nativeRenderer, long nativeEngine,
             int xoffset, int yoffset, int width, int height,
             Buffer storage, int remaining,

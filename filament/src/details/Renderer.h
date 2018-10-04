@@ -63,7 +63,7 @@ public:
     void render(FView const* view);
     void renderJob(ArenaScope& arena, FView* view);
 
-    void mirrorFrame(FSwapChain* toSwapChain, FView const* toView, FView const* fromView);
+    void mirrorFrame(FSwapChain* dstSwapChain, Viewport const* dstViewport, Viewport const* srcViewport);
 
     bool beginFrame(FSwapChain* swapChain);
     void endFrame();
@@ -141,7 +141,6 @@ private:
     FrameInfoManager mFrameInfoManager;
     bool mIsRGB16FSupported : 1;
     bool mIsRGB8Supported : 1;
-    RenderTargetPool::Target const* savedFrameTarget = nullptr;
 
     // per-frame arena for this Renderer
     LinearAllocatorArena& mPerRenderPassArena;

@@ -30,6 +30,7 @@ namespace filament {
 class Engine;
 class SwapChain;
 class View;
+class Viewport;
 
 namespace driver {
 class PixelBufferDescriptor;
@@ -140,15 +141,15 @@ public:
      * Mirror the currently rendered view to the indicated swap chain, using the
      * indicated source and destination rectangle.
      *
-     * @param toSwapChain The swap chain into which the frame should be mirrored.
-     * @param toView The destination rectangle in which to draw the view.
-     * @param fromView The source rectangle to be mirrored.
+     * @param dstSwapChain The swap chain into which the frame should be mirrored.
+     * @param dstViewport The destination rectangle in which to draw the view.
+     * @param srcViewport The source rectangle to be mirrored.
      *
      * @remark
      * mirrorFrame() should be called after a frme is rendered using render()
      * but before endFrame() is called.
      */
-    void mirrorFrame(SwapChain* toSwapChain, View const* toView, View const* fromView);
+    void mirrorFrame(SwapChain* dstSwapChain, Viewport const* dstViewport, Viewport const* srcViewport);
 
     /**
      * Read-back the content of the SwapChain associated with this Renderer.
