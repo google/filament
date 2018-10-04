@@ -173,6 +173,19 @@ CompressedTexture s3tcCompress(const LinearImage& source, S3tcConfig config);
 // with an invalid format.
 S3tcConfig s3tcParseOptionString(const std::string& options);
 
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+struct CompressionConfig {
+    enum { INVALID, ASTC, S3TC, ETC } type;
+    AstcConfig astc;
+    S3tcConfig s3tc;
+    EtcConfig etc;
+};
+
+bool parseOptionString(const std::string& options, CompressionConfig* config);
+
+CompressedTexture compressTexture(const CompressionConfig& config, const LinearImage& image);
+
 } // namespace image
 
 #endif /* IMAGEIO_BLOCKCOMPRESSION_H_ */
