@@ -50,6 +50,14 @@ public class Renderer {
         nRender(getNativeObject(), view.getNativeObject());
     }
 
+    public void saveCurrentFrame(@NonNull View view) {
+        nSaveCurrentFrame(getNativeObject(), view.getNativeObject());
+    }
+
+    public void replaySavedFrame(@NonNull SwapChain swapChain, @NonNull View view) {
+        nReplaySavedFrame(getNativeObject(), swapChain.getNativeObject(), view.getNativeObject());
+    }
+
     /**
      * This method MUST be called before endFrame.
      */
@@ -88,6 +96,8 @@ public class Renderer {
     private static native boolean nBeginFrame(long nativeRenderer, long nativeSwapChain);
     private static native void nEndFrame(long nativeRenderer);
     private static native void nRender(long nativeRenderer, long nativeView);
+    private static native void nSaveCurrentFrame(long nativeRenderer, long nativeView);
+    private static native void nReplaySavedFrame(long nativeRenderer, long nativeSwapChain, long nativeView);
     private static native int nReadPixels(long nativeRenderer, long nativeEngine,
             int xoffset, int yoffset, int width, int height,
             Buffer storage, int remaining,

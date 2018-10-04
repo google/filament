@@ -137,6 +137,29 @@ public:
     void render(View const* view);
 
     /**
+     * Save the current rendered view so that it may be replayed later into a
+     * swap chain.
+     *
+     * @param view A pointer to the view to save.
+     *
+     * @see
+     * replaySavedFrame()
+     */
+    void saveCurrentFrame(View const* view);
+
+    /**
+     * Replay the most recently saved frame into the given swap chain.
+     *
+     * @param swapChain The swap chain into which to replay the saved frame.
+     * @param view The view into which the frame should be drawn.
+     *
+     * @see
+     * saveCurrentFrame()
+     *
+     */
+    void replaySavedFrame(SwapChain* swapChain, View const* view);
+
+    /**
      * Read-back the content of the SwapChain associated with this Renderer.
      *
      * @param xoffset   Left offset of the sub-region to read back.

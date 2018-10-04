@@ -235,6 +235,49 @@ void FRenderer::renderJob(ArenaScope& arena, FView* view) {
     recordHighWatermark(commands);
 }
 
+void FRenderer::saveCurrentFrame(FView const* view) {
+    SYSTRACE_CALL();
+
+    assert(mSwapChain);
+    FEngine& engine = getEngine();
+    FEngine::DriverApi& driver = engine.getDriverApi();
+    Viewport const& vp = view->getViewport();
+    RenderTargetPool& rtp = engine.getRenderTargetPool();
+
+    if (savedFrameTarget != nullptr) {
+        rtp.put(savedFrameTarget);
+        savedFrameTarget = nullptr;
+    }
+
+    savedFrameTarget = rtp.get(TargetBufferFlags::COLOR,
+                               vp.width, vp.height, false, getLdrFormat());
+
+    const Handle<HwRenderTarget> viewRenderTarget = getRenderTarget();
+    driver.blit(TargetBufferFlags::COLOR,
+                savedFrameTarget->target, 0, 0, savedFrameTarget->w, savedFrameTarget->h,
+                viewRenderTarget, vp.left, vp.bottom, vp.width, vp.height);
+}
+
+void FRenderer::replaySavedFrame(FSwapChain* swapChain, FView const* view) {
+    SYSTRACE_CALL();
+
+    assert(mSwapChain == nullptr);
+    assert(savedFrameTarget);
+    FEngine& engine = getEngine();
+    FEngine::DriverApi& driver = engine.getDriverApi();
+    Viewport const& vp = view->getViewport();
+
+    driver.updateStreams(&driver);
+    swapChain->makeCurrent(driver);
+
+    const Handle<HwRenderTarget> viewRenderTarget = getRenderTarget();
+    driver.blit(TargetBufferFlags::COLOR,
+                viewRenderTarget, vp.left, vp.bottom, vp.width, vp.height,
+                savedFrameTarget->target, 0, 0, savedFrameTarget->w, savedFrameTarget->h);
+
+    swapChain->commit(driver);
+}
+
 bool FRenderer::beginFrame(FSwapChain* swapChain) {
     SYSTRACE_CALL();
 
@@ -385,6 +428,14 @@ void Renderer::render(View const* view) {
 
 bool Renderer::beginFrame(SwapChain* swapChain) {
     return upcast(this)->beginFrame(upcast(swapChain));
+}
+
+void Renderer::saveCurrentFrame(View const* view) {
+    upcast(this)->saveCurrentFrame(upcast(view));
+}
+
+void Renderer::replaySavedFrame(SwapChain* swapChain, View const* view) {
+    upcast(this)->replaySavedFrame(upcast(swapChain), upcast(view));
 }
 
 void Renderer::readPixels(uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
