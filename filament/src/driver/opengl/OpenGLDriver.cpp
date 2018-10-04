@@ -100,7 +100,7 @@ OpenGLDriver::OpenGLDriver(OpenGLPlatform* platform) noexcept
         : DriverBase(new ConcreteDispatcher<OpenGLDriver>(this)),
           mHandleArena("Handles", 2U * 1024U * 1024U), // TODO: set the amount in configuration
           mSamplerMap(32),
-          mContextManager(*platform) {
+          mPlatform(*platform) {
     state.enables.caps.set(getIndexForCap(GL_DITHER));
     state.vao.p = &mDefaultVAO;
 
@@ -120,7 +120,7 @@ OpenGLDriver::OpenGLDriver(OpenGLPlatform* platform) noexcept
         << renderer << io::endl
         << version << io::endl
         << shader << io::endl
-        << "OS version: " << mContextManager.getOSVersion() << io::endl;
+        << "OS version: " << mPlatform.getOSVersion() << io::endl;
 #endif
 
     // OpenGL (ES) version
@@ -264,7 +264,7 @@ void OpenGLDriver::terminate() {
         mOpenGLBlitter->terminate();
     }
     terminateClearProgram();
-    mContextManager.terminate();
+    mPlatform.terminate();
 }
 
 ShaderModel OpenGLDriver::getShaderModel() const noexcept {
@@ -1165,14 +1165,14 @@ void OpenGLDriver::createFence(Driver::FenceHandle fh, int) {
     DEBUG_MARKER()
 
     HwFence* f = construct<HwFence>(fh);
-    f->fence = mContextManager.createFence();
+    f->fence = mPlatform.createFence();
 }
 
 void OpenGLDriver::createSwapChain(Driver::SwapChainHandle sch, void* nativeWindow, uint64_t flags) {
     DEBUG_MARKER()
 
     HwSwapChain* sc = construct<HwSwapChain>(sch);
-    sc->swapChain = mContextManager.createSwapChain(nativeWindow, flags);
+    sc->swapChain = mPlatform.createSwapChain(nativeWindow, flags);
 }
 
 void OpenGLDriver::createStreamFromTextureId(Driver::StreamHandle sh,
@@ -1188,7 +1188,7 @@ void OpenGLDriver::createStreamFromTextureId(Driver::StreamHandle sh,
     glGenTextures(GLStream::ROUND_ROBIN_TEXTURE_COUNT, s->user_thread.read);
     glGenTextures(GLStream::ROUND_ROBIN_TEXTURE_COUNT, s->user_thread.write);
     for (size_t i = 0; i < GLStream::ROUND_ROBIN_TEXTURE_COUNT; i++) {
-        s->user_thread.infos[i].ets = mContextManager.createExternalTextureStorage();
+        s->user_thread.infos[i].ets = mPlatform.createExternalTextureStorage();
     }
 }
 
@@ -1335,7 +1335,7 @@ void OpenGLDriver::destroySwapChain(Driver::SwapChainHandle sch) {
 
     if (sch) {
         HwSwapChain* sc = handle_cast<HwSwapChain*>(sch);
-        mContextManager.destroySwapChain(sc->swapChain);
+        mPlatform.destroySwapChain(sc->swapChain);
         destruct(sch, sc);
     }
 }
@@ -1354,7 +1354,7 @@ void OpenGLDriver::destroyStream(Driver::StreamHandle sh) {
             detachStream(*pos);
         }
         if (s->isNativeStream()) {
-            mContextManager.destroyStream(s->stream);
+            mPlatform.destroyStream(s->stream);
         } else {
             glDeleteTextures(GLStream::ROUND_ROBIN_TEXTURE_COUNT, s->user_thread.read);
             glDeleteTextures(GLStream::ROUND_ROBIN_TEXTURE_COUNT, s->user_thread.write);
@@ -1362,7 +1362,7 @@ void OpenGLDriver::destroyStream(Driver::StreamHandle sh) {
                 glDeleteFramebuffers(1, &s->gl.fbo);
             }
             for (auto const& info : s->user_thread.infos) {
-                mContextManager.destroyExternalTextureStorage(info.ets);
+                mPlatform.destroyExternalTextureStorage(info.ets);
             }
         }
         destruct(sh, s);
@@ -1376,7 +1376,7 @@ void OpenGLDriver::destroyStream(Driver::StreamHandle sh) {
 
 Handle<HwStream> OpenGLDriver::createStream(void* nativeStream) {
     Handle<HwStream> sh( allocateHandle(sizeof(GLStream)) );
-    Platform::Stream* stream = mContextManager.createStream(nativeStream);
+    Platform::Stream* stream = mPlatform.createStream(nativeStream);
     construct<GLStream>(sh, stream);
     return sh;
 }
@@ -1405,7 +1405,7 @@ void OpenGLDriver::setStreamDimensions(Driver::StreamHandle sh, uint32_t width, 
 void OpenGLDriver::destroyFence(Driver::FenceHandle fh) {
     if (fh) {
         HwFence* f = handle_cast<HwFence*>(fh);
-        mContextManager.destroyFence(f->fence);
+        mPlatform.destroyFence(f->fence);
         destruct(fh, f);
     }
 }
@@ -1413,7 +1413,7 @@ void OpenGLDriver::destroyFence(Driver::FenceHandle fh) {
 Driver::FenceStatus OpenGLDriver::wait(Driver::FenceHandle fh, uint64_t timeout) {
     if (fh) {
         HwFence* f = handle_cast<HwFence*>(fh);
-        return mContextManager.waitFence(f->fence, timeout);
+        return mPlatform.waitFence(f->fence, timeout);
     }
     return FenceStatus::ERROR;
 }
@@ -1489,7 +1489,7 @@ bool OpenGLDriver::isRenderTargetFormatSupported(Driver::TextureFormat format) {
 
 bool OpenGLDriver::isFrameTimeSupported() {
     // TODO: Measuring the frame time is currently only done using fences
-    return mContextManager.canCreateFence();
+    return mPlatform.canCreateFence();
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -1502,7 +1502,7 @@ void OpenGLDriver::commit(Driver::SwapChainHandle sch) {
 
     if (sch) {
         HwSwapChain* sc = handle_cast<HwSwapChain*>(sch);
-        mContextManager.commit(sc->swapChain);
+        mPlatform.commit(sc->swapChain);
     }
 }
 
@@ -1511,7 +1511,7 @@ void OpenGLDriver::makeCurrent(Driver::SwapChainHandle sch) {
 
     if (sch) {
         HwSwapChain* sc = handle_cast<HwSwapChain*>(sch);
-        mContextManager.makeCurrent(sc->swapChain);
+        mPlatform.makeCurrent(sc->swapChain);
     }
 }
 
@@ -2145,7 +2145,7 @@ void OpenGLDriver::attachStream(GLTexture* t, GLStream* hwStream) noexcept {
     mExternalStreams.push_back(t);
 
     if (hwStream->isNativeStream()) {
-        mContextManager.attach(hwStream->stream, t->gl.texture_id);
+        mPlatform.attach(hwStream->stream, t->gl.texture_id);
     } else {
         assert(t->target == SamplerType::SAMPLER_EXTERNAL);
         // The texture doesn't need a texture name anymore, get rid of it
@@ -2166,7 +2166,7 @@ void OpenGLDriver::detachStream(GLTexture* t) noexcept {
 
     GLStream* s = static_cast<GLStream*>(t->hwStream);
     if (s->isNativeStream()) {
-        mContextManager.detach(t->hwStream->stream);
+        mPlatform.detach(t->hwStream->stream);
         // this deletes the texture id
     }
     glGenTextures(1, &t->gl.texture_id);
@@ -2177,13 +2177,13 @@ UTILS_NOINLINE
 void OpenGLDriver::replaceStream(GLTexture* t, GLStream* hwStream) noexcept {
     GLStream* s = static_cast<GLStream*>(t->hwStream);
     if (s->isNativeStream()) {
-        mContextManager.detach(t->hwStream->stream);
+        mPlatform.detach(t->hwStream->stream);
         // this deletes the texture id
     }
 
     if (hwStream->isNativeStream()) {
         glGenTextures(1, &t->gl.texture_id);
-        mContextManager.attach(hwStream->stream, t->gl.texture_id);
+        mPlatform.attach(hwStream->stream, t->gl.texture_id);
     } else {
         assert(t->target == SamplerType::SAMPLER_EXTERNAL);
         t->gl.texture_id = hwStream->user_thread.read[hwStream->user_thread.cur];
@@ -2238,7 +2238,7 @@ void OpenGLDriver::updateStream(GLTexture* t, driver::DriverApi* driver) noexcep
                 info.height = s->height;
 
                 Platform::ExternalTexture* ets = s->user_thread.infos[s->user_thread.cur].ets;
-                mContextManager.reallocateExternalStorage(ets, info.width, info.height,
+                mPlatform.reallocateExternalStorage(ets, info.width, info.height,
                         TextureFormat::RGB8);
 
                 glActiveTexture(GL_TEXTURE0);
@@ -2521,20 +2521,20 @@ void OpenGLDriver::readPixels(Driver::RenderTargetHandle src,
 void OpenGLDriver::beginFrame(uint64_t monotonic_clock_ns, uint32_t frameId) {
     insertEventMarker("beginFrame");
     if (UTILS_UNLIKELY(!mExternalStreams.empty())) {
-        driver::OpenGLPlatform& contextManager = mContextManager;
+        driver::OpenGLPlatform& platform = mPlatform;
         const size_t index = getIndexForTextureTarget(GL_TEXTURE_EXTERNAL_OES);
         for (GLTexture const* t : mExternalStreams) {
             assert(t && t->hwStream);
             if (static_cast<GLStream*>(t->hwStream)->isNativeStream()) {
                 assert(t->hwStream->stream);
-                contextManager.updateTexImage(t->hwStream->stream);
+                platform.updateTexImage(t->hwStream->stream);
                 // NOTE: We assume that updateTexImage() binds the texture on our behalf
                 GLuint activeUnit = state.textures.active;
                 state.textures.units[activeUnit].targets[index].texture_id = t->gl.texture_id;
             }
         }
     }
-    mContextManager.setPresentationTime(monotonic_clock_ns);
+    mPlatform.setPresentationTime(monotonic_clock_ns);
 }
 
 void OpenGLDriver::endFrame(uint32_t frameId) {
