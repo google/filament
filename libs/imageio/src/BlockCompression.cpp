@@ -126,8 +126,6 @@ CompressedTexture astcCompress(const LinearImage& original, AstcConfig config) {
     int pcdiv;
 
     switch (config.quality) {
-        // TODO: honor the other presets
-        default:
         case AstcPreset::VERYFAST:
             plimit_autoset = 2;
             oplimit_autoset = 1.0;
@@ -144,6 +142,78 @@ CompressedTexture astcCompress(const LinearImage& original, AstcConfig config) {
                 case 10: pcdiv = 36; break;
                 case 12: pcdiv = 30; break;
                 default: pcdiv = 30; break;
+            }
+            break;
+        case AstcPreset::FAST:
+            plimit_autoset = 4;
+            oplimit_autoset = 1.0;
+            dblimit_autoset_2d = fmax(85 - 35 * log10_texels_2d, 63 - 19 * log10_texels_2d);
+            dblimit_autoset_3d = fmax(85 - 35 * log10_texels_3d, 63 - 19 * log10_texels_3d);
+            bmc_autoset = 50;
+            mincorrel_autoset = 0.5;
+            maxiters_autoset = 1;
+            switch (ydim_2d) {
+                case 4: pcdiv = 60; break;
+                case 5: pcdiv = 27; break;
+                case 6: pcdiv = 30; break;
+                case 8: pcdiv = 24; break;
+                case 10: pcdiv = 16; break;
+                case 12: pcdiv = 20; break;
+                default: pcdiv = 20; break;
+            }
+            break;
+        case AstcPreset::MEDIUM:
+            plimit_autoset = 25;
+            oplimit_autoset = 1.2;
+            dblimit_autoset_2d = fmax(95 - 35 * log10_texels_2d, 70 - 19 * log10_texels_2d);
+            dblimit_autoset_3d = fmax(95 - 35 * log10_texels_3d, 70 - 19 * log10_texels_3d);
+            bmc_autoset = 75;
+            mincorrel_autoset = 0.75;
+            maxiters_autoset = 2;
+            switch (ydim_2d) {
+                case 4: pcdiv = 25; break;
+                case 5: pcdiv = 15; break;
+                case 6: pcdiv = 15; break;
+                case 8: pcdiv = 10; break;
+                case 10: pcdiv = 8; break;
+                case 12: pcdiv = 6; break;
+                default: pcdiv = 6; break;
+            }
+            break;
+        case AstcPreset::THOROUGH:
+            plimit_autoset = 100;
+            oplimit_autoset = 2.5;
+            dblimit_autoset_2d = fmax(105 - 35 * log10_texels_2d, 77 - 19 * log10_texels_2d);
+            dblimit_autoset_3d = fmax(105 - 35 * log10_texels_3d, 77 - 19 * log10_texels_3d);
+            bmc_autoset = 95;
+            mincorrel_autoset = 0.95f;
+            maxiters_autoset = 4;
+            switch (ydim_2d) {
+                case 4: pcdiv = 12; break;
+                case 5: pcdiv = 7; break;
+                case 6: pcdiv = 7; break;
+                case 8: pcdiv = 5; break;
+                case 10: pcdiv = 4; break;
+                case 12: pcdiv = 3; break;
+                default: pcdiv = 3; break;
+            }
+            break;
+        case AstcPreset::EXHAUSTIVE:
+            plimit_autoset = 1 << 10;
+            oplimit_autoset = 1000.0;
+            dblimit_autoset_2d = 999.0f;
+            dblimit_autoset_3d = 999.0f;
+            bmc_autoset = 100;
+            mincorrel_autoset = 0.99;
+            maxiters_autoset = 4;
+            switch (ydim_2d) {
+                case 4: pcdiv = 3; break;
+                case 5: pcdiv = 1; break;
+                case 6: pcdiv = 1; break;
+                case 8: pcdiv = 1; break;
+                case 10: pcdiv = 1; break;
+                case 12: pcdiv = 1; break;
+                default: pcdiv = 1; break;
             }
             break;
     }
@@ -187,10 +257,42 @@ CompressedTexture astcCompress(const LinearImage& original, AstcConfig config) {
 
     // Perform compression.
 
+    swizzlepattern swz_encode = { 0, 1, 2, 3 };
+    swizzlepattern swz_decode = { 0, 1, 2, 3 };
+    astc_decode_mode decode_mode;
+    switch (config.semantic) {
+        case AstcSemantic::COLORS_LDR:
+            decode_mode = config.srgb ? DECODE_LDR_SRGB : DECODE_LDR;
+            break;
+        case AstcSemantic::COLORS_HDR:
+            decode_mode = DECODE_HDR;
+            break;
+        case AstcSemantic::NORMALS:
+            decode_mode = config.srgb ? DECODE_LDR_SRGB : DECODE_LDR;
+            ewp.rgba_weights[0] = 1.0f;
+            ewp.rgba_weights[1] = 0.0f;
+            ewp.rgba_weights[2] = 0.0f;
+            ewp.rgba_weights[3] = 1.0f;
+            ewp.ra_normal_angular_scale = 1;
+            swz_encode.r = 0;
+            swz_encode.g = 0;
+            swz_encode.b = 0;
+            swz_encode.a = 1;
+            swz_decode.r = 0;
+            swz_decode.g = 3;
+            swz_decode.b = 6;
+            swz_decode.a = 5;
+            ewp.block_artifact_suppression = 1.8f;
+            ewp.mean_stdev_radius = 3;
+            ewp.rgb_mean_weight = 0;
+            ewp.rgb_stdev_weight = 50;
+            ewp.rgb_mean_and_stdev_mixing = 0.0;
+            ewp.alpha_mean_weight = 0;
+            ewp.alpha_stdev_weight = 50;
+            break;
+    }
+
     const int threadcount = std::thread::hardware_concurrency();
-    constexpr astc_decode_mode decode_mode = DECODE_LDR; // TODO: honor the config semantic
-    constexpr swizzlepattern swz_encode = { 0, 1, 2, 3 };
-    constexpr swizzlepattern swz_decode = { 0, 1, 2, 3 };
 
     const int xsize = input_image->xsize;
     const int ysize = input_image->ysize;
