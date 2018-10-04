@@ -632,7 +632,7 @@ std::unique_ptr<Driver> ContextManagerEGL::createDriver(void* const sharedGLCont
         goto error;
     }
 
-    if (!makeCurrent(mEGLDummySurface)) {
+    if (!makeCurrent(mEGLDummySurface, mEGLDummySurface)) {
         // eglMakeCurrent failed
         logEglError("eglMakeCurrent");
         goto error;
@@ -659,10 +659,11 @@ error:
     return nullptr;
 }
 
-EGLBoolean ContextManagerEGL::makeCurrent(EGLSurface surface) noexcept {
-    if (UTILS_UNLIKELY((surface != mCurrentSurface))) {
-        mCurrentSurface = surface;
-        return eglMakeCurrent(mEGLDisplay, surface, surface, mEGLContext);
+EGLBoolean ContextManagerEGL::makeCurrent(EGLSurface drawSurface, EGLSurface readSurface) noexcept {
+    if (UTILS_UNLIKELY((drawSurface != mCurrentDrawSurface || readSurface != mCurrentReadSurface))) {
+        mCurrentDrawSurface = drawSurface;
+        mCurrentReadSurface = readSurface;
+        return eglMakeCurrent(mEGLDisplay, drawSurface, readSurface, mEGLContext);
     }
     return EGL_TRUE;
 }
@@ -694,23 +695,25 @@ ExternalContext::SwapChain* ContextManagerEGL::createSwapChain(
 void ContextManagerEGL::destroySwapChain(ExternalContext::SwapChain* swapChain) noexcept {
     EGLSurface sur = (EGLSurface) swapChain;
     if (sur != EGL_NO_SURFACE) {
-        makeCurrent(mEGLDummySurface);
+        makeCurrent(mEGLDummySurface, mEGLDummySurface);
         eglDestroySurface(mEGLDisplay, sur);
     }
 }
 
-void ContextManagerEGL::makeCurrent(ExternalContext::SwapChain* swapChain) noexcept {
-    EGLSurface sur = (EGLSurface) swapChain;
-    if (sur != EGL_NO_SURFACE) {
-        makeCurrent(sur);
+void ContextManagerEGL::makeCurrent(ExternalContext::SwapChain* drawSwapChain,
+                                    ExternalContext::SwapChain* readSwapChain) noexcept {
+    EGLSurface drawSur = (EGLSurface) drawSwapChain;
+    EGLSurface readSur = (EGLSurface) readSwapChain;
+    if (drawSur != EGL_NO_SURFACE || readSur != EGL_NO_SURFACE) {
+        makeCurrent(drawSur, readSur);
     }
 }
 
 void ContextManagerEGL::setPresentationTime(long time) noexcept {
-    if (mCurrentSurface != EGL_NO_SURFACE) {
+    if (mCurrentDrawSurface != EGL_NO_SURFACE) {
       eglPresentationTimeANDROID(
                         mEGLDisplay,
-                        mCurrentSurface,
+                        mCurrentDrawSurface,
                         time);
     }
 }

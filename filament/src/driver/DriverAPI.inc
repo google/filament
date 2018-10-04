@@ -406,8 +406,9 @@ DECL_DRIVER_API_4(setViewportScissor,
  * Swap chain
  */
 
-DECL_DRIVER_API_1(makeCurrent,
-        Driver::SwapChainHandle, sch)
+DECL_DRIVER_API_2(makeCurrent,
+        Driver::SwapChainHandle, schDraw,
+        Driver::SwapChainHandle, schRead)
 
 
 DECL_DRIVER_API_1(commit,

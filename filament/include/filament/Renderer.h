@@ -137,27 +137,18 @@ public:
     void render(View const* view);
 
     /**
-     * Save the current rendered view so that it may be replayed later into a
-     * swap chain.
+     * Mirror the currently rendered view to the indicated swap chain, using the
+     * indicated source and destination rectangle.
      *
-     * @param view A pointer to the view to save.
+     * @param toSwapChain The swap chain into which the frame should be mirrored.
+     * @param toView The destination rectangle in which to draw the view.
+     * @param fromView The source rectangle to be mirrored.
      *
-     * @see
-     * replaySavedFrame()
+     * @remark
+     * mirrorFrame() should be called after a frme is rendered using render()
+     * but before endFrame() is called.
      */
-    void saveCurrentFrame(View const* view);
-
-    /**
-     * Replay the most recently saved frame into the given swap chain.
-     *
-     * @param swapChain The swap chain into which to replay the saved frame.
-     * @param view The view into which the frame should be drawn.
-     *
-     * @see
-     * saveCurrentFrame()
-     *
-     */
-    void replaySavedFrame(SwapChain* swapChain, View const* view);
+    void mirrorFrame(SwapChain* toSwapChain, View const* toView, View const* fromView);
 
     /**
      * Read-back the content of the SwapChain associated with this Renderer.

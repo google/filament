@@ -1506,12 +1506,13 @@ void OpenGLDriver::commit(Driver::SwapChainHandle sch) {
     }
 }
 
-void OpenGLDriver::makeCurrent(Driver::SwapChainHandle sch) {
+void OpenGLDriver::makeCurrent(Driver::SwapChainHandle schDraw, Driver::SwapChainHandle schRead) {
     DEBUG_MARKER()
 
-    if (sch) {
-        HwSwapChain* sc = handle_cast<HwSwapChain*>(sch);
-        mContextManager.makeCurrent(sc->swapChain);
+    if (schDraw && schRead) {
+        HwSwapChain* scDraw = handle_cast<HwSwapChain*>(schDraw);
+        HwSwapChain* scRead = handle_cast<HwSwapChain*>(schRead);
+        mContextManager.makeCurrent(scDraw->swapChain, scRead->swapChain);
     }
 }
 

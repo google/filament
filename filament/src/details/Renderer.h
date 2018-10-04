@@ -63,8 +63,7 @@ public:
     void render(FView const* view);
     void renderJob(ArenaScope& arena, FView* view);
 
-    void saveCurrentFrame(FView const* view);
-    void replaySavedFrame(FSwapChain* swapChain, FView const* view);
+    void mirrorFrame(FSwapChain* toSwapChain, FView const* toView, FView const* fromView);
 
     bool beginFrame(FSwapChain* swapChain);
     void endFrame();

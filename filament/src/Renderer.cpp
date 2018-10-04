@@ -235,47 +235,25 @@ void FRenderer::renderJob(ArenaScope& arena, FView* view) {
     recordHighWatermark(commands);
 }
 
-void FRenderer::saveCurrentFrame(FView const* view) {
+void FRenderer::mirrorFrame(FSwapChain* toSwapChain, FView const* toView, FView const* fromView) {
     SYSTRACE_CALL();
 
     assert(mSwapChain);
+    assert(toSwapChain);
     FEngine& engine = getEngine();
     FEngine::DriverApi& driver = engine.getDriverApi();
-    Viewport const& vp = view->getViewport();
-    RenderTargetPool& rtp = engine.getRenderTargetPool();
-
-    if (savedFrameTarget != nullptr) {
-        rtp.put(savedFrameTarget);
-        savedFrameTarget = nullptr;
-    }
-
-    savedFrameTarget = rtp.get(TargetBufferFlags::COLOR,
-                               vp.width, vp.height, false, getLdrFormat());
+    Viewport const& fromVp = fromView->getViewport();
+    Viewport const& toVp = toView->getViewport();
 
     const Handle<HwRenderTarget> viewRenderTarget = getRenderTarget();
+
+    toSwapChain->makeCurrent(driver, mSwapChain);
     driver.blit(TargetBufferFlags::COLOR,
-                savedFrameTarget->target, 0, 0, savedFrameTarget->w, savedFrameTarget->h,
-                viewRenderTarget, vp.left, vp.bottom, vp.width, vp.height);
-}
+                viewRenderTarget, toVp.left, toVp.bottom, toVp.width, toVp.height,
+                viewRenderTarget, fromVp.left, fromVp.bottom, fromVp.width, fromVp.height);
+    toSwapChain->commit(driver);
 
-void FRenderer::replaySavedFrame(FSwapChain* swapChain, FView const* view) {
-    SYSTRACE_CALL();
-
-    assert(mSwapChain == nullptr);
-    assert(savedFrameTarget);
-    FEngine& engine = getEngine();
-    FEngine::DriverApi& driver = engine.getDriverApi();
-    Viewport const& vp = view->getViewport();
-
-    driver.updateStreams(&driver);
-    swapChain->makeCurrent(driver);
-
-    const Handle<HwRenderTarget> viewRenderTarget = getRenderTarget();
-    driver.blit(TargetBufferFlags::COLOR,
-                viewRenderTarget, vp.left, vp.bottom, vp.width, vp.height,
-                savedFrameTarget->target, 0, 0, savedFrameTarget->w, savedFrameTarget->h);
-
-    swapChain->commit(driver);
+    mSwapChain->makeCurrent(driver);
 }
 
 bool FRenderer::beginFrame(FSwapChain* swapChain) {
@@ -430,12 +408,8 @@ bool Renderer::beginFrame(SwapChain* swapChain) {
     return upcast(this)->beginFrame(upcast(swapChain));
 }
 
-void Renderer::saveCurrentFrame(View const* view) {
-    upcast(this)->saveCurrentFrame(upcast(view));
-}
-
-void Renderer::replaySavedFrame(SwapChain* swapChain, View const* view) {
-    upcast(this)->replaySavedFrame(upcast(swapChain), upcast(view));
+void Renderer::mirrorFrame(SwapChain* toSwapChain, View const* toView, View const* fromView) {
+    upcast(this)->mirrorFrame(upcast(toSwapChain), upcast(toView), upcast(fromView));
 }
 
 void Renderer::readPixels(uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,

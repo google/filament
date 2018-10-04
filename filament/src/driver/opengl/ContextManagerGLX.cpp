@@ -170,9 +170,10 @@ ExternalContext::SwapChain* ContextManagerGLX::createSwapChain(
 void ContextManagerGLX::destroySwapChain(ExternalContext::SwapChain* /*swapChain*/) noexcept {
 }
 
-void ContextManagerGLX::makeCurrent(ExternalContext::SwapChain* swapChain) noexcept {
+void ContextManagerGLX::makeCurrent(
+        ExternalContext::SwapChain* drawSwapChain, ExternalContext::SwapChain* readSwapChain) noexcept {
     g_glx.setCurrentContext(mGLXDisplay,
-            (GLXDrawable) swapChain, (GLXDrawable) swapChain, mGLXContext);
+            (GLXDrawable) drawSwapChain, (GLXDrawable) readSwapChain, mGLXContext);
 }
 
 void ContextManagerGLX::commit(ExternalContext::SwapChain* swapChain) noexcept {

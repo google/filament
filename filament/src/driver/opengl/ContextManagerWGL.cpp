@@ -174,8 +174,11 @@ void ContextManagerWGL::destroySwapChain(ExternalContext::SwapChain* swapChain) 
     wglMakeCurrent(mWhdc, mContext);
 }
 
-void ContextManagerWGL::makeCurrent(ExternalContext::SwapChain* swapChain) noexcept {
-    HDC hdc = (HDC)(swapChain);
+void ContextManagerWGL::makeCurrent(ExternalContext::SwapChain* drawSwapChain,
+                                    ExternalContext::SwapChain* readSwapChain) noexcept {
+    ASSERT_PRECONDITION_NON_FATAL(drawSwapChain == readSwapChain,
+                                  "ContextManagerWGL does not support distinct draw/read swap chains.");
+    HDC hdc = (HDC)(drawSwapChain);
     if (hdc != NULL) {
         BOOL success = wglMakeCurrent(hdc, mContext);
         if (!ASSERT_POSTCONDITION_NON_FATAL(success, "wglMakeCurrent() failed. hdc = %p", hdc)) {

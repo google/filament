@@ -50,20 +50,13 @@ Java_com_google_android_filament_Renderer_nRender(JNIEnv *, jclass, jlong native
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_Renderer_nSaveCurrentFrame(JNIEnv *, jclass, jlong nativeRenderer,
-        jlong nativeView) {
+Java_com_google_android_filament_Renderer_nMirrorFrame(JNIEnv *, jclass, jlong nativeRenderer,
+        jlong nativeToSwapChain, jlong nativeToView, jlong nativeFromView) {
     Renderer *renderer = (Renderer *) nativeRenderer;
-    View *view = (View *) nativeView;
-    renderer->saveCurrentFrame(view);
-}
-
-extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_Renderer_nReplaySavedFrame(JNIEnv *, jclass, jlong nativeRenderer,
-        jlong nativeSwapChain, jlong nativeView) {
-    Renderer *renderer = (Renderer *) nativeRenderer;
-    SwapChain *swapChain = (SwapChain *) nativeSwapChain;
-    View *view = (View *) nativeView;
-    renderer->replaySavedFrame(swapChain, view);
+    SwapChain *toSwapChain = (SwapChain *) nativeToSwapChain;
+    View *toView = (View *) nativeToView;
+    View *fromView = (View *) nativeFromView;
+    renderer->mirrorFrame(toSwapChain, toView, fromView);
 }
 
 extern "C" JNIEXPORT jint JNICALL

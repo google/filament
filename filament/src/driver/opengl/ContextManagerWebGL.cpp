@@ -36,7 +36,8 @@ ExternalContext::SwapChain* ContextManagerWebGL::createSwapChain(
 void ContextManagerWebGL::destroySwapChain(ExternalContext::SwapChain* swapChain) noexcept {
 }
 
-void ContextManagerWebGL::makeCurrent(ExternalContext::SwapChain* swapChain) noexcept {
+void ContextManagerWebGL::makeCurrent(ExternalContext::SwapChain* drawSwapChain,
+                                      ExternalContext::SwapChain* readSwapChain) noexcept {
 }
 
 void ContextManagerWebGL::commit(ExternalContext::SwapChain* swapChain) noexcept {

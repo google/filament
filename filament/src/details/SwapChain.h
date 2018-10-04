@@ -36,7 +36,11 @@ public:
     void terminate(FEngine& engine) noexcept;
 
     void makeCurrent(driver::DriverApi& driverApi) noexcept {
-        driverApi.makeCurrent(mSwapChain);
+        driverApi.makeCurrent(mSwapChain, mSwapChain);
+    }
+
+    void makeCurrent(driver::DriverApi& driverApi, FSwapChain* readSwapChain) noexcept {
+        driverApi.makeCurrent(mSwapChain, readSwapChain->mSwapChain);
     }
 
     void commit(driver::DriverApi& driverApi) noexcept {

@@ -84,8 +84,11 @@ ExternalContext::SwapChain* ContextManagerCocoa::createSwapChain(void* nativewin
 void ContextManagerCocoa::destroySwapChain(ExternalContext::SwapChain* swapChain) noexcept {
 }
 
-void ContextManagerCocoa::makeCurrent(ExternalContext::SwapChain* swapChain) noexcept {
-    NSView *nsView = (NSView*) swapChain;
+void ContextManagerCocoa::makeCurrent(ExternalContext::SwapChain* drawSwapChain
+        ExternalContext::SwapChain* readSwapChain) noexcept {
+    ASSERT_PRECONDITION_NON_FATAL(drawSwapChain == readSwapChain,
+            "ContextManagerCocoa does not support using distinct draw/read swap chains.");
+    NSView *nsView = (NSView*) drawSwapChain;
     if (pImpl->mCurrentView != nsView) {
         pImpl->mCurrentView = nsView;
         // Calling setView could change the viewport and/or scissor box state, but this isn't
