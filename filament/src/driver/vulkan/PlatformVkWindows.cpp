@@ -27,7 +27,7 @@ namespace filament {
 
 using namespace driver;
 
-std::unique_ptr<Driver> PlatformVkWindows::createDriver(void* const sharedContext) noexcept {
+Driver* PlatformVkWindows::createDriver(void* const sharedContext) noexcept {
     ASSERT_PRECONDITION(sharedContext == nullptr, "Vulkan does not support shared contexts.");
     static const char* requestedExtensions[] = {
         "VK_KHR_surface",

@@ -29,7 +29,7 @@ class NoopDriver final : public DriverBase {
     virtual ~NoopDriver() noexcept;
 
 public:
-    static std::unique_ptr<Driver> create();
+    static Driver* create();
 
 private:
     virtual ShaderModel getShaderModel() const noexcept override final { return ShaderModel::UNKNOWN; }

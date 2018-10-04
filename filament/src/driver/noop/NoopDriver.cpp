@@ -20,8 +20,8 @@
 namespace filament {
 
 
-std::unique_ptr<Driver> NoopDriver::create() {
-    return std::unique_ptr<Driver>(new NoopDriver());
+Driver* NoopDriver::create() {
+    return new NoopDriver();
 }
 
 NoopDriver::NoopDriver() noexcept
