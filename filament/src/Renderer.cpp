@@ -239,6 +239,7 @@ void FRenderer::mirrorFrame(FSwapChain* dstSwapChain, Viewport const* dstViewpor
     SYSTRACE_CALL();
 
     assert(mSwapChain);
+    assert(mSwapChain->isReadable());
     assert(dstSwapChain);
     FEngine& engine = getEngine();
     FEngine::DriverApi& driver = engine.getDriverApi();
@@ -256,7 +257,7 @@ void FRenderer::mirrorFrame(FSwapChain* dstSwapChain, Viewport const* dstViewpor
                 viewRenderTarget, srcViewport->left, srcViewport->bottom, srcViewport->width, srcViewport->height);
     dstSwapChain->commit(driver);
 
-    // Reset the context and read/draw surface4w to the current surface so that
+    // Reset the context and read/draw surface to the current surface so that
     // frame rendering can continue or complete.
     mSwapChain->makeCurrent(driver);
 }

@@ -143,6 +143,7 @@ namespace filament {
 class UTILS_PUBLIC SwapChain : public FilamentAPI {
 public:
     static const uint64_t CONFIG_TRANSPARENT = driver::SWAP_CHAIN_CONFIG_TRANSPARENT;
+    static const uint64_t CONFIG_READABLE = driver::SWAP_CHAIN_CONFIG_READABLE;
 
     void* getNativeWindow() const noexcept;
 };
