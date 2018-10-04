@@ -531,7 +531,7 @@ private:
     void detachStream(GLTexture* t) noexcept;
     void replaceStream(GLTexture* t, GLStream* stream) noexcept;
 
-    driver::OpenGLPlatform& mContextManager;
+    driver::OpenGLPlatform& mPlatform;
 
     OpenGLBlitter* mOpenGLBlitter = nullptr;
     void updateStream(GLTexture* t, driver::DriverApi* driver) noexcept;
