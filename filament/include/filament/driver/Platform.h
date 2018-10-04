@@ -36,7 +36,7 @@ public:
     struct Fence {};
     struct Stream {};
     struct ExternalTexture {
-        uintptr_t image;
+        uintptr_t image = 0;
     };
 
     virtual int getOSVersion() const noexcept = 0;
