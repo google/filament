@@ -43,7 +43,7 @@ struct X11Functions {
     void* library;
 } g_x11;
 
-std::unique_ptr<Driver> PlatformVkLinux::createDriver(void* const sharedContext) noexcept {
+Driver* PlatformVkLinux::createDriver(void* const sharedContext) noexcept {
     ASSERT_PRECONDITION(sharedContext == nullptr, "Vulkan does not support shared contexts.");
     static const char* requestedExtensions[] = {
         "VK_KHR_surface",
