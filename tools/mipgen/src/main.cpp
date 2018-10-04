@@ -253,6 +253,10 @@ int main(int argc, char* argv[]) {
         sourceImage = extractChannel(sourceImage, 0);
     }
 
+    if (g_filter == Filter::GAUSSIAN_NORMALS) {
+        sourceImage = colorsToVectors(sourceImage);
+    }
+
     puts("Generating miplevels...");
     uint32_t count = getMipmapCount(sourceImage);
     vector<LinearImage> miplevels(count);
@@ -306,7 +310,10 @@ int main(int argc, char* argv[]) {
             info.glBaseInternalFormat = KtxBundle::RGBA;
         }
         uint32_t mip = 0;
-        auto addLevel = [&](const LinearImage& image) {
+        auto addLevel = [&](LinearImage image) {
+            if (g_filter == Filter::GAUSSIAN_NORMALS) {
+                image = vectorsToColors(image);
+            }
             std::unique_ptr<uint8_t[]> data;
             if (astcConfig.blocksize[0] > 0) {
                 // The ASTC encoder calls exit(1) if it fails, so it's very useful to print some
