@@ -202,7 +202,7 @@ public:
     static constexpr RenderFlags HAS_DYNAMIC_LIGHTING   = 0x04;
 
 
-    RenderPass(const char* name) noexcept : mName(name) { }
+    explicit RenderPass(const char* name) noexcept : mName(name) { }
 
     virtual ~RenderPass() noexcept;
 
@@ -237,7 +237,7 @@ private:
     static_assert(JOBS_PARALLEL_FOR_COMMANDS_SIZE % utils::CACHELINE_SIZE == 0,
             "Size of Commands jobs must be multiple of a cache-line size");
 
-    static inline void generateCommands(uint32_t commandTypeFlags, Command* const commands,
+    static inline void generateCommands(uint32_t commandTypeFlags, Command* commands,
             FScene::RenderableSoa const& soa, utils::Range<uint32_t> range, RenderFlags renderFlags,
             math::float3 cameraPosition, math::float3 cameraForward) noexcept;
 
@@ -247,7 +247,7 @@ private:
             math::float3 cameraForward) noexcept;
 
     static void setupColorCommand(Command& cmdDraw, bool hasDepthPass,
-            FMaterialInstance const* const mi) noexcept;
+            FMaterialInstance const* mi) noexcept;
 
     static void recordDriverCommands(FEngine::DriverApi& driver,
             utils::Slice<Command> const& commands) noexcept;
