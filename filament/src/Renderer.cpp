@@ -240,7 +240,6 @@ void FRenderer::mirrorFrame(FSwapChain* dstSwapChain, Viewport const& dstViewpor
     SYSTRACE_CALL();
 
     assert(mSwapChain);
-    assert(mSwapChain->isReadable());
     assert(dstSwapChain);
     FEngine& engine = getEngine();
     FEngine::DriverApi& driver = engine.getDriverApi();
@@ -253,6 +252,8 @@ void FRenderer::mirrorFrame(FSwapChain* dstSwapChain, Viewport const& dstViewpor
     // destination.
     driver.makeCurrent(dstSwapChain->getHwHandle(), mSwapChain->getHwHandle());
 
+    // Verify that the source swap chain is readable.
+    assert(mSwapChain->isReadable());
     driver.blit(TargetBufferFlags::COLOR,
                 viewRenderTarget, dstViewport.left, dstViewport.bottom, dstViewport.width, dstViewport.height,
                 viewRenderTarget, srcViewport.left, srcViewport.bottom, srcViewport.width, srcViewport.height);
