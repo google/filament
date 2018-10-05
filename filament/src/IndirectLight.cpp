@@ -90,6 +90,12 @@ IndirectLight* IndirectLight::Builder::build(Engine& engine) {
             return nullptr;
         }
 
+        if (!ASSERT_POSTCONDITION_NON_FATAL( mImpl->mReflectionsMap->isRgbm() ||
+                mImpl->mReflectionsMap->getFormat() == Texture::InternalFormat::RGBM,
+                "reflection map must have RGBM enabled")) {
+            return nullptr;
+        }
+
         if (!ASSERT_POSTCONDITION_NON_FATAL(mImpl->mReflectionsMap->getLevels() == 9 ||
                 mImpl->mReflectionsMap->getLevels() == 1,
                 "reflection map must be 256x256 and have 9 mipmap levels")) {

@@ -59,7 +59,9 @@ public class Texture {
         R32F, R32UI, R32I,
         RG16F, RG16UI, RG16I,
         R11F_G11F_B10F,
-        RGBA8, SRGB8_A8, RGBA8_SNORM, RGBM, RGB10_A2, RGBA8UI, RGBA8I,
+        RGBA8, SRGB8_A8, RGBA8_SNORM,
+        RGBM, // Deprecated but still honored; see Texture.Builder.rgbm
+        RGB10_A2, RGBA8UI, RGBA8I,
         DEPTH32F, DEPTH24_STENCIL8, DEPTH32F_STENCIL8,
 
         // 48-bits per element
@@ -332,6 +334,12 @@ public class Texture {
         }
 
         @NonNull
+        public Builder rgbm(@NonNull boolean enabled) {
+            nBuilderRgbm(mNativeBuilder, enabled);
+            return this;
+        }
+
+        @NonNull
         public Texture build(@NonNull Engine engine) {
             long nativeTexture = nBuilderBuild(mNativeBuilder, engine.getNativeObject());
             if (nativeTexture == 0) throw new IllegalStateException("Couldn't create Texture");
@@ -484,6 +492,7 @@ public class Texture {
     private static native void nBuilderLevels(long nativeBuilder, int levels);
     private static native void nBuilderSampler(long nativeBuilder, int sampler);
     private static native void nBuilderFormat(long nativeBuilder, int format);
+    private static native void nBuilderRgbm(long nativeBuilder, boolean enabled);
     private static native long nBuilderBuild(long nativeBuilder, long nativeEngine);
 
     private static native int nGetWidth(long nativeTexture, int level);

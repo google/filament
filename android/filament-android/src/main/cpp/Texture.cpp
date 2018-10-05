@@ -100,6 +100,13 @@ Java_com_google_android_filament_Texture_nBuilderFormat(JNIEnv *env, jclass type
     builder->format((Texture::InternalFormat) format);
 }
 
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_Texture_nBuilderRgbm(JNIEnv *env, jclass type,
+        jlong nativeBuilder, jboolean enable) {
+    Texture::Builder *builder = (Texture::Builder *) nativeBuilder;
+    builder->rgbm(enable);
+}
+
 extern "C" JNIEXPORT jlong JNICALL
 Java_com_google_android_filament_Texture_nBuilderBuild(JNIEnv *env, jclass type,
         jlong nativeBuilder, jlong nativeEngine) {
@@ -148,6 +155,12 @@ Java_com_google_android_filament_Texture_nGetInternalFormat(JNIEnv *env, jclass 
         jlong nativeTexture) {
     Texture *texture = (Texture *) nativeTexture;
     return (jint) texture->getFormat();
+}
+
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_google_android_filament_Texture_nGetRgbm(JNIEnv *env, jclass type, jlong nativeTexture) {
+    Texture *texture = (Texture *) nativeTexture;
+    return texture->isRgbm();
 }
 
 extern "C" JNIEXPORT jint JNICALL

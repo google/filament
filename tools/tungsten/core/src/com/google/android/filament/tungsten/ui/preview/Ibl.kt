@@ -128,7 +128,8 @@ internal class Ibl(val engine: Engine, private val pathPrefix: String) {
                 .width(size)
                 .height(size)
                 .levels(levels)
-                .format(Texture.InternalFormat.RGBM)
+                .format(Texture.InternalFormat.RGBA8)
+                .rgbm()
                 .sampler(Texture.Sampler.SAMPLER_CUBEMAP)
                 .build(engine)
 
