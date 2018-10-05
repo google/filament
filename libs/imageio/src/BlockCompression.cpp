@@ -515,6 +515,40 @@ EtcConfig etcParseOptionString(const std::string& options) {
     return result;
 }
 
+bool parseOptionString(const string& options, CompressionConfig* config) {
+    config->type = CompressionConfig::INVALID;
+    if (options.substr(0, 5) == "astc_") {
+        config->astc = astcParseOptionString(options.substr(5));
+        if (config->astc.blocksize[0] != 0) {
+            config->type = CompressionConfig::ASTC;
+        }
+    } else if (options.substr(0, 5) == "s3tc_") {
+        config->s3tc = s3tcParseOptionString(options.substr(5));
+        if (config->s3tc.format != CompressedFormat::INVALID) {
+            config->type = CompressionConfig::S3TC;
+        }
+    } else if (options.substr(0, 4) == "etc_") {
+        config->etc = etcParseOptionString(options.substr(4));
+        if (config->etc.format != CompressedFormat::INVALID) {
+            config->type = CompressionConfig::ETC;
+        }
+    }
+    return config->type != CompressionConfig::INVALID;
+}
+
+CompressedTexture compressTexture(const CompressionConfig& config, const LinearImage& image) {
+    if (config.type == CompressionConfig::ASTC) {
+        return astcCompress(image, config.astc);
+    }
+    if (config.type == CompressionConfig::S3TC) {
+        return s3tcCompress(image, config.s3tc);
+    }
+    if (config.type == CompressionConfig::ETC) {
+        return etcCompress(image, config.etc);
+    }
+    return {};
+}
+
 static LinearImage extendToFourChannels(LinearImage original) {
     LinearImage source = original;
     const uint32_t width = source.getWidth();

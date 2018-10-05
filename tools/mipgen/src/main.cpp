@@ -286,19 +286,10 @@ int main(int argc, char* argv[]) {
             info.glInternalFormat =
             info.glBaseInternalFormat = KtxBundle::LUMINANCE;
         }
-        AstcConfig astcConfig {};
-        S3tcConfig s3tcConfig {};
-        EtcConfig etcConfig {};
+        CompressionConfig config {};
         if (!g_compression.empty()) {
-            if (g_compression.substr(0, 5) == "astc_") {
-                astcConfig = astcParseOptionString(g_compression.substr(5));
-            } else if (g_compression.substr(0, 5) == "s3tc_") {
-                s3tcConfig = s3tcParseOptionString(g_compression.substr(5));
-            } else if (g_compression.substr(0, 4) == "etc_") {
-                etcConfig = etcParseOptionString(g_compression.substr(4));
-            }
-            if (astcConfig.blocksize[0] == 0 && s3tcConfig.format == CompressedFormat::INVALID
-                    && etcConfig.format == CompressedFormat::INVALID) {
+            bool valid = parseOptionString(g_compression, &config);
+            if (!valid) {
                 cerr << "Unrecognized compression: " << g_compression << endl;
                 return 1;
             }
@@ -315,32 +306,16 @@ int main(int argc, char* argv[]) {
                 image = vectorsToColors(image);
             }
             std::unique_ptr<uint8_t[]> data;
-            if (astcConfig.blocksize[0] > 0) {
-                // The ASTC encoder calls exit(1) if it fails, so it's very useful to print some
+            if (config.type != CompressionConfig::INVALID) {
+                // Some encoders call exit(1) upon failure, so it's very useful to print some
                 // source image information here for when this is invoked from a build script.
-                // Note that the encoder has limitations in terms of image size.
-                printf("Starting ASTC compression for %s (%dx%d)\n", inputPath.getName().c_str(),
+                // Note that some encoders also have limitations in terms of image size.
+                printf("Starting compression for %s (%dx%d)\n", inputPath.getName().c_str(),
                         image.getWidth(), image.getHeight());
-                CompressedTexture tex = astcCompress(image, astcConfig);
+                CompressedTexture tex = compressTexture(config, image);
                 // Add newline here because the ASTC encoder has a progress indicator that issues a
                 // carriage return without a line feed.
                 putc('\n', stdout);
-                container.setBlob({mip++}, tex.data.get(), tex.size);
-                info.glInternalFormat = (uint32_t) tex.format;
-                return;
-            }
-            if (s3tcConfig.format != CompressedFormat::INVALID) {
-                printf("Starting S3TC compression for %s (%dx%d)\n", inputPath.getName().c_str(),
-                        image.getWidth(), image.getHeight());
-                CompressedTexture tex = s3tcCompress(image, s3tcConfig);
-                container.setBlob({mip++}, tex.data.get(), tex.size);
-                info.glInternalFormat = (uint32_t) tex.format;
-                return;
-            }
-            if (etcConfig.format != CompressedFormat::INVALID) {
-                printf("Starting ETC compression for %s (%dx%d)\n", inputPath.getName().c_str(),
-                        image.getWidth(), image.getHeight());
-                CompressedTexture tex = etcCompress(image, etcConfig);
                 container.setBlob({mip++}, tex.data.get(), tex.size);
                 info.glInternalFormat = (uint32_t) tex.format;
                 return;
