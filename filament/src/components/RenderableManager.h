@@ -49,7 +49,7 @@ public:
         bool skinning       : 1;
     };
 
-    FRenderableManager(FEngine& engine) noexcept;
+    explicit FRenderableManager(FEngine& engine) noexcept;
     ~FRenderableManager();
 
     // free-up all resources
@@ -99,7 +99,7 @@ public:
 
     inline void setCastShadows(Instance instance, bool enable) noexcept;
 
-    inline void setLayerMask(Instance instance, uint8_t enable) noexcept;
+    inline void setLayerMask(Instance instance, uint8_t layerMask) noexcept;
     inline void setReceiveShadows(Instance instance, bool enable) noexcept;
     inline void setCulling(Instance instance, bool enable) noexcept;
     inline void setUniformHandle(Instance instance, Handle<HwUniformBuffer> const& handle) noexcept;
