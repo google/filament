@@ -323,7 +323,8 @@ private:
     inline void useProgram(OpenGLProgram* p) noexcept;
 
     inline void bindBuffer(GLenum target, GLuint buffer) noexcept;
-    inline void bindBufferBase(GLenum target, GLuint index, GLuint buffer) noexcept;
+    inline void bindBufferRange(GLenum target, GLuint index, GLuint buffer,
+            GLintptr offset, GLsizeiptr size) noexcept;
 
     inline void bindFramebuffer(GLenum target, GLuint buffer) noexcept;
 
@@ -409,9 +410,13 @@ private:
 
         struct {
             struct {
-                GLuint buffers[MAX_BUFFER_BINDINGS] = { 0 };
-                GLuint genericBinding = 0;
-            } targets[8];
+                struct {
+                    GLuint name = 0;
+                    GLintptr offset = 0;
+                    GLsizeiptr size = 0;
+                } buffers[MAX_BUFFER_BINDINGS];
+            } targets[2];   // there are only 2 indexed buffer target (uniform and transform feedback)
+            GLuint genericBinding[8] = { 0 };
         } buffers;
 
         struct {
@@ -576,17 +581,19 @@ constexpr size_t OpenGLDriver::getIndexForCap(GLenum cap) noexcept {
 constexpr size_t OpenGLDriver::getIndexForBufferTarget(GLenum target) noexcept {
     size_t index = 0;
     switch (target) {
-        case GL_ARRAY_BUFFER:               index = 0; break;
-        case GL_COPY_READ_BUFFER:           index = 1; break;
-        case GL_COPY_WRITE_BUFFER:          index = 2; break;
-        case GL_ELEMENT_ARRAY_BUFFER:       index = 3; break;
-        case GL_PIXEL_PACK_BUFFER:          index = 4; break;
-        case GL_PIXEL_UNPACK_BUFFER:        index = 5; break;
-        case GL_TRANSFORM_FEEDBACK_BUFFER:  index = 6; break;
-        case GL_UNIFORM_BUFFER:             index = 7; break;
+        // The indexed buffers MUST be first in this list
+        case GL_UNIFORM_BUFFER:             index = 0; break;
+        case GL_TRANSFORM_FEEDBACK_BUFFER:  index = 1; break;
+
+        case GL_ARRAY_BUFFER:               index = 2; break;
+        case GL_COPY_READ_BUFFER:           index = 3; break;
+        case GL_COPY_WRITE_BUFFER:          index = 4; break;
+        case GL_ELEMENT_ARRAY_BUFFER:       index = 5; break;
+        case GL_PIXEL_PACK_BUFFER:          index = 6; break;
+        case GL_PIXEL_UNPACK_BUFFER:        index = 7; break;
         default: index = 8; break; // should never happen
     }
-    assert(index < 8 && index < sizeof(state.buffers.targets)/sizeof(state.buffers.targets[0])); // NOLINT(misc-redundant-expression)
+    assert(index < sizeof(state.buffers.genericBinding)/sizeof(state.buffers.genericBinding[0])); // NOLINT(misc-redundant-expression)
     return index;
 }
 
