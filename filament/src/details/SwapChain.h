@@ -52,7 +52,7 @@ public:
     }
 
     constexpr bool isReadable() const noexcept {
-        return (mConfigFlags * CONFIG_READABLE) != 0;
+        return (mConfigFlags & CONFIG_READABLE) != 0;
     }
 
     Handle<HwSwapChain> getHwHandle() const noexcept {
