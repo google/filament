@@ -2535,6 +2535,9 @@ void OpenGLDriver::beginFrame(uint64_t monotonic_clock_ns, uint32_t frameId) {
             }
         }
     }
+}
+
+void OpenGLDriver::setPresentationTime(uint64_t monotonic_clock_ns) {
     mContextManager.setPresentationTime(monotonic_clock_ns);
 }
 

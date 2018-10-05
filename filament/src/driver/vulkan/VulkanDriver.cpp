@@ -228,6 +228,9 @@ void VulkanDriver::beginFrame(uint64_t monotonic_clock_ns, uint32_t frameId) {
     mBinder.gc();
 }
 
+void VulkanDriver::setPresentationTime(uint64_t monotonic_clock_ns) {
+}
+
 void VulkanDriver::endFrame(uint32_t frameId) {
     // Do nothing here; see commit().
 }

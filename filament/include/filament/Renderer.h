@@ -20,6 +20,7 @@
 #define TNT_FILAMENT_RENDERER_H
 
 #include <filament/FilamentAPI.h>
+#include <filament/Viewport.h>
 
 #include <utils/compiler.h>
 
@@ -30,7 +31,6 @@ namespace filament {
 class Engine;
 class SwapChain;
 class View;
-class Viewport;
 
 namespace driver {
 class PixelBufferDescriptor;
@@ -138,18 +138,46 @@ public:
     void render(View const* view);
 
     /**
+     * Flags used to configure the behavior of mirrorFrame().
+     *
+     * @see
+     * mirrorFrame()
+     */
+    using MirrorFrameFlag = uint32_t;
+
+    /**
+     * Indicates that the dstSwapChain passed into mirrorFrame() should be
+     * committed after the frame has been mirrored.
+     *
+     * @see
+     * mirrorFrame()
+     */
+    static constexpr MirrorFrameFlag COMMIT = 0x1;
+    /**
+     * Indicates that the presentation time should be set on the dstSwapChain
+     * passed into mirrorFrame to the monotonic clock time when the frame is
+     * mirrored.
+     *
+     * @see
+     * mirrorFrame()
+     */
+    static constexpr MirrorFrameFlag SET_PRESENTATION_TIME = 0x2;
+
+    /**
      * Mirror the currently rendered view to the indicated swap chain, using the
      * indicated source and destination rectangle.
      *
      * @param dstSwapChain The swap chain into which the frame should be mirrored.
      * @param dstViewport The destination rectangle in which to draw the view.
      * @param srcViewport The source rectangle to be mirrored.
+     * @param flags One or more MirrorFrameFlag behavior configuration flags.
      *
      * @remark
      * mirrorFrame() should be called after a frme is rendered using render()
      * but before endFrame() is called.
      */
-    void mirrorFrame(SwapChain* dstSwapChain, Viewport const* dstViewport, Viewport const* srcViewport);
+    void mirrorFrame(SwapChain* dstSwapChain, Viewport const& dstViewport, Viewport const& srcViewport,
+                     uint32_t flags=0);
 
     /**
      * Read-back the content of the SwapChain associated with this Renderer.

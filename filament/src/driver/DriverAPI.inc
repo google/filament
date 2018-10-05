@@ -208,6 +208,9 @@ DECL_DRIVER_API_2(beginFrame,
         uint64_t, monotonic_clock_ns,
         uint32_t, frameId)
 
+DECL_DRIVER_API_1(setPresentationTime,
+        uint64_t, monotonic_clock_ns)
+
 DECL_DRIVER_API_1(endFrame,
         uint32_t, frameId)
 

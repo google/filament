@@ -27,6 +27,8 @@ public class Renderer {
     private final Engine mEngine;
     private long mNativeObject;
 
+    public static final int MIRROR_FRAME_FLAG_COMMIT = 0x1;
+    public static final int MIRROR_FRAME_FLAG_SET_PRESENTATION_TIME = 0x2;
 
     Renderer(@NonNull Engine engine, long nativeRenderer) {
         mEngine = engine;
@@ -55,10 +57,11 @@ public class Renderer {
      */
     public void mirrorFrame(
             @NonNull SwapChain dstSwapChain, @NonNull Viewport dstViewport,
-            @NonNull Viewport srcViewport) {
+            @NonNull Viewport srcViewport, int flags) {
         nMirrorFrame(getNativeObject(), dstSwapChain.getNativeObject(),
                 dstViewport.left, dstViewport.bottom, dstViewport.width, dstViewport.height,
-                srcViewport.left, srcViewport.bottom, srcViewport.width, srcViewport.height);
+                srcViewport.left, srcViewport.bottom, srcViewport.width, srcViewport.height,
+                flags);
     }
 
     /**
@@ -101,7 +104,8 @@ public class Renderer {
     private static native void nRender(long nativeRenderer, long nativeView);
     private static native void nMirrorFrame(long nativeRenderer, long nativeDstSwapChain,
             int dstLeft, int dstBottom, int dstWidth, int dstHeight,
-            int srcLeft, int srcBottom, int srcWidth, int srcHeight);
+            int srcLeft, int srcBottom, int srcWidth, int srcHeight,
+            int flags);
     private static native int nReadPixels(long nativeRenderer, long nativeEngine,
             int xoffset, int yoffset, int width, int height,
             Buffer storage, int remaining,
