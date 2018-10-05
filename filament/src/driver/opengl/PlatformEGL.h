@@ -43,7 +43,7 @@ public:
 
     SwapChain* createSwapChain(void* nativewindow, uint64_t& flags) noexcept final;
     void destroySwapChain(SwapChain* swapChain) noexcept final;
-    void makeCurrent(SwapChain* swapChain) noexcept final;
+    void makeCurrent(SwapChain* drawSwapChain, SwapChain* readSwapChain) noexcept final;
     void commit(SwapChain* swapChain) noexcept final;
 
     void setPresentationTime(long time) noexcept final;
@@ -67,11 +67,12 @@ public:
     int getOSVersion() const noexcept final;
 
 private:
-    EGLBoolean makeCurrent(EGLSurface surface) noexcept;
+    EGLBoolean makeCurrent(EGLSurface drawSurface, EGLSurface readSurface) noexcept;
 
     EGLDisplay mEGLDisplay = EGL_NO_DISPLAY;
     EGLContext mEGLContext = EGL_NO_CONTEXT;
-    EGLSurface mCurrentSurface = EGL_NO_SURFACE;
+    EGLSurface mCurrentDrawSurface = EGL_NO_SURFACE;
+    EGLSurface mCurrentReadSurface = EGL_NO_SURFACE;
     EGLSurface mEGLDummySurface = EGL_NO_SURFACE;
     EGLConfig mEGLConfig;
     EGLConfig mEGLTransparentConfig;

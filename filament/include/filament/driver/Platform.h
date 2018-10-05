@@ -67,7 +67,7 @@ public:
     virtual void destroySwapChain(SwapChain* swapChain) noexcept = 0;
 
     // Called to make the OpenGL context active on the calling thread.
-    virtual void makeCurrent(SwapChain* swapChain) noexcept = 0;
+    virtual void makeCurrent(SwapChain* drawSwapChain, SwapChain* readSwapChain) noexcept = 0;
 
     // Called once the current frame finishes drawing. Typically this should
     // swap draw buffers (i.e. for double-buffered rendering).

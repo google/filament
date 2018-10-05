@@ -574,6 +574,7 @@ enum ShaderType : uint8_t {
 };
 
 static constexpr uint64_t SWAP_CHAIN_CONFIG_TRANSPARENT = 0x1;
+static constexpr uint64_t SWAP_CHAIN_CONFIG_READABLE = 0x2;
 
 } // namespace driver
 } // namespace filament

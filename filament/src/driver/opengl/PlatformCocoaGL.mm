@@ -84,8 +84,11 @@ Platform::SwapChain* PlatformCocoaGL::createSwapChain(void* nativewindow, uint64
 void PlatformCocoaGL::destroySwapChain(Platform::SwapChain* swapChain) noexcept {
 }
 
-void PlatformCocoaGL::makeCurrent(Platform::SwapChain* swapChain) noexcept {
-    NSView *nsView = (NSView*) swapChain;
+void PlatformCocoaGL::makeCurrent(Platform::SwapChain* drawSwapChain,
+        Platform::SwapChain* readSwapChain) noexcept {
+    ASSERT_PRECONDITION_NON_FATAL(drawSwapChain == readSwapChain,
+            "ContextManagerCocoa does not support using distinct draw/read swap chains.");
+    NSView *nsView = (NSView*) drawSwapChain;
     if (pImpl->mCurrentView != nsView) {
         pImpl->mCurrentView = nsView;
         // Calling setView could change the viewport and/or scissor box state, but this isn't

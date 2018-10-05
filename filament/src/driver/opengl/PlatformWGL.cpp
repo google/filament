@@ -174,8 +174,11 @@ void PlatformWGL::destroySwapChain(Platform::SwapChain* swapChain) noexcept {
     wglMakeCurrent(mWhdc, mContext);
 }
 
-void PlatformWGL::makeCurrent(Platform::SwapChain* swapChain) noexcept {
-    HDC hdc = (HDC)(swapChain);
+void PlatformWGL::makeCurrent(Platform::SwapChain* drawSwapChain,
+                              Platform::SwapChain* readSwapChain) noexcept {
+    ASSERT_PRECONDITION_NON_FATAL(drawSwapChain == readSwapChain,
+                                  "PlatformWGL does not support distinct draw/read swap chains.");
+    HDC hdc = (HDC)(drawSwapChain);
     if (hdc != NULL) {
         BOOL success = wglMakeCurrent(hdc, mContext);
         if (!ASSERT_POSTCONDITION_NON_FATAL(success, "wglMakeCurrent() failed. hdc = %p", hdc)) {

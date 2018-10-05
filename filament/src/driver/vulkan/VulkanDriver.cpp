@@ -228,6 +228,9 @@ void VulkanDriver::beginFrame(uint64_t monotonic_clock_ns, uint32_t frameId) {
     mBinder.gc();
 }
 
+void VulkanDriver::setPresentationTime(uint64_t monotonic_clock_ns) {
+}
+
 void VulkanDriver::endFrame(uint32_t frameId) {
     // Do nothing here; see commit().
 }
@@ -690,8 +693,10 @@ void VulkanDriver::setViewportScissor(
     vkCmdSetScissor(mContext.cmdbuffer, 0, 1, &scissor);
 }
 
-void VulkanDriver::makeCurrent(Driver::SwapChainHandle sch) {
-    VulkanSurfaceContext& sContext = handle_cast<VulkanSwapChain>(mHandleMap, sch)->surfaceContext;
+void VulkanDriver::makeCurrent(Driver::SwapChainHandle drawSch, Driver::SwapChainHandle readSch) {
+    ASSERT_PRECONDITION_NON_FATAL(drawSch == readSch,
+                                  "Vulkan driver does not support distinct draw/read swap chains.");
+    VulkanSurfaceContext& sContext = handle_cast<VulkanSwapChain>(mHandleMap, drawSch)->surfaceContext;
     mContext.currentSurface = &sContext;
 }
 

@@ -170,9 +170,10 @@ Platform::SwapChain* PlatformGLX::createSwapChain(
 void PlatformGLX::destroySwapChain(Platform::SwapChain* /*swapChain*/) noexcept {
 }
 
-void PlatformGLX::makeCurrent(Platform::SwapChain* swapChain) noexcept {
+void PlatformGLX::makeCurrent(
+        Platform::SwapChain* drawSwapChain, Platform::SwapChain* readSwapChain) noexcept {
     g_glx.setCurrentContext(mGLXDisplay,
-            (GLXDrawable) swapChain, (GLXDrawable) swapChain, mGLXContext);
+            (GLXDrawable) drawSwapChain, (GLXDrawable) readSwapChain, mGLXContext);
 }
 
 void PlatformGLX::commit(Platform::SwapChain* swapChain) noexcept {

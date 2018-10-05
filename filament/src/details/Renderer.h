@@ -63,6 +63,9 @@ public:
     void render(FView const* view);
     void renderJob(ArenaScope& arena, FView* view);
 
+    void mirrorFrame(FSwapChain* dstSwapChain, Viewport const& dstViewport, Viewport const& srcViewport,
+                     MirrorFrameFlag flags);
+
     bool beginFrame(FSwapChain* swapChain);
     void endFrame();
 

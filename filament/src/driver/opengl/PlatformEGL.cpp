@@ -253,7 +253,7 @@ Driver* PlatformEGL::createDriver(void* sharedContext) noexcept {
         goto error;
     }
 
-    if (!makeCurrent(mEGLDummySurface)) {
+    if (!makeCurrent(mEGLDummySurface, mEGLDummySurface)) {
         // eglMakeCurrent failed
         logEglError("eglMakeCurrent");
         goto error;
@@ -280,10 +280,11 @@ error:
     return nullptr;
 }
 
-EGLBoolean PlatformEGL::makeCurrent(EGLSurface surface) noexcept {
-    if (UTILS_UNLIKELY((surface != mCurrentSurface))) {
-        mCurrentSurface = surface;
-        return eglMakeCurrent(mEGLDisplay, surface, surface, mEGLContext);
+EGLBoolean PlatformEGL::makeCurrent(EGLSurface drawSurface, EGLSurface readSurface) noexcept {
+    if (UTILS_UNLIKELY((drawSurface != mCurrentDrawSurface || readSurface != mCurrentReadSurface))) {
+        mCurrentDrawSurface = drawSurface;
+        mCurrentReadSurface = readSurface;
+        return eglMakeCurrent(mEGLDisplay, drawSurface, readSurface, mEGLContext);
     }
     return EGL_TRUE;
 }
@@ -315,23 +316,25 @@ Platform::SwapChain* PlatformEGL::createSwapChain(
 void PlatformEGL::destroySwapChain(Platform::SwapChain* swapChain) noexcept {
     EGLSurface sur = (EGLSurface) swapChain;
     if (sur != EGL_NO_SURFACE) {
-        makeCurrent(mEGLDummySurface);
+        makeCurrent(mEGLDummySurface, mEGLDummySurface);
         eglDestroySurface(mEGLDisplay, sur);
     }
 }
 
-void PlatformEGL::makeCurrent(Platform::SwapChain* swapChain) noexcept {
-    EGLSurface sur = (EGLSurface) swapChain;
-    if (sur != EGL_NO_SURFACE) {
-        makeCurrent(sur);
+void PlatformEGL::makeCurrent(Platform::SwapChain* drawSwapChain,
+                              Platform::SwapChain* readSwapChain) noexcept {
+    EGLSurface drawSur = (EGLSurface) drawSwapChain;
+    EGLSurface readSur = (EGLSurface) readSwapChain;
+    if (drawSur != EGL_NO_SURFACE || readSur != EGL_NO_SURFACE) {
+        makeCurrent(drawSur, readSur);
     }
 }
 
 void PlatformEGL::setPresentationTime(long time) noexcept {
-    if (mCurrentSurface != EGL_NO_SURFACE) {
+    if (mCurrentDrawSurface != EGL_NO_SURFACE) {
       eglPresentationTimeANDROID(
                         mEGLDisplay,
-                        mCurrentSurface,
+                        mCurrentDrawSurface,
                         time);
     }
 }

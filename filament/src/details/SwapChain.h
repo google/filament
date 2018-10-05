@@ -36,7 +36,7 @@ public:
     void terminate(FEngine& engine) noexcept;
 
     void makeCurrent(driver::DriverApi& driverApi) noexcept {
-        driverApi.makeCurrent(mSwapChain);
+        driverApi.makeCurrent(mSwapChain, mSwapChain);
     }
 
     void commit(driver::DriverApi& driverApi) noexcept {
@@ -49,6 +49,14 @@ public:
 
     constexpr bool isTransparent() const noexcept {
         return (mConfigFlags & CONFIG_TRANSPARENT) != 0;
+    }
+
+    constexpr bool isReadable() const noexcept {
+        return (mConfigFlags & CONFIG_READABLE) != 0;
+    }
+
+    Handle<HwSwapChain> getHwHandle() const noexcept {
+      return mSwapChain;
     }
 
 private:

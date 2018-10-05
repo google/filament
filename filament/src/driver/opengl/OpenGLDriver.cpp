@@ -1506,12 +1506,13 @@ void OpenGLDriver::commit(Driver::SwapChainHandle sch) {
     }
 }
 
-void OpenGLDriver::makeCurrent(Driver::SwapChainHandle sch) {
+void OpenGLDriver::makeCurrent(Driver::SwapChainHandle schDraw, Driver::SwapChainHandle schRead) {
     DEBUG_MARKER()
 
-    if (sch) {
-        HwSwapChain* sc = handle_cast<HwSwapChain*>(sch);
-        mPlatform.makeCurrent(sc->swapChain);
+    if (schDraw && schRead) {
+        HwSwapChain* scDraw = handle_cast<HwSwapChain*>(schDraw);
+        HwSwapChain* scRead = handle_cast<HwSwapChain*>(schRead);
+        mPlatform.makeCurrent(scDraw->swapChain, scRead->swapChain);
     }
 }
 
@@ -2534,6 +2535,9 @@ void OpenGLDriver::beginFrame(uint64_t monotonic_clock_ns, uint32_t frameId) {
             }
         }
     }
+}
+
+void OpenGLDriver::setPresentationTime(uint64_t monotonic_clock_ns) {
     mPlatform.setPresentationTime(monotonic_clock_ns);
 }
 
