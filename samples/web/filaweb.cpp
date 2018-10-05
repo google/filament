@@ -240,7 +240,7 @@ SkyLight getSkyLight(Engine& engine, const char* name) {
         .width(info.pixelWidth)
         .height(info.pixelHeight)
         .levels(nmips)
-        .format(Texture::InternalFormat::RGBM)
+        .format(Texture::InternalFormat::RGBM) //?
         .sampler(Texture::Sampler::SAMPLER_CUBEMAP)
         .build(engine);
     size_t size = info.pixelWidth;
@@ -256,7 +256,7 @@ SkyLight getSkyLight(Engine& engine, const char* name) {
         offsets.nz = faceSize * 5;
         Texture::PixelBufferDescriptor buffer(
                 malloc(faceSize * 6), faceSize * 6,
-                Texture::Format::RGBM, Texture::Type::UBYTE,
+                Texture::Format::RGBM, Texture::Type::UBYTE, // ?
                 [](void* buffer, size_t size, void* user) {
                     free(buffer);
                 }, /* user = */ nullptr);
@@ -282,7 +282,7 @@ SkyLight getSkyLight(Engine& engine, const char* name) {
         .width(size)
         .height(size)
         .levels(1)
-        .format(Texture::InternalFormat::RGBM)
+        .format(Texture::InternalFormat::RGBM) // ?
         .sampler(Texture::Sampler::SAMPLER_CUBEMAP)
         .build(engine);
     {
@@ -296,7 +296,7 @@ SkyLight getSkyLight(Engine& engine, const char* name) {
         offsets.nz = faceSize * 5;
         Texture::PixelBufferDescriptor buffer(
                 malloc(faceSize * 6), faceSize * 6,
-                Texture::Format::RGBA, Texture::Type::UBYTE,
+                Texture::Format::RGBA, Texture::Type::UBYTE, // ?
                 [](void* buffer, size_t size, void* user) {
                     free(buffer);
                 }, /* user = */ nullptr);

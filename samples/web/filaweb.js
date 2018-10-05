@@ -113,6 +113,11 @@ function load_rawfile(url) {
 let load_texture = load_rawfile;
 
 function load_cubemap(name, suffix) {
+    if (use_etc) {
+        suffix = '_etc' + suffix;
+    } else if (use_s3tc) {
+        suffix = '_s3tc' + suffix;
+    }
     let urlprefix = name + '/';
     let promises = {};
     promises['ibl'] = load_rawfile(urlprefix + name + '_ibl' + suffix);

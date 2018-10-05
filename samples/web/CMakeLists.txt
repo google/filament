@@ -116,15 +116,46 @@ add_mesh("assets/models/monkey/monkey.obj" "monkey/mesh.filamesh")
 add_mesh("third_party/shader_ball/shader_ball.obj" "shaderball/mesh.filamesh")
 
 # Generate IBL and skybox images using cmgen.
+set(CMGEN_ARGS -x public --format=ktx --size=256 --extract-blur=0.1)
+set(CMGEN_ARGS_S3TC ${CMGEN_ARGS} --compression=s3tc_rgba_dxt5)
+set(CMGEN_ARGS_ETC ${CMGEN_ARGS} --compression=etc_rgba8_rgba_40)
 function(add_envmap SOURCE TARGET)
     set(source_envmap "${CMAKE_CURRENT_SOURCE_DIR}/../../${SOURCE}")
+
+    file(MAKE_DIRECTORY "public/${TARGET}")
+
     set(target_skybox "public/${TARGET}/${TARGET}_skybox.ktx")
     set(target_envmap "public/${TARGET}/${TARGET}_ibl.ktx")
-    set(target_skyboxes ${target_skyboxes} ${target_skybox} PARENT_SCOPE)
-    set(target_envmaps ${target_envmaps} ${target_envmap} PARENT_SCOPE)
-    add_custom_command(
-        OUTPUT ${target_skybox} ${target_envmap}
-        COMMAND cmgen -x public --format=ktx --size=256 --extract-blur=0.1 ${source_envmap}
+
+    set(target_skybox_etc "public/${TARGET}/${TARGET}_skybox_etc.ktx")
+    set(target_envmap_etc "public/${TARGET}/${TARGET}_ibl_etc.ktx")
+
+    set(target_skybox_s3tc "public/${TARGET}/${TARGET}_skybox_s3tc.ktx")
+    set(target_envmap_s3tc "public/${TARGET}/${TARGET}_ibl_s3tc.ktx")
+
+    set(target_skyboxes ${target_skyboxes}
+            ${target_skybox} ${target_skybox_etc} ${target_skybox_s3tc} PARENT_SCOPE)
+
+    set(target_envmaps ${target_envmaps}
+            ${target_envmap} ${target_envmap_etc} ${target_envmap_s3tc} PARENT_SCOPE)
+
+    add_custom_command(OUTPUT
+                ${target_skybox}  ${target_skybox_etc} ${target_skybox_s3tc}
+                ${target_envmap} ${target_envmap_etc} ${target_envmap_s3tc}
+
+        # First create an S3TC-encoded envmap, then rename it.
+        COMMAND cmgen ${CMGEN_ARGS_S3TC} ${source_envmap}
+        COMMAND mv ${target_skybox} ${target_skybox_s3tc}
+        COMMAND mv ${target_envmap} ${target_envmap_s3tc}
+
+        # Now create an ETC-encoded envmap, then rename it.
+        COMMAND cmgen ${CMGEN_ARGS_ETC} ${source_envmap}
+        COMMAND mv ${target_skybox} ${target_skybox_etc}
+        COMMAND mv ${target_envmap} ${target_envmap_etc}
+
+        # Finally, create KTX files for the uncompressed envmap.
+        COMMAND cmgen ${CMGEN_ARGS} ${source_envmap}
+
         MAIN_DEPENDENCY ${source_envmap}
         DEPENDS cmgen)
 endfunction()
