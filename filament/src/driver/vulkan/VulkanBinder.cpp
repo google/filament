@@ -131,8 +131,8 @@ bool VulkanBinder::getOrCreateDescriptor(VkDescriptorSet* descriptor,
         if (mDescriptorKey.uniformBuffers[binding]) {
             VkDescriptorBufferInfo& bufferInfo = mDescriptorBuffers[binding];
             bufferInfo.buffer = mDescriptorKey.uniformBuffers[binding];
-            bufferInfo.offset = 0;
-            bufferInfo.range = VK_WHOLE_SIZE;
+            bufferInfo.offset = mDescriptorKey.uniformBufferOffsets[binding];
+            bufferInfo.range = mDescriptorKey.uniformBufferSizes[binding];
             VkWriteDescriptorSet& writeInfo = writes[nwrites++];
             writeInfo.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
             writeInfo.pNext = nullptr;
@@ -361,12 +361,17 @@ void VulkanBinder::bindVertexArray(const VertexArray& varray) noexcept {
 }
 
 void VulkanBinder::unbindUniformBuffer(VkBuffer uniformBuffer) noexcept {
+    auto& key = mDescriptorKey;
     for (uint32_t bindingIndex = 0u; bindingIndex < NUM_UBUFFER_BINDINGS; ++bindingIndex) {
-        if (mDescriptorKey.uniformBuffers[bindingIndex] == uniformBuffer) {
-            mDescriptorKey.uniformBuffers[bindingIndex] = VK_NULL_HANDLE;
+        if (key.uniformBuffers[bindingIndex] == uniformBuffer) {
+            key.uniformBuffers[bindingIndex] = {};
+            key.uniformBufferSizes[bindingIndex] = {};
+            key.uniformBufferOffsets[bindingIndex] = {};
             mDirtyDescriptor = true;
         }
     }
+    // This function is often called before deleting a uniform buffer. For safety, we need to evict
+    // all descriptors that refer to the extinct uniform buffer, regardless of the binding offsets.
     evictDescriptors([uniformBuffer] (const DescriptorKey& key) {
         for (VkBuffer buf : key.uniformBuffers) {
             if (buf == uniformBuffer) {
@@ -413,10 +418,16 @@ void VulkanBinder::evictDescriptors(std::function<bool(const DescriptorKey&)> fi
     }
 }
 
-void VulkanBinder::bindUniformBuffer(uint32_t bindingIndex, VkBuffer uniformBuffer) noexcept {
+void VulkanBinder::bindUniformBuffer(uint32_t bindingIndex, VkBuffer uniformBuffer,
+        VkDeviceSize offset, VkDeviceSize size) noexcept {
     assert(bindingIndex < NUM_UBUFFER_BINDINGS);
-    if (mDescriptorKey.uniformBuffers[bindingIndex] != uniformBuffer) {
-        mDescriptorKey.uniformBuffers[bindingIndex] = uniformBuffer;
+    auto& key = mDescriptorKey;
+    if (key.uniformBuffers[bindingIndex] != uniformBuffer ||
+        key.uniformBufferOffsets[bindingIndex] != offset ||
+        key.uniformBufferSizes[bindingIndex] != size) {
+        key.uniformBuffers[bindingIndex] = uniformBuffer;
+        key.uniformBufferOffsets[bindingIndex] = offset;
+        key.uniformBufferSizes[bindingIndex] = size;
         mDirtyDescriptor = true;
     }
 }
@@ -582,7 +593,9 @@ bool VulkanBinder::PipelineEqual::operator()(const VulkanBinder::PipelineKey& k1
 bool VulkanBinder::DescEqual::operator()(const VulkanBinder::DescriptorKey& k1,
         const VulkanBinder::DescriptorKey& k2) const {
     for (uint32_t i = 0; i < NUM_UBUFFER_BINDINGS; i++) {
-        if (k1.uniformBuffers[i] != k2.uniformBuffers[i]) {
+        if (k1.uniformBuffers[i] != k2.uniformBuffers[i] ||
+            k1.uniformBufferOffsets[i] != k2.uniformBufferOffsets[i] ||
+            k1.uniformBufferSizes[i] != k2.uniformBufferSizes[i]) {
             return false;
         }
     }
