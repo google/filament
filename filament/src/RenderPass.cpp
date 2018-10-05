@@ -125,9 +125,9 @@ void RenderPass::recordDriverCommands(
 
             // per-renderable uniform
             PrimitiveInfo const& UTILS_RESTRICT info = c->primitive;
-            driver.bindUniforms(BindingPoints::PER_RENDERABLE, info.perRenderableUniforms);
+            driver.bindUniformBuffer(BindingPoints::PER_RENDERABLE, info.perRenderableUniforms);
             if (info.perRenderableBones) {
-                driver.bindUniforms(BindingPoints::PER_RENDERABLE_BONES, info.perRenderableBones);
+                driver.bindUniformBuffer(BindingPoints::PER_RENDERABLE_BONES, info.perRenderableBones);
             }
 
             FMaterialInstance const* const UTILS_RESTRICT mi = info.mi;

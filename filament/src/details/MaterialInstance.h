@@ -50,7 +50,7 @@ public:
 
     void use(FEngine::DriverApi& driver) const {
         if (mUbHandle) {
-            driver.bindUniforms(BindingPoints::PER_MATERIAL_INSTANCE, mUbHandle);
+            driver.bindUniformBuffer(BindingPoints::PER_MATERIAL_INSTANCE, mUbHandle);
         }
         if (mSbHandle) {
             driver.bindSamplers(BindingPoints::PER_MATERIAL_INSTANCE, mSbHandle);

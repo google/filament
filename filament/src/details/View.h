@@ -215,7 +215,7 @@ private:
             size_t count) const;
 
     void bindPerViewUniformsAndSamplers(FEngine::DriverApi& driver) const noexcept {
-        driver.bindUniforms(BindingPoints::PER_VIEW, getUbh());
+        driver.bindUniformBuffer(BindingPoints::PER_VIEW, getUbh());
         driver.bindSamplers(BindingPoints::PER_VIEW, getUsh());
     }
 

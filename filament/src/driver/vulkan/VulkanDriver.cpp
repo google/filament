@@ -744,7 +744,7 @@ void VulkanDriver::viewport(ssize_t left, ssize_t bottom, size_t width, size_t h
     vkCmdSetViewport(mContext.cmdbuffer, 0, 1, &viewport);
 }
 
-void VulkanDriver::bindUniforms(size_t index, Driver::UniformBufferHandle ubh) {
+void VulkanDriver::bindUniformBuffer(size_t index, Driver::UniformBufferHandle ubh) {
     auto* buffer = handle_cast<VulkanUniformBuffer>(mHandleMap, ubh);
     // The driver API does not currently expose offset / range, but it will do so in the future.
     const VkDeviceSize offset = 0;
