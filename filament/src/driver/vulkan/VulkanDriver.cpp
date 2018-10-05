@@ -741,7 +741,10 @@ void VulkanDriver::viewport(ssize_t left, ssize_t bottom, size_t width, size_t h
 
 void VulkanDriver::bindUniforms(size_t index, Driver::UniformBufferHandle ubh) {
     auto* buffer = handle_cast<VulkanUniformBuffer>(mHandleMap, ubh);
-    mBinder.bindUniformBuffer((uint32_t) index, buffer->getGpuBuffer());
+    // The driver API does not currently expose offset / range, but it will do so in the future.
+    const VkDeviceSize offset = 0;
+    const VkDeviceSize size = VK_WHOLE_SIZE;
+    mBinder.bindUniformBuffer((uint32_t) index, buffer->getGpuBuffer(), offset, size);
 }
 
 void VulkanDriver::bindSamplers(size_t index, Driver::SamplerBufferHandle sbh) {
