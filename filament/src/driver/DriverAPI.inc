@@ -432,6 +432,12 @@ DECL_DRIVER_API_2(bindUniformBuffer,
         size_t, index,
         Driver::UniformBufferHandle, ubh)
 
+DECL_DRIVER_API_4(bindUniformBufferRange,
+        size_t, index,
+        Driver::UniformBufferHandle, ubh,
+        size_t, offset,
+        size_t, size)
+
 DECL_DRIVER_API_2(bindSamplers,
         size_t, index,
         Driver::SamplerBufferHandle, sbh)
