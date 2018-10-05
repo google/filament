@@ -240,7 +240,8 @@ SkyLight getSkyLight(Engine& engine, const char* name) {
         .width(info.pixelWidth)
         .height(info.pixelHeight)
         .levels(nmips)
-        .format(Texture::InternalFormat::RGBM)
+        .format(Texture::InternalFormat::RGBA8)
+        .rgbm(true)
         .sampler(Texture::Sampler::SAMPLER_CUBEMAP)
         .build(engine);
     size_t size = info.pixelWidth;
@@ -282,7 +283,8 @@ SkyLight getSkyLight(Engine& engine, const char* name) {
         .width(size)
         .height(size)
         .levels(1)
-        .format(Texture::InternalFormat::RGBM)
+        .format(Texture::InternalFormat::RGBA8)
+        .rgbm(true)
         .sampler(Texture::Sampler::SAMPLER_CUBEMAP)
         .build(engine);
     {

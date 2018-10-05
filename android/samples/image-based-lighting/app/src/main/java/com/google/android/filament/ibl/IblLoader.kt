@@ -65,7 +65,8 @@ private fun loadIndirectLight(
             .width(w)
             .height(h)
             .levels(log2(w.toFloat()).toInt() + 1)
-            .format(Texture.InternalFormat.RGBM)
+            .format(Texture.InternalFormat.RGBA8)
+            .rgbm(true)
             .sampler(Texture.Sampler.SAMPLER_CUBEMAP)
             .build(engine)
 
@@ -105,7 +106,8 @@ private fun loadSkybox(assets: AssetManager, name: String, engine: Engine): Pair
             .width(w)
             .height(h)
             .levels(1)
-            .format(Texture.InternalFormat.RGBM)
+            .format(Texture.InternalFormat.RGBA8)
+            .rgbm(true)
             .sampler(Texture.Sampler.SAMPLER_CUBEMAP)
             .build(engine)
 

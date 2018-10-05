@@ -207,7 +207,7 @@ public:
     uint32_t getMaterialId() const noexcept { return mMaterialId++; }
 
     const FMaterial* getDefaultMaterial() const noexcept { return mDefaultMaterial; }
-    const FMaterial* getSkyboxMaterial(driver::TextureFormat format) const noexcept;
+    const FMaterial* getSkyboxMaterial(bool rgbm) const noexcept;
     const FIndirectLight* getDefaultIndirectLight() const noexcept { return mDefaultIbl; }
 
     Handle <HwProgram> getPostProcessProgramSlow(PostProcessStage stage) const noexcept;

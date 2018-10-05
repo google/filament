@@ -213,7 +213,8 @@ void FEngine::init() {
 
     mDefaultIblTexture = upcast(Texture::Builder()
             .width(1).height(1).levels(1)
-            .format(Texture::InternalFormat::RGBM)
+            .format(Texture::InternalFormat::RGBA8)
+            .rgbm(true)
             .sampler(Texture::Sampler::SAMPLER_CUBEMAP)
             .build(*this));
     static uint32_t pixel = 0;
@@ -416,11 +417,11 @@ void FEngine::flushCommandBuffer(CommandBufferQueue& commandQueue) {
     commandQueue.flush();
 }
 
-const FMaterial* FEngine::getSkyboxMaterial(driver::TextureFormat format) const noexcept {
-    size_t index = (format == driver::TextureFormat::RGBM) ? 0 : 1;
+const FMaterial* FEngine::getSkyboxMaterial(bool rgbm) const noexcept {
+    size_t index = rgbm ? 0 : 1;
     FMaterial const* material = mSkyboxMaterials[index];
     if (UTILS_UNLIKELY(material == nullptr)) {
-        material = FSkybox::createMaterial(*const_cast<FEngine*>(this), format);
+        material = FSkybox::createMaterial(*const_cast<FEngine*>(this), rgbm);
         mSkyboxMaterials[index] = material;
     }
     return material;

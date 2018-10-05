@@ -42,7 +42,7 @@ class FSkybox : public Skybox {
 public:
     FSkybox(FEngine& engine, const Builder& builder) noexcept;
 
-    static FMaterial const* createMaterial(FEngine& engine, driver::TextureFormat format);
+    static FMaterial const* createMaterial(FEngine& engine, bool rgbm);
 
     void terminate(FEngine& engine) noexcept;
 

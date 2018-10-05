@@ -115,7 +115,8 @@ bool IBL::loadCubemapLevel(filament::Texture** texture, const utils::Path& path,
                     .width((uint32_t)size)
                     .height((uint32_t)size)
                     .levels((uint8_t)numLevels)
-                    .format(Texture::InternalFormat::RGBM)
+                    .format(Texture::InternalFormat::RGBA8)
+                    .rgbm(true)
                     .sampler(Texture::Sampler::SAMPLER_CUBEMAP)
                     .build(mEngine);
         }
