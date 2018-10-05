@@ -84,7 +84,7 @@ Platform::SwapChain* PlatformCocoaGL::createSwapChain(void* nativewindow, uint64
 void PlatformCocoaGL::destroySwapChain(Platform::SwapChain* swapChain) noexcept {
 }
 
-void PlatformCocoaGL::makeCurrent(Platform::SwapChain* drawSwapChain
+void PlatformCocoaGL::makeCurrent(Platform::SwapChain* drawSwapChain,
         Platform::SwapChain* readSwapChain) noexcept {
     ASSERT_PRECONDITION_NON_FATAL(drawSwapChain == readSwapChain,
             "ContextManagerCocoa does not support using distinct draw/read swap chains.");
