@@ -297,6 +297,20 @@ inline LinearImage toLinearFromRGBM(math::float4 const* src, uint32_t w, uint32_
     return result;
 }
 
+inline LinearImage fromLinearToRGBM(const LinearImage& image) {
+    assert(image.getChannels() == 3);
+    const uint32_t w = image.getWidth(), h = image.getHeight();
+    LinearImage result(w, h, 4);
+    auto src = image.get<math::float3>();
+    auto dst = result.get<math::float4>();
+    for (uint32_t row = 0; row < h; ++row) {
+        for (uint32_t col = 0; col < w; ++col, ++src, ++dst) {
+            *dst = linearToRGBM(*src);
+        }
+    }
+    return result;
+}
+
 }  // namespace Image
 
 #endif // IMAGE_COLORTRANSFORM_H_
