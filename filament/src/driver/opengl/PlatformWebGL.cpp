@@ -36,8 +36,8 @@ Platform::SwapChain* PlatformWebGL::createSwapChain(
 void PlatformWebGL::destroySwapChain(Platform::SwapChain* swapChain) noexcept {
 }
 
-void PlatformWebGL::makeCurrent(ExternalContext::SwapChain* drawSwapChain,
-                                ExternalContext::SwapChain* readSwapChain) noexcept {
+void PlatformWebGL::makeCurrent(Platform::SwapChain* drawSwapChain,
+                                Platform::SwapChain* readSwapChain) noexcept {
 }
 
 void PlatformWebGL::commit(Platform::SwapChain* swapChain) noexcept {
