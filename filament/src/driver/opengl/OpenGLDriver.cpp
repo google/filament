@@ -2391,7 +2391,7 @@ void OpenGLDriver::viewport(ssize_t left, ssize_t bottom, size_t width, size_t h
     CHECK_GL_ERROR(utils::slog.e)
 }
 
-void OpenGLDriver::bindUniforms(size_t index, Driver::UniformBufferHandle ubh) {
+void OpenGLDriver::bindUniformBuffer(size_t index, Driver::UniformBufferHandle ubh) {
     DEBUG_MARKER()
 
     GLUniformBuffer* ub = handle_cast<GLUniformBuffer *>(ubh);

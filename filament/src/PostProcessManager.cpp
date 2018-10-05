@@ -39,7 +39,7 @@ void PostProcessManager::init(FEngine& engine) noexcept {
     mPostProcessSbh = driver.createSamplerBuffer(engine.getPostProcessSib().getSize());
     mPostProcessUbh = driver.createUniformBuffer(engine.getPerPostProcessUib().getSize());
     driver.bindSamplers(BindingPoints::POST_PROCESS, mPostProcessSbh);
-    driver.bindUniforms(BindingPoints::POST_PROCESS, mPostProcessUbh);
+    driver.bindUniformBuffer(BindingPoints::POST_PROCESS, mPostProcessUbh);
 }
 
 void PostProcessManager::terminate(driver::DriverApi& driver) noexcept {
