@@ -399,29 +399,36 @@ void OpenGLDriver::bindBuffer(GLenum target, GLuint buffer) noexcept {
         // GL_ELEMENT_ARRAY_BUFFER is a special case, where the currently bound VAO remembers
         // the index buffer, unless there are no VAO bound (see: bindVertexArray)
         assert(state.vao.p);
-        if (state.buffers.targets[targetIndex].genericBinding != buffer
+        if (state.buffers.genericBinding[targetIndex] != buffer
                 || ((state.vao.p != &mDefaultVAO) && (state.vao.p->gl.elementArray != buffer))) {
-            state.buffers.targets[targetIndex].genericBinding = buffer;
+            state.buffers.genericBinding[targetIndex] = buffer;
             if (state.vao.p != &mDefaultVAO) {
                 state.vao.p->gl.elementArray = buffer;
             }
             glBindBuffer(target, buffer);
         }
     } else {
-        update_state(state.buffers.targets[targetIndex].genericBinding, buffer, [&]() {
+        update_state(state.buffers.genericBinding[targetIndex], buffer, [&]() {
             glBindBuffer(target, buffer);
         });
     }
 }
 
-void OpenGLDriver::bindBufferBase(GLenum target, GLuint index, GLuint buffer) noexcept {
+void OpenGLDriver::bindBufferRange(GLenum target, GLuint index, GLuint buffer,
+        GLintptr offset, GLsizeiptr size) noexcept {
     size_t targetIndex = getIndexForBufferTarget(target);
+    assert(targetIndex <= 1); // sanity check
+
     // this ALSO sets the generic binding
-    if (state.buffers.targets[targetIndex].buffers[index] != buffer
-            || state.buffers.targets[targetIndex].genericBinding != buffer) {
-        state.buffers.targets[targetIndex].buffers[index] = buffer;
-        state.buffers.targets[targetIndex].genericBinding = buffer;
-        glBindBufferBase(target, index, buffer);
+    if (state.buffers.genericBinding[targetIndex] != buffer
+            || state.buffers.targets[targetIndex].buffers[index].name != buffer
+            || state.buffers.targets[targetIndex].buffers[index].offset != offset
+            || state.buffers.targets[targetIndex].buffers[index].size != size) {
+        state.buffers.targets[targetIndex].buffers[index].name = buffer;
+        state.buffers.targets[targetIndex].buffers[index].offset = offset;
+        state.buffers.targets[targetIndex].buffers[index].size = size;
+        state.buffers.genericBinding[targetIndex] = buffer;
+        glBindBufferRange(target, index, buffer, offset, size);
     }
 }
 
@@ -456,7 +463,7 @@ void OpenGLDriver::bindVertexArray(GLRenderPrimitive const* p) noexcept {
         glBindVertexArray(vao->gl.vao);
         // update GL_ELEMENT_ARRAY_BUFFER, which is updated by glBindVertexArray
         size_t targetIndex = getIndexForBufferTarget(GL_ELEMENT_ARRAY_BUFFER);
-        state.buffers.targets[targetIndex].genericBinding = vao->gl.elementArray;
+        state.buffers.genericBinding[targetIndex] = vao->gl.elementArray;
         if (UTILS_UNLIKELY(bugs.vao_doesnt_store_element_array_buffer_binding)) {
             // This shouldn't be needed, but it looks like some drivers don't do the implicit
             // glBindBuffer().
@@ -1205,10 +1212,10 @@ void OpenGLDriver::destroyVertexBuffer(Driver::VertexBufferHandle vbh) {
         glDeleteBuffers(n, eb->gl.buffers.data());
         // bindings of bound buffers are reset to 0
         const size_t targetIndex = getIndexForBufferTarget(GL_ARRAY_BUFFER);
-        auto& target = state.buffers.targets[targetIndex];
+        auto& target = state.buffers.genericBinding[targetIndex];
         for (GLuint b : eb->gl.buffers) {
-            if (target.genericBinding == b) {
-                target.genericBinding = 0;
+            if (target == b) {
+                target = 0;
             }
         }
         destruct(vbh, eb);
@@ -1223,9 +1230,9 @@ void OpenGLDriver::destroyIndexBuffer(Driver::IndexBufferHandle ibh) {
         glDeleteBuffers(1, &ib->gl.buffer);
         // bindings of bound buffers are reset to 0
         const size_t targetIndex = getIndexForBufferTarget(GL_ELEMENT_ARRAY_BUFFER);
-        auto& target = state.buffers.targets[targetIndex];
-        if (target.genericBinding == ib->gl.buffer) {
-            target.genericBinding = 0;
+        auto& target = state.buffers.genericBinding[targetIndex];
+        if (target == ib->gl.buffer) {
+            target = 0;
         }
         destruct(ibh, ib);
     }
@@ -1273,12 +1280,14 @@ void OpenGLDriver::destroyUniformBuffer(Driver::UniformBufferHandle ubh) {
         const size_t targetIndex = getIndexForBufferTarget(GL_UNIFORM_BUFFER);
         auto& target = state.buffers.targets[targetIndex];
         for (auto& buffer : target.buffers) {
-            if (buffer == ub->gl.ubo) {
-                buffer = 0;
+            if (buffer.name == ub->gl.ubo) {
+                buffer.name = 0;
+                buffer.offset = 0;
+                buffer.size = 0;
             }
         }
-        if (target.genericBinding == ub->gl.ubo) {
-            target.genericBinding = 0;
+        if (state.buffers.genericBinding[targetIndex] == ub->gl.ubo) {
+            state.buffers.genericBinding[targetIndex] = 0;
         }
         destruct(ubh, ub);
     }
@@ -2386,7 +2395,7 @@ void OpenGLDriver::bindUniforms(size_t index, Driver::UniformBufferHandle ubh) {
     DEBUG_MARKER()
 
     GLUniformBuffer* ub = handle_cast<GLUniformBuffer *>(ubh);
-    bindBufferBase(GL_UNIFORM_BUFFER, GLuint(index), ub->gl.ubo);
+    bindBufferRange(GL_UNIFORM_BUFFER, GLuint(index), ub->gl.ubo, 0, ub->ub.getSize());
     CHECK_GL_ERROR(utils::slog.e)
 }
 
