@@ -14,35 +14,36 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_DRIVER_OPENGL_CONTEXT_MANAGER_DUMMY_H
-#define TNT_FILAMENT_DRIVER_OPENGL_CONTEXT_MANAGER_DUMMY_H
+#ifndef TNT_FILAMENT_DRIVER_OPENGL_PLATFORM_GLX_H
+#define TNT_FILAMENT_DRIVER_OPENGL_PLATFORM_GLX_H
 
 #include <stdint.h>
 
+#include <bluegl/BlueGL.h>
+#include <GL/glx.h>
+
 #include <filament/driver/DriverEnums.h>
-#include <filament/driver/ExternalContext.h>
+#include <filament/driver/Platform.h>
 
 namespace filament {
 
-class ContextManagerDummy final : public driver::ContextManagerGL {
+class PlatformGLX final : public driver::OpenGLPlatform {
 public:
 
-    std::unique_ptr<Driver> createDriver(void* const sharedGLContext) noexcept override;
-    void terminate() noexcept override { }
+    Driver* createDriver(void* const sharedGLContext) noexcept override;
 
-    SwapChain* createSwapChain(void* nativewindow, uint64_t& flags) noexcept final override {
-        flags = 0;
-        return nullptr;
-    }
-    void destroySwapChain(SwapChain* swapChain) noexcept final override {}
-    void makeCurrent(SwapChain* drawSwapChain, SwapChain* readSwapChain) noexcept final override {}
-    void commit(SwapChain* swapChain) noexcept final override {}
+    void terminate() noexcept override;
 
-    Fence* createFence() noexcept final override { return nullptr; }
-    void destroyFence(Fence* fence) noexcept final override {}
-    driver::FenceStatus waitFence(Fence* fence, uint64_t timeout) noexcept final override {
-        return driver::FenceStatus::ERROR;
-    }
+    SwapChain* createSwapChain(void* nativewindow, uint64_t& flags) noexcept override;
+    void destroySwapChain(SwapChain* swapChain) noexcept override;
+    void makeCurrent(SwapChain* drawSwapChain, SwapChain* readSwapChain) noexcept override;
+    void commit(SwapChain* swapChain) noexcept override;
+
+    Fence* createFence() noexcept override;
+    void destroyFence(Fence* fence) noexcept override;
+    driver::FenceStatus waitFence(Fence* fence, uint64_t timeout) noexcept override;
+
+    void setPresentationTime(long time) noexcept final override {}
 
     Stream* createStream(void* nativeStream) noexcept final override { return nullptr; }
     void destroyStream(Stream* stream) noexcept final override {}
@@ -56,10 +57,14 @@ public:
     void destroyExternalTextureStorage(ExternalTexture* ets) noexcept final override { }
 
     int getOSVersion() const noexcept final override { return 0; }
-};
 
-using ContextManager = filament::ContextManagerDummy;
+private:
+    Display *mGLXDisplay;
+    GLXContext mGLXContext;
+    GLXFBConfig* mGLXConfig;
+    GLXPbuffer mDummySurface;
+};
 
 } // namespace filament
 
-#endif // TNT_FILAMENT_DRIVER_OPENGL_CONTEXT_MANAGER_DUMMY_H
+#endif // TNT_FILAMENT_DRIVER_OPENGL_PLATFORM_GLX_H

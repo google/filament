@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_DRIVER_OPENGL_CONTEXT_MANAGER_EGL_H
-#define TNT_FILAMENT_DRIVER_OPENGL_CONTEXT_MANAGER_EGL_H
+#ifndef TNT_FILAMENT_DRIVER_OPENGL_PLATFORM_EGL_H
+#define TNT_FILAMENT_DRIVER_OPENGL_PLATFORM_EGL_H
 
 #include <stdint.h>
 
@@ -23,7 +23,7 @@
 #include <EGL/eglext.h>
 
 #include <filament/driver/DriverEnums.h>
-#include <filament/driver/ExternalContext.h>
+#include <filament/driver/Platform.h>
 
 struct AHardwareBuffer;
 
@@ -33,12 +33,12 @@ class VirtualMachineEnv;
 class ExternalStreamManagerAndroid;
 class ExternalTextureManagerAndroid;
 
-class ContextManagerEGL final : public driver::ContextManagerGL {
+class PlatformEGL final : public driver::OpenGLPlatform {
 public:
 
-    ContextManagerEGL() noexcept;
+    PlatformEGL() noexcept;
 
-    std::unique_ptr<Driver> createDriver(void* sharedGLContext) noexcept override;
+    Driver* createDriver(void* sharedContext) noexcept override;
     void terminate() noexcept override;
 
     SwapChain* createSwapChain(void* nativewindow, uint64_t& flags) noexcept final;
@@ -82,8 +82,6 @@ private:
     ExternalTextureManagerAndroid& mExternalTextureManager;
 };
 
-using ContextManager = filament::ContextManagerEGL;
-
 } // namespace filament
 
-#endif // TNT_FILAMENT_DRIVER_OPENGL_CONTEXT_MANAGER_EGL_H
+#endif // TNT_FILAMENT_DRIVER_OPENGL_PLATFORM_EGL_H

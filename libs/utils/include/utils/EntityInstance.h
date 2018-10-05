@@ -17,9 +17,12 @@
 #ifndef TNT_FILAMENT_UTILS_ENTITYINSTANCE_H
 #define TNT_FILAMENT_UTILS_ENTITYINSTANCE_H
 
+#include <utils/compiler.h>
+
+#include <type_traits>
+
 #include <stdint.h>
 
-#include <utils/compiler.h>
 
 namespace utils {
 

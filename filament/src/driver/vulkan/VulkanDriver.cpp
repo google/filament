@@ -39,10 +39,10 @@ static constexpr bool SWAPCHAIN_HAS_DEPTH = true;
 namespace filament {
 namespace driver {
 
-VulkanDriver::VulkanDriver(ContextManagerVk* externalContext,
+VulkanDriver::VulkanDriver(VulkanPlatform* platform,
         const char* const* ppEnabledExtensions, uint32_t enabledExtensionCount) noexcept :
         DriverBase(new ConcreteDispatcher<VulkanDriver>(this)),
-        mContextManager(*externalContext), mStagePool(mContext), mFramebufferCache(mContext),
+        mContextManager(*platform), mStagePool(mContext), mFramebufferCache(mContext),
         mSamplerCache(mContext) {
     mContext.rasterState = mBinder.getDefaultRasterState();
 
@@ -158,12 +158,12 @@ VulkanDriver::VulkanDriver(ContextManagerVk* externalContext,
 
 VulkanDriver::~VulkanDriver() noexcept = default;
 
-std::unique_ptr<Driver> VulkanDriver::create(ContextManagerVk* const externalContext,
+Driver* VulkanDriver::create(VulkanPlatform* const platform,
         const char* const* ppEnabledExtensions, uint32_t enabledExtensionCount) noexcept {
-    assert(externalContext);
-    auto* const driver = new VulkanDriver(externalContext, ppEnabledExtensions,
+    assert(platform);
+    auto* const driver = new VulkanDriver(platform, ppEnabledExtensions,
             enabledExtensionCount);
-    return std::unique_ptr<Driver>(driver);
+    return driver;
 }
 
 ShaderModel VulkanDriver::getShaderModel() const noexcept {

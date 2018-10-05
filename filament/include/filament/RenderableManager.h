@@ -32,7 +32,7 @@
 #include <math/mat4.h>
 #include <math/vec3.h>
 
-#include <utils/compiler.h>
+#include <type_traits>
 
 namespace filament {
 

@@ -19,6 +19,8 @@
 
 #include <utils/compiler.h>
 
+#include <limits>
+
 #include <math/mat4.h>
 #include <math/vec3.h>
 

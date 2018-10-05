@@ -14,32 +14,24 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_DRIVER_VULKAN_CONTEXTMANAGERVKLINUX_H
-#define TNT_FILAMENT_DRIVER_VULKAN_CONTEXTMANAGERVKLINUX_H
+#ifndef TNT_FILAMENT_DRIVER_VULKAN_PLATFORM_VK_COCOA_H
+#define TNT_FILAMENT_DRIVER_VULKAN_PLATFORM_VK_COCOA_H
 
 #include <stdint.h>
 
 #include <filament/driver/DriverEnums.h>
-#include <filament/driver/ExternalContext.h>
-
-#include <X11/Xlib.h>
+#include <filament/driver/Platform.h>
 
 namespace filament {
 
-class ContextManagerVkLinux final : public driver::ContextManagerVk {
+class PlatformVkCocoa final : public driver::VulkanPlatform {
 public:
-
-    std::unique_ptr<Driver> createDriver(void* const sharedContext) noexcept override;
-
+    Driver* createDriver(void* sharedContext) noexcept override;
     void* createVkSurfaceKHR(void* nativeWindow, void* instance,
             uint32_t* width, uint32_t* height) noexcept override;
-
     int getOSVersion() const noexcept override { return 0; }
-
-private:
-    Display* mDisplay;
 };
 
 } // namespace filament
 
-#endif // TNT_FILAMENT_DRIVER_VULKAN_CONTEXTMANAGERVKLINUX_H
+#endif // TNT_FILAMENT_DRIVER_VULKAN_PLATFORM_VK_COCOA_H

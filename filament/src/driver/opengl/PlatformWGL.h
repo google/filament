@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_DRIVER_OPENGL_CONTEXT_MANAGER_WGL_H
-#define TNT_FILAMENT_DRIVER_OPENGL_CONTEXT_MANAGER_WGL_H
+#ifndef TNT_FILAMENT_DRIVER_OPENGL_PLATFORM_WGL_H
+#define TNT_FILAMENT_DRIVER_OPENGL_PLATFORM_WGL_H
 
 #include <stdint.h>
 
@@ -23,13 +23,13 @@
 #include <utils/unwindows.h>
 
 #include <filament/driver/DriverEnums.h>
-#include <filament/driver/ExternalContext.h>
+#include <filament/driver/Platform.h>
 
 namespace filament {
 
-class ContextManagerWGL final : public driver::ContextManagerGL {
+class PlatformWGL final : public driver::OpenGLPlatform {
 public:
-    std::unique_ptr<Driver> createDriver(void* const sharedGLContext) noexcept override;
+    Driver* createDriver(void* const sharedGLContext) noexcept override;
     void terminate() noexcept override;
 
     SwapChain* createSwapChain(void* nativewindow, uint64_t& flags) noexcept override;
@@ -63,8 +63,6 @@ private:
     PIXELFORMATDESCRIPTOR mPfd = {};
 };
 
-using ContextManager = filament::ContextManagerWGL;
-
 } // namespace filament
 
-#endif // TNT_FILAMENT_DRIVER_OPENGL_CONTEXT_MANAGER_GLX_H
+#endif // TNT_FILAMENT_DRIVER_OPENGL_PLATFORM_GLX_H

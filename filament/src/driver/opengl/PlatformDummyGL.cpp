@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-#include "driver/opengl/ContextManagerDummy.h"
+#include "driver/opengl/PlatformDummyGL.h"
 
 #include "driver/opengl/OpenGLDriver.h"
 
 namespace filament {
 
-std::unique_ptr<Driver> ContextManagerDummy::createDriver(void* const sharedGLContext) noexcept {
+Driver* PlatformDummyGL::createDriver(void* const sharedGLContext) noexcept {
     return nullptr;
 }
 

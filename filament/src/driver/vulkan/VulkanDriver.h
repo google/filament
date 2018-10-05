@@ -40,7 +40,7 @@ struct VulkanSamplerBuffer;
 
 class VulkanDriver final : public DriverBase {
 public:
-    static std::unique_ptr<Driver> create(driver::ContextManagerVk* externalContext,
+    static Driver* create(driver::VulkanPlatform* platform,
             const char* const* ppEnabledExtensions, uint32_t enabledExtensionCount) noexcept;
 
 private:
@@ -49,7 +49,7 @@ private:
     void debugCommand(const char* methodName) override;
 #endif
 
-    inline VulkanDriver(driver::ContextManagerVk* const externalContext,
+    inline VulkanDriver(driver::VulkanPlatform* const platform,
             const char* const* ppEnabledExtensions, uint32_t enabledExtensionCount) noexcept;
 
     virtual ~VulkanDriver() noexcept;
@@ -75,7 +75,7 @@ private:
     VulkanDriver(VulkanDriver const&) = delete;
     VulkanDriver& operator = (VulkanDriver const&) = delete;
 
-    driver::ContextManagerVk& mContextManager;
+    driver::VulkanPlatform& mContextManager;
 
     // For now we're not bothering to store handles in pools, just simple on-demand allocation.
     // We have a little map from integer handles to "blobs" which get replaced with the Hw objects.

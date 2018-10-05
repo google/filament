@@ -28,7 +28,7 @@
 
 #include <filament/driver/PixelBufferDescriptor.h>
 #include <filament/driver/BufferDescriptor.h>
-#include <filament/driver/ExternalContext.h>
+#include <filament/driver/Platform.h>
 #include <filament/driver/DriverEnums.h>
 
 #include "driver/Handle.h"

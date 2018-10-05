@@ -14,24 +14,24 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_DRIVER_OPENGL_CONTEXT_MANAGER_COCOA_H
-#define TNT_FILAMENT_DRIVER_OPENGL_CONTEXT_MANAGER_COCOA_H
+#ifndef TNT_FILAMENT_DRIVER_OPENGL_PLATFORM_COCOA_GL_H
+#define TNT_FILAMENT_DRIVER_OPENGL_PLATFORM_COCOA_GL_H
 
 #include <stdint.h>
 
 #include <filament/driver/DriverEnums.h>
-#include <filament/driver/ExternalContext.h>
+#include <filament/driver/Platform.h>
 
 namespace filament {
 
-struct ContextManagerCocoaImpl;
+struct PlatformCocoaGLImpl;
 
-class ContextManagerCocoa final : public driver::ContextManagerGL {
+class PlatformCocoaGL final : public driver::OpenGLPlatform {
 public:
-    ContextManagerCocoa();
-    ~ContextManagerCocoa() noexcept final;
+    PlatformCocoaGL();
+    ~PlatformCocoaGL() noexcept final;
 
-    std::unique_ptr<Driver> createDriver(void* sharedGLContext) noexcept override;
+    Driver* createDriver(void* sharedContext) noexcept override;
     void terminate() noexcept final;
 
     SwapChain* createSwapChain(void* nativewindow, uint64_t& flags) noexcept final;
@@ -61,11 +61,9 @@ public:
     int getOSVersion() const noexcept final { return 0; }
 
 private:
-    ContextManagerCocoaImpl* pImpl = nullptr;
+    PlatformCocoaGLImpl* pImpl = nullptr;
 };
-
-using ContextManager = filament::ContextManagerCocoa;
 
 } // namespace filament
 
-#endif // TNT_FILAMENT_DRIVER_OPENGL_CONTEXT_MANAGER_COCOA_H
+#endif // TNT_FILAMENT_DRIVER_OPENGL_PLATFORM_COCOA_GL_H

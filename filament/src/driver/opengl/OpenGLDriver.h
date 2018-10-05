@@ -43,12 +43,11 @@ class OpenGLProgram;
 class OpenGLBlitter;
 
 class OpenGLDriver final : public DriverBase {
-    inline explicit OpenGLDriver(driver::ContextManagerGL* external_context) noexcept;
+    inline explicit OpenGLDriver(driver::OpenGLPlatform* platform) noexcept;
     ~OpenGLDriver() noexcept final;
 
 public:
-    static std::unique_ptr<Driver> create(
-            driver::ContextManagerGL* externalContext, void* sharedGLContext) noexcept;
+    static Driver* create(driver::OpenGLPlatform* platform, void* sharedGLContext) noexcept;
 
     // OpenGLDriver specific fields
     struct GLVertexBuffer : public HwVertexBuffer {
@@ -110,7 +109,7 @@ public:
         bool isNativeStream() const { return gl.externalTextureId == 0; }
         struct Info {
             // storage for the read/write textures below
-            driver::ExternalContext::ExternalTexture* ets = nullptr;
+            driver::Platform::ExternalTexture* ets = nullptr;
             GLuint width = 0;
             GLuint height = 0;
         };
@@ -532,7 +531,7 @@ private:
     void detachStream(GLTexture* t) noexcept;
     void replaceStream(GLTexture* t, GLStream* stream) noexcept;
 
-    driver::ContextManagerGL& mContextManager;
+    driver::OpenGLPlatform& mPlatform;
 
     OpenGLBlitter* mOpenGLBlitter = nullptr;
     void updateStream(GLTexture* t, driver::DriverApi* driver) noexcept;

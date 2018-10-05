@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 The Android Open Source Project
+ * Copyright (C) 2018 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,34 +14,33 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_DRIVER_OPENGL_CONTEXT_MANAGER_GLX_H
-#define TNT_FILAMENT_DRIVER_OPENGL_CONTEXT_MANAGER_GLX_H
+#ifndef TNT_FILAMENT_DRIVER_OPENGL_PLATFORM_WEBGL_H
+#define TNT_FILAMENT_DRIVER_OPENGL_PLATFORM_WEBGL_H
 
 #include <stdint.h>
 
-#include <bluegl/BlueGL.h>
-#include <GL/glx.h>
-
 #include <filament/driver/DriverEnums.h>
-#include <filament/driver/ExternalContext.h>
+#include <filament/driver/Platform.h>
+
+#include <EGL/egl.h>
+#include <EGL/eglext.h>
 
 namespace filament {
 
-class ContextManagerGLX final : public driver::ContextManagerGL {
+class PlatformWebGL final : public driver::OpenGLPlatform {
 public:
 
-    std::unique_ptr<Driver> createDriver(void* const sharedGLContext) noexcept override;
-
+    Driver* createDriver(void* const sharedGLContext) noexcept override;
     void terminate() noexcept override;
 
-    SwapChain* createSwapChain(void* nativewindow, uint64_t& flags) noexcept override;
-    void destroySwapChain(SwapChain* swapChain) noexcept override;
-    void makeCurrent(SwapChain* drawSwapChain, SwapChain* readSwapChain) noexcept override;
-    void commit(SwapChain* swapChain) noexcept override;
+    SwapChain* createSwapChain(void* nativewindow, uint64_t& flags) noexcept final override;
+    void destroySwapChain(SwapChain* swapChain) noexcept final override;
+    void makeCurrent(SwapChain* drawSwapChain, SwapChain* readSwapChain) noexcept final override;
+    void commit(SwapChain* swapChain) noexcept final override;
 
-    Fence* createFence() noexcept override;
-    void destroyFence(Fence* fence) noexcept override;
-    driver::FenceStatus waitFence(Fence* fence, uint64_t timeout) noexcept override;
+    Fence* createFence() noexcept final override;
+    void destroyFence(Fence* fence) noexcept final override;
+    driver::FenceStatus waitFence(Fence* fence, uint64_t timeout) noexcept final override;
 
     void setPresentationTime(long time) noexcept final override {}
 
@@ -57,16 +56,8 @@ public:
     void destroyExternalTextureStorage(ExternalTexture* ets) noexcept final override { }
 
     int getOSVersion() const noexcept final override { return 0; }
-
-private:
-    Display *mGLXDisplay;
-    GLXContext mGLXContext;
-    GLXFBConfig* mGLXConfig;
-    GLXPbuffer mDummySurface;
 };
-
-using ContextManager = filament::ContextManagerGLX;
 
 } // namespace filament
 
-#endif // TNT_FILAMENT_DRIVER_OPENGL_CONTEXT_MANAGER_GLX_H
+#endif // TNT_FILAMENT_DRIVER_OPENGL_PLATFORM_WEBGL_H

@@ -35,7 +35,7 @@ namespace filament {
  * SwapChain* swapChain = engine->createSwapChain(nativeWindow);
  * \endcode
  *
- * When Engine::create() is used without specifying an ExternalContext, the `nativeWindow`
+ * When Engine::create() is used without specifying a Platform, the `nativeWindow`
  * parameter above must be of type:
  *
  * Platform | nativeWindow type
@@ -46,7 +46,7 @@ namespace filament {
  * X11      | Window
  * Windows  | HWND
  *
- * Otherwise, the `nativeWindow` is defined by the concrete implementation of ExternalContext.
+ * Otherwise, the `nativeWindow` is defined by the concrete implementation of Platform.
  *
  *
  * Examples:

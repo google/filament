@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "driver/vulkan/ContextManagerVkAndroid.h"
+#include "driver/vulkan/PlatformVkWindows.h"
 
 #include "VulkanDriver.h"
 
@@ -23,39 +23,45 @@
 
 #include <bluevk/BlueVK.h>
 
-#include <android/native_window.h>
-
 namespace filament {
 
 using namespace driver;
 
-std::unique_ptr<Driver> ContextManagerVkAndroid::createDriver(void* const sharedContext) noexcept {
+Driver* PlatformVkWindows::createDriver(void* const sharedContext) noexcept {
     ASSERT_PRECONDITION(sharedContext == nullptr, "Vulkan does not support shared contexts.");
     static const char* requestedExtensions[] = {
         "VK_KHR_surface",
-        "VK_KHR_android_surface",
+        "VK_KHR_win32_surface",
 #if !defined(NDEBUG)
         "VK_EXT_debug_report",
 #endif
     };
     return VulkanDriver::create(this, requestedExtensions,
-            sizeof(requestedExtensions) / sizeof(requestedExtensions[0]));
+        sizeof(requestedExtensions) / sizeof(requestedExtensions[0]));
 }
 
-void* ContextManagerVkAndroid::createVkSurfaceKHR(void* nativeWindow, void* vkinstance,
+void* PlatformVkWindows::createVkSurfaceKHR(void* nativeWindow, void* instance,
         uint32_t* width, uint32_t* height) noexcept {
-    const VkInstance instance = (VkInstance) vkinstance;
-    ANativeWindow* aNativeWindow = (ANativeWindow*) nativeWindow;
-    VkAndroidSurfaceCreateInfoKHR createInfo {
-        .sType = VK_STRUCTURE_TYPE_ANDROID_SURFACE_CREATE_INFO_KHR,
-        .window = aNativeWindow
-    };
-    VkSurfaceKHR surface = VK_NULL_HANDLE;
-    VkResult result = vkCreateAndroidSurfaceKHR(instance, &createInfo, VKALLOC, &surface);
-    ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkCreateAndroidSurfaceKHR error.");
-    *width = ANativeWindow_getWidth(aNativeWindow);
-    *height = ANativeWindow_getHeight(aNativeWindow);
-    return (void*) surface;
+    VkSurfaceKHR surface = nullptr;
+
+    HDC deviceContext = (HDC) nativeWindow;
+    HWND window = WindowFromDC(deviceContext);
+
+    VkWin32SurfaceCreateInfoKHR createInfo = {};
+    createInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
+    createInfo.hwnd = window;
+    createInfo.hinstance = GetModuleHandle(nullptr);
+
+    VkResult result = vkCreateWin32SurfaceKHR((VkInstance) instance, &createInfo, nullptr, &surface);
+    ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkCreateWin32SurfaceKHR error.");
+
+    RECT rect;
+    BOOL success = GetWindowRect(window, &rect);
+    ASSERT_POSTCONDITION(success, "GetWindowRect error.");
+    *width = rect.right - rect.left;
+    *height = rect.bottom - rect.top;
+
+    return surface;
 }
 
 } // namespace filament

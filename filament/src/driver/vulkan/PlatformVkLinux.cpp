@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "driver/vulkan/ContextManagerVkLinux.h"
+#include "driver/vulkan/PlatformVkLinux.h"
 
 #include "VulkanDriver.h"
 
@@ -43,7 +43,7 @@ struct X11Functions {
     void* library;
 } g_x11;
 
-std::unique_ptr<Driver> ContextManagerVkLinux::createDriver(void* const sharedContext) noexcept {
+Driver* PlatformVkLinux::createDriver(void* const sharedContext) noexcept {
     ASSERT_PRECONDITION(sharedContext == nullptr, "Vulkan does not support shared contexts.");
     static const char* requestedExtensions[] = {
         "VK_KHR_surface",
@@ -63,7 +63,7 @@ std::unique_ptr<Driver> ContextManagerVkLinux::createDriver(void* const sharedCo
             sizeof(requestedExtensions) / sizeof(requestedExtensions[0]));
 }
 
-void* ContextManagerVkLinux::createVkSurfaceKHR(void* nativeWindow, void* instance,
+void* PlatformVkLinux::createVkSurfaceKHR(void* nativeWindow, void* instance,
         uint32_t* width, uint32_t* height) noexcept {
     ASSERT_POSTCONDITION(vkCreateXlibSurfaceKHR, "Unable to load vkCreateXlibSurfaceKHR function.");
     VkSurfaceKHR surface = nullptr;

@@ -14,20 +14,20 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_DRIVER_VULKAN_CONTEXTMANAGERVKWINDOWS_H
-#define TNT_FILAMENT_DRIVER_VULKAN_CONTEXTMANAGERVKWINDOWS_H
+#ifndef TNT_FILAMENT_DRIVER_VULKAN_PLATFORM_VK_WINDOWS_H
+#define TNT_FILAMENT_DRIVER_VULKAN_PLATFORM_VK_WINDOWS_H
 
 #include <stdint.h>
 
 #include <filament/driver/DriverEnums.h>
-#include <filament/driver/ExternalContext.h>
+#include <filament/driver/Platform.h>
 
 namespace filament {
 
-class ContextManagerVkWindows final : public driver::ContextManagerVk {
+class PlatformVkWindows final : public driver::VulkanPlatform {
 public:
 
-    std::unique_ptr<Driver> createDriver(void* const sharedContext) noexcept override;
+    Driver* createDriver(void* const sharedContext) noexcept override;
 
     void* createVkSurfaceKHR(void* nativeWindow, void* instance,
             uint32_t* width, uint32_t* height) noexcept override;
@@ -40,4 +40,4 @@ private:
 
 } // namespace filament
 
-#endif // TNT_FILAMENT_DRIVER_VULKAN_CONTEXTMANAGERVKWINDOWS_H
+#endif // TNT_FILAMENT_DRIVER_VULKAN_PLATFORM_VK_WINDOWS_H

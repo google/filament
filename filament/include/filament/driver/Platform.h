@@ -14,47 +14,50 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_DRIVER_EXTERNALCONTEXT_H
-#define TNT_FILAMENT_DRIVER_EXTERNALCONTEXT_H
-
-#include <memory>
+#ifndef TNT_FILAMENT_DRIVER_PLATFORM_H
+#define TNT_FILAMENT_DRIVER_PLATFORM_H
 
 #include <filament/driver/DriverEnums.h>
 
 #include <utils/compiler.h>
 
 namespace filament {
+namespace details {
+class FEngine;
+}
 
 class Driver;
 
 namespace driver {
 
-class UTILS_PUBLIC ExternalContext {
+class UTILS_PUBLIC Platform {
 public:
     struct SwapChain {};
     struct Fence {};
     struct Stream {};
     struct ExternalTexture {
-        uintptr_t image;
+        uintptr_t image = 0;
     };
 
-    // Creates the platform-specific ExternalContext object. The caller takes ownership and is
-    // responsible for destroying it. Initialization of the backend API is deferred until
-    // createDriver(). The passed-in backend hint is replaced with the resolved backend.
-    static ExternalContext* create(driver::Backend* backendHint) noexcept;
+    virtual int getOSVersion() const noexcept = 0;
 
+    virtual ~Platform() noexcept;
+
+protected:
     // Creates and and initializes the low-level API (e.g. an OpenGL context or Vulkan instance),
     // then creates the concrete Driver. Returns null on failure.
-    virtual std::unique_ptr<Driver> createDriver(void* sharedGLContext) noexcept = 0;
+    // The caller takes ownership of the returned Driver* and must destroy it with delete.
+    virtual Driver* createDriver(void* sharedContext) noexcept = 0;
 
-    virtual ~ExternalContext() noexcept;
-
-    virtual int getOSVersion() const noexcept = 0;
+private:
+    friend class details::FEngine;
+    static Platform* create(driver::Backend* backendHint) noexcept;
+    static void destroy(Platform** context) noexcept;
 };
 
-class UTILS_PUBLIC ContextManagerGL : public ExternalContext {
+class UTILS_PUBLIC OpenGLPlatform : public Platform {
 public:
-    virtual ~ContextManagerGL() noexcept;
+    ~OpenGLPlatform() noexcept override;
 
     // Called to destroy the OpenGL context. This should clean up any windows
     // or buffers from initialization.
@@ -99,9 +102,9 @@ public:
     virtual void destroyExternalTextureStorage(ExternalTexture* ets) noexcept = 0;
 };
 
-class UTILS_PUBLIC ContextManagerVk : public ExternalContext {
+class UTILS_PUBLIC VulkanPlatform : public Platform {
 public:
-    virtual ~ContextManagerVk() noexcept;
+    ~VulkanPlatform() noexcept override;
 
     // Given a Vulkan instance and native window handle, creates the platform-specific surface.
     virtual void* createVkSurfaceKHR(void* nativeWindow, void* instance,
@@ -111,4 +114,4 @@ public:
 } // namespace driver
 } // namespace filament
 
-#endif // TNT_FILAMENT_DRIVER_EXTERNALCONTEXT_H
+#endif // TNT_FILAMENT_DRIVER_PLATFORM_H
