@@ -2399,6 +2399,16 @@ void OpenGLDriver::bindUniformBuffer(size_t index, Driver::UniformBufferHandle u
     CHECK_GL_ERROR(utils::slog.e)
 }
 
+void OpenGLDriver::bindUniformBufferRange(size_t index, Driver::UniformBufferHandle ubh,
+        size_t offset, size_t size) {
+    DEBUG_MARKER()
+
+    GLUniformBuffer* ub = handle_cast<GLUniformBuffer*>(ubh);
+    assert(offset + size <= ub->ub.getSize());
+    bindBufferRange(GL_UNIFORM_BUFFER, GLuint(index), ub->gl.ubo, offset, size);
+    CHECK_GL_ERROR(utils::slog.e)
+}
+
 void OpenGLDriver::bindSamplers(size_t index, Driver::SamplerBufferHandle sbh) {
     DEBUG_MARKER()
 

@@ -752,6 +752,12 @@ void VulkanDriver::bindUniformBuffer(size_t index, Driver::UniformBufferHandle u
     mBinder.bindUniformBuffer((uint32_t) index, buffer->getGpuBuffer(), offset, size);
 }
 
+void VulkanDriver::bindUniformBufferRange(size_t index, Driver::UniformBufferHandle ubh,
+        size_t offset, size_t size) {
+    auto* buffer = handle_cast<VulkanUniformBuffer>(mHandleMap, ubh);
+    mBinder.bindUniformBuffer((uint32_t)index, buffer->getGpuBuffer(), offset, size);
+}
+
 void VulkanDriver::bindSamplers(size_t index, Driver::SamplerBufferHandle sbh) {
     auto* hwsb = handle_cast<VulkanSamplerBuffer>(mHandleMap, sbh);
     mSamplerBindings[index] = hwsb;
