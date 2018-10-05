@@ -495,9 +495,9 @@ EtcConfig etcParseOptionString(const std::string& options) {
         result.format = CompressedFormat::RGB8_ALPHA1_ETC2;
     } else if (sformat == "srgb8_alpha") {
         result.format = CompressedFormat::SRGB8_ALPHA1_ETC;
-    } else if (sformat == "rgba8_etc2") {
+    } else if (sformat == "rgba8") {
         result.format = CompressedFormat::RGBA8_ETC2_EAC;
-    } else if (sformat == "srgb8_alpha8_etc2") {
+    } else if (sformat == "srgb8_alpha8") {
         result.format = CompressedFormat::SRGB8_ALPHA8_ETC2_EAC;
     }
     if (smetric == "rgba") {
