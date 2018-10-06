@@ -172,14 +172,14 @@ public:
         return boolish ? -1llu : 0llu;
     }
 
-    struct PrimitiveInfo { // 28 bytes
+    struct PrimitiveInfo { // 24 bytes
         FMaterialInstance const* mi = nullptr;              // 8 bytes (4)
         Handle<HwRenderPrimitive> primitiveHandle;          // 4 bytes
-        Handle<HwUniformBuffer> perRenderableUniforms;      // 4 bytes
         Handle<HwUniformBuffer> perRenderableBones;         // 4 bytes
         Driver::RasterState rasterState;                    // 4 bytes
+        uint16_t index = 0;                                 // 2 bytes
         Variant materialVariant;                            // 1 byte
-        uint8_t reserved[3] = { };                          // 3 bytes (that helps the compiler)
+        uint8_t reserved = { };                             // 1 byte
     };
 
     struct alignas(8) Command {     // 32 bytes
@@ -209,7 +209,7 @@ public:
     // appends rendering commands for the given view
     void render(
             FEngine& engine, utils::JobSystem& js,
-            FScene::RenderableSoa const& soa, utils::Range<uint32_t> visibleRenderables,
+            FScene& scene, utils::Range<uint32_t> visibleRenderables,
             uint32_t commandTypeFlags, RenderFlags renderFlags,
             const CameraInfo& camera, Viewport const& viewport,
             utils::GrowingSlice<Command>& commands) noexcept;
@@ -249,7 +249,7 @@ private:
     static void setupColorCommand(Command& cmdDraw, bool hasDepthPass,
             FMaterialInstance const* mi) noexcept;
 
-    static void recordDriverCommands(FEngine::DriverApi& driver,
+    static void recordDriverCommands(FEngine::DriverApi& driver, FScene& scene,
             utils::Slice<Command> const& commands) noexcept;
 
     static void updateSummedPrimitiveCounts(

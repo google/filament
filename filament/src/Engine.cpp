@@ -117,10 +117,6 @@ UniformInterfaceBlock FEngine::PerViewUib::getUib() noexcept {
     return UibGenerator::getPerViewUib();
 }
 
-UniformInterfaceBlock FEngine::PerRenderableUib::getUib() noexcept {
-    return UibGenerator::getPerRenderableUib();
-}
-
 UniformInterfaceBlock FEngine::PostProcessingUib::getUib() noexcept {
     return UibGenerator::getPostProcessingUib();
 }
@@ -153,7 +149,6 @@ FEngine::FEngine(Backend backend, Platform* platform, void* sharedGLContext) :
         mLightManager(*this),
         mCameraManager(*this),
         mPerViewUib(PerViewUib::getUib()),
-        mPerRenderableUib(PerRenderableUib::getUib()),
         mPerViewSib(PerViewSib::getSib()),
         mPostProcessUib(PostProcessingUib::getUib()),
         mPostProcessSib(PostProcessSib::getSib()),

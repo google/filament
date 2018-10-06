@@ -283,8 +283,6 @@ void FRenderableManager::create(
         static_cast<Visibility&>(manager[ci].visibility).skinning = builder->mSkinningBoneCount > 0;
 
         if (!canReuse) {
-            getUniformBuffer(ci) = UniformBuffer(engine.getPerRenderableUib());
-            setUniformHandle(ci, driver.createUniformBuffer(getUniformBuffer(ci).getSize()));
             if (builder->mSkinningBoneCount) {
                 std::unique_ptr<Bones>& bones = manager[ci].bones;
 
@@ -342,7 +340,6 @@ void FRenderableManager::destroyComponent(Instance ci) noexcept {
     FEngine& engine = mEngine;
 
     FEngine::DriverApi& driver = engine.getDriverApi();
-    driver.destroyUniformBuffer(manager[ci].uniformsHandle);
 
     // See create(RenderableManager::Builder&, Entity)
     destroyComponentPrimitives(engine, manager[ci].primitives);
@@ -368,40 +365,17 @@ void FRenderableManager::prepare(
         Instance const* UTILS_RESTRICT instances,
         utils::Range<uint32_t> list) const noexcept {
     auto& manager = mManager;
-    UniformBuffer           const * const UTILS_RESTRICT uniforms = manager.raw_array<UNIFORMS>();
-    Handle<HwUniformBuffer> const * const UTILS_RESTRICT ubhs     = manager.raw_array<UNIFORMS_HANDLE>();
-    std::unique_ptr<Bones>  const * const UTILS_RESTRICT bones    = manager.raw_array<BONES>();
+
+    std::unique_ptr<Bones>  const * const UTILS_RESTRICT bones = manager.raw_array<BONES>();
     for (uint32_t index : list) {
         size_t i = instances[index].asValue();
         assert(i);  // we should never get the null instance here
-        if (uniforms[i].isDirty()) {
-            // update per-renderable uniform buffer
-            driver.updateUniformBuffer(ubhs[i], UniformBuffer(uniforms[i]));
-            uniforms[i].clean(); // clean AFTER we send to the driver
-        }
         if (UTILS_UNLIKELY(bones[i])) {
             if (bones[i]->bones.isDirty()) {
                 driver.updateUniformBuffer(bones[i]->handle, UniformBuffer(bones[i]->bones));
                 bones[i]->bones.clean();
             }
         }
-    }
-}
-
-void FRenderableManager::updateLocalUBO(Instance instance, const math::mat4f& model) noexcept {
-    if (instance) {
-        auto& uniforms = getUniformBuffer(instance);
-
-        // update our uniform buffer
-        uniforms.setUniform(offsetof(FEngine::PerRenderableUib, worldFromModelMatrix), model);
-
-        // Using the inverse-transpose handles non-uniform scaling, but DOESN'T guarantee that
-        // the transformed normals will have unit-length, therefore they need to be normalized
-        // in the shader (that's already the case anyways, since normalization is needed after
-        // interpolation).
-        // Note: if the model matrix is known to be a rigid-transform, we could just use it directly.
-        mat3f nm = transpose(inverse(model.upperLeft()));
-        uniforms.setUniform(offsetof(FEngine::PerRenderableUib, worldFromModelNormalMatrix), nm);
     }
 }
 
