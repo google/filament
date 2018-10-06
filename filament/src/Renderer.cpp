@@ -252,17 +252,29 @@ void FRenderer::mirrorFrame(FSwapChain* dstSwapChain, Viewport const& dstViewpor
     // destination.
     driver.makeCurrent(dstSwapChain->getHwHandle(), mSwapChain->getHwHandle());
 
+    RenderPassParams params = {};
+    // Clear color to black if the CLEAR flag is set.
+    if ((flags & CLEAR) != 0) {
+        params.clear = TargetBufferFlags::COLOR;
+        params.clearColor = {0.f, 0.f, 0.f, 1.f};
+        params.clear |= RenderPassParams::IGNORE_SCISSOR | RenderPassParams::IGNORE_VIEWPORT;
+    }
+    driver.beginRenderPass(viewRenderTarget, params);
+
     // Verify that the source swap chain is readable.
     assert(mSwapChain->isReadable());
     driver.blit(TargetBufferFlags::COLOR,
                 viewRenderTarget, dstViewport.left, dstViewport.bottom, dstViewport.width, dstViewport.height,
                 viewRenderTarget, srcViewport.left, srcViewport.bottom, srcViewport.width, srcViewport.height);
     if ((flags & SET_PRESENTATION_TIME) != 0) {
-      uint64_t monotonic_clock_ns (std::chrono::steady_clock::now().time_since_epoch().count());
-      driver.setPresentationTime(monotonic_clock_ns);
+        uint64_t monotonic_clock_ns (std::chrono::steady_clock::now().time_since_epoch().count());
+        driver.setPresentationTime(monotonic_clock_ns);
     }
+
+    driver.endRenderPass();
+
     if ((flags & COMMIT) != 0) {
-      dstSwapChain->commit(driver);
+        dstSwapChain->commit(driver);
     }
 
     // Reset the context and read/draw surface to the current surface so that

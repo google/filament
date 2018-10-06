@@ -162,6 +162,14 @@ public:
      * mirrorFrame()
      */
     static constexpr MirrorFrameFlag SET_PRESENTATION_TIME = 0x2;
+    /**
+     * Indicates that the dstSwapChain passed into mirrorFrame() should be
+     * cleared to black before the frame is mirrored into the specified viewport.
+     *
+     * @see
+     * mirrorFrame()
+     */
+    static constexpr MirrorFrameFlag CLEAR = 0x4;
 
     /**
      * Mirror the currently rendered view to the indicated swap chain, using the

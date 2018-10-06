@@ -29,6 +29,7 @@ public class Renderer {
 
     public static final int MIRROR_FRAME_FLAG_COMMIT = 0x1;
     public static final int MIRROR_FRAME_FLAG_SET_PRESENTATION_TIME = 0x2;
+    public static final int MIRROR_FRAME_FLAG_CLEAR = 0x4;
 
     Renderer(@NonNull Engine engine, long nativeRenderer) {
         mEngine = engine;
