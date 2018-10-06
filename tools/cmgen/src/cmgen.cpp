@@ -882,9 +882,8 @@ void iblRoughnessPrefilter(const utils::Path& iname,
     }
 
     if (g_type == OutputType::KTX) {
-        using namespace std;
         if (g_coefficients) {
-            ostringstream sstr;
+            std::ostringstream sstr;
             for (ssize_t l = 0; l < g_sh_compute; l++) {
                 for (ssize_t m = -l; m <= l; m++) {
                     auto v = g_coefficients[CubemapSH::getShIndex(m, (size_t) l)];
@@ -893,11 +892,11 @@ void iblRoughnessPrefilter(const utils::Path& iname,
             }
             container.setMetadata("sh", sstr.str().c_str());
         }
-        vector<uint8_t> fileContents(container.getSerializedLength());
+        std::vector<uint8_t> fileContents(container.getSerializedLength());
         container.serialize(fileContents.data(), fileContents.size());
-        string filename = iname.getNameWithoutExtension() + "_ibl.ktx";
+        std::string filename = iname.getNameWithoutExtension() + "_ibl.ktx";
         auto fullpath = outputDir + filename;
-        ofstream outputStream(fullpath.c_str(), ios::out | ios::binary);
+        std::ofstream outputStream(fullpath.c_str(), std::ios::out | std::ios::binary);
         outputStream.write((const char*) fileContents.data(), fileContents.size());
         outputStream.close();
     }
