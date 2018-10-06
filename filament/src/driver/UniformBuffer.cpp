@@ -119,6 +119,16 @@ UniformBuffer::UniformBuffer(const UniformBuffer& rhs)
     memcpy(mBuffer, rhs.mBuffer, mSize);
 }
 
+UniformBuffer::UniformBuffer(const UniformBuffer& rhs, size_t trim)
+        : mBuffer(mStorage),
+          mSize(std::min(uint32_t(trim), rhs.mSize)),
+          mSomethingDirty(rhs.mSomethingDirty) {
+    if (UTILS_LIKELY(mSize > sizeof(mStorage))) {
+        mBuffer = UniformBuffer::alloc(rhs.mSize);
+    }
+    memcpy(mBuffer, rhs.mBuffer, mSize);
+}
+
 UniformBuffer::UniformBuffer(UniformBuffer&& rhs) noexcept
         : mBuffer(rhs.mBuffer),
           mSize(rhs.mSize),

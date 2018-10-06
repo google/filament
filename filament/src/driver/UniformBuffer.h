@@ -43,6 +43,8 @@ public:
     // can be copy-constructed. Needed to create temporary copies.
     UniformBuffer(const UniformBuffer& rhs);
 
+    UniformBuffer(const UniformBuffer& rhs, size_t trim);
+
     // can be moved
     UniformBuffer(UniformBuffer&& rhs) noexcept;
 

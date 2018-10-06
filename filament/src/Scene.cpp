@@ -116,7 +116,6 @@ void FScene::prepare(const math::mat4f& worldOriginTansform) {
                     ri,
                     worldTransform,
                     rcm.getVisibility(ri),
-                    rcm.getUbh(ri),
                     rcm.getBonesUbh(ri),
                     worldAABB.center,
                     0,
@@ -159,18 +158,51 @@ void FScene::prepare(const math::mat4f& worldOriginTansform) {
     }
 }
 
-void FScene::updateUBOs(utils::Range<uint32_t> visibleRenderables) const noexcept {
-    FRenderableManager& rcm = mEngine.getRenderableManager();
+void FScene::updateUBOs(utils::Range<uint32_t> visibleRenderables) noexcept {
+    FEngine::DriverApi& driver = mEngine.getDriverApi();
+    UniformBuffer& uniformBuffer = mUniformBuffer;
+    Handle<HwUniformBuffer>& uniformBufferHandle = mUniformBufferHandle;
+    const size_t size = sizeof(FRenderableManager::Transform) * visibleRenderables.size();
+
+    // reallocate UBO if it's too small
+    if (uniformBuffer.getSize() < size) {
+        // allocate 1/3 extra
+        size_t newSize = (4 * visibleRenderables.size() + 2) / 3;
+        uniformBuffer = UniformBuffer(newSize * sizeof(FRenderableManager::Transform));
+        if (uniformBufferHandle) {
+            driver.destroyUniformBuffer(uniformBufferHandle);
+        }
+        uniformBufferHandle = driver.createUniformBuffer(uniformBuffer.getSize());
+    }
+
     auto& sceneData = mRenderableData;
     for (uint32_t i : visibleRenderables) {
-        auto ri = sceneData.elementAt<RENDERABLE_INSTANCE>(i);
-        rcm.updateLocalUBO(ri, sceneData.elementAt<WORLD_TRANSFORM>(i));
+        mat4f const& model = sceneData.elementAt<WORLD_TRANSFORM>(i);
+        const size_t offset = sizeof(FRenderableManager::Transform) * i;
+
+        uniformBuffer.setUniform(
+                offset + offsetof(FRenderableManager::Transform, worldFromModelMatrix),
+                model);
+
+        // Using the inverse-transpose handles non-uniform scaling, but DOESN'T guarantee that
+        // the transformed normals will have unit-length, therefore they need to be normalized
+        // in the shader (that's already the case anyways, since normalization is needed after
+        // interpolation).
+        // Note: if the model matrix is known to be a rigid-transform, we could just use it directly.
+        uniformBuffer.setUniform(
+                offset + offsetof(FRenderableManager::Transform, worldFromModelNormalMatrix),
+                transpose(inverse(model.upperLeft())));
     }
+
+    driver.updateUniformBuffer(uniformBufferHandle, UniformBuffer(uniformBuffer, size));
+    uniformBuffer.clean();
 }
 
 void FScene::terminate(FEngine& engine) {
     // free-up the lights buffer
     mGpuLightData.terminate(engine);
+    // free-up UBOs
+    engine.getDriverApi().destroyUniformBuffer(mUniformBufferHandle);
 }
 
 void FScene::prepareDynamicLights(const CameraInfo& camera, ArenaScope& rootArena) noexcept {

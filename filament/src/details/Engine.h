@@ -147,13 +147,6 @@ public:
         alignas(16) math::float4 iblSH[9]; // actually float3 entries (std140 requires float4 alignment)
     };
 
-    struct PerRenderableUib {
-        static UniformInterfaceBlock getUib() noexcept;
-        // these fields are only used to call offsetof() and make it easy to visualize the UBO
-        math::mat4f worldFromModelMatrix;
-        math::mat3f worldFromModelNormalMatrix;
-    };
-
     struct PostProcessingUib {
         static UniformInterfaceBlock getUib() noexcept;
         math::float2 uvScale;
@@ -191,7 +184,6 @@ public:
 
     // Uniforms...
     const UniformInterfaceBlock& getPerViewUib() const noexcept { return mPerViewUib; }
-    const UniformInterfaceBlock& getPerRenderableUib() const noexcept { return mPerRenderableUib; }
     const UniformInterfaceBlock& getPerPostProcessUib() const noexcept { return mPostProcessUib; }
 
     // Samplers...
@@ -402,9 +394,6 @@ private:
 
     // Per-view Uniform interface block
     UniformInterfaceBlock mPerViewUib;
-
-    // Per-Renderable Uniform interface block
-    UniformInterfaceBlock mPerRenderableUib;
 
     // Per-view Sampler interface block
     SamplerInterfaceBlock mPerViewSib;

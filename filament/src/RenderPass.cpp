@@ -44,7 +44,7 @@ UTILS_ALWAYS_INLINE // this allows the compiler to devirtualize some calls
 inline              // this removes the code from the compilation unit
 void RenderPass::render(
         FEngine& engine, JobSystem& js,
-        FScene::RenderableSoa const& soa, Range<uint32_t> vr,
+        FScene& scene, Range<uint32_t> vr,
         uint32_t commandTypeFlags, RenderFlags renderFlags,
         const CameraInfo& camera, Viewport const& viewport,
         GrowingSlice<Command>& commands) noexcept {
@@ -53,6 +53,8 @@ void RenderPass::render(
 
     // trace the number of visible renderables
     SYSTRACE_VALUE32("visibleRenderables", vr.size());
+
+    FScene::RenderableSoa const& soa = scene.getRenderableData();
 
     // up-to-date summed primitive counts needed for generateCommands()
     updateSummedPrimitiveCounts(const_cast<FScene::RenderableSoa&>(soa), vr);
@@ -98,7 +100,7 @@ void RenderPass::render(
     beginRenderPass(driver, viewport, camera);
 
     // Now, execute all commands
-    RenderPass::recordDriverCommands(driver, commands);
+    RenderPass::recordDriverCommands(driver, scene, commands);
 
     endRenderPass(driver, viewport);
 
@@ -111,10 +113,12 @@ void RenderPass::render(
 UTILS_NOINLINE // no need to be inlined
 void RenderPass::recordDriverCommands(
         FEngine::DriverApi& UTILS_RESTRICT driver,  // using restrict here is very important
+        FScene& UTILS_RESTRICT scene,
         Slice<Command> const& commands) noexcept {
     SYSTRACE_CALL();
 
     if (!commands.empty()) {
+        Handle<HwUniformBuffer> uboHandle = scene.getUniformBufferHandle();
         FMaterialInstance const* UTILS_RESTRICT previousMi = nullptr;
         FMaterial const* UTILS_RESTRICT ma = nullptr;
         Command const* UTILS_RESTRICT c;
@@ -125,7 +129,8 @@ void RenderPass::recordDriverCommands(
 
             // per-renderable uniform
             PrimitiveInfo const& UTILS_RESTRICT info = c->primitive;
-            driver.bindUniformBuffer(BindingPoints::PER_RENDERABLE, info.perRenderableUniforms);
+            size_t offset = info.index * sizeof(FRenderableManager::Transform);
+            driver.bindUniformBufferRange(BindingPoints::PER_RENDERABLE, uboHandle, offset, sizeof(FRenderableManager::Transform));
             if (info.perRenderableBones) {
                 driver.bindUniformBuffer(BindingPoints::PER_RENDERABLE_BONES, info.perRenderableBones);
             }
@@ -267,7 +272,6 @@ void RenderPass::generateCommandsImpl(uint32_t,
     auto const* const UTILS_RESTRICT soaWorldAABBCenter = soa.data<FScene::WORLD_AABB_CENTER>();
     auto const* const UTILS_RESTRICT soaVisibility      = soa.data<FScene::VISIBILITY_STATE>();
     auto const* const UTILS_RESTRICT soaPrimitives      = soa.data<FScene::PRIMITIVES>();
-    auto const* const UTILS_RESTRICT soaUbh             = soa.data<FScene::UBH>();
     auto const* const UTILS_RESTRICT soaBonesUbh        = soa.data<FScene::BONES_UBH>();
 
     const bool hasShadowing = renderFlags & HAS_SHADOWING;
@@ -318,7 +322,7 @@ void RenderPass::generateCommandsImpl(uint32_t,
         const uint32_t distanceBits = reinterpret_cast<uint32_t&>(distance);
 
         cmdColor.key = makeField(soaVisibility[i].priority, PRIORITY_MASK, PRIORITY_SHIFT);
-        cmdColor.primitive.perRenderableUniforms = soaUbh[i];
+        cmdColor.primitive.index = (uint16_t)i;
         cmdColor.primitive.perRenderableBones = soaBonesUbh[i];
         materialVariant.setShadowReceiver(soaVisibility[i].receiveShadows & hasShadowing);
         materialVariant.setSkinning(soaVisibility[i].skinning);
@@ -328,7 +332,7 @@ void RenderPass::generateCommandsImpl(uint32_t,
         cmdDepth.key = uint64_t(Pass::DEPTH);
         cmdDepth.key |= makeField(soaVisibility[i].priority, PRIORITY_MASK, PRIORITY_SHIFT);
         cmdDepth.key |= makeField(distanceBits, DISTANCE_BITS_MASK, DISTANCE_BITS_SHIFT);
-        cmdDepth.primitive.perRenderableUniforms = soaUbh[i];
+        cmdDepth.primitive.index = (uint16_t)i;
         cmdDepth.primitive.perRenderableBones = soaBonesUbh[i];
         cmdDepth.primitive.materialVariant.setSkinning(soaVisibility[i].skinning);
 
@@ -581,7 +585,7 @@ void FRenderer::ColorPass::renderColorPass(FEngine& engine, JobSystem& js,
 
     ColorPass colorPass("ColorPass", js, jobFroxelize, view, rth);
     driver.pushGroupMarker("Color Pass");
-    colorPass.render(engine, js, soa, vr, commandType, flags, cameraInfo, scaledViewport, commands);
+    colorPass.render(engine, js, *view->getScene(), vr, commandType, flags, cameraInfo, scaledViewport, commands);
     driver.popGroupMarker();
 }
 
@@ -628,7 +632,7 @@ void FRenderer::ShadowPass::renderShadowMap(FEngine& engine, JobSystem& js,
 
     ShadowPass shadowPass("ShadowPass", shadowMap);
     driver.pushGroupMarker("Shadow map Pass");
-    shadowPass.render(engine, js, soa, vr, CommandTypeFlags::SHADOW, flags, cameraInfo, viewport, commands);
+    shadowPass.render(engine, js, *view->getScene(), vr, CommandTypeFlags::SHADOW, flags, cameraInfo, viewport, commands);
     driver.popGroupMarker();
 }
 
