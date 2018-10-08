@@ -254,10 +254,14 @@ void FRenderer::mirrorFrame(FSwapChain* dstSwapChain, Viewport const& dstViewpor
 
     RenderPassParams params = {};
     // Clear color to black if the CLEAR flag is set.
-    if ((flags & CLEAR) != 0) {
+    if (flags & CLEAR) {
         params.clear = TargetBufferFlags::COLOR;
         params.clearColor = {0.f, 0.f, 0.f, 1.f};
-        params.clear |= RenderPassParams::IGNORE_SCISSOR | RenderPassParams::IGNORE_VIEWPORT;
+        params.left = 0;
+        params.bottom = 0;
+        params.width = std::numeric_limits<uint32_t>::max();
+        params.height = std::numeric_limits<uint32_t>::max();
+        params.clear |= RenderPassParams::IGNORE_SCISSOR;
     }
     driver.beginRenderPass(viewRenderTarget, params);
 
@@ -266,14 +270,14 @@ void FRenderer::mirrorFrame(FSwapChain* dstSwapChain, Viewport const& dstViewpor
     driver.blit(TargetBufferFlags::COLOR,
                 viewRenderTarget, dstViewport.left, dstViewport.bottom, dstViewport.width, dstViewport.height,
                 viewRenderTarget, srcViewport.left, srcViewport.bottom, srcViewport.width, srcViewport.height);
-    if ((flags & SET_PRESENTATION_TIME) != 0) {
+    if (flags & SET_PRESENTATION_TIME) {
         uint64_t monotonic_clock_ns (std::chrono::steady_clock::now().time_since_epoch().count());
         driver.setPresentationTime(monotonic_clock_ns);
     }
 
     driver.endRenderPass();
 
-    if ((flags & COMMIT) != 0) {
+    if (flags & COMMIT) {
         dstSwapChain->commit(driver);
     }
 
