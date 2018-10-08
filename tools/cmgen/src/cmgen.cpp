@@ -1011,7 +1011,6 @@ void extractCubemapFaces(const utils::Path& iname, const Cubemap& cm, const util
     }
 
     if (g_type == OutputType::KTX) {
-        using namespace std;
         const uint32_t dim = cm.getDimensions();
         KtxBundle container(1, 1, true);
         container.info() = {
@@ -1026,11 +1025,11 @@ void extractCubemapFaces(const utils::Path& iname, const Cubemap& cm, const util
             .pixelDepth = 0,
         };
         exportKtxFaces(container, 0, cm);
-        string filename = iname.getNameWithoutExtension() + "_skybox.ktx";
+        std::string filename = iname.getNameWithoutExtension() + "_skybox.ktx";
         auto fullpath = outputDir + filename;
-        vector<uint8_t> fileContents(container.getSerializedLength());
+        std::vector<uint8_t> fileContents(container.getSerializedLength());
         container.serialize(fileContents.data(), fileContents.size());
-        ofstream outputStream(fullpath.c_str(), ios::out | ios::binary);
+        std::ofstream outputStream(fullpath.c_str(), std::ios::out | std::ios::binary);
         outputStream.write((const char*) fileContents.data(), fileContents.size());
         outputStream.close();
         return;
