@@ -257,6 +257,8 @@ void FRenderer::mirrorFrame(FSwapChain* dstSwapChain, Viewport const& dstViewpor
     if (flags & CLEAR) {
         params.clear = TargetBufferFlags::COLOR;
         params.clearColor = {0.f, 0.f, 0.f, 1.f};
+        params.discardStart = TargetBufferFlags::ALL;
+        params.discardEnd = TargetBufferFlags::NONE;
         params.left = 0;
         params.bottom = 0;
         params.width = std::numeric_limits<uint32_t>::max();
