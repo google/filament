@@ -550,7 +550,6 @@ void VulkanDriver::updateUniformBuffer(Driver::UniformBufferHandle ubh,
     if (uniformBuffer.isDirty()) {
         buffer->loadFromCpu(uniformBuffer.getBuffer(), (uint32_t) uniformBuffer.getSize());
     }
-    buffer->ub = std::move(uniformBuffer);
 }
 
 void VulkanDriver::updateSamplerBuffer(Driver::SamplerBufferHandle sbh,
