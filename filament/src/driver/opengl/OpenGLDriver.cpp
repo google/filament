@@ -1907,15 +1907,12 @@ void OpenGLDriver::updateUniformBuffer(Driver::UniformBufferHandle ubh,
 
     GLUniformBuffer* ub = handle_cast<GLUniformBuffer *>(ubh);
     assert(ub);
+    assert(ub->size >= p.size);
+    assert(ub->gl.ubo);
 
-    if (UTILS_UNLIKELY(uniformBuffer.isDirty())) {
-        // TODO: upload only the dirty parts
-        assert(ub->gl.ubo);
-        bindBuffer(GL_UNIFORM_BUFFER, ub->gl.ubo);
-        glBufferSubData(GL_UNIFORM_BUFFER, 0, uniformBuffer.getSize(), uniformBuffer.getBuffer());
-        CHECK_GL_ERROR(utils::slog.e)
-    }
-    ub->ub = std::move(uniformBuffer);
+    bindBuffer(GL_UNIFORM_BUFFER, ub->gl.ubo);
+    glBufferSubData(GL_UNIFORM_BUFFER, 0, uniformBuffer.getSize(), uniformBuffer.getBuffer());
+    CHECK_GL_ERROR(utils::slog.e)
 }
 
 void OpenGLDriver::load2DImage(Driver::TextureHandle th,
@@ -2395,7 +2392,7 @@ void OpenGLDriver::bindUniformBuffer(size_t index, Driver::UniformBufferHandle u
     DEBUG_MARKER()
 
     GLUniformBuffer* ub = handle_cast<GLUniformBuffer *>(ubh);
-    bindBufferRange(GL_UNIFORM_BUFFER, GLuint(index), ub->gl.ubo, 0, ub->ub.getSize());
+    bindBufferRange(GL_UNIFORM_BUFFER, GLuint(index), ub->gl.ubo, 0, ub->size);
     CHECK_GL_ERROR(utils::slog.e)
 }
 
@@ -2404,7 +2401,7 @@ void OpenGLDriver::bindUniformBufferRange(size_t index, Driver::UniformBufferHan
     DEBUG_MARKER()
 
     GLUniformBuffer* ub = handle_cast<GLUniformBuffer*>(ubh);
-    assert(offset + size <= ub->ub.getSize());
+    assert(offset + size <= ub->size);
     bindBufferRange(GL_UNIFORM_BUFFER, GLuint(index), ub->gl.ubo, offset, size);
     CHECK_GL_ERROR(utils::slog.e)
 }

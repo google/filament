@@ -39,7 +39,7 @@ public:
         mBlocks.reserve(mMaxElementCount);
     }
 
-    Pool(size_t maxCount) noexcept : mMaxElementCount(maxCount) {
+    explicit Pool(size_t maxCount) noexcept : mMaxElementCount(maxCount) {
         mBlocks.reserve(maxCount);
     }
 
