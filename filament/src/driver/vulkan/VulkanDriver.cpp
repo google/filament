@@ -524,14 +524,14 @@ void VulkanDriver::load2DImage(Driver::TextureHandle th,
         PixelBufferDescriptor&& data) {
     assert(data.type != driver::PixelDataType::COMPRESSED && "Compression not yet supported.");
     assert(xoffset == 0 && yoffset == 0 && "Offsets not yet supported.");
-    handle_cast<VulkanTexture>(mHandleMap, th)->load2DImage(std::move(data), width, height, level);
+    handle_cast<VulkanTexture>(mHandleMap, th)->load2DImage(data, width, height, level);
     scheduleDestroy(std::move(data));
 }
 
 void VulkanDriver::loadCubeImage(Driver::TextureHandle th, uint32_t level,
         PixelBufferDescriptor&& data, FaceOffsets faceOffsets) {
     assert(data.type != driver::PixelDataType::COMPRESSED && "Compression not yet supported.");
-    handle_cast<VulkanTexture>(mHandleMap, th)->loadCubeImage(std::move(data), faceOffsets, level);
+    handle_cast<VulkanTexture>(mHandleMap, th)->loadCubeImage(data, faceOffsets, level);
     scheduleDestroy(std::move(data));
 }
 
