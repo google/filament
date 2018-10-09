@@ -160,27 +160,29 @@ void FScene::prepare(const math::mat4f& worldOriginTansform) {
 
 void FScene::updateUBOs(utils::Range<uint32_t> visibleRenderables) noexcept {
     FEngine::DriverApi& driver = mEngine.getDriverApi();
-    UniformBuffer& uniformBuffer = mUniformBuffer;
     Handle<HwUniformBuffer>& uniformBufferHandle = mUniformBufferHandle;
-    const size_t size = sizeof(FRenderableManager::Transform) * visibleRenderables.size();
+    const size_t size = visibleRenderables.size() * sizeof(FRenderableManager::Transform);
 
     // reallocate UBO if it's too small
-    if (uniformBuffer.getSize() < size) {
-        // allocate 1/3 extra
-        size_t newSize = (4 * visibleRenderables.size() + 2) / 3;
-        uniformBuffer = UniformBuffer(newSize * sizeof(FRenderableManager::Transform));
-        if (uniformBufferHandle) {
-            driver.destroyUniformBuffer(uniformBufferHandle);
-        }
-        uniformBufferHandle = driver.createUniformBuffer(uniformBuffer.getSize());
+    if (mUboSize < size) {
+        // allocate 1/3 extra, with a minimum of 16 objects
+        const size_t count = std::max(size_t(16u), (4u * visibleRenderables.size() + 2u) / 3u);
+        mUboSize = uint32_t(count * sizeof(FRenderableManager::Transform));
+        driver.destroyUniformBuffer(uniformBufferHandle);
+        uniformBufferHandle = driver.createUniformBuffer(mUboSize);
+    } else {
+        // should we shrink the underlying UBO at some point?
     }
+
+    // allocate space into the command stream directly
+    void* const buffer = driver.allocate(size);
 
     auto& sceneData = mRenderableData;
     for (uint32_t i : visibleRenderables) {
         mat4f const& model = sceneData.elementAt<WORLD_TRANSFORM>(i);
-        const size_t offset = sizeof(FRenderableManager::Transform) * i;
+        const size_t offset = i * sizeof(FRenderableManager::Transform);
 
-        uniformBuffer.setUniform(
+        UniformBuffer::setUniform(buffer,
                 offset + offsetof(FRenderableManager::Transform, worldFromModelMatrix),
                 model);
 
@@ -189,13 +191,13 @@ void FScene::updateUBOs(utils::Range<uint32_t> visibleRenderables) noexcept {
         // in the shader (that's already the case anyways, since normalization is needed after
         // interpolation).
         // Note: if the model matrix is known to be a rigid-transform, we could just use it directly.
-        uniformBuffer.setUniform(
+        UniformBuffer::setUniform(buffer,
                 offset + offsetof(FRenderableManager::Transform, worldFromModelNormalMatrix),
                 transpose(inverse(model.upperLeft())));
     }
 
-    driver.updateUniformBuffer(uniformBufferHandle, uniformBuffer.toBufferDescriptor(driver, 0, size));
-    uniformBuffer.clean();
+    // TODO: handle static objects separately
+    driver.updateUniformBuffer(uniformBufferHandle, { buffer, size });
 }
 
 void FScene::terminate(FEngine& engine) {
