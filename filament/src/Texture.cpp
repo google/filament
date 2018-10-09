@@ -241,7 +241,6 @@ size_t FTexture::getFormatSize(InternalFormat format) noexcept {
         case TextureFormat::RGBA8:
         case TextureFormat::SRGB8_A8:
         case TextureFormat::RGBA8_SNORM:
-        case TextureFormat::RGBM:
         case TextureFormat::RGB10_A2:
         case TextureFormat::RGBA8UI:
         case TextureFormat::RGBA8I:

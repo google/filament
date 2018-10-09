@@ -288,7 +288,6 @@ constexpr /* inline */ GLenum getInternalFormat(filament::driver::TextureFormat 
         case TextureFormat::RGBA8:             return GL_RGBA8;
         case TextureFormat::SRGB8_A8:          return GL_SRGB8_ALPHA8;
         case TextureFormat::RGBA8_SNORM:       return GL_RGBA8_SNORM;
-        case TextureFormat::RGBM:              return GL_RGBA8;
         case TextureFormat::RGB10_A2:          return GL_RGB10_A2;
         case TextureFormat::RGBA8UI:           return GL_RGBA8UI;
         case TextureFormat::RGBA8I:            return GL_RGBA8I;
@@ -421,6 +420,8 @@ constexpr /* inline */ GLenum getInternalFormat(filament::driver::TextureFormat 
             // this should not happen
             return 0;
 #endif
+        case TextureFormat::UNUSED:
+            return 0;
     }
 }
 

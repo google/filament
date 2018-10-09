@@ -60,7 +60,7 @@ public class Texture {
         RG16F, RG16UI, RG16I,
         R11F_G11F_B10F,
         RGBA8, SRGB8_A8, RGBA8_SNORM,
-        RGBM, // Deprecated but still honored; see Texture.Builder.rgbm
+        UNUSED, // The RGBM InternalFormat has been replaced with a flag (Texture.Builder.rgbm)
         RGB10_A2, RGBA8UI, RGBA8I,
         DEPTH32F, DEPTH24_STENCIL8, DEPTH32F_STENCIL8,
 
