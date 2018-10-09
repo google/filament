@@ -125,12 +125,18 @@ public:
         std::copy_n(begin, count, p);
     }
 
+    template <typename T, typename = typename is_supported_type<T>::type>
+    static void setUniform(void* addr, size_t offset, const T& v) noexcept {
+        addr = static_cast<char*>(addr) + offset;
+        T* p = static_cast<T*>(addr);
+        *p = v;
+    }
+
     // set uniform of known types to the proper offset (e.g.: use offsetof())
     // (see specialization for mat3f below)
     template <typename T, typename = typename is_supported_type<T>::type>
     void setUniform(size_t offset, const T& v) noexcept {
-        T* p = static_cast<T*>(invalidateUniforms(offset, sizeof(T)));
-        *p = v;
+        setUniform(invalidateUniforms(offset, sizeof(T)), 0, v);
     }
 
     // get uniform of known types from the proper offset (e.g.: use offsetof())
@@ -152,8 +158,7 @@ public:
         }
     }
 
-    driver::BufferDescriptor toBufferDescriptor(
-            driver::DriverApi& driver) const noexcept {
+    driver::BufferDescriptor toBufferDescriptor(driver::DriverApi& driver) const noexcept {
         driver::BufferDescriptor p;
         p.size = getSize();
         p.buffer = driver.allocate(p.size);
@@ -203,10 +208,13 @@ UniformBuffer::setUniformArray(size_t offset, math::float3 const* begin, size_t 
 
 // specialization for mat3f (which has a different alignment, see std140 layout rules)
 template<>
-inline void UniformBuffer::setUniform(size_t offset, const math::mat3f& v) noexcept {
+inline void UniformBuffer::setUniform(void* addr, size_t offset, const math::mat3f& v) noexcept {
     struct mat43 {
         float v[3][4];
-    } temp;
+    };
+
+    addr = static_cast<char*>(addr) + offset;
+    mat43& temp = *static_cast<mat43*>(addr);
 
     temp.v[0][0] = v[0][0];
     temp.v[0][1] = v[0][1];
@@ -222,9 +230,6 @@ inline void UniformBuffer::setUniform(size_t offset, const math::mat3f& v) noexc
     temp.v[2][1] = v[2][1];
     temp.v[2][2] = v[2][2];
     temp.v[2][3] = 0; // not needed, but doesn't cost anything
-
-    // this is like setUniform(), except its not a "supported_type"
-    *static_cast<mat43*>(invalidateUniforms(offset, sizeof(temp))) = temp;
 }
 
 } // namespace filament

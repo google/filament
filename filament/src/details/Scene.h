@@ -183,7 +183,7 @@ private:
     tsl::robin_set<utils::Entity> mEntities;
     RenderableSoa mRenderableData;
     LightSoa mLightData;
-    UniformBuffer mUniformBuffer;
+    uint32_t mUboSize = 0;
     filament::Handle<HwUniformBuffer> mUniformBufferHandle;
 };
 
