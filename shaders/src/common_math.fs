@@ -95,24 +95,3 @@ void toTangentFrame(const HIGHP vec4 q, out HIGHP vec3 n, out HIGHP vec3 t) {
         vec3(-2.0,  2.0, -2.0) * q.y * q.yxw +
         vec3(-2.0,  2.0,  2.0) * q.z * q.zwx;
 }
-
-vec3 halfPartialTransformVertexUnitQ(const vec3 v, const vec4 q) {
-    // this work only for unit-quaternions
-    return cross(q.xyz, cross(q.xyz, v) + q.w * v);
-}
-
-vec3 transformVertexUnitQ(const vec3 v, const vec4 q) {
-    // this work only for unit-quaternions
-    return v + 2.0 * halfPartialTransformVertexUnitQ(v, q);
-}
-
-vec3 transformVertexUnitQT(const vec3 v, const vec4 q, const vec3 t) {
-    // this work only for unit-quaternions
-    return transformVertexUnitQ(v, q) + t;
-}
-
-vec3 partialTransformVertexUnitQT(const vec3 v, const vec4 q, const vec3 t) {
-    // this work only for unit-quaternions
-    return 2.0f * halfPartialTransformVertexUnitQ(v, q) + t;
-}
-

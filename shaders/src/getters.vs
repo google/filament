@@ -21,20 +21,32 @@ mat3 getWorldFromModelNormalMatrix() {
 //------------------------------------------------------------------------------
 
 #if defined(HAS_SKINNING)
+vec3 mulBoneNormal(const vec3 n, uint i) {
+    return vec3(
+            dot(n, bonesUniforms.bones[i + 0u].xyz),
+            dot(n, bonesUniforms.bones[i + 1u].xyz),
+            dot(n, bonesUniforms.bones[i + 2u].xyz));
+}
+
+vec3 mulBoneVertice(const vec3 v, uint i) {
+    return vec3(
+            dot(v, bonesUniforms.bones[i + 0u].xyz) + bonesUniforms.bones[i + 0u].w,
+            dot(v, bonesUniforms.bones[i + 1u].xyz) + bonesUniforms.bones[i + 1u].w,
+            dot(v, bonesUniforms.bones[i + 2u].xyz) + bonesUniforms.bones[i + 2u].w);
+}
+
 void skinNormal(inout vec3 n, const uvec4 ids, const vec4 weights) {
-    // this assumes that the sum of the weight is 1.0
-    n += (halfPartialTransformVertexUnitQ(n, bonesUniforms.bones[ids.x * 2u]) * weights.x
-        + halfPartialTransformVertexUnitQ(n, bonesUniforms.bones[ids.y * 2u]) * weights.y
-        + halfPartialTransformVertexUnitQ(n, bonesUniforms.bones[ids.z * 2u]) * weights.z
-        + halfPartialTransformVertexUnitQ(n, bonesUniforms.bones[ids.w * 2u]) * weights.w) * 2.0f;
+    n += (mulBoneNormal(n, ids.x * 3u) * weights.x
+        + mulBoneNormal(n, ids.y * 3u) * weights.y
+        + mulBoneNormal(n, ids.z * 3u) * weights.z
+        + mulBoneNormal(n, ids.w * 3u) * weights.w);
 }
 
 void skinPosition(inout vec3 p, const uvec4 ids, const vec4 weights) {
-    // this assumes that the sum of the weight is 1.0
-    p +=  partialTransformVertexUnitQT(p, bonesUniforms.bones[ids.x * 2u], bonesUniforms.bones[ids.x * 2u + 1u].xyz) * weights.x
-        + partialTransformVertexUnitQT(p, bonesUniforms.bones[ids.y * 2u], bonesUniforms.bones[ids.y * 2u + 1u].xyz) * weights.y
-        + partialTransformVertexUnitQT(p, bonesUniforms.bones[ids.z * 2u], bonesUniforms.bones[ids.z * 2u + 1u].xyz) * weights.z
-        + partialTransformVertexUnitQT(p, bonesUniforms.bones[ids.w * 2u], bonesUniforms.bones[ids.w * 2u + 1u].xyz) * weights.w;
+    p +=  mulBoneVertice(p, ids.x * 3u) * weights.x
+        + mulBoneVertice(p, ids.y * 3u) * weights.y
+        + mulBoneVertice(p, ids.z * 3u) * weights.z
+        + mulBoneVertice(p, ids.w * 3u) * weights.w;
 }
 #endif
 
