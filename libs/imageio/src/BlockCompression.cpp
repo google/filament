@@ -27,10 +27,6 @@
 #define STB_DXT_IMPLEMENTATION
 #include <stb_dxt.h>
 
-using namespace image;
-
-using std::string;
-
 namespace image {
 
 static LinearImage extendToFourChannels(LinearImage source);
@@ -316,15 +312,15 @@ CompressedTexture astcCompress(const LinearImage& original, AstcConfig config) {
     };
 }
 
-AstcConfig astcParseOptionString(const string& configString) {
+AstcConfig astcParseOptionString(const std::string& configString) {
     const size_t _1 = configString.find('_');
     const size_t _2 = configString.find('_', _1 + 1);
-    if (_1 == string::npos || _2 == string::npos) {
+    if (_1 == std::string::npos || _2 == std::string::npos) {
         return {};
     }
-    string quality = configString.substr(0, _1);
-    string semantic = configString.substr(_1 + 1, _2 - _1 - 1);
-    string blocksize = configString.substr(_2 + 1);
+    std::string quality = configString.substr(0, _1);
+    std::string semantic = configString.substr(_1 + 1, _2 - _1 - 1);
+    std::string blocksize = configString.substr(_2 + 1);
     AstcConfig config;
     if (quality == "veryfast") {
         config.quality = AstcPreset::VERYFAST;
@@ -350,7 +346,7 @@ AstcConfig astcParseOptionString(const string& configString) {
     }
 
     const size_t _x = blocksize.find('x');
-    if (_x == string::npos) {
+    if (_x == std::string::npos) {
         return {};
     }
     config.blocksize[0] = std::stoi(blocksize.substr(0, _x));
@@ -515,7 +511,7 @@ EtcConfig etcParseOptionString(const std::string& options) {
     return result;
 }
 
-bool parseOptionString(const string& options, CompressionConfig* config) {
+bool parseOptionString(const std::string& options, CompressionConfig* config) {
     config->type = CompressionConfig::INVALID;
     if (options.substr(0, 5) == "astc_") {
         config->astc = astcParseOptionString(options.substr(5));
