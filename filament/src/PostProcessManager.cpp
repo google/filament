@@ -74,7 +74,7 @@ void PostProcessManager::setSource(uint32_t viewportWidth, uint32_t viewportHeig
     ub.setUniform(offsetof(FEngine::PostProcessingUib, yOffset), yOffset);
 
     driver.updateSamplerBuffer(mPostProcessSbh, std::move(sb));
-    driver.updateUniformBuffer(mPostProcessUbh, UniformBuffer(ub));
+    driver.updateUniformBuffer(mPostProcessUbh, ub.toBufferDescriptor(driver));
 }
 
 void PostProcessManager::blit(driver::TextureFormat format) noexcept {

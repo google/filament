@@ -1901,8 +1901,7 @@ void OpenGLDriver::setViewportScissor(
     });
 }
 
-void OpenGLDriver::updateUniformBuffer(Driver::UniformBufferHandle ubh,
-        UniformBuffer&& uniformBuffer) {
+void OpenGLDriver::updateUniformBuffer(Driver::UniformBufferHandle ubh, BufferDescriptor&& p) {
     DEBUG_MARKER()
 
     GLUniformBuffer* ub = handle_cast<GLUniformBuffer *>(ubh);
@@ -1911,8 +1910,10 @@ void OpenGLDriver::updateUniformBuffer(Driver::UniformBufferHandle ubh,
     assert(ub->gl.ubo);
 
     bindBuffer(GL_UNIFORM_BUFFER, ub->gl.ubo);
-    glBufferSubData(GL_UNIFORM_BUFFER, 0, uniformBuffer.getSize(), uniformBuffer.getBuffer());
+    glBufferSubData(GL_UNIFORM_BUFFER, 0, p.size, p.buffer);
     CHECK_GL_ERROR(utils::slog.e)
+
+    scheduleDestroy(std::move(p));
 }
 
 void OpenGLDriver::load2DImage(Driver::TextureHandle th,

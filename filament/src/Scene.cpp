@@ -194,7 +194,7 @@ void FScene::updateUBOs(utils::Range<uint32_t> visibleRenderables) noexcept {
                 transpose(inverse(model.upperLeft())));
     }
 
-    driver.updateUniformBuffer(uniformBufferHandle, UniformBuffer(uniformBuffer, size));
+    driver.updateUniformBuffer(uniformBufferHandle, uniformBuffer.toBufferDescriptor(driver, 0, size));
     uniformBuffer.clean();
 }
 

@@ -19,6 +19,8 @@
 #include "details/Engine.h"
 #include "details/Texture.h"
 
+#include "driver/DriverApi.h"
+
 #include <utils/Log.h>
 
 namespace filament {

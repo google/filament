@@ -19,8 +19,9 @@
 
 #include "upcast.h"
 
+#include "UniformBuffer.h"
+
 #include "driver/DriverApiForward.h"
-#include "driver/UniformBuffer.h"
 #include "driver/Handle.h"
 
 #include <filament/Box.h>

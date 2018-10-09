@@ -594,14 +594,14 @@ void FView::froxelize(FEngine& engine) const noexcept {
     }
 }
 
-void FView::commitUniforms(driver::DriverApi& driverApi) const noexcept {
+void FView::commitUniforms(driver::DriverApi& driver) const noexcept {
     if (mPerViewUb.isDirty()) {
-        driverApi.updateUniformBuffer(mPerViewUbh, UniformBuffer(mPerViewUb));
+        driver.updateUniformBuffer(mPerViewUbh, mPerViewUb.toBufferDescriptor(driver));
         mPerViewUb.clean();
     }
 
     if (mPerViewSb.isDirty()) {
-        driverApi.updateSamplerBuffer(mPerViewSbh, SamplerBuffer(mPerViewSb));
+        driver.updateSamplerBuffer(mPerViewSbh, SamplerBuffer(mPerViewSb));
         mPerViewSb.clean();
     }
 }

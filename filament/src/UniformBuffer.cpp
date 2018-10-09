@@ -14,16 +14,16 @@
  * limitations under the License.
  */
 
-#include "driver/UniformBuffer.h"
+#include "UniformBuffer.h"
 
-#include <stdlib.h>
-#include <string.h>
+#include <utils/Mutex.h>
 
 #include <mutex>
 #include <type_traits>
 #include <unordered_map>
 
-#include <utils/Mutex.h>
+#include <stdlib.h>
+#include <string.h>
 
 using namespace math;
 
@@ -51,7 +51,7 @@ public:
 
     // always round size up to reduce the number of bins
     static size_t align(size_t size) noexcept {
-        return (size + (SIZE_ALIGNMENT-1)) & ~(SIZE_ALIGNMENT-1);
+        return (size + (SIZE_ALIGNMENT - 1)) & ~(SIZE_ALIGNMENT - 1);
     }
 
     void* get(size_t size) noexcept {

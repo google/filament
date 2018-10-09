@@ -544,12 +544,10 @@ void VulkanDriver::setExternalStream(Driver::TextureHandle th, Driver::StreamHan
 void VulkanDriver::generateMipmaps(Driver::TextureHandle th) {
 }
 
-void VulkanDriver::updateUniformBuffer(Driver::UniformBufferHandle ubh,
-        UniformBuffer&& uniformBuffer) {
+void VulkanDriver::updateUniformBuffer(Driver::UniformBufferHandle ubh, BufferDescriptor&& data) {
     auto* buffer = handle_cast<VulkanUniformBuffer>(mHandleMap, ubh);
-    if (uniformBuffer.isDirty()) {
-        buffer->loadFromCpu(uniformBuffer.getBuffer(), (uint32_t) uniformBuffer.getSize());
-    }
+    buffer->loadFromCpu(data.buffer, (uint32_t) data.size);
+    scheduleDestroy(std::move(data));
 }
 
 void VulkanDriver::updateSamplerBuffer(Driver::SamplerBufferHandle sbh,

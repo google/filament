@@ -372,7 +372,7 @@ void FRenderableManager::prepare(
         assert(i);  // we should never get the null instance here
         if (UTILS_UNLIKELY(bones[i])) {
             if (bones[i]->bones.isDirty()) {
-                driver.updateUniformBuffer(bones[i]->handle, UniformBuffer(bones[i]->bones));
+                driver.updateUniformBuffer(bones[i]->handle, bones[i]->bones.toBufferDescriptor(driver));
                 bones[i]->bones.clean();
             }
         }

@@ -28,7 +28,6 @@
 #include <filament/Material.h>
 #include <filament/Engine.h>
 
-#include "driver/UniformBuffer.h"
 #include <filament/UniformInterfaceBlock.h>
 
 #include "details/Allocators.h"
@@ -38,6 +37,7 @@
 #include "details/Engine.h"
 #include "components/TransformManager.h"
 #include "utils/RangeSet.h"
+#include "UniformBuffer.h"
 
 using namespace filament;
 using namespace math;
