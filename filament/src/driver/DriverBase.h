@@ -29,7 +29,6 @@
 
 #include "driver/Driver.h"
 #include "driver/SamplerBuffer.h"
-#include "driver/UniformBuffer.h"
 
 namespace filament {
 

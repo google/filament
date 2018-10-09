@@ -19,16 +19,20 @@
 
 #include <algorithm>
 
-#include <stddef.h>
-#include <assert.h>
-
-#include <math/mat3.h>
-#include <math/mat4.h>
+#include "driver/DriverApi.h"
 
 #include <utils/compiler.h>
 #include <utils/Log.h>
 
 #include <filament/UniformInterfaceBlock.h>
+#include <filament/driver/BufferDescriptor.h>
+
+#include <math/mat3.h>
+#include <math/mat4.h>
+
+#include <stddef.h>
+#include <assert.h>
+
 
 namespace filament {
 
@@ -146,6 +150,24 @@ public:
         if (offset >= 0) {
             setUniform<T>(size_t(offset), v);  // handles specialization for mat3f
         }
+    }
+
+    driver::BufferDescriptor toBufferDescriptor(
+            driver::DriverApi& driver) const noexcept {
+        driver::BufferDescriptor p;
+        p.size = getSize();
+        p.buffer = driver.allocate(p.size);
+        memcpy(p.buffer, getBuffer(), p.size);
+        return p;
+    }
+
+    driver::BufferDescriptor toBufferDescriptor(
+            driver::DriverApi& driver, size_t offset, size_t size) const noexcept {
+        driver::BufferDescriptor p;
+        p.size = size;
+        p.buffer = driver.allocate(p.size);
+        memcpy(p.buffer, static_cast<const char*>(getBuffer()) + offset, p.size);
+        return p;
     }
 
 private:

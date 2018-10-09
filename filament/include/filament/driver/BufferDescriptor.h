@@ -67,6 +67,11 @@ public:
                 : buffer(const_cast<void*>(buffer)), size(size), callback(callback), user(user) {
     }
 
+    void setCallback(Callback callback, void* user = nullptr) noexcept {
+        this->callback = callback;
+        this->user = user;
+    }
+
     bool hasCallback() const noexcept { return callback != nullptr; }
 
 

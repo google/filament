@@ -17,13 +17,14 @@
 #ifndef TNT_FILAMENT_DETAILS_FROXEL_H
 #define TNT_FILAMENT_DETAILS_FROXEL_H
 
+#include "UniformBuffer.h"
+
 #include "details/Allocators.h"
 #include "details/Scene.h"
 #include "details/Engine.h"
 
 #include "driver/Handle.h"
 #include "driver/GPUBuffer.h"
-#include "driver/UniformBuffer.h"
 
 #include <filament/Viewport.h>
 

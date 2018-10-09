@@ -89,7 +89,7 @@ void FMaterialInstance::commitSlow(FEngine& engine) const {
     // update uniforms if needed
     FEngine::DriverApi& driver = engine.getDriverApi();
     if (mUniforms.isDirty()) {
-        driver.updateUniformBuffer(mUbHandle, UniformBuffer(mUniforms));
+        driver.updateUniformBuffer(mUbHandle, mUniforms.toBufferDescriptor(driver));
         mUniforms.clean();
     }
     if (mSamplers.isDirty()) {

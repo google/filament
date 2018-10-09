@@ -18,10 +18,10 @@
 #define TNT_FILAMENT_DETAILS_MATERIALINSTANCE_H
 
 #include "upcast.h"
+#include "UniformBuffer.h"
 #include "details/Engine.h"
 #include "driver/DriverApi.h"
 #include "driver/Handle.h"
-#include "driver/UniformBuffer.h"
 
 #include <utils/compiler.h>
 

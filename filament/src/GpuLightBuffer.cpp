@@ -50,8 +50,8 @@ void GpuLightBuffer::commit(FEngine& engine) noexcept {
 }
 
 void GpuLightBuffer::commitSlow(FEngine& engine) noexcept {
-    DriverApi& driverApi = engine.getDriverApi();
-    driverApi.updateUniformBuffer(mLightUbh, UniformBuffer(mLightsUb));
+    DriverApi& driver = engine.getDriverApi();
+    driver.updateUniformBuffer(mLightUbh, mLightsUb.toBufferDescriptor(driver));
     mLightsUb.clean();
 }
 

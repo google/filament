@@ -359,7 +359,7 @@ DECL_DRIVER_API_1(generateMipmaps,
 
 DECL_DRIVER_API_2(updateUniformBuffer,
         Driver::UniformBufferHandle, ubh,
-        UniformBuffer&&, uniformBuffer)
+        Driver::BufferDescriptor&&, buffer)
 
 DECL_DRIVER_API_2(updateSamplerBuffer,
         Driver::SamplerBufferHandle, ubh,

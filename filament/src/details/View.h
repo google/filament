@@ -21,6 +21,8 @@
 
 #include "upcast.h"
 
+#include "UniformBuffer.h"
+
 #include "details/Allocators.h"
 #include "details/Camera.h"
 #include "details/Froxelizer.h"
@@ -29,7 +31,6 @@
 
 #include "driver/DriverApi.h"
 #include "driver/Handle.h"
-#include "driver/UniformBuffer.h"
 
 #include <utils/compiler.h>
 #include <utils/Allocator.h>
@@ -119,7 +120,7 @@ public:
     void prepareLighting(
             FEngine& engine, FEngine::DriverApi& driver, ArenaScope& arena, Viewport const& viewport) noexcept;
     void froxelize(FEngine& engine) const noexcept;
-    void commitUniforms(driver::DriverApi& driverApi) const noexcept;
+    void commitUniforms(driver::DriverApi& driver) const noexcept;
     void commitFroxels(driver::DriverApi& driverApi) const noexcept;
 
     bool hasDirectionalLight() const noexcept { return mHasDirectionalLight; }
