@@ -3,8 +3,9 @@ set -e
 
 # NDK API level
 API_LEVEL=24
-# Host tools required by Android and WebGL builds
+# Host tools required by Android, WebGL, and iOS builds
 HOST_TOOLS="matc cmgen filamesh mipgen"
+IOS_TOOLCHAIN_URL="https://opensource.apple.com/source/clang/clang-800.0.38/src/cmake/platforms/iOS.cmake"
 
 function print_help {
     local SELF_NAME=`basename $0`
@@ -26,10 +27,10 @@ function print_help {
     echo "        Do not compile desktop Java projects"
     echo "    -m"
     echo "        Compile with make instead of ninja."
-    echo "    -p [desktop|android|webgl|all]"
+    echo "    -p [desktop|android|ios|webgl|all]"
     echo "        Platform(s) to build, defaults to desktop."
-    echo "        Building android will automatically generate the toolchains if needed and"
-    echo "        perform a partial desktop build."
+    echo "        Building for Android or iOS will automatically generate / download"
+    echo "        the toolchains if needed and perform a partial desktop build."
     echo "    -r"
     echo "        Restrict the number of make/ninja jobs."
     echo "    -t"
@@ -71,6 +72,7 @@ ISSUE_DEBUG_BUILD=false
 ISSUE_RELEASE_BUILD=false
 
 ISSUE_ANDROID_BUILD=false
+ISSUE_IOS_BUILD=false
 ISSUE_DESKTOP_BUILD=true
 ISSUE_WEBGL_BUILD=false
 
@@ -346,6 +348,71 @@ function build_android {
     cd ../..
 }
 
+function ensure_ios_toolchain {
+    local TOOLCHAIN_PATH="build/toolchain-arm64-mac-ios.cmake"
+    if [ -e ${TOOLCHAIN_PATH} ]; then
+        echo "iOS arm64 toolchain file exists."
+        return 0
+    fi
+    echo
+    echo "iOS arm64 toolchain file does not exist."
+    echo "It will automatically be downloaded from http://opensource.apple.com."
+    read -p "Continue? (y/n) " -n 1 -r
+    echo
+    if [[ ! "$REPLY" =~ ^[Yy]$ ]]; then
+        echo "Toolchain file must be downloaded to continue."
+        exit 1
+    fi
+    curl -o "${TOOLCHAIN_PATH}" "${IOS_TOOLCHAIN_URL}" || {
+        echo "Error downloading iOS toolchain file."
+        exit 1
+    }
+    cat build/toolchain-arm64-mac-ios.filament.cmake >> ${TOOLCHAIN_PATH}
+    echo "Successfully downloaded iOS toolchain file and appended Filament-specific settings."
+}
+
+function build_ios_target {
+    local LC_TARGET=`echo $1 | tr '[:upper:]' '[:lower:]'`
+    local ARCH=$2
+
+    echo "Building iOS $LC_TARGET ($ARCH)..."
+    mkdir -p out/cmake-ios-${LC_TARGET}-${ARCH}
+
+    cd out/cmake-ios-${LC_TARGET}-${ARCH}
+
+    if [ ! -d "CMakeFiles" ] || [ "$ISSUE_CMAKE_ALWAYS" == "true" ]; then
+        cmake \
+            -G "$BUILD_GENERATOR" \
+            -DCMAKE_BUILD_TYPE=${LC_TARGET} \
+            -DCMAKE_INSTALL_PREFIX=../ios-${LC_TARGET}/filament \
+            -DCMAKE_TOOLCHAIN_FILE=../../build/toolchain-arm64-mac-ios.cmake \
+            -DIOS=1 \
+            ../..
+    fi
+
+    ${BUILD_COMMAND} install
+
+    cd ../..
+}
+
+function build_ios {
+    # Supress intermediate desktop tools install
+    OLD_INSTALL_COMMAND=${INSTALL_COMMAND}
+    INSTALL_COMMAND=
+    build_desktop "${HOST_TOOLS}"
+    INSTALL_COMMAND=${OLD_INSTALL_COMMAND}
+
+    ensure_ios_toolchain
+
+    if [ "$ISSUE_DEBUG_BUILD" == "true" ]; then
+        build_ios_target "Debug" "arm64"
+    fi
+
+    if [ "$ISSUE_RELEASE_BUILD" == "true" ]; then
+        build_ios_target "Release" "arm64"
+    fi
+}
+
 function validate_build_command {
     set +e
     # Make sure CMake is installed
@@ -435,21 +502,31 @@ while getopts ":hacfijmp:tuv" opt; do
             case $OPTARG in
                 desktop)
                     ISSUE_ANDROID_BUILD=false
+                    ISSUE_IOS_BUILD=false
                     ISSUE_DESKTOP_BUILD=true
                     ISSUE_WEBGL_BUILD=false
                 ;;
                 android)
                     ISSUE_ANDROID_BUILD=true
+                    ISSUE_IOS_BUILD=false
+                    ISSUE_DESKTOP_BUILD=false
+                    ISSUE_WEBGL_BUILD=false
+                ;;
+                ios)
+                    ISSUE_ANDROID_BUILD=false
+                    ISSUE_IOS_BUILD=true
                     ISSUE_DESKTOP_BUILD=false
                     ISSUE_WEBGL_BUILD=false
                 ;;
                 webgl)
                     ISSUE_ANDROID_BUILD=false
+                    ISSUE_IOS_BUILD=false
                     ISSUE_DESKTOP_BUILD=false
                     ISSUE_WEBGL_BUILD=true
                 ;;
                 all)
                     ISSUE_ANDROID_BUILD=true
+                    ISSUE_IOS_BUILD=true
                     ISSUE_DESKTOP_BUILD=true
                     ISSUE_WEBGL_BUILD=false
                 ;;
@@ -520,6 +597,10 @@ fi
 
 if [ "$ISSUE_ANDROID_BUILD" == "true" ]; then
     build_android
+fi
+
+if [ "$ISSUE_IOS_BUILD" == "true" ]; then
+    build_ios
 fi
 
 if [ "$ISSUE_WEBGL_BUILD" == "true" ]; then

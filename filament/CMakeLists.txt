@@ -43,11 +43,6 @@ set(SRCS
         src/components/LightManager.cpp
         src/components/RenderableManager.cpp
         src/components/TransformManager.cpp
-        src/driver/opengl/gl_headers.cpp
-        src/driver/opengl/OpenGLBlitter.cpp
-        src/driver/opengl/GLUtils.cpp
-        src/driver/opengl/OpenGLDriver.cpp
-        src/driver/opengl/OpenGLProgram.cpp
         src/driver/CommandStream.cpp
         src/driver/CommandBufferQueue.cpp
         src/driver/CircularBuffer.cpp
@@ -158,27 +153,43 @@ if (CMAKE_BUILD_TYPE MATCHES Debug)
     list(APPEND SRCS src/driver/noop/NoopDriver.cpp)
 endif()
 
+if(IOS AND NOT FILAMENT_SUPPORTS_VULKAN)
+    message(FATAL_ERROR "Filament for iOS must be built with Vulkan support.")
+endif()
+
 # ==================================================================================================
 # OS specific
 # ==================================================================================================
-# Here set the architecture specific sources
-if (USE_EXTERNAL_GLES3)
-    # Experimental feature; clients provide their own Context Manager.
-elseif (ANDROID)
-    list(APPEND SRCS src/driver/android/ExternalStreamManagerAndroid.cpp)
-    list(APPEND SRCS src/driver/android/ExternalTextureManagerAndroid.cpp)
-    list(APPEND SRCS src/driver/android/VirtualMachineEnv.cpp)
-    list(APPEND SRCS src/driver/opengl/PlatformEGL.cpp)
-elseif (APPLE)
-    list(APPEND SRCS src/driver/opengl/PlatformCocoaGL.mm)
-elseif (WEBGL)
-    list(APPEND SRCS src/driver/opengl/PlatformWebGL.cpp)
-elseif (LINUX)
-    list(APPEND SRCS src/driver/opengl/PlatformGLX.cpp)
-elseif (WIN32)
-    list(APPEND SRCS src/driver/opengl/PlatformWGL.cpp)
-else()
-    list(APPEND SRCS src/driver/opengl/PlatformDummyGL.cpp)
+
+# iOS does not yet support OpenGL
+if(NOT IOS)
+    list(APPEND SRCS
+        src/driver/opengl/gl_headers.cpp
+        src/driver/opengl/OpenGLBlitter.cpp
+        src/driver/opengl/GLUtils.cpp
+        src/driver/opengl/OpenGLDriver.cpp
+        src/driver/opengl/OpenGLProgram.cpp
+    )
+
+    # Here set the architecture specific sources
+    if (USE_EXTERNAL_GLES3)
+        # Experimental feature; clients provide their own Context Manager.
+    elseif (ANDROID)
+        list(APPEND SRCS src/driver/android/ExternalStreamManagerAndroid.cpp)
+        list(APPEND SRCS src/driver/android/ExternalTextureManagerAndroid.cpp)
+        list(APPEND SRCS src/driver/android/VirtualMachineEnv.cpp)
+        list(APPEND SRCS src/driver/opengl/PlatformEGL.cpp)
+    elseif (APPLE)
+        list(APPEND SRCS src/driver/opengl/PlatformCocoaGL.mm)
+    elseif (WEBGL)
+        list(APPEND SRCS src/driver/opengl/PlatformWebGL.cpp)
+    elseif (LINUX)
+        list(APPEND SRCS src/driver/opengl/PlatformGLX.cpp)
+    elseif (WIN32)
+        list(APPEND SRCS src/driver/opengl/PlatformWGL.cpp)
+    else()
+        list(APPEND SRCS src/driver/opengl/PlatformDummyGL.cpp)
+    endif()
 endif()
 
 # ==================================================================================================
@@ -186,8 +197,6 @@ endif()
 # ==================================================================================================
 # "2" corresponds to SYSTRACE_TAG_FILEMENT (See: utils/Systrace.h)
 add_definitions(-DSYSTRACE_TAG=2 )
-
-add_definitions(-DFILAMENT_DRIVER_SUPPORTS_OPENGL)
 
 # ==================================================================================================
 # Vulkan Sources
@@ -207,8 +216,10 @@ if (FILAMENT_SUPPORTS_VULKAN)
     )
     if (LINUX)
         list(APPEND SRCS src/driver/vulkan/PlatformVkLinux.cpp)
-    elseif (APPLE)
+    elseif (APPLE AND NOT IOS)
         list(APPEND SRCS src/driver/vulkan/PlatformVkCocoa.mm)
+    elseif (IOS)
+        list(APPEND SRCS src/driver/vulkan/PlatformVkCocoaTouch.mm)
     elseif (ANDROID)
         list(APPEND SRCS src/driver/vulkan/PlatformVkAndroid.cpp)
     elseif (WIN32)
@@ -229,7 +240,7 @@ set(GENERATION_ROOT ${CMAKE_CURRENT_BINARY_DIR})
 file(MAKE_DIRECTORY "${GENERATION_ROOT}/generated/material/")
 
 # Target system.
-if (ANDROID OR WEBGL)
+if (ANDROID OR WEBGL OR IOS)
     set(MATC_TARGET mobile)
 else()
     set(MATC_TARGET desktop)
@@ -305,14 +316,8 @@ target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
 # Dependencies
 # ==================================================================================================
 
-set(DARWIN_LINK_LIBRARIES bluegl bluevk)
-set(WIN32_LINK_LIBRARIES bluegl)
-
 if (ANDROID)
     target_link_libraries(${TARGET} PUBLIC GLESv3 EGL android)
-    set(LINUX_LINK_LIBRARIES )
-else()
-    set(LINUX_LINK_LIBRARIES bluegl)
 endif()
 
 if (APPLE)
@@ -325,6 +330,11 @@ target_link_libraries(${TARGET} PUBLIC filaflat)
 target_link_libraries(${TARGET} PUBLIC filabridge)
 target_link_libraries(${TARGET} PUBLIC image_headers)
 
+# iOS does not support OpenGL, and Android links directly against EGL
+if(NOT IOS AND NOT ANDROID)
+    target_link_libraries(${TARGET} PRIVATE bluegl)
+endif()
+
 if (FILAMENT_SUPPORTS_VULKAN)
     target_link_libraries(${TARGET} PUBLIC bluevk vkmemalloc)
 endif()
@@ -332,12 +342,6 @@ endif()
 if (LINUX)
     target_link_libraries(${TARGET} PRIVATE dl)
 endif()
-
-target_link_libraries(${TARGET} PRIVATE
-        "$<$<PLATFORM_ID:Darwin>:${DARWIN_LINK_LIBRARIES}>"
-        "$<$<PLATFORM_ID:Linux>:${LINUX_LINK_LIBRARIES}>"
-        "$<$<PLATFORM_ID:Windows>:${WIN32_LINK_LIBRARIES}>"
-)
 
 # ==================================================================================================
 # Compiler flags

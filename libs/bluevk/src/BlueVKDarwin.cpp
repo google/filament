@@ -23,7 +23,11 @@ using utils::Path;
 
 namespace bluevk {
 
+#ifdef IOS
+static const char* VKLIBRARY_PATH = "Frameworks/libMoltenVK.dylib";
+#else
 static const char* VKLIBRARY_PATH = "libvulkan.1.dylib";
+#endif
 
 static void* module = nullptr;
 
@@ -41,6 +45,9 @@ bool loadLibrary() {
 #endif
 
     module = dlopen(dylibPath.c_str(), RTLD_NOW | RTLD_LOCAL);
+    if (module == nullptr) {
+        printf("%s", dlerror());
+    }
     return module != nullptr;
 }
 

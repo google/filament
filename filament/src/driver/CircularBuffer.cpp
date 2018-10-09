@@ -16,7 +16,7 @@
 
 #include "driver/CircularBuffer.h"
 
-#if !defined(WIN32) && !defined(__EMSCRIPTEN__)
+#if !defined(WIN32) && !defined(__EMSCRIPTEN__) && !defined(IOS)
 #    include <sys/mman.h>
 #    include <unistd.h>
 #    define HAS_MMAP 1

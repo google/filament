@@ -6,8 +6,8 @@
 <img alt="Windows" src="build/img/windows.png" width="20px" height="20px" hspace="2px"/>[![Windows Build Status](https://filament-build.storage.googleapis.com/badges/build_status_windows.svg)](https://filament-build.storage.googleapis.com/badges/build_link_windows.html)
 <img alt="Web" src="build/img/web.png" width="20px" height="20px" hspace="2px"/>[![Web Build Status](https://filament-build.storage.googleapis.com/badges/build_status_web.svg)](https://filament-build.storage.googleapis.com/badges/build_link_web.html)
 
-Filament is a real-time physically based rendering engine for Android, Linux, macOS, Windows, and
-WebGL. It is designed to be as small as possible and as efficient as possible on Android.
+Filament is a real-time physically based rendering engine for Android, iOS, Linux, macOS, Windows,
+and WebGL. It is designed to be as small as possible and as efficient as possible on Android.
 
 Filament is currently used in the
 [Sceneform](https://developers.google.com/ar/develop/java/sceneform/) library both at runtime on
@@ -59,7 +59,7 @@ Here are a few sample materials rendered with Filament:
 
 - OpenGL 4.1+ for Linux, macOS and Windows
 - OpenGL ES 3.0+ for Android
-- Vulkan 1.0 for Android, Linux, macOS (with MoltenVk) and Windows
+- Vulkan 1.0 for Android, Linux, macOS and iOS (with MoltenVk), and Windows
 
 ### Rendering
 
@@ -108,6 +108,7 @@ Many other features have been either prototyped or planned:
     - `math`:                Mathematica notebooks used to explore BRDFs, equations, etc.
   - `filament`:              Filament engine
   - `ide`:                   Configuration files for IDEs (CLion, etc.)
+  - `ios`:                   Sample projects for iOS
   - `java`:                  Java bindings for Filament libraries
   - `libs`:                  Libraries
     - `bluegl`:                OpenGL bindings for macOS, Linux and Windows
@@ -298,6 +299,17 @@ $ cd out/cmake-release
 $ cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=../release/filament ../..
 $ ninja
 ```
+
+### iOS
+
+The easiest way to build Filament for iOS is to use `build.sh` and the
+`-p ios` flag. For instance to build the debug target:
+
+```
+$ ./build.sh -p ios debug
+```
+
+See [ios/samples/README.md](./ios/samples/README.md) for more information.
 
 ### Windows
 
@@ -839,6 +851,14 @@ a `SurfaceView`. To make things easier we provide an Android specific API called
 package `com.google.android.filament.android`. All you need to do is set a render callback on the
 helper and attach your `SurfaceView` or `TextureView` to it. You are still responsible for
 creating the swap chain in the `onNativeWindowChanged()` callback.
+
+### iOS
+
+See `ios/samples` for examples of using Filament on iOS.
+
+Filament on iOS is largely the same as native rendering with C++. A `CAMetalLayer` is passed to
+the `createSwapChain` method. At the moment, Filament for iOS only supports the Vulkan backend
+via MoltenVK.
 
 ## Generating C++ documentation
 

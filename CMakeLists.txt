@@ -297,7 +297,7 @@ if (WEBGL)
     add_subdirectory(${EXTERNAL}/stb/tnt)
 endif()
 
-if (NOT ANDROID AND NOT WEBGL)
+if (NOT ANDROID AND NOT WEBGL AND NOT IOS)
     add_subdirectory(${FILAMENT}/samples)
 
     add_subdirectory(${LIBRARIES}/bluegl)
@@ -334,7 +334,7 @@ if (NOT ANDROID AND NOT WEBGL)
     add_subdirectory(${TOOLS}/specular-color)
 endif()
 
-# Generate exported executables for cross-compiled builds (Android and WebGL)
+# Generate exported executables for cross-compiled builds (Android, WebGL, and iOS)
 if (NOT CMAKE_CROSSCOMPILING)
     export(TARGETS matc cmgen filamesh mipgen FILE ${IMPORT_EXECUTABLES})
 endif()
