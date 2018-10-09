@@ -34,6 +34,15 @@ namespace filament {
 
 using namespace details;
 
+struct InternalBone {
+    // Bones are stored as row-major
+    math::float4 rows[3] = {
+            { 1.0f, 0.0f, 0.0f, 0.0f },
+            { 0.0f, 1.0f, 0.0f, 0.0f },
+            { 0.0f, 0.0f, 1.0f, 0.0f }
+    };
+};
+
 struct RenderableManager::BuilderDetails {
     using Entry = RenderableManager::Builder::Entry;
     Entry* mEntries = nullptr;
@@ -45,8 +54,8 @@ struct RenderableManager::BuilderDetails {
     bool mCastShadows : 1;
     bool mReceiveShadows : 1;
     uint8_t mSkinningBoneCount = 0;
-    Bone const* mBones = nullptr;
-    math::mat4f const* mBoneMatrices = nullptr;
+    Bone const* mUserBones = nullptr;
+    math::mat4f const* mUserBoneMatrices = nullptr;
 
     explicit BuilderDetails(size_t count)
             : mEntriesCount(count), mCulling(true), mCastShadows(false), mReceiveShadows(true) {
@@ -139,16 +148,16 @@ RenderableManager::Builder& RenderableManager::Builder::skinning(size_t boneCoun
 }
 
 RenderableManager::Builder& RenderableManager::Builder::skinning(
-        size_t boneCount, Bone const* transforms) noexcept {
+        size_t boneCount, Bone const* bones) noexcept {
     mImpl->mSkinningBoneCount = (uint8_t)std::min(size_t(255), boneCount);
-    mImpl->mBones = transforms;
+    mImpl->mUserBones = bones;
     return *this;
 }
 
 RenderableManager::Builder& RenderableManager::Builder::skinning(
         size_t boneCount, math::mat4f const* transforms) noexcept {
     mImpl->mSkinningBoneCount = (uint8_t)std::min(size_t(255), boneCount);
-    mImpl->mBoneMatrices = transforms;
+    mImpl->mUserBoneMatrices = transforms;
     return *this;
 }
 
@@ -287,23 +296,23 @@ void FRenderableManager::create(
                 std::unique_ptr<Bones>& bones = manager[ci].bones;
 
                 bones.reset(new Bones); // FIXME: maybe use a pool allocator
-                bones->bones = UniformBuffer(CONFIG_MAX_BONE_COUNT * sizeof(Bone));
-                bones->handle = driver.createUniformBuffer(CONFIG_MAX_BONE_COUNT * sizeof(Bone));
+                bones->bones = UniformBuffer(CONFIG_MAX_BONE_COUNT * sizeof(InternalBone));
+                bones->handle = driver.createUniformBuffer(CONFIG_MAX_BONE_COUNT * sizeof(InternalBone));
             }
         }
         if (builder->mSkinningBoneCount) {
             std::unique_ptr<Bones> const& bones = manager[ci].bones;
             assert(bones);
             bones->count = builder->mSkinningBoneCount;
-            if (builder->mBones) {
-                setBones(ci, builder->mBones, builder->mSkinningBoneCount);
-            } else if (builder->mBoneMatrices) {
-                setBones(ci, builder->mBoneMatrices, builder->mSkinningBoneCount);
+            if (builder->mUserBones) {
+                setBones(ci, builder->mUserBones, builder->mSkinningBoneCount);
+            } else if (builder->mUserBoneMatrices) {
+                setBones(ci, builder->mUserBoneMatrices, builder->mSkinningBoneCount);
             } else {
                 // initialize the bones to identity
-                Bone* UTILS_RESTRICT out =
-                        (Bone*)bones->bones.invalidateUniforms(0, bones->count * sizeof(Bone));
-                std::fill_n(out, bones->count, Bone{});
+                InternalBone* UTILS_RESTRICT out =
+                        (InternalBone*)bones->bones.invalidateUniforms(0, bones->count * sizeof(InternalBone));
+                std::uninitialized_fill_n(out, bones->count, InternalBone{});
             }
         }
     }
@@ -461,10 +470,17 @@ void FRenderableManager::setBones(Instance ci,
         assert(bones && offset + boneCount <= bones->count);
         if (bones) {
             boneCount = std::min(boneCount, bones->count - offset);
-            Bone* UTILS_RESTRICT out = (Bone*)bones->bones.invalidateUniforms(
-                    offset * sizeof(Bone),
-                    boneCount * sizeof(Bone));
-            std::copy_n(transforms, boneCount, out);
+            InternalBone* UTILS_RESTRICT out = (InternalBone*)bones->bones.invalidateUniforms(
+                    offset * sizeof(InternalBone),
+                    boneCount * sizeof(InternalBone));
+            for (size_t i = 0, c = bones->count; i < c; ++i) {
+                mat4f m(transforms[i].unitQuaternion);
+                m[3].xyz = transforms[i].translation;
+                m = transpose(m); // row-major
+                out[i].rows[0] = m[0];
+                out[i].rows[1] = m[1];
+                out[i].rows[2] = m[2];
+            }
         }
     }
 }
@@ -476,13 +492,14 @@ void FRenderableManager::setBones(Instance ci,
         assert(bones && offset + boneCount <= bones->count);
         if (bones) {
             boneCount = std::min(boneCount, bones->count - offset);
-            Bone* UTILS_RESTRICT out = (Bone*)bones->bones.invalidateUniforms(
-                    offset * sizeof(Bone),
-                    boneCount * sizeof(Bone));
+            InternalBone* UTILS_RESTRICT out = (InternalBone*)bones->bones.invalidateUniforms(
+                    offset * sizeof(InternalBone),
+                    boneCount * sizeof(InternalBone));
             for (size_t i = 0, c = bones->count; i < c; ++i) {
-                mat4f const& m = transforms[i];
-                out[i].unitQuaternion = m.toQuaternion();
-                out[i].translation = m[3].xyz;
+                mat4f m = transpose(transforms[i]); // row-major
+                out[i].rows[0] = m[0];
+                out[i].rows[1] = m[1];
+                out[i].rows[2] = m[2];
             }
         }
     }
