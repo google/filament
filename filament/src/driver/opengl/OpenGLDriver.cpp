@@ -1455,7 +1455,6 @@ bool OpenGLDriver::isRenderTargetFormatSupported(Driver::TextureFormat format) {
         case TextureFormat::RG16I:
         case TextureFormat::RGBA8:
         case TextureFormat::SRGB8_A8:
-        case TextureFormat::RGBM:
         case TextureFormat::RGB10_A2:
         case TextureFormat::RGBA8UI:
         case TextureFormat::RGBA8I:

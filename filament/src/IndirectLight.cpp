@@ -90,8 +90,7 @@ IndirectLight* IndirectLight::Builder::build(Engine& engine) {
             return nullptr;
         }
 
-        if (!ASSERT_POSTCONDITION_NON_FATAL( mImpl->mReflectionsMap->isRgbm() ||
-                mImpl->mReflectionsMap->getFormat() == Texture::InternalFormat::RGBM,
+        if (!ASSERT_POSTCONDITION_NON_FATAL( mImpl->mReflectionsMap->isRgbm(),
                 "reflection map must have RGBM enabled")) {
             return nullptr;
         }

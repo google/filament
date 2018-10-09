@@ -332,7 +332,6 @@ io::ostream& operator<<(io::ostream& out, TextureFormat format) {
         CASE(TextureFormat, RGBA8)
         CASE(TextureFormat, SRGB8_A8)
         CASE(TextureFormat, RGBA8_SNORM)
-        CASE(TextureFormat, RGBM)
         CASE(TextureFormat, RGB5_A1)
         CASE(TextureFormat, RGBA4)
         CASE(TextureFormat, RGB10_A2)
