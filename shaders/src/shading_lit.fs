@@ -82,7 +82,7 @@ void getPixelParams(const MaterialInputs material, out PixelParams pixel) {
 #endif
 #endif
 
-    // Remaps the roughnes to a perceptually linear roughness (roughness^2)
+    // Remaps the roughness to a perceptually linear roughness (roughness^2)
     // TODO: the base layer's roughness should not be higher than the clear coat layer's
     pixel.roughness = roughness;
     pixel.linearRoughness = roughness * roughness;
