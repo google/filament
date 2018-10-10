@@ -25,6 +25,7 @@
 #include <filament/Texture.h>
 #include <filament/TextureSampler.h>
 
+#include <filament/driver/BufferDescriptor.h>
 #include <filament/driver/DriverEnums.h>
 
 #include <utils/compiler.h>
@@ -58,6 +59,7 @@ public:
     using VertexDomain = filament::VertexDomain;
     using TransparencyMode = filament::TransparencyMode;
 
+    using BufferDescriptor = driver::BufferDescriptor;
     using ParameterType = filament::driver::UniformType;
     using Precision = filament::driver::Precision;
     using SamplerType = filament::driver::SamplerType;
@@ -87,9 +89,14 @@ public:
         Builder& operator=(Builder const& rhs) noexcept;
         Builder& operator=(Builder&& rhs) noexcept;
 
-        // This does not copies the content of the RAM, only copy references.
+        // This does not copy the content of the RAM, it only makes a weak reference.
         // The RAM must stay valid until build() is called.
         Builder& package(const void* payload, size_t size);
+
+        // Alternatively, clients can submit a BufferDescriptor instead of void *, which is
+        // auto-released if a callback is present. Note that some language bindings (e.g.,
+        // JavaScript) prefer descriptors over the void * API.
+        Builder& package(BufferDescriptor&& buffer);
 
         /**
          * Creates the Material object and returns a pointer to it.

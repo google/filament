@@ -54,9 +54,11 @@ static const Vertex TRIANGLE_VERTICES[3] = {
 
 static constexpr uint16_t TRIANGLE_INDICES[3] = { 0, 1, 2 };
 
-static constexpr uint8_t BAKED_COLOR_PACKAGE[] = {
+static constexpr uint8_t BAKED_COLOR[] = {
     #include "generated/material/bakedColor.inc"
 };
+
+static auto BAKED_COLOR_PACKAGE = Material::BufferDescriptor(BAKED_COLOR, sizeof(BAKED_COLOR));
 
 int main(int argc, char** argv) {
     Config config;
@@ -76,17 +78,13 @@ int main(int argc, char** argv) {
                 .attribute(VertexAttribute::COLOR, 0, VertexBuffer::AttributeType::UBYTE4, 8, 12)
                 .normalized(VertexAttribute::COLOR)
                 .build(*engine);
-        app.vb->setBufferAt(*engine, 0,
-                VertexBuffer::BufferDescriptor(TRIANGLE_VERTICES, 36, nullptr));
+        app.vb->setBufferAt(*engine, 0, VertexBuffer::BufferDescriptor(TRIANGLE_VERTICES, 36));
         app.ib = IndexBuffer::Builder()
                 .indexCount(3)
                 .bufferType(IndexBuffer::IndexType::USHORT)
                 .build(*engine);
-        app.ib->setBuffer(*engine,
-                IndexBuffer::BufferDescriptor(TRIANGLE_INDICES, 6, nullptr));
-        app.mat = Material::Builder()
-                .package((void*) BAKED_COLOR_PACKAGE, sizeof(BAKED_COLOR_PACKAGE))
-                .build(*engine);
+        app.ib->setBuffer(*engine, IndexBuffer::BufferDescriptor(TRIANGLE_INDICES, 6));
+        app.mat = Material::Builder().package(std::move(BAKED_COLOR_PACKAGE)).build(*engine);
         app.renderable = EntityManager::get().create();
         RenderableManager::Builder(1)
                 .boundingBox({{ -1, -1, -1 }, { 1, 1, 1 }})

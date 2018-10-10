@@ -45,10 +45,14 @@ using namespace driver;
 
 
 struct Material::BuilderDetails {
-    const void* mPayload = nullptr;
-    size_t mSize = 0;
     filaflat::MaterialParser* mMaterialParser = nullptr;
     bool mDefaultMaterial = false;
+
+    // We have to use the heap to stash the buffer descriptor because BuilderBase uses copy
+    // assignment on the details instance, and BufferDescriptor has a deleted copy constructor. For
+    // the same reason, we also need to use shared_ptr rather than unique_ptr.
+    // TODO: consider refactoring BuilderBase to allow descendants that do not support copying.
+    std::shared_ptr<BufferDescriptor> mBufferDescriptor = std::make_shared<BufferDescriptor>();
 };
 
 FMaterial::DefaultMaterialBuilder::DefaultMaterialBuilder() : Material::Builder() {
@@ -64,20 +68,28 @@ BuilderType::Builder& BuilderType::Builder::operator=(BuilderType::Builder const
 BuilderType::Builder& BuilderType::Builder::operator=(BuilderType::Builder&& rhs) noexcept = default;
 
 Material::Builder& Material::Builder::package(const void* payload, size_t size) {
-    mImpl->mPayload = payload;
-    mImpl->mSize = size;
+    mImpl->mBufferDescriptor.reset(new BufferDescriptor(payload, size));
+    return *this;
+}
+
+Material::Builder& Material::Builder::package(BufferDescriptor&& buffer) {
+    *mImpl->mBufferDescriptor = std::move(buffer);
     return *this;
 }
 
 Material* Material::Builder::build(Engine& engine) {
-    MaterialParser* materialParser = new MaterialParser(
-            upcast(engine).getBackend(), mImpl->mPayload, mImpl->mSize);
+    // By moving the stashed buffer descriptor into a temporary, we are ensuring that its
+    // user-supplied callback is called when execution leaves this scope.
+    BufferDescriptor bd = std::move(*mImpl->mBufferDescriptor);
+
+    const driver::Backend backend = upcast(engine).getBackend();
+    MaterialParser* materialParser = new MaterialParser(backend, bd.buffer, bd.size);
     bool materialOK = materialParser->parse() && materialParser->isShadingMaterial();
     if (!ASSERT_POSTCONDITION_NON_FATAL(materialOK, "could not parse the material package")) {
         return nullptr;
     }
 
-    assert(upcast(engine).getBackend() != Backend::DEFAULT && "Default backend has not been resolved.");
+    assert(backend != Backend::DEFAULT && "Default backend has not been resolved.");
 
     uint32_t v;
     materialParser->getShaderModels(&v);
