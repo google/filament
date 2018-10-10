@@ -113,9 +113,15 @@ function load_rawfile(url) {
 let load_texture = load_rawfile;
 
 function load_cubemap(name, suffix) {
+    let compressed_suffix = suffix;
+    if (use_etc) {
+        compressed_suffix = '_etc' + suffix;
+    } else if (use_s3tc) {
+        compressed_suffix = '_s3tc' + suffix;
+    }
     let urlprefix = name + '/';
     let promises = {};
-    promises['ibl'] = load_rawfile(urlprefix + name + '_ibl' + suffix);
+    promises['ibl'] = load_rawfile(urlprefix + name + '_ibl' + compressed_suffix);
     promises['skybox'] = load_rawfile(urlprefix + name + '_skybox' + suffix);
     let numberRemaining = Object.keys(promises).length;
     var promise = new Promise((success) => {
