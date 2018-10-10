@@ -330,7 +330,7 @@ target_link_libraries(${TARGET} PUBLIC filaflat)
 target_link_libraries(${TARGET} PUBLIC filabridge)
 target_link_libraries(${TARGET} PUBLIC image_headers)
 
-# iOS does not support OpenGL, and Android links directly against EGL
+# Filament on iOS does not yet support the OpenGL backend, and Android links directly against EGL
 if(NOT IOS AND NOT ANDROID)
     target_link_libraries(${TARGET} PRIVATE bluegl)
 endif()
