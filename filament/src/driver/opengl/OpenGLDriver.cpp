@@ -1909,9 +1909,11 @@ void OpenGLDriver::updateUniformBuffer(Driver::UniformBufferHandle ubh, BufferDe
     assert(ub->size >= p.size);
     assert(ub->gl.ubo);
 
-    bindBuffer(GL_UNIFORM_BUFFER, ub->gl.ubo);
-    glBufferSubData(GL_UNIFORM_BUFFER, 0, p.size, p.buffer);
-    CHECK_GL_ERROR(utils::slog.e)
+    if (p.size > 0) {
+        bindBuffer(GL_UNIFORM_BUFFER, ub->gl.ubo);
+        glBufferSubData(GL_UNIFORM_BUFFER, 0, p.size, p.buffer);
+        CHECK_GL_ERROR(utils::slog.e)
+    }
 
     scheduleDestroy(std::move(p));
 }
