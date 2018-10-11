@@ -705,7 +705,7 @@ cannot open the HTML directly from the filesystem due to CORS. One way to deal w
 use Python to create a quick localhost server:
 
 ```
-cd out/cmake-web-release/samples/web/public
+cd out/cmake-webgl-release/samples/web/public
 python3 -m http.server     # Python 3
 python -m SimpleHTTPServer # Python 2.7
 ```
