@@ -188,7 +188,7 @@ function(add_demo NAME)
             filaweb.h
             filaweb.cpp)
     add_dependencies(${NAME} sample_materials sample_assets)
-    target_link_libraries(${NAME} PRIVATE filament filagui image math utils stb)
+    target_link_libraries(${NAME} PRIVATE filament filagui image math utils)
 
     # Copy the generated js and wasm files into the public folder, as well as the app-specific
     # manually-written HTML file.

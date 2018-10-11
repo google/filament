@@ -20,11 +20,6 @@
 
 #include <imgui.h>
 
-#define STB_IMAGE_IMPLEMENTATION
-#define STBI_NO_STDIO
-#define STBI_ONLY_PNG
-#include <stb_image.h>
-
 #include <emscripten.h>
 
 #include <image/KtxBundle.h>
@@ -164,20 +159,6 @@ Asset getRawFile(const char* name) {
     return result;
 }
 
-static Asset getPngTexture(const Asset& rawfile) {
-    int width, height, ncomp;
-    stbi_info_from_memory(rawfile.rawData.get(), rawfile.rawSize, &width, &height, &ncomp);
-    const uint32_t nbytes = width * height * 4;
-    stbi_uc* decoded = stbi_load_from_memory(rawfile.rawData.get(), rawfile.rawSize, &width,
-            &height, &ncomp, 4);
-    Asset result = {};
-    result.texture.reset(new KtxBundle(1, 1, false));
-    result.texture->setBlob({}, decoded, nbytes);
-    stbi_image_free(decoded);
-    return result;
-
-}
-
 static Asset getKtxTexture(const Asset& rawfile) {
     Asset result = {};
     result.texture.reset(new KtxBundle(rawfile.rawData.get(), rawfile.rawSize));
@@ -186,12 +167,6 @@ static Asset getKtxTexture(const Asset& rawfile) {
 
 Asset getTexture(const char* name) {
     Asset rawfile = getRawFile(name);
-    string extension = Path(rawfile.rawUrl).getExtension();
-    fflush(stdout);
-    if (extension == "png" || extension == "rgbm") {
-        return getPngTexture(rawfile);
-    }
-    // Do not check for KTX here, sometimes we use an alternate file extension.
     return getKtxTexture(rawfile);
 }
 
