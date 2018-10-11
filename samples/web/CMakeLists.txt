@@ -20,7 +20,7 @@ if (CMAKE_CROSSCOMPILING)
 endif()
 
 set(MATC_TARGET mobile)
-set(MATC_FLAGS -a all)
+set(MATC_FLAGS -a opengl)
 if (CMAKE_BUILD_TYPE MATCHES Release)
     set(MATC_FLAGS -O ${MATC_FLAGS})
 endif()
