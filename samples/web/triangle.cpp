@@ -54,10 +54,6 @@ static const Vertex TRIANGLE_VERTICES[3] = {
 
 static constexpr uint16_t TRIANGLE_INDICES[3] = { 0, 1, 2 };
 
-static constexpr uint8_t BAKED_COLOR_PACKAGE[] = {
-    #include "generated/material/bakedColor.inc"
-};
-
 static TriangleApp app;
 
 void setup(Engine* engine, View* view, Scene* scene) {
@@ -80,9 +76,12 @@ void setup(Engine* engine, View* view, Scene* scene) {
             .build(*engine);
     app.ib->setBuffer(*engine,
             IndexBuffer::BufferDescriptor(TRIANGLE_INDICES, 6, nullptr));
+
+    auto bakedColor = filaweb::getRawFile("bakedColor");
     app.mat = Material::Builder()
-            .package((void*) BAKED_COLOR_PACKAGE, sizeof(BAKED_COLOR_PACKAGE))
+            .package(bakedColor.rawData.get(), bakedColor.rawSize)
             .build(*engine);
+
     app.renderable = EntityManager::get().create();
     RenderableManager::Builder(1)
             .boundingBox({{ -1, -1, -1 }, { 1, 1, 1 }})
