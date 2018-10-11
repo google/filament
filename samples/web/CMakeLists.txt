@@ -2,7 +2,8 @@ cmake_minimum_required(VERSION 3.1)
 project(web-samples)
 
 # ==================================================================================================
-# Build materials into inc files.
+# To fetch materials, the web samples can either: (1) use #include or (2) download filamat files.
+# For simplicity, we generate both types of files for each material.
 # ==================================================================================================
 
 set(MATERIAL_NAMES
@@ -19,29 +20,30 @@ if (CMAKE_CROSSCOMPILING)
     include(${IMPORT_EXECUTABLES})
 endif()
 
-set(MATC_TARGET mobile)
-set(MATC_FLAGS -a opengl)
+set(MATC_FLAGS -a opengl -m material -p mobile)
 if (CMAKE_BUILD_TYPE MATCHES Release)
     set(MATC_FLAGS -O ${MATC_FLAGS})
 endif()
 
 set(GENERATION_ROOT ${CMAKE_CURRENT_BINARY_DIR})
 file(MAKE_DIRECTORY "${GENERATION_ROOT}/generated/material/")
+file(MAKE_DIRECTORY "public/material/")
 
 set(MATERIAL_BINS)
 foreach (NAME ${MATERIAL_NAMES})
     set(mat_src "../materials/${NAME}.mat")
     get_filename_component(localname "${mat_src}" NAME_WE)
     get_filename_component(fullname "${mat_src}" ABSOLUTE)
-    set(output_path "${GENERATION_ROOT}/generated/material/${localname}.inc")
+    set(output_inc "${GENERATION_ROOT}/generated/material/${localname}.inc")
+    set(output_bin "public/material/${localname}.filamat")
     add_custom_command(
-            OUTPUT ${output_path}
-            COMMAND matc ${MATC_FLAGS} -p ${MATC_TARGET} -m material -f header
-                    -o ${output_path} ${fullname}
+            OUTPUT ${output_inc} ${output_bin}
+            COMMAND matc ${MATC_FLAGS} -f header -o ${output_inc} ${fullname}
+            COMMAND matc ${MATC_FLAGS} -o ${output_bin} ${fullname}
             MAIN_DEPENDENCY ${mat_src}
             DEPENDS matc
             COMMENT "Compiling material ${mat_src} to ${output_path}")
-    list(APPEND MATERIAL_BINS ${output_path})
+    list(APPEND MATERIAL_BINS ${output_inc} ${output_bin})
 endforeach()
 
 add_custom_target(sample_materials DEPENDS ${MATERIAL_BINS})
