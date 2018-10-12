@@ -94,7 +94,7 @@ UniformInterfaceBlock& UibGenerator::getPostProcessingUib() noexcept {
 UniformInterfaceBlock& UibGenerator::getPerRenderableBonesUib() noexcept {
     static UniformInterfaceBlock uib = UniformInterfaceBlock::Builder()
             .name("BonesUniforms")
-            .add("bones", CONFIG_MAX_BONE_COUNT * 6, UniformInterfaceBlock::Type::FLOAT4, Precision::MEDIUM)
+            .add("bones", CONFIG_MAX_BONE_COUNT * 4, UniformInterfaceBlock::Type::FLOAT4, Precision::MEDIUM)
             .build();
     return uib;
 }
