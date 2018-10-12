@@ -23,30 +23,30 @@ mat3 getWorldFromModelNormalMatrix() {
 #if defined(HAS_SKINNING)
 vec3 mulBoneNormal(const vec3 n, uint i) {
     return vec3(
-            dot(n, bonesUniforms.bones[i + 0u].xyz),
-            dot(n, bonesUniforms.bones[i + 1u].xyz),
-            dot(n, bonesUniforms.bones[i + 2u].xyz));
+            dot(n, bonesUniforms.bones[i + 3u].xyz),
+            dot(n, bonesUniforms.bones[i + 4u].xyz),
+            dot(n, bonesUniforms.bones[i + 5u].xyz));
 }
 
 vec3 mulBoneVertice(const vec3 v, uint i) {
     return vec3(
-            dot(v, bonesUniforms.bones[i + 0u].xyz) + bonesUniforms.bones[i + 0u].w,
-            dot(v, bonesUniforms.bones[i + 1u].xyz) + bonesUniforms.bones[i + 1u].w,
-            dot(v, bonesUniforms.bones[i + 2u].xyz) + bonesUniforms.bones[i + 2u].w);
+            bonesUniforms.bones[i + 0u].w + dot(v, bonesUniforms.bones[i + 0u].xyz),
+            bonesUniforms.bones[i + 1u].w + dot(v, bonesUniforms.bones[i + 1u].xyz),
+            bonesUniforms.bones[i + 2u].w + dot(v, bonesUniforms.bones[i + 2u].xyz));
 }
 
 void skinNormal(inout vec3 n, const uvec4 ids, const vec4 weights) {
-    n += (mulBoneNormal(n, ids.x * 3u) * weights.x
-        + mulBoneNormal(n, ids.y * 3u) * weights.y
-        + mulBoneNormal(n, ids.z * 3u) * weights.z
-        + mulBoneNormal(n, ids.w * 3u) * weights.w);
+    n =  (mulBoneNormal(n, ids.x * 6u) * weights.x
+        + mulBoneNormal(n, ids.y * 6u) * weights.y
+        + mulBoneNormal(n, ids.z * 6u) * weights.z
+        + mulBoneNormal(n, ids.w * 6u) * weights.w);
 }
 
 void skinPosition(inout vec3 p, const uvec4 ids, const vec4 weights) {
-    p +=  mulBoneVertice(p, ids.x * 3u) * weights.x
-        + mulBoneVertice(p, ids.y * 3u) * weights.y
-        + mulBoneVertice(p, ids.z * 3u) * weights.z
-        + mulBoneVertice(p, ids.w * 3u) * weights.w;
+    p =   mulBoneVertice(p, ids.x * 6u) * weights.x
+        + mulBoneVertice(p, ids.y * 6u) * weights.y
+        + mulBoneVertice(p, ids.z * 6u) * weights.z
+        + mulBoneVertice(p, ids.w * 6u) * weights.w;
 }
 #endif
 

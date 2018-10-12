@@ -36,12 +36,19 @@ using namespace details;
 
 struct InternalBone {
     // Bones are stored as row-major
-    math::float4 rows[3] = {
+    math::float4 verticesTransformRowMajor[3] = {
+            { 1.0f, 0.0f, 0.0f, 0.0f },
+            { 0.0f, 1.0f, 0.0f, 0.0f },
+            { 0.0f, 0.0f, 1.0f, 0.0f }
+    };
+    math::float4 normalsTransformRowMajor[3] = {
             { 1.0f, 0.0f, 0.0f, 0.0f },
             { 0.0f, 1.0f, 0.0f, 0.0f },
             { 0.0f, 0.0f, 1.0f, 0.0f }
     };
 };
+
+static_assert(CONFIG_MAX_BONE_COUNT * sizeof(InternalBone) <= 16384, "Bones exceed max UBO size");
 
 struct RenderableManager::BuilderDetails {
     using Entry = RenderableManager::Builder::Entry;
@@ -53,7 +60,7 @@ struct RenderableManager::BuilderDetails {
     bool mCulling : 1;
     bool mCastShadows : 1;
     bool mReceiveShadows : 1;
-    uint8_t mSkinningBoneCount = 0;
+    size_t mSkinningBoneCount = 0;
     Bone const* mUserBones = nullptr;
     math::mat4f const* mUserBoneMatrices = nullptr;
 
@@ -143,20 +150,20 @@ RenderableManager::Builder& RenderableManager::Builder::receiveShadows(bool enab
 }
 
 RenderableManager::Builder& RenderableManager::Builder::skinning(size_t boneCount) noexcept {
-    mImpl->mSkinningBoneCount = (uint8_t)std::min(size_t(255), boneCount);
+    mImpl->mSkinningBoneCount = boneCount;
     return *this;
 }
 
 RenderableManager::Builder& RenderableManager::Builder::skinning(
         size_t boneCount, Bone const* bones) noexcept {
-    mImpl->mSkinningBoneCount = (uint8_t)std::min(size_t(255), boneCount);
+    mImpl->mSkinningBoneCount = boneCount;
     mImpl->mUserBones = bones;
     return *this;
 }
 
 RenderableManager::Builder& RenderableManager::Builder::skinning(
         size_t boneCount, math::mat4f const* transforms) noexcept {
-    mImpl->mSkinningBoneCount = (uint8_t)std::min(size_t(255), boneCount);
+    mImpl->mSkinningBoneCount = boneCount;
     mImpl->mUserBoneMatrices = transforms;
     return *this;
 }
@@ -170,6 +177,12 @@ RenderableManager::Builder& RenderableManager::Builder::blendOrder(size_t index,
 
 RenderableManager::Builder::Result RenderableManager::Builder::build(Engine& engine, Entity entity) {
     bool isEmpty = true;
+
+    if (!ASSERT_PRECONDITION_NON_FATAL(mImpl->mSkinningBoneCount <= CONFIG_MAX_BONE_COUNT,
+            "bone count > %u", CONFIG_MAX_BONE_COUNT)) {
+        return Error;
+    }
+
     for (size_t i = 0, c = mImpl->mEntriesCount; i < c; i++) {
         auto& entry = mImpl->mEntries[i];
 
@@ -303,11 +316,11 @@ void FRenderableManager::create(
         if (builder->mSkinningBoneCount) {
             std::unique_ptr<Bones> const& bones = manager[ci].bones;
             assert(bones);
-            bones->count = builder->mSkinningBoneCount;
+            bones->count = (uint8_t)builder->mSkinningBoneCount;
             if (builder->mUserBones) {
-                setBones(ci, builder->mUserBones, builder->mSkinningBoneCount);
+                setBones(ci, builder->mUserBones, bones->count);
             } else if (builder->mUserBoneMatrices) {
-                setBones(ci, builder->mUserBoneMatrices, builder->mSkinningBoneCount);
+                setBones(ci, builder->mUserBoneMatrices, bones->count);
             } else {
                 // initialize the bones to identity
                 InternalBone* UTILS_RESTRICT out =
@@ -474,12 +487,21 @@ void FRenderableManager::setBones(Instance ci,
                     offset * sizeof(InternalBone),
                     boneCount * sizeof(InternalBone));
             for (size_t i = 0, c = bones->count; i < c; ++i) {
-                mat4f m(transforms[i].unitQuaternion);
-                m[3].xyz = transforms[i].translation;
-                m = transpose(m); // row-major
-                out[i].rows[0] = m[0];
-                out[i].rows[1] = m[1];
-                out[i].rows[2] = m[2];
+                mat4f t(transforms[i].unitQuaternion);
+                t[3].xyz = transforms[i].translation;
+
+                const mat4f m = transpose(t); // row-major
+                out[i].verticesTransformRowMajor[0] = m[0];
+                out[i].verticesTransformRowMajor[1] = m[1];
+                out[i].verticesTransformRowMajor[2] = m[2];
+
+                // for transforming normals, we can ignore the translation, and we need
+                // to take the transpose(inverse()). However, we know we're dealing with
+                // a rigid transform, so the inverse is the transpose and they cancel out.
+                // Then, we take the transpose() for row-major encoding.
+                out[i].normalsTransformRowMajor[0] = m[0];
+                out[i].normalsTransformRowMajor[1] = m[1];
+                out[i].normalsTransformRowMajor[2] = m[2];
             }
         }
     }
@@ -496,10 +518,18 @@ void FRenderableManager::setBones(Instance ci,
                     offset * sizeof(InternalBone),
                     boneCount * sizeof(InternalBone));
             for (size_t i = 0, c = bones->count; i < c; ++i) {
-                mat4f m = transpose(transforms[i]); // row-major
-                out[i].rows[0] = m[0];
-                out[i].rows[1] = m[1];
-                out[i].rows[2] = m[2];
+                const mat4f m = transpose(transforms[i]); // row-major
+                out[i].verticesTransformRowMajor[0] = m[0];
+                out[i].verticesTransformRowMajor[1] = m[1];
+                out[i].verticesTransformRowMajor[2] = m[2];
+
+                // for transforming normals, we can ignore the translation, and we need
+                // to take the transpose(inverse()).
+                // then take the transpose() for row-major encoding.
+                const mat3f n = inverse(transforms[i].upperLeft());
+                out[i].normalsTransformRowMajor[0].xyz = n[0];
+                out[i].normalsTransformRowMajor[1].xyz = n[1];
+                out[i].normalsTransformRowMajor[2].xyz = n[2];
             }
         }
     }
