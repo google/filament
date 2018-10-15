@@ -49,11 +49,11 @@ fun destroyIbl(engine: Engine, ibl: Ibl) {
 }
 
 private fun peekSize(assets: AssetManager, name: String): Pair<Int, Int> {
-    val input = assets.open(name)
-    val opts = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-    BitmapFactory.decodeStream(input, null, opts)
-    input.close()
-    return opts.outWidth to opts.outHeight
+    assets.open(name).use { input ->
+        val opts = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeStream(input, null, opts)
+        return opts.outWidth to opts.outHeight
+    }
 }
 
 private fun loadIndirectLight(
