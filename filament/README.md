@@ -46,7 +46,7 @@ To start, download Filament's [latest binary release](https://github.com/google/
 and extract into a directory of your choosing. Binary releases are suffixed
 with the platform name, for example, `filament-20181009-linux.tgz`.
 
-Create a file, `main.cpp` in the same directory with the following contents:
+Create a file, `main.cpp`, in the same directory with the following contents:
 
 ```
 #include <filament/FilamentAPI.h>
