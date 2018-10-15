@@ -11,7 +11,7 @@ Filament. Latest versions are available on the [project page](https://github.com
 - `matinfo`, Displays information about materials compiled with `matc`
 - `mipgen`, Generates a series of miplevels from a source image.
 - `normal-blending`, Tool to blend normal maps
-- `roughness-prefilter`, Pre-filters a roughness map from a normal map to reduce aliasing 
+- `roughness-prefilter`, Pre-filters a roughness map from a normal map to reduce aliasing
 - `skygen`, Physically-based sky environment texture generator
 - `specular-color`, Computes the specular color of conductors based on spectral data
 
@@ -29,10 +29,119 @@ Filament is distributed as a set of static libraries you must link against:
 - `utils`, Support library for Filament
 
 To use Filament from Java you must use the following two libraries instead:
-- `filament-java.jar`, Contains Filament's Java classes 
+- `filament-java.jar`, Contains Filament's Java classes
 - `filament-jni`, Filament's JNI bindings
 
 To use the Vulkan backend on macOS you must also make the following libraries available at runtime:
 - `MoltenVK_icd.json`
-- `libMoltenVK.dylib` 
+- `libMoltenVK.dylib`
 - `vulkan.1.dylib`
+
+## Linking against Filament
+
+This walkthrough will get you successfully compiling and linking native code
+against Filament with minimum dependencies.
+
+To start, download Filament's [latest binary release](https://github.com/google/filament/releases)
+and extract into a directory of your choosing. Binary releases are suffixed
+with the platform name, for example, `filament-20181009-linux.tgz`.
+
+Create a file, `main.cpp`, in the same directory with the following contents:
+
+```
+#include <filament/FilamentAPI.h>
+#include <filament/Engine.h>
+
+using namespace filament;
+
+int main(int argc, char** argv)
+{
+    Engine *engine = Engine::create();
+    engine->destroy(&engine);
+    return 0;
+}
+```
+
+The directory should look like:
+
+```
+|-- README.md
+|-- bin
+|-- docs
+|-- include
+|-- lib
+|-- main.cpp
+```
+
+We'll use a platform-specific Makefile to compile and link `main.cpp` with Filament's libraries.
+Copy your platform's Makefile below into a `Makefile` inside the same directory.
+
+### Linux
+
+```
+FILAMENT_LIBS=-lfilament -lbluegl -lbluevk -lfilabridge -lfilaflat -lutils
+CC=clang++
+
+main: main.o
+	$(CC) -Llib/x86_64/ main.o $(FILAMENT_LIBS) -lpthread -lc++ -ldl -o main
+
+main.o: main.cpp
+	$(CC) -Iinclude/ -std=c++14 -pthread -c main.cpp
+
+clean:
+	rm -f main main.o
+
+.PHONY: clean
+```
+
+### macOS
+
+```
+FILAMENT_LIBS=-lfilament -lbluegl -lbluevk -lfilabridge -lfilaflat -lutils
+CC=clang++
+
+main: main.o
+	$(CC) -Llib/x86_64/ main.o $(FILAMENT_LIBS) -framework Cocoa -o main
+
+main.o: main.cpp
+	$(CC) -Iinclude/ -std=c++14 -c main.cpp
+
+clean:
+	rm -f main main.o
+
+.PHONY: clean
+```
+
+### Windows
+
+```
+FILAMENT_LIBS=lib/x86_64/filament.lib lib/x86_64/bluegl.lib \
+              lib/x86_64/filabridge.lib lib/x86_64/filaflat.lib lib/x86_64/utils.lib
+CC=clang-cl.exe
+
+main.exe: main.obj
+	$(CC) main.obj $(FILAMENT_LIBS) gdi32.lib user32.lib opengl32.lib
+
+main.obj: main.cpp
+	$(CC) /Iinclude/ /std:c++14 /c main.cpp
+
+clean:
+	del main.exe main.obj
+
+.PHONY: clean
+
+```
+
+### Compiling
+
+You should be able to invoke `make` and run the executable successfully:
+
+```
+$ make
+$ ./main
+FEngine (64 bits) created at 0x106471000 (threading is enabled)
+```
+
+On Windows, you'll need to open up a Visual Studio Native Tools Command Prompt
+and invoke `nmake` instead of `make`.
+
