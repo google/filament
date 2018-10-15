@@ -69,6 +69,11 @@ Filament.init = function(assets, onready) {
 Filament.Buffer = function(typedarray) {
     console.assert(typedarray.buffer instanceof ArrayBuffer);
     console.assert(typedarray.byteLength > 0);
+    // If the given array was taken from the WASM heap, then we need to create a copy because its
+    // pointer will become invalidated after we instantiate the driver$PixelBufferDescriptor.
+    if (Filament.HEAPU32.buffer == typedarray.buffer) {
+        typedarray = new Uint8Array(typedarray);
+    }
     const ta = typedarray;
     const bd = new Filament.driver$BufferDescriptor(ta);
     const uint8array = new Uint8Array(ta.buffer, ta.byteOffset, ta.byteLength);
@@ -79,6 +84,11 @@ Filament.Buffer = function(typedarray) {
 Filament.PixelBuffer = function(typedarray, format, datatype) {
     console.assert(typedarray.buffer instanceof ArrayBuffer);
     console.assert(typedarray.byteLength > 0);
+    // If the given array was taken from the WASM heap, then we need to create a copy because its
+    // pointer will become invalidated after we instantiate the driver$PixelBufferDescriptor.
+    if (Filament.HEAPU32.buffer == typedarray.buffer) {
+        typedarray = new Uint8Array(typedarray);
+    }
     const ta = typedarray;
     const bd = new Filament.driver$PixelBufferDescriptor(ta, format, datatype);
     const uint8array = new Uint8Array(ta.buffer, ta.byteOffset, ta.byteLength);
