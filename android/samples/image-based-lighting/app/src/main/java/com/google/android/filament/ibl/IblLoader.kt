@@ -70,7 +70,7 @@ private fun loadIndirectLight(
             .sampler(Texture.Sampler.SAMPLER_CUBEMAP)
             .build(engine)
 
-    (0 until texture.levels).forEach {
+    repeat(texture.levels) {
         loadCubemap(texture, assets, name, engine, "m${it}_", it)
     }
 
@@ -88,7 +88,7 @@ private fun loadSphericalHarmonics(assets: AssetManager, name: String): FloatArr
     // 3 bands = 9 RGB coefficients, so 9 * 3 floats
     val sphericalHarmonics = FloatArray(9 * 3)
     BufferedReader(InputStreamReader(assets.open("$name/sh.txt"))).use { input ->
-        (0 until 9).forEach { i ->
+        repeat(9) { i ->
             val line = input.readLine()
             re.find(line)?.let {
                 sphericalHarmonics[i * 3] = it.groups[1]?.value?.toFloat() ?: 0.0f
@@ -133,7 +133,7 @@ private fun loadCubemap(texture: Texture,
     // Allocate enough memory for all the cubemap faces
     val storage = ByteBuffer.allocateDirect(faceSize * 6)
 
-    arrayOf("px", "nx", "py", "ny", "pz", "nz").forEachIndexed { _, suffix ->
+    arrayOf("px", "nx", "py", "ny", "pz", "nz").forEach { suffix ->
         assets.open("$name/$prefix$suffix.rgbm").use {
             val bitmap = BitmapFactory.decodeStream(it, null, opts)
             bitmap?.copyPixelsToBuffer(storage)
