@@ -76,7 +76,17 @@ Filament.Buffer = function(typedarray) {
     const uint8array = new Uint8Array(ta.buffer, ta.byteOffset, ta.byteLength);
     bd.getBytes().set(uint8array);
     return bd;
-}
+};
+
+Filament.PixelBuffer = function(typedarray, format, datatype) {
+    console.assert(typedarray.buffer instanceof ArrayBuffer);
+    console.assert(typedarray.byteLength > 0);
+    const ta = typedarray;
+    const bd = new Filament.driver$PixelBufferDescriptor(ta, format, datatype);
+    const uint8array = new Uint8Array(ta.buffer, ta.byteOffset, ta.byteLength);
+    bd.getBytes().set(uint8array);
+    return bd;
+};
 
 // The postRun method is called by emscripten after it finishes compiling and instancing the
 // WebAssembly module. The JS classes that correspond to core Filament classes (e.g., Engine)

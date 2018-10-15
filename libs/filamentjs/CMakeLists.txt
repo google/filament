@@ -16,6 +16,6 @@ set(LOPTS "${LOPTS} -s EXPORT_NAME=Filament")
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${LOPTS}")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${COPTS}")
 
-add_executable(filamentjs jsbindings.cpp)
+add_executable(filamentjs jsenums.cpp jsbindings.cpp)
 set_target_properties(filamentjs PROPERTIES OUTPUT_NAME filament)
 target_link_libraries(filamentjs PRIVATE filament math utils image)
