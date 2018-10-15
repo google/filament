@@ -107,18 +107,18 @@ using MatBuilder = Material::Builder;
 // to JavaScript as "driver$BufferDescriptor", but clients will normally use our "Filament.Buffer"
 // helper function, which is implemented in wasmloader.
 struct BufferDescriptor {
-    BufferDescriptor(val arrdata)  : autofree(false) {
+    // This form is used when JavaScript sends a buffer into WASM.
+    BufferDescriptor(val arrdata) {
         auto byteLength = arrdata["byteLength"].as<uint32_t>();
         this->bd = new driver::BufferDescriptor(malloc(byteLength), byteLength,
                 [](void* buffer, size_t size, void* user) { free(buffer); });
     }
-    BufferDescriptor(uint8_t* data, uint32_t size) : autofree(true) {
+    // This form is used when WASM needs to return a buffer to a JavaScript.
+    BufferDescriptor(uint8_t* data, uint32_t size) {
         this->bd = new driver::BufferDescriptor(data, size);
     }
     ~BufferDescriptor() {
-        if (autofree) {
-            delete bd;
-        }
+        delete bd;
     }
     val getBytes() {
         unsigned char *byteBuffer = (unsigned char*) bd->buffer;
@@ -126,7 +126,6 @@ struct BufferDescriptor {
         return val(typed_memory_view(bufferLength, byteBuffer));
     };
     driver::BufferDescriptor* bd;
-    bool autofree;
 };
 
 } // anonymous namespace
@@ -280,9 +279,7 @@ class_<Engine>("Engine")
     .function("createMaterial", EMBIND_LAMBDA(Material*, (Engine* engine, BufferDescriptor mbd), {
         // TODO: consider adding a BufferDescriptor API to Material::Builder, then possibly removing
         // this convenient helper method.
-        Material* result = Material::Builder().package(mbd.bd->buffer, mbd.bd->size).build(*engine);
-        delete mbd.bd;
-        return result;
+        return Material::Builder().package(mbd.bd->buffer, mbd.bd->size).build(*engine);
     }), allow_raw_pointers())
     .function("destroyMaterial", (void (*)(Engine*, Material*)) []
             (Engine* engine, Material* mat) { engine->destroy(mat); },
@@ -433,9 +430,7 @@ class_<BufferDescriptor>("driver$BufferDescriptor")
 
 class_<KtxBundle>("KtxBundle")
     .constructor(EMBIND_LAMBDA(KtxBundle*, (BufferDescriptor kbd), {
-        auto result = new KtxBundle((uint8_t*) kbd.bd->buffer, (uint32_t) kbd.bd->size);
-        delete kbd.bd;
-        return result;
+        return new KtxBundle((uint8_t*) kbd.bd->buffer, (uint32_t) kbd.bd->size);
     }))
     .function("getNumMipLevels", &KtxBundle::getNumMipLevels)
     .function("getArrayLength", &KtxBundle::getArrayLength)
