@@ -59,8 +59,6 @@ Filament.init = function(assets, onready) {
             if (--Filament.remainingInitializationTasks == 0) {
                 Filament.onReady();
             }
-        }).catch(function(error) {
-            console.error('Unable to download asset:', error.message);
         });
     });
 };
