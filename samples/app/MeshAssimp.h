@@ -39,6 +39,7 @@ namespace filament {
 #include <filamat/MaterialBuilder.h>
 #include <filament/Color.h>
 #include <filament/Box.h>
+#include <filament/Texture.h>
 
 class MeshAssimp {
 public:
@@ -83,7 +84,10 @@ private:
             std::vector<short4>&   outTangents,
             std::vector<half2>&    outTexCoords,
             std::vector<Mesh>&     outMeshes,
-            std::vector<int>&      outParents);
+            std::vector<int>&      outParents,
+            std::map<std::string, filament::MaterialInstance*>& outMaterials
+            );
+
 
     filament::Engine& mEngine;
     filament::VertexBuffer* mVertexBuffer = nullptr;
@@ -91,8 +95,18 @@ private:
 
     filament::Material* mDefaultColorMaterial = nullptr;
     filament::Material* mDefaultTransparentColorMaterial = nullptr;
+    filament::Material* mGltfMaterial = nullptr;
+
+    filament::Texture* mDefaultMap = nullptr;
+    filament::Texture* mDefaultNormalMap = nullptr;
+    float mDefaultMetallic = 0.0;
+    float mDefaultRoughness = 0.4;
+    filament::sRGBColor mDefaultEmissive = filament::sRGBColor({0.0f, 0.0f, 0.0f});
+
 
     std::vector<utils::Entity> mRenderables;
+
+    std::vector<filament::Texture*> mTextures;
 };
 
 #endif // TNT_FILAMENT_SAMPLE_MESH_ASSIMP_H

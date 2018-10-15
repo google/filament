@@ -11,6 +11,7 @@ set(MATERIAL_SRCS
         materials/aiDefaultMat.mat
         materials/aiDefaultTrans.mat
         materials/depthVisualizer.mat
+        materials/gltf2.mat
         materials/groundShadow.mat
         materials/sandboxCloth.mat
         materials/sandboxLit.mat
@@ -69,7 +70,7 @@ set(APP_SRCS
         app/IBL.cpp
         app/Image.cpp
         app/IcoSphere.cpp
-        app/Sphere.cpp)
+        app/Sphere.cpp gltf_viewer.cpp)
 
 if (APPLE)
     list(APPEND APP_SRCS app/NativeWindowHelperCocoa.mm)
@@ -135,6 +136,7 @@ endfunction()
 
 if (NOT ANDROID)
     add_assimp_demo(frame_generator)
+    add_assimp_demo(gltf_viewer)
     add_assimp_demo(lightbulb)
     add_assimp_demo(material_sandbox)
     add_assimp_demo(sample_full_pbr)
