@@ -60,7 +60,7 @@ FView::FView(FEngine& engine)
       mDirectionalShadowMap(engine) {
     DriverApi& driverApi = engine.getDriverApi();
 
-    mPerViewUbh = driverApi.createUniformBuffer(mPerViewUb.getSize());
+    mPerViewUbh = driverApi.createUniformBuffer(mPerViewUb.getSize(), driver::BufferUsage::DYNAMIC);
     mPerViewSbh = driverApi.createSamplerBuffer(mPerViewSb.getSize());
 
     mPerViewSb.setBuffer(FEngine::PerViewSib::RECORDS, mFroxelizer.getRecordBuffer());

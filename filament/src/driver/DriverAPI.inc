@@ -223,15 +223,17 @@ DECL_DRIVER_API_0(flush)
  * -----------------------
  */
 
-DECL_DRIVER_API_R_4(Driver::VertexBufferHandle, createVertexBuffer,
+DECL_DRIVER_API_R_5(Driver::VertexBufferHandle, createVertexBuffer,
         uint8_t, bufferCount,
         uint8_t, attributeCount,
         uint32_t, vertexCount,
-        Driver::AttributeArray, attributes)
+        Driver::AttributeArray, attributes,
+        Driver::BufferUsage, usage)
 
-DECL_DRIVER_API_R_2(Driver::IndexBufferHandle, createIndexBuffer,
+DECL_DRIVER_API_R_3(Driver::IndexBufferHandle, createIndexBuffer,
         Driver::ElementType, elementType,
-        uint32_t, indexCount)
+        uint32_t, indexCount,
+        Driver::BufferUsage, usage)
 
 DECL_DRIVER_API_R_8(Driver::TextureHandle, createTexture,
         Driver::SamplerType, target,
@@ -246,8 +248,9 @@ DECL_DRIVER_API_R_8(Driver::TextureHandle, createTexture,
 DECL_DRIVER_API_R_1(Driver::SamplerBufferHandle, createSamplerBuffer,
         size_t, size)
 
-DECL_DRIVER_API_R_1(Driver::UniformBufferHandle, createUniformBuffer,
-        size_t, size)
+DECL_DRIVER_API_R_2(Driver::UniformBufferHandle, createUniformBuffer,
+        size_t, size,
+        Driver::BufferUsage, usage)
 
 DECL_DRIVER_API_R_0(Driver::RenderPrimitiveHandle, createRenderPrimitive)
 
