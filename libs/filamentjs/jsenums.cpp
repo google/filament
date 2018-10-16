@@ -15,8 +15,10 @@
  */
 
 #include <filament/Camera.h>
+#include <filament/Color.h>
 #include <filament/IndexBuffer.h>
 #include <filament/RenderableManager.h>
+#include <filament/LightManager.h>
 #include <filament/Texture.h>
 #include <filament/VertexBuffer.h>
 #include <filament/View.h>
@@ -28,6 +30,16 @@ using namespace emscripten;
 using namespace filament;
 
 EMSCRIPTEN_BINDINGS(jsenums) {
+
+enum_<RgbType>("RgbType")
+    .value("sRGB", RgbType::sRGB)
+    .value("LINEAR", RgbType::LINEAR);
+
+enum_<RgbaType>("RgbaType")
+    .value("sRGB", RgbaType::sRGB)
+    .value("LINEAR", RgbaType::LINEAR)
+    .value("PREMULTIPLIED_sRGB", RgbaType::PREMULTIPLIED_sRGB)
+    .value("PREMULTIPLIED_LINEAR", RgbaType::PREMULTIPLIED_LINEAR);
 
 enum_<VertexAttribute>("VertexAttribute")
     .value("POSITION", POSITION)
@@ -70,6 +82,13 @@ enum_<VertexAttribute>("VertexAttribute")
     .value("USHORT", IndexBuffer::IndexType::USHORT)
     .value("UINT", IndexBuffer::IndexType::UINT);
 
+enum_<LightManager::Type>("LightManager$Type")
+    .value("SUN", LightManager::Type::SUN)
+    .value("DIRECTIONAL", LightManager::Type::DIRECTIONAL)
+    .value("POINT", LightManager::Type::POINT)
+    .value("FOCUSED_SPOT", LightManager::Type::FOCUSED_SPOT)
+    .value("SPOT", LightManager::Type::SPOT);
+
  enum_<RenderableManager::PrimitiveType>("RenderableManager$PrimitiveType")
     .value("POINTS", RenderableManager::PrimitiveType::POINTS)
     .value("LINES", RenderableManager::PrimitiveType::LINES)
@@ -84,6 +103,10 @@ enum_<VertexAttribute>("VertexAttribute")
  enum_<Camera::Projection>("Camera$Projection")
     .value("PERSPECTIVE", Camera::Projection::PERSPECTIVE)
     .value("ORTHO", Camera::Projection::ORTHO);
+
+enum_<Camera::Fov>("Camera$Fov")
+    .value("VERTICAL", Camera::Fov::VERTICAL)
+    .value("HORIZONTAL", Camera::Fov::HORIZONTAL);
 
  enum_<Texture::Sampler>("Texture$Sampler") // aka driver::SamplerType
     .value("SAMPLER_2D", Texture::Sampler::SAMPLER_2D)
