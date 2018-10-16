@@ -57,7 +57,13 @@ public class TextureSampler {
 
     int mSampler = 0; // bit field used by native
 
+    /**
+     * Min filter: LINEAR_MIPMAP_LINEAR
+     * Mag filter: LINEAR
+     * Wrap mode: REPEAT
+     */
     public TextureSampler() {
+        this(MinFilter.LINEAR_MIPMAP_LINEAR, MagFilter.LINEAR, WrapMode.REPEAT);
     }
 
     public TextureSampler(@NonNull MagFilter minMag) {

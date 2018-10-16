@@ -73,6 +73,7 @@ target_link_libraries(filament-jni
       GLESv3
       EGL
       android
+      jnigraphics
 )
 
 option(FILAMENT_SUPPORTS_VULKAN "Enables Vulkan on Android" OFF)

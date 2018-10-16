@@ -334,7 +334,7 @@ public class Texture {
         }
 
         @NonNull
-        public Builder rgbm(@NonNull boolean enabled) {
+        public Builder rgbm(boolean enabled) {
             nBuilderRgbm(mNativeBuilder, enabled);
             return this;
         }
@@ -524,7 +524,8 @@ public class Texture {
             int alignment, int compressedSizeInBytes, int compressedFormat,
             int[] faceOffsetsInBytes, Object handler, Runnable callback);
 
-    private static native void nSetExternalImage(long nativeObject, long nativeObject1, long eglImage);
+    private static native void nSetExternalImage(
+            long nativeObject, long nativeEngine, long eglImage);
 
     private static native void nSetExternalStream(long nativeTexture,
             long nativeEngine, long nativeStream);
