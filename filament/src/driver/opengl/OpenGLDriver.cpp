@@ -399,29 +399,36 @@ void OpenGLDriver::bindBuffer(GLenum target, GLuint buffer) noexcept {
         // GL_ELEMENT_ARRAY_BUFFER is a special case, where the currently bound VAO remembers
         // the index buffer, unless there are no VAO bound (see: bindVertexArray)
         assert(state.vao.p);
-        if (state.buffers.targets[targetIndex].genericBinding != buffer
+        if (state.buffers.genericBinding[targetIndex] != buffer
                 || ((state.vao.p != &mDefaultVAO) && (state.vao.p->gl.elementArray != buffer))) {
-            state.buffers.targets[targetIndex].genericBinding = buffer;
+            state.buffers.genericBinding[targetIndex] = buffer;
             if (state.vao.p != &mDefaultVAO) {
                 state.vao.p->gl.elementArray = buffer;
             }
             glBindBuffer(target, buffer);
         }
     } else {
-        update_state(state.buffers.targets[targetIndex].genericBinding, buffer, [&]() {
+        update_state(state.buffers.genericBinding[targetIndex], buffer, [&]() {
             glBindBuffer(target, buffer);
         });
     }
 }
 
-void OpenGLDriver::bindBufferBase(GLenum target, GLuint index, GLuint buffer) noexcept {
+void OpenGLDriver::bindBufferRange(GLenum target, GLuint index, GLuint buffer,
+        GLintptr offset, GLsizeiptr size) noexcept {
     size_t targetIndex = getIndexForBufferTarget(target);
+    assert(targetIndex <= 1); // sanity check
+
     // this ALSO sets the generic binding
-    if (state.buffers.targets[targetIndex].buffers[index] != buffer
-            || state.buffers.targets[targetIndex].genericBinding != buffer) {
-        state.buffers.targets[targetIndex].buffers[index] = buffer;
-        state.buffers.targets[targetIndex].genericBinding = buffer;
-        glBindBufferBase(target, index, buffer);
+    if (state.buffers.genericBinding[targetIndex] != buffer
+            || state.buffers.targets[targetIndex].buffers[index].name != buffer
+            || state.buffers.targets[targetIndex].buffers[index].offset != offset
+            || state.buffers.targets[targetIndex].buffers[index].size != size) {
+        state.buffers.targets[targetIndex].buffers[index].name = buffer;
+        state.buffers.targets[targetIndex].buffers[index].offset = offset;
+        state.buffers.targets[targetIndex].buffers[index].size = size;
+        state.buffers.genericBinding[targetIndex] = buffer;
+        glBindBufferRange(target, index, buffer, offset, size);
     }
 }
 
@@ -456,7 +463,7 @@ void OpenGLDriver::bindVertexArray(GLRenderPrimitive const* p) noexcept {
         glBindVertexArray(vao->gl.vao);
         // update GL_ELEMENT_ARRAY_BUFFER, which is updated by glBindVertexArray
         size_t targetIndex = getIndexForBufferTarget(GL_ELEMENT_ARRAY_BUFFER);
-        state.buffers.targets[targetIndex].genericBinding = vao->gl.elementArray;
+        state.buffers.genericBinding[targetIndex] = vao->gl.elementArray;
         if (UTILS_UNLIKELY(bugs.vao_doesnt_store_element_array_buffer_binding)) {
             // This shouldn't be needed, but it looks like some drivers don't do the implicit
             // glBindBuffer().
@@ -817,7 +824,8 @@ void OpenGLDriver::createVertexBuffer(
     uint8_t bufferCount,
     uint8_t attributeCount,
     uint32_t elementCount,
-    Driver::AttributeArray attributes) {
+    Driver::AttributeArray attributes,
+    Driver::BufferUsage usage) {
     DEBUG_MARKER()
 
     GLVertexBuffer* vb = construct<GLVertexBuffer>(vbh,
@@ -836,14 +844,17 @@ void OpenGLDriver::createVertexBuffer(
             }
         }
         bindBuffer(GL_ARRAY_BUFFER, vb->gl.buffers[i]);
-        glBufferData(GL_ARRAY_BUFFER, size, nullptr, GL_STATIC_DRAW);
+        glBufferData(GL_ARRAY_BUFFER, size, nullptr, getBufferUsage(usage));
     }
 
     CHECK_GL_ERROR(utils::slog.e)
 }
 
-void OpenGLDriver::createIndexBuffer(Driver::IndexBufferHandle ibh, Driver::ElementType elementType,
-        uint32_t indexCount) {
+void OpenGLDriver::createIndexBuffer(
+        Driver::IndexBufferHandle ibh,
+        Driver::ElementType elementType,
+        uint32_t indexCount,
+        Driver::BufferUsage usage) {
     DEBUG_MARKER()
 
     uint8_t elementSize = static_cast<uint8_t>(getElementTypeSize(elementType));
@@ -852,7 +863,7 @@ void OpenGLDriver::createIndexBuffer(Driver::IndexBufferHandle ibh, Driver::Elem
     GLsizeiptr size = elementSize * indexCount;
     bindVertexArray(nullptr);
     bindBuffer(GL_ELEMENT_ARRAY_BUFFER, ib->gl.buffer);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, size, nullptr, GL_STATIC_DRAW);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, size, nullptr, getBufferUsage(usage));
     CHECK_GL_ERROR(utils::slog.e)
 }
 
@@ -877,13 +888,16 @@ void OpenGLDriver::createSamplerBuffer(Driver::SamplerBufferHandle sbh, size_t s
     construct<GLSamplerBuffer>(sbh, size);
 }
 
-void OpenGLDriver::createUniformBuffer(Driver::UniformBufferHandle ubh, size_t size) {
+void OpenGLDriver::createUniformBuffer(
+        Driver::UniformBufferHandle ubh,
+        size_t size,
+        Driver::BufferUsage usage) {
     DEBUG_MARKER()
 
     GLUniformBuffer* ub = construct<GLUniformBuffer>(ubh, size);
     glGenBuffers(1, &ub->gl.ubo);
     bindBuffer(GL_UNIFORM_BUFFER, ub->gl.ubo);
-    glBufferData(GL_UNIFORM_BUFFER, size, nullptr, GL_DYNAMIC_DRAW);
+    glBufferData(GL_UNIFORM_BUFFER, size, nullptr, getBufferUsage(usage));
     CHECK_GL_ERROR(utils::slog.e)
 }
 
@@ -1212,10 +1226,10 @@ void OpenGLDriver::destroyVertexBuffer(Driver::VertexBufferHandle vbh) {
         glDeleteBuffers(n, eb->gl.buffers.data());
         // bindings of bound buffers are reset to 0
         const size_t targetIndex = getIndexForBufferTarget(GL_ARRAY_BUFFER);
-        auto& target = state.buffers.targets[targetIndex];
+        auto& target = state.buffers.genericBinding[targetIndex];
         for (GLuint b : eb->gl.buffers) {
-            if (target.genericBinding == b) {
-                target.genericBinding = 0;
+            if (target == b) {
+                target = 0;
             }
         }
         destruct(vbh, eb);
@@ -1230,9 +1244,9 @@ void OpenGLDriver::destroyIndexBuffer(Driver::IndexBufferHandle ibh) {
         glDeleteBuffers(1, &ib->gl.buffer);
         // bindings of bound buffers are reset to 0
         const size_t targetIndex = getIndexForBufferTarget(GL_ELEMENT_ARRAY_BUFFER);
-        auto& target = state.buffers.targets[targetIndex];
-        if (target.genericBinding == ib->gl.buffer) {
-            target.genericBinding = 0;
+        auto& target = state.buffers.genericBinding[targetIndex];
+        if (target == ib->gl.buffer) {
+            target = 0;
         }
         destruct(ibh, ib);
     }
@@ -1280,12 +1294,14 @@ void OpenGLDriver::destroyUniformBuffer(Driver::UniformBufferHandle ubh) {
         const size_t targetIndex = getIndexForBufferTarget(GL_UNIFORM_BUFFER);
         auto& target = state.buffers.targets[targetIndex];
         for (auto& buffer : target.buffers) {
-            if (buffer == ub->gl.ubo) {
-                buffer = 0;
+            if (buffer.name == ub->gl.ubo) {
+                buffer.name = 0;
+                buffer.offset = 0;
+                buffer.size = 0;
             }
         }
-        if (target.genericBinding == ub->gl.ubo) {
-            target.genericBinding = 0;
+        if (state.buffers.genericBinding[targetIndex] == ub->gl.ubo) {
+            state.buffers.genericBinding[targetIndex] = 0;
         }
         destruct(ubh, ub);
     }
@@ -1409,6 +1425,14 @@ void OpenGLDriver::setStreamDimensions(Driver::StreamHandle sh, uint32_t width, 
     }
 }
 
+int64_t OpenGLDriver::getStreamTimestamp(Driver::StreamHandle sh) {
+    if (sh) {
+        GLStream* s = handle_cast<GLStream*>(sh);
+        return s->user_thread.timestamp;
+    }
+    return 0;
+}
+
 void OpenGLDriver::destroyFence(Driver::FenceHandle fh) {
     if (fh) {
         HwFence* f = handle_cast<HwFence*>(fh);
@@ -1462,7 +1486,6 @@ bool OpenGLDriver::isRenderTargetFormatSupported(Driver::TextureFormat format) {
         case TextureFormat::RG16I:
         case TextureFormat::RGBA8:
         case TextureFormat::SRGB8_A8:
-        case TextureFormat::RGBM:
         case TextureFormat::RGB10_A2:
         case TextureFormat::RGBA8UI:
         case TextureFormat::RGBA8I:
@@ -1900,21 +1923,21 @@ void OpenGLDriver::setViewportScissor(
     });
 }
 
-void OpenGLDriver::updateUniformBuffer(Driver::UniformBufferHandle ubh,
-        UniformBuffer&& uniformBuffer) {
+void OpenGLDriver::updateUniformBuffer(Driver::UniformBufferHandle ubh, BufferDescriptor&& p) {
     DEBUG_MARKER()
 
     GLUniformBuffer* ub = handle_cast<GLUniformBuffer *>(ubh);
     assert(ub);
+    assert(ub->size >= p.size);
+    assert(ub->gl.ubo);
 
-    if (UTILS_UNLIKELY(uniformBuffer.isDirty())) {
-        // TODO: upload only the dirty parts
-        assert(ub->gl.ubo);
+    if (p.size > 0) {
         bindBuffer(GL_UNIFORM_BUFFER, ub->gl.ubo);
-        glBufferSubData(GL_UNIFORM_BUFFER, 0, uniformBuffer.getSize(), uniformBuffer.getBuffer());
+        glBufferSubData(GL_UNIFORM_BUFFER, 0, p.size, p.buffer);
         CHECK_GL_ERROR(utils::slog.e)
     }
-    ub->ub = std::move(uniformBuffer);
+
+    scheduleDestroy(std::move(p));
 }
 
 void OpenGLDriver::load2DImage(Driver::TextureHandle th,
@@ -2276,8 +2299,12 @@ void OpenGLDriver::updateStream(GLTexture* t, driver::DriverApi* driver) noexcep
             // sync object is in the driver's command queue.
             glFlush();
 
-            driver->queueCommand([this, t, s, fence, readTexture, writeTexture,
-                    width = info.width, height = info.height]() {
+            // Update the stream timestamp. It's not clear to me that this is correct; which
+            // timestamp do we really want? Here we use "now" because we have nothing else we
+            // can use.
+            s->user_thread.timestamp = std::chrono::steady_clock::now().time_since_epoch().count();
+
+            driver->queueCommand([this, t, s, fence, readTexture, writeTexture]() {
                 // the stream may have been destroyed since we enqueued the command
                 // also make sure that this texture is still associated with the same stream
                 auto& streams = mExternalStreams;
@@ -2290,8 +2317,6 @@ void OpenGLDriver::updateStream(GLTexture* t, driver::DriverApi* driver) noexcep
                     t->gl.texture_id = readTexture;
                     t->gl.fence = fence;
                     s->gl.externalTexture2DId = writeTexture;
-                    s->gl.width = width;
-                    s->gl.height = height;
                 } else {
                     glDeleteSync(fence);
                 }
@@ -2390,11 +2415,21 @@ void OpenGLDriver::viewport(ssize_t left, ssize_t bottom, size_t width, size_t h
     CHECK_GL_ERROR(utils::slog.e)
 }
 
-void OpenGLDriver::bindUniforms(size_t index, Driver::UniformBufferHandle ubh) {
+void OpenGLDriver::bindUniformBuffer(size_t index, Driver::UniformBufferHandle ubh) {
     DEBUG_MARKER()
 
     GLUniformBuffer* ub = handle_cast<GLUniformBuffer *>(ubh);
-    bindBufferBase(GL_UNIFORM_BUFFER, GLuint(index), ub->gl.ubo);
+    bindBufferRange(GL_UNIFORM_BUFFER, GLuint(index), ub->gl.ubo, 0, ub->size);
+    CHECK_GL_ERROR(utils::slog.e)
+}
+
+void OpenGLDriver::bindUniformBufferRange(size_t index, Driver::UniformBufferHandle ubh,
+        size_t offset, size_t size) {
+    DEBUG_MARKER()
+
+    GLUniformBuffer* ub = handle_cast<GLUniformBuffer*>(ubh);
+    assert(offset + size <= ub->size);
+    bindBufferRange(GL_UNIFORM_BUFFER, GLuint(index), ub->gl.ubo, offset, size);
     CHECK_GL_ERROR(utils::slog.e)
 }
 
@@ -2526,7 +2561,7 @@ void OpenGLDriver::readPixels(Driver::RenderTargetHandle src,
 // Rendering ops
 // ------------------------------------------------------------------------------------------------
 
-void OpenGLDriver::beginFrame(uint64_t monotonic_clock_ns, uint32_t frameId) {
+void OpenGLDriver::beginFrame(int64_t monotonic_clock_ns, uint32_t frameId) {
     insertEventMarker("beginFrame");
     if (UTILS_UNLIKELY(!mExternalStreams.empty())) {
         driver::OpenGLPlatform& platform = mPlatform;
@@ -2535,7 +2570,7 @@ void OpenGLDriver::beginFrame(uint64_t monotonic_clock_ns, uint32_t frameId) {
             assert(t && t->hwStream);
             if (static_cast<GLStream*>(t->hwStream)->isNativeStream()) {
                 assert(t->hwStream->stream);
-                platform.updateTexImage(t->hwStream->stream);
+                platform.updateTexImage(t->hwStream->stream, &static_cast<GLStream*>(t->hwStream)->user_thread.timestamp);
                 // NOTE: We assume that updateTexImage() binds the texture on our behalf
                 GLuint activeUnit = state.textures.active;
                 state.textures.units[activeUnit].targets[index].texture_id = t->gl.texture_id;
@@ -2544,7 +2579,7 @@ void OpenGLDriver::beginFrame(uint64_t monotonic_clock_ns, uint32_t frameId) {
     }
 }
 
-void OpenGLDriver::setPresentationTime(uint64_t monotonic_clock_ns) {
+void OpenGLDriver::setPresentationTime(int64_t monotonic_clock_ns) {
     mPlatform.setPresentationTime(monotonic_clock_ns);
 }
 

@@ -37,9 +37,9 @@ void PostProcessManager::init(FEngine& engine) noexcept {
     // create sampler for post-process FBO
     DriverApi& driver = engine.getDriverApi();
     mPostProcessSbh = driver.createSamplerBuffer(engine.getPostProcessSib().getSize());
-    mPostProcessUbh = driver.createUniformBuffer(engine.getPerPostProcessUib().getSize());
+    mPostProcessUbh = driver.createUniformBuffer(engine.getPerPostProcessUib().getSize(), driver::BufferUsage::DYNAMIC);
     driver.bindSamplers(BindingPoints::POST_PROCESS, mPostProcessSbh);
-    driver.bindUniforms(BindingPoints::POST_PROCESS, mPostProcessUbh);
+    driver.bindUniformBuffer(BindingPoints::POST_PROCESS, mPostProcessUbh);
 }
 
 void PostProcessManager::terminate(driver::DriverApi& driver) noexcept {
@@ -74,7 +74,7 @@ void PostProcessManager::setSource(uint32_t viewportWidth, uint32_t viewportHeig
     ub.setUniform(offsetof(FEngine::PostProcessingUib, yOffset), yOffset);
 
     driver.updateSamplerBuffer(mPostProcessSbh, std::move(sb));
-    driver.updateUniformBuffer(mPostProcessUbh, UniformBuffer(ub));
+    driver.updateUniformBuffer(mPostProcessUbh, ub.toBufferDescriptor(driver));
 }
 
 void PostProcessManager::blit(driver::TextureFormat format) noexcept {

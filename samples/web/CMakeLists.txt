@@ -2,7 +2,8 @@ cmake_minimum_required(VERSION 3.1)
 project(web-samples)
 
 # ==================================================================================================
-# Build materials into inc files.
+# To fetch materials, the web samples can either: (1) use #include or (2) download filamat files.
+# For simplicity, we generate both types of files for each material.
 # ==================================================================================================
 
 set(MATERIAL_NAMES
@@ -19,29 +20,30 @@ if (CMAKE_CROSSCOMPILING)
     include(${IMPORT_EXECUTABLES})
 endif()
 
-set(MATC_TARGET mobile)
-set(MATC_FLAGS -a all)
+set(MATC_FLAGS -a opengl -m material -p mobile)
 if (CMAKE_BUILD_TYPE MATCHES Release)
     set(MATC_FLAGS -O ${MATC_FLAGS})
 endif()
 
 set(GENERATION_ROOT ${CMAKE_CURRENT_BINARY_DIR})
 file(MAKE_DIRECTORY "${GENERATION_ROOT}/generated/material/")
+file(MAKE_DIRECTORY "public/material/")
 
 set(MATERIAL_BINS)
 foreach (NAME ${MATERIAL_NAMES})
     set(mat_src "../materials/${NAME}.mat")
     get_filename_component(localname "${mat_src}" NAME_WE)
     get_filename_component(fullname "${mat_src}" ABSOLUTE)
-    set(output_path "${GENERATION_ROOT}/generated/material/${localname}.inc")
+    set(output_inc "${GENERATION_ROOT}/generated/material/${localname}.inc")
+    set(output_bin "public/material/${localname}.filamat")
     add_custom_command(
-            OUTPUT ${output_path}
-            COMMAND matc ${MATC_FLAGS} -p ${MATC_TARGET} -m material -f header
-                    -o ${output_path} ${fullname}
+            OUTPUT ${output_inc} ${output_bin}
+            COMMAND matc ${MATC_FLAGS} -f header -o ${output_inc} ${fullname}
+            COMMAND matc ${MATC_FLAGS} -o ${output_bin} ${fullname}
             MAIN_DEPENDENCY ${mat_src}
             DEPENDS matc
             COMMENT "Compiling material ${mat_src} to ${output_path}")
-    list(APPEND MATERIAL_BINS ${output_path})
+    list(APPEND MATERIAL_BINS ${output_inc} ${output_bin})
 endforeach()
 
 add_custom_target(sample_materials DEPENDS ${MATERIAL_BINS})
@@ -116,15 +118,39 @@ add_mesh("assets/models/monkey/monkey.obj" "monkey/mesh.filamesh")
 add_mesh("third_party/shader_ball/shader_ball.obj" "shaderball/mesh.filamesh")
 
 # Generate IBL and skybox images using cmgen.
+set(CMGEN_ARGS -x public --format=ktx --size=256 --extract-blur=0.1)
+set(CMGEN_ARGS_S3TC ${CMGEN_ARGS} --compression=s3tc_rgba_dxt5)
+set(CMGEN_ARGS_ETC ${CMGEN_ARGS} --compression=etc_rgba8_rgba_40)
 function(add_envmap SOURCE TARGET)
     set(source_envmap "${CMAKE_CURRENT_SOURCE_DIR}/../../${SOURCE}")
+
+    file(MAKE_DIRECTORY "public/${TARGET}")
+
     set(target_skybox "public/${TARGET}/${TARGET}_skybox.ktx")
     set(target_envmap "public/${TARGET}/${TARGET}_ibl.ktx")
+
+    set(target_envmap_etc "public/${TARGET}/${TARGET}_ibl_etc.ktx")
+    set(target_envmap_s3tc "public/${TARGET}/${TARGET}_ibl_s3tc.ktx")
+
     set(target_skyboxes ${target_skyboxes} ${target_skybox} PARENT_SCOPE)
-    set(target_envmaps ${target_envmaps} ${target_envmap} PARENT_SCOPE)
-    add_custom_command(
-        OUTPUT ${target_skybox} ${target_envmap}
-        COMMAND cmgen -x public --format=ktx --size=256 --extract-blur=0.1 ${source_envmap}
+
+    set(target_envmaps ${target_envmaps}
+            ${target_envmap} ${target_envmap_etc} ${target_envmap_s3tc} PARENT_SCOPE)
+
+    add_custom_command(OUTPUT ${target_skybox}
+                ${target_envmap} ${target_envmap_etc} ${target_envmap_s3tc}
+
+        # First create an S3TC-encoded envmap, then rename it.
+        COMMAND cmgen ${CMGEN_ARGS_S3TC} ${source_envmap}
+        COMMAND mv ${target_envmap} ${target_envmap_s3tc}
+
+        # Now create an ETC-encoded envmap, then rename it.
+        COMMAND cmgen ${CMGEN_ARGS_ETC} ${source_envmap}
+        COMMAND mv ${target_envmap} ${target_envmap_etc}
+
+        # Finally, create KTX files for the uncompressed envmap.
+        COMMAND cmgen ${CMGEN_ARGS} ${source_envmap}
+
         MAIN_DEPENDENCY ${source_envmap}
         DEPENDS cmgen)
 endfunction()
@@ -157,12 +183,10 @@ function(add_demo NAME)
     include_directories(${GENERATION_ROOT})
     add_executable(${NAME} ${NAME}.cpp
             ../app/CameraManipulator.cpp
-            filamesh.h
-            filamesh.cpp
             filaweb.h
             filaweb.cpp)
     add_dependencies(${NAME} sample_materials sample_assets)
-    target_link_libraries(${NAME} PRIVATE filament filagui image math utils stb)
+    target_link_libraries(${NAME} PRIVATE filament filagui filameshio image math utils)
 
     # Copy the generated js and wasm files into the public folder, as well as the app-specific
     # manually-written HTML file.

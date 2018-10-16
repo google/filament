@@ -58,7 +58,7 @@ constexpr size_t CONFIG_MAX_LIGHT_COUNT = 256;
 constexpr size_t CONFIG_MAX_LIGHT_INDEX = CONFIG_MAX_LIGHT_COUNT - 1;
 
 // This value is also limited by UBO size, ES3.0 only guarantees 16 KiB.
-// 256 is enough, but we could use 512 if needed
+// We store 64 bytes per bone.
 constexpr size_t CONFIG_MAX_BONE_COUNT = 256;
 
 // can't really use std::underlying_type<AttributeIndex>::type because the driver takes a uint32_t

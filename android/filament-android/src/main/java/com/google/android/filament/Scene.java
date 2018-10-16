@@ -16,29 +16,51 @@
 
 package com.google.android.filament;
 
-import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 
 public class Scene {
     private long mNativeObject;
+    private @Nullable Skybox mSkybox;
+    private @Nullable IndirectLight mIndirectLight;
 
     Scene(long nativeScene) {
         mNativeObject = nativeScene;
     }
 
-    public void setSkybox(@NonNull Skybox skybox) {
-        nSetSkybox(getNativeObject(), skybox.getNativeObject());
+    @Nullable
+    public Skybox getSkybox() {
+        return mSkybox;
     }
 
-    public void setIndirectLight(@NonNull IndirectLight ibl) {
-        nSetIndirectLight(getNativeObject(), ibl.getNativeObject());
+    public void setSkybox(@Nullable Skybox skybox) {
+        mSkybox = skybox;
+        nSetSkybox(getNativeObject(), mSkybox != null ? mSkybox.getNativeObject() : 0);
+    }
+
+    @Nullable
+    public IndirectLight getIndirectLight() {
+        return mIndirectLight;
+    }
+
+    public void setIndirectLight(@Nullable IndirectLight ibl) {
+        mIndirectLight = ibl;
+        nSetIndirectLight(getNativeObject(),
+                mIndirectLight != null ? mIndirectLight.getNativeObject() : 0);
     }
 
     public void addEntity(@Entity int entity) {
         nAddEntity(getNativeObject(), entity);
     }
 
-    public void remove(@Entity int entity) {
+    public void removeEntity(@Entity int entity) {
         nRemove(getNativeObject(), entity);
+    }
+
+    /**
+     * @deprecated See {@link #removeEntity(int)}
+     */
+    public void remove(@Entity int entity) {
+        removeEntity(entity);
     }
 
     public int getRenderableCount() {

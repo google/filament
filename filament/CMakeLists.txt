@@ -58,7 +58,6 @@ set(SRCS
         src/driver/Handle.cpp
         src/driver/Program.cpp
         src/driver/SamplerBuffer.cpp
-        src/driver/UniformBuffer.cpp
         src/Box.cpp
         src/Camera.cpp
         src/Color.cpp
@@ -90,6 +89,7 @@ set(SRCS
         src/SwapChain.cpp
         src/Stream.cpp
         src/Texture.cpp
+        src/UniformBuffer.cpp
         src/View.cpp
         src/Viewport.cpp
 )
@@ -136,7 +136,6 @@ set(PRIVATE_HDRS
         src/driver/Handle.h
         src/driver/Program.h
         src/driver/SamplerBuffer.h
-        src/driver/UniformBuffer.h
         src/FilamentAPI-impl.h
         src/FrameInfo.h
         src/Intersections.h
@@ -144,6 +143,7 @@ set(PRIVATE_HDRS
         src/PrecompiledMaterials.h
         src/RenderPass.h
         src/RenderTargetPool.h
+        src/UniformBuffer.h
         src/upcast.h)
 
 set(MATERIAL_SRCS

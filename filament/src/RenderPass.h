@@ -172,14 +172,14 @@ public:
         return boolish ? -1llu : 0llu;
     }
 
-    struct PrimitiveInfo { // 28 bytes
+    struct PrimitiveInfo { // 24 bytes
         FMaterialInstance const* mi = nullptr;              // 8 bytes (4)
         Handle<HwRenderPrimitive> primitiveHandle;          // 4 bytes
-        Handle<HwUniformBuffer> perRenderableUniforms;      // 4 bytes
         Handle<HwUniformBuffer> perRenderableBones;         // 4 bytes
         Driver::RasterState rasterState;                    // 4 bytes
+        uint16_t index = 0;                                 // 2 bytes
         Variant materialVariant;                            // 1 byte
-        uint8_t reserved[3] = { };                          // 3 bytes (that helps the compiler)
+        uint8_t reserved = { };                             // 1 byte
     };
 
     struct alignas(8) Command {     // 32 bytes
@@ -202,14 +202,14 @@ public:
     static constexpr RenderFlags HAS_DYNAMIC_LIGHTING   = 0x04;
 
 
-    RenderPass(const char* name) noexcept : mName(name) { }
+    explicit RenderPass(const char* name) noexcept : mName(name) { }
 
     virtual ~RenderPass() noexcept;
 
     // appends rendering commands for the given view
     void render(
             FEngine& engine, utils::JobSystem& js,
-            FScene::RenderableSoa const& soa, utils::Range<uint32_t> visibleRenderables,
+            FScene& scene, utils::Range<uint32_t> visibleRenderables,
             uint32_t commandTypeFlags, RenderFlags renderFlags,
             const CameraInfo& camera, Viewport const& viewport,
             utils::GrowingSlice<Command>& commands) noexcept;
@@ -237,7 +237,7 @@ private:
     static_assert(JOBS_PARALLEL_FOR_COMMANDS_SIZE % utils::CACHELINE_SIZE == 0,
             "Size of Commands jobs must be multiple of a cache-line size");
 
-    static inline void generateCommands(uint32_t commandTypeFlags, Command* const commands,
+    static inline void generateCommands(uint32_t commandTypeFlags, Command* commands,
             FScene::RenderableSoa const& soa, utils::Range<uint32_t> range, RenderFlags renderFlags,
             math::float3 cameraPosition, math::float3 cameraForward) noexcept;
 
@@ -247,9 +247,9 @@ private:
             math::float3 cameraForward) noexcept;
 
     static void setupColorCommand(Command& cmdDraw, bool hasDepthPass,
-            FMaterialInstance const* const mi) noexcept;
+            FMaterialInstance const* mi) noexcept;
 
-    static void recordDriverCommands(FEngine::DriverApi& driver,
+    static void recordDriverCommands(FEngine::DriverApi& driver, FScene& scene,
             utils::Slice<Command> const& commands) noexcept;
 
     static void updateSummedPrimitiveCounts(

@@ -205,11 +205,11 @@
 #pragma clang diagnostic ignored "-Wunused-parameter"
 
 DECL_DRIVER_API_2(beginFrame,
-        uint64_t, monotonic_clock_ns,
+        int64_t, monotonic_clock_ns,
         uint32_t, frameId)
 
 DECL_DRIVER_API_1(setPresentationTime,
-        uint64_t, monotonic_clock_ns)
+        int64_t, monotonic_clock_ns)
 
 DECL_DRIVER_API_1(endFrame,
         uint32_t, frameId)
@@ -223,15 +223,17 @@ DECL_DRIVER_API_0(flush)
  * -----------------------
  */
 
-DECL_DRIVER_API_R_4(Driver::VertexBufferHandle, createVertexBuffer,
+DECL_DRIVER_API_R_5(Driver::VertexBufferHandle, createVertexBuffer,
         uint8_t, bufferCount,
         uint8_t, attributeCount,
         uint32_t, vertexCount,
-        Driver::AttributeArray, attributes)
+        Driver::AttributeArray, attributes,
+        Driver::BufferUsage, usage)
 
-DECL_DRIVER_API_R_2(Driver::IndexBufferHandle, createIndexBuffer,
+DECL_DRIVER_API_R_3(Driver::IndexBufferHandle, createIndexBuffer,
         Driver::ElementType, elementType,
-        uint32_t, indexCount)
+        uint32_t, indexCount,
+        Driver::BufferUsage, usage)
 
 DECL_DRIVER_API_R_8(Driver::TextureHandle, createTexture,
         Driver::SamplerType, target,
@@ -246,8 +248,9 @@ DECL_DRIVER_API_R_8(Driver::TextureHandle, createTexture,
 DECL_DRIVER_API_R_1(Driver::SamplerBufferHandle, createSamplerBuffer,
         size_t, size)
 
-DECL_DRIVER_API_R_1(Driver::UniformBufferHandle, createUniformBuffer,
-        size_t, size)
+DECL_DRIVER_API_R_2(Driver::UniformBufferHandle, createUniformBuffer,
+        size_t, size,
+        Driver::BufferUsage, usage)
 
 DECL_DRIVER_API_R_0(Driver::RenderPrimitiveHandle, createRenderPrimitive)
 
@@ -299,13 +302,13 @@ DECL_DRIVER_API_SYNCHRONOUS_1(Driver::StreamHandle, createStream, void*, stream)
 
 DECL_DRIVER_API_SYNCHRONOUS_3(void, setStreamDimensions, Driver::StreamHandle, stream, uint32_t, width, uint32_t, height)
 
+DECL_DRIVER_API_SYNCHRONOUS_1(int64_t, getStreamTimestamp, Driver::StreamHandle, stream)
+
 DECL_DRIVER_API_SYNCHRONOUS_1(void, updateStreams, driver::DriverApi*, driver)
 
 DECL_DRIVER_API_SYNCHRONOUS_1(void, destroyFence, Driver::FenceHandle, fh)
 
-DECL_DRIVER_API_SYNCHRONOUS_2(Driver::FenceStatus, wait,
-        Driver::FenceHandle, fh,
-        uint64_t, timeout)
+DECL_DRIVER_API_SYNCHRONOUS_2(Driver::FenceStatus, wait, Driver::FenceHandle, fh, uint64_t, timeout)
 
 DECL_DRIVER_API_SYNCHRONOUS_1(bool, isTextureFormatSupported, Driver::TextureFormat, format)
 
@@ -359,7 +362,7 @@ DECL_DRIVER_API_1(generateMipmaps,
 
 DECL_DRIVER_API_2(updateUniformBuffer,
         Driver::UniformBufferHandle, ubh,
-        UniformBuffer&&, uniformBuffer)
+        Driver::BufferDescriptor&&, buffer)
 
 DECL_DRIVER_API_2(updateSamplerBuffer,
         Driver::SamplerBufferHandle, ubh,
@@ -428,9 +431,15 @@ DECL_DRIVER_API_4(viewport,
         size_t, width,
         size_t, height)
 
-DECL_DRIVER_API_2(bindUniforms,
+DECL_DRIVER_API_2(bindUniformBuffer,
         size_t, index,
         Driver::UniformBufferHandle, ubh)
+
+DECL_DRIVER_API_4(bindUniformBufferRange,
+        size_t, index,
+        Driver::UniformBufferHandle, ubh,
+        size_t, offset,
+        size_t, size)
 
 DECL_DRIVER_API_2(bindSamplers,
         size_t, index,

@@ -95,9 +95,7 @@ FSkybox::FSkybox(FEngine& engine, const Builder& builder) noexcept
         : mSkyboxTexture(upcast(builder->mEnvironmentMap)),
           mRenderableManager(engine.getRenderableManager()) {
 
-    const bool rgbm = mSkyboxTexture->getFormat() == Texture::InternalFormat::RGBM ||
-            mSkyboxTexture->isRgbm();
-    FMaterial const* material = engine.getSkyboxMaterial(rgbm);
+    FMaterial const* material = engine.getSkyboxMaterial(mSkyboxTexture->isRgbm());
     mSkyboxMaterialInstance = material->createInstance();
 
     TextureSampler sampler(TextureSampler::MagFilter::LINEAR, TextureSampler::WrapMode::REPEAT);

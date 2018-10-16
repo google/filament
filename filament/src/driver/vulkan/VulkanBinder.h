@@ -36,7 +36,7 @@ namespace driver {
 //
 // Abbreviated example usage:
 //
-//     void Driver::bindUniforms(uint32_t index, UniformBlock block) {
+//     void Driver::bindUniformBuffer(uint32_t index, UniformBlock block) {
 //         VkBuffer buffer = block->getGpuBuffer();
 //         mBinder.bindUniformBuffer(index, buffer);
 //     }

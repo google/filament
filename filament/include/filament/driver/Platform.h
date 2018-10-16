@@ -80,7 +80,7 @@ public:
     // swap draw buffers (i.e. for double-buffered rendering).
     virtual void commit(SwapChain* swapChain) noexcept = 0;
 
-    virtual void setPresentationTime(long time) noexcept = 0;
+    virtual void setPresentationTime(int64_t presentationTimeInNanosecond) noexcept = 0;
 
     virtual bool canCreateFence() noexcept { return false; }
     virtual Fence* createFence() noexcept = 0;
@@ -97,7 +97,7 @@ public:
 
     // detach destroys the texture associated to the stream
     virtual void detach(Stream* stream) noexcept = 0;
-    virtual void updateTexImage(Stream* stream) noexcept = 0;
+    virtual void updateTexImage(Stream* stream, int64_t* timestamp) noexcept = 0;
 
     // external texture storage
     virtual ExternalTexture* createExternalTextureStorage() noexcept = 0;

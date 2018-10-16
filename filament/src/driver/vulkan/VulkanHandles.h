@@ -119,8 +119,10 @@ struct VulkanTexture : public HwTexture {
             TextureFormat format, uint8_t samples, uint32_t w, uint32_t h, uint32_t depth,
             TextureUsage usage, VulkanStagePool& stagePool);
     ~VulkanTexture();
-    void load2DImage(PixelBufferDescriptor&& data, uint32_t width, uint32_t height, int miplevel);
-    void loadCubeImage(PixelBufferDescriptor&& data, const FaceOffsets& faceOffsets, int miplevel);
+    void load2DImage(const PixelBufferDescriptor& data, uint32_t width, uint32_t height,
+            int miplevel);
+    void loadCubeImage(const PixelBufferDescriptor& data, const FaceOffsets& faceOffsets,
+            int miplevel);
     VkFormat format;
     VkImageView imageView = VK_NULL_HANDLE;
     VkImage textureImage = VK_NULL_HANDLE;

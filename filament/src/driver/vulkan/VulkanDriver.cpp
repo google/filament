@@ -194,7 +194,7 @@ void VulkanDriver::terminate() {
     mContext.instance = nullptr;
 }
 
-void VulkanDriver::beginFrame(uint64_t monotonic_clock_ns, uint32_t frameId) {
+void VulkanDriver::beginFrame(int64_t monotonic_clock_ns, uint32_t frameId) {
     // We allow multiple beginFrame / endFrame pairs before commit(), so gracefully return early
     // if the swap chain has already been acquired.
     if (mContext.cmdbuffer) {
@@ -228,7 +228,7 @@ void VulkanDriver::beginFrame(uint64_t monotonic_clock_ns, uint32_t frameId) {
     mBinder.gc();
 }
 
-void VulkanDriver::setPresentationTime(uint64_t monotonic_clock_ns) {
+void VulkanDriver::setPresentationTime(int64_t monotonic_clock_ns) {
 }
 
 void VulkanDriver::endFrame(uint32_t frameId) {
@@ -240,13 +240,14 @@ void VulkanDriver::flush(int) {
 }
 
 void VulkanDriver::createVertexBuffer(Driver::VertexBufferHandle vbh, uint8_t bufferCount,
-        uint8_t attributeCount, uint32_t elementCount, Driver::AttributeArray attributes) {
+        uint8_t attributeCount, uint32_t elementCount, Driver::AttributeArray attributes,
+        Driver::BufferUsage usage) {
     construct_handle<VulkanVertexBuffer>(mHandleMap, vbh, mContext, mStagePool, bufferCount,
             attributeCount, elementCount, attributes);
 }
 
 void VulkanDriver::createIndexBuffer(Driver::IndexBufferHandle ibh, Driver::ElementType elementType,
-        uint32_t indexCount) {
+        uint32_t indexCount, Driver::BufferUsage usage) {
     auto elementSize = (uint8_t) getElementTypeSize(elementType);
     construct_handle<VulkanIndexBuffer>(mHandleMap, ibh, mContext, mStagePool, elementSize,
             indexCount);
@@ -263,7 +264,8 @@ void VulkanDriver::createSamplerBuffer(Driver::SamplerBufferHandle sbh, size_t c
     construct_handle<VulkanSamplerBuffer>(mHandleMap, sbh, mContext, count);
 }
 
-void VulkanDriver::createUniformBuffer(Driver::UniformBufferHandle ubh, size_t size) {
+void VulkanDriver::createUniformBuffer(Driver::UniformBufferHandle ubh, size_t size,
+        Driver::BufferUsage usage) {
     construct_handle<VulkanUniformBuffer>(mHandleMap, ubh, mContext, mStagePool, size);
 }
 
@@ -467,6 +469,10 @@ Handle<HwStream> VulkanDriver::createStream(void* nativeStream) {
 void VulkanDriver::setStreamDimensions(Driver::StreamHandle sh, uint32_t width, uint32_t height) {
 }
 
+int64_t VulkanDriver::getStreamTimestamp(Driver::StreamHandle sh) {
+    return 0;
+}
+
 void VulkanDriver::updateStreams(CommandStream* driver) {
 }
 
@@ -524,14 +530,14 @@ void VulkanDriver::load2DImage(Driver::TextureHandle th,
         PixelBufferDescriptor&& data) {
     assert(data.type != driver::PixelDataType::COMPRESSED && "Compression not yet supported.");
     assert(xoffset == 0 && yoffset == 0 && "Offsets not yet supported.");
-    handle_cast<VulkanTexture>(mHandleMap, th)->load2DImage(std::move(data), width, height, level);
+    handle_cast<VulkanTexture>(mHandleMap, th)->load2DImage(data, width, height, level);
     scheduleDestroy(std::move(data));
 }
 
 void VulkanDriver::loadCubeImage(Driver::TextureHandle th, uint32_t level,
         PixelBufferDescriptor&& data, FaceOffsets faceOffsets) {
     assert(data.type != driver::PixelDataType::COMPRESSED && "Compression not yet supported.");
-    handle_cast<VulkanTexture>(mHandleMap, th)->loadCubeImage(std::move(data), faceOffsets, level);
+    handle_cast<VulkanTexture>(mHandleMap, th)->loadCubeImage(data, faceOffsets, level);
     scheduleDestroy(std::move(data));
 }
 
@@ -544,13 +550,10 @@ void VulkanDriver::setExternalStream(Driver::TextureHandle th, Driver::StreamHan
 void VulkanDriver::generateMipmaps(Driver::TextureHandle th) {
 }
 
-void VulkanDriver::updateUniformBuffer(Driver::UniformBufferHandle ubh,
-        UniformBuffer&& uniformBuffer) {
+void VulkanDriver::updateUniformBuffer(Driver::UniformBufferHandle ubh, BufferDescriptor&& data) {
     auto* buffer = handle_cast<VulkanUniformBuffer>(mHandleMap, ubh);
-    if (uniformBuffer.isDirty()) {
-        buffer->loadFromCpu(uniformBuffer.getBuffer(), (uint32_t) uniformBuffer.getSize());
-    }
-    buffer->ub = std::move(uniformBuffer);
+    buffer->loadFromCpu(data.buffer, (uint32_t) data.size);
+    scheduleDestroy(std::move(data));
 }
 
 void VulkanDriver::updateSamplerBuffer(Driver::SamplerBufferHandle sbh,
@@ -744,12 +747,18 @@ void VulkanDriver::viewport(ssize_t left, ssize_t bottom, size_t width, size_t h
     vkCmdSetViewport(mContext.cmdbuffer, 0, 1, &viewport);
 }
 
-void VulkanDriver::bindUniforms(size_t index, Driver::UniformBufferHandle ubh) {
+void VulkanDriver::bindUniformBuffer(size_t index, Driver::UniformBufferHandle ubh) {
     auto* buffer = handle_cast<VulkanUniformBuffer>(mHandleMap, ubh);
     // The driver API does not currently expose offset / range, but it will do so in the future.
     const VkDeviceSize offset = 0;
     const VkDeviceSize size = VK_WHOLE_SIZE;
     mBinder.bindUniformBuffer((uint32_t) index, buffer->getGpuBuffer(), offset, size);
+}
+
+void VulkanDriver::bindUniformBufferRange(size_t index, Driver::UniformBufferHandle ubh,
+        size_t offset, size_t size) {
+    auto* buffer = handle_cast<VulkanUniformBuffer>(mHandleMap, ubh);
+    mBinder.bindUniformBuffer((uint32_t)index, buffer->getGpuBuffer(), offset, size);
 }
 
 void VulkanDriver::bindSamplers(size_t index, Driver::SamplerBufferHandle sbh) {

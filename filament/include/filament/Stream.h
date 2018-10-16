@@ -150,7 +150,7 @@ public:
      *  +--------------------+
      *  |                    |                .stride         .alignment
      *  |                    |         ----------------------->-->
-     *  |                    |         O----------------------+--+   low adresses
+     *  |                    |         O----------------------+--+   low addresses
      *  |                    |         |          |           |  |
      *  |             w      |         |          | .top      |  |
      *  |       <--------->  |         |          V           |  |
@@ -160,7 +160,7 @@ public:
      *  +------>|     v   |  |         +---->|         |      |  |
      *  |       +.........+  |         |     +.........+      |  |
      *  |            ^       |         |                      |  |
-     *  |          y |       |         +----------------------+--+  high adresses
+     *  |          y |       |         +----------------------+--+  high addresses
      *  O------------+-------+
      *
      * Typically readPixels() will be called after Renderer.beginFrame().
@@ -176,6 +176,15 @@ public:
      */
     void readPixels(uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
             driver::PixelBufferDescriptor&& buffer) noexcept;
+
+    /**
+     * Returns the presentation time of the currently displayed frame in nanosecond.
+     *
+     * This value can change at any time.
+     *
+     * @return timestamp in nanosecond.
+     */
+    int64_t getTimestamp() const noexcept;
 };
 
 } // namespace filament

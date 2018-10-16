@@ -56,7 +56,8 @@ JniCallback::~JniCallback() {
 
 void JniCallback::invoke(void*, size_t, void* user) {
     JniCallback* data = reinterpret_cast<JniCallback*>(user);
-    delete data;
+    // don't call delete here, because we don't own the storage
+    data->~JniCallback();
 }
 
 JniBufferCallback* JniBufferCallback::make(filament::Engine* engine,

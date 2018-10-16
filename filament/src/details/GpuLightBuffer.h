@@ -17,8 +17,9 @@
 #ifndef TNT_FILAMENT_DETAILS_LIGHTDATA_H
 #define TNT_FILAMENT_DETAILS_LIGHTDATA_H
 
+#include "UniformBuffer.h"
+
 #include <driver/Handle.h>
-#include <driver/UniformBuffer.h>
 
 #include <math/vec4.h>
 

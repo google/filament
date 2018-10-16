@@ -606,7 +606,6 @@ VkFormat getVkFormat(TextureFormat format) {
         case TextureFormat::RGBA8:             return VK_FORMAT_R8G8B8A8_UNORM;
         case TextureFormat::SRGB8_A8:          return VK_FORMAT_R8G8B8A8_SRGB;
         case TextureFormat::RGBA8_SNORM:       return VK_FORMAT_R8G8B8A8_SNORM;
-        case TextureFormat::RGBM:              return VK_FORMAT_R8G8B8A8_UNORM;
         case TextureFormat::RGB10_A2:          return VK_FORMAT_A2R10G10B10_UNORM_PACK32;
         case TextureFormat::RGBA8UI:           return VK_FORMAT_R8G8B8A8_UINT;
         case TextureFormat::RGBA8I:            return VK_FORMAT_R8G8B8A8_SINT;

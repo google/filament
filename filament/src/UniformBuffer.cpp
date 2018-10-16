@@ -14,16 +14,16 @@
  * limitations under the License.
  */
 
-#include "driver/UniformBuffer.h"
+#include "UniformBuffer.h"
 
-#include <stdlib.h>
-#include <string.h>
+#include <utils/Mutex.h>
 
 #include <mutex>
 #include <type_traits>
 #include <unordered_map>
 
-#include <utils/Mutex.h>
+#include <stdlib.h>
+#include <string.h>
 
 using namespace math;
 
@@ -39,7 +39,7 @@ public:
         mBlocks.reserve(mMaxElementCount);
     }
 
-    Pool(size_t maxCount) noexcept : mMaxElementCount(maxCount) {
+    explicit Pool(size_t maxCount) noexcept : mMaxElementCount(maxCount) {
         mBlocks.reserve(maxCount);
     }
 
@@ -51,7 +51,7 @@ public:
 
     // always round size up to reduce the number of bins
     static size_t align(size_t size) noexcept {
-        return (size + (SIZE_ALIGNMENT-1)) & ~(SIZE_ALIGNMENT-1);
+        return (size + (SIZE_ALIGNMENT - 1)) & ~(SIZE_ALIGNMENT - 1);
     }
 
     void* get(size_t size) noexcept {
@@ -112,6 +112,16 @@ UniformBuffer::UniformBuffer(UniformInterfaceBlock const& uib) noexcept
 UniformBuffer::UniformBuffer(const UniformBuffer& rhs)
         : mBuffer(mStorage),
           mSize(rhs.mSize),
+          mSomethingDirty(rhs.mSomethingDirty) {
+    if (UTILS_LIKELY(mSize > sizeof(mStorage))) {
+        mBuffer = UniformBuffer::alloc(rhs.mSize);
+    }
+    memcpy(mBuffer, rhs.mBuffer, mSize);
+}
+
+UniformBuffer::UniformBuffer(const UniformBuffer& rhs, size_t trim)
+        : mBuffer(mStorage),
+          mSize(std::min(uint32_t(trim), rhs.mSize)),
           mSomethingDirty(rhs.mSomethingDirty) {
     if (UTILS_LIKELY(mSize > sizeof(mStorage))) {
         mBuffer = UniformBuffer::alloc(rhs.mSize);

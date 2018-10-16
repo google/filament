@@ -35,7 +35,6 @@
 #include "driver/DriverApiForward.h"
 #include "driver/Program.h"
 #include "driver/SamplerBuffer.h"
-#include "driver/UniformBuffer.h"
 
 namespace filament {
 
@@ -62,7 +61,6 @@ public:
     using PrimitiveType = driver::PrimitiveType;
     using UniformType = driver::UniformType;
     using ElementType = driver::ElementType;
-    using Usage = driver::Usage;
     using TextureFormat = driver::TextureFormat;
     using TextureUsage = driver::TextureUsage;
     using TextureCubemapFace = driver::TextureCubemapFace;
@@ -82,6 +80,7 @@ public:
     using FenceStatus = driver::FenceStatus;
     using TargetBufferFlags = driver::TargetBufferFlags;
     using RenderPassParams = driver::RenderPassParams;
+    using BufferUsage = driver::BufferUsage;
 
     static constexpr uint64_t FENCE_WAIT_FOR_EVER = driver::FENCE_WAIT_FOR_EVER;
 
@@ -122,7 +121,7 @@ public:
 
     struct TargetBufferInfo {
         // ctor for 2D textures
-        TargetBufferInfo(TextureHandle h, uint8_t level = 0) noexcept
+        TargetBufferInfo(TextureHandle h, uint8_t level = 0) noexcept // NOLINT(google-explicit-constructor)
                 : handle(h), level(level) { }
         // ctor for cubemaps
         TargetBufferInfo(TextureHandle h, uint8_t level, TextureCubemapFace face) noexcept
@@ -266,7 +265,7 @@ utils::io::ostream& operator<<(utils::io::ostream& out, const filament::Driver::
 utils::io::ostream& operator<<(utils::io::ostream& out, filament::driver::ShaderModel model);
 utils::io::ostream& operator<<(utils::io::ostream& out, filament::driver::PrimitiveType type);
 utils::io::ostream& operator<<(utils::io::ostream& out, filament::driver::ElementType type);
-utils::io::ostream& operator<<(utils::io::ostream& out, filament::driver::Usage usage);
+utils::io::ostream& operator<<(utils::io::ostream& out, filament::driver::BufferUsage usage);
 utils::io::ostream& operator<<(utils::io::ostream& out, filament::driver::CullingMode mode);
 utils::io::ostream& operator<<(utils::io::ostream& out, filament::driver::SamplerType type);
 utils::io::ostream& operator<<(utils::io::ostream& out, filament::driver::SamplerFormat format);

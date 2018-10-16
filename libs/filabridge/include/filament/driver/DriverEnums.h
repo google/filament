@@ -60,6 +60,15 @@ enum TargetBufferFlags : uint8_t {
 };
 
 /**
+ * Frequency at which a buffer is expected to be modified and used. This is used as an hint
+ * for the driver to make better decisions about managing memory internally.
+ */
+enum BufferUsage : uint8_t {
+    STATIC,                 //!< content modified once, used many times
+    DYNAMIC,                //!< content modified frequently, used many times
+};
+
+/**
  * Selects which buffers to clear at the beginning of the render pass, as well as which buffers
  * can be discarded and the beginning and end of the render pass.
  */
@@ -191,11 +200,6 @@ enum class ElementType : uint8_t {
     HALF2,
     HALF3,
     HALF4,
-};
-
-enum class Usage : uint8_t {
-    STATIC,
-    DYNAMIC
 };
 
 enum class CullingMode : uint8_t {
@@ -368,7 +372,7 @@ enum class TextureFormat : uint16_t {
     RG16F, RG16UI, RG16I,
     R11F_G11F_B10F,
     RGBA8, SRGB8_A8,RGBA8_SNORM,
-    RGBM, // Deprecated but still honored; see Texture::Builder::rgbm
+    UNUSED, // The RGBM InternalFormat has been replaced with a flag (Texture::Builder::rgbm)
     RGB10_A2, RGBA8UI, RGBA8I,
     DEPTH32F, DEPTH24_STENCIL8, DEPTH32F_STENCIL8,
 
@@ -569,7 +573,7 @@ enum class BlendFunction : uint8_t {
     SRC_ALPHA_SATURATE
 };
 
-static constexpr size_t PIPELINE_STAGE_COUNT= 2;
+static constexpr size_t PIPELINE_STAGE_COUNT = 2;
 enum ShaderType : uint8_t {
     VERTEX = 0,
     FRAGMENT = 1

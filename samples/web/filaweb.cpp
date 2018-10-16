@@ -20,11 +20,6 @@
 
 #include <imgui.h>
 
-#define STB_IMAGE_IMPLEMENTATION
-#define STBI_NO_STDIO
-#define STBI_ONLY_PNG
-#include <stb_image.h>
-
 #include <emscripten.h>
 
 #include <image/KtxBundle.h>
@@ -164,20 +159,6 @@ Asset getRawFile(const char* name) {
     return result;
 }
 
-static Asset getPngTexture(const Asset& rawfile) {
-    int width, height, ncomp;
-    stbi_info_from_memory(rawfile.rawData.get(), rawfile.rawSize, &width, &height, &ncomp);
-    const uint32_t nbytes = width * height * 4;
-    stbi_uc* decoded = stbi_load_from_memory(rawfile.rawData.get(), rawfile.rawSize, &width,
-            &height, &ncomp, 4);
-    Asset result = {};
-    result.texture.reset(new KtxBundle(1, 1, false));
-    result.texture->setBlob({}, decoded, nbytes);
-    stbi_image_free(decoded);
-    return result;
-
-}
-
 static Asset getKtxTexture(const Asset& rawfile) {
     Asset result = {};
     result.texture.reset(new KtxBundle(rawfile.rawData.get(), rawfile.rawSize));
@@ -186,12 +167,6 @@ static Asset getKtxTexture(const Asset& rawfile) {
 
 Asset getTexture(const char* name) {
     Asset rawfile = getRawFile(name);
-    string extension = Path(rawfile.rawUrl).getExtension();
-    fflush(stdout);
-    if (extension == "png" || extension == "rgbm") {
-        return getPngTexture(rawfile);
-    }
-    // Do not check for KTX here, sometimes we use an alternate file extension.
     return getKtxTexture(rawfile);
 }
 
@@ -214,6 +189,67 @@ Asset getCubemap(const char* name) {
     return result;
 }
 
+static Texture* createCubemapTexture(filament::Engine& engine, image::KtxBundle* ktxbundle) {
+    auto info = ktxbundle->getInfo();
+    uint32_t nmips = ktxbundle->getNumMipLevels();
+    auto builder = Texture::Builder()
+            .width(info.pixelWidth)
+            .height(info.pixelHeight)
+            .levels(nmips)
+            .rgbm(true)
+            .sampler(Texture::Sampler::SAMPLER_CUBEMAP);
+
+    // Compressed textures in KTX always have a glFormat of 0.
+    if (info.glFormat == 0) {
+        builder.format(filaweb::toTextureFormat(info.glInternalFormat));
+    } else {
+        builder.format(Texture::InternalFormat::RGBA8);
+    }
+    Texture* texture = builder.build(engine);
+    size_t size = info.pixelWidth;
+    uint32_t i = 0;
+    for (uint32_t mip = 0; mip < nmips; ++mip, size >>= 1) {
+
+        uint8_t* ktxPixels;
+        uint32_t faceSize;
+        ktxbundle->getBlob({mip}, &ktxPixels, &faceSize);
+
+        Texture::FaceOffsets offsets;
+        offsets.px = faceSize * 0;
+        offsets.nx = faceSize * 1;
+        offsets.py = faceSize * 2;
+        offsets.ny = faceSize * 3;
+        offsets.pz = faceSize * 4;
+        offsets.nz = faceSize * 5;
+
+        // If this is a compressed texture, use a special PixelBufferDescriptor constructor.
+        Texture::PixelBufferDescriptor* buffer;
+        if (info.glFormat == 0) {
+            auto datatype = filaweb::toPixelDataType(info.glInternalFormat);
+            buffer = new Texture::PixelBufferDescriptor(
+                    malloc(faceSize * 6), faceSize * 6,
+                    datatype, faceSize,
+                    [](void* buffer, size_t size, void* user) {
+                        free(buffer);
+                    }, /* user = */ nullptr);
+        } else {
+            buffer = new Texture::PixelBufferDescriptor(
+                    malloc(faceSize * 6), faceSize * 6,
+                    Texture::Format::RGBM, Texture::Type::UBYTE,
+                    [](void* buffer, size_t size, void* user) {
+                        free(buffer);
+                    }, /* user = */ nullptr);
+        }
+
+        // Copy 6 faces from the KTX bundle into the Filament pixel buffer.
+        uint8_t* pbdPixels = static_cast<uint8_t*>(buffer->buffer);
+        memcpy(pbdPixels, ktxPixels, faceSize * 6);
+        texture->setImage(engine, mip, std::move(*buffer), offsets);
+        delete buffer;
+    }
+    return texture;
+}
+
 SkyLight getSkyLight(Engine& engine, const char* name) {
     SkyLight result;
     using size_t = std::size_t;
@@ -234,40 +270,7 @@ SkyLight getSkyLight(Engine& engine, const char* name) {
     }
 
     // Copy over the miplevels for the indirect light.
-    auto info = asset.envIBL->texture->getInfo();
-    uint32_t nmips = asset.envIBL->texture->getNumMipLevels();
-    Texture* texture = Texture::Builder()
-        .width(info.pixelWidth)
-        .height(info.pixelHeight)
-        .levels(nmips)
-        .format(Texture::InternalFormat::RGBA8)
-        .rgbm(true)
-        .sampler(Texture::Sampler::SAMPLER_CUBEMAP)
-        .build(engine);
-    size_t size = info.pixelWidth;
-    uint32_t i = 0;
-    for (uint32_t mip = 0; mip < nmips; ++mip, size >>= 1) {
-        const size_t faceSize = size * size * 4;
-        Texture::FaceOffsets offsets;
-        offsets.px = faceSize * 0;
-        offsets.nx = faceSize * 1;
-        offsets.py = faceSize * 2;
-        offsets.ny = faceSize * 3;
-        offsets.pz = faceSize * 4;
-        offsets.nz = faceSize * 5;
-        Texture::PixelBufferDescriptor buffer(
-                malloc(faceSize * 6), faceSize * 6,
-                Texture::Format::RGBM, Texture::Type::UBYTE,
-                [](void* buffer, size_t size, void* user) {
-                    free(buffer);
-                }, /* user = */ nullptr);
-        uint8_t* pbdPixels = static_cast<uint8_t*>(buffer.buffer);
-        uint8_t* ktxPixels;
-        uint32_t ktxSize;
-        asset.envIBL->texture->getBlob({mip}, &ktxPixels, &ktxSize);
-        memcpy(pbdPixels, ktxPixels, faceSize * 6);
-        texture->setImage(engine, mip, std::move(buffer), offsets);
-    }
+    Texture* texture = createCubemapTexture(engine, asset.envIBL->texture.get());
     asset.envIBL->texture.reset();
 
     result.indirectLight = IndirectLight::Builder()
@@ -277,41 +280,9 @@ SkyLight getSkyLight(Engine& engine, const char* name) {
         .build(engine);
 
     // Copy a single miplevel for the blurry skybox
-    info = asset.envSky->texture->getInfo();
-    size = info.pixelWidth;
-    Texture* skybox = Texture::Builder()
-        .width(size)
-        .height(size)
-        .levels(1)
-        .format(Texture::InternalFormat::RGBA8)
-        .rgbm(true)
-        .sampler(Texture::Sampler::SAMPLER_CUBEMAP)
-        .build(engine);
-    {
-        const size_t faceSize = size * size * 4;
-        Texture::FaceOffsets offsets;
-        offsets.px = faceSize * 0;
-        offsets.nx = faceSize * 1;
-        offsets.py = faceSize * 2;
-        offsets.ny = faceSize * 3;
-        offsets.pz = faceSize * 4;
-        offsets.nz = faceSize * 5;
-        Texture::PixelBufferDescriptor buffer(
-                malloc(faceSize * 6), faceSize * 6,
-                Texture::Format::RGBA, Texture::Type::UBYTE,
-                [](void* buffer, size_t size, void* user) {
-                    free(buffer);
-                }, /* user = */ nullptr);
-        uint8_t* pbdPixels = static_cast<uint8_t*>(buffer.buffer);
-        uint8_t* ktxPixels;
-        uint32_t ktxSize;
-        asset.envSky->texture->getBlob({}, &ktxPixels, &ktxSize);
-        memcpy(pbdPixels, ktxPixels, faceSize * 6);
-        skybox->setImage(engine, 0, std::move(buffer), offsets);
-    }
+    Texture* skybox = createCubemapTexture(engine, asset.envSky->texture.get());
     asset.envSky->texture.reset();
     result.skybox = Skybox::Builder().environment(skybox).build(engine);
-
     return result;
 }
 

@@ -126,11 +126,6 @@ public class UiHelper {
         // TODO: do something with policy
     }
 
-    public UiHelper(int sampleCount, RendererCallback renderCallback) {
-        this();
-        setRenderCallback(renderCallback);
-    }
-
     public void setRenderCallback(RendererCallback renderCallback) {
         mRenderCallback = renderCallback;
     }

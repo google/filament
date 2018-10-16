@@ -29,7 +29,6 @@
 
 #include "driver/Driver.h"
 #include "driver/SamplerBuffer.h"
-#include "driver/UniformBuffer.h"
 
 namespace filament {
 
@@ -100,8 +99,8 @@ struct HwSamplerBuffer : public HwBase {
 };
 
 struct HwUniformBuffer : public HwBase {
-    explicit HwUniformBuffer(size_t size) noexcept : ub(size) { }
-    UniformBuffer ub;
+    explicit HwUniformBuffer(uint32_t size) noexcept : size(size) { }
+    uint32_t size;
 };
 
 struct HwTexture : public HwBase {

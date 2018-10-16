@@ -60,7 +60,7 @@ public class Texture {
         RG16F, RG16UI, RG16I,
         R11F_G11F_B10F,
         RGBA8, SRGB8_A8, RGBA8_SNORM,
-        RGBM, // Deprecated but still honored; see Texture.Builder.rgbm
+        UNUSED, // The RGBM InternalFormat has been replaced with a flag (Texture.Builder.rgbm)
         RGB10_A2, RGBA8UI, RGBA8I,
         DEPTH32F, DEPTH24_STENCIL8, DEPTH32F_STENCIL8,
 
@@ -334,7 +334,7 @@ public class Texture {
         }
 
         @NonNull
-        public Builder rgbm(@NonNull boolean enabled) {
+        public Builder rgbm(boolean enabled) {
             nBuilderRgbm(mNativeBuilder, enabled);
             return this;
         }
@@ -524,7 +524,8 @@ public class Texture {
             int alignment, int compressedSizeInBytes, int compressedFormat,
             int[] faceOffsetsInBytes, Object handler, Runnable callback);
 
-    private static native void nSetExternalImage(long nativeObject, long nativeObject1, long eglImage);
+    private static native void nSetExternalImage(
+            long nativeObject, long nativeEngine, long eglImage);
 
     private static native void nSetExternalStream(long nativeTexture,
             long nativeEngine, long nativeStream);

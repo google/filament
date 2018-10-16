@@ -132,8 +132,8 @@ class MainActivity : Activity() {
         setupMaterial()
         loadImageBasedLight()
 
-        scene.setSkybox(ibl.skybox)
-        scene.setIndirectLight(ibl.indirectLight)
+        scene.skybox = ibl.skybox
+        scene.indirectLight = ibl.indirectLight
 
         // This map can contain named materials that will map to the material names
         // loaded from the filamesh file. The material called "DefaultMaterial" is

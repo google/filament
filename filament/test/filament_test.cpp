@@ -15,6 +15,7 @@
  */
 
 #include <iostream>
+#include <random>
 
 #include <gtest/gtest.h>
 
@@ -28,7 +29,6 @@
 #include <filament/Material.h>
 #include <filament/Engine.h>
 
-#include "driver/UniformBuffer.h"
 #include <filament/UniformInterfaceBlock.h>
 
 #include "details/Allocators.h"
@@ -36,8 +36,10 @@
 #include "details/Camera.h"
 #include "details/Froxelizer.h"
 #include "details/Engine.h"
+#include "components/RenderableManager.h"
 #include "components/TransformManager.h"
 #include "utils/RangeSet.h"
+#include "UniformBuffer.h"
 
 using namespace filament;
 using namespace math;
@@ -806,6 +808,123 @@ TEST(FilamentTest, RangeSet) {
     EXPECT_EQ(250, b[2].end);
 }
 
+TEST(FilamentTest, Bones) {
+    using namespace ::filament::details;
+
+    struct Shader {
+        static mat3f normal(FRenderableManager::InternalBone const& bone) noexcept {
+            quatf q = bone.rigidTransform;
+            float3 is = bone.iscales.xyz;
+            return mat3f(q) * mat3f::scale(is);
+        }
+        static  mat4f vertice(FRenderableManager::InternalBone const& bone) noexcept {
+            quatf q = bone.rigidTransform;
+            float3 t = bone.translation.xyz;
+            float3 s = bone.scales.xyz;
+            return mat4f::translate(t) * mat4f(q) * mat4f::scale(s);
+        }
+        static float3 normal(float3 n, FRenderableManager::InternalBone const& bone) noexcept {
+            quatf q = bone.rigidTransform;
+            float3 is = bone.iscales.xyz;
+            // apply the inverse of the non-uniform scales
+            n *= is;
+            // apply the rigid transform
+            n += 2.0 * cross(q.xyz, cross(q.xyz, n) + q.w * n);
+            return n;
+        }
+        static  float3 vertice(float3 v, FRenderableManager::InternalBone const& bone) noexcept {
+            quatf q = bone.rigidTransform;
+            float3 t = bone.translation.xyz;
+            float3 s = bone.scales.xyz;
+            // apply the non-uniform scales
+            v *= s;
+            // apply the rigid transform
+            v += 2.0 * cross(q.xyz, cross(q.xyz, v) + q.w * v);
+            // apply the translation
+            v += t;
+            return v;
+        }
+    };
+
+    struct Test {
+        static void expect_eq(mat4f e, mat4f a) noexcept {
+            for (size_t j = 0; j < 4; j++) {
+                for (size_t i = 0; i < 4; i++) {
+                    EXPECT_NEAR(e[i][j], a[i][j], 1e-6);
+                }
+            }
+        }
+        static void expect_eq(mat3f e, mat3f a) noexcept {
+            for (size_t j = 0; j < 3; j++) {
+                for (size_t i = 0; i < 3; i++) {
+                    EXPECT_NEAR(e[i][j], a[i][j], 1e-6);
+                }
+            }
+        }
+        static void expect_eq(float3 e, float3 a) noexcept {
+            for (size_t i = 0; i < 3; i++) {
+                EXPECT_NEAR(e[i], a[i], 1e-4);
+            }
+        }
+
+        static void check(mat4f const& m) noexcept {
+            FRenderableManager::InternalBone b;
+            FRenderableManager::makeBone(&b, m);
+            expect_eq(Shader::vertice(b), m);
+            expect_eq(Shader::normal(b), transpose(inverse(m.upperLeft())));
+
+        }
+
+        static void check(mat4f const& m, float3 const& v) noexcept {
+            FRenderableManager::InternalBone b;
+            FRenderableManager::makeBone(&b, m);
+            expect_eq((m * v).xyz, Shader::vertice(v, b));
+            expect_eq(transpose(inverse(m.upperLeft())) * normalize(v), Shader::normal(normalize(v), b));
+        }
+    };
+
+    Test::check(mat4f{});
+    Test::check(mat4f::translate(float3{1,2,3}));
+
+    Test::check(mat4f::scale(float3{2,2,2}));
+    Test::check(mat4f::scale(float3{1,2,3}));
+    Test::check(mat4f::scale(float3{1,-2,-3}));
+    Test::check(mat4f::scale(float3{-1,2,-3}));
+    Test::check(mat4f::scale(float3{-1,-2,3}));
+
+    Test::check(mat4f::scale(float3{-1,-2,-3}));
+    Test::check(mat4f::scale(float3{-1,2,3}));
+    Test::check(mat4f::scale(float3{1,-2,3}));
+    Test::check(mat4f::scale(float3{1,2,-3}));
+
+    Test::check(mat4f::rotate(M_PI_2, float3{0,0,1}));
+    Test::check(mat4f::rotate(M_PI_2, float3{0,1,0}));
+    Test::check(mat4f::rotate(M_PI_2, float3{1,0,0}));
+    Test::check(mat4f::rotate(M_PI_2, float3{0,1,1}));
+    Test::check(mat4f::rotate(M_PI_2, float3{1,0,1}));
+    Test::check(mat4f::rotate(M_PI_2, float3{1,1,0}));
+    Test::check(mat4f::rotate(-M_PI_2, float3{0,0,1}));
+    Test::check(mat4f::rotate(-M_PI_2, float3{0,1,0}));
+    Test::check(mat4f::rotate(-M_PI_2, float3{1,0,0}));
+    Test::check(mat4f::rotate(-M_PI_2, float3{0,1,1}));
+    Test::check(mat4f::rotate(-M_PI_2, float3{1,0,1}));
+    Test::check(mat4f::rotate(-M_PI_2, float3{1,1,0}));
+
+    mat4f m = mat4f::translate(float3{1,2,3}) *
+              mat4f::rotate(-M_PI_2, float3{1,1,0}) *
+              mat4f::scale(float3{-1,2,3});
+
+    Test::check(m);
+
+    std::default_random_engine generator(82828);
+    std::uniform_real_distribution<float> distribution(-100.0f, 100.0f);
+    auto rand_gen = std::bind(distribution, generator);
+
+    for (size_t i = 0; i < 100; ++i) {
+        float3 p(rand_gen(), rand_gen(), rand_gen());
+        Test::check(m, p);
+    }
+}
 
 int main(int argc, char** argv) {
     ::testing::InitGoogleTest(&argc, argv);

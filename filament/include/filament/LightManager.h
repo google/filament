@@ -421,7 +421,7 @@ public:
          * @error if exceptions are disabled and an error occurs, this function is a no-op.
          *        Success can be checked by looking at the return value.
          *
-         * @exception utils::PostConditionPanic if a runtime error occured, such as running out of
+         * @exception utils::PostConditionPanic if a runtime error occurred, such as running out of
          *            memory or other resources.
          * @exception utils::PreConditionPanic if a parameter to a builder function was invalid.
          */

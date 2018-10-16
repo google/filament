@@ -46,7 +46,7 @@ public:
     void makeCurrent(SwapChain* drawSwapChain, SwapChain* readSwapChain) noexcept final;
     void commit(SwapChain* swapChain) noexcept final;
 
-    void setPresentationTime(long time) noexcept final;
+    void setPresentationTime(int64_t presentationTimeInNanosecond) noexcept final;
 
     bool canCreateFence() noexcept final { return true; }
     Fence* createFence() noexcept final;
@@ -57,7 +57,7 @@ public:
     void destroyStream(Stream* stream) noexcept final;
     void attach(Stream* stream, intptr_t tname) noexcept final;
     void detach(Stream* stream) noexcept final;
-    void updateTexImage(Stream* stream) noexcept final;
+    void updateTexImage(Stream* stream, int64_t* timestamp) noexcept final;
 
     ExternalTexture* createExternalTextureStorage() noexcept final;
     void reallocateExternalStorage(ExternalTexture* ets,

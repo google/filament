@@ -18,10 +18,10 @@
 #define TNT_FILAMENT_DETAILS_MATERIALINSTANCE_H
 
 #include "upcast.h"
+#include "UniformBuffer.h"
 #include "details/Engine.h"
 #include "driver/DriverApi.h"
 #include "driver/Handle.h"
-#include "driver/UniformBuffer.h"
 
 #include <utils/compiler.h>
 
@@ -50,7 +50,7 @@ public:
 
     void use(FEngine::DriverApi& driver) const {
         if (mUbHandle) {
-            driver.bindUniforms(BindingPoints::PER_MATERIAL_INSTANCE, mUbHandle);
+            driver.bindUniformBuffer(BindingPoints::PER_MATERIAL_INSTANCE, mUbHandle);
         }
         if (mSbHandle) {
             driver.bindSamplers(BindingPoints::PER_MATERIAL_INSTANCE, mSbHandle);

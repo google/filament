@@ -60,7 +60,7 @@ FView::FView(FEngine& engine)
       mDirectionalShadowMap(engine) {
     DriverApi& driverApi = engine.getDriverApi();
 
-    mPerViewUbh = driverApi.createUniformBuffer(mPerViewUb.getSize());
+    mPerViewUbh = driverApi.createUniformBuffer(mPerViewUb.getSize(), driver::BufferUsage::DYNAMIC);
     mPerViewSbh = driverApi.createSamplerBuffer(mPerViewSb.getSize());
 
     mPerViewSb.setBuffer(FEngine::PerViewSib::RECORDS, mFroxelizer.getRecordBuffer());
@@ -594,14 +594,14 @@ void FView::froxelize(FEngine& engine) const noexcept {
     }
 }
 
-void FView::commitUniforms(driver::DriverApi& driverApi) const noexcept {
+void FView::commitUniforms(driver::DriverApi& driver) const noexcept {
     if (mPerViewUb.isDirty()) {
-        driverApi.updateUniformBuffer(mPerViewUbh, UniformBuffer(mPerViewUb));
+        driver.updateUniformBuffer(mPerViewUbh, mPerViewUb.toBufferDescriptor(driver));
         mPerViewUb.clean();
     }
 
     if (mPerViewSb.isDirty()) {
-        driverApi.updateSamplerBuffer(mPerViewSbh, SamplerBuffer(mPerViewSb));
+        driver.updateSamplerBuffer(mPerViewSbh, SamplerBuffer(mPerViewSb));
         mPerViewSb.clean();
     }
 }

@@ -31,8 +31,8 @@ namespace details {
 GpuLightBuffer::GpuLightBuffer(FEngine& engine) noexcept
         : mLightsUb(UibGenerator::getLightsUib()) {
     DriverApi& driverApi = engine.getDriverApi();
-    mLightUbh = driverApi.createUniformBuffer(mLightsUb.getSize());
-    driverApi.bindUniforms(BindingPoints::LIGHTS, mLightUbh);
+    mLightUbh = driverApi.createUniformBuffer(mLightsUb.getSize(), driver::BufferUsage::DYNAMIC);
+    driverApi.bindUniformBuffer(BindingPoints::LIGHTS, mLightUbh);
 }
 
 GpuLightBuffer::~GpuLightBuffer() noexcept = default;
@@ -46,12 +46,12 @@ void GpuLightBuffer::commit(FEngine& engine) noexcept {
     if (UTILS_UNLIKELY(mLightsUb.isDirty())) {
         commitSlow(engine);
     }
-    engine.getDriverApi().bindUniforms(BindingPoints::LIGHTS, mLightUbh);
+    engine.getDriverApi().bindUniformBuffer(BindingPoints::LIGHTS, mLightUbh);
 }
 
 void GpuLightBuffer::commitSlow(FEngine& engine) noexcept {
-    DriverApi& driverApi = engine.getDriverApi();
-    driverApi.updateUniformBuffer(mLightUbh, UniformBuffer(mLightsUb));
+    DriverApi& driver = engine.getDriverApi();
+    driver.updateUniformBuffer(mLightUbh, mLightsUb.toBufferDescriptor(driver));
     mLightsUb.clean();
 }
 

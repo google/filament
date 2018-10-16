@@ -218,9 +218,15 @@ function build_webgl_with_target {
     if [ -d "samples/web/public" ]; then
         if [ "$ISSUE_ARCHIVES" == "true" ]; then
             echo "Generating out/filament-${LC_TARGET}-web.tgz..."
-            cd samples/web/public
-            tar -czvf ../../../../filament-${LC_TARGET}-web.tgz .
+            cd samples/web
+            tar -cvf ../../../filament-${LC_TARGET}-web.tar public
             cd -
+            cd libs
+            tar -rvf ../../filament-${LC_TARGET}-web.tar filamentjs/filament.js
+            tar -rvf ../../filament-${LC_TARGET}-web.tar filamentjs/filament.wasm
+            cd -
+            gzip -c ../filament-${LC_TARGET}-web.tar > ../filament-${LC_TARGET}-web.tgz
+            rm ../filament-${LC_TARGET}-web.tar
         fi
     fi
 
@@ -421,7 +427,7 @@ function validate_build_command {
         echo "Error: could not find cmake, exiting"
         exit 1
     fi
-    
+
     # Make sure Ninja is installed
     if [ "$BUILD_COMMAND" == "ninja" ]; then
         ninja_binary=`which ninja`

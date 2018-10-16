@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "MeshIO.h"
+#include <filameshio/MeshIO.h>
 
 #include <iostream>
 #include <string>
@@ -43,6 +43,8 @@
 
 using namespace filament;
 using namespace math;
+
+#define DEFAULT_MATERIAL "DefaultMaterial"
 
 static size_t fileSize(int fd) {
     size_t filesize;
@@ -90,7 +92,7 @@ struct Part {
 };
 
 MeshIO::Mesh MeshIO::loadMeshFromFile(filament::Engine* engine, const utils::Path& path,
-        const std::map<std::string, filament::MaterialInstance*>& materials) {
+        const MaterialRegistry& materials) {
 
     Mesh mesh;
 
@@ -181,7 +183,7 @@ MeshIO::Mesh MeshIO::loadMeshFromFile(filament::Engine* engine, const utils::Pat
                 if (m != materials.end()) {
                     builder.material(i, m->second);
                 } else {
-                    builder.material(i, materials.at("DefaultMaterial"));
+                    builder.material(i, materials.at(DEFAULT_MATERIAL));
                 }
             }
 
@@ -193,6 +195,92 @@ MeshIO::Mesh MeshIO::loadMeshFromFile(filament::Engine* engine, const utils::Pat
         free(data);
     }
     close(fd);
+
+    return mesh;
+}
+
+MeshIO::Mesh MeshIO::loadMeshFromBuffer(filament::Engine* engine,
+        void const* data, Callback destructor, void* user,
+        MaterialInstance* defaultMaterial) {
+    MaterialRegistry reg;
+    reg[DEFAULT_MATERIAL] = defaultMaterial;
+    return loadMeshFromBuffer(engine, data, destructor, user, reg);
+}
+
+MeshIO::Mesh MeshIO::loadMeshFromBuffer(filament::Engine* engine,
+        void const* data, Callback destructor, void* user,
+        const MaterialRegistry& materials) {
+    const char* p = (const char *) data;
+    if (strncmp("FILAMESH", p, 8)) {
+        puts("Magic string not found.");
+        abort();
+    }
+    p += 8;
+
+    Header* header = (Header*) p;
+    p += sizeof(Header);
+
+    char const* vertexData = p;
+    p += header->vertexSize;
+
+    char const* indices = p;
+    p += header->indexSize;
+
+    Part* parts = (Part*) p;
+    p += header->parts * sizeof(Part);
+
+    uint32_t materialCount = (uint32_t) *p;
+    p += sizeof(uint32_t);
+
+    std::vector<std::string> partsMaterial(materialCount);
+    for (size_t i = 0; i < materialCount; i++) {
+        uint32_t nameLength = (uint32_t) *p;
+        p += sizeof(uint32_t);
+        partsMaterial[i] = p;
+        p += nameLength + 1; // null terminated
+    }
+
+    Mesh mesh;
+
+    mesh.indexBuffer = IndexBuffer::Builder()
+            .indexCount(header->indexCount)
+            .bufferType(header->indexType ? IndexBuffer::IndexType::USHORT
+                    : IndexBuffer::IndexType::UINT)
+            .build(*engine);
+
+    mesh.indexBuffer->setBuffer(*engine,
+            IndexBuffer::BufferDescriptor(indices, header->indexSize, destructor, user));
+
+    VertexBuffer::Builder vbb;
+    vbb.vertexCount(header->vertexCount)
+            .bufferCount(1)
+            .normalized(VertexAttribute::TANGENTS);
+
+    mesh.vertexBuffer = vbb
+            .attribute(VertexAttribute::POSITION, 0, VertexBuffer::AttributeType::HALF4,
+                        header->offsetPosition, uint8_t(header->stridePosition))
+            .attribute(VertexAttribute::TANGENTS, 0, VertexBuffer::AttributeType::SHORT4,
+                        header->offsetTangents, uint8_t(header->strideTangents))
+            .attribute(VertexAttribute::UV0, 0, VertexBuffer::AttributeType::HALF2,
+                        header->offsetUV0, uint8_t(header->strideUV0))
+            .build(*engine);
+
+    mesh.vertexBuffer->setBufferAt(*engine, 0,
+        VertexBuffer::BufferDescriptor(vertexData, header->vertexSize, destructor, user));
+
+    mesh.renderable = utils::EntityManager::get().create();
+
+    RenderableManager::Builder builder(header->parts);
+    builder.boundingBox(header->aabb);
+    const auto defaultmi = materials.at(DEFAULT_MATERIAL);
+    for (size_t i = 0; i < header->parts; i++) {
+        builder.geometry(i, RenderableManager::PrimitiveType::TRIANGLES,
+                            mesh.vertexBuffer, mesh.indexBuffer, parts[i].offset,
+                            parts[i].minIndex, parts[i].maxIndex, parts[i].indexCount);
+        const auto miter = materials.find(partsMaterial[i]);
+        builder.material(i, miter == materials.end() ? defaultmi : miter->second);
+    }
+    builder.build(*engine, mesh.renderable);
 
     return mesh;
 }

@@ -483,7 +483,7 @@ VulkanTexture::~VulkanTexture() {
     vkFreeMemory(mContext.device, textureImageMemory, VKALLOC);
 }
 
-void VulkanTexture::load2DImage(PixelBufferDescriptor&& data, uint32_t width, uint32_t height,
+void VulkanTexture::load2DImage(const PixelBufferDescriptor& data, uint32_t width, uint32_t height,
         int miplevel) {
     assert(width <= this->width && height <= this->height);
     const void* cpuData = data.buffer;
@@ -520,7 +520,7 @@ void VulkanTexture::load2DImage(PixelBufferDescriptor&& data, uint32_t width, ui
     }
 }
 
-void VulkanTexture::loadCubeImage(PixelBufferDescriptor&& data,  const FaceOffsets& faceOffsets,
+void VulkanTexture::loadCubeImage(const PixelBufferDescriptor& data, const FaceOffsets& faceOffsets,
         int miplevel) {
     const void* cpuData = data.buffer;
     const uint32_t numBytes = data.size;
