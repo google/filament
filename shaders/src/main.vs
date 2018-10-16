@@ -10,15 +10,24 @@ void main() {
         // Extract the normal and tangent in world space from the input quaternion
         // We encode the orthonormal basis as a quaternion to save space in the attributes
         toTangentFrame(normalize(mesh_tangents), material.worldNormal, vertex_worldTangent);
-        vertex_worldTangent = objectUniforms.worldFromModelNormalMatrix * vertex_worldTangent;
-        material.worldNormal = objectUniforms.worldFromModelNormalMatrix * material.worldNormal;
+
+        // We need to normalize here in case there's a scale in the matrix
+        // Without this normalization, the bitangent could exceed the range of fp16
+        // in the fragment shader, where we renormalize after interpolation
+        vertex_worldTangent =
+                normalize(objectUniforms.worldFromModelNormalMatrix * vertex_worldTangent);
+        material.worldNormal =
+                normalize(objectUniforms.worldFromModelNormalMatrix * material.worldNormal);
+
         #if defined(HAS_SKINNING)
             skinNormal(material.worldNormal, mesh_bone_indices, mesh_bone_weights);
             skinNormal(vertex_worldTangent, mesh_bone_indices, mesh_bone_weights);
         #endif
+
         // Reconstruct the bitangent from the normal and tangent. We don't bother with
         // normalization here since we'll do it after interpolation in the fragment stage
-        vertex_worldBitangent = cross(material.worldNormal, vertex_worldTangent) * sign(mesh_tangents.w);
+        vertex_worldBitangent =
+                cross(material.worldNormal, vertex_worldTangent) * sign(mesh_tangents.w);
     #else // MATERIAL_HAS_ANISOTROPY || MATERIAL_HAS_NORMAL
         // Without anisotropy or normal mapping we only need the normal vector
         toTangentFrame(normalize(mesh_tangents), material.worldNormal);
