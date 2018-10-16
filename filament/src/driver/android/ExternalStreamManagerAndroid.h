@@ -42,7 +42,7 @@ public:
     void release(EGLStream* stream) noexcept;
     void attach(EGLStream* stream, intptr_t tname) noexcept;
     void detach(EGLStream* stream) noexcept;
-    void updateTexImage(EGLStream* stream) noexcept;
+    void updateTexImage(EGLStream* stream, int64_t* timestamp) noexcept;
 
 private:
     VirtualMachineEnv& mVm;
@@ -59,6 +59,7 @@ private:
     JNIEnv* getEnvironmentSlow() noexcept;
 
     jmethodID mSurfaceTextureClass_updateTexImage;
+    jmethodID mSurfaceTextureClass_getTimestamp;
     jmethodID mSurfaceTextureClass_attachToGLContext;
     jmethodID mSurfaceTextureClass_detachFromGLContext;
 
@@ -67,6 +68,8 @@ private:
     int  (*ASurfaceTexture_attachToGLContext)(ASurfaceTexture*, uint32_t);
     int  (*ASurfaceTexture_detachFromGLContext)(ASurfaceTexture*);
     int  (*ASurfaceTexture_updateTexImage)(ASurfaceTexture*);
+    int64_t (*ASurfaceTexture_getTimestamp)(ASurfaceTexture*);   // available since api 28
+
 };
 
 } // namespace filament

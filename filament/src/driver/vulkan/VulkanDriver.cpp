@@ -194,7 +194,7 @@ void VulkanDriver::terminate() {
     mContext.instance = nullptr;
 }
 
-void VulkanDriver::beginFrame(uint64_t monotonic_clock_ns, uint32_t frameId) {
+void VulkanDriver::beginFrame(int64_t monotonic_clock_ns, uint32_t frameId) {
     // We allow multiple beginFrame / endFrame pairs before commit(), so gracefully return early
     // if the swap chain has already been acquired.
     if (mContext.cmdbuffer) {
@@ -228,7 +228,7 @@ void VulkanDriver::beginFrame(uint64_t monotonic_clock_ns, uint32_t frameId) {
     mBinder.gc();
 }
 
-void VulkanDriver::setPresentationTime(uint64_t monotonic_clock_ns) {
+void VulkanDriver::setPresentationTime(int64_t monotonic_clock_ns) {
 }
 
 void VulkanDriver::endFrame(uint32_t frameId) {
@@ -465,6 +465,10 @@ Handle<HwStream> VulkanDriver::createStream(void* nativeStream) {
 }
 
 void VulkanDriver::setStreamDimensions(Driver::StreamHandle sh, uint32_t width, uint32_t height) {
+}
+
+int64_t VulkanDriver::getStreamTimestamp(Driver::StreamHandle sh) {
+    return 0;
 }
 
 void VulkanDriver::updateStreams(CommandStream* driver) {

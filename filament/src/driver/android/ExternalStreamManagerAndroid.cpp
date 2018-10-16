@@ -51,6 +51,7 @@ ExternalStreamManagerAndroid::ExternalStreamManagerAndroid() noexcept
     loadSymbol(ASurfaceTexture_attachToGLContext,   "ASurfaceTexture_attachToGLContext");
     loadSymbol(ASurfaceTexture_detachFromGLContext, "ASurfaceTexture_detachFromGLContext");
     loadSymbol(ASurfaceTexture_updateTexImage,      "ASurfaceTexture_updateTexImage");
+    loadSymbol(ASurfaceTexture_getTimestamp,        "ASurfaceTexture_getTimestamp");
     if (ASurfaceTexture_fromSurfaceTexture) {
         slog.d << "Using ASurfaceTexture" << io::endl;
     }
@@ -77,6 +78,9 @@ JNIEnv* ExternalStreamManagerAndroid::getEnvironmentSlow() noexcept {
 
     mSurfaceTextureClass_detachFromGLContext = env->GetMethodID(
             SurfaceTextureClass, "detachFromGLContext", "()V");
+
+    mSurfaceTextureClass_getTimestamp = env->GetMethodID(
+            SurfaceTextureClass, "getTimestamp", "()J");
 
     return env;
 }
@@ -162,13 +166,21 @@ void ExternalStreamManagerAndroid::detach(EGLStream* stream) noexcept {
     }
 }
 
-void ExternalStreamManagerAndroid::updateTexImage(EGLStream* stream) noexcept {
+void ExternalStreamManagerAndroid::updateTexImage(EGLStream* stream, int64_t* timestamp) noexcept {
     if (ASurfaceTexture_fromSurfaceTexture) {
         ASurfaceTexture_updateTexImage(ASurfaceTexture_cast(stream));
+        if (ASurfaceTexture_getTimestamp) {
+            *timestamp = ASurfaceTexture_getTimestamp(ASurfaceTexture_cast(stream));
+        } else {
+            // if we're not at least on API 28, we may not have getTimestamp()
+            *timestamp = (std::chrono::steady_clock::now().time_since_epoch().count());
+        }
     } else {
         JNIEnv* const env = mVm.getEnvironment();
         assert(env); // we should have called attach() by now
         env->CallVoidMethod(jobject_cast(stream), mSurfaceTextureClass_updateTexImage);
+        VirtualMachineEnv::handleException(env);
+        *timestamp = env->CallLongMethod(jobject_cast(stream), mSurfaceTextureClass_getTimestamp);
         VirtualMachineEnv::handleException(env);
     }
 }

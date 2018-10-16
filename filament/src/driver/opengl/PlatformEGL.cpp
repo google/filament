@@ -330,12 +330,12 @@ void PlatformEGL::makeCurrent(Platform::SwapChain* drawSwapChain,
     }
 }
 
-void PlatformEGL::setPresentationTime(long time) noexcept {
+void PlatformEGL::setPresentationTime(int64_t presentationTimeInNanosecond) noexcept {
     if (mCurrentDrawSurface != EGL_NO_SURFACE) {
       eglPresentationTimeANDROID(
                         mEGLDisplay,
                         mCurrentDrawSurface,
-                        time);
+                        presentationTimeInNanosecond);
     }
 }
 
@@ -396,8 +396,8 @@ void PlatformEGL::detach(Stream* stream) noexcept {
     mExternalStreamManager.detach(stream);
 }
 
-void PlatformEGL::updateTexImage(Stream* stream) noexcept {
-    mExternalStreamManager.updateTexImage(stream);
+void PlatformEGL::updateTexImage(Stream* stream, int64_t* timestamp) noexcept {
+    mExternalStreamManager.updateTexImage(stream, timestamp);
 }
 
 Platform::ExternalTexture* PlatformEGL::createExternalTextureStorage() noexcept {

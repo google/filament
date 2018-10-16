@@ -122,10 +122,8 @@ public:
              * This is for making a cpu copy of the camera frame
              */
             GLuint externalTexture2DId = 0;
-            GLuint width = 0;
-            GLuint height = 0;
             GLuint fbo = 0;
-        } gl;
+        } gl;   // 20 bytes
 
         /*
          * The fields below are access from the main application thread
@@ -133,10 +131,11 @@ public:
          */
         struct {
             // texture id used to texture from, always used in the GL thread
-            GLuint read[ROUND_ROBIN_TEXTURE_COUNT];
+            GLuint read[ROUND_ROBIN_TEXTURE_COUNT];     // 12 bytes
             // texture id to write into, always used from the user thread
-            GLuint write[ROUND_ROBIN_TEXTURE_COUNT];
-            Info infos[ROUND_ROBIN_TEXTURE_COUNT];
+            GLuint write[ROUND_ROBIN_TEXTURE_COUNT];    // 12 bytes
+            Info infos[ROUND_ROBIN_TEXTURE_COUNT];      // 48 bytes
+            int64_t timestamp = 0;
             uint8_t cur = 0;
         } user_thread;
     };
