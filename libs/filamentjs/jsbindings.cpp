@@ -41,6 +41,7 @@
 #include <filament/Renderer.h>
 #include <filament/Scene.h>
 #include <filament/SwapChain.h>
+#include <filament/Texture.h>
 #include <filament/TransformManager.h>
 #include <filament/VertexBuffer.h>
 #include <filament/View.h>
@@ -87,6 +88,7 @@ namespace emscripten {
         BIND(IndexBuffer)
         BIND(Material)
         BIND(MaterialInstance)
+        BIND(Texture)
         BIND(utils::Entity)
         BIND(utils::EntityManager)
     }
@@ -101,6 +103,7 @@ using RenderBuilder = RenderableManager::Builder;
 using VertexBuilder = VertexBuffer::Builder;
 using IndexBuilder = IndexBuffer::Builder;
 using MatBuilder = Material::Builder;
+using TexBuilder = Texture::Builder;
 
 // We avoid directly exposing driver::BufferDescriptor because embind does not support move
 // semantics and void* doesn't make sense to JavaScript anyway. This little wrapper class is exposed
@@ -113,7 +116,7 @@ struct BufferDescriptor {
         this->bd = new driver::BufferDescriptor(malloc(byteLength), byteLength,
                 [](void* buffer, size_t size, void* user) { free(buffer); });
     }
-    // This form is used when WASM needs to return a buffer to a JavaScript.
+    // This form is used when WASM needs to return a buffer to JavaScript.
     BufferDescriptor(uint8_t* data, uint32_t size) {
         this->bd = new driver::BufferDescriptor(data, size);
     }
@@ -128,9 +131,28 @@ struct BufferDescriptor {
     driver::BufferDescriptor* bd;
 };
 
+// Exposed to JavaScript as "driver$PixelBufferDescriptor", but clients will normally use the
+// "Filament.PixelBuffer" helper function, which is implemented in wasmloader.
+struct PixelBufferDescriptor {
+    PixelBufferDescriptor(val arrdata, driver::PixelDataFormat fmt, driver::PixelDataType dtype) {
+        auto byteLength = arrdata["byteLength"].as<uint32_t>();
+        this->pbd = new driver::PixelBufferDescriptor(malloc(byteLength), byteLength,
+                fmt, dtype, [](void* buffer, size_t size, void* user) { free(buffer); });
+    }
+    ~PixelBufferDescriptor() {
+        delete pbd;
+    }
+    val getBytes() {
+        unsigned char *byteBuffer = (unsigned char*) pbd->buffer;
+        size_t bufferLength = pbd->size;
+        return val(typed_memory_view(bufferLength, byteBuffer));
+    };
+    driver::PixelBufferDescriptor* pbd;
+};
+
 } // anonymous namespace
 
-EMSCRIPTEN_BINDINGS(array_types) {
+EMSCRIPTEN_BINDINGS(jsbindings) {
 
 // MATH TYPES
 // ----------
@@ -182,65 +204,6 @@ value_array<flatmat4>("mat4")
     .element(index< 8>()).element(index< 9>()).element(index<10>()).element(index<11>())
     .element(index<12>()).element(index<13>()).element(index<14>()).element(index<15>());
 
-// CONSTANTS and ENUMS
-// -------------------
-
-enum_<VertexAttribute>("VertexAttribute")
-        .value("POSITION", POSITION)
-        .value("TANGENTS", TANGENTS)
-        .value("COLOR", COLOR)
-        .value("UV0", UV0)
-        .value("UV1", UV1)
-        .value("BONE_INDICES", BONE_INDICES)
-        .value("BONE_WEIGHTS", BONE_WEIGHTS);
-
- enum_<VertexBuffer::AttributeType>("VertexBuffer$AttributeType")
-        .value("BYTE", VertexBuffer::AttributeType::BYTE)
-        .value("BYTE2", VertexBuffer::AttributeType::BYTE2)
-        .value("BYTE3", VertexBuffer::AttributeType::BYTE3)
-        .value("BYTE4", VertexBuffer::AttributeType::BYTE4)
-        .value("UBYTE", VertexBuffer::AttributeType::UBYTE)
-        .value("UBYTE2", VertexBuffer::AttributeType::UBYTE2)
-        .value("UBYTE3", VertexBuffer::AttributeType::UBYTE3)
-        .value("UBYTE4", VertexBuffer::AttributeType::UBYTE4)
-        .value("SHORT", VertexBuffer::AttributeType::SHORT)
-        .value("SHORT2", VertexBuffer::AttributeType::SHORT2)
-        .value("SHORT3", VertexBuffer::AttributeType::SHORT3)
-        .value("SHORT4", VertexBuffer::AttributeType::SHORT4)
-        .value("USHORT", VertexBuffer::AttributeType::USHORT)
-        .value("USHORT2", VertexBuffer::AttributeType::USHORT2)
-        .value("USHORT3", VertexBuffer::AttributeType::USHORT3)
-        .value("USHORT4", VertexBuffer::AttributeType::USHORT4)
-        .value("INT", VertexBuffer::AttributeType::INT)
-        .value("UINT", VertexBuffer::AttributeType::UINT)
-        .value("FLOAT", VertexBuffer::AttributeType::FLOAT)
-        .value("FLOAT2", VertexBuffer::AttributeType::FLOAT2)
-        .value("FLOAT3", VertexBuffer::AttributeType::FLOAT3)
-        .value("FLOAT4", VertexBuffer::AttributeType::FLOAT4)
-        .value("HALF", VertexBuffer::AttributeType::HALF)
-        .value("HALF2", VertexBuffer::AttributeType::HALF2)
-        .value("HALF3", VertexBuffer::AttributeType::HALF3)
-        .value("HALF4", VertexBuffer::AttributeType::HALF4);
-
- enum_<IndexBuffer::IndexType>("IndexBuffer$IndexType")
-        .value("USHORT", IndexBuffer::IndexType::USHORT)
-        .value("UINT", IndexBuffer::IndexType::UINT);
-
- enum_<RenderableManager::PrimitiveType>("RenderableManager$PrimitiveType")
-        .value("POINTS", RenderableManager::PrimitiveType::POINTS)
-        .value("LINES", RenderableManager::PrimitiveType::LINES)
-        .value("TRIANGLES", RenderableManager::PrimitiveType::TRIANGLES)
-        .value("NONE", RenderableManager::PrimitiveType::NONE);
-
- enum_<View::DepthPrepass>("View$DepthPrepass")
-        .value("DEFAULT", View::DepthPrepass::DEFAULT)
-        .value("DISABLED", View::DepthPrepass::DISABLED)
-        .value("ENABLED", View::DepthPrepass::ENABLED);
-
- enum_<Camera::Projection>("Camera$Projection")
-        .value("PERSPECTIVE", Camera::Projection::PERSPECTIVE)
-        .value("ORTHO", Camera::Projection::ORTHO);
-
 // CORE FILAMENT CLASSES
 // ---------------------
 
@@ -289,6 +252,9 @@ class_<Engine>("Engine")
             allow_raw_pointers())
     .function("destroyMaterialInstance", (void (*)(Engine*, MaterialInstance*)) []
             (Engine* engine, MaterialInstance* mi) { engine->destroy(mi); },
+            allow_raw_pointers())
+    .function("destroyTexture", (void (*)(Engine*, Texture*)) []
+            (Engine* engine, Texture* tex) { engine->destroy(tex); },
             allow_raw_pointers())
     .function("destroyVertexBuffer", (void (*)(Engine*, VertexBuffer*)) []
             (Engine* engine, VertexBuffer* vb) { engine->destroy(vb); },
@@ -403,9 +369,55 @@ class_<Material>("Material")
     .function("getDefaultInstance",
             select_overload<MaterialInstance*(void)>(&Material::getDefaultInstance),
             allow_raw_pointers())
-    .function("getInstance", &Material::createInstance, allow_raw_pointers());
+    .function("createInstance", &Material::createInstance, allow_raw_pointers());
 
-class_<MaterialInstance>("MaterialInstance");
+class_<MaterialInstance>("MaterialInstance")
+    .function("setFloatParameter", EMBIND_LAMBDA(void,
+            (MaterialInstance* self, std::string name, float value), {
+        self->setParameter(name.c_str(), value); }), allow_raw_pointers())
+    .function("setFloat2Parameter", EMBIND_LAMBDA(void,
+            (MaterialInstance* self, std::string name, math::float2 value), {
+        self->setParameter(name.c_str(), value); }), allow_raw_pointers())
+    .function("setFloat3Parameter", EMBIND_LAMBDA(void,
+            (MaterialInstance* self, std::string name, math::float3 value), {
+        self->setParameter(name.c_str(), value); }), allow_raw_pointers())
+    .function("setFloat4Parameter", EMBIND_LAMBDA(void,
+            (MaterialInstance* self, std::string name, math::float4 value), {
+        self->setParameter(name.c_str(), value); }), allow_raw_pointers())
+    .function("setTextureParameter", EMBIND_LAMBDA(void,
+            (MaterialInstance* self, std::string name, Texture* value, TextureSampler sampler), {
+        self->setParameter(name.c_str(), value, sampler); }), allow_raw_pointers());
+
+class_<TextureSampler>("TextureSampler")
+    .constructor<driver::SamplerMinFilter, driver::SamplerMagFilter, driver::SamplerWrapMode>();
+
+class_<Texture>("Texture")
+    .class_function("Builder", (TexBuilder (*)()) [] { return TexBuilder(); })
+    .function("setImage", EMBIND_LAMBDA(void, (Texture* self,
+            Engine* engine, uint8_t level, PixelBufferDescriptor pbd), {
+        self->setImage(*engine, level, std::move(*pbd.pbd));
+    }), allow_raw_pointers());
+
+class_<TexBuilder>("Texture$Builder")
+    .function("build", EMBIND_LAMBDA(Texture*, (TexBuilder* builder, Engine* engine), {
+        return builder->build(*engine);
+    }), allow_raw_pointers())
+    .BUILDER_FUNCTION("width", TexBuilder, (TexBuilder* builder, uint32_t width), {
+        return &builder->width(width); })
+    .BUILDER_FUNCTION("height", TexBuilder, (TexBuilder* builder, uint32_t height), {
+        return &builder->height(height); })
+    .BUILDER_FUNCTION("depth", TexBuilder, (TexBuilder* builder, uint32_t depth), {
+        return &builder->depth(depth); })
+    .BUILDER_FUNCTION("levels", TexBuilder, (TexBuilder* builder, uint8_t levels), {
+        return &builder->levels(levels); })
+    .BUILDER_FUNCTION("sampler", TexBuilder, (TexBuilder* builder, Texture::Sampler target), {
+        return &builder->sampler(target); })
+    .BUILDER_FUNCTION("format", TexBuilder, (TexBuilder* builder, Texture::InternalFormat fmt), {
+        return &builder->format(fmt); })
+    .BUILDER_FUNCTION("usage", TexBuilder, (TexBuilder* builder, Texture::Usage usage), {
+        return &builder->usage(usage); })
+    .BUILDER_FUNCTION("rgbm", TexBuilder, (TexBuilder* builder, bool rgbm), {
+        return &builder->rgbm(rgbm); });
 
 // UTILS TYPES
 // -----------
@@ -424,6 +436,10 @@ class_<utils::EntityManager>("EntityManager")
 class_<BufferDescriptor>("driver$BufferDescriptor")
     .constructor<emscripten::val>()
     .function("getBytes", &BufferDescriptor::getBytes);
+
+class_<PixelBufferDescriptor>("driver$PixelBufferDescriptor")
+    .constructor<emscripten::val, driver::PixelDataFormat, driver::PixelDataType>()
+    .function("getBytes", &PixelBufferDescriptor::getBytes);
 
 // IMAGE TYPES
 // ------------

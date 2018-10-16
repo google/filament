@@ -5,7 +5,8 @@ Filament APIs:
 
 - `hello-triangle`: Minimal example showing how to setup a rendering surface for Filament
 - `lit-cube`: Shows how to create a light and a mesh with the attributes required for lighting
-- `image-based-lighting`: Demonstrates how to create image-based lights and load complex meshes 
+- `image-based-lighting`: Demonstrates how to create image-based lights and load complex meshes
+- `textured-object`: Demonstrates how to load and use textures for complex materials 
 
 ## Prerequisites
 

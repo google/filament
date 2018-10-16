@@ -183,12 +183,10 @@ function(add_demo NAME)
     include_directories(${GENERATION_ROOT})
     add_executable(${NAME} ${NAME}.cpp
             ../app/CameraManipulator.cpp
-            filamesh.h
-            filamesh.cpp
             filaweb.h
             filaweb.cpp)
     add_dependencies(${NAME} sample_materials sample_assets)
-    target_link_libraries(${NAME} PRIVATE filament filagui image math utils)
+    target_link_libraries(${NAME} PRIVATE filament filagui filameshio image math utils)
 
     # Copy the generated js and wasm files into the public folder, as well as the app-specific
     # manually-written HTML file.

@@ -19,6 +19,10 @@
 #include <algorithm>
 #include <functional>
 
+#ifdef ANDROID
+#include <android/bitmap.h>
+#endif
+
 #include <filament/driver/BufferDescriptor.h>
 #include <filament/Engine.h>
 #include <filament/Stream.h>
@@ -37,7 +41,7 @@ static size_t getTextureDataSize(const Texture *texture, size_t level,
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
-Java_com_google_android_filament_Texture_nIsTextureFormatSupported(JNIEnv *env, jclass type,
+Java_com_google_android_filament_Texture_nIsTextureFormatSupported(JNIEnv*, jclass,
         jlong nativeEngine, jint internalFormat) {
     Engine *engine = (Engine *) nativeEngine;
     return (jboolean) Texture::isTextureFormatSupported(*engine,
@@ -47,68 +51,68 @@ Java_com_google_android_filament_Texture_nIsTextureFormatSupported(JNIEnv *env, 
 // Texture::Builder...
 
 extern "C" JNIEXPORT jlong JNICALL
-Java_com_google_android_filament_Texture_nCreateBuilder(JNIEnv *env, jclass type) {
+Java_com_google_android_filament_Texture_nCreateBuilder(JNIEnv*, jclass) {
     return (jlong) new Texture::Builder();
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_Texture_nDestroyBuilder(JNIEnv *env, jclass type,
+Java_com_google_android_filament_Texture_nDestroyBuilder(JNIEnv*, jclass,
         jlong nativeBuilder) {
     Texture::Builder *builder = (Texture::Builder *) nativeBuilder;
     delete builder;
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_Texture_nBuilderWidth(JNIEnv *env, jclass type,
+Java_com_google_android_filament_Texture_nBuilderWidth(JNIEnv*, jclass,
         jlong nativeBuilder, jint width) {
     Texture::Builder *builder = (Texture::Builder *) nativeBuilder;
     builder->width((uint32_t) width);
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_Texture_nBuilderHeight(JNIEnv *env, jclass type,
+Java_com_google_android_filament_Texture_nBuilderHeight(JNIEnv*, jclass,
         jlong nativeBuilder, jint height) {
     Texture::Builder *builder = (Texture::Builder *) nativeBuilder;
     builder->height((uint32_t) height);
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_Texture_nBuilderDepth(JNIEnv *env, jclass type,
+Java_com_google_android_filament_Texture_nBuilderDepth(JNIEnv*, jclass,
         jlong nativeBuilder, jint depth) {
     Texture::Builder *builder = (Texture::Builder *) nativeBuilder;
     builder->depth((uint32_t) depth);
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_Texture_nBuilderLevels(JNIEnv *env, jclass type,
+Java_com_google_android_filament_Texture_nBuilderLevels(JNIEnv*, jclass,
         jlong nativeBuilder, jint levels) {
     Texture::Builder *builder = (Texture::Builder *) nativeBuilder;
     builder->levels((uint8_t) levels);
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_Texture_nBuilderSampler(JNIEnv *env, jclass type,
+Java_com_google_android_filament_Texture_nBuilderSampler(JNIEnv*, jclass,
         jlong nativeBuilder, jint sampler) {
     Texture::Builder *builder = (Texture::Builder *) nativeBuilder;
     builder->sampler((Texture::Sampler) sampler);
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_Texture_nBuilderFormat(JNIEnv *env, jclass type,
+Java_com_google_android_filament_Texture_nBuilderFormat(JNIEnv*, jclass,
         jlong nativeBuilder, jint format) {
     Texture::Builder *builder = (Texture::Builder *) nativeBuilder;
     builder->format((Texture::InternalFormat) format);
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_Texture_nBuilderRgbm(JNIEnv *env, jclass type,
+Java_com_google_android_filament_Texture_nBuilderRgbm(JNIEnv*, jclass,
         jlong nativeBuilder, jboolean enable) {
     Texture::Builder *builder = (Texture::Builder *) nativeBuilder;
     builder->rgbm(enable);
 }
 
 extern "C" JNIEXPORT jlong JNICALL
-Java_com_google_android_filament_Texture_nBuilderBuild(JNIEnv *env, jclass type,
+Java_com_google_android_filament_Texture_nBuilderBuild(JNIEnv*, jclass,
         jlong nativeBuilder, jlong nativeEngine) {
     Texture::Builder *builder = (Texture::Builder *) nativeBuilder;
     Engine *engine = (Engine *) nativeEngine;
@@ -118,60 +122,60 @@ Java_com_google_android_filament_Texture_nBuilderBuild(JNIEnv *env, jclass type,
 // Texture...
 
 extern "C" JNIEXPORT jint JNICALL
-Java_com_google_android_filament_Texture_nGetWidth(JNIEnv *env, jclass type, jlong nativeTexture,
+Java_com_google_android_filament_Texture_nGetWidth(JNIEnv*, jclass, jlong nativeTexture,
         jint level) {
     Texture *texture = (Texture *) nativeTexture;
     return (jint) texture->getWidth((size_t) level);
 }
 
 extern "C" JNIEXPORT jint JNICALL
-Java_com_google_android_filament_Texture_nGetHeight(JNIEnv *env, jclass type, jlong nativeTexture,
+Java_com_google_android_filament_Texture_nGetHeight(JNIEnv*, jclass, jlong nativeTexture,
         jint level) {
     Texture *texture = (Texture *) nativeTexture;
     return (jint) texture->getHeight((size_t) level);
 }
 
 extern "C" JNIEXPORT jint JNICALL
-Java_com_google_android_filament_Texture_nGetDepth(JNIEnv *env, jclass type, jlong nativeTexture,
+Java_com_google_android_filament_Texture_nGetDepth(JNIEnv*, jclass, jlong nativeTexture,
         jint level) {
     Texture *texture = (Texture *) nativeTexture;
     return (jint) texture->getDepth((size_t) level);
 }
 
 extern "C" JNIEXPORT jint JNICALL
-Java_com_google_android_filament_Texture_nGetLevels(JNIEnv *env, jclass type, jlong nativeTexture) {
+Java_com_google_android_filament_Texture_nGetLevels(JNIEnv*, jclass, jlong nativeTexture) {
     Texture *texture = (Texture *) nativeTexture;
     return (jint) texture->getLevels();
 }
 
 extern "C" JNIEXPORT jint JNICALL
-Java_com_google_android_filament_Texture_nGetTarget(JNIEnv *env, jclass type, jlong nativeTexture) {
+Java_com_google_android_filament_Texture_nGetTarget(JNIEnv*, jclass, jlong nativeTexture) {
     Texture *texture = (Texture *) nativeTexture;
     return (jint) texture->getTarget();
 }
 
 extern "C" JNIEXPORT jint JNICALL
-Java_com_google_android_filament_Texture_nGetInternalFormat(JNIEnv *env, jclass type,
+Java_com_google_android_filament_Texture_nGetInternalFormat(JNIEnv*, jclass,
         jlong nativeTexture) {
     Texture *texture = (Texture *) nativeTexture;
     return (jint) texture->getFormat();
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
-Java_com_google_android_filament_Texture_nGetRgbm(JNIEnv *env, jclass type, jlong nativeTexture) {
+Java_com_google_android_filament_Texture_nGetRgbm(JNIEnv*, jclass, jlong nativeTexture) {
     Texture *texture = (Texture *) nativeTexture;
-    return texture->isRgbm();
+    return static_cast<jboolean>(texture->isRgbm());
 }
 
 extern "C" JNIEXPORT jint JNICALL
-Java_com_google_android_filament_Texture_nSetImage(JNIEnv *env, jclass type_, jlong nativeTexture,
+Java_com_google_android_filament_Texture_nSetImage(JNIEnv* env, jclass, jlong nativeTexture,
         jlong nativeEngine, jint level, jint xoffset, jint yoffset, jint width, jint height,
         jobject storage,  jint remaining,
         jint left, jint bottom, jint type, jint alignment,
         jint stride, jint format,
         jobject handler, jobject runnable) {
-    Texture *texture = (Texture *) nativeTexture;
-    Engine *engine = (Engine *) nativeEngine;
+    Texture* texture = (Texture*) nativeTexture;
+    Engine* engine = (Engine*) nativeEngine;
 
     size_t sizeInBytes = getTextureDataSize(texture, (size_t) level, (Texture::Format) format,
             (Texture::Type) type, (size_t) stride, (size_t) alignment);
@@ -196,9 +200,9 @@ Java_com_google_android_filament_Texture_nSetImage(JNIEnv *env, jclass type_, jl
 }
 
 extern "C" JNIEXPORT jint JNICALL
-Java_com_google_android_filament_Texture_nSetImageCompressed(JNIEnv *env, jclass type_, jlong nativeTexture,
-        jlong nativeEngine, jint level, jint xoffset, jint yoffset, jint width, jint height,
-        jobject storage,  jint remaining,
+Java_com_google_android_filament_Texture_nSetImageCompressed(JNIEnv *env, jclass,
+        jlong nativeTexture, jlong nativeEngine, jint level, jint xoffset, jint yoffset,
+        jint width, jint height, jobject storage,  jint remaining,
         jint left, jint bottom, jint type, jint alignment,
         jint compressedSizeInBytes, jint compressedFormat,
         jobject handler, jobject runnable) {
@@ -227,7 +231,7 @@ Java_com_google_android_filament_Texture_nSetImageCompressed(JNIEnv *env, jclass
 }
 
 extern "C" JNIEXPORT jint JNICALL
-Java_com_google_android_filament_Texture_nSetImageCubemap(JNIEnv *env, jclass type_,
+Java_com_google_android_filament_Texture_nSetImageCubemap(JNIEnv *env, jclass,
         jlong nativeTexture, jlong nativeEngine, jint level, jobject storage, jint remaining,
         jint left, jint bottom, jint type, jint alignment, jint stride, jint format,
         jintArray faceOffsetsInBytes_,
@@ -262,7 +266,7 @@ Java_com_google_android_filament_Texture_nSetImageCubemap(JNIEnv *env, jclass ty
 }
 
 extern "C" JNIEXPORT jint JNICALL
-Java_com_google_android_filament_Texture_nSetImageCubemapCompressed(JNIEnv *env, jclass type_,
+Java_com_google_android_filament_Texture_nSetImageCubemapCompressed(JNIEnv *env, jclass,
         jlong nativeTexture, jlong nativeEngine, jint level, jobject storage, jint remaining,
         jint left, jint bottom, jint type, jint alignment,
         jint compressedSizeInBytes, jint compressedFormat, jintArray faceOffsetsInBytes_,
@@ -297,14 +301,15 @@ Java_com_google_android_filament_Texture_nSetImageCubemapCompressed(JNIEnv *env,
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_Texture_nSetExternalImage(JNIEnv*, jclass, jlong nativeTexture, jlong nativeEngine, jlong eglImage) {
+Java_com_google_android_filament_Texture_nSetExternalImage(JNIEnv*, jclass, jlong nativeTexture,
+        jlong nativeEngine, jlong eglImage) {
     Texture *texture = (Texture *) nativeTexture;
     Engine *engine = (Engine *) nativeEngine;
     texture->setExternalImage(*engine, (void*)eglImage);
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_Texture_nSetExternalStream(JNIEnv *env, jclass type,
+Java_com_google_android_filament_Texture_nSetExternalStream(JNIEnv*, jclass,
         jlong nativeTexture, jlong nativeEngine, jlong nativeStream) {
     Texture *texture = (Texture *) nativeTexture;
     Engine *engine = (Engine *) nativeEngine;
@@ -313,7 +318,7 @@ Java_com_google_android_filament_Texture_nSetExternalStream(JNIEnv *env, jclass 
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_Texture_nGenerateMipmaps(JNIEnv *env, jclass type,
+Java_com_google_android_filament_Texture_nGenerateMipmaps(JNIEnv*, jclass,
         jlong nativeTexture, jlong nativeEngine) {
     Texture *texture = (Texture *) nativeTexture;
     Engine *engine = (Engine *) nativeEngine;
@@ -323,9 +328,113 @@ Java_com_google_android_filament_Texture_nGenerateMipmaps(JNIEnv *env, jclass ty
 extern "C"
 JNIEXPORT jboolean JNICALL
 Java_com_google_android_filament_Texture_nIsStreamValidForTexture(JNIEnv*, jclass,
-        jlong nativeTexture, jlong nativeStream) {
+        jlong nativeTexture, jlong) {
     Texture* texture = (Texture*) nativeTexture;
-    Stream* stream = (Stream*) nativeStream;
     return (jboolean) (texture->getTarget() == SamplerType::SAMPLER_EXTERNAL);
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// ANDROID SPECIFIC BITS
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+#ifdef ANDROID
+
+#define BITMAP_CONFIG_ALPHA_8   0
+#define BITMAP_CONFIG_RGB_565   1
+#define BITMAP_CONFIG_RGBA_4444 2
+#define BITMAP_CONFIG_RGBA_8888 3
+#define BITMAP_CONFIG_RGBA_F16  4
+#define BITMAP_CONFIG_HARDWARE  5
+
+class AutoBitmap {
+public:
+    AutoBitmap(JNIEnv* env, jobject bitmap) noexcept
+            : mEnv(env)
+            , mBitmap(env->NewGlobalRef(bitmap))
+    {
+        if (mBitmap) {
+            AndroidBitmap_getInfo(mEnv, mBitmap, &mInfo);
+            AndroidBitmap_lockPixels(mEnv, mBitmap, &mData);
+        }
+    }
+
+    ~AutoBitmap() noexcept {
+        if (mBitmap) {
+            AndroidBitmap_unlockPixels(mEnv, mBitmap);
+            mEnv->DeleteGlobalRef(mBitmap);
+        }
+    }
+
+    AutoBitmap(AutoBitmap &&rhs) noexcept {
+        mEnv = rhs.mEnv;
+        std::swap(mData, rhs.mData);
+        std::swap(mBitmap, rhs.mBitmap);
+        std::swap(mInfo, rhs.mInfo);
+    }
+
+    void* getData() const noexcept {
+        return mData;
+    }
+
+    size_t getSizeInBytes() const noexcept {
+        return mInfo.height * mInfo.stride;
+    }
+
+    PixelDataFormat getFormat(int format) const noexcept {
+        // AndroidBitmapInfo does not capture the HARDWARE and RGBA_F16 formats
+        // so we switch on the Bitmap.Config values directly
+        switch (format) {
+            case BITMAP_CONFIG_ALPHA_8: return PixelDataFormat::ALPHA;
+            case BITMAP_CONFIG_RGB_565: return PixelDataFormat::RGB;
+            default:                    return PixelDataFormat::RGBA;
+        }
+    }
+
+    PixelDataType getType(int format) const noexcept {
+        switch (format) {
+            case BITMAP_CONFIG_RGBA_F16: return PixelDataType::HALF;
+            default:                     return PixelDataType::UBYTE;
+        }
+    }
+
+    static void invoke(void* buffer, size_t n, void* user) {
+        AutoBitmap* data = reinterpret_cast<AutoBitmap*>(user);
+        data->~AutoBitmap();
+    }
+
+    static AutoBitmap* make(Engine* engine, JNIEnv* env, jobject bitmap) {
+        void* that = engine->streamAlloc(sizeof(AutoBitmap), alignof(AutoBitmap));
+        return new (that) AutoBitmap(env, bitmap);
+    }
+
+private:
+    JNIEnv* mEnv;
+    void* mData = nullptr;
+    jobject mBitmap = nullptr;
+    AndroidBitmapInfo mInfo;
+};
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_google_android_filament_android_TextureHelper_nSetBitmap(JNIEnv* env, jclass,
+        jlong nativeTexture, jlong nativeEngine, jint level, jint xoffset, jint yoffset,
+        jint width, jint height, jobject bitmap, jint format) {
+    Texture* texture = (Texture*) nativeTexture;
+    Engine *engine = (Engine *) nativeEngine;
+
+    auto* autoBitmap = AutoBitmap::make(engine, env, bitmap);
+
+    Texture::PixelBufferDescriptor desc(
+            autoBitmap->getData(),
+            autoBitmap->getSizeInBytes(),
+            autoBitmap->getFormat(format),
+            autoBitmap->getType(format),
+            &AutoBitmap::invoke, autoBitmap);
+
+    texture->setImage(*engine, (size_t) level,
+            (uint32_t) xoffset, (uint32_t) yoffset,
+            (uint32_t) width, (uint32_t) height,
+            std::move(desc));
+}
+
+#endif

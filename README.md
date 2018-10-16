@@ -116,6 +116,7 @@ Many other features have been either prototyped or planned:
     - `filaflat`:              Serialization/deserialization library used for materials
     - `filagui`:               Helper library for [Dear ImGui](https://github.com/ocornut/imgui)
     - `filamat`:               Material generation library
+    - `filameshio`:            Tiny mesh parsing library (see also `tools/filamesh`)
     - `image`:                 Image filtering and simple transforms
     - `imageio`:               Image file reading / writing, only intended for internal use
     - `math`:                  Math library
@@ -132,7 +133,7 @@ Many other features have been either prototyped or planned:
     - `matinfo`              Displays information about materials compiled with `matc`
     - `mipgen`               Generates a series of miplevels from a source image.
     - `normal-blending`:     Tool to blend normal maps
-    - `roughness-prefilter`: Pre-filters a roughness map from a normal map to reduce aliasing 
+    - `roughness-prefilter`: Pre-filters a roughness map from a normal map to reduce aliasing
     - `skygen`:              Physically-based sky environment texture generator
     - `specular-color`:      Computes the specular color of conductors based on spectral data
 
@@ -730,7 +731,7 @@ in your build directory). These sample apps expect a path to a directory contain
 for the IBL. To generate an IBL simply use this command:
 
 ```
-cmgen -x ./ibls/ my_ibl.exr 
+cmgen -x ./ibls/ my_ibl.exr
 ```
 
 The source environment map can be a PNG (8 or 16 bit), a PSD (16 or 32 bit), an HDR or an OpenEXR
@@ -870,7 +871,7 @@ Host tools (such as `matc` or `cmgen`) can use external dependencies freely.
 ## How to make contributions
 
 Please read and follow the steps in [CONTRIBUTING.md](/CONTRIBUTING.md). Make sure you are
-familiar with the [code style](/CODE_STYLE.md). 
+familiar with the [code style](/CODE_STYLE.md).
 
 ## License
 

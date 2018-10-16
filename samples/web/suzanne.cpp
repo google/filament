@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-#include "filamesh.h"
 #include "filaweb.h"
 
 #include <filament/Engine.h>
@@ -27,6 +26,8 @@
 #include <filament/TransformManager.h>
 #include <filament/VertexBuffer.h>
 #include <filament/View.h>
+
+#include <filameshio/MeshIO.h>
 
 #include <utils/Entity.h>
 #include <utils/EntityManager.h>
@@ -43,7 +44,7 @@ using WrapMode = TextureSampler::WrapMode;
 using Format = Texture::InternalFormat;
 
 struct SuzanneApp {
-    Filamesh filamesh;
+    MeshIO::Mesh filamesh;
     Material* mat;
     MaterialInstance* mi;
     Camera* cam;
@@ -162,11 +163,18 @@ void setup(Engine* engine, View* view, Scene* scene) {
     printf("%s: %d bytes\n", "mesh", mesh.rawSize);
     const uint8_t* mdata = mesh.rawData.get();
     const auto destructor = [](void* buffer, size_t size, void* user) {
-        auto asset = (filaweb::Asset*) user;
-        asset->rawData.reset();
+        // This destruction lambda is called for the vertex buffer AND index buffer, so release CPU
+        // memory only after both have been uploaded to the GPU. The static count trick here works
+        // only because we create a single mesh in this demo.
+        static int count = 0;
+        if (++count == 2) {
+            auto asset = (filaweb::Asset*) user;
+            asset->rawData.reset();
+        }
     };
-    app.filamesh = decodeMesh(*engine, mdata, 0, app.mi, destructor, &mesh);
-    scene->addEntity(app.filamesh->renderable);
+
+    app.filamesh = MeshIO::loadMeshFromBuffer(engine, mdata, destructor, &mesh, app.mi);
+    scene->addEntity(app.filamesh.renderable);
 
     // Create textures.
     TextureSampler sampler(TextureSampler::MinFilter::LINEAR_MIPMAP_LINEAR, MagFilter::LINEAR,
@@ -243,7 +251,7 @@ void animate(Engine* engine, View* view, double now) {
     double ratio = double(width) / height;
     app.cam->setProjection(45.0, ratio, 0.1, 50.0, ratio < 1 ? Fov::HORIZONTAL : Fov::VERTICAL);
     auto& tcm = engine->getTransformManager();
-    tcm.setTransform(tcm.getInstance(app.filamesh->renderable),
+    tcm.setTransform(tcm.getInstance(app.filamesh.renderable),
         mat4f{mat3f{1.0}, float3{0.0f, 0.0f, -4.0f}} *
         mat4f::rotate(now, math::float3{0, 1, 0}));
 };
