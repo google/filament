@@ -23,6 +23,7 @@
 #include <utils/Path.h>
 
 #include <filament/Engine.h>
+#include <filament/LightManager.h>
 #include <filament/Material.h>
 #include <filament/MaterialInstance.h>
 #include <filament/RenderableManager.h>
@@ -36,13 +37,12 @@
 
 #include "app/Config.h"
 #include "app/FilamentApp.h"
-#include "app/MeshIO.h"
 
 #include <stb_image.h>
 #include <utils/EntityManager.h>
 
 #include <filamat/MaterialBuilder.h>
-#include <filament/LightManager.h>
+#include <filameshio/MeshIO.h>
 
 using namespace math;
 using namespace filament;

@@ -37,13 +37,13 @@
 
 #include "app/Config.h"
 #include "app/FilamentApp.h"
-#include "app/MeshIO.h"
 
 #include <stb_image.h>
 
 #include <utils/EntityManager.h>
 
 #include <filamat/MaterialBuilder.h>
+#include <filameshio/MeshIO.h>
 
 using namespace math;
 using namespace filament;

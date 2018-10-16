@@ -16,7 +16,6 @@
 
 #include "../material_sandbox.h"
 
-#include "filamesh.h"
 #include "filaweb.h"
 
 #include <filament/Engine.h>
@@ -25,6 +24,8 @@
 #include <filament/RenderableManager.h>
 #include <filament/Scene.h>
 #include <filament/View.h>
+
+#include <filameshio/MeshIO.h>
 
 #include <math/vec3.h>
 
@@ -44,7 +45,7 @@ using WrapMode = TextureSampler::WrapMode;
 using Format = Texture::InternalFormat;
 
 struct SandboxApp {
-    Filamesh filamesh;
+    MeshIO::Mesh filamesh;
     Camera* cam;
     SandboxParameters params;
     filaweb::SkyLight skylight;
@@ -81,12 +82,18 @@ void setup(Engine* engine, View* view, Scene* scene) {
     // Create mesh.
     const uint8_t* mdata = mesh.rawData.get();
     const auto destructor = [](void* buffer, size_t size, void* user) {
-        auto asset = (filaweb::Asset*) user;
-        asset->rawData.reset();
+        // This destruction lambda is called for the vertex buffer AND index buffer, so release CPU
+        // memory only after both have been uploaded to the GPU. The static count trick here works
+        // only because we create a single mesh in this demo.
+        static int count = 0;
+        if (++count == 2) {
+            auto asset = (filaweb::Asset*) user;
+            asset->rawData.reset();
+        }
     };
     MaterialInstance* materialInstance = app.params.materialInstance[MATERIAL_LIT];
-    app.filamesh = decodeMesh(*engine, mdata, 0, materialInstance, destructor, &mesh);
-    scene->addEntity(app.filamesh->renderable);
+    app.filamesh = MeshIO::loadMeshFromBuffer(engine, mdata, destructor, &mesh, materialInstance);
+    scene->addEntity(app.filamesh.renderable);
 
     // Create the sun.
     scene->addEntity(app.params.light);
@@ -155,7 +162,7 @@ void ui(Engine* engine, View* view) {
     MaterialInstance* materialInstance = updateInstances(params, *engine);
 
     auto& rcm = engine->getRenderableManager();
-    auto instance = rcm.getInstance(app.filamesh->renderable);
+    auto instance = rcm.getInstance(app.filamesh.renderable);
     for (size_t i = 0; i < rcm.getPrimitiveCount(instance); i++) {
         rcm.setMaterialInstanceAt(instance, i, materialInstance);
     }
