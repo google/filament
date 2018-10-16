@@ -205,11 +205,11 @@
 #pragma clang diagnostic ignored "-Wunused-parameter"
 
 DECL_DRIVER_API_2(beginFrame,
-        uint64_t, monotonic_clock_ns,
+        int64_t, monotonic_clock_ns,
         uint32_t, frameId)
 
 DECL_DRIVER_API_1(setPresentationTime,
-        uint64_t, monotonic_clock_ns)
+        int64_t, monotonic_clock_ns)
 
 DECL_DRIVER_API_1(endFrame,
         uint32_t, frameId)
@@ -299,13 +299,13 @@ DECL_DRIVER_API_SYNCHRONOUS_1(Driver::StreamHandle, createStream, void*, stream)
 
 DECL_DRIVER_API_SYNCHRONOUS_3(void, setStreamDimensions, Driver::StreamHandle, stream, uint32_t, width, uint32_t, height)
 
+DECL_DRIVER_API_SYNCHRONOUS_1(int64_t, getStreamTimestamp, Driver::StreamHandle, stream)
+
 DECL_DRIVER_API_SYNCHRONOUS_1(void, updateStreams, driver::DriverApi*, driver)
 
 DECL_DRIVER_API_SYNCHRONOUS_1(void, destroyFence, Driver::FenceHandle, fh)
 
-DECL_DRIVER_API_SYNCHRONOUS_2(Driver::FenceStatus, wait,
-        Driver::FenceHandle, fh,
-        uint64_t, timeout)
+DECL_DRIVER_API_SYNCHRONOUS_2(Driver::FenceStatus, wait, Driver::FenceHandle, fh, uint64_t, timeout)
 
 DECL_DRIVER_API_SYNCHRONOUS_1(bool, isTextureFormatSupported, Driver::TextureFormat, format)
 

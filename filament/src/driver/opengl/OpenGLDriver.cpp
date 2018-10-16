@@ -1411,6 +1411,14 @@ void OpenGLDriver::setStreamDimensions(Driver::StreamHandle sh, uint32_t width, 
     }
 }
 
+int64_t OpenGLDriver::getStreamTimestamp(Driver::StreamHandle sh) {
+    if (sh) {
+        GLStream* s = handle_cast<GLStream*>(sh);
+        return s->user_thread.timestamp;
+    }
+    return 0;
+}
+
 void OpenGLDriver::destroyFence(Driver::FenceHandle fh) {
     if (fh) {
         HwFence* f = handle_cast<HwFence*>(fh);
@@ -2277,8 +2285,12 @@ void OpenGLDriver::updateStream(GLTexture* t, driver::DriverApi* driver) noexcep
             // sync object is in the driver's command queue.
             glFlush();
 
-            driver->queueCommand([this, t, s, fence, readTexture, writeTexture,
-                    width = info.width, height = info.height]() {
+            // Update the stream timestamp. It's not clear to me that this is correct; which
+            // timestamp do we really want? Here we use "now" because we have nothing else we
+            // can use.
+            s->user_thread.timestamp = std::chrono::steady_clock::now().time_since_epoch().count();
+
+            driver->queueCommand([this, t, s, fence, readTexture, writeTexture]() {
                 // the stream may have been destroyed since we enqueued the command
                 // also make sure that this texture is still associated with the same stream
                 auto& streams = mExternalStreams;
@@ -2291,8 +2303,6 @@ void OpenGLDriver::updateStream(GLTexture* t, driver::DriverApi* driver) noexcep
                     t->gl.texture_id = readTexture;
                     t->gl.fence = fence;
                     s->gl.externalTexture2DId = writeTexture;
-                    s->gl.width = width;
-                    s->gl.height = height;
                 } else {
                     glDeleteSync(fence);
                 }
@@ -2537,7 +2547,7 @@ void OpenGLDriver::readPixels(Driver::RenderTargetHandle src,
 // Rendering ops
 // ------------------------------------------------------------------------------------------------
 
-void OpenGLDriver::beginFrame(uint64_t monotonic_clock_ns, uint32_t frameId) {
+void OpenGLDriver::beginFrame(int64_t monotonic_clock_ns, uint32_t frameId) {
     insertEventMarker("beginFrame");
     if (UTILS_UNLIKELY(!mExternalStreams.empty())) {
         driver::OpenGLPlatform& platform = mPlatform;
@@ -2546,7 +2556,7 @@ void OpenGLDriver::beginFrame(uint64_t monotonic_clock_ns, uint32_t frameId) {
             assert(t && t->hwStream);
             if (static_cast<GLStream*>(t->hwStream)->isNativeStream()) {
                 assert(t->hwStream->stream);
-                platform.updateTexImage(t->hwStream->stream);
+                platform.updateTexImage(t->hwStream->stream, &static_cast<GLStream*>(t->hwStream)->user_thread.timestamp);
                 // NOTE: We assume that updateTexImage() binds the texture on our behalf
                 GLuint activeUnit = state.textures.active;
                 state.textures.units[activeUnit].targets[index].texture_id = t->gl.texture_id;
@@ -2555,7 +2565,7 @@ void OpenGLDriver::beginFrame(uint64_t monotonic_clock_ns, uint32_t frameId) {
     }
 }
 
-void OpenGLDriver::setPresentationTime(uint64_t monotonic_clock_ns) {
+void OpenGLDriver::setPresentationTime(int64_t monotonic_clock_ns) {
     mPlatform.setPresentationTime(monotonic_clock_ns);
 }
 

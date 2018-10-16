@@ -48,7 +48,7 @@ public:
     void destroyStream(Stream* stream) noexcept final override {}
     void attach(Stream* stream, intptr_t tname) noexcept final override {}
     void detach(Stream* stream) noexcept final override {}
-    void updateTexImage(Stream* stream) noexcept final override {}
+    void updateTexImage(Stream* stream, int64_t* timestamp) noexcept final override {}
 
     ExternalTexture* createExternalTextureStorage() noexcept final override { return nullptr; }
     void reallocateExternalStorage(ExternalTexture* ets,

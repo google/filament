@@ -50,6 +50,8 @@ public:
 
     uint32_t getHeight() const noexcept { return mHeight; }
 
+    int64_t getTimestamp() const noexcept;
+
 private:
     FEngine& mEngine;
     Handle<HwStream> mStreamHandle;

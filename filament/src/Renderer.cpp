@@ -273,7 +273,7 @@ void FRenderer::mirrorFrame(FSwapChain* dstSwapChain, Viewport const& dstViewpor
                 viewRenderTarget, dstViewport.left, dstViewport.bottom, dstViewport.width, dstViewport.height,
                 viewRenderTarget, srcViewport.left, srcViewport.bottom, srcViewport.width, srcViewport.height);
     if (flags & SET_PRESENTATION_TIME) {
-        uint64_t monotonic_clock_ns (std::chrono::steady_clock::now().time_since_epoch().count());
+        int64_t monotonic_clock_ns (std::chrono::steady_clock::now().time_since_epoch().count());
         driver.setPresentationTime(monotonic_clock_ns);
     }
 
@@ -313,7 +313,7 @@ bool FRenderer::beginFrame(FSwapChain* swapChain) {
     mSwapChain = swapChain;
     swapChain->makeCurrent(driver);
 
-    uint64_t monotonic_clock_ns (std::chrono::steady_clock::now().time_since_epoch().count());
+    int64_t monotonic_clock_ns (std::chrono::steady_clock::now().time_since_epoch().count());
     driver.beginFrame(monotonic_clock_ns, mFrameId);
     driver.setPresentationTime(monotonic_clock_ns);
 

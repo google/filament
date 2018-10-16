@@ -24,6 +24,8 @@
 #include <filament/driver/PixelBufferDescriptor.h>
 
 #include <utils/Panic.h>
+#include <filament/Stream.h>
+
 
 namespace filament {
 
@@ -134,6 +136,12 @@ void FStream::readPixels(uint32_t xoffset, uint32_t yoffset, uint32_t width, uin
     }
 }
 
+int64_t FStream::getTimestamp() const noexcept {
+    FEngine::DriverApi& driver = mEngine.getDriverApi();
+    return driver.getStreamTimestamp(mStreamHandle);
+}
+
+
 } // namespace details
 
 // ------------------------------------------------------------------------------------------------
@@ -153,6 +161,10 @@ void Stream::setDimensions(uint32_t width, uint32_t height) noexcept {
 void Stream::readPixels(uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
         driver::PixelBufferDescriptor&& buffer) noexcept {
     upcast(this)->readPixels(xoffset, yoffset, width, height, std::move(buffer));
+}
+
+int64_t Stream::getTimestamp() const noexcept {
+    return upcast(this)->getTimestamp();
 }
 
 } // namespace filament

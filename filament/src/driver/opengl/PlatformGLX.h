@@ -43,13 +43,13 @@ public:
     void destroyFence(Fence* fence) noexcept override;
     driver::FenceStatus waitFence(Fence* fence, uint64_t timeout) noexcept override;
 
-    void setPresentationTime(long time) noexcept final override {}
+    void setPresentationTime(int64_t time) noexcept final override {}
 
     Stream* createStream(void* nativeStream) noexcept final override { return nullptr; }
     void destroyStream(Stream* stream) noexcept final override {}
     void attach(Stream* stream, intptr_t tname) noexcept final override {}
     void detach(Stream* stream) noexcept final override {}
-    void updateTexImage(Stream* stream) noexcept final override {}
+    void updateTexImage(Stream* stream, int64_t* timestamp) noexcept final override {}
 
     ExternalTexture* createExternalTextureStorage() noexcept final override { return nullptr; }
     void reallocateExternalStorage(ExternalTexture* ets,
