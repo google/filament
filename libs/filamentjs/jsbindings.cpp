@@ -35,6 +35,7 @@
 #include <filament/Camera.h>
 #include <filament/Engine.h>
 #include <filament/IndexBuffer.h>
+#include <filament/LightManager.h>
 #include <filament/Material.h>
 #include <filament/MaterialInstance.h>
 #include <filament/RenderableManager.h>
@@ -82,6 +83,7 @@ namespace emscripten {
         BIND(View)
         BIND(Scene)
         BIND(Camera)
+        BIND(LightManager)
         BIND(RenderableManager)
         BIND(TransformManager)
         BIND(VertexBuffer)
@@ -104,11 +106,12 @@ using VertexBuilder = VertexBuffer::Builder;
 using IndexBuilder = IndexBuffer::Builder;
 using MatBuilder = Material::Builder;
 using TexBuilder = Texture::Builder;
+using LightBuilder = LightManager::Builder;
 
 // We avoid directly exposing driver::BufferDescriptor because embind does not support move
 // semantics and void* doesn't make sense to JavaScript anyway. This little wrapper class is exposed
 // to JavaScript as "driver$BufferDescriptor", but clients will normally use our "Filament.Buffer"
-// helper function, which is implemented in wasmloader.
+// helper function (implemented in utilities.js)
 struct BufferDescriptor {
     // This form is used when JavaScript sends a buffer into WASM.
     BufferDescriptor(val arrdata) {
@@ -132,7 +135,7 @@ struct BufferDescriptor {
 };
 
 // Exposed to JavaScript as "driver$PixelBufferDescriptor", but clients will normally use the
-// "Filament.PixelBuffer" helper function, which is implemented in wasmloader.
+// "Filament.PixelBuffer" helper function (implemented in utilities.js)
 struct PixelBufferDescriptor {
     PixelBufferDescriptor(val arrdata, driver::PixelDataFormat fmt, driver::PixelDataType dtype) {
         auto byteLength = arrdata["byteLength"].as<uint32_t>();
@@ -286,7 +289,13 @@ class_<Camera>("Camera")
     .function("setProjection", EMBIND_LAMBDA(void, (Camera* self, Camera::Projection projection,
             double left, double right, double bottom, double top, double near, double far), {
         self->setProjection(projection, left, right, bottom, top, near, far);
-    }), allow_raw_pointers());
+    }), allow_raw_pointers())
+    .function("setProjectionFov", EMBIND_LAMBDA(void, (Camera* self,
+            double fovInDegrees, double aspect, double near, double far, Camera::Fov direction), {
+        self->setProjection(fovInDegrees, aspect, near, far, direction);
+    }), allow_raw_pointers())
+    .function("setExposure", &Camera::setExposure)
+    .function("lookAt", &Camera::lookAt);
 
 class_<RenderBuilder>("RenderableManager$Builder")
     .function("build", EMBIND_LAMBDA(void, (RenderBuilder* builder,
@@ -321,6 +330,39 @@ class_<TransformManager>("TransformManager")
         self->setTransform(instance, m.m); }), allow_raw_pointers());
 
 class_<TransformManager::Instance>("TransformManager$Instance");
+
+class_<LightBuilder>("LightManager$Builder")
+    .function("build", EMBIND_LAMBDA(void, (LightBuilder* builder,
+            Engine* engine, utils::Entity entity), {
+        builder->build(*engine, entity);
+    }), allow_raw_pointers())
+    .BUILDER_FUNCTION("castShadows", LightBuilder, (LightBuilder* builder, bool enable), {
+        return &builder->castShadows(enable); })
+    .BUILDER_FUNCTION("castLight", LightBuilder, (LightBuilder* builder, bool enable), {
+        return &builder->castLight(enable); })
+    .BUILDER_FUNCTION("position", LightBuilder, (LightBuilder* builder, math::float3 value), {
+        return &builder->position(value); })
+    .BUILDER_FUNCTION("direction", LightBuilder, (LightBuilder* builder, math::float3 value), {
+        return &builder->direction(value); })
+    .BUILDER_FUNCTION("color", LightBuilder, (LightBuilder* builder, math::float3 value), {
+        return &builder->color(value); })
+    .BUILDER_FUNCTION("intensity", LightBuilder, (LightBuilder* builder, float value), {
+        return &builder->intensity(value); })
+    .BUILDER_FUNCTION("falloff", LightBuilder, (LightBuilder* builder, float value), {
+        return &builder->falloff(value); })
+    .BUILDER_FUNCTION("spotLightCone", LightBuilder,
+            (LightBuilder* builder, float inner, float outer), {
+        return &builder->spotLightCone(inner, outer); })
+    .BUILDER_FUNCTION("sunAngularRadius", LightBuilder,
+            (LightBuilder* builder, float value), { return &builder->sunAngularRadius(value); })
+    .BUILDER_FUNCTION("sunHaloSize", LightBuilder,
+            (LightBuilder* builder, float value), { return &builder->sunHaloSize(value); })
+    .BUILDER_FUNCTION("sunHaloFalloff", LightBuilder,
+            (LightBuilder* builder, float value), { return &builder->sunHaloFalloff(value); });
+
+class_<LightManager>("LightManager")
+    .class_function("Builder", (LightBuilder (*)(LightManager::Type)) [] (LightManager::Type lt) {
+        return LightBuilder(lt); });
 
 class_<VertexBuilder>("VertexBuffer$Builder")
     .function("build", EMBIND_LAMBDA(VertexBuffer*, (VertexBuilder* builder, Engine* engine), {
@@ -386,7 +428,10 @@ class_<MaterialInstance>("MaterialInstance")
         self->setParameter(name.c_str(), value); }), allow_raw_pointers())
     .function("setTextureParameter", EMBIND_LAMBDA(void,
             (MaterialInstance* self, std::string name, Texture* value, TextureSampler sampler), {
-        self->setParameter(name.c_str(), value, sampler); }), allow_raw_pointers());
+        self->setParameter(name.c_str(), value, sampler); }), allow_raw_pointers())
+    .function("setColorParameter", EMBIND_LAMBDA(void,
+            (MaterialInstance* self, std::string name, RgbType type, math::float3 value), {
+        self->setParameter(name.c_str(), type, value); }), allow_raw_pointers());
 
 class_<TextureSampler>("TextureSampler")
     .constructor<driver::SamplerMinFilter, driver::SamplerMagFilter, driver::SamplerWrapMode>();
