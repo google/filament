@@ -339,6 +339,13 @@ Java_com_google_android_filament_Texture_nIsStreamValidForTexture(JNIEnv*, jclas
 
 #ifdef ANDROID
 
+#define BITMAP_CONFIG_ALPHA_8   0
+#define BITMAP_CONFIG_RGB_565   1
+#define BITMAP_CONFIG_RGBA_4444 2
+#define BITMAP_CONFIG_RGBA_8888 3
+#define BITMAP_CONFIG_RGBA_F16  4
+#define BITMAP_CONFIG_HARDWARE  5
+
 class AutoBitmap {
 public:
     AutoBitmap(JNIEnv* env, jobject bitmap) noexcept
@@ -378,12 +385,13 @@ public:
     }
 
     PixelDataFormat getFormat(int format) const noexcept {
+        // AndroidBitmapInfo does not capture the HARDWARE and RGBA_F16 formats
+        // so we switch on the Bitmap.Config values directly
         switch (format) {
-            // Bitmap.Config.ALPHA_8
-            case 1: return PixelDataFormat::ALPHA;
-            // Bitmap.Config.RGB_565
-            case 3: return PixelDataFormat::RGB;
-            // Bitmap.Config.RGBA_8888 or Bitmap.Config.RGBA_F16
+            case BITMAP_CONFIG_ALPHA_8:
+                return PixelDataFormat::ALPHA;
+            case BITMAP_CONFIG_RGB_565:
+                return PixelDataFormat::RGB;
             default:
                 return PixelDataFormat::RGBA;
         }
@@ -391,9 +399,8 @@ public:
 
     PixelDataType getType(int format) const noexcept {
         switch (format) {
-            // Bitmap.Config.RGBA_F16
-            case 6: return PixelDataType::HALF;
-            // Everything else
+            case BITMAP_CONFIG_RGBA_F16:
+                return PixelDataType::HALF;
             default:
                 return PixelDataType::UBYTE;
         }

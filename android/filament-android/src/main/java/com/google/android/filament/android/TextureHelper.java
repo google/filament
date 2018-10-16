@@ -26,7 +26,13 @@ import com.google.android.filament.Texture;
 import java.lang.reflect.Method;
 
 public final class TextureHelper {
-    private static final int BITMAP_CONFIG_HARDWARE = 7;
+    // Keep in sync with Texture.cpp
+    private static final int BITMAP_CONFIG_ALPHA_8    = 0;
+    private static final int BITMAP_CONFIG_RGB_565    = 1;
+    private static final int BITMAP_CONFIG_RGBA_4444  = 2;
+    private static final int BITMAP_CONFIG_RGBA_8888  = 3;
+    private static final int BITMAP_CONFIG_RGBA_F16   = 4;
+    private static final int BITMAP_CONFIG_HARDWARE   = 5;
 
     private static Method sEngineGetNativeObject;
     private static Method sTextureGetNativeObject;
@@ -54,9 +60,9 @@ public final class TextureHelper {
             @IntRange(from = 0) int xoffset, @IntRange(from = 0) int yoffset,
             @IntRange(from = 0) int width, @IntRange(from = 0) int height,
             @NonNull Bitmap bitmap) {
-        Bitmap.Config config = bitmap.getConfig();
-        if (config == Bitmap.Config.ARGB_4444 ||
-                config.ordinal() == BITMAP_CONFIG_HARDWARE) {
+
+        int format = toNativeFormat(bitmap.getConfig());
+        if (format == BITMAP_CONFIG_RGBA_4444 || format == BITMAP_CONFIG_HARDWARE) {
             throw new IllegalArgumentException("Unsupported config: ARGB_4444 or HARDWARE");
         }
 
@@ -64,10 +70,22 @@ public final class TextureHelper {
             long nativeTexture = (Long) sTextureGetNativeObject.invoke(texture);
             long nativeEngine = (Long) sEngineGetNativeObject.invoke(engine);
             nSetBitmap(nativeTexture, nativeEngine, level, xoffset, yoffset, width, height,
-                    bitmap, bitmap.getConfig().ordinal());
+                    bitmap, format);
         } catch (Exception e) {
             // Ignored
         }
+    }
+
+    private static int toNativeFormat(Bitmap.Config config) {
+        switch (config) {
+            case ALPHA_8:   return BITMAP_CONFIG_ALPHA_8;
+            case RGB_565:   return BITMAP_CONFIG_RGB_565;
+            case ARGB_4444: return BITMAP_CONFIG_RGBA_4444;
+            case ARGB_8888: return BITMAP_CONFIG_RGBA_8888;
+            case RGBA_F16:  return BITMAP_CONFIG_RGBA_F16;
+            case HARDWARE:  return BITMAP_CONFIG_HARDWARE;
+        }
+        return BITMAP_CONFIG_RGBA_8888;
     }
 
     private static native void nSetBitmap(long nativeTexture, long nativeEngine,
