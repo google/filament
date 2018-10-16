@@ -824,7 +824,8 @@ void OpenGLDriver::createVertexBuffer(
     uint8_t bufferCount,
     uint8_t attributeCount,
     uint32_t elementCount,
-    Driver::AttributeArray attributes) {
+    Driver::AttributeArray attributes,
+    Driver::BufferUsage usage) {
     DEBUG_MARKER()
 
     GLVertexBuffer* vb = construct<GLVertexBuffer>(vbh,
@@ -843,14 +844,17 @@ void OpenGLDriver::createVertexBuffer(
             }
         }
         bindBuffer(GL_ARRAY_BUFFER, vb->gl.buffers[i]);
-        glBufferData(GL_ARRAY_BUFFER, size, nullptr, GL_STATIC_DRAW);
+        glBufferData(GL_ARRAY_BUFFER, size, nullptr, getBufferUsage(usage));
     }
 
     CHECK_GL_ERROR(utils::slog.e)
 }
 
-void OpenGLDriver::createIndexBuffer(Driver::IndexBufferHandle ibh, Driver::ElementType elementType,
-        uint32_t indexCount) {
+void OpenGLDriver::createIndexBuffer(
+        Driver::IndexBufferHandle ibh,
+        Driver::ElementType elementType,
+        uint32_t indexCount,
+        Driver::BufferUsage usage) {
     DEBUG_MARKER()
 
     uint8_t elementSize = static_cast<uint8_t>(getElementTypeSize(elementType));
@@ -859,7 +863,7 @@ void OpenGLDriver::createIndexBuffer(Driver::IndexBufferHandle ibh, Driver::Elem
     GLsizeiptr size = elementSize * indexCount;
     bindVertexArray(nullptr);
     bindBuffer(GL_ELEMENT_ARRAY_BUFFER, ib->gl.buffer);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, size, nullptr, GL_STATIC_DRAW);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, size, nullptr, getBufferUsage(usage));
     CHECK_GL_ERROR(utils::slog.e)
 }
 
@@ -884,13 +888,16 @@ void OpenGLDriver::createSamplerBuffer(Driver::SamplerBufferHandle sbh, size_t s
     construct<GLSamplerBuffer>(sbh, size);
 }
 
-void OpenGLDriver::createUniformBuffer(Driver::UniformBufferHandle ubh, size_t size) {
+void OpenGLDriver::createUniformBuffer(
+        Driver::UniformBufferHandle ubh,
+        size_t size,
+        Driver::BufferUsage usage) {
     DEBUG_MARKER()
 
     GLUniformBuffer* ub = construct<GLUniformBuffer>(ubh, size);
     glGenBuffers(1, &ub->gl.ubo);
     bindBuffer(GL_UNIFORM_BUFFER, ub->gl.ubo);
-    glBufferData(GL_UNIFORM_BUFFER, size, nullptr, GL_DYNAMIC_DRAW);
+    glBufferData(GL_UNIFORM_BUFFER, size, nullptr, getBufferUsage(usage));
     CHECK_GL_ERROR(utils::slog.e)
 }
 

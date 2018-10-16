@@ -24,6 +24,8 @@
 #include "details/Material.h"
 #include "details/RenderPrimitive.h"
 
+#include <filament/driver/DriverEnums.h>
+
 #include <utils/Log.h>
 #include <utils/Panic.h>
 
@@ -310,7 +312,8 @@ void FRenderableManager::create(
 
                 bones.reset(new Bones); // FIXME: maybe use a pool allocator
                 bones->bones = UniformBuffer(CONFIG_MAX_BONE_COUNT * sizeof(InternalBone));
-                bones->handle = driver.createUniformBuffer(CONFIG_MAX_BONE_COUNT * sizeof(InternalBone));
+                bones->handle = driver.createUniformBuffer(CONFIG_MAX_BONE_COUNT * sizeof(InternalBone),
+                        driver::BufferUsage::DYNAMIC);
             }
         }
         if (builder->mSkinningBoneCount) {

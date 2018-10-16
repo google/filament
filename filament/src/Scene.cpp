@@ -169,7 +169,7 @@ void FScene::updateUBOs(utils::Range<uint32_t> visibleRenderables) noexcept {
         const size_t count = std::max(size_t(16u), (4u * visibleRenderables.size() + 2u) / 3u);
         mUboSize = uint32_t(count * sizeof(FRenderableManager::Transform));
         driver.destroyUniformBuffer(uniformBufferHandle);
-        uniformBufferHandle = driver.createUniformBuffer(mUboSize);
+        uniformBufferHandle = driver.createUniformBuffer(mUboSize, driver::BufferUsage::DYNAMIC);
     } else {
         // should we shrink the underlying UBO at some point?
     }

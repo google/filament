@@ -31,7 +31,7 @@ namespace details {
 GpuLightBuffer::GpuLightBuffer(FEngine& engine) noexcept
         : mLightsUb(UibGenerator::getLightsUib()) {
     DriverApi& driverApi = engine.getDriverApi();
-    mLightUbh = driverApi.createUniformBuffer(mLightsUb.getSize());
+    mLightUbh = driverApi.createUniformBuffer(mLightsUb.getSize(), driver::BufferUsage::DYNAMIC);
     driverApi.bindUniformBuffer(BindingPoints::LIGHTS, mLightUbh);
 }
 

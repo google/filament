@@ -40,7 +40,7 @@ FMaterialInstance::FMaterialInstance(FEngine& engine, FMaterial const* material)
 
     if (!material->getUniformInterfaceBlock().isEmpty()) {
         mUniforms = UniformBuffer(upcast(material)->getDefaultInstance()->mUniforms);
-        mUbHandle = driver.createUniformBuffer(mUniforms.getSize());
+        mUbHandle = driver.createUniformBuffer(mUniforms.getSize(), driver::BufferUsage::DYNAMIC);
     }
 
     if (!material->getSamplerInterfaceBlock().isEmpty()) {
@@ -63,7 +63,7 @@ void FMaterialInstance::initDefaultInstance(FEngine& engine, FMaterial const* ma
 
     if (!material->getUniformInterfaceBlock().isEmpty()) {
         mUniforms = UniformBuffer(material->getUniformInterfaceBlock());
-        mUbHandle = driver.createUniformBuffer(mUniforms.getSize());
+        mUbHandle = driver.createUniformBuffer(mUniforms.getSize(), driver::BufferUsage::STATIC);
     }
 
     if (!material->getSamplerInterfaceBlock().isEmpty()) {

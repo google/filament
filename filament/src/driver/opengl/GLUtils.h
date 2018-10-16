@@ -78,6 +78,15 @@ constexpr inline GLuint getComponentCount(filament::driver::ElementType type) no
 // Our enums to GLenum conversions
 // ------------------------------------------------------------------------------------------------
 
+constexpr inline GLenum getBufferUsage(filament::driver::BufferUsage usage) noexcept {
+    switch (usage) {
+        case driver::STATIC:
+            return GL_STATIC_DRAW;
+        case driver::DYNAMIC:
+            return GL_DYNAMIC_DRAW;
+    }
+}
+
 constexpr inline GLboolean getNormalization(bool normalized) noexcept {
     return GLboolean(normalized ? GL_TRUE : GL_FALSE);
 }

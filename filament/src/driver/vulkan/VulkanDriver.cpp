@@ -240,13 +240,14 @@ void VulkanDriver::flush(int) {
 }
 
 void VulkanDriver::createVertexBuffer(Driver::VertexBufferHandle vbh, uint8_t bufferCount,
-        uint8_t attributeCount, uint32_t elementCount, Driver::AttributeArray attributes) {
+        uint8_t attributeCount, uint32_t elementCount, Driver::AttributeArray attributes,
+        Driver::BufferUsage usage) {
     construct_handle<VulkanVertexBuffer>(mHandleMap, vbh, mContext, mStagePool, bufferCount,
             attributeCount, elementCount, attributes);
 }
 
 void VulkanDriver::createIndexBuffer(Driver::IndexBufferHandle ibh, Driver::ElementType elementType,
-        uint32_t indexCount) {
+        uint32_t indexCount, Driver::BufferUsage usage) {
     auto elementSize = (uint8_t) getElementTypeSize(elementType);
     construct_handle<VulkanIndexBuffer>(mHandleMap, ibh, mContext, mStagePool, elementSize,
             indexCount);
@@ -263,7 +264,8 @@ void VulkanDriver::createSamplerBuffer(Driver::SamplerBufferHandle sbh, size_t c
     construct_handle<VulkanSamplerBuffer>(mHandleMap, sbh, mContext, count);
 }
 
-void VulkanDriver::createUniformBuffer(Driver::UniformBufferHandle ubh, size_t size) {
+void VulkanDriver::createUniformBuffer(Driver::UniformBufferHandle ubh, size_t size,
+        Driver::BufferUsage usage) {
     construct_handle<VulkanUniformBuffer>(mHandleMap, ubh, mContext, mStagePool, size);
 }
 

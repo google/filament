@@ -146,7 +146,7 @@ FVertexBuffer::FVertexBuffer(FEngine& engine, const VertexBuffer::Builder& build
 
     FEngine::DriverApi& driver = engine.getDriverApi();
     mHandle = driver.createVertexBuffer(
-            mBufferCount, attributeCount, mVertexCount, attributeArray);
+            mBufferCount, attributeCount, mVertexCount, attributeArray, driver::BufferUsage::STATIC);
 }
 
 void FVertexBuffer::terminate(FEngine& engine) {
