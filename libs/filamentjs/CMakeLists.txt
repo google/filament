@@ -18,4 +18,4 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${COPTS}")
 
 add_executable(filamentjs jsenums.cpp jsbindings.cpp)
 set_target_properties(filamentjs PROPERTIES OUTPUT_NAME filament)
-target_link_libraries(filamentjs PRIVATE filament math utils image)
+target_link_libraries(filamentjs PRIVATE filament math utils image filameshio)

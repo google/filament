@@ -127,10 +127,9 @@ function(add_filamesh_demo NAME)
     include_directories(${GENERATION_ROOT})
     add_executable(
             ${NAME}
-            ${NAME}.cpp
-            app/MeshIO.cpp)
+            ${NAME}.cpp)
     add_dependencies(${NAME} sample_materials)
-    target_link_libraries(${NAME} PRIVATE ${APP_LIBS})
+    target_link_libraries(${NAME} PRIVATE ${APP_LIBS} filameshio)
     target_compile_options(${NAME} PRIVATE ${COMPILER_FLAGS})
 endfunction()
 

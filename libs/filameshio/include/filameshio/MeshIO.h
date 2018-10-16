@@ -14,34 +14,44 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_SAMPLE_MESHIO_H
-#define TNT_FILAMENT_SAMPLE_MESHIO_H
+#ifndef TNT_FILAMENT_FILAMESHIO_MESHIO_H
+#define TNT_FILAMENT_FILAMESHIO_MESHIO_H
+
+#include <utils/Entity.h>
+#include <utils/Path.h>
 
 #include <map>
-#include <utils/Entity.h>
+#include <string>
 
 namespace filament {
     class Engine;
-    class Renderable;
     class VertexBuffer;
     class IndexBuffer;
     class MaterialInstance;
 }
 
-namespace utils {
-    class Path;
-}
-
 class MeshIO {
 public:
+    using Callback = void(*)(void* buffer, size_t size, void* user);
+    using MaterialRegistry = std::map<std::string, filament::MaterialInstance*>;
+
     struct Mesh {
         utils::Entity renderable;
         filament::VertexBuffer* vertexBuffer = nullptr;
         filament::IndexBuffer* indexBuffer = nullptr;
     };
 
-    static Mesh loadMeshFromFile(filament::Engine* engine, const utils::Path& path,
-            const std::map<std::string, filament::MaterialInstance*>& materials);
+    static Mesh loadMeshFromFile(filament::Engine* engine,
+            const utils::Path& path,
+            const MaterialRegistry& materials);
+
+     static Mesh loadMeshFromBuffer(filament::Engine* engine,
+            void const* data, Callback destructor, void* user,
+            const MaterialRegistry& materials);
+
+     static Mesh loadMeshFromBuffer(filament::Engine* engine,
+            void const* data, Callback destructor, void* user,
+            filament::MaterialInstance* defaultMaterial);
 };
 
-#endif //TNT_FILAMENT_SAMPLE_MESHIO_H
+#endif // TNT_FILAMENT_FILAMESHIO_MESHIO_H
