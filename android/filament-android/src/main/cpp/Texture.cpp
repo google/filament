@@ -380,29 +380,20 @@ public:
         return mInfo.height * mInfo.stride;
     }
 
-    uint32_t getStride() const noexcept {
-        return mInfo.stride;
-    }
-
     PixelDataFormat getFormat(int format) const noexcept {
         // AndroidBitmapInfo does not capture the HARDWARE and RGBA_F16 formats
         // so we switch on the Bitmap.Config values directly
         switch (format) {
-            case BITMAP_CONFIG_ALPHA_8:
-                return PixelDataFormat::ALPHA;
-            case BITMAP_CONFIG_RGB_565:
-                return PixelDataFormat::RGB;
-            default:
-                return PixelDataFormat::RGBA;
+            case BITMAP_CONFIG_ALPHA_8: return PixelDataFormat::ALPHA;
+            case BITMAP_CONFIG_RGB_565: return PixelDataFormat::RGB;
+            default:                    return PixelDataFormat::RGBA;
         }
     }
 
     PixelDataType getType(int format) const noexcept {
         switch (format) {
-            case BITMAP_CONFIG_RGBA_F16:
-                return PixelDataType::HALF;
-            default:
-                return PixelDataType::UBYTE;
+            case BITMAP_CONFIG_RGBA_F16: return PixelDataType::HALF;
+            default:                     return PixelDataType::UBYTE;
         }
     }
 
@@ -434,13 +425,16 @@ Java_com_google_android_filament_android_TextureHelper_nSetBitmap(JNIEnv* env, j
     auto* callback = AutoBitmap::make(engine, env, bitmap);
 
     Texture::PixelBufferDescriptor desc(
-            callback->getData(), callback->getSizeInBytes(),
-            callback->getFormat(format), callback->getType(format),
-            1, 0, 0, // alignment, left, top
-            callback->getStride(), &AutoBitmap::invoke, callback);
+            callback->getData(),
+            callback->getSizeInBytes(),
+            callback->getFormat(format),
+            callback->getType(format),
+            &AutoBitmap::invoke, callback);
 
-    texture->setImage(*engine, (size_t) level, (uint32_t) xoffset, (uint32_t) yoffset,
-            (uint32_t) width, (uint32_t) height, std::move(desc));
+    texture->setImage(*engine, (size_t) level,
+            (uint32_t) xoffset, (uint32_t) yoffset,
+            (uint32_t) width, (uint32_t) height,
+            std::move(desc));
 }
 
 #endif

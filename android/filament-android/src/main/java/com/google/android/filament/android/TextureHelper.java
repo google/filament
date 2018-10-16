@@ -41,6 +41,9 @@ public final class TextureHelper {
         try {
             sEngineGetNativeObject = Engine.class.getDeclaredMethod("getNativeObject");
             sTextureGetNativeObject = Texture.class.getDeclaredMethod("getNativeObject");
+
+            sEngineGetNativeObject.setAccessible(true);
+            sTextureGetNativeObject.setAccessible(true);
         } catch (NoSuchMethodException e) {
             // Cannot happen
         }
