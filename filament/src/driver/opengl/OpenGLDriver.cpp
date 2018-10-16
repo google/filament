@@ -1067,7 +1067,14 @@ void OpenGLDriver::createDefaultRenderTarget(
     DEBUG_MARKER()
 
     construct<GLRenderTarget>(rth);
-    // nothing more to do
+
+    uint32_t framebuffer, colorbuffer, depthbuffer;
+    mPlatform.createDefaultRenderTarget(framebuffer, colorbuffer, depthbuffer);
+
+    GLRenderTarget* rt = handle_cast<GLRenderTarget*>(rth);
+    rt->gl.fbo = framebuffer;
+    rt->gl.color.id = colorbuffer;
+    rt->gl.depth.id = depthbuffer;
 }
 
 void OpenGLDriver::createRenderTarget(Driver::RenderTargetHandle rth,

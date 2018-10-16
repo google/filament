@@ -66,6 +66,13 @@ public:
     virtual SwapChain* createSwapChain(void* nativeWindow, uint64_t& flags) noexcept = 0;
     virtual void destroySwapChain(SwapChain* swapChain) noexcept = 0;
 
+    virtual void createDefaultRenderTarget(uint32_t& framebuffer, uint32_t& colorbuffer,
+            uint32_t& depthbuffer) noexcept {
+        framebuffer = 0;
+        colorbuffer = 0;
+        depthbuffer = 0;
+    }
+
     // Called to make the OpenGL context active on the calling thread.
     virtual void makeCurrent(SwapChain* drawSwapChain, SwapChain* readSwapChain) noexcept = 0;
 

@@ -24,10 +24,11 @@
         #include "driver/vulkan/PlatformVkAndroid.h"
     #endif
 #elif defined(IOS)
+    #ifndef USE_EXTERNAL_GLES3
+        #include "driver/opengl/PlatformCocoaTouchGL.h"
+    #endif
     #if defined (FILAMENT_DRIVER_SUPPORTS_VULKAN)
         #include "driver/vulkan/PlatformVkCocoaTouch.h"
-    #else
-        #error Filament for iOS must be compiled with Vulkan support
     #endif
 #elif defined(__APPLE__)
     #ifndef USE_EXTERNAL_GLES3
@@ -100,7 +101,7 @@ Platform* Platform::create(Backend* backend) noexcept {
     #elif defined(ANDROID)
         return new PlatformEGL();
     #elif defined(IOS)
-        return nullptr;
+        return new PlatformCocoaTouchGL();
     #elif defined(__APPLE__)
         return new PlatformCocoaGL();
     #elif defined(__linux__)

@@ -58,7 +58,7 @@ Here are a few sample materials rendered with Filament:
 ### Backends
 
 - OpenGL 4.1+ for Linux, macOS and Windows
-- OpenGL ES 3.0+ for Android
+- OpenGL ES 3.0+ for Android and iOS
 - Vulkan 1.0 for Android, Linux, macOS and iOS (with MoltenVk), and Windows
 
 ### Rendering
@@ -856,9 +856,9 @@ creating the swap chain in the `onNativeWindowChanged()` callback.
 
 See `ios/samples` for examples of using Filament on iOS.
 
-Filament on iOS is largely the same as native rendering with C++. A `CAMetalLayer` is passed to
-the `createSwapChain` method. At the moment, Filament for iOS only supports the Vulkan backend
-via MoltenVK.
+Filament on iOS is largely the same as native rendering with C++. A `CAEAGLLayer` or `CAMetalLayer`
+is passed to the `createSwapChain` method. Filament for iOS supports both OpenGL ES and Vulkan via
+MoltenVK.
 
 ## Generating C++ documentation
 

@@ -43,6 +43,11 @@ set(SRCS
         src/components/LightManager.cpp
         src/components/RenderableManager.cpp
         src/components/TransformManager.cpp
+        src/driver/opengl/gl_headers.cpp
+        src/driver/opengl/OpenGLBlitter.cpp
+        src/driver/opengl/GLUtils.cpp
+        src/driver/opengl/OpenGLDriver.cpp
+        src/driver/opengl/OpenGLProgram.cpp
         src/driver/CommandStream.cpp
         src/driver/CommandBufferQueue.cpp
         src/driver/CircularBuffer.cpp
@@ -161,35 +166,26 @@ endif()
 # OS specific
 # ==================================================================================================
 
-# iOS does not yet support OpenGL
-if(NOT IOS)
-    list(APPEND SRCS
-        src/driver/opengl/gl_headers.cpp
-        src/driver/opengl/OpenGLBlitter.cpp
-        src/driver/opengl/GLUtils.cpp
-        src/driver/opengl/OpenGLDriver.cpp
-        src/driver/opengl/OpenGLProgram.cpp
-    )
-
-    # Here set the architecture specific sources
-    if (USE_EXTERNAL_GLES3)
-        # Experimental feature; clients provide their own Context Manager.
-    elseif (ANDROID)
-        list(APPEND SRCS src/driver/android/ExternalStreamManagerAndroid.cpp)
-        list(APPEND SRCS src/driver/android/ExternalTextureManagerAndroid.cpp)
-        list(APPEND SRCS src/driver/android/VirtualMachineEnv.cpp)
-        list(APPEND SRCS src/driver/opengl/PlatformEGL.cpp)
-    elseif (APPLE)
-        list(APPEND SRCS src/driver/opengl/PlatformCocoaGL.mm)
-    elseif (WEBGL)
-        list(APPEND SRCS src/driver/opengl/PlatformWebGL.cpp)
-    elseif (LINUX)
-        list(APPEND SRCS src/driver/opengl/PlatformGLX.cpp)
-    elseif (WIN32)
-        list(APPEND SRCS src/driver/opengl/PlatformWGL.cpp)
-    else()
-        list(APPEND SRCS src/driver/opengl/PlatformDummyGL.cpp)
-    endif()
+# Here set the architecture specific sources
+if (USE_EXTERNAL_GLES3)
+    # Experimental feature; clients provide their own Context Manager.
+elseif (ANDROID)
+    list(APPEND SRCS src/driver/android/ExternalStreamManagerAndroid.cpp)
+    list(APPEND SRCS src/driver/android/ExternalTextureManagerAndroid.cpp)
+    list(APPEND SRCS src/driver/android/VirtualMachineEnv.cpp)
+    list(APPEND SRCS src/driver/opengl/PlatformEGL.cpp)
+elseif (IOS)
+    list(APPEND SRCS src/driver/opengl/PlatformCocoaTouchGL.mm)
+elseif (APPLE)
+    list(APPEND SRCS src/driver/opengl/PlatformCocoaGL.mm)
+elseif (WEBGL)
+    list(APPEND SRCS src/driver/opengl/PlatformWebGL.cpp)
+elseif (LINUX)
+    list(APPEND SRCS src/driver/opengl/PlatformGLX.cpp)
+elseif (WIN32)
+    list(APPEND SRCS src/driver/opengl/PlatformWGL.cpp)
+else()
+    list(APPEND SRCS src/driver/opengl/PlatformDummyGL.cpp)
 endif()
 
 # ==================================================================================================
@@ -330,7 +326,7 @@ target_link_libraries(${TARGET} PUBLIC filaflat)
 target_link_libraries(${TARGET} PUBLIC filabridge)
 target_link_libraries(${TARGET} PUBLIC image_headers)
 
-# Filament on iOS does not yet support the OpenGL backend, and Android links directly against EGL
+# Android and iOS link directly against platform-specific OpenGL ES libraries
 if(NOT IOS AND NOT ANDROID)
     target_link_libraries(${TARGET} PRIVATE bluegl)
 endif()

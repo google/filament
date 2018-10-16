@@ -23,6 +23,12 @@
 #import <filament/RenderableManager.h>
 #import <filament/TransformManager.h>
 
+// These defines are set in the "Preprocessor Macros" build setting for each scheme.
+#if !FILAMENT_APP_USE_VULKAN && \
+    !FILAMENT_APP_USE_OPENGL
+#error A valid FILAMENT_APP_USE_ backend define must be set.
+#endif
+
 using namespace filament;
 using utils::Entity;
 using utils::EntityManager;
@@ -65,7 +71,11 @@ static constexpr uint8_t BAKED_COLOR_PACKAGE[] = {
 - (instancetype)initWithCoder:(NSCoder*)coder
 {
     if (self = [super initWithCoder:coder]) {
+#if FILAMENT_APP_USE_OPENGL
+        [self initializeGLLayer];
+#elif FILAMENT_APP_USE_VULKAN
         [self initializeMetalLayer];
+#endif
         [self initializeFilament];
         self.contentScaleFactor = UIScreen.mainScreen.nativeScale;
     }
@@ -93,14 +103,23 @@ static constexpr uint8_t BAKED_COLOR_PACKAGE[] = {
     CAMetalLayer* metalLayer = (CAMetalLayer*) self.layer;
     metalLayer.pixelFormat = MTLPixelFormatBGRA8Unorm;
 
-    const CGSize size = self.bounds.size;
-    const float contentScale = [UIScreen mainScreen].nativeScale;
-    metalLayer.drawableSize = CGSizeMake(size.width * contentScale, size.height * contentScale);
+    CGRect nativeBounds = [UIScreen mainScreen].nativeBounds;
+    metalLayer.drawableSize = nativeBounds.size;
+}
+
+- (void)initializeGLLayer
+{
+    CAEAGLLayer* glLayer = (CAEAGLLayer*) self.layer;
+    glLayer.opaque = YES;
 }
 
 - (void)initializeFilament
 {
+#if FILAMENT_APP_USE_OPENGL
+    engine = Engine::create(filament::Engine::Backend::OPENGL);
+#elif FILAMENT_APP_USE_VULKAN
     engine = Engine::create(filament::Engine::Backend::VULKAN);
+#endif
     swapChain = engine->createSwapChain((__bridge void*) self.layer);
     renderer = engine->createRenderer();
     scene = engine->createScene();
@@ -145,9 +164,8 @@ static constexpr uint8_t BAKED_COLOR_PACKAGE[] = {
 
     filaView->setScene(scene);
     filaView->setCamera(camera);
-    CAMetalLayer* metalLayer = (CAMetalLayer*) self.layer;
-    CGSize size = metalLayer.drawableSize;
-    filaView->setViewport(Viewport(0, 0, size.width, size.height));
+    CGRect nativeBounds = [UIScreen mainScreen].nativeBounds;
+    filaView->setViewport(Viewport(0, 0, nativeBounds.size.width, nativeBounds.size.height));
 }
 
 - (void)renderloop
@@ -176,7 +194,11 @@ static constexpr uint8_t BAKED_COLOR_PACKAGE[] = {
 
 + (Class) layerClass
 {
+#if FILAMENT_APP_USE_OPENGL
+    return [CAEAGLLayer class];
+#elif FILAMENT_APP_USE_VULKAN
     return [CAMetalLayer class];
+#endif
 }
 
 @end
