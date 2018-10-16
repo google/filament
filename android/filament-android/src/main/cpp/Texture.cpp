@@ -422,14 +422,14 @@ Java_com_google_android_filament_android_TextureHelper_nSetBitmap(JNIEnv* env, j
     Texture* texture = (Texture*) nativeTexture;
     Engine *engine = (Engine *) nativeEngine;
 
-    auto* callback = AutoBitmap::make(engine, env, bitmap);
+    auto* autoBitmap = AutoBitmap::make(engine, env, bitmap);
 
     Texture::PixelBufferDescriptor desc(
-            callback->getData(),
-            callback->getSizeInBytes(),
-            callback->getFormat(format),
-            callback->getType(format),
-            &AutoBitmap::invoke, callback);
+            autoBitmap->getData(),
+            autoBitmap->getSizeInBytes(),
+            autoBitmap->getFormat(format),
+            autoBitmap->getType(format),
+            &AutoBitmap::invoke, autoBitmap);
 
     texture->setImage(*engine, (size_t) level,
             (uint32_t) xoffset, (uint32_t) yoffset,
