@@ -97,7 +97,7 @@ public:
      * @param e An entity.
      *
      * @note If this transform had children, these are orphaned, which means their local
-     * transform becomes a world transform. Usually it's not sensical. It's recomanded to make
+     * transform becomes a world transform. Usually it's not sensical. It's recommended to make
      * sure that a destroyed transform doesn't have have children.
      *
      * @see create()

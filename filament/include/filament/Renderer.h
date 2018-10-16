@@ -181,7 +181,7 @@ public:
      * @param flags One or more MirrorFrameFlag behavior configuration flags.
      *
      * @remark
-     * mirrorFrame() should be called after a frme is rendered using render()
+     * mirrorFrame() should be called after a frame is rendered using render()
      * but before endFrame() is called.
      */
     void mirrorFrame(SwapChain* dstSwapChain, Viewport const& dstViewport, Viewport const& srcViewport,
