@@ -154,3 +154,9 @@ Java_com_google_android_filament_Stream_nReadPixels(JNIEnv *env, jclass,
 
     return 0;
 }
+
+extern "C" JNIEXPORT jlong JNICALL
+Java_com_google_android_filament_Stream_nGetTimestamp(JNIEnv*, jclass, jlong nativeStream) {
+    Stream *stream = (Stream *) nativeStream;
+    return stream->getTimestamp();
+}
