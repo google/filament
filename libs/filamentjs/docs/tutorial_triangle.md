@@ -1,12 +1,3 @@
-<iframe style="width:100%;height:200px;border:none" src="demo_triangle.html"></iframe>
-
-## Literate programming
-
-The markdown source for this tutorial is not only used to generate this website, it's also used to
-generate the JavaScript for the above demo. We use a small Python script for weaving (generating
-HTML) and tangling (generating JS). This ensures that the tutorial is kept up to date and that the
-code is highly readable.
-
 ## Start your project
 
 First, create a directory for your web project and obtain `filament.js` and `filament.wasm` from
@@ -48,22 +39,22 @@ Go ahead and create `triangle.js` with the following content.
 ```js {fragment="root"}
 class App {
   constructor() {
-    /// Initialize
+    // TODO: create entities
     this.render = this.render.bind(this);
     this.resize = this.resize.bind(this);
     window.addEventListener("resize", this.resize);
     window.requestAnimationFrame(this.render);
   }
   render() {
-    /// Render
+    // TODO: render scene
     window.requestAnimationFrame(this.render);
   }
   resize() {
-    /// Resize
+    // TODO: adjust viewport and canvas
   }
 }
 
-Filament.init(['bakedColor.filamat'], () => { window.app = new App() } );
+Filament.init(['triangle.filamat'], () => { window.app = new App() } );
 ```
 
 The two calls to `bind()` allow us to pass instance methods as callbacks for animation and resize
@@ -76,7 +67,7 @@ become ready. In our callback, we simply instantiated the `App` object, since we
 work in its constructor. We also set the app instance into a `Window` property to make it accessible
 from the developer console.
 
-Go ahead and download [bakedColor.filamat](bakedColor.filamat) and place it in your project folder.
+Go ahead and download [triangle.filamat](triangle.filamat) and place it in your project folder.
 This is a *material package*, which is a binary file that contains shaders and other bits of data
 that define a PBR material. We'll learn more about material packages in the next tutorial.
 
@@ -98,7 +89,7 @@ any errors appearing in the developer console.
 We now have a basic skeleton that can respond to paint and resize events. Let's start adding
 Filament objects to the app. Insert the following code into the top of the app constructor.
 
-```js {fragment="Initialize"}
+```js {fragment="create entities"}
 this.canvas = document.getElementsByTagName('canvas')[0];
 const engine = this.engine = Filament.Engine.create(this.canvas);
 ```
@@ -110,7 +101,7 @@ The engine is a factory for many Filament entities, including `Scene`, which is 
 entities. Let's go ahead and create a scene, then add a blank entity called `triangle` into the
 scene.
 
-```js {fragment="Initialize"}
+```js {fragment="create entities"}
 this.scene = engine.createScene();
 this.triangle = Filament.EntityManager.get().create();
 this.scene.addEntity(this.triangle);
@@ -130,7 +121,7 @@ downloaded filamat asset.
 All three of these buffers can be constructed using `Filament.Buffer`, which copies a given
 TypedArray into Filament's WASM heap.
 
-```js {fragment="Initialize"}
+```js {fragment="create entities"}
 const TRIANGLE_POSITIONS = Filament.Buffer(new Float32Array([
     1, 0,
     Math.cos(Math.PI * 2 / 3), Math.sin(Math.PI * 2 / 3),
@@ -143,12 +134,12 @@ const TRIANGLE_COLORS = Filament.Buffer(new Uint32Array([
     0xff0000ff,
 ]));
 
-const BAKED_COLOR_PACKAGE = Filament.Buffer(Filament.assets['bakedColor.filamat']);
+const MATERIAL_PACKAGE = Filament.Buffer(Filament.assets['triangle.filamat']);
 ```
 
 Next we'll use the positions and colors buffers to create a single `VertexBuffer` object.
 
-```js {fragment="Initialize"}
+```js {fragment="create entities"}
 const VertexAttribute = Filament.VertexAttribute;
 const AttributeType = Filament.VertexBuffer$AttributeType;
 this.vb = Filament.VertexBuffer.Builder()
@@ -178,7 +169,7 @@ buffer slot.
 Next we'll construct an index buffer. The index buffer for our triangle is trivial: it simply holds
 the integers 0,1,2.
 
-```js {fragment="Initialize"}
+```js {fragment="create entities"}
 this.ib = Filament.IndexBuffer.Builder()
     .indexCount(3)
     .bufferType(Filament.IndexBuffer$IndexType.USHORT)
@@ -201,8 +192,8 @@ next tutorial.
 After extracting the material instance, we can finally create a renderable component for the
 triangle by setting up a bounding box and passing in the vertex and index buffers.
 
-```js {fragment="Initialize"}
-const mat = engine.createMaterial(BAKED_COLOR_PACKAGE);
+```js {fragment="create entities"}
+const mat = engine.createMaterial(MATERIAL_PACKAGE);
 const matinst = mat.getDefaultInstance();
 Filament.RenderableManager.Builder(1)
     .boundingBox([[ -1, -1, -1 ], [ 1, 1, 1 ]])
@@ -214,7 +205,7 @@ Filament.RenderableManager.Builder(1)
 Next let's wrap up the initialization routine by creating the swap chain, renderer, camera, and
 view.
 
-```js {fragment="Initialize"}
+```js {fragment="create entities"}
 this.swapChain = engine.createSwapChain();
 this.renderer = engine.createRenderer();
 this.camera = engine.createCamera();
@@ -235,7 +226,7 @@ to repaint. Often this is 60 times a second.
 
 ```js
 render() {
-    /// Render
+    // TODO: render scene
     window.requestAnimationFrame(this.render);
 }
 ```
@@ -243,7 +234,7 @@ render() {
 Let's flesh this out by rotating the triangle and invoking the Filament renderer. Add the following
 code to the top of the render method.
 
-```js {fragment="Render"}
+```js {fragment="render scene"}
 // Rotate the triangle.
 const radians = Date.now() / 1000;
 const transform = mat4.fromRotation(mat4.create(), radians, [0, 0, 1]);
@@ -269,7 +260,7 @@ One last step. Add the following code to the resize method. This adjusts the res
 rendering surface when the window size changes, taking `devicePixelRatio` into account for high-DPI
 displays. It also adjusts the camera frustum accordingly.
 
-```js {fragment="Resize"}
+```js {fragment="adjust viewport and canvas"}
 const dpr = window.devicePixelRatio;
 const width = this.canvas.width = window.innerWidth * dpr;
 const height = this.canvas.height = window.innerHeight * dpr;
