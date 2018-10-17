@@ -116,22 +116,22 @@ struct BufferDescriptor {
     // This form is used when JavaScript sends a buffer into WASM.
     BufferDescriptor(val arrdata) {
         auto byteLength = arrdata["byteLength"].as<uint32_t>();
-        this->bd = new driver::BufferDescriptor(malloc(byteLength), byteLength,
-                [](void* buffer, size_t size, void* user) { free(buffer); });
+        this->bd.reset(new driver::BufferDescriptor(malloc(byteLength), byteLength,
+                [](void* buffer, size_t size, void* user) { free(buffer); }));
     }
     // This form is used when WASM needs to return a buffer to JavaScript.
     BufferDescriptor(uint8_t* data, uint32_t size) {
-        this->bd = new driver::BufferDescriptor(data, size);
-    }
-    ~BufferDescriptor() {
-        delete bd;
+        this->bd.reset(new driver::BufferDescriptor(data, size));
     }
     val getBytes() {
         unsigned char *byteBuffer = (unsigned char*) bd->buffer;
         size_t bufferLength = bd->size;
         return val(typed_memory_view(bufferLength, byteBuffer));
-    };
-    driver::BufferDescriptor* bd;
+    }
+    // In order to match its JavaScript counterpart, the Buffer wrapper needs
+    // to use reference counting, and the easiest way to achieve that is
+    // with shared_ptr.
+    std::shared_ptr<driver::BufferDescriptor> bd;
 };
 
 // Exposed to JavaScript as "driver$PixelBufferDescriptor", but clients will normally use the
