@@ -6,7 +6,8 @@ application.
 ## Prequisites
 
 iOS support for Filament is experimental. Currently, both the OpenGL ES 3.0 and Vulkan (via
-MoltenVK) backends are supported. The iOS simulator is not supported yet.
+MoltenVK) backends are supported. The iOS simulator is supported, but because the simulator has no
+support for Metal, running Filament on the simulator is limited to the OpenGL ES backend.
 
 Before attempting to build for iOS, read [Filament's README](../../README.md). You must first
 cross-compile Filament for ARM64 on a macOS host before running the sample. The easiest way to do
@@ -36,6 +37,17 @@ If using the Vulkan backend, the pre-compiled `libMoltenVK.dylib` library must b
 `third_party/moltenvk/ios`. When building, the Xcode project automatically signs and includes this
 library inside the application bundle.
 
+If you also want to be able to run on the iOS simulator, add the `-s` flag to the `build.sh`
+command. For example, the following command will build for both devices (ARM64) and the simulator
+(x86_64) in Debug mode:
+
+```
+$ ./build.sh -s -p ios debug
+```
+
+When building for the simulator, the sample will then link against the libraries present in
+`out/ios-debug/filament/lib/x86_64'.
+
 ## Xcode
 
 Open up the Xcode project at `ios/samples/hello-triangle/hello-triangle.xcodeproj`. The
@@ -47,3 +59,4 @@ project editor.
 ## Building
 
 At this point you should be able to hit the "Run" icon to run the sample on your device.
+Alternatively, if you have also built Filament for the simulator, select an iPhone simulator.

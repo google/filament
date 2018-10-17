@@ -39,6 +39,8 @@ function print_help {
     echo "        Run all unit tests, will trigger a debug build if needed."
     echo "    -v"
     echo "        Add Vulkan support to the Android build."
+    echo "    -s"
+    echo "        Add iOS simulator support to the iOS build."
     echo ""
     echo "Build types:"
     echo "    release"
@@ -89,6 +91,8 @@ INSTALL_COMMAND=
 GENERATE_TOOLCHAINS=false
 
 VULKAN_ANDROID_OPTION="-DFILAMENT_SUPPORTS_VULKAN=OFF"
+
+IOS_BUILD_SIMULATOR=false
 
 BUILD_GENERATOR=Ninja
 BUILD_COMMAND=ninja
@@ -355,13 +359,13 @@ function build_android {
 }
 
 function ensure_ios_toolchain {
-    local TOOLCHAIN_PATH="build/toolchain-arm64-mac-ios.cmake"
+    local TOOLCHAIN_PATH="build/toolchain-mac-ios.cmake"
     if [ -e ${TOOLCHAIN_PATH} ]; then
-        echo "iOS arm64 toolchain file exists."
+        echo "iOS toolchain file exists."
         return 0
     fi
     echo
-    echo "iOS arm64 toolchain file does not exist."
+    echo "iOS toolchain file does not exist."
     echo "It will automatically be downloaded from http://opensource.apple.com."
     read -p "Continue? (y/n) " -n 1 -r
     echo
@@ -373,15 +377,25 @@ function ensure_ios_toolchain {
         echo "Error downloading iOS toolchain file."
         exit 1
     }
-    cat build/toolchain-arm64-mac-ios.filament.cmake >> ${TOOLCHAIN_PATH}
+
+    # Apple's toolchain hard-codes the PLATFORM_NAME into the toolchain file. Instead, make this a
+    # CACHE variable that can be overriden on the command line.
+    local FIND='SET(PLATFORM_NAME iphoneos)'
+    local REPLACE='SET(PLATFORM_NAME "iphoneos" CACHE STRING "iOS platform to build for")'
+    sed -i '' "s/${FIND}/${REPLACE}/g" ./${TOOLCHAIN_PATH}
+
+    # Append Filament-specific settings.
+    cat build/toolchain-mac-ios.filament.cmake >> ${TOOLCHAIN_PATH}
+
     echo "Successfully downloaded iOS toolchain file and appended Filament-specific settings."
 }
 
 function build_ios_target {
     local LC_TARGET=`echo $1 | tr '[:upper:]' '[:lower:]'`
     local ARCH=$2
+    local PLATFORM=$3
 
-    echo "Building iOS $LC_TARGET ($ARCH)..."
+    echo "Building iOS $LC_TARGET ($ARCH) for $PLATFORM..."
     mkdir -p out/cmake-ios-${LC_TARGET}-${ARCH}
 
     cd out/cmake-ios-${LC_TARGET}-${ARCH}
@@ -391,8 +405,10 @@ function build_ios_target {
             -G "$BUILD_GENERATOR" \
             -DCMAKE_BUILD_TYPE=${LC_TARGET} \
             -DCMAKE_INSTALL_PREFIX=../ios-${LC_TARGET}/filament \
-            -DCMAKE_TOOLCHAIN_FILE=../../build/toolchain-arm64-mac-ios.cmake \
+            -DIOS_ARCH=${ARCH} \
+            -DPLATFORM_NAME=${PLATFORM} \
             -DIOS=1 \
+            -DCMAKE_TOOLCHAIN_FILE=../../build/toolchain-mac-ios.cmake \
             ../..
     fi
 
@@ -418,12 +434,21 @@ function build_ios {
 
     ensure_ios_toolchain
 
+    # In theory, we could support iPhone architectures older than arm64, but
+    # only arm64 devices support OpenGL 3.0 / Metal
+
     if [ "$ISSUE_DEBUG_BUILD" == "true" ]; then
-        build_ios_target "Debug" "arm64"
+        build_ios_target "Debug" "arm64" "iphoneos"
+        if [ "$IOS_BUILD_SIMULATOR" == "true" ]; then
+            build_ios_target "Debug" "x86_64" "iphonesimulator"
+        fi
     fi
 
     if [ "$ISSUE_RELEASE_BUILD" == "true" ]; then
-        build_ios_target "Release" "arm64"
+        build_ios_target "Release" "arm64" "iphoneos"
+        if [ "$IOS_BUILD_SIMULATOR" == "true" ]; then
+            build_ios_target "Release" "x86_64" "iphonesimulator"
+        fi
     fi
 }
 
@@ -486,7 +511,7 @@ function run_tests {
 
 pushd `dirname $0` > /dev/null
 
-while getopts ":hacfijmp:tuv" opt; do
+while getopts ":hacfijmp:tuvs" opt; do
     case ${opt} in
         h)
             print_help
@@ -562,6 +587,10 @@ while getopts ":hacfijmp:tuv" opt; do
             echo "add -Pextra_cmake_args=-DFILAMENT_SUPPORTS_VULKAN=ON."
             echo "Also be sure to pass Backend::VULKAN to Engine::create."
             echo ""
+            ;;
+        s)
+            IOS_BUILD_SIMULATOR=true
+            echo "iOS simulator support enabled."
             ;;
         \?)
             echo "Invalid option: -$OPTARG" >&2

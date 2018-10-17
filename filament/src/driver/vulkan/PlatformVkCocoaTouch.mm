@@ -18,8 +18,13 @@
 
 #include "VulkanDriver.h"
 
+// Metal is not available when building for the iOS simulator on Desktop.
+#define METAL_AVAILABLE __has_include(<QuartzCore/CAMetalLayer.h>)
+
+#if METAL_AVAILABLE
 #import <Metal/Metal.h>
 #import <QuartzCore/CAMetalLayer.h>
+#endif
 
 #include <bluevk/BlueVK.h>
 #include <filament/SwapChain.h>
@@ -44,6 +49,7 @@ Driver* PlatformVkCocoaTouch::createDriver(void* const sharedContext) noexcept {
 
 void* PlatformVkCocoaTouch::createVkSurfaceKHR(void* nativeWindow, void* instance,
         uint32_t* width, uint32_t* height) noexcept {
+#if METAL_AVAILABLE
     CAMetalLayer* metalLayer = (CAMetalLayer*) nativeWindow;
 
     // Create the VkSurface.
@@ -61,6 +67,9 @@ void* PlatformVkCocoaTouch::createVkSurfaceKHR(void* nativeWindow, void* instanc
     *height = metalLayer.drawableSize.height;
 
     return surface;
+#else
+    return nullptr;
+#endif
 }
 
 } // namespace filament
