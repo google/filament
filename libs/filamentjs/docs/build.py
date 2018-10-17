@@ -4,6 +4,17 @@
 
 For each markdown file, this script invokes mistletoe twice: once
 to generate HTML, and once to extract JavaScript code blocks.
+
+Literate code fragments are marked by "// TODO: <name>". These get
+replaced according to extra properties on the code fences.
+
+For example, the following snippet would replace "// TODO: create
+wombat".
+
+```js {fragment="create wombat"}
+var wombat = new Wombat();
+```
+
 """
 
 import os
@@ -13,9 +24,19 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 CURRENT_DIR = os.getcwd()
 ROOT_DIR = '../../../'
 OUTPUT_DIR = ROOT_DIR + 'docs/webgl/'
+SERVER_DIR = OUTPUT_DIR + '..'
 BUILD_DIR = ROOT_DIR + 'out/cmake-webgl-release/'
 EXEC_NAME = os.path.basename(sys.argv[0])
 SCRIPT_NAME = os.path.basename(__file__)
+PREAMBLE = """
+## Literate programming
+
+The markdown source for this tutorial is not only used to generate this
+website, it's also used to generate the JavaScript for the above demo.
+We use a small Python script for weaving (generating HTML) and tangling
+(generating JS). This ensures that the tutorial is kept up to date and
+that the code is highly readable.
+"""
 
 # The pipenv command in the shebang needs a certain working directory.
 if EXEC_NAME == SCRIPT_NAME and SCRIPT_DIR != CURRENT_DIR:
@@ -94,7 +115,7 @@ class JsRenderer(BaseRenderer):
     def render_document(self, token):
         for child in token.children:
             self.render(child)
-        label_pattern = re.compile(r'\s*/// ((\S)+)')
+        label_pattern = re.compile(r'\s*// TODO:\ (.+)')
         result = ''
         for line in self.root.split('\n'):
             m = label_pattern.match(line)
@@ -123,41 +144,75 @@ class JsRenderer(BaseRenderer):
         fragments[key] = fragments.get(key, '') + val
         return ''
 
-def weave():
-    with open('tutorial_triangle.md', 'r') as fin:
-        rendered = mistletoe.markdown(fin, PygmentsRenderer)
+def weave(name):
+    with open(f'tutorial_{name}.md', 'r') as fin:
+        markdown = fin.read()
+        style = 'style="width:100%;height:200px;border:none"'
+        if name == 'triangle':
+            markdown = PREAMBLE + markdown
+        iframe = f"<iframe {style} src='demo_{name}.html'></iframe>\n\n"
+        markdown = iframe + markdown
+        rendered = mistletoe.markdown(markdown, PygmentsRenderer)
     template = open('tutorial_template.html').read()
     rendered = template.replace('$BODY', rendered)
-    outfile = os.path.join(OUTPUT_DIR, 'tutorial_triangle.html')
+    outfile = os.path.join(OUTPUT_DIR, f'tutorial_{name}.html')
     with open(outfile, 'w') as fout:
         fout.write(rendered)
 
-def tangle():
-    with open('tutorial_triangle.md', 'r') as fin:
+def generate_demo_html(name):
+    template = open('demo_template.html').read()
+    rendered = template.replace('$SCRIPT', f'tutorial_{name}.js')
+    outfile = os.path.join(OUTPUT_DIR, f'demo_{name}.html')
+    with open(outfile, 'w') as fout:
+        fout.write(rendered)
+
+def tangle(name):
+    with open(f'tutorial_{name}.md', 'r') as fin:
         rendered = mistletoe.markdown(fin, JsRenderer)
-    outfile = os.path.join(OUTPUT_DIR, 'tutorial_triangle.js')
+    outfile = os.path.join(OUTPUT_DIR, f'tutorial_{name}.js')
     with open(outfile, 'w') as fout:
         fout.write(rendered)
 
-def copy_filament_package():
-    jssrc = os.path.join(BUILD_DIR, 'libs/filamentjs/filament.js')
-    wasmsrc = os.path.join(BUILD_DIR, 'libs/filamentjs/filament.wasm')
-    jsdst = os.path.join(OUTPUT_DIR, 'filament.js')
-    wasmdst = os.path.join(OUTPUT_DIR, 'filament.wasm')
-    shutil.copyfile(jssrc, jsdst)
-    shutil.copyfile(wasmsrc, wasmdst)
-
-def copy_demo_assets():
+def copy_demo_filamat(srcname, dstname):
     matsrc = 'samples/web/public/material'
-    matsrc = os.path.join(BUILD_DIR, matsrc, 'bakedColor.filamat')
-    matdst = os.path.join(OUTPUT_DIR, 'bakedColor.filamat')
+    matsrc = os.path.join(BUILD_DIR, matsrc, srcname + '.filamat')
+    matdst = os.path.join(OUTPUT_DIR, dstname + '.filamat')
     shutil.copyfile(matsrc, matdst)
 
+def copy_built_file(src):
+    src = os.path.join(BUILD_DIR, src)
+    dst = os.path.join(OUTPUT_DIR, os.path.basename(src))
+    shutil.copyfile(src, dst)
+
+def copy_src_file(src):
+    src = os.path.join(ROOT_DIR, src)
+    dst = os.path.join(OUTPUT_DIR, os.path.basename(src))
+    shutil.copyfile(src, dst)
+
+def spawn_local_server():
+    import http.server
+    import socketserver
+    Handler = http.server.SimpleHTTPRequestHandler
+    Handler.extensions_map.update({ '.wasm': 'application/wasm' })
+    Handler.directory = SERVER_DIR
+    os.chdir(SERVER_DIR)
+    socketserver.TCPServer.allow_reuse_address = True
+    with socketserver.TCPServer(("", 8000), Handler) as httpd:
+        httpd.allow_reuse_address = True
+        httpd.serve_forever()
+
 if __name__ == "__main__":
-    weave()
-    tangle()
-    print(f"HTML and JS generated: {OUTPUT_DIR}")
-    if os.path.exists(BUILD_DIR):
-        copy_filament_package()
-        copy_demo_assets()
-        print("Filament package copied.")
+    for name in ["triangle", "redball"]:
+        weave(name)
+        tangle(name)
+        generate_demo_html(name)
+    copy_src_file('libs/filamentjs/docs/main.css')
+    copy_src_file('third_party/gl-matrix/gl-matrix-min.js')
+    copy_built_file('libs/filamentjs/filament.js')
+    copy_built_file('libs/filamentjs/filament.wasm')
+    copy_built_file('samples/web/public/pillars_2k/pillars_2k_skybox.ktx')
+    copy_built_file('samples/web/public/pillars_2k/pillars_2k_ibl.ktx')
+    copy_demo_filamat('bakedColor', 'triangle')
+    copy_demo_filamat('sandboxLit', 'redball')
+    if len(sys.argv) > 1 and sys.argv[1] == 'serve':
+        spawn_local_server()
