@@ -53,13 +53,14 @@ Here are a few sample materials rendered with Filament:
 
 - Native C++ API for Android, Linux, macOS and Windows
 - Java/JNI API for Android, Linux, macOS and Windows
-- [Python bindings](https://github.com/artometa/pyfilament)
+- JavaScript API
 
 ### Backends
 
 - OpenGL 4.1+ for Linux, macOS and Windows
 - OpenGL ES 3.0+ for Android
 - Vulkan 1.0 for Android, Linux, macOS (with MoltenVk) and Windows
+- WebGL 2.0 for all platforms
 
 ### Rendering
 
