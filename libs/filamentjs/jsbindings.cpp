@@ -35,12 +35,14 @@
 #include <filament/Camera.h>
 #include <filament/Engine.h>
 #include <filament/IndexBuffer.h>
+#include <filament/IndirectLight.h>
 #include <filament/LightManager.h>
 #include <filament/Material.h>
 #include <filament/MaterialInstance.h>
 #include <filament/RenderableManager.h>
 #include <filament/Renderer.h>
 #include <filament/Scene.h>
+#include <filament/Skybox.h>
 #include <filament/SwapChain.h>
 #include <filament/Texture.h>
 #include <filament/TransformManager.h>
@@ -88,8 +90,10 @@ namespace emscripten {
         BIND(TransformManager)
         BIND(VertexBuffer)
         BIND(IndexBuffer)
+        BIND(IndirectLight)
         BIND(Material)
         BIND(MaterialInstance)
+        BIND(Skybox)
         BIND(Texture)
         BIND(utils::Entity)
         BIND(utils::EntityManager)
@@ -107,6 +111,8 @@ using IndexBuilder = IndexBuffer::Builder;
 using MatBuilder = Material::Builder;
 using TexBuilder = Texture::Builder;
 using LightBuilder = LightManager::Builder;
+using IblBuilder = IndirectLight::Builder;
+using SkyBuilder = Skybox::Builder;
 
 // We avoid directly exposing driver::BufferDescriptor because embind does not support move
 // semantics and void* doesn't make sense to JavaScript anyway. This little wrapper class is exposed
@@ -207,6 +213,16 @@ value_array<flatmat4>("mat4")
     .element(index< 8>()).element(index< 9>()).element(index<10>()).element(index<11>())
     .element(index<12>()).element(index<13>()).element(index<14>()).element(index<15>());
 
+struct flatmat3 {
+    math::mat3f m;
+    float& operator[](int i) { return m[i / 3][i % 3]; }
+};
+
+value_array<flatmat3>("mat3")
+    .element(index<0>()).element(index<1>()).element(index<2>())
+    .element(index<3>()).element(index<4>()).element(index<5>())
+    .element(index<6>()).element(index<7>()).element(index<8>());
+
 // CORE FILAMENT CLASSES
 // ---------------------
 
@@ -283,7 +299,12 @@ class_<View>("View")
     .function("setPostProcessingEnabled", &View::setPostProcessingEnabled);
 
 class_<Scene>("Scene")
-    .function("addEntity", &Scene::addEntity);
+    .function("addEntity", &Scene::addEntity)
+    .function("remove", &Scene::remove)
+    .function("setSkybox", &Scene::setSkybox, allow_raw_pointers())
+    .function("setIndirectLight", &Scene::setIndirectLight, allow_raw_pointers())
+    .function("getRenderableCount", &Scene::getRenderableCount)
+    .function("getLightCount", &Scene::getLightCount);
 
 class_<Camera>("Camera")
     .function("setProjection", EMBIND_LAMBDA(void, (Camera* self, Camera::Projection projection,
@@ -441,6 +462,18 @@ class_<Texture>("Texture")
     .function("setImage", EMBIND_LAMBDA(void, (Texture* self,
             Engine* engine, uint8_t level, PixelBufferDescriptor pbd), {
         self->setImage(*engine, level, std::move(*pbd.pbd));
+    }), allow_raw_pointers())
+    .function("setImageCube", EMBIND_LAMBDA(void, (Texture* self,
+            Engine* engine, uint8_t level, PixelBufferDescriptor pbd), {
+        uint32_t faceSize = pbd.pbd->size / 6;
+        Texture::FaceOffsets offsets;
+        offsets.px = faceSize * 0;
+        offsets.nx = faceSize * 1;
+        offsets.py = faceSize * 2;
+        offsets.ny = faceSize * 3;
+        offsets.pz = faceSize * 4;
+        offsets.nz = faceSize * 5;
+        self->setImage(*engine, level, std::move(*pbd.pbd), offsets);
     }), allow_raw_pointers());
 
 class_<TexBuilder>("Texture$Builder")
@@ -463,6 +496,47 @@ class_<TexBuilder>("Texture$Builder")
         return &builder->usage(usage); })
     .BUILDER_FUNCTION("rgbm", TexBuilder, (TexBuilder* builder, bool rgbm), {
         return &builder->rgbm(rgbm); });
+
+class_<IndirectLight>("IndirectLight")
+    .class_function("Builder", (IblBuilder (*)()) [] { return IblBuilder(); })
+    .function("setIntensity", &IndirectLight::setIntensity);
+
+class_<IblBuilder>("IndirectLight$Builder")
+    .function("build", EMBIND_LAMBDA(IndirectLight*, (IblBuilder* builder, Engine* engine), {
+        return builder->build(*engine);
+    }), allow_raw_pointers())
+    .BUILDER_FUNCTION("reflections", IblBuilder, (IblBuilder* builder, Texture const* cubemap), {
+        return &builder->reflections(cubemap); })
+    .BUILDER_FUNCTION("irradianceTex", IblBuilder, (IblBuilder* builder, Texture const* cubemap), {
+        return &builder->irradiance(cubemap); })
+    .BUILDER_FUNCTION("irradianceSh", IblBuilder, (IblBuilder* builder, uint8_t nbands, val ta), {
+        // This is not efficient but consuming a BufferDescriptor would be overkill.
+        size_t nfloats = ta["length"].as<size_t>();
+        if (nfloats != nbands * nbands * 3) {
+            printf("Received %zu floats for spherical harmonics, expected %d.", nfloats, nbands);
+            return builder;
+        }
+        std::vector<float> floats(nfloats);
+        for (size_t i = 0; i < nfloats; i++) {
+            floats[i] = ta[i].as<float>();
+        }
+        return &builder->irradiance(nbands, (math::float3 const*) floats.data()); })
+    .BUILDER_FUNCTION("intensity", IblBuilder, (IblBuilder* builder, float value), {
+        return &builder->intensity(value); })
+    .BUILDER_FUNCTION("rotation", IblBuilder, (IblBuilder* builder, flatmat3 value), {
+        return &builder->rotation(value.m); });
+
+class_<Skybox>("Skybox")
+    .class_function("Builder", (SkyBuilder (*)()) [] { return SkyBuilder(); });
+
+class_<SkyBuilder>("Skybox$Builder")
+    .function("build", EMBIND_LAMBDA(Skybox*, (SkyBuilder* builder, Engine* engine), {
+        return builder->build(*engine);
+    }), allow_raw_pointers())
+    .BUILDER_FUNCTION("environment", SkyBuilder, (SkyBuilder* builder, Texture* cubemap), {
+        return &builder->environment(cubemap); })
+    .BUILDER_FUNCTION("showSun", SkyBuilder, (SkyBuilder* builder, bool show), {
+        return &builder->showSun(show); });
 
 // UTILS TYPES
 // -----------
@@ -502,7 +576,16 @@ class_<KtxBundle>("KtxBundle")
         self->getBlob(index, &data, &size);
         return BufferDescriptor(data, size);
     }), allow_raw_pointers())
-    .function("info", &KtxBundle::info);
+    .function("getCubeBlob", EMBIND_LAMBDA(BufferDescriptor, (KtxBundle* self, uint32_t miplevel), {
+        uint8_t* data;
+        uint32_t size;
+        self->getBlob({miplevel}, &data, &size);
+        return BufferDescriptor(data, size * 6);
+    }), allow_raw_pointers())
+    .function("info", &KtxBundle::info)
+    .function("getMetadata", EMBIND_LAMBDA(std::string, (KtxBundle* self, std::string key), {
+        return std::string(self->getMetadata(key.c_str()));
+    }), allow_raw_pointers());
 
 class_<KtxInfo>("KtxInfo")
     .property("endianness", &KtxInfo::endianness)

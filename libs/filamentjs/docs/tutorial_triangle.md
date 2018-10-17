@@ -63,7 +63,7 @@ class App {
   }
 }
 
-Filament.init(['bakedColor.filamat'], () => { Window.app = new App() } );
+Filament.init(['bakedColor.filamat'], () => { window.app = new App() } );
 ```
 
 The two calls to `bind()` allow us to pass instance methods as callbacks for animation and resize
