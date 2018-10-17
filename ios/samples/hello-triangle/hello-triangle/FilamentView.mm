@@ -66,6 +66,10 @@ static constexpr uint8_t BAKED_COLOR_PACKAGE[] = {
     SwapChain* swapChain;
     App app;
     CADisplayLink* displayLink;
+
+    // The amount of rotation to apply to the camera to offset the device's rotation (in radians)
+    float deviceRotation;
+    float desiredRotation;
 }
 
 - (instancetype)initWithCoder:(NSCoder*)coder
@@ -84,6 +88,13 @@ static constexpr uint8_t BAKED_COLOR_PACKAGE[] = {
     displayLink = [CADisplayLink displayLinkWithTarget:self selector:@selector(renderloop)];
     displayLink.preferredFramesPerSecond = 60;
     [displayLink addToRunLoop:NSRunLoop.currentRunLoop forMode:NSDefaultRunLoopMode];
+
+    // Call didRotate when the device orientation changes.
+    [[UIDevice currentDevice] beginGeneratingDeviceOrientationNotifications];
+    [[NSNotificationCenter defaultCenter] addObserver:self
+                                             selector:@selector(didRotate:)
+                                                 name:UIDeviceOrientationDidChangeNotification
+                                               object:nil];
 
     return self;
 }
@@ -179,7 +190,6 @@ static constexpr uint8_t BAKED_COLOR_PACKAGE[] = {
 
 - (void)update
 {
-    // Rotate the camera.
     constexpr float ZOOM = 1.5f;
     const uint32_t w = filaView->getViewport().width;
     const uint32_t h = filaView->getViewport().height;
@@ -188,8 +198,32 @@ static constexpr uint8_t BAKED_COLOR_PACKAGE[] = {
                           -aspect * ZOOM, aspect * ZOOM,
                           -ZOOM, ZOOM, 0, 1);
     auto& tcm = engine->getTransformManager();
+
+    [self updateRotation];
+
     tcm.setTransform(tcm.getInstance(app.renderable),
-                     math::mat4f::rotate(CACurrentMediaTime(), math::float3{0, 0, 1}));
+                     math::mat4f::rotate(CACurrentMediaTime(), math::float3{0, 0, 1}) *
+                     math::mat4f::rotate(deviceRotation, math::float3{0, 0, 1}));
+}
+
+- (void)didRotate:(NSNotification*)notification
+{
+    UIDeviceOrientation orientation = [[UIDevice currentDevice] orientation];
+    desiredRotation = [self rotationForDeviceOrientation:orientation];
+}
+
+- (void)updateRotation
+{
+    static const float ROTATION_SPEED = 0.1;
+    float diff = abs(desiredRotation - deviceRotation);
+    if (diff > FLT_EPSILON) {
+        if (desiredRotation > deviceRotation) {
+            deviceRotation += fmin(ROTATION_SPEED, diff);
+        }
+        if (desiredRotation < deviceRotation) {
+            deviceRotation -= fmin(ROTATION_SPEED, diff);
+        }
+    }
 }
 
 + (Class) layerClass
@@ -199,6 +233,24 @@ static constexpr uint8_t BAKED_COLOR_PACKAGE[] = {
 #elif FILAMENT_APP_USE_VULKAN
     return [CAMetalLayer class];
 #endif
+}
+
+- (float)rotationForDeviceOrientation:(UIDeviceOrientation)orientation
+{
+    switch (orientation) {
+        default:
+        case UIDeviceOrientationPortrait:
+            return 0.0f;
+
+        case UIDeviceOrientationLandscapeRight:
+            return M_PI_2;
+
+        case UIDeviceOrientationLandscapeLeft:
+            return -M_PI_2;
+
+        case UIDeviceOrientationPortraitUpsideDown:
+            return M_PI;
+    }
 }
 
 @end
