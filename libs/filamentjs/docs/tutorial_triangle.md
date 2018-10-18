@@ -30,9 +30,11 @@ a mobile-friendly page with a full-screen canvas.
 ```
 
 The above HTML loads three JavaScript files:
-- **filament.js** will download and compile the Filament WASM module.
-- **gl-matrix-min.js** is a small library that provides vector math functionality.
-- **triangle.js** will contain your application code.
+- `filament.js` does a couple things:
+   - Downloads assets and compiles the Filament WASM module.
+   - Contains high-level utilities, e.g. to simplify loading KTX textures from JavaScript.
+- `gl-matrix-min.js` is a small library that provides vector math functionality.
+- `triangle.js` will contain your application code.
 
 Go ahead and create `triangle.js` with the following content.
 
@@ -271,5 +273,6 @@ const Projection = Filament.Camera$Projection;
 this.camera.setProjection(Projection.ORTHO, -aspect, aspect, -1, 1, 0, 1);
 ```
 
-You should now have a spinning triangle! In the next tutorial we'll take a closer look at Filament
+You should now have a spinning triangle! The completed JavaScript is available
+[here](tutorial_triangle.js). In the next tutorial, we'll take a closer look at Filament
 materials and 3D rendering.
