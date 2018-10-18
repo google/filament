@@ -115,11 +115,7 @@ class App {
   }
 
   render() {
-    if (this.renderer.beginFrame(this.swapChain)) {
-      this.renderer.render(this.view);
-      this.renderer.endFrame();
-    }
-    this.engine.execute();
+    this.renderer.render(this.swapChain, this.view);
     window.requestAnimationFrame(this.render);
   }
 

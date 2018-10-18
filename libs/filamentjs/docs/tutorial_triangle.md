@@ -244,11 +244,7 @@ const tcm = this.engine.getTransformManager();
 tcm.setTransform(tcm.getInstance(this.triangle), transform);
 
 // Render the frame.
-if (this.renderer.beginFrame(this.swapChain)) {
-  this.renderer.render(this.view);
-  this.renderer.endFrame();
-}
-this.engine.execute();
+this.renderer.render(this.swapChain, this.view);
 ```
 
 The first half of our render method obtains the transform component of the triangle entity and uses

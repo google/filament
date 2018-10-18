@@ -283,7 +283,15 @@ class_<Engine>("Engine")
 class_<SwapChain>("SwapChain");
 
 class_<Renderer>("Renderer")
-    .function("render", &Renderer::render, allow_raw_pointers())
+    .function("renderView", &Renderer::render, allow_raw_pointers())
+    .function("render", EMBIND_LAMBDA(void, (Renderer* self, SwapChain* swapChain, View* view), {
+        auto engine = self->getEngine();
+        if (self->beginFrame(swapChain)) {
+            self->render(view);
+            self->endFrame();
+        }
+        engine->execute();
+    }), allow_raw_pointers())
     .function("beginFrame", &Renderer::beginFrame, allow_raw_pointers())
     .function("endFrame", &Renderer::endFrame, allow_raw_pointers());
 
