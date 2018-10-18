@@ -48,27 +48,26 @@ tutorial.
 ## Bake environment map
 
 Next we'll use Filament's `cmgen` tool to consume a HDR environment map in latlong format, and
-produce two cubemap files: a mipmapped IBL and a blurry skybox that we'll use for the background.
+produce two cubemap files: a mipmapped IBL and a blurry skybox.
 
 [pillars_2k.hdr]:
 //github.com/google/filament/blob/master/third_party/environments/pillars_2k.hdr
 
-First, download [pillars_2k.hdr], then invoke the following command in your terminal.
+Download [pillars_2k.hdr], then invoke the following command in your terminal.
 
 ```bash
 cmgen -x . --format=ktx --size=256 --extract-blur=0.1 pillars_2k.hdr
 ```
 
-The should now have a `pillars_2k` folder containing a couple KTX files for the IBL and skybox, as
-well as a text file (`sh.txt`) with spherical harmonics coefficients. Move the KTX files into your
-project folder. You can discard `sh.txt` because the IBL KTX file contains these coefficients in
-its metadata.
+You should now have a `pillars_2k` folder containing a couple KTX files for the IBL and skybox, as
+well as a text file with spherical harmonics coefficients. Move the KTX files into your project
+folder. You can discard the text file because the IBL KTX contains these coefficients in its
+metadata.
 
 ## Create HTML and JavaScript
 
-Create a text file called `redball.html` and fill it with the same HTML you used in the [previous
-tutorial](tutorial_triangle.html) but change the last script tag from `triangle.js` to
-`redball.js`.
+Create a text file called `redball.html` and copy over the HTML that we used in the [previous
+tutorial](tutorial_triangle.html). Change the last script tag from `triangle.js` to `redball.js`.
 
 Next, create `redball.js` with the following content.
 
@@ -218,19 +217,20 @@ Filament.LightManager.Builder(LightType.SUN)
   .build(engine, sunlight);
 ```
 
-We are using a light type of `SUN`, which is similar to `DIRECTIONAL`, but it has some extra
+We are using a light type of `SUN`, which is similar to `DIRECTIONAL`, but has some extra
 parameters because Filament will automatically draw a disk into the skybox.
 
-Next let's create a `IndirectLight` object from the KTX IBL. One way of doing this is the following
-(don't type this out, there's an easier way).
+Next we need to create an `IndirectLight` object from the KTX IBL. One way of doing this is the
+following (don't type this out, there's an easier way).
 
-```js {fragment="create IBL"}
+```js
 const format = Filament.PixelDataFormat.RGBM;
 const datatype = Filament.PixelDataType.UBYTE;
 
 // Create a Texture object for the mipmapped cubemap.
 const ibl_package = Filament.Buffer(Filament.assets['pillars_2k_ibl.ktx']);
 const iblktx = new Filament.KtxBundle(ibl_package);
+
 const ibltex = Filament.Texture.Builder()
   .width(iblktx.info().pixelWidth)
   .height(iblktx.info().pixelHeight)
@@ -239,6 +239,7 @@ const ibltex = Filament.Texture.Builder()
   .format(Filament.Texture$InternalFormat.RGBA8)
   .rgbm(true)
   .build(engine);
+
 for (let level = 0; level < iblktx.getNumMipLevels(); ++level) {
   const uint8array = iblktx.getCubeBlob(level).getBytes();
   const pixelbuffer = Filament.PixelBuffer(uint8array, format, datatype);
@@ -259,20 +260,20 @@ const indirectLight = Filament.IndirectLight.Builder()
 scene.setIndirectLight(indirectLight);
 ```
 
-This is a lot of boilerplate, so Filament provides a JavaScript utilitiy to make this simpler;
-simply replace the **create IBL** comment with the following snippet. *NOTE: not yet implemented.*
+Phew, that was a lot of boilerplate! Filament provides a JavaScript utility to make this simpler,
+simply replace the **create IBL** comment with the following snippet.
 
-```js
-const ibl_package = Filament.Buffer(Filament.assets['pillars_2k_ibl.ktx']);
-const indirectLight = Filament.createIblFromKtx(ibl_package);
+```js {fragment="create IBL"}
+const ibldata = Filament.assets['pillars_2k_ibl.ktx'];
+const indirectLight = Filament.createIblFromKtx(ibldata, engine, {'rgbm': true});
 indirectLight.setIntensity(50000);
 scene.setIndirectLight(indirectLight);
 ```
 
 ## Add background
 
-At the point you can run the demo and you should see a red plastic ball against a black background.
-Without a skybox, the reflections on the ball aren't truly representative of the its surroundings.
+At this point you can run the demo and you should see a red plastic ball against a black background.
+Without a skybox, the reflections on the ball are not representative of the its surroundings.
 Here's one way to create a texture for the skybox:
 
 ```js
@@ -292,8 +293,8 @@ const pixelbuffer = Filament.PixelBuffer(uint8array, format, datatype);
 skytex.setImageCube(engine, 0, pixelbuffer);
 ```
 
-Again, this is a lot of boilerplate, so Filament provides a Javascript utility for you. Replace
-**create skybox** with the following.
+Again, this is a lot of boilerplate. Filament provides a Javascript utility to make it easier.
+Replace **create skybox** with the following.
 
 ```js {fragment="create skybox"}
 const skydata = Filament.assets['pillars_2k_skybox.ktx'];

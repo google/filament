@@ -168,15 +168,17 @@ Filament.loadMathExtensions = function() {
 // ---------------
 
 Filament.createTextureFromKtx = function(ktxdata, engine, options) {
+  options = options || {};
+
   const Sampler = Filament.Texture$Sampler;
   const TextureFormat = Filament.Texture$InternalFormat;
   const PixelDataFormat = Filament.PixelDataFormat;
   const gl = Filament.ctx;
 
-  const ktx = new Filament.KtxBundle(Filament.Buffer(ktxdata));
+  const ktx = options['ktx'] || new Filament.KtxBundle(Filament.Buffer(ktxdata));
   const nlevels = ktx.getNumMipLevels();
   const ktxformat = ktx.info().glInternalFormat;
-  const rgbm = options && options['rgbm'];
+  const rgbm = !!options['rgbm'];
 
   // TODO: this switch is incomplete. Can the KtxBundle class assist?
   var texformat, pbformat, pbtype;
@@ -220,4 +222,16 @@ Filament.createTextureFromKtx = function(ktxdata, engine, options) {
   }
 
   return tex;
+};
+
+Filament.createIblFromKtx = function(ktxdata, engine, options) {
+  options = options || {};
+  const iblktx = options['ktx'] = new Filament.KtxBundle(Filament.Buffer(ktxdata));
+  const ibltex = Filament.createTextureFromKtx(ktxdata, engine, options);
+  const shstring = iblktx.getMetadata("sh");
+  const shfloats = shstring.split(/\s/, 9 * 3).map(parseFloat);
+  return Filament.IndirectLight.Builder()
+    .reflections(ibltex)
+    .irradianceSh(3, shfloats)
+    .build(engine);
 };
