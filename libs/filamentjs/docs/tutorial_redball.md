@@ -275,7 +275,7 @@ At the point you can run the demo and you should see a red plastic ball against 
 Without a skybox, the reflections on the ball aren't truly representative of the its surroundings.
 Here's one way to create a texture for the skybox:
 
-```js {fragment="create skybox"}
+```js
 const sky_package = Filament.Buffer(Filament.assets['pillars_2k_skybox.ktx']);
 const skyktx = new Filament.KtxBundle(sky_package);
 const skytex = Filament.Texture.Builder()
@@ -293,13 +293,11 @@ skytex.setImageCube(engine, 0, pixelbuffer);
 ```
 
 Again, this is a lot of boilerplate, so Filament provides a Javascript utility for you. Replace
-**create skybox** with the following. *NOTE: not yet implemented.*
+**create skybox** with the following.
 
-```js
-const sky_package = Filament.Buffer(Filament.assets['pillars_2k_skybox.ktx']);
-const skytex = Filament.createTextureFromKtx(sky_package, {'rgbm': True});
-```
 ```js {fragment="create skybox"}
+const skydata = Filament.assets['pillars_2k_skybox.ktx'];
+const skytex = Filament.createTextureFromKtx(skydata, engine, {'rgbm': true});
 const skybox = Filament.Skybox.Builder().environment(skytex).build(engine);
 scene.setSkybox(skybox);
 ```
