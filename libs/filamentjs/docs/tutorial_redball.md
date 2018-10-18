@@ -115,30 +115,29 @@ class App {
   }
 
   render() {
+    const eye = [0, 0, 4], center = [0, 0, 0], up = [0, 1, 0];
+    const radians = Date.now() / 10000;
+    vec3.rotateY(eye, eye, center, radians);
+    this.camera.lookAt(eye, center, up);
     this.renderer.render(this.swapChain, this.view);
     window.requestAnimationFrame(this.render);
   }
 
   resize() {
-    // Adjust the canvas resolution and Filament viewport.
     const dpr = window.devicePixelRatio;
     const width = this.canvas.width = window.innerWidth * dpr;
     const height = this.canvas.height = window.innerHeight * dpr;
     this.view.setViewport([0, 0, width, height]);
-
-    // Adjust the camera frustum.
-    const eye = [0, 0, 0], center = [0, 0, -1], up = [0, 1, 0];
-    this.camera.lookAt(eye, center, up);
     this.camera.setProjectionFov(45, width / height, 1.0, 10.0, Fov.VERTICAL);
   }
 }
 ```
 
 The above boilerplate should be familiar to you from the previous tutorial, although it loads in a
-new set of assets and the camera uses a perspective projection.
+new set of assets. We also added some animation to the camera.
 
 Next let's create a material instance from the package that we built at the beginning the tutorial.
-Replace the **create material** todo with the following snippet.
+Replace the **create material** comment with the following snippet.
 
 ```js {fragment="create material"}
 const material_package = Filament.Buffer(Filament.assets['plastic.filamat']);
@@ -192,10 +191,6 @@ Filament.RenderableManager.Builder(1)
   .material(0, matinstance)
   .geometry(0, PrimitiveType.TRIANGLES, vb, ib)
   .build(engine, renderable);
-
-const transform = mat4.fromTranslation(mat4.create(), [0, 0, -4]);
-const tcm = this.engine.getTransformManager();
-tcm.setTransform(tcm.getInstance(renderable), transform);
 ```
 
 At this point, the app is rendering a sphere, but it is black so it doesn't show up. To prove that
@@ -206,7 +201,7 @@ did in the first tutorial.
 
 We'll be creating two types of light sources: a directional light source that represents the sun,
 and an image-based light (IBL) defined by one of the KTX files we built at the start of the demo.
-First, replace the **create sunlight** todo with the following snippet.
+First, replace the **create sunlight** comment with the following snippet.
 
 ```js {fragment="create sunlight"}
 const sunlight = Filament.EntityManager.get().create();
@@ -265,7 +260,7 @@ scene.setIndirectLight(indirectLight);
 ```
 
 This is a lot of boilerplate, so Filament provides a JavaScript utilitiy to make this simpler;
-simply replace the **create IBL** todo with the following snippet. *NOTE: not yet implemented.*
+simply replace the **create IBL** comment with the following snippet. *NOTE: not yet implemented.*
 
 ```js
 const ibl_package = Filament.Buffer(Filament.assets['pillars_2k_ibl.ktx']);

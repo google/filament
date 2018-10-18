@@ -152,4 +152,13 @@ Filament.loadMathExtensions = function() {
     out[3] = packSnorm16(src[3]);
     return out;
   }
+  // In gl-matrix, mat3 rotation assumes rotation about the Z axis, so here we add a function
+  // to allow an arbitrary axis.
+  const fromRotationZ = mat3.fromRotation;
+  mat3.fromRotation = function(out, radians, axis) {
+    if (axis) {
+      return mat3.fromMat4(out, mat4.fromRotation(mat4.create(), radians, axis));
+    }
+    return fromRotationZ(out, radians);
+  };
 };

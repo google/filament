@@ -505,7 +505,11 @@ class_<TexBuilder>("Texture$Builder")
 
 class_<IndirectLight>("IndirectLight")
     .class_function("Builder", (IblBuilder (*)()) [] { return IblBuilder(); })
-    .function("setIntensity", &IndirectLight::setIntensity);
+    .function("setIntensity", &IndirectLight::setIntensity)
+    .function("getIntensity", &IndirectLight::getIntensity)
+    .function("setRotation", EMBIND_LAMBDA(void, (IndirectLight* self, flatmat3 value), {
+        return self->setRotation(value.m);
+    }), allow_raw_pointers());
 
 class_<IblBuilder>("IndirectLight$Builder")
     .function("build", EMBIND_LAMBDA(IndirectLight*, (IblBuilder* builder, Engine* engine), {
