@@ -5,7 +5,7 @@ To update assimp use the following steps:
 - In the Assimp directory, create an `out/` directory and from there run
   `cmake .. -DCMAKE_BUILD_TYPE=Release`, then `make -j`
 - From `out/` copy `revision.h` to the root of the assimp source tree
-- From `out/` copy `include/config.h` to `include/config.h` in the root of the assimp source tree
+- From `out/` copy `include/assimp/config.h` to `include/assimp/config.h` in the root of the assimp source tree
 - Open `tnt/CMakeLists.txt` and update the lists of public headers, private headers and source
   files. All files present on disk can be listed but to speed up build times you should remove
   source files related to importers/exporters we do not use
@@ -15,7 +15,7 @@ To update assimp use the following steps:
 
 In addition we recommend to remove the following directories:
 - `samples/`
-- `tests/`
+- `test/`
 - `tools/`
 
 We do not use these directories and they take up unnecessary space on disk.

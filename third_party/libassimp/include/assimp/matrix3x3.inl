@@ -3,7 +3,8 @@
 Open Asset Import Library (assimp)
 ---------------------------------------------------------------------------
 
-Copyright (c) 2006-2017, assimp team
+Copyright (c) 2006-2018, assimp team
+
 
 
 All rights reserved.
@@ -312,16 +313,16 @@ inline aiMatrix3x3t<TReal>& aiMatrix3x3t<TReal>::FromToMatrix(const aiVector3t<T
         u.x = x.x - from.x; u.y = x.y - from.y; u.z = x.z - from.z;
         v.x = x.x - to.x;   v.y = x.y - to.y;   v.z = x.z - to.z;
 
-        const TReal c1 = static_cast<TReal>(2.0) / (u * u);
-        const TReal c2 = static_cast<TReal>(2.0) / (v * v);
-        const TReal c3 = c1 * c2  * (u * v);
+        const TReal c1_ = static_cast<TReal>(2.0) / (u * u);
+        const TReal c2_ = static_cast<TReal>(2.0) / (v * v);
+        const TReal c3_ = c1_ * c2_  * (u * v);
 
         for (unsigned int i = 0; i < 3; i++)
         {
             for (unsigned int j = 0; j < 3; j++)
             {
-                mtx[i][j] =  - c1 * u[i] * u[j] - c2 * v[i] * v[j]
-                    + c3 * v[i] * u[j];
+                mtx[i][j] =  - c1_ * u[i] * u[j] - c2_ * v[i] * v[j]
+                    + c3_ * v[i] * u[j];
             }
             mtx[i][i] += static_cast<TReal>(1.0);
         }

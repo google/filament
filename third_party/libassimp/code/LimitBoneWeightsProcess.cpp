@@ -2,7 +2,8 @@
 Open Asset Import Library (assimp)
 ----------------------------------------------------------------------
 
-Copyright (c) 2006-2017, assimp team
+Copyright (c) 2006-2018, assimp team
+
 
 All rights reserved.
 
@@ -43,7 +44,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 #include "LimitBoneWeightsProcess.h"
-#include "StringUtils.h"
+#include <assimp/StringUtils.h>
 #include <assimp/postprocess.h>
 #include <assimp/DefaultLogger.hpp>
 #include <assimp/scene.h>
@@ -75,13 +76,13 @@ bool LimitBoneWeightsProcess::IsActive( unsigned int pFlags) const
 
 // ------------------------------------------------------------------------------------------------
 // Executes the post processing step on the given imported data.
-void LimitBoneWeightsProcess::Execute( aiScene* pScene)
-{
-    DefaultLogger::get()->debug("LimitBoneWeightsProcess begin");
-    for( unsigned int a = 0; a < pScene->mNumMeshes; a++)
-        ProcessMesh( pScene->mMeshes[a]);
+void LimitBoneWeightsProcess::Execute( aiScene* pScene) {
+    ASSIMP_LOG_DEBUG("LimitBoneWeightsProcess begin");
+    for (unsigned int a = 0; a < pScene->mNumMeshes; ++a ) {
+        ProcessMesh(pScene->mMeshes[a]);
+    }
 
-    DefaultLogger::get()->debug("LimitBoneWeightsProcess end");
+    ASSIMP_LOG_DEBUG("LimitBoneWeightsProcess end");
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -194,9 +195,7 @@ void LimitBoneWeightsProcess::ProcessMesh( aiMesh* pMesh)
         }
 
         if (!DefaultLogger::isNullLogger()) {
-            char buffer[1024];
-            ai_snprintf(buffer,1024,"Removed %u weights. Input bones: %u. Output bones: %u",removed,old_bones,pMesh->mNumBones);
-            DefaultLogger::get()->info(buffer);
+            ASSIMP_LOG_INFO_F("Removed ", removed, " weights. Input bones: ", old_bones, ". Output bones: ", pMesh->mNumBones );
         }
     }
 }

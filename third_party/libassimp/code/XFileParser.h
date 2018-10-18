@@ -2,7 +2,8 @@
 Open Asset Import Library (assimp)
 ----------------------------------------------------------------------
 
-Copyright (c) 2006-2017, assimp team
+Copyright (c) 2006-2018, assimp team
+
 
 All rights reserved.
 
@@ -48,10 +49,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include <assimp/types.h>
 
-namespace Assimp
-{
-    namespace XFile
-    {
+namespace Assimp {
+    namespace XFile {
         struct Node;
         struct Mesh;
         struct Scene;
@@ -60,21 +59,20 @@ namespace Assimp
         struct AnimBone;
     }
 
-/** The XFileParser reads a XFile either in text or binary form and builds a temporary
- * data structure out of it.
- */
-class XFileParser
-{
+/**
+  *     @brief  The XFileParser reads a XFile either in text or binary form and builds a temporary
+  *             data structure out of it.
+  */
+class XFileParser {
 public:
-    /** Constructor. Creates a data structure out of the XFile given in the memory block.
-     * @param pBuffer Null-terminated memory buffer containing the XFile
-     */
+    /// Constructor. Creates a data structure out of the XFile given in the memory block.
+    /// @param pBuffer Null-terminated memory buffer containing the XFile
     explicit XFileParser( const std::vector<char>& pBuffer);
 
-    /** Destructor. Destroys all imported data along with it */
+    /// Destructor. Destroys all imported data along with it
     ~XFileParser();
 
-    /** Returns the temporary representation of the imported data */
+    /// Returns the temporary representation of the imported data.
     XFile::Scene* GetImportedData() const { return mScene; }
 
 protected:
@@ -100,10 +98,10 @@ protected:
     //! places pointer to next begin of a token, and ignores comments
     void FindNextNoneWhiteSpace();
 
-    //! returns next parseable token. Returns empty string if no token there
+    //! returns next valid token. Returns empty string if no token there
     std::string GetNextToken();
 
-    //! reads header of dataobject including the opening brace.
+    //! reads header of data object including the opening brace.
     //! returns false if error happened, and writes name of object
     //! if there is one
     void readHeadOfDataObject( std::string* poName = NULL);
@@ -117,8 +115,8 @@ protected:
     //! checks for a separator char, either a ',' or a ';'
     void CheckForSeparator();
 
-  /// tests and possibly consumes a separator char, but does nothing if there was no separator
-  void TestForSeparator();
+    /// tests and possibly consumes a separator char, but does nothing if there was no separator
+    void TestForSeparator();
 
     //! reads a x file style string
     void GetNextTokenAsString( std::string& poString);
@@ -137,27 +135,23 @@ protected:
     /** Throws an exception with a line number and the given text. */
     AI_WONT_RETURN void ThrowException( const std::string& pText) AI_WONT_RETURN_SUFFIX;
 
-    /** Filters the imported hierarchy for some degenerated cases that some exporters produce.
-     * @param pData The sub-hierarchy to filter
-     */
+    /**
+      * @brief  Filters the imported hierarchy for some degenerated cases that some exporters produce.
+      * @param pData The sub-hierarchy to filter
+      */
     void FilterHierarchy( XFile::Node* pNode);
 
 protected:
     unsigned int mMajorVersion, mMinorVersion; ///< version numbers
     bool mIsBinaryFormat; ///< true if the file is in binary, false if it's in text form
     unsigned int mBinaryFloatSize; ///< float size in bytes, either 4 or 8
-    // counter for number arrays in binary format
-    unsigned int mBinaryNumCount;
-
-    const char* P;
-    const char* End;
-
-    /// Line number when reading in text format
-    unsigned int mLineNumber;
-
-    /// Imported data
-    XFile::Scene* mScene;
+    unsigned int mBinaryNumCount; /// < counter for number arrays in binary format
+    const char* mP;
+    const char* mEnd;
+    unsigned int mLineNumber; ///< Line number when reading in text format
+    XFile::Scene* mScene; ///< Imported data
 };
 
-}
+} //! ns Assimp
+
 #endif // AI_XFILEPARSER_H_INC

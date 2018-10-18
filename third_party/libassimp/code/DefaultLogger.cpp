@@ -3,7 +3,8 @@
 Open Asset Import Library (assimp)
 ---------------------------------------------------------------------------
 
-Copyright (c) 2006-2017, assimp team
+Copyright (c) 2006-2018, assimp team
+
 
 
 All rights reserved.
@@ -44,12 +45,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *  @brief Implementation of DefaultLogger (and Logger)
  */
 
-
 // Default log streams
 #include "Win32DebugLogStream.h"
 #include "StdOStreamLogStream.h"
 #include "FileLogStream.h"
-#include "StringUtils.h"
+#include <assimp/StringUtils.h>
 
 #include <assimp/DefaultIOSystem.h>
 #include <assimp/NullLogger.hpp>
@@ -61,8 +61,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef ASSIMP_BUILD_SINGLETHREADED
 #   include <thread>
 #   include <mutex>
-
-std::mutex loggerMutex;
+    std::mutex loggerMutex;
 #endif
 
 namespace Assimp    {
@@ -75,22 +74,19 @@ static const unsigned int SeverityAll = Logger::Info | Logger::Err | Logger::War
 
 // ----------------------------------------------------------------------------------
 // Represents a log-stream + its error severity
-struct LogStreamInfo
-{
-    unsigned int m_uiErrorSeverity;
-    LogStream *m_pStream;
+struct LogStreamInfo {
+    unsigned int  m_uiErrorSeverity;
+    LogStream    *m_pStream;
 
     // Constructor
     LogStreamInfo( unsigned int uiErrorSev, LogStream *pStream ) :
         m_uiErrorSeverity( uiErrorSev ),
-        m_pStream( pStream )
-    {
+        m_pStream( pStream ) {
         // empty
     }
 
     // Destructor
-    ~LogStreamInfo()
-    {
+    ~LogStreamInfo() {
         delete m_pStream;
     }
 };
@@ -108,7 +104,7 @@ LogStream* LogStream::createDefaultStream(aiDefaultLogStream    streams,
 #ifdef WIN32
         return new Win32DebugLogStream();
 #else
-        return NULL;
+        return nullptr;
 #endif
 
         // Platform-independent default streams
@@ -117,7 +113,7 @@ LogStream* LogStream::createDefaultStream(aiDefaultLogStream    streams,
     case aiDefaultLogStream_STDOUT:
         return new StdOStreamLogStream(std::cout);
     case aiDefaultLogStream_FILE:
-        return (name && *name ? new FileLogStream(name,io) : NULL);
+        return (name && *name ? new FileLogStream(name,io) : nullptr );
     default:
         // We don't know this default log stream, so raise an assertion
         ai_assert(false);
@@ -133,34 +129,38 @@ LogStream* LogStream::createDefaultStream(aiDefaultLogStream    streams,
 Logger *DefaultLogger::create(const char* name /*= "AssimpLog.txt"*/,
     LogSeverity severity                       /*= NORMAL*/,
     unsigned int defStreams                    /*= aiDefaultLogStream_DEBUGGER | aiDefaultLogStream_FILE*/,
-    IOSystem* io                               /*= NULL*/)
-{
+    IOSystem* io                               /*= NULL*/) {
     // enter the mutex here to avoid concurrency problems
 #ifndef ASSIMP_BUILD_SINGLETHREADED
     std::lock_guard<std::mutex> lock(loggerMutex);
 #endif
 
-    if (m_pLogger && !isNullLogger() )
+    if ( m_pLogger && !isNullLogger() ) {
         delete m_pLogger;
+    }
 
     m_pLogger = new DefaultLogger( severity );
 
     // Attach default log streams
     // Stream the log to the MSVC debugger?
-    if (defStreams & aiDefaultLogStream_DEBUGGER)
-        m_pLogger->attachStream( LogStream::createDefaultStream(aiDefaultLogStream_DEBUGGER));
+    if ( defStreams & aiDefaultLogStream_DEBUGGER ) {
+        m_pLogger->attachStream( LogStream::createDefaultStream( aiDefaultLogStream_DEBUGGER ) );
+    }
 
     // Stream the log to COUT?
-    if (defStreams & aiDefaultLogStream_STDOUT)
-        m_pLogger->attachStream( LogStream::createDefaultStream(aiDefaultLogStream_STDOUT));
+    if ( defStreams & aiDefaultLogStream_STDOUT ) {
+        m_pLogger->attachStream( LogStream::createDefaultStream( aiDefaultLogStream_STDOUT ) );
+    }
 
     // Stream the log to CERR?
-    if (defStreams & aiDefaultLogStream_STDERR)
-         m_pLogger->attachStream( LogStream::createDefaultStream(aiDefaultLogStream_STDERR));
+    if ( defStreams & aiDefaultLogStream_STDERR ) {
+        m_pLogger->attachStream( LogStream::createDefaultStream( aiDefaultLogStream_STDERR ) );
+    }
 
     // Stream the log to a file
-    if (defStreams & aiDefaultLogStream_FILE && name && *name)
-        m_pLogger->attachStream( LogStream::createDefaultStream(aiDefaultLogStream_FILE,name,io));
+    if ( defStreams & aiDefaultLogStream_FILE && name && *name ) {
+        m_pLogger->attachStream( LogStream::createDefaultStream( aiDefaultLogStream_FILE, name, io ) );
+    }
 
     return m_pLogger;
 }
@@ -199,7 +199,6 @@ void Logger::warn(const char* message)  {
 
 // ----------------------------------------------------------------------------------
 void Logger::error(const char* message) {
-
     // SECURITY FIX: see above
     if (strlen(message)>MAX_LOG_MESSAGE_LENGTH) {
         return;
@@ -208,23 +207,24 @@ void Logger::error(const char* message) {
 }
 
 // ----------------------------------------------------------------------------------
-void DefaultLogger::set( Logger *logger )
-{
+void DefaultLogger::set( Logger *logger ) {
     // enter the mutex here to avoid concurrency problems
 #ifndef ASSIMP_BUILD_SINGLETHREADED
     std::lock_guard<std::mutex> lock(loggerMutex);
 #endif
 
-    if (!logger)logger = &s_pNullLogger;
-    if (m_pLogger && !isNullLogger() )
+    if ( nullptr == logger ) {
+        logger = &s_pNullLogger;
+    }
+    if ( nullptr != m_pLogger && !isNullLogger() ) {
         delete m_pLogger;
+    }
 
     DefaultLogger::m_pLogger = logger;
 }
 
 // ----------------------------------------------------------------------------------
-bool DefaultLogger::isNullLogger()
-{
+bool DefaultLogger::isNullLogger() {
     return m_pLogger == &s_pNullLogger;
 }
 
@@ -235,8 +235,7 @@ Logger *DefaultLogger::get() {
 
 // ----------------------------------------------------------------------------------
 //  Kills the only instance
-void DefaultLogger::kill()
-{
+void DefaultLogger::kill() {
     // enter the mutex here to avoid concurrency problems
 #ifndef ASSIMP_BUILD_SINGLETHREADED
     std::lock_guard<std::mutex> lock(loggerMutex);
@@ -251,10 +250,10 @@ void DefaultLogger::kill()
 
 // ----------------------------------------------------------------------------------
 //  Debug message
-void DefaultLogger::OnDebug( const char* message )
-{
-	if ( m_Severity == Logger::NORMAL )
-		return;
+void DefaultLogger::OnDebug( const char* message ) {
+    if ( m_Severity == Logger::NORMAL ) {
+        return;
+    }
 
 	static const size_t Size = MAX_LOG_MESSAGE_LENGTH + 16;
 	char msg[Size];
@@ -265,8 +264,7 @@ void DefaultLogger::OnDebug( const char* message )
 
 // ----------------------------------------------------------------------------------
 //  Logs an info
-void DefaultLogger::OnInfo( const char* message )
-{
+void DefaultLogger::OnInfo( const char* message ){
 	static const size_t Size = MAX_LOG_MESSAGE_LENGTH + 16;
 	char msg[Size];
     ai_snprintf(msg, Size, "Info,  T%u: %s", GetThreadID(), message );
@@ -276,8 +274,7 @@ void DefaultLogger::OnInfo( const char* message )
 
 // ----------------------------------------------------------------------------------
 //  Logs a warning
-void DefaultLogger::OnWarn( const char* message )
-{
+void DefaultLogger::OnWarn( const char* message ) {
 	static const size_t Size = MAX_LOG_MESSAGE_LENGTH + 16;
 	char msg[Size];
 	ai_snprintf(msg, Size, "Warn,  T%u: %s", GetThreadID(), message );
@@ -287,8 +284,7 @@ void DefaultLogger::OnWarn( const char* message )
 
 // ----------------------------------------------------------------------------------
 //  Logs an error
-void DefaultLogger::OnError( const char* message )
-{
+void DefaultLogger::OnError( const char* message ) {
 	static const size_t Size = MAX_LOG_MESSAGE_LENGTH + 16;
 	char msg[ Size ];
     ai_snprintf(msg, Size, "Error, T%u: %s", GetThreadID(), message );
@@ -298,10 +294,10 @@ void DefaultLogger::OnError( const char* message )
 
 // ----------------------------------------------------------------------------------
 //  Will attach a new stream
-bool DefaultLogger::attachStream( LogStream *pStream, unsigned int severity )
-{
-    if (!pStream)
+bool DefaultLogger::attachStream( LogStream *pStream, unsigned int severity ) {
+    if ( nullptr == pStream ) {
         return false;
+    }
 
     if (0 == severity)  {
         severity = Logger::Info | Logger::Err | Logger::Warn | Logger::Debugging;
@@ -311,8 +307,7 @@ bool DefaultLogger::attachStream( LogStream *pStream, unsigned int severity )
         it != m_StreamArray.end();
         ++it )
     {
-        if ( (*it)->m_pStream == pStream )
-        {
+        if ( (*it)->m_pStream == pStream ) {
             (*it)->m_uiErrorSeverity |= severity;
             return true;
         }
@@ -325,34 +320,31 @@ bool DefaultLogger::attachStream( LogStream *pStream, unsigned int severity )
 
 // ----------------------------------------------------------------------------------
 //  Detach a stream
-bool DefaultLogger::detatchStream( LogStream *pStream, unsigned int severity )
-{
-    if (!pStream)
+bool DefaultLogger::detatchStream( LogStream *pStream, unsigned int severity ) {
+    if ( nullptr == pStream ) {
         return false;
+    }
 
     if (0 == severity)  {
         severity = SeverityAll;
     }
 
-    for ( StreamIt it = m_StreamArray.begin();
-        it != m_StreamArray.end();
-        ++it )
-    {
-        if ( (*it)->m_pStream == pStream )
-        {
+    bool res( false );
+    for ( StreamIt it = m_StreamArray.begin(); it != m_StreamArray.end(); ++it ) {
+        if ( (*it)->m_pStream == pStream ) {
             (*it)->m_uiErrorSeverity &= ~severity;
-            if ( (*it)->m_uiErrorSeverity == 0 )
-            {
+            if ( (*it)->m_uiErrorSeverity == 0 ) {
                 // don't delete the underlying stream 'cause the caller gains ownership again
-                (**it).m_pStream = NULL;
+                (**it).m_pStream = nullptr;
                 delete *it;
                 m_StreamArray.erase( it );
+                res = true;
                 break;
             }
             return true;
         }
     }
-    return false;
+    return res;
 }
 
 // ----------------------------------------------------------------------------------
@@ -360,15 +352,13 @@ bool DefaultLogger::detatchStream( LogStream *pStream, unsigned int severity )
 DefaultLogger::DefaultLogger(LogSeverity severity)
     :   Logger  ( severity )
     ,   noRepeatMsg (false)
-    ,   lastLen( 0 )
-{
+    ,   lastLen( 0 ) {
     lastMsg[0] = '\0';
 }
 
 // ----------------------------------------------------------------------------------
 //  Destructor
-DefaultLogger::~DefaultLogger()
-{
+DefaultLogger::~DefaultLogger() {
     for ( StreamIt it = m_StreamArray.begin(); it != m_StreamArray.end(); ++it ) {
         // also frees the underlying stream, we are its owner.
         delete *it;
@@ -377,9 +367,8 @@ DefaultLogger::~DefaultLogger()
 
 // ----------------------------------------------------------------------------------
 //  Writes message to stream
-void DefaultLogger::WriteToStreams(const char *message, ErrorSeverity ErrorSev )
-{
-    ai_assert(NULL != message);
+void DefaultLogger::WriteToStreams(const char *message, ErrorSeverity ErrorSev ) {
+    ai_assert(nullptr != message);
 
     // Check whether this is a repeated message
     if (! ::strncmp( message,lastMsg, lastLen-1))

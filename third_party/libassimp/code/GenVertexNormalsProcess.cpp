@@ -3,7 +3,8 @@
 Open Asset Import Library (assimp)
 ---------------------------------------------------------------------------
 
-Copyright (c) 2006-2017, assimp team
+Copyright (c) 2006-2018, assimp team
+
 
 
 All rights reserved.
@@ -49,8 +50,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // internal headers
 #include "GenVertexNormalsProcess.h"
 #include "ProcessHelper.h"
-#include "Exceptional.h"
-#include "qnan.h"
+#include <assimp/Exceptional.h>
+#include <assimp/qnan.h>
 
 using namespace Assimp;
 
@@ -71,6 +72,7 @@ GenVertexNormalsProcess::~GenVertexNormalsProcess() {
 // Returns whether the processing step is present in the given flag field.
 bool GenVertexNormalsProcess::IsActive( unsigned int pFlags) const
 {
+    force_ = (pFlags & aiProcess_ForceGenNormals) != 0;
     return (pFlags & aiProcess_GenSmoothNormals) != 0;
 }
 
@@ -87,39 +89,42 @@ void GenVertexNormalsProcess::SetupProperties(const Importer* pImp)
 // Executes the post processing step on the given imported data.
 void GenVertexNormalsProcess::Execute( aiScene* pScene)
 {
-    DefaultLogger::get()->debug("GenVertexNormalsProcess begin");
+    ASSIMP_LOG_DEBUG("GenVertexNormalsProcess begin");
 
-    if (pScene->mFlags & AI_SCENE_FLAGS_NON_VERBOSE_FORMAT)
+    if (pScene->mFlags & AI_SCENE_FLAGS_NON_VERBOSE_FORMAT) {
         throw DeadlyImportError("Post-processing order mismatch: expecting pseudo-indexed (\"verbose\") vertices here");
+    }
 
     bool bHas = false;
-    for( unsigned int a = 0; a < pScene->mNumMeshes; a++)
-    {
+    for( unsigned int a = 0; a < pScene->mNumMeshes; ++a) {
         if(GenMeshVertexNormals( pScene->mMeshes[a],a))
             bHas = true;
     }
 
     if (bHas)   {
-        DefaultLogger::get()->info("GenVertexNormalsProcess finished. "
+        ASSIMP_LOG_INFO("GenVertexNormalsProcess finished. "
             "Vertex normals have been calculated");
+    } else {
+        ASSIMP_LOG_DEBUG("GenVertexNormalsProcess finished. "
+            "Normals are already there");
     }
-    else DefaultLogger::get()->debug("GenVertexNormalsProcess finished. "
-        "Normals are already there");
 }
 
 // ------------------------------------------------------------------------------------------------
 // Executes the post processing step on the given imported data.
 bool GenVertexNormalsProcess::GenMeshVertexNormals (aiMesh* pMesh, unsigned int meshIndex)
 {
-    if (NULL != pMesh->mNormals)
-        return false;
+    if (NULL != pMesh->mNormals) {
+        if (force_) delete[] pMesh->mNormals;
+        else return false;
+    }
 
     // If the mesh consists of lines and/or points but not of
     // triangles or higher-order polygons the normal vectors
     // are undefined.
     if (!(pMesh->mPrimitiveTypes & (aiPrimitiveType_TRIANGLE | aiPrimitiveType_POLYGON)))
     {
-        DefaultLogger::get()->info("Normal vectors are undefined for line and point meshes");
+        ASSIMP_LOG_INFO("Normal vectors are undefined for line and point meshes");
         return false;
     }
 
@@ -144,7 +149,7 @@ bool GenVertexNormalsProcess::GenMeshVertexNormals (aiMesh* pMesh, unsigned int 
         const aiVector3D* pV1 = &pMesh->mVertices[face.mIndices[0]];
         const aiVector3D* pV2 = &pMesh->mVertices[face.mIndices[1]];
         const aiVector3D* pV3 = &pMesh->mVertices[face.mIndices[face.mNumIndices-1]];
-        const aiVector3D vNor = ((*pV2 - *pV1) ^ (*pV3 - *pV1));
+        const aiVector3D vNor = ((*pV2 - *pV1) ^ (*pV3 - *pV1)).NormalizeSafe();
 
         for (unsigned int i = 0;i < face.mNumIndices;++i) {
             pMesh->mNormals[face.mIndices[i]] = vNor;
@@ -212,17 +217,15 @@ bool GenVertexNormalsProcess::GenMeshVertexNormals (aiMesh* pMesh, unsigned int 
             vertexFinder->FindPositions( pMesh->mVertices[i] , posEpsilon, verticesFound);
 
             aiVector3D vr = pMesh->mNormals[i];
-            ai_real vrlen = vr.Length();
 
             aiVector3D pcNor;
             for (unsigned int a = 0; a < verticesFound.size(); ++a) {
                 aiVector3D v = pMesh->mNormals[verticesFound[a]];
 
-                // check whether the angle between the two normals is not too large
-                // HACK: if v.x is qnan the dot product will become qnan, too
-                //   therefore the comparison against fLimit should be false
-                //   in every case.
-                if (v * vr >= fLimit * vrlen * v.Length())
+                // Check whether the angle between the two normals is not too large.
+                // Skip the angle check on our own normal to avoid false negatives
+                // (v*v is not guaranteed to be 1.0 for all unit vectors v)
+                if (is_not_qnan(v.x) && (verticesFound[a] == i || (v * vr >= fLimit)))
                     pcNor += v;
             }
             pcNew[i] = pcNor.NormalizeSafe();

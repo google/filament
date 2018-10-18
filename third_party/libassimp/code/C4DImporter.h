@@ -44,8 +44,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef INCLUDED_AI_CINEMA_4D_LOADER_H
 #define INCLUDED_AI_CINEMA_4D_LOADER_H
 
-#include "BaseImporter.h"
-#include "LogAux.h"
+#include <assimp/BaseImporter.h>
+#include <assimp/LogAux.h>
 
 #include <map>
 struct aiNode;

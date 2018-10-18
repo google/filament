@@ -9,8 +9,8 @@
 #include "X3DExporter.hpp"
 
 // Header files, Assimp.
-#include "Exceptional.h"
-#include "StringUtils.h"
+#include <assimp/Exceptional.h>
+#include <assimp/StringUtils.h>
 #include <assimp/Exporter.hpp>
 #include <assimp/IOSystem.hpp>
 

@@ -26,7 +26,7 @@ namespace Assimp
 /// Limitations.
 ///
 /// Pay attention that X3D is format for interactive graphic and simulations for web browsers. aiScene can not contain all features of the X3D format.
-/// Also, aiScene contain rasterized-like data. For example, X3D can describe circle all cylinder with one tag, but aiScene contain result of tesselation:
+/// Also, aiScene contain rasterized-like data. For example, X3D can describe circle all cylinder with one tag, but aiScene contain result of tessellation:
 /// vertices, faces etc. Yes, you can use algorithm for detecting figures or shapes, but that's not a good idea at all.
 ///
 /// Supported nodes:

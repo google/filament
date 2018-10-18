@@ -2,7 +2,8 @@
 Open Asset Import Library (assimp)
 ----------------------------------------------------------------------
 
-Copyright (c) 2006-2017, assimp team
+Copyright (c) 2006-2018, assimp team
+
 
 All rights reserved.
 
@@ -39,7 +40,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ----------------------------------------------------------------------
 */
 
-#include "StringUtils.h"
+#include <assimp/StringUtils.h>
 #include <iomanip>
 
 // Header files, Assimp
@@ -297,7 +298,7 @@ inline void Buffer::Read(Value& obj, Asset& r)
         if (dataURI.base64) {
             uint8_t* data = 0;
             this->byteLength = Util::DecodeBase64(dataURI.data, dataURI.dataLength, data);
-            this->mData.reset(data);
+            this->mData.reset(data, std::default_delete<uint8_t[]>());
 
             if (statedLength > 0 && this->byteLength != statedLength) {
                 throw DeadlyImportError("GLTF: buffer \"" + id + "\", expected " + to_string(statedLength) +
@@ -601,7 +602,6 @@ T Accessor::Indexer::GetValue(int i)
 inline Image::Image()
     : width(0)
     , height(0)
-    , mData(0)
     , mDataLength(0)
 {
 
@@ -624,8 +624,8 @@ inline void Image::Read(Value& obj, Asset& r)
                     Ref<BufferView> bv = r.bufferViews.Get(bufferViewId);
                     if (bv) {
                         mDataLength = bv->byteLength;
-                        mData = new uint8_t[mDataLength];
-                        memcpy(mData, bv->buffer->GetPointer() + bv->byteOffset, mDataLength);
+                        mData.reset(new uint8_t[mDataLength]);
+                        memcpy(mData.get(), bv->buffer->GetPointer() + bv->byteOffset, mDataLength);
                     }
                 }
             }
@@ -640,7 +640,9 @@ inline void Image::Read(Value& obj, Asset& r)
             if (ParseDataURI(uristr, uri->GetStringLength(), dataURI)) {
                 mimeType = dataURI.mediaType;
                 if (dataURI.base64) {
-                    mDataLength = Util::DecodeBase64(dataURI.data, dataURI.dataLength, mData);
+                    uint8_t *ptr = nullptr;
+                    mDataLength = Util::DecodeBase64(dataURI.data, dataURI.dataLength, ptr);
+                    mData.reset(ptr);
                 }
             }
             else {
@@ -652,10 +654,8 @@ inline void Image::Read(Value& obj, Asset& r)
 
 inline uint8_t* Image::StealData()
 {
-    uint8_t* data = mData;
     mDataLength = 0;
-    mData = 0;
-    return data;
+    return mData.release();
 }
 
 inline void Image::SetData(uint8_t* data, size_t length, Asset& r)
@@ -670,7 +670,7 @@ inline void Image::SetData(uint8_t* data, size_t length, Asset& r)
         bufferView->byteOffset = b->AppendData(data, length);
     }
     else { // text file: will be stored as a data uri
-        this->mData = data;
+        this->mData.reset(data);
         this->mDataLength = length;
     }
 }
@@ -869,7 +869,7 @@ inline void Mesh::Read(Value& pJSON_Object, Asset& pAsset_Root)
 
 			if(comp_data == nullptr) throw DeadlyImportError("GLTF: \"Open3DGC-compression\" must has \"compressedData\".");
 
-			DefaultLogger::get()->info("GLTF: Decompressing Open3DGC data.");
+            ASSIMP_LOG_INFO("GLTF: Decompressing Open3DGC data.");
 
 			/************** Read data from JSON-document **************/
 			#define MESH_READ_COMPRESSEDDATA_MEMBER(pFieldName, pOut) \
@@ -948,24 +948,24 @@ Ref<Buffer> buf = pAsset_Root.buffers.Get(pCompression_Open3DGC.Buffer);
 	size_t size_coordindex = ifs.GetNCoordIndex() * 3;// See float attributes note.
 
 	if(primitives[0].indices->count != size_coordindex)
-		throw DeadlyImportError("GLTF: Open3DGC. Compressed indices count (" + std::to_string(size_coordindex) +
-								") not equal to uncompressed (" + std::to_string(primitives[0].indices->count) + ").");
+		throw DeadlyImportError("GLTF: Open3DGC. Compressed indices count (" + to_string(size_coordindex) +
+								") not equal to uncompressed (" + to_string(primitives[0].indices->count) + ").");
 
 	size_coordindex *= sizeof(IndicesType);
 	// Coordinates
 	size_t size_coord = ifs.GetNCoord();// See float attributes note.
 
 	if(primitives[0].attributes.position[0]->count != size_coord)
-		throw DeadlyImportError("GLTF: Open3DGC. Compressed positions count (" + std::to_string(size_coord) +
-								") not equal to uncompressed (" + std::to_string(primitives[0].attributes.position[0]->count) + ").");
+		throw DeadlyImportError("GLTF: Open3DGC. Compressed positions count (" + to_string(size_coord) +
+								") not equal to uncompressed (" + to_string(primitives[0].attributes.position[0]->count) + ").");
 
 	size_coord *= 3 * sizeof(float);
 	// Normals
 	size_t size_normal = ifs.GetNNormal();// See float attributes note.
 
 	if(primitives[0].attributes.normal[0]->count != size_normal)
-		throw DeadlyImportError("GLTF: Open3DGC. Compressed normals count (" + std::to_string(size_normal) +
-								") not equal to uncompressed (" + std::to_string(primitives[0].attributes.normal[0]->count) + ").");
+		throw DeadlyImportError("GLTF: Open3DGC. Compressed normals count (" + to_string(size_normal) +
+								") not equal to uncompressed (" + to_string(primitives[0].attributes.normal[0]->count) + ").");
 
 	size_normal *= 3 * sizeof(float);
 	// Additional attributes.
@@ -989,8 +989,8 @@ Ref<Buffer> buf = pAsset_Root.buffers.Get(pCompression_Open3DGC.Buffer);
 				if(idx_texcoord < primitives[0].attributes.texcoord.size())
 				{
 					if(primitives[0].attributes.texcoord[idx]->count != tval)
-						throw DeadlyImportError("GLTF: Open3DGC. Compressed texture coordinates count (" + std::to_string(tval) +
-												") not equal to uncompressed (" + std::to_string(primitives[0].attributes.texcoord[idx]->count) + ").");
+						throw DeadlyImportError("GLTF: Open3DGC. Compressed texture coordinates count (" + to_string(tval) +
+												") not equal to uncompressed (" + to_string(primitives[0].attributes.texcoord[idx]->count) + ").");
 
 					idx_texcoord++;
 				}

@@ -2,7 +2,8 @@
 Open Asset Import Library (assimp)
 ----------------------------------------------------------------------
 
-Copyright (c) 2006-2017, assimp team
+Copyright (c) 2006-2018, assimp team
+
 
 All rights reserved.
 
@@ -47,11 +48,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "X3DImporter.hpp"
 #include "X3DImporter_Macro.hpp"
-#include "StringUtils.h"
+#include <assimp/StringUtils.h>
 
 // Header files, Assimp.
 #include <assimp/DefaultIOSystem.h>
-#include "fast_atof.h"
+#include <assimp/fast_atof.h>
 #include "FIReader.hpp"
 
 // Header files, stdlib.

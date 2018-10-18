@@ -2,7 +2,8 @@
 Open Asset Import Library (assimp)
 ----------------------------------------------------------------------
 
-Copyright (c) 2006-2017, assimp team
+Copyright (c) 2006-2018, assimp team
+
 
 All rights reserved.
 
@@ -80,7 +81,7 @@ void ScenePreprocessor::ProcessScene ()
         name.Set(AI_DEFAULT_MATERIAL_NAME);
         helper->AddProperty(&name,AI_MATKEY_NAME);
 
-        DefaultLogger::get()->debug("ScenePreprocessor: Adding default material \'" AI_DEFAULT_MATERIAL_NAME  "\'");
+        ASSIMP_LOG_DEBUG("ScenePreprocessor: Adding default material \'" AI_DEFAULT_MATERIAL_NAME  "\'");
 
         for (unsigned int i = 0; i < scene->mNumMeshes;++i) {
             scene->mMeshes[i]->mMaterialIndex = scene->mNumMaterials;
@@ -103,7 +104,7 @@ void ScenePreprocessor::ProcessMesh (aiMesh* mesh)
 
             aiVector3D* p = mesh->mTextureCoords[i], *end = p+mesh->mNumVertices;
 
-            // Ensure unsued components are zeroed. This will make 1D texture channels work
+            // Ensure unused components are zeroed. This will make 1D texture channels work
             // as if they were 2D channels .. just in case an application doesn't handle
             // this case
             if (2 == mesh->mNumUVComponents[i]) {
@@ -121,7 +122,7 @@ void ScenePreprocessor::ProcessMesh (aiMesh* mesh)
                         break;
                 }
                 if (p == end) {
-                    DefaultLogger::get()->warn("ScenePreprocessor: UVs are declared to be 3D but they're obviously not. Reverting to 2D.");
+                    ASSIMP_LOG_WARN("ScenePreprocessor: UVs are declared to be 3D but they're obviously not. Reverting to 2D.");
                     mesh->mNumUVComponents[i] = 2;
                 }
             }
@@ -223,7 +224,7 @@ void ScenePreprocessor::ProcessAnimation (aiAnimation* anim)
                     q.mTime  = 0.;
                     q.mValue = rotation;
 
-                    DefaultLogger::get()->debug("ScenePreprocessor: Dummy rotation track has been generated");
+                    ASSIMP_LOG_DEBUG("ScenePreprocessor: Dummy rotation track has been generated");
                 }
 
                 // No scaling keys? Generate a dummy track
@@ -235,7 +236,7 @@ void ScenePreprocessor::ProcessAnimation (aiAnimation* anim)
                     q.mTime  = 0.;
                     q.mValue = scaling;
 
-                    DefaultLogger::get()->debug("ScenePreprocessor: Dummy scaling track has been generated");
+                    ASSIMP_LOG_DEBUG("ScenePreprocessor: Dummy scaling track has been generated");
                 }
 
                 // No position keys? Generate a dummy track
@@ -247,14 +248,14 @@ void ScenePreprocessor::ProcessAnimation (aiAnimation* anim)
                     q.mTime  = 0.;
                     q.mValue = position;
 
-                    DefaultLogger::get()->debug("ScenePreprocessor: Dummy position track has been generated");
+                    ASSIMP_LOG_DEBUG("ScenePreprocessor: Dummy position track has been generated");
                 }
             }
         }
     }
 
     if (anim->mDuration == -1.)     {
-        DefaultLogger::get()->debug("ScenePreprocessor: Setting animation duration");
+        ASSIMP_LOG_DEBUG("ScenePreprocessor: Setting animation duration");
         anim->mDuration = last - std::min( first, 0. );
     }
 }

@@ -41,6 +41,10 @@ woven in by Terry Thorsen 1/2003.
 #include "zlib.h"
 #include "unzip.h"
 
+#if ZLIB_VERNUM < 0x1270
+typedef unsigned long z_crc_t;
+#endif
+
 #ifdef STDC
 #  include <stddef.h>
 #  include <string.h>

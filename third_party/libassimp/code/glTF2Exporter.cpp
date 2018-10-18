@@ -2,7 +2,8 @@
 Open Asset Import Library (assimp)
 ----------------------------------------------------------------------
 
-Copyright (c) 2006-2017, assimp team
+Copyright (c) 2006-2018, assimp team
+
 
 All rights reserved.
 
@@ -43,9 +44,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "glTF2Exporter.h"
 
-#include "Exceptional.h"
-#include "StringComparison.h"
-#include "ByteSwapper.h"
+#include <assimp/Exceptional.h>
+#include <assimp/StringComparison.h>
+#include <assimp/ByteSwapper.h>
 
 #include "SplitLargeMeshes.h"
 
@@ -77,29 +78,29 @@ namespace Assimp {
         glTF2Exporter exporter(pFile, pIOSystem, pScene, pProperties, false);
     }
 
+    // ------------------------------------------------------------------------------------------------
+    // Worker function for exporting a scene to GLB. Prototyped and registered in Exporter.cpp
+    void ExportSceneGLB2(const char* pFile, IOSystem* pIOSystem, const aiScene* pScene, const ExportProperties* pProperties)
+    {
+        // invoke the exporter
+        glTF2Exporter exporter(pFile, pIOSystem, pScene, pProperties, true);
+    }
+
 } // end of namespace Assimp
 
 glTF2Exporter::glTF2Exporter(const char* filename, IOSystem* pIOSystem, const aiScene* pScene,
-                           const ExportProperties* pProperties, bool /*isBinary*/)
+                           const ExportProperties* pProperties, bool isBinary)
     : mFilename(filename)
     , mIOSystem(pIOSystem)
     , mProperties(pProperties)
 {
-    aiScene* sceneCopy_tmp;
-    SceneCombiner::CopyScene(&sceneCopy_tmp, pScene);
-    std::unique_ptr<aiScene> sceneCopy(sceneCopy_tmp);
-
-    SplitLargeMeshesProcess_Triangle tri_splitter;
-    tri_splitter.SetLimit(0xffff);
-    tri_splitter.Execute(sceneCopy.get());
-
-    SplitLargeMeshesProcess_Vertex vert_splitter;
-    vert_splitter.SetLimit(0xffff);
-    vert_splitter.Execute(sceneCopy.get());
-
-    mScene = sceneCopy.get();
+    mScene = pScene;
 
     mAsset.reset( new Asset( pIOSystem ) );
+
+    if (isBinary) {
+        mAsset->SetAsBinary();
+    }
 
     ExportMetadata();
 
@@ -118,31 +119,36 @@ glTF2Exporter::glTF2Exporter(const char* filename, IOSystem* pIOSystem, const ai
 
     AssetWriter writer(*mAsset);
 
-    writer.WriteFile(filename);
+    if (isBinary) {
+        writer.WriteGLBFile(filename);
+    } else {
+        writer.WriteFile(filename);
+    }
+}
+
+glTF2Exporter::~glTF2Exporter() {
+    // empty
 }
 
 /*
  * Copy a 4x4 matrix from struct aiMatrix to typedef mat4.
  * Also converts from row-major to column-major storage.
  */
-static void CopyValue(const aiMatrix4x4& v, mat4& o)
-{
+static void CopyValue(const aiMatrix4x4& v, mat4& o) {
     o[ 0] = v.a1; o[ 1] = v.b1; o[ 2] = v.c1; o[ 3] = v.d1;
     o[ 4] = v.a2; o[ 5] = v.b2; o[ 6] = v.c2; o[ 7] = v.d2;
     o[ 8] = v.a3; o[ 9] = v.b3; o[10] = v.c3; o[11] = v.d3;
     o[12] = v.a4; o[13] = v.b4; o[14] = v.c4; o[15] = v.d4;
 }
 
-static void CopyValue(const aiMatrix4x4& v, aiMatrix4x4& o)
-{
+static void CopyValue(const aiMatrix4x4& v, aiMatrix4x4& o) {
     o.a1 = v.a1; o.a2 = v.a2; o.a3 = v.a3; o.a4 = v.a4;
     o.b1 = v.b1; o.b2 = v.b2; o.b3 = v.b3; o.b4 = v.b4;
     o.c1 = v.c1; o.c2 = v.c2; o.c3 = v.c3; o.c4 = v.c4;
     o.d1 = v.d1; o.d2 = v.d2; o.d3 = v.d3; o.d4 = v.d4;
 }
 
-static void IdentityMatrix4(mat4& o)
-{
+static void IdentityMatrix4(mat4& o) {
     o[ 0] = 1; o[ 1] = 0; o[ 2] = 0; o[ 3] = 0;
     o[ 4] = 0; o[ 5] = 1; o[ 6] = 0; o[ 7] = 0;
     o[ 8] = 0; o[ 9] = 0; o[10] = 1; o[11] = 0;
@@ -152,7 +158,9 @@ static void IdentityMatrix4(mat4& o)
 inline Ref<Accessor> ExportData(Asset& a, std::string& meshName, Ref<Buffer>& buffer,
     unsigned int count, void* data, AttribType::Value typeIn, AttribType::Value typeOut, ComponentType compType, bool isIndices = false)
 {
-    if (!count || !data) return Ref<Accessor>();
+    if (!count || !data) {
+        return Ref<Accessor>();
+    }
 
     unsigned int numCompsIn = AttribType::GetNumComponents(typeIn);
     unsigned int numCompsOut = AttribType::GetNumComponents(typeOut);
@@ -299,11 +307,9 @@ void glTF2Exporter::GetMatTex(const aiMaterial* mat, Ref<Texture>& texture, aiTe
             std::string path = tex.C_Str();
 
             if (path.size() > 0) {
-                if (path[0] != '*') {
-                    std::map<std::string, unsigned int>::iterator it = mTexturesByPath.find(path);
-                    if (it != mTexturesByPath.end()) {
-                        texture = mAsset->textures.Get(it->second);
-                    }
+                std::map<std::string, unsigned int>::iterator it = mTexturesByPath.find(path);
+                if (it != mTexturesByPath.end()) {
+                    texture = mAsset->textures.Get(it->second);
                 }
 
                 if (!texture) {
@@ -496,9 +502,9 @@ void glTF2Exporter::ExportMaterials()
             GetMatColor(mat, pbrSG.specularFactor, AI_MATKEY_COLOR_SPECULAR);
 
             if (mat->Get(AI_MATKEY_GLTF_PBRSPECULARGLOSSINESS_GLOSSINESS_FACTOR, pbrSG.glossinessFactor) != AI_SUCCESS) {
-                float shininess;
+				float shininess;
 
-                if (mat->Get(AI_MATKEY_SHININESS, shininess)) {
+				if (mat->Get(AI_MATKEY_SHININESS, shininess) == AI_SUCCESS) {
                     pbrSG.glossinessFactor = shininess / 1000;
                 }
             }
@@ -507,6 +513,12 @@ void glTF2Exporter::ExportMaterials()
             GetMatTex(mat, pbrSG.specularGlossinessTexture, aiTextureType_SPECULAR);
 
             m->pbrSpecularGlossiness = Nullable<PbrSpecularGlossiness>(pbrSG);
+        }
+
+        bool unlit;
+        if (mat->Get(AI_MATKEY_GLTF_UNLIT, unlit) == AI_SUCCESS && unlit) {
+            mAsset->extensionsUsed.KHR_materials_unlit = true;
+            m->unlit = true;
         }
     }
 }
@@ -623,6 +635,27 @@ void ExportSkin(Asset& mAsset, const aiMesh* aimesh, Ref<Mesh>& meshRef, Ref<Buf
     Mesh::Primitive& p = meshRef->primitives.back();
     Ref<Accessor> vertexJointAccessor = ExportData(mAsset, skinRef->id, bufferRef, aimesh->mNumVertices, vertexJointData, AttribType::VEC4, AttribType::VEC4, ComponentType_FLOAT);
     if ( vertexJointAccessor ) {
+        size_t offset = vertexJointAccessor->bufferView->byteOffset;
+        size_t bytesLen = vertexJointAccessor->bufferView->byteLength;
+        unsigned int s_bytesPerComp= ComponentTypeSize(ComponentType_UNSIGNED_SHORT);
+        unsigned int bytesPerComp = ComponentTypeSize(vertexJointAccessor->componentType);
+        size_t s_bytesLen = bytesLen * s_bytesPerComp / bytesPerComp;
+        Ref<Buffer> buf = vertexJointAccessor->bufferView->buffer;
+        uint8_t* arrys = new uint8_t[bytesLen];
+        unsigned int i = 0;
+        for ( unsigned int j = 0; j <= bytesLen; j += bytesPerComp ){
+            size_t len_p = offset + j;
+            float f_value = *(float *)&buf->GetPointer()[len_p];
+            unsigned short c = static_cast<unsigned short>(f_value);
+            uint8_t* data = new uint8_t[s_bytesPerComp];
+            data = (uint8_t*)&c;
+            memcpy(&arrys[i*s_bytesPerComp], data, s_bytesPerComp);
+            ++i;
+        }
+        buf->ReplaceData_joint(offset, bytesLen, arrys, bytesLen);
+        vertexJointAccessor->componentType = ComponentType_UNSIGNED_SHORT;
+        vertexJointAccessor->bufferView->byteLength = s_bytesLen;
+
         p.attributes.joint.push_back( vertexJointAccessor );
     }
 
@@ -637,12 +670,7 @@ void ExportSkin(Asset& mAsset, const aiMesh* aimesh, Ref<Mesh>& meshRef, Ref<Buf
 
 void glTF2Exporter::ExportMeshes()
 {
-    // Not for
-    //     using IndicesType = decltype(aiFace::mNumIndices);
-    // But yes for
-    //     using IndicesType = unsigned short;
-    // because "ComponentType_UNSIGNED_SHORT" used for indices. And it's a maximal type according to glTF specification.
-    typedef unsigned short IndicesType;
+    typedef decltype(aiFace::mNumIndices) IndicesType;
 
     std::string fname = std::string(mFilename);
     std::string bufferIdPrefix = fname.substr(0, fname.rfind(".gltf"));
@@ -692,8 +720,15 @@ void glTF2Exporter::ExportMeshes()
 		if (v) p.attributes.position.push_back(v);
 
 		/******************** Normals ********************/
+        // Normalize all normals as the validator can emit a warning otherwise
+        if ( nullptr != aim->mNormals) {
+            for ( auto i = 0u; i < aim->mNumVertices; ++i ) {
+                aim->mNormals[ i ].Normalize();
+            }
+        }
+
 		Ref<Accessor> n = ExportData(*mAsset, meshId, b, aim->mNumVertices, aim->mNormals, AttribType::VEC3, AttribType::VEC3, ComponentType_FLOAT);
-		if (n) p.attributes.normal.push_back(n);
+        if (n) p.attributes.normal.push_back(n);
 
 		/************** Texture coordinates **************/
         for (int i = 0; i < AI_MAX_NUMBER_OF_TEXTURECOORDS; ++i) {
@@ -712,6 +747,14 @@ void glTF2Exporter::ExportMeshes()
 			}
 		}
 
+		/*************** Vertex colors ****************/
+		for (unsigned int indexColorChannel = 0; indexColorChannel < aim->GetNumColorChannels(); ++indexColorChannel)
+		{
+			Ref<Accessor> c = ExportData(*mAsset, meshId, b, aim->mNumVertices, aim->mColors[indexColorChannel], AttribType::VEC4, AttribType::VEC4, ComponentType_FLOAT, false);
+			if (c)
+				p.attributes.color.push_back(c);
+		}
+
 		/*************** Vertices indices ****************/
 		if (aim->mNumFaces > 0) {
 			std::vector<IndicesType> indices;
@@ -719,11 +762,11 @@ void glTF2Exporter::ExportMeshes()
             indices.resize(aim->mNumFaces * nIndicesPerFace);
             for (size_t i = 0; i < aim->mNumFaces; ++i) {
                 for (size_t j = 0; j < nIndicesPerFace; ++j) {
-                    indices[i*nIndicesPerFace + j] = uint16_t(aim->mFaces[i].mIndices[j]);
+                    indices[i*nIndicesPerFace + j] = IndicesType(aim->mFaces[i].mIndices[j]);
                 }
             }
 
-			p.indices = ExportData(*mAsset, meshId, b, unsigned(indices.size()), &indices[0], AttribType::SCALAR, AttribType::SCALAR, ComponentType_UNSIGNED_SHORT, true);
+			p.indices = ExportData(*mAsset, meshId, b, unsigned(indices.size()), &indices[0], AttribType::SCALAR, AttribType::SCALAR, ComponentType_UNSIGNED_INT, true);
 		}
 
         switch (aim->mPrimitiveTypes) {
@@ -843,6 +886,8 @@ unsigned int glTF2Exporter::ExportNodeHierarchy(const aiNode* n)
 {
     Ref<Node> node = mAsset->nodes.Create(mAsset->FindUniqueID(n->mName.C_Str(), "node"));
 
+    node->name = n->mName.C_Str();
+
     if (!n->mTransformation.IsIdentity()) {
         node->matrix.isPresent = true;
         CopyValue(n->mTransformation, node->matrix.value);
@@ -916,92 +961,89 @@ void glTF2Exporter::ExportMetadata()
     asset.generator = buffer;
 }
 
-inline void ExtractAnimationData(Asset& mAsset, std::string& animId, Ref<Animation>& animRef, Ref<Buffer>& buffer, const aiNodeAnim* nodeChannel, float ticksPerSecond)
+inline Ref<Accessor> GetSamplerInputRef(Asset& asset, std::string& animId, Ref<Buffer>& buffer, std::vector<float>& times)
 {
-    // Loop over the data and check to see if it exactly matches an existing buffer.
-    //    If yes, then reference the existing corresponding accessor.
-    //    Otherwise, add to the buffer and create a new accessor.
+    return ExportData(asset, animId, buffer, times.size(), &times[0], AttribType::SCALAR, AttribType::SCALAR, ComponentType_FLOAT);
+}
 
-    size_t counts[3] = {
-        nodeChannel->mNumPositionKeys,
-        nodeChannel->mNumScalingKeys,
-        nodeChannel->mNumRotationKeys,
-    };
-    size_t numKeyframes = 1;
-    for (int i = 0; i < 3; ++i) {
-        if (counts[i] > numKeyframes) {
-            numKeyframes = counts[i];
-        }
+inline void ExtractTranslationSampler(Asset& asset, std::string& animId, Ref<Buffer>& buffer, const aiNodeAnim* nodeChannel, float ticksPerSecond, Animation::Sampler& sampler)
+{
+    const unsigned int numKeyframes = nodeChannel->mNumPositionKeys;
+    if (numKeyframes == 0) {
+        return;
     }
 
-    //-------------------------------------------------------
-    // Extract TIME parameter data.
-    // Check if the timeStamps are the same for mPositionKeys, mRotationKeys, and mScalingKeys.
-    if(nodeChannel->mNumPositionKeys > 0) {
-        typedef float TimeType;
-        std::vector<TimeType> timeData;
-        timeData.resize(numKeyframes);
-        for (size_t i = 0; i < numKeyframes; ++i) {
-            size_t frameIndex = i * nodeChannel->mNumPositionKeys / numKeyframes;
-            // mTime is measured in ticks, but GLTF time is measured in seconds, so convert.
-            // Check if we have to cast type here. e.g. uint16_t()
-            timeData[i] = static_cast<float>(nodeChannel->mPositionKeys[frameIndex].mTime / ticksPerSecond);
-        }
-
-        Ref<Accessor> timeAccessor = ExportData(mAsset, animId, buffer, static_cast<unsigned int>(numKeyframes), &timeData[0], AttribType::SCALAR, AttribType::SCALAR, ComponentType_FLOAT);
-        if (timeAccessor) animRef->Parameters.TIME = timeAccessor;
+    std::vector<float> times(numKeyframes);
+    std::vector<float> values(numKeyframes * 3);
+    for (unsigned int i = 0; i < numKeyframes; ++i) {
+        const aiVectorKey& key = nodeChannel->mPositionKeys[i];
+        // mTime is measured in ticks, but GLTF time is measured in seconds, so convert.
+        times[i] = static_cast<float>(key.mTime / ticksPerSecond);
+        values[(i * 3) + 0] = key.mValue.x;
+        values[(i * 3) + 1] = key.mValue.y;
+        values[(i * 3) + 2] = key.mValue.z;
     }
 
-    //-------------------------------------------------------
-    // Extract translation parameter data
-    if(nodeChannel->mNumPositionKeys > 0) {
-        C_STRUCT aiVector3D* translationData = new aiVector3D[numKeyframes];
-        for (size_t i = 0; i < numKeyframes; ++i) {
-            size_t frameIndex = i * nodeChannel->mNumPositionKeys / numKeyframes;
-            translationData[i] = nodeChannel->mPositionKeys[frameIndex].mValue;
-        }
+    sampler.input = GetSamplerInputRef(asset, animId, buffer, times);
+    sampler.output = ExportData(asset, animId, buffer, numKeyframes, &values[0], AttribType::VEC3, AttribType::VEC3, ComponentType_FLOAT);
+    sampler.interpolation = Interpolation_LINEAR;
+}
 
-        Ref<Accessor> tranAccessor = ExportData(mAsset, animId, buffer, static_cast<unsigned int>(numKeyframes), translationData, AttribType::VEC3, AttribType::VEC3, ComponentType_FLOAT);
-        if ( tranAccessor ) {
-            animRef->Parameters.translation = tranAccessor;
-        }
-        delete[] translationData;
+inline void ExtractScaleSampler(Asset& asset, std::string& animId, Ref<Buffer>& buffer, const aiNodeAnim* nodeChannel, float ticksPerSecond, Animation::Sampler& sampler)
+{
+    const unsigned int numKeyframes = nodeChannel->mNumScalingKeys;
+    if (numKeyframes == 0) {
+        return;
     }
 
-    //-------------------------------------------------------
-    // Extract scale parameter data
-    if(nodeChannel->mNumScalingKeys > 0) {
-        C_STRUCT aiVector3D* scaleData = new aiVector3D[numKeyframes];
-        for (size_t i = 0; i < numKeyframes; ++i) {
-            size_t frameIndex = i * nodeChannel->mNumScalingKeys / numKeyframes;
-            scaleData[i] = nodeChannel->mScalingKeys[frameIndex].mValue;
-        }
-
-        Ref<Accessor> scaleAccessor = ExportData(mAsset, animId, buffer, static_cast<unsigned int>(numKeyframes), scaleData, AttribType::VEC3, AttribType::VEC3, ComponentType_FLOAT);
-        if ( scaleAccessor ) {
-            animRef->Parameters.scale = scaleAccessor;
-        }
-        delete[] scaleData;
+    std::vector<float> times(numKeyframes);
+    std::vector<float> values(numKeyframes * 3);
+    for (unsigned int i = 0; i < numKeyframes; ++i) {
+        const aiVectorKey& key = nodeChannel->mScalingKeys[i];
+        // mTime is measured in ticks, but GLTF time is measured in seconds, so convert.
+        times[i] = static_cast<float>(key.mTime / ticksPerSecond);
+        values[(i * 3) + 0] = key.mValue.x;
+        values[(i * 3) + 1] = key.mValue.y;
+        values[(i * 3) + 2] = key.mValue.z;
     }
 
-    //-------------------------------------------------------
-    // Extract rotation parameter data
-    if(nodeChannel->mNumRotationKeys > 0) {
-        vec4* rotationData = new vec4[numKeyframes];
-        for (size_t i = 0; i < numKeyframes; ++i) {
-            size_t frameIndex = i * nodeChannel->mNumRotationKeys / numKeyframes;
-            rotationData[i][0] = nodeChannel->mRotationKeys[frameIndex].mValue.x;
-            rotationData[i][1] = nodeChannel->mRotationKeys[frameIndex].mValue.y;
-            rotationData[i][2] = nodeChannel->mRotationKeys[frameIndex].mValue.z;
-            rotationData[i][3] = nodeChannel->mRotationKeys[frameIndex].mValue.w;
-        }
+    sampler.input = GetSamplerInputRef(asset, animId, buffer, times);
+    sampler.output = ExportData(asset, animId, buffer, numKeyframes, &values[0], AttribType::VEC3, AttribType::VEC3, ComponentType_FLOAT);
+    sampler.interpolation = Interpolation_LINEAR;
+}
 
-        Ref<Accessor> rotAccessor = ExportData(mAsset, animId, buffer, static_cast<unsigned int>(numKeyframes), rotationData, AttribType::VEC4, AttribType::VEC4, ComponentType_FLOAT);
-        if ( rotAccessor ) {
-            animRef->Parameters.rotation = rotAccessor;
-        }
-        delete[] rotationData;
+inline void ExtractRotationSampler(Asset& asset, std::string& animId, Ref<Buffer>& buffer, const aiNodeAnim* nodeChannel, float ticksPerSecond, Animation::Sampler& sampler)
+{
+    const unsigned int numKeyframes = nodeChannel->mNumRotationKeys;
+    if (numKeyframes == 0) {
+        return;
     }
+
+    std::vector<float> times(numKeyframes);
+    std::vector<float> values(numKeyframes * 4);
+    for (unsigned int i = 0; i < numKeyframes; ++i) {
+        const aiQuatKey& key = nodeChannel->mRotationKeys[i];
+        // mTime is measured in ticks, but GLTF time is measured in seconds, so convert.
+        times[i] = static_cast<float>(key.mTime / ticksPerSecond);
+        values[(i * 4) + 0] = key.mValue.x;
+        values[(i * 4) + 1] = key.mValue.y;
+        values[(i * 4) + 2] = key.mValue.z;
+        values[(i * 4) + 3] = key.mValue.w;
+    }
+
+    sampler.input = GetSamplerInputRef(asset, animId, buffer, times);
+    sampler.output = ExportData(asset, animId, buffer, numKeyframes, &values[0], AttribType::VEC4, AttribType::VEC4, ComponentType_FLOAT);
+    sampler.interpolation = Interpolation_LINEAR;
+}
+
+static void AddSampler(Ref<Animation>& animRef, Ref<Node>& nodeRef, Animation::Sampler& sampler, AnimationPath path)
+{
+      Animation::Channel channel;
+      channel.sampler = static_cast<int>(animRef->samplers.size());
+      channel.target.path = path;
+      channel.target.node = nodeRef;
+      animRef->channels.push_back(channel);
+      animRef->samplers.push_back(sampler);
 }
 
 void glTF2Exporter::ExportAnimations()
@@ -1010,6 +1052,7 @@ void glTF2Exporter::ExportAnimations()
 
     for (unsigned int i = 0; i < mScene->mNumAnimations; ++i) {
         const aiAnimation* anim = mScene->mAnimations[i];
+        const float ticksPerSecond = static_cast<float>(anim->mTicksPerSecond);
 
         std::string nameAnim = "anim";
         if (anim->mName.length > 0) {
@@ -1025,46 +1068,19 @@ void glTF2Exporter::ExportAnimations()
             name = mAsset->FindUniqueID(name, "animation");
             Ref<Animation> animRef = mAsset->animations.Create(name);
 
-            // Parameters
-            ExtractAnimationData(*mAsset, name, animRef, bufferRef, nodeChannel, static_cast<float>(anim->mTicksPerSecond));
+            Ref<Node> animNode = mAsset->nodes.Get(nodeChannel->mNodeName.C_Str());
 
-            for (unsigned int j = 0; j < 3; ++j) {
-                std::string channelType;
-                int channelSize;
-                switch (j) {
-                    case 0:
-                        channelType = "rotation";
-                        channelSize = nodeChannel->mNumRotationKeys;
-                        break;
-                    case 1:
-                        channelType = "scale";
-                        channelSize = nodeChannel->mNumScalingKeys;
-                        break;
-                    case 2:
-                        channelType = "translation";
-                        channelSize = nodeChannel->mNumPositionKeys;
-                        break;
-                }
+            Animation::Sampler translationSampler;
+            ExtractTranslationSampler(*mAsset, name, bufferRef, nodeChannel, ticksPerSecond, translationSampler);
+            AddSampler(animRef, animNode, translationSampler, AnimationPath_TRANSLATION);
 
-                if (channelSize < 1) { continue; }
+            Animation::Sampler rotationSampler;
+            ExtractRotationSampler(*mAsset, name, bufferRef, nodeChannel, ticksPerSecond, rotationSampler);
+            AddSampler(animRef, animNode, rotationSampler, AnimationPath_ROTATION);
 
-                Animation::AnimChannel tmpAnimChannel;
-                Animation::AnimSampler tmpAnimSampler;
-
-                tmpAnimChannel.sampler = static_cast<int>(animRef->Samplers.size());
-                tmpAnimChannel.target.path = channelType;
-                tmpAnimSampler.output = channelType;
-                tmpAnimSampler.id = name + "_" + channelType;
-
-                tmpAnimChannel.target.node = mAsset->nodes.Get(nodeChannel->mNodeName.C_Str());
-
-                tmpAnimSampler.input = "TIME";
-                tmpAnimSampler.interpolation = "LINEAR";
-
-                animRef->Channels.push_back(tmpAnimChannel);
-                animRef->Samplers.push_back(tmpAnimSampler);
-            }
-
+            Animation::Sampler scaleSampler;
+            ExtractScaleSampler(*mAsset, name, bufferRef, nodeChannel, ticksPerSecond, scaleSampler);
+            AddSampler(animRef, animNode, scaleSampler, AnimationPath_SCALE);
         }
 
         // Assimp documentation staes this is not used (not implemented)

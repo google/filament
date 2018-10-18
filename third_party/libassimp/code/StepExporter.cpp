@@ -2,7 +2,8 @@
 Open Asset Import Library (assimp)
 ----------------------------------------------------------------------
 
-Copyright (c) 2006-2017, assimp team
+Copyright (c) 2006-2018, assimp team
+
 
 All rights reserved.
 
@@ -46,9 +47,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "StepExporter.h"
 #include "ConvertToLHProcess.h"
-#include "Bitmap.h"
-#include "BaseImporter.h"
-#include "fast_atof.h"
+#include <assimp/Bitmap.h>
+#include <assimp/BaseImporter.h>
+#include <assimp/fast_atof.h>
 #include <assimp/SceneCombiner.h>
 #include <iostream>
 #include <ctime>
@@ -56,7 +57,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <map>
 #include <list>
 #include <memory>
-#include "Exceptional.h"
+#include <assimp/Exceptional.h>
 #include <assimp/DefaultIOSystem.h>
 #include <assimp/IOSystem.hpp>
 #include <assimp/scene.h>
@@ -161,7 +162,7 @@ void StepExporter::WriteFile()
     // see http://shodhganga.inflibnet.ac.in:8080/jspui/bitstream/10603/14116/11/11_chapter%203.pdf
     // note, that all realnumber values must be comma separated in x files
     mOutput.setf(std::ios::fixed);
-    // precission for double
+    // precision for double
     // see http://stackoverflow.com/questions/554063/how-do-i-print-a-double-value-with-full-precision-using-cout
     mOutput.precision(16);
 

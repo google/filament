@@ -3,7 +3,8 @@
 Open Asset Import Library (assimp)
 ---------------------------------------------------------------------------
 
-Copyright (c) 2006-2017, assimp team
+Copyright (c) 2006-2018, assimp team
+
 
 
 All rights reserved.
@@ -119,7 +120,7 @@ inline aiReturn aiMaterial::Get(const char* pKey,unsigned int type,
     const aiMaterialProperty* prop;
     const aiReturn ret = ::aiGetMaterialProperty(this,pKey,type,idx,
         (const aiMaterialProperty**)&prop);
-    if ( AI_SUCCESS == ret )    {
+    if ( AI_SUCCESS == ret ) {
 
         if (prop->mDataLength < sizeof(Type)) {
             return AI_FAILURE;
@@ -129,7 +130,7 @@ inline aiReturn aiMaterial::Get(const char* pKey,unsigned int type,
             return AI_FAILURE;
         }
 
-        ::memcpy(&pOut,prop->mData,sizeof(Type));
+        ::memcpy( &pOut, prop->mData, sizeof( Type ) );
     }
     return ret;
 }

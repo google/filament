@@ -4,7 +4,8 @@
 Open Asset Import Library (assimp)
 ---------------------------------------------------------------------------
 
-Copyright (c) 2006-2017, assimp team
+Copyright (c) 2006-2018, assimp team
+
 
 
 All rights reserved.
@@ -45,14 +46,15 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef ASSIMP_BUILD_NO_BVH_IMPORTER
 
 #include "BVHLoader.h"
-#include "fast_atof.h"
-#include "SkeletonMeshBuilder.h"
+#include <assimp/fast_atof.h>
+#include <assimp/SkeletonMeshBuilder.h>
 #include <assimp/Importer.hpp>
 #include <memory>
-#include "TinyFormatter.h"
+#include <assimp/TinyFormatter.h>
 #include <assimp/IOSystem.hpp>
 #include <assimp/scene.h>
 #include <assimp/importerdesc.h>
+#include <map>
 
 using namespace Assimp;
 using namespace Assimp::Formatter;
@@ -198,6 +200,7 @@ aiNode* BVHLoader::ReadNode()
     Node& internNode = mNodes.back();
 
     // now read the node's contents
+    std::string siteToken;
     while( 1)
     {
         std::string token = GetNextToken();
@@ -217,7 +220,8 @@ aiNode* BVHLoader::ReadNode()
         else if( token == "End")
         {
             // The real symbol is "End Site". Second part comes in a separate token
-            std::string siteToken = GetNextToken();
+            siteToken.clear();
+            siteToken = GetNextToken();
             if( siteToken != "Site")
                 ThrowException( format() << "Expected \"End Site\" keyword, but found \"" << token << " " << siteToken << "\"." );
 
@@ -261,21 +265,18 @@ aiNode* BVHLoader::ReadEndSite( const std::string& pParentName)
     aiNode* node = new aiNode( "EndSite_" + pParentName);
 
     // now read the node's contents. Only possible entry is "OFFSET"
-    while( 1)
-    {
-        std::string token = GetNextToken();
+    std::string token;
+    while( 1) {
+        token.clear();
+        token = GetNextToken();
 
         // end node's offset
-        if( token == "OFFSET")
-        {
+        if( token == "OFFSET") {
             ReadNodeOffset( node);
-        }
-        else if( token == "}")
-        {
+        } else if( token == "}") {
             // we're done with the end node
             break;
-        } else
-        {
+        } else {
             // everything else is a parse error
             ThrowException( format() << "Unknown keyword \"" << token << "\"." );
         }
@@ -295,8 +296,10 @@ void BVHLoader::ReadNodeOffset( aiNode* pNode)
     offset.z = GetNextTokenAsFloat();
 
     // build a transformation matrix from it
-    pNode->mTransformation = aiMatrix4x4( 1.0f, 0.0f, 0.0f, offset.x, 0.0f, 1.0f, 0.0f, offset.y,
-        0.0f, 0.0f, 1.0f, offset.z, 0.0f, 0.0f, 0.0f, 1.0f);
+    pNode->mTransformation = aiMatrix4x4( 1.0f, 0.0f, 0.0f, offset.x,
+                                          0.0f, 1.0f, 0.0f, offset.y,
+                                          0.0f, 0.0f, 1.0f, offset.z,
+                                          0.0f, 0.0f, 0.0f, 1.0f);
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -459,6 +462,13 @@ void BVHLoader::CreateAnimation( aiScene* pScene)
         aiNodeAnim* nodeAnim = new aiNodeAnim;
         anim->mChannels[a] = nodeAnim;
         nodeAnim->mNodeName.Set( nodeName);
+		std::map<BVHLoader::ChannelType, int> channelMap;
+
+		//Build map of channels 
+		for (unsigned int channel = 0; channel < node.mChannels.size(); ++channel)
+		{
+			channelMap[node.mChannels[channel]] = channel;
+		}
 
         // translational part, if given
         if( node.mChannels.size() == 6)
@@ -470,16 +480,32 @@ void BVHLoader::CreateAnimation( aiScene* pScene)
             {
                 poskey->mTime = double( fr);
 
-                // Now compute all translations in the right order
-                for( unsigned int channel = 0; channel < 3; ++channel)
+                // Now compute all translations 
+                for(BVHLoader::ChannelType channel = Channel_PositionX; channel <= Channel_PositionZ; channel = (BVHLoader::ChannelType)(channel +1))
                 {
-                    switch( node.mChannels[channel])
-                    {
-                    case Channel_PositionX: poskey->mValue.x = node.mChannelValues[fr * node.mChannels.size() + channel]; break;
-                    case Channel_PositionY: poskey->mValue.y = node.mChannelValues[fr * node.mChannels.size() + channel]; break;
-                    case Channel_PositionZ: poskey->mValue.z = node.mChannelValues[fr * node.mChannels.size() + channel]; break;
-                    default: throw DeadlyImportError( "Unexpected animation channel setup at node " + nodeName );
-                    }
+					//Find channel in node
+					std::map<BVHLoader::ChannelType, int>::iterator mapIter = channelMap.find(channel);
+
+					if (mapIter == channelMap.end())
+						throw DeadlyImportError("Missing position channel in node " + nodeName);
+					else {
+						int channelIdx = mapIter->second;
+						switch (channel) {
+						    case Channel_PositionX: 
+                                poskey->mValue.x = node.mChannelValues[fr * node.mChannels.size() + channelIdx]; 
+                                break;
+						    case Channel_PositionY: 
+                                poskey->mValue.y = node.mChannelValues[fr * node.mChannels.size() + channelIdx]; 
+                                break;
+						    case Channel_PositionZ: 
+                                poskey->mValue.z = node.mChannelValues[fr * node.mChannels.size() + channelIdx]; 
+                                break;
+                                
+                            default:
+                                break;
+						}
+
+					}
                 }
                 ++poskey;
             }
@@ -495,12 +521,6 @@ void BVHLoader::CreateAnimation( aiScene* pScene)
 
         // rotation part. Always present. First find value offsets
         {
-            unsigned int rotOffset  = 0;
-            if( node.mChannels.size() == 6)
-            {
-                // Offset all further calculations
-                rotOffset = 3;
-            }
 
             // Then create the number of rotation keys
             nodeAnim->mNumRotationKeys = mAnimNumFrames;
@@ -510,20 +530,33 @@ void BVHLoader::CreateAnimation( aiScene* pScene)
             {
                 aiMatrix4x4 temp;
                 aiMatrix3x3 rotMatrix;
+				for (BVHLoader::ChannelType channel = Channel_RotationX; channel <= Channel_RotationZ; channel = (BVHLoader::ChannelType)(channel + 1))
+				{
+					//Find channel in node
+					std::map<BVHLoader::ChannelType, int>::iterator mapIter = channelMap.find(channel);
 
-                for( unsigned int channel = 0; channel < 3; ++channel)
-                {
-                    // translate ZXY euler angels into a quaternion
-                    const float angle = node.mChannelValues[fr * node.mChannels.size() + rotOffset + channel] * float( AI_MATH_PI) / 180.0f;
+					if (mapIter == channelMap.end())
+						throw DeadlyImportError("Missing rotation channel in node " + nodeName);
+					else {
+						int channelIdx = mapIter->second;
+						// translate ZXY euler angels into a quaternion
+						const float angle = node.mChannelValues[fr * node.mChannels.size() + channelIdx] * float(AI_MATH_PI) / 180.0f;
 
-                    // Compute rotation transformations in the right order
-                    switch (node.mChannels[rotOffset+channel])
-                    {
-                    case Channel_RotationX: aiMatrix4x4::RotationX( angle, temp); rotMatrix *= aiMatrix3x3( temp); break;
-                    case Channel_RotationY: aiMatrix4x4::RotationY( angle, temp); rotMatrix *= aiMatrix3x3( temp);  break;
-                    case Channel_RotationZ: aiMatrix4x4::RotationZ( angle, temp); rotMatrix *= aiMatrix3x3( temp); break;
-                    default: throw DeadlyImportError( "Unexpected animation channel setup at node " + nodeName );
-                    }
+						// Compute rotation transformations in the right order
+						switch (channel)
+						{
+							case Channel_RotationX: 
+                                aiMatrix4x4::RotationX(angle, temp); rotMatrix *= aiMatrix3x3(temp); 
+                                break;
+							case Channel_RotationY: 
+                                aiMatrix4x4::RotationY(angle, temp); rotMatrix *= aiMatrix3x3(temp);  
+                                break;
+							case Channel_RotationZ: aiMatrix4x4::RotationZ(angle, temp); rotMatrix *= aiMatrix3x3(temp); 
+                                break;
+                            default:
+                                break;
+						}
+					}
                 }
 
                 rotkey->mTime = double( fr);

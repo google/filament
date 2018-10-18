@@ -3,8 +3,7 @@
 Open Asset Import Library (assimp)
 ---------------------------------------------------------------------------
 
-Copyright (c) 2006-2017, assimp team
-
+Copyright (c) 2006-2018, assimp team
 
 All rights reserved.
 
@@ -43,12 +42,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *  @brief Implementation of the XFile importer class
  */
 
-
 #ifndef ASSIMP_BUILD_NO_X_IMPORTER
 
 #include "XFileImporter.h"
 #include "XFileParser.h"
-#include "TinyFormatter.h"
+#include <assimp/TinyFormatter.h>
 #include "ConvertToLHProcess.h"
 #include <assimp/Defines.h>
 #include <assimp/IOSystem.hpp>
@@ -78,17 +76,19 @@ static const aiImporterDesc desc = {
 // ------------------------------------------------------------------------------------------------
 // Constructor to be privately used by Importer
 XFileImporter::XFileImporter()
-{}
+: mBuffer() {
+    // empty
+}
 
 // ------------------------------------------------------------------------------------------------
 // Destructor, private as well
-XFileImporter::~XFileImporter()
-{}
+XFileImporter::~XFileImporter() {
+    // empty
+}
 
 // ------------------------------------------------------------------------------------------------
 // Returns whether the class can handle the format of the given file.
-bool XFileImporter::CanRead( const std::string& pFile, IOSystem* pIOHandler, bool checkSig) const
-{
+bool XFileImporter::CanRead( const std::string& pFile, IOSystem* pIOHandler, bool checkSig) const {
     std::string extension = GetExtension(pFile);
     if(extension == "x") {
         return true;
@@ -103,23 +103,24 @@ bool XFileImporter::CanRead( const std::string& pFile, IOSystem* pIOHandler, boo
 
 // ------------------------------------------------------------------------------------------------
 // Get file extension list
-const aiImporterDesc* XFileImporter::GetInfo () const
-{
+const aiImporterDesc* XFileImporter::GetInfo () const {
     return &desc;
 }
 
 // ------------------------------------------------------------------------------------------------
 // Imports the given file into the given scene structure.
-void XFileImporter::InternReadFile( const std::string& pFile, aiScene* pScene, IOSystem* pIOHandler)
-{
+void XFileImporter::InternReadFile( const std::string& pFile, aiScene* pScene, IOSystem* pIOHandler) {
     // read file into memory
     std::unique_ptr<IOStream> file( pIOHandler->Open( pFile));
-    if( file.get() == NULL)
-        throw DeadlyImportError( "Failed to open file " + pFile + ".");
+    if ( file.get() == NULL ) {
+        throw DeadlyImportError( "Failed to open file " + pFile + "." );
+    }
 
+    static const size_t MinSize = 16;
     size_t fileSize = file->FileSize();
-    if( fileSize < 16)
-        throw DeadlyImportError( "XFile is too small.");
+    if ( fileSize < MinSize ) {
+        throw DeadlyImportError( "XFile is too small." );
+    }
 
     // in the hope that binary files will never start with a BOM ...
     mBuffer.resize( fileSize + 1);
@@ -133,8 +134,9 @@ void XFileImporter::InternReadFile( const std::string& pFile, aiScene* pScene, I
     CreateDataRepresentationFromImport( pScene, parser.GetImportedData());
 
     // if nothing came from it, report it as error
-    if( !pScene->mRootNode)
-        throw DeadlyImportError( "XFile is ill-formatted - no content imported.");
+    if ( !pScene->mRootNode ) {
+        throw DeadlyImportError( "XFile is ill-formatted - no content imported." );
+    }
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -145,17 +147,15 @@ void XFileImporter::CreateDataRepresentationFromImport( aiScene* pScene, XFile::
     ConvertMaterials( pScene, pData->mGlobalMaterials);
 
     // copy nodes, extracting meshes and materials on the way
-    pScene->mRootNode = CreateNodes( pScene, NULL, pData->mRootNode);
+    pScene->mRootNode = CreateNodes( pScene, nullptr, pData->mRootNode);
 
     // extract animations
     CreateAnimations( pScene, pData);
 
     // read the global meshes that were stored outside of any node
-    if( pData->mGlobalMeshes.size() > 0)
-    {
+    if( !pData->mGlobalMeshes.empty() )  {
         // create a root node to hold them if there isn't any, yet
-        if( pScene->mRootNode == NULL)
-        {
+        if( pScene->mRootNode == nullptr ) {
             pScene->mRootNode = new aiNode;
             pScene->mRootNode->mName.Set( "$dummy_node");
         }
@@ -179,8 +179,7 @@ void XFileImporter::CreateDataRepresentationFromImport( aiScene* pScene, XFile::
     flipper.Execute(pScene);
 
     // finally: create a dummy material if not material was imported
-    if( pScene->mNumMaterials == 0)
-    {
+    if( pScene->mNumMaterials == 0) {
         pScene->mNumMaterials = 1;
         // create the Material
         aiMaterial* mat = new aiMaterial;
@@ -204,10 +203,10 @@ void XFileImporter::CreateDataRepresentationFromImport( aiScene* pScene, XFile::
 
 // ------------------------------------------------------------------------------------------------
 // Recursively creates scene nodes from the imported hierarchy.
-aiNode* XFileImporter::CreateNodes( aiScene* pScene, aiNode* pParent, const XFile::Node* pNode)
-{
-    if( !pNode)
-        return NULL;
+aiNode* XFileImporter::CreateNodes( aiScene* pScene, aiNode* pParent, const XFile::Node* pNode) {
+    if ( !pNode ) {
+        return nullptr;
+    }
 
     // create node
     aiNode* node = new aiNode;
@@ -221,13 +220,13 @@ aiNode* XFileImporter::CreateNodes( aiScene* pScene, aiNode* pParent, const XFil
     CreateMeshes( pScene, node, pNode->mMeshes);
 
     // handle childs
-    if( pNode->mChildren.size() > 0)
-    {
+    if( !pNode->mChildren.empty() ) {
         node->mNumChildren = (unsigned int)pNode->mChildren.size();
         node->mChildren = new aiNode* [node->mNumChildren];
 
-        for( unsigned int a = 0; a < pNode->mChildren.size(); a++)
-            node->mChildren[a] = CreateNodes( pScene, node, pNode->mChildren[a]);
+        for ( unsigned int a = 0; a < pNode->mChildren.size(); ++a ) {
+            node->mChildren[ a ] = CreateNodes( pScene, node, pNode->mChildren[ a ] );
+        }
     }
 
     return node;
@@ -235,50 +234,47 @@ aiNode* XFileImporter::CreateNodes( aiScene* pScene, aiNode* pParent, const XFil
 
 // ------------------------------------------------------------------------------------------------
 // Creates the meshes for the given node.
-void XFileImporter::CreateMeshes( aiScene* pScene, aiNode* pNode, const std::vector<XFile::Mesh*>& pMeshes)
-{
+void XFileImporter::CreateMeshes( aiScene* pScene, aiNode* pNode, const std::vector<XFile::Mesh*>& pMeshes) {
     if (pMeshes.empty()) {
         return;
     }
 
     // create a mesh for each mesh-material combination in the source node
     std::vector<aiMesh*> meshes;
-    for( unsigned int a = 0; a < pMeshes.size(); a++)
-    {
+    for( unsigned int a = 0; a < pMeshes.size(); ++a ) {
         XFile::Mesh* sourceMesh = pMeshes[a];
+        if ( nullptr == sourceMesh ) {
+            continue;
+        }
+
         // first convert its materials so that we can find them with their index afterwards
         ConvertMaterials( pScene, sourceMesh->mMaterials);
 
         unsigned int numMaterials = std::max( (unsigned int)sourceMesh->mMaterials.size(), 1u);
-        for( unsigned int b = 0; b < numMaterials; b++)
-        {
+        for( unsigned int b = 0; b < numMaterials; ++b ) {
             // collect the faces belonging to this material
             std::vector<unsigned int> faces;
             unsigned int numVertices = 0;
-            if( sourceMesh->mFaceMaterials.size() > 0)
-            {
+            if( !sourceMesh->mFaceMaterials.empty() ) {
                 // if there is a per-face material defined, select the faces with the corresponding material
-                for( unsigned int c = 0; c < sourceMesh->mFaceMaterials.size(); c++)
-                {
-                    if( sourceMesh->mFaceMaterials[c] == b)
-                    {
+                for( unsigned int c = 0; c < sourceMesh->mFaceMaterials.size(); ++c ) {
+                    if( sourceMesh->mFaceMaterials[c] == b) {
                         faces.push_back( c);
                         numVertices += (unsigned int)sourceMesh->mPosFaces[c].mIndices.size();
                     }
                 }
-            } else
-            {
+            } else {
                 // if there is no per-face material, place everything into one mesh
-                for( unsigned int c = 0; c < sourceMesh->mPosFaces.size(); c++)
-                {
+                for( unsigned int c = 0; c < sourceMesh->mPosFaces.size(); ++c ) {
                     faces.push_back( c);
                     numVertices += (unsigned int)sourceMesh->mPosFaces[c].mIndices.size();
                 }
             }
 
             // no faces/vertices using this material? strange...
-            if( numVertices == 0)
+            if ( numVertices == 0 ) {
                 continue;
+            }
 
             // create a submesh using this material
             aiMesh* mesh = new aiMesh;
@@ -286,11 +282,9 @@ void XFileImporter::CreateMeshes( aiScene* pScene, aiNode* pNode, const std::vec
 
             // find the material in the scene's material list. Either own material
             // or referenced material, it should already have a valid index
-            if( sourceMesh->mFaceMaterials.size() > 0)
-            {
+            if( !sourceMesh->mFaceMaterials.empty() ) {
                 mesh->mMaterialIndex = static_cast<unsigned int>(sourceMesh->mMaterials[b].sceneIndex);
-            } else
-            {
+            } else {
                 mesh->mMaterialIndex = 0;
             }
 
@@ -305,28 +299,28 @@ void XFileImporter::CreateMeshes( aiScene* pScene, aiNode* pNode, const std::vec
             mesh->mName.Set(sourceMesh->mName);
 
             // normals?
-            if( sourceMesh->mNormals.size() > 0)
-                mesh->mNormals = new aiVector3D[numVertices];
+            if ( sourceMesh->mNormals.size() > 0 ) {
+                mesh->mNormals = new aiVector3D[ numVertices ];
+            }
             // texture coords
-            for( unsigned int c = 0; c < AI_MAX_NUMBER_OF_TEXTURECOORDS; c++)
-            {
-                if( sourceMesh->mTexCoords[c].size() > 0)
-                    mesh->mTextureCoords[c] = new aiVector3D[numVertices];
+            for( unsigned int c = 0; c < AI_MAX_NUMBER_OF_TEXTURECOORDS; ++c ) {
+                if ( !sourceMesh->mTexCoords[ c ].empty() ) {
+                    mesh->mTextureCoords[ c ] = new aiVector3D[ numVertices ];
+                }
             }
             // vertex colors
-            for( unsigned int c = 0; c < AI_MAX_NUMBER_OF_COLOR_SETS; c++)
-            {
-                if( sourceMesh->mColors[c].size() > 0)
-                    mesh->mColors[c] = new aiColor4D[numVertices];
+            for( unsigned int c = 0; c < AI_MAX_NUMBER_OF_COLOR_SETS; ++c ) {
+                if ( !sourceMesh->mColors[ c ].empty() ) {
+                    mesh->mColors[ c ] = new aiColor4D[ numVertices ];
+                }
             }
 
             // now collect the vertex data of all data streams present in the imported mesh
-            unsigned int newIndex = 0;
+            unsigned int newIndex( 0 );
             std::vector<unsigned int> orgPoints; // from which original point each new vertex stems
             orgPoints.resize( numVertices, 0);
 
-            for( unsigned int c = 0; c < faces.size(); c++)
-            {
+            for( unsigned int c = 0; c < faces.size(); ++c ) {
                 unsigned int f = faces[c]; // index of the source face
                 const XFile::Face& pf = sourceMesh->mPosFaces[f]; // position source face
 
@@ -336,30 +330,35 @@ void XFileImporter::CreateMeshes( aiScene* pScene, aiNode* pNode, const std::vec
                 df.mIndices = new unsigned int[ df.mNumIndices];
 
                 // collect vertex data for indices of this face
-                for( unsigned int d = 0; d < df.mNumIndices; d++)
-                {
+                for( unsigned int d = 0; d < df.mNumIndices; ++d ) {
                     df.mIndices[d] = newIndex;
+                    const unsigned int newIdx( pf.mIndices[ d ] );
+                    if ( newIdx > sourceMesh->mPositions.size() ) {
+                        continue;
+                    }
+
                     orgPoints[newIndex] = pf.mIndices[d];
 
                     // Position
                     mesh->mVertices[newIndex] = sourceMesh->mPositions[pf.mIndices[d]];
                     // Normal, if present
-                    if( mesh->HasNormals())
-                        mesh->mNormals[newIndex] = sourceMesh->mNormals[sourceMesh->mNormFaces[f].mIndices[d]];
+                    if ( mesh->HasNormals() ) {
+                        mesh->mNormals[ newIndex ] = sourceMesh->mNormals[ sourceMesh->mNormFaces[ f ].mIndices[ d ] ];
+                    }
 
                     // texture coord sets
-                    for( unsigned int e = 0; e < AI_MAX_NUMBER_OF_TEXTURECOORDS; e++)
-                    {
-                        if( mesh->HasTextureCoords( e))
-                        {
+                    for( unsigned int e = 0; e < AI_MAX_NUMBER_OF_TEXTURECOORDS; ++e ) {
+                        if( mesh->HasTextureCoords( e)) {
                             aiVector2D tex = sourceMesh->mTexCoords[e][pf.mIndices[d]];
                             mesh->mTextureCoords[e][newIndex] = aiVector3D( tex.x, 1.0f - tex.y, 0.0f);
                         }
                     }
                     // vertex color sets
-                    for( unsigned int e = 0; e < AI_MAX_NUMBER_OF_COLOR_SETS; e++)
-                        if( mesh->HasVertexColors( e))
-                            mesh->mColors[e][newIndex] = sourceMesh->mColors[e][pf.mIndices[d]];
+                    for ( unsigned int e = 0; e < AI_MAX_NUMBER_OF_COLOR_SETS; ++e ) {
+                        if ( mesh->HasVertexColors( e ) ) {
+                            mesh->mColors[ e ][ newIndex ] = sourceMesh->mColors[ e ][ pf.mIndices[ d ] ];
+                        }
+                    }
 
                     newIndex++;
                 }
@@ -371,28 +370,29 @@ void XFileImporter::CreateMeshes( aiScene* pScene, aiNode* pNode, const std::vec
             // convert all bones of the source mesh which influence vertices in this newly created mesh
             const std::vector<XFile::Bone>& bones = sourceMesh->mBones;
             std::vector<aiBone*> newBones;
-            for( unsigned int c = 0; c < bones.size(); c++)
-            {
+            for( unsigned int c = 0; c < bones.size(); ++c ) {
                 const XFile::Bone& obone = bones[c];
                 // set up a vertex-linear array of the weights for quick searching if a bone influences a vertex
                 std::vector<ai_real> oldWeights( sourceMesh->mPositions.size(), 0.0);
-                for( unsigned int d = 0; d < obone.mWeights.size(); d++)
-                    oldWeights[obone.mWeights[d].mVertex] = obone.mWeights[d].mWeight;
+                for ( unsigned int d = 0; d < obone.mWeights.size(); ++d ) {
+                    oldWeights[ obone.mWeights[ d ].mVertex ] = obone.mWeights[ d ].mWeight;
+                }
 
                 // collect all vertex weights that influence a vertex in the new mesh
                 std::vector<aiVertexWeight> newWeights;
                 newWeights.reserve( numVertices);
-                for( unsigned int d = 0; d < orgPoints.size(); d++)
-                {
+                for( unsigned int d = 0; d < orgPoints.size(); ++d ) {
                     // does the new vertex stem from an old vertex which was influenced by this bone?
                     ai_real w = oldWeights[orgPoints[d]];
-                    if( w > 0.0)
-                        newWeights.push_back( aiVertexWeight( d, w));
+                    if ( w > 0.0 ) {
+                        newWeights.push_back( aiVertexWeight( d, w ) );
+                    }
                 }
 
                 // if the bone has no weights in the newly created mesh, ignore it
-                if( newWeights.size() == 0)
+                if ( newWeights.empty() ) {
                     continue;
+                }
 
                 // create
                 aiBone* nbone = new aiBone;
@@ -402,14 +402,14 @@ void XFileImporter::CreateMeshes( aiScene* pScene, aiNode* pNode, const std::vec
                 nbone->mOffsetMatrix = obone.mOffsetMatrix;
                 nbone->mNumWeights = (unsigned int)newWeights.size();
                 nbone->mWeights = new aiVertexWeight[nbone->mNumWeights];
-                for( unsigned int d = 0; d < newWeights.size(); d++)
-                    nbone->mWeights[d] = newWeights[d];
+                for ( unsigned int d = 0; d < newWeights.size(); ++d ) {
+                    nbone->mWeights[ d ] = newWeights[ d ];
+                }
             }
 
             // store the bones in the mesh
             mesh->mNumBones = (unsigned int)newBones.size();
-            if( newBones.size() > 0)
-            {
+            if( !newBones.empty()) {
                 mesh->mBones = new aiBone*[mesh->mNumBones];
                 std::copy( newBones.begin(), newBones.end(), mesh->mBones);
             }
@@ -419,8 +419,7 @@ void XFileImporter::CreateMeshes( aiScene* pScene, aiNode* pNode, const std::vec
     // reallocate scene mesh array to be large enough
     aiMesh** prevArray = pScene->mMeshes;
     pScene->mMeshes = new aiMesh*[pScene->mNumMeshes + meshes.size()];
-    if( prevArray)
-    {
+    if( prevArray) {
         memcpy( pScene->mMeshes, prevArray, pScene->mNumMeshes * sizeof( aiMesh*));
         delete [] prevArray;
     }
@@ -430,8 +429,7 @@ void XFileImporter::CreateMeshes( aiScene* pScene, aiNode* pNode, const std::vec
     pNode->mMeshes = new unsigned int[pNode->mNumMeshes];
 
     // store all meshes in the mesh library of the scene and store their indices in the node
-    for( unsigned int a = 0; a < meshes.size(); a++)
-    {
+    for( unsigned int a = 0; a < meshes.size(); a++) {
         pScene->mMeshes[pScene->mNumMeshes] = meshes[a];
         pNode->mMeshes[a] = pScene->mNumMeshes;
         pScene->mNumMeshes++;
@@ -440,16 +438,15 @@ void XFileImporter::CreateMeshes( aiScene* pScene, aiNode* pNode, const std::vec
 
 // ------------------------------------------------------------------------------------------------
 // Converts the animations from the given imported data and creates them in the scene.
-void XFileImporter::CreateAnimations( aiScene* pScene, const XFile::Scene* pData)
-{
+void XFileImporter::CreateAnimations( aiScene* pScene, const XFile::Scene* pData) {
     std::vector<aiAnimation*> newAnims;
 
-    for( unsigned int a = 0; a < pData->mAnims.size(); a++)
-    {
+    for( unsigned int a = 0; a < pData->mAnims.size(); ++a ) {
         const XFile::Animation* anim = pData->mAnims[a];
         // some exporters mock me with empty animation tags.
-        if( anim->mAnims.size() == 0)
+        if ( anim->mAnims.empty() ) {
             continue;
+        }
 
         // create a new animation to hold the data
         aiAnimation* nanim = new aiAnimation;
@@ -461,15 +458,14 @@ void XFileImporter::CreateAnimations( aiScene* pScene, const XFile::Scene* pData
         nanim->mNumChannels = (unsigned int)anim->mAnims.size();
         nanim->mChannels = new aiNodeAnim*[nanim->mNumChannels];
 
-        for( unsigned int b = 0; b < anim->mAnims.size(); b++)
-        {
+        for( unsigned int b = 0; b < anim->mAnims.size(); ++b ) {
             const XFile::AnimBone* bone = anim->mAnims[b];
             aiNodeAnim* nbone = new aiNodeAnim;
             nbone->mNodeName.Set( bone->mBoneName);
             nanim->mChannels[b] = nbone;
 
-            // keyframes are given as combined transformation matrix keys
-            if( bone->mTrafoKeys.size() > 0)
+            // key-frames are given as combined transformation matrix keys
+            if( !bone->mTrafoKeys.empty() )
             {
                 nbone->mNumPositionKeys = (unsigned int)bone->mTrafoKeys.size();
                 nbone->mPositionKeys = new aiVectorKey[nbone->mNumPositionKeys];
@@ -478,8 +474,7 @@ void XFileImporter::CreateAnimations( aiScene* pScene, const XFile::Scene* pData
                 nbone->mNumScalingKeys = (unsigned int)bone->mTrafoKeys.size();
                 nbone->mScalingKeys = new aiVectorKey[nbone->mNumScalingKeys];
 
-                for( unsigned int c = 0; c < bone->mTrafoKeys.size(); c++)
-                {
+                for( unsigned int c = 0; c < bone->mTrafoKeys.size(); ++c)  {
                     // deconstruct each matrix into separate position, rotation and scaling
                     double time = bone->mTrafoKeys[c].mTime;
                     aiMatrix4x4 trafo = bone->mTrafoKeys[c].mMatrix;
@@ -511,13 +506,11 @@ void XFileImporter::CreateAnimations( aiScene* pScene, const XFile::Scene* pData
 
                 // longest lasting key sequence determines duration
                 nanim->mDuration = std::max( nanim->mDuration, bone->mTrafoKeys.back().mTime);
-            } else
-            {
+            } else {
                 // separate key sequences for position, rotation, scaling
                 nbone->mNumPositionKeys = (unsigned int)bone->mPosKeys.size();
                 nbone->mPositionKeys = new aiVectorKey[nbone->mNumPositionKeys];
-                for( unsigned int c = 0; c < nbone->mNumPositionKeys; c++)
-                {
+                for( unsigned int c = 0; c < nbone->mNumPositionKeys; ++c ) {
                     aiVector3D pos = bone->mPosKeys[c].mValue;
 
                     nbone->mPositionKeys[c].mTime = bone->mPosKeys[c].mTime;
@@ -527,8 +520,7 @@ void XFileImporter::CreateAnimations( aiScene* pScene, const XFile::Scene* pData
                 // rotation
                 nbone->mNumRotationKeys = (unsigned int)bone->mRotKeys.size();
                 nbone->mRotationKeys = new aiQuatKey[nbone->mNumRotationKeys];
-                for( unsigned int c = 0; c < nbone->mNumRotationKeys; c++)
-                {
+                for( unsigned int c = 0; c < nbone->mNumRotationKeys; ++c ) {
                     aiMatrix3x3 rotmat = bone->mRotKeys[c].mValue.GetMatrix();
 
                     nbone->mRotationKeys[c].mTime = bone->mRotKeys[c].mTime;
@@ -568,56 +560,51 @@ void XFileImporter::CreateAnimations( aiScene* pScene, const XFile::Scene* pData
 void XFileImporter::ConvertMaterials( aiScene* pScene, std::vector<XFile::Material>& pMaterials)
 {
     // count the non-referrer materials in the array
-    unsigned int numNewMaterials = 0;
-    for( unsigned int a = 0; a < pMaterials.size(); a++)
-        if( !pMaterials[a].mIsReference)
-            numNewMaterials++;
+    unsigned int numNewMaterials( 0 );
+    for ( unsigned int a = 0; a < pMaterials.size(); ++a ) {
+        if ( !pMaterials[ a ].mIsReference ) {
+            ++numNewMaterials;
+        }
+    }
 
     // resize the scene's material list to offer enough space for the new materials
-  if( numNewMaterials > 0 )
-  {
-      aiMaterial** prevMats = pScene->mMaterials;
-      pScene->mMaterials = new aiMaterial*[pScene->mNumMaterials + numNewMaterials];
-      if( prevMats)
-      {
-          memcpy( pScene->mMaterials, prevMats, pScene->mNumMaterials * sizeof( aiMaterial*));
-          delete [] prevMats;
-      }
-  }
+    if( numNewMaterials > 0 ) {
+        aiMaterial** prevMats = pScene->mMaterials;
+        pScene->mMaterials = new aiMaterial*[pScene->mNumMaterials + numNewMaterials];
+        if( nullptr != prevMats)  {
+            ::memcpy( pScene->mMaterials, prevMats, pScene->mNumMaterials * sizeof( aiMaterial*));
+            delete [] prevMats;
+        }
+    }
 
     // convert all the materials given in the array
-    for( unsigned int a = 0; a < pMaterials.size(); a++)
-    {
+    for( unsigned int a = 0; a < pMaterials.size(); ++a ) {
         XFile::Material& oldMat = pMaterials[a];
-        if( oldMat.mIsReference)
-    {
-      // find the material it refers to by name, and store its index
-      for( size_t a = 0; a < pScene->mNumMaterials; ++a )
-      {
-        aiString name;
-        pScene->mMaterials[a]->Get( AI_MATKEY_NAME, name);
-        if( strcmp( name.C_Str(), oldMat.mName.data()) == 0 )
-        {
-          oldMat.sceneIndex = a;
-          break;
+        if( oldMat.mIsReference) {
+            // find the material it refers to by name, and store its index
+            for( size_t a = 0; a < pScene->mNumMaterials; ++a ) {
+                aiString name;
+                pScene->mMaterials[a]->Get( AI_MATKEY_NAME, name);
+                if( strcmp( name.C_Str(), oldMat.mName.data()) == 0 ) {
+                    oldMat.sceneIndex = a;
+                    break;
+                }
+            }
+
+            if( oldMat.sceneIndex == SIZE_MAX ) {
+                ASSIMP_LOG_WARN_F( "Could not resolve global material reference \"", oldMat.mName, "\"" );
+                oldMat.sceneIndex = 0;
+            }
+
+            continue;
         }
-      }
-
-      if( oldMat.sceneIndex == SIZE_MAX )
-      {
-        DefaultLogger::get()->warn( format() << "Could not resolve global material reference \"" << oldMat.mName << "\"" );
-        oldMat.sceneIndex = 0;
-      }
-
-      continue;
-    }
 
         aiMaterial* mat = new aiMaterial;
         aiString name;
         name.Set( oldMat.mName);
         mat->AddProperty( &name, AI_MATKEY_NAME);
 
-        // Shading model: hardcoded to PHONG, there is no such information in an XFile
+        // Shading model: hard-coded to PHONG, there is no such information in an XFile
         // FIX (aramis): If the specular exponent is 0, use gouraud shading. This is a bugfix
         // for some models in the SDK (e.g. good old tiny.x)
         int shadeMode = (int)oldMat.mSpecularExponent == 0.0f
@@ -625,8 +612,8 @@ void XFileImporter::ConvertMaterials( aiScene* pScene, std::vector<XFile::Materi
 
         mat->AddProperty<int>( &shadeMode, 1, AI_MATKEY_SHADING_MODEL);
         // material colours
-    // Unclear: there's no ambient colour, but emissive. What to put for ambient?
-    // Probably nothing at all, let the user select a suitable default.
+        // Unclear: there's no ambient colour, but emissive. What to put for ambient?
+        // Probably nothing at all, let the user select a suitable default.
         mat->AddProperty( &oldMat.mEmissive, 1, AI_MATKEY_COLOR_EMISSIVE);
         mat->AddProperty( &oldMat.mDiffuse, 1, AI_MATKEY_COLOR_DIFFUSE);
         mat->AddProperty( &oldMat.mSpecular, 1, AI_MATKEY_COLOR_SPECULAR);
@@ -634,36 +621,33 @@ void XFileImporter::ConvertMaterials( aiScene* pScene, std::vector<XFile::Materi
 
 
         // texture, if there is one
-        if (1 == oldMat.mTextures.size())
-        {
+        if (1 == oldMat.mTextures.size() ) {
             const XFile::TexEntry& otex = oldMat.mTextures.back();
-            if (otex.mName.length())
-            {
+            if (otex.mName.length()) {
                 // if there is only one texture assume it contains the diffuse color
                 aiString tex( otex.mName);
-                if( otex.mIsNormalMap)
-                    mat->AddProperty( &tex, AI_MATKEY_TEXTURE_NORMALS(0));
-                else
-                    mat->AddProperty( &tex, AI_MATKEY_TEXTURE_DIFFUSE(0));
+                if ( otex.mIsNormalMap ) {
+                    mat->AddProperty( &tex, AI_MATKEY_TEXTURE_NORMALS( 0 ) );
+                } else {
+                    mat->AddProperty( &tex, AI_MATKEY_TEXTURE_DIFFUSE( 0 ) );
+                }
             }
-        }
-        else
-        {
+        } else {
             // Otherwise ... try to search for typical strings in the
             // texture's file name like 'bump' or 'diffuse'
             unsigned int iHM = 0,iNM = 0,iDM = 0,iSM = 0,iAM = 0,iEM = 0;
-            for( unsigned int b = 0; b < oldMat.mTextures.size(); b++)
-            {
+            for( unsigned int b = 0; b < oldMat.mTextures.size(); ++b ) {
                 const XFile::TexEntry& otex = oldMat.mTextures[b];
                 std::string sz = otex.mName;
-                if (!sz.length())continue;
-
+                if ( !sz.length() ) {
+                    continue;
+                }
 
                 // find the file name
-                //const size_t iLen = sz.length();
                 std::string::size_type s = sz.find_last_of("\\/");
-                if (std::string::npos == s)
+                if ( std::string::npos == s ) {
                     s = 0;
+                }
 
                 // cut off the file extension
                 std::string::size_type sExt = sz.find_last_of('.');
@@ -672,36 +656,27 @@ void XFileImporter::ConvertMaterials( aiScene* pScene, std::vector<XFile::Materi
                 }
 
                 // convert to lower case for easier comparison
-                for( unsigned int c = 0; c < sz.length(); c++)
-                    if( isalpha( sz[c]))
-                        sz[c] = tolower( sz[c]);
-
+                for ( unsigned int c = 0; c < sz.length(); ++c ) {
+                    if ( isalpha( sz[ c ] ) ) {
+                        sz[ c ] = tolower( sz[ c ] );
+                    }
+                }
 
                 // Place texture filename property under the corresponding name
                 aiString tex( oldMat.mTextures[b].mName);
 
                 // bump map
-                if (std::string::npos != sz.find("bump", s) || std::string::npos != sz.find("height", s))
-                {
+                if (std::string::npos != sz.find("bump", s) || std::string::npos != sz.find("height", s)) {
                     mat->AddProperty( &tex, AI_MATKEY_TEXTURE_HEIGHT(iHM++));
-                } else
-                if (otex.mIsNormalMap || std::string::npos != sz.find( "normal", s) || std::string::npos != sz.find("nm", s))
-                {
+                } else if (otex.mIsNormalMap || std::string::npos != sz.find( "normal", s) || std::string::npos != sz.find("nm", s)) {
                     mat->AddProperty( &tex, AI_MATKEY_TEXTURE_NORMALS(iNM++));
-                } else
-                if (std::string::npos != sz.find( "spec", s) || std::string::npos != sz.find( "glanz", s))
-                {
+                } else if (std::string::npos != sz.find( "spec", s) || std::string::npos != sz.find( "glanz", s)) {
                     mat->AddProperty( &tex, AI_MATKEY_TEXTURE_SPECULAR(iSM++));
-                } else
-                if (std::string::npos != sz.find( "ambi", s) || std::string::npos != sz.find( "env", s))
-                {
+                } else if (std::string::npos != sz.find( "ambi", s) || std::string::npos != sz.find( "env", s)) {
                     mat->AddProperty( &tex, AI_MATKEY_TEXTURE_AMBIENT(iAM++));
-                } else
-                if (std::string::npos != sz.find( "emissive", s) || std::string::npos != sz.find( "self", s))
-                {
+                } else if (std::string::npos != sz.find( "emissive", s) || std::string::npos != sz.find( "self", s)) {
                     mat->AddProperty( &tex, AI_MATKEY_TEXTURE_EMISSIVE(iEM++));
-                } else
-                {
+                } else {
                     // Assume it is a diffuse texture
                     mat->AddProperty( &tex, AI_MATKEY_TEXTURE_DIFFUSE(iDM++));
                 }

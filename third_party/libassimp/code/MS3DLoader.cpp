@@ -3,7 +3,8 @@
 Open Asset Import Library (assimp)
 ---------------------------------------------------------------------------
 
-Copyright (c) 2006-2017, assimp team
+Copyright (c) 2006-2018, assimp team
+
 
 
 All rights reserved.
@@ -50,7 +51,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 // internal headers
 #include "MS3DLoader.h"
-#include "StreamReader.h"
+#include <assimp/StreamReader.h>
 #include <assimp/DefaultLogger.hpp>
 #include <assimp/scene.h>
 #include <assimp/IOSystem.hpp>
@@ -141,7 +142,7 @@ void MS3DImporter :: ReadComments(StreamReaderLE& stream, std::vector<T>& outp)
         stream >> index >> clength;
 
         if(index >= outp.size()) {
-            DefaultLogger::get()->warn("MS3D: Invalid index in comment section");
+            ASSIMP_LOG_WARN("MS3D: Invalid index in comment section");
         }
         else if (clength > stream.GetRemainingSize()) {
             throw DeadlyImportError("MS3D: Failure reading comment, length field is out of range");
@@ -348,9 +349,6 @@ void MS3DImporter::InternReadFile( const std::string& pFile,
         stream.CopyAndAdvance(j.parentName,32);
         j.parentName[32] = '\0';
 
-    //  DefaultLogger::get()->debug(j.name);
-    //  DefaultLogger::get()->debug(j.parentName);
-
         ReadVector(stream,j.rotation);
         ReadVector(stream,j.position);
 
@@ -385,7 +383,7 @@ void MS3DImporter::InternReadFile( const std::string& pFile,
                 }
 
                 const std::string& s = std::string(reinterpret_cast<char*>(stream.GetPtr()),len);
-                DefaultLogger::get()->debug("MS3D: Model comment: " + s);
+                ASSIMP_LOG_DEBUG_F("MS3D: Model comment: ", s);
             }
 
             if(stream.GetRemainingSize() > 4 && inrange((stream >> subversion,subversion),1u,3u)) {
@@ -407,7 +405,7 @@ void MS3DImporter::InternReadFile( const std::string& pFile,
     // 2 ------------ convert to proper aiXX data structures -----------------------------------
 
     if (need_default && materials.size()) {
-        DefaultLogger::get()->warn("MS3D: Found group with no material assigned, spawning default material");
+        ASSIMP_LOG_WARN("MS3D: Found group with no material assigned, spawning default material");
         // if one of the groups has no material assigned, but there are other
         // groups with materials, a default material needs to be added (
         // scenepreprocessor adds a default material only if nummat==0).

@@ -2,7 +2,8 @@
 Open Asset Import Library (assimp)
 ----------------------------------------------------------------------
 
-Copyright (c) 2006-2017, assimp team
+Copyright (c) 2006-2018, assimp team
+
 
 All rights reserved.
 
@@ -38,6 +39,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ----------------------------------------------------------------------
 */
+#ifndef ASSIMP_BUILD_NO_GLOBALSCALE_PROCESS
+
 #include "ScaleProcess.h"
 
 #include <assimp/scene.h>
@@ -85,13 +88,6 @@ void ScaleProcess::Execute( aiScene* pScene ) {
 
 void ScaleProcess::traverseNodes( aiNode *node ) {
     applyScaling( node );
-
-    /*for ( unsigned int i = 0; i < node->mNumChildren; ++i ) {
-        aiNode *currentNode = currentNode->mChildren[ i ];
-        if ( nullptr != currentNode ) {
-            traverseNodes( currentNode );
-        }
-    }*/
 }
 
 void ScaleProcess::applyScaling( aiNode *currentNode ) {
@@ -103,3 +99,5 @@ void ScaleProcess::applyScaling( aiNode *currentNode ) {
 }
 
 } // Namespace Assimp
+
+#endif // !! ASSIMP_BUILD_NO_GLOBALSCALE_PROCESS

@@ -3,7 +3,8 @@
 Open Asset Import Library (assimp)
 ---------------------------------------------------------------------------
 
-Copyright (c) 2006-2017, assimp team
+Copyright (c) 2006-2018, assimp team
+
 
 
 All rights reserved.
@@ -49,9 +50,14 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // internal headers
 #include "ProcessHelper.h"
 #include "FindDegenerates.h"
-#include "Exceptional.h"
+#include <assimp/Exceptional.h>
 
 using namespace Assimp;
+
+//remove mesh at position 'index' from the scene
+static void removeMesh(aiScene* pScene, unsigned const index);
+//correct node indices to meshes and remove references to deleted mesh
+static void updateSceneGraph(aiNode* pNode, unsigned const index);
 
 // ------------------------------------------------------------------------------------------------
 // Constructor to be privately used by Importer
@@ -84,11 +90,52 @@ void FindDegeneratesProcess::SetupProperties(const Importer* pImp) {
 // ------------------------------------------------------------------------------------------------
 // Executes the post processing step on the given imported data.
 void FindDegeneratesProcess::Execute( aiScene* pScene) {
-    DefaultLogger::get()->debug("FindDegeneratesProcess begin");
-    for (unsigned int i = 0; i < pScene->mNumMeshes;++i){
-        ExecuteOnMesh( pScene->mMeshes[ i ] );
+    ASSIMP_LOG_DEBUG("FindDegeneratesProcess begin");
+    for (unsigned int i = 0; i < pScene->mNumMeshes;++i)
+    {
+        //Do not process point cloud, ExecuteOnMesh works only with faces data
+        if ((pScene->mMeshes[i]->mPrimitiveTypes != aiPrimitiveType::aiPrimitiveType_POINT) && ExecuteOnMesh(pScene->mMeshes[i])) {
+            removeMesh(pScene, i);
+            --i; //the current i is removed, do not skip the next one
+        }
     }
-    DefaultLogger::get()->debug("FindDegeneratesProcess finished");
+    ASSIMP_LOG_DEBUG("FindDegeneratesProcess finished");
+}
+
+static void removeMesh(aiScene* pScene, unsigned const index) {
+    //we start at index and copy the pointers one position forward
+    //save the mesh pointer to delete it later
+    auto delete_me = pScene->mMeshes[index];
+    for (unsigned i = index; i < pScene->mNumMeshes - 1; ++i) {
+        pScene->mMeshes[i] = pScene->mMeshes[i+1];
+    }
+    pScene->mMeshes[pScene->mNumMeshes - 1] = nullptr;
+    --(pScene->mNumMeshes);
+    delete delete_me;
+
+    //removing a mesh also requires updating all references to it in the scene graph
+    updateSceneGraph(pScene->mRootNode, index);
+}
+
+static void updateSceneGraph(aiNode* pNode, unsigned const index) {
+    for (unsigned i = 0; i < pNode->mNumMeshes; ++i) {
+        if (pNode->mMeshes[i] > index) {
+            --(pNode->mMeshes[i]);
+            continue;
+        }
+        if (pNode->mMeshes[i] == index) {
+            for (unsigned j = i; j < pNode->mNumMeshes -1; ++j) {
+                pNode->mMeshes[j] = pNode->mMeshes[j+1];
+            }
+            --(pNode->mNumMeshes);
+            --i;
+            continue;
+        }
+    }
+    //recurse to all children
+    for (unsigned i = 0; i < pNode->mNumChildren; ++i) {
+        updateSceneGraph(pNode->mChildren[i], index);
+    }
 }
 
 static ai_real heron( ai_real a, ai_real b, ai_real c ) {
@@ -124,7 +171,7 @@ static ai_real calculateAreaOfTriangle( const aiFace& face, aiMesh* mesh ) {
 
 // ------------------------------------------------------------------------------------------------
 // Executes the post processing step on the given imported mesh
-void FindDegeneratesProcess::ExecuteOnMesh( aiMesh* mesh) {
+bool FindDegeneratesProcess::ExecuteOnMesh( aiMesh* mesh) {
     mesh->mPrimitiveTypes = 0;
 
     std::vector<bool> remove_me;
@@ -160,7 +207,7 @@ void FindDegeneratesProcess::ExecuteOnMesh( aiMesh* mesh) {
 
                     // NOTE: we set the removed vertex index to an unique value
                     // to make sure the developer gets notified when his
-                    // application attemps to access this data.
+                    // application attempts to access this data.
                     face.mIndices[ face.mNumIndices ] = 0xdeadbeef;
 
                     if(first) {
@@ -226,33 +273,28 @@ evil_jump_outside:
                 if (&face_src != &face_dest) {
                     // clear source
                     face_src.mNumIndices = 0;
-                    face_src.mIndices = NULL;
+                    face_src.mIndices = nullptr;
                 }
             }
             else {
                 // Otherwise delete it if we don't need this face
                 delete[] face_src.mIndices;
-                face_src.mIndices = NULL;
+                face_src.mIndices = nullptr;
                 face_src.mNumIndices = 0;
             }
         }
         // Just leave the rest of the array unreferenced, we don't care for now
         mesh->mNumFaces = n;
         if (!mesh->mNumFaces) {
-            // WTF!?
-            // OK ... for completeness and because I'm not yet tired,
-            // let's write code that willl hopefully never be called
-            // (famous last words)
-
-            // OK ... bad idea.
-            throw DeadlyImportError("Mesh is empty after removal of degenerated primitives ... WTF!?");
+            //The whole mesh consists of degenerated faces
+            //signal upward, that this mesh should be deleted.
+            ASSIMP_LOG_DEBUG("FindDegeneratesProcess removed a mesh full of degenerated primitives");
+            return true;
         }
     }
 
-    if (deg && !DefaultLogger::isNullLogger())
-    {
-        char s[64];
-        ASSIMP_itoa10(s,deg);
-        DefaultLogger::get()->warn(std::string("Found ") + s + " degenerated primitives");
+    if (deg && !DefaultLogger::isNullLogger()) {
+        ASSIMP_LOG_WARN_F( "Found ", deg, " degenerated primitives");
     }
+    return false;
 }

@@ -3,7 +3,8 @@
 Open Asset Import Library (assimp)
 ---------------------------------------------------------------------------
 
-Copyright (c) 2006-2017, assimp team
+Copyright (c) 2006-2018, assimp team
+
 
 
 All rights reserved.
@@ -49,8 +50,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 // internal headers
 #include "ValidateDataStructure.h"
-#include "BaseImporter.h"
-#include "fast_atof.h"
+#include <assimp/BaseImporter.h>
+#include <assimp/fast_atof.h>
 #include "ProcessHelper.h"
 #include <memory>
 
@@ -105,7 +106,7 @@ void ValidateDSProcess::ReportWarning(const char* msg,...)
     ai_assert(iLen > 0);
 
     va_end(args);
-    DefaultLogger::get()->warn("Validation warning: " + std::string(szBuffer,iLen));
+    ASSIMP_LOG_WARN("Validation warning: " + std::string(szBuffer,iLen));
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -205,7 +206,7 @@ inline void ValidateDSProcess::DoValidationWithNameCheck(T** array,
 void ValidateDSProcess::Execute( aiScene* pScene)
 {
     this->mScene = pScene;
-    DefaultLogger::get()->debug("ValidateDataStructureProcess begin");
+    ASSIMP_LOG_DEBUG("ValidateDataStructureProcess begin");
 
     // validate the node graph of the scene
     Validate(pScene->mRootNode);
@@ -272,7 +273,7 @@ void ValidateDSProcess::Execute( aiScene* pScene)
     }
 
 //  if (!has)ReportError("The aiScene data structure is empty");
-    DefaultLogger::get()->debug("ValidateDataStructureProcess end");
+    ASSIMP_LOG_DEBUG("ValidateDataStructureProcess end");
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -368,7 +369,7 @@ void ValidateDSProcess::Validate( const aiMesh* pMesh)
 
     // positions must always be there ...
     if (!pMesh->mNumVertices || (!pMesh->mVertices && !mScene->mFlags)) {
-        ReportError("The mesh contains no vertices");
+        ReportError("The mesh %s contains no vertices", pMesh->mName.C_Str());
     }
 
     if (pMesh->mNumVertices > AI_MAX_VERTICES) {
@@ -385,7 +386,7 @@ void ValidateDSProcess::Validate( const aiMesh* pMesh)
 
     // faces, too
     if (!pMesh->mNumFaces || (!pMesh->mFaces && !mScene->mFlags))   {
-        ReportError("Mesh contains no faces");
+        ReportError("Mesh %s contains no faces", pMesh->mName.C_Str());
     }
 
     // now check whether the face indexing layout is correct:
@@ -490,8 +491,12 @@ void ValidateDSProcess::Validate( const aiMesh* pMesh)
             {
                 if (pMesh->mBones[i]->mName == pMesh->mBones[a]->mName)
                 {
-                    ReportError("aiMesh::mBones[%i] has the same name as "
-                        "aiMesh::mBones[%i]",i,a);
+                    const char *name = "unknown";
+                    if (nullptr != pMesh->mBones[ i ]->mName.C_Str()) {
+                        name = pMesh->mBones[ i ]->mName.C_Str();
+                    }
+                    ReportError("aiMesh::mBones[%i], name = \"%s\" has the same name as "
+                        "aiMesh::mBones[%i]", i, name, a );
                 }
             }
         }

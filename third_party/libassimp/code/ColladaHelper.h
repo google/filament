@@ -4,7 +4,8 @@
 Open Asset Import Library (assimp)
 ----------------------------------------------------------------------
 
-Copyright (c) 2006-2017, assimp team
+Copyright (c) 2006-2018, assimp team
+
 
 All rights reserved.
 
@@ -271,12 +272,13 @@ struct Node
     /** Node instances at this node */
     std::vector<NodeInstance> mNodeInstances;
 
-    /** Rootnodes: Name of primary camera, if any */
+    /** Root-nodes: Name of primary camera, if any */
     std::string mPrimaryCamera;
 
     //! Constructor. Begin with a zero parent
-    Node() {
-        mParent = NULL;
+    Node()
+    : mParent( nullptr ){
+        // empty
     }
 
     //! Destructor: delete all children subsequently

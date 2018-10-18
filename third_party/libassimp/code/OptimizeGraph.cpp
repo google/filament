@@ -3,7 +3,8 @@
 Open Asset Import Library (assimp)
 ---------------------------------------------------------------------------
 
-Copyright (c) 2006-2017, assimp team
+Copyright (c) 2006-2018, assimp team
+
 
 
 All rights reserved.
@@ -50,7 +51,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "OptimizeGraph.h"
 #include "ProcessHelper.h"
 #include <assimp/SceneCombiner.h>
-#include "Exceptional.h"
+#include <assimp/Exceptional.h>
 #include <stdio.h>
 
 using namespace Assimp;
@@ -72,28 +73,28 @@ using namespace Assimp;
 // ------------------------------------------------------------------------------------------------
 // Constructor to be privately used by Importer
 OptimizeGraphProcess::OptimizeGraphProcess()
-    : mScene()
-    , nodes_in()
-    , nodes_out()
-    , count_merged()
-{}
+: mScene()
+, nodes_in()
+, nodes_out()
+, count_merged() {
+    // empty
+}
 
 // ------------------------------------------------------------------------------------------------
 // Destructor, private as well
-OptimizeGraphProcess::~OptimizeGraphProcess()
-{}
+OptimizeGraphProcess::~OptimizeGraphProcess() {
+    // empty
+}
 
 // ------------------------------------------------------------------------------------------------
 // Returns whether the processing step is present in the given flag field.
-bool OptimizeGraphProcess::IsActive( unsigned int pFlags) const
-{
+bool OptimizeGraphProcess::IsActive( unsigned int pFlags) const {
     return (0 != (pFlags & aiProcess_OptimizeGraph));
 }
 
 // ------------------------------------------------------------------------------------------------
-// Setup properties for the postprocessing step
-void OptimizeGraphProcess::SetupProperties(const Importer* pImp)
-{
+// Setup properties for the post-processing step
+void OptimizeGraphProcess::SetupProperties(const Importer* pImp) {
     // Get value of AI_CONFIG_PP_OG_EXCLUDE_LIST
     std::string tmp = pImp->GetPropertyString(AI_CONFIG_PP_OG_EXCLUDE_LIST,"");
     AddLockedNodeList(tmp);
@@ -101,16 +102,14 @@ void OptimizeGraphProcess::SetupProperties(const Importer* pImp)
 
 // ------------------------------------------------------------------------------------------------
 // Collect new children
-void OptimizeGraphProcess::CollectNewChildren(aiNode* nd, std::list<aiNode*>& nodes)
-{
+void OptimizeGraphProcess::CollectNewChildren(aiNode* nd, std::list<aiNode*>& nodes) {
     nodes_in += nd->mNumChildren;
 
     // Process children
     std::list<aiNode*> child_nodes;
     for (unsigned int i = 0; i < nd->mNumChildren; ++i) {
-
         CollectNewChildren(nd->mChildren[i],child_nodes);
-        nd->mChildren[i] = NULL;
+        nd->mChildren[i] = nullptr;
     }
 
     // Check whether we need this node; if not we can replace it by our own children (warn, danger of incest).
@@ -129,13 +128,11 @@ void OptimizeGraphProcess::CollectNewChildren(aiNode* nd, std::list<aiNode*>& no
 
         if (nd->mNumMeshes || !child_nodes.empty()) {
             nodes.push_back(nd);
-        }
-        else {
+        } else {
             delete nd; /* bye, node */
             return;
         }
-    }
-    else {
+    } else {
 
         // Retain our current position in the hierarchy
         nodes.push_back(nd);
@@ -159,14 +156,11 @@ void OptimizeGraphProcess::CollectNewChildren(aiNode* nd, std::list<aiNode*>& no
                     }
                 }
                 if (n == child->mNumMeshes) {
-
                     if (!join_master) {
                         join_master = child;
                         inv = join_master->mTransformation;
                         inv.Inverse();
-                    }
-                    else {
-
+                    } else {
                         child->mTransformation = inv * child->mTransformation ;
 
                         join.push_back(child);
@@ -226,9 +220,10 @@ void OptimizeGraphProcess::CollectNewChildren(aiNode* nd, std::list<aiNode*>& no
 
         delete[] nd->mChildren;
 
-        if (!child_nodes.empty())
+        if (!child_nodes.empty()) {
             nd->mChildren = new aiNode*[child_nodes.size()];
-        else nd->mChildren = NULL;
+        }
+        else nd->mChildren = nullptr;
     }
 
     nd->mNumChildren = static_cast<unsigned int>(child_nodes.size());
@@ -245,10 +240,9 @@ void OptimizeGraphProcess::CollectNewChildren(aiNode* nd, std::list<aiNode*>& no
 }
 
 // ------------------------------------------------------------------------------------------------
-// Execute the postprocessing step on the given scene
-void OptimizeGraphProcess::Execute( aiScene* pScene)
-{
-    DefaultLogger::get()->debug("OptimizeGraphProcess begin");
+// Execute the post-processing step on the given scene
+void OptimizeGraphProcess::Execute( aiScene* pScene) {
+    ASSIMP_LOG_DEBUG("OptimizeGraphProcess begin");
     nodes_in = nodes_out = count_merged = 0;
     mScene = pScene;
 
@@ -267,7 +261,6 @@ void OptimizeGraphProcess::Execute( aiScene* pScene)
 
     for (unsigned int i = 0; i < pScene->mNumAnimations; ++i) {
         for (unsigned int a = 0; a < pScene->mAnimations[i]->mNumChannels; ++a) {
-
             aiNodeAnim* anim = pScene->mAnimations[i]->mChannels[a];
             locked.insert(AI_OG_GETKEY(anim->mNodeName));
         }
@@ -336,19 +329,17 @@ void OptimizeGraphProcess::Execute( aiScene* pScene)
     pScene->mRootNode->mParent = NULL;
     if (!DefaultLogger::isNullLogger()) {
         if ( nodes_in != nodes_out) {
-
-            char buf[512];
-            ::ai_snprintf(buf,512,"OptimizeGraphProcess finished; Input nodes: %u, Output nodes: %u",nodes_in,nodes_out);
-            DefaultLogger::get()->info(buf);
+            ASSIMP_LOG_INFO_F("OptimizeGraphProcess finished; Input nodes: ", nodes_in, ", Output nodes: ", nodes_out);
+        } else {
+            ASSIMP_LOG_DEBUG("OptimizeGraphProcess finished");
         }
-        else DefaultLogger::get()->debug("OptimizeGraphProcess finished");
     }
     meshes.clear();
     locked.clear();
 }
 
 // ------------------------------------------------------------------------------------------------
-// Buidl a LUT of all instanced meshes
+// Build a LUT of all instanced meshes
 void OptimizeGraphProcess::FindInstancedMeshes (aiNode* pNode)
 {
     for (unsigned int i = 0; i < pNode->mNumMeshes;++i) {

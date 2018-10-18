@@ -27,7 +27,7 @@ additional_dirs, ext_whitelist = [],[]
 if os.name=='posix':
     additional_dirs.append('./')
     additional_dirs.append('/usr/lib/')
-    additional_dirs.append('/usr/lib/x86_64-linux-gnu')
+    additional_dirs.append('/usr/lib/x86_64-linux-gnu/')
     additional_dirs.append('/usr/local/lib/')
 
     if 'LD_LIBRARY_PATH' in os.environ:
@@ -51,11 +51,8 @@ if os.name=='posix':
 elif os.name=='nt':
     ext_whitelist.append('.dll')
     path_dirs = os.environ['PATH'].split(';')
-    for dir_candidate in path_dirs:
-        if 'assimp' in dir_candidate.lower():
-            additional_dirs.append(dir_candidate)
+    additional_dirs.extend(path_dirs)
 
-#print(additional_dirs)
 def vec2tuple(x):
     """ Converts a VECTOR3D to a Tuple """
     return (x.x, x.y, x.z)
@@ -179,6 +176,7 @@ def try_load_functions(library_path, dll):
                           load from filename function,
                           load from memory function,
                           export to filename function,
+                          export to blob function,
                           release function,
                           ctypes handle to assimp library)
     '''
@@ -188,15 +186,17 @@ def try_load_functions(library_path, dll):
         release  = dll.aiReleaseImport
         load_mem = dll.aiImportFileFromMemory
         export   = dll.aiExportScene
+        export2blob = dll.aiExportSceneToBlob
     except AttributeError:
         #OK, this is a library, but it doesn't have the functions we need
         return None
 
     # library found!
-    from .structs import Scene
+    from .structs import Scene, ExportDataBlob
     load.restype = POINTER(Scene)
     load_mem.restype = POINTER(Scene)
-    return (library_path, load, load_mem, export, release, dll)
+    export2blob.restype = POINTER(ExportDataBlob)
+    return (library_path, load, load_mem, export, export2blob, release, dll)
 
 def search_library():
     '''
@@ -206,6 +206,7 @@ def search_library():
     Returns: tuple, (load from filename function,
                      load from memory function,
                      export to filename function,
+                     export to blob function,
                      release function,
                      dll)
     '''
@@ -225,11 +226,17 @@ def search_library():
             for filename in os.listdir(curfolder):
                 # our minimum requirement for candidates is that
                 # they should contain 'assimp' somewhere in
-                # their name
-                if filename.lower().find('assimp')==-1 or\
-                    os.path.splitext(filename)[-1].lower() not in ext_whitelist:
+                # their name                                  
+                if filename.lower().find('assimp')==-1 : 
                     continue
-
+                is_out=1
+                for et in ext_whitelist:
+                  if et in filename.lower():
+                    is_out=0
+                    break
+                if is_out:
+                  continue
+                
                 library_path = os.path.join(curfolder, filename)
                 logger.debug('Try ' + library_path)
                 try:

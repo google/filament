@@ -2,7 +2,8 @@
 Open Asset Import Library (assimp)
 ----------------------------------------------------------------------
 
-Copyright (c) 2006-2017, assimp team
+Copyright (c) 2006-2018, assimp team
+
 
 All rights reserved.
 
@@ -119,7 +120,11 @@ public:
     {
         unsigned int mBone; ///< Index of the bone
         float mWeight;      ///< Weight of that bone on this vertex
-        Weight() { }
+        Weight() AI_NO_EXCEPT
+        : mBone(0)
+        , mWeight(0.0f)
+        { }
+
         Weight( unsigned int pBone, float pWeight)
         {
             mBone = pBone;

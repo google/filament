@@ -3,7 +3,8 @@
 Open Asset Import Library (assimp)
 ---------------------------------------------------------------------------
 
-Copyright (c) 2006-2017, assimp team
+Copyright (c) 2006-2018, assimp team
+
 
 
 All rights reserved.
@@ -73,7 +74,7 @@ void LWOImporter::LoadLWOBFile()
         case AI_LWO_PNTS:
             {
                 if (!mCurLayer->mTempPoints.empty())
-                    DefaultLogger::get()->warn("LWO: PNTS chunk encountered twice");
+                    ASSIMP_LOG_WARN("LWO: PNTS chunk encountered twice");
                 else LoadLWOPoints(head.length);
                 break;
             }
@@ -82,7 +83,7 @@ void LWOImporter::LoadLWOBFile()
             {
 
                 if (!mCurLayer->mFaces.empty())
-                    DefaultLogger::get()->warn("LWO: POLS chunk encountered twice");
+                    ASSIMP_LOG_WARN("LWO: POLS chunk encountered twice");
                 else LoadLWOBPolygons(head.length);
                 break;
             }
@@ -90,7 +91,7 @@ void LWOImporter::LoadLWOBFile()
         case AI_LWO_SRFS:
             {
                 if (!mTags->empty())
-                    DefaultLogger::get()->warn("LWO: SRFS chunk encountered twice");
+                    ASSIMP_LOG_WARN("LWO: SRFS chunk encountered twice");
                 else LoadLWOTags(head.length);
                 break;
             }
@@ -182,20 +183,20 @@ void LWOImporter::CopyFaceIndicesLWOB(FaceList::iterator& it,
                 break;
             }
             face.mIndices = new unsigned int[face.mNumIndices];
-            for (unsigned int i = 0; i < face.mNumIndices;++i)
-            {
+            for (unsigned int i = 0; i < face.mNumIndices;++i) {
                 unsigned int & mi = face.mIndices[i];
                 uint16_t index;
                 ::memcpy(&index, cursor++, 2);
                 mi = index;
                 if (mi > mCurLayer->mTempPoints.size())
                 {
-                    DefaultLogger::get()->warn("LWOB: face index is out of range");
+                    ASSIMP_LOG_WARN("LWOB: face index is out of range");
                     mi = (unsigned int)mCurLayer->mTempPoints.size()-1;
                 }
             }
+        } else {
+            ASSIMP_LOG_WARN("LWOB: Face has 0 indices");
         }
-        else DefaultLogger::get()->warn("LWOB: Face has 0 indices");
         int16_t surface;
         ::memcpy(&surface, cursor++, 2);
         if (surface < 0)
@@ -241,7 +242,7 @@ LWO::Texture* LWOImporter::SetupNewTextureLWOB(LWO::TextureList& list,unsigned i
     else
     {
         // procedural or gradient, not supported
-        DefaultLogger::get()->error("LWOB: Unsupported legacy texture: " + type);
+        ASSIMP_LOG_ERROR_F("LWOB: Unsupported legacy texture: ", type);
     }
 
     return tex;
@@ -272,7 +273,7 @@ void LWOImporter::LoadLWOBSurface(unsigned int size)
          *  how much storage is actually left and work with this value from now on.
          */
         if (mFileBuffer + head.length > end) {
-            DefaultLogger::get()->error("LWOB: Invalid surface chunk length. Trying to continue.");
+            ASSIMP_LOG_ERROR("LWOB: Invalid surface chunk length. Trying to continue.");
             head.length = (uint16_t) (end - mFileBuffer);
         }
 
@@ -380,8 +381,9 @@ void LWOImporter::LoadLWOBSurface(unsigned int size)
             {
                 if (pTex)   {
                     GetS0(pTex->mFileName,head.length);
+                } else {
+                    ASSIMP_LOG_WARN("LWOB: Unexpected TIMG chunk");
                 }
-                else DefaultLogger::get()->warn("LWOB: Unexpected TIMG chunk");
                 break;
             }
         // texture strength
@@ -390,8 +392,9 @@ void LWOImporter::LoadLWOBSurface(unsigned int size)
                 AI_LWO_VALIDATE_CHUNK_LENGTH(head.length,TVAL,1);
                 if (pTex)   {
                     pTex->mStrength = (float)GetU1()/ 255.f;
+                } else {
+                    ASSIMP_LOG_ERROR("LWOB: Unexpected TVAL chunk");
                 }
-                else DefaultLogger::get()->warn("LWOB: Unexpected TVAL chunk");
                 break;
             }
         // texture flags
@@ -399,8 +402,7 @@ void LWOImporter::LoadLWOBSurface(unsigned int size)
             {
                 AI_LWO_VALIDATE_CHUNK_LENGTH(head.length,TFLG,2);
 
-                if (pTex)
-                {
+                if (nullptr != pTex) {
                     const uint16_t s = GetU2();
                     if (s & 1)
                         pTex->majorAxis = LWO::Texture::AXIS_X;
@@ -409,10 +411,13 @@ void LWOImporter::LoadLWOBSurface(unsigned int size)
                     else if (s & 4)
                         pTex->majorAxis = LWO::Texture::AXIS_Z;
 
-                    if (s & 16)
-                        DefaultLogger::get()->warn("LWOB: Ignoring \'negate\' flag on texture");
+                    if (s & 16) {
+                        ASSIMP_LOG_WARN("LWOB: Ignoring \'negate\' flag on texture");
+                    }
                 }
-                else DefaultLogger::get()->warn("LWOB: Unexpected TFLG chunk");
+                else {
+                    ASSIMP_LOG_WARN("LWOB: Unexpected TFLG chunk");
+                }
                 break;
             }
         }

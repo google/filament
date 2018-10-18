@@ -2,7 +2,8 @@
 Open Asset Import Library (assimp)
 ----------------------------------------------------------------------
 
-Copyright (c) 2006-2017, assimp team
+Copyright (c) 2006-2018, assimp team
+
 
 All rights reserved.
 
@@ -59,10 +60,8 @@ namespace Assimp    {
  *  @note Although it is called #VertexTriangleAdjacency, the current version does also
  *    support arbitrary polygons. */
 // --------------------------------------------------------------------------------------------
-class ASSIMP_API VertexTriangleAdjacency
-{
+class ASSIMP_API VertexTriangleAdjacency {
 public:
-
     // ----------------------------------------------------------------------------
     /** @brief Construction from an existing index buffer
      *  @param pcFaces Index buffer
@@ -76,38 +75,29 @@ public:
         unsigned int iNumVertices = 0,
         bool bComputeNumTriangles = true);
 
-
     // ----------------------------------------------------------------------------
     /** @brief Destructor */
     ~VertexTriangleAdjacency();
-
-
-public:
 
     // ----------------------------------------------------------------------------
     /** @brief Get all triangles adjacent to a vertex
      *  @param iVertIndex Index of the vertex
      *  @return A pointer to the adjacency list. */
-    unsigned int* GetAdjacentTriangles(unsigned int iVertIndex) const
-    {
-        ai_assert(iVertIndex < iNumVertices);
+    unsigned int* GetAdjacentTriangles(unsigned int iVertIndex) const {
+        ai_assert(iVertIndex < mNumVertices);
         return &mAdjacencyTable[ mOffsetTable[iVertIndex]];
     }
-
 
     // ----------------------------------------------------------------------------
     /** @brief Get the number of triangles that are referenced by
      *    a vertex. This function returns a reference that can be modified
      *  @param iVertIndex Index of the vertex
      *  @return Number of referenced triangles */
-    unsigned int& GetNumTrianglesPtr(unsigned int iVertIndex)
-    {
-        ai_assert(iVertIndex < iNumVertices && NULL != mLiveTriangles);
+    unsigned int& GetNumTrianglesPtr(unsigned int iVertIndex) {
+        ai_assert( iVertIndex < mNumVertices );
+        ai_assert( nullptr != mLiveTriangles );
         return mLiveTriangles[iVertIndex];
     }
-
-
-public:
 
     //! Offset table
     unsigned int* mOffsetTable;
@@ -119,9 +109,9 @@ public:
     unsigned int* mLiveTriangles;
 
     //! Debug: Number of referenced vertices
-    unsigned int iNumVertices;
-
+    unsigned int mNumVertices;
 };
-}
+
+} //! ns Assimp
 
 #endif // !! AI_VTADJACENCY_H_INC

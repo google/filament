@@ -2,7 +2,8 @@
 Open Asset Import Library (assimp)
 ----------------------------------------------------------------------
 
-Copyright (c) 2006-2017, assimp team
+Copyright (c) 2006-2018, assimp team
+
 
 All rights reserved.
 
@@ -43,6 +44,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "Q3BSPZipArchive.h"
 #include <cassert>
+#include <cstdlib>
 #include <assimp/ai_assert.h>
 
 namespace Assimp {
@@ -181,7 +183,7 @@ Q3BSPZipArchive::Q3BSPZipArchive(IOSystem* pIOHandler, const std::string& rFile)
 
         m_ZipFileHandle = unzOpen2(rFile.c_str(), &mapping);
 
-        if(m_ZipFileHandle != NULL) {
+        if(m_ZipFileHandle != nullptr) {
             mapArchive();
         }
     }
@@ -195,26 +197,23 @@ Q3BSPZipArchive::~Q3BSPZipArchive() {
     }
     m_ArchiveMap.clear();
 
-    if(m_ZipFileHandle != NULL) {
+    if(m_ZipFileHandle != nullptr) {
         unzClose(m_ZipFileHandle);
-        m_ZipFileHandle = NULL;
+        m_ZipFileHandle = nullptr;
     }
 }
 
 // ------------------------------------------------------------------------------------------------
 //  Returns true, if the archive is already open.
 bool Q3BSPZipArchive::isOpen() const {
-    return (m_ZipFileHandle != NULL);
+    return (m_ZipFileHandle != nullptr);
 }
 
 // ------------------------------------------------------------------------------------------------
 //  Returns true, if the filename is part of the archive.
 bool Q3BSPZipArchive::Exists(const char* pFile) const {
-    ai_assert(pFile != NULL);
-
     bool exist = false;
-
-    if (pFile != NULL) {
+    if (pFile != nullptr) {
         std::string rFile(pFile);
         std::map<std::string, ZipFile*>::const_iterator it = m_ArchiveMap.find(rFile);
 
@@ -239,9 +238,9 @@ char Q3BSPZipArchive::getOsSeparator() const {
 // ------------------------------------------------------------------------------------------------
 //  Opens a file, which is part of the archive.
 IOStream *Q3BSPZipArchive::Open(const char* pFile, const char* /*pMode*/) {
-    ai_assert(pFile != NULL);
+    ai_assert(pFile != nullptr);
 
-    IOStream* result = NULL;
+    IOStream* result = nullptr;
 
     std::map<std::string, ZipFile*>::iterator it = m_ArchiveMap.find(pFile);
 
@@ -256,7 +255,7 @@ IOStream *Q3BSPZipArchive::Open(const char* pFile, const char* /*pMode*/) {
 //  Close a filestream.
 void Q3BSPZipArchive::Close(IOStream *pFile) {
     (void)(pFile);
-    ai_assert(pFile != NULL);
+    ai_assert(pFile != nullptr);
 
     // We don't do anything in case the file would be opened again in the future
 }
@@ -275,7 +274,7 @@ void Q3BSPZipArchive::getFileList(std::vector<std::string> &rFileList) {
 bool Q3BSPZipArchive::mapArchive() {
     bool success = false;
 
-    if(m_ZipFileHandle != NULL) {
+    if(m_ZipFileHandle != nullptr) {
         if(m_ArchiveMap.empty()) {
             //  At first ensure file is already open
             if(unzGoToFirstFile(m_ZipFileHandle) == UNZ_OK) {

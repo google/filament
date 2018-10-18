@@ -2,7 +2,8 @@
 Open Asset Import Library (assimp)
 ----------------------------------------------------------------------
 
-Copyright (c) 2006-2017, assimp team
+Copyright (c) 2006-2018, assimp team
+
 
 All rights reserved.
 
@@ -47,7 +48,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define INCLUDED_AI_BLEND_DNA_INL
 
 #include <memory>
-#include "TinyFormatter.h"
+#include <assimp/TinyFormatter.h>
 
 namespace Assimp {
 namespace Blender {
@@ -307,6 +308,108 @@ void Structure :: ReadField(T& out, const char* name, const FileDatabase& db) co
 
 
 //--------------------------------------------------------------------------------
+// field parsing for raw untyped data (like CustomDataLayer.data)
+template <int error_policy>
+bool Structure::ReadCustomDataPtr(std::shared_ptr<ElemBase>&out, int cdtype, const char* name, const FileDatabase& db) const {
+
+	const StreamReaderAny::pos old = db.reader->GetCurrentPos();
+
+	Pointer ptrval;
+	const Field* f;
+	try	{
+		f = &(*this)[name];
+
+		// sanity check, should never happen if the genblenddna script is right
+		if (!(f->flags & FieldFlag_Pointer)) {
+			throw Error((Formatter::format(), "Field `", name, "` of structure `",
+				this->name, "` ought to be a pointer"));
+		}
+
+		db.reader->IncPtr(f->offset);
+		Convert(ptrval, db);
+		// actually it is meaningless on which Structure the Convert is called
+		// because the `Pointer` argument triggers a special implementation.
+	}
+	catch (const Error& e) {
+		_defaultInitializer<error_policy>()(out, e.what());
+		out.reset();
+	}
+
+	bool readOk = true;
+	if (ptrval.val)	{
+		// get block for ptr
+		const FileBlockHead* block = LocateFileBlockForAddress(ptrval, db);
+		db.reader->SetCurrentPos(block->start + static_cast<size_t>((ptrval.val - block->address.val)));
+		// read block->num instances of given type to out
+		readOk = readCustomData(out, cdtype, block->num, db);
+	}
+
+	// and recover the previous stream position
+	db.reader->SetCurrentPos(old);
+
+#ifndef ASSIMP_BUILD_BLENDER_NO_STATS
+	++db.stats().fields_read;
+#endif
+
+	return readOk;
+}
+
+//--------------------------------------------------------------------------------
+template <int error_policy, template <typename> class TOUT, typename T>
+bool Structure::ReadFieldPtrVector(vector<TOUT<T>>&out, const char* name, const FileDatabase& db) const {
+	out.clear();
+
+	const StreamReaderAny::pos old = db.reader->GetCurrentPos();
+
+	Pointer ptrval;
+	const Field* f;
+	try	{
+		f = &(*this)[name];
+
+		// sanity check, should never happen if the genblenddna script is right
+		if (!(f->flags & FieldFlag_Pointer)) {
+			throw Error((Formatter::format(), "Field `", name, "` of structure `",
+				this->name, "` ought to be a pointer"));
+		}
+
+		db.reader->IncPtr(f->offset);
+		Convert(ptrval, db);
+		// actually it is meaningless on which Structure the Convert is called
+		// because the `Pointer` argument triggers a special implementation.
+	}
+	catch (const Error& e) {
+		_defaultInitializer<error_policy>()(out, e.what());
+		out.clear();
+		return false;
+	}
+
+
+	if (ptrval.val)	{
+		// find the file block the pointer is pointing to
+		const FileBlockHead* block = LocateFileBlockForAddress(ptrval, db);
+		db.reader->SetCurrentPos(block->start + static_cast<size_t>((ptrval.val - block->address.val)));
+		// FIXME: basically, this could cause problems with 64 bit pointers on 32 bit systems.
+		// I really ought to improve StreamReader to work with 64 bit indices exclusively.
+
+		const Structure& s = db.dna[f->type];
+		for (size_t i = 0; i < block->num; ++i)	{
+			TOUT<T> p(new T);
+			s.Convert(*p, db);
+			out.push_back(p);
+		}
+	}
+
+	db.reader->SetCurrentPos(old);
+
+#ifndef ASSIMP_BUILD_BLENDER_NO_STATS
+	++db.stats().fields_read;
+#endif
+
+	return true;
+}
+
+
+//--------------------------------------------------------------------------------
 template <template <typename> class TOUT, typename T>
 bool Structure :: ResolvePointer(TOUT<T>& out, const Pointer & ptrval, const FileDatabase& db,
     const Field& f,
@@ -467,9 +570,7 @@ template <> bool Structure :: ResolvePointer<std::shared_ptr,ElemBase>(std::shar
         // this might happen if DNA::RegisterConverters hasn't been called so far
         // or if the target type is not contained in `our` DNA.
         out.reset();
-        DefaultLogger::get()->warn((Formatter::format(),
-            "Failed to find a converter for the `",s.name,"` structure"
-            ));
+        ASSIMP_LOG_WARN_F( "Failed to find a converter for the `",s.name,"` structure" );
         return false;
     }
 
@@ -501,7 +602,7 @@ const FileBlockHead* Structure :: LocateFileBlockForAddress(const Pointer & ptrv
 {
     // the file blocks appear in list sorted by
     // with ascending base addresses so we can run a
-    // binary search to locate the pointee quickly.
+    // binary search to locate the pointer quickly.
 
     // NOTE: Blender seems to distinguish between side-by-side
     // data (stored in the same data block) and far pointers,

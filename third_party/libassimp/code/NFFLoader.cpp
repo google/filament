@@ -3,7 +3,8 @@
 Open Asset Import Library (assimp)
 ---------------------------------------------------------------------------
 
-Copyright (c) 2006-2017, assimp team
+Copyright (c) 2006-2018, assimp team
+
 
 
 All rights reserved.
@@ -47,11 +48,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 // internal headers
 #include "NFFLoader.h"
-#include "ParsingUtils.h"
-#include "StandardShapes.h"
-#include "qnan.h"
-#include "fast_atof.h"
-#include "RemoveComments.h"
+#include <assimp/ParsingUtils.h>
+#include <assimp/StandardShapes.h>
+#include <assimp/qnan.h>
+#include <assimp/fast_atof.h>
+#include <assimp/RemoveComments.h>
 #include <assimp/IOSystem.hpp>
 #include <assimp/DefaultLogger.hpp>
 #include <assimp/scene.h>
@@ -124,14 +125,14 @@ const aiImporterDesc* NFFImporter::GetInfo () const
     do \
     { \
     if (!GetNextLine(buffer,line)) \
-        {DefaultLogger::get()->warn("NFF2: Unexpected EOF, can't read next token");break;} \
+        {ASSIMP_LOG_WARN("NFF2: Unexpected EOF, can't read next token");break;} \
     SkipSpaces(line,&sz); \
     } \
     while(IsLineEnd(*sz))
 
 
 // ------------------------------------------------------------------------------------------------
-// Loads the materail table for the NFF2 file format from an external file
+// Loads the material table for the NFF2 file format from an external file
 void NFFImporter::LoadNFF2MaterialTable(std::vector<ShadingInfo>& output,
     const std::string& path, IOSystem* pIOHandler)
 {
@@ -139,7 +140,7 @@ void NFFImporter::LoadNFF2MaterialTable(std::vector<ShadingInfo>& output,
 
     // Check whether we can read from the file
     if( !file.get())    {
-        DefaultLogger::get()->error("NFF2: Unable to open material library " + path + ".");
+        ASSIMP_LOG_ERROR("NFF2: Unable to open material library " + path + ".");
         return;
     }
 
@@ -157,7 +158,7 @@ void NFFImporter::LoadNFF2MaterialTable(std::vector<ShadingInfo>& output,
 
     // The file should start with the magic sequence "mat"
     if (!TokenMatch(buffer,"mat",3))    {
-        DefaultLogger::get()->error("NFF2: Not a valid material library " + path + ".");
+        ASSIMP_LOG_ERROR_F("NFF2: Not a valid material library ", path, ".");
         return;
     }
 
@@ -173,7 +174,7 @@ void NFFImporter::LoadNFF2MaterialTable(std::vector<ShadingInfo>& output,
         // 'version' defines the version of the file format
         if (TokenMatch(sz,"version",7))
         {
-            DefaultLogger::get()->info("NFF (Sense8) material library file format: " + std::string(sz));
+            ASSIMP_LOG_INFO_F("NFF (Sense8) material library file format: ", std::string(sz));
         }
         // 'matdef' starts a new material in the file
         else if (TokenMatch(sz,"matdef",6))
@@ -191,8 +192,7 @@ void NFFImporter::LoadNFF2MaterialTable(std::vector<ShadingInfo>& output,
             {
                 if (!curShader)
                 {
-                    DefaultLogger::get()->error(std::string("NFF2 material library: Found element ") +
-                        sz + "but there is no active material");
+                    ASSIMP_LOG_ERROR_F("NFF2 material library: Found element ", sz, "but there is no active material");
                     continue;
                 }
             }
@@ -271,7 +271,7 @@ void NFFImporter::InternReadFile( const std::string& pFile,
 
     ShadingInfo s; // current material info
 
-    // degree of tesselation
+    // degree of tessellation
     unsigned int iTesselation = 4;
 
     // some temporary variables we need to parse the file
@@ -307,7 +307,7 @@ void NFFImporter::InternReadFile( const std::string& pFile,
             SkipSpaces(line,&sz);
             if (TokenMatch(sz,"version",7))
             {
-                DefaultLogger::get()->info("NFF (Sense8) file format: " + std::string(sz));
+                ASSIMP_LOG_INFO_F("NFF (Sense8) file format: ", sz );
             }
             else if (TokenMatch(sz,"viewpos",7))
             {
@@ -345,7 +345,7 @@ void NFFImporter::InternReadFile( const std::string& pFile,
                         sz3 = sz;
                         while (!IsSpaceOrNewLine(*sz))++sz;
                         const unsigned int diff = (unsigned int)(sz-sz3);
-                        if (!diff)DefaultLogger::get()->warn("NFF2: Found empty mtable token");
+                        if (!diff)ASSIMP_LOG_WARN("NFF2: Found empty mtable token");
                         else
                         {
                             // The material table has the file extension .mat.
@@ -470,7 +470,7 @@ void NFFImporter::InternReadFile( const std::string& pFile,
                             unsigned int m = ::strtoul10(sz,&sz);
                             if (m >= (unsigned int)tempPositions.size())
                             {
-                                DefaultLogger::get()->error("NFF2: Vertex index overflow");
+                                ASSIMP_LOG_ERROR("NFF2: Vertex index overflow");
                                 m= 0;
                             }
                             // mesh.vertices.push_back (tempPositions[idx]);
@@ -550,11 +550,11 @@ void NFFImporter::InternReadFile( const std::string& pFile,
                             case 'u':
                             case 'U':
 
-                                DefaultLogger::get()->warn("Unsupported NFF2 texture attribute: trans");
+                                ASSIMP_LOG_WARN("Unsupported NFF2 texture attribute: trans");
                             };
                             if (!sz[1] || '_' != sz[2])
                             {
-                                DefaultLogger::get()->warn("NFF2: Expected underscore after texture attributes");
+                                ASSIMP_LOG_WARN("NFF2: Expected underscore after texture attributes");
                                 continue;
                             }
                             const char* sz2 = sz+3;
@@ -576,7 +576,7 @@ void NFFImporter::InternReadFile( const std::string& pFile,
                             matIdx = ::strtoul10(sz,&sz);
                             if (matIdx >= materialTable.size())
                             {
-                                DefaultLogger::get()->error("NFF2: Material index overflow.");
+                                ASSIMP_LOG_ERROR("NFF2: Material index overflow.");
                                 matIdx = 0;
                             }
 
@@ -749,7 +749,7 @@ void NFFImporter::InternReadFile( const std::string& pFile,
                 {
                     if(!GetNextLine(buffer,line))
                     {
-                        DefaultLogger::get()->error("NFF: Unexpected EOF was encountered. Patch definition incomplete");
+                        ASSIMP_LOG_ERROR("NFF: Unexpected EOF was encountered. Patch definition incomplete");
                         continue;
                     }
 
@@ -942,7 +942,7 @@ void NFFImporter::InternReadFile( const std::string& pFile,
 
                 if(!GetNextLine(buffer,line))
                 {
-                    DefaultLogger::get()->error("NFF: Unexpected end of file (cone definition not complete)");
+                    ASSIMP_LOG_ERROR("NFF: Unexpected end of file (cone definition not complete)");
                     break;
                 }
                 sz = line;
@@ -954,7 +954,7 @@ void NFFImporter::InternReadFile( const std::string& pFile,
 
                 if(!GetNextLine(buffer,line))
                 {
-                    DefaultLogger::get()->error("NFF: Unexpected end of file (cone definition not complete)");
+                    ASSIMP_LOG_ERROR("NFF: Unexpected end of file (cone definition not complete)");
                     break;
                 }
                 sz = line;
@@ -970,7 +970,7 @@ void NFFImporter::InternReadFile( const std::string& pFile,
                 float f;
                 if (( f = currentMesh.dir.Length()) < 10e-3f )
                 {
-                    DefaultLogger::get()->error("NFF: Cone height is close to zero");
+                    ASSIMP_LOG_ERROR("NFF: Cone height is close to zero");
                     continue;
                 }
                 currentMesh.dir /= f; // normalize
@@ -988,7 +988,7 @@ void NFFImporter::InternReadFile( const std::string& pFile,
                     ::ai_snprintf(currentMesh.name,128,"cone_%i",cone++);
                 else ::ai_snprintf(currentMesh.name,128,"cylinder_%i",cylinder++);
             }
-            // 'tess' - tesselation
+            // 'tess' - tessellation
             else if (TokenMatch(sz,"tess",4))
             {
                 SkipSpaces(&sz);
@@ -1028,18 +1028,20 @@ void NFFImporter::InternReadFile( const std::string& pFile,
             // 'pb' - bezier patch. Not supported yet
             else if (TokenMatch(sz,"pb",2))
             {
-                DefaultLogger::get()->error("NFF: Encountered unsupported ID: bezier patch");
+                ASSIMP_LOG_ERROR("NFF: Encountered unsupported ID: bezier patch");
             }
             // 'pn' - NURBS. Not supported yet
             else if (TokenMatch(sz,"pn",2) || TokenMatch(sz,"pnn",3))
             {
-                DefaultLogger::get()->error("NFF: Encountered unsupported ID: NURBS");
+                ASSIMP_LOG_ERROR("NFF: Encountered unsupported ID: NURBS");
             }
             // '' - comment
             else if ('#' == line[0])
             {
                 const char* sz;SkipSpaces(&line[1],&sz);
-                if (!IsLineEnd(*sz))DefaultLogger::get()->info(sz);
+                if (!IsLineEnd(*sz)) {
+                    ASSIMP_LOG_INFO(sz);
+                }
             }
         }
     }

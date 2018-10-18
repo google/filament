@@ -3,7 +3,8 @@
 Open Asset Import Library (assimp)
 ---------------------------------------------------------------------------
 
-Copyright (c) 2006-2017, assimp team
+Copyright (c) 2006-2018, assimp team
+
 
 
 All rights reserved.
@@ -47,7 +48,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef ASSIMP_BUILD_NO_TERRAGEN_IMPORTER
 
 #include "TerragenLoader.h"
-#include "StreamReader.h"
+#include <assimp/StreamReader.h>
 #include <assimp/Importer.hpp>
 #include <assimp/IOSystem.hpp>
 #include <assimp/scene.h>
@@ -191,7 +192,7 @@ void TerragenImporter::InternReadFile( const std::string& pFile,
         {
             mode = reader.GetI1();
             if (0 != mode)
-                DefaultLogger::get()->error("TER: Unsupported mapping mode, a flat terrain is returned");
+                ASSIMP_LOG_ERROR("TER: Unsupported mapping mode, a flat terrain is returned");
         }
         // actual terrain data
         else if (!::strncmp(head,AI_TERR_CHUNK_ALTW,4))

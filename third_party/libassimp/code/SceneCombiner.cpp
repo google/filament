@@ -2,7 +2,8 @@
 Open Asset Import Library (assimp)
 ----------------------------------------------------------------------
 
-Copyright (c) 2006-2017, assimp team
+Copyright (c) 2006-2018, assimp team
+
 
 All rights reserved.
 
@@ -52,9 +53,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   */
 // ----------------------------------------------------------------------------
 #include <assimp/SceneCombiner.h>
-#include "StringUtils.h"
-#include "fast_atof.h"
-#include "Hash.h"
+#include <assimp/StringUtils.h>
+#include <assimp/fast_atof.h>
+#include <assimp/metadata.h>
+#include <assimp/Hash.h>
 #include "time.h"
 #include <assimp/DefaultLogger.hpp>
 #include <assimp/scene.h>
@@ -73,7 +75,7 @@ void PrefixString(aiString& string,const char* prefix, unsigned int len) {
         return;
 
     if (len+string.length>=MAXLEN-1) {
-        DefaultLogger::get()->debug("Can't add an unique prefix because the string is too long");
+        ASSIMP_LOG_DEBUG("Can't add an unique prefix because the string is too long");
         ai_assert(false);
         return;
     }
@@ -620,8 +622,8 @@ void SceneCombiner::MergeScenes(aiScene** _dest, aiScene* master, std::vector<At
                 }
             }
             if (!(*it).resolved) {
-                DefaultLogger::get()->error(std::string("SceneCombiner: Failed to resolve attachment ")
-                    + (*it).node->mName.data + " " + (*it).attachToNode->mName.data);
+                ASSIMP_LOG_ERROR_F( "SceneCombiner: Failed to resolve attachment ", (*it).node->mName.data,
+                    " ", (*it).attachToNode->mName.data );
             }
         }
     }
@@ -705,30 +707,30 @@ void SceneCombiner::MergeBones(aiMesh* out,std::vector<aiMesh*>::const_iterator 
     // we work with hashes to make the comparisons MUCH faster,
     // at least if we have many bones.
     std::list<BoneWithHash> asBones;
-    BuildUniqueBoneList(asBones, it,end);
+    BuildUniqueBoneList( asBones, it, end );
 
     // now create the output bones
     out->mNumBones = 0;
     out->mBones = new aiBone*[asBones.size()];
 
-    for (std::list<BoneWithHash>::const_iterator it = asBones.begin(),end = asBones.end(); it != end;++it)  {
+    for (std::list<BoneWithHash>::const_iterator boneIt = asBones.begin(),boneEnd = asBones.end(); boneIt != boneEnd; ++boneIt )  {
         // Allocate a bone and setup it's name
         aiBone* pc = out->mBones[out->mNumBones++] = new aiBone();
-        pc->mName = aiString( *((*it).second ));
+        pc->mName = aiString( *( boneIt->second ));
 
-        std::vector< BoneSrcIndex >::const_iterator wend = (*it).pSrcBones.end();
+        std::vector< BoneSrcIndex >::const_iterator wend = boneIt->pSrcBones.end();
 
         // Loop through all bones to be joined for this bone
-        for (std::vector< BoneSrcIndex >::const_iterator wmit = (*it).pSrcBones.begin(); wmit != wend; ++wmit)  {
+        for (std::vector< BoneSrcIndex >::const_iterator wmit = boneIt->pSrcBones.begin(); wmit != wend; ++wmit)  {
             pc->mNumWeights += (*wmit).first->mNumWeights;
 
             // NOTE: different offset matrices for bones with equal names
             // are - at the moment - not handled correctly.
-            if (wmit != (*it).pSrcBones.begin() && pc->mOffsetMatrix != (*wmit).first->mOffsetMatrix)   {
-                DefaultLogger::get()->warn("Bones with equal names but different offset matrices can't be joined at the moment");
+            if (wmit != boneIt->pSrcBones.begin() && pc->mOffsetMatrix != wmit->first->mOffsetMatrix) {
+                ASSIMP_LOG_WARN("Bones with equal names but different offset matrices can't be joined at the moment");
                 continue;
             }
-            pc->mOffsetMatrix = (*wmit).first->mOffsetMatrix;
+            pc->mOffsetMatrix = wmit->first->mOffsetMatrix;
         }
 
         // Allocate the vertex weight array
@@ -736,7 +738,7 @@ void SceneCombiner::MergeBones(aiMesh* out,std::vector<aiMesh*>::const_iterator 
 
         // And copy the final weights - adjust the vertex IDs by the
         // face index offset of the corresponding mesh.
-        for (std::vector< BoneSrcIndex >::const_iterator wmit = (*it).pSrcBones.begin(); wmit != wend; ++wmit)  {
+        for (std::vector< BoneSrcIndex >::const_iterator wmit = (*boneIt).pSrcBones.begin(); wmit != wend; ++wmit)  {
             aiBone* pip = (*wmit).first;
             for (unsigned int mp = 0; mp < pip->mNumWeights;++mp,++avw) {
                 const aiVertexWeight& vfi = pip->mWeights[mp];
@@ -794,7 +796,7 @@ void SceneCombiner::MergeMeshes(aiMesh** _out, unsigned int /*flags*/,
                 if ((*it)->mVertices)   {
                     ::memcpy(pv2,(*it)->mVertices,(*it)->mNumVertices*sizeof(aiVector3D));
                 }
-                else DefaultLogger::get()->warn("JoinMeshes: Positions expected but input mesh contains no positions");
+                else ASSIMP_LOG_WARN("JoinMeshes: Positions expected but input mesh contains no positions");
                 pv2 += (*it)->mNumVertices;
             }
         }
@@ -805,8 +807,9 @@ void SceneCombiner::MergeMeshes(aiMesh** _out, unsigned int /*flags*/,
             for (std::vector<aiMesh*>::const_iterator it = begin; it != end;++it)   {
                 if ((*it)->mNormals)    {
                     ::memcpy(pv2,(*it)->mNormals,(*it)->mNumVertices*sizeof(aiVector3D));
+                } else {
+                    ASSIMP_LOG_WARN( "JoinMeshes: Normals expected but input mesh contains no normals" );
                 }
-                else DefaultLogger::get()->warn("JoinMeshes: Normals expected but input mesh contains no normals");
                 pv2 += (*it)->mNumVertices;
             }
         }
@@ -816,28 +819,29 @@ void SceneCombiner::MergeMeshes(aiMesh** _out, unsigned int /*flags*/,
             pv2 = out->mTangents = new aiVector3D[out->mNumVertices];
             aiVector3D* pv2b = out->mBitangents = new aiVector3D[out->mNumVertices];
 
-            for (std::vector<aiMesh*>::const_iterator it = begin; it != end;++it)   {
+            for (std::vector<aiMesh*>::const_iterator it = begin; it != end;++it) {
                 if ((*it)->mTangents)   {
                     ::memcpy(pv2, (*it)->mTangents,  (*it)->mNumVertices*sizeof(aiVector3D));
                     ::memcpy(pv2b,(*it)->mBitangents,(*it)->mNumVertices*sizeof(aiVector3D));
+                } else {
+                    ASSIMP_LOG_WARN( "JoinMeshes: Tangents expected but input mesh contains no tangents" );
                 }
-                else DefaultLogger::get()->warn("JoinMeshes: Tangents expected but input mesh contains no tangents");
                 pv2  += (*it)->mNumVertices;
                 pv2b += (*it)->mNumVertices;
             }
         }
         // copy texture coordinates
         unsigned int n = 0;
-        while ((**begin).HasTextureCoords(n))   {
+        while ((**begin).HasTextureCoords(n)) {
             out->mNumUVComponents[n] = (*begin)->mNumUVComponents[n];
 
             pv2 = out->mTextureCoords[n] = new aiVector3D[out->mNumVertices];
             for (std::vector<aiMesh*>::const_iterator it = begin; it != end;++it)   {
-
                 if ((*it)->mTextureCoords[n])   {
                     ::memcpy(pv2,(*it)->mTextureCoords[n],(*it)->mNumVertices*sizeof(aiVector3D));
+                } else {
+                    ASSIMP_LOG_WARN( "JoinMeshes: UVs expected but input mesh contains no UVs" );
                 }
-                else DefaultLogger::get()->warn("JoinMeshes: UVs expected but input mesh contains no UVs");
                 pv2 += (*it)->mNumVertices;
             }
             ++n;
@@ -845,14 +849,14 @@ void SceneCombiner::MergeMeshes(aiMesh** _out, unsigned int /*flags*/,
         // copy vertex colors
         n = 0;
         while ((**begin).HasVertexColors(n))    {
-            aiColor4D* pv2 = out->mColors[n] = new aiColor4D[out->mNumVertices];
-            for (std::vector<aiMesh*>::const_iterator it = begin; it != end;++it)   {
-
+            aiColor4D *pVec2 = out->mColors[n] = new aiColor4D[out->mNumVertices];
+            for ( std::vector<aiMesh*>::const_iterator it = begin; it != end; ++it )   {
                 if ((*it)->mColors[n])  {
-                    ::memcpy(pv2,(*it)->mColors[n],(*it)->mNumVertices*sizeof(aiColor4D));
+                    ::memcpy( pVec2, (*it)->mColors[ n ], (*it)->mNumVertices * sizeof( aiColor4D ) ) ;
+                } else {
+                    ASSIMP_LOG_WARN( "JoinMeshes: VCs expected but input mesh contains no VCs" );
                 }
-                else DefaultLogger::get()->warn("JoinMeshes: VCs expected but input mesh contains no VCs");
-                pv2 += (*it)->mNumVertices;
+                pVec2 += (*it)->mNumVertices;
             }
             ++n;
         }
@@ -1000,7 +1004,12 @@ void SceneCombiner::CopyScene(aiScene** _dest,const aiScene* src,bool allocate) 
         *_dest = new aiScene();
     }
     aiScene* dest = *_dest;
-    ai_assert(dest);
+    ai_assert(nullptr != dest);
+
+    // copy metadata
+    if ( nullptr != src->mMetaData ) {
+        dest->mMetaData = new aiMetadata( *src->mMetaData );
+    }
 
     // copy animations
     dest->mNumAnimations = src->mNumAnimations;
@@ -1255,29 +1264,30 @@ void SceneCombiner::Copy(aiMetadata** _dest, const aiMetadata* src) {
         aiMetadataEntry& out = dest->mValues[i];
         out.mType = in.mType;
         switch (dest->mValues[i].mType) {
-        case AI_BOOL:
-            out.mData = new bool(*static_cast<bool*>(in.mData));
-            break;
-        case AI_INT32:
-            out.mData = new int32_t(*static_cast<int32_t*>(in.mData));
-            break;
-        case AI_UINT64:
-            out.mData = new uint64_t(*static_cast<uint64_t*>(in.mData));
-            break;
-        case AI_FLOAT:
-            out.mData = new float(*static_cast<float*>(in.mData));
-            break;
-        case AI_DOUBLE:
-            out.mData = new double(*static_cast<double*>(in.mData));
-            break;
-        case AI_AISTRING:
-            out.mData = new aiString(*static_cast<aiString*>(in.mData));
-            break;
-        case AI_AIVECTOR3D:
-            out.mData = new aiVector3D(*static_cast<aiVector3D*>(in.mData));
-            break;
-        default:
-            ai_assert(false);
+            case AI_BOOL:
+                out.mData = new bool(*static_cast<bool*>(in.mData));
+                break;
+            case AI_INT32:
+                out.mData = new int32_t(*static_cast<int32_t*>(in.mData));
+                break;
+            case AI_UINT64:
+                out.mData = new uint64_t(*static_cast<uint64_t*>(in.mData));
+                break;
+            case AI_FLOAT:
+                out.mData = new float(*static_cast<float*>(in.mData));
+                break;
+            case AI_DOUBLE:
+                out.mData = new double(*static_cast<double*>(in.mData));
+                break;
+            case AI_AISTRING:
+                out.mData = new aiString(*static_cast<aiString*>(in.mData));
+                break;
+            case AI_AIVECTOR3D:
+                out.mData = new aiVector3D(*static_cast<aiVector3D*>(in.mData));
+                break;
+            default:
+                ai_assert(false);
+                break;
         }
     }
 }

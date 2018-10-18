@@ -5,7 +5,7 @@ from ctypes import POINTER, c_void_p, c_int, c_uint, c_char, c_float, Structure,
 
 class Vector2D(Structure):
     """
-    See 'aiVector2D.h' for details.
+    See 'vector2.h' for details.
     """ 
 
 
@@ -15,7 +15,7 @@ class Vector2D(Structure):
 
 class Matrix3x3(Structure):
     """
-    See 'aiMatrix3x3.h' for details.
+    See 'matrix3x3.h' for details.
     """ 
 
 
@@ -27,7 +27,7 @@ class Matrix3x3(Structure):
 
 class Texel(Structure):
     """
-    See 'aiTexture.h' for details.
+    See 'texture.h' for details.
     """ 
 
     _fields_ = [
@@ -36,7 +36,7 @@ class Texel(Structure):
 
 class Color4D(Structure):
     """
-    See 'aiColor4D.h' for details.
+    See 'color4.h' for details.
     """ 
 
 
@@ -47,7 +47,7 @@ class Color4D(Structure):
 
 class Plane(Structure):
     """
-    See 'aiTypes.h' for details.
+    See 'types.h' for details.
     """ 
 
     _fields_ = [
@@ -57,7 +57,7 @@ class Plane(Structure):
 
 class Color3D(Structure):
     """
-    See 'aiTypes.h' for details.
+    See 'types.h' for details.
     """ 
 
     _fields_ = [
@@ -67,7 +67,7 @@ class Color3D(Structure):
 
 class String(Structure):
     """
-    See 'aiTypes.h' for details.
+    See 'types.h' for details.
     """ 
 
     MAXLEN = 1024
@@ -84,7 +84,7 @@ class String(Structure):
 
 class MaterialPropertyString(Structure):
     """
-    See 'aiTypes.h' for details.
+    See 'MaterialSystem.cpp' for details.
     
     The size of length is truncated to 4 bytes on 64-bit platforms when used as a
     material property (see MaterialSystem.cpp aiMaterial::AddProperty() for details).
@@ -104,7 +104,7 @@ class MaterialPropertyString(Structure):
 
 class MemoryInfo(Structure):
     """
-    See 'aiTypes.h' for details.
+    See 'types.h' for details.
     """ 
 
     _fields_ = [
@@ -135,7 +135,7 @@ class MemoryInfo(Structure):
 
 class Quaternion(Structure):
     """
-    See 'aiQuaternion.h' for details.
+    See 'quaternion.h' for details.
     """ 
 
 
@@ -146,7 +146,7 @@ class Quaternion(Structure):
 
 class Face(Structure):
     """
-    See 'aiMesh.h' for details.
+    See 'mesh.h' for details.
     """ 
 
     _fields_ = [
@@ -161,7 +161,7 @@ class Face(Structure):
 
 class VertexWeight(Structure):
     """
-    See 'aiMesh.h' for details.
+    See 'mesh.h' for details.
     """ 
 
     _fields_ = [
@@ -175,7 +175,7 @@ class VertexWeight(Structure):
 
 class Matrix4x4(Structure):
     """
-    See 'aiMatrix4x4.h' for details.
+    See 'matrix4x4.h' for details.
     """ 
 
 
@@ -188,7 +188,7 @@ class Matrix4x4(Structure):
 
 class Vector3D(Structure):
     """
-    See 'aiVector3D.h' for details.
+    See 'vector3.h' for details.
     """ 
 
 
@@ -198,7 +198,7 @@ class Vector3D(Structure):
 
 class MeshKey(Structure):
     """
-    See 'aiAnim.h' for details.
+    See 'anim.h' for details.
     """ 
 
     _fields_ = [
@@ -214,9 +214,44 @@ class MeshKey(Structure):
             ("mValue", c_uint),
         ]
 
+class MetadataEntry(Structure):
+    """
+    See 'metadata.h' for details
+    """
+    AI_BOOL       = 0
+    AI_INT32      = 1
+    AI_UINT64     = 2
+    AI_FLOAT      = 3
+    AI_DOUBLE     = 4
+    AI_AISTRING   = 5
+    AI_AIVECTOR3D = 6
+    AI_META_MAX   = 7
+    _fields_ = [
+            # The type field uniquely identifies the underlying type of the data field
+            ("mType", c_uint),
+            ("mData", c_void_p),
+    ]
+
+class Metadata(Structure):
+    """
+    See 'metadata.h' for details
+    """
+    _fields_ = [
+            # Length of the mKeys and mValues arrays, respectively
+            ("mNumProperties", c_uint),
+
+            # Arrays of keys, may not be NULL. Entries in this array may not be NULL
+            # as well.
+            ("mKeys", POINTER(String)),
+
+            # Arrays of values, may not be NULL. Entries in this array may be NULL
+            # if the corresponding property key has no assigned value.
+            ("mValues", POINTER(MetadataEntry)),
+    ]
+
 class Node(Structure):
     """
-    See 'aiScene.h' for details.
+    See 'scene.h' for details.
     """ 
 
 
@@ -253,11 +288,15 @@ Node._fields_ = [
             
             # The meshes of this node. Each entry is an index into the mesh
             ("mMeshes", POINTER(c_uint)),
+
+            # Metadata associated with this node or NULL if there is no metadata.
+            # Whether any metadata is generated depends on the source file format.
+            ("mMetadata", POINTER(Metadata)),
         ]
 
 class Light(Structure):
     """
-    See 'aiLight.h' for details.
+    See 'light.h' for details.
     """ 
 
 
@@ -283,6 +322,13 @@ class Light(Structure):
             #  may be normalized, but it needn't.
             ("mDirection", Vector3D),
             
+            # Up direction of the light source in space. Relative to the
+            #  transformation of the node corresponding to the light.
+            #
+            # The direction is undefined for point lights. The vector
+            #  may be normalized, but it needn't.
+            ("mUp", Vector3D),
+
             # Constant light attenuation factor.
             #  The intensity of the light source at a given distance 'd' from
             #  the light's position is
@@ -354,11 +400,14 @@ class Light(Structure):
             #  interpolation between the inner and the outer cone of the
             #  spot light.
             ("mAngleOuterCone", c_float),
+
+            # Size of area light source.
+            ("mSize", Vector2D),
         ]
 
 class Texture(Structure):
     """
-    See 'aiTexture.h' for details.
+    See 'texture.h' for details.
     """ 
 
 
@@ -375,16 +424,25 @@ class Texture(Structure):
             ("mHeight", c_uint),
             
             # A hint from the loader to make it easier for applications
-            #  to determine the type of embedded compressed textures.
-            # If mHeight != 0 this member is undefined. Otherwise it
-            # is set set to '\\0\\0\\0\\0' if the loader has no additional
+            # to determine the type of embedded textures.
+            # 
+            # If mHeight != 0 this member is show how data is packed. Hint will consist of
+            # two parts: channel order and channel bitness (count of the bits for every
+            # color channel). For simple parsing by the viewer it's better to not omit
+            # absent color channel and just use 0 for bitness. For example:
+            # 1. Image contain RGBA and 8 bit per channel, achFormatHint == "rgba8888";
+            # 2. Image contain ARGB and 8 bit per channel, achFormatHint == "argb8888";
+            # 3. Image contain RGB and 5 bit for R and B channels and 6 bit for G channel,
+            #    achFormatHint == "rgba5650";
+            # 4. One color image with B channel and 1 bit for it, achFormatHint == "rgba0010";
+            # If mHeight == 0 then achFormatHint is set set to '\\0\\0\\0\\0' if the loader has no additional
             # information about the texture file format used OR the
             # file extension of the format without a trailing dot. If there
             # are multiple file extensions for a format, the shortest
             # extension is chosen (JPEG maps to 'jpg', not to 'jpeg').
             # E.g. 'dds\\0', 'pcx\\0', 'jpg\\0'.  All characters are lower-case.
             # The fourth character will always be '\\0'.
-            ("achFormatHint", c_char*4),
+            ("achFormatHint", c_char*9),
             
             # Data of the texture.
             # Points to an array of mWidth
@@ -395,11 +453,15 @@ class Texture(Structure):
             # buffer of size mWidth containing the compressed texture
             # data. Good luck, have fun!
             ("pcData", POINTER(Texel)),
+
+            # Texture original filename
+            # Used to get the texture reference
+            ("mFilename", String),
         ]
 
 class Ray(Structure):
     """
-    See 'aiTypes.h' for details.
+    See 'types.h' for details.
     """ 
 
     _fields_ = [
@@ -409,7 +471,7 @@ class Ray(Structure):
 
 class UVTransform(Structure):
     """
-    See 'aiMaterial.h' for details.
+    See 'material.h' for details.
     """ 
 
     _fields_ = [
@@ -430,7 +492,7 @@ class UVTransform(Structure):
 
 class MaterialProperty(Structure):
     """
-    See 'aiMaterial.h' for details.
+    See 'material.h' for details.
     """ 
 
     _fields_ = [
@@ -466,7 +528,7 @@ class MaterialProperty(Structure):
 
 class Material(Structure):
     """
-    See 'aiMaterial.h' for details.
+    See 'material.h' for details.
     """ 
 
     _fields_ = [
@@ -482,7 +544,7 @@ class Material(Structure):
 
 class Bone(Structure):
     """
-    See 'aiMesh.h' for details.
+    See 'mesh.h' for details.
     """ 
 
     _fields_ = [
@@ -501,9 +563,56 @@ class Bone(Structure):
             ("mOffsetMatrix", Matrix4x4),
         ]
 
+
+class AnimMesh(Structure):
+    """
+    See 'mesh.h' for details.
+    """ 
+
+    AI_MAX_NUMBER_OF_TEXTURECOORDS = 0x8
+    AI_MAX_NUMBER_OF_COLOR_SETS = 0x8
+
+    _fields_ = [
+            # Replacement for aiMesh::mVertices. If this array is non-NULL,
+            # it *must* contain mNumVertices entries. The corresponding
+            # array in the host mesh must be non-NULL as well - animation
+            # meshes may neither add or nor remove vertex components (if
+            # a replacement array is NULL and the corresponding source
+            # array is not, the source data is taken instead)
+            ("mVertices", POINTER(Vector3D)),
+
+            # Replacement for aiMesh::mNormals.
+            ("mNormals", POINTER(Vector3D)),
+
+            # Replacement for aiMesh::mTangents.
+            ("mTangents", POINTER(Vector3D)),
+
+            # Replacement for aiMesh::mBitangents.
+            ("mBitangents", POINTER(Vector3D)),
+
+            # Replacement for aiMesh::mColors
+            ("mColors", POINTER(Color4D) * AI_MAX_NUMBER_OF_COLOR_SETS),
+
+            # Replacement for aiMesh::mTextureCoords
+            ("mTextureCoords", POINTER(Vector3D) * AI_MAX_NUMBER_OF_TEXTURECOORDS),
+
+            # The number of vertices in the aiAnimMesh, and thus the length of all
+            # the member arrays.
+            #
+            # This has always the same value as the mNumVertices property in the
+            # corresponding aiMesh. It is duplicated here merely to make the length
+            # of the member arrays accessible even if the aiMesh is not known, e.g.
+            # from language bindings.
+            ("mNumVertices", c_uint),
+
+            # Weight of the AnimMesh.
+            ("mWeight", c_float),
+        ]
+
+
 class Mesh(Structure):
     """
-    See 'aiMesh.h' for details.
+    See 'mesh.h' for details.
     """ 
 
     AI_MAX_FACE_INDICES = 0x7fff
@@ -513,8 +622,7 @@ class Mesh(Structure):
     AI_MAX_NUMBER_OF_COLOR_SETS = 0x8
     AI_MAX_NUMBER_OF_TEXTURECOORDS = 0x8
 
-    _fields_ = [
-            # Bitwise combination of the members of the
+    _fields_ = [ # Bitwise combination of the members of the
             #aiPrimitiveType enum.
             # This specifies which types of primitives are present in the mesh.
             # The "SortByPrimitiveType"-Step can be used to make sure the
@@ -637,17 +745,23 @@ class Mesh(Structure):
             #   - Vertex animations refer to meshes by their names.
             ("mName", String),
             
-            # NOT CURRENTLY IN USE. The number of attachment meshes
+            # The number of attachment meshes. Note! Currently only works with Collada loader.
             ("mNumAnimMeshes", c_uint),
             
-            # NOT CURRENTLY IN USE. Attachment meshes for this mesh, for vertex-based animation.
-            #  Attachment meshes carry replacement data for some of the
-            #  mesh'es vertex components (usually positions, normals).
+            # Attachment meshes for this mesh, for vertex-based animation.
+            # Attachment meshes carry replacement data for some of the
+            # mesh'es vertex components (usually positions, normals).
+            # Note! Currently only works with Collada loader.
+            ("mAnimMesh", POINTER(POINTER(AnimMesh))),
+
+            # Method of morphing when animeshes are specified.
+            ("mMethod", c_uint),
+
         ]
 
 class Camera(Structure):
     """
-    See 'aiCamera.h' for details.
+    See 'camera.h' for details.
     """ 
 
 
@@ -707,7 +821,7 @@ class Camera(Structure):
 
 class VectorKey(Structure):
     """
-    See 'aiAnim.h' for details.
+    See 'anim.h' for details.
     """ 
 
     _fields_ = [
@@ -720,7 +834,7 @@ class VectorKey(Structure):
 
 class QuatKey(Structure):
     """
-    See 'aiAnim.h' for details.
+    See 'anim.h' for details.
     """ 
 
     _fields_ = [
@@ -731,9 +845,27 @@ class QuatKey(Structure):
             ("mValue", Quaternion),
         ]
 
+class MeshMorphKey(Structure):
+    """
+    See 'anim.h' for details.
+    """ 
+
+    _fields_ = [
+            # The time of this key
+            ("mTime", c_double),
+
+            # The values and weights at the time of this key
+            ("mValues", POINTER(c_uint)),
+            ("mWeights", POINTER(c_double)),
+
+            # The number of values and weights
+            ("mNumValuesAndWeights", c_uint),
+
+        ]
+
 class NodeAnim(Structure):
     """
-    See 'aiAnim.h' for details.
+    See 'anim.h' for details.
     """ 
 
     _fields_ = [
@@ -782,9 +914,48 @@ class NodeAnim(Structure):
             ("mPostState", c_uint),
         ]
 
+class MeshAnim(Structure):
+    """
+    See 'anim.h' for details.
+    """ 
+
+    _fields_ = [
+            # Name of the mesh to be animated. An empty string is not allowed,
+            #  animated meshes need to be named (not necessarily uniquely,
+            #  the name can basically serve as wild-card to select a group
+            #  of meshes with similar animation setup)
+            ("mName", String),
+
+            # Size of the #mKeys array. Must be 1, at least.
+            ("mNumKeys", c_uint),
+
+            # Key frames of the animation. May not be NULL.
+            ("mKeys", POINTER(MeshKey)),
+        ]
+
+class MeshMorphAnim(Structure):
+    """
+    See 'anim.h' for details.
+    """     
+
+    _fields_ = [
+            # Name of the mesh to be animated. An empty string is not allowed,
+            # animated meshes need to be named (not necessarily uniquely,
+            # the name can basically serve as wildcard to select a group
+            # of meshes with similar animation setup)
+            ("mName", String),
+
+            # Size of the #mKeys array. Must be 1, at least.
+            ("mNumKeys", c_uint),
+
+            # Key frames of the animation. May not be NULL.
+            ("mKeys", POINTER(MeshMorphKey)),
+        ]
+
+
 class Animation(Structure):
     """
-    See 'aiAnim.h' for details.
+    See 'anim.h' for details.
     """ 
 
     _fields_ = [
@@ -813,7 +984,50 @@ class Animation(Structure):
             
             # The mesh animation channels. Each channel affects a single mesh.
             #  The array is mNumMeshChannels in size.
+            ("mMeshChannels", POINTER(POINTER(MeshAnim))),
+
+            # The number of mesh animation channels. Each channel affects
+            # a single mesh and defines morphing animation.
+            ("mNumMorphMeshChannels", c_uint),
+
+            # The morph mesh animation channels. Each channel affects a single mesh.
+            # The array is mNumMorphMeshChannels in size. 
+            ("mMorphMeshChannels", POINTER(POINTER(MeshMorphAnim))),
+
         ]
+
+class ExportDataBlob(Structure):
+    """
+    See 'cexport.h' for details.
+
+    Note that the '_fields_' definition is outside the class to allow the 'next' field to be recursive
+    """
+    pass
+
+ExportDataBlob._fields_ = [
+            # Size of the data in bytes
+            ("size", c_size_t),
+
+            # The data.
+            ("data", c_void_p),
+
+            # Name of the blob. An empty string always
+            # indicates the first (and primary) blob,
+            # which contains the actual file data.
+            # Any other blobs are auxiliary files produced
+            # by exporters (i.e. material files). Existence
+            # of such files depends on the file format. Most
+            # formats don't split assets across multiple files.
+            #
+            # If used, blob names usually contain the file
+            # extension that should be used when writing
+            # the data to disc.
+            ("name", String),
+
+            # Pointer to the next blob in the chain or NULL if there is none.
+            ("next", POINTER(ExportDataBlob)),
+        ]
+
 
 class Scene(Structure):
     """
@@ -825,6 +1039,7 @@ class Scene(Structure):
     AI_SCENE_FLAGS_VALIDATION_WARNING =  	0x4
     AI_SCENE_FLAGS_NON_VERBOSE_FORMAT =  	0x8
     AI_SCENE_FLAGS_TERRAIN = 0x10
+    AI_SCENE_FLAGS_ALLOW_SHARED = 0x20
 
     _fields_ = [
             # Any combination of the AI_SCENE_FLAGS_XXX flags. By default
@@ -896,6 +1111,14 @@ class Scene(Structure):
             # array (if existing) is the default camera view into
             # the scene.
             ("mCameras", POINTER(POINTER(Camera))),
+
+            # This data contains global metadata which belongs to the scene like
+            # unit-conversions, versions, vendors or other model-specific data. This
+            # can be used to store format-specific metadata as well.
+            ("mMetadata", POINTER(Metadata)),
+
+            # Internal data, do not touch
+            ("mPrivate", c_char_p),
         ]
 
 assimp_structs_as_tuple = (Matrix4x4,

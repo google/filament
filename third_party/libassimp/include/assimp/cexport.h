@@ -85,7 +85,6 @@ struct aiExportFormatDesc
  */
 ASSIMP_API size_t aiGetExportFormatCount(void);
 
-
 // --------------------------------------------------------------------------------
 /** Returns a description of the nth export file format. Use #aiGetExportFormatCount()
  * to learn how many export formats are supported. The description must be released by
@@ -186,7 +185,6 @@ ASSIMP_API aiReturn aiExportSceneEx( const C_STRUCT aiScene* pScene,
     C_STRUCT aiFileIO* pIO,
     unsigned int pPreprocessing );
 
-
 // --------------------------------------------------------------------------------
 /** Describes a blob of exported scene data. Use #aiExportSceneToBlob() to create a blob containing an
 * exported scene. The memory referred by this structure is owned by Assimp.
@@ -245,8 +243,8 @@ private:
 * @param pPreprocessing Please see the documentation for #aiExportScene
 * @return the exported data or NULL in case of error
 */
-ASSIMP_API const C_STRUCT aiExportDataBlob* aiExportSceneToBlob( const C_STRUCT aiScene* pScene, const char* pFormatId,  unsigned int pPreprocessing );
-
+ASSIMP_API const C_STRUCT aiExportDataBlob* aiExportSceneToBlob( const C_STRUCT aiScene* pScene, const char* pFormatId,
+    unsigned int pPreprocessing );
 
 // --------------------------------------------------------------------------------
 /** Releases the memory associated with the given exported data. Use this function to free a data blob

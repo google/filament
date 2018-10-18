@@ -3,7 +3,8 @@
 Open Asset Import Library (assimp)
 ---------------------------------------------------------------------------
 
-Copyright (c) 2006-2017, assimp team
+Copyright (c) 2006-2018, assimp team
+
 
 
 All rights reserved.
@@ -50,11 +51,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef ASSIMP_BUILD_NO_MDL_IMPORTER
 
 #include "MDLLoader.h"
-#include "Macros.h"
-#include "qnan.h"
+#include <assimp/Macros.h>
+#include <assimp/qnan.h>
 #include "MDLDefaultColorMap.h"
 #include "MD2FileData.h"
-#include "StringUtils.h"
+#include <assimp/StringUtils.h>
 #include <assimp/Importer.hpp>
 #include <assimp/IOSystem.hpp>
 #include <assimp/scene.h>
@@ -140,7 +141,7 @@ void MDLImporter::SetupProperties(const Importer* pImp)
         configFrameID =  pImp->GetPropertyInteger(AI_CONFIG_IMPORT_GLOBAL_KEYFRAME,0);
     }
 
-    // AI_CONFIG_IMPORT_MDL_COLORMAP - pallette file
+    // AI_CONFIG_IMPORT_MDL_COLORMAP - palette file
     configPalette =  pImp->GetPropertyString(AI_CONFIG_IMPORT_MDL_COLORMAP,"colormap.lmp");
 }
 
@@ -186,37 +187,37 @@ void MDLImporter::InternReadFile( const std::string& pFile,
 
     // Original Quake1 format
     if (AI_MDL_MAGIC_NUMBER_BE == iMagicWord || AI_MDL_MAGIC_NUMBER_LE == iMagicWord)   {
-        DefaultLogger::get()->debug("MDL subtype: Quake 1, magic word is IDPO");
+        ASSIMP_LOG_DEBUG("MDL subtype: Quake 1, magic word is IDPO");
         iGSFileVersion = 0;
         InternReadFile_Quake1();
     }
     // GameStudio A<old> MDL2 format - used by some test models that come with 3DGS
     else if (AI_MDL_MAGIC_NUMBER_BE_GS3 == iMagicWord || AI_MDL_MAGIC_NUMBER_LE_GS3 == iMagicWord)  {
-        DefaultLogger::get()->debug("MDL subtype: 3D GameStudio A2, magic word is MDL2");
+        ASSIMP_LOG_DEBUG("MDL subtype: 3D GameStudio A2, magic word is MDL2");
         iGSFileVersion = 2;
         InternReadFile_Quake1();
     }
     // GameStudio A4 MDL3 format
     else if (AI_MDL_MAGIC_NUMBER_BE_GS4 == iMagicWord || AI_MDL_MAGIC_NUMBER_LE_GS4 == iMagicWord)  {
-        DefaultLogger::get()->debug("MDL subtype: 3D GameStudio A4, magic word is MDL3");
+        ASSIMP_LOG_DEBUG("MDL subtype: 3D GameStudio A4, magic word is MDL3");
         iGSFileVersion = 3;
         InternReadFile_3DGS_MDL345();
     }
     // GameStudio A5+ MDL4 format
     else if (AI_MDL_MAGIC_NUMBER_BE_GS5a == iMagicWord || AI_MDL_MAGIC_NUMBER_LE_GS5a == iMagicWord)    {
-        DefaultLogger::get()->debug("MDL subtype: 3D GameStudio A4, magic word is MDL4");
+        ASSIMP_LOG_DEBUG("MDL subtype: 3D GameStudio A4, magic word is MDL4");
         iGSFileVersion = 4;
         InternReadFile_3DGS_MDL345();
     }
     // GameStudio A5+ MDL5 format
     else if (AI_MDL_MAGIC_NUMBER_BE_GS5b == iMagicWord || AI_MDL_MAGIC_NUMBER_LE_GS5b == iMagicWord)    {
-        DefaultLogger::get()->debug("MDL subtype: 3D GameStudio A5, magic word is MDL5");
+        ASSIMP_LOG_DEBUG("MDL subtype: 3D GameStudio A5, magic word is MDL5");
         iGSFileVersion = 5;
         InternReadFile_3DGS_MDL345();
     }
     // GameStudio A7 MDL7 format
     else if (AI_MDL_MAGIC_NUMBER_BE_GS7 == iMagicWord || AI_MDL_MAGIC_NUMBER_LE_GS7 == iMagicWord)  {
-        DefaultLogger::get()->debug("MDL subtype: 3D GameStudio A7, magic word is MDL7");
+        ASSIMP_LOG_DEBUG("MDL subtype: 3D GameStudio A7, magic word is MDL7");
         iGSFileVersion = 7;
         InternReadFile_3DGS_MDL7();
     }
@@ -224,7 +225,7 @@ void MDLImporter::InternReadFile( const std::string& pFile,
     else if (AI_MDL_MAGIC_NUMBER_BE_HL2a == iMagicWord || AI_MDL_MAGIC_NUMBER_LE_HL2a == iMagicWord ||
         AI_MDL_MAGIC_NUMBER_BE_HL2b == iMagicWord || AI_MDL_MAGIC_NUMBER_LE_HL2b == iMagicWord)
     {
-        DefaultLogger::get()->debug("MDL subtype: Source(tm) Engine, magic word is IDST/IDSQ");
+        ASSIMP_LOG_DEBUG("MDL subtype: Source(tm) Engine, magic word is IDST/IDSQ");
         iGSFileVersion = 0;
         InternReadFile_HL2();
     }
@@ -257,7 +258,7 @@ void MDLImporter::SizeCheck(const void* szPos)
 }
 
 // ------------------------------------------------------------------------------------------------
-// Just for debgging purposes
+// Just for debugging purposes
 void MDLImporter::SizeCheck(const void* szPos, const char* szFile, unsigned int iLine)
 {
     ai_assert(NULL != szFile);
@@ -297,20 +298,20 @@ void MDLImporter::ValidateHeader_Quake1(const MDL::Header* pcHeader)
     if (!this->iGSFileVersion)
     {
         if (pcHeader->num_verts > AI_MDL_MAX_VERTS)
-            DefaultLogger::get()->warn("Quake 1 MDL model has more than AI_MDL_MAX_VERTS vertices");
+            ASSIMP_LOG_WARN("Quake 1 MDL model has more than AI_MDL_MAX_VERTS vertices");
 
         if (pcHeader->num_tris > AI_MDL_MAX_TRIANGLES)
-            DefaultLogger::get()->warn("Quake 1 MDL model has more than AI_MDL_MAX_TRIANGLES triangles");
+            ASSIMP_LOG_WARN("Quake 1 MDL model has more than AI_MDL_MAX_TRIANGLES triangles");
 
         if (pcHeader->num_frames > AI_MDL_MAX_FRAMES)
-            DefaultLogger::get()->warn("Quake 1 MDL model has more than AI_MDL_MAX_FRAMES frames");
+            ASSIMP_LOG_WARN("Quake 1 MDL model has more than AI_MDL_MAX_FRAMES frames");
 
         // (this does not apply for 3DGS MDLs)
         if (!this->iGSFileVersion && pcHeader->version != AI_MDL_VERSION)
-            DefaultLogger::get()->warn("Quake 1 MDL model has an unknown version: AI_MDL_VERSION (=6) is "
+            ASSIMP_LOG_WARN("Quake 1 MDL model has an unknown version: AI_MDL_VERSION (=6) is "
                 "the expected file format version");
         if(pcHeader->num_skins && (!pcHeader->skinwidth || !pcHeader->skinheight))
-            DefaultLogger::get()->warn("Skin width or height are 0");
+            ASSIMP_LOG_WARN("Skin width or height are 0");
     }
 }
 
@@ -340,9 +341,9 @@ void FlipQuakeHeader(BE_NCONST MDL::Header* pcHeader)
 
 // ------------------------------------------------------------------------------------------------
 // Read a Quake 1 file
-void MDLImporter::InternReadFile_Quake1( )
-{
+void MDLImporter::InternReadFile_Quake1() {
     ai_assert(NULL != pScene);
+
     BE_NCONST MDL::Header *pcHeader = (BE_NCONST MDL::Header*)this->mBuffer;
 
 #ifdef AI_BUILD_BIG_ENDIAN
@@ -355,9 +356,11 @@ void MDLImporter::InternReadFile_Quake1( )
     const unsigned char* szCurrent = (const unsigned char*)(pcHeader+1);
 
     // need to read all textures
-    for (unsigned int i = 0; i < (unsigned int)pcHeader->num_skins;++i)
-    {
-        union{BE_NCONST MDL::Skin* pcSkin;BE_NCONST MDL::GroupSkin* pcGroupSkin;};
+    for ( unsigned int i = 0; i < (unsigned int)pcHeader->num_skins; ++i) {
+        union {
+            BE_NCONST MDL::Skin* pcSkin;
+            BE_NCONST MDL::GroupSkin* pcGroupSkin;
+        };
         if (szCurrent + sizeof(MDL::Skin) > this->mBuffer + this->iFileSize) {
             throw DeadlyImportError("[Quake 1 MDL] Unexpected EOF");
         }
@@ -365,17 +368,15 @@ void MDLImporter::InternReadFile_Quake1( )
 
         AI_SWAP4( pcSkin->group );
 
-        // Quake 1 groupskins
-        if (1 == pcSkin->group)
-        {
+        // Quake 1 group-skins
+        if (1 == pcSkin->group) {
             AI_SWAP4( pcGroupSkin->nb );
 
             // need to skip multiple images
             const unsigned int iNumImages = (unsigned int)pcGroupSkin->nb;
             szCurrent += sizeof(uint32_t) * 2;
 
-            if (0 != iNumImages)
-            {
+            if (0 != iNumImages) {
                 if (!i) {
                     // however, create only one output image (the first)
                     this->CreateTextureARGB8_3DGS_MDL3(szCurrent + iNumImages * sizeof(float));
@@ -384,10 +385,7 @@ void MDLImporter::InternReadFile_Quake1( )
                 szCurrent += pcHeader->skinheight * pcHeader->skinwidth +
                     sizeof(float) * iNumImages;
             }
-        }
-        // 3DGS has a few files that are using other 3DGS like texture formats here
-        else
-        {
+        } else {
             szCurrent += sizeof(uint32_t);
             unsigned int iSkip = i ? UINT_MAX : 0;
             CreateTexture_3DGS_MDL4(szCurrent,pcSkin->group,&iSkip);
@@ -407,16 +405,20 @@ void MDLImporter::InternReadFile_Quake1( )
     BE_NCONST MDL::Frame* pcFrames = (BE_NCONST MDL::Frame*)szCurrent;
     BE_NCONST MDL::SimpleFrame* pcFirstFrame;
 
-    if (0 == pcFrames->type)
-    {
+    if (0 == pcFrames->type) {
         // get address of single frame
         pcFirstFrame = &pcFrames->frame;
-    }
-    else
-    {
+    } else {
         // get the first frame in the group
+
+#if 1
+        // FIXME: the cast is wrong and cause a warning on clang 5.0
+        // disable thi code for now, fix it later
+        ai_assert(false && "Bad pointer cast");
+#else
         BE_NCONST MDL::GroupFrame* pcFrames2 = (BE_NCONST MDL::GroupFrame*)pcFrames;
         pcFirstFrame = (BE_NCONST MDL::SimpleFrame*)(&pcFrames2->time + pcFrames->type);
+#endif
     }
     BE_NCONST MDL::Vertex* pcVertices = (BE_NCONST MDL::Vertex*) ((pcFirstFrame->name) + sizeof(pcFirstFrame->name));
     VALIDATE_FILE_SIZE((const unsigned char*)(pcVertices + pcHeader->num_verts));
@@ -479,7 +481,7 @@ void MDLImporter::InternReadFile_Quake1( )
             if (iIndex >= (unsigned int)pcHeader->num_verts)
             {
                 iIndex = pcHeader->num_verts-1;
-                DefaultLogger::get()->warn("Index overflow in Q1-MDL vertex list.");
+                ASSIMP_LOG_WARN("Index overflow in Q1-MDL vertex list.");
             }
 
             aiVector3D& vec = pcMesh->mVertices[iCurrent];
@@ -690,7 +692,7 @@ void MDLImporter::InternReadFile_3DGS_MDL345( )
                 unsigned int iIndex = pcTriangles->index_xyz[c];
                 if (iIndex >= (unsigned int)pcHeader->num_verts)    {
                     iIndex = pcHeader->num_verts-1;
-                    DefaultLogger::get()->warn("Index overflow in MDLn vertex list");
+                    ASSIMP_LOG_WARN("Index overflow in MDLn vertex list");
                 }
 
                 aiVector3D& vec = pcMesh->mVertices[iCurrent];
@@ -745,7 +747,7 @@ void MDLImporter::InternReadFile_3DGS_MDL345( )
                 unsigned int iIndex = pcTriangles->index_xyz[c];
                 if (iIndex >= (unsigned int)pcHeader->num_verts)    {
                     iIndex = pcHeader->num_verts-1;
-                    DefaultLogger::get()->warn("Index overflow in MDLn vertex list");
+                    ASSIMP_LOG_WARN("Index overflow in MDLn vertex list");
                 }
 
                 aiVector3D& vec = pcMesh->mVertices[iCurrent];
@@ -796,7 +798,7 @@ void MDLImporter::ImportUVCoordinate_3DGS_MDL345(
     // validate UV indices
     if (iIndex >= (unsigned int) pcHeader->synctype)    {
         iIndex = pcHeader->synctype-1;
-        DefaultLogger::get()->warn("Index overflow in MDLn UV coord list");
+        ASSIMP_LOG_WARN("Index overflow in MDLn UV coord list");
     }
 
     float s = (float)pcSrc[iIndex].u;
@@ -833,7 +835,7 @@ void MDLImporter::CalculateUVCoordinates_MDL5()
             iWidth  = (unsigned int)*piPtr;
             if (!iHeight || !iWidth)
             {
-                DefaultLogger::get()->warn("Either the width or the height of the "
+                ASSIMP_LOG_WARN("Either the width or the height of the "
                     "embedded DDS texture is zero. Unable to compute final texture "
                     "coordinates. The texture coordinates remain in their original "
                     "0-x/0-y (x,y = texture size) range.");
@@ -986,7 +988,7 @@ MDL::IntBone_MDL7** MDLImporter::LoadBones_3DGS_MDL7()
             AI_MDL7_BONE_STRUCT_SIZE__NAME_IS_32_CHARS  != pcHeader->bone_stc_size &&
             AI_MDL7_BONE_STRUCT_SIZE__NAME_IS_NOT_THERE != pcHeader->bone_stc_size)
         {
-            DefaultLogger::get()->warn("Unknown size of bone data structure");
+            ASSIMP_LOG_WARN("Unknown size of bone data structure");
             return NULL;
         }
 
@@ -1024,7 +1026,7 @@ void MDLImporter::ReadFaces_3DGS_MDL7(const MDL::IntGroupInfo_MDL7& groupInfo,
             if(iIndex > (unsigned int)groupInfo.pcGroup->numverts)  {
                 // (we might need to read this section a second time - to process frame vertices correctly)
                 pcGroupTris->v_index[c] = iIndex = groupInfo.pcGroup->numverts-1;
-                DefaultLogger::get()->warn("Index overflow in MDL7 vertex list");
+                ASSIMP_LOG_WARN("Index overflow in MDL7 vertex list");
             }
 
             // write the output face index
@@ -1069,7 +1071,7 @@ void MDLImporter::ReadFaces_3DGS_MDL7(const MDL::IntGroupInfo_MDL7& groupInfo,
                     iIndex = pcGroupTris->skinsets[0].st_index[c];
                     if(iIndex > (unsigned int)groupInfo.pcGroup->num_stpts) {
                         iIndex = groupInfo.pcGroup->num_stpts-1;
-                        DefaultLogger::get()->warn("Index overflow in MDL7 UV coordinate list (#1)");
+                        ASSIMP_LOG_WARN("Index overflow in MDL7 UV coordinate list (#1)");
                     }
 
                     float u = groupInfo.pcGroupUVs[iIndex].u;
@@ -1096,7 +1098,7 @@ void MDLImporter::ReadFaces_3DGS_MDL7(const MDL::IntGroupInfo_MDL7& groupInfo,
                     iIndex = pcGroupTris->skinsets[1].st_index[c];
                     if(iIndex > (unsigned int)groupInfo.pcGroup->num_stpts) {
                         iIndex = groupInfo.pcGroup->num_stpts-1;
-                        DefaultLogger::get()->warn("Index overflow in MDL7 UV coordinate list (#2)");
+                        ASSIMP_LOG_WARN("Index overflow in MDL7 UV coordinate list (#2)");
                     }
 
                     float u = groupInfo.pcGroupUVs[ iIndex ].u;
@@ -1151,7 +1153,7 @@ bool MDLImporter::ProcessFrames_3DGS_MDL7(const MDL::IntGroupInfo_MDL7& groupInf
             frame.pcFrame->transmatrix_count * pcHeader->bonetrans_stc_size;
 
         if (((const char*)szCurrent - (const char*)pcHeader) + iAdd > (unsigned int)pcHeader->data_size)    {
-            DefaultLogger::get()->warn("Index overflow in frame area. "
+            ASSIMP_LOG_WARN("Index overflow in frame area. "
                 "Ignoring all frames and all further mesh groups, too.");
 
             // don't parse more groups if we can't even read one
@@ -1169,7 +1171,7 @@ bool MDLImporter::ProcessFrames_3DGS_MDL7(const MDL::IntGroupInfo_MDL7& groupInf
                 uint16_t iIndex = _AI_MDL7_ACCESS(pcFrameVertices,qq,pcHeader->framevertex_stc_size,MDL::Vertex_MDL7).vertindex;
                 AI_SWAP2(iIndex);
                 if (iIndex >= groupInfo.pcGroup->numverts)  {
-                    DefaultLogger::get()->warn("Invalid vertex index in frame vertex section");
+                    ASSIMP_LOG_WARN("Invalid vertex index in frame vertex section");
                     continue;
                 }
 
@@ -1255,7 +1257,7 @@ void MDLImporter::SortByMaterials_3DGS_MDL7(
                 // sometimes MED writes -1, but normally only if there is only
                 // one skin assigned. No warning in this case
                 if(0xFFFFFFFF != groupData.pcFaces[iFace].iMatIndex[0])
-                    DefaultLogger::get()->warn("Index overflow in MDL7 material list [#0]");
+                    ASSIMP_LOG_WARN("Index overflow in MDL7 material list [#0]");
             }
             else splitGroupData.aiSplit[groupData.pcFaces[iFace].
                 iMatIndex[0]]->push_back(iFace);
@@ -1280,7 +1282,7 @@ void MDLImporter::SortByMaterials_3DGS_MDL7(
                 // sometimes MED writes -1, but normally only if there is only
                 // one skin assigned. No warning in this case
                 if(UINT_MAX != iMatIndex)
-                    DefaultLogger::get()->warn("Index overflow in MDL7 material list [#1]");
+                    ASSIMP_LOG_WARN("Index overflow in MDL7 material list [#1]");
                 iMatIndex = iNumMaterials-1;
             }
             unsigned int iMatIndex2 = groupData.pcFaces[iFace].iMatIndex[1];
@@ -1290,7 +1292,7 @@ void MDLImporter::SortByMaterials_3DGS_MDL7(
                 if (iMatIndex2 >= iNumMaterials)    {
                     // sometimes MED writes -1, but normally only if there is only
                     // one skin assigned. No warning in this case
-                    DefaultLogger::get()->warn("Index overflow in MDL7 material list [#2]");
+                    ASSIMP_LOG_WARN("Index overflow in MDL7 material list [#2]");
                     iMatIndex2 = iNumMaterials-1;
                 }
 
@@ -1412,7 +1414,7 @@ void MDLImporter::InternReadFile_3DGS_MDL7( )
 
         if (1 != groupInfo.pcGroup->typ)    {
             // Not a triangle-based mesh
-            DefaultLogger::get()->warn("[3DGS MDL7] Not a triangle mesh group. Continuing happily");
+            ASSIMP_LOG_WARN("[3DGS MDL7] Not a triangle mesh group. Continuing happily");
         }
 
         // store the name of the group
@@ -1494,13 +1496,13 @@ void MDLImporter::InternReadFile_3DGS_MDL7( )
                 groupData.vTextureCoords1.resize(iNumVertices,aiVector3D());
 
                 // check whether the triangle data structure is large enough
-                // to contain a second UV coodinate set
+                // to contain a second UV coordinate set
                 if (pcHeader->triangle_stc_size >= AI_MDL7_TRIANGLE_STD_SIZE_TWO_UV)    {
                     groupData.vTextureCoords2.resize(iNumVertices,aiVector3D());
                     groupData.bNeed2UV = true;
                 }
             }
-            groupData.pcFaces = new MDL::IntFace_MDL7[groupInfo.pcGroup->numtris];
+            groupData.pcFaces.resize(groupInfo.pcGroup->numtris);
 
             // read all faces into the preallocated arrays
             ReadFaces_3DGS_MDL7(groupInfo, groupData);
@@ -1514,7 +1516,7 @@ void MDLImporter::InternReadFile_3DGS_MDL7( )
                     sharedData.abNeedMaterials[qq] = true;
             }
         }
-        else DefaultLogger::get()->warn("[3DGS MDL7] Mesh group consists of 0 "
+        else ASSIMP_LOG_WARN("[3DGS MDL7] Mesh group consists of 0 "
             "vertices or faces. It will be skipped.");
 
         // process all frames and generate output meshes
@@ -1662,7 +1664,7 @@ void MDLImporter::ParseBoneTrafoKeys_3DGS_MDL7(
             // read all transformation matrices
             for (unsigned int iTrafo = 0; iTrafo < frame.pcFrame->transmatrix_count;++iTrafo)   {
                 if(pcBoneTransforms->bone_index >= pcHeader->bones_num) {
-                    DefaultLogger::get()->warn("Index overflow in frame area. "
+                    ASSIMP_LOG_WARN("Index overflow in frame area. "
                         "Unable to parse this bone transformation");
                 }
                 else    {
@@ -1674,7 +1676,7 @@ void MDLImporter::ParseBoneTrafoKeys_3DGS_MDL7(
             }
         }
         else    {
-            DefaultLogger::get()->warn("Ignoring animation keyframes in groups != 0");
+            ASSIMP_LOG_WARN("Ignoring animation keyframes in groups != 0");
         }
     }
 }
@@ -1892,7 +1894,7 @@ void MDLImporter::GenerateOutputMeshes_3DGS_MDL7(
                         unsigned int iBone = groupData.aiBones[ oldFace.mIndices[c] ];
                         if (UINT_MAX != iBone)  {
                             if (iBone >= iNumOutBones)  {
-                                DefaultLogger::get()->error("Bone index overflow. "
+                                ASSIMP_LOG_ERROR("Bone index overflow. "
                                     "The bone index of a vertex exceeds the allowed range. ");
                                 iBone = iNumOutBones-1;
                             }

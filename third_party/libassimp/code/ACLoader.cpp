@@ -4,7 +4,8 @@
 Open Asset Import Library (assimp)
 ---------------------------------------------------------------------------
 
-Copyright (c) 2006-2017, assimp team
+Copyright (c) 2006-2018, assimp team
+
 
 
 All rights reserved.
@@ -49,11 +50,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 // internal headers
 #include "ACLoader.h"
-#include "ParsingUtils.h"
-#include "fast_atof.h"
-#include "Subdivision.h"
+#include <assimp/ParsingUtils.h>
+#include <assimp/fast_atof.h>
+#include <assimp/Subdivision.h>
 #include "Importer.h"
-#include "BaseImporter.h"
+#include <assimp/BaseImporter.h>
 #include <assimp/Importer.hpp>
 #include <assimp/light.h>
 #include <assimp/DefaultLogger.hpp>
@@ -84,7 +85,7 @@ static const aiImporterDesc desc = {
 #define AI_AC_SKIP_TO_NEXT_TOKEN() \
     if (!SkipSpaces(&buffer)) \
     { \
-        DefaultLogger::get()->error("AC3D: Unexpected EOF/EOL"); \
+        ASSIMP_LOG_ERROR("AC3D: Unexpected EOF/EOL"); \
         continue; \
     }
 
@@ -100,7 +101,7 @@ static const aiImporterDesc desc = {
     { \
         if (IsLineEnd( *buffer )) \
         { \
-            DefaultLogger::get()->error("AC3D: Unexpected EOF/EOL in string"); \
+            ASSIMP_LOG_ERROR("AC3D: Unexpected EOF/EOL in string"); \
             out = "ERROR"; \
             break; \
         } \
@@ -119,7 +120,7 @@ static const aiImporterDesc desc = {
     { \
         if (strncmp(buffer,name,name_length) || !IsSpace(buffer[name_length])) \
         { \
-            DefaultLogger::get()->error("AC3D: Unexpexted token. " name " was expected."); \
+            ASSIMP_LOG_ERROR("AC3D: Unexpexted token. " name " was expected."); \
             continue; \
         } \
         buffer += name_length+1; \
@@ -216,7 +217,7 @@ void AC3DImporter::LoadObjectSection(std::vector<Object>& objects)
         light->mName.length = ::ai_snprintf(light->mName.data, MAXLEN, "ACLight_%i",static_cast<unsigned int>(mLights->size())-1);
         obj.name = std::string( light->mName.data );
 
-        DefaultLogger::get()->debug("AC3D: Light source encountered");
+        ASSIMP_LOG_DEBUG("AC3D: Light source encountered");
         obj.type = Object::Light;
     }
     else if (!ASSIMP_strincmp(buffer,"group",5))
@@ -306,12 +307,12 @@ void AC3DImporter::LoadObjectSection(std::vector<Object>& objects)
             {
                 if (!GetNextLine())
                 {
-                    DefaultLogger::get()->error("AC3D: Unexpected EOF: not all vertices have been parsed yet");
+                    ASSIMP_LOG_ERROR("AC3D: Unexpected EOF: not all vertices have been parsed yet");
                     break;
                 }
                 else if (!IsNumeric(*buffer))
                 {
-                    DefaultLogger::get()->error("AC3D: Unexpected token: not all vertices have been parsed yet");
+                    ASSIMP_LOG_ERROR("AC3D: Unexpected token: not all vertices have been parsed yet");
                     --buffer; // make sure the line is processed a second time
                     break;
                 }
@@ -337,8 +338,8 @@ void AC3DImporter::LoadObjectSection(std::vector<Object>& objects)
                     // example writes no surf chunks
                     if (!Q3DWorkAround)
                     {
-                        DefaultLogger::get()->warn("AC3D: SURF token was expected");
-                        DefaultLogger::get()->debug("Continuing with Quick3D Workaround enabled");
+                        ASSIMP_LOG_WARN("AC3D: SURF token was expected");
+                        ASSIMP_LOG_DEBUG("Continuing with Quick3D Workaround enabled");
                     }
                     --buffer; // make sure the line is processed a second time
                     // break; --- see fix notes above
@@ -383,7 +384,7 @@ void AC3DImporter::LoadObjectSection(std::vector<Object>& objects)
                         {
                             if(!GetNextLine())
                             {
-                                DefaultLogger::get()->error("AC3D: Unexpected EOF: surface references are incomplete");
+                                ASSIMP_LOG_ERROR("AC3D: Unexpected EOF: surface references are incomplete");
                                 break;
                             }
                             surf.entries.push_back(Surface::SurfaceEntry());
@@ -404,7 +405,7 @@ void AC3DImporter::LoadObjectSection(std::vector<Object>& objects)
             }
         }
     }
-    DefaultLogger::get()->error("AC3D: Unexpected EOF: \'kids\' line was expected");
+    ASSIMP_LOG_ERROR("AC3D: Unexpected EOF: \'kids\' line was expected");
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -477,7 +478,7 @@ aiNode* AC3DImporter::ConvertObjectSection(Object& object,
                  therefore: if no surfaces are defined return point data only
              */
 
-            DefaultLogger::get()->info("AC3D: No surfaces defined in object definition, "
+            ASSIMP_LOG_INFO("AC3D: No surfaces defined in object definition, "
                 "a point list is returned");
 
             meshes.push_back(new aiMesh());
@@ -518,12 +519,12 @@ aiNode* AC3DImporter::ConvertObjectSection(Object& object,
                 unsigned int idx = (*it).mat;
                 if (idx >= needMat.size())
                 {
-                    DefaultLogger::get()->error("AC3D: material index is out of range");
+                    ASSIMP_LOG_ERROR("AC3D: material index is out of range");
                     idx = 0;
                 }
                 if ((*it).entries.empty())
                 {
-                    DefaultLogger::get()->warn("AC3D: surface her zero vertex references");
+                    ASSIMP_LOG_WARN("AC3D: surface her zero vertex references");
                 }
 
                 // validate all vertex indices to make sure we won't crash here
@@ -532,7 +533,7 @@ aiNode* AC3DImporter::ConvertObjectSection(Object& object,
                 {
                     if ((*it2).first >= object.vertices.size())
                     {
-                        DefaultLogger::get()->warn("AC3D: Invalid vertex reference");
+                        ASSIMP_LOG_WARN("AC3D: Invalid vertex reference");
                         (*it2).first = 0;
                     }
                 }
@@ -560,7 +561,7 @@ aiNode* AC3DImporter::ConvertObjectSection(Object& object,
 
                     if ((*it).flags & 0xf)
                     {
-                        DefaultLogger::get()->warn("AC3D: The type flag of a surface is unknown");
+                        ASSIMP_LOG_WARN("AC3D: The type flag of a surface is unknown");
                         (*it).flags &= ~(0xf);
                     }
 
@@ -711,7 +712,7 @@ aiNode* AC3DImporter::ConvertObjectSection(Object& object,
             if (object.subDiv)  {
                 if (configEvalSubdivision) {
                     std::unique_ptr<Subdivider> div(Subdivider::Create(Subdivider::CATMULL_CLARKE));
-                    DefaultLogger::get()->info("AC3D: Evaluating subdivision surface: "+object.name);
+                    ASSIMP_LOG_INFO("AC3D: Evaluating subdivision surface: "+object.name);
 
                     std::vector<aiMesh*> cpy(meshes.size()-oldm,NULL);
                     div->Subdivide(&meshes[oldm],cpy.size(),&cpy.front(),object.subDiv,true);
@@ -720,7 +721,7 @@ aiNode* AC3DImporter::ConvertObjectSection(Object& object,
                     // previous meshes are deleted vy Subdivide().
                 }
                 else {
-                    DefaultLogger::get()->info("AC3D: Letting the subdivision surface untouched due to my configuration: "
+                    ASSIMP_LOG_INFO("AC3D: Letting the subdivision surface untouched due to my configuration: "
                         +object.name);
                 }
             }
@@ -812,7 +813,7 @@ void AC3DImporter::InternReadFile( const std::string& pFile,
     unsigned int version = HexDigitToDecimal( buffer[4] );
     char msg[3];
     ASSIMP_itoa10(msg,3,version);
-    DefaultLogger::get()->info(std::string("AC3D file format version: ") + msg);
+    ASSIMP_LOG_INFO_F("AC3D file format version: ", msg);
 
     std::vector<Material> materials;
     materials.reserve(5);
@@ -856,7 +857,7 @@ void AC3DImporter::InternReadFile( const std::string& pFile,
     }
     if (materials.empty())
     {
-        DefaultLogger::get()->warn("AC3D: No material has been found");
+        ASSIMP_LOG_WARN("AC3D: No material has been found");
         materials.push_back(Material());
     }
 

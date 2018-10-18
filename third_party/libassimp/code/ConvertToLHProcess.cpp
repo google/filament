@@ -3,7 +3,8 @@
 Open Asset Import Library (assimp)
 ---------------------------------------------------------------------------
 
-Copyright (c) 2006-2017, assimp team
+Copyright (c) 2006-2018, assimp team
+
 
 
 All rights reserved.
@@ -58,6 +59,25 @@ using namespace Assimp;
 
 #ifndef ASSIMP_BUILD_NO_MAKELEFTHANDED_PROCESS
 
+namespace {
+
+template <typename aiMeshType>
+void flipUVs(aiMeshType* pMesh) {
+    if (pMesh == nullptr) { return; }
+    // mirror texture y coordinate
+    for (unsigned int tcIdx = 0; tcIdx < AI_MAX_NUMBER_OF_TEXTURECOORDS; tcIdx++) {
+        if (!pMesh->HasTextureCoords(tcIdx)) {
+            break;
+        }
+
+        for (unsigned int vIdx = 0; vIdx < pMesh->mNumVertices; vIdx++) {
+            pMesh->mTextureCoords[tcIdx][vIdx].y = 1.0f - pMesh->mTextureCoords[tcIdx][vIdx].y;
+        }
+    }
+}
+
+} // namespace
+
 // ------------------------------------------------------------------------------------------------
 // Constructor to be privately used by Importer
 MakeLeftHandedProcess::MakeLeftHandedProcess()
@@ -84,18 +104,20 @@ void MakeLeftHandedProcess::Execute( aiScene* pScene)
 {
     // Check for an existent root node to proceed
     ai_assert(pScene->mRootNode != NULL);
-    DefaultLogger::get()->debug("MakeLeftHandedProcess begin");
+    ASSIMP_LOG_DEBUG("MakeLeftHandedProcess begin");
 
     // recursively convert all the nodes
     ProcessNode( pScene->mRootNode, aiMatrix4x4());
 
     // process the meshes accordingly
-    for( unsigned int a = 0; a < pScene->mNumMeshes; ++a)
-        ProcessMesh( pScene->mMeshes[a]);
+    for ( unsigned int a = 0; a < pScene->mNumMeshes; ++a ) {
+        ProcessMesh( pScene->mMeshes[ a ] );
+    }
 
     // process the materials accordingly
-    for( unsigned int a = 0; a < pScene->mNumMaterials; ++a)
-        ProcessMaterial( pScene->mMaterials[a]);
+    for ( unsigned int a = 0; a < pScene->mNumMaterials; ++a ) {
+        ProcessMaterial( pScene->mMaterials[ a ] );
+    }
 
     // transform all animation channels as well
     for( unsigned int a = 0; a < pScene->mNumAnimations; a++)
@@ -107,7 +129,7 @@ void MakeLeftHandedProcess::Execute( aiScene* pScene)
             ProcessAnimation( nodeAnim);
         }
     }
-    DefaultLogger::get()->debug("MakeLeftHandedProcess finished");
+    ASSIMP_LOG_DEBUG("MakeLeftHandedProcess finished");
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -135,8 +157,11 @@ void MakeLeftHandedProcess::ProcessNode( aiNode* pNode, const aiMatrix4x4& pPare
 
 // ------------------------------------------------------------------------------------------------
 // Converts a single mesh to left handed coordinates.
-void MakeLeftHandedProcess::ProcessMesh( aiMesh* pMesh)
-{
+void MakeLeftHandedProcess::ProcessMesh( aiMesh* pMesh) {
+    if ( nullptr == pMesh ) {
+        ASSIMP_LOG_ERROR( "Nullptr to mesh found." );
+        return;
+    }
     // mirror positions, normals and stuff along the Z axis
     for( size_t a = 0; a < pMesh->mNumVertices; ++a)
     {
@@ -172,8 +197,12 @@ void MakeLeftHandedProcess::ProcessMesh( aiMesh* pMesh)
 
 // ------------------------------------------------------------------------------------------------
 // Converts a single material to left handed coordinates.
-void MakeLeftHandedProcess::ProcessMaterial( aiMaterial* _mat)
-{
+void MakeLeftHandedProcess::ProcessMaterial( aiMaterial* _mat) {
+    if ( nullptr == _mat ) {
+        ASSIMP_LOG_ERROR( "Nullptr to aiMaterial found." );
+        return;
+    }
+
     aiMaterial* mat = (aiMaterial*)_mat;
     for (unsigned int a = 0; a < mat->mNumProperties;++a)   {
         aiMaterialProperty* prop = mat->mProperties[a];
@@ -182,7 +211,6 @@ void MakeLeftHandedProcess::ProcessMaterial( aiMaterial* _mat)
         if (!::strcmp( prop->mKey.data, "$tex.mapaxis"))    {
             ai_assert( prop->mDataLength >= sizeof(aiVector3D)); /* something is wrong with the validation if we end up here */
             aiVector3D* pff = (aiVector3D*)prop->mData;
-
             pff->z *= -1.f;
         }
     }
@@ -236,13 +264,13 @@ bool FlipUVsProcess::IsActive( unsigned int pFlags) const
 // Executes the post processing step on the given imported data.
 void FlipUVsProcess::Execute( aiScene* pScene)
 {
-    DefaultLogger::get()->debug("FlipUVsProcess begin");
+    ASSIMP_LOG_DEBUG("FlipUVsProcess begin");
     for (unsigned int i = 0; i < pScene->mNumMeshes;++i)
         ProcessMesh(pScene->mMeshes[i]);
 
     for (unsigned int i = 0; i < pScene->mNumMaterials;++i)
         ProcessMaterial(pScene->mMaterials[i]);
-    DefaultLogger::get()->debug("FlipUVsProcess finished");
+    ASSIMP_LOG_DEBUG("FlipUVsProcess finished");
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -253,7 +281,7 @@ void FlipUVsProcess::ProcessMaterial (aiMaterial* _mat)
     for (unsigned int a = 0; a < mat->mNumProperties;++a)   {
         aiMaterialProperty* prop = mat->mProperties[a];
         if( !prop ) {
-            DefaultLogger::get()->debug( "Property is null" );
+            ASSIMP_LOG_DEBUG( "Property is null" );
             continue;
         }
 
@@ -273,15 +301,9 @@ void FlipUVsProcess::ProcessMaterial (aiMaterial* _mat)
 // Converts a single mesh
 void FlipUVsProcess::ProcessMesh( aiMesh* pMesh)
 {
-    // mirror texture y coordinate
-    for( unsigned int a = 0; a < AI_MAX_NUMBER_OF_TEXTURECOORDS; a++)   {
-        if( !pMesh->HasTextureCoords( a ) ) {
-            break;
-        }
-
-        for( unsigned int b = 0; b < pMesh->mNumVertices; b++ ) {
-            pMesh->mTextureCoords[ a ][ b ].y = 1.0f - pMesh->mTextureCoords[ a ][ b ].y;
-        }
+    flipUVs(pMesh);
+    for (unsigned int idx = 0; idx < pMesh->mNumAnimMeshes; idx++) {
+        flipUVs(pMesh->mAnimMeshes[idx]);
     }
 }
 
@@ -310,10 +332,10 @@ bool FlipWindingOrderProcess::IsActive( unsigned int pFlags) const
 // Executes the post processing step on the given imported data.
 void FlipWindingOrderProcess::Execute( aiScene* pScene)
 {
-    DefaultLogger::get()->debug("FlipWindingOrderProcess begin");
+    ASSIMP_LOG_DEBUG("FlipWindingOrderProcess begin");
     for (unsigned int i = 0; i < pScene->mNumMeshes;++i)
         ProcessMesh(pScene->mMeshes[i]);
-    DefaultLogger::get()->debug("FlipWindingOrderProcess finished");
+    ASSIMP_LOG_DEBUG("FlipWindingOrderProcess finished");
 }
 
 // ------------------------------------------------------------------------------------------------

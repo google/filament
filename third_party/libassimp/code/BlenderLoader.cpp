@@ -3,7 +3,8 @@
 Open Asset Import Library (assimp)
 ----------------------------------------------------------------------
 
-Copyright (c) 2006-2017, assimp team
+Copyright (c) 2006-2018, assimp team
+
 
 All rights reserved.
 
@@ -53,13 +54,14 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "BlenderIntermediate.h"
 #include "BlenderModifier.h"
 #include "BlenderBMesh.h"
-#include "StringUtils.h"
+#include "BlenderCustomData.h"
+#include <assimp/StringUtils.h>
 #include <assimp/scene.h>
 #include <assimp/importerdesc.h>
 
-#include "StringComparison.h"
-#include "StreamReader.h"
-#include "MemoryIOWrapper.h"
+#include <assimp/StringComparison.h>
+#include <assimp/StreamReader.h>
+#include <assimp/MemoryIOWrapper.h>
 
 #include <cctype>
 
@@ -153,14 +155,6 @@ void BlenderImporter::SetupProperties(const Importer* /*pImp*/)
     // nothing to be done for the moment
 }
 
-struct free_it {
-    free_it(void* free) : free(free) {}
-    ~free_it() {
-        ::free(this->free);
-    }
-
-    void* free;
-};
 
 // ------------------------------------------------------------------------------------------------
 // Imports the given file into the given scene structure.
@@ -168,8 +162,7 @@ void BlenderImporter::InternReadFile( const std::string& pFile,
     aiScene* pScene, IOSystem* pIOHandler)
 {
 #ifndef ASSIMP_BUILD_NO_COMPRESSED_BLEND
-    Bytef* dest = NULL;
-    free_it free_it_really(dest);
+    std::vector<Bytef> uncompressed;
 #endif
 
 
@@ -217,6 +210,7 @@ void BlenderImporter::InternReadFile( const std::string& pFile,
 
         size_t total = 0l;
 
+        // TODO: be smarter about this, decompress directly into heap buffer
         // and decompress the data .... do 1k chunks in the hope that we won't kill the stack
 #define MYBLOCK 1024
         Bytef block[MYBLOCK];
@@ -231,8 +225,8 @@ void BlenderImporter::InternReadFile( const std::string& pFile,
             }
             const size_t have = MYBLOCK - zstream.avail_out;
             total += have;
-            dest = reinterpret_cast<Bytef*>( realloc(dest,total) );
-            memcpy(dest + total - have,block,have);
+            uncompressed.resize(total);
+            memcpy(uncompressed.data() + total - have,block,have);
         }
         while (ret != Z_STREAM_END);
 
@@ -240,7 +234,7 @@ void BlenderImporter::InternReadFile( const std::string& pFile,
         inflateEnd(&zstream);
 
         // replace the input stream with a memory stream
-        stream.reset(new MemoryIOStream(reinterpret_cast<uint8_t*>(dest),total));
+        stream.reset(new MemoryIOStream(reinterpret_cast<uint8_t*>(uncompressed.data()),total));
 
         // .. and retry
         stream->Read(magic,7,1);
@@ -334,12 +328,12 @@ void BlenderImporter::ExtractScene(Scene& out, const FileDatabase& file)
     ss.Convert(out,file);
 
 #ifndef ASSIMP_BUILD_BLENDER_NO_STATS
-    DefaultLogger::get()->info((format(),
+    ASSIMP_LOG_INFO_F(
         "(Stats) Fields read: " ,file.stats().fields_read,
         ", pointers resolved: " ,file.stats().pointers_resolved,
         ", cache hits: "        ,file.stats().cache_hits,
         ", cached objects: "    ,file.stats().cached_objects
-    ));
+    );
 #endif
 }
 
@@ -1028,6 +1022,34 @@ void BlenderImporter::ConvertMesh(const Scene& /*in*/, const Object* /*obj*/, co
         }
     }
 
+    // TODO should we create the TextureUVMapping map in Convert<Material> to prevent redundant processing?
+
+    // create texture <-> uvname mapping for all materials
+    // key is texture number, value is data *
+    typedef std::map<uint32_t, const MLoopUV *> TextureUVMapping;
+    // key is material number, value is the TextureUVMapping for the material
+    typedef std::map<uint32_t, TextureUVMapping> MaterialTextureUVMappings;
+    MaterialTextureUVMappings matTexUvMappings;
+    const uint32_t maxMat = static_cast<const uint32_t>(mesh->mat.size());
+    for (uint32_t m = 0; m < maxMat; ++m) {
+        // get material by index
+        const std::shared_ptr<Material> pMat = mesh->mat[m];
+        TextureUVMapping texuv;
+        const uint32_t maxTex = sizeof(pMat->mtex) / sizeof(pMat->mtex[0]);
+        for (uint32_t t = 0; t < maxTex; ++t) {
+            if (pMat->mtex[t] && pMat->mtex[t]->uvname[0]) {
+                // get the CustomData layer for given uvname and correct type
+                const ElemBase *pLoop = getCustomDataLayerData(mesh->ldata, CD_MLOOPUV, pMat->mtex[t]->uvname);
+                if (pLoop) {
+                    texuv.insert(std::make_pair(t, dynamic_cast<const MLoopUV *>(pLoop)));
+                }
+            }
+        }
+        if (texuv.size()) {
+            matTexUvMappings.insert(std::make_pair(m, texuv));
+        }
+    }
+
     // collect texture coordinates, they're stored in a separate per-face buffer
     if (mesh->mtface || mesh->mloopuv) {
         if (mesh->totface > static_cast<int> ( mesh->mtface.size())) {
@@ -1035,8 +1057,17 @@ void BlenderImporter::ConvertMesh(const Scene& /*in*/, const Object* /*obj*/, co
         }
         for (std::vector<aiMesh*>::iterator it = temp->begin()+old; it != temp->end(); ++it) {
             ai_assert((*it)->mNumVertices && (*it)->mNumFaces);
-
-            (*it)->mTextureCoords[0] = new aiVector3D[(*it)->mNumVertices];
+            const auto itMatTexUvMapping = matTexUvMappings.find((*it)->mMaterialIndex);
+            if (itMatTexUvMapping == matTexUvMappings.end()) {
+                // default behaviour like before
+                (*it)->mTextureCoords[0] = new aiVector3D[(*it)->mNumVertices];
+            }
+            else {
+                // create texture coords for every mapped tex
+                for (uint32_t i = 0; i < itMatTexUvMapping->second.size(); ++i) {
+                    (*it)->mTextureCoords[i] = new aiVector3D[(*it)->mNumVertices];
+                }
+            }
             (*it)->mNumFaces = (*it)->mNumVertices = 0;
         }
 
@@ -1058,13 +1089,34 @@ void BlenderImporter::ConvertMesh(const Scene& /*in*/, const Object* /*obj*/, co
             aiMesh* const out = temp[ mat_num_to_mesh_idx[ v.mat_nr ] ];
             const aiFace& f = out->mFaces[out->mNumFaces++];
 
-            aiVector3D* vo = &out->mTextureCoords[0][out->mNumVertices];
-            for (unsigned int j = 0; j < f.mNumIndices; ++j,++vo,++out->mNumVertices) {
-                const MLoopUV& uv = mesh->mloopuv[v.loopstart + j];
-                vo->x = uv.uv[0];
-                vo->y = uv.uv[1];
+            const auto itMatTexUvMapping = matTexUvMappings.find(v.mat_nr);
+            if (itMatTexUvMapping == matTexUvMappings.end()) {
+                // old behavior
+                aiVector3D* vo = &out->mTextureCoords[0][out->mNumVertices];
+                for (unsigned int j = 0; j < f.mNumIndices; ++j, ++vo, ++out->mNumVertices) {
+                    const MLoopUV& uv = mesh->mloopuv[v.loopstart + j];
+                    vo->x = uv.uv[0];
+                    vo->y = uv.uv[1];
+                }
             }
-
+            else {
+                // create textureCoords for every mapped tex
+                for (uint32_t m = 0; m < itMatTexUvMapping->second.size(); ++m) {
+                    const MLoopUV *tm = itMatTexUvMapping->second[m];
+                    aiVector3D* vo = &out->mTextureCoords[m][out->mNumVertices];
+                    uint32_t j = 0;
+                    for (; j < f.mNumIndices; ++j, ++vo) {
+                        const MLoopUV& uv = tm[v.loopstart + j];
+                        vo->x = uv.uv[0];
+                        vo->y = uv.uv[1];
+                    }
+                    // only update written mNumVertices in last loop
+                    // TODO why must the numVertices be incremented here?
+                    if (m == itMatTexUvMapping->second.size() - 1) {
+                        out->mNumVertices += j;
+                    }
+                }
+            }
         }
     }
 
@@ -1154,7 +1206,7 @@ aiCamera* BlenderImporter::ConvertCamera(const Scene& /*in*/, const Object* obj,
     out->mUp = aiVector3D(0.f, 1.f, 0.f);
     out->mLookAt = aiVector3D(0.f, 0.f, -1.f);
     if (cam->sensor_x && cam->lens) {
-        out->mHorizontalFOV = std::atan2(cam->sensor_x,  2.f * cam->lens);
+        out->mHorizontalFOV = 2.f * std::atan2(cam->sensor_x,  2.f * cam->lens);
     }
     out->mClipPlaneNear = cam->clipsta;
     out->mClipPlaneFar = cam->clipend;

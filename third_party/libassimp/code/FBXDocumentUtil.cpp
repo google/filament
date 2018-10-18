@@ -2,7 +2,8 @@
 Open Asset Import Library (assimp)
 ----------------------------------------------------------------------
 
-Copyright (c) 2006-2017, assimp team
+Copyright (c) 2006-2018, assimp team
+
 
 All rights reserved.
 
@@ -78,7 +79,7 @@ void DOMError(const std::string& message, const Element* element /*= NULL*/)
 void DOMWarning(const std::string& message, const Token& token)
 {
     if(DefaultLogger::get()) {
-        DefaultLogger::get()->warn(Util::AddTokenText("FBX-DOM",message,&token));
+        ASSIMP_LOG_WARN(Util::AddTokenText("FBX-DOM",message,&token));
     }
 }
 
@@ -90,7 +91,7 @@ void DOMWarning(const std::string& message, const Element* element /*= NULL*/)
         return;
     }
     if(DefaultLogger::get()) {
-        DefaultLogger::get()->warn("FBX-DOM: " + message);
+        ASSIMP_LOG_WARN("FBX-DOM: " + message);
     }
 }
 
@@ -114,7 +115,7 @@ std::shared_ptr<const PropertyTable> GetPropertyTable(const Document& doc,
         }
     }
 
-    if(!Properties70) {
+    if(!Properties70 || !Properties70->Compound()) {
         if(!no_warn) {
             DOMWarning("property table (Properties70) not found",&element);
         }

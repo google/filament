@@ -2,7 +2,8 @@
 Open Asset Import Library (assimp)
 ----------------------------------------------------------------------
 
-Copyright (c) 2006-2017, assimp team
+Copyright (c) 2006-2018, assimp team
+
 
 All rights reserved.
 
@@ -44,10 +45,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <vector>
 #include <string>
 #include <map>
+#include <memory>
 #include <assimp/vector2.h>
 #include <assimp/vector3.h>
 #include <assimp/mesh.h>
-#include "IOStreamBuffer.h"
+#include <assimp/IOStreamBuffer.h>
 
 namespace Assimp {
 
@@ -145,7 +147,7 @@ private:
     //! Iterator to end position of buffer
     DataArrayIt m_DataItEnd;
     //! Pointer to model instance
-    ObjFile::Model *m_pModel;
+    std::unique_ptr<ObjFile::Model> m_pModel;
     //! Current line (for debugging)
     unsigned int m_uiLine;
     //! Helper buffer

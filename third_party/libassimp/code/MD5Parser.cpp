@@ -3,7 +3,8 @@
 Open Asset Import Library (assimp)
 ---------------------------------------------------------------------------
 
-Copyright (c) 2006-2017, assimp team
+Copyright (c) 2006-2018, assimp team
+
 
 
 All rights reserved.
@@ -48,9 +49,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // internal headers
 #include "MD5Loader.h"
 #include "MaterialSystem.h"
-#include "fast_atof.h"
-#include "ParsingUtils.h"
-#include "StringComparison.h"
+#include <assimp/fast_atof.h>
+#include <assimp/ParsingUtils.h>
+#include <assimp/StringComparison.h>
 #include <assimp/DefaultLogger.hpp>
 #include <assimp/mesh.h>
 
@@ -69,7 +70,7 @@ MD5Parser::MD5Parser(char* _buffer, unsigned int _fileSize )
     fileSize = _fileSize;
     lineNumber = 0;
 
-    DefaultLogger::get()->debug("MD5Parser begin");
+    ASSIMP_LOG_DEBUG("MD5Parser begin");
 
     // parse the file header
     ParseHeader();
@@ -87,7 +88,7 @@ MD5Parser::MD5Parser(char* _buffer, unsigned int _fileSize )
     if ( !DefaultLogger::isNullLogger())    {
         char szBuffer[128]; // should be sufficiently large
         ::ai_snprintf(szBuffer,128,"MD5Parser end. Parsed %i sections",(int)mSections.size());
-        DefaultLogger::get()->debug(szBuffer);
+        ASSIMP_LOG_DEBUG(szBuffer);
     }
 }
 
@@ -106,7 +107,7 @@ MD5Parser::MD5Parser(char* _buffer, unsigned int _fileSize )
 {
     char szBuffer[1024];
     ::sprintf(szBuffer,"[MD5] Line %u: %s",line,warn);
-    DefaultLogger::get()->warn(szBuffer);
+    ASSIMP_LOG_WARN(szBuffer);
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -129,7 +130,7 @@ void MD5Parser::ParseHeader()
     // FIX: can break the log length limit, so we need to be careful
     char* sz = buffer;
     while (!IsLineEnd( *buffer++));
-    DefaultLogger::get()->info(std::string(sz,std::min((uintptr_t)MAX_LOG_MESSAGE_LENGTH, (uintptr_t)(buffer-sz))));
+    ASSIMP_LOG_INFO(std::string(sz,std::min((uintptr_t)MAX_LOG_MESSAGE_LENGTH, (uintptr_t)(buffer-sz))));
     SkipSpacesAndLineEnd();
 }
 
@@ -242,7 +243,7 @@ bool MD5Parser::ParseSection(Section& out)
 // .MD5MESH parsing function
 MD5MeshParser::MD5MeshParser(SectionList& mSections)
 {
-    DefaultLogger::get()->debug("MD5MeshParser begin");
+    ASSIMP_LOG_DEBUG("MD5MeshParser begin");
 
     // now parse all sections
     for (SectionList::const_iterator iter =  mSections.begin(), iterEnd = mSections.end();iter != iterEnd;++iter){
@@ -353,14 +354,14 @@ MD5MeshParser::MD5MeshParser(SectionList& mSections)
             }
         }
     }
-    DefaultLogger::get()->debug("MD5MeshParser end");
+    ASSIMP_LOG_DEBUG("MD5MeshParser end");
 }
 
 // ------------------------------------------------------------------------------------------------
 // .MD5ANIM parsing function
 MD5AnimParser::MD5AnimParser(SectionList& mSections)
 {
-    DefaultLogger::get()->debug("MD5AnimParser begin");
+    ASSIMP_LOG_DEBUG("MD5AnimParser begin");
 
     fFrameRate = 24.0f;
     mNumAnimatedComponents = UINT_MAX;
@@ -444,14 +445,14 @@ MD5AnimParser::MD5AnimParser(SectionList& mSections)
             fast_atoreal_move<float>((*iter).mGlobalValue.c_str(),fFrameRate);
         }
     }
-    DefaultLogger::get()->debug("MD5AnimParser end");
+    ASSIMP_LOG_DEBUG("MD5AnimParser end");
 }
 
 // ------------------------------------------------------------------------------------------------
 // .MD5CAMERA parsing function
 MD5CameraParser::MD5CameraParser(SectionList& mSections)
 {
-    DefaultLogger::get()->debug("MD5CameraParser begin");
+    ASSIMP_LOG_DEBUG("MD5CameraParser begin");
     fFrameRate = 24.0f;
 
     for (SectionList::const_iterator iter =  mSections.begin(), iterEnd = mSections.end();iter != iterEnd;++iter) {
@@ -482,6 +483,6 @@ MD5CameraParser::MD5CameraParser(SectionList& mSections)
             }
         }
     }
-    DefaultLogger::get()->debug("MD5CameraParser end");
+    ASSIMP_LOG_DEBUG("MD5CameraParser end");
 }
 

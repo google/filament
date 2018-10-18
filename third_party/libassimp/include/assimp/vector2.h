@@ -3,7 +3,8 @@
 Open Asset Import Library (assimp)
 ---------------------------------------------------------------------------
 
-Copyright (c) 2006-2017, assimp team
+Copyright (c) 2006-2018, assimp team
+
 
 
 All rights reserved.
@@ -85,7 +86,6 @@ public:
     const aiVector2t& operator /= (TReal f);
 
     TReal operator[](unsigned int i) const;
-    TReal& operator[](unsigned int i);
 
     bool operator== (const aiVector2t& other) const;
     bool operator!= (const aiVector2t& other) const;
@@ -99,7 +99,7 @@ public:
     operator aiVector2t<TOther> () const;
 
     TReal x, y;
-} PACK_STRUCT;
+};
 
 typedef aiVector2t<ai_real> aiVector2D;
 

@@ -2,7 +2,8 @@
 Open Asset Import Library (assimp)
 ----------------------------------------------------------------------
 
-Copyright (c) 2006-2017, assimp team
+Copyright (c) 2006-2018, assimp team
+
 
 All rights reserved.
 
@@ -76,13 +77,12 @@ private:
         FaceVertex()
         : vp()
         , vn()
-        , vt()
-        , vc() {
+        , vt() {
             // empty
         }
 
         // one-based, 0 means: 'does not exist'
-        unsigned int vp, vn, vt, vc;
+        unsigned int vp, vn, vt;
     };
 
     struct Face {
@@ -105,66 +105,80 @@ private:
 private:
     std::string filename;
     const aiScene* const pScene;
-    std::vector<aiVector3D> vp, vn, vt;
+
+    struct vertexData {
+        aiVector3D vp;
+        aiColor3D vc; // OBJ does not support 4D color
+    };
+
+    std::vector<aiVector3D> vn, vt;
     std::vector<aiColor4D> vc;
+    std::vector<vertexData> vp;
+    bool useVc;
 
-    struct aiVectorCompare {
-        bool operator() (const aiVector3D& a, const aiVector3D& b) const {
-            if(a.x < b.x) return true;
-            if(a.x > b.x) return false;
-            if(a.y < b.y) return true;
-            if(a.y > b.y) return false;
-            if(a.z < b.z) return true;
+    struct vertexDataCompare {
+        bool operator() ( const vertexData& a, const vertexData& b ) const {
+            // position
+            if (a.vp.x < b.vp.x) return true;
+            if (a.vp.x > b.vp.x) return false;
+            if (a.vp.y < b.vp.y) return true;
+            if (a.vp.y > b.vp.y) return false;
+            if (a.vp.z < b.vp.z) return true;
+            if (a.vp.z > b.vp.z) return false;
+
+            // color
+            if (a.vc.r < b.vc.r) return true;
+            if (a.vc.r > b.vc.r) return false;
+            if (a.vc.g < b.vc.g) return true;
+            if (a.vc.g > b.vc.g) return false;
+            if (a.vc.b < b.vc.b) return true;
+            if (a.vc.b > b.vc.b) return false;
             return false;
         }
     };
 
-    struct aiColor4Compare {
-        bool operator() ( const aiColor4D& a, const aiColor4D& b ) const {
-            if ( a.r < b.r ) return true;
-            if ( a.r > b.r ) return false;
-            if ( a.g < b.g ) return true;
-            if ( a.g > b.g ) return false;
-            if ( a.b < b.b ) return true;
-            if ( a.b > b.b ) return false;
-            if ( a.a < b.a ) return true;
-            if ( a.a > b.a ) return false;
+    struct aiVectorCompare { 
+        bool operator() (const aiVector3D& a, const aiVector3D& b) const { 
+            if(a.x < b.x) return true; 
+            if(a.x > b.x) return false; 
+            if(a.y < b.y) return true; 
+            if(a.y > b.y) return false; 
+            if(a.z < b.z) return true; 
             return false;
         }
     };
 
-    class vecIndexMap {
+    template <class T, class Compare = std::less<T>>
+    class indexMap {
         int mNextIndex;
-        typedef std::map<aiVector3D, int, aiVectorCompare> dataType;
+        typedef std::map<T, int, Compare> dataType;
         dataType vecMap;
     
     public:
-        vecIndexMap()
+        indexMap()
         : mNextIndex(1) {
             // empty
         }
 
-        int getIndex(const aiVector3D& vec);
-        void getVectors( std::vector<aiVector3D>& vecs );
+        int getIndex(const T& key) {
+            typename dataType::iterator vertIt = vecMap.find(key);
+            // vertex already exists, so reference it
+            if(vertIt != vecMap.end()){
+                return vertIt->second;
+            }
+            return vecMap[key] = mNextIndex++;
+        };
+
+        void getKeys( std::vector<T>& keys ) {
+            keys.resize(vecMap.size());
+            for(typename dataType::iterator it = vecMap.begin(); it != vecMap.end(); ++it){
+                keys[it->second-1] = it->first;
+            }
+        };
     };
 
-    class colIndexMap {
-        int mNextIndex;
-        typedef std::map<aiColor4D, int, aiColor4Compare> dataType;
-        dataType colMap;
-
-    public:
-        colIndexMap()
-        : mNextIndex( 1 ) {
-            // empty
-        }
-
-        int getIndex( const aiColor4D& col );
-        void getColors( std::vector<aiColor4D> &colors );
-    };
-
-    vecIndexMap mVpMap, mVnMap, mVtMap;
-    colIndexMap mVcMap;
+    indexMap<aiVector3D, aiVectorCompare> mVnMap, mVtMap;
+    indexMap<vertexData, vertexDataCompare> mVpMap;
     std::vector<MeshInstance> mMeshes;
 
     // this endl() doesn't flush() the stream

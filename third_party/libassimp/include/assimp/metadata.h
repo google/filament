@@ -3,7 +3,8 @@
 Open Asset Import Library (assimp)
 ---------------------------------------------------------------------------
 
-Copyright (c) 2006-2017, assimp team
+Copyright (c) 2006-2018, assimp team
+
 
 
 All rights reserved.
@@ -66,6 +67,7 @@ typedef enum aiMetadataType {
     AI_DOUBLE     = 4,
     AI_AISTRING   = 5,
     AI_AIVECTOR3D = 6,
+    AI_META_MAX   = 7,
 
 #ifndef SWIG
     FORCE_32BIT = INT_MAX
@@ -127,11 +129,73 @@ struct aiMetadata {
     /** 
      *  @brief  The default constructor, set all members to zero by default.
      */
-    aiMetadata()
+    aiMetadata() AI_NO_EXCEPT
     : mNumProperties(0)
-    , mKeys(NULL)
-    , mValues(NULL) {
+    , mKeys(nullptr)
+    , mValues(nullptr) {
         // empty
+    }
+
+    aiMetadata( const aiMetadata &rhs )
+    : mNumProperties( rhs.mNumProperties )
+    , mKeys( nullptr )
+    , mValues( nullptr ) {
+        mKeys = new aiString[ mNumProperties ];
+        for ( size_t i = 0; i < static_cast<size_t>( mNumProperties ); ++i ) {
+            mKeys[ i ] = rhs.mKeys[ i ];
+        }
+        mValues = new aiMetadataEntry[ mNumProperties ];
+        for ( size_t i = 0; i < static_cast<size_t>(mNumProperties); ++i ) {
+            mValues[ i ].mType = rhs.mValues[ i ].mType;
+            switch ( rhs.mValues[ i ].mType ) {
+            case AI_BOOL:
+                mValues[ i ].mData = new bool;
+                ::memcpy( mValues[ i ].mData, rhs.mValues[ i ].mData, sizeof(bool) );
+                break;
+            case AI_INT32: {
+                int32_t v;
+                ::memcpy( &v, rhs.mValues[ i ].mData, sizeof( int32_t ) );
+                mValues[ i ].mData = new int32_t( v );
+                }
+                break;
+            case AI_UINT64: {
+                    uint64_t v;
+                    ::memcpy( &v, rhs.mValues[ i ].mData, sizeof( uint64_t ) );
+                    mValues[ i ].mData = new  uint64_t( v );
+                }
+                break;
+            case AI_FLOAT: {
+                    float v;
+                    ::memcpy( &v, rhs.mValues[ i ].mData, sizeof( float ) );
+                    mValues[ i ].mData = new float( v );
+                }
+                break;
+            case AI_DOUBLE: {
+                    double v;
+                    ::memcpy( &v, rhs.mValues[ i ].mData, sizeof( double ) );
+                    mValues[ i ].mData = new double( v );
+                }
+                break;
+            case AI_AISTRING: {
+                    aiString v;
+                    rhs.Get<aiString>( mKeys[ i ], v );
+                    mValues[ i ].mData = new aiString( v );
+                }
+                break;
+            case AI_AIVECTOR3D: {
+                    aiVector3D v;
+                    rhs.Get<aiVector3D>( mKeys[ i ], v );
+                    mValues[ i ].mData = new aiVector3D( v );
+                }
+                break;
+#ifndef SWIG
+            case FORCE_32BIT:
+#endif
+            default:
+                break;
+            }
+
+        }
     }
 
     /** 
@@ -139,32 +203,32 @@ struct aiMetadata {
      */
     ~aiMetadata() {
         delete [] mKeys;
-        mKeys = NULL;
+        mKeys = nullptr;
         if (mValues) {
             // Delete each metadata entry
             for (unsigned i=0; i<mNumProperties; ++i) {
                 void* data = mValues[i].mData;
                 switch (mValues[i].mType) {
                 case AI_BOOL:
-                    delete static_cast<bool*>(data);
+                    delete static_cast< bool* >( data );
                     break;
                 case AI_INT32:
-                    delete static_cast<int32_t*>(data);
+                    delete static_cast< int32_t* >( data );
                     break;
                 case AI_UINT64:
-                    delete static_cast<uint64_t*>(data);
+                    delete static_cast< uint64_t* >( data );
                     break;
                 case AI_FLOAT:
-                    delete static_cast<float*>(data);
+                    delete static_cast< float* >( data );
                     break;
                 case AI_DOUBLE:
-                    delete static_cast<double*>(data);
+                    delete static_cast< double* >( data );
                     break;
                 case AI_AISTRING:
-                    delete static_cast<aiString*>(data);
+                    delete static_cast< aiString* >( data );
                     break;
                 case AI_AIVECTOR3D:
-                    delete static_cast<aiVector3D*>(data);
+                    delete static_cast< aiVector3D* >( data );
                     break;
 #ifndef SWIG
                 case FORCE_32BIT:
@@ -176,7 +240,7 @@ struct aiMetadata {
 
             // Delete the metadata array
             delete [] mValues;
-            mValues = NULL;
+            mValues = nullptr;
         }
     }
 
@@ -207,8 +271,8 @@ struct aiMetadata {
     }
 
 	template<typename T>
-	inline void Add(const std::string& key, const T& value)
-	{
+	inline
+    void Add(const std::string& key, const T& value) {
 		aiString* new_keys = new aiString[mNumProperties + 1];
 		aiMetadataEntry* new_values = new aiMetadataEntry[mNumProperties + 1];
 
@@ -255,7 +319,7 @@ struct aiMetadata {
 
     template<typename T>
     inline 
-    bool Get( unsigned index, T& value ) {
+    bool Get( unsigned index, T& value ) const {
         // In range assertion
         if ( index >= mNumProperties ) {
             return false;
@@ -276,7 +340,7 @@ struct aiMetadata {
 
     template<typename T>
     inline 
-    bool Get( const aiString& key, T& value ) {
+    bool Get( const aiString& key, T& value ) const {
         // Search for the given key
         for ( unsigned int i = 0; i < mNumProperties; ++i ) {
             if ( mKeys[ i ] == key ) {
@@ -287,7 +351,8 @@ struct aiMetadata {
     }
 
     template<typename T>
-    inline bool Get( const std::string& key, T& value ) {
+    inline
+    bool Get( const std::string& key, T& value ) const {
         return Get(aiString(key), value);
     }
 
@@ -296,7 +361,8 @@ struct aiMetadata {
 	/// \param [out] pKey - pointer to the key value.
 	/// \param [out] pEntry - pointer to the entry: type and value.
 	/// \return false - if pIndex is out of range, else - true.
-	inline bool Get(size_t index, const aiString*& key, const aiMetadataEntry*& entry) {
+	inline
+    bool Get(size_t index, const aiString*& key, const aiMetadataEntry*& entry) const {
         if ( index >= mNumProperties ) {
             return false;
         }

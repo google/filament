@@ -2,7 +2,8 @@
 Open Asset Import Library (assimp)
 ----------------------------------------------------------------------
 
-Copyright (c) 2006-2017, assimp team
+Copyright (c) 2006-2018, assimp team
+
 
 All rights reserved.
 
@@ -47,7 +48,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "BlenderModifier.h"
 #include <assimp/SceneCombiner.h>
-#include "Subdivision.h"
+#include <assimp/Subdivision.h>
 #include <assimp/scene.h>
 #include <memory>
 
@@ -68,34 +69,6 @@ static const fpCreateModifier creators[] = {
 
         NULL // sentinel
 };
-
-// ------------------------------------------------------------------------------------------------
-// just testing out some new macros to simplify logging
-#define ASSIMP_LOG_WARN_F(string,...)\
-    DefaultLogger::get()->warn((Formatter::format(string),__VA_ARGS__))
-
-#define ASSIMP_LOG_ERROR_F(string,...)\
-    DefaultLogger::get()->error((Formatter::format(string),__VA_ARGS__))
-
-#define ASSIMP_LOG_DEBUG_F(string,...)\
-    DefaultLogger::get()->debug((Formatter::format(string),__VA_ARGS__))
-
-#define ASSIMP_LOG_INFO_F(string,...)\
-    DefaultLogger::get()->info((Formatter::format(string),__VA_ARGS__))
-
-
-#define ASSIMP_LOG_WARN(string)\
-    DefaultLogger::get()->warn(string)
-
-#define ASSIMP_LOG_ERROR(string)\
-    DefaultLogger::get()->error(string)
-
-#define ASSIMP_LOG_DEBUG(string)\
-    DefaultLogger::get()->debug(string)
-
-#define ASSIMP_LOG_INFO(string)\
-    DefaultLogger::get()->info(string)
-
 
 // ------------------------------------------------------------------------------------------------
 struct SharedModifierData : ElemBase

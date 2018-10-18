@@ -2,7 +2,8 @@
 Open Asset Import Library (assimp)
 ----------------------------------------------------------------------
 
-Copyright (c) 2006-2017, assimp team
+Copyright (c) 2006-2018, assimp team
+
 
 All rights reserved.
 
@@ -61,7 +62,7 @@ void ConvertListToStrings(const std::string& in, std::list<std::string>& out)
             while (*s != '\'') {
                 ++s;
                 if (*s == '\0') {
-                    DefaultLogger::get()->error("ConvertListToString: String list is ill-formatted");
+                    ASSIMP_LOG_ERROR("ConvertListToString: String list is ill-formatted");
                     return;
                 }
             }

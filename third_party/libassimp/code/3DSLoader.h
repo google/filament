@@ -3,7 +3,8 @@
 Open Asset Import Library (assimp)
 ----------------------------------------------------------------------
 
-Copyright (c) 2006-2017, assimp team
+Copyright (c) 2006-2018, assimp team
+
 
 All rights reserved.
 
@@ -46,13 +47,13 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef AI_3DSIMPORTER_H_INC
 #define AI_3DSIMPORTER_H_INC
 
-#include "BaseImporter.h"
+#include <assimp/BaseImporter.h>
 #include <assimp/types.h>
 
 #ifndef ASSIMP_BUILD_NO_3DS_IMPORTER
 
 #include "3DSHelper.h"
-#include "StreamReader.h"
+#include <assimp/StreamReader.h>
 
 struct aiNode;
 

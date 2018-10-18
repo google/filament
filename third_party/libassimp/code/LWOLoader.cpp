@@ -3,7 +3,8 @@
 Open Asset Import Library (assimp)
 ---------------------------------------------------------------------------
 
-Copyright (c) 2006-2017, assimp team
+Copyright (c) 2006-2018, assimp team
+
 
 
 All rights reserved.
@@ -49,9 +50,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 // internal headers
 #include "LWOLoader.h"
-#include "StringComparison.h"
-#include "SGSpatialSort.h"
-#include "ByteSwapper.h"
+#include <assimp/StringComparison.h>
+#include <assimp/SGSpatialSort.h>
+#include <assimp/ByteSwapper.h>
 #include "ProcessHelper.h"
 #include "ConvertToLHProcess.h"
 #include <assimp/IOSystem.hpp>
@@ -187,7 +188,7 @@ void LWOImporter::InternReadFile( const std::string& pFile,
 
     // old lightwave file format (prior to v6)
     if (AI_LWO_FOURCC_LWOB == fileType) {
-        DefaultLogger::get()->info("LWO file format: LWOB (<= LightWave 5.5)");
+        ASSIMP_LOG_INFO("LWO file format: LWOB (<= LightWave 5.5)");
 
         mIsLWO2 = false;
         mIsLXOB = false;
@@ -196,12 +197,12 @@ void LWOImporter::InternReadFile( const std::string& pFile,
     // New lightwave format
     else if (AI_LWO_FOURCC_LWO2 == fileType)    {
         mIsLXOB = false;
-        DefaultLogger::get()->info("LWO file format: LWO2 (>= LightWave 6)");
+        ASSIMP_LOG_INFO("LWO file format: LWO2 (>= LightWave 6)");
     }
     // MODO file format
     else if (AI_LWO_FOURCC_LXOB == fileType)    {
         mIsLXOB = true;
-        DefaultLogger::get()->info("LWO file format: LXOB (Modo)");
+        ASSIMP_LOG_INFO("LWO file format: LXOB (Modo)");
     }
     // we don't know this format
     else
@@ -270,7 +271,7 @@ void LWOImporter::InternReadFile( const std::string& pFile,
                 unsigned int idx = (*it).surfaceIndex;
                 if (idx >= mTags->size())
                 {
-                    DefaultLogger::get()->warn("LWO: Invalid face surface index");
+                    ASSIMP_LOG_WARN("LWO: Invalid face surface index");
                     idx = UINT_MAX;
                 }
                 if(UINT_MAX == idx || UINT_MAX == (idx = _mMapping[idx]))   {
@@ -422,7 +423,9 @@ void LWOImporter::InternReadFile( const std::string& pFile,
                     // So we use a separate implementation.
                     ComputeNormals(mesh,smoothingGroups,_mSurfaces[i]);
                 }
-                else DefaultLogger::get()->debug("LWO2: No need to compute normals, they're already there");
+                else {
+                    ASSIMP_LOG_DEBUG("LWO2: No need to compute normals, they're already there");
+                }
                 ++p;
             }
         }
@@ -431,7 +434,6 @@ void LWOImporter::InternReadFile( const std::string& pFile,
         unsigned int num = static_cast<unsigned int>(apcMeshes.size() - meshStart);
         if (layer.mName != "<LWODefault>" || num > 0) {
             aiNode* pcNode = new aiNode();
-            apcNodes[layer.mIndex] = pcNode;
             pcNode->mName.Set(layer.mName);
             pcNode->mParent = (aiNode*)&layer;
             pcNode->mNumMeshes = num;
@@ -441,6 +443,7 @@ void LWOImporter::InternReadFile( const std::string& pFile,
                 for (unsigned int p = 0; p < pcNode->mNumMeshes;++p)
                     pcNode->mMeshes[p] = p + meshStart;
             }
+            apcNodes[layer.mIndex] = pcNode;
         }
     }
 
@@ -583,7 +586,7 @@ void LWOImporter::GenerateNodeGraph(std::map<uint16_t,aiNode*>& apcNodes)
     //Set parent of all children, inserting pivots
     //std::cout << "Set parent of all children" << std::endl;
     std::map<uint16_t, aiNode*> mapPivot;
-    for (std::map<uint16_t,aiNode*>::iterator itapcNodes = apcNodes.begin(); itapcNodes != apcNodes.end(); ++itapcNodes) {
+    for (auto itapcNodes = apcNodes.begin(); itapcNodes != apcNodes.end(); ++itapcNodes) {
 
         //Get the parent index
         LWO::Layer* nodeLayer = (LWO::Layer*)(itapcNodes->second->mParent);
@@ -592,7 +595,6 @@ void LWOImporter::GenerateNodeGraph(std::map<uint16_t,aiNode*>& apcNodes)
         //Create pivot node, store it into the pivot map, and set the parent as the pivot
         aiNode* pivotNode = new aiNode();
         pivotNode->mName.Set("Pivot-"+std::string(itapcNodes->second->mName.data));
-        mapPivot[-(itapcNodes->first+2)] = pivotNode;
         itapcNodes->second->mParent = pivotNode;
 
         //Look for the parent node to attach the pivot to
@@ -610,18 +612,19 @@ void LWOImporter::GenerateNodeGraph(std::map<uint16_t,aiNode*>& apcNodes)
         pivotNode->mTransformation.a4 = nodeLayer->mPivot.x;
         pivotNode->mTransformation.b4 = nodeLayer->mPivot.y;
         pivotNode->mTransformation.c4 = nodeLayer->mPivot.z;
+        mapPivot[-(itapcNodes->first+2)] = pivotNode;
     }
 
     //Merge pivot map into node map
     //std::cout << "Merge pivot map into node map" << std::endl;
-    for (std::map<uint16_t, aiNode*>::iterator itMapPivot = mapPivot.begin(); itMapPivot != mapPivot.end(); ++itMapPivot) {
+    for (auto itMapPivot = mapPivot.begin(); itMapPivot != mapPivot.end(); ++itMapPivot) {
         apcNodes[itMapPivot->first] = itMapPivot->second;
     }
 
     //Set children of all parents
     apcNodes[-1] = root;
-    for (std::map<uint16_t,aiNode*>::iterator itMapParentNodes = apcNodes.begin(); itMapParentNodes != apcNodes.end(); ++itMapParentNodes) {
-        for (std::map<uint16_t,aiNode*>::iterator itMapChildNodes = apcNodes.begin(); itMapChildNodes != apcNodes.end(); ++itMapChildNodes) {
+    for (auto itMapParentNodes = apcNodes.begin(); itMapParentNodes != apcNodes.end(); ++itMapParentNodes) {
+        for (auto itMapChildNodes = apcNodes.begin(); itMapChildNodes != apcNodes.end(); ++itMapChildNodes) {
             if ((itMapParentNodes->first != itMapChildNodes->first) && (itMapParentNodes->second == itMapChildNodes->second->mParent)) {
                 ++(itMapParentNodes->second->mNumChildren);
             }
@@ -629,7 +632,7 @@ void LWOImporter::GenerateNodeGraph(std::map<uint16_t,aiNode*>& apcNodes)
         if (itMapParentNodes->second->mNumChildren) {
             itMapParentNodes->second->mChildren = new aiNode* [ itMapParentNodes->second->mNumChildren ];
             uint16_t p = 0;
-            for (std::map<uint16_t,aiNode*>::iterator itMapChildNodes = apcNodes.begin(); itMapChildNodes != apcNodes.end(); ++itMapChildNodes) {
+            for (auto itMapChildNodes = apcNodes.begin(); itMapChildNodes != apcNodes.end(); ++itMapChildNodes) {
                 if ((itMapParentNodes->first != itMapChildNodes->first) && (itMapParentNodes->second == itMapChildNodes->second->mParent)) {
                     itMapParentNodes->second->mChildren[p++] = itMapChildNodes->second;
                 }
@@ -685,13 +688,13 @@ void LWOImporter::ResolveClips()
         if (Clip::REF == clip.type) {
 
             if (clip.clipRef >= mClips.size())  {
-                DefaultLogger::get()->error("LWO2: Clip referrer index is out of range");
+                ASSIMP_LOG_ERROR("LWO2: Clip referrer index is out of range");
                 clip.clipRef = 0;
             }
 
             Clip& dest = mClips[clip.clipRef];
             if (Clip::REF == dest.type) {
-                DefaultLogger::get()->error("LWO2: Clip references another clip reference");
+                ASSIMP_LOG_ERROR("LWO2: Clip references another clip reference");
                 clip.type = Clip::UNSUPPORTED;
             }
 
@@ -710,7 +713,7 @@ void LWOImporter::AdjustTexturePath(std::string& out)
     if (!mIsLWO2 && ::strstr(out.c_str(), "(sequence)"))    {
 
         // remove the (sequence) and append 000
-        DefaultLogger::get()->info("LWOB: Sequence of animated texture found. It will be ignored");
+        ASSIMP_LOG_INFO("LWOB: Sequence of animated texture found. It will be ignored");
         out = out.substr(0,out.length()-10) + "000";
     }
 
@@ -785,10 +788,10 @@ void LWOImporter::LoadLWO2Polygons(unsigned int length)
     {
         // read unsupported stuff too (although we won't process it)
     case  AI_LWO_MBAL:
-        DefaultLogger::get()->warn("LWO2: Encountered unsupported primitive chunk (METABALL)");
+        ASSIMP_LOG_WARN("LWO2: Encountered unsupported primitive chunk (METABALL)");
         break;
     case  AI_LWO_CURV:
-        DefaultLogger::get()->warn("LWO2: Encountered unsupported primitive chunk (SPLINE)");;
+        ASSIMP_LOG_WARN("LWO2: Encountered unsupported primitive chunk (SPLINE)");;
         break;
 
         // These are ok with no restrictions
@@ -800,7 +803,7 @@ void LWOImporter::LoadLWO2Polygons(unsigned int length)
     default:
 
         // hm!? wtf is this? ok ...
-        DefaultLogger::get()->error("LWO2: Ignoring unknown polygon type.");
+        ASSIMP_LOG_ERROR("LWO2: Ignoring unknown polygon type.");
         break;
     }
 
@@ -863,7 +866,7 @@ void LWOImporter::CopyFaceIndicesLWO2(FaceList::iterator& it,
                 face.mIndices[i] = ReadVSizedIntLWO2((uint8_t*&)cursor) + mCurLayer->mPointIDXOfs;
                 if(face.mIndices[i] > mCurLayer->mTempPoints.size())
                 {
-                    DefaultLogger::get()->warn("LWO2: Failure evaluating face record, index is out of range");
+                    ASSIMP_LOG_WARN("LWO2: Failure evaluating face record, index is out of range");
                     face.mIndices[i] = (unsigned int)mCurLayer->mTempPoints.size()-1;
                 }
             }
@@ -890,7 +893,7 @@ void LWOImporter::LoadLWO2PolygonTags(unsigned int length)
         unsigned int j = GetU2();
 
         if (i >= mCurLayer->mFaces.size())  {
-            DefaultLogger::get()->warn("LWO2: face index in PTAG is out of range");
+            ASSIMP_LOG_WARN("LWO2: face index in PTAG is out of range");
             continue;
         }
 
@@ -913,7 +916,7 @@ VMapEntry* FindEntry(std::vector< T >& list,const std::string& name, bool perPol
     for (auto & elem : list)   {
         if (elem.name == name) {
             if (!perPoly)   {
-                DefaultLogger::get()->warn("LWO2: Found two VMAP sections with equal names");
+                ASSIMP_LOG_WARN("LWO2: Found two VMAP sections with equal names");
             }
             return &elem;
         }
@@ -998,7 +1001,7 @@ void LWOImporter::LoadLWO2VertexMap(unsigned int length, bool perPoly)
     {
     case AI_LWO_TXUV:
         if (dims != 2)  {
-            DefaultLogger::get()->warn("LWO2: Skipping UV channel \'"
+            ASSIMP_LOG_WARN("LWO2: Skipping UV channel \'"
             + name + "\' with !2 components");
             return;
         }
@@ -1007,7 +1010,7 @@ void LWOImporter::LoadLWO2VertexMap(unsigned int length, bool perPoly)
     case AI_LWO_WGHT:
     case AI_LWO_MNVW:
         if (dims != 1)  {
-            DefaultLogger::get()->warn("LWO2: Skipping Weight Channel \'"
+            ASSIMP_LOG_WARN("LWO2: Skipping Weight Channel \'"
             + name + "\' with !1 components");
             return;
         }
@@ -1017,7 +1020,7 @@ void LWOImporter::LoadLWO2VertexMap(unsigned int length, bool perPoly)
     case AI_LWO_RGB:
     case AI_LWO_RGBA:
         if (dims != 3 && dims != 4) {
-            DefaultLogger::get()->warn("LWO2: Skipping Color Map \'"
+            ASSIMP_LOG_WARN("LWO2: Skipping Color Map \'"
             + name + "\' with a dimension > 4 or < 3");
             return;
         }
@@ -1032,7 +1035,7 @@ void LWOImporter::LoadLWO2VertexMap(unsigned int length, bool perPoly)
         if (name != "vert_normals" || dims != 3 || mCurLayer->mNormals.name.length())
             return;
 
-        DefaultLogger::get()->info("Processing non-standard extension: MODO VMAP.NORM.vert_normals");
+        ASSIMP_LOG_INFO("Processing non-standard extension: MODO VMAP.NORM.vert_normals");
 
         mCurLayer->mNormals.name = name;
         base = & mCurLayer->mNormals;
@@ -1047,7 +1050,7 @@ void LWOImporter::LoadLWO2VertexMap(unsigned int length, bool perPoly)
         if (name == "APS.Level") {
             // XXX handle this (seems to be subdivision-related).
         }
-        DefaultLogger::get()->warn("LWO2: Skipping unknown VMAP/VMAD channel \'" + name + "\'");
+        ASSIMP_LOG_WARN_F("LWO2: Skipping unknown VMAP/VMAD channel \'", name, "\'");
         return;
     };
     base->Allocate((unsigned int)mCurLayer->mTempPoints.size());
@@ -1067,7 +1070,7 @@ void LWOImporter::LoadLWO2VertexMap(unsigned int length, bool perPoly)
 
         unsigned int idx = ReadVSizedIntLWO2(mFileBuffer) + mCurLayer->mPointIDXOfs;
         if (idx >= numPoints)   {
-            DefaultLogger::get()->warn("LWO2: Failure evaluating VMAP/VMAD entry \'" + name + "\', vertex index is out of range");
+            ASSIMP_LOG_WARN_F("LWO2: Failure evaluating VMAP/VMAD entry \'", name, "\', vertex index is out of range");
             mFileBuffer += base->dims<<2u;
             continue;
         }
@@ -1077,7 +1080,7 @@ void LWOImporter::LoadLWO2VertexMap(unsigned int length, bool perPoly)
                 // we have already a VMAP entry for this vertex - thus
                 // we need to duplicate the corresponding polygon.
                 if (polyIdx >= numFaces)    {
-                    DefaultLogger::get()->warn("LWO2: Failure evaluating VMAD entry \'" + name + "\', polygon index is out of range");
+                    ASSIMP_LOG_WARN_F("LWO2: Failure evaluating VMAD entry \'", name, "\', polygon index is out of range");
                     mFileBuffer += base->dims<<2u;
                     continue;
                 }
@@ -1118,7 +1121,7 @@ void LWOImporter::LoadLWO2VertexMap(unsigned int length, bool perPoly)
                     CreateNewEntry(mCurLayer->mNormals, srcIdx );
                 }
                 if (!had) {
-                    DefaultLogger::get()->warn("LWO2: Failure evaluating VMAD entry \'" + name + "\', vertex index wasn't found in that polygon");
+                    ASSIMP_LOG_WARN_F("LWO2: Failure evaluating VMAD entry \'", name, "\', vertex index wasn't found in that polygon");
                     ai_assert(had);
                 }
             }
@@ -1179,11 +1182,11 @@ void LWOImporter::LoadLWO2Clip(unsigned int length)
         break;
 
     case AI_LWO_STCC:
-        DefaultLogger::get()->warn("LWO2: Color shifted images are not supported");
+        ASSIMP_LOG_WARN("LWO2: Color shifted images are not supported");
         break;
 
     case AI_LWO_ANIM:
-        DefaultLogger::get()->warn("LWO2: Animated textures are not supported");
+        ASSIMP_LOG_WARN("LWO2: Animated textures are not supported");
         break;
 
     case AI_LWO_XREF:
@@ -1200,7 +1203,7 @@ void LWOImporter::LoadLWO2Clip(unsigned int length)
         break;
 
     default:
-        DefaultLogger::get()->warn("LWO2: Encountered unknown CLIP subchunk");
+        ASSIMP_LOG_WARN("LWO2: Encountered unknown CLIP sub-chunk");
     }
 }
 
@@ -1281,7 +1284,7 @@ void LWOImporter::LoadLWO2Envelope(unsigned int length)
             {
                 AI_LWO_VALIDATE_CHUNK_LENGTH(head.length,SPAN,4);
                 if (envelope.keys.size()<2)
-                    DefaultLogger::get()->warn("LWO2: Unexpected SPAN chunk");
+                    ASSIMP_LOG_WARN("LWO2: Unexpected SPAN chunk");
                 else {
                     LWO::Key& key = envelope.keys.back();
                     switch (GetU4())
@@ -1299,7 +1302,7 @@ void LWOImporter::LoadLWO2Envelope(unsigned int length)
                         case AI_LWO_BEZ2:
                             key.inter = LWO::IT_BEZ2;break;
                         default:
-                            DefaultLogger::get()->warn("LWO2: Unknown interval interpolation mode");
+                            ASSIMP_LOG_WARN("LWO2: Unknown interval interpolation mode");
                     };
 
                     // todo ... read params
@@ -1308,7 +1311,8 @@ void LWOImporter::LoadLWO2Envelope(unsigned int length)
             }
 
         default:
-            DefaultLogger::get()->warn("LWO2: Encountered unknown ENVL subchunk");
+            ASSIMP_LOG_WARN("LWO2: Encountered unknown ENVL subchunk");
+            break;
         }
         // regardless how much we did actually read, go to the next chunk
         mFileBuffer = next;
@@ -1407,7 +1411,7 @@ void LWOImporter::LoadLWO2File()
         case AI_LWO_VMAD:
             if (mCurLayer->mFaces.empty())
             {
-                DefaultLogger::get()->warn("LWO2: Unexpected VMAD chunk");
+                ASSIMP_LOG_WARN("LWO2: Unexpected VMAD chunk");
                 break;
             }
             // --- intentionally no break here
@@ -1417,7 +1421,7 @@ void LWOImporter::LoadLWO2File()
                     break;
 
                 if (mCurLayer->mTempPoints.empty())
-                    DefaultLogger::get()->warn("LWO2: Unexpected VMAP chunk");
+                    ASSIMP_LOG_WARN("LWO2: Unexpected VMAP chunk");
                 else LoadLWO2VertexMap(head.length,head.type == AI_LWO_VMAD);
                 break;
             }
@@ -1438,17 +1442,21 @@ void LWOImporter::LoadLWO2File()
                 if (skip)
                     break;
 
-                if (mCurLayer->mFaces.empty())
-                    DefaultLogger::get()->warn("LWO2: Unexpected PTAG");
-                else LoadLWO2PolygonTags(head.length);
+                if (mCurLayer->mFaces.empty()) {
+                    ASSIMP_LOG_WARN("LWO2: Unexpected PTAG");
+                } else {
+                    LoadLWO2PolygonTags(head.length);
+                }
                 break;
             }
             // list of tags
         case AI_LWO_TAGS:
             {
-                if (!mTags->empty())
-                    DefaultLogger::get()->warn("LWO2: SRFS chunk encountered twice");
-                else LoadLWOTags(head.length);
+                if (!mTags->empty()) {
+                    ASSIMP_LOG_WARN("LWO2: SRFS chunk encountered twice");
+                }   else {
+                    LoadLWOTags(head.length);
+                }
                 break;
             }
 

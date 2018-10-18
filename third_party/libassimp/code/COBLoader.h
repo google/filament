@@ -2,7 +2,8 @@
 Open Asset Import Library (assimp)
 ----------------------------------------------------------------------
 
-Copyright (c) 2006-2017, assimp team
+Copyright (c) 2006-2018, assimp team
+
 
 All rights reserved.
 
@@ -45,8 +46,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef INCLUDED_AI_COB_LOADER_H
 #define INCLUDED_AI_COB_LOADER_H
 
-#include "BaseImporter.h"
-#include "StreamReader.h"
+#include <assimp/BaseImporter.h>
+#include <assimp/StreamReader.h>
 
 struct aiNode;
 
@@ -76,10 +77,7 @@ class COBImporter : public BaseImporter
 public:
     COBImporter();
     ~COBImporter();
-
-
-public:
-
+    
     // --------------------
     bool CanRead( const std::string& pFile, IOSystem* pIOHandler,
         bool checkSig) const;
@@ -114,15 +112,11 @@ private:
      *  @param stream Stream to read from.  */
     void ReadBinaryFile(COB::Scene& out, StreamReaderLE* stream);
 
-
-private:
-
     // Conversion to Assimp output format
 
     aiNode* BuildNodes(const COB::Node& root,const COB::Scene& scin,aiScene* fill);
 
 private:
-
     // ASCII file support
 
     void UnsupportedChunk_Ascii(LineSplitter& splitter, const COB::ChunkInfo& nfo, const char* name);
@@ -139,19 +133,6 @@ private:
     void ReadLght_Ascii(COB::Scene& out, LineSplitter& splitter, const COB::ChunkInfo& nfo);
     void ReadUnit_Ascii(COB::Scene& out, LineSplitter& splitter, const COB::ChunkInfo& nfo);
     void ReadChan_Ascii(COB::Scene& out, LineSplitter& splitter, const COB::ChunkInfo& nfo);
-
-
-    // ASCII file logging stuff to add proper line numbers to messages
-
-    static void LogWarn_Ascii (const LineSplitter& splitter, const Formatter::format& message);
-    static void LogError_Ascii(const LineSplitter& splitter, const Formatter::format& message);
-    static void LogInfo_Ascii (const LineSplitter& splitter, const Formatter::format& message);
-    static void LogDebug_Ascii(const LineSplitter& splitter, const Formatter::format& message);
-
-    static void LogWarn_Ascii  (const Formatter::format& message);
-    static void LogError_Ascii (const Formatter::format& message);
-    static void LogInfo_Ascii  (const Formatter::format& message);
-    static void LogDebug_Ascii (const Formatter::format& message);
 
 
     // Binary file support
