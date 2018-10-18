@@ -17,6 +17,6 @@ source `dirname $0`/../common/build-common.sh
 
 pushd `dirname $0`/../.. > /dev/null
 
-yes | \     # build.sh prompts the user to download Apple's iOS toolchain
-    ./build.sh -p ios -c $RUN_TESTS $GENERATE_ARCHIVES $BUILD_DEBUG $BUILD_RELEASE
+# build.sh prompts the user to download Apple's iOS toolchain
+yes | ./build.sh -p ios -c $RUN_TESTS $GENERATE_ARCHIVES $BUILD_DEBUG $BUILD_RELEASE
 
