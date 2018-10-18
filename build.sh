@@ -398,6 +398,14 @@ function build_ios_target {
 
     ${BUILD_COMMAND} install
 
+    if [ -d "../ios-${LC_TARGET}/filament" ]; then
+        if [ "$ISSUE_ARCHIVES" == "true" ]; then
+            echo "Generating out/filament-${LC_TARGET}-ios.tgz..."
+            cd ../ios-${LC_TARGET}
+            tar -czvf ../filament-${LC_TARGET}-ios.tgz filament
+        fi
+    fi
+
     cd ../..
 }
 
