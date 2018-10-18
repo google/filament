@@ -15,6 +15,8 @@ wombat".
 var wombat = new Wombat();
 ```
 
+Usage:
+./build.py [serve|help|<output_folder>]
 """
 
 import os
@@ -26,13 +28,17 @@ ROOT_DIR = '../../../'
 OUTPUT_DIR = ROOT_DIR + 'docs/webgl/'
 SERVER_DIR = OUTPUT_DIR + '..'
 BUILD_DIR = ROOT_DIR + 'out/cmake-webgl-release/'
+HOST_BUILD_DIR = ROOT_DIR + 'out/cmake-release/'
+MATC_EXEC = HOST_BUILD_DIR + 'tools/matc/matc'
+CMGEN_EXEC = HOST_BUILD_DIR + 'tools/cmgen/cmgen'
 EXEC_NAME = os.path.basename(sys.argv[0])
 SCRIPT_NAME = os.path.basename(__file__)
+
 PREAMBLE = """
 ## Literate programming
 
 The markdown source for this tutorial is not only used to generate this
-website, it's also used to generate the JavaScript for the above demo.
+web page, it's also used to generate the JavaScript for the above demo.
 We use a small Python script for weaving (generating HTML) and tangling
 (generating JS). In the code samples, you'll often see
 `// TODO: <some task>`. These are special markers that get replaced by
@@ -44,10 +50,11 @@ if EXEC_NAME == SCRIPT_NAME and SCRIPT_DIR != CURRENT_DIR:
     relative_script_path = os.path.dirname(__file__)
     quit(f"Please run script from {relative_script_path}")
 
+import jsbeautifier
 import mistletoe
+import pygments
 import re
 import shutil
-import jsbeautifier
 
 from itertools import chain
 from mistletoe import HTMLRenderer, BaseRenderer
@@ -174,11 +181,13 @@ def tangle(name):
     with open(outfile, 'w') as fout:
         fout.write(rendered)
 
-def copy_demo_filamat(srcname, dstname):
-    matsrc = 'samples/web/public/material'
-    matsrc = os.path.join(BUILD_DIR, matsrc, srcname + '.filamat')
-    matdst = os.path.join(OUTPUT_DIR, dstname + '.filamat')
-    shutil.copyfile(matsrc, matdst)
+def build_filamat(name):
+    matsrc = name + '.mat'
+    matdst = os.path.join(OUTPUT_DIR, name + '.filamat')
+    flags = '-O -a opengl -p mobile'
+    retval = os.system(f"{MATC_EXEC} {flags} -o {matdst} {matsrc}")
+    if retval != 0:
+        exit(retval)
 
 def copy_built_file(src):
     src = os.path.join(BUILD_DIR, src)
@@ -203,17 +212,30 @@ def spawn_local_server():
         httpd.serve_forever()
 
 if __name__ == "__main__":
+
+    run_server = False
+
+    if 'help' in sys.argv:
+        print(__doc__)
+        quit()
+    elif 'serve' in sys.argv:
+        run_server = True
+    elif len(sys.argv) > 1:
+        OUTPUT_DIR = sys.argv[1]
+
     for name in ["triangle", "redball"]:
         weave(name)
         tangle(name)
         generate_demo_html(name)
+
     copy_src_file('libs/filamentjs/docs/main.css')
     copy_src_file('third_party/gl-matrix/gl-matrix-min.js')
     copy_built_file('libs/filamentjs/filament.js')
     copy_built_file('libs/filamentjs/filament.wasm')
     copy_built_file('samples/web/public/pillars_2k/pillars_2k_skybox.ktx')
     copy_built_file('samples/web/public/pillars_2k/pillars_2k_ibl.ktx')
-    copy_demo_filamat('bakedColor', 'triangle')
-    copy_demo_filamat('sandboxLit', 'plastic')
-    if len(sys.argv) > 1 and sys.argv[1] == 'serve':
+    build_filamat('triangle')
+    build_filamat('plastic')
+
+    if run_server:
         spawn_local_server()

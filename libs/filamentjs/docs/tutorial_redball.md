@@ -1,9 +1,70 @@
-## Create materials and textures
+This tutorial will create the above demo, introducing you to materials and textures.
 
-TODO: Describe how to use `matc` and `cmgen` to create `plastic.filamat` and the two `pillars_2k`
-KTX files.
+You'll need to use a couple command-line tools: `matc` and `cmgen`. You can find these in the
+appropriate [Filament release](//github.com/google/filament/releases). You should choose the
+archive that corresponds to your development machine rather than the one for web.
 
-## Start your project
+## Define plastic material
+
+The `matc` tool consumes a text file containing a high-level description of a PBR material, and
+produces a binary material package that contains shader code and associated metadata. For more
+information, see the official document describing the [Filament Material System]().
+
+Let's try out `matc`. Create the following file in your favorite text editor and call it
+`plastic.mat`.
+
+```text
+material {
+    name : Lit,
+    shadingModel : lit,
+    parameters : [
+        { type : float3, name : baseColor },
+        { type : float,  name : roughness },
+        { type : float,  name : clearCoat },
+        { type : float,  name : clearCoatRoughness }
+    ],
+}
+
+fragment {
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+        material.baseColor.rgb = materialParams.baseColor;
+        material.roughness = materialParams.roughness;
+        material.clearCoat = materialParams.clearCoat;
+        material.clearCoatRoughness = materialParams.clearCoatRoughness;
+    }
+}
+```
+
+Next, invoke `matc` as follows.
+
+```bash
+matc -O -a opengl -p mobile -o plastic.filamat plastic.mat
+```
+
+You should now have a material archive in your working directory, which we'll use later in the
+tutorial.
+
+## Bake environment map
+
+Next we'll use Filament's `cmgen` tool to consume a HDR environment map in latlong format, and
+produce two cubemap files: a mipmapped IBL and a blurry skybox that we'll use for the background.
+
+[pillars_2k.hdr]:
+//github.com/google/filament/blob/master/third_party/environments/pillars_2k.hdr
+
+First, download [pillars_2k.hdr], then invoke the following command in your terminal.
+
+```bash
+cmgen -x . --format=ktx --size=256 --extract-blur=0.1 pillars_2k.hdr
+```
+
+The should now have a `pillars_2k` folder containing a couple KTX files for the IBL and skybox, as
+well as a text file (`sh.txt`) with spherical harmonics coefficients. Move the KTX files into your
+project folder. You can discard `sh.txt` because the IBL KTX file contains these coefficients in
+its metadata.
+
+## Create HTML and JavaScript
 
 Create a text file called `redball.html` and fill it with the same HTML you used in the [previous
 tutorial](tutorial_triangle.html) but change the last script tag from `triangle.js` to
@@ -91,7 +152,6 @@ const matinstance = material.createInstance();
 const red = [0.8, 0.0, 0.0];
 matinstance.setColorParameter("baseColor", Filament.RgbType.sRGB, red);
 matinstance.setFloatParameter("roughness", 0.5);
-matinstance.setFloatParameter("reflectance", 0.5);
 matinstance.setFloatParameter("clearCoat", 1.0);
 matinstance.setFloatParameter("clearCoatRoughness", 0.3);
 ```
@@ -146,10 +206,11 @@ At this point, the app is rendering a sphere, but it is black so it doesn't show
 the sphere is there, you can try changing the background color to blue via `setClearColor`, like we
 did in the first tutorial.
 
-The next step is to add some lighting. We'll be creating two types of light sources: a directional
-light source that represents the sun, and an image-based light (IBL) defined by one of the KTX files
-we built at the start of the demo. First, replace the **create sunlight** todo with the following
-snippet.
+## Add lighting
+
+We'll be creating two types of light sources: a directional light source that represents the sun,
+and an image-based light (IBL) defined by one of the KTX files we built at the start of the demo.
+First, replace the **create sunlight** todo with the following snippet.
 
 ```js {fragment="create sunlight"}
 const sunlight = Filament.EntityManager.get().create();
@@ -217,6 +278,8 @@ indirectLight.setIntensity(50000);
 scene.setIndirectLight(indirectLight);
 ```
 
+## Add background
+
 At the point you can run the demo and you should see a red plastic ball against a black background.
 Without a skybox, the reflections on the ball aren't truly representative of the its surroundings.
 Here's one way to create a texture for the skybox:
@@ -250,4 +313,5 @@ const skybox = Filament.Skybox.Builder().environment(skytex).build(engine);
 scene.setSkybox(skybox);
 ```
 
-This completes the tutorial; the completed JavaScript is available [here](tutorial_redball.js).
+That's it, we now have a shiny red ball floating in an environment! The complete JavaScript
+file is available [here](tutorial_redball.js).
