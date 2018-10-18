@@ -134,9 +134,8 @@ struct BufferDescriptor {
         size_t bufferLength = bd->size;
         return val(typed_memory_view(bufferLength, byteBuffer));
     }
-    // In order to match its JavaScript counterpart, the Buffer wrapper needs
-    // to use reference counting, and the easiest way to achieve that is
-    // with shared_ptr.
+    // In order to match its JavaScript counterpart, the Buffer wrapper needs to use reference
+    // counting, and the easiest way to achieve that is with shared_ptr.
     std::shared_ptr<driver::BufferDescriptor> bd;
 };
 
@@ -145,18 +144,17 @@ struct BufferDescriptor {
 struct PixelBufferDescriptor {
     PixelBufferDescriptor(val arrdata, driver::PixelDataFormat fmt, driver::PixelDataType dtype) {
         auto byteLength = arrdata["byteLength"].as<uint32_t>();
-        this->pbd = new driver::PixelBufferDescriptor(malloc(byteLength), byteLength,
-                fmt, dtype, [](void* buffer, size_t size, void* user) { free(buffer); });
-    }
-    ~PixelBufferDescriptor() {
-        delete pbd;
+        this->pbd.reset(new driver::PixelBufferDescriptor(malloc(byteLength), byteLength,
+                fmt, dtype, [](void* buffer, size_t size, void* user) { free(buffer); }));
     }
     val getBytes() {
         unsigned char *byteBuffer = (unsigned char*) pbd->buffer;
         size_t bufferLength = pbd->size;
         return val(typed_memory_view(bufferLength, byteBuffer));
     };
-    driver::PixelBufferDescriptor* pbd;
+    // In order to match its JavaScript counterpart, the Buffer wrapper needs to use reference
+    // counting, and the easiest way to achieve that is with shared_ptr.
+    std::shared_ptr<driver::PixelBufferDescriptor> pbd;
 };
 
 } // anonymous namespace
