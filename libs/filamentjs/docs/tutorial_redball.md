@@ -1,12 +1,13 @@
 ## Create materials and textures
 
-TODO: Describe how to use `matc` and `mipgen` to create `simple.filamat` and the two `pillars_2k`
+TODO: Describe how to use `matc` and `cmgen` to create `redball.filamat` and the two `pillars_2k`
 KTX files.
 
 ## Start your project
 
-Create a text file called `redball.html` and fill it with the same HTML you used in the
-[previous tutorial]() but change the last `<script>` src from `triangle.js` to `redball.js`.
+Create a text file called `redball.html` and fill it with the same HTML you used in the [previous
+tutorial](tutorial_triangle.js) but change the last script tag from `triangle.js` to
+`redball.js`.
 
 Next, create `redball.js` with the following content.
 
@@ -76,6 +77,10 @@ class App {
 }
 ```
 
+The above boilerplate should mostly be familiar to you from the previous tutorial, although we
+have a new set of assets and the camera uses a perspective projection rather than an orthographic
+one.
+
 TODO: Verbiage
 
 ```js {fragment="create material"}
@@ -86,8 +91,8 @@ const matinstance = material.createInstance();
 const red = [0.8, 0.0, 0.0];
 matinstance.setColorParameter("baseColor", Filament.RgbType.sRGB, red);
 matinstance.setFloatParameter("roughness", 0.5);
-matinstance.setFloatParameter("reflectance", 0.3);
-matinstance.setFloatParameter("clearCoat", 0.7);
+matinstance.setFloatParameter("reflectance", 0.5);
+matinstance.setFloatParameter("clearCoat", 1.0);
 matinstance.setFloatParameter("clearCoatRoughness", 0.3);
 ```
 
@@ -205,3 +210,5 @@ scene.setSkybox(skybox);
 ```
 
 TODO: Verbiage
+
+The completed JavaScript is available [here](tutorial_redball.js).

@@ -271,5 +271,6 @@ const Projection = Filament.Camera$Projection;
 this.camera.setProjection(Projection.ORTHO, -aspect, aspect, -1, 1, 0, 1);
 ```
 
-You should now have a spinning triangle! In the next tutorial we'll take a closer look at Filament
+You should now have a spinning triangle! The completed JavaScript is available
+[here](tutorial_triangle.js). In the next tutorial, we'll take a closer look at Filament
 materials and 3D rendering.
