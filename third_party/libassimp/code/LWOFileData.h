@@ -2,7 +2,8 @@
 Open Asset Import Library (assimp)
 ----------------------------------------------------------------------
 
-Copyright (c) 2006-2017, assimp team
+Copyright (c) 2006-2018, assimp team
+
 
 All rights reserved.
 
@@ -260,14 +261,14 @@ namespace LWO {
  * \note We can't use the code in SmoothingGroups.inl here - the mesh
  *   structures of 3DS/ASE and LWO are too different.
  */
-struct Face : public aiFace
-{
+struct Face : public aiFace {
     //! Default construction
-    Face()
-        : surfaceIndex  (0)
-        , smoothGroup   (0)
-        , type          (AI_LWO_FACE)
-    {}
+    Face() AI_NO_EXCEPT
+    : surfaceIndex( 0 )
+    , smoothGroup( 0 )
+    , type( AI_LWO_FACE ) {
+        // empty
+    }
 
     //! Construction from given type
     explicit Face(uint32_t _type)

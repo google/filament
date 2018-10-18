@@ -2,7 +2,8 @@
 Open Asset Import Library (assimp)
 ----------------------------------------------------------------------
 
-Copyright (c) 2006-2017, assimp team
+Copyright (c) 2006-2018, assimp team
+
 
 All rights reserved.
 
@@ -56,7 +57,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <assimp/anim.h>
 #include <assimp/mesh.h>
 #include <assimp/Compiler/pushpack1.h>
-#include "ByteSwapper.h"
+#include <assimp/ByteSwapper.h>
 #include <stdint.h>
 #include <vector>
 
@@ -708,7 +709,7 @@ struct GroupFrame
     SimpleFrame *frames;
 } PACK_STRUCT;
 
-#include "./../include/assimp/Compiler/poppack1.h"
+#include <assimp/Compiler/poppack1.h>
 
 // -------------------------------------------------------------------------------------
 /** \struct IntFace_MDL7
@@ -716,11 +717,9 @@ struct GroupFrame
  */
 struct IntFace_MDL7 {
     // provide a constructor for our own convenience
-    IntFace_MDL7()
-    {
-        // set everything to zero
-        mIndices[0] = mIndices[1] = mIndices[2] = 0;
-        iMatIndex[0] = iMatIndex[1] = 0;
+    IntFace_MDL7() AI_NO_EXCEPT {
+        ::memset( mIndices, 0, sizeof(uint32_t) *3);
+        ::memset( iMatIndex, 0, sizeof( unsigned int) *2);
     }
 
     //! Vertex indices
@@ -736,13 +735,11 @@ struct IntFace_MDL7 {
  *  which has been created from two single materials along with the
  *  original material indices.
  */
-struct IntMaterial_MDL7
-{
+struct IntMaterial_MDL7 {
     // provide a constructor for our own convenience
-    IntMaterial_MDL7()
-    {
-        pcMat = NULL;
-        iOldMatIndices[0] = iOldMatIndices[1] = 0;
+    IntMaterial_MDL7() AI_NO_EXCEPT
+    : pcMat( nullptr ) {
+        ::memset( iOldMatIndices, 0, sizeof(unsigned int) *2);
     }
 
     //! Material instance
@@ -760,7 +757,7 @@ struct IntMaterial_MDL7
 struct IntBone_MDL7 : aiBone
 {
     //! Default constructor
-    IntBone_MDL7() : iParent (0xffff)
+    IntBone_MDL7() AI_NO_EXCEPT : iParent (0xffff)
     {
         pkeyPositions.reserve(30);
         pkeyScalings.reserve(30);
@@ -805,12 +802,12 @@ struct IntFrameInfo_MDL7
 struct IntGroupInfo_MDL7
 {
     //! Default constructor
-    IntGroupInfo_MDL7()
+    IntGroupInfo_MDL7() AI_NO_EXCEPT
         :   iIndex(0)
-        ,   pcGroup(NULL)
-        ,   pcGroupUVs(NULL)
-        ,   pcGroupTris(NULL)
-        ,   pcGroupVerts(NULL)
+        ,   pcGroup(nullptr)
+        ,   pcGroupUVs(nullptr)
+        ,   pcGroupTris(nullptr)
+        ,   pcGroupVerts(nullptr)
         {}
 
     //! Construction from an existing group header
@@ -842,12 +839,12 @@ struct IntGroupInfo_MDL7
 //! Holds the data that belongs to a MDL7 mesh group
 struct IntGroupData_MDL7
 {
-    IntGroupData_MDL7()
-        : pcFaces(NULL), bNeed2UV(false)
+    IntGroupData_MDL7() AI_NO_EXCEPT
+        : bNeed2UV(false)
     {}
 
     //! Array of faces that belong to the group
-    MDL::IntFace_MDL7* pcFaces;
+    std::vector<MDL::IntFace_MDL7> pcFaces;
 
     //! Array of vertex positions
     std::vector<aiVector3D>     vPositions;
@@ -871,10 +868,9 @@ struct IntGroupData_MDL7
 
 // -------------------------------------------------------------------------------------
 //! Holds data from an MDL7 file that is shared by all mesh groups
-struct IntSharedData_MDL7
-{
+struct IntSharedData_MDL7 {
     //! Default constructor
-    IntSharedData_MDL7()
+    IntSharedData_MDL7() AI_NO_EXCEPT
         : apcOutBones(),
         iNum()
     {

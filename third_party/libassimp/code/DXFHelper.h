@@ -2,7 +2,8 @@
 Open Asset Import Library (assimp)
 ----------------------------------------------------------------------
 
-Copyright (c) 2006-2017, assimp team
+Copyright (c) 2006-2018, assimp team
+
 
 All rights reserved.
 
@@ -46,10 +47,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef INCLUDED_DXFHELPER_H
 #define INCLUDED_DXFHELPER_H
 
-#include "LineSplitter.h"
-#include "TinyFormatter.h"
-#include "StreamReader.h"
-#include "fast_atof.h"
+#include <assimp/LineSplitter.h>
+#include <assimp/TinyFormatter.h>
+#include <assimp/StreamReader.h>
+#include <assimp/fast_atof.h>
 #include <vector>
 #include <assimp/DefaultLogger.hpp>
 
@@ -145,7 +146,7 @@ public:
                 for(;splitter->length() && splitter->at(0) != '}'; splitter++, cnt++);
 
                 splitter++;
-                DefaultLogger::get()->debug((Formatter::format("DXF: skipped over control group ("),cnt," lines)"));
+                ASSIMP_LOG_DEBUG((Formatter::format("DXF: skipped over control group ("),cnt," lines)"));
             }
         } catch(std::logic_error&) {
             ai_assert(!splitter);
@@ -168,7 +169,6 @@ public:
     }
 
 private:
-
     LineSplitter splitter;
     int groupcode;
     std::string value;

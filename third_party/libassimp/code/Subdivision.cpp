@@ -2,7 +2,8 @@
 Open Asset Import Library (assimp)
 ----------------------------------------------------------------------
 
-Copyright (c) 2006-2017, assimp team
+Copyright (c) 2006-2018, assimp team
+
 
 All rights reserved.
 
@@ -39,11 +40,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ----------------------------------------------------------------------
 */
 
-#include "Subdivision.h"
+#include <assimp/Subdivision.h>
 #include <assimp/SceneCombiner.h>
-#include "SpatialSort.h"
+#include <assimp/SpatialSort.h>
 #include "ProcessHelper.h"
-#include "Vertex.h"
+#include <assimp/Vertex.h>
 #include <assimp/ai_assert.h>
 #include <stdio.h>
 
@@ -176,7 +177,7 @@ void CatmullClarkSubdivider::Subdivide (
         aiMesh* i = smesh[s];
         // FIX - mPrimitiveTypes might not yet be initialized
         if (i->mPrimitiveTypes && (i->mPrimitiveTypes & (aiPrimitiveType_LINE|aiPrimitiveType_POINT))==i->mPrimitiveTypes) {
-            DefaultLogger::get()->debug("Catmull-Clark Subdivider: Skipping pure line/point mesh");
+            ASSIMP_LOG_DEBUG("Catmull-Clark Subdivider: Skipping pure line/point mesh");
 
             if (discard_input) {
                 out[s] = i;
@@ -197,12 +198,12 @@ void CatmullClarkSubdivider::Subdivide (
     // checking any ranges.
     ai_assert(inmeshes.size()==outmeshes.size()&&inmeshes.size()==maptbl.size());
     if (inmeshes.empty()) {
-        DefaultLogger::get()->warn("Catmull-Clark Subdivider: Pure point/line scene, I can't do anything");
+        ASSIMP_LOG_WARN("Catmull-Clark Subdivider: Pure point/line scene, I can't do anything");
         return;
     }
     InternSubdivide(&inmeshes.front(),inmeshes.size(),&outmeshes.front(),num);
     for (unsigned int i = 0; i < maptbl.size(); ++i) {
-        ai_assert(outmeshes[i]);
+        ai_assert(nullptr != outmeshes[i]);
         out[maptbl[i]] = outmeshes[i];
     }
 
@@ -341,11 +342,8 @@ void CatmullClarkSubdivider::InternSubdivide (
         // Report the number of bad edges. bad edges are referenced by less than two
         // faces in the mesh. They occur at outer model boundaries in non-closed
         // shapes.
-        char tmp[512];
-        ai_snprintf(tmp, 512, "Catmull-Clark Subdivider: got %u bad edges touching only one face (totally %u edges). ",
-            bad_cnt,static_cast<unsigned int>(edges.size()));
-
-        DefaultLogger::get()->debug(tmp);
+        ASSIMP_LOG_DEBUG_F("Catmull-Clark Subdivider: got ", bad_cnt, " bad edges touching only one face (totally ", 
+            static_cast<unsigned int>(edges.size()), " edges). ");
     }}
 
     // ---------------------------------------------------------------------
@@ -403,7 +401,7 @@ void CatmullClarkSubdivider::InternSubdivide (
                     }
                     ai_assert(haveit);
                     if (!haveit) {
-                        DefaultLogger::get()->debug("Catmull-Clark Subdivider: Index not used");
+                        ASSIMP_LOG_DEBUG("Catmull-Clark Subdivider: Index not used");
                     }
                     break;
                 }
@@ -562,7 +560,7 @@ void CatmullClarkSubdivider::InternSubdivide (
                             // this invariant *must* hold if the vertex-to-face adjacency table is valid
                             ai_assert(haveit);
                             if ( !haveit ) {
-                                DefaultLogger::get()->warn( "OBJ: no name for material library specified." );
+                                ASSIMP_LOG_WARN( "OBJ: no name for material library specified." );
                             }
                         }
 

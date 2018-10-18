@@ -100,7 +100,13 @@ static bool isUnsignedIntegerType( Value::ValueType integerType ) {
 }
 
 static DDLNode *createDDLNode( Text *id, OpenDDLParser *parser ) {
+    // Basic checks
     if( ddl_nullptr == id || ddl_nullptr == parser ) {
+        return ddl_nullptr;
+    }
+    
+    // If the buffer is empty ( an empty node ) return nullptr
+    if ( ddl_nullptr == id->m_buffer ) {
         return ddl_nullptr;
     }
 

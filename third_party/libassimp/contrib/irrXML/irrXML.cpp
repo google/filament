@@ -9,7 +9,7 @@
 #include "irrXML.h"
 #include "irrString.h"
 #include "irrArray.h"
-#include "./../../code/fast_atof.h"
+#include <assimp/fast_atof.h>
 #include "CXMLReaderImpl.h"
 
 namespace irr

@@ -42,13 +42,14 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *  Implements a filter system to filter calls to Exists() and Open()
  *  in order to improve the success rate of file opening ...
  */
+#pragma once
 #ifndef AI_FILESYSTEMFILTER_H_INC
 #define AI_FILESYSTEMFILTER_H_INC
 
-#include "../include/assimp/IOSystem.hpp"
-#include "../include/assimp/DefaultLogger.hpp"
-#include "fast_atof.h"
-#include "ParsingUtils.h"
+#include <assimp/IOSystem.hpp>
+#include <assimp/DefaultLogger.hpp>
+#include <assimp/fast_atof.h>
+#include <assimp/ParsingUtils.h>
 
 namespace Assimp    {
 
@@ -64,90 +65,89 @@ class FileSystemFilter : public IOSystem
 public:
     /** Constructor. */
     FileSystemFilter(const std::string& file, IOSystem* old)
-        : wrapped  (old)
-        , src_file (file)
-        , sep(wrapped->getOsSeparator())
-    {
-        ai_assert(NULL != wrapped);
+    : mWrapped  (old)
+    , mSrc_file(file)
+    , mSep(mWrapped->getOsSeparator()) {
+        ai_assert(nullptr != mWrapped);
 
         // Determine base directory
-        base = src_file;
+        mBase = mSrc_file;
         std::string::size_type ss2;
-        if (std::string::npos != (ss2 = base.find_last_of("\\/")))  {
-            base.erase(ss2,base.length()-ss2);
-        }
-        else {
-            base = "";
-        //  return;
+        if (std::string::npos != (ss2 = mBase.find_last_of("\\/")))  {
+            mBase.erase(ss2,mBase.length()-ss2);
+        } else {
+            mBase = "";
         }
 
         // make sure the directory is terminated properly
         char s;
 
-        if (base.length() == 0) {
-            base = ".";
-            base += getOsSeparator();
-        }
-        else if ((s = *(base.end()-1)) != '\\' && s != '/') {
-            base += getOsSeparator();
+        if ( mBase.empty() ) {
+            mBase = ".";
+            mBase += getOsSeparator();
+        } else if ((s = *(mBase.end()-1)) != '\\' && s != '/') {
+            mBase += getOsSeparator();
         }
 
-        DefaultLogger::get()->info("Import root directory is \'" + base + "\'");
+        DefaultLogger::get()->info("Import root directory is \'" + mBase + "\'");
     }
 
     /** Destructor. */
-    ~FileSystemFilter()
-    {
-        // haha
+    ~FileSystemFilter() {
+        // empty
     }
 
     // -------------------------------------------------------------------
     /** Tests for the existence of a file at the given path. */
-    bool Exists( const char* pFile) const
-    {
+    bool Exists( const char* pFile) const {
+        ai_assert( nullptr != mWrapped );
+        
         std::string tmp = pFile;
 
         // Currently this IOSystem is also used to open THE ONE FILE.
-        if (tmp != src_file)    {
+        if (tmp != mSrc_file)    {
             BuildPath(tmp);
             Cleanup(tmp);
         }
 
-        return wrapped->Exists(tmp);
+        return mWrapped->Exists(tmp);
     }
 
     // -------------------------------------------------------------------
     /** Returns the directory separator. */
-    char getOsSeparator() const
-    {
-        return sep;
+    char getOsSeparator() const {
+        return mSep;
     }
 
     // -------------------------------------------------------------------
     /** Open a new file with a given path. */
-    IOStream* Open( const char* pFile, const char* pMode = "rb")
-    {
-        ai_assert(pFile);
-        ai_assert(pMode);
+    IOStream* Open( const char* pFile, const char* pMode = "rb") {
+        ai_assert( nullptr != mWrapped );
+        if ( nullptr == pFile || nullptr == pMode ) {
+            return nullptr;
+        }
+        
+        ai_assert( nullptr != pFile );
+        ai_assert( nullptr != pMode );
 
         // First try the unchanged path
-        IOStream* s = wrapped->Open(pFile,pMode);
+        IOStream* s = mWrapped->Open(pFile,pMode);
 
-        if (!s) {
+        if (nullptr == s) {
             std::string tmp = pFile;
 
             // Try to convert between absolute and relative paths
             BuildPath(tmp);
-            s = wrapped->Open(tmp,pMode);
+            s = mWrapped->Open(tmp,pMode);
 
-            if (!s) {
+            if (nullptr == s) {
                 // Finally, look for typical issues with paths
                 // and try to correct them. This is our last
                 // resort.
                 tmp = pFile;
                 Cleanup(tmp);
                 BuildPath(tmp);
-                s = wrapped->Open(tmp,pMode);
+                s = mWrapped->Open(tmp,pMode);
             }
         }
 
@@ -156,27 +156,75 @@ public:
 
     // -------------------------------------------------------------------
     /** Closes the given file and releases all resources associated with it. */
-    void Close( IOStream* pFile)
-    {
-        return wrapped->Close(pFile);
+    void Close( IOStream* pFile) {
+        ai_assert( nullptr != mWrapped );
+        return mWrapped->Close(pFile);
     }
 
     // -------------------------------------------------------------------
     /** Compare two paths */
-    bool ComparePaths (const char* one, const char* second) const
-    {
-        return wrapped->ComparePaths (one,second);
+    bool ComparePaths (const char* one, const char* second) const {
+        ai_assert( nullptr != mWrapped );
+        return mWrapped->ComparePaths (one,second);
+    }
+
+    // -------------------------------------------------------------------
+    /** Pushes a new directory onto the directory stack. */
+    bool PushDirectory(const std::string &path ) {
+        ai_assert( nullptr != mWrapped );
+        return mWrapped->PushDirectory(path);
+    }
+
+    // -------------------------------------------------------------------
+    /** Returns the top directory from the stack. */
+    const std::string &CurrentDirectory() const {
+        ai_assert( nullptr != mWrapped );
+        return mWrapped->CurrentDirectory();
+    }
+
+    // -------------------------------------------------------------------
+    /** Returns the number of directories stored on the stack. */
+    size_t StackSize() const {
+        ai_assert( nullptr != mWrapped );
+        return mWrapped->StackSize();
+    }
+
+    // -------------------------------------------------------------------
+    /** Pops the top directory from the stack. */
+    bool PopDirectory() {
+        ai_assert( nullptr != mWrapped );
+        return mWrapped->PopDirectory();
+    }
+
+    // -------------------------------------------------------------------
+    /** Creates an new directory at the given path. */
+    bool CreateDirectory(const std::string &path) {
+        ai_assert( nullptr != mWrapped );
+        return mWrapped->CreateDirectory(path);
+    }
+
+    // -------------------------------------------------------------------
+    /** Will change the current directory to the given path. */
+    bool ChangeDirectory(const std::string &path) {
+        ai_assert( nullptr != mWrapped );
+        return mWrapped->ChangeDirectory(path);
+    }
+
+    // -------------------------------------------------------------------
+    /** Delete file. */
+    bool DeleteFile(const std::string &file) {
+        ai_assert( nullptr != mWrapped );
+        return mWrapped->DeleteFile(file);
     }
 
 private:
-
     // -------------------------------------------------------------------
     /** Build a valid path from a given relative or absolute path.
      */
-    void BuildPath (std::string& in) const
-    {
+    void BuildPath (std::string& in) const {
+        ai_assert( nullptr != mWrapped );
         // if we can already access the file, great.
-        if (in.length() < 3 || wrapped->Exists(in)) {
+        if (in.length() < 3 || mWrapped->Exists(in)) {
             return;
         }
 
@@ -184,8 +232,8 @@ private:
         if (in[1] != ':') {
 
             // append base path and try
-            const std::string tmp = base + in;
-            if (wrapped->Exists(tmp)) {
+            const std::string tmp = mBase + in;
+            if (mWrapped->Exists(tmp)) {
                 in = tmp;
                 return;
             }
@@ -207,8 +255,8 @@ private:
             std::string::size_type last_dirsep = std::string::npos;
 
             while(true) {
-                tmp = base;
-                tmp += sep;
+                tmp = mBase;
+                tmp += mSep;
 
                 std::string::size_type dirsep = in.rfind('/', last_dirsep);
                 if (std::string::npos == dirsep) {
@@ -223,7 +271,7 @@ private:
                 last_dirsep = dirsep-1;
 
                 tmp += in.substr(dirsep+1, in.length()-pos);
-                if (wrapped->Exists(tmp)) {
+                if (mWrapped->Exists(tmp)) {
                     in = tmp;
                     return;
                 }
@@ -236,22 +284,21 @@ private:
     // -------------------------------------------------------------------
     /** Cleanup the given path
      */
-    void Cleanup (std::string& in) const
-    {
-        char last = 0;
+    void Cleanup (std::string& in) const {
         if(in.empty()) {
             return;
         }
 
         // Remove a very common issue when we're parsing file names: spaces at the
         // beginning of the path.
+        char last = 0;
         std::string::iterator it = in.begin();
         while (IsSpaceOrNewLine( *it ))++it;
         if (it != in.begin()) {
             in.erase(in.begin(),it+1);
         }
 
-        const char sep = getOsSeparator();
+        const char separator = getOsSeparator();
         for (it = in.begin(); it != in.end(); ++it) {
             // Exclude :// and \\, which remain untouched.
             // https://sourceforge.net/tracker/?func=detail&aid=3031725&group_id=226462&atid=1067632
@@ -266,7 +313,7 @@ private:
 
             // Cleanup path delimiters
             if (*it == '/' || (*it) == '\\') {
-                *it = sep;
+                *it = separator;
 
                 // And we're removing double delimiters, frequent issue with
                 // incorrectly composited paths ...
@@ -274,9 +321,7 @@ private:
                     it = in.erase(it);
                     --it;
                 }
-            }
-            else if (*it == '%' && in.end() - it > 2) {
-
+            } else if (*it == '%' && in.end() - it > 2) {
                 // Hex sequence in URIs
                 if( IsHex((&*it)[0]) && IsHex((&*it)[1]) ) {
                     *it = HexOctetToDecimal(&*it);
@@ -290,9 +335,9 @@ private:
     }
 
 private:
-    IOSystem* wrapped;
-    std::string src_file, base;
-    char sep;
+    IOSystem *mWrapped;
+    std::string mSrc_file, mBase;
+    char mSep;
 };
 
 } //!ns Assimp

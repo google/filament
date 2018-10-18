@@ -3,18 +3,15 @@ INCLUDE(CMakeForceCompiler)
 SET (CMAKE_CROSSCOMPILING   TRUE)
 SET (CMAKE_SYSTEM_NAME      "Darwin")
 SET (CMAKE_SYSTEM_PROCESSOR "x86_64")
+SET (IOS TRUE)
 
-SET (SDKVER     "7.1")
+SET (IOS_SDK_DEVICE iPhoneSimulator)
 
-SET (DEVROOT    "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain")
-SET (SDKROOT    "/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator${SDKVER}.sdk")
-SET (CC         "${DEVROOT}/usr/bin/clang")
-SET (CXX        "${DEVROOT}/usr/bin/clang++")
+SET (SDKVER     "${IOS_SDK_VERSION}")
+SET (DEVROOT    "${XCODE_ROOT_DIR}/Platforms/${IOS_SDK_DEVICE}.platform/Developer")
 
-CMAKE_FORCE_C_COMPILER          (${CC} LLVM)
-CMAKE_FORCE_CXX_COMPILER        (${CXX} LLVM)
 
-SET (CMAKE_FIND_ROOT_PATH               "${SDKROOT}" "${DEVROOT}")
+SET (CMAKE_FIND_ROOT_PATH "${SDKROOT}" "${DEVROOT}")
 SET (CMAKE_FIND_ROOT_PATH_MODE_PROGRAM  NEVER)
 SET (CMAKE_FIND_ROOT_PATH_MODE_LIBRARY  ONLY)
 SET (CMAKE_FIND_ROOT_PATH_MODE_INCLUDE  ONLY)

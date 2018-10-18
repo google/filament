@@ -2,7 +2,8 @@
 Open Asset Import Library (assimp)
 ----------------------------------------------------------------------
 
-Copyright (c) 2006-2017, assimp team
+Copyright (c) 2006-2018, assimp team
+
 
 All rights reserved.
 
@@ -245,7 +246,7 @@ struct Vertex
     uint16_t  NORMAL;
 } /*PACK_STRUCT*/;
 
-#include "./../include/assimp/Compiler/poppack1.h"
+#include <assimp/Compiler/poppack1.h>
 
 // -------------------------------------------------------------------------------
 /** @brief Unpack a Q3 16 bit vector to its full float3 representation

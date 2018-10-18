@@ -3,7 +3,8 @@
 Open Asset Import Library (assimp)
 ---------------------------------------------------------------------------
 
-Copyright (c) 2006-2017, assimp team
+Copyright (c) 2006-2018, assimp team
+
 
 
 All rights reserved.
@@ -58,7 +59,7 @@ template <typename TReal>
 class aiColor4t
 {
 public:
-    aiColor4t () : r(), g(), b(), a() {}
+    aiColor4t() AI_NO_EXCEPT : r(), g(), b(), a() {}
     aiColor4t (TReal _r, TReal _g, TReal _b, TReal _a)
         : r(_r), g(_g), b(_b), a(_a) {}
     explicit aiColor4t (TReal _r) : r(_r), g(_r), b(_r), a(_r) {}

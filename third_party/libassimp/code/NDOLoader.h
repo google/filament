@@ -45,7 +45,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define INCLUDED_AI_NDO_LOADER_H
 
 #include <assimp/vector3.h>
-#include "BaseImporter.h"
+#include <assimp/BaseImporter.h>
 #include <stdint.h>
 #include <string>
 #include <vector>

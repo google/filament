@@ -3,7 +3,8 @@
 Open Asset Import Library (assimp)
 ---------------------------------------------------------------------------
 
-Copyright (c) 2006-2017, assimp team
+Copyright (c) 2006-2018, assimp team
+
 
 
 All rights reserved.
@@ -49,8 +50,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 // internal headers
 #include "SMDLoader.h"
-#include "fast_atof.h"
-#include "SkeletonMeshBuilder.h"
+#include <assimp/fast_atof.h>
+#include <assimp/SkeletonMeshBuilder.h>
 #include <assimp/Importer.hpp>
 #include <assimp/IOSystem.hpp>
 #include <assimp/scene.h>
@@ -181,7 +182,7 @@ void SMDImporter::InternReadFile( const std::string& pFile, aiScene* pScene, IOS
         {
             if (!(*i).mName.length())
             {
-                DefaultLogger::get()->warn("SMD: Not all bones have been initialized");
+                ASSIMP_LOG_WARN("SMD: Not all bones have been initialized");
                 break;
             }
         }
@@ -229,7 +230,7 @@ void SMDImporter::LogWarning(const char* msg)
     char szTemp[1024];
     ai_assert(strlen(msg) < 1000);
     ai_snprintf(szTemp,1024,"Line %u: %s",iLineNumber,msg);
-    DefaultLogger::get()->warn(szTemp);
+    ASSIMP_LOG_WARN(szTemp);
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -285,7 +286,7 @@ void SMDImporter::CreateOutputMeshes()
         if (UINT_MAX == (*iFace).iTexture)aaiFaces[(*iFace).iTexture].push_back( 0 );
         else if ((*iFace).iTexture >= aszTextures.size())
         {
-            DefaultLogger::get()->error("[SMD/VTA] Material index overflow in face");
+            ASSIMP_LOG_INFO("[SMD/VTA] Material index overflow in face");
             aaiFaces[(*iFace).iTexture].push_back((unsigned int)aszTextures.size()-1);
         }
         else aaiFaces[(*iFace).iTexture].push_back(iNum);
@@ -365,7 +366,7 @@ void SMDImporter::CreateOutputMeshes()
                     if (pairval.first >= asBones.size() ||
                         pairval.first == face.avVertices[iVert].iParentNode)
                     {
-                        DefaultLogger::get()->error("[SMD/VTA] Bone index overflow. "
+                        ASSIMP_LOG_ERROR("[SMD/VTA] Bone index overflow. "
                             "The bone index will be ignored, the weight will be assigned "
                             "to the vertex' parent node");
                         continue;
@@ -386,7 +387,7 @@ void SMDImporter::CreateOutputMeshes()
                 {
                     if (face.avVertices[iVert].iParentNode >= asBones.size())
                     {
-                        DefaultLogger::get()->error("[SMD/VTA] Bone index overflow. "
+                        ASSIMP_LOG_ERROR("[SMD/VTA] Bone index overflow. "
                             "The index of the vertex parent bone is invalid. "
                             "The remaining weights will be normalized to 1.0");
 
@@ -714,7 +715,7 @@ void SMDImporter::ParseFile()
             if(!SkipSpaces(szCurrent,&szCurrent)) break;
             if (1 != strtoul10(szCurrent,&szCurrent))
             {
-                DefaultLogger::get()->warn("SMD.version is not 1. This "
+                ASSIMP_LOG_WARN("SMD.version is not 1. This "
                     "file format is not known. Continuing happily ...");
             }
             continue;
@@ -952,7 +953,7 @@ void SMDImporter::ParseSkeletonElement(const char* szCurrent,
     unsigned int iBone  = 0;
     if(!ParseUnsignedInt(szCurrent,&szCurrent,iBone))
     {
-        DefaultLogger::get()->error("Unexpected EOF/EOL while parsing bone index");
+        ASSIMP_LOG_ERROR("Unexpected EOF/EOL while parsing bone index");
         SMDI_PARSE_RETURN;
     }
     if (iBone >= asBones.size())

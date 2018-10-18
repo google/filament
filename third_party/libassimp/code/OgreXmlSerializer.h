@@ -2,7 +2,8 @@
 Open Asset Import Library (assimp)
 ----------------------------------------------------------------------
 
-Copyright (c) 2006-2017, assimp team
+Copyright (c) 2006-2018, assimp team
+
 
 All rights reserved.
 
@@ -45,7 +46,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef ASSIMP_BUILD_NO_OGRE_IMPORTER
 
 #include "OgreStructs.h"
-#include "irrXMLWrapper.h"
+#include <assimp/irrXMLWrapper.h>
 
 namespace Assimp
 {
@@ -97,8 +98,8 @@ private:
     void ReadAnimationKeyFrames(Animation *anim, VertexAnimationTrack *dest);
 
     template<typename T>
-    T ReadAttribute(const std::string &name) const;
-    bool HasAttribute(const std::string &name) const;
+    T ReadAttribute(const char *name) const;
+    bool HasAttribute(const char *name) const;
 
     std::string &NextNode();
     std::string &SkipCurrentNode();

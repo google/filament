@@ -1,0 +1,14 @@
+version: 1.0.{build}
+build_script:
+- cmd: >-
+    cd c:\projects\zip
+
+    mkdir build
+
+    cd build
+
+    cmake -G"Visual Studio 14" -DCMAKE_BUILD_TYPE=Debug ..
+
+    cmake --build . --config %CMAKE_BUILD_TYPE%
+
+    ctest --verbose -C "Debug"

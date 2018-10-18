@@ -2,7 +2,8 @@
 Open Asset Import Library (assimp)
 ----------------------------------------------------------------------
 
-Copyright (c) 2006-2017, assimp team
+Copyright (c) 2006-2018, assimp team
+
 
 All rights reserved.
 
@@ -43,7 +44,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #ifndef ASSIMP_BUILD_NO_OPENGEX_IMPORTER
 
-#include "BaseImporter.h"
+#include <assimp/BaseImporter.h>
 #include <assimp/mesh.h>
 
 #include <vector>
@@ -143,12 +144,10 @@ protected:
 
 private:
     struct VertexContainer {
-        size_t m_numVerts;
-        aiVector3D *m_vertices;
+        std::vector<aiVector3D> m_vertices;
         size_t m_numColors;
         aiColor4D *m_colors;
-        size_t m_numNormals;
-        aiVector3D *m_normals;
+        std::vector<aiVector3D> m_normals;
         size_t m_numUVComps[ AI_MAX_NUMBER_OF_TEXTURECOORDS ];
         aiVector3D *m_textureCoords[ AI_MAX_NUMBER_OF_TEXTURECOORDS ];
 
@@ -184,7 +183,7 @@ private:
     typedef std::map<aiNode*, std::unique_ptr<ChildInfo> > NodeChildMap;
     NodeChildMap m_nodeChildMap;
 
-    std::vector<aiMesh*> m_meshCache;
+    std::vector<std::unique_ptr<aiMesh> > m_meshCache;
     typedef std::map<std::string, size_t> ReferenceMap;
     std::map<std::string, size_t> m_mesh2refMap;
     std::map<std::string, size_t> m_material2refMap;
@@ -193,7 +192,7 @@ private:
     MetricInfo m_metrics[ MetricInfo::Max ];
     aiNode *m_currentNode;
     VertexContainer m_currentVertices;
-    aiMesh *m_currentMesh;
+    aiMesh *m_currentMesh;  // not owned, target is owned by m_meshCache
     aiMaterial *m_currentMaterial;
     aiLight *m_currentLight;
     aiCamera *m_currentCamera;

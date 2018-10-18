@@ -3,7 +3,8 @@
 Open Asset Import Library (assimp)
 ---------------------------------------------------------------------------
 
-Copyright (c) 2006-2017, assimp team
+Copyright (c) 2006-2018, assimp team
+
 
 
 All rights reserved.
@@ -41,7 +42,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 /** @file Default implementation of IOSystem using the standard C file functions */
 
-#include "StringComparison.h"
+#include <assimp/StringComparison.h>
 
 #include <assimp/DefaultIOSystem.h>
 #include <assimp/DefaultIOStream.h>
@@ -54,31 +55,49 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <stdlib.h>
 #endif
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
 using namespace Assimp;
 
-// ------------------------------------------------------------------------------------------------
-// Constructor.
-DefaultIOSystem::DefaultIOSystem()
-{
-    // nothing to do here
-}
-
-// ------------------------------------------------------------------------------------------------
-// Destructor.
-DefaultIOSystem::~DefaultIOSystem()
-{
-    // nothing to do here
-}
+// maximum path length
+// XXX http://insanecoding.blogspot.com/2007/11/pathmax-simply-isnt.html
+#ifdef PATH_MAX
+#   define PATHLIMIT PATH_MAX
+#else
+#   define PATHLIMIT 4096
+#endif
 
 // ------------------------------------------------------------------------------------------------
 // Tests for the existence of a file at the given path.
 bool DefaultIOSystem::Exists( const char* pFile) const
 {
+#ifdef _WIN32
+    wchar_t fileName16[PATHLIMIT];
+
+    bool isUnicode = IsTextUnicode(pFile, static_cast<int>(strlen(pFile)), NULL) != 0;
+    if (isUnicode) {
+
+        MultiByteToWideChar(CP_UTF8, MB_PRECOMPOSED, pFile, -1, fileName16, PATHLIMIT);
+        struct __stat64 filestat;
+        if (0 != _wstat64(fileName16, &filestat)) {
+            return false;
+        }
+    } else {
+        FILE* file = ::fopen(pFile, "rb");
+        if (!file)
+            return false;
+
+        ::fclose(file);
+    }
+#else
     FILE* file = ::fopen( pFile, "rb");
     if( !file)
         return false;
 
     ::fclose( file);
+#endif
     return true;
 }
 
@@ -88,10 +107,22 @@ IOStream* DefaultIOSystem::Open( const char* strFile, const char* strMode)
 {
     ai_assert(NULL != strFile);
     ai_assert(NULL != strMode);
-
-    FILE* file = ::fopen( strFile, strMode);
-    if( NULL == file)
-        return NULL;
+    FILE* file;
+#ifdef _WIN32
+    wchar_t fileName16[PATHLIMIT];
+    bool isUnicode = IsTextUnicode(strFile, static_cast<int>(strlen(strFile)), NULL) != 0;
+    if (isUnicode) {
+        MultiByteToWideChar(CP_UTF8, MB_PRECOMPOSED, strFile, -1, fileName16, PATHLIMIT);
+        std::string mode8(strMode);
+        file = ::_wfopen(fileName16, std::wstring(mode8.begin(), mode8.end()).c_str());
+    } else {
+        file = ::fopen(strFile, strMode);
+    }
+#else
+    file = ::fopen(strFile, strMode);
+#endif
+    if (nullptr == file)
+        return nullptr;
 
     return new DefaultIOStream(file, (std::string) strFile);
 }
@@ -121,32 +152,47 @@ bool IOSystem::ComparePaths (const char* one, const char* second) const
     return !ASSIMP_stricmp(one,second);
 }
 
-// maximum path length
-// XXX http://insanecoding.blogspot.com/2007/11/pathmax-simply-isnt.html
-#ifdef PATH_MAX
-#   define PATHLIMIT PATH_MAX
-#else
-#   define PATHLIMIT 4096
-#endif
-
 // ------------------------------------------------------------------------------------------------
 // Convert a relative path into an absolute path
-inline void MakeAbsolutePath (const char* in, char* _out)
+inline static void MakeAbsolutePath (const char* in, char* _out)
 {
     ai_assert(in && _out);
-    char* ret;
 #if defined( _MSC_VER ) || defined( __MINGW32__ )
-    ret = ::_fullpath( _out, in, PATHLIMIT );
+    bool isUnicode = IsTextUnicode(in, static_cast<int>(strlen(in)), NULL) != 0;
+    if (isUnicode) {
+        wchar_t out16[PATHLIMIT];
+        wchar_t in16[PATHLIMIT];
+        MultiByteToWideChar(CP_UTF8, MB_PRECOMPOSED, in, -1, out16, PATHLIMIT);
+        wchar_t* ret = ::_wfullpath(out16, in16, PATHLIMIT);
+        if (ret) {
+            WideCharToMultiByte(CP_UTF8, MB_PRECOMPOSED, out16, -1, _out, PATHLIMIT, nullptr, nullptr);
+        }
+        if (!ret) {
+            // preserve the input path, maybe someone else is able to fix
+            // the path before it is accessed (e.g. our file system filter)
+            ASSIMP_LOG_WARN_F("Invalid path: ", std::string(in));
+            strcpy(_out, in);
+        }
+
+    } else {
+        char* ret = :: _fullpath(_out, in, PATHLIMIT);
+        if (!ret) {
+            // preserve the input path, maybe someone else is able to fix
+            // the path before it is accessed (e.g. our file system filter)
+            ASSIMP_LOG_WARN_F("Invalid path: ", std::string(in));
+            strcpy(_out, in);
+        }
+    }
 #else
     // use realpath
-    ret = realpath(in, _out);
-#endif
+    char* ret = realpath(in, _out);
     if(!ret) {
         // preserve the input path, maybe someone else is able to fix
         // the path before it is accessed (e.g. our file system filter)
-        DefaultLogger::get()->warn("Invalid path: "+std::string(in));
+        ASSIMP_LOG_WARN_F("Invalid path: ", std::string(in));
         strcpy(_out,in);
     }
+#endif
 }
 
 // ------------------------------------------------------------------------------------------------

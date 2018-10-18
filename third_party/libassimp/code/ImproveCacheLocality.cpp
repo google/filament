@@ -3,7 +3,8 @@
 Open Asset Import Library (assimp)
 ---------------------------------------------------------------------------
 
-Copyright (c) 2006-2017, assimp team
+Copyright (c) 2006-2018, assimp team
+
 
 
 All rights reserved.
@@ -52,7 +53,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // internal headers
 #include "ImproveCacheLocality.h"
 #include "VertexTriangleAdjacency.h"
-#include "StringUtils.h"
+#include <assimp/StringUtils.h>
 #include <assimp/postprocess.h>
 #include <assimp/scene.h>
 #include <assimp/DefaultLogger.hpp>
@@ -94,11 +95,11 @@ void ImproveCacheLocalityProcess::SetupProperties(const Importer* pImp)
 void ImproveCacheLocalityProcess::Execute( aiScene* pScene)
 {
     if (!pScene->mNumMeshes) {
-        DefaultLogger::get()->debug("ImproveCacheLocalityProcess skipped; there are no meshes");
+        ASSIMP_LOG_DEBUG("ImproveCacheLocalityProcess skipped; there are no meshes");
         return;
     }
 
-    DefaultLogger::get()->debug("ImproveCacheLocalityProcess begin");
+    ASSIMP_LOG_DEBUG("ImproveCacheLocalityProcess begin");
 
     float out = 0.f;
     unsigned int numf = 0, numm = 0;
@@ -111,12 +112,8 @@ void ImproveCacheLocalityProcess::Execute( aiScene* pScene)
         }
     }
     if (!DefaultLogger::isNullLogger()) {
-        char szBuff[128]; // should be sufficiently large in every case
-        ai_snprintf(szBuff,128,"Cache relevant are %u meshes (%u faces). Average output ACMR is %f",
-            numm,numf,out/numf);
-
-        DefaultLogger::get()->info(szBuff);
-        DefaultLogger::get()->debug("ImproveCacheLocalityProcess finished. ");
+        ASSIMP_LOG_INFO_F("Cache relevant are ", numm, " meshes (", numf," faces). Average output ACMR is ", out / numf );
+        ASSIMP_LOG_DEBUG("ImproveCacheLocalityProcess finished. ");
     }
 }
 
@@ -134,7 +131,7 @@ float ImproveCacheLocalityProcess::ProcessMesh( aiMesh* pMesh, unsigned int mesh
         return 0.f;
 
     if (pMesh->mPrimitiveTypes != aiPrimitiveType_TRIANGLE) {
-        DefaultLogger::get()->error("This algorithm works on triangle meshes only");
+        ASSIMP_LOG_ERROR("This algorithm works on triangle meshes only");
         return 0.f;
     }
 
@@ -185,7 +182,7 @@ float ImproveCacheLocalityProcess::ProcessMesh( aiMesh* pMesh, unsigned int mesh
             // mesh, otherwise this value would normally be at least minimally
             // smaller than 3.0 ...
             ai_snprintf(szBuff,128,"Mesh %u: Not suitable for vcache optimization",meshNum);
-            DefaultLogger::get()->warn(szBuff);
+            ASSIMP_LOG_WARN(szBuff);
             return 0.f;
         }
     }
@@ -275,8 +272,9 @@ float ImproveCacheLocalityProcess::ProcessMesh( aiMesh* pMesh, unsigned int mesh
 
                 // so iterate through all vertices of the current triangle
                 const aiFace* pcFace = &pMesh->mFaces[ fidx ];
-                for (unsigned int* p = pcFace->mIndices, *p2 = pcFace->mIndices+3;p != p2;++p)  {
-                    const unsigned int dp = *p;
+                unsigned nind = pcFace->mNumIndices;
+                for (unsigned ind = 0; ind < nind; ind++) {
+                    unsigned dp = pcFace->mIndices[ind];
 
                     // the current vertex won't have any free triangles after this step
                     if (ivdx != (int)dp) {
@@ -362,11 +360,7 @@ float ImproveCacheLocalityProcess::ProcessMesh( aiMesh* pMesh, unsigned int mesh
 
         // very intense verbose logging ... prepare for much text if there are many meshes
         if ( DefaultLogger::get()->getLogSeverity() == Logger::VERBOSE) {
-            char szBuff[128]; // should be sufficiently large in every case
-
-            ai_snprintf(szBuff,128,"Mesh %u | ACMR in: %f out: %f | ~%.1f%%",meshNum,fACMR,fACMR2,
-                ((fACMR - fACMR2) / fACMR) * 100.f);
-            DefaultLogger::get()->debug(szBuff);
+            ASSIMP_LOG_DEBUG_F("Mesh %u | ACMR in: ", meshNum, " out: ", fACMR, " | ~", fACMR2, ((fACMR - fACMR2) / fACMR) * 100.f);
         }
 
         fACMR2 *= pMesh->mNumFaces;
@@ -374,9 +368,11 @@ float ImproveCacheLocalityProcess::ProcessMesh( aiMesh* pMesh, unsigned int mesh
     // sort the output index buffer back to the input array
     piCSIter = piIBOutput;
     for (aiFace* pcFace = pMesh->mFaces; pcFace != pcEnd;++pcFace)  {
-        pcFace->mIndices[0] = *piCSIter++;
-        pcFace->mIndices[1] = *piCSIter++;
-        pcFace->mIndices[2] = *piCSIter++;
+        unsigned nind = pcFace->mNumIndices;
+        unsigned * ind = pcFace->mIndices;
+        if (nind > 0) ind[0] = *piCSIter++;
+        if (nind > 1) ind[1] = *piCSIter++;
+        if (nind > 2) ind[2] = *piCSIter++;
     }
 
     // delete temporary storage

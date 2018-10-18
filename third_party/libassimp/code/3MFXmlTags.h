@@ -2,7 +2,8 @@
 Open Asset Import Library (assimp)
 ----------------------------------------------------------------------
 
-Copyright (c) 2006-2017, assimp team
+Copyright (c) 2006-2018, assimp team
+
 
 All rights reserved.
 
@@ -44,6 +45,11 @@ namespace Assimp {
 namespace D3MF {
 
 namespace XmlTag {
+    // Meta-data
+    static const std::string meta = "metadata";
+    static const std::string meta_name = "name";
+
+    // Model-data specific tags
     static const std::string model = "model";
     static const std::string model_unit = "unit";
     static const std::string metadata = "metadata";
@@ -61,6 +67,8 @@ namespace XmlTag {
     static const std::string v2 = "v2";
     static const std::string v3 = "v3";
     static const std::string id = "id";
+    static const std::string pid = "pid";
+    static const std::string p1 = "p1";
     static const std::string name = "name";
     static const std::string type = "type";
     static const std::string build = "build";
@@ -68,6 +76,14 @@ namespace XmlTag {
     static const std::string objectid = "objectid";
     static const std::string transform = "transform";
 
+    // Material definitions
+    static const std::string basematerials = "basematerials";
+    static const std::string basematerials_id = "id";
+    static const std::string basematerials_base = "base";
+    static const std::string basematerials_name = "name";
+    static const std::string basematerials_displaycolor = "displaycolor";
+
+    // Meta info tags
     static const std::string CONTENT_TYPES_ARCHIVE = "[Content_Types].xml";
     static const std::string ROOT_RELATIONSHIPS_ARCHIVE = "_rels/.rels";
     static const std::string SCHEMA_CONTENTTYPES = "http://schemas.openxmlformats.org/package/2006/content-types";
@@ -82,7 +98,6 @@ namespace XmlTag {
     static const std::string PACKAGE_TEXTURE_RELATIONSHIP_TYPE = "http://schemas.microsoft.com/3dmanufacturing/2013/01/3dtexture";
     static const std::string PACKAGE_CORE_PROPERTIES_RELATIONSHIP_TYPE = "http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties";
     static const std::string PACKAGE_THUMBNAIL_RELATIONSHIP_TYPE = "http://schemas.openxmlformats.org/package/2006/relationships/metadata/thumbnail";
-
 }
 
 } // Namespace D3MF

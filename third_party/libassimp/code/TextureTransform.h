@@ -2,7 +2,8 @@
 Open Asset Import Library (assimp)
 ----------------------------------------------------------------------
 
-Copyright (c) 2006-2017, assimp team
+Copyright (c) 2006-2018, assimp team
+
 
 All rights reserved.
 
@@ -43,7 +44,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef AI_TEXTURE_TRANSFORM_H_INCLUDED
 #define AI_TEXTURE_TRANSFORM_H_INCLUDED
 
-#include "BaseImporter.h"
+#include <assimp/BaseImporter.h>
 #include "BaseProcess.h"
 
 #include <assimp/material.h>
@@ -64,14 +65,14 @@ namespace Assimp    {
 /** Small helper structure representing a shortcut into the material list
  *  to be able to update some values quickly.
 */
-struct TTUpdateInfo
-{
-    TTUpdateInfo() :
-            directShortcut  (NULL)
-        ,   mat             (NULL)
-        ,   semantic        (0)
-        ,   index           (0)
-    {}
+struct TTUpdateInfo {
+    TTUpdateInfo() AI_NO_EXCEPT
+    : directShortcut(nullptr)
+    , mat(nullptr)
+    , semantic(0)
+    , index(0) {
+        // empty
+    }
 
     //! Direct shortcut, if available
     unsigned int* directShortcut;
@@ -87,15 +88,14 @@ struct TTUpdateInfo
 // ---------------------------------------------------------------------------
 /** Helper class representing texture coordinate transformations
 */
-struct STransformVecInfo : public aiUVTransform
-{
-
-    STransformVecInfo()
-        :   uvIndex     (0)
-        ,   mapU        (aiTextureMapMode_Wrap)
-        ,   mapV        (aiTextureMapMode_Wrap)
-        ,   lockedPos   (AI_TT_UV_IDX_LOCK_NONE)
-    {}
+struct STransformVecInfo : public aiUVTransform {
+    STransformVecInfo() AI_NO_EXCEPT
+    : uvIndex(0)
+    , mapU(aiTextureMapMode_Wrap)
+    , mapV(aiTextureMapMode_Wrap)
+    , lockedPos(AI_TT_UV_IDX_LOCK_NONE) {
+        // empty
+    }
 
     //! Source texture coordinate index
     unsigned int uvIndex;

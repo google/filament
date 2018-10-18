@@ -248,8 +248,6 @@ void MeshAssimp::addFromFile(const Path& path,
 
             } else {
 
-                //TODO: add usage of gltf materials
-                //Load all gltf textures
                 auto pos = materials.find(part.material);
 
                 if (pos != materials.end()) {
@@ -321,6 +319,9 @@ bool MeshAssimp::setFromFile(const Path& file,
 
     if (!scene){
         std::cout << "no scene" << std::endl;
+    }
+    if (!scene->mRootNode){
+        std::cout << "no root node" << std::endl;
     }
 
     // we could use those, but we want to keep the graph if any, for testing
@@ -408,6 +409,9 @@ bool MeshAssimp::setFromFile(const Path& file,
                     aiMaterial const* material = scene->mMaterials[materialId];
 
                     //Get filepaths for PBR textures
+                    for (i=0; i < material->mNumProperties; i++) {
+                        std::cout << material->mProperties[i]->mKey.C_Str() << std::endl;
+                    }
 
                     int texIndex = 0;
                     aiString baseColorPath;
@@ -607,9 +611,6 @@ bool MeshAssimp::setFromFile(const Path& file,
 
     if (scene) {
         aiNode const* node = scene->mRootNode;
-        if(!node){
-            std::cout << scene->mNumMeshes << std::endl;
-        }
 
         size_t totalVertexCount = 0;
         size_t totalIndexCount = 0;

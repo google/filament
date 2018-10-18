@@ -248,6 +248,17 @@ template <> void Structure :: Convert<Image> (
     ) const
 ;
 
+template <> void Structure::Convert<CustomData>(
+    CustomData& dest,
+    const FileDatabase& db
+    ) const
+    ;
+
+template <> void Structure::Convert<CustomDataLayer>(
+    CustomDataLayer& dest,
+    const FileDatabase& db
+    ) const
+    ;
 
     }
 }

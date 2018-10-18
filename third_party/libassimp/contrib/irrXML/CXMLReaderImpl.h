@@ -9,6 +9,8 @@
 #include "irrString.h"
 #include "irrArray.h"
 
+#include <cassert>
+
 using namespace Assimp;
 
 #ifdef _DEBUG
@@ -664,12 +666,9 @@ private:
 			TextData = new char_type[sizeWithoutHeader];
 
 			// MSVC debugger complains here about loss of data ...
-
-
-			// FIXME - gcc complains about 'shift width larger than width of type'
-			// for T == unsigned long. Avoid it by messing around volatile ..
-			volatile unsigned int c = 3;
-			const src_char_type cc = (src_char_type)((((uint64_t)1u << (sizeof( char_type)<<c)) - 1));
+			size_t numShift = sizeof( char_type) * 8;
+			assert(numShift < 64);
+			const src_char_type cc = (src_char_type)(((uint64_t(1u) << numShift) - 1));
 			for (int i=0; i<sizeWithoutHeader; ++i)
 				TextData[i] = char_type( source[i] & cc); 
 

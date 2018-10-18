@@ -3,7 +3,8 @@
 Open Asset Import Library (assimp)
 ---------------------------------------------------------------------------
 
-Copyright (c) 2006-2017, assimp team
+Copyright (c) 2006-2018, assimp team
+
 
 
 All rights reserved.
@@ -61,7 +62,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 /// \class CAMFImporter_NodeElement
 /// Base class for elements of nodes.
 class CAMFImporter_NodeElement {
-
 public:
 	/// Define what data type contain node element.
 	enum EType {
@@ -95,15 +95,11 @@ public:                                               /// Destructor, virtual..
         // empty
     }
 
-private:
-	/// Disabled copy constructor.
-	CAMFImporter_NodeElement(const CAMFImporter_NodeElement& pNodeElement);
-
-	/// Disabled assign operator.
-	CAMFImporter_NodeElement& operator=(const CAMFImporter_NodeElement& pNodeElement);
-
-	/// Disabled default constructor.
-	CAMFImporter_NodeElement();
+	/// Disabled copy constructor and co.
+	CAMFImporter_NodeElement(const CAMFImporter_NodeElement& pNodeElement) = delete;
+    CAMFImporter_NodeElement(CAMFImporter_NodeElement&&) = delete;
+    CAMFImporter_NodeElement& operator=(const CAMFImporter_NodeElement& pNodeElement) = delete;
+	CAMFImporter_NodeElement() = delete;
 
 protected:
 	/// In constructor inheritor must set element type.
@@ -120,9 +116,7 @@ protected:
 
 /// \struct CAMFImporter_NodeElement_Constellation
 /// A collection of objects or constellations with specific relative locations.
-struct CAMFImporter_NodeElement_Constellation : public CAMFImporter_NodeElement
-{
-	/// \fn CAMFImporter_NodeElement_Constellation(CAMFImporter_NodeElement* pParent)
+struct CAMFImporter_NodeElement_Constellation : public CAMFImporter_NodeElement {
 	/// Constructor.
 	/// \param [in] pParent - pointer to parent node.
 	CAMFImporter_NodeElement_Constellation(CAMFImporter_NodeElement* pParent)
@@ -133,9 +127,7 @@ struct CAMFImporter_NodeElement_Constellation : public CAMFImporter_NodeElement
 
 /// \struct CAMFImporter_NodeElement_Instance
 /// Part of constellation.
-struct CAMFImporter_NodeElement_Instance : public CAMFImporter_NodeElement
-{
-	/****************** Variables ******************/
+struct CAMFImporter_NodeElement_Instance : public CAMFImporter_NodeElement {
 
 	std::string ObjectID;///< ID of object for instantiation.
 	/// \var Delta - The distance of translation in the x, y, or z direction, respectively, in the referenced object's coordinate system, to
@@ -146,237 +138,185 @@ struct CAMFImporter_NodeElement_Instance : public CAMFImporter_NodeElement
 	/// instance of the object in the current constellation. Rotations shall be executed in order of x first, then y, then z.
 	aiVector3D Rotation;
 
-	/****************** Functions ******************/
-
-	/// \fn CAMFImporter_NodeElement_Instance(CAMFImporter_NodeElement* pParent)
 	/// Constructor.
 	/// \param [in] pParent - pointer to parent node.
 	CAMFImporter_NodeElement_Instance(CAMFImporter_NodeElement* pParent)
 		: CAMFImporter_NodeElement(ENET_Instance, pParent)
 	{}
-
-};// struct CAMFImporter_NodeElement_Instance
+};
 
 /// \struct CAMFImporter_NodeElement_Metadata
 /// Structure that define metadata node.
-struct CAMFImporter_NodeElement_Metadata : public CAMFImporter_NodeElement
-{
-	/****************** Variables ******************/
+struct CAMFImporter_NodeElement_Metadata : public CAMFImporter_NodeElement {
 
-	std::string Type;///< Type of "Value".
+	std::string Type;///< Type of "Value". 
 	std::string Value;///< Value.
 
-	/****************** Functions ******************/
-
-	/// \fn CAMFImporter_NodeElement_Metadata(CAMFImporter_NodeElement* pParent)
 	/// Constructor.
 	/// \param [in] pParent - pointer to parent node.
 	CAMFImporter_NodeElement_Metadata(CAMFImporter_NodeElement* pParent)
 		: CAMFImporter_NodeElement(ENET_Metadata, pParent)
 	{}
-
-};// struct CAMFImporter_NodeElement_Metadata
+};
 
 /// \struct CAMFImporter_NodeElement_Root
 /// Structure that define root node.
-struct CAMFImporter_NodeElement_Root : public CAMFImporter_NodeElement
-{
-	/****************** Variables ******************/
+struct CAMFImporter_NodeElement_Root : public CAMFImporter_NodeElement {
 
 	std::string Unit;///< The units to be used. May be "inch", "millimeter", "meter", "feet", or "micron".
 	std::string Version;///< Version of format.
 
-	/****************** Functions ******************/
-
-	/// \fn CAMFImporter_NodeElement_Root(CAMFImporter_NodeElement* pParent)
 	/// Constructor.
 	/// \param [in] pParent - pointer to parent node.
 	CAMFImporter_NodeElement_Root(CAMFImporter_NodeElement* pParent)
 		: CAMFImporter_NodeElement(ENET_Root, pParent)
 	{}
-
-};// struct CAMFImporter_NodeElement_Root
+};
 
 /// \struct CAMFImporter_NodeElement_Color
 /// Structure that define object node.
-struct CAMFImporter_NodeElement_Color : public CAMFImporter_NodeElement
-{
-	/****************** Variables ******************/
+struct CAMFImporter_NodeElement_Color : public CAMFImporter_NodeElement {
+	bool Composed;                  ///< Type of color stored: if true then look for formula in \ref Color_Composed[4], else - in \ref Color.
+	std::string Color_Composed[4];  ///< By components formulas of composed color. [0..3] - RGBA.
+	aiColor4D Color;                ///< Constant color.
+	std::string Profile;            ///< The ICC color space used to interpret the three color channels r, g and b..
 
-	bool Composed;///< Type of color stored: if true then look for formula in \ref Color_Composed[4], else - in \ref Color.
-	std::string Color_Composed[4];///< By components formulas of composed color. [0..3] => RGBA.
-	aiColor4D Color;///< Constant color.
-	std::string Profile;///< The ICC color space used to interpret the three color channels <r>, <g> and <b>..
-
-	/****************** Functions ******************/
-
-	/// \fn CAMFImporter_NodeElement_Color(CAMFImporter_NodeElement* pParent)
-	/// Constructor.
-	/// \param [in] pParent - pointer to parent node.
+	/// @brief  Constructor.
+	/// @param [in] pParent - pointer to parent node.
 	CAMFImporter_NodeElement_Color(CAMFImporter_NodeElement* pParent)
-		: CAMFImporter_NodeElement(ENET_Color, pParent)
-	{}
-
-};// struct CAMFImporter_NodeElement_Color
+	: CAMFImporter_NodeElement(ENET_Color, pParent)
+    , Composed( false )
+    , Color()
+    , Profile() {
+        // empty
+    }
+};
 
 /// \struct CAMFImporter_NodeElement_Material
 /// Structure that define material node.
-struct CAMFImporter_NodeElement_Material : public CAMFImporter_NodeElement
-{
-	/// \fn CAMFImporter_NodeElement_Material(CAMFImporter_NodeElement* pParent)
+struct CAMFImporter_NodeElement_Material : public CAMFImporter_NodeElement {
+	
 	/// Constructor.
 	/// \param [in] pParent - pointer to parent node.
 	CAMFImporter_NodeElement_Material(CAMFImporter_NodeElement* pParent)
 		: CAMFImporter_NodeElement(ENET_Material, pParent)
 	{}
 
-};// struct CAMFImporter_NodeElement_Material
+};
 
 /// \struct CAMFImporter_NodeElement_Object
 /// Structure that define object node.
-struct CAMFImporter_NodeElement_Object : public CAMFImporter_NodeElement
-{
-	/// \fn CAMFImporter_NodeElement_Object(CAMFImporter_NodeElement* pParent)
-	/// Constructor.
+struct CAMFImporter_NodeElement_Object : public CAMFImporter_NodeElement {
+
+    /// Constructor.
 	/// \param [in] pParent - pointer to parent node.
 	CAMFImporter_NodeElement_Object(CAMFImporter_NodeElement* pParent)
 		: CAMFImporter_NodeElement(ENET_Object, pParent)
 	{}
-
-};// struct CAMFImporter_NodeElement_Object
+};
 
 /// \struct CAMFImporter_NodeElement_Mesh
 /// Structure that define mesh node.
-struct CAMFImporter_NodeElement_Mesh : public CAMFImporter_NodeElement
-{
-	/// \fn CAMFImporter_NodeElement_Mesh(CAMFImporter_NodeElement* pParent)
+struct CAMFImporter_NodeElement_Mesh : public CAMFImporter_NodeElement {
 	/// Constructor.
 	/// \param [in] pParent - pointer to parent node.
 	CAMFImporter_NodeElement_Mesh(CAMFImporter_NodeElement* pParent)
 		: CAMFImporter_NodeElement(ENET_Mesh, pParent)
 	{}
-
-};// struct CAMFImporter_NodeElement_Mesh
+};
 
 /// \struct CAMFImporter_NodeElement_Vertex
 /// Structure that define vertex node.
-struct CAMFImporter_NodeElement_Vertex : public CAMFImporter_NodeElement
-{
-	/// \fn CAMFImporter_NodeElement_Vertex(CAMFImporter_NodeElement* pParent)
+struct CAMFImporter_NodeElement_Vertex : public CAMFImporter_NodeElement {
 	/// Constructor.
 	/// \param [in] pParent - pointer to parent node.
 	CAMFImporter_NodeElement_Vertex(CAMFImporter_NodeElement* pParent)
 		: CAMFImporter_NodeElement(ENET_Vertex, pParent)
 	{}
-
-};// struct CAMFImporter_NodeElement_Vertex
+};
 
 /// \struct CAMFImporter_NodeElement_Edge
 /// Structure that define edge node.
-struct CAMFImporter_NodeElement_Edge : public CAMFImporter_NodeElement
-{
-	/// \fn CAMFImporter_NodeElement_Edge(CAMFImporter_NodeElement* pParent)
+struct CAMFImporter_NodeElement_Edge : public CAMFImporter_NodeElement {
 	/// Constructor.
 	/// \param [in] pParent - pointer to parent node.
 	CAMFImporter_NodeElement_Edge(CAMFImporter_NodeElement* pParent)
 		: CAMFImporter_NodeElement(ENET_Edge, pParent)
 	{}
 
-};// struct CAMFImporter_NodeElement_Vertex
+};
 
 /// \struct CAMFImporter_NodeElement_Vertices
 /// Structure that define vertices node.
-struct CAMFImporter_NodeElement_Vertices : public CAMFImporter_NodeElement
-{
-	/// \fn CAMFImporter_NodeElement_Vertices(CAMFImporter_NodeElement* pParent)
+struct CAMFImporter_NodeElement_Vertices : public CAMFImporter_NodeElement {
 	/// Constructor.
 	/// \param [in] pParent - pointer to parent node.
 	CAMFImporter_NodeElement_Vertices(CAMFImporter_NodeElement* pParent)
 		: CAMFImporter_NodeElement(ENET_Vertices, pParent)
 	{}
-
-};// struct CAMFImporter_NodeElement_Vertices
+};
 
 /// \struct CAMFImporter_NodeElement_Volume
 /// Structure that define volume node.
-struct CAMFImporter_NodeElement_Volume : public CAMFImporter_NodeElement
-{
-	/****************** Variables ******************/
-
+struct CAMFImporter_NodeElement_Volume : public CAMFImporter_NodeElement {
 	std::string MaterialID;///< Which material to use.
 	std::string Type;///< What this volume describes can be “region” or “support”. If none specified, “object” is assumed.
 
-	/****************** Functions ******************/
-
-	/// \fn CAMFImporter_NodeElement_Volume(CAMFImporter_NodeElement* pParent)
 	/// Constructor.
 	/// \param [in] pParent - pointer to parent node.
 	CAMFImporter_NodeElement_Volume(CAMFImporter_NodeElement* pParent)
 		: CAMFImporter_NodeElement(ENET_Volume, pParent)
 	{}
-
-};// struct CAMFImporter_NodeElement_Volume
+};
 
 /// \struct CAMFImporter_NodeElement_Coordinates
 /// Structure that define coordinates node.
 struct CAMFImporter_NodeElement_Coordinates : public CAMFImporter_NodeElement
 {
-	/****************** Variables ******************/
-
 	aiVector3D Coordinate;///< Coordinate.
 
-	/****************** Functions ******************/
-
-	/// \fn CAMFImporter_NodeElement_Coordinates(CAMFImporter_NodeElement* pParent)
 	/// Constructor.
 	/// \param [in] pParent - pointer to parent node.
 	CAMFImporter_NodeElement_Coordinates(CAMFImporter_NodeElement* pParent)
 		: CAMFImporter_NodeElement(ENET_Coordinates, pParent)
 	{}
 
-};// struct CAMFImporter_NodeElement_Coordinates
+};
 
 /// \struct CAMFImporter_NodeElement_TexMap
 /// Structure that define texture coordinates node.
-struct CAMFImporter_NodeElement_TexMap : public CAMFImporter_NodeElement
-{
-	/****************** Variables ******************/
-
+struct CAMFImporter_NodeElement_TexMap : public CAMFImporter_NodeElement {
 	aiVector3D TextureCoordinate[3];///< Texture coordinates.
 	std::string TextureID_R;///< Texture ID for red color component.
 	std::string TextureID_G;///< Texture ID for green color component.
 	std::string TextureID_B;///< Texture ID for blue color component.
 	std::string TextureID_A;///< Texture ID for alpha color component.
 
-	/****************** Functions ******************/
-
-	/// \fn CAMFImporter_NodeElement_TexMap(CAMFImporter_NodeElement* pParent)
 	/// Constructor.
 	/// \param [in] pParent - pointer to parent node.
 	CAMFImporter_NodeElement_TexMap(CAMFImporter_NodeElement* pParent)
-		: CAMFImporter_NodeElement(ENET_TexMap, pParent)
-	{}
-
-};// struct CAMFImporter_NodeElement_TexMap
+	: CAMFImporter_NodeElement(ENET_TexMap, pParent)
+    , TextureCoordinate{}
+    , TextureID_R()
+    , TextureID_G()
+    , TextureID_B()
+    , TextureID_A()	{
+        // empty
+    }
+};
 
 /// \struct CAMFImporter_NodeElement_Triangle
 /// Structure that define triangle node.
-struct CAMFImporter_NodeElement_Triangle : public CAMFImporter_NodeElement
-{
-	/****************** Variables ******************/
-
+struct CAMFImporter_NodeElement_Triangle : public CAMFImporter_NodeElement {
 	size_t V[3];///< Triangle vertices.
 
-	/****************** Functions ******************/
-
-	/// \fn CAMFImporter_NodeElement_Triangle(CAMFImporter_NodeElement* pParent)
 	/// Constructor.
 	/// \param [in] pParent - pointer to parent node.
 	CAMFImporter_NodeElement_Triangle(CAMFImporter_NodeElement* pParent)
-		: CAMFImporter_NodeElement(ENET_Triangle, pParent)
-	{}
-
-};// struct CAMFImporter_NodeElement_Triangle
+	: CAMFImporter_NodeElement(ENET_Triangle, pParent) {
+        // empty
+    }
+};
 
 /// Structure that define texture node.
 struct CAMFImporter_NodeElement_Texture : public CAMFImporter_NodeElement {
@@ -395,6 +335,6 @@ struct CAMFImporter_NodeElement_Texture : public CAMFImporter_NodeElement {
     , Tiled( false ){
         // empty
     }
-};// struct CAMFImporter_NodeElement_Texture
+};
 
 #endif // INCLUDED_AI_AMF_IMPORTER_NODE_H

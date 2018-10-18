@@ -2,7 +2,8 @@
 Open Asset Import Library (assimp)
 ----------------------------------------------------------------------
 
-Copyright (c) 2006-2017, assimp team
+Copyright (c) 2006-2018, assimp team
+
 
 All rights reserved.
 
@@ -156,10 +157,16 @@ struct World : ElemBase {
 // -------------------------------------------------------------------------------
 struct MVert : ElemBase {
     float co[3] FAIL;
-    float no[3] FAIL;
+    float no[3] FAIL;       // readed as short and divided through / 32767.f
     char flag;
     int mat_nr WARN;
     int bweight;
+
+    MVert() : ElemBase()
+        , flag(0)
+        , mat_nr(0)
+        , bweight(0)
+    {}
 };
 
 // -------------------------------------------------------------------------------
@@ -368,6 +375,72 @@ struct Material : ElemBase {
     std::shared_ptr<MTex> mtex[18];
 };
 
+/*
+CustomDataLayer 104
+
+    int type 0 4
+    int offset 4 4
+    int flag 8 4
+    int active 12 4
+    int active_rnd 16 4
+    int active_clone 20 4
+    int active_mask 24 4
+    int uid 28 4
+    char name 32 64
+    void *data 96 8
+*/
+struct CustomDataLayer : ElemBase {
+    int type;
+    int offset;
+    int flag;
+    int active;
+    int active_rnd;
+    int active_clone;
+    int active_mask;
+    int uid;
+    char name[64];
+    std::shared_ptr<ElemBase> data;     // must be converted to real type according type member
+
+    CustomDataLayer()
+        : ElemBase()
+        , type(0)
+        , offset(0)
+        , flag(0)
+        , active(0)
+        , active_rnd(0)
+        , active_clone(0)
+        , active_mask(0)
+        , uid(0)
+        , data(nullptr)
+    {
+        memset(name, 0, sizeof name);
+    }
+};
+
+/*
+CustomData 208
+
+    CustomDataLayer *layers 0 8
+    int typemap 8 168
+    int pad_i1 176 4
+    int totlayer 180 4
+    int maxlayer 184 4
+    int totsize 188 4
+    BLI_mempool *pool 192 8
+    CustomDataExternal *external 200 8
+*/
+struct CustomData : ElemBase {
+    vector<std::shared_ptr<struct CustomDataLayer> > layers;
+    int typemap[42];    // CD_NUMTYPES
+    int totlayer;
+    int maxlayer;
+    int totsize;
+    /*
+    std::shared_ptr<BLI_mempool> pool;
+    std::shared_ptr<CustomDataExternal> external;
+    */
+};
+
 // -------------------------------------------------------------------------------
 struct Mesh : ElemBase {
     ID id FAIL;
@@ -397,6 +470,12 @@ struct Mesh : ElemBase {
     vector<MCol> mcol;
 
     vector< std::shared_ptr<Material> > mat FAIL;
+
+    struct CustomData vdata;
+    struct CustomData edata;
+    struct CustomData fdata;
+    struct CustomData pdata;
+    struct CustomData ldata;
 };
 
 // -------------------------------------------------------------------------------

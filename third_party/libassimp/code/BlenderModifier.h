@@ -2,7 +2,8 @@
 Open Asset Import Library (assimp)
 ----------------------------------------------------------------------
 
-Copyright (c) 2006-2017, assimp team
+Copyright (c) 2006-2018, assimp team
+
 
 All rights reserved.
 
@@ -46,53 +47,57 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define INCLUDED_AI_BLEND_MODIFIER_H
 
 #include "BlenderIntermediate.h"
-#include "TinyFormatter.h"
 
 namespace Assimp {
 namespace Blender {
 
 // -------------------------------------------------------------------------------------------
-/** Dummy base class for all blender modifiers. Modifiers are reused between imports, so
- *  they should be stateless and not try to cache model data. */
+/** 
+ *  Dummy base class for all blender modifiers. Modifiers are reused between imports, so
+ *  they should be stateless and not try to cache model data. 
+ */
 // -------------------------------------------------------------------------------------------
-class BlenderModifier
-{
+class BlenderModifier {
 public:
+    /**
+     *  The class destructor, virtual.
+     */
     virtual ~BlenderModifier() {
         // empty
     }
 
-public:
-
     // --------------------
-    /** Check if *this* modifier is active, given a ModifierData& block.*/
+    /** 
+     *  Check if *this* modifier is active, given a ModifierData& block.
+     */
     virtual bool IsActive( const ModifierData& /*modin*/) {
         return false;
     }
 
     // --------------------
-    /** Apply the modifier to a given output node. The original data used
+    /** 
+     *  Apply the modifier to a given output node. The original data used
      *  to construct the node is given as well. Not called unless IsActive()
-     *  was called and gave positive response. */
+     *  was called and gave positive response. 
+     */
     virtual void DoIt(aiNode& /*out*/,
         ConversionData& /*conv_data*/,
         const ElemBase& orig_modifier,
         const Scene& /*in*/,
         const Object& /*orig_object*/
     ) {
-        DefaultLogger::get()->warn((Formatter::format("This modifier is not supported, skipping: "),orig_modifier.dna_type));
+        ASSIMP_LOG_INFO_F("This modifier is not supported, skipping: ",orig_modifier.dna_type );
         return;
     }
 };
 
-
 // -------------------------------------------------------------------------------------------
-/** Manage all known modifiers and instance and apply them if necessary */
+/** 
+ *  Manage all known modifiers and instance and apply them if necessary 
+ */
 // -------------------------------------------------------------------------------------------
-class BlenderModifierShowcase
-{
+class BlenderModifierShowcase {
 public:
-
     // --------------------
     /** Apply all requested modifiers provided we support them. */
     void ApplyModifiers(aiNode& out,
@@ -102,25 +107,18 @@ public:
     );
 
 private:
-
     TempArray< std::vector,BlenderModifier > cached_modifiers;
 };
 
-
-
-
-
-// MODIFIERS
-
-
+// MODIFIERS /////////////////////////////////////////////////////////////////////////////////
 
 // -------------------------------------------------------------------------------------------
-/** Mirror modifier. Status: implemented. */
+/** 
+ *  Mirror modifier. Status: implemented. 
+ */
 // -------------------------------------------------------------------------------------------
-class BlenderModifier_Mirror : public BlenderModifier
-{
+class BlenderModifier_Mirror : public BlenderModifier {
 public:
-
     // --------------------
     virtual bool IsActive( const ModifierData& modin);
 
@@ -136,8 +134,7 @@ public:
 // -------------------------------------------------------------------------------------------
 /** Subdivision modifier. Status: dummy. */
 // -------------------------------------------------------------------------------------------
-class BlenderModifier_Subdivision : public BlenderModifier
-{
+class BlenderModifier_Subdivision : public BlenderModifier {
 public:
 
     // --------------------
@@ -152,6 +149,7 @@ public:
     ) ;
 };
 
+}
+}
 
-}}
 #endif // !INCLUDED_AI_BLEND_MODIFIER_H

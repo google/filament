@@ -2,7 +2,8 @@
 Open Asset Import Library (assimp)
 ----------------------------------------------------------------------
 
-Copyright (c) 2006-2017, assimp team
+Copyright (c) 2006-2018, assimp team
+
 
 All rights reserved.
 
@@ -44,34 +45,30 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #ifndef ASSIMP_BUILD_NO_OGRE_IMPORTER
 
-#include "ParsingUtils.h"
+#include <assimp/ParsingUtils.h>
 #include <functional>
 #include <algorithm>
 #include <stdint.h>
 #include <sstream>
 #include <cctype>
 
-namespace Assimp
-{
-namespace Ogre
-{
+namespace Assimp {
+namespace Ogre {
 
 /// Returns a lower cased copy of @s.
-static inline std::string ToLower(std::string s)
+static AI_FORCE_INLINE
+std::string ToLower(std::string s)
 {
     std::transform(s.begin(), s.end(), s.begin(), ::tolower);
     return s;
 }
 
 /// Returns if @c s ends with @c suffix. If @c caseSensitive is false, both strings will be lower cased before matching.
-static inline bool EndsWith(const std::string &s, const std::string &suffix, bool caseSensitive = true)
-{
-    if (s.empty() || suffix.empty())
-    {
+static AI_FORCE_INLINE
+bool EndsWith(const std::string &s, const std::string &suffix, bool caseSensitive = true) {
+    if (s.empty() || suffix.empty()) {
         return false;
-    }
-    else if (s.length() < suffix.length())
-    {
+    } else if (s.length() < suffix.length()) {
         return false;
     }
 
@@ -81,48 +78,43 @@ static inline bool EndsWith(const std::string &s, const std::string &suffix, boo
 
     size_t len = suffix.length();
     std::string sSuffix = s.substr(s.length()-len, len);
+
     return (ASSIMP_stricmp(sSuffix, suffix) == 0);
 }
 
 // Below trim functions adapted from http://stackoverflow.com/questions/216823/whats-the-best-way-to-trim-stdstring
 
 /// Trim from start
-static inline std::string &TrimLeft(std::string &s, bool newlines = true)
-{
-    if (!newlines)
-    {
+static AI_FORCE_INLINE
+std::string &TrimLeft(std::string &s, bool newlines = true) {
+    if (!newlines) {
         s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](char c) { return !Assimp::IsSpace<char>(c); }));
-    }
-    else
-    {
+    } else {
         s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](char c) { return !Assimp::IsSpaceOrNewLine<char>(c); }));
     }
     return s;
 }
 
 /// Trim from end
-static inline std::string &TrimRight(std::string &s, bool newlines = true)
-{
-    if (!newlines)
-    {
+static AI_FORCE_INLINE
+std::string &TrimRight(std::string &s, bool newlines = true) {
+    if (!newlines) {
         s.erase(std::find_if(s.rbegin(), s.rend(), [](char c) { return !Assimp::IsSpace<char>(c); }).base(),s.end());
-    }
-    else
-    {
+    } else {
         s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](char c) { return !Assimp::IsSpaceOrNewLine<char>(c); }));
     }
     return s;
 }
 
 /// Trim from both ends
-static inline std::string &Trim(std::string &s, bool newlines = true)
-{
+static AI_FORCE_INLINE
+std::string &Trim(std::string &s, bool newlines = true) {
     return TrimLeft(TrimRight(s, newlines), newlines);
 }
 
 /// Skips a line from current @ss position until a newline. Returns the skipped part.
-static inline std::string SkipLine(std::stringstream &ss)
-{
+static AI_FORCE_INLINE
+std::string SkipLine(std::stringstream &ss) {
     std::string skipped;
     getline(ss, skipped);
     return skipped;
@@ -130,8 +122,8 @@ static inline std::string SkipLine(std::stringstream &ss)
 
 /// Skips a line and reads next element from @c ss to @c nextElement.
 /** @return Skipped line content until newline. */
-static inline std::string NextAfterNewLine(std::stringstream &ss, std::string &nextElement)
-{
+static AI_FORCE_INLINE
+std::string NextAfterNewLine(std::stringstream &ss, std::string &nextElement) {
     std::string skipped = SkipLine(ss);
     ss >> nextElement;
     return skipped;

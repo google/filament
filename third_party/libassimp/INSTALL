@@ -42,3 +42,6 @@ For Windows:
 1. Open a command prompt
 2. cmake CMakeLists.txt
 2. Open your default IDE and build it
+
+For iOS:
+Just check the following project, which deploys a compiler toolchain for different iOS-versions: https://github.com/assimp/assimp/tree/master/port/iOS

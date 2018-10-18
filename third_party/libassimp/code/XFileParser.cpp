@@ -3,7 +3,8 @@
 Open Asset Import Library (assimp)
 ---------------------------------------------------------------------------
 
-Copyright (c) 2006-2017, assimp team
+Copyright (c) 2006-2018, assimp team
+
 
 
 All rights reserved.
@@ -47,11 +48,11 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "XFileParser.h"
 #include "XFileHelper.h"
-#include "fast_atof.h"
-#include "Exceptional.h"
-#include "TinyFormatter.h"
-#include "ByteSwapper.h"
-#include "StringUtils.h"
+#include <assimp/fast_atof.h>
+#include <assimp/Exceptional.h>
+#include <assimp/TinyFormatter.h>
+#include <assimp/ByteSwapper.h>
+#include <assimp/StringUtils.h>
 #include <assimp/DefaultLogger.hpp>
 
 
@@ -86,59 +87,60 @@ static void  dummy_free  (void* /*opaque*/, void* address)  {
 // ------------------------------------------------------------------------------------------------
 // Constructor. Creates a data structure out of the XFile given in the memory block.
 XFileParser::XFileParser( const std::vector<char>& pBuffer)
-{
-    mMajorVersion = mMinorVersion = 0;
-    mIsBinaryFormat = false;
-    mBinaryNumCount = 0;
-    P = End = NULL;
-    mLineNumber = 0;
-    mScene = NULL;
-
+: mMajorVersion( 0 )
+, mMinorVersion( 0 )
+, mIsBinaryFormat( false )
+, mBinaryNumCount( 0 )
+, mP( nullptr )
+, mEnd( nullptr )
+, mLineNumber( 0 )
+, mScene( nullptr ) {
     // vector to store uncompressed file for INFLATE'd X files
     std::vector<char> uncompressed;
 
     // set up memory pointers
-    P = &pBuffer.front();
-    End = P + pBuffer.size() - 1;
+    mP = &pBuffer.front();
+    mEnd = mP + pBuffer.size() - 1;
 
     // check header
-    if( strncmp( P, "xof ", 4) != 0)
-        throw DeadlyImportError( "Header mismatch, file is not an XFile.");
+    if ( 0 != strncmp( mP, "xof ", 4 ) ) {
+        throw DeadlyImportError( "Header mismatch, file is not an XFile." );
+    }
 
     // read version. It comes in a four byte format such as "0302"
-    mMajorVersion = (unsigned int)(P[4] - 48) * 10 + (unsigned int)(P[5] - 48);
-    mMinorVersion = (unsigned int)(P[6] - 48) * 10 + (unsigned int)(P[7] - 48);
+    mMajorVersion = (unsigned int)(mP[4] - 48) * 10 + (unsigned int)(mP[5] - 48);
+    mMinorVersion = (unsigned int)(mP[6] - 48) * 10 + (unsigned int)(mP[7] - 48);
 
     bool compressed = false;
 
     // txt - pure ASCII text format
-    if( strncmp( P + 8, "txt ", 4) == 0)
+    if( strncmp( mP + 8, "txt ", 4) == 0)
         mIsBinaryFormat = false;
 
     // bin - Binary format
-    else if( strncmp( P + 8, "bin ", 4) == 0)
+    else if( strncmp( mP + 8, "bin ", 4) == 0)
         mIsBinaryFormat = true;
 
     // tzip - Inflate compressed text format
-    else if( strncmp( P + 8, "tzip", 4) == 0)
+    else if( strncmp( mP + 8, "tzip", 4) == 0)
     {
         mIsBinaryFormat = false;
         compressed = true;
     }
     // bzip - Inflate compressed binary format
-    else if( strncmp( P + 8, "bzip", 4) == 0)
+    else if( strncmp( mP + 8, "bzip", 4) == 0)
     {
         mIsBinaryFormat = true;
         compressed = true;
     }
     else ThrowException( format() << "Unsupported xfile format '" <<
-       P[8] << P[9] << P[10] << P[11] << "'");
+       mP[8] << mP[9] << mP[10] << mP[11] << "'");
 
     // float size
-    mBinaryFloatSize = (unsigned int)(P[12] - 48) * 1000
-        + (unsigned int)(P[13] - 48) * 100
-        + (unsigned int)(P[14] - 48) * 10
-        + (unsigned int)(P[15] - 48);
+    mBinaryFloatSize = (unsigned int)(mP[12] - 48) * 1000
+        + (unsigned int)(mP[13] - 48) * 100
+        + (unsigned int)(mP[14] - 48) * 10
+        + (unsigned int)(mP[15] - 48);
 
     if( mBinaryFloatSize != 32 && mBinaryFloatSize != 64)
         ThrowException( format() << "Unknown float size " << mBinaryFloatSize << " specified in xfile header." );
@@ -146,7 +148,7 @@ XFileParser::XFileParser( const std::vector<char>& pBuffer)
     // The x format specifies size in bits, but we work in bytes
     mBinaryFloatSize /= 8;
 
-    P += 16;
+    mP += 16;
 
     // If this is a compressed X file, apply the inflate algorithm to it
     if (compressed)
@@ -185,13 +187,13 @@ XFileParser::XFileParser( const std::vector<char>& pBuffer)
         ::inflateInit2(&stream, -MAX_WBITS);
 
         // skip unknown data (checksum, flags?)
-        P += 6;
+        mP += 6;
 
         // First find out how much storage we'll need. Count sections.
-        const char* P1       = P;
+        const char* P1       = mP;
         unsigned int est_out = 0;
 
-        while (P1 + 3 < End)
+        while (P1 + 3 < mEnd)
         {
             // read next offset
             uint16_t ofs = *((uint16_t*)P1);
@@ -215,18 +217,18 @@ XFileParser::XFileParser( const std::vector<char>& pBuffer)
         // Allocate storage and terminating zero and do the actual uncompressing
         uncompressed.resize(est_out + 1);
         char* out = &uncompressed.front();
-        while (P + 3 < End)
+        while (mP + 3 < mEnd)
         {
-            uint16_t ofs = *((uint16_t*)P);
+            uint16_t ofs = *((uint16_t*)mP);
             AI_SWAP2(ofs);
-            P += 4;
+            mP += 4;
 
-            if (P + ofs > End + 2) {
+            if (mP + ofs > mEnd + 2) {
                 throw DeadlyImportError("X: Unexpected EOF in compressed chunk");
             }
 
             // push data to the stream
-            stream.next_in   = (Bytef*)P;
+            stream.next_in   = (Bytef*)mP;
             stream.avail_in  = ofs;
             stream.next_out  = (Bytef*)out;
             stream.avail_out = MSZIP_BLOCK;
@@ -241,19 +243,19 @@ XFileParser::XFileParser( const std::vector<char>& pBuffer)
 
             // and advance to the next offset
             out +=  MSZIP_BLOCK - stream.avail_out;
-            P   += ofs;
+            mP   += ofs;
         }
 
         // terminate zlib
         ::inflateEnd(&stream);
 
         // ok, update pointers to point to the uncompressed file data
-        P = &uncompressed[0];
-        End = out;
+        mP = &uncompressed[0];
+        mEnd = out;
 
         // FIXME: we don't need the compressed data anymore, could release
         // it already for better memory usage. Consider breaking const-co.
-        DefaultLogger::get()->info("Successfully decompressed MSZIP-compressed file");
+        ASSIMP_LOG_INFO("Successfully decompressed MSZIP-compressed file");
 #endif // !! ASSIMP_BUILD_NO_COMPRESSED_X
     }
     else
@@ -320,11 +322,11 @@ void XFileParser::ParseFile()
         if( objectName == "}")
         {
             // whatever?
-            DefaultLogger::get()->warn("} found in dataObject");
+            ASSIMP_LOG_WARN("} found in dataObject");
         } else
         {
             // unknown format
-            DefaultLogger::get()->warn("Unknown data object in animation of .x file");
+            ASSIMP_LOG_WARN("Unknown data object in animation of .x file");
             ParseUnknownDataObject();
         }
     }
@@ -420,7 +422,7 @@ void XFileParser::ParseDataObjectFrame( Node* pParent)
             ParseDataObjectMesh( mesh);
         } else
         {
-            DefaultLogger::get()->warn("Unknown data object in frame in x file");
+            ASSIMP_LOG_WARN("Unknown data object in frame in x file");
             ParseUnknownDataObject();
         }
     }
@@ -464,24 +466,25 @@ void XFileParser::ParseDataObjectMesh( Mesh* pMesh)
     // read position faces
     unsigned int numPosFaces = ReadInt();
     pMesh->mPosFaces.resize( numPosFaces);
-    for( unsigned int a = 0; a < numPosFaces; a++)
-    {
+    for( unsigned int a = 0; a < numPosFaces; ++a) {
         // read indices
         unsigned int numIndices = ReadInt();
         Face& face = pMesh->mPosFaces[a];
-        for (unsigned int b = 0; b < numIndices; b++) {
-            face.mIndices.push_back( ReadInt() );
+        for (unsigned int b = 0; b < numIndices; ++b) {
+            const int idx( ReadInt() );
+            if ( static_cast<unsigned int>( idx ) <= numVertices ) {
+                face.mIndices.push_back( idx );
+            }
         }
         TestForSeparator();
     }
 
     // here, other data objects may follow
     bool running = true;
-    while ( running )
-    {
+    while ( running ) {
         std::string objectName = GetNextToken();
 
-        if( objectName.size() == 0)
+        if( objectName.empty() )
             ThrowException( "Unexpected end of file while parsing mesh structure");
         else
         if( objectName == "}")
@@ -509,15 +512,17 @@ void XFileParser::ParseDataObjectMesh( Mesh* pMesh)
             ParseDataObjectSkinWeights( pMesh);
         else
         {
-            DefaultLogger::get()->warn("Unknown data object in mesh in x file");
+            ASSIMP_LOG_WARN("Unknown data object in mesh in x file");
             ParseUnknownDataObject();
         }
     }
 }
 
 // ------------------------------------------------------------------------------------------------
-void XFileParser::ParseDataObjectSkinWeights( Mesh *pMesh)
-{
+void XFileParser::ParseDataObjectSkinWeights( Mesh *pMesh) {
+    if ( nullptr == pMesh ) {
+        return;
+    }
     readHeadOfDataObject();
 
     std::string transformNodeName;
@@ -646,8 +651,8 @@ void XFileParser::ParseDataObjectMeshVertexColors( Mesh* pMesh)
         if( !mIsBinaryFormat)
         {
             FindNextNoneWhiteSpace();
-            if( *P == ';' || *P == ',')
-                P++;
+            if( *mP == ';' || *mP == ',')
+                mP++;
         }
     }
 
@@ -677,8 +682,8 @@ void XFileParser::ParseDataObjectMeshMaterialList( Mesh* pMesh)
     // commented out version check, as version 03.03 exported from blender also has 2 semicolons
     if( !mIsBinaryFormat) // && MajorVersion == 3 && MinorVersion <= 2)
     {
-        if(P < End && *P == ';')
-            ++P;
+        if(mP < mEnd && *mP == ';')
+            ++mP;
     }
 
     // if there was only a single material index, replicate it on all faces
@@ -717,7 +722,7 @@ void XFileParser::ParseDataObjectMeshMaterialList( Mesh* pMesh)
             // ignore
         } else
         {
-            DefaultLogger::get()->warn("Unknown data object in material list in x file");
+            ASSIMP_LOG_WARN("Unknown data object in material list in x file");
             ParseUnknownDataObject();
         }
     }
@@ -765,7 +770,7 @@ void XFileParser::ParseDataObjectMaterial( Material* pMaterial)
             pMaterial->mTextures.push_back( TexEntry( texname, true));
         } else
         {
-            DefaultLogger::get()->warn("Unknown data object in material in x file");
+            ASSIMP_LOG_WARN("Unknown data object in material in x file");
             ParseUnknownDataObject();
         }
     }
@@ -803,7 +808,7 @@ void XFileParser::ParseDataObjectAnimationSet()
             ParseDataObjectAnimation( anim);
         else
         {
-            DefaultLogger::get()->warn("Unknown data object in animation set in x file");
+            ASSIMP_LOG_WARN("Unknown data object in animation set in x file");
             ParseUnknownDataObject();
         }
     }
@@ -840,7 +845,7 @@ void XFileParser::ParseDataObjectAnimation( Animation* pAnim)
             CheckForClosingBrace();
         } else
         {
-            DefaultLogger::get()->warn("Unknown data object in animation in x file");
+            ASSIMP_LOG_WARN("Unknown data object in animation in x file");
             ParseUnknownDataObject();
         }
     }
@@ -948,7 +953,7 @@ void XFileParser::ParseDataObjectTextureFilename( std::string& pName)
     // FIX: some files (e.g. AnimationTest.x) have "" as texture file name
     if (!pName.length())
     {
-        DefaultLogger::get()->warn("Length of texture file name is zero. Skipping this texture.");
+        ASSIMP_LOG_WARN("Length of texture file name is zero. Skipping this texture.");
     }
 
     // some exporters write double backslash paths out. We simply replace them if we find them
@@ -1028,12 +1033,12 @@ void XFileParser::TestForSeparator()
     return;
 
   FindNextNoneWhiteSpace();
-  if( P >= End)
+  if( mP >= mEnd)
     return;
 
   // test and skip
-  if( *P == ';' || *P == ',')
-    P++;
+  if( *mP == ';' || *mP == ',')
+    mP++;
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -1045,62 +1050,73 @@ void XFileParser::readHeadOfDataObject( std::string* poName)
         if( poName)
             *poName = nameOrBrace;
 
-        if( GetNextToken() != "{")
-            ThrowException( "Opening brace expected.");
+        if ( GetNextToken() != "{" ) {
+            delete mScene;
+            ThrowException( "Opening brace expected." );
+        }
     }
 }
 
 // ------------------------------------------------------------------------------------------------
-std::string XFileParser::GetNextToken()
-{
+std::string XFileParser::GetNextToken() {
     std::string s;
 
     // process binary-formatted file
-    if( mIsBinaryFormat)
-    {
+    if( mIsBinaryFormat) {
         // in binary mode it will only return NAME and STRING token
         // and (correctly) skip over other tokens.
-
-        if( End - P < 2) return s;
+        if ( mEnd - mP < 2 ) {
+            return s;
+        }
         unsigned int tok = ReadBinWord();
         unsigned int len;
 
         // standalone tokens
-        switch( tok)
-        {
-            case 1:
+        switch( tok ) {
+            case 1: {
                 // name token
-                if( End - P < 4) return s;
+                if ( mEnd - mP < 4 ) {
+                    return s;
+                }
                 len = ReadBinDWord();
-                if( End - P < int(len)) return s;
-                s = std::string(P, len);
-                P += len;
-                return s;
+                const int bounds = int( mEnd - mP );
+                const int iLen   = int( len );
+                if ( iLen < 0 ) {
+                    return s;
+                }
+                if ( bounds < iLen ) {
+                    return s;
+                }
+                s = std::string( mP, len );
+                mP += len;
+            }
+            return s;
+
             case 2:
                 // string token
-                if( End - P < 4) return s;
+                if( mEnd - mP < 4) return s;
                 len = ReadBinDWord();
-                if( End - P < int(len)) return s;
-                s = std::string(P, len);
-                P += (len + 2);
+                if( mEnd - mP < int(len)) return s;
+                s = std::string(mP, len);
+                mP += (len + 2);
                 return s;
             case 3:
                 // integer token
-                P += 4;
+                mP += 4;
                 return "<integer>";
             case 5:
                 // GUID token
-                P += 16;
+                mP += 16;
                 return "<guid>";
             case 6:
-                if( End - P < 4) return s;
+                if( mEnd - mP < 4) return s;
                 len = ReadBinDWord();
-                P += (len * 4);
+                mP += (len * 4);
                 return "<int_list>";
             case 7:
-                if( End - P < 4) return s;
+                if( mEnd - mP < 4) return s;
                 len = ReadBinDWord();
-                P += (len * mBinaryFloatSize);
+                mP += (len * mBinaryFloatSize);
                 return "<flt_list>";
             case 0x0a:
                 return "{";
@@ -1158,19 +1174,19 @@ std::string XFileParser::GetNextToken()
     else
     {
         FindNextNoneWhiteSpace();
-        if( P >= End)
+        if( mP >= mEnd)
             return s;
 
-        while( (P < End) && !isspace( (unsigned char) *P))
+        while( (mP < mEnd) && !isspace( (unsigned char) *mP))
         {
             // either keep token delimiters when already holding a token, or return if first valid char
-            if( *P == ';' || *P == '}' || *P == '{' || *P == ',')
+            if( *mP == ';' || *mP == '}' || *mP == '{' || *mP == ',')
             {
                 if( !s.size())
-                    s.append( P++, 1);
+                    s.append( mP++, 1);
                 break; // stop for delimiter
             }
-            s.append( P++, 1);
+            s.append( mP++, 1);
         }
     }
     return s;
@@ -1185,18 +1201,18 @@ void XFileParser::FindNextNoneWhiteSpace()
     bool running = true;
     while( running )
     {
-        while( P < End && isspace( (unsigned char) *P))
+        while( mP < mEnd && isspace( (unsigned char) *mP))
         {
-            if( *P == '\n')
+            if( *mP == '\n')
                 mLineNumber++;
-            ++P;
+            ++mP;
         }
 
-        if( P >= End)
+        if( mP >= mEnd)
             return;
 
         // check if this is a comment
-        if( (P[0] == '/' && P[1] == '/') || P[0] == '#')
+        if( (mP[0] == '/' && mP[1] == '/') || mP[0] == '#')
             ReadUntilEndOfLine();
         else
             break;
@@ -1213,22 +1229,30 @@ void XFileParser::GetNextTokenAsString( std::string& poString)
     }
 
     FindNextNoneWhiteSpace();
-    if( P >= End)
-        ThrowException( "Unexpected end of file while parsing string");
+    if ( mP >= mEnd ) {
+        delete mScene;
+        ThrowException( "Unexpected end of file while parsing string" );
+    }
 
-    if( *P != '"')
-        ThrowException( "Expected quotation mark.");
-    ++P;
+    if ( *mP != '"' ) {
+        delete mScene;
+        ThrowException( "Expected quotation mark." );
+    }
+    ++mP;
 
-    while( P < End && *P != '"')
-        poString.append( P++, 1);
+    while( mP < mEnd && *mP != '"')
+        poString.append( mP++, 1);
 
-    if( P >= End-1)
-        ThrowException( "Unexpected end of file while parsing string");
+    if ( mP >= mEnd - 1 ) {
+        delete mScene;
+        ThrowException( "Unexpected end of file while parsing string" );
+    }
 
-    if( P[1] != ';' || P[0] != '"')
-        ThrowException( "Expected quotation mark and semicolon at the end of a string.");
-    P+=2;
+    if ( mP[ 1 ] != ';' || mP[ 0 ] != '"' ) {
+        delete mScene;
+        ThrowException( "Expected quotation mark and semicolon at the end of a string." );
+    }
+    mP+=2;
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -1237,57 +1261,58 @@ void XFileParser::ReadUntilEndOfLine()
     if( mIsBinaryFormat)
         return;
 
-    while( P < End)
+    while( mP < mEnd)
     {
-        if( *P == '\n' || *P == '\r')
+        if( *mP == '\n' || *mP == '\r')
         {
-            ++P; mLineNumber++;
+            ++mP; mLineNumber++;
             return;
         }
 
-        ++P;
+        ++mP;
     }
 }
 
 // ------------------------------------------------------------------------------------------------
 unsigned short XFileParser::ReadBinWord()
 {
-    ai_assert(End - P >= 2);
-    const unsigned char* q = (const unsigned char*) P;
+    ai_assert(mEnd - mP >= 2);
+    const unsigned char* q = (const unsigned char*) mP;
     unsigned short tmp = q[0] | (q[1] << 8);
-    P += 2;
+    mP += 2;
     return tmp;
 }
 
 // ------------------------------------------------------------------------------------------------
-unsigned int XFileParser::ReadBinDWord()
-{
-    ai_assert(End - P >= 4);
-    const unsigned char* q = (const unsigned char*) P;
+unsigned int XFileParser::ReadBinDWord() {
+    ai_assert(mEnd - mP >= 4);
+
+    const unsigned char* q = (const unsigned char*) mP;
     unsigned int tmp = q[0] | (q[1] << 8) | (q[2] << 16) | (q[3] << 24);
-    P += 4;
+    mP += 4;
     return tmp;
 }
 
 // ------------------------------------------------------------------------------------------------
 unsigned int XFileParser::ReadInt()
 {
-    if( mIsBinaryFormat)
+   if( mIsBinaryFormat)
     {
-        if( mBinaryNumCount == 0 && End - P >= 2)
+        if( mBinaryNumCount == 0 && mEnd - mP >= 2)
         {
             unsigned short tmp = ReadBinWord(); // 0x06 or 0x03
-            if( tmp == 0x06 && End - P >= 4) // array of ints follows
+            if( tmp == 0x06 && mEnd - mP >= 4) // array of ints follows
                 mBinaryNumCount = ReadBinDWord();
             else // single int follows
                 mBinaryNumCount = 1;
         }
 
         --mBinaryNumCount;
-        if ( End - P >= 4) {
+        const size_t len( mEnd - mP );
+        if ( len >= 4) {
             return ReadBinDWord();
         } else {
-            P = End;
+            mP = mEnd;
             return 0;
         }
     } else
@@ -1298,27 +1323,28 @@ unsigned int XFileParser::ReadInt()
 
         // check preceding minus sign
         bool isNegative = false;
-        if( *P == '-')
+        if( *mP == '-')
         {
             isNegative = true;
-            P++;
+            mP++;
         }
 
         // at least one digit expected
-        if( !isdigit( *P))
+        if( !isdigit( *mP))
             ThrowException( "Number expected.");
 
         // read digits
         unsigned int number = 0;
-        while( P < End)
+        while( mP < mEnd)
         {
-            if( !isdigit( *P))
+            if( !isdigit( *mP))
                 break;
-            number = number * 10 + (*P - 48);
-            P++;
+            number = number * 10 + (*mP - 48);
+            mP++;
         }
 
         CheckForSeparator();
+
         return isNegative ? ((unsigned int) -int( number)) : number;
     }
 }
@@ -1328,34 +1354,35 @@ ai_real XFileParser::ReadFloat()
 {
     if( mIsBinaryFormat)
     {
-        if( mBinaryNumCount == 0 && End - P >= 2)
+        if( mBinaryNumCount == 0 && mEnd - mP >= 2)
         {
             unsigned short tmp = ReadBinWord(); // 0x07 or 0x42
-            if( tmp == 0x07 && End - P >= 4) // array of floats following
+            if( tmp == 0x07 && mEnd - mP >= 4) // array of floats following
                 mBinaryNumCount = ReadBinDWord();
             else // single float following
                 mBinaryNumCount = 1;
         }
 
         --mBinaryNumCount;
-        if( mBinaryFloatSize == 8)
-        {
-            if( End - P >= 8) {
-                ai_real result = (ai_real) (*(double*) P);
-                P += 8;
+        if( mBinaryFloatSize == 8) {
+            if( mEnd - mP >= 8) {
+                double res;
+                ::memcpy( &res, mP, 8 );
+                mP += 8;
+                const ai_real result( static_cast<ai_real>( res ) );
                 return result;
             } else {
-                P = End;
+                mP = mEnd;
                 return 0;
             }
-        } else
-        {
-            if( End - P >= 4) {
-                ai_real result = *(ai_real*) P;
-                P += 4;
+        } else {
+            if( mEnd - mP >= 4) {
+                ai_real result;
+                ::memcpy( &result, mP, 4 );
+                mP += 4;
                 return result;
             } else {
-                P = End;
+                mP = mEnd;
                 return 0;
             }
         }
@@ -1366,21 +1393,21 @@ ai_real XFileParser::ReadFloat()
     // check for various special strings to allow reading files from faulty exporters
     // I mean you, Blender!
     // Reading is safe because of the terminating zero
-    if( strncmp( P, "-1.#IND00", 9) == 0 || strncmp( P, "1.#IND00", 8) == 0)
+    if( strncmp( mP, "-1.#IND00", 9) == 0 || strncmp( mP, "1.#IND00", 8) == 0)
     {
-        P += 9;
+        mP += 9;
         CheckForSeparator();
         return 0.0;
     } else
-    if( strncmp( P, "1.#QNAN0", 8) == 0)
+    if( strncmp( mP, "1.#QNAN0", 8) == 0)
     {
-        P += 8;
+        mP += 8;
         CheckForSeparator();
         return 0.0;
     }
 
     ai_real result = 0.0;
-    P = fast_atoreal_move<ai_real>( P, result);
+    mP = fast_atoreal_move<ai_real>( mP, result);
 
     CheckForSeparator();
 
@@ -1437,14 +1464,13 @@ aiColor3D XFileParser::ReadRGB()
 
 // ------------------------------------------------------------------------------------------------
 // Throws an exception with a line number and the given text.
-AI_WONT_RETURN void XFileParser::ThrowException( const std::string& pText)
-{
-    if( mIsBinaryFormat)
-        throw DeadlyImportError( pText);
-    else
+AI_WONT_RETURN void XFileParser::ThrowException( const std::string& pText) {
+    if ( mIsBinaryFormat ) {
+        throw DeadlyImportError( pText );
+    } else {
         throw DeadlyImportError( format() << "Line " << mLineNumber << ": " << pText );
+    }
 }
-
 
 // ------------------------------------------------------------------------------------------------
 // Filters the imported hierarchy for some degenerated cases that some exporters produce.

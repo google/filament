@@ -2,7 +2,8 @@
 Open Asset Import Library (assimp)
 ----------------------------------------------------------------------
 
-Copyright (c) 2006-2017, assimp team
+Copyright (c) 2006-2018, assimp team
+
 
 All rights reserved.
 
@@ -48,8 +49,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <stdint.h>
 #include <map>
 #include <memory>
-#include "LogAux.h"
-#include "fast_atof.h"
+#include <assimp/LogAux.h>
+#include <assimp/fast_atof.h>
 
 #include "FBXCompileConfig.h"
 #include "FBXTokenizer.h"
@@ -174,10 +175,8 @@ private:
     friend class Element;
 
     TokenPtr AdvanceToNextToken();
-
     TokenPtr LastToken() const;
     TokenPtr CurrentToken() const;
-
 
 private:
     const TokenList& tokens;
@@ -199,7 +198,6 @@ int ParseTokenAsInt(const Token& t, const char*& err_out);
 int64_t ParseTokenAsInt64(const Token& t, const char*& err_out);
 std::string ParseTokenAsString(const Token& t, const char*& err_out);
 
-
 /* wrapper around ParseTokenAsXXX() with DOMError handling */
 uint64_t ParseTokenAsID(const Token& t);
 size_t ParseTokenAsDim(const Token& t);
@@ -217,6 +215,8 @@ void ParseVectorDataArray(std::vector<float>& out, const Element& el);
 void ParseVectorDataArray(std::vector<unsigned int>& out, const Element& el);
 void ParseVectorDataArray(std::vector<uint64_t>& out, const Element& e);
 void ParseVectorDataArray(std::vector<int64_t>& out, const Element& el);
+
+bool HasElement( const Scope& sc, const std::string& index );
 
 // extract a required element from a scope, abort if the element cannot be found
 const Element& GetRequiredElement(const Scope& sc, const std::string& index, const Element* element = NULL);

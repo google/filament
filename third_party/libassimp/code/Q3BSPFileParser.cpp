@@ -2,7 +2,8 @@
 Open Asset Import Library (assimp)
 ----------------------------------------------------------------------
 
-Copyright (c) 2006-2017, assimp team
+Copyright (c) 2006-2018, assimp team
+
 
 All rights reserved.
 
@@ -54,56 +55,51 @@ namespace Assimp {
 using namespace Q3BSP;
 
 // ------------------------------------------------------------------------------------------------
-Q3BSPFileParser::Q3BSPFileParser( const std::string &rMapName, Q3BSPZipArchive *pZipArchive ) :
+Q3BSPFileParser::Q3BSPFileParser( const std::string &mapName, Q3BSPZipArchive *pZipArchive ) :
     m_sOffset( 0 ),
     m_Data(),
-    m_pModel( NULL ),
+    m_pModel(nullptr),
     m_pZipArchive( pZipArchive )
 {
-    ai_assert( NULL != m_pZipArchive );
-    ai_assert( !rMapName.empty() );
+    ai_assert(nullptr != m_pZipArchive );
+    ai_assert( !mapName.empty() );
 
-    if ( !readData( rMapName ) )
+    if ( !readData( mapName ) )
         return;
 
     m_pModel = new Q3BSPModel;
-    m_pModel->m_ModelName = rMapName;
-    if ( !parseFile() )
-    {
+    m_pModel->m_ModelName = mapName;
+    if ( !parseFile() ) {
         delete m_pModel;
-        m_pModel = NULL;
+        m_pModel = nullptr;
     }
 }
 
 // ------------------------------------------------------------------------------------------------
-Q3BSPFileParser::~Q3BSPFileParser()
-{
+Q3BSPFileParser::~Q3BSPFileParser() {
     delete m_pModel;
-    m_pModel = NULL;
+    m_pModel = nullptr;
 }
 
 // ------------------------------------------------------------------------------------------------
-Q3BSP::Q3BSPModel *Q3BSPFileParser::getModel() const
-{
+Q3BSP::Q3BSPModel *Q3BSPFileParser::getModel() const {
     return m_pModel;
 }
 
 // ------------------------------------------------------------------------------------------------
-bool Q3BSPFileParser::readData( const std::string &rMapName )
-{
+bool Q3BSPFileParser::readData( const std::string &rMapName ) {
     if ( !m_pZipArchive->Exists( rMapName.c_str() ) )
         return false;
 
     IOStream *pMapFile = m_pZipArchive->Open( rMapName.c_str() );
-    if ( NULL == pMapFile )
+    if ( nullptr == pMapFile )
         return false;
 
     const size_t size = pMapFile->FileSize();
     m_Data.resize( size );
 
     const size_t readSize = pMapFile->Read( &m_Data[0], sizeof( char ), size );
-    if ( readSize != size )
-    {
+    if ( readSize != size ) {
         m_Data.clear();
         return false;
     }
@@ -113,10 +109,8 @@ bool Q3BSPFileParser::readData( const std::string &rMapName )
 }
 
 // ------------------------------------------------------------------------------------------------
-bool Q3BSPFileParser::parseFile()
-{
-    if ( m_Data.empty() )
-    {
+bool Q3BSPFileParser::parseFile() {
+    if ( m_Data.empty() ) {
         return false;
     }
 
@@ -128,7 +122,7 @@ bool Q3BSPFileParser::parseFile()
     // Imports the dictionary of the level
     getLumps();
 
-    // Conunt data and prepare model data
+    // Count data and prepare model data
     countLumps();
 
     // Read in Vertices
@@ -208,7 +202,7 @@ void Q3BSPFileParser::getVertices()
 // ------------------------------------------------------------------------------------------------
 void Q3BSPFileParser::getIndices()
 {
-    ai_assert( NULL != m_pModel );
+    ai_assert(nullptr != m_pModel );
 
     sQ3BSPLump *lump = m_pModel->m_Lumps[ kMeshVerts ];
     size_t Offset = (size_t) lump->iOffset;
@@ -220,7 +214,7 @@ void Q3BSPFileParser::getIndices()
 // ------------------------------------------------------------------------------------------------
 void Q3BSPFileParser::getFaces()
 {
-    ai_assert( NULL != m_pModel );
+    ai_assert(nullptr != m_pModel );
 
     size_t Offset = m_pModel->m_Lumps[ kFaces ]->iOffset;
     for ( size_t idx = 0; idx < m_pModel->m_Faces.size(); idx++ )
@@ -235,7 +229,7 @@ void Q3BSPFileParser::getFaces()
 // ------------------------------------------------------------------------------------------------
 void Q3BSPFileParser::getTextures()
 {
-    ai_assert( NULL != m_pModel );
+    ai_assert(nullptr != m_pModel );
 
     size_t Offset = m_pModel->m_Lumps[ kTextures ]->iOffset;
     for ( size_t idx=0; idx < m_pModel->m_Textures.size(); idx++ )
@@ -250,7 +244,7 @@ void Q3BSPFileParser::getTextures()
 // ------------------------------------------------------------------------------------------------
 void Q3BSPFileParser::getLightMaps()
 {
-    ai_assert( NULL != m_pModel );
+    ai_assert(nullptr != m_pModel );
 
     size_t Offset = m_pModel->m_Lumps[kLightmaps]->iOffset;
     for ( size_t idx=0; idx < m_pModel->m_Lightmaps.size(); idx++ )
@@ -263,12 +257,10 @@ void Q3BSPFileParser::getLightMaps()
 }
 
 // ------------------------------------------------------------------------------------------------
-void Q3BSPFileParser::getEntities()
-{
-    int size = m_pModel->m_Lumps[ kEntities ]->iSize;
+void Q3BSPFileParser::getEntities() {
+    const int size = m_pModel->m_Lumps[ kEntities ]->iSize;
     m_pModel->m_EntityData.resize( size );
-    if ( size > 0 )
-    {
+    if ( size > 0 ) {
         size_t Offset = m_pModel->m_Lumps[ kEntities ]->iOffset;
         memcpy( &m_pModel->m_EntityData[ 0 ], &m_Data[ Offset ], sizeof( char ) * size );
     }

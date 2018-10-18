@@ -2,7 +2,8 @@
 Open Asset Import Library (assimp)
 ----------------------------------------------------------------------
 
-Copyright (c) 2006-2017, assimp team
+Copyright (c) 2006-2018, assimp team
+
 
 All rights reserved.
 
@@ -47,7 +48,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "3DSHelper.h"
 #include <assimp/SceneCombiner.h>
 #include "SplitLargeMeshes.h"
-#include "StringComparison.h"
+#include <assimp/StringComparison.h>
 #include <assimp/IOSystem.hpp>
 #include <assimp/DefaultLogger.hpp>
 #include <assimp/Exporter.hpp>
@@ -183,7 +184,7 @@ void ExportScene3DS(const char* pFile, IOSystem* pIOSystem, const aiScene* pScen
 } // end of namespace Assimp
 
 // ------------------------------------------------------------------------------------------------
-Discreet3DSExporter:: Discreet3DSExporter(std::shared_ptr<IOStream> outfile, const aiScene* scene)
+Discreet3DSExporter:: Discreet3DSExporter(std::shared_ptr<IOStream> &outfile, const aiScene* scene)
 : scene(scene)
 , writer(outfile)
 {
@@ -380,7 +381,7 @@ void Discreet3DSExporter::WriteTexture(const aiMaterial& mat, aiTextureType type
 
     // TODO: handle embedded textures properly
     if (path.data[0] == '*') {
-        DefaultLogger::get()->error("Ignoring embedded texture for export: " + std::string(path.C_Str()));
+        ASSIMP_LOG_ERROR("Ignoring embedded texture for export: " + std::string(path.C_Str()));
         return;
     }
 

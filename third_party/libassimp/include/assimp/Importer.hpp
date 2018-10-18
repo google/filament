@@ -3,7 +3,8 @@
 Open Asset Import Library (assimp)
 ---------------------------------------------------------------------------
 
-Copyright (c) 2006-2017, assimp team
+Copyright (c) 2006-2018, assimp team
+
 
 
 All rights reserved.
@@ -136,7 +137,12 @@ public:
      * If this Importer owns a scene it won't be copied.
      * Call ReadFile() to start the import process.
      */
-    Importer(const Importer& other);
+    Importer(const Importer& other)=delete;
+
+    // -------------------------------------------------------------------
+    /** Assignment operator has been deleted
+     */
+    Importer &operator=(const Importer &) = delete;
 
     // -------------------------------------------------------------------
     /** Destructor. The object kept ownership of the imported data,
@@ -324,7 +330,7 @@ public:
 
     // -------------------------------------------------------------------
     /** Supplies a custom progress handler to the importer. This
-     *  interface exposes a #Update() callback, which is called
+     *  interface exposes an #Update() callback, which is called
      *  more or less periodically (please don't sue us if it
      *  isn't as periodically as you'd like it to have ...).
      *  This can be used to implement progress bars and loading

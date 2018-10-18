@@ -2,7 +2,8 @@
 Open Asset Import Library (assimp)
 ----------------------------------------------------------------------
 
-Copyright (c) 2006-2017, assimp team
+Copyright (c) 2006-2018, assimp team
+
 
 All rights reserved.
 
@@ -73,7 +74,8 @@ public:
 
     // -------------------------------------------------------------------
     // Execute step on a given mesh
-    void ExecuteOnMesh( aiMesh* mesh);
+    ///@returns true if the current mesh should be deleted, false otherwise
+    bool ExecuteOnMesh( aiMesh* mesh);
 
     // -------------------------------------------------------------------
     /// @brief Enable the instant removal of degenerated primitives

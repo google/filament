@@ -3,7 +3,8 @@
 Open Asset Import Library (assimp)
 ---------------------------------------------------------------------------
 
-Copyright (c) 2006-2017, assimp team
+Copyright (c) 2006-2018, assimp team
+
 
 
 All rights reserved.
@@ -49,7 +50,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // internal headers
 #include "ProcessHelper.h"
 #include "SortByPTypeProcess.h"
-#include "Exceptional.h"
+#include <assimp/Exceptional.h>
 
 using namespace Assimp;
 
@@ -84,8 +85,6 @@ void SortByPTypeProcess::SetupProperties(const Importer* pImp)
 // Update changed meshes in all nodes
 void UpdateNodes(const std::vector<unsigned int>& replaceMeshIndex, aiNode* node)
 {
-//  std::vector<unsigned int>::const_iterator it;
-
     if (node->mNumMeshes)
     {
         unsigned int newSize = 0;
@@ -132,15 +131,13 @@ void UpdateNodes(const std::vector<unsigned int>& replaceMeshIndex, aiNode* node
 
 // ------------------------------------------------------------------------------------------------
 // Executes the post processing step on the given imported data.
-void SortByPTypeProcess::Execute( aiScene* pScene)
-{
-    if (!pScene->mNumMeshes)
-    {
-        DefaultLogger::get()->debug("SortByPTypeProcess skipped, there are no meshes");
+void SortByPTypeProcess::Execute( aiScene* pScene) {
+    if ( 0 == pScene->mNumMeshes) {
+        ASSIMP_LOG_DEBUG("SortByPTypeProcess skipped, there are no meshes");
         return;
     }
 
-    DefaultLogger::get()->debug("SortByPTypeProcess begin");
+    ASSIMP_LOG_DEBUG("SortByPTypeProcess begin");
 
     unsigned int aiNumMeshesPerPType[4] = {0,0,0,0};
 
@@ -151,42 +148,38 @@ void SortByPTypeProcess::Execute( aiScene* pScene)
 
     std::vector<unsigned int> replaceMeshIndex(pScene->mNumMeshes*4,UINT_MAX);
     std::vector<unsigned int>::iterator meshIdx = replaceMeshIndex.begin();
-    for (unsigned int i = 0; i < pScene->mNumMeshes;++i)
-    {
+    for (unsigned int i = 0; i < pScene->mNumMeshes; ++i) {
         aiMesh* const mesh = pScene->mMeshes[i];
         ai_assert(0 != mesh->mPrimitiveTypes);
 
         // if there's just one primitive type in the mesh there's nothing to do for us
         unsigned int num = 0;
-        if (mesh->mPrimitiveTypes & aiPrimitiveType_POINT)
-        {
+        if (mesh->mPrimitiveTypes & aiPrimitiveType_POINT) {
             ++aiNumMeshesPerPType[0];
             ++num;
         }
-        if (mesh->mPrimitiveTypes & aiPrimitiveType_LINE)
-        {
+        if (mesh->mPrimitiveTypes & aiPrimitiveType_LINE) {
             ++aiNumMeshesPerPType[1];
             ++num;
         }
-        if (mesh->mPrimitiveTypes & aiPrimitiveType_TRIANGLE)
-        {
+        if (mesh->mPrimitiveTypes & aiPrimitiveType_TRIANGLE) {
             ++aiNumMeshesPerPType[2];
             ++num;
         }
-        if (mesh->mPrimitiveTypes & aiPrimitiveType_POLYGON)
-        {
+        if (mesh->mPrimitiveTypes & aiPrimitiveType_POLYGON) {
             ++aiNumMeshesPerPType[3];
             ++num;
         }
 
-        if (1 == num)
-        {
-            if (!(configRemoveMeshes & mesh->mPrimitiveTypes))
-            {
-                *meshIdx = (unsigned int) outMeshes.size();
+        if (1 == num) {
+            if (!(configRemoveMeshes & mesh->mPrimitiveTypes)) {
+                *meshIdx = static_cast<unsigned int>( outMeshes.size() );
                 outMeshes.push_back(mesh);
+            } else {
+                delete mesh;
+                pScene->mMeshes[ i ] = nullptr;
+                bAnyChanges = true;
             }
-            else bAnyChanges = true;
 
             meshIdx += 4;
             continue;
@@ -194,14 +187,13 @@ void SortByPTypeProcess::Execute( aiScene* pScene)
         bAnyChanges = true;
 
         // reuse our current mesh arrays for the submesh
-        // with the largest numer of primitives
+        // with the largest number of primitives
         unsigned int aiNumPerPType[4] = {0,0,0,0};
         aiFace* pFirstFace = mesh->mFaces;
         aiFace* const pLastFace = pFirstFace + mesh->mNumFaces;
 
         unsigned int numPolyVerts = 0;
-        for (;pFirstFace != pLastFace; ++pFirstFace)
-        {
+        for (;pFirstFace != pLastFace; ++pFirstFace) {
             if (pFirstFace->mNumIndices <= 3)
                 ++aiNumPerPType[pFirstFace->mNumIndices-1];
             else
@@ -403,8 +395,8 @@ void SortByPTypeProcess::Execute( aiScene* pScene)
             aiNumMeshesPerPType[1], ((configRemoveMeshes & aiPrimitiveType_LINE)      ? "X" : ""),
             aiNumMeshesPerPType[2], ((configRemoveMeshes & aiPrimitiveType_TRIANGLE)  ? "X" : ""),
             aiNumMeshesPerPType[3], ((configRemoveMeshes & aiPrimitiveType_POLYGON)   ? "X" : ""));
-        DefaultLogger::get()->info(buffer);
-        DefaultLogger::get()->debug("SortByPTypeProcess finished");
+        ASSIMP_LOG_INFO(buffer);
+        ASSIMP_LOG_DEBUG("SortByPTypeProcess finished");
     }
 }
 

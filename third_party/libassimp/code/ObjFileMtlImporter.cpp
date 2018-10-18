@@ -3,7 +3,8 @@
 Open Asset Import Library (assimp)
 ---------------------------------------------------------------------------
 
-Copyright (c) 2006-2017, assimp team
+Copyright (c) 2006-2018, assimp team
+
 
 
 All rights reserved.
@@ -47,11 +48,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "ObjFileMtlImporter.h"
 #include "ObjTools.h"
 #include "ObjFileData.h"
-#include "fast_atof.h"
-#include "ParsingUtils.h"
+#include <assimp/fast_atof.h>
+#include <assimp/ParsingUtils.h>
 #include <assimp/material.h>
 #include <assimp/DefaultLogger.hpp>
-
 
 namespace Assimp    {
 
@@ -83,8 +83,6 @@ static const std::string ClampOption        = "-clamp";
 static const std::string BumpOption         = "-bm";
 static const std::string ChannelOption      = "-imfchan";
 static const std::string TypeOption         = "-type";
-
-
 
 // -------------------------------------------------------------------
 //  Constructor
@@ -303,11 +301,12 @@ void ObjFileMtlImporter::createMaterial()
         // New Material created
         m_pModel->m_pCurrentMaterial = new ObjFile::Material();
         m_pModel->m_pCurrentMaterial->MaterialName.Set( name );
+        m_pModel->m_MaterialLib.push_back( name );
+        m_pModel->m_MaterialMap[ name ] = m_pModel->m_pCurrentMaterial;
+
         if (m_pModel->m_pCurrentMesh) {
             m_pModel->m_pCurrentMesh->m_uiMaterialIndex = static_cast<unsigned int>(m_pModel->m_MaterialLib.size() - 1);
         }
-        m_pModel->m_MaterialLib.push_back( name );
-        m_pModel->m_MaterialMap[ name ] = m_pModel->m_pCurrentMaterial;
     } else {
         // Use older material
         m_pModel->m_pCurrentMaterial = (*it).second;
@@ -333,6 +332,11 @@ void ObjFileMtlImporter::getTexture() {
         // Specular texture
         out = & m_pModel->m_pCurrentMaterial->textureSpecular;
         clampIndex = ObjFile::Material::TextureSpecularType;
+    } else if ( !ASSIMP_strincmp( pPtr, DisplacementTexture1.c_str(), static_cast<unsigned int>(DisplacementTexture1.size()) ) ||
+                !ASSIMP_strincmp( pPtr, DisplacementTexture2.c_str(), static_cast<unsigned int>(DisplacementTexture2.size()) ) ) {
+        // Displacement texture
+        out = &m_pModel->m_pCurrentMaterial->textureDisp;
+        clampIndex = ObjFile::Material::TextureDispType;
     } else if ( !ASSIMP_strincmp( pPtr, OpacityTexture.c_str(), static_cast<unsigned int>(OpacityTexture.size()) ) ) {
         // Opacity texture
         out = & m_pModel->m_pCurrentMaterial->textureOpacity;
@@ -355,17 +359,12 @@ void ObjFileMtlImporter::getTexture() {
         // Reflection texture(s)
         //Do nothing here
         return;
-    } else if ( !ASSIMP_strincmp( pPtr, DisplacementTexture1.c_str(), static_cast<unsigned int>(DisplacementTexture1.size()) ) ||
-                !ASSIMP_strincmp( pPtr, DisplacementTexture2.c_str(), static_cast<unsigned int>(DisplacementTexture2.size()) ) ) {
-        // Displacement texture
-        out = &m_pModel->m_pCurrentMaterial->textureDisp;
-        clampIndex = ObjFile::Material::TextureDispType;
     } else if ( !ASSIMP_strincmp( pPtr, SpecularityTexture.c_str(), static_cast<unsigned int>(SpecularityTexture.size()) ) ) {
         // Specularity scaling (glossiness)
         out = & m_pModel->m_pCurrentMaterial->textureSpecularity;
         clampIndex = ObjFile::Material::TextureSpecularityType;
     } else {
-        DefaultLogger::get()->error("OBJ/MTL: Encountered unknown texture type");
+        ASSIMP_LOG_ERROR("OBJ/MTL: Encountered unknown texture type");
         return;
     }
 

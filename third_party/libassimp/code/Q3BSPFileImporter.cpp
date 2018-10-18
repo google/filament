@@ -2,7 +2,8 @@
 Open Asset Import Library (assimp)
 ---------------------------------------------------------------------------------------------------
 
-Copyright (c) 2006-2017, assimp team
+Copyright (c) 2006-2018, assimp team
+
 
 All rights reserved.
 
@@ -46,6 +47,8 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "Q3BSPFileParser.h"
 #include "Q3BSPFileData.h"
 
+#include <assimp/DefaultLogger.hpp>
+
 #ifdef ASSIMP_BUILD_NO_OWN_ZLIB
 #   include <zlib.h>
 #else
@@ -60,7 +63,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <assimp/importerdesc.h>
 #include <vector>
 #include <sstream>
-#include "StringComparison.h"
+#include <assimp/StringComparison.h>
 
 static const aiImporterDesc desc = {
     "Quake III BSP Importer",
@@ -81,39 +84,39 @@ using namespace Q3BSP;
 
 // ------------------------------------------------------------------------------------------------
 //  Local function to create a material key name.
-static void createKey( int id1, int id2, std::string &rKey )
-{
+static void createKey( int id1, int id2, std::string &key ) {
     std::ostringstream str;
     str << id1 << "." << id2;
-    rKey = str.str();
+    key = str.str();
 }
 
 // ------------------------------------------------------------------------------------------------
 //  Local function to extract the texture ids from a material key-name.
-static void extractIds( const std::string &rKey, int &rId1, int &rId2 )
-{
-    rId1 = -1;
-    rId2 = -1;
-    if ( rKey.empty() )
+static void extractIds( const std::string &key, int &id1, int &id2 ) {
+    id1 = -1;
+    id2 = -1;
+    if (key.empty()) {
         return;
+    }
 
-    std::string::size_type pos = rKey.find( "." );
-    if ( std::string::npos == pos )
+    const std::string::size_type pos = key.find( "." );
+    if (std::string::npos == pos) {
         return;
+    }
 
-    std::string tmp1 = rKey.substr( 0, pos );
-    std::string tmp2 = rKey.substr( pos + 1, rKey.size() - pos - 1 );
-    rId1 = atoi( tmp1.c_str() );
-    rId2 = atoi( tmp2.c_str() );
+    std::string tmp1 = key.substr( 0, pos );
+    std::string tmp2 = key.substr( pos + 1, key.size() - pos - 1 );
+    id1 = atoi( tmp1.c_str() );
+    id2 = atoi( tmp2.c_str() );
 }
 
 // ------------------------------------------------------------------------------------------------
 //  Local helper function to normalize filenames.
-static void normalizePathName( const std::string &rPath, std::string &rNormalizedPath )
-{
-    rNormalizedPath = "";
-    if ( rPath.empty() )
+static void normalizePathName( const std::string &rPath, std::string &normalizedPath ) {
+    normalizedPath = "";
+    if (rPath.empty()) {
         return;
+    }
 
 #ifdef _WIN32
     std::string sep = "\\";
@@ -123,14 +126,11 @@ static void normalizePathName( const std::string &rPath, std::string &rNormalize
 
     static const unsigned int numDelimiters = 2;
     const char delimiters[ numDelimiters ] = { '/', '\\' };
-    rNormalizedPath = rPath;
-    for (const char delimiter : delimiters)
-    {
-        for ( size_t j=0; j<rNormalizedPath.size(); j++ )
-        {
-            if ( rNormalizedPath[j] == delimiter )
-            {
-                rNormalizedPath[ j ] = sep[ 0 ];
+    normalizedPath = rPath;
+    for (const char delimiter : delimiters) {
+        for ( size_t j=0; j<normalizedPath.size(); ++j ) {
+            if ( normalizedPath[j] == delimiter ) {
+                normalizedPath[ j ] = sep[ 0 ];
             }
         }
     }
@@ -138,20 +138,19 @@ static void normalizePathName( const std::string &rPath, std::string &rNormalize
 
 // ------------------------------------------------------------------------------------------------
 //  Constructor.
-Q3BSPFileImporter::Q3BSPFileImporter() :
-    m_pCurrentMesh( NULL ),
-    m_pCurrentFace( NULL ),
-    m_MaterialLookupMap(),
-    mTextures()
-{
+Q3BSPFileImporter::Q3BSPFileImporter()
+: m_pCurrentMesh( nullptr )
+, m_pCurrentFace(nullptr)
+, m_MaterialLookupMap()
+, mTextures() {
     // empty
 }
 
 // ------------------------------------------------------------------------------------------------
 //  Destructor.
 Q3BSPFileImporter::~Q3BSPFileImporter() {
-    m_pCurrentMesh = NULL;
-    m_pCurrentFace = NULL;
+    m_pCurrentMesh = nullptr;
+    m_pCurrentFace = nullptr;
 
     // Clear face-to-material map
     for ( FaceMap::iterator it = m_MaterialLookupMap.begin(); it != m_MaterialLookupMap.end(); ++it ) {
@@ -165,92 +164,80 @@ Q3BSPFileImporter::~Q3BSPFileImporter() {
 
 // ------------------------------------------------------------------------------------------------
 //  Returns true, if the loader can read this.
-bool Q3BSPFileImporter::CanRead( const std::string& rFile, IOSystem* /*pIOHandler*/, bool checkSig ) const
-{
+bool Q3BSPFileImporter::CanRead( const std::string& rFile, IOSystem* /*pIOHandler*/, bool checkSig ) const {
     if(!checkSig) {
         return SimpleExtensionCheck( rFile, "pk3", "bsp" );
     }
-    // TODO perhaps add keyword based detection
+
     return false;
 }
 
 // ------------------------------------------------------------------------------------------------
 //  Adds extensions.
-const aiImporterDesc* Q3BSPFileImporter::GetInfo () const
-{
+const aiImporterDesc* Q3BSPFileImporter::GetInfo () const {
     return &desc;
 }
 
 // ------------------------------------------------------------------------------------------------
 //  Import method.
-void Q3BSPFileImporter::InternReadFile(const std::string &rFile, aiScene* pScene, IOSystem* pIOHandler)
-{
-    Q3BSPZipArchive Archive( pIOHandler, rFile );
-    if ( !Archive.isOpen() )
-    {
+void Q3BSPFileImporter::InternReadFile(const std::string &rFile, aiScene* scene, IOSystem* ioHandler) {
+    Q3BSPZipArchive Archive( ioHandler, rFile );
+    if ( !Archive.isOpen() ) {
         throw DeadlyImportError( "Failed to open file " + rFile + "." );
     }
 
     std::string archiveName( "" ), mapName( "" );
     separateMapName( rFile, archiveName, mapName );
 
-    if ( mapName.empty() )
-    {
-        if ( !findFirstMapInArchive( Archive, mapName ) )
-        {
+    if ( mapName.empty() ) {
+        if ( !findFirstMapInArchive( Archive, mapName ) ) {
             return;
         }
     }
 
     Q3BSPFileParser fileParser( mapName, &Archive );
     Q3BSPModel *pBSPModel = fileParser.getModel();
-    if ( NULL != pBSPModel )
-    {
-        CreateDataFromImport( pBSPModel, pScene, &Archive );
+    if ( nullptr != pBSPModel ) {
+        CreateDataFromImport( pBSPModel, scene, &Archive );
     }
 }
 
 // ------------------------------------------------------------------------------------------------
 //  Separates the map name from the import name.
-void Q3BSPFileImporter::separateMapName( const std::string &rImportName, std::string &rArchiveName,
-                                        std::string &rMapName )
-{
-    rArchiveName = "";
-    rMapName = "";
-    if ( rImportName.empty() )
-        return;
-
-    std::string::size_type pos = rImportName.rfind( "," );
-    if ( std::string::npos == pos )
-    {
-        rArchiveName = rImportName;
+void Q3BSPFileImporter::separateMapName( const std::string &importName, std::string &archiveName, std::string &mapName ) {
+    archiveName = "";
+    mapName = "";
+    if (importName.empty()) {
         return;
     }
 
-    rArchiveName = rImportName.substr( 0, pos );
-    rMapName = rImportName.substr( pos, rImportName.size() - pos - 1 );
+    const std::string::size_type pos = importName.rfind( "," );
+    if ( std::string::npos == pos ) {
+        archiveName = importName;
+        return;
+    }
+
+    archiveName = importName.substr( 0, pos );
+    mapName = importName.substr( pos, importName.size() - pos - 1 );
 }
 
 // ------------------------------------------------------------------------------------------------
 //  Returns the first map in the map archive.
-bool Q3BSPFileImporter::findFirstMapInArchive( Q3BSPZipArchive &rArchive, std::string &rMapName )
-{
-    rMapName = "";
+bool Q3BSPFileImporter::findFirstMapInArchive( Q3BSPZipArchive &bspArchive, std::string &mapName ) {
+    mapName = "";
     std::vector<std::string> fileList;
-    rArchive.getFileList( fileList );
-    if ( fileList.empty() )
+    bspArchive.getFileList( fileList );
+    if (fileList.empty()) {
         return false;
+    }
 
-    for ( std::vector<std::string>::iterator it = fileList.begin(); it != fileList.end();
-        ++it )
-    {
-        std::string::size_type pos = (*it).find( "maps/" );
-        if ( std::string::npos != pos )
-        {
+    std::vector<std::string>::iterator it( fileList.begin() );
+    for ( ; it != fileList.end(); ++it ) {
+        const std::string::size_type pos = (*it).find( "maps/" );
+        if ( std::string::npos != pos ) {
             std::string::size_type extPos = (*it).find( ".bsp" );
-            if ( std::string::npos != extPos )
-            {
-                rMapName = *it;
+            if ( std::string::npos != extPos ) {
+                mapName = *it;
                 return true;
             }
         }
@@ -262,14 +249,13 @@ bool Q3BSPFileImporter::findFirstMapInArchive( Q3BSPZipArchive &rArchive, std::s
 // ------------------------------------------------------------------------------------------------
 //  Creates the assimp specific data.
 void Q3BSPFileImporter::CreateDataFromImport( const Q3BSP::Q3BSPModel *pModel, aiScene* pScene,
-                                             Q3BSPZipArchive *pArchive )
-{
-    if ( NULL == pModel || NULL == pScene )
+        Q3BSPZipArchive *pArchive ) {
+    if (nullptr == pModel || nullptr == pScene) {
         return;
+    }
 
     pScene->mRootNode = new aiNode;
-    if ( !pModel->m_ModelName.empty() )
-    {
+    if ( !pModel->m_ModelName.empty() ) {
         pScene->mRootNode->mName.Set( pModel->m_ModelName );
     }
 
@@ -286,47 +272,34 @@ void Q3BSPFileImporter::CreateDataFromImport( const Q3BSP::Q3BSPModel *pModel, a
 // ------------------------------------------------------------------------------------------------
 //  Creates all assimp nodes.
 void Q3BSPFileImporter::CreateNodes( const Q3BSP::Q3BSPModel *pModel, aiScene* pScene,
-                                    aiNode *pParent )
-{
-    ai_assert( NULL != pModel );
-    if ( NULL == pModel )
-    {
+        aiNode *pParent ) {
+    if ( nullptr == pModel ) {
         return;
     }
 
-    unsigned int matIdx = 0;
+    unsigned int matIdx( 0 );
     std::vector<aiMesh*> MeshArray;
     std::vector<aiNode*> NodeArray;
-    for ( FaceMapIt it = m_MaterialLookupMap.begin(); it != m_MaterialLookupMap.end(); ++it )
-    {
+    for ( FaceMapIt it = m_MaterialLookupMap.begin(); it != m_MaterialLookupMap.end(); ++it ) {
         std::vector<Q3BSP::sQ3BSPFace*> *pArray = (*it).second;
         size_t numVerts = countData( *pArray );
-        if ( 0 != numVerts )
-        {
-            aiMesh* pMesh = new aiMesh;
-            aiNode *pNode = CreateTopology( pModel, matIdx, *pArray, pMesh );
-            if ( NULL != pNode )
-            {
+        if ( 0 != numVerts ) {
+            aiMesh *pMesh( nullptr );
+            aiNode *pNode = CreateTopology( pModel, matIdx, *pArray, &pMesh );
+            if ( nullptr != pNode ) {
                 NodeArray.push_back( pNode );
                 MeshArray.push_back( pMesh );
-            }
-            else
-            {
-                delete pMesh;
             }
         }
         matIdx++;
     }
 
     pScene->mNumMeshes = static_cast<unsigned int>( MeshArray.size() );
-    if ( pScene->mNumMeshes > 0 )
-    {
+    if ( pScene->mNumMeshes > 0 ) {
         pScene->mMeshes = new aiMesh*[ pScene->mNumMeshes ];
-        for ( size_t i = 0; i < MeshArray.size(); i++ )
-        {
+        for ( size_t i = 0; i < MeshArray.size(); i++ ) {
             aiMesh *pMesh = MeshArray[ i ];
-            if ( NULL != pMesh )
-            {
+            if ( nullptr != pMesh ) {
                 pScene->mMeshes[ i ] = pMesh;
             }
         }
@@ -334,8 +307,7 @@ void Q3BSPFileImporter::CreateNodes( const Q3BSP::Q3BSPModel *pModel, aiScene* p
 
     pParent->mNumChildren = static_cast<unsigned int>(MeshArray.size());
     pParent->mChildren = new aiNode*[ pScene->mRootNode->mNumChildren ];
-    for ( size_t i=0; i<NodeArray.size(); i++ )
-    {
+    for ( size_t i=0; i<NodeArray.size(); i++ ) {
         aiNode *pNode = NodeArray[ i ];
         pNode->mParent = pParent;
         pParent->mChildren[ i ] = pNode;
@@ -345,54 +317,46 @@ void Q3BSPFileImporter::CreateNodes( const Q3BSP::Q3BSPModel *pModel, aiScene* p
 
 // ------------------------------------------------------------------------------------------------
 //  Creates the topology.
-aiNode *Q3BSPFileImporter::CreateTopology( const Q3BSP::Q3BSPModel *pModel,
-                                          unsigned int materialIdx,
-                                          std::vector<sQ3BSPFace*> &rArray,
-                                          aiMesh* pMesh )
-{
+aiNode *Q3BSPFileImporter::CreateTopology( const Q3BSP::Q3BSPModel *pModel, unsigned int materialIdx,
+        std::vector<sQ3BSPFace*> &rArray, aiMesh **pMesh ) {
     size_t numVerts = countData( rArray );
-    if ( 0 == numVerts )
-    {
-        return NULL;
+    if ( 0 == numVerts ) {
+        return nullptr;
     }
 
     size_t numFaces = countFaces( rArray );
-    if ( 0 == numFaces )
-    {
-        return NULL;
+    if ( 0 == numFaces ) {
+        return nullptr;
     }
 
+    aiMesh *mesh = new aiMesh;
     size_t numTriangles = countTriangles( rArray );
-    pMesh->mPrimitiveTypes = aiPrimitiveType_TRIANGLE;
+    mesh->mPrimitiveTypes = aiPrimitiveType_TRIANGLE;
 
-    pMesh->mFaces = new aiFace[ numTriangles ];
-    pMesh->mNumFaces = static_cast<unsigned int>(numTriangles);
+    mesh->mFaces = new aiFace[ numTriangles ];
+    mesh->mNumFaces = static_cast<unsigned int>(numTriangles);
 
-    pMesh->mNumVertices = static_cast<unsigned int>(numVerts);
-    pMesh->mVertices = new aiVector3D[ numVerts ];
-    pMesh->mNormals =  new aiVector3D[ numVerts ];
-    pMesh->mTextureCoords[ 0 ] = new aiVector3D[ numVerts ];
-    pMesh->mTextureCoords[ 1 ] = new aiVector3D[ numVerts ];
-    pMesh->mMaterialIndex = materialIdx;
+    mesh->mNumVertices = static_cast<unsigned int>(numVerts);
+    mesh->mVertices = new aiVector3D[ numVerts ];
+    mesh->mNormals =  new aiVector3D[ numVerts ];
+    mesh->mTextureCoords[ 0 ] = new aiVector3D[ numVerts ];
+    mesh->mTextureCoords[ 1 ] = new aiVector3D[ numVerts ];
+    mesh->mMaterialIndex = materialIdx;
 
     unsigned int faceIdx = 0;
     unsigned int vertIdx = 0;
-    pMesh->mNumUVComponents[ 0 ] = 2;
-    pMesh->mNumUVComponents[ 1 ] = 2;
-    for ( std::vector<sQ3BSPFace*>::const_iterator it = rArray.begin(); it != rArray.end(); ++it )
-    {
+    mesh->mNumUVComponents[ 0 ] = 2;
+    mesh->mNumUVComponents[ 1 ] = 2;
+    for ( std::vector<sQ3BSPFace*>::const_iterator it = rArray.begin(); it != rArray.end(); ++it ) {
         Q3BSP::sQ3BSPFace *pQ3BSPFace = *it;
         ai_assert( NULL != pQ3BSPFace );
-        if ( NULL == pQ3BSPFace )
-        {
+        if ( nullptr == pQ3BSPFace ) {
             continue;
         }
 
-        if ( pQ3BSPFace->iNumOfFaceVerts > 0 )
-        {
-            if ( pQ3BSPFace->iType == Polygon || pQ3BSPFace->iType == TriangleMesh )
-            {
-                createTriangleTopology( pModel, pQ3BSPFace, pMesh, faceIdx, vertIdx );
+        if ( pQ3BSPFace->iNumOfFaceVerts > 0 ) {
+            if ( pQ3BSPFace->iType == Polygon || pQ3BSPFace->iType == TriangleMesh ) {
+                createTriangleTopology( pModel, pQ3BSPFace, mesh, faceIdx, vertIdx );
             }
         }
     }
@@ -400,78 +364,63 @@ aiNode *Q3BSPFileImporter::CreateTopology( const Q3BSP::Q3BSPModel *pModel,
     aiNode *pNode = new aiNode;
     pNode->mNumMeshes = 1;
     pNode->mMeshes = new unsigned int[ 1 ];
+    *pMesh = mesh;
 
     return pNode;
 }
 
 // ------------------------------------------------------------------------------------------------
 //  Creates the triangle topology from a face array.
-void Q3BSPFileImporter::createTriangleTopology( const Q3BSP::Q3BSPModel *pModel,
-                                              Q3BSP::sQ3BSPFace *pQ3BSPFace,
-                                              aiMesh* pMesh,
-                                              unsigned int &rFaceIdx,
-                                              unsigned int &rVertIdx )
-{
-    ai_assert( rFaceIdx < pMesh->mNumFaces );
+void Q3BSPFileImporter::createTriangleTopology( const Q3BSP::Q3BSPModel *pModel, sQ3BSPFace *pQ3BSPFace,
+        aiMesh* pMesh, unsigned int &faceIdx, unsigned int &vertIdx ) {
+    ai_assert( faceIdx < pMesh->mNumFaces );
 
-    m_pCurrentFace = getNextFace( pMesh, rFaceIdx );
-    ai_assert( NULL != m_pCurrentFace );
-    if ( NULL == m_pCurrentFace )
-    {
+    m_pCurrentFace = getNextFace( pMesh, faceIdx );
+    if ( nullptr == m_pCurrentFace ) {
         return;
     }
 
     m_pCurrentFace->mNumIndices = 3;
     m_pCurrentFace->mIndices = new unsigned int[ m_pCurrentFace->mNumIndices ];
 
-    size_t idx = 0;
-    for ( size_t i = 0; i < (size_t) pQ3BSPFace->iNumOfFaceVerts; i++ )
-    {
+    size_t idx( 0 );
+    for ( size_t i = 0; i < (size_t) pQ3BSPFace->iNumOfFaceVerts; ++i ) {
         const size_t index = pQ3BSPFace->iVertexIndex + pModel->m_Indices[ pQ3BSPFace->iFaceVertexIndex + i ];
-        ai_assert( index < pModel->m_Vertices.size() );
-        if ( index >= pModel->m_Vertices.size() )
-        {
+        if ( index >= pModel->m_Vertices.size() ) {
             continue;
         }
 
         sQ3BSPVertex *pVertex = pModel->m_Vertices[ index ];
-        ai_assert( NULL != pVertex );
-        if ( NULL == pVertex )
-        {
+        if ( nullptr == pVertex ) {
             continue;
         }
-
-        pMesh->mVertices[ rVertIdx ].Set( pVertex->vPosition.x, pVertex->vPosition.y, pVertex->vPosition.z );
-        pMesh->mNormals[ rVertIdx ].Set( pVertex->vNormal.x, pVertex->vNormal.y, pVertex->vNormal.z );
-
-        pMesh->mTextureCoords[ 0 ][ rVertIdx ].Set( pVertex->vTexCoord.x, pVertex->vTexCoord.y, 0.0f );
-        pMesh->mTextureCoords[ 1 ][ rVertIdx ].Set( pVertex->vLightmap.x, pVertex->vLightmap.y, 0.0f );
-
-        m_pCurrentFace->mIndices[ idx ] = rVertIdx;
-        rVertIdx++;
-
-        idx++;
-        if ( idx > 2 )
-        {
+        if (idx > 2) {
             idx = 0;
-            m_pCurrentFace = getNextFace( pMesh, rFaceIdx );
-            if ( NULL != m_pCurrentFace )
-            {
+            m_pCurrentFace = getNextFace(pMesh, faceIdx);
+            if (nullptr != m_pCurrentFace) {
                 m_pCurrentFace->mNumIndices = 3;
-                m_pCurrentFace->mIndices = new unsigned int[ 3 ];
+                m_pCurrentFace->mIndices = new unsigned int[3];
             }
         }
+
+        pMesh->mVertices[ vertIdx ].Set( pVertex->vPosition.x, pVertex->vPosition.y, pVertex->vPosition.z );
+        pMesh->mNormals[ vertIdx ].Set( pVertex->vNormal.x, pVertex->vNormal.y, pVertex->vNormal.z );
+
+        pMesh->mTextureCoords[ 0 ][ vertIdx ].Set( pVertex->vTexCoord.x, pVertex->vTexCoord.y, 0.0f );
+        pMesh->mTextureCoords[ 1 ][ vertIdx ].Set( pVertex->vLightmap.x, pVertex->vLightmap.y, 0.0f );
+
+        m_pCurrentFace->mIndices[ idx ] = vertIdx;
+        vertIdx++;
+
+        idx++;
     }
-    rFaceIdx--;
 }
 
 // ------------------------------------------------------------------------------------------------
 //  Creates all referenced materials.
 void Q3BSPFileImporter::createMaterials( const Q3BSP::Q3BSPModel *pModel, aiScene* pScene,
-                                        Q3BSPZipArchive *pArchive )
-{
-    if ( m_MaterialLookupMap.empty() )
-    {
+        Q3BSPZipArchive *pArchive ) {
+    if ( m_MaterialLookupMap.empty() ) {
         return;
     }
 
@@ -479,11 +428,9 @@ void Q3BSPFileImporter::createMaterials( const Q3BSP::Q3BSPModel *pModel, aiScen
     aiString aiMatName;
     int textureId( -1 ), lightmapId( -1 );
     for ( FaceMapIt it = m_MaterialLookupMap.begin(); it != m_MaterialLookupMap.end();
-        ++it )
-    {
-        const std::string matName = (*it).first;
-        if ( matName.empty() )
-        {
+        ++it ) {
+        const std::string matName( it->first );
+        if ( matName.empty() ) {
             continue;
         }
 
@@ -494,18 +441,16 @@ void Q3BSPFileImporter::createMaterials( const Q3BSP::Q3BSPModel *pModel, aiScen
         extractIds( matName, textureId, lightmapId );
 
         // Adding the texture
-        if ( -1 != textureId )
-        {
+        if ( -1 != textureId ) {
             sQ3BSPTexture *pTexture = pModel->m_Textures[ textureId ];
-            if ( NULL != pTexture )
-            {
+            if ( nullptr != pTexture ) {
                 std::string tmp( "*" ), texName( "" );
                 tmp += pTexture->strName;
                 tmp += ".jpg";
                 normalizePathName( tmp, texName );
 
-                if ( !importTextureFromArchive( pModel, pArchive, pScene, pMatHelper, textureId ) )
-                {
+                if ( !importTextureFromArchive( pModel, pArchive, pScene, pMatHelper, textureId ) ) {
+                    ASSIMP_LOG_ERROR("Cannot import texture from archive " + texName);
                 }
             }
 
@@ -524,17 +469,16 @@ void Q3BSPFileImporter::createMaterials( const Q3BSP::Q3BSPModel *pModel, aiScen
 
 // ------------------------------------------------------------------------------------------------
 //  Counts the number of referenced vertices.
-size_t Q3BSPFileImporter::countData( const std::vector<sQ3BSPFace*> &rArray ) const
-{
-    size_t numVerts = 0;
-    for ( std::vector<sQ3BSPFace*>::const_iterator it = rArray.begin(); it != rArray.end();
+size_t Q3BSPFileImporter::countData( const std::vector<sQ3BSPFace*> &faceArray ) const {
+    size_t numVerts( 0 );
+    for ( std::vector<sQ3BSPFace*>::const_iterator it = faceArray.begin(); it != faceArray.end();
         ++it )
     {
         sQ3BSPFace *pQ3BSPFace = *it;
         if ( pQ3BSPFace->iType == Polygon || pQ3BSPFace->iType == TriangleMesh )
         {
             Q3BSP::sQ3BSPFace *pQ3BSPFace = *it;
-            ai_assert( NULL != pQ3BSPFace );
+            ai_assert( nullptr != pQ3BSPFace );
             numVerts += pQ3BSPFace->iNumOfFaceVerts;
         }
     }
@@ -580,8 +524,7 @@ size_t Q3BSPFileImporter::countTriangles( const std::vector<Q3BSP::sQ3BSPFace*> 
 
 // ------------------------------------------------------------------------------------------------
 //  Creates the faces-to-material map.
-void Q3BSPFileImporter::createMaterialMap( const Q3BSP::Q3BSPModel *pModel )
-{
+void Q3BSPFileImporter::createMaterialMap( const Q3BSP::Q3BSPModel *pModel ) {
     std::string key( "" );
     std::vector<sQ3BSPFace*> *pCurFaceArray = NULL;
     for ( size_t idx = 0; idx < pModel->m_Faces.size(); idx++ )
@@ -591,8 +534,7 @@ void Q3BSPFileImporter::createMaterialMap( const Q3BSP::Q3BSPModel *pModel )
         const int lightMapId = pQ3BSPFace->iLightmapID;
         createKey( texId, lightMapId, key );
         FaceMapIt it = m_MaterialLookupMap.find( key );
-        if ( m_MaterialLookupMap.end() == it )
-        {
+        if ( m_MaterialLookupMap.end() == it ) {
             pCurFaceArray = new std::vector<Q3BSP::sQ3BSPFace*>;
             m_MaterialLookupMap[ key ] = pCurFaceArray;
         }
@@ -600,8 +542,8 @@ void Q3BSPFileImporter::createMaterialMap( const Q3BSP::Q3BSPModel *pModel )
         {
             pCurFaceArray = (*it).second;
         }
-        ai_assert( NULL != pCurFaceArray );
-        if ( NULL != pCurFaceArray )
+        ai_assert( nullptr != pCurFaceArray );
+        if (nullptr != pCurFaceArray )
         {
             pCurFaceArray->push_back( pQ3BSPFace );
         }
@@ -610,32 +552,31 @@ void Q3BSPFileImporter::createMaterialMap( const Q3BSP::Q3BSPModel *pModel )
 
 // ------------------------------------------------------------------------------------------------
 //  Returns the next face.
-aiFace *Q3BSPFileImporter::getNextFace( aiMesh *pMesh, unsigned int &rFaceIdx )
-{
-    aiFace *pFace( NULL );
-    if ( rFaceIdx < pMesh->mNumFaces ) {
-        pFace = &pMesh->mFaces[ rFaceIdx ];
-        rFaceIdx++;
+aiFace *Q3BSPFileImporter::getNextFace( aiMesh *mesh, unsigned int &faceIdx ) {
+    aiFace *face( nullptr );
+    if ( faceIdx < mesh->mNumFaces ) {
+        face = &mesh->mFaces[ faceIdx ];
+        ++faceIdx;
     }
 
-    return pFace;
+    return face;
 }
 
 // ------------------------------------------------------------------------------------------------
 //  Imports a texture file.
-bool Q3BSPFileImporter::importTextureFromArchive( const Q3BSP::Q3BSPModel *pModel,
-                                                 Q3BSP::Q3BSPZipArchive *pArchive, aiScene*,
+bool Q3BSPFileImporter::importTextureFromArchive( const Q3BSP::Q3BSPModel *model,
+                                                 Q3BSP::Q3BSPZipArchive *archive, aiScene*,
                                                  aiMaterial *pMatHelper, int textureId ) {
-    if ( NULL == pArchive || NULL == pMatHelper ) {
+    if (nullptr == archive || nullptr == pMatHelper ) {
         return false;
     }
 
-    if ( textureId < 0 || textureId >= static_cast<int>( pModel->m_Textures.size() ) ) {
+    if ( textureId < 0 || textureId >= static_cast<int>( model->m_Textures.size() ) ) {
         return false;
     }
 
     bool res = true;
-    sQ3BSPTexture *pTexture = pModel->m_Textures[ textureId ];
+    sQ3BSPTexture *pTexture = model->m_Textures[ textureId ];
     if ( !pTexture ) {
         return false;
     }
@@ -645,8 +586,8 @@ bool Q3BSPFileImporter::importTextureFromArchive( const Q3BSP::Q3BSPModel *pMode
     supportedExtensions.push_back( ".png" );
     supportedExtensions.push_back( ".tga" );
     std::string textureName, ext;
-    if ( expandFile( pArchive, pTexture->strName, supportedExtensions, textureName, ext ) ) {
-        IOStream *pTextureStream = pArchive->Open( textureName.c_str() );
+    if ( expandFile( archive, pTexture->strName, supportedExtensions, textureName, ext ) ) {
+        IOStream *pTextureStream = archive->Open( textureName.c_str() );
         if ( pTextureStream ) {
             size_t texSize = pTextureStream->FileSize();
             aiTexture *pTexture = new aiTexture;
@@ -667,7 +608,7 @@ bool Q3BSPFileImporter::importTextureFromArchive( const Q3BSP::Q3BSPModel *pMode
             name.data[ 0 ] = '*';
             name.length = 1 + ASSIMP_itoa10( name.data + 1, static_cast<unsigned int>(MAXLEN-1), static_cast<int32_t>(mTextures.size()) );
 
-            pArchive->Close( pTextureStream );
+            archive->Close( pTextureStream );
 
             pMatHelper->AddProperty( &name, AI_MATKEY_TEXTURE_DIFFUSE( 0 ) );
             mTextures.push_back( pTexture );
@@ -689,19 +630,16 @@ bool Q3BSPFileImporter::importTextureFromArchive( const Q3BSP::Q3BSPModel *pMode
 bool Q3BSPFileImporter::importLightmap( const Q3BSP::Q3BSPModel *pModel, aiScene* pScene,
                                        aiMaterial *pMatHelper, int lightmapId )
 {
-    if ( NULL == pModel || NULL == pScene || NULL == pMatHelper )
-    {
+    if (nullptr == pModel || nullptr == pScene || nullptr == pMatHelper ) {
         return false;
     }
 
-    if ( lightmapId < 0 || lightmapId >= static_cast<int>( pModel->m_Lightmaps.size() ) )
-    {
+    if ( lightmapId < 0 || lightmapId >= static_cast<int>( pModel->m_Lightmaps.size() ) ) {
         return false;
     }
 
     sQ3BSPLightmap *pLightMap = pModel->m_Lightmaps[ lightmapId ];
-    if ( NULL == pLightMap )
-    {
+    if (nullptr == pLightMap ) {
         return false;
     }
 
@@ -713,8 +651,7 @@ bool Q3BSPFileImporter::importLightmap( const Q3BSP::Q3BSPModel *pModel, aiScene
 
     ::memcpy( pTexture->pcData, pLightMap->bLMapData, pTexture->mWidth );
     size_t p = 0;
-    for ( size_t i = 0; i < CE_BSP_LIGHTMAPWIDTH * CE_BSP_LIGHTMAPHEIGHT; ++i )
-    {
+    for ( size_t i = 0; i < CE_BSP_LIGHTMAPWIDTH * CE_BSP_LIGHTMAPHEIGHT; ++i ) {
         pTexture->pcData[ i ].r = pLightMap->bLMapData[ p++ ];
         pTexture->pcData[ i ].g = pLightMap->bLMapData[ p++ ];
         pTexture->pcData[ i ].b = pLightMap->bLMapData[ p++ ];
@@ -730,7 +667,6 @@ bool Q3BSPFileImporter::importLightmap( const Q3BSP::Q3BSPModel *pModel, aiScene
 
     return true;
 }
-
 
 // ------------------------------------------------------------------------------------------------
 //  Will search for a supported extension.

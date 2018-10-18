@@ -2,7 +2,8 @@
 Open Asset Import Library (assimp)
 ----------------------------------------------------------------------
 
-Copyright (c) 2006-2017, assimp team
+Copyright (c) 2006-2018, assimp team
+
 
 All rights reserved.
 
@@ -59,9 +60,9 @@ namespace Assimp    {
  *  @param in Input mesh
  *  @return Hash.
  */
-inline uint64_t GetMeshHash(aiMesh* in)
-{
-    ai_assert(NULL != in);
+inline
+uint64_t GetMeshHash(aiMesh* in) {
+    ai_assert(nullptr != in);
 
     // ... get an unique value representing the vertex format of the mesh
     const unsigned int fhash = GetMeshVFormatUnique(in);
@@ -77,14 +78,14 @@ inline uint64_t GetMeshHash(aiMesh* in)
 /** @brief Perform a component-wise comparison of two arrays
  *
  *  @param first First array
- *  @param second Second aray
+ *  @param second Second array
  *  @param size Size of both arrays
  *  @param e Epsilon
  *  @return true if the arrays are identical
  */
-inline bool CompareArrays(const aiVector3D* first, const aiVector3D* second,
-    unsigned int size, float e)
-{
+inline
+bool CompareArrays(const aiVector3D* first, const aiVector3D* second,
+        unsigned int size, float e) {
     for (const aiVector3D* end = first+size; first != end; ++first,++second) {
         if ( (*first - *second).SquareLength() >= e)
             return false;

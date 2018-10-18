@@ -2,7 +2,8 @@
 Open Asset Import Library (assimp)
 ----------------------------------------------------------------------
 
-Copyright (c) 2006-2017, assimp team
+Copyright (c) 2006-2018, assimp team
+
 
 All rights reserved.
 
@@ -63,7 +64,7 @@ struct ImportSettings
         , readWeights(true)
         , preservePivots(true)
         , optimizeEmptyAnimationCurves(true)
-		, searchEmbeddedTextures(false)
+        , useLegacyEmbeddedTextureNaming(false)
     {}
 
 
@@ -139,9 +140,9 @@ struct ImportSettings
      *  The default value is true. */
     bool optimizeEmptyAnimationCurves;
 
-	/** search for embedded loaded textures, where no embedded texture data is provided.
-	*  The default value is false. */
-	bool searchEmbeddedTextures;
+    /** use legacy naming for embedded textures eg: (*0, *1, *2)
+    **/
+    bool useLegacyEmbeddedTextureNaming;
 };
 
 

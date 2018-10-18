@@ -3,7 +3,8 @@
 Open Asset Import Library (assimp)
 ---------------------------------------------------------------------------
 
-Copyright (c) 2006-2017, assimp team
+Copyright (c) 2006-2018, assimp team
+
 
 
 All rights reserved.
@@ -59,7 +60,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 // ----------------------------------------------------------------------------------------
 template <typename TReal>
-aiMatrix4x4t<TReal> ::aiMatrix4x4t () :
+aiMatrix4x4t<TReal>::aiMatrix4x4t() AI_NO_EXCEPT :
     a1(1.0f), a2(), a3(), a4(),
     b1(), b2(1.0f), b3(), b4(),
     c1(), c2(), c3(1.0f), c4(),
@@ -70,7 +71,7 @@ aiMatrix4x4t<TReal> ::aiMatrix4x4t () :
 
 // ----------------------------------------------------------------------------------------
 template <typename TReal>
-aiMatrix4x4t<TReal> ::aiMatrix4x4t (TReal _a1, TReal _a2, TReal _a3, TReal _a4,
+aiMatrix4x4t<TReal>::aiMatrix4x4t (TReal _a1, TReal _a2, TReal _a3, TReal _a4,
               TReal _b1, TReal _b2, TReal _b3, TReal _b4,
               TReal _c1, TReal _c2, TReal _c3, TReal _c4,
               TReal _d1, TReal _d2, TReal _d3, TReal _d4) :
@@ -423,12 +424,18 @@ inline void aiMatrix4x4t<TReal>::Decompose(aiVector3t<TReal>& pScaling, aiVector
 {
 	ASSIMP_MATRIX4_4_DECOMPOSE_PART;
 
-	/*
-	    |  CE     -CF      D   0 |
-	M = |  BDE+AF -BDF+AE -BC  0 |
-	    | -ADE+BF -ADF+BE  AC  0 |
-	    |  0       0       0   1 |
+    /*
+    assuming a right-handed coordinate system
+    and post-multiplication of column vectors,
+    the rotation matrix for an euler XYZ rotation is M = Rz * Ry * Rx.
+    combining gives:
+    
+        |  CE  BDE-AF  ADE+BF  0  |
+    M = |  CF  BDF+AE  ADF-BE  0  |
+        |  -D    CB      AC    0  |
+        |   0     0       0    1  |
 
+    where
 	A = cos(angle_x), B = sin(angle_x);
 	C = cos(angle_y), D = sin(angle_y);
 	E = cos(angle_z), F = sin(angle_z);
@@ -437,20 +444,20 @@ inline void aiMatrix4x4t<TReal>::Decompose(aiVector3t<TReal>& pScaling, aiVector
 	// Use a small epsilon to solve floating-point inaccuracies
     const TReal epsilon = 10e-3f;
 
-	pRotation.y  = std::asin(vCols[2].x);// D. Angle around oY.
+	pRotation.y  = std::asin(-vCols[0].z);// D. Angle around oY.
 
 	TReal C = std::cos(pRotation.y);
 
 	if(std::fabs(C) > epsilon)
 	{
 		// Finding angle around oX.
-		TReal tan_x =  vCols[2].z / C;// A
-		TReal tan_y = -vCols[2].y / C;// B
+		TReal tan_x = vCols[2].z / C;// A
+		TReal tan_y = vCols[1].z / C;// B
 
 		pRotation.x = std::atan2(tan_y, tan_x);
 		// Finding angle around oZ.
-		tan_x =  vCols[0].x / C;// E
-		tan_y = -vCols[1].x / C;// F
+		tan_x = vCols[0].x / C;// E
+		tan_y = vCols[0].y / C;// F
 		pRotation.z = std::atan2(tan_y, tan_x);
 	}
 	else
@@ -458,8 +465,8 @@ inline void aiMatrix4x4t<TReal>::Decompose(aiVector3t<TReal>& pScaling, aiVector
 		pRotation.x = 0;// Set angle around oX to 0. => A == 1, B == 0, C == 0, D == 1.
 
 		// And finding angle around oZ.
-		TReal tan_x = vCols[1].y;// -BDF+AE => E
-		TReal tan_y = vCols[0].y;//  BDE+AF => F
+		TReal tan_x =  vCols[1].y;// BDF+AE => E
+		TReal tan_y = -vCols[1].x;// BDE-AF => F
 
 		pRotation.z = std::atan2(tan_y, tan_x);
 	}

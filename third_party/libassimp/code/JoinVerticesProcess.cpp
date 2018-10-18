@@ -3,7 +3,8 @@
 Open Asset Import Library (assimp)
 ---------------------------------------------------------------------------
 
-Copyright (c) 2006-2017, assimp team
+Copyright (c) 2006-2018, assimp team
+
 
 
 All rights reserved.
@@ -49,9 +50,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "JoinVerticesProcess.h"
 #include "ProcessHelper.h"
-#include "Vertex.h"
-#include "TinyFormatter.h"
+#include <assimp/Vertex.h>
+#include <assimp/TinyFormatter.h>
 #include <stdio.h>
+#include <unordered_set>
 
 using namespace Assimp;
 // ------------------------------------------------------------------------------------------------
@@ -78,7 +80,7 @@ bool JoinVerticesProcess::IsActive( unsigned int pFlags) const
 // Executes the post processing step on the given imported data.
 void JoinVerticesProcess::Execute( aiScene* pScene)
 {
-    DefaultLogger::get()->debug("JoinVerticesProcess begin");
+    ASSIMP_LOG_DEBUG("JoinVerticesProcess begin");
 
     // get the total number of vertices BEFORE the step is executed
     int iNumOldVertices = 0;
@@ -94,24 +96,137 @@ void JoinVerticesProcess::Execute( aiScene* pScene)
         iNumVertices += ProcessMesh( pScene->mMeshes[a],a);
 
     // if logging is active, print detailed statistics
-    if (!DefaultLogger::isNullLogger())
-    {
-        if (iNumOldVertices == iNumVertices)
-        {
-            DefaultLogger::get()->debug("JoinVerticesProcess finished ");
-        } else
-        {
-            char szBuff[128]; // should be sufficiently large in every case
-            ::ai_snprintf(szBuff,128,"JoinVerticesProcess finished | Verts in: %i out: %i | ~%.1f%%",
-                iNumOldVertices,
-                iNumVertices,
-                ((iNumOldVertices - iNumVertices) / (float)iNumOldVertices) * 100.f);
-            DefaultLogger::get()->info(szBuff);
+    if (!DefaultLogger::isNullLogger()) {
+        if (iNumOldVertices == iNumVertices) {
+            ASSIMP_LOG_DEBUG("JoinVerticesProcess finished ");
+        } else {
+            ASSIMP_LOG_INFO_F("JoinVerticesProcess finished | Verts in: ", iNumOldVertices,
+                " out: ", iNumVertices, " | ~",
+                ((iNumOldVertices - iNumVertices) / (float)iNumOldVertices) * 100.f );
         }
     }
 
     pScene->mFlags |= AI_SCENE_FLAGS_NON_VERBOSE_FORMAT;
 }
+
+namespace {
+
+bool areVerticesEqual(const Vertex &lhs, const Vertex &rhs, bool complex)
+{
+    // A little helper to find locally close vertices faster.
+    // Try to reuse the lookup table from the last step.
+    const static float epsilon = 1e-5f;
+    // Squared because we check against squared length of the vector difference
+    static const float squareEpsilon = epsilon * epsilon;
+
+    // Square compare is useful for animeshes vertices compare
+    if ((lhs.position - rhs.position).SquareLength() > squareEpsilon) {
+        return false;
+    }
+
+    // We just test the other attributes even if they're not present in the mesh.
+    // In this case they're initialized to 0 so the comparison succeeds.
+    // By this method the non-present attributes are effectively ignored in the comparison.
+    if ((lhs.normal - rhs.normal).SquareLength() > squareEpsilon) {
+        return false;
+    }
+
+    if ((lhs.texcoords[0] - rhs.texcoords[0]).SquareLength() > squareEpsilon) {
+        return false;
+    }
+
+    if ((lhs.tangent - rhs.tangent).SquareLength() > squareEpsilon) {
+        return false;
+    }
+
+    if ((lhs.bitangent - rhs.bitangent).SquareLength() > squareEpsilon) {
+        return false;
+    }
+
+    // Usually we won't have vertex colors or multiple UVs, so we can skip from here
+    // Actually this increases runtime performance slightly, at least if branch
+    // prediction is on our side.
+    if (complex) {
+        for (int i = 0; i < 8; i++) {
+            if (i > 0 && (lhs.texcoords[i] - rhs.texcoords[i]).SquareLength() > squareEpsilon) {
+                return false;
+            }
+            if (GetColorDifference(lhs.colors[i], rhs.colors[i]) > squareEpsilon) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+template<class XMesh>
+void updateXMeshVertices(XMesh *pMesh, std::vector<Vertex> &uniqueVertices) {
+    // replace vertex data with the unique data sets
+    pMesh->mNumVertices = (unsigned int)uniqueVertices.size();
+
+    // ----------------------------------------------------------------------------
+    // NOTE - we're *not* calling Vertex::SortBack() because it would check for
+    // presence of every single vertex component once PER VERTEX. And our CPU
+    // dislikes branches, even if they're easily predictable.
+    // ----------------------------------------------------------------------------
+
+    // Position, if present (check made for aiAnimMesh)
+    if (pMesh->mVertices)
+    {
+        delete [] pMesh->mVertices;
+        pMesh->mVertices = new aiVector3D[pMesh->mNumVertices];
+        for (unsigned int a = 0; a < pMesh->mNumVertices; a++) {
+            pMesh->mVertices[a] = uniqueVertices[a].position;
+        }
+    }
+
+    // Normals, if present
+    if (pMesh->mNormals)
+    {
+        delete [] pMesh->mNormals;
+        pMesh->mNormals = new aiVector3D[pMesh->mNumVertices];
+        for( unsigned int a = 0; a < pMesh->mNumVertices; a++) {
+            pMesh->mNormals[a] = uniqueVertices[a].normal;
+        }
+    }
+    // Tangents, if present
+    if (pMesh->mTangents)
+    {
+        delete [] pMesh->mTangents;
+        pMesh->mTangents = new aiVector3D[pMesh->mNumVertices];
+        for (unsigned int a = 0; a < pMesh->mNumVertices; a++) {
+            pMesh->mTangents[a] = uniqueVertices[a].tangent;
+        }
+    }
+    // Bitangents as well
+    if (pMesh->mBitangents)
+    {
+        delete [] pMesh->mBitangents;
+        pMesh->mBitangents = new aiVector3D[pMesh->mNumVertices];
+        for (unsigned int a = 0; a < pMesh->mNumVertices; a++) {
+            pMesh->mBitangents[a] = uniqueVertices[a].bitangent;
+        }
+    }
+    // Vertex colors
+    for (unsigned int a = 0; pMesh->HasVertexColors(a); a++)
+    {
+        delete [] pMesh->mColors[a];
+        pMesh->mColors[a] = new aiColor4D[pMesh->mNumVertices];
+        for( unsigned int b = 0; b < pMesh->mNumVertices; b++) {
+            pMesh->mColors[a][b] = uniqueVertices[b].colors[a];
+        }
+    }
+    // Texture coords
+    for (unsigned int a = 0; pMesh->HasTextureCoords(a); a++)
+    {
+        delete [] pMesh->mTextureCoords[a];
+        pMesh->mTextureCoords[a] = new aiVector3D[pMesh->mNumVertices];
+        for (unsigned int b = 0; b < pMesh->mNumVertices; b++) {
+            pMesh->mTextureCoords[a][b] = uniqueVertices[b].texcoords[a];
+        }
+    }
+}
+} // namespace
 
 // ------------------------------------------------------------------------------------------------
 // Unites identical vertices in the given mesh
@@ -123,6 +238,19 @@ int JoinVerticesProcess::ProcessMesh( aiMesh* pMesh, unsigned int meshIndex)
     // Return early if we don't have any positions
     if (!pMesh->HasPositions() || !pMesh->HasFaces()) {
         return 0;
+    }
+
+    // We should care only about used vertices, not all of them
+    // (this can happen due to original file vertices buffer being used by
+    // multiple meshes)
+    std::unordered_set<unsigned int> usedVertexIndices;
+    usedVertexIndices.reserve(pMesh->mNumVertices);
+    for( unsigned int a = 0; a < pMesh->mNumFaces; a++)
+    {
+        aiFace& face = pMesh->mFaces[a];
+        for( unsigned int b = 0; b < face.mNumIndices; b++) {
+            usedVertexIndices.insert(face.mIndices[b]);
+        }
     }
 
     // We'll never have more vertices afterwards.
@@ -137,9 +265,6 @@ int JoinVerticesProcess::ProcessMesh( aiMesh* pMesh, unsigned int meshIndex)
     static_assert(AI_MAX_VERTICES == 0x7fffffff, "AI_MAX_VERTICES == 0x7fffffff");
     std::vector<unsigned int> replaceIndex( pMesh->mNumVertices, 0xffffffff);
 
-    // A little helper to find locally close vertices faster.
-    // Try to reuse the lookup table from the last step.
-    const static float epsilon = 1e-5f;
     // float posEpsilonSqr;
     SpatialSort* vertexFinder = NULL;
     SpatialSort _vertexFinder;
@@ -161,9 +286,6 @@ int JoinVerticesProcess::ProcessMesh( aiMesh* pMesh, unsigned int meshIndex)
         // posEpsilonSqr = ComputePositionEpsilon(pMesh);
     }
 
-    // Squared because we check against squared length of the vector difference
-    static const float squareEpsilon = epsilon * epsilon;
-
     // Again, better waste some bytes than a realloc ...
     std::vector<unsigned int> verticesFound;
     verticesFound.reserve(10);
@@ -171,9 +293,23 @@ int JoinVerticesProcess::ProcessMesh( aiMesh* pMesh, unsigned int meshIndex)
     // Run an optimized code path if we don't have multiple UVs or vertex colors.
     // This should yield false in more than 99% of all imports ...
     const bool complex = ( pMesh->GetNumColorChannels() > 0 || pMesh->GetNumUVChannels() > 1);
+    const bool hasAnimMeshes = pMesh->mNumAnimMeshes > 0;
+
+    // We'll never have more vertices afterwards.
+    std::vector<std::vector<Vertex>> uniqueAnimatedVertices;
+    if (hasAnimMeshes) {
+        uniqueAnimatedVertices.resize(pMesh->mNumAnimMeshes);
+        for (unsigned int animMeshIndex = 0; animMeshIndex < pMesh->mNumAnimMeshes; animMeshIndex++) {
+            uniqueAnimatedVertices[animMeshIndex].reserve(pMesh->mNumVertices);
+        }
+    }
 
     // Now check each vertex if it brings something new to the table
     for( unsigned int a = 0; a < pMesh->mNumVertices; a++)  {
+        if (usedVertexIndices.find(a) == usedVertexIndices.end()) {
+            continue;
+        }
+
         // collect the vertex data
         Vertex v(pMesh,a);
 
@@ -183,74 +319,32 @@ int JoinVerticesProcess::ProcessMesh( aiMesh* pMesh, unsigned int meshIndex)
 
         // check all unique vertices close to the position if this vertex is already present among them
         for( unsigned int b = 0; b < verticesFound.size(); b++) {
-
             const unsigned int vidx = verticesFound[b];
             const unsigned int uidx = replaceIndex[ vidx];
             if( uidx & 0x80000000)
                 continue;
 
             const Vertex& uv = uniqueVertices[ uidx];
-            // Position mismatch is impossible - the vertex finder already discarded all non-matching positions
 
-            // We just test the other attributes even if they're not present in the mesh.
-            // In this case they're initialized to 0 so the comparison succeeds.
-            // By this method the non-present attributes are effectively ignored in the comparison.
-            if( (uv.normal - v.normal).SquareLength() > squareEpsilon)
+            if (!areVerticesEqual(v, uv, complex)) {
                 continue;
-            if( (uv.texcoords[0] - v.texcoords[0]).SquareLength() > squareEpsilon)
-                continue;
-            if( (uv.tangent - v.tangent).SquareLength() > squareEpsilon)
-                continue;
-            if( (uv.bitangent - v.bitangent).SquareLength() > squareEpsilon)
-                continue;
+            }
 
-            // Usually we won't have vertex colors or multiple UVs, so we can skip from here
-            // Actually this increases runtime performance slightly, at least if branch
-            // prediction is on our side.
-            if (complex){
-                // manually unrolled because continue wouldn't work as desired in an inner loop,
-                // also because some compilers seem to fail the task. Colors and UV coords
-                // are interleaved since the higher entries are most likely to be
-                // zero and thus useless. By interleaving the arrays, vertices are,
-                // on average, rejected earlier.
-
-                if( (uv.texcoords[1] - v.texcoords[1]).SquareLength() > squareEpsilon)
+            if (hasAnimMeshes) {
+                // If given vertex is animated, then it has to be preserver 1 to 1 (base mesh and animated mesh require same topology)
+                // NOTE: not doing this totaly breaks anim meshes as they don't have their own faces (they use pMesh->mFaces)
+                bool breaksAnimMesh = false;
+                for (unsigned int animMeshIndex = 0; animMeshIndex < pMesh->mNumAnimMeshes; animMeshIndex++) {
+                    const Vertex& animatedUV = uniqueAnimatedVertices[animMeshIndex][ uidx];
+                    Vertex aniMeshVertex(pMesh->mAnimMeshes[animMeshIndex], a);
+                    if (!areVerticesEqual(aniMeshVertex, animatedUV, complex)) {
+                        breaksAnimMesh = true;
+                        break;
+                    }
+                }
+                if (breaksAnimMesh) {
                     continue;
-                if( GetColorDifference( uv.colors[0], v.colors[0]) > squareEpsilon)
-                    continue;
-
-                if( (uv.texcoords[2] - v.texcoords[2]).SquareLength() > squareEpsilon)
-                    continue;
-                if( GetColorDifference( uv.colors[1], v.colors[1]) > squareEpsilon)
-                    continue;
-
-                if( (uv.texcoords[3] - v.texcoords[3]).SquareLength() > squareEpsilon)
-                    continue;
-                if( GetColorDifference( uv.colors[2], v.colors[2]) > squareEpsilon)
-                    continue;
-
-                if( (uv.texcoords[4] - v.texcoords[4]).SquareLength() > squareEpsilon)
-                    continue;
-                if( GetColorDifference( uv.colors[3], v.colors[3]) > squareEpsilon)
-                    continue;
-
-                if( (uv.texcoords[5] - v.texcoords[5]).SquareLength() > squareEpsilon)
-                    continue;
-                if( GetColorDifference( uv.colors[4], v.colors[4]) > squareEpsilon)
-                    continue;
-
-                if( (uv.texcoords[6] - v.texcoords[6]).SquareLength() > squareEpsilon)
-                    continue;
-                if( GetColorDifference( uv.colors[5], v.colors[5]) > squareEpsilon)
-                    continue;
-
-                if( (uv.texcoords[7] - v.texcoords[7]).SquareLength() > squareEpsilon)
-                    continue;
-                if( GetColorDifference( uv.colors[6], v.colors[6]) > squareEpsilon)
-                    continue;
-
-                if( GetColorDifference( uv.colors[7], v.colors[7]) > squareEpsilon)
-                    continue;
+                }
             }
 
             // we're still here -> this vertex perfectly matches our given vertex
@@ -269,11 +363,17 @@ int JoinVerticesProcess::ProcessMesh( aiMesh* pMesh, unsigned int meshIndex)
             // no unique vertex matches it up to now -> so add it
             replaceIndex[a] = (unsigned int)uniqueVertices.size();
             uniqueVertices.push_back( v);
+            if (hasAnimMeshes) {
+                for (unsigned int animMeshIndex = 0; animMeshIndex < pMesh->mNumAnimMeshes; animMeshIndex++) {
+                    Vertex aniMeshVertex(pMesh->mAnimMeshes[animMeshIndex], a);
+                    uniqueAnimatedVertices[animMeshIndex].push_back(aniMeshVertex);
+                }
+            }
         }
     }
 
     if (!DefaultLogger::isNullLogger() && DefaultLogger::get()->getLogSeverity() == Logger::VERBOSE)    {
-        DefaultLogger::get()->debug((Formatter::format(),
+        ASSIMP_LOG_DEBUG_F(
             "Mesh ",meshIndex,
             " (",
             (pMesh->mName.length ? pMesh->mName.data : "unnamed"),
@@ -283,67 +383,13 @@ int JoinVerticesProcess::ProcessMesh( aiMesh* pMesh, unsigned int meshIndex)
             " | ~",
             ((pMesh->mNumVertices - uniqueVertices.size()) / (float)pMesh->mNumVertices) * 100.f,
             "%"
-        ));
+        );
     }
 
-    // replace vertex data with the unique data sets
-    pMesh->mNumVertices = (unsigned int)uniqueVertices.size();
-
-    // ----------------------------------------------------------------------------
-    // NOTE - we're *not* calling Vertex::SortBack() because it would check for
-    // presence of every single vertex component once PER VERTEX. And our CPU
-    // dislikes branches, even if they're easily predictable.
-    // ----------------------------------------------------------------------------
-
-    // Position
-    delete [] pMesh->mVertices;
-    pMesh->mVertices = new aiVector3D[pMesh->mNumVertices];
-    for( unsigned int a = 0; a < pMesh->mNumVertices; a++)
-        pMesh->mVertices[a] = uniqueVertices[a].position;
-
-    // Normals, if present
-    if( pMesh->mNormals)
-    {
-        delete [] pMesh->mNormals;
-        pMesh->mNormals = new aiVector3D[pMesh->mNumVertices];
-        for( unsigned int a = 0; a < pMesh->mNumVertices; a++) {
-            pMesh->mNormals[a] = uniqueVertices[a].normal;
-        }
-    }
-    // Tangents, if present
-    if( pMesh->mTangents)
-    {
-        delete [] pMesh->mTangents;
-        pMesh->mTangents = new aiVector3D[pMesh->mNumVertices];
-        for( unsigned int a = 0; a < pMesh->mNumVertices; a++) {
-            pMesh->mTangents[a] = uniqueVertices[a].tangent;
-        }
-    }
-    // Bitangents as well
-    if( pMesh->mBitangents)
-    {
-        delete [] pMesh->mBitangents;
-        pMesh->mBitangents = new aiVector3D[pMesh->mNumVertices];
-        for( unsigned int a = 0; a < pMesh->mNumVertices; a++) {
-            pMesh->mBitangents[a] = uniqueVertices[a].bitangent;
-        }
-    }
-    // Vertex colors
-    for( unsigned int a = 0; pMesh->HasVertexColors(a); a++)
-    {
-        delete [] pMesh->mColors[a];
-        pMesh->mColors[a] = new aiColor4D[pMesh->mNumVertices];
-        for( unsigned int b = 0; b < pMesh->mNumVertices; b++) {
-            pMesh->mColors[a][b] = uniqueVertices[b].colors[a];
-        }
-    }
-    // Texture coords
-    for( unsigned int a = 0; pMesh->HasTextureCoords(a); a++)
-    {
-        delete [] pMesh->mTextureCoords[a];
-        pMesh->mTextureCoords[a] = new aiVector3D[pMesh->mNumVertices];
-        for( unsigned int b = 0; b < pMesh->mNumVertices; b++) {
-            pMesh->mTextureCoords[a][b] = uniqueVertices[b].texcoords[a];
+    updateXMeshVertices(pMesh, uniqueVertices);
+    if (hasAnimMeshes) {
+        for (unsigned int animMeshIndex = 0; animMeshIndex < pMesh->mNumAnimMeshes; animMeshIndex++) {
+            updateXMeshVertices(pMesh->mAnimMeshes[animMeshIndex], uniqueAnimatedVertices[animMeshIndex]);
         }
     }
 
@@ -374,7 +420,7 @@ int JoinVerticesProcess::ProcessMesh( aiMesh* pMesh, unsigned int meshIndex)
                 }
             }
         } else {
-            DefaultLogger::get()->error( "X-Export: aiBone shall contain weights, but pointer to them is NULL." );
+            ASSIMP_LOG_ERROR( "X-Export: aiBone shall contain weights, but pointer to them is NULL." );
         }
 
         if (newWeights.size() > 0) {
@@ -408,7 +454,7 @@ int JoinVerticesProcess::ProcessMesh( aiMesh* pMesh, unsigned int meshIndex)
             }
 
             --a;
-            DefaultLogger::get()->warn("Removing bone -> no weights remaining");
+            ASSIMP_LOG_WARN("Removing bone -> no weights remaining");
         }
     }
     return pMesh->mNumVertices;

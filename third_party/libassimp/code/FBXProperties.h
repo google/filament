@@ -2,7 +2,8 @@
 Open Asset Import Library (assimp)
 ----------------------------------------------------------------------
 
-Copyright (c) 2006-2017, assimp team
+Copyright (c) 2006-2018, assimp team
+
 
 All rights reserved.
 
@@ -148,11 +149,23 @@ T PropertyGet(const PropertyTable& in, const std::string& name, const T& default
 // ------------------------------------------------------------------------------------------------
 template <typename T>
 inline 
-T PropertyGet(const PropertyTable& in, const std::string& name, bool& result) {
-    const Property* const prop = in.Get(name);
+T PropertyGet(const PropertyTable& in, const std::string& name, bool& result, bool useTemplate=false ) {
+    const Property* prop = in.Get(name);
     if( nullptr == prop) {
-        result = false;
-        return T();
+        if ( ! useTemplate ) {
+            result = false;
+            return T();
+        }
+        const PropertyTable* templ = in.TemplateProps();
+        if ( nullptr == templ ) {
+            result = false;
+            return T();
+        }
+        prop = templ->Get(name);
+        if ( nullptr == prop ) {
+            result = false;
+            return T();
+        }
     }
 
     // strong typing, no need to be lenient

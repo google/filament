@@ -2,7 +2,8 @@
 Open Asset Import Library (assimp)
 ----------------------------------------------------------------------
 
-Copyright (c) 2006-2017, assimp team
+Copyright (c) 2006-2018, assimp team
+
 
 All rights reserved.
 
@@ -67,10 +68,8 @@ namespace Assimp    {
  *  std::vector and std::map in the public headers. Furthermore we are dropping
  *  any STL interface problems caused by mismatching STL settings. All
  *  size calculation are now done by us, not the app heap. */
-class ImporterPimpl
-{
+class ImporterPimpl {
 public:
-
     // Data type to store the key hash
     typedef unsigned int KeyType;
 
@@ -80,8 +79,6 @@ public:
     typedef std::map<KeyType, ai_real> FloatPropertyMap;
     typedef std::map<KeyType, std::string> StringPropertyMap;
     typedef std::map<KeyType, aiMatrix4x4> MatrixPropertyMap;
-
-public:
 
     /** IO handler to use for all file accesses. */
     IOSystem* mIOHandler;
@@ -116,12 +113,34 @@ public:
     MatrixPropertyMap mMatrixProperties;
 
     /** Used for testing - extra verbose mode causes the ValidateDataStructure-Step
-     *  to be executed before and after every single postprocess step */
+     *  to be executed before and after every single post-process step */
     bool bExtraVerbose;
 
     /** Used by post-process steps to share data */
     SharedPostProcessInfo* mPPShared;
+
+    /// The default class constructor.
+    ImporterPimpl() AI_NO_EXCEPT;
 };
+
+inline
+ImporterPimpl::ImporterPimpl() AI_NO_EXCEPT
+: mIOHandler( nullptr )
+, mIsDefaultHandler( false )
+, mProgressHandler( nullptr )
+, mIsDefaultProgressHandler( false )
+, mImporter()
+, mPostProcessingSteps()
+, mScene( nullptr )
+, mErrorString()
+, mIntProperties()
+, mFloatProperties()
+, mStringProperties()
+, mMatrixProperties()
+, bExtraVerbose( false )
+, mPPShared( nullptr ) {
+    // empty
+}
 //! @endcond
 
 

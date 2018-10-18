@@ -2,7 +2,8 @@
 Open Asset Import Library (assimp)
 ----------------------------------------------------------------------
 
-Copyright (c) 2006-2017, assimp team
+Copyright (c) 2006-2018, assimp team
+
 
 All rights reserved.
 
@@ -112,10 +113,10 @@ namespace glTF2 {
         /****************** Channels *******************/
         Value channels;
         channels.SetArray();
-        channels.Reserve(unsigned(a.Channels.size()), w.mAl);
+        channels.Reserve(unsigned(a.channels.size()), w.mAl);
 
-        for (size_t i = 0; i < unsigned(a.Channels.size()); ++i) {
-            Animation::AnimChannel& c = a.Channels[i];
+        for (size_t i = 0; i < unsigned(a.channels.size()); ++i) {
+            Animation::Channel& c = a.channels[i];
             Value valChannel;
             valChannel.SetObject();
             {
@@ -125,7 +126,20 @@ namespace glTF2 {
                 valTarget.SetObject();
                 {
                     valTarget.AddMember("node", c.target.node->index, w.mAl);
-                    valTarget.AddMember("path", c.target.path, w.mAl);
+                    switch (c.target.path) {
+                        case AnimationPath_TRANSLATION:
+                            valTarget.AddMember("path", "translation", w.mAl);
+                            break;
+                        case AnimationPath_ROTATION:
+                            valTarget.AddMember("path", "rotation", w.mAl);
+                            break;
+                        case AnimationPath_SCALE:
+                            valTarget.AddMember("path", "scale", w.mAl);
+                            break;
+                        case AnimationPath_WEIGHTS:
+                            valTarget.AddMember("path", "weights", w.mAl);
+                            break;
+                    }
                 }
                 valChannel.AddMember("target", valTarget, w.mAl);
             }
@@ -137,16 +151,24 @@ namespace glTF2 {
         Value valSamplers;
         valSamplers.SetArray();
 
-        for (size_t i = 0; i < unsigned(a.Samplers.size()); ++i) {
-            Animation::AnimSampler& s = a.Samplers[i];
+        for (size_t i = 0; i < unsigned(a.samplers.size()); ++i) {
+            Animation::Sampler& s = a.samplers[i];
             Value valSampler;
             valSampler.SetObject();
             {
-                Ref<Accessor> inputAccessor = a.GetAccessor(s.input);
-                Ref<Accessor> outputAccessor = a.GetAccessor(s.output);
-                valSampler.AddMember("input", inputAccessor->index, w.mAl);
-                valSampler.AddMember("interpolation", s.interpolation, w.mAl);
-                valSampler.AddMember("output", outputAccessor->index, w.mAl);
+                valSampler.AddMember("input", s.input->index, w.mAl);
+                switch (s.interpolation) {
+                    case Interpolation_LINEAR:
+                        valSampler.AddMember("path", "LINEAR", w.mAl);
+                        break;
+                    case Interpolation_STEP:
+                        valSampler.AddMember("path", "STEP", w.mAl);
+                        break;
+                    case Interpolation_CUBICSPLINE:
+                        valSampler.AddMember("path", "CUBICSPLINE", w.mAl);
+                        break;
+                }
+                valSampler.AddMember("output", s.output->index, w.mAl);
             }
             valSamplers.PushBack(valSampler, w.mAl);
         }
@@ -156,7 +178,10 @@ namespace glTF2 {
     inline void Write(Value& obj, Buffer& b, AssetWriter& w)
     {
         obj.AddMember("byteLength", static_cast<uint64_t>(b.byteLength), w.mAl);
-        obj.AddMember("uri", Value(b.GetURI(), w.mAl).Move(), w.mAl);
+
+        const auto uri = b.GetURI();
+        const auto relativeUri = uri.substr(uri.find_last_of("/\\") + 1u);
+        obj.AddMember("uri", Value(relativeUri, w.mAl).Move(), w.mAl);
     }
 
     inline void Write(Value& obj, BufferView& bv, AssetWriter& w)
@@ -167,7 +192,9 @@ namespace glTF2 {
         if (bv.byteStride != 0) {
             obj.AddMember("byteStride", bv.byteStride, w.mAl);
         }
-        obj.AddMember("target", int(bv.target), w.mAl);
+        if (bv.target != 0) {
+            obj.AddMember("target", int(bv.target), w.mAl);
+        }
     }
 
     inline void Write(Value& /*obj*/, Camera& /*c*/, AssetWriter& /*w*/)
@@ -177,17 +204,23 @@ namespace glTF2 {
 
     inline void Write(Value& obj, Image& img, AssetWriter& w)
     {
-        std::string uri;
-        if (img.HasData()) {
-            uri = "data:" + (img.mimeType.empty() ? "application/octet-stream" : img.mimeType);
-            uri += ";base64,";
-            Util::EncodeBase64(img.GetData(), img.GetDataLength(), uri);
+        if (img.bufferView) {
+            obj.AddMember("bufferView", img.bufferView->index, w.mAl);
+            obj.AddMember("mimeType", Value(img.mimeType, w.mAl).Move(), w.mAl);
         }
         else {
-            uri = img.uri;
-        }
+            std::string uri;
+            if (img.HasData()) {
+                uri = "data:" + (img.mimeType.empty() ? "application/octet-stream" : img.mimeType);
+                uri += ";base64,";
+                Util::EncodeBase64(img.GetData(), img.GetDataLength(), uri);
+            }
+            else {
+                uri = img.uri;
+            }
 
-        obj.AddMember("uri", Value(uri, w.mAl).Move(), w.mAl);
+            obj.AddMember("uri", Value(uri, w.mAl).Move(), w.mAl);
+        }
     }
 
     namespace {
@@ -329,6 +362,12 @@ namespace glTF2 {
             if (!pbrSpecularGlossiness.ObjectEmpty()) {
                 exts.AddMember("KHR_materials_pbrSpecularGlossiness", pbrSpecularGlossiness, w.mAl);
             }
+        }
+
+        if (m.unlit) {
+          Value unlit;
+          unlit.SetObject();
+          exts.AddMember("KHR_materials_unlit", unlit, w.mAl);
         }
 
         if (!exts.ObjectEmpty()) {
@@ -561,6 +600,98 @@ namespace glTF2 {
         }
     }
 
+    inline void AssetWriter::WriteGLBFile(const char* path)
+    {
+        std::unique_ptr<IOStream> outfile(mAsset.OpenFile(path, "wb", true));
+
+        if (outfile == 0) {
+            throw DeadlyExportError("Could not open output file: " + std::string(path));
+        }
+
+        Ref<Buffer> bodyBuffer = mAsset.GetBodyBuffer();
+        if (bodyBuffer->byteLength > 0) {
+            rapidjson::Value glbBodyBuffer;
+            glbBodyBuffer.SetObject();
+            glbBodyBuffer.AddMember("byteLength", static_cast<uint64_t>(bodyBuffer->byteLength), mAl);
+            mDoc["buffers"].PushBack(glbBodyBuffer, mAl);
+        }
+
+        // Padding with spaces as required by the spec
+        uint32_t padding = 0x20202020;
+
+        //
+        // JSON chunk
+        //
+
+        StringBuffer docBuffer;
+        Writer<StringBuffer> writer(docBuffer);
+        mDoc.Accept(writer);
+
+        uint32_t jsonChunkLength = (docBuffer.GetSize() + 3) & ~3; // Round up to next multiple of 4
+        auto paddingLength = jsonChunkLength - docBuffer.GetSize();
+
+        GLB_Chunk jsonChunk;
+        jsonChunk.chunkLength = jsonChunkLength;
+        jsonChunk.chunkType = ChunkType_JSON;
+        AI_SWAP4(jsonChunk.chunkLength);
+
+        outfile->Seek(sizeof(GLB_Header), aiOrigin_SET);
+        if (outfile->Write(&jsonChunk, 1, sizeof(GLB_Chunk)) != sizeof(GLB_Chunk)) {
+            throw DeadlyExportError("Failed to write scene data header!");
+        }
+        if (outfile->Write(docBuffer.GetString(), 1, docBuffer.GetSize()) != docBuffer.GetSize()) {
+            throw DeadlyExportError("Failed to write scene data!");
+        }
+        if (paddingLength && outfile->Write(&padding, 1, paddingLength) != paddingLength) {
+            throw DeadlyExportError("Failed to write scene data padding!");
+        }
+
+        //
+        // Binary chunk
+        //
+
+        uint32_t binaryChunkLength = 0;
+        if (bodyBuffer->byteLength > 0) {
+            binaryChunkLength = (bodyBuffer->byteLength + 3) & ~3; // Round up to next multiple of 4
+            auto paddingLength = binaryChunkLength - bodyBuffer->byteLength;
+
+            GLB_Chunk binaryChunk;
+            binaryChunk.chunkLength = binaryChunkLength;
+            binaryChunk.chunkType = ChunkType_BIN;
+            AI_SWAP4(binaryChunk.chunkLength);
+
+            size_t bodyOffset = sizeof(GLB_Header) + sizeof(GLB_Chunk) + jsonChunk.chunkLength;
+            outfile->Seek(bodyOffset, aiOrigin_SET);
+            if (outfile->Write(&binaryChunk, 1, sizeof(GLB_Chunk)) != sizeof(GLB_Chunk)) {
+                throw DeadlyExportError("Failed to write body data header!");
+            }
+            if (outfile->Write(bodyBuffer->GetPointer(), 1, bodyBuffer->byteLength) != bodyBuffer->byteLength) {
+                throw DeadlyExportError("Failed to write body data!");
+            }
+            if (paddingLength && outfile->Write(&padding, 1, paddingLength) != paddingLength) {
+                throw DeadlyExportError("Failed to write body data padding!");
+            }
+        }
+
+        //
+        // Header
+        //
+
+        GLB_Header header;
+        memcpy(header.magic, AI_GLB_MAGIC_NUMBER, sizeof(header.magic));
+
+        header.version = 2;
+        AI_SWAP4(header.version);
+
+        header.length = uint32_t(sizeof(GLB_Header) + 2 * sizeof(GLB_Chunk) + jsonChunkLength + binaryChunkLength);
+        AI_SWAP4(header.length);
+
+        outfile->Seek(0, aiOrigin_SET);
+        if (outfile->Write(&header, 1, sizeof(GLB_Header)) != sizeof(GLB_Header)) {
+            throw DeadlyExportError("Failed to write the header!");
+        }
+    }
+
     inline void AssetWriter::WriteMetadata()
     {
         Value asset;
@@ -578,6 +709,10 @@ namespace glTF2 {
             // This is used to export pbrSpecularGlossiness materials with GLTF 2.
             if (this->mAsset.extensionsUsed.KHR_materials_pbrSpecularGlossiness) {
                 exts.PushBack(StringRef("KHR_materials_pbrSpecularGlossiness"), mAl);
+            }
+
+            if (this->mAsset.extensionsUsed.KHR_materials_unlit) {
+              exts.PushBack(StringRef("KHR_materials_unlit"), mAl);
             }
         }
 

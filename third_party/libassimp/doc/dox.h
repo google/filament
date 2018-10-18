@@ -62,7 +62,7 @@ that it has not been implemented yet and some (most ...) formats lack proper spe
 </tt>
 See the @link importer_notes Importer Notes Page @endlink for information, what a specific importer can do and what not.
 Note that although this paper claims to be the official documentation,
-http://assimp.sourceforge.net/main_features_formats.html
+https://github.com/assimp/assimp/blob/master/Readme.md
 <br>is usually the most up-to-date list of file formats supported by the library. <br>
 
 <sup>1</sup>: Experimental loaders<br>
@@ -90,9 +90,16 @@ but not all of them are *open-source*. If there's an accompagning '<file>\source
 @section main_install Installation
 
 assimp can be used in two ways: linking against the pre-built libraries or building the library on your own. The former
-option is the easiest, but the assimp distribution contains pre-built libraries only for Visual C++ 2005 and 2008. For other
-compilers you'll have to build assimp for yourself. Which is hopefully as hassle-free as the other way, but needs a bit
-more work. Both ways are described at the @link install Installation page. @endlink
+option is the easiest, but the assimp distribution contains pre-built libraries only for Visual C++ 2013, 2015 and 2017. 
+For other compilers you'll have to build assimp for yourself. Which is hopefully as hassle-free as the other way, but 
+needs a bit more work. Both ways are described at the @link install Installation page. @endlink
+If you want to use assimp on Ubuntu you can install it via the following command:
+
+@code
+sudo apt-get install assimp
+@endcode
+
+If you want to use the python-assimp-port just follow these instructions: https://github.com/assimp/assimp/tree/master/port/PyAssimp
 
 @section main_usage Usage
 
@@ -115,7 +122,6 @@ assimp is considerably easy, as the whole postprocessing infrastructure is avail
 See the @link extend Extending the library @endlink page for more information.
 
 
-
 @section main_support Support & Feedback
 
 If you have any questions/comments/suggestions/bug reports you're welcome to post them in our
@@ -133,129 +139,49 @@ assimp-discussions</a>.
 
 @section install_prebuilt Using the pre-built libraries with Visual C++ 8/9
 
-If you develop at Visual Studio 2005 or 2008, you can simply use the pre-built linker libraries provided in the distribution.
+If you develop at Visual Studio 2015 or 2017, you can simply use the pre-built linker libraries provided in the distribution.
 Extract all files to a place of your choice. A directory called "assimp" will be created there. Add the assimp/include path
 to your include paths (Menu-&gt;Extras-&gt;Options-&gt;Projects and Solutions-&gt;VC++ Directories-&gt;Include files)
 and the assimp/lib/&lt;Compiler&gt; path to your linker paths (Menu-&gt;Extras-&gt;Options-&gt;Projects and Solutions-&gt;VC++ Directories-&gt;Library files).
 This is necessary only once to setup all paths inside you IDE.
 
-To use the library in your C++ project you have to include either &lt;assimp/Importer.hpp&gt; or &lt;assimp/cimport.h&gt; plus some others starting with &lt;types.h&gt;.
-If you set up your IDE correctly the compiler should be able to find the files. Then you have to add the linker library to your
-project dependencies. Link to <assimp_root>/lib/<config-name>/assimp.lib. config-name is one of the predefined
-project configs. For static linking, use release/debug. See the sections below on this page for more information on the
-other build configs.
-If done correctly you should now be able to compile, link,
-run and use the application. If the linker complains about some integral functions being defined twice you probably have
-mixed the runtimes. Recheck the project configuration (project properties -&gt; C++ -&gt; Code generation -&gt; Runtime) if you use
-static runtimes (Multithreaded / Multithreaded Debug) or dynamic runtimes (Multithreaded DLL / Multithreaded Debug DLL).
-Choose the assimp linker lib accordingly.
-<br><br>
-Please don't forget to also read the @ref assimp_stl section on MSVC and the STL.
-
-@section assimp_stl Microsoft Compilers and the C++ Standard Library
-
-In VC8 and VC9 Microsoft introduced some Standard Library debugging features. A good example are improved iterator checks and
-various useful debug checks. The problem is the performance penalty that incurs with those extra checks.
-
-Most of these security enhancements are active in release builds by default, rendering assimp several times
-slower. However, it is possible to disable them by setting
+To use the library in your C++ project you can simply generate a project file via cmake. One way is to add the assimp-folder 
+as a subdirectory via the cmake-command
 
 @code
-_HAS_ITERATOR_DEBUGGING=0
-_SECURE_SCL=0
+addsubdiectory(assimp)
 @endcode
 
-in the preprocessor options (or alternatively in the source code, just before the STL is included for the first time).
-<b>assimp's vc8 and vc9 configs enable these flags by default</b>.
+Now just add the assimp-dependency to your application:
 
-<i>If you're linking statically against assimp:</i> Make sure your applications uses the same STl settings!
-If you do not, there are two binary incompatible STL versions mangled together and you'll crash.
-Alternatively you can disable the fast STL settings for assimp by removing the 'FastSTL' property sheet from
-the vc project file.
+@code
+TARGET_LINK_LIBRARIES(my_game assimp)
+@endcode
 
-<i>If you're using assimp in a DLL/SO:</i> It's ok. There's no STL used in the binary DLL/SO interface, so it doesn't care whether
-your application uses the same STL settings or not.
-<br><br>
-Another option is to build against a different STL implementation, for example STlport. There's a special
-@ref assimp_stlport section that has a description how to achieve this.
+If done correctly you should now be able to compile, link, run and use the application. 
 
 
 @section install_own Building the library from scratch
 
-To build the library on your own you first have to get hold of the dependencies. Fortunately, special attention was paid to
-keep the list of dependencies short. Unfortunately, the only dependency is <a href="http://www.boost.org">boost</a> which
-can be a bit painful to set up for certain development environments. Boost is a widely used collection of classes and
-functions for various purposes. Chances are that it was already installed along with your compiler. If not, you have to install
-it for yourself. Read the "Getting Started" section of the Boost documentation for how to setup boost. VisualStudio users
-can use a comfortable installer from <a href="http://www.boost-consulting.com/products/free">
-http://www.boost-consulting.com/products/free</a>. Choose the appropriate version of boost for your runtime of choice.
+First you need to install cmake. Now just get the code from github or download the latest version from the webside.
+to build the library just open a command-prompt / bash, navigate into the repo-folder and run cmake via:
 
-<b>If you don't want to use boost</b>, you can build against our <i>"Boost-Workaround"</i>. It consists of very small
-implementations of the various boost utility classes used. However, you'll lose functionality (e.g. threading) by doing this.
-So, if you can use boost, you should use boost. Otherwise, See the @link use_noboost NoBoost-Section @endlink
-later on this page for the details of the workaround.
-
-Once boost is working, you have to set up a project for the assimp library in your favorite IDE. If you use VC2005 or
-VC2008, you can simply load the solution or project files in the workspaces/ folder, otherwise you have to create a new
-package and add all the headers and source files from the include/ and code/ directories. Set the temporary output folder
-to obj/, for example, and redirect the output folder to bin/. Then build the library - it should compile and link fine.
-
-The last step is to integrate the library into your project. This is basically the same task as described in the
-"Using the pre-built libraries" section above: add the include/ and bin/ directories to your IDE's paths so that the compiler can find
-the library files. Alternatively you can simply add the assimp project to your project's overall solution and build it inside
-your solution.
-
-
-@section use_noboost Building without boost.
-
-The Boost-Workaround consists of dummy replacements for some boost utility templates. Currently there are replacements for
-
- - boost.scoped_ptr
- - boost.scoped_array
- - boost.format
- - boost.random
- - boost.common_factor
- - boost.foreach
- - boost.tuple
- - boost.make_shared
-
-These implementations are very limited and are not intended for use outside assimp. A compiler
-with full support for partial template specializations is required. To enable the workaround, put the following in
-your compiler's list of predefined macros:
 @code
-#define ASSIMP_BUILD_BOOST_WORKAROUND
+cmake CMakeLists.txt
 @endcode
-<br>
-If you're working with the provided solutions for Visual Studio use the <i>-noboost</i> build configs. <br>
 
-<b>assimp_BUILD_BOOST_WORKAROUND</b> implies <b>assimp_BUILD_SINGLETHREADED</b>. <br>
-See the @ref assimp_st section
-for more details.
-
-
-
+A project-file of your default make-system ( like gnu-make on linux or Visual-Studio on Windows ) will be generated. 
+Run the build and you are done. You can find the libs at assimp/lib and the dll's / so's at bin.
 
 @section assimp_dll Windows DLL Build
 
-assimp can be built as DLL. You just need to select a -dll config from the list of project
-configs and you're fine.
+The Assimp-package can be built as DLL. You just need to run the default cmake run.
 
-<b>NOTE:</b> Theoretically, assimp-dll can be used with multithreaded (non-dll) runtime libraries,
-as long as you don't utilize any non-public stuff from the code folder. However, if you happen
-to encounter *very* strange problems, try changing the runtime to <i>Multithreaded (Debug) DLL</i>.
 
-@section assimp_stlport Building against STLport
+@section assimp static lib
 
-STLport is a free, fast and secure STL replacement that works with
-all major compilers and platforms. To get it, download the latest release from
-<a href="http://www.stlport.org"/><stlport.org></a>.
-Usually you'll just need to run 'configure' + a makefile (see their README for more details).
-Don't miss to add <stlport_root>/stlport to your compiler's default include paths - <b>prior</b>
-to the directory where your compiler vendor's headers lie. Do the same for  <stlport_root>/lib and
-recompile assimp. To ensure you're really building against STLport see aiGetCompileFlags().
-<br>
-In our testing, STLport builds tend to be a bit faster than builds against Microsoft's
-C++ Standard Library.
+The Assimp-package can be build as a static library as well. Do do so just set the configuration variable <b>BUILD_SHARED_LIBS</b>
+to off during the cmake run.
 
 */
 
@@ -533,8 +459,9 @@ assimp::Importer::ReadFile(), aiImportFile() or aiImportFileEx() - see the @link
 for further information on how to use the library.
 
 By default, all 3D data is provided in a right-handed coordinate system such as OpenGL uses. In
-this coordinate system, +X points to the right, -Z points away from the viewer into the screen and
-+Y points upwards. Several modeling packages such as 3D Studio Max use this coordinate system as well (or a rotated variant of it).
+this coordinate system, +X points to the right, +Y points upwards and +Z points out of the screen
+towards the viewer. Several modeling packages such as 3D Studio Max use this coordinate system as well
+(or a rotated variant of it).
 By contrast, some other environments use left-handed coordinate systems, a prominent example being
 DirectX. If you need the imported data to be in a left-handed coordinate system, supply the
 #aiProcess_MakeLeftHanded flag to the ReadFile() function call.
@@ -552,7 +479,7 @@ although our built-in triangulation (#aiProcess_Triangulate postprocessing step)
 
 The output UV coordinate system has its origin in the lower-left corner:
 @code
-0y|1y ---------- 1x|1y
+0x|1y ---------- 1x|1y
  |                |
  |                |
  |                |
@@ -560,18 +487,27 @@ The output UV coordinate system has its origin in the lower-left corner:
 @endcode
 Use the #aiProcess_FlipUVs flag to get UV coordinates with the upper-left corner als origin.
 
-All matrices in the library are row-major. That means that the matrices are stored row by row in memory,
-which is similar to the OpenGL matrix layout. A typical 4x4 matrix including a translational part looks like this:
+A typical 4x4 matrix including a translational part looks like this:
 @code
 X1  Y1  Z1  T1
 X2  Y2  Z2  T2
 X3  Y3  Z3  T3
-0   0   0   1
+ 0   0   0   1
 @endcode
+with <tt>(X1, X2, X3)</tt> being the local X base vector, <tt>(Y1, Y2, Y3)</tt> being the local
+Y base vector, <tt>(Z1, Z2, Z3)</tt> being the local Z base vector and <tt>(T1, T2, T3)</tt> being the
+offset of the local origin (the translational part). 
+All matrices in the library use row-major storage order. That means that the matrix elements are
+stored row-by-row, i.e. they end up like this in memory: 
+<tt>[X1, Y1, Z1, T1, X2, Y2, Z2, T2, X3, Y3, Z3, T3, 0, 0, 0, 1]</tt>. 
 
-... with (X1, X2, X3) being the X base vector, (Y1, Y2, Y3) being the Y base vector, (Z1, Z2, Z3)
-being the Z base vector and (T1, T2, T3) being the translation part. If you want to use these matrices
-in DirectX functions, you have to transpose them.
+Note that this is neither the OpenGL format nor the DirectX format, because both of them specify the
+matrix layout such that the translational part occupies three consecutive addresses in memory (so those
+matrices end with <tt>[..., T1, T2, T3, 1]</tt>), whereas the translation in an Assimp matrix is found at
+the offsets 3, 7 and 11 (spread across the matrix). You can transpose an Assimp matrix to end up with
+the format that OpenGL and DirectX mandate. To be very precise: The transposition has nothing
+to do with a left-handed or right-handed coordinate system but 'converts' between row-major and
+column-major storage format.
 
 <hr>
 
@@ -664,7 +600,7 @@ See the @link materials Material System Page. @endlink
 
 @section bones Bones
 
-A mesh may have a set of bones in the form of aiBone structures.. Bones are a means to deform a mesh
+A mesh may have a set of bones in the form of aiBone objects. Bones are a means to deform a mesh
 according to the movement of a skeleton. Each bone has a name and a set of vertices on which it has influence.
 Its offset matrix declares the transformation needed to transform from mesh space to the local space of this bone.
 
@@ -717,7 +653,7 @@ To apply such an animation you need to identify the animation tracks that refer 
 in your mesh. Then for every track: <br>
 a) Find the keys that lay right before the current anim time. <br>
 b) Optional: interpolate between these and the following keys. <br>
-c) Combine the calculated position, rotation and scaling to a tranformation matrix <br>
+c) Combine the calculated position, rotation and scaling to a transformation matrix <br>
 d) Set the affected node's transformation to the calculated matrix. <br>
 
 If you need hints on how to convert to or from quaternions, have a look at the
@@ -730,27 +666,31 @@ need them at all.
 Normally textures used by assets are stored in separate files, however,
 there are file formats embedding their textures directly into the model file.
 Such textures are loaded into an aiTexture structure.
-For embedded textures, the value of `AI_MATKEY_TEXTURE(textureType, index)` will be `*<index>` where
-`<index>` is the index of the texture in aiScene::mTextures.
-<br>
+
+In previous versions, the path from the query for `AI_MATKEY_TEXTURE(textureType, index)` would be
+`*<index>` where `<index>` is the index of the texture in aiScene::mTextures. Now this call will
+return a file path for embedded textures in FBX files. To test if it is an embedded texture use
+aiScene::GetEmbeddedTexture. If the returned pointer is not null, it is embedded und can be loaded
+from the data structure. If it is null, search for a separate file. Other file types still use the
+old behaviour.<br>
+If your rely on the old behaviour, you can use Assimp::Importer::SetPropertyBool with the key
+#AI_CONFIG_IMPORT_FBX_EMBEDDED_TEXTURES_LEGACY_NAMING to force the old behaviour.
+
 There are two cases:
-<br>
-<b>1)</b> The texture is NOT compressed. Its color data is directly stored
-in the aiTexture structure as an array of aiTexture::mWidth * aiTexture::mHeight aiTexel structures. Each aiTexel represents a pixel (or "texel") of the texture
-image. The color data is stored in an unsigned RGBA8888 format, which can be easily used for
-both Direct3D and OpenGL (swizzling the order of the color components might be necessary).
-RGBA8888 has been chosen because it is well-known, easy to use and natively
-supported by nearly all graphics APIs.
-<br>
-<b>2)</b> This applies if aiTexture::mHeight == 0 is fulfilled. Then, texture is stored in a
-"compressed" format such as DDS or PNG. The term "compressed" does not mean that the
-texture data must actually be compressed, however the texture was found in the
-model file as if it was stored in a separate file on the harddisk. Appropriate
-decoders (such as libjpeg, libpng, D3DX, DevIL) are required to load theses textures.
-aiTexture::mWidth specifies the size of the texture data in bytes, aiTexture::pcData is
-a pointer to the raw image data and aiTexture::achFormatHint is either zeroed or
-contains the most common file extension of the embedded texture's format. This value is only
-set if assimp is able to determine the file format.
+1. The texture is NOT compressed. Its color data is directly stored in the aiTexture structure as an
+   array of aiTexture::mWidth * aiTexture::mHeight aiTexel structures. Each aiTexel represents a
+   pixel (or "texel") of the texture image. The color data is stored in an unsigned RGBA8888 format,
+   which can be easily used for both Direct3D and OpenGL (swizzling the order of the color
+   components might be necessary).  RGBA8888 has been chosen because it is well-known, easy to use
+   and natively supported by nearly all graphics APIs.
+2. This applies if aiTexture::mHeight == 0 is fulfilled. Then, texture is stored in a "compressed"
+   format such as DDS or PNG. The term "compressed" does not mean that the texture data must
+   actually be compressed, however the texture was found in the model file as if it was stored in a
+   separate file on the harddisk. Appropriate decoders (such as libjpeg, libpng, D3DX, DevIL) are
+   required to load theses textures.  aiTexture::mWidth specifies the size of the texture data in
+   bytes, aiTexture::pcData is a pointer to the raw image data and aiTexture::achFormatHint is
+   either zeroed or contains the most common file extension of the embedded texture's format. This
+   value is only set if assimp is able to determine the file format.
 */
 
 
@@ -803,188 +743,206 @@ All material key constants start with 'AI_MATKEY' (it's an ugly macro for histor
     <th>Name</th>
     <th>Data Type</th>
     <th>Default Value</th>
-	<th>Meaning</th>
-	<th>Notes</th>
+    <th>Meaning</th>
+    <th>Notes</th>
   </tr>
   <tr>
     <td><tt>NAME</tt></td>
     <td>aiString</td>
     <td>n/a</td>
-	<td>The name of the material, if available. </td>
-	<td>Ignored by <tt>aiProcess_RemoveRedundantMaterials</tt>. Materials are considered equal even if their names are different.</td>
+    <td>The name of the material, if available. </td>
+    <td>Ignored by <tt>aiProcess_RemoveRedundantMaterials</tt>. Materials are considered equal even if their names are different.</td>
   </tr>
   <tr>
     <td><tt>COLOR_DIFFUSE</tt></td>
     <td>aiColor3D</td>
     <td>black (0,0,0)</td>
-	<td>Diffuse color of the material. This is typically scaled by the amount of incoming diffuse light (e.g. using gouraud shading) </td>
-	<td>---</td>
+    <td>Diffuse color of the material. This is typically scaled by the amount of incoming diffuse light (e.g. using gouraud shading) </td>
+    <td>---</td>
   </tr>
   <tr>
     <td><tt>COLOR_SPECULAR</tt></td>
     <td>aiColor3D</td>
     <td>black (0,0,0)</td>
-	<td>Specular color of the material. This is typically scaled by the amount of incoming specular light (e.g. using phong shading) </td>
-	<td>---</td>
+    <td>Specular color of the material. This is typically scaled by the amount of incoming specular light (e.g. using phong shading) </td>
+    <td>---</td>
   </tr>
   <tr>
     <td><tt>COLOR_AMBIENT</tt></td>
     <td>aiColor3D</td>
     <td>black (0,0,0)</td>
-	<td>Ambient color of the material. This is typically scaled by the amount of ambient light </td>
-	<td>---</td>
+    <td>Ambient color of the material. This is typically scaled by the amount of ambient light </td>
+    <td>---</td>
   </tr>
   <tr>
     <td><tt>COLOR_EMISSIVE</tt></td>
     <td>aiColor3D</td>
     <td>black (0,0,0)</td>
-	<td>Emissive color of the material. This is the amount of light emitted by the object. In real time applications it will usually not affect surrounding objects, but raytracing applications may wish to treat emissive objects as light sources. </td>
-	<td>---</tt></td>
+    <td>Emissive color of the material. This is the amount of light emitted by the object. In real time applications it will usually not affect surrounding objects, but raytracing applications may wish to treat emissive objects as light sources. </td>
+    <td>---</td>
   </tr>
 
   <tr>
     <td><tt>COLOR_TRANSPARENT</tt></td>
     <td>aiColor3D</td>
     <td>black (0,0,0)</td>
-	<td>Defines the transparent color of the material, this is the color to be multiplied with the color of
-	translucent light to construct the final 'destination color' for a particular position in the screen buffer. T </td>
-	<td>---</tt></td>
+    <td>Defines the transparent color of the material, this is the color to be multiplied with the color of translucent light to construct the final 'destination color' for a particular position in the screen buffer.</td>
+    <td>---</td>
+  </tr>
+
+  <tr>
+    <td><tt>COLOR_REFLECTIVE</tt></td>
+    <td>aiColor3D</td>
+    <td>black (0,0,0)</td>
+    <td>Defines the reflective color of the material. This is typically scaled by the amount of incoming light from the direction of mirror reflection. Usually combined with an environment lightmap of some kind for real-time applications.</td>
+    <td>---</td>
+  </tr>
+
+  <tr>
+    <td><tt>REFLECTIVITY</tt></td>
+    <td>float</td>
+    <td>0.0</td>
+    <td>Scales the reflective color of the material.</td>
+    <td>---</td>
   </tr>
 
   <tr>
     <td><tt>WIREFRAME</tt></td>
     <td>int</td>
     <td>false</td>
-	<td>Specifies whether wireframe rendering must be turned on for the material. 0 for false, !0 for true. </td>
-	<td>---</tt></td>
+    <td>Specifies whether wireframe rendering must be turned on for the material. 0 for false, !0 for true. </td>
+    <td>---</td>
   </tr>
 
   <tr>
     <td><tt>TWOSIDED</tt></td>
     <td>int</td>
     <td>false</td>
-	<td>Specifies whether meshes using this material must be rendered without backface culling. 0 for false, !0 for true. </td>
-	<td>Some importers set this property if they don't know whether the output face oder is right. As long as it is not set, you may safely enable backface culling.</tt></td>
+    <td>Specifies whether meshes using this material must be rendered without backface culling. 0 for false, !0 for true. </td>
+    <td>Some importers set this property if they don't know whether the output face order is right. As long as it is not set, you may safely enable backface culling.</tt></td>
   </tr>
 
   <tr>
     <td><tt>SHADING_MODEL</tt></td>
     <td>int</td>
     <td>gouraud</td>
-	<td>One of the #aiShadingMode enumerated values. Defines the library shading model to use for (real time) rendering to approximate the original look of the material as closely as possible. </td>
-	<td>The presence of this key might indicate a more complex material. If absent, assume phong shading only if a specular exponent is given.</tt></td>
+    <td>One of the #aiShadingMode enumerated values. Defines the library shading model to use for (real time) rendering to approximate the original look of the material as closely as possible. </td>
+    <td>The presence of this key might indicate a more complex material. If absent, assume phong shading only if a specular exponent is given.</tt></td>
   </tr>
 
   <tr>
     <td><tt>BLEND_FUNC</tt></td>
     <td>int</td>
     <td>false</td>
-	<td>One of the #aiBlendMode enumerated values. Defines how the final color value in the screen buffer is computed from the given color at that position and the newly computed color from the material. Simply said, alpha blending settings.</td>
-	<td>-</td>
+    <td>One of the #aiBlendMode enumerated values. Defines how the final color value in the screen buffer is computed from the given color at that position and the newly computed color from the material. Simply said, alpha blending settings.</td>
+    <td>-</td>
   </tr>
 
   <tr>
     <td><tt>OPACITY</tt></td>
     <td>float</td>
     <td>1.0</td>
-	<td>Defines the opacity of the material in a range between 0..1.</td>
-	<td>Use this value to decide whether you have to activate alpha blending for rendering. <tt>OPACITY</tt> != 1 usually also implies TWOSIDED=1 to avoid cull artifacts.</td>
+    <td>Defines the opacity of the material in a range between 0..1.</td>
+    <td>Use this value to decide whether you have to activate alpha blending for rendering. <tt>OPACITY</tt> != 1 usually also implies TWOSIDED=1 to avoid cull artifacts.</td>
   </tr>
 
   <tr>
     <td><tt>SHININESS</tt></td>
     <td>float</td>
     <td>0.f</td>
-	<td>Defines the shininess of a phong-shaded material. This is actually the exponent of the phong specular equation</td>
-	<td><tt>SHININESS</tt>=0 is equivalent to <tt>SHADING_MODEL</tt>=<tt>aiShadingMode_Gouraud</tt>.</td>
+    <td>Defines the shininess of a phong-shaded material. This is actually the exponent of the phong specular equation</td>
+    <td><tt>SHININESS</tt>=0 is equivalent to <tt>SHADING_MODEL</tt>=<tt>aiShadingMode_Gouraud</tt>.</td>
   </tr>
 
   <tr>
     <td><tt>SHININESS_STRENGTH</tt></td>
     <td>float</td>
     <td>1.0</td>
-	<td>Scales the specular color of the material.</td>
-	<td>This value is kept separate from the specular color by most modelers, and so do we.</td>
+    <td>Scales the specular color of the material.</td>
+    <td>This value is kept separate from the specular color by most modelers, and so do we.</td>
   </tr>
 
   <tr>
     <td><tt>REFRACTI</tt></td>
     <td>float</td>
     <td>1.0</td>
-	<td>Defines the Index Of Refraction for the material. That's not supported by most file formats.</td>
-	<td>Might be of interest for raytracing.</td>
+    <td>Defines the Index Of Refraction for the material. That's not supported by most file formats.</td>
+    <td>Might be of interest for raytracing.</td>
   </tr>
 
   <tr>
     <td><tt>TEXTURE(t,n)</tt></td>
     <td>aiString</td>
     <td>n/a</td>
-	<td>Defines the path of the n'th texture on the stack 't', where 'n' is any value >= 0 and 't' is one of the #aiTextureType enumerated values. Either a filepath or `*<index>`, where `<index>` is the index of an embedded texture in aiScene::mTextures.</td>
-	<td>See the 'Textures' section above.</td>
+    <td>Defines the path of the n'th texture on the stack 't', where 'n' is any value >= 0 and 't'
+    is one of the #aiTextureType enumerated values. A file path to an external file or an embedded
+    texture. Use aiScene::GetEmbeddedTexture to test if it is embedded for FBX files, in other cases
+    embedded textures start with '*' followed by an index into aiScene::mTextures.</td>
+    <td>See the @ref mat_tex section above. Also see @ref textures for a more information about texture retrieval.</td>
   </tr>
 
   <tr>
     <td><tt>TEXBLEND(t,n)</tt></td>
     <td>float</td>
     <td>n/a</td>
-	<td>Defines the strength the n'th texture on the stack 't'. All color components (rgb) are multiplied with this factor *before* any further processing is done.</td>
-	<td>-</td>
+    <td>Defines the strength the n'th texture on the stack 't'. All color components (rgb) are multiplied with this factor *before* any further processing is done.</td>
+    <td>-</td>
   </tr>
 
   <tr>
     <td><tt>TEXOP(t,n)</tt></td>
     <td>int</td>
     <td>n/a</td>
-	<td>One of the #aiTextureOp enumerated values. Defines the arithmetic operation to be used to combine the n'th texture on the stack 't' with the n-1'th. <tt>TEXOP(t,0)</tt> refers to the blend operation between the base color for this stack (e.g. <tt>COLOR_DIFFUSE</tt> for the diffuse stack) and the first texture.</td>
-	<td>-</td>
+    <td>One of the #aiTextureOp enumerated values. Defines the arithmetic operation to be used to combine the n'th texture on the stack 't' with the n-1'th. <tt>TEXOP(t,0)</tt> refers to the blend operation between the base color for this stack (e.g. <tt>COLOR_DIFFUSE</tt> for the diffuse stack) and the first texture.</td>
+    <td>-</td>
   </tr>
 
   <tr>
     <td><tt>MAPPING(t,n)</tt></td>
     <td>int</td>
     <td>n/a</td>
-	<td>Defines how the input mapping coordinates for sampling the n'th texture on the stack 't' are computed. Usually explicit UV coordinates are provided, but some model file formats might also be using basic shapes, such as spheres or cylinders, to project textures onto meshes.</td>
-	<td>See the 'Textures' section below. #aiProcess_GenUVCoords can be used to let Assimp compute proper UV coordinates from projective mappings.</td>
+    <td>Defines how the input mapping coordinates for sampling the n'th texture on the stack 't' are computed. Usually explicit UV coordinates are provided, but some model file formats might also be using basic shapes, such as spheres or cylinders, to project textures onto meshes.</td>
+    <td>See the 'Textures' section below. #aiProcess_GenUVCoords can be used to let Assimp compute proper UV coordinates from projective mappings.</td>
   </tr>
 
   <tr>
     <td><tt>UVWSRC(t,n)</tt></td>
     <td>int</td>
     <td>n/a</td>
-	<td>Defines the UV channel to be used as input mapping coordinates for sampling the n'th texture on the stack 't'. All meshes assigned to this material share the same UV channel setup</td>
-	<td>Presence of this key implies <tt>MAPPING(t,n)</tt> to be #aiTextureMapping_UV. See @ref uvwsrc for more details. </td>
+    <td>Defines the UV channel to be used as input mapping coordinates for sampling the n'th texture on the stack 't'. All meshes assigned to this material share the same UV channel setup</td>
+    <td>Presence of this key implies <tt>MAPPING(t,n)</tt> to be #aiTextureMapping_UV. See @ref uvwsrc for more details. </td>
   </tr>
 
   <tr>
     <td><tt>MAPPINGMODE_U(t,n)</tt></td>
     <td>int</td>
     <td>n/a</td>
-	<td>Any of the #aiTextureMapMode enumerated values. Defines the texture wrapping mode on the x axis for sampling the n'th texture on the stack 't'. 'Wrapping' occurs whenever UVs lie outside the 0..1 range. </td>
-	<td>-</td>
+    <td>Any of the #aiTextureMapMode enumerated values. Defines the texture wrapping mode on the x axis for sampling the n'th texture on the stack 't'. 'Wrapping' occurs whenever UVs lie outside the 0..1 range. </td>
+    <td>-</td>
   </tr>
 
   <tr>
     <td><tt>MAPPINGMODE_V(t,n)</tt></td>
     <td>int</td>
     <td>n/a</td>
-	<td>Wrap mode on the v axis. See <tt>MAPPINGMODE_U</tt>. </td>
-	<td>-</td>
+    <td>Wrap mode on the v axis. See <tt>MAPPINGMODE_U</tt>. </td>
+    <td>-</td>
   </tr>
 
    <tr>
     <td><tt>TEXMAP_AXIS(t,n)</tt></td>
     <td>aiVector3D</td>
     <td>n/a</td>
-	<td></tt> Defines the base axis to to compute the mapping coordinates for the n'th texture on the stack 't' from. This is not required for UV-mapped textures. For instance, if <tt>MAPPING(t,n)</tt> is #aiTextureMapping_SPHERE, U and V would map to longitude and latitude of a sphere around the given axis. The axis is given in local mesh space.</td>
-	<td>-</td>
+    <td></tt> Defines the base axis to to compute the mapping coordinates for the n'th texture on the stack 't' from. This is not required for UV-mapped textures. For instance, if <tt>MAPPING(t,n)</tt> is #aiTextureMapping_SPHERE, U and V would map to longitude and latitude of a sphere around the given axis. The axis is given in local mesh space.</td>
+    <td>-</td>
   </tr>
 
   <tr>
     <td><tt>TEXFLAGS(t,n)</tt></td>
     <td>int</td>
     <td>n/a</td>
-	<td></tt> Defines miscellaneous flag for the n'th texture on the stack 't'. This is a bitwise combination of the #aiTextureFlags enumerated values.</td>
-	<td>-</td>
+    <td></tt> Defines miscellaneous flag for the n'th texture on the stack 't'. This is a bitwise combination of the #aiTextureFlags enumerated values.</td>
+    <td>-</td>
   </tr>
 
 </table>
@@ -1075,7 +1033,7 @@ for all textures
       assign channel specified in uvwsrc
    else
       assign channels in ascending order for all texture stacks,
-	    i.e. diffuse1 gets channel 1, opacity0 gets channel 0.
+      i.e. diffuse1 gets channel 1, opacity0 gets channel 0.
 
 @endverbatim
 

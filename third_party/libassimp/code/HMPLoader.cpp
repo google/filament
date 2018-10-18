@@ -3,7 +3,8 @@
 Open Asset Import Library (assimp)
 ---------------------------------------------------------------------------
 
-Copyright (c) 2006-2017, assimp team
+Copyright (c) 2006-2018, assimp team
+
 
 
 All rights reserved.
@@ -140,21 +141,21 @@ void HMPImporter::InternReadFile( const std::string& pFile,
     if (AI_HMP_MAGIC_NUMBER_LE_4 == iMagic ||
         AI_HMP_MAGIC_NUMBER_BE_4 == iMagic)
     {
-        DefaultLogger::get()->debug("HMP subtype: 3D GameStudio A4, magic word is HMP4");
+        ASSIMP_LOG_DEBUG("HMP subtype: 3D GameStudio A4, magic word is HMP4");
         InternReadFile_HMP4();
     }
     // HMP5 format
     else if (AI_HMP_MAGIC_NUMBER_LE_5 == iMagic ||
              AI_HMP_MAGIC_NUMBER_BE_5 == iMagic)
     {
-        DefaultLogger::get()->debug("HMP subtype: 3D GameStudio A5, magic word is HMP5");
+        ASSIMP_LOG_DEBUG("HMP subtype: 3D GameStudio A5, magic word is HMP5");
         InternReadFile_HMP5();
     }
     // HMP7 format
     else if (AI_HMP_MAGIC_NUMBER_LE_7 == iMagic ||
              AI_HMP_MAGIC_NUMBER_BE_7 == iMagic)
     {
-        DefaultLogger::get()->debug("HMP subtype: 3D GameStudio A7, magic word is HMP7");
+        ASSIMP_LOG_DEBUG("HMP subtype: 3D GameStudio A7, magic word is HMP7");
         InternReadFile_HMP7();
     }
     else

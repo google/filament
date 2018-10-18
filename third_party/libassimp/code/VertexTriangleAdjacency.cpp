@@ -3,7 +3,8 @@
 Open Asset Import Library (assimp)
 ---------------------------------------------------------------------------
 
-Copyright (c) 2006-2017, assimp team
+Copyright (c) 2006-2018, assimp team
+
 
 
 All rights reserved.
@@ -47,7 +48,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "VertexTriangleAdjacency.h"
 #include <assimp/mesh.h>
 
-
 using namespace Assimp;
 
 // ------------------------------------------------------------------------------------------------
@@ -59,8 +59,8 @@ VertexTriangleAdjacency::VertexTriangleAdjacency(aiFace *pcFaces,
     // compute the number of referenced vertices if it wasn't specified by the caller
     const aiFace* const pcFaceEnd = pcFaces + iNumFaces;
     if (!iNumVertices)  {
-
         for (aiFace* pcFace = pcFaces; pcFace != pcFaceEnd; ++pcFace)   {
+            ai_assert( nullptr != pcFace );
             ai_assert(3 == pcFace->mNumIndices);
             iNumVertices = std::max(iNumVertices,pcFace->mIndices[0]);
             iNumVertices = std::max(iNumVertices,pcFace->mIndices[1]);
@@ -68,19 +68,18 @@ VertexTriangleAdjacency::VertexTriangleAdjacency(aiFace *pcFaces,
         }
     }
 
-    this->iNumVertices = iNumVertices;
+    mNumVertices = iNumVertices;
 
     unsigned int* pi;
 
     // allocate storage
     if (bComputeNumTriangles)   {
         pi = mLiveTriangles = new unsigned int[iNumVertices+1];
-        memset(mLiveTriangles,0,sizeof(unsigned int)*(iNumVertices+1));
+        ::memset(mLiveTriangles,0,sizeof(unsigned int)*(iNumVertices+1));
         mOffsetTable = new unsigned int[iNumVertices+2]+1;
-    }
-    else {
+    } else {
         pi = mOffsetTable = new unsigned int[iNumVertices+2]+1;
-        memset(mOffsetTable,0,sizeof(unsigned int)*(iNumVertices+1));
+        ::memset(mOffsetTable,0,sizeof(unsigned int)*(iNumVertices+1));
         mLiveTriangles = NULL; // important, otherwise the d'tor would crash
     }
 
@@ -91,9 +90,11 @@ VertexTriangleAdjacency::VertexTriangleAdjacency(aiFace *pcFaces,
     // first pass: compute the number of faces referencing each vertex
     for (aiFace* pcFace = pcFaces; pcFace != pcFaceEnd; ++pcFace)
     {
-        pi[pcFace->mIndices[0]]++;
-        pi[pcFace->mIndices[1]]++;
-        pi[pcFace->mIndices[2]]++;
+        unsigned nind = pcFace->mNumIndices;
+        unsigned * ind = pcFace->mIndices;
+        if (nind > 0) pi[ind[0]]++;
+        if (nind > 1) pi[ind[1]]++;
+        if (nind > 2) pi[ind[2]]++;
     }
 
     // second pass: compute the final offset table
@@ -111,15 +112,12 @@ VertexTriangleAdjacency::VertexTriangleAdjacency(aiFace *pcFaces,
     this->mAdjacencyTable = new unsigned int[iSum];
     iSum = 0;
     for (aiFace* pcFace = pcFaces; pcFace != pcFaceEnd; ++pcFace,++iSum)    {
+        unsigned nind = pcFace->mNumIndices;
+        unsigned * ind = pcFace->mIndices;
 
-        unsigned int idx = pcFace->mIndices[0];
-        mAdjacencyTable[pi[idx]++] = iSum;
-
-        idx = pcFace->mIndices[1];
-        mAdjacencyTable[pi[idx]++] = iSum;
-
-        idx = pcFace->mIndices[2];
-        mAdjacencyTable[pi[idx]++] = iSum;
+        if (nind > 0) mAdjacencyTable[pi[ind[0]]++] = iSum;
+        if (nind > 1) mAdjacencyTable[pi[ind[1]]++] = iSum;
+        if (nind > 2) mAdjacencyTable[pi[ind[2]]++] = iSum;
     }
     // fourth pass: undo the offset computations made during the third pass
     // We could do this in a separate buffer, but this would be TIMES slower.

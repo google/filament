@@ -2,7 +2,8 @@
 Open Asset Import Library (assimp)
 ----------------------------------------------------------------------
 
-Copyright (c) 2006-2017, assimp team
+Copyright (c) 2006-2018, assimp team
+
 
 All rights reserved.
 
@@ -45,7 +46,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 namespace Assimp    {
 namespace HMP   {
 
-#include "./../include/assimp/Compiler/pushpack1.h"
+#include <assimp/Compiler/pushpack1.h>
 #include <stdint.h>
 
 // to make it easier for us, we test the magic word against both "endianesses"
@@ -130,7 +131,7 @@ struct Vertex_HMP7
     int8_t normal_x,normal_y;
 } PACK_STRUCT;
 
-#include "./../include/assimp/Compiler/poppack1.h"
+#include <assimp/Compiler/poppack1.h>
 
 } //! namespace HMP
 } //! namespace Assimp

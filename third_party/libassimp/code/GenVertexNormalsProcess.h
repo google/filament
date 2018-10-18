@@ -2,7 +2,8 @@
 Open Asset Import Library (assimp)
 ----------------------------------------------------------------------
 
-Copyright (c) 2006-2017, assimp team
+Copyright (c) 2006-2018, assimp team
+
 
 All rights reserved.
 
@@ -106,6 +107,7 @@ private:
 
     /** Configuration option: maximum smoothing angle, in radians*/
     ai_real configMaxAngle;
+    mutable bool force_ = false;
 };
 
 } // end of namespace Assimp

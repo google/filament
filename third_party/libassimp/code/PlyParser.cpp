@@ -3,7 +3,8 @@
 Open Asset Import Library (assimp)
 ---------------------------------------------------------------------------
 
-Copyright (c) 2006-2017, assimp team
+Copyright (c) 2006-2018, assimp team
+
 
 All rights reserved.
 
@@ -44,9 +45,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #ifndef ASSIMP_BUILD_NO_PLY_IMPORTER
 
-#include "fast_atof.h"
+#include <assimp/fast_atof.h>
 #include <assimp/DefaultLogger.hpp>
-#include "ByteSwapper.h"
+#include <assimp/ByteSwapper.h>
 #include "PlyLoader.h"
 
 using namespace Assimp;
@@ -96,7 +97,7 @@ PLY::EDataType PLY::Property::ParseDataType(std::vector<char> &buffer) {
   }
   if (PLY::EDT_INVALID == eOut)
   {
-    DefaultLogger::get()->info("Found unknown data type in PLY file. This is OK");
+      ASSIMP_LOG_INFO("Found unknown data type in PLY file. This is OK");
   }
 
   return eOut;
@@ -228,7 +229,7 @@ PLY::ESemantic PLY::Property::ParseSemantic(std::vector<char> &buffer) {
     eOut = PLY::EST_ZNormal;
   }
   else {
-    DefaultLogger::get()->info("Found unknown property semantic in file. This is ok");
+      ASSIMP_LOG_INFO("Found unknown property semantic in file. This is ok");
     PLY::DOM::SkipLine(buffer);
   }
   return eOut;
@@ -294,7 +295,7 @@ bool PLY::Property::ParseProperty(std::vector<char> &buffer, PLY::Property* pOut
 
   if (PLY::EST_INVALID == pOut->Semantic)
   {
-    DefaultLogger::get()->info("Found unknown semantic in PLY file. This is OK");
+    ASSIMP_LOG_INFO("Found unknown semantic in PLY file. This is OK");
     std::string(&buffer[0], &buffer[0] + strlen(&buffer[0]));
   }
 
@@ -513,7 +514,7 @@ bool PLY::DOM::SkipComments(std::vector<char> &buffer)
 
 // ------------------------------------------------------------------------------------------------
 bool PLY::DOM::ParseHeader(IOStreamBuffer<char> &streamBuffer, std::vector<char> &buffer, bool isBinary) {
-  DefaultLogger::get()->debug("PLY::DOM::ParseHeader() begin");
+    ASSIMP_LOG_DEBUG("PLY::DOM::ParseHeader() begin");
 
   // parse all elements
   while (!buffer.empty())
@@ -542,14 +543,14 @@ bool PLY::DOM::ParseHeader(IOStreamBuffer<char> &streamBuffer, std::vector<char>
   if (!isBinary) // it would occur an error, if binary data start with values as space or line end.
     SkipSpacesAndLineEnd(buffer);
 
-  DefaultLogger::get()->debug("PLY::DOM::ParseHeader() succeeded");
+  ASSIMP_LOG_DEBUG("PLY::DOM::ParseHeader() succeeded");
   return true;
 }
 
 // ------------------------------------------------------------------------------------------------
 bool PLY::DOM::ParseElementInstanceLists(IOStreamBuffer<char> &streamBuffer, std::vector<char> &buffer, PLYImporter* loader)
 {
-  DefaultLogger::get()->debug("PLY::DOM::ParseElementInstanceLists() begin");
+    ASSIMP_LOG_DEBUG("PLY::DOM::ParseElementInstanceLists() begin");
   alElementData.resize(alElements.size());
 
   std::vector<PLY::Element>::const_iterator i = alElements.begin();
@@ -570,7 +571,7 @@ bool PLY::DOM::ParseElementInstanceLists(IOStreamBuffer<char> &streamBuffer, std
     }
   }
 
-  DefaultLogger::get()->debug("PLY::DOM::ParseElementInstanceLists() succeeded");
+  ASSIMP_LOG_DEBUG("PLY::DOM::ParseElementInstanceLists() succeeded");
   return true;
 }
 
@@ -581,7 +582,7 @@ bool PLY::DOM::ParseElementInstanceListsBinary(IOStreamBuffer<char> &streamBuffe
     PLYImporter* loader,
     bool p_bBE)
 {
-  DefaultLogger::get()->debug("PLY::DOM::ParseElementInstanceListsBinary() begin");
+    ASSIMP_LOG_DEBUG("PLY::DOM::ParseElementInstanceListsBinary() begin");
   alElementData.resize(alElements.size());
 
   std::vector<PLY::Element>::const_iterator i = alElements.begin();
@@ -601,7 +602,7 @@ bool PLY::DOM::ParseElementInstanceListsBinary(IOStreamBuffer<char> &streamBuffe
     }
   }
 
-  DefaultLogger::get()->debug("PLY::DOM::ParseElementInstanceListsBinary() succeeded");
+  ASSIMP_LOG_DEBUG("PLY::DOM::ParseElementInstanceListsBinary() succeeded");
   return true;
 }
 
@@ -614,11 +615,11 @@ bool PLY::DOM::ParseInstanceBinary(IOStreamBuffer<char> &streamBuffer, DOM* p_pc
   std::vector<char> buffer;
   streamBuffer.getNextLine(buffer);
 
-  DefaultLogger::get()->debug("PLY::DOM::ParseInstanceBinary() begin");
+  ASSIMP_LOG_DEBUG("PLY::DOM::ParseInstanceBinary() begin");
 
   if (!p_pcOut->ParseHeader(streamBuffer, buffer, true))
   {
-    DefaultLogger::get()->debug("PLY::DOM::ParseInstanceBinary() failure");
+      ASSIMP_LOG_DEBUG("PLY::DOM::ParseInstanceBinary() failure");
     return false;
   }
 
@@ -627,10 +628,10 @@ bool PLY::DOM::ParseInstanceBinary(IOStreamBuffer<char> &streamBuffer, DOM* p_pc
   const char* pCur = (char*)&buffer[0];
   if (!p_pcOut->ParseElementInstanceListsBinary(streamBuffer, buffer, pCur, bufferSize, loader, p_bBE))
   {
-    DefaultLogger::get()->debug("PLY::DOM::ParseInstanceBinary() failure");
+      ASSIMP_LOG_DEBUG("PLY::DOM::ParseInstanceBinary() failure");
     return false;
   }
-  DefaultLogger::get()->debug("PLY::DOM::ParseInstanceBinary() succeeded");
+  ASSIMP_LOG_DEBUG("PLY::DOM::ParseInstanceBinary() succeeded");
   return true;
 }
 
@@ -643,11 +644,11 @@ bool PLY::DOM::ParseInstance(IOStreamBuffer<char> &streamBuffer, DOM* p_pcOut, P
   std::vector<char> buffer;
   streamBuffer.getNextLine(buffer);
 
-  DefaultLogger::get()->debug("PLY::DOM::ParseInstance() begin");
+  ASSIMP_LOG_DEBUG("PLY::DOM::ParseInstance() begin");
 
   if (!p_pcOut->ParseHeader(streamBuffer, buffer, false))
   {
-    DefaultLogger::get()->debug("PLY::DOM::ParseInstance() failure");
+      ASSIMP_LOG_DEBUG("PLY::DOM::ParseInstance() failure");
     return false;
   }
 
@@ -655,10 +656,10 @@ bool PLY::DOM::ParseInstance(IOStreamBuffer<char> &streamBuffer, DOM* p_pcOut, P
   streamBuffer.getNextLine(buffer);
   if (!p_pcOut->ParseElementInstanceLists(streamBuffer, buffer, loader))
   {
-    DefaultLogger::get()->debug("PLY::DOM::ParseInstance() failure");
+      ASSIMP_LOG_DEBUG("PLY::DOM::ParseInstance() failure");
     return false;
   }
-  DefaultLogger::get()->debug("PLY::DOM::ParseInstance() succeeded");
+  ASSIMP_LOG_DEBUG("PLY::DOM::ParseInstance() succeeded");
   return true;
 }
 
@@ -786,7 +787,7 @@ bool PLY::ElementInstance::ParseInstance(const char* &pCur,
   {
     if (!(PLY::PropertyInstance::ParseInstance(pCur, &(*a), &(*i))))
     {
-      DefaultLogger::get()->warn("Unable to parse property instance. "
+        ASSIMP_LOG_WARN("Unable to parse property instance. "
         "Skipping this element instance");
 
       PLY::PropertyInstance::ValueUnion v = PLY::PropertyInstance::DefaultValue((*a).eType);
@@ -818,7 +819,7 @@ bool PLY::ElementInstance::ParseInstanceBinary(
   {
     if (!(PLY::PropertyInstance::ParseInstanceBinary(streamBuffer, buffer, pCur, bufferSize, &(*a), &(*i), p_bBE)))
     {
-      DefaultLogger::get()->warn("Unable to parse binary property instance. "
+        ASSIMP_LOG_WARN("Unable to parse binary property instance. "
         "Skipping this element instance");
 
       (*i).avList.push_back(PLY::PropertyInstance::DefaultValue((*a).eType));
@@ -1042,71 +1043,91 @@ bool PLY::PropertyInstance::ParseValueBinary(IOStreamBuffer<char> &streamBuffer,
   switch (eType)
   {
   case EDT_UInt:
-    out->iUInt = (uint32_t)*((uint32_t*)pCur);
-    pCur += 4;
+  {
+    uint32_t t;
+    memcpy(&t, pCur, sizeof(uint32_t));
+    pCur += sizeof(uint32_t);
 
     // Swap endianness
-    if (p_bBE)ByteSwap::Swap((int32_t*)&out->iUInt);
+    if (p_bBE)ByteSwap::Swap(&t);
+    out->iUInt = t;
     break;
+  }
 
   case EDT_UShort:
   {
-    uint16_t i = *((uint16_t*)pCur);
+    uint16_t t;
+    memcpy(&t, pCur, sizeof(uint16_t));
+    pCur += sizeof(uint16_t);
 
     // Swap endianness
-    if (p_bBE)ByteSwap::Swap(&i);
-    out->iUInt = (uint32_t)i;
-    pCur += 2;
+    if (p_bBE)ByteSwap::Swap(&t);
+    out->iUInt = t;
     break;
   }
 
   case EDT_UChar:
   {
-    out->iUInt = (uint32_t)(*((uint8_t*)pCur));
-    pCur++;
+    uint8_t t;
+    memcpy(&t, pCur, sizeof(uint8_t));
+    pCur += sizeof(uint8_t);
+    out->iUInt = t;
     break;
   }
 
   case EDT_Int:
-    out->iInt = *((int32_t*)pCur);
-    pCur += 4;
+  {
+    int32_t t;
+    memcpy(&t, pCur, sizeof(int32_t));
+    pCur += sizeof(int32_t);
 
     // Swap endianness
-    if (p_bBE)ByteSwap::Swap(&out->iInt);
+    if (p_bBE)ByteSwap::Swap(&t);
+    out->iInt = t;
     break;
+  }
 
   case EDT_Short:
   {
-    int16_t i = *((int16_t*)pCur);
+    int16_t t;
+    memcpy(&t, pCur, sizeof(int16_t));
+    pCur += sizeof(int16_t);
 
     // Swap endianness
-    if (p_bBE)ByteSwap::Swap(&i);
-    out->iInt = (int32_t)i;
-    pCur += 2;
+    if (p_bBE)ByteSwap::Swap(&t);
+    out->iInt = t;
     break;
   }
 
   case EDT_Char:
-    out->iInt = (int32_t)*((int8_t*)pCur);
-    pCur++;
+  {
+    int8_t t;
+    memcpy(&t, pCur, sizeof(int8_t));
+    pCur += sizeof(int8_t);
+    out->iInt = t;
     break;
+  }
 
   case EDT_Float:
   {
-    out->fFloat = *((float*)pCur);
+    float t;
+    memcpy(&t, pCur, sizeof(float));
+    pCur += sizeof(float);
 
     // Swap endianness
-    if (p_bBE)ByteSwap::Swap((int32_t*)&out->fFloat);
-    pCur += 4;
+    if (p_bBE)ByteSwap::Swap(&t);
+    out->fFloat = t;
     break;
   }
   case EDT_Double:
   {
-    out->fDouble = *((double*)pCur);
+    double t;
+    memcpy(&t, pCur, sizeof(double));
+    pCur += sizeof(double);
 
     // Swap endianness
-    if (p_bBE)ByteSwap::Swap((int64_t*)&out->fDouble);
-    pCur += 8;
+    if (p_bBE)ByteSwap::Swap(&t);
+    out->fDouble = t;
     break;
   }
   default:

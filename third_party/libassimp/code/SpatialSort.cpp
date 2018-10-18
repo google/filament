@@ -3,7 +3,8 @@
 Open Asset Import Library (assimp)
 ---------------------------------------------------------------------------
 
-Copyright (c) 2006-2017, assimp team
+Copyright (c) 2006-2018, assimp team
+
 
 
 All rights reserved.
@@ -42,7 +43,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /** @file Implementation of the helper class to quickly find vertices close to a given position */
 
-#include "SpatialSort.h"
+#include <assimp/SpatialSort.h>
 #include <assimp/ai_assert.h>
 
 using namespace Assimp;
@@ -222,7 +223,7 @@ namespace {
         if( (-42 == (~42 + 1)) && (binValue & 0x80000000))
             return BinFloat(1 << (CHAR_BIT * sizeof(BinFloat) - 1)) - binValue;
         // One's complement?
-        else if( (-42 == ~42) && (binValue & 0x80000000))
+        else if ( (-42 == ~42) && (binValue & 0x80000000))
             return BinFloat(-0) - binValue;
         // Sign-magnitude?
         else if( (-42 == (42 | (-0))) && (binValue & 0x80000000)) // -0 = 1000... binary
@@ -293,7 +294,7 @@ void SpatialSort::FindIdenticalPositions( const aiVector3D& pPosition,
         index++;
 
     // Now start iterating from there until the first position lays outside of the distance range.
-    // Add all positions inside the distance range within the tolerance to the result aray
+    // Add all positions inside the distance range within the tolerance to the result array
     std::vector<Entry>::const_iterator it = mPositions.begin() + index;
     while( ToBinary(it->mDistance) < maxDistBinary)
     {

@@ -3,7 +3,8 @@
 Open Asset Import Library (assimp)
 ---------------------------------------------------------------------------
 
-Copyright (c) 2006-2017, assimp team
+Copyright (c) 2006-2018, assimp team
+
 
 
 All rights reserved.
@@ -99,22 +100,23 @@ bool TriangulateProcess::IsActive( unsigned int pFlags) const
 // Executes the post processing step on the given imported data.
 void TriangulateProcess::Execute( aiScene* pScene)
 {
-    DefaultLogger::get()->debug("TriangulateProcess begin");
+    ASSIMP_LOG_DEBUG("TriangulateProcess begin");
 
     bool bHas = false;
     for( unsigned int a = 0; a < pScene->mNumMeshes; a++)
     {
-        if ( TriangulateMesh( pScene->mMeshes[ a ] ) ) {
-            bHas = true;
+        if (pScene->mMeshes[ a ]) {
+            if ( TriangulateMesh( pScene->mMeshes[ a ] ) ) {
+                bHas = true;
+            }
         }
     }
     if ( bHas ) {
-        DefaultLogger::get()->info( "TriangulateProcess finished. All polygons have been triangulated." );
+        ASSIMP_LOG_INFO( "TriangulateProcess finished. All polygons have been triangulated." );
     } else {
-        DefaultLogger::get()->debug( "TriangulateProcess finished. There was nothing to be done." );
+        ASSIMP_LOG_DEBUG( "TriangulateProcess finished. There was nothing to be done." );
     }
 }
-
 
 // ------------------------------------------------------------------------------------------------
 // Triangulates the given mesh.
@@ -285,7 +287,7 @@ bool TriangulateProcess::TriangulateMesh( aiMesh* pMesh)
             // We project it onto a plane to get a 2d triangle.
 
             // Collect all vertices of of the polygon.
-            for (tmp = 0; tmp < max; ++tmp) {
+           for (tmp = 0; tmp < max; ++tmp) {
                 temp_verts3d[tmp] = verts[idx[tmp]];
             }
 
@@ -409,7 +411,7 @@ bool TriangulateProcess::TriangulateMesh( aiMesh* pMesh)
 
                     // Instead we're continuing with the standard tri-fanning algorithm which we'd
                     // use if we had only convex polygons. That's life.
-                    DefaultLogger::get()->error("Failed to triangulate polygon (no ear found). Probably not a simple polygon?");
+                    ASSIMP_LOG_ERROR("Failed to triangulate polygon (no ear found). Probably not a simple polygon?");
 
 #ifdef AI_BUILD_TRIANGULATE_DEBUG_POLYS
                     fprintf(fout,"critical error here, no ear found! ");
@@ -485,21 +487,22 @@ bool TriangulateProcess::TriangulateMesh( aiMesh* pMesh)
         for(aiFace* f = last_face; f != curOut; ) {
             unsigned int* i = f->mIndices;
 
-            //  drop dumb 0-area triangles
-            if (std::fabs(GetArea2D(temp_verts[i[0]],temp_verts[i[1]],temp_verts[i[2]])) < 1e-5f) {
-                DefaultLogger::get()->debug("Dropping triangle with area 0");
-                --curOut;
+            //  drop dumb 0-area triangles - deactivated for now:
+            //FindDegenerates post processing step can do the same thing
+            //if (std::fabs(GetArea2D(temp_verts[i[0]],temp_verts[i[1]],temp_verts[i[2]])) < 1e-5f) {
+            //    ASSIMP_LOG_DEBUG("Dropping triangle with area 0");
+            //    --curOut;
 
-                delete[] f->mIndices;
-                f->mIndices = NULL;
+            //    delete[] f->mIndices;
+            //    f->mIndices = nullptr;
 
-                for(aiFace* ff = f; ff != curOut; ++ff) {
-                    ff->mNumIndices = (ff+1)->mNumIndices;
-                    ff->mIndices = (ff+1)->mIndices;
-                    (ff+1)->mIndices = NULL;
-                }
-                continue;
-            }
+            //    for(aiFace* ff = f; ff != curOut; ++ff) {
+            //        ff->mNumIndices = (ff+1)->mNumIndices;
+            //        ff->mIndices = (ff+1)->mIndices;
+            //        (ff+1)->mIndices = nullptr;
+            //    }
+            //    continue;
+            //}
 
             i[0] = idx[i[0]];
             i[1] = idx[i[1]];

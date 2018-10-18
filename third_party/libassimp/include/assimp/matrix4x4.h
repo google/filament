@@ -3,7 +3,8 @@
 Open Asset Import Library (assimp)
 ---------------------------------------------------------------------------
 
-Copyright (c) 2006-2017, assimp team
+Copyright (c) 2006-2018, assimp team
+
 
 
 All rights reserved.
@@ -70,7 +71,7 @@ class aiMatrix4x4t
 public:
 
     /** set to identity */
-    aiMatrix4x4t ();
+    aiMatrix4x4t() AI_NO_EXCEPT;
 
     /** construction from single values */
     aiMatrix4x4t (  TReal _a1, TReal _a2, TReal _a3, TReal _a4,

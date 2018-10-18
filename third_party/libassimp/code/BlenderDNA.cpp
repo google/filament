@@ -2,7 +2,8 @@
 Open Asset Import Library (assimp)
 ----------------------------------------------------------------------
 
-Copyright (c) 2006-2017, assimp team
+Copyright (c) 2006-2018, assimp team
+
 
 All rights reserved.
 
@@ -47,9 +48,9 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #ifndef ASSIMP_BUILD_NO_BLEND_IMPORTER
 #include "BlenderDNA.h"
-#include "StreamReader.h"
-#include "fast_atof.h"
-#include "TinyFormatter.h"
+#include <assimp/StreamReader.h>
+#include <assimp/fast_atof.h>
+#include <assimp/TinyFormatter.h>
 
 using namespace Assimp;
 using namespace Assimp::Blender;
@@ -57,12 +58,11 @@ using namespace Assimp::Formatter;
 
 static bool match4(StreamReaderAny& stream, const char* string) {
     ai_assert( nullptr != string );
-    char tmp[] = {
-        (const char)(stream).GetI1(),
-        (const char)(stream).GetI1(),
-        (const char)(stream).GetI1(),
-        (const char)(stream).GetI1()
-    };
+    char tmp[4];
+    tmp[ 0 ] = ( stream ).GetI1();
+    tmp[ 1 ] = ( stream ).GetI1();
+    tmp[ 2 ] = ( stream ).GetI1();
+    tmp[ 3 ] = ( stream ).GetI1();
     return (tmp[0]==string[0] && tmp[1]==string[1] && tmp[2]==string[2] && tmp[3]==string[3]);
 }
 
@@ -210,8 +210,7 @@ void DNAParser::Parse ()
         s.size = offset;
     }
 
-    DefaultLogger::get()->debug((format(),"BlenderDNA: Got ",dna.structures.size(),
-        " structures with totally ",fields," fields"));
+    ASSIMP_LOG_DEBUG_F( "BlenderDNA: Got ", dna.structures.size()," structures with totally ",fields," fields");
 
 #ifdef ASSIMP_BUILD_BLENDER_DEBUG
     dna.DumpToFile();
@@ -228,12 +227,12 @@ void DNAParser::Parse ()
 // ------------------------------------------------------------------------------------------------
 void DNA :: DumpToFile()
 {
-    // we dont't bother using the VFS here for this is only for debugging.
+    // we don't bother using the VFS here for this is only for debugging.
     // (and all your bases are belong to us).
 
     std::ofstream f("dna.txt");
     if (f.fail()) {
-        DefaultLogger::get()->error("Could not dump dna to dna.txt");
+        ASSIMP_LOG_ERROR("Could not dump dna to dna.txt");
         return;
     }
     f << "Field format: type name offset size" << "\n";
@@ -248,7 +247,7 @@ void DNA :: DumpToFile()
     }
     f << std::flush;
 
-    DefaultLogger::get()->info("BlenderDNA: Dumped dna to dna.txt");
+    ASSIMP_LOG_INFO("BlenderDNA: Dumped dna to dna.txt");
 }
 #endif
 
@@ -367,7 +366,7 @@ void SectionParser :: Next()
     }
 
 #ifdef ASSIMP_BUILD_BLENDER_DEBUG
-    DefaultLogger::get()->debug(current.id);
+    ASSIMP_LOG_DEBUG(current.id);
 #endif
 }
 

@@ -42,9 +42,7 @@ set(PUBLIC_HDRS
 
 # private headers dependencies
 set(PRIVATE_HDRS
-    ${PRIVATE_HDR_DIR}/BaseImporter.h
     ${PRIVATE_HDR_DIR}/BaseProcess.h
-    ${PRIVATE_HDR_DIR}/Bitmap.h
     ${PRIVATE_HDR_DIR}/BlenderBMesh.h
     ${PRIVATE_HDR_DIR}/BlenderDNA.h
     ${PRIVATE_HDR_DIR}/BlenderIntermediate.h
@@ -53,8 +51,6 @@ set(PRIVATE_HDRS
     ${PRIVATE_HDR_DIR}/BlenderScene.h
     ${PRIVATE_HDR_DIR}/BlenderSceneGen.h
     ${PRIVATE_HDR_DIR}/BlenderTessellator.h
-    ${PRIVATE_HDR_DIR}/BlobIOSystem.h
-    ${PRIVATE_HDR_DIR}/ByteSwapper.h
     ${PRIVATE_HDR_DIR}/CInterfaceIOWrapper.h
     ${PRIVATE_HDR_DIR}/CalcTangentsProcess.h
     ${PRIVATE_HDR_DIR}/ColladaHelper.h
@@ -62,10 +58,11 @@ set(PRIVATE_HDRS
     ${PRIVATE_HDR_DIR}/ColladaParser.h
     ${PRIVATE_HDR_DIR}/ComputeUVMappingProcess.h
     ${PRIVATE_HDR_DIR}/ConvertToLHProcess.h
-    ${PRIVATE_HDR_DIR}/CreateAnimMesh.h
     ${PRIVATE_HDR_DIR}/DeboneProcess.h
     ${PRIVATE_HDR_DIR}/DefaultProgressHandler.h
-    ${PRIVATE_HDR_DIR}/Exceptional.h
+    ${PRIVATE_HDR_DIR}/DropFaceNormalsProcess.h
+    ${PRIVATE_HDR_DIR}/EmbedTexturesProcess.h
+    ${PRIVATE_HDR_DIR}/FBXCommon.h
     ${PRIVATE_HDR_DIR}/FBXCompileConfig.h
     ${PRIVATE_HDR_DIR}/FBXConverter.h
     ${PRIVATE_HDR_DIR}/FBXDocument.h
@@ -85,21 +82,13 @@ set(PRIVATE_HDRS
     ${PRIVATE_HDR_DIR}/FixNormalsStep.h
     ${PRIVATE_HDR_DIR}/GenFaceNormalsProcess.h
     ${PRIVATE_HDR_DIR}/GenVertexNormalsProcess.h
-    ${PRIVATE_HDR_DIR}/GenericProperty.h
-    ${PRIVATE_HDR_DIR}/Hash.h
     ${PRIVATE_HDR_DIR}/IFF.h
-    ${PRIVATE_HDR_DIR}/IOStreamBuffer.h
     ${PRIVATE_HDR_DIR}/Importer.h
     ${PRIVATE_HDR_DIR}/ImproveCacheLocality.h
     ${PRIVATE_HDR_DIR}/JoinVerticesProcess.h
     ${PRIVATE_HDR_DIR}/LimitBoneWeightsProcess.h
-    ${PRIVATE_HDR_DIR}/LineSplitter.h
-    ${PRIVATE_HDR_DIR}/LogAux.h
-    ${PRIVATE_HDR_DIR}/Macros.h
     ${PRIVATE_HDR_DIR}/MakeVerboseFormat.h
     ${PRIVATE_HDR_DIR}/MaterialSystem.h
-    ${PRIVATE_HDR_DIR}/MathFunctions.h
-    ${PRIVATE_HDR_DIR}/MemoryIOWrapper.h
     ${PRIVATE_HDR_DIR}/ObjFileData.h
     ${PRIVATE_HDR_DIR}/ObjFileImporter.h
     ${PRIVATE_HDR_DIR}/ObjFileMtlImporter.h
@@ -107,51 +96,41 @@ set(PRIVATE_HDRS
     ${PRIVATE_HDR_DIR}/ObjTools.h
     ${PRIVATE_HDR_DIR}/OptimizeGraph.h
     ${PRIVATE_HDR_DIR}/OptimizeMeshes.h
-    ${PRIVATE_HDR_DIR}/ParsingUtils.h
     ${PRIVATE_HDR_DIR}/PlyLoader.h
     ${PRIVATE_HDR_DIR}/PlyParser.h
     ${PRIVATE_HDR_DIR}/PolyTools.h
     ${PRIVATE_HDR_DIR}/PretransformVertices.h
     ${PRIVATE_HDR_DIR}/ProcessHelper.h
-    ${PRIVATE_HDR_DIR}/Profiler.h
-    ${PRIVATE_HDR_DIR}/RemoveComments.h
     ${PRIVATE_HDR_DIR}/RemoveRedundantMaterials.h
     ${PRIVATE_HDR_DIR}/RemoveVCProcess.h
-    ${PRIVATE_HDR_DIR}/SGSpatialSort.h
     ${PRIVATE_HDR_DIR}/ScaleProcess.h
     ${PRIVATE_HDR_DIR}/ScenePreprocessor.h
     ${PRIVATE_HDR_DIR}/ScenePrivate.h
-    ${PRIVATE_HDR_DIR}/SkeletonMeshBuilder.h
-    ${PRIVATE_HDR_DIR}/SmoothingGroups.h
     ${PRIVATE_HDR_DIR}/SortByPTypeProcess.h
-    ${PRIVATE_HDR_DIR}/SpatialSort.h
     ${PRIVATE_HDR_DIR}/SplitByBoneCountProcess.h
     ${PRIVATE_HDR_DIR}/SplitLargeMeshes.h
-    ${PRIVATE_HDR_DIR}/StandardShapes.h
     ${PRIVATE_HDR_DIR}/StdOStreamLogStream.h
-    ${PRIVATE_HDR_DIR}/StreamReader.h
-    ${PRIVATE_HDR_DIR}/StreamWriter.h
-    ${PRIVATE_HDR_DIR}/StringComparison.h
-    ${PRIVATE_HDR_DIR}/StringUtils.h
-    ${PRIVATE_HDR_DIR}/Subdivision.h
     ${PRIVATE_HDR_DIR}/TargetAnimation.h
     ${PRIVATE_HDR_DIR}/TextureTransform.h
-    ${PRIVATE_HDR_DIR}/TinyFormatter.h
     ${PRIVATE_HDR_DIR}/TriangulateProcess.h
     ${PRIVATE_HDR_DIR}/ValidateDataStructure.h
-    ${PRIVATE_HDR_DIR}/Vertex.h
     ${PRIVATE_HDR_DIR}/VertexTriangleAdjacency.h
     ${PRIVATE_HDR_DIR}/Win32DebugLogStream.h
     ${PRIVATE_HDR_DIR}/assbin_chunks.h
-    ${PRIVATE_HDR_DIR}/fast_atof.h
     ${PRIVATE_HDR_DIR}/glTF2Asset.h
     ${PRIVATE_HDR_DIR}/glTF2AssetWriter.h
     ${PRIVATE_HDR_DIR}/glTF2Importer.h
     ${PRIVATE_HDR_DIR}/glTFAsset.h
     ${PRIVATE_HDR_DIR}/glTFAssetWriter.h
     ${PRIVATE_HDR_DIR}/glTFImporter.h
-    ${PRIVATE_HDR_DIR}/irrXMLWrapper.h
-    ${PRIVATE_HDR_DIR}/qnan.h
+    ${PRIVATE_HDR_DIR}/Importer/IFC/IFCLoader.h
+    ${PRIVATE_HDR_DIR}/Importer/IFC/IFCReaderGen_2x3.h
+    ${PRIVATE_HDR_DIR}/Importer/IFC/IFCReaderGen_4.h
+    ${PRIVATE_HDR_DIR}/Importer/IFC/IFCUtil.h
+    ${PRIVATE_HDR_DIR}/Importer/IFC/STEPFileEncoding.h
+    ${PRIVATE_HDR_DIR}/Importer/IFC/STEPFileReader.h
+    ${PRIVATE_HDR_DIR}/Importer/StepFile/StepFileImporter.h
+    ${PRIVATE_HDR_DIR}/Importer/StepFile/StepReaderGen.h
 )
 
 # sources dependencies
@@ -177,6 +156,8 @@ set(SRCS
     ${SRC_DIR}/code/DefaultIOStream.cpp
     ${SRC_DIR}/code/DefaultIOSystem.cpp
     ${SRC_DIR}/code/DefaultLogger.cpp
+    ${SRC_DIR}/code/DropFaceNormalsProcess.cpp
+    ${SRC_DIR}/code/EmbedTexturesProcess.cpp
     ${SRC_DIR}/code/Exporter.cpp
     ${SRC_DIR}/code/FBXAnimation.cpp
     ${SRC_DIR}/code/FBXBinaryTokenizer.cpp
@@ -240,6 +221,23 @@ set(SRCS
     ${SRC_DIR}/code/glTF2Importer.cpp
     ${SRC_DIR}/code/glTFImporter.cpp
     ${SRC_DIR}/code/scene.cpp
+    ${SRC_DIR}/code/Importer/IFC/IFCBoolean.cpp
+    ${SRC_DIR}/code/Importer/IFC/IFCCurve.cpp
+    ${SRC_DIR}/code/Importer/IFC/IFCGeometry.cpp
+    ${SRC_DIR}/code/Importer/IFC/IFCLoader.cpp
+    ${SRC_DIR}/code/Importer/IFC/IFCMaterial.cpp
+    ${SRC_DIR}/code/Importer/IFC/IFCOpenings.cpp
+    ${SRC_DIR}/code/Importer/IFC/IFCProfile.cpp
+    ${SRC_DIR}/code/Importer/IFC/IFCReaderGen1_2x3.cpp
+    ${SRC_DIR}/code/Importer/IFC/IFCReaderGen2_2x3.cpp
+    ${SRC_DIR}/code/Importer/IFC/IFCReaderGen_4.cpp
+    ${SRC_DIR}/code/Importer/IFC/IFCUtil.cpp
+    ${SRC_DIR}/code/Importer/IFC/STEPFileEncoding.cpp
+    ${SRC_DIR}/code/Importer/IFC/STEPFileReader.cpp
+    ${SRC_DIR}/code/Importer/StepFile/StepFileImporter.cpp
+    ${SRC_DIR}/code/Importer/StepFile/StepFileGen1.cpp
+    ${SRC_DIR}/code/Importer/StepFile/StepFileGen2.cpp
+    ${SRC_DIR}/code/Importer/StepFile/StepFileGen3.cpp
     ${SRC_DIR}/contrib/clipper/clipper.cpp
     ${SRC_DIR}/contrib/irrXML/irrXML.cpp
     ${SRC_DIR}/contrib/poly2tri/poly2tri/common/shapes.cc
