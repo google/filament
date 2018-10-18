@@ -34,8 +34,9 @@ PREAMBLE = """
 The markdown source for this tutorial is not only used to generate this
 website, it's also used to generate the JavaScript for the above demo.
 We use a small Python script for weaving (generating HTML) and tangling
-(generating JS). This ensures that the tutorial is kept up to date and
-that the code is highly readable.
+(generating JS). In the code samples, you'll often see
+`// TODO: <some task>`. These are special markers that get replaced by
+subsequent code blocks.
 """
 
 # The pipenv command in the shebang needs a certain working directory.
@@ -213,6 +214,6 @@ if __name__ == "__main__":
     copy_built_file('samples/web/public/pillars_2k/pillars_2k_skybox.ktx')
     copy_built_file('samples/web/public/pillars_2k/pillars_2k_ibl.ktx')
     copy_demo_filamat('bakedColor', 'triangle')
-    copy_demo_filamat('sandboxLit', 'redball')
+    copy_demo_filamat('sandboxLit', 'plastic')
     if len(sys.argv) > 1 and sys.argv[1] == 'serve':
         spawn_local_server()
