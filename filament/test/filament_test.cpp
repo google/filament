@@ -813,19 +813,19 @@ TEST(FilamentTest, Bones) {
 
     struct Shader {
         static mat3f normal(FRenderableManager::InternalBone const& bone) noexcept {
-            quatf q = bone.rigidTransform;
-            float3 is = bone.iscales.xyz;
-            return mat3f(q) * mat3f::scale(is);
+            quatf q = bone.q;
+            float3 is = bone.ns.xyz;
+            return mat3f(mat3(q) * mat3::scale(is));
         }
         static  mat4f vertice(FRenderableManager::InternalBone const& bone) noexcept {
-            quatf q = bone.rigidTransform;
-            float3 t = bone.translation.xyz;
-            float3 s = bone.scales.xyz;
-            return mat4f::translate(t) * mat4f(q) * mat4f::scale(s);
+            quatf q = bone.q;
+            float3 t = bone.t.xyz;
+            float3 s = bone.s.xyz;
+            return mat4f(mat4::translate(t) * mat4(q) * mat4::scale(s));
         }
         static float3 normal(float3 n, FRenderableManager::InternalBone const& bone) noexcept {
-            quatf q = bone.rigidTransform;
-            float3 is = bone.iscales.xyz;
+            quatf q = bone.q;
+            float3 is = bone.ns.xyz;
             // apply the inverse of the non-uniform scales
             n *= is;
             // apply the rigid transform
@@ -833,9 +833,9 @@ TEST(FilamentTest, Bones) {
             return n;
         }
         static  float3 vertice(float3 v, FRenderableManager::InternalBone const& bone) noexcept {
-            quatf q = bone.rigidTransform;
-            float3 t = bone.translation.xyz;
-            float3 s = bone.scales.xyz;
+            quatf q = bone.q;
+            float3 t = bone.t.xyz;
+            float3 s = bone.s.xyz;
             // apply the non-uniform scales
             v *= s;
             // apply the rigid transform
@@ -847,39 +847,54 @@ TEST(FilamentTest, Bones) {
     };
 
     struct Test {
+        static inline double epsilon(double x, double y) {
+            double maxXYOne = std::max({ 1.0, std::fabs(x), std::fabs(y) });
+            return 1e-5 * maxXYOne;
+        }
+
         static void expect_eq(mat4f e, mat4f a) noexcept {
             for (size_t j = 0; j < 4; j++) {
                 for (size_t i = 0; i < 4; i++) {
-                    EXPECT_NEAR(e[i][j], a[i][j], 1e-6);
+                    EXPECT_NEAR(e[i][j], a[i][j], epsilon(e[i][j], a[i][j]));
                 }
             }
         }
         static void expect_eq(mat3f e, mat3f a) noexcept {
             for (size_t j = 0; j < 3; j++) {
                 for (size_t i = 0; i < 3; i++) {
-                    EXPECT_NEAR(e[i][j], a[i][j], 1e-6);
+                    EXPECT_NEAR(e[i][j], a[i][j], epsilon(e[i][j], a[i][j]));
                 }
             }
         }
         static void expect_eq(float3 e, float3 a) noexcept {
             for (size_t i = 0; i < 3; i++) {
-                EXPECT_NEAR(e[i], a[i], 1e-4);
+                EXPECT_NEAR(e[i], a[i], epsilon(e[i], a[i]));
             }
         }
 
         static void check(mat4f const& m) noexcept {
             FRenderableManager::InternalBone b;
             FRenderableManager::makeBone(&b, m);
-            expect_eq(Shader::vertice(b), m);
-            expect_eq(Shader::normal(b), transpose(inverse(m.upperLeft())));
 
+            expect_eq(Shader::vertice(b), m);
+
+            mat3f n = transpose(inverse(m.upperLeft()));
+            n *= mat3f(1.0f / std::sqrt(max(float3{length2(n[0]), length2(n[1]), length2(n[2])})));
+            expect_eq(Shader::normal(b), n);
         }
 
         static void check(mat4f const& m, float3 const& v) noexcept {
             FRenderableManager::InternalBone b;
             FRenderableManager::makeBone(&b, m);
+
             expect_eq((m * v).xyz, Shader::vertice(v, b));
-            expect_eq(transpose(inverse(m.upperLeft())) * normalize(v), Shader::normal(normalize(v), b));
+
+            mat3f n = transpose(inverse(m.upperLeft()));
+            n *= mat3f(1.0f / std::sqrt(max(float3{length2(n[0]), length2(n[1]), length2(n[2])})));
+            expect_eq(n * normalize(v), Shader::normal(normalize(v), b));
+
+            float3 normal = n * normalize(v);
+            EXPECT_LE(max(abs(normal)), 1.0);
         }
     };
 
@@ -887,15 +902,16 @@ TEST(FilamentTest, Bones) {
     Test::check(mat4f::translate(float3{1,2,3}));
 
     Test::check(mat4f::scale(float3{2,2,2}));
-    Test::check(mat4f::scale(float3{1,2,3}));
-    Test::check(mat4f::scale(float3{1,-2,-3}));
-    Test::check(mat4f::scale(float3{-1,2,-3}));
-    Test::check(mat4f::scale(float3{-1,-2,3}));
 
-    Test::check(mat4f::scale(float3{-1,-2,-3}));
-    Test::check(mat4f::scale(float3{-1,2,3}));
-    Test::check(mat4f::scale(float3{1,-2,3}));
-    Test::check(mat4f::scale(float3{1,2,-3}));
+    Test::check(mat4f::scale(float3{4,2,3}));
+    Test::check(mat4f::scale(float3{4,-2,-3}));
+    Test::check(mat4f::scale(float3{-4,2,-3}));
+    Test::check(mat4f::scale(float3{-4,-2,3}));
+
+    Test::check(mat4f::scale(float3{-4,-2,-3}));
+    Test::check(mat4f::scale(float3{-4,2,3}));
+    Test::check(mat4f::scale(float3{4,-2,3}));
+    Test::check(mat4f::scale(float3{4,2,-3}));
 
     Test::check(mat4f::rotate(M_PI_2, float3{0,0,1}));
     Test::check(mat4f::rotate(M_PI_2, float3{0,1,0}));
@@ -912,7 +928,7 @@ TEST(FilamentTest, Bones) {
 
     mat4f m = mat4f::translate(float3{1,2,3}) *
               mat4f::rotate(-M_PI_2, float3{1,1,0}) *
-              mat4f::scale(float3{-1,2,3});
+              mat4f::scale(float3{-2,3,0.04});
 
     Test::check(m);
 
