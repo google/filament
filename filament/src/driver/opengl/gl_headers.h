@@ -43,6 +43,26 @@
 
     using namespace glext;
 
+#elif defined(IOS)
+
+    #include <OpenGLES/ES3/gl.h>
+    #include <OpenGLES/ES3/glext.h>
+
+    /* The iOS SDK only provides OpenGL ES headers up to 3.0. Filament works with OpenGL 3.0, but
+     * requires 3.1 headers in order to compile. We fake it by adding the necessary 3.1 declarations
+     * below. */
+
+    #define GL_ES_VERSION_3_1 1
+    #define GL_TEXTURE_2D_MULTISAMPLE         0x9100
+
+    void glTexStorage2DMultisample (GLenum target, GLsizei samples, GLenum internalformat,
+            GLsizei width, GLsizei height, GLboolean fixedsamplelocations);
+
+    namespace glext {
+        void glFramebufferTexture2DMultisampleEXT (GLenum target, GLenum attachment,
+                GLenum textarget, GLuint texture, GLint level, GLsizei samples);
+    }
+
 #else
     #include <bluegl/BlueGL.h>
 #endif

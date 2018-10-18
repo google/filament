@@ -26,7 +26,10 @@ add_custom_command(
 # Define a fictional artifact called "moltenvk" that depends on the dylib.
 add_custom_target(moltenvk ALL DEPENDS ${OUTPUT_LIBVK} ${OUTPUT_ICD} ${OUTPUT_JSON})
 
-# Install all the molten files alongside libfilament in /usr/local/lib/x86_64
-install(FILES ${OUTPUT_LIBVK} DESTINATION lib/${DIST_DIR})
-install(FILES ${OUTPUT_ICD} DESTINATION lib/${DIST_DIR})
-install(FILES ${OUTPUT_JSON} DESTINATION lib/${DIST_DIR})
+# Install all the molten files alongside libfilament in /usr/local/lib/${ARCH}
+# Only install on Desktop- iOS links against ../ios/libMoltenVK.dylib
+if(APPLE AND NOT IOS)
+    install(FILES ${OUTPUT_LIBVK} DESTINATION lib/${DIST_DIR})
+    install(FILES ${OUTPUT_ICD} DESTINATION lib/${DIST_DIR})
+    install(FILES ${OUTPUT_JSON} DESTINATION lib/${DIST_DIR})
+endif()

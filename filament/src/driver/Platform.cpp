@@ -23,6 +23,13 @@
     #if defined (FILAMENT_DRIVER_SUPPORTS_VULKAN)
         #include "driver/vulkan/PlatformVkAndroid.h"
     #endif
+#elif defined(IOS)
+    #ifndef USE_EXTERNAL_GLES3
+        #include "driver/opengl/PlatformCocoaTouchGL.h"
+    #endif
+    #if defined (FILAMENT_DRIVER_SUPPORTS_VULKAN)
+        #include "driver/vulkan/PlatformVkCocoaTouch.h"
+    #endif
 #elif defined(__APPLE__)
     #ifndef USE_EXTERNAL_GLES3
         #include "driver/opengl/PlatformCocoaGL.h"
@@ -74,6 +81,8 @@ Platform* Platform::create(Backend* backend) noexcept {
         #if defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
             #if defined(ANDROID)
                 return new PlatformVkAndroid();
+            #elif defined(IOS)
+                return new PlatformVkCocoaTouch();
             #elif defined(__linux__)
                 return new PlatformVkLinux();
             #elif defined(__APPLE__)
@@ -91,6 +100,8 @@ Platform* Platform::create(Backend* backend) noexcept {
         return nullptr;
     #elif defined(ANDROID)
         return new PlatformEGL();
+    #elif defined(IOS)
+        return new PlatformCocoaTouchGL();
     #elif defined(__APPLE__)
         return new PlatformCocoaGL();
     #elif defined(__linux__)

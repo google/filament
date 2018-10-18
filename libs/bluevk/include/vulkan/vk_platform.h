@@ -23,6 +23,8 @@
 
 #if defined(__ANDROID__)
 #define VK_USE_PLATFORM_ANDROID_KHR 1
+#elif defined(IOS)
+#define VK_USE_PLATFORM_IOS_MVK 1
 #elif defined(__linux__)
 #define VK_USE_PLATFORM_XLIB_KHR 1
 #elif defined(__APPLE__)
