@@ -10,13 +10,16 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT_DIR = os.path.realpath(SCRIPT_DIR + "/../../../")
 BUILD_DIR = ROOT_DIR + "/out/cmake-webgl-release"
 SERVE_DIR = BUILD_DIR + "/libs/filamentjs"
+GLMATRIX_DIR = ROOT_DIR + "/third_party/gl-matrix"
 PORT = 8000
 
-# Copy assets used for testing into the server folder.
+# Copy test assets into the server folder.
 
 src_assets = (
   glob.glob(BUILD_DIR + "/samples/web/public/material/*") +
   glob.glob(BUILD_DIR + "/samples/web/public/monkey/*") +
+  glob.glob(BUILD_DIR + "/samples/web/public/pillars_2k/*") +
+  glob.glob(GLMATRIX_DIR + "/*.js") +
   glob.glob(SCRIPT_DIR + "/testwasm.*"))
 
 for src in src_assets:

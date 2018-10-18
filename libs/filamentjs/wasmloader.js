@@ -63,39 +63,6 @@ Filament.init = function(assets, onready) {
     });
 };
 
-// This wrapper makes it easy for JavaScript clients to pass large swaths of data to Filament. It
-// copies the contents of the given typed array into the WASM heap, then returns a low-level buffer
-// descriptor object.
-Filament.Buffer = function(typedarray) {
-    console.assert(typedarray.buffer instanceof ArrayBuffer);
-    console.assert(typedarray.byteLength > 0);
-    // If the given array was taken from the WASM heap, then we need to create a copy because its
-    // pointer will become invalidated after we instantiate the driver$PixelBufferDescriptor.
-    if (Filament.HEAPU32.buffer == typedarray.buffer) {
-        typedarray = new Uint8Array(typedarray);
-    }
-    const ta = typedarray;
-    const bd = new Filament.driver$BufferDescriptor(ta);
-    const uint8array = new Uint8Array(ta.buffer, ta.byteOffset, ta.byteLength);
-    bd.getBytes().set(uint8array);
-    return bd;
-};
-
-Filament.PixelBuffer = function(typedarray, format, datatype) {
-    console.assert(typedarray.buffer instanceof ArrayBuffer);
-    console.assert(typedarray.byteLength > 0);
-    // If the given array was taken from the WASM heap, then we need to create a copy because its
-    // pointer will become invalidated after we instantiate the driver$PixelBufferDescriptor.
-    if (Filament.HEAPU32.buffer == typedarray.buffer) {
-        typedarray = new Uint8Array(typedarray);
-    }
-    const ta = typedarray;
-    const bd = new Filament.driver$PixelBufferDescriptor(ta, format, datatype);
-    const uint8array = new Uint8Array(ta.buffer, ta.byteOffset, ta.byteLength);
-    bd.getBytes().set(uint8array);
-    return bd;
-};
-
 // The postRun method is called by emscripten after it finishes compiling and instancing the
 // WebAssembly module. The JS classes that correspond to core Filament classes (e.g., Engine)
 // are not guaranteed to exist until this function is called.

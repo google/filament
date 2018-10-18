@@ -35,11 +35,14 @@
 #include <filament/Camera.h>
 #include <filament/Engine.h>
 #include <filament/IndexBuffer.h>
+#include <filament/IndirectLight.h>
+#include <filament/LightManager.h>
 #include <filament/Material.h>
 #include <filament/MaterialInstance.h>
 #include <filament/RenderableManager.h>
 #include <filament/Renderer.h>
 #include <filament/Scene.h>
+#include <filament/Skybox.h>
 #include <filament/SwapChain.h>
 #include <filament/Texture.h>
 #include <filament/TransformManager.h>
@@ -82,12 +85,15 @@ namespace emscripten {
         BIND(View)
         BIND(Scene)
         BIND(Camera)
+        BIND(LightManager)
         BIND(RenderableManager)
         BIND(TransformManager)
         BIND(VertexBuffer)
         BIND(IndexBuffer)
+        BIND(IndirectLight)
         BIND(Material)
         BIND(MaterialInstance)
+        BIND(Skybox)
         BIND(Texture)
         BIND(utils::Entity)
         BIND(utils::EntityManager)
@@ -104,35 +110,38 @@ using VertexBuilder = VertexBuffer::Builder;
 using IndexBuilder = IndexBuffer::Builder;
 using MatBuilder = Material::Builder;
 using TexBuilder = Texture::Builder;
+using LightBuilder = LightManager::Builder;
+using IblBuilder = IndirectLight::Builder;
+using SkyBuilder = Skybox::Builder;
 
 // We avoid directly exposing driver::BufferDescriptor because embind does not support move
 // semantics and void* doesn't make sense to JavaScript anyway. This little wrapper class is exposed
 // to JavaScript as "driver$BufferDescriptor", but clients will normally use our "Filament.Buffer"
-// helper function, which is implemented in wasmloader.
+// helper function (implemented in utilities.js)
 struct BufferDescriptor {
     // This form is used when JavaScript sends a buffer into WASM.
     BufferDescriptor(val arrdata) {
         auto byteLength = arrdata["byteLength"].as<uint32_t>();
-        this->bd = new driver::BufferDescriptor(malloc(byteLength), byteLength,
-                [](void* buffer, size_t size, void* user) { free(buffer); });
+        this->bd.reset(new driver::BufferDescriptor(malloc(byteLength), byteLength,
+                [](void* buffer, size_t size, void* user) { free(buffer); }));
     }
     // This form is used when WASM needs to return a buffer to JavaScript.
     BufferDescriptor(uint8_t* data, uint32_t size) {
-        this->bd = new driver::BufferDescriptor(data, size);
-    }
-    ~BufferDescriptor() {
-        delete bd;
+        this->bd.reset(new driver::BufferDescriptor(data, size));
     }
     val getBytes() {
         unsigned char *byteBuffer = (unsigned char*) bd->buffer;
         size_t bufferLength = bd->size;
         return val(typed_memory_view(bufferLength, byteBuffer));
-    };
-    driver::BufferDescriptor* bd;
+    }
+    // In order to match its JavaScript counterpart, the Buffer wrapper needs
+    // to use reference counting, and the easiest way to achieve that is
+    // with shared_ptr.
+    std::shared_ptr<driver::BufferDescriptor> bd;
 };
 
 // Exposed to JavaScript as "driver$PixelBufferDescriptor", but clients will normally use the
-// "Filament.PixelBuffer" helper function, which is implemented in wasmloader.
+// "Filament.PixelBuffer" helper function (implemented in utilities.js)
 struct PixelBufferDescriptor {
     PixelBufferDescriptor(val arrdata, driver::PixelDataFormat fmt, driver::PixelDataType dtype) {
         auto byteLength = arrdata["byteLength"].as<uint32_t>();
@@ -203,6 +212,16 @@ value_array<flatmat4>("mat4")
     .element(index< 4>()).element(index< 5>()).element(index< 6>()).element(index< 7>())
     .element(index< 8>()).element(index< 9>()).element(index<10>()).element(index<11>())
     .element(index<12>()).element(index<13>()).element(index<14>()).element(index<15>());
+
+struct flatmat3 {
+    math::mat3f m;
+    float& operator[](int i) { return m[i / 3][i % 3]; }
+};
+
+value_array<flatmat3>("mat3")
+    .element(index<0>()).element(index<1>()).element(index<2>())
+    .element(index<3>()).element(index<4>()).element(index<5>())
+    .element(index<6>()).element(index<7>()).element(index<8>());
 
 // CORE FILAMENT CLASSES
 // ---------------------
@@ -280,13 +299,24 @@ class_<View>("View")
     .function("setPostProcessingEnabled", &View::setPostProcessingEnabled);
 
 class_<Scene>("Scene")
-    .function("addEntity", &Scene::addEntity);
+    .function("addEntity", &Scene::addEntity)
+    .function("remove", &Scene::remove)
+    .function("setSkybox", &Scene::setSkybox, allow_raw_pointers())
+    .function("setIndirectLight", &Scene::setIndirectLight, allow_raw_pointers())
+    .function("getRenderableCount", &Scene::getRenderableCount)
+    .function("getLightCount", &Scene::getLightCount);
 
 class_<Camera>("Camera")
     .function("setProjection", EMBIND_LAMBDA(void, (Camera* self, Camera::Projection projection,
             double left, double right, double bottom, double top, double near, double far), {
         self->setProjection(projection, left, right, bottom, top, near, far);
-    }), allow_raw_pointers());
+    }), allow_raw_pointers())
+    .function("setProjectionFov", EMBIND_LAMBDA(void, (Camera* self,
+            double fovInDegrees, double aspect, double near, double far, Camera::Fov direction), {
+        self->setProjection(fovInDegrees, aspect, near, far, direction);
+    }), allow_raw_pointers())
+    .function("setExposure", &Camera::setExposure)
+    .function("lookAt", &Camera::lookAt);
 
 class_<RenderBuilder>("RenderableManager$Builder")
     .function("build", EMBIND_LAMBDA(void, (RenderBuilder* builder,
@@ -321,6 +351,39 @@ class_<TransformManager>("TransformManager")
         self->setTransform(instance, m.m); }), allow_raw_pointers());
 
 class_<TransformManager::Instance>("TransformManager$Instance");
+
+class_<LightBuilder>("LightManager$Builder")
+    .function("build", EMBIND_LAMBDA(void, (LightBuilder* builder,
+            Engine* engine, utils::Entity entity), {
+        builder->build(*engine, entity);
+    }), allow_raw_pointers())
+    .BUILDER_FUNCTION("castShadows", LightBuilder, (LightBuilder* builder, bool enable), {
+        return &builder->castShadows(enable); })
+    .BUILDER_FUNCTION("castLight", LightBuilder, (LightBuilder* builder, bool enable), {
+        return &builder->castLight(enable); })
+    .BUILDER_FUNCTION("position", LightBuilder, (LightBuilder* builder, math::float3 value), {
+        return &builder->position(value); })
+    .BUILDER_FUNCTION("direction", LightBuilder, (LightBuilder* builder, math::float3 value), {
+        return &builder->direction(value); })
+    .BUILDER_FUNCTION("color", LightBuilder, (LightBuilder* builder, math::float3 value), {
+        return &builder->color(value); })
+    .BUILDER_FUNCTION("intensity", LightBuilder, (LightBuilder* builder, float value), {
+        return &builder->intensity(value); })
+    .BUILDER_FUNCTION("falloff", LightBuilder, (LightBuilder* builder, float value), {
+        return &builder->falloff(value); })
+    .BUILDER_FUNCTION("spotLightCone", LightBuilder,
+            (LightBuilder* builder, float inner, float outer), {
+        return &builder->spotLightCone(inner, outer); })
+    .BUILDER_FUNCTION("sunAngularRadius", LightBuilder,
+            (LightBuilder* builder, float value), { return &builder->sunAngularRadius(value); })
+    .BUILDER_FUNCTION("sunHaloSize", LightBuilder,
+            (LightBuilder* builder, float value), { return &builder->sunHaloSize(value); })
+    .BUILDER_FUNCTION("sunHaloFalloff", LightBuilder,
+            (LightBuilder* builder, float value), { return &builder->sunHaloFalloff(value); });
+
+class_<LightManager>("LightManager")
+    .class_function("Builder", (LightBuilder (*)(LightManager::Type)) [] (LightManager::Type lt) {
+        return LightBuilder(lt); });
 
 class_<VertexBuilder>("VertexBuffer$Builder")
     .function("build", EMBIND_LAMBDA(VertexBuffer*, (VertexBuilder* builder, Engine* engine), {
@@ -386,7 +449,10 @@ class_<MaterialInstance>("MaterialInstance")
         self->setParameter(name.c_str(), value); }), allow_raw_pointers())
     .function("setTextureParameter", EMBIND_LAMBDA(void,
             (MaterialInstance* self, std::string name, Texture* value, TextureSampler sampler), {
-        self->setParameter(name.c_str(), value, sampler); }), allow_raw_pointers());
+        self->setParameter(name.c_str(), value, sampler); }), allow_raw_pointers())
+    .function("setColorParameter", EMBIND_LAMBDA(void,
+            (MaterialInstance* self, std::string name, RgbType type, math::float3 value), {
+        self->setParameter(name.c_str(), type, value); }), allow_raw_pointers());
 
 class_<TextureSampler>("TextureSampler")
     .constructor<driver::SamplerMinFilter, driver::SamplerMagFilter, driver::SamplerWrapMode>();
@@ -396,6 +462,18 @@ class_<Texture>("Texture")
     .function("setImage", EMBIND_LAMBDA(void, (Texture* self,
             Engine* engine, uint8_t level, PixelBufferDescriptor pbd), {
         self->setImage(*engine, level, std::move(*pbd.pbd));
+    }), allow_raw_pointers())
+    .function("setImageCube", EMBIND_LAMBDA(void, (Texture* self,
+            Engine* engine, uint8_t level, PixelBufferDescriptor pbd), {
+        uint32_t faceSize = pbd.pbd->size / 6;
+        Texture::FaceOffsets offsets;
+        offsets.px = faceSize * 0;
+        offsets.nx = faceSize * 1;
+        offsets.py = faceSize * 2;
+        offsets.ny = faceSize * 3;
+        offsets.pz = faceSize * 4;
+        offsets.nz = faceSize * 5;
+        self->setImage(*engine, level, std::move(*pbd.pbd), offsets);
     }), allow_raw_pointers());
 
 class_<TexBuilder>("Texture$Builder")
@@ -418,6 +496,47 @@ class_<TexBuilder>("Texture$Builder")
         return &builder->usage(usage); })
     .BUILDER_FUNCTION("rgbm", TexBuilder, (TexBuilder* builder, bool rgbm), {
         return &builder->rgbm(rgbm); });
+
+class_<IndirectLight>("IndirectLight")
+    .class_function("Builder", (IblBuilder (*)()) [] { return IblBuilder(); })
+    .function("setIntensity", &IndirectLight::setIntensity);
+
+class_<IblBuilder>("IndirectLight$Builder")
+    .function("build", EMBIND_LAMBDA(IndirectLight*, (IblBuilder* builder, Engine* engine), {
+        return builder->build(*engine);
+    }), allow_raw_pointers())
+    .BUILDER_FUNCTION("reflections", IblBuilder, (IblBuilder* builder, Texture const* cubemap), {
+        return &builder->reflections(cubemap); })
+    .BUILDER_FUNCTION("irradianceTex", IblBuilder, (IblBuilder* builder, Texture const* cubemap), {
+        return &builder->irradiance(cubemap); })
+    .BUILDER_FUNCTION("irradianceSh", IblBuilder, (IblBuilder* builder, uint8_t nbands, val ta), {
+        // This is not efficient but consuming a BufferDescriptor would be overkill.
+        size_t nfloats = ta["length"].as<size_t>();
+        if (nfloats != nbands * nbands * 3) {
+            printf("Received %zu floats for spherical harmonics, expected %d.", nfloats, nbands);
+            return builder;
+        }
+        std::vector<float> floats(nfloats);
+        for (size_t i = 0; i < nfloats; i++) {
+            floats[i] = ta[i].as<float>();
+        }
+        return &builder->irradiance(nbands, (math::float3 const*) floats.data()); })
+    .BUILDER_FUNCTION("intensity", IblBuilder, (IblBuilder* builder, float value), {
+        return &builder->intensity(value); })
+    .BUILDER_FUNCTION("rotation", IblBuilder, (IblBuilder* builder, flatmat3 value), {
+        return &builder->rotation(value.m); });
+
+class_<Skybox>("Skybox")
+    .class_function("Builder", (SkyBuilder (*)()) [] { return SkyBuilder(); });
+
+class_<SkyBuilder>("Skybox$Builder")
+    .function("build", EMBIND_LAMBDA(Skybox*, (SkyBuilder* builder, Engine* engine), {
+        return builder->build(*engine);
+    }), allow_raw_pointers())
+    .BUILDER_FUNCTION("environment", SkyBuilder, (SkyBuilder* builder, Texture* cubemap), {
+        return &builder->environment(cubemap); })
+    .BUILDER_FUNCTION("showSun", SkyBuilder, (SkyBuilder* builder, bool show), {
+        return &builder->showSun(show); });
 
 // UTILS TYPES
 // -----------
@@ -457,7 +576,16 @@ class_<KtxBundle>("KtxBundle")
         self->getBlob(index, &data, &size);
         return BufferDescriptor(data, size);
     }), allow_raw_pointers())
-    .function("info", &KtxBundle::info);
+    .function("getCubeBlob", EMBIND_LAMBDA(BufferDescriptor, (KtxBundle* self, uint32_t miplevel), {
+        uint8_t* data;
+        uint32_t size;
+        self->getBlob({miplevel}, &data, &size);
+        return BufferDescriptor(data, size * 6);
+    }), allow_raw_pointers())
+    .function("info", &KtxBundle::info)
+    .function("getMetadata", EMBIND_LAMBDA(std::string, (KtxBundle* self, std::string key), {
+        return std::string(self->getMetadata(key.c_str()));
+    }), allow_raw_pointers());
 
 class_<KtxInfo>("KtxInfo")
     .property("endianness", &KtxInfo::endianness)
