@@ -474,9 +474,9 @@ void FRenderableManager::setBones(Instance ci,
                     offset * sizeof(InternalBone),
                     boneCount * sizeof(InternalBone));
             for (size_t i = 0, c = bones->count; i < c; ++i) {
-                out[i].rigidTransform = transforms[i].unitQuaternion;
-                out[i].translation.xyz = transforms[i].translation;
-                out[i].scales = out[i].iscales = { 1, 1, 1, 0 };
+                out[i].q = transforms[i].unitQuaternion;
+                out[i].t.xyz = transforms[i].translation;
+                out[i].s = out[i].ns = { 1, 1, 1, 0 };
             }
         }
     }
@@ -510,15 +510,16 @@ void FRenderableManager::makeBone(InternalBone* UTILS_RESTRICT out, math::mat4f 
 
     // compute the inverse scales
     float4 is = { 1.0f/s.x, 1.0f/s.y, 1.0f/s.z, 0.0f };
+
     // normalize the matrix
     m[0] *= is[0];
     m[1] *= is[1];
     m[2] *= is[2];
 
-    out->rigidTransform = m.toQuaternion();
-    out->translation = m[3];
-    out->scales = s;
-    out->iscales = is;
+    out->s = s;
+    out->q = m.toQuaternion();
+    out->t = m[3];
+    out->ns = is / max(abs(is));
 }
 
 } // namespace details
