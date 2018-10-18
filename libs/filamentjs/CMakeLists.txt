@@ -33,3 +33,8 @@ set_target_properties(filamentjs PROPERTIES
     OUTPUT_NAME filament)
 
 target_link_libraries(filamentjs PRIVATE filament math utils image filameshio)
+
+find_package(PythonInterp 3.7)
+if (PYTHONINTERP_FOUND)
+  add_subdirectory(docs)
+endif()
