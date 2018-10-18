@@ -75,7 +75,7 @@ public:
      *
      * enabled:   enable or disables dynamic resolution on a View
      * homogeneousScaling: by default the system scales the major axis first. Set this to true
-     *                     to force homegeneous scaling.
+     *                     to force homogeneous scaling.
      * scaleRate: rate at which the scale will change to reach the target frame rate
      *            This value can be computed as 1 / N, where N is the number of frames
      *            needed to reach 64% of the target scale factor.
@@ -368,7 +368,7 @@ public:
      *                   isn't visible and if lights are expected to shine there, there is no
      *                   point using a short zLightNear. (Default 5m).
      *
-     * @param zLightFar Distance from the camera after which lighits are not expected to be visible.
+     * @param zLightFar Distance from the camera after which lights are not expected to be visible.
      *                  Similarly to zLightNear, setting this value properly can improve
      *                  performance. (Default 100m).
      *
