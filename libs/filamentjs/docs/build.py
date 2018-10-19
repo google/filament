@@ -14,22 +14,31 @@ wombat".
 ```js {fragment="create wombat"}
 var wombat = new Wombat();
 ```
+
+This script also generates reference documentation by extracting
+doxygen style comments of the form:
+
+    /// [name] ::tags:: brief description
+    /// detailed description
+
+Where "tags" consists of one or more of the following words:
+   class, core, method, argument, retval, function
+
+These docstrings are used to build a JSON hierarchy where the roots
+are classes, free functions, and enums. The JSON is then traversed to
+generate a markdown string, which then produces HTML.
 """
 
 import os
-import sys
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__)) + '/'
-CURRENT_DIR = os.getcwd()
 ROOT_DIR = SCRIPT_DIR + '../../../'
 OUTPUT_DIR = ROOT_DIR + 'docs/webgl/'
 ENABLE_EMBEDDED_DEMO = True
 BUILD_DIR = ROOT_DIR + 'out/cmake-webgl-release/'
 TOOLS_DIR = ROOT_DIR + 'out/cmake-release/tools/'
-EXEC_NAME = os.path.basename(sys.argv[0])
-SCRIPT_NAME = os.path.basename(__file__)
 
-PREAMBLE = """
+TUTORIAL_PREAMBLE = """
 ## Literate programming
 
 The markdown source for this tutorial is not only used to generate this
@@ -39,6 +48,11 @@ We use a small Python script for weaving (generating HTML) and tangling
 `// TODO: <some task>`. These are special markers that get replaced by
 subsequent code blocks.
 """
+
+REFERENCE_PREAMBLE = """
+All type names in this reference belong to the Filament namespace.
+For example, **[init](#init)** actually refers to **Filament.init**.
+""".strip().replace("\n", " ")
 
 import argparse
 import jsbeautifier
@@ -148,7 +162,7 @@ def weave(name):
         markdown = fin.read()
         if ENABLE_EMBEDDED_DEMO:
             if name == 'triangle':
-                markdown = PREAMBLE + markdown
+                markdown = TUTORIAL_PREAMBLE + markdown
             markdown = '<div class="demo_frame">' + \
                 f'<iframe src="demo_{name}.html"></iframe>' + \
                 f'<a href="demo_{name}.html">&#x1F517;</a>' + \
@@ -207,6 +221,230 @@ def spawn_local_server():
         httpd.allow_reuse_address = True
         httpd.serve_forever()
 
+def expand_refs(comment_line):
+    """Adds hrefs to markdown links that do not already have them; e.g.
+    expands [Foo] to [Foo](#Foo) but leaves [Foo](https://foo) alone.
+    """
+    result = comment_line
+    result = re.sub(r"\[(\S+)\]([^(])", r"[\1](#\1)\2", result)
+    result = re.sub(r"\[(\S+)\]$", r"[\1](#\1)", result)
+    return result
+
+def gather_docstrings(paths):
+    """Given a list of paths to JS and CPP files, builds a JSON tree of
+    type descriptions."""
+    result = []
+    stack = [{"tags": ["root"]}]
+    previous = stack[0]
+    docline = re.compile(r' */// (.+)')
+    enumline = re.compile(r' *enum_.*\"(.*)\"')
+    enumvalue = re.compile(r' *\.value\("(.*)\"')
+    tagged = re.compile(r'(\S+)? *::(.+):: *(.*)')
+    lines = []
+    enumerating = False
+    current_enumeration = None
+    for path in paths:
+        lines += open(path).readlines()
+    for line in lines:
+        match_obj = docline.match(line)
+        if not match_obj:
+            match_obj = enumline.match(line)
+            if match_obj:
+                result.append({
+                    "name": match_obj.groups()[0],
+                    "tags": "enum",
+                    "brief": "",
+                    "detail": None,
+                    "children": [],
+                })
+                current_enumeration = result[-1]["children"]
+                enumerating = True
+                continue
+            match_obj = enumvalue.match(line)
+            if match_obj:
+                val = match_obj.groups()[0]
+                current_enumeration.append(val)
+            continue
+        ln = match_obj.groups()[0]
+        match_obj = tagged.match(ln)
+        if match_obj:
+            name = match_obj.groups()[0]
+            tags = match_obj.groups()[1].split()
+            brief = match_obj.groups()[2]
+            entity = {
+                "name": name,
+                "tags": tags,
+                "brief": brief,
+                "detail": None,
+                "children": []
+            }
+            top = stack[-1]["tags"]
+            if 'root' in top:
+                result.append(entity)
+                stack.append(entity)
+            elif 'class' in tags or 'function' in tags:
+                result.append(entity)
+                stack[-1] = entity
+            elif 'method' in tags and 'class' in top:
+                stack[-1]["children"].append(entity)
+                stack.append(entity)
+            elif 'method' in tags:
+                stack[-2]["children"].append(entity)
+                stack[-1] = entity
+            elif 'retval' in tags or 'argument' in tags:
+                stack[-1]["children"].append(entity)
+            else:
+                assert False
+            previous = entity
+        else:
+            brief = previous["brief"]
+            detail = previous["detail"]
+            if brief.endswith("\\"):
+                previous["brief"] = brief[:-1] + ln
+            elif not detail:
+                previous["detail"] = ln
+            else:
+                previous["detail"] += "\n" + ln
+    return result
+
+def generate_class_reference(entity):
+    name = entity["name"]
+    brief, detail = entity["brief"], entity["detail"]
+    brief = expand_refs(brief)
+    result = f"\n## class <a id='{name}' href='#{name}'>{name}</a>\n\n"
+    result += brief + "\n\n"
+    for method in entity["children"]:
+        result += "- **"
+        if "static" in method["tags"]:
+            # Write the class name before the method name.
+            result += name + "."
+        else:
+            # Instances are lowercase by convention.
+            result += name[0].lower() + name[1:] + "."
+        mname = method.get("name")
+        assert mname, f"Missing method name on {name}"
+        args = []
+        for child in method["children"]:
+            if "argument" in child["tags"]:
+                cname = child.get("name")
+                assert cname, f"Missing arg name on {mname}"
+                args.append(cname)
+        result += f"{mname}(" + ", ".join(args) + ")**\n"
+        if method["brief"] != "":
+            result += "  - " + method["brief"] + "\n"
+        for child in method["children"]:
+            argname = child["name"]
+            argbrief = expand_refs(child["brief"])
+            if "argument" in child["tags"]:
+                result += f"  - *{argname}* {argbrief}\n"
+            elif "retval" in child["tags"]:
+                result += f"  - *returns* {argbrief}\n"
+    result += "\n"
+    if detail:
+        result += expand_refs(detail) + "\n"
+    return result
+
+def generate_function_reference(entity):
+    name = entity["name"]
+    brief, detail = entity["brief"], entity["detail"]
+    brief = expand_refs(brief)
+    result = f"\n## function <a id='{name}' href='#{name}'>{name}</a>("
+    args = []
+    for child in entity["children"]:
+        if "argument" in child["tags"]:
+            args.append(child["name"])
+    result += ", ".join(args)
+    result += ")\n\n"
+    result += brief + "\n\n"
+    for child in entity["children"]:
+        argname = child["name"]
+        argbrief = expand_refs(child["brief"])
+        if "argument" in child["tags"]:
+            result += f"- **{argname}**\n  - {argbrief}\n"
+        else:
+            result += f"- **returns**\n  - {argbrief}\n"
+    result += "\n"
+    if detail:
+        result += expand_refs(detail) + "\n"
+    return result
+
+def generate_enum_reference(entity):
+    name = entity["name"]
+    result = f"\n## enum <a id='{name}' href='#{name}'>{name}</a>\n\n"
+    for valname in entity["children"]:
+        result += f"- {valname}\n"
+    result += "\n"
+    return result
+
+def build_reference_markdown(doctree):
+    result = REFERENCE_PREAMBLE
+    # Generate table of contents
+    result += """
+### <a id="classes" href="#classes">Classes</a>
+|     |     |
+| --- | --- |
+"""
+    doctree.sort(key = lambda t: t['name'])
+    for entity in doctree:
+        name = entity["name"]
+        brief = expand_refs(entity["brief"])
+        if "class" in entity["tags"]:
+            result += f"| [{name}](#{name}) | {brief} |\n"
+
+    result += """
+### <a id="functions" href="#functions">Free Functions</a>
+|     |     |
+| --- | --- |
+"""
+    for entity in doctree:
+        name = entity["name"]
+        brief = expand_refs(entity["brief"])
+        if "function" in entity["tags"]:
+            result += f"| [{name}](#{name}) | {brief} |\n"
+    result += """
+### <a id="enums" href="#enums">Enumerations</a>
+|     |     |
+| --- | --- |
+"""
+    for entity in doctree:
+        name = entity["name"]
+        brief = expand_refs(entity["brief"])
+        if "enum" in entity["tags"]:
+            result += f"| [{name}](#{name}) | {brief} |\n"
+    result += "\n<br>\n"
+    # Generate actual reference
+    for entity in doctree:
+        if "class" in entity["tags"]:
+            result += "\n<div class='classdoc'>\n"
+            result += generate_class_reference(entity)
+            result += "\n</div>\n"
+    for entity in doctree:
+        if "function" in entity["tags"]:
+            result += "\n<div class='funcdoc'>\n"
+            result += generate_function_reference(entity)
+            result += "\n</div>\n"
+    for entity in doctree:
+        if "enum" in entity["tags"]:
+            result += "\n<div class='enumdoc'>\n"
+            result += generate_enum_reference(entity)
+            result += "\n</div>\n"
+    return result
+
+def build_reference():
+    doctree = gather_docstrings([
+        ROOT_DIR + 'libs/filamentjs/jsbindings.cpp',
+        ROOT_DIR + 'libs/filamentjs/jsenums.cpp',
+        ROOT_DIR + 'libs/filamentjs/utilities.js',
+        ROOT_DIR + 'libs/filamentjs/wasmloader.js',
+    ])
+    markdown = build_reference_markdown(doctree)
+    rendered = mistletoe.markdown(markdown, PygmentsRenderer)
+    template = open(SCRIPT_DIR + 'ref_template.html').read()
+    rendered = template.replace('$BODY', rendered)
+    outfile = os.path.join(OUTPUT_DIR, f'reference.html')
+    with open(outfile, 'w') as fout:
+        fout.write(rendered)
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__,
             formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -221,7 +459,7 @@ if __name__ == "__main__":
             help="set the cmake webgl build folder")
     parser.add_argument("-t", "--tools-folder", type=str,
             default=TOOLS_DIR,
-            help="set the cmake host build fold for tools")
+            help="set the cmake host build folder for tools")
     parser.add_argument("-o", "--output-folder", type=str,
             default=OUTPUT_DIR,
             help="set the output folder")
@@ -246,6 +484,7 @@ if __name__ == "__main__":
     copy_built_file('samples/web/public/pillars_2k/pillars_2k_ibl.ktx')
     build_filamat('triangle')
     build_filamat('plastic')
+    build_reference()
 
     if args.server:
         spawn_local_server()
