@@ -95,6 +95,10 @@ enum_<LightManager::Type>("LightManager$Type")
     .value("TRIANGLES", RenderableManager::PrimitiveType::TRIANGLES)
     .value("NONE", RenderableManager::PrimitiveType::NONE);
 
+ enum_<View::AntiAliasing>("View$AntiAliasing")
+    .value("NONE", View::AntiAliasing::NONE)
+    .value("FXAA", View::AntiAliasing::FXAA);
+
  enum_<View::DepthPrepass>("View$DepthPrepass")
     .value("DEFAULT", View::DepthPrepass::DEFAULT)
     .value("DISABLED", View::DepthPrepass::DISABLED)

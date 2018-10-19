@@ -302,7 +302,9 @@ class_<View>("View")
     .function("setViewport", &View::setViewport)
     .function("setClearColor", &View::setClearColor)
     .function("setDepthPrepass", &View::setDepthPrepass)
-    .function("setPostProcessingEnabled", &View::setPostProcessingEnabled);
+    .function("setPostProcessingEnabled", &View::setPostProcessingEnabled)
+    .function("setAntiAliasing", &View::setAntiAliasing)
+    .function("getAntiAliasing", &View::getAntiAliasing);
 
 class_<Scene>("Scene")
     .function("addEntity", &Scene::addEntity)
