@@ -35,16 +35,31 @@ vec4 PostProcess_ToneMapping() {
 
 #if POST_PROCESS_ANTI_ALIASING
 vec4 PostProcess_AntiAliasing() {
-    vec4 resolution = frameUniforms.resolution;
-    HIGHP vec2 texelCenter = vertex_uv;
-    vec2 halfResolutionFraction = resolution.zw * 0.5;
+
+    // First, compute an exact upper bound for the area we need to sample from. The render target
+    // may be larger than the viewport that was used for scene rendering, so we cannot rely on the
+    // wrap mode alone.
+    HIGHP vec2 fboSize = vec2(textureSize(postProcess_colorBuffer, 0));
+    HIGHP vec2 invSize = 1.0 / fboSize;
+    HIGHP vec2 halfTexel = 0.5 * invSize;
+    HIGHP vec2 viewportSize = frameUniforms.resolution.xy;
+
+    // The clamp needs to be over-aggressive by a half-texel due to bilinear sampling.
+    HIGHP vec2 excessSize = 0.5 + fboSize - viewportSize;
+    HIGHP vec2 upperBound = 1.0 - excessSize * invSize;
+
+    // Next, compute the coordinates of the texel center and its bounding box. There is no need to
+    // clamp the min corner since the wrap mode will do it automatically.
+    HIGHP vec2 texelCenter = min(vertex_uv, upperBound);
+    HIGHP vec2 texelMaxCorner = min(vertex_uv + halfTexel, upperBound);
+    HIGHP vec2 texelMinCorner = vertex_uv - halfTexel;
 
     vec4 color = fxaa(
             texelCenter,
-            vec4(texelCenter - halfResolutionFraction, texelCenter + halfResolutionFraction),
+            vec4(texelMinCorner, texelMaxCorner),
             postProcess_colorBuffer,
-            resolution.zw,       // FxaaFloat4 fxaaConsoleRcpFrameOpt,
-            2.0 * resolution.zw, // FxaaFloat4 fxaaConsoleRcpFrameOpt2,
+            invSize,       // FxaaFloat4 fxaaConsoleRcpFrameOpt,
+            2.0 * invSize, // FxaaFloat4 fxaaConsoleRcpFrameOpt2,
             8.0,                 // FxaaFloat fxaaConsoleEdgeSharpness,
 #if defined(G3D_FXAA_PATCHES) && G3D_FXAA_PATCHES == 1
             0.08,                // FxaaFloat fxaaConsoleEdgeThreshold,

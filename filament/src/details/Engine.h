@@ -119,7 +119,7 @@ public:
         math::mat4f clipFromWorldMatrix;
         math::mat4f lightFromWorldMatrix;
 
-        math::float4 resolution; // width, height, 1/width, 1/height
+        math::float4 resolution; // viewport width, height, 1/width, 1/height
 
         math::float3 cameraPosition;
         float time; // time in seconds, with a 1 second period
