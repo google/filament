@@ -152,4 +152,86 @@ Filament.loadMathExtensions = function() {
     out[3] = packSnorm16(src[3]);
     return out;
   }
+  // In gl-matrix, mat3 rotation assumes rotation about the Z axis, so here we add a function
+  // to allow an arbitrary axis.
+  const fromRotationZ = mat3.fromRotation;
+  mat3.fromRotation = function(out, radians, axis) {
+    if (axis) {
+      return mat3.fromMat4(out, mat4.fromRotation(mat4.create(), radians, axis));
+    }
+    return fromRotationZ(out, radians);
+  };
+};
+
+// ---------------
+// Texture helpers
+// ---------------
+
+Filament.createTextureFromKtx = function(ktxdata, engine, options) {
+  options = options || {};
+
+  const Sampler = Filament.Texture$Sampler;
+  const TextureFormat = Filament.Texture$InternalFormat;
+  const PixelDataFormat = Filament.PixelDataFormat;
+  const gl = Filament.ctx;
+
+  const ktx = options['ktx'] || new Filament.KtxBundle(Filament.Buffer(ktxdata));
+  const nlevels = ktx.getNumMipLevels();
+  const ktxformat = ktx.info().glInternalFormat;
+  const rgbm = !!options['rgbm'];
+
+  // TODO: this switch is incomplete. Can the KtxBundle class assist?
+  var texformat, pbformat, pbtype;
+  switch (ktxformat) {
+    case gl.RGB:
+      texformat = TextureFormat.RGB8;
+      pbformat = PixelDataFormat.RGB;
+      pbtype = Filament.PixelDataType.UBYTE;
+      break;
+    case gl.RGBA:
+      texformat = TextureFormat.RGBA8;
+      pbformat = rgbm ? PixelDataFormat.RGBM : PixelDataFormat.RGBA;
+      pbtype = Filament.PixelDataType.UBYTE;
+      break;
+    default:
+      console.error('Unsupported KTX format.');
+      return null;
+  }
+
+  const tex = Filament.Texture.Builder()
+    .width(ktx.info().pixelWidth)
+    .height(ktx.info().pixelHeight)
+    .levels(nlevels)
+    .sampler(ktx.isCubemap() ? Sampler.SAMPLER_CUBEMAP : Sampler.SAMPLER_2D)
+    .format(texformat)
+    .rgbm(rgbm)
+    .build(engine);
+
+  if (ktx.isCubemap()) {
+    for (var level = 0; level < nlevels; level++) {
+      const uint8array = ktx.getCubeBlob(level).getBytes();
+      const pixelbuffer = Filament.PixelBuffer(uint8array, pbformat, pbtype);
+      tex.setImageCube(engine, level, pixelbuffer);
+    }
+  } else {
+    for (var level = 0; level < nlevels; level++) {
+      const uint8array = ktx.getBlob([level, 0, 0]).getBytes();
+      const pixelbuffer = Filament.PixelBuffer(uint8array, pbformat, pbtype);
+      tex.setImage(engine, level, pixelbuffer);
+    }
+  }
+
+  return tex;
+};
+
+Filament.createIblFromKtx = function(ktxdata, engine, options) {
+  options = options || {};
+  const iblktx = options['ktx'] = new Filament.KtxBundle(Filament.Buffer(ktxdata));
+  const ibltex = Filament.createTextureFromKtx(ktxdata, engine, options);
+  const shstring = iblktx.getMetadata("sh");
+  const shfloats = shstring.split(/\s/, 9 * 3).map(parseFloat);
+  return Filament.IndirectLight.Builder()
+    .reflections(ibltex)
+    .irradianceSh(3, shfloats)
+    .build(engine);
 };
