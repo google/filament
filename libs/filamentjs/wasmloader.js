@@ -67,14 +67,16 @@ Filament.init = function(assets, onready) {
 // WebAssembly module. The JS classes that correspond to core Filament classes (e.g., Engine)
 // are not guaranteed to exist until this function is called.
 Filament.postRun = function() {
-    Filament.Engine.create = function(canvas) {
-        Filament.createContext(canvas, true, true, {
+    Filament.Engine.create = function(canvas, options) {
+        const defaults = {
             majorVersion: 2,
             minorVersion: 0,
             antialias: false,
             depth: false,
             alpha: false
-        });
+        };
+        options = Object.assign(defaults, options);
+        Filament.createContext(canvas, true, true, options);
         return Filament.Engine._create();
     };
     if (--Filament.remainingInitializationTasks == 0 && Filament.onReady) {
