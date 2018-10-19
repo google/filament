@@ -1,4 +1,5 @@
-This tutorial will create the above demo, introducing you to materials and textures.
+This tutorial will describe how to create the redball demo, introducing you to materials and
+textures.
 
 You'll need to use a couple command-line tools: `matc` and `cmgen`. You can find these in the
 appropriate [Filament release](//github.com/google/filament/releases). You should choose the

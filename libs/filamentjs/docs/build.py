@@ -14,9 +14,6 @@ wombat".
 ```js {fragment="create wombat"}
 var wombat = new Wombat();
 ```
-
-Usage:
-./build.py [serve|help|<output_folder>]
 """
 
 import os
@@ -26,7 +23,7 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 CURRENT_DIR = os.getcwd()
 ROOT_DIR = '../../../'
 OUTPUT_DIR = ROOT_DIR + 'docs/webgl/'
-SERVER_DIR = OUTPUT_DIR + '..'
+ENABLE_EMBEDDED_DEMO = True
 BUILD_DIR = ROOT_DIR + 'out/cmake-webgl-release/'
 HOST_BUILD_DIR = ROOT_DIR + 'out/cmake-release/'
 MATC_EXEC = HOST_BUILD_DIR + 'tools/matc/matc'
@@ -50,6 +47,7 @@ if EXEC_NAME == SCRIPT_NAME and SCRIPT_DIR != CURRENT_DIR:
     relative_script_path = os.path.dirname(__file__)
     quit(f"Please run script from {relative_script_path}")
 
+import argparse
 import jsbeautifier
 import mistletoe
 import pygments
@@ -155,11 +153,13 @@ class JsRenderer(BaseRenderer):
 def weave(name):
     with open(f'tutorial_{name}.md', 'r') as fin:
         markdown = fin.read()
-        style = 'style="width:100%;height:200px;border:none"'
-        if name == 'triangle':
-            markdown = PREAMBLE + markdown
-        iframe = f"<iframe {style} src='demo_{name}.html'></iframe>\n\n"
-        markdown = iframe + markdown
+        if ENABLE_EMBEDDED_DEMO:
+            style = 'style="width:100%;height:200px;border:none"'
+            if name == 'triangle':
+                markdown = PREAMBLE + markdown
+            iframe = f"<iframe {style} src='demo_{name}.html'>" \
+                    "</iframe>\n\n"
+            markdown = iframe + markdown
         rendered = mistletoe.markdown(markdown, PygmentsRenderer)
     template = open('tutorial_template.html').read()
     rendered = template.replace('$BODY', rendered)
@@ -204,24 +204,32 @@ def spawn_local_server():
     import socketserver
     Handler = http.server.SimpleHTTPRequestHandler
     Handler.extensions_map.update({ '.wasm': 'application/wasm' })
-    Handler.directory = SERVER_DIR
-    os.chdir(SERVER_DIR)
+    server_dir = OUTPUT_DIR + '..'
+    Handler.directory = server_dir
+    os.chdir(server_dir)
     socketserver.TCPServer.allow_reuse_address = True
-    with socketserver.TCPServer(("", 8000), Handler) as httpd:
+    port = 8000
+    print(f"serving docs at http://localhost:{port}")
+    with socketserver.TCPServer(("", port), Handler) as httpd:
         httpd.allow_reuse_address = True
         httpd.serve_forever()
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description=__doc__,
+            formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("-d", "--disable-demo",
+            help="omit the embedded WebGL demo",
+            action="store_true")
+    parser.add_argument("-s", "--server",
+            help="start small server in output folder",
+            action="store_true")
+    parser.add_argument("-o", "--output-folder", type=str,
+            default=OUTPUT_DIR,
+            help="set the output folder")
+    args = parser.parse_args()
 
-    run_server = False
-
-    if 'help' in sys.argv:
-        print(__doc__)
-        quit()
-    elif 'serve' in sys.argv:
-        run_server = True
-    elif len(sys.argv) > 1:
-        OUTPUT_DIR = sys.argv[1]
+    OUTPUT_DIR = args.output_folder
+    ENABLE_EMBEDDED_DEMO = not args.disable_demo
 
     for name in ["triangle", "redball"]:
         weave(name)
@@ -237,5 +245,5 @@ if __name__ == "__main__":
     build_filamat('triangle')
     build_filamat('plastic')
 
-    if run_server:
+    if args.server:
         spawn_local_server()
