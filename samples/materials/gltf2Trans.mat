@@ -4,6 +4,8 @@ material {
         uv0
     ],
     shadingModel : lit,
+    blending : transparent,
+    transparency : default,
     parameters : [
         {
             type : sampler2d,
@@ -60,6 +62,7 @@ fragment {
 
         material.baseColor = texture(materialParams_baseColorMap, getUV0());
         material.baseColor.rgb *= materialParams.baseColorFactor.xyz;
+        material.baseColor.rgb *= material.baseColor.a;
 
         material.roughness = materialParams.roughnessFactor * texture(materialParams_metallicRoughnessMap, getUV0()).g;
         material.metallic = materialParams.metallicFactor * texture(materialParams_metallicRoughnessMap, getUV0()).b;
