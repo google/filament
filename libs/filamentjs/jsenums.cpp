@@ -50,7 +50,7 @@ enum_<VertexAttribute>("VertexAttribute")
     .value("BONE_INDICES", BONE_INDICES)
     .value("BONE_WEIGHTS", BONE_WEIGHTS);
 
- enum_<VertexBuffer::AttributeType>("VertexBuffer$AttributeType")
+enum_<VertexBuffer::AttributeType>("VertexBuffer$AttributeType")
     .value("BYTE", VertexBuffer::AttributeType::BYTE)
     .value("BYTE2", VertexBuffer::AttributeType::BYTE2)
     .value("BYTE3", VertexBuffer::AttributeType::BYTE3)
@@ -78,7 +78,7 @@ enum_<VertexAttribute>("VertexAttribute")
     .value("HALF3", VertexBuffer::AttributeType::HALF3)
     .value("HALF4", VertexBuffer::AttributeType::HALF4);
 
- enum_<IndexBuffer::IndexType>("IndexBuffer$IndexType")
+enum_<IndexBuffer::IndexType>("IndexBuffer$IndexType")
     .value("USHORT", IndexBuffer::IndexType::USHORT)
     .value("UINT", IndexBuffer::IndexType::UINT);
 
@@ -89,22 +89,22 @@ enum_<LightManager::Type>("LightManager$Type")
     .value("FOCUSED_SPOT", LightManager::Type::FOCUSED_SPOT)
     .value("SPOT", LightManager::Type::SPOT);
 
- enum_<RenderableManager::PrimitiveType>("RenderableManager$PrimitiveType")
+enum_<RenderableManager::PrimitiveType>("RenderableManager$PrimitiveType")
     .value("POINTS", RenderableManager::PrimitiveType::POINTS)
     .value("LINES", RenderableManager::PrimitiveType::LINES)
     .value("TRIANGLES", RenderableManager::PrimitiveType::TRIANGLES)
     .value("NONE", RenderableManager::PrimitiveType::NONE);
 
- enum_<View::AntiAliasing>("View$AntiAliasing")
+enum_<View::AntiAliasing>("View$AntiAliasing")
     .value("NONE", View::AntiAliasing::NONE)
     .value("FXAA", View::AntiAliasing::FXAA);
 
- enum_<View::DepthPrepass>("View$DepthPrepass")
+enum_<View::DepthPrepass>("View$DepthPrepass")
     .value("DEFAULT", View::DepthPrepass::DEFAULT)
     .value("DISABLED", View::DepthPrepass::DISABLED)
     .value("ENABLED", View::DepthPrepass::ENABLED);
 
- enum_<Camera::Projection>("Camera$Projection")
+enum_<Camera::Projection>("Camera$Projection")
     .value("PERSPECTIVE", Camera::Projection::PERSPECTIVE)
     .value("ORTHO", Camera::Projection::ORTHO);
 
@@ -112,12 +112,12 @@ enum_<Camera::Fov>("Camera$Fov")
     .value("VERTICAL", Camera::Fov::VERTICAL)
     .value("HORIZONTAL", Camera::Fov::HORIZONTAL);
 
- enum_<Texture::Sampler>("Texture$Sampler") // aka driver::SamplerType
+enum_<Texture::Sampler>("Texture$Sampler") // aka driver::SamplerType
     .value("SAMPLER_2D", Texture::Sampler::SAMPLER_2D)
     .value("SAMPLER_CUBEMAP", Texture::Sampler::SAMPLER_CUBEMAP)
     .value("SAMPLER_EXTERNAL", Texture::Sampler::SAMPLER_EXTERNAL);
 
-  enum_<Texture::InternalFormat>("Texture$InternalFormat") // aka driver::TextureFormat
+enum_<Texture::InternalFormat>("Texture$InternalFormat") // aka driver::TextureFormat
     .value("R8", Texture::InternalFormat::R8)
     .value("R8_SNORM", Texture::InternalFormat::R8_SNORM)
     .value("R8UI", Texture::InternalFormat::R8UI)
@@ -174,12 +174,12 @@ enum_<Camera::Fov>("Camera$Fov")
     .value("RGBA32UI", Texture::InternalFormat::RGBA32UI)
     .value("RGBA32I", Texture::InternalFormat::RGBA32I);
 
-  enum_<Texture::Usage>("Texture$Usage") // aka driver::TextureUsage
+enum_<Texture::Usage>("Texture$Usage") // aka driver::TextureUsage
     .value("DEFAULT", Texture::Usage::DEFAULT)
     .value("COLOR_ATTACHMENT", Texture::Usage::COLOR_ATTACHMENT)
     .value("DEPTH_ATTACHMENT", Texture::Usage::DEPTH_ATTACHMENT);
 
-  enum_<driver::PixelDataFormat>("PixelDataFormat")
+enum_<driver::PixelDataFormat>("PixelDataFormat")
     .value("R", driver::PixelDataFormat::R)
     .value("R_INTEGER", driver::PixelDataFormat::R_INTEGER)
     .value("RG", driver::PixelDataFormat::RG)
@@ -193,7 +193,7 @@ enum_<Camera::Fov>("Camera$Fov")
     .value("DEPTH_STENCIL", driver::PixelDataFormat::DEPTH_STENCIL)
     .value("ALPHA", driver::PixelDataFormat::ALPHA);
 
-  enum_<driver::PixelDataType>("PixelDataType")
+enum_<driver::PixelDataType>("PixelDataType")
     .value("UBYTE", driver::PixelDataType::UBYTE)
     .value("BYTE", driver::PixelDataType::BYTE)
     .value("USHORT", driver::PixelDataType::USHORT)

@@ -224,12 +224,17 @@ value_array<flatmat3>("mat3")
 // CORE FILAMENT CLASSES
 // ---------------------
 
+/// Engine ::core class:: Central manager and resource owner. Typically this is a singleton.
 class_<Engine>("Engine")
     .class_function("_create", (Engine* (*)()) [] { return Engine::create(); },
             allow_raw_pointers())
+    /// destroy ::static method:: Destroys an engine instance and cleans up resources.
+    /// engine ::argument:: the instance to destroy
     .class_function("destroy", (void (*)(Engine*)) []
             (Engine* engine) { Engine::destroy(&engine); }, allow_raw_pointers())
     .function("execute", &Engine::execute)
+    /// getTransformManager ::method::
+    /// ::retval:: an instance of [TransformManager]
     .function("getTransformManager", EMBIND_LAMBDA(TransformManager*, (Engine* engine), {
         return &engine->getTransformManager();
     }), allow_raw_pointers())
@@ -352,8 +357,15 @@ class_<RenderBuilder>("RenderableManager$Builder")
 class_<RenderableManager>("RenderableManager")
     .class_function("Builder", (RenderBuilder (*)(int)) [] (int n) { return RenderBuilder(n); });
 
+/// TransformManager ::core class:: Adds transform components to entities.
 class_<TransformManager>("TransformManager")
+    /// getInstance ::method:: Gets an instance representing the transform component for an entity.
+    /// entity ::argument:: an [Entity]
+    /// ::retval:: a transform component that can be passed to `setTransform`.
     .function("getInstance", &TransformManager::getInstance)
+    /// setTransform ::method:: Sets the mat4 value of a transform component.
+    /// instance ::argument:: The transform instance of entity, obtained via `getInstance`.
+    /// matrix ::argument:: Array of 16 numbers (mat4)
     .function("setTransform", EMBIND_LAMBDA(void,
             (TransformManager* self, TransformManager::Instance instance, flatmat4 m), {
         self->setTransform(instance, m.m); }), allow_raw_pointers());
@@ -465,6 +477,7 @@ class_<MaterialInstance>("MaterialInstance")
 class_<TextureSampler>("TextureSampler")
     .constructor<driver::SamplerMinFilter, driver::SamplerMagFilter, driver::SamplerWrapMode>();
 
+/// Texture ::core class:: 2D image or cubemap that can be sampled by the GPU, possibly mipmapped.
 class_<Texture>("Texture")
     .class_function("Builder", (TexBuilder (*)()) [] { return TexBuilder(); })
     .function("setImage", EMBIND_LAMBDA(void, (Texture* self,
@@ -553,34 +566,57 @@ class_<SkyBuilder>("Skybox$Builder")
 // UTILS TYPES
 // -----------
 
+/// Entity ::core class:: Handle to an object consisting of a set of components.
+/// To create an entity with no components, use [EntityManager].
 class_<utils::Entity>("Entity");
 
+/// EntityManager ::core class:: Singleton used for constructing entities in Filament's ECS.
 class_<utils::EntityManager>("EntityManager")
+    /// get ::static method:: Gets the singleton entity manager instance.
+    /// ::retval:: the one and only entity manager
     .class_function("get", (utils::EntityManager* (*)()) []
         { return &utils::EntityManager::get(); }, allow_raw_pointers())
+    /// create ::method::
+    /// ::retval:: an [Entity] without any components
     .function("create", select_overload<utils::Entity()>(&utils::EntityManager::create))
     .function("destroy", select_overload<void(utils::Entity)>(&utils::EntityManager::destroy));
 
 // DRIVER TYPES
 // ------------
 
+/// BufferDescriptor ::class:: Low level buffer wrapper.
+/// Clients should use the [Buffer] function to contruct BufferDescriptor objects.
 class_<BufferDescriptor>("driver$BufferDescriptor")
     .constructor<emscripten::val>()
+    /// getBytes ::method:: Gets a view of the WASM heap referenced by the buffer descriptor.
+    /// ::retval:: Uint8Array
     .function("getBytes", &BufferDescriptor::getBytes);
 
+/// PixelBufferDescriptor ::class:: Low level pixel buffer wrapper.
+/// Clients should use the [PixelBuffer] function to contruct PixelBufferDescriptor objects.
 class_<PixelBufferDescriptor>("driver$PixelBufferDescriptor")
     .constructor<emscripten::val, driver::PixelDataFormat, driver::PixelDataType>()
+    /// getBytes ::method:: Gets a view of the WASM heap referenced by the buffer descriptor.
+    /// ::retval:: Uint8Array
     .function("getBytes", &PixelBufferDescriptor::getBytes);
 
 // IMAGE TYPES
 // ------------
 
+/// KtxBundle ::class:: In-memory representation of a KTX file.
 class_<KtxBundle>("KtxBundle")
     .constructor(EMBIND_LAMBDA(KtxBundle*, (BufferDescriptor kbd), {
         return new KtxBundle((uint8_t*) kbd.bd->buffer, (uint32_t) kbd.bd->size);
     }))
+
+    /// info ::method:: Obtains properties of the KTX header.
+    /// ::retval:: The [KtxInfo] property accessor object.
     .function("getNumMipLevels", &KtxBundle::getNumMipLevels)
+
+    /// getArrayLength ::method:: Obtains length of the texture array.
+    /// ::retval:: The number of elements in the texture array
     .function("getArrayLength", &KtxBundle::getArrayLength)
+
     .function("isCubemap", &KtxBundle::isCubemap)
     .function("getBlob", EMBIND_LAMBDA(BufferDescriptor, (KtxBundle* self, KtxBlobIndex index), {
         uint8_t* data;
@@ -594,11 +630,22 @@ class_<KtxBundle>("KtxBundle")
         self->getBlob({miplevel}, &data, &size);
         return BufferDescriptor(data, size * 6);
     }), allow_raw_pointers())
+
+    /// info ::method:: Obtains properties of the KTX header.
+    /// ::retval:: The [KtxInfo] property accessor object.
     .function("info", &KtxBundle::info)
+
+    /// getMetadata ::method:: Obtains arbitrary metadata from the KTX file.
+    /// key ::argument:: string
+    /// ::retval:: string
     .function("getMetadata", EMBIND_LAMBDA(std::string, (KtxBundle* self, std::string key), {
         return std::string(self->getMetadata(key.c_str()));
     }), allow_raw_pointers());
 
+/// KtxInfo ::class:: Property accessor for KTX header.
+/// For example, `ktxbundle.info().pixelWidth`. See the
+/// [KTX spec](https://www.khronos.org/opengles/sdk/tools/KTX/file_format_spec/) for the list of
+/// properties.
 class_<KtxInfo>("KtxInfo")
     .property("endianness", &KtxInfo::endianness)
     .property("glType", &KtxInfo::glType)
