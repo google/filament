@@ -316,7 +316,7 @@ if (ANDROID)
     target_link_libraries(${TARGET} PUBLIC GLESv3 EGL android)
 endif()
 
-if (APPLE)
+if (APPLE AND NOT IOS)
     target_link_libraries(${TARGET} PRIVATE "-framework Cocoa")
 endif()
 
