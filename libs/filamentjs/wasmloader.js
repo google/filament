@@ -33,17 +33,19 @@
 // module.
 Filament.remainingInitializationTasks = 1;
 
-// ENTRY POINT:
-// Filament.init(assets, onready)
-//
-// All JavaScript clients must call the init function, passing in a list of asset URL's and a
-// callback. This callback gets invoked only after all assets have been downloaded and the Filament
-// WebAssembly module has been loaded. Clients should only pass asset URL's that absolutely must
-// be ready at initialization time.
-//
-// When the callback is called, each downloaded asset is available in the form of Uint8Array in the
-// "Filament.assets" object. The key is the URL and the value is the Uint8Array.
-//
+/// init ::function:: Downloads assets, loads the Filament module, and invokes a callback when done.
+///
+/// All JavaScript clients must call the init function, passing in a list of asset URL's and a
+/// callback. This callback gets invoked only after all assets have been downloaded and the Filament
+/// WebAssembly module has been loaded. Clients should only pass asset URL's that absolutely must
+/// be ready at initialization time.
+///
+/// When the callback is called, each downloaded asset is available in the form of Uint8Array in the
+/// `Filament.assets` object. The key is the URL and the value is the Uint8Array.
+///
+/// assets ::argument:: Array of strings containing URL's of required assets.
+/// onready ::argument:: callback that gets invoked after all assets have been downloaded and the \
+/// Filament WebAssembly module has been loaded.
 Filament.init = function(assets, onready) {
     Filament.onReady = onready;
     Filament.remainingInitializationTasks += assets.length;

@@ -24,6 +24,9 @@
 // copy because the input pointer becomes invalidated after allocating heap memory for the buffer
 // descriptor.
 
+/// Buffer ::function:: Constructs a [BufferDescriptor] by copying a typed array into the WASM heap.
+/// typedarray ::argument:: Data to consume (e.g. Uint8Array, Uint16Array, Float32Array)
+/// ::retval:: [BufferDescriptor]
 Filament.Buffer = function(typedarray) {
   console.assert(typedarray.buffer instanceof ArrayBuffer);
   console.assert(typedarray.byteLength > 0);
@@ -37,6 +40,12 @@ Filament.Buffer = function(typedarray) {
   return bd;
 };
 
+/// PixelBuffer ::function:: Constructs a [PixelBufferDescriptor] by copying a typed array into \
+/// the WASM heap.
+/// typedarray ::argument:: Data to consume (e.g. Uint8Array, Uint16Array, Float32Array)
+/// format ::argument:: [PixelDataFormat]
+/// datatype ::argument:: [PixelDataType]
+/// ::retval:: [PixelBufferDescriptor]
 Filament.PixelBuffer = function(typedarray, format, datatype) {
   console.assert(typedarray.buffer instanceof ArrayBuffer);
   console.assert(typedarray.byteLength > 0);
@@ -57,6 +66,17 @@ Filament.PixelBuffer = function(typedarray, format, datatype) {
 // These are some lightweight optional functions. Using them requires the presence of gl-matrix,
 // which is not bundled into filament.js.
 
+/// IcoSphere ::class:: Utility class for constructing spheres.
+///
+/// The constructor takes an integer subdivision level, with 0 being an icosahedron.
+///
+/// Exposes three arrays as properties:
+///
+/// - `icosphere.vertices` Float32Array of XYZ coordinates.
+/// - `icosphere.tangents` Uint16Array (interpreted as half-floats) encoding the surface orientation
+/// as quaternions.
+/// - `icosphere.triangles` Uint16Array with triangle indices.
+///
 Filament.IcoSphere = function(nsubdivs) {
   const X = .525731112119133606;
   const Z = .850650808352039932;
@@ -143,7 +163,9 @@ function packSnorm16(v) {
   return Math.round(clamp(v, -1.0, 1.0) * 32767.0);
 }
 
-// This function adds new methods to gl-matrix, its usage is optional.
+/// loadMathExtensions ::function:: Extends the [glMatrix](http://glmatrix.net/) math library.
+/// Filament does not require its clients to use glMatrix, so calling this function is optional.
+/// This adds `vec4.packSnorm16` and `mat3.fromRotation` to the glMatrix library.
 Filament.loadMathExtensions = function() {
   vec4.packSnorm16 = function(out, src) {
     out[0] = packSnorm16(src[0]);
@@ -167,6 +189,11 @@ Filament.loadMathExtensions = function() {
 // Texture helpers
 // ---------------
 
+/// createTextureFromKtx ::function:: Utility function that creates a [Texture] from a KTX file.
+/// ktxdata ::argument:: Uint8Array with the contents of a KTX file.
+/// engine ::argument:: [Engine]
+/// options ::argument:: Options dictionary. For now, the `rgbm` boolean is the only option.
+/// ::retval:: [Texture]
 Filament.createTextureFromKtx = function(ktxdata, engine, options) {
   options = options || {};
 

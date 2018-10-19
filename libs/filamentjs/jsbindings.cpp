@@ -224,66 +224,113 @@ value_array<flatmat3>("mat3")
 // CORE FILAMENT CLASSES
 // ---------------------
 
+/// Engine ::core class:: Central manager and resource owner. Typically this is a singleton.
 class_<Engine>("Engine")
     .class_function("_create", (Engine* (*)()) [] { return Engine::create(); },
             allow_raw_pointers())
+    /// destroy ::static method:: Destroys an engine instance and cleans up resources.
+    /// engine ::argument:: the instance to destroy
     .class_function("destroy", (void (*)(Engine*)) []
             (Engine* engine) { Engine::destroy(&engine); }, allow_raw_pointers())
     .function("execute", &Engine::execute)
+    /// getTransformManager ::method::
+    /// ::retval:: an instance of [TransformManager]
     .function("getTransformManager", EMBIND_LAMBDA(TransformManager*, (Engine* engine), {
         return &engine->getTransformManager();
     }), allow_raw_pointers())
+    /// createSwapChain ::method::
+    /// ::retval:: an instance of [SwapChain]
     .function("createSwapChain", (SwapChain* (*)(Engine*)) []
             (Engine* engine) { return engine->createSwapChain(nullptr); },
             allow_raw_pointers())
+    /// destroySwapChain ::method::
+    /// swapChain ::argument:: an instance of [SwapChain]
     .function("destroySwapChain", (void (*)(Engine*, SwapChain*)) []
             (Engine* engine, SwapChain* swapChain) { engine->destroy(swapChain); },
             allow_raw_pointers())
+    /// createRenderer ::method::
+    /// ::retval:: an instance of [Renderer]
     .function("createRenderer", &Engine::createRenderer, allow_raw_pointers())
+    /// destroyRenderer ::method::
+    /// renderer ::argument:: an instance of [Renderer]
     .function("destroyRenderer", (void (*)(Engine*, Renderer*)) []
             (Engine* engine, Renderer* renderer) { engine->destroy(renderer); },
             allow_raw_pointers())
+    /// createView ::method::
+    /// ::retval:: an instance of [View]
     .function("createView", &Engine::createView, allow_raw_pointers())
+    /// destroyView ::method::
+    /// view ::argument:: an instance of [View]
     .function("destroyView", (void (*)(Engine*, View*)) []
             (Engine* engine, View* view) { engine->destroy(view); },
             allow_raw_pointers())
+    /// createScene ::method::
+    /// ::retval:: an instance of [Scene]
     .function("createScene", &Engine::createScene, allow_raw_pointers())
+    /// destroyScene ::method::
+    /// scene ::argument:: an instance of [Scene]
     .function("destroyScene", (void (*)(Engine*, Scene*)) []
             (Engine* engine, Scene* scene) { engine->destroy(scene); },
             allow_raw_pointers())
+    /// createCamera ::method::
+    /// ::retval:: an instance of [Camera]
     .function("createCamera", select_overload<Camera*(void)>(&Engine::createCamera),
             allow_raw_pointers())
+    /// destroyCamera ::method::
+    /// camera ::argument:: an instance of [Camera]
     .function("destroyCamera", (void (*)(Engine*, Camera*)) []
             (Engine* engine, Camera* camera) { engine->destroy(camera); },
             allow_raw_pointers())
+    /// createMaterial ::method::
+    /// package ::argument:: buffer descriptor created with [Buffer] with filamat contents
+    /// ::retval:: an instance of [createMaterial]
     .function("createMaterial", EMBIND_LAMBDA(Material*, (Engine* engine, BufferDescriptor mbd), {
         // TODO: consider adding a BufferDescriptor API to Material::Builder, then possibly removing
         // this convenient helper method.
         return Material::Builder().package(mbd.bd->buffer, mbd.bd->size).build(*engine);
     }), allow_raw_pointers())
+    /// destroyMaterial ::method::
+    /// material ::argument:: an instance of [Material]
     .function("destroyMaterial", (void (*)(Engine*, Material*)) []
             (Engine* engine, Material* mat) { engine->destroy(mat); },
             allow_raw_pointers())
+    /// destroyEntity ::method::
+    /// entity ::argument:: an [Entity]
     .function("destroyEntity", (void (*)(Engine*, utils::Entity)) []
             (Engine* engine, utils::Entity entity) { engine->destroy(entity); },
             allow_raw_pointers())
+    /// destroyMaterial ::method::
+    /// instance ::argument:: the [MaterialInstance] to destroy
     .function("destroyMaterialInstance", (void (*)(Engine*, MaterialInstance*)) []
             (Engine* engine, MaterialInstance* mi) { engine->destroy(mi); },
             allow_raw_pointers())
+    /// destroyTexture ::method::
+    /// texture ::argument:: the [Texture] to destroy
     .function("destroyTexture", (void (*)(Engine*, Texture*)) []
             (Engine* engine, Texture* tex) { engine->destroy(tex); },
             allow_raw_pointers())
+    /// destroyVertexBuffer ::method::
+    /// vb ::argument:: the [VertexBuffer] to destroy
     .function("destroyVertexBuffer", (void (*)(Engine*, VertexBuffer*)) []
             (Engine* engine, VertexBuffer* vb) { engine->destroy(vb); },
             allow_raw_pointers())
+    /// destroyIndexBuffer ::method::
+    /// ib ::argument:: the [IndexBuffer] to destroy
     .function("destroyIndexBuffer", (void (*)(Engine*, IndexBuffer*)) []
             (Engine* engine, IndexBuffer* ib) { engine->destroy(ib); },
             allow_raw_pointers());
 
+/// SwapChain ::core class:: Represents the platform's native rendering surface.
+/// See also the [Engine] methods `createSwapChain` and `destroySwapChain`.
 class_<SwapChain>("SwapChain");
 
+/// Renderer ::core class:: Represents the platform's native window.
+/// See also the [Engine] methods `createRenderer` and `destroyRenderer`.
 class_<Renderer>("Renderer")
     .function("renderView", &Renderer::render, allow_raw_pointers())
+    /// render ::method:: requests rendering for a single frame on the given [View]
+    /// swapChain ::argument:: the [SwapChain] corresponding to the canvas
+    /// view ::argument:: the [View] corresponding to the canvas
     .function("render", EMBIND_LAMBDA(void, (Renderer* self, SwapChain* swapChain, View* view), {
         auto engine = self->getEngine();
         if (self->beginFrame(swapChain)) {
@@ -295,6 +342,9 @@ class_<Renderer>("Renderer")
     .function("beginFrame", &Renderer::beginFrame, allow_raw_pointers())
     .function("endFrame", &Renderer::endFrame, allow_raw_pointers());
 
+/// View ::core class:: Encompasses all the state needed for rendering a Scene.
+/// A view is associated with a particular [Scene], [Camera], and viewport.
+/// See also the [Engine] methods `createView` and `destroyView`.
 class_<View>("View")
     .function("setScene", &View::setScene, allow_raw_pointers())
     .function("setCamera", &View::setCamera, allow_raw_pointers())
@@ -306,6 +356,8 @@ class_<View>("View")
     .function("setAntiAliasing", &View::setAntiAliasing)
     .function("getAntiAliasing", &View::getAntiAliasing);
 
+/// Scene ::core class:: Flat container of renderables and lights.
+/// See also the [Engine] methods `createScene` and `destroyScene`.
 class_<Scene>("Scene")
     .function("addEntity", &Scene::addEntity)
     .function("remove", &Scene::remove)
@@ -314,6 +366,8 @@ class_<Scene>("Scene")
     .function("getRenderableCount", &Scene::getRenderableCount)
     .function("getLightCount", &Scene::getLightCount);
 
+/// Camera ::core class:: Represents the eye through which the scene is viewed.
+/// See also the [Engine] methods `createCamera` and `destroyCamera`.
 class_<Camera>("Camera")
     .function("setProjection", EMBIND_LAMBDA(void, (Camera* self, Camera::Projection projection,
             double left, double right, double bottom, double top, double near, double far), {
@@ -352,8 +406,15 @@ class_<RenderBuilder>("RenderableManager$Builder")
 class_<RenderableManager>("RenderableManager")
     .class_function("Builder", (RenderBuilder (*)(int)) [] (int n) { return RenderBuilder(n); });
 
+/// TransformManager ::core class:: Adds transform components to entities.
 class_<TransformManager>("TransformManager")
+    /// getInstance ::method:: Gets an instance representing the transform component for an entity.
+    /// entity ::argument:: an [Entity]
+    /// ::retval:: a transform component that can be passed to `setTransform`.
     .function("getInstance", &TransformManager::getInstance)
+    /// setTransform ::method:: Sets the mat4 value of a transform component.
+    /// instance ::argument:: The transform instance of entity, obtained via `getInstance`.
+    /// matrix ::argument:: Array of 16 numbers (mat4)
     .function("setTransform", EMBIND_LAMBDA(void,
             (TransformManager* self, TransformManager::Instance instance, flatmat4 m), {
         self->setTransform(instance, m.m); }), allow_raw_pointers());
@@ -412,6 +473,7 @@ class_<VertexBuilder>("VertexBuffer$Builder")
     .BUILDER_FUNCTION("bufferCount", VertexBuilder, (VertexBuilder* builder, int count), {
         return &builder->bufferCount(count); });
 
+/// VertexBuffer ::core class:: Bundle of buffers and associated vertex attributes.
 class_<VertexBuffer>("VertexBuffer")
     .class_function("Builder", (VertexBuilder (*)()) [] { return VertexBuilder(); })
     .function("setBufferAt", EMBIND_LAMBDA(void, (VertexBuffer* self,
@@ -429,6 +491,7 @@ class_<IndexBuilder>("IndexBuffer$Builder")
             IndexBuffer::IndexType indexType), {
         return &builder->bufferType(indexType); });
 
+/// IndexBuffer ::core class:: Array of 16-bit or 32-bit unsigned integers consumed by the GPU.
 class_<IndexBuffer>("IndexBuffer")
     .class_function("Builder", (IndexBuilder (*)()) [] { return IndexBuilder(); })
     .function("setBuffer", EMBIND_LAMBDA(void, (IndexBuffer* self,
@@ -465,6 +528,7 @@ class_<MaterialInstance>("MaterialInstance")
 class_<TextureSampler>("TextureSampler")
     .constructor<driver::SamplerMinFilter, driver::SamplerMagFilter, driver::SamplerWrapMode>();
 
+/// Texture ::core class:: 2D image or cubemap that can be sampled by the GPU, possibly mipmapped.
 class_<Texture>("Texture")
     .class_function("Builder", (TexBuilder (*)()) [] { return TexBuilder(); })
     .function("setImage", EMBIND_LAMBDA(void, (Texture* self,
@@ -553,34 +617,57 @@ class_<SkyBuilder>("Skybox$Builder")
 // UTILS TYPES
 // -----------
 
+/// Entity ::core class:: Handle to an object consisting of a set of components.
+/// To create an entity with no components, use [EntityManager].
 class_<utils::Entity>("Entity");
 
+/// EntityManager ::core class:: Singleton used for constructing entities in Filament's ECS.
 class_<utils::EntityManager>("EntityManager")
+    /// get ::static method:: Gets the singleton entity manager instance.
+    /// ::retval:: the one and only entity manager
     .class_function("get", (utils::EntityManager* (*)()) []
         { return &utils::EntityManager::get(); }, allow_raw_pointers())
+    /// create ::method::
+    /// ::retval:: an [Entity] without any components
     .function("create", select_overload<utils::Entity()>(&utils::EntityManager::create))
     .function("destroy", select_overload<void(utils::Entity)>(&utils::EntityManager::destroy));
 
 // DRIVER TYPES
 // ------------
 
+/// BufferDescriptor ::class:: Low level buffer wrapper.
+/// Clients should use the [Buffer] helper function to contruct BufferDescriptor objects.
 class_<BufferDescriptor>("driver$BufferDescriptor")
     .constructor<emscripten::val>()
+    /// getBytes ::method:: Gets a view of the WASM heap referenced by the buffer descriptor.
+    /// ::retval:: Uint8Array
     .function("getBytes", &BufferDescriptor::getBytes);
 
+/// PixelBufferDescriptor ::class:: Low level pixel buffer wrapper.
+/// Clients should use the [PixelBuffer] helper function to contruct PixelBufferDescriptor objects.
 class_<PixelBufferDescriptor>("driver$PixelBufferDescriptor")
     .constructor<emscripten::val, driver::PixelDataFormat, driver::PixelDataType>()
+    /// getBytes ::method:: Gets a view of the WASM heap referenced by the buffer descriptor.
+    /// ::retval:: Uint8Array
     .function("getBytes", &PixelBufferDescriptor::getBytes);
 
 // IMAGE TYPES
 // ------------
 
+/// KtxBundle ::class:: In-memory representation of a KTX file.
 class_<KtxBundle>("KtxBundle")
     .constructor(EMBIND_LAMBDA(KtxBundle*, (BufferDescriptor kbd), {
         return new KtxBundle((uint8_t*) kbd.bd->buffer, (uint32_t) kbd.bd->size);
     }))
+
+    /// info ::method:: Obtains properties of the KTX header.
+    /// ::retval:: The [KtxInfo] property accessor object.
     .function("getNumMipLevels", &KtxBundle::getNumMipLevels)
+
+    /// getArrayLength ::method:: Obtains length of the texture array.
+    /// ::retval:: The number of elements in the texture array
     .function("getArrayLength", &KtxBundle::getArrayLength)
+
     .function("isCubemap", &KtxBundle::isCubemap)
     .function("getBlob", EMBIND_LAMBDA(BufferDescriptor, (KtxBundle* self, KtxBlobIndex index), {
         uint8_t* data;
@@ -594,11 +681,22 @@ class_<KtxBundle>("KtxBundle")
         self->getBlob({miplevel}, &data, &size);
         return BufferDescriptor(data, size * 6);
     }), allow_raw_pointers())
+
+    /// info ::method:: Obtains properties of the KTX header.
+    /// ::retval:: The [KtxInfo] property accessor object.
     .function("info", &KtxBundle::info)
+
+    /// getMetadata ::method:: Obtains arbitrary metadata from the KTX file.
+    /// key ::argument:: string
+    /// ::retval:: string
     .function("getMetadata", EMBIND_LAMBDA(std::string, (KtxBundle* self, std::string key), {
         return std::string(self->getMetadata(key.c_str()));
     }), allow_raw_pointers());
 
+/// KtxInfo ::class:: Property accessor for KTX header.
+/// For example, `ktxbundle.info().pixelWidth`. See the
+/// [KTX spec](https://www.khronos.org/opengles/sdk/tools/KTX/file_format_spec/) for the list of
+/// properties.
 class_<KtxInfo>("KtxInfo")
     .property("endianness", &KtxInfo::endianness)
     .property("glType", &KtxInfo::glType)
