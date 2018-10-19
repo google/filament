@@ -89,7 +89,7 @@ public:
 #include <OpenGLES/ES3/gl.h>
 #include <OpenGLES/ES3/glext.h>
 
-#include <Utils/Panic.h>
+#include <utils/Panic.h>
 
 void glTexStorage2DMultisample (GLenum target, GLsizei samples, GLenum internalformat,
             GLsizei width, GLsizei height, GLboolean fixedsamplelocations) {
