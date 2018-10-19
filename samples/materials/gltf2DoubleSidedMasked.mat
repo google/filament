@@ -4,6 +4,10 @@ material {
         uv0
     ],
     shadingModel : lit,
+    doubleSided : true,
+    blending : masked,
+    maskThreshold : 0.5,
+    transparency : default,
     parameters : [
         {
             type : sampler2d,
