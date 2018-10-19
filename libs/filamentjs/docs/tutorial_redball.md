@@ -273,7 +273,7 @@ scene.setIndirectLight(indirectLight);
 ## Add background
 
 At this point you can run the demo and you should see a red plastic ball against a black background.
-Without a skybox, the reflections on the ball are not representative of the its surroundings.
+Without a skybox, the reflections on the ball are not representative of its surroundings.
 Here's one way to create a texture for the skybox:
 
 ```js
