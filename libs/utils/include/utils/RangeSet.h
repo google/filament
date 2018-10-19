@@ -58,7 +58,7 @@ private:
     template<typename TYPE, size_t CAPACITY,
             typename = typename std::enable_if<std::is_pod<TYPE>::value>::type>
     class vector {
-        std::array<TYPE, RANGE_COUNT> mElements;
+        std::array<TYPE, CAPACITY> mElements;
         uint32_t mSize = 0;
         using value_type     = typename std::array<TYPE, CAPACITY>::value_type;
         using iterator       = value_type*;
