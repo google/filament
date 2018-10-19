@@ -204,9 +204,8 @@ def spawn_local_server():
     import socketserver
     Handler = http.server.SimpleHTTPRequestHandler
     Handler.extensions_map.update({ '.wasm': 'application/wasm' })
-    server_dir = OUTPUT_DIR + '..'
-    Handler.directory = server_dir
-    os.chdir(server_dir)
+    Handler.directory = OUTPUT_DIR
+    os.chdir(OUTPUT_DIR)
     socketserver.TCPServer.allow_reuse_address = True
     port = 8000
     print(f"serving docs at http://localhost:{port}")
