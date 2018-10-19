@@ -154,12 +154,12 @@ def weave(name):
     with open(f'tutorial_{name}.md', 'r') as fin:
         markdown = fin.read()
         if ENABLE_EMBEDDED_DEMO:
-            style = 'style="width:100%;height:200px;border:none"'
             if name == 'triangle':
                 markdown = PREAMBLE + markdown
-            iframe = f"<iframe {style} src='demo_{name}.html'>" \
-                    "</iframe>\n\n"
-            markdown = iframe + markdown
+            markdown = '<div class="demo_frame">' + \
+                f'<iframe src="demo_{name}.html"></iframe>' + \
+                f'<a href="demo_{name}.html">&#x1F517;</a>' + \
+                '</div>\n' + markdown
         rendered = mistletoe.markdown(markdown, PygmentsRenderer)
     template = open('tutorial_template.html').read()
     rendered = template.replace('$BODY', rendered)
