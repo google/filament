@@ -293,7 +293,7 @@ const pixelbuffer = Filament.PixelBuffer(uint8array, format, datatype);
 skytex.setImageCube(engine, 0, pixelbuffer);
 ```
 
-Again, this is a lot of boilerplate. Filament provides a Javascript utility to make it easier.
+Filament provides a Javascript utility to make this easier.
 Replace **create skybox** with the following.
 
 ```js {fragment="create skybox"}
