@@ -23,6 +23,9 @@ mkdir out\cmake-release
 cd out\cmake-release
 if errorlevel 1 exit /b %errorlevel%
 
+:: Force Java JDK 8. Kokoro machines default to 9
+SET JAVA_HOME=C:\Program Files\Java\jdk1.8.0_152
+
 cmake ..\.. -G Ninja ^
     -DCMAKE_CXX_COMPILER:PATH="clang-cl.exe" ^
     -DCMAKE_C_COMPILER:PATH="clang-cl.exe" ^
