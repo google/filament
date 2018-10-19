@@ -154,10 +154,10 @@ private:
 
     struct InternalBone {
         // Bones are stored as row-major
-        math::quatf rigidTransform = { 1, 0, 0, 0 };
-        math::float4 translation = {};
-        math::float4 scales = { 1, 1, 1, 0 };
-        math::float4 iscales = { 1, 1, 1, 0 };
+        math::quatf q = { 1, 0, 0, 0 };
+        math::float4 t = {};
+        math::float4 s = { 1, 1, 1, 0 };
+        math::float4 ns = { 1, 1, 1, 0 };
     };
 
     static void makeBone(InternalBone* out, math::mat4f const& transforms) noexcept;
