@@ -260,7 +260,7 @@ const indirectLight = Filament.IndirectLight.Builder()
 scene.setIndirectLight(indirectLight);
 ```
 
-Phew, that was a lot of boilerplate! Filament provides a JavaScript utility to make this simpler,
+Filament provides a JavaScript utility to make this simpler,
 simply replace the **create IBL** comment with the following snippet.
 
 ```js {fragment="create IBL"}
