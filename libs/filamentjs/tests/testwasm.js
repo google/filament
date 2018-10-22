@@ -211,17 +211,10 @@ class App {
   }
 
   render() {
-    // Test setting transforms.
     const transform = mat4.fromTranslation(mat4.create(), [0, 0, -4]);
     const tcm = this.engine.getTransformManager();
     tcm.setTransform(tcm.getInstance(this.sphereEntity), transform);
-
-    // Render the frame.
-    if (this.renderer.beginFrame(this.swapChain)) {
-      this.renderer.render(this.view);
-      this.renderer.endFrame();
-    }
-    this.engine.execute();
+    this.renderer.render(this.swapChain, this.view);
     window.requestAnimationFrame(this.render);
   }
 

@@ -190,10 +190,18 @@ void FScene::updateUBOs(utils::Range<uint32_t> visibleRenderables) noexcept {
         // the transformed normals will have unit-length, therefore they need to be normalized
         // in the shader (that's already the case anyways, since normalization is needed after
         // interpolation).
+        //
+        // We pre-scale normals by the inverse of the largest scale factor to avoid
+        // large post-transform magnitudes in the shader, especially in the fragment shader, where
+        // we use medium precision.
+        //
         // Note: if the model matrix is known to be a rigid-transform, we could just use it directly.
+
+        mat3f m = transpose(inverse(model.upperLeft()));
+        m *= mat3f(1.0f / std::sqrt(max(float3{length2(m[0]), length2(m[1]), length2(m[2])})));
+
         UniformBuffer::setUniform(buffer,
-                offset + offsetof(FRenderableManager::Transform, worldFromModelNormalMatrix),
-                transpose(inverse(model.upperLeft())));
+                offset + offsetof(FRenderableManager::Transform, worldFromModelNormalMatrix), m);
     }
 
     // TODO: handle static objects separately

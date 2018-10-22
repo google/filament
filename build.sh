@@ -403,7 +403,7 @@ function build_ios_target {
     if [ ! -d "CMakeFiles" ] || [ "$ISSUE_CMAKE_ALWAYS" == "true" ]; then
         cmake \
             -G "$BUILD_GENERATOR" \
-            -DCMAKE_BUILD_TYPE=${LC_TARGET} \
+            -DCMAKE_BUILD_TYPE=$1 \
             -DCMAKE_INSTALL_PREFIX=../ios-${LC_TARGET}/filament \
             -DIOS_ARCH=${ARCH} \
             -DPLATFORM_NAME=${PLATFORM} \

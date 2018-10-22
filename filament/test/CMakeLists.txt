@@ -13,7 +13,7 @@ if (ANDROID)
     add_executable(filament_benchmark filament_benchmark.cpp)
     target_link_libraries(filament_benchmark PRIVATE utils filament)
     target_compile_options(filament_benchmark PRIVATE ${COMPILER_FLAGS})
-else()
+elseif(NOT IOS)
     # The following tests rely on private APIs that are stripped
     # away in Release builds
     if (TNT_DEV)

@@ -1,9 +1,9 @@
 ## Start your project
 
 First, create a directory for your web project and obtain `filament.js` and `filament.wasm` from
-the latest [filament-web tarball](https://github.com/google/filament/releases). In the future, these
-files will be available on npm, which will allow you to use [yarn](https://yarnpkg.com/en/) or
-[unpkg](https://unpkg.com).
+the latest [filament-web tarball](//github.com/google/filament/releases). In the future, these
+files will be available on npm, which will allow you to use [yarn](//yarnpkg.com/en/) or
+[unpkg](//unpkg.com).
 
 Next, create a text file called `triangle.html` and fill it with the following HTML. This creates
 a mobile-friendly page with a full-screen canvas.
@@ -83,8 +83,8 @@ python3 -m http.server     # Python 3
 python -m SimpleHTTPServer # Python 2.7
 ```
 
-To see if this works, navigate to `http://localhost:8000` and check if you can load the page without
-any errors appearing in the developer console.
+To see if this works, navigate to [http://localhost:8000](http://localhost:8000) and check if you
+can load the page without any errors appearing in the developer console.
 
 ## Create the Engine and Scene
 
@@ -109,7 +109,7 @@ this.triangle = Filament.EntityManager.get().create();
 this.scene.addEntity(this.triangle);
 ```
 
-Filament uses an [Entity-Component System](https://en.wikipedia.org/wiki/Entity-component-system).
+Filament uses an [Entity-Component System](//en.wikipedia.org/wiki/Entity-component-system).
 The triangle entity in the above snippet does not yet have an associated component. Later in the
 tutorial we will make it into a *renderable*. Renderables are entities that have associated draw
 calls.
@@ -244,11 +244,7 @@ const tcm = this.engine.getTransformManager();
 tcm.setTransform(tcm.getInstance(this.triangle), transform);
 
 // Render the frame.
-if (this.renderer.beginFrame(this.swapChain)) {
-  this.renderer.render(this.view);
-  this.renderer.endFrame();
-}
-this.engine.execute();
+this.renderer.render(this.swapChain, this.view);
 ```
 
 The first half of our render method obtains the transform component of the triangle entity and uses

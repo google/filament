@@ -1,13 +1,75 @@
-## Create materials and textures
 
-TODO: Describe how to use `matc` and `cmgen` to create `plastic.filamat` and the two `pillars_2k`
-KTX files.
+This tutorial will describe how to create the redball demo, introducing you to materials and
+textures.
 
-## Start your project
+You'll need to use a couple command-line tools: `matc` and `cmgen`. You can find these in the
+appropriate [Filament release](//github.com/google/filament/releases). You should choose the
+archive that corresponds to your development machine rather than the one for web.
 
-Create a text file called `redball.html` and fill it with the same HTML you used in the [previous
-tutorial](tutorial_triangle.html) but change the last script tag from `triangle.js` to
-`redball.js`.
+## Define plastic material
+
+The `matc` tool consumes a text file containing a high-level description of a PBR material, and
+produces a binary material package that contains shader code and associated metadata. For more
+information, see the official document describing the [Filament Material System]().
+
+Let's try out `matc`. Create the following file in your favorite text editor and call it
+`plastic.mat`.
+
+```text
+material {
+    name : Lit,
+    shadingModel : lit,
+    parameters : [
+        { type : float3, name : baseColor },
+        { type : float,  name : roughness },
+        { type : float,  name : clearCoat },
+        { type : float,  name : clearCoatRoughness }
+    ],
+}
+
+fragment {
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+        material.baseColor.rgb = materialParams.baseColor;
+        material.roughness = materialParams.roughness;
+        material.clearCoat = materialParams.clearCoat;
+        material.clearCoatRoughness = materialParams.clearCoatRoughness;
+    }
+}
+```
+
+Next, invoke `matc` as follows.
+
+```bash
+matc -O -a opengl -p mobile -o plastic.filamat plastic.mat
+```
+
+You should now have a material archive in your working directory, which we'll use later in the
+tutorial.
+
+## Bake environment map
+
+Next we'll use Filament's `cmgen` tool to consume a HDR environment map in latlong format, and
+produce two cubemap files: a mipmapped IBL and a blurry skybox.
+
+[pillars_2k.hdr]:
+//github.com/google/filament/blob/master/third_party/environments/pillars_2k.hdr
+
+Download [pillars_2k.hdr], then invoke the following command in your terminal.
+
+```bash
+cmgen -x . --format=ktx --size=256 --extract-blur=0.1 pillars_2k.hdr
+```
+
+You should now have a `pillars_2k` folder containing a couple KTX files for the IBL and skybox, as
+well as a text file with spherical harmonics coefficients. Move the KTX files into your project
+folder. You can discard the text file because the IBL KTX contains these coefficients in its
+metadata.
+
+## Create HTML and JavaScript
+
+Create a text file called `redball.html` and copy over the HTML that we used in the [previous
+tutorial](tutorial_triangle.html). Change the last script tag from `triangle.js` to `redball.js`.
 
 Next, create `redball.js` with the following content.
 
@@ -54,34 +116,29 @@ class App {
   }
 
   render() {
-    if (this.renderer.beginFrame(this.swapChain)) {
-      this.renderer.render(this.view);
-      this.renderer.endFrame();
-    }
-    this.engine.execute();
+    const eye = [0, 0, 4], center = [0, 0, 0], up = [0, 1, 0];
+    const radians = Date.now() / 10000;
+    vec3.rotateY(eye, eye, center, radians);
+    this.camera.lookAt(eye, center, up);
+    this.renderer.render(this.swapChain, this.view);
     window.requestAnimationFrame(this.render);
   }
 
   resize() {
-    // Adjust the canvas resolution and Filament viewport.
     const dpr = window.devicePixelRatio;
     const width = this.canvas.width = window.innerWidth * dpr;
     const height = this.canvas.height = window.innerHeight * dpr;
     this.view.setViewport([0, 0, width, height]);
-
-    // Adjust the camera frustum.
-    const eye = [0, 0, 0], center = [0, 0, -1], up = [0, 1, 0];
-    this.camera.lookAt(eye, center, up);
     this.camera.setProjectionFov(45, width / height, 1.0, 10.0, Fov.VERTICAL);
   }
 }
 ```
 
 The above boilerplate should be familiar to you from the previous tutorial, although it loads in a
-new set of assets and the camera uses a perspective projection.
+new set of assets. We also added some animation to the camera.
 
 Next let's create a material instance from the package that we built at the beginning the tutorial.
-Replace the **create material** todo with the following snippet.
+Replace the **create material** comment with the following snippet.
 
 ```js {fragment="create material"}
 const material_package = Filament.Buffer(Filament.assets['plastic.filamat']);
@@ -91,7 +148,6 @@ const matinstance = material.createInstance();
 const red = [0.8, 0.0, 0.0];
 matinstance.setColorParameter("baseColor", Filament.RgbType.sRGB, red);
 matinstance.setFloatParameter("roughness", 0.5);
-matinstance.setFloatParameter("reflectance", 0.5);
 matinstance.setFloatParameter("clearCoat", 1.0);
 matinstance.setFloatParameter("clearCoatRoughness", 0.3);
 ```
@@ -136,20 +192,17 @@ Filament.RenderableManager.Builder(1)
   .material(0, matinstance)
   .geometry(0, PrimitiveType.TRIANGLES, vb, ib)
   .build(engine, renderable);
-
-const transform = mat4.fromTranslation(mat4.create(), [0, 0, -4]);
-const tcm = this.engine.getTransformManager();
-tcm.setTransform(tcm.getInstance(renderable), transform);
 ```
 
 At this point, the app is rendering a sphere, but it is black so it doesn't show up. To prove that
 the sphere is there, you can try changing the background color to blue via `setClearColor`, like we
 did in the first tutorial.
 
-The next step is to add some lighting. We'll be creating two types of light sources: a directional
-light source that represents the sun, and an image-based light (IBL) defined by one of the KTX files
-we built at the start of the demo. First, replace the **create sunlight** todo with the following
-snippet.
+## Add lighting
+
+We'll be creating two types of light sources: a directional light source that represents the sun,
+and an image-based light (IBL) defined by one of the KTX files we built at the start of the demo.
+First, replace the **create sunlight** comment with the following snippet.
 
 ```js {fragment="create sunlight"}
 const sunlight = Filament.EntityManager.get().create();
@@ -166,19 +219,20 @@ Filament.LightManager.Builder(LightType.SUN)
   .build(engine, sunlight);
 ```
 
-We are using a light type of `SUN`, which is similar to `DIRECTIONAL`, but it has some extra
+We are using a light type of `SUN`, which is similar to `DIRECTIONAL`, but has some extra
 parameters because Filament will automatically draw a disk into the skybox.
 
-Next let's create a `IndirectLight` object from the KTX IBL. One way of doing this is the following
-(don't type this out, there's an easier way).
+Next we need to create an `IndirectLight` object from the KTX IBL. One way of doing this is the
+following (don't type this out, there's an easier way).
 
-```js {fragment="create IBL"}
+```js
 const format = Filament.PixelDataFormat.RGBM;
 const datatype = Filament.PixelDataType.UBYTE;
 
 // Create a Texture object for the mipmapped cubemap.
 const ibl_package = Filament.Buffer(Filament.assets['pillars_2k_ibl.ktx']);
 const iblktx = new Filament.KtxBundle(ibl_package);
+
 const ibltex = Filament.Texture.Builder()
   .width(iblktx.info().pixelWidth)
   .height(iblktx.info().pixelHeight)
@@ -187,6 +241,7 @@ const ibltex = Filament.Texture.Builder()
   .format(Filament.Texture$InternalFormat.RGBA8)
   .rgbm(true)
   .build(engine);
+
 for (let level = 0; level < iblktx.getNumMipLevels(); ++level) {
   const uint8array = iblktx.getCubeBlob(level).getBytes();
   const pixelbuffer = Filament.PixelBuffer(uint8array, format, datatype);
@@ -207,21 +262,23 @@ const indirectLight = Filament.IndirectLight.Builder()
 scene.setIndirectLight(indirectLight);
 ```
 
-This is a lot of boilerplate, so Filament provides a JavaScript utilitiy to make this simpler;
-simply replace the **create IBL** todo with the following snippet. *NOTE: not yet implemented.*
+Filament provides a JavaScript utility to make this simpler,
+simply replace the **create IBL** comment with the following snippet.
 
-```js
-const ibl_package = Filament.Buffer(Filament.assets['pillars_2k_ibl.ktx']);
-const indirectLight = Filament.createIblFromKtx(ibl_package);
+```js {fragment="create IBL"}
+const ibldata = Filament.assets['pillars_2k_ibl.ktx'];
+const indirectLight = Filament.createIblFromKtx(ibldata, engine, {'rgbm': true});
 indirectLight.setIntensity(50000);
 scene.setIndirectLight(indirectLight);
 ```
 
-At the point you can run the demo and you should see a red plastic ball against a black background.
-Without a skybox, the reflections on the ball aren't truly representative of the its surroundings.
+## Add background
+
+At this point you can run the demo and you should see a red plastic ball against a black background.
+Without a skybox, the reflections on the ball are not representative of its surroundings.
 Here's one way to create a texture for the skybox:
 
-```js {fragment="create skybox"}
+```js
 const sky_package = Filament.Buffer(Filament.assets['pillars_2k_skybox.ktx']);
 const skyktx = new Filament.KtxBundle(sky_package);
 const skytex = Filament.Texture.Builder()
@@ -238,16 +295,15 @@ const pixelbuffer = Filament.PixelBuffer(uint8array, format, datatype);
 skytex.setImageCube(engine, 0, pixelbuffer);
 ```
 
-Again, this is a lot of boilerplate, so Filament provides a Javascript utility for you. Replace
-**create skybox** with the following. *NOTE: not yet implemented.*
+Filament provides a Javascript utility to make this easier.
+Replace **create skybox** with the following.
 
-```js
-const sky_package = Filament.Buffer(Filament.assets['pillars_2k_skybox.ktx']);
-const skytex = Filament.createTextureFromKtx(sky_package, {'rgbm': True});
-```
 ```js {fragment="create skybox"}
+const skydata = Filament.assets['pillars_2k_skybox.ktx'];
+const skytex = Filament.createTextureFromKtx(skydata, engine, {'rgbm': true});
 const skybox = Filament.Skybox.Builder().environment(skytex).build(engine);
 scene.setSkybox(skybox);
 ```
 
-This completes the tutorial; the completed JavaScript is available [here](tutorial_redball.js).
+That's it, we now have a shiny red ball floating in an environment! The complete JavaScript
+file is available [here](tutorial_redball.js).

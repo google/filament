@@ -23,12 +23,6 @@ code, div.highlight pre {
   color: rgb(0, 137, 235);
 }
 
-iframe {
-  border: none;
-  width: 100%;
-  height: 100%;
-}
-
 a {
   text-decoration: none;
   color: black;
@@ -105,4 +99,23 @@ nav li {
   nav {
     text-align: right;
   }
+}
+
+div.demo_frame {
+  width: 100%;
+  height: 200px;
+  border: none;
+}
+
+iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+div.demo_frame > a {
+  position: relative;
+  float: right;
+  right: 10px;
+  bottom: 35px;
 }

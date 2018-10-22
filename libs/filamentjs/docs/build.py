@@ -14,7 +14,6 @@ wombat".
 ```js {fragment="create wombat"}
 var wombat = new Wombat();
 ```
-
 """
 
 import os
@@ -24,15 +23,19 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 CURRENT_DIR = os.getcwd()
 ROOT_DIR = '../../../'
 OUTPUT_DIR = ROOT_DIR + 'docs/webgl/'
-SERVER_DIR = OUTPUT_DIR + '..'
+ENABLE_EMBEDDED_DEMO = True
 BUILD_DIR = ROOT_DIR + 'out/cmake-webgl-release/'
+HOST_BUILD_DIR = ROOT_DIR + 'out/cmake-release/'
+MATC_EXEC = HOST_BUILD_DIR + 'tools/matc/matc'
+CMGEN_EXEC = HOST_BUILD_DIR + 'tools/cmgen/cmgen'
 EXEC_NAME = os.path.basename(sys.argv[0])
 SCRIPT_NAME = os.path.basename(__file__)
+
 PREAMBLE = """
 ## Literate programming
 
 The markdown source for this tutorial is not only used to generate this
-website, it's also used to generate the JavaScript for the above demo.
+web page, it's also used to generate the JavaScript for the above demo.
 We use a small Python script for weaving (generating HTML) and tangling
 (generating JS). In the code samples, you'll often see
 `// TODO: <some task>`. These are special markers that get replaced by
@@ -44,10 +47,12 @@ if EXEC_NAME == SCRIPT_NAME and SCRIPT_DIR != CURRENT_DIR:
     relative_script_path = os.path.dirname(__file__)
     quit(f"Please run script from {relative_script_path}")
 
+import argparse
+import jsbeautifier
 import mistletoe
+import pygments
 import re
 import shutil
-import jsbeautifier
 
 from itertools import chain
 from mistletoe import HTMLRenderer, BaseRenderer
@@ -148,11 +153,13 @@ class JsRenderer(BaseRenderer):
 def weave(name):
     with open(f'tutorial_{name}.md', 'r') as fin:
         markdown = fin.read()
-        style = 'style="width:100%;height:200px;border:none"'
-        if name == 'triangle':
-            markdown = PREAMBLE + markdown
-        iframe = f"<iframe {style} src='demo_{name}.html'></iframe>\n\n"
-        markdown = iframe + markdown
+        if ENABLE_EMBEDDED_DEMO:
+            if name == 'triangle':
+                markdown = PREAMBLE + markdown
+            markdown = '<div class="demo_frame">' + \
+                f'<iframe src="demo_{name}.html"></iframe>' + \
+                f'<a href="demo_{name}.html">&#x1F517;</a>' + \
+                '</div>\n' + markdown
         rendered = mistletoe.markdown(markdown, PygmentsRenderer)
     template = open('tutorial_template.html').read()
     rendered = template.replace('$BODY', rendered)
@@ -174,11 +181,13 @@ def tangle(name):
     with open(outfile, 'w') as fout:
         fout.write(rendered)
 
-def copy_demo_filamat(srcname, dstname):
-    matsrc = 'samples/web/public/material'
-    matsrc = os.path.join(BUILD_DIR, matsrc, srcname + '.filamat')
-    matdst = os.path.join(OUTPUT_DIR, dstname + '.filamat')
-    shutil.copyfile(matsrc, matdst)
+def build_filamat(name):
+    matsrc = name + '.mat'
+    matdst = os.path.join(OUTPUT_DIR, name + '.filamat')
+    flags = '-O -a opengl -p mobile'
+    retval = os.system(f"{MATC_EXEC} {flags} -o {matdst} {matsrc}")
+    if retval != 0:
+        exit(retval)
 
 def copy_built_file(src):
     src = os.path.join(BUILD_DIR, src)
@@ -195,25 +204,45 @@ def spawn_local_server():
     import socketserver
     Handler = http.server.SimpleHTTPRequestHandler
     Handler.extensions_map.update({ '.wasm': 'application/wasm' })
-    Handler.directory = SERVER_DIR
-    os.chdir(SERVER_DIR)
+    Handler.directory = OUTPUT_DIR
+    os.chdir(OUTPUT_DIR)
     socketserver.TCPServer.allow_reuse_address = True
-    with socketserver.TCPServer(("", 8000), Handler) as httpd:
+    port = 8000
+    print(f"serving docs at http://localhost:{port}")
+    with socketserver.TCPServer(("", port), Handler) as httpd:
         httpd.allow_reuse_address = True
         httpd.serve_forever()
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description=__doc__,
+            formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("-d", "--disable-demo",
+            help="omit the embedded WebGL demo",
+            action="store_true")
+    parser.add_argument("-s", "--server",
+            help="start small server in output folder",
+            action="store_true")
+    parser.add_argument("-o", "--output-folder", type=str,
+            default=OUTPUT_DIR,
+            help="set the output folder")
+    args = parser.parse_args()
+
+    OUTPUT_DIR = args.output_folder
+    ENABLE_EMBEDDED_DEMO = not args.disable_demo
+
     for name in ["triangle", "redball"]:
         weave(name)
         tangle(name)
         generate_demo_html(name)
+
     copy_src_file('libs/filamentjs/docs/main.css')
     copy_src_file('third_party/gl-matrix/gl-matrix-min.js')
     copy_built_file('libs/filamentjs/filament.js')
     copy_built_file('libs/filamentjs/filament.wasm')
     copy_built_file('samples/web/public/pillars_2k/pillars_2k_skybox.ktx')
     copy_built_file('samples/web/public/pillars_2k/pillars_2k_ibl.ktx')
-    copy_demo_filamat('bakedColor', 'triangle')
-    copy_demo_filamat('sandboxLit', 'plastic')
-    if len(sys.argv) > 1 and sys.argv[1] == 'serve':
+    build_filamat('triangle')
+    build_filamat('plastic')
+
+    if args.server:
         spawn_local_server()
