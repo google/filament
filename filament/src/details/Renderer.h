@@ -61,7 +61,7 @@ public:
 
     // do all the work here!
     void render(FView const* view);
-    void renderJob(ArenaScope& arena, FView* view);
+    void renderJob(ArenaScope& arena, FView& view);
 
     void mirrorFrame(FSwapChain* dstSwapChain, Viewport const& dstViewport, Viewport const& srcViewport,
                      MirrorFrameFlag flags);
@@ -83,16 +83,16 @@ private:
         using DriverApi = driver::DriverApi;
         utils::JobSystem& js;
         utils::JobSystem::Job* jobFroxelize = nullptr;
-        FView* const view;
+        FView const& view;
         Handle<HwRenderTarget> const rth;
         void beginRenderPass(driver::DriverApi& driver, Viewport const& viewport, const CameraInfo& camera) noexcept override;
         void endRenderPass(DriverApi& driver, Viewport const& viewport) noexcept override;
     public:
         ColorPass(const char* name, utils::JobSystem& js, utils::JobSystem::Job* jobFroxelize,
-                FView* view, Handle<HwRenderTarget> rth);
+                FView& view, Handle<HwRenderTarget> rth);
         static void renderColorPass(FEngine& engine, utils::JobSystem& js,
                 Handle<HwRenderTarget> rth,
-                FView* view, Viewport const& scaledViewport,
+                FView& view, Viewport const& scaledViewport,
                 utils::GrowingSlice<Command>& commands) noexcept;
     };
 
@@ -105,7 +105,7 @@ private:
     public:
         ShadowPass(const char* name, ShadowMap const& shadowMap) noexcept;
         static void renderShadowMap(FEngine& engine, utils::JobSystem& js,
-                FView* view, utils::GrowingSlice<Command>& commands) noexcept;
+                FView& view, utils::GrowingSlice<Command>& commands) noexcept;
     };
 
     Handle<HwRenderTarget> getRenderTarget() const noexcept { return mRenderTarget; }

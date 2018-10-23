@@ -111,7 +111,7 @@ void FRenderer::render(FView const* view) {
         auto masterJob = js.setMasterJob(js.createJob());
 
         // execute the render pass
-        renderJob(rootArena, const_cast<FView*>(view));
+        renderJob(rootArena, const_cast<FView&>(*view));
 
         // make sure to flush the command buffer
         engine.flush();
@@ -122,7 +122,7 @@ void FRenderer::render(FView const* view) {
     }
 }
 
-void FRenderer::renderJob(ArenaScope& arena, FView* view) {
+void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     FEngine& engine = getEngine();
     JobSystem& js = engine.getJobSystem();
     FEngine::DriverApi& driver = engine.getDriverApi();
@@ -132,10 +132,10 @@ void FRenderer::renderJob(ArenaScope& arena, FView* view) {
     // DEBUG: driver commands must all happen from the same thread. Enforce that on debug builds.
     engine.getDriverApi().debugThreading();
 
-    Viewport const& vp = view->getViewport();
-    const bool hasPostProcess = view->hasPostProcessPass();
-    float2 scale = view->updateScale(mFrameInfoManager.getLastFrameTime());
-    bool useFXAA = view->getAntiAliasing() == View::AntiAliasing::FXAA;
+    Viewport const& vp = view.getViewport();
+    const bool hasPostProcess = view.hasPostProcessPass();
+    float2 scale = view.updateScale(mFrameInfoManager.getLastFrameTime());
+    bool useFXAA = view.getAntiAliasing() == View::AntiAliasing::FXAA;
     if (!hasPostProcess) {
         // dynamic scaling and FXAA are part of the post-process phase and can't happen if
         // it's disabled.
@@ -149,7 +149,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView* view) {
         return;
     }
 
-    view->prepare(engine, driver, arena, svp);
+    view.prepare(engine, driver, arena, svp);
     // TODO: froxelization could actually start now, instead of in ColorPass::renderColorPass()
 
     /*
@@ -165,7 +165,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView* view) {
      * Shadow pass
      */
 
-    if (view->hasShadowing()) {
+    if (view.hasShadowing()) {
         ShadowPass::renderShadowMap(engine, js, view, commands);
         recordHighWatermark(commands); // for debugging
         // reset the command buffer
@@ -176,7 +176,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView* view) {
      * Depth + Color passes
      */
 
-    const uint8_t useMSAA = view->getSampleCount();
+    const uint8_t useMSAA = view.getSampleCount();
     const TextureFormat hdrFormat = getHdrFormat();
     const TextureFormat ldrFormat = getLdrFormat();
     RenderTargetPool::Target const* colorTarget = nullptr;
@@ -226,7 +226,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView* view) {
             // because it's the last command, the TextureFormat is not relevant
             ppm.blit();
         }
-        ppm.finish(view->getDiscardedTargetBuffers(), viewRenderTarget, vp, colorTarget, svp);
+        ppm.finish(view.getDiscardedTargetBuffers(), viewRenderTarget, vp, colorTarget, svp);
 
         driver.popGroupMarker();
     }

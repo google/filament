@@ -479,7 +479,7 @@ void RenderPass::updateSummedPrimitiveCounts(
 // ------------------------------------------------------------------------------------------------
 
 FRenderer::ColorPass::ColorPass(const char* name,
-        JobSystem& js, JobSystem::Job* jobFroxelize,FView* view, Handle<HwRenderTarget> const rth)
+        JobSystem& js, JobSystem::Job* jobFroxelize, FView& view, Handle<HwRenderTarget> const rth)
         : RenderPass(name), js(js), jobFroxelize(jobFroxelize), view(view), rth(rth) {
 }
 
@@ -488,7 +488,7 @@ void FRenderer::ColorPass::beginRenderPass(
     // wait for froxelization to finish
     // (this could even be a special command between the depth and color passes)
     js.wait(jobFroxelize);
-    view->commitFroxels(driver);
+    view.commitFroxels(driver);
 
     // We won't need the depth or stencil buffers after this pass.
     RenderPassParams params = {};
@@ -497,16 +497,16 @@ void FRenderer::ColorPass::beginRenderPass(
     params.bottom = viewport.bottom;
     params.width = viewport.width;
     params.height = viewport.height;
-    params.clearColor = view->getClearColor();
+    params.clearColor = view.getClearColor();
     params.clearDepth = 1.0;
 
-    if (view->hasPostProcessPass()) {
+    if (view.hasPostProcessPass()) {
         // When using a post-process pass, composition of Views is done during the post-process
         // pass, which means it's NOT done here. For this reason, we need to clear the depth/stencil
         // buffers unconditionally. The color buffer must be cleared to what the user asked for,
         // since it's akin to a drawing command.
         // Also, all buffers can be invalidated before rendering.
-        if (view->getClearTargetColor()) {
+        if (view.getClearTargetColor()) {
             params.clear = TargetBufferFlags::ALL;
         } else {
             params.clear = TargetBufferFlags::DEPTH_AND_STENCIL;
@@ -514,14 +514,14 @@ void FRenderer::ColorPass::beginRenderPass(
         params.discardStart = TargetBufferFlags::ALL;
         driver.beginRenderPass(rth, params);
     } else {
-        params.discardStart = view->getDiscardedTargetBuffers();
-        if (view->getClearTargetColor()) {
+        params.discardStart = view.getDiscardedTargetBuffers();
+        if (view.getClearTargetColor()) {
             params.clear |= TargetBufferFlags::COLOR;
         }
-        if (view->getClearTargetDepth()) {
+        if (view.getClearTargetDepth()) {
             params.clear |= TargetBufferFlags::DEPTH;
         }
-        if (view->getClearTargetStencil()) {
+        if (view.getClearTargetStencil()) {
             params.clear |= TargetBufferFlags::STENCIL;
         }
         driver.beginRenderPass(rth, params);
@@ -532,7 +532,7 @@ void FRenderer::ColorPass::endRenderPass(DriverApi& driver, Viewport const& view
     driver.endRenderPass();
 
     // and we don't need the color buffer in the areas we don't use
-    if (view->hasPostProcessPass()) {
+    if (view.hasPostProcessPass()) {
         // discard parts of the color buffer we didn't render into
         const uint32_t large = std::numeric_limits<uint16_t>::max();
         driver.discardSubRenderTargetBuffers(rth, TargetBufferFlags::COLOR,
@@ -543,32 +543,32 @@ void FRenderer::ColorPass::endRenderPass(DriverApi& driver, Viewport const& view
 }
 
 void FRenderer::ColorPass::renderColorPass(FEngine& engine, JobSystem& js,
-        Handle<HwRenderTarget> const rth, FView* view, Viewport const& scaledViewport,
+        Handle<HwRenderTarget> const rth, FView& view, Viewport const& scaledViewport,
         GrowingSlice<Command>& commands) noexcept {
 
     // start the froxelization immediately, it has no dependencies
     JobSystem::Job* jobFroxelize = js.createJob(nullptr,
-            [&engine, view](JobSystem&, JobSystem::Job*) { view->froxelize(engine); });
+            [&engine, &view](JobSystem&, JobSystem::Job*) { view.froxelize(engine); });
     js.run(jobFroxelize);
 
-    CameraInfo const& cameraInfo = view->getCameraInfo();
-    auto& soa = view->getScene()->getRenderableData();
-    auto vr = view->getVisibleRenderables();
+    CameraInfo const& cameraInfo = view.getCameraInfo();
+    auto& soa = view.getScene()->getRenderableData();
+    auto vr = view.getVisibleRenderables();
 
     // populate the RenderPrimitive array with the proper LOD
-    view->updatePrimitivesLod(engine, cameraInfo, soa, vr);
+    view.updatePrimitivesLod(engine, cameraInfo, soa, vr);
 
     DriverApi& driver = engine.getDriverApi();
-    view->prepareCamera(cameraInfo, scaledViewport);
-    view->commitUniforms(driver);
+    view.prepareCamera(cameraInfo, scaledViewport);
+    view.commitUniforms(driver);
 
     RenderPass::RenderFlags flags = 0;
-    if (view->hasShadowing())           flags |= RenderPass::HAS_SHADOWING;
-    if (view->hasDirectionalLight())    flags |= RenderPass::HAS_DIRECTIONAL_LIGHT;
-    if (view->hasDynamicLighting())     flags |= RenderPass::HAS_DYNAMIC_LIGHTING;
+    if (view.hasShadowing())           flags |= RenderPass::HAS_SHADOWING;
+    if (view.hasDirectionalLight())    flags |= RenderPass::HAS_DIRECTIONAL_LIGHT;
+    if (view.hasDynamicLighting())     flags |= RenderPass::HAS_DYNAMIC_LIGHTING;
 
     CommandTypeFlags commandType;
-    switch (view->getDepthPrepass()) {
+    switch (view.getDepthPrepass()) {
         case View::DepthPrepass::DEFAULT:
             // TODO: better default strategy (can even change on a per-frame basis)
 #ifdef ANDROID
@@ -587,7 +587,7 @@ void FRenderer::ColorPass::renderColorPass(FEngine& engine, JobSystem& js,
 
     ColorPass colorPass("ColorPass", js, jobFroxelize, view, rth);
     driver.pushGroupMarker("Color Pass");
-    colorPass.render(engine, js, *view->getScene(), vr, commandType, flags, cameraInfo, scaledViewport, commands);
+    colorPass.render(engine, js, *view.getScene(), vr, commandType, flags, cameraInfo, scaledViewport, commands);
     driver.popGroupMarker();
 }
 
@@ -603,11 +603,11 @@ void FRenderer::ShadowPass::beginRenderPass(driver::DriverApi& driver, Viewport 
 }
 
 void FRenderer::ShadowPass::renderShadowMap(FEngine& engine, JobSystem& js,
-        FView* view, GrowingSlice<Command>& commands) noexcept {
+        FView& view, GrowingSlice<Command>& commands) noexcept {
 
-    auto& soa = view->getScene()->getRenderableData();
-    auto vr = view->getVisibleShadowCasters();
-    ShadowMap const& shadowMap = view->getShadowMap();
+    auto& soa = view.getScene()->getRenderableData();
+    auto vr = view.getVisibleShadowCasters();
+    ShadowMap const& shadowMap = view.getShadowMap();
     Viewport const& viewport = shadowMap.getViewport();
     FCamera const& camera = shadowMap.getCamera();
 
@@ -621,20 +621,20 @@ void FRenderer::ShadowPass::renderShadowMap(FEngine& engine, JobSystem& js,
     };
 
     // populate the RenderPrimitive array with the proper LOD
-    view->updatePrimitivesLod(engine, cameraInfo, soa, vr);
+    view.updatePrimitivesLod(engine, cameraInfo, soa, vr);
 
     driver::DriverApi& driver = engine.getDriverApi();
-    view->prepareCamera(cameraInfo, viewport);
-    view->commitUniforms(driver);
+    view.prepareCamera(cameraInfo, viewport);
+    view.commitUniforms(driver);
 
     RenderPass::RenderFlags flags = 0;
-    if (view->hasShadowing())           flags |= RenderPass::HAS_SHADOWING;
-    if (view->hasDirectionalLight())    flags |= RenderPass::HAS_DIRECTIONAL_LIGHT;
-    if (view->hasDynamicLighting())     flags |= RenderPass::HAS_DYNAMIC_LIGHTING;
+    if (view.hasShadowing())           flags |= RenderPass::HAS_SHADOWING;
+    if (view.hasDirectionalLight())    flags |= RenderPass::HAS_DIRECTIONAL_LIGHT;
+    if (view.hasDynamicLighting())     flags |= RenderPass::HAS_DYNAMIC_LIGHTING;
 
     ShadowPass shadowPass("ShadowPass", shadowMap);
     driver.pushGroupMarker("Shadow map Pass");
-    shadowPass.render(engine, js, *view->getScene(), vr, CommandTypeFlags::SHADOW, flags, cameraInfo, viewport, commands);
+    shadowPass.render(engine, js, *view.getScene(), vr, CommandTypeFlags::SHADOW, flags, cameraInfo, viewport, commands);
     driver.popGroupMarker();
 }
 
