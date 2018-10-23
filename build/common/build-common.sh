@@ -17,6 +17,7 @@ RUN_TESTS=
 
 if [ "$TARGET" == "presubmit" ]; then
     BUILD_RELEASE=release
+    GENERATE_ARCHIVES=-a # Temporary DO NOT CHECK IN
 fi
 
 if [ "$TARGET" == "debug" ]; then
