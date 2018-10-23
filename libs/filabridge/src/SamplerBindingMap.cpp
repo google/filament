@@ -16,7 +16,7 @@
 
 #include "filament/SamplerBindingMap.h"
 
-#include "filament/SamplerInterfaceBlock.h"
+#include "private/filament/SamplerInterfaceBlock.h"
 
 #include <private/filament/SibGenerator.h>
 
@@ -27,7 +27,7 @@ void SamplerBindingMap::populate(SamplerInterfaceBlock* perMaterialSib) {
     uint8_t offset = filament::BindingPoints::COUNT;
     for (uint8_t blockIndex = 0; blockIndex < filament::BindingPoints::COUNT; blockIndex++) {
         mSamplerBlockOffsets[blockIndex] = offset;
-        filament::SamplerInterfaceBlock* sib;
+        filament::SamplerInterfaceBlock const* sib;
         if (blockIndex == filament::BindingPoints::PER_MATERIAL_INSTANCE) {
             sib = perMaterialSib;
         } else {

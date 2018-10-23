@@ -46,7 +46,6 @@ class FEngine;
 class FIndirectLight;
 class FRenderer;
 class FSkybox;
-class GpuLightBuffer;
 
 
 class FScene : public Scene {
@@ -183,8 +182,8 @@ private:
     LightSoa mLightData;
     uint32_t mRenderableUBOSize = 0;
 
-    filament::Handle<HwUniformBuffer> mRenderableUBO; // TODO: should this UBO be per-view?
-    filament::Handle<HwUniformBuffer> mLightUBO; // TODO: should this UBO be per-view?
+    Handle<HwUniformBuffer> mRenderableUBO; // TODO: should this UBO be per-view?
+    Handle<HwUniformBuffer> mLightUBO; // TODO: should this UBO be per-view?
 };
 
 FILAMENT_UPCAST(Scene)

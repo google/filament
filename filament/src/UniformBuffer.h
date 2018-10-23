@@ -24,7 +24,7 @@
 #include <utils/compiler.h>
 #include <utils/Log.h>
 
-#include <filament/UniformInterfaceBlock.h>
+#include <private/filament/UniformInterfaceBlock.h>
 #include <filament/driver/BufferDescriptor.h>
 
 #include <math/mat3.h>

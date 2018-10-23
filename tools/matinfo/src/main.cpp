@@ -24,8 +24,8 @@
 
 #include <filament/EngineEnums.h>
 #include <filament/MaterialEnums.h>
-#include <filament/SamplerInterfaceBlock.h>
-#include <filament/UniformInterfaceBlock.h>
+#include <private/filament/SamplerInterfaceBlock.h>
+#include <private/filament/UniformInterfaceBlock.h>
 #include <filament/driver/DriverEnums.h>
 
 #include <utils/Path.h>

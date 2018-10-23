@@ -17,8 +17,8 @@
 #ifndef TNT_FILAMAT_CHUNK_IB_H
 #define TNT_FILAMAT_CHUNK_IB_H
 
-#include "filament/SamplerInterfaceBlock.h"
-#include "filament/UniformInterfaceBlock.h"
+#include "private/filament/SamplerInterfaceBlock.h"
+#include "private/filament/UniformInterfaceBlock.h"
 #include "filament/SamplerBindingMap.h"
 #include "filaflat/Unflattener.h"
 

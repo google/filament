@@ -24,7 +24,7 @@
 #include <utils/compiler.h>
 #include <utils/bitset.h>
 
-#include <filament/SamplerInterfaceBlock.h>
+#include <private/filament/SamplerInterfaceBlock.h>
 
 #include "driver/Handle.h"
 

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "filament/UniformInterfaceBlock.h"
+#include "private/filament/UniformInterfaceBlock.h"
 
 #include <utils/Panic.h>
 #include <utils/compiler.h>

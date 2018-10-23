@@ -21,8 +21,8 @@
 #include <utils/Panic.h>
 #include <utils/Log.h>
 
-#include <filament/UniformInterfaceBlock.h>
-#include <filament/SamplerInterfaceBlock.h>
+#include <private/filament/UniformInterfaceBlock.h>
+#include <private/filament/SamplerInterfaceBlock.h>
 
 #include <private/filament/Variant.h>
 

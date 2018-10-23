@@ -22,6 +22,8 @@
 #include "details/ShadowMap.h"
 #include "details/Scene.h"
 
+#include <private/filament/SibGenerator.h>
+
 #include <filament/driver/DriverEnums.h>
 
 #include <limits>
@@ -99,7 +101,7 @@ void ShadowMap::prepare(DriverApi& driver, SamplerBuffer& sb) noexcept {
     s.compareFunc = SamplerCompareFunc::LE;
     s.compareMode = SamplerCompareMode::COMPARE_TO_TEXTURE;
     s.depthStencil = true;
-    sb.setSampler(FEngine::PerViewSib::SHADOW_MAP, { mShadowMapHandle, s });
+    sb.setSampler(PerViewSib::SHADOW_MAP, { mShadowMapHandle, s });
 }
 
 void ShadowMap::terminate(DriverApi& driverApi) noexcept {
