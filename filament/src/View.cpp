@@ -61,34 +61,36 @@ FView::FView(FEngine& engine)
       mPerViewSb(engine.getPerViewSib()),
       mClipSpace01(engine.getBackend() == Backend::VULKAN),
       mDirectionalShadowMap(engine) {
-    DriverApi& driverApi = engine.getDriverApi();
+    DriverApi& driver = engine.getDriverApi();
 
-    mPerViewUbh = driverApi.createUniformBuffer(mPerViewUb.getSize(), driver::BufferUsage::DYNAMIC);
-    mPerViewSbh = driverApi.createSamplerBuffer(mPerViewSb.getSize());
-
+    // set-up samplers
     mPerViewSb.setBuffer(PerViewSib::RECORDS, mFroxelizer.getRecordBuffer());
     mPerViewSb.setBuffer(PerViewSib::FROXELS, mFroxelizer.getFroxelBuffer());
-
     if (engine.getDFG()->isValid()) {
         TextureSampler sampler(TextureSampler::MagFilter::LINEAR);
         mPerViewSb.setSampler(PerViewSib::IBL_DFG_LUT,
                 engine.getDFG()->getTexture(), sampler.getSamplerParams());
     }
+    mPerViewSbh = driver.createSamplerBuffer(mPerViewSb.getSize());
+    driver.updateSamplerBuffer(mPerViewSbh, SamplerBuffer(mPerViewSb));
 
-    mIsDynamicResolutionSupported = driverApi.isFrameTimeSupported();
+    // allocate ubos
+    mPerViewUbh = driver.createUniformBuffer(mPerViewUb.getSize(), driver::BufferUsage::DYNAMIC);
+    mLightUbh = driver.createUniformBuffer(CONFIG_MAX_LIGHT_COUNT * sizeof(LightsUib), driver::BufferUsage::DYNAMIC);
 
-    driverApi.updateSamplerBuffer(mPerViewSbh, SamplerBuffer(mPerViewSb));
+    mIsDynamicResolutionSupported = driver.isFrameTimeSupported();
 }
 
 FView::~FView() noexcept = default;
 
 void FView::terminate(FEngine& engine) {
     // Here we would cleanly free resources we've allocated or we own (currently none).
-    DriverApi& driverApi = engine.getDriverApi();
-    driverApi.destroyUniformBuffer(mPerViewUbh);
-    driverApi.destroySamplerBuffer(mPerViewSbh);
-    mDirectionalShadowMap.terminate(driverApi);
-    mFroxelizer.terminate(driverApi);
+    DriverApi& driver = engine.getDriverApi();
+    driver.destroyUniformBuffer(mPerViewUbh);
+    driver.destroyUniformBuffer(mLightUbh);
+    driver.destroySamplerBuffer(mPerViewSbh);
+    mDirectionalShadowMap.terminate(driver);
+    mFroxelizer.terminate(driver);
 }
 
 void FView::setViewport(Viewport const& viewport) noexcept {
@@ -308,7 +310,7 @@ void FView::prepareLighting(FEngine& engine, FEngine::DriverApi& driver, ArenaSc
     const CameraInfo& camera = mViewingCameraInfo;
     FScene* const scene = mScene;
 
-    scene->prepareDynamicLights(camera, arena);
+    scene->prepareDynamicLights(camera, arena, mLightUbh);
 
     // here the array of visible lights has been shrunk to CONFIG_MAX_LIGHT_COUNT
     auto const& lightData = scene->getLightData();
