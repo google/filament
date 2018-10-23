@@ -15,11 +15,14 @@
  */
 
 #include "private/filament/SibGenerator.h"
-#include "filament/EngineEnums.h"
+
+#include <filament/EngineEnums.h>
+
+#include "private/filament/SamplerInterfaceBlock.h"
 
 namespace filament {
 
-SamplerInterfaceBlock& SibGenerator::getPerViewSib() noexcept {
+SamplerInterfaceBlock const& SibGenerator::getPerViewSib() noexcept {
     using Type = SamplerInterfaceBlock::Type;
     using Format = SamplerInterfaceBlock::Format;
     using Precision = SamplerInterfaceBlock::Precision;
@@ -35,7 +38,7 @@ SamplerInterfaceBlock& SibGenerator::getPerViewSib() noexcept {
     return sib;
 }
 
-SamplerInterfaceBlock& SibGenerator::getPostProcessSib() noexcept {
+SamplerInterfaceBlock const & SibGenerator::getPostProcessSib() noexcept {
     using Type = SamplerInterfaceBlock::Type;
     using Format = SamplerInterfaceBlock::Format;
     using Precision = SamplerInterfaceBlock::Precision;
@@ -46,7 +49,7 @@ SamplerInterfaceBlock& SibGenerator::getPostProcessSib() noexcept {
     return sib;
 }
 
-SamplerInterfaceBlock* SibGenerator::getSib(uint8_t bindingPoint) noexcept {
+SamplerInterfaceBlock const* SibGenerator::getSib(uint8_t bindingPoint) noexcept {
     switch (bindingPoint) {
         case BindingPoints::PER_VIEW:
             return &getPerViewSib();

@@ -26,6 +26,8 @@
 // NOTE: We only need Renderer.h here because the definition of some FRenderer methods are here
 #include "details/Renderer.h"
 
+#include <private/filament/UibGenerator.h>
+
 #include <utils/JobSystem.h>
 #include <utils/Systrace.h>
 
@@ -129,8 +131,8 @@ void RenderPass::recordDriverCommands(
 
             // per-renderable uniform
             PrimitiveInfo const& UTILS_RESTRICT info = c->primitive;
-            size_t offset = info.index * sizeof(FRenderableManager::Transform);
-            driver.bindUniformBufferRange(BindingPoints::PER_RENDERABLE, uboHandle, offset, sizeof(FRenderableManager::Transform));
+            size_t offset = info.index * sizeof(PerRenderableUib);
+            driver.bindUniformBufferRange(BindingPoints::PER_RENDERABLE, uboHandle, offset, sizeof(PerRenderableUib));
             if (info.perRenderableBones) {
                 driver.bindUniformBuffer(BindingPoints::PER_RENDERABLE_BONES, info.perRenderableBones);
             }

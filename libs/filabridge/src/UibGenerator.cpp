@@ -16,13 +16,23 @@
 
 #include "private/filament/UibGenerator.h"
 
-#include "filament/EngineEnums.h"
-#include "filament/driver/DriverEnums.h"
+#include "private/filament/UniformInterfaceBlock.h"
+
+#include <filament/EngineEnums.h>
+#include <filament/driver/DriverEnums.h>
 
 namespace filament {
-    using namespace driver;
 
-UniformInterfaceBlock& UibGenerator::getPerViewUib() noexcept  {
+using namespace driver;
+
+static_assert(sizeof(PerRenderableUib) % 256 == 0,
+        "sizeof(Transform) should be a multiple of 256");
+
+static_assert(CONFIG_MAX_BONE_COUNT * sizeof(PerRenderableUibBone) <= 16384,
+        "Bones exceed max UBO size");
+
+
+UniformInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
     // IMPORTANT NOTE: Respect std140 layout, don't update without updating Engine::PerViewUib
     static UniformInterfaceBlock uib = UniformInterfaceBlock::Builder()
             .name("FrameUniforms")
@@ -64,7 +74,7 @@ UniformInterfaceBlock& UibGenerator::getPerViewUib() noexcept  {
     return uib;
 }
 
-UniformInterfaceBlock& UibGenerator::getPerRenderableUib() noexcept {
+UniformInterfaceBlock const& UibGenerator::getPerRenderableUib() noexcept {
     static UniformInterfaceBlock uib =  UniformInterfaceBlock::Builder()
             .name("ObjectUniforms")
             .add("worldFromModelMatrix",       1, UniformInterfaceBlock::Type::MAT4, Precision::HIGH)
@@ -73,7 +83,7 @@ UniformInterfaceBlock& UibGenerator::getPerRenderableUib() noexcept {
     return uib;
 }
 
-UniformInterfaceBlock& UibGenerator::getLightsUib() noexcept {
+UniformInterfaceBlock const& UibGenerator::getLightsUib() noexcept {
     static UniformInterfaceBlock uib = UniformInterfaceBlock::Builder()
             .name("LightsUniforms")
             .add("lights", CONFIG_MAX_LIGHT_COUNT, UniformInterfaceBlock::Type::MAT4, Precision::HIGH)
@@ -81,7 +91,7 @@ UniformInterfaceBlock& UibGenerator::getLightsUib() noexcept {
     return uib;
 }
 
-UniformInterfaceBlock& UibGenerator::getPostProcessingUib() noexcept {
+UniformInterfaceBlock const& UibGenerator::getPostProcessingUib() noexcept {
     static UniformInterfaceBlock uib =  UniformInterfaceBlock::Builder()
             .name("PostProcessUniforms")
             .add("uvScale", 1, UniformInterfaceBlock::Type::FLOAT2)
@@ -91,7 +101,7 @@ UniformInterfaceBlock& UibGenerator::getPostProcessingUib() noexcept {
     return uib;
 }
 
-UniformInterfaceBlock& UibGenerator::getPerRenderableBonesUib() noexcept {
+UniformInterfaceBlock const& UibGenerator::getPerRenderableBonesUib() noexcept {
     static UniformInterfaceBlock uib = UniformInterfaceBlock::Builder()
             .name("BonesUniforms")
             .add("bones", CONFIG_MAX_BONE_COUNT * 4, UniformInterfaceBlock::Type::FLOAT4, Precision::MEDIUM)

@@ -25,9 +25,9 @@
 #include <utils/Log.h>
 
 #include <filament/EngineEnums.h>
-#include <filament/SamplerInterfaceBlock.h>
+#include <private/filament/SamplerInterfaceBlock.h>
 #include <filament/SamplerBindingMap.h>
-#include <filament/UniformInterfaceBlock.h>
+#include <private/filament/UniformInterfaceBlock.h>
 
 namespace filament {
 

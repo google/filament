@@ -28,6 +28,8 @@
 
 #include <filament/Viewport.h>
 
+#include <private/filament/UibGenerator.h>
+
 #include <utils/compiler.h>
 #include <utils/bitset.h>
 #include <utils/Slice.h>
@@ -125,11 +127,11 @@ public:
             const FScene::LightSoa& lightData) noexcept;
 
     void updateUniforms(UniformBuffer& u) {
-        u.setUniform(offsetof(FEngine::PerViewUib, zParams), mParamsZ);
-        u.setUniform(offsetof(FEngine::PerViewUib, fParams), mParamsF.yz);
-        u.setUniform(offsetof(FEngine::PerViewUib, fParamsX), mParamsF.x);
-        u.setUniform(offsetof(FEngine::PerViewUib, oneOverFroxelDimensionX), mOneOverDimension.x);
-        u.setUniform(offsetof(FEngine::PerViewUib, oneOverFroxelDimensionY), mOneOverDimension.y);
+        u.setUniform(offsetof(PerViewUib, zParams), mParamsZ);
+        u.setUniform(offsetof(PerViewUib, fParams), mParamsF.yz);
+        u.setUniform(offsetof(PerViewUib, fParamsX), mParamsF.x);
+        u.setUniform(offsetof(PerViewUib, oneOverFroxelDimensionX), mOneOverDimension.x);
+        u.setUniform(offsetof(PerViewUib, oneOverFroxelDimensionY), mOneOverDimension.y);
     }
 
     // send froxel data to GPU

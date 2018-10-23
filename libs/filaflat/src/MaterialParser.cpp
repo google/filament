@@ -26,9 +26,9 @@
 #include "TextDictionaryReader.h"
 #include "SpirvDictionaryReader.h"
 
-#include <filament/UniformInterfaceBlock.h>
+#include <private/filament/UniformInterfaceBlock.h>
 #include <filament/SamplerBindingMap.h>
-#include <filament/SamplerInterfaceBlock.h>
+#include <private/filament/SamplerInterfaceBlock.h>
 
 #include <utils/CString.h>
 

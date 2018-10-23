@@ -27,6 +27,8 @@
 #include <filament/Box.h>
 #include <filament/RenderableManager.h>
 
+#include <private/filament/UibGenerator.h>
+
 #include <utils/Entity.h>
 #include <utils/SingleInstanceComponentManager.h>
 #include <utils/Slice.h>
@@ -130,15 +132,6 @@ public:
     inline utils::Slice<FRenderPrimitive> const& getRenderPrimitives(Instance instance, uint8_t level) const noexcept;
     inline utils::Slice<FRenderPrimitive>& getRenderPrimitives(Instance instance, uint8_t level) noexcept;
 
-    // this must have an alignment of 256 to be compatible with all versions of GLES
-    // (we're wasting 156 bytes right now)
-    struct alignas(256) Transform {
-        math::mat4f worldFromModelMatrix;
-        math::mat3f worldFromModelNormalMatrix;
-    };
-    static_assert(sizeof(Transform) % 256 == 0, "sizeof(Transform) should be a multiple of 256");
-
-
 private:
     void destroyComponent(Instance ci) noexcept;
     static void destroyComponentPrimitives(FEngine& engine,
@@ -152,18 +145,7 @@ private:
 
     friend class ::FilamentTest_Bones_Test;
 
-    struct InternalBone {
-        // Bones are stored as row-major
-        math::quatf q = { 1, 0, 0, 0 };
-        math::float4 t = {};
-        math::float4 s = { 1, 1, 1, 0 };
-        math::float4 ns = { 1, 1, 1, 0 };
-    };
-
-    static void makeBone(InternalBone* out, math::mat4f const& transforms) noexcept;
-
-    static_assert(CONFIG_MAX_BONE_COUNT * sizeof(InternalBone) <= 16384,
-            "Bones exceed max UBO size");
+    static void makeBone(PerRenderableUibBone* out, math::mat4f const& transforms) noexcept;
 
     enum {
         AABB,               // user data

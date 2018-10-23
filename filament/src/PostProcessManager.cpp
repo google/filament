@@ -19,6 +19,8 @@
 
 #include "details/Engine.h"
 
+#include <private/filament/SibGenerator.h>
+
 #include <utils/Log.h>
 
 namespace filament {
@@ -58,20 +60,20 @@ void PostProcessManager::setSource(uint32_t viewportWidth, uint32_t viewportHeig
     params.filterMag = SamplerMagFilter::LINEAR;
     params.filterMin = SamplerMinFilter::LINEAR;
     SamplerBuffer sb(engine.getPostProcessSib());
-    sb.setSampler(FEngine::PostProcessSib::COLOR_BUFFER, pos->texture, params);
+    sb.setSampler(PostProcessSib::COLOR_BUFFER, pos->texture, params);
 
     auto duration = engine.getTime();
     float fraction = (duration.count() % 1000000000) / 1000000000.0f;
 
     UniformBuffer& ub = mPostProcessUb;
-    ub.setUniform(offsetof(FEngine::PostProcessingUib, time), fraction);
-    ub.setUniform(offsetof(FEngine::PostProcessingUib, uvScale),
+    ub.setUniform(offsetof(PostProcessingUib, time), fraction);
+    ub.setUniform(offsetof(PostProcessingUib, uvScale),
             math::float2{ viewportWidth, viewportHeight } / math::float2{ pos->w, pos->h });
 
     // The shader may need to know the offset between the top of the texture and the top
     // of the rectangle that it actually needs to sample from.
     const float yOffset = pos->h - viewportHeight;
-    ub.setUniform(offsetof(FEngine::PostProcessingUib, yOffset), yOffset);
+    ub.setUniform(offsetof(PostProcessingUib, yOffset), yOffset);
 
     driver.updateSamplerBuffer(mPostProcessSbh, std::move(sb));
     driver.updateUniformBuffer(mPostProcessUbh, ub.toBufferDescriptor(driver));

@@ -20,8 +20,8 @@
 
 #include <filament/EngineEnums.h>
 #include <filament/MaterialEnums.h>
-#include <filament/UniformInterfaceBlock.h>
-#include <filament/SamplerInterfaceBlock.h>
+#include <private/filament/UniformInterfaceBlock.h>
+#include <private/filament/SamplerInterfaceBlock.h>
 #include <filamat/MaterialBuilder.h>
 
 #include <utils/Log.h>

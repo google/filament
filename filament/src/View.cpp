@@ -28,6 +28,9 @@
 
 #include <filament/Exposure.h>
 
+#include <private/filament/SibGenerator.h>
+#include <private/filament/UibGenerator.h>
+
 #include <utils/Allocator.h>
 #include <utils/Systrace.h>
 #include <utils/Profiler.h>
@@ -63,12 +66,12 @@ FView::FView(FEngine& engine)
     mPerViewUbh = driverApi.createUniformBuffer(mPerViewUb.getSize(), driver::BufferUsage::DYNAMIC);
     mPerViewSbh = driverApi.createSamplerBuffer(mPerViewSb.getSize());
 
-    mPerViewSb.setBuffer(FEngine::PerViewSib::RECORDS, mFroxelizer.getRecordBuffer());
-    mPerViewSb.setBuffer(FEngine::PerViewSib::FROXELS, mFroxelizer.getFroxelBuffer());
+    mPerViewSb.setBuffer(PerViewSib::RECORDS, mFroxelizer.getRecordBuffer());
+    mPerViewSb.setBuffer(PerViewSib::FROXELS, mFroxelizer.getFroxelBuffer());
 
     if (engine.getDFG()->isValid()) {
         TextureSampler sampler(TextureSampler::MagFilter::LINEAR);
-        mPerViewSb.setSampler(FEngine::PerViewSib::IBL_DFG_LUT,
+        mPerViewSb.setSampler(PerViewSib::IBL_DFG_LUT,
                 engine.getDFG()->getTexture(), sampler.getSamplerParams());
     }
 
@@ -283,7 +286,7 @@ void FView::prepareShadowing(FEngine& engine, driver::DriverApi& driver,
             shadowMap.prepare(driver, getUs());
 
             mat4f const& lightFromWorldMatrix = shadowMap.getLightSpaceMatrix();
-            u.setUniform(offsetof(FEngine::PerViewUib, lightFromWorldMatrix), lightFromWorldMatrix);
+            u.setUniform(offsetof(PerViewUib, lightFromWorldMatrix), lightFromWorldMatrix);
 
             // the 2x bias is needed in opengl because the depth maps to -1/1. It may not be
             // needed with other APIs, but at least it won't worsen the acnee there.
@@ -291,7 +294,7 @@ void FView::prepareShadowing(FEngine& engine, driver::DriverApi& driver,
             const float texelSizeWorldSpace = shadowMap.getTexelSizeWorldSpace();
             const float constantBias = lcm.getShadowConstantBias(directionalLight);
             const float normalBias = lcm.getShadowNormalBias(directionalLight);
-            u.setUniform(offsetof(FEngine::PerViewUib, shadowBias),
+            u.setUniform(offsetof(PerViewUib, shadowBias),
                     float3{ 2 * constantBias / sceneRange, normalBias * texelSizeWorldSpace, 0 });
         }
     }
@@ -316,23 +319,23 @@ void FView::prepareLighting(FEngine& engine, FEngine::DriverApi& driver, ArenaSc
     // Exposure
     const float ev100 = camera.ev100;
     const float exposure = Exposure::exposure(ev100);
-    u.setUniform(offsetof(FEngine::PerViewUib, exposure), exposure);
-    u.setUniform(offsetof(FEngine::PerViewUib, ev100), ev100);
+    u.setUniform(offsetof(PerViewUib, exposure), exposure);
+    u.setUniform(offsetof(PerViewUib, ev100), ev100);
 
     // IBL
     FIndirectLight const* const ibl = scene->getIndirectLight();
     if (ibl) {
-        u.setUniform(offsetof(FEngine::PerViewUib, iblLuminance), ibl->getIntensity() * exposure);
-        u.setUniformArray(offsetof(FEngine::PerViewUib, iblSH), ibl->getSH(), 9);
+        u.setUniform(offsetof(PerViewUib, iblLuminance), ibl->getIntensity() * exposure);
+        u.setUniformArray(offsetof(PerViewUib, iblSH), ibl->getSH(), 9);
         if (ibl->getReflectionMap()) {
             SamplerParams reflectionSamplerParams;
             reflectionSamplerParams.filterMag = SamplerMagFilter::LINEAR;
             reflectionSamplerParams.filterMin = SamplerMinFilter::LINEAR_MIPMAP_LINEAR;
-            mPerViewSb.setSampler(FEngine::PerViewSib::IBL_SPECULAR,
+            mPerViewSb.setSampler(PerViewSib::IBL_SPECULAR,
                     { ibl->getReflectionMap(), reflectionSamplerParams });
         }
     } else {
-        u.setUniform(offsetof(FEngine::PerViewUib, iblLuminance),
+        u.setUniform(offsetof(PerViewUib, iblLuminance),
                 FIndirectLight::DEFAULT_INTENSITY * exposure);
     }
 
@@ -345,8 +348,8 @@ void FView::prepareLighting(FEngine& engine, FEngine::DriverApi& driver, ArenaSc
         const float4 colorIntensity = {
                 lcm.getColor(directionalLight), lcm.getIntensity(directionalLight) * exposure };
 
-        u.setUniform(offsetof(FEngine::PerViewUib, lightDirection), l);
-        u.setUniform(offsetof(FEngine::PerViewUib, lightColorIntensity), colorIntensity);
+        u.setUniform(offsetof(PerViewUib, lightDirection), l);
+        u.setUniform(offsetof(PerViewUib, lightColorIntensity), colorIntensity);
 
         const bool isSun = lcm.isSunLight(directionalLight);
         // The last parameter must be < 0.0f for regular directional lights
@@ -362,11 +365,11 @@ void FView::prepareLighting(FEngine& engine, FEngine::DriverApi& driver, ArenaSc
             sun.z = 1.0f / (fast::cos(radius * haloSize) - sun.x);
             sun.w = haloFalloff;
         }
-        u.setUniform(offsetof(FEngine::PerViewUib, sun), sun);
+        u.setUniform(offsetof(PerViewUib, sun), sun);
     } else {
         // Disable the sun if there's no directional light
         float4 sun{ 0.0f, 0.0f, 0.0f, -1.0f };
-        u.setUniform(offsetof(FEngine::PerViewUib, sun), sun);
+        u.setUniform(offsetof(PerViewUib, sun), sun);
     }
 
     // Dynamic lighting
@@ -510,7 +513,7 @@ void FView::prepare(FEngine& engine, driver::DriverApi& driver, ArenaScope& aren
      */
 
     float fraction = (engine.getTime().count() % 1000000000) / 1000000000.0f;
-    getUb().setUniform(offsetof(FEngine::PerViewUib, time), fraction);
+    getUb().setUniform(offsetof(PerViewUib, time), fraction);
 
     // upload the renderables's dirty UBOs
     engine.getRenderableManager().prepare(driver,
@@ -571,18 +574,18 @@ void FView::prepareCamera(const CameraInfo& camera, const Viewport& viewport) co
     const mat4f clipFromWorld(clipFromView * viewFromWorld);
 
     UniformBuffer& u = getUb();
-    u.setUniform(offsetof(FEngine::PerViewUib, viewFromWorldMatrix), viewFromWorld);    // view
-    u.setUniform(offsetof(FEngine::PerViewUib, worldFromViewMatrix), worldFromView);    // model
-    u.setUniform(offsetof(FEngine::PerViewUib, clipFromViewMatrix), clipFromView);      // projection
-    u.setUniform(offsetof(FEngine::PerViewUib, viewFromClipMatrix), viewFromClip);      // 1/projection
-    u.setUniform(offsetof(FEngine::PerViewUib, clipFromWorldMatrix), clipFromWorld);    // projection * view
+    u.setUniform(offsetof(PerViewUib, viewFromWorldMatrix), viewFromWorld);    // view
+    u.setUniform(offsetof(PerViewUib, worldFromViewMatrix), worldFromView);    // model
+    u.setUniform(offsetof(PerViewUib, clipFromViewMatrix), clipFromView);      // projection
+    u.setUniform(offsetof(PerViewUib, viewFromClipMatrix), viewFromClip);      // 1/projection
+    u.setUniform(offsetof(PerViewUib, clipFromWorldMatrix), clipFromWorld);    // projection * view
 
     const float w = viewport.width;
     const float h = viewport.height;
-    u.setUniform(offsetof(FEngine::PerViewUib, resolution), float4{ w, h, 1.0f / w, 1.0f / h });
-    u.setUniform(offsetof(FEngine::PerViewUib, origin), float2{ viewport.left, viewport.bottom });
+    u.setUniform(offsetof(PerViewUib, resolution), float4{ w, h, 1.0f / w, 1.0f / h });
+    u.setUniform(offsetof(PerViewUib, origin), float2{ viewport.left, viewport.bottom });
 
-    u.setUniform(offsetof(FEngine::PerViewUib, cameraPosition), float3{camera.getPosition()});
+    u.setUniform(offsetof(PerViewUib, cameraPosition), float3{camera.getPosition()});
 }
 
 void FView::froxelize(FEngine& engine) const noexcept {

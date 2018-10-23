@@ -29,7 +29,8 @@
 #include <filament/Material.h>
 #include <filament/Engine.h>
 
-#include <filament/UniformInterfaceBlock.h>
+#include <private/filament/UniformInterfaceBlock.h>
+#include <private/filament/UibGenerator.h>
 
 #include "details/Allocators.h"
 #include "details/Material.h"
@@ -812,18 +813,18 @@ TEST(FilamentTest, Bones) {
     using namespace ::filament::details;
 
     struct Shader {
-        static mat3f normal(FRenderableManager::InternalBone const& bone) noexcept {
+        static mat3f normal(PerRenderableUibBone const& bone) noexcept {
             quatf q = bone.q;
             float3 is = bone.ns.xyz;
             return mat3f(mat3(q) * mat3::scale(is));
         }
-        static  mat4f vertice(FRenderableManager::InternalBone const& bone) noexcept {
+        static  mat4f vertice(PerRenderableUibBone const& bone) noexcept {
             quatf q = bone.q;
             float3 t = bone.t.xyz;
             float3 s = bone.s.xyz;
             return mat4f(mat4::translate(t) * mat4(q) * mat4::scale(s));
         }
-        static float3 normal(float3 n, FRenderableManager::InternalBone const& bone) noexcept {
+        static float3 normal(float3 n, PerRenderableUibBone const& bone) noexcept {
             quatf q = bone.q;
             float3 is = bone.ns.xyz;
             // apply the inverse of the non-uniform scales
@@ -832,7 +833,7 @@ TEST(FilamentTest, Bones) {
             n += 2.0 * cross(q.xyz, cross(q.xyz, n) + q.w * n);
             return n;
         }
-        static  float3 vertice(float3 v, FRenderableManager::InternalBone const& bone) noexcept {
+        static  float3 vertice(float3 v, PerRenderableUibBone const& bone) noexcept {
             quatf q = bone.q;
             float3 t = bone.t.xyz;
             float3 s = bone.s.xyz;
@@ -873,7 +874,7 @@ TEST(FilamentTest, Bones) {
         }
 
         static void check(mat4f const& m) noexcept {
-            FRenderableManager::InternalBone b;
+            PerRenderableUibBone b;
             FRenderableManager::makeBone(&b, m);
 
             expect_eq(Shader::vertice(b), m);
@@ -884,7 +885,7 @@ TEST(FilamentTest, Bones) {
         }
 
         static void check(mat4f const& m, float3 const& v) noexcept {
-            FRenderableManager::InternalBone b;
+            PerRenderableUibBone b;
             FRenderableManager::makeBone(&b, m);
 
             expect_eq((m * v).xyz, Shader::vertice(v, b));

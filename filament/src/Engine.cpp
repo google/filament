@@ -35,10 +35,9 @@
 
 #include "PrecompiledMaterials.h"
 
-#include <filament/Exposure.h>
-
 #include <private/filament/SibGenerator.h>
-#include <private/filament/UibGenerator.h>
+
+#include <filament/Exposure.h>
 
 #include <filaflat/MaterialParser.h>
 #include <filaflat/ShaderBuilder.h>
@@ -113,25 +112,6 @@ FEngine* FEngine::create(Backend backend, Platform* platform, void* sharedGLCont
     return instance;
 }
 
-UniformInterfaceBlock FEngine::PerViewUib::getUib() noexcept {
-    return UibGenerator::getPerViewUib();
-}
-
-UniformInterfaceBlock FEngine::LightsUib::getUib() noexcept {
-    return UibGenerator::getLightsUib();
-}
-
-UniformInterfaceBlock FEngine::PostProcessingUib::getUib() noexcept {
-    return UibGenerator::getPostProcessingUib();
-}
-
-SamplerInterfaceBlock FEngine::PerViewSib::getSib() noexcept {
-    return SibGenerator::getPerViewSib();
-}
-
-SamplerInterfaceBlock FEngine::PostProcessSib::getSib() noexcept {
-    return SibGenerator::getPostProcessSib();
-}
 
 // these must be static because only a pointer is copied to the render stream
 static const half4 sFullScreenTriangleVertices[3] = {
@@ -449,9 +429,9 @@ Handle<HwProgram> FEngine::createPostProcessProgram(MaterialParser& parser,
             .withSamplerBindings(pBindings)
             .withVertexShader(CString(vShaderBuilder.getShader(), vShaderBuilder.size()))
             .withFragmentShader(CString(fShaderBuilder.getShader(), fShaderBuilder.size()))
-            .addUniformBlock(BindingPoints::PER_VIEW, &UibGenerator::getPerViewUib())
-            .addUniformBlock(BindingPoints::POST_PROCESS, &UibGenerator::getPostProcessingUib())
-            .addSamplerBlock(BindingPoints::POST_PROCESS, &SibGenerator::getPostProcessSib());
+            .addUniformBlock(BindingPoints::PER_VIEW, &PerViewUib::getUib())
+            .addUniformBlock(BindingPoints::POST_PROCESS, &PostProcessingUib::getUib())
+            .addSamplerBlock(BindingPoints::POST_PROCESS, &PostProcessSib::getSib());
     auto program = const_cast<DriverApi&>(mCommandStream).createProgram(std::move(pb));
     assert(program);
     return program;

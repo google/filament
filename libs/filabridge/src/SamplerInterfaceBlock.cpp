@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "filament/SamplerInterfaceBlock.h"
+#include "private/filament/SamplerInterfaceBlock.h"
 
 #include <utils/Panic.h>
 #include <utils/compiler.h>

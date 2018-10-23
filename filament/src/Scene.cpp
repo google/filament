@@ -19,6 +19,8 @@
 #include "components/LightManager.h"
 #include "components/RenderableManager.h"
 
+#include <private/filament/UibGenerator.h>
+
 #include "details/Culler.h"
 #include "details/Engine.h"
 #include "details/IndirectLight.h"
@@ -43,7 +45,7 @@ FScene::FScene(FEngine& engine) :
         mEngine(engine),
         mIndirectLight(engine.getDefaultIndirectLight()) {
     FEngine::DriverApi& driver = engine.getDriverApi();
-    mLightUBO = driver.createUniformBuffer(CONFIG_MAX_LIGHT_COUNT * sizeof(FEngine::LightsUib),
+    mLightUBO = driver.createUniformBuffer(CONFIG_MAX_LIGHT_COUNT * sizeof(LightsUib),
             driver::BufferUsage::DYNAMIC);
     driver.bindUniformBuffer(BindingPoints::LIGHTS, mLightUBO);
 }
@@ -163,13 +165,13 @@ void FScene::prepare(const math::mat4f& worldOriginTansform) {
 void FScene::updateUBOs(utils::Range<uint32_t> visibleRenderables) noexcept {
     FEngine::DriverApi& driver = mEngine.getDriverApi();
     Handle<HwUniformBuffer>& renderableUBO = mRenderableUBO;
-    const size_t size = visibleRenderables.size() * sizeof(FRenderableManager::Transform);
+    const size_t size = visibleRenderables.size() * sizeof(PerRenderableUib);
 
     // reallocate UBO if it's too small
     if (mRenderableUBOSize < size) {
         // allocate 1/3 extra, with a minimum of 16 objects
         const size_t count = std::max(size_t(16u), (4u * visibleRenderables.size() + 2u) / 3u);
-        mRenderableUBOSize = uint32_t(count * sizeof(FRenderableManager::Transform));
+        mRenderableUBOSize = uint32_t(count * sizeof(PerRenderableUib));
         driver.destroyUniformBuffer(renderableUBO);
         renderableUBO = driver.createUniformBuffer(mRenderableUBOSize, driver::BufferUsage::DYNAMIC);
     } else {
@@ -182,10 +184,10 @@ void FScene::updateUBOs(utils::Range<uint32_t> visibleRenderables) noexcept {
     auto& sceneData = mRenderableData;
     for (uint32_t i : visibleRenderables) {
         mat4f const& model = sceneData.elementAt<WORLD_TRANSFORM>(i);
-        const size_t offset = i * sizeof(FRenderableManager::Transform);
+        const size_t offset = i * sizeof(PerRenderableUib);
 
         UniformBuffer::setUniform(buffer,
-                offset + offsetof(FRenderableManager::Transform, worldFromModelMatrix),
+                offset + offsetof(PerRenderableUib, worldFromModelMatrix),
                 model);
 
         // Using the inverse-transpose handles non-uniform scaling, but DOESN'T guarantee that
@@ -203,7 +205,7 @@ void FScene::updateUBOs(utils::Range<uint32_t> visibleRenderables) noexcept {
         m *= mat3f(1.0f / std::sqrt(max(float3{length2(m[0]), length2(m[1]), length2(m[2])})));
 
         UniformBuffer::setUniform(buffer,
-                offset + offsetof(FRenderableManager::Transform, worldFromModelNormalMatrix), m);
+                offset + offsetof(PerRenderableUib, worldFromModelNormalMatrix), m);
     }
 
     // TODO: handle static objects separately
@@ -254,7 +256,7 @@ void FScene::prepareDynamicLights(const CameraInfo& camera, ArenaScope& rootAren
     float2* const zrange = lightData.data<FScene::SCREEN_SPACE_Z_RANGE>();
     computeLightRanges(zrange, camera, spheres + DIRECTIONAL_LIGHTS_COUNT, positionalLightCount);
 
-    FEngine::LightsUib* const lp = driver.allocatePod<FEngine::LightsUib>(positionalLightCount);
+    LightsUib* const lp = driver.allocatePod<LightsUib>(positionalLightCount);
 
     auto const* UTILS_RESTRICT directions   = lightData.data<FScene::DIRECTION>();
     auto const* UTILS_RESTRICT instances    = lightData.data<FScene::LIGHT_INSTANCE>();
@@ -267,7 +269,7 @@ void FScene::prepareDynamicLights(const CameraInfo& camera, ArenaScope& rootAren
         lp[gpuIndex].spotScaleOffset.xy   = { lcm.getSpotParams(li).scaleOffset };
     }
 
-    driver.updateUniformBuffer(mLightUBO, { lp, positionalLightCount * sizeof(FEngine::LightsUib) });
+    driver.updateUniformBuffer(mLightUBO, { lp, positionalLightCount * sizeof(LightsUib) });
 }
 
 // These methods need to exist so clang honors the __restrict__ keyword, which in turn

@@ -26,8 +26,8 @@
 #include <private/filament/UibGenerator.h>
 #include <private/filament/Variant.h>
 
-#include <filament/SamplerInterfaceBlock.h>
-#include <filament/UniformInterfaceBlock.h>
+#include <private/filament/SamplerInterfaceBlock.h>
+#include <private/filament/UniformInterfaceBlock.h>
 
 #include <filaflat/MaterialParser.h>
 

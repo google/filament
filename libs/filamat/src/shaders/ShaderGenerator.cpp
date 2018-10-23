@@ -18,8 +18,8 @@
 
 #include <sstream>
 
-#include <filament/SamplerInterfaceBlock.h>
-#include <filament/UniformInterfaceBlock.h>
+#include <private/filament/SamplerInterfaceBlock.h>
+#include <private/filament/UniformInterfaceBlock.h>
 #include <filament/MaterialEnums.h>
 
 #include <private/filament/SibGenerator.h>
