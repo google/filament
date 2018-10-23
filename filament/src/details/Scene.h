@@ -23,7 +23,6 @@
 #include "components/TransformManager.h"
 
 #include "details/Culler.h"
-#include "details/GpuLightBuffer.h"
 
 #include "Allocators.h"
 
@@ -87,8 +86,8 @@ public:
     void computeBounds(Aabb& castersBox, Aabb& receiversBox, uint32_t visibleLayers) const noexcept;
 
 
-    filament::Handle<HwUniformBuffer> getUniformBufferHandle() const noexcept {
-        return mUniformBufferHandle;
+    filament::Handle<HwUniformBuffer> getRenderableUBO() const noexcept {
+        return mRenderableUBO;
     }
 
     /*
@@ -175,7 +174,6 @@ private:
     FEngine& mEngine;
     FSkybox const* mSkybox = nullptr;
     FIndirectLight const* mIndirectLight = nullptr;
-    GpuLightBuffer mGpuLightData;
 
     // list of Entities in the scene. We use a robin_set<> so we can do efficient removes
     // (a vector<> could work, but removes would be O(n)). robin_set<> iterates almost as
@@ -183,8 +181,10 @@ private:
     tsl::robin_set<utils::Entity> mEntities;
     RenderableSoa mRenderableData;
     LightSoa mLightData;
-    uint32_t mUboSize = 0;
-    filament::Handle<HwUniformBuffer> mUniformBufferHandle;
+    uint32_t mRenderableUBOSize = 0;
+
+    filament::Handle<HwUniformBuffer> mRenderableUBO; // TODO: should this UBO be per-view?
+    filament::Handle<HwUniformBuffer> mLightUBO; // TODO: should this UBO be per-view?
 };
 
 FILAMENT_UPCAST(Scene)

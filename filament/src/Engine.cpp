@@ -117,6 +117,10 @@ UniformInterfaceBlock FEngine::PerViewUib::getUib() noexcept {
     return UibGenerator::getPerViewUib();
 }
 
+UniformInterfaceBlock FEngine::LightsUib::getUib() noexcept {
+    return UibGenerator::getLightsUib();
+}
+
 UniformInterfaceBlock FEngine::PostProcessingUib::getUib() noexcept {
     return UibGenerator::getPostProcessingUib();
 }
