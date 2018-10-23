@@ -1,4 +1,4 @@
-#!/usr/bin/env pipenv run python
+#!/usr/bin/env python3
 
 """Converts markdown into HTML and extracts JavaScript code blocks.
 
@@ -19,9 +19,9 @@ var wombat = new Wombat();
 import os
 import sys
 
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__)) + '/'
 CURRENT_DIR = os.getcwd()
-ROOT_DIR = '../../../'
+ROOT_DIR = SCRIPT_DIR + '../../../'
 OUTPUT_DIR = ROOT_DIR + 'docs/webgl/'
 ENABLE_EMBEDDED_DEMO = True
 BUILD_DIR = ROOT_DIR + 'out/cmake-webgl-release/'
@@ -41,11 +41,6 @@ We use a small Python script for weaving (generating HTML) and tangling
 `// TODO: <some task>`. These are special markers that get replaced by
 subsequent code blocks.
 """
-
-# The pipenv command in the shebang needs a certain working directory.
-if EXEC_NAME == SCRIPT_NAME and SCRIPT_DIR != CURRENT_DIR:
-    relative_script_path = os.path.dirname(__file__)
-    quit(f"Please run script from {relative_script_path}")
 
 import argparse
 import jsbeautifier
@@ -151,7 +146,7 @@ class JsRenderer(BaseRenderer):
         return ''
 
 def weave(name):
-    with open(f'tutorial_{name}.md', 'r') as fin:
+    with open(SCRIPT_DIR + f'tutorial_{name}.md', 'r') as fin:
         markdown = fin.read()
         if ENABLE_EMBEDDED_DEMO:
             if name == 'triangle':
@@ -161,28 +156,28 @@ def weave(name):
                 f'<a href="demo_{name}.html">&#x1F517;</a>' + \
                 '</div>\n' + markdown
         rendered = mistletoe.markdown(markdown, PygmentsRenderer)
-    template = open('tutorial_template.html').read()
+    template = open(SCRIPT_DIR + 'tutorial_template.html').read()
     rendered = template.replace('$BODY', rendered)
     outfile = os.path.join(OUTPUT_DIR, f'tutorial_{name}.html')
     with open(outfile, 'w') as fout:
         fout.write(rendered)
 
 def generate_demo_html(name):
-    template = open('demo_template.html').read()
+    template = open(SCRIPT_DIR + 'demo_template.html').read()
     rendered = template.replace('$SCRIPT', f'tutorial_{name}.js')
     outfile = os.path.join(OUTPUT_DIR, f'demo_{name}.html')
     with open(outfile, 'w') as fout:
         fout.write(rendered)
 
 def tangle(name):
-    with open(f'tutorial_{name}.md', 'r') as fin:
+    with open(SCRIPT_DIR + f'tutorial_{name}.md', 'r') as fin:
         rendered = mistletoe.markdown(fin, JsRenderer)
     outfile = os.path.join(OUTPUT_DIR, f'tutorial_{name}.js')
     with open(outfile, 'w') as fout:
         fout.write(rendered)
 
 def build_filamat(name):
-    matsrc = name + '.mat'
+    matsrc = SCRIPT_DIR + name + '.mat'
     matdst = os.path.join(OUTPUT_DIR, name + '.filamat')
     flags = '-O -a opengl -p mobile'
     retval = os.system(f"{MATC_EXEC} {flags} -o {matdst} {matsrc}")
@@ -229,14 +224,15 @@ if __name__ == "__main__":
 
     OUTPUT_DIR = args.output_folder
     ENABLE_EMBEDDED_DEMO = not args.disable_demo
+    os.makedirs(os.path.realpath(OUTPUT_DIR), exist_ok=True)
 
     for name in ["triangle", "redball"]:
         weave(name)
         tangle(name)
         generate_demo_html(name)
 
-    copy_src_file('libs/filamentjs/docs/main.css')
-    copy_src_file('third_party/gl-matrix/gl-matrix-min.js')
+    copy_src_file(ROOT_DIR + 'libs/filamentjs/docs/main.css')
+    copy_src_file(ROOT_DIR + 'third_party/gl-matrix/gl-matrix-min.js')
     copy_built_file('libs/filamentjs/filament.js')
     copy_built_file('libs/filamentjs/filament.wasm')
     copy_built_file('samples/web/public/pillars_2k/pillars_2k_skybox.ktx')

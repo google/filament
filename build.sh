@@ -221,13 +221,26 @@ function build_webgl_with_target {
 
     if [ -d "samples/web/public" ]; then
         if [ "$ISSUE_ARCHIVES" == "true" ]; then
+
+            which -s python3
+            if [ $? == 0 ]; then
+                echo "Generating JavaScript documentation..."
+                local DOCS_FOLDER="libs/filamentjs/jsdocs"
+                local DOCS_SCRIPT="../../libs/filamentjs/docs/build.py"
+                python3 ${DOCS_SCRIPT} --disable-demo --output-folder ${DOCS_FOLDER}
+            fi
+
             echo "Generating out/filament-${LC_TARGET}-web.tgz..."
-            cd samples/web
-            tar -cvf ../../../filament-${LC_TARGET}-web.tar public
-            cd -
+            # The web archive has the following subfolders:
+            # dist...core WASM module and accompanying JS file.
+            # docs...HTML tutorials for the JS API, accompanying demos, and a reference page.
             cd libs
-            tar -rvf ../../filament-${LC_TARGET}-web.tar filamentjs/filament.js
-            tar -rvf ../../filament-${LC_TARGET}-web.tar filamentjs/filament.wasm
+            tar -cvf ../../filament-${LC_TARGET}-web.tar -s /^filamentjs/dist/ \
+                    filamentjs/filament.js
+            tar -rvf ../../filament-${LC_TARGET}-web.tar -s /^filamentjs/dist/ \
+                    filamentjs/filament.wasm
+            tar -rvf ../../filament-${LC_TARGET}-web.tar -s /^filamentjs.jsdocs/docs/ \
+                    filamentjs/jsdocs
             cd -
             gzip -c ../filament-${LC_TARGET}-web.tar > ../filament-${LC_TARGET}-web.tgz
             rm ../filament-${LC_TARGET}-web.tar
