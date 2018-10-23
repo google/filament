@@ -5,6 +5,11 @@ unzip -q ninja-mac.zip
 chmod +x ninja
 export PATH="$PWD:$PATH"
 
+# The Kokoro machines have Python 3.6.3 installed. Let's verify that here, and install the
+# distributions required for libs/filamentjs/docs.
+python3 --version
+pip3 install mistletoe pygments jsbeautifier
+
 curl -L https://github.com/juj/emsdk/archive/0d8576c.zip > emsdk.zip
 unzip emsdk.zip
 mv emsdk-* emsdk
