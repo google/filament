@@ -44,10 +44,6 @@ namespace details {
 FScene::FScene(FEngine& engine) :
         mEngine(engine),
         mIndirectLight(engine.getDefaultIndirectLight()) {
-    FEngine::DriverApi& driver = engine.getDriverApi();
-    mLightUBO = driver.createUniformBuffer(CONFIG_MAX_LIGHT_COUNT * sizeof(LightsUib),
-            driver::BufferUsage::DYNAMIC);
-    driver.bindUniformBuffer(BindingPoints::LIGHTS, mLightUBO);
 }
 
 FScene::~FScene() noexcept = default;
@@ -215,10 +211,9 @@ void FScene::updateUBOs(utils::Range<uint32_t> visibleRenderables) noexcept {
 void FScene::terminate(FEngine& engine) {
     // free-up UBOs
     engine.getDriverApi().destroyUniformBuffer(mRenderableUBO);
-    engine.getDriverApi().destroyUniformBuffer(mLightUBO);
 }
 
-void FScene::prepareDynamicLights(const CameraInfo& camera, ArenaScope& rootArena) noexcept {
+void FScene::prepareDynamicLights(const CameraInfo& camera, ArenaScope& rootArena, Handle<HwUniformBuffer> lightUbh) noexcept {
     FEngine::DriverApi& driver = mEngine.getDriverApi();
     FLightManager& lcm = mEngine.getLightManager();
     FScene::LightSoa& lightData = getLightData();
@@ -269,7 +264,7 @@ void FScene::prepareDynamicLights(const CameraInfo& camera, ArenaScope& rootAren
         lp[gpuIndex].spotScaleOffset.xy   = { lcm.getSpotParams(li).scaleOffset };
     }
 
-    driver.updateUniformBuffer(mLightUBO, { lp, positionalLightCount * sizeof(LightsUib) });
+    driver.updateUniformBuffer(lightUbh, { lp, positionalLightCount * sizeof(LightsUib) });
 }
 
 // These methods need to exist so clang honors the __restrict__ keyword, which in turn

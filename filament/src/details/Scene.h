@@ -81,7 +81,7 @@ public:
     void terminate(FEngine& engine);
 
     void prepare(const math::mat4f& worldOriginTansform);
-    void prepareDynamicLights(const CameraInfo& camera, ArenaScope& arena) noexcept;
+    void prepareDynamicLights(const CameraInfo& camera, ArenaScope& arena, Handle<HwUniformBuffer> lightUbh) noexcept;
     void computeBounds(Aabb& castersBox, Aabb& receiversBox, uint32_t visibleLayers) const noexcept;
 
 
@@ -183,7 +183,6 @@ private:
     uint32_t mRenderableUBOSize = 0;
 
     Handle<HwUniformBuffer> mRenderableUBO; // TODO: should this UBO be per-view?
-    Handle<HwUniformBuffer> mLightUBO; // TODO: should this UBO be per-view?
 };
 
 FILAMENT_UPCAST(Scene)
