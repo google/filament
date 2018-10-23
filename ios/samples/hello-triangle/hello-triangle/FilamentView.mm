@@ -29,6 +29,12 @@
 #error A valid FILAMENT_APP_USE_ backend define must be set.
 #endif
 
+#define METAL_AVAILABLE __has_include(<QuartzCore/CAMetalLayer.h>)
+
+#if !METAL_AVAILABLE && FILAMENT_APP_USE_VULKAN
+#error The iOS simulator does not support Filament's Vulkan backend.
+#endif
+
 using namespace filament;
 using utils::Entity;
 using utils::EntityManager;
@@ -111,11 +117,13 @@ static constexpr uint8_t BAKED_COLOR_PACKAGE[] = {
 
 - (void)initializeMetalLayer
 {
+#if METAL_AVAILABLE
     CAMetalLayer* metalLayer = (CAMetalLayer*) self.layer;
     metalLayer.pixelFormat = MTLPixelFormatBGRA8Unorm;
 
     CGRect nativeBounds = [UIScreen mainScreen].nativeBounds;
     metalLayer.drawableSize = nativeBounds.size;
+#endif
 }
 
 - (void)initializeGLLayer
