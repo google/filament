@@ -147,6 +147,14 @@ public:
         alignas(16) math::float4 iblSH[9]; // actually float3 entries (std140 requires float4 alignment)
     };
 
+    struct LightsUib {
+        static UniformInterfaceBlock getUib() noexcept;
+        math::float4 positionFalloff;   // { float3(pos), 1/falloff^2 }
+        math::float4 colorIntensity;    // { float3(col), intensity }
+        math::float4 directionIES;      // { float3(dir), IES index }
+        math::float4 spotScaleOffset;   // { scale, offset, unused, unused }
+    };
+
     struct PostProcessingUib {
         static UniformInterfaceBlock getUib() noexcept;
         math::float2 uvScale;

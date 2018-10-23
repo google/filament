@@ -118,7 +118,7 @@ void RenderPass::recordDriverCommands(
     SYSTRACE_CALL();
 
     if (!commands.empty()) {
-        Handle<HwUniformBuffer> uboHandle = scene.getUniformBufferHandle();
+        Handle<HwUniformBuffer> uboHandle = scene.getRenderableUBO();
         FMaterialInstance const* UTILS_RESTRICT previousMi = nullptr;
         FMaterial const* UTILS_RESTRICT ma = nullptr;
         Command const* UTILS_RESTRICT c;
