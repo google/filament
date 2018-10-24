@@ -59,6 +59,36 @@ Filament.PixelBuffer = function(typedarray, format, datatype) {
   return bd;
 };
 
+/// loadFilamesh ::function:: Consumes the contents of a filamesh file and creates a renderable.
+/// engine ::argument:: [Engine]
+/// typedarray ::argument:: Uint8Array with contents of filamesh file
+/// definstance ::argument:: Optional default [MaterialInstance]
+/// matinstances ::argument:: Optional object that gets populated with name => [MaterialInstance]
+/// ::retval:: JavaScript object with keys `renderable`, `vertexBuffer`, and `indexBuffer`. \
+/// These are of type [Entity], [VertexBuffer], and [IndexBuffer].
+Filament.loadFilamesh = function(engine, typedarray, definstance, matinstances) {
+    matinstances = matinstances || {};
+    const registry = new Filament.MeshIO$MaterialRegistry();
+    for (var key in matinstances) {
+        registry.set(key, matinstances[key]);
+    }
+    if (definstance) {
+        registry.set("DefaultMaterial", definstance);
+    }
+    const mesh = Filament.MeshIO.loadMeshFromBuffer(engine, Filament.Buffer(typedarray), registry);
+    const keys = registry.keys();
+    for (var i = 0; i < keys.size(); i++) {
+        const key = keys.get(i);
+        const minstance = registry.get(key);
+        matinstances[key] = minstance;
+    }
+    return {
+        "renderable": mesh.renderable(),
+        "vertexBuffer": mesh.vertexBuffer(),
+        "indexBuffer": mesh.indexBuffer(),
+    }
+}
+
 // ------------------
 // Geometry Utilities
 // ------------------
