@@ -227,7 +227,9 @@ function build_webgl_with_target {
                 echo "Generating JavaScript documentation..."
                 local DOCS_FOLDER="libs/filamentjs/jsdocs"
                 local DOCS_SCRIPT="../../libs/filamentjs/docs/build.py"
-                python3 ${DOCS_SCRIPT} --disable-demo --output-folder ${DOCS_FOLDER}
+                python3 ${DOCS_SCRIPT} --disable-demo \
+                    --output-folder ${DOCS_FOLDER} \
+                    --build-folder ${PWD}
             fi
 
             echo "Generating out/filament-${LC_TARGET}-web.tgz..."

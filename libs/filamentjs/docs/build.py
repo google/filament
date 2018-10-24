@@ -25,9 +25,7 @@ ROOT_DIR = SCRIPT_DIR + '../../../'
 OUTPUT_DIR = ROOT_DIR + 'docs/webgl/'
 ENABLE_EMBEDDED_DEMO = True
 BUILD_DIR = ROOT_DIR + 'out/cmake-webgl-release/'
-HOST_BUILD_DIR = ROOT_DIR + 'out/cmake-release/'
-MATC_EXEC = HOST_BUILD_DIR + 'tools/matc/matc'
-CMGEN_EXEC = HOST_BUILD_DIR + 'tools/cmgen/cmgen'
+TOOLS_DIR = ROOT_DIR + 'out/cmake-release/tools/'
 EXEC_NAME = os.path.basename(sys.argv[0])
 SCRIPT_NAME = os.path.basename(__file__)
 
@@ -180,7 +178,8 @@ def build_filamat(name):
     matsrc = SCRIPT_DIR + name + '.mat'
     matdst = os.path.join(OUTPUT_DIR, name + '.filamat')
     flags = '-O -a opengl -p mobile'
-    retval = os.system(f"{MATC_EXEC} {flags} -o {matdst} {matsrc}")
+    matc_exec = os.path.join(TOOLS_DIR, 'matc/matc')
+    retval = os.system(f"{matc_exec} {flags} -o {matdst} {matsrc}")
     if retval != 0:
         exit(retval)
 
@@ -217,11 +216,19 @@ if __name__ == "__main__":
     parser.add_argument("-s", "--server",
             help="start small server in output folder",
             action="store_true")
+    parser.add_argument("-b", "--build-folder", type=str,
+            default=BUILD_DIR,
+            help="set the cmake webgl build folder")
+    parser.add_argument("-t", "--tools-folder", type=str,
+            default=TOOLS_DIR,
+            help="set the cmake host build fold for tools")
     parser.add_argument("-o", "--output-folder", type=str,
             default=OUTPUT_DIR,
             help="set the output folder")
     args = parser.parse_args()
 
+    BUILD_DIR = args.build_folder
+    TOOLS_DIR = args.tools_folder
     OUTPUT_DIR = args.output_folder
     ENABLE_EMBEDDED_DEMO = not args.disable_demo
     os.makedirs(os.path.realpath(OUTPUT_DIR), exist_ok=True)
