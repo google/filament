@@ -32,6 +32,8 @@
  * this explicit rather than mysterious.
  */
 
+#include <filameshio/MeshIO.h>
+
 #include <filament/Camera.h>
 #include <filament/Engine.h>
 #include <filament/IndexBuffer.h>
@@ -651,7 +653,7 @@ class_<PixelBufferDescriptor>("driver$PixelBufferDescriptor")
     /// ::retval:: Uint8Array
     .function("getBytes", &PixelBufferDescriptor::getBytes);
 
-// IMAGE TYPES
+// HELPER TYPES
 // ------------
 
 /// KtxBundle ::class:: In-memory representation of a KTX file.
@@ -707,5 +709,62 @@ class_<KtxInfo>("KtxInfo")
     .property("pixelWidth", &KtxInfo::pixelWidth)
     .property("pixelHeight", &KtxInfo::pixelHeight)
     .property("pixelDepth", &KtxInfo::pixelDepth);
+
+register_vector<std::string>("RegistryKeys");
+
+class_<MeshIO::MaterialRegistry>("MeshIO$MaterialRegistry")
+    .constructor<>()
+    .function("size", &MeshIO::MaterialRegistry::size)
+    .function("get", internal::MapAccess<MeshIO::MaterialRegistry>::get)
+    .function("set", internal::MapAccess<MeshIO::MaterialRegistry>::set)
+    .function("keys", EMBIND_LAMBDA(std::vector<std::string>, (MeshIO::MaterialRegistry* self), {
+        std::vector<std::string> result;
+        for (const auto& pair : *self) {
+            result.emplace_back(pair.first);
+        }
+        return result;
+    }), allow_raw_pointers());
+
+// MeshIO ::class:: Simple parser for filamesh files.
+// JavaScript clients are encouraged to use the [loadFilamesh] helper function instead of using
+// this class directly.
+class_<MeshIO>("MeshIO")
+    // loadMeshFromBuffer ::static method:: Parses a filamesh buffer.
+    // engine ::argument:: [Engine]
+    // buffer ::argument:: [Buffer]
+    // materials ::argument:: [MeshIO$MaterialRegistry]
+    // ::retval:: the [MeshIO$Mesh] object
+    .class_function("loadMeshFromBuffer", EMBIND_LAMBDA(MeshIO::Mesh,
+            (Engine* engine, BufferDescriptor buffer, const MeshIO::MaterialRegistry& matreg), {
+        // This destruction lambda is called for the vertex buffer AND index buffer, so release
+        // CPU memory only after both have been uploaded to the GPU.
+        struct Bundle { int count; BufferDescriptor buffer; };
+        Bundle* bundle = new Bundle({ .count = 0, .buffer = buffer });
+        const auto destructor = [](void* buffer, size_t size, void* user) {
+            Bundle* bundle = (Bundle*) user;
+            if (++bundle->count == 2) {
+                delete bundle;
+            }
+        };
+        // Parse the filamesh buffer. This creates the VB, IB, and renderable.
+        return MeshIO::loadMeshFromBuffer(
+                engine, buffer.bd->buffer,
+                destructor, &bundle, matreg);
+    }), allow_raw_pointers());
+
+// MeshIO$Mesh ::class:: Property accessor for objects created by [MeshIO].
+// This exposes three getter methods: `renderable()`, `vertexBuffer()`, and `indexBuffer()`. These
+// are of type [Entity], [VertexBuffer], and [IndexBuffer]. JavaScript clients are encouraged to
+// use the [loadFilamesh] helper function instead of using this class directly.
+class_<MeshIO::Mesh>("MeshIO$Mesh")
+    .function("renderable", EMBIND_LAMBDA(utils::Entity, (MeshIO::Mesh mesh), {
+        return mesh.renderable;
+    }), allow_raw_pointers())
+    .function("vertexBuffer", EMBIND_LAMBDA(VertexBuffer*, (MeshIO::Mesh mesh), {
+        return mesh.vertexBuffer;
+    }), allow_raw_pointers())
+    .function("indexBuffer", EMBIND_LAMBDA(IndexBuffer*, (MeshIO::Mesh mesh), {
+        return mesh.indexBuffer;
+    }), allow_raw_pointers());
 
 } // EMSCRIPTEN_BINDINGS
