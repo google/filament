@@ -231,6 +231,7 @@ private:
     Handle<HwSamplerBuffer> mPerViewSbh;
     Handle<HwUniformBuffer> mPerViewUbh;
     Handle<HwUniformBuffer> mLightUbh;
+    Handle<HwUniformBuffer> mRenderableUbh;
 
     Handle<HwSamplerBuffer> getUsh() const noexcept { return mPerViewSbh; }
     Handle<HwUniformBuffer> getUbh() const noexcept { return mPerViewUbh; }
@@ -280,6 +281,7 @@ private:
     // the following values are set by prepare()
     Range mVisibleRenderables;
     Range mVisibleShadowCasters;
+    uint32_t mRenderableUBOSize = 0;
     mutable bool mHasDirectionalLight = false;
     mutable bool mHasDynamicLighting = false;
     mutable bool mHasShadowing = false;

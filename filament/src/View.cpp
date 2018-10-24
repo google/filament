@@ -89,6 +89,7 @@ void FView::terminate(FEngine& engine) {
     driver.destroyUniformBuffer(mPerViewUbh);
     driver.destroyUniformBuffer(mLightUbh);
     driver.destroySamplerBuffer(mPerViewSbh);
+    driver.destroyUniformBuffer(mRenderableUbh);
     mDirectionalShadowMap.terminate(driver);
     mFroxelizer.terminate(driver);
 }
@@ -492,7 +493,17 @@ void FView::prepare(FEngine& engine, driver::DriverApi& driver, ArenaScope& aren
     Range merged = { 0, iEnd };
 
     // update those UBOs
-    scene->updateUBOs(merged);
+    const size_t size = merged.size() * sizeof(PerRenderableUib);
+    if (mRenderableUBOSize < size) {
+        // allocate 1/3 extra, with a minimum of 16 objects
+        const size_t count = std::max(size_t(16u), (4u * merged.size() + 2u) / 3u);
+        mRenderableUBOSize = uint32_t(count * sizeof(PerRenderableUib));
+        driver.destroyUniformBuffer(mRenderableUbh);
+        mRenderableUbh = driver.createUniformBuffer(mRenderableUBOSize, driver::BufferUsage::DYNAMIC);
+    } else {
+        // should we shrink the underlying UBO at some point?
+    }
+    scene->updateUBOs(merged, mRenderableUbh);
 
     /*
      * Light culling
