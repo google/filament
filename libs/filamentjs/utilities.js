@@ -63,10 +63,7 @@ Filament.PixelBuffer = function(typedarray, format, datatype) {
 // Geometry Utilities
 // ------------------
 
-// These are some lightweight optional functions. Using them requires the presence of gl-matrix,
-// which is not bundled into filament.js.
-
-/// IcoSphere ::class:: Utility class for constructing spheres.
+/// IcoSphere ::class:: Utility class for constructing spheres (requires glMatrix).
 ///
 /// The constructor takes an integer subdivision level, with 0 being an icosahedron.
 ///
@@ -159,19 +156,25 @@ function clamp(v, least, most) {
   return Math.max(Math.min(most, v), least);
 }
 
-function packSnorm16(v) {
-  return Math.round(clamp(v, -1.0, 1.0) * 32767.0);
+/// packSnorm16 ::function:: Converts a float in [-1, +1] into a half-float.
+/// value ::argument:: float
+/// ::retval:: half-float
+Filament.packSnorm16 = function(value) {
+  return Math.round(clamp(value, -1.0, 1.0) * 32767.0);
 }
 
 /// loadMathExtensions ::function:: Extends the [glMatrix](http://glmatrix.net/) math library.
-/// Filament does not require its clients to use glMatrix, so calling this function is optional.
-/// This adds `vec4.packSnorm16` and `mat3.fromRotation` to the glMatrix library.
+/// Filament does not require its clients to use glMatrix, but if its usage is detected then
+/// the [init] function will automatically call `loadMathExtensions`.
+/// This defines the following functions:
+/// - **vec4.packSnorm16** can be used to create half-floats (see [packSnorm16])
+/// - **mat3.fromRotation** now takes an arbitrary axis
 Filament.loadMathExtensions = function() {
   vec4.packSnorm16 = function(out, src) {
-    out[0] = packSnorm16(src[0]);
-    out[1] = packSnorm16(src[1]);
-    out[2] = packSnorm16(src[2]);
-    out[3] = packSnorm16(src[3]);
+    out[0] = Filament.packSnorm16(src[0]);
+    out[1] = Filament.packSnorm16(src[1]);
+    out[2] = Filament.packSnorm16(src[2]);
+    out[3] = Filament.packSnorm16(src[3]);
     return out;
   }
   // In gl-matrix, mat3 rotation assumes rotation about the Z axis, so here we add a function
