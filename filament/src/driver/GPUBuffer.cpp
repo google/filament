@@ -106,7 +106,6 @@ GPUBuffer& GPUBuffer::operator=(GPUBuffer&& rhs) noexcept {
 
 void GPUBuffer::swap(GPUBuffer& rhs) noexcept {
     std::swap(mTexture, rhs.mTexture);
-    std::swap(mDirtyRanges, rhs.mDirtyRanges);
     std::swap(mSize, rhs.mSize);
     std::swap(mWidth, rhs.mWidth);
     std::swap(mHeight, rhs.mHeight);
@@ -123,28 +122,8 @@ void GPUBuffer::terminate(driver::DriverApi& driverApi) noexcept {
 void GPUBuffer::commitSlow(driver::DriverApi& driverApi, void const* begin, void const* end) noexcept {
     const uintptr_t sizeInBytes = uintptr_t(end) - uintptr_t(begin);
     assert(sizeInBytes <= mRowSizeInBytes * mHeight);
-
-    const Handle<HwTexture> texture = mTexture;
-    const driver::PixelDataFormat format = mFormat;
-    const driver::PixelDataType type = mType;
-    const uint32_t w = mWidth;
-    for (auto const& range : mDirtyRanges) {
-        // we need a new PixelBufferDescriptor for each range (std:move)
-        PixelBufferDescriptor desc(begin, sizeInBytes, format, type);
-        driverApi.load2DImage(texture, 0,
-                0, range.start,
-                w, range.getCount(), std::move(desc));
-    }
-    mDirtyRanges.clear();
-}
-
-void GPUBuffer::invalidate() noexcept {
-    invalidate(0, mHeight);
-}
-
-UTILS_NOINLINE
-void GPUBuffer::invalidate(size_t row, size_t count) noexcept {
-    mDirtyRanges.set(uint32_t(row), uint32_t(count));
+    driverApi.load2DImage(mTexture, 0, 0, 0, mWidth, mHeight,
+            { begin, sizeInBytes, mFormat, mType });
 }
 
 } // namespace filament
