@@ -74,8 +74,6 @@ tutorial](tutorial_triangle.html). Change the last script tag from `triangle.js`
 Next, create `redball.js` with the following content.
 
 ```js {fragment="root"}
-Filament.loadMathExtensions();
-
 Filament.init([ 'plastic.filamat', 'pillars_2k_ibl.ktx', 'pillars_2k_skybox.ktx' ], () => {
   // Create some global aliases to enums for convenience.
   window.VertexAttribute = Filament.VertexAttribute;

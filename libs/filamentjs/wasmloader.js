@@ -40,8 +40,8 @@ Filament.remainingInitializationTasks = 1;
 /// WebAssembly module has been loaded. Clients should only pass asset URL's that absolutely must
 /// be ready at initialization time.
 ///
-/// When the callback is called, each downloaded asset is available in the form of Uint8Array in the
-/// `Filament.assets` object. The key is the URL and the value is the Uint8Array.
+/// When the callback is called, each downloaded asset is available in the `Filament.assets` global
+/// object, which contains a mapping from URL's to Uint8Array objects.
 ///
 /// assets ::argument:: Array of strings containing URL's of required assets.
 /// onready ::argument:: callback that gets invoked after all assets have been downloaded and the \
@@ -50,6 +50,14 @@ Filament.init = function(assets, onready) {
     Filament.onReady = onready;
     Filament.remainingInitializationTasks += assets.length;
     Filament.assets = {};
+
+    // Usage of glmatrix is optional. If it exists, then go ahead and augment it with some
+    // useful math functions.
+    if (typeof glMatrix !== 'undefined') {
+        Filament.loadMathExtensions();
+    }
+
+    // Issue a fetch for each asset. After the last asset is downloaded, trigger the callback.
     assets.forEach(function(name) {
         fetch(name).then(function(response) {
             if (!response.ok) {

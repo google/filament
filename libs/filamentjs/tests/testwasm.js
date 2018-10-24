@@ -1,6 +1,3 @@
-// Extend gl-matrix.
-Filament.loadMathExtensions();
-
 Filament.init([
   'bakedColor.filamat',
   'sandboxLit.filamat',
