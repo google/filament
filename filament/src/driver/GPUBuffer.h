@@ -17,14 +17,12 @@
 #ifndef TNT_FILAMENT_DETAILS_GPUBUFFER_H
 #define TNT_FILAMENT_DETAILS_GPUBUFFER_H
 
-#include <algorithm>
-
 #include <filament/driver/DriverEnums.h>
-
-#include <utils/RangeSet.h>
 
 #include "driver/DriverApiForward.h"
 #include "driver/Handle.h"
+
+#include <utils/Slice.h>
 
 namespace filament {
 
@@ -62,18 +60,9 @@ public:
 
     size_t getSize() const noexcept { return mSize; }
 
-    void invalidate() noexcept;
-    void invalidate(size_t row, size_t count) noexcept;
-
-    bool isDirty() const noexcept {
-        return !mDirtyRanges.isEmpty();
-    }
-
     // source data isn't copied and must stay valid until the command-buffer is executed
     void commit(driver::DriverApi& driverApi, void const* begin, void const* end) noexcept {
-        if (isDirty()) {
-            commitSlow(driverApi, begin, end);
-        }
+        commitSlow(driverApi, begin, end);
     }
 
     template<typename T>
@@ -94,7 +83,6 @@ private:
     void commitSlow(driver::DriverApi& driverApi, void const* begin, void const* end) noexcept;
 
     Handle<HwTexture> mTexture;
-    utils::RangeSet<4> mDirtyRanges;
     uint32_t mSize = 0;
     uint16_t mWidth;
     uint16_t mHeight;
