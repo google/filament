@@ -86,7 +86,7 @@ public:
 
 
     filament::Handle<HwUniformBuffer> getRenderableUBO() const noexcept {
-        return mRenderableUBO;
+        return mRenderableViewUbh;
     }
 
     /*
@@ -161,7 +161,7 @@ public:
     LightSoa const& getLightData() const noexcept { return mLightData; }
     LightSoa& getLightData() noexcept { return mLightData; }
 
-    void updateUBOs(utils::Range<uint32_t> visibleRenderables) noexcept;
+    void updateUBOs(utils::Range<uint32_t> visibleRenderables, Handle<HwUniformBuffer> renderableUbh) noexcept;
 
 private:
     static inline void computeLightRanges(math::float2* zrange,
@@ -174,15 +174,23 @@ private:
     FSkybox const* mSkybox = nullptr;
     FIndirectLight const* mIndirectLight = nullptr;
 
-    // list of Entities in the scene. We use a robin_set<> so we can do efficient removes
-    // (a vector<> could work, but removes would be O(n)). robin_set<> iterates almost as
-    // nicely as vector<>, which is a good compromise.
+    /*
+     * list of Entities in the scene. We use a robin_set<> so we can do efficient removes
+     * (a vector<> could work, but removes would be O(n)). robin_set<> iterates almost as
+     * nicely as vector<>, which is a good compromise.
+     */
     tsl::robin_set<utils::Entity> mEntities;
+
+
+    /*
+     * The data below is valid only during a view pass. i.e. if a scene is used in multiple
+     * views, the data below is update for each view.
+     * In essence, this data should be owned by View, but it's so scene-specific, that for now
+     * we store it here.
+     */
     RenderableSoa mRenderableData;
     LightSoa mLightData;
-    uint32_t mRenderableUBOSize = 0;
-
-    Handle<HwUniformBuffer> mRenderableUBO; // TODO: should this UBO be per-view?
+    Handle<HwUniformBuffer> mRenderableViewUbh; // This is actually owned by the view.
 };
 
 FILAMENT_UPCAST(Scene)

@@ -158,21 +158,9 @@ void FScene::prepare(const math::mat4f& worldOriginTansform) {
     }
 }
 
-void FScene::updateUBOs(utils::Range<uint32_t> visibleRenderables) noexcept {
+void FScene::updateUBOs(utils::Range<uint32_t> visibleRenderables, Handle<HwUniformBuffer> renderableUbh) noexcept {
     FEngine::DriverApi& driver = mEngine.getDriverApi();
-    Handle<HwUniformBuffer>& renderableUBO = mRenderableUBO;
     const size_t size = visibleRenderables.size() * sizeof(PerRenderableUib);
-
-    // reallocate UBO if it's too small
-    if (mRenderableUBOSize < size) {
-        // allocate 1/3 extra, with a minimum of 16 objects
-        const size_t count = std::max(size_t(16u), (4u * visibleRenderables.size() + 2u) / 3u);
-        mRenderableUBOSize = uint32_t(count * sizeof(PerRenderableUib));
-        driver.destroyUniformBuffer(renderableUBO);
-        renderableUBO = driver.createUniformBuffer(mRenderableUBOSize, driver::BufferUsage::DYNAMIC);
-    } else {
-        // should we shrink the underlying UBO at some point?
-    }
 
     // allocate space into the command stream directly
     void* const buffer = driver.allocate(size);
@@ -205,12 +193,13 @@ void FScene::updateUBOs(utils::Range<uint32_t> visibleRenderables) noexcept {
     }
 
     // TODO: handle static objects separately
-    driver.updateUniformBuffer(renderableUBO, { buffer, size });
+    mRenderableViewUbh = renderableUbh;
+    driver.updateUniformBuffer(renderableUbh, { buffer, size });
 }
 
 void FScene::terminate(FEngine& engine) {
-    // free-up UBOs
-    engine.getDriverApi().destroyUniformBuffer(mRenderableUBO);
+    // DO NOT destroy this UBO, it's owned by the View
+    mRenderableViewUbh.clear();
 }
 
 void FScene::prepareDynamicLights(const CameraInfo& camera, ArenaScope& rootArena, Handle<HwUniformBuffer> lightUbh) noexcept {
