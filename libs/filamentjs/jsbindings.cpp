@@ -172,11 +172,6 @@ struct DecodedPng {
     int encoded_ncomp;
     int decoded_ncomp;
     BufferDescriptor decoded_data;
-    ~DecodedPng() {
-      if (decoded_data.bd) {
-        stbi_image_free(decoded_data.bd->buffer);
-      }
-    }
 };
 
 // JavaScript clients should call [createTextureFromPng] rather than calling this directly.
@@ -191,6 +186,9 @@ DecodedPng decodePng(BufferDescriptor encoded_data, int requested_ncomp) {
             requested_ncomp);
     const uint32_t decoded_size = result.width * result.height * requested_ncomp;
     result.decoded_data = BufferDescriptor(decoded_data, decoded_size);
+    result.decoded_data.bd->setCallback([](void* buffer, size_t size, void* user) {
+        stbi_image_free(buffer);
+    });
     result.decoded_ncomp = requested_ncomp;
     return result;
 }
