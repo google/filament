@@ -62,7 +62,7 @@ class App {
     const ao = Filament.createTextureFromPng(Filament.assets['floor_ao_roughness_metallic.png'], engine);
     const basecolor = Filament.createTextureFromPng(Filament.assets['floor_basecolor.png'], engine);
     const normal = Filament.createTextureFromPng(Filament.assets['floor_normal.png'], engine);
-    matinstance.setTextureParameter("aoRoughnessMetallic", ao, sampler)
+    matinstance.setTextureParameter('aoRoughnessMetallic', ao, sampler)
     matinstance.setTextureParameter("baseColor", basecolor, sampler)
     matinstance.setTextureParameter("normal", normal, sampler)
 
