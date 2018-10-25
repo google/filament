@@ -63,7 +63,7 @@ class App {
     const basecolor = Filament.createTextureFromPng(Filament.assets['floor_basecolor.png'], engine);
     const normal = Filament.createTextureFromPng(Filament.assets['floor_normal.png'], engine);
     matinstance.setTextureParameter('aoRoughnessMetallic', ao, sampler)
-    matinstance.setTextureParameter("baseColor", basecolor, sampler)
+    matinstance.setTextureParameter('baseColor', basecolor, sampler)
     matinstance.setTextureParameter("normal", normal, sampler)
 
     const meshdata = Filament.assets['shader_ball.filamesh'];
