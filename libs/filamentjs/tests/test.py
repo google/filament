@@ -1,20 +1,23 @@
 #!/usr/bin/env python3
 
 import glob
-import http.server
 import os
 import shutil
-import socketserver
 import sys
 
 from pathlib import Path
+
+from twisted.web.server import Site, GzipEncoderFactory
+from twisted.web.static import File
+from twisted.web.resource import Resource, EncodingResourceWrapper
+from twisted.internet import reactor
 
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 from watchdog.events import LoggingEventHandler
 
 SCRIPT_DIR = Path(os.path.dirname(os.path.abspath(__file__)))
-ROOT_DIR = Path(os.path.realpath(SCRIPT_DIR / "../../../"))
+ROOT_DIR = Path(os.path.realpath(SCRIPT_DIR / "../../.."))
 BUILD_DIR = ROOT_DIR / "out/cmake-webgl-release"
 TOOLS_DIR = ROOT_DIR / "out/cmake-release/tools"
 SERVE_DIR = BUILD_DIR / "libs/filamentjs"
@@ -22,25 +25,14 @@ GLMATRIX_DIR = ROOT_DIR / "third_party/gl-matrix"
 CURR_DIR = Path(os.path.realpath('.'))
 PORT = 8000
 
-global server
-
 # Restart the script if the JavaScript or HTML change.
 
 class OnDirectoryChanged(FileSystemEventHandler):
     def on_modified(self, event):
-        global server
         if event.event_type != 'modified':
             return
-        server.shutdown()
         print(f'{event.src_path} was modified\nRestarting...')
-        os.chdir(CURR_DIR)
         os.execl(sys.executable, *([sys.executable]+sys.argv))
-
-print("Starting observer...")
-handler = OnDirectoryChanged()
-observer = Observer()
-observer.schedule(handler, path=str(CURR_DIR), recursive=True)
-observer.start()
 
 # Copy test assets into the server folder.
 
@@ -99,26 +91,20 @@ shutil.copy(parquet_filamesh, SERVE_DIR)
 for tex in parquet_textures:
     shutil.copy(tex, SERVE_DIR)
 
-# Associate wasm files with the correct MIME type.
-
-Handler = http.server.SimpleHTTPRequestHandler
-Handler.extensions_map.update({
-    '.wasm': 'application/wasm',
-})
-
 # Serve all files in the server folder.
 
 print(f"Serving {SERVE_DIR}...")
 print(f"    http://localhost:{PORT}/test_redball.html")
 print(f"    http://localhost:{PORT}/test_parquet.html")
-Handler.directory = SERVE_DIR
-os.chdir(SERVE_DIR)
-socketserver.TCPServer.allow_reuse_address = True
-with socketserver.TCPServer(("", PORT), Handler) as httpd:
-    global server
-    server = httpd
-    httpd.allow_reuse_address = True
-    httpd.serve_forever()
+print(f"    http://localhost:{PORT}/test_leaks.html")
 
-observer.stop()
-observer.join()
+port = 8000
+webdir = File(SERVE_DIR)
+webdir.contentTypes['.wasm'] = 'application/wasm'
+wrapped = EncodingResourceWrapper(webdir, [GzipEncoderFactory()])
+reactor.listenTCP(port, Site(wrapped))
+handler = OnDirectoryChanged()
+observer = Observer()
+observer.schedule(handler, path=str(CURR_DIR), recursive=True)
+observer.start()
+reactor.run()
