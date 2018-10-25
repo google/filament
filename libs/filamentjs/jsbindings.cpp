@@ -63,6 +63,11 @@
 #include <emscripten.h>
 #include <emscripten/bind.h>
 
+#define STB_IMAGE_IMPLEMENTATION
+#define STBI_NO_STDIO
+#define STBI_ONLY_PNG
+#include <stb_image.h>
+
 using namespace emscripten;
 using namespace filament;
 using namespace image;
@@ -121,6 +126,7 @@ using SkyBuilder = Skybox::Builder;
 // to JavaScript as "driver$BufferDescriptor", but clients will normally use our "Filament.Buffer"
 // helper function (implemented in utilities.js)
 struct BufferDescriptor {
+    BufferDescriptor() {}
     // This form is used when JavaScript sends a buffer into WASM.
     BufferDescriptor(val arrdata) {
         auto byteLength = arrdata["byteLength"].as<uint32_t>();
@@ -158,6 +164,36 @@ struct PixelBufferDescriptor {
     // counting, and the easiest way to achieve that is with shared_ptr.
     std::shared_ptr<driver::PixelBufferDescriptor> pbd;
 };
+
+// Small structure whose sole purpose is to return decoded image data to JavaScript.
+struct DecodedPng {
+    int width;
+    int height;
+    int encoded_ncomp;
+    int decoded_ncomp;
+    BufferDescriptor decoded_data;
+    ~DecodedPng() {
+      if (decoded_data.bd) {
+        stbi_image_free(decoded_data.bd->buffer);
+      }
+    }
+};
+
+// JavaScript clients should call [createTextureFromPng] rather than calling this directly.
+DecodedPng decodePng(BufferDescriptor encoded_data, int requested_ncomp) {
+    DecodedPng result;
+    stbi_uc* decoded_data = stbi_load_from_memory(
+            (stbi_uc const *) encoded_data.bd->buffer,
+            encoded_data.bd->size,
+            &result.width,
+            &result.height,
+            &result.encoded_ncomp,
+            requested_ncomp);
+    const uint32_t decoded_size = result.width * result.height * requested_ncomp;
+    result.decoded_data = BufferDescriptor(decoded_data, decoded_size);
+    result.decoded_ncomp = requested_ncomp;
+    return result;
+}
 
 } // anonymous namespace
 
@@ -533,6 +569,7 @@ class_<TextureSampler>("TextureSampler")
 /// Texture ::core class:: 2D image or cubemap that can be sampled by the GPU, possibly mipmapped.
 class_<Texture>("Texture")
     .class_function("Builder", (TexBuilder (*)()) [] { return TexBuilder(); })
+    .function("generateMipmaps", &Texture::generateMipmaps)
     .function("setImage", EMBIND_LAMBDA(void, (Texture* self,
             Engine* engine, uint8_t level, PixelBufferDescriptor pbd), {
         self->setImage(*engine, level, std::move(*pbd.pbd));
@@ -766,5 +803,13 @@ class_<MeshIO::Mesh>("MeshIO$Mesh")
     .function("indexBuffer", EMBIND_LAMBDA(IndexBuffer*, (MeshIO::Mesh mesh), {
         return mesh.indexBuffer;
     }), allow_raw_pointers());
+
+// Clients should call [createTextureFromPng] rather than using decodePng and DecodedPng directly.
+
+function("decodePng", &decodePng);
+class_<DecodedPng>("DecodedPng")
+    .property("width", &DecodedPng::width)
+    .property("height", &DecodedPng::height)
+    .property("data", &DecodedPng::decoded_data);
 
 } // EMSCRIPTEN_BINDINGS
