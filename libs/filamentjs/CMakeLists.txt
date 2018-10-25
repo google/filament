@@ -32,4 +32,4 @@ set_target_properties(filamentjs PROPERTIES
     LINK_DEPENDS "${JAVASCRIPT_SRC}"
     OUTPUT_NAME filament)
 
-target_link_libraries(filamentjs PRIVATE filament math utils image filameshio)
+target_link_libraries(filamentjs PRIVATE filament math utils image filameshio stb)

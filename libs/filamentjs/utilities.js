@@ -284,6 +284,11 @@ Filament.createTextureFromKtx = function(ktxdata, engine, options) {
   return tex;
 };
 
+/// createIblFromKtx ::function:: Utility function that creates an [IndirectLight] from a KTX file.
+/// ktxdata ::argument:: Uint8Array with the contents of a KTX file.
+/// engine ::argument:: [Engine]
+/// options ::argument:: Options dictionary. For now, the `rgbm` boolean is the only option.
+/// ::retval:: [IndirectLight]
 Filament.createIblFromKtx = function(ktxdata, engine, options) {
   options = options || {};
   const iblktx = options['ktx'] = new Filament.KtxBundle(Filament.Buffer(ktxdata));
@@ -294,4 +299,49 @@ Filament.createIblFromKtx = function(ktxdata, engine, options) {
     .reflections(ibltex)
     .irradianceSh(3, shfloats)
     .build(engine);
+};
+
+/// createTextureFromPng ::function:: Creates a 2D [Texture] from the raw contents of a PNG file.
+/// pngdata ::argument:: Uint8Array with the contents of a PNG file.
+/// engine ::argument:: [Engine]
+/// options ::argument:: JavaScript object with optional `rgbm`, `noalpha`, and `nomips` keys.
+/// ::retval:: [Texture]
+Filament.createTextureFromPng = function(pngdata, engine, options) {
+  const Sampler = Filament.Texture$Sampler;
+  const TextureFormat = Filament.Texture$InternalFormat;
+  const PixelDataFormat = Filament.PixelDataFormat;
+
+  options = options || {};
+  const rgbm = !!options['rgbm'];
+  const noalpha = !!options['noalpha'];
+  const nomips = !!options['nomips'];
+
+  const decodedpng = Filament.decodePng(Filament.Buffer(pngdata), noalpha ? 3 : 4);
+
+  var texformat, pbformat, pbtype;
+  if (noalpha) {
+    texformat = TextureFormat.RGB8;
+    pbformat = PixelDataFormat.RGB;
+    pbtype = Filament.PixelDataType.UBYTE;
+  } else {
+    texformat = TextureFormat.RGBA8;
+    pbformat = rgbm ? PixelDataFormat.RGBM : PixelDataFormat.RGBA;
+    pbtype = Filament.PixelDataType.UBYTE;
+  }
+
+  const tex = Filament.Texture.Builder()
+    .width(decodedpng.width)
+    .height(decodedpng.height)
+    .levels(nomips ? 1 : 0xff)
+    .sampler(Sampler.SAMPLER_2D)
+    .format(texformat)
+    .rgbm(rgbm)
+    .build(engine);
+
+  const pixelbuffer = Filament.PixelBuffer(decodedpng.data.getBytes(), pbformat, pbtype);
+  tex.setImage(engine, 0, pixelbuffer);
+  if (!nomips) {
+    tex.generateMipmaps(engine);
+  }
+  return tex;
 };
