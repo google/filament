@@ -80,7 +80,7 @@ class App {
     this.resize();
     this.render = this.render.bind(this);
     this.resize = this.resize.bind(this);
-    window.addEventListener("resize", this.resize);
+    window.addEventListener('resize', this.resize);
     window.requestAnimationFrame(this.render);
   }
 
