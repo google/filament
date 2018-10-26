@@ -40,9 +40,8 @@ class App {
   }
 
   resize() {
-    const dpr = window.devicePixelRatio;
-    const width = this.canvas.width = window.innerWidth * dpr;
-    const height = this.canvas.height = window.innerHeight * dpr;
+    const width = this.canvas.width;
+    const height = this.canvas.height;
     this.view.setViewport([0, 0, width, height]);
     const eye = [0, 0, 3], center = [0, 0, -1], up = [0, 1, 0];
     this.camera.lookAt(eye, center, up);
@@ -103,15 +102,6 @@ class App {
     ib.delete();
   }
 
-  // For now, simply print out malloc'd pointer value and check
-  // if it increases over time. Is there a better way of doing this?
-  printMemoryUsage() {
-    const ptr = Filament._malloc(1);
-    Filament._free(ptr);
-    this.maxptr = Math.max(this.maxptr | 0, ptr);
-    console.log(this.maxptr);
-  }
-
   animate() {
     // Recreate the polygon every couple frames, changing the number of sides.
     this.frame = (this.frame | 0) + 1;
@@ -122,7 +112,6 @@ class App {
       // Destroy and recreate the renderable component.
       this.engine.destroyEntity(this.polygon);
       this.createPolygon(this.polygon, 3 + this.nsides, this.mi);
-      this.printMemoryUsage();
     }
     // Rotate the polygon around the Z axis.
     const radians = Date.now() / 1000;
