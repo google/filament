@@ -4,6 +4,7 @@ project(filamentjs)
 
 set(JAVASCRIPT_SRC
   ${CMAKE_CURRENT_SOURCE_DIR}/wasmloader.js
+  ${CMAKE_CURRENT_SOURCE_DIR}/extensions.js
   ${CMAKE_CURRENT_SOURCE_DIR}/utilities.js)
 
 set(CPP_SRC

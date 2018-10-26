@@ -135,8 +135,6 @@ const TRIANGLE_COLORS = Filament.Buffer(new Uint32Array([
     0xff00ff00,
     0xff0000ff,
 ]));
-
-const MATERIAL_PACKAGE = Filament.Buffer(Filament.assets['triangle.filamat']);
 ```
 
 Next we'll use the positions and colors buffers to create a single `VertexBuffer` object.
@@ -195,7 +193,7 @@ After extracting the material instance, we can finally create a renderable compo
 triangle by setting up a bounding box and passing in the vertex and index buffers.
 
 ```js {fragment="create entities"}
-const mat = engine.createMaterial(MATERIAL_PACKAGE);
+const mat = engine.createMaterial('triangle.filamat');
 const matinst = mat.getDefaultInstance();
 Filament.RenderableManager.Builder(1)
     .boundingBox([[ -1, -1, -1 ], [ 1, 1, 1 ]])
