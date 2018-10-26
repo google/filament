@@ -28,7 +28,7 @@ class App {
     const sunlight = Filament.EntityManager.get().create();
     Filament.LightManager.Builder(LightType.SUN)
             .color([0.98, 0.92, 0.89])
-            .intensity(50000.0)
+            .intensity(100000.0)
             .direction([0.6, -1.0, -0.8])
             .castShadows(true)
             .sunAngularRadius(1.9)
@@ -43,7 +43,7 @@ class App {
 
     const radians = 1.0;
     indirectLight.setRotation(mat3.fromRotation(mat3.create(), radians, [0, 1, 0]))
-    indirectLight.setIntensity(8000);
+    indirectLight.setIntensity(10000);
 
     const skydata = Filament.assets['venetian_crossroads_2k_skybox.ktx'];
     const skytex = Filament.createTextureFromKtx(skydata, engine, {'rgbm': true});
@@ -59,8 +59,10 @@ class App {
         Filament.MagFilter.LINEAR,
         Filament.WrapMode.CLAMP_TO_EDGE);
 
-    const ao = Filament.createTextureFromPng(Filament.assets['floor_ao_roughness_metallic.png'], engine);
-    const basecolor = Filament.createTextureFromPng(Filament.assets['floor_basecolor.png'], engine);
+    const ao = Filament.createTextureFromPng(
+        Filament.assets['floor_ao_roughness_metallic.png'], engine);
+    const basecolor = Filament.createTextureFromPng(
+        Filament.assets['floor_basecolor.png'], engine, {'srgb': true});
     const normal = Filament.createTextureFromPng(Filament.assets['floor_normal.png'], engine);
     matinstance.setTextureParameter('aoRoughnessMetallic', ao, sampler)
     matinstance.setTextureParameter('baseColor', basecolor, sampler)
