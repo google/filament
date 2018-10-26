@@ -304,7 +304,7 @@ Filament.createIblFromKtx = function(ktxdata, engine, options) {
 /// createTextureFromPng ::function:: Creates a 2D [Texture] from the raw contents of a PNG file.
 /// pngdata ::argument:: Uint8Array with the contents of a PNG file.
 /// engine ::argument:: [Engine]
-/// options ::argument:: JavaScript object with optional `rgbm`, `noalpha`, and `nomips` keys.
+/// options ::argument:: JS object with optional `srgb`, `rgbm`, `noalpha`, and `nomips` keys.
 /// ::retval:: [Texture]
 Filament.createTextureFromPng = function(pngdata, engine, options) {
   const Sampler = Filament.Texture$Sampler;
@@ -312,19 +312,19 @@ Filament.createTextureFromPng = function(pngdata, engine, options) {
   const PixelDataFormat = Filament.PixelDataFormat;
 
   options = options || {};
+  const srgb = !!options['srgb'];
   const rgbm = !!options['rgbm'];
   const noalpha = !!options['noalpha'];
   const nomips = !!options['nomips'];
-
   const decodedpng = Filament.decodePng(Filament.Buffer(pngdata), noalpha ? 3 : 4);
 
   var texformat, pbformat, pbtype;
   if (noalpha) {
-    texformat = TextureFormat.RGB8;
+    texformat = srgb ? TextureFormat.SRGB8 : TextureFormat.RGB8;
     pbformat = PixelDataFormat.RGB;
     pbtype = Filament.PixelDataType.UBYTE;
   } else {
-    texformat = TextureFormat.RGBA8;
+    texformat = srgb ? TextureFormat.SRGB8_A8 : TextureFormat.RGBA8;
     pbformat = rgbm ? PixelDataFormat.RGBM : PixelDataFormat.RGBA;
     pbtype = Filament.PixelDataType.UBYTE;
   }
