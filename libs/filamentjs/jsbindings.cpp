@@ -784,7 +784,7 @@ class_<MeshIO>("MeshIO")
         // Parse the filamesh buffer. This creates the VB, IB, and renderable.
         return MeshIO::loadMeshFromBuffer(
                 engine, buffer.bd->buffer,
-                destructor, &bundle, matreg);
+                destructor, bundle, matreg);
     }), allow_raw_pointers());
 
 // MeshIO$Mesh ::class:: Property accessor for objects created by [MeshIO].
