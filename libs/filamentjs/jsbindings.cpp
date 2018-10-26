@@ -507,7 +507,7 @@ class_<VertexBuilder>("VertexBuffer$Builder")
 /// VertexBuffer ::core class:: Bundle of buffers and associated vertex attributes.
 class_<VertexBuffer>("VertexBuffer")
     .class_function("Builder", (VertexBuilder (*)()) [] { return VertexBuilder(); })
-    .function("setBufferAt", EMBIND_LAMBDA(void, (VertexBuffer* self,
+    .function("_setBufferAt", EMBIND_LAMBDA(void, (VertexBuffer* self,
             Engine* engine, uint8_t bufferIndex, BufferDescriptor vbd), {
         self->setBufferAt(*engine, bufferIndex, std::move(*vbd.bd));
     }), allow_raw_pointers());
@@ -525,7 +525,7 @@ class_<IndexBuilder>("IndexBuffer$Builder")
 /// IndexBuffer ::core class:: Array of 16-bit or 32-bit unsigned integers consumed by the GPU.
 class_<IndexBuffer>("IndexBuffer")
     .class_function("Builder", (IndexBuilder (*)()) [] { return IndexBuilder(); })
-    .function("setBuffer", EMBIND_LAMBDA(void, (IndexBuffer* self,
+    .function("_setBuffer", EMBIND_LAMBDA(void, (IndexBuffer* self,
             Engine* engine, BufferDescriptor ibd), {
         self->setBuffer(*engine, std::move(*ibd.bd));
     }), allow_raw_pointers());

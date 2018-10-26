@@ -114,27 +114,19 @@ The triangle entity in the above snippet does not yet have an associated compone
 tutorial we will make it into a *renderable*. Renderables are entities that have associated draw
 calls.
 
-## Construct buffer objects
+## Construct typed arrays
 
-Next we'll create three buffers: a positions buffer with XY coordinates for each vertex, a colors
-buffer with a 32-bit word for each vertex, and finally a buffer that holds the contents of the
-downloaded filamat asset.
-
-All three of these buffers can be constructed using `Filament.Buffer`, which copies a given
-TypedArray into Filament's WASM heap.
+Next we'll create two typed arrays: a positions array with XY coordinates for each vertex, and a
+colors array with a 32-bit word for each vertex.
 
 ```js {fragment="create entities"}
-const TRIANGLE_POSITIONS = Filament.Buffer(new Float32Array([
+const TRIANGLE_POSITIONS = new Float32Array([
     1, 0,
     Math.cos(Math.PI * 2 / 3), Math.sin(Math.PI * 2 / 3),
     Math.cos(Math.PI * 4 / 3), Math.sin(Math.PI * 4 / 3),
-]));
+]);
 
-const TRIANGLE_COLORS = Filament.Buffer(new Uint32Array([
-    0xffff0000,
-    0xff00ff00,
-    0xff0000ff,
-]));
+const TRIANGLE_COLORS = new Uint32Array([0xffff0000, 0xff00ff00, 0xff0000ff]);
 ```
 
 Next we'll use the positions and colors buffers to create a single `VertexBuffer` object.
@@ -175,7 +167,7 @@ this.ib = Filament.IndexBuffer.Builder()
     .bufferType(Filament.IndexBuffer$IndexType.USHORT)
     .build(engine);
 
-this.ib.setBuffer(engine, Filament.Buffer(new Uint16Array([0, 1, 2])));
+this.ib.setBuffer(engine, new Uint16Array([0, 1, 2]));
 ```
 
 Note that constructing an index buffer is similar to constructing a vertex buffer, but it only has

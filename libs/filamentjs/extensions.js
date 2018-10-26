@@ -19,7 +19,7 @@ function getBufferDescriptor(buffer) {
   if ('string' == typeof buffer || buffer instanceof String) {
     buffer = Filament.assets[buffer];
   }
-  if (buffer instanceof Uint8Array) {
+  if (buffer.buffer instanceof ArrayBuffer) {
     buffer = Filament.Buffer(buffer);
   }
   return buffer;
@@ -29,9 +29,9 @@ function getBufferDescriptor(buffer) {
 
   /// Engine ::core class::
 
-  /// create ::static method::
-  /// canvas ::argument::
-  /// options ::argument::
+  /// create ::static method:: Creates an Engine instance for the given canvas.
+  /// canvas ::argument:: the canvas DOM element
+  /// options ::argument:: optional WebGL 2.0 context configuration
   /// ::retval:: an instance of [Engine]
   Filament.Engine.create = function(canvas, options) {
     const defaults = {
@@ -67,7 +67,7 @@ function getBufferDescriptor(buffer) {
   /// ::retval:: [IndirectLight]
   Filament.Engine.prototype.createIblFromKtx = function(buffer, options) {
     return Filament._createIblFromKtx(getBufferDescriptor(buffer), this, options);
-  }
+  };
 
   /// createSkyFromKtx ::method:: Utility function that creates a [Skybox] from a KTX file.
   /// buffer ::argument:: asset string, or Uint8Array, or [Buffer] with KTX file contents
@@ -85,7 +85,7 @@ function getBufferDescriptor(buffer) {
   /// ::retval:: [Texture]
   Filament.Engine.prototype.createTextureFromPng = function(buffer, options) {
     return Filament._createTextureFromPng(getBufferDescriptor(buffer), this, options);
-  }
+  };
 
   /// loadFilamesh ::method:: Consumes the contents of a filamesh file and creates a renderable.
   /// buffer ::argument:: asset string, or Uint8Array, or [Buffer] with filamesh contents
@@ -95,6 +95,25 @@ function getBufferDescriptor(buffer) {
   /// These are of type [Entity], [VertexBuffer], and [IndexBuffer].
   Filament.Engine.prototype.loadFilamesh = function(buffer, definstance, matinstances) {
     return Filament._loadFilamesh(this, getBufferDescriptor(buffer), definstance, matinstances);
-  }
+  };
+
+  /// VertexBuffer ::core class::
+
+  /// setBufferAt ::method::
+  /// engine ::argument:: [Engine]
+  /// bufferIndex ::argument:: non-negative integer
+  /// buffer ::argument:: asset string, or Uint8Array, or [Buffer]
+  Filament.VertexBuffer.prototype.setBufferAt = function(engine, bufferIndex, buffer) {
+    this._setBufferAt(engine, bufferIndex, getBufferDescriptor(buffer));
+  };
+
+  /// IndexBuffer ::core class::
+
+  /// setBuffer ::method::
+  /// engine ::argument:: [Engine]
+  /// buffer ::argument:: asset string, or Uint8Array, or [Buffer]
+  Filament.IndexBuffer.prototype.setBuffer = function(engine, buffer) {
+    this._setBuffer(engine, getBufferDescriptor(buffer));
+  };
 
 };

@@ -280,7 +280,7 @@ def gather_docstrings(paths):
             }
 
             # Check if this is continuation of a previous type.
-            if brief== '':
+            if brief == '':
               for existing_type in result:
                 if existing_type['name'] == name:
                   entity = existing_type
@@ -322,6 +322,7 @@ def generate_class_reference(entity):
     brief = expand_refs(brief)
     result = f"\n## class <a id='{name}' href='#{name}'>{name}</a>\n\n"
     result += brief + "\n\n"
+    entity["children"].sort(key = lambda t: t["name"])
     for method in entity["children"]:
         result += "- **"
         if "static" in method["tags"]:

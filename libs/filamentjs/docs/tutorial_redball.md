@@ -180,9 +180,9 @@ const ib = Filament.IndexBuffer.Builder()
   .bufferType(IndexType.USHORT)
   .build(engine);
 
-vb.setBufferAt(engine, 0, Filament.Buffer(icosphere.vertices));
-vb.setBufferAt(engine, 1, Filament.Buffer(icosphere.tangents));
-ib.setBuffer(engine, Filament.Buffer(icosphere.triangles));
+vb.setBufferAt(engine, 0, icosphere.vertices);
+vb.setBufferAt(engine, 1, icosphere.tangents);
+ib.setBuffer(engine, icosphere.triangles);
 
 Filament.RenderableManager.Builder(1)
   .boundingBox([ [-1, -1, -1], [1, 1, 1] ])
