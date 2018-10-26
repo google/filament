@@ -278,6 +278,15 @@ def gather_docstrings(paths):
                 "detail": None,
                 "children": []
             }
+
+            # Check if this is continuation of a previous type.
+            if brief== '':
+              for existing_type in result:
+                if existing_type['name'] == name:
+                  entity = existing_type
+                  result.remove(existing_type)
+                  break
+
             top = stack[-1]["tags"]
             if 'root' in top:
                 result.append(entity)
@@ -436,6 +445,7 @@ def build_reference():
         ROOT_DIR + 'libs/filamentjs/jsenums.cpp',
         ROOT_DIR + 'libs/filamentjs/utilities.js',
         ROOT_DIR + 'libs/filamentjs/wasmloader.js',
+        ROOT_DIR + 'libs/filamentjs/extensions.js',
     ])
     markdown = build_reference_markdown(doctree)
     rendered = mistletoe.markdown(markdown, PygmentsRenderer)

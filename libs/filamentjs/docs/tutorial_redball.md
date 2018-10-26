@@ -139,8 +139,7 @@ Next let's create a material instance from the package that we built at the begi
 Replace the **create material** comment with the following snippet.
 
 ```js {fragment="create material"}
-const material_package = Filament.Buffer(Filament.assets['plastic.filamat']);
-const material = engine.createMaterial(material_package);
+const material = engine.createMaterial('plastic.filamat');
 const matinstance = material.createInstance();
 
 const red = [0.8, 0.0, 0.0];
@@ -269,8 +268,7 @@ Filament provides a JavaScript utility to make this simpler,
 simply replace the **create IBL** comment with the following snippet.
 
 ```js {fragment="create IBL"}
-const ibldata = Filament.assets['pillars_2k_ibl.ktx'];
-const indirectLight = Filament.createIblFromKtx(ibldata, engine, {'rgbm': true});
+const indirectLight = engine.createIblFromKtx('pillars_2k_ibl.ktx');
 indirectLight.setIntensity(50000);
 scene.setIndirectLight(indirectLight);
 ```
@@ -302,9 +300,7 @@ Filament provides a Javascript utility to make this easier.
 Replace **create skybox** with the following.
 
 ```js {fragment="create skybox"}
-const skydata = Filament.assets['pillars_2k_skybox.ktx'];
-const skytex = Filament.createTextureFromKtx(skydata, engine, {'rgbm': true});
-const skybox = Filament.Skybox.Builder().environment(skytex).build(engine);
+const skybox = engine.createSkyFromKtx('pillars_2k_skybox.ktx');
 scene.setSkybox(skybox);
 ```
 

@@ -260,7 +260,7 @@ value_array<flatmat3>("mat3")
 // CORE FILAMENT CLASSES
 // ---------------------
 
-/// Engine ::core class:: Central manager and resource owner. Typically this is a singleton.
+/// Engine ::core class:: Central manager and resource owner.
 class_<Engine>("Engine")
     .class_function("_create", (Engine* (*)()) [] { return Engine::create(); },
             allow_raw_pointers())
@@ -317,12 +317,7 @@ class_<Engine>("Engine")
     .function("destroyCamera", (void (*)(Engine*, Camera*)) []
             (Engine* engine, Camera* camera) { engine->destroy(camera); },
             allow_raw_pointers())
-    /// createMaterial ::method::
-    /// package ::argument:: buffer descriptor created with [Buffer] with filamat contents
-    /// ::retval:: an instance of [createMaterial]
-    .function("createMaterial", EMBIND_LAMBDA(Material*, (Engine* engine, BufferDescriptor mbd), {
-        // TODO: consider adding a BufferDescriptor API to Material::Builder, then possibly removing
-        // this convenient helper method.
+    .function("_createMaterial", EMBIND_LAMBDA(Material*, (Engine* engine, BufferDescriptor mbd), {
         return Material::Builder().package(mbd.bd->buffer, mbd.bd->size).build(*engine);
     }), allow_raw_pointers())
     /// destroyMaterial ::method::

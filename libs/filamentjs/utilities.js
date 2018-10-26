@@ -59,14 +59,7 @@ Filament.PixelBuffer = function(typedarray, format, datatype) {
   return bd;
 };
 
-/// loadFilamesh ::function:: Consumes the contents of a filamesh file and creates a renderable.
-/// engine ::argument:: [Engine]
-/// typedarray ::argument:: Uint8Array with contents of filamesh file
-/// definstance ::argument:: Optional default [MaterialInstance]
-/// matinstances ::argument:: Optional object that gets populated with name => [MaterialInstance]
-/// ::retval:: JavaScript object with keys `renderable`, `vertexBuffer`, and `indexBuffer`. \
-/// These are of type [Entity], [VertexBuffer], and [IndexBuffer].
-Filament.loadFilamesh = function(engine, typedarray, definstance, matinstances) {
+Filament._loadFilamesh = function(engine, buffer, definstance, matinstances) {
     matinstances = matinstances || {};
     const registry = new Filament.MeshIO$MaterialRegistry();
     for (var key in matinstances) {
@@ -75,7 +68,7 @@ Filament.loadFilamesh = function(engine, typedarray, definstance, matinstances) 
     if (definstance) {
         registry.set("DefaultMaterial", definstance);
     }
-    const mesh = Filament.MeshIO.loadMeshFromBuffer(engine, Filament.Buffer(typedarray), registry);
+    const mesh = Filament.MeshIO.loadMeshFromBuffer(engine, buffer, registry);
     const keys = registry.keys();
     for (var i = 0; i < keys.size(); i++) {
         const key = keys.get(i);
@@ -223,12 +216,7 @@ Filament.loadMathExtensions = function() {
 // Texture helpers
 // ---------------
 
-/// createTextureFromKtx ::function:: Utility function that creates a [Texture] from a KTX file.
-/// ktxdata ::argument:: Uint8Array with the contents of a KTX file.
-/// engine ::argument:: [Engine]
-/// options ::argument:: Options dictionary. For now, the `rgbm` boolean is the only option.
-/// ::retval:: [Texture]
-Filament.createTextureFromKtx = function(ktxdata, engine, options) {
+Filament._createTextureFromKtx = function(ktxdata, engine, options) {
   options = options || {};
 
   const Sampler = Filament.Texture$Sampler;
@@ -236,7 +224,7 @@ Filament.createTextureFromKtx = function(ktxdata, engine, options) {
   const PixelDataFormat = Filament.PixelDataFormat;
   const gl = Filament.ctx;
 
-  const ktx = options['ktx'] || new Filament.KtxBundle(Filament.Buffer(ktxdata));
+  const ktx = options['ktx'] || new Filament.KtxBundle(ktxdata);
   const nlevels = ktx.getNumMipLevels();
   const ktxformat = ktx.info().glInternalFormat;
   const rgbm = !!options['rgbm'];
@@ -285,15 +273,10 @@ Filament.createTextureFromKtx = function(ktxdata, engine, options) {
   return tex;
 };
 
-/// createIblFromKtx ::function:: Utility function that creates an [IndirectLight] from a KTX file.
-/// ktxdata ::argument:: Uint8Array with the contents of a KTX file.
-/// engine ::argument:: [Engine]
-/// options ::argument:: Options dictionary. For now, the `rgbm` boolean is the only option.
-/// ::retval:: [IndirectLight]
-Filament.createIblFromKtx = function(ktxdata, engine, options) {
-  options = options || {};
-  const iblktx = options['ktx'] = new Filament.KtxBundle(Filament.Buffer(ktxdata));
-  const ibltex = Filament.createTextureFromKtx(ktxdata, engine, options);
+Filament._createIblFromKtx = function(ktxdata, engine, options) {
+  options = options || {'rgbm': true};
+  const iblktx = options['ktx'] = new Filament.KtxBundle(ktxdata);
+  const ibltex = Filament._createTextureFromKtx(ktxdata, engine, options);
   const shstring = iblktx.getMetadata("sh");
   const shfloats = shstring.split(/\s/, 9 * 3).map(parseFloat);
   return Filament.IndirectLight.Builder()
@@ -302,12 +285,7 @@ Filament.createIblFromKtx = function(ktxdata, engine, options) {
     .build(engine);
 };
 
-/// createTextureFromPng ::function:: Creates a 2D [Texture] from the raw contents of a PNG file.
-/// pngdata ::argument:: Uint8Array with the contents of a PNG file.
-/// engine ::argument:: [Engine]
-/// options ::argument:: JS object with optional `srgb`, `rgbm`, `noalpha`, and `nomips` keys.
-/// ::retval:: [Texture]
-Filament.createTextureFromPng = function(pngdata, engine, options) {
+Filament._createTextureFromPng = function(pngdata, engine, options) {
   const Sampler = Filament.Texture$Sampler;
   const TextureFormat = Filament.Texture$InternalFormat;
   const PixelDataFormat = Filament.PixelDataFormat;
@@ -317,7 +295,8 @@ Filament.createTextureFromPng = function(pngdata, engine, options) {
   const rgbm = !!options['rgbm'];
   const noalpha = !!options['noalpha'];
   const nomips = !!options['nomips'];
-  const decodedpng = Filament.decodePng(Filament.Buffer(pngdata), noalpha ? 3 : 4);
+
+  const decodedpng = Filament.decodePng(pngdata, noalpha ? 3 : 4);
 
   var texformat, pbformat, pbtype;
   if (noalpha) {

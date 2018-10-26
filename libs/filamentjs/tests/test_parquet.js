@@ -37,21 +37,19 @@ class App {
             .build(engine, sunlight);
     this.scene.addEntity(sunlight);
 
-    const ibldata = Filament.assets['venetian_crossroads_2k_ibl.ktx'];
-    const indirectLight = this.ibl = Filament.createIblFromKtx(ibldata, engine, {'rgbm': true});
+    const ibldata = 'venetian_crossroads_2k_ibl.ktx';
+    const indirectLight = this.ibl = engine.createIblFromKtx(ibldata);
     this.scene.setIndirectLight(indirectLight);
 
     const radians = 1.0;
     indirectLight.setRotation(mat3.fromRotation(mat3.create(), radians, [0, 1, 0]))
     indirectLight.setIntensity(10000);
 
-    const skydata = Filament.assets['venetian_crossroads_2k_skybox.ktx'];
-    const skytex = Filament.createTextureFromKtx(skydata, engine, {'rgbm': true});
-    const skybox = Filament.Skybox.Builder().environment(skytex).build(engine);
+    const skydata = 'venetian_crossroads_2k_skybox.ktx';
+    const skybox = engine.createSkyFromKtx(skydata);
     this.scene.setSkybox(skybox);
 
-    const MATERIAL_PACKAGE = Filament.Buffer(Filament.assets['parquet.filamat']);
-    const material = engine.createMaterial(MATERIAL_PACKAGE);
+    const material = engine.createMaterial('parquet.filamat');
     const matinstance = material.createInstance();
 
     const sampler = new Filament.TextureSampler(
@@ -59,17 +57,14 @@ class App {
         Filament.MagFilter.LINEAR,
         Filament.WrapMode.CLAMP_TO_EDGE);
 
-    const ao = Filament.createTextureFromPng(
-        Filament.assets['floor_ao_roughness_metallic.png'], engine);
-    const basecolor = Filament.createTextureFromPng(
-        Filament.assets['floor_basecolor.png'], engine, {'srgb': true});
-    const normal = Filament.createTextureFromPng(Filament.assets['floor_normal.png'], engine);
+    const ao = engine.createTextureFromPng('floor_ao_roughness_metallic.png');
+    const basecolor = engine.createTextureFromPng('floor_basecolor.png', {'srgb': true});
+    const normal = engine.createTextureFromPng('floor_normal.png');
     matinstance.setTextureParameter('aoRoughnessMetallic', ao, sampler)
     matinstance.setTextureParameter('baseColor', basecolor, sampler)
     matinstance.setTextureParameter('normal', normal, sampler)
 
-    const meshdata = Filament.assets['shader_ball.filamesh'];
-    const mesh = Filament.loadFilamesh(engine, meshdata, matinstance);
+    const mesh = engine.loadFilamesh('shader_ball.filamesh', matinstance);
     this.shaderball = mesh.renderable;
     this.scene.addEntity(mesh.renderable);
 
