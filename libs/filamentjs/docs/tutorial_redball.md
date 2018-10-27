@@ -96,7 +96,7 @@ class App {
 
     // TODO: create material
     // TODO: create sphere
-    // TODO: create sunlight
+    // TODO: create lights
     // TODO: create IBL
     // TODO: create skybox
 
@@ -198,26 +198,31 @@ did in the first tutorial.
 
 ## Add lighting
 
-We'll be creating two types of light sources: a directional light source that represents the sun,
-and an image-based light (IBL) defined by one of the KTX files we built at the start of the demo.
-First, replace the **create sunlight** comment with the following snippet.
+In this section we will create some directional light sources, as well as an image-based light (IBL)
+defined by one of the KTX files we built at the start of the demo. First, replace the **create
+lights** comment with the following snippet.
 
-```js {fragment="create sunlight"}
+```js {fragment="create lights"}
 const sunlight = Filament.EntityManager.get().create();
 scene.addEntity(sunlight);
-
 Filament.LightManager.Builder(LightType.SUN)
   .color([0.98, 0.92, 0.89])
   .intensity(110000.0)
   .direction([0.6, -1.0, -0.8])
-  .castShadows(true)
   .sunAngularRadius(1.9)
   .sunHaloSize(10.0)
   .sunHaloFalloff(80.0)
   .build(engine, sunlight);
+
+const backlight = Filament.EntityManager.get().create();
+scene.addEntity(backlight);
+Filament.LightManager.Builder(LightType.DIRECTIONAL)
+        .direction([-1, 0, 1])
+        .intensity(50000.0)
+        .build(engine, backlight);
 ```
 
-We are using a light type of `SUN`, which is similar to `DIRECTIONAL`, but has some extra
+The `SUN` light source is similar to the `DIRECTIONAL` light source, but has some extra
 parameters because Filament will automatically draw a disk into the skybox.
 
 Next we need to create an `IndirectLight` object from the KTX IBL. One way of doing this is the

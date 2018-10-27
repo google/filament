@@ -130,7 +130,8 @@ Filament.IcoSphere = function(nsubdivs) {
     const src = this.vertices.subarray(i * 3, i * 3 + 3);
     const dst = this.tangents.subarray(i * 4, i * 4 + 4);
     const n = vec3.normalize(vec3.create(), src);
-    const b = vec3.cross(vec3.create(), n, [1, 0, 0]);
+    const b = vec3.cross(vec3.create(), n, [0, 1, 0]);
+    vec3.normalize(b, b);
     const t = vec3.cross(vec3.create(), b, n);
     const q = quat.fromMat3(quat.create(), [t[0], t[1], t[2], b[0], b[1], b[2], n[0], n[1], n[2]]);
     vec4.packSnorm16(dst, q);
