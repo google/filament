@@ -127,7 +127,16 @@ OpenGLDriver::OpenGLDriver(OpenGLPlatform* platform) noexcept
     GLint major = 0, minor = 0;
     glGetIntegerv(GL_MAJOR_VERSION, &major);
     glGetIntegerv(GL_MINOR_VERSION, &minor);
-    glGetIntegerv(GL_MAX_RENDERBUFFER_SIZE, &mMaxRenderBufferSize);
+    glGetIntegerv(GL_MAX_RENDERBUFFER_SIZE, &gets.max_renderbuffer_size);
+    glGetIntegerv(GL_MAX_UNIFORM_BLOCK_SIZE, &gets.max_uniform_block_size);
+    glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &gets.uniform_buffer_offset_alignment);
+
+#ifndef NDEBUG
+    slog.i
+        << "GL_MAX_RENDERBUFFER_SIZE = " << gets.max_renderbuffer_size << io::endl
+        << "GL_MAX_UNIFORM_BLOCK_SIZE = " << gets.max_uniform_block_size << io::endl
+        << "GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT = " << gets.uniform_buffer_offset_alignment << io::endl;
+#endif
 
     if (strstr(renderer, "Adreno")) {
         bugs.clears_hurt_performance = true;
@@ -147,6 +156,7 @@ OpenGLDriver::OpenGLDriver(OpenGLPlatform* platform) noexcept
     } else if (strstr(renderer, "Mozilla")) {
         bugs.disable_invalidate_framebuffer = true;
     }
+
 
     // Figure out if we have the extension we need
     GLint n;
@@ -2590,6 +2600,7 @@ void OpenGLDriver::endFrame(uint32_t frameId) {
 }
 
 void OpenGLDriver::flush(int) {
+    DEBUG_MARKER()
     glFlush();
 }
 
@@ -2598,6 +2609,8 @@ void OpenGLDriver::clearWithRasterPipe(
         bool clearColor, float4 const& linearColor,
         bool clearDepth, double depth,
         bool clearStencil, uint32_t stencil) noexcept {
+    DEBUG_MARKER()
+
     GLbitfield bitmask = 0;
 
     RasterState rs(mRasterState);
@@ -2629,6 +2642,7 @@ void OpenGLDriver::clearWithGeometryPipe(
         bool clearColor, float4 const& linearColor,
         bool clearDepth, double depth,
         bool clearStencil, uint32_t stencil) noexcept {
+    DEBUG_MARKER()
 
     // GLES is required to use this method; see initClearProgram.
     assert(GLES31_HEADERS);

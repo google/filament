@@ -367,7 +367,6 @@ private:
     static constexpr const size_t MAX_BUFFER_BINDINGS = 32;
 
     GLRenderPrimitive mDefaultVAO;
-    GLint mMaxRenderBufferSize = 0;
 
     template <typename T, typename F>
     inline void update_state(T& state, T const& expected, F functor, bool force = false) noexcept {
@@ -488,6 +487,13 @@ private:
 
     mutable tsl::robin_map<uint32_t, GLuint> mSamplerMap;
     mutable std::vector<GLTexture*> mExternalStreams;
+
+    // glGet*() values
+    struct {
+        GLint max_renderbuffer_size = 0;
+        GLint max_uniform_block_size = 0;
+        GLint uniform_buffer_offset_alignment = 256;
+    } gets;
 
     // features supported by this version of GL or GLES
     struct {
