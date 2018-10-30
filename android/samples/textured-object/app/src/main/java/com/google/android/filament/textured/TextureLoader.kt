@@ -72,6 +72,12 @@ fun loadTexture(engine: Engine, resources: Resources, resourceId: Int, type: Tex
     return texture
 }
 
+private fun internalFormat(type: TextureType) = when (type) {
+    TextureType.COLOR  -> Texture.InternalFormat.SRGB8_A8
+    TextureType.NORMAL -> Texture.InternalFormat.RGBA8
+    TextureType.DATA   -> Texture.InternalFormat.RGBA8
+}
+
 // Not required when SKIP_BITMAP_COPY is true
 private fun format(bitmap: Bitmap) = when (bitmap.config) {
     Bitmap.Config.ALPHA_8   -> Texture.Format.ALPHA
@@ -79,13 +85,6 @@ private fun format(bitmap: Bitmap) = when (bitmap.config) {
     Bitmap.Config.ARGB_8888 -> Texture.Format.RGBA
     Bitmap.Config.RGBA_F16  -> Texture.Format.RGBA
     else -> throw IllegalArgumentException("Unknown bitmap configuration")
-}
-
-// Not required when SKIP_BITMAP_COPY is true
-private fun internalFormat(type: TextureType) = when (type) {
-    TextureType.COLOR  -> Texture.InternalFormat.SRGB8_A8
-    TextureType.NORMAL -> Texture.InternalFormat.RGB8
-    TextureType.DATA   -> Texture.InternalFormat.RGBA8
 }
 
 // Not required when SKIP_BITMAP_COPY is true
