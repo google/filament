@@ -63,6 +63,7 @@ static double g_extract_blur = 0.0;
 static utils::Path g_extract_dir;
 
 static size_t g_output_size = 0;
+static size_t g_dfg_lut_output_size = 0;
 
        bool g_quiet = false; // needed outside of this file
 static bool g_debug = false;
@@ -315,6 +316,13 @@ static int handleCommandLineArgments(int argc, char* argv[]) {
                     exit(0);
                 }
                 break;
+            case 'l':
+                g_dfg_lut_output_size = std::stoul(arg);
+                if (!isPOT(g_dfg_lut_output_size)) {
+                    std::cerr << "DFG LUT output size must be a power of two" << std::endl;
+                    exit(0);
+                }
+                break;
             case 'z':
                 g_sh_compute = 1;
                 g_sh_output = true;
@@ -420,7 +428,7 @@ int main(int argc, char* argv[]) {
         if (!g_quiet) {
             std::cout << "Generating IBL DFG LUT..." << std::endl;
         }
-        size_t size = g_output_size ? g_output_size : DFG_LUT_DEFAULT_SIZE;
+        size_t size = g_dfg_lut_output_size ? g_dfg_lut_output_size : DFG_LUT_DEFAULT_SIZE;
         iblLutDfg(g_dfg_filename, size, g_dfg_multiscatter);
         if (num_args < 1) return 0;
     }
