@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml"{{with .Site.LanguageCode}} xml:lang="{{.}}" lang="{{.}}"{{end}}>
+<head>
+  <link href="//gmpg.org/xfn/11" rel="profile">
+  <meta http-equiv="content-type" content="text/html; charset=utf-8">
+  {{ .Hugo.Generator }}
+
+  <!-- Enable responsiveness on mobile devices-->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  {{ if .IsHome -}}
+  <title>{{ .Site.Title }}</title>
+  {{- else -}}
+  <title>{{ .Title }} &middot; {{ .Site.Title }}</title>
+  {{- end }}
+
+  <!-- CSS -->
+  <link type="text/css" rel="stylesheet" href="{{ .Site.BaseURL }}css/print.css" media="print">
+  <link type="text/css" rel="stylesheet" href="{{ .Site.BaseURL }}css/poole.css">
+  <link type="text/css" rel="stylesheet" href="{{ .Site.BaseURL }}css/syntax.css">
+  <link type="text/css" rel="stylesheet" href="{{ .Site.BaseURL }}css/hyde.css">
+  {{ partial "head_fonts.html" . }}
+
+  <!-- Icons -->
+  <link rel="apple-touch-icon-precomposed" sizes="144x144" href="/apple-touch-icon-144-precomposed.png">
+  <link rel="shortcut icon" href="/favicon.png">
+
+  <!-- RSS -->
+  <link href="{{ .RSSLink }}" rel="alternate" type="application/rss+xml" title="{{ .Site.Title }}" />
+
+  {{ partial "hook_head_end.html" . }}
+</head>
