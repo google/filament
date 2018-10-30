@@ -50,13 +50,18 @@ using namespace driver;
 
 // The Android NDK doesn't exposes extensions, fake it with eglGetProcAddress
 namespace glext {
-UTILS_PRIVATE PFNEGLCREATESYNCKHRPROC eglCreateSyncKHR;
-UTILS_PRIVATE PFNEGLDESTROYSYNCKHRPROC eglDestroySyncKHR;
-UTILS_PRIVATE PFNEGLCLIENTWAITSYNCKHRPROC eglClientWaitSyncKHR;
-UTILS_PRIVATE PFNEGLGETNATIVECLIENTBUFFERANDROIDPROC eglGetNativeClientBufferANDROID;
-UTILS_PRIVATE PFNEGLCREATEIMAGEKHRPROC eglCreateImageKHR;
-UTILS_PRIVATE PFNEGLDESTROYIMAGEKHRPROC eglDestroyImageKHR;
-UTILS_PRIVATE PFNEGLPRESENTATIONTIMEANDROIDPROC eglPresentationTimeANDROID;
+UTILS_PRIVATE PFNEGLCREATESYNCKHRPROC eglCreateSyncKHR = {};
+UTILS_PRIVATE PFNEGLDESTROYSYNCKHRPROC eglDestroySyncKHR = {};
+UTILS_PRIVATE PFNEGLCLIENTWAITSYNCKHRPROC eglClientWaitSyncKHR = {};
+UTILS_PRIVATE PFNEGLGETNATIVECLIENTBUFFERANDROIDPROC eglGetNativeClientBufferANDROID = {};
+UTILS_PRIVATE PFNEGLCREATEIMAGEKHRPROC eglCreateImageKHR = {};
+UTILS_PRIVATE PFNEGLDESTROYIMAGEKHRPROC eglDestroyImageKHR = {};
+UTILS_PRIVATE PFNEGLPRESENTATIONTIMEANDROIDPROC eglPresentationTimeANDROID = {};
+UTILS_PRIVATE PFNEGLGETCOMPOSITORTIMINGSUPPORTEDANDROIDPROC eglGetCompositorTimingSupportedANDROID = {};
+UTILS_PRIVATE PFNEGLGETCOMPOSITORTIMINGANDROIDPROC eglGetCompositorTimingANDROID = {};
+UTILS_PRIVATE PFNEGLGETNEXTFRAMEIDANDROIDPROC eglGetNextFrameIdANDROID = {};
+UTILS_PRIVATE PFNEGLGETFRAMETIMESTAMPSUPPORTEDANDROIDPROC eglGetFrameTimestampSupportedANDROID = {};
+UTILS_PRIVATE PFNEGLGETFRAMETIMESTAMPSANDROIDPROC eglGetFrameTimestampsANDROID = {};
 }
 using namespace glext;
 
@@ -143,10 +148,29 @@ Driver* PlatformEGL::createDriver(void* sharedContext) noexcept {
     eglCreateSyncKHR = (PFNEGLCREATESYNCKHRPROC) eglGetProcAddress("eglCreateSyncKHR");
     eglDestroySyncKHR = (PFNEGLDESTROYSYNCKHRPROC) eglGetProcAddress("eglDestroySyncKHR");
     eglClientWaitSyncKHR = (PFNEGLCLIENTWAITSYNCKHRPROC) eglGetProcAddress("eglClientWaitSyncKHR");
+
     eglCreateImageKHR = (PFNEGLCREATEIMAGEKHRPROC) eglGetProcAddress("eglCreateImageKHR");
     eglDestroyImageKHR = (PFNEGLDESTROYIMAGEKHRPROC) eglGetProcAddress("eglDestroyImageKHR");
+
     eglGetNativeClientBufferANDROID = (PFNEGLGETNATIVECLIENTBUFFERANDROIDPROC) eglGetProcAddress("eglGetNativeClientBufferANDROID");
-    eglPresentationTimeANDROID = (PFNEGLPRESENTATIONTIMEANDROIDPROC) eglGetProcAddress("eglPresentationTimeANDROID");
+
+    if (extensions.has("EGL_ANDROID_presentation_time")) {
+        eglPresentationTimeANDROID = (PFNEGLPRESENTATIONTIMEANDROIDPROC)eglGetProcAddress(
+                "eglPresentationTimeANDROID");
+    }
+
+    if (extensions.has("EGL_ANDROID_get_frame_timestamps")) {
+        eglGetCompositorTimingSupportedANDROID = (PFNEGLGETCOMPOSITORTIMINGSUPPORTEDANDROIDPROC)eglGetProcAddress(
+                "eglGetCompositorTimingSupportedANDROID");
+        eglGetCompositorTimingANDROID = (PFNEGLGETCOMPOSITORTIMINGANDROIDPROC)eglGetProcAddress(
+                "eglGetCompositorTimingANDROID");
+        eglGetNextFrameIdANDROID = (PFNEGLGETNEXTFRAMEIDANDROIDPROC)eglGetProcAddress(
+                "eglGetNextFrameIdANDROID");
+        eglGetFrameTimestampSupportedANDROID = (PFNEGLGETFRAMETIMESTAMPSUPPORTEDANDROIDPROC)eglGetProcAddress(
+                "eglGetFrameTimestampSupportedANDROID");
+        eglGetFrameTimestampsANDROID = (PFNEGLGETFRAMETIMESTAMPSANDROIDPROC)eglGetProcAddress(
+                "eglGetFrameTimestampsANDROID");
+    }
 
     EGLint configsCount;
     EGLint configAttribs[] = {
@@ -190,7 +214,7 @@ Driver* PlatformEGL::createDriver(void* sharedContext) noexcept {
 
     if (configsCount == 0) {
       // warn and retry without EGL_RECORDABLE_ANDROID
-      logEglError("eglChooseConfig failed to find opaque config with EGL_RECORDABLE_ANDROID.  Continuing without EGL_RECORDABLE_ANDROID.");
+      logEglError("eglChooseConfig(..., EGL_RECORDABLE_ANDROID) failed. Continuing without it.");
       configAttribs[10] = EGL_RECORDABLE_ANDROID;
       configAttribs[11] = EGL_DONT_CARE;
       if (!eglChooseConfig(mEGLDisplay, configAttribs, &mEGLConfig, 1, &configsCount) ||
@@ -211,7 +235,7 @@ Driver* PlatformEGL::createDriver(void* sharedContext) noexcept {
 
     if (configsCount == 0) {
       // warn and retry without EGL_RECORDABLE_ANDROID
-      logEglError("eglChooseConfig failed to find transparent config with EGL_RECORDABLE_ANDROID.  Continuing without EGL_RECORDABLE_ANDROID.");
+        logEglError("eglChooseConfig(..., EGL_RECORDABLE_ANDROID) failed. Continuing without it.");
       // this is not fatal
       configAttribs[10] = EGL_RECORDABLE_ANDROID;
       configAttribs[11] = EGL_DONT_CARE;
@@ -310,6 +334,11 @@ Platform::SwapChain* PlatformEGL::createSwapChain(
         logEglError("eglSurfaceAttrib(..., EGL_SWAP_BEHAVIOR, EGL_BUFFER_DESTROYED)");
         // this is not fatal
     }
+    // activate this for recording frame timestamps
+    //if (!eglSurfaceAttrib(mEGLDisplay, sur, EGL_TIMESTAMPS_ANDROID, EGL_TRUE)) {
+    //    logEglError("eglSurfaceAttrib(..., EGL_TIMESTAMPS_ANDROID, EGL_TRUE)");
+    //    // this is not fatal
+    //}
     return (SwapChain*)sur;
 }
 
@@ -332,10 +361,12 @@ void PlatformEGL::makeCurrent(Platform::SwapChain* drawSwapChain,
 
 void PlatformEGL::setPresentationTime(int64_t presentationTimeInNanosecond) noexcept {
     if (mCurrentDrawSurface != EGL_NO_SURFACE) {
-      eglPresentationTimeANDROID(
-                        mEGLDisplay,
-                        mCurrentDrawSurface,
-                        presentationTimeInNanosecond);
+        if (eglPresentationTimeANDROID) {
+            eglPresentationTimeANDROID(
+                    mEGLDisplay,
+                    mCurrentDrawSurface,
+                    presentationTimeInNanosecond);
+        }
     }
 }
 
