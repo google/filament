@@ -79,7 +79,7 @@ parquet_srcdir = ROOT_DIR / 'android/samples/textured-object/app/src/main/'
 parquet_iblsrc = ROOT_DIR / 'third_party/environments/venetian_crossroads_2k.hdr'
 parquet_matsrc = parquet_srcdir / 'materials/textured_pbr.mat'
 parquet_filamesh = parquet_srcdir / 'assets/models/shader_ball.filamesh' # based on third_party/shader_ball
-parquet_texturedir = parquet_srcdir / 'res/drawable-v24'
+parquet_texturedir = parquet_srcdir / 'res/drawable-nodpi'
 parquet_textures = [
     parquet_texturedir / 'floor_ao_roughness_metallic.png',
     parquet_texturedir / 'floor_basecolor.png',
