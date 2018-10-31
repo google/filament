@@ -66,6 +66,7 @@ enum TargetBufferFlags : uint8_t {
 enum BufferUsage : uint8_t {
     STATIC,                 //!< content modified once, used many times
     DYNAMIC,                //!< content modified frequently, used many times
+    STREAM,                 //!< content invalidate and modified frequently, used many times
 };
 
 /**

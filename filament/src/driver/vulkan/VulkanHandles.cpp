@@ -323,7 +323,8 @@ VulkanVertexBuffer::VulkanVertexBuffer(VulkanContext& context, VulkanStagePool& 
 }
 
 VulkanUniformBuffer::VulkanUniformBuffer(VulkanContext& context, VulkanStagePool& stagePool,
-        uint32_t numBytes) : HwUniformBuffer(numBytes), mContext(context), mStagePool(stagePool) {
+        uint32_t numBytes, driver::BufferUsage usage)
+        : HwUniformBuffer(numBytes, usage), mContext(context), mStagePool(stagePool) {
     // Create the VkBuffer.
     VkBufferCreateInfo bufferInfo {
         .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,

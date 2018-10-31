@@ -83,6 +83,7 @@ constexpr inline GLenum getBufferUsage(filament::driver::BufferUsage usage) noex
         case driver::STATIC:
             return GL_STATIC_DRAW;
         case driver::DYNAMIC:
+        case driver::STREAM:
             return GL_DYNAMIC_DRAW;
     }
 }

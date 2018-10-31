@@ -904,7 +904,7 @@ void OpenGLDriver::createUniformBuffer(
         Driver::BufferUsage usage) {
     DEBUG_MARKER()
 
-    GLUniformBuffer* ub = construct<GLUniformBuffer>(ubh, size);
+    GLUniformBuffer* ub = construct<GLUniformBuffer>(ubh, size, usage);
     glGenBuffers(1, &ub->gl.ubo);
     bindBuffer(GL_UNIFORM_BUFFER, ub->gl.ubo);
     glBufferData(GL_UNIFORM_BUFFER, size, nullptr, getBufferUsage(usage));
@@ -1943,8 +1943,49 @@ void OpenGLDriver::updateUniformBuffer(Driver::UniformBufferHandle ubh, BufferDe
 
     if (p.size > 0) {
         bindBuffer(GL_UNIFORM_BUFFER, ub->gl.ubo);
-        glBufferSubData(GL_UNIFORM_BUFFER, 0, p.size, p.buffer);
-        CHECK_GL_ERROR(utils::slog.e)
+
+        if (ub->usage == driver::BufferUsage::STREAM) {
+            uint32_t offset = ub->gl.base + ub->gl.size;
+
+            // align the offset to uniform_buffer_offset_alignment (which is guaranteed to be a power-of-two)
+            offset = (offset + (gets.uniform_buffer_offset_alignment - 1)) & ~(gets.uniform_buffer_offset_alignment - 1);
+
+            if (offset + p.size > ub->size) {
+                offset = 0;
+                glBufferData(GL_UNIFORM_BUFFER, ub->size, nullptr, getBufferUsage(ub->usage));
+            }
+            retry:
+            void* vaddr = glMapBufferRange(GL_UNIFORM_BUFFER, offset, p.size,
+                    GL_MAP_WRITE_BIT |
+                    GL_MAP_INVALIDATE_RANGE_BIT |
+                    GL_MAP_UNSYNCHRONIZED_BIT);
+            if (vaddr) {
+                memcpy(vaddr, p.buffer, p.size);
+                if (glUnmapBuffer(GL_UNIFORM_BUFFER) == GL_FALSE) {
+                    // it should be extremely rare, but must be handled
+                    slog.e << "glUnmapBuffer() failed" << io::endl;
+                    goto retry;
+                }
+            } else {
+                // handle mapping error, revert to glBufferSubData()
+                glBufferSubData(GL_UNIFORM_BUFFER, offset, p.size, p.buffer);
+            }
+            ub->gl.base = offset;
+            ub->gl.size = (uint32_t)p.size;
+
+            CHECK_GL_ERROR(utils::slog.e)
+        } else {
+            if (p.size == ub->size) {
+                // it looks like it's generally faster (or not worse) to use glBufferData()
+                glBufferData(GL_UNIFORM_BUFFER, ub->size, p.buffer, getBufferUsage(ub->usage));
+            } else {
+                // glBufferSubData() could be catastrophically inefficient if several are issued
+                // during the same frame. Currently, we're not doing that though.
+                glBufferSubData(GL_UNIFORM_BUFFER, 0, p.size, p.buffer);
+            }
+
+            CHECK_GL_ERROR(utils::slog.e)
+        }
     }
 
     scheduleDestroy(std::move(p));
@@ -2427,8 +2468,8 @@ void OpenGLDriver::viewport(ssize_t left, ssize_t bottom, size_t width, size_t h
 
 void OpenGLDriver::bindUniformBuffer(size_t index, Driver::UniformBufferHandle ubh) {
     DEBUG_MARKER()
-
     GLUniformBuffer* ub = handle_cast<GLUniformBuffer *>(ubh);
+    assert(ub->gl.base == 0);
     bindBufferRange(GL_UNIFORM_BUFFER, GLuint(index), ub->gl.ubo, 0, ub->size);
     CHECK_GL_ERROR(utils::slog.e)
 }
@@ -2438,8 +2479,9 @@ void OpenGLDriver::bindUniformBufferRange(size_t index, Driver::UniformBufferHan
     DEBUG_MARKER()
 
     GLUniformBuffer* ub = handle_cast<GLUniformBuffer*>(ubh);
-    assert(offset + size <= ub->size);
-    bindBufferRange(GL_UNIFORM_BUFFER, GLuint(index), ub->gl.ubo, offset, size);
+    assert(size <= ub->gl.size);
+    assert(ub->gl.base + offset + size <= ub->size);
+    bindBufferRange(GL_UNIFORM_BUFFER, GLuint(index), ub->gl.ubo, ub->gl.base + offset, size);
     CHECK_GL_ERROR(utils::slog.e)
 }
 

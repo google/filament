@@ -99,7 +99,8 @@ struct VulkanIndexBuffer : public HwIndexBuffer {
 };
 
 struct VulkanUniformBuffer : public HwUniformBuffer {
-    VulkanUniformBuffer(VulkanContext& context, VulkanStagePool& stagePool, uint32_t numBytes);
+    VulkanUniformBuffer(VulkanContext& context, VulkanStagePool& stagePool, uint32_t numBytes,
+            driver::BufferUsage usage);
     ~VulkanUniformBuffer();
     void loadFromCpu(const void* cpuData, uint32_t numBytes);
     VkBuffer getGpuBuffer() const { return mGpuBuffer; }
