@@ -166,7 +166,7 @@ void FVertexBuffer::setBufferAt(FEngine& engine, uint8_t bufferIndex,
     }
 
     if (bufferIndex < mBufferCount) {
-        engine.getDriverApi().loadVertexBuffer(mHandle, bufferIndex,
+        engine.getDriverApi().updateVertexBuffer(mHandle, bufferIndex,
                 std::move(buffer), byteOffset, byteSize);
     } else {
         ASSERT_PRECONDITION_NON_FATAL(bufferIndex < mBufferCount,

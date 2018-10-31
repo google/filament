@@ -321,14 +321,14 @@ DECL_DRIVER_API_SYNCHRONOUS_0(bool, isFrameTimeSupported)
  * -----------------------
  */
 
-DECL_DRIVER_API_5(loadVertexBuffer,
+DECL_DRIVER_API_5(updateVertexBuffer,
         Driver::VertexBufferHandle, vbh,
         size_t, index,
         Driver::BufferDescriptor&&, data,
         uint32_t, byteOffset,
         uint32_t, byteSize)
 
-DECL_DRIVER_API_4(loadIndexBuffer,
+DECL_DRIVER_API_4(updateIndexBuffer,
         Driver::IndexBufferHandle, ibh,
         Driver::BufferDescriptor&&, data,
         uint32_t, byteOffset,
@@ -342,7 +342,7 @@ DECL_DRIVER_API_2(updateSamplerBuffer,
         Driver::SamplerBufferHandle, ubh,
         SamplerBuffer&&, samplerBuffer)
 
-DECL_DRIVER_API_7(load2DImage,
+DECL_DRIVER_API_7(update2DImage,
         Driver::TextureHandle, th,
         uint32_t, level,
         uint32_t, xoffset,
@@ -351,7 +351,7 @@ DECL_DRIVER_API_7(load2DImage,
         uint32_t, height,
         Driver::PixelBufferDescriptor&&, data)
 
-DECL_DRIVER_API_4(loadCubeImage,
+DECL_DRIVER_API_4(updateCubeImage,
         Driver::TextureHandle, th,
         uint32_t, level,
         Driver::PixelBufferDescriptor&&, data,
