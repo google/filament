@@ -76,7 +76,7 @@ void FIndexBuffer::setBuffer(FEngine& engine,
         byteSize = uint32_t(buffer.size);
     }
 
-    engine.getDriverApi().loadIndexBuffer(mHandle, std::move(buffer), byteOffset, byteSize);
+    engine.getDriverApi().updateIndexBuffer(mHandle, std::move(buffer), byteOffset, byteSize);
 }
 
 } // namespace details

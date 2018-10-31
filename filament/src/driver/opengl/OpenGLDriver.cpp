@@ -1560,14 +1560,13 @@ void OpenGLDriver::makeCurrent(Driver::SwapChainHandle schDraw, Driver::SwapChai
 // Updating driver objects
 // ------------------------------------------------------------------------------------------------
 
-void OpenGLDriver::loadVertexBuffer(
+void OpenGLDriver::updateVertexBuffer(
         Driver::VertexBufferHandle vbh,
         size_t index,
         BufferDescriptor&& p,
         uint32_t byteOffset,
         uint32_t byteSize) {
     DEBUG_MARKER()
-
 
     GLVertexBuffer* eb = handle_cast<GLVertexBuffer *>(vbh);
 
@@ -1579,11 +1578,10 @@ void OpenGLDriver::loadVertexBuffer(
     CHECK_GL_ERROR(utils::slog.e)
 }
 
-void OpenGLDriver::loadIndexBuffer(
+void OpenGLDriver::updateIndexBuffer(
         Driver::IndexBufferHandle ibh,
         BufferDescriptor&& p, uint32_t byteOffset, uint32_t byteSize) {
     DEBUG_MARKER()
-
 
     GLIndexBuffer* ib = handle_cast<GLIndexBuffer *>(ibh);
     assert(ib->elementSize == 2 || ib->elementSize == 4);
@@ -1663,9 +1661,9 @@ void OpenGLDriver::updateSamplerBuffer(Driver::SamplerBufferHandle sbh,
     *sb->sb = std::move(samplerBuffer);
 }
 
-void OpenGLDriver::load2DImage(Driver::TextureHandle th,
-                               uint32_t level, uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
-                               PixelBufferDescriptor&& data) {
+void OpenGLDriver::update2DImage(Driver::TextureHandle th,
+        uint32_t level, uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
+        PixelBufferDescriptor&& data) {
     DEBUG_MARKER()
 
     GLTexture* t = handle_cast<GLTexture *>(th);
@@ -1678,8 +1676,8 @@ void OpenGLDriver::load2DImage(Driver::TextureHandle th,
     }
 }
 
-void OpenGLDriver::loadCubeImage(Driver::TextureHandle th, uint32_t level,
-                                 PixelBufferDescriptor&& data, FaceOffsets faceOffsets) {
+void OpenGLDriver::updateCubeImage(Driver::TextureHandle th, uint32_t level,
+        PixelBufferDescriptor&& data, FaceOffsets faceOffsets) {
     DEBUG_MARKER()
 
     GLTexture* t = handle_cast<GLTexture *>(th);

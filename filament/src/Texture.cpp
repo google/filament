@@ -143,7 +143,7 @@ void FTexture::setImage(FEngine& engine,
         Texture::PixelBufferDescriptor&& buffer) const noexcept {
     if (!mStream && mTarget != Sampler::SAMPLER_CUBEMAP && level < mLevels) {
         if (buffer.buffer) {
-            engine.getDriverApi().load2DImage(mHandle,
+            engine.getDriverApi().update2DImage(mHandle,
                     uint8_t(level), xoffset, yoffset, width, height, std::move(buffer));
         }
     }
@@ -153,7 +153,7 @@ void FTexture::setImage(FEngine& engine, size_t level,
         Texture::PixelBufferDescriptor&& buffer, const FaceOffsets& faceOffsets) const noexcept {
     if (!mStream && mTarget == Sampler::SAMPLER_CUBEMAP && level < mLevels) {
         if (buffer.buffer) {
-            engine.getDriverApi().loadCubeImage(mHandle, uint8_t(level),
+            engine.getDriverApi().updateCubeImage(mHandle, uint8_t(level),
                     std::move(buffer), faceOffsets);
         }
     }

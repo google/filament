@@ -511,33 +511,33 @@ bool VulkanDriver::isFrameTimeSupported() {
     return false;
 }
 
-void VulkanDriver::loadVertexBuffer(Driver::VertexBufferHandle vbh, size_t index,
+void VulkanDriver::updateVertexBuffer(Driver::VertexBufferHandle vbh, size_t index,
         BufferDescriptor&& p, uint32_t byteOffset, uint32_t byteSize) {
     auto& vb = *handle_cast<VulkanVertexBuffer>(mHandleMap, vbh);
     vb.buffers[index]->loadFromCpu(p.buffer, byteOffset, byteSize);
     scheduleDestroy(std::move(p));
 }
 
-void VulkanDriver::loadIndexBuffer(Driver::IndexBufferHandle ibh, BufferDescriptor&& p,
+void VulkanDriver::updateIndexBuffer(Driver::IndexBufferHandle ibh, BufferDescriptor&& p,
         uint32_t byteOffset, uint32_t byteSize) {
     auto& ib = *handle_cast<VulkanIndexBuffer>(mHandleMap, ibh);
     ib.buffer->loadFromCpu(p.buffer, byteOffset, byteSize);
     scheduleDestroy(std::move(p));
 }
 
-void VulkanDriver::load2DImage(Driver::TextureHandle th,
+void VulkanDriver::update2DImage(Driver::TextureHandle th,
         uint32_t level, uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
         PixelBufferDescriptor&& data) {
     assert(data.type != driver::PixelDataType::COMPRESSED && "Compression not yet supported.");
     assert(xoffset == 0 && yoffset == 0 && "Offsets not yet supported.");
-    handle_cast<VulkanTexture>(mHandleMap, th)->load2DImage(data, width, height, level);
+    handle_cast<VulkanTexture>(mHandleMap, th)->update2DImage(data, width, height, level);
     scheduleDestroy(std::move(data));
 }
 
-void VulkanDriver::loadCubeImage(Driver::TextureHandle th, uint32_t level,
+void VulkanDriver::updateCubeImage(Driver::TextureHandle th, uint32_t level,
         PixelBufferDescriptor&& data, FaceOffsets faceOffsets) {
     assert(data.type != driver::PixelDataType::COMPRESSED && "Compression not yet supported.");
-    handle_cast<VulkanTexture>(mHandleMap, th)->loadCubeImage(data, faceOffsets, level);
+    handle_cast<VulkanTexture>(mHandleMap, th)->updateCubeImage(data, faceOffsets, level);
     scheduleDestroy(std::move(data));
 }
 
@@ -928,10 +928,10 @@ void VulkanDriver::draw(Driver::ProgramHandle ph, Driver::RasterState rasterStat
 void VulkanDriver::debugCommand(const char* methodName) {
     static const std::set<utils::StaticString> OUTSIDE_COMMANDS = {
         "updateUniformBuffer",
-        "loadVertexBuffer",
-        "loadIndexBuffer",
-        "load2DImage",
-        "loadCubeImage",
+        "updateVertexBuffer",
+        "updateIndexBuffer",
+        "update2DImage",
+        "updateCubeImage",
     };
     static const utils::StaticString BEGIN_COMMAND = "beginRenderPass";
     static const utils::StaticString END_COMMAND = "endRenderPass";

@@ -122,7 +122,7 @@ void GPUBuffer::terminate(driver::DriverApi& driverApi) noexcept {
 void GPUBuffer::commitSlow(driver::DriverApi& driverApi, void const* begin, void const* end) noexcept {
     const uintptr_t sizeInBytes = uintptr_t(end) - uintptr_t(begin);
     assert(sizeInBytes <= mRowSizeInBytes * mHeight);
-    driverApi.load2DImage(mTexture, 0, 0, 0, mWidth, mHeight,
+    driverApi.update2DImage(mTexture, 0, 0, 0, mWidth, mHeight,
             { begin, sizeInBytes, mFormat, mType });
 }
 
