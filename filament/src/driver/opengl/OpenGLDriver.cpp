@@ -1597,12 +1597,352 @@ void OpenGLDriver::loadIndexBuffer(
     CHECK_GL_ERROR(utils::slog.e)
 }
 
+void OpenGLDriver::updateUniformBuffer(Driver::UniformBufferHandle ubh, BufferDescriptor&& p) {
+    DEBUG_MARKER()
+
+    GLUniformBuffer* ub = handle_cast<GLUniformBuffer *>(ubh);
+    assert(ub);
+    assert(ub->size >= p.size);
+    assert(ub->gl.ubo);
+
+    if (p.size > 0) {
+        bindBuffer(GL_UNIFORM_BUFFER, ub->gl.ubo);
+
+        if (ub->usage == driver::BufferUsage::STREAM) {
+            uint32_t offset = ub->gl.base + ub->gl.size;
+
+            // align the offset to uniform_buffer_offset_alignment (which is guaranteed to be a power-of-two)
+            offset = (offset + (gets.uniform_buffer_offset_alignment - 1)) & ~(gets.uniform_buffer_offset_alignment - 1);
+
+            if (offset + p.size > ub->size) {
+                offset = 0;
+                glBufferData(GL_UNIFORM_BUFFER, ub->size, nullptr, getBufferUsage(ub->usage));
+            }
+retry:
+            void* vaddr = glMapBufferRange(GL_UNIFORM_BUFFER, offset, p.size,
+                    GL_MAP_WRITE_BIT |
+                    GL_MAP_INVALIDATE_RANGE_BIT |
+                    GL_MAP_UNSYNCHRONIZED_BIT);
+            if (vaddr) {
+                memcpy(vaddr, p.buffer, p.size);
+                if (glUnmapBuffer(GL_UNIFORM_BUFFER) == GL_FALSE) {
+                    // it should be extremely rare, but must be handled
+                    slog.e << "glUnmapBuffer() failed" << io::endl;
+                    goto retry;
+                }
+            } else {
+                // handle mapping error, revert to glBufferSubData()
+                glBufferSubData(GL_UNIFORM_BUFFER, offset, p.size, p.buffer);
+            }
+            ub->gl.base = offset;
+            ub->gl.size = (uint32_t)p.size;
+
+            CHECK_GL_ERROR(utils::slog.e)
+        } else {
+            if (p.size == ub->size) {
+                // it looks like it's generally faster (or not worse) to use glBufferData()
+                glBufferData(GL_UNIFORM_BUFFER, ub->size, p.buffer, getBufferUsage(ub->usage));
+            } else {
+                // glBufferSubData() could be catastrophically inefficient if several are issued
+                // during the same frame. Currently, we're not doing that though.
+                glBufferSubData(GL_UNIFORM_BUFFER, 0, p.size, p.buffer);
+            }
+
+            CHECK_GL_ERROR(utils::slog.e)
+        }
+    }
+
+    scheduleDestroy(std::move(p));
+}
+
 void OpenGLDriver::updateSamplerBuffer(Driver::SamplerBufferHandle sbh,
         SamplerBuffer&& samplerBuffer) {
     DEBUG_MARKER()
 
     GLSamplerBuffer* sb = handle_cast<GLSamplerBuffer *>(sbh);
     *sb->sb = std::move(samplerBuffer);
+}
+
+void OpenGLDriver::load2DImage(Driver::TextureHandle th,
+                               uint32_t level, uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
+                               PixelBufferDescriptor&& data) {
+    DEBUG_MARKER()
+
+    GLTexture* t = handle_cast<GLTexture *>(th);
+    if (data.type == driver::PixelDataType::COMPRESSED) {
+        setCompressedTextureData(t,
+                level, xoffset, yoffset, 0, width, height, 1, std::move(data), nullptr);
+    } else {
+        setTextureData(t,
+                level, xoffset, yoffset, 0, width, height, 1, std::move(data), nullptr);
+    }
+}
+
+void OpenGLDriver::loadCubeImage(Driver::TextureHandle th, uint32_t level,
+                                 PixelBufferDescriptor&& data, FaceOffsets faceOffsets) {
+    DEBUG_MARKER()
+
+    GLTexture* t = handle_cast<GLTexture *>(th);
+    if (data.type == driver::PixelDataType::COMPRESSED) {
+        setCompressedTextureData(t, level, 0, 0, 0, 0, 0, 0, std::move(data), &faceOffsets);
+    } else {
+        setTextureData(t, level, 0, 0, 0, 0, 0, 0, std::move(data), &faceOffsets);
+    }
+}
+
+void OpenGLDriver::generateMipmaps(Driver::TextureHandle th) {
+    DEBUG_MARKER()
+
+    GLTexture* t = handle_cast<GLTexture *>(th);
+    assert(t->gl.target != GL_TEXTURE_2D_MULTISAMPLE);
+    // Note: glGenerateMimap can also fail if the internal format is not both
+    // color-renderable and filterable (i.e.: doesn't work for depth)
+    bindTexture(MAX_TEXTURE_UNITS - 1, t->gl.target, t, t->gl.targetIndex);
+    activeTexture(MAX_TEXTURE_UNITS - 1);
+    glGenerateMipmap(t->gl.target);
+
+    t->gl.baseLevel = 0;
+    t->gl.maxLevel = static_cast<uint8_t>(t->levels - 1);
+
+    glTexParameteri(t->gl.target, GL_TEXTURE_BASE_LEVEL, t->gl.baseLevel);
+    glTexParameteri(t->gl.target, GL_TEXTURE_MAX_LEVEL, t->gl.maxLevel);
+
+    CHECK_GL_ERROR(utils::slog.e)
+}
+
+void OpenGLDriver::setTextureData(GLTexture* t,
+                                  uint32_t level,
+                                  uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,
+                                  uint32_t width, uint32_t height, uint32_t depth,
+                                  PixelBufferDescriptor&& p, FaceOffsets const* faceOffsets) {
+    DEBUG_MARKER()
+
+    assert(xoffset + width <= t->width >> level);
+    assert(yoffset + height <= t->height >> level);
+    assert(zoffset + depth <= t->depth);
+    assert(t->samples <= 1);
+
+    if (UTILS_UNLIKELY(t->gl.target == GL_TEXTURE_EXTERNAL_OES)) {
+        // this is in fact an external texture, this becomes a no-op.
+        return;
+    }
+
+    GLenum glFormat = getFormat(p.format);
+    GLenum glType = getType(p.type);
+
+    pixelStore(GL_UNPACK_ROW_LENGTH, p.stride);
+    pixelStore(GL_UNPACK_ALIGNMENT, p.alignment);
+    pixelStore(GL_UNPACK_SKIP_PIXELS, p.left);
+    pixelStore(GL_UNPACK_SKIP_ROWS, p.top);
+
+    switch (t->target) {
+        case SamplerType::SAMPLER_EXTERNAL:
+            // if we get there, it's because the user is trying to use an external texture
+            // but it's not supported, so instead, we behave like a texture2d.
+            // fallthrough...
+        case SamplerType::SAMPLER_2D:
+            // NOTE: GL_TEXTURE_2D_MULTISAMPLE is not allowed
+            assert(t->gl.target == GL_TEXTURE_2D);
+            bindTexture(MAX_TEXTURE_UNITS - 1, GL_TEXTURE_2D, t);
+            activeTexture(MAX_TEXTURE_UNITS - 1);
+            glTexSubImage2D(GL_TEXTURE_2D,
+                    GLint(level), GLint(xoffset), GLint(yoffset),
+                    width, height, glFormat, glType, p.buffer);
+            break;
+        case SamplerType::SAMPLER_CUBEMAP: {
+            assert(t->gl.target == GL_TEXTURE_CUBE_MAP);
+            bindTexture(MAX_TEXTURE_UNITS - 1, GL_TEXTURE_CUBE_MAP, t);
+            activeTexture(MAX_TEXTURE_UNITS - 1);
+            FaceOffsets const& offsets = *faceOffsets;
+#pragma nounroll
+            for (size_t face = 0; face < 6; face++) {
+                GLenum target = getCubemapTarget(TextureCubemapFace(face));
+                glTexSubImage2D(target, GLint(level), 0, 0,
+                        t->width >> level, t->height >> level, glFormat, glType,
+                        static_cast<uint8_t const*>(p.buffer) + offsets[face]);
+            }
+            break;
+        }
+    }
+
+    // update the base/max LOD so we don't access undefined LOD. this allows the app to
+    // specify levels as they become available.
+
+    if (uint8_t(level) < t->gl.baseLevel) {
+        t->gl.baseLevel = uint8_t(level);
+        glTexParameteri(t->gl.target, GL_TEXTURE_BASE_LEVEL, t->gl.baseLevel);
+    }
+    if (uint8_t(level) > t->gl.maxLevel) {
+        t->gl.maxLevel = uint8_t(level);
+        glTexParameteri(t->gl.target, GL_TEXTURE_MAX_LEVEL, t->gl.maxLevel);
+    }
+
+    scheduleDestroy(std::move(p));
+
+    CHECK_GL_ERROR(utils::slog.e)
+}
+
+void OpenGLDriver::setCompressedTextureData(GLTexture* t,
+                                            uint32_t level,
+                                            uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,
+                                            uint32_t width, uint32_t height, uint32_t depth,
+                                            PixelBufferDescriptor&& p, FaceOffsets const* faceOffsets) {
+    DEBUG_MARKER()
+
+    assert(xoffset + width <= t->width >> level);
+    assert(yoffset + height <= t->height >> level);
+    assert(zoffset + depth <= t->depth);
+    assert(t->samples <= 1);
+
+    if (UTILS_UNLIKELY(t->gl.target == GL_TEXTURE_EXTERNAL_OES)) {
+        // this is in fact an external texture, this becomes a no-op.
+        return;
+    }
+
+    // TODO: maybe assert that the CompressedPixelDataType is the same than the internalFormat
+
+    GLsizei imageSize = GLsizei(p.imageSize);
+
+    //  TODO: maybe assert the size is right (b/c we can compute it ourselves)
+
+    switch (t->target) {
+        case SamplerType::SAMPLER_EXTERNAL:
+            // if we get there, it's because the user is trying to use an external texture
+            // but it's not supported, so instead, we behave like a texture2d.
+            // fallthrough...
+        case SamplerType::SAMPLER_2D:
+            // NOTE: GL_TEXTURE_2D_MULTISAMPLE is not allowed
+            assert(t->gl.target == GL_TEXTURE_2D);
+            bindTexture(MAX_TEXTURE_UNITS-1, GL_TEXTURE_2D, t);
+            activeTexture(MAX_TEXTURE_UNITS - 1);
+            glCompressedTexSubImage2D(GL_TEXTURE_2D,
+                    GLint(level), GLint(xoffset), GLint(yoffset),
+                    width, height, t->gl.internalFormat, imageSize, p.buffer);
+            break;
+        case SamplerType::SAMPLER_CUBEMAP: {
+            assert(faceOffsets);
+            assert(t->gl.target == GL_TEXTURE_CUBE_MAP);
+            bindTexture(MAX_TEXTURE_UNITS - 1, GL_TEXTURE_CUBE_MAP, t);
+            activeTexture(MAX_TEXTURE_UNITS - 1);
+            FaceOffsets const& offsets = *faceOffsets;
+#pragma nounroll
+            for (size_t face = 0; face < 6; face++) {
+                GLenum target = getCubemapTarget(TextureCubemapFace(face));
+                glCompressedTexSubImage2D(target, GLint(level), 0, 0,
+                        t->width >> level, t->height >> level, t->gl.internalFormat,
+                        imageSize, static_cast<uint8_t const*>(p.buffer) + offsets[face]);
+            }
+            break;
+        }
+    }
+
+    // update the base/max LOD so we don't access undefined LOD. this allows the app to
+    // specify levels as they become available.
+
+    if (uint8_t(level) < t->gl.baseLevel) {
+        t->gl.baseLevel = uint8_t(level);
+        glTexParameteri(t->gl.target, GL_TEXTURE_BASE_LEVEL, t->gl.baseLevel);
+    }
+    if (uint8_t(level) > t->gl.maxLevel) {
+        t->gl.maxLevel = uint8_t(level);
+        glTexParameteri(t->gl.target, GL_TEXTURE_MAX_LEVEL, t->gl.maxLevel);
+    }
+
+    scheduleDestroy(std::move(p));
+
+    CHECK_GL_ERROR(utils::slog.e)
+}
+
+void OpenGLDriver::setExternalImage(Driver::TextureHandle th, void* image) {
+    if (ext.OES_EGL_image_external_essl3) {
+        DEBUG_MARKER()
+
+        GLTexture* t = handle_cast<GLTexture*>(th);
+
+        assert(t->target == SamplerType::SAMPLER_EXTERNAL);
+        assert(t->gl.target == GL_TEXTURE_EXTERNAL_OES);
+
+        bindTexture(MAX_TEXTURE_UNITS - 1, GL_TEXTURE_EXTERNAL_OES, t);
+        activeTexture(MAX_TEXTURE_UNITS - 1);
+
+#ifdef GL_OES_EGL_image
+        glEGLImageTargetTexture2DOES(GL_TEXTURE_EXTERNAL_OES, static_cast<GLeglImageOES>(image));
+#endif
+    }
+}
+
+void OpenGLDriver::setExternalStream(Driver::TextureHandle th, Driver::StreamHandle sh) {
+    if (ext.OES_EGL_image_external_essl3) {
+        DEBUG_MARKER()
+
+        GLTexture* t = handle_cast<GLTexture*>(th);
+        if (UTILS_LIKELY(sh)) {
+            GLStream* s = handle_cast<GLStream*>(sh);
+            if (UTILS_LIKELY(!t->hwStream)) {
+                // we're not attached alread
+                attachStream(t, s);
+            } else {
+                if (s->stream != t->hwStream->stream) {
+                    // attaching to a different stream, detach the old one first
+                    replaceStream(t, s);
+                }
+            }
+        } else if (t->hwStream) {
+            // do nothing if we're not attached already
+            detachStream(t);
+        }
+    }
+}
+
+UTILS_NOINLINE
+void OpenGLDriver::attachStream(GLTexture* t, GLStream* hwStream) noexcept {
+    mExternalStreams.push_back(t);
+
+    if (hwStream->isNativeStream()) {
+        mPlatform.attach(hwStream->stream, t->gl.texture_id);
+    } else {
+        assert(t->target == SamplerType::SAMPLER_EXTERNAL);
+        // The texture doesn't need a texture name anymore, get rid of it
+        unbindTexture(t->gl.target, t->gl.texture_id);
+        glDeleteTextures(1, &t->gl.texture_id);
+        t->gl.texture_id = hwStream->user_thread.read[hwStream->user_thread.cur];
+    }
+    t->hwStream = hwStream;
+}
+
+UTILS_NOINLINE
+void OpenGLDriver::detachStream(GLTexture* t) noexcept {
+    auto& streams = mExternalStreams;
+    auto pos = std::find(streams.begin(), streams.end(), t);
+    if (pos != streams.end()) {
+        streams.erase(pos);
+    }
+
+    GLStream* s = static_cast<GLStream*>(t->hwStream);
+    if (s->isNativeStream()) {
+        mPlatform.detach(t->hwStream->stream);
+        // this deletes the texture id
+    }
+    glGenTextures(1, &t->gl.texture_id);
+    t->hwStream = nullptr;
+}
+
+UTILS_NOINLINE
+void OpenGLDriver::replaceStream(GLTexture* t, GLStream* hwStream) noexcept {
+    GLStream* s = static_cast<GLStream*>(t->hwStream);
+    if (s->isNativeStream()) {
+        mPlatform.detach(t->hwStream->stream);
+        // this deletes the texture id
+    }
+
+    if (hwStream->isNativeStream()) {
+        glGenTextures(1, &t->gl.texture_id);
+        mPlatform.attach(hwStream->stream, t->gl.texture_id);
+    } else {
+        assert(t->target == SamplerType::SAMPLER_EXTERNAL);
+        t->gl.texture_id = hwStream->user_thread.read[hwStream->user_thread.cur];
+    }
+    t->hwStream = hwStream;
 }
 
 void OpenGLDriver::beginRenderPass(Driver::RenderTargetHandle rth,
@@ -1931,346 +2271,6 @@ void OpenGLDriver::setViewportScissor(
     update_state(state.window.scissor, scissor, [scissor]() {
         glScissor(scissor.x, scissor.y, scissor.z, scissor.w);
     });
-}
-
-void OpenGLDriver::updateUniformBuffer(Driver::UniformBufferHandle ubh, BufferDescriptor&& p) {
-    DEBUG_MARKER()
-
-    GLUniformBuffer* ub = handle_cast<GLUniformBuffer *>(ubh);
-    assert(ub);
-    assert(ub->size >= p.size);
-    assert(ub->gl.ubo);
-
-    if (p.size > 0) {
-        bindBuffer(GL_UNIFORM_BUFFER, ub->gl.ubo);
-
-        if (ub->usage == driver::BufferUsage::STREAM) {
-            uint32_t offset = ub->gl.base + ub->gl.size;
-
-            // align the offset to uniform_buffer_offset_alignment (which is guaranteed to be a power-of-two)
-            offset = (offset + (gets.uniform_buffer_offset_alignment - 1)) & ~(gets.uniform_buffer_offset_alignment - 1);
-
-            if (offset + p.size > ub->size) {
-                offset = 0;
-                glBufferData(GL_UNIFORM_BUFFER, ub->size, nullptr, getBufferUsage(ub->usage));
-            }
-            retry:
-            void* vaddr = glMapBufferRange(GL_UNIFORM_BUFFER, offset, p.size,
-                    GL_MAP_WRITE_BIT |
-                    GL_MAP_INVALIDATE_RANGE_BIT |
-                    GL_MAP_UNSYNCHRONIZED_BIT);
-            if (vaddr) {
-                memcpy(vaddr, p.buffer, p.size);
-                if (glUnmapBuffer(GL_UNIFORM_BUFFER) == GL_FALSE) {
-                    // it should be extremely rare, but must be handled
-                    slog.e << "glUnmapBuffer() failed" << io::endl;
-                    goto retry;
-                }
-            } else {
-                // handle mapping error, revert to glBufferSubData()
-                glBufferSubData(GL_UNIFORM_BUFFER, offset, p.size, p.buffer);
-            }
-            ub->gl.base = offset;
-            ub->gl.size = (uint32_t)p.size;
-
-            CHECK_GL_ERROR(utils::slog.e)
-        } else {
-            if (p.size == ub->size) {
-                // it looks like it's generally faster (or not worse) to use glBufferData()
-                glBufferData(GL_UNIFORM_BUFFER, ub->size, p.buffer, getBufferUsage(ub->usage));
-            } else {
-                // glBufferSubData() could be catastrophically inefficient if several are issued
-                // during the same frame. Currently, we're not doing that though.
-                glBufferSubData(GL_UNIFORM_BUFFER, 0, p.size, p.buffer);
-            }
-
-            CHECK_GL_ERROR(utils::slog.e)
-        }
-    }
-
-    scheduleDestroy(std::move(p));
-}
-
-void OpenGLDriver::load2DImage(Driver::TextureHandle th,
-        uint32_t level, uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
-        PixelBufferDescriptor&& data) {
-    DEBUG_MARKER()
-
-    GLTexture* t = handle_cast<GLTexture *>(th);
-    if (data.type == driver::PixelDataType::COMPRESSED) {
-        setCompressedTextureData(t,
-                level, xoffset, yoffset, 0, width, height, 1, std::move(data), nullptr);
-    } else {
-        setTextureData(t,
-                level, xoffset, yoffset, 0, width, height, 1, std::move(data), nullptr);
-    }
-}
-
-void OpenGLDriver::loadCubeImage(Driver::TextureHandle th, uint32_t level,
-        PixelBufferDescriptor&& data, FaceOffsets faceOffsets) {
-    DEBUG_MARKER()
-
-    GLTexture* t = handle_cast<GLTexture *>(th);
-    if (data.type == driver::PixelDataType::COMPRESSED) {
-        setCompressedTextureData(t, level, 0, 0, 0, 0, 0, 0, std::move(data), &faceOffsets);
-    } else {
-        setTextureData(t, level, 0, 0, 0, 0, 0, 0, std::move(data), &faceOffsets);
-    }
-}
-
-void OpenGLDriver::generateMipmaps(Driver::TextureHandle th) {
-    DEBUG_MARKER()
-
-    GLTexture* t = handle_cast<GLTexture *>(th);
-    assert(t->gl.target != GL_TEXTURE_2D_MULTISAMPLE);
-    // Note: glGenerateMimap can also fail if the internal format is not both
-    // color-renderable and filterable (i.e.: doesn't work for depth)
-    bindTexture(MAX_TEXTURE_UNITS - 1, t->gl.target, t, t->gl.targetIndex);
-    activeTexture(MAX_TEXTURE_UNITS - 1);
-    glGenerateMipmap(t->gl.target);
-
-    t->gl.baseLevel = 0;
-    t->gl.maxLevel = static_cast<uint8_t>(t->levels - 1);
-
-    glTexParameteri(t->gl.target, GL_TEXTURE_BASE_LEVEL, t->gl.baseLevel);
-    glTexParameteri(t->gl.target, GL_TEXTURE_MAX_LEVEL, t->gl.maxLevel);
-
-    CHECK_GL_ERROR(utils::slog.e)
-}
-
-void OpenGLDriver::setTextureData(GLTexture* t,
-        uint32_t level,
-        uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,
-        uint32_t width, uint32_t height, uint32_t depth,
-        PixelBufferDescriptor&& p, FaceOffsets const* faceOffsets) {
-    DEBUG_MARKER()
-
-    assert(xoffset + width <= t->width >> level);
-    assert(yoffset + height <= t->height >> level);
-    assert(zoffset + depth <= t->depth);
-    assert(t->samples <= 1);
-
-    if (UTILS_UNLIKELY(t->gl.target == GL_TEXTURE_EXTERNAL_OES)) {
-        // this is in fact an external texture, this becomes a no-op.
-        return;
-    }
-
-    GLenum glFormat = getFormat(p.format);
-    GLenum glType = getType(p.type);
-
-    pixelStore(GL_UNPACK_ROW_LENGTH, p.stride);
-    pixelStore(GL_UNPACK_ALIGNMENT, p.alignment);
-    pixelStore(GL_UNPACK_SKIP_PIXELS, p.left);
-    pixelStore(GL_UNPACK_SKIP_ROWS, p.top);
-
-    switch (t->target) {
-        case SamplerType::SAMPLER_EXTERNAL:
-            // if we get there, it's because the user is trying to use an external texture
-            // but it's not supported, so instead, we behave like a texture2d.
-            // fallthrough...
-        case SamplerType::SAMPLER_2D:
-            // NOTE: GL_TEXTURE_2D_MULTISAMPLE is not allowed
-            assert(t->gl.target == GL_TEXTURE_2D);
-            bindTexture(MAX_TEXTURE_UNITS - 1, GL_TEXTURE_2D, t);
-            activeTexture(MAX_TEXTURE_UNITS - 1);
-            glTexSubImage2D(GL_TEXTURE_2D,
-                    GLint(level), GLint(xoffset), GLint(yoffset),
-                    width, height, glFormat, glType, p.buffer);
-            break;
-        case SamplerType::SAMPLER_CUBEMAP: {
-            assert(t->gl.target == GL_TEXTURE_CUBE_MAP);
-            bindTexture(MAX_TEXTURE_UNITS - 1, GL_TEXTURE_CUBE_MAP, t);
-            activeTexture(MAX_TEXTURE_UNITS - 1);
-            FaceOffsets const& offsets = *faceOffsets;
-            #pragma nounroll
-            for (size_t face = 0; face < 6; face++) {
-                GLenum target = getCubemapTarget(TextureCubemapFace(face));
-                glTexSubImage2D(target, GLint(level), 0, 0,
-                        t->width >> level, t->height >> level, glFormat, glType,
-                        static_cast<uint8_t const*>(p.buffer) + offsets[face]);
-            }
-            break;
-        }
-    }
-
-    // update the base/max LOD so we don't access undefined LOD. this allows the app to
-    // specify levels as they become available.
-
-    if (uint8_t(level) < t->gl.baseLevel) {
-        t->gl.baseLevel = uint8_t(level);
-        glTexParameteri(t->gl.target, GL_TEXTURE_BASE_LEVEL, t->gl.baseLevel);
-    }
-    if (uint8_t(level) > t->gl.maxLevel) {
-        t->gl.maxLevel = uint8_t(level);
-        glTexParameteri(t->gl.target, GL_TEXTURE_MAX_LEVEL, t->gl.maxLevel);
-    }
-
-    scheduleDestroy(std::move(p));
-
-    CHECK_GL_ERROR(utils::slog.e)
-}
-
-void OpenGLDriver::setCompressedTextureData(GLTexture* t,
-        uint32_t level,
-        uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,
-        uint32_t width, uint32_t height, uint32_t depth,
-        PixelBufferDescriptor&& p, FaceOffsets const* faceOffsets) {
-    DEBUG_MARKER()
-
-    assert(xoffset + width <= t->width >> level);
-    assert(yoffset + height <= t->height >> level);
-    assert(zoffset + depth <= t->depth);
-    assert(t->samples <= 1);
-
-    if (UTILS_UNLIKELY(t->gl.target == GL_TEXTURE_EXTERNAL_OES)) {
-        // this is in fact an external texture, this becomes a no-op.
-        return;
-    }
-
-    // TODO: maybe assert that the CompressedPixelDataType is the same than the internalFormat
-
-    GLsizei imageSize = GLsizei(p.imageSize);
-
-    //  TODO: maybe assert the size is right (b/c we can compute it ourselves)
-
-    switch (t->target) {
-        case SamplerType::SAMPLER_EXTERNAL:
-            // if we get there, it's because the user is trying to use an external texture
-            // but it's not supported, so instead, we behave like a texture2d.
-            // fallthrough...
-        case SamplerType::SAMPLER_2D:
-            // NOTE: GL_TEXTURE_2D_MULTISAMPLE is not allowed
-            assert(t->gl.target == GL_TEXTURE_2D);
-            bindTexture(MAX_TEXTURE_UNITS-1, GL_TEXTURE_2D, t);
-            activeTexture(MAX_TEXTURE_UNITS - 1);
-            glCompressedTexSubImage2D(GL_TEXTURE_2D,
-                    GLint(level), GLint(xoffset), GLint(yoffset),
-                    width, height, t->gl.internalFormat, imageSize, p.buffer);
-            break;
-        case SamplerType::SAMPLER_CUBEMAP: {
-            assert(faceOffsets);
-            assert(t->gl.target == GL_TEXTURE_CUBE_MAP);
-            bindTexture(MAX_TEXTURE_UNITS - 1, GL_TEXTURE_CUBE_MAP, t);
-            activeTexture(MAX_TEXTURE_UNITS - 1);
-            FaceOffsets const& offsets = *faceOffsets;
-            #pragma nounroll
-            for (size_t face = 0; face < 6; face++) {
-                GLenum target = getCubemapTarget(TextureCubemapFace(face));
-                glCompressedTexSubImage2D(target, GLint(level), 0, 0,
-                        t->width >> level, t->height >> level, t->gl.internalFormat,
-                        imageSize, static_cast<uint8_t const*>(p.buffer) + offsets[face]);
-            }
-            break;
-        }
-    }
-
-    // update the base/max LOD so we don't access undefined LOD. this allows the app to
-    // specify levels as they become available.
-
-    if (uint8_t(level) < t->gl.baseLevel) {
-        t->gl.baseLevel = uint8_t(level);
-        glTexParameteri(t->gl.target, GL_TEXTURE_BASE_LEVEL, t->gl.baseLevel);
-    }
-    if (uint8_t(level) > t->gl.maxLevel) {
-        t->gl.maxLevel = uint8_t(level);
-        glTexParameteri(t->gl.target, GL_TEXTURE_MAX_LEVEL, t->gl.maxLevel);
-    }
-
-    scheduleDestroy(std::move(p));
-
-    CHECK_GL_ERROR(utils::slog.e)
-}
-
-void OpenGLDriver::setExternalImage(Driver::TextureHandle th, void* image) {
-    if (ext.OES_EGL_image_external_essl3) {
-        DEBUG_MARKER()
-
-        GLTexture* t = handle_cast<GLTexture*>(th);
-
-        assert(t->target == SamplerType::SAMPLER_EXTERNAL);
-        assert(t->gl.target == GL_TEXTURE_EXTERNAL_OES);
-
-        bindTexture(MAX_TEXTURE_UNITS - 1, GL_TEXTURE_EXTERNAL_OES, t);
-        activeTexture(MAX_TEXTURE_UNITS - 1);
-
-#ifdef GL_OES_EGL_image
-        glEGLImageTargetTexture2DOES(GL_TEXTURE_EXTERNAL_OES, static_cast<GLeglImageOES>(image));
-#endif
-    }
-}
-
-void OpenGLDriver::setExternalStream(Driver::TextureHandle th, Driver::StreamHandle sh) {
-    if (ext.OES_EGL_image_external_essl3) {
-        DEBUG_MARKER()
-
-        GLTexture* t = handle_cast<GLTexture*>(th);
-        if (UTILS_LIKELY(sh)) {
-            GLStream* s = handle_cast<GLStream*>(sh);
-            if (UTILS_LIKELY(!t->hwStream)) {
-                // we're not attached alread
-                attachStream(t, s);
-            } else {
-                if (s->stream != t->hwStream->stream) {
-                    // attaching to a different stream, detach the old one first
-                    replaceStream(t, s);
-                }
-            }
-        } else if (t->hwStream) {
-            // do nothing if we're not attached already
-            detachStream(t);
-        }
-    }
-}
-
-UTILS_NOINLINE
-void OpenGLDriver::attachStream(GLTexture* t, GLStream* hwStream) noexcept {
-    mExternalStreams.push_back(t);
-
-    if (hwStream->isNativeStream()) {
-        mPlatform.attach(hwStream->stream, t->gl.texture_id);
-    } else {
-        assert(t->target == SamplerType::SAMPLER_EXTERNAL);
-        // The texture doesn't need a texture name anymore, get rid of it
-        unbindTexture(t->gl.target, t->gl.texture_id);
-        glDeleteTextures(1, &t->gl.texture_id);
-        t->gl.texture_id = hwStream->user_thread.read[hwStream->user_thread.cur];
-    }
-    t->hwStream = hwStream;
-}
-
-UTILS_NOINLINE
-void OpenGLDriver::detachStream(GLTexture* t) noexcept {
-    auto& streams = mExternalStreams;
-    auto pos = std::find(streams.begin(), streams.end(), t);
-    if (pos != streams.end()) {
-        streams.erase(pos);
-    }
-
-    GLStream* s = static_cast<GLStream*>(t->hwStream);
-    if (s->isNativeStream()) {
-        mPlatform.detach(t->hwStream->stream);
-        // this deletes the texture id
-    }
-    glGenTextures(1, &t->gl.texture_id);
-    t->hwStream = nullptr;
-}
-
-UTILS_NOINLINE
-void OpenGLDriver::replaceStream(GLTexture* t, GLStream* hwStream) noexcept {
-    GLStream* s = static_cast<GLStream*>(t->hwStream);
-    if (s->isNativeStream()) {
-        mPlatform.detach(t->hwStream->stream);
-        // this deletes the texture id
-    }
-
-    if (hwStream->isNativeStream()) {
-        glGenTextures(1, &t->gl.texture_id);
-        mPlatform.attach(hwStream->stream, t->gl.texture_id);
-    } else {
-        assert(t->target == SamplerType::SAMPLER_EXTERNAL);
-        t->gl.texture_id = hwStream->user_thread.read[hwStream->user_thread.cur];
-    }
-    t->hwStream = hwStream;
 }
 
 /*
