@@ -499,7 +499,7 @@ void FView::prepare(FEngine& engine, driver::DriverApi& driver, ArenaScope& aren
         const size_t count = std::max(size_t(16u), (4u * merged.size() + 2u) / 3u);
         mRenderableUBOSize = uint32_t(count * sizeof(PerRenderableUib));
         driver.destroyUniformBuffer(mRenderableUbh);
-        mRenderableUbh = driver.createUniformBuffer(mRenderableUBOSize, driver::BufferUsage::DYNAMIC);
+        mRenderableUbh = driver.createUniformBuffer(mRenderableUBOSize, driver::BufferUsage::STREAM);
     } else {
         // should we shrink the underlying UBO at some point?
     }

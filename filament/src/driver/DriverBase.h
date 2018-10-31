@@ -99,8 +99,10 @@ struct HwSamplerBuffer : public HwBase {
 };
 
 struct HwUniformBuffer : public HwBase {
-    explicit HwUniformBuffer(uint32_t size) noexcept : size(size) { }
+    explicit HwUniformBuffer(uint32_t size, driver::BufferUsage usage) noexcept
+        : size(size), usage(usage) { }
     uint32_t size;
+    driver::BufferUsage usage;
 };
 
 struct HwTexture : public HwBase {

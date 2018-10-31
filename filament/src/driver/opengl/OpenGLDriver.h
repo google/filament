@@ -150,6 +150,8 @@ public:
         using HwUniformBuffer::HwUniformBuffer;
         struct {
             GLuint ubo = 0;
+            uint32_t base = 0;
+            uint32_t size = 0;
         } gl;
     };
 

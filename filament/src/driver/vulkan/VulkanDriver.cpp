@@ -266,7 +266,7 @@ void VulkanDriver::createSamplerBuffer(Driver::SamplerBufferHandle sbh, size_t c
 
 void VulkanDriver::createUniformBuffer(Driver::UniformBufferHandle ubh, size_t size,
         Driver::BufferUsage usage) {
-    construct_handle<VulkanUniformBuffer>(mHandleMap, ubh, mContext, mStagePool, size);
+    construct_handle<VulkanUniformBuffer>(mHandleMap, ubh, mContext, mStagePool, size, usage);
 }
 
 void VulkanDriver::createRenderPrimitive(Driver::RenderPrimitiveHandle rph, int) {
