@@ -334,6 +334,14 @@ DECL_DRIVER_API_4(loadIndexBuffer,
         uint32_t, byteOffset,
         uint32_t, byteSize)
 
+DECL_DRIVER_API_2(updateUniformBuffer,
+        Driver::UniformBufferHandle, ubh,
+        Driver::BufferDescriptor&&, buffer)
+
+DECL_DRIVER_API_2(updateSamplerBuffer,
+        Driver::SamplerBufferHandle, ubh,
+        SamplerBuffer&&, samplerBuffer)
+
 DECL_DRIVER_API_7(load2DImage,
         Driver::TextureHandle, th,
         uint32_t, level,
@@ -349,6 +357,9 @@ DECL_DRIVER_API_4(loadCubeImage,
         Driver::PixelBufferDescriptor&&, data,
         Driver::FaceOffsets, faceOffsets)
 
+DECL_DRIVER_API_1(generateMipmaps,
+        Driver::TextureHandle, th)
+
 DECL_DRIVER_API_2(setExternalImage,
         Driver::TextureHandle, th,
         void*, image)
@@ -356,17 +367,6 @@ DECL_DRIVER_API_2(setExternalImage,
 DECL_DRIVER_API_2(setExternalStream,
         Driver::TextureHandle, th,
         Driver::StreamHandle, sh)
-
-DECL_DRIVER_API_1(generateMipmaps,
-        Driver::TextureHandle, th)
-
-DECL_DRIVER_API_2(updateUniformBuffer,
-        Driver::UniformBufferHandle, ubh,
-        Driver::BufferDescriptor&&, buffer)
-
-DECL_DRIVER_API_2(updateSamplerBuffer,
-        Driver::SamplerBufferHandle, ubh,
-        SamplerBuffer&&, samplerBuffer)
 
 DECL_DRIVER_API_2(beginRenderPass,
         Driver::RenderTargetHandle, rth,
