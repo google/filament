@@ -222,13 +222,42 @@ a.sidebar-nav-item:focus {
   color: #75b5aa;
 }
 
-/* Blue */
+/* Light Gray */
 .theme-base-0d .sidebar {
-  background-color: #6a9fb5;
+  background-color: #d0d0d0;
 }
 .theme-base-0d .content a,
 .theme-base-0d .related-posts li a:hover {
-  color: #6a9fb5;
+  color: #7080d0;
+}
+
+.theme-base-0d .lead {
+  color: black;
+}
+
+.theme-base-0d .sidebar a {
+  color: #34a;
+}
+
+.content.container {
+  padding-top: 32px;
+}
+
+.lightbulb {
+    max-height: 100%;
+    display: inline;
+}
+
+@media (min-width: 48em) {
+    .lightbulb {
+        margin-left: -10px;
+    }
+}
+
+iframe {
+  border: 0;
+  width: 100%;
+  margin-bottom: 15px;
 }
 
 /* Magenta */
