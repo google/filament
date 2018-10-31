@@ -51,12 +51,9 @@ struct HwVertexBuffer : public HwBase {
     uint32_t vertexCount;                 //   4
     uint8_t bufferCount;                  //   1
     uint8_t attributeCount;               //   1
-    uint8_t padding[2];                   //   2 -> 56 bytes
+    uint8_t padding[2]{};                 //   2 -> 56 bytes
 
-    HwVertexBuffer(
-            uint8_t bufferCount,
-            uint8_t attributeCount,
-            uint32_t elementCount,
+    HwVertexBuffer(uint8_t bufferCount, uint8_t attributeCount, uint32_t elementCount,
             Driver::AttributeArray const& attributes) noexcept
             : attributes(attributes),
               vertexCount(elementCount),
@@ -84,11 +81,11 @@ struct HwRenderPrimitive : public HwBase {
 };
 
 struct HwProgram : public HwBase {
-#if defined(NDEBUG)
-    HwProgram(const utils::CString& name) noexcept { }
-#else
+#ifndef NDEBUG
     explicit HwProgram(const utils::CString& name) noexcept : name(name) { }
     utils::CString name;
+#else
+    explicit HwProgram(const utils::CString&) noexcept { }
 #endif
 };
 
@@ -99,10 +96,6 @@ struct HwSamplerBuffer : public HwBase {
 };
 
 struct HwUniformBuffer : public HwBase {
-    explicit HwUniformBuffer(uint32_t size, driver::BufferUsage usage) noexcept
-        : size(size), usage(usage) { }
-    uint32_t size;
-    driver::BufferUsage usage;
 };
 
 struct HwTexture : public HwBase {
@@ -120,18 +113,17 @@ struct HwTexture : public HwBase {
 };
 
 struct HwRenderTarget : public HwBase {
-    HwRenderTarget() = default;
-    HwRenderTarget(uint32_t w, uint32_t h) : width(w), height(h) {}
+    HwRenderTarget(uint32_t w, uint32_t h) : width(w), height(h) { }
     uint32_t width;
     uint32_t height;
 };
 
 struct HwFence : public HwBase {
-    driver::Platform::Fence* fence;
+    driver::Platform::Fence* fence = nullptr;
 };
 
 struct HwSwapChain : public HwBase {
-    driver::Platform::SwapChain* swapChain;
+    driver::Platform::SwapChain* swapChain = nullptr;
 };
 
 struct HwStream : public HwBase {
