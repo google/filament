@@ -2,9 +2,9 @@
     <div class="container sidebar-sticky">
         <div class="sidebar-about">
             <a href="{{ .Site.BaseURL }}">
-                {{with .Site.Params.mainImage}}
-                <div style="width:100%; height:200px">
-                <img src="{{.}}" style="max-height: 100%; display: inline" />
+                {{with .Site.Params.lightbulb}}
+                <div style="width:100%; height:150px">
+                <img src="{{.}}" class="lightbulb" />
                 </div>
                 {{end}}
             </a>
