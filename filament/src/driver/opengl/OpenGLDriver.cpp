@@ -1985,41 +1985,6 @@ void OpenGLDriver::beginRenderPass(Driver::RenderTargetHandle rth,
         viewport(params.left, params.bottom, params.width, params.height);
     }
 
-
-#ifdef GL_QCOM_tiled_rendering
-    if (ext.QCOM_tiled_rendering) {
-
-        // The QCOM_tiled_rendering extension is only useful if rendering into a surface that
-        // is much larger than the viewport and comes with some downsides:
-        // - it disables the "direct" rendering mode, where the driver is able to bypass the
-        //   tiles altogether for simple geometry and no blending.
-        // - it has a large CPU cost (it's unclear why).
-        // So we're enabling the extension only if the render target is more than 4/3 the size
-        // of the viewport.
-
-        rt->gl.useQCOMTiledRendering = 3 * rt->width * rt->height >= 4 * params.width * params.height;
-        if (rt->gl.useQCOMTiledRendering) {
-            uint32_t preserve = GL_COLOR_BUFFER_BIT0_QCOM |
-                                GL_DEPTH_BUFFER_BIT0_QCOM |
-                                GL_STENCIL_BUFFER_BIT0_QCOM;
-
-            if (discardFlags & TargetBufferFlags::COLOR)
-                preserve &= ~GL_COLOR_BUFFER_BIT0_QCOM;
-
-            if (discardFlags & TargetBufferFlags::DEPTH)
-                preserve &= ~GL_DEPTH_BUFFER_BIT0_QCOM;
-
-            if (discardFlags & TargetBufferFlags::STENCIL)
-                preserve &= ~GL_STENCIL_BUFFER_BIT0_QCOM;
-
-#if DEBUG_MARKER_LEVEL == DEBUG_MARKER_SYSTRACE
-            SYSTRACE_NAME("glStartTilingQCOM");
-#endif
-            glStartTilingQCOM(params.left, params.bottom, params.width, params.height, preserve);
-        }
-    }
-#endif
-
     const bool respectScissor = !(clearFlags & RenderPassParams::IGNORE_SCISSOR);
     const bool clearColor = clearFlags & TargetBufferFlags::COLOR;
     const bool clearDepth = clearFlags & TargetBufferFlags::DEPTH;
@@ -2063,33 +2028,6 @@ void OpenGLDriver::endRenderPass(int) {
 #endif
             glInvalidateFramebuffer(GL_FRAMEBUFFER, attachmentCount, attachments.data());
         }
-
-#ifdef GL_QCOM_tiled_rendering
-        if (ext.QCOM_tiled_rendering) {
-            if (rt->gl.useQCOMTiledRendering) {
-                rt->gl.useQCOMTiledRendering = false;
-                // Note: add GL_MULTISAMPLE_BUFFER_BIT0_QCOM if custom resolves are needed
-                // (should probably be an option)
-                uint32_t preserve = GL_COLOR_BUFFER_BIT0_QCOM |
-                                    GL_DEPTH_BUFFER_BIT0_QCOM |
-                                    GL_STENCIL_BUFFER_BIT0_QCOM;
-
-                if (discardFlags & TargetBufferFlags::COLOR)
-                    preserve &= ~GL_COLOR_BUFFER_BIT0_QCOM;
-
-                if (discardFlags & TargetBufferFlags::DEPTH)
-                    preserve &= ~GL_DEPTH_BUFFER_BIT0_QCOM;
-
-                if (discardFlags & TargetBufferFlags::STENCIL)
-                    preserve &= ~GL_STENCIL_BUFFER_BIT0_QCOM;
-
-#if DEBUG_MARKER_LEVEL == DEBUG_MARKER_SYSTRACE
-                SYSTRACE_NAME("glEndTilingQCOM");
-#endif
-                glEndTilingQCOM(preserve);
-            }
-        }
-#endif
 
         CHECK_GL_ERROR(utils::slog.e)
     }
