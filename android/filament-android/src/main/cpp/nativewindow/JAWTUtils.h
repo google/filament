@@ -17,7 +17,7 @@
 #include <jawt.h>
 
 extern "C" {
-bool acquireDrawingSurface(JNIEnv *env, jobject obj, JAWT_DrawingSurface** ds,
-        JAWT_DrawingSurfaceInfo** dsi);
+bool acquireDrawingSurface(JNIEnv* env, jobject surface, JAWT_DrawingSurface** ods,
+        JAWT_DrawingSurfaceInfo** odsi);
 void releaseDrawingSurface(JAWT_DrawingSurface* ds, JAWT_DrawingSurfaceInfo* dsi);
 }
