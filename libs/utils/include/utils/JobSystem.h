@@ -220,11 +220,16 @@ public:
 
     // Wait on a job.
     // Current thread must be owned by JobSystem's thread pool. See adopt().
-    void wait(Job const* job) noexcept;
+    void wait(Job*& job) noexcept;
 
-    void runAndWait(Job* job) noexcept {
+    void runAndWait(Job*& job) noexcept {
         run(job);
         wait(job);
+    }
+    // This version allow a call such as runAndWait(createJob(...));
+    void runAndWait(Job*&& job) noexcept {
+        Job* p = job;
+        runAndWait(p);
     }
 
     // jobs are normally finished automatically, this can be used to cancel a job

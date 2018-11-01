@@ -347,7 +347,7 @@ void JobSystem::run(JobSystem::Job* job, uint32_t flags) noexcept {
     }
 }
 
-void JobSystem::wait(JobSystem::Job const* job) noexcept {
+void JobSystem::wait(Job*& job) noexcept {
     SYSTRACE_CALL();
 
     assert(job);
@@ -365,6 +365,9 @@ void JobSystem::wait(JobSystem::Job const* job) noexcept {
     // std::memory_order_acquire here is needed to synchronize with JobSystem::finish()
     // this guarantees we "see" all the changes performed by the job that just finished.
     std::atomic_thread_fence(std::memory_order_acquire);
+
+    // after wait() returns, the job has been destroyed
+    job = nullptr;
 }
 
 void JobSystem::adopt() {
