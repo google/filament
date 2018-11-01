@@ -290,10 +290,9 @@ endif()
 set (FILAMENT_SAMPLES_BINARY_DIR ${PROJECT_BINARY_DIR}/samples)
 
 if (WEBGL)
-    add_subdirectory(${FILAMENT}/samples/web)
+    add_subdirectory(web/filamentjs)
 
     add_subdirectory(${LIBRARIES}/filagui)
-    add_subdirectory(${LIBRARIES}/filamentjs)
 
     add_subdirectory(${EXTERNAL}/imgui/tnt)
     add_subdirectory(${EXTERNAL}/stb/tnt)

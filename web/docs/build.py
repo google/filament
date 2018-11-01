@@ -32,7 +32,7 @@ generate a markdown string, which then produces HTML.
 import os
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__)) + '/'
-ROOT_DIR = SCRIPT_DIR + '../../../'
+ROOT_DIR = SCRIPT_DIR + '../../'
 OUTPUT_DIR = ROOT_DIR + 'docs/webgl/'
 ENABLE_EMBEDDED_DEMO = True
 BUILD_DIR = ROOT_DIR + 'out/cmake-webgl-release/'
@@ -442,11 +442,11 @@ def build_reference_markdown(doctree):
 
 def build_reference():
     doctree = gather_docstrings([
-        ROOT_DIR + 'libs/filamentjs/jsbindings.cpp',
-        ROOT_DIR + 'libs/filamentjs/jsenums.cpp',
-        ROOT_DIR + 'libs/filamentjs/utilities.js',
-        ROOT_DIR + 'libs/filamentjs/wasmloader.js',
-        ROOT_DIR + 'libs/filamentjs/extensions.js',
+        ROOT_DIR + 'web/filamentjs/jsbindings.cpp',
+        ROOT_DIR + 'web/filamentjs/jsenums.cpp',
+        ROOT_DIR + 'web/filamentjs/utilities.js',
+        ROOT_DIR + 'web/filamentjs/wasmloader.js',
+        ROOT_DIR + 'web/filamentjs/extensions.js',
     ])
     markdown = build_reference_markdown(doctree)
     rendered = mistletoe.markdown(markdown, PygmentsRenderer)
@@ -487,12 +487,10 @@ if __name__ == "__main__":
         tangle(name)
         generate_demo_html(name)
 
-    copy_src_file(ROOT_DIR + 'libs/filamentjs/docs/main.css')
+    copy_src_file(ROOT_DIR + 'web/docs/main.css')
     copy_src_file(ROOT_DIR + 'third_party/gl-matrix/gl-matrix-min.js')
-    copy_built_file('libs/filamentjs/filament.js')
-    copy_built_file('libs/filamentjs/filament.wasm')
-    copy_built_file('samples/web/public/pillars_2k/pillars_2k_skybox.ktx')
-    copy_built_file('samples/web/public/pillars_2k/pillars_2k_ibl.ktx')
+    copy_built_file('web/filamentjs/filament.js')
+    copy_built_file('web/filamentjs/filament.wasm')
     build_filamat('triangle')
     build_filamat('plastic')
     build_reference()
