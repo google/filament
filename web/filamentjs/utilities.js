@@ -228,22 +228,28 @@ Filament._createTextureFromKtx = function(ktxdata, engine, options) {
   const nlevels = ktx.getNumMipLevels();
   const ktxformat = ktx.info().glInternalFormat;
   const rgbm = !!options['rgbm'];
+  const srgb = !!options['srgb'];
 
   // TODO: this switch is incomplete. Can the KtxBundle class assist?
   var texformat, pbformat, pbtype;
   switch (ktxformat) {
+    case gl.LUMINANCE:
+      texformat = TextureFormat.R8;
+      pbformat = PixelDataFormat.R;
+      pbtype = Filament.PixelDataType.UBYTE;
+      break;
     case gl.RGB:
-      texformat = TextureFormat.RGB8;
+      texformat = srgb ? TextureFormat.SRGB8 : TextureFormat.RGB8;
       pbformat = PixelDataFormat.RGB;
       pbtype = Filament.PixelDataType.UBYTE;
       break;
     case gl.RGBA:
-      texformat = TextureFormat.RGBA8;
+      texformat = srgb ? TextureFormat.SRGB8_A8 : TextureFormat.RGBA8;
       pbformat = rgbm ? PixelDataFormat.RGBM : PixelDataFormat.RGBA;
       pbtype = Filament.PixelDataType.UBYTE;
       break;
     default:
-      console.error('Unsupported KTX format.');
+      console.error('Unsupported KTX format: ' + ktxformat);
       return null;
   }
 
