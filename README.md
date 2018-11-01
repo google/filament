@@ -715,18 +715,18 @@ export EMSDK=<your chosen home for the emscripten SDK>
 ```
 
 The EMSDK variable is required so that the build script can find the Emscripten SDK. The build
-creates a `public` folder that can be used as the root of a simple static web server. Note that you
+creates a `samples` folder that can be used as the root of a simple static web server. Note that you
 cannot open the HTML directly from the filesystem due to CORS. One way to deal with this is to
 use Python to create a quick localhost server:
 
 ```
-cd out/cmake-webgl-release/samples/web/public
+cd out/cmake-webgl-release/web/samples
 python3 -m http.server     # Python 3
 python -m SimpleHTTPServer # Python 2.7
 ```
 
-Each sample app has its own handwritten html file, wasm file, and js loader. Additionally the public
-folder contains meshes, textures, and the tiny `filaweb.js` library.
+Each sample app has its own handwritten html file. Additionally the server folder contains assets
+such as meshes, textures, and materials.
 
 ## Running the native samples
 
