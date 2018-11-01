@@ -442,11 +442,11 @@ def build_reference_markdown(doctree):
 
 def build_reference():
     doctree = gather_docstrings([
-        ROOT_DIR + 'web/filamentjs/jsbindings.cpp',
-        ROOT_DIR + 'web/filamentjs/jsenums.cpp',
-        ROOT_DIR + 'web/filamentjs/utilities.js',
-        ROOT_DIR + 'web/filamentjs/wasmloader.js',
-        ROOT_DIR + 'web/filamentjs/extensions.js',
+        ROOT_DIR + 'web/filament-js/jsbindings.cpp',
+        ROOT_DIR + 'web/filament-js/jsenums.cpp',
+        ROOT_DIR + 'web/filament-js/utilities.js',
+        ROOT_DIR + 'web/filament-js/wasmloader.js',
+        ROOT_DIR + 'web/filament-js/extensions.js',
     ])
     markdown = build_reference_markdown(doctree)
     rendered = mistletoe.markdown(markdown, PygmentsRenderer)
@@ -489,8 +489,8 @@ if __name__ == "__main__":
 
     copy_src_file(ROOT_DIR + 'web/docs/main.css')
     copy_src_file(ROOT_DIR + 'third_party/gl-matrix/gl-matrix-min.js')
-    copy_built_file('web/filamentjs/filament.js')
-    copy_built_file('web/filamentjs/filament.wasm')
+    copy_built_file('web/filament-js/filament.js')
+    copy_built_file('web/filament-js/filament.wasm')
     copy_built_file('web/samples/pillars_2k/pillars_2k_skybox.ktx')
     copy_built_file('web/samples/pillars_2k/pillars_2k_ibl.ktx')
     build_filamat('triangle')
