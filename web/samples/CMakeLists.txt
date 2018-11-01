@@ -158,7 +158,7 @@ add_custom_target(filamentjs_public DEPENDS ${SERVER_DIR}/filament.js ${SERVER_D
 
 set(DEMO_ASSETS)
 
-set(HTML_FILES triangle.html parquet.html)
+set(HTML_FILES triangle.html parquet.html suzanne.html)
 foreach (NAME ${HTML_FILES})
     add_custom_command(
         OUTPUT ${SERVER_DIR}/${NAME}
