@@ -6,7 +6,7 @@ chmod +x ninja
 export PATH="$PWD:$PATH"
 
 # The Kokoro machines have Python 3.6.3 installed. Let's verify that here, and install the
-# distributions required for libs/filamentjs/docs.
+# distributions required for web/docs.
 python3 --version
 pip3 install mistletoe pygments jsbeautifier
 

@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.1)
 
-project(filamentjs)
+project(filament-js)
 
 set(JAVASCRIPT_SRC
   ${CMAKE_CURRENT_SOURCE_DIR}/wasmloader.js
@@ -31,10 +31,10 @@ endforeach()
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${LOPTS}")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${COPTS}")
 
-add_executable(filamentjs ${CPP_SRC})
+add_executable(filament-js ${CPP_SRC})
 
-set_target_properties(filamentjs PROPERTIES
+set_target_properties(filament-js PROPERTIES
     LINK_DEPENDS "${JAVASCRIPT_SRC}"
     OUTPUT_NAME filament)
 
-target_link_libraries(filamentjs PRIVATE filament math utils image filameshio stb)
+target_link_libraries(filament-js PRIVATE filament math utils image filameshio stb)

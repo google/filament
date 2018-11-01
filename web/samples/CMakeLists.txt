@@ -142,13 +142,13 @@ add_custom_target(sample_assets DEPENDS
 
 add_custom_command(
     OUTPUT ${SERVER_DIR}/filament.js
-    DEPENDS filamentjs
-    COMMAND cmake -E copy ${PROJECT_BINARY_DIR}/../filamentjs/filament.js ${SERVER_DIR})
+    DEPENDS filament-js
+    COMMAND cmake -E copy ${PROJECT_BINARY_DIR}/../filament-js/filament.js ${SERVER_DIR})
 
 add_custom_command(
     OUTPUT ${SERVER_DIR}/filament.wasm
-    DEPENDS filamentjs
-    COMMAND cmake -E copy ${PROJECT_BINARY_DIR}/../filamentjs/filament.wasm ${SERVER_DIR})
+    DEPENDS filament-js
+    COMMAND cmake -E copy ${PROJECT_BINARY_DIR}/../filament-js/filament.wasm ${SERVER_DIR})
 
 add_custom_target(filamentjs_public DEPENDS ${SERVER_DIR}/filament.js ${SERVER_DIR}/filament.wasm)
 

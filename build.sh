@@ -219,7 +219,7 @@ function build_webgl_with_target {
         ${BUILD_COMMAND} ${BUILD_TARGETS}
     fi
 
-    if [ -d "web/filamentjs" ]; then
+    if [ -d "web/filament-js" ]; then
         if [ "$ISSUE_ARCHIVES" == "true" ]; then
 
             which -s python3
@@ -237,10 +237,10 @@ function build_webgl_with_target {
             # dist...core WASM module and accompanying JS file.
             # docs...HTML tutorials for the JS API, accompanying demos, and a reference page.
             cd web
-            tar -cvf ../../filament-${LC_TARGET}-web.tar -s /^filamentjs/dist/ \
-                    filamentjs/filament.js
-            tar -rvf ../../filament-${LC_TARGET}-web.tar -s /^filamentjs/dist/ \
-                    filamentjs/filament.wasm
+            tar -cvf ../../filament-${LC_TARGET}-web.tar -s /^filament-js/dist/ \
+                    filament-js/filament.js
+            tar -rvf ../../filament-${LC_TARGET}-web.tar -s /^filament-js/dist/ \
+                    filament-js/filament.wasm
             tar -rvf ../../filament-${LC_TARGET}-web.tar docs
             cd -
             gzip -c ../filament-${LC_TARGET}-web.tar > ../filament-${LC_TARGET}-web.tgz

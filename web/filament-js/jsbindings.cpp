@@ -18,8 +18,8 @@
  * JS BINDINGS DESIGN
  * ------------------
  *
- * The purpose of the filamentjs library is to offer a first-class JavaScript interface to the core
- * Filament classes: Engine, Renderer, Texture, etc.
+ * The purpose of filament-js is to offer a first-class JavaScript interface to the core Filament
+ * classes: Engine, Renderer, Texture, etc.
  *
  * Emscripten offers two ways to binding JavaScript to C++: embind and WebIDL. We chose embind.
  *
