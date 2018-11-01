@@ -30,6 +30,11 @@ namespace filament {
     class MaterialInstance;
 }
 
+/**
+ * This API can be used to read meshes stored in the "filamesh" format produced
+ * by the command line tool of the same name. This file format is documented in
+ * "docs/filamesh.md" in the Filament distribution.
+ */
 class MeshIO {
 public:
     using Callback = void(*)(void* buffer, size_t size, void* user);
@@ -41,15 +46,34 @@ public:
         filament::IndexBuffer* indexBuffer = nullptr;
     };
 
+    /**
+     * Loads a filamesh renderable from the specified file. The material registry
+     * can be used to provide named materials. If a material found in the filamesh
+     * file cannot be matched to a material in the registry, a default material is
+     * used instead. The default material can be overridden by adding a material
+     * named "DefaultMaterial" to the registry.
+     */
     static Mesh loadMeshFromFile(filament::Engine* engine,
             const utils::Path& path,
             const MaterialRegistry& materials);
 
-     static Mesh loadMeshFromBuffer(filament::Engine* engine,
+    /**
+     * Loads a filamesh renderable from an in-memory buffer. The material registry
+     * can be used to provide named materials. If a material found in the filamesh
+     * file cannot be matched to a material in the registry, a default material is
+     * used instead. The default material can be overridden by adding a material
+     * named "DefaultMaterial" to the registry.
+     */
+    static Mesh loadMeshFromBuffer(filament::Engine* engine,
             void const* data, Callback destructor, void* user,
             const MaterialRegistry& materials);
 
-     static Mesh loadMeshFromBuffer(filament::Engine* engine,
+    /**
+     * Loads a filamesh renderable from the specified file. The material registry
+     * can be used to provide named materials. All the primitives of the decoded
+     * renderable are assigned the specified default material.
+     */
+    static Mesh loadMeshFromBuffer(filament::Engine* engine,
             void const* data, Callback destructor, void* user,
             filament::MaterialInstance* defaultMaterial);
 };

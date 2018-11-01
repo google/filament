@@ -23,17 +23,17 @@
 #include<GL/glx.h>
 
 extern "C" {
-void *getNativeWindow(JNIEnv *env, jclass, jobject surface) {
-    void *win = nullptr;
-    JAWT_DrawingSurface *ds = nullptr;
-    JAWT_DrawingSurfaceInfo *dsi = nullptr;
+void *getNativeWindow(JNIEnv* env, jclass, jobject surface) {
+    void* win = nullptr;
+    JAWT_DrawingSurface* ds = nullptr;
+    JAWT_DrawingSurfaceInfo* dsi = nullptr;
 
     if (!acquireDrawingSurface(env, surface, &ds, &dsi)) {
         return win;
     }
-    JAWT_X11DrawingSurfaceInfo *dsi_x11 = (JAWT_X11DrawingSurfaceInfo *) dsi->platformInfo;
+    JAWT_X11DrawingSurfaceInfo* dsi_x11 = (JAWT_X11DrawingSurfaceInfo*) dsi->platformInfo;
 
-    win = (void *) dsi_x11->drawable;
+    win = (void*) dsi_x11->drawable;
     releaseDrawingSurface(ds, dsi);
     return win;
 }
@@ -77,7 +77,7 @@ jlong createNativeSurface(jint width, jint height) {
     XFlush(display);
 
     // Camouflage the pbuffer as a window which are both XID anyway.
-    return (jlong)window;
+    return (jlong) window;
 }
 
 void destroyNativeSurface(jlong surface) {
@@ -88,4 +88,3 @@ void destroyNativeSurface(jlong surface) {
 }
 
 }
-
