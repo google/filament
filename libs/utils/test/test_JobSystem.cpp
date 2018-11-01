@@ -334,7 +334,7 @@ TEST(JobSystem, JobSystemDelegates) {
     EXPECT_EQ(3, functor.result);
 
     size_t a=0,b=0,c=0,d=0,e=0;
-    job = js.createJob(nullptr, [&functor, a,b,c,d,e](JobSystem&, JobSystem::Job*){
+    job = js.createJob(nullptr, [&functor, a,b,c](JobSystem&, JobSystem::Job*){
         functor.result = 4;
     });
     js.runAndWait(job);

@@ -34,14 +34,6 @@
 #include <utils/ThreadLocal.h>
 #include <utils/WorkStealingDequeue.h>
 
-#ifdef WIN32
-// Size is chosen so that we can store at least std::function<> and a job size is a multiple of a
-// cacheline.
-#    define JOB_PADDING (6+8)
-#else
-#    define JOB_PADDING (6)
-#endif
-
 namespace utils {
 
 class JobSystem {
@@ -60,21 +52,24 @@ public:
         Job(const Job&) = delete;
         Job(Job&&) = delete;
 
-        void* getData() { return padding; }
-        void const* getData() const { return padding; }
+        void* getData() { return storage; }
+        void const* getData() const { return storage; }
     private:
         friend class JobSystem;
+
+        // Size is chosen so that we can store at least std::function<>, the alignas() qualifier
+        // ensures we're multiple of a cache-line.
+        static constexpr size_t JOB_STORAGE_SIZE = (sizeof(std::function<void()>) + sizeof(void*) - 1) / sizeof(void*);
+
+        // keep it first, so it's correctly aligned with all architectures
+        // this is were we store the job's data, typically a std::function
+        void* storage[JOB_STORAGE_SIZE];
+
         JobFunc function;
         uint16_t parent;
         std::atomic<uint16_t> runningJobCount = { 0 };
-        // on 64-bits systems, there is an extra 32-bits lost here
-        void* padding[JOB_PADDING];
+        mutable std::atomic<uint16_t> refCount = { 1 };
     };
-
-    static_assert(
-            (sizeof(Job) % CACHELINE_SIZE == 0) ||
-            (CACHELINE_SIZE % sizeof(Job) == 0),
-            "A Job must be N cache-lines long or N Jobs must fit in a cache line exactly.");
 
     explicit JobSystem(size_t threadCount = 0, size_t adoptableThreadsCount = 1) noexcept;
 
@@ -177,7 +172,7 @@ public:
         };
         Job* job = create(parent, &stub::call);
         if (job) {
-            job->padding[0] = data;
+            job->storage[0] = data;
         }
         return job;
     }
@@ -185,7 +180,7 @@ public:
     // creates a job from a KNOWN method pointer w/ object passed by value
     template<typename T, void(T::*method)(JobSystem&, Job*)>
     Job* createJob(Job* parent, T data) noexcept {
-        static_assert(sizeof(data) <= sizeof(Job::padding), "user data too large");
+        static_assert(sizeof(data) <= sizeof(Job::storage), "user data too large");
         struct stub {
             static void call(void* user, JobSystem& js, Job* job) noexcept {
                 T* that = static_cast<T*>(user);
@@ -195,7 +190,7 @@ public:
         };
         Job* job = create(parent, &stub::call);
         if (job) {
-            new(job->padding) T(std::move(data));
+            new(job->storage) T(std::move(data));
         }
         return job;
     }
@@ -203,7 +198,7 @@ public:
     // creates a job from a functor passed by value
     template<typename T>
     Job* createJob(Job* parent, T functor) noexcept {
-        static_assert(sizeof(functor) <= sizeof(Job::padding), "functor too large");
+        static_assert(sizeof(functor) <= sizeof(Job::storage), "functor too large");
         struct stub {
             static void call(void* user, JobSystem& js, Job* job) noexcept {
                 T& that = *static_cast<T*>(user);
@@ -213,7 +208,7 @@ public:
         };
         Job* job = create(parent, &stub::call);
         if (job) {
-            new(job->padding) T(std::move(functor));
+            new(job->storage) T(std::move(functor));
         }
         return job;
     }
@@ -284,10 +279,25 @@ private:
         uint32_t mask;
     };
 
+    class Pin {
+        JobSystem& js;
+        Job const* job;
+    public:
+        Pin(JobSystem& js, Job const* job) noexcept : js(js), job(job) {
+            js.incRef(job);
+        }
+        ~Pin() noexcept {
+            js.decRef(job);
+        }
+    };
+
     static_assert(sizeof(ThreadState) % CACHELINE_SIZE == 0,
             "ThreadState doesn't align to a cache line");
 
     static ThreadState& getState() noexcept;
+
+    void incRef(Job const* job) noexcept;
+    void decRef(Job const* job) noexcept;
 
     Job* create(Job* parent, JobFunc func) noexcept;
     Job* allocateJob() noexcept;

@@ -159,6 +159,18 @@ JobSystem::~JobSystem() {
     }
 }
 
+void JobSystem::incRef(Job const* job) noexcept {
+    job->refCount.fetch_add(1, std::memory_order_relaxed);
+}
+
+void JobSystem::decRef(Job const* job) noexcept {
+    assert(job->refCount.load(std::memory_order_relaxed) > 0);
+    if (job->refCount.fetch_sub(1, std::memory_order_relaxed) == 1) {
+        // this was the last reference, it's safe to destroy the job
+        mJobPool.destroy(job);
+    }
+}
+
 JobSystem* JobSystem::getJobSystem() noexcept {
     ThreadState* const state = sThreadState;
     return state ? state->js : nullptr;
@@ -225,7 +237,7 @@ bool JobSystem::execute(JobSystem::ThreadState& state) noexcept {
 
         if (UTILS_LIKELY(job->function)) {
             SYSTRACE_NAME("job->function");
-            job->function(job->padding, *this, job);
+            job->function(job->storage, *this, job);
         }
         finish(job);
     }
@@ -277,6 +289,8 @@ JobSystem::Job* JobSystem::create(JobSystem::Job* parent, JobFunc func) noexcept
 void JobSystem::finish(Job* job) noexcept {
     SYSTRACE_CALL();
 
+    Pin pin(*this, job);
+
     // terminate this job and notify its parent
     auto& jobPool = mJobPool;
     Job* const storage = mJobStorageBase;
@@ -291,7 +305,7 @@ void JobSystem::finish(Job* job) noexcept {
         }
         Job* const parent = job->parent == 0x7FFF ? nullptr : &storage[job->parent];
         // destroy this job...
-        jobPool.destroy(job);
+        decRef(job);
         // ... and check the parent
         job = parent;
     } while (job);
@@ -307,6 +321,8 @@ void JobSystem::run(JobSystem::Job* job, uint32_t flags) noexcept {
 #if HEAVY_SYSTRACE
     SYSTRACE_CALL();
 #endif
+
+    Pin pin(*this, job);
 
     ThreadState& state(getState());
 
@@ -335,6 +351,9 @@ void JobSystem::wait(JobSystem::Job const* job) noexcept {
     SYSTRACE_CALL();
 
     assert(job);
+
+    Pin pin(*this, job);
+
     ThreadState& state(getState());
     do {
         if (!execute(state)) {
