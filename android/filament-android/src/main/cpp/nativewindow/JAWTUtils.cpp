@@ -25,65 +25,83 @@ static std::vector<int> jawtVersions = {
         0x00010009,
 };
 
-bool acquireDrawingSurface(JNIEnv *env, jobject surface, JAWT_DrawingSurface** ods,
-        JAWT_DrawingSurfaceInfo** odsi) {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wuninitialized"
+bool acquireDrawingSurface(JNIEnv* env, jobject surface,
+        JAWT_DrawingSurface** ods, JAWT_DrawingSurfaceInfo** odsi) {
+
     JAWT awt;
-    JAWT_DrawingSurface *ds = nullptr;
-    JAWT_DrawingSurfaceInfo *dsi = nullptr;
+    JAWT_DrawingSurface* ds = nullptr;
+    JAWT_DrawingSurfaceInfo* dsi = nullptr;
 
     // Search for a valid AWT
-    jboolean foundJawt = false;
-    for(int jawtVersion : jawtVersions) {
+    jboolean foundJawt = JNI_FALSE;
+    for (int jawtVersion : jawtVersions) {
         awt.version = jawtVersion;
         foundJawt = JAWT_GetAWT(env, &awt);
         if (foundJawt == JNI_TRUE) {
+#ifndef NDEBUG
             printf("Found valid AWT v%08x.\n", jawtVersion);
+#endif
             break;
         } else {
+#ifndef NDEBUG
             printf("AWT v%08x not present.\n", jawtVersion);
+#endif
         }
     }
+#ifndef NDEBUG
     fflush(stdout);
+#endif
 
     if (foundJawt == JNI_FALSE) {
         printf("AWT Not found\n");
         fflush(stdout);
-        return 0;
+        return false;
     }
 
     // Get the drawing surface
     ds = awt.GetDrawingSurface(env, surface);
-    if (ds == NULL) {
+    if (ds == nullptr) {
+#ifndef NDEBUG
         printf("NULL drawing surface\n");
         fflush(stdout);
-        return 0;
+#endif
+        return false;
     }
 
     // Lock the drawing
     jint lock = ds->Lock(ds);
     if ((lock & JAWT_LOCK_ERROR) != 0) {
+#ifndef NDEBUG
         printf("Error locking surface\n");
         fflush(stdout);
+#endif
         awt.FreeDrawingSurface(ds);
-        return 0;
+        return false;
     }
 
     // Get the drawing surface info
     dsi = ds->GetDrawingSurfaceInfo(ds);
-    if (dsi == NULL) {
+    if (dsi == nullptr) {
+#ifndef NDEBUG
         printf("Error getting surface info\n");
         fflush(stdout);
+#endif
+
         ds->Unlock(ds);
         awt.FreeDrawingSurface(ds);
-        return 0;
+        return false;
     }
 
     *odsi = dsi;
     *ods = ds;
-    return 1;
-}
 
-void releaseDrawingSurface(JAWT_DrawingSurface *ds, JAWT_DrawingSurfaceInfo *dsi) {
+    return true;
+}
+#pragma clang diagnostic pop
+
+void releaseDrawingSurface(JAWT_DrawingSurface* ds, JAWT_DrawingSurfaceInfo* dsi) {
     // Free the drawing surface info
     ds->FreeDrawingSurfaceInfo(dsi);
     // Unlock the drawing surface

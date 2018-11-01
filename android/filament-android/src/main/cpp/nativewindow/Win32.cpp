@@ -50,18 +50,22 @@ void chooseAndSetPixelFormat(HDC dc) {
     SetPixelFormat(dc, pixelFormat, &pfd);
 }
 
-void *getNativeWindow(JNIEnv *env, jclass, jobject surface) {
-    void *win = nullptr;
-    JAWT_DrawingSurface *ds = nullptr;
-    JAWT_DrawingSurfaceInfo *dsi = nullptr;
+void* getNativeWindow(JNIEnv* env, jclass, jobject surface) {
+    void* win = nullptr;
+    JAWT_DrawingSurface* ds = nullptr;
+    JAWT_DrawingSurfaceInfo* dsi = nullptr;
+
     if (!acquireDrawingSurface(env, surface, &ds, &dsi)) {
         return win;
     }
-    JAWT_Win32DrawingSurfaceInfo *dsi_win32 = (JAWT_Win32DrawingSurfaceInfo *) dsi->platformInfo;
+
+    JAWT_Win32DrawingSurfaceInfo* dsi_win32 = (JAWT_Win32DrawingSurfaceInfo*) dsi->platformInfo;
     HDC dc = dsi_win32->hdc;
     chooseAndSetPixelFormat(dsi_win32->hdc);
-    win = (void *) dsi_win32->hdc;
+
+    win = (void*) dsi_win32->hdc;
     releaseDrawingSurface(ds, dsi);
+
     return win;
 }
 
@@ -77,13 +81,15 @@ jlong createNativeSurface(jint width, jint height) {
 
     HWND window = CreateWindowA("STATIC", "dummy", 0, 0, 0, width, height, NULL, NULL, NULL, NULL);
     SetWindowLong(window, GWL_STYLE, 0); //remove all window styles
+
     HDC dc = GetDC(window);
     chooseAndSetPixelFormat(dc);
-    return (jlong)dc;
+
+    return (jlong) dc;
 }
 
 void destroyNativeSurface(jlong surface) {
-    HDC dc = (HDC)surface;
+    HDC dc = (HDC) surface;
     HWND window = WindowFromDC(dc);
     ReleaseDC(window, dc);
     DestroyWindow(window);
