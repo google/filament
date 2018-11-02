@@ -188,7 +188,7 @@ public:
     FreeList(FreeList&& rhs) noexcept = default;
     FreeList& operator=(FreeList&& rhs) noexcept = default;
 
-    void* get() noexcept {
+    void* pop() noexcept {
         Node* const head = mHead;
         mHead = head ? head->next : nullptr;
         // this could indicate a use after free
@@ -196,7 +196,7 @@ public:
         return head;
     }
 
-    void put(void* p) noexcept {
+    void push(void* p) noexcept {
         assert(p);
         assert(p >= mBegin && p < mEnd);
         // TODO: assert this is one of our pointer (i.e.: it's address match one of ours)
@@ -205,7 +205,7 @@ public:
         mHead = head;
     }
 
-    void *getCurrent() noexcept {
+    void *getFirst() noexcept {
         return mHead;
     }
 
@@ -227,7 +227,7 @@ public:
     AtomicFreeList(const FreeList& rhs) = delete;
     AtomicFreeList& operator=(const FreeList& rhs) = delete;
 
-    void* get() noexcept {
+    void* pop() noexcept {
         Node* head = mHead.load(std::memory_order_relaxed);
         while (head && !mHead.compare_exchange_weak(head, head->next,
                 std::memory_order_release, std::memory_order_relaxed)) {
@@ -235,7 +235,7 @@ public:
         return head;
     }
 
-    void put(void* p) noexcept {
+    void push(void* p) noexcept {
         assert(p);
         Node* head = static_cast<Node*>(p);
         head->next = mHead.load(std::memory_order_relaxed);
@@ -244,7 +244,7 @@ public:
         }
     }
 
-    void* getCurrent() noexcept {
+    void* getFirst() noexcept {
         return mHead.load(std::memory_order_relaxed);
     }
 
@@ -268,11 +268,11 @@ public:
         assert(size <= ELEMENT_SIZE);
         assert(alignment <= ALIGNMENT);
         assert(offset == OFFSET);
-        return mFreeList.get();
+        return mFreeList.pop();
     }
 
     void free(void* p) noexcept {
-        mFreeList.put(p);
+        mFreeList.push(p);
     }
 
     size_t getSize() const noexcept { return ELEMENT_SIZE; }
@@ -296,7 +296,7 @@ public:
     // API specific to this allocator
 
     void *getCurrent() noexcept {
-        return mFreeList.getCurrent();
+        return mFreeList.getFirst();
     }
 
 private:
