@@ -317,7 +317,7 @@ void JobSystem::finish(Job* job) noexcept {
 #endif
 }
 
-void JobSystem::run(JobSystem::Job* job, uint32_t flags) noexcept {
+void JobSystem::run(JobSystem::Job*& job, uint32_t flags) noexcept {
 #if HEAVY_SYSTRACE
     SYSTRACE_CALL();
 #endif
@@ -345,14 +345,22 @@ void JobSystem::run(JobSystem::Job* job, uint32_t flags) noexcept {
             mCondition.notify_one();
         }
     }
+
+    // after run() returns, the job is virtually invalid (it'll die on its own)
+    job = nullptr;
+}
+
+JobSystem::Job* JobSystem::runAndRetain(JobSystem::Job* job, uint32_t flags) noexcept {
+    JobSystem::Job* retained = job;
+    incRef(retained);
+    run(job, flags);
+    return retained;
 }
 
 void JobSystem::wait(Job*& job) noexcept {
     SYSTRACE_CALL();
 
     assert(job);
-
-    Pin pin(*this, job);
 
     ThreadState& state(getState());
     do {
@@ -365,6 +373,8 @@ void JobSystem::wait(Job*& job) noexcept {
     // std::memory_order_acquire here is needed to synchronize with JobSystem::finish()
     // this guarantees we "see" all the changes performed by the job that just finished.
     std::atomic_thread_fence(std::memory_order_acquire);
+
+    decRef(job);
 
     // after wait() returns, the job has been destroyed
     job = nullptr;

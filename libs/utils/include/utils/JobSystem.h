@@ -216,16 +216,26 @@ public:
     // Add job to this thread's execution queue.
     // Current thread must be owned by JobSystem's thread pool. See adopt().
     enum runFlags { DONT_SIGNAL = 0x1 };
-    void run(Job* job, uint32_t flags = 0) noexcept;
+    void run(Job*& job, uint32_t flags = 0) noexcept;
 
-    // Wait on a job.
+    // This version allow a call such as run(createJob(...));
+    void run(Job*&& job, uint32_t flags = 0) noexcept {
+        Job* p = job;
+        run(p);
+    }
+
+    // run a job and keep a reference to it. This job MUST BE waited on with wait().
+    Job* runAndRetain(Job* job, uint32_t flags = 0) noexcept;
+
+    // Wait on a job and destroys it. The job must first be obtained from runAndRetain().
     // Current thread must be owned by JobSystem's thread pool. See adopt().
     void wait(Job*& job) noexcept;
 
     void runAndWait(Job*& job) noexcept {
-        run(job);
+        runAndRetain(job);
         wait(job);
     }
+
     // This version allow a call such as runAndWait(createJob(...));
     void runAndWait(Job*&& job) noexcept {
         Job* p = job;
