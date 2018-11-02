@@ -164,9 +164,25 @@ void JobSystem::incRef(Job const* job) noexcept {
 }
 
 void JobSystem::decRef(Job const* job) noexcept {
-    assert(job->refCount.load(std::memory_order_relaxed) > 0);
-    if (job->refCount.fetch_sub(1, std::memory_order_relaxed) == 1) {
-        // this was the last reference, it's safe to destroy the job
+
+    // We must ensure that accesses from another thread happen before deleting the Job.
+    // This is done by:
+    // - using memory_order_release after dropping a reference (memory accesses to the object
+    //   through that reference must have happened before).
+    // - using memory_order_acquire before deleting the object.
+    // This is similar to Android's RefBase() implementation.
+
+
+    auto c = job->refCount.fetch_sub(1, __has_feature(thread_sanitizer) ?
+            std::memory_order_acq_rel :
+            std::memory_order_release);
+    assert(c > 0);
+    if (c == 1) {
+        // This was the last reference, it's safe to destroy the job.
+#if !__has_feature(thread_sanitizer)
+        // TSAN doesn't handle standalone fences, we use memory_order_acq_rel instead
+        std::atomic_thread_fence(std::memory_order_acquire);
+#endif
         mJobPool.destroy(job);
     }
 }
