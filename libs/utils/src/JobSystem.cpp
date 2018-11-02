@@ -288,10 +288,11 @@ JobSystem::Job* JobSystem::create(JobSystem::Job* parent, JobFunc func) noexcept
     if (UTILS_LIKELY(job)) {
         size_t index = 0x7FFF;
         if (parent) {
-            // can't create a child job of a terminated parent
-            assert(parent->runningJobCount.load(std::memory_order_relaxed) > 0);
+            auto parentjobCount = parent->runningJobCount.fetch_add(1, std::memory_order_relaxed);
 
-            parent->runningJobCount.fetch_add(1, std::memory_order_relaxed);
+            // can't create a child job of a terminated parent
+            assert(parentjobCount > 0);
+
             index = parent - mJobStorageBase;
             assert(index < MAX_JOB_COUNT);
         }
@@ -313,17 +314,23 @@ void JobSystem::finish(Job* job) noexcept {
     do {
         // std::memory_order_release here is needed to synchronize with JobSystem::wait()
         // which needs to "see" all changes that happened before the job terminated.
-        int32_t runningJobCount = job->runningJobCount.fetch_sub(1, std::memory_order_release) - 1;
-        assert(runningJobCount >= 0);
-        if (runningJobCount >= 1) {
+        auto runningJobCount = job->runningJobCount.fetch_sub(1,
+                __has_feature(thread_sanitizer) ?
+                std::memory_order_acq_rel :
+                std::memory_order_release);
+        assert(runningJobCount > 0);
+        if (runningJobCount == 1) {
+#if !__has_feature(thread_sanitizer)
+            std::atomic_thread_fence(std::memory_order_acquire);
+#endif
+            // no more work, destroy this job and check the parent.
+            Job* const parent = job->parent == 0x7FFF ? nullptr : &storage[job->parent];
+            decRef(job);
+            job = parent;
+        } else {
             // there is still work (e.g.: children), we're done.
             break;
         }
-        Job* const parent = job->parent == 0x7FFF ? nullptr : &storage[job->parent];
-        // destroy this job...
-        decRef(job);
-        // ... and check the parent
-        job = parent;
     } while (job);
 
 #if __ARM_ARCH_7A__
@@ -385,10 +392,6 @@ void JobSystem::wait(Job*& job) noexcept {
             UTILS_WAIT_FOR_EVENT();
         }
     } while (!hasJobCompleted(job) && !exitRequested());
-
-    // std::memory_order_acquire here is needed to synchronize with JobSystem::finish()
-    // this guarantees we "see" all the changes performed by the job that just finished.
-    std::atomic_thread_fence(std::memory_order_acquire);
 
     decRef(job);
 
