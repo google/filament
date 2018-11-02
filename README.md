@@ -725,6 +725,12 @@ python3 -m http.server     # Python 3
 python -m SimpleHTTPServer # Python 2.7
 ```
 
+You can then open http://localhost:8000/suzanne.html in your web browser.
+
+Alternatively, if you have node installed you can use the
+[live-server](https://www.npmjs.com/package/live-server) package, which automatically refreshes the
+web page when it detects a change.
+
 Each sample app has its own handwritten html file. Additionally the server folder contains assets
 such as meshes, textures, and materials.
 
