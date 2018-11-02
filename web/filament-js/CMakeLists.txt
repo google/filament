@@ -38,3 +38,13 @@ set_target_properties(filament-js PROPERTIES
     OUTPUT_NAME filament)
 
 target_link_libraries(filament-js PRIVATE filament math utils image filameshio stb)
+
+# Copy package.json into the output folder to allow "npm publish" to gather the two
+# artifacts that it needs (filament.js and filament.wasm)
+
+add_custom_command(
+    OUTPUT ${PROJECT_BINARY_DIR}/package.json
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/package.json
+    COMMAND cmake -E copy ${CMAKE_CURRENT_SOURCE_DIR}/package.json ${PROJECT_BINARY_DIR})
+
+add_custom_target(npm_package ALL DEPENDS ${PROJECT_BINARY_DIR}/package.json)
