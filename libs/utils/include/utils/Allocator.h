@@ -228,9 +228,9 @@ public:
     AtomicFreeList& operator=(const FreeList& rhs) = delete;
 
     void* pop() noexcept {
-        Node* head = mHead.load(std::memory_order_relaxed);
+        Node* head = mHead.load(std::memory_order_acquire);
         while (head && !mHead.compare_exchange_weak(head, head->next,
-                std::memory_order_release, std::memory_order_relaxed)) {
+                std::memory_order_acquire, std::memory_order_acquire)) {
         }
         return head;
     }
