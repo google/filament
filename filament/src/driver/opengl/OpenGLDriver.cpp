@@ -33,6 +33,11 @@
 // change to true to display all GL extensions in the console on start-up
 #define DEBUG_PRINT_EXTENSIONS false
 
+#if defined(__EMSCRIPTEN__)
+#define HAS_MAPBUFFERS 0
+#else
+#define HAS_MAPBUFFERS 1
+#endif
 
 #define DEBUG_MARKER_NONE       0
 #define DEBUG_MARKER_OPENGL     1
@@ -1612,7 +1617,7 @@ void OpenGLDriver::updateBuffer(GLenum target,
     assert(buffer->id);
 
     bindBuffer(target, buffer->id);
-    if (buffer->usage == driver::BufferUsage::STREAM) {
+    if (buffer->usage == driver::BufferUsage::STREAM && HAS_MAPBUFFERS) {
         uint32_t offset = buffer->base + buffer->size;
         offset = (offset + (alignment - 1u)) & ~(alignment - 1u);
 
