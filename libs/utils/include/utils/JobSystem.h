@@ -537,50 +537,11 @@ JobSystem::Job* parallel_for(JobSystem& js, JobSystem::Job* parent,
     return js.createJob<JobData, &JobData::parallelWithJobs>(parent, std::move(jobData));
 }
 
-
-// parallel jobs with start/count indices + sequential 'reduce'
-template<typename S, typename F, typename R>
-JobSystem::Job* parallel_for(JobSystem& js, JobSystem::Job* parent,
-        uint32_t start, uint32_t count, F functor, const S& splitter, R finish) noexcept {
-    using JobData = details::ParallelForJobData<S, F>;
-    JobData jobData(start, count, 0, std::move(functor), splitter);
-    auto wrapper = js.createJob(parent, [jobData, finish](JobSystem& js, JobSystem::Job* p) {
-        auto parallelJob = js.createJob<JobData, &JobData::parallelWithJobs>(p, std::move(jobData));
-        js.runAndWait(parallelJob);
-        finish(js, parallelJob);
-    });
-    return wrapper;
-}
-
-// parallel jobs with pointer/count + sequential 'reduce'
-template<typename T, typename S, typename F, typename R>
-JobSystem::Job* parallel_for(JobSystem& js, JobSystem::Job* parent,
-        T* data, uint32_t count, F functor, const S& splitter, R finish) noexcept {
-    auto user = [data, f = std::move(functor)](uint32_t s, uint32_t c) {
-        f(data + s, c);
-    };
-    using JobData = details::ParallelForJobData<S, decltype(user)>;
-    JobData jobData(0, count, 0, std::move(user), splitter);
-    auto wrapper = js.createJob(parent, [jobData, finish](JobSystem& js, JobSystem::Job* p) {
-        auto parallelJob = js.createJob<JobData, &JobData::parallelWithJobs>(p, std::move(jobData));
-        js.runAndWait(parallelJob);
-        finish(js, parallelJob);
-    });
-    return wrapper;
-}
-
 // parallel jobs on a Slice<>
 template<typename T, typename S, typename F>
 JobSystem::Job* parallel_for(JobSystem& js, JobSystem::Job* parent,
         utils::Slice<T> slice, F functor, const S& splitter) noexcept {
     return parallel_for(js, parent, slice.data(), slice.size(), functor, splitter);
-}
-
-// parallel jobs on a Slice<> + sequential 'reduce'
-template<typename T, typename S, typename F, typename R>
-JobSystem::Job* parallel_for(JobSystem& js, JobSystem::Job* parent,
-        utils::Slice<T> slice, F functor, const S& splitter, R finish) noexcept {
-    return parallel_for(js, parent, slice.data(), slice.size(), functor, splitter, finish);
 }
 
 
