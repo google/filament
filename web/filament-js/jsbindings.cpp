@@ -148,12 +148,23 @@ struct BufferDescriptor {
 };
 
 // Exposed to JavaScript as "driver$PixelBufferDescriptor", but clients will normally use the
-// "Filament.PixelBuffer" helper function (implemented in utilities.js)
+// PixelBuffer or CompressedPixelBuffer helper functions (implemented in utilities.js)
 struct PixelBufferDescriptor {
     PixelBufferDescriptor(val arrdata, driver::PixelDataFormat fmt, driver::PixelDataType dtype) {
         auto byteLength = arrdata["byteLength"].as<uint32_t>();
         this->pbd.reset(new driver::PixelBufferDescriptor(malloc(byteLength), byteLength,
                 fmt, dtype, [](void* buffer, size_t size, void* user) { free(buffer); }));
+    }
+    // Note that embind allows overloading based on number of arguments, but not on types.
+    // It's fine to have two constructors but they can't both have the same number of arguments.
+    PixelBufferDescriptor(val arrdata, driver::CompressedPixelDataType cdtype, int imageSize,
+            bool compressed) {
+        auto byteLength = arrdata["byteLength"].as<uint32_t>();
+        assert(compressed == true);
+        // For compressed cubemaps, the image size should be one-sixth the size of the entire blob.
+        assert(imageSize == byteLength || imageSize == byteLength / 6);
+        this->pbd.reset(new driver::PixelBufferDescriptor(malloc(byteLength), byteLength,
+                cdtype, imageSize, [](void* buffer, size_t size, void* user) { free(buffer); }));
     }
     val getBytes() {
         unsigned char *byteBuffer = (unsigned char*) pbd->buffer;
@@ -191,6 +202,63 @@ DecodedPng decodePng(BufferDescriptor encoded_data, int requested_ncomp) {
     });
     result.decoded_ncomp = requested_ncomp;
     return result;
+}
+
+template<typename T>
+T toFilamentEnum(uint32_t format) {
+    switch (format) {
+        case KtxBundle::RGB_S3TC_DXT1: return T::DXT1_RGB;
+        case KtxBundle::RGBA_S3TC_DXT1: return T::DXT1_RGBA;
+        case KtxBundle::RGBA_S3TC_DXT3: return T::DXT3_RGBA;
+        case KtxBundle::RGBA_S3TC_DXT5: return T::DXT5_RGBA;
+        case KtxBundle::RGBA_ASTC_4x4: return T::RGBA_ASTC_4x4;
+        case KtxBundle::RGBA_ASTC_5x4: return T::RGBA_ASTC_5x4;
+        case KtxBundle::RGBA_ASTC_5x5: return T::RGBA_ASTC_5x5;
+        case KtxBundle::RGBA_ASTC_6x5: return T::RGBA_ASTC_6x5;
+        case KtxBundle::RGBA_ASTC_6x6: return T::RGBA_ASTC_6x6;
+        case KtxBundle::RGBA_ASTC_8x5: return T::RGBA_ASTC_8x5;
+        case KtxBundle::RGBA_ASTC_8x6: return T::RGBA_ASTC_8x6;
+        case KtxBundle::RGBA_ASTC_8x8: return T::RGBA_ASTC_8x8;
+        case KtxBundle::RGBA_ASTC_10x5: return T::RGBA_ASTC_10x5;
+        case KtxBundle::RGBA_ASTC_10x6: return T::RGBA_ASTC_10x6;
+        case KtxBundle::RGBA_ASTC_10x8: return T::RGBA_ASTC_10x8;
+        case KtxBundle::RGBA_ASTC_10x10: return T::RGBA_ASTC_10x10;
+        case KtxBundle::RGBA_ASTC_12x10: return T::RGBA_ASTC_12x10;
+        case KtxBundle::RGBA_ASTC_12x12: return T::RGBA_ASTC_12x12;
+        case KtxBundle::SRGB8_ALPHA8_ASTC_4x4: return T::SRGB8_ALPHA8_ASTC_4x4;
+        case KtxBundle::SRGB8_ALPHA8_ASTC_5x4: return T::SRGB8_ALPHA8_ASTC_5x4;
+        case KtxBundle::SRGB8_ALPHA8_ASTC_5x5: return T::SRGB8_ALPHA8_ASTC_5x5;
+        case KtxBundle::SRGB8_ALPHA8_ASTC_6x5: return T::SRGB8_ALPHA8_ASTC_6x5;
+        case KtxBundle::SRGB8_ALPHA8_ASTC_6x6: return T::SRGB8_ALPHA8_ASTC_6x6;
+        case KtxBundle::SRGB8_ALPHA8_ASTC_8x5: return T::SRGB8_ALPHA8_ASTC_8x5;
+        case KtxBundle::SRGB8_ALPHA8_ASTC_8x6: return T::SRGB8_ALPHA8_ASTC_8x6;
+        case KtxBundle::SRGB8_ALPHA8_ASTC_8x8: return T::SRGB8_ALPHA8_ASTC_8x8;
+        case KtxBundle::SRGB8_ALPHA8_ASTC_10x5: return T::SRGB8_ALPHA8_ASTC_10x5;
+        case KtxBundle::SRGB8_ALPHA8_ASTC_10x6: return T::SRGB8_ALPHA8_ASTC_10x6;
+        case KtxBundle::SRGB8_ALPHA8_ASTC_10x8: return T::SRGB8_ALPHA8_ASTC_10x8;
+        case KtxBundle::SRGB8_ALPHA8_ASTC_10x10: return T::SRGB8_ALPHA8_ASTC_10x10;
+        case KtxBundle::SRGB8_ALPHA8_ASTC_12x10: return T::SRGB8_ALPHA8_ASTC_12x10;
+        case KtxBundle::SRGB8_ALPHA8_ASTC_12x12: return T::SRGB8_ALPHA8_ASTC_12x12;
+        case KtxBundle::R11_EAC: return T::EAC_R11;
+        case KtxBundle::SIGNED_R11_EAC: return T::EAC_R11_SIGNED;
+        case KtxBundle::RG11_EAC: return T::EAC_RG11;
+        case KtxBundle::SIGNED_RG11_EAC: return T::EAC_RG11_SIGNED;
+        case KtxBundle::RGB8_ETC2: return T::ETC2_RGB8;
+        case KtxBundle::SRGB8_ETC2: return T::ETC2_SRGB8;
+        case KtxBundle::RGB8_ALPHA1_ETC2: return T::ETC2_RGB8_A1;
+        case KtxBundle::SRGB8_ALPHA1_ETC: return T::ETC2_SRGB8_A1;
+        case KtxBundle::RGBA8_ETC2_EAC: return T::ETC2_EAC_RGBA8;
+        case KtxBundle::SRGB8_ALPHA8_ETC2_EAC: return T::ETC2_EAC_SRGBA8;
+    }
+    return (T) 0xffff;
+}
+
+filament::driver::CompressedPixelDataType toCompressedPixelDataType(uint32_t format) {
+    return toFilamentEnum<filament::driver::CompressedPixelDataType>(format);
+}
+
+filament::driver::TextureFormat toTextureFormat(uint32_t format) {
+    return toFilamentEnum<filament::driver::TextureFormat>(format);
 }
 
 } // anonymous namespace
@@ -679,6 +747,7 @@ class_<BufferDescriptor>("driver$BufferDescriptor")
 /// Clients should use the [PixelBuffer] helper function to contruct PixelBufferDescriptor objects.
 class_<PixelBufferDescriptor>("driver$PixelBufferDescriptor")
     .constructor<emscripten::val, driver::PixelDataFormat, driver::PixelDataType>()
+    .constructor<emscripten::val, driver::CompressedPixelDataType, int, bool>()
     /// getBytes ::method:: Gets a view of the WASM heap referenced by the buffer descriptor.
     /// ::retval:: Uint8Array
     .function("getBytes", &PixelBufferDescriptor::getBytes);
