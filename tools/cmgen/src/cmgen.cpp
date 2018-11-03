@@ -48,7 +48,7 @@ enum class ShFile {
     SH_NONE, SH_CROSS, SH_TEXT
 };
 
-static const size_t DFG_LUT_DEFAULT_SIZE = 128;
+static const size_t DFG_LUT_DEFAULT_SIZE = 256;
 static const size_t IBL_DEFAULT_SIZE = 256;
 
 enum class OutputType {
@@ -164,6 +164,8 @@ static void printUsage(char* name) {
             "           DDS: 8, 16 (default), 32\n\n"
             "   --size=power-of-two, -s power-of-two\n"
             "       Size of the output cubemaps (base level), 256 by default\n\n"
+            "   --dfg-lut-size=power-of-two, -g power-of-two\n"
+            "       Size of the output DFG LUT, 256 by default\n\n"
             "   --deploy=dir, -x dir\n"
             "       Generate everything needed for deployment into <dir>\n\n"
             "   --extract=dir\n"
@@ -220,6 +222,7 @@ static int handleCommandLineArgments(int argc, char* argv[]) {
             { "format",               required_argument, nullptr, 'f' },
             { "compression",          required_argument, nullptr, 'c' },
             { "size",                 required_argument, nullptr, 's' },
+            { "dfg-lut-size",         required_argument, nullptr, 'g' },
             { "extract",              required_argument, nullptr, 'e' },
             { "extract-blur",         required_argument, nullptr, 'r' },
             { "sh",                   optional_argument, nullptr, 'z' },
@@ -316,7 +319,7 @@ static int handleCommandLineArgments(int argc, char* argv[]) {
                     exit(0);
                 }
                 break;
-            case 'l':
+            case 'g':
                 g_dfg_lut_output_size = std::stoul(arg);
                 if (!isPOT(g_dfg_lut_output_size)) {
                     std::cerr << "DFG LUT output size must be a power of two" << std::endl;
