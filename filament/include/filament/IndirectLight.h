@@ -190,7 +190,7 @@ public:
          * @param engine Reference to the filament::Engine to associate this IndirectLight with.
          *
          * @return pointer to the newly created object or nullptr if exceptions are disabled and
-         *         an error occured.
+         *         an error occurred.
          *
          * @exception utils::PostConditionPanic if a runtime error occured, such as running out of
          *            memory or other resources.
