@@ -48,7 +48,7 @@ enum class ShFile {
     SH_NONE, SH_CROSS, SH_TEXT
 };
 
-static const size_t DFG_LUT_DEFAULT_SIZE = 256;
+static const size_t DFG_LUT_DEFAULT_SIZE = 128;
 static const size_t IBL_DEFAULT_SIZE = 256;
 
 enum class OutputType {
