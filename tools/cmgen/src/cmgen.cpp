@@ -165,7 +165,7 @@ static void printUsage(char* name) {
             "   --size=power-of-two, -s power-of-two\n"
             "       Size of the output cubemaps (base level), 256 by default\n\n"
             "   --dfg-lut-size=power-of-two, -g power-of-two\n"
-            "       Size of the output DFG LUT, 256 by default\n\n"
+            "       Size of the output DFG LUT, 128 by default\n\n"
             "   --deploy=dir, -x dir\n"
             "       Generate everything needed for deployment into <dir>\n\n"
             "   --extract=dir\n"
