@@ -3402,7 +3402,7 @@ To compute the specular color of a material we need to evaluate the complex Fres
 
 We then sum (integrate) and normalize all the samples to obtain $\fNormal$ in the XYZ color space. From there, a simple color space conversion yields a linear sRGB color or a non-linear sRGB color after applying the opto-electronic transfer function (OETF, commonly known as "gamma" curve). Note that for some materials such as gold the final sRGB color might fall out of gamut. We use a simple normalization step as a cheap form of gamut remapping but it would be interesting to consider computing values in a color space with a wider gamut (for instance BT.2020).
 
-To achieve the desired result we used the ICE 1931 2 degrees CMFs, from 360nm to 830nm at 1nm intervals ([source](http://cvrl.ioo.ucl.ac.uk/cmfs.htm)), and the CIE Standard Illuminant D65 relative spectral power distribution, from 300nm to 830nm, at 5nm intervals ([source](https://cielab.xyz/pdf/CIE_sel_colorimetric_tables.xls)).
+To achieve the desired result we used the ICE 1931 2 degrees CMFs, from 360nm to 830nm at 1nm intervals ([source](http://cvrl.ioo.ucl.ac.uk/cmfs.htm)), and the CIE Standard Illuminant D65 relative spectral power distribution, from 300nm to 830nm, at 5nm intervals ([source](http://files.cie.co.at/204.xls)).
 
 Our implementation is presented in listing [specularColorImpl], with the actual data omitted for brevity.
 
