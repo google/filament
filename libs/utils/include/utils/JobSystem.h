@@ -67,7 +67,7 @@ public:
 
         JobFunc function;
         uint16_t parent;
-        std::atomic<uint16_t> runningJobCount = { 0 };
+        std::atomic<uint16_t> runningJobCount = { 1 };
         mutable std::atomic<uint16_t> refCount = { 1 };
     };
 

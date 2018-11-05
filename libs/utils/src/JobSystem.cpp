@@ -160,19 +160,21 @@ JobSystem::~JobSystem() {
 }
 
 void JobSystem::incRef(Job const* job) noexcept {
+    // no action is taken when incrementing the reference counter, therefore we can safely use
+    // memory_order_relaxed.
     job->refCount.fetch_add(1, std::memory_order_relaxed);
 }
 
 void JobSystem::decRef(Job const* job) noexcept {
 
-    // We must ensure that accesses from another thread happen before deleting the Job.
-    // This is done by:
-    // - using memory_order_release after dropping a reference (memory accesses to the object
-    //   through that reference must have happened before).
-    // - using memory_order_acquire before deleting the object.
-    // This is similar to Android's RefBase() implementation.
-
-
+    // We must ensure that accesses from other threads happen before deleting the Job.
+    // To accomplish this, we need to guarantee that no read/writes are reordered after the
+    // dec-ref, because ANOTHER thread could hold the last reference (after us) and that thread
+    // needs to see all accesses completed before it deletes the object. This is done
+    // with memory_order_release.
+    // Similarly, we need to guarantee that no read/write are reordered before the last decref,
+    // or some other thread could see a destroyed object before the ref-count is 0. This is done
+    // with memory_order_acquire.
     auto c = job->refCount.fetch_sub(1, __has_feature(thread_sanitizer) ?
             std::memory_order_acq_rel :
             std::memory_order_release);
@@ -194,6 +196,7 @@ JobSystem* JobSystem::getJobSystem() noexcept {
 
 void JobSystem::requestExit() noexcept {
     mLock.lock();
+    // memory_order_relaxed is okay because we're surrounded by lock/unlock, we just want atomicity here.
     mExitRequested.store(true, std::memory_order_relaxed);
     mLock.unlock();
     mCondition.notify_all();
@@ -205,6 +208,7 @@ void JobSystem::requestExit() noexcept {
 }
 
 inline bool JobSystem::exitRequested() const noexcept {
+    // memory_order_relaxed is safe because the only action taken is to exit the thread
     return mExitRequested.load(std::memory_order_relaxed);
 }
 
@@ -223,6 +227,8 @@ JobSystem::Job* JobSystem::allocateJob() noexcept {
 }
 
 inline JobSystem::ThreadState& JobSystem::getStateToStealFrom(JobSystem::ThreadState& state) noexcept {
+    // memory_order_relaxed is okay because we don't take any action that has data dependency
+    // on this value (in particular mThreadStates, is always initialized properly).
     uint16_t adopted = mAdoptedThreads.load(std::memory_order_relaxed);
     // this is biased, but frankly, we don't care. it's fast.
     uint16_t index = uint16_t(state.rndGen() % (mThreadCount + adopted));
@@ -246,9 +252,8 @@ bool JobSystem::execute(JobSystem::ThreadState& state) noexcept {
     if (job) {
         SYSTRACE_CALL();
 
-        UTILS_UNUSED uint32_t activeJobs = mActiveJobs.fetch_sub(1, std::memory_order_acq_rel);
+        UTILS_UNUSED_IN_RELEASE uint32_t activeJobs = mActiveJobs.fetch_sub(1, std::memory_order_relaxed);
         assert(activeJobs); // whoops, we were already at 0
-        
         SYSTRACE_VALUE32("JobSystem::activeJobs", activeJobs - 1);
 
         if (UTILS_LIKELY(job->function)) {
@@ -288,6 +293,9 @@ JobSystem::Job* JobSystem::create(JobSystem::Job* parent, JobFunc func) noexcept
     if (UTILS_LIKELY(job)) {
         size_t index = 0x7FFF;
         if (parent) {
+            // add a reference to the parent to make sure it can't be terminated.
+            // memory_order_relaxed is safe because no action is taken at this point
+            // (the job is not started yet).
             auto parentjobCount = parent->runningJobCount.fetch_add(1, std::memory_order_relaxed);
 
             // can't create a child job of a terminated parent
@@ -298,7 +306,6 @@ JobSystem::Job* JobSystem::create(JobSystem::Job* parent, JobFunc func) noexcept
         }
         job->function = func;
         job->parent = uint16_t(index);
-        job->runningJobCount.store(1, std::memory_order_relaxed);
     }
     return job;
 }
@@ -409,6 +416,7 @@ void JobSystem::adopt() {
         return;
     }
 
+    // memory_order_relaxed is safe because we don't take action on this value.
     uint16_t adopted = mAdoptedThreads.fetch_add(1, std::memory_order_relaxed);
     size_t index = mThreadCount + adopted;
 
