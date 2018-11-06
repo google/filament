@@ -169,6 +169,7 @@ TEST(AllocatorTest, CppAllocator) {
 
     using CppArena = Arena<PoolAllocator<8, 8, sizeof(void*)>, LockingPolicy::NoLock, Tracking>;
     static int count = 0;
+    count = 0;
     struct Foo {
         ~Foo() {
             ++count;
