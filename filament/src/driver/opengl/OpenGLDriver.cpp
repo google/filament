@@ -1617,48 +1617,58 @@ void OpenGLDriver::updateBuffer(GLenum target,
     assert(buffer->id);
 
     bindBuffer(target, buffer->id);
-    if (buffer->usage == driver::BufferUsage::STREAM && HAS_MAPBUFFERS) {
-        uint32_t offset = buffer->base + buffer->size;
-        offset = (offset + (alignment - 1u)) & ~(alignment - 1u);
+    if (buffer->usage == driver::BufferUsage::STREAM) {
 
-        if (offset + p.size > buffer->capacity) {
-            // if we've reached the end of the buffer, we orphan it and allocate a new one.
-            // this is assuming the driver actually does that as opposed to stalling. This is
-            // the case for Mali and Adreno -- we could use fences instead.
-            offset = 0;
-            glBufferData(target, buffer->capacity, nullptr, getBufferUsage(buffer->usage));
-        }
-retry:
-        void* vaddr = glMapBufferRange(target, offset, p.size,
-                GL_MAP_WRITE_BIT |
-                GL_MAP_INVALIDATE_RANGE_BIT |
-                GL_MAP_UNSYNCHRONIZED_BIT);
-        if (vaddr) {
-            memcpy(vaddr, p.buffer, p.size);
-            if (glUnmapBuffer(target) == GL_FALSE) {
-                // it should be extremely rare, but must be handled
-                goto retry;
-            }
-        } else {
-            // handle mapping error, revert to glBufferSubData()
-            glBufferSubData(target, offset, p.size, p.buffer);
-        }
-        buffer->base = offset;
         buffer->size = (uint32_t)p.size;
 
-        CHECK_GL_ERROR(utils::slog.e)
-    } else {
-        if (p.size == buffer->capacity) {
-            // it looks like it's generally faster (or not worse) to use glBufferData()
-            glBufferData(target, buffer->capacity, p.buffer, getBufferUsage(buffer->usage));
-        } else {
-            // glBufferSubData() could be catastrophically inefficient if several are issued
-            // during the same frame. Currently, we're not doing that though.
-            glBufferSubData(target, 0, p.size, p.buffer);
-        }
+        // If MapBufferRange is supported, then attempt to use that instead of BufferSubData, which
+        // can be quite inefficient on some platforms. Note that WebGL does not support
+        // MapBufferRange, but we still allow STREAM semantics for the web platform.
+        if (HAS_MAPBUFFERS) {
+            uint32_t offset = buffer->base + buffer->size;
+            offset = (offset + (alignment - 1u)) & ~(alignment - 1u);
 
-        CHECK_GL_ERROR(utils::slog.e)
+            if (offset + p.size > buffer->capacity) {
+                // if we've reached the end of the buffer, we orphan it and allocate a new one.
+                // this is assuming the driver actually does that as opposed to stalling. This is
+                // the case for Mali and Adreno -- we could use fences instead.
+                offset = 0;
+                glBufferData(target, buffer->capacity, nullptr, getBufferUsage(buffer->usage));
+            }
+    retry:
+            void* vaddr = glMapBufferRange(target, offset, p.size,
+                    GL_MAP_WRITE_BIT |
+                    GL_MAP_INVALIDATE_RANGE_BIT |
+                    GL_MAP_UNSYNCHRONIZED_BIT);
+            if (vaddr) {
+                memcpy(vaddr, p.buffer, p.size);
+                if (glUnmapBuffer(target) == GL_FALSE) {
+                    // According to the spec, UnmapBuffer can return FALSE in rare conditions (e.g.
+                    // during a screen mode change). Note that is not a GL error, and we can handle
+                    // it by simply making a second attempt.
+                    goto retry;
+                }
+            } else {
+                // handle mapping error, revert to glBufferSubData()
+                glBufferSubData(target, offset, p.size, p.buffer);
+            }
+            buffer->base = offset;
+
+            CHECK_GL_ERROR(utils::slog.e)
+            return;
+        }
     }
+
+    if (p.size == buffer->capacity) {
+        // it looks like it's generally faster (or not worse) to use glBufferData()
+        glBufferData(target, buffer->capacity, p.buffer, getBufferUsage(buffer->usage));
+    } else {
+        // glBufferSubData() could be catastrophically inefficient if several are issued
+        // during the same frame. Currently, we're not doing that though.
+        glBufferSubData(target, 0, p.size, p.buffer);
+    }
+
+    CHECK_GL_ERROR(utils::slog.e)
 }
 
 
@@ -2424,6 +2434,7 @@ void OpenGLDriver::bindUniformBufferRange(size_t index, Driver::UniformBufferHan
     DEBUG_MARKER()
 
     GLUniformBuffer* ub = handle_cast<GLUniformBuffer*>(ubh);
+    // TODO: Is this assert really needed? Note that size is only populated for STREAM buffers.
     assert(size <= ub->gl.ubo.size);
     assert(ub->gl.ubo.base + offset + size <= ub->gl.ubo.capacity);
     bindBufferRange(GL_UNIFORM_BUFFER, GLuint(index), ub->gl.ubo.id, ub->gl.ubo.base + offset, size);
