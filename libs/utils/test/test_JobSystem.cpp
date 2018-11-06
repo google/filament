@@ -228,12 +228,12 @@ TEST(JobSystem, JobSystemSequentialChildren) {
         int i, j;
         void func(JobSystem& js, JobSystem::Job* job) {
             if (c < 43) {
-                JobSystem::Job* p = js.createJob<User, &User::func>(job, User{ c + 1 });
+                User u{ c + 1 };
+                JobSystem::Job* p = js.createJob<User, &User::func>(job, &u);
                 js.runAndWait(p);
 
-                User* u = (User *)p->getData();
-                i = u->i + u->j;
-                j = u->i;
+                i = u.i + u.j;
+                j = u.i;
             } else {
                 i = 0;
                 j = 1;
@@ -241,12 +241,13 @@ TEST(JobSystem, JobSystemSequentialChildren) {
         }
     };
 
-    JobSystem::Job* root = js.createJob<User, &User::func>(nullptr, User{ 0 });
+    User u{0};
+
+    JobSystem::Job* root = js.createJob<User, &User::func>(nullptr, &u);
     js.runAndWait(root);
-    User* u = (User *)root->getData();
 
     // 43rd fibonacci number
-    EXPECT_EQ(433494437, u->i);
+    EXPECT_EQ(433494437, u.i);
 
     js.emancipate();
 }
@@ -334,7 +335,7 @@ TEST(JobSystem, JobSystemDelegates) {
     EXPECT_EQ(3, functor.result);
 
     size_t a=0,b=0,c=0,d=0,e=0;
-    job = js.createJob(nullptr, [&functor, a,b,c,d,e](JobSystem&, JobSystem::Job*){
+    job = js.createJob(nullptr, [&functor, a,b,c](JobSystem&, JobSystem::Job*){
         functor.result = 4;
     });
     js.runAndWait(job);
