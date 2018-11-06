@@ -232,7 +232,7 @@ public:
         HeadPtr currentHead = mHead.load();
         while (currentHead.offset >= 0) {
             Node* const next = storage[currentHead.offset].next.load(std::memory_order_relaxed);
-            assert(next >= storage);
+            assert(!next || next >= storage);
             newHead = { next ? int32_t(next - storage) : -1, currentHead.tag + 1 };
             if (mHead.compare_exchange_weak(currentHead, newHead)) {
                 break;
