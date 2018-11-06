@@ -159,6 +159,36 @@ JobSystem::~JobSystem() {
     }
 }
 
+void JobSystem::incRef(Job const* job) noexcept {
+    // no action is taken when incrementing the reference counter, therefore we can safely use
+    // memory_order_relaxed.
+    job->refCount.fetch_add(1, std::memory_order_relaxed);
+}
+
+void JobSystem::decRef(Job const* job) noexcept {
+
+    // We must ensure that accesses from other threads happen before deleting the Job.
+    // To accomplish this, we need to guarantee that no read/writes are reordered after the
+    // dec-ref, because ANOTHER thread could hold the last reference (after us) and that thread
+    // needs to see all accesses completed before it deletes the object. This is done
+    // with memory_order_release.
+    // Similarly, we need to guarantee that no read/write are reordered before the last decref,
+    // or some other thread could see a destroyed object before the ref-count is 0. This is done
+    // with memory_order_acquire.
+    auto c = job->refCount.fetch_sub(1, __has_feature(thread_sanitizer) ?
+            std::memory_order_acq_rel :
+            std::memory_order_release);
+    assert(c > 0);
+    if (c == 1) {
+        // This was the last reference, it's safe to destroy the job.
+#if !__has_feature(thread_sanitizer)
+        // TSAN doesn't handle standalone fences, we use memory_order_acq_rel instead
+        std::atomic_thread_fence(std::memory_order_acquire);
+#endif
+        mJobPool.destroy(job);
+    }
+}
+
 JobSystem* JobSystem::getJobSystem() noexcept {
     ThreadState* const state = sThreadState;
     return state ? state->js : nullptr;
@@ -166,6 +196,7 @@ JobSystem* JobSystem::getJobSystem() noexcept {
 
 void JobSystem::requestExit() noexcept {
     mLock.lock();
+    // memory_order_relaxed is okay because we're surrounded by lock/unlock, we just want atomicity here.
     mExitRequested.store(true, std::memory_order_relaxed);
     mLock.unlock();
     mCondition.notify_all();
@@ -177,6 +208,7 @@ void JobSystem::requestExit() noexcept {
 }
 
 inline bool JobSystem::exitRequested() const noexcept {
+    // memory_order_relaxed is safe because the only action taken is to exit the thread
     return mExitRequested.load(std::memory_order_relaxed);
 }
 
@@ -195,6 +227,8 @@ JobSystem::Job* JobSystem::allocateJob() noexcept {
 }
 
 inline JobSystem::ThreadState& JobSystem::getStateToStealFrom(JobSystem::ThreadState& state) noexcept {
+    // memory_order_relaxed is okay because we don't take any action that has data dependency
+    // on this value (in particular mThreadStates, is always initialized properly).
     uint16_t adopted = mAdoptedThreads.load(std::memory_order_relaxed);
     // this is biased, but frankly, we don't care. it's fast.
     uint16_t index = uint16_t(state.rndGen() % (mThreadCount + adopted));
@@ -218,14 +252,13 @@ bool JobSystem::execute(JobSystem::ThreadState& state) noexcept {
     if (job) {
         SYSTRACE_CALL();
 
-        UTILS_UNUSED uint32_t activeJobs = mActiveJobs.fetch_sub(1, std::memory_order_acq_rel);
+        UTILS_UNUSED_IN_RELEASE uint32_t activeJobs = mActiveJobs.fetch_sub(1, std::memory_order_relaxed);
         assert(activeJobs); // whoops, we were already at 0
-        
         SYSTRACE_VALUE32("JobSystem::activeJobs", activeJobs - 1);
 
         if (UTILS_LIKELY(job->function)) {
             SYSTRACE_NAME("job->function");
-            job->function(job->padding, *this, job);
+            job->function(job->storage, *this, job);
         }
         finish(job);
     }
@@ -260,16 +293,19 @@ JobSystem::Job* JobSystem::create(JobSystem::Job* parent, JobFunc func) noexcept
     if (UTILS_LIKELY(job)) {
         size_t index = 0x7FFF;
         if (parent) {
-            // can't create a child job of a terminated parent
-            assert(parent->runningJobCount.load(std::memory_order_relaxed) > 0);
+            // add a reference to the parent to make sure it can't be terminated.
+            // memory_order_relaxed is safe because no action is taken at this point
+            // (the job is not started yet).
+            auto parentjobCount = parent->runningJobCount.fetch_add(1, std::memory_order_relaxed);
 
-            parent->runningJobCount.fetch_add(1, std::memory_order_relaxed);
+            // can't create a child job of a terminated parent
+            assert(parentjobCount > 0);
+
             index = parent - mJobStorageBase;
             assert(index < MAX_JOB_COUNT);
         }
         job->function = func;
         job->parent = uint16_t(index);
-        job->runningJobCount.store(1, std::memory_order_relaxed);
     }
     return job;
 }
@@ -277,23 +313,31 @@ JobSystem::Job* JobSystem::create(JobSystem::Job* parent, JobFunc func) noexcept
 void JobSystem::finish(Job* job) noexcept {
     SYSTRACE_CALL();
 
+    Pin pin(*this, job);
+
     // terminate this job and notify its parent
     auto& jobPool = mJobPool;
     Job* const storage = mJobStorageBase;
     do {
         // std::memory_order_release here is needed to synchronize with JobSystem::wait()
         // which needs to "see" all changes that happened before the job terminated.
-        int32_t runningJobCount = job->runningJobCount.fetch_sub(1, std::memory_order_release) - 1;
-        assert(runningJobCount >= 0);
-        if (runningJobCount >= 1) {
+        auto runningJobCount = job->runningJobCount.fetch_sub(1,
+                __has_feature(thread_sanitizer) ?
+                std::memory_order_acq_rel :
+                std::memory_order_release);
+        assert(runningJobCount > 0);
+        if (runningJobCount == 1) {
+#if !__has_feature(thread_sanitizer)
+            std::atomic_thread_fence(std::memory_order_acquire);
+#endif
+            // no more work, destroy this job and check the parent.
+            Job* const parent = job->parent == 0x7FFF ? nullptr : &storage[job->parent];
+            decRef(job);
+            job = parent;
+        } else {
             // there is still work (e.g.: children), we're done.
             break;
         }
-        Job* const parent = job->parent == 0x7FFF ? nullptr : &storage[job->parent];
-        // destroy this job...
-        jobPool.destroy(job);
-        // ... and check the parent
-        job = parent;
     } while (job);
 
 #if __ARM_ARCH_7A__
@@ -303,10 +347,12 @@ void JobSystem::finish(Job* job) noexcept {
 #endif
 }
 
-void JobSystem::run(JobSystem::Job* job, uint32_t flags) noexcept {
+void JobSystem::run(JobSystem::Job*& job, uint32_t flags) noexcept {
 #if HEAVY_SYSTRACE
     SYSTRACE_CALL();
 #endif
+
+    Pin pin(*this, job);
 
     ThreadState& state(getState());
 
@@ -329,12 +375,23 @@ void JobSystem::run(JobSystem::Job* job, uint32_t flags) noexcept {
             mCondition.notify_one();
         }
     }
+
+    // after run() returns, the job is virtually invalid (it'll die on its own)
+    job = nullptr;
 }
 
-void JobSystem::wait(JobSystem::Job const* job) noexcept {
+JobSystem::Job* JobSystem::runAndRetain(JobSystem::Job* job, uint32_t flags) noexcept {
+    JobSystem::Job* retained = job;
+    incRef(retained);
+    run(job, flags);
+    return retained;
+}
+
+void JobSystem::wait(Job*& job) noexcept {
     SYSTRACE_CALL();
 
     assert(job);
+
     ThreadState& state(getState());
     do {
         if (!execute(state)) {
@@ -343,9 +400,10 @@ void JobSystem::wait(JobSystem::Job const* job) noexcept {
         }
     } while (!hasJobCompleted(job) && !exitRequested());
 
-    // std::memory_order_acquire here is needed to synchronize with JobSystem::finish()
-    // this guarantees we "see" all the changes performed by the job that just finished.
-    std::atomic_thread_fence(std::memory_order_acquire);
+    decRef(job);
+
+    // after wait() returns, the job has been destroyed
+    job = nullptr;
 }
 
 void JobSystem::adopt() {
@@ -358,6 +416,7 @@ void JobSystem::adopt() {
         return;
     }
 
+    // memory_order_relaxed is safe because we don't take action on this value.
     uint16_t adopted = mAdoptedThreads.fetch_add(1, std::memory_order_relaxed);
     size_t index = mThreadCount + adopted;
 
