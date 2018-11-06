@@ -288,7 +288,7 @@ private:
         std::atomic<Node*> next;
     };
 
-    struct HeadPtr {
+    struct alignas(8) HeadPtr {
         int32_t offset;
         uint32_t tag;
     };
