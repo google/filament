@@ -167,12 +167,12 @@ bool Froxelizer::prepare(
 
     // froxel buffer (~32 KiB)
     mFroxelBufferUser = {
-            driverApi.allocatePod<FroxelEntry>(FROXEL_BUFFER_ENTRY_COUNT_MAX, CACHELINE_SIZE),
+            driverApi.allocatePod<FroxelEntry>(FROXEL_BUFFER_ENTRY_COUNT_MAX),
             FROXEL_BUFFER_ENTRY_COUNT_MAX };
 
     // record buffer (~64 KiB)
     mRecordBufferUser = {
-            driverApi.allocatePod<RecordBufferType>(RECORD_BUFFER_ENTRY_COUNT, CACHELINE_SIZE),
+            driverApi.allocatePod<RecordBufferType>(RECORD_BUFFER_ENTRY_COUNT),
             RECORD_BUFFER_ENTRY_COUNT };
 
     /*
