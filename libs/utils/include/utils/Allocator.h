@@ -238,7 +238,7 @@ public:
                 break;
             }
         }
-        return storage + currentHead.offset;
+        return (currentHead.offset >= 0) ? (storage + currentHead.offset) : nullptr;
     }
 
     void push(void* p) noexcept {

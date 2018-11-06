@@ -336,13 +336,13 @@ private:
     Job* pop(WorkQueue& workQueue) noexcept {
         size_t index = workQueue.pop();
         assert(index <= MAX_JOB_COUNT);
-        return !index ? nullptr : (mJobStorageBase - 1) + index;
+        return !index ? nullptr : &mJobStorageBase[index - 1];
     }
 
     Job* steal(WorkQueue& workQueue) noexcept {
         size_t index = workQueue.steal();
         assert(index <= MAX_JOB_COUNT);
-        return !index ? nullptr : (mJobStorageBase - 1) + index;
+        return !index ? nullptr : &mJobStorageBase[index - 1];
     }
 
     // these have thread contention, keep them together
