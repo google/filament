@@ -170,16 +170,7 @@ public:
 
 // ------------------------------------------------------------------------------------------------
 
-class FreeListBase {
-public:
-    struct Node {
-        Node* next;
-    };
-    static Node* init(void* begin, void* end,
-            size_t elementSize, size_t alignment, size_t extra) noexcept;
-};
-
-class FreeList : private FreeListBase {
+class FreeList {
 public:
     FreeList() noexcept = default;
     FreeList(void* begin, void* end, size_t elementSize, size_t alignment, size_t extra) noexcept;
@@ -210,6 +201,13 @@ public:
     }
 
 private:
+    struct Node {
+        Node* next;
+    };
+
+    static Node* init(void* begin, void* end,
+            size_t elementSize, size_t alignment, size_t extra) noexcept;
+
     Node* mHead = nullptr;
 
 #ifndef NDEBUG
@@ -219,7 +217,7 @@ private:
 #endif
 };
 
-class AtomicFreeList : private FreeListBase {
+class AtomicFreeList {
 public:
     AtomicFreeList() noexcept = default;
     AtomicFreeList(void* begin, void* end,
@@ -228,28 +226,76 @@ public:
     AtomicFreeList& operator=(const FreeList& rhs) = delete;
 
     void* pop() noexcept {
-        Node* head = mHead.load(std::memory_order_acquire);
-        while (head && !mHead.compare_exchange_weak(head, head->next,
-                std::memory_order_acquire, std::memory_order_acquire)) {
+        Node* const storage = mStorage;
+
+        HeadPtr newHead; // NOLINT(cppcoreguidelines-pro-type-member-init)
+        HeadPtr currentHead = mHead.load();
+        while (currentHead.offset >= 0) {
+            Node* const next = storage[currentHead.offset].next.load(std::memory_order_relaxed);
+            assert(next >= storage);
+            newHead = { next ? int32_t(next - storage) : -1, currentHead.tag + 1 };
+            if (mHead.compare_exchange_weak(currentHead, newHead)) {
+                break;
+            }
         }
-        return head;
+        return storage + currentHead.offset;
     }
 
     void push(void* p) noexcept {
         assert(p);
-        Node* head = static_cast<Node*>(p);
-        head->next = mHead.load(std::memory_order_relaxed);
-        while (!mHead.compare_exchange_weak(head->next, head,
-                std::memory_order_release, std::memory_order_relaxed)) {
-        }
+        Node* const storage = mStorage;
+        Node* const node = static_cast<Node*>(p);
+        HeadPtr currentHead = mHead.load();
+        HeadPtr newHead = { int32_t(node - storage), currentHead.tag + 1 };
+        do {
+            newHead.tag = currentHead.tag + 1;
+            node->next.store(storage + currentHead.offset, std::memory_order_relaxed);
+        } while(!mHead.compare_exchange_weak(currentHead, newHead));
     }
 
     void* getFirst() noexcept {
-        return mHead.load(std::memory_order_relaxed);
+        return mStorage + mHead.load(std::memory_order_relaxed).offset;
     }
 
 private:
-    std::atomic<Node*> mHead;
+    struct Node {
+        // This should be a regular (non-atomic) pointer, but this causes TSAN to complain
+        // about a data-race that exists but is benin. We always use this atomic<> in
+        // relaxed mode.
+        // The data race TSAN complains about is when a pop() is interrupted buy a
+        // pop() + push() just after mHead->next is read -- it appears as though it is written
+        // without synchronization (by the push), however in that case, the pop's CAS will fail
+        // and things will auto-correct.
+        //
+        //    Pop()                       |
+        //     |                          |
+        //   read head->next              |
+        //     |                        pop()
+        //     |                          |
+        //     |                        read head->next
+        //     |                         CAS, tag++
+        //     |                          |
+        //     |                        push()
+        //     |                          |
+        // [TSAN: data-race here]       write head->next
+        //     |                         CAS, tag++
+        //    CAS fails
+        //     |
+        //   read head->next
+        //     |
+        //    CAS, tag++
+        //
+        std::atomic<Node*> next;
+    };
+
+    struct HeadPtr {
+        int32_t offset;
+        uint32_t tag;
+    };
+
+    std::atomic<HeadPtr> mHead{};
+
+    Node* mStorage = nullptr;
 };
 
 // ------------------------------------------------------------------------------------------------
