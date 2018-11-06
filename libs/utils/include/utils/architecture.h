@@ -21,13 +21,7 @@
 
 namespace utils {
 
-#ifdef __ARM_32BIT_STATE
-// on ARM 32-bits, assume 32-bytes cache lines
-constexpr size_t CACHELINE_SIZE = 32;
-#else
-// on ARM64 and x86 we assume 64-bytes cache lines
 constexpr size_t CACHELINE_SIZE = 64;
-#endif
 
 } // namespace utils
 

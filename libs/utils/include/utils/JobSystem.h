@@ -46,29 +46,31 @@ public:
 
     using JobFunc = void(*)(void*, JobSystem&, Job*);
 
-    class alignas(CACHELINE_SIZE) Job { // NOLINT(cppcoreguidelines-pro-type-member-init)
+    class alignas(CACHELINE_SIZE) Job {
     public:
-        Job() noexcept {} // = default;
+        Job() noexcept {} /* = default; */ /* clang bug */ // NOLINT(modernize-use-equals-default,cppcoreguidelines-pro-type-member-init)
         Job(const Job&) = delete;
         Job(Job&&) = delete;
 
-        void* getData() { return storage; }
-        void const* getData() const { return storage; }
     private:
         friend class JobSystem;
 
-        // Size is chosen so that we can store at least std::function<>, the alignas() qualifier
-        // ensures we're multiple of a cache-line.
-        static constexpr size_t JOB_STORAGE_SIZE = (sizeof(std::function<void()>) + sizeof(void*) - 1) / sizeof(void*);
+        // Size is chosen so that we can store at least std::function<>
+        // the alignas() qualifier ensures we're multiple of a cache-line.
+        static constexpr size_t JOB_STORAGE_SIZE = // NOLINT(cert-err58-cpp)
+                (std::max(sizeof(std::function<void()>), size_t(48)) + sizeof(void*) - 1)
+                / sizeof(void*);
 
         // keep it first, so it's correctly aligned with all architectures
-        // this is were we store the job's data, typically a std::function
-        void* storage[JOB_STORAGE_SIZE];
-
-        JobFunc function;
-        uint16_t parent;
-        std::atomic<uint16_t> runningJobCount = { 1 };
-        mutable std::atomic<uint16_t> refCount = { 1 };
+        // this is were we store the job's data, typically a std::function<>
+                                                                // v7 | v8
+        void* storage[JOB_STORAGE_SIZE];                        // 48 | 48
+        JobFunc function;                                       //  4 |  8
+        uint16_t parent;                                        //  2 |  2
+        std::atomic<uint16_t> runningJobCount = { 1 };          //  2 |  2
+        mutable std::atomic<uint16_t> refCount = { 1 };         //  2 |  2
+                                                                //  6 |  2 (padding)
+                                                                // 64 | 64
     };
 
     explicit JobSystem(size_t threadCount = 0, size_t adoptableThreadsCount = 1) noexcept;
