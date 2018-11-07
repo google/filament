@@ -110,7 +110,7 @@ VkSampler VulkanSamplerCache::getSampler(driver::SamplerParams params) noexcept 
         .addressModeV = getWrapMode(params.wrapT),
         .addressModeW = getWrapMode(params.wrapR),
         .anisotropyEnable = params.anisotropyLog2 == 0 ? 0u : 1u,
-        .maxAnisotropy = (float) params.anisotropyLog2,
+        .maxAnisotropy = (float)(1u << params.anisotropyLog2),
         .borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK,
         .unnormalizedCoordinates = VK_FALSE,
         .compareEnable = getCompareEnable(params.compareMode),
