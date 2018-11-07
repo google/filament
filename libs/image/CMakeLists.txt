@@ -12,6 +12,7 @@ set(PUBLIC_HDRS
         include/image/ImageOps.h
         include/image/ImageSampler.h
         include/image/KtxBundle.h
+        include/image/KtxUtility.h
         include/image/LinearImage.h
 )
 

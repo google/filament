@@ -82,7 +82,7 @@ class App {
             Filament.MagFilter.LINEAR,
             Filament.WrapMode.CLAMP_TO_EDGE);
 
-        const albedo = engine.createTextureFromKtx(albedo_url, {"srgb": true});
+        const albedo = engine.createTextureFromKtx(albedo_url, {srgb: true});
         const roughness = engine.createTextureFromKtx(roughness_url);
         const metallic = engine.createTextureFromKtx(metallic_url);
         const normal = engine.createTextureFromKtx(normal_url);
