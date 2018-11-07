@@ -700,6 +700,8 @@ class_<PixelBufferDescriptor>("driver$PixelBufferDescriptor")
 // ------------
 
 /// KtxBundle ::class:: In-memory representation of a KTX file.
+/// Most clients should use one of the `*fromKtx` utility methods in the JavaScript [Engine] wrapper
+/// rather than interacting with `KtxBundle` directly.
 class_<KtxBundle>("KtxBundle")
     .constructor(EMBIND_LAMBDA(KtxBundle*, (BufferDescriptor kbd), {
         return new KtxBundle((uint8_t*) kbd.bd->buffer, (uint32_t) kbd.bd->size);
@@ -714,7 +716,7 @@ class_<KtxBundle>("KtxBundle")
     .function("getArrayLength", &KtxBundle::getArrayLength)
 
     /// getInternalFormat ::method::
-    /// srgb ::argument:: boolean
+    /// srgb ::argument:: boolean that forces the resulting format to SRGB if possible.
     /// ::retval:: [Texture$InternalFormat]
     /// Returns "undefined" is no valid Filament enumerant exists.
     .function("getInternalFormat",
@@ -732,7 +734,7 @@ class_<KtxBundle>("KtxBundle")
     }), allow_raw_pointers())
 
     /// getPixelDataFormat ::method::
-    /// rgbm ::argument:: boolean
+    /// rgbm ::argument:: boolean that configures the alpha channel into an HDR scale.
     /// ::retval:: [PixelDataFormat]
     /// Returns "undefined" is no valid Filament enumerant exists.
     .function("getPixelDataFormat",
