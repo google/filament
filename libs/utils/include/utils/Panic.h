@@ -302,14 +302,14 @@ template <typename T>
 class TPanic : public Panic {
 public:
     // std::exception protocol
-    virtual const char* what() const noexcept;
+    const char* what() const noexcept override;
 
     // Panic interface
-    virtual const char* getFunction() const noexcept;
-    virtual const char* getFile() const noexcept;
-    virtual int getLine() const noexcept;
-    virtual const CallStack& getCallStack() const noexcept;
-    virtual void log() const noexcept;
+    const char* getFunction() const noexcept override;
+    const char* getFile() const noexcept override;
+    int getLine() const noexcept override;
+    const CallStack& getCallStack() const noexcept override;
+    void log() const noexcept override;
 
     /**
      * Depending on the mode set, either throws an exception of type T with the given reason plus
@@ -348,7 +348,7 @@ protected:
      * Creates a Panic.
      * @param reason a description of the cause of the error
      */
-    explicit TPanic(const std::string& reason);
+    explicit TPanic(std::string reason);
 
     /**
      * Creates a Panic with extra information about the error-site.
@@ -357,9 +357,9 @@ protected:
      * @param line the line in the above file where the error was detected
      * @param reason a description of the cause of the error
      */
-    TPanic(char const* function, char const* file, int line, const std::string& reason);
+    TPanic(char const* function, char const* file, int line, std::string reason);
 
-    virtual ~TPanic();
+    ~TPanic() override;
 
 private:
     void buildMessage();

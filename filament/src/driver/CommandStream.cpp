@@ -73,7 +73,6 @@ void CommandStream::execute(void* buffer) {
 
     Driver& UTILS_RESTRICT driver = *mDriver;
     CommandBase* UTILS_RESTRICT base = static_cast<CommandBase*>(buffer);
-    UTILS_ALIGN_LOOP
     while (UTILS_LIKELY(base)) {
         base = base->execute(driver);
     }
@@ -96,7 +95,7 @@ void CommandStream::execute(void* buffer) {
 }
 
 void CommandStream::queueCommand(std::function<void()> command) {
-    new(allocateCommand(CustomCommand::align(sizeof(CustomCommand)))) CustomCommand(command);
+    new(allocateCommand(CustomCommand::align(sizeof(CustomCommand)))) CustomCommand(std::move(command));
 }
 
 template<typename... ARGS>

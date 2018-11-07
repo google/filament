@@ -136,7 +136,8 @@ OpenGLProgram::OpenGLProgram(OpenGLDriver* gl, const Program& programBuilder) no
                             // build unique name for this uniform (sampler)
                             auto const& e = infos[j];
                             std::string e_name(e.name.c_str());
-                            std::string uniformSamplerName(sib_name + "_" + e_name);
+                            std::string uniformSamplerName(sib_name);
+                            uniformSamplerName.append("_").append(e_name);
 
                             // find its location and associate a TMU to it
                             GLint loc = glGetUniformLocation(program, uniformSamplerName.c_str());
