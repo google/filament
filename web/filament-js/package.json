@@ -12,7 +12,8 @@
   },
   "files": [
     "filament.js",
-    "filament.wasm"
+    "filament.wasm",
+    "README.md"
   ],
   "keywords": [
     "3d",
