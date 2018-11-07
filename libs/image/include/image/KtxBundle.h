@@ -50,13 +50,13 @@ struct KtxMetadata;
  *
  * One bundle may be comprised of several mipmap levels, cubemap faces, and array elements. The
  * number of blobs is immutable, and is determined as follows.
- * 
+ *
  *     blob_count = mip_count * array_length * (cubemap ? 6 : 1)
  *
  * Bundles can be quickly serialized to a certain file format (see below link), but this class lives
  * in the image lib rather than imageio because it has no dependencies, and does not support CPU
  * decoding.
- * 
+ *
  *     https://www.khronos.org/opengles/sdk/tools/KTX/file_format_spec/
  */
 class KtxBundle {
@@ -136,6 +136,61 @@ public:
 
     // The following constants help clients populate the "info" struct. Most of them have corollary
     // constants in the OpenGL headers.
+
+    static constexpr uint32_t R8 = 0x8229;
+    static constexpr uint32_t R8_SNORM = 0x8F94;
+    static constexpr uint32_t R8UI = 0x8232;
+    static constexpr uint32_t R8I = 0x8231;
+    static constexpr uint32_t STENCIL_INDEX8 = 0x8D48;
+    static constexpr uint32_t R16F = 0x822D;
+    static constexpr uint32_t R16UI = 0x8234;
+    static constexpr uint32_t R16I = 0x8233;
+    static constexpr uint32_t RG8 = 0x822B;
+    static constexpr uint32_t RG8_SNORM = 0x8F95;
+    static constexpr uint32_t RG8UI = 0x8238;
+    static constexpr uint32_t RG8I = 0x8237;
+    static constexpr uint32_t RGB565 = 0x8D62;
+    static constexpr uint32_t RGB5_A1 = 0x8057;
+    static constexpr uint32_t RGBA4 = 0x8056;
+    static constexpr uint32_t DEPTH_COMPONENT16 = 0x81A5;
+    static constexpr uint32_t RGB8 = 0x8051;
+    static constexpr uint32_t SRGB8 = 0x8C41;
+    static constexpr uint32_t RGB8_SNORM = 0x8F96;
+    static constexpr uint32_t RGB8UI = 0x8D7D;
+    static constexpr uint32_t RGB8I = 0x8D8F;
+    static constexpr uint32_t DEPTH_COMPONENT24 = 0x81A6;
+    static constexpr uint32_t R32F = 0x822E;
+    static constexpr uint32_t R32UI = 0x8236;
+    static constexpr uint32_t R32I = 0x8235;
+    static constexpr uint32_t RG16F = 0x822F;
+    static constexpr uint32_t RG16UI = 0x823A;
+    static constexpr uint32_t RG16I = 0x8239;
+    static constexpr uint32_t R11F_G11F_B10F = 0x8C3A;
+    static constexpr uint32_t RGB9_E5 = 0x8C3D;
+    static constexpr uint32_t RGBA8 = 0x8058;
+    static constexpr uint32_t SRGB8_ALPHA8 = 0x8C43;
+    static constexpr uint32_t RGBA8_SNORM = 0x8F97;
+    static constexpr uint32_t RGB10_A2 = 0x8059;
+    static constexpr uint32_t RGBA8UI = 0x8D7C;
+    static constexpr uint32_t RGBA8I = 0x8D8E;
+    static constexpr uint32_t DEPTH_COMPONENT32F = 0x8CAC;
+    static constexpr uint32_t DEPTH24_STENCIL8 = 0x88F0;
+    static constexpr uint32_t DEPTH32F_STENCIL8 = 0x8CAD;
+    static constexpr uint32_t RGB16F = 0x881B;
+    static constexpr uint32_t RGB16UI = 0x8D77;
+    static constexpr uint32_t RGB16I = 0x8D89;
+    static constexpr uint32_t RG32F = 0x8230;
+    static constexpr uint32_t RG32UI = 0x823C;
+    static constexpr uint32_t RG32I = 0x823B;
+    static constexpr uint32_t RGBA16F = 0x881A;
+    static constexpr uint32_t RGBA16UI = 0x8D76;
+    static constexpr uint32_t RGBA16I = 0x8D88;
+    static constexpr uint32_t RGB32F = 0x8815;
+    static constexpr uint32_t RGB32UI = 0x8D71;
+    static constexpr uint32_t RGB32I = 0x8D83;
+    static constexpr uint32_t RGBA32F = 0x8814;
+    static constexpr uint32_t RGBA32UI = 0x8D70;
+    static constexpr uint32_t RGBA32I = 0x8D82;
 
     static constexpr uint32_t RED = 0x1903;
     static constexpr uint32_t RG = 0x8227;

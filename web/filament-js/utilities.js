@@ -241,35 +241,12 @@ Filament._createTextureFromKtx = function(ktxdata, engine, options) {
     const Sampler = Filament.Texture$Sampler;
     const ktx = options['ktx'] || new Filament.KtxBundle(ktxdata);
     const nlevels = ktx.getNumMipLevels();
-    const ktxformat = ktx.info().glInternalFormat;
     const rgbm = !!options['rgbm'];
     const srgb = !!options['srgb'];
 
-    // TODO: replace this switch with KtxBundle calls
-    const TextureFormat = Filament.Texture$InternalFormat;
-    const PixelDataFormat = Filament.PixelDataFormat;
-    const gl = Filament.ctx;
-    var texformat, pbformat, pbtype;
-    switch (ktxformat) {
-        case gl.LUMINANCE:
-            texformat = TextureFormat.R8;
-            pbformat = PixelDataFormat.R;
-            pbtype = Filament.PixelDataType.UBYTE;
-            break;
-        case gl.RGB:
-            texformat = srgb ? TextureFormat.SRGB8 : TextureFormat.RGB8;
-            pbformat = PixelDataFormat.RGB;
-            pbtype = Filament.PixelDataType.UBYTE;
-            break;
-        case gl.RGBA:
-            texformat = srgb ? TextureFormat.SRGB8_A8 : TextureFormat.RGBA8;
-            pbformat = rgbm ? PixelDataFormat.RGBM : PixelDataFormat.RGBA;
-            pbtype = Filament.PixelDataType.UBYTE;
-            break;
-        default:
-        console.error('Unsupported KTX format: ' + ktxformat);
-        return null;
-    }
+    var texformat = ktx.getInternalFormat(srgb);
+    var pbformat = ktx.getPixelDataFormat(rgbm);
+    var pbtype = ktx.getPixelDataType();
 
     const tex = Filament.Texture.Builder()
         .width(ktx.info().pixelWidth)

@@ -52,6 +52,7 @@
 #include <filament/View.h>
 
 #include <image/KtxBundle.h>
+#include <image/KtxUtility.h>
 
 #include <math/vec2.h>
 #include <math/vec3.h>
@@ -202,63 +203,6 @@ DecodedPng decodePng(BufferDescriptor encoded_data, int requested_ncomp) {
     });
     result.decoded_ncomp = requested_ncomp;
     return result;
-}
-
-template<typename T>
-T toFilamentEnum(uint32_t format) {
-    switch (format) {
-        case KtxBundle::RGB_S3TC_DXT1: return T::DXT1_RGB;
-        case KtxBundle::RGBA_S3TC_DXT1: return T::DXT1_RGBA;
-        case KtxBundle::RGBA_S3TC_DXT3: return T::DXT3_RGBA;
-        case KtxBundle::RGBA_S3TC_DXT5: return T::DXT5_RGBA;
-        case KtxBundle::RGBA_ASTC_4x4: return T::RGBA_ASTC_4x4;
-        case KtxBundle::RGBA_ASTC_5x4: return T::RGBA_ASTC_5x4;
-        case KtxBundle::RGBA_ASTC_5x5: return T::RGBA_ASTC_5x5;
-        case KtxBundle::RGBA_ASTC_6x5: return T::RGBA_ASTC_6x5;
-        case KtxBundle::RGBA_ASTC_6x6: return T::RGBA_ASTC_6x6;
-        case KtxBundle::RGBA_ASTC_8x5: return T::RGBA_ASTC_8x5;
-        case KtxBundle::RGBA_ASTC_8x6: return T::RGBA_ASTC_8x6;
-        case KtxBundle::RGBA_ASTC_8x8: return T::RGBA_ASTC_8x8;
-        case KtxBundle::RGBA_ASTC_10x5: return T::RGBA_ASTC_10x5;
-        case KtxBundle::RGBA_ASTC_10x6: return T::RGBA_ASTC_10x6;
-        case KtxBundle::RGBA_ASTC_10x8: return T::RGBA_ASTC_10x8;
-        case KtxBundle::RGBA_ASTC_10x10: return T::RGBA_ASTC_10x10;
-        case KtxBundle::RGBA_ASTC_12x10: return T::RGBA_ASTC_12x10;
-        case KtxBundle::RGBA_ASTC_12x12: return T::RGBA_ASTC_12x12;
-        case KtxBundle::SRGB8_ALPHA8_ASTC_4x4: return T::SRGB8_ALPHA8_ASTC_4x4;
-        case KtxBundle::SRGB8_ALPHA8_ASTC_5x4: return T::SRGB8_ALPHA8_ASTC_5x4;
-        case KtxBundle::SRGB8_ALPHA8_ASTC_5x5: return T::SRGB8_ALPHA8_ASTC_5x5;
-        case KtxBundle::SRGB8_ALPHA8_ASTC_6x5: return T::SRGB8_ALPHA8_ASTC_6x5;
-        case KtxBundle::SRGB8_ALPHA8_ASTC_6x6: return T::SRGB8_ALPHA8_ASTC_6x6;
-        case KtxBundle::SRGB8_ALPHA8_ASTC_8x5: return T::SRGB8_ALPHA8_ASTC_8x5;
-        case KtxBundle::SRGB8_ALPHA8_ASTC_8x6: return T::SRGB8_ALPHA8_ASTC_8x6;
-        case KtxBundle::SRGB8_ALPHA8_ASTC_8x8: return T::SRGB8_ALPHA8_ASTC_8x8;
-        case KtxBundle::SRGB8_ALPHA8_ASTC_10x5: return T::SRGB8_ALPHA8_ASTC_10x5;
-        case KtxBundle::SRGB8_ALPHA8_ASTC_10x6: return T::SRGB8_ALPHA8_ASTC_10x6;
-        case KtxBundle::SRGB8_ALPHA8_ASTC_10x8: return T::SRGB8_ALPHA8_ASTC_10x8;
-        case KtxBundle::SRGB8_ALPHA8_ASTC_10x10: return T::SRGB8_ALPHA8_ASTC_10x10;
-        case KtxBundle::SRGB8_ALPHA8_ASTC_12x10: return T::SRGB8_ALPHA8_ASTC_12x10;
-        case KtxBundle::SRGB8_ALPHA8_ASTC_12x12: return T::SRGB8_ALPHA8_ASTC_12x12;
-        case KtxBundle::R11_EAC: return T::EAC_R11;
-        case KtxBundle::SIGNED_R11_EAC: return T::EAC_R11_SIGNED;
-        case KtxBundle::RG11_EAC: return T::EAC_RG11;
-        case KtxBundle::SIGNED_RG11_EAC: return T::EAC_RG11_SIGNED;
-        case KtxBundle::RGB8_ETC2: return T::ETC2_RGB8;
-        case KtxBundle::SRGB8_ETC2: return T::ETC2_SRGB8;
-        case KtxBundle::RGB8_ALPHA1_ETC2: return T::ETC2_RGB8_A1;
-        case KtxBundle::SRGB8_ALPHA1_ETC: return T::ETC2_SRGB8_A1;
-        case KtxBundle::RGBA8_ETC2_EAC: return T::ETC2_EAC_RGBA8;
-        case KtxBundle::SRGB8_ALPHA8_ETC2_EAC: return T::ETC2_EAC_SRGBA8;
-    }
-    return (T) 0xffff;
-}
-
-filament::driver::CompressedPixelDataType toCompressedPixelDataType(uint32_t format) {
-    return toFilamentEnum<filament::driver::CompressedPixelDataType>(format);
-}
-
-filament::driver::TextureFormat toTextureFormat(uint32_t format) {
-    return toFilamentEnum<filament::driver::TextureFormat>(format);
 }
 
 } // anonymous namespace
@@ -768,6 +712,63 @@ class_<KtxBundle>("KtxBundle")
     /// getArrayLength ::method:: Obtains length of the texture array.
     /// ::retval:: The number of elements in the texture array
     .function("getArrayLength", &KtxBundle::getArrayLength)
+
+    /// getInternalFormat ::method::
+    /// srgb ::argument:: boolean
+    /// ::retval:: [Texture$InternalFormat]
+    /// Returns "undefined" is no valid Filament enumerant exists.
+    .function("getInternalFormat",
+            EMBIND_LAMBDA(Texture::InternalFormat, (KtxBundle* self, bool srgb), {
+        auto result = KtxUtility::toTextureFormat(self->info().glInternalFormat);
+        if (srgb) {
+            if (result == Texture::InternalFormat::RGB8) {
+                result = Texture::InternalFormat::SRGB8;
+            }
+            if (result == Texture::InternalFormat::RGBA8) {
+                result = Texture::InternalFormat::SRGB8_A8;
+            }
+        }
+        return result;
+    }), allow_raw_pointers())
+
+    /// getPixelDataFormat ::method::
+    /// rgbm ::argument:: boolean
+    /// ::retval:: [PixelDataFormat]
+    /// Returns "undefined" is no valid Filament enumerant exists.
+    .function("getPixelDataFormat",
+            EMBIND_LAMBDA(driver::PixelDataFormat, (KtxBundle* self, bool rgbm), {
+        switch (self->info().glTypeSize) {
+            case 1: return driver::PixelDataFormat::R;
+            case 2: return driver::PixelDataFormat::RG;
+            case 3: return driver::PixelDataFormat::RGB;
+            case 4: return rgbm ? driver::PixelDataFormat::RGBA : driver::PixelDataFormat::RGBM;
+        }
+        assert(false && "Unknown pixel data format.");
+        return (driver::PixelDataFormat) 0xff;
+    }), allow_raw_pointers())
+
+    /// getPixelDataType ::method::
+    /// ::retval:: [PixelDataType]
+    /// Returns "undefined" is no valid Filament enumerant exists.
+    .function("getPixelDataType",
+            EMBIND_LAMBDA(driver::PixelDataType, (KtxBundle* self), {
+        return KtxUtility::toPixelDataType(self->info().glType);
+    }), allow_raw_pointers())
+
+    /// getCompressedPixelDataType ::method::
+    /// ::retval:: [CompressedPixelDataType]
+    /// Returns "undefined" is no valid Filament enumerant exists.
+    .function("getCompressedPixelDataType",
+            EMBIND_LAMBDA(driver::CompressedPixelDataType, (KtxBundle* self), {
+        return KtxUtility::toCompressedPixelDataType(self->info().glInternalFormat);
+    }), allow_raw_pointers())
+
+    /// isCompressed ::method::
+    /// Per spec, compressed textures in KTX always have their glFormat field set to 0.
+    /// ::retval:: boolean
+    .function("isCompressed", EMBIND_LAMBDA(bool, (KtxBundle* self), {
+        return self->info().glFormat == 0;
+    }), allow_raw_pointers())
 
     .function("isCubemap", &KtxBundle::isCubemap)
     .function("getBlob", EMBIND_LAMBDA(BufferDescriptor, (KtxBundle* self, KtxBlobIndex index), {
