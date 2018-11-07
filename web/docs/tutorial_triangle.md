@@ -1,11 +1,6 @@
 ## Start your project
 
-First, create a directory for your web project and obtain `filament.js` and `filament.wasm` from
-the latest [filament-web tarball](//github.com/google/filament/releases). In the future, these
-files will be available on npm, which will allow you to use [yarn](//yarnpkg.com/en/) or
-[unpkg](//unpkg.com).
-
-Next, create a text file called `triangle.html` and fill it with the following HTML. This creates
+First, create a text file called `triangle.html` and fill it with the following HTML. This creates
 a mobile-friendly page with a full-screen canvas.
 
 ```html
@@ -22,7 +17,7 @@ a mobile-friendly page with a full-screen canvas.
 </head>
 <body>
     <canvas></canvas>
-    <script src="filament.js"></script>
+    <script src="//unpkg.com/filament/filament.js"></script>
     <script src="//unpkg.com/gl-matrix@2.8.1/dist/gl-matrix-min.js"></script>
     <script src="triangle.js"></script>
 </body>
