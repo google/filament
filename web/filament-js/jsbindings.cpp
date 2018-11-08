@@ -424,9 +424,9 @@ class_<Camera>("Camera")
     .function("lookAt", &Camera::lookAt);
 
 class_<RenderBuilder>("RenderableManager$Builder")
-    .function("build", EMBIND_LAMBDA(void, (RenderBuilder* builder,
+    .function("_build", EMBIND_LAMBDA(int, (RenderBuilder* builder,
             Engine* engine, utils::Entity entity), {
-        builder->build(*engine, entity);
+        return (int) builder->build(*engine, entity);
     }), allow_raw_pointers())
     .BUILDER_FUNCTION("boundingBox", RenderBuilder, (RenderBuilder* builder, Box box), {
         return &builder->boundingBox(box); })
@@ -462,12 +462,15 @@ class_<TransformManager>("TransformManager")
             (TransformManager* self, TransformManager::Instance instance, flatmat4 m), {
         self->setTransform(instance, m.m); }), allow_raw_pointers());
 
+/// TransformManager$Instance ::class:: Component instance returned by [TransformManager]
+/// Be sure to call the instance's `delete` method when you're done with it.
 class_<TransformManager::Instance>("TransformManager$Instance");
+    /// delete ::method:: Frees an instance obtained via `getInstance`
 
 class_<LightBuilder>("LightManager$Builder")
-    .function("build", EMBIND_LAMBDA(void, (LightBuilder* builder,
+    .function("_build", EMBIND_LAMBDA(int, (LightBuilder* builder,
             Engine* engine, utils::Entity entity), {
-        builder->build(*engine, entity);
+        return (int) builder->build(*engine, entity);
     }), allow_raw_pointers())
     .BUILDER_FUNCTION("castShadows", LightBuilder, (LightBuilder* builder, bool enable), {
         return &builder->castShadows(enable); })
@@ -498,7 +501,7 @@ class_<LightManager>("LightManager")
         return LightBuilder(lt); });
 
 class_<VertexBuilder>("VertexBuffer$Builder")
-    .function("build", EMBIND_LAMBDA(VertexBuffer*, (VertexBuilder* builder, Engine* engine), {
+    .function("_build", EMBIND_LAMBDA(VertexBuffer*, (VertexBuilder* builder, Engine* engine), {
         return builder->build(*engine);
     }), allow_raw_pointers())
     .BUILDER_FUNCTION("attribute", VertexBuilder, (VertexBuilder* builder,
@@ -525,7 +528,7 @@ class_<VertexBuffer>("VertexBuffer")
     }), allow_raw_pointers());
 
 class_<IndexBuilder>("IndexBuffer$Builder")
-    .function("build", EMBIND_LAMBDA(IndexBuffer*, (IndexBuilder* builder, Engine* engine), {
+    .function("_build", EMBIND_LAMBDA(IndexBuffer*, (IndexBuilder* builder, Engine* engine), {
         return builder->build(*engine);
     }), allow_raw_pointers())
     .BUILDER_FUNCTION("indexCount", IndexBuilder, (IndexBuilder* builder, int count), {
@@ -593,7 +596,7 @@ class_<Texture>("Texture")
     }), allow_raw_pointers());
 
 class_<TexBuilder>("Texture$Builder")
-    .function("build", EMBIND_LAMBDA(Texture*, (TexBuilder* builder, Engine* engine), {
+    .function("_build", EMBIND_LAMBDA(Texture*, (TexBuilder* builder, Engine* engine), {
         return builder->build(*engine);
     }), allow_raw_pointers())
     .BUILDER_FUNCTION("width", TexBuilder, (TexBuilder* builder, uint32_t width), {
@@ -622,7 +625,7 @@ class_<IndirectLight>("IndirectLight")
     }), allow_raw_pointers());
 
 class_<IblBuilder>("IndirectLight$Builder")
-    .function("build", EMBIND_LAMBDA(IndirectLight*, (IblBuilder* builder, Engine* engine), {
+    .function("_build", EMBIND_LAMBDA(IndirectLight*, (IblBuilder* builder, Engine* engine), {
         return builder->build(*engine);
     }), allow_raw_pointers())
     .BUILDER_FUNCTION("reflections", IblBuilder, (IblBuilder* builder, Texture const* cubemap), {
@@ -650,7 +653,7 @@ class_<Skybox>("Skybox")
     .class_function("Builder", (SkyBuilder (*)()) [] { return SkyBuilder(); });
 
 class_<SkyBuilder>("Skybox$Builder")
-    .function("build", EMBIND_LAMBDA(Skybox*, (SkyBuilder* builder, Engine* engine), {
+    .function("_build", EMBIND_LAMBDA(Skybox*, (SkyBuilder* builder, Engine* engine), {
         return builder->build(*engine);
     }), allow_raw_pointers())
     .BUILDER_FUNCTION("environment", SkyBuilder, (SkyBuilder* builder, Texture* cubemap), {

@@ -226,7 +226,9 @@ code to the top of the render method.
 const radians = Date.now() / 1000;
 const transform = mat4.fromRotation(mat4.create(), radians, [0, 0, 1]);
 const tcm = this.engine.getTransformManager();
-tcm.setTransform(tcm.getInstance(this.triangle), transform);
+const inst = tcm.getInstance(this.triangle);
+tcm.setTransform(inst, transform);
+inst.delete();
 
 // Render the frame.
 this.renderer.render(this.swapChain, this.view);
