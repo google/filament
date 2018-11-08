@@ -1,8 +1,11 @@
 
-This tutorial will describe how to create the redball demo, introducing you to materials and
+This tutorial will describe how to create the **redball** demo, introducing you to materials and
 textures.
 
-You'll need to use a couple command-line tools: `matc` and `cmgen`. You can find these in the
+For starters, create a text file called `redball.html` and copy over the HTML that we used in the
+[previous tutorial]. Change the last script tag from `triangle.js` to `redball.js`.
+
+Next you'll need to get a couple command-line tools: `matc` and `cmgen`. You can find these in the
 appropriate [Filament release](//github.com/google/filament/releases). You should choose the
 archive that corresponds to your development machine rather than the one for web.
 
@@ -10,7 +13,7 @@ archive that corresponds to your development machine rather than the one for web
 
 The `matc` tool consumes a text file containing a high-level description of a PBR material, and
 produces a binary material package that contains shader code and associated metadata. For more
-information, see the official document describing the [Filament Material System]().
+information, see the official document describing the [Filament Material System].
 
 Let's try out `matc`. Create the following file in your favorite text editor and call it
 `plastic.mat`.
@@ -52,9 +55,6 @@ tutorial.
 Next we'll use Filament's `cmgen` tool to consume a HDR environment map in latlong format, and
 produce two cubemap files: a mipmapped IBL and a blurry skybox.
 
-[pillars_2k.hdr]:
-//github.com/google/filament/blob/master/third_party/environments/pillars_2k.hdr
-
 Download [pillars_2k.hdr], then invoke the following command in your terminal.
 
 ```bash
@@ -62,19 +62,20 @@ cmgen -x . --format=ktx --size=256 --extract-blur=0.1 pillars_2k.hdr
 ```
 
 You should now have a `pillars_2k` folder containing a couple KTX files for the IBL and skybox, as
-well as a text file with spherical harmonics coefficients. Move the KTX files into your project
-folder. You can discard the text file because the IBL KTX contains these coefficients in its
-metadata.
+well as a text file with spherical harmonics coefficients. You can discard the text file because the
+IBL KTX contains these coefficients in its metadata.
 
-## Create HTML and JavaScript
-
-Create a text file called `redball.html` and copy over the HTML that we used in the [previous
-tutorial](tutorial_triangle.html). Change the last script tag from `triangle.js` to `redball.js`.
+## Create JavaScript
 
 Next, create `redball.js` with the following content.
 
 ```js {fragment="root"}
-Filament.init([ 'plastic.filamat', 'pillars_2k_ibl.ktx', 'pillars_2k_skybox.ktx' ], () => {
+const environ = 'pillars_2k';
+const ibl_url = `${environ}/${environ}_ibl.ktx`;
+const sky_url = `${environ}/${environ}_skybox.ktx`;
+const filamat_url = 'plastic.filamat'
+
+Filament.init([ filamat_url, ibl_url, sky_url ], () => {
   // Create some global aliases to enums for convenience.
   window.VertexAttribute = Filament.VertexAttribute;
   window.AttributeType = Filament.VertexBuffer$AttributeType;
@@ -109,7 +110,7 @@ class App {
     this.resize();
     this.render = this.render.bind(this);
     this.resize = this.resize.bind(this);
-    window.addEventListener("resize", this.resize);
+    window.addEventListener('resize', this.resize);
     window.requestAnimationFrame(this.render);
   }
 
@@ -139,14 +140,14 @@ Next let's create a material instance from the package that we built at the begi
 Replace the **create material** comment with the following snippet.
 
 ```js {fragment="create material"}
-const material = engine.createMaterial('plastic.filamat');
+const material = engine.createMaterial(filamat_url);
 const matinstance = material.createInstance();
 
 const red = [0.8, 0.0, 0.0];
-matinstance.setColorParameter("baseColor", Filament.RgbType.sRGB, red);
-matinstance.setFloatParameter("roughness", 0.5);
-matinstance.setFloatParameter("clearCoat", 1.0);
-matinstance.setFloatParameter("clearCoatRoughness", 0.3);
+matinstance.setColorParameter('baseColor', Filament.RgbType.sRGB, red);
+matinstance.setFloatParameter('roughness', 0.5);
+matinstance.setFloatParameter('clearCoat', 1.0);
+matinstance.setFloatParameter('clearCoatRoughness', 0.3);
 ```
 
 The next step is to create a renderable for the sphere. To help with this, we'll use the `IcoSphere`
@@ -232,7 +233,7 @@ const format = Filament.PixelDataFormat.RGBM;
 const datatype = Filament.PixelDataType.UBYTE;
 
 // Create a Texture object for the mipmapped cubemap.
-const ibl_package = Filament.Buffer(Filament.assets['pillars_2k_ibl.ktx']);
+const ibl_package = Filament.Buffer(Filament.assets[ibl_url]);
 const iblktx = new Filament.KtxBundle(ibl_package);
 
 const ibltex = Filament.Texture.Builder()
@@ -251,7 +252,7 @@ for (let level = 0; level < iblktx.getNumMipLevels(); ++level) {
 }
 
 // Parse the spherical harmonics metadata.
-const shstring = iblktx.getMetadata("sh");
+const shstring = iblktx.getMetadata('sh');
 const shfloats = shstring.split(/\s/, 9 * 3).map(parseFloat);
 
 // Build the IBL object and insert it into the scene.
@@ -268,7 +269,7 @@ Filament provides a JavaScript utility to make this simpler,
 simply replace the **create IBL** comment with the following snippet.
 
 ```js {fragment="create IBL"}
-const indirectLight = engine.createIblFromKtx('pillars_2k_ibl.ktx');
+const indirectLight = engine.createIblFromKtx(ibl_url);
 indirectLight.setIntensity(50000);
 scene.setIndirectLight(indirectLight);
 ```
@@ -280,7 +281,7 @@ Without a skybox, the reflections on the ball are not representative of its surr
 Here's one way to create a texture for the skybox:
 
 ```js
-const sky_package = Filament.Buffer(Filament.assets['pillars_2k_skybox.ktx']);
+const sky_package = Filament.Buffer(Filament.assets[sky_url]);
 const skyktx = new Filament.KtxBundle(sky_package);
 const skytex = Filament.Texture.Builder()
   .width(skyktx.info().pixelWidth)
@@ -300,9 +301,19 @@ Filament provides a Javascript utility to make this easier.
 Replace **create skybox** with the following.
 
 ```js {fragment="create skybox"}
-const skybox = engine.createSkyFromKtx('pillars_2k_skybox.ktx');
+const skybox = engine.createSkyFromKtx(sky_url);
 scene.setSkybox(skybox);
 ```
 
-That's it, we now have a shiny red ball floating in an environment! The complete JavaScript
-file is available [here](tutorial_redball.js).
+That's it, we now have a shiny red ball floating in an environment! The complete JavaScript file is
+available [here](tutorial_redball.js).
+
+In the [next tutorial], we'll take a closer look at textures and interaction.
+
+[pillars_2k.hdr]:
+//github.com/google/filament/blob/master/third_party/environments/pillars_2k.hdr
+
+[next tutorial]: tutorial_suzanne.html
+[previous tutorial]: tutorial_triangle.html
+[Filament release]: //github.com/google/filament/releases
+[Filament Material System]: https://google.github.io/filament/Materials.md.html

@@ -11,7 +11,7 @@ else()
 
     set(CUSTOM_OUTPUTS)
     set(CUSTOM_INPUTS)
-    foreach (NAME triangle redball)
+    foreach (NAME triangle redball suzanne)
         list(APPEND CUSTOM_OUTPUTS ${PROJECT_BINARY_DIR}/demo_${NAME}.html)
         list(APPEND CUSTOM_OUTPUTS ${PROJECT_BINARY_DIR}/tutorial_${NAME}.html)
         list(APPEND CUSTOM_OUTPUTS ${PROJECT_BINARY_DIR}/tutorial_${NAME}.js)

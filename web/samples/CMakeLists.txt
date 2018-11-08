@@ -90,6 +90,7 @@ add_mesh("third_party/shader_ball/shader_ball.obj" "shader_ball.filamesh")
 
 # Generate IBL and skybox images using cmgen.
 set(CMGEN_ARGS -x . --format=ktx --size=256 --extract-blur=0.1)
+set(CMGEN_ARGS_TINY -x . --format=ktx --size=64 --extract-blur=0.1)
 set(CMGEN_ARGS_S3TC ${CMGEN_ARGS} --compression=s3tc_rgba_dxt5)
 set(CMGEN_ARGS_ETC ${CMGEN_ARGS} --compression=etc_rgba8_rgba_40)
 function(add_envmap SOURCE TARGET)
@@ -103,12 +104,14 @@ function(add_envmap SOURCE TARGET)
     set(target_envmap_etc "${SERVER_DIR}/${TARGET}/${TARGET}_ibl_etc.ktx")
     set(target_envmap_s3tc "${SERVER_DIR}/${TARGET}/${TARGET}_ibl_s3tc.ktx")
 
-    set(target_skyboxes ${target_skyboxes} ${target_skybox} PARENT_SCOPE)
+    set(target_skybox_tiny "${SERVER_DIR}/${TARGET}/${TARGET}_skybox_tiny.ktx")
+
+    set(target_skyboxes ${target_skyboxes} ${target_skybox} ${target_skybox_tiny} PARENT_SCOPE)
 
     set(target_envmaps ${target_envmaps}
             ${target_envmap} ${target_envmap_etc} ${target_envmap_s3tc} PARENT_SCOPE)
 
-    add_custom_command(OUTPUT ${target_skybox}
+    add_custom_command(OUTPUT ${target_skybox} ${target_skybox_tiny}
                 ${target_envmap} ${target_envmap_etc} ${target_envmap_s3tc}
 
         # First create an S3TC-encoded envmap, then rename it.
@@ -118,6 +121,10 @@ function(add_envmap SOURCE TARGET)
         # Now create an ETC-encoded envmap, then rename it.
         COMMAND cmgen ${CMGEN_ARGS_ETC} ${source_envmap}
         COMMAND mv ${target_envmap} ${target_envmap_etc}
+
+        # Create a low-resolution skybox, then rename it.
+        COMMAND cmgen ${CMGEN_ARGS_TINY} ${source_envmap}
+        COMMAND mv ${target_skybox} ${target_skybox_tiny}
 
         # Finally, create KTX files for the uncompressed envmap.
         COMMAND cmgen ${CMGEN_ARGS} ${source_envmap}
