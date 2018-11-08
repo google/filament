@@ -28,10 +28,12 @@ const ao_url = `ao${texture_suffix}.ktx`;
 const metallic_url = `metallic${texture_suffix}.ktx`;
 const normal_url = `normal${texture_suffix}.ktx`;
 const roughness_url = `roughness${texture_suffix}.ktx`;
+const filamat_url = 'textured.filamat';
+const filamesh_url = 'suzanne.filamesh';
 
 Filament.init([
-    'textured.filamat',
-    'suzanne.filamesh',
+    filamat_url,
+    filamesh_url,
     albedo_url,
     ao_url,
     metallic_url,
@@ -74,7 +76,7 @@ class App {
         const skybox = engine.createSkyFromKtx(sky_url);
         this.scene.setSkybox(skybox);
 
-        const material = engine.createMaterial('textured.filamat');
+        const material = engine.createMaterial(filamat_url);
         const matinstance = material.createInstance();
 
         const sampler = new Filament.TextureSampler(
@@ -94,8 +96,8 @@ class App {
         matinstance.setTextureParameter('normal', normal, sampler)
         matinstance.setTextureParameter('ao', ao, sampler)
 
-        const mesh = engine.loadFilamesh('suzanne.filamesh', matinstance);
-        this.shaderball = mesh.renderable;
+        const mesh = engine.loadFilamesh(filamesh_url, matinstance);
+        this.suzanne = mesh.renderable;
         this.scene.addEntity(mesh.renderable);
 
         this.swapChain = engine.createSwapChain();
@@ -115,7 +117,7 @@ class App {
         const radians = Date.now() / 1000;
         const transform = mat4.fromRotation(mat4.create(), radians, [0, 1, 0]);
         const tcm = this.engine.getTransformManager();
-        const inst = tcm.getInstance(this.shaderball);
+        const inst = tcm.getInstance(this.suzanne);
         tcm.setTransform(inst, transform);
         inst.delete();
         this.renderer.render(this.swapChain, this.view);
