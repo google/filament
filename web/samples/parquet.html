@@ -100,7 +100,9 @@ class App {
         const radians = Date.now() / 1000;
         const transform = mat4.fromRotation(mat4.create(), radians, [0, 1, 0]);
         const tcm = this.engine.getTransformManager();
-        tcm.setTransform(tcm.getInstance(this.shaderball), transform);
+        const inst = tcm.getInstance(this.shaderball);
+        tcm.setTransform(inst, transform);
+        inst.delete();
         this.renderer.render(this.swapChain, this.view);
         window.requestAnimationFrame(this.render);
     }

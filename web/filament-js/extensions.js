@@ -122,4 +122,22 @@ Filament.loadClassExtensions = function() {
         this._setBuffer(engine, getBufferDescriptor(buffer));
     };
 
+    Filament.RenderableManager$Builder.prototype.build =
+    Filament.LightManager$Builder.prototype.build =
+        function(engine, entity) {
+            const result = this._build(engine, entity);
+            this.delete();
+            return result;
+        };
+
+    Filament.VertexBuffer$Builder.prototype.build =
+    Filament.IndexBuffer$Builder.prototype.build =
+    Filament.Texture$Builder.prototype.build =
+    Filament.IndirectLight$Builder.prototype.build =
+    Filament.Skybox$Builder.prototype.build =
+        function(engine) {
+            const result = this._build(engine);
+            this.delete();
+            return result;
+        };
 };

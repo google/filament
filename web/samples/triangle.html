@@ -82,7 +82,9 @@ class App {
         const radians = Date.now() / 1000;
         const transform = mat4.fromRotation(mat4.create(), radians, [0, 0, 1]);
         const tcm = this.engine.getTransformManager();
-        tcm.setTransform(tcm.getInstance(this.triangle), transform);
+        const inst = tcm.getInstance(this.triangle);
+        tcm.setTransform(inst, transform);
+        inst.delete();
         this.renderer.render(this.swapChain, this.view);
         window.requestAnimationFrame(this.render);
     }

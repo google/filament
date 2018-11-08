@@ -88,14 +88,13 @@ class App {
             indices[j++] = 1 + (i % (nverts - 1));
         }
         // Create vertex buffer.
-        const vbuilder = Filament.VertexBuffer.Builder()
+        this.vb = Filament.VertexBuffer.Builder()
             .vertexCount(nverts)
             .bufferCount(2)
             .attribute(VertexAttribute.POSITION, 0, AttributeType.FLOAT2, 0, 8)
             .attribute(VertexAttribute.COLOR, 1, AttributeType.UBYTE4, 0, 4)
-            .normalized(VertexAttribute.COLOR);
-        this.vb = vbuilder.build(engine);
-        vbuilder.delete();
+            .normalized(VertexAttribute.COLOR)
+            .build(engine);
         const pbuf = Filament.Buffer(positions);
         const cbuf = Filament.Buffer(colors);
         this.vb.setBufferAt(engine, 0, pbuf);
@@ -103,11 +102,10 @@ class App {
         pbuf.delete();
         cbuf.delete();
         // Create index buffer.
-        const ibuilder = Filament.IndexBuffer.Builder()
+        this.ib = Filament.IndexBuffer.Builder()
             .indexCount(indices.length)
-            .bufferType(IndexType.USHORT);
-        this.ib = ibuilder.build(engine);
-        ibuilder.delete();
+            .bufferType(IndexType.USHORT)
+            .build(engine);
         const ibuf = Filament.Buffer(indices);
         this.ib.setBuffer(engine, ibuf);
         ibuf.delete();
@@ -115,9 +113,8 @@ class App {
         const rbuilder = Filament.RenderableManager.Builder(1)
             .boundingBox([ [-1, -1, -1], [1, 1, 1] ])
             .material(0, minstance)
-            .geometry(0, PrimitiveType.TRIANGLES, this.vb, this.ib);
-        rbuilder.build(engine, polygon);
-        rbuilder.delete();
+            .geometry(0, PrimitiveType.TRIANGLES, this.vb, this.ib)
+            .build(engine, polygon);
     }
 
     animate() {
@@ -127,8 +124,8 @@ class App {
             this.frame = 0;
             this.nsides = (this.nsides | 0) + 1;
             this.nsides = this.nsides % 10;
-            // Destroy and recreate the renderable component.
-            for (var k = 0; k < 100; k++) {
+            // Repeatedly destroy and recreate the renderable component to test for leaks.
+            for (var k = 0; k < 1000; k++) {
                 this.engine.destroyEntity(this.polygon);
                 this.engine.destroyVertexBuffer(this.vb);
                 this.engine.destroyIndexBuffer(this.ib);
