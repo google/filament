@@ -95,20 +95,14 @@ class App {
             .attribute(VertexAttribute.COLOR, 1, AttributeType.UBYTE4, 0, 4)
             .normalized(VertexAttribute.COLOR)
             .build(engine);
-        const pbuf = Filament.Buffer(positions);
-        const cbuf = Filament.Buffer(colors);
-        this.vb.setBufferAt(engine, 0, pbuf);
-        this.vb.setBufferAt(engine, 1, cbuf);
-        pbuf.delete();
-        cbuf.delete();
+        this.vb.setBufferAt(engine, 0, positions);
+        this.vb.setBufferAt(engine, 1, colors);
         // Create index buffer.
         this.ib = Filament.IndexBuffer.Builder()
             .indexCount(indices.length)
             .bufferType(IndexType.USHORT)
             .build(engine);
-        const ibuf = Filament.Buffer(indices);
-        this.ib.setBuffer(engine, ibuf);
-        ibuf.delete();
+        this.ib.setBuffer(engine, indices);
         // Create renderable component.
         const rbuilder = Filament.RenderableManager.Builder(1)
             .boundingBox([ [-1, -1, -1], [1, 1, 1] ])
