@@ -718,7 +718,7 @@ class_<KtxBundle>("KtxBundle")
     /// getInternalFormat ::method::
     /// srgb ::argument:: boolean that forces the resulting format to SRGB if possible.
     /// ::retval:: [Texture$InternalFormat]
-    /// Returns "undefined" is no valid Filament enumerant exists.
+    /// Returns "undefined" if no valid Filament enumerant exists.
     .function("getInternalFormat",
             EMBIND_LAMBDA(Texture::InternalFormat, (KtxBundle* self, bool srgb), {
         auto result = KtxUtility::toTextureFormat(self->info().glInternalFormat);
@@ -736,7 +736,7 @@ class_<KtxBundle>("KtxBundle")
     /// getPixelDataFormat ::method::
     /// rgbm ::argument:: boolean that configures the alpha channel into an HDR scale.
     /// ::retval:: [PixelDataFormat]
-    /// Returns "undefined" is no valid Filament enumerant exists.
+    /// Returns "undefined" if no valid Filament enumerant exists.
     .function("getPixelDataFormat",
             EMBIND_LAMBDA(driver::PixelDataFormat, (KtxBundle* self, bool rgbm), {
         switch (self->info().glTypeSize) {
@@ -751,7 +751,7 @@ class_<KtxBundle>("KtxBundle")
 
     /// getPixelDataType ::method::
     /// ::retval:: [PixelDataType]
-    /// Returns "undefined" is no valid Filament enumerant exists.
+    /// Returns "undefined" if no valid Filament enumerant exists.
     .function("getPixelDataType",
             EMBIND_LAMBDA(driver::PixelDataType, (KtxBundle* self), {
         return KtxUtility::toPixelDataType(self->info().glType);
@@ -759,7 +759,7 @@ class_<KtxBundle>("KtxBundle")
 
     /// getCompressedPixelDataType ::method::
     /// ::retval:: [CompressedPixelDataType]
-    /// Returns "undefined" is no valid Filament enumerant exists.
+    /// Returns "undefined" if no valid Filament enumerant exists.
     .function("getCompressedPixelDataType",
             EMBIND_LAMBDA(driver::CompressedPixelDataType, (KtxBundle* self), {
         return KtxUtility::toCompressedPixelDataType(self->info().glInternalFormat);

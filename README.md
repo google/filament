@@ -710,7 +710,7 @@ cd emsdk
 ./emsdk activate sdk-1.38.11-64bit
 ```
 
-After this you can invoke [easy build](#easy-build) script as follows:
+After this you can invoke the [easy build](#easy-build) script as follows:
 
 ```
 export EMSDK=<your chosen home for the emscripten SDK>
