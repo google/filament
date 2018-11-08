@@ -263,7 +263,7 @@ Filament._createTextureFromKtx = function(ktxdata, engine, options) {
     if (ktx.isCompressed()) {
         if (ktx.isCubemap()) {
             for (var level = 0; level < nlevels; level++) {
-                const uint8array = ktx.getCubeBlob(level).getBytes();
+                const uint8array = ktx.getCubeBlob(level);
                 const facesize = uint8array.length / 6;
                 const pixelbuffer = Filament.CompressedPixelBuffer(uint8array, cdatatype, facesize);
                 tex.setImageCube(engine, level, pixelbuffer);
@@ -271,7 +271,7 @@ Filament._createTextureFromKtx = function(ktxdata, engine, options) {
             return tex;
         }
         for (var level = 0; level < nlevels; level++) {
-            const uint8array = ktx.getBlob([level, 0, 0]).getBytes();
+            const uint8array = ktx.getBlob([level, 0, 0]);
             const pixelbuffer = Filament.CompressedPixelBuffer(uint8array, cdatatype);
             tex.setImage(engine, level, pixelbuffer);
         }
@@ -280,13 +280,13 @@ Filament._createTextureFromKtx = function(ktxdata, engine, options) {
 
     if (ktx.isCubemap()) {
         for (var level = 0; level < nlevels; level++) {
-            const uint8array = ktx.getCubeBlob(level).getBytes();
+            const uint8array = ktx.getCubeBlob(level);
             const pixelbuffer = Filament.PixelBuffer(uint8array, pbformat, datatype);
             tex.setImageCube(engine, level, pixelbuffer);
         }
     } else {
         for (var level = 0; level < nlevels; level++) {
-            const uint8array = ktx.getBlob([level, 0, 0]).getBytes();
+            const uint8array = ktx.getBlob([level, 0, 0]);
             const pixelbuffer = Filament.PixelBuffer(uint8array, pbformat, datatype);
             tex.setImage(engine, level, pixelbuffer);
         }

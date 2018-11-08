@@ -15,6 +15,7 @@
 */
 
 // Private utility that converts an asset string or Uint8Array into a low-level buffer descriptor.
+// Note that the low-level buffer descriptor must be manually deleted.
 function getBufferDescriptor(buffer) {
     if ('string' == typeof buffer || buffer instanceof String) {
         buffer = Filament.assets[buffer];
@@ -56,7 +57,10 @@ Filament.loadClassExtensions = function() {
     /// package ::argument:: asset string, or Uint8Array, or [Buffer] with filamat contents
     /// ::retval:: an instance of [createMaterial]
     Filament.Engine.prototype.createMaterial = function(buffer) {
-        return this._createMaterial(getBufferDescriptor(buffer));
+        buffer = getBufferDescriptor(buffer);
+        const result = this._createMaterial(buffer);
+        buffer.delete();
+        return result;
     };
 
     /// createTextureFromKtx ::method:: Utility function that creates a [Texture] from a KTX file.
@@ -64,7 +68,10 @@ Filament.loadClassExtensions = function() {
     /// options ::argument:: Options dictionary. For now, the `rgbm` boolean is the only option.
     /// ::retval:: [Texture]
     Filament.Engine.prototype.createTextureFromKtx = function(buffer, options) {
-        return Filament._createTextureFromKtx(getBufferDescriptor(buffer), this, options);
+        buffer = getBufferDescriptor(buffer);
+        const result = Filament._createTextureFromKtx(buffer, this, options);
+        buffer.delete();
+        return result;
     };
 
     /// createIblFromKtx ::method:: Utility that creates an [IndirectLight] from a KTX file.
@@ -72,7 +79,10 @@ Filament.loadClassExtensions = function() {
     /// options ::argument:: Options dictionary. For now, the `rgbm` boolean is the only option.
     /// ::retval:: [IndirectLight]
     Filament.Engine.prototype.createIblFromKtx = function(buffer, options) {
-        return Filament._createIblFromKtx(getBufferDescriptor(buffer), this, options);
+        buffer = getBufferDescriptor(buffer);
+        const result = Filament._createIblFromKtx(buffer, this, options);
+        buffer.delete();
+        return result;
     };
 
     /// createSkyFromKtx ::method:: Utility function that creates a [Skybox] from a KTX file.
@@ -90,7 +100,10 @@ Filament.loadClassExtensions = function() {
     /// options ::argument:: JavaScript object with optional `rgbm`, `noalpha`, and `nomips` keys.
     /// ::retval:: [Texture]
     Filament.Engine.prototype.createTextureFromPng = function(buffer, options) {
-        return Filament._createTextureFromPng(getBufferDescriptor(buffer), this, options);
+        buffer = getBufferDescriptor(buffer);
+        const result = Filament._createTextureFromPng(buffer, this, options);
+        buffer.delete();
+        return result;
     };
 
     /// loadFilamesh ::method:: Consumes the contents of a filamesh file and creates a renderable.
@@ -100,7 +113,10 @@ Filament.loadClassExtensions = function() {
     /// ::retval:: JavaScript object with keys `renderable`, `vertexBuffer`, and `indexBuffer`. \
     /// These are of type [Entity], [VertexBuffer], and [IndexBuffer].
     Filament.Engine.prototype.loadFilamesh = function(buffer, definstance, matinstances) {
-        return Filament._loadFilamesh(this, getBufferDescriptor(buffer), definstance, matinstances);
+        buffer = getBufferDescriptor(buffer);
+        const result = Filament._loadFilamesh(this, buffer, definstance, matinstances);
+        buffer.delete();
+        return result;
     };
 
     /// VertexBuffer ::core class::
@@ -110,7 +126,9 @@ Filament.loadClassExtensions = function() {
     /// bufferIndex ::argument:: non-negative integer
     /// buffer ::argument:: asset string, or Uint8Array, or [Buffer]
     Filament.VertexBuffer.prototype.setBufferAt = function(engine, bufferIndex, buffer) {
-        this._setBufferAt(engine, bufferIndex, getBufferDescriptor(buffer));
+        buffer = getBufferDescriptor(buffer);
+        this._setBufferAt(engine, bufferIndex, buffer);
+        buffer.delete();
     };
 
     /// IndexBuffer ::core class::
@@ -119,7 +137,9 @@ Filament.loadClassExtensions = function() {
     /// engine ::argument:: [Engine]
     /// buffer ::argument:: asset string, or Uint8Array, or [Buffer]
     Filament.IndexBuffer.prototype.setBuffer = function(engine, buffer) {
-        this._setBuffer(engine, getBufferDescriptor(buffer));
+        buffer = getBufferDescriptor(buffer);
+        this._setBuffer(engine, buffer);
+        buffer.delete();
     };
 
     Filament.RenderableManager$Builder.prototype.build =
@@ -140,4 +160,28 @@ Filament.loadClassExtensions = function() {
             this.delete();
             return result;
         };
+
+    Filament.KtxBundle.prototype.getBlob = function(index) {
+        const blob = this._getBlob(index);
+        const result = blob.getBytes();
+        blob.delete();
+        return result;
+    }
+
+    Filament.KtxBundle.prototype.getCubeBlob = function(miplevel) {
+        const blob = this._getCubeBlob(miplevel);
+        const result = blob.getBytes();
+        blob.delete();
+        return result;
+    }
+
+    Filament.Texture.prototype.setImage = function(engine, level, pbd) {
+        this._setImage(engine, level, pbd);
+        pbd.delete();
+    }
+
+    Filament.Texture.prototype.setImageCube = function(engine, level, pbd) {
+        this._setImageCube(engine, level, pbd);
+        pbd.delete();
+    }
 };

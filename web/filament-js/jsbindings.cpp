@@ -578,11 +578,11 @@ class_<TextureSampler>("TextureSampler")
 class_<Texture>("Texture")
     .class_function("Builder", (TexBuilder (*)()) [] { return TexBuilder(); })
     .function("generateMipmaps", &Texture::generateMipmaps)
-    .function("setImage", EMBIND_LAMBDA(void, (Texture* self,
+    .function("_setImage", EMBIND_LAMBDA(void, (Texture* self,
             Engine* engine, uint8_t level, PixelBufferDescriptor pbd), {
         self->setImage(*engine, level, std::move(*pbd.pbd));
     }), allow_raw_pointers())
-    .function("setImageCube", EMBIND_LAMBDA(void, (Texture* self,
+    .function("_setImageCube", EMBIND_LAMBDA(void, (Texture* self,
             Engine* engine, uint8_t level, PixelBufferDescriptor pbd), {
         uint32_t faceSize = pbd.pbd->size / 6;
         Texture::FaceOffsets offsets;
@@ -776,13 +776,14 @@ class_<KtxBundle>("KtxBundle")
     }), allow_raw_pointers())
 
     .function("isCubemap", &KtxBundle::isCubemap)
-    .function("getBlob", EMBIND_LAMBDA(BufferDescriptor, (KtxBundle* self, KtxBlobIndex index), {
+    .function("_getBlob", EMBIND_LAMBDA(BufferDescriptor, (KtxBundle* self, KtxBlobIndex index), {
         uint8_t* data;
         uint32_t size;
         self->getBlob(index, &data, &size);
         return BufferDescriptor(data, size);
     }), allow_raw_pointers())
-    .function("getCubeBlob", EMBIND_LAMBDA(BufferDescriptor, (KtxBundle* self, uint32_t miplevel), {
+    .function("_getCubeBlob", EMBIND_LAMBDA(BufferDescriptor,
+            (KtxBundle* self, uint32_t miplevel), {
         uint8_t* data;
         uint32_t size;
         self->getBlob({miplevel}, &data, &size);
