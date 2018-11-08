@@ -220,7 +220,7 @@ void OpenGLProgram::updateSamplers(OpenGLDriver* gl) noexcept {
             if (UTILS_UNLIKELY(t->gl.fence)) {
                 glWaitSync(t->gl.fence, 0, GL_TIMEOUT_IGNORED);
                 glDeleteSync(t->gl.fence);
-                t->gl.fence = 0;
+                t->gl.fence = nullptr;
             }
 
             gl->bindTexture(tmu, t->gl.target, t, t->gl.targetIndex);

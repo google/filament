@@ -1,3 +1,5 @@
+#include <utility>
+
 /*
  * Copyright (C) 2015 The Android Open Source Project
  *
@@ -82,7 +84,7 @@ struct HwRenderPrimitive : public HwBase {
 
 struct HwProgram : public HwBase {
 #ifndef NDEBUG
-    explicit HwProgram(const utils::CString& name) noexcept : name(name) { }
+    explicit HwProgram(utils::CString name) noexcept : name(std::move(name)) { }
     utils::CString name;
 #else
     explicit HwProgram(const utils::CString&) noexcept { }

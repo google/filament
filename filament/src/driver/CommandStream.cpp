@@ -118,7 +118,7 @@ void CommandType<void (Driver::*)(ARGS...)>::Command<METHOD>::log() noexcept  {
 }
 
 /*
- * When DEBUG_COMMAND_STREAM is activated, we need to explicitely instantiate the log() method
+ * When DEBUG_COMMAND_STREAM is activated, we need to explicitly instantiate the log() method
  * (this is because we don't want it in the header file)
  */
 

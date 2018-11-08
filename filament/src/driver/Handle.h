@@ -28,7 +28,6 @@
 
 namespace filament {
 
-struct HwBase;
 struct HwVertexBuffer;
 struct HwFence;
 struct HwIndexBuffer;

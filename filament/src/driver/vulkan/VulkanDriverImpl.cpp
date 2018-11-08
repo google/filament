@@ -155,7 +155,7 @@ void createVirtualDevice(VulkanContext& context) {
     deviceCreateInfo.queueCreateInfoCount = 1;
     deviceCreateInfo.pQueueCreateInfos = deviceQueueCreateInfo;
     deviceCreateInfo.pEnabledFeatures = nullptr;
-    deviceCreateInfo.enabledExtensionCount = deviceExtensionNames.size();
+    deviceCreateInfo.enabledExtensionCount = (uint32_t)deviceExtensionNames.size();
     deviceCreateInfo.ppEnabledExtensionNames = deviceExtensionNames.data();
     VkResult result = vkCreateDevice(context.physicalDevice, &deviceCreateInfo, VKALLOC,
             &context.device);
@@ -642,14 +642,14 @@ VkFormat getVkFormat(TextureFormat format) {
 }
 
 uint32_t getBytesPerPixel(TextureFormat format) {
-    return details::FTexture::getFormatSize(format);
+    return (uint32_t)details::FTexture::getFormatSize(format);
 }
 
 // See also FTexture::computeTextureDataSize, which takes a public-facing Texture format rather
 // than a driver-level Texture format, and can account for a specified byte alignment.
 uint32_t computeSize(TextureFormat format, uint32_t w, uint32_t h, uint32_t d) {
     const size_t bytesPerTexel = details::FTexture::getFormatSize(format);
-    return bytesPerTexel * w * h * d;
+    return (uint32_t)(bytesPerTexel * w * h * d);
 }
 
 SwapContext& getSwapContext(VulkanContext& context) {
@@ -658,12 +658,12 @@ SwapContext& getSwapContext(VulkanContext& context) {
 }
 
 bool hasPendingWork(VulkanContext& context) {
-    if (context.pendingWork.size() > 0) {
+    if (!context.pendingWork.empty()) {
         return true;
     }
     if (context.currentSurface) {
         for (auto& swapContext : context.currentSurface->swapContexts) {
-            if (swapContext.pendingWork.size() > 0) {
+            if (!swapContext.pendingWork.empty()) {
                 return true;
             }
         }

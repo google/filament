@@ -127,7 +127,7 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder)
     parser->getVertexDomain(&mVertexDomain);
     parser->getRequiredAttributes(&mRequiredAttributes);
     if (mBlendingMode == BlendingMode::MASKED) {
-        parser->getMaskThreshold(&mMaskTreshold);
+        parser->getMaskThreshold(&mMaskThreshold);
     }
     if (mShading == Shading::UNLIT) {
         parser->hasShadowMultiplier(&mHasShadowMultiplier);

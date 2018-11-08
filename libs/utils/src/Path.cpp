@@ -154,7 +154,7 @@ std::string Path::getExtension() const {
     }
 
     auto name = getName();
-    auto index = name.rfind(".");
+    auto index = name.rfind('.');
     if (index != std::string::npos && index != 0) {
         return name.substr(index + 1);
     } else {
@@ -164,7 +164,7 @@ std::string Path::getExtension() const {
 
 std::string Path::getNameWithoutExtension() const {
     std::string name = getName();
-    size_t index = name.rfind(".");
+    size_t index = name.rfind('.');
     if (index != std::string::npos) {
         return name.substr(0, index);
     }
@@ -199,7 +199,7 @@ std::vector<std::string> Path::split() const {
       if (!segment.empty()) segments.push_back(segment);
     } while (next != std::string::npos);
 
-    if (segments.size() == 0) segments.push_back(m_path);
+    if (segments.empty()) segments.push_back(m_path);
 
     return segments;
 }
@@ -227,17 +227,17 @@ std::string Path::getCanonicalPath(const std::string& path) {
         size_t size = segment.length();
 
         // skip empty (keedp initial)
-        if (size == 0 && segments.size() > 0) {
+        if (size == 0 && !segments.empty()) {
             continue;
         }
 
         // skip . (keep initial)
-        if (segment == "." && segments.size() > 0) {
+        if (segment == "." && !segments.empty()) {
             continue;
         }
 
         // remove ..
-        if (segment == ".." && segments.size() > 0) {
+        if (segment == ".." && !segments.empty()) {
             if (segments.back().empty()) { // ignore if .. follows initial /
                 continue;
             }

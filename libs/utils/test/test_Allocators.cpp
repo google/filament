@@ -14,10 +14,11 @@
  * limitations under the License.
  */
 
-#include <vector>
 #include <algorithm>
-#include <functional>
 #include <bitset>
+#include <functional>
+#include <utility>
+#include <vector>
 
 #include <gtest/gtest.h>
 
@@ -213,7 +214,7 @@ TEST(AllocatorTest, ScopedStackArena) {
     void* p = nullptr;
 
     struct Foo {
-        Foo(std::function<void(void)> f) : dtor(f) { }
+        explicit Foo(std::function<void(void)> f) : dtor(std::move(std::move(f))) { }
         ~Foo() { dtor(); }
     private:
         std::function<void(void)> dtor;

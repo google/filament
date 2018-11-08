@@ -32,7 +32,7 @@ namespace details {
 class ResourceListBase {
 public:
     UTILS_NOINLINE
-    ResourceListBase(const char* typeName)
+    explicit ResourceListBase(const char* typeName)
 #ifndef NDEBUG
             : mTypeName(typeName)
 #endif

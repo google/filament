@@ -33,7 +33,7 @@
 #include <assert.h>
 #include <math/fast.h>
 
-// set EXTRA_TIMING_INFO to enable and print extra timing infos about the render loop
+// set EXTRA_TIMING_INFO to enable and print extra timing info about the render loop
 #define EXTRA_TIMING_INFO  false
 
 namespace filament {
@@ -75,7 +75,7 @@ class FrameInfoManager {
     static constexpr size_t HISTORY_COUNT = 5;
     static constexpr size_t POOL_COUNT = 8;
 
-    // set this to true to enable extra timing infos
+    // set this to true to enable extra timing info
     static constexpr bool mLapRecordsEnabled = EXTRA_TIMING_INFO;
 
 public:

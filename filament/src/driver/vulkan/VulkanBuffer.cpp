@@ -32,7 +32,7 @@ VulkanBuffer::VulkanBuffer(VulkanContext& context, VulkanStagePool& stagePool,
     VmaAllocationCreateInfo allocInfo {
         .usage = VMA_MEMORY_USAGE_GPU_ONLY
     };
-    vmaCreateBuffer(context.allocator, &bufferInfo, &allocInfo, &mGpuBuffer, &mGpuMemory, 0);
+    vmaCreateBuffer(context.allocator, &bufferInfo, &allocInfo, &mGpuBuffer, &mGpuMemory, nullptr);
 }
 
 VulkanBuffer::~VulkanBuffer() {
@@ -88,7 +88,7 @@ void VulkanBuffer::loadFromCpu(const void* cpuData, uint32_t byteOffset, uint32_
     vkQueueSubmit(mContext.graphicsQueue, 1, &submitInfo, fence);
 
     // Enqueue some work to reclaim the staging area and free the command buffer. The pipeline
-    // barrier we already placed is a GPU-to-GPU sync point, but reclaimation of the staging area
+    // barrier we already placed is a GPU-to-GPU sync point, but reclamation of the staging area
     // needs GPU-CPU synchronization. That's what the fence is for.
     mContext.pendingWork.emplace_back([this, fence, device, cmdbuffer, stage] (VkCommandBuffer)  {
         vkWaitForFences(device, 1, &fence, VK_FALSE, UINT64_MAX);

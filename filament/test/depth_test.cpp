@@ -97,7 +97,7 @@ void depthBufferPrecision(Projection proj, float nearVal, float farVal) {
     }
 }
 
-int main(void) {
+int main() {
     static constexpr float inf = std::numeric_limits<float>::infinity();
 
     const float near = 0.1f;

@@ -60,7 +60,7 @@ void DriverBase::scheduleDestroySlow(BufferDescriptor&& buffer) noexcept {
 // ------------------------------------------------------------------------------------------------
 
 /*
- * This array contains informations we might need about each texture internal formats.
+ * This array contains information we might need about each texture internal formats.
  *
  * All entries MUST be sorted by Driver::TextureFormat.
  */

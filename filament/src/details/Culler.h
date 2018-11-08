@@ -49,7 +49,7 @@ public:
     using result_type = uint8_t;
 
     /*
-     * returns whether each AABB in an array intersects with the furstum
+     * returns whether each AABB in an array intersects with the frustum
      */
     static void intersects(result_type* results,
             Frustum const& frustum,
@@ -58,7 +58,7 @@ public:
             size_t count, size_t bit) noexcept;
 
     /*
-     * returns whether each shpere in an array intersects with the furstum
+     * returns whether each sphere in an array intersects with the frustum
      */
     static void intersects(
             result_type* results,

@@ -52,10 +52,10 @@ VkFramebuffer VulkanFboCache::getFramebuffer(FboKey config, uint32_t w, uint32_t
         iter.value().timestamp = mCurrentTime;
         return iter->second.handle;
     }
-    uint32_t nattachments = 0;
+    uint32_t nAttachments = 0;
     for (auto attachment : config.attachments) {
         if (attachment) {
-            nattachments++;
+            nAttachments++;
         }
     }
     VkFramebufferCreateInfo info {
@@ -64,7 +64,7 @@ VkFramebuffer VulkanFboCache::getFramebuffer(FboKey config, uint32_t w, uint32_t
         .width = w,
         .height = h,
         .layers = 1,
-        .attachmentCount = nattachments,
+        .attachmentCount = nAttachments,
         .pAttachments = config.attachments
     };
     mRenderPassRefCount[info.renderPass]++;

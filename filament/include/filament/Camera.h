@@ -308,7 +308,7 @@ public:
      *                      between 1/8000 and 30.
      *
      * @param sensitivity   Sensitivity in ISO, clamped between 10 and 204,800.
-     *                      A higher \p sensitivity increases the exposure. Realistice values are
+     *                      A higher \p sensitivity increases the exposure. Realistic values are
      *                      between 50 and 25600.
      *
      * @note

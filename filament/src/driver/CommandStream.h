@@ -165,7 +165,7 @@ class CustomCommand : public CommandBase {
     static void execute(Driver&, CommandBase* base, intptr_t* next) noexcept;
 public:
     inline CustomCommand(CustomCommand&& rhs) = default;
-    inline CustomCommand(std::function<void()> cmd)
+    inline explicit CustomCommand(std::function<void()> cmd)
             : CommandBase(execute), mCommand(std::move(cmd)) { }
 };
 

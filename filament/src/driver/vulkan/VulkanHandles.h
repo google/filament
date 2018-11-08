@@ -45,7 +45,7 @@ struct VulkanTexture;
 // - The attachment's VkImage is shared and the owner is VulkanSwapChain.
 // - The attachment's VkImage is shared and the owner is VulkanTexture.
 //
-// We use private inheritence to shield clients from the width / height fields in HwRenderTarget,
+// We use private inheritance to shield clients from the width / height fields in HwRenderTarget,
 // which are not representative when this is the default render target.
 struct VulkanRenderTarget : private HwRenderTarget {
 
@@ -54,7 +54,7 @@ struct VulkanRenderTarget : private HwRenderTarget {
             mContext(context), mOffscreen(true) {}
 
     // Creates a special "default" render target (i.e. associated with the swap chain)
-    VulkanRenderTarget(VulkanContext& context) : HwRenderTarget(0, 0), mContext(context),
+    explicit VulkanRenderTarget(VulkanContext& context) : HwRenderTarget(0, 0), mContext(context),
             mOffscreen(false) {}
 
     ~VulkanRenderTarget();
@@ -139,7 +139,7 @@ private:
 };
 
 struct VulkanRenderPrimitive : public HwRenderPrimitive {
-    VulkanRenderPrimitive(VulkanContext& context) {}
+    explicit VulkanRenderPrimitive(VulkanContext& context) {}
     void setPrimitiveType(Driver::PrimitiveType pt);
     void setBuffers(VulkanVertexBuffer* vertexBuffer, VulkanIndexBuffer* indexBuffer,
             uint32_t enabledAttributes);

@@ -98,7 +98,7 @@ TEST(FilamentTest, TransformManager) {
     tcm.openLocalTransformTransaction();
     tcm.setTransform(parent, mat4f{ float4{ 4 }});
 
-    // check the transfroms ARE NOT propagated
+    // check the transforms ARE NOT propagated
     EXPECT_EQ(tcm.getTransform(parent), mat4f{ float4{ 4 }});
     EXPECT_EQ(tcm.getWorldTransform(parent), mat4f{ float4{ 2 }});
     EXPECT_EQ(tcm.getTransform(child), mat4f{ float4{ 1 }});
@@ -126,7 +126,7 @@ TEST(FilamentTest, TransformManager) {
     // make sure child/parent are out of order
     ASSERT_LT(child, newParent);
 
-    // local transaction reprders parent/child
+    // local transaction reorders parent/child
     tcm.openLocalTransformTransaction();
     tcm.setTransform(newParent, mat4f{ float4{ 8 }});
     tcm.commitLocalTransformTransaction();

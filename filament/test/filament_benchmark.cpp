@@ -64,7 +64,7 @@ void benchmark(Profiler& p, const char* const name, T f) {
 
 // ------------------------------------------------------------------------------------------------
 
-int main(void) {
+int main() {
 
     std::mt19937 gen;
     std::uniform_real_distribution<float> rand(-100.0f, 100.0f);

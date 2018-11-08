@@ -284,8 +284,8 @@ void FEngine::shutdown() {
     }
     cleanupResourceList(mFences);
 
-    for (size_t i = 0; i < POST_PROCESS_STAGES_COUNT; i++) {
-        driver.destroyProgram(mPostProcessPrograms[i]);
+    for (const auto& mPostProcessProgram : mPostProcessPrograms) {
+        driver.destroyProgram(mPostProcessProgram);
     }
 
     // There might be commands added by the terminate() calls
@@ -702,7 +702,7 @@ bool FEngine::execute() {
 
     // wait until we get command buffers to be executed (or thread exit requested)
     auto buffers = mCommandBufferQueue.waitForCommands();
-    if (UTILS_UNLIKELY(!buffers.size())) {
+    if (UTILS_UNLIKELY(buffers.empty())) {
         return false;
     }
 

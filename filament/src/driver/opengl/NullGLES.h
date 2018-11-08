@@ -74,7 +74,7 @@ inline void glDrawRangeElements(GLenum, GLuint, GLuint, GLsizei, GLenum, const v
 inline void glBlitFramebuffer (GLint, GLint, GLint, GLint, GLint, GLint, GLint, GLint, GLbitfield, GLenum) { }
 inline void glReadPixels (GLint, GLint, GLsizei, GLsizei, GLenum, GLenum, void *) { }
 
-inline GLenum glGetError(void) { return GL_NO_ERROR; }
+inline GLenum glGetError() { return GL_NO_ERROR; }
 
 } // namespace nullgles
 

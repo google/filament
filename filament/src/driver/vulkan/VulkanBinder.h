@@ -261,7 +261,7 @@ private:
     PipelineVal* mCurrentPipeline = nullptr;
     DescriptorVal* mCurrentDescriptor = nullptr;
 
-    // If one of these dirty flags is set, then one or more its contituent bindings have changed, so
+    // If one of these dirty flags is set, then one or more its constituent bindings have changed, so
     // a new pipeline or descriptor set needs to be retrieved from the cache or created.
     bool mDirtyPipeline = true;
     bool mDirtyDescriptor = true;

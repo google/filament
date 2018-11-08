@@ -383,9 +383,9 @@ void VulkanBinder::unbindUniformBuffer(VkBuffer uniformBuffer) noexcept {
 }
 
 void VulkanBinder::unbindImageView(VkImageView imageView) noexcept {
-    for (uint32_t bindingIndex = 0u; bindingIndex < NUM_SAMPLER_BINDINGS; ++bindingIndex) {
-        if (mDescriptorKey.samplers[bindingIndex].imageView == imageView) {
-            mDescriptorKey.samplers[bindingIndex] = {
+    for (auto& sampler : mDescriptorKey.samplers) {
+        if (sampler.imageView == imageView) {
+            sampler = {
                 .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
             };
             mDirtyDescriptor = true;

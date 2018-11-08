@@ -49,7 +49,7 @@ FScene::FScene(FEngine& engine) :
 FScene::~FScene() noexcept = default;
 
 
-void FScene::prepare(const math::mat4f& worldOriginTansform) {
+void FScene::prepare(const math::mat4f& worldOriginTransform) {
     // TODO: can we skip this in most cases? Since we rely on indices staying the same,
     //       we could only skip, if nothing changed in the RCM.
 
@@ -103,7 +103,7 @@ void FScene::prepare(const math::mat4f& worldOriginTansform) {
 
         // get the world transform
         auto ti = tcm.getInstance(e);
-        const mat4f worldTransform = worldOriginTansform * tcm.getWorldTransform(ti);
+        const mat4f worldTransform = worldOriginTransform * tcm.getWorldTransform(ti);
 
         // don't even draw this object if it doesn't have a transform (which shouldn't happen
         // because one is always created when creating a Renderable component).

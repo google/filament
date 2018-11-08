@@ -297,7 +297,7 @@ public:
      * correct when rendering a single view.
      *
      * However, when rendering a View on top of another one on the same render target,
-     * it is necessary toindicate that the color buffer cannot be discarded.
+     * it is necessary to indicate that the color buffer cannot be discarded.
      *
      * @param discard Buffers that need to be discarded before rendering.
      *

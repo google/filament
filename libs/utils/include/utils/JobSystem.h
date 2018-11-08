@@ -363,7 +363,7 @@ private:
 
     alignas(16) // at least we align to half (or quarter) cache-line
     aligned_vector<ThreadState> mThreadStates;          // actual data is stored offline
-    std::atomic<bool> mExitRequested = { 0 };           // this one is almost never written
+    std::atomic<bool> mExitRequested = { false };       // this one is almost never written
     std::atomic<uint16_t> mAdoptedThreads = { 0 };      // this one is almost never written
     Job* const mJobStorageBase;                         // Base for conversion to indices
     uint16_t mThreadCount = 0;                          // total # of threads in the pool

@@ -86,7 +86,7 @@ void foo(void*) noexcept {
     __asm__ __volatile__( "" : : : "memory" );
 }
 
-int main(void) {
+int main() {
     filament::details::EnginePerformanceTest* engine = new filament::details::EnginePerformanceTest();
     filament::details::EnginePerformanceTest* ei = engine;
     filament::details::EnginePerformanceTest::PFN destroyUniverse = engine->getDestroyUniverseApi();
