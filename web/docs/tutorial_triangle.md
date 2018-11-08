@@ -39,7 +39,7 @@ class App {
     // TODO: create entities
     this.render = this.render.bind(this);
     this.resize = this.resize.bind(this);
-    window.addEventListener("resize", this.resize);
+    window.addEventListener('resize', this.resize);
     window.requestAnimationFrame(this.render);
   }
   render() {
@@ -71,15 +71,19 @@ that define a PBR material. We'll learn more about material packages in the next
 ## Spawn a local server
 
 Because of CORS restrictions, your web app cannot fetch the material package directly from the
-file system. One way around this is to create a temporary server using Python:
+file system. One way around this is to create a temporary server using Python or node:
 
 ```bash
 python3 -m http.server     # Python 3
 python -m SimpleHTTPServer # Python 2.7
+npx http-server -p 8000    # nodejs
 ```
 
 To see if this works, navigate to [http://localhost:8000](http://localhost:8000) and check if you
 can load the page without any errors appearing in the developer console.
+
+Take care not to use Python's simple server in production since it does not serve WebAssembly files
+with the correct MIME type.
 
 ## Create the Engine and Scene
 
@@ -257,5 +261,8 @@ this.camera.setProjection(Projection.ORTHO, -aspect, aspect, -1, 1, 0, 1);
 ```
 
 You should now have a spinning triangle! The completed JavaScript is available
-[here](tutorial_triangle.js). In the next tutorial, we'll take a closer look at Filament
-materials and 3D rendering.
+[here](tutorial_triangle.js).
+
+In the [next tutorial], we'll take a closer look at Filament materials and 3D rendering.
+
+[next tutorial]: tutorial_redball.html
