@@ -51,7 +51,6 @@ class FEngine;
 class FMaterialInstance;
 class FRenderer;
 class FScene;
-class Froxelizer;
 
 class FView : public View {
 public:
@@ -134,7 +133,7 @@ public:
 
     void updatePrimitivesLod(
             FEngine& engine, const CameraInfo& camera,
-            FScene::RenderableSoa& renderableData, Range visibles) noexcept;
+            FScene::RenderableSoa& renderableData, Range visible) noexcept;
 
     static void cullRenderables(utils::JobSystem& js, FScene::RenderableSoa& renderableData,
                                 Frustum const& frustum, size_t bit) noexcept;

@@ -35,7 +35,7 @@ CommandBufferQueue::CommandBufferQueue(size_t requiredSize, size_t bufferSize)
 }
 
 CommandBufferQueue::~CommandBufferQueue() {
-    assert(!mCommandBuffersToExecute.size());
+    assert(mCommandBuffersToExecute.empty());
 }
 
 void CommandBufferQueue::requestExit() {

@@ -198,7 +198,7 @@ math::float2 FView::updateScale(duration frameTime) noexcept {
             const float maxMajorScale = minor / major;
             const float majorScale = std::max(scale, maxMajorScale);
 
-            // then the minor axis is scaled down to the original aspec-ratio
+            // then the minor axis is scaled down to the original aspect-ratio
             const float minorScale = std::max(scale / majorScale, majorScale * maxMajorScale);
 
             // if we have some scaling capacity left, scale homogeneously
@@ -728,9 +728,9 @@ void FView::prepareVisibleLights(FLightManager& lcm, utils::JobSystem&, FScene::
 }
 
 void FView::updatePrimitivesLod(FEngine& engine, const CameraInfo&,
-        FScene::RenderableSoa& renderableData, Range visibles) noexcept {
+        FScene::RenderableSoa& renderableData, Range visible) noexcept {
     FRenderableManager const& rcm = engine.getRenderableManager();
-    for (uint32_t index : visibles) {
+    for (uint32_t index : visible) {
         uint8_t level = 0; // TODO: pick the proper level of detail
         auto ri = renderableData.elementAt<FScene::RENDERABLE_INSTANCE>(index);
         renderableData.elementAt<FScene::PRIMITIVES>(index) = rcm.getRenderPrimitives(ri, level);

@@ -39,7 +39,7 @@ namespace details {
 // do this only if depth-clamp is available
 static constexpr bool USE_DEPTH_CLAMP = false;
 
-// currently disabled because it creates shadow acnee problems at a distance
+// currently disabled because it creates shadow acne problems at a distance
 static constexpr bool ENABLE_LISPSM = true;
 
 ShadowMap::ShadowMap(FEngine& engine) noexcept :

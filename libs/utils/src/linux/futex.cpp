@@ -35,11 +35,11 @@ static inline int futex(volatile void* ftx, int op, int value,
 }
 
 int futex_wake(volatile void* ftx, int count) {
-    return futex(ftx, FUTEX_WAKE, count, NULL, 0);
+    return futex(ftx, FUTEX_WAKE, count, nullptr, 0);
 }
 
 int futex_wake_ex(volatile void* ftx, bool shared, int count) {
-    return futex(ftx, shared ? FUTEX_WAKE : FUTEX_WAKE_PRIVATE, count, NULL, 0);
+    return futex(ftx, shared ? FUTEX_WAKE : FUTEX_WAKE_PRIVATE, count, nullptr, 0);
 }
 int futex_wait(volatile void* ftx, int value, const struct timespec* timeout) {
     return futex(ftx, FUTEX_WAIT, value, timeout, 0);

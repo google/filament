@@ -50,7 +50,8 @@ static std::string formatString(const char* format, ...) noexcept {
     return s;
 }
 
-static std::string panicString(std::string msg, const char* function, int line,
+static std::string panicString(
+        const std::string& msg, const char* function, int line,
         const char* file, const char* reason) {
 #ifndef NDEBUG
     return formatString("%s\nin %s:%d\nin file %s\nreason: %s",
@@ -64,16 +65,15 @@ static std::string panicString(std::string msg, const char* function, int line,
 Panic::~Panic() noexcept = default;
 
 template<typename T>
-TPanic<T>::TPanic(const std::string& reason) :
-    m_reason(reason) {
+TPanic<T>::TPanic(std::string reason) :
+    m_reason(std::move(reason)) {
     m_callstack.update(1);
     buildMessage();
 }
 
 template<typename T>
-TPanic<T>::TPanic(
-        const char* function, const char* file, int line, const std::string& reason) :
-    m_reason(reason), m_function(function), m_file(file), m_line(line) {
+TPanic<T>::TPanic(const char* function, const char* file, int line, std::string reason)
+        : m_reason(std::move(reason)), m_function(function), m_file(file), m_line(line) {
     m_callstack.update(1);
     buildMessage();
 }

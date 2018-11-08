@@ -181,7 +181,7 @@ RenderableManager::Builder::Result RenderableManager::Builder::build(Engine& eng
             material = upcast(entry.materialInstance->getMaterial());
         }
 
-        // primitves without indices or vertices will be ignored
+        // primitives without indices or vertices will be ignored
         if (!entry.indices || !entry.vertices) {
             continue;
         }

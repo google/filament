@@ -209,7 +209,8 @@ public:
     static size_t getElementTypeSize(ElementType type) noexcept;
 
     // This is here to be compatible with CommandStream (nice for debugging)
-    inline void queueCommand(const std::function<void()>& command) {
+    template<typename CALLABLE>
+    inline void queueCommand(CALLABLE command) {
         command();
     }
 

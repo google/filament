@@ -1,3 +1,5 @@
+#include <utility>
+
 /*
  * Copyright (C) 2018 The Android Open Source Project
  *
@@ -141,7 +143,7 @@ struct CommandType<void (Driver::*)(ARGS...)> {
         }
 
         // A command can be moved
-        inline Command(Command&& rhs) = default;
+        inline Command(Command&& rhs) noexcept = default;
 
         template<typename... A>
         inline explicit constexpr Command(Execute execute, A&& ... args)
@@ -160,11 +162,11 @@ struct CommandType<void (Driver::*)(ARGS...)> {
 
 class CustomCommand : public CommandBase {
     std::function<void()> mCommand;
-    static void execute(Driver&, CommandBase* self, intptr_t* next) noexcept;
+    static void execute(Driver&, CommandBase* base, intptr_t* next) noexcept;
 public:
     inline CustomCommand(CustomCommand&& rhs) = default;
-    inline CustomCommand(const std::function<void()>& cmd)
-            : CommandBase(execute), mCommand(cmd) { }
+    inline explicit CustomCommand(std::function<void()> cmd)
+            : CommandBase(execute), mCommand(std::move(cmd)) { }
 };
 
 // ------------------------------------------------------------------------------------------------
@@ -185,7 +187,7 @@ template<typename ConcreteDriver>
 class ConcreteDispatcher final : public Dispatcher {
 public:
     // initialize the dispatch table
-    ConcreteDispatcher(ConcreteDriver* driver) noexcept : Dispatcher() {
+    explicit ConcreteDispatcher(ConcreteDriver* driver) noexcept : Dispatcher() {
 #define DECL_DRIVER_API_SYNCHRONOUS(RetType, methodName, paramsDecl, params)
 #define DECL_DRIVER_API(methodName, paramsDecl, params)                 methodName##_ = methodName;
 #define DECL_DRIVER_API_RETURN(RetType, methodName, paramsDecl, params) methodName##_ = methodName;

@@ -63,7 +63,7 @@ void RenderPass::render(
 
     // compute how much maximum storage we need for this pass
     uint32_t growBy = FScene::getPrimitiveCount(soa, vr.last);
-    // double the color pass for transparents that need to render twice
+    // double the color pass for transparent objects that need to render twice
     const bool colorPass  = bool(commandTypeFlags & CommandTypeFlags::COLOR);
     const bool depthPass  = bool(commandTypeFlags & (CommandTypeFlags::DEPTH | CommandTypeFlags::SHADOW));
     growBy *= uint32_t(colorPass * 2 + depthPass);

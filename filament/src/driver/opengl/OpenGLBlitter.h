@@ -26,7 +26,7 @@ class OpenGLDriver;
 
 class OpenGLBlitter {
 public:
-    OpenGLBlitter(OpenGLDriver& openGLDriver) noexcept : mOpenGLDriver(openGLDriver) {}
+    explicit OpenGLBlitter(OpenGLDriver& openGLDriver) noexcept : mOpenGLDriver(openGLDriver) {}
 
     void init() noexcept;
     void terminate() noexcept;

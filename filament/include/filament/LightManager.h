@@ -193,7 +193,7 @@ public:
 
         /** Distance from the camera after which shadows are clipped. this is used to clip
          * shadows that are too far and wouldn't contribute to the scene much, improving
-         * performance and quality. This valie is always positive.
+         * performance and quality. This value is always positive.
          * Use 0.0f to use the camera far distance.
          */
         float shadowFar = 0.0f;

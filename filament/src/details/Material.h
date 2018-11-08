@@ -38,7 +38,6 @@ namespace filament {
 namespace details {
 
 class  FEngine;
-struct ShaderGenerator;
 
 class FMaterial : public Material {
 public:
@@ -101,7 +100,7 @@ public:
         return mRasterState.depthFunc != Driver::RasterState::DepthFunc::A;
     }
     bool isDoubleSided() const noexcept { return mDoubleSided; }
-    float getMaskThreshold() const noexcept { return mMaskTreshold; }
+    float getMaskThreshold() const noexcept { return mMaskThreshold; }
     bool hasShadowMultiplier() const noexcept { return mHasShadowMultiplier; }
     AttributeBitset getRequiredAttributes() const noexcept { return mRequiredAttributes; }
 
@@ -126,7 +125,7 @@ private:
     AttributeBitset mRequiredAttributes;
     bool mDoubleSided;
     CullingMode mCullingMode;
-    float mMaskTreshold;
+    float mMaskThreshold;
     bool mHasShadowMultiplier = false;
     bool mHasCustomDepthShader = false;
     bool mIsDefaultMaterial = false;

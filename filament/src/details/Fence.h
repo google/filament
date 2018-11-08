@@ -50,7 +50,7 @@ private:
     static std::condition_variable sCondition;
 
     struct FenceSignal {
-        FenceSignal(Type type) noexcept : mType(type) { }
+        explicit FenceSignal(Type type) noexcept : mType(type) { }
         enum State : uint8_t { UNSIGNALED, SIGNALED, DESTROYED };
         // we store mType here instead of in FFence, because it allows sizeof(FFence) to be
         // much smaller (since it needs to be multiple of 8 on 64 bits architectures)

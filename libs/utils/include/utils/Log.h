@@ -51,7 +51,7 @@ public:
         DEBUG, ERROR, WARNING, INFO
     };
 
-    ostream(Priority p) noexcept : mPriority(p) { }
+    explicit ostream(Priority p) noexcept : mPriority(p) { }
 
     ostream& operator<<(short value) noexcept;
     ostream& operator<<(unsigned short value) noexcept;

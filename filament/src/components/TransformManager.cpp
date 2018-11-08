@@ -173,7 +173,7 @@ void FTransformManager::insertNode(Instance i, Instance parent) noexcept {
     manager[i].parent = parent;
     manager[i].prev = 0;
     if (parent) {
-        // we insert ourself first in the parent's list
+        // we insert ourselves first in the parent's list
         Instance next = manager[parent].firstChild;
         manager[i].next = next;
         // we're our parent's first child now

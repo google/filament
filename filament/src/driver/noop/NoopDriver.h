@@ -26,13 +26,13 @@ namespace filament {
 
 class NoopDriver final : public DriverBase {
     NoopDriver() noexcept;
-    virtual ~NoopDriver() noexcept;
+    ~NoopDriver() noexcept override;
 
 public:
     static Driver* create();
 
 private:
-    virtual ShaderModel getShaderModel() const noexcept override final { return ShaderModel::UNKNOWN; }
+    ShaderModel getShaderModel() const noexcept final { return ShaderModel::UNKNOWN; }
 
     /*
      * Driver interface

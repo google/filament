@@ -353,7 +353,7 @@ int main(int argc, char* argv[]) {
     }
 
     const bool hasIndex16 = g_vertexCount < std::numeric_limits<uint16_t>::max();
-    const bool hasUV1 = g_uv1.size() > 0;
+    const bool hasUV1 = !g_uv1.empty();
 
     Box aabb = meshes.at(0).aabb;
     for (size_t i = 1; i < meshes.size(); i++) {

@@ -109,13 +109,6 @@
 
 #define UTILS_RESTRICT __restrict__
 
-// TODO: set the proper alignment for the target
-#ifndef __EMSCRIPTEN__
-#define UTILS_ALIGN_LOOP {__asm__ __volatile__(".align 4");}
-#else
-#define UTILS_ALIGN_LOOP
-#endif
-
 #if __has_feature(cxx_thread_local)
 #   ifdef ANDROID
 #       // Android NDK lies about supporting cxx_thread_local

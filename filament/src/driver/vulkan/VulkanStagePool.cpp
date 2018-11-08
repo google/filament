@@ -47,7 +47,7 @@ VulkanStage const* VulkanStagePool::acquireStage(uint32_t numBytes) noexcept {
     VmaAllocationCreateInfo allocInfo {
         .usage = VMA_MEMORY_USAGE_CPU_ONLY
     };
-    vmaCreateBuffer(mContext.allocator, &bufferInfo, &allocInfo, &stage->buffer, &stage->memory, 0);
+    vmaCreateBuffer(mContext.allocator, &bufferInfo, &allocInfo, &stage->buffer, &stage->memory, nullptr);
     return stage;
 }
 

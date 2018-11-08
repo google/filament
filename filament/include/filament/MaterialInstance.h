@@ -75,7 +75,7 @@ public:
      *
      * @param name      Name of the parameter as defined by Material. Cannot be nullptr.
      * @param type      Whether the color value is encoded as Linear or sRGB.
-     * @param color     Array of read, green, blue chanels values.
+     * @param color     Array of read, green, blue channels values.
      * @throws utils::PreConditionPanic if name doesn't exist or no-op if exceptions are disabled.
      */
     void setParameter(const char* name, RgbType type, math::float3 color) noexcept;

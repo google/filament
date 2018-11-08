@@ -46,7 +46,7 @@ public:
         SamplerParams s;
     };
 
-    SamplerBuffer() noexcept { }
+    SamplerBuffer() noexcept { } // NOLINT(modernize-use-equals-default)
 
     // create a sampler buffer
     explicit SamplerBuffer(size_t count) noexcept;

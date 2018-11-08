@@ -67,7 +67,7 @@ public:
         return env;
     }
 
-    static void handleException(JNIEnv* const env) noexcept;
+    static void handleException(JNIEnv* env) noexcept;
 
 private:
     JNIEnv* getEnvironmentSlow() noexcept;

@@ -80,7 +80,7 @@ public:
     ~FScene() noexcept;
     void terminate(FEngine& engine);
 
-    void prepare(const math::mat4f& worldOriginTansform);
+    void prepare(const math::mat4f& worldOriginTransform);
     void prepareDynamicLights(const CameraInfo& camera, ArenaScope& arena, Handle<HwUniformBuffer> lightUbh) noexcept;
     void computeBounds(Aabb& castersBox, Aabb& receiversBox, uint32_t visibleLayers) const noexcept;
 
@@ -128,13 +128,13 @@ public:
 
     static inline uint32_t getPrimitiveCount(RenderableSoa const& soa,
             uint32_t first, uint32_t last) noexcept {
-        // the caller must guarantee that last is dereferencable
+        // the caller must guarantee that last is dereferenceable
         return soa.elementAt<SUMMED_PRIMITIVE_COUNT>(last) -
                 soa.elementAt<SUMMED_PRIMITIVE_COUNT>(first);
     }
 
     static inline uint32_t getPrimitiveCount(RenderableSoa const& soa, uint32_t last) noexcept {
-        // the caller must guarantee that last is dereferencable
+        // the caller must guarantee that last is dereferenceable
         return soa.elementAt<SUMMED_PRIMITIVE_COUNT>(last);
     }
 

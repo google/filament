@@ -26,7 +26,7 @@ TEST(BinaryTreeArray, basic) {
     struct Node {
         size_t index = 0;
         size_t next = 0;
-        bool visited = 0;
+        bool visited = false;
     };
     Node array[256];
 

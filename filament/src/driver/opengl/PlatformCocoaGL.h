@@ -45,7 +45,7 @@ public:
         return driver::FenceStatus::ERROR;
     }
 
-    void setPresentationTime(int64_t presentationTimeInNanosecond) noexcept final override {}
+    void setPresentationTime(int64_t presentationTimeInNanosecond) noexcept final {}
 
     Stream* createStream(void* nativeStream) noexcept final { return nullptr; }
     void destroyStream(Stream* stream) noexcept final {}

@@ -57,14 +57,15 @@ public:
 
         // Size is chosen so that we can store at least std::function<>
         // the alignas() qualifier ensures we're multiple of a cache-line.
-        static constexpr size_t JOB_STORAGE_SIZE = // NOLINT(cert-err58-cpp)
-                (std::max(sizeof(std::function<void()>), size_t(48)) + sizeof(void*) - 1)
-                / sizeof(void*);
+        static constexpr size_t JOB_STORAGE_SIZE_BYTES =
+                sizeof(std::function<void()>) > 48 ? sizeof(std::function<void()>) : 48;
+        static constexpr size_t JOB_STORAGE_SIZE_WORDS =
+                (JOB_STORAGE_SIZE_BYTES + sizeof(void*) - 1) / sizeof(void*);
 
         // keep it first, so it's correctly aligned with all architectures
         // this is were we store the job's data, typically a std::function<>
                                                                 // v7 | v8
-        void* storage[JOB_STORAGE_SIZE];                        // 48 | 48
+        void* storage[JOB_STORAGE_SIZE_WORDS];                  // 48 | 48
         JobFunc function;                                       //  4 |  8
         uint16_t parent;                                        //  2 |  2
         std::atomic<uint16_t> runningJobCount = { 1 };          //  2 |  2
@@ -362,7 +363,7 @@ private:
 
     alignas(16) // at least we align to half (or quarter) cache-line
     aligned_vector<ThreadState> mThreadStates;          // actual data is stored offline
-    std::atomic<bool> mExitRequested = { 0 };           // this one is almost never written
+    std::atomic<bool> mExitRequested = { false };       // this one is almost never written
     std::atomic<uint16_t> mAdoptedThreads = { 0 };      // this one is almost never written
     Job* const mJobStorageBase;                         // Base for conversion to indices
     uint16_t mThreadCount = 0;                          // total # of threads in the pool

@@ -43,7 +43,7 @@ class RenderTargetPool {
     // 1280 x 720  is ~  7 MB for color buffer
     static constexpr size_t POOL_MAX_SIZE = 128 * 1024 * 1024;
 
-    // 2 pages is way enough for the entry sturctures (should be about 400)
+    // 2 pages is way enough for the entry structures (should be about 400)
     static constexpr size_t POOL_ENTRY_ARENA_SIZE = 8192;
 
 public:

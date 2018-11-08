@@ -136,7 +136,8 @@ OpenGLProgram::OpenGLProgram(OpenGLDriver* gl, const Program& programBuilder) no
                             // build unique name for this uniform (sampler)
                             auto const& e = infos[j];
                             std::string e_name(e.name.c_str());
-                            std::string uniformSamplerName(sib_name + "_" + e_name);
+                            std::string uniformSamplerName(sib_name);
+                            uniformSamplerName.append("_").append(e_name);
 
                             // find its location and associate a TMU to it
                             GLint loc = glGetUniformLocation(program, uniformSamplerName.c_str());
@@ -219,7 +220,7 @@ void OpenGLProgram::updateSamplers(OpenGLDriver* gl) noexcept {
             if (UTILS_UNLIKELY(t->gl.fence)) {
                 glWaitSync(t->gl.fence, 0, GL_TIMEOUT_IGNORED);
                 glDeleteSync(t->gl.fence);
-                t->gl.fence = 0;
+                t->gl.fence = nullptr;
             }
 
             gl->bindTexture(tmu, t->gl.target, t, t->gl.targetIndex);

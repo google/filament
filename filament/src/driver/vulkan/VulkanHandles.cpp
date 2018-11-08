@@ -334,7 +334,7 @@ VulkanUniformBuffer::VulkanUniformBuffer(VulkanContext& context, VulkanStagePool
     VmaAllocationCreateInfo allocInfo {
         .usage = VMA_MEMORY_USAGE_GPU_ONLY
     };
-    vmaCreateBuffer(mContext.allocator, &bufferInfo, &allocInfo, &mGpuBuffer, &mGpuMemory, 0);
+    vmaCreateBuffer(mContext.allocator, &bufferInfo, &allocInfo, &mGpuBuffer, &mGpuMemory, nullptr);
 }
 
 void VulkanUniformBuffer::loadFromCpu(const void* cpuData, uint32_t numBytes) {

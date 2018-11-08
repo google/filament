@@ -70,7 +70,7 @@ public:
     // call blocks until the CircularBuffer has at least mRequiredSize bytes available.
     void flush() noexcept;
 
-    // returns from waitForcommands() immediately.
+    // returns from waitForCommands() immediately.
     void requestExit();
 };
 

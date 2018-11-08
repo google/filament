@@ -1221,8 +1221,8 @@ void OpenGLDriver::createStreamFromTextureId(Driver::StreamHandle sh,
     s->gl.externalTextureId = static_cast<GLuint>(externalTextureId);
     glGenTextures(GLStream::ROUND_ROBIN_TEXTURE_COUNT, s->user_thread.read);
     glGenTextures(GLStream::ROUND_ROBIN_TEXTURE_COUNT, s->user_thread.write);
-    for (size_t i = 0; i < GLStream::ROUND_ROBIN_TEXTURE_COUNT; i++) {
-        s->user_thread.infos[i].ets = mPlatform.createExternalTextureStorage();
+    for (auto& info : s->user_thread.infos) {
+        info.ets = mPlatform.createExternalTextureStorage();
     }
 }
 
@@ -1677,7 +1677,7 @@ void OpenGLDriver::updateSamplerBuffer(Driver::SamplerBufferHandle sbh,
     DEBUG_MARKER()
 
     GLSamplerBuffer* sb = handle_cast<GLSamplerBuffer *>(sbh);
-    *sb->sb = std::move(samplerBuffer);
+    *sb->sb = std::move(samplerBuffer); // NOLINT(performance-move-const-arg)
 }
 
 void OpenGLDriver::update2DImage(Driver::TextureHandle th,
@@ -1984,7 +1984,7 @@ void OpenGLDriver::beginRenderPass(Driver::RenderTargetHandle rth,
         // glInvalidateFramebuffer appeared on GLES 3.0 and GL4.3, for simplicity we just
         // ignore it on GL (rather than having to do a runtime check).
         if (GLES31_HEADERS && !bugs.disable_invalidate_framebuffer) {
-            std::array<GLenum, 3> attachments;
+            std::array<GLenum, 3> attachments; // NOLINT(cppcoreguidelines-pro-type-member-init)
             GLsizei attachmentCount = getAttachments(attachments, rt, discardFlags);
             if (attachmentCount) {
 #if DEBUG_MARKER_LEVEL == DEBUG_MARKER_SYSTRACE
@@ -2035,7 +2035,7 @@ void OpenGLDriver::endRenderPass(int) {
         GLRenderTarget* rt = handle_cast<GLRenderTarget*>(mRenderPassTarget);
         bindFramebuffer(GL_FRAMEBUFFER, rt->gl.fbo);
 
-        std::array<GLenum, 3> attachments;
+        std::array<GLenum, 3> attachments; // NOLINT(cppcoreguidelines-pro-type-member-init)
         GLsizei attachmentCount = getAttachments(attachments, rt, discardFlags);
         if (attachmentCount) {
 #if DEBUG_MARKER_LEVEL == DEBUG_MARKER_SYSTRACE
@@ -2067,7 +2067,7 @@ void OpenGLDriver::discardSubRenderTargetBuffers(Driver::RenderTargetHandle rth,
         if (left < right && bottom < top) {
             bindFramebuffer(GL_FRAMEBUFFER, rt->gl.fbo);
 
-            std::array<GLenum, 3> attachments;
+            std::array<GLenum, 3> attachments; // NOLINT(cppcoreguidelines-pro-type-member-init)
             GLsizei attachmentCount = getAttachments(attachments, rt, buffers);
             if (attachmentCount) {
                 glInvalidateSubFramebuffer(GL_FRAMEBUFFER, attachmentCount, attachments.data(),
