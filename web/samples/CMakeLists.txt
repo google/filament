@@ -156,9 +156,13 @@ add_custom_target(filamentjs_public DEPENDS ${SERVER_DIR}/filament.js ${SERVER_D
 # The websamples target depends on all HTML files, assets, and filament.{js,wasm}
 # ==================================================================================================
 
-set(DEMO_ASSETS)
+set(HTML_FILES
+    leaks.html
+    parquet.html
+    suzanne.html
+    triangle.html)
 
-set(HTML_FILES triangle.html parquet.html suzanne.html)
+set(DEMO_ASSETS)
 foreach (NAME ${HTML_FILES})
     add_custom_command(
         OUTPUT ${SERVER_DIR}/${NAME}
