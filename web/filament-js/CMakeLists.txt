@@ -16,7 +16,7 @@ set(CPP_SRC
 
 set(COPTS "${COPTS} -DEMSCRIPTEN_HAS_UNBOUND_TYPE_NAMES=0")
 
-# Uncomment the following line to check for leaks with test_leaks.html
+# Uncomment the following line to check for leaks with leaks.html
 # set(LOPTS "${LOPTS} --memoryprofiler")
 
 set(LOPTS "${LOPTS} --bind")
