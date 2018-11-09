@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 The Android Open Source Project
+ * Copyright (C) 2018 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,23 +14,23 @@
  * limitations under the License.
  */
 
-#ifndef UTILS_LINUX_FUTEX_H
-#define UTILS_LINUX_FUTEX_H
+#include <utils/linux/Condition.h>
 
-#include <stdbool.h>
-
-struct timespec;
+#include "futex.h"
 
 namespace utils {
-namespace linuxutil {
 
-int futex_wake_ex(volatile void* ftx, bool shared, int count);
-int futex_wait(volatile void* ftx, int value, const struct timespec* timeout);
-int futex_wait_ex(volatile void* ftx, bool shared, int value,
-        bool use_realtime_clock, const struct timespec* abs_timeout);
 
-} // namespace linuxutil
+void Condition::wait(std::unique_lock<Mutex>& lock) noexcept {
+    uint32_t old_state = mState.load(std::memory_order_relaxed);
+    lock.unlock();
+    linuxutil::futex_wait_ex(&mState, false, old_state, false, nullptr);
+    lock.lock();
+}
+
+void Condition::pulse(int threadCount) noexcept {
+    mState.fetch_add(1, std::memory_order_relaxed);
+    linuxutil::futex_wake_ex(&mState, false, threadCount);
+}
+
 } // namespace utils
-
-
-#endif // UTILS_LINUX_FUTEX_H

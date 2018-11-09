@@ -14,45 +14,45 @@
  * limitations under the License.
  */
 
-#if defined(__linux__)
+#ifndef UTILS_LINUX_FUTEX_H
+#define UTILS_LINUX_FUTEX_H
 
-#include <errno.h>
 #include <linux/futex.h>
-#include <stdbool.h>
-#include <stddef.h>
-#include <sys/cdefs.h>
 #include <sys/syscall.h>
 #include <unistd.h>
+#include <stdbool.h>
 
-#include <utils/linux/futex.h>
+struct timespec;
 
 namespace utils {
 namespace linuxutil {
 
-static inline int futex(volatile void* ftx, int op, int value,
-        const struct timespec* timeout, int bitset) {
-    return syscall(__NR_futex, ftx, op, value, timeout, NULL, bitset);
+inline int futex(volatile void* ftx, int op, int value,
+                        const struct timespec* timeout, int bitset) {
+    return (int)syscall(__NR_futex, ftx, op, value, timeout, nullptr, bitset);
 }
 
-int futex_wake(volatile void* ftx, int count) {
+inline int futex_wake(volatile void* ftx, int count) {
     return futex(ftx, FUTEX_WAKE, count, nullptr, 0);
 }
 
-int futex_wake_ex(volatile void* ftx, bool shared, int count) {
+inline int futex_wake_ex(volatile void* ftx, bool shared, int count) {
     return futex(ftx, shared ? FUTEX_WAKE : FUTEX_WAKE_PRIVATE, count, nullptr, 0);
 }
-int futex_wait(volatile void* ftx, int value, const struct timespec* timeout) {
+
+inline int futex_wait(volatile void* ftx, int value, const struct timespec* timeout) {
     return futex(ftx, FUTEX_WAIT, value, timeout, 0);
 }
 
-int futex_wait_ex(volatile void* ftx, bool shared, int value,
-        bool use_realtime_clock, const struct timespec* abs_timeout) {
+inline int futex_wait_ex(volatile void* ftx, bool shared, int value,
+                  bool use_realtime_clock, const struct timespec* abs_timeout) {
     return futex(ftx, (shared ? FUTEX_WAIT_BITSET : FUTEX_WAIT_BITSET_PRIVATE) |
-                        (use_realtime_clock ? FUTEX_CLOCK_REALTIME : 0), value, abs_timeout,
+                      (use_realtime_clock ? FUTEX_CLOCK_REALTIME : 0), value, abs_timeout,
             FUTEX_BITSET_MATCH_ANY);
 }
 
-} //namespace linuxutil
+} // namespace linuxutil
 } // namespace utils
 
-#endif
+
+#endif // UTILS_LINUX_FUTEX_H

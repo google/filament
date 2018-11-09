@@ -17,12 +17,12 @@
 #ifndef UTILS_LINUX_CONDITION_H
 #define UTILS_LINUX_CONDITION_H
 
+#include <atomic>
 #include <limits>
-#include <mutex>
+#include <mutex> // for unique_lock
 #include <utils/linux/Mutex.h>
 
 namespace utils {
-
 
 /*
  * A very simple condition variable class that can be used as an (almost) drop-in replacement
@@ -44,13 +44,7 @@ public:
         pulse(1);
     }
 
-    UTILS_NOINLINE
-    void wait(std::unique_lock<Mutex>& lock) noexcept {
-        uint32_t old_state = mState.load(std::memory_order_relaxed);
-        lock.unlock();
-        linuxutil::futex_wait_ex(&mState, false, old_state, false, nullptr);
-        lock.lock();
-    }
+    void wait(std::unique_lock<Mutex>& lock) noexcept;
 
     template <class P>
     void wait(std::unique_lock<Mutex>& lock, P predicate) {
@@ -62,10 +56,7 @@ public:
 private:
     std::atomic<uint32_t> mState = { 0 };
 
-    inline void pulse(int threadCount) noexcept {
-        mState.fetch_add(1, std::memory_order_relaxed);
-        linuxutil::futex_wake_ex(&mState, false, threadCount);
-    }
+    void pulse(int threadCount) noexcept;
 };
 
 } // namespace utils

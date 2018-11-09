@@ -19,8 +19,6 @@
 
 #include <atomic>
 
-#include <utils/linux/futex.h>
-
 #include <utils/compiler.h>
 
 namespace utils {
@@ -29,13 +27,11 @@ namespace utils {
  * A very simple mutex class that can be used as an (almost) drop-in replacement
  * for std::mutex.
  * It is very low overhead as most of it is inlined.
- *
- * Uses the same implementation
  */
 
 class Mutex {
 public:
-    Mutex() noexcept = default;
+    constexpr Mutex() noexcept = default;
     Mutex(const Mutex&) = delete;
     Mutex& operator=(const Mutex&) = delete;
 
@@ -49,20 +45,18 @@ public:
 
     void unlock() noexcept {
         if (UTILS_UNLIKELY(mState.exchange(UNLOCKED, std::memory_order_release) == LOCKED_CONTENDED)) {
-            linuxutil::futex_wake_ex(&mState, false, LOCKED);
+            wake();
         }
     }
 
 private:
-    enum { UNLOCKED=0, LOCKED=1, LOCKED_CONTENDED=2 };
+    enum {
+        UNLOCKED = 0, LOCKED = 1, LOCKED_CONTENDED = 2
+    };
     std::atomic<uint32_t> mState = { UNLOCKED };
 
-    UTILS_NOINLINE
-    void wait() noexcept {
-        while (UTILS_UNLIKELY(mState.exchange(LOCKED_CONTENDED, std::memory_order_acquire) != UNLOCKED)) {
-            linuxutil::futex_wait_ex(&mState, false, LOCKED_CONTENDED, false, nullptr);
-        }
-    }
+    void wait() noexcept;
+    void wake() noexcept;
 };
 
 } // namespace utils

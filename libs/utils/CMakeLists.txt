@@ -35,12 +35,13 @@ set(SRCS
         src/Path.cpp
         src/Profiler.cpp
         src/Systrace.cpp
-        src/linux/futex.cpp
-)
+        )
 if (WIN32)
     list(APPEND SRCS src/win32/Path.cpp)
 endif()
 if (LINUX OR ANDROID)
+    list(APPEND SRCS src/linux/Condition.cpp)
+    list(APPEND SRCS src/linux/Mutex.cpp)
     list(APPEND SRCS src/linux/Path.cpp)
 endif()
 if (APPLE)

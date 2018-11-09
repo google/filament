@@ -366,7 +366,7 @@ void FRenderer::endFrame() {
     engine.flush();     // flush command stream
 
     // make sure we're done with the gcs
-    js.wait(job);
+    js.waitAndRelease(job);
 
 
 #if EXTRA_TIMING_INFO
