@@ -26,8 +26,8 @@
 #include <tsl/robin_set.h>
 
 #include <deque>
-#include <mutex>
-#include <set>
+#include <mutex> // for std::lock_guard
+#include <vector>
 
 
 namespace utils {
@@ -36,7 +36,6 @@ static constexpr const size_t MIN_FREE_INDICES = 1024;
 
 class UTILS_PRIVATE EntityManagerImpl : public EntityManager {
 public:
-
     using EntityManager::getGeneration;
     using EntityManager::getIndex;
     using EntityManager::makeIdentity;
@@ -109,33 +108,9 @@ public:
         lock.unlock();
 
         // notify our listeners that some entities are being destroyed
-        std::set<Listener*> listeners = getListeners();
+        auto listeners = getListeners();
         for (auto const& l : listeners) {
             l->onEntitiesDestroyed(n, entities);
-        }
-    }
-
-
-    void clear() noexcept {
-        uint8_t* const gens = mGens;
-
-        std::unique_lock<Mutex> lock(mFreeListLock);
-
-        // make all indices that were ever used invalid
-        for (size_t i = 0, c = mCurrentIndex; i < c; i++) {
-            gens[i]++;
-        }
-
-        // clear the free-list entirely.
-        mCurrentIndex = 1;
-        mFreeList.clear();
-        mFreeList.shrink_to_fit();
-        lock.unlock();
-
-        // notify our listeners that all entities are being destroyed
-        std::set<Listener*> listeners = getListeners();
-        for (auto const& l : listeners) {
-            l->onAllEntitiesDestroyed();
         }
     }
 
@@ -149,9 +124,15 @@ public:
         mListeners.erase(l);
     }
 
-    std::set<EntityManager::Listener*> getListeners() noexcept {
+    std::vector<EntityManager::Listener*> getListeners() const noexcept {
         std::unique_lock<Mutex> lock(mListenerLock);
-        return mListeners;
+        tsl::robin_set<Listener*> const& listeners = mListeners;
+        std::vector<EntityManager::Listener*> result(listeners.size()); // unfortunately this memset()
+        auto d = result.begin();
+        for (Listener* listener : listeners) {
+            *d++ = listener;
+        }
+        return result; // the c++ standard guarantees a move
     }
 
 private:
@@ -162,7 +143,7 @@ private:
     std::deque<Entity::Type> mFreeList;
 
     mutable Mutex mListenerLock;
-    std::set<Listener*> mListeners;
+    tsl::robin_set<Listener*> mListeners;
 };
 
 } // namespace utils

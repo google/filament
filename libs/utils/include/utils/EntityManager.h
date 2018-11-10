@@ -78,10 +78,6 @@ public:
     // unregisters a listener.
     void unregisterListener(Listener* l) noexcept;
 
-    // destroys all entities and return to the initial state. Thread Safe.
-    // Use this carefully -- this is mostly for testing
-    void clear() noexcept;
-
 
     /* no user serviceable parts below */
 
