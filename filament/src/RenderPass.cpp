@@ -571,7 +571,7 @@ void FRenderer::ColorPass::renderColorPass(FEngine& engine, JobSystem& js,
     switch (view.getDepthPrepass()) {
         case View::DepthPrepass::DEFAULT:
             // TODO: better default strategy (can even change on a per-frame basis)
-#ifdef ANDROID
+#if defined(ANDROID) || defined(__EMSCRIPTEN__)
             commandType = COLOR;
 #else
             commandType = DEPTH_AND_COLOR;
