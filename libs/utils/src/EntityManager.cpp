@@ -43,11 +43,6 @@ void EntityManager::destroy(size_t n, Entity* entities) noexcept {
     static_cast<EntityManagerImpl *>(this)->destroy(n, entities);
 }
 
-
-void EntityManager::clear() noexcept {
-    static_cast<EntityManagerImpl *>(this)->clear();
-}
-
 void EntityManager::registerListener(EntityManager::Listener* l) noexcept {
     static_cast<EntityManagerImpl *>(this)->registerListener(l);
 }

@@ -159,12 +159,13 @@ JobSystem::~JobSystem() {
     }
 }
 
-void JobSystem::incRef(Job const* job) noexcept {
+inline void JobSystem::incRef(Job const* job) noexcept {
     // no action is taken when incrementing the reference counter, therefore we can safely use
     // memory_order_relaxed.
     job->refCount.fetch_add(1, std::memory_order_relaxed);
 }
 
+UTILS_NOINLINE
 void JobSystem::decRef(Job const* job) noexcept {
 
     // We must ensure that accesses from other threads happen before deleting the Job.
@@ -283,37 +284,9 @@ void JobSystem::loop(ThreadState* threadState) noexcept {
     } while (!exitRequested());
 }
 
-// -----------------------------------------------------------------------------------------------
-// public API...
-
-
-JobSystem::Job* JobSystem::create(JobSystem::Job* parent, JobFunc func) noexcept {
-    parent = (parent == nullptr) ? mMasterJob : parent;
-    Job* const job = allocateJob();
-    if (UTILS_LIKELY(job)) {
-        size_t index = 0x7FFF;
-        if (parent) {
-            // add a reference to the parent to make sure it can't be terminated.
-            // memory_order_relaxed is safe because no action is taken at this point
-            // (the job is not started yet).
-            auto parentjobCount = parent->runningJobCount.fetch_add(1, std::memory_order_relaxed);
-
-            // can't create a child job of a terminated parent
-            assert(parentjobCount > 0);
-
-            index = parent - mJobStorageBase;
-            assert(index < MAX_JOB_COUNT);
-        }
-        job->function = func;
-        job->parent = uint16_t(index);
-    }
-    return job;
-}
-
+UTILS_NOINLINE
 void JobSystem::finish(Job* job) noexcept {
     SYSTRACE_CALL();
-
-    Pin pin(*this, job);
 
     // terminate this job and notify its parent
     auto& jobPool = mJobPool;
@@ -347,12 +320,53 @@ void JobSystem::finish(Job* job) noexcept {
 #endif
 }
 
+// -----------------------------------------------------------------------------------------------
+// public API...
+
+
+JobSystem::Job* JobSystem::create(JobSystem::Job* parent, JobFunc func) noexcept {
+    parent = (parent == nullptr) ? mMasterJob : parent;
+    Job* const job = allocateJob();
+    if (UTILS_LIKELY(job)) {
+        size_t index = 0x7FFF;
+        if (parent) {
+            // add a reference to the parent to make sure it can't be terminated.
+            // memory_order_relaxed is safe because no action is taken at this point
+            // (the job is not started yet).
+            auto parentJobCount = parent->runningJobCount.fetch_add(1, std::memory_order_relaxed);
+
+            // can't create a child job of a terminated parent
+            assert(parentJobCount > 0);
+
+            index = parent - mJobStorageBase;
+            assert(index < MAX_JOB_COUNT);
+        }
+        job->function = func;
+        job->parent = uint16_t(index);
+    }
+    return job;
+}
+
+void JobSystem::cancel(Job*& job) noexcept {
+    finish(job);
+    job = nullptr;
+}
+
+JobSystem::Job* JobSystem::retain(JobSystem::Job* job) noexcept {
+    JobSystem::Job* retained = job;
+    incRef(retained);
+    return retained;
+}
+
+void JobSystem::release(JobSystem::Job*& job) noexcept {
+    decRef(job);
+    job = nullptr;
+}
+
 void JobSystem::run(JobSystem::Job*& job, uint32_t flags) noexcept {
 #if HEAVY_SYSTRACE
     SYSTRACE_CALL();
 #endif
-
-    Pin pin(*this, job);
 
     ThreadState& state(getState());
 
@@ -381,16 +395,16 @@ void JobSystem::run(JobSystem::Job*& job, uint32_t flags) noexcept {
 }
 
 JobSystem::Job* JobSystem::runAndRetain(JobSystem::Job* job, uint32_t flags) noexcept {
-    JobSystem::Job* retained = job;
-    incRef(retained);
+    JobSystem::Job* retained = retain(job);
     run(job, flags);
     return retained;
 }
 
-void JobSystem::wait(Job*& job) noexcept {
+void JobSystem::waitAndRelease(Job*& job) noexcept {
     SYSTRACE_CALL();
 
     assert(job);
+    assert(job->refCount.load(std::memory_order_relaxed) >= 1);
 
     ThreadState& state(getState());
     do {
@@ -399,11 +413,12 @@ void JobSystem::wait(Job*& job) noexcept {
             UTILS_WAIT_FOR_EVENT();
         }
     } while (!hasJobCompleted(job) && !exitRequested());
+    release(job);
+}
 
-    decRef(job);
-
-    // after wait() returns, the job has been destroyed
-    job = nullptr;
+void JobSystem::runAndWait(JobSystem::Job*& job) noexcept {
+    runAndRetain(job);
+    waitAndRelease(job);
 }
 
 void JobSystem::adopt() {

@@ -487,7 +487,7 @@ void FRenderer::ColorPass::beginRenderPass(
         driver::DriverApi& driver, Viewport const& viewport, const CameraInfo& camera) noexcept {
     // wait for froxelization to finish
     // (this could even be a special command between the depth and color passes)
-    js.wait(jobFroxelize);
+    js.waitAndRelease(jobFroxelize);
     view.commitFroxels(driver);
 
     // We won't need the depth or stencil buffers after this pass.
