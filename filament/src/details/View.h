@@ -187,6 +187,14 @@ public:
     }
 
     void setDepthPrepass(DepthPrepass prepass) noexcept {
+#ifdef __EMSCRIPTEN__
+        if (prepass == View::DepthPrepass::ENABLED) {
+            utils::slog.w << "WARNING: " <<
+                "Depth prepass cannot be enabled on web due to invariance requirements." <<
+                utils::io::endl;
+            return;
+        }
+#endif
         mDepthPrepass = prepass;
     }
 
