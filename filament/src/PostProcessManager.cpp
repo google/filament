@@ -107,10 +107,11 @@ void PostProcessManager::finish(driver::TargetBufferFlags discarded,
         return;
     }
 
-    Driver::RasterState rs;
-    rs.culling = Driver::RasterState::CullingMode::NONE;
-    rs.colorWrite = true;
-    rs.depthFunc = Driver::RasterState::DepthFunc::A;
+    Driver::PipelineState pipeline;
+
+    pipeline.rasterState.culling = Driver::RasterState::CullingMode::NONE;
+    pipeline.rasterState.colorWrite = true;
+    pipeline.rasterState.depthFunc = Driver::RasterState::DepthFunc::A;
 
     RenderPassParams params = {};
     params.discardStart = TargetBufferFlags::ALL;
@@ -136,8 +137,9 @@ void PostProcessManager::finish(driver::TargetBufferFlags discarded,
             setSource(params.width, params.height, previous);
 
             // draw a full screen triangle
+            pipeline.program = commands[i].program;
             driver.beginRenderPass(target->target, params);
-            driver.draw(commands[i].program, rs, fullScreenRenderPrimitive);
+            driver.draw(pipeline, fullScreenRenderPrimitive);
             driver.endRenderPass();
         } else {
             driver.blit(TargetBufferFlags::COLOR,
@@ -163,8 +165,9 @@ void PostProcessManager::finish(driver::TargetBufferFlags discarded,
         params.height = vp.height;
 
         setSource(params.width, params.height, previous);
+        pipeline.program = commands.back().program;
         driver.beginRenderPass(viewRenderTarget, params);
-        driver.draw(commands.back().program, rs, fullScreenRenderPrimitive);
+        driver.draw(pipeline, fullScreenRenderPrimitive);
         driver.endRenderPass();
 
     } else {

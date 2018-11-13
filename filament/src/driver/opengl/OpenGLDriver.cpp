@@ -2717,18 +2717,17 @@ void OpenGLDriver::blit(TargetBufferFlags buffers,
 }
 
 void OpenGLDriver::draw(
-        Driver::ProgramHandle ph,
-        Driver::RasterState rs,
+        Driver::PipelineState state,
         Driver::RenderPrimitiveHandle rph) {
     DEBUG_MARKER()
 
-    OpenGLProgram* p = handle_cast<OpenGLProgram*>(ph);
+    OpenGLProgram* p = handle_cast<OpenGLProgram*>(state.program);
     useProgram(p);
 
     const GLRenderPrimitive* rp = handle_cast<const GLRenderPrimitive *>(rph);
     bindVertexArray(rp);
 
-    setRasterState(rs);
+    setRasterState(state.rasterState);
 
     glDrawRangeElements(GLenum(rp->type), rp->minIndex, rp->maxIndex, rp->count,
             rp->gl.indicesType, reinterpret_cast<const void*>(rp->offset));

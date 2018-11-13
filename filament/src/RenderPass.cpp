@@ -120,6 +120,7 @@ void RenderPass::recordDriverCommands(
     SYSTRACE_CALL();
 
     if (!commands.empty()) {
+        Driver::PipelineState pipeline;
         Handle<HwUniformBuffer> uboHandle = scene.getRenderableUBO();
         FMaterialInstance const* UTILS_RESTRICT previousMi = nullptr;
         FMaterial const* UTILS_RESTRICT ma = nullptr;
@@ -145,8 +146,9 @@ void RenderPass::recordDriverCommands(
                 ma = mi->getMaterial();
             }
 
-            Handle<HwProgram> const ph = ma->getProgram(info.materialVariant.key);
-            driver.draw(ph, info.rasterState, info.primitiveHandle);
+            pipeline.program = ma->getProgram(info.materialVariant.key);
+            pipeline.rasterState = info.rasterState;
+            driver.draw(pipeline, info.primitiveHandle);
         }
 
         SYSTRACE_VALUE32("commandCount", c - commands.cbegin());
