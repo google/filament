@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Filament</title>
+    <link>https://google.github.io/filament/</link>
+    <description>Recent content on Filament</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Tue, 30 Oct 2018 13:13:14 -0700</lastBuildDate>
+    
+	<atom:link href="https://google.github.io/filament/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>Core Documentation</title>
+      <link>https://google.github.io/filament/documentation/</link>
+      <pubDate>Tue, 30 Oct 2018 13:13:14 -0700</pubDate>
+      
+      <guid>https://google.github.io/filament/documentation/</guid>
+      <description> Build Instructions Filament Design Materials Overview Materials Ref Sheet  </description>
+    </item>
+    
+    <item>
+      <title>Web Docs / Demos</title>
+      <link>https://google.github.io/filament/webgl/</link>
+      <pubDate>Tue, 30 Oct 2018 13:13:14 -0700</pubDate>
+      
+      <guid>https://google.github.io/filament/webgl/</guid>
+      <description> documentation  JavaScript API reference Triangle Tutorial Redball Tutorial WebGL Meetup Slides (2018)  demos  parquet suzanne knotess  </description>
+    </item>
+    
+  </channel>
+</rss>
