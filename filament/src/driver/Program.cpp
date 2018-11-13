@@ -66,6 +66,12 @@ io::ostream& operator<<(io::ostream& out, const Program& builder) {
     // FIXME: maybe do better here!
     return out << "Program(" << builder.mName.c_str_safe() << ")";
 }
+
+void Program::setPolygonOffset(float factor, float units) noexcept {
+    mPolygonOffset[0] = factor;
+    mPolygonOffset[1] = units;
+}
+
 #endif
 
 } // namespace filament

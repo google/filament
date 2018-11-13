@@ -332,6 +332,7 @@ private:
     inline void unbindSampler(GLuint sampler) noexcept;
 
     inline void useProgram(OpenGLProgram* p) noexcept;
+           void polygonOffset(GLfloat factor, GLfloat units) noexcept;
 
     inline void bindBuffer(GLenum target, GLuint buffer) noexcept;
     inline void bindBufferRange(GLenum target, GLuint index, GLuint buffer,
@@ -417,6 +418,11 @@ private:
         struct {
             utils::bitset32 caps;
         } enables;
+
+        struct {
+            GLfloat factor = 0;
+            GLfloat units = 0;
+        } polygonOffset;
 
         struct {
             struct {

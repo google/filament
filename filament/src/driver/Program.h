@@ -89,6 +89,12 @@ public:
         return mSamplerInterfaceBlocks;
     }
 
+    void setPolygonOffset(float factor, float units) noexcept;
+
+    float getPolygonOffsetFactor() const noexcept { return mPolygonOffset[0]; }
+
+    float getPolygonOffsetUnits() const noexcept { return mPolygonOffset[1]; }
+
     const SamplerBindingMap* getSamplerBindings() const noexcept {
         return mSamplerBindings;
     }
@@ -116,6 +122,7 @@ private:
     std::array<utils::CString, NUM_SHADER_TYPES> mShadersSource;
     size_t mSamplerCount = 0;
     utils::CString mName{"unknown"};
+    float mPolygonOffset[2] = {};
     uint8_t mVariant;
 };
 

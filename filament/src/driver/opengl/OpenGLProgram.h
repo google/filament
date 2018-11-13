@@ -37,6 +37,13 @@ class Program;
 
 class OpenGLProgram : public HwProgram {
 public:
+    struct {
+        GLuint shaders[Program::NUM_SHADER_TYPES];  // 2x 4-bytes
+        GLuint program;
+        GLfloat factor;
+        GLfloat units;
+    } gl; // 20 bytes
+
 
     OpenGLProgram(OpenGLDriver* gl, const Program& builder) noexcept;
     ~OpenGLProgram() noexcept;
@@ -59,12 +66,8 @@ public:
 
             updateSamplers(gl);
         }
+        gl->polygonOffset(this->gl.factor, this->gl.units);
     }
-
-    struct {
-        GLuint shaders[Program::NUM_SHADER_TYPES];
-        GLuint program;
-    } gl; // 12 bytes
 
     static void logCompilationError(utils::io::ostream& out, GLuint shaderId, char const* source) noexcept;
 

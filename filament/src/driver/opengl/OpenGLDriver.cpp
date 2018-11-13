@@ -222,9 +222,6 @@ OpenGLDriver::OpenGLDriver(OpenGLPlatform* platform) noexcept
     glHint(GL_FRAGMENT_SHADER_DERIVATIVE_HINT, GL_NICEST);
 #endif
 
-    // For the shadow pass
-    glPolygonOffset(1.0f, 1.0f);
-
     // On some implementation we need to clear the viewport with a triangle, for performance
     // reasons
     initClearProgram();
@@ -506,6 +503,27 @@ void OpenGLDriver::useProgram(OpenGLProgram* p) noexcept {
     useProgram(p->gl.program);
     // set-up textures and samplers in the proper TMUs (as specified in setSamplers)
     p->use(this);
+}
+
+void OpenGLDriver::polygonOffset(GLfloat factor, GLfloat units) noexcept {
+    if (factor == 0.0f && units == 0.0f) {
+        // if we're in a shadow-pass, the default polygonOffset is factor = units = 1
+        const TargetBufferFlags clearFlags = (TargetBufferFlags)mRenderPassParams.clear;
+        if ((clearFlags & TargetBufferFlags::SHADOW) == TargetBufferFlags::SHADOW) {
+            factor = units = 1.0f;
+            // fall through
+        } else {
+            disable(GL_POLYGON_OFFSET_FILL);
+            return; // we're done
+        }
+    }
+    if (UTILS_UNLIKELY(
+            state.polygonOffset.factor != factor || state.polygonOffset.units != units)) {
+        state.polygonOffset.factor = factor;
+        state.polygonOffset.units = units;
+        glPolygonOffset(factor, units);
+    }
+    enable(GL_POLYGON_OFFSET_FILL);
 }
 
 void OpenGLDriver::enableVertexAttribArray(GLuint index) noexcept {
@@ -1974,12 +1992,6 @@ void OpenGLDriver::beginRenderPass(Driver::RenderTargetHandle rth,
     GLRenderTarget* rt = handle_cast<GLRenderTarget*>(rth);
     if (UTILS_UNLIKELY(state.draw_fbo != rt->gl.fbo)) {
         bindFramebuffer(GL_FRAMEBUFFER, rt->gl.fbo);
-
-        if ((clearFlags & TargetBufferFlags::SHADOW) == TargetBufferFlags::SHADOW) {
-            enable(GL_POLYGON_OFFSET_FILL);
-        } else {
-            disable(GL_POLYGON_OFFSET_FILL);
-        }
 
         // glInvalidateFramebuffer appeared on GLES 3.0 and GL4.3, for simplicity we just
         // ignore it on GL (rather than having to do a runtime check).

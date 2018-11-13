@@ -93,6 +93,8 @@ OpenGLProgram::OpenGLProgram(OpenGLDriver* gl, const Program& programBuilder) no
             return;
         }
         this->gl.program = program;
+        this->gl.factor = programBuilder.getPolygonOffsetFactor();
+        this->gl.units = programBuilder.getPolygonOffsetUnits();
 
         // Associate each UniformBlock in the program to a known binding.
         auto const& uniformInterfaceBlocks = programBuilder.getUniformInterfaceBlocks();
