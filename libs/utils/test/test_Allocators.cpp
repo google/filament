@@ -214,7 +214,7 @@ TEST(AllocatorTest, ScopedStackArena) {
     void* p = nullptr;
 
     struct Foo {
-        explicit Foo(std::function<void(void)> f) : dtor(std::move(std::move(f))) { }
+        explicit Foo(std::function<void(void)> f) : dtor(std::move(f)) { }
         ~Foo() { dtor(); }
     private:
         std::function<void(void)> dtor;
