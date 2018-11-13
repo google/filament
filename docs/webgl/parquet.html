@@ -70,7 +70,7 @@ class App {
         const sampler = new Filament.TextureSampler(
             Filament.MinFilter.LINEAR_MIPMAP_LINEAR,
             Filament.MagFilter.LINEAR,
-            Filament.WrapMode.CLAMP_TO_EDGE);
+            Filament.WrapMode.REPEAT);
 
         const ao = engine.createTextureFromPng('floor_ao_roughness_metallic.png');
         const basecolor = engine.createTextureFromPng('floor_basecolor.png', {'srgb': true});
