@@ -324,8 +324,8 @@ target_link_libraries(${TARGET} PUBLIC filaflat)
 target_link_libraries(${TARGET} PUBLIC filabridge)
 target_link_libraries(${TARGET} PUBLIC image_headers)
 
-# Android and iOS link directly against platform-specific OpenGL ES libraries
-if(NOT IOS AND NOT ANDROID)
+# Android, iOS, and WebGL do not use bluegl.
+if(NOT IOS AND NOT ANDROID AND NOT WEBGL)
     target_link_libraries(${TARGET} PRIVATE bluegl)
 endif()
 
