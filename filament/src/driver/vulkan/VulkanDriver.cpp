@@ -809,11 +809,13 @@ void VulkanDriver::blit(TargetBufferFlags buffers,
         int32_t srcLeft, int32_t srcBottom, uint32_t srcWidth, uint32_t srcHeight) {
 }
 
-void VulkanDriver::draw(Driver::ProgramHandle ph, Driver::RasterState rasterState,
-        Driver::RenderPrimitiveHandle rph) {
+void VulkanDriver::draw(Driver::PipelineState pipelineState, Driver::RenderPrimitiveHandle rph) {
     VkCommandBuffer cmdbuffer = mContext.cmdbuffer;
     ASSERT_POSTCONDITION(cmdbuffer, "Draw calls can occur only within a beginFrame / endFrame.");
     const VulkanRenderPrimitive& prim = *handle_cast<VulkanRenderPrimitive>(mHandleMap, rph);
+
+    Driver::ProgramHandle ph = pipelineState.program;
+    Driver::RasterState rasterState = pipelineState.rasterState;
 
     // If this is a debug build, validate the current shader.
     auto* program = handle_cast<VulkanProgram>(mHandleMap, ph);
@@ -833,7 +835,7 @@ void VulkanDriver::draw(Driver::ProgramHandle ph, Driver::RasterState rasterStat
         .stencilTestEnable = VK_FALSE,
     };
     mContext.rasterState.blending = {
-        .blendEnable = rasterState.hasBlending(),
+        .blendEnable = (VkBool32)rasterState.hasBlending(),
         .srcColorBlendFactor = getBlendFactor(rasterState.blendFunctionSrcRGB),
         .dstColorBlendFactor = getBlendFactor(rasterState.blendFunctionDstRGB),
         .colorBlendOp = (VkBlendOp) rasterState.blendEquationRGB,

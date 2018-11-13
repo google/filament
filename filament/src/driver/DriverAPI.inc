@@ -495,9 +495,8 @@ DECL_DRIVER_API_11(blit,
         uint32_t, srcWidth,
         uint32_t, srcHeight)
 
-DECL_DRIVER_API_3(draw,
-        Driver::ProgramHandle, ph,
-        Driver::RasterState, rs,
+DECL_DRIVER_API_2(draw,
+        Driver::PipelineState, state,
         Driver::RenderPrimitiveHandle, rph)
 
 #pragma clang diagnostic pop
