@@ -19,8 +19,8 @@
 
 #include "JsonishLexeme.h"
 
-#include <map>
 #include <memory>
+#include <unordered_map>
 #include <vector>
 
 namespace matc {
@@ -131,73 +131,85 @@ public:
         }
     }
 
-    JsonishValue(Type type) : mType(type){}
+    explicit JsonishValue(Type type) : mType(type) { }
+
     virtual ~JsonishValue() = default;
+
     Type getType() const { return mType; }
+
 protected:
     Type mType;
 };
 
 class JsonishNull final : public JsonishValue {
 public:
-    JsonishNull() : JsonishValue(NUll){}
-    virtual ~JsonishNull() = default;
+    explicit JsonishNull() : JsonishValue(NUll) { }
+
+    ~JsonishNull() override = default;
 };
 
 class JsonishBool final : public JsonishValue {
 public:
-    JsonishBool(bool b) : JsonishValue(BOOL), mBool(b) {}
-    virtual ~JsonishBool() = default;
+    explicit JsonishBool(bool b) : JsonishValue(BOOL), mBool(b) {}
+
+    ~JsonishBool() override = default;
+
     bool getBool() const {
         return mBool;
     }
+
 private:
     bool mBool;
 };
 
 class JsonishNumber final : public JsonishValue {
 public:
-    JsonishNumber(float f) : JsonishValue(NUMBER), mFloat(f) {}
-    virtual ~JsonishNumber() = default;
+    explicit JsonishNumber(float f) : JsonishValue(NUMBER), mFloat(f) {}
+
+    ~JsonishNumber() override = default;
+
     float getFloat() const {
         return mFloat;
     }
-    int64_t getInt() const {
-        return static_cast<int64_t>(mFloat);
-    }
+
 private:
     float mFloat;
 };
 
 class JsonishString final : public JsonishValue {
 public:
-    JsonishString(const std::string&& string);
-    virtual ~JsonishString() = default;
+    explicit JsonishString(const std::string&& string);
+
+    ~JsonishString() override = default;
+
     const std::string& getString() const {
         return mString;
     }
+
 private:
     std::string mString;
 };
 
-struct JsonishPair{
+struct JsonishPair {
     std::string key;
     JsonishValue* value;
 };
 
 class JsonishObject final : public JsonishValue {
 public:
-    JsonishObject() : JsonishValue(OBJECT) {}
-    virtual ~JsonishObject() {
-        for(auto itr = mMembers.begin(); itr != mMembers.end(); itr++) {
-            delete (itr->second);
+    JsonishObject() : JsonishValue(OBJECT) { }
+
+    ~JsonishObject() override {
+        for (auto member : mMembers) {
+            delete member.second;
         }
     }
+
     void addPair(JsonishPair& pair) {
         mMembers[pair.key] = pair.value;
     }
 
-    const std::map<std::string, const JsonishValue*>& getEntries() const noexcept {
+    const std::unordered_map<std::string, const JsonishValue*>& getEntries() const noexcept {
         return mMembers;
     }
 
@@ -214,23 +226,27 @@ public:
     }
 
 private:
-    std::map<std::string, const JsonishValue*> mMembers;
+    std::unordered_map<std::string, const JsonishValue*> mMembers;
 };
 
 class JsonishArray final : public JsonishValue {
 public:
     JsonishArray() : JsonishValue(ARRAY) {}
-    virtual ~JsonishArray() {
-        for(const JsonishValue* v: mElements) {
+
+    ~JsonishArray() override {
+        for (const JsonishValue* v : mElements) {
             delete v;
         }
     }
+
     void addValue(const JsonishValue* value) {
         mElements.push_back(value);
     }
-    std::vector<const JsonishValue*> getElements() const noexcept {
+
+    const std::vector<const JsonishValue*>& getElements() const noexcept {
         return mElements;
     }
+
 private:
     std::vector<const JsonishValue*> mElements;
 };
@@ -238,9 +254,11 @@ private:
 
 class JsonishParser {
 public:
-    JsonishParser(const std::vector<JsonLexeme>& lexemes) : mCursor(0), mLexemes(lexemes) {}
+    explicit JsonishParser(const std::vector<JsonLexeme>& lexemes): mCursor(0), mLexemes(lexemes) {
+    }
 
     std::unique_ptr<JsonishObject> parse() noexcept;
+
 private:
     JsonishObject* parseObject() noexcept;
     JsonishArray* parseArray() noexcept;
