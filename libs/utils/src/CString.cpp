@@ -18,6 +18,8 @@
 
 #include <utils/compiler.h>
 
+#include <memory>
+
 namespace utils {
 
 int StaticString::compare(const StaticString& rhs) const noexcept {
@@ -36,7 +38,8 @@ CString::CString(const char* cstr, size_type length) {
         Data* p = (Data*)malloc(sizeof(Data) + length + 1);
         p->length = length;
         mCStr = (value_type*)(p + 1);
-        memcpy(mCStr, cstr, length + 1);
+        // we don't use memcpy here to avoid a call to libc, the generated code is pretty good.
+        std::uninitialized_copy_n(cstr, length + 1, mCStr);
     }
 }
 

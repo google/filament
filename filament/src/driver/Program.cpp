@@ -32,9 +32,14 @@ Program& Program::operator=(const Program& rhs) = default;
 Program& Program::operator=(Program&& rhs) noexcept = default;
 Program::~Program() noexcept = default;
 
-Program& Program::diagnostics(utils::CString name, uint8_t variant) {
-    using std::swap;
-    swap(mName, name);
+Program& Program::diagnostics(utils::CString const& name, uint8_t variant) {
+    mName = name;
+    mVariant = variant;
+    return *this;
+}
+
+Program& Program::diagnostics(utils::CString&& name, uint8_t variant) noexcept {
+    name.swap(mName);
     mVariant = variant;
     return *this;
 }
@@ -44,9 +49,13 @@ Program& Program::withSamplerBindings(const SamplerBindingMap* bindings) {
     return *this;
 }
 
-Program& Program::shader(Program::Shader shader, CString source) {
-    using std::swap;
-    swap(mShadersSource[size_t(shader)], source);
+Program& Program::shader(Program::Shader shader, CString const& source) {
+    mShadersSource[size_t(shader)] = source;
+    return *this;
+}
+
+Program& Program::shader(Program::Shader shader, CString&& source) noexcept {
+    source.swap(mShadersSource[size_t(shader)]);
     return *this;
 }
 

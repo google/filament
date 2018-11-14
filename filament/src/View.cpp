@@ -39,6 +39,8 @@
 #include <math/scalar.h>
 #include <math/fast.h>
 
+#include <memory>
+
 using namespace math;
 using namespace utils;
 
