@@ -702,6 +702,16 @@ VkBlendFactor getBlendFactor(BlendFunction mode) {
     }
 }
 
+VkCullModeFlags getCullMode(CullingMode mode) {
+    using CullingMode = filament::driver::CullingMode;
+    switch (mode) {
+        case driver::CullingMode::NONE:           return VK_CULL_MODE_NONE;
+        case driver::CullingMode::FRONT:          return VK_CULL_MODE_FRONT_BIT;
+        case driver::CullingMode::BACK:           return VK_CULL_MODE_BACK_BIT;
+        case driver::CullingMode::FRONT_AND_BACK: return VK_CULL_MODE_FRONT_AND_BACK;
+    }
+}
+
 void waitForIdle(VulkanContext& context) {
     // If there's no valid GPU then we have nothing to do.
     if (!context.device) {

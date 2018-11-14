@@ -310,6 +310,8 @@ void VulkanBinder::bindRasterState(const RasterState& rasterState) noexcept {
             raster0.cullMode != raster1.cullMode ||
             raster0.rasterizerDiscardEnable != raster1.rasterizerDiscardEnable ||
             raster0.depthBiasEnable != raster1.depthBiasEnable ||
+            raster0.depthBiasConstantFactor != raster1.depthBiasConstantFactor ||
+            raster0.depthBiasSlopeFactor != raster1.depthBiasSlopeFactor ||
             blend0.colorWriteMask != blend1.colorWriteMask ||
             blend0.blendEnable != blend1.blendEnable ||
             ds0.depthTestEnable != ds1.depthTestEnable ||
@@ -618,6 +620,9 @@ static VulkanBinder::RasterState createDefaultRasterState() {
     rasterization.depthClampEnable = VK_FALSE;
     rasterization.rasterizerDiscardEnable = VK_FALSE;
     rasterization.depthBiasEnable = VK_FALSE;
+    rasterization.depthBiasConstantFactor = 0.0f;
+    rasterization.depthBiasClamp = 0.0f; // 0 is a special value that disables clamping
+    rasterization.depthBiasSlopeFactor = 0.0f;
     rasterization.lineWidth = 1.0f;
 
     VkPipelineColorBlendAttachmentState blending = {};
