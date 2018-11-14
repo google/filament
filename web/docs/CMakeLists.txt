@@ -9,9 +9,11 @@ if(${PYTHON3} STREQUAL "PYTHON3-NOTFOUND")
     message(WARNING "Python 3 not found, skipping web doc generation.")
 else()
 
+    file(STRINGS tutorials.txt TUTORIALS)
+
     set(CUSTOM_OUTPUTS)
     set(CUSTOM_INPUTS)
-    foreach (NAME triangle redball suzanne)
+    foreach (NAME ${TUTORIALS})
         list(APPEND CUSTOM_OUTPUTS ${PROJECT_BINARY_DIR}/demo_${NAME}.html)
         list(APPEND CUSTOM_OUTPUTS ${PROJECT_BINARY_DIR}/tutorial_${NAME}.html)
         list(APPEND CUSTOM_OUTPUTS ${PROJECT_BINARY_DIR}/tutorial_${NAME}.js)

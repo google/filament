@@ -495,7 +495,7 @@ if __name__ == "__main__":
     ENABLE_EMBEDDED_DEMO = not args.disable_demo
     os.makedirs(os.path.realpath(OUTPUT_DIR), exist_ok=True)
 
-    for name in ["triangle", "redball", "suzanne"]:
+    for name in open(SCRIPT_DIR + 'tutorials.txt').read().split():
         weave(name)
         tangle(name)
         generate_demo_html(name)
