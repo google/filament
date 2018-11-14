@@ -59,7 +59,6 @@ FView::FView(FEngine& engine)
     : mFroxelizer(engine),
       mPerViewUb(engine.getPerViewUib()),
       mPerViewSb(engine.getPerViewSib()),
-      mClipSpace01(engine.getBackend() == Backend::VULKAN),
       mDirectionalShadowMap(engine) {
     DriverApi& driver = engine.getDriverApi();
 
@@ -573,16 +572,7 @@ void FView::prepareCamera(const CameraInfo& camera, const Viewport& viewport) co
     const mat4f worldFromView(camera.model);
     const mat4f projectionMatrix(camera.projection);
 
-    // In Vulkan, clip-space Z is [0,w] rather than [-w,+w] and Y is flipped.
-    // See https://matthewwellings.com/blog/the-new-vulkan-coordinate-system/
-    const math::mat4f correction(math::mat4f::row_major_init{
-            1.0f,  0.0f, 0.0f, 0.0f,
-            0.0f, -1.0f, 0.0f, 0.0f,
-            0.0f,  0.0f, 0.5f, 0.5f,
-            0.0f,  0.0f, 0.0f, 1.0f,
-    });
-
-    const mat4f clipFromView(mClipSpace01 ? correction * projectionMatrix : projectionMatrix);
+    const mat4f clipFromView(projectionMatrix);
     const mat4f viewFromClip(Camera::inverseProjection(clipFromView));
     const mat4f clipFromWorld(clipFromView * viewFromWorld);
 

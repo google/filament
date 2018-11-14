@@ -283,7 +283,6 @@ private:
     UniformBuffer& getUb() const noexcept { return mPerViewUb; }
 
     utils::CString mName;
-    const bool mClipSpace01;
 
     // the following values are set by prepare()
     Range mVisibleRenderables;
