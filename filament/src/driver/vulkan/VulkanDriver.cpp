@@ -814,11 +814,12 @@ void VulkanDriver::draw(Driver::PipelineState pipelineState, Driver::RenderPrimi
     ASSERT_POSTCONDITION(cmdbuffer, "Draw calls can occur only within a beginFrame / endFrame.");
     const VulkanRenderPrimitive& prim = *handle_cast<VulkanRenderPrimitive>(mHandleMap, rph);
 
-    Driver::ProgramHandle ph = pipelineState.program;
+    Driver::ProgramHandle programHandle = pipelineState.program;
     Driver::RasterState rasterState = pipelineState.rasterState;
+    Driver::PolygonOffset depthOffset = pipelineState.polygonOffset;
 
     // If this is a debug build, validate the current shader.
-    auto* program = handle_cast<VulkanProgram>(mHandleMap, ph);
+    auto* program = handle_cast<VulkanProgram>(mHandleMap, programHandle);
 #if !defined(NDEBUG)
     if (program->bundle.vertex == VK_NULL_HANDLE || program->bundle.fragment == VK_NULL_HANDLE) {
         utils::slog.e << "Binding missing shader: " << program->name.c_str() << utils::io::endl;
@@ -834,8 +835,9 @@ void VulkanDriver::draw(Driver::PipelineState pipelineState, Driver::RenderPrimi
         .depthBoundsTestEnable = VK_FALSE,
         .stencilTestEnable = VK_FALSE,
     };
+
     mContext.rasterState.blending = {
-        .blendEnable = (VkBool32)rasterState.hasBlending(),
+        .blendEnable = (VkBool32) rasterState.hasBlending(),
         .srcColorBlendFactor = getBlendFactor(rasterState.blendFunctionSrcRGB),
         .dstColorBlendFactor = getBlendFactor(rasterState.blendFunctionDstRGB),
         .colorBlendOp = (VkBlendOp) rasterState.blendEquationRGB,
@@ -844,6 +846,12 @@ void VulkanDriver::draw(Driver::PipelineState pipelineState, Driver::RenderPrimi
         .alphaBlendOp =  (VkBlendOp) rasterState.blendEquationAlpha,
         .colorWriteMask = (VkColorComponentFlags) (rasterState.colorWrite ? 0xf : 0x0),
     };
+
+    auto& vkraster = mContext.rasterState.rasterization;
+    vkraster.cullMode = getCullMode(rasterState.culling);
+    vkraster.depthBiasEnable = (depthOffset.constant || depthOffset.slope) ? VK_TRUE : VK_FALSE;
+    vkraster.depthBiasConstantFactor = depthOffset.constant;
+    vkraster.depthBiasSlopeFactor = depthOffset.slope;
 
     // Remove the fragment shader from depth-only passes to avoid a validation warning.
     VulkanBinder::ProgramBundle shaderHandles = program->bundle;

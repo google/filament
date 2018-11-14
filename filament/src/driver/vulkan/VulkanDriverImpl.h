@@ -118,6 +118,7 @@ SwapContext& getSwapContext(VulkanContext& context);
 bool hasPendingWork(VulkanContext& context);
 VkCompareOp getCompareOp(SamplerCompareFunc func);
 VkBlendFactor getBlendFactor(BlendFunction mode);
+VkCullModeFlags getCullMode(CullingMode mode);
 void waitForIdle(VulkanContext& context);
 void acquireCommandBuffer(VulkanContext& context);
 void releaseCommandBuffer(VulkanContext& context);
