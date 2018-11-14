@@ -1,0 +1,25 @@
+language: shell
+matrix:
+  include:
+    - name: "Windows VS2017"
+      os: windows
+      script:
+        - cmd.exe /C '"C:\Program Files (x86)\Microsoft Visual Studio\2017\BuildTools\VC\Auxiliary\Build\vcvarsall.bat" amd64 && msbuild.exe projects/visualstudio2015/smolv.sln /p:Configuration=Debug'
+        - cmd.exe /C '"C:\Program Files (x86)\Microsoft Visual Studio\2017\BuildTools\VC\Auxiliary\Build\vcvarsall.bat" amd64 && msbuild.exe projects/visualstudio2015/smolv.sln /p:Configuration=Release'
+        - cmd.exe /C 'projects\visualstudio2015\build\x64\Release\smolv.exe'
+
+    - name: "Mac Xcode 10/clang"
+      os: osx
+      osx_image: xcode10.1
+      script:
+        - xcodebuild -project projects/smolv.xcodeproj -configuration Debug build
+        - xcodebuild -project projects/smolv.xcodeproj -configuration Release build
+        - projects/build/Release/smolv
+
+    - name: "Linux gcc"
+      os: linux
+      dist: trusty
+      sudo: false
+      script:
+        - make -f projects/Makefile -j 4
+        - ./smolv
