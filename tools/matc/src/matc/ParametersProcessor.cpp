@@ -178,12 +178,14 @@ bool ParametersProcessor::processDefines(filamat::MaterialBuilder& builder,
             std::cerr << PARAM_KEY_DEFINES << " array values must be STRING." << std::endl;
             return false;
         }
+
         auto jsonString = v->toJsonString();
         if (!Enums::isValid<Property>(jsonString->getString())) {
             return logEnumIssue(PARAM_KEY_DEFINES, *jsonString, Enums::map<Property>());
         }
         builder.set(Enums::toEnum<Property>(jsonString->getString()));
     }
+
     return true;
 }
 
@@ -270,6 +272,7 @@ bool ParametersProcessor::processParameter(filamat::MaterialBuilder& builder,
             std::cerr << PARAM_KEY_PARAMETERS << ": precision must be a STRING." << std::endl;
             return false;
         }
+
         auto precisionString = precisionValue->toJsonString();
         if (!Enums::isValid<SamplerPrecision>(precisionString->getString())){
             return logEnumIssue(PARAM_KEY_PARAMETERS,
@@ -283,6 +286,7 @@ bool ParametersProcessor::processParameter(filamat::MaterialBuilder& builder,
             std::cerr << PARAM_KEY_PARAMETERS<< ": format must be a STRING." << std::endl;
             return false;
         }
+
         auto formatString = formatValue->toJsonString();
         if (Enums::isValid<SamplerFormat>(formatString->getString())){
             return logEnumIssue(PARAM_KEY_PARAMETERS, *formatString, Enums::map<SamplerFormat>());
@@ -338,13 +342,15 @@ bool ParametersProcessor::processParameter(filamat::MaterialBuilder& builder,
 bool ParametersProcessor::processVariables(filamat::MaterialBuilder& builder,
         const JsonishValue& value) {
     const JsonishArray* jsonArray = value.toJsonArray();
-    if (jsonArray->getElements().size() > 4) {
+    const auto& elements = jsonArray->getElements();
+
+    if (elements.size() > 4) {
         std::cerr << PARAM_KEY_VARIABLES << ": Max array size is 4." << std::endl;
         return false;
     }
 
-    for (size_t i = 0; i < jsonArray->getElements().size(); i++) {
-        auto elementValue = jsonArray->getElements()[i];
+    for (size_t i = 0; i < elements.size(); i++) {
+        auto elementValue = elements[i];
         filamat::MaterialBuilder::Variable v = intToVariable(i);
         if (elementValue->getType() != JsonishValue::Type::STRING) {
             std::cerr << PARAM_KEY_VARIABLES << ": array index " << i << " is not a STRING. found:" <<
@@ -353,6 +359,7 @@ bool ParametersProcessor::processVariables(filamat::MaterialBuilder& builder,
         }
         builder.variable(v, elementValue->toJsonString()->getString().c_str());
     }
+
     return true;
 }
 
@@ -363,12 +370,15 @@ bool ParametersProcessor::processRequires(filamat::MaterialBuilder& builder,
             std::cerr << PARAM_KEY_REQUIRES << ": entries must be STRINGs." << std::endl;
             return false;
         }
+
         auto jsonString = v->toJsonString();
         if (!isStringValidEnum(mStringToAttributeIndex, jsonString->getString())) {
             return logEnumIssue(PARAM_KEY_REQUIRES, *jsonString, mStringToAttributeIndex);
         }
+
         builder.require(stringToEnum(mStringToAttributeIndex, jsonString->getString()));
     }
+
     return true;
 }
 
@@ -379,6 +389,7 @@ bool ParametersProcessor::processBlending(filamat::MaterialBuilder& builder,
         std::cerr << PARAM_KEY_BLENDING << ": value is not a valid BlendMode." << std::endl;
         return false;
     }
+
     builder.blending(stringToEnum(mStringToBlendingMode, jsonString->getString()));
     return true;
 }
@@ -389,6 +400,7 @@ bool ParametersProcessor::processVertexDomain(filamat::MaterialBuilder& builder,
     if (!isStringValidEnum(mStringToVertexDomain, jsonString->getString())) {
         return logEnumIssue(PARAM_KEY_VERTEX_DOMAIN, *jsonString, mStringToVertexDomain);
     }
+
     builder.vertexDomain(stringToEnum(mStringToVertexDomain, jsonString->getString()));
     return true;
 }
@@ -399,6 +411,7 @@ bool ParametersProcessor::processCulling(filamat::MaterialBuilder& builder,
     if (!isStringValidEnum(mStringToCullingMode, jsonString->getString())) {
         return logEnumIssue(PARAM_KEY_CULLING, *jsonString, mStringToCullingMode);
     }
+
     builder.culling(stringToEnum(mStringToCullingMode, jsonString->getString()));
     return true;
 }
@@ -433,6 +446,7 @@ bool ParametersProcessor::processTransparencyMode(filamat::MaterialBuilder& buil
     if (!isStringValidEnum(mStringToTransparencyMode, jsonString->getString())) {
         return logEnumIssue(PARAM_KEY_TRANSPARENCY_MODE, *jsonString, mStringToTransparencyMode);
     }
+
     builder.transparencyMode(stringToEnum(mStringToTransparencyMode, jsonString->getString()));
     return true;
 }
@@ -455,6 +469,7 @@ bool ParametersProcessor::processShading(filamat::MaterialBuilder& builder,
     if (!isStringValidEnum(mStringToShading, jsonString->getString())) {
         return logEnumIssue(PARAM_KEY_SHADING, *jsonString, mStringToShading);
     }
+
     builder.shading(stringToEnum(mStringToShading, jsonString->getString()));
     return true;
 }
@@ -463,31 +478,36 @@ bool ParametersProcessor::processVariantFilter(filamat::MaterialBuilder& builder
         const JsonishValue& value) {
     uint8_t variantFilter = 0;
     const JsonishArray* jsonArray = value.toJsonArray();
-    for (size_t i = 0; i < jsonArray->getElements().size(); i++) {
-        auto elementValue = jsonArray->getElements()[i];
+    const auto& elements = jsonArray->getElements();
+
+    for (size_t i = 0; i < elements.size(); i++) {
+        auto elementValue = elements[i];
         if (elementValue->getType() != JsonishValue::Type::STRING) {
             std::cerr << PARAM_KEY_VARIANT_FILTER << ": array index " << i <<
                       " is not a STRING. found:" <<
                       JsonishValue::typeToString(elementValue->getType()) << std::endl;
             return false;
         }
+
         const std::string& s = elementValue->toJsonString()->getString();
         if (!isStringValidEnum(mStringToVariant, s)) {
             std::cerr << PARAM_KEY_VARIANT_FILTER << ": variant " << s <<
                       " is not a valid variant" << std::endl;
         }
+
         variantFilter |= mStringToVariant[s];
     }
+
     builder.variantFilter(variantFilter);
     return true;
 }
 
 filamat::MaterialBuilder::Variable ParametersProcessor::intToVariable(size_t i) const noexcept {
     switch (i) {
-        case 0: return MaterialBuilder::Variable::CUSTOM0;
-        case 1: return MaterialBuilder::Variable::CUSTOM1;
-        case 2: return MaterialBuilder::Variable::CUSTOM2;
-        case 3: return MaterialBuilder::Variable::CUSTOM3;
+        case 0:  return MaterialBuilder::Variable::CUSTOM0;
+        case 1:  return MaterialBuilder::Variable::CUSTOM1;
+        case 2:  return MaterialBuilder::Variable::CUSTOM2;
+        case 3:  return MaterialBuilder::Variable::CUSTOM3;
         default: return MaterialBuilder::Variable::CUSTOM0;
     }
 }

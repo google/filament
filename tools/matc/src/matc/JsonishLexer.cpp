@@ -58,13 +58,13 @@ JsonType JsonishLexer::readPunctuation() noexcept {
 
     // Add lexeme.
     switch (punctuation) {
-        case ',' : return COMMA;
-        case ':' : return COLUMN;
-        case '[' : return ARRAY_START;
-        case ']' : return ARRAY_END;
-        case '{' : return BLOCK_START;
-        case '}' : return BLOCK_END;
-        default  : return readIdentifier(); // Treat everything else as an identifier.
+        case ',': return COMMA;
+        case ':': return COLUMN;
+        case '[': return ARRAY_START;
+        case ']': return ARRAY_END;
+        case '{': return BLOCK_START;
+        case '}': return BLOCK_END;
+        default : return readIdentifier(); // Treat everything else as an identifier.
     }
 }
 
