@@ -148,6 +148,7 @@ void RenderPass::recordDriverCommands(
 
             pipeline.program = ma->getProgram(info.materialVariant.key);
             pipeline.rasterState = info.rasterState;
+            pipeline.polygonOffset = mi->getPolygonOffset();
             driver.draw(pipeline, info.primitiveHandle);
         }
 

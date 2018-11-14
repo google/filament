@@ -209,3 +209,11 @@ Java_com_google_android_filament_MaterialInstance_nUnsetScissor(
     MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
     instance->unsetScissor();
 }
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_google_android_filament_MaterialInstance_nSetPolygonOffset(JNIEnv*,
+        jclass, jlong nativeMaterialInstance, jfloat scale, jfloat constant) {
+    MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
+    instance->setPolygonOffset(scale, constant);
+}
