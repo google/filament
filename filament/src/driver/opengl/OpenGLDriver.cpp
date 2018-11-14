@@ -594,6 +594,26 @@ void OpenGLDriver::depthFunc(GLenum func) noexcept {
     });
 }
 
+void OpenGLDriver::polygonOffset(GLfloat factor, GLfloat units) noexcept {
+    // if we're in the shadow-pass, the default polygon offset is factor = unit = 1
+    // TODO: this should be controlled by filament, instead of being a feature of the driver
+    if (factor == 0 && units == 0) {
+        TargetBufferFlags clearFlags = (TargetBufferFlags)mRenderPassParams.clear;
+        if ((clearFlags & TargetBufferFlags::SHADOW) == TargetBufferFlags::SHADOW) {
+            factor = units = 1.0f;
+        }
+    }
+
+    update_state(state.polygonOffset, { factor, units }, [&]() {
+        if (factor != 0 || units != 0) {
+            glPolygonOffset(factor, units);
+            enable(GL_POLYGON_OFFSET_FILL);
+        } else {
+            disable(GL_POLYGON_OFFSET_FILL);
+        }
+    });
+}
+
 void OpenGLDriver::setRasterStateSlow(Driver::RasterState rs) noexcept {
     mRasterState = rs;
 
@@ -1975,12 +1995,6 @@ void OpenGLDriver::beginRenderPass(Driver::RenderTargetHandle rth,
     if (UTILS_UNLIKELY(state.draw_fbo != rt->gl.fbo)) {
         bindFramebuffer(GL_FRAMEBUFFER, rt->gl.fbo);
 
-        if ((clearFlags & TargetBufferFlags::SHADOW) == TargetBufferFlags::SHADOW) {
-            enable(GL_POLYGON_OFFSET_FILL);
-        } else {
-            disable(GL_POLYGON_OFFSET_FILL);
-        }
-
         // glInvalidateFramebuffer appeared on GLES 3.0 and GL4.3, for simplicity we just
         // ignore it on GL (rather than having to do a runtime check).
         if (GLES31_HEADERS && !bugs.disable_invalidate_framebuffer) {
@@ -2728,6 +2742,8 @@ void OpenGLDriver::draw(
     bindVertexArray(rp);
 
     setRasterState(state.rasterState);
+
+    polygonOffset(state.polygonOffset.slope, state.polygonOffset.constant);
 
     glDrawRangeElements(GLenum(rp->type), rp->minIndex, rp->maxIndex, rp->count,
             rp->gl.indicesType, reinterpret_cast<const void*>(rp->offset));
