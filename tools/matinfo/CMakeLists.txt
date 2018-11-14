@@ -23,7 +23,7 @@ target_include_directories(${TARGET} PRIVATE ${../glslang_SOURCE_DIR}/..)
 # =================================================================================================
 # Licenses
 # ==================================================================================================
-set(MODULE_LICENSES getopt glslang)
+set(MODULE_LICENSES getopt glslang smol-v)
 set(GENERATION_ROOT ${CMAKE_CURRENT_BINARY_DIR}/generated)
 list_licenses(${GENERATION_ROOT}/licenses/licenses.inc ${MODULE_LICENSES})
 target_include_directories(${TARGET} PRIVATE ${GENERATION_ROOT})

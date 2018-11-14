@@ -51,7 +51,7 @@ include_directories(${CMAKE_BINARY_DIR})
 add_library(${TARGET} STATIC ${HDRS} ${PRIVATE_HDRS} ${SRCS})
 target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
 
-target_link_libraries(${TARGET} shaders filabridge filaflat utils)
+target_link_libraries(${TARGET} shaders filabridge filaflat utils smol-v)
 
 # ==================================================================================================
 # Compiler flags
@@ -66,6 +66,6 @@ target_compile_options(${TARGET} PRIVATE
 # Installation
 # ==================================================================================================
 # Currently disabled because we don't need it
-# To proper support Vulkan, filamat needs to support SPIR-V compilation
+# To properly support Vulkan, filamat needs to support SPIR-V compilation
 # install(DIRECTORY ${PUBLIC_HDR_DIR}/filamat DESTINATION include)
 # install(TARGETS ${TARGET} ARCHIVE DESTINATION lib/${DIST_DIR})
