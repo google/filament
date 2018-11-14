@@ -569,7 +569,8 @@ class_<MaterialInstance>("MaterialInstance")
         self->setParameter(name.c_str(), value, sampler); }), allow_raw_pointers())
     .function("setColorParameter", EMBIND_LAMBDA(void,
             (MaterialInstance* self, std::string name, RgbType type, math::float3 value), {
-        self->setParameter(name.c_str(), type, value); }), allow_raw_pointers());
+        self->setParameter(name.c_str(), type, value); }), allow_raw_pointers())
+    .function("setPolygonOffset", &MaterialInstance::setPolygonOffset, allow_raw_pointers());
 
 class_<TextureSampler>("TextureSampler")
     .constructor<driver::SamplerMinFilter, driver::SamplerMagFilter, driver::SamplerWrapMode>();

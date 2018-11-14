@@ -87,6 +87,12 @@ public:
         mScissorRect[2] = mScissorRect[3] = std::numeric_limits<int32_t>::max();
     }
 
+    void setPolygonOffset(float scale, float constant) noexcept {
+        mPolygonOffset = { scale, constant };
+    }
+
+    Driver::PolygonOffset getPolygonOffset() const noexcept { return mPolygonOffset; }
+
 private:
     friend class FMaterial;
     friend class MaterialInstance;
@@ -103,6 +109,7 @@ private:
 
     UniformBuffer mUniforms;
     SamplerBuffer mSamplers;
+    Driver::PolygonOffset mPolygonOffset;
 
     uint64_t mMaterialSortingKey = 0;
 

@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+#include <filament/MaterialInstance.h>
+
 #include "details/MaterialInstance.h"
 
 #include "RenderPass.h"
@@ -195,6 +197,10 @@ void MaterialInstance::setScissor(uint32_t left, uint32_t bottom, uint32_t width
 
 void MaterialInstance::unsetScissor() noexcept {
     upcast(this)->unsetScissor();
+}
+
+void MaterialInstance::setPolygonOffset(float scale, float constant) noexcept {
+    upcast(this)->setPolygonOffset(scale, constant);
 }
 
 } // namespace filament

@@ -147,6 +147,10 @@ public class MaterialInstance {
         nUnsetScissor(getNativeObject());
     }
 
+    public void setPolygonOffset(float scale, float constant) {
+        nSetPolygonOffset(getNativeObject(), scale, constant);
+    }
+
     long getNativeObject() {
         if (mNativeObject == 0) {
             throw new IllegalStateException("Calling method on destroyed MaterialInstance");
@@ -204,4 +208,7 @@ public class MaterialInstance {
             @IntRange(from = 0) int width, @IntRange(from = 0) int height);
 
     private static native void nUnsetScissor(long nativeMaterialInstance);
+
+    private static native void nSetPolygonOffset(long nativeMaterialInstance,
+        float scale, float constant);
 }
