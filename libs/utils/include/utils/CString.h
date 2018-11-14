@@ -185,9 +185,7 @@ public:
     CString& operator=(const CString& rhs);
 
     CString& operator=(CString&& rhs) noexcept {
-        if (this != &rhs) {
-            this->swap(rhs);
-        }
+        this->swap(rhs);
         return *this;
     }
 
@@ -258,6 +256,12 @@ public:
     const_reference back() const noexcept {
         assert(size());
         return begin()[size() - 1];
+    }
+
+    // placement new declared as "throw" to avoid the compiler's null-check
+    inline void* operator new(size_t size, void* ptr) {
+        assert(ptr);
+        return ptr;
     }
 
 private:

@@ -295,8 +295,8 @@ Handle<HwProgram> FMaterial::getProgramSlow(uint8_t variantKey) const noexcept {
 
     Program pb;
     pb      .diagnostics(mName, variantKey)
-            .withVertexShader(vs)
-            .withFragmentShader(fs)
+            .withVertexShader(std::move(vs))
+            .withFragmentShader(std::move(fs))
             .withSamplerBindings(&mSamplerBindings)
             .addUniformBlock(BindingPoints::PER_VIEW, &UibGenerator::getPerViewUib())
             .addUniformBlock(BindingPoints::LIGHTS, &UibGenerator::getLightsUib())
