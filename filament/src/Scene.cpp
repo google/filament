@@ -71,7 +71,7 @@ void FScene::prepare(const math::mat4f& worldOriginTransform) {
     size_t capacity = entities.size();
     // we need the capacity to be multiple of 16 for SIMD loops
     capacity = (capacity + 0xF) & ~0xF;
-    // we need 1 extra entry at the end for teh summed primitive count
+    // we need 1 extra entry at the end for the summed primitive count
     capacity = capacity + 1;
 
     sceneData.clear();

@@ -19,7 +19,7 @@
 
 /*
  * This looks like a header file, but really it acts as a .cpp, because it's used to
- * explicitly instantiate teh methods of BuilderBase<>
+ * explicitly instantiate the methods of BuilderBase<>
  */
 
 #include <filament/FilamentAPI.h>

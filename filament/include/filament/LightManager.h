@@ -130,7 +130,7 @@ class FLightManager;
  *
  * 2. Use the smallest possible falloff distance for point and spot lights.
  *    Performance is very sensitive to overlapping lights. The falloff distance essentially
- *    defines a sphere of influence for the light, so try to position point and and spot lights
+ *    defines a sphere of influence for the light, so try to position point and spot lights
  *    such that they don't overlap too much.
  *
  *    On the other hand, a scene can contain hundreds of non overlapping lights without
