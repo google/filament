@@ -29,8 +29,9 @@ mipgen --compression=astc_fast_ldr_4x4 albedo.png albedo_astc.ktx
 mipgen --compression=s3tc_rgb_dxt1 albedo.png albedo_s3tc.ktx
 
 # Create mipmaps for the normal map and a compressed variant.
-mipgen --kernel=NORMALS --linear normal.png normal.ktx
-mipgen --kernel=NORMALS --linear --compression=etc_rgb8_normalxyz_40 normal.png normal_etc.ktx
+mipgen --strip-alpha --kernel=NORMALS --linear normal.png normal.ktx
+mipgen --strip-alpha --kernel=NORMALS --linear --compression=etc_rgb8_normalxyz_40 \
+    normal.png normal_etc.ktx
 
 # Create mipmaps for the single-component roughness map and a compressed variant.
 mipgen --grayscale roughness.png roughness.ktx
@@ -80,7 +81,7 @@ cmgen -x . --format=ktx --size=256 --extract-blur=0.1 syferfontein_18d_clear_2k.
 You might recall the `filamat` file we generated in the previous tutorial for red plastic. For this
 demo, we'll create a material that uses textures for several parameters.
 
-Create the following textz file call it `textured.mat`. Note that our material definition now
+Create the following text file and call it `textured.mat`. Note that our material definition now
 requires a `uv0` attribute.
 
 ```text
