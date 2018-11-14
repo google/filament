@@ -918,7 +918,7 @@ $$
 f_{0_{base}} = \frac{\left( 1 - 5 \sqrt{\fNormal} \right) ^2}{\left( 5 \sqrt{\fNormal} \right) ^2}
 $$
 
-We should also modify the base layer's apparent roughness based based on the IOR of the clear coat layer but this is something we have opted to leave out for now.
+We should also modify the base layer's apparent roughness based on the IOR of the clear coat layer but this is something we have opted to leave out for now.
 
 ## Anisotropic model
 
@@ -1056,7 +1056,7 @@ Figure [materialCloth] shows how a traditional microfacet BRDF fails to capture 
 
 ![Figure [materialCloth]: Comparison of denim fabric rendered using a traditional microfacet BRDF (left) and our cloth BRDF (right)](images/screenshot_cloth.png)
 
-Velvet is an interesting use case for a cloth material model. As shown in figure [materialVelvet] this type of fabric exhibits strong rim lighting due to forward and backward scattering. These scattering events are caused by fibers standing straight at the surface of the fabric. When the incident light comes from the direction opposite to the view direction, the fibers will forward-scatter the light. Similarly, when the incident light from from the same direction as the view direction, the fibers will scatter the light backward.
+Velvet is an interesting use case for a cloth material model. As shown in figure [materialVelvet] this type of fabric exhibits strong rim lighting due to forward and backward scattering. These scattering events are caused by fibers standing straight at the surface of the fabric. When the incident light comes from the direction opposite to the view direction, the fibers will forward-scatter the light. Similarly, when the incident light from the same direction as the view direction, the fibers will scatter the light backward.
 
 ![Figure [materialVelvet]: Velvet fabric showcasing forward and backward scattering](images/screenshot_cloth_velvet.png)
 
@@ -1927,7 +1927,7 @@ the convolution, such as the increased blur in reflections closer to the viewer
 (a.k.a. stretchy reflections). 
 
 Such a simplification would also have a severe impact on constant environments, such as the white 
-furnace, because it would affect the magnitude of the the constant (i.e. DC) term of the result. We
+furnace, because it would affect the magnitude of the constant (i.e. DC) term of the result. We
 can at least correct for that by using a scale factor, $K$, in our simplified integral, which
 will make sure the average irradiance stay correct when chosen properly.
 

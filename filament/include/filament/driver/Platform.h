@@ -44,7 +44,7 @@ public:
     virtual ~Platform() noexcept;
 
 protected:
-    // Creates and and initializes the low-level API (e.g. an OpenGL context or Vulkan instance),
+    // Creates and initializes the low-level API (e.g. an OpenGL context or Vulkan instance),
     // then creates the concrete Driver. Returns null on failure.
     // The caller takes ownership of the returned Driver* and must destroy it with delete.
     virtual Driver* createDriver(void* sharedContext) noexcept = 0;

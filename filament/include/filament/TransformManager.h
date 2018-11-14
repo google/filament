@@ -98,7 +98,7 @@ public:
      *
      * @note If this transform had children, these are orphaned, which means their local
      * transform becomes a world transform. Usually it's nonsensical. It's recommended to make
-     * sure that a destroyed transform doesn't have have children.
+     * sure that a destroyed transform doesn't have children.
      *
      * @see create()
      */

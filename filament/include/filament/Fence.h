@@ -64,7 +64,7 @@ public:
     /** Mode controls the behavior of the command stream when calling wait()
      *
      * @attention
-     * It would be unwise to call call `wait(..., Mode::DONT_FLUSH)` from the same thread
+     * It would be unwise to call `wait(..., Mode::DONT_FLUSH)` from the same thread
      * the Fence was created, as it would most certainly create a dead-lock.
      */
     enum class Mode : uint8_t {
