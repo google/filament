@@ -286,6 +286,7 @@ class_<Engine>("Engine")
     .function("getTransformManager", EMBIND_LAMBDA(TransformManager*, (Engine* engine), {
         return &engine->getTransformManager();
     }), allow_raw_pointers())
+
     /// createSwapChain ::method::
     /// ::retval:: an instance of [SwapChain]
     .function("createSwapChain", (SwapChain* (*)(Engine*)) []
@@ -296,6 +297,7 @@ class_<Engine>("Engine")
     .function("destroySwapChain", (void (*)(Engine*, SwapChain*)) []
             (Engine* engine, SwapChain* swapChain) { engine->destroy(swapChain); },
             allow_raw_pointers())
+
     /// createRenderer ::method::
     /// ::retval:: an instance of [Renderer]
     .function("createRenderer", &Engine::createRenderer, allow_raw_pointers())
@@ -304,6 +306,7 @@ class_<Engine>("Engine")
     .function("destroyRenderer", (void (*)(Engine*, Renderer*)) []
             (Engine* engine, Renderer* renderer) { engine->destroy(renderer); },
             allow_raw_pointers())
+
     /// createView ::method::
     /// ::retval:: an instance of [View]
     .function("createView", &Engine::createView, allow_raw_pointers())
@@ -312,6 +315,7 @@ class_<Engine>("Engine")
     .function("destroyView", (void (*)(Engine*, View*)) []
             (Engine* engine, View* view) { engine->destroy(view); },
             allow_raw_pointers())
+
     /// createScene ::method::
     /// ::retval:: an instance of [Scene]
     .function("createScene", &Engine::createScene, allow_raw_pointers())
@@ -320,6 +324,7 @@ class_<Engine>("Engine")
     .function("destroyScene", (void (*)(Engine*, Scene*)) []
             (Engine* engine, Scene* scene) { engine->destroy(scene); },
             allow_raw_pointers())
+
     /// createCamera ::method::
     /// ::retval:: an instance of [Camera]
     .function("createCamera", select_overload<Camera*(void)>(&Engine::createCamera),
@@ -329,6 +334,7 @@ class_<Engine>("Engine")
     .function("destroyCamera", (void (*)(Engine*, Camera*)) []
             (Engine* engine, Camera* camera) { engine->destroy(camera); },
             allow_raw_pointers())
+
     .function("_createMaterial", EMBIND_LAMBDA(Material*, (Engine* engine, BufferDescriptor mbd), {
         return Material::Builder().package(mbd.bd->buffer, mbd.bd->size).build(*engine);
     }), allow_raw_pointers())
@@ -337,15 +343,31 @@ class_<Engine>("Engine")
     .function("destroyMaterial", (void (*)(Engine*, Material*)) []
             (Engine* engine, Material* mat) { engine->destroy(mat); },
             allow_raw_pointers())
+
     /// destroyEntity ::method::
     /// entity ::argument:: an [Entity]
     .function("destroyEntity", (void (*)(Engine*, utils::Entity)) []
             (Engine* engine, utils::Entity entity) { engine->destroy(entity); },
             allow_raw_pointers())
+    /// destroyIndexBuffer ::method::
+    /// ib ::argument:: the [IndexBuffer] to destroy
+    .function("destroyIndexBuffer", (void (*)(Engine*, IndexBuffer*)) []
+            (Engine* engine, IndexBuffer* ib) { engine->destroy(ib); },
+            allow_raw_pointers())
+    /// destroyIndirectLight ::method::
+    /// light ::argument:: the [IndirectLight] to destroy
+    .function("destroyIndirectLight", (void (*)(Engine*, IndirectLight*)) []
+            (Engine* engine, IndirectLight* light) { engine->destroy(light); },
+            allow_raw_pointers())
     /// destroyMaterial ::method::
     /// instance ::argument:: the [MaterialInstance] to destroy
     .function("destroyMaterialInstance", (void (*)(Engine*, MaterialInstance*)) []
             (Engine* engine, MaterialInstance* mi) { engine->destroy(mi); },
+            allow_raw_pointers())
+    /// destroySkybox ::method::
+    /// skybox ::argument:: the [Skybox] to destroy
+    .function("destroySkybox", (void (*)(Engine*, Skybox*)) []
+            (Engine* engine, Skybox* sky) { engine->destroy(sky); },
             allow_raw_pointers())
     /// destroyTexture ::method::
     /// texture ::argument:: the [Texture] to destroy
@@ -356,11 +378,6 @@ class_<Engine>("Engine")
     /// vb ::argument:: the [VertexBuffer] to destroy
     .function("destroyVertexBuffer", (void (*)(Engine*, VertexBuffer*)) []
             (Engine* engine, VertexBuffer* vb) { engine->destroy(vb); },
-            allow_raw_pointers())
-    /// destroyIndexBuffer ::method::
-    /// ib ::argument:: the [IndexBuffer] to destroy
-    .function("destroyIndexBuffer", (void (*)(Engine*, IndexBuffer*)) []
-            (Engine* engine, IndexBuffer* ib) { engine->destroy(ib); },
             allow_raw_pointers());
 
 /// SwapChain ::core class:: Represents the platform's native rendering surface.

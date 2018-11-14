@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+# -*- coding: future_fstrings -*-
+
+# To run this script, you may need to do the following on Ubuntu:
+#     sudo apt-get install python3-pip
+#     pip3 install -r requirements.txt
 
 """Converts markdown into HTML and extracts JavaScript code blocks.
 
@@ -29,6 +34,7 @@ are classes, free functions, and enums. The JSON is then traversed to
 generate a markdown string, which then produces HTML.
 """
 
+import glob
 import os
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__)) + '/'
@@ -142,6 +148,7 @@ class JsRenderer(BaseRenderer):
         opts.end_with_newline = True
         opts.preserve_newlines = False
         opts.break_chained_methods = True
+        opts.wrap_line_length = 100
         return jsbeautifier.beautify(result, opts)
 
     def render_code_fence(self, token):
@@ -197,10 +204,16 @@ def build_filamat(name):
     if retval != 0:
         exit(retval)
 
-def copy_built_file(src):
-    src = os.path.join(BUILD_DIR, src)
-    dst = os.path.join(OUTPUT_DIR, os.path.basename(src))
-    shutil.copyfile(src, dst)
+def copy_built_file(pattern, destfolder=None):
+    outdir = OUTPUT_DIR
+    if destfolder:
+        outdir = os.path.join(outdir, destfolder)
+    if not os.path.exists(outdir):
+         os.mkdir(outdir)
+    pattern = os.path.join(BUILD_DIR, pattern)
+    for src in glob.glob(pattern):
+        dst = os.path.join(outdir, os.path.basename(src))
+        shutil.copyfile(src, dst)
 
 def copy_src_file(src):
     src = os.path.join(ROOT_DIR, src)
@@ -491,10 +504,17 @@ if __name__ == "__main__":
     copy_src_file(ROOT_DIR + 'third_party/gl-matrix/gl-matrix-min.js')
     copy_built_file('web/filament-js/filament.js')
     copy_built_file('web/filament-js/filament.wasm')
-    copy_built_file('web/samples/pillars_2k/pillars_2k_skybox.ktx')
-    copy_built_file('web/samples/pillars_2k/pillars_2k_ibl.ktx')
+    copy_built_file('web/samples/suzanne.filamesh')
+    copy_built_file('web/samples/metallic*.ktx')
+    copy_built_file('web/samples/normal*.ktx')
+    copy_built_file('web/samples/roughness*.ktx')
+    copy_built_file('web/samples/ao*.ktx')
+    copy_built_file('web/samples/albedo*.ktx')
+    copy_built_file('web/samples/pillars_2k/pillars_2k_*.ktx', 'pillars_2k')
+    copy_built_file('web/samples/syferfontein_18d_clear_2k/syferfontein_18d_clear_2k_*.ktx', 'syferfontein_18d_clear_2k')
     build_filamat('triangle')
     build_filamat('plastic')
+    build_filamat('textured')
     build_reference()
 
     if args.server:
