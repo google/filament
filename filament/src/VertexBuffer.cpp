@@ -134,6 +134,7 @@ FVertexBuffer::FVertexBuffer(FEngine& engine, const VertexBuffer::Builder& build
 
     auto const& declaredAttributes = mDeclaredAttributes;
     auto const& attributes = mAttributes;
+    #pragma nounroll
     for (size_t i = 0, n = attributeArray.size(); i < n; ++i) {
         if (declaredAttributes[i]) {
             attributeArray[i].offset = attributes[i].offset;

@@ -63,6 +63,7 @@ Profiler::Profiler() noexcept {
 }
 
 Profiler::~Profiler() noexcept {
+    #pragma nounroll
     for (int fd : mCountersFd) {
         if (fd >= 0) {
             close(fd);
@@ -72,6 +73,7 @@ Profiler::~Profiler() noexcept {
 
 uint32_t Profiler::resetEvents(uint32_t eventMask) noexcept {
     // close all counters
+    #pragma nounroll
     for (int& fd : mCountersFd) {
         if (fd >= 0) {
             close(fd);
@@ -133,7 +135,7 @@ uint32_t Profiler::resetEvents(uint32_t eventMask) noexcept {
                 mEnabledEvents |= EV_L1D_MISSES;
             }
         }
-    
+
         if (eventMask & EV_BPU_REFS) {
             pe.type = PERF_TYPE_HARDWARE;
             pe.config = PERF_COUNT_HW_BRANCH_INSTRUCTIONS;
@@ -143,7 +145,7 @@ uint32_t Profiler::resetEvents(uint32_t eventMask) noexcept {
                 mEnabledEvents |= EV_BPU_REFS;
             }
         }
-    
+
         if (eventMask & EV_BPU_MISSES) {
             pe.type = PERF_TYPE_HARDWARE;
             pe.config = PERF_COUNT_HW_BRANCH_MISSES;
@@ -153,7 +155,7 @@ uint32_t Profiler::resetEvents(uint32_t eventMask) noexcept {
                 mEnabledEvents |= EV_BPU_MISSES;
             }
         }
-    
+
 #ifdef __ARM_ARCH
         if (eventMask & EV_L1I_REFS) {
             pe.type = PERF_TYPE_RAW;

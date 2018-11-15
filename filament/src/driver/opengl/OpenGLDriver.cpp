@@ -401,6 +401,7 @@ void OpenGLDriver::unbindTexture(GLenum target, GLuint texture_id) noexcept {
 
 void OpenGLDriver::unbindSampler(GLuint sampler) noexcept {
     // unbind this sampler from all the units it might be bound to
+    #pragma nounroll    // clang generates >800B of code!!!
     for (GLuint unit = 0; unit < MAX_TEXTURE_UNITS; unit++) {
         if (state.textures.units[unit].sampler == sampler) {
             bindSampler(unit, 0);
@@ -1260,6 +1261,7 @@ void OpenGLDriver::destroyVertexBuffer(Driver::VertexBufferHandle vbh) {
         // bindings of bound buffers are reset to 0
         const size_t targetIndex = getIndexForBufferTarget(GL_ARRAY_BUFFER);
         auto& target = state.buffers.genericBinding[targetIndex];
+        #pragma nounroll
         for (GLuint b : eb->gl.buffers) {
             if (target == b) {
                 target = 0;
@@ -1326,6 +1328,8 @@ void OpenGLDriver::destroyUniformBuffer(Driver::UniformBufferHandle ubh) {
         // bindings of bound buffers are reset to 0
         const size_t targetIndex = getIndexForBufferTarget(GL_UNIFORM_BUFFER);
         auto& target = state.buffers.targets[targetIndex];
+
+        #pragma nounroll // clang generates >1 KiB of code!!
         for (auto& buffer : target.buffers) {
             if (buffer.name == ub->gl.ubo.id) {
                 buffer.name = 0;

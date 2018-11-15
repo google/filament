@@ -19,8 +19,8 @@
 
 #include <filament/EngineEnums.h>
 
+#include <tsl/robin_map.h>
 #include <vector>
-#include <unordered_map>
 
 namespace filament {
 
@@ -87,7 +87,7 @@ private:
         return ((uint32_t) blockIndex << 8) + localOffset;
     }
     std::vector<SamplerBindingInfo> mBindingList;
-    std::unordered_map<BindingKey, SamplerBindingInfo> mBindingMap;
+    tsl::robin_map<BindingKey, SamplerBindingInfo> mBindingMap;
     uint8_t mSamplerBlockOffsets[filament::BindingPoints::COUNT] = { UNKNOWN_OFFSET };
 };
 
