@@ -61,6 +61,13 @@ struct lessCStrings {
     }
 };
 
+// This can be used to creates a string from a string literal -- w/o underlying allocations.
+// e.g.:
+//   StaticString s("Hello World!");
+//
+template <size_t N>
+using StringLiteral = const char[N];
+
 //! \publicsection
 class StaticString {
 public:
@@ -72,13 +79,6 @@ public:
     using const_iterator  = const value_type*;
 
     StaticString() noexcept = default;
-
-    // This can be used to creates a string from a string literal -- w/o underlying allocations.
-    // e.g.:
-    //   StaticString s("Hello World!");
-    //
-    template <size_t N>
-    using StringLiteral = const char[N];
 
     template <size_t N>
     StaticString(StringLiteral<N> const& other) noexcept // NOLINT(google-explicit-constructor)
@@ -172,11 +172,22 @@ public:
     using const_iterator  = const value_type*;
 
     CString() noexcept = default;
+
     CString(const char* cstr, size_type length);
+
+    template<size_t N>
+    explicit CString(StringLiteral<N> const& other) noexcept // NOLINT(google-explicit-constructor)
+            : CString(other, N - 1) {
+    }
+
+    CString(StaticString const& s) : CString(s.c_str(), s.size()) {}
+
     CString(const CString& rhs);
+
     CString(CString&& rhs) noexcept {
         this->swap(rhs);
     }
+
 
     // this creates a CString from a null-terminated C string, this allocates memory and copies
     // its content. this is explicit because this operation is costly.

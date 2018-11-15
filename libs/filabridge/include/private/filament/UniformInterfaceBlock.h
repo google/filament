@@ -24,9 +24,9 @@
 
 #include <math/vec4.h>
 
+#include <tsl/robin_map.h>
+
 #include <assert.h>
-#include <string>
-#include <unordered_map>
 #include <vector>
 
 namespace filament {
@@ -37,7 +37,7 @@ public:
     UniformInterfaceBlock(const UniformInterfaceBlock& rhs);
     UniformInterfaceBlock(UniformInterfaceBlock&& rhs) noexcept;
     UniformInterfaceBlock& operator=(const UniformInterfaceBlock& rhs);
-    UniformInterfaceBlock& operator=(UniformInterfaceBlock&& rhs) noexcept;
+    UniformInterfaceBlock& operator=(UniformInterfaceBlock&& rhs) /*noexcept*/;
     ~UniformInterfaceBlock() noexcept;
 
     using Type = driver::UniformType;
@@ -45,11 +45,30 @@ public:
 
     class Builder {
     public:
+        ~Builder() noexcept;
+
         // Give a name to this uniform interface block
-        Builder& name(const std::string& interfaceBlockName);
+        Builder& name(utils::CString const& interfaceBlockName);
+        Builder& name(utils::CString&& interfaceBlockName);
+        Builder& name(utils::StaticString const& interfaceBlockName);
+        template<size_t N>
+        Builder& name(utils::StringLiteral<N> const& interfaceBlockName) {
+            return name(utils::StaticString{ interfaceBlockName, (utils::CString::size_type)(N - 1) });
+        }
+
         // Add a uniform
-        Builder& add(const std::string& uniformName, size_t size,
+        Builder& add(utils::CString const& uniformName, size_t size,
                 Type type, Precision precision = Precision::DEFAULT);
+        Builder& add(utils::CString&& uniformName, size_t size,
+                Type type, Precision precision = Precision::DEFAULT);
+        Builder& add(utils::StaticString const& uniformName, size_t size,
+                Type type, Precision precision = Precision::DEFAULT);
+        template<size_t N>
+        Builder& add(utils::StringLiteral<N> const& uniformName, size_t size,
+                Type type, Precision precision = Precision::DEFAULT) {
+            return add(utils::StaticString{ uniformName, N - 1 }, size, type, precision);
+        }
+
         // build and return the UniformInterfaceBlock
         UniformInterfaceBlock build();
     private:
@@ -78,8 +97,6 @@ public:
             assert(index < size);
             return (offset + stride * index) * sizeof(uint32_t);
         }
-    private:
-        friend std::ostream& operator << (std::ostream& out, const UniformInfo& info);
     };
 
     // name of this uniform interface block
@@ -103,14 +120,14 @@ public:
 private:
     friend class Builder;
 
-    explicit UniformInterfaceBlock(Builder& builder) noexcept;
+    explicit UniformInterfaceBlock(Builder const& builder) noexcept;
 
     static uint8_t baseAlignmentForType(Type type) noexcept;
     static uint8_t strideForType(Type type) noexcept;
 
     utils::CString mName;
     std::vector<UniformInfo> mUniformsInfoList;
-    std::unordered_map<const char*, uint32_t, utils::hashCStrings, utils::equalCStrings> mInfoMap;
+    tsl::robin_map<const char*, uint32_t, utils::hashCStrings, utils::equalCStrings> mInfoMap;
     uint32_t mSize = 0; // size in bytes
 };
 

@@ -17,7 +17,10 @@
 #ifndef TNT_FILAFLAT_SHADERBUILDER_H
 #define TNT_FILAFLAT_SHADERBUILDER_H
 
-#include <cstddef>
+#include <utils/CString.h>
+
+#include <stddef.h>
+#include <stdint.h>
 
 namespace filaflat {
 
@@ -33,18 +36,20 @@ public:
     void announce(size_t size);
 
     // Append a data blob to the shader. Returns true if successful.
-    bool appendPart(const char* data, size_t size);
+    void appendPart(const char* data, size_t size) noexcept;
 
-    const char* getShader() const {
-        return mShader;
-    }
+    // returns a copy of the shader string
+    utils::CString getShader() const { return { mShader, mCursor }; }
+
+    // returns the shader string. valid until next api call.
+    char const* c_str() const noexcept { return mShader; }
 
     size_t size() const { return mCursor; }
 
 private:
-    size_t mCapacity;
-    size_t mCursor;
-    char* mShader;
+    uint32_t mCapacity = 16384;
+    uint32_t mCursor = 0;
+    char* mShader = nullptr;
 };
 
 } // namespace filaflat

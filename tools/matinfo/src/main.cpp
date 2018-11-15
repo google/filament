@@ -356,7 +356,7 @@ static bool printMaterial(const ChunkContainer& container) {
 
     printUint32Chunk(container, filamat::PostProcessVersion, "Post process version: ");
 
-    std::string name;
+    CString name;
     if (read(container, filamat::MaterialName, &name)) {
         std::cout << "    " << std::setw(alignment) << std::left << "Name: ";
         std::cout << name.c_str() << std::endl;
@@ -417,7 +417,7 @@ static bool printParametersInfo(ChunkContainer container) {
             container.getChunkStart(filamat::ChunkType::MaterialUib),
             container.getChunkEnd(filamat::ChunkType::MaterialUib));
 
-    std::string name;
+    CString name;
     if (!uib.read(&name)) {
         return false;
     }
@@ -447,7 +447,7 @@ static bool printParametersInfo(ChunkContainer container) {
     std::cout << "Parameters:" << std::endl;
 
     for (uint64_t i = 0; i < uibCount; i++) {
-        std::string fieldName;
+        CString fieldName;
         uint64_t fieldSize;
         uint8_t fieldType;
         uint8_t fieldPrecision;
@@ -469,7 +469,7 @@ static bool printParametersInfo(ChunkContainer container) {
         }
 
         std::cout << "    "
-                  << std::setw(alignment) << fieldName
+                  << std::setw(alignment) << fieldName.c_str()
                   << std::setw(alignment) << toString(filament::UniformInterfaceBlock::Type(fieldType))
                   << arraySizeToString(fieldSize)
                   << std::setw(10) << toString(filament::UniformInterfaceBlock::Precision(fieldPrecision))
@@ -477,7 +477,7 @@ static bool printParametersInfo(ChunkContainer container) {
     }
 
     for (uint64_t i = 0; i < sibCount; i++) {
-        std::string fieldName;
+        CString fieldName;
         uint8_t fieldType;
         uint8_t fieldFormat;
         uint8_t fieldPrecision;
@@ -503,7 +503,7 @@ static bool printParametersInfo(ChunkContainer container) {
         }
 
         std::cout << "    "
-                << std::setw(alignment) << fieldName
+                << std::setw(alignment) << fieldName.c_str()
                 << std::setw(alignment) << toString(filament::SamplerInterfaceBlock::Type(fieldType))
                 << std::setw(10) << toString(filament::SamplerInterfaceBlock::Precision(fieldPrecision))
                 << toString(filament::SamplerInterfaceBlock::Format(fieldFormat))
@@ -524,7 +524,7 @@ static void printChunks(const ChunkContainer& container) {
     size_t count = container.getChunkCount();
     for (size_t i = 0; i < count; i++) {
         auto chunk = container.getChunk(i);
-        std::cout << "    " << typeToString(chunk.type) << " ";
+        std::cout << "    " << typeToString(chunk.type).c_str() << " ";
         std::cout << std::setw(7) << std::right << chunk.desc.size << std::endl;
     }
 }
@@ -756,7 +756,7 @@ static bool parseChunks(Config config, void* data, size_t size) {
 
             const auto& item = info[config.shaderIndex];
             parser.getShader(item.shaderModel, item.variant, item.pipelineStage, builder);
-            std::cout << builder.getShader();
+            std::cout << builder.c_str();
 
             return true;
         }
@@ -782,7 +782,7 @@ static bool parseChunks(Config config, void* data, size_t size) {
             parser.getShader(item.shaderModel, item.variant, item.pipelineStage, builder);
 
             // Build std::vector<uint32_t> since that's what the Khronos libraries consume.
-            uint32_t const* words = reinterpret_cast<uint32_t const*>(builder.getShader());
+            uint32_t const* words = reinterpret_cast<uint32_t const*>(builder.c_str());
             assert(0 == (builder.size() % 4));
             const std::vector<uint32_t> spirv(words, words + builder.size() / 4);
 

@@ -259,11 +259,11 @@ public:
     void prepare();
     void gc();
 
-    filaflat::ShaderBuilder& getVertexShaderBuilder() noexcept {
+    filaflat::ShaderBuilder& getVertexShaderBuilder() const noexcept {
         return mVertexShaderBuilder;
     }
 
-    filaflat::ShaderBuilder& getFragmentShaderBuilder() noexcept {
+    filaflat::ShaderBuilder& getFragmentShaderBuilder() const noexcept {
         return mFragmentShaderBuilder;
     }
 
@@ -360,8 +360,8 @@ private:
 
     mutable utils::CountDownLatch mDriverBarrier;
 
-    filaflat::ShaderBuilder mVertexShaderBuilder;
-    filaflat::ShaderBuilder mFragmentShaderBuilder;
+    mutable filaflat::ShaderBuilder mVertexShaderBuilder;
+    mutable filaflat::ShaderBuilder mFragmentShaderBuilder;
     FDebugRegistry mDebugRegistry;
 
 public:

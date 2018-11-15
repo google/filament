@@ -117,7 +117,7 @@ private:
     const SamplerBindingMap* mSamplerBindings = nullptr;
     std::array<utils::CString, NUM_SHADER_TYPES> mShadersSource;
     size_t mSamplerCount = 0;
-    utils::CString mName{"unknown"};
+    utils::CString mName;
     uint8_t mVariant;
 };
 

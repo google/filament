@@ -18,7 +18,7 @@
 
 namespace filaflat {
 
-bool Unflattener::read(std::string* s) noexcept {
+bool Unflattener::read(utils::CString* s) noexcept {
     const uint8_t* start = mCursor;
     while (mCursor < mEnd && *mCursor != '\0') {
         mCursor++;
@@ -26,7 +26,7 @@ bool Unflattener::read(std::string* s) noexcept {
     bool overflowed = mCursor >= mEnd;
     if (!overflowed) {
         mCursor++;
-        *s = std::string(start, mCursor);
+        *s = utils::CString{ (const char*)start, (utils::CString::size_type)(mCursor - start) };
     }
     return !overflowed;
 }
