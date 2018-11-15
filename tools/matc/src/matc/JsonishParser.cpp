@@ -193,7 +193,7 @@ const JsonLexeme* JsonishParser::peekCurrentLexemeType() const noexcept {
 
 JsonishObject* JsonishParser::parseMembers() noexcept {
     JsonishObject* object = new JsonishObject();
-    while (1) {
+    while (true) {
         JsonishPair pair = parsePair();
         if (!pair.value) {
             // Accept a comma after the last element
@@ -203,9 +203,11 @@ JsonishObject* JsonishParser::parseMembers() noexcept {
             }
 
             reportError("unable to parse pair");
+
             delete object;
             return nullptr;
         }
+
         object->addPair(pair);
 
         // Is there a comma and more pairs?
@@ -218,8 +220,8 @@ JsonishObject* JsonishParser::parseMembers() noexcept {
 
 JsonishArray* JsonishParser::parseElements() noexcept {
     JsonishArray* array = new JsonishArray();
-    while (1) {
 
+    while (true) {
         JsonishValue* value = parseValue();
         if (!value) {
             reportError("unable to read value");
@@ -233,6 +235,7 @@ JsonishArray* JsonishParser::parseElements() noexcept {
             break;
         }
     }
+
     return array;
 }
 
@@ -241,6 +244,7 @@ JsonishValue* JsonishParser::parseValue() noexcept {
     if (next == nullptr) {
         return nullptr;
     }
+
     std::string tmp(next->getStart(), next->getSize());
     switch (next->getType()) {
         case STRING:
@@ -269,11 +273,14 @@ void JsonishParser::reportError(const char* message) noexcept {
     if (mErrorReported) {
         return;
     }
+
     std::cerr << "Syntax error, " << message;
+
     const JsonLexeme* lexeme = peekNextLexemeType();
     if (lexeme == nullptr) {
         lexeme = peekCurrentLexemeType();
     }
+
     if (lexeme != nullptr) {
         std::cerr << " at line:" << lexeme->getLine()
                << " position:" << lexeme->getLinePosition() << std::endl
@@ -283,6 +290,7 @@ void JsonishParser::reportError(const char* message) noexcept {
     } else {
         std::cerr << " but reached end of file instead." << std::endl;
     }
+
     mErrorReported = true;
 }
 
