@@ -276,8 +276,6 @@ Handle<HwProgram> FMaterial::getProgramSlow(uint8_t variantKey) const noexcept {
             "GLSL or SPIR-V chunks for the vertex shader (variant=0x%x, filtered=0x%x).",
             mName.c_str(), variantKey, vertexVariantKey);
 
-    CString vs(vsBuilder.getShader(), (CString::size_type) vsBuilder.size());
-
     /*
      * Fragment shader
      */
@@ -291,12 +289,11 @@ Handle<HwProgram> FMaterial::getProgramSlow(uint8_t variantKey) const noexcept {
             "The material '%s' has not been compiled to include the required "
             "GLSL or SPIR-V chunks for the fragment shader (variant=0x%x, filterer=0x%x).",
             mName.c_str(), variantKey, fragmentVariantKey);
-    CString fs(fsBuilder.getShader(), (CString::size_type) fsBuilder.size());
 
     Program pb;
     pb      .diagnostics(mName, variantKey)
-            .withVertexShader(std::move(vs))
-            .withFragmentShader(std::move(fs))
+            .withVertexShader(vsBuilder.getShader())
+            .withFragmentShader(fsBuilder.getShader())
             .withSamplerBindings(&mSamplerBindings)
             .addUniformBlock(BindingPoints::PER_VIEW, &UibGenerator::getPerViewUib())
             .addUniformBlock(BindingPoints::LIGHTS, &UibGenerator::getLightsUib())

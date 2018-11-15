@@ -23,14 +23,42 @@ using namespace utils;
 
 namespace filament {
 
-SamplerInterfaceBlock::Builder& SamplerInterfaceBlock::Builder::name(const std::string& interfaceBlockName) {
-    mName = CString(interfaceBlockName.c_str());
+SamplerInterfaceBlock::Builder&
+SamplerInterfaceBlock::Builder::name(utils::CString const& interfaceBlockName) {
+    mName = interfaceBlockName;
     return *this;
 }
 
-SamplerInterfaceBlock::Builder& SamplerInterfaceBlock::Builder::add( const std::string& samplerName, Type type, Format format,
+SamplerInterfaceBlock::Builder&
+SamplerInterfaceBlock::Builder::name(utils::CString&& interfaceBlockName) {
+    interfaceBlockName.swap(mName);
+    return *this;
+}
+
+SamplerInterfaceBlock::Builder&
+SamplerInterfaceBlock::Builder::name(utils::StaticString const& interfaceBlockName) {
+    mName = CString{ interfaceBlockName };
+    return *this;
+}
+
+SamplerInterfaceBlock::Builder& SamplerInterfaceBlock::Builder::add(
+        utils::CString const& samplerName, Type type, Format format,
         Precision precision, bool multisample) noexcept {
-    mEntries.emplace_back(CString(samplerName.c_str()), type, format, precision, multisample);
+    mEntries.emplace_back(samplerName, type, format, precision, multisample);
+    return *this;
+}
+
+SamplerInterfaceBlock::Builder& SamplerInterfaceBlock::Builder::add(
+        utils::CString&& samplerName, Type type, Format format,
+        Precision precision, bool multisample) noexcept {
+    mEntries.emplace_back(std::move(samplerName), type, format, precision, multisample);
+    return *this;
+}
+
+SamplerInterfaceBlock::Builder& SamplerInterfaceBlock::Builder::add(
+        utils::StaticString const& samplerName, Type type, Format format,
+        Precision precision, bool multisample) noexcept {
+    mEntries.emplace_back(samplerName, type, format, precision, multisample);
     return *this;
 }
 
@@ -38,17 +66,19 @@ SamplerInterfaceBlock SamplerInterfaceBlock::Builder::build() {
     return SamplerInterfaceBlock(*this);
 }
 
+SamplerInterfaceBlock::Builder::~Builder() noexcept = default;
+
 // -------------------------------------------------------------------------------------------------
 
 SamplerInterfaceBlock::SamplerInterfaceBlock() = default;
 SamplerInterfaceBlock::SamplerInterfaceBlock(const SamplerInterfaceBlock& rhs) = default;
 SamplerInterfaceBlock::SamplerInterfaceBlock(SamplerInterfaceBlock&& rhs) noexcept /* = default */ {};
 SamplerInterfaceBlock& SamplerInterfaceBlock::operator=(const SamplerInterfaceBlock& rhs) = default;
-SamplerInterfaceBlock& SamplerInterfaceBlock::operator=(SamplerInterfaceBlock&& rhs) noexcept = default;
+SamplerInterfaceBlock& SamplerInterfaceBlock::operator=(SamplerInterfaceBlock&& rhs) /*noexcept*/ = default;
 SamplerInterfaceBlock::~SamplerInterfaceBlock() noexcept = default;
 
-SamplerInterfaceBlock::SamplerInterfaceBlock(Builder& builder) noexcept
-    : mName(std::move(builder.mName))
+SamplerInterfaceBlock::SamplerInterfaceBlock(Builder const& builder) noexcept
+    : mName(builder.mName)
 {
     auto& infoMap = mInfoMap;
     auto& samplersInfoList = mSamplersInfoList;
@@ -58,7 +88,7 @@ SamplerInterfaceBlock::SamplerInterfaceBlock(Builder& builder) noexcept
     uint32_t i = 0;
     for (auto const& e : builder.mEntries) {
         SamplerInfo& info = samplersInfoList[i];
-        info = { std::move(e.name), uint8_t(i), e.type, e.format, e.precision, e.multisample };
+        info = { e.name, uint8_t(i), e.type, e.format, e.precision, e.multisample };
 
         // record this uniform info
         infoMap[info.name.c_str()] = i;

@@ -17,16 +17,19 @@
 #ifndef TNT_FILAMENT_DRIVER_SAMPLERINTERFACEBLOCK_H
 #define TNT_FILAMENT_DRIVER_SAMPLERINTERFACEBLOCK_H
 
-#include <assert.h>
-#include <map>
-#include <string>
-#include <unordered_map>
-#include <vector>
+
+#include <filament/driver/DriverEnums.h>
 
 #include <utils/compiler.h>
 #include <utils/CString.h>
+
 #include <math/vec4.h>
-#include <filament/driver/DriverEnums.h>
+
+#include <tsl/robin_map.h>
+
+#include <vector>
+
+#include <assert.h>
 
 namespace filament {
 
@@ -36,7 +39,7 @@ public:
     SamplerInterfaceBlock(const SamplerInterfaceBlock& rhs);
     SamplerInterfaceBlock(SamplerInterfaceBlock&& rhs) noexcept;
     SamplerInterfaceBlock& operator=(const SamplerInterfaceBlock& rhs);
-    SamplerInterfaceBlock& operator=(SamplerInterfaceBlock&& rhs) noexcept;
+    SamplerInterfaceBlock& operator=(SamplerInterfaceBlock&& rhs) /*noexcept*/;
     ~SamplerInterfaceBlock() noexcept;
 
     using Type = driver::SamplerType;
@@ -46,11 +49,33 @@ public:
 
     class Builder {
     public:
+        ~Builder() noexcept;
+
         // Give a name to this sampler interface block
-        Builder& name(const std::string& interfaceBlockName);
+        Builder& name(utils::CString const& interfaceBlockName);
+        Builder& name(utils::CString&& interfaceBlockName);
+        Builder& name(utils::StaticString const& interfaceBlockName);
+        template<size_t N>
+        Builder& name(utils::StringLiteral<N> const& interfaceBlockName) {
+            return name(utils::StaticString{interfaceBlockName, N - 1});
+        }
+
         // Add a sampler
-        Builder& add(const std::string& samplerName, Type type, Format format, Precision precision = Precision::MEDIUM,
+        Builder& add(utils::CString const& samplerName, Type type, Format format,
+                Precision precision = Precision::MEDIUM,
                 bool multisample = false) noexcept;
+        Builder& add(utils::CString&& samplerName, Type type, Format format,
+                Precision precision = Precision::MEDIUM,
+                bool multisample = false) noexcept;
+        Builder& add(utils::StaticString const& samplerName, Type type, Format format,
+                Precision precision = Precision::MEDIUM,
+                bool multisample = false) noexcept;
+        template<size_t N>
+        Builder& add(utils::StringLiteral<N> const& samplerName, Type type, Format format,
+                Precision precision = Precision::MEDIUM, bool multisample = false) {
+            return add(utils::StaticString{ samplerName, N - 1 }, type, format, precision);
+        }
+
         // build and return the SamplerInterfaceBlock
         SamplerInterfaceBlock build();
     private:
@@ -71,19 +96,18 @@ public:
 
     struct SamplerInfo {
         SamplerInfo() noexcept = default;
-        SamplerInfo(utils::CString name,
-                uint8_t offset, Type type, Format format, Precision precision, bool multisample) noexcept
+        SamplerInfo(utils::CString name, uint8_t offset, Type type, Format format,
+                Precision precision, bool multisample) noexcept
                 : name(std::move(name)),
                   offset(offset), type(type), format(format),
-                  multisample(multisample), precision(precision) {}
-        utils::CString name;        // name of this sampler
-        uint8_t offset;      // offset in "Sampler" of this sampler in the buffer
-        Type type;           // type of this sampler
-        Format format;       // format of this sampler
-        bool multisample;    // multisample capable
-        Precision precision; // precision of this sampler
-    private:
-        friend std::ostream& operator<<(std::ostream& out, const SamplerInfo& info);
+                  multisample(multisample), precision(precision) {
+        }
+        utils::CString name;    // name of this sampler
+        uint8_t offset;         // offset in "Sampler" of this sampler in the buffer
+        Type type;              // type of this sampler
+        Format format;          // format of this sampler
+        bool multisample;       // multisample capable
+        Precision precision;    // precision of this sampler
     };
 
     // name of this sampler interface block
@@ -107,11 +131,11 @@ public:
 private:
     friend class Builder;
 
-    explicit SamplerInterfaceBlock(Builder& builder) noexcept;
+    explicit SamplerInterfaceBlock(Builder const& builder) noexcept;
 
     utils::CString mName;
     std::vector<SamplerInfo> mSamplersInfoList;
-    std::unordered_map<const char*, uint32_t, utils::hashCStrings, utils::equalCStrings> mInfoMap;
+    tsl::robin_map<const char*, uint32_t, utils::hashCStrings, utils::equalCStrings> mInfoMap;
     uint32_t mSize = 0; // size in Samplers (i.e.: count)
 };
 

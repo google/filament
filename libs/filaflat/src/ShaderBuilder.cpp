@@ -17,15 +17,14 @@
 #include <filaflat/ShaderBuilder.h>
 
 #include <assert.h>
-#include <cstdlib>
-#include <cstring>
+#include <stdlib.h>
 
 #include <utils/Log.h>
 
 namespace filaflat {
 
-ShaderBuilder::ShaderBuilder() : mCursor(0), mCapacity(16384) {
-    mShader = static_cast<char*>(malloc(mCapacity));
+ShaderBuilder::ShaderBuilder()
+        : mShader(static_cast<char*>(malloc(mCapacity))) {
 }
 
 ShaderBuilder::~ShaderBuilder() {
@@ -34,25 +33,21 @@ ShaderBuilder::~ShaderBuilder() {
 
 void ShaderBuilder::reset() {
     mCursor = 0;
-    mShader[mCursor] = '\0';
+    mShader[0] = '\0';
 }
 
 void ShaderBuilder::announce(size_t size) {
     if (size > mCapacity) {
-        mShader = (char*)realloc(mShader, size);
-        mCapacity = size;
+        mCapacity = (uint32_t)size;
+        mShader = (char *)realloc(mShader, size);
     }
 }
 
-bool ShaderBuilder::appendPart(const char *data, size_t size) {
+void ShaderBuilder::appendPart(const char* data, size_t size) noexcept {
     size_t available = mCapacity - mCursor;
-    if (size > available) {
-        assert(!"Not enough capacity in ShaderBuilder.");
-        return false;
-    }
+    assert(size <= available);
     memcpy(mShader + mCursor, data, size);
     mCursor += size;
-    return true;
 }
 
 }

@@ -283,12 +283,10 @@ void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
     filament::UniformInterfaceBlock::Builder ibb;
     for (size_t i = 0, c = mParameterCount; i < c; i++) {
         auto const& param = mParameters[i];
-        CString const& uniformName = param.name;
         if (param.isSampler) {
-            sbb.add(uniformName.c_str(), param.samplerType, param.samplerFormat,
-                    param.samplerPrecision);
+            sbb.add(param.name, param.samplerType, param.samplerFormat, param.samplerPrecision);
         } else {
-            ibb.add(uniformName.c_str(), param.size, param.uniformType);
+            ibb.add(param.name, param.size, param.uniformType);
         }
     }
 

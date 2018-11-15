@@ -20,8 +20,7 @@
 #include <filaflat/ChunkContainer.h>
 
 #include <utils/compiler.h>
-
-#include <string>
+#include <utils/CString.h>
 
 #include <stdint.h>
 
@@ -111,7 +110,7 @@ public:
         return true;
     }
 
-    bool read(std::string* s) noexcept;
+    bool read(utils::CString* s) noexcept;
 
     bool read(const char** blob, size_t* size) noexcept;
 

@@ -16,9 +16,10 @@
 
 #include "ChunkInterfaceBlock.h"
 
-#include <string>
+#include <utils/CString.h>
 
 using namespace filament;
+using namespace utils;
 
 namespace filaflat {
 
@@ -27,12 +28,12 @@ bool ChunkUniformInterfaceBlock::unflatten(Unflattener& unflattener,
 
     UniformInterfaceBlock::Builder builder = UniformInterfaceBlock::Builder();
 
-    std::string name;
+    CString name;
     if (!unflattener.read(&name)) {
         return false;
     }
 
-    builder.name(name);
+    builder.name(std::move(name));
 
     // Read number of fields.
     uint64_t numFields = 0 ;
@@ -41,7 +42,7 @@ bool ChunkUniformInterfaceBlock::unflatten(Unflattener& unflattener,
     }
 
     for (uint64_t i = 0; i < numFields; i++) {
-        std::string fieldName;
+        CString fieldName;
         uint64_t fieldSize;
         uint8_t fieldType;
         uint8_t fieldPrecision;
@@ -75,7 +76,7 @@ bool ChunkSamplerInterfaceBlock::unflatten(Unflattener& unflattener,
 
     SamplerInterfaceBlock::Builder builder = SamplerInterfaceBlock::Builder();
 
-    std::string name;
+    CString name;
     if (!unflattener.read(&name)) {
         return false;
     }
@@ -88,7 +89,7 @@ bool ChunkSamplerInterfaceBlock::unflatten(Unflattener& unflattener,
     }
 
     for (uint64_t i = 0; i < numFields; i++) {
-        std::string fieldName;
+        CString fieldName;
         uint8_t fieldType;
         uint8_t fieldFormat;
         uint8_t fieldPrecision;

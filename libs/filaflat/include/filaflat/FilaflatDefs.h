@@ -18,10 +18,10 @@
 #define TNT_FILAMAT_FILAFLAT_DEFS_H
 
 #include <stdint.h>
-#include <string>
 #include <functional>
 
 #include <utils/compiler.h>
+#include <utils/CString.h>
 
 namespace filamat {
 
@@ -39,14 +39,14 @@ constexpr inline uint64_t charTo64bitNum(const char str[9])  {
 }
 
 // Unpack a 64 bit integer into a std::string
-inline std::string typeToString(uint64_t v) {
+inline utils::CString typeToString(uint64_t v) {
     uint8_t* raw = (uint8_t*) &v;
     char str[9];
     for (size_t i = 0; i < 8; i++) {
         str[7 - i] = raw[i];
     }
     str[8] = '\0';
-    return std::string(str);
+    return utils::CString(str, 7);
 }
 
 enum UTILS_PUBLIC ChunkType : uint64_t {

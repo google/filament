@@ -26,15 +26,13 @@
 #include "TextDictionaryReader.h"
 #include "SpirvDictionaryReader.h"
 
-#include <private/filament/UniformInterfaceBlock.h>
 #include <filament/SamplerBindingMap.h>
 #include <private/filament/SamplerInterfaceBlock.h>
+#include <private/filament/UniformInterfaceBlock.h>
 
 #include <utils/CString.h>
 
-#include <cstdlib>
-
-#include <string>
+#include <stdlib.h>
 
 using namespace utils;
 using namespace filament;
@@ -79,10 +77,10 @@ struct MaterialParserDetails {
     bool getFromSimpleChunk(filamat::ChunkType type, T* value) const noexcept;
 
     bool getVkShader(filament::driver::ShaderModel shaderModel, uint8_t variant,
-            filament::driver::ShaderType shaderType, ShaderBuilder& shaderBuilder) noexcept;
+            filament::driver::ShaderType st, ShaderBuilder& shader) noexcept;
 
     bool getGlShader(filament::driver::ShaderModel shaderModel, uint8_t variant,
-            filament::driver::ShaderType shaderType, ShaderBuilder& shaderBuilder) noexcept;
+            filament::driver::ShaderType st, ShaderBuilder& shader) noexcept;
 };
 
 template<typename T>
@@ -142,7 +140,7 @@ bool MaterialParser::getName(utils::CString* cstring) const noexcept {
    const uint8_t* end = mImpl->mChunkContainer.getChunkEnd(type);
    Unflattener unflattener(start, end);
 
-   std::string s;
+   CString s;
    if (unflattener.read(&s)) {
        *cstring =  CString(s.c_str());
        return true;
@@ -215,28 +213,33 @@ bool MaterialParser::getDepthTest(bool* value) const noexcept {
 }
 
 bool MaterialParser::getCullingMode(driver::CullingMode* value) const noexcept {
-    assert(sizeof(driver::CullingMode) == sizeof(uint8_t));
+    static_assert(sizeof(driver::CullingMode) == sizeof(uint8_t),
+            "CullingMode expected size is wrong");
     return mImpl->getFromSimpleChunk(ChunkType::MaterialCullingMode, reinterpret_cast<uint8_t*>(value));
 }
 
 bool MaterialParser::getTransparencyMode(TransparencyMode* value) const noexcept {
-    assert(sizeof(TransparencyMode) == sizeof(uint8_t));
+    static_assert(sizeof(TransparencyMode) == sizeof(uint8_t),
+            "TransparencyMode expected size is wrong");
     return mImpl->getFromSimpleChunk(ChunkType::MaterialTransparencyMode,
             reinterpret_cast<uint8_t*>(value));
 }
 
 bool MaterialParser::getInterpolation(Interpolation* value) const noexcept {
-    assert(sizeof(Interpolation) == sizeof(uint8_t));
+    static_assert(sizeof(Interpolation) == sizeof(uint8_t),
+            "Interpolation expected size is wrong");
     return mImpl->getFromSimpleChunk(ChunkType::MaterialInterpolation, reinterpret_cast<uint8_t*>(value));
 }
 
 bool MaterialParser::getVertexDomain(VertexDomain* value) const noexcept {
-    assert(sizeof(VertexDomain) == sizeof(uint8_t));
+    static_assert(sizeof(VertexDomain) == sizeof(uint8_t),
+            "VertexDomain expected size is wrong");
     return mImpl->getFromSimpleChunk(ChunkType::MaterialVertexDomain, reinterpret_cast<uint8_t*>(value));
 }
 
 bool MaterialParser::getBlendingMode(BlendingMode* value) const noexcept {
-    assert(sizeof(BlendingMode) == sizeof(uint8_t));
+    static_assert(sizeof(BlendingMode) == sizeof(uint8_t),
+            "BlendingMode expected size is wrong");
     return mImpl->getFromSimpleChunk(ChunkType::MaterialBlendingMode, reinterpret_cast<uint8_t*>(value));
 }
 
@@ -249,7 +252,8 @@ bool MaterialParser::hasShadowMultiplier(bool* value) const noexcept {
 }
 
 bool MaterialParser::getShading(Shading* value) const noexcept {
-    assert(sizeof(Shading) == sizeof(uint8_t));
+    static_assert(sizeof(Shading) == sizeof(uint8_t),
+            "Shading expected size is wrong");
     return mImpl->getFromSimpleChunk(ChunkType::MaterialShading, reinterpret_cast<uint8_t*>(value));
 }
 

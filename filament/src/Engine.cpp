@@ -409,8 +409,8 @@ const FMaterial* FEngine::getSkyboxMaterial(bool rgbm) const noexcept {
 
 Handle<HwProgram> FEngine::createPostProcessProgram(MaterialParser& parser,
         ShaderModel shaderModel, PostProcessStage stage) const noexcept {
-    ShaderBuilder vShaderBuilder;
-    ShaderBuilder fShaderBuilder;
+    ShaderBuilder& vShaderBuilder = getVertexShaderBuilder();
+    ShaderBuilder& fShaderBuilder = getFragmentShaderBuilder();
     parser.getShader(shaderModel, (uint8_t) stage, ShaderType::VERTEX, vShaderBuilder);
     parser.getShader(shaderModel, (uint8_t) stage, ShaderType::FRAGMENT, fShaderBuilder);
 
@@ -427,8 +427,8 @@ Handle<HwProgram> FEngine::createPostProcessProgram(MaterialParser& parser,
     Program pb;
     pb      .diagnostics(CString("Post Process"))
             .withSamplerBindings(pBindings)
-            .withVertexShader(CString(vShaderBuilder.getShader(), vShaderBuilder.size()))
-            .withFragmentShader(CString(fShaderBuilder.getShader(), fShaderBuilder.size()))
+            .withVertexShader(vShaderBuilder.getShader())
+            .withFragmentShader(fShaderBuilder.getShader())
             .addUniformBlock(BindingPoints::PER_VIEW, &PerViewUib::getUib())
             .addUniformBlock(BindingPoints::POST_PROCESS, &PostProcessingUib::getUib())
             .addSamplerBlock(BindingPoints::POST_PROCESS, &PostProcessSib::getSib());
