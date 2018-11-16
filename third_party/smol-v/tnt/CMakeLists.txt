@@ -17,3 +17,5 @@ target_compile_options(${TARGET} PRIVATE
 )
 
 target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
+
+install(TARGETS ${TARGET} ARCHIVE DESTINATION lib/${DIST_DIR})

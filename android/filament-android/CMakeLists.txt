@@ -22,6 +22,11 @@ add_library(bluevk STATIC IMPORTED)
 set_target_properties(bluevk PROPERTIES IMPORTED_LOCATION
         ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libbluevk.a)
 
+add_library(smol-v STATIC IMPORTED)
+set_target_properties(smol-v PROPERTIES IMPORTED_LOCATION
+        ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libsmol-v.a)
+
+
 include_directories(${FILAMENT_DIR}/include)
 
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -fno-exceptions -fno-rtti")
@@ -79,5 +84,5 @@ target_link_libraries(filament-jni
 option(FILAMENT_SUPPORTS_VULKAN "Enables Vulkan on Android" OFF)
 
 if (FILAMENT_SUPPORTS_VULKAN)
-    target_link_libraries(filament-jni bluevk)
+    target_link_libraries(filament-jni bluevk smol-v)
 endif()

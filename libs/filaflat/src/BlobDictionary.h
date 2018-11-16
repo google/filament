@@ -32,11 +32,11 @@ public:
     using Blob = std::vector<uint8_t>;
 
     inline void addBlob(const char* blob, size_t len) noexcept {
-        mBlobs.emplace_back(Blob(blob, blob + len));
+        mBlobs.emplace_back(blob, blob + len);
     }
 
     inline void addBlob(Blob&& blob) noexcept {
-        mBlobs.emplace_back(blob);
+        mBlobs.emplace_back(std::move(blob));
     }
 
     inline bool isEmpty() const noexcept {
