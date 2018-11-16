@@ -9,53 +9,42 @@ set(TARGET matlang)
 # ==================================================================================================
 # Sources and headers
 # ==================================================================================================
-file(GLOB_RECURSE HDRS src/*.h)
+file(GLOB_RECURSE HDRS
+        src/matc/CommandlineConfig.h
+        src/matc/Compiler.h
+        src/matc/Config.h
+        src/matc/JsonishLexeme.h
+        src/matc/JsonishLexer.h
+        src/matc/JsonishParser.h
+        src/matc/Lexeme.h
+        src/matc/Lexer.h
+        src/matc/MaterialCompiler.h
+        src/matc/MaterialLexeme.h
+        src/matc/MaterialLexer.h
+        src/matc/ParametersProcessor.h
+        src/matc/PostprocessMaterialCompiler.h
+        )
 
 set(SRCS
-        src/matc/sca/ASTHelpers.cpp
-        src/matc/sca/GLSLTools.cpp
-        src/matc/sca/GLSLPostProcessor.cpp
         src/matc/Compiler.cpp
         src/matc/CommandlineConfig.cpp
-        src/matc/Enums.cpp
         src/matc/JsonishLexer.cpp
         src/matc/JsonishParser.cpp
         src/matc/MaterialCompiler.cpp
         src/matc/MaterialLexer.cpp
         src/matc/ParametersProcessor.cpp
         src/matc/PostprocessMaterialCompiler.cpp
-        src/matc/PostprocessMaterialBuilder.cpp
         )
 
 # ==================================================================================================
 # Target definitions
 # ==================================================================================================
 add_library(${TARGET} STATIC ${SRCS} ${HDRS})
-target_include_directories(${TARGET} PUBLIC src)
 
-# We are being naughty and accessing private headers here
-# For spirv-tools, we're just following glslang's example
-# For filamat, well... it belongs to us so...
-target_include_directories(${TARGET} PRIVATE ${spirv-tools_SOURCE_DIR}/include)
+target_include_directories(${TARGET} PUBLIC src)
 target_include_directories(${TARGET} PRIVATE ${filamat_SOURCE_DIR}/src)
 
-# glslang libraries have circular dependencies. To make sure the proper object are part of the link
-# we need to force archive re-scan on new symbol dependencies via start/end-group.
-# Read more about this here https://eli.thegreenplace.net/2013/07/09/library-order-in-static-linking
-set(COMMON_MATC_LIBS getopt filamat filabridge utils)
-if (APPLE)
-    target_link_libraries(${TARGET} ${COMMON_MATC_LIBS}
-            glslang SPIRV SPVRemapper SPIRV-Tools-opt spirv-cross-glsl)
-else()
-    target_link_libraries(${TARGET} ${COMMON_MATC_LIBS}
-            -Wl,--start-group glslang SPIRV SPVRemapper SPIRV-Tools-opt spirv-cross-glsl -Wl,--end-group)
-endif()
-
-# =================================================================================================
-# Compiler flags
-# ==================================================================================================
-# this must match options enabled in glslang's CMakeLists.txt
-target_compile_options(${TARGET} PRIVATE -DAMD_EXTENSIONS -DNV_EXTENSIONS )
+target_link_libraries(${TARGET} getopt filamat filabridge utils)
 
 # =================================================================================================
 # Licenses

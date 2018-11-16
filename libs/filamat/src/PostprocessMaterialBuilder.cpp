@@ -14,18 +14,20 @@
  * limitations under the License.
  */
 
-#include "PostprocessMaterialBuilder.h"
+#include "filamat/PostprocessMaterialBuilder.h"
 
 #include <filamat/Package.h>
 
-#include <shaders/ShaderGenerator.h>
+#include "shaders/ShaderGenerator.h"
 
-#include <eiff/ChunkContainer.h>
-#include <eiff/DictionaryGlslChunk.h>
-#include <eiff/DictionarySpirvChunk.h>
-#include <eiff/MaterialGlslChunk.h>
-#include <eiff/MaterialSpirvChunk.h>
-#include <eiff/SimpleFieldChunk.h>
+#include "GLSLPostProcessor.h"
+
+#include "eiff/ChunkContainer.h"
+#include "eiff/DictionaryGlslChunk.h"
+#include "eiff/DictionarySpirvChunk.h"
+#include "eiff/MaterialGlslChunk.h"
+#include "eiff/MaterialSpirvChunk.h"
+#include "eiff/SimpleFieldChunk.h"
 
 #include <vector>
 
@@ -40,6 +42,12 @@ PostprocessMaterialBuilder& PostprocessMaterialBuilder::postProcessor(PostProces
 
 Package PostprocessMaterialBuilder::build() {
     prepare();
+    // Install postprocessor to optimize / compile to Spir-V if necessary.
+    // TODO: remove the postProcessor functionality, since it isn't being used by the outside world.
+    using namespace std::placeholders;
+    GLSLPostProcessor postProcessor(mOptimization, mPrintShaders);
+    this->postProcessor(std::bind(&GLSLPostProcessor::process, postProcessor, _1, _2, _3, _4, _5));
+
     // Create chunk tree.
     ChunkContainer container;
 

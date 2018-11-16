@@ -44,13 +44,7 @@ public:
 
     using Platform = filamat::MaterialBuilder::Platform;
     using TargetApi = filamat::MaterialBuilder::TargetApi;
-
-    enum class Optimization {
-        NONE,
-        PREPROCESSOR,
-        SIZE,
-        PERFORMANCE
-    };
+    using Optimization = filamat::MaterialBuilder::Optimization;
 
     enum class Metadata {
         NONE,

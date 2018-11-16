@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-#include "Enums.h"
+#include "filamat/Enums.h"
 
-#include <filamat/MaterialBuilder.h>
+#include "filamat/MaterialBuilder.h"
 
-namespace matc {
+namespace filamat {
 
 std::unordered_map<std::string, Property> Enums::mStringToProperty = {
         { "baseColor",           Property::BASE_COLOR },
@@ -107,4 +107,4 @@ std::unordered_map<std::string, SamplerFormat>& Enums::getMap<SamplerFormat>() n
     return mStringToSamplerFormat;
 };
 
-}
+} // namespace filamat

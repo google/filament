@@ -26,6 +26,8 @@
 
 #include <private/filament/Variant.h>
 
+#include "GLSLPostProcessor.h"
+
 #include "shaders/MaterialInfo.h"
 #include "shaders/ShaderGenerator.h"
 
@@ -38,6 +40,8 @@
 #include "eiff/SimpleFieldChunk.h"
 #include "eiff/DictionaryGlslChunk.h"
 #include "eiff/DictionarySpirvChunk.h"
+
+#include "filamat/sca/GLSLTools.h"
 
 using namespace utils;
 
@@ -84,6 +88,7 @@ void MaterialBuilderBase::prepare() {
 
 MaterialBuilder::MaterialBuilder() : mMaterialName("Unnamed") {
     std::fill_n(mProperties, filament::MATERIAL_PROPERTIES_COUNT, false);
+    GLSLTools::init();
     mShaderModels.reset();
 }
 
@@ -255,6 +260,16 @@ MaterialBuilder& MaterialBuilder::targetApi(TargetApi targetApi) noexcept {
     return *this;
 }
 
+MaterialBuilder& MaterialBuilder::optimization(Optimization optimization) noexcept {
+    mOptimization = optimization;
+    return *this;
+}
+
+MaterialBuilder& MaterialBuilder::printShaders(bool printShaders) noexcept {
+    mPrintShaders = printShaders;
+    return *this;
+}
+
 MaterialBuilder& MaterialBuilder::codeGenTargetApi(TargetApi targetApi) noexcept {
     mCodeGenTargetApi = targetApi;
     return *this;
@@ -333,6 +348,12 @@ static void showErrorMessage(const char* materialName, uint8_t variant,
 Package MaterialBuilder::build() noexcept {
     MaterialInfo info;
     prepareToBuild(info);
+
+    // Install postprocessor to optimize / compile to Spir-V if necessary.
+    // TODO: remove the postProcessor functionality, since it isn't being used by the outside world.
+    using namespace std::placeholders;
+    GLSLPostProcessor postProcessor(mOptimization, mPrintShaders);
+    this->postProcessor(std::bind(&GLSLPostProcessor::process, postProcessor, _1, _2, _3, _4, _5));
 
     // Create chunk tree.
     ChunkContainer container;

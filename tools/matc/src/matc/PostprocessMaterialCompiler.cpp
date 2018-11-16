@@ -16,12 +16,10 @@
 
 #include "PostprocessMaterialCompiler.h"
 
-#include "PostprocessMaterialBuilder.h"
-#include "sca/GLSLTools.h"
-#include "sca/GLSLPostProcessor.h"
+#include <filamat/PostprocessMaterialBuilder.h>
+#include <filamat/sca/GLSLTools.h>
 
 using namespace filamat;
-using namespace std::placeholders;
 
 namespace matc {
 
@@ -38,11 +36,9 @@ bool PostprocessMaterialCompiler::run(const Config& config) {
     builder
         .platform(config.getPlatform())
         .targetApi(config.getTargetApi())
+        .optimization(config.getOptimizationLevel())
+        .printShaders(config.printShaders())
         .codeGenTargetApi(config.getCodeGenTargetApi());
-
-    // Install postprocessor (to clean GLSL from comments and dead code).
-    GLSLPostProcessor postProcessor(config);
-    builder.postProcessor(std::bind(&GLSLPostProcessor::process, postProcessor, _1, _2, _3, _4, _5));
 
     Package package = builder.build();
     if (!package.isValid()) {

@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef TNT_MATC_POSTPROCESS_PACKAGE_BUILDER_H
-#define TNT_MATC_POSTPROCESS_PACKAGE_BUILDER_H
+#ifndef TNT_FILAMAT_POSTPROCESS_PACKAGE_BUILDER_H
+#define TNT_FILAMAT_POSTPROCESS_PACKAGE_BUILDER_H
 
 #include <filamat/Package.h>
 #include <filamat/MaterialBuilder.h>
@@ -58,9 +58,20 @@ public:
         return *this;
     }
 
+    PostprocessMaterialBuilder& optimization(Optimization optimization) noexcept {
+        mOptimization = optimization;
+        return *this;
+    }
+
+    PostprocessMaterialBuilder& printShaders(bool printShaders) noexcept {
+        mPrintShaders = printShaders;
+        return *this;
+    }
+
 private:
     PostProcessCallBack mPostprocessorCallback = nullptr;
+    Optimization mOptimization = Optimization::NONE;
 };
 
 } // namespace
-#endif // TNT_MATC_POSTPROCESS_PACKAGE_BUILDER_H
+#endif // TNT_FILAMAT_POSTPROCESS_PACKAGE_BUILDER_H

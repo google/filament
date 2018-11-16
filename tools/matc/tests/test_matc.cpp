@@ -18,10 +18,10 @@
 
 #include "MockConfig.h"
 
-#include <matc/sca/ASTHelpers.h>
+#include <filamat/sca/ASTHelpers.h>
 #include <matc/MaterialLexer.h>
 
-using namespace matc::ASTUtils;
+using namespace ASTUtils;
 
 filamat::MaterialBuilder makeBuilder(const std::string shaderCode) {
     filamat::MaterialBuilder builder;
@@ -49,11 +49,11 @@ protected:
     }
 
     virtual void SetUp() {
-        matc::GLSLTools::init();
+        GLSLTools::init();
     }
 
     virtual void TearDown() {
-        matc::GLSLTools::terminate();
+        GLSLTools::terminate();
     }
 };
 
@@ -65,10 +65,10 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerNothingDetected) {
     )");
 
     filamat::MaterialBuilder builder = makeBuilder(shaderCode);
-    matc::GLSLTools glslTools;
-    matc::GLSLTools::PropertySet properties;
+    GLSLTools glslTools;
+    GLSLTools::PropertySet properties;
     glslTools.findProperties(builder, properties);
-    matc::GLSLTools::PropertySet expected;
+    GLSLTools::PropertySet expected;
     EXPECT_EQ(expected, properties);
 }
 
@@ -84,10 +84,10 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerNotFollowingINParameters) {
     )");
 
     filamat::MaterialBuilder builder = makeBuilder(shaderCode);
-    matc::GLSLTools glslTools;
-    matc::GLSLTools::PropertySet properties;
+    GLSLTools glslTools;
+    GLSLTools::PropertySet properties;
     glslTools.findProperties(builder, properties);
-    matc::GLSLTools::PropertySet expected;
+    GLSLTools::PropertySet expected;
     EXPECT_EQ(expected, properties);
 }
 
@@ -100,10 +100,10 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerDirectAssign) {
     )");
 
     filamat::MaterialBuilder builder = makeBuilder(shaderCode);
-    matc::GLSLTools glslTools;
-    matc::GLSLTools::PropertySet properties;
+    GLSLTools glslTools;
+    GLSLTools::PropertySet properties;
     glslTools.findProperties(builder, properties);
-    matc::GLSLTools::PropertySet expected;
+    GLSLTools::PropertySet expected;
     expected.insert(filamat::MaterialBuilder::Property::BASE_COLOR);
     EXPECT_EQ(expected, properties);
 }
@@ -118,10 +118,10 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerDirectAssignWithSwizzling) {
     )");
 
     filamat::MaterialBuilder builder = makeBuilder(shaderCode);
-    matc::GLSLTools glslTools;
-    matc::GLSLTools::PropertySet properties;
+    GLSLTools glslTools;
+    GLSLTools::PropertySet properties;
     glslTools.findProperties(builder, properties);
-    matc::GLSLTools::PropertySet expected;
+    GLSLTools::PropertySet expected;
     expected.insert(filamat::MaterialBuilder::Property::BASE_COLOR);
     EXPECT_EQ(expected, properties);
 }
@@ -140,10 +140,10 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerSymbolAsOutParameterWithAliasing) {
     )");
 
     filamat::MaterialBuilder builder = makeBuilder(shaderCode);
-    matc::GLSLTools glslTools;
-    matc::GLSLTools::PropertySet properties;
+    GLSLTools glslTools;
+    GLSLTools::PropertySet properties;
     glslTools.findProperties(builder, properties);
-    matc::GLSLTools::PropertySet expected;
+    GLSLTools::PropertySet expected;
     expected.insert(filamat::MaterialBuilder::Property::BASE_COLOR);
     EXPECT_EQ(expected, properties);
 }
@@ -162,10 +162,10 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerSymbolAsOutParameterWithAliasingAndSw
     )");
 
     filamat::MaterialBuilder builder = makeBuilder(shaderCode);
-    matc::GLSLTools glslTools;
-    matc::GLSLTools::PropertySet properties;
+    GLSLTools glslTools;
+    GLSLTools::PropertySet properties;
     glslTools.findProperties(builder, properties);
-    matc::GLSLTools::PropertySet expected;
+    GLSLTools::PropertySet expected;
     expected.insert(filamat::MaterialBuilder::Property::BASE_COLOR);
     EXPECT_EQ(expected, properties);
 }
@@ -189,10 +189,10 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerSymbolInOutInChainWithDirectIndexInto
     )");
 
     filamat::MaterialBuilder builder = makeBuilder(shaderCode);
-    matc::GLSLTools glslTools;
-    matc::GLSLTools::PropertySet properties;
+    GLSLTools glslTools;
+    GLSLTools::PropertySet properties;
     glslTools.findProperties(builder, properties);
-    matc::GLSLTools::PropertySet expected;
+    GLSLTools::PropertySet expected;
     expected.insert(filamat::MaterialBuilder::Property::BASE_COLOR);
     EXPECT_EQ(expected, properties);
 }
@@ -216,10 +216,10 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerSymbolInOutInChain) {
     )");
 
     filamat::MaterialBuilder builder = makeBuilder(shaderCode);
-    matc::GLSLTools glslTools;
-    matc::GLSLTools::PropertySet properties;
+    GLSLTools glslTools;
+    GLSLTools::PropertySet properties;
     glslTools.findProperties(builder, properties);
-    matc::GLSLTools::PropertySet expected;
+    GLSLTools::PropertySet expected;
     expected.insert(filamat::MaterialBuilder::Property::BASE_COLOR);
     EXPECT_EQ(expected, properties);
 }
@@ -234,10 +234,10 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerBaseColor) {
     )");
 
     filamat::MaterialBuilder builder = makeBuilder(shaderCode);
-    matc::GLSLTools glslTools;
-    matc::GLSLTools::PropertySet properties;
+    GLSLTools glslTools;
+    GLSLTools::PropertySet properties;
     glslTools.findProperties(builder, properties);
-    matc::GLSLTools::PropertySet expected;
+    GLSLTools::PropertySet expected;
     expected.insert(filamat::MaterialBuilder::Property::BASE_COLOR);
     EXPECT_EQ(expected, properties);
 }
@@ -250,10 +250,10 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerRoughness) {
     )");
 
     filamat::MaterialBuilder builder = makeBuilder(shaderCode);
-    matc::GLSLTools glslTools;
-    matc::GLSLTools::PropertySet properties;
+    GLSLTools glslTools;
+    GLSLTools::PropertySet properties;
     glslTools.findProperties(builder, properties);
-    matc::GLSLTools::PropertySet expected;
+    GLSLTools::PropertySet expected;
     expected.insert(filamat::MaterialBuilder::Property::ROUGHNESS);
     EXPECT_EQ(expected, properties);
 }
@@ -266,10 +266,10 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerMetallic) {
     )");
 
     filamat::MaterialBuilder builder = makeBuilder(shaderCode);
-    matc::GLSLTools glslTools;
-    matc::GLSLTools::PropertySet properties;
+    GLSLTools glslTools;
+    GLSLTools::PropertySet properties;
     glslTools.findProperties(builder, properties);
-    matc::GLSLTools::PropertySet expected;
+    GLSLTools::PropertySet expected;
     expected.insert(filamat::MaterialBuilder::Property::METALLIC);
     EXPECT_EQ(expected, properties);
 }
@@ -282,10 +282,10 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerReflectance) {
     )");
 
     filamat::MaterialBuilder builder = makeBuilder(shaderCode);
-    matc::GLSLTools glslTools;
-    matc::GLSLTools::PropertySet properties;
+    GLSLTools glslTools;
+    GLSLTools::PropertySet properties;
     glslTools.findProperties(builder, properties);
-    matc::GLSLTools::PropertySet expected;
+    GLSLTools::PropertySet expected;
     expected.insert(filamat::MaterialBuilder::Property::REFLECTANCE);
     EXPECT_EQ(expected, properties);
 }
@@ -298,10 +298,10 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerAmbientOcclusion) {
     )");
 
     filamat::MaterialBuilder builder = makeBuilder(shaderCode);
-    matc::GLSLTools glslTools;
-    matc::GLSLTools::PropertySet properties;
+    GLSLTools glslTools;
+    GLSLTools::PropertySet properties;
     glslTools.findProperties(builder, properties);
-    matc::GLSLTools::PropertySet expected;
+    GLSLTools::PropertySet expected;
     expected.insert(filamat::MaterialBuilder::Property::AMBIENT_OCCLUSION);
     EXPECT_EQ(expected, properties);
 }
@@ -315,10 +315,10 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerClearCoat) {
 
     filamat::MaterialBuilder builder = makeBuilder(shaderCode);
     builder.shading(filamat::MaterialBuilder::Shading::LIT);
-    matc::GLSLTools glslTools;
-    matc::GLSLTools::PropertySet properties;
+    GLSLTools glslTools;
+    GLSLTools::PropertySet properties;
     glslTools.findProperties(builder, properties);
-    matc::GLSLTools::PropertySet expected;
+    GLSLTools::PropertySet expected;
     expected.insert(filamat::MaterialBuilder::Property::CLEAR_COAT);
     EXPECT_EQ(expected, properties);
 }
@@ -332,10 +332,10 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerClearCoatRoughness) {
 
     filamat::MaterialBuilder builder = makeBuilder(shaderCode);
     builder.shading(filamat::MaterialBuilder::Shading::LIT);
-    matc::GLSLTools glslTools;
-    matc::GLSLTools::PropertySet properties;
+    GLSLTools glslTools;
+    GLSLTools::PropertySet properties;
     glslTools.findProperties(builder, properties);
-    matc::GLSLTools::PropertySet expected;
+    GLSLTools::PropertySet expected;
     expected.insert(filamat::MaterialBuilder::Property::CLEAR_COAT_ROUGHNESS);
     EXPECT_EQ(expected, properties);
 }
@@ -349,10 +349,10 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerClearCoatNormal) {
 
     filamat::MaterialBuilder builder = makeBuilder(shaderCode);
     builder.shading(filamat::MaterialBuilder::Shading::LIT);
-    matc::GLSLTools glslTools;
-    matc::GLSLTools::PropertySet properties;
+    GLSLTools glslTools;
+    GLSLTools::PropertySet properties;
     glslTools.findProperties(builder, properties);
-    matc::GLSLTools::PropertySet expected;
+    GLSLTools::PropertySet expected;
     expected.insert(filamat::MaterialBuilder::Property::CLEAR_COAT_NORMAL);
     EXPECT_EQ(expected, properties);
 }
@@ -366,10 +366,10 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerThickness) {
 
     filamat::MaterialBuilder builder = makeBuilder(shaderCode);
     builder.shading(filamat::MaterialBuilder::Shading::SUBSURFACE);
-    matc::GLSLTools glslTools;
-    matc::GLSLTools::PropertySet properties;
+    GLSLTools glslTools;
+    GLSLTools::PropertySet properties;
     glslTools.findProperties(builder, properties);
-    matc::GLSLTools::PropertySet expected;
+    GLSLTools::PropertySet expected;
     expected.insert(filamat::MaterialBuilder::Property::THICKNESS);
     EXPECT_EQ(expected, properties);
 }
@@ -383,10 +383,10 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerSubsurfacePower) {
 
     filamat::MaterialBuilder builder = makeBuilder(shaderCode);
     builder.shading(filamat::MaterialBuilder::Shading::SUBSURFACE);
-    matc::GLSLTools glslTools;
-    matc::GLSLTools::PropertySet properties;
+    GLSLTools glslTools;
+    GLSLTools::PropertySet properties;
     glslTools.findProperties(builder, properties);
-    matc::GLSLTools::PropertySet expected;
+    GLSLTools::PropertySet expected;
     expected.insert(filamat::MaterialBuilder::Property::SUBSURFACE_POWER);
     EXPECT_EQ(expected, properties);
 }
@@ -400,10 +400,10 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerSubsurfaceColor) {
 
     filamat::MaterialBuilder builder = makeBuilder(shaderCode);
     builder.shading(filamat::MaterialBuilder::Shading::SUBSURFACE);
-    matc::GLSLTools glslTools;
-    matc::GLSLTools::PropertySet properties;
+    GLSLTools glslTools;
+    GLSLTools::PropertySet properties;
     glslTools.findProperties(builder, properties);
-    matc::GLSLTools::PropertySet expected;
+    GLSLTools::PropertySet expected;
     expected.insert(filamat::MaterialBuilder::Property::SUBSURFACE_COLOR);
     EXPECT_EQ(expected, properties);
 }
@@ -417,10 +417,10 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerAnisotropicDirection) {
 
     filamat::MaterialBuilder builder = makeBuilder(shaderCode);
     builder.shading(filamat::MaterialBuilder::Shading::LIT);
-    matc::GLSLTools glslTools;
-    matc::GLSLTools::PropertySet properties;
+    GLSLTools glslTools;
+    GLSLTools::PropertySet properties;
     glslTools.findProperties(builder, properties);
-    matc::GLSLTools::PropertySet expected;
+    GLSLTools::PropertySet expected;
     expected.insert(filamat::MaterialBuilder::Property::ANISOTROPY_DIRECTION);
     EXPECT_EQ(expected, properties);
 }
@@ -434,10 +434,10 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerAnisotropic) {
 
     filamat::MaterialBuilder builder = makeBuilder(shaderCode);
     builder.shading(filamat::MaterialBuilder::Shading::LIT);
-    matc::GLSLTools glslTools;
-    matc::GLSLTools::PropertySet properties;
+    GLSLTools glslTools;
+    GLSLTools::PropertySet properties;
     glslTools.findProperties(builder, properties);
-    matc::GLSLTools::PropertySet expected;
+    GLSLTools::PropertySet expected;
     expected.insert(filamat::MaterialBuilder::Property::ANISOTROPY);
     EXPECT_EQ(expected, properties);
 }
@@ -451,10 +451,10 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerSheenColor) {
 
     filamat::MaterialBuilder builder = makeBuilder(shaderCode);
     builder.shading(filamat::MaterialBuilder::Shading::CLOTH);
-    matc::GLSLTools glslTools;
-    matc::GLSLTools::PropertySet properties;
+    GLSLTools glslTools;
+    GLSLTools::PropertySet properties;
     glslTools.findProperties(builder, properties);
-    matc::GLSLTools::PropertySet expected;
+    GLSLTools::PropertySet expected;
     expected.insert(filamat::MaterialBuilder::Property::SHEEN_COLOR);
     EXPECT_EQ(expected, properties);
 }
@@ -467,10 +467,10 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerNormal) {
     )");
 
     filamat::MaterialBuilder builder = makeBuilder(shaderCode);
-    matc::GLSLTools glslTools;
-    matc::GLSLTools::PropertySet properties;
+    GLSLTools glslTools;
+    GLSLTools::PropertySet properties;
     glslTools.findProperties(builder, properties);
-    matc::GLSLTools::PropertySet expected;
+    GLSLTools::PropertySet expected;
     expected.insert(filamat::MaterialBuilder::Property::NORMAL);
     EXPECT_EQ(expected, properties);
 }

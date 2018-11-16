@@ -22,17 +22,17 @@
 
 #include <filament/driver/DriverEnums.h>
 
-#include <matc/Config.h>
+#include "filamat/MaterialBuilder.h"    // for MaterialBuilder:: enums
 
 #include <ShaderLang.h>
 
 #include <spirv-tools/optimizer.hpp>
 
-namespace matc {
+namespace filamat {
 
 class GLSLPostProcessor {
 public:
-    GLSLPostProcessor(const Config& config);
+    GLSLPostProcessor(MaterialBuilder::Optimization optimization, bool printShaders);
 
     ~GLSLPostProcessor();
 
@@ -51,13 +51,14 @@ private:
     void registerSizePasses(spvtools::Optimizer& optimizer) const;
     void registerPerformancePasses(spvtools::Optimizer& optimizer) const;
 
-    const Config& mConfig;
+    const filamat::MaterialBuilder::Optimization mOptimization;
+    const bool mPrintShaders;
     std::string* mGlslOutput = nullptr;
     SpirvBlob* mSpirvOutput = nullptr;
     EShLanguage mShLang = EShLangFragment;
     int mLangVersion = 0;
 };
 
-} // namespace matc
+} // namespace filamat
 
 #endif //TNT_GLSLPOSTPROCESSOR_H

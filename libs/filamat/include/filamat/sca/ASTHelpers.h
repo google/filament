@@ -26,7 +26,8 @@
 
 class TIntermNode;
 
-namespace matc {
+using namespace filamat;
+
 namespace ASTUtils {
 
 // Extract the name of a function from its glslang mangled signature. e.g: Returns prepareMaterial
@@ -71,5 +72,4 @@ void getFunctionParameters(glslang::TIntermAggregate* func, std::vector<Function
         noexcept;
 
 } // namespace ASTutils
-} // namespace matc
 #endif //TNT_SCAHELPERS_H_H

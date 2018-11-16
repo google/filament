@@ -18,13 +18,14 @@
 
 #include "MockConfig.h"
 
-#include <matc/sca/ASTHelpers.h>
+#include <filamat/sca/ASTHelpers.h>
+
 #include <matc/MaterialCompiler.h>
 #include <matc/MaterialLexer.h>
 #include <matc/JsonishLexer.h>
 #include <matc/JsonishParser.h>
 
-using namespace matc::ASTUtils;
+using namespace ASTUtils;
 
 class MaterialLexer: public ::testing::Test {
 protected:

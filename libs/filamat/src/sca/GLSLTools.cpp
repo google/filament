@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "GLSLTools.h"
+#include "filamat/sca/GLSLTools.h"
 
 #include <cstring>
 
@@ -26,9 +26,9 @@
 
 #include <utils/Log.h>
 
-#include <matc/Enums.h>
+#include "filamat/Enums.h"
 
-#include "ASTHelpers.h"
+#include "filamat/sca/ASTHelpers.h"
 
 // GLSLANG headers
 #include <InfoSink.h>
@@ -36,13 +36,12 @@
 
 #include "builtinResource.h"
 
-using namespace filamat;
 using namespace utils;
 using namespace glslang;
-using namespace matc::ASTUtils;
+using namespace ASTUtils;
 using namespace filament::driver;
 
-namespace matc {
+namespace filamat {
 
 GLSLangCleaner::GLSLangCleaner() {
     mAllocator = &GetThreadPoolAllocator();
@@ -327,10 +326,10 @@ EShMessages GLSLTools::glslangFlagsFromTargetApi(MaterialBuilder::TargetApi targ
 }
 
 void GLSLTools::prepareShaderParser(glslang::TShader& shader, EShLanguage language,
-        int version, Config::Optimization optimization) {
+        int version, filamat::MaterialBuilder::Optimization optimization) {
     // We must only setup the SPIRV environment when we actually need to output SPIRV
-    if (optimization == Config::Optimization::SIZE ||
-            optimization == Config::Optimization::PERFORMANCE) {
+    if (optimization == filamat::MaterialBuilder::Optimization::SIZE ||
+            optimization == filamat::MaterialBuilder::Optimization::PERFORMANCE) {
         shader.setAutoMapBindings(true);
         shader.setEnvInput(EShSourceGlsl, language, EShClientVulkan, version);
         shader.setEnvClient(EShClientVulkan, EShTargetVulkan_1_1);
@@ -338,4 +337,4 @@ void GLSLTools::prepareShaderParser(glslang::TShader& shader, EShLanguage langua
     }
 }
 
-} // namespace matc
+} // namespace filamat
