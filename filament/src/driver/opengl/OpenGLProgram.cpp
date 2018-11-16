@@ -30,6 +30,17 @@ namespace filament {
 using namespace math;
 using namespace utils;
 
+// we just want a small, tight loop for our purpose here, so we avoid std::copy_n
+UTILS_NOINLINE
+static char* copy_n(char const* s, size_t n, char* d) noexcept {
+    char* const e = d + n;
+#pragma nounroll
+    while (d != e) {
+        *d++ = *s++;
+    }
+    return d;
+}
+
 OpenGLProgram::OpenGLProgram(OpenGLDriver* gl, const Program& programBuilder) noexcept
         :  HwProgram(programBuilder.getName()), mIsValid(false) {
 
@@ -117,6 +128,9 @@ OpenGLProgram::OpenGLProgram(OpenGLDriver* gl, const Program& programBuilder) no
             auto& indicesRun = mIndicesRuns;
             uint8_t numUsedBindings = 0;
             uint8_t tmu = 0;
+
+            char uniformName[256];
+
             #pragma nounroll
             for (size_t i = 0, c = samplerInterfaceBlocks.size(); i < c; i++) {
                 auto const& sib = samplerInterfaceBlocks[i];
@@ -128,19 +142,27 @@ OpenGLProgram::OpenGLProgram(OpenGLDriver* gl, const Program& programBuilder) no
                         info.binding = uint8_t(i);
 
                         // sampler interface block name
-                        std::string sib_name(sib->getName().c_str());
-                        sib_name.front() = char(std::tolower(sib_name.front()));
+                        CString const& sibName = sib->getName();
+                        char* const prefix = copy_n(sibName.begin(),
+                                std::min(sizeof(uniformName) / 2, (size_t)sibName.size()),
+                                uniformName);
+                        if (uniformName[0] >= 'A' && uniformName[0] <= 'Z') {
+                            uniformName[0] |= 0x20; // poor man's tolower()
+                        }
+                        *prefix = '_';
 
                         uint8_t count = 0;
                         for (uint8_t j = 0, m = uint8_t(infos.size()); j < m; ++j) {
                             // build unique name for this uniform (sampler)
                             auto const& e = infos[j];
-                            std::string e_name(e.name.c_str());
-                            std::string uniformSamplerName(sib_name);
-                            uniformSamplerName.append("_").append(e_name);
+                            char* last = copy_n(e.name.begin(),
+                                    std::min(sizeof(uniformName) / 2 - 2, (size_t)e.name.size()),
+                                    prefix + 1);
+                            *last++ = 0; // null terminator
+                            assert(last <= std::end(uniformName));
 
                             // find its location and associate a TMU to it
-                            GLint loc = glGetUniformLocation(program, uniformSamplerName.c_str());
+                            GLint loc = glGetUniformLocation(program, uniformName);
                             if (loc >= 0) {
                                 glUniform1i(loc, tmu);
                                 indicesRun[tmu] = j;

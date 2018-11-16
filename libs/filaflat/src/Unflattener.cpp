@@ -25,8 +25,8 @@ bool Unflattener::read(utils::CString* s) noexcept {
     }
     bool overflowed = mCursor >= mEnd;
     if (!overflowed) {
-        mCursor++;
         *s = utils::CString{ (const char*)start, (utils::CString::size_type)(mCursor - start) };
+        mCursor++;
     }
     return !overflowed;
 }

@@ -35,6 +35,9 @@ int StaticString::compare(const StaticString& rhs) const noexcept {
 UTILS_NOINLINE
 CString::CString(const char* cstr, size_type length) {
     if (length && cstr) {
+        // I think we can't use this assert with vulkan, because shaders are returned as CString
+        // (see ShaderBuilder).
+        // assert(length == strlen(cstr));
         Data* p = (Data*)malloc(sizeof(Data) + length + 1);
         p->length = length;
         mCStr = (value_type*)(p + 1);
