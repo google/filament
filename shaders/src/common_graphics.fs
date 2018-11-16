@@ -33,8 +33,8 @@ vec3 Inverse_Tonemap_Unreal(const vec3 x) {
 
 /**
  * Applies the inverse of the tone mapping operator to the specified HDR or LDR
- * sRGB (non-linear) color. The inverse tone mapping operator may be an
- * approximation of the real inverse operation.
+ * sRGB (non-linear) color and returns a linear sRGB color. The inverse tone mapping
+ * operator may be an approximation of the real inverse operation.
  *
  * @public-api
  */
@@ -46,8 +46,8 @@ vec3 inverseTonemapSRGB(vec3 color) {
 
 /**
  * Applies the inverse of the tone mapping operator to the specified HDR or LDR
- * linear RGB color. The inverse tone mapping operator may be an approximation of
- * the real inverse operation.
+ * linear RGB color and returns a linear RGB color. The inverse tone mapping operator
+ * may be an approximation of the real inverse operation.
  *
  * @public-api
  */
