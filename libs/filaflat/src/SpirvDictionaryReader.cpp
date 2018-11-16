@@ -16,6 +16,11 @@
 
 #include "SpirvDictionaryReader.h"
 
+#if defined (FILAMENT_DRIVER_SUPPORTS_VULKAN)
+#include <utils/Log.h>
+#include <smolv.h>
+#endif
+
 #include <assert.h>
 
 namespace filaflat {
@@ -26,8 +31,8 @@ bool SpirvDictionaryReader::unflatten(Unflattener& f, BlobDictionary& dictionary
         return false;
     }
 
-    // TODO: support compression
-    assert(compressionScheme == 0);
+    // For now, 1 is the only acceptable compression scheme.
+    assert(compressionScheme == 1);
 
     uint32_t numBlobs;
     if (!f.read(&numBlobs)) {
@@ -36,12 +41,28 @@ bool SpirvDictionaryReader::unflatten(Unflattener& f, BlobDictionary& dictionary
 
     dictionary.reserve(numBlobs);
     for (uint32_t i = 0; i < numBlobs; i++) {
-        const char* blob;
-        size_t size;
-        if (!f.read(&blob, &size)) {
+        const char* compressed;
+        size_t compressedSize;
+        if (!f.read(&compressed, &compressedSize)) {
             return false;
         }
-        dictionary.addBlob(blob, size);
+
+#if defined (FILAMENT_DRIVER_SUPPORTS_VULKAN)
+        size_t spirvSize = smolv::GetDecodedBufferSize(compressed, compressedSize);
+        if (spirvSize == 0) {
+            utils::slog.e << "Error with SPIRV decompression" << utils::io::endl;
+            return false;
+        }
+        BlobDictionary::Blob spirv(spirvSize);
+        if (!smolv::Decode(compressed, compressedSize, spirv.data(), spirvSize)) {
+            utils::slog.e << "Error with SPIRV decompression" << utils::io::endl;
+            return false;
+        }
+        dictionary.addBlob(std::move(spirv));
+#else
+        return false;
+#endif
+
     }
     return true;
 }

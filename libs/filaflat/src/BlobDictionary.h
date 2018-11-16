@@ -29,8 +29,14 @@ public:
     BlobDictionary() = default;
     ~BlobDictionary() = default;
 
+    using Blob = std::vector<uint8_t>;
+
     inline void addBlob(const char* blob, size_t len) noexcept {
-        mBlobs.push_back({ blob, len });
+        mBlobs.emplace_back(Blob(blob, blob + len));
+    }
+
+    inline void addBlob(Blob&& blob) noexcept {
+        mBlobs.emplace_back(blob);
     }
 
     inline bool isEmpty() const noexcept {
@@ -42,8 +48,8 @@ public:
     }
 
     inline const char* getBlob(size_t index, size_t* size) const noexcept {
-        *size = mBlobs[index].size;
-        return mBlobs[index].data;
+        *size = mBlobs[index].size();
+        return (const char*) mBlobs[index].data();
     }
 
     inline const char* getString(size_t index) const noexcept {
@@ -53,10 +59,6 @@ public:
 
 
 private:
-    struct Blob {
-        const char* data;
-        size_t size;
-    };
     std::vector<Blob> mBlobs;
 };
 
