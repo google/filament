@@ -44,16 +44,14 @@ public:
     explicit UniformBuffer(size_t size) noexcept;
     explicit UniformBuffer(UniformInterfaceBlock const& uib) noexcept;
 
-    // can be copy-constructed. Needed to create temporary copies.
-    UniformBuffer(const UniformBuffer& rhs);
-
-    UniformBuffer(const UniformBuffer& rhs, size_t trim);
-
-    // can be moved
-    UniformBuffer(UniformBuffer&& rhs) noexcept;
+    // disallow copy-construction, since it's heavy.
+    UniformBuffer(const UniformBuffer& rhs) = delete;
 
     // we forbid copy, which makes UniformBuffer's allocation immutable
     UniformBuffer& operator=(const UniformBuffer& rhs) = delete;
+
+    // can be moved
+    UniformBuffer(UniformBuffer&& rhs) noexcept;
 
     // can be moved (e.g. assigned from a temporary)
     UniformBuffer& operator=(UniformBuffer&& rhs) noexcept;
@@ -161,7 +159,7 @@ public:
     driver::BufferDescriptor toBufferDescriptor(driver::DriverApi& driver) const noexcept {
         driver::BufferDescriptor p;
         p.size = getSize();
-        p.buffer = driver.allocate(p.size);
+        p.buffer = driver.allocate(p.size); // TODO: use out-of-line buffer if too large
         memcpy(p.buffer, getBuffer(), p.size);
         return p;
     }
@@ -170,7 +168,7 @@ public:
             driver::DriverApi& driver, size_t offset, size_t size) const noexcept {
         driver::BufferDescriptor p;
         p.size = size;
-        p.buffer = driver.allocate(p.size);
+        p.buffer = driver.allocate(p.size); // TODO: use out-of-line buffer if too large
         memcpy(p.buffer, static_cast<const char*>(getBuffer()) + offset, p.size);
         return p;
     }

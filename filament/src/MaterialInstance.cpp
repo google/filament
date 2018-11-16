@@ -24,6 +24,8 @@
 #include "details/Material.h"
 #include "details/Texture.h"
 
+#include <string.h>
+
 using namespace math;
 
 namespace filament {
@@ -41,7 +43,9 @@ FMaterialInstance::FMaterialInstance(FEngine& engine, FMaterial const* material)
             material->getId(), material->generateMaterialInstanceId());
 
     if (!material->getUniformInterfaceBlock().isEmpty()) {
-        mUniforms = UniformBuffer(upcast(material)->getDefaultInstance()->mUniforms);
+        const UniformBuffer& defaultUniforms = upcast(material)->getDefaultInstance()->mUniforms;
+        mUniforms = UniformBuffer(upcast(material)->getUniformInterfaceBlock());
+        ::memcpy(const_cast<void*>(mUniforms.getBuffer()), defaultUniforms.getBuffer(), mUniforms.getSize());
         mUbHandle = driver.createUniformBuffer(mUniforms.getSize(), driver::BufferUsage::DYNAMIC);
     }
 
