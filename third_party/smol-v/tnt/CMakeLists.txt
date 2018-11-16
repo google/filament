@@ -12,4 +12,8 @@ set(SRCS
 
 add_library(${TARGET} STATIC ${SRCS})
 
+target_compile_options(${TARGET} PRIVATE
+        $<$<PLATFORM_ID:Linux>:-fPIC>
+)
+
 target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
