@@ -461,10 +461,55 @@ class_<RenderBuilder>("RenderableManager$Builder")
         return &builder->geometry(index, type, vertices, indices); })
     .BUILDER_FUNCTION("material", RenderBuilder, (RenderBuilder* builder,
             size_t index, MaterialInstance* mi), {
-        return &builder->material(index, mi); });
+        return &builder->material(index, mi); })
+    .BUILDER_FUNCTION("blendOrder", RenderBuilder,
+            (RenderBuilder* builder, size_t index, uint16_t order), {
+        return &builder->blendOrder(index, order); });
 
+/// RenderableManager ::core class:: Allows access to properties of drawable objects.
 class_<RenderableManager>("RenderableManager")
-    .class_function("Builder", (RenderBuilder (*)(int)) [] (int n) { return RenderBuilder(n); });
+    .class_function("Builder", (RenderBuilder (*)(int)) [] (int n) { return RenderBuilder(n); })
+
+    /// getInstance ::method:: Gets an instance of the renderable component for an entity.
+    /// entity ::argument:: an [Entity]
+    /// ::retval:: a renderable component
+    .function("getInstance", &RenderableManager::getInstance)
+
+    .function("setAxisAlignedBoundingBox", &RenderableManager::setAxisAlignedBoundingBox)
+    .function("setLayerMask", &RenderableManager::setLayerMask)
+    .function("setPriority", &RenderableManager::setPriority)
+    .function("setCastShadows", &RenderableManager::setCastShadows)
+    .function("setReceiveShadows", &RenderableManager::setReceiveShadows)
+    .function("isShadowCaster", &RenderableManager::isShadowCaster)
+    .function("isShadowReceiver", &RenderableManager::isShadowReceiver)
+    .function("getAxisAlignedBoundingBox", &RenderableManager::getAxisAlignedBoundingBox)
+    .function("getPrimitiveCount", &RenderableManager::getPrimitiveCount)
+    .function("setMaterialInstanceAt", &RenderableManager::setMaterialInstanceAt,
+            allow_raw_pointers())
+    .function("getMaterialInstanceAt", &RenderableManager::getMaterialInstanceAt,
+            allow_raw_pointers())
+    .function("setBlendOrderAt", &RenderableManager::setBlendOrderAt)
+
+    // TODO: provide bindings for AttributeBitset
+    .function("getEnabledAttributesAt", &RenderableManager::getEnabledAttributesAt)
+
+    .function("setGeometryAt", EMBIND_LAMBDA(void, (RenderableManager* self,
+            RenderableManager::Instance instance, size_t primitiveIndex,
+            RenderableManager::PrimitiveType type, VertexBuffer* vertices, IndexBuffer* indices,
+            size_t offset, size_t count), {
+        self->setGeometryAt(instance, primitiveIndex, type, vertices, indices, offset, count);
+    }), allow_raw_pointers())
+
+    .function("setGeometryRangeAt", EMBIND_LAMBDA(void, (RenderableManager* self,
+            RenderableManager::Instance instance, size_t primitiveIndex,
+            RenderableManager::PrimitiveType type, size_t offset, size_t count), {
+        self->setGeometryAt(instance, primitiveIndex, type, offset, count);
+    }), allow_raw_pointers());
+
+/// RenderableManager$Instance ::class:: Component instance returned by [RenderableManager]
+/// Be sure to call the instance's `delete` method when you're done with it.
+class_<RenderableManager::Instance>("RenderableManager$Instance");
+    /// delete ::method:: Frees an instance obtained via `getInstance`
 
 /// TransformManager ::core class:: Adds transform components to entities.
 class_<TransformManager>("TransformManager")
@@ -587,7 +632,7 @@ class_<MaterialInstance>("MaterialInstance")
     .function("setColorParameter", EMBIND_LAMBDA(void,
             (MaterialInstance* self, std::string name, RgbType type, math::float3 value), {
         self->setParameter(name.c_str(), type, value); }), allow_raw_pointers())
-    .function("setPolygonOffset", &MaterialInstance::setPolygonOffset, allow_raw_pointers());
+    .function("setPolygonOffset", &MaterialInstance::setPolygonOffset);
 
 class_<TextureSampler>("TextureSampler")
     .constructor<driver::SamplerMinFilter, driver::SamplerMagFilter, driver::SamplerWrapMode>();
@@ -721,8 +766,8 @@ class_<PixelBufferDescriptor>("driver$PixelBufferDescriptor")
 // ------------
 
 /// KtxBundle ::class:: In-memory representation of a KTX file.
-/// Most clients should use one of the `*fromKtx` utility methods in the JavaScript [Engine] wrapper
-/// rather than interacting with `KtxBundle` directly.
+/// Most clients should use one of the `create*FromKtx` utility methods in the JavaScript [Engine]
+/// wrapper rather than interacting with `KtxBundle` directly.
 class_<KtxBundle>("KtxBundle")
     .constructor(EMBIND_LAMBDA(KtxBundle*, (BufferDescriptor kbd), {
         return new KtxBundle((uint8_t*) kbd.bd->buffer, (uint32_t) kbd.bd->size);

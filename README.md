@@ -897,6 +897,11 @@ as possible. The current external dependencies of the runtime library include:
 - STL
 - robin-map (header only library)
 
+When building with Vulkan enabled, we have a few additional small dependencies:
+
+- vkmemalloc
+- smol-v
+
 Host tools (such as `matc` or `cmgen`) can use external dependencies freely.
 
 ## How to make contributions
