@@ -32,7 +32,9 @@ bool TextDictionaryReader::unflatten(Unflattener& f, BlobDictionary& dictionary)
         if (!f.read(&str)) {
             return false;
         }
-        dictionary.addBlob(str, strlen(str));
+        // BlobDictionary hold binary chunks and does not care if the data holds text, it is
+        // therefore crucial to include the trailing null.
+        dictionary.addBlob(str, strlen(str) + 1);
     }
     return true;
 }
