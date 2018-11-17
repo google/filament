@@ -29,8 +29,8 @@ using namespace driver;
 namespace details {
 
 
-std::mutex FFence::sLock;
-std::condition_variable FFence::sCondition;
+utils::Mutex FFence::sLock;
+utils::Condition FFence::sCondition;
 
 FFence::FFence(FEngine& engine, Type type)
     : mEngine(engine), mFenceSignal(std::make_shared<FenceSignal>(type)) {
@@ -94,7 +94,7 @@ FenceStatus FFence::wait(Mode mode, uint64_t timeout) noexcept {
 
 UTILS_NOINLINE
 void FFence::FenceSignal::signal(State s) noexcept {
-    std::unique_lock<std::mutex> lock(FFence::sLock);
+    std::unique_lock<utils::Mutex> lock(FFence::sLock);
     mState = s;
     lock.unlock();
     FFence::sCondition.notify_all();
@@ -102,7 +102,7 @@ void FFence::FenceSignal::signal(State s) noexcept {
 
 UTILS_NOINLINE
 Fence::FenceStatus FFence::FenceSignal::wait(uint64_t timeout) noexcept {
-    std::unique_lock<std::mutex> lock(FFence::sLock);
+    std::unique_lock<utils::Mutex> lock(FFence::sLock);
     while (mState == UNSIGNALED) {
         if (mState == DESTROYED) {
             return FenceStatus::ERROR;
