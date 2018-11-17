@@ -1,4 +1,8 @@
-Filament.init(['plastic.filamat', 'pillars_2k/pillars_2k_ibl.ktx', 'pillars_2k/pillars_2k_skybox.ktx'], () => {
+const environ = 'pillars_2k';
+const ibl_url = `${environ}/${environ}_ibl.ktx`;
+const sky_url = `${environ}/${environ}_skybox.ktx`;
+const filamat_url = 'plastic.filamat'
+Filament.init([filamat_url, ibl_url, sky_url], () => {
   // Create some global aliases to enums for convenience.
   window.VertexAttribute = Filament.VertexAttribute;
   window.AttributeType = Filament.VertexBuffer$AttributeType;
@@ -15,13 +19,13 @@ class App {
     this.canvas = canvas;
     const engine = this.engine = Filament.Engine.create(canvas);
     const scene = engine.createScene();
-    const material = engine.createMaterial('plastic.filamat');
+    const material = engine.createMaterial(filamat_url);
     const matinstance = material.createInstance();
     const red = [0.8, 0.0, 0.0];
-    matinstance.setColorParameter("baseColor", Filament.RgbType.sRGB, red);
-    matinstance.setFloatParameter("roughness", 0.5);
-    matinstance.setFloatParameter("clearCoat", 1.0);
-    matinstance.setFloatParameter("clearCoatRoughness", 0.3);
+    matinstance.setColorParameter('baseColor', Filament.RgbType.sRGB, red);
+    matinstance.setFloatParameter('roughness', 0.5);
+    matinstance.setFloatParameter('clearCoat', 1.0);
+    matinstance.setFloatParameter('clearCoatRoughness', 0.3);
     const renderable = Filament.EntityManager.get()
       .create();
     scene.addEntity(renderable);
@@ -66,10 +70,10 @@ class App {
       .direction([-1, 0, 1])
       .intensity(50000.0)
       .build(engine, backlight);
-    const indirectLight = engine.createIblFromKtx('pillars_2k/pillars_2k_ibl.ktx');
+    const indirectLight = engine.createIblFromKtx(ibl_url);
     indirectLight.setIntensity(50000);
     scene.setIndirectLight(indirectLight);
-    const skybox = engine.createSkyFromKtx('pillars_2k/pillars_2k_skybox.ktx');
+    const skybox = engine.createSkyFromKtx(sky_url);
     scene.setSkybox(skybox);
     this.swapChain = engine.createSwapChain();
     this.renderer = engine.createRenderer();
@@ -80,7 +84,7 @@ class App {
     this.resize();
     this.render = this.render.bind(this);
     this.resize = this.resize.bind(this);
-    window.addEventListener("resize", this.resize);
+    window.addEventListener('resize', this.resize);
     window.requestAnimationFrame(this.render);
   }
   render() {
