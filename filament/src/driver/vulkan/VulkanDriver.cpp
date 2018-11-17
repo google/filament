@@ -53,7 +53,7 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform,
     // Validation crashes on MoltenVK, so disable it by default on MacOS.
     VkInstanceCreateInfo instanceCreateInfo = {};
 #if !defined(NDEBUG) && !defined(__APPLE__)
-    static const char* DESIRED_LAYERS[] = {
+    static utils::StaticString DESIRED_LAYERS[] = {
     // NOTE: sometimes we see a message: "Cannot activate layer VK_LAYER_GOOGLE_unique_objects
     // prior to activating VK_LAYER_LUNARG_core_validation." despite the fact that it is clearly
     // last in the following list. Should we simply remove unique_objects from the list?
@@ -76,10 +76,10 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform,
     vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
     std::vector<const char*> enabledLayers;
     for (const VkLayerProperties& layer : availableLayers) {
-        const std::string availableLayer(layer.layerName);
+        const utils::CString availableLayer(layer.layerName);
         for (const auto& desired : DESIRED_LAYERS) {
-            if (availableLayer == desired) {
-                enabledLayers.push_back(desired);
+            if (availableLayer.compare(desired) == 0) {
+                enabledLayers.push_back(desired.c_str());
             }
         }
     }
