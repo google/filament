@@ -68,6 +68,14 @@
 <td align="left">Low level pixel buffer wrapper.</td>
 </tr>
 <tr>
+<td align="left"><a href="#RenderableManager">RenderableManager</a></td>
+<td align="left">Allows access to properties of drawable objects.</td>
+</tr>
+<tr>
+<td align="left"><a href="#RenderableManager%24Instance">RenderableManager$Instance</a></td>
+<td align="left">Component instance returned by <a href="#RenderableManager">RenderableManager</a></td>
+</tr>
+<tr>
 <td align="left"><a href="#Renderer">Renderer</a></td>
 <td align="left">Represents the platform's native window.</td>
 </tr>
@@ -121,6 +129,10 @@
 <tr>
 <td align="left"><a href="#PixelBuffer">PixelBuffer</a></td>
 <td align="left">Constructs a <a href="#PixelBufferDescriptor">PixelBufferDescriptor</a> by copying a typed array into the WASM heap.</td>
+</tr>
+<tr>
+<td align="left"><a href="#fetch">fetch</a></td>
+<td align="left">Downloads assets and invokes a callback when done.</td>
 </tr>
 <tr>
 <td align="left"><a href="#getSupportedFormatSuffix">getSupportedFormatSuffix</a></td>
@@ -350,6 +362,11 @@
 <li><em>ib</em> the <a href="#IndexBuffer">IndexBuffer</a> to destroy</li>
 </ul>
 </li>
+<li><strong>engine.destroyIndirectLight(light)</strong>
+<ul>
+<li><em>light</em> the <a href="#IndirectLight">IndirectLight</a> to destroy</li>
+</ul>
+</li>
 <li><strong>engine.destroyMaterial(material)</strong>
 <ul>
 <li><em>material</em> an instance of <a href="#Material">Material</a></li>
@@ -368,6 +385,11 @@
 <li><strong>engine.destroyScene(scene)</strong>
 <ul>
 <li><em>scene</em> an instance of <a href="#Scene">Scene</a></li>
+</ul>
+</li>
+<li><strong>engine.destroySkybox(skybox)</strong>
+<ul>
+<li><em>skybox</em> the <a href="#Skybox">Skybox</a> to destroy</li>
 </ul>
 </li>
 <li><strong>engine.destroySwapChain(swapChain)</strong>
@@ -509,8 +531,8 @@ as quaternions.</li>
 </ul>
 </li>
 </ul>
-<p>Most clients should use one of the <code>*fromKtx</code> utility methods in the JavaScript <a href="#Engine">Engine</a> wrapper
-rather than interacting with <code>KtxBundle</code> directly.</p>
+<p>Most clients should use one of the <code>create*FromKtx</code> utility methods in the JavaScript <a href="#Engine">Engine</a>
+wrapper rather than interacting with <code>KtxBundle</code> directly.</p>
 </div>
 <div class='classdoc'>
 <h2>class <a id='KtxInfo' href='#KtxInfo'>KtxInfo</a></h2>
@@ -531,6 +553,31 @@ properties.</p>
 </li>
 </ul>
 <p>Clients should use the <a href="#PixelBuffer">PixelBuffer</a> helper function to contruct PixelBufferDescriptor objects.</p>
+</div>
+<div class='classdoc'>
+<h2>class <a id='RenderableManager' href='#RenderableManager'>RenderableManager</a></h2>
+<p>Allows access to properties of drawable objects.</p>
+<ul>
+<li><strong>renderableManager.getInstance(entity)</strong>
+<ul>
+<li>Gets an instance of the renderable component for an entity.</li>
+<li><em>entity</em> an <a href="#Entity">Entity</a></li>
+<li><em>returns</em> a renderable component</li>
+</ul>
+</li>
+</ul>
+</div>
+<div class='classdoc'>
+<h2>class <a id='RenderableManager$Instance' href='#RenderableManager$Instance'>RenderableManager$Instance</a></h2>
+<p>Component instance returned by <a href="#RenderableManager">RenderableManager</a></p>
+<ul>
+<li><strong>renderableManager$Instance.delete()</strong>
+<ul>
+<li>Frees an instance obtained via <code>getInstance</code></li>
+</ul>
+</li>
+</ul>
+<p>Be sure to call the instance's <code>delete</code> method when you're done with it.</p>
 </div>
 <div class='classdoc'>
 <h2>class <a id='Renderer' href='#Renderer'>Renderer</a></h2>
@@ -676,6 +723,22 @@ See also the <a href="#Engine">Engine</a> methods <code>createView</code> and <c
 <li><strong>returns</strong>
 <ul>
 <li><a href="#PixelBufferDescriptor">PixelBufferDescriptor</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<div class='funcdoc'>
+<h2>function <a id='fetch' href='#fetch'>fetch</a>(assets, onready)</h2>
+<p>Downloads assets and invokes a callback when done.</p>
+<ul>
+<li><strong>assets</strong>
+<ul>
+<li>Array of strings containing URL's of required assets.</li>
+</ul>
+</li>
+<li><strong>onready</strong>
+<ul>
+<li>callback that gets invoked after all assets have been downloaded.</li>
 </ul>
 </li>
 </ul>
