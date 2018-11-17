@@ -1,19 +1,22 @@
 <!DOCTYPE html>
 <html lang="en"><head>
+<link href="https://google.github.io/filament/favicon.png" rel="icon" type="image/x-icon" />
 <link href="https://fonts.googleapis.com/css?family=Open+Sans:300,400,600,700|Tangerine:700|Inconsolata" rel="stylesheet">
 <link href="main.css" rel="stylesheet" type="text/css">
 </head>
 <body class="verbiage">
 <div class="demo_frame"><iframe src="demo_redball.html"></iframe><a href="demo_redball.html">&#x1F517;</a></div>
-<p>This tutorial will describe how to create the redball demo, introducing you to materials and
+<p>This tutorial will describe how to create the <strong>redball</strong> demo, introducing you to materials and
 textures.</p>
-<p>You'll need to use a couple command-line tools: <code>matc</code> and <code>cmgen</code>. You can find these in the
+<p>For starters, create a text file called <code>redball.html</code> and copy over the HTML that we used in the
+<a href="tutorial_triangle.html">previous tutorial</a>. Change the last script tag from <code>triangle.js</code> to <code>redball.js</code>.</p>
+<p>Next you'll need to get a couple command-line tools: <code>matc</code> and <code>cmgen</code>. You can find these in the
 appropriate <a href="//github.com/google/filament/releases">Filament release</a>. You should choose the
 archive that corresponds to your development machine rather than the one for web.</p>
 <h2>Define plastic material</h2>
 <p>The <code>matc</code> tool consumes a text file containing a high-level description of a PBR material, and
 produces a binary material package that contains shader code and associated metadata. For more
-information, see the official document describing the <a href="">Filament Material System</a>.</p>
+information, see the official document describing the <a href="https://google.github.io/filament/Materials.md.html">Filament Material System</a>.</p>
 <p>Let's try out <code>matc</code>. Create the following file in your favorite text editor and call it
 <code>plastic.mat</code>.</p>
 <div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span>material {
@@ -52,14 +55,16 @@ produce two cubemap files: a mipmapped IBL and a blurry skybox.</p>
 </pre></div>
 
 <p>You should now have a <code>pillars_2k</code> folder containing a couple KTX files for the IBL and skybox, as
-well as a text file with spherical harmonics coefficients. Move the KTX files into your project
-folder. You can discard the text file because the IBL KTX contains these coefficients in its
-metadata.</p>
-<h2>Create HTML and JavaScript</h2>
-<p>Create a text file called <code>redball.html</code> and copy over the HTML that we used in the <a href="tutorial_triangle.html">previous
-tutorial</a>. Change the last script tag from <code>triangle.js</code> to <code>redball.js</code>.</p>
+well as a text file with spherical harmonics coefficients. You can discard the text file because the
+IBL KTX contains these coefficients in its metadata.</p>
+<h2>Create JavaScript</h2>
 <p>Next, create <code>redball.js</code> with the following content.</p>
-<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span>Filament.init([ <span style="color: #BA2121">&#39;plastic.filamat&#39;</span>, <span style="color: #BA2121">&#39;pillars_2k_ibl.ktx&#39;</span>, <span style="color: #BA2121">&#39;pillars_2k_skybox.ktx&#39;</span> ], () =&gt; {
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span><span style="color: #008000; font-weight: bold">const</span> environ <span style="color: #666666">=</span> <span style="color: #BA2121">&#39;pillars_2k&#39;</span>;
+<span style="color: #008000; font-weight: bold">const</span> ibl_url <span style="color: #666666">=</span> <span style="color: #BA2121">`</span><span style="color: #BB6688; font-weight: bold">${</span>environ<span style="color: #BB6688; font-weight: bold">}</span><span style="color: #BA2121">/</span><span style="color: #BB6688; font-weight: bold">${</span>environ<span style="color: #BB6688; font-weight: bold">}</span><span style="color: #BA2121">_ibl.ktx`</span>;
+<span style="color: #008000; font-weight: bold">const</span> sky_url <span style="color: #666666">=</span> <span style="color: #BA2121">`</span><span style="color: #BB6688; font-weight: bold">${</span>environ<span style="color: #BB6688; font-weight: bold">}</span><span style="color: #BA2121">/</span><span style="color: #BB6688; font-weight: bold">${</span>environ<span style="color: #BB6688; font-weight: bold">}</span><span style="color: #BA2121">_skybox.ktx`</span>;
+<span style="color: #008000; font-weight: bold">const</span> filamat_url <span style="color: #666666">=</span> <span style="color: #BA2121">&#39;plastic.filamat&#39;</span>
+
+Filament.init([ filamat_url, ibl_url, sky_url ], () =&gt; {
   <span style="color: #408080; font-style: italic">// Create some global aliases to enums for convenience.</span>
   <span style="color: #008000">window</span>.VertexAttribute <span style="color: #666666">=</span> Filament.VertexAttribute;
   <span style="color: #008000">window</span>.AttributeType <span style="color: #666666">=</span> Filament.VertexBuffer$AttributeType;
@@ -94,7 +99,7 @@ tutorial</a>. Change the last script tag from <code>triangle.js</code> to <code>
     <span style="color: #008000; font-weight: bold">this</span>.resize();
     <span style="color: #008000; font-weight: bold">this</span>.render <span style="color: #666666">=</span> <span style="color: #008000; font-weight: bold">this</span>.render.bind(<span style="color: #008000; font-weight: bold">this</span>);
     <span style="color: #008000; font-weight: bold">this</span>.resize <span style="color: #666666">=</span> <span style="color: #008000; font-weight: bold">this</span>.resize.bind(<span style="color: #008000; font-weight: bold">this</span>);
-    <span style="color: #008000">window</span>.addEventListener(<span style="color: #BA2121">&quot;resize&quot;</span>, <span style="color: #008000; font-weight: bold">this</span>.resize);
+    <span style="color: #008000">window</span>.addEventListener(<span style="color: #BA2121">&#39;resize&#39;</span>, <span style="color: #008000; font-weight: bold">this</span>.resize);
     <span style="color: #008000">window</span>.requestAnimationFrame(<span style="color: #008000; font-weight: bold">this</span>.render);
   }
 
@@ -121,14 +126,14 @@ tutorial</a>. Change the last script tag from <code>triangle.js</code> to <code>
 new set of assets. We also added some animation to the camera.</p>
 <p>Next let's create a material instance from the package that we built at the beginning the tutorial.
 Replace the <strong>create material</strong> comment with the following snippet.</p>
-<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span><span style="color: #008000; font-weight: bold">const</span> material <span style="color: #666666">=</span> engine.createMaterial(<span style="color: #BA2121">&#39;plastic.filamat&#39;</span>);
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span><span style="color: #008000; font-weight: bold">const</span> material <span style="color: #666666">=</span> engine.createMaterial(filamat_url);
 <span style="color: #008000; font-weight: bold">const</span> matinstance <span style="color: #666666">=</span> material.createInstance();
 
 <span style="color: #008000; font-weight: bold">const</span> red <span style="color: #666666">=</span> [<span style="color: #666666">0.8</span>, <span style="color: #666666">0.0</span>, <span style="color: #666666">0.0</span>];
-matinstance.setColorParameter(<span style="color: #BA2121">&quot;baseColor&quot;</span>, Filament.RgbType.sRGB, red);
-matinstance.setFloatParameter(<span style="color: #BA2121">&quot;roughness&quot;</span>, <span style="color: #666666">0.5</span>);
-matinstance.setFloatParameter(<span style="color: #BA2121">&quot;clearCoat&quot;</span>, <span style="color: #666666">1.0</span>);
-matinstance.setFloatParameter(<span style="color: #BA2121">&quot;clearCoatRoughness&quot;</span>, <span style="color: #666666">0.3</span>);
+matinstance.setColorParameter(<span style="color: #BA2121">&#39;baseColor&#39;</span>, Filament.RgbType.sRGB, red);
+matinstance.setFloatParameter(<span style="color: #BA2121">&#39;roughness&#39;</span>, <span style="color: #666666">0.5</span>);
+matinstance.setFloatParameter(<span style="color: #BA2121">&#39;clearCoat&#39;</span>, <span style="color: #666666">1.0</span>);
+matinstance.setFloatParameter(<span style="color: #BA2121">&#39;clearCoatRoughness&#39;</span>, <span style="color: #666666">0.3</span>);
 </pre></div>
 
 <p>The next step is to create a renderable for the sphere. To help with this, we'll use the <code>IcoSphere</code>
@@ -205,7 +210,7 @@ following (don't type this out, there's an easier way).</p>
 <span style="color: #008000; font-weight: bold">const</span> datatype <span style="color: #666666">=</span> Filament.PixelDataType.UBYTE;
 
 <span style="color: #408080; font-style: italic">// Create a Texture object for the mipmapped cubemap.</span>
-<span style="color: #008000; font-weight: bold">const</span> ibl_package <span style="color: #666666">=</span> Filament.Buffer(Filament.assets[<span style="color: #BA2121">&#39;pillars_2k_ibl.ktx&#39;</span>]);
+<span style="color: #008000; font-weight: bold">const</span> ibl_package <span style="color: #666666">=</span> Filament.Buffer(Filament.assets[ibl_url]);
 <span style="color: #008000; font-weight: bold">const</span> iblktx <span style="color: #666666">=</span> <span style="color: #008000; font-weight: bold">new</span> Filament.KtxBundle(ibl_package);
 
 <span style="color: #008000; font-weight: bold">const</span> ibltex <span style="color: #666666">=</span> Filament.Texture.Builder()
@@ -224,7 +229,7 @@ following (don't type this out, there's an easier way).</p>
 }
 
 <span style="color: #408080; font-style: italic">// Parse the spherical harmonics metadata.</span>
-<span style="color: #008000; font-weight: bold">const</span> shstring <span style="color: #666666">=</span> iblktx.getMetadata(<span style="color: #BA2121">&quot;sh&quot;</span>);
+<span style="color: #008000; font-weight: bold">const</span> shstring <span style="color: #666666">=</span> iblktx.getMetadata(<span style="color: #BA2121">&#39;sh&#39;</span>);
 <span style="color: #008000; font-weight: bold">const</span> shfloats <span style="color: #666666">=</span> shstring.split(<span style="color: #BB6688">/\s/</span>, <span style="color: #666666">9</span> <span style="color: #666666">*</span> <span style="color: #666666">3</span>).map(<span style="color: #008000">parseFloat</span>);
 
 <span style="color: #408080; font-style: italic">// Build the IBL object and insert it into the scene.</span>
@@ -239,7 +244,7 @@ scene.setIndirectLight(indirectLight);
 
 <p>Filament provides a JavaScript utility to make this simpler,
 simply replace the <strong>create IBL</strong> comment with the following snippet.</p>
-<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span><span style="color: #008000; font-weight: bold">const</span> indirectLight <span style="color: #666666">=</span> engine.createIblFromKtx(<span style="color: #BA2121">&#39;pillars_2k_ibl.ktx&#39;</span>);
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span><span style="color: #008000; font-weight: bold">const</span> indirectLight <span style="color: #666666">=</span> engine.createIblFromKtx(ibl_url);
 indirectLight.setIntensity(<span style="color: #666666">50000</span>);
 scene.setIndirectLight(indirectLight);
 </pre></div>
@@ -248,7 +253,7 @@ scene.setIndirectLight(indirectLight);
 <p>At this point you can run the demo and you should see a red plastic ball against a black background.
 Without a skybox, the reflections on the ball are not representative of its surroundings.
 Here's one way to create a texture for the skybox:</p>
-<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span><span style="color: #008000; font-weight: bold">const</span> sky_package <span style="color: #666666">=</span> Filament.Buffer(Filament.assets[<span style="color: #BA2121">&#39;pillars_2k_skybox.ktx&#39;</span>]);
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span><span style="color: #008000; font-weight: bold">const</span> sky_package <span style="color: #666666">=</span> Filament.Buffer(Filament.assets[sky_url]);
 <span style="color: #008000; font-weight: bold">const</span> skyktx <span style="color: #666666">=</span> <span style="color: #008000; font-weight: bold">new</span> Filament.KtxBundle(sky_package);
 <span style="color: #008000; font-weight: bold">const</span> skytex <span style="color: #666666">=</span> Filament.Texture.Builder()
   .width(skyktx.info().pixelWidth)
@@ -266,12 +271,13 @@ skytex.setImageCube(engine, <span style="color: #666666">0</span>, pixelbuffer);
 
 <p>Filament provides a Javascript utility to make this easier.
 Replace <strong>create skybox</strong> with the following.</p>
-<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span><span style="color: #008000; font-weight: bold">const</span> skybox <span style="color: #666666">=</span> engine.createSkyFromKtx(<span style="color: #BA2121">&#39;pillars_2k_skybox.ktx&#39;</span>);
+<div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span><span style="color: #008000; font-weight: bold">const</span> skybox <span style="color: #666666">=</span> engine.createSkyFromKtx(sky_url);
 scene.setSkybox(skybox);
 </pre></div>
 
-<p>That's it, we now have a shiny red ball floating in an environment! The complete JavaScript
-file is available <a href="tutorial_redball.js">here</a>.</p>
+<p>That's it, we now have a shiny red ball floating in an environment! The complete JavaScript file is
+available <a href="tutorial_redball.js">here</a>.</p>
+<p>In the <a href="tutorial_suzanne.html">next tutorial</a>, we'll take a closer look at textures and interaction.</p>
 
 </body>
 </html>

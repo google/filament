@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en"><head>
+<link href="https://google.github.io/filament/favicon.png" rel="icon" type="image/x-icon" />
 <link href="https://fonts.googleapis.com/css?family=Open+Sans:300,400,600,700|Tangerine:700|Inconsolata" rel="stylesheet">
 <link href="main.css" rel="stylesheet" type="text/css">
 </head>
@@ -52,7 +53,7 @@ a mobile-friendly page with a full-screen canvas.</p>
     <span style="color: #408080; font-style: italic">// TODO: create entities</span>
     <span style="color: #008000; font-weight: bold">this</span>.render <span style="color: #666666">=</span> <span style="color: #008000; font-weight: bold">this</span>.render.bind(<span style="color: #008000; font-weight: bold">this</span>);
     <span style="color: #008000; font-weight: bold">this</span>.resize <span style="color: #666666">=</span> <span style="color: #008000; font-weight: bold">this</span>.resize.bind(<span style="color: #008000; font-weight: bold">this</span>);
-    <span style="color: #008000">window</span>.addEventListener(<span style="color: #BA2121">&quot;resize&quot;</span>, <span style="color: #008000; font-weight: bold">this</span>.resize);
+    <span style="color: #008000">window</span>.addEventListener(<span style="color: #BA2121">&#39;resize&#39;</span>, <span style="color: #008000; font-weight: bold">this</span>.resize);
     <span style="color: #008000">window</span>.requestAnimationFrame(<span style="color: #008000; font-weight: bold">this</span>.render);
   }
   render() {
@@ -79,13 +80,16 @@ This is a <em>material package</em>, which is a binary file that contains shader
 that define a PBR material. We'll learn more about material packages in the next tutorial.</p>
 <h2>Spawn a local server</h2>
 <p>Because of CORS restrictions, your web app cannot fetch the material package directly from the
-file system. One way around this is to create a temporary server using Python:</p>
+file system. One way around this is to create a temporary server using Python or node:</p>
 <div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span>python3 -m http.server     <span style="color: #408080; font-style: italic"># Python 3</span>
 python -m SimpleHTTPServer <span style="color: #408080; font-style: italic"># Python 2.7</span>
+npx http-server -p <span style="color: #666666">8000</span>    <span style="color: #408080; font-style: italic"># nodejs</span>
 </pre></div>
 
 <p>To see if this works, navigate to <a href="http://localhost:8000">http://localhost:8000</a> and check if you
 can load the page without any errors appearing in the developer console.</p>
+<p>Take care not to use Python's simple server in production since it does not serve WebAssembly files
+with the correct MIME type.</p>
 <h2>Create the Engine and Scene</h2>
 <p>We now have a basic skeleton that can respond to paint and resize events. Let's start adding
 Filament objects to the app. Insert the following code into the top of the app constructor.</p>
@@ -228,8 +232,8 @@ displays. It also adjusts the camera frustum accordingly.</p>
 </pre></div>
 
 <p>You should now have a spinning triangle! The completed JavaScript is available
-<a href="tutorial_triangle.js">here</a>. In the next tutorial, we'll take a closer look at Filament
-materials and 3D rendering.</p>
+<a href="tutorial_triangle.js">here</a>.</p>
+<p>In the <a href="tutorial_redball.html">next tutorial</a>, we'll take a closer look at Filament materials and 3D rendering.</p>
 
 </body>
 </html>
