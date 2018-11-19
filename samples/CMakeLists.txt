@@ -143,7 +143,6 @@ endfunction()
 
 if (NOT ANDROID)
     add_assimp_demo(frame_generator)
-    add_assimp_demo(gltf_viewer)
     add_assimp_demo(lightbulb)
     add_assimp_demo(material_sandbox)
     add_assimp_demo(sample_full_pbr)

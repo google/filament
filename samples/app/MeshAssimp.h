@@ -29,7 +29,6 @@ namespace filament {
 #include <map>
 #include <vector>
 
-#include <math/mat3.h>
 #include <math/mat4.h>
 #include <math/quat.h>
 #include <math/vec3.h>
@@ -40,9 +39,6 @@ namespace filament {
 #include <filamat/MaterialBuilder.h>
 #include <filament/Color.h>
 #include <filament/Box.h>
-#include <filament/Texture.h>
-#include <filament/TextureSampler.h>
-#include <filament/TransformManager.h>
 
 class MeshAssimp {
 public:
@@ -60,11 +56,6 @@ public:
     const std::vector<utils::Entity> getRenderables() const noexcept {
         return mRenderables;
     }
-
-    //For use with normalizing coordinates
-    math::float3 minBound = math::float3(1.0f);
-    math::float3 maxBound = math::float3(-1.0f);
-    utils::Entity rootEntity;
 
 private:
     struct Part {
@@ -84,7 +75,6 @@ private:
         std::vector<Part> parts;
         filament::Box aabb;
         mat4f transform;
-        mat4f accTransform;
     };
 
     bool setFromFile(const utils::Path& file,
@@ -93,11 +83,8 @@ private:
             std::vector<short4>&   outTangents,
             std::vector<half2>&    outTexCoords,
             std::vector<Mesh>&     outMeshes,
-            std::vector<int>&      outParents,
-            std::map<std::string, filament::MaterialInstance*>& outMaterials
-            );
+            std::vector<int>&      outParents);
 
-    filament::Texture* createOneByOneTexture(uint32_t textureData);
     filament::Engine& mEngine;
     filament::VertexBuffer* mVertexBuffer = nullptr;
     filament::IndexBuffer* mIndexBuffer = nullptr;
@@ -105,23 +92,7 @@ private:
     filament::Material* mDefaultColorMaterial = nullptr;
     filament::Material* mDefaultTransparentColorMaterial = nullptr;
 
-    filament::Material* mGltfMaterial = nullptr; // Single sided gltf material
-    filament::Material* mGltfMaterialDS = nullptr; // Double sided gltf material
-    filament::Material* mGltfMaterialTrans = nullptr; // Transparent gltf material
-    filament::Material* mGltfMaterialDSTrans = nullptr; // Double sided Transparent gltf material
-    filament::Material* mGltfMaterialMasked = nullptr; // Transparent gltf material
-    filament::Material* mGltfMaterialDSMasked = nullptr; // Double sided Transparent gltf material
-    filament::Material* mGltfMaterialUnlit = nullptr;
-    filament::Material* mGltfMaterialDSUnlit = nullptr;
-    filament::Texture* mDefaultMap = nullptr;
-    filament::Texture* mDefaultNormalMap = nullptr;
-    float mDefaultMetallic = 0.0;
-    float mDefaultRoughness = 0.4;
-    filament::sRGBColor mDefaultEmissive = filament::sRGBColor({0.0f, 0.0f, 0.0f});
-
     std::vector<utils::Entity> mRenderables;
-
-    std::vector<filament::Texture*> mTextures;
 };
 
 #endif // TNT_FILAMENT_SAMPLE_MESH_ASSIMP_H
