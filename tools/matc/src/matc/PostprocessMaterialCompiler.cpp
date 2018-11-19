@@ -37,8 +37,7 @@ bool PostprocessMaterialCompiler::run(const Config& config) {
         .platform(config.getPlatform())
         .targetApi(config.getTargetApi())
         .optimization(config.getOptimizationLevel())
-        .printShaders(config.printShaders())
-        .codeGenTargetApi(config.getCodeGenTargetApi());
+        .printShaders(config.printShaders());
 
     Package package = builder.build();
     if (!package.isValid()) {

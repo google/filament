@@ -60,10 +60,9 @@ void MaterialBuilderBase::prepare() {
         mShaderModels.set(static_cast<size_t>(ShaderModel::GL_CORE_41));
     }
 
-    // If the code gen target API was specifically set to Vulkan, generate for Vulkan, otherwise
-    // generate for OpenGL (case OPENGL or ALL)
-    TargetApi glCodeGenTargetApi = mCodeGenTargetApi != TargetApi::VULKAN ?
-            TargetApi::OPENGL : TargetApi::VULKAN;
+    // OpenGL is a special case. If we're doing any optimization, then we need to go to Spir-V.
+    TargetApi glCodeGenTargetApi = mOptimization > MaterialBuilder::Optimization::PREPROCESSOR ?
+            TargetApi::VULKAN : TargetApi::OPENGL;
 
     // Build a list of codegen permutations, which is useful across all types of material builders.
     // The shader model loop starts at 1 to skip ShaderModel::UNKNOWN.
@@ -256,7 +255,6 @@ MaterialBuilder& MaterialBuilder::platform(Platform platform) noexcept {
 
 MaterialBuilder& MaterialBuilder::targetApi(TargetApi targetApi) noexcept {
     mTargetApi = targetApi;
-    mCodeGenTargetApi = targetApi;
     return *this;
 }
 
@@ -267,11 +265,6 @@ MaterialBuilder& MaterialBuilder::optimization(Optimization optimization) noexce
 
 MaterialBuilder& MaterialBuilder::printShaders(bool printShaders) noexcept {
     mPrintShaders = printShaders;
-    return *this;
-}
-
-MaterialBuilder& MaterialBuilder::codeGenTargetApi(TargetApi targetApi) noexcept {
-    mCodeGenTargetApi = targetApi;
     return *this;
 }
 
@@ -429,12 +422,6 @@ Package MaterialBuilder::build() noexcept {
     SimpleFieldChunk<uint8_t> matInterpolation(ChunkType::MaterialInterpolation,
             static_cast<uint8_t>(mInterpolation));
     container.addChild(&matInterpolation);
-
-    // In order to generate SPIR-V, we must run the GLSL through the post-processor.
-    if (mCodeGenTargetApi != TargetApi::OPENGL && mPostprocessorCallback == nullptr) {
-        utils::slog.e << "SPIR-V requested for " << mMaterialName.c_str()
-                << " but there is no post-processor." << utils::io::endl;
-    }
 
     SimpleFieldChunk<uint32_t> matShaderModels(ChunkType::MaterialShaderModels,
             mShaderModels.getValue());
