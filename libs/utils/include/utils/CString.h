@@ -279,14 +279,10 @@ private:
         return strncmp(data(), rhs.data(), size());
     }
 
-    int compare(const StaticString& rhs) const noexcept {
-        size_type lhs_size = size();
-        size_type rhs_size = rhs.size();
-        if (lhs_size < rhs_size) return -1;
-        if (lhs_size > rhs_size) return 1;
-        return strncmp(data(), rhs.data(), size());
+    friend bool operator==(CString const& lhs, StaticString const& rhs) noexcept {
+        return (lhs.data() == rhs.data()) ||
+               ((lhs.size() == rhs.size()) && !strncmp(lhs.data(), rhs.data(), lhs.size()));
     }
-
     friend bool operator==(CString const& lhs, CString const& rhs) noexcept {
         return (lhs.data() == rhs.data()) ||
                ((lhs.size() == rhs.size()) && !strncmp(lhs.data(), rhs.data(), lhs.size()));

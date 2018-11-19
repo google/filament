@@ -78,7 +78,7 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform,
     for (const VkLayerProperties& layer : availableLayers) {
         const utils::CString availableLayer(layer.layerName);
         for (const auto& desired : DESIRED_LAYERS) {
-            if (availableLayer.compare(desired) == 0) {
+            if (availableLayer == desired) {
                 enabledLayers.push_back(desired.c_str());
             }
         }
