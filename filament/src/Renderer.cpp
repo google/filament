@@ -317,7 +317,7 @@ bool FRenderer::beginFrame(FSwapChain* swapChain) {
     driver.beginFrame(monotonic_clock_ns, mFrameId);
     driver.setPresentationTime(monotonic_clock_ns);
 
-    if (mFrameSkipper.skipFrameNeeded()) {
+    if (!mFrameSkipper.beginFrame()) {
         mFrameInfoManager.cancelFrame();
         driver.endFrame(mFrameId);
         engine.flush();
