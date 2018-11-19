@@ -50,12 +50,10 @@ bool SpirvDictionaryReader::unflatten(Unflattener& f, BlobDictionary& dictionary
 #if defined (FILAMENT_DRIVER_SUPPORTS_VULKAN)
         size_t spirvSize = smolv::GetDecodedBufferSize(compressed, compressedSize);
         if (spirvSize == 0) {
-            utils::slog.e << "Error with SPIRV decompression" << utils::io::endl;
             return false;
         }
         BlobDictionary::Blob spirv(spirvSize);
         if (!smolv::Decode(compressed, compressedSize, spirv.data(), spirvSize)) {
-            utils::slog.e << "Error with SPIRV decompression" << utils::io::endl;
             return false;
         }
         dictionary.addBlob(std::move(spirv));
