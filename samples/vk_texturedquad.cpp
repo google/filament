@@ -81,7 +81,7 @@ int main(int argc, char** argv) {
     auto setup = [&app](Engine* engine, View* view, Scene* scene) {
 
         // Load texture
-        Path path = FilamentApp::getRootPath() + "third_party/textures/Moss_01/Moss_01_Color.png";
+        Path path = FilamentApp::getRootPath() + "textures/Moss_01/Moss_01_Color.png";
         if (!path.exists()) {
             std::cerr << "The texture " << path << " does not exist" << std::endl;
             exit(1);
