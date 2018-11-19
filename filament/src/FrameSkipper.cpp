@@ -21,31 +21,21 @@ namespace filament {
 namespace details {
 
 FrameSkipper::FrameSkipper(FEngine& engine, size_t latency) noexcept
-        : mEngine(engine)
-#ifndef NDEBUG
-        , mLatency((uint32_t)std::max(latency, size_t(1)))
-#endif
-{
-    // by pushing latency elements in the vector, we end-up checking the mFences vector
-    // in beginFrame() with latency frames behind the last endFrame().
-    mFences.resize(latency);
+        : mEngine(engine), mLast((uint32_t)std::max(latency, size_t(1)) - 1) {
+    assert(latency <= MAX_FRAME_LATENCY);
 }
 
 FrameSkipper::~FrameSkipper() noexcept {
-    for (FFence* fence : mFences) {
+    for (FFence* fence : mDelayedFences) {
         if (fence) {
             mEngine.destroy(fence);
         }
     }
 }
 
-bool FrameSkipper::beginFrame() const noexcept {
-
-    // this is an invariant
-    assert(mFences.size() == mLatency);
-
-    auto& fences = mFences;
-    FFence* fence = fences.front();
+bool FrameSkipper::beginFrame() noexcept {
+    auto& fences = mDelayedFences;
+    FFence* const fence = fences.front();
     if (fence) {
         auto status = fence->wait(Fence::Mode::DONT_FLUSH, 0);
         if (status == Fence::FenceStatus::TIMEOUT_EXPIRED) {
@@ -54,12 +44,14 @@ bool FrameSkipper::beginFrame() const noexcept {
         }
         mEngine.destroy(fence);
     }
-    fences.pop_front();
+    // shift all fences down by 1
+    std::move(fences.begin() + 1, fences.end(), fences.begin());
+    fences.back() = nullptr;
     return true;
 }
 
 void FrameSkipper::endFrame() noexcept {
-    mFences.push_back(mEngine.createFence(Fence::Type::HARD));
+    mDelayedFences[mLast] = mEngine.createFence(Fence::Type::HARD);
 }
 
 
