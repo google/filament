@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_DETAULS_FRAMESKIPPER_H
-#define TNT_FILAMENT_DETAULS_FRAMESKIPPER_H
+#ifndef TNT_FILAMENT_DETAILS_FRAMESKIPPER_H
+#define TNT_FILAMENT_DETAILS_FRAMESKIPPER_H
 
 #include "details/Fence.h"
 
@@ -31,17 +31,22 @@ public:
     explicit FrameSkipper(FEngine& engine, size_t latency = 2) noexcept;
     ~FrameSkipper() noexcept;
 
-    void endFrame() noexcept;
+    // returns false if we need to skip this frame, because the gpu is running behind the cpu.
+    // in that case, don't call endFrame().
+    // returns true if rendering can proceed. Always call endFrame() when done.
+    bool beginFrame() const noexcept;
 
-    bool skipFrameNeeded() const noexcept;
+    void endFrame() noexcept;
 
 private:
     FEngine& mEngine;
     mutable std::deque<FFence *> mFences;
-    mutable int mExtraSkipCount = 0;
+#ifndef NDEBUG
+    uint32_t mLatency = 0;
+#endif
 };
 
 } // namespace details
 } // namespace filament
 
-#endif // TNT_FILAMENT_DETAULS_FRAMESKIPPER_H
+#endif // TNT_FILAMENT_DETAILS_FRAMESKIPPER_H
