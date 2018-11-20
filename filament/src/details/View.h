@@ -38,7 +38,7 @@
 #include <utils/Slice.h>
 #include <utils/Range.h>
 
-#include <deque>
+#include <array>
 
 namespace utils {
 class JobSystem;
@@ -214,6 +214,8 @@ public:
     void setCameraUser(FCamera* camera) noexcept { setCullingCamera(camera); }
 
 private:
+    static constexpr size_t MAX_FRAMETIME_HISTORY = 32u;
+
     void prepareVisibleLights(
             FLightManager& lcm, utils::JobSystem& js, FScene::LightSoa& lightData) const;
 
@@ -270,7 +272,8 @@ private:
 
     using duration = std::chrono::duration<float, std::milli>;
     DynamicResolutionOptions mDynamicResolution;
-    std::deque<duration> mFrameTimeHistory;
+    std::array<duration, MAX_FRAMETIME_HISTORY> mFrameTimeHistory;
+    size_t mFrameTimeHistorySize = 0;
 
     math::float2 mScale = 1.0f;
     float mDynamicWorkloadScale = 1.0f;
