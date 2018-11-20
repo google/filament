@@ -200,7 +200,9 @@ struct State {
 };
 
 //TODO: Remove redundant method from sample_full_pbr
-static void loadTexture(Engine *engine, const std::string &filePath, Texture **map, bool sRGB, bool hasAlpha) {
+static void loadTexture(Engine *engine, const std::string &filePath, Texture **map,
+        bool sRGB, bool hasAlpha) {
+
     if (!filePath.empty()) {
         Path path(filePath);
         if (path.exists()) {
@@ -277,13 +279,15 @@ void loadEmbeddedTexture(Engine *engine, aiTexture *embeddedTexture, Texture **m
     (*map)->generateMipmaps(*engine);
 }
 
-// Takes a texture filename and returns the index of the embedded texture, -1 if the texture is not embedded
+// Takes a texture filename and returns the index of the embedded texture,
+// -1 if the texture is not embedded
 int32_t getEmbeddedTextureId(const aiString& path) {
     const char *pathStr = path.C_Str();
     if (path.length >= 2 && pathStr[0] == '*') {
-        for (int i = 0; i < path.length; i++) {
-            if (!isdigit(pathStr[i]))
+        for (int i = 1; i < path.length; i++) {
+            if (!isdigit(pathStr[i])) {
                 return -1;
+            }
         }
         return std::atoi(pathStr + 1);
     }
@@ -503,12 +507,10 @@ bool MeshAssimp::setFromFile(const Path& file, std::vector<uint32_t>& outIndices
 
     if (!scene) {
         std::cout << "No scene" << std::endl;
-        return false;
     }
 
-    if (!scene->mRootNode) {
+    if (scene && !scene->mRootNode) {
         std::cout << "No root node" << std::endl;
-        return false;
     }
 
     // we could use those, but we want to keep the graph if any, for testing
