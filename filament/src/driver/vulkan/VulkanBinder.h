@@ -70,7 +70,7 @@ namespace driver {
 class VulkanBinder {
 public:
     static constexpr uint32_t NUM_UBUFFER_BINDINGS = filament::BindingPoints::COUNT;
-    static constexpr uint32_t NUM_SAMPLER_BINDINGS = 8;
+    static constexpr uint32_t NUM_SAMPLER_BINDINGS = filament::MAX_SAMPLER_COUNT;
     static constexpr uint32_t NUM_SHADER_MODULES = 2;
     static constexpr uint32_t MAX_VERTEX_ATTRIBUTES = filament::ATTRIBUTE_INDEX_COUNT;
 

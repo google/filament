@@ -25,7 +25,6 @@
 #include <utils/CString.h>
 #include <utils/trap.h>
 
-#include <csignal>
 #include <set>
 
 // Vulkan functions often immediately dereference pointers, so it's fine to pass in a pointer
@@ -885,6 +884,10 @@ void VulkanDriver::draw(Driver::PipelineState pipelineState, Driver::RenderPrimi
             if (!sampler->t) {
                 continue;
             }
+
+            // Obtain the global sampler binding index and pass this to VulkanBinder. Note that
+            // "binding" is an offset that is global to the shader, whereas "samplerIndex" is an
+            // offset into the virtual sampler buffer.
             uint8_t binding, group;
             if (program->samplerBindings.getSamplerBinding(bufferIdx, samplerIndex, &binding,
                     &group)) {

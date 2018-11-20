@@ -20,11 +20,15 @@
 
 #include <private/filament/SibGenerator.h>
 
+#include <utils/Log.h>
+
 namespace filament {
 
-void SamplerBindingMap::populate(SamplerInterfaceBlock* perMaterialSib) {
+void SamplerBindingMap::populate(SamplerInterfaceBlock* perMaterialSib, const char* materialName) {
     // To avoid collision, the sampler bindings start after the last UBO binding.
-    uint8_t offset = filament::BindingPoints::COUNT;
+    const uint8_t numUniformBlockBindings = filament::BindingPoints::COUNT;
+    uint8_t offset = numUniformBlockBindings;
+    bool overflow = false;
     for (uint8_t blockIndex = 0; blockIndex < filament::BindingPoints::COUNT; blockIndex++) {
         mSamplerBlockOffsets[blockIndex] = offset;
         filament::SamplerInterfaceBlock const* sib;
@@ -36,11 +40,40 @@ void SamplerBindingMap::populate(SamplerInterfaceBlock* perMaterialSib) {
         if (sib) {
             auto sibFields = sib->getSamplerInfoList();
             for (auto sInfo : sibFields) {
+                if (offset - numUniformBlockBindings >= filament::MAX_SAMPLER_COUNT) {
+                    overflow = true;
+                }
                 addSampler({
                     .blockIndex = blockIndex,
                     .localOffset = sInfo.offset,
                     .globalOffset = offset++,
                 });
+            }
+        }
+    }
+
+    // If an overflow occurred, go back through and list all sampler names. This is helpful to
+    // material authors who need to understand where the samplers are coming from.
+    if (overflow) {
+        utils::slog.e << "WARNING: Exceeded max sampler count of " << filament::MAX_SAMPLER_COUNT;
+        if (materialName) {
+            utils::slog.e << " (" << materialName << ")";
+        }
+        utils::slog.e << utils::io::endl;
+        offset = 0;
+        for (uint8_t blockIndex = 0; blockIndex < filament::BindingPoints::COUNT; blockIndex++) {
+            filament::SamplerInterfaceBlock const* sib;
+            if (blockIndex == filament::BindingPoints::PER_MATERIAL_INSTANCE) {
+                sib = perMaterialSib;
+            } else {
+                sib = filament::SibGenerator::getSib(blockIndex);
+            }
+            if (sib) {
+                auto sibFields = sib->getSamplerInfoList();
+                for (auto sInfo : sibFields) {
+                    utils::slog.e << "  " << offset << " " << sInfo.name.c_str() << utils::io::endl;
+                    offset++;
+                }
             }
         }
     }

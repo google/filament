@@ -422,7 +422,9 @@ void VulkanBinder::evictDescriptors(std::function<bool(const DescriptorKey&)> fi
 
 void VulkanBinder::bindUniformBuffer(uint32_t bindingIndex, VkBuffer uniformBuffer,
         VkDeviceSize offset, VkDeviceSize size) noexcept {
-    assert(bindingIndex < NUM_UBUFFER_BINDINGS);
+    ASSERT_POSTCONDITION(bindingIndex < NUM_UBUFFER_BINDINGS,
+            "Uniform bindings overflow: index = %d, capacity = %d.",
+            bindingIndex, NUM_UBUFFER_BINDINGS);
     auto& key = mDescriptorKey;
     if (key.uniformBuffers[bindingIndex] != uniformBuffer ||
         key.uniformBufferOffsets[bindingIndex] != offset ||
@@ -437,7 +439,9 @@ void VulkanBinder::bindUniformBuffer(uint32_t bindingIndex, VkBuffer uniformBuff
 void VulkanBinder::bindSampler(uint32_t bindingIndex, VkDescriptorImageInfo samplerInfo) noexcept {
     const uint32_t offset = NUM_UBUFFER_BINDINGS;
     assert(bindingIndex >= offset);
-    assert(bindingIndex < offset + NUM_SAMPLER_BINDINGS);
+    ASSERT_POSTCONDITION(bindingIndex < offset + NUM_SAMPLER_BINDINGS,
+            "Sampler bindings overflow: index = %d, capacity = %d.",
+            bindingIndex - offset, NUM_SAMPLER_BINDINGS);
     VkDescriptorImageInfo& imageInfo = mDescriptorKey.samplers[bindingIndex - offset];
     if (imageInfo.sampler != samplerInfo.sampler || imageInfo.imageView != samplerInfo.imageView ||
         imageInfo.imageLayout != samplerInfo.imageLayout) {

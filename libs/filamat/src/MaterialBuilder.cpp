@@ -326,7 +326,7 @@ void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
     info.blendingMode = mBlendingMode;
     info.shading = mShading;
     info.hasShadowMultiplier = mShadowMultiplier;
-    info.samplerBindings.populate(&info.sib);
+    info.samplerBindings.populate(&info.sib, mMaterialName.c_str());
 }
 
 static void showErrorMessage(const char* materialName, uint8_t variant,

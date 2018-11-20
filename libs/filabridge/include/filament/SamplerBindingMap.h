@@ -48,8 +48,10 @@ class SamplerInterfaceBlock;
 class SamplerBindingMap {
 public:
     // Assigns a range of finalized binding points to each sampler block. If a per-material SIB
-    // is provided, then material samplers are also inserted (always at the end).
-    void populate(SamplerInterfaceBlock* perMaterialSib = nullptr);
+    // is provided, then material samplers are also inserted (always at the end). The optional
+    // material name is used for error reporting only.
+    void populate(SamplerInterfaceBlock* perMaterialSib = nullptr,
+            const char* materialName = nullptr);
 
     // Given a valid Filament binding point and an offset with the block, returns true and sets
     // the output arguments: (1) the globally unique binding index, and (2) the grouping index.
