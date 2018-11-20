@@ -70,7 +70,6 @@ public:
 
 private:
     PostProcessCallBack mPostprocessorCallback = nullptr;
-    Optimization mOptimization = Optimization::NONE;
 };
 
 } // namespace
