@@ -32,7 +32,7 @@ using Backend = Engine::Backend;
 struct App {
     utils::Entity light;
     std::map<std::string, MaterialInstance*> materials;
-    MeshAssimp* meshes;
+    MeshAssimp* meshes = nullptr;
     mat4f transform;
 };
 
@@ -65,7 +65,9 @@ int main(int argc, char** argv) {
 
         // Enable the metallic surface property to observe reflections.
         for (auto& pair : app.materials) {
-            pair.second->setParameter("metallic", 1.0f);
+            if (pair.second->getMaterial()->hasParameter("metallic")) {
+                pair.second->setParameter("metallic", 1.0f);
+            }
         }
 
         // Add light sources into the scene.
