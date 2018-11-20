@@ -119,6 +119,22 @@ constexpr float exp(float x) noexcept {
     return float(exp(double(x)));
 }
 
+inline float MATH_PURE pow(float a, float b) noexcept {
+    constexpr int fudgeMinRMSE = 486411;
+    constexpr int K = (127<<23) - fudgeMinRMSE;
+    union { float f; int x; } u = { a };
+    u.x = (int)(b * (u.x - K) + K);
+    return u.f;
+}
+
+// this is more precise than pow() above
+inline float MATH_PURE pow2dot2(float a) noexcept {
+    union { float f; int x; } u = { a };
+    constexpr int K = (127<<23);
+    u.x = (int)(0.2f * (u.x - K) + K);
+    return a * a * u.f; // a^2 * a^0.2
+}
+
 /*
  * unsigned saturated arithmetic
  */
