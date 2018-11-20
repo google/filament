@@ -265,10 +265,17 @@ endif()
 # ==================================================================================================
 # Sub-projects
 # ==================================================================================================
+# spirv-tools must come before filamat, as filamat relies on the presence of the
+# spirv-tools_SOURCE_DIR variable.
+add_subdirectory(${EXTERNAL}/spirv-tools)
+add_subdirectory(${EXTERNAL}/glslang/tnt)
+add_subdirectory(${EXTERNAL}/spirv-cross/tnt)
+
 # Common to all platforms
 add_subdirectory(${EXTERNAL}/libgtest/tnt)
 add_subdirectory(${LIBRARIES}/filabridge)
 add_subdirectory(${LIBRARIES}/filaflat)
+add_subdirectory(${LIBRARIES}/filamat)
 add_subdirectory(${LIBRARIES}/filameshio)
 add_subdirectory(${LIBRARIES}/image)
 add_subdirectory(${LIBRARIES}/math)
@@ -299,15 +306,6 @@ if (WEBGL)
 endif()
 
 if (NOT ANDROID AND NOT WEBGL AND NOT IOS)
-    # spirv-tools must come before filamat, as filamat relies on the presence of the
-    # spirv-tools_SOURCE_DIR variable.
-    add_subdirectory(${EXTERNAL}/spirv-tools)
-    add_subdirectory(${EXTERNAL}/glslang/tnt)
-    add_subdirectory(${EXTERNAL}/spirv-cross/tnt)
-
-    # filamat is only needed for samples and matc
-    add_subdirectory(${LIBRARIES}/filamat)
-
     add_subdirectory(${FILAMENT}/samples)
 
     add_subdirectory(${LIBRARIES}/bluegl)

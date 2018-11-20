@@ -60,6 +60,11 @@ elseif("${CMAKE_SYSTEM_NAME}" STREQUAL "Android")
   set(SPIRV_TIMER_ENABLED ON)
 elseif("${CMAKE_SYSTEM_NAME}" STREQUAL "FreeBSD")
   add_definitions(-DSPIRV_FREEBSD)
+# Filament specific changes
+elseif("${CMAKE_SYSTEM_NAME}" STREQUAL "Emscripten")
+  # Allow spirv-tools to compile with Emscripten
+  add_definitions(-DSPIRV_EMSCRIPTEN)
+# End Filament specific changes
 else()
   message(FATAL_ERROR "Your platform '${CMAKE_SYSTEM_NAME}' is not supported!")
 endif()

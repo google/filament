@@ -15,7 +15,8 @@
 cmake_minimum_required(VERSION 3.1)
 project(SPIRV-Cross)
 
-option(SPIRV_CROSS_EXCEPTIONS_TO_ASSERTIONS "Instead of throwing exceptions assert" OFF)
+# Use assertions instead of exceptions so we can succesfully compile with -fno-exceptions.
+option(SPIRV_CROSS_EXCEPTIONS_TO_ASSERTIONS "Instead of throwing exceptions assert" ON)
 
 if(${CMAKE_GENERATOR} MATCHES "Makefile")
   if(${CMAKE_CURRENT_SOURCE_DIR} STREQUAL ${CMAKE_CURRENT_BINARY_DIR})
@@ -25,9 +26,11 @@ endif()
 
 set(spirv-compiler-options "")
 set(spirv-compiler-defines "")
+set(spirv-compiler-public-defines "")
 
 if(SPIRV_CROSS_EXCEPTIONS_TO_ASSERTIONS)
-  set(spirv-compiler-defines ${spirv-compiler-defines} SPIRV_CROSS_EXCEPTIONS_TO_ASSERTIONS)
+  # This needs to be public, because exceptions are exposed in public headers.
+  set(spirv-compiler-public-defines ${spirv-compiler-public-defines} SPIRV_CROSS_EXCEPTIONS_TO_ASSERTIONS)
 endif()
 
 # To specify special debug or optimization options, use
@@ -61,6 +64,7 @@ macro(spirv_cross_add_library name config_name)
       PUBLIC_HEADERS "${hdrs}")
   target_compile_options(${name} PRIVATE ${spirv-compiler-options})
   target_compile_definitions(${name} PRIVATE ${spirv-compiler-defines})
+  target_compile_definitions(${name} PUBLIC ${spirv-compiler-public-defines})
 endmacro()
 
 spirv_cross_add_library(spirv-cross-core spirv_cross_core STATIC
