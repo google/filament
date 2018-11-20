@@ -23,7 +23,7 @@
 
 #include <filamat/MaterialBuilder.h>
 
-namespace matc {
+namespace filamat {
 
 using Property = filamat::MaterialBuilder::Property;
 using UniformType = filamat::MaterialBuilder::UniformType;
@@ -83,6 +83,6 @@ std::string Enums::toString(T t) noexcept {
     return "";
 }
 
-}
+} // namespace filamat
 
 #endif //TNT_ENUMMANAGER_H

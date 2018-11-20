@@ -22,14 +22,14 @@
 
 #include <filamat/MaterialBuilder.h>
 
-#include "Enums.h"
+#include <filamat/Enums.h>
+#include <filamat/sca/GLSLTools.h>
+
 #include "MaterialLexeme.h"
 #include "MaterialLexer.h"
 #include "JsonishLexer.h"
 #include "JsonishParser.h"
 #include "ParametersProcessor.h"
-#include "sca/GLSLTools.h"
-#include "sca/GLSLPostProcessor.h"
 
 using namespace utils;
 using namespace filamat;
@@ -287,7 +287,9 @@ bool MaterialCompiler::run(const Config& config) {
     builder
         .platform(config.getPlatform())
         .targetApi(config.getTargetApi())
+        .optimization(config.getOptimizationLevel())
         .codeGenTargetApi(config.getCodeGenTargetApi())
+        .printShaders(config.printShaders())
         .variantFilter(config.getVariantFilter() | builder.getVariantFilter());
 
     // At this point the builder may be able to generate valid shaders if the user populated the
@@ -297,11 +299,6 @@ bool MaterialCompiler::run(const Config& config) {
         std::cerr << "Could not compile material " << input->getName() << std::endl;
         return false;
     }
-
-    // Install postprocessor (to optimize/strip GLSL).
-    GLSLPostProcessor postProcessor(config);
-
-    builder.postProcessor(std::bind(&GLSLPostProcessor::process, postProcessor, _1, _2, _3, _4, _5));
 
     // Write builder.build() to output.
     Package package = builder.build();

@@ -22,7 +22,7 @@
 #include <ctype.h>
 #include <private/filament/Variant.h>
 
-#include "Enums.h"
+#include <filamat/Enums.h>
 
 using namespace filamat;
 using namespace utils;

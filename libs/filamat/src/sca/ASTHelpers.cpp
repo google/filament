@@ -14,18 +14,17 @@
  * limitations under the License.
  */
 
-#include "ASTHelpers.h"
+#include "filamat/sca/ASTHelpers.h"
+
+#include "filamat/sca/GLSLTools.h"
 
 #include <iostream>
-
-#include "GLSLTools.h"
 
 #include <intermediate.h>
 #include <localintermediate.h>
 using namespace glslang;
 
-namespace matc {
-namespace ASTUtils{
+namespace ASTUtils {
 
 // Traverse the AST to find the definition of a function based on its name/signature.
 // e.g: prepareMaterial(struct-MaterialInputs-vf4-vf41;
@@ -359,4 +358,3 @@ void getFunctionParameters(TIntermAggregate* func, std::vector<FunctionParameter
 }
 
 } // namespace ASTHelpers
-} // namespace matc

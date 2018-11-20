@@ -24,14 +24,13 @@
 
 #include <filamat/MaterialBuilder.h>
 #include <ShaderLang.h>
-#include <matc/Config.h>
 
 class TIntermNode;
 namespace glslang {
 class TPoolAllocator;
 }
 
-namespace matc {
+namespace filamat {
 
 // Used for symbol tracking during static code analysis.
 struct Access {
@@ -149,7 +148,7 @@ public:
     static EShMessages glslangFlagsFromTargetApi(filamat::MaterialBuilder::TargetApi targetApi);
 
     static void prepareShaderParser(glslang::TShader& shader, EShLanguage language,
-            int version, Config::Optimization optimization);
+            int version, filamat::MaterialBuilder::Optimization optimization);
 
 private:
 
@@ -176,6 +175,6 @@ private:
 
 };
 
-} // namespace matc
+} // namespace filamat
 
 #endif //TNT_STATICCODEANALYZER_H
