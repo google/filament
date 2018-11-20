@@ -504,6 +504,12 @@ bool MeshAssimp::setFromFile(const Path& file, std::vector<uint32_t>& outIndices
             aiProcess_Triangulate);
 
     scene = importer.ApplyPostProcessing(aiProcess_CalcTangentSpace);
+    size_t index = importer.GetImporterIndex(file.getExtension().c_str());
+    const aiImporterDesc* importerDesc = importer.GetImporterInfo(index);
+    bool isGLTF = false;
+    if (!strncmp("glTF2 Importer", importerDesc->mName, 14)) {
+        isGLTF = true;
+    }
 
     if (!scene) {
         std::cout << "No scene" << std::endl;
@@ -606,6 +612,18 @@ bool MeshAssimp::setFromFile(const Path& file, std::vector<uint32_t>& outIndices
                     uint32_t materialId = mesh->mMaterialIndex;
                     aiMaterial const* material = scene->mMaterials[materialId];
 
+                    std::string materialName;
+                    if (material->Get(AI_MATKEY_NAME, name) != AI_SUCCESS) {
+                        static int matCount = 0;
+                        while (outMaterials.find("_mat_" + std::to_string(matCount))
+                               != outMaterials.end()) {
+                            matCount++;
+                        }
+                        materialName = "_mat_" + std::to_string(matCount);
+                    } else {
+                        materialName = name.C_Str();
+                    }
+
                     aiString baseColorPath;
                     aiString AOPath;
                     aiString MRPath;
@@ -614,25 +632,12 @@ bool MeshAssimp::setFromFile(const Path& file, std::vector<uint32_t>& outIndices
                     aiString name;
                     aiTextureMapMode mapMode[3];
 
-                    std::string materialName;
-                    if (material->Get(AI_MATKEY_NAME, name) != AI_SUCCESS) {
-                        static int matCount = 0;
-                        while (outMaterials.find("_mat_" + std::to_string(matCount))
-                                 != outMaterials.end()) {
-                            matCount++;
-                        }
-                        materialName = "_mat_" + std::to_string(matCount);
-                    } else {
-                        materialName = name.C_Str();
-                    }
-
                     std::string dirName = file.getParent();
                     TextureSampler defaultSampler(
                             TextureSampler::MinFilter::LINEAR_MIPMAP_LINEAR,
                            TextureSampler::MagFilter::LINEAR, TextureSampler::WrapMode::REPEAT);
 
                     if (outMaterials.find(materialName) == outMaterials.end()) {
-
                         bool materialIsDoubleSided = false;
                         material->Get("$mat.twosided", 0, 0, materialIsDoubleSided);
 
@@ -698,7 +703,7 @@ bool MeshAssimp::setFromFile(const Path& file, std::vector<uint32_t>& outIndices
                         }
 
                         if (material->GetTexture(aiTextureType_UNKNOWN, 0, &MRPath, nullptr, nullptr,
-                                                 nullptr, nullptr, mapMode) == AI_SUCCESS) {
+                                nullptr, nullptr, mapMode) == AI_SUCCESS) {
                             setTextureFromPath(scene, &mEngine, mTextures, MRPath, materialName,
                                     dirName, mapMode, "metallicRoughnessMap", outMaterials);
 
@@ -711,8 +716,8 @@ bool MeshAssimp::setFromFile(const Path& file, std::vector<uint32_t>& outIndices
                                     mDefaultRoughness);
                         }
 
-                        if (material->GetTexture(aiTextureType_LIGHTMAP, 0, &AOPath, nullptr, nullptr,
-                                                 nullptr, nullptr, mapMode) == AI_SUCCESS) {
+                        if (material->GetTexture(aiTextureType_LIGHTMAP, 0, &AOPath, nullptr,
+                                nullptr, nullptr, nullptr, mapMode) == AI_SUCCESS) {
                             setTextureFromPath(scene, &mEngine, mTextures, AOPath, materialName,
                                     dirName, mapMode, "aoMap", outMaterials);
 
