@@ -31,8 +31,6 @@ function print_help {
     echo "        Platform(s) to build, defaults to desktop."
     echo "        Building for Android or iOS will automatically generate / download"
     echo "        the toolchains if needed and perform a partial desktop build."
-    echo "    -r"
-    echo "        Restrict the number of make/ninja jobs."
     echo "    -t"
     echo "        Generate the Android toolchain, requires \$ANDROID_HOME to be set."
     echo "    -u"
