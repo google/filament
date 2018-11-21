@@ -110,6 +110,10 @@ public:
         return mOutput;
     }
 
+    Output* getAsmOutput()  const noexcept override  {
+        return mAsmOutput;
+    }
+
     Input* getInput() const noexcept override {
         return mInput;
     }
@@ -131,6 +135,7 @@ private:
 
     FilesystemInput* mInput = nullptr;
     FilesystemOutput* mOutput = nullptr;
+    FilesystemOutput* mAsmOutput = nullptr;
 };
 
 } // namespace matc

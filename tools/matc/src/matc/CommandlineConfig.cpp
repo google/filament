@@ -128,6 +128,7 @@ bool CommandlineConfig::parse() {
                 break;
             case 'o':
                 mOutput = new FilesystemOutput(arg.c_str());
+                mAsmOutput = new FilesystemOutput((arg + ".S").c_str());
                 break;
             case 'f':
                 if (arg == "blob") {

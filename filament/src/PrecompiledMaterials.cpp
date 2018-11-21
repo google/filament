@@ -21,12 +21,6 @@
 namespace filament {
 namespace details {
 
-// This package is generated with matc and contains post process shader code.
-const uint8_t POST_PROCESS_PACKAGE[] = {
-#include "generated/material/postprocess.inc"
-};
-const size_t POST_PROCESS_PACKAGE_SIZE = sizeof(POST_PROCESS_PACKAGE);
-
 // This package is generated with matc and contains default material shader code.
 const uint8_t DEFAULT_MATERIAL_PACKAGE[] = {
 #include "generated/material/defaultMaterial.inc"

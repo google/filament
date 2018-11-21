@@ -62,6 +62,7 @@ public:
         virtual bool close() noexcept = 0;
     };
     virtual Output* getOutput()  const noexcept = 0;
+    virtual Output* getAsmOutput()  const noexcept { return nullptr; }
 
     class Input {
     public:
@@ -89,6 +90,10 @@ public:
 
     OutputFormat getOutputFormat() const noexcept {
         return mOutputFormat;
+    }
+
+    bool isAsmBlobEnabled() const noexcept {
+        return mIsAsmBlobEnabled;
     }
 
     bool isValid() const noexcept {
@@ -134,6 +139,7 @@ protected:
     bool mDebug = false;
     bool mIsValid = true;
     bool mPrintShaders = false;
+    bool mIsAsmBlobEnabled = true;
     Optimization mOptimizationLevel = Optimization::NONE;
     Metadata mReflectionTarget = Metadata::NONE;
     Mode mMode = Mode::MATERIAL;

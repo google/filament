@@ -22,6 +22,21 @@
 
 using namespace filamat;
 
+namespace {
+
+const char* ASMTEMPLATE = R"ASM(
+    .global %s_PACKAGE
+    .global %s_PACKAGE_SIZE
+    .section %s
+%s_PACKAGE:
+    .incbin "%s.bin"
+1:
+%s_PACKAGE_SIZE:
+    .int 1b - %s_PACKAGE
+)ASM";
+
+}
+
 namespace matc {
 
 bool Compiler::writeBlob(const Package &pkg, const Config& config) const noexcept {
@@ -33,6 +48,32 @@ bool Compiler::writeBlob(const Package &pkg, const Config& config) const noexcep
 
     output->write(pkg.getData(), pkg.getSize());
     output->close();
+
+    if (config.isAsmBlobEnabled()) {
+        Config::Output* ao = config.getAsmOutput();
+        if (!ao || !ao->open()) {
+            std::cerr << "Unable to create asm file." << std::endl;
+            return false;
+        }
+
+        std::ostream& file = ao->getOutputStream();
+        char buf[512];
+        snprintf(buf, sizeof(buf), ASMTEMPLATE,
+
+#if defined(__linux__) || defined(WIN32)
+        "POST_PROCESS", "POST_PROCESS",
+        ".rodata",
+        "POST_PROCESS", "postprocess",
+        "POST_PROCESS", "POST_PROCESS");
+#else
+        "_POST_PROCESS", "_POST_PROCESS",
+        "__TEXT,__const",
+        "_POST_PROCESS", "postprocess",
+        "_POST_PROCESS", "_POST_PROCESS");
+#endif
+        file << buf;
+        ao->close();
+    }
 
     return true;
 }

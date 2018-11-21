@@ -1,8 +1,9 @@
 cmake_minimum_required(VERSION 3.1)
-project(filament)
+project(filament C ASM)
 
 set(TARGET filament)
 set(PUBLIC_HDR_DIR include)
+set(GENERATION_ROOT ${CMAKE_CURRENT_BINARY_DIR})
 
 # ==================================================================================================
 # Sources and headers
@@ -38,7 +39,15 @@ set(PUBLIC_HDRS
         include/filament/View.h
         include/filament/Viewport.h)
 
+if (NOT WIN32)
+    set(ASM_ARCH_FLAG "-arch ${DIST_ARCH}")
+endif()
+
+set_source_files_properties(${GENERATION_ROOT}/generated/material/postprocess.bin.S PROPERTIES
+    COMPILE_FLAGS "-I${GENERATION_ROOT}/generated/material ${ASM_ARCH_FLAG}")
+
 set(SRCS
+        ${GENERATION_ROOT}/generated/material/postprocess.bin.S
         src/components/CameraManager.cpp
         src/components/LightManager.cpp
         src/components/RenderableManager.cpp
@@ -230,7 +239,6 @@ if (CMAKE_CROSSCOMPILING)
 endif()
 
 set(MATERIAL_BINS)
-set(GENERATION_ROOT ${CMAKE_CURRENT_BINARY_DIR})
 file(MAKE_DIRECTORY "${GENERATION_ROOT}/generated/material/")
 
 # Target system.
@@ -267,11 +275,11 @@ foreach (mat_src ${MATERIAL_SRCS})
     list(APPEND MATERIAL_BINS ${output_path})
 endforeach()
 
-set(output_path "${GENERATION_ROOT}/generated/material/postprocess.inc")
+set(output_path "${GENERATION_ROOT}/generated/material/postprocess.bin")
 add_custom_command(
-        OUTPUT ${output_path}
+        OUTPUT ${output_path} ${output_path}.S
         COMMAND matc ${MATC_BASE_FLAGS} ${MATC_OPT_FLAGS} -p ${MATC_TARGET} -m postprocess
-                -f header -o ${output_path}
+                -f blob -o ${output_path}
         DEPENDS matc
         COMMENT "Compiling post-process material ${output_path}"
 )
