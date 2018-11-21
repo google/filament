@@ -77,20 +77,27 @@ Material* Material::Builder::build(Engine& engine) {
         return nullptr;
     }
 
-    assert(upcast(engine).getBackend() != Backend::DEFAULT && "Default backend has not been resolved.");
+    assert(upcast(engine).getBackend() != Backend::DEFAULT &&
+            "Default backend has not been resolved.");
 
     uint32_t v;
     materialParser->getShaderModels(&v);
     utils::bitset32 shaderModels;
     shaderModels.setValue(v);
 
-    uint32_t sm = static_cast<uint32_t>(upcast(engine).getDriver().getShaderModel());
-    CString name;
-    materialParser->getName(&name);
-    if (!ASSERT_POSTCONDITION_NON_FATAL(shaderModels.test(sm),
-            "the material '%s' does not contain shaders compatible with this platform; "
-            "need shader model %d but have 0x%02x", name.c_str_safe(), sm,
-            shaderModels.getValue())) {
+    driver::ShaderModel shaderModel = upcast(engine).getDriver().getShaderModel();
+    if (!shaderModels.test(static_cast<uint32_t>(shaderModel))) {
+        CString name;
+        materialParser->getName(&name);
+        slog.e << "The material '" << name.c_str_safe() << "' was not built for ";
+        switch (shaderModel) {
+            case driver::ShaderModel::GL_ES_30: slog.e << "mobile.\n"; break;
+            case driver::ShaderModel::GL_CORE_41: slog.e << "desktop.\n"; break;
+            case driver::ShaderModel::UNKNOWN: /* should never happen */ break;
+        }
+        slog.e << "Need shader model 0x" << io::hex << (uint32_t) shaderModel
+                << " but compiled material contains 0x" << shaderModels.getValue()
+                << io::dec << io::endl;
         return nullptr;
     }
 
