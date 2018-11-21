@@ -37,16 +37,16 @@ badges above.
 
 Here are a few sample materials rendered with Filament:
 
-![Brushed copper](docs/images/samples/brushed_copper_2.png)
-![Chess set](docs/images/samples/chess1.png)
-![Environment lighting](docs/images/samples/spheres.png)
-![Material 1](docs/images/samples/material_01.png)
-![Material 2](docs/images/samples/material_02.png)
-![Material 3](docs/images/samples/material_03.png)
-![Material 4](docs/images/samples/material_04.png)
-![Material 6](docs/images/samples/material_06.png)
-![Material 7](docs/images/samples/material_07.png)
-![Material 8](docs/images/samples/material_08.png)
+![Brushed copper](docs/images/samples/brushed_copper_2.jpg)
+![Chess set](docs/images/samples/chess1.jpg)
+![Environment lighting](docs/images/samples/spheres.jpg)
+![Material 1](docs/images/samples/material_01.jpg)
+![Material 2](docs/images/samples/material_02.jpg)
+![Material 3](docs/images/samples/material_03.jpg)
+![Material 4](docs/images/samples/material_04.jpg)
+![Material 6](docs/images/samples/material_06.jpg)
+![Material 7](docs/images/samples/material_07.jpg)
+![Material 8](docs/images/samples/material_08.jpg)
 
 ## Features
 
