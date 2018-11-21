@@ -22,9 +22,6 @@
 namespace matc {
 class PostprocessMaterialCompiler final: public Compiler {
 public:
-    PostprocessMaterialCompiler();
-    ~PostprocessMaterialCompiler();
-
     bool run(const Config& config) override;
     bool checkParameters(const Config& config) override;
 };

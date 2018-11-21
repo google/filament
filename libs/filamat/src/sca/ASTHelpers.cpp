@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-#include "filamat/sca/ASTHelpers.h"
+#include "ASTHelpers.h"
 
-#include "filamat/sca/GLSLTools.h"
+#include "GLSLTools.h"
 
 #include <iostream>
 

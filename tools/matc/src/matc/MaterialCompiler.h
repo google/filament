@@ -36,7 +36,6 @@ class JsonishValue;
 class MaterialCompiler final: public Compiler {
 public:
     MaterialCompiler();
-    ~MaterialCompiler() override;
 
     bool run(const Config& config) override;
     bool checkParameters(const Config& config) override;

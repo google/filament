@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "filamat/sca/GLSLTools.h"
+#include "GLSLTools.h"
 
 #include <cstring>
 
@@ -28,7 +28,7 @@
 
 #include "filamat/Enums.h"
 
-#include "filamat/sca/ASTHelpers.h"
+#include "ASTHelpers.h"
 
 // GLSLANG headers
 #include <InfoSink.h>

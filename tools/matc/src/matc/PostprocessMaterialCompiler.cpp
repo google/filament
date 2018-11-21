@@ -17,19 +17,10 @@
 #include "PostprocessMaterialCompiler.h"
 
 #include <filamat/PostprocessMaterialBuilder.h>
-#include <filamat/sca/GLSLTools.h>
 
 using namespace filamat;
 
 namespace matc {
-
-PostprocessMaterialCompiler::PostprocessMaterialCompiler() {
-    GLSLTools::init();
-}
-
-PostprocessMaterialCompiler::~PostprocessMaterialCompiler() {
-    GLSLTools::terminate();
-}
 
 bool PostprocessMaterialCompiler::run(const Config& config) {
     PostprocessMaterialBuilder builder;
