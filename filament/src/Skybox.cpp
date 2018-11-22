@@ -30,24 +30,12 @@
 
 #include <utils/Panic.h>
 
+#include "generated/resources/materials.h"
+
 using namespace math;
 namespace filament {
 
 using namespace details;
-
-// TODO: Merge the two skybox Material into one.
-// This package is generated with matc and contains skybox material shader
-// code.
-static const uint8_t SKYBOX_MATERIAL_PACKAGE[] = {
-#include "generated/material/skybox.inc"
-};
-
-// This package is generated with matc and contains skybox material shader
-// code.
-static const uint8_t SKYBOXRGBM_MATERIAL_PACKAGE[] = {
-#include "generated/material/skyboxRGBM.inc"
-};
-
 
 struct Skybox::BuilderDetails {
     Texture* mEnvironmentMap = nullptr;
@@ -117,16 +105,15 @@ FSkybox::FSkybox(FEngine& engine, const Builder& builder) noexcept
 }
 
 FMaterial const* FSkybox::createMaterial(FEngine& engine, bool rgbm) {
-   if (rgbm) {
-       FMaterial const* material = upcast(Material::Builder().package(
-               (void*)SKYBOXRGBM_MATERIAL_PACKAGE,
-               sizeof(SKYBOXRGBM_MATERIAL_PACKAGE)).build(engine));
-       return material;
-   }
+    // TODO: Merge the two skybox materials into one.
+    if (rgbm) {
+        FMaterial const* material = upcast(Material::Builder().package(
+                MATERIALS_SKYBOXRGBM_DATA, MATERIALS_SKYBOXRGBM_SIZE).build(engine));
+        return material;
+    }
 
     FMaterial const* material = upcast(Material::Builder().package(
-            (void*)SKYBOX_MATERIAL_PACKAGE,
-            sizeof(SKYBOX_MATERIAL_PACKAGE)).build(engine));
+            MATERIALS_SKYBOX_DATA, MATERIALS_SKYBOX_SIZE).build(engine));
     return material;
 }
 

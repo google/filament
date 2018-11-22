@@ -339,5 +339,5 @@ endif()
 
 # Generate exported executables for cross-compiled builds (Android, WebGL, and iOS)
 if (NOT CMAKE_CROSSCOMPILING)
-    export(TARGETS matc cmgen filamesh mipgen FILE ${IMPORT_EXECUTABLES})
+    export(TARGETS matc cmgen filamesh mipgen resgen FILE ${IMPORT_EXECUTABLES})
 endif()
