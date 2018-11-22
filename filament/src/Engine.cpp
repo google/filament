@@ -33,8 +33,6 @@
 #include "details/View.h"
 #include "driver/Program.h"
 
-#include "PrecompiledMaterials.h"
-
 #include <private/filament/SibGenerator.h>
 
 #include <filament/Exposure.h>
@@ -55,6 +53,7 @@
 
 #include <stdio.h>
 
+#include "generated/resources/materials.h"
 
 using namespace math;
 using namespace utils;
@@ -160,7 +159,7 @@ void FEngine::init() {
 
     // Parse all post process shaders now, but create them lazily
     mPostProcessParser = std::make_unique<filaflat::MaterialParser>(mBackend,
-            POST_PROCESS_PACKAGE, POST_PROCESS_PACKAGE_SIZE);
+            MATERIALS_POSTPROCESS_DATA, MATERIALS_POSTPROCESS_SIZE);
 
     UTILS_UNUSED_IN_RELEASE bool ppMaterialOk =
             mPostProcessParser->parse() && mPostProcessParser->isPostProcessMaterial();
@@ -219,7 +218,7 @@ void FEngine::init() {
     // Always initialize the default material, most materials' depth shaders fallback on it.
     mDefaultMaterial = upcast(
             FMaterial::DefaultMaterialBuilder()
-                    .package(DEFAULT_MATERIAL_PACKAGE, DEFAULT_MATERIAL_PACKAGE_SIZE)
+                    .package(MATERIALS_DEFAULTMATERIAL_DATA, MATERIALS_DEFAULTMATERIAL_SIZE)
                     .build(*const_cast<FEngine*>(this)));
 }
 

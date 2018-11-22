@@ -4,7 +4,7 @@ set -e
 # NDK API level
 API_LEVEL=24
 # Host tools required by Android, WebGL, and iOS builds
-HOST_TOOLS="matc cmgen filamesh mipgen"
+HOST_TOOLS="matc cmgen filamesh mipgen resgen"
 IOS_TOOLCHAIN_URL="https://opensource.apple.com/source/clang/clang-800.0.38/src/cmake/platforms/iOS.cmake"
 
 function print_help {
