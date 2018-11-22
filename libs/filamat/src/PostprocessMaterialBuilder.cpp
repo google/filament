@@ -144,8 +144,8 @@ Package PostprocessMaterialBuilder::build() {
     }
 
     // Emit GLSL chunks
-    DictionaryTextChunk dicGlslChunk(glslDictionary);
-    MaterialTextChunk glslChunk(glslEntries, glslDictionary);
+    DictionaryTextChunk dicGlslChunk(glslDictionary, ChunkType::DictionaryGlsl);
+    MaterialTextChunk glslChunk(glslEntries, glslDictionary, ChunkType::MaterialGlsl);
     if (!glslEntries.empty()) {
         container.addChild(&dicGlslChunk);
         container.addChild(&glslChunk);

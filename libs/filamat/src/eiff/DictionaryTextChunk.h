@@ -28,7 +28,7 @@ namespace filamat {
 
 class DictionaryTextChunk : public Chunk {
 public:
-    DictionaryTextChunk(LineDictionary& dictionary);
+    DictionaryTextChunk(LineDictionary& dictionary, ChunkType chunkType);
     ~DictionaryTextChunk() = default;
     virtual void flatten(Flattener& f);
 private:

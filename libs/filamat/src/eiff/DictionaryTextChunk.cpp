@@ -18,8 +18,8 @@
 
 namespace filamat {
 
-DictionaryTextChunk::DictionaryTextChunk(LineDictionary& dictionary) :
-        Chunk(ChunkType::DictionaryGlsl), mDictionary(dictionary){
+DictionaryTextChunk::DictionaryTextChunk(LineDictionary& dictionary, ChunkType chunkType) :
+        Chunk(chunkType), mDictionary(dictionary) {
 }
 
 void DictionaryTextChunk::flatten(Flattener& f) {

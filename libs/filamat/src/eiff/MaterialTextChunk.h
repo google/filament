@@ -28,7 +28,8 @@ namespace filamat {
 
 class MaterialTextChunk final : public TextChunk<TextEntry> {
 public:
-    MaterialTextChunk(const std::vector<TextEntry> &entries, LineDictionary &dictionary);
+    MaterialTextChunk(const std::vector<TextEntry> &entries, LineDictionary &dictionary,
+            ChunkType chunkType);
     ~MaterialTextChunk() = default;
 protected:
     virtual const char* getShaderText(size_t entryIndex) const override;
