@@ -23,9 +23,9 @@
 #include "GLSLPostProcessor.h"
 
 #include "eiff/ChunkContainer.h"
-#include "eiff/DictionaryGlslChunk.h"
+#include "eiff/DictionaryTextChunk.h"
 #include "eiff/DictionarySpirvChunk.h"
-#include "eiff/MaterialGlslChunk.h"
+#include "eiff/MaterialTextChunk.h"
 #include "eiff/MaterialSpirvChunk.h"
 #include "eiff/SimpleFieldChunk.h"
 
@@ -54,7 +54,7 @@ Package PostprocessMaterialBuilder::build() {
     SimpleFieldChunk<uint32_t> version(ChunkType::PostProcessVersion,1);
     container.addChild(&version);
 
-    std::vector<GlslEntry> glslEntries;
+    std::vector<TextEntry> glslEntries;
     std::vector<SpirvEntry> spirvEntries;
     LineDictionary glslDictionary;
     BlobDictionary spirvDictionary;
@@ -73,7 +73,7 @@ Package PostprocessMaterialBuilder::build() {
         const TargetApi codeGenTargetApi = params.codeGenTargetApi;
         std::vector<uint32_t>* pSpirv = (targetApi == TargetApi::VULKAN) ? &spirv : nullptr;
 
-        GlslEntry glslEntry;
+        TextEntry glslEntry;
         SpirvEntry spirvEntry;
 
         glslEntry.shaderModel = static_cast<uint8_t>(params.shaderModel);
@@ -144,8 +144,8 @@ Package PostprocessMaterialBuilder::build() {
     }
 
     // Emit GLSL chunks
-    DictionaryGlslChunk dicGlslChunk(glslDictionary);
-    MaterialGlslChunk glslChunk(glslEntries, glslDictionary);
+    DictionaryTextChunk dicGlslChunk(glslDictionary);
+    MaterialTextChunk glslChunk(glslEntries, glslDictionary);
     if (!glslEntries.empty()) {
         container.addChild(&dicGlslChunk);
         container.addChild(&glslChunk);
@@ -167,7 +167,7 @@ Package PostprocessMaterialBuilder::build() {
     package.setValid(!errorOccured);
 
     // Free all shaders that were created earlier.
-    for (GlslEntry entry : glslEntries) {
+    for (TextEntry entry : glslEntries) {
         free(entry.shader);
     }
     return package;

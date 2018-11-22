@@ -19,12 +19,12 @@ set(PRIVATE_HDRS
         src/eiff/BlobDictionary.h
         src/eiff/Chunk.h
         src/eiff/ChunkContainer.h
-        src/eiff/DictionaryGlslChunk.h
+        src/eiff/DictionaryTextChunk.h
         src/eiff/DictionarySpirvChunk.h
         src/eiff/Flattener.h
-        src/eiff/GlslChunk.h
+        src/eiff/TextChunk.h
         src/eiff/LineDictionary.h
-        src/eiff/MaterialGlslChunk.h
+        src/eiff/MaterialTextChunk.h
         src/eiff/MaterialInterfaceBlockChunk.h
         src/eiff/MaterialSpirvChunk.h
         src/eiff/ShaderEntry.h
@@ -37,10 +37,10 @@ set(SRCS
         src/eiff/BlobDictionary.cpp
         src/eiff/Chunk.cpp
         src/eiff/ChunkContainer.cpp
-        src/eiff/DictionaryGlslChunk.cpp
+        src/eiff/DictionaryTextChunk.cpp
         src/eiff/DictionarySpirvChunk.cpp
         src/eiff/LineDictionary.cpp
-        src/eiff/MaterialGlslChunk.cpp
+        src/eiff/MaterialTextChunk.cpp
         src/eiff/MaterialSpirvChunk.cpp
         src/eiff/MaterialInterfaceBlockChunk.cpp
         src/eiff/SimpleFieldChunk.cpp

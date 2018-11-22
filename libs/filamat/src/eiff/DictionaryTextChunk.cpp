@@ -14,15 +14,15 @@
  * limitations under the License.
  */
 
-#include "DictionaryGlslChunk.h"
+#include "DictionaryTextChunk.h"
 
 namespace filamat {
 
-DictionaryGlslChunk::DictionaryGlslChunk(LineDictionary& dictionary) :
+DictionaryTextChunk::DictionaryTextChunk(LineDictionary& dictionary) :
         Chunk(ChunkType::DictionaryGlsl), mDictionary(dictionary){
 }
 
-void DictionaryGlslChunk::flatten(Flattener& f) {
+void DictionaryTextChunk::flatten(Flattener& f) {
     // NumStrings
     f.writeUint32(mDictionary.getLineCount());
 

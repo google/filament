@@ -14,23 +14,23 @@
  * limitations under the License.
  */
 
-#include "MaterialGlslChunk.h"
+#include "MaterialTextChunk.h"
 
 namespace filamat {
 
-MaterialGlslChunk::MaterialGlslChunk(const std::vector<GlslEntry> &entries,
+MaterialTextChunk::MaterialTextChunk(const std::vector<TextEntry> &entries,
                                      LineDictionary &dictionary) :
-    GlslChunk(ChunkType::MaterialGlsl, entries, dictionary) {
+    TextChunk(ChunkType::MaterialGlsl, entries, dictionary) {
 }
 
-void MaterialGlslChunk::writeEntryAttributes(size_t entryIndex, Flattener& f) {
-    const GlslEntry& entry = mEntries[entryIndex];
+void MaterialTextChunk::writeEntryAttributes(size_t entryIndex, Flattener& f) {
+    const TextEntry& entry = mEntries[entryIndex];
     f.writeUint8(entry.shaderModel);
     f.writeUint8(entry.variant);
     f.writeUint8(entry.stage);
 }
 
-const char* MaterialGlslChunk::getShaderText(size_t entryIndex) const {
+const char* MaterialTextChunk::getShaderText(size_t entryIndex) const {
     return mEntries[entryIndex].shader;
 }
 
