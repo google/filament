@@ -214,7 +214,7 @@ public:
         return (mCountersFd[ICACHE_REFS] >= 0) && (mCountersFd[ICACHE_MISSES] >= 0);
     }
 
-private:
+//private:
     Profiler() noexcept;
     ~Profiler() noexcept;
 

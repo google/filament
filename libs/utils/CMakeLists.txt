@@ -118,3 +118,15 @@ endif()
 add_executable(test_${TARGET} ${TEST_SRCS})
 
 target_link_libraries(test_${TARGET} PRIVATE gtest utils tsl math)
+
+# ==================================================================================================
+# Test benchmark
+# ==================================================================================================
+
+set(BENCHMARK_SRCS
+        benchmark/benchmark_mutex.cpp
+        benchmark/benchmark_memcpy.cpp)
+
+add_executable(benchmark_${TARGET} ${BENCHMARK_SRCS})
+
+target_link_libraries(benchmark_${TARGET} PRIVATE benchmark_main utils tsl math)

@@ -42,14 +42,13 @@ void printResults(char const* name, size_t REPEAT, Profiler::Counters const& c) 
     std::cout << "" << std::endl;
 }
 
-template <typename T, size_t REPEAT = 2>
+template<typename T, size_t REPEAT = 2>
 void benchmark(Profiler& p, const char* const name, T f) {
-    Profiler::Counters b;
-    Profiler::Counters c;
+    Profiler::Counters c{};
     p.start();
 
 #pragma nounroll
-    for (size_t j=0 ; j<2 ; j++) {
+    for (size_t j = 0; j < 2; j++) {
         p.reset();
 #pragma nounroll
         for (size_t i = 0; i < REPEAT; i++) {
@@ -103,7 +102,6 @@ int main() {
     Culler::result_type * __restrict__ visibles = nullptr;
     posix_memalign((void**)&visibles, 32, batch * sizeof(*visibles));
 
-    Profiler::Counters c;
     Profiler& p = Profiler::get();
     p.resetEvents(
             Profiler::EV_CPU_CYCLES |
