@@ -283,6 +283,7 @@ function build_android_target {
             -DCMAKE_BUILD_TYPE=$1 \
             -DCMAKE_INSTALL_PREFIX=../android-${LC_TARGET}/filament \
             -DCMAKE_TOOLCHAIN_FILE=../../build/toolchain-${ARCH}-linux-android.cmake \
+            -DHAVE_STD_REGEX=0 -DHAVE_POSIX_REGEX=0 -DHAVE_STEADY_CLOCK=0 \
             $VULKAN_ANDROID_OPTION \
             ../..
     fi
