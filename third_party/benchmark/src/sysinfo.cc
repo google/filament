@@ -37,6 +37,10 @@
 #include <kstat.h>
 #endif
 
+#if defined(__ANDROID__)
+#include <android/api-level.h>
+#endif
+
 #include <algorithm>
 #include <array>
 #include <bitset>
@@ -583,7 +587,11 @@ std::vector<double> GetLoadAvg() {
     defined BENCHMARK_OS_OPENBSD
   constexpr int kMaxSamples = 3;
   std::vector<double> res(kMaxSamples, 0.0);
+#if defined(__ANDROID__) && (__ANDROID_API__ < 29)
+    const int nelem = 0;
+#else
   const int nelem = getloadavg(res.data(), kMaxSamples);
+#endif
   if (nelem < 1) {
     res.clear();
   } else {
