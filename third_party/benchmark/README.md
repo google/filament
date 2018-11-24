@@ -712,6 +712,7 @@ or where there are only a couple of lines per benchmark. Here's an example of
 the default output:
 
 ```
+
 ------------------------------------------------------------------------------
 Benchmark                        Time           CPU Iterations UserCounters...
 ------------------------------------------------------------------------------
@@ -740,6 +741,7 @@ individual benchmarks. Here's an example of corresponding output when
 `--benchmark_counters_tabular=true` is passed:
 
 ```
+
 ---------------------------------------------------------------------------------------
 Benchmark                        Time           CPU Iterations    Bar   Bat   Baz   Foo
 ---------------------------------------------------------------------------------------
