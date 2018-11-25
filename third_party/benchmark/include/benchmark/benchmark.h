@@ -344,6 +344,7 @@ inline BENCHMARK_ALWAYS_INLINE void DoNotOptimize(Tp const& value) {
   internal::UseCharPointer(&reinterpret_cast<char const volatile&>(value));
 }
 // FIXME Add ClobberMemory() for non-gnu and non-msvc compilers
+inline BENCHMARK_ALWAYS_INLINE void ClobberMemory() { /* FIXME: this doesn't do anything */ }
 #endif
 
 // This class is used for user-defined counters.
