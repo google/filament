@@ -35,8 +35,6 @@ void printResults(char const* name, size_t REPEAT, Profiler::Counters const& c) 
 template <typename T>
 void benchmark(Profiler& p, const char* const name, T f) {
     size_t REPEAT = 128;
-    Profiler::Counters b;
-    Profiler::Counters c;
     p.start();
 
     #pragma nounroll
@@ -49,7 +47,7 @@ void benchmark(Profiler& p, const char* const name, T f) {
     }
 
     p.stop();
-    p.readCounters(&c);
+    Profiler::Counters c = p.readCounters();
     printResults(name, REPEAT, c);
 }
 
@@ -57,8 +55,6 @@ void benchmark(Profiler& p, const char* const name, T f) {
 template <typename T>
 void benchmark_nounroll(Profiler& p, const char* const name, T f) {
     size_t REPEAT = 128;
-    Profiler::Counters b;
-    Profiler::Counters c;
     p.start();
 
 #pragma nounroll
@@ -71,7 +67,7 @@ void benchmark_nounroll(Profiler& p, const char* const name, T f) {
     }
 
     p.stop();
-    p.readCounters(&c);
+    Profiler::Counters c = p.readCounters();
     printResults(name, REPEAT, c);
 }
 
@@ -91,12 +87,7 @@ int main() {
     filament::details::EnginePerformanceTest* ei = engine;
     filament::details::EnginePerformanceTest::PFN destroyUniverse = engine->getDestroyUniverseApi();
 
-    Profiler::Counters c;
-    Profiler& p = Profiler::get();
-    p.resetEvents(
-            Profiler::EV_CPU_CYCLES |
-            Profiler::EV_BPU_MISSES
-    );
+    Profiler p(Profiler::EV_CPU_CYCLES | Profiler::EV_BPU_MISSES);
 
     benchmark(p, "Local function call", [engine]() {
         foo(engine);

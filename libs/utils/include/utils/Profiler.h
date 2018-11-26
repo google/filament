@@ -29,6 +29,8 @@
 #   include <linux/perf_event.h>
 #endif
 
+#include <utils/compiler.h>
+
 namespace utils {
 
 class Profiler {
@@ -62,8 +64,9 @@ public:
         EV_BPU_RATES = EV_BPU_REFS | EV_BPU_MISSES,
     };
 
-    static Profiler& get() noexcept;
-
+    Profiler() noexcept; // must call resetEvents()
+    explicit Profiler(uint32_t eventMask) noexcept;
+    ~Profiler() noexcept;
 
     Profiler(const Profiler& rhs) = delete;
     Profiler(Profiler&& rhs) = delete;
@@ -71,7 +74,6 @@ public:
     Profiler& operator=(Profiler&& rhs) = delete;
 
     // selects which events are enabled. 
-    // By Default: EV_CPU_CYCLES | EV_L1D_RATES | EV_BPU_RATES
     uint32_t resetEvents(uint32_t eventMask) noexcept;
 
     uint32_t getEnabledEvents() const noexcept { return mEnabledEvents; }
@@ -93,7 +95,7 @@ public:
             lhs.nr -= rhs.nr;
             lhs.time_enabled -= rhs.time_enabled;
             lhs.time_running -= rhs.time_running;
-            for (size_t i=0 ; i<EVENT_COUNT ; ++i) {
+            for (size_t i = 0; i < EVENT_COUNT; ++i) {
                 lhs.counters[i].value -= rhs.counters[i].value;
             }
             return lhs;
@@ -181,20 +183,21 @@ public:
         ioctl(fd, PERF_EVENT_IOC_DISABLE, PERF_IOC_FLAG_GROUP);
     }
 
-    void readCounters(Counters* outCounters) noexcept {
-        Counters counters;
+    Counters readCounters() noexcept {
+        Counters outCounters{};
+        Counters counters; // NOLINT
         ssize_t n = read(mCountersFd[0], &counters, sizeof(Counters));
-        memset(outCounters, 0, sizeof(Counters));
         if (n > 0) {
-            outCounters->nr = counters.nr;
-            outCounters->time_enabled = counters.time_enabled;
-            outCounters->time_running = counters.time_running;
-            for (size_t i=0 ; i<size_t(EVENT_COUNT) ; i++) {
+            outCounters.nr = counters.nr;
+            outCounters.time_enabled = counters.time_enabled;
+            outCounters.time_running = counters.time_running;
+            for (size_t i = 0; i < size_t(EVENT_COUNT); i++) {
                 if (mCountersFd[i] >= 0) {
-                    outCounters->counters[i] = counters.counters[mIds[i]];
+                    outCounters.counters[i] = counters.counters[mIds[i]];
                 }
             }
         }
+        return outCounters;
     }
 
 #else // !__linux__
@@ -202,7 +205,7 @@ public:
     void reset() noexcept { }
     void start() noexcept { }
     void stop() noexcept { }
-    void readCounters(Counters* counters) noexcept { }
+    Counters readCounters() noexcept { return {}; }
 
 #endif // __linux__
 
@@ -215,10 +218,7 @@ public:
     }
 
 private:
-    Profiler() noexcept;
-    ~Profiler() noexcept;
-
-    __attribute__((unused)) uint8_t mIds[EVENT_COUNT];
+    UTILS_UNUSED uint8_t mIds[EVENT_COUNT];
     int mCountersFd[EVENT_COUNT];
     uint32_t mEnabledEvents = 0;
 };

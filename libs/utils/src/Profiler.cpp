@@ -18,11 +18,12 @@
 
 #include <stdlib.h>
 #include <string.h>
+
 #if !defined(WIN32)
-#include <unistd.h>
+#   include <unistd.h>
 #else
-#include <io.h>
-#define close _close
+#   include <io.h>
+#   define close _close
 #endif
 
 #include <algorithm>
@@ -43,23 +44,21 @@
     };
 #endif
 
-static int perf_event_open(struct perf_event_attr* hw_event, pid_t pid,
+static int perf_event_open(perf_event_attr* hw_event, pid_t pid,
         int cpu, int group_fd, unsigned long flags) {
-    return syscall(__NR_perf_event_open, hw_event, pid, cpu, group_fd, flags);
+    return (int)syscall(__NR_perf_event_open, hw_event, pid, cpu, group_fd, flags);
 }
 
 #endif // __linux__
 
 namespace utils {
 
-Profiler& Profiler::get() noexcept {
-    static Profiler sProfiler;
-    return sProfiler;
-}
-
 Profiler::Profiler() noexcept {
     std::uninitialized_fill(std::begin(mCountersFd), std::end(mCountersFd), -1);
-    Profiler::resetEvents(EV_CPU_CYCLES | EV_L1D_RATES | EV_BPU_RATES);
+}
+
+Profiler::Profiler(uint32_t eventMask) noexcept : Profiler() {
+    Profiler::resetEvents(eventMask);
 }
 
 Profiler::~Profiler() noexcept {
@@ -84,10 +83,9 @@ uint32_t Profiler::resetEvents(uint32_t eventMask) noexcept {
 
 #if defined(__linux__)
 
-    struct perf_event_attr pe;
-    memset(&pe, 0, sizeof(struct perf_event_attr));
+    perf_event_attr pe{};
     pe.type = PERF_TYPE_HARDWARE;
-    pe.size = sizeof(struct perf_event_attr);
+    pe.size = sizeof(perf_event_attr);
     pe.config = PERF_COUNT_HW_INSTRUCTIONS;
     pe.disabled = 1;
     pe.exclude_kernel = 1;
