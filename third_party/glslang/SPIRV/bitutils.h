@@ -26,7 +26,7 @@ Dest BitwiseCast(Src source) {
   Dest dest;
   static_assert(sizeof(source) == sizeof(dest),
                 "BitwiseCast: Source and destination must have the same size");
-  std::memcpy(&dest, &source, sizeof(dest));
+  std::memcpy(static_cast<void*>(&dest), &source, sizeof(dest));
   return dest;
 }
 

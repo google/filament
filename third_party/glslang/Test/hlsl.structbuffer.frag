@@ -5,7 +5,7 @@ struct sb_t
     bool   test2;
 }; // stride = 20
 
-StructuredBuffer<sb_t>  sbuf : register(c10);
+StructuredBuffer<sb_t>  sbuf : register(t10);
 StructuredBuffer<float> sbuf2;
 
 float4 main(uint pos : FOO) : SV_Target0

@@ -11,7 +11,7 @@ spv.specConstant.vert
                               Source GLSL 400
                               Name 4  "main"
                               Name 9  "arraySize"
-                              Name 14  "foo(vf4[s2543];"
+                              Name 14  "foo(vf4[s2765];"
                               Name 13  "p"
                               Name 17  "builtin_spec_constant("
                               Name 20  "color"
@@ -102,10 +102,10 @@ spv.specConstant.vert
                               Store 20(color) 46
               48:          10 Load 22(ucol)
                               Store 47(param) 48
-              49:           2 FunctionCall 14(foo(vf4[s2543];) 47(param)
+              49:           2 FunctionCall 14(foo(vf4[s2765];) 47(param)
                               Return
                               FunctionEnd
-14(foo(vf4[s2543];):           2 Function None 12
+14(foo(vf4[s2765];):           2 Function None 12
            13(p):     11(ptr) FunctionParameter
               15:             Label
               54:     24(ptr) AccessChain 53(dupUcol) 23

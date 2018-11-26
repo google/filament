@@ -171,6 +171,8 @@ ERROR:     xfb_buffer 0, xfb_stride 92
 ERROR: Linking vertex stage: xfb_stride must be multiple of 4:
 ERROR:     xfb_buffer 5, xfb_stride 6
 ERROR: Linking vertex stage: xfb_stride is too large:
+ERROR:     xfb_buffer 6, components (1/4 stride) needed are 500, gl_MaxTransformFeedbackInterleavedComponents is 64
+ERROR: Linking vertex stage: xfb_stride is too large:
 ERROR:     xfb_buffer 7, components (1/4 stride) needed are 66, gl_MaxTransformFeedbackInterleavedComponents is 64
 
 Shader version: 440

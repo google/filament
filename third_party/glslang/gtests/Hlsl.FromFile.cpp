@@ -382,7 +382,8 @@ INSTANTIATE_TEST_CASE_P(
         {"hlsl.typeGraphCopy.vert", "main"},
         {"hlsl.typedef.frag", "PixelShaderFunction"},
         {"hlsl.whileLoop.frag", "PixelShaderFunction"},
-        {"hlsl.void.frag", "PixelShaderFunction"}
+        {"hlsl.void.frag", "PixelShaderFunction"},
+        {"hlsl.type.type.conversion.all.frag", "main"}
     }),
     FileNameAsCustomTestSuffix
 );
@@ -399,6 +400,8 @@ INSTANTIATE_TEST_CASE_P(
         {"hlsl.wavequery.frag", "PixelShaderFunction"},
         {"hlsl.wavereduction.comp", "CSMain"},
         {"hlsl.wavevote.comp", "CSMain"},
+        { "hlsl.type.type.conversion.valid.frag", "main" },
+        {"hlsl.int.dot.frag", "main"}
     }),
     FileNameAsCustomTestSuffix
 );

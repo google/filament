@@ -46,7 +46,7 @@ ERROR: 0:142: 'r8_snorm' : does not apply to signed integer images
 ERROR: 0:143: 'rgba32ui' : does not apply to signed integer images 
 ERROR: 0:144: 'r8ui' : does not apply to signed integer images 
 ERROR: 0:147: 'offset on block member' : not supported for this version or the enabled extensions 
-ERROR: 0:147: 'offset/align' : can only be used with std140 or std430 layout packing 
+ERROR: 0:147: 'offset/align' : can only be used with std140, std430, or scalar layout packing 
 ERROR: 0:157: 'textureQueryLevels' : no matching overloaded function found 
 ERROR: 0:157: 'assign' :  cannot convert from ' const float' to ' temp int'
 ERROR: 0:158: 'textureQueryLevels' : no matching overloaded function found 

@@ -243,6 +243,7 @@ public:
             std::vector<uint32_t> spirv_binary;
             glslang::SpvOptions options;
             options.disableOptimizer = !enableOptimizer;
+            options.validate = true;
             glslang::GlslangToSpv(*program.getIntermediate(stage),
                                   spirv_binary, &logger, &options);
 
@@ -298,8 +299,10 @@ public:
 
         if (success && (controls & EShMsgSpvRules)) {
             std::vector<uint32_t> spirv_binary;
+            glslang::SpvOptions options;
+            options.validate = true;
             glslang::GlslangToSpv(*program.getIntermediate(stage),
-                                  spirv_binary, &logger);
+                                  spirv_binary, &logger, &options);
 
             std::ostringstream disassembly_stream;
             spv::Parameterize();
@@ -338,8 +341,10 @@ public:
 
         if (success && (controls & EShMsgSpvRules)) {
             std::vector<uint32_t> spirv_binary;
+            glslang::SpvOptions options;
+            options.validate = true;
             glslang::GlslangToSpv(*program.getIntermediate(stage),
-                                  spirv_binary, &logger);
+                                  spirv_binary, &logger, &options);
 
             spv::spirvbin_t(0 /*verbosity*/).remap(spirv_binary, remapOptions);
 

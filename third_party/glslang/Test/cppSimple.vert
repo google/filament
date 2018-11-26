@@ -170,7 +170,7 @@ int a = length("aoenatuh");  // ERROR
 
 // ERROR
 #define m4(b)
-#define m4 (b)
+#define m4
 
 // ERROR
 #define m5 (b)
@@ -178,7 +178,7 @@ int a = length("aoenatuh");  // ERROR
 
 // ERROR
 #define m6(a)
-#define m6
+#define m6(a,b)
 
 // ERROR (whitespace)
 #define m7 (a)

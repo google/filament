@@ -31,8 +31,11 @@ matrix:
 
 # scripts that run after cloning repository
 install:
-  - git clone https://github.com/google/googletest.git External/googletest
   - C:/Python27/python.exe update_glslang_sources.py
+  - git clone https://github.com/google/googletest.git External/googletest
+  - cd External/googletest
+  - git checkout 440527a61e1c91188195f7de212c63c77e8f0a45
+  - cd ../..
 
 build:
   parallel: true  # enable MSBuild parallel builds
@@ -40,7 +43,7 @@ build:
 
 build_script:
   - mkdir build && cd build
-  - cmake .. -DCMAKE_INSTALL_PREFIX=install
+  - cmake -G "Visual Studio 12 2013 Win64" -DCMAKE_INSTALL_PREFIX=install ..
   - cmake --build . --config %CONFIGURATION% --target install
 
 test_script:

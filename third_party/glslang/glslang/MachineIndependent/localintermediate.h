@@ -41,6 +41,8 @@
 #include "../Public/ShaderLang.h"
 #include "Versions.h"
 
+#include <string>
+#include <vector>
 #include <algorithm>
 #include <set>
 #include <array>
@@ -204,6 +206,17 @@ class TSymbolTable;
 class TSymbol;
 class TVariable;
 
+#ifdef NV_EXTENSIONS
+//
+// Texture and Sampler transformation mode.
+//
+enum ComputeDerivativeMode {
+    LayoutDerivativeNone,         // default layout as SPV_NV_compute_shader_derivatives not enabled
+    LayoutDerivativeGroupQuads,   // derivative_group_quadsNV
+    LayoutDerivativeGroupLinear,  // derivative_group_linearNV
+};
+#endif
+
 //
 // Set of helper functions to help parse and build the tree.
 //
@@ -223,6 +236,10 @@ public:
 #ifdef NV_EXTENSIONS
         layoutOverrideCoverage(false),
         geoPassthroughEXT(false),
+        numShaderRecordNVBlocks(0),
+        computeDerivativeMode(LayoutDerivativeNone),
+        primitives(TQualifier::layoutNotSet),
+        numTaskNVBlocks(0),
 #endif
         autoMapBindings(false),
         autoMapLocations(false),
@@ -231,10 +248,12 @@ public:
         useUnknownFormat(false),
         hlslOffsets(false),
         useStorageBuffer(false),
+        useVulkanMemoryModel(false),
         hlslIoMapping(false),
         textureSamplerTransformMode(EShTexSampTransKeep),
         needToLegalize(false),
-        binaryDoubleOutput(false)
+        binaryDoubleOutput(false),
+        uniformLocationBase(0)
     {
         localSize[0] = 1;
         localSize[1] = 1;
@@ -349,7 +368,7 @@ public:
         if (hlslOffsets)
             processes.addProcess("hlsl-offsets");
     }
-    bool usingHlslOFfsets() const { return hlslOffsets; }
+    bool usingHlslOffsets() const { return hlslOffsets; }
     void setUseStorageBuffer()
     {
         useStorageBuffer = true;
@@ -363,6 +382,12 @@ public:
             processes.addProcess("hlsl-iomap");
     }
     bool usingHlslIoMapping() { return hlslIoMapping; }
+    void setUseVulkanMemoryModel()
+    {
+        useVulkanMemoryModel = true;
+        processes.addProcess("use-vulkan-memory-model");
+    }
+    bool usingVulkanMemoryModel() const { return useVulkanMemoryModel; }
 
     template<class T> T addCounterBufferName(const T& name) const { return name + implicitCounterName; }
     bool hasCounterBufferName(const TString& name) const {
@@ -406,6 +431,11 @@ public:
     int getNumEntryPoints() const { return numEntryPoints; }
     int getNumErrors() const { return numErrors; }
     void addPushConstantCount() { ++numPushConstants; }
+#ifdef NV_EXTENSIONS
+    void addShaderRecordNVCount() { ++numShaderRecordNVBlocks; }
+    void addTaskNVCount() { ++numTaskNVBlocks; }
+#endif
+
     bool isRecursive() const { return recursive; }
 
     TIntermSymbol* addSymbol(const TVariable&);
@@ -604,7 +634,9 @@ public:
     int addXfbBufferOffset(const TType&);
     unsigned int computeTypeXfbSize(const TType&, bool& containsDouble) const;
     static int getBaseAlignmentScalar(const TType&, int& size);
-    static int getBaseAlignment(const TType&, int& size, int& stride, bool std140, bool rowMajor);
+    static int getBaseAlignment(const TType&, int& size, int& stride, TLayoutPacking layoutPacking, bool rowMajor);
+    static int getScalarAlignment(const TType&, int& size, int& stride, bool rowMajor);
+    static int getMemberAlignment(const TType&, int& size, int& stride, TLayoutPacking layoutPacking, bool rowMajor);
     static bool improperStraddle(const TType& type, int size, int offset);
     bool promote(TIntermOperator*);
 
@@ -613,6 +645,16 @@ public:
     bool getLayoutOverrideCoverage() const { return layoutOverrideCoverage; }
     void setGeoPassthroughEXT() { geoPassthroughEXT = true; }
     bool getGeoPassthroughEXT() const { return geoPassthroughEXT; }
+    void setLayoutDerivativeMode(ComputeDerivativeMode mode) { computeDerivativeMode = mode; }
+    ComputeDerivativeMode getLayoutDerivativeModeNone() const { return computeDerivativeMode; }
+    bool setPrimitives(int m)
+    {
+        if (primitives != TQualifier::layoutNotSet)
+            return primitives == m;
+        primitives = m;
+        return true;
+    }
+    int getPrimitives() const { return primitives; }
 #endif
 
     const char* addSemanticName(const TString& name)
@@ -624,13 +666,33 @@ public:
     const std::string& getSourceFile() const { return sourceFile; }
     void addSourceText(const char* text) { sourceText = sourceText + text; }
     const std::string& getSourceText() const { return sourceText; }
-    void addProcesses(const std::vector<std::string>& p) {
+    void addProcesses(const std::vector<std::string>& p)
+    {
         for (int i = 0; i < (int)p.size(); ++i)
             processes.addProcess(p[i]);
     }
     void addProcess(const std::string& process) { processes.addProcess(process); }
     void addProcessArgument(const std::string& arg) { processes.addArgument(arg); }
     const std::vector<std::string>& getProcesses() const { return processes.getProcesses(); }
+
+    void addUniformLocationOverride(const char* nameStr, int location)
+    {
+        std::string name = nameStr;
+        uniformLocationOverrides[name] = location;
+    }
+
+    int getUniformLocationOverride(const char* nameStr) const
+    {
+        std::string name = nameStr;
+        auto pos = uniformLocationOverrides.find(name);
+        if (pos == uniformLocationOverrides.end())
+            return -1;
+        else
+            return pos->second;
+    }
+
+    void setUniformLocationBase(int base) { uniformLocationBase = base; }
+    int getUniformLocationBase() const { return uniformLocationBase; }
 
     void setNeedsLegalization() { needToLegalize = true; }
     bool needsLegalization() const { return needToLegalize; }
@@ -716,6 +778,10 @@ protected:
 #ifdef NV_EXTENSIONS
     bool layoutOverrideCoverage;
     bool geoPassthroughEXT;
+    int numShaderRecordNVBlocks;
+    ComputeDerivativeMode computeDerivativeMode;
+    int primitives;
+    int numTaskNVBlocks;
 #endif
 
     // Base shift values
@@ -732,6 +798,7 @@ protected:
     bool useUnknownFormat;
     bool hlslOffsets;
     bool useStorageBuffer;
+    bool useVulkanMemoryModel;
     bool hlslIoMapping;
 
     std::set<TString> ioAccessed;           // set of names of statically read/written I/O that might need extra checking
@@ -751,6 +818,9 @@ protected:
 
     bool needToLegalize;
     bool binaryDoubleOutput;
+
+    std::unordered_map<std::string, int> uniformLocationOverrides;
+    int uniformLocationBase;
 
 private:
     void operator=(TIntermediate&); // prevent assignments

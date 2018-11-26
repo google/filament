@@ -14,6 +14,8 @@ layout(rgba32f, binding = 10)   uniform image2DMSArray  i2DMSArray;
 
 layout(r32i,    binding = 11)   uniform iimage1D        ii1D;
 layout(r32ui,   binding = 12)   uniform uimage2D        ui2D;
+layout(r32i,    binding = 13)   uniform iimage2DMS      ii2DMS;
+layout(r32ui,   binding = 14)   uniform uimage2DMSArray ui2DMSArray;
 
 flat in int     ic1D;
 flat in ivec2   ic2D;
@@ -85,6 +87,8 @@ void main()
     ui      += imageAtomicExchange(ui2D, ic2D, value);
     iv.x    += imageAtomicCompSwap(ii1D, ic1D, 18, 17);
     ui      += imageAtomicCompSwap(ui2D, ic2D, 19u, value);
+    iv.x    += imageAtomicCompSwap(ii2DMS, ic2D, 2, 18, 17);
+    ui      += imageAtomicCompSwap(ui2DMSArray, ic3D, 3, 19u, value);
 
     imageStore(wo2D, ic2D, v);
 

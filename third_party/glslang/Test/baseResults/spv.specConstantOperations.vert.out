@@ -18,10 +18,68 @@ spv.specConstantOperations.vert
                               Name 42  "sp_uint"
                               Name 43  "sp_sint"
                               Name 45  "sp_double"
+                              Name 46  "float_from_double"
+                              Name 47  "double_from_float"
+                              Name 49  "bool_from_int"
+                              Name 50  "bool_from_uint"
+                              Name 51  "int_from_bool"
+                              Name 53  "uint_from_bool"
+                              Name 54  "sp_uint_from_sint"
+                              Name 55  "sp_sint_from_uint"
+                              Name 56  "negate_int"
+                              Name 57  "not_int"
+                              Name 58  "sp_int_add_two"
+                              Name 61  "sp_int_add_two_sub_three"
+                              Name 63  "sp_int_add_two_sub_four"
+                              Name 64  "sp_sint_mul_two"
+                              Name 66  "sp_uint_mul_two"
+                              Name 68  "sp_sint_mul_two_div_five"
+                              Name 70  "sp_uint_mul_two_div_five"
+                              Name 71  "sp_sint_rem_four"
+                              Name 73  "sp_uint_rem_four"
+                              Name 75  "sp_sint_mul_three_div_five"
+                              Name 77  "sp_sint_shift_right_arithmetic"
+                              Name 79  "sp_uint_shift_right_arithmetic"
+                              Name 80  "sp_sint_shift_left"
+                              Name 81  "sp_uint_shift_left"
+                              Name 83  "sp_sint_or_256"
+                              Name 85  "sp_uint_xor_512"
+                              Name 86  "sp_int_lt_sp_sint"
+                              Name 87  "sp_uint_equal_sp_uint"
+                              Name 88  "sp_int_gt_sp_sint"
+                              Name 91  "iv"
+                              Name 95  "uv"
+                              Name 98  "bv_from_iv"
+                              Name 99  "bv_from_uv"
+                              Name 102  "iv_from_bv"
+                              Name 104  "uv_from_bv"
+                              Name 105  "uv_from_iv"
+                              Name 106  "iv_from_uv"
+                              Name 107  "not_iv"
+                              Name 108  "negate_iv"
+                              Name 110  "iv_add_two"
+                              Name 113  "iv_add_two_sub_three"
+                              Name 115  "iv_add_two_sub_four"
+                              Name 116  "iv_mul_two"
+                              Name 118  "iv_mul_two_div_five"
+                              Name 119  "iv_rem_four"
+                              Name 121  "iv_shift_right_arithmetic"
+                              Name 122  "iv_shift_left"
+                              Name 125  "iv_or_1024"
+                              Name 128  "uv_xor_2048"
+                              Name 129  "iv_x"
+                              Name 131  "iv_yx"
+                              Name 133  "iv_zyx"
+                              Name 134  "iv_yzxw"
                               Name 135  "a"
                               Name 136  "b"
                               Name 137  "c"
                               Name 142  "ternayArray1"
+                              Name 145  "t1"
+                              Name 146  "t2"
+                              Name 148  "t3"
+                              Name 152  "t4"
+                              Name 161  "v2"
                               Decorate 19(sp_int) SpecId 201
                               Decorate 40(sp_float) SpecId 200
                               Decorate 42(sp_uint) SpecId 202
@@ -53,95 +111,95 @@ spv.specConstantOperations.vert
      43(sp_sint):      6(int) SpecConstant 4294967286
               44:             TypeFloat 64
    45(sp_double):44(float64_t) SpecConstant 2333366019 1074118410
-              46:   39(float) SpecConstantOp 115 45(sp_double)
-              47:44(float64_t) SpecConstantOp 115 40(sp_float)
+46(float_from_double):   39(float) SpecConstantOp 115 45(sp_double)
+47(double_from_float):44(float64_t) SpecConstantOp 115 40(sp_float)
               48:     41(int) Constant 0
-              49:    22(bool) SpecConstantOp 171 19(sp_int) 48
-              50:    22(bool) SpecConstantOp 171 42(sp_uint) 48
-              51:      6(int) SpecConstantOp 169 49 32 12
+49(bool_from_int):    22(bool) SpecConstantOp 171 19(sp_int) 48
+50(bool_from_uint):    22(bool) SpecConstantOp 171 42(sp_uint) 48
+51(int_from_bool):      6(int) SpecConstantOp 169 49(bool_from_int) 32 12
               52:     41(int) Constant 1
-              53:     41(int) SpecConstantOp 169 49 52 48
-              54:     41(int) SpecConstantOp 128 43(sp_sint) 48
-              55:      6(int) SpecConstantOp 128 42(sp_uint) 48
-              56:      6(int) SpecConstantOp 126 19(sp_int)
-              57:      6(int) SpecConstantOp 200 19(sp_int)
-              58:      6(int) SpecConstantOp 128 19(sp_int) 20
+53(uint_from_bool):     41(int) SpecConstantOp 169 49(bool_from_int) 52 48
+54(sp_uint_from_sint):     41(int) SpecConstantOp 128 43(sp_sint) 48
+55(sp_sint_from_uint):      6(int) SpecConstantOp 128 42(sp_uint) 48
+  56(negate_int):      6(int) SpecConstantOp 126 19(sp_int)
+     57(not_int):      6(int) SpecConstantOp 200 19(sp_int)
+58(sp_int_add_two):      6(int) SpecConstantOp 128 19(sp_int) 20
               59:      6(int) SpecConstantOp 128 19(sp_int) 20
               60:      6(int) Constant 3
-              61:      6(int) SpecConstantOp 130 59 60
+61(sp_int_add_two_sub_three):      6(int) SpecConstantOp 130 59 60
               62:      6(int) Constant 4
-              63:      6(int) SpecConstantOp 130 58 62
-              64:      6(int) SpecConstantOp 132 43(sp_sint) 20
+63(sp_int_add_two_sub_four):      6(int) SpecConstantOp 130 58(sp_int_add_two) 62
+64(sp_sint_mul_two):      6(int) SpecConstantOp 132 43(sp_sint) 20
               65:     41(int) Constant 2
-              66:     41(int) SpecConstantOp 132 42(sp_uint) 65
+66(sp_uint_mul_two):     41(int) SpecConstantOp 132 42(sp_uint) 65
               67:      6(int) Constant 5
-              68:      6(int) SpecConstantOp 135 64 67
+68(sp_sint_mul_two_div_five):      6(int) SpecConstantOp 135 64(sp_sint_mul_two) 67
               69:     41(int) Constant 5
-              70:     41(int) SpecConstantOp 134 66 69
-              71:      6(int) SpecConstantOp 139 43(sp_sint) 62
+70(sp_uint_mul_two_div_five):     41(int) SpecConstantOp 134 66(sp_uint_mul_two) 69
+71(sp_sint_rem_four):      6(int) SpecConstantOp 139 43(sp_sint) 62
               72:     41(int) Constant 4
-              73:     41(int) SpecConstantOp 137 42(sp_uint) 72
+73(sp_uint_rem_four):     41(int) SpecConstantOp 137 42(sp_uint) 72
               74:      6(int) SpecConstantOp 132 43(sp_sint) 60
-              75:      6(int) SpecConstantOp 135 74 67
+75(sp_sint_mul_three_div_five):      6(int) SpecConstantOp 135 74 67
               76:      6(int) Constant 10
-              77:      6(int) SpecConstantOp 195 43(sp_sint) 76
+77(sp_sint_shift_right_arithmetic):      6(int) SpecConstantOp 195 43(sp_sint) 76
               78:      6(int) Constant 20
-              79:     41(int) SpecConstantOp 194 42(sp_uint) 78
-              80:      6(int) SpecConstantOp 196 43(sp_sint) 32
-              81:     41(int) SpecConstantOp 196 42(sp_uint) 20
+79(sp_uint_shift_right_arithmetic):     41(int) SpecConstantOp 194 42(sp_uint) 78
+80(sp_sint_shift_left):      6(int) SpecConstantOp 196 43(sp_sint) 32
+81(sp_uint_shift_left):     41(int) SpecConstantOp 196 42(sp_uint) 20
               82:      6(int) Constant 256
-              83:      6(int) SpecConstantOp 197 43(sp_sint) 82
+83(sp_sint_or_256):      6(int) SpecConstantOp 197 43(sp_sint) 82
               84:     41(int) Constant 512
-              85:     41(int) SpecConstantOp 198 42(sp_uint) 84
-              86:    22(bool) SpecConstantOp 177 19(sp_int) 43(sp_sint)
-              87:    22(bool) SpecConstantOp 170 42(sp_uint) 42(sp_uint)
-              88:    22(bool) SpecConstantOp 173 19(sp_int) 43(sp_sint)
+85(sp_uint_xor_512):     41(int) SpecConstantOp 198 42(sp_uint) 84
+86(sp_int_lt_sp_sint):    22(bool) SpecConstantOp 177 19(sp_int) 43(sp_sint)
+87(sp_uint_equal_sp_uint):    22(bool) SpecConstantOp 170 42(sp_uint) 42(sp_uint)
+88(sp_int_gt_sp_sint):    22(bool) SpecConstantOp 173 19(sp_int) 43(sp_sint)
               89:      6(int) Constant 30
               90:             TypeVector 6(int) 4
-              91:   90(ivec4) SpecConstantComposite 78 89 19(sp_int) 19(sp_int)
+          91(iv):   90(ivec4) SpecConstantComposite 78 89 19(sp_int) 19(sp_int)
               92:     41(int) Constant 4294967295
               93:     41(int) Constant 4294967294
               94:             TypeVector 41(int) 4
-              95:   94(ivec4) SpecConstantComposite 42(sp_uint) 42(sp_uint) 92 93
+          95(uv):   94(ivec4) SpecConstantComposite 42(sp_uint) 42(sp_uint) 92 93
               96:             TypeVector 22(bool) 4
               97:   94(ivec4) ConstantComposite 48 48 48 48
-              98:   96(bvec4) SpecConstantOp 171 91 97
-              99:   96(bvec4) SpecConstantOp 171 95 97
+  98(bv_from_iv):   96(bvec4) SpecConstantOp 171 91(iv) 97
+  99(bv_from_uv):   96(bvec4) SpecConstantOp 171 95(uv) 97
              100:   90(ivec4) ConstantComposite 12 12 12 12
              101:   90(ivec4) ConstantComposite 32 32 32 32
-             102:   90(ivec4) SpecConstantOp 169 98 101 100
+ 102(iv_from_bv):   90(ivec4) SpecConstantOp 169 98(bv_from_iv) 101 100
              103:   94(ivec4) ConstantComposite 52 52 52 52
-             104:   94(ivec4) SpecConstantOp 169 98 103 97
-             105:   94(ivec4) SpecConstantOp 128 91 97
-             106:   90(ivec4) SpecConstantOp 128 95 97
-             107:   90(ivec4) SpecConstantOp 200 91
-             108:   90(ivec4) SpecConstantOp 126 91
+ 104(uv_from_bv):   94(ivec4) SpecConstantOp 169 98(bv_from_iv) 103 97
+ 105(uv_from_iv):   94(ivec4) SpecConstantOp 128 91(iv) 97
+ 106(iv_from_uv):   90(ivec4) SpecConstantOp 128 95(uv) 97
+     107(not_iv):   90(ivec4) SpecConstantOp 200 91(iv)
+  108(negate_iv):   90(ivec4) SpecConstantOp 126 91(iv)
              109:   90(ivec4) ConstantComposite 20 20 20 20
-             110:   90(ivec4) SpecConstantOp 128 91 109
-             111:   90(ivec4) SpecConstantOp 128 91 109
+ 110(iv_add_two):   90(ivec4) SpecConstantOp 128 91(iv) 109
+             111:   90(ivec4) SpecConstantOp 128 91(iv) 109
              112:   90(ivec4) ConstantComposite 60 60 60 60
-             113:   90(ivec4) SpecConstantOp 130 111 112
+113(iv_add_two_sub_three):   90(ivec4) SpecConstantOp 130 111 112
              114:   90(ivec4) ConstantComposite 62 62 62 62
-             115:   90(ivec4) SpecConstantOp 130 113 114
-             116:   90(ivec4) SpecConstantOp 132 91 109
+115(iv_add_two_sub_four):   90(ivec4) SpecConstantOp 130 113(iv_add_two_sub_three) 114
+ 116(iv_mul_two):   90(ivec4) SpecConstantOp 132 91(iv) 109
              117:   90(ivec4) ConstantComposite 67 67 67 67
-             118:   90(ivec4) SpecConstantOp 135 116 117
-             119:   90(ivec4) SpecConstantOp 139 91 114
+118(iv_mul_two_div_five):   90(ivec4) SpecConstantOp 135 116(iv_mul_two) 117
+119(iv_rem_four):   90(ivec4) SpecConstantOp 139 91(iv) 114
              120:   90(ivec4) ConstantComposite 76 76 76 76
-             121:   90(ivec4) SpecConstantOp 195 91 120
-             122:   90(ivec4) SpecConstantOp 196 91 109
+121(iv_shift_right_arithmetic):   90(ivec4) SpecConstantOp 195 91(iv) 120
+122(iv_shift_left):   90(ivec4) SpecConstantOp 196 91(iv) 109
              123:      6(int) Constant 1024
              124:   90(ivec4) ConstantComposite 123 123 123 123
-             125:   90(ivec4) SpecConstantOp 197 91 124
+ 125(iv_or_1024):   90(ivec4) SpecConstantOp 197 91(iv) 124
              126:     41(int) Constant 2048
              127:   94(ivec4) ConstantComposite 126 126 126 126
-             128:   94(ivec4) SpecConstantOp 198 95 127
-             129:      6(int) SpecConstantOp 81 91 0
+128(uv_xor_2048):   94(ivec4) SpecConstantOp 198 95(uv) 127
+       129(iv_x):      6(int) SpecConstantOp 81 91(iv) 0
              130:             TypeVector 6(int) 2
-             131:  130(ivec2) SpecConstantOp 79 91 91 1(GLSL.std.450) 0
+      131(iv_yx):  130(ivec2) SpecConstantOp 79 91(iv) 91(iv) 1(GLSL.std.450) 0
              132:             TypeVector 6(int) 3
-             133:  132(ivec3) SpecConstantOp 79 91 91 2 1(GLSL.std.450) 0
-             134:   90(ivec4) SpecConstantOp 79 91 91 1(GLSL.std.450) 2 0 3
+     133(iv_zyx):  132(ivec3) SpecConstantOp 79 91(iv) 91(iv) 2 1(GLSL.std.450) 0
+    134(iv_yzxw):   90(ivec4) SpecConstantOp 79 91(iv) 91(iv) 1(GLSL.std.450) 2 0 3
           135(a):      6(int) SpecConstant 4
           136(b):      6(int) SpecConstant 6
           137(c):    22(bool) SpecConstantTrue
@@ -152,14 +210,14 @@ spv.specConstantOperations.vert
 142(ternayArray1):    141(ptr) Variable Private
              143:      6(int) Constant 13
              144:      6(int) Constant 17
-             145:      6(int) SpecConstantOp 169 137(c) 143 144
-             146:      6(int) SpecConstantOp 169 137(c) 135(a) 144
+         145(t1):      6(int) SpecConstantOp 169 137(c) 143 144
+         146(t2):      6(int) SpecConstantOp 169 137(c) 135(a) 144
              147:    22(bool) ConstantTrue
-             148:      6(int) SpecConstantOp 169 147 135(a) 144
+         148(t3):      6(int) SpecConstantOp 169 147 135(a) 144
              149:    22(bool) SpecConstantOp 173 135(a) 136(b)
              150:      6(int) SpecConstantOp 128 143 135(a)
              151:      6(int) SpecConstantOp 132 144 136(b)
-             152:      6(int) SpecConstantOp 169 149 150 151
+         152(t4):      6(int) SpecConstantOp 169 149 150 151
              153:    22(bool) SpecConstantOp 168 137(c)
              154:             TypeVector 39(float) 2
              155:   39(float) Constant 1065353216
@@ -168,7 +226,7 @@ spv.specConstantOperations.vert
              158:  154(fvec2) ConstantComposite 157 157
              159:             TypeVector 22(bool) 2
              160:  159(bvec2) SpecConstantComposite 153 153
-             161:  154(fvec2) SpecConstantOp 169 160 156 158
+         161(v2):  154(fvec2) SpecConstantOp 169 160 156 158
          4(main):           2 Function None 3
                5:             Label
                               Return

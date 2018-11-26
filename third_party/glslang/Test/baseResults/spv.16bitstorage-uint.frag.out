@@ -4,10 +4,8 @@ spv.16bitstorage-uint.frag
 // Id's are bound by 173
 
                               Capability Shader
-                              Capability Int16
                               Capability StorageUniformBufferBlock16
                               Capability StorageUniform16
-                              Extension  "SPV_AMD_gpu_shader_int16"
                               Extension  "SPV_KHR_16bit_storage"
                1:             ExtInstImport  "GLSL.std.450"
                               MemoryModel Logical GLSL450

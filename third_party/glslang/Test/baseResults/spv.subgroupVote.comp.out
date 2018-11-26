@@ -38,7 +38,7 @@ spv.subgroupVote.comp
                               MemberDecorate 24(Buffers) 2 Offset 32
                               MemberDecorate 24(Buffers) 3 Offset 64
                               MemberDecorate 24(Buffers) 4 Offset 96
-                              Decorate 24(Buffers) BufferBlock
+                              Decorate 24(Buffers) Block
                               Decorate 27(data) DescriptorSet 0
                               Decorate 27(data) Binding 0
                               Decorate 215 BuiltIn WorkgroupSize
@@ -59,31 +59,31 @@ spv.subgroupVote.comp
               23:             TypeVector 22(float64_t) 4
      24(Buffers):             TypeStruct 18(fvec4) 20(ivec4) 21(ivec4) 23(f64vec4) 19(int)
               25:             TypeArray 24(Buffers) 15
-              26:             TypePointer Uniform 25
-        27(data):     26(ptr) Variable Uniform
+              26:             TypePointer StorageBuffer 25
+        27(data):     26(ptr) Variable StorageBuffer
               29:     19(int) Constant 4
-              30:             TypePointer Uniform 19(int)
+              30:             TypePointer StorageBuffer 19(int)
               33:     19(int) Constant 0
               34:             TypeBool
               36:      6(int) Constant 3
               41:      6(int) Constant 0
-              42:             TypePointer Uniform 17(float)
+              42:             TypePointer StorageBuffer 17(float)
               46:     19(int) Constant 1
               50:             TypeVector 17(float) 2
-              51:             TypePointer Uniform 18(fvec4)
+              51:             TypePointer StorageBuffer 18(fvec4)
               59:     19(int) Constant 2
               60:             TypeVector 17(float) 3
               68:     19(int) Constant 3
               81:             TypeVector 19(int) 2
-              82:             TypePointer Uniform 20(ivec4)
+              82:             TypePointer StorageBuffer 20(ivec4)
               90:             TypeVector 19(int) 3
-             104:             TypePointer Uniform 6(int)
+             104:             TypePointer StorageBuffer 6(int)
              111:             TypeVector 6(int) 2
-             112:             TypePointer Uniform 21(ivec4)
+             112:             TypePointer StorageBuffer 21(ivec4)
              120:             TypeVector 6(int) 3
-             142:             TypePointer Uniform 22(float64_t)
+             142:             TypePointer StorageBuffer 22(float64_t)
              149:             TypeVector 22(float64_t) 2
-             150:             TypePointer Uniform 23(f64vec4)
+             150:             TypePointer StorageBuffer 23(f64vec4)
              158:             TypeVector 22(float64_t) 3
              182:   81(ivec2) ConstantComposite 33 33
              183:             TypeVector 34(bool) 2
