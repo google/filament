@@ -716,32 +716,6 @@ bool FEngine::execute() {
     return true;
 }
 
-// ---------------------------------------------------------------------------------------------
-
-EnginePerformanceTest::~EnginePerformanceTest() noexcept = default;
-
-class FEnginePerformanceTest : public EnginePerformanceTest {
-public:
-    void activateOmegaThirteen() noexcept { }
-};
-
-FILAMENT_UPCAST(EnginePerformanceTest)
-
-void EnginePerformanceTest::activateOmegaThirteen() noexcept {
-    upcast(this)->activateOmegaThirteen();
-}
-
-void EnginePerformanceTest::activateBigBang() noexcept {
-}
-
-static void destroyUniverse(void *) {
-}
-
-EnginePerformanceTest::PFN EnginePerformanceTest::getDestroyUniverseApi() {
-    return &destroyUniverse;
-}
-
-
 } // namespace details
 
 // ------------------------------------------------------------------------------------------------
