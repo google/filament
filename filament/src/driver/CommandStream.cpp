@@ -62,12 +62,12 @@ CommandStream::CommandStream(Driver& driver, CircularBuffer& buffer) noexcept
 
 void CommandStream::execute(void* buffer) {
     SYSTRACE_CALL();
-    Profiler::Counters c0;
+
+    Profiler profiler;
 
     if (SYSTRACE_TAG) {
         // we want to remove all this when tracing is completely disabled
-        Profiler& profiler = Profiler::get();
-        profiler.reset();
+        profiler.resetEvents(Profiler::EV_CPU_CYCLES | Profiler::EV_L1D_RATES  | Profiler::EV_BPU_RATES);
         profiler.start();
     }
 
@@ -79,17 +79,15 @@ void CommandStream::execute(void* buffer) {
 
     if (SYSTRACE_TAG) {
         // we want to remove all this when tracing is completely disabled
-        Profiler& profiler = Profiler::get();
-        profiler.readCounters(&c0);
-        profiler.stop();
-        SYSTRACE_VALUE32("GLThread (I)", c0.getInstructions());
-        SYSTRACE_VALUE32("GLThread (C)", c0.getCpuCycles());
-        SYSTRACE_VALUE32("GLThread (CPI x10)", c0.getCPI() * 10);
-        SYSTRACE_VALUE32("GLThread (L1D HR%)", c0.getL1DHitRate() * 100);
+        UTILS_UNUSED Profiler::Counters counters = profiler.readCounters();
+        SYSTRACE_VALUE32("GLThread (I)", counters.getInstructions());
+        SYSTRACE_VALUE32("GLThread (C)", counters.getCpuCycles());
+        SYSTRACE_VALUE32("GLThread (CPI x10)", counters.getCPI() * 10);
+        SYSTRACE_VALUE32("GLThread (L1D HR%)", counters.getL1DHitRate() * 100);
         if (profiler.hasBranchRates()) {
-            SYSTRACE_VALUE32("GLThread (BHR%)", c0.getBranchHitRate() * 100);
+            SYSTRACE_VALUE32("GLThread (BHR%)", counters.getBranchHitRate() * 100);
         } else {
-            SYSTRACE_VALUE32("GLThread (BPU miss)", c0.getBranchMisses());
+            SYSTRACE_VALUE32("GLThread (BPU miss)", counters.getBranchMisses());
         }
     }
 }
