@@ -506,10 +506,9 @@ bool MeshAssimp::setFromFile(const Path& file, std::vector<uint32_t>& outIndices
     scene = importer.ApplyPostProcessing(aiProcess_CalcTangentSpace);
     size_t index = importer.GetImporterIndex(file.getExtension().c_str());
     const aiImporterDesc* importerDesc = importer.GetImporterInfo(index);
-    bool isGLTF = false;
-    if (!strncmp("glTF2 Importer", importerDesc->mName, 14)) {
-        isGLTF = true;
-    }
+    bool isGLTF = importerDesc &&
+            (!strncmp("glTF Importer",  importerDesc->mName, 13) ||
+             !strncmp("glTF2 Importer", importerDesc->mName, 14));
 
     if (!scene) {
         std::cout << "No scene" << std::endl;
@@ -542,11 +541,10 @@ bool MeshAssimp::setFromFile(const Path& file, std::vector<uint32_t>& outIndices
 
     size_t deep = 0;
     size_t depth = 0;
+    size_t matCount = 0;
 
     const std::function<void(aiNode const* node, int parentIndex)> processNode =
-            [this, file, scene, &processNode, &outParents, &deep, &depth,
-                    &outIndices, &outPositions, &outTangents, &outTexCoords, &outMeshes, &outMaterials]
-            (aiNode const* node, int parentIndex) {
+            [&](aiNode const* node, int parentIndex) {
 
         mat4f const& current = transpose(*reinterpret_cast<mat4f const*>(&node->mTransformation));
 
@@ -583,6 +581,8 @@ bool MeshAssimp::setFromFile(const Path& file, std::vector<uint32_t>& outIndices
                         float3 bitangent;
 
                         //If the tangent and bitangent don't exist, make arbitrary ones
+                        // TODO: The glTF specification recommends using the MikkTSpace algorithm
+                        //       for computing tangent vectors in the absence of explicit tangents.
                         if (!tangents) {
                             bitangent = norm(cross(normal, float3{1.0, 0.0, 0.0}));
                             tangent = norm(cross(normal, bitangent));
@@ -612,163 +612,26 @@ bool MeshAssimp::setFromFile(const Path& file, std::vector<uint32_t>& outIndices
                     uint32_t materialId = mesh->mMaterialIndex;
                     aiMaterial const* material = scene->mMaterials[materialId];
 
+                    aiString name;
                     std::string materialName;
+
                     if (material->Get(AI_MATKEY_NAME, name) != AI_SUCCESS) {
-                        static int matCount = 0;
-                        while (outMaterials.find("_mat_" + std::to_string(matCount))
-                               != outMaterials.end()) {
-                            matCount++;
+                        if (isGLTF) {
+                            while (outMaterials.find("_mat_" + std::to_string(matCount))
+                                   != outMaterials.end()) {
+                                matCount++;
+                            }
+                            materialName = "_mat_" + std::to_string(matCount);
+                        } else {
+                            materialName = AI_DEFAULT_MATERIAL_NAME;
                         }
-                        materialName = "_mat_" + std::to_string(matCount);
                     } else {
                         materialName = name.C_Str();
                     }
 
-                    aiString baseColorPath;
-                    aiString AOPath;
-                    aiString MRPath;
-                    aiString normalPath;
-                    aiString emissivePath;
-                    aiString name;
-                    aiTextureMapMode mapMode[3];
-
-                    std::string dirName = file.getParent();
-                    TextureSampler defaultSampler(
-                            TextureSampler::MinFilter::LINEAR_MIPMAP_LINEAR,
-                           TextureSampler::MagFilter::LINEAR, TextureSampler::WrapMode::REPEAT);
-
-                    if (outMaterials.find(materialName) == outMaterials.end()) {
-                        bool materialIsDoubleSided = false;
-                        material->Get("$mat.twosided", 0, 0, materialIsDoubleSided);
-
-                        bool materialIsUnlit = false;
-                        material->Get("$mat.gltf.unlit", 0, 0, materialIsUnlit);
-
-                        aiString alphaMode;
-
-                        if (materialIsUnlit) {
-                            if (materialIsDoubleSided){
-                                outMaterials[materialName] = mGltfMaterialDSUnlit->createInstance();
-                            } else {
-                                outMaterials[materialName] = mGltfMaterialUnlit->createInstance();
-                            }
-                        } else if (materialIsDoubleSided) {
-                            material->Get("$mat.gltf.alphaMode", 0, 0, alphaMode);
-
-                            if (strcmp(alphaMode.C_Str(), "BLEND") == 0) {
-                                outMaterials[materialName] = mGltfMaterialDSTrans->createInstance();
-                            } else if (strcmp(alphaMode.C_Str(), "MASK") == 0) {
-                                outMaterials[materialName] = mGltfMaterialDSMasked->createInstance();
-                                float maskThreshold = 0.5;
-                                material->Get("$mat.gltf.alphaCutoff", 0, 0, maskThreshold);
-                                outMaterials[materialName]->setParameter(
-                                        "maskThreshold", maskThreshold);
-                            } else {
-                                outMaterials[materialName] = mGltfMaterialDS->createInstance();
-                            }
-                        } else {
-                             material->Get("$mat.gltf.alphaMode", 0, 0, alphaMode);
-
-                             if (strcmp(alphaMode.C_Str(), "BLEND") == 0) {
-                                 outMaterials[materialName] = mGltfMaterialTrans->createInstance();
-                             } else if (strcmp(alphaMode.C_Str(), "MASK") == 0) {
-                                 outMaterials[materialName] = mGltfMaterialMasked->createInstance();
-                                 float maskThreshold = 0.5;
-                                 material->Get("$mat.gltf.alphaCutoff", 0, 0, maskThreshold);
-                                 outMaterials[materialName]->setParameter(
-                                         "maskThreshold", maskThreshold);
-                             } else {
-                                 outMaterials[materialName] = mGltfMaterial->createInstance();
-                             }
-                        }
-
-                        // Load property values for gltf files
-                        aiColor4D baseColorFactor;
-                        sRGBColorA baseColorFactorCast{1.0f};
-                        aiColor3D emissiveFactor;
-                        sRGBColor emissiveFactorCast{1.0f};
-                        float metallicFactor = 1.0;
-                        float roughnessFactor = 1.0;
-
-                        //TODO: is occlusion strength available on Assimp now?
-
-                        // Load texture images for gltf files
-                        if (material->GetTexture(aiTextureType_DIFFUSE, 1, &baseColorPath,
-                                nullptr, nullptr, nullptr, nullptr, mapMode) == AI_SUCCESS) {
-                            setTextureFromPath(scene, &mEngine, mTextures, baseColorPath,
-                                    materialName, dirName, mapMode, "baseColorMap", outMaterials);
-                        } else {
-                            outMaterials[materialName]->setParameter("baseColorMap", mDefaultMap,
-                                    defaultSampler);
-                        }
-
-                        if (material->GetTexture(aiTextureType_UNKNOWN, 0, &MRPath, nullptr, nullptr,
-                                nullptr, nullptr, mapMode) == AI_SUCCESS) {
-                            setTextureFromPath(scene, &mEngine, mTextures, MRPath, materialName,
-                                    dirName, mapMode, "metallicRoughnessMap", outMaterials);
-
-                        } else {
-                            outMaterials[materialName]->setParameter("metallicRoughnessMap",
-                                    mDefaultMap, defaultSampler);
-                            outMaterials[materialName]->setParameter("metallicFactor",
-                                    mDefaultMetallic);
-                            outMaterials[materialName]->setParameter("roughnessFactor",
-                                    mDefaultRoughness);
-                        }
-
-                        if (material->GetTexture(aiTextureType_LIGHTMAP, 0, &AOPath, nullptr,
-                                nullptr, nullptr, nullptr, mapMode) == AI_SUCCESS) {
-                            setTextureFromPath(scene, &mEngine, mTextures, AOPath, materialName,
-                                    dirName, mapMode, "aoMap", outMaterials);
-
-                        } else {
-                            outMaterials[materialName]->setParameter("aoMap", mDefaultMap,
-                                    defaultSampler);
-                        }
-
-                        if (material->GetTexture(aiTextureType_NORMALS, 0, &normalPath, nullptr,
-                                nullptr, nullptr, nullptr, mapMode) == AI_SUCCESS) {
-                            setTextureFromPath(scene, &mEngine, mTextures, normalPath, materialName,
-                                    dirName, mapMode, "normalMap", outMaterials);
-                        } else {
-                            outMaterials[materialName]->setParameter("normalMap",
-                                    mDefaultNormalMap, defaultSampler);
-                        }
-
-                        if (material->GetTexture(aiTextureType_EMISSIVE, 0, &emissivePath, nullptr,
-                                nullptr, nullptr, nullptr, mapMode) == AI_SUCCESS) {
-                            setTextureFromPath(scene, &mEngine, mTextures, emissivePath,
-                                    materialName, dirName, mapMode, "emissiveMap", outMaterials);
-
-                        }  else {
-                            outMaterials[materialName]->setParameter("emissiveMap",
-                                    mDefaultMap, defaultSampler);
-                            outMaterials[materialName]->setParameter("emissiveFactor",
-                                    mDefaultEmissive);
-                        }
-
-                        //If the gltf has texture factors, override the default factor values
-                        if (material->Get("$mat.gltf.pbrMetallicRoughness.metallicFactor",
-                                0, 0, metallicFactor) == AI_SUCCESS) {
-                            outMaterials[materialName]->setParameter(
-                                    "metallicFactor", metallicFactor);
-                        }
-                        if (material->Get("$mat.gltf.pbrMetallicRoughness.roughnessFactor",
-                                0, 0, roughnessFactor) == AI_SUCCESS) {
-                            outMaterials[materialName]->setParameter(
-                                    "roughnessFactor", roughnessFactor);
-                        }
-                        if (material->Get(AI_MATKEY_COLOR_EMISSIVE, emissiveFactor) == AI_SUCCESS) {
-                            emissiveFactorCast = *reinterpret_cast<sRGBColor*>(&emissiveFactor);
-                            outMaterials[materialName]->setParameter(
-                                    "emissiveFactor", emissiveFactorCast);
-                        }
-                        if (material->Get("$mat.gltf.pbrMetallicRoughness.baseColorFactor",
-                                0, 0, baseColorFactor) == AI_SUCCESS) {
-                            baseColorFactorCast = *reinterpret_cast<sRGBColorA*>(&baseColorFactor);
-                            outMaterials[materialName]->setParameter(
-                                    "baseColorFactor", baseColorFactorCast);
-                        }
+                    if (isGLTF && outMaterials.find(materialName) == outMaterials.end()) {
+                        std::string dirName = file.getParent();
+                        processGLTFMaterial(scene, material, materialName, dirName, outMaterials);
                     }
 
                     aiColor3D color;
@@ -897,6 +760,146 @@ bool MeshAssimp::setFromFile(const Path& file, std::vector<uint32_t>& outIndices
         return true;
     }
     return false;
+}
+
+void MeshAssimp::processGLTFMaterial(const aiScene* scene, const aiMaterial* material,
+        const std::string& materialName, const std::string& dirName,
+         std::map<std::string, MaterialInstance*>& outMaterials) const {
+
+    aiString baseColorPath;
+    aiString AOPath;
+    aiString MRPath;
+    aiString normalPath;
+    aiString emissivePath;
+    aiTextureMapMode mapMode[3];
+
+    bool materialIsDoubleSided = false;
+    material->Get("$mat.twosided", 0, 0, materialIsDoubleSided);
+
+    bool materialIsUnlit = false;
+    material->Get("$mat.gltf.unlit", 0, 0, materialIsUnlit);
+
+    aiString alphaMode;
+
+    if (materialIsUnlit) {
+        if (materialIsDoubleSided){
+            outMaterials[materialName] = mGltfMaterialDSUnlit->createInstance();
+        } else {
+            outMaterials[materialName] = mGltfMaterialUnlit->createInstance();
+        }
+    } else if (materialIsDoubleSided) {
+        material->Get("$mat.gltf.alphaMode", 0, 0, alphaMode);
+
+        if (strcmp(alphaMode.C_Str(), "BLEND") == 0) {
+            outMaterials[materialName] = mGltfMaterialDSTrans->createInstance();
+        } else if (strcmp(alphaMode.C_Str(), "MASK") == 0) {
+            outMaterials[materialName] = mGltfMaterialDSMasked->createInstance();
+            float maskThreshold = 0.5;
+            material->Get("$mat.gltf.alphaCutoff", 0, 0, maskThreshold);
+            outMaterials[materialName]->setParameter(
+                    "maskThreshold", maskThreshold);
+        } else {
+            outMaterials[materialName] = mGltfMaterialDS->createInstance();
+        }
+    } else {
+         material->Get("$mat.gltf.alphaMode", 0, 0, alphaMode);
+
+         if (strcmp(alphaMode.C_Str(), "BLEND") == 0) {
+             outMaterials[materialName] = mGltfMaterialTrans->createInstance();
+         } else if (strcmp(alphaMode.C_Str(), "MASK") == 0) {
+             outMaterials[materialName] = mGltfMaterialMasked->createInstance();
+             float maskThreshold = 0.5;
+             material->Get("$mat.gltf.alphaCutoff", 0, 0, maskThreshold);
+             outMaterials[materialName]->setParameter(
+                     "maskThreshold", maskThreshold);
+         } else {
+             outMaterials[materialName] = mGltfMaterial->createInstance();
+         }
+    }
+
+    // Load property values for gltf files
+    aiColor4D baseColorFactor;
+    sRGBColorA baseColorFactorCast{1.0f};
+    aiColor3D emissiveFactor;
+    sRGBColor emissiveFactorCast{1.0f};
+    float metallicFactor = 1.0;
+    float roughnessFactor = 1.0;
+
+    // TODO: is occlusion strength available on Assimp now?
+
+    // Load texture images for gltf files
+    TextureSampler sampler(
+            TextureSampler::MinFilter::LINEAR_MIPMAP_LINEAR,
+            TextureSampler::MagFilter::LINEAR, TextureSampler::WrapMode::REPEAT);
+
+    if (material->GetTexture(aiTextureType_DIFFUSE, 1, &baseColorPath,
+            nullptr, nullptr, nullptr, nullptr, mapMode) == AI_SUCCESS) {
+        setTextureFromPath(scene, &mEngine, mTextures, baseColorPath,
+                materialName, dirName, mapMode, "baseColorMap", outMaterials);
+    } else {
+        outMaterials[materialName]->setParameter("baseColorMap", mDefaultMap,
+                sampler);
+    }
+
+    if (material->GetTexture(aiTextureType_UNKNOWN, 0, &MRPath,
+            nullptr, nullptr, nullptr, nullptr, mapMode) == AI_SUCCESS) {
+        setTextureFromPath(scene, &mEngine, mTextures, MRPath, materialName,
+                dirName, mapMode, "metallicRoughnessMap", outMaterials);
+
+    } else {
+        outMaterials[materialName]->setParameter("metallicRoughnessMap", mDefaultMap, sampler);
+        outMaterials[materialName]->setParameter("metallicFactor", mDefaultMetallic);
+        outMaterials[materialName]->setParameter("roughnessFactor", mDefaultRoughness);
+    }
+
+    if (material->GetTexture(aiTextureType_LIGHTMAP, 0, &AOPath, nullptr,
+            nullptr, nullptr, nullptr, mapMode) == AI_SUCCESS) {
+        setTextureFromPath(scene, &mEngine, mTextures, AOPath, materialName,
+                dirName, mapMode, "aoMap", outMaterials);
+
+    } else {
+        outMaterials[materialName]->setParameter("aoMap", mDefaultMap, sampler);
+    }
+
+    if (material->GetTexture(aiTextureType_NORMALS, 0, &normalPath, nullptr,
+            nullptr, nullptr, nullptr, mapMode) == AI_SUCCESS) {
+        setTextureFromPath(scene, &mEngine, mTextures, normalPath, materialName,
+                dirName, mapMode, "normalMap", outMaterials);
+    } else {
+        outMaterials[materialName]->setParameter("normalMap", mDefaultNormalMap, sampler);
+    }
+
+    if (material->GetTexture(aiTextureType_EMISSIVE, 0, &emissivePath, nullptr,
+            nullptr, nullptr, nullptr, mapMode) == AI_SUCCESS) {
+        setTextureFromPath(scene, &mEngine, mTextures, emissivePath,
+                materialName, dirName, mapMode, "emissiveMap", outMaterials);
+
+    }  else {
+        outMaterials[materialName]->setParameter("emissiveMap", mDefaultMap, sampler);
+        outMaterials[materialName]->setParameter("emissiveFactor", mDefaultEmissive);
+    }
+
+    //If the gltf has texture factors, override the default factor values
+    if (material->Get("$mat.gltf.pbrMetallicRoughness.metallicFactor", 0, 0, metallicFactor)
+            == AI_SUCCESS) {
+        outMaterials[materialName]->setParameter("metallicFactor", metallicFactor);
+    }
+
+    if (material->Get("$mat.gltf.pbrMetallicRoughness.roughnessFactor", 0, 0, roughnessFactor)
+            == AI_SUCCESS) {
+        outMaterials[materialName]->setParameter("roughnessFactor", roughnessFactor);
+    }
+
+    if (material->Get(AI_MATKEY_COLOR_EMISSIVE, emissiveFactor) == AI_SUCCESS) {
+        emissiveFactorCast = *reinterpret_cast<sRGBColor*>(&emissiveFactor);
+        outMaterials[materialName]->setParameter("emissiveFactor", emissiveFactorCast);
+    }
+
+    if (material->Get("$mat.gltf.pbrMetallicRoughness.baseColorFactor", 0, 0, baseColorFactor)
+            == AI_SUCCESS) {
+        baseColorFactorCast = *reinterpret_cast<sRGBColorA*>(&baseColorFactor);
+        outMaterials[materialName]->setParameter("baseColorFactor", baseColorFactorCast);
+    }
 }
 
 

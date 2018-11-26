@@ -139,15 +139,20 @@ static void setup(Engine* engine, View* view, Scene* scene) {
 
     for (auto renderable : g_meshSet->getRenderables()) {
         if (rcm.hasComponent(renderable)) {
+            auto instance = rcm.getInstance(renderable);
+            rcm.setCastShadows(instance, true);
+            rcm.setReceiveShadows(instance, true);
             scene->addEntity(renderable);
         }
     }
 
     g_light = EntityManager::get().create();
-    LightManager::Builder(LightManager::Type::DIRECTIONAL)
-            .color(Color::toLinear<ACCURATE>({0.98f, 0.92f, 0.89f}))
+    LightManager::Builder(LightManager::Type::SUN)
+            .color(Color::toLinear<ACCURATE>(sRGBColor(0.98f, 0.92f, 0.89f)))
             .intensity(110000)
-            .direction({0.6, -1, -0.8})
+            .direction({ 0.7, -1, -0.8 })
+            .sunAngularRadius(1.9f)
+            .castShadows(true)
             .build(*engine, g_light);
     scene->addEntity(g_light);
 }

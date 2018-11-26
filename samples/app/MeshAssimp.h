@@ -43,6 +43,7 @@ namespace filament {
 #include <filament/Texture.h>
 #include <filament/TextureSampler.h>
 #include <filament/TransformManager.h>
+#include <assimp/scene.h>
 
 class MeshAssimp {
 public:
@@ -94,8 +95,11 @@ private:
             std::vector<half2>&    outTexCoords,
             std::vector<Mesh>&     outMeshes,
             std::vector<int>&      outParents,
-            std::map<std::string, filament::MaterialInstance*>& outMaterials
-            );
+            std::map<std::string, filament::MaterialInstance*>& outMaterials);
+
+    void processGLTFMaterial(const aiScene* scene, const aiMaterial* material,
+            const std::string& materialName, const std::string& dirName,
+            std::map<std::string, filament::MaterialInstance*>& outMaterials) const;
 
     filament::Texture* createOneByOneTexture(uint32_t textureData);
     filament::Engine& mEngine;
