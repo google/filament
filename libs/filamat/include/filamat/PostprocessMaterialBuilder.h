@@ -46,15 +46,6 @@ public:
     // (used to generate code) and final output representations (spirv and/or text).
     PostprocessMaterialBuilder& targetApi(TargetApi targetApi) noexcept {
         mTargetApi = targetApi;
-        mCodeGenTargetApi = targetApi;
-        return *this;
-    }
-
-    // specifies vulkan vs opengl; this method can be used to override which target API is used
-    // during the code generation step. This can be useful when the post-processor uses a
-    // different intermediate representation.
-    PostprocessMaterialBuilder& codeGenTargetApi(TargetApi targetApi) noexcept {
-        mCodeGenTargetApi = targetApi;
         return *this;
     }
 
