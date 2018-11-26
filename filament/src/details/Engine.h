@@ -379,16 +379,6 @@ public:
 
 FILAMENT_UPCAST(Engine)
 
-class UTILS_PUBLIC EnginePerformanceTest {
-public:
-    //! \privatesection
-    using PFN = void(*)(void *);
-    virtual void activateBigBang() noexcept;
-    void activateOmegaThirteen() noexcept;
-    PFN getDestroyUniverseApi();
-    virtual ~EnginePerformanceTest() noexcept;
-};
-
 } // namespace details
 } // namespace filament
 
