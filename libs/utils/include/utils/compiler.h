@@ -30,10 +30,18 @@
 #define __has_builtin(x) 0
 #endif
 
-#define UTILS_PUBLIC  __attribute__((visibility("default")))
+#if __has_attribute(visibility)
+#    define UTILS_PUBLIC  __attribute__((visibility("default")))
+#else
+#    define UTILS_PUBLIC  
+#endif
 
-#ifndef TNT_DEV
-#    define UTILS_PRIVATE __attribute__((visibility("hidden")))
+#if __has_attribute(visibility)
+#    ifndef TNT_DEV
+#        define UTILS_PRIVATE __attribute__((visibility("hidden")))
+#    else
+#        define UTILS_PRIVATE
+#    endif
 #else
 #    define UTILS_PRIVATE
 #endif

@@ -19,11 +19,9 @@
 
 #include <math/TMatHelpers.h>
 #include <math/vec2.h>
+#include <math/compiler.h>
 #include <stdint.h>
 #include <sys/types.h>
-
-
-#define PURE __attribute__((pure))
 
 namespace math {
 // -------------------------------------------------------------------------------------
@@ -348,7 +346,7 @@ constexpr TMat22<T>::TMat22(const TVec2<A>& v0, const TVec2<B>& v1) {
 
 // matrix * column-vector, result is a vector of the same type than the input vector
 template <typename T, typename U>
-constexpr typename TMat22<U>::col_type PURE operator *(const TMat22<T>& lhs, const TVec2<U>& rhs) {
+constexpr typename TMat22<U>::col_type MATH_PURE operator *(const TMat22<T>& lhs, const TVec2<U>& rhs) {
     // Result is initialized to zero.
     typename TMat22<U>::col_type result = {};
     for (size_t col = 0; col < TMat22<T>::NUM_COLS; ++col) {
@@ -359,7 +357,7 @@ constexpr typename TMat22<U>::col_type PURE operator *(const TMat22<T>& lhs, con
 
 // row-vector * matrix, result is a vector of the same type than the input vector
 template <typename T, typename U>
-constexpr typename TMat22<U>::row_type PURE operator *(const TVec2<U>& lhs, const TMat22<T>& rhs) {
+constexpr typename TMat22<U>::row_type MATH_PURE operator *(const TVec2<U>& lhs, const TMat22<T>& rhs) {
     typename TMat22<U>::row_type result;
     for (size_t col = 0; col < TMat22<T>::NUM_COLS; ++col) {
         result[col] = dot(lhs, rhs[col]);
@@ -369,14 +367,14 @@ constexpr typename TMat22<U>::row_type PURE operator *(const TVec2<U>& lhs, cons
 
 // matrix * scalar, result is a matrix of the same type than the input matrix
 template<typename T, typename U>
-constexpr typename std::enable_if<std::is_arithmetic<U>::value, TMat22<T>>::type PURE
+constexpr typename std::enable_if<std::is_arithmetic<U>::value, TMat22<T>>::type MATH_PURE
 operator*(TMat22<T> lhs, U rhs) {
     return lhs *= rhs;
 }
 
 // scalar * matrix, result is a matrix of the same type than the input matrix
 template<typename T, typename U>
-constexpr typename std::enable_if<std::is_arithmetic<U>::value, TMat22<T>>::type PURE
+constexpr typename std::enable_if<std::is_arithmetic<U>::value, TMat22<T>>::type MATH_PURE
 operator*(U lhs, const TMat22<T>& rhs) {
     return rhs * lhs;
 }
@@ -387,7 +385,7 @@ operator*(U lhs, const TMat22<T>& rhs) {
  * BASE<T>::col_type is not accessible from there (???)
  */
 template<typename T>
-constexpr typename TMat22<T>::col_type PURE diag(const TMat22<T>& m) {
+constexpr typename TMat22<T>::col_type MATH_PURE diag(const TMat22<T>& m) {
     return matrix::diag(m);
 }
 
@@ -400,8 +398,6 @@ typedef details::TMat22<float> mat2f;
 
 // ----------------------------------------------------------------------------------------
 }  // namespace math
-
-#undef PURE
 
 namespace std {
 template <typename T>
