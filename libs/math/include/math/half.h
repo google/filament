@@ -21,17 +21,7 @@
 #include <limits>
 #include <type_traits>
 
-#ifdef __cplusplus
-#   define LIKELY( exp )    (__builtin_expect( !!(exp), true ))
-#   define UNLIKELY( exp )  (__builtin_expect( !!(exp), false ))
-#else
-#   define LIKELY( exp )    (__builtin_expect( !!(exp), 1 ))
-#   define UNLIKELY( exp )  (__builtin_expect( !!(exp), 0 ))
-#endif
-
-#ifndef MAKE_CONSTEXPR
-#define MAKE_CONSTEXPR(e) __builtin_constant_p(e) ? (e) : (e)
-#endif
+#include <math/compiler.h>
 
 namespace math {
 
@@ -122,7 +112,7 @@ constexpr half::fp16 half::ftoh(float f) noexcept {
     unsigned int sign = in.getS();
 
     in.setS(0);
-    if (UNLIKELY(in.getE() == 0xFF)) { // inf or nan
+    if (MATH_UNLIKELY(in.getE() == 0xFF)) { // inf or nan
         out.setE(0x1F);
         out.setM(in.getM() ? 0x200 : 0);
     } else {
@@ -151,7 +141,7 @@ constexpr float half::htof(half::fp16 in) noexcept {
 #endif // __ARM_NEON
 
 inline constexpr math::half operator"" _h(long double v) {
-    return math::half(v);
+    return math::half(static_cast<float>(v));
 }
 
 } // namespace math
@@ -202,9 +192,5 @@ public:
 };
 
 } // namespace std
-
-#undef LIKELY
-#undef UNLIKELY
-#undef MAKE_CONSTEXPR
 
 #endif // TNT_MATH_HALF_H

@@ -55,7 +55,7 @@ public:
      * element type.
      */
     template<typename OTHER>
-    VECTOR<T>& operator +=(const VECTOR<OTHER>& v) {
+    constexpr VECTOR<T>& operator +=(const VECTOR<OTHER>& v) {
         VECTOR<T>& lhs = static_cast<VECTOR<T>&>(*this);
         for (size_t i = 0; i < lhs.size(); i++) {
             lhs[i] += v[i];
@@ -63,7 +63,7 @@ public:
         return lhs;
     }
     template<typename OTHER>
-    VECTOR<T>& operator -=(const VECTOR<OTHER>& v) {
+    constexpr VECTOR<T>& operator -=(const VECTOR<OTHER>& v) {
         VECTOR<T>& lhs = static_cast<VECTOR<T>&>(*this);
         for (size_t i = 0; i < lhs.size(); i++) {
             lhs[i] -= v[i];
@@ -76,14 +76,14 @@ public:
      * like "vector *= scalar" by letting the compiler implicitly convert a scalar
      * to a vector (assuming the BASE<T> allows it).
      */
-    VECTOR<T>& operator +=(const VECTOR<T>& v) {
+    constexpr VECTOR<T>& operator +=(const VECTOR<T>& v) {
         VECTOR<T>& lhs = static_cast<VECTOR<T>&>(*this);
         for (size_t i = 0; i < lhs.size(); i++) {
             lhs[i] += v[i];
         }
         return lhs;
     }
-    VECTOR<T>& operator -=(const VECTOR<T>& v) {
+    constexpr VECTOR<T>& operator -=(const VECTOR<T>& v) {
         VECTOR<T>& lhs = static_cast<VECTOR<T>&>(*this);
         for (size_t i = 0; i < lhs.size(); i++) {
             lhs[i] -= v[i];
@@ -136,7 +136,7 @@ public:
      * element type.
      */
     template<typename OTHER>
-    VECTOR<T>& operator *=(const VECTOR<OTHER>& v) {
+    constexpr VECTOR<T>& operator *=(const VECTOR<OTHER>& v) {
         VECTOR<T>& lhs = static_cast<VECTOR<T>&>(*this);
         for (size_t i = 0; i < lhs.size(); i++) {
             lhs[i] *= v[i];
@@ -144,7 +144,7 @@ public:
         return lhs;
     }
     template<typename OTHER>
-    VECTOR<T>& operator /=(const VECTOR<OTHER>& v) {
+    constexpr VECTOR<T>& operator /=(const VECTOR<OTHER>& v) {
         VECTOR<T>& lhs = static_cast<VECTOR<T>&>(*this);
         for (size_t i = 0; i < lhs.size(); i++) {
             lhs[i] /= v[i];
@@ -157,14 +157,14 @@ public:
      * like "vector *= scalar" by letting the compiler implicitly convert a scalar
      * to a vector (assuming the BASE<T> allows it).
      */
-    VECTOR<T>& operator *=(const VECTOR<T>& v) {
+    constexpr VECTOR<T>& operator *=(const VECTOR<T>& v) {
         VECTOR<T>& lhs = static_cast<VECTOR<T>&>(*this);
         for (size_t i = 0; i < lhs.size(); i++) {
             lhs[i] *= v[i];
         }
         return lhs;
     }
-    VECTOR<T>& operator /=(const VECTOR<T>& v) {
+    constexpr VECTOR<T>& operator /=(const VECTOR<T>& v) {
         VECTOR<T>& lhs = static_cast<VECTOR<T>&>(*this);
         for (size_t i = 0; i < lhs.size(); i++) {
             lhs[i] /= v[i];
@@ -254,7 +254,7 @@ public:
     friend inline
     bool MATH_PURE operator ==(const VECTOR<T>& lv, const VECTOR<RT>& rv) {
         // w/ inlining we end-up with many branches that will pollute the BPU cache
-        #pragma nounroll
+        MATH_NOUNROLL
         for (size_t i = 0; i < lv.size(); i++)
             if (lv[i] != rv[i])
                 return false;
@@ -271,7 +271,7 @@ public:
     friend inline
     bool MATH_PURE operator >(const VECTOR<T>& lv, const VECTOR<RT>& rv) {
         // w/ inlining we end-up with many branches that will pollute the BPU cache
-        #pragma nounroll
+        MATH_NOUNROLL
         for (size_t i = 0; i < lv.size(); i++) {
             if (lv[i] != rv[i]) {
                 return lv[i] > rv[i];
@@ -290,7 +290,7 @@ public:
     friend inline
     bool MATH_PURE operator <(const VECTOR<T>& lv, const VECTOR<RT>& rv) {
         // w/ inlining we end-up with many branches that will pollute the BPU cache
-        #pragma nounroll
+        MATH_NOUNROLL
         for (size_t i = 0; i < lv.size(); i++) {
             if (lv[i] != rv[i]) {
                 return lv[i] < rv[i];
@@ -392,11 +392,11 @@ public:
         return r;
     }
 
-    friend inline constexpr T MATH_PURE norm(const VECTOR<T>& lv) {
+    friend inline T MATH_PURE norm(const VECTOR<T>& lv) {
         return std::sqrt(dot(lv, lv));
     }
 
-    friend inline constexpr T MATH_PURE length(const VECTOR<T>& lv) {
+    friend inline T MATH_PURE length(const VECTOR<T>& lv) {
         return norm(lv);
     }
 

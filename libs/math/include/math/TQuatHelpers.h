@@ -54,7 +54,7 @@ public:
      * element type.
      */
     template <typename OTHER>
-    QUATERNION<T>& operator *= (const QUATERNION<OTHER>& r) {
+    constexpr QUATERNION<T>& operator *= (const QUATERNION<OTHER>& r) {
         QUATERNION<T>& q = static_cast<QUATERNION<T>&>(*this);
         q = q * r;
         return q;
@@ -62,14 +62,14 @@ public:
 
     /* compound assignment products by a scalar
      */
-    QUATERNION<T>& operator *= (T v) {
+    constexpr QUATERNION<T>& operator *= (T v) {
         QUATERNION<T>& lhs = static_cast<QUATERNION<T>&>(*this);
         for (size_t i = 0; i < QUATERNION<T>::size(); i++) {
             lhs[i] *= v;
         }
         return lhs;
     }
-    QUATERNION<T>& operator /= (T v) {
+    constexpr QUATERNION<T>& operator /= (T v) {
         QUATERNION<T>& lhs = static_cast<QUATERNION<T>&>(*this);
         for (size_t i = 0; i < QUATERNION<T>::size(); i++) {
             lhs[i] /= v;
@@ -172,12 +172,12 @@ public:
     }
 
     friend inline
-    constexpr T MATH_PURE norm(const QUATERNION<T>& q) {
+    T MATH_PURE norm(const QUATERNION<T>& q) {
         return std::sqrt( dot(q, q) );
     }
 
     friend inline
-    constexpr T MATH_PURE length(const QUATERNION<T>& q) {
+    T MATH_PURE length(const QUATERNION<T>& q) {
         return norm(q);
     }
 
@@ -187,8 +187,8 @@ public:
     }
 
     friend inline
-    constexpr QUATERNION<T> MATH_PURE normalize(const QUATERNION<T>& q) {
-        return length(q) ? q / length(q) : QUATERNION<T>(1);
+    QUATERNION<T> MATH_PURE normalize(const QUATERNION<T>& q) {
+        return length(q) ? q / length(q) : QUATERNION<T>(static_cast<T>(1));
     }
 
     friend inline

@@ -682,7 +682,7 @@ public:
     }
 
     void* allocate(size_t size, size_t alignment = 1) noexcept {
-        return mArena.template alloc(size, alignment, 0);
+        return mArena.template alloc<uint8_t>(size, alignment, 0);
     }
 
     template <typename T>

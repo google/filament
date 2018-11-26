@@ -21,13 +21,10 @@
 #include <math/TQuatHelpers.h>
 #include <math/vec3.h>
 #include <math/vec4.h>
+#include <math/compiler.h>
 
 #include <stdint.h>
 #include <sys/types.h>
-
-#ifndef PURE
-#define PURE __attribute__((pure))
-#endif
 
 namespace math {
 // -------------------------------------------------------------------------------------
@@ -125,7 +122,7 @@ public:
 
     // constructs a quaternion from an axis and angle
     template <typename A, typename B>
-    constexpr static TQuaternion PURE fromAxisAngle(const TVec3<A>& axis, B angle) {
+    constexpr static TQuaternion MATH_PURE fromAxisAngle(const TVec3<A>& axis, B angle) {
         return TQuaternion(std::sin(angle*0.5) * normalize(axis), std::cos(angle*0.5));
     }
 };
@@ -160,7 +157,5 @@ constexpr inline quat operator"" _k(unsigned long long v) {
 
 // ----------------------------------------------------------------------------------------
 }  // namespace math
-
-#undef PURE
 
 #endif  // MATH_QUAT_H_

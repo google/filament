@@ -20,12 +20,11 @@
 #include <math/quat.h>
 #include <math/TMatHelpers.h>
 #include <math/vec3.h>
+#include <math/compiler.h>
 
 #include <limits.h>
 #include <stdint.h>
 #include <sys/types.h>
-
-#define PURE __attribute__((pure))
 
 namespace math {
 // -------------------------------------------------------------------------------------
@@ -392,7 +391,7 @@ constexpr TMat33<T>::TMat33(const TQuaternion<U>& q) {
 
 // matrix * column-vector, result is a vector of the same type than the input vector
 template <typename T, typename U>
-constexpr typename TMat33<U>::col_type PURE operator *(const TMat33<T>& lhs, const TVec3<U>& rhs) {
+constexpr typename TMat33<U>::col_type MATH_PURE operator *(const TMat33<T>& lhs, const TVec3<U>& rhs) {
     // Result is initialized to zero.
     typename TMat33<U>::col_type result = {};
     for (size_t col = 0; col < TMat33<T>::NUM_COLS; ++col) {
@@ -403,7 +402,7 @@ constexpr typename TMat33<U>::col_type PURE operator *(const TMat33<T>& lhs, con
 
 // row-vector * matrix, result is a vector of the same type than the input vector
 template <typename T, typename U>
-constexpr typename TMat33<U>::row_type PURE operator *(const TVec3<U>& lhs, const TMat33<T>& rhs) {
+constexpr typename TMat33<U>::row_type MATH_PURE operator *(const TVec3<U>& lhs, const TMat33<T>& rhs) {
     typename TMat33<U>::row_type result;
     for (size_t col = 0; col < TMat33<T>::NUM_COLS; ++col) {
         result[col] = dot(lhs, rhs[col]);
@@ -413,14 +412,14 @@ constexpr typename TMat33<U>::row_type PURE operator *(const TVec3<U>& lhs, cons
 
 // matrix * scalar, result is a matrix of the same type than the input matrix
 template<typename T, typename U>
-constexpr typename std::enable_if<std::is_arithmetic<U>::value, TMat33<T>>::type PURE
+constexpr typename std::enable_if<std::is_arithmetic<U>::value, TMat33<T>>::type MATH_PURE
 operator*(TMat33<T> lhs, U rhs) {
     return lhs *= rhs;
 }
 
 // scalar * matrix, result is a matrix of the same type than the input matrix
 template<typename T, typename U>
-constexpr typename std::enable_if<std::is_arithmetic<U>::value, TMat33<T>>::type PURE
+constexpr typename std::enable_if<std::is_arithmetic<U>::value, TMat33<T>>::type MATH_PURE
 operator*(U lhs, const TMat33<T>& rhs) {
     return rhs * lhs;
 }
@@ -455,7 +454,7 @@ constexpr TQuaternion<T> TMat33<T>::packTangentFrame(const TMat33<T>& m, size_t 
  * BASE<T>::col_type is not accessible from there (???)
  */
 template<typename T>
-constexpr typename TMat33<T>::col_type PURE diag(const TMat33<T>& m) {
+constexpr typename TMat33<T>::col_type MATH_PURE diag(const TMat33<T>& m) {
     return matrix::diag(m);
 }
 
@@ -468,8 +467,6 @@ typedef details::TMat33<float> mat3f;
 
 // ----------------------------------------------------------------------------------------
 }  // namespace math
-
-#undef PURE
 
 namespace std {
 template <typename T>
