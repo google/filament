@@ -44,8 +44,8 @@ public:
     }
 
     Box& set(const math::float3& min, const math::float3& max) noexcept {
-        center     = (max + min) * 0.5f;
-        halfExtent = (max - min) * 0.5f;
+        center     = (max + min) * math::float3(0.5f);
+        halfExtent = (max - min) * math::float3(0.5f);
         return *this;
     }
 
@@ -64,7 +64,7 @@ public:
 struct Aabb {
     math::float3 min = std::numeric_limits<float>::max();
     math::float3 max = std::numeric_limits<float>::lowest();
-    math::float3 center() const noexcept { return (min + max) * 0.5f; }
+    math::float3 center() const noexcept { return (min + max) * math::float3(0.5f); }
     bool isEmpty() const noexcept {
         return min >= max;
     }
