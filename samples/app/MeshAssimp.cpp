@@ -798,8 +798,7 @@ void MeshAssimp::processGLTFMaterial(const aiScene* scene, const aiMaterial* mat
             outMaterials[materialName] = mGltfMaterialDSMasked->createInstance();
             float maskThreshold = 0.5;
             material->Get("$mat.gltf.alphaCutoff", 0, 0, maskThreshold);
-            outMaterials[materialName]->setParameter(
-                    "maskThreshold", maskThreshold);
+            outMaterials[materialName]->setParameter("maskThreshold", maskThreshold);
         } else {
             outMaterials[materialName] = mGltfMaterialDS->createInstance();
         }
@@ -812,8 +811,7 @@ void MeshAssimp::processGLTFMaterial(const aiScene* scene, const aiMaterial* mat
              outMaterials[materialName] = mGltfMaterialMasked->createInstance();
              float maskThreshold = 0.5;
              material->Get("$mat.gltf.alphaCutoff", 0, 0, maskThreshold);
-             outMaterials[materialName]->setParameter(
-                     "maskThreshold", maskThreshold);
+             outMaterials[materialName]->setParameter("maskThreshold", maskThreshold);
          } else {
              outMaterials[materialName] = mGltfMaterial->createInstance();
          }
