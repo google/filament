@@ -307,41 +307,43 @@ TextureSampler::WrapMode aiToFilamentMapMode(aiTextureMapMode mapMode) {
 
 // TODO: Change this to a member function (requires some alteration of cmakelsts.txt)
 void setTextureFromPath(const aiScene *scene, Engine *engine,
-        std::vector<filament::Texture*> textures, const aiString &texFile,
-        const std::string &materialName, const std::string &texDir,
+        std::vector<filament::Texture*> textures, const aiString &textureFile,
+        const std::string &materialName, const std::string &textureDirectory,
         aiTextureMapMode *mapMode, const char *parameterName,
         std::map<std::string, MaterialInstance *> &outMaterials) {
 
     TextureSampler sampler;
     if (mapMode) {
-        sampler = TextureSampler(TextureSampler::MinFilter::LINEAR_MIPMAP_LINEAR,
-                                 TextureSampler::MagFilter::LINEAR,
-                                 aiToFilamentMapMode(mapMode[0]),
-                                 aiToFilamentMapMode(mapMode[1]),
-                                 aiToFilamentMapMode(mapMode[2]));
+        sampler = TextureSampler(
+                TextureSampler::MinFilter::LINEAR_MIPMAP_LINEAR,
+                TextureSampler::MagFilter::LINEAR,
+                aiToFilamentMapMode(mapMode[0]),
+                aiToFilamentMapMode(mapMode[1]),
+                aiToFilamentMapMode(mapMode[2]));
     } else {
-        sampler = TextureSampler(TextureSampler::MinFilter::LINEAR_MIPMAP_LINEAR,
-                                 TextureSampler::MagFilter::LINEAR, TextureSampler::WrapMode::REPEAT);
+        sampler = TextureSampler(
+                TextureSampler::MinFilter::LINEAR_MIPMAP_LINEAR,
+                TextureSampler::MagFilter::LINEAR,
+                TextureSampler::WrapMode::REPEAT);
     }
 
     Texture* textureMap = nullptr;
-    int32_t embeddedId = getEmbeddedTextureId(texFile);
+    int32_t embeddedId = getEmbeddedTextureId(textureFile);
 
-    //TODO: change this in refactor
+    // TODO: change this in refactor
     bool isSRGB = strcmp(parameterName, "baseColorMap") == 0 || strcmp(parameterName, "emissiveMap") == 0;
     bool hasAlpha = strcmp(parameterName, "baseColorMap") == 0;
 
     if (embeddedId != -1) {
         loadEmbeddedTexture(engine, scene->mTextures[embeddedId], &textureMap, isSRGB, hasAlpha);
     } else {
-        loadTexture(engine, texDir + texFile.C_Str(), &textureMap, isSRGB, hasAlpha);
+        loadTexture(engine, textureDirectory + textureFile.C_Str(), &textureMap, isSRGB, hasAlpha);
     }
 
     textures.push_back(textureMap);
 
     if (textureMap != nullptr) {
-        outMaterials[materialName]->setParameter(
-                parameterName, textureMap, sampler);
+        outMaterials[materialName]->setParameter(parameterName, textureMap, sampler);
     }
 }
 
@@ -819,9 +821,7 @@ void MeshAssimp::processGLTFMaterial(const aiScene* scene, const aiMaterial* mat
 
     // Load property values for gltf files
     aiColor4D baseColorFactor;
-    sRGBColorA baseColorFactorCast{1.0f};
     aiColor3D emissiveFactor;
-    sRGBColor emissiveFactorCast{1.0f};
     float metallicFactor = 1.0;
     float roughnessFactor = 1.0;
 
@@ -830,22 +830,21 @@ void MeshAssimp::processGLTFMaterial(const aiScene* scene, const aiMaterial* mat
     // Load texture images for gltf files
     TextureSampler sampler(
             TextureSampler::MinFilter::LINEAR_MIPMAP_LINEAR,
-            TextureSampler::MagFilter::LINEAR, TextureSampler::WrapMode::REPEAT);
+            TextureSampler::MagFilter::LINEAR,
+            TextureSampler::WrapMode::REPEAT);
 
     if (material->GetTexture(aiTextureType_DIFFUSE, 1, &baseColorPath,
             nullptr, nullptr, nullptr, nullptr, mapMode) == AI_SUCCESS) {
         setTextureFromPath(scene, &mEngine, mTextures, baseColorPath,
                 materialName, dirName, mapMode, "baseColorMap", outMaterials);
     } else {
-        outMaterials[materialName]->setParameter("baseColorMap", mDefaultMap,
-                sampler);
+        outMaterials[materialName]->setParameter("baseColorMap", mDefaultMap, sampler);
     }
 
     if (material->GetTexture(aiTextureType_UNKNOWN, 0, &MRPath,
             nullptr, nullptr, nullptr, nullptr, mapMode) == AI_SUCCESS) {
         setTextureFromPath(scene, &mEngine, mTextures, MRPath, materialName,
                 dirName, mapMode, "metallicRoughnessMap", outMaterials);
-
     } else {
         outMaterials[materialName]->setParameter("metallicRoughnessMap", mDefaultMap, sampler);
         outMaterials[materialName]->setParameter("metallicFactor", mDefaultMetallic);
@@ -856,7 +855,6 @@ void MeshAssimp::processGLTFMaterial(const aiScene* scene, const aiMaterial* mat
             nullptr, nullptr, nullptr, mapMode) == AI_SUCCESS) {
         setTextureFromPath(scene, &mEngine, mTextures, AOPath, materialName,
                 dirName, mapMode, "aoMap", outMaterials);
-
     } else {
         outMaterials[materialName]->setParameter("aoMap", mDefaultMap, sampler);
     }
@@ -873,7 +871,6 @@ void MeshAssimp::processGLTFMaterial(const aiScene* scene, const aiMaterial* mat
             nullptr, nullptr, nullptr, mapMode) == AI_SUCCESS) {
         setTextureFromPath(scene, &mEngine, mTextures, emissivePath,
                 materialName, dirName, mapMode, "emissiveMap", outMaterials);
-
     }  else {
         outMaterials[materialName]->setParameter("emissiveMap", mDefaultMap, sampler);
         outMaterials[materialName]->setParameter("emissiveFactor", mDefaultEmissive);
@@ -891,15 +888,13 @@ void MeshAssimp::processGLTFMaterial(const aiScene* scene, const aiMaterial* mat
     }
 
     if (material->Get(AI_MATKEY_COLOR_EMISSIVE, emissiveFactor) == AI_SUCCESS) {
-        emissiveFactorCast = *reinterpret_cast<sRGBColor*>(&emissiveFactor);
+        sRGBColor emissiveFactorCast = *reinterpret_cast<sRGBColor*>(&emissiveFactor);
         outMaterials[materialName]->setParameter("emissiveFactor", emissiveFactorCast);
     }
 
     if (material->Get("$mat.gltf.pbrMetallicRoughness.baseColorFactor", 0, 0, baseColorFactor)
             == AI_SUCCESS) {
-        baseColorFactorCast = *reinterpret_cast<sRGBColorA*>(&baseColorFactor);
+        sRGBColorA baseColorFactorCast = *reinterpret_cast<sRGBColorA*>(&baseColorFactor);
         outMaterials[materialName]->setParameter("baseColorFactor", baseColorFactorCast);
     }
 }
-
-
