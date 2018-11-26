@@ -85,10 +85,10 @@ static const char* ASM_TEMPLATE = R"ASM(
 )ASM";
 
 static void printUsage(const char* name) {
-    string execName(Path(name).getName());
-    const string from("RESGEN");
-    string usage(USAGE);
-    for (size_t pos = usage.find(from); pos != string::npos; pos = usage.find(from, pos)) {
+    std::string execName(Path(name).getName());
+    const std::string from("RESGEN");
+    std::string usage(USAGE);
+    for (size_t pos = usage.find(from); pos != std::string::npos; pos = usage.find(from, pos)) {
         usage.replace(pos, from.length(), execName);
     }
     puts(usage.c_str());
@@ -114,7 +114,7 @@ static int handleArguments(int argc, char* argv[]) {
     int optionIndex = 0;
 
     while ((opt = getopt_long(argc, argv, OPTSTR, OPTIONS, &optionIndex)) >= 0) {
-        string arg(optarg ? optarg : "");
+        std::string arg(optarg ? optarg : "");
         switch (opt) {
             default:
             case 'h':
@@ -148,8 +148,8 @@ int main(int argc, char* argv[]) {
         inputPaths.emplace_back(argv[argIndex]);
     }
 
-    string packageFile = g_packageName;
-    string packagePrefix = string(g_packageName) + "_";
+    std::string packageFile = g_packageName;
+    std::string packagePrefix = std::string(g_packageName) + "_";
     transform(packageFile.begin(), packageFile.end(), packageFile.begin(), ::tolower);
     transform(packagePrefix.begin(), packagePrefix.end(), packagePrefix.begin(), ::toupper);
 
@@ -166,17 +166,17 @@ int main(int argc, char* argv[]) {
 
     // In the assembly language templates, replace {RESOURCES} with packagePrefix and replace
     // {resources} with packageFile.
-    const string k1("{RESOURCES}");
-    const string k2("{resources}");
-    string aasmstr(APPLE_ASM_TEMPLATE);
-    string asmstr(ASM_TEMPLATE);
-    for (size_t pos = aasmstr.find(k1); pos != string::npos; pos = aasmstr.find(k1, pos))
+    const std::string k1("{RESOURCES}");
+    const std::string k2("{resources}");
+    std::string aasmstr(APPLE_ASM_TEMPLATE);
+    std::string asmstr(ASM_TEMPLATE);
+    for (size_t pos = aasmstr.find(k1); pos != std::string::npos; pos = aasmstr.find(k1, pos))
         aasmstr.replace(pos, k1.length(), packagePrefix);
-    for (size_t pos = aasmstr.find(k2); pos != string::npos; pos = aasmstr.find(k2, pos))
+    for (size_t pos = aasmstr.find(k2); pos != std::string::npos; pos = aasmstr.find(k2, pos))
         aasmstr.replace(pos, k2.length(), packageFile);
-    for (size_t pos = asmstr.find(k1); pos != string::npos; pos = asmstr.find(k1, pos))
+    for (size_t pos = asmstr.find(k1); pos != std::string::npos; pos = asmstr.find(k1, pos))
         asmstr.replace(pos, k1.length(), packagePrefix);
-    for (size_t pos = asmstr.find(k2); pos != string::npos; pos = asmstr.find(k2, pos))
+    for (size_t pos = asmstr.find(k2); pos != std::string::npos; pos = asmstr.find(k2, pos))
         asmstr.replace(pos, k2.length(), packageFile);
 
     // Generate the Apple-friendly assembly language file.
@@ -238,9 +238,9 @@ int main(int argc, char* argv[]) {
         vector<uint8_t> content((istreambuf_iterator<char>(inStream)), {});
 
         // Formulate the resource name and the prefixed resource name.
-        string rname = inPath.getNameWithoutExtension();
+        std::string rname = inPath.getNameWithoutExtension();
         transform(rname.begin(), rname.end(), rname.begin(), ::toupper);
-        const string prname = packagePrefix + rname;
+        const std::string prname = packagePrefix + rname;
 
         // Write the binary blob into the bin file.
         binStream.write((const char*) content.data(), content.size());
