@@ -14,24 +14,27 @@
  * limitations under the License.
  */
 
-#include "MaterialGlslChunk.h"
+#ifndef TNT_FILAMAT_DIC_TEXT_CHUNK_H
+#define TNT_FILAMAT_DIC_TEXT_CHUNK_H
+
+#include <stdint.h>
+#include <vector>
+
+#include "Chunk.h"
+#include "Flattener.h"
+#include "LineDictionary.h"
 
 namespace filamat {
 
-MaterialGlslChunk::MaterialGlslChunk(const std::vector<GlslEntry> &entries,
-                                     LineDictionary &dictionary) :
-    GlslChunk(ChunkType::MaterialGlsl, entries, dictionary) {
-}
-
-void MaterialGlslChunk::writeEntryAttributes(size_t entryIndex, Flattener& f) {
-    const GlslEntry& entry = mEntries[entryIndex];
-    f.writeUint8(entry.shaderModel);
-    f.writeUint8(entry.variant);
-    f.writeUint8(entry.stage);
-}
-
-const char* MaterialGlslChunk::getShaderText(size_t entryIndex) const {
-    return mEntries[entryIndex].shader;
-}
+class DictionaryTextChunk : public Chunk {
+public:
+    DictionaryTextChunk(LineDictionary& dictionary, ChunkType chunkType);
+    ~DictionaryTextChunk() = default;
+    virtual void flatten(Flattener& f);
+private:
+    LineDictionary& mDictionary;
+};
 
 } // namespace filamat
+
+#endif // TNT_FILAMAT_DIC_TEXT_CHUNK_H

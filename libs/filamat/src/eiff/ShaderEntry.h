@@ -19,7 +19,8 @@
 
 namespace filamat {
 
-struct GlslEntry {
+// TextEntry stores a shader in ASCII text format, like GLSL.
+struct TextEntry {
     uint8_t shaderModel;
     uint8_t variant;
     uint8_t stage;

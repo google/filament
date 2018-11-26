@@ -34,11 +34,11 @@
 #include "eiff/BlobDictionary.h"
 #include "eiff/LineDictionary.h"
 #include "eiff/MaterialInterfaceBlockChunk.h"
-#include "eiff/MaterialGlslChunk.h"
+#include "eiff/MaterialTextChunk.h"
 #include "eiff/MaterialSpirvChunk.h"
 #include "eiff/ChunkContainer.h"
 #include "eiff/SimpleFieldChunk.h"
-#include "eiff/DictionaryGlslChunk.h"
+#include "eiff/DictionaryTextChunk.h"
 #include "eiff/DictionarySpirvChunk.h"
 
 #include "filamat/sca/GLSLTools.h"
@@ -428,7 +428,7 @@ Package MaterialBuilder::build() noexcept {
     container.addChild(&matShaderModels);
 
     // Generate all shaders.
-    std::vector<GlslEntry> glslEntries;
+    std::vector<TextEntry> glslEntries;
     std::vector<SpirvEntry> spirvEntries;
     LineDictionary glslDictionary;
     BlobDictionary spirvDictionary;
@@ -450,7 +450,7 @@ Package MaterialBuilder::build() noexcept {
         const TargetApi codeGenTargetApi = params.codeGenTargetApi;
         std::vector<uint32_t>* pSpirv = (targetApi == TargetApi::VULKAN) ? &spirv : nullptr;
 
-        GlslEntry glslEntry;
+        TextEntry glslEntry;
         SpirvEntry spirvEntry;
 
         glslEntry.shaderModel = static_cast<uint8_t>(params.shaderModel);
@@ -536,9 +536,9 @@ Package MaterialBuilder::build() noexcept {
         }
     }
 
-    // Emit GLSL chunks (TextDictionaryReader and MaterialGlslChunk).
-    filamat::DictionaryGlslChunk dicGlslChunk(glslDictionary);
-    MaterialGlslChunk glslChunk(glslEntries, glslDictionary);
+    // Emit GLSL chunks (TextDictionaryReader and MaterialTextChunk).
+    filamat::DictionaryTextChunk dicGlslChunk(glslDictionary, ChunkType::DictionaryGlsl);
+    MaterialTextChunk glslChunk(glslEntries, glslDictionary, ChunkType::MaterialGlsl);
     if (!glslEntries.empty()) {
         container.addChild(&dicGlslChunk);
         container.addChild(&glslChunk);
@@ -560,7 +560,7 @@ Package MaterialBuilder::build() noexcept {
     package.setValid(!errorOccured);
 
     // Free all shaders that were created earlier.
-    for (GlslEntry entry : glslEntries) {
+    for (TextEntry entry : glslEntries) {
         free(entry.shader);
     }
     return package;

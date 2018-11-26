@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMAT_GLSL_CHUNK_H
-#define TNT_FILAMAT_GLSL_CHUNK_H
+#ifndef TNT_FILAMAT_TEXT_CHUNK_H
+#define TNT_FILAMAT_TEXT_CHUNK_H
 
 #include <vector>
 
@@ -30,11 +30,11 @@ using namespace utils;
 namespace filamat {
 
 template <class T>
-class GlslChunk : public Chunk {
+class TextChunk : public Chunk {
 public:
-    virtual ~GlslChunk() = default;
+    virtual ~TextChunk() = default;
 protected:
-    GlslChunk(ChunkType type, const std::vector<T>& entries, const LineDictionary& dictionary) :
+    TextChunk(ChunkType type, const std::vector<T>& entries, const LineDictionary& dictionary) :
             Chunk(type), mDictionary(dictionary), mEntries(entries) {
 
     }
@@ -132,4 +132,4 @@ protected:
 
 } // namespace filamat
 
-#endif // TNT_FILAMAT_GLSL_CHUNK_H
+#endif // TNT_FILAMAT_TEXT_CHUNK_H
