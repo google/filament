@@ -21,7 +21,7 @@ spv.subgroupBasic.comp
                               Name 25  "gl_SubgroupID"
                               Decorate 7 ArrayStride 4
                               MemberDecorate 8(Buffer) 0 Offset 0
-                              Decorate 8(Buffer) BufferBlock
+                              Decorate 8(Buffer) Block
                               Decorate 10(data) DescriptorSet 0
                               Decorate 10(data) Binding 0
                               Decorate 14(gl_SubgroupSize) RelaxedPrecision
@@ -38,14 +38,14 @@ spv.subgroupBasic.comp
                6:             TypeInt 32 1
                7:             TypeRuntimeArray 6(int)
        8(Buffer):             TypeStruct 7
-               9:             TypePointer Uniform 8(Buffer)
-        10(data):      9(ptr) Variable Uniform
+               9:             TypePointer StorageBuffer 8(Buffer)
+        10(data):      9(ptr) Variable StorageBuffer
               11:      6(int) Constant 0
               12:             TypeInt 32 0
               13:             TypePointer Input 12(int)
 14(gl_SubgroupSize):     13(ptr) Variable Input
               16:      6(int) Constant 1
-              17:             TypePointer Uniform 6(int)
+              17:             TypePointer StorageBuffer 6(int)
 19(gl_SubgroupInvocationID):     13(ptr) Variable Input
 22(gl_NumSubgroups):     13(ptr) Variable Input
 25(gl_SubgroupID):     13(ptr) Variable Input

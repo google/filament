@@ -141,13 +141,27 @@ void TIntermediate::mergeModes(TInfoSink& infoSink, TIntermediate& unit)
     if (vertices == TQualifier::layoutNotSet)
         vertices = unit.vertices;
     else if (vertices != unit.vertices) {
-        if (language == EShLangGeometry)
+        if (language == EShLangGeometry
+#ifdef NV_EXTENSIONS
+            || language == EShLangMeshNV
+#endif
+            )
             error(infoSink, "Contradictory layout max_vertices values");
         else if (language == EShLangTessControl)
             error(infoSink, "Contradictory layout vertices values");
         else
             assert(0);
     }
+#ifdef NV_EXTENSIONS
+    if (primitives == TQualifier::layoutNotSet)
+        primitives = unit.primitives;
+    else if (primitives != unit.primitives) {
+        if (language == EShLangMeshNV)
+            error(infoSink, "Contradictory layout max_primitives values");
+        else
+            assert(0);
+    }
+#endif
 
     if (inputPrimitive == ElgNone)
         inputPrimitive = unit.inputPrimitive;
@@ -265,6 +279,13 @@ void TIntermediate::mergeTrees(TInfoSink& infoSink, TIntermediate& unit)
     }
 
     // Getting this far means we have two existing trees to merge...
+#ifdef NV_EXTENSIONS
+    numShaderRecordNVBlocks += unit.numShaderRecordNVBlocks;
+#endif
+
+#ifdef NV_EXTENSIONS
+    numTaskNVBlocks += unit.numTaskNVBlocks;
+#endif
 
     // Get the top-level globals of each unit
     TIntermSequence& globals = treeRoot->getAsAggregate()->getSequence();
@@ -524,11 +545,16 @@ void TIntermediate::mergeErrorCheck(TInfoSink& infoSink, const TIntermSymbol& sy
     }
 
     // Memory...
-    if (symbol.getQualifier().coherent  != unitSymbol.getQualifier().coherent ||
-        symbol.getQualifier().volatil   != unitSymbol.getQualifier().volatil ||
-        symbol.getQualifier().restrict  != unitSymbol.getQualifier().restrict ||
-        symbol.getQualifier().readonly  != unitSymbol.getQualifier().readonly ||
-        symbol.getQualifier().writeonly != unitSymbol.getQualifier().writeonly) {
+    if (symbol.getQualifier().coherent          != unitSymbol.getQualifier().coherent ||
+        symbol.getQualifier().devicecoherent    != unitSymbol.getQualifier().devicecoherent ||
+        symbol.getQualifier().queuefamilycoherent  != unitSymbol.getQualifier().queuefamilycoherent ||
+        symbol.getQualifier().workgroupcoherent != unitSymbol.getQualifier().workgroupcoherent ||
+        symbol.getQualifier().subgroupcoherent  != unitSymbol.getQualifier().subgroupcoherent ||
+        symbol.getQualifier().nonprivate        != unitSymbol.getQualifier().nonprivate ||
+        symbol.getQualifier().volatil           != unitSymbol.getQualifier().volatil ||
+        symbol.getQualifier().restrict          != unitSymbol.getQualifier().restrict ||
+        symbol.getQualifier().readonly          != unitSymbol.getQualifier().readonly ||
+        symbol.getQualifier().writeonly         != unitSymbol.getQualifier().writeonly) {
         error(infoSink, "Memory qualifiers must match:");
         writeTypeComparison = true;
     }
@@ -663,17 +689,9 @@ void TIntermediate::finalCheck(TInfoSink& infoSink, bool keepUncalled)
     case EShLangGeometry:
         if (inputPrimitive == ElgNone)
             error(infoSink, "At least one shader must specify an input layout primitive");
-        if (outputPrimitive == ElgNone
-#ifdef NV_EXTENSIONS
-            && !getGeoPassthroughEXT()
-#endif
-            )
+        if (outputPrimitive == ElgNone)
             error(infoSink, "At least one shader must specify an output layout primitive");
-        if (vertices == TQualifier::layoutNotSet
-#ifdef NV_EXTENSIONS
-            && !getGeoPassthroughEXT()
-#endif
-           )
+        if (vertices == TQualifier::layoutNotSet)
             error(infoSink, "At least one shader must specify a layout(max_vertices = value)");
         break;
     case EShLangFragment:
@@ -685,6 +703,42 @@ void TIntermediate::finalCheck(TInfoSink& infoSink, bool keepUncalled)
         break;
     case EShLangCompute:
         break;
+
+#ifdef NV_EXTENSIONS
+    case EShLangRayGenNV:
+    case EShLangIntersectNV:
+    case EShLangAnyHitNV:
+    case EShLangClosestHitNV:
+    case EShLangMissNV:
+    case EShLangCallableNV:
+        if (numShaderRecordNVBlocks > 1)
+            error(infoSink, "Only one shaderRecordNV buffer block is allowed per stage");
+        break;
+    case EShLangMeshNV:
+        // NV_mesh_shader doesn't allow use of both single-view and per-view builtins.
+        if (inIoAccessed("gl_Position") && inIoAccessed("gl_PositionPerViewNV"))
+            error(infoSink, "Can only use one of gl_Position or gl_PositionPerViewNV");
+        if (inIoAccessed("gl_ClipDistance") && inIoAccessed("gl_ClipDistancePerViewNV"))
+            error(infoSink, "Can only use one of gl_ClipDistance or gl_ClipDistancePerViewNV");
+        if (inIoAccessed("gl_CullDistance") && inIoAccessed("gl_CullDistancePerViewNV"))
+            error(infoSink, "Can only use one of gl_CullDistance or gl_CullDistancePerViewNV");
+        if (inIoAccessed("gl_Layer") && inIoAccessed("gl_LayerPerViewNV"))
+            error(infoSink, "Can only use one of gl_Layer or gl_LayerPerViewNV");
+        if (inIoAccessed("gl_ViewportMask") && inIoAccessed("gl_ViewportMaskPerViewNV"))
+            error(infoSink, "Can only use one of gl_ViewportMask or gl_ViewportMaskPerViewNV");
+        if (outputPrimitive == ElgNone)
+            error(infoSink, "At least one shader must specify an output layout primitive");
+        if (vertices == TQualifier::layoutNotSet)
+            error(infoSink, "At least one shader must specify a layout(max_vertices = value)");
+        if (primitives == TQualifier::layoutNotSet)
+            error(infoSink, "At least one shader must specify a layout(max_primitives = value)");
+        // fall through
+    case EShLangTaskNV:
+        if (numTaskNVBlocks > 1)
+            error(infoSink, "Only one taskNV interface block is allowed per shader");
+        break;
+#endif
+
     default:
         error(infoSink, "Unknown Stage.");
         break;
@@ -955,7 +1009,7 @@ int TIntermediate::addUsedLocation(const TQualifier& qualifier, const TType& typ
         return -1;
 
     int size;
-    if (qualifier.isUniformOrBuffer()) {
+    if (qualifier.isUniformOrBuffer() || qualifier.isTaskMemory()) {
         if (type.isSizedArray())
             size = type.getCumulativeArraySize();
         else
@@ -1106,10 +1160,19 @@ int TIntermediate::computeTypeLocationSize(const TType& type, EShLanguage stage)
         // TODO: perf: this can be flattened by using getCumulativeArraySize(), and a deref that discards all arrayness
         // TODO: are there valid cases of having an unsized array with a location?  If so, running this code too early.
         TType elementType(type, 0);
-        if (type.isSizedArray())
+        if (type.isSizedArray()
+#ifdef NV_EXTENSIONS
+            && !type.getQualifier().isPerView()
+#endif
+            )
             return type.getOuterArraySize() * computeTypeLocationSize(elementType, stage);
-        else
+        else {
+#ifdef NV_EXTENSIONS
+            // unset perViewNV attributes for arrayed per-view outputs: "perviewNV vec4 v[MAX_VIEWS][3];"
+            elementType.getQualifier().perViewNV = false;
+#endif
             return computeTypeLocationSize(elementType, stage);
+        }
     }
 
     // "The locations consumed by block and structure members are determined by applying the rules above
@@ -1309,10 +1372,11 @@ int TIntermediate::getBaseAlignmentScalar(const TType& type, int& size)
 // stride comes from the flattening down to vectors.
 //
 // Return value is the alignment of the type.
-int TIntermediate::getBaseAlignment(const TType& type, int& size, int& stride, bool std140, bool rowMajor)
+int TIntermediate::getBaseAlignment(const TType& type, int& size, int& stride, TLayoutPacking layoutPacking, bool rowMajor)
 {
     int alignment;
 
+    bool std140 = layoutPacking == glslang::ElpStd140;
     // When using the std140 storage layout, structures will be laid out in buffer
     // storage with its members stored in monotonically increasing order based on their
     // location in the declaration. A structure and each structure member have a base
@@ -1376,7 +1440,7 @@ int TIntermediate::getBaseAlignment(const TType& type, int& size, int& stride, b
     if (type.isArray()) {
         // TODO: perf: this might be flattened by using getCumulativeArraySize(), and a deref that discards all arrayness
         TType derefType(type, 0);
-        alignment = getBaseAlignment(derefType, size, dummyStride, std140, rowMajor);
+        alignment = getBaseAlignment(derefType, size, dummyStride, layoutPacking, rowMajor);
         if (std140)
             alignment = std::max(baseAlignmentVec4Std140, alignment);
         RoundToPow2(size, alignment);
@@ -1396,7 +1460,7 @@ int TIntermediate::getBaseAlignment(const TType& type, int& size, int& stride, b
             int memberSize;
             // modify just the children's view of matrix layout, if there is one for this member
             TLayoutMatrix subMatrixLayout = memberList[m].type->getQualifier().layoutMatrix;
-            int memberAlignment = getBaseAlignment(*memberList[m].type, memberSize, dummyStride, std140,
+            int memberAlignment = getBaseAlignment(*memberList[m].type, memberSize, dummyStride, layoutPacking,
                                                    (subMatrixLayout != ElmNone) ? (subMatrixLayout == ElmRowMajor) : rowMajor);
             maxAlignment = std::max(maxAlignment, memberAlignment);
             RoundToPow2(size, memberAlignment);
@@ -1435,7 +1499,7 @@ int TIntermediate::getBaseAlignment(const TType& type, int& size, int& stride, b
         // rule 5: deref to row, not to column, meaning the size of vector is num columns instead of num rows
         TType derefType(type, 0, rowMajor);
 
-        alignment = getBaseAlignment(derefType, size, dummyStride, std140, rowMajor);
+        alignment = getBaseAlignment(derefType, size, dummyStride, layoutPacking, rowMajor);
         if (std140)
             alignment = std::max(baseAlignmentVec4Std140, alignment);
         RoundToPow2(size, alignment);
@@ -1461,6 +1525,81 @@ bool TIntermediate::improperStraddle(const TType& type, int size, int offset)
 
     return size <= 16 ? offset / 16 != (offset + size - 1) / 16
                       : offset % 16 != 0;
+}
+
+int TIntermediate::getScalarAlignment(const TType& type, int& size, int& stride, bool rowMajor)
+{
+    int alignment;
+
+    stride = 0;
+    int dummyStride;
+
+    if (type.isArray()) {
+        TType derefType(type, 0);
+        alignment = getScalarAlignment(derefType, size, dummyStride, rowMajor);
+
+        stride = size;
+        RoundToPow2(stride, alignment);
+
+        size = stride * (type.getOuterArraySize() - 1) + size;
+        return alignment;
+    }
+
+    if (type.getBasicType() == EbtStruct) {
+        const TTypeList& memberList = *type.getStruct();
+
+        size = 0;
+        int maxAlignment = 0;
+        for (size_t m = 0; m < memberList.size(); ++m) {
+            int memberSize;
+            // modify just the children's view of matrix layout, if there is one for this member
+            TLayoutMatrix subMatrixLayout = memberList[m].type->getQualifier().layoutMatrix;
+            int memberAlignment = getScalarAlignment(*memberList[m].type, memberSize, dummyStride,
+                                                     (subMatrixLayout != ElmNone) ? (subMatrixLayout == ElmRowMajor) : rowMajor);
+            maxAlignment = std::max(maxAlignment, memberAlignment);
+            RoundToPow2(size, memberAlignment);
+            size += memberSize;
+        }
+
+        return maxAlignment;
+    }
+
+    if (type.isScalar())
+        return getBaseAlignmentScalar(type, size);
+
+    if (type.isVector()) {
+        int scalarAlign = getBaseAlignmentScalar(type, size);
+        
+        size *= type.getVectorSize();
+        return scalarAlign;
+    }
+
+    if (type.isMatrix()) {
+        TType derefType(type, 0, rowMajor);
+
+        alignment = getScalarAlignment(derefType, size, dummyStride, rowMajor);
+
+        stride = size;  // use intra-matrix stride for stride of a just a matrix
+        if (rowMajor)
+            size = stride * type.getMatrixRows();
+        else
+            size = stride * type.getMatrixCols();
+
+        return alignment;
+    }
+
+    assert(0);  // all cases should be covered above
+    size = 1;
+    return 1;    
+}
+
+int TIntermediate::getMemberAlignment(const TType& type, int& size, int& stride, TLayoutPacking layoutPacking, bool rowMajor)
+{
+    if (layoutPacking == glslang::ElpScalar) {
+        return getScalarAlignment(type, size, stride, rowMajor);
+    } else {
+        return getBaseAlignment(type, size, stride, layoutPacking, rowMajor);
+    }
 }
 
 } // end namespace glslang

@@ -10,6 +10,7 @@ ERROR: 5 compilation errors.  No code generated.
 Shader version: 100
 ERROR: node is still EOpNull!
 0:?   Linker Objects
+0:?     'n' ( global highp int)
 
 
 Linked vertex stage:
@@ -19,4 +20,5 @@ ERROR: Linking vertex stage: Missing entry point: Each stage requires one entry 
 Shader version: 100
 ERROR: node is still EOpNull!
 0:?   Linker Objects
+0:?     'n' ( global highp int)
 

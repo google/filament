@@ -4,8 +4,6 @@ spv.8bitstorage-uint.frag
 // Id's are bound by 173
 
                               Capability Shader
-                              Capability Int8
-                              Capability CapabilityStorageBuffer8BitAccess
                               Capability CapabilityUniformAndStorageBuffer8BitAccess
                               Extension  "SPV_KHR_8bit_storage"
                1:             ExtInstImport  "GLSL.std.450"

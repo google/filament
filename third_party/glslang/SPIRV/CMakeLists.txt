@@ -5,6 +5,7 @@ set(SOURCES
     SpvBuilder.cpp
     SpvPostProcess.cpp
     doc.cpp
+    SpvTools.cpp
     disassemble.cpp)
 
 set(SPVREMAP_SOURCES
@@ -23,6 +24,7 @@ set(HEADERS
     SpvBuilder.h
     spvIR.h
     doc.h
+    SpvTools.h
     disassemble.h)
 
 set(SPVREMAP_HEADERS

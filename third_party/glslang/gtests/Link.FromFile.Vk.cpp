@@ -79,6 +79,7 @@ TEST_P(LinkTestVulkan, FromFile)
         std::vector<uint32_t> spirv_binary;
         glslang::SpvOptions options;
         options.disableOptimizer = true;
+        options.validate = true;
         glslang::GlslangToSpv(*program.getIntermediate(shaders.front()->getStage()),
                                 spirv_binary, &logger, &options);
 

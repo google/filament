@@ -61,8 +61,97 @@ namespace spv {
 
 namespace spv {
 
+// Hook to visit each operand type and result type of an instruction.
+// Will be called multiple times for one instruction, once for each typed
+// operand and the result.
+void Builder::postProcessType(const Instruction& inst, Id typeId)
+{
+    // Characterize the type being questioned
+    Id basicTypeOp = getMostBasicTypeClass(typeId);
+    int width = 0;
+    if (basicTypeOp == OpTypeFloat || basicTypeOp == OpTypeInt)
+        width = getScalarTypeWidth(typeId);
+
+    // Do opcode-specific checks
+    switch (inst.getOpCode()) {
+    case OpLoad:
+    case OpStore:
+        if (basicTypeOp == OpTypeStruct) {
+            if (containsType(typeId, OpTypeInt, 8))
+                addCapability(CapabilityInt8);
+            if (containsType(typeId, OpTypeInt, 16))
+                addCapability(CapabilityInt16);
+            if (containsType(typeId, OpTypeFloat, 16))
+                addCapability(CapabilityFloat16);
+        } else {
+            StorageClass storageClass = getStorageClass(inst.getIdOperand(0));
+            if (width == 8) {
+                switch (storageClass) {
+                case StorageClassUniform:
+                case StorageClassStorageBuffer:
+                case StorageClassPushConstant:
+                    break;
+                default:
+                    addCapability(CapabilityInt8);
+                    break;
+                }
+            } else if (width == 16) {
+                switch (storageClass) {
+                case StorageClassUniform:
+                case StorageClassStorageBuffer:
+                case StorageClassPushConstant:
+                case StorageClassInput:
+                case StorageClassOutput:
+                    break;
+                default:
+                    if (basicTypeOp == OpTypeInt)
+                        addCapability(CapabilityInt16);
+                    if (basicTypeOp == OpTypeFloat)
+                        addCapability(CapabilityFloat16);
+                    break;
+                }
+            }
+        }
+        break;
+    case OpAccessChain:
+    case OpPtrAccessChain:
+    case OpCopyObject:
+    case OpFConvert:
+    case OpSConvert:
+    case OpUConvert:
+        break;
+    case OpExtInst:
+#if AMD_EXTENSIONS
+        switch (inst.getImmediateOperand(1)) {
+        case GLSLstd450Frexp:
+        case GLSLstd450FrexpStruct:
+            if (getSpvVersion() < glslang::EShTargetSpv_1_3 && containsType(typeId, OpTypeInt, 16))
+                addExtension(spv::E_SPV_AMD_gpu_shader_int16);
+            break;
+        case GLSLstd450InterpolateAtCentroid:
+        case GLSLstd450InterpolateAtSample:
+        case GLSLstd450InterpolateAtOffset:
+            if (getSpvVersion() < glslang::EShTargetSpv_1_3 && containsType(typeId, OpTypeFloat, 16))
+                addExtension(spv::E_SPV_AMD_gpu_shader_half_float);
+            break;
+        default:
+            break;
+        }
+#endif
+        break;
+    default:
+        if (basicTypeOp == OpTypeFloat && width == 16)
+            addCapability(CapabilityFloat16);
+        if (basicTypeOp == OpTypeInt && width == 16)
+            addCapability(CapabilityInt16);
+        if (basicTypeOp == OpTypeInt && width == 8)
+            addCapability(CapabilityInt8);
+        break;
+    }
+}
+
 // Called for each instruction that resides in a block.
-void Builder::postProcess(Instruction& inst)
+void Builder::postProcess(const Instruction& inst)
 {
     // Add capabilities based simply on the opcode.
     switch (inst.getOpCode()) {
@@ -104,10 +193,22 @@ void Builder::postProcess(Instruction& inst)
     default:
         break;
     }
+
+    // Checks based on type
+    if (inst.getTypeId() != NoType)
+        postProcessType(inst, inst.getTypeId());
+    for (int op = 0; op < inst.getNumOperands(); ++op) {
+        if (inst.isIdOperand(op)) {
+            // In blocks, these are always result ids, but we are relying on
+            // getTypeId() to return NoType for things like OpLabel.
+            if (getTypeId(inst.getIdOperand(op)) != NoType)
+                postProcessType(inst, getTypeId(inst.getIdOperand(op)));
+        }
+    }
 }
 
 // Called for each instruction in a reachable block.
-void Builder::postProcessReachable(Instruction& inst)
+void Builder::postProcessReachable(const Instruction&)
 {
     // did have code here, but questionable to do so without deleting the instructions
 }

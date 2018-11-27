@@ -127,7 +127,7 @@ public:
             addImmediateOperand(word);
         }
     }
-    bool isIdOperand(int op) { return idOperand[op]; }
+    bool isIdOperand(int op) const { return idOperand[op]; }
     void setBlock(Block* b) { block = b; }
     Block* getBlock() const { return block; }
     Op getOpCode() const { return opCode; }

@@ -27,9 +27,9 @@ ERROR: 0:64: 'uniform buffer-member align' : not supported for this version or t
 ERROR: 0:65: 'uniform buffer-member align' : not supported for this version or the enabled extensions 
 ERROR: 0:65: 'offset on block member' : not supported for this version or the enabled extensions 
 ERROR: 0:66: 'offset on block member' : not supported for this version or the enabled extensions 
-ERROR: 0:64: 'align' : can only be used with std140 or std430 layout packing 
-ERROR: 0:65: 'offset/align' : can only be used with std140 or std430 layout packing 
-ERROR: 0:66: 'offset/align' : can only be used with std140 or std430 layout packing 
+ERROR: 0:64: 'align' : can only be used with std140, std430, or scalar layout packing 
+ERROR: 0:65: 'offset/align' : can only be used with std140, std430, or scalar layout packing 
+ERROR: 0:66: 'offset/align' : can only be used with std140, std430, or scalar layout packing 
 ERROR: 0:71: 'offset on block member' : not supported for this version or the enabled extensions 
 ERROR: 0:74: 'gl_MaxTransformFeedbackBuffers' : required extension not requested: GL_ARB_enhanced_layouts
 ERROR: 0:75: 'gl_MaxTransformFeedbackInterleavedComponents' : required extension not requested: GL_ARB_enhanced_layouts

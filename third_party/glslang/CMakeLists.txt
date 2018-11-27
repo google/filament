@@ -44,6 +44,22 @@ if(USE_CCACHE)
     endif(CCACHE_FOUND)
 endif()
 
+# Precompiled header macro. Parameters are source file list and filename for pch cpp file.
+macro(glslang_pch SRCS PCHCPP)
+  if(MSVC)
+    if (CMAKE_GENERATOR MATCHES "^Visual Studio")
+      set(PCH_NAME "$(IntDir)\\pch.pch")
+    else()
+      set(PCH_NAME "${CMAKE_CURRENT_BINARY_DIR}/pch.pch")
+    endif()
+    # make source files use/depend on PCH_NAME
+    set_source_files_properties(${${SRCS}} PROPERTIES COMPILE_FLAGS "/Yupch.h /FIpch.h /Fp${PCH_NAME} /Zm300" OBJECT_DEPENDS "${PCH_NAME}")
+    # make PCHCPP file compile and generate PCH_NAME
+    set_source_files_properties(${PCHCPP} PROPERTIES COMPILE_FLAGS "/Ycpch.h /Fp${PCH_NAME} /Zm300" OBJECT_OUTPUTS "${PCH_NAME}")
+    list(APPEND ${SRCS} "${PCHCPP}")
+  endif()
+endmacro(glslang_pch)
+
 project(glslang)
 # make testing optional
 include(CTest)

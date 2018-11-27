@@ -148,6 +148,9 @@ const char* const E_GL_KHR_shader_subgroup_shuffle          = "GL_KHR_shader_sub
 const char* const E_GL_KHR_shader_subgroup_shuffle_relative = "GL_KHR_shader_subgroup_shuffle_relative";
 const char* const E_GL_KHR_shader_subgroup_clustered        = "GL_KHR_shader_subgroup_clustered";
 const char* const E_GL_KHR_shader_subgroup_quad             = "GL_KHR_shader_subgroup_quad";
+const char* const E_GL_KHR_memory_scope_semantics           = "GL_KHR_memory_scope_semantics";
+
+const char* const E_GL_EXT_shader_atomic_int64              = "GL_EXT_shader_atomic_int64";
 
 const char* const E_GL_EXT_shader_non_constant_global_initializers = "GL_EXT_shader_non_constant_global_initializers";
 const char* const E_GL_EXT_shader_image_load_formatted = "GL_EXT_shader_image_load_formatted";
@@ -163,6 +166,7 @@ const char* const E_GL_EXT_post_depth_coverage              = "GL_EXT_post_depth
 const char* const E_GL_EXT_control_flow_attributes          = "GL_EXT_control_flow_attributes";
 const char* const E_GL_EXT_nonuniform_qualifier             = "GL_EXT_nonuniform_qualifier";
 const char* const E_GL_EXT_samplerless_texture_functions    = "GL_EXT_samplerless_texture_functions";
+const char* const E_GL_EXT_scalar_block_layout              = "GL_EXT_scalar_block_layout";
 
 // Arrays of extensions for the above viewportEXTs duplications
 
@@ -204,6 +208,12 @@ const char* const E_GL_NV_shader_atomic_int64                   = "GL_NV_shader_
 const char* const E_GL_NV_conservative_raster_underestimation   = "GL_NV_conservative_raster_underestimation";
 const char* const E_GL_NV_shader_noperspective_interpolation    = "GL_NV_shader_noperspective_interpolation";
 const char* const E_GL_NV_shader_subgroup_partitioned           = "GL_NV_shader_subgroup_partitioned";
+const char* const E_GL_NV_shading_rate_image                    = "GL_NV_shading_rate_image";
+const char* const E_GL_NV_ray_tracing                           = "GL_NV_ray_tracing";
+const char* const E_GL_NV_fragment_shader_barycentric           = "GL_NV_fragment_shader_barycentric";
+const char* const E_GL_NV_compute_shader_derivatives            = "GL_NV_compute_shader_derivatives";
+const char* const E_GL_NV_shader_texture_footprint              = "GL_NV_shader_texture_footprint";
+const char* const E_GL_NV_mesh_shader                           = "GL_NV_mesh_shader";
 
 // Arrays of extensions for the above viewportEXTs duplications
 

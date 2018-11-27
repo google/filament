@@ -72,6 +72,9 @@ void TType::buildMangledName(TString& mangledName) const
     case EbtUint64:             mangledName += "u64";    break;
     case EbtBool:               mangledName += 'b';      break;
     case EbtAtomicUint:         mangledName += "au";     break;
+#ifdef NV_EXTENSIONS
+    case EbtAccStructNV:        mangledName += "asnv";   break;
+#endif
     case EbtSampler:
         switch (sampler.type) {
 #ifdef AMD_EXTENSIONS

@@ -23,7 +23,7 @@ spv.subgroup.geom
                               Name 20  "gl_SubgroupInvocationID"
                               Decorate 8 ArrayStride 16
                               MemberDecorate 9(Output) 0 Offset 0
-                              Decorate 9(Output) BufferBlock
+                              Decorate 9(Output) Block
                               Decorate 11 DescriptorSet 0
                               Decorate 11 Binding 0
                               Decorate 15(gl_PrimitiveIDIn) BuiltIn PrimitiveId
@@ -39,8 +39,8 @@ spv.subgroup.geom
                7:             TypeVector 6(int) 4
                8:             TypeRuntimeArray 7(ivec4)
        9(Output):             TypeStruct 8
-              10:             TypePointer Uniform 9(Output)
-              11:     10(ptr) Variable Uniform
+              10:             TypePointer StorageBuffer 9(Output)
+              11:     10(ptr) Variable StorageBuffer
               12:             TypeInt 32 1
               13:     12(int) Constant 0
               14:             TypePointer Input 12(int)
@@ -49,7 +49,7 @@ spv.subgroup.geom
 18(gl_SubgroupSize):     17(ptr) Variable Input
 20(gl_SubgroupInvocationID):     17(ptr) Variable Input
               22:      6(int) Constant 0
-              24:             TypePointer Uniform 7(ivec4)
+              24:             TypePointer StorageBuffer 7(ivec4)
          4(main):           2 Function None 3
                5:             Label
               16:     12(int) Load 15(gl_PrimitiveIDIn)

@@ -67,6 +67,11 @@
 #include "iomapper.h"
 #include "Initialize.h"
 
+// TODO: this really shouldn't be here, it is only because of the trial addition
+// of printing pre-processed tokens, which requires knowing the string literal
+// token to print ", but none of that seems appropriate for this file.
+#include "preprocessor/PpTokens.h"
+
 namespace { // anonymous namespace for file-local functions and symbols
 
 // Total number of successful initializers of glslang: a refcount
@@ -342,6 +347,36 @@ bool InitializeSymbolTables(TInfoSink& infoSink, TSymbolTable** commonTable,  TS
         InitializeStageSymbolTable(*builtInParseables, version, profile, spvVersion, EShLangCompute, source,
                                    infoSink, commonTable, symbolTables);
 
+#ifdef NV_EXTENSIONS
+    // check for ray tracing stages
+    if (profile != EEsProfile && version >= 450) {
+        InitializeStageSymbolTable(*builtInParseables, version, profile, spvVersion, EShLangRayGenNV, source,
+            infoSink, commonTable, symbolTables);
+        InitializeStageSymbolTable(*builtInParseables, version, profile, spvVersion, EShLangIntersectNV, source,
+            infoSink, commonTable, symbolTables);
+        InitializeStageSymbolTable(*builtInParseables, version, profile, spvVersion, EShLangAnyHitNV, source,
+            infoSink, commonTable, symbolTables);
+        InitializeStageSymbolTable(*builtInParseables, version, profile, spvVersion, EShLangClosestHitNV, source,
+            infoSink, commonTable, symbolTables);
+        InitializeStageSymbolTable(*builtInParseables, version, profile, spvVersion, EShLangMissNV, source,
+            infoSink, commonTable, symbolTables);
+        InitializeStageSymbolTable(*builtInParseables, version, profile, spvVersion, EShLangCallableNV, source,
+            infoSink, commonTable, symbolTables);
+    }
+
+    // check for mesh
+    if ((profile != EEsProfile && version >= 450) ||
+        (profile == EEsProfile && version >= 320))
+        InitializeStageSymbolTable(*builtInParseables, version, profile, spvVersion, EShLangMeshNV, source,
+                                   infoSink, commonTable, symbolTables);
+
+    // check for task
+    if ((profile != EEsProfile && version >= 450) ||
+        (profile == EEsProfile && version >= 320))
+        InitializeStageSymbolTable(*builtInParseables, version, profile, spvVersion, EShLangTaskNV, source,
+                                   infoSink, commonTable, symbolTables);
+#endif
+
     return true;
 }
 
@@ -565,6 +600,28 @@ bool DeduceVersionProfile(TInfoSink& infoSink, EShLanguage stage, bool versionNo
             version = profile == EEsProfile ? 310 : 420;
         }
         break;
+#ifdef NV_EXTENSIONS
+    case EShLangRayGenNV:
+    case EShLangIntersectNV:
+    case EShLangAnyHitNV:
+    case EShLangClosestHitNV:
+    case EShLangMissNV:
+    case EShLangCallableNV:
+        if (profile == EEsProfile || version < 460) {
+            correct = false;
+            infoSink.info.message(EPrefixError, "#version: ray tracing shaders require non-es profile with version 460 or above");
+            version = 460;
+        }
+        break;
+    case EShLangMeshNV:
+    case EShLangTaskNV:
+        if ((profile == EEsProfile && version < 320) ||
+            (profile != EEsProfile && version < 450)) {
+            correct = false;
+            infoSink.info.message(EPrefixError, "#version: mesh/task shaders require es profile with version 320 or above, or non-es profile with version 450 or above");
+            version = profile == EEsProfile ? 320 : 450;
+        }
+#endif
     default:
         break;
     }
@@ -965,6 +1022,8 @@ private:
 // DoPreprocessing is a valid ProcessingContext template argument,
 // which only performs the preprocessing step of compilation.
 // It places the result in the "string" argument to its constructor.
+//
+// This is not an officially supported or fully working path.
 struct DoPreprocessing {
     explicit DoPreprocessing(std::string* string): outputString(string) {}
     bool operator()(TParseContextBase& parseContext, TPpContext& ppContext,
@@ -1072,7 +1131,11 @@ struct DoPreprocessing {
                 outputBuffer += ' ';
             }
             lastToken = token;
+            if (token == PpAtomConstString)
+                outputBuffer += "\"";
             outputBuffer += ppToken.name;
+            if (token == PpAtomConstString)
+                outputBuffer += "\"";
         } while (true);
         outputBuffer += '\n';
         *outputString = std::move(outputBuffer);
@@ -1122,6 +1185,9 @@ struct DoFullParse{
 // Return: True if there were no issues found in preprocessing,
 //         False if during preprocessing any unknown version, pragmas or
 //         extensions were found.
+//
+// NOTE: Doing just preprocessing to obtain a correct preprocessed shader string
+// is not an officially supported or fully working path.
 bool PreprocessDeferred(
     TCompiler* compiler,
     const char* const shaderStrings[],
@@ -1695,6 +1761,14 @@ void TShader::setAutoMapBindings(bool map)              { intermediate->setAutoM
 void TShader::setInvertY(bool invert)                   { intermediate->setInvertY(invert); }
 // Fragile: currently within one stage: simple auto-assignment of location
 void TShader::setAutoMapLocations(bool map)             { intermediate->setAutoMapLocations(map); }
+void TShader::addUniformLocationOverride(const char* name, int loc)
+{
+    intermediate->addUniformLocationOverride(name, loc);
+}
+void TShader::setUniformLocationBase(int base)
+{
+    intermediate->setUniformLocationBase(base);
+}
 // See comment above TDefaultHlslIoMapper in iomapper.cpp:
 void TShader::setHlslIoMapping(bool hlslIoMap)          { intermediate->setHlslIoMapping(hlslIoMap); }
 void TShader::setFlattenUniformArrays(bool flatten)     { intermediate->setFlattenUniformArrays(flatten); }
@@ -1726,6 +1800,9 @@ bool TShader::parse(const TBuiltInResource* builtInResources, int defaultVersion
 
 // Fill in a string with the result of preprocessing ShaderStrings
 // Returns true if all extensions, pragmas and version strings were valid.
+//
+// NOTE: Doing just preprocessing to obtain a correct preprocessed shader string
+// is not an officially supported or fully working path.
 bool TShader::preprocess(const TBuiltInResource* builtInResources,
                          int defaultVersion, EProfile defaultProfile,
                          bool forceDefaultVersionAndProfile,

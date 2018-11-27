@@ -60,6 +60,24 @@ EShLanguage GetShaderStage(const std::string& stage)
         return EShLangFragment;
     } else if (stage == "comp") {
         return EShLangCompute;
+#ifdef NV_EXTENSIONS
+    } else if (stage == "rgen") {
+        return EShLangRayGenNV;
+    } else if (stage == "rint") {
+        return EShLangIntersectNV;
+    } else if (stage == "rahit") {
+        return EShLangAnyHitNV;
+    } else if (stage == "rchit") {
+        return EShLangClosestHitNV;
+    } else if (stage == "rmiss") {
+        return EShLangMissNV;
+    } else if (stage == "rcall") {
+        return EShLangCallableNV;
+    } else if (stage == "task") {
+        return EShLangTaskNV;
+    } else if (stage == "mesh") {
+        return EShLangMeshNV;
+#endif
     } else {
         assert(0 && "Unknown shader stage");
         return EShLangCount;

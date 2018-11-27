@@ -39,5 +39,6 @@ static const char* const E_SPV_KHR_16bit_storage                = "SPV_KHR_16bit
 static const char* const E_SPV_KHR_8bit_storage                 = "SPV_KHR_8bit_storage";
 static const char* const E_SPV_KHR_storage_buffer_storage_class = "SPV_KHR_storage_buffer_storage_class";
 static const char* const E_SPV_KHR_post_depth_coverage          = "SPV_KHR_post_depth_coverage";
+static const char* const E_SPV_KHR_vulkan_memory_model          = "SPV_KHR_vulkan_memory_model";
 
 #endif  // #ifndef GLSLextKHR_H

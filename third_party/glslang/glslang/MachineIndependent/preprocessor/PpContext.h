@@ -267,12 +267,12 @@ public:
     //
 
     struct MacroSymbol {
-        MacroSymbol() : emptyArgs(0), busy(0), undef(0) { }
+        MacroSymbol() : functionLike(0), busy(0), undef(0) { }
         TVector<int> args;
         TokenStream body;
-        unsigned emptyArgs : 1;
-        unsigned busy      : 1;
-        unsigned undef     : 1;
+        unsigned functionLike : 1;  // 0 means object-like, 1 means function-like
+        unsigned busy         : 1;
+        unsigned undef        : 1;
     };
 
     typedef TMap<int, MacroSymbol> TSymbolMap;

@@ -27,3 +27,39 @@ int main() {
   += -= *= /= %= <<= >>= &= |= ^=
   1.2 2E10 5u -5lf
 }
+
+struct S {
+    int member1;
+    float member2;
+    vec4 member3;
+};
+
+#define xyz xxyz
+#define yzy() yyz
+
+#define FUN_MAC() \
+	vec3 a = vec3(0); \
+	vec3 b = a.zxyz;  \
+	vec3 b = a.xyz;   \
+	vec3 b = a.yzy();   \
+	vec3 b = a.xyz();   \
+	vec3 b = a.yzy;   \
+	vec3 b = a.z;
+
+void foo()
+{
+    S s;
+    s.member2 + s.member1;
+    s.member3.zyx;
+    s.member2.xyz;
+    s.member2.yzy();
+    s.member2.xyz();
+    s.member2.yzy;
+    FUN_MAC()
+    yzy
+
+    ();
+    yzy
+
+
+}

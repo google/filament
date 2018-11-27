@@ -46,6 +46,7 @@
 
 #include "disassemble.h"
 #include "doc.h"
+#include "SpvTools.h"
 
 namespace spv {
     extern "C" {
@@ -509,7 +510,9 @@ void SpirvStream::disassembleInstruction(Id resultId, Id /*typeId*/, Op opCode, 
                 }else if (strcmp(spv::E_SPV_NV_sample_mask_override_coverage, name) == 0 ||
                           strcmp(spv::E_SPV_NV_geometry_shader_passthrough, name) == 0 ||
                           strcmp(spv::E_SPV_NV_viewport_array2, name) == 0 ||
-                          strcmp(spv::E_SPV_NVX_multiview_per_view_attributes, name) == 0) {
+                          strcmp(spv::E_SPV_NVX_multiview_per_view_attributes, name) == 0 || 
+                          strcmp(spv::E_SPV_NV_fragment_shader_barycentric, name) == 0 ||
+                          strcmp(spv::E_SPV_NV_mesh_shader, name) == 0) {
                     extInstSet = GLSLextNVInst;
 #endif
                 }
@@ -534,6 +537,11 @@ void SpirvStream::disassembleInstruction(Id resultId, Id /*typeId*/, Op opCode, 
         case OperandLiteralString:
             numOperands -= disassembleString();
             break;
+        case OperandMemoryAccess:
+            outputMask(OperandMemoryAccess, stream[word++]);
+            --numOperands;
+            disassembleIds(numOperands);
+            return;
         default:
             assert(operandClass >= OperandSource && operandClass < OperandOpcode);
 
@@ -685,21 +693,45 @@ static const char* GLSLextNVGetDebugNames(const char* name, unsigned entrypoint)
         strcmp(name, spv::E_SPV_NV_geometry_shader_passthrough) == 0 ||
         strcmp(name, spv::E_ARB_shader_viewport_layer_array) == 0 ||
         strcmp(name, spv::E_SPV_NV_viewport_array2) == 0 ||
-        strcmp(spv::E_SPV_NVX_multiview_per_view_attributes, name) == 0) {
+        strcmp(spv::E_SPV_NVX_multiview_per_view_attributes, name) == 0 ||
+        strcmp(spv::E_SPV_NV_fragment_shader_barycentric, name) == 0 ||
+        strcmp(name, spv::E_SPV_NV_mesh_shader) == 0) {
         switch (entrypoint) {
-        case DecorationOverrideCoverageNV:          return "OverrideCoverageNV";
-        case DecorationPassthroughNV:               return "PassthroughNV";
-        case CapabilityGeometryShaderPassthroughNV: return "GeometryShaderPassthroughNV";
-        case DecorationViewportRelativeNV:          return "ViewportRelativeNV";
+        // NV builtins
         case BuiltInViewportMaskNV:                 return "ViewportMaskNV";
-        case CapabilityShaderViewportMaskNV:        return "ShaderViewportMaskNV";
-        case DecorationSecondaryViewportRelativeNV: return "SecondaryViewportRelativeNV";
         case BuiltInSecondaryPositionNV:            return "SecondaryPositionNV";
         case BuiltInSecondaryViewportMaskNV:        return "SecondaryViewportMaskNV";
-        case CapabilityShaderStereoViewNV:          return "ShaderStereoViewNV";
         case BuiltInPositionPerViewNV:              return "PositionPerViewNV";
         case BuiltInViewportMaskPerViewNV:          return "ViewportMaskPerViewNV";
+        case BuiltInBaryCoordNV:                    return "BaryCoordNV";
+        case BuiltInBaryCoordNoPerspNV:             return "BaryCoordNoPerspNV";
+        case BuiltInTaskCountNV:                    return "TaskCountNV";
+        case BuiltInPrimitiveCountNV:               return "PrimitiveCountNV";
+        case BuiltInPrimitiveIndicesNV:             return "PrimitiveIndicesNV";
+        case BuiltInClipDistancePerViewNV:          return "ClipDistancePerViewNV";
+        case BuiltInCullDistancePerViewNV:          return "CullDistancePerViewNV";
+        case BuiltInLayerPerViewNV:                 return "LayerPerViewNV";
+        case BuiltInMeshViewCountNV:                return "MeshViewCountNV";
+        case BuiltInMeshViewIndicesNV:              return "MeshViewIndicesNV";
+
+        // NV Capabilities
+        case CapabilityGeometryShaderPassthroughNV: return "GeometryShaderPassthroughNV";
+        case CapabilityShaderViewportMaskNV:        return "ShaderViewportMaskNV";
+        case CapabilityShaderStereoViewNV:          return "ShaderStereoViewNV";
         case CapabilityPerViewAttributesNV:         return "PerViewAttributesNV";
+        case CapabilityFragmentBarycentricNV:       return "FragmentBarycentricNV";
+        case CapabilityMeshShadingNV:               return "MeshShadingNV";
+
+        // NV Decorations
+        case DecorationOverrideCoverageNV:          return "OverrideCoverageNV";
+        case DecorationPassthroughNV:               return "PassthroughNV";
+        case DecorationViewportRelativeNV:          return "ViewportRelativeNV";
+        case DecorationSecondaryViewportRelativeNV: return "SecondaryViewportRelativeNV";
+        case DecorationPerVertexNV:                 return "PerVertexNV";
+        case DecorationPerPrimitiveNV:              return "PerPrimitiveNV";
+        case DecorationPerViewNV:                   return "PerViewNV";
+        case DecorationPerTaskNV:                   return "PerTaskNV";
+
         default:                                    return "Bad";
         }
     }
@@ -715,26 +747,5 @@ void Disassemble(std::ostream& out, const std::vector<unsigned int>& stream)
     SpirvStream.validate();
     SpirvStream.processInstructions();
 }
-
-#if ENABLE_OPT
-
-#include "spirv-tools/libspirv.h"
-
-// Use the SPIRV-Tools disassembler to print SPIR-V.
-void SpirvToolsDisassemble(std::ostream& out, const std::vector<unsigned int>& spirv)
-{
-    spv_context context = spvContextCreate(SPV_ENV_UNIVERSAL_1_3);
-    spv_text text;
-    spv_diagnostic diagnostic = nullptr;
-    spvBinaryToText(context, &spirv.front(), spirv.size(),
-        SPV_BINARY_TO_TEXT_OPTION_FRIENDLY_NAMES | SPV_BINARY_TO_TEXT_OPTION_INDENT,
-        &text, &diagnostic);
-    if (diagnostic == nullptr)
-        out << text->str;
-    else
-        spvDiagnosticPrint(diagnostic);
-}
-
-#endif
 
 }; // end namespace spv

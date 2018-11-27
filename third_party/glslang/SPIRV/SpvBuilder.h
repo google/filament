@@ -131,6 +131,9 @@ public:
     Id makeSamplerType();
     Id makeSampledImageType(Id imageType);
 
+    // accelerationStructureNV type
+    Id makeAccelerationStructureNVType();
+
     // For querying about types.
     Id getTypeId(Id resultId) const { return module.getTypeId(resultId); }
     Id getDerefTypeId(Id resultId) const;
@@ -167,6 +170,7 @@ public:
     bool isImageType(Id typeId)        const { return getTypeClass(typeId) == OpTypeImage; }
     bool isSamplerType(Id typeId)      const { return getTypeClass(typeId) == OpTypeSampler; }
     bool isSampledImageType(Id typeId) const { return getTypeClass(typeId) == OpTypeSampledImage; }
+    bool containsType(Id typeId, Op typeOp, unsigned int width) const;
 
     bool isConstantOpCode(Op opcode) const;
     bool isSpecConstantOpCode(Op opcode) const;
@@ -273,10 +277,10 @@ public:
     Id createUndefined(Id type);
 
     // Store into an Id and return the l-value
-    void createStore(Id rValue, Id lValue);
+    void createStore(Id rValue, Id lValue, spv::MemoryAccessMask memoryAccess = spv::MemoryAccessMaskNone, spv::Scope scope = spv::ScopeMax);
 
     // Load from an Id and return it
-    Id createLoad(Id lValue);
+    Id createLoad(Id lValue, spv::MemoryAccessMask memoryAccess = spv::MemoryAccessMaskNone, spv::Scope scope = spv::ScopeMax);
 
     // Create an OpAccessChain instruction
     Id createAccessChain(StorageClass, Id base, const std::vector<Id>& offsets);
@@ -295,6 +299,7 @@ public:
 
     void createNoResultOp(Op);
     void createNoResultOp(Op, Id operand);
+    void createNoResultOp(Op, const std::vector<Id>& operands);
     void createNoResultOp(Op, const std::vector<IdImmediate>& operands);
     void createControlBarrier(Scope execution, Scope memory, MemorySemanticsMask);
     void createMemoryBarrier(unsigned executionScope, unsigned memorySemantics);
@@ -364,6 +369,10 @@ public:
         Id component;
         Id texelOut;
         Id lodClamp;
+        Id granularity;
+        Id coarse;
+        bool nonprivate;
+        bool volatil;
     };
 
     // Select the correct texture operation based on all inputs, and emit the correct instruction
@@ -503,6 +512,43 @@ public:
         Id component;                  // a dynamic component index, can coexist with a swizzle, done after the swizzle, NoResult if not present
         Id preSwizzleBaseType;         // dereferenced type, before swizzle or component is applied; NoType unless a swizzle or component is present
         bool isRValue;                 // true if 'base' is an r-value, otherwise, base is an l-value
+
+        // Accumulate whether anything in the chain of structures has coherent decorations.
+        struct CoherentFlags {
+            unsigned coherent : 1;
+            unsigned devicecoherent : 1;
+            unsigned queuefamilycoherent : 1;
+            unsigned workgroupcoherent : 1;
+            unsigned subgroupcoherent : 1;
+            unsigned nonprivate : 1;
+            unsigned volatil : 1;
+            unsigned isImage : 1;
+
+            void clear() {
+                coherent = 0;
+                devicecoherent = 0;
+                queuefamilycoherent = 0;
+                workgroupcoherent = 0;
+                subgroupcoherent = 0;
+                nonprivate = 0;
+                volatil = 0;
+                isImage = 0;
+            }
+
+            CoherentFlags() { clear(); }
+            CoherentFlags operator |=(const CoherentFlags &other) {
+                coherent |= other.coherent;
+                devicecoherent |= other.devicecoherent;
+                queuefamilycoherent |= other.queuefamilycoherent;
+                workgroupcoherent |= other.workgroupcoherent;
+                subgroupcoherent |= other.subgroupcoherent;
+                nonprivate |= other.nonprivate;
+                volatil |= other.volatil;
+                isImage |= other.isImage;
+                return *this;
+            }
+        };
+        CoherentFlags coherentFlags;
     };
 
     //
@@ -532,9 +578,10 @@ public:
     }
 
     // push offset onto the end of the chain
-    void accessChainPush(Id offset)
+    void accessChainPush(Id offset, AccessChain::CoherentFlags coherentFlags)
     {
         accessChain.indexChain.push_back(offset);
+        accessChain.coherentFlags |= coherentFlags;
     }
 
     // push new swizzle onto the end of any existing swizzle, merging into a single swizzle
@@ -552,10 +599,10 @@ public:
     }
 
     // use accessChain and swizzle to store value
-    void accessChainStore(Id rvalue);
+    void accessChainStore(Id rvalue, spv::MemoryAccessMask memoryAccess = spv::MemoryAccessMaskNone, spv::Scope scope = spv::ScopeMax);
 
     // use accessChain and swizzle to load an r-value
-    Id accessChainLoad(Decoration precision, Decoration nonUniform, Id ResultType);
+    Id accessChainLoad(Decoration precision, Decoration nonUniform, Id ResultType, spv::MemoryAccessMask memoryAccess = spv::MemoryAccessMaskNone, spv::Scope scope = spv::ScopeMax);
 
     // get the direct pointer for an l-value
     Id accessChainGetLValue();
@@ -569,9 +616,11 @@ public:
     void postProcess();
 
     // Hook to visit each instruction in a block in a function
-    void postProcess(Instruction& inst);
+    void postProcess(const Instruction&);
     // Hook to visit each instruction in a reachable block in a function.
-    void postProcessReachable(Instruction& inst);
+    void postProcessReachable(const Instruction&);
+    // Hook to visit each non-32-bit sized float/int operation in a block.
+    void postProcessType(const Instruction&, spv::Id typeId);
 
     void dump(std::vector<unsigned int>&) const;
 

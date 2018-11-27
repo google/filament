@@ -39,7 +39,7 @@ ERROR: 0:168: 'Binst' : cannot add storage, auxiliary, memory, interpolation, la
 ERROR: 0:169: 'Bblock' : cannot add storage, auxiliary, memory, interpolation, layout, or precision qualifier to an existing variable 
 ERROR: 0:170: 'Bfoo' : cannot add storage, auxiliary, memory, interpolation, layout, or precision qualifier to an existing variable 
 ERROR: 0:172: 'std430' : not supported for this version or the enabled extensions 
-ERROR: 0:172: 'std430' : requires the 'buffer' storage qualifier 
+ERROR: 0:172: 'std430 requires the buffer storage qualifier' : required extension not requested: GL_EXT_scalar_block_layout
 ERROR: 0:175: '' : array size required 
 ERROR: 0:185: 'assign' :  cannot convert from ' temp 4-element array of highp float' to ' temp 3-element array of highp float'
 ERROR: 0:186: 'assign' :  cannot convert from ' temp 3-element array of highp float' to ' temp 4-element array of highp float'

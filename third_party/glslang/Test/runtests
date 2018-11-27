@@ -130,13 +130,13 @@ diff -b $BASEDIR/spv.looseUniformNoLoc.vert.out $TARGETDIR/spv.looseUniformNoLoc
 # Testing debug information
 #
 echo Testing SPV Debug Information
-$EXE -g --relaxed-errors --suppress-warnings --aml --amb --hlsl-offsets --nsf \
+$EXE -g --relaxed-errors --suppress-warnings --aml --amb --hlsl-offsets --nsf --spirv-val \
      -G -H spv.debugInfo.frag --rsb frag 3 > $TARGETDIR/spv.debugInfo.frag.out
 diff -b $BASEDIR/spv.debugInfo.frag.out $TARGETDIR/spv.debugInfo.frag.out || HASERROR=1
-$EXE -g -Od --target-env vulkan1.1 --relaxed-errors --suppress-warnings --aml --hlsl-offsets --nsf \
+$EXE -g -Od --target-env vulkan1.1 --relaxed-errors --suppress-warnings --aml --hlsl-offsets --nsf --spirv-val \
      -G -H spv.debugInfo.frag --rsb frag 3 > $TARGETDIR/spv.debugInfo.1.1.frag.out
 diff -b $BASEDIR/spv.debugInfo.1.1.frag.out $TARGETDIR/spv.debugInfo.1.1.frag.out || HASERROR=1
-$EXE -g -D -Od -e newMain -g --amb --aml --fua --hlsl-iomap --nsf --sib 1 --ssb 2 --sbb 3 --stb 4 --suavb 5 --sub 6 \
+$EXE -g -D -Od -e newMain -g --amb --aml --fua --hlsl-iomap --nsf --spirv-val --sib 1 --ssb 2 --sbb 3 --stb 4 --suavb 5 --sub 6 \
      --sep origMain -H -Od spv.hlslDebugInfo.vert --rsb vert t0 0 0 > $TARGETDIR/spv.hlslDebugInfo.frag.out
 diff -b $BASEDIR/spv.hlslDebugInfo.frag.out $TARGETDIR/spv.hlslDebugInfo.frag.out || HASERROR=1
 
@@ -166,13 +166,14 @@ diff -b $BASEDIR/hlsl.-D-U.frag.out $TARGETDIR/hlsl.-D-U.frag.out || HASERROR=1
 # Test --client and --target-env
 #
 echo "Testing --client and --target-env"
-$EXE --client vulkan100      spv.targetVulkan.vert || HASERROR=1
-$EXE --client opengl100      spv.targetOpenGL.vert || HASERROR=1
-$EXE --target-env vulkan1.0  spv.targetVulkan.vert || HASERROR=1
-$EXE --target-env vulkan1.1  spv.targetVulkan.vert || HASERROR=1
-$EXE --target-env opengl     spv.targetOpenGL.vert || HASERROR=1
-$EXE -V100                   spv.targetVulkan.vert || HASERROR=1
-$EXE -G100                   spv.targetOpenGL.vert || HASERROR=1
+$EXE --client vulkan100       spv.targetVulkan.vert || HASERROR=1
+$EXE --client opengl100       spv.targetOpenGL.vert || HASERROR=1
+$EXE --target-env vulkan1.0   spv.targetVulkan.vert || HASERROR=1
+$EXE --target-env vulkan1.1   spv.targetVulkan.vert || HASERROR=1
+$EXE --target-env opengl      spv.targetOpenGL.vert || HASERROR=1
+$EXE -V100                    spv.targetVulkan.vert || HASERROR=1
+$EXE -G100                    spv.targetOpenGL.vert || HASERROR=1
+$EXE --target-env spirv1.2 -V spv.targetVulkan.vert || HASERROR=1
 
 #
 # Testing GLSL entry point rename
@@ -208,6 +209,7 @@ diff -b $BASEDIR/hlsl.y-negate-3.vert.out $TARGETDIR/hlsl.y-negate-3.vert.out ||
 #
 # Testing hlsl_functionality1
 #
+echo "Testing hlsl_functionality1"
 $EXE -H -e main -D -Od -fhlsl_functionality1 hlsl.structbuffer.incdec.frag > \
     $TARGETDIR/hlsl.structbuffer.incdec.frag.hlslfun1.out
 diff -b $BASEDIR/hlsl.structbuffer.incdec.frag.hlslfun1.out $TARGETDIR/hlsl.structbuffer.incdec.frag.hlslfun1.out || HASERROR=1
@@ -218,6 +220,7 @@ diff -b $BASEDIR/hlsl.noSemantic.functionality1.comp.out $TARGETDIR/hlsl.noSeman
 #
 # Testing HLSL-specific PP feature expansion
 #
+echo "Testing HLSL-specific PP feature expansion"
 $EXE -D -E hlsl.pp.expand.frag > $TARGETDIR/hlsl.pp.expand.frag.out 2> $TARGETDIR/hlsl.pp.expand.frag.err
 diff -b $BASEDIR/hlsl.pp.expand.frag.out $TARGETDIR/hlsl.pp.expand.frag.out || HASERROR=1
 diff -b $BASEDIR/hlsl.pp.expand.frag.err $TARGETDIR/hlsl.pp.expand.frag.err || HASERROR=1

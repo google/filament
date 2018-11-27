@@ -96,7 +96,7 @@ class GoodCommit(object):
     def AddRemote(self):
         """Add the remote 'known-good' if it does not exist."""
         remotes = command_output(['git', 'remote'], self.subdir).splitlines()
-        if 'known-good' not in remotes:
+        if b'known-good' not in remotes:
             command_output(['git', 'remote', 'add', 'known-good', self.GetUrl()], self.subdir)
 
     def HasCommit(self):

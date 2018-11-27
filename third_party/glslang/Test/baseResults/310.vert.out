@@ -15,7 +15,7 @@ ERROR: 0:78: 'vertex-shader array-of-struct output' : not supported with this pr
 ERROR: 0:79: 'vertex-shader array-of-struct output' : not supported with this profile: es
 ERROR: 0:81: 'vertex-shader struct output containing an array' : not supported with this profile: es
 ERROR: 0:83: 'vertex-shader struct output containing structure' : not supported with this profile: es
-ERROR: 0:85: 'std430' : requires the 'buffer' storage qualifier 
+ERROR: 0:85: 'std430 requires the buffer storage qualifier' : required extension not requested: GL_EXT_scalar_block_layout
 ERROR: 0:97: 's' : member of block cannot be or contain a sampler, image, or atomic_uint type 
 ERROR: 0:105: 'location' : overlapping use of location 12
 ERROR: 0:107: 'input block' : not supported in this stage: vertex

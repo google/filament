@@ -31,30 +31,30 @@ void main()
 
     if ((relMask == result) && subgroupInverseBallot(data[0].u4))
     {
-        data[invocation].f4.x   = subgroupBroadcast(data[0].f4.x,    invocation);
-        data[invocation].f4.xy  = subgroupBroadcast(data[1].f4.xy,   invocation);
-        data[invocation].f4.xyz = subgroupBroadcast(data[2].f4.xyz,  invocation);
-        data[invocation].f4     = subgroupBroadcast(data[3].f4,      invocation);
+        data[invocation].f4.x   = subgroupBroadcast(data[0].f4.x,    3);
+        data[invocation].f4.xy  = subgroupBroadcast(data[1].f4.xy,   3);
+        data[invocation].f4.xyz = subgroupBroadcast(data[2].f4.xyz,  3);
+        data[invocation].f4     = subgroupBroadcast(data[3].f4,      3);
 
-        data[invocation].i4.x   = subgroupBroadcast(data[0].i4.x,    invocation);
-        data[invocation].i4.xy  = subgroupBroadcast(data[1].i4.xy,   invocation);
-        data[invocation].i4.xyz = subgroupBroadcast(data[2].i4.xyz,  invocation);
-        data[invocation].i4     = subgroupBroadcast(data[3].i4,      invocation);
+        data[invocation].i4.x   = subgroupBroadcast(data[0].i4.x,    2);
+        data[invocation].i4.xy  = subgroupBroadcast(data[1].i4.xy,   2);
+        data[invocation].i4.xyz = subgroupBroadcast(data[2].i4.xyz,  2);
+        data[invocation].i4     = subgroupBroadcast(data[3].i4,      2);
 
-        data[invocation].u4.x   = subgroupBroadcast(data[0].u4.x,    invocation);
-        data[invocation].u4.xy  = subgroupBroadcast(data[1].u4.xy,   invocation);
-        data[invocation].u4.xyz = subgroupBroadcast(data[2].u4.xyz,  invocation);
-        data[invocation].u4     = subgroupBroadcast(data[3].u4,      invocation);
+        data[invocation].u4.x   = subgroupBroadcast(data[0].u4.x,    1);
+        data[invocation].u4.xy  = subgroupBroadcast(data[1].u4.xy,   1);
+        data[invocation].u4.xyz = subgroupBroadcast(data[2].u4.xyz,  1);
+        data[invocation].u4     = subgroupBroadcast(data[3].u4,      1);
 
-        data[invocation].d4.x   = subgroupBroadcast(data[0].d4.x,    invocation);
-        data[invocation].d4.xy  = subgroupBroadcast(data[1].d4.xy,   invocation);
-        data[invocation].d4.xyz = subgroupBroadcast(data[2].d4.xyz,  invocation);
-        data[invocation].d4     = subgroupBroadcast(data[3].d4,      invocation);
+        data[invocation].d4.x   = subgroupBroadcast(data[0].d4.x,    0);
+        data[invocation].d4.xy  = subgroupBroadcast(data[1].d4.xy,   0);
+        data[invocation].d4.xyz = subgroupBroadcast(data[2].d4.xyz,  0);
+        data[invocation].d4     = subgroupBroadcast(data[3].d4,      0);
 
-        data[invocation].i4.x   = int(subgroupBroadcast(data[0].i4.x < 0,            invocation));
-        data[invocation].i4.xy  = ivec2(subgroupBroadcast(lessThan(data[1].i4.xy, ivec2(0)), invocation));
-        data[invocation].i4.xyz = ivec3(subgroupBroadcast(lessThan(data[1].i4.xyz, ivec3(0)), invocation));
-        data[invocation].i4     = ivec4(subgroupBroadcast(lessThan(data[1].i4, ivec4(0)), invocation));
+        data[invocation].i4.x   = int(subgroupBroadcast(data[0].i4.x < 0,            1));
+        data[invocation].i4.xy  = ivec2(subgroupBroadcast(lessThan(data[1].i4.xy, ivec2(0)), 1));
+        data[invocation].i4.xyz = ivec3(subgroupBroadcast(lessThan(data[1].i4.xyz, ivec3(0)), 1));
+        data[invocation].i4     = ivec4(subgroupBroadcast(lessThan(data[1].i4, ivec4(0)), 1));
     }
     else
     {

@@ -35,9 +35,9 @@ ERROR: 0:155: '#else' : unexpected tokens following directive
 ERROR: 0:158: '#else' : #else after #else 
 ERROR: 0:160: '#endif' : unexpected tokens following directive 
 ERROR: 0:164: '#define' : duplicate macro parameter 
-ERROR: 0:173: '#define' : Macro redefined; different number of arguments: m4
-ERROR: 0:178: '#define' : Macro redefined; different number of arguments: m5
-ERROR: 0:182: '#define' : Macro redefined; different number of arguments: m6
+ERROR: 0:173: '#define' : Macro redefined; function-like versus object-like: m4
+ERROR: 0:177: '#define' : Macro redefined; function-like versus object-like: m5
+ERROR: 0:181: '#define' : Macro redefined; different number of arguments: m6
 ERROR: 0:185: '#define' : Macro redefined; different substitutions: m7
 ERROR: 0:192: '#define' : Macro redefined; different substitutions: m8
 ERROR: 0:196: '#define' : Macro redefined; different argument names: m9
@@ -77,7 +77,7 @@ ERROR: 12:9000: 'preprocessor evaluation' : expected ')'
 ERROR: 12:9002: '#if' : unexpected tokens following directive 
 ERROR: 12:9014: 'FOOOM' : undeclared identifier 
 ERROR: 12:9014: '=' :  cannot convert from ' temp float' to ' global int'
-ERROR: 12:9016: 'preprocessor evaluation' : can't evaluate expression 
+ERROR: 12:9015: 'preprocessor evaluation' : can't evaluate expression 
 ERROR: 12:9016: 'preprocessor evaluation' : bad expression 
 ERROR: 12:9500: 'preprocessor evaluation' : bad expression 
 ERROR: 12:9500: '#if' : unexpected tokens following directive 
