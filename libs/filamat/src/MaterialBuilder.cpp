@@ -41,7 +41,7 @@
 #include "eiff/DictionaryTextChunk.h"
 #include "eiff/DictionarySpirvChunk.h"
 
-#include "filamat/sca/GLSLTools.h"
+#include "sca/GLSLTools.h"
 
 using namespace utils;
 
@@ -87,7 +87,6 @@ void MaterialBuilderBase::prepare() {
 
 MaterialBuilder::MaterialBuilder() : mMaterialName("Unnamed") {
     std::fill_n(mProperties, filament::MATERIAL_PROPERTIES_COUNT, false);
-    GLSLTools::init();
     mShaderModels.reset();
 }
 
@@ -337,6 +336,16 @@ static void showErrorMessage(const char* materialName, uint8_t variant,
 }
 
 Package MaterialBuilder::build() noexcept {
+    GLSLTools::init();
+
+    bool errorOccured = false;
+
+    // Populate mProperties with the properties set in the shader.
+    GLSLTools glslTools;
+    if (!glslTools.process(*this)) {
+        errorOccured = true;
+    }
+
     MaterialInfo info;
     prepareToBuild(info);
 
@@ -443,7 +452,6 @@ Package MaterialBuilder::build() noexcept {
     SimpleFieldChunk<bool> hasCustomDepth(ChunkType::MaterialHasCustomDepthShader, customDepth);
     container.addChild(&hasCustomDepth);
 
-    bool errorOccured = false;
     for (const auto& params : mCodeGenPermutations) {
         const ShaderModel shaderModel = ShaderModel(params.shaderModel);
         const TargetApi targetApi = params.targetApi;

@@ -23,11 +23,12 @@
 #include "GLSLPostProcessor.h"
 
 #include "eiff/ChunkContainer.h"
-#include "eiff/DictionaryTextChunk.h"
 #include "eiff/DictionarySpirvChunk.h"
-#include "eiff/MaterialTextChunk.h"
+#include "eiff/DictionaryTextChunk.h"
 #include "eiff/MaterialSpirvChunk.h"
+#include "eiff/MaterialTextChunk.h"
 #include "eiff/SimpleFieldChunk.h"
+#include "sca/GLSLTools.h"
 
 #include <vector>
 
@@ -41,6 +42,7 @@ PostprocessMaterialBuilder& PostprocessMaterialBuilder::postProcessor(PostProces
 }
 
 Package PostprocessMaterialBuilder::build() {
+    GLSLTools::init();
     prepare();
     // Install postprocessor to optimize / compile to Spir-V if necessary.
     // TODO: remove the postProcessor functionality, since it isn't being used by the outside world.
