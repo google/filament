@@ -33,6 +33,9 @@ class FVertexBuffer;
 
 class Engine;
 
+/**
+ * Holds a set of buffers that define the geometry of a Renderable.
+ */
 class UTILS_PUBLIC VertexBuffer : public FilamentAPI {
     struct BuilderDetails;
 
@@ -88,14 +91,62 @@ public:
         };
     };
 
-    // Return the vertex count
+    /**
+     * Returns the vertex count.
+     */
     size_t getVertexCount() const noexcept;
 
-    // noop if bufferIndex >= bufferCount
+    /**
+     * Moves the given buffer data into the slot at the given index.
+     *
+     * Does nothing if bufferIndex >= bufferCount.
+     */
     void setBufferAt(Engine& engine, uint8_t bufferIndex,
             BufferDescriptor&& buffer,
             uint32_t byteOffset = 0,
             uint32_t byteSize = 0);
+
+    /**
+     * Specifies the quaternion type for the "populateTangentQuaternions" utility.
+     */
+    enum QuatType {
+        HALF4,  // 2 bytes per component as half-floats (8 bytes per quat)
+        SHORT4, // 2 bytes per component as normalized integers (8 bytes per quat)
+        FLOAT4, // 4 bytes per component as floats (16 bytes per quat)
+    };
+
+    /**
+     * Specifies the parameters for the "populateTangentQuaternions" utility.
+     */
+    struct QuatTangentContext {
+        QuatType quatType;            // required
+        size_t quatCount;             // required
+        void* outBuffer;              // required
+        size_t outStride;             // required stride in bytes
+        const math::float3* normals;  // required source data
+        size_t normalsStride;         // optional stride in bytes (assumes packed)
+        const math::float4* tangents; // optional source data
+        size_t tangentsStride;        // optional stride in bytes (assumes packed)
+    };
+
+    /**
+     * Convenience function that consumes normal vectors (and, optionally, tangent vectors) and
+     * produces quaternions that can be passed into a TANGENTS buffer.
+     *
+     * The given output buffer must be preallocated with at least quatCount * outStride bytes.
+     *
+     * Normals are required but tangents are optional, in which case this function tries to generate
+     * reasonable tangents. The given normals should be unit length.
+     *
+     * If supplied, the tangent vectors should be unit length and should be orthogonal to the
+     * normals. The w component of the tangent is a sign (-1 or +1) indicating handedness of the
+     * basis.
+     *
+     * Note that some applications and file formats (e.g. Blender and glTF) use mikktspace, which
+     * consumes full topology information and produces an unindexed mesh, so it cannot be used here.
+     * This function exists for simple use cases only.
+     */
+    static void populateTangentQuaternions(const QuatTangentContext& ctx);
 };
 
 } // namespace filament
