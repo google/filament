@@ -231,8 +231,15 @@ public:
         HeadPtr newHead; // NOLINT(cppcoreguidelines-pro-type-member-init)
         HeadPtr currentHead = mHead.load();
         while (currentHead.offset >= 0) {
+            // The value of "next" we load here might already contain application data if another
+            // thread raced ahead of us. But in that case, the computed "newHead" will be discarded
+            // since compare_exchange_weak fails. Then this thread will loop with the updated
+            // value of currentHead, and try again.
             Node* const next = storage[currentHead.offset].next.load(std::memory_order_relaxed);
             newHead = { next ? int32_t(next - storage) : -1, currentHead.tag + 1 };
+            // In the rare case that the other thread that raced ahead of us already returned the 
+            // same mHead we just loaded, but it now has a different "next" value, the tag field will not 
+            // match, and compare_exchange_weak will fail and prevent that particular race condition.
             if (mHead.compare_exchange_weak(currentHead, newHead)) {
                 // This assert needs to occur after we have validated that there was no race condition
                 // Otherwise, next might already contain application data, if another thread
