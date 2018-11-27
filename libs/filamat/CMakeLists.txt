@@ -97,3 +97,17 @@ target_compile_options(${TARGET} PRIVATE
 # To properly support Vulkan, filamat needs to support SPIR-V compilation
 # install(DIRECTORY ${PUBLIC_HDR_DIR}/filamat DESTINATION include)
 # install(TARGETS ${TARGET} ARCHIVE DESTINATION lib/${DIST_DIR})
+
+# ==================================================================================================
+# Tests
+# ==================================================================================================
+project(test_filamat)
+set(TARGET test_filamat)
+set(SRCS
+        tests/test_filamat.cpp)
+
+add_executable(${TARGET} ${SRCS})
+
+target_include_directories(${TARGET} PRIVATE src)
+
+target_link_libraries(${TARGET} filamat gtest)

@@ -83,7 +83,6 @@ project(test_matc)
 set(TARGET test_matc)
 set(SRCS
     tests/test_matc.cpp
-    tests/test_lexersAndParsers.cpp
     tests/MockConfig.cpp
     tests/MockConfig.h)
 
