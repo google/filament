@@ -232,9 +232,12 @@ public:
         HeadPtr currentHead = mHead.load();
         while (currentHead.offset >= 0) {
             Node* const next = storage[currentHead.offset].next.load(std::memory_order_relaxed);
-            assert(!next || next >= storage);
             newHead = { next ? int32_t(next - storage) : -1, currentHead.tag + 1 };
             if (mHead.compare_exchange_weak(currentHead, newHead)) {
+                // This assert needs to occur after we have validated that there was no race condition
+                // Otherwise, next might already contain application data, if another thread
+                // raced ahead of us after we loaded mHead, but before we loaded mHead->next.
+                assert(!next || next >= storage);
                 break;
             }
         }
@@ -288,6 +291,10 @@ private:
         std::atomic<Node*> next;
     };
 
+    // This struct is using a 32-bit offset into the arena rather than
+    // a direct pointer, because together with the 32-bit tag, it needs to 
+    // fit into 8 bytes. If it was any larger, it would not be possible to
+    // access it atomically.
     struct alignas(8) HeadPtr {
         int32_t offset;
         uint32_t tag;
