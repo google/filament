@@ -155,7 +155,12 @@ bool GLSLTools::process(MaterialBuilder& builder) const noexcept {
 }
 
 void GLSLTools::init() {
-    InitializeProcess();
+    // According to glslang, InitializeProcess should be called exactly once per process.
+    static bool initializeCalled = false;
+    if (!initializeCalled) {
+        InitializeProcess();
+        initializeCalled = true;
+    }
 }
 
 void GLSLTools::terminate() {
