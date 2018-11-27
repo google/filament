@@ -57,14 +57,16 @@ Sphere::Sphere(Engine& engine, Material const* material, bool culling)
         auto const& vertices = geometry->sphere.getVertices();
         uint32_t indexCount = (uint32_t)(indices.size() * 3);
 
-        for (auto const& vertice : vertices) {
-            float3 n = vertice;
-            // todo produce correct u,v
-            float3 b = cross(n, float3{ 1, 0, 0 });
-            float3 t = cross(b, n);
-            quatf q = mat3f::packTangentFrame({ t, b, n });
-            geometry->tangents.push_back(packSnorm16(q.xyzw));
-        }
+        geometry->tangents.resize(vertices.size());
+        VertexBuffer::populateTangentQuaternions(VertexBuffer::QuatTangentContext {
+            .quatType = VertexBuffer::SHORT4,
+            .quatCount = vertices.size(),
+            .outBuffer = geometry->tangents.data(),
+            .outStride = sizeof(math::short4),
+            .normals = vertices.data()
+        });
+
+        // todo produce correct u,v
 
         geometry->vertexBuffer = VertexBuffer::Builder()
                 .vertexCount((uint32_t)vertices.size())

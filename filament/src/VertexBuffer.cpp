@@ -20,11 +20,18 @@
 
 #include "FilamentAPI-impl.h"
 
+#include <math/mat3.h>
+#include <math/norm.h>
+#include <math/quat.h>
+#include <math/vec3.h>
+#include <math/vec4.h>
+
 #include <utils/Panic.h>
 
 namespace filament {
 
 using namespace details;
+using namespace math;
 
 struct VertexBuffer::BuilderDetails {
     VertexBuffer::Builder::AttributeData mAttributes[MAX_ATTRIBUTE_BUFFERS_COUNT];
@@ -191,6 +198,64 @@ void VertexBuffer::setBufferAt(Engine& engine, uint8_t bufferIndex,
         driver::BufferDescriptor&& buffer, uint32_t byteOffset, uint32_t byteSize) {
     upcast(this)->setBufferAt(upcast(engine), bufferIndex,
             std::move(buffer), byteOffset, byteSize);
+}
+
+void VertexBuffer::populateTangentQuaternions(const QuatTangentContext& ctx) {
+    if (!ASSERT_PRECONDITION_NON_FATAL(ctx.normals, "Normals must be provided")) {
+        return;
+    }
+
+    // Define a small lambda that converts fp32 into the desired output format.
+    void (*writeQuat)(math::quatf, uint8_t*);
+    switch (ctx.quatType) {
+        case HALF4:
+            writeQuat = [] (quatf inquat, uint8_t* outquat) {
+                *((quath*) outquat) = quath(inquat);
+            };
+            break;
+        case SHORT4:
+            writeQuat = [] (quatf inquat, uint8_t* outquat) {
+                *((short4*) outquat) = packSnorm16(inquat.xyzw);
+            };
+            break;
+        case FLOAT4:
+            writeQuat = [] (quatf inquat, uint8_t* outquat) {
+                *((quatf*) outquat) = inquat;
+            };
+            break;
+    }
+
+    const float3* normal = ctx.normals;
+    const size_t nstride = ctx.normalsStride ? ctx.normalsStride : sizeof(math::float3);
+    uint8_t* outquat = (uint8_t*) ctx.outBuffer;
+
+    // If tangents are not provided, simply cross N with arbitrary vector (1, 0, 0)
+    if (!ctx.tangents) {
+        for (size_t qindex = 0, qcount = ctx.quatCount; qindex < qcount; ++qindex) {
+            float3 n = *normal;
+            float3 b = normalize(cross(n, float3{1, 0, 0}));
+            float3 t = cross(n, b);
+            writeQuat(mat3f::packTangentFrame({t, b, n}), outquat);
+            normal = (const float3*) (((const uint8_t*) normal) + nstride);
+            outquat += ctx.outStride;
+        }
+        return;
+    }
+
+    const float3* tanvec = &ctx.tangents->xyz;
+    const float* tandir = &ctx.tangents->w;
+    const size_t tstride = ctx.tangentsStride ? ctx.tangentsStride : sizeof(math::float4);
+
+    for (size_t qindex = 0, qcount = ctx.quatCount; qindex < qcount; ++qindex) {
+        float3 n = *normal;
+        float3 t = *tanvec;
+        float3 b = *tandir > 0 ? cross(t, n) : cross(n, t);
+        writeQuat(mat3f::packTangentFrame({t, b, n}), outquat);
+        normal = (const float3*) (((const uint8_t*) normal) + nstride);
+        tanvec = (const float3*) (((const uint8_t*) tanvec) + tstride);
+        tandir = (const float*) (((const uint8_t*) tandir) + tstride);
+        outquat += ctx.outStride;
+    }
 }
 
 } // namespace filament
