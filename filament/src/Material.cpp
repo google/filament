@@ -95,9 +95,8 @@ Material* Material::Builder::build(Engine& engine) {
             case driver::ShaderModel::GL_CORE_41: slog.e << "desktop.\n"; break;
             case driver::ShaderModel::UNKNOWN: /* should never happen */ break;
         }
-        slog.e << "Need shader model 0x" << io::hex << (uint32_t) shaderModel
-                << " but compiled material contains 0x" << shaderModels.getValue()
-                << io::dec << io::endl;
+        slog.e << "Compiled material contains shader models 0x"
+                << io::hex << shaderModels.getValue() << io::dec << "." << io::endl;
         return nullptr;
     }
 
