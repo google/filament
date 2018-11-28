@@ -132,12 +132,23 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder)
     parser->getInterpolation(&mInterpolation);
     parser->getVertexDomain(&mVertexDomain);
     parser->getRequiredAttributes(&mRequiredAttributes);
+
     if (mBlendingMode == BlendingMode::MASKED) {
         parser->getMaskThreshold(&mMaskThreshold);
     }
+
+    // The fade blending mode only affects shading. For proper sorting we need to
+    // treat this blending mode as a regular transparent blending operation.
+    if (UTILS_UNLIKELY(mBlendingMode == BlendingMode::FADE)) {
+        mRenderBlendingMode = BlendingMode::TRANSPARENT;
+    } else {
+        mRenderBlendingMode = mBlendingMode;
+    }
+
     if (mShading == Shading::UNLIT) {
         parser->hasShadowMultiplier(&mHasShadowMultiplier);
     }
+
     mIsVariantLit = mShading != Shading::UNLIT || mHasShadowMultiplier;
 
     // create raster state
