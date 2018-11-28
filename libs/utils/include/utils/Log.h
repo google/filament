@@ -86,6 +86,7 @@ private:
     friend ostream& hex(ostream& s) noexcept;
     friend ostream& dec(ostream& s) noexcept;
     friend ostream& endl(ostream& s) noexcept;
+    friend ostream& flush(ostream& s) noexcept;
 
     enum type {
         SHORT, USHORT, INT, UINT, LONG, ULONG, LONG_LONG, ULONG_LONG, DOUBLE, LONG_DOUBLE
@@ -132,6 +133,7 @@ inline ostream& operator<<(ostream& stream, const VECTOR<T>& v) {
 inline ostream& hex(ostream& s) noexcept { return s.hex(); }
 inline ostream& dec(ostream& s) noexcept { return s.dec(); }
 inline ostream& endl(ostream& s) noexcept { s << "\n"; return s.flush(); }
+inline ostream& flush(ostream& s) noexcept { return s.flush(); }
 
 #else  // UTILS_TINY_IO
 
@@ -139,6 +141,7 @@ using ostream = std::ostream;
 inline ostream& hex(ostream& s) noexcept { return s << std::hex; }
 inline ostream& dec(ostream& s) noexcept { return s << std::dec; }
 inline ostream& endl(ostream& s) noexcept { return s << std::endl; }
+inline ostream& flush(ostream& s) noexcept { return s << std::flush; }
 
 #endif // UTILS_TINY_IO
 } // namespace io

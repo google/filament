@@ -66,8 +66,8 @@ bool GLSLTools::analyzeFragmentShader(const std::string& shaderCode, ShaderModel
     EShMessages msg = glslangFlagsFromTargetApi(targetApi);
     bool ok = tShader.parse(&DefaultTBuiltInResource, version, false, msg);
     if (!ok) {
-        std::cerr << "ERROR: Unable to parse fragment shader:" << std::endl;
-        std::cerr << tShader.getInfoLog() << std::flush;
+        utils::slog.e << "ERROR: Unable to parse fragment shader:" << utils::io::endl;
+        utils::slog.e << tShader.getInfoLog() << utils::io::flush;
         return false;
     }
 
@@ -75,8 +75,8 @@ bool GLSLTools::analyzeFragmentShader(const std::string& shaderCode, ShaderModel
     // Check there is a material function definition in this shader.
     TIntermNode* materialFctNode = ASTUtils::getFunctionByNameOnly("material", *root);
     if (materialFctNode == nullptr) {
-        std::cerr << "ERROR: Invalid fragment shader:" << std::endl;
-        std::cerr << "ERROR: Unable to find material() function" << std::endl;
+        utils::slog.e << "ERROR: Invalid fragment shader:" << utils::io::endl;
+        utils::slog.e << "ERROR: Unable to find material() function" << utils::io::endl;
         return false;
     }
 
@@ -84,8 +84,8 @@ bool GLSLTools::analyzeFragmentShader(const std::string& shaderCode, ShaderModel
     TIntermAggregate* prepareMaterialNode = ASTUtils::getFunctionByNameOnly("prepareMaterial",
             *root);
     if (prepareMaterialNode == nullptr) {
-        std::cerr << "ERROR: Invalid fragment shader:" << std::endl;
-        std::cerr << "ERROR: Unable to find prepareMaterial() function" << std::endl;
+        utils::slog.e << "ERROR: Invalid fragment shader:" << utils::io::endl;
+        utils::slog.e << "ERROR: Unable to find prepareMaterial() function" << utils::io::endl;
         return false;
     }
 
@@ -93,8 +93,8 @@ bool GLSLTools::analyzeFragmentShader(const std::string& shaderCode, ShaderModel
     bool prepareMaterialCalled = isFunctionCalled(prepareMaterialSignature,
             *materialFctNode, *root);
     if (!prepareMaterialCalled) {
-        std::cerr << "ERROR: Invalid fragment shader:" << std::endl;
-        std::cerr << "ERROR: prepareMaterial() is not called" << std::endl;
+        utils::slog.e << "ERROR: Invalid fragment shader:" << utils::io::endl;
+        utils::slog.e << "ERROR: prepareMaterial() is not called" << utils::io::endl;
         return false;
     }
 
@@ -115,8 +115,8 @@ bool GLSLTools::analyzeVertexShader(const std::string& shaderCode, ShaderModel m
     EShMessages msg = glslangFlagsFromTargetApi(targetApi);
     bool ok = tShader.parse(&DefaultTBuiltInResource, version, false, msg);
     if (!ok) {
-        std::cerr << "ERROR: Unable to parse vertex shader" << std::endl;
-        std::cerr << tShader.getInfoLog() << std::flush;
+        utils::slog.e << "ERROR: Unable to parse vertex shader" << utils::io::endl;
+        utils::slog.e << tShader.getInfoLog() << utils::io::flush;
         return false;
     }
 
@@ -124,8 +124,8 @@ bool GLSLTools::analyzeVertexShader(const std::string& shaderCode, ShaderModel m
     // Check there is a material function definition in this shader.
     TIntermNode* materialFctNode = ASTUtils::getFunctionByNameOnly("materialVertex", *root);
     if (materialFctNode == nullptr) {
-        std::cerr << "ERROR: Invalid vertex shader" << std::endl;
-        std::cerr << "ERROR: Unable to find materialVertex() function" << std::endl;
+        utils::slog.e << "ERROR: Invalid vertex shader" << utils::io::endl;
+        utils::slog.e << "ERROR: Unable to find materialVertex() function" << utils::io::endl;
         return false;
     }
 
@@ -193,7 +193,7 @@ bool GLSLTools::findProperties(const filamat::MaterialBuilder& builderIn, Proper
     if (!ok) {
         // Even with all properties set the shader doesn't build. This is likely a syntax error
         // with user provided code.
-        std::cerr << tShader.getInfoLog() << std::endl;
+        utils::slog.e << tShader.getInfoLog() << utils::io::endl;
         return false;
     }
 
@@ -210,7 +210,8 @@ bool GLSLTools::findPropertyWritesOperations(const std::string& functionName, si
     glslang::TIntermAggregate* functionMaterialDef =
             ASTUtils::getFunctionBySignature(functionName, *rootNode);
     if (functionMaterialDef == nullptr) {
-        std::cerr << "Unable to find function '" << functionName << "' definition." << std::endl;
+        utils::slog.e << "Unable to find function '" << functionName << "' definition."
+                << utils::io::endl;
         return false;
     }
 
@@ -218,8 +219,8 @@ bool GLSLTools::findPropertyWritesOperations(const std::string& functionName, si
     ASTUtils::getFunctionParameters(functionMaterialDef, functionMaterialParameters);
 
     if (functionMaterialParameters.size() <= parameterIdx) {
-        std::cerr << "Unable to find function '" << functionName <<  "' parameterIndex: " <<
-                parameterIdx << std::endl;
+        utils::slog.e << "Unable to find function '" << functionName <<  "' parameterIndex: " <<
+                parameterIdx << utils::io::endl;
         return false;
     }
 
@@ -233,7 +234,8 @@ bool GLSLTools::findPropertyWritesOperations(const std::string& functionName, si
     std::deque<Symbol> symbols;
     bool ok = findSymbolsUsage(functionName, *rootNode, symbols);
     if (!ok) {
-        std::cerr << "Unable to trace usage of symbols in function '" << functionName << std::endl;
+        utils::slog.e << "Unable to trace usage of symbols in function '" << functionName
+                << utils::io::endl;
         return false;
     }
 
