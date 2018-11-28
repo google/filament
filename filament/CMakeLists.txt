@@ -163,22 +163,9 @@ if(IOS AND NOT FILAMENT_SUPPORTS_VULKAN)
 endif()
 
 # Embed the binary resource blob for materials.
-list(APPEND PRIVATE_HDRS ${RESOURCE_DIR}/materials.h)
-if (WEBGL)
-    list(APPEND SRCS ${RESOURCE_DIR}/materials.c)
-else()
-    if (NOT WIN32)
-        set(ASM_ARCH_FLAG "-arch ${DIST_ARCH}")
-    endif()
-    if (APPLE)
-        set(ASM_FILE ${RESOURCE_DIR}/materials.apple.S)
-    else()
-        set(ASM_FILE ${RESOURCE_DIR}/materials.S)
-    endif()
-    list(APPEND SRCS ${ASM_FILE})
-    set_source_files_properties(${ASM_FILE} PROPERTIES
-            COMPILE_FLAGS "-I${RESOURCE_DIR} ${ASM_ARCH_FLAG}")
-endif()
+get_resgen_vars(${RESOURCE_DIR} materials)
+list(APPEND PRIVATE_HDRS ${RESGEN_HEADER})
+list(APPEND SRCS ${RESGEN_SOURCE})
 
 # ==================================================================================================
 # OS specific
@@ -296,21 +283,16 @@ add_custom_command(
 )
 list(APPEND MATERIAL_BINS ${output_path})
 
-set(resgen_outputs
-    ${RESOURCE_DIR}/materials.bin
-    ${RESOURCE_DIR}/materials.S
-    ${RESOURCE_DIR}/materials.apple.S
-    ${RESOURCE_DIR}/materials.h
-    ${RESOURCE_DIR}/materials.c
-)
 add_custom_command(
-        OUTPUT ${resgen_outputs}
+        OUTPUT ${RESGEN_OUTPUTS}
         COMMAND resgen -x ${RESOURCE_DIR} -p materials ${MATERIAL_BINS}
         DEPENDS resgen ${MATERIAL_BINS}
         COMMENT "Aggregating compiled materials"
 )
 
-add_custom_target(filament_materials DEPENDS ${resgen_outputs})
+if (DEFINED RESGEN_FLAGS)
+    set_source_files_properties(${RESGEN_SOURCE} PROPERTIES COMPILE_FLAGS ${RESGEN_FLAGS})
+endif()
 
 set(DATA_BINS)
 file(MAKE_DIRECTORY "${GENERATION_ROOT}/generated/data/")
@@ -334,7 +316,6 @@ include_directories(src)
 
 # we're building a library
 add_library(${TARGET} STATIC ${PRIVATE_HDRS} ${PUBLIC_HDRS} ${SRCS} ${DATA_BINS})
-add_dependencies(${TARGET} filament_materials)
 
 # specify where the public headers of this library are
 target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
