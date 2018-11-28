@@ -16,7 +16,7 @@
 
 #include "driver/vulkan/VulkanDriver.h"
 
-#include "driver/CommandStream.h"
+#include "driver/CommandStreamDispatcher.h"
 
 #include "VulkanBuffer.h"
 #include "VulkanHandles.h"
