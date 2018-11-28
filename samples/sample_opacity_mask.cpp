@@ -197,9 +197,6 @@ static void setup(Engine* engine, View* view, Scene* scene) {
             .name("DefaultMaterial")
             .require(VertexAttribute::UV0)
             .parameter(MaterialBuilder::SamplerType::SAMPLER_2D, "opacityMaskMap")
-            .set(Property::BASE_COLOR)
-            .set(Property::METALLIC)
-            .set(Property::ROUGHNESS)
             .material(R"SHADER(
                 void material(inout MaterialInputs material) {
                     prepareMaterial(material);

@@ -31,7 +31,6 @@ namespace matc {
 
 static constexpr const char* PARAM_KEY_NAME              = "name";
 static constexpr const char* PARAM_KEY_INTERPOLATION     = "interpolation";
-static constexpr const char* PARAM_KEY_DEFINES           = "defines";
 static constexpr const char* PARAM_KEY_PARAMETERS        = "parameters";
 static constexpr const char* PARAM_KEY_VARIABLES         = "variables";
 static constexpr const char* PARAM_KEY_REQUIRES          = "requires";
@@ -51,7 +50,6 @@ static constexpr const char* PARAM_KEY_VARIANT_FILTER    = "variantFilter";
 ParametersProcessor::ParametersProcessor() {
     mConfigProcessor[PARAM_KEY_NAME]              = &ParametersProcessor::processName;
     mConfigProcessor[PARAM_KEY_INTERPOLATION]     = &ParametersProcessor::processInterpolation;
-    mConfigProcessor[PARAM_KEY_DEFINES]           = &ParametersProcessor::processDefines;
     mConfigProcessor[PARAM_KEY_PARAMETERS]        = &ParametersProcessor::processParameters;
     mConfigProcessor[PARAM_KEY_VARIABLES]         = &ParametersProcessor::processVariables;
     mConfigProcessor[PARAM_KEY_REQUIRES]          = &ParametersProcessor::processRequires;
@@ -70,7 +68,6 @@ ParametersProcessor::ParametersProcessor() {
 
     mRootAsserts[PARAM_KEY_NAME]              = JsonishValue::Type::STRING;
     mRootAsserts[PARAM_KEY_INTERPOLATION]     = JsonishValue::Type::STRING;
-    mRootAsserts[PARAM_KEY_DEFINES]           = JsonishValue::Type::ARRAY;
     mRootAsserts[PARAM_KEY_PARAMETERS]        = JsonishValue::Type::ARRAY;
     mRootAsserts[PARAM_KEY_VARIABLES]         = JsonishValue::Type::ARRAY;
     mRootAsserts[PARAM_KEY_REQUIRES]          = JsonishValue::Type::ARRAY;
@@ -167,25 +164,6 @@ bool ParametersProcessor::processInterpolation(filamat::MaterialBuilder& builder
     }
 
     builder.interpolation(stringToEnum(mStringToInterpolation, interpolationString->getString()));
-    return true;
-}
-
-bool ParametersProcessor::processDefines(filamat::MaterialBuilder& builder,
-        const JsonishValue& value) {
-    auto jsonArray = value.toJsonArray();
-    for (auto v : jsonArray->getElements()) {
-        if (v->getType() != JsonishValue::Type::STRING) {
-            std::cerr << PARAM_KEY_DEFINES << " array values must be STRING." << std::endl;
-            return false;
-        }
-
-        auto jsonString = v->toJsonString();
-        if (!Enums::isValid<Property>(jsonString->getString())) {
-            return logEnumIssue(PARAM_KEY_DEFINES, *jsonString, Enums::map<Property>());
-        }
-        builder.set(Enums::toEnum<Property>(jsonString->getString()));
-    }
-
     return true;
 }
 

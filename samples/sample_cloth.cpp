@@ -181,10 +181,6 @@ static void setup(Engine* engine, View* view, Scene* scene) {
 
     MaterialBuilder builder = MaterialBuilder()
             .name("DefaultMaterial")
-            .set(Property::NORMAL)
-            .set(Property::BASE_COLOR)
-            .set(Property::SHEEN_COLOR)
-            .set(Property::ROUGHNESS)
             .require(VertexAttribute::UV0)
             .parameter(MaterialBuilder::SamplerType::SAMPLER_2D, "normalMap")
             .parameter(MaterialBuilder::SamplerType::SAMPLER_2D, "basecolorMap")

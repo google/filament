@@ -219,9 +219,6 @@ static void setup(Engine* engine, View* view, Scene* scene) {
 
     MaterialBuilder builder = MaterialBuilder()
             .name("DefaultMaterial")
-            .set(Property::BASE_COLOR)
-            .set(Property::METALLIC)
-            .set(Property::ROUGHNESS)
             .material(shader.c_str())
             .shading(Shading::LIT);
 
