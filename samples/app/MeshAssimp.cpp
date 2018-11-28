@@ -112,7 +112,6 @@ Texture* MeshAssimp::createOneByOneTexture(uint32_t pixel) {
 }
 
 MeshAssimp::MeshAssimp(Engine& engine) : mEngine(engine) {
-    //Initialize some things here
     mDefaultMap = createOneByOneTexture(0xffffffff);
     mDefaultNormalMap = createOneByOneTexture(0xffff8080);
 
@@ -305,25 +304,48 @@ TextureSampler::WrapMode aiToFilamentMapMode(aiTextureMapMode mapMode) {
     }
 }
 
+TextureSampler::MinFilter aiMinFilterToFilament(unsigned int aiMinFilter){
+    switch(aiMinFilter){
+        case 9728: return TextureSampler::MinFilter::NEAREST;
+        case 9729: return TextureSampler::MinFilter::LINEAR;
+        case 9984: return TextureSampler::MinFilter::NEAREST_MIPMAP_NEAREST;
+        case 9985: return TextureSampler::MinFilter::LINEAR_MIPMAP_NEAREST;
+        case 9986: return TextureSampler::MinFilter::NEAREST_MIPMAP_LINEAR;
+        case 9987: return TextureSampler::MinFilter::LINEAR_MIPMAP_LINEAR;
+        default: return TextureSampler::MinFilter::LINEAR_MIPMAP_LINEAR;
+    }
+}
+
+TextureSampler::MagFilter aiMagFilterToFilament(unsigned int aiMagFilter){
+    switch(aiMagFilter){
+        case 9728: return TextureSampler::MagFilter::NEAREST;
+        default: return TextureSampler::MagFilter::LINEAR;
+    }
+}
+
 // TODO: Change this to a member function (requires some alteration of cmakelsts.txt)
 void setTextureFromPath(const aiScene *scene, Engine *engine,
         std::vector<filament::Texture*> textures, const aiString &textureFile,
         const std::string &materialName, const std::string &textureDirectory,
         aiTextureMapMode *mapMode, const char *parameterName,
-        std::map<std::string, MaterialInstance *> &outMaterials) {
+        std::map<std::string, MaterialInstance *> &outMaterials,
+        unsigned int aiMinFilterType=0, unsigned int aiMagFilterType=0) {
+
+    TextureSampler::MinFilter minFilterType = aiMinFilterToFilament(aiMinFilterType);
+    TextureSampler::MagFilter magFilterType = aiMagFilterToFilament(aiMagFilterType);
 
     TextureSampler sampler;
     if (mapMode) {
         sampler = TextureSampler(
-                TextureSampler::MinFilter::LINEAR_MIPMAP_LINEAR,
-                TextureSampler::MagFilter::LINEAR,
+                minFilterType,
+                magFilterType,
                 aiToFilamentMapMode(mapMode[0]),
                 aiToFilamentMapMode(mapMode[1]),
                 aiToFilamentMapMode(mapMode[2]));
     } else {
         sampler = TextureSampler(
-                TextureSampler::MinFilter::LINEAR_MIPMAP_LINEAR,
-                TextureSampler::MagFilter::LINEAR,
+                minFilterType,
+                magFilterType,
                 TextureSampler::WrapMode::REPEAT);
     }
 
@@ -569,6 +591,7 @@ bool MeshAssimp::setFromFile(const Path& file, std::vector<uint32_t>& outIndices
             float3 const* texCoords  = reinterpret_cast<const float3*>(mesh->mTextureCoords[0]);
 
             const size_t numVertices = mesh->mNumVertices;
+
             if (numVertices > 0) {
                 const aiFace* faces = mesh->mFaces;
                 const size_t numFaces = mesh->mNumFaces;
@@ -599,6 +622,7 @@ bool MeshAssimp::setFromFile(const Path& file, std::vector<uint32_t>& outIndices
                         outPositions.emplace_back(positions[j], 1.0_h);
                     }
 
+
                     // all faces should be triangles since we configure assimp to triangulate faces
                     size_t indicesCount = numFaces * faces[0].mNumIndices;
                     size_t indexBufferOffset = outIndices.size();
@@ -616,6 +640,7 @@ bool MeshAssimp::setFromFile(const Path& file, std::vector<uint32_t>& outIndices
 
                     aiString name;
                     std::string materialName;
+
 
                     if (material->Get(AI_MATKEY_NAME, name) != AI_SUCCESS) {
                         if (isGLTF) {
@@ -833,16 +858,25 @@ void MeshAssimp::processGLTFMaterial(const aiScene* scene, const aiMaterial* mat
 
     if (material->GetTexture(aiTextureType_DIFFUSE, 1, &baseColorPath,
             nullptr, nullptr, nullptr, nullptr, mapMode) == AI_SUCCESS) {
+        unsigned int minType = 0;
+        unsigned int magType = 0;
+        material->Get("$tex.mappingfiltermin", aiTextureType_DIFFUSE, 1, minType);
+        material->Get("$tex.mappingfiltermag", aiTextureType_DIFFUSE, 1, magType);
+
         setTextureFromPath(scene, &mEngine, mTextures, baseColorPath,
-                materialName, dirName, mapMode, "baseColorMap", outMaterials);
+                materialName, dirName, mapMode, "baseColorMap", outMaterials, minType, magType);
     } else {
         outMaterials[materialName]->setParameter("baseColorMap", mDefaultMap, sampler);
     }
 
     if (material->GetTexture(aiTextureType_UNKNOWN, 0, &MRPath,
             nullptr, nullptr, nullptr, nullptr, mapMode) == AI_SUCCESS) {
+        unsigned int minType = 0;
+        unsigned int magType = 0;
+        material->Get("$tex.mappingfiltermin", aiTextureType_UNKNOWN, 0, minType);
+        material->Get("$tex.mappingfiltermag", aiTextureType_UNKNOWN, 0, magType);
         setTextureFromPath(scene, &mEngine, mTextures, MRPath, materialName,
-                dirName, mapMode, "metallicRoughnessMap", outMaterials);
+                dirName, mapMode, "metallicRoughnessMap", outMaterials, minType, magType);
     } else {
         outMaterials[materialName]->setParameter("metallicRoughnessMap", mDefaultMap, sampler);
         outMaterials[materialName]->setParameter("metallicFactor", mDefaultMetallic);
@@ -851,24 +885,36 @@ void MeshAssimp::processGLTFMaterial(const aiScene* scene, const aiMaterial* mat
 
     if (material->GetTexture(aiTextureType_LIGHTMAP, 0, &AOPath, nullptr,
             nullptr, nullptr, nullptr, mapMode) == AI_SUCCESS) {
+        unsigned int minType = 0;
+        unsigned int magType = 0;
+        material->Get("$tex.mappingfiltermin", aiTextureType_LIGHTMAP, 0, minType);
+        material->Get("$tex.mappingfiltermag", aiTextureType_LIGHTMAP, 0, magType);
         setTextureFromPath(scene, &mEngine, mTextures, AOPath, materialName,
-                dirName, mapMode, "aoMap", outMaterials);
+                dirName, mapMode, "aoMap", outMaterials, minType, magType);
     } else {
         outMaterials[materialName]->setParameter("aoMap", mDefaultMap, sampler);
     }
 
     if (material->GetTexture(aiTextureType_NORMALS, 0, &normalPath, nullptr,
             nullptr, nullptr, nullptr, mapMode) == AI_SUCCESS) {
+        unsigned int minType = 0;
+        unsigned int magType = 0;
+        material->Get("$tex.mappingfiltermin", aiTextureType_NORMALS, 0, minType);
+        material->Get("$tex.mappingfiltermag", aiTextureType_NORMALS, 0, magType);
         setTextureFromPath(scene, &mEngine, mTextures, normalPath, materialName,
-                dirName, mapMode, "normalMap", outMaterials);
+                dirName, mapMode, "normalMap", outMaterials, minType, magType);
     } else {
         outMaterials[materialName]->setParameter("normalMap", mDefaultNormalMap, sampler);
     }
 
     if (material->GetTexture(aiTextureType_EMISSIVE, 0, &emissivePath, nullptr,
             nullptr, nullptr, nullptr, mapMode) == AI_SUCCESS) {
-        setTextureFromPath(scene, &mEngine, mTextures, emissivePath,
-                materialName, dirName, mapMode, "emissiveMap", outMaterials);
+        unsigned int minType = 0;
+        unsigned int magType = 0;
+        material->Get("$tex.mappingfiltermin", aiTextureType_EMISSIVE, 0, minType);
+        material->Get("$tex.mappingfiltermag", aiTextureType_EMISSIVE, 0, magType);
+        setTextureFromPath(scene, &mEngine, mTextures, emissivePath, materialName,
+                dirName, mapMode, "emissiveMap", outMaterials, minType, magType);
     }  else {
         outMaterials[materialName]->setParameter("emissiveMap", mDefaultMap, sampler);
         outMaterials[materialName]->setParameter("emissiveFactor", mDefaultEmissive);
