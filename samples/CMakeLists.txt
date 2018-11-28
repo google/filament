@@ -1,9 +1,28 @@
 cmake_minimum_required(VERSION 3.1)
 project(filament-samples C ASM)
 
+set(ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR}/..)
 set(GENERATION_ROOT ${CMAKE_CURRENT_BINARY_DIR})
 set(RESOURCE_DIR  "${GENERATION_ROOT}/generated/resources")
 set(MATERIAL_DIR  "${GENERATION_ROOT}/generated/material")
+set(RESOURCE_BINS)
+
+# ==================================================================================================
+# Convert OBJ files into filamesh files.
+# ==================================================================================================
+
+function(add_mesh SOURCE TARGET)
+    set(source_mesh "${ROOT_DIR}/${SOURCE}")
+    set(target_mesh "${RESOURCE_DIR}/${TARGET}")
+    set(RESOURCE_BINS ${RESOURCE_BINS} ${target_mesh} PARENT_SCOPE)
+    add_custom_command(
+        OUTPUT ${target_mesh}
+        COMMAND filamesh ${source_mesh} ${target_mesh}
+        MAIN_DEPENDENCY ${source_mesh}
+        DEPENDS filamesh)
+endfunction()
+
+add_mesh("assets/models/monkey/monkey.obj" "suzanne.filamesh")
 
 # ==================================================================================================
 # Build materials
@@ -46,7 +65,6 @@ if (CMAKE_BUILD_TYPE MATCHES Release)
     set(MATC_FLAGS -O ${MATC_FLAGS})
 endif()
 
-set(MATERIAL_BINS)
 foreach (mat_src ${MATERIAL_SRCS})
     get_filename_component(localname "${mat_src}" NAME_WE)
     get_filename_component(fullname "${mat_src}" ABSOLUTE)
@@ -59,15 +77,19 @@ foreach (mat_src ${MATERIAL_SRCS})
             DEPENDS matc
             COMMENT "Compiling material ${mat_src} to ${output_path}"
     )
-    list(APPEND MATERIAL_BINS ${output_path})
+    list(APPEND RESOURCE_BINS ${output_path})
 endforeach()
+
+# ==================================================================================================
+# Build aggregated resource files
+# ==================================================================================================
 
 get_resgen_vars(${RESOURCE_DIR} resources)
 
 add_custom_command(
         OUTPUT ${RESGEN_OUTPUTS}
-        COMMAND resgen -x ${RESOURCE_DIR} -p resources ${MATERIAL_BINS}
-        DEPENDS resgen ${MATERIAL_BINS}
+        COMMAND resgen -x ${RESOURCE_DIR} -p resources ${RESOURCE_BINS}
+        DEPENDS resgen ${RESOURCE_BINS}
         COMMENT "Aggregating resources"
 )
 
@@ -164,7 +186,6 @@ if (NOT ANDROID)
 
     add_filamesh_demo(sample_cloth)
     add_filamesh_demo(sample_subsurface)
-    add_filamesh_demo(vk_imgui)
     add_filamesh_demo(sample_normal_map)
     add_filamesh_demo(sample_opacity_mask)
 
@@ -199,15 +220,16 @@ endif()
 # ==================================================================================================
 
 if (FILAMENT_SUPPORTS_VULKAN)
-    add_assimp_demo(vk_strobecolor)
-    add_assimp_demo(vk_hellotriangle)
-    add_assimp_demo(vk_depthtesting)
-    add_assimp_demo(vk_texturedquad)
-    add_assimp_demo(vk_hellopbr)
     add_assimp_demo(vk_shadowtest)
-    add_assimp_demo(vk_animation)
-    add_assimp_demo(vk_vbotest)
-    add_assimp_demo(vk_viewtest)
+    add_filamesh_demo(vk_animation)
+    add_filamesh_demo(vk_depthtesting)
+    add_filamesh_demo(vk_hellopbr)
+    add_filamesh_demo(vk_hellotriangle)
+    add_filamesh_demo(vk_imgui)
+    add_filamesh_demo(vk_strobecolor)
+    add_filamesh_demo(vk_texturedquad)
+    add_filamesh_demo(vk_vbotest)
+    add_filamesh_demo(vk_viewtest)
 endif()
 
 # ==================================================================================================
