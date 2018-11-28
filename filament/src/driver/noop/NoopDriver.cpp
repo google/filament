@@ -15,7 +15,7 @@
  */
 
 #include "driver/noop/NoopDriver.h"
-#include "driver/CommandStream.h"
+#include "driver/CommandStreamDispatcher.h"
 
 namespace filament {
 

@@ -24,7 +24,7 @@
 #include <utils/Systrace.h>
 
 #include "driver/DriverApi.h"
-#include "driver/CommandStream.h"
+#include "driver/CommandStreamDispatcher.h"
 #include "driver/opengl/OpenGLProgram.h"
 #include "driver/opengl/OpenGLBlitter.h"
 
@@ -41,7 +41,6 @@
 
 #define DEBUG_MARKER_NONE       0
 #define DEBUG_MARKER_OPENGL     1
-#define DEBUG_MARKER_SYSTRACE   2
 
 // set to the desired debug marker level
 #define DEBUG_MARKER_LEVEL      DEBUG_MARKER_NONE
@@ -49,9 +48,6 @@
 #if DEBUG_MARKER_LEVEL == DEBUG_MARKER_OPENGL
 #   define DEBUG_MARKER() \
         DebugMarker _debug_marker(*this, __PRETTY_FUNCTION__);
-#elif DEBUG_MARKER_LEVEL == DEBUG_MARKER_SYSTRACE
-#   define DEBUG_MARKER() \
-        SYSTRACE_CALL();
 #else
 #   define DEBUG_MARKER()
 #endif
@@ -2005,9 +2001,6 @@ void OpenGLDriver::beginRenderPass(Driver::RenderTargetHandle rth,
             std::array<GLenum, 3> attachments; // NOLINT(cppcoreguidelines-pro-type-member-init)
             GLsizei attachmentCount = getAttachments(attachments, rt, discardFlags);
             if (attachmentCount) {
-#if DEBUG_MARKER_LEVEL == DEBUG_MARKER_SYSTRACE
-                SYSTRACE_NAME("glInvalidateFramebuffer");
-#endif
                 glInvalidateFramebuffer(GL_FRAMEBUFFER, attachmentCount, attachments.data());
                 CHECK_GL_ERROR(utils::slog.e)
             }
@@ -2056,9 +2049,6 @@ void OpenGLDriver::endRenderPass(int) {
         std::array<GLenum, 3> attachments; // NOLINT(cppcoreguidelines-pro-type-member-init)
         GLsizei attachmentCount = getAttachments(attachments, rt, discardFlags);
         if (attachmentCount) {
-#if DEBUG_MARKER_LEVEL == DEBUG_MARKER_SYSTRACE
-            SYSTRACE_NAME("glInvalidateFramebuffer");
-#endif
             glInvalidateFramebuffer(GL_FRAMEBUFFER, attachmentCount, attachments.data());
         }
 
