@@ -26,9 +26,10 @@ static ::testing::AssertionResult PropertyListsMatch(const MaterialBuilder::Prop
         const MaterialBuilder::PropertyList& actual) {
     for (size_t i = 0; i < filament::MATERIAL_PROPERTIES_COUNT; i++) {
         if (expected[i] != actual[i]) {
-            const auto& str = Enums::toString<Property>(Property(i));
-            return ::testing::AssertionFailure() << "actual[" << str << "] (" << actual[i] <<
-            ") != expected[" << str << "] (" << expected[i] << ")";
+            const auto& propString = Enums::toString<Property>(Property(i));
+            return ::testing::AssertionFailure()
+                    << "actual[" << propString << "] (" << actual[i]
+                    << ") != expected[" << propString << "] (" << expected[i] << ")";
         }
     }
     return ::testing::AssertionSuccess();

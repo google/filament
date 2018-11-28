@@ -248,14 +248,14 @@ public:
     // returns a list of at least getParameterCount() parameters
     const ParameterList& getParameters() const noexcept { return mParameters; }
 
-    TargetApi getTargetApi() const { return mTargetApi; }
-
-    Platform getPlatform() const { return mPlatform; }
-
     uint8_t getVariantFilter() const { return mVariantFilter; }
 
 private:
     void prepareToBuild(MaterialInfo& info) noexcept;
+
+    // Return true if:
+    // The shader is syntactically and semantically valid
+    bool runStaticCodeAnalysis() noexcept;
 
     bool isLit() const noexcept { return mShading != filament::Shading::UNLIT; }
 

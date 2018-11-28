@@ -293,6 +293,29 @@ void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
     info.samplerBindings.populate(&info.sib, mMaterialName.c_str());
 }
 
+bool MaterialBuilder::runStaticCodeAnalysis() noexcept {
+    using namespace filament::driver;
+
+    GLSLTools glslTools;
+
+    // Populate mProperties with the properties set in the shader.
+    if (!glslTools.findProperties(*this, mProperties, mTargetApi)) {
+        return false;
+    }
+
+    // At this point the shader is syntactically correct. Perform semantic analysis now.
+    ShaderModel model;
+
+    std::string shaderCode = peek(ShaderType::VERTEX, model, mProperties);
+    bool result = glslTools.analyzeVertexShader(shaderCode, model, mTargetApi);
+    if (!result) return result;
+
+    shaderCode = peek(ShaderType::FRAGMENT, model, mProperties);
+    result = glslTools.analyzeFragmentShader(shaderCode, model, mTargetApi);
+    return result;
+
+}
+
 static void showErrorMessage(const char* materialName, uint8_t variant,
         MaterialBuilder::TargetApi targetApi, filament::driver::ShaderType shaderType,
         const std::string& shaderCode) {
@@ -312,18 +335,14 @@ static void showErrorMessage(const char* materialName, uint8_t variant,
 Package MaterialBuilder::build() noexcept {
     GLSLTools::init();
 
+    if (!runStaticCodeAnalysis()) {
+        // Return an empty package to signal a failure to build the material.
+        Package package(0);
+        package.setValid(false);
+        return package;
+    }
+
     bool errorOccured = false;
-
-    GLSLTools glslTools;
-
-    // Populate mProperties with the properties set in the shader.
-    if (!glslTools.findProperties(*this, mProperties)) {
-        errorOccured = true;
-    }
-
-    if (!glslTools.process(*this, mProperties)) {
-        errorOccured = true;
-    }
 
     MaterialInfo info;
     prepareToBuild(info);

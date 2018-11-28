@@ -132,20 +132,6 @@ bool GLSLTools::analyzeVertexShader(const std::string& shaderCode, ShaderModel m
     return true;
 }
 
-bool GLSLTools::process(MaterialBuilder& builder,
-        const MaterialBuilder::PropertyList& properties) const noexcept {
-    // At this point the shader is syntactically correct. Perform semantic analysis now.
-    ShaderModel model;
-
-    std::string shaderCode = builder.peek(ShaderType::VERTEX, model, properties);
-    bool result = analyzeVertexShader(shaderCode, model, builder.getTargetApi());
-    if (!result) return result;
-
-    shaderCode = builder.peek(ShaderType::FRAGMENT, model, properties);
-    result = analyzeFragmentShader(shaderCode, model, builder.getTargetApi());
-    return result;
-}
-
 void GLSLTools::init() {
     // According to glslang, InitializeProcess should be called exactly once per process.
     static bool initializeCalled = false;
@@ -156,7 +142,8 @@ void GLSLTools::init() {
 }
 
 bool GLSLTools::findProperties(const filamat::MaterialBuilder& builderIn,
-        MaterialBuilder::PropertyList& properties) const noexcept {
+        MaterialBuilder::PropertyList& properties,
+        MaterialBuilder::TargetApi targetApi) const noexcept {
     filamat::MaterialBuilder builder(builderIn);
 
     // Some fields in MaterialInputs only exist if the property is set (e.g: normal, subsurface
@@ -174,7 +161,7 @@ bool GLSLTools::findProperties(const filamat::MaterialBuilder& builderIn,
 
     GLSLangCleaner cleaner;
     int version = glslangVersionFromShaderModel(model);
-    EShMessages msg = glslangFlagsFromTargetApi(builderIn.getTargetApi());
+    EShMessages msg = glslangFlagsFromTargetApi(targetApi);
     const TBuiltInResource* builtins = &DefaultTBuiltInResource;
     bool ok = tShader.parse(builtins, version, false, msg);
     if (!ok) {

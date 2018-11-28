@@ -123,9 +123,6 @@ public:
             filament::driver::ShaderModel model,
             filamat::MaterialBuilder::TargetApi targetApi) const noexcept;
 
-    // Return true if:
-    // The shader is syntactically and semantically valid AND
-    // The shader features a materialVertex( function
     bool analyzeVertexShader(const std::string& shaderCode,
             filament::driver::ShaderModel model,
             filamat::MaterialBuilder::TargetApi targetApi) const noexcept;
@@ -140,7 +137,8 @@ public:
     // Use static code analysis on the fragment shader AST to guess properties used in user provided
     // glgl code. Populate properties accordingly.
     bool findProperties(const filamat::MaterialBuilder& builder,
-            MaterialBuilder::PropertyList& properties) const noexcept;
+            MaterialBuilder::PropertyList& properties,
+            MaterialBuilder::TargetApi targetApi) const noexcept;
 
     static int glslangVersionFromShaderModel(filament::driver::ShaderModel model);
 
