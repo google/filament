@@ -217,7 +217,7 @@ bool GLSLTools::findPropertyWritesOperations(const std::string& functionName, si
     std::vector<FunctionParameter> functionMaterialParameters;
     ASTUtils::getFunctionParameters(functionMaterialDef, functionMaterialParameters);
 
-    if (functionMaterialParameters.size() < parameterIdx) {
+    if (functionMaterialParameters.size() <= parameterIdx) {
         std::cerr << "Unable to find function '" << functionName <<  "' parameterIndex: " <<
                 parameterIdx << std::endl;
         return false;
