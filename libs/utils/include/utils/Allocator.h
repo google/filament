@@ -228,7 +228,6 @@ public:
     void* pop() noexcept {
         Node* const storage = mStorage;
 
-        HeadPtr newHead; // NOLINT(cppcoreguidelines-pro-type-member-init)
         HeadPtr currentHead = mHead.load();
         while (currentHead.offset >= 0) {
             // The value of "next" we load here might already contain application data if another
@@ -236,7 +235,7 @@ public:
             // since compare_exchange_weak fails. Then this thread will loop with the updated
             // value of currentHead, and try again.
             Node* const next = storage[currentHead.offset].next.load(std::memory_order_relaxed);
-            newHead = { next ? int32_t(next - storage) : -1, currentHead.tag + 1 };
+            const HeadPtr newHead{ next ? int32_t(next - storage) : -1, currentHead.tag + 1 };
             // In the rare case that the other thread that raced ahead of us already returned the 
             // same mHead we just loaded, but it now has a different "next" value, the tag field will not 
             // match, and compare_exchange_weak will fail and prevent that particular race condition.
@@ -248,18 +247,21 @@ public:
                 break;
             }
         }
-        return (currentHead.offset >= 0) ? (storage + currentHead.offset) : nullptr;
+        void* p = (currentHead.offset >= 0) ? (storage + currentHead.offset) : nullptr;
+        assert(!p || p >= storage);
+        return p;
     }
 
     void push(void* p) noexcept {
-        assert(p);
         Node* const storage = mStorage;
+        assert(p && p >= storage);
         Node* const node = static_cast<Node*>(p);
         HeadPtr currentHead = mHead.load();
         HeadPtr newHead = { int32_t(node - storage), currentHead.tag + 1 };
         do {
             newHead.tag = currentHead.tag + 1;
-            node->next.store(storage + currentHead.offset, std::memory_order_relaxed);
+            Node* const n = (currentHead.offset >= 0) ? (storage + currentHead.offset) : nullptr;
+            node->next.store(n, std::memory_order_relaxed);
         } while(!mHead.compare_exchange_weak(currentHead, newHead));
     }
 
