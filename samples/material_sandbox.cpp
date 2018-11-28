@@ -52,10 +52,6 @@ using namespace filament;
 using namespace filamat;
 using namespace utils;
 
-static constexpr uint8_t GROUND_SHADOW_PACKAGE[] = {
-    #include "generated/material/groundShadow.inc"
-};
-
 static std::vector<Path> g_filenames;
 
 static Scene* g_scene = nullptr;
@@ -201,7 +197,7 @@ static void setup(Engine* engine, View*, Scene* scene) {
     if (g_shadowPlane) {
         EntityManager& em = EntityManager::get();
         Material* shadowMaterial = Material::Builder()
-                .package((void*) GROUND_SHADOW_PACKAGE, sizeof(GROUND_SHADOW_PACKAGE))
+                .package(RESOURCES_GROUNDSHADOW_DATA, RESOURCES_GROUNDSHADOW_SIZE)
                 .build(*engine);
 
         const static uint32_t indices[] = {
