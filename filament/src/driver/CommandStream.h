@@ -183,37 +183,6 @@ public:
 
 // ------------------------------------------------------------------------------------------------
 
-template<typename ConcreteDriver>
-class ConcreteDispatcher final : public Dispatcher {
-public:
-    // initialize the dispatch table
-    explicit ConcreteDispatcher(ConcreteDriver* driver) noexcept : Dispatcher() {
-#define DECL_DRIVER_API_SYNCHRONOUS(RetType, methodName, paramsDecl, params)
-#define DECL_DRIVER_API(methodName, paramsDecl, params)                 methodName##_ = methodName;
-#define DECL_DRIVER_API_RETURN(RetType, methodName, paramsDecl, params) methodName##_ = methodName;
-#include "driver/DriverAPI.inc"
-    }
-private:
-#define DECL_DRIVER_API_SYNCHRONOUS(RetType, methodName, paramsDecl, params)
-#define DECL_DRIVER_API(methodName, paramsDecl, params)                                         \
-    static void methodName(Driver& driver, CommandBase* base, intptr_t* next) {                 \
-        using Type = CommandType<decltype(&Driver::methodName)>;                                \
-        using Cmd = typename Type::template Command<&Driver::methodName>;                       \
-        ConcreteDriver& concreteDriver = static_cast<ConcreteDriver&>(driver);                  \
-        Cmd::execute(&ConcreteDriver::methodName, concreteDriver, base, next);                  \
-     }
-#define DECL_DRIVER_API_RETURN(RetType, methodName, paramsDecl, params)                         \
-    static void methodName(Driver& driver, CommandBase* base, intptr_t* next) {                 \
-        using Type = CommandType<decltype(&Driver::methodName)>;                                \
-        using Cmd = typename Type::template Command<&Driver::methodName>;                       \
-        ConcreteDriver& concreteDriver = static_cast<ConcreteDriver&>(driver);                  \
-        Cmd::execute(&ConcreteDriver::methodName, concreteDriver, base, next);                  \
-     }
-#include "driver/DriverAPI.inc"
-};
-
-// ------------------------------------------------------------------------------------------------
-
 #ifdef NDEBUG
     #define DEBUG_COMMAND(methodName, params...)
 #else
