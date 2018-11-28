@@ -28,29 +28,7 @@
 
 #include <math/vec3.h>
 
-static constexpr uint8_t MATERIAL_UNLIT_PACKAGE[] = {
-    #include "generated/material/sandboxUnlit.inc"
-};
-
-static constexpr uint8_t MATERIAL_LIT_PACKAGE[] = {
-    #include "generated/material/sandboxLit.inc"
-};
-
-static constexpr uint8_t MATERIAL_LIT_FADE_PACKAGE[] = {
-    #include "generated/material/sandboxLitFade.inc"
-};
-
-static constexpr uint8_t MATERIAL_LIT_TRANSPARENT_PACKAGE[] = {
-    #include "generated/material/sandboxLitTransparent.inc"
-};
-
-static constexpr uint8_t MATERIAL_SUBSURFACE_PACKAGE[] = {
-    #include "generated/material/sandboxSubsurface.inc"
-};
-
-static constexpr uint8_t MATERIAL_CLOTH_PACKAGE[] = {
-    #include "generated/material/sandboxCloth.inc"
-};
+#include "generated/resources/resources.h"
 
 constexpr uint8_t MATERIAL_MODEL_UNLIT =       0;
 constexpr uint8_t MATERIAL_MODEL_LIT =         1;
@@ -104,38 +82,37 @@ inline void createInstances(SandboxParameters& params, filament::Engine& engine)
     using namespace filament;
     using namespace utils;
     params.material[MATERIAL_UNLIT] = Material::Builder()
-            .package((void*) MATERIAL_UNLIT_PACKAGE, sizeof(MATERIAL_UNLIT_PACKAGE))
+            .package(RESOURCES_SANDBOXUNLIT_DATA, RESOURCES_SANDBOXUNLIT_SIZE)
             .build(engine);
     params.materialInstance[MATERIAL_UNLIT] =
             params.material[MATERIAL_UNLIT]->createInstance();
 
     params.material[MATERIAL_LIT] = Material::Builder()
-            .package((void*) MATERIAL_LIT_PACKAGE, sizeof(MATERIAL_LIT_PACKAGE))
+            .package(RESOURCES_SANDBOXLIT_DATA, RESOURCES_SANDBOXLIT_SIZE)
             .build(engine);
     params.materialInstance[MATERIAL_LIT] =
             params.material[MATERIAL_LIT]->createInstance();
 
     params.material[MATERIAL_TRANSPARENT] = Material::Builder()
-            .package((void*) MATERIAL_LIT_TRANSPARENT_PACKAGE,
-                    sizeof(MATERIAL_LIT_TRANSPARENT_PACKAGE))
+            .package(RESOURCES_SANDBOXLITTRANSPARENT_DATA, RESOURCES_SANDBOXLITTRANSPARENT_SIZE)
             .build(engine);
     params.materialInstance[MATERIAL_TRANSPARENT] =
             params.material[MATERIAL_TRANSPARENT]->createInstance();
 
     params.material[MATERIAL_FADE] = Material::Builder()
-            .package((void*) MATERIAL_LIT_FADE_PACKAGE, sizeof(MATERIAL_LIT_FADE_PACKAGE))
+            .package(RESOURCES_SANDBOXLITFADE_DATA, RESOURCES_SANDBOXLITFADE_SIZE)
             .build(engine);
     params.materialInstance[MATERIAL_FADE] =
             params.material[MATERIAL_FADE]->createInstance();
 
     params.material[MATERIAL_SUBSURFACE] = Material::Builder()
-            .package((void*) MATERIAL_SUBSURFACE_PACKAGE, sizeof(MATERIAL_SUBSURFACE_PACKAGE))
+            .package(RESOURCES_SANDBOXSUBSURFACE_DATA, RESOURCES_SANDBOXSUBSURFACE_SIZE)
             .build(engine);
     params.materialInstance[MATERIAL_SUBSURFACE] =
             params.material[MATERIAL_SUBSURFACE]->createInstance();
 
     params.material[MATERIAL_CLOTH] = Material::Builder()
-            .package((void*) MATERIAL_CLOTH_PACKAGE, sizeof(MATERIAL_CLOTH_PACKAGE))
+            .package(RESOURCES_SANDBOXCLOTH_DATA, RESOURCES_SANDBOXCLOTH_SIZE)
             .build(engine);
     params.materialInstance[MATERIAL_CLOTH] =
             params.material[MATERIAL_CLOTH]->createInstance();

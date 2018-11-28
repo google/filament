@@ -34,6 +34,8 @@
 #include <cmath>
 #include <stdint.h>
 
+#include "generated/resources/resources.h"
+
 using namespace filament;
 using utils::Entity;
 using utils::EntityManager;
@@ -66,10 +68,6 @@ static const Vertex QUAD_VERTICES[4] = {
 static constexpr uint16_t QUAD_INDICES[6] = {
     0, 1, 2,
     3, 2, 1,
-};
-
-static constexpr uint8_t BAKED_TEXTURE_PACKAGE[] = {
-    #include "generated/material/bakedTexture.inc"
 };
 
 int main(int argc, char** argv) {
@@ -129,7 +127,7 @@ int main(int argc, char** argv) {
         app.ib->setBuffer(*engine,
                 IndexBuffer::BufferDescriptor(QUAD_INDICES, 12, nullptr));
         app.mat = Material::Builder()
-                .package((void*) BAKED_TEXTURE_PACKAGE, sizeof(BAKED_TEXTURE_PACKAGE))
+                .package(RESOURCES_BAKEDTEXTURE_DATA, RESOURCES_BAKEDTEXTURE_SIZE)
                 .build(*engine);
         app.matInstance = app.mat->createInstance();
         app.matInstance->setParameter("albedo", app.tex, sampler);

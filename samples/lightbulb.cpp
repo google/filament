@@ -40,14 +40,12 @@
 #include "app/IcoSphere.h"
 #include "app/Sphere.h"
 
+#include "generated/resources/resources.h"
+
 using namespace math;
 using namespace filament;
 using namespace filamat;
 using namespace utils;
-
-static constexpr uint8_t GROUND_SHADOW_PACKAGE[] = {
-    #include "generated/material/groundShadow.inc"
-};
 
 static std::vector<Path> g_filenames;
 
@@ -350,7 +348,7 @@ static void setup(Engine* engine, View* view, Scene* scene) {
 
     if (g_shadowPlane) {
         Material* shadowMaterial = Material::Builder()
-                .package((void*) GROUND_SHADOW_PACKAGE, sizeof(GROUND_SHADOW_PACKAGE))
+                .package(RESOURCES_GROUNDSHADOW_DATA, RESOURCES_GROUNDSHADOW_SIZE)
                 .build(*engine);
 
         const static uint32_t indices[] = {

@@ -42,51 +42,12 @@
 
 #include <stdlib.h>
 
+#include "generated/resources/resources.h"
 
 using namespace filament;
 using namespace filamat;
 using namespace math;
 using namespace utils;
-
-static constexpr uint8_t DEFAULT_MATERIAL_PACKAGE[] = {
-    #include "generated/material/aiDefaultMat.inc"
-};
-
-static constexpr uint8_t DEFAULT_TRANSPARENT_PACKAGE[] = {
-    #include "generated/material/aiDefaultTrans.inc"
-};
-
-static constexpr uint8_t GLTF2_PACKAGE[] = {
-    #include "generated/material/gltf2.inc"
-};
-
-static constexpr uint8_t GLTF2_DS_PACKAGE[] = {
-    #include "generated/material/gltf2DoubleSided.inc"
-};
-
-static constexpr uint8_t GLTF2_TRANS_PACKAGE[] = {
-    #include "generated/material/gltf2Trans.inc"
-};
-
-static constexpr uint8_t GLTF2_DS_TRANS_PACKAGE[] = {
-    #include "generated/material/gltf2DoubleSidedTrans.inc"
-};
-
-static constexpr uint8_t GLTF2_MASKED_PACKAGE[] = {
-    #include "generated/material/gltf2Masked.inc"
-};
-
-static constexpr uint8_t GLTF2_DS_MASKED_PACKAGE[] = {
-    #include "generated/material/gltf2DoubleSidedMasked.inc"
-};
-
-static constexpr uint8_t GLTF2_UNLIT_PACKAGE[] = {
-    #include "generated/material/gltf2Unlit.inc"
-};
-
-static constexpr uint8_t GLTF2_DS_UNLIT_PACKAGE[] = {
-    #include "generated/material/gltf2DoubleSidedUnlit.inc"
-};
 
 Texture* MeshAssimp::createOneByOneTexture(uint32_t pixel) {
     uint32_t *textureData = (uint32_t *) malloc(sizeof(uint32_t));
@@ -117,7 +78,7 @@ MeshAssimp::MeshAssimp(Engine& engine) : mEngine(engine) {
     mDefaultNormalMap = createOneByOneTexture(0xffff8080);
 
     mDefaultColorMaterial = Material::Builder()
-            .package((void*) DEFAULT_MATERIAL_PACKAGE, sizeof(DEFAULT_MATERIAL_PACKAGE))
+            .package(RESOURCES_AIDEFAULTMAT_DATA, RESOURCES_AIDEFAULTMAT_SIZE)
             .build(mEngine);
 
     mDefaultColorMaterial->setDefaultParameter("baseColor",   RgbType::LINEAR, float3{0.8});
@@ -126,7 +87,7 @@ MeshAssimp::MeshAssimp(Engine& engine) : mEngine(engine) {
     mDefaultColorMaterial->setDefaultParameter("reflectance", 0.5f);
 
     mDefaultTransparentColorMaterial = Material::Builder()
-            .package((void*) DEFAULT_TRANSPARENT_PACKAGE, sizeof(DEFAULT_TRANSPARENT_PACKAGE))
+            .package(RESOURCES_AIDEFAULTTRANS_DATA, RESOURCES_AIDEFAULTTRANS_SIZE)
             .build(mEngine);
 
     mDefaultTransparentColorMaterial->setDefaultParameter("baseColor", RgbType::LINEAR, float3{0.8});
@@ -134,28 +95,28 @@ MeshAssimp::MeshAssimp(Engine& engine) : mEngine(engine) {
     mDefaultTransparentColorMaterial->setDefaultParameter("roughness", 0.4f);
 
     mGltfMaterial = Material::Builder()
-            .package((void*) GLTF2_PACKAGE, sizeof(GLTF2_PACKAGE))
+            .package(RESOURCES_GLTF2_DATA, RESOURCES_GLTF2_SIZE)
             .build(mEngine);
     mGltfMaterialDS = Material::Builder()
-            .package((void*) GLTF2_DS_PACKAGE, sizeof(GLTF2_DS_PACKAGE))
+            .package(RESOURCES_GLTF2DOUBLESIDED_DATA, RESOURCES_GLTF2DOUBLESIDED_SIZE)
             .build(mEngine);
     mGltfMaterialTrans = Material::Builder()
-            .package((void*) GLTF2_TRANS_PACKAGE, sizeof(GLTF2_TRANS_PACKAGE))
+            .package(RESOURCES_GLTF2TRANS_DATA, RESOURCES_GLTF2TRANS_SIZE)
             .build(mEngine);
     mGltfMaterialDSTrans = Material::Builder()
-            .package((void*) GLTF2_DS_TRANS_PACKAGE, sizeof(GLTF2_DS_TRANS_PACKAGE))
+            .package(RESOURCES_GLTF2DOUBLESIDEDTRANS_DATA, RESOURCES_GLTF2DOUBLESIDEDTRANS_SIZE)
             .build(mEngine);
     mGltfMaterialMasked = Material::Builder()
-            .package((void*) GLTF2_MASKED_PACKAGE, sizeof(GLTF2_MASKED_PACKAGE))
+            .package(RESOURCES_GLTF2MASKED_DATA, RESOURCES_GLTF2MASKED_SIZE)
             .build(mEngine);
     mGltfMaterialDSMasked = Material::Builder()
-            .package((void*) GLTF2_DS_MASKED_PACKAGE, sizeof(GLTF2_DS_MASKED_PACKAGE))
+            .package(RESOURCES_GLTF2DOUBLESIDEDMASKED_DATA, RESOURCES_GLTF2DOUBLESIDEDMASKED_SIZE)
             .build(mEngine);
     mGltfMaterialUnlit = Material::Builder()
-            .package((void*) GLTF2_UNLIT_PACKAGE, sizeof(GLTF2_UNLIT_PACKAGE))
+            .package(RESOURCES_GLTF2UNLIT_DATA, RESOURCES_GLTF2UNLIT_SIZE)
             .build(mEngine);
     mGltfMaterialDSUnlit = Material::Builder()
-            .package((void*) GLTF2_DS_UNLIT_PACKAGE, sizeof(GLTF2_DS_UNLIT_PACKAGE))
+            .package(RESOURCES_GLTF2DOUBLESIDEDUNLIT_DATA, RESOURCES_GLTF2DOUBLESIDEDUNLIT_SIZE)
             .build(mEngine);
 }
 

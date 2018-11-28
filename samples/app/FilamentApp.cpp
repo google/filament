@@ -44,22 +44,12 @@
 #include "Cube.h"
 #include "NativeWindowHelper.h"
 
+#include "generated/resources/resources.h"
+
 using namespace filament;
 using namespace filagui;
 using namespace math;
 using namespace utils;
-
-static constexpr uint8_t AI_DEFAULT_MAT_PACKAGE[] = {
-    #include "generated/material/aiDefaultMat.inc"
-};
-
-static constexpr uint8_t TRANSPARENT_COLOR_PACKAGE[] = {
-    #include "generated/material/transparentColor.inc"
-};
-
-static constexpr uint8_t DEPTH_VISUALIZER_PACKAGE[] = {
-    #include "generated/material/depthVisualizer.inc"
-};
 
 FilamentApp& FilamentApp::get() {
     static FilamentApp filamentApp;
@@ -82,17 +72,17 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
             new FilamentApp::Window(this, config, config.title, width, height));
 
     mDepthMaterial = Material::Builder()
-            .package((void*) DEPTH_VISUALIZER_PACKAGE, sizeof(DEPTH_VISUALIZER_PACKAGE))
+            .package(RESOURCES_DEPTHVISUALIZER_DATA, RESOURCES_DEPTHVISUALIZER_SIZE)
             .build(*mEngine);
 
     mDepthMI = mDepthMaterial->createInstance();
 
     mDefaultMaterial = Material::Builder()
-            .package((void*) AI_DEFAULT_MAT_PACKAGE, sizeof(AI_DEFAULT_MAT_PACKAGE))
+            .package(RESOURCES_AIDEFAULTMAT_DATA, RESOURCES_AIDEFAULTMAT_SIZE)
             .build(*mEngine);
-            
+
     mTransparentMaterial = Material::Builder()
-            .package((void*) TRANSPARENT_COLOR_PACKAGE, sizeof(TRANSPARENT_COLOR_PACKAGE))
+            .package(RESOURCES_TRANSPARENTCOLOR_DATA, RESOURCES_TRANSPARENTCOLOR_SIZE)
             .build(*mEngine);
 
     std::unique_ptr<Cube> cameraCube(new Cube(*mEngine, mTransparentMaterial, {1,0,0}));

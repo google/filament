@@ -1,5 +1,9 @@
 cmake_minimum_required(VERSION 3.1)
-project(filament-samples)
+project(filament-samples C ASM)
+
+set(GENERATION_ROOT ${CMAKE_CURRENT_BINARY_DIR})
+set(RESOURCE_DIR  "${GENERATION_ROOT}/generated/resources")
+set(MATERIAL_DIR  "${GENERATION_ROOT}/generated/material")
 
 # ==================================================================================================
 # Build materials
@@ -32,9 +36,7 @@ if (CMAKE_CROSSCOMPILING)
     include(${IMPORT_EXECUTABLES})
 endif()
 
-set(MATERIAL_BINS)
-set(GENERATION_ROOT ${CMAKE_CURRENT_BINARY_DIR})
-file(MAKE_DIRECTORY "${GENERATION_ROOT}/generated/material/")
+file(MAKE_DIRECTORY ${MATERIAL_DIR})
 
 set(MATC_TARGET desktop)
 
@@ -44,14 +46,15 @@ if (CMAKE_BUILD_TYPE MATCHES Release)
     set(MATC_FLAGS -O ${MATC_FLAGS})
 endif()
 
+set(MATERIAL_BINS)
 foreach (mat_src ${MATERIAL_SRCS})
     get_filename_component(localname "${mat_src}" NAME_WE)
     get_filename_component(fullname "${mat_src}" ABSOLUTE)
-    set(output_path "${GENERATION_ROOT}/generated/material/${localname}.inc")
+    set(output_path "${MATERIAL_DIR}/${localname}.filamat")
     add_custom_command(
             OUTPUT ${output_path}
-            COMMAND matc ${MATC_FLAGS} -p ${MATC_TARGET} -m material -f header
-            -o ${output_path} ${fullname}
+            COMMAND matc ${MATC_FLAGS} -p ${MATC_TARGET} -m material
+                    -o ${output_path} ${fullname}
             MAIN_DEPENDENCY ${mat_src}
             DEPENDS matc
             COMMENT "Compiling material ${mat_src} to ${output_path}"
@@ -59,7 +62,18 @@ foreach (mat_src ${MATERIAL_SRCS})
     list(APPEND MATERIAL_BINS ${output_path})
 endforeach()
 
-add_custom_target(sample_materials DEPENDS ${MATERIAL_BINS})
+get_resgen_vars(${RESOURCE_DIR} resources)
+
+add_custom_command(
+        OUTPUT ${RESGEN_OUTPUTS}
+        COMMAND resgen -x ${RESOURCE_DIR} -p resources ${MATERIAL_BINS}
+        DEPENDS resgen ${MATERIAL_BINS}
+        COMMENT "Aggregating resources"
+)
+
+if (DEFINED RESGEN_FLAGS)
+    set_source_files_properties(${RESGEN_SOURCE} PROPERTIES COMPILE_FLAGS ${RESGEN_FLAGS})
+endif()
 
 # ==================================================================================================
 # Common library
@@ -71,6 +85,7 @@ if (WIN32)
 endif()
 
 set(APP_SRCS
+        ${RESGEN_SOURCE}
         app/CameraManipulator.cpp
         app/Cube.cpp
         app/FilamentApp.cpp
@@ -95,7 +110,6 @@ endif()
 include_directories(app)
 
 add_library(sample-app ${APP_SRCS})
-add_dependencies(sample-app sample_materials)
 target_include_directories(sample-app PUBLIC app)
 
 target_link_libraries(sample-app PRIVATE ${APP_LIBS})
@@ -126,7 +140,6 @@ function(add_assimp_demo NAME)
             ${NAME}
             ${NAME}.cpp
             app/MeshAssimp.cpp)
-    add_dependencies(${NAME} sample_materials)
     target_link_libraries(${NAME} PRIVATE ${APP_LIBS} assimp)
     target_compile_options(${NAME} PRIVATE ${COMPILER_FLAGS})
 endfunction()
@@ -136,7 +149,6 @@ function(add_filamesh_demo NAME)
     add_executable(
             ${NAME}
             ${NAME}.cpp)
-    add_dependencies(${NAME} sample_materials)
     target_link_libraries(${NAME} PRIVATE ${APP_LIBS} filameshio)
     target_compile_options(${NAME} PRIVATE ${COMPILER_FLAGS})
 endfunction()
