@@ -27,7 +27,7 @@
 #include <spirv_glsl.hpp>
 
 #include "sca/builtinResource.h"
-#include "filamat/sca/GLSLTools.h"
+#include "sca/GLSLTools.h"
 
 using namespace glslang;
 using namespace spirv_cross;

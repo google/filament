@@ -8,8 +8,6 @@ set(PUBLIC_HDR_DIR include)
 # Sources and headers
 # ==================================================================================================
 set(HDRS
-        include/filamat/sca/ASTHelpers.h
-        include/filamat/sca/GLSLTools.h
         include/filamat/Enums.h
         include/filamat/MaterialBuilder.h
         include/filamat/Package.h
@@ -29,6 +27,8 @@ set(PRIVATE_HDRS
         src/eiff/MaterialSpirvChunk.h
         src/eiff/ShaderEntry.h
         src/eiff/SimpleFieldChunk.h
+        src/sca/ASTHelpers.h
+        src/sca/GLSLTools.h
         src/sca/builtinResource.h
         src/shaders/Shaders.h
         src/GLSLPostProcessor.h)
@@ -97,3 +97,17 @@ target_compile_options(${TARGET} PRIVATE
 # To properly support Vulkan, filamat needs to support SPIR-V compilation
 # install(DIRECTORY ${PUBLIC_HDR_DIR}/filamat DESTINATION include)
 # install(TARGETS ${TARGET} ARCHIVE DESTINATION lib/${DIST_DIR})
+
+# ==================================================================================================
+# Tests
+# ==================================================================================================
+project(test_filamat)
+set(TARGET test_filamat)
+set(SRCS
+        tests/test_filamat.cpp)
+
+add_executable(${TARGET} ${SRCS})
+
+target_include_directories(${TARGET} PRIVATE src)
+
+target_link_libraries(${TARGET} filamat gtest)

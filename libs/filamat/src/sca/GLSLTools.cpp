@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "filamat/sca/GLSLTools.h"
+#include "GLSLTools.h"
 
 #include <cstring>
 
@@ -28,7 +28,7 @@
 
 #include "filamat/Enums.h"
 
-#include "filamat/sca/ASTHelpers.h"
+#include "ASTHelpers.h"
 
 // GLSLANG headers
 #include <InfoSink.h>
@@ -155,7 +155,12 @@ bool GLSLTools::process(MaterialBuilder& builder) const noexcept {
 }
 
 void GLSLTools::init() {
-    InitializeProcess();
+    // According to glslang, InitializeProcess should be called exactly once per process.
+    static bool initializeCalled = false;
+    if (!initializeCalled) {
+        InitializeProcess();
+        initializeCalled = true;
+    }
 }
 
 void GLSLTools::terminate() {

@@ -18,474 +18,233 @@
 
 #include "MockConfig.h"
 
-#include <filamat/sca/ASTHelpers.h>
+#include <matc/MaterialCompiler.h>
 #include <matc/MaterialLexer.h>
+#include <matc/JsonishLexer.h>
+#include <matc/JsonishParser.h>
 
-using namespace ASTUtils;
-
-filamat::MaterialBuilder makeBuilder(const std::string shaderCode) {
-    filamat::MaterialBuilder builder;
-    builder.material(shaderCode.c_str());
-    builder.platform(filamat::MaterialBuilder::Platform::MOBILE);
-    return std::move(builder);
-}
-
-TEST(StaticCodeAnalysisHelper, getFunctionName) {
-    std::string name = getFunctionName("main(");
-    EXPECT_EQ(name, "main");
-}
-
-TEST(StaticCodeAnalysisHelper, getFunctionNameNoParenthesis) {
-    std::string name = getFunctionName("main");
-    EXPECT_EQ(name, "main");
-}
-
-class MaterialCompiler : public ::testing::Test {
+class MaterialLexer: public ::testing::Test {
 protected:
-    MaterialCompiler() {
-    }
-
-    virtual ~MaterialCompiler() {
-    }
-
-    virtual void SetUp() {
-        GLSLTools::init();
-    }
-
-    virtual void TearDown() {
-        GLSLTools::terminate();
-    }
+    MaterialLexer() = default;
+    ~MaterialLexer() = default;
 };
 
-TEST_F(MaterialCompiler, StaticCodeAnalyzerNothingDetected) {
-    std::string shaderCode(R"(
-        void material(inout MaterialInputs material) {
-            prepareMaterial(material);
-        }
-    )");
+class TestMaterialCompiler {
+public:
+    explicit TestMaterialCompiler(const matc::MaterialCompiler& materialCompiler) :
+            mMaterialCompiler(materialCompiler) {}
 
-    filamat::MaterialBuilder builder = makeBuilder(shaderCode);
-    GLSLTools glslTools;
-    GLSLTools::PropertySet properties;
-    glslTools.findProperties(builder, properties);
-    GLSLTools::PropertySet expected;
-    EXPECT_EQ(expected, properties);
-}
+    bool parseMaterial(const char* buffer, size_t size, filamat::MaterialBuilder& builder)
+            const noexcept{
+        return mMaterialCompiler.parseMaterial(buffer, size, builder);
+    }
 
-TEST_F(MaterialCompiler, StaticCodeAnalyzerNotFollowingINParameters) {
-    std::string shaderCode(R"(
-        void notAffectingInput(in MaterialInputs material) {
-            material.baseColor = vec4(0.8);
-        }
-        void material(inout MaterialInputs material) {
-            prepareMaterial(material);
-            notAffectingInput(material);
-        }
-    )");
+    bool parseMaterialAsJSON(const char* buffer, size_t size, filamat::MaterialBuilder& builder)
+            const noexcept{
+        return mMaterialCompiler.parseMaterialAsJSON(buffer, size, builder);
+    }
 
-    filamat::MaterialBuilder builder = makeBuilder(shaderCode);
-    GLSLTools glslTools;
-    GLSLTools::PropertySet properties;
-    glslTools.findProperties(builder, properties);
-    GLSLTools::PropertySet expected;
-    EXPECT_EQ(expected, properties);
-}
+private:
+    const matc::MaterialCompiler& mMaterialCompiler;
+};
 
-TEST_F(MaterialCompiler, StaticCodeAnalyzerDirectAssign) {
-    std::string shaderCode(R"(
-        void material(inout MaterialInputs material) {
-            prepareMaterial(material);
-            material.baseColor = vec4(0.8);
-        }
-    )");
+static std::string materialSource(R"(
+    material {
+        name : "Filament Default Material",
+        shadingModel : unlit
+    }
 
-    filamat::MaterialBuilder builder = makeBuilder(shaderCode);
-    GLSLTools glslTools;
-    GLSLTools::PropertySet properties;
-    glslTools.findProperties(builder, properties);
-    GLSLTools::PropertySet expected;
-    expected.insert(filamat::MaterialBuilder::Property::BASE_COLOR);
-    EXPECT_EQ(expected, properties);
-}
-
-
-TEST_F(MaterialCompiler, StaticCodeAnalyzerDirectAssignWithSwizzling) {
-    std::string shaderCode(R"(
+    fragment {
         void material(inout MaterialInputs material) {
             prepareMaterial(material);
             material.baseColor.rgb = vec3(0.8);
         }
-    )");
+    }
+)");
 
-    filamat::MaterialBuilder builder = makeBuilder(shaderCode);
-    GLSLTools glslTools;
-    GLSLTools::PropertySet properties;
-    glslTools.findProperties(builder, properties);
-    GLSLTools::PropertySet expected;
-    expected.insert(filamat::MaterialBuilder::Property::BASE_COLOR);
-    EXPECT_EQ(expected, properties);
-}
+static std::string materialSourceWithTool(R"(
+    material {
+        name : "Filament Default Material",
+        shadingModel : unlit
+    }
 
-TEST_F(MaterialCompiler, StaticCodeAnalyzerSymbolAsOutParameterWithAliasing) {
-    std::string shaderCode(R"(
-
-        void setBaseColor(inout vec4 aliasBaseColor) {
-            aliasBaseColor = vec4(0.8,0.1,0.2,1.0);
-        }
-
+    fragment {
         void material(inout MaterialInputs material) {
             prepareMaterial(material);
-            setBaseColor(material.baseColor);
+            material.baseColor.rgb = vec3(0.8);
         }
-    )");
+    }
 
-    filamat::MaterialBuilder builder = makeBuilder(shaderCode);
-    GLSLTools glslTools;
-    GLSLTools::PropertySet properties;
-    glslTools.findProperties(builder, properties);
-    GLSLTools::PropertySet expected;
-    expected.insert(filamat::MaterialBuilder::Property::BASE_COLOR);
-    EXPECT_EQ(expected, properties);
-}
+    tool {
+        all of this should be ignored
+        matching braces are fine
+        {  } { { } } { }
+    }
+)");
 
-TEST_F(MaterialCompiler, StaticCodeAnalyzerSymbolAsOutParameterWithAliasingAndSwizzling) {
-    std::string shaderCode(R"(
+static std::string materialSourceWithCommentedBraces(R"(
+    material {
+        name : "Filament Default Material",
+        shadingModel : unlit
+    }
 
-        void setBaseColor(inout float aliasedRed) {
-            aliasedRed = 0.8;
-        }
-
+    fragment {
         void material(inout MaterialInputs material) {
             prepareMaterial(material);
-            setBaseColor(material.baseColor.r);
+            // if (test) {
+            material.baseColor.rgb = vec3(0.8); // if (test) {
         }
-    )");
+    }
+)");
 
-    filamat::MaterialBuilder builder = makeBuilder(shaderCode);
-    GLSLTools glslTools;
-    GLSLTools::PropertySet properties;
-    glslTools.findProperties(builder, properties);
-    GLSLTools::PropertySet expected;
-    expected.insert(filamat::MaterialBuilder::Property::BASE_COLOR);
-    EXPECT_EQ(expected, properties);
+TEST_F(MaterialLexer, NormalMaterialLexing) {
+    matc::MaterialLexer materialLexer;
+    materialLexer.lex(materialSource.c_str(), materialSource.size(), 1);
+    auto lexemes = materialLexer.getLexemes();
+    // A material grammar is made of identifiers and blocks. The source provided has one identifier,
+    // followed by block,identifier, and block. Total expected is four.
+    EXPECT_EQ(lexemes.size(), 4);
 }
 
-TEST_F(MaterialCompiler, StaticCodeAnalyzerSymbolInOutInChainWithDirectIndexIntoStruct) {
-    std::string shaderCode(R"(
-
-        float setBaseColorOtherFunction(inout vec4 myBaseColor) {
-            myBaseColor = vec4(0.8,0.1,0.2,1.0);
-            return 1.0;
-        }
-
-        void setBaseColor(inout vec4 aliaseBaseColor) {
-            setBaseColorOtherFunction(aliaseBaseColor);
-        }
-
-        void material(inout MaterialInputs material) {
-            prepareMaterial(material);
-            setBaseColor(material.baseColor);
-        }
-    )");
-
-    filamat::MaterialBuilder builder = makeBuilder(shaderCode);
-    GLSLTools glslTools;
-    GLSLTools::PropertySet properties;
-    glslTools.findProperties(builder, properties);
-    GLSLTools::PropertySet expected;
-    expected.insert(filamat::MaterialBuilder::Property::BASE_COLOR);
-    EXPECT_EQ(expected, properties);
+TEST_F(MaterialLexer, MaterialCompiler) {
+  matc::MaterialCompiler rawCompiler;
+  TestMaterialCompiler compiler(rawCompiler);
+  filamat::MaterialBuilder unused;
+  bool result = compiler.parseMaterial(materialSource.c_str(), materialSource.size(), unused);
+  EXPECT_EQ(result, true);
 }
 
-TEST_F(MaterialCompiler, StaticCodeAnalyzerSymbolInOutInChain) {
-    std::string shaderCode(R"(
-
-        float setBaseColorOtherFunction(inout MaterialInputs foo) {
-            foo.baseColor = vec4(0.8,0.1,0.2,1.0);
-            return 1.0;
-        }
-
-        void setBaseColor(inout MaterialInputs bar) {
-            setBaseColorOtherFunction(bar);
-        }
-
-        void material(inout MaterialInputs material) {
-            prepareMaterial(material);
-            setBaseColor(material);
-        }
-    )");
-
-    filamat::MaterialBuilder builder = makeBuilder(shaderCode);
-    GLSLTools glslTools;
-    GLSLTools::PropertySet properties;
-    glslTools.findProperties(builder, properties);
-    GLSLTools::PropertySet expected;
-    expected.insert(filamat::MaterialBuilder::Property::BASE_COLOR);
-    EXPECT_EQ(expected, properties);
+TEST_F(MaterialLexer, MaterialCompilerWithToolSection) {
+    matc::MaterialCompiler rawCompiler;
+    TestMaterialCompiler compiler(rawCompiler);
+    filamat::MaterialBuilder unused;
+    bool result = compiler.parseMaterial(materialSourceWithTool.c_str(), materialSourceWithTool.size(), unused);
+    EXPECT_EQ(result, true);
 }
 
-// Tests all attributes in Property type.
-TEST_F(MaterialCompiler, StaticCodeAnalyzerBaseColor) {
-    std::string shaderCode(R"(
-        void material(inout MaterialInputs material) {
-            prepareMaterial(material);
-            material.baseColor = vec4(0.8);
-        }
-    )");
-
-    filamat::MaterialBuilder builder = makeBuilder(shaderCode);
-    GLSLTools glslTools;
-    GLSLTools::PropertySet properties;
-    glslTools.findProperties(builder, properties);
-    GLSLTools::PropertySet expected;
-    expected.insert(filamat::MaterialBuilder::Property::BASE_COLOR);
-    EXPECT_EQ(expected, properties);
+TEST_F(MaterialLexer, MaterialCompilerWithCommentedBraces) {
+    matc::MaterialCompiler rawCompiler;
+    TestMaterialCompiler compiler(rawCompiler);
+    filamat::MaterialBuilder unused;
+    bool result = compiler.parseMaterial(materialSourceWithCommentedBraces.c_str(), materialSourceWithCommentedBraces.size(), unused);
+    EXPECT_EQ(result, true);
 }
-TEST_F(MaterialCompiler, StaticCodeAnalyzerRoughness) {
-    std::string shaderCode(R"(
-        void material(inout MaterialInputs material) {
-            prepareMaterial(material);
-            material.roughness = 0.8;
-        }
-    )");
 
-    filamat::MaterialBuilder builder = makeBuilder(shaderCode);
-    GLSLTools glslTools;
-    GLSLTools::PropertySet properties;
-    glslTools.findProperties(builder, properties);
-    GLSLTools::PropertySet expected;
-    expected.insert(filamat::MaterialBuilder::Property::ROUGHNESS);
-    EXPECT_EQ(expected, properties);
-}
-TEST_F(MaterialCompiler, StaticCodeAnalyzerMetallic) {
-    std::string shaderCode(R"(
-        void material(inout MaterialInputs material) {
-            prepareMaterial(material);
-            material.metallic = 0.8;
-        }
+TEST_F(MaterialLexer, MaterialParserErrorOnlyIdentifier) {
+    std::string sourceMissingIdentifier(R"(
+        singleIdentifier
     )");
-
-    filamat::MaterialBuilder builder = makeBuilder(shaderCode);
-    GLSLTools glslTools;
-    GLSLTools::PropertySet properties;
-    glslTools.findProperties(builder, properties);
-    GLSLTools::PropertySet expected;
-    expected.insert(filamat::MaterialBuilder::Property::METALLIC);
-    EXPECT_EQ(expected, properties);
+    matc::MaterialCompiler rawCompiler;
+    TestMaterialCompiler compiler(rawCompiler);
+    filamat::MaterialBuilder unused;
+    bool result = compiler.parseMaterial(
+            sourceMissingIdentifier.c_str(), sourceMissingIdentifier.size(), unused);
+    EXPECT_EQ(result, false);
 }
-TEST_F(MaterialCompiler, StaticCodeAnalyzerReflectance) {
-    std::string shaderCode(R"(
-        void material(inout MaterialInputs material) {
-            prepareMaterial(material);
-            material.reflectance= 0.8;
-        }
+
+TEST_F(MaterialLexer, MaterialParserErrorMissingBlock) {
+      std::string sourceMissingBlock(R"(
+        identifier1 {}
+        identifier1
     )");
-
-    filamat::MaterialBuilder builder = makeBuilder(shaderCode);
-    GLSLTools glslTools;
-    GLSLTools::PropertySet properties;
-    glslTools.findProperties(builder, properties);
-    GLSLTools::PropertySet expected;
-    expected.insert(filamat::MaterialBuilder::Property::REFLECTANCE);
-    EXPECT_EQ(expected, properties);
+    matc::MaterialCompiler rawCompiler;
+    TestMaterialCompiler compiler(rawCompiler);
+    filamat::MaterialBuilder unused;
+    bool result = compiler.parseMaterial(
+            sourceMissingBlock.c_str(), sourceMissingBlock.size(), unused);
+    EXPECT_EQ(result, false);
 }
-TEST_F(MaterialCompiler, StaticCodeAnalyzerAmbientOcclusion) {
-    std::string shaderCode(R"(
-        void material(inout MaterialInputs material) {
-            prepareMaterial(material);
-            material.ambientOcclusion = 0.8;
-        }
+
+TEST_F(MaterialLexer, MaterialParserErrorTwoBlock) {
+  std::string sourceTwoBlock(R"(
+        identifier1 {} {}
     )");
-
-    filamat::MaterialBuilder builder = makeBuilder(shaderCode);
-    GLSLTools glslTools;
-    GLSLTools::PropertySet properties;
-    glslTools.findProperties(builder, properties);
-    GLSLTools::PropertySet expected;
-    expected.insert(filamat::MaterialBuilder::Property::AMBIENT_OCCLUSION);
-    EXPECT_EQ(expected, properties);
+  matc::MaterialCompiler rawCompiler;
+  TestMaterialCompiler compiler(rawCompiler);
+  filamat::MaterialBuilder unused;
+  bool result = compiler.parseMaterial(sourceTwoBlock.c_str(), sourceTwoBlock.size(), unused);
+  EXPECT_EQ(result, false);
 }
-TEST_F(MaterialCompiler, StaticCodeAnalyzerClearCoat) {
-    std::string shaderCode(R"(
-        void material(inout MaterialInputs material) {
-            prepareMaterial(material);
-            material.clearCoat = 0.8;
-        }
+
+TEST_F(MaterialLexer, MaterialParserSyntaxError) {
+    std::string sourceSyntaxError(R"(
+        identifier1 {} # identified2 {}
     )");
-
-    filamat::MaterialBuilder builder = makeBuilder(shaderCode);
-    builder.shading(filamat::MaterialBuilder::Shading::LIT);
-    GLSLTools glslTools;
-    GLSLTools::PropertySet properties;
-    glslTools.findProperties(builder, properties);
-    GLSLTools::PropertySet expected;
-    expected.insert(filamat::MaterialBuilder::Property::CLEAR_COAT);
-    EXPECT_EQ(expected, properties);
+    matc::MaterialCompiler rawCompiler;
+    TestMaterialCompiler compiler(rawCompiler);
+    filamat::MaterialBuilder unused;
+    bool result = compiler.parseMaterial(sourceSyntaxError.c_str(), sourceSyntaxError.size(), unused);
+    EXPECT_EQ(result, false);
 }
-TEST_F(MaterialCompiler, StaticCodeAnalyzerClearCoatRoughness) {
-    std::string shaderCode(R"(
-        void material(inout MaterialInputs material) {
-            prepareMaterial(material);
-            material.clearCoatRoughness = 0.8;
-        }
-    )");
 
-    filamat::MaterialBuilder builder = makeBuilder(shaderCode);
-    builder.shading(filamat::MaterialBuilder::Shading::LIT);
-    GLSLTools glslTools;
-    GLSLTools::PropertySet properties;
-    glslTools.findProperties(builder, properties);
-    GLSLTools::PropertySet expected;
-    expected.insert(filamat::MaterialBuilder::Property::CLEAR_COAT_ROUGHNESS);
-    EXPECT_EQ(expected, properties);
+static std::string jsonMaterialSource(R"(
+{
+    "fragment": "void material(inout MaterialInputs material) {
+        vec3 normal = vec3(0.0, 0.0, 1.0);
+        material.normal = normal;
+        prepareMaterial(material);
+        material.baseColor = vec4(1.0, 1.0, 1.0, 1.0) * materialParams.baseColorFactor;
+        material.metallic = materialParams.metallicFactor;
+        material.roughness = materialParams.roughnessFactor;
+        material.ambientOcclusion = 1.0;
+        material.emissive = vec4(0.0);
+        material.reflectance = 0.5;
+        //  material.baseColor.xyz = normal;\n}",
+    "material": {
+        "blending": "opaque",
+        "name": "Gltf 2 Metallic-Roughness Material",
+        "parameters": [
+            {
+            "name": "baseColorFactor",
+            "type": "float4"
+            },
+            {
+            "name": "metallicFactor",
+            "type": "float"
+            },
+            {
+            "name": "roughnessFactor",
+            "type": "float"
+            },
+            {
+            "name": "emissiveFactor",
+            "type": "float4"
+            }
+        ],
+        "requires": [
+           "position",
+           "tangents",
+           "uv0"
+        ],
+        "shadingModel": "lit"
+    }
 }
-TEST_F(MaterialCompiler, StaticCodeAnalyzerClearCoatNormal) {
-    std::string shaderCode(R"(
-        void material(inout MaterialInputs material) {
-            prepareMaterial(material);
-            material.clearCoatNormal = vec3(1.0, 1.0, 1.0);
-        }
-    )");
+)");
 
-    filamat::MaterialBuilder builder = makeBuilder(shaderCode);
-    builder.shading(filamat::MaterialBuilder::Shading::LIT);
-    GLSLTools glslTools;
-    GLSLTools::PropertySet properties;
-    glslTools.findProperties(builder, properties);
-    GLSLTools::PropertySet expected;
-    expected.insert(filamat::MaterialBuilder::Property::CLEAR_COAT_NORMAL);
-    EXPECT_EQ(expected, properties);
-}
-TEST_F(MaterialCompiler, StaticCodeAnalyzerThickness) {
-    std::string shaderCode(R"(
-        void material(inout MaterialInputs material) {
-            prepareMaterial(material);
-            material.thickness= 0.8;
-        }
-    )");
+TEST_F(MaterialLexer, JsonMaterialLexingAndParsing) {
+    matc::JsonishLexer jsonishLexer;
+    jsonishLexer.lex(jsonMaterialSource.c_str(), jsonMaterialSource.size(), 1);
+    auto lexemes = jsonishLexer.getLexemes();
 
-    filamat::MaterialBuilder builder = makeBuilder(shaderCode);
-    builder.shading(filamat::MaterialBuilder::Shading::SUBSURFACE);
-    GLSLTools glslTools;
-    GLSLTools::PropertySet properties;
-    glslTools.findProperties(builder, properties);
-    GLSLTools::PropertySet expected;
-    expected.insert(filamat::MaterialBuilder::Property::THICKNESS);
-    EXPECT_EQ(expected, properties);
-}
-TEST_F(MaterialCompiler, StaticCodeAnalyzerSubsurfacePower) {
-    std::string shaderCode(R"(
-        void material(inout MaterialInputs material) {
-            prepareMaterial(material);
-            material.subsurfacePower = 0.8;
-        }
-    )");
+    EXPECT_TRUE(!lexemes.empty());
 
-    filamat::MaterialBuilder builder = makeBuilder(shaderCode);
-    builder.shading(filamat::MaterialBuilder::Shading::SUBSURFACE);
-    GLSLTools glslTools;
-    GLSLTools::PropertySet properties;
-    glslTools.findProperties(builder, properties);
-    GLSLTools::PropertySet expected;
-    expected.insert(filamat::MaterialBuilder::Property::SUBSURFACE_POWER);
-    EXPECT_EQ(expected, properties);
-}
-TEST_F(MaterialCompiler, StaticCodeAnalyzerSubsurfaceColor) {
-    std::string shaderCode(R"(
-        void material(inout MaterialInputs material) {
-            prepareMaterial(material);
-            material.subsurfaceColor= vec3(0.8);
-        }
-    )");
+    matc::JsonishParser jsonishParser(lexemes);
+    std::unique_ptr<matc::JsonishObject> root = jsonishParser.parse();
 
-    filamat::MaterialBuilder builder = makeBuilder(shaderCode);
-    builder.shading(filamat::MaterialBuilder::Shading::SUBSURFACE);
-    GLSLTools glslTools;
-    GLSLTools::PropertySet properties;
-    glslTools.findProperties(builder, properties);
-    GLSLTools::PropertySet expected;
-    expected.insert(filamat::MaterialBuilder::Property::SUBSURFACE_COLOR);
-    EXPECT_EQ(expected, properties);
+    auto entries = root->getEntries();
+    EXPECT_TRUE(entries.size() == 2);
+    EXPECT_TRUE(entries.find("fragment") != entries.end());
+    EXPECT_TRUE(entries.find("material") != entries.end());
 }
-TEST_F(MaterialCompiler, StaticCodeAnalyzerAnisotropicDirection) {
-    std::string shaderCode(R"(
-        void material(inout MaterialInputs material) {
-            prepareMaterial(material);
-            material.anisotropyDirection = vec3(0.8);
-        }
-    )");
 
-    filamat::MaterialBuilder builder = makeBuilder(shaderCode);
-    builder.shading(filamat::MaterialBuilder::Shading::LIT);
-    GLSLTools glslTools;
-    GLSLTools::PropertySet properties;
-    glslTools.findProperties(builder, properties);
-    GLSLTools::PropertySet expected;
-    expected.insert(filamat::MaterialBuilder::Property::ANISOTROPY_DIRECTION);
-    EXPECT_EQ(expected, properties);
+TEST_F(MaterialLexer, JsonMaterialCompiler) {
+  matc::MaterialCompiler rawCompiler;
+  TestMaterialCompiler compiler(rawCompiler);
+  filamat::MaterialBuilder unused;
+  bool result = compiler.parseMaterialAsJSON(jsonMaterialSource.c_str(), jsonMaterialSource.size(), unused);
+  EXPECT_EQ(result, true);
 }
-TEST_F(MaterialCompiler, StaticCodeAnalyzerAnisotropic) {
-    std::string shaderCode(R"(
-        void material(inout MaterialInputs material) {
-            prepareMaterial(material);
-            material.anisotropy = 0.8;
-        }
-    )");
 
-    filamat::MaterialBuilder builder = makeBuilder(shaderCode);
-    builder.shading(filamat::MaterialBuilder::Shading::LIT);
-    GLSLTools glslTools;
-    GLSLTools::PropertySet properties;
-    glslTools.findProperties(builder, properties);
-    GLSLTools::PropertySet expected;
-    expected.insert(filamat::MaterialBuilder::Property::ANISOTROPY);
-    EXPECT_EQ(expected, properties);
-}
-TEST_F(MaterialCompiler, StaticCodeAnalyzerSheenColor) {
-    std::string shaderCode(R"(
-        void material(inout MaterialInputs material) {
-            prepareMaterial(material);
-            material.sheenColor = vec3(0.8);
-        }
-    )");
-
-    filamat::MaterialBuilder builder = makeBuilder(shaderCode);
-    builder.shading(filamat::MaterialBuilder::Shading::CLOTH);
-    GLSLTools glslTools;
-    GLSLTools::PropertySet properties;
-    glslTools.findProperties(builder, properties);
-    GLSLTools::PropertySet expected;
-    expected.insert(filamat::MaterialBuilder::Property::SHEEN_COLOR);
-    EXPECT_EQ(expected, properties);
-}
-TEST_F(MaterialCompiler, StaticCodeAnalyzerNormal) {
-    std::string shaderCode(R"(
-        void material(inout MaterialInputs material) {
-            prepareMaterial(material);
-            material.normal= vec3(0.8);
-        }
-    )");
-
-    filamat::MaterialBuilder builder = makeBuilder(shaderCode);
-    GLSLTools glslTools;
-    GLSLTools::PropertySet properties;
-    glslTools.findProperties(builder, properties);
-    GLSLTools::PropertySet expected;
-    expected.insert(filamat::MaterialBuilder::Property::NORMAL);
-    EXPECT_EQ(expected, properties);
-}
-TEST_F(MaterialCompiler, EmptyName) {
-    std::string shaderCode(R"(
-        void material(inout MaterialInputs material) {
-            prepareMaterial(material);
-        }
-    )");
-
-    filamat::MaterialBuilder builder = makeBuilder(shaderCode);
-    // The material should compile successfully with an empty name
-    builder.name("");
-    filamat::Package result = builder.build();
-}
 int main(int argc, char** argv) {
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();

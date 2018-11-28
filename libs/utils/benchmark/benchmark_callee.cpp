@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 The Android Open Source Project
+ * Copyright (C) 2018 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,17 +14,6 @@
  * limitations under the License.
  */
 
-#ifndef TNT_POSTPROCESSMATERIALCOMPILER_H
-#define TNT_POSTPROCESSMATERIALCOMPILER_H
 
-#include "Compiler.h"
-
-namespace matc {
-class PostprocessMaterialCompiler final: public Compiler {
-public:
-    bool run(const Config& config) override;
-    bool checkParameters(const Config& config) override;
-};
-
-} // namespace matc
-#endif //TNT_POSTPROCESSMATERIALCOMPILER_H
+void bar() noexcept {
+}

@@ -66,14 +66,23 @@ public:
 
     using ShaderModel = filament::driver::ShaderModel;
 
+    /**
+     * Holds information about a material parameter.
+     */
     struct ParameterInfo {
+        //! Name of the parameter.
         const char* name;
+        //! Whether the parameter is a sampler (texture).
         bool isSampler;
         union {
+            //! Type of the parameter if the parameter is not a sampler.
             ParameterType type;
+            //! Type of the parameter if the parameter is a sampler.
             SamplerType samplerType;
         };
+        //! Size of the parameter when the parameter is an array.
         uint32_t count;
+        //! Requested precision of the parameter.
         Precision precision;
     };
 
@@ -87,8 +96,13 @@ public:
         Builder& operator=(Builder const& rhs) noexcept;
         Builder& operator=(Builder&& rhs) noexcept;
 
-        // This does not copies the content of the RAM, only copy references.
-        // The RAM must stay valid until build() is called.
+        /**
+         * Specifies the material data. The material data is a binary blob produced by
+         * libfilamat or by matc.
+         *
+         * @param payload Pointer to the material data, must stay valid until build() is called.
+         * @param size Size of the material data pointed to by "payload" in bytes.
+         */
         Builder& package(const void* payload, size_t size);
 
         /**
@@ -108,45 +122,132 @@ public:
         friend class details::FMaterial;
     };
 
+    /**
+     * Creates a new instance of this material. Material instances should be freed using
+     * Engine::destroy(const MaterialInstance*).
+     *
+     * @return A pointer to the new instance.
+     */
     MaterialInstance* createInstance() const noexcept;
 
+    //! Returns the name of this material as a null-terminated string.
     const char* getName() const noexcept;
+
+    //! Returns the shading model of this material.
     Shading getShading()  const noexcept;
+
+    //! Returns the interpolation mode of this material. This affects how variables are interpolated.
     Interpolation getInterpolation() const noexcept;
+
+    //! Returns the blending mode of this material.
     BlendingMode getBlendingMode() const noexcept;
+
+    //! Returns the vertex domain of this material.
     VertexDomain getVertexDomain() const noexcept;
+
+    //! Returns the culling mode of this material.
     CullingMode getCullingMode() const noexcept;
+
+    //! Returns the transparency mode of this material.
+    //! This value only makes sense when the blending mode is transparent or fade.
     TransparencyMode getTransparencyMode() const noexcept;
+
+    //! Indicates whether this material will write to the color buffer.
     bool isColorWriteEnabled() const noexcept;
+
+    //! Indicates whether this material will write to the depth buffer.
     bool isDepthWriteEnabled() const noexcept;
+
+    //! Indicates whether this material will use depth testing.
     bool isDepthCullingEnabled() const noexcept;
+
+    //! Indicates whether this material is double-sided.
     bool isDoubleSided() const noexcept;
+
+    //! Returns the alpha mask threshold used when the blending mode is set to masked.
     float getMaskThreshold() const noexcept;
+
+    //! Indicates whether this material uses the shadowing factor as a color multiplier.
+    //! This values only makes sense when the shading mode is unlit.
     bool hasShadowMultiplier() const noexcept;
+
+    //! Returns the list of vertex attributes required by this material.
     AttributeBitset getRequiredAttributes() const noexcept;
 
+    /**
+     * Returns the number of parameters declared by this material.
+     * The returned value can be 0.
+     */
     size_t getParameterCount() const noexcept;
+
+    /**
+     * Gets information about this material's parameters.
+     *
+     * @param parameters A pointer to a list of ParameterInfo.
+     *                   The list must be at least "count" large
+     * @param count The number of parameters to retrieve. Must be >= 0 and can be > count.
+     *
+     * @return The number of parameters written to the parameters pointer.
+     */
     size_t getParameters(ParameterInfo* parameters, size_t count) const noexcept;
+
+    //! Indicates whether a parameter of the given name exists on this material.
     bool hasParameter(const char* name) const noexcept;
 
+    /**
+     * Sets the value of the given parameter on this material's default instance.
+     *
+     * @param name The name of the material parameter
+     * @param value The value of the material parameter
+     *
+     * @see getDefaultInstance()
+     */
     template <typename T>
     void setDefaultParameter(const char* name, T value) noexcept {
         getDefaultInstance()->setParameter(name, value);
     }
 
-    void setDefaultParameter(const char* name, Texture const* texture, TextureSampler const& sampler) noexcept {
+    /**
+     * Sets the value of the given parameter on this material's default instance.
+     *
+     * @param name The name of the material parameter
+     * @param value The value of the material parameter
+     *
+     * @see getDefaultInstance()
+     */
+    void setDefaultParameter(const char* name, Texture const* texture,
+            TextureSampler const& sampler) noexcept {
         getDefaultInstance()->setParameter(name, texture, sampler);
     }
 
+    /**
+     * Sets the value of the given parameter on this material's default instance.
+     *
+     * @param name The name of the material parameter
+     * @param value The value of the material parameter
+     *
+     * @see getDefaultInstance()
+     */
     void setDefaultParameter(const char* name, RgbType type, math::float3 color) noexcept {
         getDefaultInstance()->setParameter(name, type, color);
     }
 
+    /**
+     * Sets the value of the given parameter on this material's default instance.
+     *
+     * @param name The name of the material parameter
+     * @param value The value of the material parameter
+     *
+     * @see getDefaultInstance()
+     */
     void setDefaultParameter(const char* name, RgbaType type, math::float4 color) noexcept {
         getDefaultInstance()->setParameter(name, type, color);
     }
 
+    //! Returns this material's default instance.
     MaterialInstance* getDefaultInstance() noexcept;
+
+    //! Returns this material's default instance.
     MaterialInstance const* getDefaultInstance() const noexcept;
 };
 

@@ -291,6 +291,7 @@ public:
     //! Returns a Frustum object in world space
     Frustum getFrustum() const noexcept;
 
+    //! Returns the entity representing this camera
     utils::Entity getEntity() const noexcept;
 
     /** Sets this camera's exposure (default is 16, 1/125s, 100 ISO)

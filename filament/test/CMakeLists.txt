@@ -6,10 +6,6 @@ project(filament-tests)
 # ==================================================================================================
 
 if (ANDROID)
-    add_executable(filament_calls filament_calls.cpp)
-    target_link_libraries(filament_calls PRIVATE utils filament)
-    target_compile_options(filament_calls PRIVATE ${COMPILER_FLAGS})
-
     add_executable(filament_benchmark filament_benchmark.cpp)
     target_link_libraries(filament_benchmark PRIVATE utils filament)
     target_compile_options(filament_benchmark PRIVATE ${COMPILER_FLAGS})
