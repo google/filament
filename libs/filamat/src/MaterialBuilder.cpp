@@ -313,7 +313,6 @@ bool MaterialBuilder::runStaticCodeAnalysis() noexcept {
     shaderCode = peek(ShaderType::FRAGMENT, model, mProperties);
     result = glslTools.analyzeFragmentShader(shaderCode, model, mTargetApi);
     return result;
-
 }
 
 static void showErrorMessage(const char* materialName, uint8_t variant,

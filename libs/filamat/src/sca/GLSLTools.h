@@ -138,7 +138,7 @@ public:
     // glgl code. Populate properties accordingly.
     bool findProperties(const filamat::MaterialBuilder& builder,
             MaterialBuilder::PropertyList& properties,
-            MaterialBuilder::TargetApi targetApi) const noexcept;
+            MaterialBuilder::TargetApi targetApi = MaterialBuilder::TargetApi::OPENGL) const noexcept;
 
     static int glslangVersionFromShaderModel(filament::driver::ShaderModel model);
 
