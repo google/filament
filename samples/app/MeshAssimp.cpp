@@ -14,6 +14,17 @@
  * limitations under the License.
  */
 
+#define GL_NEAREST                        0x2600
+#define GL_LINEAR                         0x2601
+#define GL_NEAREST_MIPMAP_NEAREST         0x2700
+#define GL_LINEAR_MIPMAP_NEAREST          0x2701
+#define GL_NEAREST_MIPMAP_LINEAR          0x2702
+#define GL_LINEAR_MIPMAP_LINEAR           0x2703
+#define GL_TEXTURE_MAG_FILTER             0x2800
+#define GL_TEXTURE_MIN_FILTER             0x2801
+#define GL_TEXTURE_WRAP_S                 0x2802
+#define GL_TEXTURE_WRAP_T                 0x2803
+
 #include "MeshAssimp.h"
 
 #include <string.h>
@@ -306,19 +317,19 @@ TextureSampler::WrapMode aiToFilamentMapMode(aiTextureMapMode mapMode) {
 
 TextureSampler::MinFilter aiMinFilterToFilament(unsigned int aiMinFilter){
     switch(aiMinFilter){
-        case 9728: return TextureSampler::MinFilter::NEAREST;
-        case 9729: return TextureSampler::MinFilter::LINEAR;
-        case 9984: return TextureSampler::MinFilter::NEAREST_MIPMAP_NEAREST;
-        case 9985: return TextureSampler::MinFilter::LINEAR_MIPMAP_NEAREST;
-        case 9986: return TextureSampler::MinFilter::NEAREST_MIPMAP_LINEAR;
-        case 9987: return TextureSampler::MinFilter::LINEAR_MIPMAP_LINEAR;
+        case GL_NEAREST: return TextureSampler::MinFilter::NEAREST;
+        case GL_LINEAR: return TextureSampler::MinFilter::LINEAR;
+        case GL_NEAREST_MIPMAP_NEAREST: return TextureSampler::MinFilter::NEAREST_MIPMAP_NEAREST;
+        case GL_LINEAR_MIPMAP_NEAREST: return TextureSampler::MinFilter::LINEAR_MIPMAP_NEAREST;
+        case GL_NEAREST_MIPMAP_LINEAR: return TextureSampler::MinFilter::NEAREST_MIPMAP_LINEAR;
+        case GL_LINEAR_MIPMAP_LINEAR: return TextureSampler::MinFilter::LINEAR_MIPMAP_LINEAR;
         default: return TextureSampler::MinFilter::LINEAR_MIPMAP_LINEAR;
     }
 }
 
 TextureSampler::MagFilter aiMagFilterToFilament(unsigned int aiMagFilter){
     switch(aiMagFilter){
-        case 9728: return TextureSampler::MagFilter::NEAREST;
+        case GL_NEAREST: return TextureSampler::MagFilter::NEAREST;
         default: return TextureSampler::MagFilter::LINEAR;
     }
 }
