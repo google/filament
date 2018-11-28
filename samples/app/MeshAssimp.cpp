@@ -560,7 +560,7 @@ bool MeshAssimp::setFromFile(const Path& file, std::vector<uint32_t>& outIndices
             float3 const* tangents   = reinterpret_cast<float3 const*>(mesh->mTangents);
             float3 const* bitangents = reinterpret_cast<float3 const*>(mesh->mBitangents);
             float3 const* normals    = reinterpret_cast<float3 const*>(mesh->mNormals);
-            float3 const* texCoords  = reinterpret_cast<const float3*>(mesh->mTextureCoords[0]);
+            float3 const* texCoords  = reinterpret_cast<float3 const*>(mesh->mTextureCoords[0]);
 
             const size_t numVertices = mesh->mNumVertices;
 
@@ -573,29 +573,35 @@ bool MeshAssimp::setFromFile(const Path& file, std::vector<uint32_t>& outIndices
 
                     for (size_t j = 0; j < numVertices; j++) {
                         float3 normal = normals[j];
-                        float3 texCoord = texCoords ? texCoords[j] : float3{0.0};
                         float3 tangent;
                         float3 bitangent;
 
-                        //If the tangent and bitangent don't exist, make arbitrary ones
-                        // TODO: The glTF specification recommends using the MikkTSpace algorithm
-                        //       for computing tangent vectors in the absence of explicit tangents.
+                        // Assimp always returns 3D tex coords but we only support 2D tex coords.
+                        float2 texCoord = texCoords ? texCoords[j].xy : float2{0.0};
+
+                        // If the tangent and bitangent don't exist, make arbitrary ones. This only
+                        // occurs when the mesh is missing texture coordinates, because assimp
+                        // computes tangents for us. (search up for aiProcess_CalcTangentSpace)
                         if (!tangents) {
-                            bitangent = norm(cross(normal, float3{1.0, 0.0, 0.0}));
-                            tangent = norm(cross(normal, bitangent));
+                            bitangent = normalize(cross(normal, float3{1.0, 0.0, 0.0}));
+                            tangent = normalize(cross(normal, bitangent));
                         } else {
+                            // In assimp, the CalcTangentsProcess algorithm generates tangents in
+                            // the +U direction and bitangents in the +V direction, but the glTF
+                            // conformance suite (see NormalTangentTest) reveals that bitangents
+                            // should be flipped.
                             tangent = tangents[j];
-                            bitangent = bitangents[j];
+                            bitangent = -bitangents[j];
                         }
 
                         quatf q = mat3f::packTangentFrame({tangent, bitangent, normal});
                         outTangents.push_back(packSnorm16(q.xyzw));
-                        outTexCoords.emplace_back(texCoord.xy);
+                        outTexCoords.emplace_back(texCoord);
                         outPositions.emplace_back(positions[j], 1.0_h);
                     }
 
-
-                    // all faces should be triangles since we configure assimp to triangulate faces
+                    // Populate the index buffer. All faces are triangles at this point because we
+                    // asked assimp to perform triangulation.
                     size_t indicesCount = numFaces * faces[0].mNumIndices;
                     size_t indexBufferOffset = outIndices.size();
                     totalIndices += indicesCount;
@@ -612,7 +618,6 @@ bool MeshAssimp::setFromFile(const Path& file, std::vector<uint32_t>& outIndices
 
                     aiString name;
                     std::string materialName;
-
 
                     if (material->Get(AI_MATKEY_NAME, name) != AI_SUCCESS) {
                         if (isGLTF) {
