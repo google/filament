@@ -307,7 +307,7 @@ public:
     void setRenderTarget(TargetBufferFlags discard = TargetBufferFlags::ALL) noexcept;
 
     /**
-     * Sets how many samples are to be used for MSAA. Default is 1.
+     * Sets how many samples are to be used for MSAA. Default is 1 and disables MSAA.
      *
      * @param count number of samples to use for multi-sampled anti-aliasing.\n
      *              0: treated as 1
@@ -319,7 +319,9 @@ public:
     void setSampleCount(uint8_t count = 1) noexcept;
 
     /**
-     * Returns the sample count set by setSampleCount(). Effective sample could be different
+     * Returns the sample count set by setSampleCount(). Effective sample could be different.
+     * A value of 0 or 1 means MSAA is disabled.
+     *
      * @return value set by setSampleCount().
      */
     uint8_t getSampleCount() const noexcept;
@@ -330,16 +332,18 @@ public:
     };
 
     /**
-     * Enables or disables in the post-processing stage. Enabled by default.
+     * Enables or disables anti-aliasing in the post-processing stage. Enabled by default.
+     * MSAA can be enabled in addition, see setSampleCount().
      *
      * @param type FXAA for enabling, NONE for disabling anti-aliasing.
      */
     void setAntiAliasing(AntiAliasing type) noexcept;
 
     /**
-     * Queries whether FXAA is enabled during the post-processing stage.
+     * Queries whether anti-aliasing is enabled during the post-processing stage. To query
+     * whether MSAA is enabled, see getSampleCount().
      *
-     * @return true if FXAA is enabled, false if not.
+     * @return The post-processing anti-aliasing method.
      */
     AntiAliasing getAntiAliasing() const noexcept;
 
@@ -395,6 +399,7 @@ public:
      */
     void setPostProcessingEnabled(bool enabled) noexcept;
 
+    //! Returns true if post-processing is enabled. See setPostProcessingEnabled() for more info.
     bool isPostProcessingEnabled() const noexcept;
 
     // for debugging...
