@@ -261,25 +261,19 @@ static void setup(Engine* engine, View*, Scene* scene) {
 
     MaterialBuilder builder = MaterialBuilder()
             .name("DefaultMaterial")
-            .set(Property::BASE_COLOR)
-            .set(Property::METALLIC)
-            .set(Property::ROUGHNESS)
             .material(shader.c_str())
             .shading(Shading::LIT);
 
     if (hasNormalMap) {
         builder
             .require(VertexAttribute::UV0)
-            .parameter(MaterialBuilder::SamplerType::SAMPLER_2D, "normalMap")
-            .set(Property::NORMAL);
+            .parameter(MaterialBuilder::SamplerType::SAMPLER_2D, "normalMap");
     }
 
     if (hasClearCoatNormalMap) {
         builder
             .require(VertexAttribute::UV0)
-            .parameter(MaterialBuilder::SamplerType::SAMPLER_2D, "clearCoatNormalMap")
-            .set(Property::CLEAR_COAT)
-            .set(Property::CLEAR_COAT_NORMAL);
+            .parameter(MaterialBuilder::SamplerType::SAMPLER_2D, "clearCoatNormalMap");
     }
 
     if (hasBaseColorMap) {

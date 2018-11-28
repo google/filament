@@ -132,24 +132,16 @@ bool GLSLTools::analyzeVertexShader(const std::string& shaderCode, ShaderModel m
     return true;
 }
 
-bool GLSLTools::process(MaterialBuilder& builder) const noexcept {
-    PropertySet properties;
-    if (!findProperties(builder, properties)) {
-        return false;
-    }
-
-    for (Property property : properties) {
-        builder.set(property);
-    }
-
+bool GLSLTools::process(MaterialBuilder& builder,
+        const MaterialBuilder::PropertyList& properties) const noexcept {
     // At this point the shader is syntactically correct. Perform semantic analysis now.
     ShaderModel model;
 
-    std::string shaderCode = builder.peek(ShaderType::VERTEX, model);
+    std::string shaderCode = builder.peek(ShaderType::VERTEX, model, properties);
     bool result = analyzeVertexShader(shaderCode, model, builder.getTargetApi());
     if (!result) return result;
 
-    shaderCode = builder.peek(ShaderType::FRAGMENT, model);
+    shaderCode = builder.peek(ShaderType::FRAGMENT, model, properties);
     result = analyzeFragmentShader(shaderCode, model, builder.getTargetApi());
     return result;
 }
@@ -163,23 +155,18 @@ void GLSLTools::init() {
     }
 }
 
-void GLSLTools::terminate() {
-    FinalizeProcess();
-}
-
-bool GLSLTools::findProperties(const filamat::MaterialBuilder& builderIn, PropertySet& properties)
-        const noexcept {
+bool GLSLTools::findProperties(const filamat::MaterialBuilder& builderIn,
+        MaterialBuilder::PropertyList& properties) const noexcept {
+    filamat::MaterialBuilder builder(builderIn);
 
     // Some fields in MaterialInputs only exist if the property is set (e.g: normal, subsurface
-    // for cloth shading model). Copy the builder and give our shader all properties. This will
-    // enable us to parse and static code analyse the AST.
-    filamat::MaterialBuilder builder(builderIn);
-    for (auto hint : Enums::map<Property>()) {
-        builder.set(hint.second);
-    }
+    // for cloth shading model). Give our shader all properties. This will enable us to parse and
+    // static code analyse the AST.
+    MaterialBuilder::PropertyList allProperties;
+    std::fill_n(allProperties, filament::MATERIAL_PROPERTIES_COUNT, true);
 
     ShaderModel model;
-    std::string shaderCode = builder.peek(ShaderType::FRAGMENT, model);
+    std::string shaderCode = builder.peek(ShaderType::FRAGMENT, model, allProperties);
     const char* shaderCString = shaderCode.c_str();
 
     TShader tShader(EShLanguage::EShLangFragment);
@@ -205,7 +192,7 @@ bool GLSLTools::findProperties(const filamat::MaterialBuilder& builderIn, Proper
 }
 
 bool GLSLTools::findPropertyWritesOperations(const std::string& functionName, size_t parameterIdx,
-        TIntermNode* rootNode, PropertySet& properties) const noexcept {
+        TIntermNode* rootNode, MaterialBuilder::PropertyList& properties) const noexcept {
 
     glslang::TIntermAggregate* functionMaterialDef =
             ASTUtils::getFunctionBySignature(functionName, *rootNode);
@@ -258,7 +245,7 @@ bool GLSLTools::findPropertyWritesOperations(const std::string& functionName, si
 
 void GLSLTools::scanSymbolForProperty(Symbol& symbol,
         TIntermNode* rootNode,
-        PropertySet& properties) const noexcept {
+        MaterialBuilder::PropertyList& properties) const noexcept {
     for (Access access : symbol.getAccesses()) {
         if (access.type == Access::Type::FunctionCall) {
             // Do NOT look into prepareMaterial call.
@@ -279,7 +266,7 @@ void GLSLTools::scanSymbolForProperty(Symbol& symbol,
                         FunctionParameter::INOUT) {
                     MaterialBuilder::Property p =
                             Enums::toEnum<Property>(symbol.getDirectIndexStructName());
-                    properties.insert(p);
+                    properties[size_t(p)] = true;
                 }
             } else {
                 findPropertyWritesOperations(access.string, access.parameterIdx, rootNode,
@@ -292,7 +279,7 @@ void GLSLTools::scanSymbolForProperty(Symbol& symbol,
         if (access.type == Access::Type::DirectIndexForStruct) {
             if (Enums::isValid<Property>(access.string)) {
                 MaterialBuilder::Property p = Enums::toEnum<Property>(access.string);
-                properties.insert(p);
+                properties[size_t(p)] = true;
             }
             return;
         }

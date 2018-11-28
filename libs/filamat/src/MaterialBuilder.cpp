@@ -117,32 +117,6 @@ MaterialBuilder& MaterialBuilder::interpolation(Interpolation interpolation) noe
     return *this;
 }
 
-MaterialBuilder& MaterialBuilder::set(Property p) noexcept {
-    // Note: switch/case here is useful in case we're given an invalid property
-    switch (p) {
-        case Property::BASE_COLOR:
-        case Property::ROUGHNESS:
-        case Property::METALLIC:
-        case Property::REFLECTANCE:
-        case Property::AMBIENT_OCCLUSION:
-        case Property::CLEAR_COAT:
-        case Property::CLEAR_COAT_ROUGHNESS:
-        case Property::CLEAR_COAT_NORMAL:
-        case Property::ANISOTROPY:
-        case Property::ANISOTROPY_DIRECTION:
-        case Property::THICKNESS:
-        case Property::SUBSURFACE_POWER:
-        case Property::SUBSURFACE_COLOR:
-        case Property::SHEEN_COLOR:
-        case Property::EMISSIVE:
-        case Property::NORMAL:
-            assert(size_t(p) < filament::MATERIAL_PROPERTIES_COUNT);
-            mProperties[size_t(p)] = true;
-            break;
-    }
-    return *this;
-}
-
 MaterialBuilder& MaterialBuilder::variable(Variable v, const char* name) noexcept {
     switch (v) {
         case Variable::CUSTOM0:
@@ -340,9 +314,14 @@ Package MaterialBuilder::build() noexcept {
 
     bool errorOccured = false;
 
-    // Populate mProperties with the properties set in the shader.
     GLSLTools glslTools;
-    if (!glslTools.process(*this)) {
+
+    // Populate mProperties with the properties set in the shader.
+    if (!glslTools.findProperties(*this, mProperties)) {
+        errorOccured = true;
+    }
+
+    if (!glslTools.process(*this, mProperties)) {
         errorOccured = true;
     }
 
@@ -580,9 +559,9 @@ MaterialBuilder& MaterialBuilder::postProcessor(PostProcessCallBack callback) {
 }
 
 const std::string MaterialBuilder::peek(filament::driver::ShaderType type,
-        filament::driver::ShaderModel& model) noexcept {
+        filament::driver::ShaderModel& model, const PropertyList& properties) noexcept {
 
-    ShaderGenerator sg(mProperties, mVariables,
+    ShaderGenerator sg(properties, mVariables,
             mMaterialCode, mMaterialLineOffset, mMaterialVertexCode, mMaterialVertexLineOffset);
 
     MaterialInfo info;

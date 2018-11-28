@@ -129,8 +129,6 @@ static void setup(Engine* engine, View* view, Scene* scene) {
 
     Package pkg = MaterialBuilder()
             .name("PositionOffset")
-            .set(Property::BASE_COLOR)
-            .set(Property::ROUGHNESS)
             .material(R"SHADER(
                 void material(inout MaterialInputs material) {
                     prepareMaterial(material);

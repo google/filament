@@ -120,9 +120,6 @@ public:
     // set the interpolation mode
     MaterialBuilder& interpolation(Interpolation interpolation) noexcept;
 
-    // declares that this property is modified by the material
-    MaterialBuilder& set(Property p) noexcept;
-
     // add a parameter (i.e.: a uniform) to this material
     MaterialBuilder& parameter(UniformType type, const char* name) noexcept;
 
@@ -230,17 +227,17 @@ public:
         bool isSampler;
     };
 
+    using PropertyList = bool[filament::MATERIAL_PROPERTIES_COUNT];
+    using VariableList = utils::CString[filament::MATERIAL_VARIABLES_COUNT];
+
     // Preview the first shader that would generated in the MaterialPackage.
     // This is used to run Static Code Analysis before generating a package.
     // Outputs the chosen shader model in the model parameter
     const std::string peek(filament::driver::ShaderType type,
-            filament::driver::ShaderModel& model) noexcept;
+            filament::driver::ShaderModel& model, const PropertyList& properties) noexcept;
 
     // Returns true if any of the parameter samplers is of type samplerExternal
     bool hasExternalSampler() const noexcept;
-
-    using PropertyList = bool[filament::MATERIAL_PROPERTIES_COUNT];
-    using VariableList = utils::CString[filament::MATERIAL_VARIABLES_COUNT];
 
     static constexpr size_t MAX_PARAMETERS_COUNT = 32;
     using ParameterList = Parameter[MAX_PARAMETERS_COUNT];

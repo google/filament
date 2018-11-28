@@ -113,7 +113,6 @@ private:
 class GLSLTools {
 public:
     static void init();
-    static void terminate();
 
     // Return true if:
     // The shader is syntactically and semantically valid AND
@@ -133,15 +132,15 @@ public:
 
     // Analyze the first fragment shader the builder will construct and guess properties used (the
     // builder is modified accordingly). Return true if all operation succeeded.
-    bool process(filamat::MaterialBuilder& builder) const noexcept;
+    bool process(filamat::MaterialBuilder& builder,
+            const MaterialBuilder::PropertyList& properties) const noexcept;
 
     // Public for unit tests.
     using Property = filamat::MaterialBuilder::Property;
-    using PropertySet = std::set<Property>;
     // Use static code analysis on the fragment shader AST to guess properties used in user provided
     // glgl code. Populate properties accordingly.
     bool findProperties(const filamat::MaterialBuilder& builder,
-            PropertySet& properties) const noexcept;
+            MaterialBuilder::PropertyList& properties) const noexcept;
 
     static int glslangVersionFromShaderModel(filament::driver::ShaderModel model);
 
@@ -166,12 +165,12 @@ private:
     // findPropertyWritesOperations("material", 0, ...);
     // Does nothing if the parameter is not marked as OUT or INOUT
     bool findPropertyWritesOperations(const std::string& functionName, size_t parameterIdx,
-            TIntermNode* rootNode, PropertySet& properties) const noexcept;
+            TIntermNode* rootNode, MaterialBuilder::PropertyList& properties) const noexcept;
 
     // Look at a symbol access and find out if it affects filament MaterialInput fields. Will follow
     // function calls if necessary.
-    void scanSymbolForProperty(Symbol& symbol, TIntermNode* rootNode, PropertySet& properties)
-            const noexcept;
+    void scanSymbolForProperty(Symbol& symbol, TIntermNode* rootNode,
+            MaterialBuilder::PropertyList& properties) const noexcept;
 
 };
 

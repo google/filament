@@ -282,19 +282,9 @@ static void setup(Engine* engine, View* view, Scene* scene) {
 
     MaterialBuilder builder = MaterialBuilder()
             .name("DefaultMaterial")
-            .set(Property::BASE_COLOR)
-            .set(Property::METALLIC)
-            .set(Property::ROUGHNESS)
-            .set(Property::AMBIENT_OCCLUSION)
             .material(shader.c_str())
             .shading(Shading::LIT);
 
-    if (g_pbrConfig.clearCoat) {
-        builder.set(Property::CLEAR_COAT);
-    }
-    if (g_pbrConfig.anisotropy) {
-        builder.set(Property::ANISOTROPY);
-    }
     if (hasBaseColorMap) {
         builder
             .require(VertexAttribute::UV0)
@@ -317,7 +307,6 @@ static void setup(Engine* engine, View* view, Scene* scene) {
     }
     if (hasNormalMap) {
         builder
-            .set(Property::NORMAL)
             .require(VertexAttribute::UV0)
             .parameter(MaterialBuilder::SamplerType::SAMPLER_2D, "normalMap");
     }
