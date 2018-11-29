@@ -120,17 +120,8 @@ private:
         return mCommandsHighWatermark * sizeof(RenderPass::Command);
     }
 
-    driver::TextureFormat getHdrFormat() const noexcept {
-        const bool translucent = mSwapChain->isTransparent();
-        return (translucent || !mIsRGB16FSupported) ? driver::TextureFormat::RGBA16F
-                                                    : driver::TextureFormat::RGB16F;
-    }
-
-    driver::TextureFormat getLdrFormat() const noexcept {
-        const bool translucent = mSwapChain->isTransparent();
-        return (translucent || !mIsRGB8Supported) ? driver::TextureFormat::RGBA8
-                                                  : driver::TextureFormat::RGB8;
-    }
+    driver::TextureFormat getHdrFormat(const View& view) const noexcept;
+    driver::TextureFormat getLdrFormat() const noexcept;
 
     // keep a reference to our engine
     FEngine& mEngine;

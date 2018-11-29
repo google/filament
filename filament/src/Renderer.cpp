@@ -95,6 +95,27 @@ void FRenderer::terminate(FEngine& engine) {
     }
 }
 
+driver::TextureFormat FRenderer::getHdrFormat(const View& view) const noexcept {
+    const bool translucent = mSwapChain->isTransparent();
+    if (translucent) return driver::TextureFormat::RGBA16F;
+
+    switch (view.getRenderQuality().hdrColorBuffer) {
+        case View::QualityLevel::LOW:
+        case View::QualityLevel::MEDIUM:
+            return driver::TextureFormat::R11F_G11F_B10F;
+        case View::QualityLevel::HIGH:
+        case View::QualityLevel::ULTRA:
+            return !mIsRGB16FSupported ? driver::TextureFormat::RGBA16F
+                                       : driver::TextureFormat::RGB16F;
+    }
+}
+
+driver::TextureFormat FRenderer::getLdrFormat() const noexcept {
+    const bool translucent = mSwapChain->isTransparent();
+    return (translucent || !mIsRGB8Supported) ? driver::TextureFormat::RGBA8
+                                              : driver::TextureFormat::RGB8;
+}
+
 void FRenderer::render(FView const* view) {
     SYSTRACE_CALL();
 
@@ -177,7 +198,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
      */
 
     const uint8_t useMSAA = view.getSampleCount();
-    const TextureFormat hdrFormat = getHdrFormat();
+    const TextureFormat hdrFormat = getHdrFormat(view);
     const TextureFormat ldrFormat = getLdrFormat();
     RenderTargetPool::Target const* colorTarget = nullptr;
 
