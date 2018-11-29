@@ -27,6 +27,7 @@
 
 #include <utils/compiler.h>
 #include <utils/memalign.h>
+#include <utils/Mutex.h>
 
 namespace utils {
 
@@ -468,7 +469,7 @@ private:
     }
 };
 
-using Mutex = std::mutex;
+using Mutex = utils::Mutex;
 
 } // namespace LockingPolicy
 
