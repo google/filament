@@ -30,6 +30,8 @@ using namespace utils;
 
 static const char* g_packageName = "resources";
 static const char* g_deployDir = ".";
+static bool g_keepExtension = false;
+static bool g_appendNull = false;
 
 static const char* USAGE = R"TXT(
 RESGEN aggregates a sequence of binary blobs, each of which becomes a "resource" whose id
@@ -54,6 +56,10 @@ Options:
        This is used to generate filenames and symbol prefixes
    --deploy=dir, -x dir (defaults to ".")
        Generate everything needed for deployment into <dir>
+   --keep, -k
+       keep file extensions when generating symbols
+   --text, -t
+       append a null terminator to each data blob
 
 Examples:
     RESGEN -p textures jungle.png beach.png
@@ -101,12 +107,14 @@ static void license() {
 }
 
 static int handleArguments(int argc, char* argv[]) {
-    static constexpr const char* OPTSTR = "hLp:x:";
+    static constexpr const char* OPTSTR = "hLp:x:kt";
     static const struct option OPTIONS[] = {
             { "help",                 no_argument, 0, 'h' },
             { "license",              no_argument, 0, 'L' },
             { "package",        required_argument, 0, 'p' },
             { "deploy",         required_argument, 0, 'x' },
+            { "keep",                 no_argument, 0, 'k' },
+            { "text",                 no_argument, 0, 't' },
             { 0, 0, 0, 0 }  // termination of the option list
     };
 
@@ -128,6 +136,12 @@ static int handleArguments(int argc, char* argv[]) {
                 break;
             case 'x':
                 g_deployDir = optarg;
+                break;
+            case 'k':
+                g_keepExtension = true;
+                break;
+            case 't':
+                g_appendNull = true;
                 break;
         }
     }
@@ -236,9 +250,13 @@ int main(int argc, char* argv[]) {
             exit(1);
         }
         vector<uint8_t> content((istreambuf_iterator<char>(inStream)), {});
+        if (g_appendNull) {
+            content.push_back(0);
+        }
 
         // Formulate the resource name and the prefixed resource name.
-        std::string rname = inPath.getNameWithoutExtension();
+        std::string rname = g_keepExtension ? inPath.getName() : inPath.getNameWithoutExtension();
+        replace(rname.begin(), rname.end(), '.', '_');
         transform(rname.begin(), rname.end(), rname.begin(), ::toupper);
         const std::string prname = packagePrefix + rname;
 
