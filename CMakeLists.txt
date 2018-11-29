@@ -266,30 +266,33 @@ endif()
 # Common Functions
 # ==================================================================================================
 
-# Sets the following variables: RESGEN_HEADER, RESGEN_SOURCE, RESGEN_FLAGS, and RESGEN_OUTPUTS
+# Sets the following variables: RESGEN_HEADER, RESGEN_SOURCE, RESGEN_FLAGS, RESGEN_SOURCE_FLAGS,
+# and RESGEN_OUTPUTS
 function(get_resgen_vars ARCHIVE_DIR ARCHIVE_NAME)
-    set(RESGEN_HEADER "${ARCHIVE_DIR}/${ARCHIVE_NAME}.h" PARENT_SCOPE)
-    if (WEBGL)
-        set(RESGEN_SOURCE "${ARCHIVE_DIR}/${ARCHIVE_NAME}.c" PARENT_SCOPE)
-    else()
-        if (NOT WIN32)
-            set(ASM_ARCH_FLAG "-arch ${DIST_ARCH}")
-        endif()
-        if (APPLE)
-            set(RESGEN_SOURCE "${ARCHIVE_DIR}/${ARCHIVE_NAME}.apple.S" PARENT_SCOPE)
-        else()
-            set(RESGEN_SOURCE "${ARCHIVE_DIR}/${ARCHIVE_NAME}.S" PARENT_SCOPE)
-        endif()
-        set(RESGEN_FLAGS "-I${ARCHIVE_DIR} ${ASM_ARCH_FLAG}" PARENT_SCOPE)
-    endif()
-    set(RESGEN_OUTPUTS
+    set(OUTPUTS
         ${ARCHIVE_DIR}/${ARCHIVE_NAME}.bin
         ${ARCHIVE_DIR}/${ARCHIVE_NAME}.S
         ${ARCHIVE_DIR}/${ARCHIVE_NAME}.apple.S
         ${ARCHIVE_DIR}/${ARCHIVE_NAME}.h
-        ${ARCHIVE_DIR}/${ARCHIVE_NAME}.c
-        PARENT_SCOPE
     )
+    if (NOT WIN32)
+        set(ASM_ARCH_FLAG "-arch ${DIST_ARCH}")
+    endif()
+    if (APPLE)
+        set(ASM_SUFFIX ".apple")
+    endif()
+    if (WEBGL)
+        set(RESGEN_HEADER "${ARCHIVE_DIR}/${ARCHIVE_NAME}.h" PARENT_SCOPE)
+        set(RESGEN_OUTPUTS "${OUTPUTS};${ARCHIVE_DIR}/${ARCHIVE_NAME}.c" PARENT_SCOPE)
+        set(RESGEN_FLAGS -cx ${ARCHIVE_DIR} -p ${ARCHIVE_NAME} PARENT_SCOPE)
+        set(RESGEN_SOURCE "${ARCHIVE_DIR}/${ARCHIVE_NAME}.c" PARENT_SCOPE)
+    else()
+        set(RESGEN_HEADER "${ARCHIVE_DIR}/${ARCHIVE_NAME}.h" PARENT_SCOPE)
+        set(RESGEN_OUTPUTS "${OUTPUTS}" PARENT_SCOPE)
+        set(RESGEN_FLAGS -x ${ARCHIVE_DIR} -p ${ARCHIVE_NAME} PARENT_SCOPE)
+        set(RESGEN_SOURCE "${ARCHIVE_DIR}/${ARCHIVE_NAME}${ASM_SUFFIX}.S" PARENT_SCOPE)
+        set(RESGEN_SOURCE_FLAGS "-I${ARCHIVE_DIR} ${ASM_ARCH_FLAG}" PARENT_SCOPE)
+    endif()
 endfunction()
 
 # ==================================================================================================

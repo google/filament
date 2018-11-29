@@ -54,14 +54,14 @@ get_resgen_vars(${RESOURCE_DIR} shaders)
 
 add_custom_command(
         OUTPUT ${RESGEN_OUTPUTS}
-        COMMAND resgen --text --keep -x ${RESOURCE_DIR} -p shaders ${SHADERS}
+        COMMAND resgen --text --keep ${RESGEN_FLAGS} ${SHADERS}
         DEPENDS resgen ${SHADERS}
         WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
         COMMENT "Aggregating shaders"
 )
 
-if (DEFINED RESGEN_FLAGS)
-    set_source_files_properties(${RESGEN_SOURCE} PROPERTIES COMPILE_FLAGS ${RESGEN_FLAGS})
+if (DEFINED RESGEN_SOURCE_FLAGS)
+    set_source_files_properties(${RESGEN_SOURCE} PROPERTIES COMPILE_FLAGS ${RESGEN_SOURCE_FLAGS})
 endif()
 
 # WIN32 seems to require at least one C file, so create an empty one.
