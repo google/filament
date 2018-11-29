@@ -32,6 +32,7 @@ static const char* g_packageName = "resources";
 static const char* g_deployDir = ".";
 static bool g_keepExtension = false;
 static bool g_appendNull = false;
+static bool g_generateC = false;
 
 static const char* USAGE = R"TXT(
 RESGEN aggregates a sequence of binary blobs, each of which becomes a "resource" whose id
@@ -41,7 +42,6 @@ is the basename of the input file. It produces the following set of files:
     resources.S ......... small assembly file with incbin directive and rodata section
     resources.apple.S ... ditto but with different rodata name and underscore prefixes
     resources.bin ....... the aggregated binary blob that the incbin refers to
-    resources.c ......... large xxd-style array (useful for WebAssembly)
 
 Usage:
     RESGEN [options] <input_file_0> <input_file_1> ...
@@ -60,9 +60,11 @@ Options:
        Keep file extensions when generating symbols
    --text, -t
        Append a null terminator to each data blob
+   --cfile, -c
+       Generate xxd-style C file (useful for WebAssembly)
 
 Examples:
-    RESGEN -p textures jungle.png beach.png
+    RESGEN -cp textures jungle.png beach.png
     > Generated files: textures.h, textures.S, textures.apple.S, textures.bin, textures.c
     > Generated symbols: TEXTURES_JUNGLE_DATA, TEXTURES_JUNGLE_SIZE,
                          TEXTURES_BEACH_DATA, TEXTURES_BEACH_SIZE
@@ -107,7 +109,7 @@ static void license() {
 }
 
 static int handleArguments(int argc, char* argv[]) {
-    static constexpr const char* OPTSTR = "hLp:x:kt";
+    static constexpr const char* OPTSTR = "hLp:x:ktc";
     static const struct option OPTIONS[] = {
             { "help",                 no_argument, 0, 'h' },
             { "license",              no_argument, 0, 'L' },
@@ -115,6 +117,7 @@ static int handleArguments(int argc, char* argv[]) {
             { "deploy",         required_argument, 0, 'x' },
             { "keep",                 no_argument, 0, 'k' },
             { "text",                 no_argument, 0, 't' },
+            { "cfile",                no_argument, 0, 'c' },
             { 0, 0, 0, 0 }  // termination of the option list
     };
 
@@ -143,6 +146,9 @@ static int handleArguments(int argc, char* argv[]) {
             case 't':
                 g_appendNull = true;
                 break;
+            case 'c':
+                g_generateC = true;
+                break;
         }
     }
 
@@ -166,6 +172,7 @@ int main(int argc, char* argv[]) {
     std::string packagePrefix = std::string(g_packageName) + "_";
     transform(packageFile.begin(), packageFile.end(), packageFile.begin(), ::tolower);
     transform(packagePrefix.begin(), packagePrefix.end(), packagePrefix.begin(), ::toupper);
+    std::string package = packagePrefix + "PACKAGE";
 
     const Path deployDir(g_deployDir);
     if (!deployDir.exists()) {
@@ -228,18 +235,20 @@ int main(int argc, char* argv[]) {
             << "#define " << packagePrefix << "H_" << endl << endl
             << "#include <stdint.h>" << endl << endl
             << "extern \"C\" {" << endl
-            << "    extern const uint8_t " << packagePrefix << "PACKAGE[];" << endl
-            << "    extern const int " << packagePrefix << "PACKAGE_SIZE;" << endl
+            << "    extern const uint8_t " << package << "[];" << endl
+            << "    extern const int " << package << "_SIZE;" << endl
             << "}" << endl << endl;
 
     // Open the generated C file for writing.
-    ofstream xxdStream(xxdPath.getPath());
-    if (!xxdStream) {
-        cerr << "Unable to open " << xxdPath << endl;
-        exit(1);
+    ofstream xxdStream;
+    if (g_generateC) {
+        xxdStream = ofstream(xxdPath.getPath());
+        if (!xxdStream) {
+            cerr << "Unable to open " << xxdPath << endl;
+            exit(1);
+        }
+        xxdStream << "#include <stdint.h>\n\nconst uint8_t " << package << "[] = {\n";
     }
-    xxdStream << "#include <stdint.h>" << endl << endl
-            << "const uint8_t " << packagePrefix << "PACKAGE[] = {" << endl;
 
     // Iterate through each input file and consume its contents.
     size_t offset = 0;
@@ -264,34 +273,41 @@ int main(int argc, char* argv[]) {
         binStream.write((const char*) content.data(), content.size());
 
         // Write the offset and size into the header file.
-        headerStream << "static const size_t " << prname << "_OFFSET = " << offset << ";" << endl
-                << "static const size_t " << prname << "_SIZE = " << content.size() << ";" << endl
-                << "static const uint8_t* " << prname << "_DATA = "
-                << packagePrefix << "PACKAGE + " << prname << "_OFFSET;" << endl;
+        headerStream
+                << "#define " << prname << "_OFFSET " << offset << "\n"
+                << "#define " << prname << "_SIZE " << content.size() << "\n"
+                << "#define " << prname << "_DATA (" << package << " + " << prname << "_OFFSET)\n";
 
         // Write the xxd-style ASCII array, followed by a blank line.
-        xxdStream << "// " << rname << endl;
-        size_t i = 0;
-        for (; i < content.size(); i++) {
-            if (i > 0 && i % 20 == 0) {
-                xxdStream << endl;
+        if (g_generateC) {
+            xxdStream << "// " << rname << "\n";
+            xxdStream << setfill('0') << hex;
+            size_t i = 0;
+            for (; i < content.size(); i++) {
+                if (i > 0 && i % 20 == 0) {
+                    xxdStream << "\n";
+                }
+                xxdStream << "0x" << setw(2) << (int) content[i] << ", ";
             }
-            xxdStream << "0x" << setfill('0') << setw(2) << hex << (int) content[i] << ", ";
+            if (i % 20 != 0) xxdStream << "\n";
+            xxdStream << "\n";
         }
-        if (i % 20 != 0) xxdStream << endl;
-        xxdStream << endl;
+
         offset += content.size();
     }
 
-    headerStream << endl << "#endif" << endl;
-
-    xxdStream << "};" << endl << endl
-            << "const int " << packagePrefix << "PACKAGE_SIZE = " << dec << offset << ";" << endl;
+    headerStream << "\n#endif\n";
 
     cout << "Generated files: "
         << headerPath << " "
         << asmPath << " "
         << appleAsmPath << " "
-        << binPath << " "
-        << xxdPath << endl;
+        << binPath;
+
+    if (g_generateC) {
+        xxdStream << "};\n\nconst int " << package << "_SIZE = " << dec << offset << ";\n";
+        cout << " " << xxdPath;
+    }
+
+    cout << endl;
 }

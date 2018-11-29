@@ -88,13 +88,13 @@ get_resgen_vars(${RESOURCE_DIR} resources)
 
 add_custom_command(
         OUTPUT ${RESGEN_OUTPUTS}
-        COMMAND resgen -x ${RESOURCE_DIR} -p resources ${RESOURCE_BINS}
+        COMMAND resgen ${RESGEN_FLAGS} ${RESOURCE_BINS}
         DEPENDS resgen ${RESOURCE_BINS}
         COMMENT "Aggregating resources"
 )
 
-if (DEFINED RESGEN_FLAGS)
-    set_source_files_properties(${RESGEN_SOURCE} PROPERTIES COMPILE_FLAGS ${RESGEN_FLAGS})
+if (DEFINED RESGEN_SOURCE_FLAGS)
+    set_source_files_properties(${RESGEN_SOURCE} PROPERTIES COMPILE_FLAGS ${RESGEN_SOURCE_FLAGS})
 endif()
 
 # ==================================================================================================

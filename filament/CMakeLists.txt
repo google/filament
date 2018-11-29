@@ -285,13 +285,13 @@ list(APPEND MATERIAL_BINS ${output_path})
 
 add_custom_command(
         OUTPUT ${RESGEN_OUTPUTS}
-        COMMAND resgen -x ${RESOURCE_DIR} -p materials ${MATERIAL_BINS}
+        COMMAND resgen ${RESGEN_FLAGS} ${MATERIAL_BINS}
         DEPENDS resgen ${MATERIAL_BINS}
         COMMENT "Aggregating compiled materials"
 )
 
-if (DEFINED RESGEN_FLAGS)
-    set_source_files_properties(${RESGEN_SOURCE} PROPERTIES COMPILE_FLAGS ${RESGEN_FLAGS})
+if (DEFINED RESGEN_SOURCE_FLAGS)
+    set_source_files_properties(${RESGEN_SOURCE} PROPERTIES COMPILE_FLAGS ${RESGEN_SOURCE_FLAGS})
 endif()
 
 set(DATA_BINS)
