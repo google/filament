@@ -787,7 +787,7 @@ class_<KtxBundle>("KtxBundle")
     /// Returns "undefined" if no valid Filament enumerant exists.
     .function("getInternalFormat",
             EMBIND_LAMBDA(Texture::InternalFormat, (KtxBundle* self, bool srgb), {
-        auto result = KtxUtility::toTextureFormat(self->info().glInternalFormat);
+        auto result = KtxUtility::toTextureFormat(self->info());
         if (srgb) {
             if (result == Texture::InternalFormat::RGB8) {
                 result = Texture::InternalFormat::SRGB8;
@@ -805,14 +805,7 @@ class_<KtxBundle>("KtxBundle")
     /// Returns "undefined" if no valid Filament enumerant exists.
     .function("getPixelDataFormat",
             EMBIND_LAMBDA(driver::PixelDataFormat, (KtxBundle* self, bool rgbm), {
-        switch (self->info().glTypeSize) {
-            case 1: return driver::PixelDataFormat::R;
-            case 2: return driver::PixelDataFormat::RG;
-            case 3: return driver::PixelDataFormat::RGB;
-            case 4: return rgbm ? driver::PixelDataFormat::RGBA : driver::PixelDataFormat::RGBM;
-        }
-        assert(false && "Unknown pixel data format.");
-        return (driver::PixelDataFormat) 0xff;
+        return KtxUtility::toPixelDataFormat(self->getInfo());
     }), allow_raw_pointers())
 
     /// getPixelDataType ::method::
@@ -820,7 +813,7 @@ class_<KtxBundle>("KtxBundle")
     /// Returns "undefined" if no valid Filament enumerant exists.
     .function("getPixelDataType",
             EMBIND_LAMBDA(driver::PixelDataType, (KtxBundle* self), {
-        return KtxUtility::toPixelDataType(self->info().glType);
+        return KtxUtility::toPixelDataType(self->getInfo());
     }), allow_raw_pointers())
 
     /// getCompressedPixelDataType ::method::
@@ -828,14 +821,14 @@ class_<KtxBundle>("KtxBundle")
     /// Returns "undefined" if no valid Filament enumerant exists.
     .function("getCompressedPixelDataType",
             EMBIND_LAMBDA(driver::CompressedPixelDataType, (KtxBundle* self), {
-        return KtxUtility::toCompressedPixelDataType(self->info().glInternalFormat);
+        return KtxUtility::toCompressedPixelDataType(self->getInfo());
     }), allow_raw_pointers())
 
     /// isCompressed ::method::
     /// Per spec, compressed textures in KTX always have their glFormat field set to 0.
     /// ::retval:: boolean
     .function("isCompressed", EMBIND_LAMBDA(bool, (KtxBundle* self), {
-        return self->info().glFormat == 0;
+        return KtxUtility::isCompressed(self->getInfo());
     }), allow_raw_pointers())
 
     .function("isCubemap", &KtxBundle::isCubemap)

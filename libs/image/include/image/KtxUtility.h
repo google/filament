@@ -28,6 +28,7 @@ namespace KtxUtility {
     using TextureFormat = filament::driver::TextureFormat;
     using CompressedPixelDataType = filament::driver::CompressedPixelDataType;
     using PixelDataType = filament::driver::PixelDataType;
+    using PixelDataFormat = filament::driver::PixelDataFormat;
 
     template<typename T>
     T toCompressedFilamentEnum(uint32_t format) {
@@ -78,12 +79,12 @@ namespace KtxUtility {
         return (T) 0xffff;
     }
 
-    CompressedPixelDataType toCompressedPixelDataType(uint32_t format) {
-        return toCompressedFilamentEnum<CompressedPixelDataType>(format);
+    CompressedPixelDataType toCompressedPixelDataType(const KtxInfo& info) {
+        return toCompressedFilamentEnum<CompressedPixelDataType>(info.glInternalFormat);
     }
 
-    PixelDataType toPixelDataType(uint32_t dtype) {
-        switch (dtype) {
+    PixelDataType toPixelDataType(const KtxInfo& info) {
+        switch (info.glType) {
             case KtxBundle::UNSIGNED_BYTE: return PixelDataType::UBYTE;
             case KtxBundle::UNSIGNED_SHORT: return PixelDataType::USHORT;
             case KtxBundle::HALF_FLOAT: return PixelDataType::HALF;
@@ -92,8 +93,22 @@ namespace KtxUtility {
         return (PixelDataType) 0xff;
     }
 
-    TextureFormat toTextureFormat(uint32_t format) {
-        switch (format) {
+    PixelDataFormat toPixelDataFormat(const KtxInfo& info, bool rgbm = false) {
+        switch (info.glTypeSize) {
+            case 1: return PixelDataFormat::R;
+            case 2: return PixelDataFormat::RG;
+            case 3: return PixelDataFormat::RGB;
+            case 4: return rgbm ? PixelDataFormat::RGBM : PixelDataFormat::RGBA;
+        }
+        return (PixelDataFormat) 0xff;
+    }
+
+    bool isCompressed(const KtxInfo& info) {
+        return info.glFormat == 0;
+    }
+
+    TextureFormat toTextureFormat(const KtxInfo& info) {
+        switch (info.glInternalFormat) {
             case KtxBundle::RED: return TextureFormat::R8;
             case KtxBundle::RG: return TextureFormat::RG8;
             case KtxBundle::RGB: return TextureFormat::RGB8;
@@ -153,7 +168,7 @@ namespace KtxUtility {
             case KtxBundle::RGBA32UI: return TextureFormat::RGBA32UI;
             case KtxBundle::RGBA32I: return TextureFormat::RGBA32I;
         }
-        return toCompressedFilamentEnum<TextureFormat>(format);
+        return toCompressedFilamentEnum<TextureFormat>(info.glInternalFormat);
     }
 
 } // namespace KtxUtility
