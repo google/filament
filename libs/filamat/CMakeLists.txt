@@ -30,7 +30,6 @@ set(PRIVATE_HDRS
         src/sca/ASTHelpers.h
         src/sca/GLSLTools.h
         src/sca/builtinResource.h
-        src/shaders/Shaders.h
         src/GLSLPostProcessor.h)
 
 set(SRCS

@@ -48,18 +48,18 @@ Usage:
 
 Options:
    --help, -h
-       print this message
+       Print this message
    --license, -L
-       print copyright and license information
+       Print copyright and license information
    --package=string, -p string
        Name of the resource package (defaults to "resources")
        This is used to generate filenames and symbol prefixes
    --deploy=dir, -x dir (defaults to ".")
        Generate everything needed for deployment into <dir>
    --keep, -k
-       keep file extensions when generating symbols
+       Keep file extensions when generating symbols
    --text, -t
-       append a null terminator to each data blob
+       Append a null terminator to each data blob
 
 Examples:
     RESGEN -p textures jungle.png beach.png

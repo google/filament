@@ -1,7 +1,11 @@
 cmake_minimum_required(VERSION 3.1)
-project(shaders)
+project(shaders C ASM)
 
 set(TARGET shaders)
+
+if (CMAKE_CROSSCOMPILING)
+    include(${IMPORT_EXECUTABLES})
+endif()
 
 # ==================================================================================================
 # Sources and headers
@@ -44,59 +48,24 @@ set(SHADERS
 # ==================================================================================================
 # Code generation
 # ==================================================================================================
-set(GENERATION_ROOT ${CMAKE_BINARY_DIR})
+set(RESOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated)
 
-set(SHADER_LIST)
-file(MAKE_DIRECTORY "${GENERATION_ROOT}/generated/shaders/")
+get_resgen_vars(${RESOURCE_DIR} shaders)
 
-# On windows we cannot use 'cat' executable. We replace it with 'type'.
-# On windows we cannot use character " on commandline. It has to be escape with ^".
-set(CAT_COMMAND cat)
-set(DOUBLEQUOTE "\\\"")
-set(OPENP "\\(")
-set(CLOSEP "\\)")
-set(SEMICOLON "\;")
+add_custom_command(
+        OUTPUT ${RESGEN_OUTPUTS}
+        COMMAND resgen --text --keep -x ${RESOURCE_DIR} -p shaders ${SHADERS}
+        DEPENDS resgen ${SHADERS}
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        COMMENT "Aggregating shaders"
+)
 
-if (WIN32)
-    set(CAT_COMMAND type)
-    set(DOUBLEQUOTE "^\"")
-    set(OPENP "(")
-    set(CLOSEP ")")
-    set(SEMICOLON ";")
+if (DEFINED RESGEN_FLAGS)
+    set_source_files_properties(${RESGEN_SOURCE} PROPERTIES COMPILE_FLAGS ${RESGEN_FLAGS})
 endif()
-
-foreach (shader_file ${SHADERS})
-    get_filename_component(localname "${shader_file}" NAME)
-    get_filename_component(filename  "${localname}"   NAME_WE)
-    get_filename_component(extension "${localname}"   EXT)
-    get_filename_component(fullname  "${shader_file}" ABSOLUTE)
-
-    string(SUBSTRING "${extension}" 1 -1 extension)
-
-    if (WIN32)
-       string(REPLACE "/" "\\" fullname ${fullname})
-    endif()
-
-    set(output_path "${GENERATION_ROOT}/generated/shaders/${localname}.cpp")
-    add_custom_command(
-            OUTPUT ${output_path}
-            # For cross-platform compatibility, each string passed to echo must be enclosed in
-            # double quotes and contain no spaces
-            COMMAND echo "namespace" "filament" "{" > ${output_path}
-            COMMAND echo "namespace" "shaders" "{" >> ${output_path}
-            COMMAND echo "extern" "const" "char" "${filename}_${extension}[]" "=" "R${DOUBLEQUOTE}FILAMENT__${OPENP}" >> ${output_path}
-            COMMAND ${CAT_COMMAND} \"${fullname}\" >> \"${output_path}\"
-            COMMAND echo "${CLOSEP}FILAMENT__${DOUBLEQUOTE}${SEMICOLON}" >> ${output_path}
-            COMMAND echo "}" "//" "namespace" "shaders" >> ${output_path}
-            COMMAND echo "}" "//" "namespace" "filament" >> ${output_path}
-            DEPENDS ${shader_file}
-            COMMENT "Processing shader ${shader_file}"
-    )
-
-    list(APPEND SHADER_LIST ${output_path})
-endforeach()
 
 # ==================================================================================================
 # Include and target definitions
 # ==================================================================================================
-add_library(${TARGET} STATIC ${SHADER_LIST} ${SHADERS})
+add_library(${TARGET} STATIC ${RESGEN_SOURCE})
+target_include_directories(${TARGET} PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
