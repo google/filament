@@ -18,10 +18,11 @@
 
 #include "GLSLTools.h"
 
-#include <iostream>
-
 #include <intermediate.h>
 #include <localintermediate.h>
+
+#include <utils/Log.h>
+
 using namespace glslang;
 
 namespace ASTUtils {
@@ -232,67 +233,67 @@ public:
 
     void pad() {
        for (int i = 0; i < depth; ++i) {
-           std::cerr << "    ";
+           utils::slog.e << "    ";
        }
     }
 
     bool visitBinary(TVisit, TIntermBinary* node) override {
         pad();
-        std::cerr << "Binary " << op2Str(node->getOp());
-        std::cerr << std::endl;
+        utils::slog.e << "Binary " << op2Str(node->getOp());
+        utils::slog.e << utils::io::endl;
         return true;
     }
 
     bool visitUnary(TVisit, TIntermUnary* node) override {
         pad();
-        std::cerr << "Unary" << op2Str(node->getOp());
-        std::cerr << std::endl;
+        utils::slog.e << "Unary" << op2Str(node->getOp());
+        utils::slog.e << utils::io::endl;
         return true;
     }
 
     bool visitAggregate(TVisit, TIntermAggregate* node) override {
         pad();
-        std::cerr << "Aggregate" << op2Str(node->getOp());
-        std::cerr << std::endl;
+        utils::slog.e << "Aggregate" << op2Str(node->getOp());
+        utils::slog.e << utils::io::endl;
         return true;
     }
 
     bool visitSelection(TVisit, TIntermSelection* node) override {
         pad();
-        std::cerr << "Selection";
-        std::cerr << std::endl;
+        utils::slog.e << "Selection";
+        utils::slog.e << utils::io::endl;
         return true;
     }
 
     void visitConstantUnion(TIntermConstantUnion* node) override {
         pad();
-        std::cerr << "ConstantUnion";
-        std::cerr << std::endl;
+        utils::slog.e << "ConstantUnion";
+        utils::slog.e << utils::io::endl;
     }
 
     void visitSymbol(TIntermSymbol* node) override {
         pad();
-        std::cerr << "Symbol " << node->getAsSymbolNode()->getName().c_str();
-        std::cerr << std::endl;
+        utils::slog.e << "Symbol " << node->getAsSymbolNode()->getName().c_str();
+        utils::slog.e << utils::io::endl;
     }
 
     bool visitLoop(TVisit, TIntermLoop* node) override {
         pad();
-        std::cerr << "Loop";
-        std::cerr << std::endl;
+        utils::slog.e << "Loop";
+        utils::slog.e << utils::io::endl;
         return true;
     }
 
     bool visitBranch(TVisit, TIntermBranch* node) override {
         pad();
-        std::cerr << "Branch";
-        std::cerr << std::endl;
+        utils::slog.e << "Branch";
+        utils::slog.e << utils::io::endl;
         return true;
     }
 
     bool visitSwitch(TVisit, TIntermSwitch* node) override {
-        std::cerr << "Binary ";
-        std::cerr << std::endl;
+        utils::slog.e << "Binary ";
+        utils::slog.e << utils::io::endl;
         return true;
     }
 };
