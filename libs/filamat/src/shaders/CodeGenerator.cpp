@@ -16,7 +16,7 @@
 
 #include "CodeGenerator.h"
 
-#include "Shaders.h"
+#include "generated/shaders.h"
 
 #include <cctype>
 #include <iomanip>
@@ -81,7 +81,7 @@ std::ostream& CodeGenerator::generateProlog(std::ostream& out, ShaderType type,
         out << "invariant gl_Position;\n";
     }
 
-    out << filament::shaders::common_types_fs;
+    out << SHADERS_COMMON_TYPES_FS_DATA;
 
     out << "\n";
     return out;
@@ -115,10 +115,10 @@ std::ostream& CodeGenerator::generateEpilog(std::ostream& out) const {
 
 std::ostream& CodeGenerator::generateShaderMain(std::ostream& out, ShaderType type) const {
     if (type == ShaderType::VERTEX) {
-        out << filament::shaders::shadowing_vs;
-        out << filament::shaders::main_vs;
+        out << SHADERS_SHADOWING_VS_DATA;
+        out << SHADERS_MAIN_VS_DATA;
     } else if (type == ShaderType::FRAGMENT) {
-        out << filament::shaders::main_fs;
+        out << SHADERS_MAIN_FS_DATA;
     }
     return out;
 }
@@ -126,21 +126,21 @@ std::ostream& CodeGenerator::generateShaderMain(std::ostream& out, ShaderType ty
 std::ostream& CodeGenerator::generatePostProcessMain(std::ostream& out,
         ShaderType type, filament::PostProcessStage variant) const {
     if (type == ShaderType::VERTEX) {
-        out << filament::shaders::post_process_vs;
+        out << SHADERS_POST_PROCESS_VS_DATA;
     } else if (type == ShaderType::FRAGMENT) {
         switch (variant) {
             case PostProcessStage::TONE_MAPPING_OPAQUE:
             case PostProcessStage::TONE_MAPPING_TRANSLUCENT:
-                out << filament::shaders::tone_mapping_fs;
-                out << filament::shaders::conversion_functions_fs;
-                out << filament::shaders::dithering_fs;
+                out << SHADERS_TONE_MAPPING_FS_DATA;
+                out << SHADERS_CONVERSION_FUNCTIONS_FS_DATA;
+                out << SHADERS_DITHERING_FS_DATA;
                 break;
             case PostProcessStage::ANTI_ALIASING_OPAQUE:
             case PostProcessStage::ANTI_ALIASING_TRANSLUCENT:
-                out << filament::shaders::fxaa_fs;
+                out << SHADERS_FXAA_FS_DATA;
                 break;
         }
-        out << filament::shaders::post_process_fs;
+        out << SHADERS_POST_PROCESS_FS_DATA;
     }
     return out;
 }
@@ -206,18 +206,18 @@ std::ostream& CodeGenerator::generateVariables(std::ostream& out, ShaderType typ
             generateDefine(out, "LOCATION_BONE_WEIGHTS", uint32_t(VertexAttribute::BONE_WEIGHTS));
         }
 
-        out << filament::shaders::variables_vs;
+        out << SHADERS_VARIABLES_VS_DATA;
     } else if (type == ShaderType::FRAGMENT) {
-        out << filament::shaders::variables_fs;
+        out << SHADERS_VARIABLES_FS_DATA;
     }
     return out;
 }
 
 std::ostream& CodeGenerator::generateDepthShaderMain(std::ostream& out, ShaderType type) const {
     if (type == ShaderType::VERTEX) {
-        out << filament::shaders::depth_main_vs;
+        out << SHADERS_DEPTH_MAIN_VS_DATA;
     } else if (type == ShaderType::FRAGMENT) {
-        out << filament::shaders::depth_main_fs;
+        out << SHADERS_DEPTH_MAIN_FS_DATA;
     }
     return out;
 }
@@ -342,29 +342,29 @@ std::ostream& CodeGenerator::generateMaterialProperty(std::ostream& out,
 }
 
 std::ostream& CodeGenerator::generateCommon(std::ostream& out, ShaderType type) const {
-    out << filament::shaders::common_math_fs;
+    out << SHADERS_COMMON_MATH_FS_DATA;
     if (type == ShaderType::VERTEX) {
     } else if (type == ShaderType::FRAGMENT) {
-        out << filament::shaders::common_graphics_fs;
+        out << SHADERS_COMMON_GRAPHICS_FS_DATA;
     }
     return out;
 }
 
 std::ostream& CodeGenerator::generateCommonMaterial(std::ostream& out, ShaderType type) const {
     if (type == ShaderType::VERTEX) {
-        out << filament::shaders::common_material_vs;
+        out << SHADERS_COMMON_MATERIAL_VS_DATA;
     } else if (type == ShaderType::FRAGMENT) {
-        out << filament::shaders::common_material_fs;
+        out << SHADERS_COMMON_MATERIAL_FS_DATA;
     }
     return out;
 }
 
 std::ostream& CodeGenerator::generateGetters(std::ostream& out, ShaderType type) const {
-    out << filament::shaders::common_getters_fs;
+    out << SHADERS_COMMON_GETTERS_FS_DATA;
     if (type == ShaderType::VERTEX) {
-        out << filament::shaders::getters_vs;
+        out << SHADERS_GETTERS_VS_DATA;
     } else if (type == ShaderType::FRAGMENT) {
-        out << filament::shaders::getters_fs;
+        out << SHADERS_GETTERS_FS_DATA;
     }
     return out;
 }
@@ -372,7 +372,7 @@ std::ostream& CodeGenerator::generateGetters(std::ostream& out, ShaderType type)
 std::ostream& CodeGenerator::generateParameters(std::ostream& out, ShaderType type) const {
     if (type == ShaderType::VERTEX) {
     } else if (type == ShaderType::FRAGMENT) {
-        out << filament::shaders::shading_parameters_fs;
+        out << SHADERS_SHADING_PARAMETERS_FS_DATA;
     }
     return out;
 }
@@ -381,38 +381,38 @@ std::ostream& CodeGenerator::generateShaderLit(std::ostream& out, ShaderType typ
         filament::Variant variant, filament::Shading shading) const {
     if (type == ShaderType::VERTEX) {
     } else if (type == ShaderType::FRAGMENT) {
-        out << filament::shaders::common_lighting_fs;
+        out << SHADERS_COMMON_LIGHTING_FS_DATA;
         if (variant.hasShadowReceiver()) {
-            out << filament::shaders::shadowing_fs;
+            out << SHADERS_SHADOWING_FS_DATA;
         }
 
-        out << filament::shaders::brdf_fs;
+        out << SHADERS_BRDF_FS_DATA;
         switch (shading) {
             case Shading::UNLIT:
                 assert("Lit shader generated with unlit shading model");
                 break;
             case Shading::LIT:
-                out << filament::shaders::shading_model_standard_fs;
+                out << SHADERS_SHADING_MODEL_STANDARD_FS_DATA;
                 break;
             case Shading::SUBSURFACE:
-                out << filament::shaders::shading_model_subsurface_fs;
+                out << SHADERS_SHADING_MODEL_SUBSURFACE_FS_DATA;
                 break;
             case Shading::CLOTH:
-                out << filament::shaders::shading_model_cloth_fs;
+                out << SHADERS_SHADING_MODEL_CLOTH_FS_DATA;
                 break;
         }
 
         if (shading != Shading::UNLIT) {
-            out << filament::shaders::light_indirect_fs;
+            out << SHADERS_LIGHT_INDIRECT_FS_DATA;
         }
         if (variant.hasDirectionalLighting()) {
-            out << filament::shaders::light_directional_fs;
+            out << SHADERS_LIGHT_DIRECTIONAL_FS_DATA;
         }
         if (variant.hasDynamicLighting()) {
-            out << filament::shaders::light_punctual_fs;
+            out << SHADERS_LIGHT_PUNCTUAL_FS_DATA;
         }
 
-        out << filament::shaders::shading_lit_fs;
+        out << SHADERS_SHADING_LIT_FS_DATA;
     }
     return out;
 }
@@ -423,10 +423,10 @@ std::ostream& CodeGenerator::generateShaderUnlit(std::ostream& out, ShaderType t
     } else if (type == ShaderType::FRAGMENT) {
         if (hasShadowMultiplier) {
             if (variant.hasShadowReceiver()) {
-                out << filament::shaders::shadowing_fs;
+                out << SHADERS_SHADOWING_FS_DATA;
             }
         }
-        out << filament::shaders::shading_unlit_fs;
+        out << SHADERS_SHADING_UNLIT_FS_DATA;
     }
     return out;
 }
