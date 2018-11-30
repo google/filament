@@ -4,6 +4,12 @@ project(math)
 set(TARGET math)
 set(PUBLIC_HDR_DIR include)
 
+if (MSVC OR CLANG_CL)
+    set(OPTIMIZATION_FLAGS /fp:fast)
+else()
+    set(OPTIMIZATION_FLAGS -ffast-math -ffp-contract=fast)
+endif()
+
 # ==================================================================================================
 # Sources and headers
 # ==================================================================================================
@@ -35,3 +41,16 @@ add_executable(test_${TARGET}
         tests/test_quat.cpp
 )
 target_link_libraries(test_${TARGET} PRIVATE math gtest)
+
+# ==================================================================================================
+# Benchmarks
+# ==================================================================================================
+
+set(BENCHMARK_SRCS
+        benchmarks/benchmark_fast.cpp)
+
+add_executable(benchmark_${TARGET} ${BENCHMARK_SRCS})
+
+target_compile_options(benchmark_${TARGET} PRIVATE ${OPTIMIZATION_FLAGS})
+
+target_link_libraries(benchmark_${TARGET} PRIVATE benchmark_main utils math)

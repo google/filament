@@ -120,7 +120,7 @@ add_executable(test_${TARGET} ${TEST_SRCS})
 target_link_libraries(test_${TARGET} PRIVATE gtest utils tsl math)
 
 # ==================================================================================================
-# Test benchmark
+# Benchmarks
 # ==================================================================================================
 
 add_library(benchmark_${TARGET}_callee SHARED benchmark/benchmark_callee.cpp)

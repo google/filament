@@ -127,31 +127,6 @@ int main() {
 
     free(visibles);
 
-
-    benchmark(p, "cos", [&]() {
-        for (size_t i = 0; i < batch; i++) {
-            spheres[i].x = std::cos(spheres[i].x);
-        }
-    });
-
-    benchmark(p, "fast::cos", [&]() {
-        for (size_t i = 0; i < batch; i++) {
-            spheres[i].x = math::fast::cos<float>(spheres[i].x);
-        }
-    });
-    
-    benchmark(p, "rsqrt", [&]() {
-        for (size_t i = 0; i < batch; i++) {
-            spheres[i].x = 1.0f / std::sqrt(spheres[i].x);
-        }
-    });
-
-    benchmark(p, "fast::rsqrt", [&]() {
-        for (size_t i = 0; i < batch; i++) {
-            spheres[i].x = math::fast::isqrt(spheres[i].x);
-        }
-    });
-
     benchmark(p, "half4", [&]() {
         for (size_t i = 0; i < batch; i++) {
             spheresHalf[i] = half4(spheres[i]);
@@ -166,34 +141,6 @@ int main() {
                     spheres[i].z,
                     spheres[i].w
             );
-        }
-    });
-
-    benchmark(p, "pow(float4, 2.2f)", [&]() {
-        for (size_t i = 0; i < batch; i++) {
-            colors_results[i] = pow(colors[i], 2.2f);
-        }
-    });
-
-    benchmark(p, "fast::pow(float4, 2.2f)", [&]() {
-        for (size_t i = 0; i < batch; i++) {
-            colors_results[i] = {
-                    fast::pow(colors[i].x, 2.2f),
-                    fast::pow(colors[i].y, 2.2f),
-                    fast::pow(colors[i].z, 2.2f),
-                    fast::pow(colors[i].w, 2.2f),
-            };
-        }
-    });
-
-    benchmark(p, "fast::pow2dot2(float4)", [&]() {
-        for (size_t i = 0; i < batch; i++) {
-            colors_results[i] = {
-                    fast::pow2dot2(colors[i].x),
-                    fast::pow2dot2(colors[i].y),
-                    fast::pow2dot2(colors[i].z),
-                    fast::pow2dot2(colors[i].w),
-            };
         }
     });
 
