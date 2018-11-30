@@ -26,6 +26,7 @@ namespace filament {
     class Renderable;
 }
 
+#include <unordered_map>
 #include <map>
 #include <vector>
 
@@ -109,14 +110,7 @@ private:
     filament::Material* mDefaultColorMaterial = nullptr;
     filament::Material* mDefaultTransparentColorMaterial = nullptr;
 
-    filament::Material* mGltfMaterial = nullptr; // Single sided gltf material
-    filament::Material* mGltfMaterialDS = nullptr; // Double sided gltf material
-    filament::Material* mGltfMaterialTrans = nullptr; // Transparent gltf material
-    filament::Material* mGltfMaterialDSTrans = nullptr; // Double sided Transparent gltf material
-    filament::Material* mGltfMaterialMasked = nullptr; // Transparent gltf material
-    filament::Material* mGltfMaterialDSMasked = nullptr; // Double sided Transparent gltf material
-    filament::Material* mGltfMaterialUnlit = nullptr;
-    filament::Material* mGltfMaterialDSUnlit = nullptr;
+    mutable std::unordered_map<std::string, filament::Material*> mGltfMaterialCache;
     filament::Texture* mDefaultMap = nullptr;
     filament::Texture* mDefaultNormalMap = nullptr;
     float mDefaultMetallic = 0.0;
