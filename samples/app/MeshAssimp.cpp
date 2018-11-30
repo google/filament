@@ -148,7 +148,6 @@ Material* createMaterialFromConfig(Engine& engine, materialConfig config){
             .material(shader.c_str())
             .doubleSided(config.doubleSided)
             .require(VertexAttribute::UV0)
-            .set(Property::BASE_COLOR)
             .parameter(MaterialBuilder::SamplerType::SAMPLER_2D, "baseColorMap")
             .parameter(MaterialBuilder::UniformType::FLOAT4, "baseColorFactor")
             .parameter(MaterialBuilder::SamplerType::SAMPLER_2D, "metallicRoughnessMap")
@@ -173,12 +172,7 @@ Material* createMaterialFromConfig(Engine& engine, materialConfig config){
     if (config.unlit) {
         builder.shading(Shading::UNLIT);
     } else {
-        builder.set(Property::METALLIC)
-                .set(Property::ROUGHNESS)
-                .set(Property::AMBIENT_OCCLUSION)
-                .set(Property::EMISSIVE)
-                .set(Property::NORMAL)
-                .shading(Shading::LIT);
+        builder.shading(Shading::LIT);
     }
 
     Package pkg = builder.build();
