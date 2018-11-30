@@ -338,6 +338,7 @@ int main(int argc, char* argv[]) {
         }
         vector<uint8_t> fileContents(container.getSerializedLength());
         container.serialize(fileContents.data(), fileContents.size());
+        Path(outputPattern).getParent().mkdirRecursive();
         ofstream outputStream(outputPattern, ios::out | ios::binary);
         outputStream.write((const char*) fileContents.data(), fileContents.size());
         outputStream.close();
@@ -354,6 +355,7 @@ int main(int argc, char* argv[]) {
             cerr << "Output pattern is too long." << endl;
             return 1;
         }
+        Path(path).getParent().mkdirRecursive();
         ofstream outputStream(path, ios::binary | ios::trunc);
         if (!outputStream) {
             cerr << "The output file cannot be opened: " << path << endl;
