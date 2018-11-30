@@ -345,6 +345,12 @@ int main(int argc, char* argv[]) {
     }
 
     Path dst(argv[optionIndex + 1]);
+
+    const Path outputDir(dst.getParent());
+    if (!outputDir.exists()) {
+        outputDir.mkdirRecursive();
+    }
+
     std::ofstream out(dst, std::ios::binary | std::ios::trunc);
     if (!out.good()) {
         std::cerr << "Could not write to " << dst << std::endl;
