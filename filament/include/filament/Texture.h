@@ -76,6 +76,7 @@ public:
     using CubemapFace = driver::TextureCubemapFace;                 //!< Cube map faces
     using Format = driver::PixelDataFormat;                         //!< Pixel color format
     using Type = driver::PixelDataType;                             //!< Pixel data format
+    using CompressedType = driver::CompressedPixelDataType;         //!< Compressed pixel data format
     using FaceOffsets = driver::FaceOffsets;                        //!< Cube map faces offsets
     using Usage = driver::TextureUsage;                             //!< Usage affects texel layout
 
