@@ -40,7 +40,7 @@ struct App {
     mat4f transform;
 };
 
-static const char* IBL_FOLDER = "envs/office";
+static const char* IBL_FOLDER = "envs/pillars";
 
 int main(int argc, char** argv) {
     Config config;
