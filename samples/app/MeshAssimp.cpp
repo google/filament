@@ -72,11 +72,11 @@ struct materialConfig {
     alphaMode alphaMode = opaque;
     float maskThreshold = 0.5f;
     int numUVs = 1;
-    int baseColorUV = 0;
-    int metallicRoughnessUV = 0;
-    int emissiveUV = 0;
-    int aoUV = 0;
-    int normalUV = 0;
+    unsigned int baseColorUV = 0;
+    unsigned int metallicRoughnessUV = 0;
+    unsigned int emissiveUV = 0;
+    unsigned int aoUV = 0;
+    unsigned int normalUV = 0;
 };
 
 void appendBooleanToBitMask(uint64_t *bitmask, bool b){
@@ -653,8 +653,6 @@ bool MeshAssimp::setFromFile(const Path& file, std::vector<uint32_t>& outIndices
             float3 const* normals    = reinterpret_cast<float3 const*>(mesh->mNormals);
             float3 const* texCoords  = reinterpret_cast<float3 const*>(mesh->mTextureCoords[0]);
 
-            std::cout << mesh->GetNumUVChannels() << std::endl;
-
             const size_t numVertices = mesh->mNumVertices;
 
             if (numVertices > 0) {
@@ -869,12 +867,6 @@ void MeshAssimp::processGLTFMaterial(const aiScene* scene, const aiMaterial* mat
     aiString normalPath;
     aiString emissivePath;
     aiTextureMapMode mapMode[3];
-
-
-    for (int i=0; i < material->mNumProperties; i++){
-        std::cout << material->mProperties[i]->mKey.C_Str() << std::endl;
-    }
-
     materialConfig matConfig;
 
     material->Get("$mat.twosided", 0, 0, matConfig.doubleSided);
@@ -923,17 +915,14 @@ void MeshAssimp::processGLTFMaterial(const aiScene* scene, const aiMaterial* mat
             TextureSampler::MagFilter::LINEAR,
             TextureSampler::WrapMode::REPEAT);
 
-    unsigned int uvIndex = 5;
-
     if (material->GetTexture(AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_BASE_COLOR_TEXTURE, &baseColorPath,
-            nullptr, &uvIndex, nullptr, nullptr, mapMode) == AI_SUCCESS) {
-
-        std::cout << "uvIndex " << uvIndex << std::endl;
+            nullptr, nullptr, nullptr, nullptr, mapMode) == AI_SUCCESS) {
         unsigned int minType = 0;
         unsigned int magType = 0;
         material->Get("$tex.mappingfiltermin", AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_BASE_COLOR_TEXTURE, minType);
         material->Get("$tex.mappingfiltermag", AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_BASE_COLOR_TEXTURE, magType);
-
+        material->Get("$tex.file.texCoord", AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_BASE_COLOR_TEXTURE,
+                matConfig.baseColorUV);
         setTextureFromPath(scene, &mEngine, mTextures, baseColorPath,
                 materialName, dirName, mapMode, "baseColorMap", outMaterials, minType, magType);
     } else {
@@ -941,13 +930,13 @@ void MeshAssimp::processGLTFMaterial(const aiScene* scene, const aiMaterial* mat
     }
 
     if (material->GetTexture(AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_METALLICROUGHNESS_TEXTURE, &MRPath,
-            nullptr, &uvIndex, nullptr, nullptr, mapMode) == AI_SUCCESS) {
-        std::cout << "uvIndex " << uvIndex << std::endl;
-
+            nullptr, nullptr, nullptr, nullptr, mapMode) == AI_SUCCESS) {
         unsigned int minType = 0;
         unsigned int magType = 0;
         material->Get("$tex.mappingfiltermin", AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_METALLICROUGHNESS_TEXTURE, minType);
         material->Get("$tex.mappingfiltermag", AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_METALLICROUGHNESS_TEXTURE, magType);
+        material->Get("$tex.file.texCoord", AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_METALLICROUGHNESS_TEXTURE,
+                      matConfig.metallicRoughnessUV);
         setTextureFromPath(scene, &mEngine, mTextures, MRPath, materialName,
                 dirName, mapMode, "metallicRoughnessMap", outMaterials, minType, magType);
     } else {
@@ -957,17 +946,12 @@ void MeshAssimp::processGLTFMaterial(const aiScene* scene, const aiMaterial* mat
     }
 
     if (material->GetTexture(aiTextureType_LIGHTMAP, 0, &AOPath, nullptr,
-            &uvIndex, nullptr, nullptr, mapMode) == AI_SUCCESS) {
-        std::cout << "uvIndex " << uvIndex << std::endl;
-
+                             nullptr, nullptr, nullptr, mapMode) == AI_SUCCESS) {
         unsigned int minType = 0;
         unsigned int magType = 0;
         material->Get("$tex.mappingfiltermin", aiTextureType_LIGHTMAP, 0, minType);
         material->Get("$tex.mappingfiltermag", aiTextureType_LIGHTMAP, 0, magType);
-
-        material->Get("$tex.file.texCoord", aiTextureType_LIGHTMAP, 0, uvIndex);
-        std::cout << "uvIndex " << uvIndex << std::endl;
-
+        material->Get("$tex.file.texCoord", aiTextureType_LIGHTMAP, 0, matConfig.aoUV);
         setTextureFromPath(scene, &mEngine, mTextures, AOPath, materialName,
                 dirName, mapMode, "aoMap", outMaterials, minType, magType);
     } else {
@@ -975,13 +959,12 @@ void MeshAssimp::processGLTFMaterial(const aiScene* scene, const aiMaterial* mat
     }
 
     if (material->GetTexture(aiTextureType_NORMALS, 0, &normalPath, nullptr,
-            &uvIndex, nullptr, nullptr, mapMode) == AI_SUCCESS) {
-        std::cout << "uvIndex " << uvIndex << std::endl;
-
+            nullptr, nullptr, nullptr, mapMode) == AI_SUCCESS) {
         unsigned int minType = 0;
         unsigned int magType = 0;
         material->Get("$tex.mappingfiltermin", aiTextureType_NORMALS, 0, minType);
         material->Get("$tex.mappingfiltermag", aiTextureType_NORMALS, 0, magType);
+        material->Get("$tex.file.texCoord", aiTextureType_NORMALS, 0, matConfig.normalUV);
         setTextureFromPath(scene, &mEngine, mTextures, normalPath, materialName,
                 dirName, mapMode, "normalMap", outMaterials, minType, magType);
     } else {
@@ -989,13 +972,12 @@ void MeshAssimp::processGLTFMaterial(const aiScene* scene, const aiMaterial* mat
     }
 
     if (material->GetTexture(aiTextureType_EMISSIVE, 0, &emissivePath, nullptr,
-            &uvIndex, nullptr, nullptr, mapMode) == AI_SUCCESS) {
-        std::cout << "uvIndex " << uvIndex << std::endl;
-
+            nullptr, nullptr, nullptr, mapMode) == AI_SUCCESS) {
         unsigned int minType = 0;
         unsigned int magType = 0;
         material->Get("$tex.mappingfiltermin", aiTextureType_EMISSIVE, 0, minType);
         material->Get("$tex.mappingfiltermag", aiTextureType_EMISSIVE, 0, magType);
+        material->Get("$tex.file.texCoord", aiTextureType_EMISSIVE, 0, matConfig.emissiveUV);
         setTextureFromPath(scene, &mEngine, mTextures, emissivePath, materialName,
                 dirName, mapMode, "emissiveMap", outMaterials, minType, magType);
     }  else {
