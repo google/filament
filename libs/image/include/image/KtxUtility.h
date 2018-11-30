@@ -142,6 +142,23 @@ namespace KtxUtility {
         return texture;
     }
 
+    /**
+     * Creates a Texture object from a KTX bundle, populates all of its faces and miplevels,
+     * and automatically destroys the bundle after all the texture data has been uploaded.
+     *
+     * @param engine Used to create the Filament Texture
+     * @param ktx In-memory representation of a KTX file
+     * @param srgb Forces the KTX-specified format into an SRGB format if possible
+     * @param rgbm Interpret alpha as an HDR multiplier
+     */
+    inline Texture* createTexture(Engine* engine, KtxBundle* ktx, bool srgb, bool rgbm) {
+        auto freeKtx = [] (void* userdata) {
+            KtxBundle* ktx = (KtxBundle*) userdata;
+            delete ktx;
+        };
+        return createTexture(engine, *ktx, srgb, rgbm, freeKtx, ktx);
+    }
+
     template<typename T>
     T toCompressedFilamentEnum(uint32_t format) {
         switch (format) {

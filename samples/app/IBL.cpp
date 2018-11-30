@@ -17,6 +17,7 @@
 #include "IBL.h"
 
 #include <fstream>
+#include <sstream>
 #include <string>
 
 #include <filament/Engine.h>
@@ -25,14 +26,20 @@
 #include <filament/Texture.h>
 #include <filament/Skybox.h>
 
+#include <image/KtxBundle.h>
+#include <image/KtxUtility.h>
+
 #include <stb_image.h>
 
 #include <utils/Path.h>
 #include <filament/IndirectLight.h>
 
 using namespace filament;
+using namespace image;
 using namespace math;
 using namespace utils;
+
+static constexpr float IBL_INTENSITY = 30000.0f;
 
 IBL::IBL(Engine& engine) : mEngine(engine) {
 }
@@ -44,7 +51,47 @@ IBL::~IBL() {
     mEngine.destroy(mSkyboxTexture);
 }
 
+bool IBL::loadFromKtx(const std::string& prefix) {
+    Path iblPath(prefix + "_ibl.ktx");
+    Path skyPath(prefix + "_skybox.ktx");
+    if (!iblPath.exists() || !skyPath.exists()) {
+        return false;
+    }
+
+    auto createKtx = [] (Path path) {
+        using namespace std;
+        ifstream file(path.getPath(), ios::binary);
+        vector<uint8_t> contents((istreambuf_iterator<char>(file)), {});
+        return new image::KtxBundle(contents.data(), contents.size());
+    };
+
+    KtxBundle* iblKtx = createKtx(iblPath);
+    KtxBundle* skyKtx = createKtx(skyPath);
+
+    mSkyboxTexture = KtxUtility::createTexture(&mEngine, skyKtx, false, true);
+    mTexture = KtxUtility::createTexture(&mEngine, iblKtx, false, true);
+
+    std::istringstream shstring(iblKtx->getMetadata("sh"));
+    for (float3& band : mBands) {
+        shstring >> band.x >> band.y >> band.z;
+    }
+
+    mIndirectLight = IndirectLight::Builder()
+            .reflections(mTexture)
+            .irradiance(3, mBands)
+            .intensity(IBL_INTENSITY)
+            .build(mEngine);
+
+    mSkybox = Skybox::Builder().environment(mSkyboxTexture).showSun(true).build(mEngine);
+
+    return true;
+}
+
 bool IBL::loadFromDirectory(const utils::Path& path) {
+    // First check if KTX files are available.
+    if (loadFromKtx(Path::concat(path, path.getName()))) {
+        return true;
+    }
     // Read spherical harmonics
     Path sh(Path::concat(path, "sh.txt"));
     if (sh.exists()) {
@@ -75,7 +122,7 @@ bool IBL::loadFromDirectory(const utils::Path& path) {
     mIndirectLight = IndirectLight::Builder()
             .reflections(mTexture)
             .irradiance(3, mBands)
-            .intensity(30000.0f)
+            .intensity(IBL_INTENSITY)
             .build(mEngine);
 
     mSkybox = Skybox::Builder().environment(mSkyboxTexture).showSun(true).build(mEngine);
