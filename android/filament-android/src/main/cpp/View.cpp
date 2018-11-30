@@ -119,7 +119,7 @@ extern "C" JNIEXPORT jint JNICALL
 Java_com_google_android_filament_View_nGetAntiAliasing(JNIEnv*, jclass,
         jlong nativeView) {
     View* view = (View*) nativeView;
-    return (jint)view->getAntiAliasing();
+    return (jint) view->getAntiAliasing();
 }
 
 extern "C" JNIEXPORT void JNICALL
@@ -134,21 +134,31 @@ Java_com_google_android_filament_View_nSetDynamicResolutionOptions(JNIEnv*,
     options.targetFrameTimeMilli = targetFrameTimeMilli;
     options.headRoomRatio = headRoomRatio;
     options.scaleRate = scaleRate;
-    options.minScale = math::float2{ minScale };
-    options.maxScale = math::float2{ maxScale };
-    options.history = (uint8_t)history;
-    return view->setDynamicResolutionOptions(options);
+    options.minScale = math::float2{minScale};
+    options.maxScale = math::float2{maxScale};
+    options.history = (uint8_t) history;
+    view->setDynamicResolutionOptions(options);
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_google_android_filament_View_nSetRenderQuality(JNIEnv*, jclass,
+        jlong nativeView, jint hdrColorBufferQuality) {
+    View* view = (View*) nativeView;
+    View::RenderQuality renderQuality;
+    renderQuality.hdrColorBuffer = View::QualityLevel(hdrColorBufferQuality);
+    view->setRenderQuality(renderQuality);
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_View_nSetDynamicLightingOptions(JNIEnv *env,
+Java_com_google_android_filament_View_nSetDynamicLightingOptions(JNIEnv*,
         jclass, jlong nativeView, jfloat zLightNear, jfloat zLightFar) {
     View* view = (View*) nativeView;
     view->setDynamicLightingOptions(zLightNear, zLightFar);
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_View_nSetDepthPrepass(JNIEnv *env,
+Java_com_google_android_filament_View_nSetDepthPrepass(JNIEnv*,
         jclass, jlong nativeView, jint value) {
     View* view = (View*) nativeView;
     view->setDepthPrepass(View::DepthPrepass(value));
@@ -165,5 +175,5 @@ extern "C" JNIEXPORT jboolean JNICALL
 Java_com_google_android_filament_View_nIsPostProcessingEnabled(JNIEnv*,
         jclass, jlong nativeView) {
     View* view = (View*) nativeView;
-    return view->isPostProcessingEnabled();
+    return static_cast<jboolean>(view->isPostProcessingEnabled());
 }

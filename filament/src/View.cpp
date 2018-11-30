@@ -847,6 +847,14 @@ View::DynamicResolutionOptions View::getDynamicResolutionOptions() const noexcep
     return upcast(this)->getDynamicResolutionOptions();
 }
 
+void View::setRenderQuality(const RenderQuality& renderQuality) noexcept {
+    upcast(this)->setRenderQuality(renderQuality);
+}
+
+View::RenderQuality View::getRenderQuality() const noexcept {
+    return upcast(this)->getRenderQuality();
+}
+
 void View::setPostProcessingEnabled(bool enabled) noexcept {
     upcast(this)->setPostProcessingEnabled(enabled);
 }
