@@ -180,6 +180,14 @@ public:
         return mDynamicResolution;
     }
 
+    void setRenderQuality(RenderQuality const& renderQuality) noexcept {
+        mRenderQuality = renderQuality;
+    }
+
+    RenderQuality getRenderQuality() const noexcept {
+        return mRenderQuality;
+    }
+
     void setDynamicLightingOptions(float zLightNear, float zLightFar) noexcept;
 
     void setPostProcessingEnabled(bool enabled) noexcept {
@@ -278,6 +286,8 @@ private:
     math::float2 mScale = 1.0f;
     float mDynamicWorkloadScale = 1.0f;
     bool mIsDynamicResolutionSupported = false;
+
+    RenderQuality mRenderQuality;
 
     mutable UniformBuffer mPerViewUb;
     mutable SamplerBuffer mPerViewSb;

@@ -30,6 +30,7 @@ public class View {
     private Camera mCamera;
     private Viewport mViewport = new Viewport(0, 0, 0, 0);
     private DynamicResolutionOptions mDynamicResolution;
+    private RenderQuality mRenderQuality;
     private DepthPrepass mDepthPrepass = DepthPrepass.DEFAULT;
 
     public static class DynamicResolutionOptions {
@@ -41,7 +42,18 @@ public class View {
         public float minScale = 0.5f;
         public float maxScale = 1.0f;
         public int history = 9;
-    };
+    }
+
+    public enum QualityLevel {
+        LOW,
+        MEDIUM,
+        HIGH,
+        ULTRA
+    }
+
+    public static class RenderQuality {
+        public QualityLevel hdrColorBuffer = QualityLevel.HIGH;
+    }
 
     public enum AntiAliasing {
         NONE,
@@ -169,13 +181,26 @@ public class View {
         return mDynamicResolution;
     }
 
+    public void setRenderQuality(@NonNull RenderQuality renderQuality) {
+        mRenderQuality = renderQuality;
+        nSetRenderQuality(getNativeObject(), renderQuality.hdrColorBuffer.ordinal());
+    }
+
+    @NonNull
+    public RenderQuality getRenderQuality() {
+        if (mRenderQuality == null) {
+            mRenderQuality = new RenderQuality();
+        }
+        return mRenderQuality;
+    }
+
     @NonNull
     public DepthPrepass getDepthPrepass() {
         return mDepthPrepass;
     }
 
     public void setDepthPrepass(@NonNull DepthPrepass depthPrepass) {
-        mDepthPrepass = mDepthPrepass;
+        mDepthPrepass = depthPrepass;
         nSetDepthPrepass(getNativeObject(), depthPrepass.value);
     }
 
@@ -228,6 +253,7 @@ public class View {
             boolean enabled, boolean homogeneousScaling,
             float targetFrameTimeMilli, float headRoomRatio, float scaleRate,
             float minScale, float maxScale, int history);
+    private static native void nSetRenderQuality(long nativeView, int hdrColorBufferQuality);
     private static native void nSetDynamicLightingOptions(long nativeView, float zLightNear, float zLightFar);
     private static native void nSetDepthPrepass(long nativeView, int value);
     private static native void nSetPostProcessingEnabled(long nativeView, boolean enabled);
