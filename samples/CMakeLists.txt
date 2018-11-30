@@ -101,7 +101,7 @@ endif()
 # Common library
 # ==================================================================================================
 
-set(APP_LIBS filament sdl2 stb math filamat utils getopt imgui filagui)
+set(APP_LIBS filament sdl2 stb math filamat utils getopt imgui filagui image)
 if (WIN32)
     list(APPEND APP_LIBS sdl2main)
 endif()
@@ -186,7 +186,7 @@ if (NOT ANDROID)
     add_filamesh_demo(sample_normal_map)
 
     # Sample app specific
-    target_link_libraries(frame_generator PRIVATE image imageio)
+    target_link_libraries(frame_generator PRIVATE imageio)
 endif()
 
 # ==================================================================================================
