@@ -50,7 +50,7 @@ struct App {
 };
 
 static const char* MODEL_FILE = "assets/models/monkey/monkey.obj";
-static const char* IBL_FOLDER = "envs/office";
+static const char* IBL_FOLDER = "envs/pillars";
 
 static constexpr bool ENABLE_SHADOWS = true;
 
