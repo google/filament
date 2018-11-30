@@ -17,18 +17,130 @@
 #ifndef IMAGE_KTXUTILITY_H
 #define IMAGE_KTXUTILITY_H
 
-#include <filament/driver/DriverEnums.h>
+#include <filament/Engine.h>
+#include <filament/Texture.h>
 
 #include <image/KtxBundle.h>
 
 namespace image {
 
+/**
+ * KtxUtility allows clients to create Filament textures from KtxBundle objects.
+ *
+ * Note that libimage does not have a dependency on libfilament, so for simplicity this is a
+ * header-only library with inlined functions.
+ */
 namespace KtxUtility {
 
-    using TextureFormat = filament::driver::TextureFormat;
-    using CompressedPixelDataType = filament::driver::CompressedPixelDataType;
-    using PixelDataType = filament::driver::PixelDataType;
-    using PixelDataFormat = filament::driver::PixelDataFormat;
+    using Texture = filament::Texture;
+    using Engine = filament::Engine;
+
+    using TextureFormat = Texture::InternalFormat;
+    using CompressedPixelDataType = Texture::CompressedType;
+    using PixelDataType = Texture::Type;
+    using PixelDataFormat = Texture::Format;
+    using PixelBufferDescriptor = Texture::PixelBufferDescriptor;
+
+    using Callback = void(*)(void* userdata);
+
+    CompressedPixelDataType toCompressedPixelDataType(const KtxInfo& info);
+    PixelDataType toPixelDataType(const KtxInfo& info);
+    PixelDataFormat toPixelDataFormat(const KtxInfo& info, bool rgbm);
+    bool isCompressed(const KtxInfo& info);
+    TextureFormat toTextureFormat(const KtxInfo& info);
+
+    /**
+     * Creates a Texture object from a KTX file and populates all of its faces and miplevels.
+     *
+     * @param engine Used to create the Filament Texture
+     * @param ktx In-memory representation of a KTX file
+     * @param srgb Forces the KTX-specified format into an SRGB format if possible
+     * @param rgbm Interpret alpha as an HDR multiplier
+     * @param callback Gets called after all texture data has been uploaded to the GPU
+     * @param userdata Passed into the callback
+     */
+    inline Texture* createTexture(Engine* engine, const KtxBundle& ktx, bool srgb, bool rgbm,
+            Callback callback, void* userdata) {
+        using Sampler = Texture::Sampler;
+        const auto& ktxinfo = ktx.getInfo();
+        const uint32_t nmips = ktx.getNumMipLevels();
+        const auto cdatatype = toCompressedPixelDataType(ktxinfo);
+        const auto datatype = toPixelDataType(ktxinfo);
+        const auto dataformat = toPixelDataFormat(ktxinfo, rgbm);
+
+        auto texformat = toTextureFormat(ktxinfo);
+        if (srgb) {
+            if (texformat == Texture::InternalFormat::RGB8) {
+                texformat = Texture::InternalFormat::SRGB8;
+            }
+            if (texformat == Texture::InternalFormat::RGBA8) {
+                texformat = Texture::InternalFormat::SRGB8_A8;
+            }
+        }
+
+        Texture* texture = Texture::Builder()
+            .width(ktxinfo.pixelWidth)
+            .height(ktxinfo.pixelHeight)
+            .levels(nmips)
+            .sampler(ktx.isCubemap() ? Sampler::SAMPLER_CUBEMAP : Sampler::SAMPLER_2D)
+            .rgbm(rgbm)
+            .format(texformat)
+            .build(*engine);
+
+        struct Userdata {
+            uint32_t remainingBuffers;
+            Callback callback;
+            void* userdata;
+        };
+
+        Userdata* cbuser = new Userdata({nmips, callback, userdata});
+
+        PixelBufferDescriptor::Callback cb = [](void*, size_t, void* cbuserptr) {
+            Userdata* cbuser = (Userdata*) cbuserptr;
+            if (--cbuser->remainingBuffers == 0) {
+                if (cbuser->callback) {
+                    cbuser->callback(cbuser->userdata);
+                }
+                delete cbuser;
+            }
+        };
+
+        uint8_t* data;
+        uint32_t size;
+
+        if (isCompressed(ktxinfo)) {
+            if (ktx.isCubemap()) {
+                for (uint32_t level = 0; level < nmips; ++level) {
+                    ktx.getBlob({level, 0, 0}, &data, &size);
+                    PixelBufferDescriptor pbd(data, size * 6, cdatatype, size, cb, cbuser);
+                    texture->setImage(*engine, level, std::move(pbd), Texture::FaceOffsets(size));
+                }
+                return texture;
+            }
+            for (uint32_t level = 0; level < nmips; ++level) {
+                ktx.getBlob({level, 0, 0}, &data, &size);
+                PixelBufferDescriptor pbd(data, size, cdatatype, size, cb, cbuser);
+                texture->setImage(*engine, level, std::move(pbd));
+            }
+            return texture;
+        }
+
+        if (ktx.isCubemap()) {
+            for (uint32_t level = 0; level < nmips; ++level) {
+                ktx.getBlob({level, 0, 0}, &data, &size);
+                PixelBufferDescriptor pbd(data, size * 6, dataformat, datatype, cb, cbuser);
+                texture->setImage(*engine, level, std::move(pbd), Texture::FaceOffsets(size));
+            }
+            return texture;
+        }
+
+        for (uint32_t level = 0; level < nmips; ++level) {
+            ktx.getBlob({level, 0, 0}, &data, &size);
+            PixelBufferDescriptor pbd(data, size, dataformat, datatype, cb, cbuser);
+            texture->setImage(*engine, level, std::move(pbd));
+        }
+        return texture;
+    }
 
     template<typename T>
     T toCompressedFilamentEnum(uint32_t format) {
@@ -79,11 +191,11 @@ namespace KtxUtility {
         return (T) 0xffff;
     }
 
-    CompressedPixelDataType toCompressedPixelDataType(const KtxInfo& info) {
+    inline CompressedPixelDataType toCompressedPixelDataType(const KtxInfo& info) {
         return toCompressedFilamentEnum<CompressedPixelDataType>(info.glInternalFormat);
     }
 
-    PixelDataType toPixelDataType(const KtxInfo& info) {
+    inline PixelDataType toPixelDataType(const KtxInfo& info) {
         switch (info.glType) {
             case KtxBundle::UNSIGNED_BYTE: return PixelDataType::UBYTE;
             case KtxBundle::UNSIGNED_SHORT: return PixelDataType::USHORT;
@@ -93,7 +205,7 @@ namespace KtxUtility {
         return (PixelDataType) 0xff;
     }
 
-    PixelDataFormat toPixelDataFormat(const KtxInfo& info, bool rgbm = false) {
+    inline PixelDataFormat toPixelDataFormat(const KtxInfo& info, bool rgbm) {
         switch (info.glTypeSize) {
             case 1: return PixelDataFormat::R;
             case 2: return PixelDataFormat::RG;
@@ -103,11 +215,11 @@ namespace KtxUtility {
         return (PixelDataFormat) 0xff;
     }
 
-    bool isCompressed(const KtxInfo& info) {
+    inline bool isCompressed(const KtxInfo& info) {
         return info.glFormat == 0;
     }
 
-    TextureFormat toTextureFormat(const KtxInfo& info) {
+    inline TextureFormat toTextureFormat(const KtxInfo& info) {
         switch (info.glInternalFormat) {
             case KtxBundle::RED: return TextureFormat::R8;
             case KtxBundle::RG: return TextureFormat::RG8;

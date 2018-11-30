@@ -239,60 +239,10 @@ Filament.loadMathExtensions = function() {
 
 Filament._createTextureFromKtx = function(ktxdata, engine, options) {
     options = options || {};
-
-    const Sampler = Filament.Texture$Sampler;
     const ktx = options['ktx'] || new Filament.KtxBundle(ktxdata);
-    const nlevels = ktx.getNumMipLevels();
     const rgbm = !!options['rgbm'];
     const srgb = !!options['srgb'];
-
-    var texformat = ktx.getInternalFormat(srgb);
-    var pbformat = ktx.getPixelDataFormat(rgbm);
-    var cdatatype = ktx.getCompressedPixelDataType();
-    var datatype = ktx.getPixelDataType();
-
-    const tex = Filament.Texture.Builder()
-        .width(ktx.info().pixelWidth)
-        .height(ktx.info().pixelHeight)
-        .levels(nlevels)
-        .sampler(ktx.isCubemap() ? Sampler.SAMPLER_CUBEMAP : Sampler.SAMPLER_2D)
-        .format(texformat)
-        .rgbm(rgbm)
-        .build(engine);
-
-    if (ktx.isCompressed()) {
-        if (ktx.isCubemap()) {
-            for (var level = 0; level < nlevels; level++) {
-                const uint8array = ktx.getCubeBlob(level);
-                const facesize = uint8array.length / 6;
-                const pixelbuffer = Filament.CompressedPixelBuffer(uint8array, cdatatype, facesize);
-                tex.setImageCube(engine, level, pixelbuffer);
-            }
-            return tex;
-        }
-        for (var level = 0; level < nlevels; level++) {
-            const uint8array = ktx.getBlob([level, 0, 0]);
-            const pixelbuffer = Filament.CompressedPixelBuffer(uint8array, cdatatype);
-            tex.setImage(engine, level, pixelbuffer);
-        }
-        return tex;
-    }
-
-    if (ktx.isCubemap()) {
-        for (var level = 0; level < nlevels; level++) {
-            const uint8array = ktx.getCubeBlob(level);
-            const pixelbuffer = Filament.PixelBuffer(uint8array, pbformat, datatype);
-            tex.setImageCube(engine, level, pixelbuffer);
-        }
-    } else {
-        for (var level = 0; level < nlevels; level++) {
-            const uint8array = ktx.getBlob([level, 0, 0]);
-            const pixelbuffer = Filament.PixelBuffer(uint8array, pbformat, datatype);
-            tex.setImage(engine, level, pixelbuffer);
-        }
-    }
-
-    return tex;
+    return Filament.KtxUtility$createTexture(engine, ktx, srgb, rgbm);
 };
 
 Filament._createIblFromKtx = function(ktxdata, engine, options) {

@@ -648,13 +648,7 @@ class_<Texture>("Texture")
     .function("_setImageCube", EMBIND_LAMBDA(void, (Texture* self,
             Engine* engine, uint8_t level, PixelBufferDescriptor pbd), {
         uint32_t faceSize = pbd.pbd->size / 6;
-        Texture::FaceOffsets offsets;
-        offsets.px = faceSize * 0;
-        offsets.nx = faceSize * 1;
-        offsets.py = faceSize * 2;
-        offsets.ny = faceSize * 3;
-        offsets.pz = faceSize * 4;
-        offsets.nz = faceSize * 5;
+        Texture::FaceOffsets offsets(faceSize);
         self->setImage(*engine, level, std::move(*pbd.pbd), offsets);
     }), allow_raw_pointers());
 
@@ -805,7 +799,7 @@ class_<KtxBundle>("KtxBundle")
     /// Returns "undefined" if no valid Filament enumerant exists.
     .function("getPixelDataFormat",
             EMBIND_LAMBDA(driver::PixelDataFormat, (KtxBundle* self, bool rgbm), {
-        return KtxUtility::toPixelDataFormat(self->getInfo());
+        return KtxUtility::toPixelDataFormat(self->getInfo(), rgbm);
     }), allow_raw_pointers())
 
     /// getPixelDataType ::method::
@@ -856,6 +850,11 @@ class_<KtxBundle>("KtxBundle")
     .function("getMetadata", EMBIND_LAMBDA(std::string, (KtxBundle* self, std::string key), {
         return std::string(self->getMetadata(key.c_str()));
     }), allow_raw_pointers());
+
+function("KtxUtility$createTexture", EMBIND_LAMBDA(Texture*,
+        (Engine* engine, const KtxBundle& ktx, bool srgb, bool rgbm), {
+    return KtxUtility::createTexture(engine, ktx, srgb, rgbm, nullptr, nullptr);
+}), allow_raw_pointers());
 
 /// KtxInfo ::class:: Property accessor for KTX header.
 /// For example, `ktxbundle.info().pixelWidth`. See the
