@@ -181,13 +181,9 @@ if (NOT ANDROID)
     add_assimp_demo(lightbulb)
     add_assimp_demo(material_sandbox)
     add_assimp_demo(sample_full_pbr)
-    add_assimp_demo(sample_pbr)
-    add_assimp_demo(sample_position_offset)
 
     add_filamesh_demo(sample_cloth)
-    add_filamesh_demo(sample_subsurface)
     add_filamesh_demo(sample_normal_map)
-    add_filamesh_demo(sample_opacity_mask)
 
     # Sample app specific
     target_link_libraries(frame_generator PRIVATE image imageio)
