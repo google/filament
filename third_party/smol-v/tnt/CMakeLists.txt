@@ -13,7 +13,7 @@ set(SRCS
 add_library(${TARGET} STATIC ${SRCS})
 
 target_compile_options(${TARGET} PRIVATE
-        -Wtautological-unsigned-enum-zero-compare
+        -Wno-tautological-unsigned-enum-zero-compare
         $<$<PLATFORM_ID:Linux>:-fPIC>
 )
 
