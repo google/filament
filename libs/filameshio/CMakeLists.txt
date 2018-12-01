@@ -7,7 +7,11 @@ set(PUBLIC_HDR_DIR include)
 # ==================================================================================================
 # Sources and headers
 # ==================================================================================================
-set(PUBLIC_HDRS ${PUBLIC_HDR_DIR}/${TARGET}/MeshIO.h)
+set(PUBLIC_HDRS
+    ${PUBLIC_HDR_DIR}/${TARGET}/filamesh.h
+    ${PUBLIC_HDR_DIR}/${TARGET}/MeshIO.h
+)
+
 set(DIST_HDRS ${PUBLIC_HDR_DIR}/${TARGET}/MeshIO.h)
 set(SRCS src/MeshIO.cpp)
 

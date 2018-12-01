@@ -49,6 +49,11 @@ public:
         return *this;
     }
 
+    Box& unionSelf(const Box& box) noexcept {
+        set(std::min(getMin(), box.getMin()), std::max(getMax(), box.getMax()));
+        return *this;
+    }
+
     constexpr Box translateTo(const math::float3& tr) const noexcept {
         return Box{ tr, halfExtent };
     }

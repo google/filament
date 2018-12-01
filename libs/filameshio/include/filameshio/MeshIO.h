@@ -69,7 +69,7 @@ public:
             const MaterialRegistry& materials);
 
     /**
-     * Loads a filamesh renderable from the specified file. The material registry
+     * Loads a filamesh renderable from an in-memory buffer. The material registry
      * can be used to provide named materials. All the primitives of the decoded
      * renderable are assigned the specified default material.
      */
