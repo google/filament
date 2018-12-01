@@ -4,21 +4,19 @@ project(filamesh)
 set(TARGET filamesh)
 
 # ==================================================================================================
-# Sources and headers
+# Sources
 # ==================================================================================================
-file(GLOB_RECURSE HDRS src/*.h)
-
 set(SRCS src/main.cpp)
 
 # ==================================================================================================
 # Target definitions
 # ==================================================================================================
-add_executable(${TARGET} ${HDRS} ${SRCS})
+add_executable(${TARGET} ${SRCS})
 
 target_link_libraries(${TARGET} PUBLIC math)
 target_link_libraries(${TARGET} PUBLIC utils)
 target_link_libraries(${TARGET} PUBLIC assimp)
-target_link_libraries(${TARGET} PRIVATE getopt)
+target_link_libraries(${TARGET} PRIVATE getopt filameshio)
 
 # ==================================================================================================
 # Compile options and optimizations

@@ -57,7 +57,7 @@ struct Header {
     uint32_t version;
     uint32_t parts;
     Box      aabb;
-    uint32_t interleaved;
+    uint32_t flags;
     uint32_t offsetPosition;
     uint32_t stridePosition;
     uint32_t offsetTangents;

@@ -29,7 +29,7 @@ Note: the UV1 attribute cannot be used in interleaved mode
     uint32  : number of parts (sub-meshes or draw calls)
     float3  : center of the total bounding box (AABB)
     float3  : half extent of the total bounding box (AABB)
-    uint32  : 0 if the vertices are not interleaved, 1 otherwise
+    uint32  : flags (interleaved)
     uint32  : offset of the position attribute
     uint32  : stride of the position attribute
     uint32  : offset of the tangents attribute
@@ -97,7 +97,7 @@ struct Header {
     uint32_t version;
     uint32_t parts;
     Box      aabb;
-    uint32_t interleaved;
+    uint32_t flags;
     uint32_t offsetPosition;
     uint32_t stridePosition;
     uint32_t offsetTangents;

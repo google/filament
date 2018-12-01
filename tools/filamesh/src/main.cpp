@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-
 #include <fstream>
 #include <iostream>
 
@@ -26,11 +25,12 @@
 
 #include <utils/Path.h>
 
+#include <filameshio/filamesh.h>
+
 #include <getopt/getopt.h>
 
-#include "Box.h"
-
 using namespace math;
+using namespace filamesh;
 using namespace utils;
 
 #include <assimp/Importer.hpp>
@@ -38,64 +38,8 @@ using namespace utils;
 #include <assimp/cimport.h>
 #include <assimp/scene.h>
 
-static const uint32_t VERSION = 1;
-
 using Assimp::Importer;
-
-struct Header {
-    uint32_t version;
-    uint32_t parts;
-    Box      aabb;
-    uint32_t interleaved;
-    uint32_t offsetPosition;
-    uint32_t stridePosition;
-    uint32_t offsetTangents;
-    uint32_t strideTangents;
-    uint32_t offsetColor;
-    uint32_t strideColor;
-    uint32_t offsetUV0;
-    uint32_t strideUV0;
-    uint32_t offsetUV1;
-    uint32_t strideUV1;
-    uint32_t vertexCount;
-    uint32_t vertexSize;
-    uint32_t indexType;
-    uint32_t indexCount;
-    uint32_t indexSize;
-};
-
-struct Vertex {
-    Vertex(const float3& position, const quatf& tangents, const float4& color, const float3& uv0):
-            position(position, 1.0_h),
-            tangents(packSnorm16(tangents.xyzw)),
-            color(clamp(color, 0.0f, 1.0f) * 255.0f),
-            uv0(uv0.xy) {
-    }
-
-    half4  position;
-    short4 tangents;
-    ubyte4 color;
-    half2  uv0;
-};
-
-struct Mesh {
-    Mesh(uint32_t offset, uint32_t count, uint32_t minIndex, uint32_t maxIndex,
-            uint32_t material, const Box& aabb):
-            offset(offset),
-            count(count),
-            minIndex(minIndex),
-            maxIndex(maxIndex),
-            material(material),
-            aabb(aabb) {
-    }
-
-    uint32_t offset;
-    uint32_t count;
-    uint32_t minIndex;
-    uint32_t maxIndex;
-    uint32_t material;
-    Box aabb;
-};
+using filament::Box;
 
 // configuration
 bool g_interleaved = false;
@@ -372,7 +316,8 @@ int main(int argc, char* argv[]) {
     header.version = VERSION;
     header.parts = uint32_t(meshes.size());
     header.aabb = aabb;
-    header.interleaved = uint32_t(g_interleaved ? 1 : 0);
+    header.flags = 0;
+    header.flags |= g_interleaved ? INTERLEAVED : 0;
     if (g_interleaved) {
         header.offsetPosition = offsetof(Vertex, position);
         header.offsetTangents = offsetof(Vertex, tangents);
