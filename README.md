@@ -51,7 +51,7 @@ Here are a few sample materials rendered with Filament:
 
 ### APIs
 
-- Native C++ API for Android, Linux, macOS and Windows
+- Native C++ API for Android, iOS, Linux, macOS and Windows
 - Java/JNI API for Android, Linux, macOS and Windows
 - JavaScript API
 
