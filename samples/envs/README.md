@@ -1,6 +1,13 @@
+# Sample environment maps
+
 The contents of this folder were built using cmgen as follows:
 
+```
 export CMGEN=../../out/cmake-release/tools/cmgen/cmgen
 $CMGEN -x . --format=ktx --size=256 --extract-blur=0.1 ../../assets/environments/white_furnace/white_furnace.exr
 $CMGEN -x . --format=ktx --size=256 --extract-blur=0.1 ../../third_party/environments/venetian_crossroads_2k.hdr
 $CMGEN -x . --format=ktx --size=256 --extract-blur=0.1 ../../third_party/environments/pillars_2k.hdr
+$CMGEN -x . --format=ktx --size=256 uv2
+$CMGEN -x . --format=ktx --size=256 uv8
+$CMGEN -x . --format=ktx --size=256 uv128
+```
