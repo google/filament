@@ -63,7 +63,11 @@ using namespace math;
 using namespace utils;
 
 
-enum class AlphaMode {OPAQUE, MASKED, TRANSPARENT};
+enum class AlphaMode : uint8_t {
+    OPAQUE,
+    MASKED,
+    TRANSPARENT
+};
 
 struct MaterialConfig {
     bool doubleSided = false;
@@ -81,9 +85,7 @@ struct MaterialConfig {
 
 void appendBooleanToBitMask(uint64_t &bitmask, bool b) {
     bitmask <<= 1;
-    if (b) {
-        bitmask |= 0x1;
-    }
+    bitmask |= b;
 }
 
 uint64_t hashMaterialConfig(MaterialConfig config) {
