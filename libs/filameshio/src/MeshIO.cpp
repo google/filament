@@ -33,6 +33,8 @@
 #include <math/vec2.h>
 #include <math/vec4.h>
 
+#include <filameshio/filamesh.h>
+
 #include <filament/Box.h>
 #include <filament/Engine.h>
 #include <filament/Fence.h>
@@ -42,6 +44,7 @@
 #include <filament/Scene.h>
 
 using namespace filament;
+using namespace filamesh;
 using namespace math;
 
 #define DEFAULT_MATERIAL "DefaultMaterial"
@@ -52,44 +55,6 @@ static size_t fileSize(int fd) {
     lseek(fd, 0, SEEK_SET);
     return filesize;
 }
-
-struct Header {
-    uint32_t version;
-    uint32_t parts;
-    Box      aabb;
-    uint32_t interleaved;
-    uint32_t offsetPosition;
-    uint32_t stridePosition;
-    uint32_t offsetTangents;
-    uint32_t strideTangents;
-    uint32_t offsetColor;
-    uint32_t strideColor;
-    uint32_t offsetUV0;
-    uint32_t strideUV0;
-    uint32_t offsetUV1;
-    uint32_t strideUV1;
-    uint32_t vertexCount;
-    uint32_t vertexSize;
-    uint32_t indexType;
-    uint32_t indexCount;
-    uint32_t indexSize;
-};
-
-struct Vertex {
-    half4  position;
-    short4 tangents;
-    ubyte4 color;
-    half2  uv0;
-};
-
-struct Part {
-    uint32_t offset;
-    uint32_t indexCount;
-    uint32_t minIndex;
-    uint32_t maxIndex;
-    uint32_t materialID;
-    Box      aabb;
-};
 
 MeshIO::Mesh MeshIO::loadMeshFromFile(filament::Engine* engine, const utils::Path& path,
         const MaterialRegistry& materials) {

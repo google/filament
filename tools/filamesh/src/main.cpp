@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-
 #include <fstream>
 #include <iostream>
 
@@ -26,10 +25,11 @@
 
 #include <utils/Path.h>
 
+#include <filameshio/filamesh.h>
+
 #include <getopt/getopt.h>
 
-#include "Box.h"
-
+using namespace filamesh;
 using namespace math;
 using namespace utils;
 
@@ -38,31 +38,10 @@ using namespace utils;
 #include <assimp/cimport.h>
 #include <assimp/scene.h>
 
-static const uint32_t VERSION = 1;
-
 using Assimp::Importer;
 
-struct Header {
-    uint32_t version;
-    uint32_t parts;
-    Box      aabb;
-    uint32_t interleaved;
-    uint32_t offsetPosition;
-    uint32_t stridePosition;
-    uint32_t offsetTangents;
-    uint32_t strideTangents;
-    uint32_t offsetColor;
-    uint32_t strideColor;
-    uint32_t offsetUV0;
-    uint32_t strideUV0;
-    uint32_t offsetUV1;
-    uint32_t strideUV1;
-    uint32_t vertexCount;
-    uint32_t vertexSize;
-    uint32_t indexType;
-    uint32_t indexCount;
-    uint32_t indexSize;
-};
+// configuration
+bool g_interleaved = false;
 
 struct Vertex {
     Vertex(const float3& position, const quatf& tangents, const float4& color, const float3& uv0):
@@ -77,28 +56,6 @@ struct Vertex {
     ubyte4 color;
     half2  uv0;
 };
-
-struct Mesh {
-    Mesh(uint32_t offset, uint32_t count, uint32_t minIndex, uint32_t maxIndex,
-            uint32_t material, const Box& aabb):
-            offset(offset),
-            count(count),
-            minIndex(minIndex),
-            maxIndex(maxIndex),
-            material(material),
-            aabb(aabb) {
-    }
-
-    uint32_t offset;
-    uint32_t count;
-    uint32_t minIndex;
-    uint32_t maxIndex;
-    uint32_t material;
-    Box aabb;
-};
-
-// configuration
-bool g_interleaved = false;
 
 uint32_t g_vertexCount = 0;
 std::vector<uint32_t> g_indices;
@@ -137,7 +94,7 @@ static Box computeAABB(VECTOR const* positions, INDEX const* indices,
 }
 
 template<bool INTERLEAVED>
-void processNode(const aiScene* scene, const aiNode* node, std::vector<Mesh>& meshes) {
+void processNode(const aiScene* scene, const aiNode* node, std::vector<Part>& meshes) {
     for (size_t i = 0; i < node->mNumMeshes; ++i) {
         const aiMesh* mesh = scene->mMeshes[node->mMeshes[i]];
         if (!mesh->HasNormals() || !mesh->HasTextureCoords(0)) {
@@ -168,7 +125,7 @@ void processNode(const aiScene* scene, const aiNode* node, std::vector<Mesh>& me
             const size_t numFaces = mesh->mNumFaces;
 
             if (numFaces > 0) {
-                size_t indicesOffset = g_vertexCount;
+                uint32_t indicesOffset = g_vertexCount;
                 g_vertexCount += numVertices;
                 if (INTERLEAVED) {
                     g_vertices.reserve(g_vertexCount);
@@ -198,8 +155,8 @@ void processNode(const aiScene* scene, const aiNode* node, std::vector<Mesh>& me
                 }
 
                 // all faces should be triangles since we configure assimp to triangulate faces
-                size_t indicesCount = numFaces * faces[0].mNumIndices;
-                size_t indexBufferOffset = g_indices.size();
+                uint32_t indicesCount = numFaces * faces[0].mNumIndices;
+                uint32_t indexBufferOffset = g_indices.size();
                 g_indices.reserve(g_indices.size() + indicesCount);
 
                 for (size_t j = 0; j < numFaces; ++j) {
@@ -215,8 +172,14 @@ void processNode(const aiScene* scene, const aiNode* node, std::vector<Mesh>& me
                 const Box aabb(computeAABB(positions,
                         g_indices.data() + indexBufferOffset, indicesCount, stride));
 
-                meshes.emplace_back(indexBufferOffset, indicesCount, indicesOffset,
-                        indicesOffset + indicesCount - 1, mesh->mMaterialIndex, aabb);
+                meshes.emplace_back(Part {
+                    .offset = indexBufferOffset,
+                    .indexCount = indicesCount,
+                    .minIndex = indicesOffset,
+                    .maxIndex = (indicesOffset + indicesCount - 1),
+                    .material = mesh->mMaterialIndex,
+                    .aabb = aabb
+                });
             }
         }
     }
@@ -334,7 +297,7 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    std::vector<Mesh> meshes;
+    std::vector<Part> meshes;
 
     const aiNode* node = scene->mRootNode;
 
@@ -372,7 +335,8 @@ int main(int argc, char* argv[]) {
     header.version = VERSION;
     header.parts = uint32_t(meshes.size());
     header.aabb = aabb;
-    header.interleaved = uint32_t(g_interleaved ? 1 : 0);
+    header.flags = 0;
+    header.flags |= g_interleaved ? INTERLEAVED : 0;
     if (g_interleaved) {
         header.offsetPosition = offsetof(Vertex, position);
         header.offsetTangents = offsetof(Vertex, tangents);
