@@ -63,47 +63,48 @@ using namespace math;
 using namespace utils;
 
 
-enum alphaMode {opaque, masked, transparent};
+enum AlphaMode {OPAQUE, MASKED, TRANSPARENT};
 
-struct materialConfig {
+struct MaterialConfig {
     bool doubleSided = false;
     bool unlit = false;
     bool hasVertexColors;
-    alphaMode alphaMode = opaque;
+    AlphaMode alphaMode = OPAQUE;
     float maskThreshold = 0.5f;
-    int numUVs = 1;
-    unsigned int baseColorUV = 0;
-    unsigned int metallicRoughnessUV = 0;
-    unsigned int emissiveUV = 0;
-    unsigned int aoUV = 0;
-    unsigned int normalUV = 0;
+    uint8_t numUVs = 1;
+    uint8_t baseColorUV = 0;
+    uint8_t metallicRoughnessUV = 0;
+    uint8_t emissiveUV = 0;
+    uint8_t aoUV = 0;
+    uint8_t normalUV = 0;
 };
 
-void appendBooleanToBitMask(uint64_t *bitmask, bool b){
-    *bitmask <<= 1;
+void appendBooleanToBitMask(uint64_t &bitmask, bool b) {
+    bitmask <<= 1;
     if (b){
-        *bitmask += 1;
+        bitmask |= 0x1;
     }
 }
 
-std::string hashMaterialConfig(materialConfig config){
+uint64_t hashMaterialConfig(MaterialConfig config){
     uint64_t bitmask = 0;
-    appendBooleanToBitMask(&bitmask, config.doubleSided);
-    appendBooleanToBitMask(&bitmask, config.unlit);
-    appendBooleanToBitMask(&bitmask, config.hasVertexColors);
-    appendBooleanToBitMask(&bitmask, config.alphaMode == opaque);
-    appendBooleanToBitMask(&bitmask, config.alphaMode == masked);
-    appendBooleanToBitMask(&bitmask, config.alphaMode == transparent);
-    appendBooleanToBitMask(&bitmask, config.numUVs == 1);
-    appendBooleanToBitMask(&bitmask, config.baseColorUV == 0);
-    appendBooleanToBitMask(&bitmask, config.metallicRoughnessUV == 0);
-    appendBooleanToBitMask(&bitmask, config.emissiveUV == 0);
-    appendBooleanToBitMask(&bitmask, config.aoUV == 0);
-    appendBooleanToBitMask(&bitmask, config.normalUV == 0);
-    return std::to_string(bitmask) + "_" + std::to_string(config.maskThreshold);
+    memcpy(&config.maskThreshold, &bitmask, sizeof(config.maskThreshold));
+    appendBooleanToBitMask(bitmask, config.doubleSided);
+    appendBooleanToBitMask(bitmask, config.unlit);
+    appendBooleanToBitMask(bitmask, config.hasVertexColors);
+    appendBooleanToBitMask(bitmask, config.alphaMode == OPAQUE);
+    appendBooleanToBitMask(bitmask, config.alphaMode == MASKED);
+    appendBooleanToBitMask(bitmask, config.alphaMode == TRANSPARENT);
+    appendBooleanToBitMask(bitmask, config.numUVs == 1);
+    appendBooleanToBitMask(bitmask, config.baseColorUV == 0);
+    appendBooleanToBitMask(bitmask, config.metallicRoughnessUV == 0);
+    appendBooleanToBitMask(bitmask, config.emissiveUV == 0);
+    appendBooleanToBitMask(bitmask, config.aoUV == 0);
+    appendBooleanToBitMask(bitmask, config.normalUV == 0);
+    return bitmask;
 }
 
-std::string shaderFromConfig(materialConfig config){
+std::string shaderFromConfig(MaterialConfig config){
     std::string shader = R"SHADER(
         void material(inout MaterialInputs material) {
     )SHADER";
@@ -121,7 +122,7 @@ std::string shaderFromConfig(materialConfig config){
         material.baseColor.rgb *= materialParams.baseColorFactor.xyz;
     )SHADER";
 
-    if (config.alphaMode == transparent){
+    if (config.alphaMode == TRANSPARENT){
         shader += R"SHADER(
             material.baseColor.rgb *= material.baseColor.a;
         )SHADER";
@@ -141,7 +142,7 @@ std::string shaderFromConfig(materialConfig config){
     return shader;
 }
 
-Material* createMaterialFromConfig(Engine& engine, materialConfig config){
+Material* createMaterialFromConfig(Engine& engine, MaterialConfig config){
     std::string shader = shaderFromConfig(config);
     MaterialBuilder builder = MaterialBuilder()
             .name("material")
@@ -161,19 +162,15 @@ Material* createMaterialFromConfig(Engine& engine, materialConfig config){
             .parameter(MaterialBuilder::UniformType::FLOAT3, "emissiveFactor");
 
     switch(config.alphaMode) {
-        case masked      : builder.blending(MaterialBuilder::BlendingMode::MASKED);
-                           builder.maskThreshold(config.maskThreshold);
-                           break;
-        case transparent : builder.blending(MaterialBuilder::BlendingMode::TRANSPARENT);
-                           break;
+        case MASKED : builder.blending(MaterialBuilder::BlendingMode::MASKED);
+            builder.maskThreshold(config.maskThreshold);
+            break;
+        case TRANSPARENT : builder.blending(MaterialBuilder::BlendingMode::TRANSPARENT);
+            break;
         default : builder.blending(MaterialBuilder::BlendingMode::OPAQUE);
     }
 
-    if (config.unlit) {
-        builder.shading(Shading::UNLIT);
-    } else {
-        builder.shading(Shading::LIT);
-    }
+    builder.shading(config.unlit ? Shading::UNLIT : Shading::LIT);
 
     Package pkg = builder.build();
     return Material::Builder().package(pkg.getData(), pkg.getSize()).build(engine);
@@ -867,7 +864,7 @@ void MeshAssimp::processGLTFMaterial(const aiScene* scene, const aiMaterial* mat
     aiString normalPath;
     aiString emissivePath;
     aiTextureMapMode mapMode[3];
-    materialConfig matConfig;
+    MaterialConfig matConfig;
 
     material->Get("$mat.twosided", 0, 0, matConfig.doubleSided);
     material->Get(AI_MATKEY_GLTF_UNLIT, matConfig.unlit);
@@ -875,18 +872,18 @@ void MeshAssimp::processGLTFMaterial(const aiScene* scene, const aiMaterial* mat
     aiString alphaMode;
     material->Get(AI_MATKEY_GLTF_ALPHAMODE, alphaMode);
     if (strcmp(alphaMode.C_Str(), "BLEND") == 0) {
-        matConfig.alphaMode = transparent;
+        matConfig.alphaMode = TRANSPARENT;
     } else if (strcmp(alphaMode.C_Str(), "MASK") == 0) {
-        matConfig.alphaMode = masked;
+        matConfig.alphaMode = MASKED;
     }
 
-    if (matConfig.alphaMode == masked){
+    if (matConfig.alphaMode == MASKED){
         float maskThreshold = 0.5;
         material->Get(AI_MATKEY_GLTF_ALPHACUTOFF, maskThreshold);
         matConfig.maskThreshold = maskThreshold;
     }
 
-    std::string configHash = hashMaterialConfig(matConfig);
+    uint64_t configHash = hashMaterialConfig(matConfig);
 
     if (mGltfMaterialCache.find(configHash) == mGltfMaterialCache.end()) {
         mGltfMaterialCache[configHash] = createMaterialFromConfig(mEngine, matConfig);

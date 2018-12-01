@@ -110,7 +110,7 @@ private:
     filament::Material* mDefaultColorMaterial = nullptr;
     filament::Material* mDefaultTransparentColorMaterial = nullptr;
 
-    mutable std::unordered_map<std::string, filament::Material*> mGltfMaterialCache;
+    mutable std::unordered_map<uint64_t, filament::Material*> mGltfMaterialCache;
     filament::Texture* mDefaultMap = nullptr;
     filament::Texture* mDefaultNormalMap = nullptr;
     float mDefaultMetallic = 0.0;
