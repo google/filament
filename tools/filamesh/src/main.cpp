@@ -367,7 +367,7 @@ int main(int argc, char* argv[]) {
     }
     header.vertexCount = g_vertexCount;
     header.vertexSize = g_vertexCount * sizeof(Vertex);
-    header.indexType = uint32_t(hasIndex16 ? 1 : 0);
+    header.indexType = uint32_t(hasIndex16 ? UI16 : UI32);
     header.indexCount = g_indices.size();
     header.indexSize = g_indices.size() * (hasIndex16 ? sizeof(uint16_t) : sizeof(uint32_t));
 

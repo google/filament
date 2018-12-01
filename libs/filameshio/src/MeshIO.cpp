@@ -69,13 +69,10 @@ MeshIO::Mesh MeshIO::loadMeshFromFile(filament::Engine* engine, const utils::Pat
 
     if (data) {
         char *p = data;
+        char *magic = p;
+        p += sizeof(MAGICID);
 
-        char magic[9];
-        memcpy(magic, (const char*) p, sizeof(char) * 8);
-        magic[8] = '\0';
-        p += sizeof(char) * 8;
-
-        if (!strcmp("FILAMESH", magic)) {
+        if (!strncmp(MAGICID, magic, 8)) {
             Header* header = (Header*) p;
             p += sizeof(Header);
 
@@ -176,7 +173,7 @@ MeshIO::Mesh MeshIO::loadMeshFromBuffer(filament::Engine* engine,
         void const* data, Callback destructor, void* user,
         const MaterialRegistry& materials) {
     const char* p = (const char *) data;
-    if (strncmp("FILAMESH", p, 8)) {
+    if (strncmp(MAGICID, p, 8)) {
         puts("Magic string not found.");
         abort();
     }
@@ -209,7 +206,7 @@ MeshIO::Mesh MeshIO::loadMeshFromBuffer(filament::Engine* engine,
 
     mesh.indexBuffer = IndexBuffer::Builder()
             .indexCount(header->indexCount)
-            .bufferType(header->indexType ? IndexBuffer::IndexType::USHORT
+            .bufferType(header->indexType == UI16 ? IndexBuffer::IndexType::USHORT
                     : IndexBuffer::IndexType::UINT)
             .build(*engine);
 

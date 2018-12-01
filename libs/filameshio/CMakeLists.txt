@@ -29,3 +29,9 @@ target_link_libraries(${TARGET} PUBLIC filament)
 set(INSTALL_TYPE ARCHIVE)
 install(TARGETS ${TARGET} ${INSTALL_TYPE} DESTINATION lib/${DIST_DIR})
 install(FILES ${DIST_HDRS} DESTINATION include/${TARGET})
+
+# ==================================================================================================
+# Tests
+# ==================================================================================================
+add_executable(test_${TARGET} tests/test_filamesh.cpp )
+target_link_libraries(test_${TARGET} PRIVATE filameshio gtest)
