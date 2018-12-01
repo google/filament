@@ -63,13 +63,13 @@ using namespace math;
 using namespace utils;
 
 
-enum AlphaMode {OPAQUE, MASKED, TRANSPARENT};
+enum class AlphaMode {OPAQUE, MASKED, TRANSPARENT};
 
 struct MaterialConfig {
     bool doubleSided = false;
     bool unlit = false;
     bool hasVertexColors;
-    AlphaMode alphaMode = OPAQUE;
+    AlphaMode alphaMode = AlphaMode::OPAQUE;
     float maskThreshold = 0.5f;
     uint8_t numUVs = 1;
     uint8_t baseColorUV = 0;
@@ -81,20 +81,20 @@ struct MaterialConfig {
 
 void appendBooleanToBitMask(uint64_t &bitmask, bool b) {
     bitmask <<= 1;
-    if (b){
+    if (b) {
         bitmask |= 0x1;
     }
 }
 
-uint64_t hashMaterialConfig(MaterialConfig config){
+uint64_t hashMaterialConfig(MaterialConfig config) {
     uint64_t bitmask = 0;
     memcpy(&config.maskThreshold, &bitmask, sizeof(config.maskThreshold));
     appendBooleanToBitMask(bitmask, config.doubleSided);
     appendBooleanToBitMask(bitmask, config.unlit);
     appendBooleanToBitMask(bitmask, config.hasVertexColors);
-    appendBooleanToBitMask(bitmask, config.alphaMode == OPAQUE);
-    appendBooleanToBitMask(bitmask, config.alphaMode == MASKED);
-    appendBooleanToBitMask(bitmask, config.alphaMode == TRANSPARENT);
+    appendBooleanToBitMask(bitmask, config.alphaMode == AlphaMode::OPAQUE);
+    appendBooleanToBitMask(bitmask, config.alphaMode == AlphaMode::MASKED);
+    appendBooleanToBitMask(bitmask, config.alphaMode == AlphaMode::TRANSPARENT);
     appendBooleanToBitMask(bitmask, config.numUVs == 1);
     appendBooleanToBitMask(bitmask, config.baseColorUV == 0);
     appendBooleanToBitMask(bitmask, config.metallicRoughnessUV == 0);
@@ -104,7 +104,7 @@ uint64_t hashMaterialConfig(MaterialConfig config){
     return bitmask;
 }
 
-std::string shaderFromConfig(MaterialConfig config){
+std::string shaderFromConfig(MaterialConfig config) {
     std::string shader = R"SHADER(
         void material(inout MaterialInputs material) {
     )SHADER";
@@ -122,7 +122,7 @@ std::string shaderFromConfig(MaterialConfig config){
         material.baseColor.rgb *= materialParams.baseColorFactor.xyz;
     )SHADER";
 
-    if (config.alphaMode == TRANSPARENT){
+    if (config.alphaMode == AlphaMode::TRANSPARENT) {
         shader += R"SHADER(
             material.baseColor.rgb *= material.baseColor.a;
         )SHADER";
@@ -142,7 +142,7 @@ std::string shaderFromConfig(MaterialConfig config){
     return shader;
 }
 
-Material* createMaterialFromConfig(Engine& engine, MaterialConfig config){
+Material* createMaterialFromConfig(Engine& engine, MaterialConfig config ) {
     std::string shader = shaderFromConfig(config);
     MaterialBuilder builder = MaterialBuilder()
             .name("material")
@@ -162,10 +162,10 @@ Material* createMaterialFromConfig(Engine& engine, MaterialConfig config){
             .parameter(MaterialBuilder::UniformType::FLOAT3, "emissiveFactor");
 
     switch(config.alphaMode) {
-        case MASKED : builder.blending(MaterialBuilder::BlendingMode::MASKED);
+        case AlphaMode::MASKED : builder.blending(MaterialBuilder::BlendingMode::MASKED);
             builder.maskThreshold(config.maskThreshold);
             break;
-        case TRANSPARENT : builder.blending(MaterialBuilder::BlendingMode::TRANSPARENT);
+        case AlphaMode::TRANSPARENT : builder.blending(MaterialBuilder::BlendingMode::TRANSPARENT);
             break;
         default : builder.blending(MaterialBuilder::BlendingMode::OPAQUE);
     }
@@ -364,8 +364,8 @@ TextureSampler::WrapMode aiToFilamentMapMode(aiTextureMapMode mapMode) {
     }
 }
 
-TextureSampler::MinFilter aiMinFilterToFilament(unsigned int aiMinFilter){
-    switch(aiMinFilter){
+TextureSampler::MinFilter aiMinFilterToFilament(unsigned int aiMinFilter) {
+    switch(aiMinFilter) {
         case GL_NEAREST: return TextureSampler::MinFilter::NEAREST;
         case GL_LINEAR: return TextureSampler::MinFilter::LINEAR;
         case GL_NEAREST_MIPMAP_NEAREST: return TextureSampler::MinFilter::NEAREST_MIPMAP_NEAREST;
@@ -376,8 +376,8 @@ TextureSampler::MinFilter aiMinFilterToFilament(unsigned int aiMinFilter){
     }
 }
 
-TextureSampler::MagFilter aiMagFilterToFilament(unsigned int aiMagFilter){
-    switch(aiMagFilter){
+TextureSampler::MagFilter aiMagFilterToFilament(unsigned int aiMagFilter) {
+    switch(aiMagFilter) {
         case GL_NEAREST: return TextureSampler::MagFilter::NEAREST;
         default: return TextureSampler::MagFilter::LINEAR;
     }
@@ -872,12 +872,9 @@ void MeshAssimp::processGLTFMaterial(const aiScene* scene, const aiMaterial* mat
     aiString alphaMode;
     material->Get(AI_MATKEY_GLTF_ALPHAMODE, alphaMode);
     if (strcmp(alphaMode.C_Str(), "BLEND") == 0) {
-        matConfig.alphaMode = TRANSPARENT;
+        matConfig.alphaMode = AlphaMode::TRANSPARENT;
     } else if (strcmp(alphaMode.C_Str(), "MASK") == 0) {
-        matConfig.alphaMode = MASKED;
-    }
-
-    if (matConfig.alphaMode == MASKED){
+        matConfig.alphaMode = AlphaMode::MASKED;
         float maskThreshold = 0.5;
         material->Get(AI_MATKEY_GLTF_ALPHACUTOFF, maskThreshold);
         matConfig.maskThreshold = maskThreshold;
@@ -892,7 +889,7 @@ void MeshAssimp::processGLTFMaterial(const aiScene* scene, const aiMaterial* mat
     outMaterials[materialName] = mGltfMaterialCache[configHash]->createInstance();
 
     // TODO: is there a way to use the same material for multiple mask threshold values?
-//    if (matConfig.alphaMode == masked){
+//    if (matConfig.alphaMode == masked) {
 //        float maskThreshold = 0.5;
 //        material->Get(AI_MATKEY_GLTF_ALPHACUTOFF, maskThreshold);
 //        outMaterials[materialName]->setParameter("maskThreshold", maskThreshold);
