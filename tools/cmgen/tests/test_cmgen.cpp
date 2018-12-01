@@ -142,7 +142,7 @@ TEST_F(CmgenTest, SphericalHarmonics) { // NOLINT
 TEST_F(CmgenTest, HdrLatLong) { // NOLINT
     const string inputPath = "assets/environments/white_furnace/white_furnace.exr";
     const string resultPath = "white_furnace/nx.rgbm";
-    const string goldenPath = "samples/envs/white_furnace/nx.rgbm";
+    const string goldenPath = "tools/cmgen/tests/white_furnace_nx.rgbm";
     processEnvMap(inputPath, resultPath, goldenPath);
 }
 
