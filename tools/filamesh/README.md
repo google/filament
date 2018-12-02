@@ -29,7 +29,7 @@ Note: the UV1 attribute cannot be used in interleaved mode
     uint32  : number of parts (sub-meshes or draw calls)
     float3  : center of the total bounding box (AABB)
     float3  : half extent of the total bounding box (AABB)
-    uint32  : flags (interleaved, UV type, compression type)
+    uint32  : flags (see below)
     uint32  : offset of the position attribute
     uint32  : stride of the position attribute
     uint32  : offset of the tangents attribute
@@ -45,6 +45,13 @@ Note: the UV1 attribute cannot be used in interleaved mode
     uint32  : 0 if indices are stored as uint32, 1 if stored as uint16
     uint32  : total number of indices
     uint32  : size in bytes occupied by the indices
+
+The `flags` field contains the following bits:
+
+- Bit 0: Specifies that vertex attributes are interleaved.
+- Bit 1: UV's are 16-bit integers normalized into [-1, +1] rather than half-floats.
+- Bit 2: Vertex and index data are compressed using zeux/meshoptimizer.
+- Bit 3: Vertex and index data are compressed using google/draco.
 
 ### Vertex data
 
