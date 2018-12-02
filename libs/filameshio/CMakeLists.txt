@@ -33,5 +33,7 @@ install(FILES ${DIST_HDRS} DESTINATION include/${TARGET})
 # ==================================================================================================
 # Tests
 # ==================================================================================================
-add_executable(test_${TARGET} tests/test_filamesh.cpp )
-target_link_libraries(test_${TARGET} PRIVATE filameshio gtest)
+if (NOT IOS AND NOT WEBGL)
+    add_executable(test_${TARGET} tests/test_filamesh.cpp )
+    target_link_libraries(test_${TARGET} PRIVATE filameshio gtest)
+endif()

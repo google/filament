@@ -33,10 +33,10 @@ enum IndexType : uint32_t {
 };
 
 enum Flags : uint32_t {
-    INTERLEAVED         = (1 << 0),
-    TEXCOORD_SNORM16    = (1 << 1),
-    COMPRESSION_MESHOPT = (1 << 2),
-    COMPRESSION_DRACO   = (1 << 3),
+    INTERLEAVED         = 1 << 0,
+    TEXCOORD_SNORM16    = 1 << 1,
+    COMPRESSION_MESHOPT = 1 << 2,
+    COMPRESSION_DRACO   = 1 << 3,
 };
 
 struct Header {
