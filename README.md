@@ -348,7 +348,7 @@ Create the msBuild project:
 ```
 
 Check out the output and make sure Clang for Windows frontend was found. You should see a line
-showing the following ouput.
+showing the following output.
 ```
 Clang:C:/Program Files/LLVM/msbuild-bin/cl.exe
 ```
