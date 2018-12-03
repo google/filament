@@ -34,6 +34,11 @@ public:
         profiler.resetEvents(utils::Profiler::EV_CPU_CYCLES | utils::Profiler::EV_BPU_MISSES);
         profiler.start();
     }
+
+    void stop() {
+        profiler.stop();
+    }
+
     ~PerformanceCounters() {
         profiler.stop();
         counters = profiler.readCounters();
