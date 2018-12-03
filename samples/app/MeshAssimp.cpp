@@ -53,6 +53,7 @@
 #include <stb_image.h>
 
 #include <stdlib.h>
+#include <filament/driver/DriverEnums.h>
 
 #include "generated/resources/resources.h"
 
@@ -60,6 +61,122 @@ using namespace filament;
 using namespace filamat;
 using namespace math;
 using namespace utils;
+
+
+enum class AlphaMode : uint8_t {
+    OPAQUE,
+    MASKED,
+    TRANSPARENT
+};
+
+struct MaterialConfig {
+    bool doubleSided = false;
+    bool unlit = false;
+    bool hasVertexColors;
+    AlphaMode alphaMode = AlphaMode::OPAQUE;
+    float maskThreshold = 0.5f;
+    uint8_t numUVs = 1;
+    uint8_t baseColorUV = 0;
+    uint8_t metallicRoughnessUV = 0;
+    uint8_t emissiveUV = 0;
+    uint8_t aoUV = 0;
+    uint8_t normalUV = 0;
+};
+
+void appendBooleanToBitMask(uint64_t &bitmask, bool b) {
+    bitmask <<= 1;
+    bitmask |= b;
+}
+
+uint64_t hashMaterialConfig(MaterialConfig config) {
+    uint64_t bitmask = 0;
+    memcpy(&config.maskThreshold, &bitmask, sizeof(config.maskThreshold));
+    appendBooleanToBitMask(bitmask, config.doubleSided);
+    appendBooleanToBitMask(bitmask, config.unlit);
+    appendBooleanToBitMask(bitmask, config.hasVertexColors);
+    appendBooleanToBitMask(bitmask, config.alphaMode == AlphaMode::OPAQUE);
+    appendBooleanToBitMask(bitmask, config.alphaMode == AlphaMode::MASKED);
+    appendBooleanToBitMask(bitmask, config.alphaMode == AlphaMode::TRANSPARENT);
+    appendBooleanToBitMask(bitmask, config.numUVs == 1);
+    appendBooleanToBitMask(bitmask, config.baseColorUV == 0);
+    appendBooleanToBitMask(bitmask, config.metallicRoughnessUV == 0);
+    appendBooleanToBitMask(bitmask, config.emissiveUV == 0);
+    appendBooleanToBitMask(bitmask, config.aoUV == 0);
+    appendBooleanToBitMask(bitmask, config.normalUV == 0);
+    return bitmask;
+}
+
+std::string shaderFromConfig(MaterialConfig config) {
+    std::string shader = R"SHADER(
+        void material(inout MaterialInputs material) {
+    )SHADER";
+
+    if (!config.unlit) {
+        shader += R"SHADER(
+            material.normal = texture(materialParams_normalMap, getUV0()).xyz * 2.0 - 1.0;
+            material.normal.y = -material.normal.y;
+        )SHADER";
+    }
+
+    shader += R"SHADER(
+        prepareMaterial(material);
+        material.baseColor = texture(materialParams_baseColorMap, getUV0());
+        material.baseColor.rgb *= materialParams.baseColorFactor.xyz;
+    )SHADER";
+
+    if (config.alphaMode == AlphaMode::TRANSPARENT) {
+        shader += R"SHADER(
+            material.baseColor.rgb *= material.baseColor.a;
+        )SHADER";
+    }
+
+    if (!config.unlit) {
+        shader += R"SHADER(
+            material.roughness = materialParams.roughnessFactor * texture(materialParams_metallicRoughnessMap, getUV0()).g;
+            material.metallic = materialParams.metallicFactor * texture(materialParams_metallicRoughnessMap, getUV0()).b;
+            material.ambientOcclusion = texture(materialParams_aoMap, getUV0()).r;
+            material.emissive = texture(materialParams_emissiveMap, getUV0());
+            material.emissive.rgb *= materialParams.emissiveFactor.rgb;
+        )SHADER";
+    }
+
+    shader += "}\n";
+    return shader;
+}
+
+Material* createMaterialFromConfig(Engine& engine, MaterialConfig config ) {
+    std::string shader = shaderFromConfig(config);
+    MaterialBuilder builder = MaterialBuilder()
+            .name("material")
+            .material(shader.c_str())
+            .doubleSided(config.doubleSided)
+            .require(VertexAttribute::UV0)
+            .parameter(MaterialBuilder::SamplerType::SAMPLER_2D, "baseColorMap")
+            .parameter(MaterialBuilder::UniformType::FLOAT4, "baseColorFactor")
+            .parameter(MaterialBuilder::SamplerType::SAMPLER_2D, "metallicRoughnessMap")
+            .parameter(MaterialBuilder::SamplerType::SAMPLER_2D, "aoMap")
+            .parameter(MaterialBuilder::SamplerType::SAMPLER_2D, "emissiveMap")
+            .parameter(MaterialBuilder::SamplerType::SAMPLER_2D, "normalMap")
+            .parameter(MaterialBuilder::UniformType::FLOAT, "metallicFactor")
+            .parameter(MaterialBuilder::UniformType::FLOAT, "roughnessFactor")
+            .parameter(MaterialBuilder::UniformType::FLOAT, "normalScale")
+            .parameter(MaterialBuilder::UniformType::FLOAT, "aoStrength")
+            .parameter(MaterialBuilder::UniformType::FLOAT3, "emissiveFactor");
+
+    switch(config.alphaMode) {
+        case AlphaMode::MASKED : builder.blending(MaterialBuilder::BlendingMode::MASKED);
+            builder.maskThreshold(config.maskThreshold);
+            break;
+        case AlphaMode::TRANSPARENT : builder.blending(MaterialBuilder::BlendingMode::TRANSPARENT);
+            break;
+        default : builder.blending(MaterialBuilder::BlendingMode::OPAQUE);
+    }
+
+    builder.shading(config.unlit ? Shading::UNLIT : Shading::LIT);
+
+    Package pkg = builder.build();
+    return Material::Builder().package(pkg.getData(), pkg.getSize()).build(engine);
+}
 
 Texture* MeshAssimp::createOneByOneTexture(uint32_t pixel) {
     uint32_t *textureData = (uint32_t *) malloc(sizeof(uint32_t));
@@ -104,31 +221,6 @@ MeshAssimp::MeshAssimp(Engine& engine) : mEngine(engine) {
     mDefaultTransparentColorMaterial->setDefaultParameter("baseColor", RgbType::LINEAR, float3{0.8});
     mDefaultTransparentColorMaterial->setDefaultParameter("metallic",  0.0f);
     mDefaultTransparentColorMaterial->setDefaultParameter("roughness", 0.4f);
-
-    mGltfMaterial = Material::Builder()
-            .package(RESOURCES_GLTF2_DATA, RESOURCES_GLTF2_SIZE)
-            .build(mEngine);
-    mGltfMaterialDS = Material::Builder()
-            .package(RESOURCES_GLTF2DOUBLESIDED_DATA, RESOURCES_GLTF2DOUBLESIDED_SIZE)
-            .build(mEngine);
-    mGltfMaterialTrans = Material::Builder()
-            .package(RESOURCES_GLTF2TRANS_DATA, RESOURCES_GLTF2TRANS_SIZE)
-            .build(mEngine);
-    mGltfMaterialDSTrans = Material::Builder()
-            .package(RESOURCES_GLTF2DOUBLESIDEDTRANS_DATA, RESOURCES_GLTF2DOUBLESIDEDTRANS_SIZE)
-            .build(mEngine);
-    mGltfMaterialMasked = Material::Builder()
-            .package(RESOURCES_GLTF2MASKED_DATA, RESOURCES_GLTF2MASKED_SIZE)
-            .build(mEngine);
-    mGltfMaterialDSMasked = Material::Builder()
-            .package(RESOURCES_GLTF2DOUBLESIDEDMASKED_DATA, RESOURCES_GLTF2DOUBLESIDEDMASKED_SIZE)
-            .build(mEngine);
-    mGltfMaterialUnlit = Material::Builder()
-            .package(RESOURCES_GLTF2UNLIT_DATA, RESOURCES_GLTF2UNLIT_SIZE)
-            .build(mEngine);
-    mGltfMaterialDSUnlit = Material::Builder()
-            .package(RESOURCES_GLTF2DOUBLESIDEDUNLIT_DATA, RESOURCES_GLTF2DOUBLESIDEDUNLIT_SIZE)
-            .build(mEngine);
 }
 
 MeshAssimp::~MeshAssimp() {
@@ -136,16 +228,13 @@ MeshAssimp::~MeshAssimp() {
     mEngine.destroy(mIndexBuffer);
     mEngine.destroy(mDefaultColorMaterial);
     mEngine.destroy(mDefaultTransparentColorMaterial);
-    mEngine.destroy(mGltfMaterial);
-    mEngine.destroy(mGltfMaterialDS);
-    mEngine.destroy(mGltfMaterialTrans);
-    mEngine.destroy(mGltfMaterialDSTrans);
-    mEngine.destroy(mGltfMaterialMasked);
-    mEngine.destroy(mGltfMaterialDSMasked);
-    mEngine.destroy(mGltfMaterialUnlit);
-    mEngine.destroy(mGltfMaterialDSUnlit);
     mEngine.destroy(mDefaultNormalMap);
     mEngine.destroy(mDefaultMap);
+
+    for (auto& item : mGltfMaterialCache) {
+        auto material = item.second;
+        mEngine.destroy(material);
+    }
 
     for (Entity renderable : mRenderables) {
         mEngine.destroy(renderable);
@@ -277,8 +366,8 @@ TextureSampler::WrapMode aiToFilamentMapMode(aiTextureMapMode mapMode) {
     }
 }
 
-TextureSampler::MinFilter aiMinFilterToFilament(unsigned int aiMinFilter){
-    switch(aiMinFilter){
+TextureSampler::MinFilter aiMinFilterToFilament(unsigned int aiMinFilter) {
+    switch(aiMinFilter) {
         case GL_NEAREST: return TextureSampler::MinFilter::NEAREST;
         case GL_LINEAR: return TextureSampler::MinFilter::LINEAR;
         case GL_NEAREST_MIPMAP_NEAREST: return TextureSampler::MinFilter::NEAREST_MIPMAP_NEAREST;
@@ -289,8 +378,8 @@ TextureSampler::MinFilter aiMinFilterToFilament(unsigned int aiMinFilter){
     }
 }
 
-TextureSampler::MagFilter aiMagFilterToFilament(unsigned int aiMagFilter){
-    switch(aiMagFilter){
+TextureSampler::MagFilter aiMagFilterToFilament(unsigned int aiMagFilter) {
+    switch(aiMagFilter) {
         case GL_NEAREST: return TextureSampler::MagFilter::NEAREST;
         default: return TextureSampler::MagFilter::LINEAR;
     }
@@ -777,48 +866,36 @@ void MeshAssimp::processGLTFMaterial(const aiScene* scene, const aiMaterial* mat
     aiString normalPath;
     aiString emissivePath;
     aiTextureMapMode mapMode[3];
+    MaterialConfig matConfig;
 
-    bool materialIsDoubleSided = false;
-    material->Get("$mat.twosided", 0, 0, materialIsDoubleSided);
-
-    bool materialIsUnlit = false;
-    material->Get(AI_MATKEY_GLTF_UNLIT, materialIsUnlit);
+    material->Get("$mat.twosided", 0, 0, matConfig.doubleSided);
+    material->Get(AI_MATKEY_GLTF_UNLIT, matConfig.unlit);
 
     aiString alphaMode;
-
-    if (materialIsUnlit) {
-        if (materialIsDoubleSided){
-            outMaterials[materialName] = mGltfMaterialDSUnlit->createInstance();
-        } else {
-            outMaterials[materialName] = mGltfMaterialUnlit->createInstance();
-        }
-    } else if (materialIsDoubleSided) {
-        material->Get(AI_MATKEY_GLTF_ALPHAMODE, alphaMode);
-
-        if (strcmp(alphaMode.C_Str(), "BLEND") == 0) {
-            outMaterials[materialName] = mGltfMaterialDSTrans->createInstance();
-        } else if (strcmp(alphaMode.C_Str(), "MASK") == 0) {
-            outMaterials[materialName] = mGltfMaterialDSMasked->createInstance();
-            float maskThreshold = 0.5;
-            material->Get(AI_MATKEY_GLTF_ALPHACUTOFF, maskThreshold);
-            outMaterials[materialName]->setParameter("maskThreshold", maskThreshold);
-        } else {
-            outMaterials[materialName] = mGltfMaterialDS->createInstance();
-        }
-    } else {
-         material->Get(AI_MATKEY_GLTF_ALPHAMODE, alphaMode);
-
-         if (strcmp(alphaMode.C_Str(), "BLEND") == 0) {
-             outMaterials[materialName] = mGltfMaterialTrans->createInstance();
-         } else if (strcmp(alphaMode.C_Str(), "MASK") == 0) {
-             outMaterials[materialName] = mGltfMaterialMasked->createInstance();
-             float maskThreshold = 0.5;
-             material->Get(AI_MATKEY_GLTF_ALPHACUTOFF, maskThreshold);
-             outMaterials[materialName]->setParameter("maskThreshold", maskThreshold);
-         } else {
-             outMaterials[materialName] = mGltfMaterial->createInstance();
-         }
+    material->Get(AI_MATKEY_GLTF_ALPHAMODE, alphaMode);
+    if (strcmp(alphaMode.C_Str(), "BLEND") == 0) {
+        matConfig.alphaMode = AlphaMode::TRANSPARENT;
+    } else if (strcmp(alphaMode.C_Str(), "MASK") == 0) {
+        matConfig.alphaMode = AlphaMode::MASKED;
+        float maskThreshold = 0.5;
+        material->Get(AI_MATKEY_GLTF_ALPHACUTOFF, maskThreshold);
+        matConfig.maskThreshold = maskThreshold;
     }
+
+    uint64_t configHash = hashMaterialConfig(matConfig);
+
+    if (mGltfMaterialCache.find(configHash) == mGltfMaterialCache.end()) {
+        mGltfMaterialCache[configHash] = createMaterialFromConfig(mEngine, matConfig);
+    }
+
+    outMaterials[materialName] = mGltfMaterialCache[configHash]->createInstance();
+
+    // TODO: is there a way to use the same material for multiple mask threshold values?
+//    if (matConfig.alphaMode == masked) {
+//        float maskThreshold = 0.5;
+//        material->Get(AI_MATKEY_GLTF_ALPHACUTOFF, maskThreshold);
+//        outMaterials[materialName]->setParameter("maskThreshold", maskThreshold);
+//    }
 
     // Load property values for gltf files
     aiColor4D baseColorFactor;
@@ -840,7 +917,8 @@ void MeshAssimp::processGLTFMaterial(const aiScene* scene, const aiMaterial* mat
         unsigned int magType = 0;
         material->Get("$tex.mappingfiltermin", AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_BASE_COLOR_TEXTURE, minType);
         material->Get("$tex.mappingfiltermag", AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_BASE_COLOR_TEXTURE, magType);
-
+        material->Get("$tex.file.texCoord", AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_BASE_COLOR_TEXTURE,
+                matConfig.baseColorUV);
         setTextureFromPath(scene, &mEngine, mTextures, baseColorPath,
                 materialName, dirName, mapMode, "baseColorMap", outMaterials, minType, magType);
     } else {
@@ -853,6 +931,8 @@ void MeshAssimp::processGLTFMaterial(const aiScene* scene, const aiMaterial* mat
         unsigned int magType = 0;
         material->Get("$tex.mappingfiltermin", AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_METALLICROUGHNESS_TEXTURE, minType);
         material->Get("$tex.mappingfiltermag", AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_METALLICROUGHNESS_TEXTURE, magType);
+        material->Get("$tex.file.texCoord", AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_METALLICROUGHNESS_TEXTURE,
+                      matConfig.metallicRoughnessUV);
         setTextureFromPath(scene, &mEngine, mTextures, MRPath, materialName,
                 dirName, mapMode, "metallicRoughnessMap", outMaterials, minType, magType);
     } else {
@@ -862,11 +942,12 @@ void MeshAssimp::processGLTFMaterial(const aiScene* scene, const aiMaterial* mat
     }
 
     if (material->GetTexture(aiTextureType_LIGHTMAP, 0, &AOPath, nullptr,
-            nullptr, nullptr, nullptr, mapMode) == AI_SUCCESS) {
+                             nullptr, nullptr, nullptr, mapMode) == AI_SUCCESS) {
         unsigned int minType = 0;
         unsigned int magType = 0;
         material->Get("$tex.mappingfiltermin", aiTextureType_LIGHTMAP, 0, minType);
         material->Get("$tex.mappingfiltermag", aiTextureType_LIGHTMAP, 0, magType);
+        material->Get("$tex.file.texCoord", aiTextureType_LIGHTMAP, 0, matConfig.aoUV);
         setTextureFromPath(scene, &mEngine, mTextures, AOPath, materialName,
                 dirName, mapMode, "aoMap", outMaterials, minType, magType);
     } else {
@@ -879,6 +960,7 @@ void MeshAssimp::processGLTFMaterial(const aiScene* scene, const aiMaterial* mat
         unsigned int magType = 0;
         material->Get("$tex.mappingfiltermin", aiTextureType_NORMALS, 0, minType);
         material->Get("$tex.mappingfiltermag", aiTextureType_NORMALS, 0, magType);
+        material->Get("$tex.file.texCoord", aiTextureType_NORMALS, 0, matConfig.normalUV);
         setTextureFromPath(scene, &mEngine, mTextures, normalPath, materialName,
                 dirName, mapMode, "normalMap", outMaterials, minType, magType);
     } else {
@@ -891,6 +973,7 @@ void MeshAssimp::processGLTFMaterial(const aiScene* scene, const aiMaterial* mat
         unsigned int magType = 0;
         material->Get("$tex.mappingfiltermin", aiTextureType_EMISSIVE, 0, minType);
         material->Get("$tex.mappingfiltermag", aiTextureType_EMISSIVE, 0, magType);
+        material->Get("$tex.file.texCoord", aiTextureType_EMISSIVE, 0, matConfig.emissiveUV);
         setTextureFromPath(scene, &mEngine, mTextures, emissivePath, materialName,
                 dirName, mapMode, "emissiveMap", outMaterials, minType, magType);
     }  else {

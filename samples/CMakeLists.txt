@@ -34,14 +34,6 @@ set(MATERIAL_SRCS
         materials/aiDefaultMat.mat
         materials/aiDefaultTrans.mat
         materials/depthVisualizer.mat
-        materials/gltf2.mat
-        materials/gltf2DoubleSided.mat
-        materials/gltf2DoubleSidedMasked.mat
-        materials/gltf2DoubleSidedTrans.mat
-        materials/gltf2DoubleSidedUnlit.mat
-        materials/gltf2Masked.mat
-        materials/gltf2Trans.mat
-        materials/gltf2Unlit.mat
         materials/groundShadow.mat
         materials/sandboxCloth.mat
         materials/sandboxLit.mat
