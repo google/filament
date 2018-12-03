@@ -173,7 +173,7 @@ TEST_F(FilameshTest, Interleaved) {
         .version = VERSION,
         .parts = 1,
         .aabb = unitBox,
-        .flags = INTERLEAVED,
+        .flags = INTERLEAVED | TEXCOORD_SNORM16,
         .offsetPosition = offsetof(InterleavedVertex, position),
         .offsetTangents = offsetof(InterleavedVertex, tangent),
         .offsetColor = offsetof(InterleavedVertex, color),

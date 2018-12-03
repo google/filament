@@ -54,6 +54,7 @@ void MeshWriter::serialize(ostream& out, const Mesh& mesh) {
     header.aabb = aabb;
     header.flags = 0;
     header.flags |= mInterleaved ? INTERLEAVED : 0;
+    header.flags |= mSnormUVs ? TEXCOORD_SNORM16 : 0;
     if (mInterleaved) {
         header.offsetPosition = offsetof(Vertex, position);
         header.offsetTangents = offsetof(Vertex, tangents);

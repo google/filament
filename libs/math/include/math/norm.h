@@ -37,6 +37,10 @@ inline int16_t packSnorm16(float v) noexcept {
     return static_cast<int16_t>(std::round(clamp(v, -1.0f, 1.0f) * 32767.0f));
 }
 
+inline short2 packSnorm16(float2 v) noexcept {
+    return short2{packSnorm16(v.x), packSnorm16(v.y)};
+}
+
 inline short4 packSnorm16(float4 v) noexcept {
     return short4{packSnorm16(v.x), packSnorm16(v.y), packSnorm16(v.z), packSnorm16(v.w)};
 }

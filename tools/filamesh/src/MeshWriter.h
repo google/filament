@@ -57,8 +57,9 @@ struct Mesh {
 
 class MeshWriter {
     bool mInterleaved;
+    bool mSnormUVs;
 public:
-    MeshWriter(bool interleaved) : mInterleaved(interleaved) {}
+    MeshWriter(bool interleaved, bool snormUVs) : mInterleaved(interleaved), mSnormUVs(snormUVs) {}
     void serialize(std::ostream&, const Mesh& mesh);
 };
 
