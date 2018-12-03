@@ -25,6 +25,7 @@
 #include <math/quat.h>
 #include <math/vec3.h>
 
+#include <utils/algorithm.h>
 #include <utils/Path.h>
 
 #include <filameshio/filamesh.h>
@@ -49,11 +50,6 @@ bool g_snormUVs = false;
 Mesh g_mesh;
 float2 g_minUV = float2(std::numeric_limits<float>::max());
 float2 g_maxUV = float2(-std::numeric_limits<float>::max());
-
-template <class Dest, class Source>
-inline Dest bit_cast(const Source& source) {
-    return *reinterpret_cast<const Dest*>(&source);
-}
 
 template<bool SNORMUVS>
 static ushort2 convertUV(float2 uv) {
