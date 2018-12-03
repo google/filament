@@ -44,8 +44,27 @@ using Assimp::Importer;
 
 // configuration
 bool g_interleaved = false;
+bool g_snormUVs = false;
 
 Mesh g_mesh;
+float2 g_minUV = float2(std::numeric_limits<float>::max());
+float2 g_maxUV = float2(-std::numeric_limits<float>::max());
+
+template <class Dest, class Source>
+inline Dest bit_cast(const Source& source) {
+    return *reinterpret_cast<const Dest*>(&source);
+}
+
+template<bool SNORMUVS>
+static ushort2 convertUV(float2 uv) {
+    if (SNORMUVS) {
+        short2 uvshort(packSnorm16(uv));
+        return bit_cast<ushort2>(uvshort);
+    } else {
+        half2 uvhalf(uv);
+        return bit_cast<ushort2>(uvhalf);
+    }
+}
 
 template<typename VECTOR, typename INDEX>
 static Box computeAABB(VECTOR const* positions, INDEX const* indices,
@@ -62,14 +81,41 @@ static Box computeAABB(VECTOR const* positions, INDEX const* indices,
     return Box().set(bmin, bmax);
 }
 
-template<bool INTERLEAVED>
-void processNode(const aiScene* scene, const aiNode* node, std::vector<Part>& meshes) {
+void preprocessNode(const aiScene* scene, const aiNode* node) {
     for (size_t i = 0; i < node->mNumMeshes; ++i) {
         const aiMesh* mesh = scene->mMeshes[node->mMeshes[i]];
         if (!mesh->HasNormals() || !mesh->HasTextureCoords(0)) {
             std::cerr << "The mesh must have texture coordinates" << std::endl;
             exit(1);
         }
+        const float3* uv0 = reinterpret_cast<const float3*>(mesh->mTextureCoords[0]);
+        const float3* uv1 = reinterpret_cast<const float3*>(mesh->mTextureCoords[1]);
+        if (!mesh->HasTextureCoords(1)) {
+            uv1 = nullptr;
+        }
+        const size_t numVertices = mesh->mNumVertices;
+        const size_t numFaces = mesh->mNumFaces;
+        if (numVertices == 0 || numFaces == 0) {
+            continue;
+        }
+        for (size_t j = 0; j < numVertices; j++) {
+            g_minUV = min(uv0[j].xy, g_minUV);
+            g_maxUV = max(uv0[j].xy, g_maxUV);
+            if (uv1) {
+                g_minUV = min(uv1[j].xy, g_minUV);
+                g_maxUV = max(uv1[j].xy, g_maxUV);
+            }
+        }
+    }
+    for (size_t i=0 ; i<node->mNumChildren ; ++i) {
+        preprocessNode(scene, node->mChildren[i]);
+    }
+}
+
+template<bool INTERLEAVED, bool SNORMUVS>
+void processNode(const aiScene* scene, const aiNode* node, std::vector<Part>& meshes) {
+    for (size_t i = 0; i < node->mNumMeshes; ++i) {
+        const aiMesh* mesh = scene->mMeshes[node->mMeshes[i]];
 
         const float3* vertices = reinterpret_cast<const float3*>(mesh->mVertices);
         const float3* tangents = reinterpret_cast<const float3*>(mesh->mTangents);
@@ -106,13 +152,12 @@ void processNode(const aiScene* scene, const aiNode* node, std::vector<Part>& me
 
                 for (size_t j = 0; j < numVertices; j++) {
                     quatf q = mat3f::packTangentFrame({tangents[j], bitangents[j], normals[j]});
-                    half2 uv(uv0[j].xy);
                     color = colors ? colors[j] : float4(1.0f);
                     Vertex vertex {
                         .position = half4(vertices[j], 1.0_h),
                         .tangents = short4(math::packSnorm16(q.xyzw)),
                         .color = ubyte4(clamp(color, 0.0f, 1.0f) * 255.0f),
-                        .uv0 = *((ushort2*)&uv),
+                        .uv0 = convertUV<SNORMUVS>(uv0[j].xy),
                     };
                     if (INTERLEAVED) {
                         g_mesh.vertices.emplace_back(vertex);
@@ -122,8 +167,7 @@ void processNode(const aiScene* scene, const aiNode* node, std::vector<Part>& me
                         g_mesh.colors.emplace_back(vertex.color);
                         g_mesh.uv0.emplace_back(vertex.uv0);
                         if (uv1 != nullptr) {
-                            half2 uv(uv1[j].xy);
-                            g_mesh.uv1.emplace_back(*((ushort2*)&uv));
+                            g_mesh.uv1.emplace_back(convertUV<SNORMUVS>(uv1[j].xy));
                         }
                     }
                 }
@@ -159,7 +203,7 @@ void processNode(const aiScene* scene, const aiNode* node, std::vector<Part>& me
     }
 
     for (size_t i=0 ; i<node->mNumChildren ; ++i) {
-        processNode<INTERLEAVED>(scene, node->mChildren[i], meshes);
+        processNode<INTERLEAVED, SNORMUVS>(scene, node->mChildren[i], meshes);
     }
 }
 
@@ -273,10 +317,24 @@ int main(int argc, char* argv[]) {
 
     const aiNode* node = scene->mRootNode;
 
+    // Check for acceptable assimp data and determine UV bounds.
+    preprocessNode(scene, node);
+    g_snormUVs = g_minUV.x >= 0.0f && g_minUV.x <= 1.0f && g_maxUV.x >= 0.0f && g_maxUV.x <= 1.0f &&
+                 g_minUV.y >= 0.0f && g_minUV.y <= 1.0f && g_maxUV.y >= 0.0f && g_maxUV.y <= 1.0f;
+
+    // Consume assimp data and produce filamesh data.
     if (g_interleaved) {
-        processNode<true>(scene, node, g_mesh.parts);
+        if (g_snormUVs) {
+            processNode<true, true>(scene, node, g_mesh.parts);
+        } else {
+            processNode<true, false>(scene, node, g_mesh.parts);
+        }
     } else {
-        processNode<false>(scene, node, g_mesh.parts);
+        if (g_snormUVs) {
+            processNode<false, true>(scene, node, g_mesh.parts);
+        } else {
+            processNode<false, false>(scene, node, g_mesh.parts);
+        }
     }
 
     uint32_t materialCount = scene->mNumMaterials;
@@ -307,7 +365,7 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    MeshWriter(g_interleaved).serialize(out, g_mesh);
+    MeshWriter(g_interleaved, g_snormUVs).serialize(out, g_mesh);
 
     out.flush();
     out.close();
