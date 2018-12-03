@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+#include "MeshWriter.h"
+
 #include <fstream>
 #include <iostream>
 
@@ -43,40 +45,7 @@ using Assimp::Importer;
 // configuration
 bool g_interleaved = false;
 
-struct Vertex {
-    Vertex(const float3& position, const quatf& tangents, const float4& color, const float3& uv0):
-            position(position, 1.0_h),
-            tangents(packSnorm16(tangents.xyzw)),
-            color(clamp(color, 0.0f, 1.0f) * 255.0f),
-            uv0(uv0.xy) {
-    }
-
-    half4  position;
-    short4 tangents;
-    ubyte4 color;
-    half2  uv0;
-};
-
-uint32_t g_vertexCount = 0;
-std::vector<uint32_t> g_indices;
-// interleaved
-std::vector<Vertex> g_vertices;
-// de-interleaved
-std::vector<decltype(Vertex::position)>  g_positions;
-std::vector<decltype(Vertex::tangents)>  g_tangents;
-std::vector<decltype(Vertex::color)>     g_colors;
-std::vector<decltype(Vertex::uv0)>       g_uv0;
-std::vector<decltype(Vertex::uv0)>       g_uv1;
-
-template<typename T>
-void write(std::ofstream& out, const T& value) {
-    out.write((const char*) &value, sizeof(T));
-}
-
-template<typename T>
-void write(std::ofstream& out, const T* data, uint32_t count) {
-    out.write((const char*) data, sizeof(T) * count);
-}
+Mesh g_mesh;
 
 template<typename VECTOR, typename INDEX>
 static Box computeAABB(VECTOR const* positions, INDEX const* indices,
@@ -125,52 +94,57 @@ void processNode(const aiScene* scene, const aiNode* node, std::vector<Part>& me
             const size_t numFaces = mesh->mNumFaces;
 
             if (numFaces > 0) {
-                uint32_t indicesOffset = g_vertexCount;
-                g_vertexCount += numVertices;
+                uint32_t indicesOffset = g_mesh.vertexCount;
+                g_mesh.vertexCount += numVertices;
                 if (INTERLEAVED) {
-                    g_vertices.reserve(g_vertexCount);
+                    g_mesh.vertices.reserve(g_mesh.vertexCount);
                 } else {
-                    g_positions.reserve(g_vertexCount);
-                    g_tangents.reserve(g_vertexCount);
-                    g_uv0.reserve(g_vertexCount);
+                    g_mesh.positions.reserve(g_mesh.vertexCount);
+                    g_mesh.tangents.reserve(g_mesh.vertexCount);
+                    g_mesh.uv0.reserve(g_mesh.vertexCount);
                 }
 
                 for (size_t j = 0; j < numVertices; j++) {
                     quatf q = mat3f::packTangentFrame({tangents[j], bitangents[j], normals[j]});
-
+                    half2 uv(uv0[j].xy);
                     color = colors ? colors[j] : float4(1.0f);
+                    Vertex vertex {
+                        .position = half4(vertices[j], 1.0_h),
+                        .tangents = short4(math::packSnorm16(q.xyzw)),
+                        .color = ubyte4(clamp(color, 0.0f, 1.0f) * 255.0f),
+                        .uv0 = *((ushort2*)&uv),
+                    };
                     if (INTERLEAVED) {
-                        g_vertices.emplace_back(vertices[j], q, color, uv0[j]);
+                        g_mesh.vertices.emplace_back(vertex);
                     } else {
-                        // use the same conversions as in the interleaved case
-                        Vertex v(vertices[j], q, color, uv0[j]);
-                        g_positions.emplace_back(v.position);
-                        g_tangents.emplace_back(v.tangents);
-                        g_colors.emplace_back(v.color);
-                        g_uv0.emplace_back(v.uv0);
+                        g_mesh.positions.emplace_back(vertex.position);
+                        g_mesh.tangents.emplace_back(vertex.tangents);
+                        g_mesh.colors.emplace_back(vertex.color);
+                        g_mesh.uv0.emplace_back(vertex.uv0);
                         if (uv1 != nullptr) {
-                            g_uv1.emplace_back(uv1[j].xy);
+                            half2 uv(uv1[j].xy);
+                            g_mesh.uv1.emplace_back(*((ushort2*)&uv));
                         }
                     }
                 }
 
                 // all faces should be triangles since we configure assimp to triangulate faces
                 uint32_t indicesCount = numFaces * faces[0].mNumIndices;
-                uint32_t indexBufferOffset = g_indices.size();
-                g_indices.reserve(g_indices.size() + indicesCount);
+                uint32_t indexBufferOffset = g_mesh.indices.size();
+                g_mesh.indices.reserve(g_mesh.indices.size() + indicesCount);
 
                 for (size_t j = 0; j < numFaces; ++j) {
                     const aiFace& face = faces[j];
                     for (size_t k = 0; k < face.mNumIndices; ++k) {
-                        g_indices.push_back(uint32_t(face.mIndices[k] + indicesOffset));
+                        g_mesh.indices.push_back(uint32_t(face.mIndices[k] + indicesOffset));
                     }
                 }
 
                 size_t stride = INTERLEAVED ? sizeof(Vertex) : sizeof(Vertex::position);
                 const decltype(Vertex::position)* positions =
-                        INTERLEAVED ? &g_vertices.data()->position : g_positions.data();
+                        INTERLEAVED ? &g_mesh.vertices.data()->position : g_mesh.positions.data();
                 const Box aabb(computeAABB(positions,
-                        g_indices.data() + indexBufferOffset, indicesCount, stride));
+                        g_mesh.indices.data() + indexBufferOffset, indicesCount, stride));
 
                 meshes.emplace_back(Part {
                     .offset = indexBufferOffset,
@@ -297,14 +271,26 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    std::vector<Part> meshes;
-
     const aiNode* node = scene->mRootNode;
 
     if (g_interleaved) {
-        processNode<true>(scene, node, meshes);
+        processNode<true>(scene, node, g_mesh.parts);
     } else {
-        processNode<false>(scene, node, meshes);
+        processNode<false>(scene, node, g_mesh.parts);
+    }
+
+    uint32_t materialCount = scene->mNumMaterials;
+
+    for (uint32_t i = 0; i < materialCount; i++) {
+        const aiMaterial* material = scene->mMaterials[i];
+
+        aiString name;
+        if (material->Get(AI_MATKEY_NAME, name) != AI_SUCCESS) {
+            std::cerr << "Unnamed material replaced with 'default'" << std::endl;
+            g_mesh.materials.emplace_back("default");
+        } else {
+            g_mesh.materials.emplace_back(name.C_Str());
+        }
     }
 
     Path dst(argv[optionIndex + 1]);
@@ -321,100 +307,7 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    const bool hasIndex16 = g_vertexCount < std::numeric_limits<uint16_t>::max();
-    const bool hasUV1 = !g_uv1.empty();
-
-    Box aabb = meshes.at(0).aabb;
-    for (size_t i = 1; i < meshes.size(); i++) {
-        aabb.unionSelf(meshes.at(i).aabb);
-    }
-
-    write(out, "FILAMESH", 8 * sizeof(char));
-
-    Header header;
-    header.version = VERSION;
-    header.parts = uint32_t(meshes.size());
-    header.aabb = aabb;
-    header.flags = 0;
-    header.flags |= g_interleaved ? INTERLEAVED : 0;
-    if (g_interleaved) {
-        header.offsetPosition = offsetof(Vertex, position);
-        header.offsetTangents = offsetof(Vertex, tangents);
-        header.offsetColor    = offsetof(Vertex, color);
-        header.offsetUV0      = offsetof(Vertex, uv0);
-        header.offsetUV1      = std::numeric_limits<uint32_t>::max();
-        header.stridePosition = sizeof(Vertex);
-        header.strideTangents = sizeof(Vertex);
-        header.strideColor    = sizeof(Vertex);
-        header.strideUV0      = sizeof(Vertex);
-        header.strideUV1      = std::numeric_limits<uint32_t>::max();
-    } else {
-        header.offsetPosition = 0;
-        header.offsetTangents = g_vertexCount * sizeof(Vertex::position);
-        header.offsetColor    = header.offsetTangents + g_vertexCount * sizeof(Vertex::tangents);
-        header.offsetUV0      = header.offsetColor + g_vertexCount * sizeof(Vertex::color);
-        header.offsetUV1      = std::numeric_limits<uint32_t>::max();
-        header.stridePosition = 0;
-        header.strideTangents = 0;
-        header.strideColor    = 0;
-        header.strideUV0      = 0;
-        header.strideUV1      = std::numeric_limits<uint32_t>::max();
-
-        if (hasUV1) {
-            header.offsetUV1  = header.offsetUV0 + g_vertexCount * sizeof(Vertex::uv0);
-            header.strideUV1  = 0;
-        }
-    }
-    header.vertexCount = g_vertexCount;
-    header.vertexSize = g_vertexCount * sizeof(Vertex);
-    header.indexType = uint32_t(hasIndex16 ? UI16 : UI32);
-    header.indexCount = g_indices.size();
-    header.indexSize = g_indices.size() * (hasIndex16 ? sizeof(uint16_t) : sizeof(uint32_t));
-
-    write(out, header);
-
-    if (g_interleaved) {
-        write(out, g_vertices.data(), uint32_t(g_vertices.size()));
-    } else {
-        write(out, g_positions.data(), uint32_t(g_positions.size()));
-        write(out, g_tangents.data(),  uint32_t(g_tangents.size()));
-        write(out, g_colors.data(), uint32_t(g_colors.size()));
-        write(out, g_uv0.data(), uint32_t(g_uv0.size()));
-        if (hasUV1) {
-            write(out, g_uv1.data(), uint32_t(g_uv1.size()));
-        }
-    }
-
-    if (!hasIndex16) {
-        write(out, g_indices.data(), uint32_t(g_indices.size()));
-    } else {
-        std::vector<uint16_t> smallIndices;
-        smallIndices.resize(g_indices.size());
-        for (size_t i = 0; i < g_indices.size(); i++) {
-            smallIndices[i] = static_cast<uint16_t>(g_indices[i]);
-        }
-        write(out, smallIndices.data(), uint32_t(smallIndices.size()));
-    }
-
-    write(out, meshes.data(), header.parts);
-
-    uint32_t materialCount = scene->mNumMaterials;
-    write(out, materialCount);
-
-    for (uint32_t i = 0; i < materialCount; i++) {
-        const aiMaterial* material = scene->mMaterials[i];
-
-        aiString name;
-        if (material->Get(AI_MATKEY_NAME, name) != AI_SUCCESS) {
-            std::cerr << "Unnamed material replaced with 'default'" << std::endl;
-            write(out, uint32_t(7));
-            write(out, "default\0", uint32_t(8));
-        } else {
-            write(out, uint32_t(name.length));
-            write(out, name.C_Str(), uint32_t(name.length));
-            write(out, char(0));
-        }
-    }
+    MeshWriter(g_interleaved).serialize(out, g_mesh);
 
     out.flush();
     out.close();
