@@ -421,3 +421,4 @@ install(FILES "README.md" DESTINATION .)
 # Sub-projects
 # ==================================================================================================
 add_subdirectory(test)
+add_subdirectory(benchmark)
