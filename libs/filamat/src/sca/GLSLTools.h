@@ -127,11 +127,6 @@ public:
             filament::driver::ShaderModel model,
             filamat::MaterialBuilder::TargetApi targetApi) const noexcept;
 
-    // Analyze the first fragment shader the builder will construct and guess properties used (the
-    // builder is modified accordingly). Return true if all operation succeeded.
-    bool process(filamat::MaterialBuilder& builder,
-            const MaterialBuilder::PropertyList& properties) const noexcept;
-
     // Public for unit tests.
     using Property = filamat::MaterialBuilder::Property;
     // Use static code analysis on the fragment shader AST to guess properties used in user provided
