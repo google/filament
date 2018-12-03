@@ -35,16 +35,6 @@
 
 namespace filamat {
 
-// Shader postprocessor, called after generation of a shader but before writing it to the package.
-// Must return false if an error occured while postProcessing the shader and true if everything was
-// ok.
-using PostProcessCallBack = std::function<bool(
-        const std::string& /* inputShader */,
-        filament::driver::ShaderType,
-        filament::driver::ShaderModel,
-        std::string* /* outputGlsl */,
-        std::vector<uint32_t>* /* outputSpirv */ )>;
-
 struct MaterialInfo;
 
 class UTILS_PUBLIC MaterialBuilderBase {
@@ -106,10 +96,6 @@ public:
     using SamplerFormat = filament::driver::SamplerFormat;
     using SamplerPrecision = filament::driver::Precision;
     using CullingMode = filament::driver::CullingMode;
-
-    // Each shader generated while building the package content can be post-processed via this
-    // callback.
-    MaterialBuilder& postProcessor(PostProcessCallBack callback);
 
     // set name of this material
     MaterialBuilder& name(const char* name) noexcept;
@@ -290,8 +276,6 @@ private:
     bool mDepthTest = true;
     bool mDepthWrite = true;
     bool mDepthWriteSet = false;
-
-    PostProcessCallBack mPostprocessorCallback = nullptr;
 };
 
 } // namespace filamat

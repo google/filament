@@ -31,10 +31,6 @@ public:
 
     Package build();
 
-    // Each shader generated while building the package content can be post-processed via this
-    // callback.
-    PostprocessMaterialBuilder& postProcessor(PostProcessCallBack callback);
-
     // specifies desktop vs mobile; works in concert with TargetApi to determine the shader models
     // (used to generate code) and final output representations (spirv and/or text).
     PostprocessMaterialBuilder& platform(Platform platform) noexcept {
@@ -58,9 +54,6 @@ public:
         mPrintShaders = printShaders;
         return *this;
     }
-
-private:
-    PostProcessCallBack mPostprocessorCallback = nullptr;
 };
 
 } // namespace
