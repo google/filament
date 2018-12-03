@@ -20,8 +20,6 @@
 
 #include <utils/Profiler.h>
 #include <utils/compiler.h>
-#include <math/fast.h>
-#include <math/scalar.h>
 
 #include <iostream>
 #include <vector>
@@ -69,26 +67,16 @@ int main() {
     size_t batch = 512;
     Frustum frustum(mat4f::perspective(45.0f, 1.0f, 0.1f, 100.0f));
 
-
     std::vector<float3> boxesCenter(batch);
     std::vector<float3> boxesExtent(batch);
     std::vector<float4> spheres(batch);
-    std::vector<float4> colors(batch);
-    std::vector<float4> colors_results(batch);
-    std::vector<half4> spheresHalf(batch);
     for (size_t i=0 ; i<batch ; i++) {
         float4& sphere = spheres[i];
-        float4& color = colors[i];
         float z = std::fabs(rand(gen));
         sphere.z = -z;
         sphere.x = rand(gen, std::uniform_real_distribution<float>::param_type{-z, z});
         sphere.y = rand(gen, std::uniform_real_distribution<float>::param_type{-z, z});
         sphere.w = rand(gen, std::uniform_real_distribution<float>::param_type{0.11f, 25.0f});
-
-        color.x = rand(gen, std::uniform_real_distribution<float>::param_type{0.0f, 1.0f});
-        color.y = rand(gen, std::uniform_real_distribution<float>::param_type{0.0f, 1.0f});
-        color.z = rand(gen, std::uniform_real_distribution<float>::param_type{0.0f, 1.0f});
-        color.w = rand(gen, std::uniform_real_distribution<float>::param_type{0.0f, 1.0f});
 
         boxesCenter[i] = sphere.xyz;
         boxesExtent[i] = {
@@ -126,23 +114,6 @@ int main() {
     std::cout << std::endl;
 
     free(visibles);
-
-    benchmark(p, "half4", [&]() {
-        for (size_t i = 0; i < batch; i++) {
-            spheresHalf[i] = half4(spheres[i]);
-        }
-    });
-
-    benchmark(p, "half x 4", [&]() {
-        for (size_t i = 0; i < batch; i++) {
-            spheresHalf[i] = half4(
-                    spheres[i].x,
-                    spheres[i].y,
-                    spheres[i].z,
-                    spheres[i].w
-            );
-        }
-    });
 
     return 0;
 }
