@@ -19,7 +19,7 @@ add_executable(${TARGET} ${SRCS})
 target_link_libraries(${TARGET} PUBLIC math)
 target_link_libraries(${TARGET} PUBLIC utils)
 target_link_libraries(${TARGET} PUBLIC assimp)
-target_link_libraries(${TARGET} PRIVATE getopt filameshio)
+target_link_libraries(${TARGET} PRIVATE getopt filameshio meshoptimizer)
 
 # ==================================================================================================
 # Compile options and optimizations

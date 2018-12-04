@@ -18,7 +18,7 @@
 
 #include <filameshio/filamesh.h>
 
-#include <math/norm.h>
+#include <meshoptimizer.h>
 
 using namespace filamesh;
 using namespace math;
@@ -34,16 +34,120 @@ void write(ostream& out, const T* data, uint32_t count) {
     out.write((const char*) data, sizeof(T) * count);
 }
 
-void MeshWriter::serialize(ostream& out, const Mesh& mesh) {
+template<typename T>
+size_t write(unsigned char* out, const vector<T>& data) {
+    memcpy(out, data.data(), data.size() * sizeof(T));
+    return data.size() * sizeof(T);
+}
 
-    const uint32_t maxint = std::numeric_limits<uint32_t>::max();
+void MeshWriter::optimize(Mesh& mesh) {
+    // First, re-order triangles to improve cache locality and reduce the number of VS invocations.
+    // Note that assimp already has aiProcess_ImproveCacheLocality, but MeshWriter doesn't know
+    // about assimp, and it doesn't hurt to do it again here since this generally runs offline.
+    meshopt_optimizeVertexCache(mesh.indices.data(), mesh.indices.data(), mesh.indices.size(),
+                mesh.vertexCount);
+
+    // At this point, triangle order has been established but we still need to shuffle vertices to
+    // optimize the fetch. This makes it so that lower-numbered indices generally come before
+    // higher-numbered indices.
+    if (mFlags & INTERLEAVED) {
+        meshopt_optimizeVertexFetch(mesh.vertices.data(), mesh.indices.data(),
+                mesh.indices.size(), mesh.vertices.data(), mesh.vertices.size(),
+                sizeof(Vertex));
+    } else {
+        const uint32_t vertexCount = mesh.vertexCount;
+
+        // Allocate a remapping table and create a copy of the index buffer.
+        vector<uint32_t> remappingVector(vertexCount);
+        vector<uint32_t> indicesVector = mesh.indices;
+        uint32_t* remapping = remappingVector.data();
+        const uint32_t* indices = indicesVector.data();
+
+        // Populate the remapping table.
+        meshopt_optimizeVertexFetchRemap(remapping, mesh.indices.data(),
+                mesh.indices.size(), vertexCount);
+
+        // Apply the remapping table.
+        meshopt_remapIndexBuffer(mesh.indices.data(), indices, mesh.indices.size(), remapping);
+        meshopt_remapVertexBuffer(mesh.positions.data(), mesh.positions.data(),
+                vertexCount, sizeof(decltype(Vertex::position)), remapping);
+        meshopt_remapVertexBuffer(mesh.tangents.data(), mesh.tangents.data(),
+                vertexCount, sizeof(decltype(Vertex::tangents)), remapping);
+        meshopt_remapVertexBuffer(mesh.colors.data(), mesh.colors.data(),
+                vertexCount, sizeof(decltype(Vertex::color)), remapping);
+        meshopt_remapVertexBuffer(mesh.uv0.data(), mesh.uv0.data(),
+                vertexCount, sizeof(decltype(Vertex::uv0)), remapping);
+        if (!mesh.uv1.empty()) {
+            meshopt_remapVertexBuffer(mesh.uv1.data(), mesh.uv1.data(),
+                    vertexCount, sizeof(decltype(Vertex::uv0)), remapping);
+        }
+    }
+
+    // As a last step, the meshoptimizer README recommends applying individual meshopt_quantize*
+    // functions as needed, but we actually already quantized the data according to our constraints
+    // e.g. we already (potentially) use snorm16 for uvs, half-floats for tangents, etc.
+}
+
+void MeshWriter::serialize(ostream& out, Mesh& mesh) {
+    const uint32_t maxint = numeric_limits<uint32_t>::max();
     const bool hasIndex16 = mesh.vertexCount < maxint;
     const bool hasUV1 = !mesh.uv1.empty();
+    const size_t vertexSize = sizeof(Vertex) + (hasUV1 ? sizeof(ushort2) : 0);
+    if ((mFlags & INTERLEAVED) && hasUV1) {
+        cerr << "Interleaved vertices can only have 1 UV set." << endl;
+        exit(1);
+    }
 
     // Compute the overall bounding box.
     Box aabb = mesh.parts.at(0).aabb;
     for (size_t i = 1; i < mesh.parts.size(); i++) {
         aabb.unionSelf(mesh.parts.at(i).aabb);
+    }
+
+    // It's safe to optimize the mesh regardless of the compression setting.
+    optimize(mesh);
+
+    // Perform compression of vertex data if it has been requested.
+    vector<unsigned char> compressedVertices;
+    if (mFlags & COMPRESSION) {
+        compressedVertices.resize(meshopt_encodeVertexBufferBound(mesh.vertexCount, vertexSize));
+        size_t compressedVertexSize;
+        if (mFlags & INTERLEAVED) {
+            compressedVertexSize = meshopt_encodeVertexBuffer(compressedVertices.data(),
+                    compressedVertices.size(), mesh.vertices.data(), mesh.vertexCount, vertexSize);
+        } else {
+            vector<unsigned char> sourceData(mesh.vertexCount * vertexSize);
+            unsigned char* ptr = sourceData.data();
+            ptr += write(ptr, mesh.positions);
+            ptr += write(ptr, mesh.tangents);
+            ptr += write(ptr, mesh.colors);
+            ptr += write(ptr, mesh.uv0);
+            if (hasUV1) {
+                ptr += write(ptr, mesh.uv1);
+            }
+            assert(ptr - sourceData.data() == sourceData.size());
+            compressedVertexSize = meshopt_encodeVertexBuffer(compressedVertices.data(),
+                    compressedVertices.size(), sourceData.data(), mesh.vertexCount, vertexSize);
+        }
+        if (compressedVertexSize == 0) {
+            cerr << "Unable to compress vertex buffer." << endl;
+            exit(1);
+        }
+        compressedVertices.resize(compressedVertexSize);
+    }
+
+    // Perform compression of index data if it has been requested.
+    vector<unsigned char> compressedIndices;
+    if (mFlags & COMPRESSION) {
+        compressedIndices.resize(meshopt_encodeIndexBufferBound(mesh.indices.size(),
+                mesh.vertexCount));
+        size_t result = meshopt_encodeIndexBuffer(compressedIndices.data(),
+                compressedIndices.size(), mesh.indices.data(), mesh.indices.size());
+        if (result == 0) {
+            cerr << "Unable to compress index buffer." << endl;
+            exit(1);
+        }
+        compressedIndices.resize(result);
     }
 
     write(out, "FILAMESH", 8 * sizeof(char));
@@ -52,10 +156,8 @@ void MeshWriter::serialize(ostream& out, const Mesh& mesh) {
     header.version = VERSION;
     header.parts = uint32_t(mesh.parts.size());
     header.aabb = aabb;
-    header.flags = 0;
-    header.flags |= mInterleaved ? INTERLEAVED : 0;
-    header.flags |= mSnormUVs ? TEXCOORD_SNORM16 : 0;
-    if (mInterleaved) {
+    header.flags = mFlags;
+    if (mFlags & INTERLEAVED) {
         header.offsetPosition = offsetof(Vertex, position);
         header.offsetTangents = offsetof(Vertex, tangents);
         header.offsetColor    = offsetof(Vertex, color);
@@ -77,21 +179,28 @@ void MeshWriter::serialize(ostream& out, const Mesh& mesh) {
         header.strideColor    = 0;
         header.strideUV0      = 0;
         header.strideUV1      = maxint;
-
         if (hasUV1) {
             header.offsetUV1  = header.offsetUV0 + mesh.vertexCount * sizeof(Vertex::uv0);
             header.strideUV1  = 0;
         }
     }
     header.vertexCount = mesh.vertexCount;
-    header.vertexSize = mesh.vertexCount * sizeof(Vertex);
     header.indexType = uint32_t(hasIndex16 ? UI16 : UI32);
     header.indexCount = mesh.indices.size();
-    header.indexSize = mesh.indices.size() * (hasIndex16 ? sizeof(uint16_t) : sizeof(uint32_t));
+
+    if (mFlags & COMPRESSION) {
+        header.vertexSize = compressedVertices.size();
+        header.indexSize = compressedIndices.size();
+    } else {
+        header.vertexSize = mesh.vertexCount * vertexSize;
+        header.indexSize = mesh.indices.size() * (hasIndex16 ? sizeof(uint16_t) : sizeof(uint32_t));
+    }
 
     write(out, header);
 
-    if (mInterleaved) {
+    if (mFlags & COMPRESSION) {
+        write(out, compressedVertices.data(), compressedVertices.size());
+    } else if (mFlags & INTERLEAVED) {
         write(out, mesh.vertices.data(), uint32_t(mesh.vertices.size()));
     } else {
         write(out, mesh.positions.data(), uint32_t(mesh.positions.size()));
@@ -103,10 +212,12 @@ void MeshWriter::serialize(ostream& out, const Mesh& mesh) {
         }
     }
 
-    if (!hasIndex16) {
+    if (mFlags & COMPRESSION) {
+        write(out, compressedIndices.data(), compressedIndices.size());
+    } else if (!hasIndex16) {
         write(out, mesh.indices.data(), uint32_t(mesh.indices.size()));
     } else {
-        std::vector<uint16_t> smallIndices;
+        vector<uint16_t> smallIndices;
         smallIndices.resize(mesh.indices.size());
         for (size_t i = 0; i < mesh.indices.size(); i++) {
             smallIndices[i] = static_cast<uint16_t>(mesh.indices[i]);

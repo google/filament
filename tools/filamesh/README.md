@@ -38,20 +38,19 @@ Note: the UV1 attribute cannot be used in interleaved mode
     uint32  : stride of the color attribute
     uint32  : offset of the UV0 attribute
     uint32  : stride of the UV0 attribute
-    uint32  : offset of the UV1 attribute (always 0xffffffff in interleaved mode)
-    uint32  : stride of the UV1 attribute (always 0xffffffff in interleaved mode)
+    uint32  : offset of the UV1 attribute (0xffffffff if UV1 is not present)
+    uint32  : stride of the UV1 attribute (0xffffffff if UV1 is not present)
     uint32  : total number of vertices
-    uint32  : size in bytes occupied by the vertices
+    uint32  : size in bytes occupied by the (compressed) vertices
     uint32  : 0 if indices are stored as uint32, 1 if stored as uint16
     uint32  : total number of indices
-    uint32  : size in bytes occupied by the indices
+    uint32  : size in bytes occupied by the (compressed) indices
 
 The `flags` field contains the following bits:
 
 - Bit 0: Specifies that vertex attributes are interleaved.
 - Bit 1: UV's are 16-bit integers normalized into [-1, +1] rather than half-floats.
 - Bit 2: Vertex and index data are compressed using zeux/meshoptimizer.
-- Bit 3: Vertex and index data are compressed using google/draco.
 
 ### Vertex data
 

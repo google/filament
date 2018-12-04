@@ -8,12 +8,12 @@ we'll also be using `filamesh` and `mipgen`.
 
 ## Create filamesh file
 
-Filament does not have an asset loading system, but it does provide a simple binary mesh format
-called `filamesh` for demonstration purposes. Let's create a filamesh file for suzanne by converting
-[this OBJ file]:
+Filament does not have an asset loading system, but it does provide a binary mesh format
+called `filamesh` for simple use cases. Let's create a compressed filamesh file for suzanne by
+converting [this OBJ file]:
 
 ```bash
-filamesh monkey.obj suzanne.filamesh
+filamesh --compress monkey.obj suzanne.filamesh
 ```
 
 ## Create mipmapped textures

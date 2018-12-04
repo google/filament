@@ -15,8 +15,21 @@
  */
 
 #include <filameshio/MeshIO.h>
+#include <filameshio/filamesh.h>
 
-#include <iostream>
+#include <filament/Box.h>
+#include <filament/Engine.h>
+#include <filament/Fence.h>
+#include <filament/Material.h>
+#include <filament/MaterialInstance.h>
+#include <filament/RenderableManager.h>
+
+#include <meshoptimizer.h>
+
+#include <utils/EntityManager.h>
+#include <utils/Log.h>
+#include <utils/Path.h>
+
 #include <string>
 #include <vector>
 
@@ -26,22 +39,6 @@
 #else
 #    include <io.h>
 #endif
-
-#include <utils/EntityManager.h>
-#include <utils/Path.h>
-
-#include <math/vec2.h>
-#include <math/vec4.h>
-
-#include <filameshio/filamesh.h>
-
-#include <filament/Box.h>
-#include <filament/Engine.h>
-#include <filament/Fence.h>
-#include <filament/Material.h>
-#include <filament/MaterialInstance.h>
-#include <filament/RenderableManager.h>
-#include <filament/Scene.h>
 
 using namespace filament;
 using namespace filamesh;
@@ -95,20 +92,20 @@ MeshIO::Mesh MeshIO::loadMeshFromBuffer(filament::Engine* engine,
 MeshIO::Mesh MeshIO::loadMeshFromBuffer(filament::Engine* engine,
         void const* data, Callback destructor, void* user,
         const MaterialRegistry& materials) {
-    const char* p = (const char *) data;
-    if (strncmp(MAGICID, p, 8)) {
-        puts("Magic string not found.");
-        abort();
+    const uint8_t* p = (const uint8_t*) data;
+    if (strncmp(MAGICID, (const char *) p, 8)) {
+        utils::slog.e << "Magic string not found." << utils::io::endl;
+        return {};
     }
     p += 8;
 
     Header* header = (Header*) p;
     p += sizeof(Header);
 
-    char const* vertexData = p;
+    uint8_t const* vertexData = p;
     p += header->vertexSize;
 
-    char const* indices = p;
+    uint8_t const* indices = p;
     p += header->indexSize;
 
     Part* parts = (Part*) p;
@@ -121,7 +118,7 @@ MeshIO::Mesh MeshIO::loadMeshFromBuffer(filament::Engine* engine,
     for (size_t i = 0; i < materialCount; i++) {
         uint32_t nameLength = (uint32_t) *p;
         p += sizeof(uint32_t);
-        partsMaterial[i] = p;
+        partsMaterial[i] = (const char*) p;
         p += nameLength + 1; // null terminated
     }
 
@@ -133,12 +130,36 @@ MeshIO::Mesh MeshIO::loadMeshFromBuffer(filament::Engine* engine,
                     : IndexBuffer::IndexType::UINT)
             .build(*engine);
 
-    mesh.indexBuffer->setBuffer(*engine,
-            IndexBuffer::BufferDescriptor(indices, header->indexSize, destructor, user));
+    // If the index buffer is compressed, then decode the indices into a temporary buffer.
+    // The user callback can be called immediately afterwards because the source data does not get
+    // passed to the GPU.
+    const size_t indicesSize = header->indexSize;
+    if (header->flags & COMPRESSION) {
+        size_t indexSize = header->indexType == UI16 ? sizeof(uint16_t) : sizeof(uint32_t);
+        size_t indexCount = header->indexCount;
+        size_t uncompressedSize = indexSize * indexCount;
+        void* uncompressed = malloc(uncompressedSize);
+        int err = meshopt_decodeIndexBuffer(uncompressed, indexCount, indexSize, indices,
+                indicesSize);
+        if (err) {
+            utils::slog.e << "Unable to decode index buffer." << utils::io::endl;
+            return {};
+        }
+        if (destructor) {
+            destructor((void*) indices, indicesSize, user);
+        }
+        auto freecb = [](void* buffer, size_t size, void* user) { free(buffer); };
+        mesh.indexBuffer->setBuffer(*engine,
+                IndexBuffer::BufferDescriptor(uncompressed, uncompressedSize, freecb, nullptr));
+    } else {
+        mesh.indexBuffer->setBuffer(*engine,
+                IndexBuffer::BufferDescriptor(indices, indicesSize, destructor, user));
+    }
 
     VertexBuffer::Builder vbb;
     vbb.vertexCount(header->vertexCount)
             .bufferCount(1)
+            .normalized(VertexAttribute::COLOR)
             .normalized(VertexAttribute::TANGENTS);
 
     VertexBuffer::AttributeType uvtype = (header->flags & TEXCOORD_SNORM16) ?
@@ -149,6 +170,8 @@ MeshIO::Mesh MeshIO::loadMeshFromBuffer(filament::Engine* engine,
                         header->offsetPosition, uint8_t(header->stridePosition))
             .attribute(VertexAttribute::TANGENTS, 0, VertexBuffer::AttributeType::SHORT4,
                         header->offsetTangents, uint8_t(header->strideTangents))
+            .attribute(VertexAttribute::COLOR, 0, VertexBuffer::AttributeType::UBYTE4,
+                        header->offsetColor, uint8_t(header->strideColor))
             .attribute(VertexAttribute::UV0, 0, uvtype,
                         header->offsetUV0, uint8_t(header->strideUV0));
 
@@ -156,9 +179,11 @@ MeshIO::Mesh MeshIO::loadMeshFromBuffer(filament::Engine* engine,
         vbb.normalized(VertexAttribute::UV0);
     }
 
-    if (header->offsetUV1 != std::numeric_limits<uint32_t>::max() &&
-            header->strideUV1 != std::numeric_limits<uint32_t>::max()) {
-        vbb.attribute(VertexAttribute::UV1,   0, VertexBuffer::AttributeType::HALF2,
+    constexpr uint32_t uintmax = std::numeric_limits<uint32_t>::max();
+    const bool hasUV1 = header->offsetUV1 != uintmax && header->strideUV1 != uintmax;
+
+    if (hasUV1) {
+        vbb.attribute(VertexAttribute::UV1, 0, VertexBuffer::AttributeType::HALF2,
                 header->offsetUV1, uint8_t(header->strideUV1));
         if (header->flags & TEXCOORD_SNORM16) {
             vbb.normalized(VertexAttribute::UV1);
@@ -167,8 +192,32 @@ MeshIO::Mesh MeshIO::loadMeshFromBuffer(filament::Engine* engine,
 
     mesh.vertexBuffer = vbb.build(*engine);
 
-    mesh.vertexBuffer->setBufferAt(*engine, 0,
-        VertexBuffer::BufferDescriptor(vertexData, header->vertexSize, destructor, user));
+    // If the vertex buffer is compressed, then decode the vertices into a temporary buffer.
+    // The user callback can be called immediately afterwards because the source data does not get
+    // passed to the GPU.
+    const size_t verticesSize = header->vertexSize;
+    if (header->flags & COMPRESSION) {
+        size_t vertexSize = sizeof(half4) + sizeof(short4) + sizeof(ubyte4) + sizeof(ushort2) +
+                (hasUV1 ? sizeof(ushort2) : 0);
+        size_t vertexCount = header->vertexCount;
+        size_t uncompressedSize = vertexSize * vertexCount;
+        void* uncompressed = malloc(uncompressedSize);
+        int err = meshopt_decodeVertexBuffer(uncompressed, vertexCount, vertexSize, vertexData,
+                verticesSize);
+        if (err) {
+            utils::slog.e << "Unable to decode vertex buffer." << utils::io::endl;
+            return {};
+        }
+        if (destructor) {
+            destructor((void*) vertexData, verticesSize, user);
+        }
+        auto freecb = [](void* buffer, size_t size, void* user) { free(buffer); };
+        mesh.vertexBuffer->setBufferAt(*engine, 0,
+                IndexBuffer::BufferDescriptor(uncompressed, uncompressedSize, freecb, nullptr));
+    } else {
+        mesh.vertexBuffer->setBufferAt(*engine, 0,
+                VertexBuffer::BufferDescriptor(vertexData, verticesSize, destructor, user));
+    }
 
     mesh.renderable = utils::EntityManager::get().create();
 
