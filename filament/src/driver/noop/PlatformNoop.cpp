@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 The Android Open Source Project
+ * Copyright (C) 2017 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,30 +14,14 @@
  * limitations under the License.
  */
 
+#include "driver/noop/PlatformNoop.h"
+
 #include "driver/noop/NoopDriver.h"
-#include "driver/CommandStreamDispatcher.h"
 
 namespace filament {
 
-
-Driver* NoopDriver::create() {
-    return new NoopDriver();
+Driver* PlatformNoop::createDriver(void* const sharedGLContext) noexcept {
+    return NoopDriver::create();
 }
-
-NoopDriver::NoopDriver() noexcept : DriverBase(new ConcreteDispatcher<NoopDriver>(this)) {
-}
-
-NoopDriver::~NoopDriver() noexcept = default;
-
-driver::ShaderModel NoopDriver::getShaderModel() const noexcept {
-#if defined(GLES31_HEADERS)
-    return driver::ShaderModel::GL_CORE_30;
-#else
-    return driver::ShaderModel::GL_CORE_41;
-#endif
-}
-
-// explicit instantiation of the Dispatcher
-template class ConcreteDispatcher<NoopDriver>;
 
 } // namespace filament

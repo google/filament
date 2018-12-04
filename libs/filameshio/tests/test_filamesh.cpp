@@ -107,7 +107,7 @@ static const InterleavedVertex interleavedVertices[] = { {
 class FilameshTest : public testing::Test {
 protected:
     void SetUp() override {
-        engine = Engine::create(Engine::Backend::OPENGL);
+        engine = Engine::create(Engine::Backend::NOOP);
     }
 
     void TearDown() override {
