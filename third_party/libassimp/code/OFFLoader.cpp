@@ -106,15 +106,23 @@ const aiImporterDesc* OFFImporter::GetInfo () const
     return &desc;
 }
 
+
+// skip blank space, lines and comments
+static void NextToken(const char **car, const char* end) {
+  SkipSpacesAndLineEnd(car);
+  while (*car < end && (**car == '#' || **car == '\n' || **car == '\r')) {
+    SkipLine(car);
+    SkipSpacesAndLineEnd(car);
+  }
+}
+
 // ------------------------------------------------------------------------------------------------
 // Imports the given file into the given scene structure.
-void OFFImporter::InternReadFile( const std::string& pFile,
-    aiScene* pScene, IOSystem* pIOHandler)
-{
+void OFFImporter::InternReadFile( const std::string& pFile, aiScene* pScene, IOSystem* pIOHandler) {
     std::unique_ptr<IOStream> file( pIOHandler->Open( pFile, "rb"));
 
     // Check whether we can read from the file
-    if( file.get() == NULL) {
+    if( file.get() == nullptr) {
         throw DeadlyImportError( "Failed to open OFF file " + pFile + ".");
     }
 
@@ -123,15 +131,61 @@ void OFFImporter::InternReadFile( const std::string& pFile,
     TextFileToBuffer(file.get(),mBuffer2);
     const char* buffer = &mBuffer2[0];
 
-    char line[4096];
-    GetNextLine(buffer,line);
-    if ('O' == line[0]) {
-        GetNextLine(buffer,line); // skip the 'OFF' line
+    // Proper OFF header parser. We only implement normal loading for now.
+    bool hasTexCoord = false, hasNormals = false, hasColors = false;
+    bool hasHomogenous = false, hasDimension = false;
+    unsigned int dimensions = 3;
+    const char* car = buffer;
+    const char* end = buffer + mBuffer2.size();
+    NextToken(&car, end);
+    
+    if (car < end - 2 && car[0] == 'S' && car[1] == 'T') {
+      hasTexCoord = true; car += 2;
+    }
+    if (car < end - 1 && car[0] == 'C') {
+      hasColors = true; car++;
+    }
+    if (car < end- 1 && car[0] == 'N') {
+      hasNormals = true; car++;
+    }
+    if (car < end - 1 && car[0] == '4') {
+      hasHomogenous = true; car++;
+    }
+    if (car < end - 1 && car[0] == 'n') {
+      hasDimension = true; car++;
+    }
+    if (car < end - 3 && car[0] == 'O' && car[1] == 'F' && car[2] == 'F') {
+        car += 3;
+	NextToken(&car, end);
+    } else {
+      // in case there is no OFF header (which is allowed by the
+      // specification...), then we might have unintentionally read an
+      // additional dimension from the primitive count fields
+      dimensions = 3;
+      hasHomogenous = false;
+      NextToken(&car, end);
+      
+      // at this point the next token should be an integer number
+      if (car >= end - 1 || *car < '0' || *car > '9') {
+	throw DeadlyImportError("OFF: Header is invalid");
+      }
+    }
+    if (hasDimension) {
+        dimensions = strtoul10(car, &car);
+	NextToken(&car, end);
+    }
+    if (dimensions > 3) {
+        throw DeadlyImportError
+	  ("OFF: Number of vertex coordinates higher than 3 unsupported");
     }
 
-    const char* sz = line; SkipSpaces(&sz);
-    const unsigned int numVertices = strtoul10(sz,&sz);SkipSpaces(&sz);
-    const unsigned int numFaces = strtoul10(sz,&sz);
+    NextToken(&car, end);
+    const unsigned int numVertices = strtoul10(car, &car);
+    NextToken(&car, end);
+    const unsigned int numFaces = strtoul10(car, &car);
+    NextToken(&car, end);
+    strtoul10(car, &car);  // skip edge count
+    NextToken(&car, end);
 
     if (!numVertices) {
         throw DeadlyImportError("OFF: There are no valid vertices");
@@ -147,91 +201,127 @@ void OFFImporter::InternReadFile( const std::string& pFile,
     pScene->mMeshes[0] = mesh;
 
     mesh->mNumFaces = numFaces;
-    aiFace* faces = new aiFace [mesh->mNumFaces];
+    aiFace* faces = new aiFace[mesh->mNumFaces];
     mesh->mFaces = faces;
 
-    std::vector<aiVector3D> tempPositions(numVertices);
+    mesh->mNumVertices = numVertices;
+    mesh->mVertices = new aiVector3D[numVertices];
+    mesh->mNormals = hasNormals ? new aiVector3D[numVertices] : nullptr;
+    mesh->mColors[0] = hasColors ? new aiColor4D[numVertices] : nullptr;
+
+    if (hasTexCoord) {
+        mesh->mNumUVComponents[0] = 2;
+        mesh->mTextureCoords[0] = new aiVector3D[numVertices];
+    }
+    char line[4096];
+    buffer = car;
+    const char *sz = car;
 
     // now read all vertex lines
-    for (unsigned int i = 0; i< numVertices;++i)
-    {
-        if(!GetNextLine(buffer,line))
-        {
+    for (unsigned int i = 0; i < numVertices; ++i) {
+        if(!GetNextLine(buffer, line)) {
             ASSIMP_LOG_ERROR("OFF: The number of verts in the header is incorrect");
             break;
         }
-        aiVector3D& v = tempPositions[i];
+        aiVector3D& v = mesh->mVertices[i];	
+        sz = line;
 
-        sz = line; SkipSpaces(&sz);
-        sz = fast_atoreal_move<ai_real>(sz,(ai_real&)v.x); SkipSpaces(&sz);
-        sz = fast_atoreal_move<ai_real>(sz,(ai_real&)v.y); SkipSpaces(&sz);
-        fast_atoreal_move<ai_real>(sz,(ai_real&)v.z);
+	// helper array to write a for loop over possible dimension values
+	ai_real* vec[3] = {&v.x, &v.y, &v.z};
+
+	// stop at dimensions: this allows loading 1D or 2D coordinate vertices
+        for (unsigned int dim = 0; dim < dimensions; ++dim ) {
+	    SkipSpaces(&sz);
+	    sz = fast_atoreal_move<ai_real>(sz, *vec[dim]);
+	}
+
+	// if has homogenous coordinate, divide others by this one
+	if (hasHomogenous) {
+	    SkipSpaces(&sz);
+	    ai_real w = 1.;
+	    sz = fast_atoreal_move<ai_real>(sz, w);
+            for (unsigned int dim = 0; dim < dimensions; ++dim ) {
+	        *(vec[dim]) /= w;
+	    }
+	}
+
+	// read optional normals
+	if (hasNormals) {
+	    aiVector3D& n = mesh->mNormals[i];
+	    SkipSpaces(&sz);
+	    sz = fast_atoreal_move<ai_real>(sz,(ai_real&)n.x);
+	    SkipSpaces(&sz);
+	    sz = fast_atoreal_move<ai_real>(sz,(ai_real&)n.y);
+	    SkipSpaces(&sz);
+	    fast_atoreal_move<ai_real>(sz,(ai_real&)n.z);
+	}
+	
+	// reading colors is a pain because the specification says it can be
+	// integers or floats, and any number of them between 1 and 4 included,
+	// until the next comment or end of line
+	// in theory should be testing type !
+	if (hasColors) {
+	    aiColor4D& c = mesh->mColors[0][i];
+	    SkipSpaces(&sz);
+	    sz = fast_atoreal_move<ai_real>(sz,(ai_real&)c.r);
+            if (*sz != '#' && *sz != '\n' && *sz != '\r') {
+	        SkipSpaces(&sz);
+	        sz = fast_atoreal_move<ai_real>(sz,(ai_real&)c.g);
+            } else {
+	        c.g = 0.;
+	    }
+            if (*sz != '#' && *sz != '\n' && *sz != '\r') {
+	        SkipSpaces(&sz);
+	        sz = fast_atoreal_move<ai_real>(sz,(ai_real&)c.b);
+            } else {
+	        c.b = 0.;
+	    }
+            if (*sz != '#' && *sz != '\n' && *sz != '\r') {
+	        SkipSpaces(&sz);
+	        sz = fast_atoreal_move<ai_real>(sz,(ai_real&)c.a);
+            } else {
+	        c.a = 1.;
+	    }
+	}
+        if (hasTexCoord) {
+	    aiVector3D& t = mesh->mTextureCoords[0][i];
+	    SkipSpaces(&sz);
+	    sz = fast_atoreal_move<ai_real>(sz,(ai_real&)t.x);
+	    SkipSpaces(&sz);
+	    fast_atoreal_move<ai_real>(sz,(ai_real&)t.y);
+	}
     }
 
-
-    // First find out how many vertices we'll need
-    const char* old = buffer;
-    for (unsigned int i = 0; i< mesh->mNumFaces;++i)
-    {
-        if(!GetNextLine(buffer,line))
-        {
+    // load faces with their indices
+    faces = mesh->mFaces;
+    for (unsigned int i = 0; i < numFaces; ) {
+        if(!GetNextLine(buffer,line)) {
             ASSIMP_LOG_ERROR("OFF: The number of faces in the header is incorrect");
             break;
         }
-        sz = line;SkipSpaces(&sz);
-        faces->mNumIndices = strtoul10(sz,&sz);
-        if(!(faces->mNumIndices) || faces->mNumIndices > 9)
-        {
-            ASSIMP_LOG_ERROR("OFF: Faces with zero indices aren't allowed");
+        unsigned int idx;
+        sz = line; SkipSpaces(&sz);
+        idx = strtoul10(sz,&sz);
+        if(!idx || idx > 9) {
+	    ASSIMP_LOG_ERROR("OFF: Faces with zero indices aren't allowed");
             --mesh->mNumFaces;
             continue;
-        }
-        mesh->mNumVertices += faces->mNumIndices;
-        ++faces;
-    }
-
-    if (!mesh->mNumVertices)
-        throw DeadlyImportError("OFF: There are no valid faces");
-
-    // allocate storage for the output vertices
-    std::vector<aiVector3D> verts;
-    verts.reserve(mesh->mNumVertices);
-
-    // second: now parse all face indices
-    buffer = old;
-    faces = mesh->mFaces;
-    for (unsigned int i = 0, p = 0; i< mesh->mNumFaces;)
-    {
-        if(!GetNextLine(buffer,line))break;
-
-        unsigned int idx;
-        sz = line;SkipSpaces(&sz);
-        idx = strtoul10(sz,&sz);
-        if(!(idx) || idx > 9)
-            continue;
-
-        faces->mIndices = new unsigned int [faces->mNumIndices];
-        for (unsigned int m = 0; m < faces->mNumIndices;++m)
-        {
+	}
+	faces->mNumIndices = idx;
+        faces->mIndices = new unsigned int[faces->mNumIndices];
+        for (unsigned int m = 0; m < faces->mNumIndices;++m) {
             SkipSpaces(&sz);
             idx = strtoul10(sz,&sz);
-            if ((idx) >= numVertices)
-            {
+            if (idx >= numVertices) {
                 ASSIMP_LOG_ERROR("OFF: Vertex index is out of range");
-                idx = numVertices-1;
+                idx = numVertices - 1;
             }
-            faces->mIndices[m] = p++;
-            verts.push_back(tempPositions[idx]);
+            faces->mIndices[m] = idx;
         }
         ++i;
         ++faces;
     }
-
-    if (mesh->mNumVertices != verts.size()) {
-        throw DeadlyImportError("OFF: Vertex count mismatch");
-    }
-    mesh->mVertices = new aiVector3D[verts.size()];
-    memcpy(mesh->mVertices, &verts[0], verts.size() * sizeof(aiVector3D));
+    
     // generate the output node graph
     pScene->mRootNode = new aiNode();
     pScene->mRootNode->mName.Set("<OFFRoot>");
@@ -248,8 +338,8 @@ void OFFImporter::InternReadFile( const std::string& pFile,
     pcMat->AddProperty(&clr,1,AI_MATKEY_COLOR_DIFFUSE);
     pScene->mMaterials[0] = pcMat;
 
-    const int twosided =1;
-    pcMat->AddProperty(&twosided,1,AI_MATKEY_TWOSIDED);
+    const int twosided = 1;
+    pcMat->AddProperty(&twosided, 1, AI_MATKEY_TWOSIDED);
 }
 
 #endif // !! ASSIMP_BUILD_NO_OFF_IMPORTER

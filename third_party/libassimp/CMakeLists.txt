@@ -170,7 +170,7 @@ IF(NOT IGNORE_GIT_HASH)
 
   # Get the latest abbreviated commit hash of the working branch
   EXECUTE_PROCESS(
-    COMMAND git log -1 --format=%h --no-show-signature
+    COMMAND git rev-parse --short=8 HEAD
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     OUTPUT_VARIABLE GIT_COMMIT_HASH
     OUTPUT_STRIP_TRAILING_WHITESPACE

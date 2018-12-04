@@ -419,8 +419,6 @@ private:
 
 } //namespace D3MF
 
-static const std::string Extension = "3mf";
-
 static const aiImporterDesc desc = {
     "3mf Importer",
     "",
@@ -431,7 +429,7 @@ static const aiImporterDesc desc = {
     0,
     0,
     0,
-    Extension.c_str()
+    "3mf"
 };
 
 D3MFImporter::D3MFImporter()
@@ -445,7 +443,7 @@ D3MFImporter::~D3MFImporter() {
 
 bool D3MFImporter::CanRead(const std::string &filename, IOSystem *pIOHandler, bool checkSig) const {
     const std::string extension( GetExtension( filename ) );
-    if(extension == Extension ) {
+    if(extension == desc.mFileExtensions ) {
         return true;
     } else if ( !extension.length() || checkSig ) {
         if ( nullptr == pIOHandler ) {

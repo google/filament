@@ -56,7 +56,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #endif
 
 #include "IFCLoader.h"
-#include "STEPFileReader.h"
+#include "../STEPParser/STEPFileReader.h"
 
 #include "IFCUtil.h"
 

@@ -161,19 +161,21 @@ void Discreet3DSImporter::InternReadFile( const std::string& pFile,
     aiScene* pScene, IOSystem* pIOHandler)
 {
     StreamReaderLE stream(pIOHandler->Open(pFile,"rb"));
-    this->stream = &stream;
 
     // We should have at least one chunk
     if (stream.GetRemainingSize() < 16) {
         throw DeadlyImportError("3DS file is either empty or corrupt: " + pFile);
     }
+    this->stream = &stream;
 
     // Allocate our temporary 3DS representation
-    mScene = new D3DS::Scene();
+    D3DS::Scene _scene;
+    mScene = &_scene;
 
     // Initialize members
+    D3DS::Node _rootNode("UNNAMED");
     mLastNodeIndex             = -1;
-    mCurrentNode               = new D3DS::Node("UNNAMED");
+    mCurrentNode               = &_rootNode;
     mRootNode                  = mCurrentNode;
     mRootNode->mHierarchyPos   = -1;
     mRootNode->mHierarchyIndex = -1;
@@ -193,7 +195,6 @@ void Discreet3DSImporter::InternReadFile( const std::string& pFile,
     // file.
     for (auto &mesh : mScene->mMeshes) {
         if (mesh.mFaces.size() > 0 && mesh.mPositions.size() == 0)  {
-            delete mScene;
             throw DeadlyImportError("3DS file contains faces but no vertices: " + pFile);
         }
         CheckIndices(mesh);
@@ -201,7 +202,7 @@ void Discreet3DSImporter::InternReadFile( const std::string& pFile,
         ComputeNormalsWithSmoothingsGroups<D3DS::Face>(mesh);
     }
 
-    // Replace all occurrences of the default material with a
+    // Replace all occurences of the default material with a
     // valid material. Generate it if no material containing
     // DEFAULT in its name has been found in the file
     ReplaceDefaultMaterial();
@@ -218,10 +219,8 @@ void Discreet3DSImporter::InternReadFile( const std::string& pFile,
     // Now apply the master scaling factor to the scene
     ApplyMasterScale(pScene);
 
-    // Delete our internal scene representation and the root
-    // node, so the whole hierarchy will follow
-    delete mRootNode;
-    delete mScene;
+    // Our internal scene representation and the root
+    // node will be automatically deleted, so the whole hierarchy will follow
 
     AI_DEBUG_INVALIDATE_PTR(mRootNode);
     AI_DEBUG_INVALIDATE_PTR(mScene);
