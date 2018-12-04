@@ -17,7 +17,7 @@ function(add_mesh SOURCE TARGET)
     set(RESOURCE_BINS ${RESOURCE_BINS} ${target_mesh} PARENT_SCOPE)
     add_custom_command(
         OUTPUT ${target_mesh}
-        COMMAND filamesh ${source_mesh} ${target_mesh}
+        COMMAND filamesh --compress ${source_mesh} ${target_mesh}
         MAIN_DEPENDENCY ${source_mesh}
         DEPENDS filamesh)
 endfunction()
