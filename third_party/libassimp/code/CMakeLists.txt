@@ -191,6 +191,14 @@ SET( Common_SRCS
 )
 SOURCE_GROUP(Common FILES ${Common_SRCS})
 
+SET( STEPParser_SRCS
+  Importer/STEPParser/STEPFileReader.h
+  Importer/STEPParser/STEPFileReader.cpp
+  Importer/STEPParser/STEPFileEncoding.cpp
+  Importer/STEPParser/STEPFileEncoding.h
+)
+SOURCE_GROUP(STEPParser FILES ${STEPParser_SRCS})
+
 IF ( ASSIMP_BUILD_NONFREE_C4D_IMPORTER )
   SET( C4D_SRCS
     C4DImporter.cpp
@@ -487,11 +495,8 @@ ADD_ASSIMP_IMPORTER( IFC
   Importer/IFC/IFCCurve.cpp
   Importer/IFC/IFCBoolean.cpp
   Importer/IFC/IFCOpenings.cpp
-  Importer/IFC/STEPFileReader.h
-  Importer/IFC/STEPFileReader.cpp
-  Importer/IFC/STEPFileEncoding.cpp
-  Importer/IFC/STEPFileEncoding.h
 )
+
 if (ASSIMP_BUILD_IFC_IMPORTER)
   if (MSVC)
     set_source_files_properties(Importer/IFC/IFCReaderGen1_2x3.cpp Importer/IFC/IFCReaderGen2_2x3.cpp PROPERTIES COMPILE_FLAGS "/bigobj")
@@ -885,6 +890,7 @@ SET( assimp_src
   ${Exporter_SRCS}
   ${PostProcessing_SRCS}
   ${MaterialSystem_SRCS}
+  ${STEPParser_SRCS}
   ${Step_SRCS}
 
   # Model Support
@@ -917,7 +923,7 @@ IF (ASSIMP_BUILD_NONFREE_C4D_IMPORTER)
 ENDIF (ASSIMP_BUILD_NONFREE_C4D_IMPORTER)
 
 ADD_LIBRARY( assimp ${assimp_src} )
-ADD_LIBRARY(assimp::asimp ALIAS assimp)
+ADD_LIBRARY(assimp::assimp ALIAS assimp)
 
 TARGET_INCLUDE_DIRECTORIES ( assimp PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../include>

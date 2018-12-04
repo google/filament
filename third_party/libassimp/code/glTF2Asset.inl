@@ -1357,6 +1357,13 @@ inline void Asset::Load(const std::string& pFile, bool isBinary)
         }
     }
 
+    // Force reading of skins since they're not always directly referenced
+    if (Value* skinsArray = FindArray(doc, "skins")) {
+        for (unsigned int i = 0; i < skinsArray->Size(); ++i) {
+            skins.Retrieve(i);
+        }
+    }
+
     if (Value* animsArray = FindArray(doc, "animations")) {
         for (unsigned int i = 0; i < animsArray->Size(); ++i) {
             animations.Retrieve(i);

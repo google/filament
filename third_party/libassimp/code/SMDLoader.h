@@ -219,6 +219,7 @@ protected:
     /** Parse the SMD file and create the output scene
     */
     void ParseFile();
+    void ReadSmd(const std::string &pFile, IOSystem* pIOHandler);
 
     // -------------------------------------------------------------------
     /** Parse the triangles section of the SMD file
@@ -290,13 +291,6 @@ protected:
     unsigned int GetTextureIndex(const std::string& filename);
 
     // -------------------------------------------------------------------
-    /** Computes absolute bone transformations
-     * All output transformations are in worldspace.
-     */
-    void ComputeAbsoluteBoneTransformations();
-
-
-    // -------------------------------------------------------------------
     /** Parse a line in the skeleton section
      */
     void ParseSkeletonElement(const char* szCurrent,
@@ -344,7 +338,9 @@ protected:
      */
     void CreateOutputMeshes();
     void CreateOutputNodes();
-    void CreateOutputAnimations();
+    void CreateOutputAnimations(const std::string &pFile, IOSystem* pIOHandler);
+    void CreateOutputAnimation(int index, const std::string &name);
+    void GetAnimationFileList(const std::string &pFile, IOSystem* pIOHandler, std::vector<std::tuple<std::string, std::string>>& outList);
     void CreateOutputMaterials();
 
 
@@ -413,6 +409,8 @@ private:
      */
     unsigned int iLineNumber;
 
+    bool bLoadAnimationList = true;
+    bool noSkeletonMesh = false;
 };
 
 } // end of namespace Assimp

@@ -527,27 +527,25 @@ inline aiMatrix4x4t<TReal>& aiMatrix4x4t<TReal>::FromEulerAnglesXYZ(TReal x, TRe
 {
     aiMatrix4x4t<TReal>& _this = *this;
 
-    TReal cr = std::cos( x );
-    TReal sr = std::sin( x );
-    TReal cp = std::cos( y );
-    TReal sp = std::sin( y );
-    TReal cy = std::cos( z );
-    TReal sy = std::sin( z );
+    TReal cx = std::cos(x);
+    TReal sx = std::sin(x);
+    TReal cy = std::cos(y);
+    TReal sy = std::sin(y);
+    TReal cz = std::cos(z);
+    TReal sz = std::sin(z);
 
-    _this.a1 = cp*cy ;
-    _this.a2 = cp*sy;
-    _this.a3 = -sp ;
+    // mz*my*mx
+    _this.a1 = cz * cy;
+    _this.a2 = cz * sy * sx - sz * cx;
+    _this.a3 = sz * sx + cz * sy * cx;
 
-    TReal srsp = sr*sp;
-    TReal crsp = cr*sp;
+    _this.b1 = sz * cy;
+    _this.b2 = cz * cx + sz * sy * sx;
+    _this.b3 = sz * sy * cx - cz * sx;
 
-    _this.b1 = srsp*cy-cr*sy ;
-    _this.b2 = srsp*sy+cr*cy ;
-    _this.b3 = sr*cp ;
-
-    _this.c1 =  crsp*cy+sr*sy ;
-    _this.c2 =  crsp*sy-sr*cy ;
-    _this.c3 = cr*cp ;
+    _this.c1 = -sy;
+    _this.c2 = cy * sx;
+    _this.c3 = cy * cx;
 
     return *this;
 }

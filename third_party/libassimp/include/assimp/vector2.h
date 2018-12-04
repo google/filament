@@ -53,7 +53,6 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #   include <math.h>
 #endif
 
-#include "./Compiler/pushpack1.h"
 #include "defs.h"
 
 // ----------------------------------------------------------------------------------
@@ -62,23 +61,17 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #ifdef __cplusplus
 template <typename TReal>
-class aiVector2t
-{
+class aiVector2t {
 public:
-
     aiVector2t () : x(), y() {}
     aiVector2t (TReal _x, TReal _y) : x(_x), y(_y) {}
     explicit aiVector2t (TReal _xyz) : x(_xyz), y(_xyz) {}
-    aiVector2t (const aiVector2t& o) : x(o.x), y(o.y) {}
-
-public:
+    aiVector2t (const aiVector2t& o) = default;
 
     void Set( TReal pX, TReal pY);
     TReal SquareLength() const ;
     TReal Length() const ;
     aiVector2t& Normalize();
-
-public:
 
     const aiVector2t& operator += (const aiVector2t& o);
     const aiVector2t& operator -= (const aiVector2t& o);
@@ -110,7 +103,5 @@ struct aiVector2D {
 };
 
 #endif // __cplusplus
-
-#include "./Compiler/poppack1.h"
 
 #endif // AI_VECTOR2D_H_INC

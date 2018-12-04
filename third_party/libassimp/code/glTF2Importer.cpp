@@ -1022,6 +1022,32 @@ void glTF2Importer::ImportAnimations(glTF2::Asset& r)
                 ++j;
             }
         }
+        
+        // Use the latest keyframe for the duration of the animation
+        double maxDuration = 0;
+        for (unsigned int j = 0; j < ai_anim->mNumChannels; ++j) {
+            auto chan = ai_anim->mChannels[j];
+            if (chan->mNumPositionKeys) {
+                auto lastPosKey = chan->mPositionKeys[chan->mNumPositionKeys - 1];
+                if (lastPosKey.mTime > maxDuration) {
+                    maxDuration = lastPosKey.mTime;
+                }
+            }
+            if (chan->mNumRotationKeys) {
+                auto lastRotKey = chan->mRotationKeys[chan->mNumRotationKeys - 1];
+                if (lastRotKey.mTime > maxDuration) {
+                    maxDuration = lastRotKey.mTime;
+                }
+            }
+            if (chan->mNumScalingKeys) {
+                auto lastScaleKey = chan->mScalingKeys[chan->mNumScalingKeys - 1];
+                if (lastScaleKey.mTime > maxDuration) {
+                    maxDuration = lastScaleKey.mTime;
+                }
+            }
+        }
+        ai_anim->mDuration = maxDuration;
+        
         mScene->mAnimations[i] = ai_anim;
     }
 }

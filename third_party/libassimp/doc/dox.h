@@ -1486,9 +1486,8 @@ Just copy'n'paste the template from Appendix A and adapt it for your needs.
 with DefaultLogger::get()->[error, warn, debug, info].
 </li>
 <li>
-Make sure that your loader compiles against all build configurations on all supported platforms. This includes <i>-noboost</i>! To avoid problems,
-see the boost section on this page for a list of all 'allowed' boost classes (again, this grew historically when we had to accept that boost
-is not THAT widely spread that one could rely on it being available everywhere).
+Make sure that your loader compiles against all build configurations on all supported platforms. You can use our CI-build to check several platforms 
+like Windows and Linux ( 32 bit and 64 bit ).
 </li>
 <li>
 Provide some _free_ test models in <tt>&lt;root&gt;/test/models/&lt;FormatName&gt;/</tt> and credit their authors.
@@ -1566,22 +1565,6 @@ NewMaterial->AddProperty(&aiString(MaterialName.c_str()), AI_MATKEY_NAME);//Mate
 //set the first diffuse texture
 NewMaterial->AddProperty(&aiString(Texturename.c_str()), AI_MATKEY_TEXTURE(aiTextureType_DIFFUSE, 0));//again, Texturename is a std::string
 @endcode
-
-@section boost Boost
-
-The boost whitelist:
-<ul>
-<li><i>boost.scoped_ptr</i></li>
-<li><i>boost.scoped_array</i></li>
-<li><i>boost.format</i> </li>
-<li><i>boost.random</i> </li>
-<li><i>boost.common_factor</i> </li>
-<li><i>boost.foreach</i> </li>
-<li><i>boost.tuple</i></li>
-</ul>
-
-(if you happen to need something else, i.e. boost::thread, make this an optional feature.
-<tt>assimp_BUILD_BOOST_WORKAROUND</tt> is defined for <i>-noboost</i> builds)
 
 @section appa Appendix A - Template for BaseImporter's abstract methods
 

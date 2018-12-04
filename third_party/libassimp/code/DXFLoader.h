@@ -50,31 +50,26 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <map>
 
 namespace Assimp    {
-    namespace DXF {
 
-        class LineReader;
-        struct FileData;
-        struct PolyLine;
-        struct Block;
-        struct InsertBlock;
+// Forward declarations
+namespace DXF {
+    class LineReader;
+    struct FileData;
+    struct PolyLine;
+    struct Block;
+    struct InsertBlock;
 
-        typedef std::map<std::string, const DXF::Block*> BlockMap;
-    }
-
+    typedef std::map<std::string, const DXF::Block*> BlockMap;
+}
 
 // ---------------------------------------------------------------------------
-/** DXF importer implementation.
- *
-*/
-class DXFImporter : public BaseImporter
-{
+/** 
+ *  @brief  DXF importer implementation.
+ */
+class DXFImporter : public BaseImporter {
 public:
     DXFImporter();
     ~DXFImporter();
-
-
-
-public:
 
     // -------------------------------------------------------------------
     /** Returns whether the class can handle the format of the given file.
@@ -83,7 +78,6 @@ public:
         bool checkSig) const;
 
 protected:
-
     // -------------------------------------------------------------------
     /** Return importer meta information.
      * See #BaseImporter::GetInfo for the details*/
