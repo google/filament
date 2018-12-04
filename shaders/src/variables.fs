@@ -21,7 +21,7 @@ LAYOUT_LOCATION(8) SHADING_INTERPOLATION centroid in HIGHP vec3 vertex_worldNorm
 LAYOUT_LOCATION(9) in MEDIUMP vec4 vertex_color;
 #endif
 
-#if defined(HAS_ATTRIBUTE_UV0)
+#if defined(HAS_ATTRIBUTE_UV0) && !defined(HAS_ATTRIBUTE_UV1)
 LAYOUT_LOCATION(10) in HIGHP vec2 vertex_uv01;
 #elif defined(HAS_ATTRIBUTE_UV1)
 LAYOUT_LOCATION(10) in HIGHP vec4 vertex_uv01;
