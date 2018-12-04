@@ -36,19 +36,12 @@ using namespace filament::driver;
 
 namespace filamat {
 
-PostprocessMaterialBuilder& PostprocessMaterialBuilder::postProcessor(PostProcessCallBack callback) {
-    mPostprocessorCallback = callback;
-    return *this;
-}
-
 Package PostprocessMaterialBuilder::build() {
     GLSLTools::init();
     prepare();
-    // Install postprocessor to optimize / compile to Spir-V if necessary.
-    // TODO: remove the postProcessor functionality, since it isn't being used by the outside world.
-    using namespace std::placeholders;
+
+    // Create a postprocessor to optimize / compile to Spir-V if necessary.
     GLSLPostProcessor postProcessor(mOptimization, mPrintShaders);
-    this->postProcessor(std::bind(&GLSLPostProcessor::process, postProcessor, _1, _2, _3, _4, _5));
 
     // Create chunk tree.
     ChunkContainer container;
@@ -90,14 +83,12 @@ Package PostprocessMaterialBuilder::build() {
                     shaderModel, targetApi, codeGenTargetApi,
                     filament::PostProcessStage(k), firstSampler);
 
-            if (mPostprocessorCallback != nullptr) {
-                bool ok = mPostprocessorCallback(vs, filament::driver::ShaderType::VERTEX,
-                        shaderModel, &vs, pSpirv);
-                if (!ok) {
-                    // An error occured while postProcessing, aborting.
-                    errorOccured = true;
-                    break;
-                }
+            bool ok = postProcessor.process(vs, filament::driver::ShaderType::VERTEX, shaderModel,
+                    &vs, pSpirv);
+            if (!ok) {
+                // An error occured while postProcessing, aborting.
+                errorOccured = true;
+                break;
             }
 
             if (targetApi == TargetApi::OPENGL) {
@@ -119,14 +110,12 @@ Package PostprocessMaterialBuilder::build() {
             std::string fs = ShaderPostProcessGenerator::createPostProcessFragmentProgram(
                     shaderModel, targetApi, codeGenTargetApi,
                     filament::PostProcessStage(k), firstSampler);
-            if (mPostprocessorCallback != nullptr) {
-                bool ok = mPostprocessorCallback(fs, filament::driver::ShaderType::FRAGMENT,
-                        shaderModel, &fs, pSpirv);
-                if (!ok) {
-                    // An error occured while postProcessing, aborting.
-                    errorOccured = true;
-                    break;
-                }
+            ok = postProcessor.process(fs, filament::driver::ShaderType::FRAGMENT, shaderModel, &fs,
+                    pSpirv);
+            if (!ok) {
+                // An error occured while postProcessing, aborting.
+                errorOccured = true;
+                break;
             }
             if (targetApi == TargetApi::OPENGL) {
                 glslEntry.stage = filament::driver::ShaderType::FRAGMENT;
