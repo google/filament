@@ -115,17 +115,32 @@ std::string shaderFromConfig(MaterialConfig config) {
     )SHADER";
 
     if (!config.unlit) {
-        shader += R"SHADER(
-            material.normal = texture(materialParams_normalMap, getUV0()).xyz * 2.0 - 1.0;
-            material.normal.y = -material.normal.y;
-        )SHADER";
+        if (config.normalUV == 0) {
+            shader += R"SHADER(
+                material.normal = texture(materialParams_normalMap, getUV0()).xyz * 2.0 - 1.0;
+                material.normal.y = -material.normal.y;
+            )SHADER";
+        } else {
+            shader += R"SHADER(
+                material.normal = texture(materialParams_normalMap, getUV1()).xyz * 2.0 - 1.0;
+                material.normal.y = -material.normal.y;
+            )SHADER";
+        }
     }
 
-    shader += R"SHADER(
-        prepareMaterial(material);
-        material.baseColor = texture(materialParams_baseColorMap, getUV0());
-        material.baseColor.rgb *= materialParams.baseColorFactor.xyz;
-    )SHADER";
+    if (config.baseColorUV == 0) {
+        shader += R"SHADER(
+            prepareMaterial(material);
+            material.baseColor = texture(materialParams_baseColorMap, getUV0());
+            material.baseColor.rgb *= materialParams.baseColorFactor.xyz;
+        )SHADER";
+    } else {
+        shader += R"SHADER(
+            prepareMaterial(material);
+            material.baseColor = texture(materialParams_baseColorMap, getUV1());
+            material.baseColor.rgb *= materialParams.baseColorFactor.xyz;
+        )SHADER";
+    }
 
     if (config.alphaMode == AlphaMode::TRANSPARENT) {
         shader += R"SHADER(
@@ -134,18 +149,42 @@ std::string shaderFromConfig(MaterialConfig config) {
     }
 
     if (!config.unlit) {
-        shader += R"SHADER(
-            material.roughness = materialParams.roughnessFactor * texture(materialParams_metallicRoughnessMap, getUV0()).g;
-            material.metallic = materialParams.metallicFactor * texture(materialParams_metallicRoughnessMap, getUV0()).b;
-            material.ambientOcclusion = texture(materialParams_aoMap, getUV0()).r;
-            material.emissive = texture(materialParams_emissiveMap, getUV0());
-            material.emissive.rgb *= materialParams.emissiveFactor.rgb;
-        )SHADER";
+        if (config.metallicRoughnessUV == 0) {
+            shader += R"SHADER(
+                material.roughness = materialParams.roughnessFactor * texture(materialParams_metallicRoughnessMap, getUV0()).g;
+                material.metallic = materialParams.metallicFactor * texture(materialParams_metallicRoughnessMap, getUV0()).b;
+            )SHADER";
+        } else {
+            shader += R"SHADER(
+                material.roughness = materialParams.roughnessFactor * texture(materialParams_metallicRoughnessMap, getUV1()).g;
+                material.metallic = materialParams.metallicFactor * texture(materialParams_metallicRoughnessMap, getUV1()).b;
+            )SHADER";
+        }
+
+        if (config.aoUV == 0) {
+            shader += R"SHADER(
+                material.ambientOcclusion = texture(materialParams_aoMap, getUV0()).r;
+            )SHADER";
+        } else {
+            shader += R"SHADER(
+                material.ambientOcclusion = texture(materialParams_aoMap, getUV1()).r;
+            )SHADER";
+        }
+
+        if (config.emissiveUV == 0) {
+            shader += R"SHADER(
+                material.emissive = texture(materialParams_emissiveMap, getUV0());
+                material.emissive.rgb *= materialParams.emissiveFactor.rgb;
+            )SHADER";
+        } else {
+            shader += R"SHADER(
+                material.emissive = texture(materialParams_emissiveMap, getUV1());
+                material.emissive.rgb *= materialParams.emissiveFactor.rgb;
+            )SHADER";
+        }
     }
 
     shader += "}\n";
-
-    std::cout << shader;
     return shader;
 }
 
@@ -169,7 +208,7 @@ Material* createMaterialFromConfig(Engine& engine, MaterialConfig config ) {
             .parameter(MaterialBuilder::UniformType::FLOAT3, "emissiveFactor");
 
     if (config.maxUVIndex() > 0) {
-//        builder.require(VertexAttribute::UV1);
+        builder.require(VertexAttribute::UV1);
     }
 
     switch(config.alphaMode) {
