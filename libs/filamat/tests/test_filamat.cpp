@@ -511,7 +511,7 @@ TEST_F(MaterialCompiler, EmptyName) {
 
 TEST_F(MaterialCompiler, Uv0AndUv1) {
     filamat::MaterialBuilder builder;
-    // Requiring both sets of UV coordinats should not fail.
+    // Requiring both sets of UV coordinates should not fail.
     builder.require(filament::VertexAttribute::UV0);
     builder.require(filament::VertexAttribute::UV1);
     filamat::Package result = builder.build();
