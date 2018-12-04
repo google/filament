@@ -249,6 +249,7 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerBaseColor) {
     expected[size_t(filamat::MaterialBuilder::Property::BASE_COLOR)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
+
 TEST_F(MaterialCompiler, StaticCodeAnalyzerRoughness) {
     std::string shaderCode(R"(
         void material(inout MaterialInputs material) {
@@ -265,6 +266,7 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerRoughness) {
     expected[size_t(filamat::MaterialBuilder::Property::ROUGHNESS)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
+
 TEST_F(MaterialCompiler, StaticCodeAnalyzerMetallic) {
     std::string shaderCode(R"(
         void material(inout MaterialInputs material) {
@@ -281,6 +283,7 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerMetallic) {
     expected[size_t(filamat::MaterialBuilder::Property::METALLIC)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
+
 TEST_F(MaterialCompiler, StaticCodeAnalyzerReflectance) {
     std::string shaderCode(R"(
         void material(inout MaterialInputs material) {
@@ -297,6 +300,7 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerReflectance) {
     expected[size_t(filamat::MaterialBuilder::Property::REFLECTANCE)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
+
 TEST_F(MaterialCompiler, StaticCodeAnalyzerAmbientOcclusion) {
     std::string shaderCode(R"(
         void material(inout MaterialInputs material) {
@@ -313,6 +317,7 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerAmbientOcclusion) {
     expected[size_t(filamat::MaterialBuilder::Property::AMBIENT_OCCLUSION)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
+
 TEST_F(MaterialCompiler, StaticCodeAnalyzerClearCoat) {
     std::string shaderCode(R"(
         void material(inout MaterialInputs material) {
@@ -330,6 +335,7 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerClearCoat) {
     expected[size_t(filamat::MaterialBuilder::Property::CLEAR_COAT)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
+
 TEST_F(MaterialCompiler, StaticCodeAnalyzerClearCoatRoughness) {
     std::string shaderCode(R"(
         void material(inout MaterialInputs material) {
@@ -347,6 +353,7 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerClearCoatRoughness) {
     expected[size_t(filamat::MaterialBuilder::Property::CLEAR_COAT_ROUGHNESS)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
+
 TEST_F(MaterialCompiler, StaticCodeAnalyzerClearCoatNormal) {
     std::string shaderCode(R"(
         void material(inout MaterialInputs material) {
@@ -364,6 +371,7 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerClearCoatNormal) {
     expected[size_t(filamat::MaterialBuilder::Property::CLEAR_COAT_NORMAL)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
+
 TEST_F(MaterialCompiler, StaticCodeAnalyzerThickness) {
     std::string shaderCode(R"(
         void material(inout MaterialInputs material) {
@@ -381,6 +389,7 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerThickness) {
     expected[size_t(filamat::MaterialBuilder::Property::THICKNESS)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
+
 TEST_F(MaterialCompiler, StaticCodeAnalyzerSubsurfacePower) {
     std::string shaderCode(R"(
         void material(inout MaterialInputs material) {
@@ -398,6 +407,7 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerSubsurfacePower) {
     expected[size_t(filamat::MaterialBuilder::Property::SUBSURFACE_POWER)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
+
 TEST_F(MaterialCompiler, StaticCodeAnalyzerSubsurfaceColor) {
     std::string shaderCode(R"(
         void material(inout MaterialInputs material) {
@@ -415,6 +425,7 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerSubsurfaceColor) {
     expected[size_t(filamat::MaterialBuilder::Property::SUBSURFACE_COLOR)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
+
 TEST_F(MaterialCompiler, StaticCodeAnalyzerAnisotropicDirection) {
     std::string shaderCode(R"(
         void material(inout MaterialInputs material) {
@@ -432,6 +443,7 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerAnisotropicDirection) {
     expected[size_t(filamat::MaterialBuilder::Property::ANISOTROPY_DIRECTION)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
+
 TEST_F(MaterialCompiler, StaticCodeAnalyzerAnisotropic) {
     std::string shaderCode(R"(
         void material(inout MaterialInputs material) {
@@ -449,6 +461,7 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerAnisotropic) {
     expected[size_t(filamat::MaterialBuilder::Property::ANISOTROPY)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
+
 TEST_F(MaterialCompiler, StaticCodeAnalyzerSheenColor) {
     std::string shaderCode(R"(
         void material(inout MaterialInputs material) {
@@ -466,6 +479,7 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerSheenColor) {
     expected[size_t(filamat::MaterialBuilder::Property::SHEEN_COLOR)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
+
 TEST_F(MaterialCompiler, StaticCodeAnalyzerNormal) {
     std::string shaderCode(R"(
         void material(inout MaterialInputs material) {
@@ -494,6 +508,16 @@ TEST_F(MaterialCompiler, EmptyName) {
     builder.name("");
     filamat::Package result = builder.build();
 }
+
+TEST_F(MaterialCompiler, Uv0AndUv1) {
+    filamat::MaterialBuilder builder;
+    // Requiring both sets of UV coordinats should not fail.
+    builder.require(filament::VertexAttribute::UV0);
+    builder.require(filament::VertexAttribute::UV1);
+    filamat::Package result = builder.build();
+    EXPECT_TRUE(result.isValid());
+}
+
 int main(int argc, char** argv) {
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
