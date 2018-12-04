@@ -181,8 +181,7 @@ void MS3DImporter :: CollectChildJoints(const std::vector<TempJoint>& joints,
             ch->mParent = nd;
 
             ch->mTransformation = aiMatrix4x4::Translation(joints[i].position,aiMatrix4x4()=aiMatrix4x4())*
-                // XXX actually, I don't *know* why we need the inverse here. Probably column vs. row order?
-                aiMatrix4x4().FromEulerAnglesXYZ(joints[i].rotation).Transpose();
+                aiMatrix4x4().FromEulerAnglesXYZ(joints[i].rotation);
 
             const aiMatrix4x4 abs = absTrafo*ch->mTransformation;
             for(unsigned int a = 0; a < mScene->mNumMeshes; ++a) {
@@ -639,11 +638,8 @@ void MS3DImporter::InternReadFile( const std::string& pFile,
                     aiQuatKey& q = nd->mRotationKeys[nd->mNumRotationKeys++];
 
                     q.mTime = (*rot).time*animfps;
-
-                    // XXX it seems our matrix&quaternion code has faults in its conversion routines --
-                    // aiQuaternion(x,y,z) seems to besomething different as quat(matrix.fromeuler(x,y,z)).
-                    q.mValue = aiQuaternion(aiMatrix3x3(aiMatrix4x4().FromEulerAnglesXYZ((*rot).value)*
-                        aiMatrix4x4().FromEulerAnglesXYZ((*it).rotation)).Transpose());
+                    q.mValue = aiQuaternion(aiMatrix3x3(aiMatrix4x4().FromEulerAnglesXYZ((*it).rotation)*
+                        aiMatrix4x4().FromEulerAnglesXYZ((*rot).value)));
                 }
             }
 

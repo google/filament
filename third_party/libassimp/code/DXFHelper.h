@@ -55,27 +55,20 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <assimp/DefaultLogger.hpp>
 
 namespace Assimp {
-    namespace DXF {
-
+namespace DXF {
 
 // read pairs of lines, parse group code and value and provide utilities
 // to convert the data to the target data type.
-class LineReader
-{
-
+// do NOT skip empty lines. In DXF files, they count as valid data.
+class LineReader {
 public:
-
     LineReader(StreamReaderLE& reader)
-         // do NOT skip empty lines. In DXF files, they count as valid data.
-        : splitter(reader,false,true)
-        , groupcode( 0 )
-        , value()
-        , end()
-    {
+    : splitter(reader,false,true)
+    , groupcode( 0 )
+    , value()
+    , end() {
+        // empty
     }
-
-public:
-
 
     // -----------------------------------------
     bool Is(int gc, const char* what) const {
@@ -102,8 +95,6 @@ public:
         return !((bool)*this);
     }
 
-public:
-
     // -----------------------------------------
     unsigned int ValueAsUnsignedInt() const {
         return strtoul10(value.c_str());
@@ -118,8 +109,6 @@ public:
     float ValueAsFloat() const {
         return fast_atof(value.c_str());
     }
-
-public:
 
     // -----------------------------------------
     /** pseudo-iterator increment to advance to the next (groupcode/value) pair */
@@ -175,14 +164,12 @@ private:
     int end;
 };
 
-
-
 // represents a POLYLINE or a LWPOLYLINE. or even a 3DFACE The data is converted as needed.
-struct PolyLine
-{
+struct PolyLine {
     PolyLine()
-        : flags()
-    {}
+    : flags() {
+        // empty
+    }
 
     std::vector<aiVector3D> positions;
     std::vector<aiColor4D>  colors;
@@ -194,14 +181,15 @@ struct PolyLine
     std::string desc;
 };
 
-
 // reference to a BLOCK. Specifies its own coordinate system.
-struct InsertBlock
-{
+struct InsertBlock {
     InsertBlock()
-        : scale(1.f,1.f,1.f)
-        , angle()
-    {}
+    : pos()
+    , scale(1.f,1.f,1.f)
+    , angle()
+    , name() {
+        // empty
+    }
 
     aiVector3D pos;
     aiVector3D scale;
@@ -228,9 +216,7 @@ struct FileData
     std::vector<Block> blocks;
 };
 
+}
+} // Namespace Assimp
 
-
-
-
-}}
 #endif

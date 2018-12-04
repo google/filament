@@ -212,6 +212,7 @@ public:
         for( unsigned int a = 0; a < mPostProcessingSteps.size(); a++) {
             delete mPostProcessingSteps[a];
         }
+        delete mProgressHandler;
     }
 
 public:
@@ -246,10 +247,6 @@ Exporter :: Exporter()
 // ------------------------------------------------------------------------------------------------
 Exporter::~Exporter() {
     FreeBlob();
-    if (pimpl->mIsDefaultProgressHandler) {
-        delete pimpl->mProgressHandler;
-        pimpl->mProgressHandler = nullptr;
-    }
     delete pimpl;
 }
 

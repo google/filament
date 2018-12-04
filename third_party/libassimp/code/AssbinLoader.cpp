@@ -57,6 +57,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <assimp/anim.h>
 #include <assimp/scene.h>
 #include <assimp/importerdesc.h>
+#include <memory>
 
 #ifdef ASSIMP_BUILD_NO_OWN_ZLIB
 #   include <zlib.h>
@@ -103,7 +104,9 @@ bool AssbinImporter::CanRead( const std::string& pFile, IOSystem* pIOHandler, bo
 template <typename T>
 T Read(IOStream * stream) {
     T t;
-    stream->Read( &t, sizeof(T), 1 );
+    size_t res = stream->Read( &t, sizeof(T), 1 );
+    if(res != 1)
+        throw DeadlyImportError("Unexpected EOF");
     return t;
 }
 
@@ -144,7 +147,8 @@ template <>
 aiString Read<aiString>(IOStream * stream) {
     aiString s;
     stream->Read(&s.length,4,1);
-    stream->Read(s.data,s.length,1);
+    if(s.length)
+        stream->Read(s.data,s.length,1);
     s.data[s.length] = 0;
     return s;
 }
@@ -207,46 +211,48 @@ void ReadBounds( IOStream * stream, T* /*p*/, unsigned int n ) {
 }
 
 // -----------------------------------------------------------------------------------
-void AssbinImporter::ReadBinaryNode( IOStream * stream, aiNode** node, aiNode* parent ) {
-    uint32_t chunkID = Read<uint32_t>(stream);
-    (void)(chunkID);
-    ai_assert(chunkID == ASSBIN_CHUNK_AINODE);
+void AssbinImporter::ReadBinaryNode( IOStream * stream, aiNode** onode, aiNode* parent ) {
+    if(Read<uint32_t>(stream) != ASSBIN_CHUNK_AINODE)
+        throw DeadlyImportError("Magic chunk identifiers are wrong!");
     /*uint32_t size =*/ Read<uint32_t>(stream);
 
-    *node = new aiNode();
+    std::unique_ptr<aiNode> node(new aiNode());
 
-    (*node)->mName = Read<aiString>(stream);
-    (*node)->mTransformation = Read<aiMatrix4x4>(stream);
-    (*node)->mNumChildren = Read<unsigned int>(stream);
-    (*node)->mNumMeshes = Read<unsigned int>(stream);
+    node->mName = Read<aiString>(stream);
+    node->mTransformation = Read<aiMatrix4x4>(stream);
+    unsigned numChildren = Read<unsigned int>(stream);
+    unsigned numMeshes = Read<unsigned int>(stream);
 	unsigned int nb_metadata = Read<unsigned int>(stream);
 
     if(parent) {
-        (*node)->mParent = parent;
+        node->mParent = parent;
     }
 
-    if ((*node)->mNumMeshes) {
-        (*node)->mMeshes = new unsigned int[(*node)->mNumMeshes];
-        for (unsigned int i = 0; i < (*node)->mNumMeshes; ++i) {
-            (*node)->mMeshes[i] = Read<unsigned int>(stream);
+    if (numMeshes)
+    {
+        node->mMeshes = new unsigned int[numMeshes];
+        for (unsigned int i = 0; i < numMeshes; ++i) {
+            node->mMeshes[i] = Read<unsigned int>(stream);
+            node->mNumMeshes++;
         }
     }
 
-    if ((*node)->mNumChildren) {
-        (*node)->mChildren = new aiNode*[(*node)->mNumChildren];
-        for (unsigned int i = 0; i < (*node)->mNumChildren; ++i) {
-            ReadBinaryNode( stream, &(*node)->mChildren[i], *node );
+    if (numChildren) {
+        node->mChildren = new aiNode*[numChildren];
+        for (unsigned int i = 0; i < numChildren; ++i) {
+            ReadBinaryNode( stream, &node->mChildren[i], node.get() );
+            node->mNumChildren++;
         }
     }
 
     if ( nb_metadata > 0 ) {
-        (*node)->mMetaData = aiMetadata::Alloc(nb_metadata);
+        node->mMetaData = aiMetadata::Alloc(nb_metadata);
         for (unsigned int i = 0; i < nb_metadata; ++i) {
-            (*node)->mMetaData->mKeys[i] = Read<aiString>(stream);
-            (*node)->mMetaData->mValues[i].mType = (aiMetadataType) Read<uint16_t>(stream);
-            void* data( nullptr );
+            node->mMetaData->mKeys[i] = Read<aiString>(stream);
+            node->mMetaData->mValues[i].mType = (aiMetadataType) Read<uint16_t>(stream);
+            void* data = nullptr;
 
-            switch ((*node)->mMetaData->mValues[i].mType) {
+            switch (node->mMetaData->mValues[i].mType) {
                 case AI_BOOL:
                     data = new bool(Read<bool>(stream));
                     break;
@@ -275,16 +281,16 @@ void AssbinImporter::ReadBinaryNode( IOStream * stream, aiNode** node, aiNode* p
                     break;
             }
 
-			(*node)->mMetaData->mValues[i].mData = data;
+			node->mMetaData->mValues[i].mData = data;
 		}
 	}
+    *onode = node.release();
 }
 
 // -----------------------------------------------------------------------------------
 void AssbinImporter::ReadBinaryBone( IOStream * stream, aiBone* b ) {
-    uint32_t chunkID = Read<uint32_t>(stream);
-    (void)(chunkID);
-    ai_assert(chunkID == ASSBIN_CHUNK_AIBONE);
+    if(Read<uint32_t>(stream) != ASSBIN_CHUNK_AIBONE)
+        throw DeadlyImportError("Magic chunk identifiers are wrong!");
     /*uint32_t size =*/ Read<uint32_t>(stream);
 
     b->mName = Read<aiString>(stream);
@@ -306,12 +312,10 @@ void AssbinImporter::ReadBinaryBone( IOStream * stream, aiBone* b ) {
 static bool fitsIntoUI16(unsigned int mNumVertices) {
     return ( mNumVertices < (1u<<16) );
 }
-
 // -----------------------------------------------------------------------------------
 void AssbinImporter::ReadBinaryMesh( IOStream * stream, aiMesh* mesh ) {
-    uint32_t chunkID = Read<uint32_t>(stream);
-    (void)(chunkID);
-    ai_assert(chunkID == ASSBIN_CHUNK_AIMESH);
+    if(Read<uint32_t>(stream) != ASSBIN_CHUNK_AIMESH)
+        throw DeadlyImportError("Magic chunk identifiers are wrong!");
     /*uint32_t size =*/ Read<uint32_t>(stream);
 
     mesh->mPrimitiveTypes = Read<unsigned int>(stream);
@@ -423,9 +427,8 @@ void AssbinImporter::ReadBinaryMesh( IOStream * stream, aiMesh* mesh ) {
 
 // -----------------------------------------------------------------------------------
 void AssbinImporter::ReadBinaryMaterialProperty(IOStream * stream, aiMaterialProperty* prop) {
-    uint32_t chunkID = Read<uint32_t>(stream);
-    (void)(chunkID);
-    ai_assert(chunkID == ASSBIN_CHUNK_AIMATERIALPROPERTY);
+    if(Read<uint32_t>(stream) != ASSBIN_CHUNK_AIMATERIALPROPERTY)
+        throw DeadlyImportError("Magic chunk identifiers are wrong!");
     /*uint32_t size =*/ Read<uint32_t>(stream);
 
     prop->mKey = Read<aiString>(stream);
@@ -440,9 +443,8 @@ void AssbinImporter::ReadBinaryMaterialProperty(IOStream * stream, aiMaterialPro
 
 // -----------------------------------------------------------------------------------
 void AssbinImporter::ReadBinaryMaterial(IOStream * stream, aiMaterial* mat) {
-    uint32_t chunkID = Read<uint32_t>(stream);
-    (void)(chunkID);
-    ai_assert(chunkID == ASSBIN_CHUNK_AIMATERIAL);
+    if(Read<uint32_t>(stream) != ASSBIN_CHUNK_AIMATERIAL)
+        throw DeadlyImportError("Magic chunk identifiers are wrong!");
     /*uint32_t size =*/ Read<uint32_t>(stream);
 
     mat->mNumAllocated = mat->mNumProperties = Read<unsigned int>(stream);
@@ -462,9 +464,8 @@ void AssbinImporter::ReadBinaryMaterial(IOStream * stream, aiMaterial* mat) {
 
 // -----------------------------------------------------------------------------------
 void AssbinImporter::ReadBinaryNodeAnim(IOStream * stream, aiNodeAnim* nd) {
-    uint32_t chunkID = Read<uint32_t>(stream);
-    (void)(chunkID);
-    ai_assert(chunkID == ASSBIN_CHUNK_AINODEANIM);
+    if(Read<uint32_t>(stream) != ASSBIN_CHUNK_AINODEANIM)
+        throw DeadlyImportError("Magic chunk identifiers are wrong!");
     /*uint32_t size =*/ Read<uint32_t>(stream);
 
     nd->mNodeName = Read<aiString>(stream);
@@ -508,9 +509,8 @@ void AssbinImporter::ReadBinaryNodeAnim(IOStream * stream, aiNodeAnim* nd) {
 
 // -----------------------------------------------------------------------------------
 void AssbinImporter::ReadBinaryAnim( IOStream * stream, aiAnimation* anim ) {
-    uint32_t chunkID = Read<uint32_t>(stream);
-    (void)(chunkID);
-    ai_assert(chunkID == ASSBIN_CHUNK_AIANIMATION);
+    if(Read<uint32_t>(stream) != ASSBIN_CHUNK_AIANIMATION)
+        throw DeadlyImportError("Magic chunk identifiers are wrong!");
     /*uint32_t size =*/ Read<uint32_t>(stream);
 
     anim->mName = Read<aiString> (stream);
@@ -529,9 +529,8 @@ void AssbinImporter::ReadBinaryAnim( IOStream * stream, aiAnimation* anim ) {
 
 // -----------------------------------------------------------------------------------
 void AssbinImporter::ReadBinaryTexture(IOStream * stream, aiTexture* tex) {
-    uint32_t chunkID = Read<uint32_t>(stream);
-    (void)(chunkID);
-    ai_assert(chunkID == ASSBIN_CHUNK_AITEXTURE);
+    if(Read<uint32_t>(stream) != ASSBIN_CHUNK_AITEXTURE)
+        throw DeadlyImportError("Magic chunk identifiers are wrong!");
     /*uint32_t size =*/ Read<uint32_t>(stream);
 
     tex->mWidth = Read<unsigned int>(stream);
@@ -551,9 +550,8 @@ void AssbinImporter::ReadBinaryTexture(IOStream * stream, aiTexture* tex) {
 
 // -----------------------------------------------------------------------------------
 void AssbinImporter::ReadBinaryLight( IOStream * stream, aiLight* l ) {
-    uint32_t chunkID = Read<uint32_t>(stream);
-    (void)(chunkID);
-    ai_assert(chunkID == ASSBIN_CHUNK_AILIGHT);
+    if(Read<uint32_t>(stream) != ASSBIN_CHUNK_AILIGHT)
+        throw DeadlyImportError("Magic chunk identifiers are wrong!");
     /*uint32_t size =*/ Read<uint32_t>(stream);
 
     l->mName = Read<aiString>(stream);
@@ -577,9 +575,8 @@ void AssbinImporter::ReadBinaryLight( IOStream * stream, aiLight* l ) {
 
 // -----------------------------------------------------------------------------------
 void AssbinImporter::ReadBinaryCamera( IOStream * stream, aiCamera* cam ) {
-    uint32_t chunkID = Read<uint32_t>(stream);
-    (void)(chunkID);
-    ai_assert(chunkID == ASSBIN_CHUNK_AICAMERA);
+    if(Read<uint32_t>(stream) != ASSBIN_CHUNK_AICAMERA)
+        throw DeadlyImportError("Magic chunk identifiers are wrong!");
     /*uint32_t size =*/ Read<uint32_t>(stream);
 
     cam->mName = Read<aiString>(stream);
@@ -594,9 +591,8 @@ void AssbinImporter::ReadBinaryCamera( IOStream * stream, aiCamera* cam ) {
 
 // -----------------------------------------------------------------------------------
 void AssbinImporter::ReadBinaryScene( IOStream * stream, aiScene* scene ) {
-    uint32_t chunkID = Read<uint32_t>(stream);
-    (void)(chunkID);
-    ai_assert(chunkID == ASSBIN_CHUNK_AISCENE);
+    if(Read<uint32_t>(stream) != ASSBIN_CHUNK_AISCENE)
+        throw DeadlyImportError("Magic chunk identifiers are wrong!");
     /*uint32_t size =*/ Read<uint32_t>(stream);
 
     scene->mFlags         = Read<unsigned int>(stream);
@@ -614,6 +610,7 @@ void AssbinImporter::ReadBinaryScene( IOStream * stream, aiScene* scene ) {
     // Read all meshes
     if (scene->mNumMeshes) {
         scene->mMeshes = new aiMesh*[scene->mNumMeshes];
+        memset(scene->mMeshes, 0, scene->mNumMeshes*sizeof(aiMesh*));
         for (unsigned int i = 0; i < scene->mNumMeshes;++i) {
             scene->mMeshes[i] = new aiMesh();
             ReadBinaryMesh( stream,scene->mMeshes[i]);
@@ -623,6 +620,7 @@ void AssbinImporter::ReadBinaryScene( IOStream * stream, aiScene* scene ) {
     // Read materials
     if (scene->mNumMaterials) {
         scene->mMaterials = new aiMaterial*[scene->mNumMaterials];
+        memset(scene->mMaterials, 0, scene->mNumMaterials*sizeof(aiMaterial*));
         for (unsigned int i = 0; i< scene->mNumMaterials; ++i) {
             scene->mMaterials[i] = new aiMaterial();
             ReadBinaryMaterial(stream,scene->mMaterials[i]);
@@ -632,6 +630,7 @@ void AssbinImporter::ReadBinaryScene( IOStream * stream, aiScene* scene ) {
     // Read all animations
     if (scene->mNumAnimations) {
         scene->mAnimations = new aiAnimation*[scene->mNumAnimations];
+        memset(scene->mAnimations, 0, scene->mNumAnimations*sizeof(aiAnimation*));
         for (unsigned int i = 0; i < scene->mNumAnimations;++i) {
             scene->mAnimations[i] = new aiAnimation();
             ReadBinaryAnim(stream,scene->mAnimations[i]);
@@ -641,6 +640,7 @@ void AssbinImporter::ReadBinaryScene( IOStream * stream, aiScene* scene ) {
     // Read all textures
     if (scene->mNumTextures) {
         scene->mTextures = new aiTexture*[scene->mNumTextures];
+        memset(scene->mTextures, 0, scene->mNumTextures*sizeof(aiTexture*));
         for (unsigned int i = 0; i < scene->mNumTextures;++i) {
             scene->mTextures[i] = new aiTexture();
             ReadBinaryTexture(stream,scene->mTextures[i]);
@@ -650,6 +650,7 @@ void AssbinImporter::ReadBinaryScene( IOStream * stream, aiScene* scene ) {
     // Read lights
     if (scene->mNumLights) {
         scene->mLights = new aiLight*[scene->mNumLights];
+        memset(scene->mLights, 0, scene->mNumLights*sizeof(aiLight*));
         for (unsigned int i = 0; i < scene->mNumLights;++i) {
             scene->mLights[i] = new aiLight();
             ReadBinaryLight(stream,scene->mLights[i]);
@@ -659,6 +660,7 @@ void AssbinImporter::ReadBinaryScene( IOStream * stream, aiScene* scene ) {
     // Read cameras
     if (scene->mNumCameras) {
         scene->mCameras = new aiCamera*[scene->mNumCameras];
+        memset(scene->mCameras, 0, scene->mNumCameras*sizeof(aiCamera*));
         for (unsigned int i = 0; i < scene->mNumCameras;++i) {
             scene->mCameras[i] = new aiCamera();
             ReadBinaryCamera(stream,scene->mCameras[i]);
@@ -675,7 +677,7 @@ void AssbinImporter::InternReadFile( const std::string& pFile, aiScene* pScene, 
     }
 
     // signature
-    stream->Seek( 44, aiOrigin_CUR ); 
+    stream->Seek( 44, aiOrigin_CUR );
 
     unsigned int versionMajor = Read<unsigned int>(stream);
     unsigned int versionMinor = Read<unsigned int>(stream);
@@ -701,11 +703,19 @@ void AssbinImporter::InternReadFile( const std::string& pFile, aiScene* pScene, 
         uLongf compressedSize = static_cast<uLongf>(stream->FileSize() - stream->Tell());
 
         unsigned char * compressedData = new unsigned char[ compressedSize ];
-        stream->Read( compressedData, 1, compressedSize );
+        size_t len = stream->Read( compressedData, 1, compressedSize );
+        ai_assert(len == compressedSize);
 
         unsigned char * uncompressedData = new unsigned char[ uncompressedSize ];
 
-        uncompress( uncompressedData, &uncompressedSize, compressedData, compressedSize );
+        int res = uncompress( uncompressedData, &uncompressedSize, compressedData, len );
+        if(res != Z_OK)
+        {
+            delete [] uncompressedData;
+            delete [] compressedData;
+            pIOHandler->Close(stream);
+            throw DeadlyImportError("Zlib decompression failed.");
+        }
 
         MemoryIOStream io( uncompressedData, uncompressedSize );
 

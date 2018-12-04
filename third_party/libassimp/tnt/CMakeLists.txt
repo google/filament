@@ -127,10 +127,10 @@ set(PRIVATE_HDRS
     ${PRIVATE_HDR_DIR}/Importer/IFC/IFCReaderGen_2x3.h
     ${PRIVATE_HDR_DIR}/Importer/IFC/IFCReaderGen_4.h
     ${PRIVATE_HDR_DIR}/Importer/IFC/IFCUtil.h
-    ${PRIVATE_HDR_DIR}/Importer/IFC/STEPFileEncoding.h
-    ${PRIVATE_HDR_DIR}/Importer/IFC/STEPFileReader.h
     ${PRIVATE_HDR_DIR}/Importer/StepFile/StepFileImporter.h
     ${PRIVATE_HDR_DIR}/Importer/StepFile/StepReaderGen.h
+    ${PRIVATE_HDR_DIR}/Importer/STEPParser/STEPFileEncoding.h
+    ${PRIVATE_HDR_DIR}/Importer/STEPParser/STEPFileReader.h
 )
 
 # sources dependencies
@@ -232,12 +232,12 @@ set(SRCS
     ${SRC_DIR}/code/Importer/IFC/IFCReaderGen2_2x3.cpp
     ${SRC_DIR}/code/Importer/IFC/IFCReaderGen_4.cpp
     ${SRC_DIR}/code/Importer/IFC/IFCUtil.cpp
-    ${SRC_DIR}/code/Importer/IFC/STEPFileEncoding.cpp
-    ${SRC_DIR}/code/Importer/IFC/STEPFileReader.cpp
     ${SRC_DIR}/code/Importer/StepFile/StepFileImporter.cpp
     ${SRC_DIR}/code/Importer/StepFile/StepFileGen1.cpp
     ${SRC_DIR}/code/Importer/StepFile/StepFileGen2.cpp
     ${SRC_DIR}/code/Importer/StepFile/StepFileGen3.cpp
+    ${SRC_DIR}/code/Importer/STEPParser/STEPFileEncoding.cpp
+    ${SRC_DIR}/code/Importer/STEPParser/STEPFileReader.cpp
     ${SRC_DIR}/contrib/clipper/clipper.cpp
     ${SRC_DIR}/contrib/irrXML/irrXML.cpp
     ${SRC_DIR}/contrib/poly2tri/poly2tri/common/shapes.cc

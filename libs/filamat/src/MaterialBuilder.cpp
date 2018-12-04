@@ -346,11 +346,8 @@ Package MaterialBuilder::build() noexcept {
     MaterialInfo info;
     prepareToBuild(info);
 
-    // Install postprocessor to optimize / compile to Spir-V if necessary.
-    // TODO: remove the postProcessor functionality, since it isn't being used by the outside world.
-    using namespace std::placeholders;
+    // Create a postprocessor to optimize / compile to Spir-V if necessary.
     GLSLPostProcessor postProcessor(mOptimization, mPrintShaders);
-    this->postProcessor(std::bind(&GLSLPostProcessor::process, postProcessor, _1, _2, _3, _4, _5));
 
     // Create chunk tree.
     ChunkContainer container;
@@ -481,15 +478,13 @@ Package MaterialBuilder::build() noexcept {
                 std::string vs = sg.createVertexProgram(
                         shaderModel, targetApi, codeGenTargetApi, info, k,
                         mInterpolation, mVertexDomain);
-                if (mPostprocessorCallback != nullptr) {
-                    bool ok = mPostprocessorCallback(vs, filament::driver::ShaderType::VERTEX,
-                            shaderModel, &vs, pSpirv);
-                    if (!ok) {
-                        showErrorMessage(mMaterialName.c_str_safe(), k, targetApi,
-                                filament::driver::ShaderType::VERTEX, vs);
-                        errorOccured = true;
-                        break;
-                    }
+                bool ok = postProcessor.process(vs, filament::driver::ShaderType::VERTEX,
+                        shaderModel, &vs, pSpirv);
+                if (!ok) {
+                    showErrorMessage(mMaterialName.c_str_safe(), k, targetApi,
+                            filament::driver::ShaderType::VERTEX, vs);
+                    errorOccured = true;
+                    break;
                 }
                 if (targetApi == TargetApi::OPENGL) {
                     glslEntry.stage = filament::driver::ShaderType::VERTEX;
@@ -512,15 +507,13 @@ Package MaterialBuilder::build() noexcept {
                 // Fragment Shader
                 std::string fs = sg.createFragmentProgram(
                         shaderModel, targetApi, codeGenTargetApi, info, k, mInterpolation);
-                if (mPostprocessorCallback != nullptr) {
-                    bool ok = mPostprocessorCallback(fs, filament::driver::ShaderType::FRAGMENT,
-                            shaderModel, &fs, pSpirv);
-                    if (!ok) {
-                        showErrorMessage(mMaterialName.c_str_safe(), k, targetApi,
-                                filament::driver::ShaderType::FRAGMENT, fs);
-                        errorOccured = true;
-                        break;
-                    }
+                bool ok = postProcessor.process(fs, filament::driver::ShaderType::FRAGMENT,
+                        shaderModel, &fs, pSpirv);
+                if (!ok) {
+                    showErrorMessage(mMaterialName.c_str_safe(), k, targetApi,
+                            filament::driver::ShaderType::FRAGMENT, fs);
+                    errorOccured = true;
+                    break;
                 }
                 if (targetApi == TargetApi::OPENGL) {
                     glslEntry.stage = filament::driver::ShaderType::FRAGMENT;
@@ -569,11 +562,6 @@ Package MaterialBuilder::build() noexcept {
         free(entry.shader);
     }
     return package;
-}
-
-MaterialBuilder& MaterialBuilder::postProcessor(PostProcessCallBack callback) {
-    mPostprocessorCallback = callback;
-    return *this;
 }
 
 const std::string MaterialBuilder::peek(filament::driver::ShaderType type,
