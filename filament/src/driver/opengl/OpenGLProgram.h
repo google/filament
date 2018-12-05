@@ -33,8 +33,6 @@
 
 namespace filament {
 
-class Program;
-
 class OpenGLProgram : public HwProgram {
 public:
 

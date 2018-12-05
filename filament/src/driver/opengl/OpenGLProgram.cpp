@@ -116,6 +116,7 @@ OpenGLProgram::OpenGLProgram(OpenGLDriver* gl, const Program& programBuilder) no
                 if (index >= 0) {
                     glUniformBlockBinding(program, GLuint(index), binding);
                 }
+                CHECK_GL_ERROR(utils::slog.e)
             }
         }
 

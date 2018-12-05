@@ -273,6 +273,8 @@ utils::io::ostream& operator<<(utils::io::ostream& out, const filament::Driver::
 utils::io::ostream& operator<<(utils::io::ostream& out, const filament::Driver::FaceOffsets& type);
 utils::io::ostream& operator<<(utils::io::ostream& out, const filament::Driver::RasterState& rs);
 utils::io::ostream& operator<<(utils::io::ostream& out, const filament::Driver::TargetBufferInfo& tbi);
+utils::io::ostream& operator<<(utils::io::ostream& out, const filament::Driver::PolygonOffset& po);
+utils::io::ostream& operator<<(utils::io::ostream& out, const filament::Driver::PipelineState& ps);
 
 utils::io::ostream& operator<<(utils::io::ostream& out, filament::driver::ShaderModel model);
 utils::io::ostream& operator<<(utils::io::ostream& out, filament::driver::PrimitiveType type);

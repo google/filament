@@ -207,10 +207,11 @@ io::ostream& operator<<(io::ostream& out, ElementType type) {
     return out;
 }
 
-io::ostream& operator<<(io::ostream& out, Usage usage) {
+io::ostream& operator<<(io::ostream& out, BufferUsage usage) {
     switch (usage) {
-        CASE(Usage, STATIC)
-        CASE(Usage, DYNAMIC)
+        CASE(BufferUsage, STATIC)
+        CASE(BufferUsage, DYNAMIC)
+        CASE(BufferUsage, STREAM)
     }
     return out;
 }
@@ -268,7 +269,6 @@ io::ostream& operator<<(io::ostream& out, PixelDataFormat format) {
         CASE(PixelDataFormat, RGBM)
         CASE(PixelDataFormat, DEPTH_COMPONENT)
         CASE(PixelDataFormat, DEPTH_STENCIL)
-        CASE(PixelDataFormat, STENCIL_INDEX)
         CASE(PixelDataFormat, ALPHA)
     }
     return out;
@@ -360,6 +360,35 @@ io::ostream& operator<<(io::ostream& out, TextureFormat format) {
         CASE(TextureFormat, DXT1_RGBA)
         CASE(TextureFormat, DXT3_RGBA)
         CASE(TextureFormat, DXT5_RGBA)
+        CASE(TextureFormat, UNUSED)
+        CASE(TextureFormat, RGBA_ASTC_4x4)
+        CASE(TextureFormat, RGBA_ASTC_5x4)
+        CASE(TextureFormat, RGBA_ASTC_5x5)
+        CASE(TextureFormat, RGBA_ASTC_6x5)
+        CASE(TextureFormat, RGBA_ASTC_6x6)
+        CASE(TextureFormat, RGBA_ASTC_8x5)
+        CASE(TextureFormat, RGBA_ASTC_8x6)
+        CASE(TextureFormat, RGBA_ASTC_8x8)
+        CASE(TextureFormat, RGBA_ASTC_10x5)
+        CASE(TextureFormat, RGBA_ASTC_10x6)
+        CASE(TextureFormat, RGBA_ASTC_10x8)
+        CASE(TextureFormat, RGBA_ASTC_10x10)
+        CASE(TextureFormat, RGBA_ASTC_12x10)
+        CASE(TextureFormat, RGBA_ASTC_12x12)
+        CASE(TextureFormat, SRGB8_ALPHA8_ASTC_4x4)
+        CASE(TextureFormat, SRGB8_ALPHA8_ASTC_5x4)
+        CASE(TextureFormat, SRGB8_ALPHA8_ASTC_5x5)
+        CASE(TextureFormat, SRGB8_ALPHA8_ASTC_6x5)
+        CASE(TextureFormat, SRGB8_ALPHA8_ASTC_6x6)
+        CASE(TextureFormat, SRGB8_ALPHA8_ASTC_8x5)
+        CASE(TextureFormat, SRGB8_ALPHA8_ASTC_8x6)
+        CASE(TextureFormat, SRGB8_ALPHA8_ASTC_8x8)
+        CASE(TextureFormat, SRGB8_ALPHA8_ASTC_10x5)
+        CASE(TextureFormat, SRGB8_ALPHA8_ASTC_10x6)
+        CASE(TextureFormat, SRGB8_ALPHA8_ASTC_10x8)
+        CASE(TextureFormat, SRGB8_ALPHA8_ASTC_10x10)
+        CASE(TextureFormat, SRGB8_ALPHA8_ASTC_12x10)
+        CASE(TextureFormat, SRGB8_ALPHA8_ASTC_12x12)
     }
     return out;
 }
@@ -481,6 +510,19 @@ io::ostream& operator<<(io::ostream& out, const Driver::TargetBufferInfo& tbi) {
            << "h=" << tbi.handle << ", "
            << "level=" << tbi.level << ", "
            << "face=" << tbi.face << "}";
+}
+
+io::ostream& operator<<(io::ostream& out, const Driver::PolygonOffset& po) {
+    return out << "PolygonOffset{"
+           << "slope=" << po.slope << ", "
+           << "constant=" << po.constant << "}";
+}
+
+io::ostream& operator<<(io::ostream& out, const Driver::PipelineState& ps) {
+    return out << "PipelineState{"
+           << "program=" << ps.program << ", "
+           << "rasterState=" << ps.rasterState << ", "
+           << "polygonOffset=" << ps.polygonOffset << "}";
 }
 
 UTILS_PRIVATE
