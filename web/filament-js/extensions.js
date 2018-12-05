@@ -109,7 +109,7 @@ Filament.loadClassExtensions = function() {
     /// loadFilamesh ::method:: Consumes the contents of a filamesh file and creates a renderable.
     /// buffer ::argument:: asset string, or Uint8Array, or [Buffer] with filamesh contents
     /// definstance ::argument:: Optional default [MaterialInstance]
-    /// matinstances ::argument:: Optional object that gets fukked with name => [MaterialInstance]
+    /// matinstances ::argument:: Optional object that gets filled with name => [MaterialInstance]
     /// ::retval:: JavaScript object with keys `renderable`, `vertexBuffer`, and `indexBuffer`. \
     /// These are of type [Entity], [VertexBuffer], and [IndexBuffer].
     Filament.Engine.prototype.loadFilamesh = function(buffer, definstance, matinstances) {

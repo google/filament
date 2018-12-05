@@ -60,7 +60,7 @@ class MeshWriter {
     void optimize(Mesh& mesh);
 public:
     MeshWriter(uint32_t flags) : mFlags(flags) {}
-    void serialize(std::ostream&, Mesh& mesh);
+    bool serialize(std::ostream&, Mesh& mesh);
 };
 
 }

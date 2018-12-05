@@ -88,14 +88,14 @@ void MeshWriter::optimize(Mesh& mesh) {
     // e.g. we already (potentially) use snorm16 for uvs, half-floats for tangents, etc.
 }
 
-void MeshWriter::serialize(ostream& out, Mesh& mesh) {
+bool MeshWriter::serialize(ostream& out, Mesh& mesh) {
     const uint32_t maxint = numeric_limits<uint32_t>::max();
     const bool hasIndex16 = mesh.vertexCount < maxint;
     const bool hasUV1 = !mesh.uv1.empty();
     const size_t vertexSize = sizeof(Vertex) + (hasUV1 ? sizeof(ushort2) : 0);
     if ((mFlags & INTERLEAVED) && hasUV1) {
         cerr << "Interleaved vertices can only have 1 UV set." << endl;
-        exit(1);
+        return false;
     }
 
     // Compute the overall bounding box.
@@ -108,6 +108,7 @@ void MeshWriter::serialize(ostream& out, Mesh& mesh) {
     optimize(mesh);
 
     // Perform compression of vertex data if it has been requested.
+    CompressionHeader cheader {};
     vector<unsigned char> compressedVertices;
     if (mFlags & COMPRESSION) {
         compressedVertices.resize(meshopt_encodeVertexBufferBound(mesh.vertexCount, vertexSize));
@@ -116,22 +117,37 @@ void MeshWriter::serialize(ostream& out, Mesh& mesh) {
             compressedVertexSize = meshopt_encodeVertexBuffer(compressedVertices.data(),
                     compressedVertices.size(), mesh.vertices.data(), mesh.vertexCount, vertexSize);
         } else {
-            vector<unsigned char> sourceData(mesh.vertexCount * vertexSize);
-            unsigned char* ptr = sourceData.data();
-            ptr += write(ptr, mesh.positions);
-            ptr += write(ptr, mesh.tangents);
-            ptr += write(ptr, mesh.colors);
-            ptr += write(ptr, mesh.uv0);
+            unsigned char* cptr = compressedVertices.data();
+            unsigned char* cend = compressedVertices.data() + compressedVertices.size();
+
+            cheader.positions = meshopt_encodeVertexBuffer(cptr, cend - cptr, mesh.positions.data(),
+                    mesh.vertexCount, sizeof(decltype(Vertex::position)));
+            cptr += cheader.positions;
+
+            cheader.tangents = meshopt_encodeVertexBuffer(cptr, cend - cptr, mesh.tangents.data(),
+                    mesh.vertexCount, sizeof(decltype(Vertex::tangents)));
+            cptr += cheader.tangents;
+
+            cheader.colors = meshopt_encodeVertexBuffer(cptr, cend - cptr, mesh.colors.data(),
+                    mesh.vertexCount, sizeof(decltype(Vertex::color)));
+            cptr += cheader.colors;
+
+            cheader.uv0 = meshopt_encodeVertexBuffer(cptr, cend - cptr, mesh.uv0.data(),
+                    mesh.vertexCount, sizeof(decltype(Vertex::uv0)));
+            cptr += cheader.uv0;
+
             if (hasUV1) {
-                ptr += write(ptr, mesh.uv1);
+                cheader.uv1 = meshopt_encodeVertexBuffer(cptr, cend - cptr, mesh.uv1.data(),
+                        mesh.vertexCount, sizeof(decltype(Vertex::uv0)));
+                cptr += cheader.uv1;
             }
-            assert(ptr - sourceData.data() == sourceData.size());
-            compressedVertexSize = meshopt_encodeVertexBuffer(compressedVertices.data(),
-                    compressedVertices.size(), sourceData.data(), mesh.vertexCount, vertexSize);
+
+            assert(cend - cptr >= 0);
+            compressedVertexSize = cptr - compressedVertices.data();
         }
         if (compressedVertexSize == 0) {
             cerr << "Unable to compress vertex buffer." << endl;
-            exit(1);
+            return false;
         }
         compressedVertices.resize(compressedVertexSize);
     }
@@ -145,7 +161,7 @@ void MeshWriter::serialize(ostream& out, Mesh& mesh) {
                 compressedIndices.size(), mesh.indices.data(), mesh.indices.size());
         if (result == 0) {
             cerr << "Unable to compress index buffer." << endl;
-            exit(1);
+            return false;
         }
         compressedIndices.resize(result);
     }
@@ -189,7 +205,7 @@ void MeshWriter::serialize(ostream& out, Mesh& mesh) {
     header.indexCount = mesh.indices.size();
 
     if (mFlags & COMPRESSION) {
-        header.vertexSize = compressedVertices.size();
+        header.vertexSize = sizeof(cheader) + compressedVertices.size();
         header.indexSize = compressedIndices.size();
     } else {
         header.vertexSize = mesh.vertexCount * vertexSize;
@@ -199,6 +215,7 @@ void MeshWriter::serialize(ostream& out, Mesh& mesh) {
     write(out, header);
 
     if (mFlags & COMPRESSION) {
+        write(out, &cheader, 1);
         write(out, compressedVertices.data(), compressedVertices.size());
     } else if (mFlags & INTERLEAVED) {
         write(out, mesh.vertices.data(), uint32_t(mesh.vertices.size()));
@@ -228,10 +245,11 @@ void MeshWriter::serialize(ostream& out, Mesh& mesh) {
     write(out, mesh.parts.data(), header.parts);
 
     write(out, uint32_t(mesh.materials.size()));
-
     for (const auto& name : mesh.materials) {
         write(out, uint32_t(name.size()));
         write(out, name.c_str(), uint32_t(name.size()));
         write(out, char(0));
     }
+
+    return true;
 }

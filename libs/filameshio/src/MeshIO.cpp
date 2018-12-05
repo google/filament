@@ -202,8 +202,36 @@ MeshIO::Mesh MeshIO::loadMeshFromBuffer(filament::Engine* engine,
         size_t vertexCount = header->vertexCount;
         size_t uncompressedSize = vertexSize * vertexCount;
         void* uncompressed = malloc(uncompressedSize);
-        int err = meshopt_decodeVertexBuffer(uncompressed, vertexCount, vertexSize, vertexData,
-                verticesSize);
+        const uint8_t* srcdata = vertexData + sizeof(CompressionHeader);
+        int err = 0;
+        if (header->flags & INTERLEAVED) {
+            err |= meshopt_decodeVertexBuffer(uncompressed, vertexCount, vertexSize, srcdata,
+                    vertexSize);
+        } else {
+            const CompressionHeader* sizes = (CompressionHeader*) vertexData;
+            uint8_t* dstdata = (uint8_t*) uncompressed;
+            auto decode = meshopt_decodeVertexBuffer;
+
+            err |= decode(dstdata, vertexCount, sizeof(half4), srcdata, sizes->positions);
+            srcdata += sizes->positions;
+            dstdata += sizeof(half4) * vertexCount;
+
+            err |= decode(dstdata, vertexCount, sizeof(short4), srcdata, sizes->tangents);
+            srcdata += sizes->tangents;
+            dstdata += sizeof(short4) * vertexCount;
+
+            err |= decode(dstdata, vertexCount, sizeof(ubyte4), srcdata, sizes->colors);
+            srcdata += sizes->colors;
+            dstdata += sizeof(ubyte4) * vertexCount;
+
+            err |= decode(dstdata, vertexCount, sizeof(ushort2), srcdata, sizes->uv0);
+
+            if (sizes->uv1) {
+                srcdata += sizes->uv0;
+                dstdata += sizeof(ushort2) * vertexCount;
+                err |= decode(dstdata, vertexCount, sizeof(ushort2), srcdata, sizes->uv1);
+            }
+        }
         if (err) {
             utils::slog.e << "Unable to decode vertex buffer." << utils::io::endl;
             return {};

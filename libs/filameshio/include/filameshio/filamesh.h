@@ -38,6 +38,16 @@ enum Flags : uint32_t {
     COMPRESSION         = 1 << 2,
 };
 
+// Each of these fields specifies a number of bytes within the compressed data. This is ignored
+// when the INTERLEAVED flag is enabled.
+struct CompressionHeader {
+    uint32_t positions;
+    uint32_t tangents;
+    uint32_t colors;
+    uint32_t uv0;
+    uint32_t uv1;
+};
+
 struct Header {
     uint32_t version;
     uint32_t parts;
