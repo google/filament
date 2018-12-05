@@ -52,6 +52,12 @@ add_library(image_headers INTERFACE)
 target_include_directories(image_headers INTERFACE ${PUBLIC_HDR_DIR})
 
 # ==================================================================================================
+# Installation
+# ==================================================================================================
+install(TARGETS ${TARGET} ARCHIVE DESTINATION lib/${DIST_DIR})
+install(DIRECTORY ${PUBLIC_HDR_DIR}/image DESTINATION include)
+
+# ==================================================================================================
 # Tests
 # ==================================================================================================
 if (NOT ANDROID AND NOT WEBGL AND NOT IOS)
