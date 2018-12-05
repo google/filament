@@ -81,7 +81,7 @@ struct MaterialConfig {
     uint8_t aoUV = 0;
     uint8_t normalUV = 0;
 
-    constexpr uint8_t maxUVIndex() {
+    uint8_t maxUVIndex() {
         return std::max({baseColorUV, metallicRoughnessUV, emissiveUV, aoUV, normalUV});
     }
 };
