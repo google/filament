@@ -75,12 +75,15 @@ struct MaterialConfig {
     bool hasVertexColors;
     AlphaMode alphaMode = AlphaMode::OPAQUE;
     float maskThreshold = 0.5f;
-    uint8_t numUVs = 1;
     uint8_t baseColorUV = 0;
     uint8_t metallicRoughnessUV = 0;
     uint8_t emissiveUV = 0;
     uint8_t aoUV = 0;
     uint8_t normalUV = 0;
+
+    uint8_t maxUVIndex() {
+        return std::max({baseColorUV, metallicRoughnessUV, emissiveUV, aoUV, normalUV});
+    }
 };
 
 void appendBooleanToBitMask(uint64_t &bitmask, bool b) {
@@ -97,7 +100,6 @@ uint64_t hashMaterialConfig(MaterialConfig config) {
     appendBooleanToBitMask(bitmask, config.alphaMode == AlphaMode::OPAQUE);
     appendBooleanToBitMask(bitmask, config.alphaMode == AlphaMode::MASKED);
     appendBooleanToBitMask(bitmask, config.alphaMode == AlphaMode::TRANSPARENT);
-    appendBooleanToBitMask(bitmask, config.numUVs == 1);
     appendBooleanToBitMask(bitmask, config.baseColorUV == 0);
     appendBooleanToBitMask(bitmask, config.metallicRoughnessUV == 0);
     appendBooleanToBitMask(bitmask, config.emissiveUV == 0);
@@ -111,16 +113,22 @@ std::string shaderFromConfig(MaterialConfig config) {
         void material(inout MaterialInputs material) {
     )SHADER";
 
+    shader += "float2 normalUV = getUV" + std::to_string(config.normalUV) + "();\n";
+    shader += "float2 baseColorUV = getUV" + std::to_string(config.baseColorUV) + "();\n";
+    shader += "float2 metallicRoughnessUV = getUV" + std::to_string(config.metallicRoughnessUV) + "();\n";
+    shader += "float2 aoUV = getUV" + std::to_string(config.aoUV) + "();\n";
+    shader += "float2 emissiveUV = getUV" + std::to_string(config.emissiveUV) + "();\n";
+
     if (!config.unlit) {
         shader += R"SHADER(
-            material.normal = texture(materialParams_normalMap, getUV0()).xyz * 2.0 - 1.0;
+            material.normal = texture(materialParams_normalMap, normalUV).xyz * 2.0 - 1.0;
             material.normal.y = -material.normal.y;
         )SHADER";
     }
 
     shader += R"SHADER(
         prepareMaterial(material);
-        material.baseColor = texture(materialParams_baseColorMap, getUV0());
+        material.baseColor = texture(materialParams_baseColorMap, baseColorUV);
         material.baseColor.rgb *= materialParams.baseColorFactor.xyz;
     )SHADER";
 
@@ -132,10 +140,10 @@ std::string shaderFromConfig(MaterialConfig config) {
 
     if (!config.unlit) {
         shader += R"SHADER(
-            material.roughness = materialParams.roughnessFactor * texture(materialParams_metallicRoughnessMap, getUV0()).g;
-            material.metallic = materialParams.metallicFactor * texture(materialParams_metallicRoughnessMap, getUV0()).b;
-            material.ambientOcclusion = texture(materialParams_aoMap, getUV0()).r;
-            material.emissive = texture(materialParams_emissiveMap, getUV0());
+            material.roughness = materialParams.roughnessFactor * texture(materialParams_metallicRoughnessMap, metallicRoughnessUV).g;
+            material.metallic = materialParams.metallicFactor * texture(materialParams_metallicRoughnessMap, metallicRoughnessUV).b;
+            material.ambientOcclusion = texture(materialParams_aoMap, aoUV).r;
+            material.emissive = texture(materialParams_emissiveMap, emissiveUV);
             material.emissive.rgb *= materialParams.emissiveFactor.rgb;
         )SHADER";
     }
@@ -162,6 +170,10 @@ Material* createMaterialFromConfig(Engine& engine, MaterialConfig config ) {
             .parameter(MaterialBuilder::UniformType::FLOAT, "normalScale")
             .parameter(MaterialBuilder::UniformType::FLOAT, "aoStrength")
             .parameter(MaterialBuilder::UniformType::FLOAT3, "emissiveFactor");
+
+    if (config.maxUVIndex() > 0) {
+        builder.require(VertexAttribute::UV1);
+    }
 
     switch(config.alphaMode) {
         case AlphaMode::MASKED : builder.blending(MaterialBuilder::BlendingMode::MASKED);
@@ -458,29 +470,32 @@ void MeshAssimp::addFromFile(const Path& path,
         std::vector<uint32_t> indices;
         std::vector<half4> positions;
         std::vector<short4> tangents;
-        std::vector<half2> texCoords;
+        std::vector<half2> texCoords0;
+        std::vector<half2> texCoords1;
 
         // TODO: if we had a way to allocate temporary buffers from the engine with a
         // "command buffer" lifetime, we wouldn't need to have to deal with freeing the
         // std::vectors here.
 
         //TODO: a lot of these method arguments should probably be class or global variables
-        if (!setFromFile(path, indices, positions, tangents, texCoords, meshes, parents, materials)) {
+        if (!setFromFile(path, indices, positions, tangents, texCoords0, texCoords1, meshes, parents, materials)) {
             return;
         }
 
         mVertexBuffer = VertexBuffer::Builder()
                 .vertexCount((uint32_t)positions.size())
-                .bufferCount(3)
+                .bufferCount(4)
                 .attribute(VertexAttribute::POSITION,     0, VertexBuffer::AttributeType::HALF4)
                 .attribute(VertexAttribute::TANGENTS,     1, VertexBuffer::AttributeType::SHORT4)
                 .attribute(VertexAttribute::UV0,          2, VertexBuffer::AttributeType::HALF2)
+                .attribute(VertexAttribute::UV1,          3, VertexBuffer::AttributeType::HALF2)
                 .normalized(VertexAttribute::TANGENTS)
                 .build(mEngine);
 
         auto ps = new State<half4>(std::move(positions));
         auto ns = new State<short4>(std::move(tangents));
-        auto ts = new State<half2>(std::move(texCoords));
+        auto t0s = new State<half2>(std::move(texCoords0));
+        auto t1s = new State<half2>(std::move(texCoords1));
         auto is = new State<uint32_t>(std::move(indices));
 
         mVertexBuffer->setBufferAt(mEngine, 0,
@@ -490,7 +505,10 @@ void MeshAssimp::addFromFile(const Path& path,
                 VertexBuffer::BufferDescriptor(ns->data(), ns->size(), State<short4>::free, ns));
 
         mVertexBuffer->setBufferAt(mEngine, 2,
-                VertexBuffer::BufferDescriptor(ts->data(), ts->size(), State<half2>::free, ts));
+                VertexBuffer::BufferDescriptor(t0s->data(), t0s->size(), State<half2>::free, t0s));
+
+        mVertexBuffer->setBufferAt(mEngine, 3,
+                VertexBuffer::BufferDescriptor(t1s->data(), t1s->size(), State<half2>::free, t1s));
 
         mIndexBuffer = IndexBuffer::Builder().indexCount(uint32_t(is->size())).build(mEngine);
         mIndexBuffer->setBuffer(mEngine,
@@ -564,7 +582,7 @@ using Assimp::Importer;
 
 bool MeshAssimp::setFromFile(const Path& file, std::vector<uint32_t>& outIndices,
         std::vector<half4>& outPositions, std::vector<short4>& outTangents,
-        std::vector<half2>& outTexCoords, std::vector<Mesh>& outMeshes,
+        std::vector<half2>& outTexCoords0, std::vector<half2>& outTexCoords1, std::vector<Mesh>& outMeshes,
         std::vector<int>& outParents, std::map<std::string, MaterialInstance*>& outMaterials) {
 
     Importer importer;
@@ -650,7 +668,8 @@ bool MeshAssimp::setFromFile(const Path& file, std::vector<uint32_t>& outIndices
             float3 const* tangents   = reinterpret_cast<float3 const*>(mesh->mTangents);
             float3 const* bitangents = reinterpret_cast<float3 const*>(mesh->mBitangents);
             float3 const* normals    = reinterpret_cast<float3 const*>(mesh->mNormals);
-            float3 const* texCoords  = reinterpret_cast<float3 const*>(mesh->mTextureCoords[0]);
+            float3 const* texCoords0 = reinterpret_cast<float3 const*>(mesh->mTextureCoords[0]);
+            float3 const* texCoords1 = reinterpret_cast<float3 const*>(mesh->mTextureCoords[1]);
 
             const size_t numVertices = mesh->mNumVertices;
 
@@ -667,8 +686,8 @@ bool MeshAssimp::setFromFile(const Path& file, std::vector<uint32_t>& outIndices
                         float3 bitangent;
 
                         // Assimp always returns 3D tex coords but we only support 2D tex coords.
-                        float2 texCoord = texCoords ? texCoords[j].xy : float2{0.0};
-
+                        float2 texCoord0 = texCoords0 ? texCoords0[j].xy : float2{0.0};
+                        float2 texCoord1 = texCoords1 ? texCoords1[j].xy : float2{0.0};
                         // If the tangent and bitangent don't exist, make arbitrary ones. This only
                         // occurs when the mesh is missing texture coordinates, because assimp
                         // computes tangents for us. (search up for aiProcess_CalcTangentSpace)
@@ -686,7 +705,9 @@ bool MeshAssimp::setFromFile(const Path& file, std::vector<uint32_t>& outIndices
 
                         quatf q = mat3f::packTangentFrame({tangent, bitangent, normal});
                         outTangents.push_back(packSnorm16(q.xyzw));
-                        outTexCoords.emplace_back(texCoord);
+                        outTexCoords0.emplace_back(texCoord0);
+                        outTexCoords1.emplace_back(texCoord1);
+
                         outPositions.emplace_back(positions[j], 1.0_h);
                     }
 
@@ -798,7 +819,8 @@ bool MeshAssimp::setFromFile(const Path& file, std::vector<uint32_t>& outIndices
 
         outPositions.reserve(outPositions.size() + totalVertexCount);
         outTangents.reserve(outTangents.size() + totalVertexCount);
-        outTexCoords.reserve(outTexCoords.size() + totalVertexCount);
+        outTexCoords0.reserve(outTexCoords0.size() + totalVertexCount);
+        outTexCoords1.reserve(outTexCoords1.size() + totalVertexCount);
         outIndices.reserve(outIndices.size() + totalIndexCount);
 
         processNode(node, -1);
@@ -882,6 +904,14 @@ void MeshAssimp::processGLTFMaterial(const aiScene* scene, const aiMaterial* mat
         matConfig.maskThreshold = maskThreshold;
     }
 
+    material->Get(_AI_MATKEY_GLTF_TEXTURE_TEXCOORD_BASE, AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_BASE_COLOR_TEXTURE,
+                  matConfig.baseColorUV);
+    material->Get(_AI_MATKEY_GLTF_TEXTURE_TEXCOORD_BASE, AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_METALLICROUGHNESS_TEXTURE,
+                  matConfig.metallicRoughnessUV);
+    material->Get(_AI_MATKEY_GLTF_TEXTURE_TEXCOORD_BASE, aiTextureType_LIGHTMAP, 0, matConfig.aoUV);
+    material->Get(_AI_MATKEY_GLTF_TEXTURE_TEXCOORD_BASE, aiTextureType_NORMALS, 0, matConfig.normalUV);
+    material->Get(_AI_MATKEY_GLTF_TEXTURE_TEXCOORD_BASE, aiTextureType_EMISSIVE, 0, matConfig.emissiveUV);
+
     uint64_t configHash = hashMaterialConfig(matConfig);
 
     if (mGltfMaterialCache.find(configHash) == mGltfMaterialCache.end()) {
@@ -917,8 +947,7 @@ void MeshAssimp::processGLTFMaterial(const aiScene* scene, const aiMaterial* mat
         unsigned int magType = 0;
         material->Get("$tex.mappingfiltermin", AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_BASE_COLOR_TEXTURE, minType);
         material->Get("$tex.mappingfiltermag", AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_BASE_COLOR_TEXTURE, magType);
-        material->Get("$tex.file.texCoord", AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_BASE_COLOR_TEXTURE,
-                matConfig.baseColorUV);
+
         setTextureFromPath(scene, &mEngine, mTextures, baseColorPath,
                 materialName, dirName, mapMode, "baseColorMap", outMaterials, minType, magType);
     } else {
@@ -931,8 +960,7 @@ void MeshAssimp::processGLTFMaterial(const aiScene* scene, const aiMaterial* mat
         unsigned int magType = 0;
         material->Get("$tex.mappingfiltermin", AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_METALLICROUGHNESS_TEXTURE, minType);
         material->Get("$tex.mappingfiltermag", AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_METALLICROUGHNESS_TEXTURE, magType);
-        material->Get("$tex.file.texCoord", AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_METALLICROUGHNESS_TEXTURE,
-                      matConfig.metallicRoughnessUV);
+
         setTextureFromPath(scene, &mEngine, mTextures, MRPath, materialName,
                 dirName, mapMode, "metallicRoughnessMap", outMaterials, minType, magType);
     } else {
@@ -947,7 +975,6 @@ void MeshAssimp::processGLTFMaterial(const aiScene* scene, const aiMaterial* mat
         unsigned int magType = 0;
         material->Get("$tex.mappingfiltermin", aiTextureType_LIGHTMAP, 0, minType);
         material->Get("$tex.mappingfiltermag", aiTextureType_LIGHTMAP, 0, magType);
-        material->Get("$tex.file.texCoord", aiTextureType_LIGHTMAP, 0, matConfig.aoUV);
         setTextureFromPath(scene, &mEngine, mTextures, AOPath, materialName,
                 dirName, mapMode, "aoMap", outMaterials, minType, magType);
     } else {
@@ -960,7 +987,6 @@ void MeshAssimp::processGLTFMaterial(const aiScene* scene, const aiMaterial* mat
         unsigned int magType = 0;
         material->Get("$tex.mappingfiltermin", aiTextureType_NORMALS, 0, minType);
         material->Get("$tex.mappingfiltermag", aiTextureType_NORMALS, 0, magType);
-        material->Get("$tex.file.texCoord", aiTextureType_NORMALS, 0, matConfig.normalUV);
         setTextureFromPath(scene, &mEngine, mTextures, normalPath, materialName,
                 dirName, mapMode, "normalMap", outMaterials, minType, magType);
     } else {
@@ -973,7 +999,6 @@ void MeshAssimp::processGLTFMaterial(const aiScene* scene, const aiMaterial* mat
         unsigned int magType = 0;
         material->Get("$tex.mappingfiltermin", aiTextureType_EMISSIVE, 0, minType);
         material->Get("$tex.mappingfiltermag", aiTextureType_EMISSIVE, 0, magType);
-        material->Get("$tex.file.texCoord", aiTextureType_EMISSIVE, 0, matConfig.emissiveUV);
         setTextureFromPath(scene, &mEngine, mTextures, emissivePath, materialName,
                 dirName, mapMode, "emissiveMap", outMaterials, minType, magType);
     }  else {

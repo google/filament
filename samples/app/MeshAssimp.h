@@ -93,7 +93,8 @@ private:
             std::vector<uint32_t>& outIndices,
             std::vector<half4>&    outPositions,
             std::vector<short4>&   outTangents,
-            std::vector<half2>&    outTexCoords,
+            std::vector<half2>&    outTexCoords0,
+            std::vector<half2>&    outTexCoords1,
             std::vector<Mesh>&     outMeshes,
             std::vector<int>&      outParents,
             std::map<std::string, filament::MaterialInstance*>& outMaterials);
