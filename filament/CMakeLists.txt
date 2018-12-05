@@ -156,6 +156,7 @@ set(MATERIAL_SRCS
 # Remove it from release builds, since it uses some space needlessly.
 if (CMAKE_BUILD_TYPE MATCHES Debug)
     list(APPEND SRCS src/driver/noop/NoopDriver.cpp)
+    list(APPEND SRCS src/driver/noop/PlatformNoop.cpp)
 endif()
 
 if(IOS AND NOT FILAMENT_SUPPORTS_VULKAN)

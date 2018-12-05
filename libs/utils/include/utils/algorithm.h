@@ -255,6 +255,18 @@ RandomAccessIterator partition_point(
     return first;
 }
 
+template <class To, class From>
+typename std::enable_if_t<
+    (sizeof(To) == sizeof(From)) &&
+    std::is_trivially_copyable<From>::value &&
+    std::is_trivial<To>::value,
+    // this implementation requires that To is trivially default constructible
+    To>
+// constexpr support needs compiler magic
+bit_cast(const From &src) noexcept {
+    return reinterpret_cast<const To&>(src);
+}
+
 } // namespace utils
 
 #endif // TNT_UTILS_ALGORITHM_H

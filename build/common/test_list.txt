@@ -6,3 +6,4 @@ libs/utils/test_utils
 libs/filamat/test_filamat
 tools/matc/test_matc
 tools/cmgen/test_cmgen compare
+libs/filameshio/test_filameshio

@@ -1,0 +1,12 @@
+This folder was created as follows:
+
+cd third_party
+curl -L -O https://github.com/zeux/meshoptimizer/archive/0a816f5.zip
+unzip 0a816f5.zip
+mv meshoptimizer-* meshoptimizer
+cd meshoptimizer
+rm -rf demo tools
+mv LICENSE.md LICENSE
+
+Also removed lines 11 - 24 vertexcodec.cpp to disable SSE, which caused build
+issues with windows.
