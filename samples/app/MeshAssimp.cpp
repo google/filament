@@ -81,7 +81,7 @@ struct MaterialConfig {
     uint8_t aoUV = 0;
     uint8_t normalUV = 0;
 
-    uint8_t maxUVIndex() {
+    constexpr uint8_t maxUVIndex() {
         return std::max({baseColorUV, metallicRoughnessUV, emissiveUV, aoUV, normalUV});
     }
 };
@@ -100,7 +100,6 @@ uint64_t hashMaterialConfig(MaterialConfig config) {
     appendBooleanToBitMask(bitmask, config.alphaMode == AlphaMode::OPAQUE);
     appendBooleanToBitMask(bitmask, config.alphaMode == AlphaMode::MASKED);
     appendBooleanToBitMask(bitmask, config.alphaMode == AlphaMode::TRANSPARENT);
-    appendBooleanToBitMask(bitmask, config.maxUVIndex() == 1);
     appendBooleanToBitMask(bitmask, config.baseColorUV == 0);
     appendBooleanToBitMask(bitmask, config.metallicRoughnessUV == 0);
     appendBooleanToBitMask(bitmask, config.emissiveUV == 0);
@@ -114,33 +113,25 @@ std::string shaderFromConfig(MaterialConfig config) {
         void material(inout MaterialInputs material) {
     )SHADER";
 
+    shader += "float2 normalUV = " + std::string(config.normalUV == 0 ? "getUV0()" : "getUV1()") + ";\n";
+    shader += "float2 baseColorUV = " + std::string(config.baseColorUV == 0 ? "getUV0()" : "getUV1()") + ";\n";
+    shader += "float2 metallicRoughnessUV = " + std::string(config.metallicRoughnessUV == 0 ? "getUV0()" : "getUV1()") + ";\n";
+    shader += "float2 aoUV = " + std::string(config.aoUV == 0 ? "getUV0()" : "getUV1()") + ";\n";
+    shader += "float2 emissiveUV = " + std::string(config.emissiveUV == 0 ? "getUV0()" : "getUV1()") + ";\n";
+
+
     if (!config.unlit) {
-        if (config.normalUV == 0) {
-            shader += R"SHADER(
-                material.normal = texture(materialParams_normalMap, getUV0()).xyz * 2.0 - 1.0;
-                material.normal.y = -material.normal.y;
-            )SHADER";
-        } else {
-            shader += R"SHADER(
-                material.normal = texture(materialParams_normalMap, getUV1()).xyz * 2.0 - 1.0;
-                material.normal.y = -material.normal.y;
-            )SHADER";
-        }
+        shader += R"SHADER(
+            material.normal = texture(materialParams_normalMap, normalUV).xyz * 2.0 - 1.0;
+            material.normal.y = -material.normal.y;
+        )SHADER";
     }
 
-    if (config.baseColorUV == 0) {
-        shader += R"SHADER(
-            prepareMaterial(material);
-            material.baseColor = texture(materialParams_baseColorMap, getUV0());
-            material.baseColor.rgb *= materialParams.baseColorFactor.xyz;
-        )SHADER";
-    } else {
-        shader += R"SHADER(
-            prepareMaterial(material);
-            material.baseColor = texture(materialParams_baseColorMap, getUV1());
-            material.baseColor.rgb *= materialParams.baseColorFactor.xyz;
-        )SHADER";
-    }
+    shader += R"SHADER(
+        prepareMaterial(material);
+        material.baseColor = texture(materialParams_baseColorMap, baseColorUV);
+        material.baseColor.rgb *= materialParams.baseColorFactor.xyz;
+    )SHADER";
 
     if (config.alphaMode == AlphaMode::TRANSPARENT) {
         shader += R"SHADER(
@@ -149,39 +140,13 @@ std::string shaderFromConfig(MaterialConfig config) {
     }
 
     if (!config.unlit) {
-        if (config.metallicRoughnessUV == 0) {
-            shader += R"SHADER(
-                material.roughness = materialParams.roughnessFactor * texture(materialParams_metallicRoughnessMap, getUV0()).g;
-                material.metallic = materialParams.metallicFactor * texture(materialParams_metallicRoughnessMap, getUV0()).b;
-            )SHADER";
-        } else {
-            shader += R"SHADER(
-                material.roughness = materialParams.roughnessFactor * texture(materialParams_metallicRoughnessMap, getUV1()).g;
-                material.metallic = materialParams.metallicFactor * texture(materialParams_metallicRoughnessMap, getUV1()).b;
-            )SHADER";
-        }
-
-        if (config.aoUV == 0) {
-            shader += R"SHADER(
-                material.ambientOcclusion = texture(materialParams_aoMap, getUV0()).r;
-            )SHADER";
-        } else {
-            shader += R"SHADER(
-                material.ambientOcclusion = texture(materialParams_aoMap, getUV1()).r;
-            )SHADER";
-        }
-
-        if (config.emissiveUV == 0) {
-            shader += R"SHADER(
-                material.emissive = texture(materialParams_emissiveMap, getUV0());
-                material.emissive.rgb *= materialParams.emissiveFactor.rgb;
-            )SHADER";
-        } else {
-            shader += R"SHADER(
-                material.emissive = texture(materialParams_emissiveMap, getUV1());
-                material.emissive.rgb *= materialParams.emissiveFactor.rgb;
-            )SHADER";
-        }
+        shader += R"SHADER(
+            material.roughness = materialParams.roughnessFactor * texture(materialParams_metallicRoughnessMap, metallicRoughnessUV).g;
+            material.metallic = materialParams.metallicFactor * texture(materialParams_metallicRoughnessMap, metallicRoughnessUV).b;
+            material.ambientOcclusion = texture(materialParams_aoMap, aoUV).r;
+            material.emissive = texture(materialParams_emissiveMap, emissiveUV);
+            material.emissive.rgb *= materialParams.emissiveFactor.rgb;
+        )SHADER";
     }
 
     shader += "}\n";
@@ -940,13 +905,13 @@ void MeshAssimp::processGLTFMaterial(const aiScene* scene, const aiMaterial* mat
         matConfig.maskThreshold = maskThreshold;
     }
 
-    material->Get("$tex.file.texCoord", AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_BASE_COLOR_TEXTURE,
+    material->Get(_AI_MATKEY_GLTF_TEXTURE_TEXCOORD_BASE, AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_BASE_COLOR_TEXTURE,
                   matConfig.baseColorUV);
-    material->Get("$tex.file.texCoord", AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_METALLICROUGHNESS_TEXTURE,
+    material->Get(_AI_MATKEY_GLTF_TEXTURE_TEXCOORD_BASE, AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_METALLICROUGHNESS_TEXTURE,
                   matConfig.metallicRoughnessUV);
-    material->Get("$tex.file.texCoord", aiTextureType_LIGHTMAP, 0, matConfig.aoUV);
-    material->Get("$tex.file.texCoord", aiTextureType_NORMALS, 0, matConfig.normalUV);
-    material->Get("$tex.file.texCoord", aiTextureType_EMISSIVE, 0, matConfig.emissiveUV);
+    material->Get(_AI_MATKEY_GLTF_TEXTURE_TEXCOORD_BASE, aiTextureType_LIGHTMAP, 0, matConfig.aoUV);
+    material->Get(_AI_MATKEY_GLTF_TEXTURE_TEXCOORD_BASE, aiTextureType_NORMALS, 0, matConfig.normalUV);
+    material->Get(_AI_MATKEY_GLTF_TEXTURE_TEXCOORD_BASE, aiTextureType_EMISSIVE, 0, matConfig.emissiveUV);
 
     uint64_t configHash = hashMaterialConfig(matConfig);
 
