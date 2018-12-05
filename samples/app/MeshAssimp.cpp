@@ -113,12 +113,11 @@ std::string shaderFromConfig(MaterialConfig config) {
         void material(inout MaterialInputs material) {
     )SHADER";
 
-    shader += "float2 normalUV = " + std::string(config.normalUV == 0 ? "getUV0()" : "getUV1()") + ";\n";
-    shader += "float2 baseColorUV = " + std::string(config.baseColorUV == 0 ? "getUV0()" : "getUV1()") + ";\n";
-    shader += "float2 metallicRoughnessUV = " + std::string(config.metallicRoughnessUV == 0 ? "getUV0()" : "getUV1()") + ";\n";
-    shader += "float2 aoUV = " + std::string(config.aoUV == 0 ? "getUV0()" : "getUV1()") + ";\n";
-    shader += "float2 emissiveUV = " + std::string(config.emissiveUV == 0 ? "getUV0()" : "getUV1()") + ";\n";
-
+    shader += "float2 normalUV = getUV" + std::to_string(config.normalUV) + "();\n";
+    shader += "float2 baseColorUV = getUV" + std::to_string(config.baseColorUV) + "();\n";
+    shader += "float2 metallicRoughnessUV = getUV" + std::to_string(config.metallicRoughnessUV) + "();\n";
+    shader += "float2 aoUV = getUV" + std::to_string(config.aoUV) + "();\n";
+    shader += "float2 emissiveUV = getUV" + std::to_string(config.emissiveUV) + "();\n";
 
     if (!config.unlit) {
         shader += R"SHADER(
