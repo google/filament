@@ -6,7 +6,7 @@ include(GNUInstallDirs)
 
 option(ENABLE_AMD_EXTENSIONS "Enables support of AMD-specific extensions" ON)
 option(ENABLE_NV_EXTENSIONS "Enables support of Nvidia-specific extensions" ON)
-option(ENABLE_OPT "Enables spirv-opt capability if present" OFFENABLE_OPT)
+option(ENABLE_OPT "Enables spirv-opt capability if present" OFF)
 
 if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT AND WIN32)
     set(CMAKE_INSTALL_PREFIX "install" CACHE STRING "..." FORCE)

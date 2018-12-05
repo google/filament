@@ -318,6 +318,7 @@ add_subdirectory(${FILAMENT}/shaders)
 add_subdirectory(${EXTERNAL}/robin-map/tnt)
 add_subdirectory(${EXTERNAL}/smol-v/tnt)
 add_subdirectory(${EXTERNAL}/benchmark/tnt)
+add_subdirectory(${EXTERNAL}/meshoptimizer)
 
 if (FILAMENT_SUPPORTS_VULKAN)
     add_subdirectory(${LIBRARIES}/bluevk)

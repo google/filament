@@ -22,6 +22,7 @@ include_directories(${PUBLIC_HDR_DIR})
 add_library(${TARGET} STATIC ${PUBLIC_HDRS} ${SRCS})
 target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
 target_link_libraries(${TARGET} PUBLIC filament)
+target_link_libraries(${TARGET} PRIVATE meshoptimizer)
 
 # ==================================================================================================
 # Installation
@@ -33,7 +34,7 @@ install(FILES ${DIST_HDRS} DESTINATION include/${TARGET})
 # ==================================================================================================
 # Tests
 # ==================================================================================================
-if (NOT IOS AND NOT WEBGL)
+if (NOT IOS AND NOT WEBGL AND NOT ANDROID)
     add_executable(test_${TARGET} tests/test_filamesh.cpp )
     target_link_libraries(test_${TARGET} PRIVATE filameshio gtest)
 endif()

@@ -42,6 +42,7 @@ enum class Backend : uint8_t {
     DEFAULT = 0,  //!< Automatically selects an appropriate driver for the platform.
     OPENGL = 1,   //!< Selects the OpenGL driver (which supports OpenGL ES as well).
     VULKAN = 2,   //!< Selects the Vulkan driver if the platform supports it.
+    NOOP = 3,     //!< Selects the no-op driver for testing purposes.
 };
 
 /**
