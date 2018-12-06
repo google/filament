@@ -97,13 +97,24 @@ Filament.loadClassExtensions = function() {
 
     /// createTextureFromPng ::method:: Creates a 2D [Texture] from the raw contents of a PNG file.
     /// buffer ::argument:: asset string, or Uint8Array, or [Buffer] with PNG file contents
-    /// options ::argument:: JavaScript object with optional `rgbm`, `noalpha`, and `nomips` keys.
+    /// options ::argument:: object with optional `srgb`, `rgbm`, `noalpha`, and `nomips` keys.
     /// ::retval:: [Texture]
     Filament.Engine.prototype.createTextureFromPng = function(buffer, options) {
         buffer = getBufferDescriptor(buffer);
         const result = Filament._createTextureFromPng(buffer, this, options);
         buffer.delete();
         return result;
+    };
+
+    /// createTextureFromJpeg ::method:: Creates a 2D [Texture] from a JPEG image.
+    /// image ::argument:: asset string or DOM Image that has already been loaded
+    /// options ::argument:: JavaScript object with optional `srgb` and `nomips` keys.
+    /// ::retval:: [Texture]
+    Filament.Engine.prototype.createTextureFromJpeg = function(image, options) {
+        if ('string' == typeof image || image instanceof String) {
+            image = Filament.assets[image];
+        }
+        return Filament._createTextureFromJpeg(image, this, options);
     };
 
     /// loadFilamesh ::method:: Consumes the contents of a filamesh file and creates a renderable.

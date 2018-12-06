@@ -154,6 +154,7 @@ export class Engine {
     public createScene(): Scene;
     public createSkyFromKtx(url: string): Skybox;
     public createSwapChain(): SwapChain;
+    public createTextureFromJpeg(url: string): Texture;
     public createTextureFromPng(url: string): Texture;
     public createView(): View;
     public destroySkybox(skybox: Skybox): void;

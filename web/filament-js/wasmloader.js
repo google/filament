@@ -41,7 +41,7 @@ Filament.remainingInitializationTasks = 1;
 /// be ready at initialization time.
 ///
 /// When the callback is called, each downloaded asset is available in the `Filament.assets` global
-/// object, which contains a mapping from URL's to Uint8Array objects.
+/// object, which contains a mapping from URL's to Uint8Array objects and DOM images.
 ///
 /// assets ::argument:: Array of strings containing URL's of required assets.
 /// onready ::argument:: callback that gets invoked after all assets have been downloaded and the \
@@ -58,18 +58,10 @@ Filament.init = function(assets, onready) {
     }
 
     // Issue a fetch for each asset. After the last asset is downloaded, trigger the callback.
-    assets.forEach(function(name) {
-        fetch(name).then(function(response) {
-            if (!response.ok) {
-                throw new Error(name);
-            }
-            return response.arrayBuffer();
-        }).then(function(arrayBuffer) {
-            Filament.assets[name] = new Uint8Array(arrayBuffer);
-            if (--Filament.remainingInitializationTasks === 0) {
-                Filament.onReady();
-            }
-        });
+    Filament.fetch(assets, null, function(name) {
+        if (--Filament.remainingInitializationTasks == 0 && Filament.onReady) {
+            Filament.onReady();
+        }
     });
 };
 
@@ -85,10 +77,27 @@ Filament.postRun = function() {
 
 /// fetch ::function:: Downloads assets and invokes a callback when done.
 /// assets ::argument:: Array of strings containing URL's of required assets.
-/// onready ::argument:: callback that gets invoked after all assets have been downloaded.
-Filament.fetch = function(assets, onDone) {
+/// onDone ::argument:: callback that gets invoked after all assets have been downloaded.
+/// onFetch ::argument:: optional callback that's invoked after each asset is downloaded.
+Filament.fetch = function(assets, onDone, onFetched) {
     var remainingAssets = assets.length;
     assets.forEach(function(name) {
+        const lower = name.toLowerCase();
+        if (lower.endsWith('.jpeg') || lower.endsWith('.jpg')) {
+            var img = new Image();
+            img.src = name;
+            img.decoding = 'async';
+            img.onload = function() {
+                Filament.assets[name] = img;
+                if (onFetched) {
+                    onFetched(name);
+                }
+                if (--remainingAssets === 0 && onDone) {
+                    onDone();
+                }
+            };
+            return;
+        }
         fetch(name).then(function(response) {
             if (!response.ok) {
                 throw new Error(name);
@@ -96,7 +105,10 @@ Filament.fetch = function(assets, onDone) {
             return response.arrayBuffer();
         }).then(function(arrayBuffer) {
             Filament.assets[name] = new Uint8Array(arrayBuffer);
-            if (--remainingAssets === 0) {
+            if (onFetched) {
+                onFetched(name);
+            }
+            if (--remainingAssets === 0 && onDone) {
                 onDone();
             }
         });
