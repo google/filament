@@ -310,9 +310,9 @@ meshopt_Bounds meshopt_computeClusterBounds(const unsigned int* indices, size_t 
 	bounds.cone_cutoff = sqrtf(1 - mindp * mindp);
 
 	// quantize axis & cutoff to 8-bit SNORM format
-	bounds.cone_axis_s8[0] = char(meshopt_quantizeSnorm(bounds.cone_axis[0], 8));
-	bounds.cone_axis_s8[1] = char(meshopt_quantizeSnorm(bounds.cone_axis[1], 8));
-	bounds.cone_axis_s8[2] = char(meshopt_quantizeSnorm(bounds.cone_axis[2], 8));
+	bounds.cone_axis_s8[0] = (signed char)(meshopt_quantizeSnorm(bounds.cone_axis[0], 8));
+	bounds.cone_axis_s8[1] = (signed char)(meshopt_quantizeSnorm(bounds.cone_axis[1], 8));
+	bounds.cone_axis_s8[2] = (signed char)(meshopt_quantizeSnorm(bounds.cone_axis[2], 8));
 
 	// for the 8-bit test to be conservative, we need to adjust the cutoff by measuring the max. error
 	float cone_axis_s8_e0 = fabsf(bounds.cone_axis_s8[0] / 127.f - bounds.cone_axis[0]);
@@ -322,7 +322,7 @@ meshopt_Bounds meshopt_computeClusterBounds(const unsigned int* indices, size_t 
 	// note that we need to round this up instead of rounding to nearest, hence +1
 	int cone_cutoff_s8 = int(127 * (bounds.cone_cutoff + cone_axis_s8_e0 + cone_axis_s8_e1 + cone_axis_s8_e2) + 1);
 
-	bounds.cone_cutoff_s8 = (cone_cutoff_s8 > 127) ? 127 : char(cone_cutoff_s8);
+	bounds.cone_cutoff_s8 = (cone_cutoff_s8 > 127) ? 127 : (signed char)(cone_cutoff_s8);
 
 	return bounds;
 }

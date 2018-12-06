@@ -9,7 +9,7 @@ namespace meshopt
 
 struct VertexHasher
 {
-	const char* vertices;
+	const unsigned char* vertices;
 	size_t vertex_size;
 	size_t vertex_stride;
 
@@ -20,7 +20,7 @@ struct VertexHasher
 		const int r = 24;
 
 		unsigned int h = 0;
-		const char* key = vertices + index * vertex_stride;
+		const unsigned char* key = vertices + index * vertex_stride;
 		size_t len = vertex_size;
 
 		while (len >= 4)
@@ -97,7 +97,7 @@ size_t meshopt_generateVertexRemap(unsigned int* destination, const unsigned int
 
 	memset(destination, -1, vertex_count * sizeof(unsigned int));
 
-	VertexHasher hasher = {static_cast<const char*>(vertices), vertex_size, vertex_size};
+	VertexHasher hasher = {static_cast<const unsigned char*>(vertices), vertex_size, vertex_size};
 
 	size_t table_size = hashBuckets(vertex_count);
 	unsigned int* table = allocator.allocate<unsigned int>(table_size);
@@ -143,7 +143,7 @@ void meshopt_remapVertexBuffer(void* destination, const void* vertices, size_t v
 	// support in-place remap
 	if (destination == vertices)
 	{
-		char* vertices_copy = allocator.allocate<char>(vertex_count * vertex_size);
+		unsigned char* vertices_copy = allocator.allocate<unsigned char>(vertex_count * vertex_size);
 		memcpy(vertices_copy, vertices, vertex_count * vertex_size);
 		vertices = vertices_copy;
 	}
@@ -154,7 +154,7 @@ void meshopt_remapVertexBuffer(void* destination, const void* vertices, size_t v
 		{
 			assert(remap[i] < vertex_count);
 
-			memcpy(static_cast<char*>(destination) + remap[i] * vertex_size, static_cast<const char*>(vertices) + i * vertex_size, vertex_size);
+			memcpy(static_cast<unsigned char*>(destination) + remap[i] * vertex_size, static_cast<const unsigned char*>(vertices) + i * vertex_size, vertex_size);
 		}
 	}
 }
@@ -186,7 +186,7 @@ void meshopt_generateShadowIndexBuffer(unsigned int* destination, const unsigned
 	unsigned int* remap = allocator.allocate<unsigned int>(vertex_count);
 	memset(remap, -1, vertex_count * sizeof(unsigned int));
 
-	VertexHasher hasher = {static_cast<const char*>(vertices), vertex_size, vertex_stride};
+	VertexHasher hasher = {static_cast<const unsigned char*>(vertices), vertex_size, vertex_stride};
 
 	size_t table_size = hashBuckets(vertex_count);
 	unsigned int* table = allocator.allocate<unsigned int>(table_size);
