@@ -9,11 +9,11 @@ set(PUBLIC_HDR_DIR include)
 # ==================================================================================================
 set(PUBLIC_HDRS
     ${PUBLIC_HDR_DIR}/${TARGET}/filamesh.h
-    ${PUBLIC_HDR_DIR}/${TARGET}/MeshIO.h
+    ${PUBLIC_HDR_DIR}/${TARGET}/MeshReader.h
 )
 
-set(DIST_HDRS ${PUBLIC_HDR_DIR}/${TARGET}/MeshIO.h)
-set(SRCS src/MeshIO.cpp)
+set(DIST_HDRS ${PUBLIC_HDR_DIR}/${TARGET}/MeshReader.h)
+set(SRCS src/MeshReader.cpp)
 
 # ==================================================================================================
 # Includes and target definition
@@ -21,8 +21,10 @@ set(SRCS src/MeshIO.cpp)
 include_directories(${PUBLIC_HDR_DIR})
 add_library(${TARGET} STATIC ${PUBLIC_HDRS} ${SRCS})
 target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
-target_link_libraries(${TARGET} PUBLIC filament)
-target_link_libraries(${TARGET} PRIVATE meshoptimizer)
+target_link_libraries(${TARGET}
+    PRIVATE meshoptimizer
+    PUBLIC filament # Public only because the filamesh API needs Box.h
+)
 
 # ==================================================================================================
 # Installation

@@ -56,11 +56,11 @@ struct Mesh {
 };
 
 class MeshWriter {
-    bool mInterleaved;
-    bool mSnormUVs;
+    uint32_t mFlags;
+    void optimize(Mesh& mesh);
 public:
-    MeshWriter(bool interleaved, bool snormUVs) : mInterleaved(interleaved), mSnormUVs(snormUVs) {}
-    void serialize(std::ostream&, const Mesh& mesh);
+    MeshWriter(uint32_t flags) : mFlags(flags) {}
+    bool serialize(std::ostream&, Mesh& mesh);
 };
 
 }

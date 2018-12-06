@@ -21,7 +21,7 @@
 #include <filament/TransformManager.h>
 #include <filament/View.h>
 
-#include <filameshio/MeshIO.h>
+#include <filameshio/MeshReader.h>
 
 #include "app/Config.h"
 #include "app/FilamentApp.h"
@@ -36,7 +36,7 @@ struct App {
     utils::Entity light;
     Material* material;
     MaterialInstance* materialInstance;
-    MeshIO::Mesh mesh;
+    MeshReader::Mesh mesh;
     mat4f transform;
 };
 
@@ -64,7 +64,7 @@ int main(int argc, char** argv) {
         mi->setParameter("reflectance", 0.5f);
 
         // Add geometry into the scene.
-        app.mesh = MeshIO::loadMeshFromBuffer(engine, RESOURCES_SUZANNE_DATA, nullptr, nullptr, mi);
+        app.mesh = MeshReader::loadMeshFromBuffer(engine, RESOURCES_SUZANNE_DATA, nullptr, nullptr, mi);
         auto ti = tcm.getInstance(app.mesh.renderable);
         app.transform = mat4f{ mat3f(1), float3(0, 0, -4) } * tcm.getWorldTransform(ti);
         rcm.setCastShadows(rcm.getInstance(app.mesh.renderable), false);

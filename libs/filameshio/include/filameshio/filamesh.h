@@ -35,8 +35,17 @@ enum IndexType : uint32_t {
 enum Flags : uint32_t {
     INTERLEAVED         = 1 << 0,
     TEXCOORD_SNORM16    = 1 << 1,
-    COMPRESSION_MESHOPT = 1 << 2,
-    COMPRESSION_DRACO   = 1 << 3,
+    COMPRESSION         = 1 << 2,
+};
+
+// Each of these fields specifies a number of bytes within the compressed data. This is ignored
+// when the INTERLEAVED flag is enabled.
+struct CompressionHeader {
+    uint32_t positions;
+    uint32_t tangents;
+    uint32_t colors;
+    uint32_t uv0;
+    uint32_t uv1;
 };
 
 struct Header {
