@@ -215,7 +215,7 @@ Texture* MeshAssimp::createOneByOneTexture(uint32_t pixel) {
 void getMinMaxUV(const aiScene *scene, const aiNode* node, float2 &minUV, float2 &maxUV, int uvIndex) {
     for (size_t i = 0; i < node->mNumMeshes; ++i) {
         const aiMesh* mesh = scene->mMeshes[node->mMeshes[i]];
-        if (!mesh->HasNormals() || !mesh->HasTextureCoords(uvIndex)) {
+        if (!mesh->HasTextureCoords(uvIndex)) {
             continue;
         }
         const float3* uv = reinterpret_cast<const float3*>(mesh->mTextureCoords[uvIndex]);
@@ -231,7 +231,7 @@ void getMinMaxUV(const aiScene *scene, const aiNode* node, float2 &minUV, float2
             }
         }
     }
-    for (size_t i=0 ; i<node->mNumChildren ; ++i) {
+    for (size_t i = 0 ; i < node->mNumChildren ; ++i) {
         getMinMaxUV(scene, node->mChildren[i], minUV, maxUV, uvIndex);
     }
 }
@@ -701,7 +701,7 @@ bool MeshAssimp::setFromFile(Asset& asset, std::map<std::string, MaterialInstanc
         asset.indices.reserve(asset.indices.size() + totalIndexCount);
 
         float2 minUV0 = float2(std::numeric_limits<float>::max());
-        float2 maxUV0 = float2(-std::numeric_limits<float>::max());
+        float2 maxUV0 = float2(std::numeric_limits<float>::min());
         getMinMaxUV(scene, node, minUV0, maxUV0, 0);
         float2 minUV1 = float2(std::numeric_limits<float>::max());
         float2 maxUV1 = float2(-std::numeric_limits<float>::max());
@@ -787,15 +787,15 @@ bool MeshAssimp::setFromFile(Asset& asset, std::map<std::string, MaterialInstanc
 
 template<bool SNORMUV0, bool SNORMUV1>
 void MeshAssimp::processNode(Asset& asset,
-                             std::map<std::string,
-                             MaterialInstance *> &outMaterials,
-                             const aiScene *scene,
-                             bool isGLTF,
-                             size_t deep,
-                             size_t matCount,
-                             const aiNode *node,
-                             int parentIndex,
-                             size_t &depth) const {
+        std::map<std::string,
+        MaterialInstance *> &outMaterials,
+        const aiScene *scene,
+        bool isGLTF,
+        size_t deep,
+        size_t matCount,
+        const aiNode *node,
+        int parentIndex,
+        size_t &depth) const {
     mat4f const& current = transpose(*reinterpret_cast<mat4f const*>(&node->mTransformation));
 
     size_t totalIndices = 0;
@@ -940,20 +940,21 @@ void MeshAssimp::processNode(Asset& asset,
                 }
             }
         }
+
     if (node->mNumMeshes > 0) {
-            asset.meshes.back().count = totalIndices;
-        }
+        asset.meshes.back().count = totalIndices;
+    }
 
     if (node->mNumChildren) {
-            parentIndex = static_cast<int>(asset.meshes.size()) - 1;
-            deep++;
-            depth = std::__1::max(deep, depth);
-            for (size_t i = 0, c = node->mNumChildren; i < c; i++) {
-                processNode<SNORMUV0, SNORMUV1>(asset, outMaterials, scene,
-                        isGLTF, deep, matCount, node->mChildren[i], parentIndex, depth);
-            }
-            deep--;
+        parentIndex = static_cast<int>(asset.meshes.size()) - 1;
+        deep++;
+        depth = std::__1::max(deep, depth);
+        for (size_t i = 0, c = node->mNumChildren; i < c; i++) {
+            processNode<SNORMUV0, SNORMUV1>(asset, outMaterials, scene,
+                                            isGLTF, deep, matCount, node->mChildren[i], parentIndex, depth);
         }
+        deep--;
+    }
 }
 
 void MeshAssimp::processGLTFMaterial(const aiScene* scene, const aiMaterial* material,

@@ -50,7 +50,7 @@ bool g_compression = false;
 
 Mesh g_mesh;
 float2 g_minUV = float2(std::numeric_limits<float>::max());
-float2 g_maxUV = float2(-std::numeric_limits<float>::max());
+float2 g_maxUV = float2(std::numeric_limits<float>::min());
 
 template<bool SNORMUVS>
 static ushort2 convertUV(float2 uv) {
@@ -199,7 +199,7 @@ void processNode(const aiScene* scene, const aiNode* node, std::vector<Part>& me
         }
     }
 
-    for (size_t i=0 ; i<node->mNumChildren ; ++i) {
+    for (size_t i = 0 ; i < node->mNumChildren ; ++i) {
         processNode<INTERLEAVED, SNORMUVS>(scene, node->mChildren[i], meshes);
     }
 }
