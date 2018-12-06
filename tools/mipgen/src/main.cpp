@@ -269,12 +269,13 @@ int main(int argc, char* argv[]) {
         // bundle, we want to include level 0, so add 1 to the KTX level count.
         KtxBundle container(1 + miplevels.size(), 1, false);
         auto& info = container.info();
+        size_t componentCount = 3;
         info = {
             .endianness = KtxBundle::ENDIAN_DEFAULT,
             .glType = KtxBundle::UNSIGNED_BYTE,
-            .glTypeSize = 3,
+            .glTypeSize = 1,
             .glFormat = KtxBundle::RGB,
-            .glInternalFormat = KtxBundle::RGB,
+            .glInternalFormat = KtxBundle::RGB8,
             .glBaseInternalFormat = KtxBundle::RGB,
             .pixelWidth = sourceImage.getWidth(),
             .pixelHeight = sourceImage.getHeight(),
@@ -285,6 +286,7 @@ int main(int argc, char* argv[]) {
             info.glFormat =
             info.glInternalFormat =
             info.glBaseInternalFormat = KtxBundle::LUMINANCE;
+            componentCount = 1;
         }
         CompressionConfig config {};
         if (!g_compression.empty()) {
@@ -330,7 +332,7 @@ int main(int argc, char* argv[]) {
                 data = fromLinearTosRGB<uint8_t>(image);
             }
             container.setBlob({mip++, 0, 0}, data.get(),
-                    image.getWidth() * image.getHeight() * container.info().glTypeSize);
+                    image.getWidth() * image.getHeight() * container.info().glTypeSize * componentCount);
         };
         addLevel(sourceImage);
         for (auto image : miplevels) {
