@@ -81,14 +81,14 @@ Filament.CompressedPixelBuffer = function(typedarray, cdatatype, faceSize) {
 
 Filament._loadFilamesh = function(engine, buffer, definstance, matinstances) {
     matinstances = matinstances || {};
-    const registry = new Filament.MeshIO$MaterialRegistry();
+    const registry = new Filament.MeshReader$MaterialRegistry();
     for (var key in matinstances) {
         registry.set(key, matinstances[key]);
     }
     if (definstance) {
         registry.set("DefaultMaterial", definstance);
     }
-    const mesh = Filament.MeshIO.loadMeshFromBuffer(engine, buffer, registry);
+    const mesh = Filament.MeshReader.loadMeshFromBuffer(engine, buffer, registry);
     const keys = registry.keys();
     for (var i = 0; i < keys.size(); i++) {
         const key = keys.get(i);

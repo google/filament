@@ -19,7 +19,7 @@
 #include <filament/RenderableManager.h>
 
 #include <filameshio/filamesh.h>
-#include <filameshio/MeshIO.h>
+#include <filameshio/MeshReader.h>
 
 #include <math/half.h>
 #include <math/mat3.h>
@@ -157,7 +157,7 @@ TEST_F(FilameshTest, NonInterleaved) {
 
     // Deserialize the mesh as a smoke test.
     MaterialInstance* mi = engine->getDefaultMaterial()->createInstance();
-    auto mesh = MeshIO::loadMeshFromBuffer(engine, stream.str().data(), nullptr, nullptr, mi);
+    auto mesh = MeshReader::loadMeshFromBuffer(engine, stream.str().data(), nullptr, nullptr, mi);
     auto& rm = engine->getRenderableManager();
     auto inst = rm.getInstance(mesh.renderable);
     EXPECT_EQ(rm.getPrimitiveCount(inst), 1);
@@ -206,7 +206,7 @@ TEST_F(FilameshTest, Interleaved) {
 
     // Deserialize the mesh as a smoke test.
     MaterialInstance* mi = engine->getDefaultMaterial()->createInstance();
-    auto mesh = MeshIO::loadMeshFromBuffer(engine, stream.str().data(), nullptr, nullptr, mi);
+    auto mesh = MeshReader::loadMeshFromBuffer(engine, stream.str().data(), nullptr, nullptr, mi);
     auto& rm = engine->getRenderableManager();
     auto inst = rm.getInstance(mesh.renderable);
     EXPECT_EQ(rm.getPrimitiveCount(inst), 1);

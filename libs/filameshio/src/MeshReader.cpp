@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include <filameshio/MeshIO.h>
+#include <filameshio/MeshReader.h>
 #include <filameshio/filamesh.h>
 
 #include <filament/Box.h>
@@ -53,7 +53,7 @@ static size_t fileSize(int fd) {
     return filesize;
 }
 
-MeshIO::Mesh MeshIO::loadMeshFromFile(filament::Engine* engine, const utils::Path& path,
+MeshReader::Mesh MeshReader::loadMeshFromFile(filament::Engine* engine, const utils::Path& path,
         const MaterialRegistry& materials) {
 
     Mesh mesh;
@@ -81,7 +81,7 @@ MeshIO::Mesh MeshIO::loadMeshFromFile(filament::Engine* engine, const utils::Pat
     return mesh;
 }
 
-MeshIO::Mesh MeshIO::loadMeshFromBuffer(filament::Engine* engine,
+MeshReader::Mesh MeshReader::loadMeshFromBuffer(filament::Engine* engine,
         void const* data, Callback destructor, void* user,
         MaterialInstance* defaultMaterial) {
     MaterialRegistry reg;
@@ -89,7 +89,7 @@ MeshIO::Mesh MeshIO::loadMeshFromBuffer(filament::Engine* engine,
     return loadMeshFromBuffer(engine, data, destructor, user, reg);
 }
 
-MeshIO::Mesh MeshIO::loadMeshFromBuffer(filament::Engine* engine,
+MeshReader::Mesh MeshReader::loadMeshFromBuffer(filament::Engine* engine,
         void const* data, Callback destructor, void* user,
         const MaterialRegistry& materials) {
     const uint8_t* p = (const uint8_t*) data;

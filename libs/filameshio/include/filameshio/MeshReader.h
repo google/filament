@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_FILAMESHIO_MESHIO_H
-#define TNT_FILAMENT_FILAMESHIO_MESHIO_H
+#ifndef TNT_FILAMENT_FILAMESHIO_MESHREADER_H
+#define TNT_FILAMENT_FILAMESHIO_MESHREADER_H
 
 #include <utils/Entity.h>
 #include <utils/Path.h>
@@ -35,7 +35,7 @@ namespace filament {
  * by the command line tool of the same name. This file format is documented in
  * "docs/filamesh.md" in the Filament distribution.
  */
-class MeshIO {
+class MeshReader {
 public:
     using Callback = void(*)(void* buffer, size_t size, void* user);
     using MaterialRegistry = std::map<std::string, filament::MaterialInstance*>;
@@ -78,4 +78,4 @@ public:
             filament::MaterialInstance* defaultMaterial);
 };
 
-#endif // TNT_FILAMENT_FILAMESHIO_MESHIO_H
+#endif // TNT_FILAMENT_FILAMESHIO_MESHREADER_H
