@@ -62,8 +62,6 @@ using namespace filamat;
 using namespace math;
 using namespace utils;
 
-
-
 enum class AlphaMode : uint8_t {
     OPAQUE,
     MASKED,
@@ -226,8 +224,8 @@ void getMinMaxUV(const aiScene *scene, const aiNode* node, float2 &minUV, float2
         if (numVertices == 0 || numFaces == 0) {
             continue;
         }
-        for (size_t j = 0; j < numVertices; j++) {
-            if (uv) {
+        if (uv) {
+            for (size_t j = 0; j < numVertices; j++) {
                 minUV = min(uv[j].xy, minUV);
                 maxUV = max(uv[j].xy, maxUV);
             }
@@ -876,7 +874,7 @@ void MeshAssimp::processNode(Asset& asset,
                     aiMaterial const* material = scene->mMaterials[materialId];
 
                     aiString name;
-                    std::__1::string materialName;
+                    std::string materialName;
 
                     if (material->Get(AI_MATKEY_NAME, name) != AI_SUCCESS) {
                         if (isGLTF) {
