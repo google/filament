@@ -224,6 +224,7 @@ namespace KtxUtility {
 
     inline PixelDataFormat toPixelDataFormat(const KtxInfo& info, bool rgbm) {
         switch (info.glFormat) {
+            case KtxBundle::LUMINANCE:
             case KtxBundle::RED: return PixelDataFormat::R;
             case KtxBundle::RG: return PixelDataFormat::RG;
             case KtxBundle::RGB: return PixelDataFormat::RGB;

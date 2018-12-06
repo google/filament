@@ -331,8 +331,8 @@ int main(int argc, char* argv[]) {
             } else {
                 data = fromLinearTosRGB<uint8_t>(image);
             }
-            container.setBlob({mip++, 0, 0}, data.get(),
-                    image.getWidth() * image.getHeight() * container.info().glTypeSize * componentCount);
+            container.setBlob({mip++, 0, 0}, data.get(), image.getWidth() * image.getHeight() *
+                    container.info().glTypeSize * componentCount);
         };
         addLevel(sourceImage);
         for (auto image : miplevels) {
