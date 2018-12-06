@@ -44,7 +44,7 @@ target_link_libraries(filament-js PRIVATE filament math utils image filameshio s
 # artifacts that it needs.
 
 set(RESOURCES )
-foreach (RESOURCE package.json README.md)
+foreach (RESOURCE package.json README.md filament.d.ts)
     add_custom_command(
         OUTPUT ${PROJECT_BINARY_DIR}/${RESOURCE}
         DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${RESOURCE}
