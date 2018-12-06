@@ -214,34 +214,38 @@ Texture* MeshAssimp::createOneByOneTexture(uint32_t pixel) {
     return texturePtr;
 }
 
-void getMinMaxUV(const aiScene *scene, const aiNode* node, float2 &minUV, float2 &maxUV) {
+void getMinMaxUV(const aiScene *scene, const aiNode* node, float2 &minUV, float2 &maxUV, int uvIndex) {
     for (size_t i = 0; i < node->mNumMeshes; ++i) {
         const aiMesh* mesh = scene->mMeshes[node->mMeshes[i]];
-        if (!mesh->HasNormals() || !mesh->HasTextureCoords(0)) {
-            std::cerr << "The mesh must have texture coordinates" << std::endl;
-            exit(1);
+        if (!mesh->HasNormals() || !mesh->HasTextureCoords(uvIndex)) {
+            continue;
         }
-        const float3* uv0 = reinterpret_cast<const float3*>(mesh->mTextureCoords[0]);
-        const float3* uv1 = reinterpret_cast<const float3*>(mesh->mTextureCoords[1]);
-        if (!mesh->HasTextureCoords(1)) {
-            uv1 = nullptr;
-        }
+        const float3* uv = reinterpret_cast<const float3*>(mesh->mTextureCoords[uvIndex]);
         const size_t numVertices = mesh->mNumVertices;
         const size_t numFaces = mesh->mNumFaces;
         if (numVertices == 0 || numFaces == 0) {
             continue;
         }
         for (size_t j = 0; j < numVertices; j++) {
-            minUV = min(uv0[j].xy, minUV);
-            maxUV = max(uv0[j].xy, maxUV);
-            if (uv1) {
-                minUV = min(uv1[j].xy, minUV);
-                maxUV = max(uv1[j].xy, maxUV);
+            if (uv) {
+                minUV = min(uv[j].xy, minUV);
+                maxUV = max(uv[j].xy, maxUV);
             }
         }
     }
     for (size_t i=0 ; i<node->mNumChildren ; ++i) {
-        getMinMaxUV(scene, node->mChildren[i], minUV, maxUV);
+        getMinMaxUV(scene, node->mChildren[i], minUV, maxUV, uvIndex);
+    }
+}
+
+template<bool SNORMUVS>
+static ushort2 convertUV(float2 uv) {
+    if (SNORMUVS) {
+        short2 uvshort(packSnorm16(uv));
+        return bit_cast<ushort2>(uvshort);
+    } else {
+        half2 uvhalf(uv);
+        return bit_cast<ushort2>(uvhalf);
     }
 }
 
@@ -509,20 +513,33 @@ void MeshAssimp::addFromFile(const Path& path,
             return;
         }
 
-        mVertexBuffer = VertexBuffer::Builder()
+        VertexBuffer::Builder vertexBufferBuilder = VertexBuffer::Builder()
                 .vertexCount((uint32_t)asset.positions.size())
                 .bufferCount(4)
                 .attribute(VertexAttribute::POSITION,     0, VertexBuffer::AttributeType::HALF4)
                 .attribute(VertexAttribute::TANGENTS,     1, VertexBuffer::AttributeType::SHORT4)
-                .attribute(VertexAttribute::UV0,          2, VertexBuffer::AttributeType::HALF2)
-                .attribute(VertexAttribute::UV1,          3, VertexBuffer::AttributeType::HALF2)
-                .normalized(VertexAttribute::TANGENTS)
-                .build(mEngine);
+                .normalized(VertexAttribute::TANGENTS);
+
+        if (asset.snormUV0) {
+            vertexBufferBuilder.attribute(VertexAttribute::UV0, 2, VertexBuffer::AttributeType::SHORT2)
+                .normalized(VertexAttribute::UV0);
+        } else {
+            vertexBufferBuilder.attribute(VertexAttribute::UV0, 2, VertexBuffer::AttributeType::HALF2);
+        }
+
+        if (asset.snormUV1) {
+            vertexBufferBuilder.attribute(VertexAttribute::UV1, 3, VertexBuffer::AttributeType::SHORT2)
+                    .normalized(VertexAttribute::UV1);
+        } else {
+            vertexBufferBuilder.attribute(VertexAttribute::UV1, 3, VertexBuffer::AttributeType::HALF2);
+        }
+
+        mVertexBuffer = vertexBufferBuilder.build(mEngine);
 
         auto ps = new State<half4>(std::move(asset.positions));
         auto ns = new State<short4>(std::move(asset.tangents));
-        auto t0s = new State<half2>(std::move(asset.texCoords0));
-        auto t1s = new State<half2>(std::move(asset.texCoords1));
+        auto t0s = new State<ushort2>(std::move(asset.texCoords0));
+        auto t1s = new State<ushort2>(std::move(asset.texCoords1));
         auto is = new State<uint32_t>(std::move(asset.indices));
 
         mVertexBuffer->setBufferAt(mEngine, 0,
@@ -532,10 +549,10 @@ void MeshAssimp::addFromFile(const Path& path,
                 VertexBuffer::BufferDescriptor(ns->data(), ns->size(), State<short4>::free, ns));
 
         mVertexBuffer->setBufferAt(mEngine, 2,
-                VertexBuffer::BufferDescriptor(t0s->data(), t0s->size(), State<half2>::free, t0s));
+                VertexBuffer::BufferDescriptor(t0s->data(), t0s->size(), State<ushort2>::free, t0s));
 
         mVertexBuffer->setBufferAt(mEngine, 3,
-                VertexBuffer::BufferDescriptor(t1s->data(), t1s->size(), State<half2>::free, t1s));
+                VertexBuffer::BufferDescriptor(t1s->data(), t1s->size(), State<ushort2>::free, t1s));
 
         mIndexBuffer = IndexBuffer::Builder().indexCount(uint32_t(is->size())).build(mEngine);
         mIndexBuffer->setBuffer(mEngine,
@@ -685,12 +702,37 @@ bool MeshAssimp::setFromFile(Asset& asset, std::map<std::string, MaterialInstanc
         asset.texCoords1.reserve(asset.texCoords1.size() + totalVertexCount);
         asset.indices.reserve(asset.indices.size() + totalIndexCount);
 
-//        float2 minUV = float2(std::numeric_limits<float>::max());
-//        float2 maxUV = float2(-std::numeric_limits<float>::max());
-//        getMinMaxUV(scene, node, minUV, maxUV);
+        float2 minUV0 = float2(std::numeric_limits<float>::max());
+        float2 maxUV0 = float2(-std::numeric_limits<float>::max());
+        getMinMaxUV(scene, node, minUV0, maxUV0, 0);
+        float2 minUV1 = float2(std::numeric_limits<float>::max());
+        float2 maxUV1 = float2(-std::numeric_limits<float>::max());
+        getMinMaxUV(scene, node, minUV1, maxUV1, 1);
 
-        processNode(asset, outMaterials,
-                    scene, isGLTF, deep, matCount, node, -1, depth);;
+        asset.snormUV0 = minUV0.x >= -1.0f && minUV0.x <= 1.0f && maxUV0.x >= -1.0f && maxUV0.x <= 1.0f &&
+                     minUV0.y >= -1.0f && minUV0.y <= 1.0f && maxUV0.y >= -1.0f && maxUV0.y <= 1.0f;
+        
+        asset.snormUV1 = minUV1.x >= -1.0f && minUV1.x <= 1.0f && maxUV1.x >= -1.0f && maxUV1.x <= 1.0f &&
+                         minUV1.y >= -1.0f && minUV1.y <= 1.0f && maxUV1.y >= -1.0f && maxUV1.y <= 1.0f;
+
+        if (asset.snormUV0) {
+            if (asset.snormUV1) {
+                processNode<true, true>(asset, outMaterials,
+                                        scene, isGLTF, deep, matCount, node, -1, depth);
+            } else {
+                processNode<true, false>(asset, outMaterials,
+                                        scene, isGLTF, deep, matCount, node, -1, depth);
+            }
+        } else {
+            if (asset.snormUV1) {
+                processNode<false, true>(asset, outMaterials,
+                                        scene, isGLTF, deep, matCount, node, -1, depth);
+            } else {
+                processNode<false, false>(asset, outMaterials,
+                                        scene, isGLTF, deep, matCount, node, -1, depth);
+            }
+        }
+
 
         std::cout << "Hierarchy depth = " << depth << std::endl;
 
@@ -745,6 +787,7 @@ bool MeshAssimp::setFromFile(Asset& asset, std::map<std::string, MaterialInstanc
     return false;
 }
 
+template<bool SNORMUV0, bool SNORMUV1>
 void MeshAssimp::processNode(Asset& asset,
                              std::map<std::string,
                              MaterialInstance *> &outMaterials,
@@ -810,8 +853,8 @@ void MeshAssimp::processNode(Asset& asset,
 
                         quatf q = math::details::TMat33<float>::packTangentFrame({tangent, bitangent, normal});
                         asset.tangents.push_back(packSnorm16(q.xyzw));
-                        asset.texCoords0.emplace_back(texCoord0);
-                        asset.texCoords1.emplace_back(texCoord1);
+                        asset.texCoords0.emplace_back(convertUV<SNORMUV0>(texCoord0));
+                        asset.texCoords1.emplace_back(convertUV<SNORMUV1>(texCoord1));
 
                         asset.positions.emplace_back(positions[j], 1.0_h);
                     }
@@ -908,9 +951,8 @@ void MeshAssimp::processNode(Asset& asset,
             deep++;
             depth = std::__1::max(deep, depth);
             for (size_t i = 0, c = node->mNumChildren; i < c; i++) {
-                processNode(asset, outMaterials,
-                            scene, isGLTF, deep, matCount, node->mChildren[i], parentIndex,
-                            depth);
+                processNode<SNORMUV0, SNORMUV1>(asset, outMaterials, scene,
+                        isGLTF, deep, matCount, node->mChildren[i], parentIndex, depth);
             }
             deep--;
         }

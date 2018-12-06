@@ -315,8 +315,8 @@ int main(int argc, char* argv[]) {
 
     // Check for acceptable assimp data and determine UV bounds.
     preprocessNode(scene, node);
-    g_snormUVs = g_minUV.x >= 0.0f && g_minUV.x <= 1.0f && g_maxUV.x >= 0.0f && g_maxUV.x <= 1.0f &&
-                 g_minUV.y >= 0.0f && g_minUV.y <= 1.0f && g_maxUV.y >= 0.0f && g_maxUV.y <= 1.0f;
+    g_snormUVs = g_minUV.x >= -1.0f && g_minUV.x <= 1.0f && g_maxUV.x >= -1.0f && g_maxUV.x <= 1.0f &&
+                 g_minUV.y >= -1.0f && g_minUV.y <= 1.0f && g_maxUV.y >= -1.0f && g_maxUV.y <= 1.0f;
 
     // Consume assimp data and produce filamesh data.
     if (g_interleaved) {
