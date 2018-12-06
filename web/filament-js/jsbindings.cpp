@@ -32,7 +32,7 @@
  * this explicit rather than mysterious.
  */
 
-#include <filameshio/MeshIO.h>
+#include <filameshio/MeshReader.h>
 
 #include <filament/Camera.h>
 #include <filament/Engine.h>
@@ -873,12 +873,12 @@ class_<KtxInfo>("KtxInfo")
 
 register_vector<std::string>("RegistryKeys");
 
-class_<MeshIO::MaterialRegistry>("MeshIO$MaterialRegistry")
+class_<MeshReader::MaterialRegistry>("MeshReader$MaterialRegistry")
     .constructor<>()
-    .function("size", &MeshIO::MaterialRegistry::size)
-    .function("get", internal::MapAccess<MeshIO::MaterialRegistry>::get)
-    .function("set", internal::MapAccess<MeshIO::MaterialRegistry>::set)
-    .function("keys", EMBIND_LAMBDA(std::vector<std::string>, (MeshIO::MaterialRegistry* self), {
+    .function("size", &MeshReader::MaterialRegistry::size)
+    .function("get", internal::MapAccess<MeshReader::MaterialRegistry>::get)
+    .function("set", internal::MapAccess<MeshReader::MaterialRegistry>::set)
+    .function("keys", EMBIND_LAMBDA(std::vector<std::string>, (MeshReader::MaterialRegistry* self), {
         std::vector<std::string> result;
         for (const auto& pair : *self) {
             result.emplace_back(pair.first);
@@ -886,17 +886,17 @@ class_<MeshIO::MaterialRegistry>("MeshIO$MaterialRegistry")
         return result;
     }), allow_raw_pointers());
 
-// MeshIO ::class:: Simple parser for filamesh files.
+// MeshReader ::class:: Simple parser for filamesh files.
 // JavaScript clients are encouraged to use the [loadFilamesh] helper function instead of using
 // this class directly.
-class_<MeshIO>("MeshIO")
+class_<MeshReader>("MeshReader")
     // loadMeshFromBuffer ::static method:: Parses a filamesh buffer.
     // engine ::argument:: [Engine]
     // buffer ::argument:: [Buffer]
-    // materials ::argument:: [MeshIO$MaterialRegistry]
-    // ::retval:: the [MeshIO$Mesh] object
-    .class_function("loadMeshFromBuffer", EMBIND_LAMBDA(MeshIO::Mesh,
-            (Engine* engine, BufferDescriptor buffer, const MeshIO::MaterialRegistry& matreg), {
+    // materials ::argument:: [MeshReader$MaterialRegistry]
+    // ::retval:: the [MeshReader$Mesh] object
+    .class_function("loadMeshFromBuffer", EMBIND_LAMBDA(MeshReader::Mesh,
+            (Engine* engine, BufferDescriptor buffer, const MeshReader::MaterialRegistry& matreg), {
         // This destruction lambda is called for the vertex buffer AND index buffer, so release
         // CPU memory only after both have been uploaded to the GPU.
         struct Bundle { int count; BufferDescriptor buffer; };
@@ -908,23 +908,23 @@ class_<MeshIO>("MeshIO")
             }
         };
         // Parse the filamesh buffer. This creates the VB, IB, and renderable.
-        return MeshIO::loadMeshFromBuffer(
+        return MeshReader::loadMeshFromBuffer(
                 engine, buffer.bd->buffer,
                 destructor, bundle, matreg);
     }), allow_raw_pointers());
 
-// MeshIO$Mesh ::class:: Property accessor for objects created by [MeshIO].
+// MeshReader$Mesh ::class:: Property accessor for objects created by [MeshReader].
 // This exposes three getter methods: `renderable()`, `vertexBuffer()`, and `indexBuffer()`. These
 // are of type [Entity], [VertexBuffer], and [IndexBuffer]. JavaScript clients are encouraged to
 // use the [loadFilamesh] helper function instead of using this class directly.
-class_<MeshIO::Mesh>("MeshIO$Mesh")
-    .function("renderable", EMBIND_LAMBDA(utils::Entity, (MeshIO::Mesh mesh), {
+class_<MeshReader::Mesh>("MeshReader$Mesh")
+    .function("renderable", EMBIND_LAMBDA(utils::Entity, (MeshReader::Mesh mesh), {
         return mesh.renderable;
     }), allow_raw_pointers())
-    .function("vertexBuffer", EMBIND_LAMBDA(VertexBuffer*, (MeshIO::Mesh mesh), {
+    .function("vertexBuffer", EMBIND_LAMBDA(VertexBuffer*, (MeshReader::Mesh mesh), {
         return mesh.vertexBuffer;
     }), allow_raw_pointers())
-    .function("indexBuffer", EMBIND_LAMBDA(IndexBuffer*, (MeshIO::Mesh mesh), {
+    .function("indexBuffer", EMBIND_LAMBDA(IndexBuffer*, (MeshReader::Mesh mesh), {
         return mesh.indexBuffer;
     }), allow_raw_pointers());
 
