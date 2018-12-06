@@ -446,11 +446,11 @@ public:
 
     // for debugging...
 
-    //! debugging: allows to entirely disable culling. (culling enabled by default).
-    void setCulling(bool culling) noexcept;
+    //! debugging: allows to entirely disable frustum culling. (culling enabled by default).
+    void setFrustumCullingEnabled(bool culling) noexcept;
 
-    //! debugging: returns whether culling is enabled.
-    bool isCullingEnabled() const noexcept;
+    //! debugging: returns whether frustum culling is enabled.
+    bool isFrustumCullingEnabled() const noexcept;
 
     //! debugging: sets the Camera used for rendering. It may be different from the culling camera.
     void setDebugCamera(Camera* camera) noexcept;

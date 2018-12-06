@@ -96,8 +96,8 @@ public:
     }
     bool isSkyboxVisible() const noexcept;
 
-    void setCulling(bool culling) noexcept { mCulling = culling; }
-    bool isCullingEnabled() const noexcept { return mCulling; }
+    void setFrustumCullingEnabled(bool culling) noexcept { mCulling = culling; }
+    bool isFrustumCullingEnabled() const noexcept { return mCulling; }
 
     void setVisibleLayers(uint8_t select, uint8_t values) noexcept;
     uint8_t getVisibleLayers() const noexcept {

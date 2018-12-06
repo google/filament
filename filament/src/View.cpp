@@ -635,7 +635,7 @@ UTILS_NOINLINE
 void FView::prepareVisibleRenderables(JobSystem& js,
         FScene::RenderableSoa& renderableData) const noexcept {
     SYSTRACE_CALL();
-    if (UTILS_LIKELY(isCullingEnabled())) {
+    if (UTILS_LIKELY(isFrustumCullingEnabled())) {
         cullRenderables(js, renderableData, mCullingFrustum, VISIBLE_RENDERABLE_BIT);
     } else {
         std::fill(renderableData.begin<FScene::VISIBLE_MASK>(),
@@ -787,12 +787,12 @@ void View::setClearTargets(bool color, bool depth, bool stencil) noexcept {
     return upcast(this)->setClearTargets(color, depth, stencil);
 }
 
-void View::setCulling(bool culling) noexcept {
-    upcast(this)->setCulling(culling);
+void View::setFrustumCullingEnabled(bool culling) noexcept {
+    upcast(this)->setFrustumCullingEnabled(culling);
 }
 
-bool View::isCullingEnabled() const noexcept {
-    return upcast(this)->isCullingEnabled();
+bool View::isFrustumCullingEnabled() const noexcept {
+    return upcast(this)->isFrustumCullingEnabled();
 }
 
 void View::setDebugCamera(Camera* camera) noexcept {
