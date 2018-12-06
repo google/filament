@@ -63,6 +63,7 @@ using namespace math;
 using namespace utils;
 
 
+
 enum class AlphaMode : uint8_t {
     OPAQUE,
     MASKED,
@@ -211,6 +212,37 @@ Texture* MeshAssimp::createOneByOneTexture(uint32_t pixel) {
     texturePtr->generateMipmaps(mEngine);
 
     return texturePtr;
+}
+
+void getMinMaxUV(const aiScene *scene, const aiNode* node, float2 &minUV, float2 &maxUV) {
+    for (size_t i = 0; i < node->mNumMeshes; ++i) {
+        const aiMesh* mesh = scene->mMeshes[node->mMeshes[i]];
+        if (!mesh->HasNormals() || !mesh->HasTextureCoords(0)) {
+            std::cerr << "The mesh must have texture coordinates" << std::endl;
+            exit(1);
+        }
+        const float3* uv0 = reinterpret_cast<const float3*>(mesh->mTextureCoords[0]);
+        const float3* uv1 = reinterpret_cast<const float3*>(mesh->mTextureCoords[1]);
+        if (!mesh->HasTextureCoords(1)) {
+            uv1 = nullptr;
+        }
+        const size_t numVertices = mesh->mNumVertices;
+        const size_t numFaces = mesh->mNumFaces;
+        if (numVertices == 0 || numFaces == 0) {
+            continue;
+        }
+        for (size_t j = 0; j < numVertices; j++) {
+            minUV = min(uv0[j].xy, minUV);
+            maxUV = max(uv0[j].xy, maxUV);
+            if (uv1) {
+                minUV = min(uv1[j].xy, minUV);
+                maxUV = max(uv1[j].xy, maxUV);
+            }
+        }
+    }
+    for (size_t i=0 ; i<node->mNumChildren ; ++i) {
+        getMinMaxUV(scene, node->mChildren[i], minUV, maxUV);
+    }
 }
 
 MeshAssimp::MeshAssimp(Engine& engine) : mEngine(engine) {
@@ -463,27 +495,22 @@ Box computeTransformedAABB(VECTOR const* vertices, INDEX const* indices, size_t 
 void MeshAssimp::addFromFile(const Path& path,
         std::map<std::string, MaterialInstance*>& materials, bool overrideMaterial) {
 
-    std::vector<Mesh> meshes;
-    std::vector<int> parents;
+    Asset asset;
+    asset.file = path;
 
     { // This scope to make sure we're not using std::move()'d objects later
-        std::vector<uint32_t> indices;
-        std::vector<half4> positions;
-        std::vector<short4> tangents;
-        std::vector<half2> texCoords0;
-        std::vector<half2> texCoords1;
 
         // TODO: if we had a way to allocate temporary buffers from the engine with a
         // "command buffer" lifetime, we wouldn't need to have to deal with freeing the
         // std::vectors here.
 
         //TODO: a lot of these method arguments should probably be class or global variables
-        if (!setFromFile(path, indices, positions, tangents, texCoords0, texCoords1, meshes, parents, materials)) {
+        if (!setFromFile(asset, materials)) {
             return;
         }
 
         mVertexBuffer = VertexBuffer::Builder()
-                .vertexCount((uint32_t)positions.size())
+                .vertexCount((uint32_t)asset.positions.size())
                 .bufferCount(4)
                 .attribute(VertexAttribute::POSITION,     0, VertexBuffer::AttributeType::HALF4)
                 .attribute(VertexAttribute::TANGENTS,     1, VertexBuffer::AttributeType::SHORT4)
@@ -492,11 +519,11 @@ void MeshAssimp::addFromFile(const Path& path,
                 .normalized(VertexAttribute::TANGENTS)
                 .build(mEngine);
 
-        auto ps = new State<half4>(std::move(positions));
-        auto ns = new State<short4>(std::move(tangents));
-        auto t0s = new State<half2>(std::move(texCoords0));
-        auto t1s = new State<half2>(std::move(texCoords1));
-        auto is = new State<uint32_t>(std::move(indices));
+        auto ps = new State<half4>(std::move(asset.positions));
+        auto ns = new State<short4>(std::move(asset.tangents));
+        auto t0s = new State<half2>(std::move(asset.texCoords0));
+        auto t1s = new State<half2>(std::move(asset.texCoords1));
+        auto is = new State<uint32_t>(std::move(asset.indices));
 
         mVertexBuffer->setBufferAt(mEngine, 0,
                 VertexBuffer::BufferDescriptor(ps->data(), ps->size(), State<half4>::free, ps));
@@ -522,15 +549,15 @@ void MeshAssimp::addFromFile(const Path& path,
     }
 
     size_t startIndex = mRenderables.size();
-    mRenderables.resize(startIndex + meshes.size());
-    EntityManager::get().create(meshes.size(), mRenderables.data() + startIndex);
+    mRenderables.resize(startIndex + asset.meshes.size());
+    EntityManager::get().create(asset.meshes.size(), mRenderables.data() + startIndex);
     EntityManager::get().create(1, &rootEntity);
 
     TransformManager& tcm = mEngine.getTransformManager();
     //Add root instance
     tcm.create(rootEntity, TransformManager::Instance{}, mat4f());
 
-    for (auto& mesh : meshes) {
+    for (auto& mesh : asset.meshes) {
         RenderableManager::Builder builder(mesh.parts.size());
         builder.boundingBox(mesh.aabb);
 
@@ -566,12 +593,12 @@ void MeshAssimp::addFromFile(const Path& path,
             partIndex++;
         }
 
-        const size_t meshIndex = &mesh - meshes.data();
+        const size_t meshIndex = &mesh - asset.meshes.data();
         Entity entity = mRenderables[startIndex + meshIndex];
         if (!mesh.parts.empty()) {
             builder.build(mEngine, entity);
         }
-        auto pindex = parents[meshIndex];
+        auto pindex = asset.parents[meshIndex];
         TransformManager::Instance parent((pindex < 0) ?
                 tcm.getInstance(rootEntity) : tcm.getInstance(mRenderables[pindex]));
         tcm.create(entity, parent, mesh.transform);
@@ -580,10 +607,7 @@ void MeshAssimp::addFromFile(const Path& path,
 
 using Assimp::Importer;
 
-bool MeshAssimp::setFromFile(const Path& file, std::vector<uint32_t>& outIndices,
-        std::vector<half4>& outPositions, std::vector<short4>& outTangents,
-        std::vector<half2>& outTexCoords0, std::vector<half2>& outTexCoords1, std::vector<Mesh>& outMeshes,
-        std::vector<int>& outParents, std::map<std::string, MaterialInstance*>& outMaterials) {
+bool MeshAssimp::setFromFile(Asset& asset, std::map<std::string, MaterialInstance*>& outMaterials) {
 
     Importer importer;
     importer.SetPropertyInteger(AI_CONFIG_PP_SBP_REMOVE,
@@ -591,7 +615,7 @@ bool MeshAssimp::setFromFile(const Path& file, std::vector<uint32_t>& outIndices
     importer.SetPropertyBool(AI_CONFIG_IMPORT_COLLADA_IGNORE_UP_DIRECTION, true);
     importer.SetPropertyBool(AI_CONFIG_PP_PTV_KEEP_HIERARCHY, true);
 
-    aiScene const* scene = importer.ReadFile(file,
+    aiScene const* scene = importer.ReadFile(asset.file,
             // normals and tangents
             aiProcess_GenSmoothNormals |
             aiProcess_CalcTangentSpace |
@@ -608,7 +632,7 @@ bool MeshAssimp::setFromFile(const Path& file, std::vector<uint32_t>& outIndices
             aiProcess_Triangulate);
 
     scene = importer.ApplyPostProcessing(aiProcess_CalcTangentSpace);
-    size_t index = importer.GetImporterIndex(file.getExtension().c_str());
+    size_t index = importer.GetImporterIndex(asset.file.getExtension().c_str());
     const aiImporterDesc* importerDesc = importer.GetImporterInfo(index);
     bool isGLTF = importerDesc &&
             (!strncmp("glTF Importer",  importerDesc->mName, 13) ||
@@ -647,168 +671,6 @@ bool MeshAssimp::setFromFile(const Path& file, std::vector<uint32_t>& outIndices
     size_t depth = 0;
     size_t matCount = 0;
 
-    const std::function<void(aiNode const* node, int parentIndex)> processNode =
-            [&](aiNode const* node, int parentIndex) {
-
-        mat4f const& current = transpose(*reinterpret_cast<mat4f const*>(&node->mTransformation));
-
-        size_t totalIndices = 0;
-        outParents.push_back(parentIndex);
-        outMeshes.push_back(Mesh{});
-        outMeshes.back().offset = outIndices.size();
-        outMeshes.back().transform = current;
-
-        mat4f parentTransform = parentIndex >= 0 ? outMeshes[parentIndex].accTransform : mat4f();
-        outMeshes.back().accTransform = parentTransform * current;
-
-        for (size_t i = 0; i < node->mNumMeshes; i++) {
-            aiMesh const* mesh = scene->mMeshes[node->mMeshes[i]];
-
-            float3 const* positions  = reinterpret_cast<float3 const*>(mesh->mVertices);
-            float3 const* tangents   = reinterpret_cast<float3 const*>(mesh->mTangents);
-            float3 const* bitangents = reinterpret_cast<float3 const*>(mesh->mBitangents);
-            float3 const* normals    = reinterpret_cast<float3 const*>(mesh->mNormals);
-            float3 const* texCoords0 = reinterpret_cast<float3 const*>(mesh->mTextureCoords[0]);
-            float3 const* texCoords1 = reinterpret_cast<float3 const*>(mesh->mTextureCoords[1]);
-
-            const size_t numVertices = mesh->mNumVertices;
-
-            if (numVertices > 0) {
-                const aiFace* faces = mesh->mFaces;
-                const size_t numFaces = mesh->mNumFaces;
-
-                if (numFaces > 0) {
-                    size_t indicesOffset = outPositions.size();
-
-                    for (size_t j = 0; j < numVertices; j++) {
-                        float3 normal = normals[j];
-                        float3 tangent;
-                        float3 bitangent;
-
-                        // Assimp always returns 3D tex coords but we only support 2D tex coords.
-                        float2 texCoord0 = texCoords0 ? texCoords0[j].xy : float2{0.0};
-                        float2 texCoord1 = texCoords1 ? texCoords1[j].xy : float2{0.0};
-                        // If the tangent and bitangent don't exist, make arbitrary ones. This only
-                        // occurs when the mesh is missing texture coordinates, because assimp
-                        // computes tangents for us. (search up for aiProcess_CalcTangentSpace)
-                        if (!tangents) {
-                            bitangent = normalize(cross(normal, float3{1.0, 0.0, 0.0}));
-                            tangent = normalize(cross(normal, bitangent));
-                        } else {
-                            // In assimp, the CalcTangentsProcess algorithm generates tangents in
-                            // the +U direction and bitangents in the +V direction, but the glTF
-                            // conformance suite (see NormalTangentTest) reveals that bitangents
-                            // should be flipped.
-                            tangent = tangents[j];
-                            bitangent = -bitangents[j];
-                        }
-
-                        quatf q = mat3f::packTangentFrame({tangent, bitangent, normal});
-                        outTangents.push_back(packSnorm16(q.xyzw));
-                        outTexCoords0.emplace_back(texCoord0);
-                        outTexCoords1.emplace_back(texCoord1);
-
-                        outPositions.emplace_back(positions[j], 1.0_h);
-                    }
-
-                    // Populate the index buffer. All faces are triangles at this point because we
-                    // asked assimp to perform triangulation.
-                    size_t indicesCount = numFaces * faces[0].mNumIndices;
-                    size_t indexBufferOffset = outIndices.size();
-                    totalIndices += indicesCount;
-
-                    for (size_t j = 0; j < numFaces; ++j) {
-                        const aiFace& face = faces[j];
-                        for (size_t k = 0; k < face.mNumIndices; ++k) {
-                            outIndices.push_back(uint32_t(face.mIndices[k] + indicesOffset));
-                        }
-                    }
-
-                    uint32_t materialId = mesh->mMaterialIndex;
-                    aiMaterial const* material = scene->mMaterials[materialId];
-
-                    aiString name;
-                    std::string materialName;
-
-                    if (material->Get(AI_MATKEY_NAME, name) != AI_SUCCESS) {
-                        if (isGLTF) {
-                            while (outMaterials.find("_mat_" + std::to_string(matCount))
-                                   != outMaterials.end()) {
-                                matCount++;
-                            }
-                            materialName = "_mat_" + std::to_string(matCount);
-                        } else {
-                            materialName = AI_DEFAULT_MATERIAL_NAME;
-                        }
-                    } else {
-                        materialName = name.C_Str();
-                    }
-
-                    if (isGLTF && outMaterials.find(materialName) == outMaterials.end()) {
-                        std::string dirName = file.getParent();
-                        processGLTFMaterial(scene, material, materialName, dirName, outMaterials);
-                    }
-
-                    aiColor3D color;
-                    sRGBColor baseColor{1.0f};
-                    if (material->Get(AI_MATKEY_COLOR_DIFFUSE, color) == AI_SUCCESS) {
-                        baseColor = *reinterpret_cast<sRGBColor*>(&color);
-                    }
-
-                    float opacity;
-                    if (material->Get(AI_MATKEY_OPACITY, opacity) != AI_SUCCESS) {
-                        opacity = 1.0f;
-                    }
-                    if (opacity <= 0.0f) opacity = 1.0f;
-
-                    float shininess;
-                    if (material->Get(AI_MATKEY_SHININESS, shininess) != AI_SUCCESS) {
-                        shininess = 0.0f;
-                    }
-
-                    // convert shininess to roughness
-                    float roughness = std::sqrt(2.0f / (shininess + 2.0f));
-
-                    float metallic = 0.0f;
-                    float reflectance = 0.5f;
-                    if (material->Get(AI_MATKEY_COLOR_SPECULAR, color) == AI_SUCCESS) {
-                        // if there's a non-grey specular color, assume a metallic surface
-                        if (color.r != color.g && color.r != color.b) {
-                            metallic = 1.0f;
-                            baseColor = *reinterpret_cast<sRGBColor*>(&color);
-                        } else {
-                            if (baseColor.r == 0.0f && baseColor.g == 0.0f && baseColor.b == 0.0f) {
-                                metallic = 1.0f;
-                                baseColor = *reinterpret_cast<sRGBColor*>(&color);
-                            } else {
-                                // TODO: the conversion formula is correct
-                                // reflectance = sqrtf(color.r / 0.16f);
-                            }
-                        }
-                    }
-
-                    outMeshes.back().parts.push_back({
-                            indexBufferOffset, indicesCount, materialName,
-                            baseColor, opacity, metallic, roughness, reflectance
-                    });
-                }
-            }
-        }
-        if (node->mNumMeshes > 0) {
-            outMeshes.back().count = totalIndices;
-        }
-
-        if (node->mNumChildren) {
-            parentIndex = static_cast<int>(outMeshes.size()) - 1;
-            deep++;
-            depth = std::max(deep, depth);
-            for (size_t i = 0, c = node->mNumChildren; i < c; i++) {
-                processNode(node->mChildren[i], parentIndex);
-            }
-            deep--;
-        }
-    };
-
     if (scene) {
         aiNode const* node = scene->mRootNode;
 
@@ -817,26 +679,31 @@ bool MeshAssimp::setFromFile(const Path& file, std::vector<uint32_t>& outIndices
 
         countVertices(node, totalVertexCount, totalIndexCount);
 
-        outPositions.reserve(outPositions.size() + totalVertexCount);
-        outTangents.reserve(outTangents.size() + totalVertexCount);
-        outTexCoords0.reserve(outTexCoords0.size() + totalVertexCount);
-        outTexCoords1.reserve(outTexCoords1.size() + totalVertexCount);
-        outIndices.reserve(outIndices.size() + totalIndexCount);
+        asset.positions.reserve(asset.positions.size() + totalVertexCount);
+        asset.tangents.reserve(asset.tangents.size() + totalVertexCount);
+        asset.texCoords0.reserve(asset.texCoords0.size() + totalVertexCount);
+        asset.texCoords1.reserve(asset.texCoords1.size() + totalVertexCount);
+        asset.indices.reserve(asset.indices.size() + totalIndexCount);
 
-        processNode(node, -1);
+//        float2 minUV = float2(std::numeric_limits<float>::max());
+//        float2 maxUV = float2(-std::numeric_limits<float>::max());
+//        getMinMaxUV(scene, node, minUV, maxUV);
+
+        processNode(asset, outMaterials,
+                    scene, isGLTF, deep, matCount, node, -1, depth);;
 
         std::cout << "Hierarchy depth = " << depth << std::endl;
 
         // compute the aabb and find bounding box of entire model
-        for (auto& mesh : outMeshes) {
+        for (auto& mesh : asset.meshes) {
             mesh.aabb = RenderableManager::computeAABB(
-                    outPositions.data(),
-                    outIndices.data() + mesh.offset,
+                    asset.positions.data(),
+                    asset.indices.data() + mesh.offset,
                     mesh.count);
 
             Box transformedAabb = computeTransformedAABB(
-                    outPositions.data(),
-                    outIndices.data() + mesh.offset,
+                    asset.positions.data(),
+                    asset.indices.data() + mesh.offset,
                     mesh.count,
                     mesh.accTransform);
 
@@ -876,6 +743,177 @@ bool MeshAssimp::setFromFile(const Path& file, std::vector<uint32_t>& outIndices
         return true;
     }
     return false;
+}
+
+void MeshAssimp::processNode(Asset& asset,
+                             std::map<std::string,
+                             MaterialInstance *> &outMaterials,
+                             const aiScene *scene,
+                             bool isGLTF,
+                             size_t deep,
+                             size_t matCount,
+                             const aiNode *node,
+                             int parentIndex,
+                             size_t &depth) const {
+    mat4f const& current = transpose(*reinterpret_cast<mat4f const*>(&node->mTransformation));
+
+    size_t totalIndices = 0;
+    asset.parents.push_back(parentIndex);
+    asset.meshes.push_back(Mesh{});
+    asset.meshes.back().offset = asset.indices.size();
+    asset.meshes.back().transform = current;
+
+    mat4f parentTransform = parentIndex >= 0 ? asset.meshes[parentIndex].accTransform : mat4f();
+    asset.meshes.back().accTransform = parentTransform * current;
+
+    for (size_t i = 0; i < node->mNumMeshes; i++) {
+            aiMesh const* mesh = scene->mMeshes[node->mMeshes[i]];
+
+            float3 const* positions  = reinterpret_cast<float3 const*>(mesh->mVertices);
+            float3 const* tangents   = reinterpret_cast<float3 const*>(mesh->mTangents);
+            float3 const* bitangents = reinterpret_cast<float3 const*>(mesh->mBitangents);
+            float3 const* normals    = reinterpret_cast<float3 const*>(mesh->mNormals);
+            float3 const* texCoords0 = reinterpret_cast<float3 const*>(mesh->mTextureCoords[0]);
+            float3 const* texCoords1 = reinterpret_cast<float3 const*>(mesh->mTextureCoords[1]);
+
+            const size_t numVertices = mesh->mNumVertices;
+
+            if (numVertices > 0) {
+                const aiFace* faces = mesh->mFaces;
+                const size_t numFaces = mesh->mNumFaces;
+
+                if (numFaces > 0) {
+                    size_t indicesOffset = asset.positions.size();
+
+                    for (size_t j = 0; j < numVertices; j++) {
+                        float3 normal = normals[j];
+                        float3 tangent;
+                        float3 bitangent;
+
+                        // Assimp always returns 3D tex coords but we only support 2D tex coords.
+                        float2 texCoord0 = texCoords0 ? texCoords0[j].xy : float2{0.0};
+                        float2 texCoord1 = texCoords1 ? texCoords1[j].xy : float2{0.0};
+                        // If the tangent and bitangent don't exist, make arbitrary ones. This only
+                        // occurs when the mesh is missing texture coordinates, because assimp
+                        // computes tangents for us. (search up for aiProcess_CalcTangentSpace)
+                        if (!tangents) {
+                            bitangent = normalize(cross(normal, float3{1.0, 0.0, 0.0}));
+                            tangent = normalize(cross(normal, bitangent));
+                        } else {
+                            // In assimp, the CalcTangentsProcess algorithm generates tangents in
+                            // the +U direction and bitangents in the +V direction, but the glTF
+                            // conformance suite (see NormalTangentTest) reveals that bitangents
+                            // should be flipped.
+                            tangent = tangents[j];
+                            bitangent = -bitangents[j];
+                        }
+
+                        quatf q = math::details::TMat33<float>::packTangentFrame({tangent, bitangent, normal});
+                        asset.tangents.push_back(packSnorm16(q.xyzw));
+                        asset.texCoords0.emplace_back(texCoord0);
+                        asset.texCoords1.emplace_back(texCoord1);
+
+                        asset.positions.emplace_back(positions[j], 1.0_h);
+                    }
+
+                    // Populate the index buffer. All faces are triangles at this point because we
+                    // asked assimp to perform triangulation.
+                    size_t indicesCount = numFaces * faces[0].mNumIndices;
+                    size_t indexBufferOffset = asset.indices.size();
+                    totalIndices += indicesCount;
+
+                    for (size_t j = 0; j < numFaces; ++j) {
+                        const aiFace& face = faces[j];
+                        for (size_t k = 0; k < face.mNumIndices; ++k) {
+                            asset.indices.push_back(uint32_t(face.mIndices[k] + indicesOffset));
+                        }
+                    }
+
+                    uint32_t materialId = mesh->mMaterialIndex;
+                    aiMaterial const* material = scene->mMaterials[materialId];
+
+                    aiString name;
+                    std::__1::string materialName;
+
+                    if (material->Get(AI_MATKEY_NAME, name) != AI_SUCCESS) {
+                        if (isGLTF) {
+                            while (outMaterials.find("_mat_" + std::__1::to_string(matCount))
+                                   != outMaterials.end()) {
+                                matCount++;
+                            }
+                            materialName = "_mat_" + std::__1::to_string(matCount);
+                        } else {
+                            materialName = AI_DEFAULT_MATERIAL_NAME;
+                        }
+                    } else {
+                        materialName = name.C_Str();
+                    }
+
+                    if (isGLTF && outMaterials.find(materialName) == outMaterials.end()) {
+                        std::__1::string dirName = asset.file.getParent();
+                        processGLTFMaterial(scene, material, materialName, dirName, outMaterials);
+                    }
+
+                    aiColor3D color;
+                    sRGBColor baseColor{1.0f};
+                    if (material->Get(AI_MATKEY_COLOR_DIFFUSE, color) == AI_SUCCESS) {
+                        baseColor = *reinterpret_cast<sRGBColor*>(&color);
+                    }
+
+                    float opacity;
+                    if (material->Get(AI_MATKEY_OPACITY, opacity) != AI_SUCCESS) {
+                        opacity = 1.0f;
+                    }
+                    if (opacity <= 0.0f) opacity = 1.0f;
+
+                    float shininess;
+                    if (material->Get(AI_MATKEY_SHININESS, shininess) != AI_SUCCESS) {
+                        shininess = 0.0f;
+                    }
+
+                    // convert shininess to roughness
+                    float roughness = sqrt(2.0f / (shininess + 2.0f));
+
+                    float metallic = 0.0f;
+                    float reflectance = 0.5f;
+                    if (material->Get(AI_MATKEY_COLOR_SPECULAR, color) == AI_SUCCESS) {
+                        // if there's a non-grey specular color, assume a metallic surface
+                        if (color.r != color.g && color.r != color.b) {
+                            metallic = 1.0f;
+                            baseColor = *reinterpret_cast<sRGBColor*>(&color);
+                        } else {
+                            if (baseColor.r == 0.0f && baseColor.g == 0.0f && baseColor.b == 0.0f) {
+                                metallic = 1.0f;
+                                baseColor = *reinterpret_cast<sRGBColor*>(&color);
+                            } else {
+                                // TODO: the conversion formula is correct
+                                // reflectance = sqrtf(color.r / 0.16f);
+                            }
+                        }
+                    }
+
+                    asset.meshes.back().parts.push_back({
+                            indexBufferOffset, indicesCount, materialName,
+                            baseColor, opacity, metallic, roughness, reflectance
+                    });
+                }
+            }
+        }
+    if (node->mNumMeshes > 0) {
+            asset.meshes.back().count = totalIndices;
+        }
+
+    if (node->mNumChildren) {
+            parentIndex = static_cast<int>(asset.meshes.size()) - 1;
+            deep++;
+            depth = std::__1::max(deep, depth);
+            for (size_t i = 0, c = node->mNumChildren; i < c; i++) {
+                processNode(asset, outMaterials,
+                            scene, isGLTF, deep, matCount, node->mChildren[i], parentIndex,
+                            depth);
+            }
+            deep--;
+        }
 }
 
 void MeshAssimp::processGLTFMaterial(const aiScene* scene, const aiMaterial* material,

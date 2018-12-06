@@ -89,19 +89,32 @@ private:
         mat4f accTransform;
     };
 
-    bool setFromFile(const utils::Path& file,
-            std::vector<uint32_t>& outIndices,
-            std::vector<half4>&    outPositions,
-            std::vector<short4>&   outTangents,
-            std::vector<half2>&    outTexCoords0,
-            std::vector<half2>&    outTexCoords1,
-            std::vector<Mesh>&     outMeshes,
-            std::vector<int>&      outParents,
-            std::map<std::string, filament::MaterialInstance*>& outMaterials);
+    struct Asset {
+        utils::Path file;
+        std::vector<uint32_t> indices;
+        std::vector<half4> positions;
+        std::vector<short4> tangents;
+        std::vector<half2> texCoords0;
+        std::vector<half2> texCoords1;
+        std::vector<Mesh> meshes;
+        std::vector<int> parents;
+    };
+
+    bool setFromFile(Asset& asset, std::map<std::string, filament::MaterialInstance*>& outMaterials);
 
     void processGLTFMaterial(const aiScene* scene, const aiMaterial* material,
             const std::string& materialName, const std::string& dirName,
             std::map<std::string, filament::MaterialInstance*>& outMaterials) const;
+
+    void processNode(Asset& asset,
+                     std::map<std::string, filament::MaterialInstance*>& outMaterials,
+                     const aiScene *scene,
+                     bool isGLTF,
+                     size_t deep,
+                     size_t matCount,
+                     const aiNode *node,
+                     int parentIndex,
+                     size_t &depth) const;
 
     filament::Texture* createOneByOneTexture(uint32_t textureData);
     filament::Engine& mEngine;
@@ -121,6 +134,8 @@ private:
     std::vector<utils::Entity> mRenderables;
 
     std::vector<filament::Texture*> mTextures;
+
+
 };
 
 #endif // TNT_FILAMENT_SAMPLE_MESH_ASSIMP_H
