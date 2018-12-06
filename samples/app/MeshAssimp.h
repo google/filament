@@ -52,6 +52,7 @@ public:
     using half4 = math::half4;
     using short4 = math::short4;
     using half2 = math::half2;
+    using ushort2 = math::ushort2;
     explicit MeshAssimp(filament::Engine& engine);
     ~MeshAssimp();
 
@@ -94,8 +95,10 @@ private:
         std::vector<uint32_t> indices;
         std::vector<half4> positions;
         std::vector<short4> tangents;
-        std::vector<half2> texCoords0;
-        std::vector<half2> texCoords1;
+        std::vector<ushort2> texCoords0;
+        std::vector<ushort2> texCoords1;
+        bool snormUV0;
+        bool snormUV1;
         std::vector<Mesh> meshes;
         std::vector<int> parents;
     };
@@ -106,6 +109,7 @@ private:
             const std::string& materialName, const std::string& dirName,
             std::map<std::string, filament::MaterialInstance*>& outMaterials) const;
 
+    template<bool SNORMUV0S, bool SNORMUV1S>
     void processNode(Asset& asset,
                      std::map<std::string, filament::MaterialInstance*>& outMaterials,
                      const aiScene *scene,
