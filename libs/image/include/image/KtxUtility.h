@@ -223,11 +223,12 @@ namespace KtxUtility {
     }
 
     inline PixelDataFormat toPixelDataFormat(const KtxInfo& info, bool rgbm) {
-        switch (info.glTypeSize) {
-            case 1: return PixelDataFormat::R;
-            case 2: return PixelDataFormat::RG;
-            case 3: return PixelDataFormat::RGB;
-            case 4: return rgbm ? PixelDataFormat::RGBM : PixelDataFormat::RGBA;
+        switch (info.glFormat) {
+            case KtxBundle::RED: return PixelDataFormat::R;
+            case KtxBundle::RG: return PixelDataFormat::RG;
+            case KtxBundle::RGB: return PixelDataFormat::RGB;
+            case KtxBundle::RGBA:
+                return rgbm ? PixelDataFormat::RGBM : PixelDataFormat::RGBA;
         }
         return (PixelDataFormat) 0xff;
     }
