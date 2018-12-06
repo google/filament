@@ -141,7 +141,7 @@ static float vertexScore(int cache_position, unsigned int live_triangles)
 	return kVertexScoreTableCache[1 + cache_position] + kVertexScoreTableLive[live_triangles_clamped];
 }
 
-static unsigned int getNextTriangleDeadEnd(unsigned int& input_cursor, const char* emitted_flags, size_t face_count)
+static unsigned int getNextTriangleDeadEnd(unsigned int& input_cursor, const unsigned char* emitted_flags, size_t face_count)
 {
 	// input order
 	while (input_cursor < face_count)
@@ -191,7 +191,7 @@ void meshopt_optimizeVertexCache(unsigned int* destination, const unsigned int* 
 	memcpy(live_triangles, adjacency.counts, vertex_count * sizeof(unsigned int));
 
 	// emitted flags
-	char* emitted_flags = allocator.allocate<char>(face_count);
+	unsigned char* emitted_flags = allocator.allocate<unsigned char>(face_count);
 	memset(emitted_flags, 0, face_count);
 
 	// compute initial vertex scores
@@ -379,7 +379,7 @@ void meshopt_optimizeVertexCacheFifo(unsigned int* destination, const unsigned i
 	unsigned int dead_end_top = 0;
 
 	// emitted flags
-	char* emitted_flags = allocator.allocate<char>(face_count);
+	unsigned char* emitted_flags = allocator.allocate<unsigned char>(face_count);
 	memset(emitted_flags, 0, face_count);
 
 	unsigned int current_vertex = 0;

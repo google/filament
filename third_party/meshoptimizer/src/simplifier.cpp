@@ -195,7 +195,7 @@ enum VertexKind
 
 // manifold vertices can collapse on anything except locked
 // border/seam vertices can only be collapsed onto border/seam respectively
-const char kCanCollapse[Kind_Count][Kind_Count] = {
+const unsigned char kCanCollapse[Kind_Count][Kind_Count] = {
     {1, 1, 1, 1},
     {0, 1, 0, 0},
     {0, 0, 1, 0},
@@ -205,7 +205,7 @@ const char kCanCollapse[Kind_Count][Kind_Count] = {
 // if a vertex is manifold or seam, adjoining edges are guaranteed to have an opposite edge
 // note that for seam edges, the opposite edge isn't present in the attribute-based topology
 // but is present if you consider a position-only mesh variant
-const char kHasOpposite[Kind_Count][Kind_Count] = {
+const unsigned char kHasOpposite[Kind_Count][Kind_Count] = {
     {1, 1, 1, 1},
     {1, 0, 1, 0},
     {1, 1, 1, 1},

@@ -11,7 +11,7 @@
 #include <assert.h>
 #include <stddef.h>
 
-/* Version macro; major * 100 + minor * 10 + patch */
+/* Version macro; major * 1000 + minor * 10 + patch */
 #define MESHOPTIMIZER_VERSION 90
 
 /* If no API is defined, assume default */
@@ -256,8 +256,8 @@ struct meshopt_Bounds
 	float cone_cutoff; /* = cos(angle/2) */
 
 	/* normal cone axis and cutoff, stored in 8-bit SNORM format; decode using x/127.0 */
-	char cone_axis_s8[3];
-	char cone_cutoff_s8;
+	signed char cone_axis_s8[3];
+	signed char cone_cutoff_s8;
 };
 
 /**

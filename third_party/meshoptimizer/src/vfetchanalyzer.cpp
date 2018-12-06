@@ -13,7 +13,7 @@ meshopt_VertexFetchStatistics meshopt_analyzeVertexFetch(const unsigned int* ind
 
 	meshopt_VertexFetchStatistics result = {};
 
-	char* vertex_visited = allocator.allocate<char>(vertex_count);
+	unsigned char* vertex_visited = allocator.allocate<unsigned char>(vertex_count);
 	memset(vertex_visited, 0, vertex_count);
 
 	const size_t kCacheLine = 64;

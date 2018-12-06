@@ -4,8 +4,22 @@
 #include <assert.h>
 #include <string.h>
 
-#ifdef __ARM_NEON__
+#if defined(__ARM_NEON__) || defined(__ARM_NEON)
 #define SIMD_NEON
+#endif
+
+#if defined(__AVX__) || defined(__SSSE3__)
+#define SIMD_SSE
+#endif
+
+#if !defined(SIMD_SSE) && defined(WIN32) && (defined(_M_IX86) || defined(_M_X64))
+#define SIMD_SSE
+#define SIMD_FALLBACK
+#include <intrin.h>
+#endif
+
+#ifdef SIMD_SSE
+#include <tmmintrin.h>
 #endif
 
 #ifdef SIMD_NEON
@@ -36,7 +50,7 @@ static size_t getVertexBlockSize(size_t vertex_size)
 
 inline unsigned char zigzag8(unsigned char v)
 {
-	return (char(v) >> 7) ^ (v << 1);
+	return ((signed char)(v) >> 7) ^ (v << 1);
 }
 
 inline unsigned char unzigzag8(unsigned char v)
@@ -337,7 +351,7 @@ static bool decodeBytesGroupBuildTables()
 		{
 			int maski = (mask >> i) & 1;
 			shuffle[i] = maski ? count : 0x80;
-			count += char(maski);
+			count += (unsigned char)(maski);
 		}
 
 		memcpy(kDecodeBytesGroupShuffle[mask], shuffle, 8);
@@ -502,10 +516,10 @@ static void transpose8(uint8x16_t& x0, uint8x16_t& x1, uint8x16_t& x2, uint8x16_
 	uint16x8x2_t x01 = vzipq_u16(vreinterpretq_u16_u8(t01.val[0]), vreinterpretq_u16_u8(t23.val[0]));
 	uint16x8x2_t x23 = vzipq_u16(vreinterpretq_u16_u8(t01.val[1]), vreinterpretq_u16_u8(t23.val[1]));
 
-	x0 = x01.val[0];
-	x1 = x01.val[1];
-	x2 = x23.val[0];
-	x3 = x23.val[1];
+	x0 = vreinterpretq_u8_u16(x01.val[0]);
+	x1 = vreinterpretq_u8_u16(x01.val[1]);
+	x2 = vreinterpretq_u8_u16(x23.val[0]);
+	x3 = vreinterpretq_u8_u16(x23.val[1]);
 }
 
 static uint8x16_t unzigzag8(uint8x16_t v)
