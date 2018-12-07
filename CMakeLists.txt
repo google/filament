@@ -24,25 +24,37 @@ if (UNIX AND NOT APPLE AND NOT ANDROID AND NOT WEBGL)
 endif()
 
 if (WIN32)
+    # Link statically against c/c++ lib to avoid missing redistriburable such as
+    # "VCRUNTIME140.dll not found. Try reinstalling the app.", but give users
+    # a choice to opt for the shared runtime if they want.
+    option(USE_STATIC_CRT "Link against the static runtime libraries." ON)
+
     # On Windows we need to instruct cmake to generate the .def in order to get the .lib required
     # when linking against dlls. CL.EXE will not generate .lib without .def file (or without pragma
     # __declspec(dllexport) in front of each functions).
     set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 
+    if (${USE_STATIC_CRT})
+        set(CRT_FLAGS_RELEASE "/MT")
+        set(CRT_FLAGS_DEBUG "/MTd")
+    else()
+        set(CRT_FLAGS_RELEASE "/MD")
+        set(CRT_FLAGS_DEBUG "/MDd")
+    endif()
+
     # TODO: Figure out why pdb generation messes with incremental compilaton.
     # IN RELEASE_WITH_DEBUG_INFO, generate debug info in .obj, no in pdb.
-    set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} /Z7")
-    set(CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO} /Z7")
+    set(CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO} ${CRT_FLAGS_RELEASE} /Z7")
+    set(CMAKE_C_FLAGS_RELWITHDEBINFO "${CMAKE_C_FLAGS_RELWITHDEBINFO} ${CRT_FLAGS_RELEASE} /Z7")
 
-    # In RELEASE, link statically against c/c++ lib to avoid missing redistriburable such as
-    # "VCRUNTIME140.dll not found. Try reinstalling the app.". Also generate PDBs.
-    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT /Zi")
-    set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} /MT /Zi")
+    # In RELEASE, also generate PDBs.
+    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${CRT_FLAGS_RELEASE} /Zi")
+    set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} ${CRT_FLAGS_RELEASE} /Zi")
 
     # In DEBUG, avoid generating a PDB file which seems to mess with incremental compilation.
     # Instead generate debug info directly inside obj files.
-    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /Z7")
-    set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} /Z7")
+    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${CRT_FLAGS_DEBUG} /Z7")
+    set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} ${CRT_FLAGS_DEBUG} /Z7")
 endif()
 
 # ==================================================================================================
