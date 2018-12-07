@@ -113,7 +113,6 @@ uint32_t selectMemoryType(VulkanContext& context, uint32_t flags, VkFlags reqs);
 VkFormat getVkFormat(ElementType type, bool normalized);
 VkFormat getVkFormat(TextureFormat format);
 uint32_t getBytesPerPixel(TextureFormat format);
-uint32_t computeSize(TextureFormat format, uint32_t w, uint32_t h, uint32_t d);
 SwapContext& getSwapContext(VulkanContext& context);
 bool hasPendingWork(VulkanContext& context);
 VkCompareOp getCompareOp(SamplerCompareFunc func);

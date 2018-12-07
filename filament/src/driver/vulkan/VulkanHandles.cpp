@@ -403,7 +403,7 @@ VulkanTexture::VulkanTexture(VulkanContext& context, SamplerType target, uint8_t
         TextureFormat tformat, uint8_t samples, uint32_t w, uint32_t h, uint32_t depth,
         TextureUsage usage, VulkanStagePool& stagePool) :
         HwTexture(target, levels, samples, w, h, depth), format(getVkFormat(tformat)),
-        mContext(context), mStagePool(stagePool), mByteCount(computeSize(tformat, w, h, depth)) {
+        mContext(context), mStagePool(stagePool) {
     ASSERT_POSTCONDITION(getBytesPerPixel(tformat) != 3,
             "Many Vulkan implementations do not support 24 bpp image data.");
 
@@ -484,8 +484,8 @@ VulkanTexture::~VulkanTexture() {
     vkFreeMemory(mContext.device, textureImageMemory, VKALLOC);
 }
 
-void VulkanTexture::update2DImage(const PixelBufferDescriptor& data, uint32_t width, uint32_t height,
-        int miplevel) {
+void VulkanTexture::update2DImage(const PixelBufferDescriptor& data, uint32_t width,
+        uint32_t height, int miplevel) {
     assert(width <= this->width && height <= this->height);
     const void* cpuData = data.buffer;
     const uint32_t numBytes = data.size;
@@ -521,8 +521,8 @@ void VulkanTexture::update2DImage(const PixelBufferDescriptor& data, uint32_t wi
     }
 }
 
-void VulkanTexture::updateCubeImage(const PixelBufferDescriptor& data, const FaceOffsets& faceOffsets,
-        int miplevel) {
+void VulkanTexture::updateCubeImage(const PixelBufferDescriptor& data,
+        const FaceOffsets& faceOffsets, int miplevel) {
     const void* cpuData = data.buffer;
     const uint32_t numBytes = data.size;
     assert(this->target == SamplerType::SAMPLER_CUBEMAP);

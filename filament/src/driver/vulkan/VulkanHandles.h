@@ -142,7 +142,6 @@ private:
 
     VulkanContext& mContext;
     VulkanStagePool& mStagePool;
-    uint32_t mByteCount;
 };
 
 struct VulkanRenderPrimitive : public HwRenderPrimitive {
