@@ -5,6 +5,7 @@ set(ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR}/..)
 set(GENERATION_ROOT ${CMAKE_CURRENT_BINARY_DIR})
 set(RESOURCE_DIR  "${GENERATION_ROOT}/generated/resources")
 set(MATERIAL_DIR  "${GENERATION_ROOT}/generated/material")
+set(TEXTURE_DIR "${GENERATION_ROOT}/generated/texture")
 set(RESOURCE_BINS)
 
 # ==================================================================================================
@@ -41,6 +42,7 @@ set(MATERIAL_SRCS
         materials/sandboxLitTransparent.mat
         materials/sandboxSubsurface.mat
         materials/sandboxUnlit.mat
+        materials/texturedLit.mat
         materials/transparentColor.mat)
 
 if (CMAKE_CROSSCOMPILING)
@@ -73,7 +75,7 @@ foreach (mat_src ${MATERIAL_SRCS})
 endforeach()
 
 # ==================================================================================================
-# Build aggregated resource files
+# Build common resources
 # ==================================================================================================
 
 get_resgen_vars(${RESOURCE_DIR} resources)
@@ -89,17 +91,54 @@ if (DEFINED RESGEN_SOURCE_FLAGS)
     set_source_files_properties(${RESGEN_SOURCE} PROPERTIES COMPILE_FLAGS ${RESGEN_SOURCE_FLAGS})
 endif()
 
+add_library(common-resources ${RESGEN_SOURCE})
+
+# ==================================================================================================
+# Build suzanne resources
+# ==================================================================================================
+
+function(add_ktxfiles SOURCE TARGET EXTRA_ARGS)
+    set(source_path "${ROOT_DIR}/${SOURCE}")
+    set(target_path "${TEXTURE_DIR}/${TARGET}")
+    set(KTX_FILES ${KTX_FILES} ${target_path} PARENT_SCOPE)
+    add_custom_command(
+        OUTPUT ${target_path}
+        COMMAND mipgen --strip-alpha ${EXTRA_ARGS} ${source_path} ${target_path}
+        MAIN_DEPENDENCY ${source_path}
+        DEPENDS mipgen)
+endfunction()
+
+add_ktxfiles("assets/models/monkey/albedo.png" "albedo_s3tc.ktx" "--compression=s3tc_rgb_dxt1")
+add_ktxfiles("assets/models/monkey/normal.png" "normal.ktx" "--kernel=NORMALS;--linear")
+add_ktxfiles("assets/models/monkey/roughness.png" "roughness.ktx" "--grayscale")
+add_ktxfiles("assets/models/monkey/metallic.png" "metallic.ktx" "--grayscale")
+add_ktxfiles("assets/models/monkey/ao.png" "ao.ktx" "--grayscale")
+
+get_resgen_vars(${RESOURCE_DIR} textures)
+
+add_custom_command(
+        OUTPUT ${RESGEN_OUTPUTS}
+        COMMAND resgen ${RESGEN_FLAGS} ${KTX_FILES}
+        DEPENDS resgen ${KTX_FILES}
+        COMMENT "Aggregating textures"
+)
+
+if (DEFINED RESGEN_SOURCE_FLAGS)
+    set_source_files_properties(${RESGEN_SOURCE} PROPERTIES COMPILE_FLAGS ${RESGEN_SOURCE_FLAGS})
+endif()
+
+add_library(suzanne-resources ${RESGEN_SOURCE})
+
 # ==================================================================================================
 # Common library
 # ==================================================================================================
 
-set(APP_LIBS filament sdl2 stb math filamat utils getopt imgui filagui image)
+set(APP_LIBS filament sdl2 stb math filamat utils getopt imgui filagui image common-resources)
 if (WIN32)
     list(APPEND APP_LIBS sdl2main)
 endif()
 
 set(APP_SRCS
-        ${RESGEN_SOURCE}
         app/CameraManipulator.cpp
         app/Cube.cpp
         app/FilamentApp.cpp
@@ -176,9 +215,11 @@ if (NOT ANDROID)
 
     add_filamesh_demo(sample_cloth)
     add_filamesh_demo(sample_normal_map)
+    add_filamesh_demo(suzanne)
 
     # Sample app specific
     target_link_libraries(frame_generator PRIVATE imageio)
+    target_link_libraries(suzanne PRIVATE suzanne-resources)
 endif()
 
 # ==================================================================================================
