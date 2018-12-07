@@ -37,6 +37,9 @@ if (project.hasProperty("filament_dist_dir")) {
 android {
     compileSdkVersion 28
     defaultConfig {
+        // Our minSdkVersion is actually 21, we lie and say 14 here so apps don't have
+        // to increase their minSdkVersion unnecessarily. It is however up to them to
+        // ensure they do not initialize Filament on API levels < 21.
         minSdkVersion 14
         targetSdkVersion 28
         versionCode 1
@@ -47,7 +50,7 @@ android {
         externalNativeBuild {
             cmake {
                 arguments.add("-DANDROID_PIE=ON")
-                arguments.add("-DANDROID_PLATFORM=android-24")
+                arguments.add("-DANDROID_PLATFORM=android-21")
                 arguments.add("-DANDROID_STL=c++_static")
                 arguments.add("-DFILAMENT_DIST_DIR=${filament_path}".toString())
                 cppFlags.add("-std=c++14")
