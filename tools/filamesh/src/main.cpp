@@ -50,7 +50,7 @@ bool g_compression = false;
 
 Mesh g_mesh;
 float2 g_minUV = float2(std::numeric_limits<float>::max());
-float2 g_maxUV = float2(-std::numeric_limits<float>::max());
+float2 g_maxUV = float2(std::numeric_limits<float>::lowest());
 
 template<bool SNORMUVS>
 static ushort2 convertUV(float2 uv) {
@@ -199,7 +199,7 @@ void processNode(const aiScene* scene, const aiNode* node, std::vector<Part>& me
         }
     }
 
-    for (size_t i=0 ; i<node->mNumChildren ; ++i) {
+    for (size_t i = 0 ; i < node->mNumChildren ; ++i) {
         processNode<INTERLEAVED, SNORMUVS>(scene, node->mChildren[i], meshes);
     }
 }
@@ -322,8 +322,8 @@ int main(int argc, char* argv[]) {
 
     // Check for acceptable assimp data and determine UV bounds.
     preprocessNode(scene, node);
-    g_snormUVs = g_minUV.x >= 0.0f && g_minUV.x <= 1.0f && g_maxUV.x >= 0.0f && g_maxUV.x <= 1.0f &&
-                 g_minUV.y >= 0.0f && g_minUV.y <= 1.0f && g_maxUV.y >= 0.0f && g_maxUV.y <= 1.0f;
+    g_snormUVs = g_minUV.x >= -1.0f && g_minUV.x <= 1.0f && g_maxUV.x >= -1.0f && g_maxUV.x <= 1.0f &&
+                 g_minUV.y >= -1.0f && g_minUV.y <= 1.0f && g_maxUV.y >= -1.0f && g_maxUV.y <= 1.0f;
 
     // Consume assimp data and produce filamesh data.
     if (g_interleaved) {
