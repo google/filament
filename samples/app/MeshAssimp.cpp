@@ -1106,4 +1106,12 @@ void MeshAssimp::processGLTFMaterial(const aiScene* scene, const aiMaterial* mat
         sRGBColorA baseColorFactorCast = *reinterpret_cast<sRGBColorA*>(&baseColorFactor);
         outMaterials[materialName]->setParameter("baseColorFactor", baseColorFactorCast);
     }
+
+    aiBool isSpecularGlossiness = false;
+    if (material->Get(AI_MATKEY_GLTF_PBRSPECULARGLOSSINESS, isSpecularGlossiness)
+        == AI_SUCCESS) {
+        if (isSpecularGlossiness) {
+            std::cout << "Warning: pbrSpecularGlossiness textures are not currently supported" << std::endl;
+        }
+    }
 }
