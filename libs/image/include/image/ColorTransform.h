@@ -164,23 +164,23 @@ std::unique_ptr<uint8_t[]> fromLinearTosRGB(const LinearImage& image) {
     return dst;
 }
 
-// Creates a 3-channel RGB u8 image from a f32 image.
-// The source image can have three or more channels, but only the first three are honored.
-template <typename T>
+// Creates a N-channel RGB u8 image from a f32 image.
+// The source image can have three or more channels, but only the first N are honored.
+template <typename T, int N = 3>
 std::unique_ptr<uint8_t[]> fromLinearToRGB(const LinearImage& image) {
     using math::float3;
     size_t w = image.getWidth();
     size_t h = image.getHeight();
-    UTILS_UNUSED_IN_RELEASE size_t channels = image.getChannels();
-    assert(channels >= 3);
-    std::unique_ptr<uint8_t[]> dst(new uint8_t[w * h * 3 * sizeof(T)]);
+    size_t channels = image.getChannels();
+    assert(channels >= N);
+    std::unique_ptr<uint8_t[]> dst(new uint8_t[w * h * N * sizeof(T)]);
     T* d = reinterpret_cast<T*>(dst.get());
     for (size_t y = 0; y < h; ++y) {
-        for (size_t x = 0; x < w; ++x, d += 3) {
-            auto src = image.get<float3>((uint32_t) x, (uint32_t) y);
-            float3 l(saturate(*src) * std::numeric_limits<T>::max());
-            for (size_t i = 0; i < 3; i++) {
-                d[i] = T(l[i]);
+        float const* p = image.getPixelRef(0, y);
+        for (size_t x = 0; x < w; ++x, p += channels, d += N) {
+            for (int n = 0; n < N; n++) {
+                float target = math::saturate(p[n]) * std::numeric_limits<T>::max();
+                d[n] = T(target);
             }
         }
     }

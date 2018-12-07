@@ -56,6 +56,9 @@ LinearImage cropRegion(const LinearImage& image, uint32_t l, uint32_t t, uint32_
 // Lexicographically compares two images, similar to memcmp.
 int compare(const LinearImage& a, const LinearImage& b, float epsilon = 0.0f);
 
+// Sets all pixels in all channels to the given value.
+void clearToValue(LinearImage& img, float value);
+
 } // namespace image
 
 #endif /* IMAGE_LINEARIMAGE_H */
