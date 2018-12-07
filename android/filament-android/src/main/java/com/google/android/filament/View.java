@@ -212,6 +212,14 @@ public class View {
         nSetPostProcessingEnabled(getNativeObject(), enabled);
     }
 
+    public boolean isFrontFaceWindingInverted() {
+        return nIsFrontFaceWindingInverted(getNativeObject());
+    }
+
+    public void setFrontFaceWindingInverted(boolean inverted) {
+        nSetFrontFaceWindingInverted(getNativeObject(), inverted);
+    }
+
     public void setDynamicLightingOptions(float zLightNear, float zLightFar) {
         nSetDynamicLightingOptions(getNativeObject(), zLightNear, zLightFar);
     }
@@ -258,4 +266,6 @@ public class View {
     private static native void nSetDepthPrepass(long nativeView, int value);
     private static native void nSetPostProcessingEnabled(long nativeView, boolean enabled);
     private static native boolean nIsPostProcessingEnabled(long nativeView);
+    private static native void nSetFrontFaceWindingInverted(long nativeView, boolean inverted);
+    private static native boolean nIsFrontFaceWindingInverted(long nativeView);
 }

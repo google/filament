@@ -16,7 +16,8 @@ material {
     vertexDomain : device,
     depthWrite : false,
     shadingModel : unlit,
-    variantFilter : [ skinning ]
+    variantFilter : [ skinning ],
+    culling: none
 }
 
 fragment {

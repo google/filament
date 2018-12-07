@@ -863,6 +863,14 @@ bool View::isPostProcessingEnabled() const noexcept {
     return upcast(this)->hasPostProcessPass();
 }
 
+void View::setFrontFaceWindingInverted(bool inverted) noexcept {
+    upcast(this)->setFrontFaceWindingInverted(inverted);
+}
+
+bool View::isFrontFaceWindingInverted() const noexcept {
+    return upcast(this)->isFrontFaceWindingInverted();
+}
+
 void View::setDepthPrepass(View::DepthPrepass prepass) noexcept {
     upcast(this)->setDepthPrepass(prepass);
 }
