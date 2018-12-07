@@ -701,14 +701,14 @@ bool MeshAssimp::setFromFile(Asset& asset, std::map<std::string, MaterialInstanc
         asset.indices.reserve(asset.indices.size() + totalIndexCount);
 
         float2 minUV0 = float2(std::numeric_limits<float>::max());
-        float2 maxUV0 = float2(std::numeric_limits<float>::min());
+        float2 maxUV0 = float2(std::numeric_limits<float>::lowest());
         getMinMaxUV(scene, node, minUV0, maxUV0, 0);
         float2 minUV1 = float2(std::numeric_limits<float>::max());
-        float2 maxUV1 = float2(-std::numeric_limits<float>::max());
+        float2 maxUV1 = float2(std::numeric_limits<float>::lowest());
         getMinMaxUV(scene, node, minUV1, maxUV1, 1);
 
         asset.snormUV0 = minUV0.x >= -1.0f && minUV0.x <= 1.0f && maxUV0.x >= -1.0f && maxUV0.x <= 1.0f &&
-                     minUV0.y >= -1.0f && minUV0.y <= 1.0f && maxUV0.y >= -1.0f && maxUV0.y <= 1.0f;
+                         minUV0.y >= -1.0f && minUV0.y <= 1.0f && maxUV0.y >= -1.0f && maxUV0.y <= 1.0f;
         
         asset.snormUV1 = minUV1.x >= -1.0f && minUV1.x <= 1.0f && maxUV1.x >= -1.0f && maxUV1.x <= 1.0f &&
                          minUV1.y >= -1.0f && minUV1.y <= 1.0f && maxUV1.y >= -1.0f && maxUV1.y <= 1.0f;

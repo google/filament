@@ -50,7 +50,7 @@ bool g_compression = false;
 
 Mesh g_mesh;
 float2 g_minUV = float2(std::numeric_limits<float>::max());
-float2 g_maxUV = float2(std::numeric_limits<float>::min());
+float2 g_maxUV = float2(std::numeric_limits<float>::lowest());
 
 template<bool SNORMUVS>
 static ushort2 convertUV(float2 uv) {
