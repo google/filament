@@ -72,6 +72,10 @@ public:
         return static_cast<char*>(mBuffer) + offset;
     }
 
+    void* invalidate() noexcept {
+        return invalidateUniforms(0, mSize);
+    }
+
     // pointer to the uniform buffer
     void const* getBuffer() const noexcept { return mBuffer; }
 
