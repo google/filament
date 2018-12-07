@@ -878,11 +878,11 @@ void MeshAssimp::processNode(Asset& asset,
 
                     if (material->Get(AI_MATKEY_NAME, name) != AI_SUCCESS) {
                         if (isGLTF) {
-                            while (outMaterials.find("_mat_" + std::__1::to_string(matCount))
+                            while (outMaterials.find("_mat_" + std::to_string(matCount))
                                    != outMaterials.end()) {
                                 matCount++;
                             }
-                            materialName = "_mat_" + std::__1::to_string(matCount);
+                            materialName = "_mat_" + std::to_string(matCount);
                         } else {
                             materialName = AI_DEFAULT_MATERIAL_NAME;
                         }
@@ -891,7 +891,7 @@ void MeshAssimp::processNode(Asset& asset,
                     }
 
                     if (isGLTF && outMaterials.find(materialName) == outMaterials.end()) {
-                        std::__1::string dirName = asset.file.getParent();
+                        std::string dirName = asset.file.getParent();
                         processGLTFMaterial(scene, material, materialName, dirName, outMaterials);
                     }
 
@@ -948,7 +948,7 @@ void MeshAssimp::processNode(Asset& asset,
     if (node->mNumChildren) {
         parentIndex = static_cast<int>(asset.meshes.size()) - 1;
         deep++;
-        depth = std::__1::max(deep, depth);
+        depth = std::max(deep, depth);
         for (size_t i = 0, c = node->mNumChildren; i < c; i++) {
             processNode<SNORMUV0, SNORMUV1>(asset, outMaterials, scene,
                                             isGLTF, deep, matCount, node->mChildren[i], parentIndex, depth);
