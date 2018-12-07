@@ -135,7 +135,6 @@ private:
             uint32_t width, uint32_t height, FaceOffsets const* faceOffsets, uint32_t miplevel);
     VulkanContext& mContext;
     VulkanStagePool& mStagePool;
-    uint32_t mByteCount;
 };
 
 struct VulkanRenderPrimitive : public HwRenderPrimitive {
