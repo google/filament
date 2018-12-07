@@ -1049,7 +1049,7 @@ void MeshAssimp::processGLTFMaterial(const aiScene* scene, const aiMaterial* mat
     }
 
     if (material->GetTexture(aiTextureType_LIGHTMAP, 0, &AOPath, nullptr,
-                             nullptr, nullptr, nullptr, mapMode) == AI_SUCCESS) {
+            nullptr, nullptr, nullptr, mapMode) == AI_SUCCESS) {
         unsigned int minType = 0;
         unsigned int magType = 0;
         material->Get("$tex.mappingfiltermin", aiTextureType_LIGHTMAP, 0, minType);
@@ -1086,13 +1086,11 @@ void MeshAssimp::processGLTFMaterial(const aiScene* scene, const aiMaterial* mat
     }
 
     //If the gltf has texture factors, override the default factor values
-    if (material->Get(AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_METALLIC_FACTOR, metallicFactor)
-            == AI_SUCCESS) {
+    if (material->Get(AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_METALLIC_FACTOR, metallicFactor) == AI_SUCCESS) {
         outMaterials[materialName]->setParameter("metallicFactor", metallicFactor);
     }
 
-    if (material->Get(AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_ROUGHNESS_FACTOR, roughnessFactor)
-            == AI_SUCCESS) {
+    if (material->Get(AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_ROUGHNESS_FACTOR, roughnessFactor) == AI_SUCCESS) {
         outMaterials[materialName]->setParameter("roughnessFactor", roughnessFactor);
     }
 
@@ -1101,9 +1099,15 @@ void MeshAssimp::processGLTFMaterial(const aiScene* scene, const aiMaterial* mat
         outMaterials[materialName]->setParameter("emissiveFactor", emissiveFactorCast);
     }
 
-    if (material->Get(AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_BASE_COLOR_FACTOR, baseColorFactor)
-            == AI_SUCCESS) {
+    if (material->Get(AI_MATKEY_GLTF_PBRMETALLICROUGHNESS_BASE_COLOR_FACTOR, baseColorFactor) == AI_SUCCESS) {
         sRGBColorA baseColorFactorCast = *reinterpret_cast<sRGBColorA*>(&baseColorFactor);
         outMaterials[materialName]->setParameter("baseColorFactor", baseColorFactorCast);
+    }
+
+    aiBool isSpecularGlossiness = false;
+    if (material->Get(AI_MATKEY_GLTF_PBRSPECULARGLOSSINESS, isSpecularGlossiness) == AI_SUCCESS) {
+        if (isSpecularGlossiness) {
+            std::cout << "Warning: pbrSpecularGlossiness textures are not currently supported" << std::endl;
+        }
     }
 }
