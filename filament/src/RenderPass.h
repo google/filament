@@ -197,10 +197,10 @@ public:
 
 
     using RenderFlags = uint8_t;
-    static constexpr RenderFlags HAS_SHADOWING          = 0x01;
-    static constexpr RenderFlags HAS_DIRECTIONAL_LIGHT  = 0x02;
-    static constexpr RenderFlags HAS_DYNAMIC_LIGHTING   = 0x04;
-
+    static constexpr RenderFlags HAS_SHADOWING           = 0x01;
+    static constexpr RenderFlags HAS_DIRECTIONAL_LIGHT   = 0x02;
+    static constexpr RenderFlags HAS_DYNAMIC_LIGHTING    = 0x04;
+    static constexpr RenderFlags HAS_INVERSE_FRONT_FACES = 0x08;
 
     explicit RenderPass(const char* name) noexcept : mName(name) { }
 

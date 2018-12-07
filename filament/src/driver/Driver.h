@@ -198,7 +198,8 @@ public:
                 DepthFunc depthFunc                 : 3;        // 28
                 bool colorWrite                     : 1;        // 29
                 bool alphaToCoverage                : 1;        // 30
-                uint8_t padding                     : 2;        // 32
+                bool inverseFrontFaces              : 1;        // 31
+                uint8_t padding                     : 1;        // 32
             };
             uint32_t u = 0;
         };
