@@ -320,6 +320,14 @@
 <li><em>returns</em> an instance of <a href="#SwapChain">SwapChain</a></li>
 </ul>
 </li>
+<li><strong>engine.createTextureFromJpeg(image, options)</strong>
+<ul>
+<li>Creates a 2D [Texture] from a JPEG image.</li>
+<li><em>image</em> asset string or DOM Image that has already been loaded</li>
+<li><em>options</em> JavaScript object with optional <code>srgb</code> and <code>nomips</code> keys.</li>
+<li><em>returns</em> <a href="#Texture">Texture</a></li>
+</ul>
+</li>
 <li><strong>engine.createTextureFromKtx(buffer, options)</strong>
 <ul>
 <li>Utility function that creates a [Texture] from a KTX file.</li>
@@ -332,7 +340,7 @@
 <ul>
 <li>Creates a 2D [Texture] from the raw contents of a PNG file.</li>
 <li><em>buffer</em> asset string, or Uint8Array, or <a href="#Buffer">Buffer</a> with PNG file contents</li>
-<li><em>options</em> JavaScript object with optional <code>rgbm</code>, <code>noalpha</code>, and <code>nomips</code> keys.</li>
+<li><em>options</em> object with optional <code>srgb</code>, <code>rgbm</code>, <code>noalpha</code>, and <code>nomips</code> keys.</li>
 <li><em>returns</em> <a href="#Texture">Texture</a></li>
 </ul>
 </li>
@@ -728,7 +736,7 @@ See also the <a href="#Engine">Engine</a> methods <code>createView</code> and <c
 </ul>
 </div>
 <div class='funcdoc'>
-<h2>function <a id='fetch' href='#fetch'>fetch</a>(assets, onready)</h2>
+<h2>function <a id='fetch' href='#fetch'>fetch</a>(assets, onDone, onFetch)</h2>
 <p>Downloads assets and invokes a callback when done.</p>
 <ul>
 <li><strong>assets</strong>
@@ -736,9 +744,14 @@ See also the <a href="#Engine">Engine</a> methods <code>createView</code> and <c
 <li>Array of strings containing URL's of required assets.</li>
 </ul>
 </li>
-<li><strong>onready</strong>
+<li><strong>onDone</strong>
 <ul>
 <li>callback that gets invoked after all assets have been downloaded.</li>
+</ul>
+</li>
+<li><strong>onFetch</strong>
+<ul>
+<li>optional callback that's invoked after each asset is downloaded.</li>
 </ul>
 </li>
 </ul>
@@ -793,7 +806,7 @@ callback. This callback gets invoked only after all assets have been downloaded 
 WebAssembly module has been loaded. Clients should only pass asset URL's that absolutely must
 be ready at initialization time.
 When the callback is called, each downloaded asset is available in the <code>Filament.assets</code> global
-object, which contains a mapping from URL's to Uint8Array objects.</p>
+object, which contains a mapping from URL's to Uint8Array objects and DOM images.</p>
 </div>
 <div class='funcdoc'>
 <h2>function <a id='loadMathExtensions' href='#loadMathExtensions'>loadMathExtensions</a>()</h2>
