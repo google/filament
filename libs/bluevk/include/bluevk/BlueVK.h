@@ -45,7 +45,7 @@ namespace bluevk {
 
     void bindInstance(VkInstance instance);
 
-}; // namespace bluevk
+} // namespace bluevk
 
 #if defined(VK_VERSION_1_0)
 extern PFN_vkAllocateCommandBuffers vkAllocateCommandBuffers;
