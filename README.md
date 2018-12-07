@@ -442,7 +442,7 @@ Run `build.sh -h` for more information.
 ##### Linux toolchain
 
 ```
-$ $SDK/ndk-bundle/build/tools/make_standalone_toolchain.py --arch arm64 --api 24 \
+$ $SDK/ndk-bundle/build/tools/make_standalone_toolchain.py --arch arm64 --api 21 \
         --stl libc++ --force \
         --install-dir toolchains/Linux/aarch64-linux-android-4.9
 ```
@@ -450,7 +450,7 @@ $ $SDK/ndk-bundle/build/tools/make_standalone_toolchain.py --arch arm64 --api 24
 ##### Darwin toolchain
 
 ```
-$ $SDK/ndk-bundle/build/tools/make_standalone_toolchain.py --arch arm64 --api 24 \
+$ $SDK/ndk-bundle/build/tools/make_standalone_toolchain.py --arch arm64 --api 21 \
         --stl libc++ --force \
         --install-dir toolchains/Darwin/aarch64-linux-android-4.9
 ```
@@ -487,7 +487,7 @@ binaries should be found in `out/android-release/filament/lib/arm64-v8a`.
 ##### Linux toolchain
 
 ```
-$ $SDK/ndk-bundle/build/tools/make_standalone_toolchain.py --arch arm --api 24 \
+$ $SDK/ndk-bundle/build/tools/make_standalone_toolchain.py --arch arm --api 21 \
         --stl libc++ --force \
         --install-dir toolchains/Linux/arm-linux-androideabi-4.9
 ```
@@ -495,7 +495,7 @@ $ $SDK/ndk-bundle/build/tools/make_standalone_toolchain.py --arch arm --api 24 \
 ##### Darwin toolchain
 
 ```
-$ $SDK/ndk-bundle/build/tools/make_standalone_toolchain.py --arch arm --api 24 \
+$ $SDK/ndk-bundle/build/tools/make_standalone_toolchain.py --arch arm --api 21 \
         --stl libc++ --force \
         --install-dir toolchains/Darwin/arm-linux-androideabi-4.9
 ```
@@ -532,7 +532,7 @@ binaries should be found in `out/android-release/filament/lib/armeabi-v7a`.
 ##### Linux toolchain
 
 ```
-$ $SDK/ndk-bundle/build/tools/make_standalone_toolchain.py --arch x86_64 --api 24 \
+$ $SDK/ndk-bundle/build/tools/make_standalone_toolchain.py --arch x86_64 --api 21 \
         --stl libc++ --force \
         --install-dir toolchains/Linux/x86_64-linux-android-4.9
 ```
@@ -540,7 +540,7 @@ $ $SDK/ndk-bundle/build/tools/make_standalone_toolchain.py --arch x86_64 --api 2
 ##### Darwin toolchain
 
 ```
-$ $SDK/ndk-bundle/build/tools/make_standalone_toolchain.py --arch x86_64 --api 24 \
+$ $SDK/ndk-bundle/build/tools/make_standalone_toolchain.py --arch x86_64 --api 21 \
         --stl libc++ --force \
         --install-dir toolchains/Darwin/x86_64-linux-android-4.9
 ```
@@ -577,7 +577,7 @@ binaries should be found in `out/android-release/filament/lib/x86_64`.
 ##### Linux toolchain
 
 ```
-$ $SDK/ndk-bundle/build/tools/make_standalone_toolchain.py --arch x86 --api 24 \
+$ $SDK/ndk-bundle/build/tools/make_standalone_toolchain.py --arch x86 --api 21 \
         --stl libc++ --force \
         --install-dir toolchains/Linux/i686-linux-android-4.9
 ```
@@ -585,7 +585,7 @@ $ $SDK/ndk-bundle/build/tools/make_standalone_toolchain.py --arch x86 --api 24 \
 ##### Darwin toolchain
 
 ```
-$ $SDK/ndk-bundle/build/tools/make_standalone_toolchain.py --arch x86 --api 24 \
+$ $SDK/ndk-bundle/build/tools/make_standalone_toolchain.py --arch x86 --api 21 \
         --stl libc++ --force \
         --install-dir toolchains/Darwin/i686-linux-android-4.9
 ```
