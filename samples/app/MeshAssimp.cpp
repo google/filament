@@ -731,7 +731,6 @@ bool MeshAssimp::setFromFile(Asset& asset, std::map<std::string, MaterialInstanc
             }
         }
 
-
         std::cout << "Hierarchy depth = " << depth << std::endl;
 
         // compute the aabb and find bounding box of entire model
@@ -1105,5 +1104,13 @@ void MeshAssimp::processGLTFMaterial(const aiScene* scene, const aiMaterial* mat
             == AI_SUCCESS) {
         sRGBColorA baseColorFactorCast = *reinterpret_cast<sRGBColorA*>(&baseColorFactor);
         outMaterials[materialName]->setParameter("baseColorFactor", baseColorFactorCast);
+    }
+
+    aiBool isSpecularGlossiness = false;
+    if (material->Get(AI_MATKEY_GLTF_PBRSPECULARGLOSSINESS, isSpecularGlossiness)
+        == AI_SUCCESS) {
+        if (isSpecularGlossiness) {
+            std::cout << "Warning: pbrSpecularGlossiness textures are not currently supported" << std::endl;
+        }
     }
 }
