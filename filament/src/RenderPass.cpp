@@ -278,6 +278,8 @@ void RenderPass::generateCommandsImpl(uint32_t,
     auto const* const UTILS_RESTRICT soaBonesUbh        = soa.data<FScene::BONES_UBH>();
 
     const bool hasShadowing = renderFlags & HAS_SHADOWING;
+    const bool inverseFrontFaces = renderFlags & HAS_INVERSE_FRONT_FACES;
+
     Variant materialVariant;
     materialVariant.setDirectionalLighting(renderFlags & HAS_DIRECTIONAL_LIGHT);
     materialVariant.setDynamicLighting(renderFlags & HAS_DYNAMIC_LIGHTING);
@@ -292,6 +294,7 @@ void RenderPass::generateCommandsImpl(uint32_t,
     cmdDepth.primitive.rasterState.depthWrite = true;
     cmdDepth.primitive.rasterState.depthFunc = Driver::RasterState::DepthFunc::L;
     cmdDepth.primitive.rasterState.alphaToCoverage = false;
+    cmdDepth.primitive.rasterState.inverseFrontFaces = inverseFrontFaces;
 
     for (uint32_t i = range.first; i < range.last; ++i) {
         // Signed distance from camera to object's center. Positive distances are in front of
@@ -354,6 +357,8 @@ void RenderPass::generateCommandsImpl(uint32_t,
                 cmdColor.primitive.primitiveHandle = primitive.getHwHandle();
                 cmdColor.primitive.materialVariant = materialVariant;
                 RenderPass::setupColorCommand(cmdColor, depthPass, mi);
+                // Inverting front faces applies to all renderables and primitives in the view
+                cmdColor.primitive.rasterState.inverseFrontFaces = inverseFrontFaces;
 
                 const bool blendPass = Pass(cmdColor.key & PASS_MASK) == Pass::BLENDED;
                 if (blendPass) {
@@ -564,9 +569,10 @@ void FRenderer::ColorPass::renderColorPass(FEngine& engine, JobSystem& js,
     view.commitUniforms(driver);
 
     RenderPass::RenderFlags flags = 0;
-    if (view.hasShadowing())           flags |= RenderPass::HAS_SHADOWING;
-    if (view.hasDirectionalLight())    flags |= RenderPass::HAS_DIRECTIONAL_LIGHT;
-    if (view.hasDynamicLighting())     flags |= RenderPass::HAS_DYNAMIC_LIGHTING;
+    if (view.hasShadowing())               flags |= RenderPass::HAS_SHADOWING;
+    if (view.hasDirectionalLight())        flags |= RenderPass::HAS_DIRECTIONAL_LIGHT;
+    if (view.hasDynamicLighting())         flags |= RenderPass::HAS_DYNAMIC_LIGHTING;
+    if (view.isFrontFaceWindingInverted()) flags |= RenderPass::HAS_INVERSE_FRONT_FACES;
 
     CommandTypeFlags commandType;
     switch (view.getDepthPrepass()) {
@@ -588,7 +594,8 @@ void FRenderer::ColorPass::renderColorPass(FEngine& engine, JobSystem& js,
 
     ColorPass colorPass("ColorPass", js, jobFroxelize, view, rth);
     driver.pushGroupMarker("Color Pass");
-    colorPass.render(engine, js, *view.getScene(), vr, commandType, flags, cameraInfo, scaledViewport, commands);
+    colorPass.render(engine, js, *view.getScene(), vr, commandType, flags,
+            cameraInfo, scaledViewport, commands);
     driver.popGroupMarker();
 }
 
@@ -629,9 +636,10 @@ void FRenderer::ShadowPass::renderShadowMap(FEngine& engine, JobSystem& js,
     view.commitUniforms(driver);
 
     RenderPass::RenderFlags flags = 0;
-    if (view.hasShadowing())           flags |= RenderPass::HAS_SHADOWING;
-    if (view.hasDirectionalLight())    flags |= RenderPass::HAS_DIRECTIONAL_LIGHT;
-    if (view.hasDynamicLighting())     flags |= RenderPass::HAS_DYNAMIC_LIGHTING;
+    if (view.hasShadowing())               flags |= RenderPass::HAS_SHADOWING;
+    if (view.hasDirectionalLight())        flags |= RenderPass::HAS_DIRECTIONAL_LIGHT;
+    if (view.hasDynamicLighting())         flags |= RenderPass::HAS_DYNAMIC_LIGHTING;
+    if (view.isFrontFaceWindingInverted()) flags |= RenderPass::HAS_INVERSE_FRONT_FACES;
 
     ShadowPass shadowPass("ShadowPass", shadowMap);
     driver.pushGroupMarker("Shadow map Pass");
