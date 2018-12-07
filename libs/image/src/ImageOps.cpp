@@ -236,4 +236,12 @@ int compare(const LinearImage& a, const LinearImage& b, float epsilon) {
             [epsilon](float x, float y) { return x < y - epsilon; });
 }
 
+void clearToValue(LinearImage& image, float value) {
+    const uint32_t nvals = image.getWidth() * image.getHeight() * image.getChannels();
+    float* data = image.getPixelRef();
+    for (uint32_t index = 0; index < nvals; ++index) {
+        data[index] = value;
+    }
+}
+
 } // namespace image

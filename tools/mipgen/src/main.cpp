@@ -40,6 +40,7 @@ static bool g_formatSpecified = false;
 static bool g_createGallery = false;
 static string g_compression = "";
 static Filter g_filter = Filter::DEFAULT;
+static bool g_addAlpha = false;
 static bool g_stripAlpha = false;
 static bool g_grayscale = false;
 static bool g_ktxContainer = false;
@@ -74,6 +75,8 @@ Options:
    --kernel=[box|nearest|hermite|gaussian|normals|mitchell|lanczos|min], -k [filter]
        specify filter kernel type (defaults to lanczos)
        the "normals" filter may automatically change the compression scheme
+   --add-alpha
+       if the source image has 3 channels, this adds a fourth channel filled with 1.0
    --strip-alpha
        ignore the alpha component of the input image
    --compression=COMPRESSION, -c COMPRESSION
@@ -134,7 +137,7 @@ static void license() {
 }
 
 static int handleArguments(int argc, char* argv[]) {
-    static constexpr const char* OPTSTR = "hLlgpf:c:k:s";
+    static constexpr const char* OPTSTR = "hLlgpf:c:k:sa";
     static const struct option OPTIONS[] = {
             { "help",                 no_argument, 0, 'h' },
             { "license",              no_argument, 0, 'L' },
@@ -145,6 +148,7 @@ static int handleArguments(int argc, char* argv[]) {
             { "compression",    required_argument, 0, 'c' },
             { "kernel",         required_argument, 0, 'k' },
             { "strip-alpha",          no_argument, 0, 's' },
+            { "add-alpha",            no_argument, 0, 'a' },
             { 0, 0, 0, 0 }  // termination of the option list
     };
 
@@ -179,6 +183,9 @@ static int handleArguments(int argc, char* argv[]) {
             }
             case 's':
                 g_stripAlpha = true;
+                break;
+            case 'a':
+                g_addAlpha = true;
                 break;
             case 'f':
                 if (arg == "png") {
@@ -249,6 +256,14 @@ int main(int argc, char* argv[]) {
         auto b = extractChannel(sourceImage, 2);
         sourceImage = combineChannels({r, g, b});
     }
+    if (g_addAlpha && sourceImage.getChannels() == 3) {
+        auto r = extractChannel(sourceImage, 0);
+        auto g = extractChannel(sourceImage, 1);
+        auto b = extractChannel(sourceImage, 2);
+        auto a = LinearImage(sourceImage.getWidth(), sourceImage.getHeight(), 1);
+        clearToValue(a, 1.0f);
+        sourceImage = combineChannels({r, g, b, a});
+    }
     if (g_grayscale) {
         sourceImage = extractChannel(sourceImage, 0);
     }
@@ -269,26 +284,26 @@ int main(int argc, char* argv[]) {
         // bundle, we want to include level 0, so add 1 to the KTX level count.
         KtxBundle container(1 + miplevels.size(), 1, false);
         auto& info = container.info();
-        size_t componentCount = 3;
+        CompressionConfig config {};
         info = {
             .endianness = KtxBundle::ENDIAN_DEFAULT,
             .glType = KtxBundle::UNSIGNED_BYTE,
             .glTypeSize = 1,
-            .glFormat = KtxBundle::RGB,
-            .glInternalFormat = KtxBundle::RGB8,
-            .glBaseInternalFormat = KtxBundle::RGB,
             .pixelWidth = sourceImage.getWidth(),
             .pixelHeight = sourceImage.getHeight(),
             .pixelDepth = 0,
         };
-        if (g_grayscale) {
-            info.glTypeSize = 1;
-            info.glFormat =
-            info.glInternalFormat =
-            info.glBaseInternalFormat = KtxBundle::LUMINANCE;
-            componentCount = 1;
+        size_t componentCount = sourceImage.getChannels();
+        if (componentCount == 1) {
+            info.glFormat = info.glBaseInternalFormat = KtxBundle::RED;
+            info.glInternalFormat = KtxBundle::R8;
+        } else if (componentCount == 3) {
+            info.glFormat = info.glBaseInternalFormat = KtxBundle::RGB;
+            info.glInternalFormat = KtxBundle::RGB8;
+        } else if (componentCount == 4) {
+            info.glFormat = info.glBaseInternalFormat = KtxBundle::RGBA;
+            info.glInternalFormat = KtxBundle::RGBA8;
         }
-        CompressionConfig config {};
         if (!g_compression.empty()) {
             bool valid = parseOptionString(g_compression, &config);
             if (!valid) {
@@ -298,9 +313,7 @@ int main(int argc, char* argv[]) {
             // The KTX spec says the following for compressed textures: glTypeSize should 1,
             // glFormat should be 0, and glBaseInternalFormat should be RED, RG, RGB, or RGBA.
             // The glInternalFormat field is the only field that specifies the actual format.
-            info.glTypeSize = 1;
             info.glFormat = 0;
-            info.glBaseInternalFormat = KtxBundle::RGBA;
         }
         uint32_t mip = 0;
         auto addLevel = [&](LinearImage image) {
@@ -327,9 +340,17 @@ int main(int argc, char* argv[]) {
             } else if (g_grayscale) {
                 data = fromLinearTosRGB<uint8_t, 1>(image);
             } else if (g_linearized) {
-                data = fromLinearToRGB<uint8_t>(image);
+                if (componentCount == 3) {
+                    data = fromLinearToRGB<uint8_t, 3>(image);
+                } else {
+                    data = fromLinearToRGB<uint8_t, 4>(image);
+                }
             } else {
-                data = fromLinearTosRGB<uint8_t>(image);
+                if (componentCount == 3) {
+                    data = fromLinearTosRGB<uint8_t, 3>(image);
+                } else {
+                    data = fromLinearTosRGB<uint8_t, 4>(image);
+                }
             }
             container.setBlob({mip++, 0, 0}, data.get(), image.getWidth() * image.getHeight() *
                     container.info().glTypeSize * componentCount);
@@ -351,7 +372,7 @@ int main(int argc, char* argv[]) {
     puts("Writing image files to disk...");
     char path[256];
     uint32_t mip = 1; // start at 1 because 0 is the original image
-    for (auto image: miplevels) {
+    for (auto image : miplevels) {
         int result = snprintf(path, sizeof(path), outputPattern.c_str(), mip++);
         if (result < 0 || result >= sizeof(path)) {
             cerr << "Output pattern is too long." << endl;
