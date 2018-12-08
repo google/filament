@@ -77,6 +77,8 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     float ev100;
 
     alignas(16) math::float4 iblSH[9]; // actually float3 entries (std140 requires float4 alignment)
+
+    math::float4 userTime;  // time(s), (double)time - (float)time, 0, 0
 };
 
 

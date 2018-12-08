@@ -70,6 +70,8 @@ UniformInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             .add("ev100",                   1, UniformInterfaceBlock::Type::FLOAT)
             // ibl
             .add("iblSH",                   9, UniformInterfaceBlock::Type::FLOAT3)
+            // user time
+            .add("userTime",                1, UniformInterfaceBlock::Type::FLOAT4)
             .build();
     return uib;
 }

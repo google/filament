@@ -397,7 +397,7 @@ void FView::prepareLighting(FEngine& engine, FEngine::DriverApi& driver, ArenaSc
 }
 
 void FView::prepare(FEngine& engine, driver::DriverApi& driver, ArenaScope& arena,
-        Viewport const& viewport) noexcept {
+        Viewport const& viewport, math::float4 const& userTime) noexcept {
     JobSystem& js = engine.getJobSystem();
 
     /*
@@ -537,8 +537,9 @@ void FView::prepare(FEngine& engine, driver::DriverApi& driver, ArenaScope& aren
      * Update driver state
      */
 
-    float fraction = (engine.getTime().count() % 1000000000) / 1000000000.0f;
+    float fraction = (engine.getEngineTime().count() % 1000000000) / 1000000000.0f;
     getUb().setUniform(offsetof(PerViewUib, time), fraction);
+    getUb().setUniform(offsetof(PerViewUib, userTime), userTime);
 
     // upload the renderables's dirty UBOs
     engine.getRenderableManager().prepare(driver,

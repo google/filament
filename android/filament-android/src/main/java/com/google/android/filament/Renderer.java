@@ -89,6 +89,14 @@ public class Renderer {
         }
     }
 
+    double getUserTime() {
+        return nGetUserTime(getNativeObject());
+    }
+
+    void resetUserTime() {
+        nResetUserTime(getNativeObject());
+    }
+
     long getNativeObject() {
         if (mNativeObject == 0) {
             throw new IllegalStateException("Calling method on destroyed Renderer");
@@ -112,4 +120,6 @@ public class Renderer {
             Buffer storage, int remaining,
             int left, int top, int type, int alignment, int stride, int format,
             Object handler, Runnable callback);
+    private static native double nGetUserTime(long nativeRenderer);
+    private static native void nResetUserTime(long nativeRenderer);
 }

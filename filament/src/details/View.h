@@ -62,7 +62,7 @@ public:
     void terminate(FEngine& engine);
 
     void prepare(FEngine& engine, driver::DriverApi& driver, ArenaScope& arena,
-            Viewport const& viewport) noexcept;
+            Viewport const& viewport, math::float4 const& userTime) noexcept;
 
     void setScene(FScene* scene) { mScene = scene; }
     FScene const* getScene() const noexcept { return mScene; }

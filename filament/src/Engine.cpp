@@ -137,7 +137,7 @@ FEngine::FEngine(Backend backend, Platform* platform, void* sharedGLContext) :
         mPostProcessSib(PostProcessSib::getSib()),
         mCommandBufferQueue(CONFIG_MIN_COMMAND_BUFFERS_SIZE, CONFIG_COMMAND_BUFFERS_SIZE),
         mPerRenderPassAllocator("per-renderpass allocator", CONFIG_PER_RENDER_PASS_ARENA_SIZE),
-        mEpoch(std::chrono::steady_clock::now()),
+        mEngineEpoch(std::chrono::steady_clock::now()),
         mDriverBarrier(1)
 {
     SYSTRACE_ENABLE();
