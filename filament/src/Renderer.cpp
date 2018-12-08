@@ -33,6 +33,8 @@
 #include <utils/vector.h>
 
 #include <assert.h>
+#include <filament/Renderer.h>
+
 
 using namespace math;
 using namespace utils;
@@ -55,6 +57,7 @@ FRenderer::FRenderer(FEngine& engine) :
 
 void FRenderer::init() noexcept {
     DriverApi& driver = mEngine.getDriverApi();
+    mUserEpoch = mEngine.getEngineEpoch();
     mRenderTarget = driver.createDefaultRenderTarget();
     mIsRGB16FSupported = driver.isRenderTargetFormatSupported(driver::TextureFormat::RGB16F);
     mIsRGB8Supported = driver.isRenderTargetFormatSupported(driver::TextureFormat::RGB8);
@@ -93,6 +96,10 @@ void FRenderer::terminate(FEngine& engine) {
         // to initialize themselves, otherwise the engine tries to destroy invalid handles.
         engine.execute();
     }
+}
+
+void FRenderer::resetUserTime() {
+    mUserEpoch = std::chrono::steady_clock::now();
 }
 
 driver::TextureFormat FRenderer::getHdrFormat(const View& view) const noexcept {
@@ -170,7 +177,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
         return;
     }
 
-    view.prepare(engine, driver, arena, svp);
+    view.prepare(engine, driver, arena, svp, getShaderUserTime());
     // TODO: froxelization could actually start now, instead of in ColorPass::renderColorPass()
 
     /*
@@ -345,6 +352,12 @@ bool FRenderer::beginFrame(FSwapChain* swapChain) {
         return false;
     }
 
+    // latch the frame time
+    std::chrono::duration<double> time{ getUserTime() };
+    float h = (float)time.count();
+    float l = float(time.count() - h);
+    mShaderUserTime = { h, l, 0, 0 };
+
     // ask the engine to do what it needs to (e.g. updates light buffer, materials...)
     engine.prepare();
 
@@ -473,6 +486,14 @@ void Renderer::readPixels(uint32_t xoffset, uint32_t yoffset, uint32_t width, ui
 
 void Renderer::endFrame() {
     upcast(this)->endFrame();
+}
+
+double Renderer::getUserTime() const {
+    return upcast(this)->getUserTime().count();
+}
+
+void Renderer::resetUserTime() {
+    upcast(this)->resetUserTime();
 }
 
 } // namespace filament

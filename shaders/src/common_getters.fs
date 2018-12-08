@@ -43,6 +43,11 @@ float getTime() {
 }
 
 /** @public-api */
+HIGHP vec4 getUserTime() {
+    return frameUniforms.userTime;
+}
+
+/** @public-api */
 float getExposure() {
     return frameUniforms.exposure;
 }

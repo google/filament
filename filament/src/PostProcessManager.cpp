@@ -62,7 +62,7 @@ void PostProcessManager::setSource(uint32_t viewportWidth, uint32_t viewportHeig
     SamplerBuffer sb(engine.getPostProcessSib());
     sb.setSampler(PostProcessSib::COLOR_BUFFER, pos->texture, params);
 
-    auto duration = engine.getTime();
+    auto duration = engine.getEngineTime();
     float fraction = (duration.count() % 1000000000) / 1000000000.0f;
 
     UniformBuffer& ub = mPostProcessUb;

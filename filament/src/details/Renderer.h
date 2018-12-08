@@ -59,6 +59,8 @@ public:
 
     FEngine& getEngine() const noexcept { return mEngine; }
 
+    math::float4 getShaderUserTime() const { return mShaderUserTime; }
+
     // do all the work here!
     void render(FView const* view);
     void renderJob(ArenaScope& arena, FView& view);
@@ -69,6 +71,8 @@ public:
     bool beginFrame(FSwapChain* swapChain);
     void endFrame();
 
+    void resetUserTime();
+
     void readPixels(uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
             driver::PixelBufferDescriptor&& buffer);
 
@@ -76,6 +80,7 @@ public:
     void terminate(FEngine& engine);
 
 private:
+    friend class Renderer;
     using Command = RenderPass::Command;
 
     // this class is defined in RenderPass.cpp
@@ -123,6 +128,15 @@ private:
     driver::TextureFormat getHdrFormat(const View& view) const noexcept;
     driver::TextureFormat getLdrFormat() const noexcept;
 
+    using clock = std::chrono::steady_clock;
+    using Epoch = clock::time_point;
+    using duration = clock::duration;
+
+    Epoch getUserEpoch() const { return mUserEpoch; }
+    duration getUserTime() const noexcept {
+        return clock::now() - getUserEpoch();
+    }
+
     // keep a reference to our engine
     FEngine& mEngine;
     FrameSkipper mFrameSkipper;
@@ -133,6 +147,8 @@ private:
     FrameInfoManager mFrameInfoManager;
     bool mIsRGB16FSupported : 1;
     bool mIsRGB8Supported : 1;
+    Epoch mUserEpoch;
+    math::float4 mShaderUserTime;
 
     // per-frame arena for this Renderer
     LinearAllocatorArena& mPerRenderPassArena;

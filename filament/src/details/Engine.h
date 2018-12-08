@@ -203,15 +203,15 @@ public:
         return mBackend;
     }
 
-    duration getTime() const noexcept {
-        return clock::now() - getEpoch();
-    }
-
     void* streamAlloc(size_t size, size_t alignment) noexcept;
 
     utils::JobSystem& getJobSystem() noexcept { return mJobSystem; }
 
-    Epoch getEpoch() const { return mEpoch; }
+
+    Epoch getEngineEpoch() const { return mEngineEpoch; }
+    duration getEngineTime() const noexcept {
+        return clock::now() - getEngineEpoch();
+    }
 
     void shutdown();
 
@@ -347,7 +347,7 @@ private:
 
     utils::JobSystem mJobSystem;
 
-    Epoch mEpoch;
+    Epoch mEngineEpoch;
 
     mutable FMaterial const* mDefaultMaterial = nullptr;
     mutable FMaterial const* mSkyboxMaterials[2] = { nullptr, nullptr };

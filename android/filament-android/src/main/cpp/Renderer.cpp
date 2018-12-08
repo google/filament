@@ -96,3 +96,15 @@ Java_com_google_android_filament_Renderer_nReadPixels(JNIEnv *env, jclass,
 
     return 0;
 }
+
+extern "C" JNIEXPORT jdouble JNICALL
+Java_com_google_android_filament_Renderer_nGetUserTime(JNIEnv*, jclass, jlong nativeRenderer) {
+    Renderer *renderer = (Renderer *) nativeRenderer;
+    return renderer->getUserTime();
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_Renderer_nResetUserTime(JNIEnv*, jclass, jlong nativeRenderer) {
+    Renderer *renderer = (Renderer *) nativeRenderer;
+    renderer->resetUserTime();
+}
