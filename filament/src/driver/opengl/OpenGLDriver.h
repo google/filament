@@ -345,6 +345,7 @@ private:
     inline void disableVertexAttribArray(GLuint index) noexcept;
     inline void enable(GLenum cap) noexcept;
     inline void disable(GLenum cap) noexcept;
+    inline void frontFace(GLenum mode) noexcept;
     inline void cullFace(GLenum mode) noexcept;
     inline void blendEquation(GLenum modeRGB, GLenum modeA) noexcept;
     inline void blendFunction(GLenum srcRGB, GLenum srcA, GLenum dstRGB, GLenum dstA) noexcept;
@@ -404,6 +405,7 @@ private:
         } vao;
 
         struct {
+            GLenum frontFace            = GL_CCW;
             GLenum cullFace             = GL_BACK;
             GLenum blendEquationRGB     = GL_FUNC_ADD;
             GLenum blendEquationA       = GL_FUNC_ADD;

@@ -308,6 +308,7 @@ void VulkanBinder::bindRasterState(const RasterState& rasterState) noexcept {
     if (
             raster0.polygonMode != raster1.polygonMode ||
             raster0.cullMode != raster1.cullMode ||
+            raster0.frontFace != raster1.frontFace ||
             raster0.rasterizerDiscardEnable != raster1.rasterizerDiscardEnable ||
             raster0.depthBiasEnable != raster1.depthBiasEnable ||
             raster0.depthBiasConstantFactor != raster1.depthBiasConstantFactor ||

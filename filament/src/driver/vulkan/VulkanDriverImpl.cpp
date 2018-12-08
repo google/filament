@@ -712,6 +712,11 @@ VkCullModeFlags getCullMode(CullingMode mode) {
     }
 }
 
+VkFrontFace getFrontFace(bool inverseFrontFaces) {
+    return inverseFrontFaces ?
+            VkFrontFace::VK_FRONT_FACE_CLOCKWISE : VkFrontFace::VK_FRONT_FACE_COUNTER_CLOCKWISE;
+}
+
 void waitForIdle(VulkanContext& context) {
     // If there's no valid GPU then we have nothing to do.
     if (!context.device) {
