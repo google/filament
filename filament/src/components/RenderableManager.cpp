@@ -255,21 +255,10 @@ void FRenderableManager::create(
     auto& manager = mManager;
     FEngine::DriverApi& driver = engine.getDriverApi();
 
-    // If we already have an instance we can reuse parts of it without completely
-    // destroying it. In particular we can reuse the UBO since it's the same for
-    // all renderables
-    bool canReuse = false;
-    Instance ci = getInstance(entity);
-    if (UTILS_UNLIKELY(ci)) {
-        canReuse = true;
-        destroyComponentPrimitives(engine, manager[ci].primitives);
-        std::unique_ptr<Bones> const& bones = manager[ci].bones;
-        if (bones && !builder->mSkinningBoneCount) {
-            driver.destroyUniformBuffer(bones->handle);
-        }
+    if (UTILS_UNLIKELY(manager.hasComponent(entity))) {
+        destroy(entity);
     }
-
-    ci = manager.addComponent(entity);
+    Instance ci = manager.addComponent(entity);
     assert(ci);
 
     if (ci) {
@@ -288,31 +277,29 @@ void FRenderableManager::create(
         setCastShadows(ci, builder->mCastShadows);
         setReceiveShadows(ci, builder->mReceiveShadows);
         setCulling(ci, builder->mCulling);
-        static_cast<Visibility&>(manager[ci].visibility).skinning = builder->mSkinningBoneCount > 0;
+        setSkinning(ci, false);
 
-        if (!canReuse) {
-            if (builder->mSkinningBoneCount) {
-                std::unique_ptr<Bones>& bones = manager[ci].bones;
-
-                bones.reset(new Bones); // FIXME: maybe use a pool allocator
-                bones->bones = UniformBuffer(CONFIG_MAX_BONE_COUNT * sizeof(PerRenderableUibBone));
-                bones->handle = driver.createUniformBuffer(CONFIG_MAX_BONE_COUNT * sizeof(PerRenderableUibBone),
-                        driver::BufferUsage::DYNAMIC);
-            }
-        }
-        if (builder->mSkinningBoneCount) {
-            std::unique_ptr<Bones> const& bones = manager[ci].bones;
+        const size_t count = builder->mSkinningBoneCount;
+        if (UTILS_UNLIKELY(count)) {
+            std::unique_ptr<Bones>& bones = manager[ci].bones;
+            bones = std::unique_ptr<Bones>(new Bones{
+                    driver.createUniformBuffer(count * sizeof(PerRenderableUibBone),
+                            driver::BufferUsage::DYNAMIC),
+                    UniformBuffer{ count * sizeof(PerRenderableUibBone) },
+                    (uint8_t)count
+            });
             assert(bones);
-            bones->count = (uint8_t)builder->mSkinningBoneCount;
-            if (builder->mUserBones) {
-                setBones(ci, builder->mUserBones, bones->count);
-            } else if (builder->mUserBoneMatrices) {
-                setBones(ci, builder->mUserBoneMatrices, bones->count);
-            } else {
-                // initialize the bones to identity
-                PerRenderableUibBone* UTILS_RESTRICT out =
-                        (PerRenderableUibBone*)bones->bones.invalidateUniforms(0, bones->count * sizeof(PerRenderableUibBone));
-                std::uninitialized_fill_n(out, bones->count, PerRenderableUibBone{});
+            if (bones) {
+                setSkinning(ci, true);
+                if (builder->mUserBones) {
+                    setBones(ci, builder->mUserBones, count);
+                } else if (builder->mUserBoneMatrices) {
+                    setBones(ci, builder->mUserBoneMatrices, count);
+                } else {
+                    // initialize the bones to identity
+                    PerRenderableUibBone* out = (PerRenderableUibBone*)bones->bones.invalidate();
+                    std::uninitialized_fill_n(out, count, PerRenderableUibBone{});
+                }
             }
         }
     }

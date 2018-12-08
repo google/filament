@@ -99,6 +99,7 @@ public:
     inline void setLayerMask(Instance instance, uint8_t layerMask) noexcept;
     inline void setReceiveShadows(Instance instance, bool enable) noexcept;
     inline void setCulling(Instance instance, bool enable) noexcept;
+    inline void setSkinning(Instance instance, bool enable) noexcept;
     inline void setPrimitives(Instance instance, utils::Slice<FRenderPrimitive> const& primitives) noexcept;
     inline void setBones(Instance instance, Bone const* transforms, size_t boneCount, size_t offset = 0) noexcept;
     inline void setBones(Instance instance, math::mat4f const* transforms, size_t boneCount, size_t offset = 0) noexcept;
@@ -175,11 +176,11 @@ private:
 
             union {
                 // this specific usage of union is permitted. All fields are identical
-                Field<AABB>                 aabb;
-                Field<LAYERS>               layers;
-                Field<VISIBILITY>           visibility;
-                Field<PRIMITIVES>           primitives;
-                Field<BONES>                bones;
+                Field<AABB>         aabb;
+                Field<LAYERS>       layers;
+                Field<VISIBILITY>   visibility;
+                Field<PRIMITIVES>   primitives;
+                Field<BONES>        bones;
             };
         };
 
@@ -242,6 +243,13 @@ void FRenderableManager::setCulling(Instance instance, bool enable) noexcept {
     if (instance) {
         Visibility& visibility = mManager[instance].visibility;
         visibility.culling = enable;
+    }
+}
+
+void FRenderableManager::setSkinning(Instance instance, bool enable) noexcept {
+    if (instance) {
+        Visibility& visibility = mManager[instance].visibility;
+        visibility.skinning = enable;
     }
 }
 
