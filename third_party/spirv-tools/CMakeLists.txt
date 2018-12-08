@@ -28,6 +28,8 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 if (APPLE)
   set(CMAKE_MACOSX_RPATH ON)
 endif (APPLE)
+set(SPIRV_SKIP_EXECUTABLES_OPTION ON)
+set(SPIRV_SKIP_TESTS_OPTION ON)
 set(SKIP_SPIRV_TOOLS_INSTALL ON)
 # End Filament specific changes
 
@@ -210,11 +212,13 @@ else()
 endif()
 
 # Defaults to OFF if the user didn't set it.
+# Filament specific changes
 option(SPIRV_SKIP_EXECUTABLES
   "Skip building the executable and tests along with the library"
-  ${SPIRV_SKIP_EXECUTABLES})
+  ${SPIRV_SKIP_EXECUTABLES_OPTION})
 option(SPIRV_SKIP_TESTS
-  "Skip building tests along with the library" ${SPIRV_SKIP_TESTS})
+  "Skip building tests along with the library" ${SPIRV_SKIP_TESTS_OPTION})
+# End Filament specific changes
 if ("${SPIRV_SKIP_EXECUTABLES}")
   set(SPIRV_SKIP_TESTS ON)
 endif()
