@@ -539,6 +539,13 @@ void OpenGLDriver::disable(GLenum cap) noexcept {
     }
 }
 
+void OpenGLDriver::frontFace(GLenum mode) noexcept {
+    // WARNING: don't call this without updating mRasterState
+    update_state(state.raster.frontFace, mode, [&]() {
+        glFrontFace(mode);
+    });
+}
+
 void OpenGLDriver::cullFace(GLenum mode) noexcept {
     // WARNING: don't call this without updating mRasterState
     update_state(state.raster.cullFace, mode, [&]() {
@@ -629,6 +636,8 @@ void OpenGLDriver::setRasterStateSlow(Driver::RasterState rs) noexcept {
             cullFace(GL_FRONT_AND_BACK);
             break;
     }
+
+    frontFace(rs.inverseFrontFaces ? GL_CW : GL_CCW);
 
     if (rs.culling != CullingMode::NONE) {
         enable(GL_CULL_FACE);

@@ -848,6 +848,7 @@ void VulkanDriver::draw(Driver::PipelineState pipelineState, Driver::RenderPrimi
 
     auto& vkraster = mContext.rasterState.rasterization;
     vkraster.cullMode = getCullMode(rasterState.culling);
+    vkraster.frontFace = getFrontFace(rasterState.inverseFrontFaces);
     vkraster.depthBiasEnable = (depthOffset.constant || depthOffset.slope) ? VK_TRUE : VK_FALSE;
     vkraster.depthBiasConstantFactor = depthOffset.constant;
     vkraster.depthBiasSlopeFactor = depthOffset.slope;
