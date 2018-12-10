@@ -42,11 +42,16 @@ public:
             filament::driver::ShaderModel shaderModel, std::string* outputGlsl,
             SpirvBlob* outputSpirv);
 
+    bool hasSpirvOptimization() const noexcept {
+        return mOptimization != MaterialBuilderBase::Optimization::NONE &&
+            mOptimization != MaterialBuilderBase::Optimization::PREPROCESSOR;
+    }
+
 private:
     void fullOptimization(const glslang::TShader& tShader,
-            const filament::driver::ShaderModel shaderModel) const;
+            filament::driver::ShaderModel shaderModel) const;
     void preprocessOptimization(glslang::TShader& tShader,
-            const filament::driver::ShaderModel shaderModel) const;
+            filament::driver::ShaderModel shaderModel) const;
 
     void registerSizePasses(spvtools::Optimizer& optimizer) const;
     void registerPerformancePasses(spvtools::Optimizer& optimizer) const;

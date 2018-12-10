@@ -51,7 +51,11 @@ public:
             MaterialBuilder::TargetApi targetApi, MaterialBuilder::TargetApi codeGenTargetApi,
             MaterialInfo const& material, uint8_t variantKey,
             filament::Interpolation interpolation) const noexcept;
+
     bool hasCustomDepthShader() const noexcept;
+
+    void fixupExternalSamplers(filament::driver::ShaderModel sm, std::string& shader,
+            MaterialInfo const& material) const noexcept;
 
 private:
     MaterialBuilder::PropertyList mProperties;

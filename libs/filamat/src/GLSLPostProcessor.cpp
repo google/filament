@@ -206,7 +206,7 @@ bool GLSLPostProcessor::process(const std::string& inputShader,
 }
 
 void GLSLPostProcessor::preprocessOptimization(glslang::TShader& tShader,
-        const filament::driver::ShaderModel shaderModel) const {
+        filament::driver::ShaderModel shaderModel) const {
     using TargetApi = MaterialBuilder::TargetApi;
 
     std::string glsl;
@@ -246,7 +246,7 @@ void GLSLPostProcessor::preprocessOptimization(glslang::TShader& tShader,
 }
 
 void GLSLPostProcessor::fullOptimization(const TShader& tShader,
-        const filament::driver::ShaderModel shaderModel) const {
+        filament::driver::ShaderModel shaderModel) const {
     SpirvBlob spirv;
 
     // Compile GLSL to to SPIR-V

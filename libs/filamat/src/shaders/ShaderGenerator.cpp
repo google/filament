@@ -337,6 +337,15 @@ const std::string ShaderGenerator::createFragmentProgram(filament::driver::Shade
     return fs.str();
 }
 
+void ShaderGenerator::fixupExternalSamplers(filament::driver::ShaderModel sm,
+        std::string& shader, MaterialInfo const& material) const noexcept {
+    // External samplers are only supported on GL ES at the moment, we must
+    // skip the fixup on desktop targets
+    if (material.hasExternalSamplers && sm == ShaderModel::GL_ES_30) {
+        CodeGenerator::fixupExternalSamplers(shader, material.sib);
+    }
+}
+
 const std::string ShaderPostProcessGenerator::createPostProcessVertexProgram(
         filament::driver::ShaderModel sm, MaterialBuilder::TargetApi targetApi,
         MaterialBuilder::TargetApi codeGenTargetApi, filament::PostProcessStage variant,
@@ -419,5 +428,6 @@ void ShaderPostProcessGenerator::generatePostProcessStageDefines(std::stringstre
             break;
     }
 }
+
 
 } // namespace filament
