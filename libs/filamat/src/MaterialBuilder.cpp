@@ -490,7 +490,7 @@ Package MaterialBuilder::build() noexcept {
                 }
 
                 if (targetApi == TargetApi::OPENGL) {
-                    if (postProcessor.hasSpirvOptimization()) {
+                    if (codeGenTargetApi == TargetApi::VULKAN) {
                         sg.fixupExternalSamplers(shaderModel, vs, info);
                     }
 
@@ -526,7 +526,7 @@ Package MaterialBuilder::build() noexcept {
                 }
 
                 if (targetApi == TargetApi::OPENGL) {
-                    if (postProcessor.hasSpirvOptimization()) {
+                    if (codeGenTargetApi == TargetApi::VULKAN) {
                         sg.fixupExternalSamplers(shaderModel, fs, info);
                     }
 
