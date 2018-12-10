@@ -129,10 +129,17 @@ struct VulkanTexture : public HwTexture {
     VkImage textureImage = VK_NULL_HANDLE;
     VkDeviceMemory textureImageMemory = VK_NULL_HANDLE;
 private:
+
+    // Issues a barrier that transforms the layout of the image, e.g. from a CPU-writeable
+    // layout to a GPU-readable layout.
     void transitionImageLayout(VkCommandBuffer cmdbuffer, VkImage image,
             VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t miplevel);
+
+    // Issues a copy from a VkBuffer to a specified miplevel in a VkImage. The given width and
+    // height define a subregion within the miplevel.
     void copyBufferToImage(VkCommandBuffer cmdbuffer, VkBuffer buffer, VkImage image,
             uint32_t width, uint32_t height, FaceOffsets const* faceOffsets, uint32_t miplevel);
+
     VulkanContext& mContext;
     VulkanStagePool& mStagePool;
     uint32_t mByteCount;

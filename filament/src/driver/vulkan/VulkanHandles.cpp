@@ -536,6 +536,8 @@ void VulkanTexture::updateCubeImage(const PixelBufferDescriptor& data, const Fac
 
     // Create a copy-to-device functor because we might need to defer it.
     auto copyToDevice = [this, faceOffsets, stage, miplevel] (VkCommandBuffer cmd) {
+        uint32_t width = std::max(1u, this->width >> miplevel);
+        uint32_t height = std::max(1u, this->height >> miplevel);
         transitionImageLayout(cmd, textureImage, VK_IMAGE_LAYOUT_UNDEFINED,
                 VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, miplevel);
         copyBufferToImage(cmd, stage->buffer, textureImage, width, height, &faceOffsets, miplevel);
@@ -591,6 +593,7 @@ void VulkanTexture::transitionImageLayout(VkCommandBuffer cmd, VkImage image,
 
 void VulkanTexture::copyBufferToImage(VkCommandBuffer cmd, VkBuffer buffer, VkImage image,
         uint32_t width, uint32_t height, FaceOffsets const* faceOffsets, uint32_t miplevel) {
+    VkExtent3D extent { width, height, 1 };
     if (target == SamplerType::SAMPLER_CUBEMAP) {
         assert(faceOffsets);
         VkBufferImageCopy regions[6] = {{}};
@@ -600,9 +603,7 @@ void VulkanTexture::copyBufferToImage(VkCommandBuffer cmd, VkBuffer buffer, VkIm
             region.imageSubresource.baseArrayLayer = face;
             region.imageSubresource.layerCount = 1;
             region.imageSubresource.mipLevel = miplevel;
-            region.imageExtent.width = width >> miplevel;
-            region.imageExtent.height = height >> miplevel;
-            region.imageExtent.depth = 1;
+            region.imageExtent = extent;
             region.bufferOffset = faceOffsets->offsets[face];
         }
         vkCmdCopyBufferToImage(cmd, buffer, image,
@@ -613,11 +614,7 @@ void VulkanTexture::copyBufferToImage(VkCommandBuffer cmd, VkBuffer buffer, VkIm
     region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     region.imageSubresource.mipLevel = miplevel;
     region.imageSubresource.layerCount = 1;
-    region.imageExtent = {
-        .width = width >> miplevel,
-        .height = height >> miplevel,
-        .depth = 1,
-    };
+    region.imageExtent = extent;
     vkCmdCopyBufferToImage(cmd, buffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 }
 
