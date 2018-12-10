@@ -471,13 +471,15 @@ Package MaterialBuilder::build() noexcept {
             spirvEntry.variant = k;
 
             // Remove variants for unlit materials
-            uint8_t v = filament::Variant::filterVariant(k & variantMask, isLit() || mShadowMultiplier);
+            uint8_t v = filament::Variant::filterVariant(
+                    k & variantMask, isLit() || mShadowMultiplier);
 
             if (filament::Variant::filterVariantVertex(v) == k) {
                 // Vertex Shader
                 std::string vs = sg.createVertexProgram(
                         shaderModel, targetApi, codeGenTargetApi, info, k,
                         mInterpolation, mVertexDomain);
+
                 bool ok = postProcessor.process(vs, filament::driver::ShaderType::VERTEX,
                         shaderModel, &vs, pSpirv);
                 if (!ok) {
@@ -486,14 +488,20 @@ Package MaterialBuilder::build() noexcept {
                     errorOccured = true;
                     break;
                 }
+
                 if (targetApi == TargetApi::OPENGL) {
+                    if (codeGenTargetApi == TargetApi::VULKAN) {
+                        sg.fixupExternalSamplers(shaderModel, vs, info);
+                    }
+
                     glslEntry.stage = filament::driver::ShaderType::VERTEX;
                     glslEntry.shaderSize = vs.size();
-                    glslEntry.shader = (char*)malloc(glslEntry.shaderSize + 1);
+                    glslEntry.shader = (char*) malloc(glslEntry.shaderSize + 1);
                     strcpy(glslEntry.shader, vs.c_str());
                     glslDictionary.addText(glslEntry.shader);
                     glslEntries.push_back(glslEntry);
                 }
+
                 if (targetApi == TargetApi::VULKAN) {
                     assert(spirv.size() > 0);
                     spirvEntry.stage = filament::driver::ShaderType::VERTEX;
@@ -507,6 +515,7 @@ Package MaterialBuilder::build() noexcept {
                 // Fragment Shader
                 std::string fs = sg.createFragmentProgram(
                         shaderModel, targetApi, codeGenTargetApi, info, k, mInterpolation);
+
                 bool ok = postProcessor.process(fs, filament::driver::ShaderType::FRAGMENT,
                         shaderModel, &fs, pSpirv);
                 if (!ok) {
@@ -515,14 +524,20 @@ Package MaterialBuilder::build() noexcept {
                     errorOccured = true;
                     break;
                 }
+
                 if (targetApi == TargetApi::OPENGL) {
+                    if (codeGenTargetApi == TargetApi::VULKAN) {
+                        sg.fixupExternalSamplers(shaderModel, fs, info);
+                    }
+
                     glslEntry.stage = filament::driver::ShaderType::FRAGMENT;
                     glslEntry.shaderSize = fs.size();
-                    glslEntry.shader = (char*)malloc(glslEntry.shaderSize + 1);
+                    glslEntry.shader = (char*) malloc(glslEntry.shaderSize + 1);
                     strcpy(glslEntry.shader, fs.c_str());
                     glslDictionary.addText(glslEntry.shader);
                     glslEntries.push_back(glslEntry);
                 }
+
                 if (targetApi == TargetApi::VULKAN) {
                     assert(spirv.size() > 0);
                     spirvEntry.stage = filament::driver::ShaderType::FRAGMENT;

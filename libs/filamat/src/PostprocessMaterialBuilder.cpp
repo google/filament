@@ -46,7 +46,7 @@ Package PostprocessMaterialBuilder::build() {
     // Create chunk tree.
     ChunkContainer container;
 
-    SimpleFieldChunk<uint32_t> version(ChunkType::PostProcessVersion,1);
+    SimpleFieldChunk<uint32_t> version(ChunkType::PostProcessVersion, 1);
     container.addChild(&version);
 
     std::vector<TextEntry> glslEntries;
@@ -62,6 +62,7 @@ Package PostprocessMaterialBuilder::build() {
     const uint8_t firstSampler =
             samplerBindingMap.getBlockOffset(filament::BindingPoints::POST_PROCESS);
     bool errorOccured = false;
+
     for (const auto& params : mCodeGenPermutations) {
         const ShaderModel shaderModel = ShaderModel(params.shaderModel);
         const TargetApi targetApi = params.targetApi;
@@ -99,6 +100,7 @@ Package PostprocessMaterialBuilder::build() {
                 glslDictionary.addText(glslEntry.shader);
                 glslEntries.push_back(glslEntry);
             }
+
             if (targetApi == TargetApi::VULKAN) {
                 spirvEntry.stage = filament::driver::ShaderType::VERTEX;
                 spirvEntry.dictionaryIndex = spirvDictionary.addBlob(spirv);
@@ -110,6 +112,7 @@ Package PostprocessMaterialBuilder::build() {
             std::string fs = ShaderPostProcessGenerator::createPostProcessFragmentProgram(
                     shaderModel, targetApi, codeGenTargetApi,
                     filament::PostProcessStage(k), firstSampler);
+
             ok = postProcessor.process(fs, filament::driver::ShaderType::FRAGMENT, shaderModel, &fs,
                     pSpirv);
             if (!ok) {
@@ -117,14 +120,16 @@ Package PostprocessMaterialBuilder::build() {
                 errorOccured = true;
                 break;
             }
+
             if (targetApi == TargetApi::OPENGL) {
                 glslEntry.stage = filament::driver::ShaderType::FRAGMENT;
                 glslEntry.shaderSize = fs.size();
-                glslEntry.shader = (char*)malloc(glslEntry.shaderSize + 1);
+                glslEntry.shader = (char*) malloc(glslEntry.shaderSize + 1);
                 strcpy(glslEntry.shader, fs.c_str());
                 glslDictionary.addText(glslEntry.shader);
                 glslEntries.push_back(glslEntry);
             }
+
             if (targetApi == TargetApi::VULKAN) {
                 spirvEntry.stage = filament::driver::ShaderType::FRAGMENT;
                 spirvEntry.dictionaryIndex = spirvDictionary.addBlob(spirv);

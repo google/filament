@@ -266,17 +266,6 @@ bool MaterialCompiler::run(const Config& config) {
             return reflectParameters(builder);
     }
 
-    Config::Optimization optimizationLevel = config.getOptimizationLevel();
-    // Drop the optimization level to preprocessor when the material uses external samplers
-    // samplerExternalOES in GLSL is currently not fully supported in SPIR-V/Vulkan and
-    // proper handling is lacking in glslang and spirv-cross
-    // TODO: remove when external samplers are fully supported in SPIR-V
-    if (builder.hasExternalSampler() && optimizationLevel != Config::Optimization::PREPROCESSOR) {
-        std::cerr << "Warning: external sampler detected, lowering optimizations "
-                     "to preprocessor only." << std::endl;
-        const_cast<Config&>(config).setOptimizationLevel(Config::Optimization::PREPROCESSOR);
-    }
-
     builder
         .platform(config.getPlatform())
         .targetApi(config.getTargetApi())

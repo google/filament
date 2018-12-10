@@ -109,6 +109,9 @@ public:
     std::ostream& generateGetters(std::ostream& out, ShaderType type) const;
     std::ostream& generateParameters(std::ostream& out, ShaderType type) const;
 
+    static void fixupExternalSamplers(
+            std::string& shader, filament::SamplerInterfaceBlock const& sib) noexcept;
+
 private:
     filament::driver::Precision getDefaultPrecision(ShaderType type) const;
     filament::driver::Precision getDefaultUniformPrecision() const;

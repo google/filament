@@ -51,7 +51,18 @@ public:
             MaterialBuilder::TargetApi targetApi, MaterialBuilder::TargetApi codeGenTargetApi,
             MaterialInfo const& material, uint8_t variantKey,
             filament::Interpolation interpolation) const noexcept;
+
     bool hasCustomDepthShader() const noexcept;
+
+    /**
+     * When a GLSL shader is optimized we run it through an intermediate SPIR-V
+     * representation. Unfortunately external samplers cannot be used with SPIR-V
+     * at this time, so we must transform them into regular 2D samplers. This
+     * fixup step can be used to turn the samplers back into external samplers after
+     * the optimizations have been applied.
+     */
+    void fixupExternalSamplers(filament::driver::ShaderModel sm, std::string& shader,
+            MaterialInfo const& material) const noexcept;
 
 private:
     MaterialBuilder::PropertyList mProperties;

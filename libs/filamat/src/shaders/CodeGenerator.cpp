@@ -279,11 +279,11 @@ std::ostream& CodeGenerator::generateSamplers(
 
     const CString& blockName = sib.getName();
     std::string instanceName(blockName.c_str());
-    instanceName.front() = char(std::tolower((unsigned char)instanceName.front()));
+    instanceName.front() = char(std::tolower((unsigned char) instanceName.front()));
 
     for (auto const& info : infos) {
         auto type = info.type;
-        if (info.type == SamplerType::SAMPLER_EXTERNAL && mShaderModel != ShaderModel::GL_ES_30) {
+        if (type == SamplerType::SAMPLER_EXTERNAL && mShaderModel != ShaderModel::GL_ES_30) {
             // we're generating the shader for the desktop, where we assume external textures
             // are not supported, in which case we revert to texture2d
             type = SamplerType::SAMPLER_2D;
@@ -302,6 +302,51 @@ std::ostream& CodeGenerator::generateSamplers(
 
     return out;
 }
+
+void CodeGenerator::fixupExternalSamplers(
+        std::string& shader, SamplerInterfaceBlock const& sib) noexcept {
+    auto const& infos = sib.getSamplerInfoList();
+    if (infos.empty()) {
+        return;
+    }
+
+    const CString& blockName = sib.getName();
+    std::string instanceName(blockName.c_str());
+    instanceName.front() = char(std::tolower((unsigned char) instanceName.front()));
+
+    bool hasExternalSampler = false;
+
+    // Replace sampler2D declarations by samplerExternal declarations as they may have
+    // been swapped during a previous optimization step
+    for (auto const& info : infos) {
+        if (info.type == SamplerType::SAMPLER_EXTERNAL) {
+            auto name = std::string("sampler2D ") + instanceName + '_' + info.name.c_str();
+            size_t index = shader.find(name);
+
+            if (index != std::string::npos) {
+                hasExternalSampler = true;
+                auto newName =
+                        std::string("samplerExternalOES ") + instanceName + '_' + info.name.c_str();
+                shader.replace(index, name.size(), newName);
+            }
+        }
+    }
+
+    // This method should only be called on shaders that have external samplers but since
+    // they may have been removed by previous optimization steps, we check again here
+    if (hasExternalSampler) {
+        // Find the #version line so we can insert the #extension directive
+        size_t index = shader.find("#version");
+        index += 8;
+
+        // Find the end of the line and skip the line return
+        while (shader[index] != '\n') index++;
+        index++;
+
+        shader.insert(index, "#extension GL_OES_EGL_image_external_essl3 : require\n");
+    }
+}
+
 
 std::ostream& CodeGenerator::generateDefine(std::ostream& out, const char* name, bool value) const {
     if (value) {

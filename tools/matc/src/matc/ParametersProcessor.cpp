@@ -129,7 +129,7 @@ bool ParametersProcessor::process(filamat::MaterialBuilder& builder, const Jsoni
         const std::string& key = entry.first;
         const JsonishValue* field = entry.second;
         if (mConfigProcessor.find(key) == mConfigProcessor.end()) {
-            std::cerr << "Ignoring config entry (unknown key):\"" << key << "\"" << std::endl;
+            std::cerr << "Ignoring config entry (unknown key): \"" << key << "\"" << std::endl;
             continue;
         }
 

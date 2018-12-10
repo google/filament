@@ -44,9 +44,9 @@ public:
 
 private:
     void fullOptimization(const glslang::TShader& tShader,
-            const filament::driver::ShaderModel shaderModel) const;
+            filament::driver::ShaderModel shaderModel) const;
     void preprocessOptimization(glslang::TShader& tShader,
-            const filament::driver::ShaderModel shaderModel) const;
+            filament::driver::ShaderModel shaderModel) const;
 
     void registerSizePasses(spvtools::Optimizer& optimizer) const;
     void registerPerformancePasses(spvtools::Optimizer& optimizer) const;
