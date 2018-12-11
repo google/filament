@@ -34,6 +34,7 @@
 
 #include <utils/compiler.h>
 #include <utils/Allocator.h>
+#include <utils/JobSystem.h>
 #include <utils/Slice.h>
 
 namespace filament {
@@ -95,7 +96,8 @@ private:
     public:
         ColorPass(const char* name, utils::JobSystem& js, utils::JobSystem::Job* jobFroxelize,
                 FView& view, Handle<HwRenderTarget> rth);
-        static void renderColorPass(FEngine& engine, utils::JobSystem& js,
+        static void renderColorPass(FEngine& engine,
+                utils::JobSystem& js, utils::JobSystem::Job* sync,
                 Handle<HwRenderTarget> rth,
                 FView& view, Viewport const& scaledViewport,
                 utils::GrowingSlice<Command>& commands) noexcept;

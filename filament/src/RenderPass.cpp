@@ -548,14 +548,10 @@ void FRenderer::ColorPass::endRenderPass(DriverApi& driver, Viewport const& view
     }
 }
 
-void FRenderer::ColorPass::renderColorPass(FEngine& engine, JobSystem& js,
+void FRenderer::ColorPass::renderColorPass(FEngine& engine,
+        JobSystem& js, JobSystem::Job* sync,
         Handle<HwRenderTarget> const rth, FView& view, Viewport const& scaledViewport,
         GrowingSlice<Command>& commands) noexcept {
-
-    // start the froxelization immediately, it has no dependencies
-    JobSystem::Job* jobFroxelize = js.createJob(nullptr,
-            [&engine, &view](JobSystem&, JobSystem::Job*) { view.froxelize(engine); });
-    jobFroxelize = js.runAndRetain(jobFroxelize);
 
     CameraInfo const& cameraInfo = view.getCameraInfo();
     auto& soa = view.getScene()->getRenderableData();
@@ -592,7 +588,7 @@ void FRenderer::ColorPass::renderColorPass(FEngine& engine, JobSystem& js,
             break;
     }
 
-    ColorPass colorPass("ColorPass", js, jobFroxelize, view, rth);
+    ColorPass colorPass("ColorPass", js, sync, view, rth);
     driver.pushGroupMarker("Color Pass");
     colorPass.render(engine, js, *view.getScene(), vr, commandType, flags,
             cameraInfo, scaledViewport, commands);

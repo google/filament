@@ -178,7 +178,10 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     }
 
     view.prepare(engine, driver, arena, svp, getShaderUserTime());
-    // TODO: froxelization could actually start now, instead of in ColorPass::renderColorPass()
+
+    // start froxelization immediately, it has no dependencies
+    JobSystem::Job* jobFroxelize = js.runAndRetain(js.createJob(nullptr,
+            [&engine, &view](JobSystem&, JobSystem::Job*) { view.froxelize(engine); }));
 
     /*
      * Allocate command buffer.
@@ -218,7 +221,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 
     // FIXME: viewRenderTarget doesn't have a depth-buffer, so when skipping post-process, don't rely on it
     const Handle<HwRenderTarget> viewRenderTarget = getRenderTarget();
-    ColorPass::renderColorPass(engine, js,
+    ColorPass::renderColorPass(engine, js, jobFroxelize,
             colorTarget ? colorTarget->target : viewRenderTarget, view, svp, commands);
 
     /*
