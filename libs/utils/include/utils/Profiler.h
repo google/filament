@@ -183,22 +183,7 @@ public:
         ioctl(fd, PERF_EVENT_IOC_DISABLE, PERF_IOC_FLAG_GROUP);
     }
 
-    Counters readCounters() noexcept {
-        Counters outCounters{};
-        Counters counters; // NOLINT
-        ssize_t n = read(mCountersFd[0], &counters, sizeof(Counters));
-        if (n > 0) {
-            outCounters.nr = counters.nr;
-            outCounters.time_enabled = counters.time_enabled;
-            outCounters.time_running = counters.time_running;
-            for (size_t i = 0; i < size_t(EVENT_COUNT); i++) {
-                if (mCountersFd[i] >= 0) {
-                    outCounters.counters[i] = counters.counters[mIds[i]];
-                }
-            }
-        }
-        return outCounters;
-    }
+    Counters readCounters() noexcept;
 
 #else // !__linux__
 
@@ -218,7 +203,7 @@ public:
     }
 
 private:
-    UTILS_UNUSED uint8_t mIds[EVENT_COUNT];
+    UTILS_UNUSED uint8_t mIds[EVENT_COUNT] = {};
     int mCountersFd[EVENT_COUNT];
     uint32_t mEnabledEvents = 0;
 };

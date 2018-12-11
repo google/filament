@@ -202,4 +202,25 @@ uint32_t Profiler::resetEvents(uint32_t eventMask) noexcept {
     return mEnabledEvents;
 }
 
+#if defined(__linux__)
+
+Profiler::Counters Profiler::readCounters() noexcept {
+    Counters outCounters{};
+    Counters counters; // NOLINT
+    ssize_t n = read(mCountersFd[0], &counters, sizeof(Counters));
+    if (n > 0) {
+        outCounters.nr = counters.nr;
+        outCounters.time_enabled = counters.time_enabled;
+        outCounters.time_running = counters.time_running;
+        for (size_t i = 0; i < size_t(EVENT_COUNT); i++) {
+            // in theory we should check that mCountersFd[i] >= 0, but we don't to avoid
+            // a branch, mIds[] is initialized such we won't access past the counters array.
+            outCounters.counters[i] = counters.counters[mIds[i]];
+        }
+    }
+    return outCounters;
+}
+
+#endif // __linux__
+
 } // namespace utils
