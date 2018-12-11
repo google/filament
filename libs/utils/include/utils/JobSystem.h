@@ -305,6 +305,7 @@ public:
 
     static void setThreadPriority(Priority priority) noexcept;
     static void setThreadAffinity(uint32_t mask) noexcept;
+    static void setThreadAffinityById(size_t id) noexcept;
 
     size_t getParallelSplitCount() const noexcept {
         return mParallelSplitCount;
@@ -333,7 +334,7 @@ private:
         JobSystem* js;
         std::thread thread;
         default_random_engine rndGen;
-        uint32_t mask;
+        uint32_t id;
     };
 
     static_assert(sizeof(ThreadState) % CACHELINE_SIZE == 0,
@@ -352,7 +353,7 @@ private:
     void requestExit() noexcept;
     bool exitRequested() const noexcept;
 
-    void loop(ThreadState* threadState) noexcept;
+    void loop(ThreadState* state) noexcept;
     bool execute(JobSystem::ThreadState& state) noexcept;
     void finish(Job* job) noexcept;
 
