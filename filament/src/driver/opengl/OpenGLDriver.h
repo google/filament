@@ -275,9 +275,11 @@ private:
     using GetProcAddressType = MustCastToRightType (*)(const char* name);
     GetProcAddressType getProcAddress = nullptr;
 
-    static bool hasExtension(std::set<utils::StaticString> const& exts, const char* ext) noexcept;
-    void initExtensionsGLES(GLint major, GLint minor, std::set<utils::StaticString> const& extensionsMap);
-    void initExtensionsGL(GLint major, GLint minor, std::set<utils::StaticString> const& extensionsMap);
+    // this is chosen to minimize code size
+    using ExtentionSet = std::set<utils::StaticString>;
+    static bool hasExtension(ExtentionSet const& exts, utils::StaticString ext) noexcept;
+    void initExtensionsGLES(GLint major, GLint minor, ExtentionSet const& extensionsMap);
+    void initExtensionsGL(GLint major, GLint minor, ExtentionSet const& extensionsMap);
 
 
     /* Misc... */

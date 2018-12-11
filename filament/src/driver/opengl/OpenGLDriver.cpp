@@ -162,7 +162,7 @@ OpenGLDriver::OpenGLDriver(OpenGLPlatform* platform) noexcept
     // Figure out if we have the extension we need
     GLint n;
     glGetIntegerv(GL_NUM_EXTENSIONS, &n);
-    std::set<StaticString> exts;
+    ExtentionSet exts;
     for (GLint i = 0; i < n; i++) {
         const char * const ext = (const char*)glGetStringi(GL_EXTENSIONS, (GLuint)i);
         exts.emplace(ext, strlen(ext));
@@ -240,11 +240,12 @@ OpenGLDriver::~OpenGLDriver() noexcept {
 // Driver interface concrete implementation
 // ------------------------------------------------------------------------------------------------
 
-bool OpenGLDriver::hasExtension(std::set<StaticString> const& map, const char* ext) noexcept {
-    return map.find({ ext, (StaticString::size_type) strlen(ext) }) != map.end();
+UTILS_NOINLINE
+bool OpenGLDriver::hasExtension(ExtentionSet const& map, utils::StaticString ext) noexcept {
+    return map.find(ext) != map.end();
 }
 
-void OpenGLDriver::initExtensionsGLES(GLint major, GLint minor, std::set<StaticString> const& exts) {
+void OpenGLDriver::initExtensionsGLES(GLint major, GLint minor, ExtentionSet const& exts) {
     // figure out and initialize the extensions we need
     ext.texture_filter_anisotropic = hasExtension(exts, "GL_EXT_texture_filter_anisotropic");
     ext.texture_compression_etc2 = true;
@@ -256,7 +257,7 @@ void OpenGLDriver::initExtensionsGLES(GLint major, GLint minor, std::set<StaticS
     ext.EXT_multisampled_render_to_texture = hasExtension(exts, "GL_EXT_multisampled_render_to_texture");
 }
 
-void OpenGLDriver::initExtensionsGL(GLint major, GLint minor, std::set<StaticString> const& exts) {
+void OpenGLDriver::initExtensionsGL(GLint major, GLint minor, ExtentionSet const& exts) {
     ext.texture_filter_anisotropic = hasExtension(exts, "GL_EXT_texture_filter_anisotropic");
     ext.texture_compression_etc2 = hasExtension(exts, "GL_ARB_ES3_compatibility");
     ext.texture_compression_s3tc = hasExtension(exts, "GL_EXT_texture_compression_s3tc");
