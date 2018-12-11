@@ -52,10 +52,20 @@ IBL::~IBL() {
 }
 
 bool IBL::loadFromKtx(const std::string& prefix) {
-    Path iblPath(prefix + "_ibl.ktx");
-    Path skyPath(prefix + "_skybox.ktx");
-    if (!iblPath.exists() || !skyPath.exists()) {
-        return false;
+    // First check for compressed variants of the environment.
+    Path iblPath(prefix + "_ibl_s3tc.ktx");
+    if (!iblPath.exists()) {
+        iblPath = Path(prefix + "_ibl.ktx");
+        if (!iblPath.exists()) {
+            return false;
+        }
+    }
+    Path skyPath(prefix + "_skybox_s3tc.ktx");
+    if (!skyPath.exists()) {
+        skyPath = Path(prefix + "_skybox.ktx");
+        if (!skyPath.exists()) {
+            return false;
+        }
     }
 
     auto createKtx = [] (Path path) {

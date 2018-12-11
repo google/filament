@@ -534,7 +534,6 @@ void VulkanDriver::update2DImage(Driver::TextureHandle th,
 
 void VulkanDriver::updateCubeImage(Driver::TextureHandle th, uint32_t level,
         PixelBufferDescriptor&& data, FaceOffsets faceOffsets) {
-    assert(data.type != driver::PixelDataType::COMPRESSED && "Compression not yet supported.");
     handle_cast<VulkanTexture>(mHandleMap, th)->updateCubeImage(data, faceOffsets, level);
     scheduleDestroy(std::move(data));
 }
