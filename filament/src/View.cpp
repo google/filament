@@ -295,7 +295,7 @@ void FView::prepareShadowing(FEngine& engine, driver::DriverApi& driver,
         if (shadowMap.hasVisibleShadows()) {
             // Cull shadow casters
             Frustum const& frustum = shadowMap.getCamera().getFrustum();
-            prepareVisibleShadowCasters(engine.getJobSystem(), renderableData, frustum);
+            FView::prepareVisibleShadowCasters(engine.getJobSystem(), frustum, renderableData);
 
             // allocates shadowmap driver resources
             shadowMap.prepare(driver, getUs());
@@ -388,6 +388,7 @@ void FView::prepareLighting(FEngine& engine, FEngine::DriverApi& driver, ArenaSc
     }
 
     // Dynamic lighting
+    mHasDynamicLighting = scene->getLightData().size() > FScene::DIRECTIONAL_LIGHTS_COUNT;
     if (mHasDynamicLighting) {
         Froxelizer& froxelizer = mFroxelizer;
         if (froxelizer.prepare(driver, arena, viewport, camera.projection, camera.zn, camera.zf)) {
@@ -462,68 +463,79 @@ void FView::prepare(FEngine& engine, driver::DriverApi& driver, ArenaScope& aren
     scene->prepare(worldOriginScene);
 
     /*
-     * Culling: as soon as possible we perform our camera-culling
-     * (this will set the VISIBLE_RENDERABLE bit)
+     * Light culling: runs in parallel with Renderable culling (below)
      */
 
+    auto prepareVisibleLightsJob = js.runAndRetain(js.createJob(nullptr,
+            [&frustum = mCullingFrustum, &engine, scene](JobSystem& js, JobSystem::Job*) {
+                FView::prepareVisibleLights(
+                        engine.getLightManager(), js, frustum, scene->getLightData());
+            }));
+
+    Range merged;
     FScene::RenderableSoa& renderableData = scene->getRenderableData();
-    Slice<Culler::result_type> cullingMask = renderableData.slice<FScene::VISIBLE_MASK>();
-    std::fill(cullingMask.begin(), cullingMask.end(), 0); // TODO: can we avoid this fill?
-    prepareVisibleRenderables(js, renderableData);
 
-    /*
-     * Shadowing: compute the shadow camera and cull shadow casters
-     * (this will set the VISIBLE_SHADOW_CASTER bit)
-     */
+    { // all the operations in this scope must happen sequentially
 
-    prepareShadowing(engine, driver, renderableData, scene->getLightData());
+        Slice<Culler::result_type> cullingMask = renderableData.slice<FScene::VISIBLE_MASK>();
+        std::uninitialized_fill(cullingMask.begin(), cullingMask.end(), 0);
 
-    /*
-     * partition the array of renderable w.r.t their visibility:
-     *
-     * Sort the SoA so that invisible objects are first, then renderables,
-     * then both renderable and casters, then casters only -- this operation is somewhat heavy
-     * as it sorts the whole SoA. We use std::partition instead of sort(), which gives us
-     * O(3.N) instead of O(N.log(N)) application of swap().
-     */
+        /*
+         * Culling: as soon as possible we perform our camera-culling
+         * (this will set the VISIBLE_RENDERABLE bit)
+         */
 
-    // calculate the sorting key for all elements, based on their visibility
-    uint8_t const* layers = renderableData.data<FScene::LAYERS>();
-    auto const* visibility = renderableData.data<FScene::VISIBILITY_STATE>();
-    computeVisibilityMasks(getVisibleLayers(), layers, visibility, cullingMask.begin(),
-            renderableData.size());
+        prepareVisibleRenderables(js, mCullingFrustum, renderableData);
 
-    auto const beginRenderables = renderableData.begin();
-    auto beginCasters = partition(beginRenderables, renderableData.end(), VISIBLE_RENDERABLE);
-    auto beginCastersOnly = partition(beginCasters, renderableData.end(), VISIBLE_ALL);
-    auto endCastersOnly = partition(beginCastersOnly, renderableData.end(), VISIBLE_SHADOW_CASTER);
 
-    // convert to indices
-    uint32_t iEnd = uint32_t(endCastersOnly - beginRenderables);
-    mVisibleRenderables = Range{ 0, uint32_t(beginCastersOnly - beginRenderables) };
-    mVisibleShadowCasters = Range{ uint32_t(beginCasters - beginRenderables), iEnd };
-    Range merged = { 0, iEnd };
+        /*
+         * Shadowing: compute the shadow camera and cull shadow casters
+         * (this will set the VISIBLE_SHADOW_CASTER bit)
+         */
 
-    // update those UBOs
-    const size_t size = merged.size() * sizeof(PerRenderableUib);
-    if (mRenderableUBOSize < size) {
-        // allocate 1/3 extra, with a minimum of 16 objects
-        const size_t count = std::max(size_t(16u), (4u * merged.size() + 2u) / 3u);
-        mRenderableUBOSize = uint32_t(count * sizeof(PerRenderableUib));
-        driver.destroyUniformBuffer(mRenderableUbh);
-        mRenderableUbh = driver.createUniformBuffer(mRenderableUBOSize, driver::BufferUsage::STREAM);
-    } else {
-        // should we shrink the underlying UBO at some point?
+        prepareShadowing(engine, driver, renderableData, scene->getLightData());
+
+        /*
+         * partition the array of renderable w.r.t their visibility:
+         *
+         * Sort the SoA so that invisible objects are first, then renderables,
+         * then both renderable and casters, then casters only -- this operation is somewhat heavy
+         * as it sorts the whole SoA. We use std::partition instead of sort(), which gives us
+         * O(3.N) instead of O(N.log(N)) application of swap().
+         */
+
+        // calculate the sorting key for all elements, based on their visibility
+        uint8_t const* layers = renderableData.data<FScene::LAYERS>();
+        auto const* visibility = renderableData.data<FScene::VISIBILITY_STATE>();
+        computeVisibilityMasks(getVisibleLayers(), layers, visibility, cullingMask.begin(),
+                renderableData.size());
+
+        auto const beginRenderables = renderableData.begin();
+        auto beginCasters = partition(beginRenderables, renderableData.end(), VISIBLE_RENDERABLE);
+        auto beginCastersOnly = partition(beginCasters, renderableData.end(), VISIBLE_ALL);
+        auto endCastersOnly = partition(beginCastersOnly, renderableData.end(),
+                VISIBLE_SHADOW_CASTER);
+
+        // convert to indices
+        uint32_t iEnd = uint32_t(endCastersOnly - beginRenderables);
+        mVisibleRenderables = Range{ 0, uint32_t(beginCastersOnly - beginRenderables) };
+        mVisibleShadowCasters = Range{ uint32_t(beginCasters - beginRenderables), iEnd };
+        merged = Range{ 0, iEnd };
+
+        // update those UBOs
+        const size_t size = merged.size() * sizeof(PerRenderableUib);
+        if (mRenderableUBOSize < size) {
+            // allocate 1/3 extra, with a minimum of 16 objects
+            const size_t count = std::max(size_t(16u), (4u * merged.size() + 2u) / 3u);
+            mRenderableUBOSize = uint32_t(count * sizeof(PerRenderableUib));
+            driver.destroyUniformBuffer(mRenderableUbh);
+            mRenderableUbh = driver.createUniformBuffer(mRenderableUBOSize,
+                    driver::BufferUsage::STREAM);
+        } else {
+            // TODO: should we shrink the underlying UBO at some point?
+        }
+        scene->updateUBOs(merged, mRenderableUbh);
     }
-    scene->updateUBOs(merged, mRenderableUbh);
-
-    /*
-     * Light culling
-     *
-     * TODO: this could be done in parallel with culling above
-     */
-
-    prepareVisibleLights(engine.getLightManager(), js, scene->getLightData());
 
     /*
      * Prepare lighting -- this is where we update the lights UBOs, set-up the IBL,
@@ -531,6 +543,7 @@ void FView::prepare(FEngine& engine, driver::DriverApi& driver, ArenaScope& aren
      * Relies on FScene::prepare() and prepareVisibleLights()
      */
 
+    js.waitAndRelease(prepareVisibleLightsJob);
     prepareLighting(engine, driver, arena, viewport);
 
     /*
@@ -634,21 +647,21 @@ void FView::commitFroxels(driver::DriverApi& driverApi) const noexcept {
 
 UTILS_NOINLINE
 void FView::prepareVisibleRenderables(JobSystem& js,
-        FScene::RenderableSoa& renderableData) const noexcept {
+        Frustum const& frustum, FScene::RenderableSoa& renderableData) const noexcept {
     SYSTRACE_CALL();
     if (UTILS_LIKELY(isFrustumCullingEnabled())) {
-        cullRenderables(js, renderableData, mCullingFrustum, VISIBLE_RENDERABLE_BIT);
+        FView::cullRenderables(js, renderableData, frustum, VISIBLE_RENDERABLE_BIT);
     } else {
-        std::fill(renderableData.begin<FScene::VISIBLE_MASK>(),
+        std::uninitialized_fill(renderableData.begin<FScene::VISIBLE_MASK>(),
                   renderableData.end<FScene::VISIBLE_MASK>(), VISIBLE_RENDERABLE);
     }
 }
 
 UTILS_NOINLINE
 void FView::prepareVisibleShadowCasters(JobSystem& js,
-        FScene::RenderableSoa& renderableData, Frustum const& lightFrustum) const noexcept {
+        Frustum const& lightFrustum, FScene::RenderableSoa& renderableData) noexcept {
     SYSTRACE_CALL();
-    cullRenderables(js, renderableData, lightFrustum, VISIBLE_SHADOW_CASTER_BIT);
+    FView::cullRenderables(js, renderableData, lightFrustum, VISIBLE_SHADOW_CASTER_BIT);
 }
 
 void FView::cullRenderables(JobSystem& js,
@@ -674,14 +687,14 @@ void FView::cullRenderables(JobSystem& js,
     js.runAndWait(job);
 }
 
-void FView::prepareVisibleLights(FLightManager& lcm, utils::JobSystem&, FScene::LightSoa& lightData) const {
+void FView::prepareVisibleLights(FLightManager const& lcm, utils::JobSystem&,
+        Frustum const& frustum, FScene::LightSoa& lightData) noexcept {
 
     auto const* UTILS_RESTRICT sphereArray     = lightData.data<FScene::POSITION_RADIUS>();
     auto const* UTILS_RESTRICT directions      = lightData.data<FScene::DIRECTION>();
     auto const* UTILS_RESTRICT instanceArray   = lightData.data<FScene::LIGHT_INSTANCE>();
     auto      * UTILS_RESTRICT visibleArray    = lightData.data<FScene::VISIBILITY>();
 
-    Frustum const& frustum = mCullingFrustum;
     Culler::intersects(visibleArray, frustum, sphereArray, lightData.size());
 
     const float4* const UTILS_RESTRICT planes = frustum.getNormalizedPlanes();
@@ -728,7 +741,6 @@ void FView::prepareVisibleLights(FLightManager& lcm, utils::JobSystem&, FScene::
     assert(visibleLightCount == size_t(last - lightData.begin()));
 
     lightData.resize(visibleLightCount);
-    mHasDynamicLighting = visibleLightCount > FScene::DIRECTIONAL_LIGHTS_COUNT;
 }
 
 void FView::updatePrimitivesLod(FEngine& engine, const CameraInfo&,
