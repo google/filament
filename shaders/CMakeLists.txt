@@ -64,10 +64,9 @@ if (DEFINED RESGEN_SOURCE_FLAGS)
     set_source_files_properties(${RESGEN_SOURCE} PROPERTIES COMPILE_FLAGS ${RESGEN_SOURCE_FLAGS})
 endif()
 
-# WIN32 seems to require at least one C file, so create an empty one.
+# CMake fails to invoke ar on Windows unless there is at least one C/C++ file in the library.
 set(DUMMY_SRC "${RESOURCE_DIR}/dummy.c")
-add_custom_command(OUTPUT ${DUMMY_SRC}
-        COMMAND echo "//" > ${DUMMY_SRC})
+add_custom_command(OUTPUT ${DUMMY_SRC} COMMAND echo "//" > ${DUMMY_SRC})
 
 # ==================================================================================================
 # Include and target definitions

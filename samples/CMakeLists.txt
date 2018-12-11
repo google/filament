@@ -91,7 +91,11 @@ if (DEFINED RESGEN_SOURCE_FLAGS)
     set_source_files_properties(${RESGEN_SOURCE} PROPERTIES COMPILE_FLAGS ${RESGEN_SOURCE_FLAGS})
 endif()
 
-add_library(common-resources ${RESGEN_SOURCE})
+# CMake fails to invoke ar on Windows unless there is at least one C/C++ file in the library.
+set(DUMMY_SRC "${RESOURCE_DIR}/dummy.c")
+add_custom_command(OUTPUT ${DUMMY_SRC} COMMAND echo "//" > ${DUMMY_SRC})
+
+add_library(common-resources ${DUMMY_SRC} ${RESGEN_SOURCE})
 
 # ==================================================================================================
 # Build suzanne resources
@@ -127,7 +131,7 @@ if (DEFINED RESGEN_SOURCE_FLAGS)
     set_source_files_properties(${RESGEN_SOURCE} PROPERTIES COMPILE_FLAGS ${RESGEN_SOURCE_FLAGS})
 endif()
 
-add_library(suzanne-resources ${RESGEN_SOURCE})
+add_library(suzanne-resources ${DUMMY_SRC} ${RESGEN_SOURCE})
 
 # ==================================================================================================
 # Common library
