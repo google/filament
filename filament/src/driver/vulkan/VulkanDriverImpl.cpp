@@ -154,7 +154,18 @@ void createVirtualDevice(VulkanContext& context) {
     deviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
     deviceCreateInfo.queueCreateInfoCount = 1;
     deviceCreateInfo.pQueueCreateInfos = deviceQueueCreateInfo;
-    deviceCreateInfo.pEnabledFeatures = nullptr;
+
+    // We could simply enable *all* supported features, but since that may have performance
+    // consequences let's just enable the features we need.
+    VkPhysicalDeviceFeatures enabledFeatures {};
+    if (context.physicalDeviceFeatures.textureCompressionETC2) {
+        enabledFeatures.textureCompressionETC2 = VK_TRUE;
+    }
+    if (context.physicalDeviceFeatures.textureCompressionBC) {
+        enabledFeatures.textureCompressionBC = VK_TRUE;
+    }
+
+    deviceCreateInfo.pEnabledFeatures = &enabledFeatures;
     deviceCreateInfo.enabledExtensionCount = (uint32_t)deviceExtensionNames.size();
     deviceCreateInfo.ppEnabledExtensionNames = deviceExtensionNames.data();
     VkResult result = vkCreateDevice(context.physicalDevice, &deviceCreateInfo, VKALLOC,
