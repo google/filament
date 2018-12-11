@@ -53,8 +53,8 @@ set(MATC_TARGET desktop)
 
 # Optimize materials for performance in Release mode.
 set(MATC_FLAGS -a all)
-if (CMAKE_BUILD_TYPE MATCHES Release)
-    set(MATC_FLAGS -O ${MATC_FLAGS})
+if (NOT CMAKE_BUILD_TYPE MATCHES Release)
+    set(MATC_FLAGS -g ${MATC_FLAGS})
 endif()
 
 foreach (mat_src ${MATERIAL_SRCS})

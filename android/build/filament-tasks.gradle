@@ -96,7 +96,7 @@ class MaterialCompiler extends DefaultTask {
                 standardOutput out
                 errorOutput err
                 executable "${matcPath}"
-                args('-O', '-p', 'mobile', '-o', getOutputFile(file), file)
+                args('-p', 'mobile', '-o', getOutputFile(file), file)
             }
         }
 

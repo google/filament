@@ -1398,9 +1398,7 @@ The command line flags relevant to application development are described in tabl
 **-o**, **--output**            | [path]             | Specify the output file path
 **-p**, **--platform**          | desktop/mobile/all | Select the target platform(s)
 **-a**, **--api**               | opengl/vulkan/all  | Specify the target graphics API
-**-O**, **--optimize**          | N/A                | Optimize compiled material for performance
-**-S**, **--optimize-size**     | N/A                | Optimize compiled material for size and performance
-**-E**, **--preprocessor-only** | N/A                | Optimize compiled material by running only the preprocessor
+**-S**, **--optimize-size**     | N/A                | Optimize compiled material for size instead of just performance
 **-r**, **--reflect**           | parameters         | Outputs the specified metadata as JSON
 **-v**, **--variant-filter**    | [variant]          | Filters out the specified, comma-separated variants
 [Table [matcFlags]: List of `matc` flags]
@@ -1416,7 +1414,7 @@ appropriate target platform. For instance, to compile a material package for And
 the following command:
 
 ```text
-$ matc -p mobile -O -o ./materials/bin/car_paint.filamat ./materials/src/car_paint.mat
+$ matc -p mobile -o ./materials/bin/car_paint.filamat ./materials/src/car_paint.mat
 ```
 
 ### --api
@@ -1427,28 +1425,14 @@ only Vulkan capable devices, you can reduce the size of the material packages by
 the set of Vulkan shaders:
 
 ```text
-$ matc -a vulkan -O -o ./materials/bin/car_paint.filamat ./materials/src/car_paint.mat
+$ matc -a vulkan -o ./materials/bin/car_paint.filamat ./materials/src/car_paint.mat
 ```
-
-### --optimize
-
-This flag runs a separate optimization pass on the compiled material. This optimization pass applies
-many optimization techniques to attempt to make the generated shaders faster to compile and execute
-at runtime. In some cases using this flag might increase the size of the compiled material file.
-It is recommended to use this flag when compiling your application in release mode.
 
 ### --optimize-size
 
-This flag is similar to `--optimize` but applies fewer optimization techniques to try and keep the
-final material as small as possible. If the compiled material is deemed too large with `--optimize`,
-using this flag might be a good compromise between runtime performance and size.
-
-### --preprocessor-only
-
-This flags optimizes the compiled material by running only the preprocessor on the generated
-shaders. This flag may result in compiled materials that are smaller than with `--optimize-size`.
-This flag is only recommended if the size of the compiled material is more important than runtime
-performance and if `--optimize-size` does not deliver satisfactory results.
+This flag applies fewer optimization techniques to try and keep the final material as small as
+possible. If the compiled material is deemed too large by default, using this flag might be
+a good compromise between runtime performance and size.
 
 ### --reflect
 

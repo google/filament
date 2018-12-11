@@ -255,8 +255,8 @@ else()
 endif()
 
 # Only optimize materials in Release mode (so error message lines match the source code)
-if (CMAKE_BUILD_TYPE MATCHES Release)
-    set(MATC_OPT_FLAGS -O)
+if (NOT CMAKE_BUILD_TYPE MATCHES Release)
+    set(MATC_OPT_FLAGS -g)
 endif()
 
 foreach (mat_src ${MATERIAL_SRCS})
