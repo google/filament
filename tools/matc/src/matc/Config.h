@@ -51,11 +51,11 @@ public:
         PARAMETERS
     };
 
-    virtual ~Config() {}
+    virtual ~Config() = default;
 
     class Output {
     public:
-        virtual ~Output() {}
+        virtual ~Output() = default;
         virtual bool open() noexcept = 0;
         virtual bool write(const uint8_t* data, size_t size) noexcept = 0;
         virtual std::ostream& getOutputStream() noexcept = 0;
@@ -65,7 +65,7 @@ public:
 
     class Input {
     public:
-        virtual ~Input() {}
+        virtual ~Input() = default;
         virtual ssize_t open() noexcept = 0;
         virtual std::unique_ptr<const char[]> read() noexcept = 0;
         virtual bool close() noexcept = 0;
@@ -123,7 +123,7 @@ protected:
     bool mDebug = false;
     bool mIsValid = true;
     bool mPrintShaders = false;
-    Optimization mOptimizationLevel = Optimization::NONE;
+    Optimization mOptimizationLevel = Optimization::PERFORMANCE;
     Metadata mReflectionTarget = Metadata::NONE;
     Mode mMode = Mode::MATERIAL;
     Platform mPlatform = Platform::ALL;
