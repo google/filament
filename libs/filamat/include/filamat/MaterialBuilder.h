@@ -67,7 +67,7 @@ protected:
     using ShaderModel = filament::driver::ShaderModel;
     Platform mPlatform = Platform::DESKTOP;
     TargetApi mTargetApi = TargetApi::OPENGL;
-    Optimization mOptimization = Optimization::NONE;
+    Optimization mOptimization = Optimization::PERFORMANCE;
     bool mPrintShaders = false;
     utils::bitset32 mShaderModels;
     struct CodeGenParams {
@@ -177,7 +177,7 @@ public:
     // (used to generate code) and final output representations (spirv and/or text).
     MaterialBuilder& targetApi(TargetApi targetApi) noexcept;
 
-    // specifies the level of optimization to apply to the shaders (default is NONE)
+    // specifies the level of optimization to apply to the shaders (default is PERFORMANCE)
     MaterialBuilder& optimization(Optimization optimization) noexcept;
 
     // if true, will output the generated GLSL shader code to stdout

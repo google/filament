@@ -44,24 +44,24 @@
 #endif
 
 // enable tracing
-#define SYSTRACE_ENABLE() utils::details::Systrace::enable(SYSTRACE_TAG)
+#define SYSTRACE_ENABLE() ::utils::details::Systrace::enable(SYSTRACE_TAG)
 
 // disable tracing
-#define SYSTRACE_DISABLE() utils::details::Systrace::disable(SYSTRACE_TAG)
+#define SYSTRACE_DISABLE() ::utils::details::Systrace::disable(SYSTRACE_TAG)
 
 
 /**
  * Creates a Systrace context in the current scope. needed for calling all other systrace
  * commands below.
  */
-#define SYSTRACE_CONTEXT() utils::details::Systrace ___tracer(SYSTRACE_TAG)
+#define SYSTRACE_CONTEXT() ::utils::details::Systrace ___tracer(SYSTRACE_TAG)
 
 
 // SYSTRACE_NAME traces the beginning and end of the current scope.  To trace
 // the correct start and end times this macro should be declared first in the
 // scope body.
 // It also automatically creates a Systrace context
-#define SYSTRACE_NAME(name) utils::details::ScopedTrace ___tracer(SYSTRACE_TAG, name)
+#define SYSTRACE_NAME(name) ::utils::details::ScopedTrace ___tracer(SYSTRACE_TAG, name)
 
 // SYSTRACE_CALL is an SYSTRACE_NAME that uses the current function name.
 #define SYSTRACE_CALL() SYSTRACE_NAME(__FUNCTION__)

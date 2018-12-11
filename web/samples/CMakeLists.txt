@@ -19,8 +19,8 @@ set(MATERIAL_NAMES
     nonlit)
 
 set(MATC_FLAGS -a opengl -m material -p mobile)
-if (CMAKE_BUILD_TYPE MATCHES Release)
-    set(MATC_FLAGS -O ${MATC_FLAGS})
+if (NOT CMAKE_BUILD_TYPE MATCHES Release)
+    set(MATC_FLAGS -g ${MATC_FLAGS})
 endif()
 
 set(MATERIAL_BINS)
