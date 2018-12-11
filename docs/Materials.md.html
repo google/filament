@@ -1331,6 +1331,7 @@ type aliases:
 **getWorldCameraPosition()**        | float3   |  Position of the camera/eye in world space
 **getTime()**                       | float    |  Current time in seconds, may be reset regularly to avoid precision loss
 **getUserTime()**                   | float4   |  Current time in seconds: `time`, `(double)time - time`, `0`, `0`
+**getUserTimeMode(float m)**        | float    |  Current time modulo m in seconds
 **getExposure()**                   | float    |  Photometric exposure of the camera
 **getEV100()**                      | float    |  [Exposure value at ISO 100](https://en.wikipedia.org/wiki/Exposure_value) of the camera
 
