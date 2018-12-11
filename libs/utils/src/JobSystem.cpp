@@ -382,12 +382,9 @@ void JobSystem::run(JobSystem::Job*& job, uint32_t flags) noexcept {
 
     // wake-up a thread if needed...
     if (!(flags & DONT_SIGNAL)) {
-        // if it was busy before, try to wake-up another sleeping thread
-        if (activeJobs) {
-            // wake-up a queue
-            { std::lock_guard<Mutex> lock(mLock); }
-            mCondition.notify_one();
-        }
+        // wake-up a queue
+        { std::lock_guard<Mutex> lock(mLock); }
+        mCondition.notify_one();
     }
 
     // after run() returns, the job is virtually invalid (it'll die on its own)
