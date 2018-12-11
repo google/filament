@@ -103,6 +103,15 @@ void JobSystem::setThreadAffinity(uint32_t mask) noexcept {
 #endif
 }
 
+void JobSystem::setThreadAffinityById(size_t id) noexcept {
+#if defined(__linux__)
+    cpu_set_t set;
+    CPU_ZERO(&set);
+    CPU_SET(id, &set);
+    sched_setaffinity(gettid(), sizeof(set), &set);
+#endif
+}
+
 JobSystem::JobSystem(size_t threadCount, size_t adoptableThreadsCount) noexcept
     : mJobPool("JobSystem Job pool", MAX_JOB_COUNT * sizeof(Job)),
       mJobStorageBase(static_cast<Job *>(mJobPool.getAllocator().getCurrent()))
@@ -138,7 +147,7 @@ JobSystem::JobSystem(size_t threadCount, size_t adoptableThreadsCount) noexcept
     for (size_t i = 0, n = states.size(); i < n; i++) {
         auto& state = states[i];
         state.rndGen = default_random_engine(rd());
-        state.mask = uint32_t(1UL << i);
+        state.id = (uint32_t)i;
         state.js = this;
         if (i < hardwareThreadCount) {
             // don't start a thread of adoptable thread slots
@@ -266,19 +275,24 @@ bool JobSystem::execute(JobSystem::ThreadState& state) noexcept {
     return job != nullptr;
 }
 
-void JobSystem::loop(ThreadState* threadState) noexcept {
+void JobSystem::loop(ThreadState* state) noexcept {
     setThreadName("JobSystem::loop");
     setThreadPriority(Priority::DISPLAY);
 
+    // set a CPU affinity on each of our JobSystem thread to prevent them from jumping from core
+    // to core. On Android, it looks like the affinity needs to be reset from time to time.
+    setThreadAffinityById(state->id);
+
     // record our work queue to thread-local storage
-    sThreadState = threadState;
+    sThreadState = state;
 
     // run our main loop...
     do {
-        if (!execute(*threadState)) {
+        if (!execute(*state)) {
             std::unique_lock<Mutex> lock(mLock);
             while (!exitRequested() && !(mActiveJobs.load(std::memory_order_relaxed))) {
                 mCondition.wait(lock);
+                setThreadAffinityById(state->id);
             }
         }
     } while (!exitRequested());
@@ -454,7 +468,7 @@ void JobSystem::emancipate() {
 
 io::ostream& operator<<(io::ostream& out, JobSystem const& js) {
     for (auto const& item : js.mThreadStates) {
-        out << size_t(std::log2f(item.mask)) << ": " << item.workQueue.getCount() << io::endl;
+        out << size_t(item.id) << ": " << item.workQueue.getCount() << io::endl;
     }
     return out;
 }

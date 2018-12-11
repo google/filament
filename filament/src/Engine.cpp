@@ -370,16 +370,15 @@ int FEngine::loop() {
     JobSystem::setThreadName("FEngine::loop");
     JobSystem::setThreadPriority(JobSystem::Priority::DISPLAY);
 
+    // We use the highest affinity bit, assuming this is a Big core in a  big.little
+    // configuration. This is also a core not used by the JobSystem.
+    // Either way the main reason to do this is to avoid this thread jumping from core to core
+    // and loose its caches in the process.
+    uint32_t id = std::thread::hardware_concurrency() - 1;
+
     while (true) {
-
-        // FIXME: we should do this based on the CPUs we actually have
-        uint32_t affinityMask = (std::thread::hardware_concurrency() >= 6) ? 0xF0 : 0;
-
-        if (affinityMask) {
-            // looks like thread affinity needs to be reset regularly (on Android)
-            JobSystem::setThreadAffinity(affinityMask);
-        }
-
+        // looks like thread affinity needs to be reset regularly (on Android)
+        JobSystem::setThreadAffinityById(id);
         if (!execute()) {
             break;
         }
