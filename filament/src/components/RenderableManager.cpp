@@ -286,7 +286,7 @@ void FRenderableManager::create(
                     driver.createUniformBuffer(count * sizeof(PerRenderableUibBone),
                             driver::BufferUsage::DYNAMIC),
                     UniformBuffer{ count * sizeof(PerRenderableUibBone) },
-                    (uint8_t)count
+                    count
             });
             assert(bones);
             if (bones) {

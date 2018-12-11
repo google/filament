@@ -141,7 +141,7 @@ private:
     struct Bones {
         filament::Handle<HwUniformBuffer> handle;
         UniformBuffer bones;
-        uint8_t count;
+        size_t count;
     };
 
     friend class ::FilamentTest_Bones_Test;
