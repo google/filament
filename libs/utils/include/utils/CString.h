@@ -28,26 +28,25 @@
 namespace utils {
 
 //! \privatesection
+struct hashCStrings {
+    typedef const char* argument_type;
+    typedef size_t result_type;
+    result_type operator()(argument_type cstr) const noexcept {
+        size_t hash = 5381;
+        while (int c = *cstr++) {
+            hash = (hash * 33u) ^ size_t(c);
+        }
+        return hash;
+    }
+};
+
+//! \privatesection
 struct equalCStrings {
     typedef const char* first_argument_type;
     typedef const char* second_argument_type;
     typedef bool result_type;
     bool operator()(const char* lhs, const char* rhs) const noexcept {
         return !strcmp(lhs, rhs);
-    }
-};
-
-//! \privatesection
-struct hashCStrings {
-    typedef const char* argument_type;
-    typedef size_t result_type;
-    result_type operator()(argument_type cstr) const noexcept {
-        // TODO: is this good enough?
-        size_t hash = 5381;
-        while (int c = *cstr++) {
-            hash = hash * 33 ^ c;
-        }
-        return hash;
     }
 };
 
@@ -80,22 +79,38 @@ public:
 
     StaticString() noexcept = default;
 
+    // initialization from a string literal
     template <size_t N>
     StaticString(StringLiteral<N> const& other) noexcept // NOLINT(google-explicit-constructor)
         : mString(other),
-          mLength(size_type(N - 1)) {
+          mLength(size_type(N - 1)),
+          mHash(computeHash(other)) {
     }
 
-    StaticString(const_pointer literal, size_t length) noexcept
-            : mString(literal),
-              mLength(size_type(length)) {
-    }
-
+    // assignment from a string literal
     template<size_t N>
     StaticString& operator=(StringLiteral<N> const& other) noexcept {
         mString = other;
         mLength = size_type(N - 1);
+        mHash = computeHash(other);
         return *this;
+    }
+
+    // helper to make a StaticString from a C string that is known to be a string literal
+    static constexpr StaticString make(const_pointer literal, size_t length) noexcept {
+        StaticString r;
+        r.mString = literal;
+        r.mLength = size_type(length);
+        size_type hash = 5381;
+        while (int c = *literal++) {
+            hash = (hash * 33u) ^ size_type(c);
+        }
+        r.mHash = hash;
+        return r;
+    }
+
+    static StaticString make(const_pointer literal) noexcept {
+        return make(literal, strlen(literal));
     }
 
     const_pointer c_str() const noexcept { return mString; }
@@ -130,9 +145,21 @@ public:
         return begin()[size() - 1];
     }
 
+    size_type getHash() const noexcept { return mHash; }
+
 private:
     const_pointer mString = nullptr;
     size_type mLength = 0;
+    size_type mHash = 0;
+
+    template<size_t N>
+    static constexpr size_type computeHash(StringLiteral<N> const& s) noexcept {
+        size_type hash = 5381;
+        for (size_t i = 0; i < N - 1; i++) {
+            hash = (hash * 33u) ^ size_type(s[i]);
+        }
+        return hash;
+    }
 
     int compare(const StaticString& rhs) const noexcept;
 
@@ -344,9 +371,8 @@ template<>
 struct hash<utils::StaticString> {
     typedef utils::StaticString argument_type;
     typedef size_t result_type;
-    utils::hashCStrings hasher;
     size_t operator()(const utils::StaticString& s) const noexcept {
-        return hasher(s.c_str());
+        return s.getHash();
     }
 };
 

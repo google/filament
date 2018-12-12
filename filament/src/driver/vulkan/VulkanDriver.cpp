@@ -949,7 +949,7 @@ void VulkanDriver::debugCommand(const char* methodName) {
     static const utils::StaticString BEGIN_COMMAND = "beginRenderPass";
     static const utils::StaticString END_COMMAND = "endRenderPass";
     static bool inRenderPass = false;
-    const utils::StaticString command(methodName, strlen(methodName));
+    const utils::StaticString command = utils::StaticString::make(methodName, strlen(methodName));
     if (command == BEGIN_COMMAND) {
         assert(!inRenderPass);
         inRenderPass = true;

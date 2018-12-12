@@ -55,9 +55,10 @@ public:
         Builder& name(utils::CString const& interfaceBlockName);
         Builder& name(utils::CString&& interfaceBlockName);
         Builder& name(utils::StaticString const& interfaceBlockName);
+
         template<size_t N>
         Builder& name(utils::StringLiteral<N> const& interfaceBlockName) {
-            return name(utils::StaticString{interfaceBlockName, N - 1});
+            return name(utils::StaticString{ interfaceBlockName });
         }
 
         // Add a sampler
@@ -70,10 +71,11 @@ public:
         Builder& add(utils::StaticString const& samplerName, Type type, Format format,
                 Precision precision = Precision::MEDIUM,
                 bool multisample = false) noexcept;
+
         template<size_t N>
         Builder& add(utils::StringLiteral<N> const& samplerName, Type type, Format format,
                 Precision precision = Precision::MEDIUM, bool multisample = false) {
-            return add(utils::StaticString{ samplerName, N - 1 }, type, format, precision);
+            return add(utils::StaticString{ samplerName }, type, format, precision);
         }
 
         // build and return the SamplerInterfaceBlock

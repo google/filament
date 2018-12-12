@@ -34,7 +34,7 @@ FDebugRegistry::FDebugRegistry() noexcept {
 
 UTILS_NOINLINE
 void *FDebugRegistry::getPropertyAddress(const char *name) noexcept {
-    StaticString key(name, strlen(name));
+    StaticString key = StaticString::make(name, strlen(name));
     auto &propertyMap = mPropertyMap;
     if (propertyMap.find(key) == propertyMap.end()) {
         return nullptr;

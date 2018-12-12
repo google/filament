@@ -361,8 +361,8 @@ Filter filterFromString(const char* rawname) {
         { "MINIMUM", Filter::MINIMUM},
     };
     string name = rawname;
-    for (auto& c: name) c = toupper((unsigned char) c);
-    auto iter = map.find({ name.c_str(), name.size() });
+    for (auto& c: name) { c = toupper((unsigned char)c); }
+    auto iter = map.find(StaticString::make(name.c_str(), name.size()));
     return iter == map.end() ? Filter::DEFAULT : iter->second;
 }
 
