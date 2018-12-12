@@ -3,7 +3,7 @@
 # version of clang we want to use
 CLANG_VERSION=7
 # version of libcxx and libcxxabi we want to use
-CXX_VERSION=7.0.2
+CXX_VERSION=7.0.0
 
 # Steps specific to our CI environment
 # CI runs on Ubuntu 14.04, we need to install clang-6.0 and the
