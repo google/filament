@@ -1451,8 +1451,16 @@ void OpenGLDriver::updateStreams(driver::DriverApi* driver) {
     if (UTILS_UNLIKELY(!mExternalStreams.empty())) {
         OpenGLBlitter::State state;
         for (GLTexture* t : mExternalStreams) {
-            assert(t && t->hwStream);
-            if (!static_cast<GLStream*>(t->hwStream)->isNativeStream()) {
+            assert(t);
+
+            GLStream* s = static_cast<GLStream*>(t->hwStream);
+            if (UTILS_UNLIKELY(s == nullptr)) {
+                // this can happen because we're called synchronously and the setExternalStream()
+                // call may bot have been processed yet.
+                continue;
+            }
+
+            if (!s->isNativeStream()) {
                 state.setup();
                 updateStream(t, driver);
             }
@@ -2253,99 +2261,95 @@ void OpenGLDriver::setViewportScissor(
 #define DEBUG_NO_EXTERNAL_STREAM_COPY false
 
 void OpenGLDriver::updateStream(GLTexture* t, driver::DriverApi* driver) noexcept {
+    SYSTRACE_CALL();
+
     GLStream* s = static_cast<GLStream*>(t->hwStream);
-    if (UTILS_UNLIKELY(s == nullptr)) {
-        // this can happen because we're called synchronously and the setExternalStream() call
-        // may bot have been processed yet.
-        return;
-    }
+    assert(s);
+    assert(!s->isNativeStream());
 
-    if (UTILS_LIKELY(!s->isNativeStream())) {
-        // round-robin to the next texture name
-        if (UTILS_UNLIKELY(DEBUG_NO_EXTERNAL_STREAM_COPY ||
-                           bugs.disable_shared_context_draws || !mOpenGLBlitter)) {
-            driver->queueCommand([this, t, s]() {
-                // the stream may have been destroyed since we enqueued the command
-                // also make sure that this texture is still associated with the same stream
-                auto& streams = mExternalStreams;
-                if (UTILS_LIKELY(std::find(streams.begin(), streams.end(), t) != streams.end()) &&
-                    (t->hwStream == s)) {
-                    t->gl.texture_id = s->gl.externalTextureId;
-                }
-            });
-        } else {
-            s->user_thread.cur = uint8_t(
-                    (s->user_thread.cur + 1) % GLStream::ROUND_ROBIN_TEXTURE_COUNT);
-            GLuint writeTexture = s->user_thread.write[s->user_thread.cur];
-            GLuint readTexture = s->user_thread.read[s->user_thread.cur];
+    // round-robin to the next texture name
+    if (UTILS_UNLIKELY(DEBUG_NO_EXTERNAL_STREAM_COPY ||
+                       bugs.disable_shared_context_draws || !mOpenGLBlitter)) {
+        driver->queueCommand([this, t, s]() {
+            // the stream may have been destroyed since we enqueued the command
+            // also make sure that this texture is still associated with the same stream
+            auto& streams = mExternalStreams;
+            if (UTILS_LIKELY(std::find(streams.begin(), streams.end(), t) != streams.end()) &&
+                (t->hwStream == s)) {
+                t->gl.texture_id = s->gl.externalTextureId;
+            }
+        });
+    } else {
+        s->user_thread.cur = uint8_t(
+                (s->user_thread.cur + 1) % GLStream::ROUND_ROBIN_TEXTURE_COUNT);
+        GLuint writeTexture = s->user_thread.write[s->user_thread.cur];
+        GLuint readTexture = s->user_thread.read[s->user_thread.cur];
 
-            // Make sure we're using the proper size
-            GLStream::Info& info = s->user_thread.infos[s->user_thread.cur];
-            if (UTILS_UNLIKELY(info.width != s->width || info.height != s->height)) {
+        // Make sure we're using the proper size
+        GLStream::Info& info = s->user_thread.infos[s->user_thread.cur];
+        if (UTILS_UNLIKELY(info.width != s->width || info.height != s->height)) {
 
-                // nothing guarantees that this buffer is free (i.e. has been consumed by the
-                // GL thread), so we could potentially cause a glitch by reallocating the
-                // texture here. This should be very rare though.
-                // This could be fixed by always using a new temporary texture here, and
-                // replacing it in the queueCommand() below. imho, not worth it.
+            // nothing guarantees that this buffer is free (i.e. has been consumed by the
+            // GL thread), so we could potentially cause a glitch by reallocating the
+            // texture here. This should be very rare though.
+            // This could be fixed by always using a new temporary texture here, and
+            // replacing it in the queueCommand() below. imho, not worth it.
 
-                info.width = s->width;
-                info.height = s->height;
+            info.width = s->width;
+            info.height = s->height;
 
-                Platform::ExternalTexture* ets = s->user_thread.infos[s->user_thread.cur].ets;
-                mPlatform.reallocateExternalStorage(ets, info.width, info.height,
-                        TextureFormat::RGB8);
+            Platform::ExternalTexture* ets = s->user_thread.infos[s->user_thread.cur].ets;
+            mPlatform.reallocateExternalStorage(ets, info.width, info.height, TextureFormat::RGB8);
 
-                glActiveTexture(GL_TEXTURE0);
-                glBindTexture(GL_TEXTURE_2D, writeTexture);
-                glBindTexture(GL_TEXTURE_EXTERNAL_OES, readTexture);
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, writeTexture);
+            glBindTexture(GL_TEXTURE_EXTERNAL_OES, readTexture);
 #ifdef GL_OES_EGL_image
-                glEGLImageTargetTexture2DOES(GL_TEXTURE_2D, (GLeglImageOES)ets->image);
-                glEGLImageTargetTexture2DOES(GL_TEXTURE_EXTERNAL_OES, (GLeglImageOES)ets->image);
+            glEGLImageTargetTexture2DOES(GL_TEXTURE_2D, (GLeglImageOES)ets->image);
+            glEGLImageTargetTexture2DOES(GL_TEXTURE_EXTERNAL_OES, (GLeglImageOES)ets->image);
 #endif
-            }
-
-            // copy the texture...
-#ifndef NDEBUG
-            if (t->gl.fence) {
-                // we're about to overwrite a buffer that hasn't been consumed
-                slog.d << "OpenGLDriver::updateStream(): about to overwrite buffer " <<
-                       int(s->user_thread.cur) << " of Texture at " << t << " of Stream at " << s
-                       << io::endl;
-            }
-#endif
-            mOpenGLBlitter->blit(s->gl.externalTextureId, writeTexture, s->width, s->height);
-
-            // We need a fence to guarantee that this copy has happened when we need the texture
-            // in OpenGLProgram::updateSamplers(), i.e. when we bind textures just before use.
-            GLsync fence = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
-            // Per https://www.khronos.org/opengl/wiki/Sync_Object, flush to make sure that the
-            // sync object is in the driver's command queue.
-            glFlush();
-
-            // Update the stream timestamp. It's not clear to me that this is correct; which
-            // timestamp do we really want? Here we use "now" because we have nothing else we
-            // can use.
-            s->user_thread.timestamp = std::chrono::steady_clock::now().time_since_epoch().count();
-
-            driver->queueCommand([this, t, s, fence, readTexture, writeTexture]() {
-                // the stream may have been destroyed since we enqueued the command
-                // also make sure that this texture is still associated with the same stream
-                auto& streams = mExternalStreams;
-                if (UTILS_LIKELY(std::find(streams.begin(), streams.end(), t) != streams.end()) &&
-                    (t->hwStream == s)) {
-                    if (UTILS_UNLIKELY(t->gl.fence)) {
-                        // if the texture still has a fence set, destroy it now, so it's not leaked.
-                        glDeleteSync(t->gl.fence);
-                    }
-                    t->gl.texture_id = readTexture;
-                    t->gl.fence = fence;
-                    s->gl.externalTexture2DId = writeTexture;
-                } else {
-                    glDeleteSync(fence);
-                }
-            });
         }
+
+        // copy the texture...
+#ifndef NDEBUG
+        if (t->gl.fence) {
+            // we're about to overwrite a buffer that hasn't been consumed
+            slog.d << "OpenGLDriver::updateStream(): about to overwrite buffer " <<
+                   int(s->user_thread.cur) << " of Texture at " << t << " of Stream at " << s
+                   << io::endl;
+        }
+#endif
+        mOpenGLBlitter->blit(s->gl.externalTextureId, writeTexture, s->width, s->height);
+
+        // We need a fence to guarantee that this copy has happened when we need the texture
+        // in OpenGLProgram::updateSamplers(), i.e. when we bind textures just before use.
+        GLsync fence = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
+        // Per https://www.khronos.org/opengl/wiki/Sync_Object, flush to make sure that the
+        // sync object is in the driver's command queue.
+        glFlush();
+
+        // Update the stream timestamp. It's not clear to me that this is correct; which
+        // timestamp do we really want? Here we use "now" because we have nothing else we
+        // can use.
+        s->user_thread.timestamp = std::chrono::steady_clock::now().time_since_epoch().count();
+
+        driver->queueCommand([this, t, s, fence, readTexture, writeTexture]() {
+            // the stream may have been destroyed since we enqueued the command
+            // also make sure that this texture is still associated with the same stream
+            auto& streams = mExternalStreams;
+            if (UTILS_LIKELY(std::find(streams.begin(), streams.end(), t) != streams.end()) &&
+                (t->hwStream == s)) {
+                if (UTILS_UNLIKELY(t->gl.fence)) {
+                    // if the texture still has a fence set, destroy it now, so it's not leaked.
+                    glDeleteSync(t->gl.fence);
+                }
+                t->gl.texture_id = readTexture;
+                t->gl.fence = fence;
+                s->gl.externalTexture2DId = writeTexture;
+            } else {
+                glDeleteSync(fence);
+            }
+        });
     }
 }
 
