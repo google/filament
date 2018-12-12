@@ -1,12 +1,12 @@
 #!/bin/bash
 
 # version of clang we want to use
-CLANG_VERSION=6.0
+CLANG_VERSION=7.0
 # version of libcxx and libcxxabi we want to use
-CXX_VERSION=6.0.1
+CXX_VERSION=7.0.2
 
 # Steps specific to our CI environment
-# CI runs on Ubuntu 14.04, we need to install clang-5.0 and the
+# CI runs on Ubuntu 14.04, we need to install clang-6.0 and the
 # appropriate libc++ ourselves
 if [ "$KOKORO_BUILD_ID" ]; then
     sudo ln -s /usr/include/x86_64-linux-gnu/asm /usr/include/asm
@@ -65,7 +65,7 @@ if [ "$KOKORO_BUILD_ID" ]; then
     export LIBRARY_PATH=/usr/local/lib:$LIBRARY_PATH
 
     # set to true to link against libc++abi
-    export FILAMENT_REQUIRES_CXXABI=true
+    export FILAMENT_REQUIRES_CXXABI=false
 fi
 
 wget -q https://github.com/ninja-build/ninja/releases/download/v1.8.2/ninja-linux.zip
