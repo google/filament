@@ -1,12 +1,12 @@
 #!/bin/bash
 
 # version of clang we want to use
-CLANG_VERSION=5.0
+CLANG_VERSION=6.0
 # version of libcxx and libcxxabi we want to use
-CXX_VERSION=5.0.2
+CXX_VERSION=6.0.1
 
 # Steps specific to our CI environment
-# CI runs on Ubuntu 14.04, we need to install clang-5.0 and th
+# CI runs on Ubuntu 14.04, we need to install clang-5.0 and the
 # appropriate libc++ ourselves
 if [ "$KOKORO_BUILD_ID" ]; then
     sudo ln -s /usr/include/x86_64-linux-gnu/asm /usr/include/asm
