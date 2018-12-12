@@ -30,7 +30,7 @@
 #define HAS_EXECINFO 0
 #endif
 
-#if !defined(WIN32)
+#if !defined(NDEBUG) && !defined(WIN32)
 #include <cxxabi.h>
 #endif
 
@@ -56,7 +56,7 @@ CallStack CallStack::unwind(size_t ignore) noexcept {
 
 // ------------------------------------------------------------------------------------------------
 
-intptr_t CallStack::operator [](size_t index) const {
+intptr_t CallStack::operator[](size_t index) const {
     if (index >= m_frame_count) {
 #ifdef __EXCEPTIONS
         throw std::out_of_range("out-of-range access in CallStack::operator[]");
@@ -78,13 +78,13 @@ void CallStack::update_gcc(size_t ignore) noexcept {
     // reset the object
     ssize_t size = 0;
 
-    void *array[NUM_FRAMES];
+    void* array[NUM_FRAMES];
 #if HAS_EXECINFO
     size = ::backtrace(array, NUM_FRAMES);
     size -= ignore;
 #endif
     for (ssize_t i = 0; i < size; i++) {
-        m_stack[i].pc = intptr_t(array[ignore+i]);
+        m_stack[i].pc = intptr_t(array[ignore + i]);
     }
     size--; // the last one seems to always be 0x0
 
@@ -92,7 +92,7 @@ void CallStack::update_gcc(size_t ignore) noexcept {
     m_frame_count = size_t(std::max(ssize_t(0), size));
 }
 
-bool CallStack::operator <(const CallStack& rhs) const {
+bool CallStack::operator<(const CallStack& rhs) const {
     if (m_frame_count != rhs.m_frame_count) {
         return m_frame_count < rhs.m_frame_count;
     }
@@ -102,7 +102,7 @@ bool CallStack::operator <(const CallStack& rhs) const {
 // ------------------------------------------------------------------------------------------------
 
 utils::CString CallStack::demangleTypeName(const char* mangled) {
-#if !defined(WIN32)
+#if !defined(NDEBUG) && !defined(WIN32)
     size_t len;
     int status;
     std::unique_ptr<char, FreeDeleter> demangled(abi::__cxa_demangle(mangled, nullptr, &len, &status));
