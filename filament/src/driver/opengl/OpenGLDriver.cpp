@@ -165,7 +165,7 @@ OpenGLDriver::OpenGLDriver(OpenGLPlatform* platform) noexcept
     ExtentionSet exts;
     for (GLint i = 0; i < n; i++) {
         const char * const ext = (const char*)glGetStringi(GL_EXTENSIONS, (GLuint)i);
-        exts.emplace(ext, strlen(ext));
+        exts.insert(StaticString::make(ext, strlen(ext)));
         if (DEBUG_PRINT_EXTENSIONS) {
             slog.d << ext << io::endl;
         }

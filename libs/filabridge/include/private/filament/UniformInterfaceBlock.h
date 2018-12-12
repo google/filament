@@ -51,9 +51,10 @@ public:
         Builder& name(utils::CString const& interfaceBlockName);
         Builder& name(utils::CString&& interfaceBlockName);
         Builder& name(utils::StaticString const& interfaceBlockName);
+
         template<size_t N>
         Builder& name(utils::StringLiteral<N> const& interfaceBlockName) {
-            return name(utils::StaticString{ interfaceBlockName, (utils::CString::size_type)(N - 1) });
+            return name(utils::StaticString{ interfaceBlockName });
         }
 
         // Add a uniform
@@ -63,10 +64,11 @@ public:
                 Type type, Precision precision = Precision::DEFAULT);
         Builder& add(utils::StaticString const& uniformName, size_t size,
                 Type type, Precision precision = Precision::DEFAULT);
+
         template<size_t N>
         Builder& add(utils::StringLiteral<N> const& uniformName, size_t size,
                 Type type, Precision precision = Precision::DEFAULT) {
-            return add(utils::StaticString{ uniformName, N - 1 }, size, type, precision);
+            return add(utils::StaticString{ uniformName }, size, type, precision);
         }
 
         // build and return the UniformInterfaceBlock
