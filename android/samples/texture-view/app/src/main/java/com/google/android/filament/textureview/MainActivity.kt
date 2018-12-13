@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.android.filament.hellotriangle
+package com.google.android.filament.textureview
 
 import android.animation.ValueAnimator
 import android.app.Activity
@@ -22,7 +22,7 @@ import android.opengl.Matrix
 import android.os.Bundle
 import android.view.Choreographer
 import android.view.Surface
-import android.view.SurfaceView
+import android.view.TextureView
 import android.view.animation.LinearInterpolator
 import com.google.android.filament.*
 import com.google.android.filament.RenderableManager.PrimitiveType
@@ -46,7 +46,7 @@ class MainActivity : Activity() {
     }
 
     // The View we want to render into
-    private lateinit var surfaceView: SurfaceView
+    private lateinit var textureView: TextureView
     // UiHelper is provided by Filament to manage SurfaceView and SurfaceTexture
     private lateinit var uiHelper: UiHelper
     // Choreographer is used to schedule new frames
@@ -83,8 +83,8 @@ class MainActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        surfaceView = SurfaceView(this)
-        setContentView(surfaceView)
+        textureView = TextureView(this)
+        setContentView(textureView)
 
         choreographer = Choreographer.getInstance()
 
@@ -100,7 +100,7 @@ class MainActivity : Activity() {
 
         // NOTE: To choose a specific rendering resolution, add the following line:
         // uiHelper.setDesiredSize(1280, 720)
-        uiHelper.attachTo(surfaceView)
+        uiHelper.attachTo(textureView)
     }
 
     private fun setupFilament() {

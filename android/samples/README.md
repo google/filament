@@ -33,6 +33,12 @@ Demonstrates how to render into a transparent `SurfaceView`:
 
 ![Transparent Rendering](../../docs/images/samples/sample_transparent_rendering.jpg)
 
+### `texture-view`
+
+Demonstrates how to render into a `TextureView` instead of a `SurfaceView`:
+
+![Texture View](../../docs/images/samples/sample_texture_view.jpg)
+
 ## Prerequisites
 
 Before you start, make sure to read [Filament's README](../../README.md). You need to be able to

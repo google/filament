@@ -20,6 +20,8 @@ import android.graphics.PixelFormat;
 import android.graphics.SurfaceTexture;
 
 import android.os.Build;
+import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 import android.util.Log;
 import android.view.Surface;
 import android.view.SurfaceHolder;
@@ -27,6 +29,98 @@ import android.view.SurfaceView;
 import android.view.TextureView;
 import com.google.android.filament.SwapChain;
 
+/**
+ * UiHelper is a simple class that can manage either a SurfaceView or a TextureView so it can
+ * be used to render into with Filament.
+ *
+ * Here is a simple example with a SurfaceView. The code would be exactly the same with a
+ * TextureView:
+ *
+ * <pre>
+ * public class FilamentActivity extends Activity {
+ *     private UiHelper mUiHelper;
+ *     private SurfaceView mSurfaceView;
+ *
+ *     // Filament specific APIs
+ *     private Engine mEngine;
+ *     private Renderer mRenderer;
+ *     private View mView; // com.google.android.filament.View, not android.view.View
+ *     private SwapChain mSwapChain;
+ *
+ *     public void onCreate(Bundle savedInstanceState) {
+ *         super.onCreate(savedInstanceState);
+ *
+ *         // Create a SurfaceView and add it to the activity
+ *         mSurfaceView = new SurfaceView(this);
+ *         setContentView(mSurfaceView);
+ *
+ *         // Create the Filament UI helper
+ *         mUiHelper = new UiHelper(UiHelper.ContextErrorPolicy.DONT_CHECK);
+ *
+ *         // Attach the SurfaceView to the helper, you could do the same with a TextureView
+ *         mUiHelper.attachTo(surfaceView)
+ *
+ *         // Set a rendering callback that we will use to invoke Filament
+ *         mUiHelper.setRenderCallback(new UiHelper.RendererCallback() {
+ *             public void onNativeWindowChanged(Surface surface) {
+ *                 if (mSwapChain != null) mEngine.destroySwapChain(mSwapChain);
+ *                 mSwapChain = mEngine.createSwapChain(surface, mUiHelper.getSwapChainFlags());
+ *             }
+ *
+ *             // The native surface went away, we must stop rendering.
+ *             public void onDetachedFromSurface() {
+ *                 if (mSwapChain != null) {
+ *                     mEngine.destroySwapChain(mSwapChain);
+ *
+ *                     // Required to ensure we don't return before Filament is done executing the
+ *                     // destroySwapChain command, otherwise Android might destroy the Surface
+ *                     // too early
+ *                     mEngine.flushAndWait();
+ *
+ *                     mSwapChain = null;
+ *                 }
+ *             }
+ *
+ *             // The native surface has changed size. This is always called at least once
+ *             // after the surface is created (after onNativeWindowChanged() is invoked).
+ *             public void onResized(int width, int height) {
+ *                 // Compute camera projection and set the viewport on the view
+ *             }
+ *         });
+ *
+ *         mEngine = Engine.create();
+ *         mRenderer = mEngine.createRenderer();
+ *         mView = mEngine.createView();
+ *         // Create scene, camera, etc.
+ *     }
+ *
+ *     public void onDestroy() {
+ *        super.onDestroy()
+ *         // Always detach the surface before destroying the engine
+ *         mUiHelper.detach()
+ *
+ *         // This ensures that all the commands we've sent to Filament have
+ *         // been processed before we attempt to destroy anything
+ *         Fence.waitAndDestroy(mEngine.createFence(Fence.Type.SOFT), Fence.Mode.FLUSH);
+ *
+ *         mEngine.destroy()
+ *     }
+ *
+ *     // This is an example of a render function. You will most likely invoke this from
+ *     // a Choreographer callback to trigger rendering at vsync.
+ *     public void render() {
+ *         if (mUiHelper.isReadyToRender) {
+ *             // If beginFrame() returns false you should skip the frame
+ *             // This means you are sending frames too quickly to the GPU
+ *             if (mRenderer.beginFrame(swapChain)) {
+ *                 mRenderer.render(mView)
+ *                 mRenderer.endFrame()
+ *             }
+ *         }
+ *     }
+ * }
+ * </pre>
+ */
 public class UiHelper {
     private static final String LOG_TAG = "UiHelper";
     private static final boolean LOGGING = false;
@@ -42,22 +136,39 @@ public class UiHelper {
 
     private boolean mOpaque = true;
 
+    /**
+     * Enum used to decide whether UiHelper should perform extra error checking.
+     *
+     * @see UiHelper#UiHelper(ContextErrorPolicy)
+     */
     public enum ContextErrorPolicy {
-        CHECK, DONT_CHECK
+        /** Check for extra errors. */
+        CHECK,
+        /** Do not check for extra errors. */
+        DONT_CHECK
     }
 
+    /**
+     * Interface used to know when the native surface is created, destroyed or resized.
+     *
+     * @see #setRenderCallback(RendererCallback)
+     */
     public interface RendererCallback {
-
-        // called when the underlying native window has changed
-        // NOTE: this could be called from UiHelper's constructor.
+        /**
+         * Called when the underlying native window has changed.
+         */
         void onNativeWindowChanged(Surface surface);
 
-        // called when the surface is going away. after this call isReadyToRender() returns false.
-        // you MUST have stopped drawing when returning.
-        // This is called from detach() or if the surface disappears on its own.
+        /**
+         * Called when the surface is going away. After this call <code>isReadyToRender()</code>
+         * returns false. You MUST have stopped drawing when returning.
+         * This is called from detach() or if the surface disappears on its own.
+         */
         void onDetachedFromSurface();
 
-        // called when the underlying native window has been resized
+        /**
+         * Called when the underlying native window has been resized.
+         */
         void onResized(int width, int height);
     }
 
@@ -114,41 +225,49 @@ public class UiHelper {
     }
 
     /**
-     *  Creates a UiHelper which will help manage the EGL context
-     *  and EGL surfaces. UiHelper handles SurfaceView and TextureView.
-     *
-     *  When this call returns, OpenGL ES is ready to use.
+     *  Creates a UiHelper which will help manage the native surface provided by a
+     *  SurfaceView or a TextureView.
      */
     public UiHelper() {
         this(ContextErrorPolicy.CHECK);
     }
 
+    /**
+     * Creates a UiHelper which will help manage the native surface provided by a
+     * SurfaceView or a TextureView.
+     *
+     * @param policy The error checking policy to use.
+     */
     public UiHelper(ContextErrorPolicy policy) {
         // TODO: do something with policy
     }
 
-    public void setRenderCallback(RendererCallback renderCallback) {
+    /**
+     * Sets the renderer callback that will be notified when the native surface is
+     * created, destroyed or resized.
+     *
+     * @param renderCallback The callback to register.
+     */
+    public void setRenderCallback(@Nullable RendererCallback renderCallback) {
         mRenderCallback = renderCallback;
     }
 
+    /**
+     * Returns the current render callback associated with this UiHelper.
+     */
+    @Nullable
     public RendererCallback getRenderCallback() {
         return mRenderCallback;
     }
 
     /**
-     * Free resources associated to the native window specified in attachTo().
+     * Free resources associated to the native window specified in {@link #attachTo(SurfaceView)}
+     * or {@link #attachTo(TextureView)}.
      */
     public void detach() {
         destroySwapChain();
         mNativeWindow = null;
         mRenderSurface = null;
-    }
-
-    @Override
-    protected void finalize() throws Throwable {
-        super.finalize();
-        // TODO: check that detach() has been called
-        // TODO: call Surface.release() if not already done
     }
 
     /**
@@ -164,7 +283,7 @@ public class UiHelper {
     }
 
     /**
-     * Set the size of the render target buffers.
+     * Set the size of the render target buffers of the native surface.
      */
     public void setDesiredSize(int width, int height) {
         mDesiredWidth = width;
@@ -174,10 +293,16 @@ public class UiHelper {
         }
     }
 
+    /**
+     * Returns the requested width for the native surface.
+     */
     public int getDesiredWidth() {
         return mDesiredWidth;
     }
 
+    /**
+     * Returns the requested height for the native surface.
+     */
     public int getDesiredHeight() {
         return mDesiredHeight;
     }
@@ -202,6 +327,11 @@ public class UiHelper {
         mOpaque = opaque;
     }
 
+    /**
+     * Returns the flags to pass to
+     * {@link com.google.android.filament.Engine#createSwapChain(Object, long)} to honor all
+     * the options set on this UiHelper.
+     */
     public long getSwapChainFlags() {
         return isOpaque() ? SwapChain.CONFIG_DEFAULT : SwapChain.CONFIG_TRANSPARENT;
     }
@@ -212,7 +342,7 @@ public class UiHelper {
      * As soon as SurfaceView is ready (i.e. has a Surface), we'll create the
      * EGL resources needed, and call user callbacks if needed.
      */
-    public void attachTo(SurfaceView view) {
+    public void attachTo(@NonNull SurfaceView view) {
         if (attach(view)) {
             if (!isOpaque()) {
                 view.setZOrderOnTop(true);
@@ -261,7 +391,7 @@ public class UiHelper {
      * As soon as TextureView is ready (i.e. has a buffer), we'll create the
      * EGL resources needed, and call user callbacks if needed.
      */
-    public void attachTo(TextureView view) {
+    public void attachTo(@NonNull TextureView view) {
         if (attach(view)) {
             view.setOpaque(isOpaque());
 
@@ -274,13 +404,20 @@ public class UiHelper {
                     if (LOGGING) Log.d(LOG_TAG, "onSurfaceTextureAvailable()");
 
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.ICE_CREAM_SANDWICH_MR1) {
-                        surfaceTexture.setDefaultBufferSize(mDesiredWidth, mDesiredHeight);
+                        if (mDesiredWidth > 0 && mDesiredHeight > 0) {
+                            surfaceTexture.setDefaultBufferSize(mDesiredWidth, mDesiredHeight);
+                        }
                     }
 
                     Surface surface = new Surface(surfaceTexture);
                     TextureViewHandler textureViewHandler = (TextureViewHandler) mRenderSurface;
                     textureViewHandler.setSurface(surface);
+
                     createSwapChain(surface);
+
+                    // Call this the first time because onSurfaceTextureSizeChanged()
+                    // isn't called at initialization time
+                    mRenderCallback.onResized(width, height);
                 }
 
                 @Override
@@ -311,7 +448,7 @@ public class UiHelper {
         }
     }
 
-    private boolean attach(Object nativeWindow) {
+    private boolean attach(@NonNull Object nativeWindow) {
         if (mNativeWindow != null) {
             // we are already attached to a native window
             if (mNativeWindow == nativeWindow) {
@@ -324,8 +461,8 @@ public class UiHelper {
         return true;
     }
 
-    private void createSwapChain(Surface sur) {
-        mRenderCallback.onNativeWindowChanged(sur);
+    private void createSwapChain(@NonNull Surface surface) {
+        mRenderCallback.onNativeWindowChanged(surface);
         mHasSwapChain = true;
     }
 
