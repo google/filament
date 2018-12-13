@@ -376,8 +376,12 @@ private:
     }
 
     // these have thread contention, keep them together
-    utils::Mutex mLock;
-    utils::Condition mCondition;
+    utils::Mutex mLooperLock;
+    utils::Condition mLooperCondition;
+
+    utils::Mutex mWaiterLock;
+    utils::Condition mWaiterCondition;
+
     std::atomic<uint32_t> mActiveJobs = { 0 };
     utils::Arena<utils::ThreadSafeObjectPoolAllocator<Job>, LockingPolicy::NoLock> mJobPool;
 

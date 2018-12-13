@@ -205,16 +205,13 @@ JobSystem* JobSystem::getJobSystem() noexcept {
 }
 
 void JobSystem::requestExit() noexcept {
-    mLock.lock();
-    // memory_order_relaxed is okay because we're surrounded by lock/unlock, we just want atomicity here.
-    mExitRequested.store(true, std::memory_order_relaxed);
-    mLock.unlock();
-    mCondition.notify_all();
-#if __ARM_ARCH_7A__
-    // on ARMv7a SEL is needed
-        __dsb(0xA);     // ISHST = 0xA (b1010)
-        UTILS_SIGNAL_EVENT();
-#endif
+    mExitRequested.store(true);
+
+    { std::lock_guard<Mutex> lock(mLooperLock); }
+    mLooperCondition.notify_all();
+
+    { std::lock_guard<Mutex> lock(mWaiterLock); }
+    mWaiterCondition.notify_all();
 }
 
 inline bool JobSystem::exitRequested() const noexcept {
@@ -289,9 +286,9 @@ void JobSystem::loop(ThreadState* state) noexcept {
     // run our main loop...
     do {
         if (!execute(*state)) {
-            std::unique_lock<Mutex> lock(mLock);
+            std::unique_lock<Mutex> lock(mLooperLock);
             while (!exitRequested() && !(mActiveJobs.load(std::memory_order_relaxed))) {
-                mCondition.wait(lock);
+                mLooperCondition.wait(lock);
                 setThreadAffinityById(state->id);
             }
         }
@@ -327,11 +324,9 @@ void JobSystem::finish(Job* job) noexcept {
         }
     } while (job);
 
-#if __ARM_ARCH_7A__
-    // on ARMv7a SEL is needed
-    __dsb(0xA);     // ISHST = 0xA (b1010)
-    UTILS_SIGNAL_EVENT();
-#endif
+    // wake-up all threads that could potentially be waiting on this job finishing
+    { std::lock_guard<Mutex> lock(mWaiterLock); }
+    mWaiterCondition.notify_all();
 }
 
 // -----------------------------------------------------------------------------------------------
@@ -397,8 +392,8 @@ void JobSystem::run(JobSystem::Job*& job, uint32_t flags) noexcept {
     // wake-up a thread if needed...
     if (!(flags & DONT_SIGNAL)) {
         // wake-up a queue
-        { std::lock_guard<Mutex> lock(mLock); }
-        mCondition.notify_one();
+        { std::lock_guard<Mutex> lock(mLooperLock); }
+        mLooperCondition.notify_one();
     }
 
     // after run() returns, the job is virtually invalid (it'll die on its own)
@@ -420,10 +415,13 @@ void JobSystem::waitAndRelease(Job*& job) noexcept {
     ThreadState& state(getState());
     do {
         if (!execute(state)) {
-            // we're a waiter so we spin!!!
-            UTILS_WAIT_FOR_EVENT();
+            std::unique_lock<Mutex> lock(mWaiterLock);
+            while (!hasJobCompleted(job) && !exitRequested()) {
+                mWaiterCondition.wait(lock);
+            }
         }
     } while (!hasJobCompleted(job) && !exitRequested());
+
     release(job);
 }
 
