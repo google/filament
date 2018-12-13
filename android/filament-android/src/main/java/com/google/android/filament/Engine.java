@@ -71,13 +71,19 @@ public class Engine {
      * - Other: none
      */
     public SwapChain createSwapChain(@NonNull Object surface) {
-        return createSwapChain(surface, 0);
+        return createSwapChain(surface, SwapChain.CONFIG_DEFAULT);
     }
 
     /**
      * Valid surface types:
      * - Android: Surface
      * - Other: none
+     *
+     * Flags: see CONFIG flags in SwapChain.
+     *
+     * @see SwapChain#CONFIG_DEFAULT
+     * @see SwapChain#CONFIG_TRANSPARENT
+     * @see SwapChain#CONFIG_READABLE
      */
     public SwapChain createSwapChain(@NonNull Object surface, long flags) {
         if (Platform.get().validateSurface(surface)) {

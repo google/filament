@@ -16,6 +16,7 @@
 
 package com.google.android.filament.android;
 
+import android.graphics.PixelFormat;
 import android.graphics.SurfaceTexture;
 
 import android.os.Build;
@@ -24,6 +25,7 @@ import android.view.Surface;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.TextureView;
+import com.google.android.filament.SwapChain;
 
 public class UiHelper {
     private static final String LOG_TAG = "UiHelper";
@@ -35,6 +37,10 @@ public class UiHelper {
 
     private RendererCallback mRenderCallback;
     private boolean mHasSwapChain;
+
+    private RenderSurface mRenderSurface;
+
+    private boolean mOpaque = true;
 
     public enum ContextErrorPolicy {
         CHECK, DONT_CHECK
@@ -54,8 +60,6 @@ public class UiHelper {
         // called when the underlying native window has been resized
         void onResized(int width, int height);
     }
-
-    // --------------------------------------------------------------------------------------------
 
     private interface RenderSurface {
         void resize(int width, int height);
@@ -108,9 +112,6 @@ public class UiHelper {
             mSurface = surface;
         }
     }
-    // --------------------------------------------------------------------------------------------
-
-    private RenderSurface mRenderSurface;
 
     /**
      *  Creates a UiHelper which will help manage the EGL context
@@ -163,7 +164,7 @@ public class UiHelper {
     }
 
     /**
-     * Set the size of the underlying buffers
+     * Set the size of the render target buffers.
      */
     public void setDesiredSize(int width, int height) {
         mDesiredWidth = width;
@@ -182,38 +183,70 @@ public class UiHelper {
     }
 
     /**
+     * Returns true if the render target is opaque.
+     */
+    public boolean isOpaque() {
+        return mOpaque;
+    }
+
+    /**
+     * Controls whether the render target (SurfaceView or TextureView) is opaque or not.
+     * The render target is considered opaque by default.
+     *
+     * Must be called before calling {@link #attachTo(SurfaceView)}
+     * or {@link #attachTo(TextureView)}.
+     *
+     * @param opaque Indicates whether the render target should be opaque. True by default.
+     */
+    public void setOpaque(boolean opaque) {
+        mOpaque = opaque;
+    }
+
+    public long getSwapChainFlags() {
+        return isOpaque() ? SwapChain.CONFIG_DEFAULT : SwapChain.CONFIG_TRANSPARENT;
+    }
+
+    /**
      * Associate UiHelper with a SurfaceView.
      *
      * As soon as SurfaceView is ready (i.e. has a Surface), we'll create the
      * EGL resources needed, and call user callbacks if needed.
      */
     public void attachTo(SurfaceView view) {
-        final SurfaceHolder.Callback callback = new SurfaceHolder.Callback() {
-            @Override
-            public void surfaceCreated(SurfaceHolder holder) {
-                if (LOGGING) Log.d(LOG_TAG, "surfaceCreated()");
-                createSwapChain(holder.getSurface());
-            }
-
-            @Override
-            public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
-                // Note: this is always called at least once after surfaceCreated()
-                if (LOGGING) Log.d(LOG_TAG, "surfaceChanged(" + width + ", " + height + ")");
-                mRenderCallback.onResized(width, height);
-            }
-
-            @Override
-            public void surfaceDestroyed(SurfaceHolder holder) {
-                if (LOGGING) Log.d(LOG_TAG, "surfaceDestroyed()");
-                destroySwapChain();
-            }
-        };
-
         if (attach(view)) {
+            if (!isOpaque()) {
+                view.setZOrderOnTop(true);
+                view.getHolder().setFormat(PixelFormat.TRANSLUCENT);
+            }
+
             mRenderSurface = new SurfaceViewHandler(view);
+
+            final SurfaceHolder.Callback callback = new SurfaceHolder.Callback() {
+                @Override
+                public void surfaceCreated(SurfaceHolder holder) {
+                    if (LOGGING) Log.d(LOG_TAG, "surfaceCreated()");
+                    createSwapChain(holder.getSurface());
+                }
+
+                @Override
+                public void surfaceChanged(
+                        SurfaceHolder holder, int format, int width, int height) {
+                    // Note: this is always called at least once after surfaceCreated()
+                    if (LOGGING) Log.d(LOG_TAG, "surfaceChanged(" + width + ", " + height + ")");
+                    mRenderCallback.onResized(width, height);
+                }
+
+                @Override
+                public void surfaceDestroyed(SurfaceHolder holder) {
+                    if (LOGGING) Log.d(LOG_TAG, "surfaceDestroyed()");
+                    destroySwapChain();
+                }
+            };
+
             SurfaceHolder holder = view.getHolder();
             holder.addCallback(callback);
             holder.setFixedSize(mDesiredWidth, mDesiredHeight);
+
             // in case the SurfaceView's surface already existed
             final Surface surface = holder.getSurface();
             if (surface != null && surface.isValid()) {
@@ -229,42 +262,50 @@ public class UiHelper {
      * EGL resources needed, and call user callbacks if needed.
      */
     public void attachTo(TextureView view) {
-        final TextureView.SurfaceTextureListener listener = new TextureView.SurfaceTextureListener() {
-            @Override
-            public void onSurfaceTextureAvailable(SurfaceTexture surfaceTexture, int width, int height) {
-                if (LOGGING) Log.d(LOG_TAG, "onSurfaceTextureAvailable()");
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.ICE_CREAM_SANDWICH_MR1) {
-                    surfaceTexture.setDefaultBufferSize(mDesiredWidth, mDesiredHeight);
-                }
-                Surface surface = new Surface(surfaceTexture);
-                TextureViewHandler textureViewHandler = (TextureViewHandler)mRenderSurface;
-                textureViewHandler.setSurface(surface);
-                createSwapChain(surface);
-            }
-
-            @Override
-            public void onSurfaceTextureSizeChanged(SurfaceTexture surfaceTexture, int width, int height) {
-                if (LOGGING) Log.d(LOG_TAG, "onSurfaceTextureSizeChanged()");
-                mRenderCallback.onResized(width, height);
-            }
-
-            @Override
-            public boolean onSurfaceTextureDestroyed(SurfaceTexture surfaceTexture) {
-                if (LOGGING) Log.d(LOG_TAG, "onSurfaceTextureDestroyed()");
-                destroySwapChain();
-                return true;
-            }
-
-            @Override
-            public void onSurfaceTextureUpdated(SurfaceTexture surface) { }
-        };
-
         if (attach(view)) {
+            view.setOpaque(isOpaque());
+
             mRenderSurface = new TextureViewHandler(view);
+
+            TextureView.SurfaceTextureListener listener = new TextureView.SurfaceTextureListener() {
+                @Override
+                public void onSurfaceTextureAvailable(
+                        SurfaceTexture surfaceTexture, int width, int height) {
+                    if (LOGGING) Log.d(LOG_TAG, "onSurfaceTextureAvailable()");
+
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.ICE_CREAM_SANDWICH_MR1) {
+                        surfaceTexture.setDefaultBufferSize(mDesiredWidth, mDesiredHeight);
+                    }
+
+                    Surface surface = new Surface(surfaceTexture);
+                    TextureViewHandler textureViewHandler = (TextureViewHandler) mRenderSurface;
+                    textureViewHandler.setSurface(surface);
+                    createSwapChain(surface);
+                }
+
+                @Override
+                public void onSurfaceTextureSizeChanged(
+                        SurfaceTexture surfaceTexture, int width, int height) {
+                    if (LOGGING) Log.d(LOG_TAG, "onSurfaceTextureSizeChanged()");
+                    mRenderCallback.onResized(width, height);
+                }
+
+                @Override
+                public boolean onSurfaceTextureDestroyed(SurfaceTexture surfaceTexture) {
+                    if (LOGGING) Log.d(LOG_TAG, "onSurfaceTextureDestroyed()");
+                    destroySwapChain();
+                    return true;
+                }
+
+                @Override
+                public void onSurfaceTextureUpdated(SurfaceTexture surface) { }
+            };
+
             view.setSurfaceTextureListener(listener);
+
             // in case the View's SurfaceTexture already existed
             if (view.isAvailable()) {
-                final SurfaceTexture surfaceTexture = view.getSurfaceTexture();
+                SurfaceTexture surfaceTexture = view.getSurfaceTexture();
                 listener.onSurfaceTextureAvailable(surfaceTexture, mDesiredWidth, mDesiredHeight);
             }
         }
