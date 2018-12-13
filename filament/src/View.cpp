@@ -689,6 +689,7 @@ void FView::cullRenderables(JobSystem& js,
 
 void FView::prepareVisibleLights(FLightManager const& lcm, utils::JobSystem&,
         Frustum const& frustum, FScene::LightSoa& lightData) noexcept {
+    SYSTRACE_CALL();
 
     auto const* UTILS_RESTRICT sphereArray     = lightData.data<FScene::POSITION_RADIUS>();
     auto const* UTILS_RESTRICT directions      = lightData.data<FScene::DIRECTION>();
