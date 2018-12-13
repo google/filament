@@ -266,8 +266,8 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     recordHighWatermark(commands);
 }
 
-void FRenderer::mirrorFrame(FSwapChain* dstSwapChain, Viewport const& dstViewport, Viewport const& srcViewport,
-                            MirrorFrameFlag flags) {
+void FRenderer::mirrorFrame(FSwapChain* dstSwapChain, Viewport const& dstViewport,
+        Viewport const& srcViewport, MirrorFrameFlag flags) {
     SYSTRACE_CALL();
 
     assert(mSwapChain);
@@ -301,11 +301,10 @@ void FRenderer::mirrorFrame(FSwapChain* dstSwapChain, Viewport const& dstViewpor
     // Verify that the source swap chain is readable.
     assert(mSwapChain->isReadable());
     driver.blit(TargetBufferFlags::COLOR,
-                viewRenderTarget, dstViewport.left, dstViewport.bottom, dstViewport.width, dstViewport.height,
-                viewRenderTarget, srcViewport.left, srcViewport.bottom, srcViewport.width, srcViewport.height);
+            viewRenderTarget, dstViewport.left, dstViewport.bottom, dstViewport.width, dstViewport.height,
+            viewRenderTarget, srcViewport.left, srcViewport.bottom, srcViewport.width, srcViewport.height);
     if (flags & SET_PRESENTATION_TIME) {
-        int64_t monotonic_clock_ns (std::chrono::steady_clock::now().time_since_epoch().count());
-        driver.setPresentationTime(monotonic_clock_ns);
+        // TODO: Implement this properly, see https://github.com/google/filament/issues/633
     }
 
     driver.endRenderPass();
@@ -346,7 +345,6 @@ bool FRenderer::beginFrame(FSwapChain* swapChain) {
 
     int64_t monotonic_clock_ns (std::chrono::steady_clock::now().time_since_epoch().count());
     driver.beginFrame(monotonic_clock_ns, mFrameId);
-    driver.setPresentationTime(monotonic_clock_ns);
 
     if (!mFrameSkipper.beginFrame()) {
         mFrameInfoManager.cancelFrame();
