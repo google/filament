@@ -174,12 +174,12 @@ public class UiHelper {
         }
     }
 
-    public void setDesiredWidth(int desiredWidth) {
-        mDesiredWidth = desiredWidth;
+    public int getDesiredWidth() {
+        return mDesiredWidth;
     }
 
-    public void setDesiredHeight(int desiredHeight) {
-        mDesiredHeight = desiredHeight;
+    public int getDesiredHeight() {
+        return mDesiredHeight;
     }
 
     /**

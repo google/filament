@@ -14,12 +14,11 @@
  * limitations under the License.
  */
 
-package com.google.android.filament.hellotriangle
+package com.google.android.filament.transparentrendering
 
 import android.animation.ValueAnimator
 import android.annotation.SuppressLint
 import android.app.Activity
-import android.graphics.PixelFormat
 import android.opengl.Matrix
 import android.os.Bundle
 import android.view.Choreographer
