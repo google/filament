@@ -84,6 +84,6 @@ int bind();
 void unbind();
 
 
-}; // namespace bluegl
+} // namespace bluegl
 
 #endif // TNT_FILAMENT_BLUEGL__H
