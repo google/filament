@@ -24,6 +24,13 @@ public class Engine {
     @NonNull private final LightManager mLightManager;
     @NonNull private final RenderableManager mRenderableManager;
 
+    public enum Backend {
+        DEFAULT,  // Automatically selects an appropriate driver for the platform.
+        OPENGL,   // Selects the OpenGL ES driver.
+        VULKAN,   // Selects the experimental Vulkan driver.
+        NOOP,     // Selects the no-op driver for testing purposes.
+    }
+
     private Engine(long nativeEngine) {
         mNativeObject = nativeEngine;
         mTransformManager = new TransformManager(nGetTransformManager(nativeEngine));
@@ -33,7 +40,14 @@ public class Engine {
 
     @NonNull
     public static Engine create() {
-        long nativeEngine = nCreateEngine(0);
+        long nativeEngine = nCreateEngine(0, 0);
+        if (nativeEngine == 0) throw new IllegalStateException("Couldn't create Engine");
+        return new Engine(nativeEngine);
+    }
+
+    @NonNull
+    public static Engine create(@NonNull Backend backend) {
+        long nativeEngine = nCreateEngine(backend.ordinal(), 0);
         if (nativeEngine == 0) throw new IllegalStateException("Couldn't create Engine");
         return new Engine(nativeEngine);
     }
@@ -46,7 +60,7 @@ public class Engine {
     @NonNull
     public static Engine create(@NonNull Object sharedContext) {
         if (Platform.get().validateSharedContext(sharedContext)) {
-            long nativeEngine = nCreateEngine(
+            long nativeEngine = nCreateEngine(0,
                     Platform.get().getSharedContextNativeHandle(sharedContext));
             if (nativeEngine == 0) throw new IllegalStateException("Couldn't create Engine");
             return new Engine(nativeEngine);
@@ -263,7 +277,7 @@ public class Engine {
         mNativeObject = 0;
     }
 
-    private static native long nCreateEngine(long sharedContext);
+    private static native long nCreateEngine(long backend, long sharedContext);
     private static native void nDestroyEngine(long nativeEngine);
     private static native long nCreateSwapChain(long nativeEngine, Object nativeWindow, long flags);
     private static native long nCreateSwapChainFromRawPointer(long nativeEngine, long pointer, long flags);

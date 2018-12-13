@@ -600,7 +600,7 @@ while getopts ":hacfijmp:tuvs" opt; do
             echo "To switch your application to Vulkan, in Android Studio go to "
             echo "File > Settings > Build > Compiler. In the command-line options field, "
             echo "add -Pextra_cmake_args=-DFILAMENT_SUPPORTS_VULKAN=ON."
-            echo "Also be sure to pass Backend::VULKAN to Engine::create."
+            echo "Also be sure to pass Engine.Backend.VULKAN to Engine.create."
             echo ""
             ;;
         s)

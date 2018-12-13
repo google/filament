@@ -22,9 +22,9 @@ using namespace filament;
 using namespace utils;
 
 extern "C" JNIEXPORT jlong JNICALL
-Java_com_google_android_filament_Engine_nCreateEngine(JNIEnv*, jclass,
+Java_com_google_android_filament_Engine_nCreateEngine(JNIEnv*, jclass, jlong backend,
         jlong sharedContext) {
-    return (jlong) Engine::create(Engine::Backend::OPENGL, nullptr, (void*) sharedContext);
+    return (jlong) Engine::create((Engine::Backend) backend, nullptr, (void*) sharedContext);
 }
 
 extern "C" JNIEXPORT void JNICALL
