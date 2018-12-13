@@ -17,14 +17,18 @@
 package com.google.android.filament.hellotriangle
 
 import android.animation.ValueAnimator
+import android.annotation.SuppressLint
 import android.app.Activity
 import android.graphics.PixelFormat
 import android.opengl.Matrix
 import android.os.Bundle
 import android.view.Choreographer
+import android.view.Gravity
 import android.view.Surface
 import android.view.SurfaceView
 import android.view.animation.LinearInterpolator
+import android.widget.FrameLayout
+import android.widget.TextView
 
 import com.google.android.filament.*
 import com.google.android.filament.RenderableManager.*
@@ -83,13 +87,29 @@ class MainActivity : Activity() {
 
     private val animator = ValueAnimator.ofFloat(0.0f, 360.0f)
 
+    @SuppressLint("SetTextI18n")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        surfaceView = SurfaceView(this)
-        setContentView(surfaceView)
-
         choreographer = Choreographer.getInstance()
+
+        surfaceView = SurfaceView(this)
+
+        val textView = TextView(this).apply {
+            val d = resources.displayMetrics.density
+            text = "This TextView is under the Filament SurfaceView."
+            textSize = 32.0f
+            setPadding((16 * d).toInt(), 0, (16 * d).toInt(), 0)
+        }
+
+        setContentView(FrameLayout(this).apply {
+            addView(textView, FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.MATCH_PARENT,
+                    FrameLayout.LayoutParams.WRAP_CONTENT,
+                    Gravity.CENTER_VERTICAL
+            ))
+            addView(surfaceView)
+        })
 
         setupSurfaceView()
         setupFilament()
@@ -101,8 +121,9 @@ class MainActivity : Activity() {
         uiHelper = UiHelper(UiHelper.ContextErrorPolicy.DONT_CHECK)
         uiHelper.renderCallback = SurfaceCallback()
 
-        // NOTE: To choose a specific rendering resolution, add the following line:
-        // uiHelper.setDesiredSize(1280, 720)
+        // Make the render target transparent
+        uiHelper.isOpaque = false
+
         uiHelper.attachTo(surfaceView)
     }
 
@@ -115,13 +136,8 @@ class MainActivity : Activity() {
     }
 
     private fun setupView() {
-        // Clear the background to middle-grey
-        // Setting up a clear color is useful for debugging but usually
-        // unnecessary when using a skybox
-        view.setClearColor(0.035f, 0.035f, 0.035f, 1.0f)
-
-        // NOTE: Try to disable post-processing (tone-mapping, etc.) to see the difference
-        // view.isPostProcessingEnabled = false
+        // Make sure to clear to a fully transparent color
+        view.setClearColor(0.0f, 0.0f, 0.0f, 0.0f)
 
         // Tell the view which camera we want to use
         view.camera = camera

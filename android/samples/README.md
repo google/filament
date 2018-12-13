@@ -5,13 +5,13 @@ Filament APIs:
 
 ### `hello-triangle`
 
-A minimal example showing how to setup a rendering surface for Filament:
+Demonstrates how to setup a rendering surface for Filament:
 
-![Hellow Triangle](../../docs/images/samples/sample_hello_triangle.jpg)
+![Hello Triangle](../../docs/images/samples/sample_hello_triangle.jpg)
 
 ### `lit-cube`
 
-Shows how to create a light and a mesh with the attributes required for lighting:
+Demonstrates how to create a light and a mesh with the attributes required for lighting:
 
 ![Lit Cube](../../docs/images/samples/sample_lit_cube.jpg)
 
@@ -26,6 +26,12 @@ Demonstrates how to create image-based lights and load complex meshes:
 Demonstrates how to load and use textures for complex materials:
 
 ![Textured Object](../../docs/images/samples/sample_textured_object.jpg)
+
+### `transparent-rendering`
+
+Demonstrates how to render into a transparent `SurfaceView`:
+
+![Transparent Rendering](../../docs/images/samples/sample_transparent_rendering.jpg)
 
 ## Prerequisites
 
