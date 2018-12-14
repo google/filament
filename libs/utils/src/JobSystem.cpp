@@ -422,6 +422,10 @@ void JobSystem::waitAndRelease(Job*& job) noexcept {
         }
     } while (!hasJobCompleted(job) && !exitRequested());
 
+    if (job == mMasterJob) {
+        mMasterJob = nullptr;
+    }
+
     release(job);
 }
 

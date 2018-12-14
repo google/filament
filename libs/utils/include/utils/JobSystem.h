@@ -93,11 +93,8 @@ public:
 
     // If a parent is not specified when creating a job, that job will automatically take the
     // master job as a parent.
-    // The master job is reset when calling reset()
+    // The master job is reset when waited on.
     Job* setMasterJob(Job* job) noexcept { return mMasterJob = job; }
-
-    // Clears the master job
-    void reset() noexcept { mMasterJob = nullptr; }
 
 
     // NOTE: All methods below must be called from the same thread and that thread must be
