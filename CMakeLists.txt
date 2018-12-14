@@ -311,17 +311,10 @@ endfunction()
 # ==================================================================================================
 # Sub-projects
 # ==================================================================================================
-# spirv-tools must come before filamat, as filamat relies on the presence of the
-# spirv-tools_SOURCE_DIR variable.
-add_subdirectory(${EXTERNAL}/spirv-tools)
-add_subdirectory(${EXTERNAL}/glslang/tnt)
-add_subdirectory(${EXTERNAL}/spirv-cross/tnt)
-
 # Common to all platforms
 add_subdirectory(${EXTERNAL}/libgtest/tnt)
 add_subdirectory(${LIBRARIES}/filabridge)
 add_subdirectory(${LIBRARIES}/filaflat)
-add_subdirectory(${LIBRARIES}/filamat)
 add_subdirectory(${LIBRARIES}/filameshio)
 add_subdirectory(${LIBRARIES}/image)
 add_subdirectory(${LIBRARIES}/math)
@@ -354,13 +347,20 @@ if (WEBGL)
 endif()
 
 if (NOT ANDROID AND NOT WEBGL AND NOT IOS)
-    add_subdirectory(${FILAMENT}/samples)
+    # spirv-tools must come before filamat, as filamat relies on the presence of the
+    # spirv-tools_SOURCE_DIR variable.
+    add_subdirectory(${EXTERNAL}/spirv-tools)
+    add_subdirectory(${EXTERNAL}/glslang/tnt)
+    add_subdirectory(${EXTERNAL}/spirv-cross/tnt)
 
     add_subdirectory(${LIBRARIES}/bluegl)
     add_subdirectory(${LIBRARIES}/filagui)
+    add_subdirectory(${LIBRARIES}/filamat)
     add_subdirectory(${LIBRARIES}/imageio)
 
     add_subdirectory(${FILAMENT}/java)
+    add_subdirectory(${FILAMENT}/samples)
+
     add_subdirectory(${EXTERNAL}/astcenc/tnt)
     add_subdirectory(${EXTERNAL}/etc2comp)
     add_subdirectory(${EXTERNAL}/getopt)

@@ -4,7 +4,8 @@ set -e
 # NDK API level
 API_LEVEL=21
 # Host tools required by Android, WebGL, and iOS builds
-HOST_TOOLS="matc cmgen filamesh mipgen resgen"
+MOBILE_HOST_TOOLS="matc resgen cmgen"
+WEB_HOST_TOOLS="${MOBILE_HOST_TOOLS} mipgen filamesh"
 IOS_TOOLCHAIN_URL="https://opensource.apple.com/source/clang/clang-800.0.38/src/cmake/platforms/iOS.cmake"
 
 function print_help {
@@ -263,7 +264,7 @@ function build_webgl {
     OLD_INSTALL_COMMAND=${INSTALL_COMMAND}; INSTALL_COMMAND=
     OLD_ISSUE_DEBUG_BUILD=${ISSUE_DEBUG_BUILD}; ISSUE_DEBUG_BUILD=false
     OLD_ISSUE_RELEASE_BUILD=${ISSUE_RELEASE_BUILD}; ISSUE_RELEASE_BUILD=true
-    build_desktop "${HOST_TOOLS}"
+    build_desktop "${WEB_HOST_TOOLS}"
     INSTALL_COMMAND=${OLD_INSTALL_COMMAND}
     ISSUE_DEBUG_BUILD=${OLD_ISSUE_DEBUG_BUILD}
     ISSUE_RELEASE_BUILD=${OLD_ISSUE_RELEASE_BUILD}
@@ -338,7 +339,7 @@ function build_android {
     # Supress intermediate desktop tools install
     OLD_INSTALL_COMMAND=${INSTALL_COMMAND}
     INSTALL_COMMAND=
-    build_desktop "${HOST_TOOLS}"
+    build_desktop "${MOBILE_HOST_TOOLS}"
     INSTALL_COMMAND=${OLD_INSTALL_COMMAND}
 
     build_android_arch "aarch64" "aarch64-linux-android" "arm64"
@@ -450,7 +451,7 @@ function build_ios {
     # Supress intermediate desktop tools install
     OLD_INSTALL_COMMAND=${INSTALL_COMMAND}
     INSTALL_COMMAND=
-    build_desktop "${HOST_TOOLS}"
+    build_desktop "${MOBILE_HOST_TOOLS}"
     INSTALL_COMMAND=${OLD_INSTALL_COMMAND}
 
     ensure_ios_toolchain
