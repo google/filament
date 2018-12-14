@@ -134,7 +134,6 @@ void CubemapUtils::process(
     }
     // wait for all our threads to finish
     js.runAndWait(parent);
-    js.reset();
 
     for (STATE& s : states) {
         reduce(s);

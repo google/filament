@@ -136,7 +136,6 @@ void CubemapUtils::cubemapToEquirectangular(Image& dst, const Cubemap& src) {
     auto job = jobs::parallel_for(js, nullptr, 0, uint32_t(h),
             std::ref(parallelJobTask), jobs::CountSplitter<1, 8>());
     js.runAndWait(job);
-    js.reset();
 }
 
 void CubemapUtils::cubemapToOctahedron(Image& dst, const Cubemap& src) {
@@ -172,7 +171,6 @@ void CubemapUtils::cubemapToOctahedron(Image& dst, const Cubemap& src) {
     auto job = jobs::parallel_for(js, nullptr, 0, uint32_t(h),
             std::ref(parallelJobTask), jobs::CountSplitter<1, 8>());
     js.runAndWait(job);
-    js.reset();
 }
 
 void CubemapUtils::crossToCubemap(Cubemap& dst, const Image& src) {

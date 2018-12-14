@@ -156,7 +156,6 @@ static void generateSky(LinearImage image) {
     );
 
     js.runAndWait(job);
-    js.reset();
 
     // cleanup sky data
     arhosekskymodelstate_free(jobData.skyState[0]);

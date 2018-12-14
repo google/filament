@@ -146,7 +146,6 @@ void FRenderer::render(FView const* view) {
 
         // and wait for all jobs to finish as a safety (this should be a no-op)
         js.runAndWait(masterJob);
-        js.reset();
     }
 }
 

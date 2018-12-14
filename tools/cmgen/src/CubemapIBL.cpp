@@ -826,5 +826,4 @@ void CubemapIBL::DFG(Image& dst, bool multiscatter) {
                 }
             }, jobs::CountSplitter<1, 8>());
     js.runAndWait(job);
-    js.reset();
 }
