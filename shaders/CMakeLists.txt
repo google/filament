@@ -64,12 +64,8 @@ if (DEFINED RESGEN_SOURCE_FLAGS)
     set_source_files_properties(${RESGEN_SOURCE} PROPERTIES COMPILE_FLAGS ${RESGEN_SOURCE_FLAGS})
 endif()
 
-# CMake fails to invoke ar on Windows unless there is at least one C/C++ file in the library.
-set(DUMMY_SRC "${RESOURCE_DIR}/dummy.c")
-add_custom_command(OUTPUT ${DUMMY_SRC} COMMAND echo "//" > ${DUMMY_SRC})
-
 # ==================================================================================================
 # Include and target definitions
 # ==================================================================================================
-add_library(${TARGET} STATIC ${DUMMY_SRC} ${RESGEN_SOURCE})
+add_library(${TARGET} STATIC ${RESGEN_SOURCE})
 target_include_directories(${TARGET} PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
