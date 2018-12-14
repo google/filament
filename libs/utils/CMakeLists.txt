@@ -130,6 +130,7 @@ set(BENCHMARK_SRCS
         benchmark/benchmark_allocators.cpp
         benchmark/benchmark_binary_search.cpp
         benchmark/benchmark_calls.cpp
+        benchmark/benchmark_JobSystem.cpp
         benchmark/benchmark_mutex.cpp
         benchmark/benchmark_memcpy.cpp)
 

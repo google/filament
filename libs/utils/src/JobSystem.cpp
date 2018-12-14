@@ -233,14 +233,14 @@ JobSystem::Job* JobSystem::allocateJob() noexcept {
     return mJobPool.make<Job>();
 }
 
-inline JobSystem::ThreadState& JobSystem::getStateToStealFrom(JobSystem::ThreadState& state) noexcept {
+inline JobSystem::ThreadState* JobSystem::getStateToStealFrom(JobSystem::ThreadState& state) noexcept {
     // memory_order_relaxed is okay because we don't take any action that has data dependency
     // on this value (in particular mThreadStates, is always initialized properly).
     uint16_t adopted = mAdoptedThreads.load(std::memory_order_relaxed);
     // this is biased, but frankly, we don't care. it's fast.
     uint16_t index = uint16_t(state.rndGen() % (mThreadCount + adopted));
     assert(index < mThreadStates.size());
-    return mThreadStates[index];
+    return &mThreadStates[index];
 }
 
 bool JobSystem::execute(JobSystem::ThreadState& state) noexcept {
@@ -248,12 +248,16 @@ bool JobSystem::execute(JobSystem::ThreadState& state) noexcept {
     Job* job = pop(state.workQueue);
     if (job == nullptr) {
         // our queue is empty, try to steal a job
-        ThreadState& stateToStealFrom = getStateToStealFrom(state);
-        if (&stateToStealFrom != &state) {
-            // don't steal from our own queue
-            job = steal(stateToStealFrom.workQueue);
-            // nullptr -> nothing to steal in that queue either
-        }
+        do {
+            ThreadState* stateToStealFrom = nullptr;
+            do {
+                stateToStealFrom = getStateToStealFrom(state);
+                // don't steal from our own queue
+            } while (stateToStealFrom == &state);
+            job = steal(stateToStealFrom->workQueue);
+            // nullptr -> nothing to steal in that queue either, if there are active jobs,
+            // continue to try stealing one.
+        } while (!job && mActiveJobs.load(std::memory_order_relaxed) && !exitRequested());
     }
 
     if (job) {
@@ -299,6 +303,8 @@ UTILS_NOINLINE
 void JobSystem::finish(Job* job) noexcept {
     SYSTRACE_CALL();
 
+    bool notify = false;
+
     // terminate this job and notify its parent
     auto& jobPool = mJobPool;
     Job* const storage = mJobStorageBase;
@@ -314,7 +320,8 @@ void JobSystem::finish(Job* job) noexcept {
 #if !__has_feature(thread_sanitizer)
             std::atomic_thread_fence(std::memory_order_acquire);
 #endif
-            // no more work, destroy this job and check the parent.
+            // no more work, destroy this job and notify its the parent
+            notify = notify || job->hasWaiter.load();
             Job* const parent = job->parent == 0x7FFF ? nullptr : &storage[job->parent];
             decRef(job);
             job = parent;
@@ -325,8 +332,10 @@ void JobSystem::finish(Job* job) noexcept {
     } while (job);
 
     // wake-up all threads that could potentially be waiting on this job finishing
-    { std::lock_guard<Mutex> lock(mWaiterLock); }
-    mWaiterCondition.notify_all();
+    if (notify) {
+        { std::lock_guard<Mutex> lock(mWaiterLock); }
+        mWaiterCondition.notify_all();
+    }
 }
 
 // -----------------------------------------------------------------------------------------------
@@ -415,9 +424,13 @@ void JobSystem::waitAndRelease(Job*& job) noexcept {
     ThreadState& state(getState());
     do {
         if (!execute(state)) {
-            std::unique_lock<Mutex> lock(mWaiterLock);
-            while (!hasJobCompleted(job) && !exitRequested()) {
-                mWaiterCondition.wait(lock);
+            // test if job has completed first, to possibly avoid taking the lock
+            if (!hasJobCompleted(job)) {
+                std::unique_lock<Mutex> lock(mWaiterLock);
+                job->hasWaiter.store(true);
+                while (!hasJobCompleted(job) && !exitRequested()) {
+                    mWaiterCondition.wait(lock);
+                }
             }
         }
     } while (!hasJobCompleted(job) && !exitRequested());
