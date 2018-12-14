@@ -70,7 +70,8 @@ public:
         uint16_t parent;                                        //  2 |  2
         std::atomic<uint16_t> runningJobCount = { 1 };          //  2 |  2
         mutable std::atomic<uint16_t> refCount = { 1 };         //  2 |  2
-                                                                //  6 |  2 (padding)
+        std::atomic_bool hasWaiter = { false };                 //  1 |  1
+                                                                //  5 |  1 (padding)
                                                                 // 64 | 64
     };
 
@@ -96,6 +97,8 @@ public:
     // The master job is reset when waited on.
     Job* setMasterJob(Job* job) noexcept { return mMasterJob = job; }
 
+
+    Job* create(Job* parent, JobFunc func) noexcept;
 
     // NOTE: All methods below must be called from the same thread and that thread must be
     // owned by JobSystem's thread pool.
@@ -342,9 +345,8 @@ private:
     void incRef(Job const* job) noexcept;
     void decRef(Job const* job) noexcept;
 
-    Job* create(Job* parent, JobFunc func) noexcept;
     Job* allocateJob() noexcept;
-    JobSystem::ThreadState& getStateToStealFrom(JobSystem::ThreadState& state) noexcept;
+    JobSystem::ThreadState* getStateToStealFrom(JobSystem::ThreadState& state) noexcept;
     bool hasJobCompleted(Job const* job) noexcept;
 
     void requestExit() noexcept;
