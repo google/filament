@@ -460,13 +460,13 @@ FxaaFloat4 fxaa(
     //
     // Use noperspective interpolation here (turn off perspective interpolation).
     // {xy} = center of pixel
-    FxaaFloat2 pos,
+    HIGHP FxaaFloat2 pos,
     //
     // Used only for FXAA Console, and not used on the 360 version.
     // Use noperspective interpolation here (turn off perspective interpolation).
     // {xy__} = upper left of pixel
     // {__zw} = lower right of pixel
-    FxaaFloat4 fxaaConsolePosPos,
+    HIGHP FxaaFloat4 fxaaConsolePosPos,
     //
     // Input color texture.
     // {rgb_} = color in linear or perceptual color space
@@ -482,14 +482,14 @@ FxaaFloat4 fxaa(
     //     N = 0.33 (sharper)
     // {__z_} =  N/screenWidthInPixels
     // {___w} =  N/screenHeightInPixels
-    FxaaFloat2 fxaaConsoleRcpFrameOpt,
+    HIGHP FxaaFloat2 fxaaConsoleRcpFrameOpt,
     //
     // Only used on FXAA Console.
     // Not used on 360, but used on PS3 and PC.
     // This must be from a constant/uniform.
     // {__z_} =  2.0/screenWidthInPixels
     // {___w} =  2.0/screenHeightInPixels
-    FxaaFloat2 fxaaConsoleRcpFrameOpt2,
+    HIGHP FxaaFloat2 fxaaConsoleRcpFrameOpt2,
     //
     // Only used on FXAA Console.
     // This used to be the FXAA_CONSOLE__EDGE_SHARPNESS define.
@@ -572,35 +572,43 @@ FxaaFloat4 fxaa(
     // Max, including the center
     FxaaFloat lumaMaxM = max(lumaMax, lumaM);
 
-    // Diagonal gradient (biased to avoid a later divide by zero)
-    FxaaFloat dirSwMinusNe = lumaSw - lumaNe;
-#   if G3D_FXAA_PATCHES
-        dirSwMinusNe += 1.0 / 512.0;
-#   endif        
-
     // Total range within a 3x3 neighborhood, for thresholding
     // whether it is worth appling AA
     FxaaFloat lumaMaxSubMinM = lumaMaxM - lumaMinM;
 
-    // Other diagonal gradient
-    FxaaFloat dirSeMinusNw = lumaSe - lumaNw;
-
     // If the entire range is less than the edge threshold, apply no AA
     if (lumaMaxSubMinM < lumaMaxScaledClamped) { return rgbyM; }
 
-    // Tangent to the edge
-    FxaaFloat2 dir;
-    dir.x = dirSwMinusNe + dirSeMinusNw; // == (SW + SE) - (NE + NW) ~= S - N
-    dir.y = dirSwMinusNe - dirSeMinusNw; // == (SW + NW) - (SE + NE) ~= W - E
-    FxaaFloat2 dir1 = normalize(dir.xy);
+    // Diagonal gradient (biased to avoid a later divide by zero)
+    FxaaFloat dirSwMinusNe = lumaSw - lumaNe;
 
-    // Step one pixel-width along the tangent in both the positive and negative half spaces and sample there
+    // Other diagonal gradient
+    FxaaFloat dirSeMinusNw = lumaSe - lumaNw;
+
+    // Tangent to the edge
+    FxaaFloat2 dir = FxaaFloat2(
+        dirSwMinusNe + dirSeMinusNw, // == (SW + SE) - (NE + NW) ~= S - N
+        dirSwMinusNe - dirSeMinusNw  // == (SW + NW) - (SE + NE) ~= W - E
+    );
+
+    // Avoid a division by 0 when normalizing dir
+    // Should we instead do the following?
+    //     FxaaFloat2 dir1 = dir.xy / (length(dir) + MEDIUMP_FLT_MIN);
+    // Or even the following?
+    //     FxaaFloat2 dir1 = dirLength < MEDIUMP_FLT_MIN ? FxaaFloat2(0.0) : dir.xy / dirLength
+    FxaaFloat dirLength = length(dir.xy);
+    if (dirLength < MEDIUMP_FLT_MIN) { return rgbyM; }
+
+    FxaaFloat2 dir1 = dir.xy / dirLength;
+
+    // Step one pixel-width along the tangent in both the positive and negative half
+    // spaces and sample there
     FxaaFloat4 rgbyN1 = FxaaTexTop(tex, pos.xy - dir1 * fxaaConsoleRcpFrameOpt.xy);
     FxaaFloat4 rgbyP1 = FxaaTexTop(tex, pos.xy + dir1 * fxaaConsoleRcpFrameOpt.xy);
 
 #   if G3D_FXAA_PATCHES
-        // A second sample up to two pixels away along the tangent.  This is a "min" in the original.  We increase the 
-        // distance (i.e., amount of blur) as the luma contrast increases.
+        // A second sample up to two pixels away along the tangent.  This is a "min" in the original.
+        //  We increase the distance (i.e., amount of blur) as the luma contrast increases.
         FxaaFloat dirAbsMinTimesC = max(abs(dir1.x), abs(dir1.y)) * fxaaConsoleEdgeSharpness * 0.015;
         FxaaFloat2 dir2 = dir1.xy * min(lumaMaxSubMinM / dirAbsMinTimesC, 3.0);
 #   else
@@ -624,8 +632,8 @@ FxaaFloat4 fxaa(
     if (twoTap) { rgbyB.xyz = rgbyA.xyz * 0.5; }
 
 #   if G3D_FXAA_PATCHES
-        // Keep some of the original contribution to avoid thin lines degrading completely and overblurring.
-        // This is an addition to the original Lottes algorithm
+        // Keep some of the original contribution to avoid thin lines degrading completely
+        // and overblurring. This is an addition to the original Lottes algorithm
         // rgbyB = sqrt(lerp(rgbyB * rgbyB, rgbyM * rgbyM, 0.25));  // Luminance preserving
         rgbyB = mix(rgbyB, rgbyM, 0.25); // Faster
 #   endif

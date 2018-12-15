@@ -58,8 +58,8 @@ vec4 PostProcess_AntiAliasing() {
             texelCenter,
             vec4(texelMinCorner, texelMaxCorner),
             postProcess_colorBuffer,
-            invSize,       // FxaaFloat4 fxaaConsoleRcpFrameOpt,
-            2.0 * invSize, // FxaaFloat4 fxaaConsoleRcpFrameOpt2,
+            invSize,             // FxaaFloat4 fxaaConsoleRcpFrameOpt,
+            2.0 * invSize,       // FxaaFloat4 fxaaConsoleRcpFrameOpt2,
             8.0,                 // FxaaFloat fxaaConsoleEdgeSharpness,
 #if defined(G3D_FXAA_PATCHES) && G3D_FXAA_PATCHES == 1
             0.08,                // FxaaFloat fxaaConsoleEdgeThreshold,

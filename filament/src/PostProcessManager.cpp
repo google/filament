@@ -39,7 +39,8 @@ void PostProcessManager::init(FEngine& engine) noexcept {
     // create sampler for post-process FBO
     DriverApi& driver = engine.getDriverApi();
     mPostProcessSbh = driver.createSamplerBuffer(engine.getPostProcessSib().getSize());
-    mPostProcessUbh = driver.createUniformBuffer(engine.getPerPostProcessUib().getSize(), driver::BufferUsage::DYNAMIC);
+    mPostProcessUbh = driver.createUniformBuffer(engine.getPerPostProcessUib().getSize(),
+            driver::BufferUsage::DYNAMIC);
     driver.bindSamplers(BindingPoints::POST_PROCESS, mPostProcessSbh);
     driver.bindUniformBuffer(BindingPoints::POST_PROCESS, mPostProcessUbh);
 }
