@@ -633,7 +633,7 @@ FxaaFloat4 fxaa(
 
 #   if G3D_FXAA_PATCHES
         // Keep some of the original contribution to avoid thin lines degrading completely
-       // and overblurring. This is an addition to the original Lottes algorithm
+        // and overblurring. This is an addition to the original Lottes algorithm
         // rgbyB = sqrt(lerp(rgbyB * rgbyB, rgbyM * rgbyM, 0.25));  // Luminance preserving
         rgbyB = mix(rgbyB, rgbyM, 0.25); // Faster
 #   endif
