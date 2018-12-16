@@ -112,6 +112,14 @@ enum_<Camera::Fov>("Camera$Fov")
     .value("VERTICAL", Camera::Fov::VERTICAL)
     .value("HORIZONTAL", Camera::Fov::HORIZONTAL);
 
+enum_<Frustum::Plane>("Frustum$Plane")
+    .value("LEFT", Frustum::Plane::LEFT)
+    .value("RIGHT", Frustum::Plane::RIGHT)
+    .value("BOTTOM", Frustum::Plane::BOTTOM)
+    .value("TOP", Frustum::Plane::TOP)
+    .value("FAR", Frustum::Plane::FAR)
+    .value("NEAR", Frustum::Plane::NEAR);
+
 enum_<Texture::Sampler>("Texture$Sampler") // aka driver::SamplerType
     .value("SAMPLER_2D", Texture::Sampler::SAMPLER_2D)
     .value("SAMPLER_CUBEMAP", Texture::Sampler::SAMPLER_CUBEMAP)

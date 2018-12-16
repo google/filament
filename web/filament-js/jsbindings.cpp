@@ -230,9 +230,11 @@ value_array<math::float4>("float4")
     .element(&math::float4::z)
     .element(&math::float4::w);
 
-value_array<Box>("Box")
-    .element(&Box::center)
-    .element(&Box::halfExtent);
+value_array<math::quat>("quat")
+    .element(&math::quat::x)
+    .element(&math::quat::y)
+    .element(&math::quat::z)
+    .element(&math::quat::w);
 
 value_array<Viewport>("Viewport")
     .element(&Viewport::left)
@@ -244,6 +246,10 @@ value_array<KtxBlobIndex>("KtxBlobIndex")
     .element(&KtxBlobIndex::mipLevel)
     .element(&KtxBlobIndex::arrayIndex)
     .element(&KtxBlobIndex::cubeFace);
+
+value_object<Box>("Box")
+    .field("center", &Box::center)
+    .field("halfExtent", &Box::halfExtent);
 
 // In JavaScript, a flat contiguous representation is best for matrices (see gl-matrix) so we
 // need to define a small wrapper here.
@@ -269,6 +275,10 @@ value_array<flatmat3>("mat3")
     .element(index<3>()).element(index<4>()).element(index<5>())
     .element(index<6>()).element(index<7>()).element(index<8>());
 
+value_object<RenderableManager::Bone>("RenderableManager$Bone")
+    .field("unitQuaternion", &RenderableManager::Bone::unitQuaternion)
+    .field("translation", &RenderableManager::Bone::translation);
+
 // CORE FILAMENT CLASSES
 // ---------------------
 
@@ -281,10 +291,23 @@ class_<Engine>("Engine")
     .class_function("destroy", (void (*)(Engine*)) []
             (Engine* engine) { Engine::destroy(&engine); }, allow_raw_pointers())
     .function("execute", &Engine::execute)
+
     /// getTransformManager ::method::
     /// ::retval:: an instance of [TransformManager]
     .function("getTransformManager", EMBIND_LAMBDA(TransformManager*, (Engine* engine), {
         return &engine->getTransformManager();
+    }), allow_raw_pointers())
+
+    /// getLightManager ::method::
+    /// ::retval:: an instance of [LightManager]
+    .function("getLightManager", EMBIND_LAMBDA(LightManager*, (Engine* engine), {
+        return &engine->getLightManager();
+    }), allow_raw_pointers())
+
+    /// getRenderableManager ::method::
+    /// ::retval:: an instance of [RenderableManager]
+    .function("getRenderableManager", EMBIND_LAMBDA(RenderableManager*, (Engine* engine), {
+        return &engine->getRenderableManager();
     }), allow_raw_pointers())
 
     /// createSwapChain ::method::
@@ -426,6 +449,26 @@ class_<Scene>("Scene")
     .function("getRenderableCount", &Scene::getRenderableCount)
     .function("getLightCount", &Scene::getLightCount);
 
+/// Frustum ::core class:: Represents the six planes of a truncated viewing pyramid
+class_<Frustum>("Frustum")
+    .constructor(EMBIND_LAMBDA(Frustum*, (flatmat4 m), {
+        return new Frustum(m.m);
+    }), allow_raw_pointers())
+
+    .function("setProjection",  EMBIND_LAMBDA(void, (Frustum* self, flatmat4 m), {
+        self->setProjection(m.m);
+    }), allow_raw_pointers())
+
+    .function("getNormalizedPlane", &Frustum::getNormalizedPlane)
+
+    .function("intersectsBox", EMBIND_LAMBDA(bool, (Frustum* self, const Box& box), {
+        return self->intersects(box);
+    }), allow_raw_pointers())
+
+    .function("intersectsSphere", EMBIND_LAMBDA(bool, (Frustum* self, const math::float4& sphere), {
+        return self->intersects(sphere);
+    }), allow_raw_pointers());
+
 /// Camera ::core class:: Represents the eye through which the scene is viewed.
 /// See also the [Engine] methods `createCamera` and `destroyCamera`.
 class_<Camera>("Camera")
@@ -433,48 +476,129 @@ class_<Camera>("Camera")
             double left, double right, double bottom, double top, double near, double far), {
         self->setProjection(projection, left, right, bottom, top, near, far);
     }), allow_raw_pointers())
+
     .function("setProjectionFov", EMBIND_LAMBDA(void, (Camera* self,
             double fovInDegrees, double aspect, double near, double far, Camera::Fov direction), {
         self->setProjection(fovInDegrees, aspect, near, far, direction);
     }), allow_raw_pointers())
+
+    .function("setLensProjection", &Camera::setLensProjection)
+    .function("setCustomProjection", &Camera::setCustomProjection)
+
+    .function("getProjectionMatrix", EMBIND_LAMBDA(flatmat4, (Camera* self), {
+        return flatmat4 { math::mat4f(self->getProjectionMatrix()) };
+    }), allow_raw_pointers())
+
+    .function("getCullingProjectionMatrix", EMBIND_LAMBDA(flatmat4, (Camera* self), {
+        return flatmat4 { math::mat4f(self->getCullingProjectionMatrix()) };
+    }), allow_raw_pointers())
+
+    .function("getNear", &Camera::getNear)
+    .function("getCullingFar", &Camera::getCullingFar)
+
+    .function("setModelMatrix", EMBIND_LAMBDA(void, (Camera* self, flatmat4 m), {
+        self->setModelMatrix(m.m);
+    }), allow_raw_pointers())
+
+    .function("lookAt", &Camera::lookAt)
+
+    .function("getModelMatrix", EMBIND_LAMBDA(flatmat4, (Camera* self), {
+        return flatmat4 { self->getModelMatrix() };
+    }), allow_raw_pointers())
+
+    .function("getViewMatrix", EMBIND_LAMBDA(flatmat4, (Camera* self), {
+        return flatmat4 { self->getViewMatrix() };
+    }), allow_raw_pointers())
+
+    .function("getPosition", &Camera::getPosition)
+    .function("getLeftVector", &Camera::getLeftVector)
+    .function("getUpVector", &Camera::getUpVector)
+    .function("getForwardVector", &Camera::getForwardVector)
+    .function("getFrustum", &Camera::getFrustum)
     .function("setExposure", &Camera::setExposure)
-    .function("lookAt", &Camera::lookAt);
+    .function("getAperture", &Camera::getAperture)
+    .function("getShutterSpeed", &Camera::getShutterSpeed)
+    .function("getSensitivity", &Camera::getSensitivity)
+
+    .class_function("inverseProjection",  (flatmat4 (*)(flatmat4)) [] (flatmat4 m) {
+        return flatmat4 { math::mat4f(Camera::inverseProjection(m.m)) };
+    }, allow_raw_pointers());
 
 class_<RenderBuilder>("RenderableManager$Builder")
-    .function("_build", EMBIND_LAMBDA(int, (RenderBuilder* builder,
-            Engine* engine, utils::Entity entity), {
-        return (int) builder->build(*engine, entity);
-    }), allow_raw_pointers())
-    .BUILDER_FUNCTION("boundingBox", RenderBuilder, (RenderBuilder* builder, Box box), {
-        return &builder->boundingBox(box); })
-    .BUILDER_FUNCTION("culling", RenderBuilder, (RenderBuilder* builder, bool enable), {
-        return &builder->culling(enable); })
-    .BUILDER_FUNCTION("receiveShadows", RenderBuilder, (RenderBuilder* builder, bool enable), {
-        return &builder->receiveShadows(enable); })
-    .BUILDER_FUNCTION("castShadows", RenderBuilder, (RenderBuilder* builder, bool enable), {
-        return &builder->castShadows(enable); })
     .BUILDER_FUNCTION("geometry", RenderBuilder, (RenderBuilder* builder,
             size_t index,
             RenderableManager::PrimitiveType type,
             VertexBuffer* vertices,
             IndexBuffer* indices), {
         return &builder->geometry(index, type, vertices, indices); })
+
     .BUILDER_FUNCTION("material", RenderBuilder, (RenderBuilder* builder,
             size_t index, MaterialInstance* mi), {
         return &builder->material(index, mi); })
+
+    .BUILDER_FUNCTION("boundingBox", RenderBuilder, (RenderBuilder* builder, Box box), {
+        return &builder->boundingBox(box); })
+
+    .BUILDER_FUNCTION("layerMask", RenderBuilder, (RenderBuilder* builder, uint8_t select,
+            uint8_t values), {
+        return &builder->layerMask(select, values); })
+
+    .BUILDER_FUNCTION("priority", RenderBuilder, (RenderBuilder* builder, uint8_t value), {
+        return &builder->priority(value); })
+
+    .BUILDER_FUNCTION("culling", RenderBuilder, (RenderBuilder* builder, bool enable), {
+        return &builder->culling(enable); })
+
+    .BUILDER_FUNCTION("castShadows", RenderBuilder, (RenderBuilder* builder, bool enable), {
+        return &builder->castShadows(enable); })
+
+    .BUILDER_FUNCTION("receiveShadows", RenderBuilder, (RenderBuilder* builder, bool enable), {
+        return &builder->receiveShadows(enable); })
+
+    .BUILDER_FUNCTION("skinning", RenderBuilder, (RenderBuilder* builder, size_t boneCount), {
+        return &builder->skinning(boneCount); })
+
+    .BUILDER_FUNCTION("skinningBones", RenderBuilder, (RenderBuilder* builder,
+            emscripten::val transforms), {
+        auto nbones = transforms["length"].as<size_t>();
+        std::vector<RenderableManager::Bone> bones(nbones);
+        for (size_t i = 0; i < nbones; i++) {
+            bones[i] = transforms[i].as<RenderableManager::Bone>();
+        }
+        return &builder->skinning(bones.size(), bones.data());
+    })
+
+    .BUILDER_FUNCTION("skinningMatrices", RenderBuilder, (RenderBuilder* builder,
+            emscripten::val transforms), {
+        auto nbones = transforms["length"].as<size_t>();
+        std::vector<math::mat4f> matrices(nbones);
+        for (size_t i = 0; i < nbones; i++) {
+            matrices[i] = transforms[i].as<flatmat4>().m;
+        }
+        return &builder->skinning(matrices.size(), matrices.data());
+    })
+
     .BUILDER_FUNCTION("blendOrder", RenderBuilder,
             (RenderBuilder* builder, size_t index, uint16_t order), {
-        return &builder->blendOrder(index, order); });
+        return &builder->blendOrder(index, order); })
+
+    .function("_build", EMBIND_LAMBDA(int, (RenderBuilder* builder,
+            Engine* engine, utils::Entity entity), {
+        return (int) builder->build(*engine, entity);
+    }), allow_raw_pointers());
 
 /// RenderableManager ::core class:: Allows access to properties of drawable objects.
 class_<RenderableManager>("RenderableManager")
-    .class_function("Builder", (RenderBuilder (*)(int)) [] (int n) { return RenderBuilder(n); })
+    .function("hasComponent", &RenderableManager::hasComponent)
 
     /// getInstance ::method:: Gets an instance of the renderable component for an entity.
     /// entity ::argument:: an [Entity]
     /// ::retval:: a renderable component
     .function("getInstance", &RenderableManager::getInstance)
 
+    .class_function("Builder", (RenderBuilder (*)(int)) [] (int n) { return RenderBuilder(n); })
+
+    .function("destroy", &RenderableManager::destroy)
     .function("setAxisAlignedBoundingBox", &RenderableManager::setAxisAlignedBoundingBox)
     .function("setLayerMask", &RenderableManager::setLayerMask)
     .function("setPriority", &RenderableManager::setPriority)
@@ -482,16 +606,33 @@ class_<RenderableManager>("RenderableManager")
     .function("setReceiveShadows", &RenderableManager::setReceiveShadows)
     .function("isShadowCaster", &RenderableManager::isShadowCaster)
     .function("isShadowReceiver", &RenderableManager::isShadowReceiver)
+
+    .function("setBones", EMBIND_LAMBDA(void, (RenderableManager* self,
+            RenderableManager::Instance instance, emscripten::val transforms, size_t offset), {
+        auto nbones = transforms["length"].as<size_t>();
+        std::vector<RenderableManager::Bone> bones(nbones);
+        for (size_t i = 0; i < nbones; i++) {
+            bones[i] = transforms[i].as<RenderableManager::Bone>();
+        }
+        self->setBones(instance, bones.data(), bones.size(), offset);
+    }), allow_raw_pointers())
+
+    .function("setBonesFromMatices", EMBIND_LAMBDA(void, (RenderableManager* self,
+        RenderableManager::Instance instance, emscripten::val transforms, size_t offset), {
+        auto nbones = transforms["length"].as<size_t>();
+        std::vector<math::mat4f> bones(nbones);
+        for (size_t i = 0; i < nbones; i++) {
+            bones[i] = transforms[i].as<flatmat4>().m;
+        }
+        self->setBones(instance, bones.data(), bones.size(), offset);
+    }), allow_raw_pointers())
+
     .function("getAxisAlignedBoundingBox", &RenderableManager::getAxisAlignedBoundingBox)
     .function("getPrimitiveCount", &RenderableManager::getPrimitiveCount)
     .function("setMaterialInstanceAt", &RenderableManager::setMaterialInstanceAt,
             allow_raw_pointers())
     .function("getMaterialInstanceAt", &RenderableManager::getMaterialInstanceAt,
             allow_raw_pointers())
-    .function("setBlendOrderAt", &RenderableManager::setBlendOrderAt)
-
-    // TODO: provide bindings for AttributeBitset
-    .function("getEnabledAttributesAt", &RenderableManager::getEnabledAttributesAt)
 
     .function("setGeometryAt", EMBIND_LAMBDA(void, (RenderableManager* self,
             RenderableManager::Instance instance, size_t primitiveIndex,
@@ -504,6 +645,13 @@ class_<RenderableManager>("RenderableManager")
             RenderableManager::Instance instance, size_t primitiveIndex,
             RenderableManager::PrimitiveType type, size_t offset, size_t count), {
         self->setGeometryAt(instance, primitiveIndex, type, offset, count);
+    }), allow_raw_pointers())
+
+    .function("setBlendOrderAt", &RenderableManager::setBlendOrderAt)
+
+    .function("getEnabledAttributesAt", EMBIND_LAMBDA(uint32_t, (RenderableManager* self,
+            RenderableManager::Instance instance, size_t primitiveIndex), {
+        return self->getEnabledAttributesAt(instance, primitiveIndex).getValue();
     }), allow_raw_pointers());
 
 /// RenderableManager$Instance ::class:: Component instance returned by [RenderableManager]
@@ -513,16 +661,35 @@ class_<RenderableManager::Instance>("RenderableManager$Instance");
 
 /// TransformManager ::core class:: Adds transform components to entities.
 class_<TransformManager>("TransformManager")
+    .function("hasComponent", &TransformManager::hasComponent)
+
     /// getInstance ::method:: Gets an instance representing the transform component for an entity.
     /// entity ::argument:: an [Entity]
     /// ::retval:: a transform component that can be passed to `setTransform`.
     .function("getInstance", &TransformManager::getInstance)
+
+    .function("create", &TransformManager::create)
+    .function("destroy", &TransformManager::destroy)
+    .function("setParent", &TransformManager::setParent)
+
     /// setTransform ::method:: Sets the mat4 value of a transform component.
     /// instance ::argument:: The transform instance of entity, obtained via `getInstance`.
     /// matrix ::argument:: Array of 16 numbers (mat4)
     .function("setTransform", EMBIND_LAMBDA(void,
             (TransformManager* self, TransformManager::Instance instance, flatmat4 m), {
-        self->setTransform(instance, m.m); }), allow_raw_pointers());
+        self->setTransform(instance, m.m); }), allow_raw_pointers())
+
+    .function("getTransform", EMBIND_LAMBDA(flatmat4,
+            (TransformManager* self, TransformManager::Instance instance), {
+        return flatmat4 { self->getTransform(instance) } ; }), allow_raw_pointers())
+
+    .function("getWorldTransform", EMBIND_LAMBDA(flatmat4,
+            (TransformManager* self, TransformManager::Instance instance), {
+        return flatmat4 { self->getTransform(instance) } ; }), allow_raw_pointers())
+
+    .function("openLocalTransformTransaction", &TransformManager::openLocalTransformTransaction)
+    .function("commitLocalTransformTransaction",
+            &TransformManager::commitLocalTransformTransaction);
 
 /// TransformManager$Instance ::class:: Component instance returned by [TransformManager]
 /// Be sure to call the instance's `delete` method when you're done with it.

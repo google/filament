@@ -1,7 +1,27 @@
-// -------------------------------------------------------------------------------------------------
-// Declares TypeScript annotations for Filament, which is implemented with an external WASM library.
-// We will eventually autogenerate this file, but for now it is incomplete and hand-authored.
-// -------------------------------------------------------------------------------------------------
+/*
+ * Copyright (C) 2019 The Android Open Source Project
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/*
+ * This file declares TypeScript annotations for Filament, which is implemented with an external
+ * WASM library. The annotations declared in this file must match the bindings that are defined
+ * in jsbindings. Note that clients are not required to use glMatrix, but we provide annotations for
+ * those that do.
+ */
+
+import * as glm from "gl-matrix";
 
 export as namespace Filament;
 
@@ -11,17 +31,30 @@ export function fetch(assets: string[], onready: () => void): void;
 
 export const assets: {[url: string]: Uint8Array};
 
-export type Box = number[][];
-export type float2 = number[];
-export type float3 = number[];
-export type float4 = number[];
-export type mat3 = number[];
-export type mat4 = number[];
+export type float2 = glm.vec2|number[];
+export type float3 = glm.vec3|number[];
+export type float4 = glm.vec4|number[];
+export type mat3 = glm.mat3|number[];
+export type mat4 = glm.mat4|number[];
+export type quat = glm.quat|number[];
 
 export class Entity {}
 export class Skybox {}
 export class Texture {}
 export class SwapChain {}
+
+export interface Box {
+    center: float3;
+    halfExtent: float3;
+}
+
+export class LightManager$Instance {
+    public delete(): void;
+}
+
+export class RenderableManager$Instance {
+    public delete(): void;
+}
 
 export class TransformManager$Instance {
     public delete(): void;
@@ -64,30 +97,73 @@ export class IndexBuffer$Builder {
 }
 
 export class RenderableManager$Builder {
-    public boundingBox(box: Box): RenderableManager$Builder;
-    public culling(enable: boolean): RenderableManager$Builder;
-    public material(geo: number, minstance: MaterialInstance): RenderableManager$Builder;
     public geometry(slot: number,
-                    ptype: RenderableManager$PrimitiveType,
-                    vb: VertexBuffer,
-                    ib: IndexBuffer): RenderableManager$Builder;
+        ptype: RenderableManager$PrimitiveType,
+        vb: VertexBuffer,
+        ib: IndexBuffer): RenderableManager$Builder;
+    public material(geo: number, minstance: MaterialInstance): RenderableManager$Builder;
+    public boundingBox(box: Box): RenderableManager$Builder;
+    public layerMask(select: number, values: number): RenderableManager$Builder;
+    public priority(value: number): RenderableManager$Builder;
+    public culling(enable: boolean): RenderableManager$Builder;
+    public castShadows(enable: boolean): RenderableManager$Builder;
+    public receiveShadows(enable: boolean): RenderableManager$Builder;
+    public skinning(boneCount: number): RenderableManager$Builder;
+    public skinningBones(transforms: RenderableManager$Bone[]): RenderableManager$Builder;
+    public skinningMatrices(transforms: mat4[]): RenderableManager$Builder;
+    public blendOrder(index: number, order: number): RenderableManager$Builder;
     public build(engine: Engine, entity: Entity): void;
 }
 
 export class LightManager$Builder {
+    public build(engine: Engine, entity: Entity): void;
+    public castShadows(value: boolean): LightManager$Builder;
     public color(rgb: float3): LightManager$Builder;
+    public direction(value: float3): LightManager$Builder;
     public intensity(value: number): LightManager$Builder;
     public position(value: float3): LightManager$Builder;
-    public direction(value: float3): LightManager$Builder;
-    public build(engine: Engine, entity: Entity): void;
 }
 
 export class LightManager {
     public static Builder(ltype: LightManager$Type): LightManager$Builder;
 }
 
+export interface RenderableManager$Bone {
+    unitQuaternion: quat;
+    translation: float3;
+}
+
 export class RenderableManager {
+    public hasComponent(entity: Entity): boolean;
+    public getInstance(entity: Entity): RenderableManager$Instance;
     public static Builder(ngeos: number): RenderableManager$Builder;
+    public destroy(entity: Entity);
+    public setAxisAlignedBoundingBox(instance: RenderableManager$Instance, aabb: Box): void;
+    public setLayerMask(instance: RenderableManager$Instance, select: number, values: number): void;
+    public setPriority(instance: RenderableManager$Instance, priority: number): void;
+    public setCastShadows(instance: RenderableManager$Instance, enable: boolean): void;
+    public setReceiveShadows(inst: RenderableManager$Instance, enable: boolean): void;
+    public isShadowCaster(instance: RenderableManager$Instance): boolean;
+    public isShadowReceiver(instance: RenderableManager$Instance): boolean;
+    public setBones(instance: RenderableManager$Instance, transforms: RenderableManager$Bone[],
+            offset: number): void
+    public setBonesFromMatrices(instance: RenderableManager$Instance, transforms: mat4[],
+            offset: number): void
+    public getAxisAlignedBoundingBox(instance: RenderableManager$Instance): Box;
+    public getPrimitiveCount(instance: RenderableManager$Instance): number;
+    public setMaterialInstanceAt(instance: RenderableManager$Instance,
+            primitiveIndex: number, materialInstance: MaterialInstance): void;
+    public getMaterialInstanceAt(instance: RenderableManager$Instance, primitiveIndex: number):
+            MaterialInstance;
+    public setGeometryAt(instance: RenderableManager$Instance, primitiveIndex: number,
+            type: RenderableManager$PrimitiveType, vertices: VertexBuffer, indices: IndexBuffer,
+            offset: number, count: number): void;
+    public setGeometryRangeAt(instance: RenderableManager$Instance, primitiveIndex: number,
+            type: RenderableManager$PrimitiveType, offset: number, count: number): void;
+    public setBlendOrderAt(instance: RenderableManager$Instance, primitiveIndex: number,
+            order: number): void;
+    public getEnabledAttributesAt(instance: RenderableManager$Instance,
+            primitiveIndex: number): number;
 }
 
 export class VertexBuffer {
@@ -108,10 +184,39 @@ export class Material {
     public createInstance(): MaterialInstance;
 }
 
+export class Frustum {
+    constructor(pv: mat4);
+    public setProjection(pv: mat4): void;
+    public getNormalizedPlane(plane: Frustum$Plane): float4;
+    public intersectsBox(box: Box): boolean;
+    public intersectsSphere(sphere: float4): boolean;
+}
+
 export class Camera {
-    public lookAt(eye: number[], center: number[], up: number[]): void;
+    public setProjection(Camera$Projection, left: number, right: number, bottom: number,
+        top: number, near: number, far: number): void;
     public setProjectionFov(fovInDegrees: number, aspect: number,
-                            near: number, far: number, fov: Camera$Fov): void;
+        near: number, far: number, fov: Camera$Fov): void;
+    public setLensProjection(focalLength: number, near: number, far: number): void;
+    public setCustomProjection(projection: mat4, near: number, far: number): void;
+    public getProjectionMatrix(): mat4;
+    public getCullingProjectionMatrix(): mat4;
+    public getNear(): number;
+    public getCullingFar(): number;
+    public setModelMatrix(view: mat4): void;
+    public lookAt(eye: float3, center: float3, up: float3): void;
+    public getModelMatrix(): mat4;
+    public getViewMatrix(): mat4;
+    public getPosition(): float3;
+    public getLeftVector(): float3;
+    public getUpVector(): float3;
+    public getForwardVector(): float3;
+    public getFrustum(): Frustum;
+    public setExposure(aperture: number, shutterSpeed: number, sensitivity: number): void;
+    public getAperture(): number;
+    public getShutterSpeed(): number;
+    public getSensitivity(): number;
+    public static inverseProjection(p: mat4): mat4;
 }
 
 export class IndirectLight {
@@ -129,14 +234,22 @@ export class Scene {
 
 export class View {
     public setCamera(camera: Camera);
-    public setClearColor(color: number[]);
+    public setClearColor(color: float4);
     public setScene(scene: Scene);
-    public setViewport(viewport: number[]);
+    public setViewport(viewport: float4);
 }
 
 export class TransformManager {
+    public hasComponent(entity: Entity): boolean;
     public getInstance(entity: Entity): TransformManager$Instance;
+    public create(entity: Entity, parent: TransformManager$Instance, xform: mat4): void;
+    public destroy(entity: Entity): void;
+    public setParent(instance: TransformManager$Instance, parent: TransformManager$Instance): void;
     public setTransform(instance: TransformManager$Instance, xform: mat4): void;
+    public getTransform(instance: TransformManager$Instance): mat4;
+    public getWorldTransform(instance: TransformManager$Instance): mat4;
+    public openLocalTransformTransaction(): void;
+    public commitLocalTransformTransaction(): void;
 }
 
 interface Filamesh {
@@ -158,12 +271,21 @@ export class Engine {
     public createTextureFromPng(url: string): Texture;
     public createView(): View;
     public destroySkybox(skybox: Skybox): void;
+    public getLightManager(): LightManager;
+    public getRenderableManager(): RenderableManager;
     public getSupportedFormatSuffix(suffix: string): void;
     public getTransformManager(): TransformManager;
     public init(assets: string[], onready: () => void): void;
-    public loadFilamesh(url: string,
-                        definstance: MaterialInstance,
-                        matinstances: object): Filamesh;
+    public loadFilamesh(url: string, definstance: MaterialInstance, matinstances: object): Filamesh;
+}
+
+export enum Frustum$Plane {
+    LEFT,
+    RIGHT,
+    BOTTOM,
+    TOP,
+    FAR,
+    NEAR,
 }
 
 export enum Camera$Fov {

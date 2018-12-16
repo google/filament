@@ -186,7 +186,7 @@ vb.setBufferAt(engine, 1, icosphere.tangents);
 ib.setBuffer(engine, icosphere.triangles);
 
 Filament.RenderableManager.Builder(1)
-  .boundingBox([ [-1, -1, -1], [1, 1, 1] ])
+  .boundingBox({ center: [-1, -1, -1], halfExtent: [1, 1, 1] })
   .material(0, matinstance)
   .geometry(0, PrimitiveType.TRIANGLES, vb, ib)
   .build(engine, renderable);

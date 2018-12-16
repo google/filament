@@ -187,7 +187,7 @@ triangle by setting up a bounding box and passing in the vertex and index buffer
 const mat = engine.createMaterial('triangle.filamat');
 const matinst = mat.getDefaultInstance();
 Filament.RenderableManager.Builder(1)
-    .boundingBox([[ -1, -1, -1 ], [ 1, 1, 1 ]])
+    .boundingBox({ center: [-1, -1, -1], halfExtent: [1, 1, 1] })
     .material(0, matinst)
     .geometry(0, Filament.RenderableManager$PrimitiveType.TRIANGLES, this.vb, this.ib)
     .build(engine, this.triangle);
