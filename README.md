@@ -327,14 +327,21 @@ Google employees require additional steps which can be found here [go/filawin](h
 Install the following components:
 
 - [Windows 10 SDK](https://developer.microsoft.com/en-us/windows/downloads/windows-10-sdk)
-- [Visual Studio 2015](https://www.visualstudio.com/downloads)
+- [Visual Studio 2015 or 2017](https://www.visualstudio.com/downloads)
 - [Clang 6](http://releases.llvm.org/download.html)
 - [Python 3.7](https://www.python.org/ftp/python/3.7.0/python-3.7.0.exe)
 - [Git 2.16.1 or later](https://github.com/git-for-windows/git/releases/download/v2.16.1.windows.4/PortableGit-2.16.1.4-64-bit.7z.exe)
 - [Cmake 3.11 or later](https://cmake.org/files/v3.11/cmake-3.11.0-rc1-win64-x64.msi)
 
-Open an VS2015 x64 Native Tools terminal (click the start button, type "x64 native tools" and
-select: "VS2015 x64 Native Tools Command Prompt").
+If you're using Visual Studio 2017, you'll also need to install the [LLVM Compiler
+Toolchain](https://marketplace.visualstudio.com/items?itemName=LLVMExtensions.llvm-toolchain)
+extension.
+
+Open an appropriate Native Tools terminal for the version of Visual Studio you are using:
+- VS 2015: VS2015 x64 Native Tools Command Prompt
+- VS 2017: x64 Native Tools Command Prompt for VS 2017
+
+You can find these by clicking the start button and typing "x64 native tools".
 
 Create a working directory:
 ```
@@ -344,11 +351,20 @@ Create a working directory:
 
 Create the msBuild project:
 ```
+# Visual Studio 2015:
 > cmake -T"LLVM-vs2014" -G "Visual Studio 14 2015 Win64" ../..
+
+# Visual Studio 2017
+> cmake ..\.. -T"LLVM" -G "Visual Studio 15 2017 Win64" ^
+-DCMAKE_CXX_COMPILER:PATH="C:\Program Files\LLVM\bin\clang-cl.exe" ^
+-DCMAKE_C_COMPILER:PATH="C:\Program Files\LLVM\bin\clang-cl.exe" ^
+-DCMAKE_LINKER:PATH="C:\Program Files\LLVM\bin\lld-link.exe"
 ```
 
 Check out the output and make sure Clang for Windows frontend was found. You should see a line
-showing the following output.
+showing the following output. Note that for Visual Studio 2017 this line may list Microsoft's
+compiler, but the build will still in fact use Clang and you can proceed.
+
 ```
 Clang:C:/Program Files/LLVM/msbuild-bin/cl.exe
 ```
@@ -379,11 +395,11 @@ Alternatively, you can use [Ninja](https://ninja-build.org/) to build for Window
 installation is still necessary.
 
 First, install the dependencies listed under [Windows](#Windows) as well as Ninja. Then open up a
-VS2015 x64 Native Tools terminal as before. Create a build directory inside Filament and run the
+Native Tools terminal as before. Create a build directory inside Filament and run the
 following CMake command:
 
 ```
-cmake .. -G Ninja ^
+> cmake .. -G Ninja ^
 -DCMAKE_CXX_COMPILER:PATH="C:\Program Files\LLVM\bin\clang-cl.exe" ^
 -DCMAKE_C_COMPILER:PATH="C:\Program Files\LLVM\bin\clang-cl.exe" ^
 -DCMAKE_LINKER:PATH="C:\Program Files\LLVM\bin\lld-link.exe" ^
