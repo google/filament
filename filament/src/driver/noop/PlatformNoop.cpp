@@ -14,6 +14,10 @@
  * limitations under the License.
  */
 
+// The noop driver is only useful for ensuring we don't have certain build issues.
+// Remove it from release builds, since it uses some space needlessly.
+#ifndef NDEBUG
+
 #include "driver/noop/PlatformNoop.h"
 
 #include "driver/noop/NoopDriver.h"
@@ -25,3 +29,5 @@ Driver* PlatformNoop::createDriver(void* const sharedGLContext) noexcept {
 }
 
 } // namespace filament
+
+#endif
