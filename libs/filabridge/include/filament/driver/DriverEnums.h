@@ -24,6 +24,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <utils/unwindows.h> // Because we define ERROR in the FenceStatus enum.
+
 namespace filament {
 
 /**
