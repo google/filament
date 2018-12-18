@@ -137,6 +137,8 @@ set(PRIVATE_HDRS
         src/driver/Handle.h
         src/driver/Program.h
         src/driver/SamplerBuffer.h
+        src/driver/noop/NoopDriver.cpp
+        src/driver/noop/PlatformNoop.cpp
         src/FilamentAPI-impl.h
         src/FrameInfo.h
         src/Intersections.h
@@ -151,17 +153,6 @@ set(MATERIAL_SRCS
         src/materials/skybox.mat
         src/materials/skyboxRGBM.mat
 )
-
-# The noop driver is only useful for ensuring we don't have certain build issues.
-# Remove it from release builds, since it uses some space needlessly.
-if (CMAKE_BUILD_TYPE MATCHES Debug)
-    list(APPEND SRCS src/driver/noop/NoopDriver.cpp)
-    list(APPEND SRCS src/driver/noop/PlatformNoop.cpp)
-endif()
-
-if(IOS AND NOT FILAMENT_SUPPORTS_VULKAN)
-    message(FATAL_ERROR "Filament for iOS must be built with Vulkan support.")
-endif()
 
 # Embed the binary resource blob for materials.
 get_resgen_vars(${RESOURCE_DIR} materials)
