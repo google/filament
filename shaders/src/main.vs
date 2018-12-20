@@ -11,17 +11,17 @@ void main() {
         // We encode the orthonormal basis as a quaternion to save space in the attributes
         toTangentFrame(mesh_tangents, material.worldNormal, vertex_worldTangent);
 
+        #if defined(HAS_SKINNING)
+            skinNormal(material.worldNormal, mesh_bone_indices, mesh_bone_weights);
+            skinNormal(vertex_worldTangent, mesh_bone_indices, mesh_bone_weights);
+        #endif
+
         // We don't need to normalize here, even if there's a scale in the matrix
         // because we ensure the worldFromModelNormalMatrix pre-scales the normal such that
         // all its components are < 1.0. This precents the bitangent to exceed the range of fp16
         // in the fragment shader, where we renormalize after interpolation
         vertex_worldTangent = objectUniforms.worldFromModelNormalMatrix * vertex_worldTangent;
         material.worldNormal = objectUniforms.worldFromModelNormalMatrix * material.worldNormal;
-
-        #if defined(HAS_SKINNING)
-            skinNormal(material.worldNormal, mesh_bone_indices, mesh_bone_weights);
-            skinNormal(vertex_worldTangent, mesh_bone_indices, mesh_bone_weights);
-        #endif
 
         // Reconstruct the bitangent from the normal and tangent. We don't bother with
         // normalization here since we'll do it after interpolation in the fragment stage
