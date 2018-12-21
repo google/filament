@@ -45,7 +45,12 @@ LinearImage::LinearImage(const LinearImage& that) {
 }
 
 LinearImage& LinearImage::operator=(const LinearImage& that) {
-    mDataRef = that.mDataRef ? new SharedReference(*that.mDataRef) : nullptr;
+    auto newDataRef = that.mDataRef
+        ? new SharedReference(*that.mDataRef)
+        : nullptr;
+    delete mDataRef;
+    mDataRef = newDataRef;
+    
     mData = that.mData;
     mWidth = that.mWidth;
     mHeight = that.mHeight;
