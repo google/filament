@@ -136,8 +136,6 @@ class FLightManager;
  *    On the other hand, a scene can contain hundreds of non overlapping lights without
  *    incurring a significant overhead.
  *
- * 3. Use Type.Static Lights as much as possible.
- *
  */
 class UTILS_PUBLIC LightManager : public FilamentAPI {
     struct BuilderDetails;
@@ -477,8 +475,6 @@ public:
      * @param i        Instance of the component obtained from getInstance().
      * @param position Light's position in world space. The default is at the origin.
      *
-     * @note ignored for Mode.STATIC lights.
-     *
      * @see Builder.position()
      */
     void setPosition(Instance i, const math::float3& position) noexcept;
@@ -493,8 +489,6 @@ public:
      * @param direction Light's direction in world space. Should be a unit vector.
      *                  The default is {0,-1,0}.
      *
-     * @note ignored for Mode.STATIC lights.
-     *
      * @see Builder.direction()
      */
     void setDirection(Instance i, const math::float3& direction) noexcept;
@@ -508,8 +502,6 @@ public:
      * @param i     Instance of the component obtained from getInstance().
      * @param color Color of the light specified in the linear sRGB color-space.
      *              The default is white {1,1,1}.
-     *
-     * @note ignored for Mode.STATIC lights.
      *
      * @see Builder.color(), getInstance()
      */
@@ -531,8 +523,6 @@ public:
      *                  - For point lights and spot lights, it specifies the luminous power
      *                  in *lumen*.
      *
-     * @note ignored for Mode.STATIC lights.
-     *
      * @see Builder.intensity()
      */
     void setIntensity(Instance i, float intensity) noexcept;
@@ -553,8 +543,6 @@ public:
      *         Halogen  |  7.0%
      *             LED  |  8.7%
      *     Fluorescent  | 10.7%
-     *
-     * @note ignored for Mode.STATIC lights.
      *
      * @see Builder.intensity(float watts, float efficiency)
      */
@@ -579,8 +567,6 @@ public:
      * @param i      Instance of the component obtained from getInstance().
      * @param radius falloff distance in world units. Default is 1 meter.
      *
-     * @note ignored for Mode.STATIC lights.
-     *
      * @see Builder.falloff()
      */
     void setFalloff(Instance i, float radius) noexcept;
@@ -598,8 +584,6 @@ public:
      * @param i     Instance of the component obtained from getInstance().
      * @param inner inner cone angle in *radians* between 0 and @f$ \pi @f$
      * @param outer outer cone angle in *radians* between 0 and @f$ \pi @f$
-     *
-     * @note ignored for Mode.STATIC lights.
      *
      * @see Builder.spotLightCone()
      */
