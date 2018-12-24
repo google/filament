@@ -77,7 +77,7 @@ public:
     using const_pointer   = const value_type*;
     using const_iterator  = const value_type*;
 
-    StaticString() noexcept = default;
+    constexpr StaticString() noexcept = default;
 
     // initialization from a string literal
     template <size_t N>
