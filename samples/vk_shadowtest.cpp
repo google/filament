@@ -124,6 +124,8 @@ int main(int argc, char** argv) {
     });
 
     FilamentApp::get().run(config, setup, cleanup);
+
+    return 0;
 }
 
 static GroundPlane createGroundPlane(Engine* engine) {
