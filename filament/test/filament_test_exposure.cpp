@@ -145,8 +145,3 @@ TEST_F(FilamentExposureTest, ComputeIlluminanceFromEV100) {
     int32_t sunny16 = static_cast<int32_t>(roundf(Exposure::illuminance(16.0f, 1 / 125.0f, 100.0f)));
     EXPECT_EQ(80000, sunny16);
 }
-
-int main(int argc, char** argv) {
-    ::testing::InitGoogleTest(&argc, argv);
-    return RUN_ALL_TESTS();
-}

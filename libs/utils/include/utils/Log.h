@@ -97,7 +97,7 @@ private:
     const char* getFormat(type t) const noexcept;
 
     class Buffer {
-        char mStorage[1024];
+        char mStorage[16384];
     public:
         char* curr = mStorage;
         size_t size = sizeof(mStorage);
