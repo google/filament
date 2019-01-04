@@ -54,4 +54,6 @@ int main(int argc, char** argv) {
     config.title = "ImGui Demo";
     auto nop = [](filament::Engine*, filament::View*, filament::Scene*) {};
     FilamentApp::get().run(config, nop, nop, imgui);
+
+    return 0;
 }
