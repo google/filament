@@ -155,8 +155,8 @@ std::unique_ptr<uint8_t[]> fromLinearTosRGB(const LinearImage& image) {
         float const* p = image.getPixelRef(0, y);
         for (size_t x = 0; x < w; ++x, p += nchan, d += N) {
             for (int n = 0; n < N; n++) {
-                float source = linearTosRGB(p[n]);
-                float target = math::saturate(source) * std::numeric_limits<T>::max();
+                float source = n < 3 ? linearTosRGB(p[n]) : p[n];
+                float target = math::saturate(source) * std::numeric_limits<T>::max() + 0.5f;
                 d[n] = T(target);
             }
         }
@@ -179,7 +179,7 @@ std::unique_ptr<uint8_t[]> fromLinearToRGB(const LinearImage& image) {
         float const* p = image.getPixelRef(0, y);
         for (size_t x = 0; x < w; ++x, p += channels, d += N) {
             for (int n = 0; n < N; n++) {
-                float target = math::saturate(p[n]) * std::numeric_limits<T>::max();
+                float target = math::saturate(p[n]) * std::numeric_limits<T>::max() + 0.5f;
                 d[n] = T(target);
             }
         }
@@ -201,7 +201,7 @@ std::unique_ptr<uint8_t[]> fromLinearToRGBM(const LinearImage& image) {
     for (size_t y = 0; y < h; ++y) {
         for (size_t x = 0; x < w; ++x, d += 4) {
             auto src = image.get<float3>((uint32_t) x, (uint32_t) y);
-            float4 l(linearToRGBM(*src) * std::numeric_limits<T>::max());
+            float4 l(linearToRGBM(*src) * std::numeric_limits<T>::max() + 0.5f);
             for (size_t i = 0; i < 4; i++) {
                 d[i] = T(l[i]);
             }
@@ -222,7 +222,7 @@ std::unique_ptr<uint8_t[]> fromLinearToGrayscale(const LinearImage& image) {
     for (size_t y = 0; y < h; ++y) {
         float const* p = image.getPixelRef(0, y);
         for (size_t x = 0; x < w; ++x, ++p, ++d) {
-            const float gray = math::saturate(*p) * std::numeric_limits<T>::max();
+            const float gray = math::saturate(*p) * std::numeric_limits<T>::max() + 0.5f;
             d[0] = T(gray);
         }
     }
