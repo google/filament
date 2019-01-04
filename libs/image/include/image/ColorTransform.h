@@ -154,12 +154,11 @@ std::unique_ptr<uint8_t[]> fromLinearTosRGB(const LinearImage& image) {
     for (size_t y = 0; y < h; ++y) {
         float const* p = image.getPixelRef(0, y);
         for (size_t x = 0; x < w; ++x, p += nchan, d += N) {
-          for (int n = 0; n < N; n++) {
-            float source = n < 3 ? linearTosRGB(p[n]) : p[n];
-            float target =
-                math::saturate(source) * std::numeric_limits<T>::max() + 0.5f;
-            d[n] = T(target);
-          }
+            for (int n = 0; n < N; n++) {
+                float source = n < 3 ? linearTosRGB(p[n]) : p[n];
+                float target = math::saturate(source) * std::numeric_limits<T>::max() + 0.5f;
+                d[n] = T(target);
+            }
         }
     }
     return dst;
@@ -180,9 +179,8 @@ std::unique_ptr<uint8_t[]> fromLinearToRGB(const LinearImage& image) {
         float const* p = image.getPixelRef(0, y);
         for (size_t x = 0; x < w; ++x, p += channels, d += N) {
             for (int n = 0; n < N; n++) {
-              float target =
-                  math::saturate(p[n]) * std::numeric_limits<T>::max() + 0.5f;
-              d[n] = T(target);
+                float target = math::saturate(p[n]) * std::numeric_limits<T>::max() + 0.5f;
+                d[n] = T(target);
             }
         }
     }
@@ -224,9 +222,8 @@ std::unique_ptr<uint8_t[]> fromLinearToGrayscale(const LinearImage& image) {
     for (size_t y = 0; y < h; ++y) {
         float const* p = image.getPixelRef(0, y);
         for (size_t x = 0; x < w; ++x, ++p, ++d) {
-          const float gray =
-              math::saturate(*p) * std::numeric_limits<T>::max() + 0.5f;
-          d[0] = T(gray);
+            const float gray = math::saturate(*p) * std::numeric_limits<T>::max() + 0.5f;
+            d[0] = T(gray);
         }
     }
     return dst;
