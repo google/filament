@@ -67,21 +67,26 @@ void FScene::prepare(const math::mat4f& worldOriginTransform) {
     // NOTE: we can't know in advance how many entities are renderable or lights because the corresponding
     // component can be added after the entity is added to the scene.
 
-    // for the purpose of allocation, we'll assume all our entities are renderables
-    size_t capacity = entities.size();
+    size_t renderableDataCapacity = entities.size();
     // we need the capacity to be multiple of 16 for SIMD loops
-    capacity = (capacity + 0xF) & ~0xF;
+    renderableDataCapacity = (renderableDataCapacity + 0xF) & ~0xF;
     // we need 1 extra entry at the end for the summed primitive count
-    capacity = capacity + 1;
+    renderableDataCapacity = renderableDataCapacity + 1;
 
     sceneData.clear();
-    if (sceneData.capacity() < capacity) {
-        sceneData.setCapacity(capacity);
+    if (sceneData.capacity() < renderableDataCapacity) {
+        sceneData.setCapacity(renderableDataCapacity);
     }
 
+    // The light data list will always contain at least one entry for the
+    // dominating directional light, even if there are no entities.
+    size_t lightDataCapacity = std::max<size_t>(1, entities.size());
+    // we need the capacity to be multiple of 16 for SIMD loops
+    lightDataCapacity = (lightDataCapacity + 0xF) & ~0xF;
+
     lightData.clear();
-    if (lightData.capacity() < capacity) {
-        lightData.setCapacity(capacity);
+    if (lightData.capacity() < lightDataCapacity) {
+        lightData.setCapacity(lightDataCapacity);
     }
     // the first entries are reserved for the directional lights (currently only one)
     lightData.resize(DIRECTIONAL_LIGHTS_COUNT);
