@@ -119,20 +119,15 @@ LinearImage verticalFlip(const LinearImage& image) {
     return result;
 }
 
-template <class VecT,
-          class Scale = std::ratio<1, 1>,
-          class Offset = std::ratio<1, 1>>
-LinearImage applyScaleOffset(const LinearImage& image) {
+template<class VecT>
+LinearImage applyScaleOffset(const LinearImage& image,
+        typename VecT::value_type scale, typename VecT::value_type offset) {
     const uint32_t width = image.getWidth(), height = image.getHeight();
     LinearImage result(width, height, image.getChannels());
     auto src = (VecT const*) image.getPixelRef();
     auto dst = (VecT*) result.getPixelRef();
-    constexpr float scale_f =
-        static_cast<float>(Scale::num) / static_cast<float>(Scale::den);
-    constexpr float offset_f =
-        static_cast<float>(Offset::num) / static_cast<float>(Offset::den);
     for (uint32_t n = 0, end = width * height; n < end; ++n) {
-      dst[n] = scale_f * src[n] + VecT(offset_f);
+        dst[n] = scale * src[n] + VecT{offset};
     }
     return result;
 }
@@ -141,16 +136,16 @@ LinearImage vectorsToColors(const LinearImage& image) {
     ASSERT_PRECONDITION(image.getChannels() == 3 || image.getChannels() == 4,
                         "Must be a 3 or 4 channel image");
     return image.getChannels() == 3
-        ? applyScaleOffset<float3, std::ratio<1, 2>, std::ratio<1, 2>>(image)
-        : applyScaleOffset<float4, std::ratio<1, 2>, std::ratio<1, 2>>(image);
+        ? applyScaleOffset<float3>(image, 0.5f, 0.5f)
+        : applyScaleOffset<float4>(image, 0.5f, 0.5f);
 }
 
 LinearImage colorsToVectors(const LinearImage& image) {
     ASSERT_PRECONDITION(image.getChannels() == 3 || image.getChannels() == 4,
                         "Must be a 3 or 4 channel image");
     return image.getChannels() == 3
-        ? applyScaleOffset<float3, std::ratio<2, 1>, std::ratio<-1, 1>>(image)
-        : applyScaleOffset<float4, std::ratio<2, 1>, std::ratio<-1, 1>>(image);
+        ? applyScaleOffset<float3>(image, 2.0f, 1.0f)
+        : applyScaleOffset<float4>(image, 2.0f, 1.0f);
 }
 
 LinearImage extractChannel(const LinearImage& source, uint32_t channel) {
