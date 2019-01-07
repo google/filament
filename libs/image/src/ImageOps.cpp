@@ -17,10 +17,12 @@
 #include <image/ImageOps.h>
 
 #include <math/vec3.h>
+#include <math/vec4.h>
 #include <utils/Panic.h>
 
 #include <algorithm>
 #include <memory>
+#include <ratio>
 
 using namespace math;
 
@@ -117,28 +119,38 @@ LinearImage verticalFlip(const LinearImage& image) {
     return result;
 }
 
-LinearImage vectorsToColors(const LinearImage& image) {
-    ASSERT_PRECONDITION(image.getChannels() == 3, "Must be a 3-channel image.");
+template <class VecT,
+          class Scale = std::ratio<1, 1>,
+          class Offset = std::ratio<1, 1>>
+LinearImage applyScaleOffset(const LinearImage& image) {
     const uint32_t width = image.getWidth(), height = image.getHeight();
-    LinearImage result(width, height, 3);
-    auto src = (float3 const*) image.getPixelRef();
-    auto dst = (float3*) result.getPixelRef();
+    LinearImage result(width, height, image.getChannels());
+    auto src = (VecT const*) image.getPixelRef();
+    auto dst = (VecT*) result.getPixelRef();
+    constexpr float scale_f =
+        static_cast<float>(Scale::num) / static_cast<float>(Scale::den);
+    constexpr float offset_f =
+        static_cast<float>(Offset::num) / static_cast<float>(Offset::den);
     for (uint32_t n = 0, end = width * height; n < end; ++n) {
-        dst[n] = 0.5f * (src[n] + float3(1));
+      dst[n] = scale_f * src[n] + VecT(offset_f);
     }
     return result;
 }
 
+LinearImage vectorsToColors(const LinearImage& image) {
+    ASSERT_PRECONDITION(image.getChannels() == 3 || image.getChannels() == 4,
+                        "Must be a 3 or 4 channel image");
+    return image.getChannels() == 3
+        ? applyScaleOffset<float3, std::ratio<1, 2>, std::ratio<1, 2>>(image)
+        : applyScaleOffset<float4, std::ratio<1, 2>, std::ratio<1, 2>>(image);
+}
+
 LinearImage colorsToVectors(const LinearImage& image) {
-    ASSERT_PRECONDITION(image.getChannels() == 3, "Must be a 3-channel image.");
-    const uint32_t width = image.getWidth(), height = image.getHeight();
-    LinearImage result(width, height, 3);
-    auto src = (float3 const*) image.getPixelRef();
-    auto dst = (float3*) result.getPixelRef();
-    for (uint32_t n = 0, end = width * height; n < end; ++n) {
-        dst[n] = 2.0f * src[n] - float3(1);
-    }
-    return result;
+    ASSERT_PRECONDITION(image.getChannels() == 3 || image.getChannels() == 4,
+                        "Must be a 3 or 4 channel image");
+    return image.getChannels() == 3
+        ? applyScaleOffset<float3, std::ratio<2, 1>, std::ratio<-1, 1>>(image)
+        : applyScaleOffset<float4, std::ratio<2, 1>, std::ratio<-1, 1>>(image);
 }
 
 LinearImage extractChannel(const LinearImage& source, uint32_t channel) {

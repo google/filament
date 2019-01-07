@@ -18,6 +18,7 @@
 #include <image/ImageOps.h>
 
 #include <math/vec3.h>
+#include <math/vec4.h>
 #include <utils/Panic.h>
 #include <utils/CString.h>
 
@@ -204,12 +205,22 @@ FilterFunction createFilterFunction(Filter ftype) {
     return fn;
 }
 
-void normalize(LinearImage& image) {
-    ASSERT_PRECONDITION(image.getChannels() == 3, "Must be a 3-channel image.");
+template <class VecT>
+void normalizeImpl(LinearImage& image) {
     const uint32_t width = image.getWidth(), height = image.getHeight();
-    auto vecs = (math::float3*) image.getPixelRef();
+    auto vecs = (VecT*) image.getPixelRef();
     for (uint32_t n = 0; n < width * height; ++n) {
         vecs[n] = normalize(vecs[n]);
+    }
+}
+
+void normalize(LinearImage& image) {
+    ASSERT_PRECONDITION(image.getChannels() == 3 || image.getChannels() == 4,
+                        "Must be a 3 or 4 channel image");
+    if (image.getChannels() == 3) {
+      normalizeImpl<math::float3>(image);
+    } else {
+      normalizeImpl<math::float4>(image);
     }
 }
 
