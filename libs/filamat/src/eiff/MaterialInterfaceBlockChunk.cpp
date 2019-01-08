@@ -56,19 +56,4 @@ void MaterialSamplerInterfaceBlockChunk::flatten(Flattener &f) {
     }
 }
 
-MaterialSamplerBindingsChunk::MaterialSamplerBindingsChunk(const SamplerBindingMap& sb) :
-        Chunk(ChunkType::MaterialSamplerBindings), mSamplerBindings(sb) {
-}
-
-void MaterialSamplerBindingsChunk::flatten(Flattener &f) {
-    const auto& bindings = mSamplerBindings.getBindingList();
-    f.writeUint64(bindings.size());
-    for (auto info: bindings) {
-        f.writeUint8(info.blockIndex);
-        f.writeUint8(info.localOffset);
-        f.writeUint8(info.globalOffset);
-        f.writeUint8(info.groupIndex);
-    }
-}
-
 }

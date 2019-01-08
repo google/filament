@@ -32,10 +32,6 @@ struct ChunkSamplerInterfaceBlock {
     bool unflatten(Unflattener& unflattener,filament::SamplerInterfaceBlock*);
 };
 
-struct ChunkSamplerBindingsBlock {
-    bool unflatten(Unflattener& unflattener,filament::SamplerBindingMap*);
-};
-
 } // namespace filamat
 
 #endif // TNT_FILAMAT_CHUNK_IB_H

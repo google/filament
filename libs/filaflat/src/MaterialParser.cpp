@@ -26,7 +26,6 @@
 #include "TextDictionaryReader.h"
 #include "SpirvDictionaryReader.h"
 
-#include <filament/SamplerBindingMap.h>
 #include <private/filament/SamplerInterfaceBlock.h>
 #include <private/filament/UniformInterfaceBlock.h>
 
@@ -168,20 +167,6 @@ bool MaterialParser::getSIB(filament::SamplerInterfaceBlock* sib) const noexcept
     Unflattener unflattener(start, end);
 
     return ChunkSamplerInterfaceBlock().unflatten(unflattener, sib);
-}
-
-bool MaterialParser::getSamplerBindingMap(filament::SamplerBindingMap* bindings) const noexcept {
-    auto type = MaterialSamplerBindings;
-
-    if (!mImpl->mChunkContainer.hasChunk(type)) {
-        return false;
-    }
-
-    const uint8_t* start = mImpl->mChunkContainer.getChunkStart(type);
-    const uint8_t* end = mImpl->mChunkContainer.getChunkEnd(type);
-    Unflattener unflattener(start, end);
-
-    return ChunkSamplerBindingsBlock().unflatten(unflattener, bindings);
 }
 
 bool MaterialParser::getShaderModels(uint32_t* value) const noexcept {

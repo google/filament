@@ -46,15 +46,5 @@ private:
     filament::SamplerInterfaceBlock& mSib;
 };
 
-class MaterialSamplerBindingsChunk : public Chunk {
-public:
-    MaterialSamplerBindingsChunk(const filament::SamplerBindingMap& samplerBindings);
-    virtual ~MaterialSamplerBindingsChunk() = default;
-
-    virtual void flatten(Flattener &) override;
-private:
-    const filament::SamplerBindingMap& mSamplerBindings;
-};
-
 } // namespace filamat
 #endif // TNT_FILAMAT_MAT_INFO_CHUNK_H

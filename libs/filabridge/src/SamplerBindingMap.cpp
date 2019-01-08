@@ -24,10 +24,10 @@
 
 namespace filament {
 
-void SamplerBindingMap::populate(SamplerInterfaceBlock* perMaterialSib, const char* materialName) {
-    // To avoid collision, the sampler bindings start after the last UBO binding.
-    const uint8_t numUniformBlockBindings = filament::BindingPoints::COUNT;
-    uint8_t offset = numUniformBlockBindings;
+void SamplerBindingMap::populate(uint8_t firstSamplerBinding,
+        const SamplerInterfaceBlock* perMaterialSib, const char* materialName) {
+    uint8_t offset = firstSamplerBinding;
+    size_t maxSamplerIndex = firstSamplerBinding + filament::MAX_SAMPLER_COUNT - 1;
     bool overflow = false;
     for (uint8_t blockIndex = 0; blockIndex < filament::BindingPoints::COUNT; blockIndex++) {
         mSamplerBlockOffsets[blockIndex] = offset;
@@ -40,7 +40,7 @@ void SamplerBindingMap::populate(SamplerInterfaceBlock* perMaterialSib, const ch
         if (sib) {
             auto sibFields = sib->getSamplerInfoList();
             for (auto sInfo : sibFields) {
-                if (offset - numUniformBlockBindings >= filament::MAX_SAMPLER_COUNT) {
+                if (offset > maxSamplerIndex) {
                     overflow = true;
                 }
                 addSampler({

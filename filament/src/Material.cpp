@@ -22,6 +22,8 @@
 
 #include "FilamentAPI-impl.h"
 
+#include <filament/driver/DriverEnums.h>
+
 #include <private/filament/SibGenerator.h>
 #include <private/filament/UibGenerator.h>
 #include <private/filament/Variant.h>
@@ -123,9 +125,9 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder)
     UTILS_UNUSED_IN_RELEASE bool uibOK = parser->getUIB(&mUniformInterfaceBlock);
     assert(uibOK);
 
-    // Sampler bindings are only required for Vulkan.
-    UTILS_UNUSED_IN_RELEASE bool sbOK = parser->getSamplerBindingMap(&mSamplerBindings);
-    assert(engine.getBackend() == Backend::OPENGL || sbOK);
+    // Populate sampler bindings for the backend that will consume this Material.
+    const uint8_t offset = getSamplerBindingsStart(engine.getBackend());
+    mSamplerBindings.populate(offset, &mSamplerInterfaceBlock);
 
     parser->getShading(&mShading);
     parser->getBlendingMode(&mBlendingMode);

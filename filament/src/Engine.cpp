@@ -418,9 +418,10 @@ Handle<HwProgram> FEngine::createPostProcessProgram(MaterialParser& parser,
     // need to populate a SamplerBindingMap and pass a weak reference to Program. Binding maps are
     // normally owned by Material, but in this case we'll simply own a copy right here in static
     // storage.
-    static const SamplerBindingMap* pBindings = [] {
+    static const SamplerBindingMap* pBindings = [backend = this->mBackend] {
         static SamplerBindingMap bindings;
-        bindings.populate();
+        uint8_t offset = filament::getSamplerBindingsStart(backend);
+        bindings.populate(offset);
         return &bindings;
     }();
 

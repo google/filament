@@ -290,7 +290,6 @@ void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
     info.blendingMode = mBlendingMode;
     info.shading = mShading;
     info.hasShadowMultiplier = mShadowMultiplier;
-    info.samplerBindings.populate(&info.sib, mMaterialName.c_str());
 }
 
 bool MaterialBuilder::runStaticCodeAnalysis() noexcept {
@@ -391,11 +390,6 @@ Package MaterialBuilder::build() noexcept {
     MaterialSamplerInterfaceBlockChunk matSib = MaterialSamplerInterfaceBlockChunk(info.sib);
     container.addChild(&matSib);
 
-    MaterialSamplerBindingsChunk matSb = MaterialSamplerBindingsChunk(info.samplerBindings);
-    if (mTargetApi == TargetApi::VULKAN || mTargetApi == TargetApi::ALL) {
-        container.addChild(&matSb);
-    }
-
     SimpleFieldChunk<bool> matDepthWriteSet(ChunkType::MaterialDepthWriteSet, mDepthWriteSet);
     container.addChild(&matDepthWriteSet);
 
@@ -451,6 +445,13 @@ Package MaterialBuilder::build() noexcept {
         const TargetApi targetApi = params.targetApi;
         const TargetApi codeGenTargetApi = params.codeGenTargetApi;
         std::vector<uint32_t>* pSpirv = (targetApi == TargetApi::VULKAN) ? &spirv : nullptr;
+
+        // Re-populate the set of sampler bindings for this API.
+        filament::SamplerBindingMap map;
+        auto backend = static_cast<filament::driver::Backend>(params.targetApi);
+        uint8_t offset = filament::getSamplerBindingsStart(backend);
+        map.populate(offset, &info.sib, mMaterialName.c_str());
+        info.samplerBindings = std::move(map);
 
         TextEntry glslEntry;
         SpirvEntry spirvEntry;
@@ -592,6 +593,14 @@ const std::string MaterialBuilder::peek(filament::driver::ShaderType type,
         model = ShaderModel(params.shaderModel);
         const TargetApi targetApi = params.targetApi;
         const TargetApi codeGenTargetApi = params.codeGenTargetApi;
+
+        // Re-populate the set of sampler bindings for this API.
+        filament::SamplerBindingMap map;
+        auto backend = static_cast<filament::driver::Backend>(params.targetApi);
+        uint8_t offset = filament::getSamplerBindingsStart(backend);
+        map.populate(offset, &info.sib, mMaterialName.c_str());
+        info.samplerBindings = std::move(map);
+
         if (type == filament::driver::ShaderType::VERTEX) {
             return sg.createVertexProgram(model, targetApi, codeGenTargetApi,
                     info, 0, mInterpolation, mVertexDomain);

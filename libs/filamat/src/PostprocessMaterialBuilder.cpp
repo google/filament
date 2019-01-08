@@ -55,12 +55,6 @@ Package PostprocessMaterialBuilder::build() {
     BlobDictionary spirvDictionary;
     std::vector<uint32_t> spirv;
 
-    // Populate a SamplerBindingMap for the sole purpose of finding where the post-process bindings
-    // live within the global namespace of samplers.
-    filament::SamplerBindingMap samplerBindingMap;
-    samplerBindingMap.populate();
-    const uint8_t firstSampler =
-            samplerBindingMap.getBlockOffset(filament::BindingPoints::POST_PROCESS);
     bool errorOccured = false;
 
     for (const auto& params : mCodeGenPermutations) {
@@ -68,6 +62,15 @@ Package PostprocessMaterialBuilder::build() {
         const TargetApi targetApi = params.targetApi;
         const TargetApi codeGenTargetApi = params.codeGenTargetApi;
         std::vector<uint32_t>* pSpirv = (targetApi == TargetApi::VULKAN) ? &spirv : nullptr;
+
+        // Populate a SamplerBindingMap for the sole purpose of finding where the post-process bindings
+        // live within the global namespace of samplers.
+        filament::SamplerBindingMap samplerBindingMap;
+        auto backend = static_cast<filament::driver::Backend>(params.targetApi);
+        uint8_t offset = filament::getSamplerBindingsStart(backend);
+        samplerBindingMap.populate(offset);
+        const uint8_t firstSampler =
+                samplerBindingMap.getBlockOffset(filament::BindingPoints::POST_PROCESS);
 
         TextEntry glslEntry;
         SpirvEntry spirvEntry;
