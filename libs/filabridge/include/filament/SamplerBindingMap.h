@@ -50,7 +50,7 @@ public:
     // Assigns a range of finalized binding points to each sampler block.
     // Samples are given monotonically increasing binding points starting with firstSamplerBinding.
     // If a per-material SIB is provided, then material samplers are also inserted (always at the
-    // end). The optional // material name is used for error reporting only.
+    // end). The optional material name is used for error reporting only.
     void populate(uint8_t firstSamplerBinding,
             const SamplerInterfaceBlock* perMaterialSib = nullptr,
             const char* materialName = nullptr);
