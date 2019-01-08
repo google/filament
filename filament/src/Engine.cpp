@@ -257,6 +257,8 @@ void FEngine::shutdown() {
     destroy(mDefaultIblTexture);
     destroy(mDefaultIbl);
 
+    destroy(mDefaultMaterial);
+
     /*
      * clean-up after the user -- we call terminate on each "leaked" object and clear each list.
      *
