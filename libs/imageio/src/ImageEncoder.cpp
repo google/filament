@@ -711,7 +711,7 @@ EXREncoder::~EXREncoder() {
 }
 
 static int toEXRCompression(const std::string& c) {
-    if (c == "") {
+    if (c.empty()) {
         return TINYEXR_COMPRESSIONTYPE_PIZ;
     } else if (c == "RAW") {
         return TINYEXR_COMPRESSIONTYPE_NONE;
