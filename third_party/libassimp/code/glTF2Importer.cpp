@@ -1013,7 +1013,7 @@ void glTF2Importer::ImportAnimations(glTF2::Asset& r)
 
         std::unordered_map<unsigned int, AnimationSamplers> samplers = GatherSamplers(anim);
 
-        ai_anim->mNumChannels = r.skins[0].jointNames.size();
+        ai_anim->mNumChannels = r.skins.Size() > 0 ? r.skins[0].jointNames.size() : 0;
         if (ai_anim->mNumChannels > 0) {
             ai_anim->mChannels = new aiNodeAnim*[ai_anim->mNumChannels];
             int j = 0;
@@ -1022,7 +1022,7 @@ void glTF2Importer::ImportAnimations(glTF2::Asset& r)
                 ++j;
             }
         }
-        
+
         // Use the latest keyframe for the duration of the animation
         double maxDuration = 0;
         for (unsigned int j = 0; j < ai_anim->mNumChannels; ++j) {
@@ -1047,7 +1047,7 @@ void glTF2Importer::ImportAnimations(glTF2::Asset& r)
             }
         }
         ai_anim->mDuration = maxDuration;
-        
+
         mScene->mAnimations[i] = ai_anim;
     }
 }
