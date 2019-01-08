@@ -144,8 +144,8 @@ LinearImage colorsToVectors(const LinearImage& image) {
     ASSERT_PRECONDITION(image.getChannels() == 3 || image.getChannels() == 4,
                         "Must be a 3 or 4 channel image");
     return image.getChannels() == 3
-        ? applyScaleOffset<float3>(image, 2.0f, 1.0f)
-        : applyScaleOffset<float4>(image, 2.0f, 1.0f);
+        ? applyScaleOffset<float3>(image, 2.0f, -1.0f)
+        : applyScaleOffset<float4>(image, 2.0f, -1.0f);
 }
 
 LinearImage extractChannel(const LinearImage& source, uint32_t channel) {
