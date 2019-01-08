@@ -19,3 +19,13 @@ In addition we recommend to remove the following directories:
 - `tools/`
 
 We do not use these directories and they take up unnecessary space on disk.
+
+Other Changes
+-------------
+
+(1)
+
+In glTF2Importer.cpp, change from:
+    ai_anim->mNumChannels = r.skins[0].jointNames.size();
+to:
+    ai_anim->mNumChannels = r.skins.Size() > 0 ? r.skins[0].jointNames.size() : 0;

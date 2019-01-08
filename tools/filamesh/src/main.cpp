@@ -81,9 +81,13 @@ static Box computeAABB(VECTOR const* positions, INDEX const* indices,
 void preprocessNode(const aiScene* scene, const aiNode* node) {
     for (size_t i = 0; i < node->mNumMeshes; ++i) {
         const aiMesh* mesh = scene->mMeshes[node->mMeshes[i]];
-        if (!mesh->HasNormals() || !mesh->HasTextureCoords(0)) {
-            std::cerr << "The mesh must have texture coordinates" << std::endl;
-            exit(1);
+        if (!mesh->HasNormals()) {
+            std::cerr << "Error: mesh " << i <<  " does not have normals" << std::endl;
+            continue;
+        }
+        if (!mesh->HasTextureCoords(0)) {
+            std::cerr << "Error: mesh " << i <<  " does not have texture coordinates" << std::endl;
+            continue;
         }
         const float3* uv0 = reinterpret_cast<const float3*>(mesh->mTextureCoords[0]);
         const float3* uv1 = reinterpret_cast<const float3*>(mesh->mTextureCoords[1]);
@@ -104,7 +108,7 @@ void preprocessNode(const aiScene* scene, const aiNode* node) {
             }
         }
     }
-    for (size_t i=0 ; i<node->mNumChildren ; ++i) {
+    for (size_t i = 0; i < node->mNumChildren; ++i) {
         preprocessNode(scene, node->mChildren[i]);
     }
 }
@@ -113,6 +117,9 @@ template<bool INTERLEAVED, bool SNORMUVS>
 void processNode(const aiScene* scene, const aiNode* node, std::vector<Part>& meshes) {
     for (size_t i = 0; i < node->mNumMeshes; ++i) {
         const aiMesh* mesh = scene->mMeshes[node->mMeshes[i]];
+        if (!mesh->HasNormals() || !mesh->HasTextureCoords(0)) {
+            continue;
+        }
 
         const float3* vertices = reinterpret_cast<const float3*>(mesh->mVertices);
         const float3* tangents = reinterpret_cast<const float3*>(mesh->mTangents);
@@ -212,7 +219,7 @@ static void printUsage(const char* name) {
                     "    FILAMESH [options] <source mesh> <destination file>\n"
                     "\n"
                     "Supported mesh formats:\n"
-                    "    COLLADA, FBX, OBJ\n"
+                    "    COLLADA, FBX, OBJ, GLTF\n"
                     "\n"
                     "Input meshes must have texture coordinates.\n"
                     "\n"
