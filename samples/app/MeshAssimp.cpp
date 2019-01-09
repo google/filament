@@ -139,8 +139,9 @@ std::string shaderFromConfig(MaterialConfig config) {
 
     if (!config.unlit) {
         shader += R"SHADER(
-            material.roughness = materialParams.roughnessFactor * texture(materialParams_metallicRoughnessMap, metallicRoughnessUV).g;
-            material.metallic = materialParams.metallicFactor * texture(materialParams_metallicRoughnessMap, metallicRoughnessUV).b;
+            vec4 metallicRoughness = texture(materialParams_metallicRoughnessMap, metallicRoughnessUV);
+            material.roughness = materialParams.roughnessFactor * metallicRoughness.g;
+            material.metallic = materialParams.metallicFactor * metallicRoughness.b;
             material.ambientOcclusion = texture(materialParams_aoMap, aoUV).r;
             material.emissive = texture(materialParams_emissiveMap, emissiveUV);
             material.emissive.rgb *= materialParams.emissiveFactor.rgb;
@@ -709,7 +710,7 @@ bool MeshAssimp::setFromFile(Asset& asset, std::map<std::string, MaterialInstanc
 
         asset.snormUV0 = minUV0.x >= -1.0f && minUV0.x <= 1.0f && maxUV0.x >= -1.0f && maxUV0.x <= 1.0f &&
                          minUV0.y >= -1.0f && minUV0.y <= 1.0f && maxUV0.y >= -1.0f && maxUV0.y <= 1.0f;
-        
+
         asset.snormUV1 = minUV1.x >= -1.0f && minUV1.x <= 1.0f && maxUV1.x >= -1.0f && maxUV1.x <= 1.0f &&
                          minUV1.y >= -1.0f && minUV1.y <= 1.0f && maxUV1.y >= -1.0f && maxUV1.y <= 1.0f;
 
