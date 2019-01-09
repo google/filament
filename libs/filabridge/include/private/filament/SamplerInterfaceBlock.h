@@ -148,7 +148,7 @@ inline constexpr uint8_t getSamplerBindingsStart(driver::Backend api) noexcept {
         default:
         case driver::Backend::OPENGL:
         case driver::Backend::VULKAN: {
-            // Vulkan has a single namespace for uniforms and samplers.
+            // Vulkan and OpenGL have a single namespace for uniforms and samplers.
             // To avoid collision, the sampler bindings start after the last UBO binding.
             const uint8_t numUniformBlockBindings = filament::BindingPoints::COUNT;
             return numUniformBlockBindings;
