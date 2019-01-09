@@ -1,0 +1,34 @@
+material {
+    name : helmet,
+    requires : [
+        uv0
+    ],
+    shadingModel : lit,
+    parameters : [
+        {
+            type : sampler2d,
+            name : baseColor
+        },
+        {
+            type : sampler2d,
+            name : occlusionRoughnessMetallic
+        },
+        {
+            type : sampler2d,
+            name : normalMap
+        }
+    ],
+}
+
+fragment {
+    void material(inout MaterialInputs material) {
+        vec2 uv = getUV0();
+        material.normal = texture(materialParams_normalMap, uv).xyz * 2.0 - 1.0;
+        prepareMaterial(material);
+        material.baseColor = texture(materialParams_baseColor, uv);
+        vec4 orm = texture(materialParams_occlusionRoughnessMetallic, uv);
+        material.ambientOcclusion = orm.r;
+        material.roughness = orm.g;
+        material.metallic = orm.b;
+    }
+}
