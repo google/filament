@@ -86,7 +86,8 @@ void preprocessNode(const aiScene* scene, const aiNode* node) {
             continue;
         }
         if (!mesh->HasTextureCoords(0)) {
-            std::cerr << "Error: mesh " << i <<  " does not have texture coordinates" << std::endl;
+            std::cerr << "Warning: mesh " << i <<  " does not have texture coordinates"
+                    << std::endl;
             continue;
         }
         const float3* uv0 = reinterpret_cast<const float3*>(mesh->mTextureCoords[0]);
@@ -117,7 +118,7 @@ template<bool INTERLEAVED, bool SNORMUVS>
 void processNode(const aiScene* scene, const aiNode* node, std::vector<Part>& meshes) {
     for (size_t i = 0; i < node->mNumMeshes; ++i) {
         const aiMesh* mesh = scene->mMeshes[node->mMeshes[i]];
-        if (!mesh->HasNormals() || !mesh->HasTextureCoords(0)) {
+        if (!mesh->HasNormals()) {
             continue;
         }
 
@@ -131,6 +132,9 @@ void processNode(const aiScene* scene, const aiNode* node, std::vector<Part>& me
 
         if (!mesh->HasVertexColors(0)) {
             colors = nullptr;
+        }
+        if (!mesh->HasTextureCoords(0)) {
+            uv0 = nullptr;
         }
         if (!mesh->HasTextureCoords(1)) {
             uv1 = nullptr;
@@ -155,13 +159,18 @@ void processNode(const aiScene* scene, const aiNode* node, std::vector<Part>& me
                 }
 
                 for (size_t j = 0; j < numVertices; j++) {
-                    quatf q = mat3f::packTangentFrame({tangents[j], bitangents[j], normals[j]});
+                    quatf q;
+                    if (uv0) {
+                        q = mat3f::packTangentFrame({tangents[j], bitangents[j], normals[j]});
+                    } else {
+                        q = quatf(0, 0, 0, 1);
+                    }
                     color = colors ? colors[j] : float4(1.0f);
                     Vertex vertex {
                         .position = half4(vertices[j], 1.0_h),
                         .tangents = short4(math::packSnorm16(q.xyzw)),
                         .color = ubyte4(clamp(color, 0.0f, 1.0f) * 255.0f),
-                        .uv0 = convertUV<SNORMUVS>(uv0[j].xy),
+                        .uv0 = uv0 ? convertUV<SNORMUVS>(uv0[j].xy) : ushort2(0),
                     };
                     if (INTERLEAVED) {
                         g_mesh.vertices.emplace_back(vertex);
