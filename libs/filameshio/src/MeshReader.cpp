@@ -54,7 +54,7 @@ static size_t fileSize(int fd) {
 }
 
 MeshReader::Mesh MeshReader::loadMeshFromFile(filament::Engine* engine, const utils::Path& path,
-        const MaterialRegistry& materials) {
+        MaterialRegistry& materials) {
 
     Mesh mesh;
 
@@ -91,7 +91,7 @@ MeshReader::Mesh MeshReader::loadMeshFromBuffer(filament::Engine* engine,
 
 MeshReader::Mesh MeshReader::loadMeshFromBuffer(filament::Engine* engine,
         void const* data, Callback destructor, void* user,
-        const MaterialRegistry& materials) {
+        MaterialRegistry& materials) {
     const uint8_t* p = (const uint8_t*) data;
     if (strncmp(MAGICID, (const char *) p, 8)) {
         utils::slog.e << "Magic string not found." << utils::io::endl;
@@ -256,8 +256,14 @@ MeshReader::Mesh MeshReader::loadMeshFromBuffer(filament::Engine* engine,
         builder.geometry(i, RenderableManager::PrimitiveType::TRIANGLES,
                             mesh.vertexBuffer, mesh.indexBuffer, parts[i].offset,
                             parts[i].minIndex, parts[i].maxIndex, parts[i].indexCount);
-        const auto miter = materials.find(partsMaterial[i]);
-        builder.material(i, miter == materials.end() ? defaultmi : miter->second);
+        const auto& materialName = partsMaterial[i];
+        const auto miter = materials.find(materialName);
+        if (miter == materials.end()) {
+            builder.material(i, defaultmi);
+            materials[materialName] = defaultmi;
+        } else {
+            builder.material(i, miter->second);
+        }
     }
     builder.build(*engine, mesh.renderable);
 

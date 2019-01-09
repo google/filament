@@ -55,7 +55,7 @@ public:
      */
     static Mesh loadMeshFromFile(filament::Engine* engine,
             const utils::Path& path,
-            const MaterialRegistry& materials);
+            MaterialRegistry& materials);
 
     /**
      * Loads a filamesh renderable from an in-memory buffer. The material registry
@@ -66,7 +66,7 @@ public:
      */
     static Mesh loadMeshFromBuffer(filament::Engine* engine,
             void const* data, Callback destructor, void* user,
-            const MaterialRegistry& materials);
+            MaterialRegistry& materials);
 
     /**
      * Loads a filamesh renderable from an in-memory buffer. The material registry
