@@ -13,6 +13,7 @@ endif()
 # ==================================================================================================
 
 set(MATERIAL_NAMES
+    helmet
     parquet
     sandbox
     textured
@@ -48,12 +49,23 @@ add_custom_target(sample_materials DEPENDS ${MATERIAL_BINS})
 function(add_ktxfiles SOURCE TARGET EXTRA_ARGS)
     set(source_path "${ROOT_DIR}/${SOURCE}")
     set(target_path "${SERVER_DIR}/${TARGET}")
-    set(target_ktxfiles ${target_ktxfiles} ${target_path} PARENT_SCOPE)
+    set(target_textures ${target_textures} ${target_path} PARENT_SCOPE)
     add_custom_command(
         OUTPUT ${target_path}
         COMMAND mipgen --strip-alpha ${EXTRA_ARGS} ${source_path} ${target_path}
         MAIN_DEPENDENCY ${source_path}
         DEPENDS mipgen)
+endfunction()
+
+# Somtimes we want to load raw PNG files instead of KTX; simply copy those into the server folder.
+function(add_pngfile SOURCE TARGET)
+    set(source_path "${ROOT_DIR}/${SOURCE}")
+    set(target_path "${SERVER_DIR}/${TARGET}")
+    set(target_textures ${target_textures} ${target_path} PARENT_SCOPE)
+    add_custom_command(
+        OUTPUT ${target_path}
+        COMMAND cmake -E copy ${source_path} ${target_path}
+        MAIN_DEPENDENCY ${source_path})
 endfunction()
 
 set(ETC_R11_ARGS "--grayscale;--compression=etc_r11_numeric_40")
@@ -73,6 +85,22 @@ add_ktxfiles("assets/models/monkey/metallic.png" "metallic_etc.ktx" "${ETC_R11_A
 add_ktxfiles("assets/models/monkey/ao.png" "ao.ktx" "--grayscale")
 add_ktxfiles("assets/models/monkey/ao.png" "ao_etc.ktx" "${ETC_R11_ARGS}")
 
+add_pngfile("third_party/helmet/FlightHelmet_baseColor.png" "FlightHelmet_baseColor.png")
+add_pngfile("third_party/helmet/FlightHelmet_baseColor1.png" "FlightHelmet_baseColor1.png")
+add_pngfile("third_party/helmet/FlightHelmet_baseColor2.png" "FlightHelmet_baseColor2.png")
+add_pngfile("third_party/helmet/FlightHelmet_baseColor3.png" "FlightHelmet_baseColor3.png")
+add_pngfile("third_party/helmet/FlightHelmet_baseColor4.png" "FlightHelmet_baseColor4.png")
+add_pngfile("third_party/helmet/FlightHelmet_normal.png" "FlightHelmet_normal.png")
+add_pngfile("third_party/helmet/FlightHelmet_normal1.png" "FlightHelmet_normal1.png")
+add_pngfile("third_party/helmet/FlightHelmet_normal2.png" "FlightHelmet_normal2.png")
+add_pngfile("third_party/helmet/FlightHelmet_normal3.png" "FlightHelmet_normal3.png")
+add_pngfile("third_party/helmet/FlightHelmet_normal4.png" "FlightHelmet_normal4.png")
+add_pngfile("third_party/helmet/FlightHelmet_occlusionRoughnessMetallic.png" "FlightHelmet_occlusionRoughnessMetallic.png")
+add_pngfile("third_party/helmet/FlightHelmet_occlusionRoughnessMetallic1.png" "FlightHelmet_occlusionRoughnessMetallic1.png")
+add_pngfile("third_party/helmet/FlightHelmet_occlusionRoughnessMetallic2.png" "FlightHelmet_occlusionRoughnessMetallic2.png")
+add_pngfile("third_party/helmet/FlightHelmet_occlusionRoughnessMetallic3.png" "FlightHelmet_occlusionRoughnessMetallic3.png")
+add_pngfile("third_party/helmet/FlightHelmet_occlusionRoughnessMetallic4.png" "FlightHelmet_occlusionRoughnessMetallic4.png")
+
 # Convert OBJ files into filamesh files.
 function(add_mesh SOURCE TARGET)
     set(source_mesh "${ROOT_DIR}/${SOURCE}")
@@ -86,6 +114,7 @@ function(add_mesh SOURCE TARGET)
 endfunction()
 
 add_mesh("assets/models/monkey/monkey.obj" "suzanne.filamesh")
+add_mesh("third_party/helmet/FlightHelmet.gltf" "helmet.filamesh")
 add_mesh("third_party/shader_ball/shader_ball.obj" "shader_ball.filamesh")
 
 # Generate IBL and skybox images using cmgen.
@@ -138,7 +167,7 @@ add_envmap("third_party/environments/venetian_crossroads_2k.hdr" "venetian_cross
 add_envmap("third_party/environments/pillars_2k.hdr" "pillars_2k")
 
 add_custom_target(sample_assets DEPENDS
-    ${target_ktxfiles}
+    ${target_textures}
     ${target_meshes}
     ${target_envmaps}
     ${target_skyboxes})
@@ -164,6 +193,7 @@ add_custom_target(filamentjs_public DEPENDS ${SERVER_DIR}/filament.js ${SERVER_D
 # ==================================================================================================
 
 set(HTML_FILES
+    helmet.html
     leaks.html
     parquet.html
     suzanne.html
