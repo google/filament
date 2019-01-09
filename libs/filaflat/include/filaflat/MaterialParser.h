@@ -30,7 +30,6 @@
 namespace filament {
 class UniformInterfaceBlock;
 class SamplerInterfaceBlock;
-class SamplerBindingMap;
 }
 
 namespace filaflat {
@@ -56,7 +55,6 @@ public:
     bool getName(utils::CString*) const noexcept;
     bool getUIB(filament::UniformInterfaceBlock* uib) const noexcept;
     bool getSIB(filament::SamplerInterfaceBlock* sib) const noexcept;
-    bool getSamplerBindingMap(filament::SamplerBindingMap*) const noexcept;
     bool getShaderModels(uint32_t* value) const noexcept;
 
     bool getDepthWriteSet(bool* value) const noexcept;

@@ -124,37 +124,4 @@ bool ChunkSamplerInterfaceBlock::unflatten(Unflattener& unflattener,
     return true;
 }
 
-bool ChunkSamplerBindingsBlock::unflatten(Unflattener& unflattener,
-        filament::SamplerBindingMap* map) {
-    assert(map);
-
-    uint64_t numFields = 0 ;
-    if (!unflattener.read(&numFields) ) {
-        return false;
-    }
-
-    for (uint64_t i = 0; i < numFields; i++) {
-        SamplerBindingInfo info;
-        if (!unflattener.read(&info.blockIndex)) {
-            return false;
-        }
-
-        if (!unflattener.read(&info.localOffset)) {
-            return false;
-        }
-
-        if (!unflattener.read(&info.globalOffset)) {
-            return false;
-        }
-
-        if (!unflattener.read(&info.groupIndex)) {
-            return false;
-        }
-
-        map->addSampler(info);
-    }
-
-    return true;
-}
-
 } // namespace filaflat

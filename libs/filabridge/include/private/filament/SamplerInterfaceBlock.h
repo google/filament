@@ -19,6 +19,7 @@
 
 
 #include <filament/driver/DriverEnums.h>
+#include <filament/EngineEnums.h>
 
 #include <utils/compiler.h>
 #include <utils/CString.h>
@@ -140,6 +141,20 @@ private:
     tsl::robin_map<const char*, uint32_t, utils::hashCStrings, utils::equalCStrings> mInfoMap;
     uint32_t mSize = 0; // size in Samplers (i.e.: count)
 };
+
+// Returns the binding point of the first sampler for the given backend API.
+inline constexpr uint8_t getSamplerBindingsStart(driver::Backend api) noexcept {
+    switch (api) {
+        default:
+        case driver::Backend::OPENGL:
+        case driver::Backend::VULKAN: {
+            // Vulkan and OpenGL have a single namespace for uniforms and samplers.
+            // To avoid collision, the sampler bindings start after the last UBO binding.
+            const uint8_t numUniformBlockBindings = filament::BindingPoints::COUNT;
+            return numUniformBlockBindings;
+        }
+    }
+}
 
 } // namespace filament
 
