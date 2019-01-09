@@ -896,7 +896,7 @@ class_<MeshReader>("MeshReader")
     // materials ::argument:: [MeshReader$MaterialRegistry]
     // ::retval:: the [MeshReader$Mesh] object
     .class_function("loadMeshFromBuffer", EMBIND_LAMBDA(MeshReader::Mesh,
-            (Engine* engine, BufferDescriptor buffer, const MeshReader::MaterialRegistry& matreg), {
+            (Engine* engine, BufferDescriptor buffer, MeshReader::MaterialRegistry& matreg), {
         // This destruction lambda is called for the vertex buffer AND index buffer, so release
         // CPU memory only after both have been uploaded to the GPU.
         struct Bundle { int count; BufferDescriptor buffer; };
