@@ -78,6 +78,8 @@ endforeach()
 # Build common resources
 # ==================================================================================================
 
+file(MAKE_DIRECTORY ${RESOURCE_DIR})
+
 get_resgen_vars(${RESOURCE_DIR} resources)
 
 add_custom_command(
