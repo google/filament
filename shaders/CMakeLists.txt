@@ -45,6 +45,28 @@ set(SHADERS
         src/variables.fs
         src/variables.vs)
 
+set(MINIFIED_DIR ${CMAKE_CURRENT_BINARY_DIR}/minified)
+
+file(MAKE_DIRECTORY ${MINIFIED_DIR})
+
+# After the foreach loop, SHADERS_MIN will contain the paths to the minified shaders.
+set(SHADERS_MIN)
+foreach(SHADER_FILE ${SHADERS})
+    get_filename_component(SHADER_NAME ${SHADER_FILE} NAME)
+    set(SHADER_RAW ${CMAKE_CURRENT_SOURCE_DIR}/${SHADER_FILE})
+    set(SHADER_MIN ${MINIFIED_DIR}/${SHADER_NAME})
+    # For Debug builds, pass the "-Onone" flag to perform no minification. This is helpful for
+    # debugging shaders.
+    add_custom_command(
+        OUTPUT ${SHADER_MIN}
+        COMMAND glslminifier "$<$<CONFIG:DEBUG>:-Onone>" -o ${SHADER_MIN} ${SHADER_RAW}
+        DEPENDS glslminifier ${SHADER_RAW}
+        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+        COMMENT "Minifying shader ${SHADER_NAME}"
+    )
+    list(APPEND SHADERS_MIN ${SHADER_MIN})
+endforeach()
+
 # ==================================================================================================
 # Code generation
 # ==================================================================================================
@@ -54,9 +76,9 @@ get_resgen_vars(${RESOURCE_DIR} shaders)
 
 add_custom_command(
         OUTPUT ${RESGEN_OUTPUTS}
-        COMMAND resgen --text --keep ${RESGEN_FLAGS} ${SHADERS}
-        DEPENDS resgen ${SHADERS}
-        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+        COMMAND resgen --text --keep ${RESGEN_FLAGS} ${SHADERS_MIN}
+        DEPENDS resgen ${SHADERS_MIN}
+        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
         COMMENT "Aggregating shaders"
 )
 
