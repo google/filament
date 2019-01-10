@@ -602,6 +602,7 @@ void FView::prepareCamera(const CameraInfo& camera, const Viewport& viewport) co
     const mat4f clipFromView(projectionMatrix);
     const mat4f viewFromClip(Camera::inverseProjection(clipFromView));
     const mat4f clipFromWorld(clipFromView * viewFromWorld);
+    const mat4f worldFromClip(worldFromView * viewFromClip);
 
     UniformBuffer& u = getUb();
     u.setUniform(offsetof(PerViewUib, viewFromWorldMatrix), viewFromWorld);    // view
@@ -609,6 +610,7 @@ void FView::prepareCamera(const CameraInfo& camera, const Viewport& viewport) co
     u.setUniform(offsetof(PerViewUib, clipFromViewMatrix), clipFromView);      // projection
     u.setUniform(offsetof(PerViewUib, viewFromClipMatrix), viewFromClip);      // 1/projection
     u.setUniform(offsetof(PerViewUib, clipFromWorldMatrix), clipFromWorld);    // projection * view
+    u.setUniform(offsetof(PerViewUib, worldFromClipMatrix), worldFromClip);    // 1/(projection * view)
 
     const float w = viewport.width;
     const float h = viewport.height;
