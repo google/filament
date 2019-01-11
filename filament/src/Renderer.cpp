@@ -383,12 +383,12 @@ void FRenderer::endFrame() {
     }
     mFrameSkipper.endFrame();
 
-    driver.endFrame(mFrameId);
-
     if (mSwapChain) {
         mSwapChain->commit(driver);
         mSwapChain = nullptr;
     }
+
+    driver.endFrame(mFrameId);
 
     // Run the component managers' GC in parallel
     // WARNING: while doing this we can't access any component manager
