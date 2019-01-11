@@ -47,7 +47,5 @@ void setUpMetalLayer(void* nativeView) {
     // See "Direct to Display" http://metalkit.org/2017/06/30/introducing-metal-2.html.
     metalLayer.opaque = YES;
 
-    metalLayer.displaySyncEnabled = YES;
-
     [view setLayer:metalLayer];
 }
