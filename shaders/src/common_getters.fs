@@ -28,6 +28,11 @@ mat4 getClipFromWorldMatrix() {
 }
 
 /** @public-api */
+mat4 getWorldFromClipMatrix() {
+    return frameUniforms.worldFromClipMatrix;
+}
+
+/** @public-api */
 vec4 getResolution() {
     return frameUniforms.resolution;
 }

@@ -49,6 +49,7 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     math::mat4f clipFromViewMatrix;
     math::mat4f viewFromClipMatrix;
     math::mat4f clipFromWorldMatrix;
+    math::mat4f worldFromClipMatrix;
     math::mat4f lightFromWorldMatrix;
 
     math::float4 resolution; // viewport width, height, 1/width, 1/height
