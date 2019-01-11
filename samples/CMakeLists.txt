@@ -155,7 +155,7 @@ set(APP_SRCS
 
 if (APPLE)
     list(APPEND APP_SRCS app/NativeWindowHelperCocoa.mm)
-    list(APPEND APP_LIBS "-framework Cocoa")
+    list(APPEND APP_LIBS "-framework Cocoa -framework quartzcore")
 endif()
 
 if (LINUX)

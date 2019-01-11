@@ -423,14 +423,12 @@ FilamentApp::Window::Window(FilamentApp* filamentApp,
     // rather than the one created by SDL.
     mFilamentApp->mEngine = Engine::create(config.backend);
 
-    // HACK: We don't use SDL's 2D rendering functionality, but by invoking it we cause
-    // SDL to create a Metal backing layer, which allows us to run Vulkan apps via MoltenVK.
-    #if defined(FILAMENT_DRIVER_SUPPORTS_VULKAN) && defined(__APPLE__)
-    constexpr int METAL_DRIVER = 2;
-    SDL_CreateRenderer(mWindow, METAL_DRIVER, SDL_RENDERER_ACCELERATED);
-    #endif
-
     void* nativeWindow = ::getNativeWindow(mWindow);
+#if defined(FILAMENT_DRIVER_SUPPORTS_VULKAN) && defined(__APPLE__)
+    // We request a Metal layer in case we want to render via Metal / MoltenVK. For OpenGL, this
+    // won't make a difference.
+    setUpMetalLayer(nativeWindow);
+#endif
     mSwapChain = mFilamentApp->mEngine->createSwapChain(nativeWindow);
     mRenderer = mFilamentApp->mEngine->createRenderer();
 
