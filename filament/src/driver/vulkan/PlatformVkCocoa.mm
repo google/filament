@@ -30,8 +30,6 @@
 #error VK_MVK_macos_surface is not defined
 #endif
 
-#define METALVIEW_TAG 255
-
 namespace filament {
 
 using namespace driver;
