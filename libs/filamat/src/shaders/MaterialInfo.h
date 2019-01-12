@@ -37,6 +37,8 @@ struct UTILS_PUBLIC MaterialInfo {
     bool isDoubleSided;
     bool hasExternalSamplers;
     bool hasShadowMultiplier;
+    bool curvatureToRoughness;
+    bool limitOverInterpolation;
     filament::AttributeBitset requiredAttributes;
     filament::BlendingMode blendingMode;
     filament::Shading shading;

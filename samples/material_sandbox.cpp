@@ -143,7 +143,7 @@ static int handleCommandLineArgments(int argc, char* argv[], Config* config) {
 }
 
 static void cleanup(Engine* engine, View*, Scene*) {
-    for (auto material : g_meshMaterialInstances) {
+    for (const auto& material : g_meshMaterialInstances) {
         engine->destroy(material.second);
     }
 
@@ -320,6 +320,11 @@ static void gui(filament::Engine* engine, filament::View*) {
             ImGui::SliderAngle("ibl rotation", &params.iblRotation);
         }
 
+        if (ImGui::CollapsingHeader("Anti-aliasing")) {
+            ImGui::Checkbox("fxaa", &params.fxaa);
+            ImGui::Checkbox("msaa 4x", &params.msaa);
+        }
+
         if (ImGui::CollapsingHeader("Debug")) {
             DebugRegistry& debug = engine->getDebugRegistry();
             ImGui::Checkbox("Light Far uses shadow casters",
@@ -368,6 +373,11 @@ static void gui(filament::Engine* engine, filament::View*) {
     }
 }
 
+static void preRender(filament::Engine*, filament::View* view, filament::Scene*, filament::Renderer*) {
+    view->setAntiAliasing(g_params.fxaa ? View::FXAA : View::NONE);
+    view->setSampleCount((uint8_t) (g_params.msaa ? 4 : 1));
+}
+
 int main(int argc, char* argv[]) {
     int option_index = handleCommandLineArgments(argc, argv, &g_config);
     int num_args = argc - option_index;
@@ -387,7 +397,7 @@ int main(int argc, char* argv[]) {
 
     g_config.title = "Material Sandbox";
     FilamentApp& filamentApp = FilamentApp::get();
-    filamentApp.run(g_config, setup, cleanup, gui);
+    filamentApp.run(g_config, setup, cleanup, gui, preRender);
 
     return 0;
 }

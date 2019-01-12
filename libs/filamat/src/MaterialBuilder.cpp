@@ -216,6 +216,16 @@ MaterialBuilder& MaterialBuilder::shadowMultiplier(bool shadowMultiplier) noexce
     return *this;
 }
 
+MaterialBuilder& MaterialBuilder::curvatureToRoughness(bool curvatureToRoughness) noexcept {
+    mCurvatureToRoughness = curvatureToRoughness;
+    return *this;
+}
+
+MaterialBuilder& MaterialBuilder::limitOverInterpolation(bool limitOverInterpolation) noexcept {
+    mLimitOverInterpolation = limitOverInterpolation;
+    return *this;
+}
+
 MaterialBuilder& MaterialBuilder::transparencyMode(TransparencyMode mode) noexcept {
     mTransparencyMode = mode;
     return *this;
@@ -286,6 +296,8 @@ void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
     info.isLit = isLit();
     info.isDoubleSided = mDoubleSided;
     info.hasExternalSamplers = hasExternalSampler();
+    info.curvatureToRoughness = mCurvatureToRoughness;
+    info.limitOverInterpolation = mLimitOverInterpolation;
     info.requiredAttributes = mRequiredAttributes;
     info.blendingMode = mBlendingMode;
     info.shading = mShading;
@@ -307,7 +319,7 @@ bool MaterialBuilder::runStaticCodeAnalysis() noexcept {
 
     std::string shaderCode = peek(ShaderType::VERTEX, model, mProperties);
     bool result = glslTools.analyzeVertexShader(shaderCode, model, mTargetApi);
-    if (!result) return result;
+    if (!result) return false;
 
     shaderCode = peek(ShaderType::FRAGMENT, model, mProperties);
     result = glslTools.analyzeFragmentShader(shaderCode, model, mTargetApi);
@@ -373,6 +385,14 @@ Package MaterialBuilder::build() noexcept {
     if (mShading == Shading::UNLIT) {
         container.addChild(&matShadowMultiplier);
     }
+
+    SimpleFieldChunk<bool> matCurvatureToRoughness(
+            ChunkType::MaterialCurvatureToRoughness, mCurvatureToRoughness);
+    container.addChild(&matCurvatureToRoughness);
+
+    SimpleFieldChunk<bool> matLimitOverInterpolation(
+            ChunkType::MaterialLimitOverInterpolation, mLimitOverInterpolation);
+    container.addChild(&matLimitOverInterpolation);
 
     SimpleFieldChunk<uint8_t> matTransparency(ChunkType::MaterialTransparencyMode,
             static_cast<uint8_t>(mTransparencyMode));
@@ -453,8 +473,8 @@ Package MaterialBuilder::build() noexcept {
         map.populate(offset, &info.sib, mMaterialName.c_str());
         info.samplerBindings = std::move(map);
 
-        TextEntry glslEntry;
-        SpirvEntry spirvEntry;
+        TextEntry glslEntry{0};
+        SpirvEntry spirvEntry{0};
 
         glslEntry.shaderModel = static_cast<uint8_t>(params.shaderModel);
         spirvEntry.shaderModel = static_cast<uint8_t>(params.shaderModel);
@@ -504,7 +524,7 @@ Package MaterialBuilder::build() noexcept {
                 }
 
                 if (targetApi == TargetApi::VULKAN) {
-                    assert(spirv.size() > 0);
+                    assert(!spirv.empty());
                     spirvEntry.stage = filament::driver::ShaderType::VERTEX;
                     spirvEntry.dictionaryIndex = spirvDictionary.addBlob(spirv);
                     spirv.clear();
@@ -540,7 +560,7 @@ Package MaterialBuilder::build() noexcept {
                 }
 
                 if (targetApi == TargetApi::VULKAN) {
-                    assert(spirv.size() > 0);
+                    assert(!spirv.empty());
                     spirvEntry.stage = filament::driver::ShaderType::FRAGMENT;
                     spirvEntry.dictionaryIndex = spirvDictionary.addBlob(spirv);
                     spirv.clear();

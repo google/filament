@@ -40,7 +40,7 @@
 using namespace filaflat;
 using namespace utils;
 
-static const int alignment = 17;
+static const int alignment = 24;
 
 struct Config {
     bool printGLSL = false;
@@ -371,6 +371,8 @@ static bool printMaterial(const ChunkContainer& container) {
     printChunk<filament::Interpolation, uint8_t>(container, filamat::MaterialInterpolation,
             "Interpolation: ");
     printChunk<bool, bool>(container, filamat::MaterialShadowMultiplier, "Shadow multiply: ");
+    printChunk<bool, bool>(container, filamat::MaterialCurvatureToRoughness, "Curvature to roughness: ");
+    printChunk<bool, bool>(container, filamat::MaterialLimitOverInterpolation, "Limit interpolation: ");
 
     std::cout << std::endl;
 
