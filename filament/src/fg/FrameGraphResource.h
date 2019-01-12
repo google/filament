@@ -17,11 +17,15 @@
 #ifndef TNT_FILAMENT_FRAMEGRAPHRESOURCEHANDLE_H
 #define TNT_FILAMENT_FRAMEGRAPHRESOURCEHANDLE_H
 
+#include <filament/driver/DriverEnums.h>
+
 #include <limits>
 
 #include <stdint.h>
 
 namespace filament {
+
+class FrameGraph;
 
 /*
  * A FrameGraph resource.
@@ -29,10 +33,17 @@ namespace filament {
  * This is used to represent a virtual resource.
  */
 
-struct FrameGraphResource {
+class FrameGraphResource {
+public:
 
-    struct TextureDesc {
-        // TODO: descriptor for textures and render targets
+    struct Descriptor {
+        uint32_t width = 1;     // width of resource in pixel
+        uint32_t height = 1;    // height of resource in pixel
+        uint32_t depth = 1;     // # of images for 3D textures
+        uint8_t levels = 1;     // # of levels for textures
+        uint8_t samples = 1;    // # of sample for render targets
+        driver::SamplerType type = driver::SamplerType::SAMPLER_2D;     // texture target type
+        driver::TextureFormat format = driver::TextureFormat::RGBA8;    // resource internal format
     };
 
     static constexpr uint16_t UNINITIALIZED = std::numeric_limits<uint16_t>::max();
