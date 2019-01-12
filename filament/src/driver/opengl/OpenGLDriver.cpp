@@ -575,7 +575,7 @@ void OpenGLDriver::blendFunction(GLenum srcRGB, GLenum srcA, GLenum dstRGB, GLen
         state.raster.blendFunctionSrcA = srcA;
         state.raster.blendFunctionDstRGB = dstRGB;
         state.raster.blendFunctionDstA = dstA;
-        glBlendFuncSeparate(srcRGB, dstRGB, dstA, srcA);
+        glBlendFuncSeparate(srcRGB, dstRGB, srcA, dstA);
     }
 }
 
