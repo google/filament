@@ -17,8 +17,15 @@
 #include <gtest/gtest.h>
 
 #include "fg/FrameGraph.h"
+#include "fg/FrameGraphPassResources.h"
+
+#include "driver/CommandStream.h"
+#include "driver/noop/NoopDriver.h"
 
 using namespace filament;
+
+static CircularBuffer buffer(8192);
+static CommandStream driverApi(*NoopDriver::create(), buffer);
 
 TEST(FrameGraphTest, SimpleRenderPass) {
 
@@ -31,18 +38,27 @@ TEST(FrameGraphTest, SimpleRenderPass) {
     };
 
     auto& renderPass = fg.addPass<RenderPassData>("Render",
-            [&](FrameGraphBuilder& builder, RenderPassData& data) {
-                data.output = builder.createTexture("renderTarget", FrameGraphBuilder::WRITE, {});
+            [&](FrameGraph::Builder& builder, RenderPassData& data) {
+                FrameGraphResource::Descriptor desc {
+                    .format = driver::TextureFormat::RGBA16F
+                };
+                data.output = builder.write(builder.createTexture("renderTarget", desc));
                 EXPECT_TRUE(data.output.isValid());
                 EXPECT_TRUE(fg.isValid(data.output));
             },
-            [&renderPassExecuted](FrameGraphPassResources const& resources, RenderPassData const& data) {
+            [=, &renderPassExecuted](
+                    FrameGraphPassResources const& resources,
+                    RenderPassData const& data,
+                    driver::DriverApi& driver) {
                 renderPassExecuted = true;
+                EXPECT_TRUE(resources.getTexture(data.output));
+
             });
 
     fg.present(renderPass.getData().output);
 
-    fg.compile().execute();
+    fg.compile();
+    fg.execute(driverApi);
 
     EXPECT_TRUE(renderPassExecuted);
 }
@@ -60,13 +76,20 @@ TEST(FrameGraphTest, SimpleRenderAndPostProcessPasses) {
     };
 
     auto& renderPass = fg.addPass<RenderPassData>("Render",
-            [&](FrameGraphBuilder& builder, RenderPassData& data) {
-                data.output = builder.createTexture("renderTarget", FrameGraphBuilder::WRITE, {});
+            [&](FrameGraph::Builder& builder, RenderPassData& data) {
+                FrameGraphResource::Descriptor desc {
+                        .format = driver::TextureFormat::RGBA16F
+                };
+                data.output = builder.write(builder.createTexture("renderTarget", desc));
                 EXPECT_TRUE(data.output.isValid());
                 EXPECT_TRUE(fg.isValid(data.output));
             },
-            [&renderPassExecuted](FrameGraphPassResources const& resources, RenderPassData const& data) {
+            [=, &renderPassExecuted](
+                    FrameGraphPassResources const& resources,
+                    RenderPassData const& data,
+                    driver::DriverApi& driver) {
                 renderPassExecuted = true;
+                EXPECT_TRUE(resources.getTexture(data.output));
             });
 
 
@@ -76,15 +99,23 @@ TEST(FrameGraphTest, SimpleRenderAndPostProcessPasses) {
     };
 
     auto& postProcessPass = fg.addPass<PostProcessPassData>("PostProcess",
-            [&](FrameGraphBuilder& builder, PostProcessPassData& data) {
+            [&](FrameGraph::Builder& builder, PostProcessPassData& data) {
                 data.input = builder.read(renderPass.getData().output);
                 data.output = builder.write(data.input);
+
+                auto* desc = fg.getDescriptor(data.output);
+
+                EXPECT_EQ(desc->format, driver::TextureFormat::RGBA16F);
+
                 EXPECT_TRUE(data.input.isValid());
                 EXPECT_TRUE(data.output.isValid());
                 EXPECT_FALSE(fg.isValid(data.input));
                 EXPECT_TRUE(fg.isValid(data.output));
             },
-            [&postProcessPassExecuted](FrameGraphPassResources const& resources, PostProcessPassData const& data) {
+            [=, &postProcessPassExecuted](
+                    FrameGraphPassResources const& resources,
+                    PostProcessPassData const& data,
+                    driver::DriverApi& driver) {
                 postProcessPassExecuted = true;
             });
 
@@ -98,7 +129,7 @@ TEST(FrameGraphTest, SimpleRenderAndPostProcessPasses) {
 
     fg.export_graphviz(utils::slog.d);
 
-    fg.execute();
+    fg.execute(driverApi);
 
 
     EXPECT_TRUE(renderPassExecuted);
@@ -119,10 +150,13 @@ TEST(FrameGraphTest, SimplePassCulling) {
     };
 
     auto& renderPass = fg.addPass<RenderPassData>("Render",
-            [&](FrameGraphBuilder& builder, RenderPassData& data) {
-                data.output = builder.createTexture("renderTarget", FrameGraphBuilder::WRITE, {});
+            [&](FrameGraph::Builder& builder, RenderPassData& data) {
+                data.output = builder.write(builder.createTexture("renderTarget"));
             },
-            [&renderPassExecuted](FrameGraphPassResources const& resources, RenderPassData const& data) {
+            [=, &renderPassExecuted](
+                    FrameGraphPassResources const& resources,
+                    RenderPassData const& data,
+                    driver::DriverApi& driver) {
                 renderPassExecuted = true;
             });
 
@@ -133,11 +167,14 @@ TEST(FrameGraphTest, SimplePassCulling) {
     };
 
     auto& postProcessPass = fg.addPass<PostProcessPassData>("PostProcess",
-            [&](FrameGraphBuilder& builder, PostProcessPassData& data) {
+            [&](FrameGraph::Builder& builder, PostProcessPassData& data) {
                 data.input = builder.read(renderPass.getData().output);
-                data.output = builder.createTexture("postprocess-renderTarget", FrameGraphBuilder::WRITE, {});
+                data.output = builder.write(builder.createTexture("postprocess-renderTarget"));
             },
-            [&postProcessPassExecuted](FrameGraphPassResources const& resources, PostProcessPassData const& data) {
+            [=, &postProcessPassExecuted](
+                    FrameGraphPassResources const& resources,
+                    PostProcessPassData const& data,
+                    driver::DriverApi& driver) {
                 postProcessPassExecuted = true;
             });
 
@@ -148,11 +185,14 @@ TEST(FrameGraphTest, SimplePassCulling) {
     };
 
     auto& culledPass = fg.addPass<CulledPassData>("CulledPass",
-            [&](FrameGraphBuilder& builder, CulledPassData& data) {
+            [&](FrameGraph::Builder& builder, CulledPassData& data) {
                 data.input = builder.read(renderPass.getData().output);
-                data.output = builder.createTexture("unused-rendertarget", FrameGraphBuilder::WRITE, {});
+                data.output = builder.write(builder.createTexture("unused-rendertarget"));
             },
-            [&culledPassExecuted](FrameGraphPassResources const& resources, CulledPassData const& data) {
+            [=, &culledPassExecuted](
+                    FrameGraphPassResources const& resources,
+                    CulledPassData const& data,
+                    driver::DriverApi& driver) {
                 culledPassExecuted = true;
             });
 
@@ -170,7 +210,7 @@ TEST(FrameGraphTest, SimplePassCulling) {
 
     //fg.export_graphviz(utils::slog.d);
 
-    fg.execute();
+    fg.execute(driverApi);
 
     EXPECT_TRUE(renderPassExecuted);
     EXPECT_TRUE(postProcessPassExecuted);
@@ -205,10 +245,10 @@ TEST(FrameGraphTest, BadGraph) {
     };
 
     auto& R0 = fg.addPass<R0Data>("R1",
-            [&](FrameGraphBuilder& builder, R0Data& data) {
-                data.output = builder.createTexture("A", FrameGraphBuilder::WRITE, {});
+            [&](FrameGraph::Builder& builder, R0Data& data) {
+                data.output = builder.write(builder.createTexture("A"));
             },
-            [&](FrameGraphPassResources const&, R0Data const&) {
+            [=, &R0exec](FrameGraphPassResources const&, R0Data const&, driver::DriverApi&) {
                 R0exec = true;
             });
 
@@ -219,21 +259,21 @@ TEST(FrameGraphTest, BadGraph) {
     };
 
     auto& R1 = fg.addPass<RData>("R1",
-            [&](FrameGraphBuilder& builder, RData& data) {
+            [&](FrameGraph::Builder& builder, RData& data) {
                 data.input = builder.read(R0.getData().output);
                 data.output = builder.write(data.input);
             },
-            [&](FrameGraphPassResources const&, RData const&) {
+            [=, &R1exec](FrameGraphPassResources const&, RData const&, driver::DriverApi&) {
                 R1exec = true;
             });
 
     fg.present(R1.getData().output);
 
     auto& R2 = fg.addPass<RData>("R2",
-            [&](FrameGraphBuilder& builder, RData& data) {
+            [&](FrameGraph::Builder& builder, RData& data) {
                 EXPECT_FALSE(fg.isValid(R0.getData().output));
             },
-            [&](FrameGraphPassResources const&, RData const&) {
+            [=, &R2exec](FrameGraphPassResources const&, RData const&, driver::DriverApi&) {
                 R2exec = true;
             });
 
@@ -241,7 +281,7 @@ TEST(FrameGraphTest, BadGraph) {
 
     fg.compile();
 
-    fg.execute();
+    fg.execute(driverApi);
 
     EXPECT_TRUE(R0exec);
     EXPECT_TRUE(R1exec);
@@ -256,10 +296,10 @@ TEST(FrameGraphTest, ComplexGraph) {
         FrameGraphResource output;
     };
     auto& depthPass = fg.addPass<DepthPassData>("Depth pass",
-            [&](FrameGraphBuilder& builder, DepthPassData& data) {
-                data.output = builder.createTexture("Depth Buffer", FrameGraphBuilder::WRITE, {});
+            [&](FrameGraph::Builder& builder, DepthPassData& data) {
+                data.output = builder.write(builder.createTexture("Depth Buffer"));
             },
-            [&](FrameGraphPassResources const&, DepthPassData const&) {
+            [=](FrameGraphPassResources const&, DepthPassData const&, driver::DriverApi&) {
             });
 
 
@@ -270,11 +310,11 @@ TEST(FrameGraphTest, ComplexGraph) {
         FrameGraphResource output;
     };
     auto& buggyPass = fg.addPass<BuffyPassData>("Bug",
-            [&](FrameGraphBuilder& builder, BuffyPassData& data) {
+            [&](FrameGraph::Builder& builder, BuffyPassData& data) {
                 data.input = builder.read(depthPass.getData().output);
-                data.output = builder.createTexture("Buggy output", FrameGraphBuilder::WRITE, {});
+                data.output = builder.write(builder.createTexture("Buggy output"));
             },
-            [&](FrameGraphPassResources const&, BuffyPassData const&) {
+            [&](FrameGraphPassResources const&, BuffyPassData const&, driver::DriverApi&) {
             });
     fg.present(buggyPass.getData().output);
 
@@ -286,14 +326,14 @@ TEST(FrameGraphTest, ComplexGraph) {
         FrameGraphResource gbuffers[3];
     };
     auto& gbufferPass = fg.addPass<GBufferPassData>("Gbuffer pass",
-            [&](FrameGraphBuilder& builder, GBufferPassData& data) {
+            [&](FrameGraph::Builder& builder, GBufferPassData& data) {
                 data.input = builder.read(depthPass.getData().output);
                 data.output = builder.write(data.input);
-                data.gbuffers[0] = builder.createTexture("Gbuffer 1", FrameGraphBuilder::WRITE, {});
-                data.gbuffers[1] = builder.createTexture("Gbuffer 2", FrameGraphBuilder::WRITE, {});
-                data.gbuffers[2] = builder.createTexture("Gbuffer 3", FrameGraphBuilder::WRITE, {});
+                data.gbuffers[0] = builder.write(builder.createTexture("Gbuffer 1"));
+                data.gbuffers[1] = builder.write(builder.createTexture("Gbuffer 2"));
+                data.gbuffers[2] = builder.write(builder.createTexture("Gbuffer 3"));
             },
-            [&](FrameGraphPassResources const&, GBufferPassData const&) {
+            [=](FrameGraphPassResources const&, GBufferPassData const&, driver::DriverApi&) {
             });
 
 
@@ -302,14 +342,14 @@ TEST(FrameGraphTest, ComplexGraph) {
         FrameGraphResource output;
     };
     auto& lightingPass = fg.addPass<LightingPassData>("Lighting pass",
-            [&](FrameGraphBuilder& builder, LightingPassData& data) {
+            [&](FrameGraph::Builder& builder, LightingPassData& data) {
                 data.input[0] = builder.read(gbufferPass.getData().output);
                 data.input[1] = builder.read(gbufferPass.getData().gbuffers[0]);
                 data.input[2] = builder.read(gbufferPass.getData().gbuffers[1]);
                 data.input[3] = builder.read(gbufferPass.getData().gbuffers[2]);
-                data.output = builder.createTexture("Lighting buffer", FrameGraphBuilder::WRITE, {});
+                data.output = builder.write(builder.createTexture("Lighting buffer"));
             },
-            [&](FrameGraphPassResources const&, LightingPassData const&) {
+            [=](FrameGraphPassResources const&, LightingPassData const&, driver::DriverApi&) {
             });
 
 
@@ -318,22 +358,22 @@ TEST(FrameGraphTest, ComplexGraph) {
         FrameGraphResource output;
     };
     auto& convolutionPass = fg.addPass<ConvolutionPassData>("Convolution",
-            [&](FrameGraphBuilder& builder, ConvolutionPassData& data) {
-                data.input = builder.read(gbufferPass.getData().gbuffers[2]); //builder.createTexture("Cubemap", FrameGraphBuilder::READ, {});
-                data.output = builder.createTexture("Reflection probe", FrameGraphBuilder::WRITE, {});
+            [&](FrameGraph::Builder& builder, ConvolutionPassData& data) {
+                data.input = builder.read(gbufferPass.getData().gbuffers[2]); //builder.createTexture("Cubemap", Builder::READ, {});
+                data.output = builder.write(builder.createTexture("Reflection probe"));
             },
-            [&](FrameGraphPassResources const&, ConvolutionPassData const&) {
+            [=](FrameGraphPassResources const&, ConvolutionPassData const&, driver::DriverApi&) {
             });
 
     fg.present(lightingPass.getData().output);
 
-    fg.moveResource(convolutionPass.getData().output, lightingPass.getData().output);
+    //fg.moveResource(convolutionPass.getData().output, lightingPass.getData().output);
 
     fg.compile();
 
     fg.export_graphviz(utils::slog.d);
 
-    fg.execute();
+    fg.execute(driverApi);
 }
 
 TEST(FrameGraphTest, MoveResource) {
@@ -346,20 +386,20 @@ TEST(FrameGraphTest, MoveResource) {
     };
 
     auto& renderPass = fg.addPass<RenderPassData>("Render",
-            [&](FrameGraphBuilder& builder, RenderPassData& data) {
-                data.input = builder.createTexture("render-inout", FrameGraphBuilder::READ, {});
+            [&](FrameGraph::Builder& builder, RenderPassData& data) {
+                data.input = builder.read(builder.createTexture("render-inout"));
                 data.output = builder.write(data.input);
             },
-            [](FrameGraphPassResources const& resources, RenderPassData const& data) {
+            [=](FrameGraphPassResources const& resources, RenderPassData const& data, driver::DriverApi&) {
             });
     fg.present(renderPass.getData().output);
 
     auto& debugPass = fg.addPass<RenderPassData>("Debug",
-            [&](FrameGraphBuilder& builder, RenderPassData& data) {
-                data.input = builder.createTexture("debug-inout", FrameGraphBuilder::READ, {});
+            [&](FrameGraph::Builder& builder, RenderPassData& data) {
+                data.input = builder.read(builder.createTexture("debug-inout"));
                 data.output = builder.write(data.input);
             },
-            [](FrameGraphPassResources const& resources, RenderPassData const& data) {
+            [=](FrameGraphPassResources const& resources, RenderPassData const& data, driver::DriverApi&) {
             });
     fg.present(debugPass.getData().output);
 
@@ -367,5 +407,5 @@ TEST(FrameGraphTest, MoveResource) {
 
     fg.compile();
     fg.export_graphviz(utils::slog.d);
-    fg.execute();
+    fg.execute(driverApi);
 }

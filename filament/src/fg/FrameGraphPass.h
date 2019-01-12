@@ -17,6 +17,8 @@
 #ifndef TNT_FILAMENT_FRAMEGRAPHPASS_H
 #define TNT_FILAMENT_FRAMEGRAPHPASS_H
 
+#include "driver/DriverApiForward.h"
+
 #include <limits>
 
 #include <stdint.h>
@@ -27,7 +29,7 @@ class FrameGraphPassResources;
 
 class FrameGraphPassExecutor {
     friend class FrameGraph;
-    virtual void execute(FrameGraphPassResources const& resources) noexcept = 0;
+    virtual void execute(FrameGraphPassResources const& resources, driver::DriverApi& driver) noexcept = 0;
 public:
     FrameGraphPassExecutor();
     virtual ~FrameGraphPassExecutor();
@@ -41,8 +43,8 @@ class FrameGraphPass final : private FrameGraphPassExecutor {
     explicit FrameGraphPass(Execute&& execute) noexcept
             : FrameGraphPassExecutor(), mExecute(std::forward<Execute>(execute)) {
     }
-    void execute(FrameGraphPassResources const& resources) noexcept final {
-        mExecute(resources, mData);
+    void execute(FrameGraphPassResources const& resources, driver::DriverApi& driver) noexcept final {
+        mExecute(resources, mData, driver);
     }
     Execute mExecute;
     Data mData;
@@ -51,7 +53,6 @@ public:
     Data const& getData() const noexcept { return mData; }
     Data& getData() noexcept { return mData; }
 };
-
 
 } // namespace filament
 

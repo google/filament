@@ -21,6 +21,10 @@
 #include "FrameGraphPass.h"
 #include "FrameGraphResource.h"
 
+#include "driver/DriverApiForward.h"
+#include "FrameGraphPassResources.h"
+
+
 #include <utils/Log.h>
 
 #include <vector>
@@ -42,45 +46,41 @@ struct PassNode;
 struct Alias;
 } // namespace fg
 
-class FrameGraph;
-
-// ------------------------------------------------------------------------------------------------
-
-class FrameGraphPassResources {
-public:
-};
-
-// ------------------------------------------------------------------------------------------------
-
-class FrameGraphBuilder {
-public:
-    FrameGraphBuilder(FrameGraph& fg, fg::PassNode& pass) noexcept;
-    FrameGraphBuilder(FrameGraphBuilder const&) = delete;
-    FrameGraphBuilder& operator = (FrameGraphBuilder const&) = delete;
-
-    // create a resource
-    enum CreateFlags : uint32_t {
-        UNKNOWN, READ, WRITE
-    };
-    FrameGraphResource createTexture(const char* name, CreateFlags flags,
-            FrameGraphResource::TextureDesc const& desc) noexcept;
-
-    // read from a resource (i.e. add a reference to that resource)
-    FrameGraphResource read(FrameGraphResource const& input /*, read-flags*/);
-
-    // write to a resource (i.e. add a reference to the pass that's doing the writing))
-    FrameGraphResource write(FrameGraphResource const& output  /*, write-flags*/);
-
-private:
-    fg::ResourceNode* getResource(FrameGraphResource handle);
-    FrameGraph& mFrameGraph;
-    fg::PassNode& mPass;
-};
-
-// ------------------------------------------------------------------------------------------------
+class FrameGraphPassResources;
 
 class FrameGraph {
 public:
+
+    class Builder {
+    public:
+        Builder(Builder const&) = delete;
+        Builder& operator=(Builder const&) = delete;
+
+        // create a resource
+        using RWFlags = uint32_t;
+        static constexpr RWFlags NONE  = 0x0;
+        static constexpr RWFlags COLOR = 0x1;
+        static constexpr RWFlags DEPTH = 0x2;
+
+        FrameGraphResource createTexture(const char* name,
+                FrameGraphResource::Descriptor const& desc = {}) noexcept;
+
+        // read from a resource (i.e. add a reference to that resource)
+        FrameGraphResource read(FrameGraphResource const& input, RWFlags readFlags = COLOR);
+
+        // write to a resource (i.e. add a reference to the pass that's doing the writing))
+        FrameGraphResource write(FrameGraphResource const& output, RWFlags writeFlags = COLOR);
+
+        // declare that this pass has side effects
+        Builder& sideEffect() noexcept;
+
+    private:
+        friend class FrameGraph;
+        Builder(FrameGraph& fg, fg::PassNode& pass) noexcept;
+        FrameGraph& mFrameGraph;
+        fg::PassNode& mPass;
+    };
+
     FrameGraph();
     FrameGraph(FrameGraph const&) = delete;
     FrameGraph& operator = (FrameGraph const&) = delete;
@@ -97,45 +97,41 @@ public:
         fg::PassNode& node = createPass(name, pass);
 
         // call the setup code, which will declare used resources
-        FrameGraphBuilder builder(*this, node);
+        Builder builder(*this, node);
         setup(builder, pass->getData());
 
         // return a reference to the pass to the user
         return *pass;
     }
 
-    void moveResource(FrameGraphResource from, FrameGraphResource to);
-
     void present(FrameGraphResource input);
 
-    bool isValid(FrameGraphResource handle) const noexcept ;
+    bool isValid(FrameGraphResource r) const noexcept;
+
+    FrameGraphResource::Descriptor* getDescriptor(FrameGraphResource r);
+
+    FrameGraphResource importResource(const char* name, Handle <HwRenderTarget> target);
 
     FrameGraph& compile() noexcept;
 
-    void execute() noexcept;
+    void execute(driver::DriverApi& driver) noexcept;
 
+
+    void moveResource(FrameGraphResource from, FrameGraphResource to);
     void export_graphviz(utils::io::ostream& out);
 
 private:
-    friend class FrameGraphBuilder;
-
-    FrameGraphPassResources mResources;
+    friend class FrameGraphPassResources;
 
     fg::PassNode& createPass(const char* name, FrameGraphPassExecutor* base) noexcept;
+    fg::ResourceNode& createResource(const char* name, bool imported) noexcept;
+    fg::ResourceNode* getResource(FrameGraphResource r);
 
-    fg::ResourceNode& createResource(const char* name) noexcept;
-
-    // list of frame graph passes
-    std::vector<fg::PassNode> mPassNodes;
-
-    // frame graph concrete resources
+    std::vector<fg::PassNode> mPassNodes;           // list of frame graph passes
     std::vector<fg::ResourceNode> mResourceNodes;
-
-    std::vector<fg::Resource> mResourceRegistry;
-
+    std::vector<fg::Resource> mResourceRegistry;    // frame graph concrete resources
     std::vector<fg::Alias> mAliases;
 };
-
 
 } // namespace filament
 
