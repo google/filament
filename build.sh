@@ -216,6 +216,8 @@ function build_webgl_with_target {
         ISSUE_CMAKE_ALWAYS=true
     fi
     if [ ! -d "CMakeFiles" ] || [ "$ISSUE_CMAKE_ALWAYS" == "true" ]; then
+        # Apply the emscripten environment within a subshell.
+        (
         source ${EMSDK}/emsdk_env.sh
         cmake \
             -G "$BUILD_GENERATOR" \
@@ -225,6 +227,7 @@ function build_webgl_with_target {
             -DWEBGL=1 \
             ../..
         ${BUILD_COMMAND} ${BUILD_TARGETS}
+        )
     fi
 
     if [ -d "web/filament-js" ]; then
@@ -524,9 +527,16 @@ function run_test {
 }
 
 function run_tests {
-    while read test; do
-        run_test "$test"
-    done < build/common/test_list.txt
+    if [ "$ISSUE_WEBGL_BUILD" == "true" ]; then
+        npx tsc --noEmit \
+            third_party/gl-matrix/gl-matrix.d.ts \
+            web/filament-js/filament.d.ts \
+            web/filament-js/test.ts
+    else
+        while read test; do
+            run_test "$test"
+        done < build/common/test_list.txt
+    fi
 }
 
 # Beginning of the script
