@@ -37,6 +37,7 @@
     #if defined (FILAMENT_DRIVER_SUPPORTS_VULKAN)
         #include "driver/vulkan/PlatformVkCocoa.h"
     #endif
+    #include "driver/metal/PlatformMetal.h"
 #elif defined(__linux__)
     #ifndef USE_EXTERNAL_GLES3
         #include "driver/opengl/PlatformGLX.h"
@@ -73,6 +74,8 @@ OpenGLPlatform::~OpenGLPlatform() noexcept = default;
 
 VulkanPlatform::~VulkanPlatform() noexcept = default;
 
+MetalPlatform::~MetalPlatform() noexcept = default;
+
 // Creates the platform-specific Platform object. The caller takes ownership and is
 // responsible for destroying it. Initialization of the backend API is deferred until
 // createDriver(). The passed-in backend hint is replaced with the resolved backend.
@@ -104,6 +107,13 @@ Platform* Platform::create(Backend* backend) noexcept {
         #else
             return nullptr;
         #endif
+    }
+    if (*backend == Backend::METAL) {
+#if defined(FILAMENT_SUPPORTS_METAL)
+        return new PlatformMetal();
+#else
+        return nullptr;
+#endif
     }
     #if defined(USE_EXTERNAL_GLES3)
         return nullptr;

@@ -118,6 +118,12 @@ public:
             uint32_t* width, uint32_t* height) noexcept = 0;
 };
 
+class UTILS_PUBLIC MetalPlatform : public Platform {
+public:
+    ~MetalPlatform() noexcept override;
+
+};
+
 } // namespace driver
 } // namespace filament
 

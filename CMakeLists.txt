@@ -226,6 +226,16 @@ if (FILAMENT_SUPPORTS_VULKAN)
     add_definitions(-DFILAMENT_DRIVER_SUPPORTS_VULKAN)
 endif()
 
+# Build with Metal support on non-WebGL Apple platforms.
+if (APPLE AND NOT WEBGL)
+    option(FILAMENT_SUPPORTS_METAL "Include the Metal backend" ON)
+else()
+    option(FILAMENT_SUPPORTS_METAL "Include the Metal backend" OFF)
+endif()
+if (FILAMENT_SUPPORTS_METAL)
+    add_definitions(-DFILAMENT_SUPPORTS_METAL)
+endif()
+
 # ==================================================================================================
 # Distribution
 # ==================================================================================================
