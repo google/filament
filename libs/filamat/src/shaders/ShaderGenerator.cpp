@@ -152,12 +152,9 @@ const std::string ShaderGenerator::createVertexProgram(filament::driver::ShaderM
 
     cg.generateProlog(vs, ShaderType::VERTEX, material.hasExternalSamplers);
 
-    if (cg.getShaderModel() >= filament::driver::ShaderModel::GL_CORE_41) {
-        // TODO: find a better way to set this, esp. on mobile
-        cg.generateDefine(vs, "GEOMETRIC_SPECULAR_AA_ROUGHNESS", true);
-        cg.generateDefine(vs, "GEOMETRIC_SPECULAR_AA_NORMAL", true);
-    }
-    bool litVariants = lit || (!lit && material.hasShadowMultiplier);
+    cg.generateDefine(vs, "GEOMETRIC_SPECULAR_AA_NORMAL", material.limitOverInterpolation);
+
+    bool litVariants = lit || material.hasShadowMultiplier;
     cg.generateDefine(vs, "HAS_DIRECTIONAL_LIGHTING", litVariants && variant.hasDirectionalLighting());
     cg.generateDefine(vs, "HAS_SHADOWING", litVariants && variant.hasShadowReceiver());
     cg.generateDefine(vs, "HAS_SHADOW_MULTIPLIER", material.hasShadowMultiplier);
@@ -248,8 +245,11 @@ const std::string ShaderGenerator::createFragmentProgram(filament::driver::Shade
     // this should probably be a code generation option
     cg.generateDefine(fs, "USE_MULTIPLE_SCATTERING_COMPENSATION", true);
 
+    cg.generateDefine(fs, "GEOMETRIC_SPECULAR_AA_ROUGHNESS", material.curvatureToRoughness);
+    cg.generateDefine(fs, "GEOMETRIC_SPECULAR_AA_NORMAL", material.limitOverInterpolation);
+
     // lighting variants
-    bool litVariants = lit || (!lit && material.hasShadowMultiplier);
+    bool litVariants = lit || material.hasShadowMultiplier;
     cg.generateDefine(fs, "HAS_DIRECTIONAL_LIGHTING", litVariants && variant.hasDirectionalLighting());
     cg.generateDefine(fs, "HAS_DYNAMIC_LIGHTING", litVariants && variant.hasDynamicLighting());
     cg.generateDefine(fs, "HAS_SHADOWING", litVariants && variant.hasShadowReceiver());

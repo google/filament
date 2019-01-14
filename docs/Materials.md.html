@@ -1084,6 +1084,48 @@ fragment {
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+### curvatureToRoughness
+
+Type
+:    `boolean`
+
+Value
+:     `true` or `false`. Defaults to `false`.
+
+Description
+:    Reduces specular aliasing by increasing roughness based on the local geometric curvature.
+     This property is particularly effective if you only use MSAA.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ JSON
+material {
+    curvatureToRoughness : true
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+![Figure [curvatureToRoughness]: Close up of a glossy metallic surface rendered normally (left) and
+with `curvatureToRoughness` (right).](images/screenshot_curvature_to_roughness.png)
+
+### limitOverInterpolation
+
+Type
+:    `boolean`
+
+Value
+:     `true` or `false`. Defaults to `false`.
+
+Description
+:    Reduces specular aliasing by attempting to eliminate normal over-interpolation. When this
+     property is turned on, the material switches to centroid normal interpolation when the
+     interpolated normals are too long. This property should only be used if your anti-aliasing
+     method is MSAA. The effects are a lot more subtle than `curvatureToRoughness`, which should be
+     used first to eliminate specular aliasing.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ JSON
+material {
+    limitOverInterpolation : true
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 ### variantFilter
 
 Type

@@ -38,7 +38,6 @@ public:
 private:
     bool processName(filamat::MaterialBuilder &builder, const JsonishValue &value);
     bool processInterpolation(filamat::MaterialBuilder &builder, const JsonishValue &value);
-    bool processDefines(filamat::MaterialBuilder &builder, const JsonishValue &value);
     bool processParameters(filamat::MaterialBuilder &builder, const JsonishValue &value);
     bool processVariables(filamat::MaterialBuilder &builder, const JsonishValue &value);
     bool processRequires(filamat::MaterialBuilder &builder, const JsonishValue &value);
@@ -52,6 +51,8 @@ private:
     bool processTransparencyMode(filamat::MaterialBuilder &builder, const JsonishValue &value);
     bool processMaskThreshold(filamat::MaterialBuilder &builder, const JsonishValue &value);
     bool processShadowMultiplier(filamat::MaterialBuilder &builder, const JsonishValue &value);
+    bool processCurvatureToRoughness(filamat::MaterialBuilder &builder, const JsonishValue &value);
+    bool processLimitOverInterpolation(filamat::MaterialBuilder &builder, const JsonishValue &value);
     bool processShading(filamat::MaterialBuilder &builder, const JsonishValue &value);
     bool processVariantFilter(filamat::MaterialBuilder &builder, const JsonishValue &value);
     bool processParameter(filamat::MaterialBuilder& builder, const JsonishObject& value) const

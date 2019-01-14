@@ -76,6 +76,8 @@ struct SandboxParameters {
     bool directionalLightEnabled = true;
     utils::Entity light;
     bool hasDirectionalLight = true;
+    bool fxaa = true;
+    bool msaa = false;
 };
 
 inline void createInstances(SandboxParameters& params, filament::Engine& engine) {

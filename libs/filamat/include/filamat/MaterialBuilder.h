@@ -166,6 +166,12 @@ public:
     // the material output is multiplied by the shadowing factor (UNLIT model only)
     MaterialBuilder& shadowMultiplier(bool shadowMultiplier) noexcept;
 
+    // reduce specular aliasing by locally increasing roughness using geometric curvature
+    MaterialBuilder& curvatureToRoughness(bool curvatureToRoughness) noexcept;
+
+    // reduce specular aliasing at silhouette by preventing over-interpolation of geometric normals
+    MaterialBuilder& limitOverInterpolation(bool limitOverInterpolation) noexcept;
+
     // specifies how transparent objects should be rendered (default is DEFAULT)
     MaterialBuilder& transparencyMode(TransparencyMode mode) noexcept;
 
@@ -276,6 +282,9 @@ private:
     bool mDepthTest = true;
     bool mDepthWrite = true;
     bool mDepthWriteSet = false;
+
+    bool mCurvatureToRoughness = false;
+    bool mLimitOverInterpolation = false;
 };
 
 } // namespace filamat

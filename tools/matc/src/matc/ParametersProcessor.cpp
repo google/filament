@@ -29,23 +29,25 @@ using namespace utils;
 
 namespace matc {
 
-static constexpr const char* PARAM_KEY_NAME              = "name";
-static constexpr const char* PARAM_KEY_INTERPOLATION     = "interpolation";
-static constexpr const char* PARAM_KEY_PARAMETERS        = "parameters";
-static constexpr const char* PARAM_KEY_VARIABLES         = "variables";
-static constexpr const char* PARAM_KEY_REQUIRES          = "requires";
-static constexpr const char* PARAM_KEY_BLENDING          = "blending";
-static constexpr const char* PARAM_KEY_VERTEX_DOMAIN     = "vertexDomain";
-static constexpr const char* PARAM_KEY_CULLING           = "culling";
-static constexpr const char* PARAM_KEY_COLOR_WRITE       = "colorWrite";
-static constexpr const char* PARAM_KEY_DEPTH_WRITE       = "depthWrite";
-static constexpr const char* PARAM_KEY_DEPTH_CULL        = "depthCulling";
-static constexpr const char* PARAM_KEY_DOUBLE_SIDED      = "doubleSided";
-static constexpr const char* PARAM_KEY_TRANSPARENCY_MODE = "transparency";
-static constexpr const char* PARAM_KEY_MASK_THRESHOLD    = "maskThreshold";
-static constexpr const char* PARAM_KEY_SHADOW_MULTIPLIER = "shadowMultiplier";
-static constexpr const char* PARAM_KEY_SHADING           = "shadingModel";
-static constexpr const char* PARAM_KEY_VARIANT_FILTER    = "variantFilter";
+static constexpr const char* PARAM_KEY_NAME                     = "name";
+static constexpr const char* PARAM_KEY_INTERPOLATION            = "interpolation";
+static constexpr const char* PARAM_KEY_PARAMETERS               = "parameters";
+static constexpr const char* PARAM_KEY_VARIABLES                = "variables";
+static constexpr const char* PARAM_KEY_REQUIRES                 = "requires";
+static constexpr const char* PARAM_KEY_BLENDING                 = "blending";
+static constexpr const char* PARAM_KEY_VERTEX_DOMAIN            = "vertexDomain";
+static constexpr const char* PARAM_KEY_CULLING                  = "culling";
+static constexpr const char* PARAM_KEY_COLOR_WRITE              = "colorWrite";
+static constexpr const char* PARAM_KEY_DEPTH_WRITE              = "depthWrite";
+static constexpr const char* PARAM_KEY_DEPTH_CULL               = "depthCulling";
+static constexpr const char* PARAM_KEY_DOUBLE_SIDED             = "doubleSided";
+static constexpr const char* PARAM_KEY_TRANSPARENCY_MODE        = "transparency";
+static constexpr const char* PARAM_KEY_MASK_THRESHOLD           = "maskThreshold";
+static constexpr const char* PARAM_KEY_SHADOW_MULTIPLIER        = "shadowMultiplier";
+static constexpr const char* PARAM_KEY_SHADING                  = "shadingModel";
+static constexpr const char* PARAM_KEY_VARIANT_FILTER           = "variantFilter";
+static constexpr const char* PARAM_KEY_CURVATURE_TO_ROUGHNESS   = "curvatureToRoughness";
+static constexpr const char* PARAM_KEY_LIMIT_OVER_INTERPOLATION = "limitOverInterpolation";
 
 ParametersProcessor::ParametersProcessor() {
     mConfigProcessor[PARAM_KEY_NAME]              = &ParametersProcessor::processName;
@@ -65,24 +67,30 @@ ParametersProcessor::ParametersProcessor() {
     mConfigProcessor[PARAM_KEY_SHADOW_MULTIPLIER] = &ParametersProcessor::processShadowMultiplier;
     mConfigProcessor[PARAM_KEY_SHADING]           = &ParametersProcessor::processShading;
     mConfigProcessor[PARAM_KEY_VARIANT_FILTER]    = &ParametersProcessor::processVariantFilter;
+    mConfigProcessor[PARAM_KEY_CURVATURE_TO_ROUGHNESS]
+            = &ParametersProcessor::processCurvatureToRoughness;
+    mConfigProcessor[PARAM_KEY_LIMIT_OVER_INTERPOLATION]
+            = &ParametersProcessor::processLimitOverInterpolation;
 
-    mRootAsserts[PARAM_KEY_NAME]              = JsonishValue::Type::STRING;
-    mRootAsserts[PARAM_KEY_INTERPOLATION]     = JsonishValue::Type::STRING;
-    mRootAsserts[PARAM_KEY_PARAMETERS]        = JsonishValue::Type::ARRAY;
-    mRootAsserts[PARAM_KEY_VARIABLES]         = JsonishValue::Type::ARRAY;
-    mRootAsserts[PARAM_KEY_REQUIRES]          = JsonishValue::Type::ARRAY;
-    mRootAsserts[PARAM_KEY_BLENDING]          = JsonishValue::Type::STRING;
-    mRootAsserts[PARAM_KEY_VERTEX_DOMAIN]     = JsonishValue::Type::STRING;
-    mRootAsserts[PARAM_KEY_CULLING]           = JsonishValue::Type::STRING;
-    mRootAsserts[PARAM_KEY_COLOR_WRITE]       = JsonishValue::Type::BOOL;
-    mRootAsserts[PARAM_KEY_DEPTH_WRITE]       = JsonishValue::Type::BOOL;
-    mRootAsserts[PARAM_KEY_DEPTH_CULL]        = JsonishValue::Type::BOOL;
-    mRootAsserts[PARAM_KEY_DOUBLE_SIDED]      = JsonishValue::Type::BOOL;
-    mRootAsserts[PARAM_KEY_TRANSPARENCY_MODE] = JsonishValue::Type::STRING;
-    mRootAsserts[PARAM_KEY_MASK_THRESHOLD]    = JsonishValue::Type::NUMBER;
-    mRootAsserts[PARAM_KEY_SHADOW_MULTIPLIER] = JsonishValue::Type::BOOL;
-    mRootAsserts[PARAM_KEY_SHADING]           = JsonishValue::Type::STRING;
-    mRootAsserts[PARAM_KEY_VARIANT_FILTER]    = JsonishValue::Type::ARRAY;
+    mRootAsserts[PARAM_KEY_NAME]                     = JsonishValue::Type::STRING;
+    mRootAsserts[PARAM_KEY_INTERPOLATION]            = JsonishValue::Type::STRING;
+    mRootAsserts[PARAM_KEY_PARAMETERS]               = JsonishValue::Type::ARRAY;
+    mRootAsserts[PARAM_KEY_VARIABLES]                = JsonishValue::Type::ARRAY;
+    mRootAsserts[PARAM_KEY_REQUIRES]                 = JsonishValue::Type::ARRAY;
+    mRootAsserts[PARAM_KEY_BLENDING]                 = JsonishValue::Type::STRING;
+    mRootAsserts[PARAM_KEY_VERTEX_DOMAIN]            = JsonishValue::Type::STRING;
+    mRootAsserts[PARAM_KEY_CULLING]                  = JsonishValue::Type::STRING;
+    mRootAsserts[PARAM_KEY_COLOR_WRITE]              = JsonishValue::Type::BOOL;
+    mRootAsserts[PARAM_KEY_DEPTH_WRITE]              = JsonishValue::Type::BOOL;
+    mRootAsserts[PARAM_KEY_DEPTH_CULL]               = JsonishValue::Type::BOOL;
+    mRootAsserts[PARAM_KEY_DOUBLE_SIDED]             = JsonishValue::Type::BOOL;
+    mRootAsserts[PARAM_KEY_TRANSPARENCY_MODE]        = JsonishValue::Type::STRING;
+    mRootAsserts[PARAM_KEY_MASK_THRESHOLD]           = JsonishValue::Type::NUMBER;
+    mRootAsserts[PARAM_KEY_SHADOW_MULTIPLIER]        = JsonishValue::Type::BOOL;
+    mRootAsserts[PARAM_KEY_SHADING]                  = JsonishValue::Type::STRING;
+    mRootAsserts[PARAM_KEY_VARIANT_FILTER]           = JsonishValue::Type::ARRAY;
+    mRootAsserts[PARAM_KEY_CURVATURE_TO_ROUGHNESS]   = JsonishValue::Type::BOOL;
+    mRootAsserts[PARAM_KEY_LIMIT_OVER_INTERPOLATION] = JsonishValue::Type::BOOL;
 
     mStringToInterpolation["smooth"] = MaterialBuilder::Interpolation::SMOOTH;
     mStringToInterpolation["flat"] = MaterialBuilder::Interpolation::FLAT;
@@ -125,7 +133,7 @@ ParametersProcessor::ParametersProcessor() {
 }
 
 bool ParametersProcessor::process(filamat::MaterialBuilder& builder, const JsonishObject& jsonObject) {
-    for(auto entry : jsonObject.getEntries()) {
+    for(const auto& entry : jsonObject.getEntries()) {
         const std::string& key = entry.first;
         const JsonishValue* field = entry.second;
         if (mConfigProcessor.find(key) == mConfigProcessor.end()) {
@@ -438,6 +446,18 @@ bool ParametersProcessor::processMaskThreshold(filamat::MaterialBuilder& builder
 bool ParametersProcessor::processShadowMultiplier(filamat::MaterialBuilder& builder,
         const JsonishValue& value) {
     builder.shadowMultiplier(value.toJsonBool()->getBool());
+    return true;
+}
+
+bool ParametersProcessor::processCurvatureToRoughness(filamat::MaterialBuilder& builder,
+        const JsonishValue& value) {
+    builder.curvatureToRoughness(value.toJsonBool()->getBool());
+    return true;
+}
+
+bool ParametersProcessor::processLimitOverInterpolation(filamat::MaterialBuilder& builder,
+        const JsonishValue& value) {
+    builder.limitOverInterpolation(value.toJsonBool()->getBool());
     return true;
 }
 
