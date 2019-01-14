@@ -19,6 +19,7 @@
 #include <utils/Panic.h>
 
 #include <Cocoa/Cocoa.h>
+#include <QuartzCore/QuartzCore.h>
 
 #include <SDL_syswm.h>
 
@@ -29,4 +30,22 @@ void* getNativeWindow(SDL_Window* sdlWindow) {
     NSWindow* win = wmi.info.cocoa.window;
     NSView* view = [win contentView];
     return view;
+}
+
+void setUpMetalLayer(void* nativeView) {
+    NSView* view = (NSView*) nativeView;
+    [view setWantsLayer:YES];
+    CAMetalLayer* metalLayer = [CAMetalLayer layer];
+    metalLayer.bounds = view.bounds;
+
+    // It's important to set the drawableSize to the actual backing pixels. When rendering
+    // full-screen, we can skip the macOS compositor if the size matches the display size.
+    metalLayer.drawableSize = [view convertSizeToBacking:view.bounds.size];
+
+    // This is set to NO by default, but is also important to ensure we can bypass the compositor
+    // in full-screen mode
+    // See "Direct to Display" http://metalkit.org/2017/06/30/introducing-metal-2.html.
+    metalLayer.opaque = YES;
+
+    [view setLayer:metalLayer];
 }
