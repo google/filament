@@ -162,7 +162,7 @@ section below.
 
 To build Filament for Android you must also install the following:
 
-- Android Studio 3.1
+- Android Studio 3.3
 - Android SDK
 - Android NDK
 
