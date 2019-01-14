@@ -1,5 +1,4 @@
-#include "../../../toolchains/Darwin/aarch64-linux-android-4.9/include/c++/4.9.x/climits"
-#include <climits>/*
+/*
  * Copyright (C) 2015 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
