@@ -72,8 +72,7 @@ SDK. This includes the project `filament-android` in the parent directory.
 
 ## Android Studio
 
-Due to issues with composite builds in Android Studio 3.1, it is highly recommended to use
-Android Studio 3.2 or higher to open this project.
+You must use Android Studio 3.3 or higher to open these projects.
 
 ## Compiling
 
