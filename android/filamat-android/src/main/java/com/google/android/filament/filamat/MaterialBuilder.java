@@ -40,7 +40,7 @@ public class MaterialBuilder {
         UNLIT,                  // no lighting applied, emissive possible
         LIT,                    // default, standard lighting
         SUBSURFACE,             // subsurface lighting model
-        CLOTH,                  // cloth lighting model
+        CLOTH                   // cloth lighting model
     }
 
     public enum Platform {
