@@ -27,7 +27,9 @@
 
 #include "MeshAssimp.h"
 
+#include <stdlib.h>
 #include <string.h>
+
 #include <array>
 
 #include <filament/Color.h>
@@ -52,7 +54,6 @@
 
 #include <stb_image.h>
 
-#include <stdlib.h>
 #include <filament/driver/DriverEnums.h>
 
 #include "generated/resources/resources.h"
@@ -214,7 +215,7 @@ Texture* MeshAssimp::createOneByOneTexture(uint32_t pixel) {
 }
 
 void getMinMaxUV(const aiScene *scene, const aiNode* node, float2 &minUV,
-        float2 &maxUV, u_int32_t uvIndex) {
+        float2 &maxUV, uint32_t uvIndex) {
     for (size_t i = 0; i < node->mNumMeshes; ++i) {
         const aiMesh* mesh = scene->mMeshes[node->mMeshes[i]];
         if (!mesh->HasTextureCoords(uvIndex)) {
