@@ -71,7 +71,7 @@ enum class AlphaMode : uint8_t {
 struct MaterialConfig {
     bool doubleSided = false;
     bool unlit = false;
-    bool hasVertexColors;
+    bool hasVertexColors = false;
     AlphaMode alphaMode = AlphaMode::OPAQUE;
     float maskThreshold = 0.5f;
     uint8_t baseColorUV = 0;
@@ -128,7 +128,7 @@ std::string shaderFromConfig(MaterialConfig config) {
     shader += R"SHADER(
         prepareMaterial(material);
         material.baseColor = texture(materialParams_baseColorMap, baseColorUV);
-        material.baseColor.rgb *= materialParams.baseColorFactor.xyz;
+        material.baseColor *= materialParams.baseColorFactor;
     )SHADER";
 
     if (config.alphaMode == AlphaMode::TRANSPARENT) {
@@ -157,7 +157,8 @@ Material* createMaterialFromConfig(Engine& engine, MaterialConfig config ) {
     MaterialBuilder builder = MaterialBuilder()
             .name("material")
             .material(shader.c_str())
-            .doubleSided(config.doubleSided)
+            // TODO: Checking for the alphaMode is a bit of a hack to fix incorrect glTF files
+            .doubleSided(config.doubleSided || config.alphaMode != AlphaMode::OPAQUE)
             .require(VertexAttribute::UV0)
             .parameter(MaterialBuilder::SamplerType::SAMPLER_2D, "baseColorMap")
             .parameter(MaterialBuilder::UniformType::FLOAT4, "baseColorFactor")
@@ -970,7 +971,7 @@ void MeshAssimp::processGLTFMaterial(const aiScene* scene, const aiMaterial* mat
     aiTextureMapMode mapMode[3];
     MaterialConfig matConfig;
 
-    material->Get("$mat.twosided", 0, 0, matConfig.doubleSided);
+    material->Get(AI_MATKEY_TWOSIDED, matConfig.doubleSided);
     material->Get(AI_MATKEY_GLTF_UNLIT, matConfig.unlit);
 
     aiString alphaMode;
