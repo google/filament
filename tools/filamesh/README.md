@@ -198,6 +198,14 @@ Mesh loadMeshFromFile(filament::Engine* engine, const utils::Path& path,
             mesh.indexBuffer->setBuffer(*engine,
                     IndexBuffer::BufferDescriptor(indices, header->indexSize));
 
+            const uint32_t FLAG_SNORM16_UV = 0x2;
+
+            VertexBuffer::AttributeType::HALF2 uvType = VertexBuffer::AttributeType::HALF2;
+            if (header->flags & FLAG_SNORM16_UV) {
+                uvType = VertexBuffer::AttributeType::SHORT2;
+            }
+            bool uvNormalized = header->flags & FLAG_SNORM16_UV; 
+
             VertexBuffer::Builder vbb;
             vbb.vertexCount(header->vertexCount)
                 .bufferCount(1)
@@ -209,13 +217,20 @@ Mesh loadMeshFromFile(filament::Engine* engine, const utils::Path& path,
                         header->offsetTangents, uint8_t(header->strideTangents))
                 .attribute(VertexAttribute::COLOR,    0, VertexBuffer::AttributeType::UBYTE4,
                         header->offsetColor, uint8_t(header->strideColor))
-                .attribute(VertexAttribute::UV0,      0, VertexBuffer::AttributeType::HALF2,
+                .attribute(VertexAttribute::UV0,      0, uvType,
                         header->offsetUV0, uint8_t(header->strideUV0));
+
+            if (uvNormalized) {
+                vbb.normalized(VertexAttribute::UV0);
+            }
 
             if (header->offsetUV1 != std::numeric_limits<uint32_t>::max() &&
                     header->strideUV1 != std::numeric_limits<uint32_t>::max()) {
-                vbb.attribute(VertexAttribute::UV1,   0, VertexBuffer::AttributeType::HALF2,
+                vbb.attribute(VertexAttribute::UV1,   0, uvType,
                         header->offsetUV1, uint8_t(header->strideUV1));
+                if (uvNormalized) {
+                    vbb.normalized(VertexAttribute::UV1);
+                }
             }
 
             mesh.vertexBuffer = vbb.build(*engine);
