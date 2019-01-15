@@ -157,8 +157,7 @@ Material* createMaterialFromConfig(Engine& engine, MaterialConfig config ) {
     MaterialBuilder builder = MaterialBuilder()
             .name("material")
             .material(shader.c_str())
-            // TODO: Checking for the alphaMode is a bit of a hack to fix incorrect glTF files
-            .doubleSided(config.doubleSided || config.alphaMode != AlphaMode::OPAQUE)
+            .doubleSided(config.doubleSided)
             .require(VertexAttribute::UV0)
             .parameter(MaterialBuilder::SamplerType::SAMPLER_2D, "baseColorMap")
             .parameter(MaterialBuilder::UniformType::FLOAT4, "baseColorFactor")
@@ -214,7 +213,8 @@ Texture* MeshAssimp::createOneByOneTexture(uint32_t pixel) {
     return texturePtr;
 }
 
-void getMinMaxUV(const aiScene *scene, const aiNode* node, float2 &minUV, float2 &maxUV, int uvIndex) {
+void getMinMaxUV(const aiScene *scene, const aiNode* node, float2 &minUV,
+        float2 &maxUV, u_int32_t uvIndex) {
     for (size_t i = 0; i < node->mNumMeshes; ++i) {
         const aiMesh* mesh = scene->mMeshes[node->mMeshes[i]];
         if (!mesh->HasTextureCoords(uvIndex)) {
@@ -398,7 +398,7 @@ int32_t getEmbeddedTextureId(const aiString& path) {
                 return -1;
             }
         }
-        return std::atoi(pathStr + 1);
+        return std::atoi(pathStr + 1); // NOLINT
     }
     return -1;
 }
@@ -625,7 +625,6 @@ void MeshAssimp::addFromFile(const Path& path,
 using Assimp::Importer;
 
 bool MeshAssimp::setFromFile(Asset& asset, std::map<std::string, MaterialInstance*>& outMaterials) {
-
     Importer importer;
     importer.SetPropertyInteger(AI_CONFIG_PP_SBP_REMOVE,
             aiPrimitiveType_LINE | aiPrimitiveType_POINT);
@@ -649,6 +648,7 @@ bool MeshAssimp::setFromFile(Asset& asset, std::map<std::string, MaterialInstanc
             aiProcess_Triangulate);
 
     scene = importer.ApplyPostProcessing(aiProcess_CalcTangentSpace);
+
     size_t index = importer.GetImporterIndex(asset.file.getExtension().c_str());
     const aiImporterDesc* importerDesc = importer.GetImporterInfo(index);
     bool isGLTF = importerDesc &&
@@ -684,11 +684,11 @@ bool MeshAssimp::setFromFile(Asset& asset, std::map<std::string, MaterialInstanc
         }
     };
 
-    size_t deep = 0;
-    size_t depth = 0;
-    size_t matCount = 0;
-
     if (scene) {
+        size_t deep = 0;
+        size_t depth = 0;
+        size_t matCount = 0;
+
         aiNode const* node = scene->mRootNode;
 
         size_t totalVertexCount = 0;
@@ -732,9 +732,6 @@ bool MeshAssimp::setFromFile(Asset& asset, std::map<std::string, MaterialInstanc
                                         scene, isGLTF, deep, matCount, node, -1, depth);
             }
         }
-
-
-        std::cout << "Hierarchy depth = " << depth << std::endl;
 
         // compute the aabb and find bounding box of entire model
         for (auto& mesh : asset.meshes) {
@@ -782,6 +779,7 @@ bool MeshAssimp::setFromFile(Asset& asset, std::map<std::string, MaterialInstanc
                 }
             }
         }
+
         return true;
     }
     return false;
