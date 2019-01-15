@@ -60,7 +60,7 @@ private fun loadIndirectLight(
         assets: AssetManager,
         name: String,
         engine: Engine): Pair<IndirectLight, Texture> {
-    val (w, h) = peekSize(assets, "$name/nx.rgbm")
+    val (w, h) = peekSize(assets, "$name/m0_nx.rgbm")
     val texture = Texture.Builder()
             .width(w)
             .height(h)

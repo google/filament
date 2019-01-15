@@ -60,7 +60,7 @@ private fun loadIndirectLight(
         assets: AssetManager,
         name: String,
         engine: Engine): Pair<IndirectLight, Texture> {
-    val (w, h) = peekSize(assets, "$name/nx.rgbm")
+    val (w, h) = peekSize(assets, "$name/m0_nx.rgbm")
     val texture = Texture.Builder()
             .width(w)
             .height(h)
@@ -142,6 +142,7 @@ private fun loadCubemap(texture: Texture,
 
     // Rewind the texture buffer
     storage.flip()
+    android.util.Log.d("Texture", "Cubemap level: $level $faceSize ${texture.getWidth(level)}")
 
     val buffer = Texture.PixelBufferDescriptor(storage, Texture.Format.RGBM, Texture.Type.UBYTE)
     texture.setImage(engine, level, buffer, offsets)
