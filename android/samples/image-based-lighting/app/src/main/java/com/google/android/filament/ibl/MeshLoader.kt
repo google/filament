@@ -219,7 +219,7 @@ private fun createVertexBuffer(engine: Engine, header: Header, data: ByteBuffer)
             // sub-pixel addressing in textures that are <= 1024x1024
             .attribute(UV0, 0, uvType, header.uv0Offset.toInt(), header.uv0Stride.toInt())
 
-    // When UV coordinates are stored as 16-bit integeres we must normalize them (we want values
+    // When UV coordinates are stored as 16-bit integers we must normalize them (we want values
     // in the range -1..1)
     if (uvNormalized(header)) {
         vertexBufferBuilder.normalized(UV0)
