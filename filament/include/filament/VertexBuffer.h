@@ -64,7 +64,7 @@ public:
                 uint8_t byteStride = 0) noexcept;     // default is attribute size
 
         // no-op if attribute is an invalid enum
-        Builder& normalized(VertexAttribute attribute) noexcept;
+        Builder& normalized(VertexAttribute attribute, bool normalize = true) noexcept;
 
         /**
          * Creates the VertexBuffer object and returns a pointer to it.

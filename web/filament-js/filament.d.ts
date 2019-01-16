@@ -87,6 +87,7 @@ export class VertexBuffer$Builder {
                         atype: VertexBuffer$AttributeType,
                         offset: number, stride: number): VertexBuffer$Builder;
     public normalized(attrib: VertexAttribute): VertexBuffer$Builder;
+    public normalizedIf(attrib: VertexAttribute, normalized: boolean): VertexBuffer$Builder;
     public build(engine: Engine): VertexBuffer;
 }
 

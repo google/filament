@@ -65,9 +65,9 @@ Java_com_google_android_filament_VertexBuffer_nBuilderAttribute(JNIEnv *env, jcl
 
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_VertexBuffer_nBuilderNormalized(JNIEnv *env, jclass type,
-        jlong nativeBuilder, jint attribute) {
+        jlong nativeBuilder, jint attribute, jboolean normalized) {
     VertexBuffer::Builder* builder = (VertexBuffer::Builder *) nativeBuilder;
-    builder->normalized((VertexAttribute) attribute);
+    builder->normalized((VertexAttribute) attribute, normalized);
 }
 
 extern "C" JNIEXPORT jlong JNICALL

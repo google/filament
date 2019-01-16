@@ -218,19 +218,14 @@ private fun createVertexBuffer(engine: Engine, header: Header, data: ByteBuffer)
             // the range they span. When stored as half-float, there is only enough precision for
             // sub-pixel addressing in textures that are <= 1024x1024
             .attribute(UV0, 0, uvType, header.uv0Offset.toInt(), header.uv0Stride.toInt())
-
-    // When UV coordinates are stored as 16-bit integers we must normalize them (we want values
-    // in the range -1..1)
-    if (uvNormalized(header)) {
-        vertexBufferBuilder.normalized(UV0)
-    }
+            // When UV coordinates are stored as 16-bit integers we must normalize them (we want
+            // values in the range -1..1)
+            .normalized(UV0, uvNormalized(header))
 
     if (header.uv1Offset != MAX_UINT32 && header.uv1Stride != MAX_UINT32) {
         vertexBufferBuilder
                 .attribute(UV1, 0, uvType, header.uv1Offset.toInt(), header.uv1Stride.toInt())
-        if (uvNormalized(header)) {
-            vertexBufferBuilder.normalized(UV1)
-        }
+                .normalized(UV1, uvNormalized(header))
     }
 
     return vertexBufferBuilder.build(engine).apply { setBufferAt(engine, 0, data) }

@@ -108,7 +108,13 @@ public class VertexBuffer {
 
         @NonNull
         public Builder normalized(@NonNull VertexAttribute attribute) {
-            nBuilderNormalized(mNativeBuilder, attribute.ordinal());
+            nBuilderNormalized(mNativeBuilder, attribute.ordinal(), true);
+            return this;
+        }
+
+        @NonNull
+        public Builder normalized(@NonNull VertexAttribute attribute, boolean enabled) {
+            nBuilderNormalized(mNativeBuilder, attribute.ordinal(), enabled);
             return this;
         }
 
@@ -183,7 +189,8 @@ public class VertexBuffer {
     private static native void nBuilderBufferCount(long nativeBuilder, int bufferCount);
     private static native void nBuilderAttribute(long nativeBuilder, int attribute,
             int bufferIndex, int attributeType, int byteOffset, int byteStride);
-    private static native void nBuilderNormalized(long nativeBuilder, int attribute);
+    private static native void nBuilderNormalized(long nativeBuilder, int attribute,
+            boolean normalized);
     private static native long nBuilderBuild(long nativeBuilder, long nativeEngine);
 
     private static native int nGetVertexCount(long nativeVertexBuffer);
