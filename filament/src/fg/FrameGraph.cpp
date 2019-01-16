@@ -39,7 +39,7 @@ using namespace fg;
 namespace fg {
 
 struct Resource {
-    explicit Resource(const char* name, bool imported) noexcept : name(name), imported(imported) { }
+    explicit Resource(const char* name, bool imported) noexcept;
     Resource(Resource const&) = delete;
     Resource(Resource&&) = default;
     Resource& operator=(Resource const&) = delete;
@@ -67,87 +67,18 @@ struct Resource {
     FrameGraphPassResources::RenderTarget target;
 };
 
-Resource::~Resource() noexcept {
-    if (!imported) {
-        assert(!textures[0]);
-        assert(!textures[1]);
-        assert(!target.target);
-    }
-}
-
-void Resource::create(DriverApi& driver) noexcept {
-    uint8_t discardStart = TargetBufferFlags::ALL;
-    uint8_t discardEnd = TargetBufferFlags::ALL;
-    if (readerCount) {
-        assert(readFlags);
-        if (readFlags & FrameGraph::Builder::COLOR) {
-            discardEnd &= ~TargetBufferFlags::COLOR;
-            textures[0] = driver.createTexture(desc.type, desc.levels,
-                    desc.format, 1,
-                    desc.width, desc.height, desc.depth,
-                    TextureUsage::COLOR_ATTACHMENT);
-        }
-        if (readFlags & FrameGraph::Builder::DEPTH) {
-            discardEnd &= ~TargetBufferFlags::DEPTH;
-            textures[1] = driver.createTexture(desc.type, desc.levels,
-                    TextureFormat::DEPTH24, 1,
-                    desc.width, desc.height, desc.depth,
-                    TextureUsage::DEPTH_ATTACHMENT);
-        }
-    }
-    if (writerCount) {
-        assert(writeFlags);
-        uint32_t attachments = 0;
-        if (writeFlags & FrameGraph::Builder::COLOR) {
-            discardStart &= ~TargetBufferFlags::COLOR;
-            attachments |= uint32_t(TargetBufferFlags::COLOR);
-        }
-        if (writeFlags & FrameGraph::Builder::DEPTH) {
-            discardStart &= ~TargetBufferFlags::DEPTH;
-            attachments |= TargetBufferFlags::DEPTH;
-        }
-
-        target.target = driver.createRenderTarget(TargetBufferFlags(attachments),
-                desc.width, desc.height, desc.samples, desc.format,
-                { textures[0] }, { textures[1] }, {});
-
-        target.params = {};
-        target.params.discardStart = discardStart;
-        target.params.discardEnd = discardEnd;
-        target.params.left = 0;
-        target.params.bottom = 0;
-        target.params.width = desc.width;
-        target.params.height = desc.height;
-        target.params.dependencies = RenderPassParams::DEPENDENCY_BY_REGION;
-    }
-}
-
-void Resource::destroy(DriverApi& driver) noexcept {
-    if (!imported) {
-        for (auto& texture : textures) {
-            if (texture) {
-                driver.destroyTexture(texture);
-                texture.clear(); // needed because of noop driver
-            }
-        }
-        if (target.target) {
-            driver.destroyRenderTarget(target.target);
-            target.target.clear(); // needed because of noop driver
-        }
-    }
-}
-
 struct ResourceNode {
-    ResourceNode(const char* name, uint16_t index, bool imported) noexcept
-            : name(name), index(index), imported(imported) {
+    ResourceNode(const char* name, FrameGraphResource::Descriptor const& desc, bool imported,
+                 uint16_t index) noexcept
+            : name(name), imported(imported), index(index), desc(desc) {
     }
     ResourceNode(ResourceNode const&) = delete;
     ResourceNode(ResourceNode&&) noexcept = default;
 
     // constants
     const char* const name;
-    uint16_t const index;
-    bool imported;
+    const bool imported;
+    const uint16_t index;
 
     // updated by the builder
     uint16_t version = 0;
@@ -156,7 +87,10 @@ struct ResourceNode {
     FrameGraph::Builder::RWFlags writeFlags = 0;
 
     // set during compile()
-    Resource* resource = nullptr;
+    union {
+        Resource* resource = nullptr;
+        size_t offset;
+    };
 };
 
 struct PassNode {
@@ -183,20 +117,36 @@ struct PassNode {
     ~PassNode() { delete base; }
 
     // for Builder
-    void read(ResourceNode const& resource) {
+    FrameGraphResource read(ResourceNode const& resource) {
         // just record that we're reading from this resource (at the given version)
-        reads.push_back({ resource.index, resource.version });
+        FrameGraphResource r{ resource.index, resource.version };
+        reads.push_back(r);
+        return r;
     }
 
-    void write(ResourceNode& resource) {
-        // invalidate existing handles to this resource
+    FrameGraphResource write(ResourceNode& resource) {
+        /*
+         * We invalidate and rename handles that are writen into, to avoid undefined order
+         * access to the resources.
+         *
+         * e.g. forbidden graphs
+         *
+         *         +-> [R1] -+
+         *        /           \
+         *  (A) -+             +-> (A)
+         *        \           /
+         *         +-> [R2] -+        // failure when setting R2 from (A)
+         *
+         */
         ++resource.version;
         // writing to an imported resource should count as a side-effect
         if (resource.imported) {
             hasSideEffect = true;
         }
         // record the write
-        writes.push_back({ resource.index, resource.version });
+        FrameGraphResource r{ resource.index, resource.version };
+        writes.push_back(r);
+        return r;
     }
 
     // constants
@@ -219,6 +169,115 @@ struct Alias {
     FrameGraphResource from, to;
 };
 
+
+Resource::~Resource() noexcept {
+    if (!imported) {
+        assert(!textures[0]);
+        assert(!textures[1]);
+        assert(!target.target);
+    }
+}
+
+// ------------------------------------------------------------------------------------------------
+// out-of-line definitions
+// ------------------------------------------------------------------------------------------------
+
+Resource::Resource(const char* name, bool imported) noexcept
+        : name(name), imported(imported) {
+}
+
+void Resource::create(DriverApi& driver) noexcept {
+    if (imported) {
+        target.params = {};
+        target.params.discardStart = TargetBufferFlags::NONE;
+        target.params.discardEnd = TargetBufferFlags::NONE;
+        target.params.left = 0;
+        target.params.bottom = 0;
+        target.params.width = desc.width;
+        target.params.height = desc.height;
+        return;   // FIXME: do the right thing
+    }
+
+    // FIXME: the discard flags must be update for each pass
+    uint8_t discardStart = TargetBufferFlags::NONE;
+    uint8_t discardEnd = TargetBufferFlags::NONE;
+//    uint8_t discardStart = TargetBufferFlags::ALL;
+//    uint8_t discardEnd = TargetBufferFlags::ALL;
+//    if (readerCount) {
+//        if (readFlags & FrameGraph::Builder::COLOR) {
+//            discardEnd &= ~TargetBufferFlags::COLOR;
+//        }
+//        if (readFlags & FrameGraph::Builder::DEPTH) {
+//            discardEnd &= ~TargetBufferFlags::DEPTH;
+//        }
+//    }
+//    if (writerCount) {
+//        if (writeFlags & FrameGraph::Builder::COLOR) {
+//            discardStart &= ~TargetBufferFlags::COLOR;
+//        }
+//        if (writeFlags & FrameGraph::Builder::DEPTH) {
+//            discardStart &= ~TargetBufferFlags::DEPTH;
+//        }
+//        target.params = {};
+//        target.params.discardStart = discardStart;
+//        target.params.discardEnd = discardEnd;
+//    }
+
+
+    if (readerCount) {
+        assert(readFlags);
+        if (readFlags & FrameGraph::Builder::COLOR) {
+            textures[0] = driver.createTexture(desc.type, desc.levels,
+                    desc.format, 1,
+                    desc.width, desc.height, desc.depth,
+                    TextureUsage::COLOR_ATTACHMENT);
+        }
+        if (readFlags & FrameGraph::Builder::DEPTH) {
+            textures[1] = driver.createTexture(desc.type, desc.levels,
+                    TextureFormat::DEPTH24, 1,
+                    desc.width, desc.height, desc.depth,
+                    TextureUsage::DEPTH_ATTACHMENT);
+        }
+    }
+    if (writerCount) {
+        assert(writeFlags);
+        uint32_t attachments = 0;
+        if (writeFlags & FrameGraph::Builder::COLOR) {
+            attachments |= uint32_t(TargetBufferFlags::COLOR);
+        }
+        if (writeFlags & FrameGraph::Builder::DEPTH) {
+            attachments |= TargetBufferFlags::DEPTH;
+        }
+
+        target.target = driver.createRenderTarget(TargetBufferFlags(attachments),
+                desc.width, desc.height, desc.samples, desc.format,
+                { textures[0] }, { textures[1] }, {});
+
+        target.params = {};
+        target.params.left = 0;
+        target.params.bottom = 0;
+        target.params.width = desc.width;
+        target.params.height = desc.height;
+    }
+}
+
+void Resource::destroy(DriverApi& driver) noexcept {
+    // we don't own the handles of imported resources
+    if (imported) return;
+
+    for (auto& texture : textures) {
+        if (texture) {
+            driver.destroyTexture(texture);
+            texture.clear(); // needed because of noop driver
+        }
+    }
+    if (target.target) {
+        driver.destroyRenderTarget(target.target);
+        target.target.clear(); // needed because of noop driver
+    }
+}
+
+
 } // namespace fg
 
 // ------------------------------------------------------------------------------------------------
@@ -232,11 +291,10 @@ FrameGraph::Builder::Builder(FrameGraph& fg, PassNode& pass) noexcept
     : mFrameGraph(fg), mPass(pass) {
 }
 
-FrameGraphResource FrameGraph::Builder::createTexture(
+FrameGraphResource FrameGraph::Builder::createResource(
         const char* name, FrameGraphResource::Descriptor const& desc) noexcept {
     FrameGraph& frameGraph = mFrameGraph;
-    ResourceNode& resource = frameGraph.createResource(name, false);
-    resource.desc = desc;
+    ResourceNode& resource = frameGraph.createResource(name, desc, false);
     return { resource.index, resource.version };
 }
 
@@ -246,8 +304,7 @@ FrameGraphResource FrameGraph::Builder::read(FrameGraphResource const& input, RW
         return {};
     }
     resource->readFlags |= readFlags;
-    mPass.read(*resource);
-    return input;
+    return mPass.read(*resource);
 }
 
 FrameGraphResource FrameGraph::Builder::write(FrameGraphResource const& output, RWFlags writeFlags) {
@@ -255,25 +312,8 @@ FrameGraphResource FrameGraph::Builder::write(FrameGraphResource const& output, 
     if (!resource) {
         return {};
     }
-
     resource->writeFlags |= writeFlags;
-    mPass.write(*resource);
-
-    /*
-     * We invalidate and rename handles that are writen into, to avoid undefined order
-     * access to the resources.
-     *
-     * e.g. forbidden graphs
-     *
-     *         +-> [R1] -+
-     *        /           \
-     *  (A) -+             +-> (A)
-     *        \           /
-     *         +-> [R2] -+        // failure when setting R2 from (A)
-     *
-     */
-
-    return { resource->index, resource->version };
+    return mPass.write(*resource);
 }
 
 FrameGraph::Builder& FrameGraph::Builder::sideEffect() noexcept {
@@ -294,26 +334,53 @@ Handle<HwTexture> FrameGraphPassResources::getTexture(
     Resource const* const pResource = mFrameGraph.mResourceNodes[r.index].resource;
     assert(pResource);
 
+    const char* requested = "unknown";
+    Handle<HwTexture> h;
     switch (attachment) {
         case TextureUsage::DEFAULT:
             if (pResource->readFlags == FrameGraph::Builder::DEPTH) {
-                return pResource->textures[1];
+                h = pResource->textures[1];
+                requested = "depth";
+                break;
             }
             [[clang::fallthrough]];
         case TextureUsage::COLOR_ATTACHMENT:
-            return pResource->textures[0];
+            h = pResource->textures[0];
+            requested = "color";
+            break;
 
         case TextureUsage::DEPTH_ATTACHMENT:
-            return pResource->textures[1];
+            h = pResource->textures[1];
+            requested = "depth";
+            break;
     }
+
+    if (pResource->imported) {
+        ASSERT_POSTCONDITION_NON_FATAL(h,
+                "Imported resource \"%s\" (id=%u) doesn't have a %s texture",
+                pResource->name, r.index, requested);
+    } else {
+        // for non imported resources that shouldn't happen.
+        // FIXME: is it true though? couldn't it happen if user didn't declare dependencies right?
+        assert(h);
+    }
+    return h;
 }
 
-FrameGraphPassResources::RenderTarget const& FrameGraphPassResources::getRenderTarget(
-        FrameGraphResource r) const noexcept {
+FrameGraphPassResources::RenderTarget const&
+FrameGraphPassResources::getRenderTarget(FrameGraphResource r) const noexcept {
     // TODO: we should check that this FrameGraphResource is indeed used by this pass
     (void)mPass; // suppress unused warning
     Resource const* const pResource = mFrameGraph.mResourceNodes[r.index].resource;
     assert(pResource);
+    assert(pResource->target.target);
+
+    if (pResource->imported) {
+        ASSERT_POSTCONDITION_NON_FATAL(pResource->target.target,
+                "Imported resource \"%s\" (id=%u) doesn't have a render target",
+                pResource->name, r.index);
+    }
+
     return pResource->target;
 }
 
@@ -340,9 +407,12 @@ bool FrameGraph::isValid(FrameGraphResource handle) const noexcept {
     return handle.version == resource.version;
 }
 
-void FrameGraph::moveResource(FrameGraphResource from, FrameGraphResource to) {
-    // FIXME: what checks need to happen?
+bool FrameGraph::moveResource(FrameGraphResource from, FrameGraphResource to) {
+    if (!isValid(from) || !isValid(to)) {
+        return false;
+    }
     mAliases.push_back({from, to});
+    return true;
 }
 
 void FrameGraph::present(FrameGraphResource input) {
@@ -364,13 +434,13 @@ PassNode& FrameGraph::createPass(const char* name, FrameGraphPassExecutor* base)
     return frameGraphPasses.back();
 }
 
-ResourceNode& FrameGraph::createResource(const char* name, bool imported) noexcept {
+ResourceNode& FrameGraph::createResource(
+        const char* name, FrameGraphResource::Descriptor const& desc, bool imported) noexcept {
     auto& registry = mResourceNodes;
     uint16_t id = (uint16_t)registry.size();
-    registry.emplace_back(name, id, imported);
+    registry.emplace_back(name, desc, imported, id);
     return registry.back();
 }
-
 
 ResourceNode* FrameGraph::getResource(FrameGraphResource r) {
     auto& registry = mResourceNodes;
@@ -396,20 +466,53 @@ FrameGraphResource::Descriptor* FrameGraph::getDescriptor(FrameGraphResource r) 
     return node ? &node->desc : nullptr;
 }
 
-FrameGraphResource FrameGraph::importResource(const char* name, Handle <HwRenderTarget> target) {
-    ResourceNode& resource = createResource(name, true);
-    return { resource.index, resource.version };
+FrameGraphResource FrameGraph::importResource(
+        const char* name, FrameGraphResource::Descriptor const& descriptor,
+        Handle <HwRenderTarget> target) {
+    return importResource(name, descriptor, target, {}, {});
+}
+
+FrameGraphResource FrameGraph::importResource(
+        const char* name, FrameGraphResource::Descriptor const& descriptor,
+        Handle<HwTexture> color, Handle<HwTexture> depth) {
+    return importResource(name, descriptor, {}, color, depth);
+}
+
+FrameGraphResource FrameGraph::importResource(
+        const char* name, FrameGraphResource::Descriptor const& descriptor,
+        Handle <HwRenderTarget> target,
+        Handle <HwTexture> color, Handle <HwTexture> depth) {
+    ResourceNode& node = createResource(name, descriptor, true);
+
+    // imported resources are created immediately
+    auto& resourceRegistry = mResourceRegistry;
+    resourceRegistry.emplace_back(name, true);
+    Resource& resource = resourceRegistry.back();
+    resource.textures[0] = color;
+    resource.textures[1] = depth;
+    resource.target.target = target;
+
+    // we store the offset into the array (instead of the pointer) because the storage might
+    // move between now and compile().
+    node.offset = &resource - resourceRegistry.data();
+
+    return { node.index, node.version };
 }
 
 FrameGraph& FrameGraph::compile() noexcept {
+    auto& passNodes = mPassNodes;
     auto& resourceNodes = mResourceNodes;
     auto& resourceRegistry = mResourceRegistry;
     resourceRegistry.reserve(resourceNodes.size());
 
     // create the sub-resources
     for (ResourceNode& node : resourceNodes) {
-        resourceRegistry.emplace_back(node.name, node.imported);
-        node.resource = &resourceRegistry.back();
+        if (node.imported) {
+            node.resource = &resourceRegistry[node.offset];
+        } else {
+            resourceRegistry.emplace_back(node.name, false);
+            node.resource = &resourceRegistry.back();
+        }
         node.resource->desc = node.desc;
         node.resource->readFlags = node.readFlags;
         node.resource->writeFlags = node.writeFlags;
@@ -420,7 +523,7 @@ FrameGraph& FrameGraph::compile() noexcept {
         // disconnect all writes to "from"
         auto& from = resourceNodes[alias.from.index];
         auto& to = resourceNodes[alias.to.index];
-        for (PassNode& pass : mPassNodes) {
+        for (PassNode& pass : passNodes) {
             auto pos = std::find_if(pass.writes.begin(), pass.writes.end(),
                     [&from](FrameGraphResource const& r) { return r.index == from.index; });
             if (pos != pass.writes.end()) {
@@ -439,7 +542,7 @@ FrameGraph& FrameGraph::compile() noexcept {
     }
 
     // compute passes and resource reference counts
-    for (PassNode& pass : mPassNodes) {
+    for (PassNode& pass : passNodes) {
         // compute passes reference counts (i.e. resources we're writing to)
         pass.refCount = (uint32_t)pass.writes.size() + (uint32_t)pass.hasSideEffect;
 
@@ -479,29 +582,24 @@ FrameGraph& FrameGraph::compile() noexcept {
 
         assert(pSubResource->writerCount <= 1);
 
-        // if a resource doesn't have a writer and is not imported, then we the graph is not
-        // set correctly. For now we ignore this.
-        if (!pSubResource->writer) {
-            slog.d << "resource \"" << pSubResource->name << "\" is never written!" << io::endl;
-            continue; // TODO: this shouldn't happen in a valid graph
-        }
-
         PassNode* const writer = pSubResource->writer;
-        assert(writer->refCount >= 1);
-        if (--writer->refCount == 0) {
-            // this pass is culled
-            auto const& reads = writer->reads;
-            for (FrameGraphResource resource : reads) {
-                Resource* r = resourceNodes[resource.index].resource;
-                if (--r->readerCount == 0) {
-                    stack.push_back(r);
+        if (writer) {
+            assert(writer->refCount >= 1);
+            if (--writer->refCount == 0) {
+                // this pass is culled
+                auto const& reads = writer->reads;
+                for (FrameGraphResource resource : reads) {
+                    Resource* r = resourceNodes[resource.index].resource;
+                    if (--r->readerCount == 0) {
+                        stack.push_back(r);
+                    }
                 }
             }
         }
     }
 
     // compute first/last users for active passes
-    for (PassNode& pass : mPassNodes) {
+    for (PassNode& pass : passNodes) {
         if (!pass.refCount) {
             assert(!pass.hasSideEffect);
             continue;
@@ -597,7 +695,10 @@ void FrameGraph::export_graphviz(utils::io::ostream& out) {
                    "\\nrefs:" << subresource->readerCount
                    <<"\""
                    ", style=filled, fillcolor="
-                   << (subresource->readerCount ? "skyblue" : "skyblue4") << "]\n";
+                   << ((subresource->imported) ?
+                        (subresource->readerCount ? "palegreen" : "palegreen4") :
+                        (subresource->readerCount ? "skyblue" : "skyblue4"))
+                   << "]\n";
         }
     }
 
