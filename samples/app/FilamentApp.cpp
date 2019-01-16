@@ -548,7 +548,11 @@ void FilamentApp::Window::fixupMouseCoordinatesForHdpi(ssize_t& x, ssize_t& y) c
 
 void FilamentApp::Window::resize() {
     mFilamentApp->mEngine->destroy(mSwapChain);
-    mSwapChain = mFilamentApp->mEngine->createSwapChain(::getNativeWindow(mWindow));
+    void* nativeWindow = ::getNativeWindow(mWindow);
+    mSwapChain = mFilamentApp->mEngine->createSwapChain(nativeWindow);
+#if defined(FILAMENT_DRIVER_SUPPORTS_VULKAN) && defined(__APPLE__)
+    resizeMetalLayer(nativeWindow);
+#endif
     configureCamerasForWindow();
 }
 

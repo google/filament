@@ -20,6 +20,10 @@
 struct SDL_Window;
 
 extern "C" void* getNativeWindow(SDL_Window* sdlWindow);
+
+#if defined(__APPLE__)
 extern "C" void setUpMetalLayer(void* nativeWindow);
+extern "C" void resizeMetalLayer(void* nativeView);
+#endif
 
 #endif // TNT_FILAMENT_NATIVE_WINDOW_HELPER_H
