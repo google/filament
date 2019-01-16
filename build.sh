@@ -528,6 +528,8 @@ function run_test {
 
 function run_tests {
     if [ "$ISSUE_WEBGL_BUILD" == "true" ]; then
+        pwd
+        npx tsc --version
         npx tsc --noEmit \
             third_party/gl-matrix/gl-matrix.d.ts \
             web/filament-js/filament.d.ts \

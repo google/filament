@@ -16,4 +16,14 @@ source `dirname $0`/ci-common.sh
 source `dirname $0`/../common/build-common.sh
 
 pushd `dirname $0`/../.. > /dev/null
+
+# Install a typescript compiler to allow testing.
+if [ "$RUN_TESTS" == "-u" ]; then
+    npm install typescript
+    echo "Node Version: "
+    node --version
+    echo "TypeScript Version: "
+    npx tsc --version
+fi
+
 ./build.sh -p webgl -c $RUN_TESTS $GENERATE_ARCHIVES $BUILD_DEBUG $BUILD_RELEASE
