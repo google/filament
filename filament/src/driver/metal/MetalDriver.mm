@@ -401,10 +401,6 @@ void MetalDriver::draw(Driver::PipelineState ps, Driver::RenderPrimitiveHandle r
 
 }
 
-void MetalDriver::enumerateSamplerBuffers(const MetalProgram *program,
-        const std::function<void(const SamplerBuffer::Sampler*, uint8_t)>& f) {
-}
-
 } // namespace metal
 } // namespace driver
 
