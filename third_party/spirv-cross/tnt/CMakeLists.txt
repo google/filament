@@ -80,4 +80,8 @@ spirv_cross_add_library(spirv-cross-glsl spirv_cross_glsl STATIC
     ../spirv_glsl.cpp
     ../spirv_glsl.hpp)
 
-target_link_libraries(spirv-cross-glsl spirv-cross-core)
+spirv_cross_add_library(spirv-cross-msl spirv_cross_msl STATIC
+    ../spirv_msl.cpp
+    ../spirv_msl.hpp)
+
+target_link_libraries(spirv-cross-glsl spirv-cross-msl spirv-cross-core)

@@ -45,6 +45,7 @@ static const int alignment = 24;
 struct Config {
     bool printGLSL = false;
     bool printSPIRV = false;
+    bool printMetal = false;
     bool transpile = false;
     bool binary = false;
     uint64_t shaderIndex;
@@ -71,6 +72,8 @@ static void printUsage(const char* name) {
                     "       Print GLSL for the nth shader (0 is the first OpenGL shader)\n\n"
                     "   --print-spirv=[index], -s\n"
                     "       Print disasm for the nth shader (0 is the first Vulkan shader)\n\n"
+                    "   --print-metal=[index], -m\n"
+                    "       Print Metal Shading Language for the nth shader (0 is the first Metal shader)\n\n"
                     "   --print-vkglsl=[index], -v\n"
                     "       Print the nth Vulkan shader transpiled into GLSL\n\n"
                     "   --dump-binary=[index], -b\n"
@@ -100,6 +103,7 @@ static int handleArguments(int argc, char* argv[], Config* config) {
             { "print-glsl",   required_argument, 0, 'g' },
             { "print-spirv",  required_argument, 0, 's' },
             { "print-vkglsl", required_argument, 0, 'v' },
+            { "print-metal",  required_argument, 0, 'm' },
             { "dump-binary",  required_argument, 0, 'b' },
             { 0, 0, 0, 0 }  // termination of the option list
     };
@@ -135,6 +139,9 @@ static int handleArguments(int argc, char* argv[], Config* config) {
                 config->shaderIndex = static_cast<uint64_t>(std::stoi(arg));
                 config->binary = true;
                 break;
+            case 'm':
+                config->printMetal = true;
+                config->shaderIndex = static_cast<uint64_t>(std::stoi(arg));
         }
     }
 
@@ -531,6 +538,56 @@ static void printChunks(const ChunkContainer& container) {
     }
 }
 
+static bool getMetalShaderInfo(ChunkContainer container, std::vector<ShaderInfo>* info) {
+    if (!container.hasChunk(filamat::ChunkType::MaterialMetal)) {
+        return true; // that's not an error, a material can have no metal stuff
+    }
+
+    Unflattener unflattener(
+            container.getChunkStart(filamat::ChunkType::MaterialMetal),
+            container.getChunkEnd(filamat::ChunkType::MaterialMetal));
+
+    uint64_t shaderCount = 0;
+    if (!unflattener.read(&shaderCount) || shaderCount == 0) {
+        return false;
+    }
+
+    info->clear();
+    info->reserve(shaderCount);
+
+    for (uint64_t i = 0; i < shaderCount; i++) {
+        uint8_t shaderModelValue;
+        uint8_t variantValue;
+        uint8_t pipelineStageValue;
+        uint32_t offsetValue;
+
+        if (!unflattener.read(&shaderModelValue)) {
+            return false;
+        }
+
+        if (!unflattener.read(&variantValue)) {
+            return false;
+        }
+
+        if (!unflattener.read(&pipelineStageValue)) {
+            return false;
+        }
+
+        if (!unflattener.read(&offsetValue)) {
+            return false;
+        }
+
+        info->push_back({
+                .shaderModel = filament::driver::ShaderModel(shaderModelValue),
+                .variant = variantValue,
+                .pipelineStage = filament::driver::ShaderType(pipelineStageValue),
+                .offset = offsetValue
+        });
+    }
+
+    return true;
+}
+
 static bool getGlShaderInfo(ChunkContainer container, std::vector<ShaderInfo>* info) {
     if (!container.hasChunk(filamat::ChunkType::MaterialGlsl)) {
         return true; // that's not an error, a material can have no glsl stuff
@@ -629,12 +686,7 @@ static bool getVkShaderInfo(ChunkContainer container, std::vector<ShaderInfo>* i
     return true;
 }
 
-static bool printGlslInfo(ChunkContainer container) {
-    std::vector<ShaderInfo> info;
-    if (!getGlShaderInfo(container, &info)) {
-        return false;
-    }
-    std::cout << "GLSL shaders:" << std::endl;
+static void printShaderInfo(const std::vector<ShaderInfo>& info) {
     for (uint64_t i = 0; i < info.size(); ++i) {
         const auto& item = info[i];
         std::cout << "    #";
@@ -648,6 +700,15 @@ static bool printGlslInfo(ChunkContainer container) {
         std::cout << std::setfill(' ') << std::dec << std::endl;
     }
     std::cout << std::endl;
+}
+
+static bool printGlslInfo(ChunkContainer container) {
+    std::vector<ShaderInfo> info;
+    if (!getGlShaderInfo(container, &info)) {
+        return false;
+    }
+    std::cout << "GLSL shaders:" << std::endl;
+    printShaderInfo(info);
     return true;
 }
 
@@ -657,19 +718,17 @@ static bool printVkInfo(ChunkContainer container) {
         return false;
     }
     std::cout << "Vulkan shaders:" << std::endl;
-    for (uint64_t i = 0; i < info.size(); ++i) {
-        const auto& item = info[i];
-        std::cout << "    #";
-        std::cout << std::setw(4) << std::left << i;
-        std::cout << std::setw(6) << std::left << toString(item.shaderModel);
-        std::cout << " ";
-        std::cout << std::setw(2) << std::left << toString(item.pipelineStage);
-        std::cout << " ";
-        std::cout << "0x" << std::hex << std::setfill('0') << std::setw(2)
-                  << std::right << (int) item.variant;
-        std::cout << std::setfill(' ') << std::dec << std::endl;
+    printShaderInfo(info);
+    return true;
+}
+
+static bool printMetalInfo(ChunkContainer container) {
+    std::vector<ShaderInfo> info;
+    if (!getMetalShaderInfo(container, &info)) {
+        return false;
     }
-    std::cout << std::endl;
+    std::cout << "Metal shaders:" << std::endl;
+    printShaderInfo(info);
     return true;
 }
 
@@ -687,6 +746,10 @@ static bool printMaterialInfo(const ChunkContainer& container) {
     }
 
     if (!printVkInfo(container)) {
+        return false;
+    }
+
+    if (!printMetalInfo(container)) {
         return false;
     }
 
@@ -735,7 +798,7 @@ static bool parseChunks(Config config, void* data, size_t size) {
     if (!container.parse()) {
         return false;
     }
-    if (config.printGLSL || config.printSPIRV) {
+    if (config.printGLSL || config.printSPIRV || config.printMetal) {
         filaflat::ShaderBuilder builder;
         std::vector<ShaderInfo> info;
 
@@ -795,6 +858,30 @@ static bool parseChunks(Config config, void* data, size_t size) {
             } else {
                 disassembleSpirv(spirv);
             }
+
+            return true;
+        }
+
+        if (config.printMetal) {
+            MaterialParser parser(filament::driver::Backend::METAL, data, size);
+            if (!parser.parse() ||
+                    (!parser.isShadingMaterial() && !parser.isPostProcessMaterial())) {
+                return false;
+            }
+
+            if (!getMetalShaderInfo(container, &info)) {
+                std::cerr << "Failed to parse Metal chunk." << std::endl;
+                return false;
+            }
+
+            if (config.shaderIndex >= info.size()) {
+                std::cerr << "Shader index out of range." << std::endl;
+                return false;
+            }
+
+            const auto& item = info[config.shaderIndex];
+            parser.getShader(item.shaderModel, item.variant, item.pipelineStage, builder);
+            std::cout << builder.getShader().c_str();
 
             return true;
         }

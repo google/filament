@@ -51,6 +51,7 @@ public:
         ALL,
         OPENGL,
         VULKAN,
+        METAL
     };
 
     enum class Optimization {

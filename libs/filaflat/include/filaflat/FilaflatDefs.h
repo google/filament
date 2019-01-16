@@ -55,6 +55,7 @@ enum UTILS_PUBLIC ChunkType : uint64_t {
     MaterialSib = charTo64bitNum("MAT_SIB "),
     MaterialGlsl = charTo64bitNum("MAT_GLSL"),
     MaterialSpirv = charTo64bitNum("MAT_SPIR"),
+    MaterialMetal = charTo64bitNum("MAT_METL"),
     MaterialShaderModels = charTo64bitNum("MAT_SMDL"),
     MaterialSamplerBindings = charTo64bitNum("MAT_SAMP"),   // no longer used
 
@@ -87,6 +88,7 @@ enum UTILS_PUBLIC ChunkType : uint64_t {
 
     DictionaryGlsl = charTo64bitNum("DIC_GLSL"),
     DictionarySpirv = charTo64bitNum("DIC_SPIR"),
+    DictionaryMetal = charTo64bitNum("DIC_METL")
 };
 
 } // namespace filamat

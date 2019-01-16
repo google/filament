@@ -153,6 +153,10 @@ inline constexpr uint8_t getSamplerBindingsStart(driver::Backend api) noexcept {
             const uint8_t numUniformBlockBindings = filament::BindingPoints::COUNT;
             return numUniformBlockBindings;
         }
+
+        case driver::Backend::METAL:
+            // Metal has a separate namespace for uniforms and samplers- collisions aren't an issue.
+            return 0;
     }
 }
 
