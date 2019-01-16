@@ -18,7 +18,6 @@
 #include "driver/CommandStreamDispatcher.h"
 #include "driver/metal/MetalDriver.h"
 
-#include <AppKit/AppKit.h>
 #include <Metal/Metal.h>
 #include <QuartzCore/QuartzCore.h>
 

@@ -37,7 +37,6 @@
     #if defined (FILAMENT_DRIVER_SUPPORTS_VULKAN)
         #include "driver/vulkan/PlatformVkCocoa.h"
     #endif
-    #include "driver/metal/PlatformMetal.h"
 #elif defined(__linux__)
     #ifndef USE_EXTERNAL_GLES3
         #include "driver/opengl/PlatformGLX.h"
@@ -58,6 +57,10 @@
     #ifndef USE_EXTERNAL_GLES3
         #include "driver/opengl/PlatformDummyGL.h"
     #endif
+#endif
+
+#if defined (FILAMENT_SUPPORTS_METAL)
+    #include "driver/metal/PlatformMetal.h"
 #endif
 
 #ifndef NDEBUG
