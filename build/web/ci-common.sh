@@ -10,13 +10,6 @@ export PATH="$PWD:$PATH"
 python3 --version
 pip3 install mistletoe pygments jsbeautifier future_fstrings
 
-# Install a typescript compiler to allow testing.
-npm install typescript
-echo "Node Version: "
-node --version
-echo "TypeScript Version: "
-npx tsc --version
-
 # Install a specific version of emscripen to avoid surprises.
 curl -L https://github.com/juj/emsdk/archive/0d8576c.zip > emsdk.zip
 unzip emsdk.zip
