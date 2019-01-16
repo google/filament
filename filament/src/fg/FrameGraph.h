@@ -59,19 +59,24 @@ public:
         // create a resource
         using RWFlags = uint32_t;
         static constexpr RWFlags NONE  = 0x0;
-        static constexpr RWFlags COLOR = 0x1;
-        static constexpr RWFlags DEPTH = 0x2;
+        static constexpr RWFlags COLOR = 0x1;   // COLOR buffer access
+        static constexpr RWFlags DEPTH = 0x2;   // DEPTH buffer access
 
-        FrameGraphResource createTexture(const char* name,
+        // Create a virtual resource that can eventually turn into a concrete texture or
+        // render target
+        FrameGraphResource createResource(const char* name,
                 FrameGraphResource::Descriptor const& desc = {}) noexcept;
 
-        // read from a resource (i.e. add a reference to that resource)
+        // Read from a resource (i.e. add a reference to that resource)
         FrameGraphResource read(FrameGraphResource const& input, RWFlags readFlags = COLOR);
 
-        // write to a resource (i.e. add a reference to the pass that's doing the writing))
+        // Write to a resource (i.e. add a reference to the pass that's doing the writing))
+        // Writing to a resource makes its handle invalid.
+        // Writing to an imported resources adds a side-effect (see sideEffect() below).
         FrameGraphResource write(FrameGraphResource const& output, RWFlags writeFlags = COLOR);
 
-        // declare that this pass has side effects
+        // Declare that this pass has side effects outside the framefraph (i.e. it can't be culled)
+        // Calling write() on an imported resource automatically adds a side-effect.
         Builder& sideEffect() noexcept;
 
     private:
@@ -86,6 +91,13 @@ public:
     FrameGraph& operator = (FrameGraph const&) = delete;
     ~FrameGraph();
 
+    /*
+     * Add a pass to the framegraph.
+     * The Setup lambda is called synchronously and used to declare which and how resources are
+     *   used by this pass. Captures should be done by reference.
+     * The Execute lamda is called asynchronously from FrameGraph::execute(), and this is where
+     *   immediate drawing commands can be issued. Captures must be done by copy.
+     */
     template <typename Data, typename Setup, typename Execute>
     FrameGraphPass<Data, Execute>& addPass(const char* name, Setup setup, Execute&& execute) {
         static_assert(sizeof(Execute) < 1024, "Execute() lambda is capturing too much data.");
@@ -104,27 +116,57 @@ public:
         return *pass;
     }
 
+    // Adds a reference to 'input', preventing it from being culled.
     void present(FrameGraphResource input);
 
+    // Returns whether the resource handle is valid. A resource handle becomes invalid after
+    // it's used to declare a resource write (see Builder::write()).
     bool isValid(FrameGraphResource r) const noexcept;
 
+    // Return the Descriptor associated to this resource handle, or nullptr if the resource
+    // handle is invalid.
     FrameGraphResource::Descriptor* getDescriptor(FrameGraphResource r);
 
-    FrameGraphResource importResource(const char* name, Handle <HwRenderTarget> target);
+    // Import a write-only render target from outside the framegraph and returns a handle to it.
+    FrameGraphResource importResource(
+            const char* name, FrameGraphResource::Descriptor const& descriptor,
+            Handle<HwRenderTarget> target);
 
+    // Import a read-only render target from outside the framegraph and returns a handle to it.
+    FrameGraphResource importResource(
+            const char* name, FrameGraphResource::Descriptor const& descriptor,
+            Handle<HwTexture> color,
+            Handle<HwTexture> depth = {});
+
+    // Import a read/write render target from outside the framegraph and returns a handle to it.
+    FrameGraphResource importResource(
+            const char* name, FrameGraphResource::Descriptor const& descriptor,
+            Handle<HwRenderTarget> target,
+            Handle<HwTexture> color,
+            Handle<HwTexture> depth = {});
+
+    // Moves the resource associated to the handle 'from' to the handle 'to'. After this call,
+    // all handles referring to the resource 'to' are redirected to the resource 'from'
+    // (including handles used in the past).
+    // All writes to 'from' are disconnected (i.e. these passes loose a reference).
+    // Returns true on success, false if one of the handle was invalid.
+    bool moveResource(FrameGraphResource from, FrameGraphResource to);
+
+    // allocates concrete resources and culls unreferenced passes
     FrameGraph& compile() noexcept;
 
+    // execute all referenced passes
     void execute(driver::DriverApi& driver) noexcept;
 
-
-    void moveResource(FrameGraphResource from, FrameGraphResource to);
+    // for debugging
     void export_graphviz(utils::io::ostream& out);
 
 private:
     friend class FrameGraphPassResources;
 
     fg::PassNode& createPass(const char* name, FrameGraphPassExecutor* base) noexcept;
-    fg::ResourceNode& createResource(const char* name, bool imported) noexcept;
+    fg::ResourceNode& createResource(const char* name,
+            FrameGraphResource::Descriptor const& desc, bool imported) noexcept;
     fg::ResourceNode* getResource(FrameGraphResource r);
 
     std::vector<fg::PassNode> mPassNodes;           // list of frame graph passes
