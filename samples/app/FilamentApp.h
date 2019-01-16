@@ -157,6 +157,7 @@ private:
         SDL_Window* mWindow = nullptr;
         FilamentApp* mFilamentApp = nullptr;
         filament::Renderer* mRenderer = nullptr;
+        filament::Engine::Backend mBackend;
 
         CameraManipulator mMainCameraMan;
         CameraManipulator mOrthoCameraMan;
