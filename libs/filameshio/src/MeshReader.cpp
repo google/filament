@@ -173,21 +173,17 @@ MeshReader::Mesh MeshReader::loadMeshFromBuffer(filament::Engine* engine,
             .attribute(VertexAttribute::COLOR, 0, VertexBuffer::AttributeType::UBYTE4,
                         header->offsetColor, uint8_t(header->strideColor))
             .attribute(VertexAttribute::UV0, 0, uvtype,
-                        header->offsetUV0, uint8_t(header->strideUV0));
-
-    if (header->flags & TEXCOORD_SNORM16) {
-        vbb.normalized(VertexAttribute::UV0);
-    }
+                        header->offsetUV0, uint8_t(header->strideUV0))
+            .normalized(VertexAttribute::UV0, header->flags & TEXCOORD_SNORM16);
 
     constexpr uint32_t uintmax = std::numeric_limits<uint32_t>::max();
     const bool hasUV1 = header->offsetUV1 != uintmax && header->strideUV1 != uintmax;
 
     if (hasUV1) {
-        vbb.attribute(VertexAttribute::UV1, 0, VertexBuffer::AttributeType::HALF2,
-                header->offsetUV1, uint8_t(header->strideUV1));
-        if (header->flags & TEXCOORD_SNORM16) {
-            vbb.normalized(VertexAttribute::UV1);
-        }
+        vbb
+            .attribute(VertexAttribute::UV1, 0, VertexBuffer::AttributeType::HALF2,
+                    header->offsetUV1, uint8_t(header->strideUV1))
+            .normalized(VertexAttribute::UV1);
     }
 
     mesh.vertexBuffer = vbb.build(*engine);

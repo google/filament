@@ -745,6 +745,9 @@ class_<VertexBuilder>("VertexBuffer$Builder")
     .BUILDER_FUNCTION("normalized", VertexBuilder, (VertexBuilder* builder,
             VertexAttribute attrib), {
         return &builder->normalized(attrib); })
+    .BUILDER_FUNCTION("normalizedIf", VertexBuilder, (VertexBuilder* builder,
+            VertexAttribute attrib, bool normalized), {
+        return &builder->normalized(attrib, normalized); })
     .BUILDER_FUNCTION("bufferCount", VertexBuilder, (VertexBuilder* builder, int count), {
         return &builder->bufferCount(count); });
 

@@ -100,10 +100,15 @@ VertexBuffer::Builder& VertexBuffer::Builder::attribute(VertexAttribute attribut
     return *this;
 }
 
-VertexBuffer::Builder& VertexBuffer::Builder::normalized(VertexAttribute attribute) noexcept {
+VertexBuffer::Builder& VertexBuffer::Builder::normalized(VertexAttribute attribute,
+        bool normalized) noexcept {
     if (size_t(attribute) < MAX_ATTRIBUTE_BUFFERS_COUNT) {
         AttributeData& entry = mImpl->mAttributes[attribute];
-        entry.flags |= Driver::Attribute::FLAG_NORMALIZED;
+        if (normalized) {
+            entry.flags |= Driver::Attribute::FLAG_NORMALIZED;
+        } else {
+            entry.flags &= ~Driver::Attribute::FLAG_NORMALIZED;
+        }
     }
     return *this;
 }
