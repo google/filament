@@ -422,12 +422,14 @@ FilamentApp::Window::Window(FilamentApp* filamentApp,
     // For single-threaded platforms, we need to ensure that Filament's OpenGL context is current,
     // rather than the one created by SDL.
     mFilamentApp->mEngine = Engine::create(config.backend);
+    mBackend = config.backend;
 
     void* nativeWindow = ::getNativeWindow(mWindow);
 #if defined(FILAMENT_DRIVER_SUPPORTS_VULKAN) && defined(__APPLE__)
-    // We request a Metal layer in case we want to render via Metal / MoltenVK. For OpenGL, this
-    // won't make a difference.
-    setUpMetalLayer(nativeWindow);
+    // We request a Metal layer for rendering via MoltenVK.
+    if (config.backend == filament::Engine::Backend::VULKAN) {
+        setUpMetalLayer(nativeWindow);
+    }
 #endif
     mSwapChain = mFilamentApp->mEngine->createSwapChain(nativeWindow);
     mRenderer = mFilamentApp->mEngine->createRenderer();
@@ -551,7 +553,9 @@ void FilamentApp::Window::resize() {
     void* nativeWindow = ::getNativeWindow(mWindow);
     mSwapChain = mFilamentApp->mEngine->createSwapChain(nativeWindow);
 #if defined(FILAMENT_DRIVER_SUPPORTS_VULKAN) && defined(__APPLE__)
-    resizeMetalLayer(nativeWindow);
+    if (mBackend == filament::Engine::Backend::VULKAN) {
+        resizeMetalLayer(nativeWindow);
+    }
 #endif
     configureCamerasForWindow();
 }
