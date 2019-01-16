@@ -356,6 +356,10 @@ if (FILAMENT_SUPPORTS_VULKAN)
     target_link_libraries(${TARGET} PUBLIC bluevk vkmemalloc)
 endif()
 
+if (FILAMENT_SUPPORTS_METAL)
+    target_link_libraries(${TARGET} PUBLIC "-framework Metal")
+endif()
+
 if (LINUX)
     target_link_libraries(${TARGET} PRIVATE dl)
 endif()
