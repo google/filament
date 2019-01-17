@@ -51,7 +51,7 @@ void PostProcessManager::terminate(driver::DriverApi& driver) noexcept {
 }
 
 void PostProcessManager::setSource(uint32_t viewportWidth, uint32_t viewportHeight,
-        const RenderTargetPool::Target* pos) const noexcept {
+        Handle<HwTexture> texture, uint32_t textureWidth, uint32_t textureHeight) const noexcept {
     FEngine& engine = *mEngine;
     DriverApi& driver = engine.getDriverApi();
 
@@ -61,7 +61,7 @@ void PostProcessManager::setSource(uint32_t viewportWidth, uint32_t viewportHeig
     params.filterMag = SamplerMagFilter::LINEAR;
     params.filterMin = SamplerMinFilter::LINEAR;
     SamplerBuffer sb(engine.getPostProcessSib());
-    sb.setSampler(PostProcessSib::COLOR_BUFFER, pos->texture, params);
+    sb.setSampler(PostProcessSib::COLOR_BUFFER, texture, params);
 
     auto duration = engine.getEngineTime();
     float fraction = (duration.count() % 1000000000) / 1000000000.0f;
@@ -69,11 +69,11 @@ void PostProcessManager::setSource(uint32_t viewportWidth, uint32_t viewportHeig
     UniformBuffer& ub = mPostProcessUb;
     ub.setUniform(offsetof(PostProcessingUib, time), fraction);
     ub.setUniform(offsetof(PostProcessingUib, uvScale),
-            math::float2{ viewportWidth, viewportHeight } / math::float2{ pos->w, pos->h });
+            math::float2{ viewportWidth, viewportHeight } / math::float2{ textureWidth, textureHeight });
 
     // The shader may need to know the offset between the top of the texture and the top
     // of the rectangle that it actually needs to sample from.
-    const float yOffset = pos->h - viewportHeight;
+    const float yOffset = textureHeight - viewportHeight;
     ub.setUniform(offsetof(PostProcessingUib, yOffset), yOffset);
 
     driver.updateSamplerBuffer(mPostProcessSbh, std::move(sb));
@@ -135,7 +135,7 @@ void PostProcessManager::finish(driver::TargetBufferFlags discarded,
 
         if (commands[i].program) {
             // set the source for this pass (i.e. previous target)
-            setSource(params.width, params.height, previous);
+            setSource(params.width, params.height, previous->texture, previous->w, previous->h);
 
             // draw a full screen triangle
             pipeline.program = commands[i].program;
@@ -165,7 +165,7 @@ void PostProcessManager::finish(driver::TargetBufferFlags discarded,
         params.width = vp.width;
         params.height = vp.height;
 
-        setSource(params.width, params.height, previous);
+        setSource(params.width, params.height, previous->texture, previous->w, previous->h);
         pipeline.program = commands.back().program;
         driver.beginRenderPass(viewRenderTarget, params);
         driver.draw(pipeline, fullScreenRenderPrimitive);
