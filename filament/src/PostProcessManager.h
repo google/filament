@@ -41,8 +41,8 @@ class PostProcessManager {
 public:
     void init(details::FEngine& engine) noexcept;
     void terminate(driver::DriverApi& driver) noexcept;
-    void setSource(uint32_t viewportWidth, uint32_t viewportHeight,
-            const RenderTargetPool::Target* pos) const noexcept;
+    void setSource(uint32_t viewportWidth, uint32_t viewportHeight, Handle <HwTexture> texture,
+            uint32_t textureWidth, uint32_t textureHeight) const noexcept;
 
     // start() is a scam, it does nothing
     void start() noexcept { }
