@@ -167,10 +167,15 @@ public:
     MaterialBuilder& shadowMultiplier(bool shadowMultiplier) noexcept;
 
     // reduce specular aliasing by locally increasing roughness using geometric curvature
+    // disabled by default
     MaterialBuilder& curvatureToRoughness(bool curvatureToRoughness) noexcept;
 
     // reduce specular aliasing at silhouette by preventing over-interpolation of geometric normals
+    // disabled by default
     MaterialBuilder& limitOverInterpolation(bool limitOverInterpolation) noexcept;
+
+    // enable/disable flipping of the Y coordinate of UV attributes, enabled by default
+    MaterialBuilder& flipUV(bool flipUV) noexcept;
 
     // specifies how transparent objects should be rendered (default is DEFAULT)
     MaterialBuilder& transparencyMode(TransparencyMode mode) noexcept;
@@ -285,6 +290,8 @@ private:
 
     bool mCurvatureToRoughness = false;
     bool mLimitOverInterpolation = false;
+
+    bool mFlipUV = true;
 };
 
 } // namespace filamat

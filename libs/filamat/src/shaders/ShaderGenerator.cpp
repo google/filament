@@ -152,6 +152,7 @@ const std::string ShaderGenerator::createVertexProgram(filament::driver::ShaderM
 
     cg.generateProlog(vs, ShaderType::VERTEX, material.hasExternalSamplers);
 
+    cg.generateDefine(vs, "FLIP_UV_ATTRIBUTE", material.flipUV);
     cg.generateDefine(vs, "GEOMETRIC_SPECULAR_AA_NORMAL", material.limitOverInterpolation);
 
     bool litVariants = lit || material.hasShadowMultiplier;

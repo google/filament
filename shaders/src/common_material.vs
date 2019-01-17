@@ -31,10 +31,18 @@ void initMaterialVertex(out MaterialVertexInputs material) {
     material.color = mesh_color;
 #endif
 #ifdef HAS_ATTRIBUTE_UV0
+    #ifdef FLIP_UV_ATTRIBUTE
     material.uv0 = vec2(mesh_uv0.x, 1.0 - mesh_uv0.y);
+    #else
+    material.uv0 = mesh_uv0;
+    #endif
 #endif
 #ifdef HAS_ATTRIBUTE_UV1
+    #ifdef FLIP_UV_ATTRIBUTE
     material.uv1 = vec2(mesh_uv1.x, 1.0 - mesh_uv1.y);
+    #else
+    material.uv1 = mesh_uv1;
+    #endif
 #endif
 #ifdef VARIABLE_CUSTOM0
     material.VARIABLE_CUSTOM0 = vec4(0.0);

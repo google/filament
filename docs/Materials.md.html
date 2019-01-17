@@ -1159,6 +1159,25 @@ material {
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+### flipUV
+
+Type
+:    `boolean`
+
+Value
+:     `true` or `false`. Defaults to `true`.
+
+Description
+:    When set to `true` (default value), the Y coordinate of UV attributes will be flipped when
+     read by this material's vertex shader. Flipping is equivalent to `y = 1.0 - y`. When set
+     to `false`, flipping is disabled and the UV attributes are read as is.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ JSON
+material {
+    flipUV : false
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 ## Vertex block
 
 The vertex block is optional and can be used to control the vertex shading stage of the material.
@@ -1214,6 +1233,11 @@ struct MaterialVertexInputs {
     float4 variable3;     // if 4 or more variables is defined
 };
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+!!! TIP: UV attributes
+    By default the vertex shader of a material will flip the Y coordinate of the UV attributes
+    of the current mesh: `material.uv0 = vec2(mesh_uv0.x, 1.0 - mesh_uv0.y)`. You can control
+    this behavior using the `flipUV` property and setting it to `false`.
 
 ## Fragment block
 

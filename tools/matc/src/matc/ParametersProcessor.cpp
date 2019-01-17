@@ -48,6 +48,7 @@ static constexpr const char* PARAM_KEY_SHADING                  = "shadingModel"
 static constexpr const char* PARAM_KEY_VARIANT_FILTER           = "variantFilter";
 static constexpr const char* PARAM_KEY_CURVATURE_TO_ROUGHNESS   = "curvatureToRoughness";
 static constexpr const char* PARAM_KEY_LIMIT_OVER_INTERPOLATION = "limitOverInterpolation";
+static constexpr const char* PARAM_KEY_FLIP_UV                  = "flipUV";
 
 ParametersProcessor::ParametersProcessor() {
     mConfigProcessor[PARAM_KEY_NAME]              = &ParametersProcessor::processName;
@@ -71,6 +72,7 @@ ParametersProcessor::ParametersProcessor() {
             = &ParametersProcessor::processCurvatureToRoughness;
     mConfigProcessor[PARAM_KEY_LIMIT_OVER_INTERPOLATION]
             = &ParametersProcessor::processLimitOverInterpolation;
+    mConfigProcessor[PARAM_KEY_FLIP_UV]           = &ParametersProcessor::processFlipUV;
 
     mRootAsserts[PARAM_KEY_NAME]                     = JsonishValue::Type::STRING;
     mRootAsserts[PARAM_KEY_INTERPOLATION]            = JsonishValue::Type::STRING;
@@ -91,6 +93,7 @@ ParametersProcessor::ParametersProcessor() {
     mRootAsserts[PARAM_KEY_VARIANT_FILTER]           = JsonishValue::Type::ARRAY;
     mRootAsserts[PARAM_KEY_CURVATURE_TO_ROUGHNESS]   = JsonishValue::Type::BOOL;
     mRootAsserts[PARAM_KEY_LIMIT_OVER_INTERPOLATION] = JsonishValue::Type::BOOL;
+    mRootAsserts[PARAM_KEY_FLIP_UV]                  = JsonishValue::Type::BOOL;
 
     mStringToInterpolation["smooth"] = MaterialBuilder::Interpolation::SMOOTH;
     mStringToInterpolation["flat"] = MaterialBuilder::Interpolation::FLAT;
@@ -458,6 +461,11 @@ bool ParametersProcessor::processCurvatureToRoughness(filamat::MaterialBuilder& 
 bool ParametersProcessor::processLimitOverInterpolation(filamat::MaterialBuilder& builder,
         const JsonishValue& value) {
     builder.limitOverInterpolation(value.toJsonBool()->getBool());
+    return true;
+}
+
+bool ParametersProcessor::processFlipUV(filamat::MaterialBuilder& builder, const JsonishValue& value) {
+    builder.flipUV(value.toJsonBool()->getBool());
     return true;
 }
 

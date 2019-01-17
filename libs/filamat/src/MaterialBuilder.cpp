@@ -226,6 +226,11 @@ MaterialBuilder& MaterialBuilder::limitOverInterpolation(bool limitOverInterpola
     return *this;
 }
 
+MaterialBuilder& MaterialBuilder::flipUV(bool flipUV) noexcept {
+    mFlipUV = flipUV;
+    return *this;
+}
+
 MaterialBuilder& MaterialBuilder::transparencyMode(TransparencyMode mode) noexcept {
     mTransparencyMode = mode;
     return *this;
@@ -298,6 +303,7 @@ void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
     info.hasExternalSamplers = hasExternalSampler();
     info.curvatureToRoughness = mCurvatureToRoughness;
     info.limitOverInterpolation = mLimitOverInterpolation;
+    info.flipUV = mFlipUV;
     info.requiredAttributes = mRequiredAttributes;
     info.blendingMode = mBlendingMode;
     info.shading = mShading;
