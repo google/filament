@@ -18,6 +18,9 @@ Android devices and as the renderer inside the Android Studio plugin.
 
 [Download Filament releases](https://github.com/google/filament/releases) to access stable builds.
 
+Make sure you always use tools from the same release as the runtime library. This is particularly
+important for `matc` (material compiler).
+
 If you prefer to live on the edge, you can download a continuous build by clicking one of the build
 badges above.
 
