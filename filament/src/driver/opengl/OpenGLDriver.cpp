@@ -1301,7 +1301,7 @@ void OpenGLDriver::destroyRenderPrimitive(Driver::RenderPrimitiveHandle rph) {
         glDeleteVertexArrays(1, &rp->gl.vao);
         // binding of a bound VAO is reset to 0
         if (state.vao.p == rp) {
-            state.vao.p = &mDefaultVAO;
+            bindVertexArray(nullptr);
         }
         destruct(rph, rp);
     }
