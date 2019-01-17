@@ -17,7 +17,6 @@ RUN_TESTS=
 
 if [ "$TARGET" == "presubmit" ]; then
     BUILD_RELEASE=release
-    RUN_TESTS=-u # TODO remove
 fi
 
 if [ "$TARGET" == "debug" ]; then
