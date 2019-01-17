@@ -133,6 +133,7 @@ and tools.
 - `tools`:                 Host tools
   - `cmgen`:               Image-based lighting asset generator
   - `filamesh`:            Mesh converter
+  - `glslminifier`:        Minifies GLSL source code
   - `matc`:                Material compiler
   - `matinfo`              Displays information about materials compiled with `matc`
   - `mipgen`               Generates a series of miplevels from a source image
