@@ -21,6 +21,8 @@
 
 #include "UniformBuffer.h"
 
+#include "fg/FrameGraphResource.h"
+
 #include "driver/DriverApiForward.h"
 #include "driver/Handle.h"
 
@@ -58,6 +60,23 @@ public:
             Viewport const& vp,
             RenderTargetPool::Target const* linearTarget,
             Viewport const& svp);
+
+
+    FrameGraphResource msaa(
+            FrameGraph& fg, FrameGraphResource input,
+            driver::TextureFormat outFormat) noexcept;
+
+    FrameGraphResource toneMapping(
+            FrameGraph& fg, FrameGraphResource input, driver::TextureFormat outFormat,
+            bool translucent) noexcept;
+
+    FrameGraphResource fxaa(
+            FrameGraph& fg, FrameGraphResource input, driver::TextureFormat outFormat,
+            bool translucent) noexcept;
+
+    FrameGraphResource dynamicScaling(
+            FrameGraph& fg, FrameGraphResource input,
+            driver::TextureFormat outFormat, Viewport const& outViewport) noexcept;
 
 
 private:
