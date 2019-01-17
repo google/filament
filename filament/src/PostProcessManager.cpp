@@ -19,6 +19,8 @@
 
 #include "details/Engine.h"
 
+#include "fg/FrameGraph.h"
+
 #include <private/filament/SibGenerator.h>
 
 #include <utils/Log.h>
@@ -182,5 +184,177 @@ void PostProcessManager::finish(driver::TargetBufferFlags discarded,
     // clear our command buffer
     commands.clear();
 }
+
+
+// ------------------------------------------------------------------------------------------------
+
+FrameGraphResource PostProcessManager::msaa(FrameGraph& fg,
+        FrameGraphResource input, driver::TextureFormat outFormat) noexcept {
+
+    struct PostProcessMSAA {
+        FrameGraphResource input;
+        FrameGraphResource output;
+    };
+
+    auto& ppMSAA = fg.addPass<PostProcessMSAA>("msaa",
+            [&](FrameGraph::Builder& builder, PostProcessMSAA& data) {
+                auto const* inputDesc = fg.getDescriptor(input);
+                data.input = builder.read(input);
+
+                FrameGraphResource::Descriptor outputDesc{
+                        .width = inputDesc->width,
+                        .height = inputDesc->height,
+                        .format = outFormat
+                };
+                data.output = builder.write(builder.createResource("msaa output", outputDesc));
+            },
+            [=](
+                    FrameGraphPassResources const& resources,
+                    PostProcessMSAA const& data, DriverApi& driver) {
+                auto in = resources.getRenderTarget(data.input);
+                auto out = resources.getRenderTarget(data.output);
+                auto const& desc = resources.getDescriptor(data.input);
+                driver.blit(TargetBufferFlags::COLOR,
+                        out.target, 0, 0, desc.width, desc.height,
+                        in.target, 0, 0, desc.width, desc.height);
+            });
+
+    return ppMSAA.getData().output;
+}
+
+FrameGraphResource PostProcessManager::toneMapping(FrameGraph& fg,
+        FrameGraphResource input, driver::TextureFormat outFormat, bool translucent) noexcept {
+
+    FEngine* engine = mEngine;
+    Handle<HwRenderPrimitive> const& fullScreenRenderPrimitive = engine->getFullScreenRenderPrimitive();
+
+    struct PostProcessToneMapping {
+        FrameGraphResource input;
+        FrameGraphResource output;
+    };
+    Handle<HwProgram> toneMappingProgram = engine->getPostProcessProgram(
+            translucent ? PostProcessStage::TONE_MAPPING_TRANSLUCENT
+                        : PostProcessStage::TONE_MAPPING_OPAQUE);
+
+    auto& ppToneMapping = fg.addPass<PostProcessToneMapping>("tonemapping",
+            [&](FrameGraph::Builder& builder, PostProcessToneMapping& data) {
+                auto const* inputDesc = fg.getDescriptor(input);
+                data.input = builder.read(input);
+
+                FrameGraphResource::Descriptor outputDesc{
+                        .width = inputDesc->width,
+                        .height = inputDesc->height,
+                        .format = outFormat
+                };
+                data.output = builder.write(
+                        builder.createResource("tonemapping output", outputDesc));
+            },
+            [=](FrameGraphPassResources const& resources,
+                    PostProcessToneMapping const& data, DriverApi& driver) {
+                Driver::PipelineState pipeline;
+                pipeline.rasterState.culling = Driver::RasterState::CullingMode::NONE;
+                pipeline.rasterState.colorWrite = true;
+                pipeline.rasterState.depthFunc = Driver::RasterState::DepthFunc::A;
+                pipeline.program = toneMappingProgram;
+
+                auto const& targetDesc = resources.getDescriptor(data.output);
+                auto const& textureDesc = resources.getDescriptor(data.input);
+                auto const& texture = resources.getTexture(data.input, TextureUsage::COLOR_ATTACHMENT);
+                setSource(targetDesc.width, targetDesc.height, texture, textureDesc.width, textureDesc.height);
+
+                auto const& target = resources.getRenderTarget(data.output);
+                driver.beginRenderPass(target.target, target.params);
+                driver.draw(pipeline, fullScreenRenderPrimitive);
+                driver.endRenderPass();
+            });
+
+    return ppToneMapping.getData().output;
+}
+
+FrameGraphResource PostProcessManager::fxaa(FrameGraph& fg,
+        FrameGraphResource input, driver::TextureFormat outFormat, bool translucent) noexcept {
+
+    FEngine* engine = mEngine;
+    Handle<HwRenderPrimitive> const& fullScreenRenderPrimitive = engine->getFullScreenRenderPrimitive();
+
+    struct PostProcessFXAA {
+        FrameGraphResource input;
+        FrameGraphResource output;
+    };
+
+    Handle<HwProgram> antiAliasingProgram = engine->getPostProcessProgram(
+            translucent ? PostProcessStage::ANTI_ALIASING_TRANSLUCENT
+                        : PostProcessStage::ANTI_ALIASING_OPAQUE);
+
+    auto& ppFXAA = fg.addPass<PostProcessFXAA>("fxaa",
+            [&](FrameGraph::Builder& builder, PostProcessFXAA& data) {
+                auto* inputDesc = fg.getDescriptor(input);
+                inputDesc->format = TextureFormat::RGBA8;
+                data.input = builder.read(input);
+
+                FrameGraphResource::Descriptor outputDesc{
+                        .width = inputDesc->width,
+                        .height = inputDesc->height,
+                        .format = outFormat
+                };
+                data.output = builder.write(builder.createResource("fxaa output", outputDesc));
+            },
+            [=](FrameGraphPassResources const& resources,
+                    PostProcessFXAA const& data, DriverApi& driver) {
+                Driver::PipelineState pipeline;
+                pipeline.rasterState.culling = Driver::RasterState::CullingMode::NONE;
+                pipeline.rasterState.colorWrite = true;
+                pipeline.rasterState.depthFunc = Driver::RasterState::DepthFunc::A;
+                pipeline.program = antiAliasingProgram;
+
+                auto const& targetDesc = resources.getDescriptor(data.output);
+                auto const& textureDesc = resources.getDescriptor(data.input);
+                auto const& texture = resources.getTexture(data.input, TextureUsage::COLOR_ATTACHMENT);
+                setSource(targetDesc.width, targetDesc.height, texture, textureDesc.width, textureDesc.height);
+
+                auto const& target = resources.getRenderTarget(data.output);
+                driver.beginRenderPass(target.target, target.params);
+                driver.draw(pipeline, fullScreenRenderPrimitive);
+                driver.endRenderPass();
+            });
+
+    return ppFXAA.getData().output;
+}
+
+FrameGraphResource PostProcessManager::dynamicScaling(FrameGraph& fg,
+        FrameGraphResource input, driver::TextureFormat outFormat,
+        Viewport const& outViewport) noexcept {
+
+    struct PostProcessScaling {
+        FrameGraphResource input;
+        FrameGraphResource output;
+    };
+
+    auto& ppScaling = fg.addPass<PostProcessScaling>("scaling",
+            [&](FrameGraph::Builder& builder, PostProcessScaling& data) {
+                auto* inputDesc = fg.getDescriptor(input);
+                data.input = builder.read(input);
+
+                FrameGraphResource::Descriptor outputDesc{
+                        .width = inputDesc->width,
+                        .height = inputDesc->height,
+                        .format = outFormat
+                };
+                data.output = builder.write(builder.createResource("scale output", outputDesc));
+            },
+            [=](FrameGraphPassResources const& resources,
+                    PostProcessScaling const& data, DriverApi& driver) {
+                auto in = resources.getRenderTarget(data.input);
+                auto out = resources.getRenderTarget(data.output);
+                auto const& inDesc = resources.getDescriptor(data.input);
+                driver.blit(TargetBufferFlags::COLOR,
+                        out.target, outViewport.left, outViewport.bottom, outViewport.width,
+                        outViewport.height,
+                        in.target, 0, 0, inDesc.width, inDesc.height);
+            });
+
+    return ppScaling.getData().output;
+}
+
 
 } // namespace filament

@@ -25,15 +25,18 @@
 #include "details/View.h"
 
 #include <filament/Scene.h>
+#include <filament/Renderer.h>
 
 #include <filament/driver/PixelBufferDescriptor.h>
+
+#include "fg/FrameGraph.h"
+#include "fg/FrameGraphResource.h"
 
 #include <utils/Panic.h>
 #include <utils/Systrace.h>
 #include <utils/vector.h>
 
 #include <assert.h>
-#include <filament/Renderer.h>
 
 
 using namespace math;
@@ -227,36 +230,88 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
      * Post Processing...
      */
 
+
+#define USE_FRAME_GRAPH false
+
     if (UTILS_LIKELY(hasPostProcess)) {
         driver.pushGroupMarker("Post Processing");
 
-        ppm.start();
+        assert(colorTarget);
 
-        if (useMSAA > 1) {
-            // Note: MSAA, when used is applied before tone-mapping (which is not ideal)
-            // (tone mapping currently only works without multi-sampling)
-            // this blit does a MSAA resolve
-            ppm.blit(hdrFormat);
+        if (USE_FRAME_GRAPH) {
+            FrameGraph fg;
+
+            const bool translucent = mSwapChain->isTransparent();
+
+            FrameGraphResource::Descriptor colorDesc{
+                    .width = colorTarget->w,
+                    .height= colorTarget->h,
+                    .format= colorTarget->format,
+                    .samples= colorTarget->samples
+            };
+
+            FrameGraphResource::Descriptor viewRenderTargetDesc{
+                    .width = vp.width,
+                    .height= vp.height
+            };
+
+            FrameGraphResource input = fg.importResource("colorTarget", colorDesc,
+                    colorTarget->target, colorTarget->texture);
+
+            FrameGraphResource output = fg.importResource("viewRenderTarget",
+                    viewRenderTargetDesc, viewRenderTarget);
+
+            if (useMSAA > 1) {
+                input = ppm.msaa(fg, input, hdrFormat);
+            }
+            input = ppm.toneMapping(fg, input, ldrFormat, translucent);
+            if (useFXAA) {
+                input = ppm.fxaa(fg, input, ldrFormat, translucent);
+            }
+            if (scaled) {
+                input = ppm.dynamicScaling(fg, input, ldrFormat, vp);
+            }
+
+            fg.moveResource(output, input);
+            fg.present(output);
+
+            fg.compile();
+            //fg.export_graphviz(slog.d);
+            fg.execute(driver);
+
+            rtp.put(colorTarget);
+
+        } else {
+
+            ppm.start();
+
+            if (useMSAA > 1) {
+                // Note: MSAA, when used is applied before tone-mapping (which is not ideal)
+                // (tone mapping currently only works without multi-sampling)
+                // this blit does a MSAA resolve
+                ppm.blit(hdrFormat);
+            }
+
+            const bool translucent = mSwapChain->isTransparent();
+            Handle<HwProgram> toneMappingProgram = engine.getPostProcessProgram(
+                    translucent ? PostProcessStage::TONE_MAPPING_TRANSLUCENT
+                                : PostProcessStage::TONE_MAPPING_OPAQUE);
+            ppm.pass(useFXAA ? TextureFormat::RGBA8 : ldrFormat, toneMappingProgram);
+
+            if (useFXAA) {
+                Handle<HwProgram> antiAliasingProgram = engine.getPostProcessProgram(
+                        translucent ? PostProcessStage::ANTI_ALIASING_TRANSLUCENT
+                                    : PostProcessStage::ANTI_ALIASING_OPAQUE);
+                ppm.pass(ldrFormat, antiAliasingProgram);
+            }
+
+            if (scaled) {
+                // because it's the last command, the TextureFormat is not relevant
+                ppm.blit();
+            }
+            ppm.finish(view.getDiscardedTargetBuffers(), viewRenderTarget, vp, colorTarget, svp);
+
         }
-
-        const bool translucent = mSwapChain->isTransparent();
-        Handle<HwProgram> toneMappingProgram = engine.getPostProcessProgram(
-                translucent ? PostProcessStage::TONE_MAPPING_TRANSLUCENT
-                            : PostProcessStage::TONE_MAPPING_OPAQUE);
-        ppm.pass(useFXAA ? TextureFormat::RGBA8 : ldrFormat, toneMappingProgram);
-
-        if (useFXAA) {
-            Handle<HwProgram> antiAliasingProgram = engine.getPostProcessProgram(
-                    translucent ? PostProcessStage::ANTI_ALIASING_TRANSLUCENT
-                                : PostProcessStage::ANTI_ALIASING_OPAQUE);
-            ppm.pass(ldrFormat, antiAliasingProgram);
-        }
-
-        if (scaled) {
-            // because it's the last command, the TextureFormat is not relevant
-            ppm.blit();
-        }
-        ppm.finish(view.getDiscardedTargetBuffers(), viewRenderTarget, vp, colorTarget, svp);
 
         driver.popGroupMarker();
     }
