@@ -102,6 +102,7 @@ and tools.
 
 - `android`:               Android libraries and projects
   - `build`:               Custom Gradle tasks for Android builds
+  - `filamat-android`:     Filament material generation library (AAR) for Android
   - `filament-android`:    Filament library (AAR) for Android
   - `samples`:             Android-specific Filament samples
 - `art`:                   Source for various artworks (logos, PDF manuals, etc.)
