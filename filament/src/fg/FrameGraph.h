@@ -75,7 +75,7 @@ public:
         // Writing to an imported resources adds a side-effect (see sideEffect() below).
         FrameGraphResource write(FrameGraphResource const& output, RWFlags writeFlags = COLOR);
 
-        // Declare that this pass has side effects outside the framefraph (i.e. it can't be culled)
+        // Declare that this pass has side effects outside the framegraph (i.e. it can't be culled)
         // Calling write() on an imported resource automatically adds a side-effect.
         Builder& sideEffect() noexcept;
 

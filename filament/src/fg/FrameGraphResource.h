@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_FRAMEGRAPHRESOURCEHANDLE_H
-#define TNT_FILAMENT_FRAMEGRAPHRESOURCEHANDLE_H
+#ifndef TNT_FILAMENT_FRAMEGRAPHRESOURCE_H
+#define TNT_FILAMENT_FRAMEGRAPHRESOURCE_H
 
 #include <filament/driver/DriverEnums.h>
 
@@ -57,4 +57,4 @@ public:
 
 } // namespace filament
 
-#endif //TNT_FILAMENT_FRAMEGRAPHRESOURCEHANDLE_H
+#endif //TNT_FILAMENT_FRAMEGRAPHRESOURCE_H
