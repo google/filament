@@ -51,7 +51,7 @@ TEST(FrameGraphTest, SimpleRenderPass) {
                     RenderPassData const& data,
                     driver::DriverApi& driver) {
                 renderPassExecuted = true;
-                EXPECT_TRUE(resources.getTexture(data.output));
+                EXPECT_TRUE(resources.getRenderTarget(data.output).target);
 
             });
 
@@ -115,7 +115,7 @@ TEST(FrameGraphTest, SimpleRenderAndPostProcessPasses) {
                     RenderPassData const& data,
                     driver::DriverApi& driver) {
                 renderPassExecuted = true;
-                EXPECT_TRUE(resources.getTexture(data.output));
+                EXPECT_TRUE(resources.getRenderTarget(data.output).target);
             });
 
 
