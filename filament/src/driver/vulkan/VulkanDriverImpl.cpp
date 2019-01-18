@@ -604,14 +604,14 @@ VkFormat getVkFormat(TextureFormat format) {
         case TextureFormat::RGBA4:             return VK_FORMAT_R4G4B4A4_UNORM_PACK16;
         case TextureFormat::DEPTH16:           return VK_FORMAT_D16_UNORM;
 
-        // 24 bits per element. In practice, very few GPU vendors support these. For simplicity
-        // we just assume they are not supported, not bothering to query the device capabilities.
-        // Note that VK_FORMAT_ enums for 24-bit formats exist, but are meant for vertex attributes.
-        case TextureFormat::RGB8:
-        case TextureFormat::SRGB8:
-        case TextureFormat::RGB8_SNORM:
-        case TextureFormat::RGB8UI:
-        case TextureFormat::RGB8I:
+        // 24 bits per element. In practice, very few GPU vendors support these. So, we simply
+        // always reshape them into 32-bit formats.
+        case TextureFormat::RGB8:              return VK_FORMAT_R8G8B8A8_UNORM;
+        case TextureFormat::SRGB8:             return VK_FORMAT_R8G8B8A8_SRGB;
+        case TextureFormat::RGB8_SNORM:        return VK_FORMAT_R8G8B8A8_SNORM;
+        case TextureFormat::RGB8UI:            return VK_FORMAT_R8G8B8A8_UINT;
+        case TextureFormat::RGB8I:             return VK_FORMAT_R8G8B8A8_SINT;
+
         case TextureFormat::DEPTH24:
             return VK_FORMAT_UNDEFINED;
 

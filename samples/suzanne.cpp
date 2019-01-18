@@ -55,7 +55,7 @@ static const char* IBL_FOLDER = "envs/venetian_crossroads";
 int main(int argc, char** argv) {
     Config config;
     config.title = "suzanne";
-    // config.backend = Backend::VULKAN;
+    config.backend = Engine::Backend::VULKAN;
     config.iblDirectory = FilamentApp::getRootPath() + IBL_FOLDER;
 
     App app;

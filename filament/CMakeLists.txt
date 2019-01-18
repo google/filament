@@ -135,6 +135,7 @@ set(PRIVATE_HDRS
         src/driver/CommandBufferQueue.h
         src/driver/CommandStream.h
         src/driver/CommandStreamDispatcher.h
+        src/driver/DataReshaper.h
         src/driver/Driver.h
         src/driver/DriverAPI.inc
         src/driver/DriverApi.h
