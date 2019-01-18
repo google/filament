@@ -123,7 +123,7 @@ cmake ^
     ..\..
 ```
 
-3. Build:
+3. Build.
 
 Inside of each build directory, run:
 
