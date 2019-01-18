@@ -1,9 +1,14 @@
+// The sole purpose of this no-op function is to improve parity between the depth vertex shader
+// and color vertex shader, thus working around a variance issue seen with NVIDIA drivers.
+void materialVertex(inout MaterialVertexInputs m) { }
+
 void main() {
 #if defined(VERTEX_DOMAIN_DEVICE)
     gl_Position = getSkinnedPosition();
 #else
     MaterialVertexInputs material;
     initMaterialVertex(material);
+    materialVertex(material);
     gl_Position = getClipFromWorldMatrix() * material.worldPosition;
 #endif
 
