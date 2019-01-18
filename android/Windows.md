@@ -1,4 +1,4 @@
-# Building Filament for Android on Windows.
+# Building Filament for Android on Windows
 
 ## Prerequisites
 
