@@ -220,6 +220,16 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder)
     parser->hasCustomDepthShader(&mHasCustomDepthShader);
     mIsDefaultMaterial = builder->mDefaultMaterial;
 
+    // pre-cache the shared variants -- these variants are shared with the default material.
+    if (UTILS_UNLIKELY(!mIsDefaultMaterial && !mHasCustomDepthShader)) {
+        auto& cachedPrograms = mCachedPrograms;
+        for (uint8_t i = 0, n = cachedPrograms.size(); i < n; ++i) {
+            if (Variant(i).isDepthPass()) {
+                cachedPrograms[i] = engine.getDefaultMaterial()->getProgram(i);
+            }
+        }
+    }
+
     bool colorWrite;
     parser->getColorWrite(&colorWrite);
     mRasterState.colorWrite = colorWrite;
@@ -237,8 +247,17 @@ FMaterial::~FMaterial() noexcept {
 void FMaterial::terminate(FEngine& engine) {
     DriverApi& driverApi = engine.getDriverApi();
     auto& cachedPrograms = mCachedPrograms;
-    for (const auto& cachedProgram : cachedPrograms) {
-        driverApi.destroyProgram(cachedProgram);
+    for (size_t i = 0, n = cachedPrograms.size(); i < n; ++i) {
+        if (!mIsDefaultMaterial) {
+            // The depth variants may be shared with the default material, in which case
+            // we should not free it now.
+            bool isSharedVariant = Variant(i).isDepthPass() && !mHasCustomDepthShader;
+            if (isSharedVariant) {
+                // we don't own this variant, skip.
+                continue;
+            }
+        }
+        driverApi.destroyProgram(cachedPrograms[i]);
     }
     mDefaultInstance.terminate(engine);
 }

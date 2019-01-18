@@ -28,6 +28,7 @@ namespace filament {
         Variant() noexcept = default;
         constexpr Variant(uint8_t key) noexcept : key(key) { }
 
+
         // DIR: Directional Lighting
         // DYN: Dynamic Lighting
         // SRE: Shadow Receiver
