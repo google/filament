@@ -82,16 +82,19 @@ private:
     using Blob = std::vector<uint8_t>;
     using HandleMap = std::unordered_map<HandleBase::HandleId, Blob>;
     HandleMap mHandleMap;
+    std::mutex mHandleMapMutex;
     HandleBase::HandleId mNextId = 1;
 
     template<typename Dp, typename B>
     Handle<B> alloc_handle() {
+        std::lock_guard<std::mutex> lock(mHandleMapMutex);
         mHandleMap[mNextId] = Blob(sizeof(Dp));
         return Handle<B>(mNextId++);
     }
 
     template<typename Dp, typename B>
     Dp* handle_cast(HandleMap& handleMap, Handle<B>& handle) noexcept {
+        std::lock_guard<std::mutex> lock(mHandleMapMutex);
         assert(handle);
         auto iter = handleMap.find(handle.getId());
         assert(iter != handleMap.end());
@@ -102,6 +105,7 @@ private:
 
     template<typename Dp, typename B>
     const Dp* handle_const_cast(HandleMap& handleMap, const Handle<B>& handle) noexcept {
+        std::lock_guard<std::mutex> lock(mHandleMapMutex);
         assert(handle);
         auto iter = handleMap.find(handle.getId());
         assert(iter != handleMap.end());
@@ -112,6 +116,7 @@ private:
 
     template<typename Dp, typename B, typename ... ARGS>
     Dp* construct_handle(HandleMap& handleMap, Handle<B>& handle, ARGS&& ... args) noexcept {
+        std::lock_guard<std::mutex> lock(mHandleMapMutex);
         auto iter = handleMap.find(handle.getId());
         assert(iter != handleMap.end());
         Blob& blob = iter->second;
@@ -123,8 +128,13 @@ private:
 
     template<typename Dp, typename B>
     void destruct_handle(HandleMap& handleMap, Handle<B>& handle) noexcept {
+        std::lock_guard<std::mutex> lock(mHandleMapMutex);
         // Call the destructor, remove the blob, don't bother reclaiming the integer id.
-        handle_cast<Dp>(handleMap, handle)->~Dp();
+        auto iter = handleMap.find(handle.getId());
+        assert(iter != handleMap.end());
+        Blob& blob = iter->second;
+        assert(blob.size() == sizeof(Dp));
+        reinterpret_cast<Dp*>(blob.data())->~Dp();
         handleMap.erase(handle.getId());
     }
 
