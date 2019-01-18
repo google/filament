@@ -81,7 +81,7 @@ private:
 
     // For now we're not bothering to store handles in pools, just simple on-demand allocation.
     // We have a little map from integer handles to "blobs" which get replaced with the Hw objects.
-    using Blob = std::vector<uint8_t>;
+    using Blob = void*;
     using HandleMap = tsl::robin_map<HandleBase::HandleId, Blob>;
     std::mutex mHandleMapMutex;
     HandleMap mHandleMap;
@@ -90,7 +90,7 @@ private:
     template<typename Dp, typename B>
     Handle<B> alloc_handle() {
         std::lock_guard<std::mutex> lock(mHandleMapMutex);
-        mHandleMap[mNextId] = Blob(sizeof(Dp));
+        mHandleMap[mNextId] = malloc(sizeof(Dp));
         return Handle<B>(mNextId++);
     }
 
@@ -101,8 +101,7 @@ private:
         auto iter = handleMap.find(handle.getId());
         assert(iter != handleMap.end());
         Blob& blob = iter.value();
-        assert(blob.size() == sizeof(Dp));
-        return reinterpret_cast<Dp*>(blob.data());
+        return reinterpret_cast<Dp*>(blob);
     }
 
     template<typename Dp, typename B>
@@ -112,8 +111,7 @@ private:
         auto iter = handleMap.find(handle.getId());
         assert(iter != handleMap.end());
         Blob& blob = iter.value();
-        assert(blob.size() == sizeof(Dp));
-        return reinterpret_cast<const Dp*>(blob.data());
+        return reinterpret_cast<const Dp*>(blob);
     }
 
     template<typename Dp, typename B, typename ... ARGS>
@@ -122,8 +120,7 @@ private:
         auto iter = handleMap.find(handle.getId());
         assert(iter != handleMap.end());
         Blob& blob = iter.value();
-        assert(blob.size() == sizeof(Dp));
-        Dp* addr = reinterpret_cast<Dp*>(blob.data());
+        Dp* addr = reinterpret_cast<Dp*>(blob);
         new(addr) Dp(std::forward<ARGS>(args)...);
         return addr;
     }
@@ -136,8 +133,8 @@ private:
         auto iter = handleMap.find(handle.getId());
         assert(iter != handleMap.end());
         Blob& blob = iter.value();
-        assert(blob.size() == sizeof(Dp));
-        reinterpret_cast<Dp*>(blob.data())->~Dp();
+        reinterpret_cast<Dp*>(blob)->~Dp();
+        free(blob);
         handleMap.erase(handle.getId());
     }
 };
