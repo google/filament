@@ -219,12 +219,24 @@ void getPresentationQueue(VulkanContext& context, VulkanSurfaceContext& sc) {
     vkGetPhysicalDeviceQueueFamilyProperties(context.physicalDevice, &queueFamiliesCount,
             queueFamiliesProperties.data());
     uint32_t presentQueueFamilyIndex = 0xffff;
-    for (uint32_t j = 0; j < queueFamiliesCount; ++j) {
-        VkBool32 supported = VK_FALSE;
-        vkGetPhysicalDeviceSurfaceSupportKHR(context.physicalDevice, j, sc.surface, &supported);
-        if (supported) {
-            presentQueueFamilyIndex = j;
-            break;
+
+    // We prefer the graphics and presentation queues to be the same, so first check if that works.
+    // On most platforms they must be the same anyway, and this avoids issues with MoltenVK.
+    VkBool32 supported = VK_FALSE;
+    vkGetPhysicalDeviceSurfaceSupportKHR(context.physicalDevice, context.graphicsQueueFamilyIndex,
+            sc.surface, &supported);
+    if (supported) {
+        presentQueueFamilyIndex = context.graphicsQueueFamilyIndex;
+    }
+
+    // Otherwise fall back to separate graphics and presentation queues.
+    if (presentQueueFamilyIndex == 0xffff) {
+        for (uint32_t j = 0; j < queueFamiliesCount; ++j) {
+            vkGetPhysicalDeviceSurfaceSupportKHR(context.physicalDevice, j, sc.surface, &supported);
+            if (supported) {
+                presentQueueFamilyIndex = j;
+                break;
+            }
         }
     }
     ASSERT_POSTCONDITION(presentQueueFamilyIndex != 0xffff,
