@@ -199,7 +199,7 @@ FrameGraphResource PostProcessManager::msaa(FrameGraph& fg,
     auto& ppMSAA = fg.addPass<PostProcessMSAA>("msaa",
             [&](FrameGraph::Builder& builder, PostProcessMSAA& data) {
                 auto const* inputDesc = fg.getDescriptor(input);
-                data.input = builder.read(input);
+                data.input = builder.blit(input);
 
                 FrameGraphResource::Descriptor outputDesc{
                         .width = inputDesc->width,
@@ -208,8 +208,7 @@ FrameGraphResource PostProcessManager::msaa(FrameGraph& fg,
                 };
                 data.output = builder.write(builder.createResource("msaa output", outputDesc));
             },
-            [=](
-                    FrameGraphPassResources const& resources,
+            [=](FrameGraphPassResources const& resources,
                     PostProcessMSAA const& data, DriverApi& driver) {
                 auto in = resources.getRenderTarget(data.input);
                 auto out = resources.getRenderTarget(data.output);
@@ -333,7 +332,7 @@ FrameGraphResource PostProcessManager::dynamicScaling(FrameGraph& fg,
     auto& ppScaling = fg.addPass<PostProcessScaling>("scaling",
             [&](FrameGraph::Builder& builder, PostProcessScaling& data) {
                 auto* inputDesc = fg.getDescriptor(input);
-                data.input = builder.read(input);
+                data.input = builder.blit(input);
 
                 FrameGraphResource::Descriptor outputDesc{
                         .width = inputDesc->width,

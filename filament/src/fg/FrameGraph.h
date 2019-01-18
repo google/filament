@@ -70,6 +70,9 @@ public:
         // Read from a resource (i.e. add a reference to that resource)
         FrameGraphResource read(FrameGraphResource const& input, RWFlags readFlags = COLOR);
 
+        // The resource will be used as a source of a blit()
+        FrameGraphResource blit(FrameGraphResource const& input, RWFlags readFlags = COLOR);
+
         // Write to a resource (i.e. add a reference to the pass that's doing the writing))
         // Writing to a resource makes its handle invalid.
         // Writing to an imported resources adds a side-effect (see sideEffect() below).

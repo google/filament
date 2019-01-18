@@ -140,6 +140,12 @@ struct PassNode {
         return r;
     }
 
+    bool isReadingFrom(FrameGraphResource resource) const noexcept {
+        auto pos = std::find_if(reads.begin(), reads.end(),
+                [resource](FrameGraphResource cur) { return resource.index == cur.index; });
+        return (pos != reads.end());
+    }
+
     FrameGraphResource write(ResourceNode& resource) {
         // don't allow multiple writes of the same resource -- it's just redundant.
         auto pos = std::find_if(writes.begin(), writes.end(),
@@ -172,6 +178,12 @@ struct PassNode {
         return r;
     }
 
+    bool isWritingTo(FrameGraphResource resource) const noexcept {
+        auto pos = std::find_if(writes.begin(), writes.end(),
+                [resource](FrameGraphResource cur) { return resource.index == cur.index; });
+        return (pos != writes.end());
+    }
+
     // constants
     const char* const name;                     // our name
     const uint32_t id;                          // a unique id (only for debugging)
@@ -180,6 +192,9 @@ struct PassNode {
     // set by the builder
     ResourceList reads;                     // resources we're reading from
     ResourceList writes;                    // resources we're writing to
+
+    // TODO: we need to store discardFlags per resource written
+
     bool hasSideEffect = false;             // whether this pass has side effects
 
     // computed during compile()
@@ -249,29 +264,37 @@ void Resource::create(DriverApi& driver) noexcept {
 
     if (readerCount) {
         assert(readFlags);
-        if (readFlags & FrameGraph::Builder::COLOR) {
-            textures[0] = driver.createTexture(desc.type, desc.levels,
-                    desc.format, 1,
-                    desc.width, desc.height, desc.depth,
-                    TextureUsage::COLOR_ATTACHMENT);
-        }
-        if (readFlags & FrameGraph::Builder::DEPTH) {
-            textures[1] = driver.createTexture(desc.type, desc.levels,
-                    TextureFormat::DEPTH24, 1,
-                    desc.width, desc.height, desc.depth,
-                    TextureUsage::DEPTH_ATTACHMENT);
-        }
     }
+
     if (writerCount) {
         assert(writeFlags);
-        uint32_t attachments = 0;
-        if (writeFlags & FrameGraph::Builder::COLOR) {
-            attachments |= uint32_t(TargetBufferFlags::COLOR);
-        }
-        if (writeFlags & FrameGraph::Builder::DEPTH) {
-            attachments |= TargetBufferFlags::DEPTH;
-        }
+    }
 
+    if (readFlags & FrameGraph::Builder::COLOR) {
+        textures[0] = driver.createTexture(desc.type, desc.levels,
+                desc.format, 1,
+                desc.width, desc.height, desc.depth,
+                TextureUsage::COLOR_ATTACHMENT);
+    }
+    if (readFlags & FrameGraph::Builder::DEPTH) {
+        textures[1] = driver.createTexture(desc.type, desc.levels,
+                TextureFormat::DEPTH24, 1,
+                desc.width, desc.height, desc.depth,
+                TextureUsage::DEPTH_ATTACHMENT);
+    }
+
+    // Note: if the resource is a source of a blit, it needs a rendertarget (because that's how
+    // blits work) -- in that case, the resource would have been declared with Builder::blit()
+    // access, and its write flags here would be set.
+
+    uint32_t attachments = 0;
+    if (writeFlags & FrameGraph::Builder::COLOR) {
+        attachments |= uint32_t(TargetBufferFlags::COLOR);
+    }
+    if (writeFlags & FrameGraph::Builder::DEPTH) {
+        attachments |= TargetBufferFlags::DEPTH;
+    }
+    if (attachments) {
         target.target = driver.createRenderTarget(TargetBufferFlags(attachments),
                 desc.width, desc.height, desc.samples, desc.format,
                 { textures[0] }, { textures[1] }, {});
@@ -332,6 +355,18 @@ FrameGraphResource FrameGraph::Builder::read(FrameGraphResource const& input, RW
     return mPass.read(*resource);
 }
 
+FrameGraphResource
+FrameGraph::Builder::blit(FrameGraphResource const& input, FrameGraph::Builder::RWFlags readFlags) {
+    ResourceNode* resource = mFrameGraph.getResource(input);
+    if (!resource) {
+        return {};
+    }
+    resource->readFlags |= readFlags;
+    // resource used in a blit, it needs a rendertarget, so we set its write flags.
+    resource->writeFlags |= readFlags;
+    return mPass.read(*resource);
+}
+
 FrameGraphResource FrameGraph::Builder::write(FrameGraphResource const& output, RWFlags writeFlags) {
     ResourceNode* resource = mFrameGraph.getResource(output);
     if (!resource) {
@@ -354,10 +389,15 @@ FrameGraphPassResources::FrameGraphPassResources(FrameGraph& fg, fg::PassNode co
 
 Handle<HwTexture> FrameGraphPassResources::getTexture(
         FrameGraphResource r, TextureUsage attachment) const noexcept {
-    // TODO: we should check that this FrameGraphResource is indeed used by this pass
-    (void)mPass; // suppress unused warning
+
     Resource const* const pResource = mFrameGraph.mResourceNodes[r.index].resource;
     assert(pResource);
+
+    // check that this FrameGraphResource is indeed used by this pass
+    ASSERT_POSTCONDITION_NON_FATAL(mPass.isReadingFrom(r),
+            "Pass \"%s\" doesn't declare reads to resource \"%s\" -- expect graphic corruptions",
+            mPass.name, pResource->name);
+
 
     const char* requested = "unknown";
     Handle<HwTexture> h;
@@ -394,10 +434,16 @@ Handle<HwTexture> FrameGraphPassResources::getTexture(
 
 FrameGraphPassResources::RenderTarget const&
 FrameGraphPassResources::getRenderTarget(FrameGraphResource r) const noexcept {
-    // TODO: we should check that this FrameGraphResource is indeed used by this pass
-    (void)mPass; // suppress unused warning
     Resource const* const pResource = mFrameGraph.mResourceNodes[r.index].resource;
     assert(pResource);
+
+    // We need to check the resource in read or written by this pass (as opposed to written only),
+    // because a render target is needed for blit operations, which might be what the caller
+    // is doing.
+    ASSERT_POSTCONDITION_NON_FATAL(mPass.isWritingTo(r) || mPass.isReadingFrom(r),
+            "Pass \"%s\" doesn't declare writes to resource \"%s\" -- expect graphic corruptions",
+            mPass.name, pResource->name);
+
     assert(pResource->target.target);
 
     if (pResource->imported) {
