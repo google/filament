@@ -6,6 +6,8 @@ In addition to the requirements for [building Filament on Windows](../README.md#
 need the Android SDK and NDK. See [Getting Started with the
 NDK](https://developer.android.com/ndk/guides/) for detailed installation instructions.
 
+Ensure the `%ANDROID_HOME%` environment variable is set to your Android SDK installation location.
+
 All of the following commands should be executed in a Visual Studio x64 Native Tools Command Prompt.
 
 ## Desktop Tools
