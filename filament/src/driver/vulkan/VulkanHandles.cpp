@@ -18,6 +18,8 @@
 
 #include <private/filament/Variant.h>
 
+#include "driver/DataReshaper.h"
+
 #include <utils/Panic.h>
 
 #define FILAMENT_VULKAN_VERBOSE 0
@@ -402,11 +404,8 @@ VulkanUniformBuffer::~VulkanUniformBuffer() {
 VulkanTexture::VulkanTexture(VulkanContext& context, SamplerType target, uint8_t levels,
         TextureFormat tformat, uint8_t samples, uint32_t w, uint32_t h, uint32_t depth,
         TextureUsage usage, VulkanStagePool& stagePool) :
-        HwTexture(target, levels, samples, w, h, depth), format(getVkFormat(tformat)),
-        mContext(context), mStagePool(stagePool) {
-    ASSERT_POSTCONDITION(getBytesPerPixel(tformat) != 3,
-            "Many Vulkan implementations do not support 24 bpp image data.");
-
+        HwTexture(target, levels, samples, w, h, depth), srcformat(tformat),
+        vkformat(getVkFormat(tformat)), mContext(context), mStagePool(stagePool) {
     // Create an appropriately-sized device-only VkImage, but do not fill it yet.
     VkImageCreateInfo imageInfo {
         .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
@@ -414,7 +413,7 @@ VulkanTexture::VulkanTexture(VulkanContext& context, SamplerType target, uint8_t
         .extent.width = w,
         .extent.height = h,
         .extent.depth = depth,
-        .format = format,
+        .format = vkformat,
         .mipLevels = levels,
         .arrayLayers = 1,
         .usage = VK_IMAGE_USAGE_SAMPLED_BIT,
@@ -437,7 +436,7 @@ VulkanTexture::VulkanTexture(VulkanContext& context, SamplerType target, uint8_t
             << "result = " << error << ", "
             << "extent = " << w << "x" << h << "x"<< depth << ", "
             << "mipLevels = " << levels << ", "
-            << "format = " << format << utils::io::endl;
+            << "format = " << vkformat << utils::io::endl;
     }
     ASSERT_POSTCONDITION(!error, "Unable to create image.");
 
@@ -459,7 +458,7 @@ VulkanTexture::VulkanTexture(VulkanContext& context, SamplerType target, uint8_t
     VkImageViewCreateInfo viewInfo = {};
     viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
     viewInfo.image = textureImage;
-    viewInfo.format = format;
+    viewInfo.format = vkformat;
     viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     viewInfo.subresourceRange.baseMipLevel = 0;
     viewInfo.subresourceRange.levelCount = levels;
@@ -488,19 +487,22 @@ VulkanTexture::~VulkanTexture() {
 void VulkanTexture::update2DImage(const PixelBufferDescriptor& data, uint32_t width,
         uint32_t height, int miplevel) {
     assert(width <= this->width && height <= this->height);
+    const bool reshape = getBytesPerPixel(srcformat) == 3;
     const void* cpuData = data.buffer;
-    const uint32_t numBytes = data.size;
-
-    // TODO: Here we should invoke a dumb CPU blitter that can reshape the data (e.g. adding dummy
-    // alpha) if format conversion is required. Currently we are not honoring left / top / stride.
+    const uint32_t numSrcBytes = data.size;
+    const uint32_t numDstBytes = reshape ? (4 * numSrcBytes / 3) : numSrcBytes;
 
     // Create and populate the staging buffer.
-    VulkanStage const* stage = mStagePool.acquireStage(numBytes);
+    VulkanStage const* stage = mStagePool.acquireStage(numDstBytes);
     void* mapped;
     vmaMapMemory(mContext.allocator, stage->memory, &mapped);
-    memcpy(mapped, cpuData, numBytes);
+    if (reshape) {
+        DataReshaper::reshape<uint8_t, 3, 4>(mapped, cpuData, numSrcBytes);
+    } else {
+        memcpy(mapped, cpuData, numSrcBytes);
+    }
     vmaUnmapMemory(mContext.allocator, stage->memory);
-    vmaFlushAllocation(mContext.allocator, stage->memory, 0, numBytes);
+    vmaFlushAllocation(mContext.allocator, stage->memory, 0, numDstBytes);
 
     // Create a copy-to-device functor because we might need to defer it.
     auto copyToDevice = [this, stage, width, height, miplevel] (VkCommandBuffer cmd) {
@@ -524,16 +526,23 @@ void VulkanTexture::update2DImage(const PixelBufferDescriptor& data, uint32_t wi
 
 void VulkanTexture::updateCubeImage(const PixelBufferDescriptor& data,
         const FaceOffsets& faceOffsets, int miplevel) {
-    const void* cpuData = data.buffer;
-    const uint32_t numBytes = data.size;
     assert(this->target == SamplerType::SAMPLER_CUBEMAP);
+    const bool reshape = getBytesPerPixel(srcformat) == 3;
+    const void* cpuData = data.buffer;
+    const uint32_t numSrcBytes = data.size;
+    const uint32_t numDstBytes = reshape ? (4 * numSrcBytes / 3) : numSrcBytes;
+
     // Create and populate the staging buffer.
-    VulkanStage const* stage = mStagePool.acquireStage(numBytes);
+    VulkanStage const* stage = mStagePool.acquireStage(numDstBytes);
     void* mapped;
     vmaMapMemory(mContext.allocator, stage->memory, &mapped);
-    memcpy(mapped, cpuData, numBytes);
+    if (reshape) {
+        DataReshaper::reshape<uint8_t, 3, 4>(mapped, cpuData, numSrcBytes);
+    } else {
+        memcpy(mapped, cpuData, numSrcBytes);
+    }
     vmaUnmapMemory(mContext.allocator, stage->memory);
-    vmaFlushAllocation(mContext.allocator, stage->memory, 0, numBytes);
+    vmaFlushAllocation(mContext.allocator, stage->memory, 0, numDstBytes);
 
     // Create a copy-to-device functor because we might need to defer it.
     auto copyToDevice = [this, faceOffsets, stage, miplevel] (VkCommandBuffer cmd) {
