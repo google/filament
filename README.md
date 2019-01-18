@@ -447,6 +447,8 @@ Filament can be built for the following architectures:
 Note that the main target is the ARM 64-bit target. Our implementation is optimized first and
 foremost for `arm64-v8a`.
 
+To build Android on Windows machines, see [android/Windows.md](android/Windows.md).
+
 #### Easy Android build
 
 The easiest way to build Filament for Android is to use `build.sh` and the
