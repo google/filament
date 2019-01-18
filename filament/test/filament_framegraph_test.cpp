@@ -63,6 +63,32 @@ TEST(FrameGraphTest, SimpleRenderPass) {
     EXPECT_TRUE(renderPassExecuted);
 }
 
+TEST(FrameGraphTest, SimpleRenderPassReadWrite) {
+
+    FrameGraph fg;
+
+    struct RenderPassData {
+        FrameGraphResource input;
+        FrameGraphResource output;
+    };
+
+    auto& renderPass = fg.addPass<RenderPassData>("Render",
+            [&](FrameGraph::Builder& builder, RenderPassData& data) {
+                auto r = builder.createResource("renderTarget", {});
+                data.output = builder.write(r);
+                data.input = builder.read(data.output);
+            },
+            [=](FrameGraphPassResources const& resources,
+                    RenderPassData const& data,
+                    driver::DriverApi& driver) {
+            });
+
+    fg.present(renderPass.getData().output);
+    fg.compile();
+    fg.export_graphviz(utils::slog.d);
+    fg.execute(driverApi);
+}
+
 
 TEST(FrameGraphTest, SimpleRenderAndPostProcessPasses) {
 
@@ -126,9 +152,7 @@ TEST(FrameGraphTest, SimpleRenderAndPostProcessPasses) {
     EXPECT_TRUE(fg.isValid(postProcessPass.getData().output));
 
     fg.compile();
-
-    fg.export_graphviz(utils::slog.d);
-
+    //fg.export_graphviz(utils::slog.d);
     fg.execute(driverApi);
 
 
@@ -204,12 +228,8 @@ TEST(FrameGraphTest, SimplePassCulling) {
     EXPECT_TRUE(fg.isValid(culledPass.getData().input));
     EXPECT_TRUE(fg.isValid(culledPass.getData().output));
 
-    //fg.export_graphviz(utils::slog.d);
-
     fg.compile();
-
     //fg.export_graphviz(utils::slog.d);
-
     fg.execute(driverApi);
 
     EXPECT_TRUE(renderPassExecuted);
@@ -370,9 +390,7 @@ TEST(FrameGraphTest, ComplexGraph) {
     //fg.moveResource(convolutionPass.getData().output, lightingPass.getData().output);
 
     fg.compile();
-
-    fg.export_graphviz(utils::slog.d);
-
+    //fg.export_graphviz(utils::slog.d);
     fg.execute(driverApi);
 }
 
@@ -406,6 +424,6 @@ TEST(FrameGraphTest, MoveResource) {
     fg.moveResource(renderPass.getData().output, debugPass.getData().input);
 
     fg.compile();
-    fg.export_graphviz(utils::slog.d);
+    //fg.export_graphviz(utils::slog.d);
     fg.execute(driverApi);
 }

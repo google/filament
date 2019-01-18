@@ -118,13 +118,36 @@ struct PassNode {
 
     // for Builder
     FrameGraphResource read(ResourceNode const& resource) {
-        // just record that we're reading from this resource (at the given version)
+        // don't allow multiple reads of the same resource -- it's just redundant.
+        auto pos = std::find_if(reads.begin(), reads.end(),
+                [&resource](FrameGraphResource cur) { return resource.index == cur.index; });
+        if (pos != reads.end()) {
+            return *pos;
+        }
+
         FrameGraphResource r{ resource.index, resource.version };
+
+        // now figure out if we already recorded a write to this resource, and if so, use the
+        // previous version number to record the read. i.e. pretend the read() was recorded first.
+        pos = std::find_if(writes.begin(), writes.end(),
+                [&resource](FrameGraphResource cur) { return resource.index == cur.index; });
+        if (pos != writes.end()) {
+            r.version--;
+        }
+
+        // just record that we're reading from this resource (at the given version)
         reads.push_back(r);
         return r;
     }
 
     FrameGraphResource write(ResourceNode& resource) {
+        // don't allow multiple writes of the same resource -- it's just redundant.
+        auto pos = std::find_if(writes.begin(), writes.end(),
+                [&resource](FrameGraphResource cur) { return resource.index == cur.index; });
+        if (pos != writes.end()) {
+            return *pos;
+        }
+
         /*
          * We invalidate and rename handles that are writen into, to avoid undefined order
          * access to the resources.
@@ -290,6 +313,8 @@ FrameGraphPassExecutor::~FrameGraphPassExecutor() = default;
 FrameGraph::Builder::Builder(FrameGraph& fg, PassNode& pass) noexcept
     : mFrameGraph(fg), mPass(pass) {
 }
+
+FrameGraph::Builder::~Builder() noexcept = default;
 
 FrameGraphResource FrameGraph::Builder::createResource(
         const char* name, FrameGraphResource::Descriptor const& desc) noexcept {

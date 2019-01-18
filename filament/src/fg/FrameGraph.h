@@ -82,6 +82,7 @@ public:
     private:
         friend class FrameGraph;
         Builder(FrameGraph& fg, fg::PassNode& pass) noexcept;
+        ~Builder() noexcept;
         FrameGraph& mFrameGraph;
         fg::PassNode& mPass;
     };

@@ -25,7 +25,12 @@
 
 namespace filament {
 
+namespace fg {
+struct PassNode;
+} // namespace fg
+
 class FrameGraph;
+class FrameGraphPassResources;
 
 /*
  * A FrameGraph resource.
@@ -34,7 +39,22 @@ class FrameGraph;
  */
 
 class FrameGraphResource {
+    friend class FrameGraph;
+    friend class FrameGraphPassResources;
+    friend struct fg::PassNode;
+
+    FrameGraphResource(uint16_t index, uint16_t version) noexcept
+            : index(index), version(version) {}
+
+    static constexpr uint16_t UNINITIALIZED = std::numeric_limits<uint16_t>::max();
+    // index to the resource handle
+    uint16_t index = UNINITIALIZED;
+    // version of the resource when it was created. When this version doesn't match the
+    // resource handle's version, this resource has become invalid.
+    uint16_t version = 0;
+
 public:
+    FrameGraphResource() noexcept = default;
 
     struct Descriptor {
         uint32_t width = 1;     // width of resource in pixel
@@ -46,13 +66,19 @@ public:
         driver::TextureFormat format = driver::TextureFormat::RGBA8;    // resource internal format
     };
 
-    static constexpr uint16_t UNINITIALIZED = std::numeric_limits<uint16_t>::max();
-    // index to the resource handle
-    uint16_t index = UNINITIALIZED;
-    // version of the resource when it was created. When this version doesn't match the
-    // resource handle's version, this resource has become invalid.
-    uint16_t version = 0;
     bool isValid() const noexcept { return index != UNINITIALIZED; }
+
+    bool operator < (const FrameGraphResource& rhs) const noexcept {
+        return (index == rhs.index) ? (version < rhs.version) : (index < rhs.index);
+    }
+
+    bool operator == (const FrameGraphResource& rhs) const noexcept {
+        return (index == rhs.index) && (version == rhs.version);
+    }
+
+    bool operator != (const FrameGraphResource& rhs) const noexcept {
+        return !operator==(rhs);
+    }
 };
 
 } // namespace filament
