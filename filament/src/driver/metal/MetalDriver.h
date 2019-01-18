@@ -23,8 +23,9 @@
 #include <utils/compiler.h>
 #include <utils/Log.h>
 
+#include <tsl/robin_map.h>
+
 #include <mutex>
-#include <unordered_map>
 
 namespace filament {
 namespace driver {
@@ -81,7 +82,7 @@ private:
     // For now we're not bothering to store handles in pools, just simple on-demand allocation.
     // We have a little map from integer handles to "blobs" which get replaced with the Hw objects.
     using Blob = std::vector<uint8_t>;
-    using HandleMap = std::unordered_map<HandleBase::HandleId, Blob>;
+    using HandleMap = tsl::robin_map<HandleBase::HandleId, Blob>;
     std::mutex mHandleMapMutex;
     HandleMap mHandleMap;
     HandleBase::HandleId mNextId = 1;
@@ -99,7 +100,7 @@ private:
         assert(handle);
         auto iter = handleMap.find(handle.getId());
         assert(iter != handleMap.end());
-        Blob& blob = iter->second;
+        Blob& blob = iter.value();
         assert(blob.size() == sizeof(Dp));
         return reinterpret_cast<Dp*>(blob.data());
     }
@@ -110,7 +111,7 @@ private:
         assert(handle);
         auto iter = handleMap.find(handle.getId());
         assert(iter != handleMap.end());
-        Blob& blob = iter->second;
+        Blob& blob = iter.value();
         assert(blob.size() == sizeof(Dp));
         return reinterpret_cast<const Dp*>(blob.data());
     }
@@ -120,7 +121,7 @@ private:
         std::lock_guard<std::mutex> lock(mHandleMapMutex);
         auto iter = handleMap.find(handle.getId());
         assert(iter != handleMap.end());
-        Blob& blob = iter->second;
+        Blob& blob = iter.value();
         assert(blob.size() == sizeof(Dp));
         Dp* addr = reinterpret_cast<Dp*>(blob.data());
         new(addr) Dp(std::forward<ARGS>(args)...);
@@ -134,7 +135,7 @@ private:
         // Call the destructor, remove the blob, don't bother reclaiming the integer id.
         auto iter = handleMap.find(handle.getId());
         assert(iter != handleMap.end());
-        Blob& blob = iter->second;
+        Blob& blob = iter.value();
         assert(blob.size() == sizeof(Dp));
         reinterpret_cast<Dp*>(blob.data())->~Dp();
         handleMap.erase(handle.getId());
