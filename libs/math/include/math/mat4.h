@@ -286,15 +286,15 @@ public:
         return result != 0;
     }
 
-    static constexpr TMat44 ortho(T left, T right, T bottom, T top, T near, T far);
+    static constexpr TMat44 ortho(T left, T right, T bottom, T top, T near_plane, T far_plane);
 
-    static constexpr TMat44 frustum(T left, T right, T bottom, T top, T near, T far);
+    static constexpr TMat44 frustum(T left, T right, T bottom, T top, T near_plane, T far_plane);
 
     enum class Fov {
         HORIZONTAL,
         VERTICAL
     };
-    static constexpr TMat44 perspective(T fov, T aspect, T near, T far, Fov direction = Fov::VERTICAL);
+    static constexpr TMat44 perspective(T fov, T aspect, T near_plane, T far_plane, Fov direction = Fov::VERTICAL);
 
     template <typename A, typename B, typename C>
     static constexpr TMat44 lookAt(const TVec3<A>& eye, const TVec3<B>& center, const TVec3<C>& up);
@@ -467,44 +467,44 @@ constexpr TMat44<T>::TMat44(const TMat33<U>& m, const TVec4<V>& v) {
 // ----------------------------------------------------------------------------------------
 
 template <typename T>
-constexpr TMat44<T> TMat44<T>::ortho(T left, T right, T bottom, T top, T near, T far) {
+constexpr TMat44<T> TMat44<T>::ortho(T left, T right, T bottom, T top, T near_plane, T far_plane) {
     TMat44<T> m;
-    m[0][0] =  2 / (right - left);
-    m[1][1] =  2 / (top   - bottom);
-    m[2][2] = -2 / (far   - near);
-    m[3][0] = -(right + left)   / (right - left);
-    m[3][1] = -(top   + bottom) / (top   - bottom);
-    m[3][2] = -(far   + near)   / (far   - near);
+    m[0][0] =  2 / (right     - left);
+    m[1][1] =  2 / (top       - bottom);
+    m[2][2] = -2 / (far_plane - near_plane);
+    m[3][0] = -(right     + left)       / (right     - left);
+    m[3][1] = -(top       + bottom)     / (top       - bottom);
+    m[3][2] = -(far_plane + near_plane) / (far_plane - near_plane);
     return m;
 }
 
 template <typename T>
-constexpr TMat44<T> TMat44<T>::frustum(T left, T right, T bottom, T top, T near, T far) {
+constexpr TMat44<T> TMat44<T>::frustum(T left, T right, T bottom, T top, T near_plane, T far_plane) {
     TMat44<T> m;
-    m[0][0] =  (2 * near) / (right - left);
-    m[1][1] =  (2 * near) / (top   - bottom);
-    m[2][0] =  (right + left)   / (right - left);
-    m[2][1] =  (top   + bottom) / (top   - bottom);
-    m[2][2] = -(far   + near)   / (far   - near);
+    m[0][0] =  (2 * near_plane) / (right - left);
+    m[1][1] =  (2 * near_plane) / (top   - bottom);
+    m[2][0] =  (right     + left)           / (right     - left);
+    m[2][1] =  (top       + bottom)         / (top       - bottom);
+    m[2][2] = -(far_plane + near_plane)     / (far_plane - near_plane);
     m[2][3] = -1;
-    m[3][2] = -(2 * far * near) / (far   - near);
+    m[3][2] = -(2 * far_plane * near_plane) / (far_plane - near_plane);
     m[3][3] =  0;
     return m;
 }
 
 template <typename T>
-constexpr TMat44<T> TMat44<T>::perspective(T fov, T aspect, T near, T far, TMat44::Fov direction) {
+constexpr TMat44<T> TMat44<T>::perspective(T fov, T aspect, T near_plane, T far_plane, TMat44::Fov direction) {
     T h;
     T w;
 
     if (direction == TMat44::Fov::VERTICAL) {
-        h = std::tan(fov * M_PI / 360.0f) * near;
+        h = std::tan(fov * M_PI / 360.0f) * near_plane;
         w = h * aspect;
     } else {
-        w = std::tan(fov * M_PI / 360.0f) * near;
+        w = std::tan(fov * M_PI / 360.0f) * near_plane;
         h = w / aspect;
     }
-    return frustum(-w, w, -h, h, near, far);
+    return frustum(-w, w, -h, h, near_plane, far_plane);
 }
 
 /*
