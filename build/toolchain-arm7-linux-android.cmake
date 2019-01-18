@@ -28,8 +28,13 @@ set(DIST_ARCH armeabi-v7a)
 set(TOOLCHAIN ${CMAKE_SOURCE_DIR}/toolchains/${CMAKE_HOST_SYSTEM_NAME}/${ARCH}-4.9)
 
 # specify the cross compiler
-set(CMAKE_C_COMPILER   ${TOOLCHAIN}/bin/${ARCH}-clang)
-set(CMAKE_CXX_COMPILER ${TOOLCHAIN}/bin/${ARCH}-clang++)
+set(COMPILER_SUFFIX)
+if(WIN32)
+    set(COMPILER_SUFFIX ".cmd")
+    set(CMAKE_AR ${TOOLCHAIN}/bin/${ARCH}-ar.exe CACHE FILEPATH "Archiver")
+endif()
+set(CMAKE_C_COMPILER   ${TOOLCHAIN}/bin/${ARCH}-clang${COMPILER_SUFFIX})
+set(CMAKE_CXX_COMPILER ${TOOLCHAIN}/bin/${ARCH}-clang++${COMPILER_SUFFIX})
 
 # where is the target environment
 set(CMAKE_FIND_ROOT_PATH  ${TOOLCHAIN}/sysroot)
