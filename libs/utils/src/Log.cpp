@@ -55,14 +55,14 @@ void ostream::Buffer::reset() noexcept {
 
 const char* ostream::getFormat(ostream::type t) const noexcept {
     switch (t) {
-        case type::SHORT:       return mShowHex ? "%hx"  : "%hd";
-        case type::USHORT:      return mShowHex ? "%hx"  : "%hu";
-        case type::INT:         return mShowHex ? "%x"   : "%d";
-        case type::UINT:        return mShowHex ? "%x"   : "%u";
-        case type::LONG:        return mShowHex ? "%lx"  : "%ld";
-        case type::ULONG:       return mShowHex ? "%lx"  : "%lu";
-        case type::LONG_LONG:   return mShowHex ? "%llx" : "%lld";
-        case type::ULONG_LONG:  return mShowHex ? "%llx" : "%llu";
+        case type::SHORT:       return mShowHex ? "0x%hx"  : "%hd";
+        case type::USHORT:      return mShowHex ? "0x%hx"  : "%hu";
+        case type::INT:         return mShowHex ? "0x%x"   : "%d";
+        case type::UINT:        return mShowHex ? "0x%x"   : "%u";
+        case type::LONG:        return mShowHex ? "0x%lx"  : "%ld";
+        case type::ULONG:       return mShowHex ? "0x%lx"  : "%lu";
+        case type::LONG_LONG:   return mShowHex ? "0x%llx" : "%lld";
+        case type::ULONG_LONG:  return mShowHex ? "0x%llx" : "%llu";
         case type::DOUBLE:      return "%f";
         case type::LONG_DOUBLE: return "%Lf";
     }
