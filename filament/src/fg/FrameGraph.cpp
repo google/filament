@@ -193,7 +193,13 @@ struct PassNode {
     ResourceList reads;                     // resources we're reading from
     ResourceList writes;                    // resources we're writing to
 
-    // TODO: we need to store discardFlags per resource written
+    struct TargetFlags {
+        uint8_t clear = 0;
+        uint8_t discardStart = 0;
+        uint8_t discardEnd = 0;
+        uint8_t dependencies = 0;
+    };
+    std::vector<TargetFlags> targetFlags;
 
     bool hasSideEffect = false;             // whether this pass has side effects
 
@@ -225,85 +231,47 @@ Resource::Resource(const char* name, bool imported) noexcept
 }
 
 void Resource::create(DriverApi& driver) noexcept {
-    if (imported) {
-        target.params = {};
-        target.params.discardStart = TargetBufferFlags::NONE;
-        target.params.discardEnd = TargetBufferFlags::NONE;
-        target.params.left = 0;
-        target.params.bottom = 0;
-        target.params.width = desc.width;
-        target.params.height = desc.height;
-        return;   // FIXME: do the right thing
-    }
+    // some sanity check
+    if (readerCount)    assert(readFlags);
+    if (writerCount)    assert(writeFlags);
 
-    // FIXME: the discard flags must be update for each pass
-    uint8_t discardStart = TargetBufferFlags::NONE;
-    uint8_t discardEnd = TargetBufferFlags::NONE;
-//    uint8_t discardStart = TargetBufferFlags::ALL;
-//    uint8_t discardEnd = TargetBufferFlags::ALL;
-//    if (readerCount) {
-//        if (readFlags & FrameGraph::Builder::COLOR) {
-//            discardEnd &= ~TargetBufferFlags::COLOR;
-//        }
-//        if (readFlags & FrameGraph::Builder::DEPTH) {
-//            discardEnd &= ~TargetBufferFlags::DEPTH;
-//        }
-//    }
-//    if (writerCount) {
-//        if (writeFlags & FrameGraph::Builder::COLOR) {
-//            discardStart &= ~TargetBufferFlags::COLOR;
-//        }
-//        if (writeFlags & FrameGraph::Builder::DEPTH) {
-//            discardStart &= ~TargetBufferFlags::DEPTH;
-//        }
-//        target.params = {};
-//        target.params.discardStart = discardStart;
-//        target.params.discardEnd = discardEnd;
-//    }
+    // technically this doesn't need to be initialized if we're not a rendertarget.
+    target.params = {};
+    target.params.left = 0;
+    target.params.bottom = 0;
+    target.params.width = desc.width;
+    target.params.height = desc.height;
 
+    if (!imported) {
+        if (readFlags & FrameGraph::Builder::COLOR) {
+            textures[0] = driver.createTexture(desc.type, desc.levels,
+                    desc.format, 1,
+                    desc.width, desc.height, desc.depth,
+                    TextureUsage::COLOR_ATTACHMENT);
+        }
+        if (readFlags & FrameGraph::Builder::DEPTH) {
+            textures[1] = driver.createTexture(desc.type, desc.levels,
+                    TextureFormat::DEPTH24, 1,
+                    desc.width, desc.height, desc.depth,
+                    TextureUsage::DEPTH_ATTACHMENT);
+        }
 
-    if (readerCount) {
-        assert(readFlags);
-    }
+        // Note: if the resource is a source of a blit, it needs a rendertarget (because that's how
+        // blits work) -- in that case, the resource would have been declared with Builder::blit()
+        // access, and its write flags here would be set.
 
-    if (writerCount) {
-        assert(writeFlags);
-    }
-
-    if (readFlags & FrameGraph::Builder::COLOR) {
-        textures[0] = driver.createTexture(desc.type, desc.levels,
-                desc.format, 1,
-                desc.width, desc.height, desc.depth,
-                TextureUsage::COLOR_ATTACHMENT);
-    }
-    if (readFlags & FrameGraph::Builder::DEPTH) {
-        textures[1] = driver.createTexture(desc.type, desc.levels,
-                TextureFormat::DEPTH24, 1,
-                desc.width, desc.height, desc.depth,
-                TextureUsage::DEPTH_ATTACHMENT);
-    }
-
-    // Note: if the resource is a source of a blit, it needs a rendertarget (because that's how
-    // blits work) -- in that case, the resource would have been declared with Builder::blit()
-    // access, and its write flags here would be set.
-
-    uint32_t attachments = 0;
-    if (writeFlags & FrameGraph::Builder::COLOR) {
-        attachments |= uint32_t(TargetBufferFlags::COLOR);
-    }
-    if (writeFlags & FrameGraph::Builder::DEPTH) {
-        attachments |= TargetBufferFlags::DEPTH;
-    }
-    if (attachments) {
-        target.target = driver.createRenderTarget(TargetBufferFlags(attachments),
-                desc.width, desc.height, desc.samples, desc.format,
-                { textures[0] }, { textures[1] }, {});
-
-        target.params = {};
-        target.params.left = 0;
-        target.params.bottom = 0;
-        target.params.width = desc.width;
-        target.params.height = desc.height;
+        uint32_t attachments = 0;
+        if (writeFlags & FrameGraph::Builder::COLOR) {
+            attachments |= uint32_t(TargetBufferFlags::COLOR);
+        }
+        if (writeFlags & FrameGraph::Builder::DEPTH) {
+            attachments |= TargetBufferFlags::DEPTH;
+        }
+        if (attachments) {
+            target.target = driver.createRenderTarget(TargetBufferFlags(attachments),
+                    desc.width, desc.height, desc.samples, desc.format,
+                    { textures[0] }, { textures[1] }, {});
+        }
     }
 }
 
@@ -385,6 +353,20 @@ FrameGraph::Builder& FrameGraph::Builder::sideEffect() noexcept {
 
 FrameGraphPassResources::FrameGraphPassResources(FrameGraph& fg, fg::PassNode const& pass) noexcept
     : mFrameGraph(fg), mPass(pass) {
+
+    // copy the target flags for each render target of this pass
+    auto const& resourceNodes = fg.mResourceNodes;
+    for (size_t i = 0, c = pass.writes.size(); i < c; i++) {
+        auto const& r = pass.writes[i];
+        Resource* const pResource = resourceNodes[r.index].resource;
+        assert(pResource);
+        RenderPassParams& targetFlags = pResource->target.params;
+        const PassNode::TargetFlags& passTargetFlags = pass.targetFlags[i];
+        targetFlags.clear          = passTargetFlags.clear;
+        targetFlags.discardStart   = passTargetFlags.discardStart;
+        targetFlags.discardEnd     = passTargetFlags.discardEnd;
+        targetFlags.dependencies   = passTargetFlags.dependencies;
+    }
 }
 
 Handle<HwTexture> FrameGraphPassResources::getTexture(
@@ -451,6 +433,11 @@ FrameGraphPassResources::getRenderTarget(FrameGraphResource r) const noexcept {
                 "Imported resource \"%s\" (id=%u) doesn't have a render target",
                 pResource->name, r.index);
     }
+
+//    slog.d << mPass.name << ": resource = \"" << pResource->name << "\", flags = "
+//        << io::hex
+//        << pResource->target.params.discardStart << ", "
+//        << pResource->target.params.discardEnd << io::endl;
 
     return pResource->target;
 }
@@ -670,9 +657,13 @@ FrameGraph& FrameGraph::compile() noexcept {
     }
 
     // compute first/last users for active passes
-    for (PassNode& pass : passNodes) {
+    auto first = passNodes.begin();
+    auto last = passNodes.end();
+    while (first != last) {
+        PassNode& pass = *first;
         if (!pass.refCount) {
             assert(!pass.hasSideEffect);
+            ++first;
             continue;
         }
         for (FrameGraphResource resource : pass.reads) {
@@ -682,13 +673,69 @@ FrameGraph& FrameGraph::compile() noexcept {
             // figure out which is the last pass to need this resource
             subResource->last = &pass;
         }
-        for (FrameGraphResource resource : pass.writes) {
+
+        pass.targetFlags.resize(pass.writes.size());
+        for (size_t i = 0, c = pass.writes.size(); i < c; i++) {
+            FrameGraphResource resource = pass.writes[i];
             Resource* subResource = resourceNodes[resource.index].resource;
             // figure out which is the first pass to need this resource
             subResource->first = subResource->first ? subResource->first : &pass;
             // figure out which is the last pass to need this resource
             subResource->last = &pass;
+            
+            // compute this resource discard flag for this pass
+            PassNode::TargetFlags& targetFlags = pass.targetFlags[i];
+
+            // FIXME: the discard flags must be updated for each attachement
+            uint8_t discardStart = TargetBufferFlags::ALL;
+            uint8_t discardEnd = TargetBufferFlags::ALL;
+            // does anyone reads this resource after us...
+            auto curr = first;
+            while (++curr != last) {
+                PassNode& futurePass = *curr;
+
+                // TODO: maybe find a more efficient way of figuring this out
+                const bool isFuturePassReadingFromUs = std::find_if(
+                        futurePass.reads.begin(), futurePass.reads.end(),
+                        [subResource, &resourceNodes](FrameGraphResource cur) {
+                            return subResource == resourceNodes[cur.index].resource;
+                        }) != futurePass.reads.end();
+
+                if (isFuturePassReadingFromUs) {
+                    // if a future pass is reading from us, we can't discard when we're done
+                    // TODO: track this per attachment
+                    discardEnd &= ~TargetBufferFlags::COLOR;
+                    discardEnd &= ~TargetBufferFlags::DEPTH;
+                    break;
+                }
+            }
+
+            // does anyone write this resource before us
+            curr = passNodes.begin();
+            while (curr != first) {
+                PassNode& pastPass = *curr++;
+
+                // TODO: maybe find a more efficient way of figuring this out
+                const bool isPastPassWrittingToUs = std::find_if(
+                        pastPass.writes.begin(), pastPass.writes.end(),
+                        [subResource, &resourceNodes](FrameGraphResource cur) {
+                            return subResource == resourceNodes[cur.index].resource;
+                        }) != pastPass.writes.end();
+
+                if (isPastPassWrittingToUs) {
+                    // if a past pass is writing to us, we can't discard
+                    // TODO: track this per attachment
+                    discardStart &= ~TargetBufferFlags::COLOR;
+                    discardStart &= ~TargetBufferFlags::DEPTH;
+                    break;
+                }
+            }
+            targetFlags.clear = 0;
+            targetFlags.discardStart = discardStart;
+            targetFlags.discardEnd = discardEnd;
+            targetFlags.dependencies = 0;
         }
+        ++first;
     }
 
     // add resource to devirtualize or destroy to the corresponding list for each active pass
@@ -710,14 +757,13 @@ void FrameGraph::execute(DriverApi& driver) noexcept {
         if (!node.refCount) continue;
         assert(node.base);
 
-        FrameGraphPassResources resources(*this, node);
-
         // create concrete resources
         for (size_t id : node.devirtualize) {
             resourceRegistry[id].create(driver);
         }
 
         // execute the pass
+        FrameGraphPassResources resources(*this, node);
         node.base->execute(resources, driver);
 
         // destroy concrete resources
