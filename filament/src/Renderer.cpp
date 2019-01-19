@@ -273,7 +273,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
             }
 
             fg.moveResource(output, input);
-            fg.present(output);
+            fg.present(output, FrameGraph::Builder::COLOR);
 
             fg.compile();
             //fg.export_graphviz(slog.d);

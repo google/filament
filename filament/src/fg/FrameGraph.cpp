@@ -81,7 +81,7 @@ struct ResourceNode {
     const uint16_t index;
 
     // updated by the builder
-    uint16_t version = 0;
+    uint8_t version = 0;
     FrameGraphResource::Descriptor desc;
     FrameGraph::Builder::RWFlags readFlags  = 0;
     FrameGraph::Builder::RWFlags writeFlags = 0;
@@ -117,7 +117,7 @@ struct PassNode {
     ~PassNode() { delete base; }
 
     // for Builder
-    FrameGraphResource read(ResourceNode const& resource) {
+    FrameGraphResource read(ResourceNode const& resource, FrameGraph::Builder::RWFlags flags) {
         // don't allow multiple reads of the same resource -- it's just redundant.
         auto pos = std::find_if(reads.begin(), reads.end(),
                 [&resource](FrameGraphResource cur) { return resource.index == cur.index; });
@@ -125,7 +125,7 @@ struct PassNode {
             return *pos;
         }
 
-        FrameGraphResource r{ resource.index, resource.version };
+        FrameGraphResource r{ resource.index, resource.version, flags };
 
         // now figure out if we already recorded a write to this resource, and if so, use the
         // previous version number to record the read. i.e. pretend the read() was recorded first.
@@ -146,7 +146,7 @@ struct PassNode {
         return (pos != reads.end());
     }
 
-    FrameGraphResource write(ResourceNode& resource) {
+    FrameGraphResource write(ResourceNode& resource, FrameGraph::Builder::RWFlags flags) {
         // don't allow multiple writes of the same resource -- it's just redundant.
         auto pos = std::find_if(writes.begin(), writes.end(),
                 [&resource](FrameGraphResource cur) { return resource.index == cur.index; });
@@ -173,7 +173,7 @@ struct PassNode {
             hasSideEffect = true;
         }
         // record the write
-        FrameGraphResource r{ resource.index, resource.version };
+        FrameGraphResource r{ resource.index, resource.version, flags };
         writes.push_back(r);
         return r;
     }
@@ -320,7 +320,7 @@ FrameGraphResource FrameGraph::Builder::read(FrameGraphResource const& input, RW
         return {};
     }
     resource->readFlags |= readFlags;
-    return mPass.read(*resource);
+    return mPass.read(*resource, readFlags);
 }
 
 FrameGraphResource
@@ -332,7 +332,7 @@ FrameGraph::Builder::blit(FrameGraphResource const& input, FrameGraph::Builder::
     resource->readFlags |= readFlags;
     // resource used in a blit, it needs a rendertarget, so we set its write flags.
     resource->writeFlags |= readFlags;
-    return mPass.read(*resource);
+    return mPass.read(*resource, readFlags);
 }
 
 FrameGraphResource FrameGraph::Builder::write(FrameGraphResource const& output, RWFlags writeFlags) {
@@ -341,7 +341,7 @@ FrameGraphResource FrameGraph::Builder::write(FrameGraphResource const& output, 
         return {};
     }
     resource->writeFlags |= writeFlags;
-    return mPass.write(*resource);
+    return mPass.write(*resource, writeFlags);
 }
 
 FrameGraph::Builder& FrameGraph::Builder::sideEffect() noexcept {
@@ -473,12 +473,12 @@ bool FrameGraph::moveResource(FrameGraphResource from, FrameGraphResource to) {
     return true;
 }
 
-void FrameGraph::present(FrameGraphResource input) {
+void FrameGraph::present(FrameGraphResource input, Builder::RWFlags sideEffects) {
     struct Dummy {
     };
     addPass<Dummy>("Present",
-            [&input](Builder& builder, Dummy& data) {
-                builder.read(input);
+            [&](Builder& builder, Dummy& data) {
+                builder.read(input, sideEffects);
                 builder.sideEffect();
             },
             [](FrameGraphPassResources const& resources, Dummy const& data, DriverApi&) {
@@ -695,17 +695,23 @@ FrameGraph& FrameGraph::compile() noexcept {
                 PassNode& futurePass = *curr;
 
                 // TODO: maybe find a more efficient way of figuring this out
-                const bool isFuturePassReadingFromUs = std::find_if(
+
+                auto pos = std::find_if(
                         futurePass.reads.begin(), futurePass.reads.end(),
                         [subResource, &resourceNodes](FrameGraphResource cur) {
                             return subResource == resourceNodes[cur.index].resource;
-                        }) != futurePass.reads.end();
+                        });
+
+                const bool isFuturePassReadingFromUs = pos != futurePass.reads.end();
 
                 if (isFuturePassReadingFromUs) {
                     // if a future pass is reading from us, we can't discard when we're done
-                    // TODO: track this per attachment
-                    discardEnd &= ~TargetBufferFlags::COLOR;
-                    discardEnd &= ~TargetBufferFlags::DEPTH;
+                    if (pos->flags & Builder::COLOR) {
+                        discardEnd &= ~TargetBufferFlags::COLOR;
+                    }
+                    if (pos->flags & Builder::DEPTH) {
+                        discardEnd &= ~TargetBufferFlags::DEPTH;
+                    }
                     break;
                 }
             }
@@ -716,17 +722,22 @@ FrameGraph& FrameGraph::compile() noexcept {
                 PassNode& pastPass = *curr++;
 
                 // TODO: maybe find a more efficient way of figuring this out
-                const bool isPastPassWrittingToUs = std::find_if(
+                auto pos = std::find_if(
                         pastPass.writes.begin(), pastPass.writes.end(),
                         [subResource, &resourceNodes](FrameGraphResource cur) {
                             return subResource == resourceNodes[cur.index].resource;
-                        }) != pastPass.writes.end();
+                        });
 
-                if (isPastPassWrittingToUs) {
+                const bool isPastPassWritingToUs = pos != pastPass.writes.end();
+
+                if (isPastPassWritingToUs) {
                     // if a past pass is writing to us, we can't discard
-                    // TODO: track this per attachment
-                    discardStart &= ~TargetBufferFlags::COLOR;
-                    discardStart &= ~TargetBufferFlags::DEPTH;
+                    if (pos->flags & Builder::COLOR) {
+                        discardStart &= ~TargetBufferFlags::COLOR;
+                    }
+                    if (pos->flags & Builder::DEPTH) {
+                        discardStart &= ~TargetBufferFlags::DEPTH;
+                    }
                     break;
                 }
             }
