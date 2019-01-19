@@ -57,7 +57,7 @@ public:
         Builder& operator=(Builder const&) = delete;
 
         // create a resource
-        using RWFlags = uint32_t;
+        using RWFlags = uint8_t;
         static constexpr RWFlags NONE  = 0x0;
         static constexpr RWFlags COLOR = 0x1;   // COLOR buffer access
         static constexpr RWFlags DEPTH = 0x2;   // DEPTH buffer access
@@ -121,7 +121,8 @@ public:
     }
 
     // Adds a reference to 'input', preventing it from being culled.
-    void present(FrameGraphResource input);
+    void present(FrameGraphResource input,
+            Builder::RWFlags sideEffects = Builder::COLOR | Builder::DEPTH);
 
     // Returns whether the resource handle is valid. A resource handle becomes invalid after
     // it's used to declare a resource write (see Builder::write()).

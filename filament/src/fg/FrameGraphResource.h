@@ -43,15 +43,21 @@ class FrameGraphResource {
     friend class FrameGraphPassResources;
     friend struct fg::PassNode;
 
-    FrameGraphResource(uint16_t index, uint16_t version) noexcept
+    FrameGraphResource(uint16_t index, uint8_t version) noexcept
             : index(index), version(version) {}
+
+    FrameGraphResource(uint16_t index, uint8_t version, uint8_t flags) noexcept
+            : index(index), version(version), flags(flags) {}
 
     static constexpr uint16_t UNINITIALIZED = std::numeric_limits<uint16_t>::max();
     // index to the resource handle
     uint16_t index = UNINITIALIZED;
     // version of the resource when it was created. When this version doesn't match the
     // resource handle's version, this resource has become invalid.
-    uint16_t version = 0;
+    uint8_t version = 0;
+
+    // buffers accessed for either read or write
+    uint8_t flags = 0;
 
 public:
     FrameGraphResource() noexcept = default;
