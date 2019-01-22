@@ -105,6 +105,7 @@ struct PassNode {
             : name(rhs.name), id(rhs.id), base(rhs.base),
               reads(std::move(rhs.reads)),
               writes(std::move(rhs.writes)),
+              targetFlags(std::move(rhs.targetFlags)),
               devirtualize(std::move(rhs.devirtualize)),
               destroy(std::move(rhs.destroy)),
               refCount(rhs.refCount) {
