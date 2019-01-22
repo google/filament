@@ -24,6 +24,7 @@
 #include "driver/DriverApiForward.h"
 #include "FrameGraphPassResources.h"
 
+#include "details/Allocators.h"
 
 #include <utils/Log.h>
 
@@ -168,16 +169,27 @@ public:
 
 private:
     friend class FrameGraphPassResources;
+    friend struct fg::PassNode;
+
+    template <typename T>
+    using Allocator = utils::STLAllocator<T, details::LinearAllocatorArena>;
+
+    template <typename T>
+    using Vector = std::vector<T, Allocator<T>>;
+
+    auto& getArena() noexcept { return mArena; }
 
     fg::PassNode& createPass(const char* name, FrameGraphPassExecutor* base) noexcept;
     fg::ResourceNode& createResource(const char* name,
             FrameGraphResource::Descriptor const& desc, bool imported) noexcept;
     fg::ResourceNode* getResource(FrameGraphResource r);
 
-    std::vector<fg::PassNode> mPassNodes;           // list of frame graph passes
-    std::vector<fg::ResourceNode> mResourceNodes;
-    std::vector<fg::Resource> mResourceRegistry;    // frame graph concrete resources
-    std::vector<fg::Alias> mAliases;
+    details::LinearAllocatorArena mArena;
+
+    Vector<fg::PassNode> mPassNodes;           // list of frame graph passes
+    Vector<fg::ResourceNode> mResourceNodes;
+    Vector<fg::Resource> mResourceRegistry;    // frame graph concrete resources
+    Vector<fg::Alias> mAliases;
 };
 
 } // namespace filament

@@ -94,11 +94,16 @@ struct ResourceNode {
 };
 
 struct PassNode {
-    // TODO: use something less heavy than a std::vector<>
-    using ResourceList = std::vector<FrameGraphResource>;
+    template <typename T>
+    using Vector = FrameGraph::Vector<T>;
 
-    PassNode(const char* name, uint32_t id, FrameGraphPassExecutor* base) noexcept
-            : name(name), id(id), base(base) {
+    PassNode(FrameGraph& fg, const char* name, uint32_t id, FrameGraphPassExecutor* base) noexcept
+            : name(name), id(id), base(base),
+              reads(fg.getArena()),
+              writes(fg.getArena()),
+              targetFlags(fg.getArena()),
+              devirtualize(fg.getArena()),
+              destroy(fg.getArena()) {
     }
     PassNode(PassNode const&) = delete;
     PassNode(PassNode&& rhs) noexcept
@@ -191,8 +196,8 @@ struct PassNode {
     FrameGraphPassExecutor* base = nullptr;     // type eraser for calling execute()
 
     // set by the builder
-    ResourceList reads;                     // resources we're reading from
-    ResourceList writes;                    // resources we're writing to
+    Vector<FrameGraphResource> reads;           // resources we're reading from
+    Vector<FrameGraphResource> writes;          // resources we're writing to
 
     struct TargetFlags {
         uint8_t clear = 0;
@@ -200,13 +205,13 @@ struct PassNode {
         uint8_t discardEnd = 0;
         uint8_t dependencies = 0;
     };
-    std::vector<TargetFlags> targetFlags;
+    Vector<TargetFlags> targetFlags;
 
     bool hasSideEffect = false;             // whether this pass has side effects
 
     // computed during compile()
-    std::vector<uint16_t> devirtualize;     // resources we need to create before executing
-    std::vector<uint16_t> destroy;          // resources we need to destroy after executing
+    Vector<uint16_t> devirtualize;          // resources we need to create before executing
+    Vector<uint16_t> destroy;               // resources we need to destroy after executing
     uint32_t refCount = 0;                  // count resources that have a reference to us
 };
 
@@ -454,7 +459,17 @@ FrameGraphResource::Descriptor const& FrameGraphPassResources::getDescriptor(
 
 // ------------------------------------------------------------------------------------------------
 
-FrameGraph::FrameGraph() = default;
+FrameGraph::FrameGraph()
+        : mArena("FrameGraph Arena", 16384), // TODO: the Area will eventually come from outside
+          mPassNodes(mArena),
+          mResourceNodes(mArena),
+          mResourceRegistry(mArena),
+          mAliases(mArena) {
+    // some default size to avoid wasting space with the std::vector<>
+    mPassNodes.reserve(8);
+    mResourceNodes.reserve(8);
+    mAliases.reserve(4);
+}
 
 FrameGraph::~FrameGraph() = default;
 
@@ -489,7 +504,7 @@ void FrameGraph::present(FrameGraphResource input, Builder::RWFlags sideEffects)
 PassNode& FrameGraph::createPass(const char* name, FrameGraphPassExecutor* base) noexcept {
     auto& frameGraphPasses = mPassNodes;
     const uint32_t id = (uint32_t)frameGraphPasses.size();
-    frameGraphPasses.emplace_back(name, id, base);
+    frameGraphPasses.emplace_back(*this, name, id, base);
     return frameGraphPasses.back();
 }
 
@@ -624,7 +639,7 @@ FrameGraph& FrameGraph::compile() noexcept {
     }
 
     // cull passes and resources...
-    std::vector<Resource*> stack;
+    Vector<Resource*> stack(mArena);
     stack.reserve(resourceNodes.size());
     for (Resource& resource : resourceRegistry) {
         if (resource.readerCount == 0) {
