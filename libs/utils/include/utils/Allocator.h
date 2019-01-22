@@ -123,7 +123,7 @@ public:
 
     // LinearAllocator shouldn't have a free() method
     // it's only needed to be compatible with STLAllocator<> below
-    void free(void*) UTILS_RESTRICT noexcept { }
+    void free(void*, size_t) UTILS_RESTRICT noexcept { }
 
 private:
     void* mBegin = nullptr;
@@ -734,14 +734,16 @@ public:
     struct rebind { using other = STLAllocator<OTHER, ARENA>; };
 
 public:
-    explicit STLAllocator(ARENA& arena) : mArena(arena) { }
+    // we don't make this explicit, so that we can initialize a vector using a STLAllocator
+    // from an Arena, avoiding to have to repeat the vector type.
+    STLAllocator(ARENA& arena) : mArena(arena) { } // NOLINT(google-explicit-constructor)
 
     TYPE* allocate(std::size_t n) {
-        return static_cast<TYPE *>(mArena.alloc(n * sizeof(n), alignof(TYPE)));
+        return static_cast<TYPE *>(mArena.alloc(n * sizeof(TYPE), alignof(TYPE)));
     }
 
     void deallocate(TYPE* p, std::size_t n) {
-        mArena.free(p);
+        mArena.free(p, n * sizeof(TYPE));
     }
 
 private:

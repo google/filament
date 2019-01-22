@@ -291,7 +291,7 @@ TEST(AllocatorTest, STLAllocator) {
         void onAlloc(void* p, size_t size, size_t alignment, size_t extra) {
             allocations.push_back(p);
         }
-        void onFree(void* p) {
+        void onFree(void* p, size_t) {
             auto pos = std::find(allocations.begin(), allocations.end(), p);
             EXPECT_TRUE(pos != allocations.end());
             allocations.erase(pos);
