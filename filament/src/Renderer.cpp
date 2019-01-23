@@ -247,17 +247,14 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
                     .width = colorTarget->w,
                     .height= colorTarget->h,
                     .format= colorTarget->format,
-                    .samples= colorTarget->samples
             };
+            FrameGraphResource input = fg.importResource("colorTarget",
+                    colorDesc, colorTarget->texture);
 
-            FrameGraphResource::Descriptor viewRenderTargetDesc{
+            FrameGraphRenderTarget::Descriptor viewRenderTargetDesc{
                     .width = vp.width,
-                    .height= vp.height
+                    .height= vp.height,
             };
-
-            FrameGraphResource input = fg.importResource("colorTarget", colorDesc,
-                    colorTarget->target, colorTarget->texture);
-
             FrameGraphResource output = fg.importResource("viewRenderTarget",
                     viewRenderTargetDesc, viewRenderTarget);
 
@@ -273,7 +270,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
             }
 
             fg.moveResource(output, input);
-            fg.present(output, FrameGraph::Builder::COLOR);
+            fg.present(output);
 
             fg.compile();
             //fg.export_graphviz(slog.d);

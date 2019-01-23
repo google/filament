@@ -27,6 +27,7 @@ namespace filament {
 
 namespace fg {
 struct PassNode;
+struct RenderTarget;
 } // namespace fg
 
 class FrameGraph;
@@ -42,12 +43,10 @@ class FrameGraphResource {
     friend class FrameGraph;
     friend class FrameGraphPassResources;
     friend struct fg::PassNode;
+    friend struct fg::RenderTarget;
 
     FrameGraphResource(uint16_t index, uint8_t version) noexcept
             : index(index), version(version) {}
-
-    FrameGraphResource(uint16_t index, uint8_t version, uint8_t flags) noexcept
-            : index(index), version(version), flags(flags) {}
 
     static constexpr uint16_t UNINITIALIZED = std::numeric_limits<uint16_t>::max();
     // index to the resource handle
@@ -55,9 +54,6 @@ class FrameGraphResource {
     // version of the resource when it was created. When this version doesn't match the
     // resource handle's version, this resource has become invalid.
     uint8_t version = 0;
-
-    // buffers accessed for either read or write
-    uint8_t flags = 0;
 
 public:
     FrameGraphResource() noexcept = default;
@@ -67,7 +63,6 @@ public:
         uint32_t height = 1;    // height of resource in pixel
         uint32_t depth = 1;     // # of images for 3D textures
         uint8_t levels = 1;     // # of levels for textures
-        uint8_t samples = 1;    // # of sample for render targets
         driver::SamplerType type = driver::SamplerType::SAMPLER_2D;     // texture target type
         driver::TextureFormat format = driver::TextureFormat::RGBA8;    // resource internal format
     };
@@ -86,6 +81,47 @@ public:
         return !operator==(rhs);
     }
 };
+
+
+class FrameGraphRenderTarget {
+    friend class FrameGraph;
+    friend class FrameGraphPassResources;
+    friend struct fg::PassNode;
+
+    explicit FrameGraphRenderTarget(uint16_t index) noexcept : index(index) {}
+
+    static constexpr uint16_t UNINITIALIZED = std::numeric_limits<uint16_t>::max();
+    // index to the resource handle
+    uint16_t index = UNINITIALIZED;
+
+public:
+    FrameGraphRenderTarget() noexcept = default;
+
+    struct Descriptor {
+        uint32_t width = 1;             // width of resource in pixel
+        uint32_t height = 1;            // height of resource in pixel
+        uint8_t samples = 1;            // # of samples
+        struct {
+            FrameGraphResource color;   // color attachment
+            FrameGraphResource depth;   // depth attachment
+        } attachments;
+    };
+
+    bool isValid() const noexcept { return index != UNINITIALIZED; }
+
+    bool operator < (const FrameGraphRenderTarget& rhs) const noexcept {
+        return (index < rhs.index);
+    }
+
+    bool operator == (const FrameGraphRenderTarget& rhs) const noexcept {
+        return (index == rhs.index);
+    }
+
+    bool operator != (const FrameGraphRenderTarget& rhs) const noexcept {
+        return !operator==(rhs);
+    }
+};
+
 
 } // namespace filament
 

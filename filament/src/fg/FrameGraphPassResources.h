@@ -33,15 +33,14 @@ class FrameGraphResource;
 class FrameGraphPassResources {
 public:
 
-    struct RenderTarget {
+    struct RenderTargetInfo {
         Handle<HwRenderTarget> target;
         driver::RenderPassParams params;
     };
 
-    Handle<HwTexture> getTexture(FrameGraphResource r,
-            driver::TextureUsage attachment = driver::TextureUsage::DEFAULT) const noexcept;
+    Handle <HwTexture> getTexture(FrameGraphResource r) const noexcept;
 
-    RenderTarget const& getRenderTarget(FrameGraphResource r) const noexcept;
+    RenderTargetInfo const& getRenderTarget(FrameGraphRenderTarget r) const noexcept;
 
     FrameGraphResource::Descriptor const& getDescriptor(FrameGraphResource r) const noexcept;
 

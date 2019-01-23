@@ -43,6 +43,7 @@ namespace filament {
 namespace fg {
 struct Resource;
 struct ResourceNode;
+struct RenderTarget;
 struct PassNode;
 struct Alias;
 } // namespace fg
@@ -57,27 +58,29 @@ public:
         Builder(Builder const&) = delete;
         Builder& operator=(Builder const&) = delete;
 
-        // create a resource
-        using RWFlags = uint8_t;
-        static constexpr RWFlags NONE  = 0x0;
-        static constexpr RWFlags COLOR = 0x1;   // COLOR buffer access
-        static constexpr RWFlags DEPTH = 0x2;   // DEPTH buffer access
-
+        // TODO: should this always register a write? If the GPU doesn't write into the resource
+        // what's the point of creating it?
         // Create a virtual resource that can eventually turn into a concrete texture or
         // render target
-        FrameGraphResource createResource(const char* name,
+        FrameGraphResource declareTexture(const char* name,
                 FrameGraphResource::Descriptor const& desc = {}) noexcept;
 
+        FrameGraphRenderTarget declareRenderTarget(const char* name,
+                FrameGraphRenderTarget::Descriptor const& desc = {}) noexcept;
+
+        FrameGraphRenderTarget declareRenderTarget(FrameGraphResource texture) noexcept;
+
         // Read from a resource (i.e. add a reference to that resource)
-        FrameGraphResource read(FrameGraphResource const& input, RWFlags readFlags = COLOR);
+        FrameGraphResource read(FrameGraphResource const& input);
 
         // The resource will be used as a source of a blit()
-        FrameGraphResource blit(FrameGraphResource const& input, RWFlags readFlags = COLOR);
+        FrameGraphResource blit(FrameGraphResource const& input);
 
+        // TODO: should write be replaced by declareRenderTarget()?
         // Write to a resource (i.e. add a reference to the pass that's doing the writing))
         // Writing to a resource makes its handle invalid.
         // Writing to an imported resources adds a side-effect (see sideEffect() below).
-        FrameGraphResource write(FrameGraphResource const& output, RWFlags writeFlags = COLOR);
+        FrameGraphResource write(FrameGraphResource const& output);
 
         // Declare that this pass has side effects outside the framegraph (i.e. it can't be culled)
         // Calling write() on an imported resource automatically adds a side-effect.
@@ -122,8 +125,7 @@ public:
     }
 
     // Adds a reference to 'input', preventing it from being culled.
-    void present(FrameGraphResource input,
-            Builder::RWFlags sideEffects = Builder::COLOR | Builder::DEPTH);
+    void present(FrameGraphResource input);
 
     // Returns whether the resource handle is valid. A resource handle becomes invalid after
     // it's used to declare a resource write (see Builder::write()).
@@ -135,21 +137,14 @@ public:
 
     // Import a write-only render target from outside the framegraph and returns a handle to it.
     FrameGraphResource importResource(
-            const char* name, FrameGraphResource::Descriptor const& descriptor,
+            const char* name, FrameGraphRenderTarget::Descriptor const& descriptor,
             Handle<HwRenderTarget> target);
 
     // Import a read-only render target from outside the framegraph and returns a handle to it.
     FrameGraphResource importResource(
             const char* name, FrameGraphResource::Descriptor const& descriptor,
-            Handle<HwTexture> color,
-            Handle<HwTexture> depth = {});
+            Handle<HwTexture> color);
 
-    // Import a read/write render target from outside the framegraph and returns a handle to it.
-    FrameGraphResource importResource(
-            const char* name, FrameGraphResource::Descriptor const& descriptor,
-            Handle<HwRenderTarget> target,
-            Handle<HwTexture> color,
-            Handle<HwTexture> depth = {});
 
     // Moves the resource associated to the handle 'from' to the handle 'to'. After this call,
     // all handles referring to the resource 'to' are redirected to the resource 'from'
@@ -170,6 +165,7 @@ public:
 private:
     friend class FrameGraphPassResources;
     friend struct fg::PassNode;
+    friend struct fg::RenderTarget;
 
     template <typename T>
     using Allocator = utils::STLAllocator<T, details::LinearAllocatorArena>;
@@ -184,10 +180,19 @@ private:
             FrameGraphResource::Descriptor const& desc, bool imported) noexcept;
     fg::ResourceNode* getResource(FrameGraphResource r);
 
+    fg::RenderTarget& createRenderTarget(const char* name,
+            FrameGraphRenderTarget::Descriptor const& desc, bool imported) noexcept;
+
+    enum class DiscardPhase { START, END };
+    uint8_t computeDiscardFlags(DiscardPhase phase,
+            fg::PassNode const* curr, fg::PassNode const* first,
+            fg::RenderTarget const& renderTarget);
+
     details::LinearAllocatorArena mArena;
 
     Vector<fg::PassNode> mPassNodes;           // list of frame graph passes
     Vector<fg::ResourceNode> mResourceNodes;
+    Vector<fg::RenderTarget> mRenderTargets;
     Vector<fg::Resource> mResourceRegistry;    // frame graph concrete resources
     Vector<fg::Alias> mAliases;
 };
