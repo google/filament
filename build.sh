@@ -117,6 +117,7 @@ function build_clean {
     echo "Cleaning build directories..."
     rm -Rf out
     rm -Rf android/filament-android/build
+    rm -Rf android/filament-android/.externalNativeBuild
 }
 
 function generate_toolchain {
