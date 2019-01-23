@@ -26,5 +26,8 @@ elif [ "$LC_UNAME" == "darwin" ]; then
 fi
 source `dirname $0`/../common/build-common.sh
 
+yes | $ANDROID_HOME/tools/bin/sdkmanager --update >/dev/null && \
+    yes | $ANDROID_HOME/tools/bin/sdkmanager --licenses >/dev/null
+
 pushd `dirname $0`/../.. > /dev/null
 ./build.sh -p android -c $GENERATE_ARCHIVES $BUILD_DEBUG $BUILD_RELEASE
