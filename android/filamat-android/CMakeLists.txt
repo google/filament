@@ -53,8 +53,12 @@ set(CMAKE_SKIP_RPATH TRUE)
 
 set_target_properties(${TARGET} PROPERTIES
         CXX_STANDARD 14
-        COMPILE_FLAGS "-fno-exceptions -fvisibility=hidden $<$<PLATFORM_ID:Linux>:-fPIC>"
+        COMPILE_FLAGS "-fno-exceptions -fvisibility=hidden"
         LINK_FLAGS "${GC_SECTIONS} ${EXPORTED_SYMBOLS}")
+
+target_compile_options(${TARGET} PRIVATE
+        $<$<PLATFORM_ID:Linux>:-fPIC>
+)
 
 target_link_libraries(${TARGET} filamat)
 
