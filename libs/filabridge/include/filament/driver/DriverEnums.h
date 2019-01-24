@@ -436,10 +436,12 @@ enum class TextureFormat : uint16_t {
     SRGB8_ALPHA8_ASTC_12x12,
 };
 
-enum class TextureUsage : uint8_t {
-    DEFAULT,
-    COLOR_ATTACHMENT,
-    DEPTH_ATTACHMENT,
+enum TextureUsage : uint8_t {
+    COLOR_ATTACHMENT    = 0x1,
+    DEPTH_ATTACHMENT    = 0x2,
+    STENCIL_ATTACHMENT  = 0x4,
+    UPLOADABLE          = 0x8,
+    DEFAULT = UPLOADABLE
 };
 
 //! returns whether this format is an ETC2 compressed format

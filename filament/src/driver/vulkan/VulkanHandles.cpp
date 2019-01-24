@@ -403,9 +403,16 @@ VulkanTexture::VulkanTexture(VulkanContext& context, SamplerType target, uint8_t
         imageInfo.arrayLayers = 6;
         imageInfo.flags = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
     }
-    if (usage == TextureUsage::COLOR_ATTACHMENT) {
+    if (usage & TextureUsage::COLOR_ATTACHMENT) {
         imageInfo.usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-    } else if (usage == TextureUsage::DEPTH_ATTACHMENT) {
+    }
+    if (usage & TextureUsage::STENCIL_ATTACHMENT) {
+        imageInfo.usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+    }
+    if (usage & TextureUsage::UPLOADABLE) {
+        imageInfo.usage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    }
+    if (usage & TextureUsage::DEPTH_ATTACHMENT) {
         imageInfo.usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
     } else {
         // If it's a not an FBO target or a depth attachment, then it's safe to assume that it will
@@ -413,6 +420,7 @@ VulkanTexture::VulkanTexture(VulkanContext& context, SamplerType target, uint8_t
         // need to support GenerateMipmaps, it can be a blit source; ergo we set USAGE_TRANSFER_SRC.
         imageInfo.usage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
     }
+
     VkResult error = vkCreateImage(context.device, &imageInfo, VKALLOC, &textureImage);
     if (error) {
         utils::slog.d << "vkCreateImage: "
