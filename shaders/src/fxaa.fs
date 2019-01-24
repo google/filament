@@ -16,6 +16,12 @@
 #   define FXAA_GREEN_AS_LUMA 1
 #endif
 
+// This substitute for the built-in "mix" function exists to work around #732, seen with Vulkan
+// on the Pixel 3 + Android P.
+vec4 lerp(vec4 x, vec4 y, float a) {
+    return x * (1.0 - a) + y * a;
+}
+
 /**
   G3D version of FXAA. See copyright and warranty statement below.
 
@@ -635,7 +641,7 @@ FxaaFloat4 fxaa(
         // Keep some of the original contribution to avoid thin lines degrading completely
         // and overblurring. This is an addition to the original Lottes algorithm
         // rgbyB = sqrt(lerp(rgbyB * rgbyB, rgbyM * rgbyM, 0.25));  // Luminance preserving
-        rgbyB = mix(rgbyB, rgbyM, 0.25); // Faster
+        rgbyB = lerp(rgbyB, rgbyM, 0.25); // Faster
 #   endif
     return rgbyB; 
 }
