@@ -231,7 +231,7 @@ endif()
 if (NOT ANDROID AND NOT WEBGL AND NOT IOS)
     option(FILAMENT_BUILD_FILAMAT "Build filamat and JNI buildings" ON)
 else()
-    option(FILAMENT_BUILD_FILAMAT "Include the Vulkan backend" OFF)
+    option(FILAMENT_BUILD_FILAMAT "Build filamat and JNI buildings" OFF)
 endif()
 
 # ==================================================================================================
