@@ -262,7 +262,7 @@ Your Linux distribution might default to `gcc` instead of `clang`, if that's the
 $ mkdir out/cmake-release
 $ cd out/cmake-release
 # Or use a specific version of clang, for instance /usr/bin/clang-5.0
-$ CC=/usr/bin/clang CXX=/usr/bin/clang++ \
+$ CC=/usr/bin/clang CXX=/usr/bin/clang++ CXXFLAGS=-stdlib=libc++ \
     cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=../release/filament ../..
 ```
 
