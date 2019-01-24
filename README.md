@@ -155,7 +155,7 @@ and tools.
 To build Filament, you must first install the following tools:
 
 - CMake 3.4 (or more recent)
-- clang 5.0 (or more recent)
+- clang 7.0 (or more recent)
 - [ninja 1.8](https://github.com/ninja-build/ninja/wiki/Pre-built-Ninja-packages) (or more recent)
 
 To build the Java based components of the project you can optionally install (recommended):
@@ -231,8 +231,8 @@ If you use CMake directly instead of the build script, pass `-DENABLE_JAVA=OFF` 
 Make sure you've installed the following dependencies:
 
 - `libglu1-mesa-dev`
-- `libc++-dev` (`libcxx-devel` on Fedora)
-- `libc++abi-dev`
+- `libc++-7-dev` (`libcxx-devel` on Fedora)
+- `libc++abi-7-dev`
 - `ninja-build`
 - `libxi-dev`
 
@@ -261,8 +261,8 @@ Your Linux distribution might default to `gcc` instead of `clang`, if that's the
 ```
 $ mkdir out/cmake-release
 $ cd out/cmake-release
-# Or use a specific version of clang, for instance /usr/bin/clang-5.0
-$ CC=/usr/bin/clang CXX=/usr/bin/clang++ CXXFLAGS=-stdlib=libc++ \
+# Or use a specific version of clang, for instance /usr/bin/clang-7
+$ CC=/usr/bin/clang CXX=/usr/bin/clang++ CXXFLAGS=-stdlib=libc++ LDFLAGS=-lc++abi \
     cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=../release/filament ../..
 ```
 
@@ -273,8 +273,8 @@ specific version of clang:
 ```
 $ update-alternatives --install /usr/bin/cc cc /usr/bin/clang 100
 $ update-alternatives --install /usr/bin/c++ c++ /usr/bin/clang++ 100
-$ update-alternatives --install /usr/bin/clang clang /usr/bin/clang-5.0 100
-$ update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-5.0 100
+$ update-alternatives --install /usr/bin/clang clang /usr/bin/clang-7 100
+$ update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-7 100
 ```
 
 Finally, invoke `ninja`:
