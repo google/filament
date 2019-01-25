@@ -77,6 +77,12 @@ android {
     sourceSets {
         main {
             jni.srcDirs "src/main/cpp"
+            // To enable validation layers with the Vulkan backend, uncomment the following lines
+            // to copy the appropriate files from the NDK to the device. Also be sure to use a debug
+            // configuration for the native build.
+            // jniLibs {
+            //     srcDirs = ["${android.ndkDirectory}/sources/third_party/vulkan/src/build-android/jniLibs"]
+            // }
         }
     }
 

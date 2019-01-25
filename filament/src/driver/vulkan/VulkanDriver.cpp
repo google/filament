@@ -82,6 +82,15 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform,
             }
         }
     }
+
+    // To enable validation layers in Android, set the jniLibs property in the gradle file for
+    // filament-android as follows. This copies the appropriate libraries from the NDK to the
+    // device. This makes the aar much larger, so it should be avoided in release builds.
+    //
+    // sourceSets { main { jniLibs {
+    //   srcDirs = ["${android.ndkDirectory}/sources/third_party/vulkan/src/build-android/jniLibs"]
+    // } } }
+
     if (!enabledLayers.empty()) {
         instanceCreateInfo.enabledLayerCount = (uint32_t) enabledLayers.size();
         instanceCreateInfo.ppEnabledLayerNames = enabledLayers.data();
