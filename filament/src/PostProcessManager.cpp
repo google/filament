@@ -194,28 +194,25 @@ FrameGraphResource PostProcessManager::msaa(FrameGraph& fg,
     struct PostProcessMSAA {
         FrameGraphResource input;
         FrameGraphResource output;
-        FrameGraphRenderTarget inRenderTarget;
-        FrameGraphRenderTarget outRenderTarget;
     };
 
     auto& ppMSAA = fg.addPass<PostProcessMSAA>("msaa",
             [&](FrameGraph::Builder& builder, PostProcessMSAA& data) {
                 auto const* inputDesc = fg.getDescriptor(input);
-                data.input = builder.blit(input);
-                data.inRenderTarget = builder.declareRenderTarget(data.input);
+                data.input = builder.useRenderTarget(input).textures[0];
 
                 FrameGraphResource::Descriptor outputDesc{
                         .width = inputDesc->width,
                         .height = inputDesc->height,
                         .format = outFormat
                 };
-                data.output = builder.write(builder.declareTexture("msaa output", outputDesc));
-                data.outRenderTarget = builder.declareRenderTarget(data.output);
+                data.output = builder.createTexture("msaa output", outputDesc);
+                data.output = builder.useRenderTarget(data.output).textures[0];
             },
             [=](FrameGraphPassResources const& resources,
                     PostProcessMSAA const& data, DriverApi& driver) {
-                auto in = resources.getRenderTarget(data.inRenderTarget);
-                auto out = resources.getRenderTarget(data.outRenderTarget);
+                auto in = resources.getRenderTarget(data.input);
+                auto out = resources.getRenderTarget(data.output);
                 auto const& desc = resources.getDescriptor(data.input);
                 driver.blit(TargetBufferFlags::COLOR,
                         out.target, 0, 0, desc.width, desc.height,
@@ -234,7 +231,6 @@ FrameGraphResource PostProcessManager::toneMapping(FrameGraph& fg,
     struct PostProcessToneMapping {
         FrameGraphResource input;
         FrameGraphResource output;
-        FrameGraphRenderTarget outRenderTarget;
     };
     Handle<HwProgram> toneMappingProgram = engine->getPostProcessProgram(
             translucent ? PostProcessStage::TONE_MAPPING_TRANSLUCENT
@@ -250,9 +246,8 @@ FrameGraphResource PostProcessManager::toneMapping(FrameGraph& fg,
                         .height = inputDesc->height,
                         .format = outFormat
                 };
-                data.output = builder.write(
-                        builder.declareTexture("tonemapping output", outputDesc));
-                data.outRenderTarget = builder.declareRenderTarget(data.output);
+                data.output = builder.createTexture("tonemapping output", outputDesc);
+                data.output = builder.useRenderTarget(data.output).textures[0];
             },
             [=](FrameGraphPassResources const& resources,
                     PostProcessToneMapping const& data, DriverApi& driver) {
@@ -267,7 +262,7 @@ FrameGraphResource PostProcessManager::toneMapping(FrameGraph& fg,
                 auto const& texture = resources.getTexture(data.input);
                 setSource(targetDesc.width, targetDesc.height, texture, textureDesc.width, textureDesc.height);
 
-                auto const& target = resources.getRenderTarget(data.outRenderTarget);
+                auto const& target = resources.getRenderTarget(data.output);
                 driver.beginRenderPass(target.target, target.params);
                 driver.draw(pipeline, fullScreenRenderPrimitive);
                 driver.endRenderPass();
@@ -285,7 +280,6 @@ FrameGraphResource PostProcessManager::fxaa(FrameGraph& fg,
     struct PostProcessFXAA {
         FrameGraphResource input;
         FrameGraphResource output;
-        FrameGraphRenderTarget outRenderTarget;
     };
 
     Handle<HwProgram> antiAliasingProgram = engine->getPostProcessProgram(
@@ -303,8 +297,8 @@ FrameGraphResource PostProcessManager::fxaa(FrameGraph& fg,
                         .height = inputDesc->height,
                         .format = outFormat
                 };
-                data.output = builder.write(builder.declareTexture("fxaa output", outputDesc));
-                data.outRenderTarget = builder.declareRenderTarget(data.output);
+                data.output = builder.createTexture("fxaa output", outputDesc);
+                data.output = builder.useRenderTarget(data.output).textures[0];
             },
             [=](FrameGraphPassResources const& resources,
                     PostProcessFXAA const& data, DriverApi& driver) {
@@ -319,7 +313,7 @@ FrameGraphResource PostProcessManager::fxaa(FrameGraph& fg,
                 auto const& texture = resources.getTexture(data.input);
                 setSource(targetDesc.width, targetDesc.height, texture, textureDesc.width, textureDesc.height);
 
-                auto const& target = resources.getRenderTarget(data.outRenderTarget);
+                auto const& target = resources.getRenderTarget(data.output);
                 driver.beginRenderPass(target.target, target.params);
                 driver.draw(pipeline, fullScreenRenderPrimitive);
                 driver.endRenderPass();
@@ -335,28 +329,25 @@ FrameGraphResource PostProcessManager::dynamicScaling(FrameGraph& fg,
     struct PostProcessScaling {
         FrameGraphResource input;
         FrameGraphResource output;
-        FrameGraphRenderTarget inRenderTarget;
-        FrameGraphRenderTarget outRenderTarget;
     };
 
     auto& ppScaling = fg.addPass<PostProcessScaling>("scaling",
             [&](FrameGraph::Builder& builder, PostProcessScaling& data) {
                 auto* inputDesc = fg.getDescriptor(input);
-                data.input = builder.blit(input);
-                data.inRenderTarget = builder.declareRenderTarget(data.input);
+                data.input = builder.useRenderTarget(input).textures[0];
 
                 FrameGraphResource::Descriptor outputDesc{
                         .width = inputDesc->width,
                         .height = inputDesc->height,
                         .format = outFormat
                 };
-                data.output = builder.write(builder.declareTexture("scale output", outputDesc));
-                data.outRenderTarget = builder.declareRenderTarget(data.output);
+                data.output = builder.createTexture("scale output", outputDesc);
+                data.output = builder.useRenderTarget(data.output).textures[0];
             },
             [=](FrameGraphPassResources const& resources,
                     PostProcessScaling const& data, DriverApi& driver) {
-                auto in = resources.getRenderTarget(data.inRenderTarget);
-                auto out = resources.getRenderTarget(data.outRenderTarget);
+                auto in = resources.getRenderTarget(data.input);
+                auto out = resources.getRenderTarget(data.output);
                 auto const& inDesc = resources.getDescriptor(data.input);
                 driver.blit(TargetBufferFlags::COLOR,
                         out.target, outViewport.left, outViewport.bottom, outViewport.width,

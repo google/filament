@@ -19,12 +19,14 @@
 
 
 #include "FrameGraphPass.h"
+#include "FrameGraphPassResources.h"
 #include "FrameGraphResource.h"
 
-#include "driver/DriverApiForward.h"
-#include "FrameGraphPassResources.h"
-
 #include "details/Allocators.h"
+
+#include "driver/DriverApiForward.h"
+
+#include <filament/driver/DriverEnums.h>
 
 #include <utils/Log.h>
 
@@ -55,38 +57,45 @@ public:
 
     class Builder {
     public:
+        using Attachments = FrameGraphRenderTarget::Attachments;
+
         Builder(Builder const&) = delete;
         Builder& operator=(Builder const&) = delete;
 
-        // TODO: should this always register a write? If the GPU doesn't write into the resource
-        // what's the point of creating it?
         // Create a virtual resource that can eventually turn into a concrete texture or
         // render target
-        FrameGraphResource declareTexture(const char* name,
+        FrameGraphResource createTexture(const char* name,
                 FrameGraphResource::Descriptor const& desc = {}) noexcept;
-
-        FrameGraphRenderTarget declareRenderTarget(const char* name,
-                FrameGraphRenderTarget::Descriptor const& desc = {}) noexcept;
-
-        FrameGraphRenderTarget declareRenderTarget(FrameGraphResource texture) noexcept;
 
         // Read from a resource (i.e. add a reference to that resource)
         FrameGraphResource read(FrameGraphResource const& input);
 
-        // The resource will be used as a source of a blit()
-        FrameGraphResource blit(FrameGraphResource const& input);
+        /*
+         * Use this resource as a render target.
+         * This implies both reading and writing to the resource -- but unlike Builder::read()
+         * this doesn't allow reading with a texture sampler.
+         * Writing to a resource:
+         *   - adds a reference to the pass that's doing the writing
+         *   - makes its handle invalid.
+         *   - [imported resource only] adds a side-effect (see sideEffect() below
+         */
+        Attachments useRenderTarget(const char* name,
+                FrameGraphRenderTarget::Descriptor const& desc,
+                driver::TargetBufferFlags clearFlags = {}) noexcept;
 
-        // TODO: should write be replaced by declareRenderTarget()?
-        // Write to a resource (i.e. add a reference to the pass that's doing the writing))
-        // Writing to a resource makes its handle invalid.
-        // Writing to an imported resources adds a side-effect (see sideEffect() below).
-        FrameGraphResource write(FrameGraphResource const& output);
+        // helper for single color attachment
+        Attachments useRenderTarget(FrameGraphResource texture,
+                driver::TargetBufferFlags clearFlags = {}) noexcept;
 
         // Declare that this pass has side effects outside the framegraph (i.e. it can't be culled)
         // Calling write() on an imported resource automatically adds a side-effect.
         Builder& sideEffect() noexcept;
 
     private:
+        // this is private for now because we only have textures, and this is for regular buffers
+        FrameGraphResource write(FrameGraphResource const& output);
+        FrameGraphResource read(FrameGraphResource const& input, bool doesntNeedTexture);
+
         friend class FrameGraph;
         Builder(FrameGraph& fg, fg::PassNode& pass) noexcept;
         ~Builder() noexcept;
@@ -110,8 +119,8 @@ public:
     FrameGraphPass<Data, Execute>& addPass(const char* name, Setup setup, Execute&& execute) {
         static_assert(sizeof(Execute) < 1024, "Execute() lambda is capturing too much data.");
 
-        // create the FrameGraph pass (TODO: use special allocator)
-        auto* const pass = new FrameGraphPass<Data, Execute>(std::forward<Execute>(execute));
+        // create the FrameGraph pass
+        auto* const pass = mArena.make<FrameGraphPass<Data, Execute>>(std::forward<Execute>(execute));
 
         // record in our pass list
         fg::PassNode& node = createPass(name, pass);
@@ -138,7 +147,9 @@ public:
     // Import a write-only render target from outside the framegraph and returns a handle to it.
     FrameGraphResource importResource(
             const char* name, FrameGraphRenderTarget::Descriptor const& descriptor,
-            Handle<HwRenderTarget> target);
+            Handle<HwRenderTarget> target,
+            driver::TargetBufferFlags discardStart = driver::TargetBufferFlags::NONE,
+            driver::TargetBufferFlags discardEnd = driver::TargetBufferFlags::NONE);
 
     // Import a read-only render target from outside the framegraph and returns a handle to it.
     FrameGraphResource importResource(
@@ -168,10 +179,14 @@ private:
     friend struct fg::RenderTarget;
 
     template <typename T>
-    using Allocator = utils::STLAllocator<T, details::LinearAllocatorArena>;
-
-    template <typename T>
-    using Vector = std::vector<T, Allocator<T>>;
+    struct Deleter {
+        FrameGraph& fg;
+        Deleter(FrameGraph& fg) noexcept : fg(fg) {} // NOLINT(google-explicit-constructor)
+        void operator()(T* object) noexcept { fg.mArena.destroy(object); }
+    };
+    template <typename T> using UniquePtr = std::unique_ptr<T, Deleter<T>>;
+    template <typename T> using Allocator = utils::STLAllocator<T, details::LinearAllocatorArena>;
+    template <typename T> using Vector = std::vector<T, Allocator<T>>; // 32 bytes
 
     auto& getArena() noexcept { return mArena; }
 
@@ -189,12 +204,12 @@ private:
             fg::RenderTarget const& renderTarget);
 
     details::LinearAllocatorArena mArena;
-
-    Vector<fg::PassNode> mPassNodes;           // list of frame graph passes
-    Vector<fg::ResourceNode> mResourceNodes;
+    Vector<fg::PassNode> mPassNodes;                    // list of frame graph passes
+    Vector<fg::ResourceNode> mResourceNodes;            // list of resource nodes
+    Vector<UniquePtr<fg::Resource>> mResourceRegistry;  // list actual resources
     Vector<fg::RenderTarget> mRenderTargets;
-    Vector<fg::Resource> mResourceRegistry;    // frame graph concrete resources
     Vector<fg::Alias> mAliases;
+    uint16_t mId = 0;
 };
 
 } // namespace filament
