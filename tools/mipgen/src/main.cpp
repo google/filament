@@ -30,6 +30,7 @@
 
 #include <fstream>
 #include <iostream>
+#include <string>
 
 using namespace image;
 using namespace std;
@@ -38,7 +39,7 @@ using namespace utils;
 static ImageEncoder::Format g_format = ImageEncoder::Format::PNG_LINEAR;
 static bool g_formatSpecified = false;
 static bool g_createGallery = false;
-static string g_compression = "";
+static std::string g_compression = "";
 static Filter g_filter = Filter::DEFAULT;
 static bool g_addAlpha = false;
 static bool g_stripAlpha = false;
@@ -121,10 +122,10 @@ static const char* HTML_SUFFIX = R"HTML(</body>
 )HTML";
 
 static void printUsage(const char* name) {
-    string execName(Path(name).getName());
-    const string from("MIPGEN");
-    string usage(USAGE);
-    for (size_t pos = usage.find(from); pos != string::npos; pos = usage.find(from, pos)) {
+    std::string execName(Path(name).getName());
+    const std::string from("MIPGEN");
+    std::string usage(USAGE);
+    for (size_t pos = usage.find(from); pos != std::string::npos; pos = usage.find(from, pos)) {
         usage.replace(pos, from.length(), execName);
     }
     puts(usage.c_str());
@@ -156,7 +157,7 @@ static int handleArguments(int argc, char* argv[]) {
     int optionIndex = 0;
 
     while ((opt = getopt_long(argc, argv, OPTSTR, OPTIONS, &optionIndex)) >= 0) {
-        string arg(optarg ? optarg : "");
+        std::string arg(optarg ? optarg : "");
         switch (opt) {
             default:
             case 'h':
@@ -234,7 +235,7 @@ int main(int argc, char* argv[]) {
         return 1;
     }
     Path inputPath(argv[optionIndex++]);
-    string outputPattern(argv[optionIndex]);
+    std::string outputPattern(argv[optionIndex]);
     if (Path(outputPattern).getExtension() == "ktx") {
         g_ktxContainer = true;
         g_formatSpecified = true;
