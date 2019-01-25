@@ -2367,7 +2367,8 @@ using an environment made of colored vertical stripes (skybox hidden).](images/i
 When sampling the IBL, the clear coat layer is calculated as a second specular lobe. This specular lobe is oriented along the view direction since we cannot reasonably integrate over the hemisphere. Listing [clearCoatIBL] demonstrates this approximation in practice. It also shows the energy conservation step. It is important to note that this second specular lobe is computed exactly the same way as the main specular lobe, using the same DFG approximation.
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-float Fc = F_Schlick(0.04, 1.0, shading_NoV) * clearCoat;
+// clearCoat_NoV == shading_NoV if the clear coat layer doesn't have its own normal map
+float Fc = F_Schlick(0.04, 1.0, clearCoat_NoV) * clearCoat;
 // base layer attenuation for energy compensation
 iblDiffuse  *= 1.0 - Fc;
 iblSpecular *= sq(1.0 - Fc);
