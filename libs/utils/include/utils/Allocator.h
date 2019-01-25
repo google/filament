@@ -157,6 +157,10 @@ public:
         aligned_free(p);
     }
 
+    void free(void* p, size_t) noexcept {
+        free(p);
+    }
+
     // Allocators can't be copied
     HeapAllocator(const HeapAllocator& rhs) = delete;
     HeapAllocator& operator=(const HeapAllocator& rhs) = delete;
@@ -335,7 +339,7 @@ public:
         return mFreeList.pop();
     }
 
-    void free(void* p) noexcept {
+    void free(void* p, size_t = ELEMENT_SIZE) noexcept {
         mFreeList.push(p);
     }
 
@@ -598,7 +602,7 @@ public:
     void destroy(T* p) noexcept {
         if (p) {
             p->~T();
-            this->free((void*)p);
+            this->free((void*)p, sizeof(T));
         }
     }
 
