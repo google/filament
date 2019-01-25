@@ -17,6 +17,8 @@
 #ifndef TNT_FILAMENT_FRAMEGRAPHPASSRESOURCES_H
 #define TNT_FILAMENT_FRAMEGRAPHPASSRESOURCES_H
 
+#include "FrameGraphResource.h"
+
 #include <filament/driver/DriverEnums.h>
 
 #include "driver/Handle.h"
@@ -28,7 +30,6 @@ struct PassNode;
 } // namespace fg
 
 class FrameGraph;
-class FrameGraphResource;
 
 class FrameGraphPassResources {
 public:
@@ -40,7 +41,7 @@ public:
 
     Handle <HwTexture> getTexture(FrameGraphResource r) const noexcept;
 
-    RenderTargetInfo const& getRenderTarget(FrameGraphRenderTarget r) const noexcept;
+    RenderTargetInfo getRenderTarget(FrameGraphResource r) const noexcept;
 
     FrameGraphResource::Descriptor const& getDescriptor(FrameGraphResource r) const noexcept;
 

@@ -23,6 +23,7 @@
 #include "driver/noop/NoopDriver.h"
 
 using namespace filament;
+using namespace driver;
 
 static CircularBuffer buffer(8192);
 static CommandStream driverApi(*NoopDriver::create(), buffer);
@@ -35,135 +36,161 @@ TEST(FrameGraphTest, SimpleRenderPass) {
 
     struct RenderPassData {
         FrameGraphResource output;
-        FrameGraphRenderTarget outRenderTarget;
     };
 
     auto& renderPass = fg.addPass<RenderPassData>("Render",
             [&](FrameGraph::Builder& builder, RenderPassData& data) {
-                FrameGraphResource::Descriptor desc {
-                    .format = driver::TextureFormat::RGBA16F
+                FrameGraphResource::Descriptor desc{
+                        .format = TextureFormat::RGBA16F
                 };
-                data.output = builder.write(builder.declareTexture("renderTarget", desc));
-                data.outRenderTarget = builder.declareRenderTarget(data.output);
-                EXPECT_TRUE(data.output.isValid());
+                data.output = builder.createTexture("color buffer", desc);
+                data.output = builder.useRenderTarget(data.output).textures[0];
                 EXPECT_TRUE(fg.isValid(data.output));
             },
             [=, &renderPassExecuted](
                     FrameGraphPassResources const& resources,
                     RenderPassData const& data,
-                    driver::DriverApi& driver) {
+                    DriverApi& driver) {
                 renderPassExecuted = true;
-                EXPECT_TRUE(resources.getRenderTarget(data.outRenderTarget).target);
+                auto const& rt = resources.getRenderTarget(data.output);
+                EXPECT_TRUE(rt.target);
+                EXPECT_EQ(TargetBufferFlags::ALL, rt.params.discardStart);
+                EXPECT_EQ(TargetBufferFlags::DEPTH_AND_STENCIL, rt.params.discardEnd);
 
             });
 
     fg.present(renderPass.getData().output);
-
     fg.compile();
     fg.execute(driverApi);
 
     EXPECT_TRUE(renderPassExecuted);
 }
 
-TEST(FrameGraphTest, SimpleRenderPassReadWrite) {
-
-    FrameGraph fg;
-
-    struct RenderPassData {
-        FrameGraphResource input;
-        FrameGraphResource output;
-    };
-
-    auto& renderPass = fg.addPass<RenderPassData>("Render",
-            [&](FrameGraph::Builder& builder, RenderPassData& data) {
-                auto r = builder.declareTexture("renderTarget", {});
-                data.output = builder.write(r);
-                data.input = builder.read(data.output);
-            },
-            [=](FrameGraphPassResources const& resources,
-                    RenderPassData const& data,
-                    driver::DriverApi& driver) {
-            });
-
-    fg.present(renderPass.getData().output);
-    fg.compile();
-    fg.export_graphviz(utils::slog.d);
-    fg.execute(driverApi);
-}
-
-
-TEST(FrameGraphTest, SimpleRenderAndPostProcessPasses) {
+TEST(FrameGraphTest, SimpleRenderPass2) {
 
     FrameGraph fg;
 
     bool renderPassExecuted = false;
-    bool postProcessPassExecuted = false;
 
     struct RenderPassData {
-        FrameGraphResource output;
-        FrameGraphRenderTarget outRenderTarget;
+        FrameGraphResource outColor;
+        FrameGraphResource outDepth;
     };
 
     auto& renderPass = fg.addPass<RenderPassData>("Render",
             [&](FrameGraph::Builder& builder, RenderPassData& data) {
-                FrameGraphResource::Descriptor desc {
-                        .format = driver::TextureFormat::RGBA16F
+                FrameGraphResource::Descriptor inputDesc{};
+                inputDesc.format = TextureFormat::RGBA16F;
+                data.outColor = builder.createTexture("color buffer", inputDesc);
+                inputDesc.format = TextureFormat::DEPTH24;
+                data.outDepth = builder.createTexture("depth buffer", inputDesc);
+                FrameGraphRenderTarget::Descriptor outputDesc{
+                        .attachments.color = data.outColor,
+                        .attachments.depth = data.outDepth
                 };
-                data.output = builder.write(builder.declareTexture("renderTarget", desc));
-                data.outRenderTarget = builder.declareRenderTarget(data.output);
-                EXPECT_TRUE(data.output.isValid());
-                EXPECT_TRUE(fg.isValid(data.output));
+                auto rt = builder.useRenderTarget("rt", outputDesc);
+                data.outColor = rt.textures[0];
+                data.outDepth = rt.textures[1];
+
+                EXPECT_TRUE(fg.isValid(data.outColor));
+                EXPECT_TRUE(fg.isValid(data.outDepth));
             },
             [=, &renderPassExecuted](
                     FrameGraphPassResources const& resources,
                     RenderPassData const& data,
-                    driver::DriverApi& driver) {
+                    DriverApi& driver) {
                 renderPassExecuted = true;
-                EXPECT_TRUE(resources.getRenderTarget(data.outRenderTarget).target);
+                auto const& rt = resources.getRenderTarget(data.outColor);
+                EXPECT_TRUE(rt.target);
+                EXPECT_EQ(TargetBufferFlags::ALL, rt.params.discardStart);
+                EXPECT_EQ(TargetBufferFlags::STENCIL, rt.params.discardEnd);
             });
 
-
-    struct PostProcessPassData {
-        FrameGraphResource input;
-        FrameGraphResource output;
-    };
-
-    auto& postProcessPass = fg.addPass<PostProcessPassData>("PostProcess",
-            [&](FrameGraph::Builder& builder, PostProcessPassData& data) {
-                data.input = builder.read(renderPass.getData().output);
-                data.output = builder.write(data.input);
-
-                auto* desc = fg.getDescriptor(data.output);
-
-                EXPECT_EQ(desc->format, driver::TextureFormat::RGBA16F);
-
-                EXPECT_TRUE(data.input.isValid());
-                EXPECT_TRUE(data.output.isValid());
-                EXPECT_FALSE(fg.isValid(data.input));
-                EXPECT_TRUE(fg.isValid(data.output));
-            },
-            [=, &postProcessPassExecuted](
-                    FrameGraphPassResources const& resources,
-                    PostProcessPassData const& data,
-                    driver::DriverApi& driver) {
-                postProcessPassExecuted = true;
-            });
-
-    fg.present(postProcessPass.getData().output);
-
-    EXPECT_FALSE(fg.isValid(renderPass.getData().output));
-    EXPECT_FALSE(fg.isValid(postProcessPass.getData().input));
-    EXPECT_TRUE(fg.isValid(postProcessPass.getData().output));
-
+    fg.present(renderPass.getData().outColor);
+    fg.present(renderPass.getData().outDepth);
     fg.compile();
-    //fg.export_graphviz(utils::slog.d);
     fg.execute(driverApi);
 
-
     EXPECT_TRUE(renderPassExecuted);
-    EXPECT_TRUE(postProcessPassExecuted);
 }
 
+TEST(FrameGraphTest, ScenarioDepthPrePass) {
+
+    FrameGraph fg;
+
+    bool depthPrepassExecuted = false;
+    bool colorPassExecuted = false;
+
+    struct DepthPrepassData {
+        FrameGraphResource outDepth;
+    };
+
+    auto& depthPrepass = fg.addPass<DepthPrepassData>("depth prepass",
+            [&](FrameGraph::Builder& builder, DepthPrepassData& data) {
+                FrameGraphResource::Descriptor inputDesc{};
+                inputDesc.format = TextureFormat::DEPTH24;
+                data.outDepth = builder.createTexture("depth buffer", inputDesc);
+                FrameGraphRenderTarget::Descriptor outputDesc{
+                        .attachments.depth = data.outDepth
+                };
+                data.outDepth = builder.useRenderTarget("rt depth", outputDesc).textures[1];
+                EXPECT_TRUE(fg.isValid(data.outDepth));
+            },
+            [=, &depthPrepassExecuted](
+                    FrameGraphPassResources const& resources,
+                    DepthPrepassData const& data,
+                    DriverApi& driver) {
+                depthPrepassExecuted = true;
+                auto const& rt = resources.getRenderTarget(data.outDepth);
+                EXPECT_TRUE(rt.target);
+                EXPECT_EQ(TargetBufferFlags::ALL, rt.params.discardStart);
+                EXPECT_EQ(TargetBufferFlags::COLOR_AND_STENCIL, rt.params.discardEnd);
+            });
+
+    struct ColorPassData {
+        FrameGraphResource outColor;
+        FrameGraphResource outDepth;
+    };
+
+    auto& colorPass = fg.addPass<ColorPassData>("color pass",
+            [&](FrameGraph::Builder& builder, ColorPassData& data) {
+                FrameGraphResource::Descriptor inputDesc{};
+                inputDesc.format = TextureFormat::RGBA16F;
+                data.outColor = builder.createTexture("color buffer", inputDesc);
+
+                // declare a read here, so a reference is added to the previous pass
+                data.outDepth = depthPrepass.getData().outDepth;
+
+                FrameGraphRenderTarget::Descriptor outputDesc{
+                        .attachments.color = data.outColor,
+                        .attachments.depth = data.outDepth
+                };
+                auto rt = builder.useRenderTarget("rt color+depth", outputDesc);
+                data.outColor = rt.textures[0];
+                data.outDepth = rt.textures[1];
+
+                EXPECT_FALSE(fg.isValid(depthPrepass.getData().outDepth));
+                EXPECT_TRUE(fg.isValid(data.outColor));
+                EXPECT_TRUE(fg.isValid(data.outDepth));
+            },
+            [=, &colorPassExecuted](
+                    FrameGraphPassResources const& resources,
+                    ColorPassData const& data,
+                    DriverApi& driver) {
+                colorPassExecuted = true;
+                auto const& rt = resources.getRenderTarget(data.outColor);
+                EXPECT_TRUE(rt.target);
+                EXPECT_EQ(TargetBufferFlags::COLOR_AND_STENCIL, rt.params.discardStart);
+                EXPECT_EQ(TargetBufferFlags::DEPTH_AND_STENCIL, rt.params.discardEnd);
+            });
+
+    fg.present(colorPass.getData().outColor);
+    fg.compile();
+    fg.execute(driverApi);
+
+    EXPECT_TRUE(depthPrepassExecuted);
+    EXPECT_TRUE(colorPassExecuted);
+}
 
 TEST(FrameGraphTest, SimplePassCulling) {
 
@@ -179,13 +206,18 @@ TEST(FrameGraphTest, SimplePassCulling) {
 
     auto& renderPass = fg.addPass<RenderPassData>("Render",
             [&](FrameGraph::Builder& builder, RenderPassData& data) {
-                data.output = builder.write(builder.declareTexture("renderTarget"));
+                data.output = builder.createTexture("renderTarget");
+                data.output = builder.useRenderTarget(data.output).textures[0];
             },
             [=, &renderPassExecuted](
                     FrameGraphPassResources const& resources,
                     RenderPassData const& data,
                     driver::DriverApi& driver) {
                 renderPassExecuted = true;
+                auto const& rt = resources.getRenderTarget(data.output);
+                EXPECT_TRUE(rt.target);
+                EXPECT_EQ(TargetBufferFlags::ALL, rt.params.discardStart);
+                EXPECT_EQ(TargetBufferFlags::DEPTH_AND_STENCIL, rt.params.discardEnd);
             });
 
 
@@ -197,13 +229,18 @@ TEST(FrameGraphTest, SimplePassCulling) {
     auto& postProcessPass = fg.addPass<PostProcessPassData>("PostProcess",
             [&](FrameGraph::Builder& builder, PostProcessPassData& data) {
                 data.input = builder.read(renderPass.getData().output);
-                data.output = builder.write(builder.declareTexture("postprocess-renderTarget"));
+                data.output = builder.createTexture("postprocess-renderTarget");
+                data.output = builder.useRenderTarget(data.output).textures[0];
             },
             [=, &postProcessPassExecuted](
                     FrameGraphPassResources const& resources,
                     PostProcessPassData const& data,
                     driver::DriverApi& driver) {
                 postProcessPassExecuted = true;
+                auto const& rt = resources.getRenderTarget(data.output);
+                EXPECT_TRUE(rt.target);
+                EXPECT_EQ(TargetBufferFlags::ALL, rt.params.discardStart);
+                EXPECT_EQ(TargetBufferFlags::DEPTH_AND_STENCIL, rt.params.discardEnd);
             });
 
 
@@ -215,7 +252,8 @@ TEST(FrameGraphTest, SimplePassCulling) {
     auto& culledPass = fg.addPass<CulledPassData>("CulledPass",
             [&](FrameGraph::Builder& builder, CulledPassData& data) {
                 data.input = builder.read(renderPass.getData().output);
-                data.output = builder.write(builder.declareTexture("unused-rendertarget"));
+                data.output = builder.createTexture("unused-rendertarget");
+                data.output = builder.useRenderTarget(data.output).textures[0];
             },
             [=, &culledPassExecuted](
                     FrameGraphPassResources const& resources,
@@ -239,195 +277,4 @@ TEST(FrameGraphTest, SimplePassCulling) {
     EXPECT_TRUE(renderPassExecuted);
     EXPECT_TRUE(postProcessPassExecuted);
     EXPECT_FALSE(culledPassExecuted);
-}
-
-
-TEST(FrameGraphTest, BadGraph) {
-
-    /*
-     * We invalidate and rename handles that are written into, to avoid undefined order
-     * access to the resources.
-     *
-     * e.g. forbidden graphs
-     *
-     *              +->[R1]-+
-     *             /         \
-     * [R0]->(A)--+           +-> (A)
-     *             \         /
-     *              +->[R2]-+        // failure when setting R2 from (A)
-     *
-     */
-
-    FrameGraph fg;
-
-    bool R0exec = false;
-    bool R1exec = false;
-    bool R2exec = false;
-
-    struct R0Data {
-        FrameGraphResource output;
-    };
-
-    auto& R0 = fg.addPass<R0Data>("R1",
-            [&](FrameGraph::Builder& builder, R0Data& data) {
-                data.output = builder.write(builder.declareTexture("A"));
-            },
-            [=, &R0exec](FrameGraphPassResources const&, R0Data const&, driver::DriverApi&) {
-                R0exec = true;
-            });
-
-
-    struct RData {
-        FrameGraphResource input;
-        FrameGraphResource output;
-    };
-
-    auto& R1 = fg.addPass<RData>("R1",
-            [&](FrameGraph::Builder& builder, RData& data) {
-                data.input = builder.read(R0.getData().output);
-                data.output = builder.write(data.input);
-            },
-            [=, &R1exec](FrameGraphPassResources const&, RData const&, driver::DriverApi&) {
-                R1exec = true;
-            });
-
-    fg.present(R1.getData().output);
-
-    auto& R2 = fg.addPass<RData>("R2",
-            [&](FrameGraph::Builder& builder, RData& data) {
-                EXPECT_FALSE(fg.isValid(R0.getData().output));
-            },
-            [=, &R2exec](FrameGraphPassResources const&, RData const&, driver::DriverApi&) {
-                R2exec = true;
-            });
-
-    EXPECT_FALSE(fg.isValid(R2.getData().output));
-
-    fg.compile();
-
-    fg.execute(driverApi);
-
-    EXPECT_TRUE(R0exec);
-    EXPECT_TRUE(R1exec);
-    EXPECT_FALSE(R2exec);
-}
-
-TEST(FrameGraphTest, ComplexGraph) {
-
-    FrameGraph fg;
-
-    struct DepthPassData {
-        FrameGraphResource output;
-    };
-    auto& depthPass = fg.addPass<DepthPassData>("Depth pass",
-            [&](FrameGraph::Builder& builder, DepthPassData& data) {
-                data.output = builder.write(builder.declareTexture("Depth Buffer"));
-            },
-            [=](FrameGraphPassResources const&, DepthPassData const&, driver::DriverApi&) {
-            });
-
-
-
-    // buggy pass
-    struct BuffyPassData {
-        FrameGraphResource input;
-        FrameGraphResource output;
-    };
-    auto& buggyPass = fg.addPass<BuffyPassData>("Bug",
-            [&](FrameGraph::Builder& builder, BuffyPassData& data) {
-                data.input = builder.read(depthPass.getData().output);
-                data.output = builder.write(builder.declareTexture("Buggy output"));
-            },
-            [&](FrameGraphPassResources const&, BuffyPassData const&, driver::DriverApi&) {
-            });
-    fg.present(buggyPass.getData().output);
-
-
-
-    struct GBufferPassData {
-        FrameGraphResource input;
-        FrameGraphResource output;
-        FrameGraphResource gbuffers[3];
-    };
-    auto& gbufferPass = fg.addPass<GBufferPassData>("Gbuffer pass",
-            [&](FrameGraph::Builder& builder, GBufferPassData& data) {
-                data.input = builder.read(depthPass.getData().output);
-                data.output = builder.write(data.input);
-                data.gbuffers[0] = builder.write(builder.declareTexture("Gbuffer 1"));
-                data.gbuffers[1] = builder.write(builder.declareTexture("Gbuffer 2"));
-                data.gbuffers[2] = builder.write(builder.declareTexture("Gbuffer 3"));
-            },
-            [=](FrameGraphPassResources const&, GBufferPassData const&, driver::DriverApi&) {
-            });
-
-
-    struct LightingPassData {
-        FrameGraphResource input[4];
-        FrameGraphResource output;
-    };
-    auto& lightingPass = fg.addPass<LightingPassData>("Lighting pass",
-            [&](FrameGraph::Builder& builder, LightingPassData& data) {
-                data.input[0] = builder.read(gbufferPass.getData().output);
-                data.input[1] = builder.read(gbufferPass.getData().gbuffers[0]);
-                data.input[2] = builder.read(gbufferPass.getData().gbuffers[1]);
-                data.input[3] = builder.read(gbufferPass.getData().gbuffers[2]);
-                data.output = builder.write(builder.declareTexture("Lighting buffer"));
-            },
-            [=](FrameGraphPassResources const&, LightingPassData const&, driver::DriverApi&) {
-            });
-
-
-    struct ConvolutionPassData {
-        FrameGraphResource input;
-        FrameGraphResource output;
-    };
-    auto& convolutionPass = fg.addPass<ConvolutionPassData>("Convolution",
-            [&](FrameGraph::Builder& builder, ConvolutionPassData& data) {
-                data.input = builder.read(gbufferPass.getData().gbuffers[2]); //builder.createTexture("Cubemap", Builder::READ, {});
-                data.output = builder.write(builder.declareTexture("Reflection probe"));
-            },
-            [=](FrameGraphPassResources const&, ConvolutionPassData const&, driver::DriverApi&) {
-            });
-
-    fg.present(lightingPass.getData().output);
-
-    //fg.moveResource(convolutionPass.getData().output, lightingPass.getData().output);
-
-    fg.compile();
-    //fg.export_graphviz(utils::slog.d);
-    fg.execute(driverApi);
-}
-
-TEST(FrameGraphTest, MoveResource) {
-
-    FrameGraph fg;
-
-    struct RenderPassData {
-        FrameGraphResource input;
-        FrameGraphResource output;
-    };
-
-    auto& renderPass = fg.addPass<RenderPassData>("Render",
-            [&](FrameGraph::Builder& builder, RenderPassData& data) {
-                data.input = builder.read(builder.declareTexture("render-inout"));
-                data.output = builder.write(data.input);
-            },
-            [=](FrameGraphPassResources const& resources, RenderPassData const& data, driver::DriverApi&) {
-            });
-    fg.present(renderPass.getData().output);
-
-    auto& debugPass = fg.addPass<RenderPassData>("Debug",
-            [&](FrameGraph::Builder& builder, RenderPassData& data) {
-                data.input = builder.read(builder.declareTexture("debug-inout"));
-                data.output = builder.write(data.input);
-            },
-            [=](FrameGraphPassResources const& resources, RenderPassData const& data, driver::DriverApi&) {
-            });
-    fg.present(debugPass.getData().output);
-
-    fg.moveResource(renderPass.getData().output, debugPass.getData().input);
-
-    fg.compile();
-    //fg.export_graphviz(utils::slog.d);
-    fg.execute(driverApi);
 }

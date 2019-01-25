@@ -45,15 +45,11 @@ class FrameGraphResource {
     friend struct fg::PassNode;
     friend struct fg::RenderTarget;
 
-    FrameGraphResource(uint16_t index, uint8_t version) noexcept
-            : index(index), version(version) {}
+    FrameGraphResource(uint16_t index) noexcept : index(index) {}
 
     static constexpr uint16_t UNINITIALIZED = std::numeric_limits<uint16_t>::max();
     // index to the resource handle
     uint16_t index = UNINITIALIZED;
-    // version of the resource when it was created. When this version doesn't match the
-    // resource handle's version, this resource has become invalid.
-    uint8_t version = 0;
 
 public:
     FrameGraphResource() noexcept = default;
@@ -70,11 +66,11 @@ public:
     bool isValid() const noexcept { return index != UNINITIALIZED; }
 
     bool operator < (const FrameGraphResource& rhs) const noexcept {
-        return (index == rhs.index) ? (version < rhs.version) : (index < rhs.index);
+        return index < rhs.index;
     }
 
     bool operator == (const FrameGraphResource& rhs) const noexcept {
-        return (index == rhs.index) && (version == rhs.version);
+        return (index == rhs.index);
     }
 
     bool operator != (const FrameGraphResource& rhs) const noexcept {
@@ -83,44 +79,28 @@ public:
 };
 
 
-class FrameGraphRenderTarget {
-    friend class FrameGraph;
-    friend class FrameGraphPassResources;
-    friend struct fg::PassNode;
+namespace FrameGraphRenderTarget {
 
-    explicit FrameGraphRenderTarget(uint16_t index) noexcept : index(index) {}
-
-    static constexpr uint16_t UNINITIALIZED = std::numeric_limits<uint16_t>::max();
-    // index to the resource handle
-    uint16_t index = UNINITIALIZED;
-
-public:
-    FrameGraphRenderTarget() noexcept = default;
-
-    struct Descriptor {
-        uint32_t width = 1;             // width of resource in pixel
-        uint32_t height = 1;            // height of resource in pixel
-        uint8_t samples = 1;            // # of samples
+struct Attachments {
+    enum { COLOR, DEPTH };
+    union {
+        FrameGraphResource textures[2] = {};
         struct {
-            FrameGraphResource color;   // color attachment
-            FrameGraphResource depth;   // depth attachment
-        } attachments;
+            FrameGraphResource color;
+            FrameGraphResource depth;
+        };
     };
-
-    bool isValid() const noexcept { return index != UNINITIALIZED; }
-
-    bool operator < (const FrameGraphRenderTarget& rhs) const noexcept {
-        return (index < rhs.index);
-    }
-
-    bool operator == (const FrameGraphRenderTarget& rhs) const noexcept {
-        return (index == rhs.index);
-    }
-
-    bool operator != (const FrameGraphRenderTarget& rhs) const noexcept {
-        return !operator==(rhs);
-    }
+    static constexpr size_t COUNT = sizeof(textures) / sizeof(*textures);
 };
+
+struct Descriptor {
+    uint32_t width = 1;             // width of resource in pixel
+    uint32_t height = 1;            // height of resource in pixel
+    uint8_t samples = 1;            // # of samples
+    Attachments attachments;
+};
+
+} // namespace FrameGraphRenderTarget
 
 
 } // namespace filament
