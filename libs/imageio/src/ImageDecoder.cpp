@@ -374,49 +374,62 @@ LinearImage HDRDecoder::decode() {
         uint16_t magic;
         std::unique_ptr<uint8_t[]> rgbe(new uint8_t[width * 4]);
 
-        for (uint32_t y = 0; y < height; y++) {
-            //std::cout << "line: " << y << std::endl;
-            mStream.read((char*) &magic, 2);
-            if (magic != 0x0202) {
-                throw std::runtime_error("invalid scanline (magic)");
-            }
-            mStream.read((char*) &w, 2);
-            if (ntohs(w) != width) {
-                throw std::runtime_error("invalid scanline (width)");
-            }
-
-            char* d = (char*) rgbe.get();
-            for (size_t p = 0; p < 4; p++) {
-                size_t num_bytes = 0;
-                while (num_bytes < width) {
-                    uint8_t rle_count;
-                    mStream.read((char*) &rle_count, 1);
-                    if (rle_count > 128) {
-                        char v;
-                        mStream.read(&v, 1);
-                        memset(d, v, size_t(rle_count - 128));
-                        d += rle_count - 128;
-                        num_bytes += rle_count - 128;
-                    } else {
-                        if (rle_count == 0) {
-                            throw std::runtime_error("run length is zero");
-                        }
-                        mStream.read(d, rle_count);
-                        d += rle_count;
-                        num_bytes += rle_count;
-                    }
+        if (width < 8 || width > 32767) {
+            for (uint32_t y = 0; y < height; y++) {
+                math::float3* i = reinterpret_cast<math::float3*>(image.getPixelRef(0, y));
+                mStream.read((char*) &rgbe, width * 4);
+                // (rgb/256) * 2^(e-128)
+                size_t pixel = 0;
+                for (size_t x = 0; x < width; x++, pixel += 4) {
+                    math::float3 v(rgbe[pixel], rgbe[pixel + 1], rgbe[pixel + 2]);
+                    i[x] = v * std::ldexp(1.0f, rgbe[pixel + 3] - (128 + 8));
                 }
             }
+        } else {
+            for (uint32_t y = 0; y < height; y++) {
+                //std::cout << "line: " << y << std::endl;
+                mStream.read((char*) &magic, 2);
+                if (magic != 0x0202) {
+                    throw std::runtime_error("invalid scanline (magic)");
+                }
+                mStream.read((char*) &w, 2);
+                if (ntohs(w) != width) {
+                    throw std::runtime_error("invalid scanline (width)");
+                }
 
-            uint8_t const* r = &rgbe[0];
-            uint8_t const* g = &rgbe[width];
-            uint8_t const* b = &rgbe[2 * width];
-            uint8_t const* e = &rgbe[3 * width];
-            math::float3* i = reinterpret_cast<math::float3*>(image.getPixelRef(0, y));
-            // (rgb/256) * 2^(e-128)
-            for (size_t x = 0; x < width; x++, r++, g++, b++, e++) {
-                math::float3 v(r[0], g[0], b[0]);
-                i[x] = v * std::ldexp(1.0f, e[0] - (128 + 8));
+                char* d = (char*) rgbe.get();
+                for (size_t p = 0; p < 4; p++) {
+                    size_t num_bytes = 0;
+                    while (num_bytes < width) {
+                        uint8_t rle_count;
+                        mStream.read((char*) &rle_count, 1);
+                        if (rle_count > 128) {
+                            char v;
+                            mStream.read(&v, 1);
+                            memset(d, v, size_t(rle_count - 128));
+                            d += rle_count - 128;
+                            num_bytes += rle_count - 128;
+                        } else {
+                            if (rle_count == 0) {
+                                throw std::runtime_error("run length is zero");
+                            }
+                            mStream.read(d, rle_count);
+                            d += rle_count;
+                            num_bytes += rle_count;
+                        }
+                    }
+                }
+
+                uint8_t const* r = &rgbe[0];
+                uint8_t const* g = &rgbe[width];
+                uint8_t const* b = &rgbe[2 * width];
+                uint8_t const* e = &rgbe[3 * width];
+                math::float3* i = reinterpret_cast<math::float3*>(image.getPixelRef(0, y));
+                // (rgb/256) * 2^(e-128)
+                for (size_t x = 0; x < width; x++, r++, g++, b++, e++) {
+                    math::float3 v(r[0], g[0], b[0]);
+                    i[x] = v * std::ldexp(1.0f, e[0] - (128 + 8));
+                }
             }
         }
 
