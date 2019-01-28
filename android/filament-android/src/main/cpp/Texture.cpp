@@ -36,8 +36,10 @@ using namespace driver;
 
 static size_t getTextureDataSize(const Texture *texture, size_t level,
         Texture::Format format, Texture::Type type, size_t stride, size_t alignment) {
+    // Zero stride implies tight row-to-row packing.
+    stride = stride == 0 ? texture->getWidth(level) : std::max(size_t(1), stride >> level);
     return Texture::computeTextureDataSize(format, type,
-            std::max(size_t(1), stride >> level), texture->getHeight(level), alignment);
+            stride, texture->getHeight(level), alignment);
 }
 
 extern "C" JNIEXPORT jboolean JNICALL
