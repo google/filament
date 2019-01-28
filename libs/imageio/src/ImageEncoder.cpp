@@ -448,9 +448,10 @@ size_t HDREncoder::countNonRepeats(uint8_t const* data, size_t length) {
             if (same >= 3) {
                 // non-repeats are always at least 3 bytes long
                 return i;
-            } else {
-                same = 1;
             }
+        } else {
+            same = 1;
+            v = data[i];
         }
     }
     return length;
@@ -492,33 +493,47 @@ bool HDREncoder::encode(const LinearImage& image) {
         mStream << "-Y " << std::to_string(height) << " "
                 << "+X " << std::to_string(width) << std::endl;
 
-        std::unique_ptr<uint8_t[]> rgbe(new uint8_t[width*4]);
-        uint8_t* const r = &rgbe[0];
-        uint8_t* const g = &rgbe[width];
-        uint8_t* const b = &rgbe[2*width];
-        uint8_t* const e = &rgbe[3*width];
-        uint16_t magic = 0x0202;
-        uint16_t widthNetwork = htons(width);
-
-        for (uint32_t y=0 ; y<height ; y++) {
-            // convert one scanline to RGBE
-            uint8_t p[4];
-            auto data = image.get<float3>(0, y);
-            for (size_t x=0 ; x<width ; ++x, ++data) {
-                float2rgbe(p, *data);
-                r[x] = p[0];
-                g[x] = p[1];
-                b[x] = p[2];
-                e[x] = p[3];
+        // The Radiance format is not expected to use RLE encoding when
+        // scanlines are less than 8 pixels or more than 32,767 pixels
+        if (width < 8 || width > 32767) {
+            for (uint32_t y = 0; y < height; y++) {
+                uint8_t p[4];
+                auto data = image.get<float3>(0, y);
+                for (size_t x = 0; x < width; ++x, ++data) {
+                    float2rgbe(p, *data);
+                    mStream.write((char*) &p, 4);
+                }
             }
-            // now RLE-compress each plane
-            mStream.write((char*)&magic, 2);
-            mStream.write((char*)&widthNetwork, 2);
-            rle(mStream, r, width);
-            rle(mStream, g, width);
-            rle(mStream, b, width);
-            rle(mStream, e, width);
+        } else {
+            std::unique_ptr<uint8_t[]> rgbe(new uint8_t[width*4]);
+            uint8_t* const r = &rgbe[0];
+            uint8_t* const g = &rgbe[width];
+            uint8_t* const b = &rgbe[2*width];
+            uint8_t* const e = &rgbe[3*width];
+            uint16_t magic = 0x0202;
+            uint16_t widthNetwork = htons(width);
+
+            for (uint32_t y = 0; y < height; y++) {
+                // convert one scanline to RGBE
+                uint8_t p[4];
+                auto data = image.get<float3>(0, y);
+                for (size_t x = 0; x < width; ++x, ++data) {
+                    float2rgbe(p, *data);
+                    r[x] = p[0];
+                    g[x] = p[1];
+                    b[x] = p[2];
+                    e[x] = p[3];
+                }
+                // now RLE-compress each plane
+                mStream.write((char*) &magic, 2);
+                mStream.write((char*) &widthNetwork, 2);
+                rle(mStream, r, width);
+                rle(mStream, g, width);
+                rle(mStream, b, width);
+                rle(mStream, e, width);
+            }
         }
+
         mStream.flush();
     } catch(std::runtime_error& e) {
         // reset the stream, like we found it
