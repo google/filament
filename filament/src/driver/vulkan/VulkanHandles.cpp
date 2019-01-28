@@ -404,7 +404,7 @@ VulkanUniformBuffer::~VulkanUniformBuffer() {
 VulkanTexture::VulkanTexture(VulkanContext& context, SamplerType target, uint8_t levels,
         TextureFormat tformat, uint8_t samples, uint32_t w, uint32_t h, uint32_t depth,
         TextureUsage usage, VulkanStagePool& stagePool) :
-        HwTexture(target, levels, samples, w, h, depth), srcformat(tformat),
+        HwTexture(target, levels, samples, w, h, depth, tformat),
         vkformat(getVkFormat(tformat)), mContext(context), mStagePool(stagePool) {
     // Create an appropriately-sized device-only VkImage, but do not fill it yet.
     VkImageCreateInfo imageInfo {
@@ -487,7 +487,7 @@ VulkanTexture::~VulkanTexture() {
 void VulkanTexture::update2DImage(const PixelBufferDescriptor& data, uint32_t width,
         uint32_t height, int miplevel) {
     assert(width <= this->width && height <= this->height);
-    const bool reshape = getBytesPerPixel(srcformat) == 3;
+    const bool reshape = getBytesPerPixel(format) == 3;
     const void* cpuData = data.buffer;
     const uint32_t numSrcBytes = data.size;
     const uint32_t numDstBytes = reshape ? (4 * numSrcBytes / 3) : numSrcBytes;
@@ -527,7 +527,7 @@ void VulkanTexture::update2DImage(const PixelBufferDescriptor& data, uint32_t wi
 void VulkanTexture::updateCubeImage(const PixelBufferDescriptor& data,
         const FaceOffsets& faceOffsets, int miplevel) {
     assert(this->target == SamplerType::SAMPLER_CUBEMAP);
-    const bool reshape = getBytesPerPixel(srcformat) == 3;
+    const bool reshape = getBytesPerPixel(format) == 3;
     const void* cpuData = data.buffer;
     const uint32_t numSrcBytes = data.size;
     const uint32_t numDstBytes = reshape ? (4 * numSrcBytes / 3) : numSrcBytes;

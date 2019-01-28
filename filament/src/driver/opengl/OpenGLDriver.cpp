@@ -993,7 +993,7 @@ void OpenGLDriver::createTexture(Driver::TextureHandle th, SamplerType target, u
         TextureUsage usage) {
     DEBUG_MARKER()
 
-    GLTexture* t = construct<GLTexture>(th, target, levels, samples, w, h, depth);
+    GLTexture* t = construct<GLTexture>(th, target, levels, samples, w, h, depth, format);
     glGenTextures(1, &t->gl.texture_id);
 
     // below we're using the a = foo(b = C) pattern, this is on purpose, to make sure
