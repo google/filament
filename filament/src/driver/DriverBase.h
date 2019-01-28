@@ -102,15 +102,16 @@ struct HwUniformBuffer : public HwBase {
 
 struct HwTexture : public HwBase {
     HwTexture(driver::SamplerType target, uint8_t levels, uint8_t samples,
-              uint32_t width, uint32_t height, uint32_t depth) noexcept
+              uint32_t width, uint32_t height, uint32_t depth, Driver::TextureFormat fmt) noexcept
             : width(width), height(height), depth(depth),
-              target(target), levels(levels), samples(samples) { }
+              target(target), levels(levels), samples(samples), format(fmt) { }
     uint32_t width;
     uint32_t height;
     uint32_t depth;
     driver::SamplerType target;
-    uint8_t levels;
-    uint8_t samples;
+    uint8_t levels : 4;  // This allows up to 15 levels (max texture size of 32768 x 32768)
+    uint8_t samples : 4; // In practice this is always 1.
+    Driver::TextureFormat format;
     HwStream* hwStream = nullptr;
 };
 

@@ -124,7 +124,6 @@ struct VulkanTexture : public HwTexture {
             int miplevel);
     void updateCubeImage(const PixelBufferDescriptor& data, const FaceOffsets& faceOffsets,
             int miplevel);
-    TextureFormat srcformat;
     VkFormat vkformat;
     VkImageView imageView = VK_NULL_HANDLE;
     VkImage textureImage = VK_NULL_HANDLE;
