@@ -31,6 +31,8 @@
 #include "app/FilamentApp.h"
 #include "app/IBL.h"
 
+#include <stb_image.h>
+
 #include "generated/resources/resources.h"
 #include "generated/resources/textures.h"
 
@@ -52,6 +54,23 @@ struct App {
 
 static const char* IBL_FOLDER = "envs/venetian_crossroads";
 
+static Texture* loadNormalMap(Engine* engine, const uint8_t* normals, size_t nbytes) {
+    int w, h, n;
+    unsigned char* data = stbi_load_from_memory(normals, nbytes, &w, &h, &n, 3);
+    Texture* normalMap = Texture::Builder()
+            .width(uint32_t(w))
+            .height(uint32_t(h))
+            .levels(0xff)
+            .format(driver::TextureFormat::RGB8)
+            .build(*engine);
+    Texture::PixelBufferDescriptor buffer(data, size_t(w * h * 3),
+            Texture::Format::RGB, Texture::Type::UBYTE,
+            (driver::BufferDescriptor::Callback) &stbi_image_free);
+    normalMap->setImage(*engine, 0, std::move(buffer));
+    normalMap->generateMipmaps(*engine);
+    return normalMap;
+}
+
 int main(int argc, char** argv) {
     Config config;
     config.title = "suzanne";
@@ -68,13 +87,12 @@ int main(int argc, char** argv) {
         auto albedo = new image::KtxBundle(TEXTURES_ALBEDO_S3TC_DATA, TEXTURES_ALBEDO_S3TC_SIZE);
         auto ao = new image::KtxBundle(TEXTURES_AO_DATA, TEXTURES_AO_SIZE);
         auto metallic = new image::KtxBundle(TEXTURES_METALLIC_DATA, TEXTURES_METALLIC_SIZE);
-        auto normal = new image::KtxBundle(TEXTURES_NORMAL_DATA, TEXTURES_NORMAL_SIZE);
         auto roughness = new image::KtxBundle(TEXTURES_ROUGHNESS_DATA, TEXTURES_ROUGHNESS_SIZE);
         app.albedo = KtxUtility::createTexture(engine, albedo, true, false);
         app.ao = KtxUtility::createTexture(engine, ao, false, false);
         app.metallic = KtxUtility::createTexture(engine, metallic, false, false);
-        app.normal = KtxUtility::createTexture(engine, normal, false, false);
         app.roughness = KtxUtility::createTexture(engine, roughness, false, false);
+        app.normal = loadNormalMap(engine, TEXTURES_NORMAL_DATA, TEXTURES_NORMAL_SIZE);
         TextureSampler sampler(TextureSampler::MinFilter::LINEAR_MIPMAP_LINEAR,
                 TextureSampler::MagFilter::LINEAR);
 

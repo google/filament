@@ -106,7 +106,7 @@ add_library(common-resources ${DUMMY_SRC} ${RESGEN_SOURCE})
 function(add_ktxfiles SOURCE TARGET EXTRA_ARGS)
     set(source_path "${ROOT_DIR}/${SOURCE}")
     set(target_path "${TEXTURE_DIR}/${TARGET}")
-    set(KTX_FILES ${KTX_FILES} ${target_path} PARENT_SCOPE)
+    set(TEXTURE_FILES ${TEXTURE_FILES} ${target_path} PARENT_SCOPE)
     add_custom_command(
         OUTPUT ${target_path}
         COMMAND mipgen --strip-alpha ${EXTRA_ARGS} ${source_path} ${target_path}
@@ -114,18 +114,29 @@ function(add_ktxfiles SOURCE TARGET EXTRA_ARGS)
         DEPENDS mipgen)
 endfunction()
 
+function(add_pngfile SOURCE TARGET)
+    set(source_path "${ROOT_DIR}/${SOURCE}")
+    set(target_path "${TEXTURE_DIR}/${TARGET}")
+    set(TEXTURE_FILES ${TEXTURE_FILES} ${target_path} PARENT_SCOPE)
+    add_custom_command(
+        OUTPUT ${target_path}
+        COMMAND cmake -E copy ${source_path} ${target_path}
+        MAIN_DEPENDENCY ${source_path})
+endfunction()
+
 add_ktxfiles("assets/models/monkey/albedo.png" "albedo_s3tc.ktx" "--compression=s3tc_rgb_dxt1")
-add_ktxfiles("assets/models/monkey/normal.png" "normal.ktx" "--kernel=NORMALS;--linear")
 add_ktxfiles("assets/models/monkey/roughness.png" "roughness.ktx" "--grayscale")
 add_ktxfiles("assets/models/monkey/metallic.png" "metallic.ktx" "--grayscale")
 add_ktxfiles("assets/models/monkey/ao.png" "ao.ktx" "--grayscale")
+
+add_pngfile("assets/models/monkey/normal.png" "normal.png")
 
 get_resgen_vars(${RESOURCE_DIR} textures)
 
 add_custom_command(
         OUTPUT ${RESGEN_OUTPUTS}
-        COMMAND resgen ${RESGEN_FLAGS} ${KTX_FILES}
-        DEPENDS resgen ${KTX_FILES}
+        COMMAND resgen ${RESGEN_FLAGS} ${TEXTURE_FILES}
+        DEPENDS resgen ${TEXTURE_FILES}
         COMMENT "Aggregating textures"
 )
 
