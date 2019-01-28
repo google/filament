@@ -51,17 +51,17 @@ public:
     static PNGDecoder* create(std::istream& stream);
     static bool checkSignature(char const* buf);
 
+    PNGDecoder(const PNGDecoder&) = delete;
+    PNGDecoder& operator=(const PNGDecoder&) = delete;
+
 private:
     explicit PNGDecoder(std::istream& stream);
-    PNGDecoder(const PNGDecoder&) = delete;
-    ~PNGDecoder();
-
-    PNGDecoder& operator = (const PNGDecoder&) = delete;
+    ~PNGDecoder() override;
 
     void init();
 
     // ImageDecoder::Decoder interface
-    virtual LinearImage decode() override;
+    LinearImage decode() override;
 
     static void cb_error(png_structp, png_const_charp);
     static void cb_stream(png_structp png, png_bytep buffer, png_size_t size);
@@ -78,19 +78,19 @@ private:
 // -----------------------------------------------------------------------------------------------
 
 class HDRDecoder : public ImageDecoder::Decoder {
-    friend class ImageDecoder;
+public:
     static HDRDecoder* create(std::istream& stream);
     static bool checkSignature(char const* buf);
 
-private:
-    explicit HDRDecoder(std::istream& stream);
     HDRDecoder(const HDRDecoder&) = delete;
-    ~HDRDecoder();
-
     HDRDecoder& operator=(const HDRDecoder&) = delete;
 
+private:
+    explicit HDRDecoder(std::istream& stream);
+    ~HDRDecoder() override;
+
     // ImageDecoder::Decoder interface
-    virtual LinearImage decode() override;
+    LinearImage decode() override;
 
     static const char sigRadiance[];
     static const char sigRGBE[];
@@ -101,19 +101,19 @@ private:
 // -----------------------------------------------------------------------------------------------
 
 class PSDDecoder : public ImageDecoder::Decoder {
-    friend class ImageDecoder;
+public:
     static PSDDecoder* create(std::istream& stream);
     static bool checkSignature(char const* buf);
 
+    PSDDecoder(const PSDDecoder&) = delete;
+    PSDDecoder& operator=(const PSDDecoder&) = delete;
+
 private:
     explicit PSDDecoder(std::istream& stream);
-    PSDDecoder(const PSDDecoder&) = delete;
-    ~PSDDecoder();
-
-    PSDDecoder& operator = (const PSDDecoder&) = delete;
+    ~PSDDecoder() override;
 
     // ImageDecoder::Decoder interface
-    virtual LinearImage decode() override;
+    LinearImage decode() override;
 
     static const char sig[];
     std::istream& mStream;
@@ -123,19 +123,19 @@ private:
 // -----------------------------------------------------------------------------------------------
 
 class EXRDecoder : public ImageDecoder::Decoder {
-    friend class ImageDecoder;
+public:
     static EXRDecoder* create(std::istream& stream, const std::string& sourceName);
     static bool checkSignature(char const* buf);
 
-private:
-    EXRDecoder(std::istream& stream, const std::string& sourceName);
     EXRDecoder(const EXRDecoder&) = delete;
-    ~EXRDecoder();
-
     EXRDecoder& operator = (const EXRDecoder&) = delete;
 
+private:
+    EXRDecoder(std::istream& stream, const std::string& sourceName);
+    ~EXRDecoder() override;
+
     // ImageDecoder::Decoder interface
-    virtual LinearImage decode() override;
+    LinearImage decode() override;
 
     static const char sig[];
     std::istream& mStream;
@@ -220,16 +220,16 @@ bool PNGDecoder::checkSignature(char const* buf) {
 
 PNGDecoder::PNGDecoder(std::istream& stream)
     : mStream(stream), mStreamStartPos(stream.tellg()) {
-        mPNG = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+        mPNG = png_create_read_struct(PNG_LIBPNG_VER_STRING, nullptr, nullptr, nullptr);
 }
 
 void PNGDecoder::init() {
-    png_set_error_fn(mPNG, this, cb_error, NULL);
+    png_set_error_fn(mPNG, this, cb_error, nullptr);
     png_set_read_fn(mPNG, this, cb_stream);
 }
 
 PNGDecoder::~PNGDecoder() {
-    png_destroy_read_struct(&mPNG, &mInfo, NULL);
+    png_destroy_read_struct(&mPNG, &mInfo, nullptr);
 }
 
 LinearImage PNGDecoder::decode() {
@@ -355,11 +355,11 @@ LinearImage HDRDecoder::decode() {
                 char format[128];
                 mStream.getline(buf, sizeof(buf), 0xa);
                 if (buf[0] == '#') continue;
-                sscanf(buf, "FORMAT=%127s", format);
-                sscanf(buf, "GAMMA=%f", &gamma);
-                sscanf(buf, "EXPOSURE=%f", &exposure);
-                if ((sscanf(buf, "%cY %u %cX %u", &sy, &height, &sx, &width) == 4)||
-                    (sscanf(buf, "%cX %u %cY %u", &sx, &width, &sy, &height) == 4)) {
+                sscanf(buf, "FORMAT=%127s", format); // NOLINT
+                sscanf(buf, "GAMMA=%f", &gamma); // NOLINT
+                sscanf(buf, "EXPOSURE=%f", &exposure); // NOLINT
+                if ((sscanf(buf, "%cY %u %cX %u", &sy, &height, &sx, &width) == 4)||   // NOLINT
+                    (sscanf(buf, "%cX %u %cY %u", &sx, &width, &sy, &height) == 4)) {  // NOLINT
                     break;
                 }
             } while (true);
@@ -367,30 +367,30 @@ LinearImage HDRDecoder::decode() {
 
         LinearImage image(width, height, 3);
 
-        uint32_t flags = 0;
         if (sx == '-') image = horizontalFlip(image);
         if (sy == '+') image = verticalFlip(image);
 
         uint16_t w;
         uint16_t magic;
-        std::unique_ptr<uint8_t[]> rgbe(new uint8_t[width*4]);
-        for (size_t y=0 ; y<height ; y++) {
+        std::unique_ptr<uint8_t[]> rgbe(new uint8_t[width * 4]);
+
+        for (uint32_t y = 0; y < height; y++) {
             //std::cout << "line: " << y << std::endl;
-            mStream.read((char*)&magic, 2);
+            mStream.read((char*) &magic, 2);
             if (magic != 0x0202) {
                 throw std::runtime_error("invalid scanline (magic)");
             }
-            mStream.read((char*)&w, 2);
+            mStream.read((char*) &w, 2);
             if (ntohs(w) != width) {
                 throw std::runtime_error("invalid scanline (width)");
             }
 
-            char *d = (char *)rgbe.get();
-            for (size_t p=0 ; p<4 ; p++) {
+            char* d = (char*) rgbe.get();
+            for (size_t p = 0; p < 4; p++) {
                 size_t num_bytes = 0;
                 while (num_bytes < width) {
                     uint8_t rle_count;
-                    mStream.read((char*)&rle_count, 1);
+                    mStream.read((char*) &rle_count, 1);
                     if (rle_count > 128) {
                         char v;
                         mStream.read(&v, 1);
@@ -410,15 +410,16 @@ LinearImage HDRDecoder::decode() {
 
             uint8_t const* r = &rgbe[0];
             uint8_t const* g = &rgbe[width];
-            uint8_t const* b = &rgbe[2*width];
-            uint8_t const* e = &rgbe[3*width];
+            uint8_t const* b = &rgbe[2 * width];
+            uint8_t const* e = &rgbe[3 * width];
             math::float3* i = reinterpret_cast<math::float3*>(image.getPixelRef(0, y));
             // (rgb/256) * 2^(e-128)
-            for (size_t x=0 ; x<width ; x++, r++, g++, b++, e++) {
+            for (size_t x = 0; x < width; x++, r++, g++, b++, e++) {
                 math::float3 v(r[0], g[0], b[0]);
-                i[x] = v * std::ldexp(1.0f, e[0]-(128+8));
+                i[x] = v * std::ldexp(1.0f, e[0] - (128 + 8));
             }
         }
+
         return image;
 
     } catch(std::runtime_error& e) {
@@ -467,7 +468,7 @@ LinearImage PSDDecoder::decode() {
     static const uint16_t kCompressionRAW = 0;
 
     try {
-        Header h;
+        Header h = { };
         mStream.read(reinterpret_cast<char*>(&h), sizeof(Header));
 
         if (ntohs(h.channels) != 3) {
@@ -511,18 +512,20 @@ LinearImage PSDDecoder::decode() {
 
         if (depth == 32) {
             for (size_t i = 0; i < 3; i++) {
-                for (size_t y = 0; y < height; y++) {
-                    for (size_t x = 0; x < width; x++) {
-                        math::float3& pixel = *reinterpret_cast<math::float3*>(image.getPixelRef(x, y));
+                for (uint32_t y = 0; y < height; y++) {
+                    for (uint32_t x = 0; x < width; x++) {
+                        math::float3& pixel =
+                                *reinterpret_cast<math::float3*>(image.getPixelRef(x, y));
                         pixel[i] = read32(mStream);
                     }
                 }
             }
         } else {
             for (size_t i = 0; i < 3; i++) {
-                for (size_t y = 0; y < height; y++) {
-                    for (size_t x = 0; x < width; x++) {
-                        math::float3& pixel = *reinterpret_cast<math::float3*>(image.getPixelRef(x, y));
+                for (uint32_t y = 0; y < height; y++) {
+                    for (uint32_t x = 0; x < width; x++) {
+                        math::float3& pixel =
+                                *reinterpret_cast<math::float3*>(image.getPixelRef(x, y));
                         pixel[i] = read16(mStream);
                     }
                 }
@@ -584,11 +587,11 @@ LinearImage EXRDecoder::decode() {
         src.clear();
         src.shrink_to_fit();
 
-        LinearImage image(width, height, 3);
+        LinearImage image((uint32_t) width, (uint32_t) height, 3);
 
         size_t i = 0;
-        for (size_t y = 0; y < height; y++) {
-            for (size_t x = 0; x < width; x++) {
+        for (uint32_t y = 0; y < height; y++) {
+            for (uint32_t x = 0; x < width; x++) {
                 math::float3& pixel = *reinterpret_cast<math::float3*>(image.getPixelRef(x, y));
                 pixel.r = rgba[i++];
                 pixel.g = rgba[i++];
