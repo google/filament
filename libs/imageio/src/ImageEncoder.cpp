@@ -39,6 +39,8 @@
 #include <math/vec3.h>
 #include <math/vec4.h>
 
+#include <utils/compiler.h>
+
 #include <image/ColorTransform.h>
 
 using namespace math;
@@ -55,17 +57,17 @@ public:
 
     static PNGEncoder* create(std::ostream& stream, PixelFormat format = PixelFormat::sRGB);
 
+    PNGEncoder(const PNGEncoder&) = delete;
+    PNGEncoder& operator=(const PNGEncoder&) = delete;
+
 private:
     PNGEncoder(std::ostream& stream, PixelFormat format);
-    PNGEncoder(const PNGEncoder&) = delete;
-    ~PNGEncoder();
-
-    PNGEncoder& operator = (const PNGEncoder&) = delete;
+    ~PNGEncoder() override;
 
     void init();
 
     // ImageEncoder::Encoder interface
-    virtual bool encode(const LinearImage& image) override;
+    bool encode(const LinearImage& image) override;
 
     int chooseColorType(const LinearImage& image) const;
     uint32_t getChannelsCount() const;
@@ -90,17 +92,17 @@ class HDREncoder : public ImageEncoder::Encoder {
 public:
     static HDREncoder* create(std::ostream& stream);
 
+    HDREncoder(const HDREncoder&) = delete;
+    HDREncoder& operator=(const HDREncoder&) = delete;
+
 private:
     explicit HDREncoder(std::ostream& stream);
-    HDREncoder(const HDREncoder&) = delete;
-    ~HDREncoder();
-
-    HDREncoder& operator = (const HDREncoder&) = delete;
+    ~HDREncoder() override = default;
 
     // ImageEncoder::Encoder interface
-    virtual bool encode(const LinearImage& image) override;
+    bool encode(const LinearImage& image) override;
 
-    static void float2rgbe(uint8_t rgbe[4], const math::float3& color);
+    static void float2rgbe(uint8_t rgbe[4], const math::float3& in);
     static size_t countRepeats(uint8_t const* data, size_t length);
     static size_t countNonRepeats(uint8_t const* data, size_t length);
     static void rle(std::ostream& out, uint8_t const* data, size_t length);
@@ -115,15 +117,15 @@ class PSDEncoder : public ImageEncoder::Encoder {
 public:
     static PSDEncoder* create(std::ostream& stream, const std::string& compression);
 
+    PSDEncoder(const PSDEncoder&) = delete;
+    PSDEncoder& operator=(const PSDEncoder&) = delete;
+
 private:
     PSDEncoder(std::ostream& stream, const std::string& compression);
-    PSDEncoder(const PSDEncoder&) = delete;
-    ~PSDEncoder();
-
-    PSDEncoder& operator = (const PSDEncoder&) = delete;
+    ~PSDEncoder() override = default;
 
     // ImageEncoder::Encoder interface
-    virtual bool encode(const LinearImage& image) override;
+    bool encode(const LinearImage& image) override;
 
     std::ostream& mStream;
     std::streampos mStreamStartPos;
@@ -139,15 +141,15 @@ public:
     static EXREncoder* create(std::ostream& stream, const std::string& compression,
             const std::string& destName);
 
+    EXREncoder(const EXREncoder&) = delete;
+    EXREncoder& operator=(const EXREncoder&) = delete;
+
 private:
     EXREncoder(std::ostream& stream, const std::string& compression, const std::string& destName);
-    EXREncoder(const EXREncoder&) = delete;
-    ~EXREncoder();
-
-    EXREncoder& operator = (const EXREncoder&) = delete;
+    ~EXREncoder() override = default;
 
     // ImageEncoder::Encoder interface
-    virtual bool encode(const LinearImage& image) override;
+    bool encode(const LinearImage& image) override;
 
     std::ostream& mStream;
     std::streampos mStreamStartPos;
@@ -167,15 +169,15 @@ public:
     static DDSEncoder* create(std::ostream& stream, const std::string& compression,
                               PixelFormat format = PixelFormat::sRGB);
 
+    DDSEncoder(const DDSEncoder&) = delete;
+    DDSEncoder& operator=(const DDSEncoder&) = delete;
+
 private:
     DDSEncoder(std::ostream& stream, const std::string& compression, PixelFormat format);
-    DDSEncoder(const DDSEncoder&) = delete;
-    ~DDSEncoder();
-
-    DDSEncoder& operator = (const DDSEncoder&) = delete;
+    ~DDSEncoder() override = default;
 
     // ImageEncoder::Encoder interface
-    virtual bool encode(const LinearImage& image) override;
+    bool encode(const LinearImage& image) override;
 
     std::ostream& mStream;
     std::streampos mStreamStartPos;
@@ -219,7 +221,7 @@ bool ImageEncoder::encode(std::ostream& stream, Format format, const LinearImage
 
 ImageEncoder::Format ImageEncoder::chooseFormat(const std::string& name, bool forceLinear) {
     std::string ext;
-    size_t index = name.rfind(".");
+    size_t index = name.rfind('.');
     if (index != std::string::npos && index != 0) {
          ext = name.substr(index + 1);
     }
@@ -270,8 +272,8 @@ PNGEncoder* PNGEncoder::create(std::ostream& stream, PixelFormat format) {
 }
 
 PNGEncoder::PNGEncoder(std::ostream& stream, PixelFormat format)
-    : mStream(stream), mStreamStartPos(stream.tellp()), mFormat(format) {
-        mPNG = png_create_write_struct(PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+    : mStream(stream), mStreamStartPos(stream.tellp()), mFormat(format),
+      mPNG(png_create_write_struct(PNG_LIBPNG_VER_STRING, nullptr, nullptr, nullptr)) {
 }
 
 PNGEncoder::~PNGEncoder() {
@@ -279,8 +281,8 @@ PNGEncoder::~PNGEncoder() {
 }
 
 void PNGEncoder::init() {
-    png_set_error_fn(mPNG, this, cb_error, NULL);
-    png_set_write_fn(mPNG, this, cb_stream, NULL);
+    png_set_error_fn(mPNG, this, cb_error, nullptr);
+    png_set_write_fn(mPNG, this, cb_stream, nullptr);
 }
 
 int PNGEncoder::chooseColorType(const LinearImage& image) const {
@@ -404,9 +406,6 @@ HDREncoder::HDREncoder(std::ostream& stream)
     : mStream(stream), mStreamStartPos(stream.tellp()) {
 }
 
-HDREncoder::~HDREncoder() {
-}
-
 void HDREncoder::float2rgbe(uint8_t rgbe[4], const float3& in) {
     int e;
 
@@ -417,11 +416,10 @@ void HDREncoder::float2rgbe(uint8_t rgbe[4], const float3& in) {
     if (color.b < 0) color.b = 0;
 
     float v = std::max(color.r, std::max(color.g, color.b));
-    float m = std::frexp(v, &e);  // m*2^e = v
-    if (e < -128) {
+    if (v < 1e-32f) {
         rgbe[0] = rgbe[1] = rgbe[2] = rgbe[3] = 0;
     } else {
-        v = (m * 256) / v;
+        v = std::frexp(v, &e) * 256 / v;  // m*2^e = v
         rgbe[0] = uint8_t(color.r * v);
         rgbe[1] = uint8_t(color.g * v);
         rgbe[2] = uint8_t(color.b * v);
@@ -450,9 +448,10 @@ size_t HDREncoder::countNonRepeats(uint8_t const* data, size_t length) {
             if (same >= 3) {
                 // non-repeats are always at least 3 bytes long
                 return i;
-            } else {
-                same = 1;
             }
+        } else {
+            same = 1;
+            v = data[i];
         }
     }
     return length;
@@ -494,33 +493,47 @@ bool HDREncoder::encode(const LinearImage& image) {
         mStream << "-Y " << std::to_string(height) << " "
                 << "+X " << std::to_string(width) << std::endl;
 
-        std::unique_ptr<uint8_t[]> rgbe(new uint8_t[width*4]);
-        uint8_t* const r = &rgbe[0];
-        uint8_t* const g = &rgbe[width];
-        uint8_t* const b = &rgbe[2*width];
-        uint8_t* const e = &rgbe[3*width];
-        uint16_t magic = 0x0202;
-        uint16_t widthNetwork = htons(width);
-
-        for (size_t y=0 ; y<height ; y++) {
-            // convert one scanline to RGBE
-            uint8_t p[4];
-            auto data = image.get<float3>(0, y);
-            for (size_t x=0 ; x<width ; ++x, ++data) {
-                float2rgbe(p, *data);
-                r[x] = p[0];
-                g[x] = p[1];
-                b[x] = p[2];
-                e[x] = p[3];
+        // The Radiance format is not expected to use RLE encoding when
+        // scanlines are less than 8 pixels or more than 32,767 pixels
+        if (width < 8 || width > 32767) {
+            for (uint32_t y = 0; y < height; y++) {
+                uint8_t p[4];
+                auto data = image.get<float3>(0, y);
+                for (size_t x = 0; x < width; ++x, ++data) {
+                    float2rgbe(p, *data);
+                    mStream.write((char*) &p, 4);
+                }
             }
-            // now RLE-compress each plane
-            mStream.write((char*)&magic, 2);
-            mStream.write((char*)&widthNetwork, 2);
-            rle(mStream, r, width);
-            rle(mStream, g, width);
-            rle(mStream, b, width);
-            rle(mStream, e, width);
+        } else {
+            std::unique_ptr<uint8_t[]> rgbe(new uint8_t[width*4]);
+            uint8_t* const r = &rgbe[0];
+            uint8_t* const g = &rgbe[width];
+            uint8_t* const b = &rgbe[2*width];
+            uint8_t* const e = &rgbe[3*width];
+            uint16_t magic = 0x0202;
+            uint16_t widthNetwork = htons(width);
+
+            for (uint32_t y = 0; y < height; y++) {
+                // convert one scanline to RGBE
+                uint8_t p[4];
+                auto data = image.get<float3>(0, y);
+                for (size_t x = 0; x < width; ++x, ++data) {
+                    float2rgbe(p, *data);
+                    r[x] = p[0];
+                    g[x] = p[1];
+                    b[x] = p[2];
+                    e[x] = p[3];
+                }
+                // now RLE-compress each plane
+                mStream.write((char*) &magic, 2);
+                mStream.write((char*) &widthNetwork, 2);
+                rle(mStream, r, width);
+                rle(mStream, g, width);
+                rle(mStream, b, width);
+                rle(mStream, e, width);
+            }
         }
+
         mStream.flush();
     } catch(std::runtime_error& e) {
         // reset the stream, like we found it
@@ -542,9 +555,6 @@ PSDEncoder* PSDEncoder::create(std::ostream& stream, const std::string& compress
 
 PSDEncoder::PSDEncoder(std::ostream& stream, const std::string& compression)
         : mStream(stream), mStreamStartPos(stream.tellp()), mCompression(compression) {
-}
-
-PSDEncoder::~PSDEncoder() {
 }
 
 static inline void write32(std::ostream& stream, float f) {
@@ -663,7 +673,7 @@ bool PSDEncoder::encode(const LinearImage& image) {
 
         if (depth == 32) {
             for (size_t channel = 0; channel < 3; channel++) {
-                for (size_t y = 0; y < height; y++) {
+                for (uint32_t y = 0; y < height; y++) {
                     auto data = image.get<float3>(0, y);
                     for (size_t x = 0; x < width; x++) {
                         write32(mStream, (*data)[channel]);
@@ -673,7 +683,7 @@ bool PSDEncoder::encode(const LinearImage& image) {
             }
         } else {
             for (size_t channel = 0; channel < 3; channel++) {
-                for (size_t y = 0; y < height; y++) {
+                for (uint32_t y = 0; y < height; y++) {
                     auto data = image.get<float3>(0, y);
                     for (size_t x = 0; x < width; x++) {
                         write16(mStream, linearTosRGB((*data)[channel]));
@@ -705,9 +715,6 @@ EXREncoder::EXREncoder(std::ostream& stream, const std::string& compression,
                        const std::string& destName)
         : mStream(stream), mStreamStartPos(stream.tellp()),
           mCompression(compression), mDestName(destName) {
-}
-
-EXREncoder::~EXREncoder() {
 }
 
 static int toEXRCompression(const std::string& c) {
@@ -751,7 +758,7 @@ bool EXREncoder::encode(const LinearImage& image) {
         std::unique_ptr<float[]> b(new float[width * height]);
 
         size_t i = 0;
-        for (size_t y = 0; y < height; y++) {
+        for (uint32_t y = 0; y < height; y++) {
             auto data = image.get<float3>(0, y);
             for (size_t x = 0; x < width; x++, data++) {
                 r[i] = data->r;
@@ -816,39 +823,39 @@ const uint32_t DDS_FOURCC_DX10 = 0x30315844; // "DX10"
 
 #pragma pack(push, 1)
 struct DDS_PIXELFORMAT {
-    uint32_t dwSize;
-    uint32_t dwFlags;
-    uint32_t dwFourCC;
-    uint32_t dwRGBBitCount;
-    uint32_t dwRBitMask;
-    uint32_t dwGBitMask;
-    uint32_t dwBBitMask;
-    uint32_t dwABitMask;
+    uint32_t UTILS_UNUSED dwSize;
+    uint32_t              dwFlags;
+    uint32_t UTILS_UNUSED dwFourCC;
+    uint32_t UTILS_UNUSED dwRGBBitCount;
+    uint32_t UTILS_UNUSED dwRBitMask;
+    uint32_t UTILS_UNUSED dwGBitMask;
+    uint32_t UTILS_UNUSED dwBBitMask;
+    uint32_t UTILS_UNUSED dwABitMask;
 };
 
 struct DDS_HEADER {
-    uint32_t        dwSize;
-    uint32_t        dwFlags;
-    uint32_t        dwHeight;
-    uint32_t        dwWidth;
-    uint32_t        dwPitchOrLinearSize;
-    uint32_t        dwDepth;
-    uint32_t        dwMipMapCount;
-    uint32_t        dwReserved1[11];
-    DDS_PIXELFORMAT ddspf;
-    uint32_t        dwCaps;
-    uint32_t        dwCaps2;
-    uint32_t        dwCaps3;
-    uint32_t        dwCaps4;
-    uint32_t        dwReserved2;
+    uint32_t        UTILS_UNUSED dwSize;
+    uint32_t                     dwFlags;
+    uint32_t        UTILS_UNUSED dwHeight;
+    uint32_t        UTILS_UNUSED dwWidth;
+    uint32_t        UTILS_UNUSED dwPitchOrLinearSize;
+    uint32_t        UTILS_UNUSED dwDepth;
+    uint32_t        UTILS_UNUSED dwMipMapCount;
+    uint32_t        UTILS_UNUSED dwReserved1[11];
+    DDS_PIXELFORMAT UTILS_UNUSED ddspf;
+    uint32_t        UTILS_UNUSED dwCaps;
+    uint32_t        UTILS_UNUSED dwCaps2;
+    uint32_t        UTILS_UNUSED dwCaps3;
+    uint32_t        UTILS_UNUSED dwCaps4;
+    uint32_t        UTILS_UNUSED dwReserved2;
 };
 
 struct DDS_HEADER_DXT10 {
-    uint32_t dxgiFormat;
-    uint32_t resourceDimension;
-    uint32_t miscFlag;
-    uint32_t arraySize;
-    uint32_t miscFlags2;
+    uint32_t              dxgiFormat;
+    uint32_t UTILS_UNUSED resourceDimension;
+    uint32_t UTILS_UNUSED miscFlag;
+    uint32_t UTILS_UNUSED arraySize;
+    uint32_t UTILS_UNUSED miscFlags2;
 };
 #pragma pack(pop)
 
@@ -888,9 +895,6 @@ DDSEncoder::DDSEncoder(std::ostream& stream, const std::string& compression, Pix
     }
 }
 
-DDSEncoder::~DDSEncoder() {
-}
-
 static uint32_t chooseBpp(const LinearImage& image, const std::string& compression) {
     size_t depth = 16;
     if (compression == "8") depth = 8;
@@ -928,14 +932,12 @@ bool DDSEncoder::encode(const LinearImage& image) {
         size_t width = image.getWidth();
         size_t height = image.getHeight();
 
-        DDS_PIXELFORMAT ddspf;
-        memset(&ddspf, 0, sizeof(ddspf));
+        DDS_PIXELFORMAT ddspf = { };
         ddspf.dwSize   = sizeof(ddspf);
         ddspf.dwFlags  = DDPF_FOURCC;
         ddspf.dwFourCC = DDS_FOURCC_DX10;
 
-        DDS_HEADER header;
-        memset(&header, 0, sizeof(header));
+        DDS_HEADER header = { };
         header.dwSize              = sizeof(header);
         header.dwFlags             = DDSD_CAPS | DDSD_HEIGHT | DDSD_WIDTH |
                                      DDSD_PIXELFORMAT | DDSD_PITCH;
@@ -947,8 +949,7 @@ bool DDSEncoder::encode(const LinearImage& image) {
         header.ddspf               = ddspf;
         header.dwCaps              = DDSCAPS_TEXTURE;
 
-        DDS_HEADER_DXT10 headerDX10;
-        memset(&headerDX10, 0, sizeof(headerDX10));
+        DDS_HEADER_DXT10 headerDX10 = { };
         headerDX10.dxgiFormat        = chooseDXGIFormat(image, mCompression);
         headerDX10.resourceDimension = DDS_RESOURCE_DIMENSION_TEXTURE2D;
         headerDX10.arraySize         = 1;
@@ -961,7 +962,7 @@ bool DDSEncoder::encode(const LinearImage& image) {
             case DXGI_FORMAT_R8_UINT: {
                 switch (mFormat) {
                     case PixelFormat::sRGB:
-                        for (size_t y = 0; y < height; y++) {
+                        for (uint32_t y = 0; y < height; y++) {
                             const float* data = image.getPixelRef(0, y);
                             for (size_t x = 0; x < width; x++) {
                                 uint8_t b = (uint8_t) (linearTosRGB(saturate(*data)) * 255);
@@ -971,7 +972,7 @@ bool DDSEncoder::encode(const LinearImage& image) {
                         }
                         break;
                     case PixelFormat::LINEAR_RGB:
-                        for (size_t y = 0; y < height; y++) {
+                        for (uint32_t y = 0; y < height; y++) {
                             const float* data = image.getPixelRef(0, y);
                             for (size_t x = 0; x < width; x++) {
                                 uint8_t b = (uint8_t) (saturate(*data) * 255);
@@ -984,7 +985,7 @@ bool DDSEncoder::encode(const LinearImage& image) {
                 break;
             }
             case DXGI_FORMAT_R16_FLOAT: {
-                for (size_t y = 0; y < height; y++) {
+                for (uint32_t y = 0; y < height; y++) {
                     const float* data = image.getPixelRef(0, y);
                     for (size_t x = 0; x < width; x++) {
                         math::half p = math::half(*data);
@@ -995,7 +996,7 @@ bool DDSEncoder::encode(const LinearImage& image) {
                 break;
             }
             case DXGI_FORMAT_R32_FLOAT: {
-                for (size_t y = 0; y < height; y++) {
+                for (uint32_t y = 0; y < height; y++) {
                     const float* data = image.getPixelRef(0, y);
                     mStream.write((const char*) data, width * sizeof(float));
                 }
@@ -1004,7 +1005,7 @@ bool DDSEncoder::encode(const LinearImage& image) {
             case DXGI_FORMAT_R8G8_UINT: {
                 switch (mFormat) {
                     case PixelFormat::sRGB:
-                        for (size_t y = 0; y < height; y++) {
+                        for (uint32_t y = 0; y < height; y++) {
                             const float2* data = reinterpret_cast<float2 const*>(image.getPixelRef(0, y));
                             for (size_t x = 0; x < width; x++) {
                                 uint8_t b;
@@ -1017,7 +1018,7 @@ bool DDSEncoder::encode(const LinearImage& image) {
                         }
                         break;
                     case PixelFormat::LINEAR_RGB:
-                        for (size_t y = 0; y < height; y++) {
+                        for (uint32_t y = 0; y < height; y++) {
                             const float2* data = reinterpret_cast<float2 const*>(image.getPixelRef(0, y));
                             for (size_t x = 0; x < width; x++) {
                                 uint8_t b;
@@ -1033,7 +1034,7 @@ bool DDSEncoder::encode(const LinearImage& image) {
                 break;
             }
             case DXGI_FORMAT_R16G16_FLOAT: {
-                for (size_t y = 0; y < height; y++) {
+                for (uint32_t y = 0; y < height; y++) {
                     const float2* data = reinterpret_cast<float2 const*>(image.getPixelRef(0, y));
                     for (size_t x = 0; x < width; x++) {
                         half2 p = half2(*data);
@@ -1044,7 +1045,7 @@ bool DDSEncoder::encode(const LinearImage& image) {
                 break;
             }
             case DXGI_FORMAT_R32G32_FLOAT: {
-                for (size_t y = 0; y < height; y++) {
+                for (uint32_t y = 0; y < height; y++) {
                     const float2* data = reinterpret_cast<float2 const*>(image.getPixelRef(0, y));
                     mStream.write((const char*) data, width * sizeof(float2));
                 }
@@ -1053,7 +1054,7 @@ bool DDSEncoder::encode(const LinearImage& image) {
             case DXGI_FORMAT_R8G8B8A8_UINT: {
                 switch (mFormat) {
                     case PixelFormat::sRGB:
-                        for (size_t y = 0; y < height; y++) {
+                        for (uint32_t y = 0; y < height; y++) {
                             auto data = image.get<float3>(0, y);
                             for (size_t x = 0; x < width; x++) {
                                 uint8_t r = (uint8_t) (linearTosRGB(saturate(data->r)) * 255);
@@ -1067,7 +1068,7 @@ bool DDSEncoder::encode(const LinearImage& image) {
 
                         break;
                     case PixelFormat::LINEAR_RGB:
-                        for (size_t y = 0; y < height; y++) {
+                        for (uint32_t y = 0; y < height; y++) {
                             auto data = image.get<float3>(0, y);
                             for (size_t x = 0; x < width; x++) {
                                 uint8_t r = (uint8_t) (saturate(data->r) * 255);
@@ -1083,7 +1084,7 @@ bool DDSEncoder::encode(const LinearImage& image) {
                 break;
             }
             case DXGI_FORMAT_R16G16B16A16_FLOAT: {
-                for (size_t y = 0; y < height; y++) {
+                for (uint32_t y = 0; y < height; y++) {
                     auto data = image.get<float3>(0, y);
                     for (size_t x = 0; x < width; x++) {
                         half4 p = half4(half3(*data), 1);
@@ -1094,7 +1095,7 @@ bool DDSEncoder::encode(const LinearImage& image) {
                 break;
             }
             case DXGI_FORMAT_R32G32B32A32_FLOAT: {
-                for (size_t y = 0; y < height; y++) {
+                for (uint32_t y = 0; y < height; y++) {
                     auto data = image.get<float3>(0, y);
                     for (size_t x = 0; x < width; x++) {
                         float4 p = float4(3.0f, 3.0f, 3.0f, 1.0f);
