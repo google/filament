@@ -67,6 +67,9 @@ std::ostream& CodeGenerator::generateProlog(std::ostream& out, ShaderType type,
     if (mTargetApi == TargetApi::VULKAN) {
         out << "#define TARGET_VULKAN_ENVIRONMENT\n";
     }
+    if (mTargetApi == TargetApi::METAL) {
+        out << "#define TARGET_METAL_ENVIRONMENT\n";
+    }
     if (mCodeGenTargetApi == TargetApi::VULKAN) {
         out << "#define CODEGEN_TARGET_VULKAN_ENVIRONMENT\n";
     }

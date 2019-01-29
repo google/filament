@@ -24,6 +24,7 @@
 #include <localintermediate.h>
 
 #include <spirv_glsl.hpp>
+#include <spirv_msl.hpp>
 
 #include "sca/builtinResource.h"
 #include "sca/GLSLTools.h"
@@ -127,9 +128,17 @@ static std::string shrinkString(const std::string& s) {
     return r;
 }
 
+void SpvToMsl(const SpirvBlob* spirv, std::string* outMsl) {
+    CompilerMSL mslCompiler(*spirv);
+    mslCompiler.set_common_options(CompilerGLSL::Options {
+        .vertex.fixup_clipspace = true
+    });
+    *outMsl = mslCompiler.compile();
+}
+
 bool GLSLPostProcessor::process(const std::string& inputShader,
         filament::driver::ShaderType shaderType, filament::driver::ShaderModel shaderModel,
-        std::string* outputGlsl, SpirvBlob* outputSpirv) {
+        std::string* outputGlsl, SpirvBlob* outputSpirv, std::string* outputMsl) {
 
     // If TargetApi is Vulkan, then we need post-processing even if there's no optimization.
     using TargetApi = MaterialBuilder::TargetApi;
@@ -144,6 +153,7 @@ bool GLSLPostProcessor::process(const std::string& inputShader,
 
     mGlslOutput = outputGlsl;
     mSpirvOutput = outputSpirv;
+    mMslOutput = outputMsl;
 
     if (shaderType == filament::driver::VERTEX) {
         mShLang = EShLangVertex;
@@ -182,6 +192,9 @@ bool GLSLPostProcessor::process(const std::string& inputShader,
         case MaterialBuilder::Optimization::NONE:
             if (mSpirvOutput) {
                 GlslangToSpv(*program.getIntermediate(mShLang), *mSpirvOutput);
+                if (mMslOutput) {
+                    SpvToMsl(mSpirvOutput, mMslOutput);
+                }
             } else {
                 utils::slog.e << "GLSL post-processor invoked with optimization level NONE"
                         << utils::io::endl;
@@ -240,6 +253,10 @@ void GLSLPostProcessor::preprocessOptimization(glslang::TShader& tShader,
         }
     }
 
+    if (mMslOutput) {
+        SpvToMsl(mSpirvOutput, mMslOutput);
+    }
+
     if (mGlslOutput) {
         *mGlslOutput = glsl;
     }
@@ -278,6 +295,10 @@ void GLSLPostProcessor::fullOptimization(const TShader& tShader,
 
     if (mSpirvOutput) {
         *mSpirvOutput = spirv;
+    }
+
+    if (mMslOutput) {
+        SpvToMsl(mSpirvOutput, mMslOutput);
     }
 
     // Transpile back to GLSL
