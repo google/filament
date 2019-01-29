@@ -1129,6 +1129,8 @@ void OpenGLDriver::createDefaultRenderTarget(
 
     GLRenderTarget* rt = handle_cast<GLRenderTarget*>(rth);
     rt->gl.fbo = framebuffer;
+    rt->gl.samples = 1;
+    rt->gl.colorLevel = 0;
     rt->gl.color.id = colorbuffer;
     rt->gl.depth.id = depthbuffer;
 }
@@ -1165,6 +1167,7 @@ void OpenGLDriver::createRenderTarget(Driver::RenderTargetHandle rth,
     rt->gl.samples = samples;
 
     if (targets & TargetBufferFlags::COLOR) {
+        rt->gl.colorLevel = color.level;
         // TODO: handle multiple color attachments
         if (color.handle) {
             rt->gl.color.texture = handle_cast<GLTexture*>(color.handle);
@@ -1174,6 +1177,8 @@ void OpenGLDriver::createRenderTarget(Driver::RenderTargetHandle rth,
             framebufferRenderbuffer(&rt->gl.color, GL_COLOR_ATTACHMENT0, internalFormat,
                     width, height, samples, rt->gl.fbo);
         }
+    } else {
+        rt->gl.colorLevel = 0;
     }
 
     // handle special cases first (where depth/stencil are packed)
@@ -2735,6 +2740,29 @@ void OpenGLDriver::blit(TargetBufferFlags buffers,
                 mask, GL_LINEAR);
         enable(GL_SCISSOR_TEST);
         CHECK_GL_ERROR(utils::slog.e)
+
+        // In a sense, blitting to a texture level is similar to calling setTextureData on it; in
+        // both cases, we update the base/max LOD to give shaders access to levels as they become
+        // available.
+        GLTexture* dtexture = d->gl.color.texture;
+        if ((mask & GL_COLOR_BUFFER_BIT) && dtexture) {
+            uint8_t baseLevel = dtexture->gl.baseLevel;
+            uint8_t maxLevel = dtexture->gl.maxLevel;
+            uint8_t targetLevel = d->gl.colorLevel;
+            if (targetLevel < baseLevel || targetLevel > maxLevel) {
+                GLenum target = dtexture->gl.target;
+                bindTexture(MAX_TEXTURE_UNITS - 1, target, dtexture, dtexture->gl.targetIndex);
+                activeTexture(MAX_TEXTURE_UNITS - 1);
+                if (targetLevel < baseLevel) {
+                    dtexture->gl.baseLevel = targetLevel;
+                    glTexParameteri(target, GL_TEXTURE_BASE_LEVEL, targetLevel);
+                }
+                if (targetLevel > maxLevel) {
+                    dtexture->gl.maxLevel = targetLevel;
+                    glTexParameteri(target, GL_TEXTURE_MAX_LEVEL, targetLevel);
+                }
+            }
+        }
     }
 }
 
