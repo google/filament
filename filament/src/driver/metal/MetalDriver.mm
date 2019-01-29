@@ -293,10 +293,6 @@ void MetalDriver::setExternalStream(Driver::TextureHandle th, Driver::StreamHand
 
 }
 
-void MetalDriver::generateMipmaps(Driver::TextureHandle th) {
-
-}
-
 void MetalDriver::updateUniformBuffer(Driver::UniformBufferHandle ubh,
         Driver::BufferDescriptor&& data) {
 

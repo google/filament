@@ -1746,26 +1746,6 @@ void OpenGLDriver::updateCubeImage(Driver::TextureHandle th, uint32_t level,
     }
 }
 
-void OpenGLDriver::generateMipmaps(Driver::TextureHandle th) {
-    DEBUG_MARKER()
-
-    GLTexture* t = handle_cast<GLTexture *>(th);
-    assert(t->gl.target != GL_TEXTURE_2D_MULTISAMPLE);
-    // Note: glGenerateMimap can also fail if the internal format is not both
-    // color-renderable and filterable (i.e.: doesn't work for depth)
-    bindTexture(MAX_TEXTURE_UNITS - 1, t->gl.target, t, t->gl.targetIndex);
-    activeTexture(MAX_TEXTURE_UNITS - 1);
-    glGenerateMipmap(t->gl.target);
-
-    t->gl.baseLevel = 0;
-    t->gl.maxLevel = static_cast<uint8_t>(t->levels - 1);
-
-    glTexParameteri(t->gl.target, GL_TEXTURE_BASE_LEVEL, t->gl.baseLevel);
-    glTexParameteri(t->gl.target, GL_TEXTURE_MAX_LEVEL, t->gl.maxLevel);
-
-    CHECK_GL_ERROR(utils::slog.e)
-}
-
 void OpenGLDriver::setTextureData(GLTexture* t,
                                   uint32_t level,
                                   uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,

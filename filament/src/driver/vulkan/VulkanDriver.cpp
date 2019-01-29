@@ -544,9 +544,6 @@ void VulkanDriver::setExternalImage(Driver::TextureHandle th, void* image) {
 void VulkanDriver::setExternalStream(Driver::TextureHandle th, Driver::StreamHandle sh) {
 }
 
-void VulkanDriver::generateMipmaps(Driver::TextureHandle th) {
-}
-
 void VulkanDriver::updateUniformBuffer(Driver::UniformBufferHandle ubh, BufferDescriptor&& data) {
     auto* buffer = handle_cast<VulkanUniformBuffer>(mHandleMap, ubh);
     buffer->loadFromCpu(data.buffer, (uint32_t) data.size);
