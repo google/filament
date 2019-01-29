@@ -357,9 +357,6 @@ DECL_DRIVER_API_4(updateCubeImage,
         Driver::PixelBufferDescriptor&&, data,
         Driver::FaceOffsets, faceOffsets)
 
-DECL_DRIVER_API_1(generateMipmaps,
-        Driver::TextureHandle, th)
-
 DECL_DRIVER_API_2(setExternalImage,
         Driver::TextureHandle, th,
         void*, image)
