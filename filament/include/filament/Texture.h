@@ -356,7 +356,8 @@ public:
     void setExternalStream(Engine& engine, Stream* stream) noexcept;
 
     /**
-     * Generates all the mipmap levels automatically.
+     * Generates all the mipmap levels automatically. This requires the texture to have a
+     * color-renderable format.
      *
      * @param engine        Engine this texture is associated to.
      *

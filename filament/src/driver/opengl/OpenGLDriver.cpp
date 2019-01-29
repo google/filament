@@ -1550,6 +1550,10 @@ bool OpenGLDriver::isRenderTargetFormatSupported(Driver::TextureFormat format) {
         case TextureFormat::RGBA16I:
             return true;
 
+        // Three-component SRGB is a color-renderable texture format in core OpenGL on desktop.
+        case TextureFormat::SRGB8:
+            return GL41_HEADERS;
+
         // Half-float formats, requires extension.
         case TextureFormat::RGB16F:
             return ext.EXT_color_buffer_half_float;
