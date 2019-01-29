@@ -70,8 +70,7 @@ public:
         uint16_t parent;                                        //  2 |  2
         std::atomic<uint16_t> runningJobCount = { 1 };          //  2 |  2
         mutable std::atomic<uint16_t> refCount = { 1 };         //  2 |  2
-        std::atomic_bool hasWaiter = { false };                 //  1 |  1
-                                                                //  5 |  1 (padding)
+                                                                //  6 |  2 (padding)
                                                                 // 64 | 64
     };
 
