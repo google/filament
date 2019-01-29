@@ -257,7 +257,7 @@ private fun createRenderable(
         // Find a material in the supplied material map, otherwise we fall back to
         // the default material named "DefaultMaterial"
         val material = materials[definedMaterials[parts[i].materialID.toInt()]]
-        material.let {
+        material?.let {
             builder.material(i, material)
         } ?: builder.material(i, materials["DefaultMaterial"]!!)
     }
