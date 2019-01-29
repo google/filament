@@ -647,7 +647,7 @@ void sphericalHarmonics(const utils::Path& iname, const Cubemap& inputCubemap) {
         sh = CubemapSH::computeSH(inputCubemap, g_sh_compute, g_sh_irradiance);
     }
 
-    if (g_sh_output) {
+    if (!g_quiet && g_sh_output) {
         outputSh(std::cout, sh, g_sh_compute);
     }
 
