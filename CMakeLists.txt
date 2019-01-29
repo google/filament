@@ -236,6 +236,14 @@ if (FILAMENT_SUPPORTS_METAL)
     add_definitions(-DFILAMENT_SUPPORTS_METAL)
 endif()
 
+# Building filamat increases build times and isn't required for non-desktop platforms, so turn it
+# off by default.
+if (NOT ANDROID AND NOT WEBGL AND NOT IOS)
+    option(FILAMENT_BUILD_FILAMAT "Build filamat and JNI buildings" ON)
+else()
+    option(FILAMENT_BUILD_FILAMAT "Build filamat and JNI buildings" OFF)
+endif()
+
 # ==================================================================================================
 # Distribution
 # ==================================================================================================
@@ -323,6 +331,7 @@ endfunction()
 # ==================================================================================================
 # Sub-projects
 # ==================================================================================================
+
 # Common to all platforms
 add_subdirectory(${EXTERNAL}/libgtest/tnt)
 add_subdirectory(${LIBRARIES}/filabridge)
@@ -337,6 +346,16 @@ add_subdirectory(${EXTERNAL}/robin-map/tnt)
 add_subdirectory(${EXTERNAL}/smol-v/tnt)
 add_subdirectory(${EXTERNAL}/benchmark/tnt)
 add_subdirectory(${EXTERNAL}/meshoptimizer)
+
+if (FILAMENT_BUILD_FILAMAT)
+    # spirv-tools must come before filamat, as filamat relies on the presence of the
+    # spirv-tools_SOURCE_DIR variable.
+    add_subdirectory(${EXTERNAL}/spirv-tools)
+    add_subdirectory(${EXTERNAL}/glslang/tnt)
+    add_subdirectory(${EXTERNAL}/spirv-cross/tnt)
+    add_subdirectory(android/filamat-android)
+    add_subdirectory(${LIBRARIES}/filamat)
+endif()
 
 if (FILAMENT_SUPPORTS_VULKAN)
     add_subdirectory(${LIBRARIES}/bluevk)
@@ -359,15 +378,8 @@ if (WEBGL)
 endif()
 
 if (NOT ANDROID AND NOT WEBGL AND NOT IOS)
-    # spirv-tools must come before filamat, as filamat relies on the presence of the
-    # spirv-tools_SOURCE_DIR variable.
-    add_subdirectory(${EXTERNAL}/spirv-tools)
-    add_subdirectory(${EXTERNAL}/glslang/tnt)
-    add_subdirectory(${EXTERNAL}/spirv-cross/tnt)
-
     add_subdirectory(${LIBRARIES}/bluegl)
     add_subdirectory(${LIBRARIES}/filagui)
-    add_subdirectory(${LIBRARIES}/filamat)
     add_subdirectory(${LIBRARIES}/imageio)
 
     add_subdirectory(${FILAMENT}/java)
