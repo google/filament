@@ -69,8 +69,10 @@ fun loadMesh(assets: AssetManager, name: String,
 private const val FILAMESH_FILE_IDENTIFIER = "FILAMESH"
 private const val MAX_UINT32 = 4294967295
 
+@Suppress("unused")
 private const val HEADER_FLAG_INTERLEAVED = 0x1L
 private const val HEADER_FLAG_SNORM16_UV  = 0x2L
+@Suppress("unused")
 private const val HEADER_FLAG_COMPRESSED  = 0x4L
 
 private class Header {
@@ -255,7 +257,7 @@ private fun createRenderable(
         // Find a material in the supplied material map, otherwise we fall back to
         // the default material named "DefaultMaterial"
         val material = materials[definedMaterials[parts[i].materialID.toInt()]]
-        material?.let {
+        material.let {
             builder.material(i, material)
         } ?: builder.material(i, materials["DefaultMaterial"]!!)
     }
