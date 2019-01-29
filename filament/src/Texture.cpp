@@ -179,7 +179,26 @@ void FTexture::setExternalStream(FEngine& engine, FStream* stream) noexcept {
     }
 }
 
+static bool isColorRenderable(FEngine& engine, Texture::InternalFormat format) {
+    switch (format) {
+        case Texture::InternalFormat::DEPTH16:
+        case Texture::InternalFormat::DEPTH24:
+        case Texture::InternalFormat::DEPTH32F:
+        case Texture::InternalFormat::DEPTH24_STENCIL8:
+        case Texture::InternalFormat::DEPTH32F_STENCIL8:
+            return false;
+        default:
+            return engine.getDriverApi().isRenderTargetFormatSupported(format);
+    }
+}
+
 void FTexture::generateMipmaps(FEngine& engine) const noexcept {
+    // The OpenGL spec for GenerateMipmap stipulates that it returns INVALID_OPERATION unless
+    // the sized internal format is both color-renderable and texture-filterable.
+    if (!ASSERT_POSTCONDITION_NON_FATAL(isColorRenderable(engine, mFormat),
+            "Texture format must be color renderable")) {
+        return;
+    }
     if ((mTarget == Sampler::SAMPLER_2D || mTarget == Sampler::SAMPLER_CUBEMAP)
             && mLevels > 1 && (mWidth > 1 || mHeight > 1)) {
         FEngine::DriverApi& driver = engine.getDriverApi();
