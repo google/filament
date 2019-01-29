@@ -210,10 +210,6 @@ OpenGLDriver::OpenGLDriver(OpenGLPlatform* platform) noexcept
     }
 #endif
 
-#ifdef GL_GENERATE_MIPMAP_HINT
-    glHint(GL_GENERATE_MIPMAP_HINT, GL_NICEST);
-#endif
-
 #ifdef GL_FRAGMENT_SHADER_DERIVATIVE_HINT
     glHint(GL_FRAGMENT_SHADER_DERIVATIVE_HINT, GL_NICEST);
 #endif

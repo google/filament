@@ -181,8 +181,31 @@ void FTexture::setExternalStream(FEngine& engine, FStream* stream) noexcept {
 
 void FTexture::generateMipmaps(FEngine& engine) const noexcept {
     if ((mTarget == Sampler::SAMPLER_2D || mTarget == Sampler::SAMPLER_CUBEMAP)
-            && mLevels > 1) {
-        engine.getDriverApi().generateMipmaps(mHandle);
+            && mLevels > 1 && (mWidth > 1 || mHeight > 1)) {
+        FEngine::DriverApi& driver = engine.getDriverApi();
+
+        // Wrap miplevel 0 in a render target so that we can use it as a blit source.
+        uint8_t level = 0;
+        uint32_t srcw = mWidth;
+        uint32_t srch = mHeight;
+        Driver::RenderTargetHandle srcrth = driver.createRenderTarget(TargetBufferFlags::COLOR,
+                srcw, srch, mSampleCount, mFormat, { mHandle, level++ }, {}, {});
+
+        // Perform a blit for all miplevels down to 1x1.
+        Driver::RenderTargetHandle dstrth;
+        do {
+            uint32_t dstw = std::max(srcw >> 1, 1u);
+            uint32_t dsth = std::max(srch >> 1, 1u);
+            dstrth = driver.createRenderTarget(TargetBufferFlags::COLOR, dstw, dsth, mSampleCount,
+                    mFormat, { mHandle, level++ }, {}, {});
+            driver.blit(TargetBufferFlags::COLOR, dstrth, 0, 0, dstw, dsth, srcrth, 0, 0,
+                    srcw, srch);
+            driver.destroyRenderTarget(srcrth);
+            srcrth = dstrth;
+            srcw = dstw;
+            srch = dsth;
+        } while ((srcw > 1 || srch > 1) && level < mLevels);
+        driver.destroyRenderTarget(dstrth);
     }
 }
 
