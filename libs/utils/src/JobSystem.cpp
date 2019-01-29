@@ -321,7 +321,7 @@ void JobSystem::finish(Job* job) noexcept {
             std::atomic_thread_fence(std::memory_order_acquire);
 #endif
             // no more work, destroy this job and notify its the parent
-            notify = notify || job->hasWaiter.load();
+            notify = true;
             Job* const parent = job->parent == 0x7FFF ? nullptr : &storage[job->parent];
             decRef(job);
             job = parent;
@@ -427,7 +427,6 @@ void JobSystem::waitAndRelease(Job*& job) noexcept {
             // test if job has completed first, to possibly avoid taking the lock
             if (!hasJobCompleted(job)) {
                 std::unique_lock<Mutex> lock(mWaiterLock);
-                job->hasWaiter.store(true);
                 while (!hasJobCompleted(job) && !exitRequested()) {
                     mWaiterCondition.wait(lock);
                 }
