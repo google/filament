@@ -319,7 +319,6 @@ TEST(AllocatorTest, STLAllocator) {
 
 
     {
-#if !defined(WIN32)
         std::vector<int, STLAllocator<int, Arena>> vector(allocator);
         vector.push_back(1);
         EXPECT_GT(arena.getListener().allocations.size(), 0);
@@ -327,10 +326,6 @@ TEST(AllocatorTest, STLAllocator) {
         vector.push_back(3);
         vector.push_back(4);
         vector.clear();
-#else
-        // Disabled under windows due to incompatibility between clang and Microsoft STL.
-#       warning "Custom Allocator Test Disabled."
-#endif
     }
 
     EXPECT_EQ(0, arena.getListener().allocations.size());
