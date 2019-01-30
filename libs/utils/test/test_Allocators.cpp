@@ -302,7 +302,11 @@ TEST(AllocatorTest, STLAllocator) {
 
     using Arena = Arena<LinearAllocator, LockingPolicy::NoLock, Tracking>;
     Arena arena("arena", 1204);
+    Arena arena2("arena2", 1204);
     STLAllocator<int, Arena> allocator(arena);
+    STLAllocator<int, Arena> allocator2(arena2);
+    EXPECT_TRUE(allocator != allocator2);
+    EXPECT_TRUE(allocator == allocator);
 
     {
 #if !defined(WIN32)
