@@ -50,12 +50,12 @@ struct VulkanTexture;
 struct VulkanRenderTarget : private HwRenderTarget {
 
     // Creates an offscreen render target.
-    VulkanRenderTarget(VulkanContext& context, uint32_t w, uint32_t h) : HwRenderTarget(w, h),
-            mContext(context), mOffscreen(true) {}
+    VulkanRenderTarget(VulkanContext& context, uint32_t w, uint32_t h, uint32_t miplevel) :
+            HwRenderTarget(w, h), mContext(context), mOffscreen(true), mColorLevel(miplevel) {}
 
     // Creates a special "default" render target (i.e. associated with the swap chain)
     explicit VulkanRenderTarget(VulkanContext& context) : HwRenderTarget(0, 0), mContext(context),
-            mOffscreen(false) {}
+            mOffscreen(false), mColorLevel(0) {}
 
     ~VulkanRenderTarget();
     bool isOffscreen() const { return mOffscreen; }
@@ -64,6 +64,7 @@ struct VulkanRenderTarget : private HwRenderTarget {
     VkExtent2D getExtent() const;
     VulkanAttachment getColor() const;
     VulkanAttachment getDepth() const;
+    uint32_t getColorLevel() const { return mColorLevel; }
     void createColorImage(VkFormat format);
     void createDepthImage(VkFormat format);
     void setColorImage(VulkanAttachment c);
@@ -73,6 +74,7 @@ private:
     VulkanAttachment mDepth = {};
     VulkanContext& mContext;
     bool mOffscreen;
+    uint32_t mColorLevel;
     bool mSharedColorImage = true;
     bool mSharedDepthImage = true;
 };
@@ -124,16 +126,17 @@ struct VulkanTexture : public HwTexture {
             int miplevel);
     void updateCubeImage(const PixelBufferDescriptor& data, const FaceOffsets& faceOffsets,
             int miplevel);
+
+    // Issues a barrier that transforms the layout of the image, e.g. from a CPU-writeable
+    // layout to a GPU-readable layout.
+    static void transitionImageLayout(VkCommandBuffer cmdbuffer, VkImage image,
+            VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t miplevel, uint32_t layers);
+
     VkFormat vkformat;
     VkImageView imageView = VK_NULL_HANDLE;
     VkImage textureImage = VK_NULL_HANDLE;
     VkDeviceMemory textureImageMemory = VK_NULL_HANDLE;
 private:
-
-    // Issues a barrier that transforms the layout of the image, e.g. from a CPU-writeable
-    // layout to a GPU-readable layout.
-    void transitionImageLayout(VkCommandBuffer cmdbuffer, VkImage image,
-            VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t miplevel);
 
     // Issues a copy from a VkBuffer to a specified miplevel in a VkImage. The given width and
     // height define a subregion within the miplevel.

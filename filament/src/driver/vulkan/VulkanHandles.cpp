@@ -428,7 +428,10 @@ VulkanTexture::VulkanTexture(VulkanContext& context, SamplerType target, uint8_t
     } else if (usage == TextureUsage::DEPTH_ATTACHMENT) {
         imageInfo.usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
     } else {
-        imageInfo.usage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+        // If it's a not an FBO target or a depth attachment, then it's safe to assume that it will
+        // need to be uploaded or blitted to, so we should set USAGE_TRANSFER_DST. Also, since we
+        // need to support GenerateMipmaps, it can be a blit source; ergo we set USAGE_TRANSFER_SRC.
+        imageInfo.usage |= VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
     }
     VkResult error = vkCreateImage(context.device, &imageInfo, VKALLOC, &textureImage);
     if (error) {
@@ -507,10 +510,10 @@ void VulkanTexture::update2DImage(const PixelBufferDescriptor& data, uint32_t wi
     // Create a copy-to-device functor because we might need to defer it.
     auto copyToDevice = [this, stage, width, height, miplevel] (VkCommandBuffer cmd) {
         transitionImageLayout(cmd, textureImage, VK_IMAGE_LAYOUT_UNDEFINED,
-                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, miplevel);
+                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, miplevel, 1);
         copyBufferToImage(cmd, stage->buffer, textureImage, width, height, nullptr, miplevel);
         transitionImageLayout(cmd, textureImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, miplevel);
+                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, miplevel, 1);
         getSwapContext(mContext).pendingWork.emplace_back([this, stage] (VkCommandBuffer) {
             mStagePool.releaseStage(stage);
         });
@@ -549,10 +552,10 @@ void VulkanTexture::updateCubeImage(const PixelBufferDescriptor& data,
         uint32_t width = std::max(1u, this->width >> miplevel);
         uint32_t height = std::max(1u, this->height >> miplevel);
         transitionImageLayout(cmd, textureImage, VK_IMAGE_LAYOUT_UNDEFINED,
-                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, miplevel);
+                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, miplevel, 6);
         copyBufferToImage(cmd, stage->buffer, textureImage, width, height, &faceOffsets, miplevel);
         transitionImageLayout(cmd, textureImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, miplevel);
+                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, miplevel, 6);
         getSwapContext(mContext).pendingWork.emplace_back([this, stage] (VkCommandBuffer) {
             mStagePool.releaseStage(stage);
         });
@@ -567,7 +570,7 @@ void VulkanTexture::updateCubeImage(const PixelBufferDescriptor& data,
 }
 
 void VulkanTexture::transitionImageLayout(VkCommandBuffer cmd, VkImage image,
-        VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t miplevel) {
+        VkImageLayout oldLayout, VkImageLayout newLayout, uint32_t miplevel, uint32_t layerCount) {
     VkImageMemoryBarrier barrier = {};
     barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
     barrier.oldLayout = oldLayout;
@@ -579,23 +582,30 @@ void VulkanTexture::transitionImageLayout(VkCommandBuffer cmd, VkImage image,
     barrier.subresourceRange.baseMipLevel = miplevel;
     barrier.subresourceRange.levelCount = 1;
     barrier.subresourceRange.baseArrayLayer = 0;
-    barrier.subresourceRange.layerCount = this->target == SamplerType::SAMPLER_CUBEMAP ? 6 : 1;
+    barrier.subresourceRange.layerCount = layerCount;
     VkPipelineStageFlags sourceStage;
     VkPipelineStageFlags destinationStage;
-    if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED &&
-            newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
-        barrier.srcAccessMask = 0;
-        barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-        sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-        destinationStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-    } else if (oldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL &&
-            newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
-        barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-        barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-        sourceStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-        destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-    } else {
-        PANIC_POSTCONDITION("Unsupported layout transition.");
+    switch (newLayout) {
+        case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
+            barrier.srcAccessMask = 0;
+            barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+            sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+            destinationStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+            break;
+        case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
+            barrier.srcAccessMask = 0;
+            barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+            sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+            destinationStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+            break;
+        case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
+            barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+            barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+            sourceStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+            destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+            break;
+        default:
+           PANIC_POSTCONDITION("Unsupported layout transition.");
     }
     vkCmdPipelineBarrier(cmd, sourceStage, destinationStage, 0, 0, nullptr, 0, nullptr, 1,
             &barrier);
