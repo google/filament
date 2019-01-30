@@ -308,6 +308,16 @@ TEST(AllocatorTest, STLAllocator) {
     EXPECT_TRUE(allocator != allocator2);
     EXPECT_TRUE(allocator == allocator);
 
+    STLAllocator<int, Arena>::rebind<char>::other charAllocator(arena);
+    EXPECT_TRUE(allocator == charAllocator);
+
+    STLAllocator<int, Arena> allocatorCopy(allocator);
+    EXPECT_TRUE(allocator == allocatorCopy);
+
+    STLAllocator<int, Arena> allocatorFromCharCopy(charAllocator);
+    EXPECT_TRUE(allocatorFromCharCopy == charAllocator);
+
+
     {
 #if !defined(WIN32)
         std::vector<int, STLAllocator<int, Arena>> vector(allocator);

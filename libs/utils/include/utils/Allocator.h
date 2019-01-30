@@ -739,6 +739,9 @@ public:
     // from an Arena, avoiding to have to repeat the vector type.
     STLAllocator(ARENA& arena) : mArena(arena) { } // NOLINT(google-explicit-constructor)
 
+    template<typename U>
+    explicit STLAllocator(STLAllocator<U, ARENA> const& rhs) : mArena(rhs.mArena) { }
+
     TYPE* allocate(std::size_t n) {
         return static_cast<TYPE *>(mArena.alloc(n * sizeof(TYPE), alignof(TYPE)));
     }
