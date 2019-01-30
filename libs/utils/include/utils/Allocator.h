@@ -18,16 +18,17 @@
 #define TNT_UTILS_ALLOCATOR_H
 
 
-#include <assert.h>
-#include <stddef.h>
-#include <stdlib.h>
-
-#include <atomic>
-#include <mutex>
-
 #include <utils/compiler.h>
 #include <utils/memalign.h>
 #include <utils/Mutex.h>
+
+#include <atomic>
+#include <mutex>
+#include <type_traits>
+
+#include <assert.h>
+#include <stddef.h>
+#include <stdlib.h>
 
 namespace utils {
 
@@ -746,16 +747,21 @@ public:
         mArena.free(p, n * sizeof(TYPE));
     }
 
-private:
-    template <typename T, typename U, typename A>
-    friend bool operator==(const STLAllocator<T, A>& rhs, const STLAllocator<U, A>& lhs) {
-        return &rhs.mArena == &lhs.mArena;
+    // these should be out-of-class friends, but this doesn't seem to work with some compilers
+    // which complain about multiple definition each time a STLAllocator<> is instantiated.
+    template <typename U, typename A>
+    bool operator==(const STLAllocator<U, A>& lhs) noexcept {
+        return std::addressof(mArena) == std::addressof(lhs.mArena);
     }
 
-    template <typename T, typename U, typename A>
-    friend bool operator!=(const STLAllocator<T, A>& rhs, const STLAllocator<U, A>& lhs) {
-        return !operator==(rhs, lhs);
+    template <typename U, typename A>
+    bool operator!=(const STLAllocator<U, A>& lhs) noexcept {
+        return !operator==(lhs);
     }
+
+private:
+    template<typename U, typename A>
+    friend class STLAllocator;
 
     ARENA& mArena;
 };
