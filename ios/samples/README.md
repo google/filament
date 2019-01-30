@@ -46,7 +46,7 @@ $ ./build.sh -s -p ios debug
 ```
 
 When building for the simulator, the sample will then link against the libraries present in
-`out/ios-debug/filament/lib/x86_64'.
+`out/ios-debug/filament/lib/x86_64`.
 
 ## Xcode
 
