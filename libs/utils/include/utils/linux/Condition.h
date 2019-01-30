@@ -19,6 +19,7 @@
 
 #include <atomic>
 #include <chrono>
+#include <condition_variable> // for cv_status
 #include <limits>
 #include <mutex> // for unique_lock
 
