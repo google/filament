@@ -294,10 +294,11 @@ void VulkanDriver::createRenderTarget(Driver::RenderTargetHandle rth,
         TextureFormat format, Driver::TargetBufferInfo color, Driver::TargetBufferInfo depth,
         Driver::TargetBufferInfo stencil) {
     auto& renderTarget = *construct_handle<VulkanRenderTarget>(mHandleMap, rth, mContext,
-            width, height);
+            width, height, color.level);
     if (color.handle) {
         auto colorTexture = handle_cast<VulkanTexture>(mHandleMap, color.handle);
         renderTarget.setColorImage({
+            .image = colorTexture->textureImage,
             .view = colorTexture->imageView,
             .format = colorTexture->vkformat
         });
@@ -307,6 +308,7 @@ void VulkanDriver::createRenderTarget(Driver::RenderTargetHandle rth,
     if (depth.handle) {
         auto depthTexture = handle_cast<VulkanTexture>(mHandleMap, depth.handle);
         renderTarget.setDepthImage({
+            .image = depthTexture->textureImage,
             .view = depthTexture->imageView,
             .format = depthTexture->vkformat
         });
@@ -810,6 +812,63 @@ void VulkanDriver::blit(TargetBufferFlags buffers,
         int32_t dstLeft, int32_t dstBottom, uint32_t dstWidth, uint32_t dstHeight,
         Driver::RenderTargetHandle src,
         int32_t srcLeft, int32_t srcBottom, uint32_t srcWidth, uint32_t srcHeight) {
+    auto dstTarget = handle_cast<VulkanRenderTarget>(mHandleMap, dst);
+    auto srcTarget = handle_cast<VulkanRenderTarget>(mHandleMap, src);
+
+    // In debug builds, verify that the two render targets have blittable formats.
+#ifndef NDEBUG
+    const VkPhysicalDevice gpu = mContext.physicalDevice;
+    VkFormatProperties info;
+    vkGetPhysicalDeviceFormatProperties(gpu, srcTarget->getColor().format, &info);
+    if (!ASSERT_POSTCONDITION_NON_FATAL(info.optimalTilingFeatures & VK_FORMAT_FEATURE_BLIT_SRC_BIT,
+            "Source format is not blittable")) {
+        return;
+    }
+    vkGetPhysicalDeviceFormatProperties(gpu, dstTarget->getColor().format, &info);
+    if (!ASSERT_POSTCONDITION_NON_FATAL(info.optimalTilingFeatures & VK_FORMAT_FEATURE_BLIT_DST_BIT,
+            "Destination format is not blittable")) {
+        return;
+    }
+#endif
+
+    const int32_t srcRight = srcLeft + srcWidth;
+    const int32_t srcTop = srcBottom + srcHeight;
+    const uint32_t srcLevel = srcTarget->getColorLevel();
+
+    const int32_t dstRight = dstLeft + dstWidth;
+    const int32_t dstTop = dstBottom + dstHeight;
+    const uint32_t dstLevel = dstTarget->getColorLevel();
+
+    const VkImageBlit blitRegions[1] = {{
+        .srcSubresource = { VK_IMAGE_ASPECT_COLOR_BIT, srcLevel, 0, 1 },
+        .srcOffsets = { { srcLeft, srcBottom, 0 }, { srcRight, srcTop, 1 }},
+        .dstSubresource = { VK_IMAGE_ASPECT_COLOR_BIT, dstLevel, 0, 1 },
+        .dstOffsets = { { dstLeft, dstBottom, 0 }, { dstRight, dstTop, 1 }}
+    }};
+
+    auto vkblit = [=](VkCommandBuffer cmdbuffer) {
+        VkImage srcImage = srcTarget->getColor().image;
+        VulkanTexture::transitionImageLayout(cmdbuffer, srcImage, VK_IMAGE_LAYOUT_UNDEFINED,
+                VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, srcLevel, 1);
+
+        VkImage dstImage = dstTarget->getColor().image;
+        VulkanTexture::transitionImageLayout(cmdbuffer, dstImage, VK_IMAGE_LAYOUT_UNDEFINED,
+                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, dstLevel, 1);
+
+        // TODO: Issue vkCmdResolveImage for MSAA targets.
+
+        vkCmdBlitImage(cmdbuffer, srcImage, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, dstImage,
+                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, blitRegions, VK_FILTER_LINEAR);
+
+        VulkanTexture::transitionImageLayout(cmdbuffer, dstImage, VK_IMAGE_LAYOUT_UNDEFINED,
+                VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, dstLevel, 1);
+    };
+
+    if (!mContext.cmdbuffer) {
+        mContext.pendingWork.emplace_back(vkblit);
+    } else {
+        vkblit(mContext.cmdbuffer);
+    }
 }
 
 void VulkanDriver::draw(Driver::PipelineState pipelineState, Driver::RenderPrimitiveHandle rph) {
