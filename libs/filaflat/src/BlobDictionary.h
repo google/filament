@@ -17,6 +17,7 @@
 #ifndef TNT_FILAFLAT_BLOBDICTIONARY_H
 #define TNT_FILAFLAT_BLOBDICTIONARY_H
 
+#include <cstdint>
 #include <vector>
 
 #include <stddef.h>

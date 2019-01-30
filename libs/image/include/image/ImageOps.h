@@ -19,6 +19,7 @@
 
 #include <image/LinearImage.h>
 
+#include <cstddef>
 #include <initializer_list>
 
 namespace image {

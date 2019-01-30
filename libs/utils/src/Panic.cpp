@@ -19,6 +19,7 @@
 #include <atomic>
 #include <cstdarg>
 #include <cstdlib>
+#include <cstring>
 
 #include <utils/Log.h>
 
