@@ -228,7 +228,8 @@ void VulkanDriver::beginFrame(int64_t monotonic_clock_ns, uint32_t frameId) {
     // VulkanDriver, such as reclaiming memory. There are two sets of work queues: one in the
     // global context, and one in the per-cmdbuffer contexts. Crucially, we have begun the frame
     // but not the render pass; we cannot perform arbitrary work during the render pass.
-    performPendingWork(mContext, swapContext, swapContext.cmdbuffer);
+    performPendingWork(swapContext.pendingWork, swapContext.cmdbuffer);
+    performPendingWork(mContext.pendingWork, swapContext.cmdbuffer);
 
     // Free old unused objects.
     mStagePool.gc();

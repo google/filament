@@ -122,7 +122,7 @@ VkFrontFace getFrontFace(bool inverseFrontFaces);
 void waitForIdle(VulkanContext& context);
 void acquireCommandBuffer(VulkanContext& context);
 void releaseCommandBuffer(VulkanContext& context);
-void performPendingWork(VulkanContext& context, SwapContext& swapContext, VkCommandBuffer cmdbuf);
+void performPendingWork(VulkanTaskQueue& work, VkCommandBuffer cmdbuf);
 void flushCommandBuffer(VulkanContext& context);
 VkFormat findSupportedFormat(VulkanContext& context, const std::vector<VkFormat>& candidates,
         VkImageTiling tiling, VkFormatFeatureFlags features);

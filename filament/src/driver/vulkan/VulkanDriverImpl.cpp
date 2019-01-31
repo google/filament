@@ -788,24 +788,21 @@ void waitForIdle(VulkanContext& context) {
         return;
     }
 
-    // If there's no surface, then there's no command buffer.
-    if (!context.currentSurface) {
-        return;
-    }
-
     // First, wait for submitted command buffer(s) to finish.
-    VkFence fences[2];
-    uint32_t nfences = 0;
-    auto& surfaceContext = *context.currentSurface;
-    for (auto& swapContext : surfaceContext.swapContexts) {
-        assert(nfences < 2);
-        if (swapContext.submitted && swapContext.fence) {
-            fences[nfences++] = swapContext.fence;
-            swapContext.submitted = false;
+    if (context.currentSurface) {
+        VkFence fences[2];
+        uint32_t nfences = 0;
+        auto& surfaceContext = *context.currentSurface;
+        for (auto& swapContext : surfaceContext.swapContexts) {
+            assert(nfences < 2);
+            if (swapContext.submitted && swapContext.fence) {
+                fences[nfences++] = swapContext.fence;
+                swapContext.submitted = false;
+            }
         }
-    }
-    if (nfences > 0) {
-        vkWaitForFences(context.device, nfences, fences, VK_FALSE, ~0ull);
+        if (nfences > 0) {
+            vkWaitForFences(context.device, nfences, fences, VK_FALSE, ~0ull);
+        }
     }
 
     // If we don't have any pending work, we're done.
@@ -847,15 +844,18 @@ void waitForIdle(VulkanContext& context) {
             utils::slog.e << "Unexpected daisychaining of pending work." << utils::io::endl;
             break;
         }
-        for (auto& swapContext : context.currentSurface->swapContexts) {
-            vkBeginCommandBuffer(cmdbuffer, &beginInfo);
-            performPendingWork(context, swapContext, cmdbuffer);
-            vkEndCommandBuffer(cmdbuffer);
-            vkQueueSubmit(context.graphicsQueue, 1, &submitInfo, fence);
-            vkWaitForFences(context.device, 1, &fence, VK_FALSE, UINT64_MAX);
-            vkResetFences(context.device, 1, &fence);
-            vkResetCommandBuffer(cmdbuffer, 0);
+        vkBeginCommandBuffer(cmdbuffer, &beginInfo);
+        if (context.currentSurface) {
+            for (auto& swapContext : context.currentSurface->swapContexts) {
+                performPendingWork(swapContext.pendingWork, cmdbuffer);
+            }
         }
+        performPendingWork(context.pendingWork, cmdbuffer);
+        vkEndCommandBuffer(cmdbuffer);
+        vkQueueSubmit(context.graphicsQueue, 1, &submitInfo, fence);
+        vkWaitForFences(context.device, 1, &fence, VK_FALSE, UINT64_MAX);
+        vkResetFences(context.device, 1, &fence);
+        vkResetCommandBuffer(cmdbuffer, 0);
     }
     vkFreeCommandBuffers(context.device, context.commandPool, 1, &cmdbuffer);
     vkDestroyFence(context.device, fence, VKALLOC);
@@ -917,18 +917,11 @@ void releaseCommandBuffer(VulkanContext& context) {
     swapContext.submitted = true;
 }
 
-void performPendingWork(VulkanContext& context, SwapContext& swapContext, VkCommandBuffer cmdbuf) {
-    // First, execute pending tasks that are specific to this swap context. Copy the tasks into a
-    // local queue first, which allows newly added tasks to be deferred until the next frame.
-    decltype(swapContext.pendingWork) tasks;
-    tasks.swap(swapContext.pendingWork);
-    for (auto& callback : tasks) {
-        callback(cmdbuf);
-    }
-    // Next, execute the global pending work. Again, we copy the work queue into a local queue
-    // to allow tasks to re-add themselves.
-    tasks.clear();
-    tasks.swap(context.pendingWork);
+void performPendingWork(VulkanTaskQueue& work, VkCommandBuffer cmdbuf) {
+    // Copy the tasks into a local queue first, which allows newly added tasks to be deferred until
+    // the next frame.
+    VulkanTaskQueue tasks;
+    tasks.swap(work);
     for (auto& callback : tasks) {
         callback(cmdbuf);
     }
