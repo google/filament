@@ -460,7 +460,7 @@ void FRenderableManager::setBones(Instance ci,
             PerRenderableUibBone* UTILS_RESTRICT out = (PerRenderableUibBone*)bones->bones.invalidateUniforms(
                     offset * sizeof(PerRenderableUibBone),
                     boneCount * sizeof(PerRenderableUibBone));
-            for (size_t i = 0, c = bones->count; i < c; ++i) {
+            for (size_t i = 0, c = boneCount; i < c; ++i) {
                 out[i].q = transforms[i].unitQuaternion;
                 out[i].t.xyz = transforms[i].translation;
                 out[i].s = out[i].ns = { 1, 1, 1, 0 };
@@ -479,7 +479,7 @@ void FRenderableManager::setBones(Instance ci,
             PerRenderableUibBone* UTILS_RESTRICT out = (PerRenderableUibBone*)bones->bones.invalidateUniforms(
                     offset * sizeof(PerRenderableUibBone),
                     boneCount * sizeof(PerRenderableUibBone));
-            for (size_t i = 0, c = bones->count; i < c; ++i) {
+            for (size_t i = 0, c = boneCount; i < c; ++i) {
                 makeBone(&out[i], transforms[i]);
             }
         }

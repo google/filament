@@ -137,6 +137,8 @@ public:
     bool isShadowCaster(Instance instance) const noexcept;
     bool isShadowReceiver(Instance instance) const noexcept;
 
+    // Updates the bone transforms in the range [offset, offset + boneCount).
+    // The bones must be pre-allocated using Builder::skinning().
     void setBones(Instance instance, Bone const* transforms, size_t boneCount = 1, size_t offset = 0) noexcept;
     void setBones(Instance instance, math::mat4f const* transforms, size_t boneCount = 1, size_t offset = 0) noexcept;
 

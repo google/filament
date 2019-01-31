@@ -199,8 +199,11 @@ void FTexture::generateMipmaps(FEngine& engine) const noexcept {
             "Texture format must be color renderable")) {
         return;
     }
-    if ((mTarget == Sampler::SAMPLER_2D || mTarget == Sampler::SAMPLER_CUBEMAP)
-            && mLevels > 1 && (mWidth > 1 || mHeight > 1)) {
+    if (mLevels == 1 || (mWidth == 1 && mHeight == 1)) {
+        return;
+    }
+
+    auto generateMipsForLayer = [this, &engine](uint16_t layer) {
         FEngine::DriverApi& driver = engine.getDriverApi();
 
         // Wrap miplevel 0 in a render target so that we can use it as a blit source.
@@ -208,7 +211,7 @@ void FTexture::generateMipmaps(FEngine& engine) const noexcept {
         uint32_t srcw = mWidth;
         uint32_t srch = mHeight;
         Driver::RenderTargetHandle srcrth = driver.createRenderTarget(TargetBufferFlags::COLOR,
-                srcw, srch, mSampleCount, mFormat, { mHandle, level++ }, {}, {});
+                srcw, srch, mSampleCount, mFormat, { mHandle, level++, layer }, {}, {});
 
         // Perform a blit for all miplevels down to 1x1.
         Driver::RenderTargetHandle dstrth;
@@ -216,7 +219,7 @@ void FTexture::generateMipmaps(FEngine& engine) const noexcept {
             uint32_t dstw = std::max(srcw >> 1, 1u);
             uint32_t dsth = std::max(srch >> 1, 1u);
             dstrth = driver.createRenderTarget(TargetBufferFlags::COLOR, dstw, dsth, mSampleCount,
-                    mFormat, { mHandle, level++ }, {}, {});
+                    mFormat, { mHandle, level++, layer }, {}, {});
             driver.blit(TargetBufferFlags::COLOR, dstrth, 0, 0, dstw, dsth, srcrth, 0, 0,
                     srcw, srch);
             driver.destroyRenderTarget(srcrth);
@@ -225,6 +228,14 @@ void FTexture::generateMipmaps(FEngine& engine) const noexcept {
             srch = dsth;
         } while ((srcw > 1 || srch > 1) && level < mLevels);
         driver.destroyRenderTarget(dstrth);
+    };
+
+    if (mTarget == Sampler::SAMPLER_2D) {
+        generateMipsForLayer(0);
+    } else if (mTarget == Sampler::SAMPLER_CUBEMAP) {
+        for (uint16_t layer = 0; layer < 6; ++layer) {
+            generateMipsForLayer(layer);
+        }
     }
 }
 
