@@ -514,7 +514,7 @@ void VulkanTexture::update2DImage(const PixelBufferDescriptor& data, uint32_t wi
         copyBufferToImage(cmd, stage->buffer, textureImage, width, height, nullptr, miplevel);
         transitionImageLayout(cmd, textureImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                 VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, miplevel, 1);
-        getSwapContext(mContext).pendingWork.emplace_back([this, stage] (VkCommandBuffer) {
+        mContext.pendingWork.emplace_back([this, stage] (VkCommandBuffer) {
             mStagePool.releaseStage(stage);
         });
     };
@@ -556,7 +556,7 @@ void VulkanTexture::updateCubeImage(const PixelBufferDescriptor& data,
         copyBufferToImage(cmd, stage->buffer, textureImage, width, height, &faceOffsets, miplevel);
         transitionImageLayout(cmd, textureImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                 VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, miplevel, 6);
-        getSwapContext(mContext).pendingWork.emplace_back([this, stage] (VkCommandBuffer) {
+        mContext.pendingWork.emplace_back([this, stage] (VkCommandBuffer) {
             mStagePool.releaseStage(stage);
         });
     };

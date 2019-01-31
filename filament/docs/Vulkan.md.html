@@ -11,7 +11,7 @@
 </style>
 
 **Vulkan Backend**
-          *Last updated: 27 July 2018*
+          *Last updated: 31 Jan 2019*
 
 ![](../../docs/images/filament_logo.png)
 
@@ -80,6 +80,16 @@ In a self-imposed design constraint, we have decided that every method in `Vulka
 override; it should have no private methods other than the handle allocators. This reins in
 complexity because it must implement every method in `DriverAPI` while dealing with Vulkan itself,
 which has an extremely low-level API.
+
+## Command buffers
+
+We have a separate `VkCommandBuffer` for each element in the swap context. This allows us to
+populate command buffer "A" while the GPU is busy consuming command buffer "B". Thus, we typically
+have two persistent `VkCommandBuffer` objects: for each element in the swap chain.
+
+However, note that we can receive Driver API requests before the SwapChain has been created. One
+typical example is uploading texture data. For these types of operations, we simply create a one-off
+command buffer (which is supposedly a lightweight operation in Vulkan) and execute work on it.
 
 ## Handle types
 
