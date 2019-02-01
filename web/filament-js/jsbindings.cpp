@@ -617,7 +617,7 @@ class_<RenderableManager>("RenderableManager")
         self->setBones(instance, bones.data(), bones.size(), offset);
     }), allow_raw_pointers())
 
-    .function("setBonesFromMatices", EMBIND_LAMBDA(void, (RenderableManager* self,
+    .function("setBonesFromMatrices", EMBIND_LAMBDA(void, (RenderableManager* self,
         RenderableManager::Instance instance, emscripten::val transforms, size_t offset), {
         auto nbones = transforms["length"].as<size_t>();
         std::vector<math::mat4f> bones(nbones);

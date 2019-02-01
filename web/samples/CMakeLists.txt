@@ -196,6 +196,7 @@ set(HTML_FILES
     helmet.html
     leaks.html
     parquet.html
+    skinning.html
     suzanne.html
     triangle.html)
 
