@@ -39,6 +39,6 @@ enum GlslMinifyOptions : uint32_t {
 std::string minifyGlsl(const std::string& glsl,
         GlslMinifyOptions options = GlslMinifyOptions::ALL) noexcept;
 
-} // namesapce glslminifier
+} // namespace glslminifier
 
 #endif //TNT_GLSLMINIFY_H

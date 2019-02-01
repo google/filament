@@ -100,7 +100,7 @@ public:
      * Add a pass to the framegraph.
      * The Setup lambda is called synchronously and used to declare which and how resources are
      *   used by this pass. Captures should be done by reference.
-     * The Execute lamda is called asynchronously from FrameGraph::execute(), and this is where
+     * The Execute lambda is called asynchronously from FrameGraph::execute(), and this is where
      *   immediate drawing commands can be issued. Captures must be done by copy.
      */
     template <typename Data, typename Setup, typename Execute>

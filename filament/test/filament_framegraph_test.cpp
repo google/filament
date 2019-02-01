@@ -241,7 +241,7 @@ TEST(FrameGraphTest, SimplePassCulling) {
 TEST(FrameGraphTest, BadGraph) {
 
     /*
-     * We invalidate and rename handles that are writen into, to avoid undefined order
+     * We invalidate and rename handles that are written into, to avoid undefined order
      * access to the resources.
      *
      * e.g. forbidden graphs
