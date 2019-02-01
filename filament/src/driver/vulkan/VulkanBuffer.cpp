@@ -42,7 +42,6 @@ VulkanBuffer::~VulkanBuffer() {
 
 void VulkanBuffer::loadFromCpu(const void* cpuData, uint32_t byteOffset, uint32_t numBytes) {
     assert(byteOffset == 0);
-    VkDevice device = mContext.device;
     VulkanStage const* stage = mStagePool.acquireStage(numBytes);
     void* mapped;
     vmaMapMemory(mContext.allocator, stage->memory, &mapped);
@@ -50,52 +49,33 @@ void VulkanBuffer::loadFromCpu(const void* cpuData, uint32_t byteOffset, uint32_
     vmaUnmapMemory(mContext.allocator, stage->memory);
     vmaFlushAllocation(mContext.allocator, stage->memory, byteOffset, numBytes);
 
-    // Create and submit a one-off command buffer to allow uploading outside a frame.
-    VkCommandBuffer cmdbuffer;
-    VkFence fence;
-    VkCommandBufferBeginInfo beginInfo { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
-    VkCommandBufferAllocateInfo allocateInfo {
-        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-        .commandPool = mContext.commandPool,
-        .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-        .commandBufferCount = 1
-    };
-    VkFenceCreateInfo fenceCreateInfo { .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
-    VkBufferCopy region { .size = numBytes };
-    vkAllocateCommandBuffers(device, &allocateInfo, &cmdbuffer);
-    vkCreateFence(device, &fenceCreateInfo, VKALLOC, &fence);
-    vkBeginCommandBuffer(cmdbuffer, &beginInfo);
-    vkCmdCopyBuffer(cmdbuffer, stage->buffer, mGpuBuffer, 1, &region);
+    auto copyToDevice = [this, numBytes, stage] (VkCommandBuffer cmdbuffer) {
+        VkBufferCopy region { .size = numBytes };
+        vkCmdCopyBuffer(cmdbuffer, stage->buffer, mGpuBuffer, 1, &region);
 
-    // Ensure that the copy finishes before the next draw call.
-    VkBufferMemoryBarrier barrier {
-        .sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
-        .srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
-        .dstAccessMask = VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT | VK_ACCESS_INDEX_READ_BIT,
-        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-        .buffer = mGpuBuffer,
-        .size = VK_WHOLE_SIZE
+        // Ensure that the copy finishes before the next draw call.
+        VkBufferMemoryBarrier barrier {
+            .sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
+            .srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
+            .dstAccessMask = VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT | VK_ACCESS_INDEX_READ_BIT,
+            .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+            .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+            .buffer = mGpuBuffer,
+            .size = VK_WHOLE_SIZE
+        };
+        vkCmdPipelineBarrier(cmdbuffer, VK_PIPELINE_STAGE_TRANSFER_BIT,
+                VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, 0, 0, nullptr, 1, &barrier, 0, nullptr);
+        mContext.pendingWork.emplace_back([this, stage] (VkCommandBuffer)  {
+            mStagePool.releaseStage(stage);
+        });
     };
-    vkCmdPipelineBarrier(cmdbuffer, VK_PIPELINE_STAGE_TRANSFER_BIT,
-            VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, 0, 0, nullptr, 1, &barrier, 0, nullptr);
-    vkEndCommandBuffer(cmdbuffer);
-    VkSubmitInfo submitInfo {
-        .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-        .commandBufferCount = 1,
-        .pCommandBuffers = &cmdbuffer,
-    };
-    vkQueueSubmit(mContext.graphicsQueue, 1, &submitInfo, fence);
 
-    // Enqueue some work to reclaim the staging area and free the command buffer. The pipeline
-    // barrier we already placed is a GPU-to-GPU sync point, but reclamation of the staging area
-    // needs GPU-CPU synchronization. That's what the fence is for.
-    mContext.pendingWork.emplace_back([this, fence, device, cmdbuffer, stage] (VkCommandBuffer)  {
-        vkWaitForFences(device, 1, &fence, VK_FALSE, UINT64_MAX);
-        vkFreeCommandBuffers(device, mContext.commandPool, 1, &cmdbuffer);
-        vkDestroyFence(device, fence, VKALLOC);
-        mStagePool.releaseStage(stage);
-    });
+    // If possible, perform the upload immediately, otherwise queue up the work.
+    if (mContext.cmdbuffer) {
+        copyToDevice(mContext.cmdbuffer);
+    } else {
+        mContext.pendingWork.emplace_back(copyToDevice);
+    }
 }
 
 } // namespace filament
