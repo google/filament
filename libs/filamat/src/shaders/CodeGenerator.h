@@ -75,12 +75,12 @@ public:
     std::ostream& generateShaderUnlit(std::ostream& out, ShaderType type,
             filament::Variant variant, bool hasShadowMultiplier) const;
 
-    // generate in/out variable
+    // generate declarations for custom interpolants
     std::ostream& generateVariable(std::ostream& out, ShaderType type,
             const utils::CString& name, size_t index) const;
 
-    // generate in/out variables
-    std::ostream& generateVariables(std::ostream& out, ShaderType type,
+    // generate declarations for non-custom "in" variables
+    std::ostream& generateShaderInputs(std::ostream& out, ShaderType type,
         const filament::AttributeBitset& attributes, filament::Interpolation interpolation) const;
 
     // generate no-op shader for depth prepass

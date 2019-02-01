@@ -26,6 +26,8 @@ set(SHADERS
         src/fxaa.fs
         src/getters.fs
         src/getters.vs
+        src/inputs.fs
+        src/inputs.vs
         src/light_directional.fs
         src/light_indirect.fs
         src/light_punctual.fs
@@ -41,9 +43,7 @@ set(SHADERS
         src/shading_unlit.fs
         src/shadowing.fs
         src/shadowing.vs
-        src/tone_mapping.fs
-        src/variables.fs
-        src/variables.vs)
+        src/tone_mapping.fs)
 
 set(MINIFIED_DIR ${CMAKE_CURRENT_BINARY_DIR}/minified)
 

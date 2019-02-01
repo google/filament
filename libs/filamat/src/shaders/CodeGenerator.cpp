@@ -163,7 +163,7 @@ std::ostream& CodeGenerator::generateVariable(std::ostream& out, ShaderType type
     return out;
 }
 
-std::ostream& CodeGenerator::generateVariables(std::ostream& out, ShaderType type,
+std::ostream& CodeGenerator::generateShaderInputs(std::ostream& out, ShaderType type,
         const AttributeBitset& attributes, Interpolation interpolation) const {
 
     const char* shading = getInterpolationQualifier(interpolation);
@@ -209,9 +209,9 @@ std::ostream& CodeGenerator::generateVariables(std::ostream& out, ShaderType typ
             generateDefine(out, "LOCATION_BONE_WEIGHTS", uint32_t(VertexAttribute::BONE_WEIGHTS));
         }
 
-        out << SHADERS_VARIABLES_VS_DATA;
+        out << SHADERS_INPUTS_VS_DATA;
     } else if (type == ShaderType::FRAGMENT) {
-        out << SHADERS_VARIABLES_FS_DATA;
+        out << SHADERS_INPUTS_FS_DATA;
     }
     return out;
 }
