@@ -11,7 +11,7 @@
 </style>
 
 **Vulkan Backend**
-          *Last updated: 31 Jan 2019*
+          *Last updated: 1 Feb 2019*
 
 ![](../../docs/images/filament_logo.png)
 
@@ -83,13 +83,21 @@ which has an extremely low-level API.
 
 ## Command buffers
 
-We have a separate `VkCommandBuffer` for each element in the swap context. This allows us to
-populate command buffer "A" while the GPU is busy consuming command buffer "B". Thus, we typically
-have two persistent `VkCommandBuffer` objects: for each element in the swap chain.
+We persist one `VkCommandBuffer` for each element in the swap context. This allows us to
+populate command buffer "A" while the GPU is busy consuming command buffer "B".
 
-However, note that we can receive Driver API requests before the SwapChain has been created. One
-typical example is uploading texture data. For these types of operations, we simply create a one-off
-command buffer (which is supposedly a lightweight operation in Vulkan) and execute work on it.
+Note that we can receive DriverAPI requests before the SwapChain has been created. One typical
+example is uploading texture data. For these types of operations, we defer the work until a command
+buffer becomes available. If a subsequent DriverAPI command needs to use the data that was uploaded,
+there is no need to synchronize because it too will be deferred when there is no command buffer,
+using the same queue of lambda functions (look for `pendingWork` in the Vulkan driver).
+
+We sometimes create a one-off command buffer, which is necessary when a resource is created,
+populated, then immediately deleted, all before a swap chain has been created. One example of this
+is mipmap generation, which requires the construction of transient render targets. When any resource
+is deleted, VulkanDriver first waits for all pending work to finish. If there is no swap chain, it
+will create a one-off command buffer solely for performing pending work; see our `waitForIdle`
+function.
 
 ## Handle types
 
