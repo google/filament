@@ -278,3 +278,63 @@ TEST(FrameGraphTest, SimplePassCulling) {
     EXPECT_TRUE(postProcessPassExecuted);
     EXPECT_FALSE(culledPassExecuted);
 }
+
+TEST(FrameGraphTest, RenderTargetLifetime) {
+
+    FrameGraph fg;
+
+    bool renderPassExecuted1 = false;
+    bool renderPassExecuted2 = false;
+    Handle<HwRenderTarget> rt1;
+
+    struct RenderPassData {
+        FrameGraphResource output;
+    };
+
+    auto& renderPass1 = fg.addPass<RenderPassData>("Render1",
+            [&](FrameGraph::Builder& builder, RenderPassData& data) {
+                FrameGraphResource::Descriptor desc{
+                        .format = TextureFormat::RGBA16F
+                };
+                data.output = builder.createTexture("color buffer", desc);
+                data.output = builder.useRenderTarget(data.output, (TargetBufferFlags)0x80).textures[0];
+                EXPECT_TRUE(fg.isValid(data.output));
+            },
+            [=, &rt1, &renderPassExecuted1](
+                    FrameGraphPassResources const& resources,
+                    RenderPassData const& data,
+                    DriverApi& driver) {
+                renderPassExecuted1 = true;
+                auto const& rt = resources.getRenderTarget(data.output);
+                rt1 = rt.target;
+                EXPECT_TRUE(rt.target);
+                EXPECT_EQ(TargetBufferFlags::ALL, rt.params.discardStart);
+                EXPECT_EQ(TargetBufferFlags::DEPTH_AND_STENCIL, rt.params.discardEnd);
+            });
+
+    auto& renderPass2 = fg.addPass<RenderPassData>("Render2",
+            [&](FrameGraph::Builder& builder, RenderPassData& data) {
+                data.output = builder.useRenderTarget(renderPass1.getData().output, (TargetBufferFlags)0x40).textures[0];
+                EXPECT_TRUE(fg.isValid(data.output));
+            },
+            [=, &rt1, &renderPassExecuted2](
+                    FrameGraphPassResources const& resources,
+                    RenderPassData const& data,
+                    DriverApi& driver) {
+                renderPassExecuted2 = true;
+                auto const& rt = resources.getRenderTarget(data.output);
+                EXPECT_TRUE(rt.target);
+                EXPECT_EQ(0x40|0x80, rt.params.clear);
+                EXPECT_EQ(rt1.getId(), rt.target.getId()); // FIXME: this test is always true the NoopDriver
+                EXPECT_EQ(TargetBufferFlags::DEPTH_AND_STENCIL, rt.params.discardStart);
+                EXPECT_EQ(TargetBufferFlags::DEPTH_AND_STENCIL, rt.params.discardEnd);
+
+            });
+
+    fg.present(renderPass2.getData().output);
+    fg.compile();
+    fg.execute(driverApi);
+
+    EXPECT_TRUE(renderPassExecuted1);
+    EXPECT_TRUE(renderPassExecuted2);
+}

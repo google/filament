@@ -46,6 +46,7 @@ namespace fg {
 struct Resource;
 struct ResourceNode;
 struct RenderTarget;
+struct RenderTargetResource;
 struct PassNode;
 struct Alias;
 } // namespace fg
@@ -145,9 +146,9 @@ public:
     FrameGraphResource::Descriptor* getDescriptor(FrameGraphResource r);
 
     // Import a write-only render target from outside the framegraph and returns a handle to it.
-    FrameGraphResource importResource(
-            const char* name, FrameGraphRenderTarget::Descriptor const& descriptor,
-            Handle<HwRenderTarget> target,
+    FrameGraphResource importResource(const char* name,
+            FrameGraphRenderTarget::Descriptor descriptor,
+            Handle<HwRenderTarget> target, uint32_t width, uint32_t height,
             driver::TargetBufferFlags discardStart = driver::TargetBufferFlags::NONE,
             driver::TargetBufferFlags discardEnd = driver::TargetBufferFlags::NONE);
 
@@ -177,6 +178,7 @@ private:
     friend class FrameGraphPassResources;
     friend struct fg::PassNode;
     friend struct fg::RenderTarget;
+    friend struct fg::RenderTargetResource;
 
     template <typename T>
     struct Deleter {
@@ -203,12 +205,17 @@ private:
             fg::PassNode const* curr, fg::PassNode const* first,
             fg::RenderTarget const& renderTarget);
 
+    bool equals(FrameGraphRenderTarget::Descriptor const& rhs,
+            FrameGraphRenderTarget::Descriptor const& lhs) const noexcept;
+
     details::LinearAllocatorArena mArena;
     Vector<fg::PassNode> mPassNodes;                    // list of frame graph passes
     Vector<fg::ResourceNode> mResourceNodes;            // list of resource nodes
-    Vector<UniquePtr<fg::Resource>> mResourceRegistry;  // list actual resources
-    Vector<fg::RenderTarget> mRenderTargets;
-    Vector<fg::Alias> mAliases;
+    Vector<fg::RenderTarget> mRenderTargets;            // list of rendertarget
+    Vector<fg::Alias> mAliases;                         // list of aliases
+    Vector<UniquePtr<fg::Resource>> mResourceRegistry;  // list of actual textures
+    Vector<UniquePtr<fg::RenderTargetResource>> mRenderTargetCache; // list of actual rendertargets
+
     uint16_t mId = 0;
 };
 
