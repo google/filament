@@ -168,7 +168,7 @@ const std::string ShaderGenerator::createVertexProgram(filament::driver::ShaderM
         attributes.set(VertexAttribute::BONE_INDICES);
         attributes.set(VertexAttribute::BONE_WEIGHTS);
     }
-    cg.generateVariables(vs, ShaderType::VERTEX, attributes, interpolation);
+    cg.generateShaderInputs(vs, ShaderType::VERTEX, attributes, interpolation);
 
     // custom material variables
     size_t variableIndex = 0;
@@ -280,7 +280,7 @@ const std::string ShaderGenerator::createFragmentProgram(filament::driver::Shade
     cg.generateDefine(fs, getShadingDefine(material.shading), true);
     generateMaterialDefines(fs, cg, mProperties);
 
-    cg.generateVariables(fs, ShaderType::FRAGMENT, material.requiredAttributes, interpolation);
+    cg.generateShaderInputs(fs, ShaderType::FRAGMENT, material.requiredAttributes, interpolation);
 
     // custom material variables
     size_t variableIndex = 0;
