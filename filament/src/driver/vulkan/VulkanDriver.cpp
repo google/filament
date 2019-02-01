@@ -557,9 +557,11 @@ void VulkanDriver::setExternalStream(Driver::TextureHandle th, Driver::StreamHan
 }
 
 void VulkanDriver::updateUniformBuffer(Driver::UniformBufferHandle ubh, BufferDescriptor&& data) {
-    auto* buffer = handle_cast<VulkanUniformBuffer>(mHandleMap, ubh);
-    buffer->loadFromCpu(data.buffer, (uint32_t) data.size);
-    scheduleDestroy(std::move(data));
+    if (data.size > 0) {
+        auto* buffer = handle_cast<VulkanUniformBuffer>(mHandleMap, ubh);
+        buffer->loadFromCpu(data.buffer, (uint32_t) data.size);
+        scheduleDestroy(std::move(data));
+    }
 }
 
 void VulkanDriver::updateSamplerBuffer(Driver::SamplerBufferHandle sbh,
