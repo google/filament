@@ -251,12 +251,8 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
             FrameGraphResource input = fg.importResource("colorTarget",
                     colorDesc, colorTarget->texture);
 
-            FrameGraphRenderTarget::Descriptor viewRenderTargetDesc{
-                    .width = vp.width,
-                    .height= vp.height,
-            };
             FrameGraphResource output = fg.importResource("viewRenderTarget",
-                    viewRenderTargetDesc, viewRenderTarget);
+                    {}, viewRenderTarget, vp.width, vp.height);
 
             if (useMSAA > 1) {
                 input = ppm.msaa(fg, input, hdrFormat);

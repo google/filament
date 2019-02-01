@@ -19,6 +19,7 @@
 
 #include <filament/driver/DriverEnums.h>
 
+#include <array>
 #include <limits>
 
 #include <stdint.h>
@@ -28,6 +29,7 @@ namespace filament {
 namespace fg {
 struct PassNode;
 struct RenderTarget;
+struct RenderTargetResource;
 } // namespace fg
 
 class FrameGraph;
@@ -44,6 +46,7 @@ class FrameGraphResource {
     friend class FrameGraphPassResources;
     friend struct fg::PassNode;
     friend struct fg::RenderTarget;
+    friend struct fg::RenderTargetResource;
 
     FrameGraphResource(uint16_t index) noexcept : index(index) {}
 
@@ -61,6 +64,7 @@ public:
         uint8_t levels = 1;     // # of levels for textures
         driver::SamplerType type = driver::SamplerType::SAMPLER_2D;     // texture target type
         driver::TextureFormat format = driver::TextureFormat::RGBA8;    // resource internal format
+        bool relaxed = false; // dimensions can be slightly adjusted
     };
 
     bool isValid() const noexcept { return index != UNINITIALIZED; }
@@ -83,21 +87,19 @@ namespace FrameGraphRenderTarget {
 
 struct Attachments {
     enum { COLOR, DEPTH };
+    static constexpr size_t COUNT = 2;
     union {
-        FrameGraphResource textures[2] = {};
+        std::array<FrameGraphResource, COUNT> textures = {};
         struct {
             FrameGraphResource color;
             FrameGraphResource depth;
         };
     };
-    static constexpr size_t COUNT = sizeof(textures) / sizeof(*textures);
 };
 
 struct Descriptor {
-    uint32_t width = 1;             // width of resource in pixel
-    uint32_t height = 1;            // height of resource in pixel
-    uint8_t samples = 1;            // # of samples
     Attachments attachments;
+    uint8_t samples = 1;            // # of samples
 };
 
 } // namespace FrameGraphRenderTarget
