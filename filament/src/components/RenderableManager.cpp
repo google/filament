@@ -282,8 +282,20 @@ void FRenderableManager::create(
         const size_t count = builder->mSkinningBoneCount;
         if (UTILS_UNLIKELY(count)) {
             std::unique_ptr<Bones>& bones = manager[ci].bones;
+            // Note that we are sizing the bones UBO according to CONFIG_MAX_BONE_COUNT rather than
+            // mSkinningBoneCount. According to the OpenGL ES 3.2 specification in 7.6.3 Uniform
+            // Buffer Object Bindings:
+            //
+            //     the uniform block must be populated with a buffer object with a size no smaller
+            //     than the minimum required size of the uniform block (the value of
+            //     UNIFORM_BLOCK_DATA_SIZE).
+            //
+            // This unfortunately means that we are using a large memory footprint for skinned
+            // renderables. In the future we could try addressing this by implementing a paging
+            // system such that multiple skinned renderables will share regions within a single
+            // large block of bones.
             bones = std::unique_ptr<Bones>(new Bones{
-                    driver.createUniformBuffer(count * sizeof(PerRenderableUibBone),
+                    driver.createUniformBuffer(CONFIG_MAX_BONE_COUNT * sizeof(PerRenderableUibBone),
                             driver::BufferUsage::DYNAMIC),
                     UniformBuffer{ count * sizeof(PerRenderableUibBone) },
                     count
