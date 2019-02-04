@@ -43,6 +43,19 @@ android {
         versionName "1.0"
 
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+
+        externalNativeBuild {
+            cmake {
+                arguments.add("-DANDROID_PIE=ON")
+                arguments.add("-DANDROID_PLATFORM=android-21")
+                arguments.add("-DANDROID_STL=c++_static")
+                arguments.add("-DFILAMENT_DIST_DIR=${filament_path}".toString())
+                cppFlags.add("-std=c++14")
+                if (project.hasProperty('extra_cmake_args')) {
+                    arguments.add(extra_cmake_args)
+                }
+            }
+        }
     }
 
     buildTypes {
@@ -52,17 +65,16 @@ android {
         }
     }
 
-    sourceSets {
-        main {
-            jniLibs.srcDirs "${filament_path}/lib"
+    externalNativeBuild {
+        cmake {
+            path "CMakeLists.txt"
         }
     }
 
-    // Ensure that only the libfilamat-jni.so library is included in the AAR, in case any other
-    // libraries happen to be present.
-    packagingOptions {
-        exclude '**/*.so'
-        merge '**/libfilamat-jni.so'
+    sourceSets {
+        main {
+            jni.srcDirs "src/main/cpp"
+        }
     }
 
     compileOptions {
@@ -75,4 +87,3 @@ dependencies {
     implementation fileTree(include: ['*.jar'], dir: 'libs')
     implementation 'com.android.support:support-annotations:28.0.0'
 }
-

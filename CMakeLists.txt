@@ -353,7 +353,6 @@ if (FILAMENT_BUILD_FILAMAT)
     add_subdirectory(${EXTERNAL}/spirv-tools)
     add_subdirectory(${EXTERNAL}/glslang/tnt)
     add_subdirectory(${EXTERNAL}/spirv-cross/tnt)
-    add_subdirectory(android/filamat-android)
     add_subdirectory(${LIBRARIES}/filamat)
 endif()
 

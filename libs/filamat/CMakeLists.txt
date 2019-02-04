@@ -92,10 +92,48 @@ target_compile_options(${TARGET} PRIVATE
 # ==================================================================================================
 # Installation
 # ==================================================================================================
-# Currently disabled because we don't need it
-# To properly support Vulkan, filamat needs to support SPIR-V compilation
-# install(DIRECTORY ${PUBLIC_HDR_DIR}/filamat DESTINATION include)
-# install(TARGETS ${TARGET} ARCHIVE DESTINATION lib/${DIST_DIR})
+
+# Filamat has dependencies on a bunch of SPIRV-related libraries. To make things simpler, we bundle
+# them together into a single shared library and copy this into the installation folder. This
+# requires us to explicitly list the dependencies below, as CMake doesn't have a way to recursively
+# query dependencies.
+set(FILAMAT_DEPS
+        OGLCompiler
+        OSDependent
+        SPIRV
+        SPIRV-Tools
+        SPIRV-Tools-opt
+        SPVRemapper
+        filamat
+        glslang
+        spirv-cross-core
+        spirv-cross-glsl
+        spirv-cross-msl
+        )
+
+# Loop through the dependent libraries and query their location on disk.
+set(FILAMAT_DEPS_FILES )
+foreach(DEPENDENCY ${FILAMAT_DEPS})
+    list(APPEND FILAMAT_DEPS_FILES "$<TARGET_FILE:${DEPENDENCY}>")
+endforeach()
+
+# Run the combine-static-libs script to bundle the libraries together.
+set(FILAMAT_COMBINED_OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/libfilamat_combined.a")
+set(COMBINE_SCRIPT "${CMAKE_SOURCE_DIR}/build/linux/combine-static-libs.sh")
+if (WIN32)
+    set(COMBINE_SCRIPT "${CMAKE_SOURCE_DIR}/build/windows/combine-static-libs.bat")
+    set(CMAKE_AR "lib.exe")
+endif()
+add_custom_command(
+    TARGET filamat POST_BUILD
+    COMMAND "${COMBINE_SCRIPT}" "${CMAKE_AR}" "${FILAMAT_COMBINED_OUTPUT}" ${FILAMAT_DEPS_FILES}
+    COMMENT "Combining filamat dependencies into single shared library"
+    VERBATIM
+)
+
+set(FILAMAT_LIB_NAME ${CMAKE_STATIC_LIBRARY_PREFIX}filamat${CMAKE_STATIC_LIBRARY_SUFFIX})
+install(FILES "${FILAMAT_COMBINED_OUTPUT}" DESTINATION lib/${DIST_DIR} RENAME ${FILAMAT_LIB_NAME})
+install(DIRECTORY ${PUBLIC_HDR_DIR}/filamat DESTINATION include)
 
 # ==================================================================================================
 # Tests
