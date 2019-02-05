@@ -59,8 +59,9 @@ static const Vertex TRIANGLE_VERTICES[3] = {
 
 static constexpr uint16_t TRIANGLE_INDICES[3] = { 0, 1, 2 };
 
+// This file is compiled via the matc tool. See the "Run Script" build phase.
 static constexpr uint8_t BAKED_COLOR_PACKAGE[] = {
-#include "bakedColor.inc"
+#include "bakedColor.filamat"
 };
 
 @implementation FilamentView {

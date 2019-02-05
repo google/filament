@@ -7,7 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		43CA3CA92176AA6900B497B4 /* bakedColor.inc in Sources */ = {isa = PBXBuildFile; fileRef = 43E4A54A21600D0800E4AEA0 /* bakedColor.inc */; };
 		43CA3CAA2176AA6900B497B4 /* ViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 43E4A535216006AF00E4AEA0 /* ViewController.m */; };
 		43CA3CAB2176AA6900B497B4 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 43E4A540216006B100E4AEA0 /* main.m */; };
 		43CA3CAC2176AA6900B497B4 /* FilamentView.mm in Sources */ = {isa = PBXBuildFile; fileRef = 43E4A5482160073300E4AEA0 /* FilamentView.mm */; };
@@ -22,7 +21,6 @@
 		43E4A53E216006B100E4AEA0 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 43E4A53C216006B100E4AEA0 /* LaunchScreen.storyboard */; };
 		43E4A541216006B100E4AEA0 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 43E4A540216006B100E4AEA0 /* main.m */; };
 		43E4A5492160073300E4AEA0 /* FilamentView.mm in Sources */ = {isa = PBXBuildFile; fileRef = 43E4A5482160073300E4AEA0 /* FilamentView.mm */; };
-		43E4A54B21600D0800E4AEA0 /* bakedColor.inc in Sources */ = {isa = PBXBuildFile; fileRef = 43E4A54A21600D0800E4AEA0 /* bakedColor.inc */; };
 		43E4A55221601ECB00E4AEA0 /* libMoltenVK.dylib in CopyFiles */ = {isa = PBXBuildFile; fileRef = 43E4A54F21601CE600E4AEA0 /* libMoltenVK.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 /* End PBXBuildFile section */
 
@@ -40,6 +38,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		4366F7E82209317900542309 /* bakedColor.mat */ = {isa = PBXFileReference; lastKnownFileType = text; path = bakedColor.mat; sourceTree = "<group>"; };
 		43CA3CB82176AA6900B497B4 /* hello-triangle-OpenGL.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "hello-triangle-OpenGL.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		43E4A52E216006AF00E4AEA0 /* hello-triangle-VK.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "hello-triangle-VK.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		43E4A531216006AF00E4AEA0 /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
@@ -53,7 +52,6 @@
 		43E4A540216006B100E4AEA0 /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
 		43E4A5472160073300E4AEA0 /* FilamentView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = FilamentView.h; sourceTree = "<group>"; };
 		43E4A5482160073300E4AEA0 /* FilamentView.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = FilamentView.mm; sourceTree = "<group>"; };
-		43E4A54A21600D0800E4AEA0 /* bakedColor.inc */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.pascal; path = bakedColor.inc; sourceTree = "<group>"; };
 		43E4A54F21601CE600E4AEA0 /* libMoltenVK.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libMoltenVK.dylib; path = ../../../third_party/moltenvk/ios/libMoltenVK.dylib; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -96,6 +94,7 @@
 		43E4A530216006AF00E4AEA0 /* hello-triangle */ = {
 			isa = PBXGroup;
 			children = (
+				4366F7E82209317900542309 /* bakedColor.mat */,
 				43E4A531216006AF00E4AEA0 /* AppDelegate.h */,
 				43E4A532216006AF00E4AEA0 /* AppDelegate.m */,
 				43E4A534216006AF00E4AEA0 /* ViewController.h */,
@@ -106,7 +105,6 @@
 				43E4A53A216006B100E4AEA0 /* Assets.xcassets */,
 				43E4A53C216006B100E4AEA0 /* LaunchScreen.storyboard */,
 				43E4A53F216006B100E4AEA0 /* Info.plist */,
-				43E4A54A21600D0800E4AEA0 /* bakedColor.inc */,
 				43E4A540216006B100E4AEA0 /* main.m */,
 			);
 			path = "hello-triangle";
@@ -119,6 +117,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 43CA3CB52176AA6900B497B4 /* Build configuration list for PBXNativeTarget "hello-triangle-OpenGL" */;
 			buildPhases = (
+				4366F7E7220930EF00542309 /* ShellScript */,
 				43CA3CA82176AA6900B497B4 /* Sources */,
 				43CA3CAE2176AA6900B497B4 /* Frameworks */,
 				43CA3CAF2176AA6900B497B4 /* Resources */,
@@ -136,6 +135,7 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = 43E4A544216006B100E4AEA0 /* Build configuration list for PBXNativeTarget "hello-triangle-VK" */;
 			buildPhases = (
+				4366F7E62209302E00542309 /* ShellScript */,
 				43E4A52A216006AF00E4AEA0 /* Sources */,
 				43E4A52B216006AF00E4AEA0 /* Frameworks */,
 				43E4A52C216006AF00E4AEA0 /* Resources */,
@@ -206,12 +206,48 @@
 		};
 /* End PBXResourcesBuildPhase section */
 
+/* Begin PBXShellScriptBuildPhase section */
+		4366F7E62209302E00542309 /* ShellScript */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PROJECT_DIR}/build-materials.sh\"\n";
+		};
+		4366F7E7220930EF00542309 /* ShellScript */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PROJECT_DIR}/build-materials.sh\"\n";
+		};
+/* End PBXShellScriptBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
 		43CA3CA82176AA6900B497B4 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				43CA3CA92176AA6900B497B4 /* bakedColor.inc in Sources */,
 				43CA3CAA2176AA6900B497B4 /* ViewController.m in Sources */,
 				43CA3CAB2176AA6900B497B4 /* main.m in Sources */,
 				43CA3CAC2176AA6900B497B4 /* FilamentView.mm in Sources */,
@@ -223,7 +259,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				43E4A54B21600D0800E4AEA0 /* bakedColor.inc in Sources */,
 				43E4A536216006AF00E4AEA0 /* ViewController.m in Sources */,
 				43E4A541216006B100E4AEA0 /* main.m in Sources */,
 				43E4A5492160073300E4AEA0 /* FilamentView.mm in Sources */,
@@ -265,7 +300,10 @@
 					"DEBUG=1",
 					"$(inherited)",
 				);
-				HEADER_SEARCH_PATHS = "../../../out/ios-debug/filament/include";
+				HEADER_SEARCH_PATHS = (
+					"../../../out/ios-debug/filament/include",
+					generated/,
+				);
 				INFOPLIST_FILE = "hello-triangle/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -295,7 +333,10 @@
 				DEVELOPMENT_TEAM = "";
 				ENABLE_BITCODE = NO;
 				GCC_PREPROCESSOR_DEFINITIONS = "FILAMENT_APP_USE_OPENGL=1";
-				HEADER_SEARCH_PATHS = "../../../out/ios-release/filament/include";
+				HEADER_SEARCH_PATHS = (
+					"../../../out/ios-release/filament/include",
+					generated/,
+				);
 				INFOPLIST_FILE = "hello-triangle/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -443,7 +484,10 @@
 					"DEBUG=1",
 					"$(inherited)",
 				);
-				HEADER_SEARCH_PATHS = "../../../out/ios-debug/filament/include";
+				HEADER_SEARCH_PATHS = (
+					"../../../out/ios-debug/filament/include",
+					generated/,
+				);
 				INFOPLIST_FILE = "hello-triangle/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -473,7 +517,10 @@
 				DEVELOPMENT_TEAM = "";
 				ENABLE_BITCODE = NO;
 				GCC_PREPROCESSOR_DEFINITIONS = "FILAMENT_APP_USE_VULKAN=1";
-				HEADER_SEARCH_PATHS = "../../../out/ios-release/filament/include";
+				HEADER_SEARCH_PATHS = (
+					"../../../out/ios-release/filament/include",
+					generated/,
+				);
 				INFOPLIST_FILE = "hello-triangle/Info.plist";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
