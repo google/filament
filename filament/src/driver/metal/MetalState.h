@@ -291,10 +291,9 @@ struct SamplerStateCreator {
 using SamplerStateCache = StateCache<driver::SamplerParams, id<MTLSamplerState>,
         SamplerStateCreator>;
 
-// Raster-related states
+// Raster-related state
 
 using CullModeStateTracker = StateTracker<MTLCullMode>;
-using WindingStateTracker = StateTracker<MTLWinding>;
 
 } // namespace metal
 } // namespace driver
