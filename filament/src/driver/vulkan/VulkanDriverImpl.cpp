@@ -267,13 +267,19 @@ void getSurfaceCaps(VulkanContext& context, VulkanSurfaceContext& sc) {
 }
 
 void createSwapChainAndImages(VulkanContext& context, VulkanSurfaceContext& surfaceContext) {
-    // Pick an image count and format.  According to section 30.5 of VK 1.1, maxImageCount of zero
-    // apparently means "that there is no limit on the number of images, though there may be limits
-    // related to the total amount of memory used by presentable images."
-    uint32_t desiredImageCount = 2;
+    // The general advice is to require one more than the minimum swap chain length, since the
+    // absolute minimum could easily require waiting for a driver or presentation layer to release
+    // the previous frame's buffer. The only situation in which we'd ask for the minimum length is
+    // when using a MAILBOX presentation strategy for low-latency situations where tearing is
+    // acceptable.
     const uint32_t maxImageCount = surfaceContext.surfaceCapabilities.maxImageCount;
-    if (desiredImageCount < surfaceContext.surfaceCapabilities.minImageCount ||
-            (maxImageCount != 0 && desiredImageCount > maxImageCount)) {
+    const uint32_t minImageCount = surfaceContext.surfaceCapabilities.minImageCount;
+    uint32_t desiredImageCount = minImageCount + 1;
+
+    // According to section 30.5 of VK 1.1, maxImageCount of zero means "that there is no limit on
+    // the number of images, though there may be limits related to the total amount of memory used
+    // by presentable images."
+    if (maxImageCount != 0 && desiredImageCount > maxImageCount) {
         utils::slog.e << "Swap chain does not support " << desiredImageCount << " images.\n";
         desiredImageCount = surfaceContext.surfaceCapabilities.minImageCount;
     }
