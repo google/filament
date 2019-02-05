@@ -168,11 +168,9 @@ public:
         using HwRenderTarget::HwRenderTarget;
         struct GL {
             struct RenderBuffer {
-                union {
-                    GLTexture* texture = nullptr;
-                    GLenum internalFormat;
-                };
-                GLuint id = 0;
+                GLTexture* texture = nullptr;
+                GLenum internalFormat = 0; // when texture == nullptr
+                GLuint rb = 0;             // when texture == nullptr
             };
             // field ordering to optimize size on 64-bits
             RenderBuffer color;
@@ -181,7 +179,6 @@ public:
             GLuint fbo = 0;
             uint8_t samples : 4;
             uint8_t colorLevel : 4; // Allows up to 15 levels (max texture size of 32768 x 32768)
-            bool useQCOMTiledRendering = false;
         } gl;
     };
 
