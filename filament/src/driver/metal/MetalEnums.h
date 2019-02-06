@@ -59,7 +59,7 @@ constexpr inline MTLIndexType getIndexType(size_t elementSize) noexcept {
     ASSERT_POSTCONDITION(false, "Index element size not supported.");
 }
 
-inline MTLVertexFormat getMetalFormat(ElementType type, bool normalized) noexcept {
+constexpr inline MTLVertexFormat getMetalFormat(ElementType type, bool normalized) noexcept {
     if (normalized) {
         switch (type) {
             // Single Component Types
