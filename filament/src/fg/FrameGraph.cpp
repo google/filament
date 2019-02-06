@@ -213,6 +213,7 @@ struct RenderTarget { // 32
 
         if (pos != renderTargetCache.end()) {
             cache = pos->get();
+            cache->targetInfo.params.clear |= userTargetFlags.clear;
         } else {
             uint8_t attachments = 0;
             uint32_t width = 0;
@@ -225,36 +226,77 @@ struct RenderTarget { // 32
                     TargetBufferFlags::DEPTH,
                     TargetBufferFlags::STENCIL };
 
-            // TODO: make sure all used resource have the same size
-
-            // TODO: adjust the size (to help the cache) if possible (relaxed flag is set)
+            bool relaxed = true;
+            uint32_t minWidth = std::numeric_limits<uint32_t>::max();
+            uint32_t maxWidth = 0;
+            uint32_t minHeight = std::numeric_limits<uint32_t>::max();
+            uint32_t maxHeight = 0;
 
             for (FrameGraphResource const& attachment : desc.attachments.textures) {
                 size_t index = &attachment - desc.attachments.textures.data();
                 if (attachment.isValid()) {
                     Resource const* const pResource = resourceNodes[attachment.index].resource;
                     assert(pResource);
-                    width = pResource->desc.width;
-                    height = pResource->desc.height;
-                    textures[index] = pResource->texture;
+
                     attachments |= flags[index];
+
+                    // figure out the min/max dimensions across all attachments
+                    minWidth  = std::min(minWidth,  pResource->desc.width);
+                    maxWidth  = std::max(maxWidth,  pResource->desc.width);
+                    minHeight = std::min(minHeight, pResource->desc.height);
+                    maxHeight = std::max(maxHeight, pResource->desc.height);
+
+                    textures[index] = pResource->texture;
                     if (index == FrameGraphRenderTarget::Attachments::COLOR) {
                         colorFormat = pResource->desc.format;
                     }
+
+                    // if the resource doesn't need an actual texture, we are free to
+                    // increase its size.
+                    relaxed = relaxed && (pResource->desc.relaxed || !pResource->needsTexture);
                 }
             }
 
-            // create the cache entry
-            RenderTargetResource* pRenderTargetResource =
-                    fg.mArena.make<RenderTargetResource>(desc, imported,
-                            TargetBufferFlags(attachments), width, height, desc.samples,
-                            colorFormat);
-            renderTargetCache.emplace_back(pRenderTargetResource, fg);
-            cache = pRenderTargetResource;
-        }
+            if (attachments) {
+                if (!relaxed && (minWidth == maxWidth && minHeight == maxHeight)) {
+                    // All attachments' size match, we're good to go.
+                    // We don't take this path if all attachments allow to tweak their size,
+                    // as in that case we can round-up to take advantage of caching in the driver.
+                    width = maxWidth;
+                    height = maxHeight;
+                } else {
+                    // Some attachments might not allow to be resized (i.e. the non relaxed textures),
+                    // use the largest size.
+                    // We also round dimensions up to avoid lots of small resizes in the driver.
+                    // (this is assuming the driver uses some cache internally).
+                    width  = (maxWidth  + 31) & ~31;
+                    height = (maxHeight + 31) & ~31;
 
-        assert(cache);
-        cache->targetInfo.params.clear |= userTargetFlags.clear;
+                    // and update the resource's descriptors that allow it
+                    for (FrameGraphResource const& attachment : desc.attachments.textures) {
+                        if (attachment.isValid()) {
+                            Resource* const pResource = resourceNodes[attachment.index].resource;
+                            if (pResource->desc.relaxed || !pResource->needsTexture) {
+                                pResource->desc.width = width;
+                                pResource->desc.height = height;
+                            }
+                        }
+                    }
+                    // at the end of this process, it's possible that some attachments won't match
+                    // but there is nothing more we can do, as these attachments require a texture
+                    // and don't have the relaxed flag.
+                }
+
+                // create the cache entry
+                RenderTargetResource* pRenderTargetResource =
+                        fg.mArena.make<RenderTargetResource>(desc, imported,
+                                TargetBufferFlags(attachments), width, height, desc.samples,
+                                colorFormat);
+                renderTargetCache.emplace_back(pRenderTargetResource, fg);
+                cache = pRenderTargetResource;
+                cache->targetInfo.params.clear |= userTargetFlags.clear;
+            }
+        }
     }
 };
 
