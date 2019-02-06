@@ -11,7 +11,7 @@
 </style>
 
 **Vulkan Backend**
-          *Last updated: 1 Feb 2019*
+          *Last updated: 6 Feb 2019*
 
 ![](../../docs/images/filament_logo.png)
 
@@ -224,7 +224,7 @@ the BlueVK header, which in turn includes the Vulkan headers.
 
 Here we list some of the most significant issues and to-be-done items for the Vulkan backend.
 
-- We haven't done any performance analysis yet
+- We need to do more performance analysis
     - We don't have great stress tests, but we should at least:
         1. Try sponza on a Pixel 2
         2. Capture a systrace
@@ -244,9 +244,6 @@ Here we list some of the most significant issues and to-be-done items for the Vu
 - We don't *quite* have feature parity with the OpenGL backend
     - No support for streaming camera texture yet
         - This is possible, even in Android O, just haven't gotten around to it yet
-    - Some texture format limitations
-        - No compressed textures yet
-        - We do not allow 24-bit types
     - Filament fences don't map well to Vulkan semantics
         - Higher level timing queries might make more sense
 

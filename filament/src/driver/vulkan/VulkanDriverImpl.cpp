@@ -796,11 +796,11 @@ void waitForIdle(VulkanContext& context) {
 
     // First, wait for submitted command buffer(s) to finish.
     if (context.currentSurface) {
-        VkFence fences[2];
+        VkFence fences[4];
         uint32_t nfences = 0;
         auto& surfaceContext = *context.currentSurface;
         for (auto& swapContext : surfaceContext.swapContexts) {
-            assert(nfences < 2);
+            assert(nfences < 4);
             if (swapContext.submitted && swapContext.fence) {
                 fences[nfences++] = swapContext.fence;
                 swapContext.submitted = false;

@@ -182,7 +182,7 @@ When building for WebGL, you'll also need to set `EMSDK`. See [WebAssembly](#web
 
 ### IDE
 
-We recommend using CLion to develop for Filament. Simply open the root directory's CMakeList.txt
+We recommend using CLion to develop for Filament. Simply open the root directory's CMakeLists.txt
 in CLion to obtain a usable project.
 
 ### Easy build
