@@ -43,7 +43,7 @@ using namespace math;
 struct App {
     Material* material;
     MaterialInstance* materialInstance;
-    MeshReader::Mesh mesh;
+    filamesh::MeshReader::Mesh mesh;
     mat4f transform;
     Texture* albedo;
     Texture* normal;
@@ -111,8 +111,8 @@ int main(int argc, char** argv) {
         ibl->setRotation(mat3f::rotate(0.5f, float3{ 0, 1, 0 }));
 
         // Add geometry into the scene.
-        app.mesh = MeshReader::loadMeshFromBuffer(engine, RESOURCES_SUZANNE_DATA, nullptr, nullptr,
-                app.materialInstance);
+        app.mesh = filamesh::MeshReader::loadMeshFromBuffer(engine, RESOURCES_SUZANNE_DATA, nullptr,
+                nullptr, app.materialInstance);
         auto ti = tcm.getInstance(app.mesh.renderable);
         app.transform = mat4f{ mat3f(1), float3(0, 0, -4) } * tcm.getWorldTransform(ti);
         rcm.setCastShadows(rcm.getInstance(app.mesh.renderable), false);

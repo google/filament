@@ -53,6 +53,8 @@ static size_t fileSize(int fd) {
     return filesize;
 }
 
+namespace filamesh {
+
 MeshReader::Mesh MeshReader::loadMeshFromFile(filament::Engine* engine, const utils::Path& path,
         MaterialRegistry& materials) {
 
@@ -265,3 +267,5 @@ MeshReader::Mesh MeshReader::loadMeshFromBuffer(filament::Engine* engine,
 
     return mesh;
 }
+
+} // namespace filamesh

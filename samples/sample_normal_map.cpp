@@ -46,6 +46,7 @@
 
 using namespace math;
 using namespace filament;
+using namespace filamesh;
 using namespace filamat;
 using namespace utils;
 
