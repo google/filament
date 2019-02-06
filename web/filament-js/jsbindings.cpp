@@ -71,6 +71,7 @@
 
 using namespace emscripten;
 using namespace filament;
+using namespace filamesh;
 using namespace image;
 
 // Many methods require a thin layer of C++ glue which is elegantly expressed with a lambda.
