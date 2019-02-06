@@ -18,6 +18,7 @@
 #define TNT_FILAMENT_FRAMEGRAPHRESOURCE_H
 
 #include <filament/driver/DriverEnums.h>
+#include <filament/Viewport.h>
 
 #include <array>
 #include <limits>
@@ -99,6 +100,7 @@ struct Attachments {
 
 struct Descriptor {
     Attachments attachments;
+    Viewport viewport;
     uint8_t samples = 1;            // # of samples
 };
 

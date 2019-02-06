@@ -117,13 +117,20 @@ struct ResourceNode { // 24
 struct RenderTargetResource final : public VirtualResource {  // 104
 
     RenderTargetResource(
-            FrameGraphRenderTarget::Descriptor desc, bool imported,
+            FrameGraphRenderTarget::Descriptor const& desc, bool imported,
             TargetBufferFlags targets,
             uint32_t width, uint32_t height, uint8_t samples, TextureFormat format)
             : desc(desc), imported(imported),
-              attachments(targets), samples(samples), format(format)  {
-        targetInfo.params.width = width;
-        targetInfo.params.height = height;
+              attachments(targets), samples(samples), format(format), width(width), height(height)  {
+        targetInfo.params.left   = desc.viewport.left;
+        targetInfo.params.bottom = desc.viewport.bottom;
+        targetInfo.params.width  = desc.viewport.width;
+        targetInfo.params.height = desc.viewport.height;
+        // if Descriptor was initialized with default values, set the viewport to width/height
+        if (targetInfo.params.width == 0 && targetInfo.params.height == 0) {
+            targetInfo.params.width  = width;
+            targetInfo.params.height = height;
+        }
     }
 
     RenderTargetResource(RenderTargetResource const&) = delete;
@@ -139,6 +146,8 @@ struct RenderTargetResource final : public VirtualResource {  // 104
     TargetBufferFlags attachments;
     uint8_t samples;
     TextureFormat format;
+    uint32_t width;
+    uint32_t height;
 
     // updated during execute with the current pass' discard flags
     FrameGraphPassResources::RenderTargetInfo targetInfo;
@@ -162,7 +171,7 @@ struct RenderTargetResource final : public VirtualResource {  // 104
 
                 // create the concrete rendertarget
                 targetInfo.target = driver.createRenderTarget(attachments,
-                        targetInfo.params.width, targetInfo.params.height, desc.samples, format,
+                        width, height, desc.samples, format,
                         { textures[0] }, { textures[1] }, {});
             }
         }
@@ -579,13 +588,14 @@ FrameGraphPassResources::getRenderTarget(FrameGraphResource r) const noexcept {
     // TODO: for cubemaps/arrays, we'll need to be able to specifyt he face/index
 
     for (RenderTarget const* renderTarget : mPass.renderTargets) {
+        auto& desc = renderTarget->desc;
         auto pos = std::find_if(
-                renderTarget->desc.attachments.textures.begin(),
-                renderTarget->desc.attachments.textures.end(),
+                desc.attachments.textures.begin(),
+                desc.attachments.textures.end(),
                 [pResource, &resourceNodes](FrameGraphResource const& r) {
                     return resourceNodes[r.index].resource == pResource;
                 });
-        if (pos != std::end(renderTarget->desc.attachments.textures)) {
+        if (pos != std::end(desc.attachments.textures)) {
             assert(renderTarget->cache);
             info = renderTarget->cache->targetInfo;
             // overwrite discard flags with the per-rendertarget (per-pass) computed value

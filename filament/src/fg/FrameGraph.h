@@ -80,6 +80,7 @@ public:
          *   - makes its handle invalid.
          *   - [imported resource only] adds a side-effect (see sideEffect() below
          */
+
         Attachments useRenderTarget(const char* name,
                 FrameGraphRenderTarget::Descriptor const& desc,
                 driver::TargetBufferFlags clearFlags = {}) noexcept;
