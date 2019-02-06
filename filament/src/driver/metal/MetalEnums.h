@@ -23,6 +23,8 @@
 
 #include <utils/Panic.h>
 
+#include <Availability.h>
+
 namespace filament {
 namespace driver {
 
@@ -57,14 +59,16 @@ constexpr inline MTLIndexType getIndexType(size_t elementSize) noexcept {
     ASSERT_POSTCONDITION(false, "Index element size not supported.");
 }
 
-constexpr inline MTLVertexFormat getMetalFormat(ElementType type, bool normalized) noexcept {
+inline MTLVertexFormat getMetalFormat(ElementType type, bool normalized) noexcept {
     if (normalized) {
         switch (type) {
             // Single Component Types
+#if MAC_OS_X_VERSION_MAX_ALLOWED > 101300 || IPHONE_OS_VERSION_MAX_ALLOWED > 110000
             case ElementType::BYTE: return MTLVertexFormatCharNormalized;
             case ElementType::UBYTE: return MTLVertexFormatUCharNormalized;
             case ElementType::SHORT: return MTLVertexFormatShortNormalized;
             case ElementType::USHORT: return MTLVertexFormatUShortNormalized;
+#endif
             // Two Component Types
             case ElementType::BYTE2: return MTLVertexFormatChar2Normalized;
             case ElementType::UBYTE2: return MTLVertexFormatUChar2Normalized;
@@ -87,11 +91,13 @@ constexpr inline MTLVertexFormat getMetalFormat(ElementType type, bool normalize
     }
     switch (type) {
         // Single Component Types
+#if MAC_OS_X_VERSION_MAX_ALLOWED > 101300 || IPHONE_OS_VERSION_MAX_ALLOWED > 110000
         case ElementType::BYTE: return MTLVertexFormatChar;
         case ElementType::UBYTE: return MTLVertexFormatUChar;
         case ElementType::SHORT: return MTLVertexFormatShort;
         case ElementType::USHORT: return MTLVertexFormatUShort;
         case ElementType::HALF: return MTLVertexFormatHalf;
+#endif
         case ElementType::INT: return MTLVertexFormatInt;
         case ElementType::UINT: return MTLVertexFormatUInt;
         case ElementType::FLOAT: return MTLVertexFormatFloat;
