@@ -53,7 +53,7 @@ Java_com_google_android_filament_IndirectLight_nIrradiance(JNIEnv* env, jclass,
         jlong nativeBuilder, jint bands, jfloatArray sh_) {
     IndirectLight::Builder* builder = (IndirectLight::Builder*) nativeBuilder;
     jfloat* sh = env->GetFloatArrayElements(sh_, NULL);
-    builder->irradiance((uint8_t) bands, (const math::float3*) sh);
+    builder->irradiance((uint8_t) bands, (const filament::math::float3*) sh);
     env->ReleaseFloatArrayElements(sh_, sh, JNI_ABORT);
 }
 
@@ -77,7 +77,7 @@ Java_com_google_android_filament_IndirectLight_nRotation(JNIEnv *, jclass, jlong
         jfloat v0, jfloat v1, jfloat v2, jfloat v3, jfloat v4, jfloat v5, jfloat v6, jfloat v7,
         jfloat v8) {
     IndirectLight::Builder *builder = (IndirectLight::Builder *) nativeBuilder;
-    builder->rotation(math::mat3f{v0, v1, v2, v3, v4, v5, v6, v7, v8});
+    builder->rotation(filament::math::mat3f{v0, v1, v2, v3, v4, v5, v6, v7, v8});
 }
 
 
@@ -101,5 +101,5 @@ Java_com_google_android_filament_IndirectLight_nSetRotation(JNIEnv *env, jclass 
         jlong nativeIndirectLight, jfloat v0, jfloat v1, jfloat v2, jfloat v3, jfloat v4, jfloat v5,
         jfloat v6, jfloat v7, jfloat v8) {
     IndirectLight *indirectLight = (IndirectLight *) nativeIndirectLight;
-    indirectLight->setRotation(math::mat3f{v0, v1, v2, v3, v4, v5, v6, v7, v8});
+    indirectLight->setRotation(filament::math::mat3f{v0, v1, v2, v3, v4, v5, v6, v7, v8});
 }

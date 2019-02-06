@@ -29,7 +29,7 @@
 #include <utils/Log.h>
 #include <utils/Panic.h>
 
-using namespace math;
+using namespace filament::math;
 using namespace utils;
 
 namespace filament {
@@ -48,7 +48,7 @@ struct RenderableManager::BuilderDetails {
     bool mReceiveShadows : 1;
     size_t mSkinningBoneCount = 0;
     Bone const* mUserBones = nullptr;
-    math::mat4f const* mUserBoneMatrices = nullptr;
+    filament::math::mat4f const* mUserBoneMatrices = nullptr;
 
     explicit BuilderDetails(size_t count)
             : mEntriesCount(count), mCulling(true), mCastShadows(false), mReceiveShadows(true) {
@@ -148,7 +148,7 @@ RenderableManager::Builder& RenderableManager::Builder::skinning(
 }
 
 RenderableManager::Builder& RenderableManager::Builder::skinning(
-        size_t boneCount, math::mat4f const* transforms) noexcept {
+        size_t boneCount, filament::math::mat4f const* transforms) noexcept {
     mImpl->mSkinningBoneCount = boneCount;
     mImpl->mUserBoneMatrices = transforms;
     return *this;
@@ -482,7 +482,7 @@ void FRenderableManager::setBones(Instance ci,
 }
 
 void FRenderableManager::setBones(Instance ci,
-        math::mat4f const* UTILS_RESTRICT transforms, size_t boneCount, size_t offset) noexcept {
+        filament::math::mat4f const* UTILS_RESTRICT transforms, size_t boneCount, size_t offset) noexcept {
     if (ci) {
         std::unique_ptr<Bones> const& bones = mManager[ci].bones;
         assert(bones && offset + boneCount <= bones->count);
@@ -498,7 +498,7 @@ void FRenderableManager::setBones(Instance ci,
     }
 }
 
-void FRenderableManager::makeBone(PerRenderableUibBone* UTILS_RESTRICT out, math::mat4f const& t) noexcept {
+void FRenderableManager::makeBone(PerRenderableUibBone* UTILS_RESTRICT out, filament::math::mat4f const& t) noexcept {
     mat4f m(t);
 
     // figure out the scales

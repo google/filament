@@ -59,7 +59,7 @@ Java_com_google_android_filament_TransformManager_nCreateArray(JNIEnv* env,
     if (localTransform_) {
         jfloat *localTransform = env->GetFloatArrayElements(localTransform_, NULL);
         tm->create(entity, (TransformManager::Instance) parent,
-                *reinterpret_cast<const math::mat4f *>(localTransform));
+                *reinterpret_cast<const filament::math::mat4f *>(localTransform));
         env->ReleaseFloatArrayElements(localTransform_, localTransform, JNI_ABORT);
     } else {
         tm->create(entity, (TransformManager::Instance) parent);
@@ -90,7 +90,7 @@ Java_com_google_android_filament_TransformManager_nSetTransform(JNIEnv* env,
     TransformManager* tm = (TransformManager*) nativeTransformManager;
     jfloat *localTransform = env->GetFloatArrayElements(localTransform_, NULL);
     tm->setTransform((TransformManager::Instance) i,
-            *reinterpret_cast<const math::mat4f *>(localTransform));
+            *reinterpret_cast<const filament::math::mat4f *>(localTransform));
     env->ReleaseFloatArrayElements(localTransform_, localTransform, JNI_ABORT);
 }
 
@@ -100,7 +100,7 @@ Java_com_google_android_filament_TransformManager_nGetTransform(JNIEnv* env,
         jfloatArray outLocalTransform_) {
     TransformManager* tm = (TransformManager*) nativeTransformManager;
     jfloat *outLocalTransform = env->GetFloatArrayElements(outLocalTransform_, NULL);
-    *reinterpret_cast<math::mat4f *>(outLocalTransform) = tm->getTransform(
+    *reinterpret_cast<filament::math::mat4f *>(outLocalTransform) = tm->getTransform(
             (TransformManager::Instance) i);
     env->ReleaseFloatArrayElements(outLocalTransform_, outLocalTransform, 0);
 }
@@ -111,7 +111,7 @@ Java_com_google_android_filament_TransformManager_nGetWorldTransform(JNIEnv* env
         jfloatArray outWorldTransform_) {
     TransformManager* tm = (TransformManager*) nativeTransformManager;
     jfloat *outWorldTransform = env->GetFloatArrayElements(outWorldTransform_, NULL);
-    *reinterpret_cast<math::mat4f *>(outWorldTransform) = tm->getWorldTransform(
+    *reinterpret_cast<filament::math::mat4f *>(outWorldTransform) = tm->getWorldTransform(
             (TransformManager::Instance) i);
     env->ReleaseFloatArrayElements(outWorldTransform_, outWorldTransform, 0);
 }

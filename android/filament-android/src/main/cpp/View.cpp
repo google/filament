@@ -134,8 +134,8 @@ Java_com_google_android_filament_View_nSetDynamicResolutionOptions(JNIEnv*,
     options.targetFrameTimeMilli = targetFrameTimeMilli;
     options.headRoomRatio = headRoomRatio;
     options.scaleRate = scaleRate;
-    options.minScale = math::float2{minScale};
-    options.maxScale = math::float2{maxScale};
+    options.minScale = filament::math::float2{minScale};
+    options.maxScale = filament::math::float2{maxScale};
     options.history = (uint8_t) history;
     view->setDynamicResolutionOptions(options);
 }

@@ -123,9 +123,9 @@ public:
         size_t quatCount;             // required
         void* outBuffer;              // required
         size_t outStride;             // required stride in bytes
-        const math::float3* normals;  // required source data
+        const filament::math::float3* normals;  // required source data
         size_t normalsStride;         // optional stride in bytes (assumes packed)
-        const math::float4* tangents; // optional source data
+        const filament::math::float4* tangents; // optional source data
         size_t tangentsStride;        // optional stride in bytes (assumes packed)
     };
 

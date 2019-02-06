@@ -33,7 +33,7 @@
 
 using namespace filament;
 using namespace filamesh;
-using namespace math;
+using namespace filament::math;
 using namespace std;
 
 static const Box unitBox = {

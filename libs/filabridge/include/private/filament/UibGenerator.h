@@ -44,76 +44,76 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     static const UniformInterfaceBlock& getUib() noexcept {
         return UibGenerator::getPerViewUib();
     }
-    math::mat4f viewFromWorldMatrix;
-    math::mat4f worldFromViewMatrix;
-    math::mat4f clipFromViewMatrix;
-    math::mat4f viewFromClipMatrix;
-    math::mat4f clipFromWorldMatrix;
-    math::mat4f worldFromClipMatrix;
-    math::mat4f lightFromWorldMatrix;
+    filament::math::mat4f viewFromWorldMatrix;
+    filament::math::mat4f worldFromViewMatrix;
+    filament::math::mat4f clipFromViewMatrix;
+    filament::math::mat4f viewFromClipMatrix;
+    filament::math::mat4f clipFromWorldMatrix;
+    filament::math::mat4f worldFromClipMatrix;
+    filament::math::mat4f lightFromWorldMatrix;
 
-    math::float4 resolution; // viewport width, height, 1/width, 1/height
+    filament::math::float4 resolution; // viewport width, height, 1/width, 1/height
 
-    math::float3 cameraPosition;
+    filament::math::float3 cameraPosition;
     float time; // time in seconds, with a 1 second period
 
-    math::float4 lightColorIntensity; // directional light
+    filament::math::float4 lightColorIntensity; // directional light
 
-    math::float4 sun; // cos(sunAngle), sin(sunAngle), 1/(sunAngle*HALO_SIZE-sunAngle), HALO_EXP
+    filament::math::float4 sun; // cos(sunAngle), sin(sunAngle), 1/(sunAngle*HALO_SIZE-sunAngle), HALO_EXP
 
-    math::float3 lightDirection;
+    filament::math::float3 lightDirection;
     uint32_t fParamsX; // stride-x
 
-    math::float3 shadowBias; // constant bias, normal bias, unused
+    filament::math::float3 shadowBias; // constant bias, normal bias, unused
     float oneOverFroxelDimensionY;
 
-    math::float4 zParams; // froxel Z parameters
+    filament::math::float4 zParams; // froxel Z parameters
 
-    math::uint2 fParams; // stride-y, stride-z
-    math::float2 origin; // viewport left, viewport bottom
+    filament::math::uint2 fParams; // stride-y, stride-z
+    filament::math::float2 origin; // viewport left, viewport bottom
 
     float oneOverFroxelDimensionX;
     float iblLuminance;
     float exposure;
     float ev100;
 
-    alignas(16) math::float4 iblSH[9]; // actually float3 entries (std140 requires float4 alignment)
+    alignas(16) filament::math::float4 iblSH[9]; // actually float3 entries (std140 requires float4 alignment)
 
-    math::float4 userTime;  // time(s), (double)time - (float)time, 0, 0
+    filament::math::float4 userTime;  // time(s), (double)time - (float)time, 0, 0
 };
 
 
 // PerRenderableUib must have an alignment of 256 to be compatible with all versions of GLES.
 struct alignas(256) PerRenderableUib {
-    math::mat4f worldFromModelMatrix;
-    math::mat3f worldFromModelNormalMatrix;
+    filament::math::mat4f worldFromModelMatrix;
+    filament::math::mat3f worldFromModelNormalMatrix;
 };
 
 struct LightsUib {
     static const UniformInterfaceBlock& getUib() noexcept {
         return UibGenerator::getLightsUib();
     }
-    math::float4 positionFalloff;   // { float3(pos), 1/falloff^2 }
-    math::float4 colorIntensity;    // { float3(col), intensity }
-    math::float4 directionIES;      // { float3(dir), IES index }
-    math::float4 spotScaleOffset;   // { scale, offset, unused, unused }
+    filament::math::float4 positionFalloff;   // { float3(pos), 1/falloff^2 }
+    filament::math::float4 colorIntensity;    // { float3(col), intensity }
+    filament::math::float4 directionIES;      // { float3(dir), IES index }
+    filament::math::float4 spotScaleOffset;   // { scale, offset, unused, unused }
 };
 
 struct PostProcessingUib {
     static const UniformInterfaceBlock& getUib() noexcept {
         return UibGenerator::getPostProcessingUib();
     }
-    math::float2 uvScale;
+    filament::math::float2 uvScale;
     float time;             // time in seconds, with a 1 second period, used for dithering
     float yOffset;
 };
 
 // This is not the UBO proper, but just an element of a bone array.
 struct PerRenderableUibBone {
-    math::quatf q = { 1, 0, 0, 0 };
-    math::float4 t = {};
-    math::float4 s = { 1, 1, 1, 0 };
-    math::float4 ns = { 1, 1, 1, 0 };
+    filament::math::quatf q = { 1, 0, 0, 0 };
+    filament::math::float4 t = {};
+    filament::math::float4 s = { 1, 1, 1, 0 };
+    filament::math::float4 ns = { 1, 1, 1, 0 };
 };
 
 } // namespace filament

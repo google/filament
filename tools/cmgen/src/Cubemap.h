@@ -46,7 +46,7 @@ public:
                     //                 +----+
     };
 
-    typedef math::float3 Texel;
+    typedef filament::math::float3 Texel;
 
 
     void resetDimensions(size_t dim);
@@ -55,18 +55,18 @@ public:
     inline const Image& getImageForFace(Face face) const;
     inline Image& getImageForFace(Face face);
 
-    inline math::double2 center(size_t x, size_t y) const;
+    inline filament::math::double2 center(size_t x, size_t y) const;
 
-    inline math::double3 getDirectionFor(Face face, size_t x, size_t y) const;
-    inline math::double3 getDirectionFor(Face face, double x, double y) const;
+    inline filament::math::double3 getDirectionFor(Face face, size_t x, size_t y) const;
+    inline filament::math::double3 getDirectionFor(Face face, double x, double y) const;
 
-    inline Texel const& sampleAt(const math::double3& direction) const;
-    inline Texel        filterAt(const math::double3& direction) const;
+    inline Texel const& sampleAt(const filament::math::double3& direction) const;
+    inline Texel        filterAt(const filament::math::double3& direction) const;
 
     static Texel filterAt(const Image& image, double x, double y);
 
     static Texel trilinearFilterAt(const Cubemap& c0, const Cubemap& c1, double lerp,
-            const math::double3& direction);
+            const filament::math::double3& direction);
 
     inline static const Texel& sampleAt(void const* data) {
         return *static_cast<Texel const *>(data);
@@ -88,7 +88,7 @@ public:
 
     // Note: this doesn't apply the Image's flips
     // (this is why this is private)
-    static Address getAddressFor(const math::double3& direction);
+    static Address getAddressFor(const filament::math::double3& direction);
 
 private:
     size_t mDimensions = 0;
@@ -105,22 +105,22 @@ inline Image& Cubemap::getImageForFace(Face face) {
     return mFaces[int(face)];
 }
 
-inline math::double2 Cubemap::center(size_t x, size_t y) const {
+inline filament::math::double2 Cubemap::center(size_t x, size_t y) const {
     // map [0, dim] to [-1,1] with (-1,-1) at bottom left
-    math::double2 c(x+0.5, y+0.5);
+     filament::math::double2 c(x+0.5, y+0.5);
     return c;
 }
 
-inline math::double3 Cubemap::getDirectionFor(Face face, size_t x, size_t y) const {
+inline filament::math::double3 Cubemap::getDirectionFor(Face face, size_t x, size_t y) const {
     return getDirectionFor(face, x+0.5, y+0.5);
 }
 
-inline math::double3 Cubemap::getDirectionFor(Face face, double x, double y) const {
+inline filament::math::double3 Cubemap::getDirectionFor(Face face, double x, double y) const {
     // map [0, dim] to [-1,1] with (-1,-1) at bottom left
     double cx = (x * mScale) - 1;
     double cy = 1 - (y * mScale);
 
-    math::double3 dir;
+     filament::math::double3 dir;
     const double l = std::sqrt(cx*cx + cy*cy + 1);
     switch (face) {
         case Face::PX:  dir = {   1, cy, -cx }; break;
@@ -133,14 +133,14 @@ inline math::double3 Cubemap::getDirectionFor(Face face, double x, double y) con
     return dir * (1 / l);
 }
 
-inline Cubemap::Texel const& Cubemap::sampleAt(const math::double3& direction) const {
+inline Cubemap::Texel const& Cubemap::sampleAt(const filament::math::double3& direction) const {
     Cubemap::Address addr(getAddressFor(direction));
     const size_t x = std::min(size_t(addr.s * mDimensions), mDimensions-1);
     const size_t y = std::min(size_t(addr.t * mDimensions), mDimensions-1);
     return sampleAt(getImageForFace(addr.face).getPixelRef(x, y));
 }
 
-inline Cubemap::Texel Cubemap::filterAt(const math::double3& direction) const {
+inline Cubemap::Texel Cubemap::filterAt(const filament::math::double3& direction) const {
     Cubemap::Address addr(getAddressFor(direction));
     addr.s = std::min(addr.s * mDimensions, mUpperBound);
     addr.t = std::min(addr.t * mDimensions, mUpperBound);

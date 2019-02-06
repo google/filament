@@ -31,7 +31,7 @@
 #include <math/scalar.h>
 #include <math/vec3.h>
 
-using namespace math;
+using namespace filament::math;
 using namespace std::complex_literals;
 
 static void printUsage(const char* name) {

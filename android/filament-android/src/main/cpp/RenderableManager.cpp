@@ -197,7 +197,7 @@ Java_com_google_android_filament_RenderableManager_nSetBonesAsMatrices(JNIEnv* e
         return -1;
     }
     rm->setBones((RenderableManager::Instance)i,
-            static_cast<math::mat4f const *>(data), (size_t)boneCount, (size_t)offset);
+            static_cast<filament::math::mat4f const *>(data), (size_t)boneCount, (size_t)offset);
     return 0;
 }
 
@@ -277,8 +277,8 @@ Java_com_google_android_filament_RenderableManager_nGetAxisAlignedBoundingBox(JN
     jfloat *center = env->GetFloatArrayElements(center_, NULL);
     jfloat *halfExtent = env->GetFloatArrayElements(halfExtent_, NULL);
     Box const &aabb = rm->getAxisAlignedBoundingBox((RenderableManager::Instance) i);
-    *reinterpret_cast<math::float3 *>(center) = aabb.center;
-    *reinterpret_cast<math::float3 *>(halfExtent) = aabb.halfExtent;
+    *reinterpret_cast<filament::math::float3 *>(center) = aabb.center;
+    *reinterpret_cast<filament::math::float3 *>(halfExtent) = aabb.halfExtent;
     env->ReleaseFloatArrayElements(center_, center, 0);
     env->ReleaseFloatArrayElements(halfExtent_, halfExtent, 0);
 }

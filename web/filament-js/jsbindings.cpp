@@ -216,26 +216,26 @@ EMSCRIPTEN_BINDINGS(jsbindings) {
 // array-like data using embind's "value_array" feature. We do not expose all our math functions
 // under the assumption that JS clients will use glMatrix or something similar for math.
 
-value_array<math::float2>("float2")
-    .element(&math::float2::x)
-    .element(&math::float2::y);
+value_array<filament::math::float2>("float2")
+    .element(&filament::math::float2::x)
+    .element(&filament::math::float2::y);
 
-value_array<math::float3>("float3")
-    .element(&math::float3::x)
-    .element(&math::float3::y)
-    .element(&math::float3::z);
+value_array<filament::math::float3>("float3")
+    .element(&filament::math::float3::x)
+    .element(&filament::math::float3::y)
+    .element(&filament::math::float3::z);
 
-value_array<math::float4>("float4")
-    .element(&math::float4::x)
-    .element(&math::float4::y)
-    .element(&math::float4::z)
-    .element(&math::float4::w);
+value_array<filament::math::float4>("float4")
+    .element(&filament::math::float4::x)
+    .element(&filament::math::float4::y)
+    .element(&filament::math::float4::z)
+    .element(&filament::math::float4::w);
 
-value_array<math::quat>("quat")
-    .element(&math::quat::x)
-    .element(&math::quat::y)
-    .element(&math::quat::z)
-    .element(&math::quat::w);
+value_array<filament::math::quat>("quat")
+    .element(&filament::math::quat::x)
+    .element(&filament::math::quat::y)
+    .element(&filament::math::quat::z)
+    .element(&filament::math::quat::w);
 
 value_array<Viewport>("Viewport")
     .element(&Viewport::left)
@@ -256,7 +256,7 @@ value_object<Box>("Box")
 // need to define a small wrapper here.
 
 struct flatmat4 {
-    math::mat4f m;
+    filament::math::mat4f m;
     float& operator[](int i) { return m[i / 4][i % 4]; }
 };
 
@@ -267,7 +267,7 @@ value_array<flatmat4>("mat4")
     .element(index<12>()).element(index<13>()).element(index<14>()).element(index<15>());
 
 struct flatmat3 {
-    math::mat3f m;
+    filament::math::mat3f m;
     float& operator[](int i) { return m[i / 3][i % 3]; }
 };
 
@@ -466,7 +466,7 @@ class_<Frustum>("Frustum")
         return self->intersects(box);
     }), allow_raw_pointers())
 
-    .function("intersectsSphere", EMBIND_LAMBDA(bool, (Frustum* self, const math::float4& sphere), {
+    .function("intersectsSphere", EMBIND_LAMBDA(bool, (Frustum* self, const filament::math::float4& sphere), {
         return self->intersects(sphere);
     }), allow_raw_pointers());
 
@@ -487,11 +487,11 @@ class_<Camera>("Camera")
     .function("setCustomProjection", &Camera::setCustomProjection)
 
     .function("getProjectionMatrix", EMBIND_LAMBDA(flatmat4, (Camera* self), {
-        return flatmat4 { math::mat4f(self->getProjectionMatrix()) };
+        return flatmat4 { filament::math::mat4f(self->getProjectionMatrix()) };
     }), allow_raw_pointers())
 
     .function("getCullingProjectionMatrix", EMBIND_LAMBDA(flatmat4, (Camera* self), {
-        return flatmat4 { math::mat4f(self->getCullingProjectionMatrix()) };
+        return flatmat4 { filament::math::mat4f(self->getCullingProjectionMatrix()) };
     }), allow_raw_pointers())
 
     .function("getNear", &Camera::getNear)
@@ -522,7 +522,7 @@ class_<Camera>("Camera")
     .function("getSensitivity", &Camera::getSensitivity)
 
     .class_function("inverseProjection",  (flatmat4 (*)(flatmat4)) [] (flatmat4 m) {
-        return flatmat4 { math::mat4f(Camera::inverseProjection(m.m)) };
+        return flatmat4 { filament::math::mat4f(Camera::inverseProjection(m.m)) };
     }, allow_raw_pointers());
 
 class_<RenderBuilder>("RenderableManager$Builder")
@@ -572,7 +572,7 @@ class_<RenderBuilder>("RenderableManager$Builder")
     .BUILDER_FUNCTION("skinningMatrices", RenderBuilder, (RenderBuilder* builder,
             emscripten::val transforms), {
         auto nbones = transforms["length"].as<size_t>();
-        std::vector<math::mat4f> matrices(nbones);
+        std::vector<filament::math::mat4f> matrices(nbones);
         for (size_t i = 0; i < nbones; i++) {
             matrices[i] = transforms[i].as<flatmat4>().m;
         }
@@ -621,7 +621,7 @@ class_<RenderableManager>("RenderableManager")
     .function("setBonesFromMatrices", EMBIND_LAMBDA(void, (RenderableManager* self,
         RenderableManager::Instance instance, emscripten::val transforms, size_t offset), {
         auto nbones = transforms["length"].as<size_t>();
-        std::vector<math::mat4f> bones(nbones);
+        std::vector<filament::math::mat4f> bones(nbones);
         for (size_t i = 0; i < nbones; i++) {
             bones[i] = transforms[i].as<flatmat4>().m;
         }
@@ -706,11 +706,11 @@ class_<LightBuilder>("LightManager$Builder")
         return &builder->castShadows(enable); })
     .BUILDER_FUNCTION("castLight", LightBuilder, (LightBuilder* builder, bool enable), {
         return &builder->castLight(enable); })
-    .BUILDER_FUNCTION("position", LightBuilder, (LightBuilder* builder, math::float3 value), {
+    .BUILDER_FUNCTION("position", LightBuilder, (LightBuilder* builder, filament::math::float3 value), {
         return &builder->position(value); })
-    .BUILDER_FUNCTION("direction", LightBuilder, (LightBuilder* builder, math::float3 value), {
+    .BUILDER_FUNCTION("direction", LightBuilder, (LightBuilder* builder, filament::math::float3 value), {
         return &builder->direction(value); })
-    .BUILDER_FUNCTION("color", LightBuilder, (LightBuilder* builder, math::float3 value), {
+    .BUILDER_FUNCTION("color", LightBuilder, (LightBuilder* builder, filament::math::float3 value), {
         return &builder->color(value); })
     .BUILDER_FUNCTION("intensity", LightBuilder, (LightBuilder* builder, float value), {
         return &builder->intensity(value); })
@@ -789,19 +789,19 @@ class_<MaterialInstance>("MaterialInstance")
             (MaterialInstance* self, std::string name, float value), {
         self->setParameter(name.c_str(), value); }), allow_raw_pointers())
     .function("setFloat2Parameter", EMBIND_LAMBDA(void,
-            (MaterialInstance* self, std::string name, math::float2 value), {
+            (MaterialInstance* self, std::string name, filament::math::float2 value), {
         self->setParameter(name.c_str(), value); }), allow_raw_pointers())
     .function("setFloat3Parameter", EMBIND_LAMBDA(void,
-            (MaterialInstance* self, std::string name, math::float3 value), {
+            (MaterialInstance* self, std::string name, filament::math::float3 value), {
         self->setParameter(name.c_str(), value); }), allow_raw_pointers())
     .function("setFloat4Parameter", EMBIND_LAMBDA(void,
-            (MaterialInstance* self, std::string name, math::float4 value), {
+            (MaterialInstance* self, std::string name, filament::math::float4 value), {
         self->setParameter(name.c_str(), value); }), allow_raw_pointers())
     .function("setTextureParameter", EMBIND_LAMBDA(void,
             (MaterialInstance* self, std::string name, Texture* value, TextureSampler sampler), {
         self->setParameter(name.c_str(), value, sampler); }), allow_raw_pointers())
     .function("setColorParameter", EMBIND_LAMBDA(void,
-            (MaterialInstance* self, std::string name, RgbType type, math::float3 value), {
+            (MaterialInstance* self, std::string name, RgbType type, filament::math::float3 value), {
         self->setParameter(name.c_str(), type, value); }), allow_raw_pointers())
     .function("setPolygonOffset", &MaterialInstance::setPolygonOffset);
 
@@ -871,7 +871,7 @@ class_<IblBuilder>("IndirectLight$Builder")
         for (size_t i = 0; i < nfloats; i++) {
             floats[i] = ta[i].as<float>();
         }
-        return &builder->irradiance(nbands, (math::float3 const*) floats.data()); })
+        return &builder->irradiance(nbands, (filament::math::float3 const*) floats.data()); })
     .BUILDER_FUNCTION("intensity", IblBuilder, (IblBuilder* builder, float value), {
         return &builder->intensity(value); })
     .BUILDER_FUNCTION("rotation", IblBuilder, (IblBuilder* builder, flatmat3 value), {

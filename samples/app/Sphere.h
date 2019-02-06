@@ -54,7 +54,7 @@ public:
         return mMaterialInstance;
     }
 
-    Sphere& setPosition(math::float3 const& position) noexcept;
+    Sphere& setPosition(filament::math::float3 const& position) noexcept;
     Sphere& setRadius(float radius) noexcept;
 
 private:

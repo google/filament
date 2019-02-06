@@ -41,7 +41,7 @@
 
 #include <memory>
 
-using namespace math;
+using namespace filament::math;
 using namespace utils;
 
 namespace filament {
@@ -398,7 +398,7 @@ void FView::prepareLighting(FEngine& engine, FEngine::DriverApi& driver, ArenaSc
 }
 
 void FView::prepare(FEngine& engine, driver::DriverApi& driver, ArenaScope& arena,
-        Viewport const& viewport, math::float4 const& userTime) noexcept {
+        Viewport const& viewport, filament::math::float4 const& userTime) noexcept {
     JobSystem& js = engine.getJobSystem();
 
     /*

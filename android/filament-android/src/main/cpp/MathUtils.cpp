@@ -19,7 +19,7 @@
 #include <math/mat3.h>
 #include <math/quat.h>
 
-using namespace math;
+using namespace filament::math;
 
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_MathUtils_nPackTangentFrame(JNIEnv *env, jclass,

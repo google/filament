@@ -20,7 +20,7 @@
 
 #include <math/fast.h>
 
-using namespace math;
+using namespace filament::math;
 
 class FastTest : public testing::Test {
 protected:

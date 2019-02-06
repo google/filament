@@ -32,7 +32,7 @@
 #include <filament/TransformManager.h>
 #include <utils/EntityManager.h>
 
-using namespace math;
+using namespace filament::math;
 using namespace filament;
 using namespace utils;
 
@@ -236,9 +236,9 @@ void ImGuiHelper::createVertexBuffer(size_t bufferIndex, size_t capacity) {
             .attribute(VertexAttribute::POSITION, 0, VertexBuffer::AttributeType::FLOAT2, 0,
                     sizeof(ImDrawVert))
             .attribute(VertexAttribute::UV0, 0, VertexBuffer::AttributeType::FLOAT2,
-                    sizeof(math::float2), sizeof(ImDrawVert))
+                    sizeof(filament::math::float2), sizeof(ImDrawVert))
             .attribute(VertexAttribute::COLOR, 0, VertexBuffer::AttributeType::UBYTE4,
-                    2 * sizeof(math::float2), sizeof(ImDrawVert))
+                    2 * sizeof(filament::math::float2), sizeof(ImDrawVert))
             .normalized(VertexAttribute::COLOR)
             .build(*mEngine);
 }

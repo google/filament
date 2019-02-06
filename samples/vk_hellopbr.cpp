@@ -30,7 +30,8 @@
 
 using namespace filament;
 using namespace filamesh;
-using namespace math;
+using namespace filament::math;
+
 using Backend = Engine::Backend;
 
 struct App {

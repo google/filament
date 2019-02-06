@@ -33,7 +33,7 @@
 #include <getopt/getopt.h>
 
 using namespace filamesh;
-using namespace math;
+using namespace filament::math;
 using namespace utils;
 
 #include <assimp/Importer.hpp>
@@ -66,12 +66,12 @@ static ushort2 convertUV(float2 uv) {
 template<typename VECTOR, typename INDEX>
 static Box computeAABB(VECTOR const* positions, INDEX const* indices,
         size_t count, size_t stride) noexcept {
-    math::float3 bmin(std::numeric_limits<float>::max());
-    math::float3 bmax(std::numeric_limits<float>::lowest());
+    filament::math::float3 bmin(std::numeric_limits<float>::max());
+    filament::math::float3 bmax(std::numeric_limits<float>::lowest());
     for (size_t i = 0; i < count; ++i) {
         VECTOR const* p = reinterpret_cast<VECTOR const *>(
                 (char const*) positions + indices[i] * stride);
-        const math::float3 v(p->x, p->y, p->z);
+        const filament::math::float3 v(p->x, p->y, p->z);
         bmin = min(bmin, v);
         bmax = max(bmax, v);
     }
@@ -168,7 +168,7 @@ void processNode(const aiScene* scene, const aiNode* node, std::vector<Part>& me
                     color = colors ? colors[j] : float4(1.0f);
                     Vertex vertex {
                         .position = half4(vertices[j], 1.0_h),
-                        .tangents = short4(math::packSnorm16(q.xyzw)),
+                        .tangents = short4(filament::math::packSnorm16(q.xyzw)),
                         .color = ubyte4(clamp(color, 0.0f, 1.0f) * 255.0f),
                         .uv0 = uv0 ? convertUV<SNORMUVS>(uv0[j].xy) : ushort2(0),
                     };

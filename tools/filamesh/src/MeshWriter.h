@@ -28,10 +28,10 @@
 
 namespace filamesh {
 
-using half4 = math::half4;
-using short4 = math::short4;
-using ubyte4 = math::ubyte4;
-using ushort2 = math::ushort2;
+using half4 = filament::math::half4;
+using short4 = filament::math::short4;
+using ubyte4 = filament::math::ubyte4;
+using ushort2 = filament::math::ushort2;
 
 struct Vertex {
     half4  position;

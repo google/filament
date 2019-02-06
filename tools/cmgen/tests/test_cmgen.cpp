@@ -39,7 +39,7 @@
 
 using std::string;
 using utils::Path;
-using namespace math;
+using namespace filament::math;
 
 using namespace image;
 
@@ -104,7 +104,7 @@ static void processEnvMap(string inputPath, string resultPath, string goldenPath
     ASSERT_EQ(resultImage.isValid(), true);
     ASSERT_EQ(resultImage.getChannels(), 4);
     LinearImage resultLImage = toLinearFromRGBM(
-            reinterpret_cast<math::float4 const*>(resultImage.getPixelRef()),
+            reinterpret_cast<filament::math::float4 const*>(resultImage.getPixelRef()),
             resultImage.getWidth(), resultImage.getHeight());
 
     std::cout << "Golden image is at " << goldenPath << std::endl;

@@ -29,6 +29,7 @@
 
 #include <math/compiler.h>
 
+namespace filament {
 namespace math {
 namespace details {
 // -------------------------------------------------------------------------------------
@@ -593,5 +594,6 @@ public:
 // -------------------------------------------------------------------------------------
 }  // namespace details
 }  // namespace math
+}  // namespace filament
 
 #endif  // MATH_TVECHELPERS_H_

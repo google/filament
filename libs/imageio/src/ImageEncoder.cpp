@@ -43,7 +43,7 @@
 
 #include <image/ColorTransform.h>
 
-using namespace math;
+using namespace filament::math;
 
 namespace image {
 
@@ -102,7 +102,7 @@ private:
     // ImageEncoder::Encoder interface
     bool encode(const LinearImage& image) override;
 
-    static void float2rgbe(uint8_t rgbe[4], const math::float3& in);
+    static void float2rgbe(uint8_t rgbe[4], const float3& in);
     static size_t countRepeats(uint8_t const* data, size_t length);
     static size_t countNonRepeats(uint8_t const* data, size_t length);
     static void rle(std::ostream& out, uint8_t const* data, size_t length);
@@ -988,7 +988,7 @@ bool DDSEncoder::encode(const LinearImage& image) {
                 for (uint32_t y = 0; y < height; y++) {
                     const float* data = image.getPixelRef(0, y);
                     for (size_t x = 0; x < width; x++) {
-                        math::half p = math::half(*data);
+                        half p = half(*data);
                         mStream.write((const char*) &p, 2);
                         data++;
                     }

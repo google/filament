@@ -24,7 +24,7 @@
 
 #include <cmath>
 
-using namespace math;
+using namespace filament::math;
 
 
 struct Scalar{};
@@ -152,8 +152,8 @@ struct FastPow2dot2 {
 };
 
 struct Float16 {
-    using result_type = math::half;
-    math::half operator()(float v) { return math::half(v); }
+    using result_type = half;
+    half operator()(float v) { return half(v); }
     static const char* label() { return "half"; }
 };
 

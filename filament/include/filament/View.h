@@ -97,7 +97,7 @@ public:
         DynamicResolutionOptions() = default;
 
         DynamicResolutionOptions(bool enabled, float scaleRate,
-                math::float2 minScale, math::float2 maxScale)
+                filament::math::float2 minScale, filament::math::float2 maxScale)
                 : minScale(minScale), maxScale(maxScale),
                   scaleRate(scaleRate), enabled(enabled) {
             // this one exists for backward compatibility
@@ -105,8 +105,8 @@ public:
 
         explicit DynamicResolutionOptions(bool enabled) : enabled(enabled) { }
 
-        math::float2 minScale = math::float2(0.5f);     //!< minimum scale factors in x and y
-        math::float2 maxScale = math::float2(1.0f);     //!< maximum scale factors in x and y
+        filament::math::float2 minScale = filament::math::float2(0.5f);     //!< minimum scale factors in x and y
+        filament::math::float2 maxScale = filament::math::float2(1.0f);     //!< maximum scale factors in x and y
         float scaleRate = 0.125f;                       //!< rate at which the scale will change
         float targetFrameTimeMilli = 1000.0f / 60.0f;   //!< desired frame time, or budget.
         float headRoomRatio = 0.0f;                     //!< additional headroom for the GPU

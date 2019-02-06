@@ -46,7 +46,7 @@ public:
 
     bool empty() const noexcept { return !width || !height; }
 
-    Viewport scale(math::float2 s) const noexcept;
+    Viewport scale(filament::math::float2 s) const noexcept;
 
     // left coordinate in pixels
     int32_t left = 0;
