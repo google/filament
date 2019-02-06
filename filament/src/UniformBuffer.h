@@ -101,21 +101,21 @@ public:
                 std::is_same<float, T>::value ||
                 std::is_same<int32_t, T>::value ||
                 std::is_same<uint32_t, T>::value ||
-                std::is_same<math::quatf, T>::value ||
-                std::is_same<math::bool2, T>::value ||
-                std::is_same<math::bool3, T>::value ||
-                std::is_same<math::bool4, T>::value ||
-                std::is_same<math::int2, T>::value ||
-                std::is_same<math::int3, T>::value ||
-                std::is_same<math::int4, T>::value ||
-                std::is_same<math::uint2, T>::value ||
-                std::is_same<math::uint3, T>::value ||
-                std::is_same<math::uint4, T>::value ||
-                std::is_same<math::float2, T>::value ||
-                std::is_same<math::float3, T>::value ||
-                std::is_same<math::float4, T>::value ||
-                std::is_same<math::mat3f, T>::value ||
-                std::is_same<math::mat4f, T>::value
+                std::is_same<filament::math::quatf, T>::value ||
+                std::is_same<filament::math::bool2, T>::value ||
+                std::is_same<filament::math::bool3, T>::value ||
+                std::is_same<filament::math::bool4, T>::value ||
+                std::is_same<filament::math::int2, T>::value ||
+                std::is_same<filament::math::int3, T>::value ||
+                std::is_same<filament::math::int4, T>::value ||
+                std::is_same<filament::math::uint2, T>::value ||
+                std::is_same<filament::math::uint3, T>::value ||
+                std::is_same<filament::math::uint4, T>::value ||
+                std::is_same<filament::math::float2, T>::value ||
+                std::is_same<filament::math::float3, T>::value ||
+                std::is_same<filament::math::float4, T>::value ||
+                std::is_same<filament::math::mat3f, T>::value ||
+                std::is_same<filament::math::mat4f, T>::value
         >::type;
     };
 
@@ -145,7 +145,7 @@ public:
     template<typename T, typename = typename is_supported_type<T>::type>
     T const& getUniform(size_t offset) const noexcept {
         // we don't support mat3f because a specialization would force us to return by value.
-        static_assert(!std::is_same<math::mat3f, T>::value, "mat3f not supported");
+        static_assert(!std::is_same<filament::math::mat3f, T>::value, "mat3f not supported");
         return *reinterpret_cast<T const*>(static_cast<char const*>(mBuffer) + offset);
     }
 
@@ -198,10 +198,10 @@ private:
 // specialization for float3 (which has a different alignment)
 template<>
 inline void
-UniformBuffer::setUniformArray(size_t offset, math::float3 const* begin, size_t count) noexcept {
-    math::float4* p = static_cast<math::float4*>(invalidateUniforms(offset,
-            sizeof(math::float4) * count));
-    math::float3 const* const end = begin + count;
+UniformBuffer::setUniformArray(size_t offset, filament::math::float3 const* begin, size_t count) noexcept {
+    filament::math::float4* p = static_cast<filament::math::float4*>(invalidateUniforms(offset,
+            sizeof(filament::math::float4) * count));
+    filament::math::float3 const* const end = begin + count;
     while (begin != end) {
         p->xyz = *begin++;
         ++p;
@@ -210,7 +210,7 @@ UniformBuffer::setUniformArray(size_t offset, math::float3 const* begin, size_t 
 
 // specialization for mat3f (which has a different alignment, see std140 layout rules)
 template<>
-inline void UniformBuffer::setUniform(void* addr, size_t offset, const math::mat3f& v) noexcept {
+inline void UniformBuffer::setUniform(void* addr, size_t offset, const filament::math::mat3f& v) noexcept {
     struct mat43 {
         float v[3][4];
     };

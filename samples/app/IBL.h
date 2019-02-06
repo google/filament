@@ -58,7 +58,7 @@ private:
 
     filament::Engine& mEngine;
 
-    math::float3 mBands[9] = {};
+    filament::math::float3 mBands[9] = {};
 
     filament::Texture* mTexture = nullptr;
     filament::IndirectLight* mIndirectLight = nullptr;

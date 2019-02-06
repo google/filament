@@ -33,7 +33,7 @@
 
 #include <algorithm>
 
-using namespace math;
+using namespace filament::math;
 using namespace utils;
 
 namespace filament {
@@ -49,7 +49,7 @@ FScene::FScene(FEngine& engine) :
 FScene::~FScene() noexcept = default;
 
 
-void FScene::prepare(const math::mat4f& worldOriginTransform) {
+void FScene::prepare(const filament::math::mat4f& worldOriginTransform) {
     // TODO: can we skip this in most cases? Since we rely on indices staying the same,
     //       we could only skip, if nothing changed in the RCM.
 

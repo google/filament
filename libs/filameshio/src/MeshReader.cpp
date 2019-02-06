@@ -42,7 +42,7 @@
 
 using namespace filament;
 using namespace filamesh;
-using namespace math;
+using namespace filament::math;
 
 #define DEFAULT_MATERIAL "DefaultMaterial"
 

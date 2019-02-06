@@ -35,7 +35,7 @@ struct App {
     utils::Entity renderable;
 };
 
-static constexpr math::float2 POSITIONS[] { {.5, 0}, {-.5, .5}, {-.5, -.5} };
+static constexpr filament::math::float2 POSITIONS[] { {.5, 0}, {-.5, .5}, {-.5, -.5} };
 static constexpr uint32_t COLORS[] { 0xffff0000u, 0xff00ff00u, 0xff0000ffu };
 static constexpr uint16_t TRIANGLE_INDICES[] { 0, 1, 2 };
 

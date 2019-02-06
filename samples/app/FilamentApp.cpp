@@ -48,7 +48,7 @@
 
 using namespace filament;
 using namespace filagui;
-using namespace math;
+using namespace filament::math;
 using namespace utils;
 
 FilamentApp& FilamentApp::get() {

@@ -32,7 +32,7 @@
 #include <utils/Systrace.h>
 
 using namespace utils;
-using namespace math;
+using namespace filament::math;
 
 namespace filament {
 
@@ -206,7 +206,7 @@ void RenderPass::setupColorCommand(Command& cmdDraw, bool hasDepthPass,
 UTILS_NOINLINE
 void RenderPass::generateCommands(uint32_t commandTypeFlags, Command* const commands,
         FScene::RenderableSoa const& soa, utils::Range<uint32_t> range, RenderFlags renderFlags,
-        math::float3 cameraPosition, math::float3 cameraForward) noexcept {
+        filament::math::float3 cameraPosition, filament::math::float3 cameraForward) noexcept {
 
     // generateCommands() writes both the draw and depth commands simultaneously such that
     // we go throw the list of renderables just once.

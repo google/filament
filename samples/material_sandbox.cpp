@@ -47,7 +47,7 @@
 
 #include "material_sandbox.h"
 
-using namespace math;
+using namespace filament::math;
 using namespace filament;
 using namespace filamat;
 using namespace utils;
@@ -204,22 +204,22 @@ static void setup(Engine* engine, View*, Scene* scene) {
                 0, 1, 2, 2, 3, 0
         };
 
-        const static math::float3 vertices[] = {
+        const static filament::math::float3 vertices[] = {
                 { -10, 0, -10 },
                 { -10, 0,  10 },
                 {  10, 0,  10 },
                 {  10, 0, -10 },
         };
 
-        short4 tbn = math::packSnorm16(
+        short4 tbn = filament::math::packSnorm16(
                 mat3f::packTangentFrame(
-                        math::mat3f{
+                        filament::math::mat3f{
                                 float3{ 1.0f, 0.0f, 0.0f }, float3{ 0.0f, 0.0f, 1.0f },
                                 float3{ 0.0f, 1.0f, 0.0f }
                         }
                 ).xyzw);
 
-        const static math::short4 normals[] { tbn, tbn, tbn, tbn };
+        const static filament::math::short4 normals[] { tbn, tbn, tbn, tbn };
 
         VertexBuffer* vertexBuffer = VertexBuffer::Builder()
                 .vertexCount(4)
@@ -256,7 +256,7 @@ static void setup(Engine* engine, View*, Scene* scene) {
         scene->addEntity(planeRenderable);
 
         tcm.setTransform(tcm.getInstance(planeRenderable),
-                math::mat4f::translate(float3{0, -1, -4}));
+                filament::math::mat4f::translate(float3{0, -1, -4}));
     }
 }
 

@@ -57,7 +57,7 @@ void updateOrCompare(LinearImage limgResult, const utils::Path& fnameGolden,
     // Convert 4-channel RGBM into proper RGB.
     if (fnameGolden.getExtension() == "rgbm" && limgGolden.getChannels() == 4) {
         limgGolden = toLinearFromRGBM(
-                reinterpret_cast<math::float4 const*>(limgGolden.getPixelRef()),
+                reinterpret_cast< filament::math::float4 const*>(limgGolden.getPixelRef()),
                 limgGolden.getWidth(), limgGolden.getHeight());
     }
 

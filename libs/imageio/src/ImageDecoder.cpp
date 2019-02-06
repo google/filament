@@ -273,22 +273,22 @@ LinearImage PNGDecoder::decode() {
             if (getColorSpace() == ImageDecoder::ColorSpace::SRGB) {
                 return toLinearWithAlpha<uint16_t>(width, height, rowBytes, imageData,
                         [ ](uint16_t v) -> uint16_t { return ntohs(v); },
-                        sRGBToLinear<math::float4>);
+                        sRGBToLinear< filament::math::float4>);
             } else {
                 return toLinearWithAlpha<uint16_t>(width, height, rowBytes, imageData,
                         [ ](uint16_t v) -> uint16_t { return ntohs(v); },
-                        [ ](const math::float4& color) -> math::float4 { return color; });
+                        [ ](const filament::math::float4& color) ->  filament::math::float4 { return color; });
             }
         } else {
             // Convert to linear float (PNG 16 stores data in network order (big endian).
             if (getColorSpace() == ImageDecoder::ColorSpace::SRGB) {
                 return toLinear<uint16_t>(width, height, rowBytes, imageData,
                         [ ](uint16_t v) -> uint16_t { return ntohs(v); },
-                        sRGBToLinear<math::float3>);
+                        sRGBToLinear< filament::math::float3>);
             } else {
                 return toLinear<uint16_t>(width, height, rowBytes, imageData,
                         [ ](uint16_t v) -> uint16_t { return ntohs(v); },
-                        [ ](const math::float3& color) -> math::float3 { return color; });
+                        [ ](const filament::math::float3& color) ->  filament::math::float3 { return color; });
             }
         }
     } catch(std::runtime_error& e) {
@@ -376,12 +376,12 @@ LinearImage HDRDecoder::decode() {
 
         if (width < 8 || width > 32767) {
             for (uint32_t y = 0; y < height; y++) {
-                math::float3* i = reinterpret_cast<math::float3*>(image.getPixelRef(0, y));
+                 filament::math::float3* i = reinterpret_cast< filament::math::float3*>(image.getPixelRef(0, y));
                 mStream.read((char*) &rgbe, width * 4);
                 // (rgb/256) * 2^(e-128)
                 size_t pixel = 0;
                 for (size_t x = 0; x < width; x++, pixel += 4) {
-                    math::float3 v(rgbe[pixel], rgbe[pixel + 1], rgbe[pixel + 2]);
+                     filament::math::float3 v(rgbe[pixel], rgbe[pixel + 1], rgbe[pixel + 2]);
                     i[x] = v * std::ldexp(1.0f, rgbe[pixel + 3] - (128 + 8));
                 }
             }
@@ -424,10 +424,10 @@ LinearImage HDRDecoder::decode() {
                 uint8_t const* g = &rgbe[width];
                 uint8_t const* b = &rgbe[2 * width];
                 uint8_t const* e = &rgbe[3 * width];
-                math::float3* i = reinterpret_cast<math::float3*>(image.getPixelRef(0, y));
+                 filament::math::float3* i = reinterpret_cast< filament::math::float3*>(image.getPixelRef(0, y));
                 // (rgb/256) * 2^(e-128)
                 for (size_t x = 0; x < width; x++, r++, g++, b++, e++) {
-                    math::float3 v(r[0], g[0], b[0]);
+                     filament::math::float3 v(r[0], g[0], b[0]);
                     i[x] = v * std::ldexp(1.0f, e[0] - (128 + 8));
                 }
             }
@@ -527,8 +527,8 @@ LinearImage PSDDecoder::decode() {
             for (size_t i = 0; i < 3; i++) {
                 for (uint32_t y = 0; y < height; y++) {
                     for (uint32_t x = 0; x < width; x++) {
-                        math::float3& pixel =
-                                *reinterpret_cast<math::float3*>(image.getPixelRef(x, y));
+                         filament::math::float3& pixel =
+                                *reinterpret_cast< filament::math::float3*>(image.getPixelRef(x, y));
                         pixel[i] = read32(mStream);
                     }
                 }
@@ -537,8 +537,8 @@ LinearImage PSDDecoder::decode() {
             for (size_t i = 0; i < 3; i++) {
                 for (uint32_t y = 0; y < height; y++) {
                     for (uint32_t x = 0; x < width; x++) {
-                        math::float3& pixel =
-                                *reinterpret_cast<math::float3*>(image.getPixelRef(x, y));
+                         filament::math::float3& pixel =
+                                *reinterpret_cast< filament::math::float3*>(image.getPixelRef(x, y));
                         pixel[i] = read16(mStream);
                     }
                 }
@@ -605,7 +605,7 @@ LinearImage EXRDecoder::decode() {
         size_t i = 0;
         for (uint32_t y = 0; y < height; y++) {
             for (uint32_t x = 0; x < width; x++) {
-                math::float3& pixel = *reinterpret_cast<math::float3*>(image.getPixelRef(x, y));
+                 filament::math::float3& pixel = *reinterpret_cast< filament::math::float3*>(image.getPixelRef(x, y));
                 pixel.r = rgba[i++];
                 pixel.g = rgba[i++];
                 pixel.b = rgba[i++];

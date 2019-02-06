@@ -31,7 +31,7 @@
 namespace filament {
 
 using namespace details;
-using namespace math;
+using namespace filament::math;
 
 struct VertexBuffer::BuilderDetails {
     VertexBuffer::Builder::AttributeData mAttributes[MAX_ATTRIBUTE_BUFFERS_COUNT];
@@ -193,7 +193,7 @@ void FVertexBuffer::setBufferAt(FEngine& engine, uint8_t bufferIndex,
 // Trampoline calling into private implementation
 // ------------------------------------------------------------------------------------------------
 
-using namespace details;
+using namespace filament::details;
 
 size_t VertexBuffer::getVertexCount() const noexcept {
     return upcast(this)->getVertexCount();
@@ -211,7 +211,7 @@ void VertexBuffer::populateTangentQuaternions(const QuatTangentContext& ctx) {
     }
 
     // Define a small lambda that converts fp32 into the desired output format.
-    void (*writeQuat)(math::quatf, uint8_t*);
+    void (*writeQuat)(filament::math::quatf, uint8_t*);
     switch (ctx.quatType) {
         case HALF4:
             writeQuat = [] (quatf inquat, uint8_t* outquat) {
@@ -231,7 +231,7 @@ void VertexBuffer::populateTangentQuaternions(const QuatTangentContext& ctx) {
     }
 
     const float3* normal = ctx.normals;
-    const size_t nstride = ctx.normalsStride ? ctx.normalsStride : sizeof(math::float3);
+    const size_t nstride = ctx.normalsStride ? ctx.normalsStride : sizeof(filament::math::float3);
     uint8_t* outquat = (uint8_t*) ctx.outBuffer;
 
     // If tangents are not provided, simply cross N with arbitrary vector (1, 0, 0)
@@ -249,7 +249,7 @@ void VertexBuffer::populateTangentQuaternions(const QuatTangentContext& ctx) {
 
     const float3* tanvec = &ctx.tangents->xyz;
     const float* tandir = &ctx.tangents->w;
-    const size_t tstride = ctx.tangentsStride ? ctx.tangentsStride : sizeof(math::float4);
+    const size_t tstride = ctx.tangentsStride ? ctx.tangentsStride : sizeof(filament::math::float4);
 
     for (size_t qindex = 0, qcount = ctx.quatCount; qindex < qcount; ++qindex) {
         float3 n = *normal;

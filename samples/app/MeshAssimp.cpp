@@ -60,7 +60,7 @@
 
 using namespace filament;
 using namespace filamat;
-using namespace math;
+using namespace filament::math;
 using namespace utils;
 
 enum class AlphaMode : uint8_t {
@@ -484,12 +484,12 @@ template<typename VECTOR, typename INDEX>
 Box computeTransformedAABB(VECTOR const* vertices, INDEX const* indices, size_t count,
         const mat4f& transform) noexcept {
     size_t stride = sizeof(VECTOR);
-    math::float3 bmin(std::numeric_limits<float>::max());
-    math::float3 bmax(std::numeric_limits<float>::lowest());
+    filament::math::float3 bmin(std::numeric_limits<float>::max());
+    filament::math::float3 bmax(std::numeric_limits<float>::lowest());
     for (size_t i = 0; i < count; ++i) {
         VECTOR const* p = reinterpret_cast<VECTOR const*>(
                 (char const*) vertices + indices[i] * stride);
-        const math::float3 v(p->x, p->y, p->z);
+        const filament::math::float3 v(p->x, p->y, p->z);
         float3 tv = (transform * float4(v, 1.0f)).xyz;
         bmin = min(bmin, tv);
         bmax = max(bmax, tv);
@@ -850,7 +850,7 @@ void MeshAssimp::processNode(Asset& asset,
                             bitangent = -bitangents[j];
                         }
 
-                        quatf q = math::details::TMat33<float>::packTangentFrame({tangent, bitangent, normal});
+                        quatf q = filament::math::details::TMat33<float>::packTangentFrame({tangent, bitangent, normal});
                         asset.tangents.push_back(packSnorm16(q.xyzw));
                         asset.texCoords0.emplace_back(convertUV<SNORMUV0>(texCoord0));
                         asset.texCoords1.emplace_back(convertUV<SNORMUV1>(texCoord1));

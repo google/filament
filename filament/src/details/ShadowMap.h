@@ -57,7 +57,7 @@ public:
 
     // Computes the transform to use in the shader to access the shadow map.
     // Valid after calling update().
-    math::mat4f const& getLightSpaceMatrix() const noexcept { return mLightSpace; }
+    filament::math::mat4f const& getLightSpaceMatrix() const noexcept { return mLightSpace; }
 
     // return the size of a texel in world space (pre-warping)
     float getTexelSizeWorldSpace() const noexcept { return mTexelSizeWs; }
@@ -76,10 +76,10 @@ public:
 
 private:
     struct CameraInfo {
-        math::mat4f projection;
-        math::mat4f model;
-        math::mat4f view;
-        math::mat4f worldOrigin;
+        filament::math::mat4f projection;
+        filament::math::mat4f model;
+        filament::math::mat4f view;
+        filament::math::mat4f worldOrigin;
         float zn = 0;
         float zf = 0;
         float dzn = 0;
@@ -87,8 +87,8 @@ private:
         Frustum frustum;
         float getNear() const noexcept { return zn; }
         float getFar() const noexcept { return zf; }
-        math::float3 const& getPosition() const noexcept { return model[3].xyz; }
-        math::float3 getForwardVector() const noexcept {
+        filament::math::float3 const& getPosition() const noexcept { return model[3].xyz; }
+        filament::math::float3 getForwardVector() const noexcept {
             return -normalize(model[2].xyz);   // the camera looks towards -z
         }
     };
@@ -102,56 +102,56 @@ private:
     };
 
     // 8 corners, 12 segments w/ 2 intersection max -- all of this twice (8 + 12 * 2) * 2 (768 bytes)
-    using FrustumBoxIntersection = std::array<math::float3, 64>;
+    using FrustumBoxIntersection = std::array<filament::math::float3, 64>;
 
     void computeShadowCameraDirectional(
-            math::float3 const& direction, FScene const* scene, CameraInfo const& camera,
+            filament::math::float3 const& direction, FScene const* scene, CameraInfo const& camera,
             uint8_t visibleLayers) noexcept;
 
-    static math::mat4f applyLISPSM(
-            CameraInfo const& camera, float dzn, float dzf, const math::mat4f& LMpMv,
-            Aabb const& wsShadowReceiversVolume, const math::float3 wsViewFrustumCorners[8],
-            const math::float3& dir);
+    static filament::math::mat4f applyLISPSM(
+            CameraInfo const& camera, float dzn, float dzf, const filament::math::mat4f& LMpMv,
+            Aabb const& wsShadowReceiversVolume, const filament::math::float3 wsViewFrustumCorners[8],
+            const filament::math::float3& dir);
 
-    static inline void snapLightFrustum(math::float2& s, math::float2& o,
+    static inline void snapLightFrustum(filament::math::float2& s, filament::math::float2& o,
             uint32_t shadowMapDimension) noexcept;
 
-    static inline void computeFrustumCorners(math::float3* out,
-            const math::mat4f& projectionViewInverse) noexcept;
+    static inline void computeFrustumCorners(filament::math::float3* out,
+            const filament::math::mat4f& projectionViewInverse) noexcept;
 
-    static inline math::float2 computeNearFar(math::mat4f const& lightView,
+    static inline filament::math::float2 computeNearFar(filament::math::mat4f const& lightView,
             Aabb const& wsShadowCastersVolume) noexcept;
 
-    static inline void intersectWithShadowCasters(Aabb& lightFrustum, const math::mat4f& lightView,
+    static inline void intersectWithShadowCasters(Aabb& lightFrustum, const filament::math::mat4f& lightView,
             Aabb const& wsShadowCastersVolume) noexcept;
 
-    static inline math::float2 computeWpNearFarOfWarpSpace(math::mat4f const& lightView,
-            math::float3 const wsViewFrustumCorners[8]) noexcept;
+    static inline filament::math::float2 computeWpNearFarOfWarpSpace(filament::math::mat4f const& lightView,
+            filament::math::float3 const wsViewFrustumCorners[8]) noexcept;
 
-    static inline bool intersectSegmentWithPlane(math::float3& p,
-            math::float3 s0, math::float3 s1,
-            math::float3 pn, math::float3 p0) noexcept;
+    static inline bool intersectSegmentWithPlane(filament::math::float3& p,
+            filament::math::float3 s0, filament::math::float3 s1,
+            filament::math::float3 pn, filament::math::float3 p0) noexcept;
 
-    static inline bool intersectSegmentWithPlanarQuad(math::float3& p,
-            math::float3 s0, math::float3 s1,
-            math::float3 t0, math::float3 t1,
-            math::float3 t2, math::float3 t3) noexcept;
+    static inline bool intersectSegmentWithPlanarQuad(filament::math::float3& p,
+            filament::math::float3 s0, filament::math::float3 s1,
+            filament::math::float3 t0, filament::math::float3 t1,
+            filament::math::float3 t2, filament::math::float3 t3) noexcept;
 
-    static size_t intersectFrustums(math::float3* out, size_t vertexCount,
-            math::float3 const* segmentsVertices, math::float3 const* quadsVertices) noexcept;
+    static size_t intersectFrustums(filament::math::float3* out, size_t vertexCount,
+            filament::math::float3 const* segmentsVertices, filament::math::float3 const* quadsVertices) noexcept;
 
     static size_t intersectFrustumWithBox(
             FrustumBoxIntersection& outVertices,
             const Frustum& frustum,
-            const math::float3* wsFrustumCorners,
+            const filament::math::float3* wsFrustumCorners,
             Aabb const& wsBox);
 
-    static math::mat4f warpFrustum(float n, float f) noexcept;
+    static filament::math::mat4f warpFrustum(float n, float f) noexcept;
 
-    math::mat4f getTextureCoordsMapping() const noexcept;
+    filament::math::mat4f getTextureCoordsMapping() const noexcept;
 
-    float texelSizeWorldSpace(const math::mat4f& lightSpaceMatrix) const noexcept;
-    float texelSizeWorldSpace(const math::mat4f& lightSpaceMatrix, math::float3 const& str) const noexcept;
+    float texelSizeWorldSpace(const filament::math::mat4f& lightSpaceMatrix) const noexcept;
+    float texelSizeWorldSpace(const filament::math::mat4f& lightSpaceMatrix, filament::math::float3 const& str) const noexcept;
 
     static constexpr const Segment sBoxSegments[12] = {
             { 0, 1 }, { 1, 3 }, { 3, 2 }, { 2, 0 },
@@ -169,7 +169,7 @@ private:
 
     FCamera* mCamera = nullptr;
     FCamera* mDebugCamera = nullptr;
-    math::mat4f mLightSpace;
+    filament::math::mat4f mLightSpace;
     float mSceneRange = 0.0f;
     float mTexelSizeWs = 0.0f;
 

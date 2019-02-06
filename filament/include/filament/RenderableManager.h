@@ -54,8 +54,8 @@ public:
     Instance getInstance(utils::Entity e) const noexcept;
 
     struct Bone {
-        math::quatf unitQuaternion = { 1, 0, 0, 0 };
-        math::float3 translation = { 0, 0, 0 };
+        filament::math::quatf unitQuaternion = { 1, 0, 0, 0 };
+        filament::math::float3 translation = { 0, 0, 0 };
         float reserved = 0;
     };
 
@@ -84,7 +84,7 @@ public:
         Builder& receiveShadows(bool enable) noexcept; // true by default
         Builder& skinning(size_t boneCount) noexcept; // 0 by default, 255 max
         Builder& skinning(size_t boneCount, Bone const* bones) noexcept;
-        Builder& skinning(size_t boneCount, math::mat4f const* transforms) noexcept;
+        Builder& skinning(size_t boneCount, filament::math::mat4f const* transforms) noexcept;
 
         // Sets an ordering index for blended primitives that all live at the same Z value.
         Builder& blendOrder(size_t index, uint16_t order) noexcept; // 0 by default
@@ -140,7 +140,7 @@ public:
     // Updates the bone transforms in the range [offset, offset + boneCount).
     // The bones must be pre-allocated using Builder::skinning().
     void setBones(Instance instance, Bone const* transforms, size_t boneCount = 1, size_t offset = 0) noexcept;
-    void setBones(Instance instance, math::mat4f const* transforms, size_t boneCount = 1, size_t offset = 0) noexcept;
+    void setBones(Instance instance, filament::math::mat4f const* transforms, size_t boneCount = 1, size_t offset = 0) noexcept;
 
 
     // getters...
@@ -171,10 +171,10 @@ public:
     template<typename T>
     struct is_supported_vector_type {
         using type = typename std::enable_if<
-                std::is_same<math::float4, T>::value ||
-                std::is_same<math::half4,  T>::value ||
-                std::is_same<math::float3, T>::value ||
-                std::is_same<math::half3,  T>::value
+                std::is_same<filament::math::float4, T>::value ||
+                std::is_same<filament::math::half4,  T>::value ||
+                std::is_same<filament::math::float3, T>::value ||
+                std::is_same<filament::math::half3,  T>::value
         >::type;
     };
 
@@ -198,12 +198,12 @@ public:
 template<typename VECTOR, typename INDEX, typename, typename>
 Box RenderableManager::computeAABB(VECTOR const* vertices, INDEX const* indices, size_t count,
         size_t stride) noexcept {
-    math::float3 bmin(std::numeric_limits<float>::max());
-    math::float3 bmax(std::numeric_limits<float>::lowest());
+    filament::math::float3 bmin(std::numeric_limits<float>::max());
+    filament::math::float3 bmax(std::numeric_limits<float>::lowest());
     for (size_t i = 0; i < count; ++i) {
         VECTOR const* p = reinterpret_cast<VECTOR const*>(
                 (char const*)vertices + indices[i] * stride);
-        const math::float3 v(p->x, p->y, p->z);
+        const filament::math::float3 v(p->x, p->y, p->z);
         bmin = min(bmin, v);
         bmax = max(bmax, v);
     }

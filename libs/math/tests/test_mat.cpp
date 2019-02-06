@@ -25,7 +25,7 @@
 #include <math/mat3.h>
 #include <math/quat.h>
 
-using namespace math;
+using namespace filament::math;
 
 class MatTest : public testing::Test {
 protected:
@@ -382,7 +382,7 @@ TYPED_TEST_CASE(MatTestT, TestMatrixValueTypes);
 }
 
 TYPED_TEST(MatTestT, Inverse4) {
-    typedef ::math::details::TMat44<TypeParam> M44T;
+    typedef filament::math::details::TMat44<TypeParam> M44T;
 
     M44T m1(1,  0,  0,  0,
             0,  1,  0,  0,
@@ -420,7 +420,7 @@ TYPED_TEST(MatTestT, Inverse4) {
 
 //------------------------------------------------------------------------------
 TYPED_TEST(MatTestT, Inverse3) {
-    typedef ::math::details::TMat33<TypeParam> M33T;
+    typedef filament::math::details::TMat33<TypeParam> M33T;
 
     M33T m1(1,  0,  0,
             0,  1,  0,
@@ -453,7 +453,7 @@ TYPED_TEST(MatTestT, Inverse3) {
 
 //------------------------------------------------------------------------------
 TYPED_TEST(MatTestT, Inverse2) {
-    typedef ::math::details::TMat22<TypeParam> M22T;
+    typedef filament::math::details::TMat22<TypeParam> M22T;
 
     M22T m1(1,  0,
             0,  1);
@@ -514,9 +514,9 @@ do {                                                            \
 //------------------------------------------------------------------------------
 // Test some translation stuff.
 TYPED_TEST(MatTestT, Translation4) {
-    typedef ::math::details::TMat44<TypeParam> M44T;
-    typedef ::math::details::TVec4<TypeParam> V4T;
-    typedef ::math::details::TVec3<TypeParam> V3T;
+    typedef filament::math::details::TMat44<TypeParam> M44T;
+    typedef filament::math::details::TVec4<TypeParam> V4T;
+    typedef filament::math::details::TVec3<TypeParam> V3T;
 
     V3T translateBy(-7.3, 1.1, 14.4);
     V3T translation(translateBy[0], translateBy[1], translateBy[2]);
@@ -539,9 +539,9 @@ TYPED_TEST(MatTestT, Translation4) {
 //------------------------------------------------------------------------------
 // Test some scale stuff.
 TYPED_TEST(MatTestT, Scale4) {
-    typedef ::math::details::TMat44<TypeParam> M44T;
-    typedef ::math::details::TVec4<TypeParam> V4T;
-    typedef ::math::details::TVec3<TypeParam> V3T;
+    typedef filament::math::details::TMat44<TypeParam> M44T;
+    typedef filament::math::details::TVec4<TypeParam> V4T;
+    typedef filament::math::details::TVec3<TypeParam> V3T;
 
     V3T scaleBy(2.0, 3.0, 4.0);
     V3T scale(scaleBy[0], scaleBy[1], scaleBy[2]);
@@ -583,7 +583,7 @@ static void verifyOrthonormal(const MATRIX& A) {
 //------------------------------------------------------------------------------
 // Test euler code.
 TYPED_TEST(MatTestT, EulerZYX_44) {
-    typedef ::math::details::TMat44<TypeParam> M44T;
+    typedef filament::math::details::TMat44<TypeParam> M44T;
 
     std::default_random_engine generator(82828);
     std::uniform_real_distribution<double> distribution(-6.0 * 2.0*M_PI, 6.0 * 2.0*M_PI);
@@ -602,7 +602,7 @@ TYPED_TEST(MatTestT, EulerZYX_44) {
 // Test euler code.
 TYPED_TEST(MatTestT, EulerZYX_33) {
 
-    typedef ::math::details::TMat33<TypeParam> M33T;
+    typedef filament::math::details::TMat33<TypeParam> M33T;
 
     std::default_random_engine generator(112233);
     std::uniform_real_distribution<double> distribution(-6.0 * 2.0*M_PI, 6.0 * 2.0*M_PI);
@@ -621,10 +621,10 @@ TYPED_TEST(MatTestT, EulerZYX_33) {
 // Test to quaternion with post translation.
 TYPED_TEST(MatTestT, ToQuaternionPostTranslation) {
 
-    typedef ::math::details::TMat44<TypeParam> M44T;
-    typedef ::math::details::TVec4<TypeParam> V4T;
-    typedef ::math::details::TVec3<TypeParam> V3T;
-    typedef ::math::details::TQuaternion<TypeParam> QuatT;
+    typedef filament::math::details::TMat44<TypeParam> M44T;
+    typedef filament::math::details::TVec4<TypeParam> V4T;
+    typedef filament::math::details::TVec3<TypeParam> V3T;
+    typedef filament::math::details::TQuaternion<TypeParam> QuatT;
 
     std::default_random_engine generator(112233);
     std::uniform_real_distribution<double> distribution(-6.0 * 2.0*M_PI, 6.0 * 2.0*M_PI);
@@ -661,9 +661,9 @@ TYPED_TEST(MatTestT, ToQuaternionPointTransformation33) {
     static constexpr TypeParam value_eps =
             TypeParam(1000) * std::numeric_limits<TypeParam>::epsilon();
 
-    typedef ::math::details::TMat33<TypeParam> M33T;
-    typedef ::math::details::TVec3<TypeParam> V3T;
-    typedef ::math::details::TQuaternion<TypeParam> QuatT;
+    typedef filament::math::details::TMat33<TypeParam> M33T;
+    typedef filament::math::details::TVec3<TypeParam> V3T;
+    typedef filament::math::details::TQuaternion<TypeParam> QuatT;
 
     std::default_random_engine generator(112233);
     std::uniform_real_distribution<double> distribution(-100.0, 100.0);
@@ -689,10 +689,10 @@ TYPED_TEST(MatTestT, ToQuaternionPointTransformation44) {
     static constexpr TypeParam value_eps =
             TypeParam(1000) * std::numeric_limits<TypeParam>::epsilon();
 
-    typedef ::math::details::TMat44<TypeParam> M44T;
-    typedef ::math::details::TVec4<TypeParam> V4T;
-    typedef ::math::details::TVec3<TypeParam> V3T;
-    typedef ::math::details::TQuaternion<TypeParam> QuatT;
+    typedef filament::math::details::TMat44<TypeParam> M44T;
+    typedef filament::math::details::TVec4<TypeParam> V4T;
+    typedef filament::math::details::TVec3<TypeParam> V3T;
+    typedef filament::math::details::TQuaternion<TypeParam> QuatT;
 
     std::default_random_engine generator(992626);
     std::uniform_real_distribution<double> distribution(-100.0, 100.0);

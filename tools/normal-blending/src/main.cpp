@@ -27,7 +27,7 @@
 
 #include <getopt/getopt.h>
 
-using namespace math;
+using namespace filament::math;
 using namespace image;
 
 static image::ImageEncoder::Format g_format = image::ImageEncoder::Format::PNG;

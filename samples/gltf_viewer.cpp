@@ -44,7 +44,7 @@
 #include <string>
 #include <vector>
 
-using namespace math;
+using namespace filament::math;
 using namespace filament;
 using namespace filamat;
 using namespace utils;

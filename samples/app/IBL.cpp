@@ -36,7 +36,7 @@
 
 using namespace filament;
 using namespace image;
-using namespace math;
+using namespace filament::math;
 using namespace utils;
 
 static constexpr float IBL_INTENSITY = 30000.0f;

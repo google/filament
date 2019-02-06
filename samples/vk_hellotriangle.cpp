@@ -44,7 +44,7 @@ struct App {
 };
 
 struct Vertex {
-    math::float2 position;
+    filament::math::float2 position;
     uint32_t color;
 };
 
@@ -118,7 +118,7 @@ int main(int argc, char** argv) {
             -ZOOM, ZOOM, 0, 1);
         auto& tcm = engine->getTransformManager();
         tcm.setTransform(tcm.getInstance(app.renderable),
-             math::mat4f::rotate(now, math::float3{0, 0, 1}));
+             filament::math::mat4f::rotate(now, filament::math::float3{0, 0, 1}));
     });
 
     FilamentApp::get().run(config, setup, cleanup);

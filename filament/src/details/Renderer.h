@@ -60,7 +60,7 @@ public:
 
     FEngine& getEngine() const noexcept { return mEngine; }
 
-    math::float4 getShaderUserTime() const { return mShaderUserTime; }
+    filament::math::float4 getShaderUserTime() const { return mShaderUserTime; }
 
     // do all the work here!
     void render(FView const* view);
@@ -150,7 +150,7 @@ private:
     bool mIsRGB16FSupported : 1;
     bool mIsRGB8Supported : 1;
     Epoch mUserEpoch;
-    math::float4 mShaderUserTime;
+    filament::math::float4 mShaderUserTime;
 
     // per-frame arena for this Renderer
     LinearAllocatorArena& mPerRenderPassArena;

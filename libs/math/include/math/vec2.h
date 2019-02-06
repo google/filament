@@ -25,6 +25,7 @@
 #include <type_traits>
 
 
+namespace filament {
 namespace math {
 // -------------------------------------------------------------------------------------
 
@@ -107,5 +108,6 @@ typedef details::TVec2<bool> bool2;
 
 // ----------------------------------------------------------------------------------------
 }  // namespace math
+}  // namespace filament
 
 #endif  // MATH_VEC2_H_

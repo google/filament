@@ -38,7 +38,7 @@
 
 using namespace filament;
 using namespace image;
-using namespace math;
+using namespace filament::math;
 
 struct App {
     Material* material;

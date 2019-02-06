@@ -21,7 +21,7 @@
 #include <math/half.h>
 #include <math/vec4.h>
 
-using namespace math;
+using namespace filament::math;
 
 class HalfTest : public testing::Test {
 protected:
