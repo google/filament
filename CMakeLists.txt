@@ -381,8 +381,8 @@ if (NOT ANDROID AND NOT WEBGL AND NOT IOS)
     add_subdirectory(${LIBRARIES}/filagui)
     add_subdirectory(${LIBRARIES}/imageio)
 
-    add_subdirectory(${FILAMENT}/java)
     add_subdirectory(${FILAMENT}/java/filamat)
+    add_subdirectory(${FILAMENT}/java/filament)
     add_subdirectory(${FILAMENT}/samples)
 
     add_subdirectory(${EXTERNAL}/astcenc/tnt)
