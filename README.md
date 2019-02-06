@@ -381,7 +381,7 @@ You are now ready to build:
 
 Run it:
 ```
-> samples\Release\lightbulb.exe ..\..\assets\models\monkey\monkey.obj
+> samples\Release\material_sandbox.exe ..\..\assets\models\monkey\monkey.obj
 ```
 
 #### Tips
