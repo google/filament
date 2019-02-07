@@ -32,7 +32,7 @@ void* getNativeWindow(SDL_Window* sdlWindow) {
     return view;
 }
 
-void setUpMetalLayer(void* nativeView) {
+void* setUpMetalLayer(void* nativeView) {
     NSView* view = (NSView*) nativeView;
     [view setWantsLayer:YES];
     CAMetalLayer* metalLayer = [CAMetalLayer layer];
@@ -48,10 +48,13 @@ void setUpMetalLayer(void* nativeView) {
     metalLayer.opaque = YES;
 
     [view setLayer:metalLayer];
+
+    return metalLayer;
 }
 
-void resizeMetalLayer(void* nativeView) {
+void* resizeMetalLayer(void* nativeView) {
     NSView* view = (NSView*) nativeView;
     CAMetalLayer* metalLayer = (CAMetalLayer*)view.layer;
     metalLayer.drawableSize = [view convertSizeToBacking:view.bounds.size];
+    return metalLayer;
 }
