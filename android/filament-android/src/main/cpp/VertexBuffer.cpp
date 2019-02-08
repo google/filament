@@ -21,10 +21,14 @@
 
 #include <filament/VertexBuffer.h>
 
+#include <math/vec3.h>
+#include <math/vec4.h>
+
 #include "CallbackUtils.h"
 #include "NioUtils.h"
 
 using namespace filament;
+using namespace filament::math;
 using namespace driver;
 
 extern "C" JNIEXPORT jlong JNICALL
@@ -109,4 +113,44 @@ Java_com_google_android_filament_VertexBuffer_nSetBufferAt(JNIEnv *env, jclass t
             (uint32_t) destOffsetInBytes, (uint32_t) sizeInBytes);
 
     return 0;
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_VertexBuffer_nPopulateTangentQuaternions(JNIEnv *env,
+        jclass type, jint quatType, jint quatCount, jobject outBuffer, jint outRemaining,
+        jint outStride, jobject normals, jint normalsRemaining, jint normalsStride,
+        jobject tangents, jint tangentsRemaining, jint tangentsStride) {
+
+    AutoBuffer outNioBuffer(env, outBuffer, outRemaining);
+    void* outData = outNioBuffer.getData();
+
+    AutoBuffer normalsNioBuffer(env, normals, normalsRemaining);
+    auto normalsData = (const float3*) normalsNioBuffer.getData();
+
+    if (tangents) {
+        AutoBuffer tangentsNioBuffer(env, tangents, tangentsRemaining);
+        auto tangentsData = (const float4*) tangentsNioBuffer.getData();
+        VertexBuffer::populateTangentQuaternions({
+            .quatType = (VertexBuffer::QuatType) quatType,
+            .quatCount = (size_t) quatCount,
+            .outBuffer = outData,
+            .outStride = (size_t) outStride,
+            .normals = normalsData,
+            .normalsStride = (size_t) normalsStride,
+            .tangents = tangentsData,
+            .tangentsStride = (size_t) tangentsStride
+        });
+        return;
+    }
+
+    VertexBuffer::populateTangentQuaternions({
+        .quatType = (VertexBuffer::QuatType) quatType,
+        .quatCount = (size_t) quatCount,
+        .outBuffer = outData,
+        .outStride = (size_t) outStride,
+        .normals = normalsData,
+        .normalsStride = (size_t) normalsStride,
+        .tangents = nullptr,
+        .tangentsStride = 0
+    });
 }

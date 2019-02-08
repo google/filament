@@ -69,6 +69,23 @@ public class VertexBuffer {
         HALF4,
     }
 
+    public enum QuatType {
+        HALF4,  // 2 bytes per component as half-floats (8 bytes per quat)
+        SHORT4, // 2 bytes per component as normalized integers (8 bytes per quat)
+        FLOAT4, // 4 bytes per component as floats (16 bytes per quat)
+    }
+
+    public static class QuatTangentContext {
+        public QuatType quatType;   // desired quaternion type (required)
+        public int quatCount;       // number of quaternions (required)
+        public Buffer outBuffer;    // pre-allocated output buffer (required)
+        public int outStride;       // desired stride in bytes (optional)
+        public Buffer normals;      // source normals (required)
+        public int normalsStride;   // normals stride in bytes (optional)
+        public Buffer tangents;     // source tangents (optional)
+        public int tangentsStride;  // tangents stride in bytes (optional)
+    }
+
     public static class Builder {
         @SuppressWarnings({"FieldCanBeLocal", "UnusedDeclaration"}) // Keep to finalize native resources
         private final BuilderFinalizer mFinalizer;
@@ -172,6 +189,14 @@ public class VertexBuffer {
         }
     }
 
+    public static void populateTangentQuaternions(@NonNull QuatTangentContext context) {
+        nPopulateTangentQuaternions(context.quatType.ordinal(), context.quatCount,
+                context.outBuffer, context.outBuffer.remaining(), context.outStride,
+                context.normals, context.normals.remaining(), context.normalsStride,
+                context.tangents, context.tangents != null ? context.tangents.remaining() : 0,
+                context.tangentsStride);
+    }
+
     long getNativeObject() {
         if (mNativeObject == 0) {
             throw new IllegalStateException("Calling method on destroyed VertexBuffer");
@@ -197,4 +222,8 @@ public class VertexBuffer {
     private static native int nSetBufferAt(long nativeVertexBuffer, long nativeEngine,
             int bufferIndex, Buffer buffer, int remaining, int destOffsetInBytes, int count,
             Object handler, Runnable callback);
+
+    private static native void nPopulateTangentQuaternions(int quatType, int quatCount,
+            Buffer outBuffer, int outRemaining, int outStride, Buffer normals, int normalsRemaining,
+            int normalsStride, Buffer tangents, int tangentsRemaining, int tangentsStride);
 }

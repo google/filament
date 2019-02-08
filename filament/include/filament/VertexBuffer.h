@@ -119,14 +119,14 @@ public:
      * Specifies the parameters for the "populateTangentQuaternions" utility.
      */
     struct QuatTangentContext {
-        QuatType quatType;            // required
-        size_t quatCount;             // required
-        void* outBuffer;              // required
-        size_t outStride;             // required stride in bytes
-        const filament::math::float3* normals;  // required source data
-        size_t normalsStride;         // optional stride in bytes (assumes packed)
-        const filament::math::float4* tangents; // optional source data
-        size_t tangentsStride;        // optional stride in bytes (assumes packed)
+        QuatType quatType;            // desired quaternion type (required)
+        size_t quatCount;             // number of quaternions (required)
+        void* outBuffer;              // pre-allocated output buffer (required)
+        size_t outStride;             // desired stride in bytes (optional)
+        const filament::math::float3* normals;  // source normals (required)
+        size_t normalsStride;         // normals stride in bytes (optional)
+        const filament::math::float4* tangents; // source tangents (optional)
+        size_t tangentsStride;        // tangents stride in bytes (optional)
     };
 
     /**

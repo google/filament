@@ -211,27 +211,31 @@ void VertexBuffer::populateTangentQuaternions(const QuatTangentContext& ctx) {
     }
 
     // Define a small lambda that converts fp32 into the desired output format.
-    void (*writeQuat)(filament::math::quatf, uint8_t*);
+    size_t outStride = ctx.outStride;
+    void (*writeQuat)(quatf, uint8_t*);
     switch (ctx.quatType) {
         case HALF4:
             writeQuat = [] (quatf inquat, uint8_t* outquat) {
                 *((quath*) outquat) = quath(inquat);
             };
+            outStride = outStride ? outStride : sizeof(half4);
             break;
         case SHORT4:
             writeQuat = [] (quatf inquat, uint8_t* outquat) {
                 *((short4*) outquat) = packSnorm16(inquat.xyzw);
             };
+            outStride = outStride ? outStride : sizeof(short4);
             break;
         case FLOAT4:
             writeQuat = [] (quatf inquat, uint8_t* outquat) {
                 *((quatf*) outquat) = inquat;
             };
+            outStride = outStride ? outStride : sizeof(float4);
             break;
     }
 
     const float3* normal = ctx.normals;
-    const size_t nstride = ctx.normalsStride ? ctx.normalsStride : sizeof(filament::math::float3);
+    const size_t nstride = ctx.normalsStride ? ctx.normalsStride : sizeof(float3);
     uint8_t* outquat = (uint8_t*) ctx.outBuffer;
 
     // If tangents are not provided, simply cross N with arbitrary vector (1, 0, 0)
@@ -242,14 +246,14 @@ void VertexBuffer::populateTangentQuaternions(const QuatTangentContext& ctx) {
             float3 t = cross(n, b);
             writeQuat(mat3f::packTangentFrame({t, b, n}), outquat);
             normal = (const float3*) (((const uint8_t*) normal) + nstride);
-            outquat += ctx.outStride;
+            outquat += outStride;
         }
         return;
     }
 
     const float3* tanvec = &ctx.tangents->xyz;
     const float* tandir = &ctx.tangents->w;
-    const size_t tstride = ctx.tangentsStride ? ctx.tangentsStride : sizeof(filament::math::float4);
+    const size_t tstride = ctx.tangentsStride ? ctx.tangentsStride : sizeof(float4);
 
     for (size_t qindex = 0, qcount = ctx.quatCount; qindex < qcount; ++qindex) {
         float3 n = *normal;
