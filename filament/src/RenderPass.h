@@ -239,12 +239,12 @@ private:
 
     static inline void generateCommands(uint32_t commandTypeFlags, Command* commands,
             FScene::RenderableSoa const& soa, utils::Range<uint32_t> range, RenderFlags renderFlags,
-            math::float3 cameraPosition, math::float3 cameraForward) noexcept;
+            filament::math::float3 cameraPosition, filament::math::float3 cameraForward) noexcept;
 
     template<uint32_t commandTypeFlags>
     static inline void generateCommandsImpl(uint32_t, Command* commands, FScene::RenderableSoa const& soa,
-            utils::Range<uint32_t> range, RenderFlags renderFlags, math::float3 cameraPosition,
-            math::float3 cameraForward) noexcept;
+            utils::Range<uint32_t> range, RenderFlags renderFlags, filament::math::float3 cameraPosition,
+            filament::math::float3 cameraForward) noexcept;
 
     static void setupColorCommand(Command& cmdDraw, bool hasDepthPass,
             FMaterialInstance const* mi) noexcept;

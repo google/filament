@@ -218,9 +218,9 @@ void normalize(LinearImage& image) {
     ASSERT_PRECONDITION(image.getChannels() == 3 || image.getChannels() == 4,
                         "Must be a 3 or 4 channel image");
     if (image.getChannels() == 3) {
-      normalizeImpl<math::float3>(image);
+      normalizeImpl< filament::math::float3>(image);
     } else {
-      normalizeImpl<math::float4>(image);
+      normalizeImpl< filament::math::float4>(image);
     }
 }
 

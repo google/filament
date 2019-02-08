@@ -23,6 +23,7 @@
 
 #include <math/compiler.h>
 
+namespace filament {
 namespace math {
 
 /*
@@ -101,7 +102,7 @@ private:
 };
 
 constexpr inline half makeHalf(uint16_t bits) noexcept {
-    return half(math::half::binary, bits);
+    return half(half::binary, bits);
 }
 
 constexpr half::fp16 half::ftoh(float f) noexcept {
@@ -140,20 +141,21 @@ constexpr float half::htof(half::fp16 in) noexcept {
 
 #endif // __ARM_NEON
 
-inline constexpr math::half operator"" _h(long double v) {
-    return math::half(static_cast<float>(v));
+inline constexpr half operator"" _h(long double v) {
+    return half(static_cast<float>(v));
 }
 
 } // namespace math
+} // namespace filament
 
 namespace std {
 
-template<> struct is_floating_point<math::half> : public std::true_type {};
+template<> struct is_floating_point< filament::math::half> : public std::true_type {};
 
 template<>
-class numeric_limits<math::half> {
+class numeric_limits< filament::math::half> {
 public:
-    typedef math::half type;
+    typedef filament::math::half type;
 
     static constexpr const bool is_specialized = true;
     static constexpr const bool is_signed = true;
@@ -180,15 +182,15 @@ public:
     static constexpr const int max_exponent = 16;
     static constexpr const int max_exponent10 = 4;
 
-    inline static constexpr type round_error() noexcept { return math::makeHalf(0x3800); }
-    inline static constexpr type min() noexcept { return math::makeHalf(0x0400); }
-    inline static constexpr type max() noexcept { return math::makeHalf(0x7bff); }
-    inline static constexpr type lowest() noexcept { return math::makeHalf(0xfbff); }
-    inline static constexpr type epsilon() noexcept { return math::makeHalf(0x1400); }
-    inline static constexpr type infinity() noexcept { return math::makeHalf(0x7c00); }
-    inline static constexpr type quiet_NaN() noexcept { return math::makeHalf(0x7fff); }
-    inline static constexpr type denorm_min() noexcept { return math::makeHalf(0x0001); }
-    inline static constexpr type signaling_NaN() noexcept { return math::makeHalf(0x7dff); }
+    inline static constexpr type round_error() noexcept { return filament::math::makeHalf(0x3800); }
+    inline static constexpr type min() noexcept { return filament::math::makeHalf(0x0400); }
+    inline static constexpr type max() noexcept { return filament::math::makeHalf(0x7bff); }
+    inline static constexpr type lowest() noexcept { return filament::math::makeHalf(0xfbff); }
+    inline static constexpr type epsilon() noexcept { return filament::math::makeHalf(0x1400); }
+    inline static constexpr type infinity() noexcept { return filament::math::makeHalf(0x7c00); }
+    inline static constexpr type quiet_NaN() noexcept { return filament::math::makeHalf(0x7fff); }
+    inline static constexpr type denorm_min() noexcept { return filament::math::makeHalf(0x0001); }
+    inline static constexpr type signaling_NaN() noexcept { return filament::math::makeHalf(0x7dff); }
 };
 
 } // namespace std

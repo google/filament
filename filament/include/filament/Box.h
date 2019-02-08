@@ -28,24 +28,24 @@ namespace filament {
 
 class UTILS_PUBLIC Box {
 public:
-    math::float3 center = {};
-    math::float3 halfExtent = {};
+    filament::math::float3 center = {};
+    filament::math::float3 halfExtent = {};
 
     constexpr bool isEmpty() const noexcept {
         return length2(halfExtent) == 0;
     }
 
-    constexpr math::float3 getMin() const noexcept {
+    constexpr filament::math::float3 getMin() const noexcept {
         return center - halfExtent;
     }
 
-    constexpr math::float3 getMax() const noexcept {
+    constexpr filament::math::float3 getMax() const noexcept {
         return center + halfExtent;
     }
 
-    Box& set(const math::float3& min, const math::float3& max) noexcept {
-        center     = (max + min) * math::float3(0.5f);
-        halfExtent = (max - min) * math::float3(0.5f);
+    Box& set(const filament::math::float3& min, const filament::math::float3& max) noexcept {
+        center     = (max + min) * filament::math::float3(0.5f);
+        halfExtent = (max - min) * filament::math::float3(0.5f);
         return *this;
     }
 
@@ -54,22 +54,22 @@ public:
         return *this;
     }
 
-    constexpr Box translateTo(const math::float3& tr) const noexcept {
+    constexpr Box translateTo(const filament::math::float3& tr) const noexcept {
         return Box{ tr, halfExtent };
     }
 
-    math::float4 getBoundingSphere() const noexcept {
+    filament::math::float4 getBoundingSphere() const noexcept {
         return { center, length(halfExtent) };
     }
 
-    friend Box rigidTransform(Box const& box, const math::mat4f& m) noexcept;
-    friend Box rigidTransform(Box const& box, const math::mat3f& m) noexcept;
+    friend Box rigidTransform(Box const& box, const filament::math::mat4f& m) noexcept;
+    friend Box rigidTransform(Box const& box, const filament::math::mat3f& m) noexcept;
 };
 
 struct Aabb {
-    math::float3 min = std::numeric_limits<float>::max();
-    math::float3 max = std::numeric_limits<float>::lowest();
-    math::float3 center() const noexcept { return (min + max) * math::float3(0.5f); }
+    filament::math::float3 min = std::numeric_limits<float>::max();
+    filament::math::float3 max = std::numeric_limits<float>::lowest();
+    filament::math::float3 center() const noexcept { return (min + max) * filament::math::float3(0.5f); }
     bool isEmpty() const noexcept {
         return min >= max;
     }

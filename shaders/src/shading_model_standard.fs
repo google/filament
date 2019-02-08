@@ -54,7 +54,7 @@ vec3 isotropicLobe(const PixelParams pixel, const Light light, const vec3 h,
         float NoV, float NoL, float NoH, float LoH) {
 
     float D = distribution(pixel.linearRoughness, NoH, h);
-    float V = visibility(pixel.roughness, pixel.linearRoughness, NoV, NoL, LoH);
+    float V = visibility(pixel.linearRoughness, NoV, NoL, LoH);
     vec3  F = fresnel(pixel.f0, LoH);
 
     return (D * V) * F;

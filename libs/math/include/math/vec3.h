@@ -23,6 +23,7 @@
 #include <sys/types.h>
 
 
+namespace filament {
 namespace math {
 // -------------------------------------------------------------------------------------
 
@@ -126,5 +127,6 @@ typedef details::TVec3<bool> bool3;
 
 // ----------------------------------------------------------------------------------------
 }  // namespace math
+}  // namespace filament
 
 #endif  // MATH_VEC3_H_

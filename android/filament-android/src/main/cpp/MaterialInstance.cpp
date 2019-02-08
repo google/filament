@@ -47,14 +47,14 @@ extern "C"
 JNIEXPORT void JNICALL
 Java_com_google_android_filament_MaterialInstance_nSetParameterBool2(JNIEnv *env, jclass,
         jlong nativeMaterialInstance, jstring name_, jboolean x, jboolean y) {
-    setParameter(env, nativeMaterialInstance, name_, math::bool2{x, y});
+    setParameter(env, nativeMaterialInstance, name_, filament::math::bool2{x, y});
 }
 
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_google_android_filament_MaterialInstance_nSetParameterBool3(JNIEnv *env, jclass,
         jlong nativeMaterialInstance, jstring name_, jboolean x, jboolean y, jboolean z) {
-    setParameter(env, nativeMaterialInstance, name_, math::bool3{x, y, z});
+    setParameter(env, nativeMaterialInstance, name_, filament::math::bool3{x, y, z});
 }
 
 extern "C"
@@ -62,7 +62,7 @@ JNIEXPORT void JNICALL
 Java_com_google_android_filament_MaterialInstance_nSetParameterBool4(JNIEnv *env, jclass,
         jlong nativeMaterialInstance, jstring name_,
         jboolean x, jboolean y, jboolean z, jboolean w) {
-    setParameter(env, nativeMaterialInstance, name_, math::bool4{x, y, z, w});
+    setParameter(env, nativeMaterialInstance, name_, filament::math::bool4{x, y, z, w});
 }
 
 extern "C"
@@ -76,14 +76,14 @@ extern "C"
 JNIEXPORT void JNICALL
 Java_com_google_android_filament_MaterialInstance_nSetParameterInt2(JNIEnv *env, jclass,
         jlong nativeMaterialInstance, jstring name_, jint x, jint y) {
-    setParameter(env, nativeMaterialInstance, name_, math::int2{x, y});
+    setParameter(env, nativeMaterialInstance, name_, filament::math::int2{x, y});
 }
 
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_google_android_filament_MaterialInstance_nSetParameterInt3(JNIEnv *env, jclass,
         jlong nativeMaterialInstance, jstring name_, jint x, jint y, jint z) {
-    setParameter(env, nativeMaterialInstance, name_, math::int3{x, y, z});
+    setParameter(env, nativeMaterialInstance, name_, filament::math::int3{x, y, z});
 }
 
 extern "C"
@@ -91,7 +91,7 @@ JNIEXPORT void JNICALL
 Java_com_google_android_filament_MaterialInstance_nSetParameterInt4(JNIEnv *env, jclass,
         jlong nativeMaterialInstance, jstring name_,
         jint x, jint y, jint z, jint w) {
-    setParameter(env, nativeMaterialInstance, name_, math::int4{x, y, z, w});
+    setParameter(env, nativeMaterialInstance, name_, filament::math::int4{x, y, z, w});
 }
 
 extern "C"
@@ -105,14 +105,14 @@ extern "C"
 JNIEXPORT void JNICALL
 Java_com_google_android_filament_MaterialInstance_nSetParameterFloat2(JNIEnv *env, jclass,
         jlong nativeMaterialInstance, jstring name_, jfloat x, jfloat y) {
-    setParameter(env, nativeMaterialInstance, name_, math::float2{x, y});
+    setParameter(env, nativeMaterialInstance, name_, filament::math::float2{x, y});
 }
 
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_google_android_filament_MaterialInstance_nSetParameterFloat3(JNIEnv *env, jclass,
         jlong nativeMaterialInstance, jstring name_, jfloat x, jfloat y, jfloat z) {
-    setParameter(env, nativeMaterialInstance, name_, math::float3{x, y, z});
+    setParameter(env, nativeMaterialInstance, name_, filament::math::float3{x, y, z});
 }
 
 extern "C"
@@ -120,7 +120,7 @@ JNIEXPORT void JNICALL
 Java_com_google_android_filament_MaterialInstance_nSetParameterFloat4(JNIEnv *env, jclass,
         jlong nativeMaterialInstance, jstring name_,
         jfloat x, jfloat y, jfloat z, jfloat w) {
-    setParameter(env, nativeMaterialInstance, name_, math::float4{x, y, z, w});
+    setParameter(env, nativeMaterialInstance, name_, filament::math::float4{x, y, z, w});
 }
 
 extern "C"

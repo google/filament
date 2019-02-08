@@ -25,7 +25,7 @@
 #include <math/vec4.h>
 #include <math/vec3.h>
 
-using namespace math;
+using namespace filament::math;
 
 class QuatTest : public testing::Test {
 protected:

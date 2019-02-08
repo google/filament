@@ -47,33 +47,33 @@ CompressedTexture astcCompress(const LinearImage& original, AstcConfig config) {
 
     using Format = CompressedFormat;
     Format format;
-    if (config.blocksize == math::ushort2 {4, 4}) {
+    if (config.blocksize ==  filament::math::ushort2 {4, 4}) {
         format = config.srgb ? Format::SRGB8_ALPHA8_ASTC_4x4 : Format::RGBA_ASTC_4x4;
-    } else if (config.blocksize == math::ushort2 {5, 4}) {
+    } else if (config.blocksize ==  filament::math::ushort2 {5, 4}) {
         format = config.srgb ? Format::SRGB8_ALPHA8_ASTC_5x4 : Format::RGBA_ASTC_5x4;
-    } else if (config.blocksize == math::ushort2 {5, 5}) {
+    } else if (config.blocksize ==  filament::math::ushort2 {5, 5}) {
         format = config.srgb ? Format::SRGB8_ALPHA8_ASTC_5x5 : Format::RGBA_ASTC_5x5;
-    } else if (config.blocksize == math::ushort2 {6, 5}) {
+    } else if (config.blocksize ==  filament::math::ushort2 {6, 5}) {
         format = config.srgb ? Format::SRGB8_ALPHA8_ASTC_6x5 : Format::RGBA_ASTC_6x5;
-    } else if (config.blocksize == math::ushort2 {6, 6}) {
+    } else if (config.blocksize ==  filament::math::ushort2 {6, 6}) {
         format = config.srgb ? Format::SRGB8_ALPHA8_ASTC_6x6 : Format::RGBA_ASTC_6x6;
-    } else if (config.blocksize == math::ushort2 {8, 5}) {
+    } else if (config.blocksize ==  filament::math::ushort2 {8, 5}) {
         format = config.srgb ? Format::SRGB8_ALPHA8_ASTC_8x5 : Format::RGBA_ASTC_8x5;
-    } else if (config.blocksize == math::ushort2 {8, 6}) {
+    } else if (config.blocksize ==  filament::math::ushort2 {8, 6}) {
         format = config.srgb ? Format::SRGB8_ALPHA8_ASTC_8x6 : Format::RGBA_ASTC_8x6;
-    } else if (config.blocksize == math::ushort2 {8, 8}) {
+    } else if (config.blocksize ==  filament::math::ushort2 {8, 8}) {
         format = config.srgb ? Format::SRGB8_ALPHA8_ASTC_8x8 : Format::RGBA_ASTC_8x8;
-    } else if (config.blocksize == math::ushort2 {10, 5}) {
+    } else if (config.blocksize ==  filament::math::ushort2 {10, 5}) {
         format = config.srgb ? Format::SRGB8_ALPHA8_ASTC_10x5 : Format::RGBA_ASTC_10x5;
-    } else if (config.blocksize == math::ushort2 {10, 6}) {
+    } else if (config.blocksize ==  filament::math::ushort2 {10, 6}) {
         format = config.srgb ? Format::SRGB8_ALPHA8_ASTC_10x6 : Format::RGBA_ASTC_10x6;
-    } else if (config.blocksize == math::ushort2 {10, 8}) {
+    } else if (config.blocksize ==  filament::math::ushort2 {10, 8}) {
         format = config.srgb ? Format::SRGB8_ALPHA8_ASTC_10x8 : Format::RGBA_ASTC_10x8;
-    } else if (config.blocksize == math::ushort2 {10, 10}) {
+    } else if (config.blocksize ==  filament::math::ushort2 {10, 10}) {
         format = config.srgb ? Format::SRGB8_ALPHA8_ASTC_10x10 : Format::RGBA_ASTC_10x10;
-    } else if (config.blocksize == math::ushort2 {12, 10}) {
+    } else if (config.blocksize ==  filament::math::ushort2 {12, 10}) {
         format = config.srgb ? Format::SRGB8_ALPHA8_ASTC_12x10 : Format::RGBA_ASTC_12x10;
-    } else if (config.blocksize == math::ushort2 {12, 12}) {
+    } else if (config.blocksize ==  filament::math::ushort2 {12, 12}) {
         format = config.srgb ? Format::SRGB8_ALPHA8_ASTC_12x12 : Format::RGBA_ASTC_12x12;
     } else {
         return {};

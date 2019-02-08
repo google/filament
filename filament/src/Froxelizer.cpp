@@ -35,7 +35,7 @@
 
 #include <stddef.h>
 
-using namespace math;
+using namespace filament::math;
 using namespace utils;
 
 namespace filament {
@@ -151,7 +151,7 @@ void Froxelizer::setProjection(const mat4f& projection, float near, float far) n
 
 bool Froxelizer::prepare(
         FEngine::DriverApi& driverApi, ArenaScope& arena, Viewport const& viewport,
-        const math::mat4f& projection, float projectionNear, float projectionFar) noexcept {
+        const filament::math::mat4f& projection, float projectionNear, float projectionFar) noexcept {
     setViewport(viewport);
     setProjection(projection, projectionNear, projectionFar);
 

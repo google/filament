@@ -42,10 +42,10 @@
 #include "UniformBuffer.h"
 
 using namespace filament;
-using namespace math;
+using namespace filament::math;
 using namespace utils;
 
-static bool isGray(math::float3 v) {
+static bool isGray(filament::math::float3 v) {
     return v.r == v.g && v.g == v.b;
 }
 
@@ -55,7 +55,7 @@ static bool almostEqualUlps(float a, float b, int maxUlps) {
     return intDiff <= maxUlps;
 }
 
-static bool vec3eq(math::float3 a, math::float3 b) {
+static bool vec3eq(filament::math::float3 a, filament::math::float3 b) {
     return  almostEqualUlps(a.x, b.x, 1) &&
             almostEqualUlps(a.y, b.y, 1) &&
             almostEqualUlps(a.z, b.z, 1);

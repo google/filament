@@ -26,6 +26,7 @@
 #include <stdint.h>
 #include <sys/types.h>
 
+namespace filament {
 namespace math {
 // -------------------------------------------------------------------------------------
 
@@ -157,5 +158,6 @@ constexpr inline quat operator"" _k(unsigned long long v) {
 
 // ----------------------------------------------------------------------------------------
 }  // namespace math
+}  // namespace filament
 
 #endif  // MATH_QUAT_H_

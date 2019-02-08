@@ -27,6 +27,7 @@
 #include <math/compiler.h>
 #include <math/vec3.h>
 
+namespace filament {
 namespace math {
 namespace details {
 // -------------------------------------------------------------------------------------
@@ -297,5 +298,6 @@ public:
 // -------------------------------------------------------------------------------------
 }  // namespace details
 }  // namespace math
+}  // namespace filament
 
 #endif  // MATH_TQUATHELPERS_H_

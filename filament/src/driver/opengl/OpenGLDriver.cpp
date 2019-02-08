@@ -52,7 +52,7 @@
 #   define DEBUG_MARKER()
 #endif
 
-using namespace math;
+using namespace filament::math;
 using namespace utils;
 
 namespace filament {
@@ -1094,7 +1094,7 @@ void OpenGLDriver::renderBufferStorage(GLuint rbo, GLenum internalformat, uint32
 
 void OpenGLDriver::framebufferRenderbuffer(GLRenderTarget::GL::RenderBuffer* rb, GLenum attachment,
         GLenum internalformat, uint32_t width, uint32_t height, uint8_t samples, GLuint fbo) noexcept {
-    rb->id = framebufferRenderbuffer(width, height, samples, attachment, internalformat, fbo);
+    rb->rb = framebufferRenderbuffer(width, height, samples, attachment, internalformat, fbo);
     rb->internalFormat = internalformat;
 }
 
@@ -1127,8 +1127,8 @@ void OpenGLDriver::createDefaultRenderTarget(
     rt->gl.fbo = framebuffer;
     rt->gl.samples = 1;
     rt->gl.colorLevel = 0;
-    rt->gl.color.id = colorbuffer;
-    rt->gl.depth.id = depthbuffer;
+    rt->gl.color.rb = colorbuffer;  // FIXME: populate format
+    rt->gl.depth.rb = depthbuffer;  // FIXME: populate format
 }
 
 void OpenGLDriver::createRenderTarget(Driver::RenderTargetHandle rth,
@@ -1216,7 +1216,7 @@ void OpenGLDriver::createRenderTarget(Driver::RenderTargetHandle rth,
     }
 
     // unbind the renderbuffer, to avoid any later confusion
-    if (rt->gl.color.id || rt->gl.depth.id || rt->gl.stencil.id) {
+    if (rt->gl.color.rb || rt->gl.depth.rb || rt->gl.stencil.rb) {
         glBindRenderbuffer(GL_RENDERBUFFER, 0);
     }
 
@@ -1377,17 +1377,17 @@ void OpenGLDriver::destroyRenderTarget(Driver::RenderTargetHandle rth) {
             // first unbind this framebuffer if needed
             bindFramebuffer(GL_FRAMEBUFFER, 0);
         }
-        if (rt->gl.color.id) {
+        if (rt->gl.color.rb) {
             // delete color  renderbuffer if needed
-            glDeleteRenderbuffers(1, &rt->gl.color.id);
+            glDeleteRenderbuffers(1, &rt->gl.color.rb);
         }
-        if (rt->gl.depth.id) {
+        if (rt->gl.depth.rb) {
             // delete depth (or depth-stencil) renderbuffer if needed
-            glDeleteRenderbuffers(1, &rt->gl.depth.id);
+            glDeleteRenderbuffers(1, &rt->gl.depth.rb);
         }
-        if (rt->gl.stencil.id) {
+        if (rt->gl.stencil.rb) {
             // delete stencil renderbuffer if needed
-            glDeleteRenderbuffers(1, &rt->gl.stencil.id);
+            glDeleteRenderbuffers(1, &rt->gl.stencil.rb);
         }
         if (rt->gl.fbo) {
             // finally delete the framebuffer object
@@ -2116,32 +2116,35 @@ void OpenGLDriver::resizeRenderTarget(Driver::RenderTargetHandle rth,
     // can't resize default FBO
     assert(rt->gl.fbo);
 
-    if (rt->gl.color.id) {
-        // if we have a depth renderbuffer, reallocate it
-        renderBufferStorage(rt->gl.color.id, rt->gl.color.internalFormat, width, height, rt->gl.samples);
-    } else if (rt->gl.color.texture) {
+    if (rt->gl.color.texture) {
         // if it was a texture, reallocate the texture and discard content
         textureStorage(rt->gl.color.texture, width, height, rt->gl.color.texture->depth);
+    } else {
+        assert(rt->gl.color.rb); // can't resize default render buffer
+        // if we have a color renderbuffer, reallocate it
+        renderBufferStorage(rt->gl.color.rb, rt->gl.color.internalFormat, width, height, rt->gl.samples);
     }
 
-    if (rt->gl.depth.id) {
-        // if we have a depth renderbuffer, reallocate it
-        renderBufferStorage(rt->gl.depth.id, rt->gl.depth.internalFormat, width, height, rt->gl.samples);
-    } else if (rt->gl.depth.texture) {
+    if (rt->gl.depth.texture) {
         // if it was a texture, reallocate the texture and discard content
         textureStorage(rt->gl.depth.texture, width, height, rt->gl.depth.texture->depth);
+    } else {
+        assert(rt->gl.depth.rb);
+        // if we have a depth renderbuffer, reallocate it
+        renderBufferStorage(rt->gl.depth.rb, rt->gl.depth.internalFormat, width, height, rt->gl.samples);
     }
 
-    if (rt->gl.stencil.id) {
-        // if we have a stencil renderbuffer, reallocate it
-        renderBufferStorage(rt->gl.stencil.id, rt->gl.stencil.internalFormat, width, height, rt->gl.samples);
-    } else if (rt->gl.stencil.texture) {
+    if (rt->gl.stencil.texture) {
         // if it was a texture, reallocate the texture and discard content
         textureStorage(rt->gl.stencil.texture, width, height, rt->gl.stencil.texture->depth);
+    } else {
+        assert(rt->gl.stencil.rb);
+        // if we have a stencil renderbuffer, reallocate it
+        renderBufferStorage(rt->gl.stencil.rb, rt->gl.stencil.internalFormat, width, height, rt->gl.samples);
     }
 
     // unbind the renderbuffer, to avoid any later confusion
-    if (rt->gl.color.id || rt->gl.depth.id || rt->gl.stencil.id) {
+    if (rt->gl.color.rb || rt->gl.depth.rb || rt->gl.stencil.rb) {
         glBindRenderbuffer(GL_RENDERBUFFER, 0);
     }
 }

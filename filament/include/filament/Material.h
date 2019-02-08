@@ -228,7 +228,7 @@ public:
      *
      * @see getDefaultInstance()
      */
-    void setDefaultParameter(const char* name, RgbType type, math::float3 color) noexcept {
+    void setDefaultParameter(const char* name, RgbType type, filament::math::float3 color) noexcept {
         getDefaultInstance()->setParameter(name, type, color);
     }
 
@@ -240,7 +240,7 @@ public:
      *
      * @see getDefaultInstance()
      */
-    void setDefaultParameter(const char* name, RgbaType type, math::float4 color) noexcept {
+    void setDefaultParameter(const char* name, RgbaType type, filament::math::float4 color) noexcept {
         getDefaultInstance()->setParameter(name, type, color);
     }
 

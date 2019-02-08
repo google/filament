@@ -42,7 +42,7 @@
 
 using namespace filament;
 using namespace filamesh;
-using namespace math;
+using namespace filament::math;
 
 #define DEFAULT_MATERIAL "DefaultMaterial"
 
@@ -52,6 +52,8 @@ static size_t fileSize(int fd) {
     lseek(fd, 0, SEEK_SET);
     return filesize;
 }
+
+namespace filamesh {
 
 MeshReader::Mesh MeshReader::loadMeshFromFile(filament::Engine* engine, const utils::Path& path,
         MaterialRegistry& materials) {
@@ -265,3 +267,5 @@ MeshReader::Mesh MeshReader::loadMeshFromBuffer(filament::Engine* engine,
 
     return mesh;
 }
+
+} // namespace filamesh

@@ -69,7 +69,7 @@ inline void* Image::getPixelRef(size_t x, size_t y) const {
 
 template <typename T>
 std::unique_ptr<uint8_t[]> fromLinearTosRGB(const Image& image) {
-    using math::float3;
+    using filament::math::float3;
     size_t w = image.getWidth();
     size_t h = image.getHeight();
     size_t channels = image.getChannelsCount();
@@ -89,7 +89,7 @@ std::unique_ptr<uint8_t[]> fromLinearTosRGB(const Image& image) {
 
 template <typename T>
 std::unique_ptr<uint8_t[]> fromLinearToRGB(const Image& image) {
-    using math::float3;
+    using filament::math::float3;
     size_t w = image.getWidth();
     size_t h = image.getHeight();
     size_t channels = image.getChannelsCount();
@@ -109,7 +109,7 @@ std::unique_ptr<uint8_t[]> fromLinearToRGB(const Image& image) {
 
 template <typename T>
 std::unique_ptr<uint8_t[]> fromLinearToRGBM(const Image& image) {
-    using namespace math;
+    using namespace filament::math;
     size_t w = image.getWidth();
     size_t h = image.getHeight();
     std::unique_ptr<uint8_t[]> dst(new uint8_t[w * h * 4 * sizeof(T)]);

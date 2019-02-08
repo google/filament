@@ -22,7 +22,7 @@
 #include "CubemapUtils.h"
 #include "utilities.h"
 
-using namespace math;
+using namespace filament::math;
 
 // -----------------------------------------------------------------------------------------------
 // A few useful utilities
@@ -331,7 +331,7 @@ std::unique_ptr<double3[]> CubemapSH::computeIrradianceSH3Bands(const Cubemap& c
 }
 
 void CubemapSH::renderPreScaledSH3Bands(
-        Cubemap& cm, const std::unique_ptr<math::double3[]>& sh) {
+        Cubemap& cm, const std::unique_ptr<filament::math::double3[]>& sh) {
     CubemapUtils::process<CubemapUtils::EmptyState>(cm,
             [&](CubemapUtils::EmptyState&, size_t y, Cubemap::Face f, Cubemap::Texel* data, size_t dim) {
         for (size_t x=0 ; x<dim ; ++x, ++data) {

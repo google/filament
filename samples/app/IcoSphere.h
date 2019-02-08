@@ -36,7 +36,7 @@ public:
     };
 
     using TriangleList = std::vector<Triangle>;
-    using VertexList = std::vector<math::float3>;
+    using VertexList = std::vector<filament::math::float3>;
     using IndexedMesh = std::pair<VertexList, TriangleList>;
 
     explicit IcoSphere(size_t subdivisions);

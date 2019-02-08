@@ -42,8 +42,8 @@ using std::string;
 using std::swap;
 using std::vector;
 
-using math::float3;
-using math::float4;
+using filament::math::float3;
+using filament::math::float4;
 
 using namespace image;
 
@@ -249,7 +249,7 @@ TEST_F(ImageTest, ColorTransformRGB) { // NOLINT
     memcpy(data.get(), texels, sizeof(texels));
     LinearImage img = image::toLinear<uint16_t>(w, h, bpr, data, 
         [ ](uint16_t v) -> uint16_t { return v; },
-        sRGBToLinear<math::float3>);
+        sRGBToLinear< filament::math::float3>);
     auto pixels = img.get<float3>();
     ASSERT_NEAR(pixels[0].x, 0.0f, 0.001f);
     ASSERT_NEAR(pixels[0].y, 0.0f, 0.001f);
@@ -273,7 +273,7 @@ TEST_F(ImageTest, ColorTransformRGBA) { // NOLINT
     memcpy(data.get(), texels, sizeof(texels));
     LinearImage img = image::toLinearWithAlpha<uint16_t>(w, h, bpr, data, 
         [ ](uint16_t v) -> uint16_t { return v; },
-        sRGBToLinear<math::float4>);
+        sRGBToLinear< filament::math::float4>);
     auto pixels = reinterpret_cast<float4*>(img.getPixelRef());
     ASSERT_NEAR(pixels[3].x, 0.04282892f, 0.001f);
     ASSERT_NEAR(pixels[3].y, 0.12025354f, 0.001f);

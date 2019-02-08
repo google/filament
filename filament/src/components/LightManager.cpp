@@ -25,7 +25,7 @@
 #include <filament/LightManager.h>
 
 
-using namespace math;
+using namespace filament::math;
 using namespace utils;
 
 namespace filament {
@@ -38,12 +38,12 @@ struct LightManager::BuilderDetails {
     Type mType;
     bool mCastShadows = false;
     bool mCastLight = true;
-    math::float3 mPosition = {};
+    filament::math::float3 mPosition = {};
     float mFalloff = 1.0f;
     LinearColor mColor = LinearColor{ 1.0f };
     float mIntensity = 100000.0f;
-    math::float3 mDirection = { 0.0f, -1.0f, 0.0f };
-    math::float2 mSpotInnerOuter = { (float)M_PI, (float)M_PI };
+    filament::math::float3 mDirection = { 0.0f, -1.0f, 0.0f };
+    filament::math::float2 mSpotInnerOuter = { (float)M_PI, (float)M_PI };
     float mSunAngle = 0.00951f; // 0.545° in radians
     float mSunHaloSize = 10.0f;
     float mSunHaloFalloff = 80.0f;
@@ -215,7 +215,7 @@ void FLightManager::terminate() noexcept {
     }
 }
 
-void FLightManager::setLocalPosition(Instance i, const math::float3& position) noexcept {
+void FLightManager::setLocalPosition(Instance i, const filament::math::float3& position) noexcept {
     assert(i);
     auto& manager = mManager;
     manager[i].position = position;

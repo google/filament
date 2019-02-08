@@ -47,7 +47,7 @@ struct App {
 };
 
 struct Vertex {
-    math::float2 position;
+    filament::math::float2 position;
     uint32_t color;
 };
 
@@ -211,8 +211,8 @@ static constexpr uint8_t BAKED_COLOR_PACKAGE[] = {
     [self updateRotation];
 
     tcm.setTransform(tcm.getInstance(app.renderable),
-                     math::mat4f::rotate(CACurrentMediaTime(), math::float3{0, 0, 1}) *
-                     math::mat4f::rotate(deviceRotation, math::float3{0, 0, 1}));
+                     filament::math::mat4f::rotate(CACurrentMediaTime(), filament::math::float3{0, 0, 1}) *
+                     filament::math::mat4f::rotate(deviceRotation, filament::math::float3{0, 0, 1}));
 }
 
 - (void)didRotate:(NSNotification*)notification

@@ -41,10 +41,10 @@ public:
 
     void setViewport(size_t w, size_t h);
 
-    void lookAt(const math::double3& eye, const math::double3& at);
-    void track(const math::double2& delta);
+    void lookAt(const filament::math::double3& eye, const filament::math::double3& at);
+    void track(const filament::math::double2& delta);
     void dolly(double delta, double dollySpeed = 5.0);
-    void rotate(const math::double2& delta, double rotateSpeed = 7.0);
+    void rotate(const filament::math::double2& delta, double rotateSpeed = 7.0);
 
     void updateCameraTransform();
 
@@ -53,8 +53,8 @@ private:
 
     Camera* mCamera = nullptr;
 
-    math::double3 mRotation;
-    math::double3 mTranslation;
+    filament::math::double3 mRotation;
+    filament::math::double3 mTranslation;
 
     double mCenterOfInterest = 10.0;
     double mFovx = 65.0;

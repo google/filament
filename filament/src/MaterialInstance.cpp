@@ -26,7 +26,7 @@
 
 #include <string.h>
 
-using namespace math;
+using namespace filament::math;
 
 namespace filament {
 

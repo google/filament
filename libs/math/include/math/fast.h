@@ -26,6 +26,7 @@
 #include <arm_neon.h>
 #endif
 
+namespace filament {
 namespace math {
 namespace fast {
 
@@ -46,7 +47,7 @@ constexpr T MATH_PURE cos(T x) noexcept {
 // x between -pi and pi
 template <typename T, typename = typename std::enable_if<std::is_floating_point<T>::value>::type>
 constexpr T MATH_PURE sin(T x) noexcept {
-    return math::fast::cos<T>(x - T(M_PI_2));
+    return filament::math::fast::cos<T>(x - T(M_PI_2));
 }
 
 constexpr inline float MATH_PURE ilog2(float x) noexcept {
@@ -180,5 +181,6 @@ inline T MATH_PURE qdec(T a)  noexcept {
 
 } // namespace fast
 } // namespace math
+} // namespace filament
 
 #endif // TNT_MATH_FAST_H

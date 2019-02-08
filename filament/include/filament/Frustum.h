@@ -51,28 +51,28 @@ public:
     Frustum& operator=(Frustum&& rhs) noexcept = default;
 
     // create a frustum from a projection matrix (usually the projection * view matrix)
-    explicit Frustum(const math::mat4f& pv);
+    explicit Frustum(const filament::math::mat4f& pv);
 
     // set the frustum from the given projection matrix
-    void setProjection(const math::mat4f& pv);
+    void setProjection(const filament::math::mat4f& pv);
 
     // return the plane equation parameters with normalized normals
-    math::float4 getNormalizedPlane(Plane plane) const noexcept;
+    filament::math::float4 getNormalizedPlane(Plane plane) const noexcept;
 
     // return frustum planes in left, right, bottom, top, far, near order
-    void getNormalizedPlanes(math::float4 planes[6]) const noexcept;
+    void getNormalizedPlanes(filament::math::float4 planes[6]) const noexcept;
 
-    math::float4 const* getNormalizedPlanes() const noexcept { return mPlanes; }
+    filament::math::float4 const* getNormalizedPlanes() const noexcept { return mPlanes; }
 
     // returns whether a box intersects the frustum (i.e. is visible)
     bool intersects(const Box& box) const noexcept;
 
     // returns whether a sphere intersects the frustum (i.e. is visible)
-    bool intersects(const math::float4& sphere) const noexcept;
+    bool intersects(const filament::math::float4& sphere) const noexcept;
 
 private:
     friend class details::Culler;
-    math::float4 mPlanes[6];
+    filament::math::float4 mPlanes[6];
 };
 
 

@@ -71,7 +71,7 @@ void PostProcessManager::setSource(uint32_t viewportWidth, uint32_t viewportHeig
     UniformBuffer& ub = mPostProcessUb;
     ub.setUniform(offsetof(PostProcessingUib, time), fraction);
     ub.setUniform(offsetof(PostProcessingUib, uvScale),
-            math::float2{ viewportWidth, viewportHeight } / math::float2{ textureWidth, textureHeight });
+            filament::math::float2{ viewportWidth, viewportHeight } / filament::math::float2{ textureWidth, textureHeight });
 
     // The shader may need to know the offset between the top of the texture and the top
     // of the rectangle that it actually needs to sample from.

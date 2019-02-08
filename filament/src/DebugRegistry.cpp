@@ -22,7 +22,7 @@
 #   define DEBUG_PROPERTIES_WRITABLE false
 #endif
 
-using namespace math;
+using namespace filament::math;
 using namespace utils;
 
 namespace filament {
@@ -105,15 +105,15 @@ bool DebugRegistry::setProperty(const char* name, float v) noexcept {
     return upcast(this)->setProperty(name, v);
 }
 
-bool DebugRegistry::setProperty(const char* name, math::float2 v) noexcept {
+bool DebugRegistry::setProperty(const char* name, filament::math::float2 v) noexcept {
     return upcast(this)->setProperty(name, v);
 }
 
-bool DebugRegistry::setProperty(const char* name, math::float3 v) noexcept {
+bool DebugRegistry::setProperty(const char* name, filament::math::float3 v) noexcept {
     return upcast(this)->setProperty(name, v);
 }
 
-bool DebugRegistry::setProperty(const char* name, math::float4 v) noexcept {
+bool DebugRegistry::setProperty(const char* name, filament::math::float4 v) noexcept {
     return upcast(this)->setProperty(name, v);
 }
 
@@ -130,15 +130,15 @@ bool DebugRegistry::getProperty(const char* name, float* v) const noexcept {
     return upcast(this)->getProperty(name, v);
 }
 
-bool DebugRegistry::getProperty(const char* name, math::float2* v) const noexcept {
+bool DebugRegistry::getProperty(const char* name, filament::math::float2* v) const noexcept {
     return upcast(this)->getProperty(name, v);
 }
 
-bool DebugRegistry::getProperty(const char* name, math::float3* v) const noexcept {
+bool DebugRegistry::getProperty(const char* name, filament::math::float3* v) const noexcept {
     return upcast(this)->getProperty(name, v);
 }
 
-bool DebugRegistry::getProperty(const char* name, math::float4* v) const noexcept {
+bool DebugRegistry::getProperty(const char* name, filament::math::float4* v) const noexcept {
     return upcast(this)->getProperty(name, v);
 }
 

@@ -30,7 +30,7 @@
 
 using namespace filament;
 using namespace filament::details;
-using namespace math;
+using namespace filament::math;
 using namespace utils;
 
 
