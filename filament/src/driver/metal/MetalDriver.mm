@@ -773,7 +773,7 @@ void MetalDriver::draw(Driver::PipelineState ps, Driver::RenderPrimitiveHandle r
                                               indexCount:primitive->count
                                                indexType:getIndexType(indexBuffer->elementSize)
                                              indexBuffer:indexBuffer->buffer
-                                       indexBufferOffset:0];
+                                       indexBufferOffset:primitive->offset];
 }
 
 void MetalDriver::enumerateSamplerBuffers(const MetalProgram *program,
