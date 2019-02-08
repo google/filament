@@ -425,13 +425,27 @@ FilamentApp::Window::Window(FilamentApp* filamentApp,
     mBackend = config.backend;
 
     void* nativeWindow = ::getNativeWindow(mWindow);
-#if defined(FILAMENT_DRIVER_SUPPORTS_VULKAN) && defined(__APPLE__)
-    // We request a Metal layer for rendering via MoltenVK.
+    void* nativeSwapChain = nativeWindow;
+
+#if defined(__APPLE__)
+
+    void* metalLayer = nullptr;
+    if (config.backend == filament::Engine::Backend::METAL) {
+        metalLayer = setUpMetalLayer(nativeWindow);
+        // The swap chain on Metal is a CAMetalLayer.
+        nativeSwapChain = metalLayer;
+    }
+
+#if defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
     if (config.backend == filament::Engine::Backend::VULKAN) {
+        // We request a Metal layer for rendering via MoltenVK.
         setUpMetalLayer(nativeWindow);
     }
 #endif
-    mSwapChain = mFilamentApp->mEngine->createSwapChain(nativeWindow);
+
+#endif
+
+    mSwapChain = mFilamentApp->mEngine->createSwapChain(nativeSwapChain);
     mRenderer = mFilamentApp->mEngine->createRenderer();
 
     // create cameras
@@ -551,12 +565,26 @@ void FilamentApp::Window::fixupMouseCoordinatesForHdpi(ssize_t& x, ssize_t& y) c
 void FilamentApp::Window::resize() {
     mFilamentApp->mEngine->destroy(mSwapChain);
     void* nativeWindow = ::getNativeWindow(mWindow);
-    mSwapChain = mFilamentApp->mEngine->createSwapChain(nativeWindow);
-#if defined(FILAMENT_DRIVER_SUPPORTS_VULKAN) && defined(__APPLE__)
+    void* nativeSwapChain = nativeWindow;
+
+#if defined(__APPLE__)
+
+    void* metalLayer = nullptr;
+    if (mBackend == filament::Engine::Backend::METAL) {
+        metalLayer = resizeMetalLayer(nativeWindow);
+        // The swap chain on Metal is a CAMetalLayer.
+        nativeSwapChain = metalLayer;
+    }
+
+#if defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
     if (mBackend == filament::Engine::Backend::VULKAN) {
         resizeMetalLayer(nativeWindow);
     }
 #endif
+
+#endif
+
+    mSwapChain = mFilamentApp->mEngine->createSwapChain(nativeSwapChain);
     configureCamerasForWindow();
 }
 
