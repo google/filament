@@ -139,6 +139,16 @@ MetalUniformBuffer::~MetalUniformBuffer() {
     }
 }
 
+void MetalUniformBuffer::copyIntoBuffer(void* src, size_t size) {
+    // Either copy into the Metal buffer or into our cpu buffer.
+    if (buffer) {
+        memcpy(buffer.contents, src, size);
+    } else {
+        assert(cpuBuffer);
+        memcpy(cpuBuffer, src, size);
+    }
+}
+
 void MetalRenderPrimitive::setBuffers(MetalVertexBuffer* vertexBuffer, MetalIndexBuffer*
         indexBuffer, uint32_t enabledAttributes) {
     this->vertexBuffer = vertexBuffer;
