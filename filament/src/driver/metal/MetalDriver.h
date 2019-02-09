@@ -52,7 +52,7 @@ private:
     void debugCommand(const char* methodName) override;
 #endif
 
-    virtual ShaderModel getShaderModel() const noexcept override final { return ShaderModel::GL_CORE_41; }
+    ShaderModel getShaderModel() const noexcept final;
 
     /*
      * Driver interface

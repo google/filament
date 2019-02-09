@@ -9,7 +9,7 @@ mkdir -p "${PROJECT_DIR}/generated/"
 "${matc_path}" \
     --api all \
     -f header \
-    -o "${PROJECT_DIR}/generated/bakedColor.filamat" \
+    -o "${PROJECT_DIR}/generated/bakedColor.inc" \
     "${PROJECT_DIR}/hello-triangle/bakedColor.mat"
 
 # FilamentView.mm includes bakedColor.filamat, so touch it to force Xcode to

@@ -7,6 +7,13 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		4366F7EC220E481600542309 /* ViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 43E4A535216006AF00E4AEA0 /* ViewController.m */; };
+		4366F7ED220E481600542309 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 43E4A540216006B100E4AEA0 /* main.m */; };
+		4366F7EE220E481600542309 /* FilamentView.mm in Sources */ = {isa = PBXBuildFile; fileRef = 43E4A5482160073300E4AEA0 /* FilamentView.mm */; };
+		4366F7EF220E481600542309 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 43E4A532216006AF00E4AEA0 /* AppDelegate.m */; };
+		4366F7F2220E481600542309 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 43E4A53C216006B100E4AEA0 /* LaunchScreen.storyboard */; };
+		4366F7F3220E481600542309 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 43E4A53A216006B100E4AEA0 /* Assets.xcassets */; };
+		4366F7F4220E481600542309 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 43E4A537216006AF00E4AEA0 /* Main.storyboard */; };
 		43CA3CAA2176AA6900B497B4 /* ViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 43E4A535216006AF00E4AEA0 /* ViewController.m */; };
 		43CA3CAB2176AA6900B497B4 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 43E4A540216006B100E4AEA0 /* main.m */; };
 		43CA3CAC2176AA6900B497B4 /* FilamentView.mm in Sources */ = {isa = PBXBuildFile; fileRef = 43E4A5482160073300E4AEA0 /* FilamentView.mm */; };
@@ -14,33 +21,12 @@
 		43CA3CB02176AA6900B497B4 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 43E4A53C216006B100E4AEA0 /* LaunchScreen.storyboard */; };
 		43CA3CB12176AA6900B497B4 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 43E4A53A216006B100E4AEA0 /* Assets.xcassets */; };
 		43CA3CB22176AA6900B497B4 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 43E4A537216006AF00E4AEA0 /* Main.storyboard */; };
-		43E4A533216006AF00E4AEA0 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 43E4A532216006AF00E4AEA0 /* AppDelegate.m */; };
-		43E4A536216006AF00E4AEA0 /* ViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 43E4A535216006AF00E4AEA0 /* ViewController.m */; };
-		43E4A539216006AF00E4AEA0 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 43E4A537216006AF00E4AEA0 /* Main.storyboard */; };
-		43E4A53B216006B100E4AEA0 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 43E4A53A216006B100E4AEA0 /* Assets.xcassets */; };
-		43E4A53E216006B100E4AEA0 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 43E4A53C216006B100E4AEA0 /* LaunchScreen.storyboard */; };
-		43E4A541216006B100E4AEA0 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 43E4A540216006B100E4AEA0 /* main.m */; };
-		43E4A5492160073300E4AEA0 /* FilamentView.mm in Sources */ = {isa = PBXBuildFile; fileRef = 43E4A5482160073300E4AEA0 /* FilamentView.mm */; };
-		43E4A55221601ECB00E4AEA0 /* libMoltenVK.dylib in CopyFiles */ = {isa = PBXBuildFile; fileRef = 43E4A54F21601CE600E4AEA0 /* libMoltenVK.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 /* End PBXBuildFile section */
-
-/* Begin PBXCopyFilesBuildPhase section */
-		43E4A55121601EB600E4AEA0 /* CopyFiles */ = {
-			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
-			dstPath = "";
-			dstSubfolderSpec = 10;
-			files = (
-				43E4A55221601ECB00E4AEA0 /* libMoltenVK.dylib in CopyFiles */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		4366F7E82209317900542309 /* bakedColor.mat */ = {isa = PBXFileReference; lastKnownFileType = text; path = bakedColor.mat; sourceTree = "<group>"; };
+		4366F7F8220E481600542309 /* hello-triangle-Metal.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "hello-triangle-Metal.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		43CA3CB82176AA6900B497B4 /* hello-triangle-OpenGL.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "hello-triangle-OpenGL.app"; sourceTree = BUILT_PRODUCTS_DIR; };
-		43E4A52E216006AF00E4AEA0 /* hello-triangle-VK.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "hello-triangle-VK.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		43E4A531216006AF00E4AEA0 /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
 		43E4A532216006AF00E4AEA0 /* AppDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AppDelegate.m; sourceTree = "<group>"; };
 		43E4A534216006AF00E4AEA0 /* ViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ViewController.h; sourceTree = "<group>"; };
@@ -52,18 +38,17 @@
 		43E4A540216006B100E4AEA0 /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
 		43E4A5472160073300E4AEA0 /* FilamentView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = FilamentView.h; sourceTree = "<group>"; };
 		43E4A5482160073300E4AEA0 /* FilamentView.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = FilamentView.mm; sourceTree = "<group>"; };
-		43E4A54F21601CE600E4AEA0 /* libMoltenVK.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libMoltenVK.dylib; path = ../../../third_party/moltenvk/ios/libMoltenVK.dylib; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
-		43CA3CAE2176AA6900B497B4 /* Frameworks */ = {
+		4366F7F0220E481600542309 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		43E4A52B216006AF00E4AEA0 /* Frameworks */ = {
+		43CA3CAE2176AA6900B497B4 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -76,7 +61,6 @@
 		43E4A525216006AF00E4AEA0 = {
 			isa = PBXGroup;
 			children = (
-				43E4A54F21601CE600E4AEA0 /* libMoltenVK.dylib */,
 				43E4A530216006AF00E4AEA0 /* hello-triangle */,
 				43E4A52F216006AF00E4AEA0 /* Products */,
 			);
@@ -85,8 +69,8 @@
 		43E4A52F216006AF00E4AEA0 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				43E4A52E216006AF00E4AEA0 /* hello-triangle-VK.app */,
 				43CA3CB82176AA6900B497B4 /* hello-triangle-OpenGL.app */,
+				4366F7F8220E481600542309 /* hello-triangle-Metal.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -113,6 +97,24 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		4366F7E9220E481600542309 /* hello-triangle-Metal */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 4366F7F5220E481600542309 /* Build configuration list for PBXNativeTarget "hello-triangle-Metal" */;
+			buildPhases = (
+				4366F7EA220E481600542309 /* ShellScript */,
+				4366F7EB220E481600542309 /* Sources */,
+				4366F7F0220E481600542309 /* Frameworks */,
+				4366F7F1220E481600542309 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = "hello-triangle-Metal";
+			productName = "hello-triangle";
+			productReference = 4366F7F8220E481600542309 /* hello-triangle-Metal.app */;
+			productType = "com.apple.product-type.application";
+		};
 		43CA3CA72176AA6900B497B4 /* hello-triangle-OpenGL */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 43CA3CB52176AA6900B497B4 /* Build configuration list for PBXNativeTarget "hello-triangle-OpenGL" */;
@@ -131,25 +133,6 @@
 			productReference = 43CA3CB82176AA6900B497B4 /* hello-triangle-OpenGL.app */;
 			productType = "com.apple.product-type.application";
 		};
-		43E4A52D216006AF00E4AEA0 /* hello-triangle-VK */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = 43E4A544216006B100E4AEA0 /* Build configuration list for PBXNativeTarget "hello-triangle-VK" */;
-			buildPhases = (
-				4366F7E62209302E00542309 /* ShellScript */,
-				43E4A52A216006AF00E4AEA0 /* Sources */,
-				43E4A52B216006AF00E4AEA0 /* Frameworks */,
-				43E4A52C216006AF00E4AEA0 /* Resources */,
-				43E4A55121601EB600E4AEA0 /* CopyFiles */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-			);
-			name = "hello-triangle-VK";
-			productName = "hello-triangle";
-			productReference = 43E4A52E216006AF00E4AEA0 /* hello-triangle-VK.app */;
-			productType = "com.apple.product-type.application";
-		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -158,11 +141,6 @@
 			attributes = {
 				LastUpgradeCheck = 1000;
 				ORGANIZATIONNAME = Google;
-				TargetAttributes = {
-					43E4A52D216006AF00E4AEA0 = {
-						CreatedOnToolsVersion = 10.0;
-					};
-				};
 			};
 			buildConfigurationList = 43E4A529216006AF00E4AEA0 /* Build configuration list for PBXProject "hello-triangle" */;
 			compatibilityVersion = "Xcode 9.3";
@@ -178,12 +156,22 @@
 			projectRoot = "";
 			targets = (
 				43CA3CA72176AA6900B497B4 /* hello-triangle-OpenGL */,
-				43E4A52D216006AF00E4AEA0 /* hello-triangle-VK */,
+				4366F7E9220E481600542309 /* hello-triangle-Metal */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		4366F7F1220E481600542309 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				4366F7F2220E481600542309 /* LaunchScreen.storyboard in Resources */,
+				4366F7F3220E481600542309 /* Assets.xcassets in Resources */,
+				4366F7F4220E481600542309 /* Main.storyboard in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		43CA3CAF2176AA6900B497B4 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -194,20 +182,10 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		43E4A52C216006AF00E4AEA0 /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				43E4A53E216006B100E4AEA0 /* LaunchScreen.storyboard in Resources */,
-				43E4A53B216006B100E4AEA0 /* Assets.xcassets in Resources */,
-				43E4A539216006AF00E4AEA0 /* Main.storyboard in Resources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
-		4366F7E62209302E00542309 /* ShellScript */ = {
+		4366F7E7220930EF00542309 /* ShellScript */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -224,7 +202,7 @@
 			shellPath = /bin/sh;
 			shellScript = "\"${PROJECT_DIR}/build-materials.sh\"\n";
 		};
-		4366F7E7220930EF00542309 /* ShellScript */ = {
+		4366F7EA220E481600542309 /* ShellScript */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -244,6 +222,17 @@
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		4366F7EB220E481600542309 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				4366F7EC220E481600542309 /* ViewController.m in Sources */,
+				4366F7ED220E481600542309 /* main.m in Sources */,
+				4366F7EE220E481600542309 /* FilamentView.mm in Sources */,
+				4366F7EF220E481600542309 /* AppDelegate.m in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		43CA3CA82176AA6900B497B4 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -252,17 +241,6 @@
 				43CA3CAB2176AA6900B497B4 /* main.m in Sources */,
 				43CA3CAC2176AA6900B497B4 /* FilamentView.mm in Sources */,
 				43CA3CAD2176AA6900B497B4 /* AppDelegate.m in Sources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		43E4A52A216006AF00E4AEA0 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				43E4A536216006AF00E4AEA0 /* ViewController.m in Sources */,
-				43E4A541216006B100E4AEA0 /* main.m in Sources */,
-				43E4A5492160073300E4AEA0 /* FilamentView.mm in Sources */,
-				43E4A533216006AF00E4AEA0 /* AppDelegate.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -288,6 +266,76 @@
 /* End PBXVariantGroup section */
 
 /* Begin XCBuildConfiguration section */
+		4366F7F6220E481600542309 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_BITCODE = NO;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"FILAMENT_APP_USE_METAL=1",
+					"$(inherited)",
+				);
+				HEADER_SEARCH_PATHS = (
+					"../../../out/ios-debug/filament/include",
+					generated/,
+				);
+				INFOPLIST_FILE = "$(SRCROOT)/hello-triangle/Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				LIBRARY_SEARCH_PATHS = "../../../out/ios-debug/filament/lib/$(CURRENT_ARCH)";
+				OTHER_LDFLAGS = (
+					"-lfilament",
+					"-lfilaflat",
+					"-lfilabridge",
+					"-lutils",
+					"-lsmol-v",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "google.filament.hello-triangle";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SYSTEM_HEADER_SEARCH_PATHS = "../../../out/ios-debug/filament/include";
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		4366F7F7220E481600542309 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_BITCODE = NO;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"FILAMENT_APP_USE_METAL=1",
+					"$(inherited)",
+				);
+				HEADER_SEARCH_PATHS = (
+					"../../../out/ios-release/filament/include",
+					generated/,
+				);
+				INFOPLIST_FILE = "$(SRCROOT)/hello-triangle/Info.plist";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				LIBRARY_SEARCH_PATHS = "../../../out/ios-release/filament/lib/$(CURRENT_ARCH)";
+				OTHER_LDFLAGS = (
+					"-lfilament",
+					"-lfilaflat",
+					"-lfilabridge",
+					"-lutils",
+					"-lsmol-v",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "google.filament.hello-triangle";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SYSTEM_HEADER_SEARCH_PATHS = "../../../out/ios-release/filament/include";
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 		43CA3CB62176AA6900B497B4 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -297,7 +345,6 @@
 				ENABLE_BITCODE = NO;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"FILAMENT_APP_USE_OPENGL=1",
-					"DEBUG=1",
 					"$(inherited)",
 				);
 				HEADER_SEARCH_PATHS = (
@@ -314,7 +361,6 @@
 					"-lfilament",
 					"-lfilaflat",
 					"-lfilabridge",
-					"-lbluevk",
 					"-lutils",
 					"-lsmol-v",
 				);
@@ -332,7 +378,10 @@
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = "";
 				ENABLE_BITCODE = NO;
-				GCC_PREPROCESSOR_DEFINITIONS = "FILAMENT_APP_USE_OPENGL=1";
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"FILAMENT_APP_USE_OPENGL=1",
+					"$(inherited)",
+				);
 				HEADER_SEARCH_PATHS = (
 					"../../../out/ios-release/filament/include",
 					generated/,
@@ -347,7 +396,6 @@
 					"-lfilament",
 					"-lfilaflat",
 					"-lfilabridge",
-					"-lbluevk",
 					"-lutils",
 					"-lsmol-v",
 				);
@@ -472,79 +520,18 @@
 			};
 			name = Release;
 		};
-		43E4A545216006B100E4AEA0 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = "";
-				ENABLE_BITCODE = NO;
-				GCC_PREPROCESSOR_DEFINITIONS = (
-					"FILAMENT_APP_USE_VULKAN=1",
-					"DEBUG=1",
-					"$(inherited)",
-				);
-				HEADER_SEARCH_PATHS = (
-					"../../../out/ios-debug/filament/include",
-					generated/,
-				);
-				INFOPLIST_FILE = "hello-triangle/Info.plist";
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-				);
-				LIBRARY_SEARCH_PATHS = "../../../out/ios-debug/filament/lib/$(CURRENT_ARCH)";
-				OTHER_LDFLAGS = (
-					"-lfilament",
-					"-lfilaflat",
-					"-lfilabridge",
-					"-lbluevk",
-					"-lutils",
-					"-lsmol-v",
-				);
-				PRODUCT_BUNDLE_IDENTIFIER = "google.filament.hello-triangle";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SYSTEM_HEADER_SEARCH_PATHS = "../../../out/ios-debug/filament/include";
-				TARGETED_DEVICE_FAMILY = "1,2";
-			};
-			name = Debug;
-		};
-		43E4A546216006B100E4AEA0 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = "";
-				ENABLE_BITCODE = NO;
-				GCC_PREPROCESSOR_DEFINITIONS = "FILAMENT_APP_USE_VULKAN=1";
-				HEADER_SEARCH_PATHS = (
-					"../../../out/ios-release/filament/include",
-					generated/,
-				);
-				INFOPLIST_FILE = "hello-triangle/Info.plist";
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-				);
-				LIBRARY_SEARCH_PATHS = "../../../out/ios-release/filament/lib/$(CURRENT_ARCH)";
-				OTHER_LDFLAGS = (
-					"-lfilament",
-					"-lfilaflat",
-					"-lfilabridge",
-					"-lbluevk",
-					"-lutils",
-					"-lsmol-v",
-				);
-				PRODUCT_BUNDLE_IDENTIFIER = "google.filament.hello-triangle";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SYSTEM_HEADER_SEARCH_PATHS = "../../../out/ios-release/filament/include";
-				TARGETED_DEVICE_FAMILY = "1,2";
-			};
-			name = Release;
-		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		4366F7F5220E481600542309 /* Build configuration list for PBXNativeTarget "hello-triangle-Metal" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				4366F7F6220E481600542309 /* Debug */,
+				4366F7F7220E481600542309 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		43CA3CB52176AA6900B497B4 /* Build configuration list for PBXNativeTarget "hello-triangle-OpenGL" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -559,15 +546,6 @@
 			buildConfigurations = (
 				43E4A542216006B100E4AEA0 /* Debug */,
 				43E4A543216006B100E4AEA0 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		43E4A544216006B100E4AEA0 /* Build configuration list for PBXNativeTarget "hello-triangle-VK" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				43E4A545216006B100E4AEA0 /* Debug */,
-				43E4A546216006B100E4AEA0 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

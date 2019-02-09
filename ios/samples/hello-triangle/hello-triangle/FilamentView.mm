@@ -24,15 +24,15 @@
 #import <filament/TransformManager.h>
 
 // These defines are set in the "Preprocessor Macros" build setting for each scheme.
-#if !FILAMENT_APP_USE_VULKAN && \
+#if !FILAMENT_APP_USE_METAL && \
     !FILAMENT_APP_USE_OPENGL
 #error A valid FILAMENT_APP_USE_ backend define must be set.
 #endif
 
 #define METAL_AVAILABLE __has_include(<QuartzCore/CAMetalLayer.h>)
 
-#if !METAL_AVAILABLE && FILAMENT_APP_USE_VULKAN
-#error The iOS simulator does not support Filament's Vulkan backend.
+#if !METAL_AVAILABLE && FILAMENT_APP_USE_METAL
+#error The iOS simulator does not support Metal.
 #endif
 
 using namespace filament;
@@ -61,7 +61,7 @@ static constexpr uint16_t TRIANGLE_INDICES[3] = { 0, 1, 2 };
 
 // This file is compiled via the matc tool. See the "Run Script" build phase.
 static constexpr uint8_t BAKED_COLOR_PACKAGE[] = {
-#include "bakedColor.filamat"
+#include "bakedColor.inc"
 };
 
 @implementation FilamentView {
@@ -84,7 +84,7 @@ static constexpr uint8_t BAKED_COLOR_PACKAGE[] = {
     if (self = [super initWithCoder:coder]) {
 #if FILAMENT_APP_USE_OPENGL
         [self initializeGLLayer];
-#elif FILAMENT_APP_USE_VULKAN
+#elif FILAMENT_APP_USE_METAL
         [self initializeMetalLayer];
 #endif
         [self initializeFilament];
@@ -137,8 +137,8 @@ static constexpr uint8_t BAKED_COLOR_PACKAGE[] = {
 {
 #if FILAMENT_APP_USE_OPENGL
     engine = Engine::create(filament::Engine::Backend::OPENGL);
-#elif FILAMENT_APP_USE_VULKAN
-    engine = Engine::create(filament::Engine::Backend::VULKAN);
+#elif FILAMENT_APP_USE_METAL
+    engine = Engine::create(filament::Engine::Backend::METAL);
 #endif
     swapChain = engine->createSwapChain((__bridge void*) self.layer);
     renderer = engine->createRenderer();
@@ -239,7 +239,7 @@ static constexpr uint8_t BAKED_COLOR_PACKAGE[] = {
 {
 #if FILAMENT_APP_USE_OPENGL
     return [CAEAGLLayer class];
-#elif FILAMENT_APP_USE_VULKAN
+#elif FILAMENT_APP_USE_METAL
     return [CAMetalLayer class];
 #endif
 }
