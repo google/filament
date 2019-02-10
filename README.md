@@ -414,7 +414,7 @@ following CMake command:
 You should then be able to build by invoking Ninja:
 
 ```
-ninja
+> ninja
 ```
 
 #### Development tips
@@ -429,7 +429,7 @@ ninja
 To confirm Filament was properly built, run the following command from the build directory:
 
 ```
-./samples/material_sandbox --ibl=../../samples/envs/pillars ../../assets/models/sphere/sphere.obj
+> samples\material_sandbox.exe --ibl=..\..\samples\envs\pillars ..\..\assets\models\sphere\sphere.obj
 ```
 
 ### Android
