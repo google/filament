@@ -23,6 +23,7 @@
 #include <stdint.h>
 #include <sys/types.h>
 
+namespace filament {
 namespace math {
 // -------------------------------------------------------------------------------------
 namespace details {
@@ -398,14 +399,15 @@ typedef details::TMat22<float> mat2f;
 
 // ----------------------------------------------------------------------------------------
 }  // namespace math
+}  // namespace filament
 
 namespace std {
 template <typename T>
-constexpr void swap(math::details::TMat22<T>& lhs, math::details::TMat22<T>& rhs) noexcept {
+constexpr void swap( filament::math::details::TMat22<T>& lhs,  filament::math::details::TMat22<T>& rhs) noexcept {
     // This generates much better code than the default implementation
     // It's unclear why, I believe this is due to an optimization bug in the clang.
     //
-    //    math::details::TMat22<T> t(lhs);
+    //     filament::math::details::TMat22<T> t(lhs);
     //    lhs = rhs;
     //    rhs = t;
     //

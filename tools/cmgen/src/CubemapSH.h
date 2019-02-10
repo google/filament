@@ -33,25 +33,25 @@ public:
     /*
      * Spherical Harmonics decomposition of the given cubemap
      */
-    static std::unique_ptr<math::double3[]> computeSH(const Cubemap& cm, size_t numBands, bool irradiance);
+    static std::unique_ptr< filament::math::double3[]> computeSH(const Cubemap& cm, size_t numBands, bool irradiance);
 
     /*
      * Render given spherical harmonics into a cubemap
      */
     static void renderSH(
             Cubemap& cm,
-            const std::unique_ptr<math::double3[]>& sh, size_t numBands);
+            const std::unique_ptr< filament::math::double3[]>& sh, size_t numBands);
 
     /*
      * Compute spherical harmonics of the irradiance of the given cubemap.
      * The SH basis are pre-scaled for easier rendering
      */
-    static std::unique_ptr<math::double3[]> computeIrradianceSH3Bands(const Cubemap& cm);
+    static std::unique_ptr< filament::math::double3[]> computeIrradianceSH3Bands(const Cubemap& cm);
 
     /*
      * Render pre-scaled irrandiance SH
      */
-    static void renderPreScaledSH3Bands(Cubemap& cm, const std::unique_ptr<math::double3[]>& sh);
+    static void renderPreScaledSH3Bands(Cubemap& cm, const std::unique_ptr< filament::math::double3[]>& sh);
 
     static size_t getShIndex(ssize_t m, size_t l) {
         return SHindex(m, l);
@@ -65,7 +65,7 @@ private:
     static void computeShBasis(
             double* SHb,
             size_t numBands,
-            const math::double3& s);
+            const filament::math::double3& s);
 
     static double Kml(ssize_t m, size_t l);
 
@@ -73,7 +73,7 @@ private:
 
     // debugging only...
     static double Legendre(ssize_t l, ssize_t m, double x);
-    static double TSH(int l, int m, const math::double3& d);
+    static double TSH(int l, int m, const filament::math::double3& d);
     static void printShBase(std::ostream& out, int l, int m);
 };
 

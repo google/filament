@@ -19,7 +19,7 @@
 #include <utils/StructureOfArrays.h>
 #include <math/vec4.h>
 
-using namespace math;
+using namespace filament::math;
 using namespace utils;
 
 struct TestFloat4 : public float4 {

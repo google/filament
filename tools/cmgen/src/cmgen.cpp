@@ -39,7 +39,7 @@
 #include "CubemapUtils.h"
 #include "Image.h"
 
-using namespace math;
+using namespace filament::math;
 using namespace image;
 
 // -----------------------------------------------------------------------------------------------
@@ -73,7 +73,7 @@ static bool g_sh_shader = false;
 static bool g_sh_irradiance = false;
 static ShFile g_sh_file = ShFile::SH_NONE;
 static utils::Path g_sh_filename;
-static std::unique_ptr<math::double3[]> g_coefficients;
+static std::unique_ptr<filament::math::double3[]> g_coefficients;
 
 static bool g_is_mipmap = false;
 static utils::Path g_is_mipmap_dir;
@@ -105,9 +105,9 @@ static void iblMipmapPrefilter(const utils::Path& iname, const std::vector<Image
         const std::vector<Cubemap>& levels, const utils::Path& dir);
 static void iblLutDfg(const utils::Path& filename, size_t size, bool multiscatter = false);
 static void extractCubemapFaces(const utils::Path& iname, const Cubemap& cm, const utils::Path& dir);
-static void outputSh(std::ostream& out, const std::unique_ptr<math::double3[]>& sh, size_t numBands);
+static void outputSh(std::ostream& out, const std::unique_ptr<filament::math::double3[]>& sh, size_t numBands);
 static void UTILS_UNUSED outputSpectrum(std::ostream& out,
-        const std::unique_ptr<math::double3[]>& sh, size_t numBands);
+        const std::unique_ptr<filament::math::double3[]>& sh, size_t numBands);
 static void saveImage(const std::string& path, ImageEncoder::Format format, const Image& image,
         const std::string& compression);
 static LinearImage toLinearImage(const Image& image);
@@ -640,7 +640,7 @@ void generateMipmaps(std::vector<Cubemap>& levels, std::vector<Image>& images) {
 }
 
 void sphericalHarmonics(const utils::Path& iname, const Cubemap& inputCubemap) {
-    std::unique_ptr<math::double3[]> sh;
+    std::unique_ptr<filament::math::double3[]> sh;
     if (g_sh_shader) {
         sh = CubemapSH::computeIrradianceSH3Bands(inputCubemap);
     } else {
@@ -706,7 +706,7 @@ void sphericalHarmonics(const utils::Path& iname, const Cubemap& inputCubemap) {
 }
 
 void outputSh(std::ostream& out,
-        const std::unique_ptr<math::double3[]>& sh, size_t numBands) {
+        const std::unique_ptr<filament::math::double3[]>& sh, size_t numBands) {
     for (ssize_t l = 0; l < numBands; l++) {
         for (ssize_t m = -l; m <= l; m++) {
             size_t i = CubemapSH::getShIndex(m, (size_t) l);
@@ -728,7 +728,7 @@ void outputSh(std::ostream& out,
 }
 
 void UTILS_UNUSED outputSpectrum(std::ostream& out,
-        const std::unique_ptr<math::double3[]>& sh, size_t numBands) {
+        const std::unique_ptr<filament::math::double3[]>& sh, size_t numBands) {
     // We assume a symetrical function (i.e. m!=0 terms are zero)
     for (ssize_t l = 0; l < numBands; l++) {
         size_t i = CubemapSH::getShIndex(0, (size_t) l);

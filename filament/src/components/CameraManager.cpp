@@ -25,7 +25,7 @@
 #include <math/mat4.h>
 
 using namespace utils;
-using namespace math;
+using namespace filament::math;
 
 namespace filament {
 namespace details {

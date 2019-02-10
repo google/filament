@@ -20,12 +20,12 @@
 
 #include <math/mat3.h>
 
-using namespace math;
+using namespace filament::math;
 
 namespace filament {
 
-using xyY = math::float3;
-using XYZ = math::float3;
+using xyY = filament::math::float3;
+using XYZ = filament::math::float3;
 
 float3 Color::sRGBToLinear(float3 color) noexcept {
     return image::sRGBToLinear(color);

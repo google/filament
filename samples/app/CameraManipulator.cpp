@@ -16,7 +16,7 @@
 
 #include "CameraManipulator.h"
 
-using namespace math;
+using namespace filament::math;
 
 template <typename T>
 static constexpr inline double radians(T deg) {

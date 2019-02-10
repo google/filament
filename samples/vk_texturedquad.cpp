@@ -54,8 +54,8 @@ struct App {
 };
 
 struct Vertex {
-    math::float2 position;
-    math::float2 uv;
+    filament::math::float2 position;
+    filament::math::float2 uv;
 };
 
 static const Vertex QUAD_VERTICES[4] = {

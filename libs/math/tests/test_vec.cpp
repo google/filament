@@ -20,7 +20,7 @@
 
 #include <math/vec4.h>
 
-using namespace math;
+using namespace filament::math;
 
 class VecTest : public testing::Test {
 protected:

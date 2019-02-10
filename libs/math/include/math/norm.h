@@ -23,6 +23,7 @@
 #include <cmath>
 #include <stdint.h>
 
+namespace filament {
 namespace math {
 
 inline uint16_t packUnorm16(float v) noexcept {
@@ -93,6 +94,7 @@ inline float4 unpackSnorm8(byte4 v) noexcept {
     return float4{unpackSnorm8(v.x), unpackSnorm8(v.y), unpackSnorm8(v.z), unpackSnorm8(v.w)};
 }
 
-} // namespace std
+} // namespace math
+} // namespace filament
 
 #endif // TNT_MATH_NORM_H

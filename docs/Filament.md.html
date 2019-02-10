@@ -2248,7 +2248,7 @@ vec3 evaluateIBL(vec3 n, vec3 v, vec3 diffuseColor, vec3 f0, vec3 f90, float rou
 
     // Specular indirect
     vec3 indirectSpecular = evaluateSpecularIBL(r, roughness);
-    vec2 env = prefilteredDFG_LUT(NoV, roughness);
+    vec2 env = prefilteredDFG_LUT(roughness, NoV);
     vec3 specularColor = f0 * env.x + f90 * env.y;
 
     // Diffuse indirect

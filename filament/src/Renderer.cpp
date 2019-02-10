@@ -39,7 +39,7 @@
 #include <assert.h>
 
 
-using namespace math;
+using namespace filament::math;
 using namespace utils;
 
 namespace filament {

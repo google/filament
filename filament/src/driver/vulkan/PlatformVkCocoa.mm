@@ -46,8 +46,6 @@ void* PlatformVkCocoa::createVkSurfaceKHR(void* nativeWindow, void* instance,
     // Obtain the CAMetalLayer-backed view.
     NSView* nsview = (NSView*) nativeWindow;
     ASSERT_POSTCONDITION(nsview, "Unable to obtain Metal-backed NSView.");
-    CAMetalLayer* mlayer = (CAMetalLayer*) nsview.layer;
-    ASSERT_POSTCONDITION(mlayer, "Unable to obtain CAMetalLayer from NSView.");
 
     // Create the VkSurface.
     ASSERT_POSTCONDITION(vkCreateMacOSSurfaceMVK, "Unable to load vkCreateMacOSSurfaceMVK function.");

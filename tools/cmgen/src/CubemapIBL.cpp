@@ -27,7 +27,7 @@
 #include "ProgressUpdater.h"
 #include "utilities.h"
 
-using namespace math;
+using namespace filament::math;
 using namespace image;
 using namespace utils;
 

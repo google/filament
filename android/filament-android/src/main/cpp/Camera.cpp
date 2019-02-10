@@ -48,7 +48,7 @@ Java_com_google_android_filament_Camera_nSetCustomProjection(JNIEnv *env, jclass
         jlong nativeCamera, jdoubleArray inMatrix_, jdouble near, jdouble far) {
     Camera *camera = (Camera *) nativeCamera;
     jdouble *inMatrix = env->GetDoubleArrayElements(inMatrix_, NULL);
-    camera->setCustomProjection(*reinterpret_cast<const math::mat4 *>(inMatrix), near, far);
+    camera->setCustomProjection(*reinterpret_cast<const filament::math::mat4 *>(inMatrix), near, far);
     env->ReleaseDoubleArrayElements(inMatrix_, inMatrix, JNI_ABORT);
 }
 
@@ -78,7 +78,7 @@ Java_com_google_android_filament_Camera_nSetModelMatrix(JNIEnv *env, jclass,
         jlong nativeCamera, jfloatArray in_) {
     Camera* camera = (Camera *) nativeCamera;
     jfloat *in = env->GetFloatArrayElements(in_, NULL);
-    camera->setModelMatrix(*reinterpret_cast<const math::mat4f*>(in));
+    camera->setModelMatrix(*reinterpret_cast<const filament::math::mat4f*>(in));
     env->ReleaseFloatArrayElements(in_, in, JNI_ABORT);
 }
 
@@ -87,7 +87,7 @@ Java_com_google_android_filament_Camera_nGetProjectionMatrix(JNIEnv *env, jclass
         jlong nativeCamera, jdoubleArray out_) {
     Camera *camera = (Camera *) nativeCamera;
     jdouble *out = env->GetDoubleArrayElements(out_, NULL);
-    const math::mat4& m = camera->getProjectionMatrix();
+    const filament::math::mat4& m = camera->getProjectionMatrix();
     std::copy_n(&m[0][0], 16, out);
     env->ReleaseDoubleArrayElements(out_, out, 0);
 }
@@ -97,7 +97,7 @@ Java_com_google_android_filament_Camera_nGetModelMatrix(JNIEnv *env, jclass,
         jlong nativeCamera, jfloatArray out_) {
     Camera *camera = (Camera *) nativeCamera;
     jfloat *out = env->GetFloatArrayElements(out_, NULL);
-    const math::mat4f& m = camera->getModelMatrix();
+    const filament::math::mat4f& m = camera->getModelMatrix();
     std::copy_n(&m[0][0], 16, out);
     env->ReleaseFloatArrayElements(out_, out, 0);
 }
@@ -107,7 +107,7 @@ Java_com_google_android_filament_Camera_nGetViewMatrix(JNIEnv *env, jclass, jlon
         jfloatArray out_) {
     Camera *camera = (Camera *) nativeCamera;
     jfloat *out = env->GetFloatArrayElements(out_, NULL);
-    const math::mat4f& m = camera->getViewMatrix();
+    const filament::math::mat4f& m = camera->getViewMatrix();
     std::copy_n(&m[0][0], 16, out);
     env->ReleaseFloatArrayElements(out_, out, 0);
 }
@@ -117,7 +117,7 @@ Java_com_google_android_filament_Camera_nGetPosition(JNIEnv *env, jclass, jlong 
         jfloatArray out_) {
     Camera *camera = (Camera *) nativeCamera;
     jfloat *out = env->GetFloatArrayElements(out_, NULL);
-    reinterpret_cast<math::float3&>(*out) = camera->getPosition();
+    reinterpret_cast<filament::math::float3&>(*out) = camera->getPosition();
     env->ReleaseFloatArrayElements(out_, out, 0);
 }
 
@@ -126,7 +126,7 @@ Java_com_google_android_filament_Camera_nGetLeftVector(JNIEnv *env, jclass, jlon
         jfloatArray out_) {
     Camera *camera = (Camera *) nativeCamera;
     jfloat *out = env->GetFloatArrayElements(out_, NULL);
-    reinterpret_cast<math::float3&>(*out) = camera->getLeftVector();
+    reinterpret_cast<filament::math::float3&>(*out) = camera->getLeftVector();
     env->ReleaseFloatArrayElements(out_, out, 0);
 }
 
@@ -135,7 +135,7 @@ Java_com_google_android_filament_Camera_nGetUpVector(JNIEnv *env, jclass, jlong 
         jfloatArray out_) {
     Camera *camera = (Camera *) nativeCamera;
     jfloat *out = env->GetFloatArrayElements(out_, NULL);
-    reinterpret_cast<math::float3&>(*out) = camera->getUpVector();
+    reinterpret_cast<filament::math::float3&>(*out) = camera->getUpVector();
     env->ReleaseFloatArrayElements(out_, out, 0);
 }
 
@@ -144,7 +144,7 @@ Java_com_google_android_filament_Camera_nGetForwardVector(JNIEnv *env, jclass,
         jlong nativeCamera, jfloatArray out_) {
     Camera *camera = (Camera *) nativeCamera;
     jfloat *out = env->GetFloatArrayElements(out_, NULL);
-    reinterpret_cast<math::float3&>(*out) = camera->getForwardVector();
+    reinterpret_cast<filament::math::float3&>(*out) = camera->getForwardVector();
     env->ReleaseFloatArrayElements(out_, out, 0);
 }
 

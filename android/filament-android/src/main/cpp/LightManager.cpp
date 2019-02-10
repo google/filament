@@ -174,7 +174,7 @@ Java_com_google_android_filament_LightManager_nGetPosition(JNIEnv *env, jclass t
         jlong nativeLightManager, jint i, jfloatArray out_) {
     LightManager *lm = (LightManager *) nativeLightManager;
     jfloat *out = env->GetFloatArrayElements(out_, NULL);
-    *reinterpret_cast<math::float3 *>(out) = lm->getPosition((LightManager::Instance) i);
+    *reinterpret_cast<filament::math::float3 *>(out) = lm->getPosition((LightManager::Instance) i);
     env->ReleaseFloatArrayElements(out_, out, 0);
 }
 
@@ -190,7 +190,7 @@ Java_com_google_android_filament_LightManager_nGetDirection(JNIEnv *env, jclass 
         jlong nativeLightManager, jint i, jfloatArray out_) {
     LightManager *lm = (LightManager *) nativeLightManager;
     jfloat *out = env->GetFloatArrayElements(out_, NULL);
-    *reinterpret_cast<math::float3 *>(out) = lm->getDirection((LightManager::Instance) i);
+    *reinterpret_cast<filament::math::float3 *>(out) = lm->getDirection((LightManager::Instance) i);
     env->ReleaseFloatArrayElements(out_, out, 0);
 }
 
@@ -206,7 +206,7 @@ Java_com_google_android_filament_LightManager_nGetColor(JNIEnv *env, jclass type
         jlong nativeLightManager, jint i, jfloatArray out_) {
     LightManager *lm = (LightManager *) nativeLightManager;
     jfloat *out = env->GetFloatArrayElements(out_, NULL);
-    *reinterpret_cast<math::float3 *>(out) = lm->getColor((LightManager::Instance) i);
+    *reinterpret_cast<filament::math::float3 *>(out) = lm->getColor((LightManager::Instance) i);
     env->ReleaseFloatArrayElements(out_, out, 0);
 }
 

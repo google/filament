@@ -30,6 +30,8 @@ namespace filament {
     class MaterialInstance;
 }
 
+namespace filamesh {
+
 /**
  * This API can be used to read meshes stored in the "filamesh" format produced
  * by the command line tool of the same name. This file format is documented in
@@ -77,5 +79,7 @@ public:
             void const* data, Callback destructor, void* user,
             filament::MaterialInstance* defaultMaterial);
 };
+
+} // namespace filamesh
 
 #endif // TNT_FILAMENT_FILAMESHIO_MESHREADER_H

@@ -90,7 +90,7 @@ public:
      *
      * @see destroy()
      */
-    void create(utils::Entity entity, Instance parent = {}, const math::mat4f& localTransform = {});
+    void create(utils::Entity entity, Instance parent = {}, const filament::math::mat4f& localTransform = {});
 
     /**
      * Destroys this component from the given entity, children are orphaned.
@@ -122,7 +122,7 @@ public:
      *            will be particularly bad when updating a lot of transforms. In that case,
      *            consider using openLocalTransformTransaction() / commitLocalTransformTransaction().
      */
-    void setTransform(Instance ci, const math::mat4f& localTransform) noexcept;
+    void setTransform(Instance ci, const filament::math::mat4f& localTransform) noexcept;
 
     /**
      * Returns the local transform of a transform component.
@@ -131,7 +131,7 @@ public:
      *         returns the value set by setTransform().
      * @see setTransform()
      */
-    const math::mat4f& getTransform(Instance ci) const noexcept;
+    const filament::math::mat4f& getTransform(Instance ci) const noexcept;
 
     /**
      * Return the world transform of a transform component.
@@ -141,7 +141,7 @@ public:
      *         transform.
      * @see setTransform()
      */
-    const math::mat4f& getWorldTransform(Instance ci) const noexcept;
+    const filament::math::mat4f& getWorldTransform(Instance ci) const noexcept;
 
     /**
      * Opens a local transform transaction. During a transaction, getWorldTransform() can

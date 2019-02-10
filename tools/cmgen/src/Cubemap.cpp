@@ -16,7 +16,7 @@
 
 #include "Cubemap.h"
 
-using namespace math;
+using namespace filament::math;
 
 Cubemap::Cubemap(size_t dim) {
     resetDimensions(dim);

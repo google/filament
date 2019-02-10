@@ -24,7 +24,7 @@
 #include <memory>
 #include <ratio>
 
-using namespace math;
+using namespace filament::math;
 
 namespace image {
 

@@ -29,7 +29,9 @@
 #include "generated/resources/resources.h"
 
 using namespace filament;
-using namespace math;
+using namespace filamesh;
+using namespace filament::math;
+
 using Backend = Engine::Backend;
 
 struct App {

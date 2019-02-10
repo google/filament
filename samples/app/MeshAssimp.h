@@ -48,11 +48,11 @@ namespace filament {
 
 class MeshAssimp {
 public:
-    using mat4f = math::mat4f;
-    using half4 = math::half4;
-    using short4 = math::short4;
-    using half2 = math::half2;
-    using ushort2 = math::ushort2;
+    using mat4f = filament::math::mat4f;
+    using half4 = filament::math::half4;
+    using short4 = filament::math::short4;
+    using half2 = filament::math::half2;
+    using ushort2 = filament::math::ushort2;
     explicit MeshAssimp(filament::Engine& engine);
     ~MeshAssimp();
 
@@ -65,8 +65,8 @@ public:
     }
 
     //For use with normalizing coordinates
-    math::float3 minBound = math::float3(1.0f);
-    math::float3 maxBound = math::float3(-1.0f);
+    filament::math::float3 minBound = filament::math::float3(1.0f);
+    filament::math::float3 maxBound = filament::math::float3(-1.0f);
     utils::Entity rootEntity;
 
 private:

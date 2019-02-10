@@ -114,7 +114,7 @@ enum class AstcSemantic {
 struct AstcConfig {
     AstcPreset quality;
     AstcSemantic semantic;
-    math::ushort2 blocksize;
+     filament::math::ushort2 blocksize;
     bool srgb;
 };
 

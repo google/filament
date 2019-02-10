@@ -96,7 +96,7 @@ struct RenderPassParams {
     uint32_t width = 0;
     uint32_t height = 0;
     // Clear values (32 bytes)
-    math::float4 clearColor = {};
+    filament::math::float4 clearColor = {};
     double clearDepth = 1.0;
     uint32_t clearStencil = 0;
     uint32_t reserved1 = 0;

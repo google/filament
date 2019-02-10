@@ -44,8 +44,9 @@
 #include <filamat/MaterialBuilder.h>
 #include <filameshio/MeshReader.h>
 
-using namespace math;
+using namespace filament::math;
 using namespace filament;
+using namespace filamesh;
 using namespace filamat;
 using namespace utils;
 

@@ -257,28 +257,28 @@ TEST(JobSystem, JobSystemParallelFor) {
     JobSystem js;
     js.adopt();
 
-    std::array<math::float3, 4096*16> vertices;
+    std::array<filament::math::float3, 4096*16> vertices;
     for (size_t j = 0; j<vertices.size(); ++j) {
-        vertices[j] = math::float3(j);
+        vertices[j] = filament::math::float3(j);
     }
 
     struct Executor {
-        void operator()(math::float3* v, size_t c) {
+        void operator()(filament::math::float3* v, size_t c) {
             for (size_t i=0 ; i<c; ++i) {
                 v[i] = matrix * v[i];
             }
         }
-        math::mat3f matrix;
+        filament::math::mat3f matrix;
     } state;
-    state.matrix = math::mat3f(2);
+    state.matrix = filament::math::mat3f(2);
 
     JobSystem::Job* job = parallel_for(js, nullptr, vertices.data(), vertices.size(),
             std::ref(state), CountSplitter<4>());
     js.runAndWait(job);
 
-    const math::mat3f matrix(2);
+    const filament::math::mat3f matrix(2);
     for (size_t j = 0; j<vertices.size(); ++j) {
-        EXPECT_TRUE(vertices[j] == matrix*math::float3(j));
+        EXPECT_TRUE(vertices[j] == matrix*filament::math::float3(j));
     }
 
     js.emancipate();

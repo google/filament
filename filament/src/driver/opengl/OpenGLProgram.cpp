@@ -27,7 +27,7 @@
 
 namespace filament {
 
-using namespace math;
+using namespace filament::math;
 using namespace utils;
 
 // we just want a small, tight loop for our purpose here, so we avoid std::copy_n

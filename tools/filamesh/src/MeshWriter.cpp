@@ -21,7 +21,7 @@
 #include <meshoptimizer.h>
 
 using namespace filamesh;
-using namespace math;
+using namespace filament::math;
 using namespace std;
 
 template<typename T>

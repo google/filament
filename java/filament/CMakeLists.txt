@@ -35,7 +35,7 @@ if (WIN32)
     set(CXX_STANDARD "/std:c++14")
 endif()
 
-set(FILAMENT_DIR ../android/filament-android)
+set(FILAMENT_DIR ../../android/filament-android)
 
 set(JNI_SOURCE_FILES
         ${FILAMENT_DIR}/src/main/cpp/Camera.cpp
@@ -146,6 +146,6 @@ set(JAVA_SOURCE_FILES
 
 add_jar(${TARGET}
         SOURCES ${JAVA_SOURCE_FILES}
-        INCLUDE_JARS lib/support-annotations.jar)
+        INCLUDE_JARS ../lib/support-annotations.jar)
 
 install_jar(${TARGET} lib)

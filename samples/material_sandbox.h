@@ -67,7 +67,7 @@ struct SandboxParameters {
     bool castShadows = true;
     filament::sRGBColor lightColor = {0.98f, 0.92f, 0.89f};
     float lightIntensity = 110000.0f;
-    math::float3 lightDirection = {0.6f, -1.0f, -0.8f};
+    filament::math::float3 lightDirection = {0.6f, -1.0f, -0.8f};
     float iblIntensity = 30000.0f;
     float iblRotation = 0.0f;
     float sunHaloSize = 10.0f;
