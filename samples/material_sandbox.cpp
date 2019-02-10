@@ -389,7 +389,7 @@ int main(int argc, char* argv[]) {
     for (int i = option_index; i < argc; i++) {
         utils::Path filename = argv[i];
         if (!filename.exists()) {
-            std::cerr << "file " << argv[option_index] << " not found!" << std::endl;
+            std::cerr << "file " << argv[i] << " not found!" << std::endl;
             return 1;
         }
         g_filenames.push_back(filename);
