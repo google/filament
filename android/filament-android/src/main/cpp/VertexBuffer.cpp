@@ -121,7 +121,7 @@ Java_com_google_android_filament_VertexBuffer_nPopulateTangentQuaternions(JNIEnv
         jint outStride, jobject normals, jint normalsRemaining, jint normalsStride,
         jobject tangents, jint tangentsRemaining, jint tangentsStride) {
 
-    AutoBuffer outNioBuffer(env, outBuffer, outRemaining);
+    AutoBuffer outNioBuffer(env, outBuffer, outRemaining, true);
     void* outData = outNioBuffer.getData();
 
     AutoBuffer normalsNioBuffer(env, normals, normalsRemaining);

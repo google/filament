@@ -26,7 +26,8 @@ struct {
     jmethodID getBufferType;
 } gNioUtils;
 
-AutoBuffer::AutoBuffer(JNIEnv *env, jobject buffer, jint size) noexcept : mEnv(env) {
+AutoBuffer::AutoBuffer(JNIEnv *env, jobject buffer, jint size, bool commit) noexcept : mEnv(env),
+        mDoCommit(commit) {
     mBuffer = env->NewGlobalRef(buffer);
 
     mType = (BufferType) env->CallStaticIntMethod(
@@ -108,27 +109,28 @@ AutoBuffer::AutoBuffer(AutoBuffer &&rhs) noexcept {
 AutoBuffer::~AutoBuffer() noexcept {
     JNIEnv *env = mEnv;
     if (mBaseArray) {
+        jint mode = mDoCommit ? 0 : JNI_ABORT;
         switch (mType) {
             case BufferType::BYTE:
-                env->ReleaseByteArrayElements((jbyteArray)mBaseArray, (jbyte *) mData, JNI_ABORT);
+                env->ReleaseByteArrayElements((jbyteArray)mBaseArray, (jbyte *) mData, mode);
                 break;
             case BufferType::CHAR:
-                env->ReleaseCharArrayElements((jcharArray)mBaseArray, (jchar *) mData, JNI_ABORT);
+                env->ReleaseCharArrayElements((jcharArray)mBaseArray, (jchar *) mData, mode);
                 break;
             case BufferType::SHORT:
-                env->ReleaseShortArrayElements((jshortArray)mBaseArray, (jshort *) mData, JNI_ABORT);
+                env->ReleaseShortArrayElements((jshortArray)mBaseArray, (jshort *) mData, mode);
                 break;
             case BufferType::INT:
-                env->ReleaseIntArrayElements((jintArray)mBaseArray, (jint *) mData, JNI_ABORT);
+                env->ReleaseIntArrayElements((jintArray)mBaseArray, (jint *) mData, mode);
                 break;
             case BufferType::LONG:
-                env->ReleaseLongArrayElements((jlongArray)mBaseArray, (jlong *) mData, JNI_ABORT);
+                env->ReleaseLongArrayElements((jlongArray)mBaseArray, (jlong *) mData, mode);
                 break;
             case BufferType::FLOAT:
-                env->ReleaseFloatArrayElements((jfloatArray)mBaseArray, (jfloat *) mData, JNI_ABORT);
+                env->ReleaseFloatArrayElements((jfloatArray)mBaseArray, (jfloat *) mData, mode);
                 break;
             case BufferType::DOUBLE:
-                env->ReleaseDoubleArrayElements((jdoubleArray)mBaseArray, (jdouble *) mData, JNI_ABORT);
+                env->ReleaseDoubleArrayElements((jdoubleArray)mBaseArray, (jdouble *) mData, mode);
                 break;
         }
         env->DeleteGlobalRef(mBaseArray);
