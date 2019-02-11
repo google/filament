@@ -32,7 +32,9 @@ public:
         DOUBLE
     };
 
-    AutoBuffer(JNIEnv* env, jobject buffer, jint size) noexcept;
+    // Clients should pass "true" for the commit argument if they intend to mutate the buffer
+    // contents from native code.
+    AutoBuffer(JNIEnv* env, jobject buffer, jint size, bool commit = false) noexcept;
     AutoBuffer(AutoBuffer&& rhs) noexcept;
     ~AutoBuffer() noexcept;
 
@@ -62,4 +64,5 @@ private:
     void* mData = nullptr;
     jobject mBuffer = nullptr;
     jarray mBaseArray = nullptr;
+    bool mDoCommit = false;
 };
