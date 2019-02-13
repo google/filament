@@ -4,6 +4,9 @@
 # To run this script, you may need to do the following on Ubuntu:
 #     sudo apt-get install python3-pip
 #     pip3 install -r requirements.txt
+#
+# If CMake is choosing /usr/bin/python3, then do this instead:
+#     /usr/bin/python3 -m pip requirements.txt
 
 """Converts markdown into HTML and extracts JavaScript code blocks.
 
