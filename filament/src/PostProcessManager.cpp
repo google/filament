@@ -15,7 +15,6 @@
  */
 
 #include "PostProcessManager.h"
-#include "RenderTargetPool.h"
 
 #include "details/Engine.h"
 
@@ -30,13 +29,12 @@
 namespace filament {
 
 using namespace utils;
+using namespace math;
 using namespace driver;
-using namespace details;
+using namespace filament::details;
 
 void PostProcessManager::init(FEngine& engine) noexcept {
     mEngine = &engine;
-
-    mCommands.reserve(8);
 
     mPostProcessUb = UniformBuffer(engine.getPerPostProcessUib());
 
@@ -70,10 +68,11 @@ void PostProcessManager::setSource(uint32_t viewportWidth, uint32_t viewportHeig
     auto duration = engine.getEngineTime();
     float fraction = (duration.count() % 1000000000) / 1000000000.0f;
 
+    float2 uvScale = float2{ viewportWidth, viewportHeight } / float2{ textureWidth, textureHeight };
+
     UniformBuffer& ub = mPostProcessUb;
     ub.setUniform(offsetof(PostProcessingUib, time), fraction);
-    ub.setUniform(offsetof(PostProcessingUib, uvScale),
-            filament::math::float2{ viewportWidth, viewportHeight } / filament::math::float2{ textureWidth, textureHeight });
+    ub.setUniform(offsetof(PostProcessingUib, uvScale), uvScale);
 
     // The shader may need to know the offset between the top of the texture and the top
     // of the rectangle that it actually needs to sample from.
@@ -84,143 +83,7 @@ void PostProcessManager::setSource(uint32_t viewportWidth, uint32_t viewportHeig
     driver.updateUniformBuffer(mPostProcessUbh, ub.toBufferDescriptor(driver));
 }
 
-void PostProcessManager::blit(driver::TextureFormat format) noexcept {
-    mCommands.push_back({{}, format});
-}
-
-void PostProcessManager::pass(driver::TextureFormat format, Handle<HwProgram> program) noexcept {
-    mCommands.push_back({program, format});
-}
-
-void PostProcessManager::finish(driver::TargetBufferFlags discarded,
-        Handle<HwRenderTarget> viewRenderTarget,
-        filament::Viewport const& vp,
-        RenderTargetPool::Target const* previous,
-        filament::Viewport const& svp) {
-
-    assert(viewRenderTarget);
-    assert(previous);
-
-    FEngine& engine = *mEngine;
-    DriverApi& driver = engine.getDriverApi();
-    RenderTargetPool& rtp = engine.getRenderTargetPool();
-    Handle<HwRenderPrimitive> const& fullScreenRenderPrimitive = engine.getFullScreenRenderPrimitive();
-    std::vector<Command>& commands = mCommands;
-
-    if (UTILS_UNLIKELY(commands.empty())) {
-        rtp.put(previous);
-        return;
-    }
-
-    Driver::PipelineState pipeline;
-
-    pipeline.rasterState.culling = Driver::RasterState::CullingMode::NONE;
-    pipeline.rasterState.colorWrite = true;
-    pipeline.rasterState.depthFunc = Driver::RasterState::DepthFunc::A;
-
-    RenderPassParams params = {};
-    params.flags.discardStart = TargetBufferFlags::ALL;
-    params.flags.discardEnd = TargetBufferFlags::DEPTH_AND_STENCIL;
-    params.flags.dependencies = RenderPassFlags::DEPENDENCY_BY_REGION;
-    params.viewport.left = 0;
-    params.viewport.bottom = 0;
-    params.viewport.width = svp.width;
-    params.viewport.height = svp.height;
-
-    for (size_t i = 0, c = commands.size() - 1; i < c; i++) {
-        // if the next command is a blit, it we don't need a texture
-        uint8_t flags = !commands[i + 1].program ? RenderTargetPool::Target::NO_TEXTURE : uint8_t();
-
-        // create a render target for this pass
-        RenderTargetPool::Target const* target = rtp.get(
-                TargetBufferFlags::COLOR, svp.width, svp.height, 1, commands[i].format, flags);
-
-        assert(target);
-
-        if (commands[i].program) {
-            // set the source for this pass (i.e. previous target)
-            setSource(params.viewport.width, params.viewport.height, previous->texture, previous->w, previous->h);
-
-            // draw a full screen triangle
-            pipeline.program = commands[i].program;
-            driver.beginRenderPass(target->target, params);
-            driver.draw(pipeline, fullScreenRenderPrimitive);
-            driver.endRenderPass();
-        } else {
-            driver.blit(TargetBufferFlags::COLOR,
-                    target->target, { 0, 0, svp.width, svp.height },
-                    previous->target, { 0, 0, svp.width, svp.height });
-        }
-        // return the previous target to the pool
-        rtp.put(previous);
-        previous = target;
-    }
-
-    assert(!commands.empty());
-    assert(previous);
-
-    // The last command is special, it always draw to the viewRenderTarget and uses
-    // the non scaled viewport.
-    if (commands.back().program) {
-        params.flags.discardStart = discarded;
-        params.flags.discardEnd = TargetBufferFlags::DEPTH_AND_STENCIL;
-        params.viewport.left = vp.left;
-        params.viewport.bottom = vp.bottom;
-        params.viewport.width = vp.width;
-        params.viewport.height = vp.height;
-
-        setSource(params.viewport.width, params.viewport.height, previous->texture, previous->w, previous->h);
-        pipeline.program = commands.back().program;
-        driver.beginRenderPass(viewRenderTarget, params);
-        driver.draw(pipeline, fullScreenRenderPrimitive);
-        driver.endRenderPass();
-
-    } else {
-        driver.blit(TargetBufferFlags::COLOR,
-                viewRenderTarget, { vp.left, vp.bottom, vp.width, vp.height },
-                previous->target, { 0, 0, svp.width, svp.height });
-    }
-
-    rtp.put(previous);
-
-    // clear our command buffer
-    commands.clear();
-}
-
-
 // ------------------------------------------------------------------------------------------------
-
-FrameGraphResource PostProcessManager::msaa(FrameGraph& fg,
-        FrameGraphResource input, driver::TextureFormat outFormat) noexcept {
-
-    struct PostProcessMSAA {
-        FrameGraphResource input;
-        FrameGraphResource output;
-    };
-
-    auto& ppMSAA = fg.addPass<PostProcessMSAA>("msaa",
-            [&](FrameGraph::Builder& builder, PostProcessMSAA& data) {
-                auto const* inputDesc = fg.getDescriptor(input);
-                data.input = builder.useRenderTarget(input).textures[0];
-
-                FrameGraphResource::Descriptor outputDesc{
-                        .width = inputDesc->width,
-                        .height = inputDesc->height,
-                        .format = outFormat
-                };
-                data.output = builder.createTexture("msaa output", outputDesc);
-                data.output = builder.useRenderTarget(data.output).textures[0];
-            },
-            [=](FrameGraphPassResources const& resources,
-                    PostProcessMSAA const& data, DriverApi& driver) {
-                auto in = resources.getRenderTarget(data.input);
-                auto out = resources.getRenderTarget(data.output);
-                driver.blit(TargetBufferFlags::COLOR,
-                        out.target, out.params.viewport, in.target, in.params.viewport);
-            });
-
-    return ppMSAA.getData().output;
-}
 
 FrameGraphResource PostProcessManager::toneMapping(FrameGraph& fg,
         FrameGraphResource input, driver::TextureFormat outFormat, bool translucent) noexcept {
@@ -257,10 +120,14 @@ FrameGraphResource PostProcessManager::toneMapping(FrameGraph& fg,
                 pipeline.rasterState.depthFunc = Driver::RasterState::DepthFunc::A;
                 pipeline.program = toneMappingProgram;
 
-                auto const& targetDesc = resources.getDescriptor(data.output);
                 auto const& textureDesc = resources.getDescriptor(data.input);
                 auto const& texture = resources.getTexture(data.input);
-                setSource(targetDesc.width, targetDesc.height, texture, textureDesc.width, textureDesc.height);
+                // TODO: the first parameters below are the *actual viewport* size
+                //       (as opposed to the size of the source texture). Currently we don't allow
+                //       the texture to be resized, so they match. We'll need something more
+                //       sofisticated in the future.
+                setSource(textureDesc.width, textureDesc.height,
+                        texture, textureDesc.width, textureDesc.height);
 
                 auto const& target = resources.getRenderTarget(data.output);
                 driver.beginRenderPass(target.target, target.params);
@@ -308,10 +175,14 @@ FrameGraphResource PostProcessManager::fxaa(FrameGraph& fg,
                 pipeline.rasterState.depthFunc = Driver::RasterState::DepthFunc::A;
                 pipeline.program = antiAliasingProgram;
 
-                auto const& targetDesc = resources.getDescriptor(data.output);
                 auto const& textureDesc = resources.getDescriptor(data.input);
                 auto const& texture = resources.getTexture(data.input);
-                setSource(targetDesc.width, targetDesc.height, texture, textureDesc.width, textureDesc.height);
+                // TODO: the first parameters below are the *actual viewport* size
+                //       (as opposed to the size of the source texture). Currently we don't allow
+                //       the texture to be resized, so they match. We'll need something more
+                //       sofisticated in the future.
+                setSource(textureDesc.width, textureDesc.height,
+                        texture, textureDesc.width, textureDesc.height);
 
                 auto const& target = resources.getRenderTarget(data.output);
                 driver.beginRenderPass(target.target, target.params);
@@ -323,8 +194,7 @@ FrameGraphResource PostProcessManager::fxaa(FrameGraph& fg,
 }
 
 FrameGraphResource PostProcessManager::dynamicScaling(FrameGraph& fg,
-        FrameGraphResource input, driver::TextureFormat outFormat,
-        filament::Viewport const& outViewport) noexcept {
+        FrameGraphResource input, driver::TextureFormat outFormat) noexcept {
 
     struct PostProcessScaling {
         FrameGraphResource input;
