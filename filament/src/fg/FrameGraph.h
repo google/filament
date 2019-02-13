@@ -94,6 +94,13 @@ public:
         // Calling write() on an imported resource automatically adds a side-effect.
         Builder& sideEffect() noexcept;
 
+        // returns whether this resource is an attachment to some rendertarget
+        bool isAttachment(FrameGraphResource resource) const noexcept;
+
+        // returns the descriptor of the render target this attachment belongs to
+        FrameGraphRenderTarget::Descriptor const& getRenderTargetDescriptor(
+                FrameGraphResource attachment) const;
+
     private:
         // this is private for now because we only have textures, and this is for regular buffers
         FrameGraphResource write(FrameGraphResource const& output);

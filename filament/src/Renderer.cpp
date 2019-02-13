@@ -157,7 +157,6 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     JobSystem& js = engine.getJobSystem();
     FEngine::DriverApi& driver = engine.getDriverApi();
     PostProcessManager& ppm = engine.getPostProcessManager();
-    RenderTargetPool& rtp = engine.getRenderTargetPool();
 
     // DEBUG: driver commands must all happen from the same thread. Enforce that on debug builds.
     engine.getDriverApi().debugThreading();
@@ -206,101 +205,86 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     }
 
     /*
+     * Frame graph
+     */
+
+    FrameGraph fg;
+
+    const TextureFormat hdrFormat = getHdrFormat(view);
+    const uint8_t useMSAA = view.getSampleCount();
+
+    // FIXME: we use "hasPostProcess" as a proxy for deciding if we need a depth-buffer or not
+    //        historically this has been true, but it's definitely wrong.
+    //        This hack is needed because viewRenderTarget(output) doesn't have a depth-buffer,
+    //        so when skipping post-process (which draws directly into it), we can't rely on it.
+    const bool colorPassNeedsDepthBuffer = hasPostProcess;
+
+    const Handle<HwRenderTarget> viewRenderTarget = getRenderTarget();
+    FrameGraphResource output = fg.importResource("viewRenderTarget",
+            { .viewport = vp }, viewRenderTarget, vp.width, vp.height);
+
+    /*
      * Depth + Color passes
      */
 
-    const uint8_t useMSAA = view.getSampleCount();
-    const TextureFormat hdrFormat = getHdrFormat(view);
-    const TextureFormat ldrFormat = getLdrFormat();
-    RenderTargetPool::Target const* colorTarget = nullptr;
+    struct ColorPassData {
+        FrameGraphResource color;
+        FrameGraphResource depth;
+    };
 
-    if (UTILS_LIKELY(hasPostProcess)) {
-        // allocate the target we need for rendering the scene
-        colorTarget = rtp.get(TargetBufferFlags::COLOR_AND_DEPTH,
-                svp.width, svp.height, useMSAA, hdrFormat);
-        svp.left = svp.bottom = 0;
-    }
+    auto& colorPass = fg.addPass<ColorPassData>("Color pass",
+            [&](FrameGraph::Builder& builder, ColorPassData& data) {
 
-    // FIXME: viewRenderTarget doesn't have a depth-buffer, so when skipping post-process, don't rely on it
-    const Handle<HwRenderTarget> viewRenderTarget = getRenderTarget();
-    ColorPass::renderColorPass(engine, js, jobFroxelize,
-            colorTarget ? colorTarget->target : viewRenderTarget, view, svp, commands);
+                data.color = builder.createTexture("color buffer",
+                        { .width = svp.width, .height = svp.height, .format = hdrFormat });
+
+                if (colorPassNeedsDepthBuffer) {
+                    data.depth = builder.createTexture("depth buffer",
+                            { .width = svp.width, .height = svp.height });
+                }
+
+                FrameGraphRenderTarget::Descriptor desc{
+                        .samples = useMSAA,
+                        .attachments.color = data.color,
+                        .attachments.depth = data.depth
+                };
+                data.color = builder.useRenderTarget("colorRenderTarget", desc).textures[0];
+            },
+            [=, &engine, &js, &view, &commands]
+                    (FrameGraphPassResources const& resources,
+                            ColorPassData const& data, DriverApi& driver) {
+                auto out = resources.getRenderTarget(data.color);
+                ColorPass::renderColorPass(engine, js, jobFroxelize, out.target, view,
+                        static_cast<filament::Viewport const&>(out.params.viewport),
+                        commands);
+            });
+
+    FrameGraphResource input = colorPass.getData().color;
 
     /*
      * Post Processing...
      */
 
+    if (hasPostProcess) {
+        const TextureFormat ldrFormat = getLdrFormat();
+        const bool translucent = mSwapChain->isTransparent();
 
-#define USE_FRAME_GRAPH false
-
-    if (UTILS_LIKELY(hasPostProcess)) {
-        driver.pushGroupMarker("Post Processing");
-
-        assert(colorTarget);
-
-        if (USE_FRAME_GRAPH) {
-            FrameGraph fg;
-
-            const bool translucent = mSwapChain->isTransparent();
-
-            FrameGraphResource::Descriptor colorDesc{
-                    .width = colorTarget->w,
-                    .height= colorTarget->h,
-                    .format= colorTarget->format,
-            };
-            FrameGraphResource input = fg.importResource("colorTarget",
-                    colorDesc, colorTarget->texture);
-
-            FrameGraphResource output = fg.importResource("viewRenderTarget", { .viewport = vp },
-                    viewRenderTarget, vp.width, vp.height);
-
-            if (useMSAA > 1) {
-                input = ppm.msaa(fg, input, hdrFormat);
-            }
-            input = ppm.toneMapping(fg, input, ldrFormat, translucent);
-            if (useFXAA) {
-                input = ppm.fxaa(fg, input, ldrFormat, translucent);
-            }
-            if (scaled) {
-                input = ppm.dynamicScaling(fg, input, ldrFormat, vp);
-            }
-
-            fg.moveResource(output, input);
-            fg.present(output);
-
-            fg.compile();
-            //fg.export_graphviz(slog.d);
-            fg.execute(driver);
-
-            rtp.put(colorTarget);
-
-        } else {
-
-            ppm.start();
-
-            const bool translucent = mSwapChain->isTransparent();
-            Handle<HwProgram> toneMappingProgram = engine.getPostProcessProgram(
-                    translucent ? PostProcessStage::TONE_MAPPING_TRANSLUCENT
-                                : PostProcessStage::TONE_MAPPING_OPAQUE);
-            ppm.pass(useFXAA ? TextureFormat::RGBA8 : ldrFormat, toneMappingProgram);
-
-            if (useFXAA) {
-                Handle<HwProgram> antiAliasingProgram = engine.getPostProcessProgram(
-                        translucent ? PostProcessStage::ANTI_ALIASING_TRANSLUCENT
-                                    : PostProcessStage::ANTI_ALIASING_OPAQUE);
-                ppm.pass(ldrFormat, antiAliasingProgram);
-            }
-
-            if (scaled) {
-                // because it's the last command, the TextureFormat is not relevant
-                ppm.blit();
-            }
-            ppm.finish(view.getDiscardedTargetBuffers(), viewRenderTarget, vp, colorTarget, svp);
-
+        input = ppm.toneMapping(fg, input, ldrFormat, translucent);
+        if (useFXAA) {
+            input = ppm.fxaa(fg, input, ldrFormat, translucent);
         }
-
-        driver.popGroupMarker();
+        if (scaled) {
+            input = ppm.dynamicScaling(fg, input, ldrFormat);
+        }
     }
+
+    fg.present(input);
+
+    fg.moveResource(output, input);
+
+    fg.compile();
+    //fg.export_graphviz(slog.d);
+    fg.execute(driver);
 
     // for debugging
     recordHighWatermark(commands);

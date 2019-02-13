@@ -17,20 +17,13 @@
 #ifndef TNT_FILAMENT_POSTPROCESS_MANAGER_H
 #define TNT_FILAMENT_POSTPROCESS_MANAGER_H
 
-#include "RenderTargetPool.h"
-
 #include "UniformBuffer.h"
+
+#include "driver/DriverApiForward.h"
 
 #include "fg/FrameGraphResource.h"
 
-#include "driver/DriverApiForward.h"
-#include "driver/Handle.h"
-
-#include <filament/Viewport.h>
-
 #include <filament/driver/DriverEnums.h>
-
-#include <vector>
 
 namespace filament {
 
@@ -43,28 +36,8 @@ class PostProcessManager {
 public:
     void init(details::FEngine& engine) noexcept;
     void terminate(driver::DriverApi& driver) noexcept;
-    void setSource(uint32_t viewportWidth, uint32_t viewportHeight, Handle <HwTexture> texture,
+    void setSource(uint32_t viewportWidth, uint32_t viewportHeight, Handle<HwTexture> texture,
             uint32_t textureWidth, uint32_t textureHeight) const noexcept;
-
-    // start() is a scam, it does nothing
-    void start() noexcept { }
-
-    // a fullscreen pass, using the given format as target and writing into the specified program
-    void pass(driver::TextureFormat format, Handle<HwProgram> program) noexcept;
-
-    // a blit pass, using the given format as target
-    void blit(driver::TextureFormat format = driver::TextureFormat::RGBA8) noexcept;
-
-    void finish(driver::TargetBufferFlags discarded,
-            Handle<HwRenderTarget> viewRenderTarget,
-            Viewport const& vp,
-            RenderTargetPool::Target const* linearTarget,
-            Viewport const& svp);
-
-
-    FrameGraphResource msaa(
-            FrameGraph& fg, FrameGraphResource input,
-            driver::TextureFormat outFormat) noexcept;
 
     FrameGraphResource toneMapping(
             FrameGraph& fg, FrameGraphResource input, driver::TextureFormat outFormat,
@@ -75,19 +48,10 @@ public:
             bool translucent) noexcept;
 
     FrameGraphResource dynamicScaling(
-            FrameGraph& fg, FrameGraphResource input,
-            driver::TextureFormat outFormat, Viewport const& outViewport) noexcept;
-
+            FrameGraph& fg, FrameGraphResource input, driver::TextureFormat outFormat) noexcept;
 
 private:
     details::FEngine* mEngine = nullptr;
-
-    struct Command {
-        Handle<HwProgram> program = {};
-        driver::TextureFormat format;
-    };
-
-    std::vector<Command> mCommands;
 
     // we need only one of these
     mutable UniformBuffer mPostProcessUb;
