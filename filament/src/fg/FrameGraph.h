@@ -196,7 +196,7 @@ private:
     fg::PassNode& createPass(const char* name, FrameGraphPassExecutor* base) noexcept;
     fg::ResourceNode& createResource(const char* name,
             FrameGraphResource::Descriptor const& desc, bool imported) noexcept;
-    fg::ResourceNode* getResource(FrameGraphResource r);
+    fg::ResourceNode& getResource(FrameGraphResource r);
 
     fg::RenderTarget& createRenderTarget(const char* name,
             FrameGraphRenderTarget::Descriptor const& desc, bool imported) noexcept;
