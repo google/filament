@@ -333,13 +333,10 @@ struct PassNode { // 200
     }
 
     FrameGraphResource read(FrameGraph& fg, FrameGraphResource const& handle, bool isRenderTarget = false) {
-        ResourceNode* const pNode = fg.getResource(handle);
-        if (!pNode) {
-            return {};
-        }
+        ResourceNode const& node = fg.getResource(handle);
 
         if (!isRenderTarget) {
-            pNode->resource->needsTexture = true;
+            node.resource->needsTexture = true;
         }
 
         // don't allow multiple reads of the same resource -- it's just redundant.
@@ -362,10 +359,7 @@ struct PassNode { // 200
     }
 
     FrameGraphResource write(FrameGraph& fg, const FrameGraphResource& handle) {
-        ResourceNode const* pNode = fg.getResource(handle);
-        if (!pNode) {
-            return {};
-        }
+        ResourceNode const& node = fg.getResource(handle);
 
         // don't allow multiple writes of the same resource -- it's just redundant.
         auto pos = std::find_if(writes.begin(), writes.end(),
@@ -388,16 +382,16 @@ struct PassNode { // 200
          *
          */
 
-        ++pNode->resource->version;
+        ++node.resource->version;
 
         // writing to an imported resource should count as a side-effect
-        if (pNode->resource->imported) {
+        if (node.resource->imported) {
             hasSideEffect = true;
         }
 
         auto& resourceNodes = fg.mResourceNodes;
         size_t index = resourceNodes.size();
-        resourceNodes.emplace_back(pNode->resource, pNode->resource->version);
+        resourceNodes.emplace_back(node.resource, node.resource->version);
         FrameGraphResource r{ (uint16_t)index };
 
         // record the write
@@ -516,10 +510,10 @@ FrameGraph::Builder::Attachments FrameGraph::Builder::useRenderTarget(const char
         const size_t index = &attachment - desc.attachments.textures.data();
         if (attachment.isValid()) {
 
-            ResourceNode* r = fg.getResource(attachment);
-            uint8_t usage = r->resource->usage;
+            ResourceNode& node = fg.getResource(attachment);
+            uint8_t usage = node.resource->usage;
             usage |= usages[index];
-            r->resource->usage = TextureUsage(usage);
+            node.resource->usage = TextureUsage(usage);
 
             rt.textures[index] = mPass.useRenderTarget(fg, attachment);
         }
@@ -529,9 +523,8 @@ FrameGraph::Builder::Attachments FrameGraph::Builder::useRenderTarget(const char
 
 FrameGraph::Builder::Attachments FrameGraph::Builder::useRenderTarget(
         FrameGraphResource texture, TargetBufferFlags clearFlags) noexcept {
-    ResourceNode* pResourceNode = mFrameGraph.getResource(texture);
-    assert(pResourceNode);
-    Resource* pResource = pResourceNode->resource;
+    ResourceNode& resourceNode = mFrameGraph.getResource(texture);
+    Resource* pResource = resourceNode.resource;
     assert(pResource);
     FrameGraphRenderTarget::Descriptor desc {
         .attachments.color = texture,
@@ -588,7 +581,7 @@ FrameGraphPassResources::getRenderTarget(FrameGraphResource r) const noexcept {
     // TODO: for cubemaps/arrays, we'll need to be able to specifyt he face/index
 
     for (RenderTarget const* renderTarget : mPass.renderTargets) {
-        auto& desc = renderTarget->desc;
+        auto const& desc = renderTarget->desc;
         auto pos = std::find_if(
                 desc.attachments.textures.begin(),
                 desc.attachments.textures.end(),
@@ -610,7 +603,7 @@ FrameGraphPassResources::getRenderTarget(FrameGraphResource r) const noexcept {
     // check that this FrameGraphRenderTarget is indeed declared by this pass
     ASSERT_POSTCONDITION_NON_FATAL(info.target,
             "Pass \"%s\" doesn't declare a rendertarget using \"%s\" -- expect graphic corruptions",
-            mPass.name, fg.getResource(r)->resource->name);
+            mPass.name, fg.getResource(r).resource->name);
     
 //    slog.d << mPass.name << ": resource = \"" << renderTarget.name << "\", flags = "
 //        << io::hex
@@ -698,30 +691,25 @@ ResourceNode& FrameGraph::createResource(const char* name,
     return resourceNodes.back();
 }
 
-ResourceNode* FrameGraph::getResource(FrameGraphResource r) {
+ResourceNode& FrameGraph::getResource(FrameGraphResource r) {
     auto& resourceNodes = mResourceNodes;
 
-    if (!ASSERT_POSTCONDITION_NON_FATAL(r.isValid(), "using an uninitialized resource handle")) {
-        return nullptr;
-    }
+    ASSERT_POSTCONDITION(r.isValid(), "using an uninitialized resource handle");
 
     assert(r.index < resourceNodes.size());
     ResourceNode& node = resourceNodes[r.index];
     assert(node.resource);
 
-    if (!ASSERT_POSTCONDITION_NON_FATAL(node.resource->version == node.version,
+    ASSERT_POSTCONDITION(node.resource->version == node.version,
             "using an invalid resource handle (version=%u) for resource=\"%s\" (id=%u, version=%u)",
-            node.resource->version, node.resource->name, node.resource->id, node.version)) {
-        return nullptr;
-    }
+            node.resource->version, node.resource->name, node.resource->id, node.version);
 
-    return &node;
+    return node;
 }
 FrameGraphResource::Descriptor* FrameGraph::getDescriptor(FrameGraphResource r) {
-    ResourceNode* node = getResource(r);
-    assert(node);
-    assert(node->resource);
-    return node ? &(node->resource->desc) : nullptr;
+    ResourceNode& node = getResource(r);
+    assert(node.resource);
+    return &(node.resource->desc);
 }
 
 bool FrameGraph::equals(FrameGraphRenderTarget::Descriptor const& lhs,
@@ -794,17 +782,20 @@ uint8_t FrameGraph::computeDiscardFlags(DiscardPhase phase,
             TargetBufferFlags::DEPTH,
             TargetBufferFlags::STENCIL };
 
+    auto const& desc = renderTarget.cache->desc;
+
     // for each pass...
     while (discardFlags && curr != first) {
         PassNode const& pass = *curr++;
         // TODO: maybe find a more efficient way of figuring this out
         // for each resource written or read...
         for (FrameGraphResource cur : ((phase == DiscardPhase::START) ? pass.writes : pass.reads)) {
-            // for all possible attachments...
+            // for all possible attachments of our renderTarget...
             Resource const* const pResource = resourceNodes[cur.index].resource;
-            for (FrameGraphResource const& attachment : renderTarget.desc.attachments.textures) {
-                if (resourceNodes[attachment.index].resource == pResource) {
-                    size_t index = &attachment - renderTarget.desc.attachments.textures.data();
+            for (FrameGraphResource const& attachment : desc.attachments.textures) {
+                if (attachment.isValid() && resourceNodes[attachment.index].resource == pResource) {
+                    // we can't discard this attachment since it's read/written
+                    size_t index = &attachment - desc.attachments.textures.data();
                     discardFlags &= ~flags[index];
                 }
             }
