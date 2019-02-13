@@ -206,8 +206,8 @@ private:
             fg::PassNode const* curr, fg::PassNode const* first,
             fg::RenderTarget const& renderTarget);
 
-    bool equals(FrameGraphRenderTarget::Descriptor const& rhs,
-            FrameGraphRenderTarget::Descriptor const& lhs) const noexcept;
+    bool equals(FrameGraphRenderTarget::Descriptor const& lhs,
+            FrameGraphRenderTarget::Descriptor const& rhs) const noexcept;
 
     details::LinearAllocatorArena mArena;
     Vector<fg::PassNode> mPassNodes;                    // list of frame graph passes

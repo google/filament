@@ -119,9 +119,9 @@ struct RenderTargetResource final : public VirtualResource {  // 104
     RenderTargetResource(
             FrameGraphRenderTarget::Descriptor const& desc, bool imported,
             TargetBufferFlags targets,
-            uint32_t width, uint32_t height, uint8_t samples, TextureFormat format)
+            uint32_t width, uint32_t height, TextureFormat format)
             : desc(desc), imported(imported),
-              attachments(targets), samples(samples), format(format), width(width), height(height)  {
+              attachments(targets), format(format), width(width), height(height)  {
         targetInfo.params.left   = desc.viewport.left;
         targetInfo.params.bottom = desc.viewport.bottom;
         targetInfo.params.width  = desc.viewport.width;
@@ -144,7 +144,6 @@ struct RenderTargetResource final : public VirtualResource {  // 104
 
     // render target creation info
     TargetBufferFlags attachments;
-    uint8_t samples;
     TextureFormat format;
     uint32_t width;
     uint32_t height;
@@ -218,7 +217,9 @@ struct RenderTarget { // 32
 
         // find a matching rendertarget
         auto pos = std::find_if(renderTargetCache.begin(), renderTargetCache.end(),
-                [this, &fg](auto const& rt) { return fg.equals(rt->desc, desc); });
+                [this, &fg](auto const& rt) {
+                    return fg.equals(rt->desc, desc);
+                });
 
         if (pos != renderTargetCache.end()) {
             cache = pos->get();
@@ -299,8 +300,7 @@ struct RenderTarget { // 32
                 // create the cache entry
                 RenderTargetResource* pRenderTargetResource =
                         fg.mArena.make<RenderTargetResource>(desc, imported,
-                                TargetBufferFlags(attachments), width, height, desc.samples,
-                                colorFormat);
+                                TargetBufferFlags(attachments), width, height, colorFormat);
                 renderTargetCache.emplace_back(pRenderTargetResource, fg);
                 cache = pRenderTargetResource;
                 cache->targetInfo.params.clear |= userTargetFlags.clear;
@@ -724,15 +724,23 @@ FrameGraphResource::Descriptor* FrameGraph::getDescriptor(FrameGraphResource r) 
     return node ? &(node->resource->desc) : nullptr;
 }
 
-bool FrameGraph::equals(FrameGraphRenderTarget::Descriptor const& rhs,
-        FrameGraphRenderTarget::Descriptor const& lhs) const noexcept {
+bool FrameGraph::equals(FrameGraphRenderTarget::Descriptor const& lhs,
+        FrameGraphRenderTarget::Descriptor const& rhs) const noexcept {
+    const Vector<filament::fg::ResourceNode>& resourceNodes = mResourceNodes;
     return std::equal(
-            rhs.attachments.textures.begin(), rhs.attachments.textures.end(),
             lhs.attachments.textures.begin(), lhs.attachments.textures.end(),
-            [this](FrameGraphResource lhs, FrameGraphResource rhs) {
-                return (lhs.index == rhs.index) ||
-                       (mResourceNodes[lhs.index].resource == mResourceNodes[rhs.index].resource);
-            }) && rhs.samples == lhs.samples;
+            rhs.attachments.textures.begin(), rhs.attachments.textures.end(),
+            [&resourceNodes](FrameGraphResource lhs, FrameGraphResource rhs) {
+                if (lhs.index == rhs.index) {
+                    // obviously resources match if they're the same
+                    return true;
+                }
+                if (resourceNodes[lhs.index].resource == resourceNodes[rhs.index].resource) {
+                    // they also match if they're the same concrete resource
+                    return true;
+                }
+                return false;
+            }) && lhs.samples == rhs.samples;
 }
 
 FrameGraphResource FrameGraph::importResource(const char* name,
@@ -756,7 +764,7 @@ FrameGraphResource FrameGraph::importResource(const char* name,
     // Populate the cache with a RenderTargetResource
     // create a cache entry
     RenderTargetResource* pRenderTargetResource = mArena.make<RenderTargetResource>(descriptor, true,
-            TargetBufferFlags::COLOR, width, height, descriptor.samples, TextureFormat{});
+            TargetBufferFlags::COLOR, width, height, TextureFormat{});
     pRenderTargetResource->targetInfo.target = target;
     mRenderTargetCache.emplace_back(pRenderTargetResource, *this);
 
