@@ -94,6 +94,8 @@ ISSUE_CMAKE_ALWAYS=false
 
 RUN_TESTS=false
 
+WEB_DOCS_OPTION="-DGENERATE_WEB_DOCS=OFF"
+
 ENABLE_JAVA=ON
 
 INSTALL_COMMAND=
@@ -231,6 +233,7 @@ function build_webgl_with_target {
             -DCMAKE_BUILD_TYPE=$1 \
             -DCMAKE_INSTALL_PREFIX=../webgl-${LC_TARGET}/filament \
             -DWEBGL=1 \
+            $WEB_DOCS_OPTION \
             ../..
         ${BUILD_COMMAND} ${BUILD_TARGETS}
         )
@@ -587,6 +590,7 @@ while getopts ":hacfijmp:tuvsl" opt; do
         a)
             ISSUE_ARCHIVES=true
             INSTALL_COMMAND=install
+            WEB_DOCS_OPTION="-DGENERATE_WEB_DOCS=ON"
             ;;
         c)
             ISSUE_CLEAN=true
