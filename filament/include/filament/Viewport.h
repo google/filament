@@ -43,11 +43,8 @@ public:
     /*
      * Create a Viewport from its left-bottom coordinates and size in pixels
      */
-    Viewport(int32_t left, int32_t bottom, uint32_t width, uint32_t height) noexcept {
-        this->left = left;
-        this->bottom = bottom;
-        this->width = width;
-        this->height = height;
+    Viewport(int32_t left, int32_t bottom, uint32_t width, uint32_t height) noexcept
+            : driver::Viewport{ left, bottom, width, height } {
     }
 
     bool empty() const noexcept { return !width || !height; }
