@@ -220,8 +220,9 @@ void FTexture::generateMipmaps(FEngine& engine) const noexcept {
             uint32_t dsth = std::max(srch >> 1, 1u);
             dstrth = driver.createRenderTarget(TargetBufferFlags::COLOR, dstw, dsth, mSampleCount,
                     mFormat, { mHandle, level++, layer }, {}, {});
-            driver.blit(TargetBufferFlags::COLOR, dstrth, 0, 0, dstw, dsth, srcrth, 0, 0,
-                    srcw, srch);
+            driver.blit(TargetBufferFlags::COLOR,
+                    dstrth, { 0, 0, dstw, dsth },
+                    srcrth, { 0, 0, srcw, srch });
             driver.destroyRenderTarget(srcrth);
             srcrth = dstrth;
             srcw = dstw;

@@ -92,9 +92,9 @@ void PostProcessManager::pass(driver::TextureFormat format, Handle<HwProgram> pr
 
 void PostProcessManager::finish(driver::TargetBufferFlags discarded,
         Handle<HwRenderTarget> viewRenderTarget,
-        Viewport const& vp,
+        filament::Viewport const& vp,
         RenderTargetPool::Target const* previous,
-        Viewport const& svp) {
+        filament::Viewport const& svp) {
 
     assert(viewRenderTarget);
     assert(previous);
@@ -117,13 +117,13 @@ void PostProcessManager::finish(driver::TargetBufferFlags discarded,
     pipeline.rasterState.depthFunc = Driver::RasterState::DepthFunc::A;
 
     RenderPassParams params = {};
-    params.discardStart = TargetBufferFlags::ALL;
-    params.discardEnd = TargetBufferFlags::DEPTH_AND_STENCIL;
-    params.left = 0;
-    params.bottom = 0;
-    params.width = svp.width;
-    params.height = svp.height;
-    params.dependencies = RenderPassParams::DEPENDENCY_BY_REGION;
+    params.flags.discardStart = TargetBufferFlags::ALL;
+    params.flags.discardEnd = TargetBufferFlags::DEPTH_AND_STENCIL;
+    params.flags.dependencies = RenderPassFlags::DEPENDENCY_BY_REGION;
+    params.viewport.left = 0;
+    params.viewport.bottom = 0;
+    params.viewport.width = svp.width;
+    params.viewport.height = svp.height;
 
     for (size_t i = 0, c = commands.size() - 1; i < c; i++) {
         // if the next command is a blit, it we don't need a texture
@@ -137,7 +137,7 @@ void PostProcessManager::finish(driver::TargetBufferFlags discarded,
 
         if (commands[i].program) {
             // set the source for this pass (i.e. previous target)
-            setSource(params.width, params.height, previous->texture, previous->w, previous->h);
+            setSource(params.viewport.width, params.viewport.height, previous->texture, previous->w, previous->h);
 
             // draw a full screen triangle
             pipeline.program = commands[i].program;
@@ -146,8 +146,8 @@ void PostProcessManager::finish(driver::TargetBufferFlags discarded,
             driver.endRenderPass();
         } else {
             driver.blit(TargetBufferFlags::COLOR,
-                    target->target, 0, 0, svp.width, svp.height,
-                    previous->target, 0, 0, svp.width, svp.height);
+                    target->target, { 0, 0, svp.width, svp.height },
+                    previous->target, { 0, 0, svp.width, svp.height });
         }
         // return the previous target to the pool
         rtp.put(previous);
@@ -160,14 +160,14 @@ void PostProcessManager::finish(driver::TargetBufferFlags discarded,
     // The last command is special, it always draw to the viewRenderTarget and uses
     // the non scaled viewport.
     if (commands.back().program) {
-        params.discardStart = discarded;
-        params.discardEnd = TargetBufferFlags::DEPTH_AND_STENCIL;
-        params.left = vp.left;
-        params.bottom = vp.bottom;
-        params.width = vp.width;
-        params.height = vp.height;
+        params.flags.discardStart = discarded;
+        params.flags.discardEnd = TargetBufferFlags::DEPTH_AND_STENCIL;
+        params.viewport.left = vp.left;
+        params.viewport.bottom = vp.bottom;
+        params.viewport.width = vp.width;
+        params.viewport.height = vp.height;
 
-        setSource(params.width, params.height, previous->texture, previous->w, previous->h);
+        setSource(params.viewport.width, params.viewport.height, previous->texture, previous->w, previous->h);
         pipeline.program = commands.back().program;
         driver.beginRenderPass(viewRenderTarget, params);
         driver.draw(pipeline, fullScreenRenderPrimitive);
@@ -175,8 +175,8 @@ void PostProcessManager::finish(driver::TargetBufferFlags discarded,
 
     } else {
         driver.blit(TargetBufferFlags::COLOR,
-                viewRenderTarget, vp.left, vp.bottom, vp.width, vp.height,
-                previous->target, 0, 0, svp.width, svp.height);
+                viewRenderTarget, { vp.left, vp.bottom, vp.width, vp.height },
+                previous->target, { 0, 0, svp.width, svp.height });
     }
 
     rtp.put(previous);
@@ -213,10 +213,8 @@ FrameGraphResource PostProcessManager::msaa(FrameGraph& fg,
                     PostProcessMSAA const& data, DriverApi& driver) {
                 auto in = resources.getRenderTarget(data.input);
                 auto out = resources.getRenderTarget(data.output);
-                auto const& desc = resources.getDescriptor(data.input);
                 driver.blit(TargetBufferFlags::COLOR,
-                        out.target, 0, 0, desc.width, desc.height,
-                        in.target, 0, 0, desc.width, desc.height);
+                        out.target, out.params.viewport, in.target, in.params.viewport);
             });
 
     return ppMSAA.getData().output;
@@ -324,7 +322,7 @@ FrameGraphResource PostProcessManager::fxaa(FrameGraph& fg,
 
 FrameGraphResource PostProcessManager::dynamicScaling(FrameGraph& fg,
         FrameGraphResource input, driver::TextureFormat outFormat,
-        Viewport const& outViewport) noexcept {
+        filament::Viewport const& outViewport) noexcept {
 
     struct PostProcessScaling {
         FrameGraphResource input;
@@ -348,11 +346,8 @@ FrameGraphResource PostProcessManager::dynamicScaling(FrameGraph& fg,
                     PostProcessScaling const& data, DriverApi& driver) {
                 auto in = resources.getRenderTarget(data.input);
                 auto out = resources.getRenderTarget(data.output);
-                auto const& inDesc = resources.getDescriptor(data.input);
                 driver.blit(TargetBufferFlags::COLOR,
-                        out.target, outViewport.left, outViewport.bottom, outViewport.width,
-                        outViewport.height,
-                        in.target, 0, 0, inDesc.width, inDesc.height);
+                        out.target, out.params.viewport, in.target, in.params.viewport);
             });
 
     return ppScaling.getData().output;

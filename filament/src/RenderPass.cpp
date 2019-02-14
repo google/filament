@@ -48,7 +48,7 @@ void RenderPass::render(
         FEngine& engine, JobSystem& js,
         FScene& scene, Range<uint32_t> vr,
         uint32_t commandTypeFlags, RenderFlags renderFlags,
-        const CameraInfo& camera, Viewport const& viewport,
+        const CameraInfo& camera, filament::Viewport const& viewport,
         GrowingSlice<Command>& commands) noexcept {
 
     SYSTRACE_CONTEXT();
@@ -490,7 +490,7 @@ FRenderer::ColorPass::ColorPass(const char* name,
 }
 
 void FRenderer::ColorPass::beginRenderPass(
-        driver::DriverApi& driver, Viewport const& viewport, const CameraInfo& camera) noexcept {
+        driver::DriverApi& driver, filament::Viewport const& viewport, const CameraInfo& camera) noexcept {
     // wait for froxelization to finish
     // (this could even be a special command between the depth and color passes)
     js.waitAndRelease(jobFroxelize);
@@ -498,11 +498,8 @@ void FRenderer::ColorPass::beginRenderPass(
 
     // We won't need the depth or stencil buffers after this pass.
     RenderPassParams params = {};
-    params.discardEnd = TargetBufferFlags::DEPTH_AND_STENCIL;
-    params.left = viewport.left;
-    params.bottom = viewport.bottom;
-    params.width = viewport.width;
-    params.height = viewport.height;
+    params.flags.discardEnd = TargetBufferFlags::DEPTH_AND_STENCIL;
+    params.viewport = viewport;
     params.clearColor = view.getClearColor();
     params.clearDepth = 1.0;
 
@@ -513,28 +510,28 @@ void FRenderer::ColorPass::beginRenderPass(
         // since it's akin to a drawing command.
         // Also, all buffers can be invalidated before rendering.
         if (view.getClearTargetColor()) {
-            params.clear = TargetBufferFlags::ALL;
+            params.flags.clear = TargetBufferFlags::ALL;
         } else {
-            params.clear = TargetBufferFlags::DEPTH_AND_STENCIL;
+            params.flags.clear = TargetBufferFlags::DEPTH_AND_STENCIL;
         }
-        params.discardStart = TargetBufferFlags::ALL;
+        params.flags.discardStart = TargetBufferFlags::ALL;
         driver.beginRenderPass(rth, params);
     } else {
-        params.discardStart = view.getDiscardedTargetBuffers();
+        params.flags.discardStart = view.getDiscardedTargetBuffers();
         if (view.getClearTargetColor()) {
-            params.clear |= TargetBufferFlags::COLOR;
+            params.flags.clear |= TargetBufferFlags::COLOR;
         }
         if (view.getClearTargetDepth()) {
-            params.clear |= TargetBufferFlags::DEPTH;
+            params.flags.clear |= TargetBufferFlags::DEPTH;
         }
         if (view.getClearTargetStencil()) {
-            params.clear |= TargetBufferFlags::STENCIL;
+            params.flags.clear |= TargetBufferFlags::STENCIL;
         }
         driver.beginRenderPass(rth, params);
     }
 }
 
-void FRenderer::ColorPass::endRenderPass(DriverApi& driver, Viewport const& viewport) noexcept {
+void FRenderer::ColorPass::endRenderPass(DriverApi& driver, filament::Viewport const& viewport) noexcept {
     driver.endRenderPass();
 
     // and we don't need the color buffer in the areas we don't use
@@ -550,7 +547,7 @@ void FRenderer::ColorPass::endRenderPass(DriverApi& driver, Viewport const& view
 
 void FRenderer::ColorPass::renderColorPass(FEngine& engine,
         JobSystem& js, JobSystem::Job* sync,
-        Handle<HwRenderTarget> const rth, FView& view, Viewport const& scaledViewport,
+        Handle<HwRenderTarget> const rth, FView& view, filament::Viewport const& scaledViewport,
         GrowingSlice<Command>& commands) noexcept {
 
     CameraInfo const& cameraInfo = view.getCameraInfo();
@@ -602,7 +599,8 @@ FRenderer::ShadowPass::ShadowPass(const char* name,
         : RenderPass(name), shadowMap(shadowMap) {
 }
 
-void FRenderer::ShadowPass::beginRenderPass(driver::DriverApi& driver, Viewport const&, const CameraInfo&) noexcept {
+void FRenderer::ShadowPass::beginRenderPass(driver::DriverApi& driver,
+        filament::Viewport const&, const CameraInfo&) noexcept {
     shadowMap.beginRenderPass(driver);
 }
 
@@ -612,7 +610,7 @@ void FRenderer::ShadowPass::renderShadowMap(FEngine& engine, JobSystem& js,
     auto& soa = view.getScene()->getRenderableData();
     auto vr = view.getVisibleShadowCasters();
     ShadowMap const& shadowMap = view.getShadowMap();
-    Viewport const& viewport = shadowMap.getViewport();
+    filament::Viewport const& viewport = shadowMap.getViewport();
     FCamera const& camera = shadowMap.getCamera();
 
     CameraInfo cameraInfo = {
@@ -639,11 +637,13 @@ void FRenderer::ShadowPass::renderShadowMap(FEngine& engine, JobSystem& js,
 
     ShadowPass shadowPass("ShadowPass", shadowMap);
     driver.pushGroupMarker("Shadow map Pass");
-    shadowPass.render(engine, js, *view.getScene(), vr, CommandTypeFlags::SHADOW, flags, cameraInfo, viewport, commands);
+    shadowPass.render(engine, js, *view.getScene(), vr,
+            CommandTypeFlags::SHADOW, flags, cameraInfo, viewport, commands);
     driver.popGroupMarker();
 }
 
-void FRenderer::ShadowPass::endRenderPass(DriverApi& driver, Viewport const& viewport) noexcept {
+void FRenderer::ShadowPass::endRenderPass(DriverApi& driver,
+        filament::Viewport const& viewport) noexcept {
     driver.endRenderPass();
 }
 

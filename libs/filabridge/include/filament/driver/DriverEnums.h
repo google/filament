@@ -77,32 +77,40 @@ enum BufferUsage : uint8_t {
  * Selects which buffers to clear at the beginning of the render pass, as well as which buffers
  * can be discarded and the beginning and end of the render pass.
  */
-struct RenderPassParams {
-    // RenderPass flags are 4 bytes.  The first three are buffer selections composed from
-    // TargetBufferFlags. The last byte is an optional dependency hint (used only for Vulkan).
-    union {
-        struct {
-            uint8_t clear;
-            uint8_t discardStart;
-            uint8_t discardEnd;
-            uint8_t dependencies;
-        };
-        uint32_t flags = 0;
-    };
-    static constexpr uint8_t DEPENDENCY_BY_REGION = 1; // see "framebuffer-local" in Vulkan spec.
-    // Viewport (16 bytes)
+
+struct Viewport {
     int32_t left = 0;
     int32_t bottom = 0;
     uint32_t width = 0;
     uint32_t height = 0;
+};
+
+struct RenderPassFlags {
+    uint8_t clear;
+    uint8_t discardStart;
+    uint8_t discardEnd;
+    uint8_t dependencies;
+
+    static constexpr uint8_t DEPENDENCY_BY_REGION = 1; // see "framebuffer-local" in Vulkan spec.
+
+    // Extra RenderPass-only flags stashed in the "clear" field.
+    static const uint8_t IGNORE_SCISSOR = 0x10;
+    static const uint8_t IGNORE_VIEWPORT = 0x20;
+};
+
+struct RenderPassParams {
+    // RenderPass flags are 4 bytes.  The first three are buffer selections composed from
+    // TargetBufferFlags. The last byte is an optional dependency hint (used only for Vulkan).
+    RenderPassFlags flags;
+
+    // Viewport (16 bytes)
+    Viewport viewport;
+
     // Clear values (32 bytes)
     filament::math::float4 clearColor = {};
     double clearDepth = 1.0;
     uint32_t clearStencil = 0;
     uint32_t reserved1 = 0;
-    // Extra RenderPass-only flags stashed in the "clear" field.
-    static const uint8_t IGNORE_SCISSOR = 0x10;
-    static const uint8_t IGNORE_VIEWPORT = 0x20;
 };
 
 /**

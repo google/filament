@@ -134,7 +134,7 @@ void Froxelizer::setOptions(float zLightNear, float zLightFar) noexcept {
 }
 
 
-void Froxelizer::setViewport(Viewport const& viewport) noexcept {
+void Froxelizer::setViewport(filament::Viewport const& viewport) noexcept {
     if (UTILS_UNLIKELY(mViewport != viewport)) {
         mViewport = viewport;
         mDirtyFlags |= VIEWPORT_CHANGED;
@@ -150,7 +150,7 @@ void Froxelizer::setProjection(const mat4f& projection, float near, float far) n
 }
 
 bool Froxelizer::prepare(
-        FEngine::DriverApi& driverApi, ArenaScope& arena, Viewport const& viewport,
+        FEngine::DriverApi& driverApi, ArenaScope& arena, filament::Viewport const& viewport,
         const filament::math::mat4f& projection, float projectionNear, float projectionFar) noexcept {
     setViewport(viewport);
     setProjection(projection, projectionNear, projectionFar);
@@ -206,7 +206,7 @@ bool Froxelizer::prepare(
 
 void Froxelizer::computeFroxelLayout(
         uint2* dim, uint16_t* countX, uint16_t* countY, uint16_t* countZ,
-        Viewport const& viewport) noexcept {
+        filament::Viewport const& viewport) noexcept {
 
     if (SUPPORTS_NON_SQUARE_FROXELS == false) {
         // calculate froxel dimension from FROXEL_BUFFER_ENTRY_COUNT_MAX and viewport
@@ -250,7 +250,7 @@ UTILS_NOINLINE
 bool Froxelizer::update() noexcept {
     bool uniformsNeedUpdating = false;
     if (UTILS_UNLIKELY(mDirtyFlags & VIEWPORT_CHANGED)) {
-        Viewport const& viewport = mViewport;
+        filament::Viewport const& viewport = mViewport;
 
         uint2 froxelDimension;
         uint16_t froxelCountX, froxelCountY, froxelCountZ;

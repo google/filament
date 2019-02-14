@@ -95,7 +95,7 @@ void FView::terminate(FEngine& engine) {
     mFroxelizer.terminate(driver);
 }
 
-void FView::setViewport(Viewport const& viewport) noexcept {
+void FView::setViewport(filament::Viewport const& viewport) noexcept {
     mViewport = viewport;
 }
 
@@ -316,7 +316,7 @@ void FView::prepareShadowing(FEngine& engine, driver::DriverApi& driver,
 }
 
 void FView::prepareLighting(FEngine& engine, FEngine::DriverApi& driver, ArenaScope& arena,
-        Viewport const& viewport) noexcept {
+        filament::Viewport const& viewport) noexcept {
     SYSTRACE_CALL();
 
     UniformBuffer& u = getUb();
@@ -398,7 +398,7 @@ void FView::prepareLighting(FEngine& engine, FEngine::DriverApi& driver, ArenaSc
 }
 
 void FView::prepare(FEngine& engine, driver::DriverApi& driver, ArenaScope& arena,
-        Viewport const& viewport, filament::math::float4 const& userTime) noexcept {
+        filament::Viewport const& viewport, filament::math::float4 const& userTime) noexcept {
     JobSystem& js = engine.getJobSystem();
 
     /*
@@ -592,7 +592,7 @@ UTILS_NOINLINE
     });
 }
 
-void FView::prepareCamera(const CameraInfo& camera, const Viewport& viewport) const noexcept {
+void FView::prepareCamera(const CameraInfo& camera, const filament::Viewport& viewport) const noexcept {
     SYSTRACE_CALL();
 
     const mat4f viewFromWorld(camera.view);
@@ -782,11 +782,11 @@ Camera& View::getCamera() noexcept {
 }
 
 
-void View::setViewport(Viewport const& viewport) noexcept {
+void View::setViewport(filament::Viewport const& viewport) noexcept {
     upcast(this)->setViewport(viewport);
 }
 
-Viewport const& View::getViewport() const noexcept {
+filament::Viewport const& View::getViewport() const noexcept {
     return upcast(this)->getViewport();
 }
 

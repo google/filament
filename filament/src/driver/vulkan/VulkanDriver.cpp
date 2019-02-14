@@ -601,7 +601,10 @@ void VulkanDriver::beginRenderPass(Driver::RenderTargetHandle rth,
         .finalLayout = finalLayout,
         .colorFormat = color.format,
         .depthFormat = depth.format,
-        .flags.value = params.flags,
+        .flags.clear         = params.flags.clear,
+        .flags.discardStart  = params.flags.discardStart,
+        .flags.discardEnd    = params.flags.discardEnd,
+        .flags.dependencies  = params.flags.dependencies
     });
     mBinder.bindRenderPass(renderPass);
 
@@ -618,10 +621,10 @@ void VulkanDriver::beginRenderPass(Driver::RenderTargetHandle rth,
         .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
         .renderPass = renderPass,
         .framebuffer = mFramebufferCache.getFramebuffer(fbo, extent.width, extent.height),
-        .renderArea.offset.x = params.left,
-        .renderArea.offset.y = params.bottom,
-        .renderArea.extent.width = params.width,
-        .renderArea.extent.height = params.height,
+        .renderArea.offset.x = params.viewport.left,
+        .renderArea.offset.y = params.viewport.bottom,
+        .renderArea.extent.width = params.viewport.width,
+        .renderArea.extent.height = params.viewport.height,
     };
 
     rt->transformClientRectToPlatform(&renderPassInfo.renderArea);
@@ -641,8 +644,9 @@ void VulkanDriver::beginRenderPass(Driver::RenderTargetHandle rth,
     renderPassInfo.pClearValues = &clearValues[0];
 
     vkCmdBeginRenderPass(swapContext.cmdbuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-    if (!(params.clear & RenderPassParams::IGNORE_VIEWPORT)) {
-        viewport(params.left, params.bottom, params.width, params.height);
+    if (!(params.flags.clear & RenderPassFlags::IGNORE_VIEWPORT)) {
+        viewport(params.viewport.left, params.viewport.bottom,
+                params.viewport.width, params.viewport.height);
     }
 
     mContext.currentRenderPass = renderPassInfo;
@@ -811,10 +815,8 @@ void VulkanDriver::readStreamPixels(Driver::StreamHandle sh, uint32_t x, uint32_
 }
 
 void VulkanDriver::blit(TargetBufferFlags buffers,
-        Driver::RenderTargetHandle dst,
-        int32_t dstLeft, int32_t dstBottom, uint32_t dstWidth, uint32_t dstHeight,
-        Driver::RenderTargetHandle src,
-        int32_t srcLeft, int32_t srcBottom, uint32_t srcWidth, uint32_t srcHeight) {
+        Driver::RenderTargetHandle dst, driver::Viewport dstRect,
+        Driver::RenderTargetHandle src, driver::Viewport srcRect) {
     auto dstTarget = handle_cast<VulkanRenderTarget>(mHandleMap, dst);
     auto srcTarget = handle_cast<VulkanRenderTarget>(mHandleMap, src);
 
@@ -834,19 +836,19 @@ void VulkanDriver::blit(TargetBufferFlags buffers,
     }
 #endif
 
-    const int32_t srcRight = srcLeft + srcWidth;
-    const int32_t srcTop = srcBottom + srcHeight;
+    const int32_t srcRight = srcRect.left + srcRect.width;
+    const int32_t srcTop = srcRect.bottom + srcRect.height;
     const uint32_t srcLevel = srcTarget->getColorLevel();
 
-    const int32_t dstRight = dstLeft + dstWidth;
-    const int32_t dstTop = dstBottom + dstHeight;
+    const int32_t dstRight = dstRect.left + dstRect.width;
+    const int32_t dstTop = dstRect.bottom + dstRect.height;
     const uint32_t dstLevel = dstTarget->getColorLevel();
 
     const VkImageBlit blitRegions[1] = {{
         .srcSubresource = { VK_IMAGE_ASPECT_COLOR_BIT, srcLevel, 0, 1 },
-        .srcOffsets = { { srcLeft, srcBottom, 0 }, { srcRight, srcTop, 1 }},
+        .srcOffsets = { { srcRect.left, srcRect.bottom, 0 }, { srcRight, srcTop, 1 }},
         .dstSubresource = { VK_IMAGE_ASPECT_COLOR_BIT, dstLevel, 0, 1 },
-        .dstOffsets = { { dstLeft, dstBottom, 0 }, { dstRight, dstTop, 1 }}
+        .dstOffsets = { { dstRect.left, dstRect.bottom, 0 }, { dstRight, dstTop, 1 }}
     }};
 
     auto vkblit = [=](VkCommandBuffer cmdbuffer) {

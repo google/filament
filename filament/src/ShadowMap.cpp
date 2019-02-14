@@ -116,14 +116,14 @@ void ShadowMap::terminate(DriverApi& driverApi) noexcept {
 
 void ShadowMap::beginRenderPass(DriverApi& driver) const noexcept {
     RenderPassParams params = {};
-    params.clear = TargetBufferFlags::SHADOW;
-    params.discardStart = TargetBufferFlags::DEPTH;
-    params.discardEnd = TargetBufferFlags::COLOR_AND_STENCIL;
+    params.flags.clear = TargetBufferFlags::SHADOW;
+    params.flags.discardStart = TargetBufferFlags::DEPTH;
+    params.flags.discardEnd = TargetBufferFlags::COLOR_AND_STENCIL;
     params.clearDepth = 1.0;
-    params.width = params.height = mShadowMapDimension;
+    params.viewport.width = params.viewport.height = mShadowMapDimension;
     // Disable scissor and viewport to avoid bugs in some drivers where the GPU memory is reloaded
     // needlessly.
-    params.clear |= RenderPassParams::IGNORE_SCISSOR | RenderPassParams::IGNORE_VIEWPORT;
+    params.flags.clear |= RenderPassFlags::IGNORE_SCISSOR | RenderPassFlags::IGNORE_VIEWPORT;
     driver.beginRenderPass(mShadowMapRenderTarget, params);
 
     driver.viewport(mViewport.left, mViewport.bottom,
