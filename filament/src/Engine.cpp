@@ -678,7 +678,7 @@ inline void FEngine::destroy(const FMaterial* ptr) {
     if (ptr != nullptr) {
         auto pos = mMaterialInstances.find(ptr);
         if (pos != mMaterialInstances.cend()) {
-            // we've destroyed the material before destroying all its instances
+            // ensure we've destroyed all instances before destroying the material
             if (!ASSERT_PRECONDITION_NON_FATAL(pos->second.empty(),
                     "destroying material \"%s\" but %u instances still alive",
                     ptr->getName().c_str(), (*pos).second.size())) {
