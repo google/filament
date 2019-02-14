@@ -21,10 +21,10 @@ cd github\filament
 
 :: If this is a continuous or release build, build all Filament static library
 :: variants (/MD, /MDd, /MT, /MTd)
-if %KOKORO_JOB_TYPE% == CONTINUOUS_INTEGRATION (set FILAMENT_BUILD_ALL_VARIANTS=1)
-if %KOKORO_JOB_TYPE% == RELEASE (set FILAMENT_BUILD_ALL_VARIANTS=1)
+if "%KOKORO_JOB_TYPE%" == "CONTINUOUS_INTEGRATION" (set FILAMENT_BUILD_ALL_VARIANTS=1)
+if "%KOKORO_JOB_TYPE%" == "RELEASE" (set FILAMENT_BUILD_ALL_VARIANTS=1)
 
-if %FILAMENT_BUILD_ALL_VARIANTS% == 1 (
+if "%FILAMENT_BUILD_ALL_VARIANTS%" == "1" (
     echo KOKORO_JOB_TYPE is %KOKORO_JOB_TYPE%
     echo Building additional Filament static library variants.
 )
@@ -49,7 +49,7 @@ if errorlevel 1 exit /b %errorlevel%
 ninja install
 if errorlevel 1 exit /b %errorlevel%
 
-if %FILAMENT_BUILD_ALL_VARIANTS% == 1 (
+if "%FILAMENT_BUILD_ALL_VARIANTS%" == "1" (
     cd ..
     :: Build variants and copy them inside cmake-release\install
     call %~dp0variants.bat
