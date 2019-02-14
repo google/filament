@@ -217,7 +217,6 @@ void FEngine::init() {
             .build(*this));
 
     mPostProcessManager.init(*this);
-    mRenderTargetPool.init(*this);
     mLightManager.init(*this);
     mDFG.reset(new DFG(*this));
 
@@ -250,7 +249,6 @@ void FEngine::shutdown() {
      */
 
     mPostProcessManager.terminate(driver);  // free-up post-process manager resources
-    mRenderTargetPool.terminate(driver);    // free-up all offscreen render targets
     mDFG->terminate();                      // free-up the DFG
     mRenderableManager.terminate();         // free-up all renderables
     mLightManager.terminate();              // free-up all lights

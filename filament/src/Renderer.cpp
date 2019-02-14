@@ -393,7 +393,6 @@ void FRenderer::endFrame() {
 
     FEngine& engine = getEngine();
     FEngine::DriverApi& driver = engine.getDriverApi();
-    RenderTargetPool& rtp = engine.getRenderTargetPool();
 
     FrameInfoManager& frameInfoManager = mFrameInfoManager;
 
@@ -420,7 +419,6 @@ void FRenderer::endFrame() {
 
     auto job = js.runAndRetain(jobs::createJob(js, nullptr, &FEngine::gc, &engine)); // gc all managers
 
-    rtp.gc();           // gc post-processing targets (this can generate driver commands)
     engine.flush();     // flush command stream
 
     // make sure we're done with the gcs
