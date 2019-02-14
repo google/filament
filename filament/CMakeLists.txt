@@ -88,7 +88,6 @@ set(SRCS
         src/Renderer.cpp
         src/RenderPass.cpp
         src/RenderPrimitive.cpp
-        src/RenderTargetPool.cpp
         src/Scene.cpp
         src/ShadowMap.cpp
         src/Skybox.cpp
@@ -154,7 +153,6 @@ set(PRIVATE_HDRS
         src/MaterialParser.h
         src/PostProcessManager.h
         src/RenderPass.h
-        src/RenderTargetPool.h
         src/UniformBuffer.h
         src/upcast.h)
 
