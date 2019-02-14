@@ -86,10 +86,10 @@ struct Viewport {
 };
 
 struct RenderPassFlags {
-    uint8_t clear;
-    uint8_t discardStart;
-    uint8_t discardEnd;
-    uint8_t dependencies;
+    uint8_t clear = 0;
+    uint8_t discardStart = 0;
+    uint8_t discardEnd = 0;
+    uint8_t dependencies = 0;
 
     static constexpr uint8_t DEPENDENCY_BY_REGION = 1; // see "framebuffer-local" in Vulkan spec.
 
