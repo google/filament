@@ -79,17 +79,17 @@ enum BufferUsage : uint8_t {
  */
 
 struct Viewport {
-    int32_t left = 0;
-    int32_t bottom = 0;
-    uint32_t width = 0;
-    uint32_t height = 0;
+    int32_t left;
+    int32_t bottom;
+    uint32_t width;
+    uint32_t height;
 };
 
 struct RenderPassFlags {
-    uint8_t clear = 0;
-    uint8_t discardStart = 0;
-    uint8_t discardEnd = 0;
-    uint8_t dependencies = 0;
+    uint8_t clear;
+    uint8_t discardStart;
+    uint8_t discardEnd;
+    uint8_t dependencies;
 
     static constexpr uint8_t DEPENDENCY_BY_REGION = 1; // see "framebuffer-local" in Vulkan spec.
 
@@ -101,10 +101,10 @@ struct RenderPassFlags {
 struct RenderPassParams {
     // RenderPass flags are 4 bytes.  The first three are buffer selections composed from
     // TargetBufferFlags. The last byte is an optional dependency hint (used only for Vulkan).
-    RenderPassFlags flags;
+    RenderPassFlags flags{};
 
     // Viewport (16 bytes)
-    Viewport viewport;
+    Viewport viewport{};
 
     // Clear values (32 bytes)
     filament::math::float4 clearColor = {};
