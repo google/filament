@@ -385,11 +385,9 @@ void MetalDriver::readStreamPixels(Driver::StreamHandle sh, uint32_t x, uint32_t
 
 }
 
-void MetalDriver::blit(Driver::TargetBufferFlags buffers, Driver::RenderTargetHandle dst,
-        int32_t dstLeft, int32_t dstBottom, uint32_t dstWidth, uint32_t dstHeight,
-        Driver::RenderTargetHandle src, int32_t srcLeft, int32_t srcBottom, uint32_t srcWidth,
-        uint32_t srcHeight) {
-
+void MetalDriver::blit(Driver::TargetBufferFlags buffers,
+        Driver::RenderTargetHandle dst, driver::Viewport dstRect,
+        Driver::RenderTargetHandle src, driver::Viewport srcRect) {
 }
 
 void MetalDriver::draw(Driver::PipelineState ps, Driver::RenderPrimitiveHandle rph) {

@@ -599,7 +599,7 @@ void OpenGLDriver::polygonOffset(GLfloat factor, GLfloat units) noexcept {
     // if we're in the shadow-pass, the default polygon offset is factor = unit = 1
     // TODO: this should be controlled by filament, instead of being a feature of the driver
     if (factor == 0 && units == 0) {
-        TargetBufferFlags clearFlags = (TargetBufferFlags)mRenderPassParams.clear;
+        TargetBufferFlags clearFlags = (TargetBufferFlags)mRenderPassParams.flags.clear;
         if ((clearFlags & TargetBufferFlags::SHADOW) == TargetBufferFlags::SHADOW) {
             factor = units = 1.0f;
         }
@@ -1991,8 +1991,8 @@ void OpenGLDriver::beginRenderPass(Driver::RenderTargetHandle rth,
 
     mRenderPassTarget = rth;
     mRenderPassParams = params;
-    const TargetBufferFlags clearFlags = (TargetBufferFlags) params.clear;
-    const TargetBufferFlags discardFlags = (TargetBufferFlags) params.discardStart;
+    const TargetBufferFlags clearFlags = (TargetBufferFlags) params.flags.clear;
+    const TargetBufferFlags discardFlags = (TargetBufferFlags) params.flags.discardStart;
 
     GLRenderTarget* rt = handle_cast<GLRenderTarget*>(rth);
     if (UTILS_UNLIKELY(state.draw_fbo != rt->gl.fbo)) {
@@ -2010,11 +2010,12 @@ void OpenGLDriver::beginRenderPass(Driver::RenderTargetHandle rth,
         }
     }
 
-    if (!(clearFlags & RenderPassParams::IGNORE_VIEWPORT)) {
-        viewport(params.left, params.bottom, params.width, params.height);
+    if (!(clearFlags & RenderPassFlags::IGNORE_VIEWPORT)) {
+        viewport(params.viewport.left, params.viewport.bottom,
+                params.viewport.width, params.viewport.height);
     }
 
-    const bool respectScissor = !(clearFlags & RenderPassParams::IGNORE_SCISSOR);
+    const bool respectScissor = !(clearFlags & RenderPassFlags::IGNORE_SCISSOR);
     const bool clearColor = clearFlags & TargetBufferFlags::COLOR;
     const bool clearDepth = clearFlags & TargetBufferFlags::DEPTH;
     const bool clearStencil = clearFlags & TargetBufferFlags::STENCIL;
@@ -2041,7 +2042,7 @@ void OpenGLDriver::beginRenderPass(Driver::RenderTargetHandle rth,
 void OpenGLDriver::endRenderPass(int) {
     DEBUG_MARKER()
     assert(mRenderPassTarget);
-    const TargetBufferFlags discardFlags = (TargetBufferFlags) mRenderPassParams.discardEnd;
+    const TargetBufferFlags discardFlags = (TargetBufferFlags) mRenderPassParams.flags.discardEnd;
     // glInvalidateFramebuffer appeared on GLES 3.0 and GL4.3, for simplicity we just
     // ignore it on GL (rather than having to do a runtime check).
     if (GLES31_HEADERS && !bugs.disable_invalidate_framebuffer) {
@@ -2694,10 +2695,8 @@ void OpenGLDriver::clearWithGeometryPipe(
 }
 
 void OpenGLDriver::blit(TargetBufferFlags buffers,
-        Driver::RenderTargetHandle dst,
-        int32_t dstLeft, int32_t dstBottom, uint32_t dstWidth, uint32_t dstHeight,
-        Driver::RenderTargetHandle src,
-        int32_t srcLeft, int32_t srcBottom, uint32_t srcWidth, uint32_t srcHeight) {
+        Driver::RenderTargetHandle dst, driver::Viewport dstRect,
+        Driver::RenderTargetHandle src, driver::Viewport srcRect) {
     DEBUG_MARKER()
 
     GLbitfield mask = 0;
@@ -2718,8 +2717,8 @@ void OpenGLDriver::blit(TargetBufferFlags buffers,
         bindFramebuffer(GL_DRAW_FRAMEBUFFER, d->gl.fbo);
         disable(GL_SCISSOR_TEST);
         glBlitFramebuffer(
-                srcLeft, srcBottom, srcLeft + srcWidth, srcBottom + srcHeight,
-                dstLeft, dstBottom, dstLeft + dstWidth, dstBottom + dstHeight,
+                srcRect.left, srcRect.bottom, srcRect.left + srcRect.width, srcRect.bottom + srcRect.height,
+                dstRect.left, dstRect.bottom, dstRect.left + dstRect.width, dstRect.bottom + dstRect.height,
                 mask, GL_LINEAR);
         enable(GL_SCISSOR_TEST);
         CHECK_GL_ERROR(utils::slog.e)

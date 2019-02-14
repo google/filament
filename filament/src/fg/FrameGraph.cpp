@@ -122,14 +122,11 @@ struct RenderTargetResource final : public VirtualResource {  // 104
             uint32_t width, uint32_t height, TextureFormat format)
             : desc(desc), imported(imported),
               attachments(targets), format(format), width(width), height(height)  {
-        targetInfo.params.left   = desc.viewport.left;
-        targetInfo.params.bottom = desc.viewport.bottom;
-        targetInfo.params.width  = desc.viewport.width;
-        targetInfo.params.height = desc.viewport.height;
+        targetInfo.params.viewport   = desc.viewport;
         // if Descriptor was initialized with default values, set the viewport to width/height
-        if (targetInfo.params.width == 0 && targetInfo.params.height == 0) {
-            targetInfo.params.width  = width;
-            targetInfo.params.height = height;
+        if (targetInfo.params.viewport.width == 0 && targetInfo.params.viewport.height == 0) {
+            targetInfo.params.viewport.width  = width;
+            targetInfo.params.viewport.height = height;
         }
     }
 
@@ -223,7 +220,7 @@ struct RenderTarget { // 32
 
         if (pos != renderTargetCache.end()) {
             cache = pos->get();
-            cache->targetInfo.params.clear |= userTargetFlags.clear;
+            cache->targetInfo.params.flags.clear |= userTargetFlags.clear;
         } else {
             uint8_t attachments = 0;
             uint32_t width = 0;
@@ -303,7 +300,7 @@ struct RenderTarget { // 32
                                 TargetBufferFlags(attachments), width, height, colorFormat);
                 renderTargetCache.emplace_back(pRenderTargetResource, fg);
                 cache = pRenderTargetResource;
-                cache->targetInfo.params.clear |= userTargetFlags.clear;
+                cache->targetInfo.params.flags.clear |= userTargetFlags.clear;
             }
         }
     }
@@ -592,9 +589,9 @@ FrameGraphPassResources::getRenderTarget(FrameGraphResource r) const noexcept {
             assert(renderTarget->cache);
             info = renderTarget->cache->targetInfo;
             // overwrite discard flags with the per-rendertarget (per-pass) computed value
-            info.params.discardStart = renderTarget->targetFlags.discardStart;
-            info.params.discardEnd   = renderTarget->targetFlags.discardEnd;
-            info.params.dependencies = renderTarget->targetFlags.dependencies;
+            info.params.flags.discardStart = renderTarget->targetFlags.discardStart;
+            info.params.flags.discardEnd   = renderTarget->targetFlags.discardEnd;
+            info.params.flags.dependencies = renderTarget->targetFlags.dependencies;
             assert(info.target);
             break;
         }

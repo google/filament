@@ -162,7 +162,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     // DEBUG: driver commands must all happen from the same thread. Enforce that on debug builds.
     engine.getDriverApi().debugThreading();
 
-    Viewport const& vp = view.getViewport();
+    filament::Viewport const& vp = view.getViewport();
     const bool hasPostProcess = view.hasPostProcessPass();
     float2 scale = view.updateScale(mFrameInfoManager.getLastFrameTime());
     bool useFXAA = view.getAntiAliasing() == View::AntiAliasing::FXAA;
@@ -174,7 +174,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     }
 
     const bool scaled = any(notEqual(scale, float2(1.0f)));
-    Viewport svp = vp.scale(scale);
+    filament::Viewport svp = vp.scale(scale);
     if (svp.empty()) {
         return;
     }
@@ -251,8 +251,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
             FrameGraphResource input = fg.importResource("colorTarget",
                     colorDesc, colorTarget->texture);
 
-            FrameGraphResource output = fg.importResource("viewRenderTarget",
-                    { .viewport.left = vp.left, .viewport.bottom = vp.bottom },
+            FrameGraphResource output = fg.importResource("viewRenderTarget", { .viewport = vp },
                     viewRenderTarget, vp.width, vp.height);
 
             if (useMSAA > 1) {
@@ -314,8 +313,8 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     recordHighWatermark(commands);
 }
 
-void FRenderer::mirrorFrame(FSwapChain* dstSwapChain, Viewport const& dstViewport,
-        Viewport const& srcViewport, MirrorFrameFlag flags) {
+void FRenderer::mirrorFrame(FSwapChain* dstSwapChain, filament::Viewport const& dstViewport,
+        filament::Viewport const& srcViewport, MirrorFrameFlag flags) {
     SYSTRACE_CALL();
 
     assert(mSwapChain);
@@ -334,23 +333,22 @@ void FRenderer::mirrorFrame(FSwapChain* dstSwapChain, Viewport const& dstViewpor
     RenderPassParams params = {};
     // Clear color to black if the CLEAR flag is set.
     if (flags & CLEAR) {
-        params.clear = TargetBufferFlags::COLOR;
+        params.flags.clear = TargetBufferFlags::COLOR;
         params.clearColor = {0.f, 0.f, 0.f, 1.f};
-        params.discardStart = TargetBufferFlags::ALL;
-        params.discardEnd = TargetBufferFlags::NONE;
-        params.left = 0;
-        params.bottom = 0;
-        params.width = std::numeric_limits<uint32_t>::max();
-        params.height = std::numeric_limits<uint32_t>::max();
-        params.clear |= RenderPassParams::IGNORE_SCISSOR;
+        params.flags.discardStart = TargetBufferFlags::ALL;
+        params.flags.discardEnd = TargetBufferFlags::NONE;
+        params.viewport.left = 0;
+        params.viewport.bottom = 0;
+        params.viewport.width = std::numeric_limits<uint32_t>::max();
+        params.viewport.height = std::numeric_limits<uint32_t>::max();
+        params.flags.clear |= RenderPassFlags::IGNORE_SCISSOR;
     }
     driver.beginRenderPass(viewRenderTarget, params);
 
     // Verify that the source swap chain is readable.
     assert(mSwapChain->isReadable());
     driver.blit(TargetBufferFlags::COLOR,
-            viewRenderTarget, dstViewport.left, dstViewport.bottom, dstViewport.width, dstViewport.height,
-            viewRenderTarget, srcViewport.left, srcViewport.bottom, srcViewport.width, srcViewport.height);
+            viewRenderTarget, dstViewport, viewRenderTarget, srcViewport);
     if (flags & SET_PRESENTATION_TIME) {
         // TODO: Implement this properly, see https://github.com/google/filament/issues/633
     }
@@ -523,8 +521,8 @@ bool Renderer::beginFrame(SwapChain* swapChain) {
     return upcast(this)->beginFrame(upcast(swapChain));
 }
 
-void Renderer::mirrorFrame(SwapChain* dstSwapChain, Viewport const& dstViewport, Viewport const& srcViewport,
-                           MirrorFrameFlag flags) {
+void Renderer::mirrorFrame(SwapChain* dstSwapChain, filament::Viewport const& dstViewport,
+        filament::Viewport const& srcViewport, MirrorFrameFlag flags) {
     upcast(this)->mirrorFrame(upcast(dstSwapChain), dstViewport, srcViewport, flags);
 }
 

@@ -17,6 +17,8 @@
 #ifndef TNT_FILAMENT_VIEWPORT_H
 #define TNT_FILAMENT_VIEWPORT_H
 
+#include <filament/driver/DriverEnums.h>
+
 #include <utils/compiler.h>
 
 #include <math/scalar.h>
@@ -30,7 +32,7 @@ namespace filament {
 /*
  * Viewport describes a view port in pixel coordinates
  */
-class UTILS_PUBLIC Viewport {
+class UTILS_PUBLIC Viewport : public driver::Viewport {
 public:
     Viewport() noexcept = default;
     Viewport(const Viewport& viewport) noexcept = default;
@@ -41,24 +43,16 @@ public:
     /*
      * Create a Viewport from its left-bottom coordinates and size in pixels
      */
-    Viewport(int32_t left, int32_t bottom, uint32_t width, uint32_t height) noexcept
-            : left(left), bottom(bottom), width(width), height(height) { }
+    Viewport(int32_t left, int32_t bottom, uint32_t width, uint32_t height) noexcept {
+        this->left = left;
+        this->bottom = bottom;
+        this->width = width;
+        this->height = height;
+    }
 
     bool empty() const noexcept { return !width || !height; }
 
     Viewport scale(filament::math::float2 s) const noexcept;
-
-    // left coordinate in pixels
-    int32_t left = 0;
-
-    // bottom coordinate in pixels
-    int32_t bottom = 0;
-
-    // width in pixels
-    uint32_t width = 0;
-
-    // height in pixels
-    uint32_t height = 0;
 
 private:
     friend bool operator==(Viewport const& rhs, Viewport const& lhs) noexcept {
