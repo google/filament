@@ -94,6 +94,14 @@ public:
     void addEntity(utils::Entity entity);
 
     /**
+     * Adds a contiguous list of entities to the Scene.
+     *
+     * @param entities
+     * @param count
+     */
+    void addEntities(const utils::Entity* entities, size_t count);
+
+    /**
      * Removes the Renderable from the Scene.
      *
      * @param entity The Entity to remove from the Scene. If the specified

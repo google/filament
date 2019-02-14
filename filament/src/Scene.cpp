@@ -317,6 +317,10 @@ void FScene::addEntity(Entity entity) {
     mEntities.insert(entity);
 }
 
+void FScene::addEntities(const Entity* entities, size_t count) {
+    mEntities.insert(entities, entities + count);
+}
+
 void FScene::remove(Entity entity) {
     mEntities.erase(entity);
 }
@@ -402,6 +406,10 @@ void Scene::setIndirectLight(IndirectLight const* ibl) noexcept {
 
 void Scene::addEntity(Entity entity) {
     upcast(this)->addEntity(entity);
+}
+
+void Scene::addEntities(const Entity* entities, size_t count) {
+    upcast(this)->addEntities(entities, count);
 }
 
 void Scene::remove(Entity entity) {

@@ -62,6 +62,7 @@ public:
     FIndirectLight const* getIndirectLight() const noexcept { return mIndirectLight; }
 
     void addEntity(utils::Entity entity);
+    void addEntities(const utils::Entity* entities, size_t count);
     void remove(utils::Entity entity);
 
     size_t getRenderableCount() const noexcept;
