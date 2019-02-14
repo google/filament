@@ -111,6 +111,8 @@ void PlatformCocoaTouchGL::makeCurrent(SwapChain* drawSwapChain, SwapChain* read
     if (pImpl->mCurrentGlLayer != glLayer) {
         pImpl->mCurrentGlLayer = glLayer;
 
+        glBindFramebuffer(GL_FRAMEBUFFER, pImpl->mDefaultFramebuffer);
+
         glBindRenderbuffer(GL_RENDERBUFFER, pImpl->mDefaultColorbuffer);
         [pImpl->mGLContext renderbufferStorage:GL_RENDERBUFFER fromDrawable:glLayer];
 
@@ -122,11 +124,11 @@ void PlatformCocoaTouchGL::makeCurrent(SwapChain* drawSwapChain, SwapChain* read
 
         glBindRenderbuffer(GL_RENDERBUFFER, pImpl->mDefaultDepthbuffer);
         glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, width, height);
-    }
 
-    // Test the framebuffer for completeness.
-    GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
-    ASSERT_POSTCONDITION(status == GL_FRAMEBUFFER_COMPLETE, "Incomplete framebuffer.");
+        // Test the framebuffer for completeness.
+        GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+        ASSERT_POSTCONDITION(status == GL_FRAMEBUFFER_COMPLETE, "Incomplete framebuffer.");
+    }
 }
 
 void PlatformCocoaTouchGL::commit(Platform::SwapChain* swapChain) noexcept {
