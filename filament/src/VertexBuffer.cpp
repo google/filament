@@ -263,7 +263,7 @@ void VertexBuffer::populateTangentQuaternions(const QuatTangentContext& ctx) {
         normal = (const float3*) (((const uint8_t*) normal) + nstride);
         tanvec = (const float3*) (((const uint8_t*) tanvec) + tstride);
         tandir = (const float*) (((const uint8_t*) tandir) + tstride);
-        outquat += ctx.outStride;
+        outquat += outStride;
     }
 }
 
