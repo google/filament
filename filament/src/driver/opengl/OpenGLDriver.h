@@ -108,8 +108,8 @@ public:
 
             // texture parameters go here too
             GLfloat anisotropy = 1.0;
-            uint8_t baseLevel = 255;
-            uint8_t maxLevel = 0;
+            int8_t baseLevel = 127;
+            int8_t maxLevel = -1;
             uint8_t targetIndex = 0;
         } gl;
     };
