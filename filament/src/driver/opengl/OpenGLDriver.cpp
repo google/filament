@@ -1832,12 +1832,12 @@ void OpenGLDriver::setTextureData(GLTexture* t,
     // update the base/max LOD so we don't access undefined LOD. this allows the app to
     // specify levels as they become available.
 
-    if (uint8_t(level) < t->gl.baseLevel) {
-        t->gl.baseLevel = uint8_t(level);
+    if (int8_t(level) < t->gl.baseLevel) {
+        t->gl.baseLevel = int8_t(level);
         glTexParameteri(t->gl.target, GL_TEXTURE_BASE_LEVEL, t->gl.baseLevel);
     }
-    if (uint8_t(level) > t->gl.maxLevel) {
-        t->gl.maxLevel = uint8_t(level);
+    if (int8_t(level) > t->gl.maxLevel) {
+        t->gl.maxLevel = int8_t(level);
         glTexParameteri(t->gl.target, GL_TEXTURE_MAX_LEVEL, t->gl.maxLevel);
     }
 
@@ -2752,9 +2752,9 @@ void OpenGLDriver::blit(TargetBufferFlags buffers,
         // available.
         GLTexture* dtexture = d->gl.color.texture;
         if ((mask & GL_COLOR_BUFFER_BIT) && dtexture) {
-            uint8_t baseLevel = dtexture->gl.baseLevel;
-            uint8_t maxLevel = dtexture->gl.maxLevel;
-            uint8_t targetLevel = d->gl.colorLevel;
+            int8_t baseLevel = dtexture->gl.baseLevel;
+            int8_t maxLevel = dtexture->gl.maxLevel;
+            int8_t targetLevel = d->gl.colorLevel;
             if (targetLevel < baseLevel || targetLevel > maxLevel) {
                 GLenum target = dtexture->gl.target;
                 bindTexture(MAX_TEXTURE_UNITS - 1, target, dtexture, dtexture->gl.targetIndex);
