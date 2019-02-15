@@ -65,6 +65,8 @@ struct MetalUniformBuffer : public HwUniformBuffer {
     MetalUniformBuffer(id<MTLDevice> device, size_t size);
     ~MetalUniformBuffer();
 
+    void copyIntoBuffer(void* src, size_t size);
+
     size_t size = 0;
 
     id <MTLBuffer> buffer;
