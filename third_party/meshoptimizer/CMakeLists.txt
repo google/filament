@@ -37,3 +37,5 @@ if(BUILD_DEMO)
     add_executable(demo demo/main.cpp demo/miniz.cpp demo/objparser.cpp)
     target_link_libraries(demo meshoptimizer)
 endif()
+
+install(TARGETS meshoptimizer ARCHIVE DESTINATION lib/${DIST_DIR})
