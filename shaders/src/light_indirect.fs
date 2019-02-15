@@ -160,7 +160,7 @@ vec3 diffuseIrradiance(const vec3 n) {
 // IBL specular
 //------------------------------------------------------------------------------
 
-vec3 specularIrradiance(const vec3 r, float roughness) {
+vec3 prefilteredRadiance(const vec3 r, float roughness) {
     // lod = lod_count * sqrt(linear_roughness), which is the mapping used by cmgen
     // where linear_roughness = roughness^2
     // using all the mip levels requires seamless cubemap sampling
@@ -168,7 +168,7 @@ vec3 specularIrradiance(const vec3 r, float roughness) {
     return decodeDataForIBL(textureLod(light_iblSpecular, r, lod));
 }
 
-vec3 specularIrradiance(const vec3 r, float roughness, float offset) {
+vec3 prefilteredRadiance(const vec3 r, float roughness, float offset) {
     float lod = IBL_MAX_MIP_LEVEL * roughness * roughness;
     return decodeDataForIBL(textureLod(light_iblSpecular, r, lod + offset));
 }
@@ -413,7 +413,7 @@ void evaluateClearCoatIBL(const PixelParams pixel, float specularAO, inout vec3 
     float Fc = F_Schlick(0.04, 1.0, clearCoatNoV) * pixel.clearCoat;
     float attenuation = 1.0 - Fc;
     Fr *= sq(attenuation);
-    Fr += specularIrradiance(clearCoatR, pixel.clearCoatRoughness) * (specularAO * Fc);
+    Fr += prefilteredRadiance(clearCoatR, pixel.clearCoatRoughness) * (specularAO * Fc);
     Fd *= attenuation;
 #endif
 }
@@ -422,7 +422,7 @@ void evaluateSubsurfaceIBL(const PixelParams pixel, const vec3 diffuseIrradiance
         inout vec3 Fd, inout vec3 Fr) {
 #if defined(SHADING_MODEL_SUBSURFACE)
     vec3 viewIndependent = diffuseIrradiance;
-    vec3 viewDependent = specularIrradiance(-shading_view, pixel.roughness, 1.0 + pixel.thickness);
+    vec3 viewDependent = prefilteredRadiance(-shading_view, pixel.roughness, 1.0 + pixel.thickness);
     float attenuation = (1.0 - pixel.thickness) / (2.0 * PI);
     Fd += pixel.subsurfaceColor * (viewIndependent + viewDependent) * attenuation;
 #elif defined(SHADING_MODEL_CLOTH) && defined(MATERIAL_HAS_SUBSURFACE_COLOR)
@@ -448,7 +448,7 @@ void evaluateIBL(const MaterialInputs material, const PixelParams pixel, inout v
     // specular indirect
     vec3 Fr;
 #if IBL_INTEGRATION == IBL_INTEGRATION_PREFILTERED_CUBEMAP
-    Fr = specularDFG(pixel) * specularIrradiance(r, pixel.roughness);
+    Fr = specularDFG(pixel) * prefilteredRadiance(r, pixel.roughness);
     Fr *= specularAO * pixel.energyCompensation;
     evaluateClearCoatIBL(pixel, specularAO, Fd, Fr);
 #elif IBL_INTEGRATION == IBL_INTEGRATION_IMPORTANCE_SAMPLING
