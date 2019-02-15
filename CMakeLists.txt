@@ -122,7 +122,7 @@ if (LINUX)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
     if (FILAMENT_REQUIRES_CXXABI)
         # Required in CI environment with custom libc++ and libc++abi
-        link_libraries("-lc++abi")
+        link_libraries(libc++abi.a)
     endif()
     # To distribute our binaries, we must remove the dependency on libc++ and libgcc.
     if (CMAKE_BUILD_TYPE STREQUAL "Release")
