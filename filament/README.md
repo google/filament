@@ -114,16 +114,24 @@ clean:
 
 ### Windows
 
+Note that the static libraries distributed for Windows include several
+variants: mt, md, mtd, mdd. These correspond to the [run-time library
+flags](https://docs.microsoft.com/en-us/cpp/build/reference/md-mt-ld-use-run-time-library?view=vs-2017)
+`/MT`, `/MD`, `/MTd`, and `/MDd`, respectively. Here we use the mt variant.
+
+When building Filament from source, the `USE_STATIC_CRT` CMake option can be
+used to change the run-time library version.
+
 ```
-FILAMENT_LIBS=lib/x86_64/filament.lib lib/x86_64/bluegl.lib \
-              lib/x86_64/filabridge.lib lib/x86_64/filaflat.lib lib/x86_64/utils.lib
+FILAMENT_LIBS=lib/x86_64/mt/filament.lib lib/x86_64/mt/bluegl.lib \
+              lib/x86_64/mt/filabridge.lib lib/x86_64/mt/filaflat.lib lib/x86_64/mt/utils.lib
 CC=clang-cl.exe
 
 main.exe: main.obj
 	$(CC) main.obj $(FILAMENT_LIBS) gdi32.lib user32.lib opengl32.lib
 
 main.obj: main.cpp
-	$(CC) /Iinclude/ /std:c++14 /c main.cpp
+	$(CC) /MT /Iinclude/ /std:c++14 /c main.cpp
 
 clean:
 	del main.exe main.obj
