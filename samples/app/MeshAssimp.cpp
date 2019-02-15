@@ -93,7 +93,7 @@ void appendBooleanToBitMask(uint64_t &bitmask, bool b) {
 
 uint64_t hashMaterialConfig(MaterialConfig config) {
     uint64_t bitmask = 0;
-    memcpy(&config.maskThreshold, &bitmask, sizeof(config.maskThreshold));
+    memcpy(&bitmask, &config.maskThreshold, sizeof(config.maskThreshold));
     appendBooleanToBitMask(bitmask, config.doubleSided);
     appendBooleanToBitMask(bitmask, config.unlit);
     appendBooleanToBitMask(bitmask, config.hasVertexColors);
