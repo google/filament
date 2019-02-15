@@ -556,6 +556,12 @@ void VulkanDriver::setExternalImage(Driver::TextureHandle th, void* image) {
 void VulkanDriver::setExternalStream(Driver::TextureHandle th, Driver::StreamHandle sh) {
 }
 
+void VulkanDriver::generateMipmaps(Driver::TextureHandle th) { }
+
+bool VulkanDriver::canGenerateMipmaps() {
+    return false;
+}
+
 void VulkanDriver::updateUniformBuffer(Driver::UniformBufferHandle ubh, BufferDescriptor&& data) {
     if (data.size > 0) {
         auto* buffer = handle_cast<VulkanUniformBuffer>(mHandleMap, ubh);

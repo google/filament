@@ -405,6 +405,14 @@ void MetalDriver::setExternalStream(Driver::TextureHandle th, Driver::StreamHand
 
 }
 
+void MetalDriver::generateMipmaps(Driver::TextureHandle th) {
+
+}
+
+bool MetalDriver::canGenerateMipmaps() {
+    return false;
+}
+
 void MetalDriver::updateUniformBuffer(Driver::UniformBufferHandle ubh,
         Driver::BufferDescriptor&& data) {
     auto buffer = handle_cast<MetalUniformBuffer>(mHandleMap, ubh);

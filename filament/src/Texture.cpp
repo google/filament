@@ -203,6 +203,11 @@ void FTexture::generateMipmaps(FEngine& engine) const noexcept {
         return;
     }
 
+    if (engine.getDriverApi().canGenerateMipmaps()) {
+         engine.getDriverApi().generateMipmaps(mHandle);
+         return;
+    }
+
     auto generateMipsForLayer = [this, &engine](uint16_t layer) {
         FEngine::DriverApi& driver = engine.getDriverApi();
 
