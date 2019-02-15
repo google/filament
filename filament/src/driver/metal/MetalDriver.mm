@@ -51,7 +51,7 @@ struct MetalDriverImpl {
     id<MTLCommandBuffer> mCurrentCommandBuffer = nullptr;
     id<MTLRenderCommandEncoder> mCurrentCommandEncoder = nullptr;
 
-    RenderPassParams mCurrentRenderPassParams;
+    RenderPassFlags mCurrentRenderPassFlags;
     MetalRenderTarget* mCurrentRenderTarget = nullptr;
 
     // State trackers.
@@ -422,7 +422,7 @@ void MetalDriver::beginRenderPass(Driver::RenderTargetHandle rth,
         const Driver::RenderPassParams& params) {
     auto renderTarget = handle_cast<MetalRenderTarget>(mHandleMap, rth);
     pImpl->mCurrentRenderTarget = renderTarget;
-    pImpl->mCurrentRenderPassParams = params;
+    pImpl->mCurrentRenderPassFlags = params.flags;
 
     MTLRenderPassDescriptor* descriptor = [MTLRenderPassDescriptor renderPassDescriptor];
 
@@ -447,7 +447,7 @@ void MetalDriver::beginRenderPass(Driver::RenderTargetHandle rth,
     // Metal clears the entire attachment without respect to viewport or scissor.
     // TODO: Might need to clear the scissor area manually via a draw if we need that functionality.
 
-    const auto clearFlags = (TargetBufferFlags) params.clear;
+    const auto clearFlags = (TargetBufferFlags) params.flags.clear;
     const bool clearColor = clearFlags & TargetBufferFlags::COLOR;
     const bool clearDepth = clearFlags & TargetBufferFlags::DEPTH;
 
@@ -479,7 +479,8 @@ void MetalDriver::beginRenderPass(Driver::RenderTargetHandle rth,
     // Filament's default winding is counter clockwise.
     [pImpl->mCurrentCommandEncoder setFrontFacingWinding:MTLWindingCounterClockwise];
 
-    viewport(params.left, params.bottom, params.width, params.height);
+    viewport(params.viewport.left, params.viewport.bottom, params.viewport.width,
+            params.viewport.height);
 
     // Metal requires a new command encoder for each render pass, and they cannot be reused.
     // We must bind certain states for each command encoder, so we dirty the states here to force a
@@ -669,7 +670,7 @@ void MetalDriver::draw(Driver::PipelineState ps, Driver::RenderPrimitiveHandle r
     }
 
     // Depth bias. Use a depth bias of 1.0 / 1.0 for the shadow pass.
-    TargetBufferFlags clearFlags = (TargetBufferFlags) pImpl->mCurrentRenderPassParams.clear;
+    TargetBufferFlags clearFlags = (TargetBufferFlags) pImpl->mCurrentRenderPassFlags.clear;
     if ((clearFlags & TargetBufferFlags::SHADOW) == TargetBufferFlags::SHADOW) {
         [pImpl->mCurrentCommandEncoder setDepthBias:1.0f
                                          slopeScale:1.0f
