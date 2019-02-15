@@ -316,6 +316,8 @@ DECL_DRIVER_API_SYNCHRONOUS_1(bool, isRenderTargetFormatSupported, Driver::Textu
 
 DECL_DRIVER_API_SYNCHRONOUS_0(bool, isFrameTimeSupported)
 
+DECL_DRIVER_API_SYNCHRONOUS_0(bool, canGenerateMipmaps)
+
 /*
  * Updating driver objects
  * -----------------------
@@ -356,6 +358,9 @@ DECL_DRIVER_API_4(updateCubeImage,
         uint32_t, level,
         Driver::PixelBufferDescriptor&&, data,
         Driver::FaceOffsets, faceOffsets)
+
+DECL_DRIVER_API_1(generateMipmaps,
+        Driver::TextureHandle, th)
 
 DECL_DRIVER_API_2(setExternalImage,
         Driver::TextureHandle, th,
