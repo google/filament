@@ -720,9 +720,11 @@ bool FrameGraph::equals(FrameGraphRenderTarget::Descriptor const& lhs,
                     // obviously resources match if they're the same
                     return true;
                 }
-                if (resourceNodes[lhs.index].resource == resourceNodes[rhs.index].resource) {
-                    // they also match if they're the same concrete resource
-                    return true;
+                if (lhs.isValid() && rhs.isValid()) {
+                    if (resourceNodes[lhs.index].resource == resourceNodes[rhs.index].resource) {
+                        // they also match if they're the same concrete resource
+                        return true;
+                    }
                 }
                 return false;
             }) && lhs.samples == rhs.samples;
