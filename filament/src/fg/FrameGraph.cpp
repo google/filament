@@ -583,7 +583,7 @@ FrameGraphPassResources::getRenderTarget(FrameGraphResource r) const noexcept {
                 desc.attachments.textures.begin(),
                 desc.attachments.textures.end(),
                 [pResource, &resourceNodes](FrameGraphResource const& r) {
-                    return resourceNodes[r.index].resource == pResource;
+                    return r.isValid() && resourceNodes[r.index].resource == pResource;
                 });
         if (pos != std::end(desc.attachments.textures)) {
             assert(renderTarget->cache);
