@@ -14,5 +14,6 @@ if(NOT IOS)
         target_compile_options(test_${TARGET} PRIVATE ${COMPILER_FLAGS})
 
         add_executable(test_depth depth_test.cpp)
+        target_link_libraries(test_depth PRIVATE utils)
     endif()
 endif()
