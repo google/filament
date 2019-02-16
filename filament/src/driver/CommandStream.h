@@ -95,7 +95,7 @@ private:
 
 template<typename M, typename D, typename T, std::size_t... I>
 constexpr void trampoline(M&& m, D&& d, T&& t, std::index_sequence<I...>) {
-    (d.*m)(std::get<I>(std::move(t))...);
+    (d.*m)(std::move(std::get<I>(std::forward<T>(t)))...);
 }
 
 template<typename M, typename D, typename T>
@@ -211,19 +211,12 @@ public:
 #define DECL_DRIVER_API_RETURN(RetType, methodName, paramsDecl, params)                         \
     inline RetType methodName(paramsDecl) {                                                     \
         DEBUG_COMMAND(methodName, params);                                                      \
-        RetType result = mDriver->methodName##Synchronous();                                    \
-        using CmdType = CommandType<decltype(&Driver::methodName)>;                             \
-        using Cmd = CmdType::Command<&Driver::methodName>;                                      \
+        RetType result = mDriver->methodName##S();                                              \
+        using CmdType = CommandType<decltype(&Driver::methodName##R)>;                          \
+        using Cmd = CmdType::Command<&Driver::methodName##R>;                                   \
         void* const p = allocateCommand(CommandBase::align(sizeof(Cmd)));                       \
         new(p) Cmd(mDispatcher->methodName##_, RetType(result), params);                        \
         return result;                                                                          \
-    }                                                                                           \
-    inline void methodName(RetType result, paramsDecl) {                                        \
-        DEBUG_COMMAND(methodName, params);                                                      \
-        using CmdType = CommandType<decltype(&Driver::methodName)>;                             \
-        using Cmd = CmdType::Command<&Driver::methodName>;                                      \
-        void* const p = allocateCommand(CommandBase::align(sizeof(Cmd)));                       \
-        new(p) Cmd(mDispatcher->methodName##_, result, params);                                 \
     }
 
 #include "driver/DriverAPI.inc"

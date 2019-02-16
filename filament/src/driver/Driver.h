@@ -261,8 +261,8 @@ public:
     virtual RetType methodName(paramsDecl) = 0;
 
 #define DECL_DRIVER_API_RETURN(RetType, methodName, paramsDecl, params) \
-    virtual RetType methodName##Synchronous() noexcept = 0; \
-    void methodName(RetType, paramsDecl) {}
+    virtual RetType methodName##S() noexcept = 0; \
+    void methodName##R(RetType, paramsDecl) {}
 
 #include "driver/DriverAPI.inc"
 };

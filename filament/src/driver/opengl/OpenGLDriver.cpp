@@ -809,55 +809,55 @@ void OpenGLDriver::destruct(Handle<B>& handle, D const* p) noexcept {
     }
 }
 
-Handle<HwVertexBuffer> OpenGLDriver::createVertexBufferSynchronous() noexcept {
+Handle<HwVertexBuffer> OpenGLDriver::createVertexBufferS() noexcept {
     return Handle<HwVertexBuffer>( allocateHandle(sizeof(GLVertexBuffer)) );
 }
 
-Handle<HwIndexBuffer> OpenGLDriver::createIndexBufferSynchronous() noexcept {
+Handle<HwIndexBuffer> OpenGLDriver::createIndexBufferS() noexcept {
     return Handle<HwIndexBuffer>( allocateHandle(sizeof(GLIndexBuffer)) );
 }
 
-Handle<HwRenderPrimitive> OpenGLDriver::createRenderPrimitiveSynchronous() noexcept {
+Handle<HwRenderPrimitive> OpenGLDriver::createRenderPrimitiveS() noexcept {
     return Handle<HwRenderPrimitive>( allocateHandle(sizeof(GLRenderPrimitive)) );
 }
 
-Handle<HwProgram> OpenGLDriver::createProgramSynchronous() noexcept {
+Handle<HwProgram> OpenGLDriver::createProgramS() noexcept {
     return Handle<HwProgram>( allocateHandle(sizeof(OpenGLProgram)) );
 }
 
-Handle<HwSamplerBuffer> OpenGLDriver::createSamplerBufferSynchronous() noexcept {
+Handle<HwSamplerBuffer> OpenGLDriver::createSamplerBufferS() noexcept {
     return Handle<HwSamplerBuffer>( allocateHandle(sizeof(GLSamplerBuffer)) );
 }
 
-Handle<HwUniformBuffer> OpenGLDriver::createUniformBufferSynchronous() noexcept {
+Handle<HwUniformBuffer> OpenGLDriver::createUniformBufferS() noexcept {
     return Handle<HwUniformBuffer>( allocateHandle(sizeof(GLUniformBuffer)) );
 }
 
-Handle<HwTexture> OpenGLDriver::createTextureSynchronous() noexcept {
+Handle<HwTexture> OpenGLDriver::createTextureS() noexcept {
     return Handle<HwTexture>( allocateHandle(sizeof(GLTexture)) );
 }
 
-Handle<HwRenderTarget> OpenGLDriver::createDefaultRenderTargetSynchronous() noexcept {
+Handle<HwRenderTarget> OpenGLDriver::createDefaultRenderTargetS() noexcept {
     return Handle<HwRenderTarget>( allocateHandle(sizeof(GLRenderTarget)) );
 }
 
-Handle<HwRenderTarget> OpenGLDriver::createRenderTargetSynchronous() noexcept {
+Handle<HwRenderTarget> OpenGLDriver::createRenderTargetS() noexcept {
     return Handle<HwRenderTarget>( allocateHandle(sizeof(GLRenderTarget)) );
 }
 
-Handle<HwFence> OpenGLDriver::createFenceSynchronous() noexcept {
+Handle<HwFence> OpenGLDriver::createFenceS() noexcept {
     return Handle<HwFence>( allocateHandle(sizeof(HwFence)) );
 }
 
-Handle<HwSwapChain> OpenGLDriver::createSwapChainSynchronous() noexcept {
+Handle<HwSwapChain> OpenGLDriver::createSwapChainS() noexcept {
     return Handle<HwSwapChain>( allocateHandle(sizeof(HwSwapChain)) );
 }
 
-Handle<HwStream> OpenGLDriver::createStreamFromTextureIdSynchronous() noexcept {
+Handle<HwStream> OpenGLDriver::createStreamFromTextureIdS() noexcept {
     return Handle<HwStream>( allocateHandle(sizeof(GLStream)) );
 }
 
-void OpenGLDriver::createVertexBuffer(
+void OpenGLDriver::createVertexBufferR(
     Driver::VertexBufferHandle vbh,
     uint8_t bufferCount,
     uint8_t attributeCount,
@@ -888,7 +888,7 @@ void OpenGLDriver::createVertexBuffer(
     CHECK_GL_ERROR(utils::slog.e)
 }
 
-void OpenGLDriver::createIndexBuffer(
+void OpenGLDriver::createIndexBufferR(
         Driver::IndexBufferHandle ibh,
         Driver::ElementType elementType,
         uint32_t indexCount,
@@ -905,7 +905,7 @@ void OpenGLDriver::createIndexBuffer(
     CHECK_GL_ERROR(utils::slog.e)
 }
 
-void OpenGLDriver::createRenderPrimitive(Driver::RenderPrimitiveHandle rph, int) {
+void OpenGLDriver::createRenderPrimitiveR(Driver::RenderPrimitiveHandle rph, int) {
     DEBUG_MARKER()
 
     GLRenderPrimitive* rp = construct<GLRenderPrimitive>(rph);
@@ -913,20 +913,20 @@ void OpenGLDriver::createRenderPrimitive(Driver::RenderPrimitiveHandle rph, int)
     CHECK_GL_ERROR(utils::slog.e)
 }
 
-void OpenGLDriver::createProgram(Driver::ProgramHandle ph, Program&& program) {
+void OpenGLDriver::createProgramR(Driver::ProgramHandle ph, Program&& program) {
     DEBUG_MARKER()
 
     construct<OpenGLProgram>(ph, this, program);
     CHECK_GL_ERROR(utils::slog.e)
 }
 
-void OpenGLDriver::createSamplerBuffer(Driver::SamplerBufferHandle sbh, size_t size) {
+void OpenGLDriver::createSamplerBufferR(Driver::SamplerBufferHandle sbh, size_t size) {
     DEBUG_MARKER()
 
     construct<GLSamplerBuffer>(sbh, size);
 }
 
-void OpenGLDriver::createUniformBuffer(
+void OpenGLDriver::createUniformBufferR(
         Driver::UniformBufferHandle ubh,
         size_t size,
         Driver::BufferUsage usage) {
@@ -984,7 +984,7 @@ void OpenGLDriver::textureStorage(OpenGLDriver::GLTexture* t,
     t->depth = depth;
 }
 
-void OpenGLDriver::createTexture(Driver::TextureHandle th, SamplerType target, uint8_t levels,
+void OpenGLDriver::createTextureR(Driver::TextureHandle th, SamplerType target, uint8_t levels,
         TextureFormat format, uint8_t samples, uint32_t w, uint32_t h, uint32_t depth,
         TextureUsage usage) {
     DEBUG_MARKER()
@@ -1114,7 +1114,7 @@ GLuint OpenGLDriver::framebufferRenderbuffer(uint32_t width, uint32_t height, ui
     return rbo;
 }
 
-void OpenGLDriver::createDefaultRenderTarget(
+void OpenGLDriver::createDefaultRenderTargetR(
         Driver::RenderTargetHandle rth, int) {
     DEBUG_MARKER()
 
@@ -1131,7 +1131,7 @@ void OpenGLDriver::createDefaultRenderTarget(
     rt->gl.depth.rb = depthbuffer;  // FIXME: populate format
 }
 
-void OpenGLDriver::createRenderTarget(Driver::RenderTargetHandle rth,
+void OpenGLDriver::createRenderTargetR(Driver::RenderTargetHandle rth,
         Driver::TargetBufferFlags targets,
         uint32_t width,
         uint32_t height,
@@ -1223,21 +1223,21 @@ void OpenGLDriver::createRenderTarget(Driver::RenderTargetHandle rth,
     CHECK_GL_ERROR(utils::slog.e)
 }
 
-void OpenGLDriver::createFence(Driver::FenceHandle fh, int) {
+void OpenGLDriver::createFenceR(Driver::FenceHandle fh, int) {
     DEBUG_MARKER()
 
     HwFence* f = construct<HwFence>(fh);
     f->fence = mPlatform.createFence();
 }
 
-void OpenGLDriver::createSwapChain(Driver::SwapChainHandle sch, void* nativeWindow, uint64_t flags) {
+void OpenGLDriver::createSwapChainR(Driver::SwapChainHandle sch, void* nativeWindow, uint64_t flags) {
     DEBUG_MARKER()
 
     HwSwapChain* sc = construct<HwSwapChain>(sch);
     sc->swapChain = mPlatform.createSwapChain(nativeWindow, flags);
 }
 
-void OpenGLDriver::createStreamFromTextureId(Driver::StreamHandle sh,
+void OpenGLDriver::createStreamFromTextureIdR(Driver::StreamHandle sh,
         intptr_t externalTextureId, uint32_t width, uint32_t height) {
     DEBUG_MARKER()
 

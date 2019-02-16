@@ -51,9 +51,9 @@ private:
     RetType methodName(paramsDecl) override { return RetType(true); }
 
 #define DECL_DRIVER_API_RETURN(RetType, methodName, paramsDecl, params) \
-    RetType methodName##Synchronous() noexcept override { \
+    RetType methodName##S() noexcept override { \
         return RetType((RetType::HandleId)0xDEAD0000); } \
-    UTILS_ALWAYS_INLINE void methodName(RetType, paramsDecl) { }
+    UTILS_ALWAYS_INLINE void methodName##R(RetType, paramsDecl) { }
 
 #include "driver/DriverAPI.inc"
 };
