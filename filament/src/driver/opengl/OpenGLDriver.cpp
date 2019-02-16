@@ -1759,13 +1759,14 @@ void OpenGLDriver::generateMipmaps(Driver::TextureHandle th) {
     // color-renderable and filterable (i.e.: doesn't work for depth)
     bindTexture(MAX_TEXTURE_UNITS - 1, t->gl.target, t, t->gl.targetIndex);
     activeTexture(MAX_TEXTURE_UNITS - 1);
-    glGenerateMipmap(t->gl.target);
 
     t->gl.baseLevel = 0;
     t->gl.maxLevel = static_cast<uint8_t>(t->levels - 1);
 
     glTexParameteri(t->gl.target, GL_TEXTURE_BASE_LEVEL, t->gl.baseLevel);
     glTexParameteri(t->gl.target, GL_TEXTURE_MAX_LEVEL, t->gl.maxLevel);
+
+    glGenerateMipmap(t->gl.target);
 
     CHECK_GL_ERROR(utils::slog.e)
 }
