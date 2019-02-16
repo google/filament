@@ -69,10 +69,10 @@ private:
 #define DECL_DRIVER_API_RETURN(RetType, methodName, paramsDecl, params)                         \
     static void methodName(Driver& driver, CommandBase* base, intptr_t* next) {                 \
         SYSTRACE()                                                                              \
-        using Type = CommandType<decltype(&Driver::methodName)>;                                \
-        using Cmd = typename Type::template Command<&Driver::methodName>;                       \
+        using Type = CommandType<decltype(&Driver::methodName##R)>;                             \
+        using Cmd = typename Type::template Command<&Driver::methodName##R>;                    \
         ConcreteDriver& concreteDriver = static_cast<ConcreteDriver&>(driver);                  \
-        Cmd::execute(&ConcreteDriver::methodName, concreteDriver, base, next);                  \
+        Cmd::execute(&ConcreteDriver::methodName##R, concreteDriver, base, next);               \
      }
 #include "driver/DriverAPI.inc"
 };

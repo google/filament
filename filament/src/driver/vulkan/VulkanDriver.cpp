@@ -248,49 +248,49 @@ void VulkanDriver::flush(int) {
     // Todo: equivalent of glFlush()
 }
 
-void VulkanDriver::createVertexBuffer(Driver::VertexBufferHandle vbh, uint8_t bufferCount,
+void VulkanDriver::createVertexBufferR(Driver::VertexBufferHandle vbh, uint8_t bufferCount,
         uint8_t attributeCount, uint32_t elementCount, Driver::AttributeArray attributes,
         Driver::BufferUsage usage) {
     construct_handle<VulkanVertexBuffer>(mHandleMap, vbh, mContext, mStagePool, bufferCount,
             attributeCount, elementCount, attributes);
 }
 
-void VulkanDriver::createIndexBuffer(Driver::IndexBufferHandle ibh, Driver::ElementType elementType,
+void VulkanDriver::createIndexBufferR(Driver::IndexBufferHandle ibh, Driver::ElementType elementType,
         uint32_t indexCount, Driver::BufferUsage usage) {
     auto elementSize = (uint8_t) getElementTypeSize(elementType);
     construct_handle<VulkanIndexBuffer>(mHandleMap, ibh, mContext, mStagePool, elementSize,
             indexCount);
 }
 
-void VulkanDriver::createTexture(Driver::TextureHandle th, SamplerType target, uint8_t levels,
+void VulkanDriver::createTextureR(Driver::TextureHandle th, SamplerType target, uint8_t levels,
         TextureFormat format, uint8_t samples, uint32_t w, uint32_t h, uint32_t depth,
         TextureUsage usage) {
     construct_handle<VulkanTexture>(mHandleMap, th, mContext, target, levels, format, samples,
             w, h, depth, usage, mStagePool);
 }
 
-void VulkanDriver::createSamplerBuffer(Driver::SamplerBufferHandle sbh, size_t count) {
+void VulkanDriver::createSamplerBufferR(Driver::SamplerBufferHandle sbh, size_t count) {
     construct_handle<VulkanSamplerBuffer>(mHandleMap, sbh, mContext, count);
 }
 
-void VulkanDriver::createUniformBuffer(Driver::UniformBufferHandle ubh, size_t size,
+void VulkanDriver::createUniformBufferR(Driver::UniformBufferHandle ubh, size_t size,
         Driver::BufferUsage usage) {
     construct_handle<VulkanUniformBuffer>(mHandleMap, ubh, mContext, mStagePool, size, usage);
 }
 
-void VulkanDriver::createRenderPrimitive(Driver::RenderPrimitiveHandle rph, int) {
+void VulkanDriver::createRenderPrimitiveR(Driver::RenderPrimitiveHandle rph, int) {
     construct_handle<VulkanRenderPrimitive>(mHandleMap, rph, mContext);
 }
 
-void VulkanDriver::createProgram(Driver::ProgramHandle ph, Program&& program) {
+void VulkanDriver::createProgramR(Driver::ProgramHandle ph, Program&& program) {
     construct_handle<VulkanProgram>(mHandleMap, ph, mContext, program);
 }
 
-void VulkanDriver::createDefaultRenderTarget(Driver::RenderTargetHandle rth, int) {
+void VulkanDriver::createDefaultRenderTargetR(Driver::RenderTargetHandle rth, int) {
     construct_handle<VulkanRenderTarget>(mHandleMap, rth, mContext);
 }
 
-void VulkanDriver::createRenderTarget(Driver::RenderTargetHandle rth,
+void VulkanDriver::createRenderTargetR(Driver::RenderTargetHandle rth,
         Driver::TargetBufferFlags targets, uint32_t width, uint32_t height, uint8_t samples,
         TextureFormat format, Driver::TargetBufferInfo color, Driver::TargetBufferInfo depth,
         Driver::TargetBufferInfo stencil) {
@@ -318,10 +318,10 @@ void VulkanDriver::createRenderTarget(Driver::RenderTargetHandle rth,
     }
 }
 
-void VulkanDriver::createFence(Driver::FenceHandle fh, int) {
+void VulkanDriver::createFenceR(Driver::FenceHandle fh, int) {
 }
 
-void VulkanDriver::createSwapChain(Driver::SwapChainHandle sch, void* nativeWindow,
+void VulkanDriver::createSwapChainR(Driver::SwapChainHandle sch, void* nativeWindow,
         uint64_t flags) {
     auto* swapChain = construct_handle<VulkanSwapChain>(mHandleMap, sch);
     VulkanSurfaceContext& sc = swapChain->surfaceContext;
@@ -340,55 +340,55 @@ void VulkanDriver::createSwapChain(Driver::SwapChainHandle sch, void* nativeWind
     }
 }
 
-void VulkanDriver::createStreamFromTextureId(Driver::StreamHandle sh, intptr_t externalTextureId,
+void VulkanDriver::createStreamFromTextureIdR(Driver::StreamHandle sh, intptr_t externalTextureId,
         uint32_t width, uint32_t height) {
 }
 
-Handle<HwVertexBuffer> VulkanDriver::createVertexBufferSynchronous() noexcept {
+Handle<HwVertexBuffer> VulkanDriver::createVertexBufferS() noexcept {
     return alloc_handle<VulkanVertexBuffer, HwVertexBuffer>();
 }
 
-Handle<HwIndexBuffer> VulkanDriver::createIndexBufferSynchronous() noexcept {
+Handle<HwIndexBuffer> VulkanDriver::createIndexBufferS() noexcept {
     return alloc_handle<VulkanIndexBuffer, HwIndexBuffer>();
 }
 
-Handle<HwTexture> VulkanDriver::createTextureSynchronous() noexcept {
+Handle<HwTexture> VulkanDriver::createTextureS() noexcept {
     return alloc_handle<VulkanTexture, HwTexture>();
 }
 
-Handle<HwSamplerBuffer> VulkanDriver::createSamplerBufferSynchronous() noexcept {
+Handle<HwSamplerBuffer> VulkanDriver::createSamplerBufferS() noexcept {
     return alloc_handle<VulkanSamplerBuffer, HwSamplerBuffer>();
 }
 
-Handle<HwUniformBuffer> VulkanDriver::createUniformBufferSynchronous() noexcept {
+Handle<HwUniformBuffer> VulkanDriver::createUniformBufferS() noexcept {
     return alloc_handle<VulkanUniformBuffer, HwUniformBuffer>();
 }
 
-Handle<HwRenderPrimitive> VulkanDriver::createRenderPrimitiveSynchronous() noexcept {
+Handle<HwRenderPrimitive> VulkanDriver::createRenderPrimitiveS() noexcept {
     return alloc_handle<VulkanRenderPrimitive, HwRenderPrimitive>();
 }
 
-Handle<HwProgram> VulkanDriver::createProgramSynchronous() noexcept {
+Handle<HwProgram> VulkanDriver::createProgramS() noexcept {
     return alloc_handle<VulkanProgram, HwProgram>();
 }
 
-Handle<HwRenderTarget> VulkanDriver::createDefaultRenderTargetSynchronous() noexcept {
+Handle<HwRenderTarget> VulkanDriver::createDefaultRenderTargetS() noexcept {
     return alloc_handle<VulkanRenderTarget, HwRenderTarget>();
 }
 
-Handle<HwRenderTarget> VulkanDriver::createRenderTargetSynchronous() noexcept {
+Handle<HwRenderTarget> VulkanDriver::createRenderTargetS() noexcept {
     return alloc_handle<VulkanRenderTarget, HwRenderTarget>();
 }
 
-Handle<HwFence> VulkanDriver::createFenceSynchronous() noexcept {
+Handle<HwFence> VulkanDriver::createFenceS() noexcept {
     return {};
 }
 
-Handle<HwSwapChain> VulkanDriver::createSwapChainSynchronous() noexcept {
+Handle<HwSwapChain> VulkanDriver::createSwapChainS() noexcept {
     return alloc_handle<VulkanSwapChain, HwSwapChain>();
 }
 
-Handle<HwStream> VulkanDriver::createStreamFromTextureIdSynchronous() noexcept {
+Handle<HwStream> VulkanDriver::createStreamFromTextureIdS() noexcept {
     return {};
 }
 

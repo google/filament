@@ -128,7 +128,7 @@ void MetalDriver::flush(int dummy) {
 
 }
 
-void MetalDriver::createVertexBuffer(Driver::VertexBufferHandle vbh, uint8_t bufferCount,
+void MetalDriver::createVertexBufferR(Driver::VertexBufferHandle vbh, uint8_t bufferCount,
         uint8_t attributeCount, uint32_t vertexCount, Driver::AttributeArray attributes,
         Driver::BufferUsage usage) {
     // TODO: Take BufferUsage into account when creating the buffer.
@@ -136,41 +136,41 @@ void MetalDriver::createVertexBuffer(Driver::VertexBufferHandle vbh, uint8_t buf
             attributeCount, vertexCount, attributes);
 }
 
-void MetalDriver::createIndexBuffer(Driver::IndexBufferHandle ibh, Driver::ElementType elementType,
+void MetalDriver::createIndexBufferR(Driver::IndexBufferHandle ibh, Driver::ElementType elementType,
         uint32_t indexCount, Driver::BufferUsage usage) {
     auto elementSize = (uint8_t) getElementTypeSize(elementType);
     construct_handle<MetalIndexBuffer>(mHandleMap, ibh, pImpl->mDevice, elementSize, indexCount);
 }
 
-void MetalDriver::createTexture(Driver::TextureHandle th, Driver::SamplerType target, uint8_t levels,
+void MetalDriver::createTextureR(Driver::TextureHandle th, Driver::SamplerType target, uint8_t levels,
         Driver::TextureFormat format, uint8_t samples, uint32_t width, uint32_t height,
         uint32_t depth, Driver::TextureUsage usage) {
     construct_handle<MetalTexture>(mHandleMap, th, pImpl->mDevice, target, levels, format, samples,
             width, height, depth, usage);
 }
 
-void MetalDriver::createSamplerBuffer(Driver::SamplerBufferHandle sbh, size_t size) {
+void MetalDriver::createSamplerBufferR(Driver::SamplerBufferHandle sbh, size_t size) {
     construct_handle<MetalSamplerBuffer>(mHandleMap, sbh, size);
 }
 
-void MetalDriver::createUniformBuffer(Driver::UniformBufferHandle ubh, size_t size,
+void MetalDriver::createUniformBufferR(Driver::UniformBufferHandle ubh, size_t size,
         Driver::BufferUsage usage) {
     construct_handle<MetalUniformBuffer>(mHandleMap, ubh, pImpl->mDevice, size);
 }
 
-void MetalDriver::createRenderPrimitive(Driver::RenderPrimitiveHandle rph, int dummy) {
+void MetalDriver::createRenderPrimitiveR(Driver::RenderPrimitiveHandle rph, int dummy) {
     construct_handle<MetalRenderPrimitive>(mHandleMap, rph);
 }
 
-void MetalDriver::createProgram(Driver::ProgramHandle rph, Program&& program) {
+void MetalDriver::createProgramR(Driver::ProgramHandle rph, Program&& program) {
     construct_handle<MetalProgram>(mHandleMap, rph, pImpl->mDevice, program);
 }
 
-void MetalDriver::createDefaultRenderTarget(Driver::RenderTargetHandle rth, int dummy) {
+void MetalDriver::createDefaultRenderTargetR(Driver::RenderTargetHandle rth, int dummy) {
     construct_handle<MetalRenderTarget>(mHandleMap, rth);
 }
 
-void MetalDriver::createRenderTarget(Driver::RenderTargetHandle rth,
+void MetalDriver::createRenderTargetR(Driver::RenderTargetHandle rth,
         Driver::TargetBufferFlags targetBufferFlags, uint32_t width, uint32_t height,
         uint8_t samples, Driver::TextureFormat format, Driver::TargetBufferInfo color,
         Driver::TargetBufferInfo depth, Driver::TargetBufferInfo stencil) {
@@ -202,65 +202,65 @@ void MetalDriver::createRenderTarget(Driver::RenderTargetHandle rth,
             "Stencil buffer not supported.");
 }
 
-void MetalDriver::createFence(Driver::FenceHandle, int dummy) {
+void MetalDriver::createFenceR(Driver::FenceHandle, int dummy) {
 
 }
 
-void MetalDriver::createSwapChain(Driver::SwapChainHandle sch, void* nativeWindow, uint64_t flags) {
+void MetalDriver::createSwapChainR(Driver::SwapChainHandle sch, void* nativeWindow, uint64_t flags) {
     auto* metalLayer = (CAMetalLayer*) nativeWindow;
     construct_handle<MetalSwapChain>(mHandleMap, sch, pImpl->mDevice, metalLayer);
 }
 
-void MetalDriver::createStreamFromTextureId(Driver::StreamHandle, intptr_t externalTextureId,
+void MetalDriver::createStreamFromTextureIdR(Driver::StreamHandle, intptr_t externalTextureId,
         uint32_t width, uint32_t height) {
 
 }
 
-Driver::VertexBufferHandle MetalDriver::createVertexBufferSynchronous() noexcept {
+Driver::VertexBufferHandle MetalDriver::createVertexBufferS() noexcept {
     return alloc_handle<MetalVertexBuffer, HwVertexBuffer>();
 }
 
-Driver::IndexBufferHandle MetalDriver::createIndexBufferSynchronous() noexcept {
+Driver::IndexBufferHandle MetalDriver::createIndexBufferS() noexcept {
     return alloc_handle<MetalIndexBuffer, HwIndexBuffer>();
 }
 
-Driver::TextureHandle MetalDriver::createTextureSynchronous() noexcept {
+Driver::TextureHandle MetalDriver::createTextureS() noexcept {
     return alloc_handle<MetalTexture, HwTexture>();
 }
 
-Driver::SamplerBufferHandle MetalDriver::createSamplerBufferSynchronous() noexcept {
+Driver::SamplerBufferHandle MetalDriver::createSamplerBufferS() noexcept {
     return alloc_handle<MetalSamplerBuffer, HwSamplerBuffer>();
 }
 
-Driver::UniformBufferHandle MetalDriver::createUniformBufferSynchronous() noexcept {
+Driver::UniformBufferHandle MetalDriver::createUniformBufferS() noexcept {
     return alloc_handle<MetalUniformBuffer, HwUniformBuffer>();
 }
 
-Driver::RenderPrimitiveHandle MetalDriver::createRenderPrimitiveSynchronous() noexcept {
+Driver::RenderPrimitiveHandle MetalDriver::createRenderPrimitiveS() noexcept {
     return alloc_handle<MetalRenderPrimitive, HwRenderPrimitive>();
 }
 
-Driver::ProgramHandle MetalDriver::createProgramSynchronous() noexcept {
+Driver::ProgramHandle MetalDriver::createProgramS() noexcept {
     return alloc_handle<MetalProgram, HwProgram>();
 }
 
-Driver::RenderTargetHandle MetalDriver::createDefaultRenderTargetSynchronous() noexcept {
+Driver::RenderTargetHandle MetalDriver::createDefaultRenderTargetS() noexcept {
     return alloc_handle<MetalRenderTarget, HwRenderTarget>();
 }
 
-Driver::RenderTargetHandle MetalDriver::createRenderTargetSynchronous() noexcept {
+Driver::RenderTargetHandle MetalDriver::createRenderTargetS() noexcept {
     return alloc_handle<MetalRenderTarget, HwRenderTarget>();
 }
 
-Driver::FenceHandle MetalDriver::createFenceSynchronous() noexcept {
+Driver::FenceHandle MetalDriver::createFenceS() noexcept {
     return {};
 }
 
-Driver::SwapChainHandle MetalDriver::createSwapChainSynchronous() noexcept {
+Driver::SwapChainHandle MetalDriver::createSwapChainS() noexcept {
     return alloc_handle<MetalSwapChain, HwSwapChain>();
 }
 
-Driver::StreamHandle MetalDriver::createStreamFromTextureIdSynchronous() noexcept {
+Driver::StreamHandle MetalDriver::createStreamFromTextureIdS() noexcept {
     return {};
 }
 
