@@ -79,6 +79,11 @@ Material* Material::Builder::build(Engine& engine) {
         return nullptr;
     }
 
+    uint32_t version;
+    materialParser->getMaterialVersion(&version);
+    ASSERT_PRECONDITION(version == MATERIAL_VERSION, "Material version mismatch. Expected %d but "
+            "received %d.", MATERIAL_VERSION, version);
+
     assert(upcast(engine).getBackend() != Backend::DEFAULT &&
             "Default backend has not been resolved.");
 

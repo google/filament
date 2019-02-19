@@ -136,6 +136,14 @@ bool MaterialParser::isPostProcessMaterial() const noexcept {
 }
 
 // Accessors
+bool MaterialParser::getMaterialVersion(uint32_t* value) const noexcept {
+    return mImpl->getFromSimpleChunk(ChunkType::MaterialVersion, value);
+}
+
+bool MaterialParser::getPostProcessVersion(uint32_t* value) const noexcept {
+    return mImpl->getFromSimpleChunk(ChunkType::PostProcessVersion, value);
+}
+
 bool MaterialParser::getName(utils::CString* cstring) const noexcept {
    ChunkType type = ChunkType::MaterialName;
 

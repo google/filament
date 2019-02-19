@@ -21,6 +21,8 @@
 #include <stdint.h>
 
 namespace filament {
+    static constexpr size_t MATERIAL_VERSION = 1;
+
     enum class Shading : uint8_t {
         UNLIT,                  // no lighting applied, emissive possible
         LIT,                    // default, standard lighting

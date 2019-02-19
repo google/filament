@@ -55,10 +55,12 @@ static void usage(char* name) {
             "       Specify the target API: opengl (default), vulkan, metal, or all\n\n"
             "   --reflect, -r\n"
             "       Reflect the specified metadata as JSON: parameters\n\n"
-            "   --variant-filter=<filter>, -v <filter>\n"
+            "   --variant-filter=<filter>, -V <filter>\n"
             "       Filter out specified comma-separated variants:\n"
             "           directionalLighting, dynamicLighting, shadowReceiver, skinning\n"
             "       This variant filter is merged the filter from the material, if any\n\n"
+            "   --version, -v\n"
+            "       Print the material version number\n\n"
             "Internal use and debugging only:\n"
             "   --optimize-none, -g\n"
             "       Disable all shader optimizations, for debugging\n\n"
@@ -109,7 +111,7 @@ CommandlineConfig::CommandlineConfig(int argc, char** argv) : Config(), mArgc(ar
 }
 
 bool CommandlineConfig::parse() {
-    static constexpr const char* OPTSTR = "hxo:f:dm:a:p:OSEr:v:g";
+    static constexpr const char* OPTSTR = "hlxo:f:dm:a:p:OSEr:vV:g";
     static const struct option OPTIONS[] = {
             { "help",                    no_argument, nullptr, 'h' },
             { "license",                 no_argument, nullptr, 'l' },
@@ -117,7 +119,7 @@ bool CommandlineConfig::parse() {
             { "output-format",     required_argument, nullptr, 'f' },
             { "debug",                   no_argument, nullptr, 'd' },
             { "mode",              required_argument, nullptr, 'm' },
-            { "variant-filter",    required_argument, nullptr, 'v' },
+            { "variant-filter",    required_argument, nullptr, 'V' },
             { "platform",          required_argument, nullptr, 'p' },
             { "optimize",                no_argument, nullptr, 'x' }, // for backward compatibility
             { "optimize",                no_argument, nullptr, 'O' }, // for backward compatibility
@@ -127,6 +129,7 @@ bool CommandlineConfig::parse() {
             { "api",               required_argument, nullptr, 'a' },
             { "reflect",           required_argument, nullptr, 'r' },
             { "print",                   no_argument, nullptr, 't' },
+            { "version",                 no_argument, nullptr, 'v' },
             { nullptr, 0, nullptr, 0 }  // termination of the option list
     };
 
@@ -204,10 +207,15 @@ bool CommandlineConfig::parse() {
                     return false;
                 }
                 break;
-            case 'v': {
+            case 'v':
+                // Similar to --help, the --version command does an early exit in order to avoid
+                // subsequent error spew such as "Missing input filename" etc.
+                std::cout << filament::MATERIAL_VERSION << std::endl;
+                exit(0);
+                break;
+            case 'V':
                 mVariantFilter = parseVariantFilter(arg);
                 break;
-            }
             // These 2 flags are supported for backward compatibility
             case 'O':
             case 'x':

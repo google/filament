@@ -46,7 +46,7 @@ Package PostprocessMaterialBuilder::build() {
     // Create chunk tree.
     ChunkContainer container;
 
-    SimpleFieldChunk<uint32_t> version(ChunkType::PostProcessVersion, 1);
+    SimpleFieldChunk<uint32_t> version(ChunkType::PostProcessVersion, filament::MATERIAL_VERSION);
     container.addChild(&version);
 
     std::vector<TextEntry> glslEntries;
