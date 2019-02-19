@@ -40,7 +40,7 @@ namespace driver {
 
 VulkanDriver::VulkanDriver(VulkanPlatform* platform,
         const char* const* ppEnabledExtensions, uint32_t enabledExtensionCount) noexcept :
-        DriverBase(new ConcreteDispatcher<VulkanDriver>(this)),
+        DriverBase(new ConcreteDispatcher<VulkanDriver>()),
         mContextManager(*platform), mStagePool(mContext), mFramebufferCache(mContext),
         mSamplerCache(mContext) {
     mContext.rasterState = mBinder.getDefaultRasterState();

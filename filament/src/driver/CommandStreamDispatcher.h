@@ -50,10 +50,10 @@ template<typename ConcreteDriver>
 class ConcreteDispatcher final : public Dispatcher {
 public:
     // initialize the dispatch table
-    explicit ConcreteDispatcher(ConcreteDriver* driver) noexcept : Dispatcher() {
+    explicit ConcreteDispatcher() noexcept : Dispatcher() {
 #define DECL_DRIVER_API_SYNCHRONOUS(RetType, methodName, paramsDecl, params)
-#define DECL_DRIVER_API(methodName, paramsDecl, params)                 methodName##_ = methodName;
-#define DECL_DRIVER_API_RETURN(RetType, methodName, paramsDecl, params) methodName##_ = methodName;
+#define DECL_DRIVER_API(methodName, paramsDecl, params)                 methodName##_ = &ConcreteDispatcher::methodName;
+#define DECL_DRIVER_API_RETURN(RetType, methodName, paramsDecl, params) methodName##_ = &ConcreteDispatcher::methodName;
 #include "driver/DriverAPI.inc"
     }
 private:
@@ -61,16 +61,14 @@ private:
 #define DECL_DRIVER_API(methodName, paramsDecl, params)                                         \
     static void methodName(Driver& driver, CommandBase* base, intptr_t* next) {                 \
         SYSTRACE()                                                                              \
-        using Type = CommandType<decltype(&Driver::methodName)>;                                \
-        using Cmd = typename Type::template Command<&Driver::methodName>;                       \
+        using Cmd = COMMAND_TYPE(methodName);                                                   \
         ConcreteDriver& concreteDriver = static_cast<ConcreteDriver&>(driver);                  \
         Cmd::execute(&ConcreteDriver::methodName, concreteDriver, base, next);                  \
      }
 #define DECL_DRIVER_API_RETURN(RetType, methodName, paramsDecl, params)                         \
     static void methodName(Driver& driver, CommandBase* base, intptr_t* next) {                 \
         SYSTRACE()                                                                              \
-        using Type = CommandType<decltype(&Driver::methodName##R)>;                             \
-        using Cmd = typename Type::template Command<&Driver::methodName##R>;                    \
+        using Cmd = COMMAND_TYPE(methodName##R);                                                \
         ConcreteDriver& concreteDriver = static_cast<ConcreteDriver&>(driver);                  \
         Cmd::execute(&ConcreteDriver::methodName##R, concreteDriver, base, next);               \
      }

@@ -119,6 +119,8 @@ struct CommandType<void (Driver::*)(ARGS...)> {
     /*
      * Command is templated on a specific method of Driver, using CommandType's template
      * parameter.
+     * Note that we're never calling this method (which is why it doesn't appear in the
+     * template parameter below). The actual call is made through Command::execute().
      */
     template<void(Driver::*)(ARGS...)>
     class Command : public CommandBase {
@@ -158,6 +160,9 @@ struct CommandType<void (Driver::*)(ARGS...)> {
     };
 };
 
+// convert an method of "class Driver" into a Command<> type
+#define COMMAND_TYPE(method) CommandType<decltype(&Driver::method)>::Command<&Driver::method>
+
 // ------------------------------------------------------------------------------------------------
 
 class CustomCommand : public CommandBase {
@@ -196,8 +201,7 @@ public:
 #define DECL_DRIVER_API(methodName, paramsDecl, params)                                         \
     inline void methodName(paramsDecl) {                                                        \
         DEBUG_COMMAND(methodName, params);                                                      \
-        using CmdType = CommandType<decltype(&Driver::methodName)>;                             \
-        using Cmd = CmdType::Command<&Driver::methodName>;                                      \
+        using Cmd = COMMAND_TYPE(methodName);                                                   \
         void* const p = allocateCommand(CommandBase::align(sizeof(Cmd)));                       \
         new(p) Cmd(mDispatcher->methodName##_, params);                                         \
     }
@@ -212,8 +216,7 @@ public:
     inline RetType methodName(paramsDecl) {                                                     \
         DEBUG_COMMAND(methodName, params);                                                      \
         RetType result = mDriver->methodName##S();                                              \
-        using CmdType = CommandType<decltype(&Driver::methodName##R)>;                          \
-        using Cmd = CmdType::Command<&Driver::methodName##R>;                                   \
+        using Cmd = COMMAND_TYPE(methodName##R);                                                \
         void* const p = allocateCommand(CommandBase::align(sizeof(Cmd)));                       \
         new(p) Cmd(mDispatcher->methodName##_, RetType(result), params);                        \
         return result;                                                                          \
