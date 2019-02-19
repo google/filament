@@ -1,4 +1,4 @@
-// stb_dxt.h - v1.04 - DXT1/DXT5 compressor - public domain
+// stb_dxt.h - v1.08b - DXT1/DXT5 compressor - public domain
 // original by fabian "ryg" giesen - ported to C by stb
 // use '#define STB_DXT_IMPLEMENTATION' before including to create the implementation
 //
@@ -9,6 +9,10 @@
 //     and "high quality" using mode.
 //
 // version history:
+//   v1.08  - (sbt) fix bug in dxt-with-alpha block
+//   v1.07  - (stb) bc4; allow not using libc; add STB_DXT_STATIC
+//   v1.06  - (stb) fix to known-broken 1.05
+//   v1.05  - (stb) support bc5/3dc (Arvids Kokins), use extern "C" in C++ (Pavel Krajcevski)
 //   v1.04  - (ryg) default to no rounding bias for lerped colors (as per S3TC/DX10 spec);
 //            single color match fix (allow for inexact color interpolation);
 //            optimal DXT5 index finder; "high quality" mode that runs multiple refinement steps.
@@ -17,22 +21,42 @@
 //   v1.01  - (stb) fix bug converting to RGB that messed up quality, thanks ryg & cbloom
 //   v1.00  - (stb) first release
 //
+// contributors: 
+//   Kevin Schmidt (#defines for "freestanding" compilation)
+//   github:ppiastucki (BC4 support)
+// 
 // LICENSE
 //
-//   This software is in the public domain. Where that dedication is not
-//   recognized, you are granted a perpetual, irrevocable license to copy,
-//   distribute, and modify this file as you see fit.
+//   See end of file for license information.
 
 #ifndef STB_INCLUDE_STB_DXT_H
 #define STB_INCLUDE_STB_DXT_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#ifdef STB_DXT_STATIC
+#define STBDDEF static
+#else
+#define STBDDEF extern
+#endif
 
 // compression mode (bitflags)
 #define STB_DXT_NORMAL    0
 #define STB_DXT_DITHER    1   // use dithering. dubious win. never use for normal maps and the like!
 #define STB_DXT_HIGHQUAL  2   // high quality mode, does two refinement steps instead of 1. ~30-40% slower.
 
-void stb_compress_dxt_block(unsigned char *dest, const unsigned char *src, int alpha, int mode);
+STBDDEF void stb_compress_dxt_block(unsigned char *dest, const unsigned char *src_rgba_four_bytes_per_pixel, int alpha, int mode);
+STBDDEF void stb_compress_bc4_block(unsigned char *dest, const unsigned char *src_r_one_byte_per_pixel);
+STBDDEF void stb_compress_bc5_block(unsigned char *dest, const unsigned char *src_rg_two_byte_per_pixel);
+
 #define STB_COMPRESS_DXT_BLOCK
+
+#ifdef __cplusplus
+}
+#endif
+#endif // STB_INCLUDE_STB_DXT_H
 
 #ifdef STB_DXT_IMPLEMENTATION
 
@@ -51,8 +75,23 @@ void stb_compress_dxt_block(unsigned char *dest, const unsigned char *src, int a
 // #define STB_DXT_USE_ROUNDING_BIAS
 
 #include <stdlib.h>
+
+#if !defined(STBD_ABS) || !defined(STBI_FABS)
 #include <math.h>
-#include <string.h> // memset
+#endif
+
+#ifndef STBD_ABS
+#define STBD_ABS(i)           abs(i)
+#endif
+
+#ifndef STBD_FABS
+#define STBD_FABS(x)          fabs(x)
+#endif
+
+#ifndef STBD_MEMSET
+#include <string.h>
+#define STBD_MEMSET           memset
+#endif
 
 static unsigned char stb__Expand5[32];
 static unsigned char stb__Expand6[64];
@@ -117,13 +156,13 @@ static void stb__PrepareOptTable(unsigned char *Table,const unsigned char *expan
          for (mx=0;mx<size;mx++) {
             int mine = expand[mn];
             int maxe = expand[mx];
-            int err = abs(stb__Lerp13(maxe, mine) - i);
+            int err = STBD_ABS(stb__Lerp13(maxe, mine) - i);
             
             // DX10 spec says that interpolation must be within 3% of "correct" result,
             // add this as error term. (normally we'd expect a random distribution of
             // +-1.5% error, but nowhere in the spec does it say that the error has to be
             // unbiased - better safe than sorry).
-            err += abs(maxe - mine) * 3 / 100;
+            err += STBD_ABS(maxe - mine) * 3 / 100;
             
             if(err < bestErr)
             { 
@@ -151,11 +190,11 @@ static void stb__DitherBlock(unsigned char *dest, unsigned char *block)
   int err[8],*ep1 = err,*ep2 = err+4, *et;
   int ch,y;
 
-  // process channels seperately
+  // process channels separately
   for (ch=0; ch<3; ++ch) {
       unsigned char *bp = block+ch, *dp = dest+ch;
       unsigned char *quant = (ch == 1) ? stb__QuantGTab+8 : stb__QuantRBTab+8;
-      memset(err, 0, sizeof(err));
+      STBD_MEMSET(err, 0, sizeof(err));
       for(y=0; y<4; ++y) {
          dp[ 0] = quant[bp[ 0] + ((3*ep2[1] + 5*ep2[0]) >> 4)];
          ep1[0] = bp[ 0] - dp[ 0];
@@ -339,9 +378,9 @@ static void stb__OptimizeColorsBlock(unsigned char *block, unsigned short *pmax1
     vfb = b;
   }
 
-  magn = fabs(vfr);
-  if (fabs(vfg) > magn) magn = fabs(vfg);
-  if (fabs(vfb) > magn) magn = fabs(vfb);
+  magn = STBD_FABS(vfr);
+  if (STBD_FABS(vfg) > magn) magn = STBD_FABS(vfg);
+  if (STBD_FABS(vfb) > magn) magn = STBD_FABS(vfb);
 
    if(magn < 4.0f) { // too small, default to luminance
       v_r = 299; // JPEG YCbCr luma coefs, scaled by 1000.
@@ -538,18 +577,18 @@ static void stb__CompressColorBlock(unsigned char *dest, unsigned char *block, i
 }
 
 // Alpha block compression (this is easy for a change)
-static void stb__CompressAlphaBlock(unsigned char *dest,unsigned char *src,int mode)
+static void stb__CompressAlphaBlock(unsigned char *dest,unsigned char *src, int stride)
 {
    int i,dist,bias,dist4,dist2,bits,mask;
 
    // find min/max color
    int mn,mx;
-   mn = mx = src[3];
+   mn = mx = src[0];
 
    for (i=1;i<16;i++)
    {
-      if (src[i*4+3] < mn) mn = src[i*4+3];
-      else if (src[i*4+3] > mx) mx = src[i*4+3];
+      if (src[i*stride] < mn) mn = src[i*stride];
+      else if (src[i*stride] > mx) mx = src[i*stride];
    }
 
    // encode them
@@ -568,7 +607,7 @@ static void stb__CompressAlphaBlock(unsigned char *dest,unsigned char *src,int m
    bits = 0,mask=0;
    
    for (i=0;i<16;i++) {
-      int a = src[i*4+3]*7 + bias;
+      int a = src[i*stride]*7 + bias;
       int ind,t;
 
       // select index. this is a "linear scale" lerp factor between 0 (val=min) and 7 (val=max).
@@ -612,6 +651,7 @@ static void stb__InitDXT()
 
 void stb_compress_dxt_block(unsigned char *dest, const unsigned char *src, int alpha, int mode)
 {
+   unsigned char data[16][4];
    static int init=1;
    if (init) {
       stb__InitDXT();
@@ -619,12 +659,70 @@ void stb_compress_dxt_block(unsigned char *dest, const unsigned char *src, int a
    }
 
    if (alpha) {
-      stb__CompressAlphaBlock(dest,(unsigned char*) src,mode);
+      int i;
+      stb__CompressAlphaBlock(dest,(unsigned char*) src+3, 4);
       dest += 8;
+      // make a new copy of the data in which alpha is opaque,
+      // because code uses a fast test for color constancy
+      memcpy(data, src, 4*16);
+      for (i=0; i < 16; ++i)
+         data[i][3] = 255;
+      src = &data[0][0];
    }
 
    stb__CompressColorBlock(dest,(unsigned char*) src,mode);
 }
+
+void stb_compress_bc4_block(unsigned char *dest, const unsigned char *src)
+{
+   stb__CompressAlphaBlock(dest,(unsigned char*) src, 1);
+}
+
+void stb_compress_bc5_block(unsigned char *dest, const unsigned char *src)
+{
+   stb__CompressAlphaBlock(dest,(unsigned char*) src,2);
+   stb__CompressAlphaBlock(dest + 8,(unsigned char*) src+1,2);
+}
 #endif // STB_DXT_IMPLEMENTATION
 
-#endif // STB_INCLUDE_STB_DXT_H
+/*
+------------------------------------------------------------------------------
+This software is available under 2 licenses -- choose whichever you prefer.
+------------------------------------------------------------------------------
+ALTERNATIVE A - MIT License
+Copyright (c) 2017 Sean Barrett
+Permission is hereby granted, free of charge, to any person obtaining a copy of 
+this software and associated documentation files (the "Software"), to deal in 
+the Software without restriction, including without limitation the rights to 
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies 
+of the Software, and to permit persons to whom the Software is furnished to do 
+so, subject to the following conditions:
+The above copyright notice and this permission notice shall be included in all 
+copies or substantial portions of the Software.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE 
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE 
+SOFTWARE.
+------------------------------------------------------------------------------
+ALTERNATIVE B - Public Domain (www.unlicense.org)
+This is free and unencumbered software released into the public domain.
+Anyone is free to copy, modify, publish, use, compile, sell, or distribute this 
+software, either in source code form or as a compiled binary, for any purpose, 
+commercial or non-commercial, and by any means.
+In jurisdictions that recognize copyright laws, the author or authors of this 
+software dedicate any and all copyright interest in the software to the public 
+domain. We make this dedication for the benefit of the public at large and to 
+the detriment of our heirs and successors. We intend this dedication to be an 
+overt act of relinquishment in perpetuity of all present and future rights to 
+this software under copyright law.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE 
+AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN 
+ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION 
+WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+------------------------------------------------------------------------------
+*/

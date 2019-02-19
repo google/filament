@@ -1,4 +1,4 @@
-// stb_tilemap_editor.h - v0.37 - Sean Barrett - http://nothings.org/stb
+// stb_tilemap_editor.h - v0.39 - Sean Barrett - http://nothings.org/stb
 // placed in the public domain - not copyrighted - first released 2014-09
 //
 // Embeddable tilemap editor for C/C++
@@ -168,7 +168,7 @@
 //      #define STB_TILEMAP_EDITOR_IMPLEMENTATION
 //      // this triggers the implementation
 //
-//      void STBTE_DRAW_RECT(int x0, int y0, int x1, int y1, uint color);
+//      void STBTE_DRAW_RECT(int x0, int y0, int x1, int y1, unsigned int color);
 //      // this must draw a filled rectangle (exclusive on right/bottom)
 //      // color = (r<<16)|(g<<8)|(b)
 //      
@@ -251,7 +251,7 @@
 //
 //   The following symbols set static limits which determine how much
 //   memory will be allocated for the editor. You can override them
-//   by making similiar definitions, but memory usage will increase.
+//   by making similar definitions, but memory usage will increase.
 //
 //      #define STBTE_MAX_TILEMAP_X      200   // max 4096
 //      #define STBTE_MAX_TILEMAP_Y      200   // max 4096
@@ -275,6 +275,7 @@
 //   either approach allows cut&pasting between levels.)
 //
 // REVISION HISTORY
+//   0.38  fix warning
 //   0.37  fix warning
 //   0.36  minor compiler support
 //   0.35  layername button changes
@@ -316,9 +317,7 @@
 //
 // LICENSE
 //
-//   This software is in the public domain. Where that dedication is not
-//   recognized, you are granted a perpetual, irrevocable license to copy,
-//   distribute, and modify this file as you see fit.
+//   See end of file for license information.
 
 
 
@@ -397,7 +396,7 @@ extern void stbte_tick(stbte_tilemap *tm, float time_in_seconds_since_last_frame
 //  user input
 //
 
-// if you're using SDL, call the next function for SDL_MOUSEMOVE, SDL_MOUSEBUTTON, SDL_MOUSEWHEEL;
+// if you're using SDL, call the next function for SDL_MOUSEMOTION, SDL_MOUSEBUTTONDOWN, SDL_MOUSEBUTTONUP, SDL_MOUSEWHEEL;
 // the transformation lets you scale from SDL mouse coords to stb_tilemap_editor coords
 extern void stbte_mouse_sdl(stbte_tilemap *tm, const void *sdl_event, float xscale, float yscale, int xoffset, int yoffset);
 
@@ -405,6 +404,8 @@ extern void stbte_mouse_sdl(stbte_tilemap *tm, const void *sdl_event, float xsca
 extern void stbte_mouse_move(stbte_tilemap *tm, int x, int y, int shifted, int scrollkey);
 extern void stbte_mouse_button(stbte_tilemap *tm, int x, int y, int right, int down, int shifted, int scrollkey);
 extern void stbte_mouse_wheel(stbte_tilemap *tm, int x, int y, int vscroll);
+
+// note: at the moment, mouse wheel events (SDL_MOUSEWHEEL) are ignored.
 
 // for keyboard, define your own mapping from keys to the following actions.
 // this is totally optional, as all features are accessible with the mouse
@@ -1848,7 +1849,7 @@ static int stbte__minibutton(int colormode, int x, int y, int ch, int id)
    int x0 = x, y0 = y, x1 = x+8, y1 = y+7;
    int over = stbte__hittest(x0,y0,x1,y1,id);
    if (stbte__ui.event == STBTE__paint) {
-      char str[2] = { ch,0 };
+      char str[2] = { (char)ch, 0 };
       stbte__draw_textbox(x0,y0,x1,y1, str,1,0,colormode, STBTE__INDEX_FOR_ID(id,0,0));
    }
    return stbte__button_core(id);
@@ -1859,7 +1860,7 @@ static int stbte__layerbutton(int x, int y, int ch, int id, int toggled, int dis
    int x0 = x, y0 = y, x1 = x+10, y1 = y+11;
    int over = !disabled && stbte__hittest(x0,y0,x1,y1,id);
    if (stbte__ui.event == STBTE__paint) {
-      char str[2] = { ch,0 };
+      char str[2] = { (char)ch, 0 };
       int off = (9-stbte__get_char_width(ch))/2;
       stbte__draw_textbox(x0,y0,x1,y1, str, off+1,2, colormode, STBTE__INDEX_FOR_ID(id,disabled,toggled));
    }
@@ -2251,7 +2252,7 @@ enum
    STBTE__prop_int,
 };
 
-// id is:      [      24-bit data     : 7-bit identifer ]
+// id is:      [      24-bit data     : 7-bit identifier ]
 // map id is:  [  12-bit y : 12 bit x : 7-bit identifier ]
 
 #define STBTE__ID(n,p)     ((n) + ((p)<<7))
@@ -2879,7 +2880,7 @@ static void stbte__drag_update(stbte_tilemap *tm, int mapx, int mapy, int copy_p
             stbte__set_link(tm, mapx, mapy, -1, -1, STBTE__undo_record);
          else if (moved || (copied && written)) {
             // if we move the target, we update to point to the new target;
-            // or, if we copy the target and the source is part ofthe copy, then update to new target
+            // or, if we copy the target and the source is part of the copy, then update to new target
             int x = k->x + (stbte__ui.drag_dest_x - stbte__ui.drag_x);
             int y = k->y + (stbte__ui.drag_dest_y - stbte__ui.drag_y);
             if (!(x >= 0 && y >= 0 && x < tm->max_x && y < tm->max_y))
@@ -3356,7 +3357,7 @@ static void stbte__toolbar(stbte_tilemap *tm, int x0, int y0, int w, int h)
 
 #define STBTE__TEXTCOLOR(n)  stbte__color_table[n][STBTE__text][STBTE__idle]
 
-static int stbte__info_value(char *label, int x, int y, int val, int digits, int id)
+static int stbte__info_value(const char *label, int x, int y, int val, int digits, int id)
 {
    if (stbte__ui.event == STBTE__paint) {
       int off = 9-stbte__get_char_width(label[0]);
@@ -4129,3 +4130,45 @@ void stbte_mouse_sdl(stbte_tilemap *tm, const void *sdl_event, float xs, float y
 }
 
 #endif // STB_TILEMAP_EDITOR_IMPLEMENTATION
+
+/*
+------------------------------------------------------------------------------
+This software is available under 2 licenses -- choose whichever you prefer.
+------------------------------------------------------------------------------
+ALTERNATIVE A - MIT License
+Copyright (c) 2017 Sean Barrett
+Permission is hereby granted, free of charge, to any person obtaining a copy of 
+this software and associated documentation files (the "Software"), to deal in 
+the Software without restriction, including without limitation the rights to 
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies 
+of the Software, and to permit persons to whom the Software is furnished to do 
+so, subject to the following conditions:
+The above copyright notice and this permission notice shall be included in all 
+copies or substantial portions of the Software.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE 
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE 
+SOFTWARE.
+------------------------------------------------------------------------------
+ALTERNATIVE B - Public Domain (www.unlicense.org)
+This is free and unencumbered software released into the public domain.
+Anyone is free to copy, modify, publish, use, compile, sell, or distribute this 
+software, either in source code form or as a compiled binary, for any purpose, 
+commercial or non-commercial, and by any means.
+In jurisdictions that recognize copyright laws, the author or authors of this 
+software dedicate any and all copyright interest in the software to the public 
+domain. We make this dedication for the benefit of the public at large and to 
+the detriment of our heirs and successors. We intend this dedication to be an 
+overt act of relinquishment in perpetuity of all present and future rights to 
+this software under copyright law.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE 
+AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN 
+ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION 
+WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+------------------------------------------------------------------------------
+*/
