@@ -327,6 +327,14 @@ void MetalDriver::terminate() {
     [pImpl->mDriverPool drain];
 }
 
+ShaderModel MetalDriver::getShaderModel() const noexcept {
+#if defined(IOS)
+    return ShaderModel::GL_ES_30;
+#else
+    return ShaderModel::GL_CORE_41;
+#endif
+}
+
 Driver::StreamHandle MetalDriver::createStream(void* stream) {
     return {};
 }
