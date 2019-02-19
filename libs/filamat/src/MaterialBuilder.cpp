@@ -372,7 +372,7 @@ Package MaterialBuilder::build() noexcept {
     // Create chunk tree.
     ChunkContainer container;
 
-    SimpleFieldChunk<uint32_t> matVersion(ChunkType::MaterialVersion, 1);
+    SimpleFieldChunk<uint32_t> matVersion(ChunkType::MaterialVersion, filament::MATERIAL_VERSION);
     container.addChild(&matVersion);
 
     SimpleFieldChunk<const char*> matName(ChunkType::MaterialName, mMaterialName.c_str_safe());

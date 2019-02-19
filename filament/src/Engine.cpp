@@ -165,6 +165,11 @@ void FEngine::init() {
             mPostProcessParser->parse() && mPostProcessParser->isPostProcessMaterial();
     assert(ppMaterialOk);
 
+    uint32_t version;
+    mPostProcessParser->getPostProcessVersion(&version);
+    ASSERT_PRECONDITION(version == MATERIAL_VERSION, "Post-process material version mismatch. "
+            "Expected %d but received %d.", MATERIAL_VERSION, version);
+
     mFullScreenTriangleVb = upcast(VertexBuffer::Builder()
             .vertexCount(3)
             .bufferCount(1)
