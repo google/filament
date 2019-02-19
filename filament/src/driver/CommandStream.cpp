@@ -42,9 +42,10 @@ static void printParameterPack(io::ostream& out, const FIRST& first, const REMAI
 }
 
 static UTILS_NOINLINE UTILS_UNUSED std::string extractMethodName(std::string& command) noexcept {
-    auto pos = command.rfind("::Command<&(filament::Driver::");
-    auto end = command.rfind(")>");
-    pos += std::string("::Command<&(filament::").length();
+    constexpr const char startPattern[] = "::Command<&(filament::Driver::";
+    auto pos = command.rfind(startPattern);
+    auto end = command.rfind('(');
+    pos += sizeof(startPattern) - 1;
     return command.substr(pos, end-pos);
 }
 
@@ -125,7 +126,7 @@ void CommandType<void (Driver::*)(ARGS...)>::Command<METHOD>::log() noexcept  {
 #define DECL_DRIVER_API(methodName, paramsDecl, params) \
     template void CommandType<decltype(&Driver::methodName)>::Command<&Driver::methodName>::log();
 #define DECL_DRIVER_API_RETURN(RetType, methodName, paramsDecl, params) \
-    template void CommandType<decltype(&Driver::methodName)>::Command<&Driver::methodName>::log();
+    template void CommandType<decltype(&Driver::methodName##R)>::Command<&Driver::methodName##R>::log();
 #include "driver/DriverAPI.inc"
 #endif
 
@@ -398,6 +399,7 @@ io::ostream& operator<<(io::ostream& out, TextureUsage usage) {
         CASE(TextureUsage, DEFAULT)
         CASE(TextureUsage, COLOR_ATTACHMENT)
         CASE(TextureUsage, DEPTH_ATTACHMENT)
+        CASE(TextureUsage, STENCIL_ATTACHMENT)
     }
     return out;
 }
@@ -584,15 +586,25 @@ io::ostream& operator<<(io::ostream& out, const filament::UniformInterfaceBlock:
 }
 
 UTILS_PRIVATE
+io::ostream& operator<<(io::ostream& out, filament::driver::Viewport const& viewport) {
+    out << "Viewport{"
+        << ", left=" << viewport.left
+        << ", bottom=" << viewport.bottom
+        << ", width=" << viewport.width
+        << ", height=" << viewport.height << "}";
+    return out;
+}
+
+UTILS_PRIVATE
 io::ostream& operator<<(io::ostream& out, filament::driver::RenderPassParams const& params) {
     out << "RenderPassParams{"
-        <<   "clear=" << params.clear
-        << ", discardStart=" << params.discardStart
-        << ", discardEnd=" << params.discardEnd
-        << ", left=" << params.left
-        << ", bottom=" << params.bottom
-        << ", width=" << params.width
-        << ", height=" << params.height
+        <<   "clear=" << params.flags.clear
+        << ", discardStart=" << params.flags.discardStart
+        << ", discardEnd=" << params.flags.discardEnd
+        << ", left=" << params.viewport.left
+        << ", bottom=" << params.viewport.bottom
+        << ", width=" << params.viewport.width
+        << ", height=" << params.viewport.height
         << ", clearColor=" << params.clearColor
         << ", clearDepth=" << params.clearDepth
         << ", clearStencil=" << params.clearStencil << "}";
