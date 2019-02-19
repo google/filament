@@ -120,7 +120,7 @@ struct CommandType<void (Driver::*)(ARGS...)> {
      * Command is templated on a specific method of Driver, using CommandType's template
      * parameter.
      */
-    template<void(Driver::*METHOD)(ARGS...)>
+    template<void(Driver::*)(ARGS...)>
     class Command : public CommandBase {
         // We use a std::tuple<> to record the arguments passed to the constructor
         using SavedParameters = std::tuple<typename std::decay<ARGS>::type...>;
@@ -138,7 +138,7 @@ struct CommandType<void (Driver::*)(ARGS...)> {
                 // must call this before invoking the method
                 self->log();
             }
-            apply(method, driver, self->mArgs);
+            apply(std::forward<M>(method), std::forward<D>(driver), self->mArgs);
             self->~Command();
         }
 

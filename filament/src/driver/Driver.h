@@ -298,6 +298,7 @@ utils::io::ostream& operator<<(utils::io::ostream& out, filament::driver::PixelD
 utils::io::ostream& operator<<(utils::io::ostream& out, filament::driver::PixelDataType type);
 utils::io::ostream& operator<<(utils::io::ostream& out, filament::driver::BufferDescriptor const& b);
 utils::io::ostream& operator<<(utils::io::ostream& out, filament::driver::PixelBufferDescriptor const& b);
+utils::io::ostream& operator<<(utils::io::ostream& out, filament::driver::Viewport const& v);
 utils::io::ostream& operator<<(utils::io::ostream& out, filament::driver::RenderPassParams const& b);
 #endif
 
