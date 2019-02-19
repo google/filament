@@ -28,7 +28,7 @@ Driver* NoopDriver::create() {
     return new NoopDriver();
 }
 
-NoopDriver::NoopDriver() noexcept : DriverBase(new ConcreteDispatcher<NoopDriver>(this)) {
+NoopDriver::NoopDriver() noexcept : DriverBase(new ConcreteDispatcher<NoopDriver>()) {
 }
 
 NoopDriver::~NoopDriver() noexcept = default;

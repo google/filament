@@ -85,7 +85,7 @@ Driver* MetalDriver::create(MetalPlatform* const platform) {
 }
 
 MetalDriver::MetalDriver(driver::MetalPlatform* platform) noexcept
-        : DriverBase(new ConcreteDispatcher<MetalDriver>(this)),
+        : DriverBase(new ConcreteDispatcher<MetalDriver>()),
         mPlatform(*platform),
         pImpl(new MetalDriverImpl) {
     pImpl->mDriverPool = [[NSAutoreleasePool alloc] init];
