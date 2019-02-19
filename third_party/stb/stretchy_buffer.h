@@ -1,8 +1,9 @@
-// stretchy_buffer.h - v1.02 - public domain - nothings.org/stb
+// stretchy_buffer.h - v1.03 - public domain - nothings.org/stb
 // a vector<>-like dynamic array for C
 //
 // version history:
-//      1.02 -  compiles as C++, but untested
+//      1.03 -  compile as C++ maybe
+//      1.02 -  tweaks to syntax for no good reason
 //      1.01 -  added a "common uses" documentation section
 //      1.0  -  fixed bug in the version I posted prematurely
 //      0.9  -  rewrite to try to avoid strict-aliasing optimization
@@ -21,7 +22,7 @@
 //        - the length of the "in-use" part of the array
 //        - the current size of the allocated array
 //
-//    I find it to be single most useful non-built-in-structure when
+//    I find it to be the single most useful non-built-in-structure when
 //    programming in C (hash tables a close second), but to be clear
 //    it lacks many of the capabilities of C++ vector<>: there is no
 //    range checking, the object address isn't stable (see next section
@@ -57,7 +58,7 @@
 //
 //         1. can't take long-term pointers to elements of the array
 //         2. have to return the pointer from functions which might expand it
-//            (either as a return value or by passing it back)
+//            (either as a return value or by storing it to a ptr-to-ptr)
 //
 //    Now you can do the following things with this array:
 //
@@ -162,11 +163,13 @@
 //    the main trick is in realizing in the first place that it's
 //    possible to do this in a generic, type-safe way in C.
 //
+// Contributors:
+//
+// Timothy Wright (github:ZenToad)
+//
 // LICENSE
 //
-//   This software is in the public domain. Where that dedication is not
-//   recognized, you are granted a perpetual, irrevocable license to copy,
-//   distribute, and modify this file as you see fit.
+//   See end of file for license information.
 
 #ifndef STB_STRETCHY_BUFFER_H_INCLUDED
 #define STB_STRETCHY_BUFFER_H_INCLUDED
@@ -191,7 +194,7 @@
 
 #define stb__sbneedgrow(a,n)  ((a)==0 || stb__sbn(a)+(n) >= stb__sbm(a))
 #define stb__sbmaybegrow(a,n) (stb__sbneedgrow(a,(n)) ? stb__sbgrow(a,n) : 0)
-#define stb__sbgrow(a,n)      ((a) = stb__sbgrowf((a), (n), sizeof(*(a))))
+#define stb__sbgrow(a,n)      (*((void **)&(a)) = stb__sbgrowf((a), (n), sizeof(*(a))))
 
 #include <stdlib.h>
 
@@ -214,3 +217,46 @@ static void * stb__sbgrowf(void *arr, int increment, int itemsize)
    }
 }
 #endif // STB_STRETCHY_BUFFER_H_INCLUDED
+
+
+/*
+------------------------------------------------------------------------------
+This software is available under 2 licenses -- choose whichever you prefer.
+------------------------------------------------------------------------------
+ALTERNATIVE A - MIT License
+Copyright (c) 2017 Sean Barrett
+Permission is hereby granted, free of charge, to any person obtaining a copy of 
+this software and associated documentation files (the "Software"), to deal in 
+the Software without restriction, including without limitation the rights to 
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies 
+of the Software, and to permit persons to whom the Software is furnished to do 
+so, subject to the following conditions:
+The above copyright notice and this permission notice shall be included in all 
+copies or substantial portions of the Software.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE 
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE 
+SOFTWARE.
+------------------------------------------------------------------------------
+ALTERNATIVE B - Public Domain (www.unlicense.org)
+This is free and unencumbered software released into the public domain.
+Anyone is free to copy, modify, publish, use, compile, sell, or distribute this 
+software, either in source code form or as a compiled binary, for any purpose, 
+commercial or non-commercial, and by any means.
+In jurisdictions that recognize copyright laws, the author or authors of this 
+software dedicate any and all copyright interest in the software to the public 
+domain. We make this dedication for the benefit of the public at large and to 
+the detriment of our heirs and successors. We intend this dedication to be an 
+overt act of relinquishment in perpetuity of all present and future rights to 
+this software under copyright law.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE 
+AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN 
+ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION 
+WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+------------------------------------------------------------------------------
+*/
