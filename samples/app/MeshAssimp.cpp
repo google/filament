@@ -155,6 +155,7 @@ std::string shaderFromConfig(MaterialConfig config) {
 
 Material* createMaterialFromConfig(Engine& engine, MaterialConfig config ) {
     std::string shader = shaderFromConfig(config);
+    MaterialBuilder::init();
     MaterialBuilder builder = MaterialBuilder()
             .name("material")
             .material(shader.c_str())
