@@ -648,8 +648,6 @@ bool MeshAssimp::setFromFile(Asset& asset, std::map<std::string, MaterialInstanc
             // we only support triangles
             aiProcess_Triangulate);
 
-    scene = importer.ApplyPostProcessing(aiProcess_CalcTangentSpace);
-
     size_t index = importer.GetImporterIndex(asset.file.getExtension().c_str());
     const aiImporterDesc* importerDesc = importer.GetImporterInfo(index);
     bool isGLTF = importerDesc &&
@@ -842,12 +840,8 @@ void MeshAssimp::processNode(Asset& asset,
                             bitangent = normalize(cross(normal, float3{1.0, 0.0, 0.0}));
                             tangent = normalize(cross(normal, bitangent));
                         } else {
-                            // In assimp, the CalcTangentsProcess algorithm generates tangents in
-                            // the +U direction and bitangents in the +V direction, but the glTF
-                            // conformance suite (see NormalTangentTest) reveals that bitangents
-                            // should be flipped.
                             tangent = tangents[j];
-                            bitangent = -bitangents[j];
+                            bitangent = bitangents[j];
                         }
 
                         quatf q = filament::math::details::TMat33<float>::packTangentFrame({tangent, bitangent, normal});
