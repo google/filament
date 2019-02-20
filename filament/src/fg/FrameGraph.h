@@ -31,6 +31,7 @@
 #include <utils/Log.h>
 
 #include <vector>
+#include <memory>
 
 /*
  * A somewhat generic frame graph API.
