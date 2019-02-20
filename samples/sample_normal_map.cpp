@@ -260,6 +260,7 @@ static void setup(Engine* engine, View*, Scene* scene) {
 
     shader += "}\n";
 
+    MaterialBuilder::init();
     MaterialBuilder builder = MaterialBuilder()
             .name("DefaultMaterial")
             .material(shader.c_str())

@@ -180,6 +180,7 @@ static void setup(Engine* engine, View* view, Scene* scene) {
         return;
     }
 
+    MaterialBuilder::init();
     MaterialBuilder builder = MaterialBuilder()
             .name("DefaultMaterial")
             .require(VertexAttribute::UV0)
