@@ -196,14 +196,14 @@ bool CalcTangentsProcess::ProcessMesh( aiMesh* pMesh, unsigned int meshIndex)
         }
 
         // tangent points in the direction where to positive X axis of the texture coord's would point in model space
-        // bitangent's points along the positive Y axis of the texture coord's, respectively
+        // bitangent's points along the negative Y axis of the texture coord's, respectively
         aiVector3D tangent, bitangent;
         tangent.x = (w.x * sy - v.x * ty) * dirCorrection;
         tangent.y = (w.y * sy - v.y * ty) * dirCorrection;
         tangent.z = (w.z * sy - v.z * ty) * dirCorrection;
-        bitangent.x = (w.x * sx - v.x * tx) * dirCorrection;
-        bitangent.y = (w.y * sx - v.y * tx) * dirCorrection;
-        bitangent.z = (w.z * sx - v.z * tx) * dirCorrection;
+        bitangent.x = (v.x * tx - w.x * sx) * dirCorrection;
+        bitangent.y = (v.y * tx - w.y * sx) * dirCorrection;
+        bitangent.z = (v.z * tx - w.z * sx) * dirCorrection;
 
         // store for every vertex of that face
         for( unsigned int b = 0; b < face.mNumIndices; ++b ) {
