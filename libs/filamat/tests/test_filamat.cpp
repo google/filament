@@ -61,7 +61,7 @@ protected:
     }
 
     virtual void SetUp() {
-        GLSLTools::init();
+        MaterialBuilder::init();
     }
 };
 
