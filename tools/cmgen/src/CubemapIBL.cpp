@@ -775,31 +775,6 @@ static double2 __UNUSED prefilteredDFG_Karis(double NoV, double roughness) {
     return double2(-1.04, 1.04) * a004 + double2(r.z, r.w);
 }
 
-static double2 __UNUSED prefilteredDFG_Cloth_Ashikhmin(double NoV, double roughness) {
-    const double4 c0(0.24, 0.93, 0.01, 0.2);
-    const double4 c1(2.0, -1.3, 0.4, 0.03);
-    double s = 1.0 - NoV;
-    double e = s - c0.y;
-    double g = c0.x * std::exp2(-(e * e) / (2.0 * c0.z)) + s * c0.w;
-    double n = roughness * c1.x + c1.y;
-    double r = std::max(1.0 - n * n, c1.z) * g;
-    return {r, r * c1.w};
-}
-
-static double2 __UNUSED prefilteredDFG_Cloth_Charlie(double NoV, double roughness) {
-    const double3 c0(0.95, 1250.0, 0.0095);
-    const double4 c1(0.04, 0.2, 0.3, 0.2);
-    double a = 1.0 - NoV;
-    double b = 1.0 - roughness;
-    double n = std::pow(c1.x + a, 64.0);
-    double e = b - c0.x;
-    double g = std::exp2(-(e * e) * c0.y);
-    double f = b + c1.y;
-    double c = n * g + c1.z * (a + c1.w) * roughness + f * f * std::pow(a, 8.0);
-    double r = std::min(c, 18.0);
-    return {r, r * c0.z};
-}
-
 void CubemapIBL::DFG(Image& dst, bool multiscatter) {
     auto dfvFunction = multiscatter ? ::DFV_Multiscatter : ::DFV;
     JobSystem& js = CubemapUtils::getJobSystem();
