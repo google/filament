@@ -3621,13 +3621,13 @@ $$\begin{equation}
 The PDF of the BRDF can therefore be expressed as in equation $\ref{importantPDF}$:
 
 $$\begin{equation}\label{importantPDF}
-p(\theta,\phi) = \frac{\alpha^2}{\pi(cos^2\theta (\alpha^2-1) + 1) cos\theta sin\theta}
+p(\theta,\phi) = \frac{\alpha^2}{\pi(cos^2\theta (\alpha^2-1) + 1)^2} cos\theta sin\theta
 \end{equation}$$
 
 The term $sin\theta$ comes from the differential solid angle $sin\theta d\phi d\theta$ since we integrate over a sphere. We sample $\theta$ and $\phi$ independently:
 
 $$\begin{align*}
-p(\theta) &= \int_0^{2\pi} p(\theta,\phi) d\phi = \frac{2\alpha^2}{cos^2\theta (\alpha^2-1) + 1} cos\theta sin\theta \\
+p(\theta) &= \int_0^{2\pi} p(\theta,\phi) d\phi = \frac{2\alpha^2}{(cos^2\theta (\alpha^2-1) + 1)^2} cos\theta sin\theta \\
 p(\phi) &= \frac{p(\theta,\phi)}{p(\phi)} = \frac{1}{2\pi}
 \end{align*}$$
 
