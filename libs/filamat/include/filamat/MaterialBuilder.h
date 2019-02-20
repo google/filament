@@ -20,6 +20,7 @@
 #include <cstddef>
 #include <cstdint>
 
+#include <atomic>
 #include <string>
 #include <vector>
 
@@ -61,6 +62,13 @@ public:
         PERFORMANCE
     };
 
+    // Must be called first before building any materials.
+    static void init();
+
+    // Call when finished building materials to release all internal resources. After calling
+    // shutdown, another call to MaterialBuilder::init must precede another material build.
+    static void shutdown();
+
 protected:
     // Looks at platform and target API, then decides on shader models and output formats.
     void prepare();
@@ -78,6 +86,12 @@ protected:
     };
     std::vector<CodeGenParams> mCodeGenPermutations;
     uint8_t mVariantFilter = 0;
+
+    // Keeps track of how many times MaterialBuilder::init() has been called without a call to
+    // MaterialBuilder::shutdown(). Internally, glslang does something similar. We keep track for
+    // ourselves so we can inform the user if MaterialBuilder::init() hasn't been called before
+    // attempting to build a material.
+    static std::atomic<int> materialBuilderClients;
 };
 
 class UTILS_PUBLIC MaterialBuilder : public MaterialBuilderBase {

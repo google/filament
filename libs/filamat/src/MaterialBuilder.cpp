@@ -47,6 +47,8 @@ using namespace utils;
 
 namespace filamat {
 
+std::atomic<int> MaterialBuilderBase::materialBuilderClients(0);
+
 void MaterialBuilderBase::prepare() {
     mCodeGenPermutations.clear();
     mShaderModels.reset();
@@ -91,6 +93,16 @@ void MaterialBuilderBase::prepare() {
 MaterialBuilder::MaterialBuilder() : mMaterialName("Unnamed") {
     std::fill_n(mProperties, filament::MATERIAL_PROPERTIES_COUNT, false);
     mShaderModels.reset();
+}
+
+void MaterialBuilderBase::init() {
+    materialBuilderClients++;
+    GLSLTools::init();
+}
+
+void MaterialBuilderBase::shutdown() {
+    materialBuilderClients--;
+    GLSLTools::shutdown();
 }
 
 MaterialBuilder& MaterialBuilder::name(const char* name) noexcept {
@@ -352,7 +364,14 @@ static void showErrorMessage(const char* materialName, uint8_t variant,
 }
 
 Package MaterialBuilder::build() noexcept {
-    GLSLTools::init();
+    if (materialBuilderClients == 0) {
+        utils::slog.e << "Error: MaterialBuilder::init() must be called before build()."
+            << utils::io::endl;
+        // Return an empty package to signal a failure to build the material.
+        Package package(0);
+        package.setValid(false);
+        return package;
+    }
 
     if (!runStaticCodeAnalysis()) {
         // Return an empty package to signal a failure to build the material.

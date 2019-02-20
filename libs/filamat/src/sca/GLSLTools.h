@@ -113,6 +113,7 @@ private:
 class GLSLTools {
 public:
     static void init();
+    static void shutdown();
 
     // Return true if:
     // The shader is syntactically and semantically valid AND

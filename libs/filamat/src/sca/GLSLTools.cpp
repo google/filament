@@ -133,12 +133,12 @@ bool GLSLTools::analyzeVertexShader(const std::string& shaderCode, ShaderModel m
 }
 
 void GLSLTools::init() {
-    // According to glslang, InitializeProcess should be called exactly once per process.
-    static bool initializeCalled = false;
-    if (!initializeCalled) {
-        InitializeProcess();
-        initializeCalled = true;
-    }
+    // Each call to InitializeProcess must be matched with a call to FinalizeProcess.
+    InitializeProcess();
+}
+
+void GLSLTools::shutdown() {
+    FinalizeProcess();
 }
 
 bool GLSLTools::findProperties(const filamat::MaterialBuilder& builderIn,

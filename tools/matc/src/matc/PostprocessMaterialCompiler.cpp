@@ -23,6 +23,7 @@ using namespace filamat;
 namespace matc {
 
 bool PostprocessMaterialCompiler::run(const Config& config) {
+    PostprocessMaterialBuilder::init();
     PostprocessMaterialBuilder builder;
     builder
         .platform(config.getPlatform())
@@ -31,6 +32,7 @@ bool PostprocessMaterialCompiler::run(const Config& config) {
         .printShaders(config.printShaders());
 
     Package package = builder.build();
+    PostprocessMaterialBuilder::shutdown();
     if (!package.isValid()) {
         return false;
     }

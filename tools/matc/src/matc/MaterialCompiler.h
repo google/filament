@@ -38,6 +38,7 @@ public:
     MaterialCompiler();
 
     bool run(const Config& config) override;
+
     bool checkParameters(const Config& config) override;
 
 private:
