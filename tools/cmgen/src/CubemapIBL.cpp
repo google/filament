@@ -37,7 +37,7 @@ static double pow5(double x) {
     return (x*x)*(x*x)*x;
 }
 
-static double3 hemisphereImportanceSampleDggx(double2 u, double a) {
+static double3 hemisphereImportanceSampleDggx(double2 u, double a) { // pdf = D(a) * cosTheta
     const double phi = 2 * M_PI * u.x;
     // NOTE: (aa-1) == (a-1)(a+1) produces better fp accuracy
     const double cosTheta2 = (1 - u.y) / (1 + (a + 1) * ((a - 1) * u.y));
@@ -46,11 +46,18 @@ static double3 hemisphereImportanceSampleDggx(double2 u, double a) {
     return { sinTheta * std::cos(phi), sinTheta * std::sin(phi), cosTheta };
 }
 
-static double3 __UNUSED hemisphereCosSample(double2 u) {
+static double3 __UNUSED hemisphereCosSample(double2 u) {  // pdf = cosTheta / M_PI;
     const double phi = 2 * M_PI * u.x;
     const double cosTheta2 = 1 - u.y;
     const double cosTheta = std::sqrt(cosTheta2);
     const double sinTheta = std::sqrt(1 - cosTheta2);
+    return { sinTheta * std::cos(phi), sinTheta * std::sin(phi), cosTheta };
+}
+
+static double3 __UNUSED hemisphereUniformSample(double2 u) { // pdf = 1.0 / (2.0 * M_PI);
+    const double phi = 2 * M_PI * u.x;
+    const double cosTheta = 1 - u.y;
+    const double sinTheta = std::sqrt(1 - cosTheta * cosTheta);
     return { sinTheta * std::cos(phi), sinTheta * std::sin(phi), cosTheta };
 }
 
@@ -548,23 +555,25 @@ static double2 __UNUSED DFV_NoIS(double NoV, double roughness, size_t numSamples
     double2 r = 0;
     const double linearRoughness = roughness * roughness;
     const double3 V(std::sqrt(1 - NoV * NoV), 0, NoV);
-    for (size_t i=0 ; i<numSamples ; i++) {
+    for (size_t i = 0; i < numSamples; i++) {
         const double2 u = hammersley(uint32_t(i), 1.0f / numSamples);
         const double3 H = hemisphereCosSample(u);
-        const double3 L = 2 * dot(V, H)*H - V;
+        const double3 L = 2 * dot(V, H) * H - V;
         const double VoH = saturate(dot(V, H));
         const double NoL = saturate(L.z);
         const double NoH = saturate(H.z);
         if (NoL > 0) {
             // Note: remember VoH == LoH  (H is half vector)
-            const double v = Visibility(NoV, NoL, linearRoughness) * NoL * (VoH / NoH);
+            const double J = 1.0 / (4.0 * VoH);
+            const double pdf = NoH / M_PI;
+            const double d = DistributionGGX(NoH, linearRoughness) * NoL / (pdf * J);
             const double Fc = pow5(1 - VoH);
-            const double d = DistributionGGX(NoH, linearRoughness);
+            const double v = Visibility(NoV, NoL, linearRoughness);
             r.x += d * v * (1.0 - Fc);
             r.y += d * v * Fc;
         }
     }
-    return r * (M_PI * 4.0 / numSamples);
+    return r / numSamples;
 }
 
 /*
@@ -656,10 +665,10 @@ static double2 __UNUSED DFV_NoIS(double NoV, double roughness, size_t numSamples
 static double2 DFV(double NoV, double linearRoughness, size_t numSamples) {
     double2 r = 0;
     const double3 V(std::sqrt(1 - NoV * NoV), 0, NoV);
-    for (size_t i=0 ; i<numSamples ; i++) {
+    for (size_t i = 0; i < numSamples; i++) {
         const double2 u = hammersley(uint32_t(i), 1.0f / numSamples);
         const double3 H = hemisphereImportanceSampleDggx(u, linearRoughness);
-        const double3 L = 2 * dot(V, H)*H - V;
+        const double3 L = 2 * dot(V, H) * H - V;
         const double VoH = saturate(dot(V, H));
         const double NoL = saturate(L.z);
         const double NoH = saturate(H.z);
