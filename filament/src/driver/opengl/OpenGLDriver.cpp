@@ -429,8 +429,7 @@ void OpenGLDriver::bindBufferRange(GLenum target, GLuint index, GLuint buffer,
     assert(targetIndex <= 1); // sanity check
 
     // this ALSO sets the generic binding
-    if (state.buffers.genericBinding[targetIndex] != buffer
-            || state.buffers.targets[targetIndex].buffers[index].name != buffer
+        if (   state.buffers.targets[targetIndex].buffers[index].name != buffer
             || state.buffers.targets[targetIndex].buffers[index].offset != offset
             || state.buffers.targets[targetIndex].buffers[index].size != size) {
         state.buffers.targets[targetIndex].buffers[index].name = buffer;
