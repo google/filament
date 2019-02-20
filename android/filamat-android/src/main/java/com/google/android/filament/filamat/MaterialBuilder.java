@@ -26,6 +26,10 @@ public class MaterialBuilder {
     private final BuilderFinalizer mFinalizer;
     private final long mNativeObject;
 
+    static {
+        System.loadLibrary("filamat-jni");
+    }
+
     public enum VertexAttribute {
         POSITION,               // XYZ position (float3)
         TANGENTS,               // tangent, bitangent and normal, encoded as a quaternion (4 floats or half floats)
@@ -47,6 +51,14 @@ public class MaterialBuilder {
         DESKTOP,
         MOBILE,
         ALL
+    }
+
+    public static void init() {
+        nMaterialBuilderInit();
+    }
+
+    public static void shutdown() {
+        nMaterialBuilderShutdown();
     }
 
     public MaterialBuilder() {
@@ -123,6 +135,9 @@ public class MaterialBuilder {
             }
         }
     }
+
+    private static native void nMaterialBuilderInit();
+    private static native void nMaterialBuilderShutdown();
 
     private static native long nCreateMaterialBuilder();
     private static native void nDestroyMaterialBuilder(long nativeBuilder);

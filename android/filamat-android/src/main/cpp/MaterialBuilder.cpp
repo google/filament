@@ -23,6 +23,18 @@
 using namespace filament;
 using namespace filamat;
 
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_filamat_MaterialBuilder_nMaterialBuilderInit(JNIEnv *env,
+        jclass type) {
+    MaterialBuilder::init();
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_filamat_MaterialBuilder_nMaterialBuilderShutdown(JNIEnv *env,
+        jclass type) {
+    MaterialBuilder::shutdown();
+}
+
 extern "C" JNIEXPORT jlong JNICALL
 Java_com_google_android_filament_filamat_MaterialBuilder_nCreateMaterialBuilder(JNIEnv *env,
         jclass type) {

@@ -37,7 +37,6 @@ using namespace filament::driver;
 namespace filamat {
 
 Package PostprocessMaterialBuilder::build() {
-    GLSLTools::init();
     prepare();
 
     // Create a postprocessor to optimize / compile to Spir-V if necessary.

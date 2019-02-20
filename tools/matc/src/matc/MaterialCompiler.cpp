@@ -246,6 +246,7 @@ bool MaterialCompiler::run(const Config& config) {
     }
     auto buffer = input->read();
 
+    MaterialBuilder::init();
     MaterialBuilder builder;
     // Before attempting an expensive lex, let's find out if we were sent pure JSON.
     bool parsed;
@@ -275,6 +276,7 @@ bool MaterialCompiler::run(const Config& config) {
 
     // Write builder.build() to output.
     Package package = builder.build();
+    MaterialBuilder::shutdown();
     if (!package.isValid()) {
         std::cerr << "Could not compile material " << input->getName() << std::endl;
         return false;
