@@ -18,7 +18,7 @@ vec3 surfaceShading(const PixelParams pixel, const Light light, float occlusion)
     // specular BRDF
     float D = distributionCloth(pixel.linearRoughness, NoH);
     float V = visibilityCloth(shading_NoV, NoL);
-    vec3  F = fresnel(pixel.f0, LoH);
+    vec3  F = pixel.f0;
     // Ignore pixel.energyCompensation since we use a different BRDF here
     vec3 Fr = (D * V) * F;
 

@@ -14,18 +14,8 @@
 #define SPHERICAL_HARMONICS_BANDS           3
 #endif
 
-// Diffuse reflectance
-#define IBL_IRRADIANCE_SPHERICAL_HARMONICS  0
-
-// Specular reflectance
-#define IBL_PREFILTERED_DFG_LUT             0
-
-#define IBL_IRRADIANCE                      IBL_IRRADIANCE_SPHERICAL_HARMONICS
-#define IBL_PREFILTERED_DFG                 IBL_PREFILTERED_DFG_LUT
-
 // Cloth DFG approximation
-#define CLOTH_DFG_ASHIKHMIN                 0
-#define CLOTH_DFG_CHARLIE                   1
+#define CLOTH_DFG_CHARLIE                   0
 
 #define CLOTH_DFG                           CLOTH_DFG_CHARLIE
 
@@ -53,75 +43,18 @@ vec3 decodeDataForIBL(const vec4 data) {
 // IBL prefiltered DFG term implementations
 //------------------------------------------------------------------------------
 
-vec2 PrefilteredDFG_LUT(float coord, float NoV) {
+vec3 PrefilteredDFG_LUT(float coord, float NoV) {
     // coord = sqrt(linear_roughness), which is the mapping used by cmgen.
-    return textureLod(light_iblDFG, vec2(NoV, coord), 0.0).rg;
+    return textureLod(light_iblDFG, vec2(NoV, coord), 0.0).rgb;
 }
-
-#if CLOTH_DFG == CLOTH_DFG_ASHIKHMIN
-/**
- * Analytical approximation of the pre-filtered DFG terms for the cloth shading
- * model. This approximation is based on the Ashikhmin distribution term and
- * the Neubelt visibility term. See brdf.fs for more details.
- */
-vec2 PrefilteredDFG_Cloth_Ashikhmin(float roughness, float NoV) {
-    const vec4 c0 = vec4(0.24,  0.93, 0.01, 0.20);
-    const vec4 c1 = vec4(2.00, -1.30, 0.40, 0.03);
-
-    float s = 1.0 - NoV;
-    float e = s - c0.y;
-    float g = c0.x * exp2(-(e * e) / (2.0 * c0.z)) + s * c0.w;
-    float n = roughness * c1.x + c1.y;
-    float r = max(1.0 - n * n, c1.z) * g;
-
-    return vec2(r, r * c1.w);
-}
-#endif
-
- #if CLOTH_DFG == CLOTH_DFG_CHARLIE
-/**
- * Analytical approximation of the pre-filtered DFG terms for the cloth shading
- * model. This approximation is based on the Estevez & Kulla distribution term
- * ("Charlie" sheen) and the Neubelt visibility term. See brdf.fs for more
- * details.
- */
-vec2 PrefilteredDFG_Cloth_Charlie(float roughness, float NoV) {
-    const vec3 c0 = vec3(0.95, 1250.0, 0.0095);
-    const vec4 c1 = vec4(0.04, 0.2, 0.3, 0.2);
-
-    float a = 1.0 - NoV;
-    float b = 1.0 - roughness;
-
-    float n = pow(c1.x + a, 64.0);
-    float e = b - c0.x;
-    float g = exp2(-(e * e) * c0.y);
-    float f = b + c1.y;
-    float a2 = a * a;
-    float a3 = a2 * a;
-    float c = n * g + c1.z * (a + c1.w) * roughness + f * f * a3 * a3 * a2;
-    float r = min(c, 18.0);
-
-    return vec2(r, r * c0.z);
-}
-#endif
 
 //------------------------------------------------------------------------------
 // IBL environment BRDF dispatch
 //------------------------------------------------------------------------------
 
-vec2 prefilteredDFG(float roughness, float NoV) {
-#if defined(SHADING_MODEL_CLOTH)
-    #if CLOTH_DFG == CLOTH_DFG_ASHIKHMIN
-        return PrefilteredDFG_Cloth_Ashikhmin(roughness, NoV);
-    #elif CLOTH_DFG == CLOTH_DFG_CHARLIE
-        return PrefilteredDFG_Cloth_Charlie(roughness, NoV);
-    #endif
-#else
-    #if IBL_PREFILTERED_DFG == IBL_PREFILTERED_DFG_LUT
-        // PrefilteredDFG_LUT() takes a coordinate, which is sqrt(linear_roughness) = roughness
-        return PrefilteredDFG_LUT(roughness, NoV);
-    #endif
-#endif
+vec3 prefilteredDFG(float roughness, float NoV) {
+    // PrefilteredDFG_LUT() takes a coordinate, which is sqrt(linear_roughness) = roughness
+    return PrefilteredDFG_LUT(roughness, NoV);
 }
 
 //------------------------------------------------------------------------------
@@ -151,9 +84,7 @@ vec3 Irradiance_SphericalHarmonics(const vec3 n) {
 //------------------------------------------------------------------------------
 
 vec3 diffuseIrradiance(const vec3 n) {
-#if IBL_IRRADIANCE == IBL_IRRADIANCE_SPHERICAL_HARMONICS
     return Irradiance_SphericalHarmonics(n);
-#endif
 }
 
 //------------------------------------------------------------------------------
@@ -183,7 +114,9 @@ vec3 getSpecularDominantDirection(vec3 n, vec3 r, float linearRoughness) {
 }
 
 vec3 specularDFG(const PixelParams pixel) {
-#if defined(SHADING_MODEL_CLOTH) || !defined(USE_MULTIPLE_SCATTERING_COMPENSATION)
+#if defined(SHADING_MODEL_CLOTH)
+    return pixel.f0 * pixel.dfg.z;
+#elif !defined(USE_MULTIPLE_SCATTERING_COMPENSATION)
     return pixel.f0 * pixel.dfg.x + pixel.dfg.y;
 #else
     return mix(pixel.dfg.xxx, pixel.dfg.yyy, pixel.f0);
@@ -228,7 +161,6 @@ vec3 getReflectedVector(const PixelParams pixel, const vec3 n) {
 //------------------------------------------------------------------------------
 
 #if IBL_INTEGRATION == IBL_INTEGRATION_IMPORTANCE_SAMPLING
-
 vec2 hammersley(uint index) {
     // Compute Hammersley sequence
     // TODO: these should come from uniforms

@@ -82,6 +82,7 @@ static utils::Path g_prefilter_dir;
 static bool g_dfg = false;
 static utils::Path g_dfg_filename;
 static bool g_dfg_multiscatter = false;
+static bool g_dfg_cloth = false;
 
 static bool g_ibl_irradiance = false;
 static utils::Path g_ibl_irradiance_dir;
@@ -103,7 +104,7 @@ static void iblDiffuseIrradiance(const utils::Path& iname, const std::vector<Cub
         const utils::Path& dir);
 static void iblMipmapPrefilter(const utils::Path& iname, const std::vector<Image>& images,
         const std::vector<Cubemap>& levels, const utils::Path& dir);
-static void iblLutDfg(const utils::Path& filename, size_t size, bool multiscatter = false);
+static void iblLutDfg(const utils::Path& filename, size_t size, bool multiscatter, bool cloth);
 static void extractCubemapFaces(const utils::Path& iname, const Cubemap& cm, const utils::Path& dir);
 static void outputSh(std::ostream& out, const std::unique_ptr<filament::math::double3[]>& sh, size_t numBands);
 static void UTILS_UNUSED outputSpectrum(std::ostream& out,
@@ -181,6 +182,8 @@ static void printUsage(char* name) {
             "       Compute the IBL DFG LUT\n\n"
             "   --ibl-dfg-multiscatter\n"
             "       If --ibl-dfg is set, computes the DFG for multi-scattering GGX\n\n"
+            "   --ibl-dfg-cloth\n"
+            "       If --ibl-dfg is set, adds a 3rd channel to the DFG for cloth shading\n\n"
             "   --ibl-is-mipmap=dir\n"
             "       Generate mipmap for pre-filtered importance sampling\n\n"
             "   --ibl-irradiance=dir\n"
@@ -228,6 +231,7 @@ static int handleCommandLineArgments(int argc, char* argv[]) {
             { "ibl-irradiance",       required_argument, nullptr, 'P' },
             { "ibl-dfg",              required_argument, nullptr, 'a' },
             { "ibl-dfg-multiscatter",       no_argument, nullptr, 'u' },
+            { "ibl-dfg-cloth",              no_argument, nullptr, 'C' },
             { "ibl-samples",          required_argument, nullptr, 'k' },
             { "deploy",               required_argument, nullptr, 'x' },
             { "no-mirror",                  no_argument, nullptr, 'm' },
@@ -371,6 +375,9 @@ static int handleCommandLineArgments(int argc, char* argv[]) {
             case 'u':
                 g_dfg_multiscatter = true;
                 break;
+            case 'C':
+                g_dfg_cloth = true;
+                break;
             case 'k':
                 g_num_samples = (size_t)std::stoi(arg);
                 break;
@@ -419,7 +426,7 @@ int main(int argc, char* argv[]) {
             std::cout << "Generating IBL DFG LUT..." << std::endl;
         }
         size_t size = g_output_size ? g_output_size : DFG_LUT_DEFAULT_SIZE;
-        iblLutDfg(g_dfg_filename, size, g_dfg_multiscatter);
+        iblLutDfg(g_dfg_filename, size, g_dfg_multiscatter, g_dfg_cloth);
         if (num_args < 1) return 0;
     }
 
@@ -960,10 +967,10 @@ static bool isIncludeFile(const utils::Path& filename) {
     return extension == "inc";
 }
 
-void iblLutDfg(const utils::Path& filename, size_t size, bool multiscatter) {
-    std::unique_ptr<uint8_t[]> buf(new uint8_t[size*size*sizeof(float3)]);
-    Image image(std::move(buf), size, size, size*sizeof(float3), sizeof(float3));
-    CubemapIBL::DFG(image, multiscatter);
+void iblLutDfg(const utils::Path& filename, size_t size, bool multiscatter, bool cloth) {
+    std::unique_ptr<uint8_t[]> buf(new uint8_t[size * size * sizeof(float3)]);
+    Image image(std::move(buf), size, size, size * sizeof(float3), sizeof(float3));
+    CubemapIBL::DFG(image, multiscatter, cloth);
 
     utils::Path outputDir(filename.getAbsolutePath().getParent());
     if (!outputDir.exists()) {
@@ -982,11 +989,15 @@ void iblLutDfg(const utils::Path& filename, size_t size, bool multiscatter) {
         for (size_t y = 0; y < size; y++) {
             for (size_t x = 0; x < size; x++) {
                 if (x % 4 == 0) outputStream << std::endl << "    ";
-                const half2 d = half2(static_cast<float3*>(image.getPixelRef(x, size - 1 - y))->xy);
+                const half3 d = half3(*static_cast<float3*>(image.getPixelRef(x, size - 1 - y)));
                 const uint16_t r = *reinterpret_cast<const uint16_t*>(&d.r);
                 const uint16_t g = *reinterpret_cast<const uint16_t*>(&d.g);
+                const uint16_t b = *reinterpret_cast<const uint16_t*>(&d.b);
                 outputStream << "0x" << std::setfill('0') << std::setw(4) << std::hex << r << ", ";
                 outputStream << "0x" << std::setfill('0') << std::setw(4) << std::hex << g << ", ";
+                if (g_dfg_cloth) {
+                    outputStream << "0x" << std::setfill('0') << std::setw(4) << std::hex << b << ", ";
+                }
             }
         }
         if (!isInclude) {
