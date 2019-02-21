@@ -92,7 +92,49 @@ extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_filamat_MaterialBuilder_nMaterialBuilderShading(JNIEnv* env,
         jclass type, jlong nativeBuilder, jint shading) {
     auto builder = (MaterialBuilder*) nativeBuilder;
-    builder->shading((Shading) shading);
+    builder->shading((MaterialBuilder::Shading) shading);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_filamat_MaterialBuilder_nMaterialBuilderInterpolation(JNIEnv* env,
+        jclass type, jlong nativeBuilder, jint interpolation) {
+    auto builder = (MaterialBuilder*) nativeBuilder;
+    builder->interpolation((MaterialBuilder::Interpolation) interpolation);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_filamat_MaterialBuilder_nMaterialBuilderUniformParameter(
+        JNIEnv* env, jclass type, jlong nativeBuilder, jint uniformType, jstring name_) {
+    auto builder = (MaterialBuilder*) nativeBuilder;
+    const char* name = env->GetStringUTFChars(name_, nullptr);
+    builder->parameter((MaterialBuilder::UniformType) uniformType, name);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_filamat_MaterialBuilder_nMaterialBuilderUniformParameterArray(
+        JNIEnv* env, jclass type, jlong nativeBuilder, jint uniformType, jint size, jstring name_) {
+    auto builder = (MaterialBuilder*) nativeBuilder;
+    const char* name = env->GetStringUTFChars(name_, nullptr);
+    builder->parameter((MaterialBuilder::UniformType) uniformType, (size_t) size, name);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_filamat_MaterialBuilder_nMaterialBuilderSamplerParameter(
+        JNIEnv* env, jclass type, jlong nativeBuilder, jint samplerType, jint format,
+        jint precision, jstring name_) {
+    auto builder = (MaterialBuilder*) nativeBuilder;
+    const char* name = env->GetStringUTFChars(name_, nullptr);
+    builder->parameter((MaterialBuilder::SamplerType) samplerType,
+            (MaterialBuilder::SamplerFormat) format, (MaterialBuilder::SamplerPrecision) precision,
+            name);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_filamat_MaterialBuilder_nMaterialBuilderVariable(
+        JNIEnv* env, jclass type, jlong nativeBuilder, jint variable, jstring name_) {
+    const char* name = env->GetStringUTFChars(name_, nullptr);
+    auto builder = (MaterialBuilder*) nativeBuilder;
+    builder->variable((MaterialBuilder::Variable) variable, name);
 }
 
 extern "C" JNIEXPORT void JNICALL
@@ -119,6 +161,27 @@ Java_com_google_android_filament_filamat_MaterialBuilder_nMaterialBuilderMateria
 }
 
 extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_filamat_MaterialBuilder_nMaterialBuilderBlending(JNIEnv* env,
+        jclass type, jlong nativeBuilder, jint mode) {
+    auto builder = (MaterialBuilder*) nativeBuilder;
+    builder->blending((MaterialBuilder::BlendingMode) mode);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_filamat_MaterialBuilder_nMaterialBuilderVertexDomain(JNIEnv* env,
+        jclass type, jlong nativeBuilder, jint vertexDomain) {
+    auto builder = (MaterialBuilder*) nativeBuilder;
+    builder->vertexDomain((MaterialBuilder::VertexDomain) vertexDomain);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_filamat_MaterialBuilder_nMaterialBuilderCulling(JNIEnv* env,
+        jclass type, jlong nativeBuilder, jint mode) {
+    auto builder = (MaterialBuilder*) nativeBuilder;
+    builder->culling((MaterialBuilder::CullingMode) mode);
+}
+
+extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_filamat_MaterialBuilder_nMaterialBuilderColorWrite(JNIEnv* env,
         jclass type, jlong nativeBuilder, jboolean enable) {
     auto builder = (MaterialBuilder*) nativeBuilder;
@@ -126,8 +189,89 @@ Java_com_google_android_filament_filamat_MaterialBuilder_nMaterialBuilderColorWr
 }
 
 extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_filamat_MaterialBuilder_nMaterialBuilderDepthWrite(JNIEnv* env,
+        jclass type, jlong nativeBuilder, jboolean depthWrite) {
+    auto builder = (MaterialBuilder*) nativeBuilder;
+    builder->depthWrite(depthWrite);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_filamat_MaterialBuilder_nMaterialBuilderDepthCulling(JNIEnv* env,
+        jclass type, jlong nativeBuilder, jboolean depthCulling) {
+    auto builder = (MaterialBuilder*) nativeBuilder;
+    builder->depthCulling(depthCulling);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_filamat_MaterialBuilder_nMaterialBuilderDoubleSided(JNIEnv* env,
+        jclass type, jlong nativeBuilder, jboolean doubleSided) {
+    auto builder = (MaterialBuilder*) nativeBuilder;
+    builder->doubleSided(doubleSided);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_filamat_MaterialBuilder_nMaterialBuilderMaskThreshold(JNIEnv* env,
+        jclass type, jlong nativeBuilder, jfloat maskThreshold) {
+    auto builder = (MaterialBuilder*) nativeBuilder;
+    builder->maskThreshold(maskThreshold);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_filamat_MaterialBuilder_nMaterialBuilderShadowMultiplier(
+        JNIEnv* env, jclass type, jlong nativeBuilder, jboolean shadowMultiplier) {
+    auto builder = (MaterialBuilder*) nativeBuilder;
+    builder->shadowMultiplier(shadowMultiplier);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_filamat_MaterialBuilder_nMaterialBuilderCurvatureToRoughness(
+        JNIEnv* env, jclass type, jlong nativeBuilder, jboolean curvatureToRoughness) {
+    auto builder = (MaterialBuilder*) nativeBuilder;
+    builder->curvatureToRoughness(curvatureToRoughness);
+}
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_filamat_MaterialBuilder_nMaterialBuilderLimitOverInterpolation(
+        JNIEnv* env, jclass type, jlong nativeBuilder, jboolean limitOverInterpolation) {
+    auto builder = (MaterialBuilder*) nativeBuilder;
+    builder->limitOverInterpolation(limitOverInterpolation);
+}
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_filamat_MaterialBuilder_nMaterialBuilderFlipUV(JNIEnv* env,
+        jclass type, jlong nativeBuilder, jboolean flipUV) {
+    auto builder = (MaterialBuilder*) nativeBuilder;
+    builder->flipUV(flipUV);
+}
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_filamat_MaterialBuilder_nMaterialBuilderTransparencyMode(
+        JNIEnv* env, jclass type, jlong nativeBuilder, jint mode) {
+    auto builder = (MaterialBuilder*) nativeBuilder;
+    builder->transparencyMode((MaterialBuilder::TransparencyMode) mode);
+}
+
+extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_filamat_MaterialBuilder_nMaterialBuilderPlatform(JNIEnv* env,
         jclass type, jlong nativeBuilder, jint platform) {
     auto builder = (MaterialBuilder*) nativeBuilder;
     builder->platform((MaterialBuilder::Platform) platform);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_filamat_MaterialBuilder_nMaterialBuilderTargetApi(JNIEnv* env,
+        jclass type, jlong nativeBuilder, jint targetApi) {
+    auto builder = (MaterialBuilder*) nativeBuilder;
+    builder->targetApi((MaterialBuilder::TargetApi) targetApi);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_filamat_MaterialBuilder_nMaterialBuilderOptimization(JNIEnv* env,
+        jclass type, jlong nativeBuilder, jint optimization) {
+    auto builder = (MaterialBuilder*) nativeBuilder;
+    builder->optimization((MaterialBuilder::Optimization) optimization);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_filamat_MaterialBuilder_nMaterialBuilderVariantFilter(JNIEnv* env,
+        jclass type, jlong nativeBuilder, jbyte variantFilter) {
+    auto builder = (MaterialBuilder*) nativeBuilder;
+    builder->variantFilter((uint8_t) variantFilter);
 }
