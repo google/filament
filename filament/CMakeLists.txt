@@ -311,7 +311,7 @@ file(MAKE_DIRECTORY "${GENERATION_ROOT}/generated/data/")
 set(output_path "${GENERATION_ROOT}/generated/data/dfg.inc")
 add_custom_command(
         OUTPUT ${output_path}
-        COMMAND cmgen --quiet --ibl-dfg-multiscatter --ibl-dfg=${output_path}
+        COMMAND cmgen --quiet --ibl-dfg-multiscatter --ibl-dfg-cloth --ibl-dfg=${output_path}
         DEPENDS cmgen
         COMMENT "Generating DFG LUT ${output_path}"
 )

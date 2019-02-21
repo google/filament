@@ -1083,10 +1083,10 @@ D_{velvet}(v,h,\alpha) = \frac{1}{\pi(1 + 4\alpha^2)} (1 + 4 \frac{exp\left(\fra
 For the full specular BRDF, we also follow [#Neubelt13] and replace the traditional denominator with a smoother variant:
 
 $$\begin{equation}\label{clothSpecularBRDF}
-f_{r}(v,h,\alpha) = \frac{F(v,h) D_{velvet}(v,h,\alpha)}{4(\NoL + \NoV - (\NoL)(\NoV))}
+f_{r}(v,h,\alpha) = \frac{D_{velvet}(v,h,\alpha)}{4(\NoL + \NoV - (\NoL)(\NoV))}
 \end{equation}$$
 
-The implementation of the velvet NDF is presented in listing [clothBRDF], optimized to properly fit in half float formats and to avoid computing a costly cotangent, relying instead on trigonometric identities.
+The implementation of the velvet NDF is presented in listing [clothBRDF], optimized to properly fit in half float formats and to avoid computing a costly cotangent, relying instead on trigonometric identities. Note that we removed the Fresnel component from this BRDF.
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 float D_Ashikhmin(float linearRoughness, float NoH) {
@@ -1156,7 +1156,7 @@ The complete implementation of our cloth BRDF, including sheen color and optiona
 // specular BRDF
 float D = distributionCloth(linearRoughness, NoH);
 float V = visibilityCloth(NoV, NoL);
-vec3  F = fresnel(sheenColor, LoH);
+vec3  F = sheenColor;
 vec3 Fr = (D * V) * F;
 
 // diffuse BRDF
@@ -2014,7 +2014,7 @@ $$\begin{equation}
 I(f(n, v, \alpha))        \equiv \frac{1}{N}\sum_{\forall \, i \in image} f(l_i, n, v, \alpha)       \left<\NoL\right>
 \end{equation}$$
 
-However, in practice we're using _importance sampling_ which needs to take de $pdf$ of the distribution
+However, in practice we're using _importance sampling_ which needs to take the $pdf$ of the distribution
 into account and adds a term $\frac{\left<\VoH\right>}{D(h_i, \alpha)\left<\NoH\right>}$.
 See Importance Sampling For The IBL section:
 
@@ -2417,57 +2417,11 @@ Figure [anisotropicDirection] demonstrates this modified implementation in pract
 
 ### Cloth ###
 
-The IBL implementation for the cloth material model is more complicated than for the other material models. The main difference stems from the use of a different NDF (Ashikhmin vs height-correlated Smith GGX). As described in this section, we use the split-sum approximation to compute the DFG term of the BRDF when computing an IBL. Since this DFG term is based on the wrong NDF, we must find a new approximation.
+The IBL implementation for the cloth material model is more complicated than for the other material models. The main difference stems from the use of a different NDF ("Charlie" vs height-correlated Smith GGX). As described in this section, we use the split-sum approximation to compute the DFG term of the BRDF when computing an IBL. This DFG term is designed for a different BRDF and cannot be used for the cloth BRDF. Since we designed our  cloth BRDF to not need a Fresnel term, we can generate a single DG term in the 3rd channel of the DFG LUT. The result is shown in figure [dfgClothLUT].
 
-The approximation we use is purely analytical and was manually fitted against a Monte-Carlo reference shown in figure [clothDFGReference] (using $2^{22}$ samples per data point instead of importance sampling). This visual comparison shows the significant impact the cloth NDF has on the BRDF. Using the standard DFG term would result in widely incorrect results.
+The DG term is generated using uniform sampling as recommended in [#Estevez17]. With uniform sampling the $pdf$ is simply $\frac{1}{2\pi}$ and we must still use the Jacobian $\frac{1}{\eft< 4 \VoH \right>}$.
 
-![Figure [clothDFGReference]: DFG LUT (left) vs Ashikhmin DFG LUT (middle) vs "Charlie" DFG LUT (right)](images/ibl/dfg_cloth.png)
-
-Manual fitting was performed in Mathematica (as shown in figure [clothManualFitting]) and while not perfect, the analytical approximation strikes a decent balance between correctness and runtime cost.
-
-![Figure [clothManualFitting]: Manual fitting of the DFG term for the cloth NDF](images/ibl/cloth_dfg_approximation.png)
-
-Listing [clothApprox] shows the implementation of the DFG approximation for the Ashikhmin NDF. We also provide the [Mathematica notebook](math/Cloth%20DFG%20Approximation.nb) containing the formulas of our approximation as well as comparisons to the reference LUT.
-
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-vec2 PrefilteredDFG_Cloth_Ashikhmin(float roughness, float NoV) {
-    const vec4 c0 = vec4(0.24,  0.93, 0.01, 0.20);
-    const vec4 c1 = vec4(2.00, -1.30, 0.40, 0.03);
-
-    float s = 1.0 - NoV;
-    float e = s - c0.y;
-    float g = c0.x * exp2(-(e * e) / (2.0 * c0.z)) + s * c0.w;
-    float n = roughness * c1.x + c1.y;
-    float r = max(1.0 - n * n, c1.z) * g;
-
-    return vec2(r, r * c1.w);
-}
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-[Listing [clothApprox]: GLSL implementation of the DFG approximation for the Ashikhmin cloth NDF]
-
-Listing [clothCharlieApprox] shows the implementation of the DFG approximation for the "Charlie" NDF.
-
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-vec2 PrefilteredDFG_Cloth_Charlie(float roughness, float NoV) {
-    const vec3 c0 = vec3(0.95, 1250.0, 0.0095);
-    const vec4 c1 = vec4(0.04, 0.2, 0.3, 0.2);
-
-    float a = 1.0 - NoV;
-    float b = 1.0 - roughness;
-
-    float n = pow(c1.x + a, 64.0);
-    float e = b - c0.x;
-    float g = exp2(-(e * e) * c0.y);
-    float f = b + c1.y;
-    float a2 = a * a;
-    float a3 = a2 * a;
-    float c = n * g + c1.z * (a + c1.w) * roughness + f * f * a3 * a3 * a2;
-    float r = min(c, 18.0);
-
-    return vec2(r, r * c0.z);
-}
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-[Listing [clothCharlieApprox]: GLSL implementation of the DFG approximation for the "Charlie" cloth NDF]
+![Figure [dfgClothLUT]: DFG LUT with a 3rd channel encoding the DG term of the cloth BRDF](images/ibl/dfg_cloth.png)
 
 The remainder of the image-based lighting implementation follows the same steps as the implementation of regular lights, including the optional subsurface scattering term and its wrap diffuse component. Just as with the clear coat IBL implementation, we cannot integrate over the hemisphere and use the view direction as the dominant light direction to compute the wrap diffuse component.
 
@@ -4284,6 +4238,10 @@ void main() {
 [Listing [froxelEvaluation]: GLSL implementation of assigning lights to froxels (compute shader)]
 
 # Revisions
+
+February 20, 2019: Cloth shading
+ - Removed Fresnel term from the cloth BRDF
+ - Removed cloth DFG approximations, replaced with a new channel in the DFG LUT
 
 August 21, 2018: Multiscattering
  - Added section [Energy loss in specular reflectance] on how to compensate for energy loss in single scattering BRDFs

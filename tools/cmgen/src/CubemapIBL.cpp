@@ -101,9 +101,9 @@ static double Visibility(double NoV, double NoL, double a) {
 }
 
 static double __UNUSED VisibilityAshikhmin(double NoV, double NoL, double a) {
+    // Neubelt and Pettineo 2013, "Crafting a Next-gen Material Pipeline for The Order: 1886"
     return 1 / (4 * (NoL + NoV - NoL * NoV));
 }
-
 
 /*
  *
@@ -749,6 +749,26 @@ static double2 DFV_Multiscatter(double NoV, double linearRoughness, size_t numSa
     return r * (4.0 / numSamples);
 }
 
+static double DFV_Charlie(double NoV, double linearRoughness, size_t numSamples) {
+    double r = 0.0;
+    const double3 V(std::sqrt(1 - NoV * NoV), 0, NoV);
+    for (size_t i = 0; i < numSamples; i++) {
+        const double2 u = hammersley(uint32_t(i), 1.0f / numSamples);
+        const double3 H = hemisphereCosSample(u);
+        const double3 L = 2 * dot(V, H) * H - V;
+        const double VoH = saturate(dot(V, H));
+        const double NoL = saturate(L.z);
+        const double NoH = saturate(H.z);
+        if (NoL > 0) {
+            const double v = VisibilityAshikhmin(NoV, NoL, linearRoughness);
+            const double d = DistributionCharlie(NoH, linearRoughness);
+            r += v * d * NoL * VoH; // VoH comes from the Jacobian, 1/(4*VoH)
+        }
+    }
+    // uniform sampling, the PDF is 1/2pi, 4 comes from the Jacobian
+    return r * (4.0 * 2.0 * M_PI / numSamples);
+}
+
 void CubemapIBL::brdf(Cubemap& dst, double linearRoughness) {
     CubemapUtils::process<CubemapUtils::EmptyState>(dst,
             [ & ](CubemapUtils::EmptyState&, size_t y,
@@ -775,20 +795,11 @@ void CubemapIBL::brdf(Cubemap& dst, double linearRoughness) {
             });
 }
 
-static double2 __UNUSED prefilteredDFG_Karis(double NoV, double roughness) {
-    // see https://www.unrealengine.com/blog/physically-based-shading-on-mobile
-    const double4 c0(-1.0, -0.0275, -0.572,  0.022);
-    const double4 c1( 1.0,  0.0425,  1.040, -0.040);
-    double4 r = roughness * c0 + c1;
-    float a004 = (float) (std::min(r.x * r.x, exp2(-9.28 * NoV)) * r.x + r.y);
-    return double2(-1.04, 1.04) * a004 + double2(r.z, r.w);
-}
-
-void CubemapIBL::DFG(Image& dst, bool multiscatter) {
+void CubemapIBL::DFG(Image& dst, bool multiscatter, bool cloth) {
     auto dfvFunction = multiscatter ? ::DFV_Multiscatter : ::DFV;
     JobSystem& js = CubemapUtils::getJobSystem();
     auto job = jobs::parallel_for<char>(js, nullptr, nullptr, uint32_t(dst.getHeight()),
-            [ &dst, dfvFunction ](char* d, size_t c) {
+            [&dst, dfvFunction, cloth](char* d, size_t c) {
                 const size_t width = dst.getWidth();
                 const size_t height = dst.getHeight();
                 size_t y0 = size_t(d);
@@ -805,6 +816,9 @@ void CubemapIBL::DFG(Image& dst, bool multiscatter) {
                         // const double NoV = double(x) / (width-1);
                         const double NoV = saturate((x + 0.5) / width);
                         float3 r = { dfvFunction(NoV, linear_roughness, 1024), 0 };
+                        if (cloth) {
+                            r.b = float(DFV_Charlie(NoV, linear_roughness, 4096));
+                        }
                         *data = r;
                     }
                 }

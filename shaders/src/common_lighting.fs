@@ -25,7 +25,7 @@ struct PixelParams {
     float roughness;
     vec3  f0;
     float linearRoughness;
-    vec2  dfg;
+    vec3  dfg;
     vec3  energyCompensation;
 
 #if defined(MATERIAL_HAS_CLEAR_COAT)
