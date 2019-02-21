@@ -56,7 +56,7 @@ void* PlatformVkWindows::createVkSurfaceKHR(void* nativeWindow, void* instance,
     ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkCreateWin32SurfaceKHR error.");
 
     RECT rect;
-    BOOL success = GetWindowRect(window, &rect);
+    BOOL success = GetClientRect(window, &rect);
     ASSERT_POSTCONDITION(success, "GetWindowRect error.");
     *width = rect.right - rect.left;
     *height = rect.bottom - rect.top;
