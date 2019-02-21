@@ -66,5 +66,5 @@ Occasionally, changes in Filament's `CMakeLists.txt` can require cleaning the CM
 directories. This can be done by adding the `-c` flag to the `build.sh` script or by simply deleting
 the `out` directory.
 
-Before reporting build errors, please try cleaning the CMake directories frst and building again
+Before reporting build errors, please try cleaning the CMake directories first and building again
 from scratch.
