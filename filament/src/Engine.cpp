@@ -325,6 +325,11 @@ void FEngine::prepare() {
             item->commit(*this);
         }
     }
+
+    // Commit default material instances.
+    for (auto& material : mMaterials) {
+        material->getDefaultInstance()->commit(*this);
+    }
 }
 
 void FEngine::gc() {
