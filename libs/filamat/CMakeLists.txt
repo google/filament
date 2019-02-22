@@ -119,9 +119,9 @@ endforeach()
 
 # Run the combine-static-libs script to bundle the libraries together.
 set(FILAMAT_COMBINED_OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/libfilamat_combined.a")
-set(COMBINE_SCRIPT "${CMAKE_SOURCE_DIR}/build/linux/combine-static-libs.sh")
+set(COMBINE_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/../../build/linux/combine-static-libs.sh")
 if (WIN32)
-    set(COMBINE_SCRIPT "${CMAKE_SOURCE_DIR}/build/windows/combine-static-libs.bat")
+    set(COMBINE_SCRIPT "${CMAKE_CURRENT_SOURCE_DIR}/../../build/windows/combine-static-libs.bat")
     set(CMAKE_AR "lib.exe")
 endif()
 add_custom_command(
