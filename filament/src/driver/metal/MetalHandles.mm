@@ -232,10 +232,14 @@ MetalProgram::~MetalProgram() {
 MetalTexture::MetalTexture(id<MTLDevice> device, driver::SamplerType target, uint8_t levels,
         TextureFormat format, uint8_t samples, uint32_t width, uint32_t height, uint32_t depth,
         TextureUsage usage) noexcept
-    : HwTexture(target, levels, samples, width, height, depth, format) {
+    : HwTexture(target, levels, samples, width, height, depth, format), reshaper(format) {
 
-    MTLPixelFormat pixelFormat = getMetalFormat(format);
-    bytesPerPixel = static_cast<uint8_t>(details::FTexture::getFormatSize(format));
+    // Metal does not natively support 3 component textures. We'll emulate support by reshaping the
+    // image data and using a 4 component texture.
+    const TextureFormat reshapedFormat = reshaper.getReshapedFormat();
+    const MTLPixelFormat pixelFormat = getMetalFormat(reshapedFormat);
+
+    bytesPerPixel = static_cast<uint8_t>(details::FTexture::getFormatSize(reshapedFormat));
 
     ASSERT_POSTCONDITION(pixelFormat != MTLPixelFormatInvalid, "Pixel format not supported.");
 
@@ -270,6 +274,8 @@ MetalTexture::~MetalTexture() {
 
 void MetalTexture::load2DImage(uint32_t level, uint32_t xoffset, uint32_t yoffset, uint32_t width,
         uint32_t height, Driver::PixelBufferDescriptor& data) noexcept {
+    void* buffer = reshaper.reshape(data.buffer, data.size);
+
     MTLRegion region {
         .origin = {
             .x = xoffset,
@@ -286,9 +292,11 @@ void MetalTexture::load2DImage(uint32_t level, uint32_t xoffset, uint32_t yoffse
     [texture replaceRegion:region
                mipmapLevel:level
                      slice:0
-                 withBytes:data.buffer
+                 withBytes:buffer
                bytesPerRow:bytesPerRow
              bytesPerImage:0];          // only needed for MTLTextureType3D
+
+    reshaper.freeBuffer(buffer);
 }
 
 void MetalTexture::loadCubeImage(const PixelBufferDescriptor& data, const FaceOffsets& faceOffsets,

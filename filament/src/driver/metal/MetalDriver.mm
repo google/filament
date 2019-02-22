@@ -361,7 +361,8 @@ Driver::FenceStatus MetalDriver::wait(Driver::FenceHandle fh, uint64_t timeout) 
 }
 
 bool MetalDriver::isTextureFormatSupported(Driver::TextureFormat format) {
-    return getMetalFormat(format) != MTLPixelFormatInvalid;
+    return getMetalFormat(format) != MTLPixelFormatInvalid ||
+           TextureReshaper::canReshapeTextureFormat(format);
 }
 
 bool MetalDriver::isRenderTargetFormatSupported(Driver::TextureFormat format) {

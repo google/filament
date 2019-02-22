@@ -64,6 +64,7 @@ set(SRCS
         src/driver/Handle.cpp
         src/driver/Program.cpp
         src/driver/SamplerBuffer.cpp
+        src/driver/TextureReshaper.cpp
         src/Box.cpp
         src/Camera.cpp
         src/Color.cpp
@@ -136,6 +137,7 @@ set(PRIVATE_HDRS
         src/driver/CommandStream.h
         src/driver/CommandStreamDispatcher.h
         src/driver/DataReshaper.h
+        src/driver/TextureReshaper.h
         src/driver/Driver.h
         src/driver/DriverAPI.inc
         src/driver/DriverApi.h

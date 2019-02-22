@@ -26,12 +26,12 @@ namespace filament {
 // submit 3-component data.
 class DataReshaper {
 public:
-    template<typename componentType, int numSrcChannels, int numDstChannels>
+    template<typename componentType, int numSrcChannels, int numDstChannels,
+            componentType maxValue = std::numeric_limits<componentType>::max()>
     static void reshape(void* dest, const void* src, size_t numSrcBytes) {
-        const componentType maxValue = std::numeric_limits<componentType>::max();
         const componentType* in = (const componentType*) src;
         componentType* out = (componentType*) dest;
-        const size_t numWords = numSrcBytes / numSrcChannels;
+        const size_t numWords = (numSrcBytes / sizeof(componentType)) / numSrcChannels;
         for (size_t word = 0; word < numWords; ++word) {
             for (size_t component = 0; component < numSrcChannels; ++component) {
                 out[component] = in[component];
