@@ -34,6 +34,7 @@ PFNGLPUSHGROUPMARKEREXTPROC glPushGroupMarkerEXT;
 PFNGLPOPGROUPMARKEREXTPROC glPopGroupMarkerEXT;
 #endif
 #if GL_EXT_multisampled_render_to_texture
+PFNGLRENDERBUFFERSTORAGEMULTISAMPLEEXTPROC glRenderbufferStorageMultisampleEXT;
 PFNGLFRAMEBUFFERTEXTURE2DMULTISAMPLEEXTPROC glFramebufferTexture2DMultisampleEXT;
 #endif
 }
@@ -77,6 +78,9 @@ public:
         glFramebufferTexture2DMultisampleEXT =
                 (PFNGLFRAMEBUFFERTEXTURE2DMULTISAMPLEEXTPROC)eglGetProcAddress(
                         "glFramebufferTexture2DMultisampleEXT");
+        glRenderbufferStorageMultisampleEXT =
+                (PFNGLRENDERBUFFERSTORAGEMULTISAMPLEEXTPROC)eglGetProcAddress(
+                        "glRenderbufferStorageMultisampleEXT");
 #endif
     }
 } instance;

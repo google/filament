@@ -177,6 +177,8 @@ public:
             RenderBuffer depth;
             RenderBuffer stencil;
             GLuint fbo = 0;
+            GLuint fbo_draw = 0;
+            TargetBufferFlags resolve = TargetBufferFlags::NONE; // attachments in fbo_draw to resolve
             uint8_t samples : 4;
             uint8_t colorLevel : 4; // Allows up to 15 levels (max texture size of 32768 x 32768)
         } gl;

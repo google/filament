@@ -37,6 +37,7 @@
         extern PFNGLPOPGROUPMARKEREXTPROC glPopGroupMarkerEXT;
 #endif
 #if GL_EXT_multisampled_render_to_texture
+        extern PFNGLRENDERBUFFERSTORAGEMULTISAMPLEEXTPROC glRenderbufferStorageMultisampleEXT;
         extern PFNGLFRAMEBUFFERTEXTURE2DMULTISAMPLEEXTPROC glFramebufferTexture2DMultisampleEXT;
 #endif
     }

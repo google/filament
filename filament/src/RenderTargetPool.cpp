@@ -87,7 +87,7 @@ RenderTargetPool::Target const* RenderTargetPool::get(
                 entry.attachments, target_w, target_h, samples, format, {}, {}, {});
     } else {
         entry.texture = driver.createTexture(Driver::SamplerType::SAMPLER_2D, 1,
-                format, samples, target_w, target_h, 1, Driver::TextureUsage::COLOR_ATTACHMENT);
+                format, 1, target_w, target_h, 1, Driver::TextureUsage::COLOR_ATTACHMENT);
 
         entry.target = driver.createRenderTarget(
                 entry.attachments, target_w, target_h, samples, format,
