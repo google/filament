@@ -133,6 +133,9 @@ public:
      * Convenience function that consumes normal vectors (and, optionally, tangent vectors) and
      * produces quaternions that can be passed into a TANGENTS buffer.
      *
+     * We may deprecate this method in the future. See also filament::geometry::SurfaceOrientation,
+     * which has additional capabilities.
+     *
      * The given output buffer must be preallocated with at least quatCount * outStride bytes.
      *
      * Normals are required but tangents are optional, in which case this function tries to generate
@@ -141,10 +144,6 @@ public:
      * If supplied, the tangent vectors should be unit length and should be orthogonal to the
      * normals. The w component of the tangent is a sign (-1 or +1) indicating handedness of the
      * basis.
-     *
-     * Note that some applications and file formats (e.g. Blender and glTF) use mikktspace, which
-     * consumes full topology information and produces an unindexed mesh, so it cannot be used here.
-     * This function exists for simple use cases only.
      */
     static void populateTangentQuaternions(const QuatTangentContext& ctx);
 };
