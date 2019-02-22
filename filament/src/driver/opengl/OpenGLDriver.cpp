@@ -1020,17 +1020,14 @@ void OpenGLDriver::createTextureR(Driver::TextureHandle th, SamplerType target, 
         }
 
         if (t->samples > 1) {
+            // Note: we can't be here in practice because filament's user API doesn't
+            // allow the creation of multi-sampled textures.
             if (features.multisample_texture) {
                 // multi-sample texture on GL 3.2 / GLES 3.1 and above
                 t->gl.targetIndex = (uint8_t)
                         getIndexForTextureTarget(t->gl.target = GL_TEXTURE_2D_MULTISAMPLE);
             } else {
-                // Turn off multi-sampling for that texture. This works because we're always only
-                // doing a resolve-blit (as opposed to doing a manual resolve in the shader -- i.e.:
-                // we're never attempt to use a multisample sampler).
-                // When EXT_multisampled_render_to_texture is available, we handle  it in
-                // framebufferTexture() below; if not, the resolve-blit becomes superfluous,
-                // but at least it works.
+                // Turn off multi-sampling for that texture. It's just not supported.
             }
         }
 
@@ -1046,36 +1043,73 @@ void OpenGLDriver::framebufferTexture(Driver::TargetBufferInfo& binfo,
 
     assert(t->target != SamplerType::SAMPLER_EXTERNAL);
 
-    bindFramebuffer(GL_FRAMEBUFFER, rt->gl.fbo);
+    GLenum target = GL_TEXTURE_2D;
     switch (t->target) {
         case SamplerType::SAMPLER_2D:
+            target = t->gl.target;  // this could be GL_TEXTURE_2D_MULTISAMPLE
+            // note: multi-sampled textures can't have mipmaps
+            break;
+        case SamplerType::SAMPLER_CUBEMAP:
+            target = getCubemapTarget(binfo.face);
+            // note: cubemaps can't be multi-sampled
+            break;
+        default:
+            break;
+    }
+
+    if (rt->gl.samples <= 1 ||
+        (rt->gl.samples > 1 && t->samples > 1 && features.multisample_texture)) {
+        // on GL3.2 / GLES3.1 and above multisample is handled when creating the texture.
+        // If multisampled textures are not supported and we end-up here, things should
+        // still work, albeit without MSAA.
+        bindFramebuffer(GL_FRAMEBUFFER, rt->gl.fbo);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, attachment, target, t->gl.texture_id, binfo.level);
+    } else
 #if GLES31_HEADERS
-            if (t->samples > 1 && !features.multisample_texture && ext.EXT_multisampled_render_to_texture) {
-                // we have a multi-sample texture, but multi-sampled textures are not supported,
-                // however, we have EXT_multisampled_render_to_texture -- phew.
-                // In that case, we create a multi-sampled framebuffer into our regular texture.
-                // Resolve happens automatically when sampling the texture.
-                glext::glFramebufferTexture2DMultisampleEXT(GL_FRAMEBUFFER,
-                        attachment, t->gl.target, t->gl.texture_id, binfo.level, t->samples);
-            } else
+    if (ext.EXT_multisampled_render_to_texture) {
+        assert(rt->gl.samples > 1);
+        // We have a multi-sample rendertarget and we have EXT_multisampled_render_to_texture,
+        // so, we can directly use a 1-sample texture as attachment, multi-sample resolve,
+        // will happen automagically and efficiently in the driver.
+        // This extension only exists on OpenGL ES.
+        bindFramebuffer(GL_FRAMEBUFFER, rt->gl.fbo);
+        glext::glFramebufferTexture2DMultisampleEXT(GL_FRAMEBUFFER,
+                        attachment, target, t->gl.texture_id, binfo.level, rt->gl.samples);
+    } else
 #endif
-            {
-                // on GL3.2 / GLES3.1 and above multisample is handled when creating the texture.
-                // If multisampled textures are not supported and we end-up here, things should
-                // still work, albeit without MSAA.
-                glFramebufferTexture2D(GL_FRAMEBUFFER, attachment,
-                        t->gl.target, t->gl.texture_id, binfo.level);
-            }
-            break;
-        case SamplerType::SAMPLER_CUBEMAP: {
-            GLenum target = getCubemapTarget(binfo.face);
-            glFramebufferTexture2D(GL_FRAMEBUFFER, attachment,
-                    target, t->gl.texture_id, binfo.level);
-            break;
+    { // here we emulate ext.EXT_multisampled_render_to_texture
+        assert(rt->gl.samples > 1);
+
+        // We need a "draw" sidecar fbo, used later for the resolve, which takes place in
+        // endRenderPass().
+        if (!rt->gl.fbo_draw) {
+            glGenFramebuffers(1, &rt->gl.fbo_draw);
         }
-        case SamplerType::SAMPLER_EXTERNAL:
-            // cannot happen by construction
-            break;
+        bindFramebuffer(GL_FRAMEBUFFER, rt->gl.fbo_draw);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, attachment, target, t->gl.texture_id, binfo.level);
+        switch (attachment) {
+            case GL_COLOR_ATTACHMENT0:
+                rt->gl.resolve = TargetBufferFlags(rt->gl.resolve | TargetBufferFlags::COLOR);
+                break;
+            case GL_DEPTH_ATTACHMENT:
+                rt->gl.resolve = TargetBufferFlags(rt->gl.resolve | TargetBufferFlags::DEPTH);
+                break;
+            case GL_STENCIL_ATTACHMENT:
+                rt->gl.resolve = TargetBufferFlags(rt->gl.resolve | TargetBufferFlags::STENCIL);
+                break;
+            case GL_DEPTH_STENCIL_ATTACHMENT:
+                rt->gl.resolve = TargetBufferFlags(rt->gl.resolve | TargetBufferFlags::DEPTH);
+                rt->gl.resolve = TargetBufferFlags(rt->gl.resolve | TargetBufferFlags::STENCIL);
+                break;
+            default:
+                break;
+        }
+
+        // Create a multi-sampled renderbuffer, where the rendering will take place, and make that
+        // our attachment.
+        bindFramebuffer(GL_FRAMEBUFFER, rt->gl.fbo);
+        framebufferRenderbuffer(&rt->gl.color, attachment, t->gl.internalFormat,
+                rt->width, rt->height, rt->gl.samples, rt->gl.fbo);
     }
 
     CHECK_GL_FRAMEBUFFER_STATUS(utils::slog.e)
@@ -1085,7 +1119,16 @@ void OpenGLDriver::renderBufferStorage(GLuint rbo, GLenum internalformat, uint32
         uint32_t height, uint8_t samples) const noexcept {
     glBindRenderbuffer(GL_RENDERBUFFER, rbo);
     if (samples > 1) {
-        glRenderbufferStorageMultisample(GL_RENDERBUFFER, samples, internalformat, width, height);
+#if GLES31_HEADERS
+        if (ext.EXT_multisampled_render_to_texture) {
+            // FIXME: if real multi-sample textures are/will be used as attachment,
+            //        we shouldn't be here. But we don't have an easy way to know at this point.
+            glext::glRenderbufferStorageMultisampleEXT(GL_RENDERBUFFER, samples, internalformat, width, height);
+        } else
+#endif
+        {
+            glRenderbufferStorageMultisample(GL_RENDERBUFFER, samples, internalformat, width, height);
+        }
     } else {
         glRenderbufferStorage(GL_RENDERBUFFER, internalformat, width, height);
     }
@@ -1145,16 +1188,33 @@ void OpenGLDriver::createRenderTargetR(Driver::RenderTargetHandle rth,
     glGenFramebuffers(1, &rt->gl.fbo);
 
     /*
-     * Special case for GLES 3.0 (i.e. multi-sample texture not supported):
-     * When we get here, textures can't be multi-sample and we can't create a framebuffer with
-     * heterogeneous attachments. In that case, we have no choice but to set the sample count to 1.
+     * The GLES 3.0 spec states:
      *
-     * However, if EXT_multisampled_render_to_texture is supported, the situation is different
-     * because we can now create a framebuffer with a multi-sampled attachment for that texture.
+     * GL_FRAMEBUFFER_INCOMPLETE_MULTISAMPLE is returned
+     * - if the value of GL_RENDERBUFFER_SAMPLES is not the same for all attached renderbuffers or,
+     * - if the attached images are a mix of renderbuffers and textures,
+     *      the value of GL_RENDERBUFFER_SAMPLES is not zero.
+     *
+     * GLES 3.1 (spec, refpages are wrong) and EXT_multisampled_render_to_texture add:
+     *
+     * The value of RENDERBUFFER_SAMPLES is the same for all
+     *    attached renderbuffers; the value of TEXTURE_SAMPLES
+     *    is the same for all texture attachments; and, if the attached
+     *    images are a mix of renderbuffers and textures, the value of
+     *    RENDERBUFFER_SAMPLES matches the value of TEXTURE_SAMPLES.
+     *
+     *
+     * In other words, heterogeneous (renderbuffer/textures) attachments are not supported in
+     * GLES3.0, unless EXT_multisampled_render_to_texture is present.
+     *
+     * 'features.multisample_texture' below is a proxy for "GLES3.1 or GL4.x".
+     *
      */
     if (samples > 1 && !features.multisample_texture && !ext.EXT_multisampled_render_to_texture) {
         if (color.handle || depth.handle || stencil.handle) {
-            // do this only if a texture is used (in which case they'll all be single-sample)
+            // TODO: we could work around this by using shadow renderbuffers + a resolve blit
+            //       it's probably not worth the effort, because ES3.0 is fairly limited.
+            // We do this only if a texture is used (in which case they'll all be single-sample)
             samples = 1;
         }
     }
@@ -1391,6 +1451,10 @@ void OpenGLDriver::destroyRenderTarget(Driver::RenderTargetHandle rth) {
         if (rt->gl.fbo) {
             // finally delete the framebuffer object
             glDeleteFramebuffers(1, &rt->gl.fbo);
+        }
+        if (rt->gl.fbo_draw) {
+            // finally delete the draw framebuffer object
+            glDeleteFramebuffers(1, &rt->gl.fbo_draw);
         }
         destruct(rth, rt);
     }
@@ -2066,12 +2130,36 @@ void OpenGLDriver::beginRenderPass(Driver::RenderTargetHandle rth,
 void OpenGLDriver::endRenderPass(int) {
     DEBUG_MARKER()
     assert(mRenderPassTarget);
-    const TargetBufferFlags discardFlags = (TargetBufferFlags) mRenderPassParams.flags.discardEnd;
+
+    GLRenderTarget* const rt = handle_cast<GLRenderTarget*>(mRenderPassTarget);
+
+    const TargetBufferFlags discardFlags = TargetBufferFlags(mRenderPassParams.flags.discardEnd);
+    const TargetBufferFlags resolve = TargetBufferFlags(rt->gl.resolve & ~discardFlags);
+
+    GLbitfield mask = 0;
+    if (resolve & TargetBufferFlags::COLOR) {
+        mask |= GL_COLOR_BUFFER_BIT;
+    }
+    if (resolve  & TargetBufferFlags::DEPTH) {
+        mask |= GL_DEPTH_BUFFER_BIT;
+    }
+    if (resolve  & TargetBufferFlags::STENCIL) {
+        mask |= GL_STENCIL_BUFFER_BIT;
+    }
+
+    if (UTILS_UNLIKELY(mask)) {
+        bindFramebuffer(GL_READ_FRAMEBUFFER, rt->gl.fbo);
+        bindFramebuffer(GL_DRAW_FRAMEBUFFER, rt->gl.fbo_draw);
+        disable(GL_SCISSOR_TEST);
+        glBlitFramebuffer(0, 0, rt->width, rt->height, 0, 0, rt->width, rt->height, mask, GL_NEAREST);
+        enable(GL_SCISSOR_TEST);
+        CHECK_GL_ERROR(utils::slog.e)
+    }
+
     // glInvalidateFramebuffer appeared on GLES 3.0 and GL4.3, for simplicity we just
     // ignore it on GL (rather than having to do a runtime check).
     if (GLES31_HEADERS && !bugs.disable_invalidate_framebuffer) {
         // we wouldn't have to bind the framebuffer if we had glInvalidateNamedFramebuffer()
-        GLRenderTarget* rt = handle_cast<GLRenderTarget*>(mRenderPassTarget);
         bindFramebuffer(GL_FRAMEBUFFER, rt->gl.fbo);
 
         std::array<GLenum, 3> attachments; // NOLINT(cppcoreguidelines-pro-type-member-init)
@@ -2082,6 +2170,7 @@ void OpenGLDriver::endRenderPass(int) {
 
         CHECK_GL_ERROR(utils::slog.e)
     }
+
     mRenderPassTarget.clear();
 }
 
