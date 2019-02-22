@@ -24,6 +24,7 @@
 
 #include "MetalState.h" // for MetalState::VertexDescription
 #include "MetalEnums.h"
+#include "TextureReshaper.h"
 
 #include <utils/Panic.h>
 
@@ -111,6 +112,7 @@ struct MetalTexture : public HwTexture {
 
     id<MTLTexture> texture;
     uint8_t bytesPerPixel;
+    TextureReshaper reshaper;
 };
 
 struct MetalSamplerBuffer : public HwSamplerBuffer {

@@ -207,6 +207,7 @@ if (FILAMENT_SUPPORTS_METAL)
             src/driver/metal/MetalHandles.mm
             src/driver/metal/MetalState.mm
             src/driver/metal/PlatformMetal.mm
+            src/driver/metal/TextureReshaper.cpp
     )
 endif()
 
