@@ -14,6 +14,10 @@ add_library(filaflat STATIC IMPORTED)
 set_target_properties(filaflat PROPERTIES IMPORTED_LOCATION
         ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libfilaflat.a)
 
+add_library(geometry STATIC IMPORTED)
+set_target_properties(geometry PROPERTIES IMPORTED_LOCATION
+        ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libgeometry.a)
+
 add_library(filabridge STATIC IMPORTED)
 set_target_properties(filabridge PROPERTIES IMPORTED_LOCATION
         ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libfilabridge.a)
@@ -74,6 +78,7 @@ target_link_libraries(filament-jni
       filament
       filaflat
       filabridge
+      geometry
       utils
       log
       GLESv3

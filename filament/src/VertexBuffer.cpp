@@ -20,6 +20,8 @@
 
 #include "FilamentAPI-impl.h"
 
+#include <geometry/SurfaceOrientation.h>
+
 #include <math/mat3.h>
 #include <math/norm.h>
 #include <math/quat.h>
@@ -206,65 +208,27 @@ void VertexBuffer::setBufferAt(Engine& engine, uint8_t bufferIndex,
 }
 
 void VertexBuffer::populateTangentQuaternions(const QuatTangentContext& ctx) {
-    if (!ASSERT_PRECONDITION_NON_FATAL(ctx.normals, "Normals must be provided")) {
-        return;
-    }
+    auto quats = geometry::SurfaceOrientation::Builder()
+        .vertexCount(ctx.quatCount)
+        .normals(ctx.normals)
+        .normalStride(ctx.normalsStride)
+        .tangents(ctx.tangents)
+        .tangentStride(ctx.tangentsStride)
+        .build();
 
-    // Define a small lambda that converts fp32 into the desired output format.
-    size_t outStride = ctx.outStride;
-    void (*writeQuat)(quatf, uint8_t*);
     switch (ctx.quatType) {
         case HALF4:
-            writeQuat = [] (quatf inquat, uint8_t* outquat) {
-                *((quath*) outquat) = quath(inquat);
-            };
-            outStride = outStride ? outStride : sizeof(half4);
+            quats->getQuats((quath*) ctx.outBuffer, ctx.quatCount, ctx.outStride);
             break;
         case SHORT4:
-            writeQuat = [] (quatf inquat, uint8_t* outquat) {
-                *((short4*) outquat) = packSnorm16(inquat.xyzw);
-            };
-            outStride = outStride ? outStride : sizeof(short4);
+            quats->getQuats((short4*) ctx.outBuffer, ctx.quatCount, ctx.outStride);
             break;
         case FLOAT4:
-            writeQuat = [] (quatf inquat, uint8_t* outquat) {
-                *((quatf*) outquat) = inquat;
-            };
-            outStride = outStride ? outStride : sizeof(float4);
+            quats->getQuats((quatf*) ctx.outBuffer, ctx.quatCount, ctx.outStride);
             break;
     }
 
-    const float3* normal = ctx.normals;
-    const size_t nstride = ctx.normalsStride ? ctx.normalsStride : sizeof(float3);
-    uint8_t* outquat = (uint8_t*) ctx.outBuffer;
-
-    // If tangents are not provided, simply cross N with arbitrary vector (1, 0, 0)
-    if (!ctx.tangents) {
-        for (size_t qindex = 0, qcount = ctx.quatCount; qindex < qcount; ++qindex) {
-            float3 n = *normal;
-            float3 b = normalize(cross(n, float3{1, 0, 0}));
-            float3 t = cross(n, b);
-            writeQuat(mat3f::packTangentFrame({t, b, n}), outquat);
-            normal = (const float3*) (((const uint8_t*) normal) + nstride);
-            outquat += outStride;
-        }
-        return;
-    }
-
-    const float3* tanvec = &ctx.tangents->xyz;
-    const float* tandir = &ctx.tangents->w;
-    const size_t tstride = ctx.tangentsStride ? ctx.tangentsStride : sizeof(float4);
-
-    for (size_t qindex = 0, qcount = ctx.quatCount; qindex < qcount; ++qindex) {
-        float3 n = *normal;
-        float3 t = *tanvec;
-        float3 b = *tandir > 0 ? cross(t, n) : cross(n, t);
-        writeQuat(mat3f::packTangentFrame({t, b, n}), outquat);
-        normal = (const float3*) (((const uint8_t*) normal) + nstride);
-        tanvec = (const float3*) (((const uint8_t*) tanvec) + tstride);
-        tandir = (const float*) (((const uint8_t*) tandir) + tstride);
-        outquat += outStride;
-    }
+    geometry::SurfaceOrientation::destroy(quats);
 }
 
 } // namespace filament
