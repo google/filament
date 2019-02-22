@@ -24,7 +24,7 @@
 
 #include "MetalState.h" // for MetalState::VertexDescription
 #include "MetalEnums.h"
-#include "TextureReshaper.h"
+#include "driver/TextureReshaper.h"
 
 #include <utils/Panic.h>
 

@@ -16,7 +16,7 @@
 
 #include "TextureReshaper.h"
 
-#include "driver/DataReshaper.h"
+#include "DataReshaper.h"
 
 #include <utils/Panic.h>
 
