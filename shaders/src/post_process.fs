@@ -50,6 +50,8 @@ vec4 PostProcess_AntiAliasing() {
 
     // Next, compute the coordinates of the texel center and its bounding box. There is no need to
     // clamp the min corner since the wrap mode will do it automatically.
+
+    // vertex_uv is already interpolated to pixel center by the GPU
     HIGHP vec2 texelCenter = min(vertex_uv, upperBound);
     HIGHP vec2 texelMaxCorner = min(vertex_uv + halfTexel, upperBound);
     HIGHP vec2 texelMinCorner = vertex_uv - halfTexel;
