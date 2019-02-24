@@ -154,7 +154,7 @@ and tools.
 
 To build Filament, you must first install the following tools:
 
-- CMake 3.4 (or more recent)
+- CMake 3.13 (or more recent)
 - clang 7.0 (or more recent)
 - [ninja 1.8](https://github.com/ninja-build/ninja/wiki/Pre-built-Ninja-packages) (or more recent)
 
@@ -169,7 +169,7 @@ To build Filament for Android you must also install the following:
 
 - Android Studio 3.3
 - Android SDK
-- Android NDK
+- Android NDK 19 or higher
 
 ### Environment variables
 
@@ -334,10 +334,9 @@ Install the following components:
 
 - [Windows 10 SDK](https://developer.microsoft.com/en-us/windows/downloads/windows-10-sdk)
 - [Visual Studio 2015 or 2017](https://www.visualstudio.com/downloads)
-- [Clang 6](http://releases.llvm.org/download.html)
+- [Clang 7](http://releases.llvm.org/download.html)
 - [Python 3.7](https://www.python.org/ftp/python/3.7.0/python-3.7.0.exe)
-- [Git 2.16.1 or later](https://github.com/git-for-windows/git/releases/download/v2.16.1.windows.4/PortableGit-2.16.1.4-64-bit.7z.exe)
-- [Cmake 3.11 or later](https://cmake.org/files/v3.11/cmake-3.11.0-rc1-win64-x64.msi)
+- [Cmake 3.13 or later](https://github.com/Kitware/CMake/releases/download/v3.13.4/cmake-3.13.4-win64-x64.msi)
 
 If you're using Visual Studio 2017, you'll also need to install the [LLVM Compiler
 Toolchain](https://marketplace.visualstudio.com/items?itemName=LLVMExtensions.llvm-toolchain)
@@ -463,24 +462,6 @@ Run `build.sh -h` for more information.
 
 #### ARM 64-bit target (arm64-v8a)
 
-##### Linux toolchain
-
-```
-$ $SDK/ndk-bundle/build/tools/make_standalone_toolchain.py --arch arm64 --api 21 \
-        --stl libc++ --force \
-        --install-dir toolchains/Linux/aarch64-linux-android-4.9
-```
-
-##### Darwin toolchain
-
-```
-$ $SDK/ndk-bundle/build/tools/make_standalone_toolchain.py --arch arm64 --api 21 \
-        --stl libc++ --force \
-        --install-dir toolchains/Darwin/aarch64-linux-android-4.9
-```
-
-##### Compiling
-
 Then invoke CMake in a build directory of your choice, inside of filament's directory:
 
 ```
@@ -507,24 +488,6 @@ to build the Android Studio projects located in `filament/android`. After instal
 binaries should be found in `out/android-release/filament/lib/arm64-v8a`.
 
 #### ARM 32-bit target (armeabi-v7a)
-
-##### Linux toolchain
-
-```
-$ $SDK/ndk-bundle/build/tools/make_standalone_toolchain.py --arch arm --api 21 \
-        --stl libc++ --force \
-        --install-dir toolchains/Linux/arm-linux-androideabi-4.9
-```
-
-##### Darwin toolchain
-
-```
-$ $SDK/ndk-bundle/build/tools/make_standalone_toolchain.py --arch arm --api 21 \
-        --stl libc++ --force \
-        --install-dir toolchains/Darwin/arm-linux-androideabi-4.9
-```
-
-##### Compiling
 
 Then invoke CMake in a build directory of your choice, inside of filament's directory:
 
@@ -553,24 +516,6 @@ binaries should be found in `out/android-release/filament/lib/armeabi-v7a`.
 
 #### Intel 64-bit target (x86_64)
 
-##### Linux toolchain
-
-```
-$ $SDK/ndk-bundle/build/tools/make_standalone_toolchain.py --arch x86_64 --api 21 \
-        --stl libc++ --force \
-        --install-dir toolchains/Linux/x86_64-linux-android-4.9
-```
-
-##### Darwin toolchain
-
-```
-$ $SDK/ndk-bundle/build/tools/make_standalone_toolchain.py --arch x86_64 --api 21 \
-        --stl libc++ --force \
-        --install-dir toolchains/Darwin/x86_64-linux-android-4.9
-```
-
-##### Compiling
-
 Then invoke CMake in a build directory of your choice, sibling of filament's directory:
 
 ```
@@ -597,24 +542,6 @@ to build the Android Studio projects located in `filament/android`. After instal
 binaries should be found in `out/android-release/filament/lib/x86_64`.
 
 #### Intel 32-bit target (x86)
-
-##### Linux toolchain
-
-```
-$ $SDK/ndk-bundle/build/tools/make_standalone_toolchain.py --arch x86 --api 21 \
-        --stl libc++ --force \
-        --install-dir toolchains/Linux/i686-linux-android-4.9
-```
-
-##### Darwin toolchain
-
-```
-$ $SDK/ndk-bundle/build/tools/make_standalone_toolchain.py --arch x86 --api 21 \
-        --stl libc++ --force \
-        --install-dir toolchains/Darwin/i686-linux-android-4.9
-```
-
-##### Compiling
 
 Then invoke CMake in a build directory of your choice, sibling of filament's directory:
 
