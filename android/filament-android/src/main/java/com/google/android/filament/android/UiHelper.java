@@ -381,6 +381,9 @@ public class UiHelper {
             final Surface surface = holder.getSurface();
             if (surface != null && surface.isValid()) {
                 callback.surfaceCreated(holder);
+                int format = isOpaque() ? PixelFormat.OPAQUE : PixelFormat.TRANSLUCENT;
+                callback.surfaceChanged(holder, format,
+                        holder.getSurfaceFrame().width(), holder.getSurfaceFrame().height());
             }
         }
     }
