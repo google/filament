@@ -105,6 +105,11 @@ namespace glext {
             GLenum textarget, GLuint texture, GLint level, GLsizei samples) {
         PANIC_PRECONDITION("glFramebufferTexture2DMultisampleEXT should not be called on iOS.");
     }
+
+    void glRenderbufferStorageMultisampleEXT (GLenum target, GLsizei samples,
+            GLenum internalformat, GLsizei width, GLsizei height) {
+        PANIC_PRECONDITION("glRenderbufferStorageMultisampleEXT should not be called on iOS.");
+    }
 }
 
 #endif

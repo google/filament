@@ -62,6 +62,9 @@
     namespace glext {
         void glFramebufferTexture2DMultisampleEXT (GLenum target, GLenum attachment,
                 GLenum textarget, GLuint texture, GLint level, GLsizei samples);
+
+        void glRenderbufferStorageMultisampleEXT (GLenum target, GLsizei samples,
+                GLenum internalformat, GLsizei width, GLsizei height);
     }
 
 #else
