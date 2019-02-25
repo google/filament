@@ -59,7 +59,7 @@ python %ANDROID_HOME%\ndk-bundle\build\tools\make_standalone_toolchain.py ^
     --api 21 ^
     --stl libc++ ^
     --force ^
-    --install-dir "toolchains/Windows/arm-linux-android-4.9"
+    --install-dir "toolchains/Windows/arm-linux-androideabi-4.9"
 
 python %ANDROID_HOME%\ndk-bundle\build\tools\make_standalone_toolchain.py ^
     --arch x86_64 ^
