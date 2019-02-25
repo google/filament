@@ -4,12 +4,24 @@
 CLANG_VERSION=7
 # version of libcxx and libcxxabi we want to use
 CXX_VERSION=7.0.0
+# version of CMake to use instead of the default one
+CMAKE_VERSION=3.13.4
 
 # Steps specific to our CI environment
 # CI runs on Ubuntu 14.04, we need to install clang-6.0 and the
 # appropriate libc++ ourselves
 if [ "$KOKORO_BUILD_ID" ]; then
     sudo ln -s /usr/include/x86_64-linux-gnu/asm /usr/include/asm
+
+    mkdir -p cmake
+    cd cmake
+
+    sudo wget https://github.com/Kitware/CMake/releases/download/v$CMAKE_VERSION/cmake-$CMAKE_VERSION-Linux-x86_64.sh
+    sudo chmod +x ./cmake-$CMAKE_VERSION-Linux-x86_64.sh
+    sudo ./cmake-$CMAKE_VERSION-Linux-x86_64.sh --skip-license
+    sudo update-alternatives --install /usr/bin/cmake cmake `pwd`/cmake/bin/cmake 1 --force
+
+    cd ..
 
     # This may or may not be needed...
     # sudo apt-key adv --keyserver apt.llvm.org --recv-keys 15CF4D18AF4F7421
