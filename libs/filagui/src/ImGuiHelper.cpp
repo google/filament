@@ -47,12 +47,31 @@ ImGuiHelper::ImGuiHelper(Engine* engine, filament::View* view, const Path& fontP
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
 
+    // Create a simple alpha-blended 2D blitting material.
+    mMaterial = Material::Builder()
+            .package((void*)UI_BLIT_PACKAGE, sizeof(UI_BLIT_PACKAGE))
+            .build(*engine);
+
     // If the given font path is invalid, ImGui will silently fall back to proggy, which is a
     // tiny "pixel art" texture that is compiled into the library.
     if (!fontPath.isEmpty()) {
         io.Fonts->AddFontFromFileTTF(fontPath.c_str(), 16.0f);
+        createAtlasTexture(engine);
     }
 
+    // Create a scene solely for our one and only Renderable.
+    Scene* scene = engine->createScene();
+    view->setScene(scene);
+    EntityManager& em = utils::EntityManager::get();
+    mRenderable = em.create();
+    scene->addEntity(mRenderable);
+
+    ImGui::StyleColorsDark();
+}
+
+void ImGuiHelper::createAtlasTexture(Engine* engine) {
+    engine->destroy(mTexture);
+    ImGuiIO& io = ImGui::GetIO();
     // Create the grayscale texture that ImGui uses for its glyph atlas.
     static unsigned char* pixels;
     int width, height;
@@ -70,23 +89,8 @@ ImGuiHelper::ImGuiHelper(Engine* engine, filament::View* view, const Path& fontP
             .build(*engine);
     mTexture->setImage(*engine, 0, std::move(pb));
 
-    // Create a simple alpha-blended 2D blitting material.
-    filament::Material* material = Material::Builder()
-            .package((void*)UI_BLIT_PACKAGE, sizeof(UI_BLIT_PACKAGE))
-            .build(*engine);
-
     TextureSampler sampler(TextureSampler::MinFilter::LINEAR, TextureSampler::MagFilter::LINEAR);
-    material->setDefaultParameter("albedo", mTexture, sampler);
-    mMaterial = material;
-
-    // Create a scene solely for our one and only Renderable.
-    Scene* scene = engine->createScene();
-    view->setScene(scene);
-    EntityManager& em = utils::EntityManager::get();
-    mRenderable = em.create();
-    scene->addEntity(mRenderable);
-
-    ImGui::StyleColorsDark();
+    mMaterial->setDefaultParameter("albedo", mTexture, sampler);
 }
 
 ImGuiHelper::~ImGuiHelper() {
