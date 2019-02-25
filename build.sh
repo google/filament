@@ -1,8 +1,6 @@
 #!/bin/bash
 set -e
 
-# NDK API level
-API_LEVEL=21
 # Host tools required by Android, WebGL, and iOS builds
 MOBILE_HOST_TOOLS="matc resgen cmgen"
 WEB_HOST_TOOLS="${MOBILE_HOST_TOOLS} mipgen filamesh"
@@ -31,10 +29,8 @@ function print_help {
     echo "    -p platform1,platform2,..."
     echo "        Where platformN is [desktop|android|ios|webgl|all]."
     echo "        Platform(s) to build, defaults to desktop."
-    echo "        Building for Android or iOS will automatically generate / download"
+    echo "        Building for iOS will automatically generate / download"
     echo "        the toolchains if needed and perform a partial desktop build."
-    echo "    -t"
-    echo "        Generate the Android toolchain, requires \$ANDROID_HOME to be set."
     echo "    -u"
     echo "        Run all unit tests, will trigger a debug build if needed."
     echo "    -v"
@@ -100,8 +96,6 @@ ENABLE_JAVA=ON
 
 INSTALL_COMMAND=
 
-GENERATE_TOOLCHAINS=false
-
 VULKAN_ANDROID_OPTION="-DFILAMENT_SUPPORTS_VULKAN=OFF"
 
 BUILD_FILAMAT_ANDROID=false
@@ -116,8 +110,6 @@ BUILD_CUSTOM_TARGETS=
 UNAME=`echo $(uname)`
 LC_UNAME=`echo ${UNAME} | tr '[:upper:]' '[:lower:]'`
 
-TOOLCHAIN_SCRIPT=${ANDROID_HOME}/ndk-bundle/build/tools/make_standalone_toolchain.py
-
 # Functions
 
 function build_clean {
@@ -125,43 +117,6 @@ function build_clean {
     rm -Rf out
     rm -Rf android/filament-android/build
     rm -Rf android/filament-android/.externalNativeBuild
-}
-
-function generate_toolchain {
-    local ARCH=$1
-    local ARCH_NAME=$2
-    local TOOLCHAIN_NAME=toolchains/${UNAME}/${ARCH_NAME}-4.9
-
-    if [ -z "$ANDROID_HOME" ]; then
-        echo "The environment variable \$ANDROID_HOME is not set." >&2
-        exit 1
-    fi
-
-    if [ ! -f "$TOOLCHAIN_SCRIPT" ]; then
-        echo "The NDK is not properly installed in $ANDROID_HOME." >&2
-        exit 1
-    fi
-
-    if [ -d "$TOOLCHAIN_NAME" ]; then
-        echo "Removing existing $ARCH toolchain..."
-        rm -Rf ${TOOLCHAIN_NAME}
-    fi
-
-    echo "Generating $ARCH toolchain..."
-
-    ${TOOLCHAIN_SCRIPT} \
-        --arch ${ARCH} \
-        --api ${API_LEVEL} \
-        --stl libc++ \
-        --force \
-        --install-dir ${TOOLCHAIN_NAME}
-}
-
-function generate_toolchains {
-    generate_toolchain "arm64" "aarch64-linux-android"
-    generate_toolchain "arm" "arm-linux-androideabi"
-    generate_toolchain "x86_64" "x86_64-linux-android"
-    generate_toolchain "x86" "i686-linux-android"
 }
 
 function build_desktop_target {
@@ -319,12 +274,6 @@ function build_android_target {
 function build_android_arch {
     local ARCH=$1
     local ARCH_NAME=$2
-    local TOOLCHAIN_ARCH=$3
-    local TOOLCHAIN_NAME=toolchains/${UNAME}/${ARCH_NAME}-4.9
-
-    if [ ! -d "$TOOLCHAIN_NAME" ]; then
-        generate_toolchain ${TOOLCHAIN_ARCH} ${ARCH_NAME}
-    fi
 
     if [ "$ISSUE_DEBUG_BUILD" == "true" ]; then
         build_android_target "Debug" "$ARCH"
@@ -636,9 +585,6 @@ while getopts ":hacfijmp:tuvsl" opt; do
                 esac
             done
             ;;
-        t)
-            GENERATE_TOOLCHAINS=true
-            ;;
         u)
             ISSUE_DEBUG_BUILD=true
             RUN_TESTS=true
@@ -699,10 +645,6 @@ validate_build_command
 
 if [ "$ISSUE_CLEAN" == "true" ]; then
     build_clean
-fi
-
-if [ "$GENERATE_TOOLCHAINS" == "true" ]; then
-    generate_toolchains
 fi
 
 if [ "$ISSUE_DESKTOP_BUILD" == "true" ]; then
