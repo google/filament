@@ -725,13 +725,13 @@ same version that our continuous builds use.
 
 ```
 cd <your chosen parent folder for the emscripten SDK>
-curl -L https://github.com/juj/emsdk/archive/0d8576c.zip > emsdk.zip
+curl -L https://github.com/emscripten-core/emsdk/archive/a77638d.zip > emsdk.zip
 unzip emsdk.zip
 mv emsdk-* emsdk
 cd emsdk
 ./emsdk update
-./emsdk install sdk-1.38.11-64bit
-./emsdk activate sdk-1.38.11-64bit
+./emsdk install sdk-1.38.28-64bit
+./emsdk activate sdk-1.38.28-64bit
 ```
 
 After this you can invoke the [easy build](#easy-build) script as follows:

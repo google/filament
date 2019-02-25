@@ -565,11 +565,12 @@ function run_test {
 
 function run_tests {
     if [ "$ISSUE_WEBGL_BUILD" == "true" ]; then
-        echo "TypeScript `tsc --version`"
-        tsc --noEmit \
-            third_party/gl-matrix/gl-matrix.d.ts \
-            web/filament-js/filament.d.ts \
-            web/filament-js/test.ts
+        if ! echo "TypeScript `tsc --version`" ; then
+            tsc --noEmit \
+                third_party/gl-matrix/gl-matrix.d.ts \
+                web/filament-js/filament.d.ts \
+                web/filament-js/test.ts
+        fi
     else
         while read test; do
             run_test "$test"
