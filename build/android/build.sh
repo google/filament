@@ -14,6 +14,8 @@ set -x
 UNAME=`echo $(uname)`
 LC_UNAME=`echo $UNAME | tr '[:upper:]' '[:lower:]'`
 
+FILAMENT_ANDROID_CI_BUILD=true
+
 # build-common.sh will generate the following variables:
 #     $GENERATE_ARCHIVES
 #     $BUILD_DEBUG
