@@ -8,11 +8,15 @@ CXX_VERSION=7.0.0
 CMAKE_VERSION=3.13.4
 
 # Steps specific to our CI environment
-# CI runs on Ubuntu 14.04, we need to install clang-6.0 and the
+# CI runs on Ubuntu 14.04, we need to install clang-7.0 and the
 # appropriate libc++ ourselves
 if [ "$KOKORO_BUILD_ID" ]; then
     sudo ln -s /usr/include/x86_64-linux-gnu/asm /usr/include/asm
 
+    # Update NDK
+    yes | $ANDROID_HOME/tools/bin/sdkmanager "ndk-bundle"
+
+    # Install CMake
     mkdir -p cmake
     cd cmake
 
@@ -23,6 +27,7 @@ if [ "$KOKORO_BUILD_ID" ]; then
 
     cd ..
 
+    # Install clang
     # This may or may not be needed...
     # sudo apt-key adv --keyserver apt.llvm.org --recv-keys 15CF4D18AF4F7421
     sudo apt-add-repository "deb http://apt.llvm.org/trusty/ llvm-toolchain-trusty-$CLANG_VERSION main"
