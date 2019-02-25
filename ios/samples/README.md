@@ -1,4 +1,4 @@
-# Filament sample iOS app
+# Filament sample iOS apps
 
 This directory contains sample apps that demonstrate how to use the Filament API in an iOS
 application.
@@ -14,8 +14,8 @@ cross-compile Filament for desktop and ARM64 on a macOS host before running the 
 way to do this is by running the following commands at the root of Filament's source tree:
 
 ```
-$ ./build.sh -p desktop release         # build required desktop tools (matc, resgen, etc)
-$ ./build.sh -p ios debug               # cross-compile Filament for iOS
+$ ./build.sh -p desktop -i release         # build required desktop tools (matc, resgen, etc)
+$ ./build.sh -p ios -i debug               # cross-compile Filament for iOS
 ```
 
 This will automatically download Apple's iOS toolchain file for CMake and build Filament for iOS.
