@@ -38,8 +38,7 @@ using namespace details;
 
 struct RenderableManager::BuilderDetails {
     using Entry = RenderableManager::Builder::Entry;
-    Entry* mEntries = nullptr;
-    size_t mEntriesCount = 0;
+    std::vector<Entry> mEntries;
     Box mAABB;
     uint8_t mLayerMask = 0x1;
     uint8_t mPriority = 0x4;
@@ -51,7 +50,7 @@ struct RenderableManager::BuilderDetails {
     filament::math::mat4f const* mUserBoneMatrices = nullptr;
 
     explicit BuilderDetails(size_t count)
-            : mEntriesCount(count), mCulling(true), mCastShadows(false), mReceiveShadows(true) {
+            : mEntries(count), mCulling(true), mCastShadows(false), mReceiveShadows(true) {
     }
     // this is only needed for the explicit instantiation below
     BuilderDetails() = default;
@@ -60,11 +59,9 @@ struct RenderableManager::BuilderDetails {
 using BuilderType = RenderableManager;
 BuilderType::Builder::Builder(size_t count) noexcept
         : BuilderBase<RenderableManager::BuilderDetails>(count) {
-    mImpl->mEntries = new Entry[count];
+    assert(mImpl->mEntries.size() == count);
 }
-BuilderType::Builder::~Builder() noexcept {
-    delete [] mImpl->mEntries;
-}
+BuilderType::Builder::~Builder() noexcept = default;
 BuilderType::Builder::Builder(BuilderType::Builder&& rhs) noexcept = default;
 BuilderType::Builder& BuilderType::Builder::operator=(BuilderType::Builder&& rhs) noexcept = default;
 
@@ -85,21 +82,22 @@ RenderableManager::Builder& RenderableManager::Builder::geometry(size_t index,
 RenderableManager::Builder& RenderableManager::Builder::geometry(size_t index,
         PrimitiveType type, VertexBuffer* vertices, IndexBuffer* indices,
         size_t offset, size_t minIndex, size_t maxIndex, size_t count) noexcept {
-    if (index < mImpl->mEntriesCount) {
-        mImpl->mEntries[index].vertices = vertices;
-        mImpl->mEntries[index].indices = indices;
-        mImpl->mEntries[index].offset = offset;
-        mImpl->mEntries[index].minIndex = minIndex;
-        mImpl->mEntries[index].maxIndex = maxIndex;
-        mImpl->mEntries[index].count = count;
-        mImpl->mEntries[index].type = type;
+    std::vector<Entry>& entries = mImpl->mEntries;
+    if (index < entries.size()) {
+        entries[index].vertices = vertices;
+        entries[index].indices = indices;
+        entries[index].offset = offset;
+        entries[index].minIndex = minIndex;
+        entries[index].maxIndex = maxIndex;
+        entries[index].count = count;
+        entries[index].type = type;
     }
     return *this;
 }
 
 RenderableManager::Builder& RenderableManager::Builder::material(size_t index,
         MaterialInstance const* materialInstance) noexcept {
-    if (index < mImpl->mEntriesCount) {
+    if (index < mImpl->mEntries.size()) {
         mImpl->mEntries[index].materialInstance = materialInstance;
     }
     return *this;
@@ -155,7 +153,7 @@ RenderableManager::Builder& RenderableManager::Builder::skinning(
 }
 
 RenderableManager::Builder& RenderableManager::Builder::blendOrder(size_t index, uint16_t blendOrder) noexcept {
-    if (index < mImpl->mEntriesCount) {
+    if (index < mImpl->mEntries.size()) {
         mImpl->mEntries[index].blendOrder = blendOrder;
     }
     return *this;
@@ -169,7 +167,7 @@ RenderableManager::Builder::Result RenderableManager::Builder::build(Engine& eng
         return Error;
     }
 
-    for (size_t i = 0, c = mImpl->mEntriesCount; i < c; i++) {
+    for (size_t i = 0, c = mImpl->mEntries.size(); i < c; i++) {
         auto& entry = mImpl->mEntries[i];
 
         // entry.materialInstance must be set to something even if indices/vertices are null
@@ -264,12 +262,12 @@ void FRenderableManager::create(
     if (ci) {
         // create and initialize all needed RenderPrimitives
         using size_type = Slice<FRenderPrimitive>::size_type;
-        Builder::Entry const * const entries = builder->mEntries;
-        FRenderPrimitive* rp = new FRenderPrimitive[builder->mEntriesCount];
-        for (size_t i = 0, c = builder->mEntriesCount; i < c; ++i) {
+        Builder::Entry const * const entries = builder->mEntries.data();
+        FRenderPrimitive* rp = new FRenderPrimitive[builder->mEntries.size()];
+        for (size_t i = 0, c = builder->mEntries.size(); i < c; ++i) {
             rp[i].init(driver, entries[i]);
         }
-        setPrimitives(ci, { rp, size_type(builder->mEntriesCount) });
+        setPrimitives(ci, { rp, size_type(builder->mEntries.size()) });
 
         setAxisAlignedBoundingBox(ci, builder->mAABB);
         setLayerMask(ci, builder->mLayerMask);
