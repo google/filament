@@ -17,10 +17,8 @@ void main() {
 #endif
 
 #if POST_PROCESS_ANTI_ALIASING
-    // Account for the texture actual size
-    vertex_uv *= postProcessUniforms.uvScale;
-    // Compute texel center
-    vertex_uv = (floor(vertex_uv) + vec2(0.5, 0.5)) * frameUniforms.resolution.zw;
+    // texel to uv, accounting for the texture actual size
+    vertex_uv *= frameUniforms.resolution.zw * postProcessUniforms.uvScale;
 #endif
 
     gl_Position = position;

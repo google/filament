@@ -37,6 +37,7 @@
         extern PFNGLPOPGROUPMARKEREXTPROC glPopGroupMarkerEXT;
 #endif
 #if GL_EXT_multisampled_render_to_texture
+        extern PFNGLRENDERBUFFERSTORAGEMULTISAMPLEEXTPROC glRenderbufferStorageMultisampleEXT;
         extern PFNGLFRAMEBUFFERTEXTURE2DMULTISAMPLEEXTPROC glFramebufferTexture2DMultisampleEXT;
 #endif
     }
@@ -61,6 +62,9 @@
     namespace glext {
         void glFramebufferTexture2DMultisampleEXT (GLenum target, GLenum attachment,
                 GLenum textarget, GLuint texture, GLint level, GLsizei samples);
+
+        void glRenderbufferStorageMultisampleEXT (GLenum target, GLsizei samples,
+                GLenum internalformat, GLsizei width, GLsizei height);
     }
 
 #else

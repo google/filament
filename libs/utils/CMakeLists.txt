@@ -111,10 +111,12 @@ set(TEST_SRCS
 )
 
 # The Path tests are platform-specific
-if (WIN32)
-    list(APPEND TEST_SRCS test/test_WinPath.cpp)
-else()
-    list(APPEND TEST_SRCS test/test_Path.cpp)
+if (NOT WEBGL)
+    if (WIN32)
+        list(APPEND TEST_SRCS test/test_WinPath.cpp)
+    else()
+        list(APPEND TEST_SRCS test/test_Path.cpp)
+    endif()
 endif()
 
 add_executable(test_${TARGET} ${TEST_SRCS})

@@ -278,13 +278,6 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 
             ppm.start();
 
-            if (useMSAA > 1) {
-                // Note: MSAA, when used is applied before tone-mapping (which is not ideal)
-                // (tone mapping currently only works without multi-sampling)
-                // this blit does a MSAA resolve
-                ppm.blit(hdrFormat);
-            }
-
             const bool translucent = mSwapChain->isTransparent();
             Handle<HwProgram> toneMappingProgram = engine.getPostProcessProgram(
                     translucent ? PostProcessStage::TONE_MAPPING_TRANSLUCENT

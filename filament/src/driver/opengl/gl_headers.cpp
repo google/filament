@@ -34,6 +34,7 @@ PFNGLPUSHGROUPMARKEREXTPROC glPushGroupMarkerEXT;
 PFNGLPOPGROUPMARKEREXTPROC glPopGroupMarkerEXT;
 #endif
 #if GL_EXT_multisampled_render_to_texture
+PFNGLRENDERBUFFERSTORAGEMULTISAMPLEEXTPROC glRenderbufferStorageMultisampleEXT;
 PFNGLFRAMEBUFFERTEXTURE2DMULTISAMPLEEXTPROC glFramebufferTexture2DMultisampleEXT;
 #endif
 }
@@ -77,6 +78,9 @@ public:
         glFramebufferTexture2DMultisampleEXT =
                 (PFNGLFRAMEBUFFERTEXTURE2DMULTISAMPLEEXTPROC)eglGetProcAddress(
                         "glFramebufferTexture2DMultisampleEXT");
+        glRenderbufferStorageMultisampleEXT =
+                (PFNGLRENDERBUFFERSTORAGEMULTISAMPLEEXTPROC)eglGetProcAddress(
+                        "glRenderbufferStorageMultisampleEXT");
 #endif
     }
 } instance;
@@ -100,6 +104,11 @@ namespace glext {
     void glFramebufferTexture2DMultisampleEXT (GLenum target, GLenum attachment,
             GLenum textarget, GLuint texture, GLint level, GLsizei samples) {
         PANIC_PRECONDITION("glFramebufferTexture2DMultisampleEXT should not be called on iOS.");
+    }
+
+    void glRenderbufferStorageMultisampleEXT (GLenum target, GLsizei samples,
+            GLenum internalformat, GLsizei width, GLsizei height) {
+        PANIC_PRECONDITION("glRenderbufferStorageMultisampleEXT should not be called on iOS.");
     }
 }
 

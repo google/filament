@@ -5,7 +5,7 @@ project(filament-tests)
 # Unit tests
 # ==================================================================================================
 
-if(NOT IOS)
+if(NOT IOS AND NOT WEBGL)
     # The following tests rely on private APIs that are stripped
     # away in Release builds
     if (TNT_DEV)
