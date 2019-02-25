@@ -6,6 +6,8 @@ CLANG_VERSION=7
 CXX_VERSION=7.0.0
 # version of CMake to use instead of the default one
 CMAKE_VERSION=3.13.4
+# version of ninja to use
+NINJA_VERSION=1.8.2
 
 # Steps specific to our CI environment
 # CI runs on Ubuntu 14.04, we need to install clang-7.0 and the
@@ -87,6 +89,6 @@ if [ "$KOKORO_BUILD_ID" ]; then
     export FILAMENT_REQUIRES_CXXABI=false
 fi
 
-wget -q https://github.com/ninja-build/ninja/releases/download/v1.8.2/ninja-linux.zip
+wget -q https://github.com/ninja-build/ninja/releases/download/v$NINJA_VERSION/ninja-linux.zip
 unzip -q ninja-linux.zip
 export PATH="$PWD:$PATH"
