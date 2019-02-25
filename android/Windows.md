@@ -39,43 +39,6 @@ ninja matc resgen cmgen
 The build should succeed and a `ImportExecutables-Release.cmake` file should automatically be
 created at Filament's root directory.
 
-## Toolchains
-
-Generate a toolchain for each Android architecture you're interested in building for.
-
-From Filament's root directory, run the NDK `make_standalone_toolchain.py` script for each
-architecture.
-
-```
-python %ANDROID_HOME%\ndk-bundle\build\tools\make_standalone_toolchain.py ^
-    --arch arm64 ^
-    --api 21 ^
-    --stl libc++ ^
-    --force ^
-    --install-dir "toolchains/Windows/aarch64-linux-android-4.9"
-
-python %ANDROID_HOME%\ndk-bundle\build\tools\make_standalone_toolchain.py ^
-    --arch arm ^
-    --api 21 ^
-    --stl libc++ ^
-    --force ^
-    --install-dir "toolchains/Windows/arm-linux-android-4.9"
-
-python %ANDROID_HOME%\ndk-bundle\build\tools\make_standalone_toolchain.py ^
-    --arch x86_64 ^
-    --api 21 ^
-    --stl libc++ ^
-    --force ^
-    --install-dir "toolchains/Windows/x86_64-linux-android-4.9"
-
-python %ANDROID_HOME%\ndk-bundle\build\tools\make_standalone_toolchain.py ^
-    --arch x86 ^
-    --api 21 ^
-    --stl libc++ ^
-    --force ^
-    --install-dir "toolchains/Windows/x86-linux-android-4.9"
-````
-
 ## Build
 
 1. Create the build directories.
