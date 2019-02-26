@@ -121,10 +121,13 @@ struct MetalSamplerBuffer : public HwSamplerBuffer {
 };
 
 struct MetalRenderTarget : public HwRenderTarget {
-    MetalRenderTarget(uint32_t width, uint32_t height) : HwRenderTarget(width, height) {}
-    MetalRenderTarget() : HwRenderTarget(0, 0), isDefaultRenderTarget(true) {}
+    MetalRenderTarget(MetalContext* context, uint32_t width, uint32_t height)
+            : HwRenderTarget(width, height), context(context) {}
+    explicit MetalRenderTarget(MetalContext* context)
+            : HwRenderTarget(0, 0), context(context), isDefaultRenderTarget(true) {}
     ~MetalRenderTarget();
 
+    MetalContext* context;
     bool isDefaultRenderTarget = false;
     id<MTLTexture> color = nil;
     id<MTLTexture> depth = nil;

@@ -124,14 +124,14 @@ void MetalDriver::createProgramR(Driver::ProgramHandle rph, Program&& program) {
 }
 
 void MetalDriver::createDefaultRenderTargetR(Driver::RenderTargetHandle rth, int dummy) {
-    construct_handle<MetalRenderTarget>(mHandleMap, rth);
+    construct_handle<MetalRenderTarget>(mHandleMap, rth, mContext);
 }
 
 void MetalDriver::createRenderTargetR(Driver::RenderTargetHandle rth,
         Driver::TargetBufferFlags targetBufferFlags, uint32_t width, uint32_t height,
         uint8_t samples, Driver::TextureFormat format, Driver::TargetBufferInfo color,
         Driver::TargetBufferInfo depth, Driver::TargetBufferInfo stencil) {
-    auto renderTarget = construct_handle<MetalRenderTarget>(mHandleMap, rth, width, height);
+    auto renderTarget = construct_handle<MetalRenderTarget>(mHandleMap, rth, mContext, width, height);
 
     if (color.handle) {
         auto colorTexture = handle_cast<MetalTexture>(mHandleMap, color.handle);
