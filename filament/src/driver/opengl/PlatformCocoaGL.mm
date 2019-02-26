@@ -14,6 +14,9 @@
  * limitations under the License.
  */
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+
 #include "driver/opengl/PlatformCocoaGL.h"
 
 #include <OpenGL/OpenGL.h>
@@ -113,3 +116,5 @@ void PlatformCocoaGL::commit(Platform::SwapChain* swapChain) noexcept {
 }
 
 } // namespace filament
+
+#pragma clang diagnostic pop
