@@ -31,7 +31,7 @@ namespace filament {
 namespace driver {
 namespace metal {
 
-struct MetalDriverImpl;
+struct MetalContext;
 
 struct MetalProgram;
 
@@ -46,7 +46,7 @@ private:
 
     driver::MetalPlatform& mPlatform;
 
-    MetalDriverImpl* pImpl;
+    MetalContext* mContext;
 
 #ifndef NDEBUG
     void debugCommand(const char* methodName) override;
