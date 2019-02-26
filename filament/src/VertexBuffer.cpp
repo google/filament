@@ -210,25 +210,21 @@ void VertexBuffer::setBufferAt(Engine& engine, uint8_t bufferIndex,
 void VertexBuffer::populateTangentQuaternions(const QuatTangentContext& ctx) {
     auto quats = geometry::SurfaceOrientation::Builder()
         .vertexCount(ctx.quatCount)
-        .normals(ctx.normals)
-        .normalStride(ctx.normalsStride)
-        .tangents(ctx.tangents)
-        .tangentStride(ctx.tangentsStride)
+        .normals(ctx.normals, ctx.normalsStride)
+        .tangents(ctx.tangents, ctx.tangentsStride)
         .build();
 
     switch (ctx.quatType) {
         case HALF4:
-            quats->getQuats((quath*) ctx.outBuffer, ctx.quatCount, ctx.outStride);
+            quats.getQuats((quath*) ctx.outBuffer, ctx.quatCount, ctx.outStride);
             break;
         case SHORT4:
-            quats->getQuats((short4*) ctx.outBuffer, ctx.quatCount, ctx.outStride);
+            quats.getQuats((short4*) ctx.outBuffer, ctx.quatCount, ctx.outStride);
             break;
         case FLOAT4:
-            quats->getQuats((quatf*) ctx.outBuffer, ctx.quatCount, ctx.outStride);
+            quats.getQuats((quatf*) ctx.outBuffer, ctx.quatCount, ctx.outStride);
             break;
     }
-
-    geometry::SurfaceOrientation::destroy(quats);
 }
 
 } // namespace filament
