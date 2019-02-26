@@ -32,52 +32,65 @@ using Builder = SurfaceOrientation::Builder;
 
 struct OrientationBuilderImpl {
     size_t vertexCount = 0;
-    const float3* normals = 0;
-    const float4* tangents = 0;
-    const float2* uvs = 0;
-    const float3* positions = 0;
-    const uint3* triangles32 = 0;
-    const ushort3* triangles16 = 0;
+    const float3* normals = nullptr;
+    const float4* tangents = nullptr;
+    const float2* uvs = nullptr;
+    const float3* positions = nullptr;
+    const uint3* triangles32 = nullptr;
+    const ushort3* triangles16 = nullptr;
     size_t normalStride = 0;
     size_t tangentStride = 0;
     size_t uvStride = 0;
     size_t positionStride = 0;
     size_t triangleCount = 0;
-    SurfaceOrientation* buildWithNormalsOnly();
-    SurfaceOrientation* buildWithSuppliedTangents();
-    SurfaceOrientation* buildWithUvs();
+    SurfaceOrientation buildWithNormalsOnly();
+    SurfaceOrientation buildWithSuppliedTangents();
+    SurfaceOrientation buildWithUvs();
 };
 
 struct OrientationImpl {
     vector<quatf> quaternions;
 };
 
-Builder::Builder() : mImpl(new OrientationBuilderImpl) {}
+Builder::Builder() noexcept : mImpl(new OrientationBuilderImpl) {}
 
 Builder::~Builder() noexcept { delete mImpl; }
+
+Builder::Builder(Builder&& that) noexcept {
+    std::swap(mImpl, that.mImpl);
+}
+
+Builder& Builder::operator=(Builder&& that) noexcept {
+    std::swap(mImpl, that.mImpl);
+    return *this;
+}
 
 Builder& Builder::vertexCount(size_t vertexCount) noexcept {
     mImpl->vertexCount = vertexCount;
     return *this;
 }
 
-Builder& Builder::normals(const float3* normals) noexcept {
+Builder& Builder::normals(const float3* normals, size_t stride) noexcept {
     mImpl->normals = normals;
+    mImpl->normalStride = stride;
     return *this;
 }
 
-Builder& Builder::tangents(const float4* tangents) noexcept {
+Builder& Builder::tangents(const float4* tangents, size_t stride) noexcept {
     mImpl->tangents = tangents;
+    mImpl->tangentStride = stride;
     return *this;
 }
 
-Builder& Builder::uvs(const float2* uvs) noexcept {
+Builder& Builder::uvs(const float2* uvs, size_t stride) noexcept {
     mImpl->uvs = uvs;
+    mImpl->uvStride = stride;
     return *this;
 }
 
-Builder& Builder::positions(const float3* positions) noexcept {
+Builder& Builder::positions(const float3* positions, size_t stride) noexcept {
     mImpl->positions = positions;
+    mImpl->positionStride = stride;
     return *this;
 }
 
@@ -87,38 +100,16 @@ Builder& Builder::triangleCount(size_t triangleCount) noexcept {
 }
 
 Builder& Builder::triangles(const uint3* triangles) noexcept {
-    ASSERT_PRECONDITION(mImpl->triangles16 == nullptr, "Triangles already supplied.");
     mImpl->triangles32 = triangles;
     return *this;
 }
 
 Builder& Builder::triangles(const ushort3* triangles) noexcept {
-    ASSERT_PRECONDITION(mImpl->triangles32 == nullptr, "Triangles already supplied.");
     mImpl->triangles16 = triangles;
     return *this;
 }
 
-Builder& Builder::normalStride(size_t numBytes) noexcept {
-    mImpl->normalStride = numBytes;
-    return *this;
-}
-
-Builder& Builder::tangentStride(size_t numBytes) noexcept {
-    mImpl->tangentStride = numBytes;
-    return *this;
-}
-
-Builder& Builder::uvStride(size_t numBytes) noexcept {
-    mImpl->uvStride = numBytes;
-    return *this;
-}
-
-Builder& Builder::positionStride(size_t numBytes) noexcept {
-    mImpl->positionStride = numBytes;
-    return *this;
-}
-
-SurfaceOrientation* Builder::build() {
+SurfaceOrientation Builder::build() {
     ASSERT_PRECONDITION(mImpl->normals != nullptr, "Normals are required.");
     ASSERT_PRECONDITION(mImpl->vertexCount > 0, "Vertex count must be non-zero.");
     if (mImpl->tangents != nullptr) {
@@ -128,14 +119,16 @@ SurfaceOrientation* Builder::build() {
         return mImpl->buildWithNormalsOnly();
     }
     bool hasTriangles = mImpl->triangles16 || mImpl->triangles32;
+    bool bothTypes = mImpl->triangles16 && mImpl->triangles32;
     ASSERT_PRECONDITION(hasTriangles && mImpl->positions,
             "When using UVs, positions and triangles are required.");
+    ASSERT_PRECONDITION(!bothTypes, "Choose 16 or 32-bit indices, not both.");
     ASSERT_PRECONDITION(mImpl->triangleCount > 0,
             "When using UVs, triangle count is required.");
     return mImpl->buildWithUvs();
 }
 
-SurfaceOrientation* OrientationBuilderImpl::buildWithNormalsOnly() {
+SurfaceOrientation OrientationBuilderImpl::buildWithNormalsOnly() {
     vector<quatf> quats(vertexCount);
 
     const float3* normal = this->normals;
@@ -149,10 +142,10 @@ SurfaceOrientation* OrientationBuilderImpl::buildWithNormalsOnly() {
         normal = (const float3*) (((const uint8_t*) normal) + nstride);
     }
 
-    return new SurfaceOrientation(new OrientationImpl( { std::move(quats) } ));
+    return SurfaceOrientation(new OrientationImpl( { std::move(quats) } ));
 }
 
-SurfaceOrientation* OrientationBuilderImpl::buildWithSuppliedTangents() {
+SurfaceOrientation OrientationBuilderImpl::buildWithSuppliedTangents() {
     vector<quatf> quats(vertexCount);
 
     const float3* normal = this->normals;
@@ -172,7 +165,7 @@ SurfaceOrientation* OrientationBuilderImpl::buildWithSuppliedTangents() {
         tandir = (const float*) (((const uint8_t*) tandir) + tstride);
     }
 
-    return new SurfaceOrientation(new OrientationImpl( { std::move(quats) } ));
+    return SurfaceOrientation(new OrientationImpl( { std::move(quats) } ));
 }
 
 // This method is based on:
@@ -183,7 +176,7 @@ SurfaceOrientation* OrientationBuilderImpl::buildWithSuppliedTangents() {
 // We considered mikktspace (which thankfully has a zlib-style license) but it would require
 // re-indexing via meshoptimizer and is therefore a bit heavyweight.
 //
-SurfaceOrientation* OrientationBuilderImpl::buildWithUvs() {
+SurfaceOrientation OrientationBuilderImpl::buildWithUvs() {
     ASSERT_PRECONDITION(this->normalStride == 0, "Non-zero normal stride not yet supported.");
     ASSERT_PRECONDITION(this->tangentStride == 0, "Non-zero tangent stride not yet supported.");
     ASSERT_PRECONDITION(this->uvStride == 0, "Non-zero uv stride not yet supported.");
@@ -243,44 +236,51 @@ SurfaceOrientation* OrientationBuilderImpl::buildWithUvs() {
         float3 b = w < 0 ? cross(t, n) : cross(n, t);
         quats[a] = mat3f::packTangentFrame({t, b, n});
     }
-    return new SurfaceOrientation(new OrientationImpl( { std::move(quats) } ));
+    return SurfaceOrientation(new OrientationImpl( { std::move(quats) } ));
 }
 
-void SurfaceOrientation::destroy(SurfaceOrientation* so) { delete so; }
+SurfaceOrientation::SurfaceOrientation(OrientationImpl* impl) noexcept : mImpl(impl) {}
 
-SurfaceOrientation::SurfaceOrientation(OrientationImpl* impl) : mImpl(impl) {}
+SurfaceOrientation::~SurfaceOrientation() noexcept { delete mImpl; }
 
-SurfaceOrientation::~SurfaceOrientation() { delete mImpl; }
+SurfaceOrientation::SurfaceOrientation(SurfaceOrientation&& that) noexcept {
+    std::swap(mImpl, that.mImpl);
+}
+
+SurfaceOrientation& SurfaceOrientation::operator=(SurfaceOrientation&& that) noexcept {
+    std::swap(mImpl, that.mImpl);
+    return *this;
+}
 
 size_t SurfaceOrientation::getVertexCount() const noexcept {
     return mImpl->quaternions.size();
 }
 
-void SurfaceOrientation::getQuats(quatf* out, size_t nquats, size_t stride) const noexcept {
+void SurfaceOrientation::getQuats(quatf* out, size_t quatCount, size_t stride) const noexcept {
     const vector<quatf>& in = mImpl->quaternions;
-    nquats = std::min(nquats, in.size());
+    quatCount = std::min(quatCount, in.size());
     stride = stride ? stride : sizeof(decltype(*out));
-    for (size_t i = 0; i < nquats; ++i) {
+    for (size_t i = 0; i < quatCount; ++i) {
         *out = in[i];
         out = (decltype(out)) (((uint8_t*) out) + stride);
     }
 }
 
-void SurfaceOrientation::getQuats(short4* out, size_t nquats, size_t stride) const noexcept {
+void SurfaceOrientation::getQuats(short4* out, size_t quatCount, size_t stride) const noexcept {
     const vector<quatf>& in = mImpl->quaternions;
-    nquats = std::min(nquats, in.size());
+    quatCount = std::min(quatCount, in.size());
     stride = stride ? stride : sizeof(decltype(*out));
-    for (size_t i = 0; i < nquats; ++i) {
+    for (size_t i = 0; i < quatCount; ++i) {
         *out = packSnorm16(in[i].xyzw);
         out = (decltype(out)) (((uint8_t*) out) + stride);
     }
 }
 
-void SurfaceOrientation::getQuats(quath* out, size_t nquats, size_t stride) const noexcept {
+void SurfaceOrientation::getQuats(quath* out, size_t quatCount, size_t stride) const noexcept {
     const vector<quatf>& in = mImpl->quaternions;
-    nquats = std::min(nquats, in.size());
+    quatCount = std::min(quatCount, in.size());
     stride = stride ? stride : sizeof(decltype(*out));
-    for (size_t i = 0; i < nquats; ++i) {
+    for (size_t i = 0; i < quatCount; ++i) {
         *out = quath(in[i]);
         out = (decltype(out)) (((uint8_t*) out) + stride);
     }
