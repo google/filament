@@ -319,6 +319,79 @@ public:
         return TMat33<T>(m_value[0].xyz, m_value[1].xyz, m_value[2].xyz);
     }
 
+    /**
+     * Decomposes a matrix into "TRS" form, this can be useful when reading certain asset file
+     * formats. Assumes no skew or shear.
+     */
+    inline void decompose(TVec3<T>* translation, TQuaternion<T>* rotation, TVec3<T>* scale) const {
+        // Extract translation.
+        *translation = m_value[3].xyz;
+
+        // Extract upper-left for determinant computation.
+        const T a = m_value[0][0];
+        const T b = m_value[0][1];
+        const T c = m_value[0][2];
+        const T d = m_value[1][0];
+        const T e = m_value[1][1];
+        const T f = m_value[1][2];
+        const T g = m_value[2][0];
+        const T h = m_value[2][1];
+        const T i = m_value[2][2];
+        const T A = e * i - f * h;
+        const T B = f * g - d * i;
+        const T C = d * h - e * g;
+
+        // Extract scale.
+        const T det(a * A + b * B + c * C);
+        T scalex = length(TVec3<T>({a, b, c}));
+        T scaley = length(TVec3<T>({d, e, f}));
+        T scalez = length(TVec3<T>({g, h, i}));
+        TVec3<T> s = { scalex, scaley, scalez };
+        if (det < 0) {
+            s = -s;
+        }
+        *scale = s;
+
+        // Remove scale from the matrix.
+        TMat44<T> clone = *this;
+        clone.m_value[0] /= s.x;
+        clone.m_value[1] /= s.y;
+        clone.m_value[2] /= s.z;
+
+        // Extract rotation.
+        *rotation = clone.toQuaternion();
+    }
+
+    /**
+     * The inverse of "decompose", useful when working with some asset file formats.
+     */
+    template <typename A>
+    static constexpr TMat44 compose(const TVec3<T>& translation, const TQuaternion<A>& rotation, const TVec3<A>& scale) {
+        float tx = translation[0];
+        float ty = translation[1];
+        float tz = translation[2];
+        float qx = rotation[0];
+        float qy = rotation[1];
+        float qz = rotation[2];
+        float qw = rotation[3];
+        float sx = scale[0];
+        float sy = scale[1];
+        float sz = scale[2];
+        return TMat44(
+            (1 - 2 * qy*qy - 2 * qz*qz) * sx,
+            (2 * qx*qy + 2 * qz*qw) * sy,
+            (2 * qx*qz - 2 * qy*qw) * sz,
+            0.f,
+            (2 * qx*qy - 2 * qz*qw) * sx,
+            (1 - 2 * qx*qx - 2 * qz*qz) * sy,
+            (2 * qy*qz + 2 * qx*qw) * sz,
+            0.f,
+            (2 * qx*qz + 2 * qy*qw) * sx,
+            (2 * qy*qz - 2 * qx*qw) * sy,
+            (1 - 2 * qx*qx - 2 * qy*qy) * sz,
+            0.f, tx, ty, tz, 1.f);
+    }
+
     template <typename A>
     static constexpr TMat44 translate(const TVec3<A>& t) {
         TMat44 r;
