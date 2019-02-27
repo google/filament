@@ -156,7 +156,8 @@ void MetalDriver::createRenderTargetR(Driver::RenderTargetHandle rth,
         mtlDepth = [mContext->device newTextureWithDescriptor:depthTextureDesc];
     }
 
-    construct_handle<MetalRenderTarget>(mHandleMap, rth, mContext, width, height, mtlColor, mtlDepth);
+    construct_handle<MetalRenderTarget>(mHandleMap, rth, mContext, width, height, samples, format,
+            mtlColor, mtlDepth);
 
     ASSERT_POSTCONDITION(
             !stencil.handle && !(targetBufferFlags & TargetBufferFlags::STENCIL),
@@ -407,6 +408,7 @@ void MetalDriver::beginRenderPass(Driver::RenderTargetHandle rth,
     // Color
 
     descriptor.colorAttachments[0].texture = renderTarget->getColor();
+    descriptor.colorAttachments[0].resolveTexture = renderTarget->getColorResolve();
     mContext->currentSurfacePixelFormat = descriptor.colorAttachments[0].texture.pixelFormat;
 
     // Metal clears the entire attachment without respect to viewport or scissor.
@@ -424,9 +426,16 @@ void MetalDriver::beginRenderPass(Driver::RenderTargetHandle rth,
     // Depth
 
     descriptor.depthAttachment.texture = renderTarget->getDepth();
+    descriptor.depthAttachment.resolveTexture = renderTarget->getDepthResolve();
     descriptor.depthAttachment.loadAction = clearDepth ? MTLLoadActionClear : MTLLoadActionDontCare;
     descriptor.depthAttachment.clearDepth = params.clearDepth;
     mContext->currentDepthPixelFormat = descriptor.depthAttachment.texture.pixelFormat;
+
+    if (renderTarget->isMultisampled()) {
+        descriptor.colorAttachments[0].storeAction = MTLStoreActionMultisampleResolve;
+        // TODO: We don't need to resolve the depth texture if we don't need it.
+        descriptor.depthAttachment.storeAction = MTLStoreActionMultisampleResolve;
+    }
 
     mContext->currentCommandEncoder =
             [mContext->currentCommandBuffer renderCommandEncoderWithDescriptor:descriptor];
@@ -570,6 +579,7 @@ void MetalDriver::readStreamPixels(Driver::StreamHandle sh, uint32_t x, uint32_t
 void MetalDriver::blit(Driver::TargetBufferFlags buffers,
         Driver::RenderTargetHandle dst, driver::Viewport dstRect,
         Driver::RenderTargetHandle src, driver::Viewport srcRect) {
+
 }
 
 void MetalDriver::draw(Driver::PipelineState ps, Driver::RenderPrimitiveHandle rph) {
@@ -586,6 +596,7 @@ void MetalDriver::draw(Driver::PipelineState ps, Driver::RenderPrimitiveHandle r
         .vertexDescription = primitive->vertexDescription,
         .colorAttachmentPixelFormat = mContext->currentSurfacePixelFormat,
         .depthAttachmentPixelFormat = mContext->currentDepthPixelFormat,
+        .sampleCount = mContext->currentRenderTarget->getSamples(),
         .blendState = BlendState {
             .blendingEnabled = rs.hasBlending(),
             .rgbBlendOperation = getMetalBlendOperation(rs.blendEquationRGB),

@@ -122,21 +122,35 @@ struct MetalSamplerBuffer : public HwSamplerBuffer {
 
 class MetalRenderTarget : public HwRenderTarget {
 public:
-    MetalRenderTarget(MetalContext* context, uint32_t width, uint32_t height, id<MTLTexture> color,
-            id<MTLTexture> depth);
+    MetalRenderTarget(MetalContext* context, uint32_t width, uint32_t height, uint8_t samples,
+            TextureFormat format, id<MTLTexture> color, id<MTLTexture> depth);
     explicit MetalRenderTarget(MetalContext* context)
             : HwRenderTarget(0, 0), context(context), defaultRenderTarget(true) {}
     ~MetalRenderTarget();
 
     bool isDefaultRenderTarget() const { return defaultRenderTarget; }
+    bool isMultisampled() const { return samples > 1; }
+    uint8_t getSamples() const { return samples; }
+
     id<MTLTexture> getColor();
+    id<MTLTexture> getColorResolve();
     id<MTLTexture> getDepth();
+    id<MTLTexture> getDepthResolve();
 
 private:
+    static id<MTLTexture> createMultisampledTexture(id<MTLDevice> device, TextureFormat format,
+            uint32_t width, uint32_t height, uint8_t samples);
+
     MetalContext* context;
-    bool defaultRenderTarget = false;
     id<MTLTexture> color = nil;
     id<MTLTexture> depth = nil;
+    bool defaultRenderTarget = false;
+    uint8_t samples = 1;
+
+    // These textures are only used if this render target is multisampled.
+    id<MTLTexture> multisampledColor = nil;
+    id<MTLTexture> multisampledDepth = nil;
+
 };
 
 } // namespace metal

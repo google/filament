@@ -207,6 +207,7 @@ struct PipelineState {
     VertexDescription vertexDescription;
     MTLPixelFormat colorAttachmentPixelFormat = MTLPixelFormatInvalid;
     MTLPixelFormat depthAttachmentPixelFormat = MTLPixelFormatInvalid;
+    NSUInteger sampleCount = 1;
     BlendState blendState;
 
     bool operator==(const PipelineState& rhs) const noexcept {
@@ -216,6 +217,7 @@ struct PipelineState {
                 this->vertexDescription == rhs.vertexDescription &&
                 this->colorAttachmentPixelFormat == rhs.colorAttachmentPixelFormat &&
                 this->depthAttachmentPixelFormat == rhs.depthAttachmentPixelFormat &&
+                this->sampleCount == rhs.sampleCount &&
                 this->blendState == rhs.blendState
         );
     }
