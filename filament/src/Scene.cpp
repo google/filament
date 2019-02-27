@@ -349,6 +349,10 @@ size_t FScene::getLightCount() const noexcept {
     return count;
 }
 
+bool FScene::hasEntity(Entity entity) const noexcept {
+    return mEntities.find(entity) != mEntities.end();
+}
+
 void FScene::setSkybox(FSkybox const* skybox) noexcept {
     std::swap(mSkybox, skybox);
     if (skybox) {
@@ -422,6 +426,10 @@ size_t Scene::getRenderableCount() const noexcept {
 
 size_t Scene::getLightCount() const noexcept {
     return upcast(this)->getLightCount();
+}
+
+bool Scene::hasEntity(Entity entity) const noexcept {
+    return upcast(this)->hasEntity(entity);
 }
 
 } // namespace filament

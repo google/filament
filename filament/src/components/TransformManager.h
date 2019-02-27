@@ -62,6 +62,12 @@ public:
 
     void setParent(Instance i, Instance newParent) noexcept;
 
+    utils::Entity getParent(Instance i) const noexcept;
+
+    size_t getChildCount(Instance i) const noexcept;
+
+    size_t getChildren(Instance i, utils::Entity* children, size_t count) const noexcept;
+
     void openLocalTransformTransaction() noexcept;
 
     void commitLocalTransformTransaction() noexcept;

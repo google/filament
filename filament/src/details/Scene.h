@@ -67,6 +67,7 @@ public:
 
     size_t getRenderableCount() const noexcept;
     size_t getLightCount() const noexcept;
+    bool hasEntity(utils::Entity entity) const noexcept;
 
 public:
     /*

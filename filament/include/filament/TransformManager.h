@@ -105,7 +105,7 @@ public:
     void destroy(utils::Entity e) noexcept;
 
     /**
-     * Re-parent an entity to a new one.
+     * Re-parents an entity to a new one.
      * @param i             The instance of the transform component to re-parent
      * @param newParent     The instance of the new parent transform
      * @attention It is an error to re-parent an entity to a descendant and will cause undefined behaviour.
@@ -114,7 +114,30 @@ public:
     void setParent(Instance i, Instance newParent) noexcept;
 
     /**
-     * Set a local transform of a transform component.
+     * Returns the parent of a transform component, or the null entity if it is a root.
+     * @param i The instance of the transform component to query.
+     */
+    utils::Entity getParent(Instance i) const noexcept;
+
+    /**
+     * Returns the number of children of a transform component.
+     * @param i The instance of the transform component to query.
+     * @return The number of children of the queried component.
+     */
+    size_t getChildCount(Instance i) const noexcept;
+
+    /**
+     * Gets a list of children for a transform component.
+     *
+     * @param i The instance of the transform component to query.
+     * @param chidren Pointer to array-of-Entity. The array must have at least "count" elements.
+     * @param count The maximum number of children to retrieve.
+     * @return The number of children written to the pointer.
+     */
+    size_t getChildren(Instance i, utils::Entity* children, size_t count) const noexcept;
+
+    /**
+     * Sets a local transform of a transform component.
      * @param ci              The instance of the transform component to set the local transform to.
      * @param localTransform  The local transform (i.e. relative to the parent).
      * @see getTransform()
