@@ -21,6 +21,7 @@
 #include <details/Texture.h> // for FTexture::getFormatSize
 
 #include <utils/Panic.h>
+#include <utils/trap.h>
 
 namespace filament {
 namespace driver {
@@ -313,6 +314,27 @@ void MetalTexture::loadCubeImage(const PixelBufferDescriptor& data, const FaceOf
                    bytesPerRow:bytesPerRow
                  bytesPerImage:0];
     }
+}
+
+MetalRenderTarget::MetalRenderTarget(MetalContext* context, uint32_t width, uint32_t height,
+        id<MTLTexture> color, id<MTLTexture> depth) : HwRenderTarget(width, height),
+        context(context), color(color), depth(depth) {
+    [color retain];
+    [depth retain];
+}
+
+id<MTLTexture> MetalRenderTarget::getColor() {
+    if (defaultRenderTarget) {
+        return acquireDrawable(context).texture;
+    }
+    return color;
+}
+
+id<MTLTexture> MetalRenderTarget::getDepth() {
+    if (defaultRenderTarget) {
+        return context->currentSurface->depthTexture;
+    }
+    return depth;
 }
 
 MetalRenderTarget::~MetalRenderTarget() {

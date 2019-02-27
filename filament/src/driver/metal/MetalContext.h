@@ -26,7 +26,7 @@ namespace filament {
 namespace driver {
 namespace metal {
 
-struct MetalRenderTarget;
+class MetalRenderTarget;
 struct MetalSamplerBuffer;
 struct MetalSwapChain;
 
