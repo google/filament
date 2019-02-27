@@ -73,7 +73,6 @@ FView::FView(FEngine& engine)
                 engine.getDFG()->getTexture(), sampler.getSamplerParams());
     }
     mPerViewSbh = driver.createSamplerBuffer(mPerViewSb.getSize());
-    driver.updateSamplerBuffer(mPerViewSbh, SamplerBuffer(mPerViewSb));
 
     // allocate ubos
     mPerViewUbh = driver.createUniformBuffer(mPerViewUb.getSize(), driver::BufferUsage::DYNAMIC);
@@ -632,12 +631,10 @@ void FView::froxelize(FEngine& engine) const noexcept {
 void FView::commitUniforms(driver::DriverApi& driver) const noexcept {
     if (mPerViewUb.isDirty()) {
         driver.updateUniformBuffer(mPerViewUbh, mPerViewUb.toBufferDescriptor(driver));
-        mPerViewUb.clean();
     }
 
     if (mPerViewSb.isDirty()) {
-        driver.updateSamplerBuffer(mPerViewSbh, SamplerBuffer(mPerViewSb));
-        mPerViewSb.clean();
+        driver.updateSamplerBuffer(mPerViewSbh, std::move(mPerViewSb.toCommandStream()));
     }
 }
 

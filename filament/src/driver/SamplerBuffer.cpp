@@ -22,34 +22,54 @@ namespace filament {
 // create a sampler buffer
 SamplerBuffer::SamplerBuffer(size_t count) noexcept : mSize(uint8_t(count)) {
     assert(count <= mBuffer.size());
-
     // samplers need to be initialized to their default so we can no-op in the driver
     // if the user forgets to set them
-    Sampler* const b = mBuffer.data();
-    Sampler* const e = b + mSize;
-    std::fill(b, e, Sampler{ Handle<HwTexture>{}, SamplerParams{} });
+    constexpr Sampler prototype{{}, {}};
+    std::fill_n(mBuffer.begin(), mSize, prototype);
 }
 
 SamplerBuffer::SamplerBuffer(const SamplerBuffer& rhs) noexcept
-        : mDirty(rhs.mDirty),
-          mSize(rhs.mSize) {
-    Sampler const *b = rhs.mBuffer.data();
-    Sampler const * const e = b + rhs.mSize;
-    Sampler* dst = mBuffer.data();
-    std::copy(b, e, dst);
+        : mDirty(rhs.mDirty), mSize(rhs.mSize) {
+    std::copy_n(rhs.mBuffer.begin(), rhs.mSize, mBuffer.begin());
+}
+
+SamplerBuffer::SamplerBuffer(SamplerBuffer&& rhs) noexcept
+        : mDirty(rhs.mDirty), mSize(rhs.mSize) {
+    std::copy_n(rhs.mBuffer.begin(), rhs.mSize, mBuffer.begin());
+    rhs.clean();
 }
 
 SamplerBuffer& SamplerBuffer::operator=(const SamplerBuffer& rhs) noexcept {
     if (this != &rhs) {
+        std::copy_n(rhs.mBuffer.begin(), rhs.mSize, mBuffer.begin());
         mDirty = rhs.mDirty;
         mSize = rhs.mSize;
-        Sampler const *b = rhs.mBuffer.data();
-        Sampler const * const e = b + rhs.mSize;
-        Sampler* dst = mBuffer.data();
-        std::copy(b, e, dst);
     }
     return *this;
 }
+
+SamplerBuffer& SamplerBuffer::operator=(SamplerBuffer&& rhs) noexcept {
+    if (this != &rhs) {
+        std::copy_n(rhs.mBuffer.begin(), rhs.mSize, mBuffer.begin());
+        mDirty = rhs.mDirty;
+        mSize = rhs.mSize;
+        rhs.clean();
+    }
+    return *this;
+}
+
+SamplerBuffer& SamplerBuffer::toCommandStream() const noexcept {
+    /*
+     * This works because our move ctor preserves the data and cleans the dirty flags.
+     * if we changed the implementation in the future to do a real move, we'd have to change
+     * this method to return SamplerBuffer by value, e.g.:
+     *    SamplerBuffer copy(*this);
+     *    this->clean();
+     *    return copy;
+     */
+    return const_cast<SamplerBuffer&>(*this);
+}
+
 
 void SamplerBuffer::setSampler(size_t index, Sampler const& sampler) noexcept {
     if (index < mSize) {

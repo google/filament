@@ -41,7 +41,7 @@ public:
         // we use a no-init default ctor so that the mBuffer array doesn't initializes itself
         // needlessly.
         Sampler() noexcept : t(Handle<HwTexture>::NO_INIT), s(SamplerParams::NO_INIT) { }
-        Sampler(Handle<HwTexture> t, SamplerParams s) noexcept : t(t), s(s) { }
+        constexpr Sampler(Handle<HwTexture> t, SamplerParams s) noexcept : t(t), s(s) { }
         Handle<HwTexture> t;
         SamplerParams s;
     };
@@ -54,14 +54,19 @@ public:
     explicit SamplerBuffer(SamplerInterfaceBlock const& sib) noexcept
             : SamplerBuffer(sib.getSize()) { }
 
-
-    // can be copied and moved
+    // can be copied -- this preserves dirty bits
     SamplerBuffer(const SamplerBuffer& rhs) noexcept;
-
-    // don't use copy-and-swap idiom (less efficient)
     SamplerBuffer& operator=(const SamplerBuffer& rhs) noexcept;
 
+    // and moved -- this cleans rhs's dirty flags
+    SamplerBuffer(SamplerBuffer&& rhs) noexcept;
+    SamplerBuffer& operator=(SamplerBuffer&& rhs) noexcept;
+
     ~SamplerBuffer() noexcept = default;
+
+    // Efficiently move a SamplerBuffer to the command stream. Always use std::move() on the
+    // returned value, as in the future this might return SamplerBuffer by value.
+    SamplerBuffer& toCommandStream() const noexcept;
 
     // pointer to the sampler buffer
     Sampler const* getBuffer() const noexcept { return mBuffer.data(); }
