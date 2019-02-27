@@ -38,6 +38,7 @@
 #include <iostream>
 
 using namespace filaflat;
+using namespace filamat;
 using namespace utils;
 
 static const int alignment = 24;

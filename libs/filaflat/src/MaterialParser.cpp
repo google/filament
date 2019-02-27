@@ -19,6 +19,7 @@
 #include <filaflat/ChunkContainer.h>
 #include <filaflat/ShaderBuilder.h>
 #include <filaflat/Unflattener.h>
+#include <filaflat/FilaflatDefs.h>
 
 #include "BlobDictionary.h"
 #include "ChunkInterfaceBlock.h"
@@ -295,7 +296,7 @@ bool MaterialParserDetails::getVkShader(filament::driver::ShaderModel shaderMode
     }
 
     if (UTILS_UNLIKELY(mBlobDictionary.isEmpty())) {
-        if (!SpirvDictionaryReader::unflatten(container, mBlobDictionary)) {
+        if (!SpirvDictionaryReader::unflatten(container, mBlobDictionary, ChunkType::DictionarySpirv)) {
             return false;
         }
     }

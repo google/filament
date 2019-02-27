@@ -35,7 +35,7 @@ public:
             : mSrc(src), mCursor(src), mEnd(end) {
     }
 
-    Unflattener(ChunkContainer const& container, filamat::ChunkType type)
+    Unflattener(ChunkContainer const& container, ChunkContainer::Type type)
             : mSrc(container.getChunkStart(type)),
               mCursor(mSrc),
               mEnd(container.getChunkEnd(type)) {

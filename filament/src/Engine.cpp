@@ -36,6 +36,7 @@
 #include <private/filament/SibGenerator.h>
 
 #include <filament/Exposure.h>
+#include <filament/MaterialEnums.h>
 
 #include <filaflat/MaterialParser.h>
 #include <filaflat/ShaderBuilder.h>

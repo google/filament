@@ -63,7 +63,6 @@ public:
     using SamplerType = filament::driver::SamplerType;
     using SamplerFormat = filament::driver::SamplerFormat;
     using CullingMode = filament::driver::CullingMode;
-
     using ShaderModel = filament::driver::ShaderModel;
 
     /**

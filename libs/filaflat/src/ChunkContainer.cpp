@@ -20,8 +20,6 @@
 
 namespace filaflat {
 
-using namespace filamat;
-
 bool ChunkContainer::parseChunk(Unflattener& unflattener) {
     uint64_t type;
     if (!unflattener.read(&type)) {
@@ -41,7 +39,7 @@ bool ChunkContainer::parseChunk(Unflattener& unflattener) {
         return false;
     }
 
-    mChunks[ChunkType(type)] = { cursor, size };
+    mChunks[Type(type)] = { cursor, size };
     unflattener.setCursor(cursor + size);
     return true;
 }

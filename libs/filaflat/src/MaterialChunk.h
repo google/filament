@@ -20,9 +20,6 @@
 #include "BlobDictionary.h"
 
 #include <filament/driver/DriverEnums.h>
-#include <filament/MaterialEnums.h>
-
-#include <private/filament/Variant.h>
 
 #include <filaflat/ShaderBuilder.h>
 #include <filaflat/Unflattener.h>
