@@ -17,7 +17,7 @@
 #include <getopt/getopt.h>
 
 #include <filaflat/ChunkContainer.h>
-#include <filaflat/FilaflatDefs.h>
+#include <filament/MaterialChunkType.h>
 #include <filaflat/MaterialParser.h>
 #include <filaflat/Unflattener.h>
 #include <filaflat/ShaderBuilder.h>

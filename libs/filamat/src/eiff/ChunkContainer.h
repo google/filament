@@ -22,7 +22,7 @@
 #include "Chunk.h"
 #include "Flattener.h"
 
-#include <filaflat/FilaflatDefs.h>
+#include <filament/MaterialChunkType.h>
 
 namespace filamat {
 
