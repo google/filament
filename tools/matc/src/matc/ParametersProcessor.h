@@ -53,6 +53,7 @@ private:
     bool processShadowMultiplier(filamat::MaterialBuilder &builder, const JsonishValue &value);
     bool processCurvatureToRoughness(filamat::MaterialBuilder &builder, const JsonishValue &value);
     bool processLimitOverInterpolation(filamat::MaterialBuilder &builder, const JsonishValue &value);
+    bool processClearCoatIorChange(filamat::MaterialBuilder &builder, const JsonishValue &value);
     bool processFlipUV(filamat::MaterialBuilder &builder, const JsonishValue &value);
     bool processShading(filamat::MaterialBuilder &builder, const JsonishValue &value);
     bool processVariantFilter(filamat::MaterialBuilder &builder, const JsonishValue &value);

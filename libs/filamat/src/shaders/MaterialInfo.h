@@ -39,6 +39,7 @@ struct UTILS_PUBLIC MaterialInfo {
     bool hasShadowMultiplier;
     bool curvatureToRoughness;
     bool limitOverInterpolation;
+    bool clearCoatIorChange;
     bool flipUV;
     filament::AttributeBitset requiredAttributes;
     filament::BlendingMode blendingMode;

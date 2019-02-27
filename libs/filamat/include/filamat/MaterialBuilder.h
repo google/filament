@@ -189,6 +189,12 @@ public:
     // disabled by default
     MaterialBuilder& limitOverInterpolation(bool limitOverInterpolation) noexcept;
 
+    // enables or disables the index of refraction (IoR) change caused by the clear coat layer when
+    // present. When the IoR changes, the base color is darkened. Disabling this feature preserves
+    // the base color as initially specified
+    // enabled by default
+    MaterialBuilder& clearCoatIorChange(bool clearCoatIorChange) noexcept;
+
     // enable/disable flipping of the Y coordinate of UV attributes, enabled by default
     MaterialBuilder& flipUV(bool flipUV) noexcept;
 
@@ -305,6 +311,7 @@ private:
 
     bool mCurvatureToRoughness = false;
     bool mLimitOverInterpolation = false;
+    bool mClearCoatIorChange = true;
 
     bool mFlipUV = true;
 };

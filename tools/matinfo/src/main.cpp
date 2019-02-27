@@ -380,6 +380,7 @@ static bool printMaterial(const ChunkContainer& container) {
     printChunk<bool, bool>(container, filamat::MaterialShadowMultiplier, "Shadow multiply: ");
     printChunk<bool, bool>(container, filamat::MaterialCurvatureToRoughness, "Curvature to roughness: ");
     printChunk<bool, bool>(container, filamat::MaterialLimitOverInterpolation, "Limit interpolation: ");
+    printChunk<bool, bool>(container, filamat::MaterialClearCoatIorChange, "Clear coat IOR change: ");
 
     std::cout << std::endl;
 

@@ -241,6 +241,11 @@ MaterialBuilder& MaterialBuilder::limitOverInterpolation(bool limitOverInterpola
     return *this;
 }
 
+MaterialBuilder& MaterialBuilder::clearCoatIorChange(bool clearCoatIorChange) noexcept {
+    mClearCoatIorChange = clearCoatIorChange;
+    return *this;
+}
+
 MaterialBuilder& MaterialBuilder::flipUV(bool flipUV) noexcept {
     mFlipUV = flipUV;
     return *this;
@@ -318,6 +323,7 @@ void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
     info.hasExternalSamplers = hasExternalSampler();
     info.curvatureToRoughness = mCurvatureToRoughness;
     info.limitOverInterpolation = mLimitOverInterpolation;
+    info.clearCoatIorChange = mClearCoatIorChange;
     info.flipUV = mFlipUV;
     info.requiredAttributes = mRequiredAttributes;
     info.blendingMode = mBlendingMode;
@@ -421,6 +427,10 @@ Package MaterialBuilder::build() noexcept {
     SimpleFieldChunk<bool> matLimitOverInterpolation(
             ChunkType::MaterialLimitOverInterpolation, mLimitOverInterpolation);
     container.addChild(&matLimitOverInterpolation);
+
+    SimpleFieldChunk<bool> matClearCoatIorChange(
+            ChunkType::MaterialClearCoatIorChange, mClearCoatIorChange);
+    container.addChild(&matClearCoatIorChange);
 
     SimpleFieldChunk<uint8_t> matTransparency(ChunkType::MaterialTransparencyMode,
             static_cast<uint8_t>(mTransparencyMode));

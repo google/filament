@@ -295,6 +295,12 @@ public class MaterialBuilder {
     }
 
     @NonNull
+    public MaterialBuilder clearCoatIorChange(boolean clearCoatIorChange) {
+        nMaterialBuilderClearCoatIorChange(mNativeObject, clearCoatIorChange);
+        return this;
+    }
+
+    @NonNull
     public MaterialBuilder flipUV(boolean flipUV) {
         nMaterialBuilderFlipUV(mNativeObject, flipUV);
         return this;
@@ -398,6 +404,8 @@ public class MaterialBuilder {
             boolean curvatureToRoughness);
     private static native void nMaterialBuilderLimitOverInterpolation(long mNativeObject,
             boolean limitOverInterpolation);
+    private static native void nMaterialBuilderClearCoatIorChange(long mNativeObject,
+            boolean clearCoatIorChange);
     private static native void nMaterialBuilderFlipUV(long nativeBuilder, boolean flipUV);
     private static native void nMaterialBuilderTransparencyMode(long nativeBuilder, int mode);
     private static native void nMaterialBuilderPlatform(long nativeBuilder, int platform);

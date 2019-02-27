@@ -68,6 +68,7 @@ enum UTILS_PUBLIC ChunkType : uint64_t {
     MaterialShadowMultiplier = charTo64bitNum("MAT_SHML"),
     MaterialCurvatureToRoughness = charTo64bitNum("MAT_CV2R"),
     MaterialLimitOverInterpolation = charTo64bitNum("MAT_LMOI"),
+    MaterialClearCoatIorChange = charTo64bitNum("MAT_CIOR"),
 
     MaterialRequiredAttributes = charTo64bitNum("MAT_REQA"),
     MaterialDepthWriteSet = charTo64bitNum("MAT_DEWS"),
