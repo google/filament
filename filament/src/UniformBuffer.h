@@ -65,6 +65,8 @@ public:
         }
     }
 
+    UniformBuffer& setUniforms(const UniformBuffer& rhs) noexcept;
+
     // invalidate a range of uniforms and return a pointer to it. offset and size given in bytes
     void* invalidateUniforms(size_t offset, size_t size) {
         assert(offset + size <= mSize);

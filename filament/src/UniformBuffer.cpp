@@ -64,6 +64,27 @@ UniformBuffer& UniformBuffer::operator=(UniformBuffer&& rhs) noexcept {
     return *this;
 }
 
+UniformBuffer& UniformBuffer::setUniforms(const UniformBuffer& rhs) noexcept {
+    if (this != &rhs) {
+        if (UTILS_UNLIKELY(mSize != rhs.mSize)) {
+            // first free our storage if any
+            if (mBuffer && !isLocalStorage()) {
+                UniformBuffer::free(mBuffer, mSize);
+            }
+            // and allocate new storage
+            mBuffer = mStorage;
+            mSize = rhs.mSize;
+            if (mSize > sizeof(mStorage)) {
+                mBuffer = UniformBuffer::alloc(mSize);
+            }
+        }
+        memcpy(mBuffer, rhs.mBuffer, rhs.mSize);
+        // always invalidate ourselves
+        invalidate();
+    }
+    return *this;
+}
+
 void* UniformBuffer::alloc(size_t size) noexcept {
     // these allocations have a long life span
     return ::malloc(size);

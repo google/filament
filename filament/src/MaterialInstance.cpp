@@ -43,14 +43,12 @@ FMaterialInstance::FMaterialInstance(FEngine& engine, FMaterial const* material)
             material->getId(), material->generateMaterialInstanceId());
 
     if (!material->getUniformInterfaceBlock().isEmpty()) {
-        const UniformBuffer& defaultUniforms = upcast(material)->getDefaultInstance()->mUniforms;
-        mUniforms = UniformBuffer(upcast(material)->getUniformInterfaceBlock());
-        ::memcpy(const_cast<void*>(mUniforms.getBuffer()), defaultUniforms.getBuffer(), mUniforms.getSize());
+        mUniforms.setUniforms(material->getDefaultInstance()->getUniformBuffer());
         mUbHandle = driver.createUniformBuffer(mUniforms.getSize(), driver::BufferUsage::DYNAMIC);
     }
 
     if (!material->getSamplerInterfaceBlock().isEmpty()) {
-        mSamplers = SamplerBuffer(material->getDefaultInstance()->getSamplerBuffer());
+        mSamplers.setSamplers(material->getDefaultInstance()->getSamplerBuffer());
         mSbHandle = driver.createSamplerBuffer(mSamplers.getSize());
     }
 
@@ -69,7 +67,7 @@ void FMaterialInstance::initDefaultInstance(FEngine& engine, FMaterial const* ma
 
     if (!material->getUniformInterfaceBlock().isEmpty()) {
         mUniforms = UniformBuffer(material->getUniformInterfaceBlock());
-        mUbHandle = driver.createUniformBuffer(mUniforms.getSize(), driver::BufferUsage::DYNAMIC);
+        mUbHandle = driver.createUniformBuffer(mUniforms.getSize(), driver::BufferUsage::STATIC);
     }
 
     if (!material->getSamplerInterfaceBlock().isEmpty()) {

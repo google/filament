@@ -73,6 +73,7 @@ public:
 
     uint64_t getSortingKey() const noexcept { return mMaterialSortingKey; }
 
+    UniformBuffer const& getUniformBuffer() const noexcept { return mUniforms; }
     SamplerBuffer const& getSamplerBuffer() const noexcept { return mSamplers; }
 
     void setScissor(int32_t left, int32_t bottom, uint32_t width, uint32_t height) noexcept {
