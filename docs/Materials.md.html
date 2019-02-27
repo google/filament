@@ -1093,7 +1093,7 @@ Value
 
 Description
 :    Reduces specular aliasing by increasing roughness based on the local geometric curvature.
-     This property is particularly effective if you only use MSAA.
+     This property is particularly effective if you only use MSAA as your anti-aliasing method.
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ JSON
 material {
@@ -1102,7 +1102,7 @@ material {
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 ![Figure [curvatureToRoughness]: Close up of a glossy metallic surface rendered normally (left) and
-with `curvatureToRoughness` (right).](images/screenshot_curvature_to_roughness.png)
+with `curvatureToRoughness` (right).](images/screenshot_curvature_to_roughness.jpg)
 
 ### limitOverInterpolation
 
@@ -1124,6 +1124,31 @@ material {
     limitOverInterpolation : true
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+### clearCoatIorChange
+
+Type
+:    `boolean`
+
+Value
+:     `true` or `false`. Defaults to `true`.
+
+Description
+:    When adding a clear coat layer, the change in index of refraction (IoR) is taken into account
+     to modify the specular color of the base layer. This appears to darken `baseColor`. When this
+     effect is disabled, `baseColor` is left unmodified. See figure [clearCoatIorChange] for an
+     example of how this property can affect a red metallic base layer.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ JSON
+material {
+    clearCoatIorChange : false
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+![Figure [clearCoatIorChange]: The same rough metallic ball with a clear coat layer rendered
+with `clearCoatIorChange` enabled (left) and disabled
+(right).](images/screenshot_clear_coat_ior_change.jpg)
 
 ### variantFilter
 

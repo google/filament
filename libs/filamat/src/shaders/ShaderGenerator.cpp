@@ -249,6 +249,8 @@ const std::string ShaderGenerator::createFragmentProgram(filament::driver::Shade
     cg.generateDefine(fs, "GEOMETRIC_SPECULAR_AA_ROUGHNESS", material.curvatureToRoughness);
     cg.generateDefine(fs, "GEOMETRIC_SPECULAR_AA_NORMAL", material.limitOverInterpolation);
 
+    cg.generateDefine(fs, "CLEAR_COAT_IOR_CHANGE", material.clearCoatIorChange);
+
     // lighting variants
     bool litVariants = lit || material.hasShadowMultiplier;
     cg.generateDefine(fs, "HAS_DIRECTIONAL_LIGHTING", litVariants && variant.hasDirectionalLighting());

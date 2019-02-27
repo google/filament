@@ -229,18 +229,28 @@ Java_com_google_android_filament_filamat_MaterialBuilder_nMaterialBuilderCurvatu
     auto builder = (MaterialBuilder*) nativeBuilder;
     builder->curvatureToRoughness(curvatureToRoughness);
 }
+
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_filamat_MaterialBuilder_nMaterialBuilderLimitOverInterpolation(
         JNIEnv* env, jclass type, jlong nativeBuilder, jboolean limitOverInterpolation) {
     auto builder = (MaterialBuilder*) nativeBuilder;
     builder->limitOverInterpolation(limitOverInterpolation);
 }
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_filamat_MaterialBuilder_nMaterialBuilderClearCoatIorChange(
+        JNIEnv* env, jclass type, jlong nativeBuilder, jboolean clearCoatIorChange) {
+    auto builder = (MaterialBuilder*) nativeBuilder;
+    builder->clearCoatIorChange(clearCoatIorChange);
+}
+
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_filamat_MaterialBuilder_nMaterialBuilderFlipUV(JNIEnv* env,
         jclass type, jlong nativeBuilder, jboolean flipUV) {
     auto builder = (MaterialBuilder*) nativeBuilder;
     builder->flipUV(flipUV);
 }
+
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_filamat_MaterialBuilder_nMaterialBuilderTransparencyMode(
         JNIEnv* env, jclass type, jlong nativeBuilder, jint mode) {

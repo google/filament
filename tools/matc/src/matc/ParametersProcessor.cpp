@@ -48,6 +48,7 @@ static constexpr const char* PARAM_KEY_SHADING                  = "shadingModel"
 static constexpr const char* PARAM_KEY_VARIANT_FILTER           = "variantFilter";
 static constexpr const char* PARAM_KEY_CURVATURE_TO_ROUGHNESS   = "curvatureToRoughness";
 static constexpr const char* PARAM_KEY_LIMIT_OVER_INTERPOLATION = "limitOverInterpolation";
+static constexpr const char* PARAM_KEY_CLEAR_COAT_IOR_CHANGE    = "clearCoatIorChange";
 static constexpr const char* PARAM_KEY_FLIP_UV                  = "flipUV";
 
 ParametersProcessor::ParametersProcessor() {
@@ -72,6 +73,8 @@ ParametersProcessor::ParametersProcessor() {
             = &ParametersProcessor::processCurvatureToRoughness;
     mConfigProcessor[PARAM_KEY_LIMIT_OVER_INTERPOLATION]
             = &ParametersProcessor::processLimitOverInterpolation;
+    mConfigProcessor[PARAM_KEY_CLEAR_COAT_IOR_CHANGE]
+            = &ParametersProcessor::processClearCoatIorChange;
     mConfigProcessor[PARAM_KEY_FLIP_UV]           = &ParametersProcessor::processFlipUV;
 
     mRootAsserts[PARAM_KEY_NAME]                     = JsonishValue::Type::STRING;
@@ -93,6 +96,7 @@ ParametersProcessor::ParametersProcessor() {
     mRootAsserts[PARAM_KEY_VARIANT_FILTER]           = JsonishValue::Type::ARRAY;
     mRootAsserts[PARAM_KEY_CURVATURE_TO_ROUGHNESS]   = JsonishValue::Type::BOOL;
     mRootAsserts[PARAM_KEY_LIMIT_OVER_INTERPOLATION] = JsonishValue::Type::BOOL;
+    mRootAsserts[PARAM_KEY_CLEAR_COAT_IOR_CHANGE]    = JsonishValue::Type::BOOL;
     mRootAsserts[PARAM_KEY_FLIP_UV]                  = JsonishValue::Type::BOOL;
 
     mStringToInterpolation["smooth"] = MaterialBuilder::Interpolation::SMOOTH;
@@ -464,7 +468,14 @@ bool ParametersProcessor::processLimitOverInterpolation(filamat::MaterialBuilder
     return true;
 }
 
-bool ParametersProcessor::processFlipUV(filamat::MaterialBuilder& builder, const JsonishValue& value) {
+bool ParametersProcessor::processClearCoatIorChange(filamat::MaterialBuilder& builder,
+        const JsonishValue& value) {
+    builder.clearCoatIorChange(value.toJsonBool()->getBool());
+    return true;
+}
+
+bool ParametersProcessor::processFlipUV(filamat::MaterialBuilder& builder,
+        const JsonishValue& value) {
     builder.flipUV(value.toJsonBool()->getBool());
     return true;
 }
