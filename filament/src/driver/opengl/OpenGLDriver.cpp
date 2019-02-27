@@ -952,7 +952,7 @@ void OpenGLDriver::textureStorage(OpenGLDriver::GLTexture* t,
             glTexStorage2D(t->gl.target, GLsizei(t->levels), t->gl.internalFormat,
                     GLsizei(width), GLsizei(height));
             break;
-        case GL_TEXTURE_3D: {
+        case GL_TEXTURE_2D_ARRAY: {
             glTexStorage3D(t->gl.target, GLsizei(t->levels), t->gl.internalFormat,
                     GLsizei(width), GLsizei(height), GLsizei(depth));
             break;
@@ -1010,8 +1010,13 @@ void OpenGLDriver::createTextureR(Driver::TextureHandle th, SamplerType target, 
                 // but it's not supported, so instead, we behave like a texture2d.
                 // fallthrough...
             case SamplerType::SAMPLER_2D:
-                t->gl.targetIndex = (uint8_t)
-                        getIndexForTextureTarget(t->gl.target = GL_TEXTURE_2D);
+                if (depth <= 1) {
+                    t->gl.targetIndex = (uint8_t)
+                            getIndexForTextureTarget(t->gl.target = GL_TEXTURE_2D);
+                } else {
+                    t->gl.targetIndex = (uint8_t)
+                            getIndexForTextureTarget(t->gl.target = GL_TEXTURE_2D_ARRAY);
+                }
                 break;
             case SamplerType::SAMPLER_CUBEMAP:
                 t->gl.targetIndex = (uint8_t)
@@ -1046,7 +1051,7 @@ void OpenGLDriver::framebufferTexture(Driver::TargetBufferInfo& binfo,
     GLenum target = GL_TEXTURE_2D;
     switch (t->target) {
         case SamplerType::SAMPLER_2D:
-            target = t->gl.target;  // this could be GL_TEXTURE_2D_MULTISAMPLE
+            target = t->gl.target;  // this could be GL_TEXTURE_2D_MULTISAMPLE or GL_TEXTURE_2D_ARRAY
             // note: multi-sampled textures can't have mipmaps
             break;
         case SamplerType::SAMPLER_CUBEMAP:
@@ -1063,10 +1068,24 @@ void OpenGLDriver::framebufferTexture(Driver::TargetBufferInfo& binfo,
         // If multisampled textures are not supported and we end-up here, things should
         // still work, albeit without MSAA.
         bindFramebuffer(GL_FRAMEBUFFER, rt->gl.fbo);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, attachment, target, t->gl.texture_id, binfo.level);
+        switch (target) {
+            case GL_TEXTURE_2D:
+            case GL_TEXTURE_2D_MULTISAMPLE:
+                glFramebufferTexture2D(GL_FRAMEBUFFER, attachment,
+                        target, t->gl.texture_id, binfo.level);
+                break;
+            case GL_TEXTURE_2D_ARRAY:
+                // GL_TEXTURE_2D_MULTISAMPLE_ARRAY is not supported in GLES
+                glFramebufferTextureLayer(GL_FRAMEBUFFER, attachment,
+                        t->gl.texture_id, binfo.level, binfo.layer);
+                break;
+            default:
+                // we shouldn't be here
+                break;
+        }
     } else
 #if GLES31_HEADERS
-    if (ext.EXT_multisampled_render_to_texture) {
+    if (ext.EXT_multisampled_render_to_texture && t->depth <= 1) {
         assert(rt->gl.samples > 1);
         // We have a multi-sample rendertarget and we have EXT_multisampled_render_to_texture,
         // so, we can directly use a 1-sample texture as attachment, multi-sample resolve,
@@ -1086,7 +1105,20 @@ void OpenGLDriver::framebufferTexture(Driver::TargetBufferInfo& binfo,
             glGenFramebuffers(1, &rt->gl.fbo_draw);
         }
         bindFramebuffer(GL_FRAMEBUFFER, rt->gl.fbo_draw);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, attachment, target, t->gl.texture_id, binfo.level);
+        switch (target) {
+            case GL_TEXTURE_2D:
+                glFramebufferTexture2D(GL_FRAMEBUFFER, attachment,
+                        target, t->gl.texture_id, binfo.level);
+                break;
+            case GL_TEXTURE_2D_ARRAY:
+                glFramebufferTextureLayer(GL_FRAMEBUFFER, attachment,
+                        t->gl.texture_id, binfo.level, binfo.layer);
+                break;
+            default:
+                // we shouldn't be here
+                break;
+        }
+
         switch (attachment) {
             case GL_COLOR_ATTACHMENT0:
                 rt->gl.resolve = TargetBufferFlags(rt->gl.resolve | TargetBufferFlags::COLOR);
@@ -1870,12 +1902,23 @@ void OpenGLDriver::setTextureData(GLTexture* t,
             // fallthrough...
         case SamplerType::SAMPLER_2D:
             // NOTE: GL_TEXTURE_2D_MULTISAMPLE is not allowed
-            assert(t->gl.target == GL_TEXTURE_2D);
-            bindTexture(MAX_TEXTURE_UNITS - 1, GL_TEXTURE_2D, t);
+            bindTexture(MAX_TEXTURE_UNITS - 1, t->gl.target, t);
             activeTexture(MAX_TEXTURE_UNITS - 1);
-            glTexSubImage2D(GL_TEXTURE_2D,
-                    GLint(level), GLint(xoffset), GLint(yoffset),
-                    width, height, glFormat, glType, p.buffer);
+            switch (t->gl.target) {
+                case GL_TEXTURE_2D:
+                    glTexSubImage2D(t->gl.target, GLint(level),
+                            GLint(xoffset), GLint(yoffset),
+                            width, height, glFormat, glType, p.buffer);
+                    break;
+                case GL_TEXTURE_2D_ARRAY:
+                    glTexSubImage3D(t->gl.target, GLint(level),
+                            GLint(xoffset), GLint(yoffset), GLint(zoffset),
+                            width, height, depth, glFormat, glType, p.buffer);
+                    break;
+                default:
+                    // we shouldn't be here
+                    break;
+            }
             break;
         case SamplerType::SAMPLER_CUBEMAP: {
             assert(t->gl.target == GL_TEXTURE_CUBE_MAP);
@@ -1940,12 +1983,23 @@ void OpenGLDriver::setCompressedTextureData(GLTexture* t,
             // fallthrough...
         case SamplerType::SAMPLER_2D:
             // NOTE: GL_TEXTURE_2D_MULTISAMPLE is not allowed
-            assert(t->gl.target == GL_TEXTURE_2D);
-            bindTexture(MAX_TEXTURE_UNITS-1, GL_TEXTURE_2D, t);
+            bindTexture(MAX_TEXTURE_UNITS - 1, t->gl.target, t);
             activeTexture(MAX_TEXTURE_UNITS - 1);
-            glCompressedTexSubImage2D(GL_TEXTURE_2D,
-                    GLint(level), GLint(xoffset), GLint(yoffset),
-                    width, height, t->gl.internalFormat, imageSize, p.buffer);
+            switch (t->gl.target) {
+                case GL_TEXTURE_2D:
+                    glCompressedTexSubImage2D(t->gl.target, GLint(level),
+                            GLint(xoffset), GLint(yoffset),
+                            width, height, t->gl.internalFormat, imageSize, p.buffer);
+                    break;
+                case GL_TEXTURE_2D_ARRAY:
+                    glCompressedTexSubImage3D(t->gl.target, GLint(level),
+                            GLint(xoffset), GLint(yoffset), GLint(zoffset),
+                            width, height, depth, t->gl.internalFormat, imageSize, p.buffer);
+                    break;
+                default:
+                    // we shouldn't be here
+                    break;
+            }
             break;
         case SamplerType::SAMPLER_CUBEMAP: {
             assert(faceOffsets);
