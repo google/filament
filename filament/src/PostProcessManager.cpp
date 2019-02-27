@@ -23,6 +23,8 @@
 
 #include <private/filament/SibGenerator.h>
 
+#include <filament/MaterialEnums.h>
+
 #include <utils/Log.h>
 
 namespace filament {

@@ -18,7 +18,6 @@
 #define TNT_FILAFLAT_DIC_GLSL_CHUNK_H
 
 #include <filaflat/ChunkContainer.h>
-#include <filaflat/FilaflatDefs.h>
 #include <filaflat/Unflattener.h>
 
 #include "BlobDictionary.h"
@@ -31,8 +30,9 @@ namespace filaflat {
 struct TextDictionaryReader {
     bool unflatten(Unflattener& unflattener, BlobDictionary& dictionary);
 
-    static bool unflatten(ChunkContainer const& container, BlobDictionary& blobDictionary,
-            filamat::ChunkType chunkType) {
+    static bool unflatten(
+            ChunkContainer const& container, BlobDictionary& blobDictionary,
+            ChunkContainer::Type chunkType) {
         Unflattener dictionaryUnflattener(container, chunkType);
         TextDictionaryReader dictionary;
         return dictionary.unflatten(dictionaryUnflattener, blobDictionary);

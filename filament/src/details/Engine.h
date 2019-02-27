@@ -40,6 +40,7 @@
 #include <filament/VertexBuffer.h>
 #include <filament/IndirectLight.h>
 #include <filament/Material.h>
+#include <filament/MaterialEnums.h>
 #include <filament/Texture.h>
 #include <filament/Skybox.h>
 #include <filament/Stream.h>
