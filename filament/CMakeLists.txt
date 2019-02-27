@@ -205,6 +205,7 @@ add_definitions(-DSYSTRACE_TAG=2 )
 
 if (FILAMENT_SUPPORTS_METAL)
     list(APPEND SRCS
+            src/driver/metal/MetalContext.mm
             src/driver/metal/MetalDriver.mm
             src/driver/metal/MetalHandles.mm
             src/driver/metal/MetalState.mm

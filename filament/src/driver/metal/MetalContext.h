@@ -73,6 +73,11 @@ struct MetalContext {
     MTLPixelFormat currentDepthPixelFormat = MTLPixelFormatInvalid;
 };
 
+// Acquire the current surface's CAMetalDrawable for the current frame if it has not already been
+// acquired.
+// This method returns the drawable and stores it in the context's currentDrawable field.
+id<CAMetalDrawable> acquireDrawable(MetalContext* context);
+
 } // namespace metal
 } // namespace driver
 } // namespace filament

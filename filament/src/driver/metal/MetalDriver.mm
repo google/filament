@@ -28,7 +28,6 @@
 
 #include <utils/Log.h>
 #include <utils/Panic.h>
-#include <utils/trap.h>
 
 #pragma clang diagnostic push
 #pragma ide diagnostic ignored "HidingNonVirtualFunction"
@@ -404,15 +403,7 @@ void MetalDriver::beginRenderPass(Driver::RenderTargetHandle rth,
     // Color
 
     if (renderTarget->isDefaultRenderTarget) {
-        // Lazily acquire the next drawable, if we haven't already acquired it for this frame.
-        if (!mContext->currentDrawable) {
-            mContext->currentDrawable = [mContext->currentSurface->layer nextDrawable];
-        }
-        if (mContext->currentDrawable == nil) {
-            utils::slog.e << "Could not obtain drawable." << utils::io::endl;
-            utils::debug_trap();
-        }
-        descriptor.colorAttachments[0].texture = mContext->currentDrawable.texture;
+        descriptor.colorAttachments[0].texture = acquireDrawable(mContext).texture;
         mContext->currentSurfacePixelFormat = mContext->currentDrawable.texture.pixelFormat;
     } else {
         descriptor.colorAttachments[0].texture = renderTarget->color;
