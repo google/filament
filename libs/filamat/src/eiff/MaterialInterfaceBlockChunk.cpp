@@ -15,7 +15,7 @@
  */
 #include "MaterialInterfaceBlockChunk.h"
 
-#include "filaflat/FilaflatDefs.h"
+#include "filament/MaterialChunkType.h"
 
 using namespace filament;
 

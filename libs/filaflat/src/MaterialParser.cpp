@@ -19,7 +19,7 @@
 #include <filaflat/ChunkContainer.h>
 #include <filaflat/ShaderBuilder.h>
 #include <filaflat/Unflattener.h>
-#include <filaflat/FilaflatDefs.h>
+#include <filament/MaterialChunkType.h>
 
 #include "BlobDictionary.h"
 #include "ChunkInterfaceBlock.h"
