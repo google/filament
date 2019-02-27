@@ -91,6 +91,8 @@ public:
         return mBuffer[info.offset];
     }
 
+    SamplerBuffer& setSamplers(SamplerBuffer const& rhs) noexcept;
+
     // set sampler at given index
     void setSampler(size_t index, Sampler const& sampler) noexcept;
 

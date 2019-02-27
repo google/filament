@@ -70,6 +70,14 @@ SamplerBuffer& SamplerBuffer::toCommandStream() const noexcept {
     return const_cast<SamplerBuffer&>(*this);
 }
 
+SamplerBuffer& SamplerBuffer::setSamplers(SamplerBuffer const& rhs) noexcept {
+    if (this != &rhs) {
+        std::copy_n(rhs.mBuffer.begin(), rhs.mSize, mBuffer.begin());
+        mDirty.setValue((1u << rhs.mSize) - 1u);
+        mSize = rhs.mSize;
+    }
+    return *this;
+}
 
 void SamplerBuffer::setSampler(size_t index, Sampler const& sampler) noexcept {
     if (index < mSize) {
