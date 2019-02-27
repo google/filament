@@ -32,7 +32,7 @@ struct MetalSwapChain;
 
 struct MetalContext {
     id<MTLDevice> device = nullptr;
-    id<MTLCommandQueue> mCommandQueue = nullptr;
+    id<MTLCommandQueue> commandQueue = nullptr;
 
     // A pool for autoreleased objects throughout the lifetime of the Metal driver.
     NSAutoreleasePool* driverPool = nil;

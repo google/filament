@@ -47,7 +47,7 @@ MetalDriver::MetalDriver(driver::MetalPlatform* platform) noexcept
         mContext(new MetalContext) {
     mContext->driverPool = [[NSAutoreleasePool alloc] init];
     mContext->device = MTLCreateSystemDefaultDevice();
-    mContext->mCommandQueue = [mContext->device newCommandQueue];
+    mContext->commandQueue = [mContext->device newCommandQueue];
     mContext->pipelineStateCache.setDevice(mContext->device);
     mContext->depthStencilStateCache.setDevice(mContext->device);
     mContext->samplerStateCache.setDevice(mContext->device);
@@ -69,7 +69,7 @@ void MetalDriver::debugCommand(const char *methodName) {
 
 void MetalDriver::beginFrame(int64_t monotonic_clock_ns, uint32_t frameId) {
     mContext->framePool = [[NSAutoreleasePool alloc] init];
-    mContext->currentCommandBuffer = [mContext->mCommandQueue commandBuffer];
+    mContext->currentCommandBuffer = [mContext->commandQueue commandBuffer];
 }
 
 void MetalDriver::setPresentationTime(int64_t monotonic_clock_ns) {
@@ -280,7 +280,7 @@ void MetalDriver::destroyStream(Driver::StreamHandle sh) {
 }
 
 void MetalDriver::terminate() {
-    [mContext->mCommandQueue release];
+    [mContext->commandQueue release];
     [mContext->driverPool drain];
 }
 
