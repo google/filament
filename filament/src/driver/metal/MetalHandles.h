@@ -22,8 +22,9 @@
 #include <Metal/Metal.h>
 #include <QuartzCore/QuartzCore.h> // for CAMetalLayer
 
-#include "MetalState.h" // for MetalState::VertexDescription
+#include "MetalContext.h"
 #include "MetalEnums.h"
+#include "MetalState.h" // for MetalState::VertexDescription
 #include "driver/TextureReshaper.h"
 
 #include <utils/Panic.h>
