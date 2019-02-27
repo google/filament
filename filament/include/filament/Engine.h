@@ -148,6 +148,8 @@ public:
     /**
      * Creates an instance of Engine
      *
+     * @param backend           Which driver backend to use.
+     *
      * @param platform          A pointer to an object that implements Platform. If this is
      *                          provided, then this object is used to create the hardware context
      *                          and expose platform features to it.
@@ -169,7 +171,7 @@ public:
      *
      * @return A pointer to the newly created Engine, or nullptr if the Engine couldn't be created.
      *
-     * @error nullptr if the GPU driver couldn't be initialized, for instance if it doesn't
+     * nullptr if the GPU driver couldn't be initialized, for instance if it doesn't
      * support the right version of OpenGL or OpenGL ES.
      *
      * @exception utils::PostConditionPanic can be thrown if there isn't enough memory to
@@ -280,7 +282,7 @@ public:
      * @attention All MaterialInstance of the specified material must be destroyed before
      *            destroying a Material.
      * @exception utils::PreConditionPanic is thrown if some MaterialInstances remain.
-     * @error no-op if exceptions are disabled and some MaterialInstances remain.
+     * no-op if exceptions are disabled and some MaterialInstances remain.
      */
     void destroy(const Material* p);
     void destroy(const MaterialInstance* p);    //!< Destroys a MaterialInstance object.

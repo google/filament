@@ -826,7 +826,8 @@ MoltenVK.
 
 ## Generating C++ documentation
 
-To generate the documentation you must first install `doxygen`, then run the following commands:
+To generate the documentation you must first install `doxygen` and `graphviz`, then run the 
+following commands:
 
 ```
 $ cd filament/filament

@@ -208,10 +208,11 @@ public:
     }
 
     /**
-     * Sets the value of the given parameter on this material's default instance.
+     * Sets a texture and sampler parameters on this material's default instance.
      *
-     * @param name The name of the material parameter
-     * @param texture The value of the material parameter
+     * @param name The name of the material texture parameter
+     * @param texture The texture to set as parameter
+     * @param sampler The sampler to be used with this texture
      *
      * @see getDefaultInstance()
      */
@@ -221,10 +222,11 @@ public:
     }
 
     /**
-     * Sets the value of the given parameter on this material's default instance.
+     * Sets the color of the given parameter on this material's default instance.
      *
-     * @param name The name of the material parameter
-     * @param color The value of the material parameter
+     * @param name The name of the material color parameter
+     * @param type Whether the color is specified in the linear or sRGB space
+     * @param color The color as a floating point red, green, blue tuple
      *
      * @see getDefaultInstance()
      */
@@ -233,10 +235,11 @@ public:
     }
 
     /**
-     * Sets the value of the given parameter on this material's default instance.
+     * Sets the color of the given parameter on this material's default instance.
      *
-     * @param name The name of the material parameter
-     * @param color The value of the material parameter
+     * @param name The name of the material color parameter
+     * @param type Whether the color is specified in the linear or sRGB space
+     * @param color The color as a floating point red, green, blue, alpha tuple
      *
      * @see getDefaultInstance()
      */
