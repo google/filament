@@ -96,12 +96,12 @@ public:
          * @param entity Entity to add the Renderable component to.
          * @return Success if the component was created successfully, Error otherwise.
          *
+         * If exceptions are disabled and an error occurs, this function is a no-op.
+         *        Success can be checked by looking at the return value.
+         *
          * If this component already exists on the given entity and the construction is successful,
          * it is first destroyed as if destroy(utils::Entity e) was called. In case of error,
          * the existing component is unmodified.
-         *
-         * @error if exceptions are disabled and an error occurs, this function is a no-op.
-         *        Success can be checked by looking at the return value.
          *
          * @exception utils::PostConditionPanic if a runtime error occurred, such as running out of
          *            memory or other resources.

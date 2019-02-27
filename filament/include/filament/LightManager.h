@@ -410,14 +410,14 @@ public:
          * @param entity Entity to add the light component to.
          * @return Success if the component was created successfully, Error otherwise.
          *
+         * If exceptions are disabled and an error occurs, this function is a no-op.
+         *        Success can be checked by looking at the return value.
+         *
          * If this component already exists on the given entity, it is first destroyed as if
          * destroy(utils::Entity e) was called.
          *
          * @warning
          * Currently, only 2048 lights can be created on a given Engine.
-         *
-         * @error if exceptions are disabled and an error occurs, this function is a no-op.
-         *        Success can be checked by looking at the return value.
          *
          * @exception utils::PostConditionPanic if a runtime error occurred, such as running out of
          *            memory or other resources.
