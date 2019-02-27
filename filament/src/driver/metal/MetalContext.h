@@ -31,46 +31,46 @@ struct MetalSamplerBuffer;
 struct MetalSwapChain;
 
 struct MetalContext {
-    id<MTLDevice> mDevice = nullptr;
+    id<MTLDevice> device = nullptr;
     id<MTLCommandQueue> mCommandQueue = nullptr;
 
     // A pool for autoreleased objects throughout the lifetime of the Metal driver.
-    NSAutoreleasePool* mDriverPool = nil;
+    NSAutoreleasePool* driverPool = nil;
 
     // A pool for autoreleased objects allocated during the execution of a frame.
     // The pool is created in beginFrame() and drained in endFrame().
-    NSAutoreleasePool* mFramePool = nil;
+    NSAutoreleasePool* framePool = nil;
 
     // Single use, re-created each frame.
-    id<MTLCommandBuffer> mCurrentCommandBuffer = nullptr;
-    id<MTLRenderCommandEncoder> mCurrentCommandEncoder = nullptr;
+    id<MTLCommandBuffer> currentCommandBuffer = nullptr;
+    id<MTLRenderCommandEncoder> currentCommandEncoder = nullptr;
 
-    RenderPassFlags mCurrentRenderPassFlags;
-    MetalRenderTarget* mCurrentRenderTarget = nullptr;
+    RenderPassFlags currentRenderPassFlags;
+    MetalRenderTarget* currentRenderTarget = nullptr;
 
     // State trackers.
-    PipelineStateTracker mPipelineState;
-    DepthStencilStateTracker mDepthStencilState;
-    UniformBufferStateTracker mUniformState[VERTEX_BUFFER_START];
-    CullModeStateTracker mCullModeState;
+    PipelineStateTracker pipelineState;
+    DepthStencilStateTracker depthStencilState;
+    UniformBufferStateTracker uniformState[VERTEX_BUFFER_START];
+    CullModeStateTracker cullModeState;
 
     // State caches.
-    DepthStencilStateCache mDepthStencilStateCache;
-    PipelineStateCache mPipelineStateCache;
-    SamplerStateCache mSamplerStateCache;
+    DepthStencilStateCache depthStencilStateCache;
+    PipelineStateCache pipelineStateCache;
+    SamplerStateCache samplerStateCache;
 
-    id<MTLSamplerState> mBoundSamplers[NUM_SAMPLER_BINDINGS] = {};
-    id<MTLTexture> mBoundTextures[NUM_SAMPLER_BINDINGS] = {};
-    bool mSamplersDirty = true;
-    bool mTexturesDirty = true;
+    id<MTLSamplerState> boundSamplers[NUM_SAMPLER_BINDINGS] = {};
+    id<MTLTexture> boundTextures[NUM_SAMPLER_BINDINGS] = {};
+    bool samplersDirty = true;
+    bool texturesDirty = true;
 
-    MetalSamplerBuffer* mSamplerBindings[NUM_SAMPLER_BINDINGS] = {};
+    MetalSamplerBuffer* samplerBindings[NUM_SAMPLER_BINDINGS] = {};
 
     // Surface-related properties.
-    MetalSwapChain* mCurrentSurface = nullptr;
-    id<CAMetalDrawable> mCurrentDrawable = nullptr;
-    MTLPixelFormat mCurrentSurfacePixelFormat = MTLPixelFormatInvalid;
-    MTLPixelFormat mCurrentDepthPixelFormat = MTLPixelFormatInvalid;
+    MetalSwapChain* currentSurface = nullptr;
+    id<CAMetalDrawable> currentDrawable = nullptr;
+    MTLPixelFormat currentSurfacePixelFormat = MTLPixelFormatInvalid;
+    MTLPixelFormat currentDepthPixelFormat = MTLPixelFormatInvalid;
 };
 
 } // namespace metal
