@@ -379,7 +379,6 @@ void FRenderableManager::prepare(
         if (UTILS_UNLIKELY(bones[i])) {
             if (bones[i]->bones.isDirty()) {
                 driver.updateUniformBuffer(bones[i]->handle, bones[i]->bones.toBufferDescriptor(driver));
-                bones[i]->bones.clean();
             }
         }
     }

@@ -52,7 +52,7 @@ public:
     enum class no_init { };
     static constexpr no_init NO_INIT = { };
 
-    HandleBase() noexcept : object(nullid) { }
+    constexpr HandleBase() noexcept : object(nullid) { }
 
     explicit HandleBase(no_init) noexcept { } // NOLINT
 

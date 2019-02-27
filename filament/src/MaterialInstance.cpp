@@ -96,11 +96,9 @@ void FMaterialInstance::commitSlow(FEngine& engine) const {
     FEngine::DriverApi& driver = engine.getDriverApi();
     if (mUniforms.isDirty()) {
         driver.updateUniformBuffer(mUbHandle, mUniforms.toBufferDescriptor(driver));
-        mUniforms.clean();
     }
     if (mSamplers.isDirty()) {
-        driver.updateSamplerBuffer(mSbHandle, SamplerBuffer(mSamplers));
-        mSamplers.clean();
+        driver.updateSamplerBuffer(mSbHandle, std::move(mSamplers.toCommandStream()));
     }
 }
 

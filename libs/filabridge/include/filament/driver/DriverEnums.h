@@ -70,7 +70,7 @@ enum TargetBufferFlags : uint8_t {
 enum BufferUsage : uint8_t {
     STATIC,                 //!< content modified once, used many times
     DYNAMIC,                //!< content modified frequently, used many times
-    STREAM,                 //!< content invalidate and modified frequently, used many times
+    STREAM,                 //!< content invalidated and modified frequently, used many times
 };
 
 /**
@@ -552,7 +552,7 @@ struct SamplerParams {
     enum class no_init { };
     static constexpr no_init NO_INIT = { };
 
-    SamplerParams() noexcept : u(0) { }
+    constexpr SamplerParams() noexcept : u(0) { }
     SamplerParams(no_init) noexcept { }
 
     union {
