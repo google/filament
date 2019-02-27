@@ -96,8 +96,8 @@ public:
     /**
      * Adds a contiguous list of entities to the Scene.
      *
-     * @param entities
-     * @param count
+     * @param entities Array containing entities to add to the scene.
+     * @param count Size of the entity array.
      */
     void addEntities(const utils::Entity* entities, size_t count);
 

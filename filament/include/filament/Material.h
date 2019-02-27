@@ -211,7 +211,7 @@ public:
      * Sets the value of the given parameter on this material's default instance.
      *
      * @param name The name of the material parameter
-     * @param value The value of the material parameter
+     * @param texture The value of the material parameter
      *
      * @see getDefaultInstance()
      */
@@ -224,7 +224,7 @@ public:
      * Sets the value of the given parameter on this material's default instance.
      *
      * @param name The name of the material parameter
-     * @param value The value of the material parameter
+     * @param color The value of the material parameter
      *
      * @see getDefaultInstance()
      */
@@ -236,7 +236,7 @@ public:
      * Sets the value of the given parameter on this material's default instance.
      *
      * @param name The name of the material parameter
-     * @param value The value of the material parameter
+     * @param color The value of the material parameter
      *
      * @see getDefaultInstance()
      */
