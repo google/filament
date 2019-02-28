@@ -50,6 +50,8 @@ public:
 
     class Builder {
     public:
+        Builder() = default;
+        Builder(Builder const&) = default;
         ~Builder() noexcept;
 
         // Give a name to this sampler interface block
@@ -97,7 +99,7 @@ public:
         std::vector<Entry> mEntries;
     };
 
-    struct SamplerInfo {
+    struct SamplerInfo { // NOLINT(cppcoreguidelines-pro-type-member-init)
         SamplerInfo() noexcept = default;
         SamplerInfo(utils::CString name, uint8_t offset, Type type, Format format,
                 Precision precision, bool multisample) noexcept

@@ -19,6 +19,10 @@
 #include <utils/Panic.h>
 #include <utils/compiler.h>
 
+#include <utility>
+
+#include <stdint.h>
+
 using namespace utils;
 
 namespace filament {
