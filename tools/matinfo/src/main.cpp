@@ -17,9 +17,11 @@
 #include <getopt/getopt.h>
 
 #include <filaflat/ChunkContainer.h>
-#include <filaflat/MaterialParser.h>
-#include <filaflat/Unflattener.h>
+#include <filaflat/MaterialChunk.h>
 #include <filaflat/ShaderBuilder.h>
+#include <filaflat/SpirvDictionaryReader.h>
+#include <filaflat/TextDictionaryReader.h>
+#include <filaflat/Unflattener.h>
 
 #include <private/filament/SamplerInterfaceBlock.h>
 #include <private/filament/UniformInterfaceBlock.h>
@@ -41,9 +43,94 @@
 
 using namespace filaflat;
 using namespace filamat;
+using namespace filament;
+using namespace filament::driver;
 using namespace utils;
 
 static const int alignment = 24;
+
+
+class MaterialParser {
+public:
+    MaterialParser(filament::driver::Backend backend, const void* data, size_t size)
+            : mBackend(backend), mChunkContainer(data, size) {
+        switch (mBackend) {
+            case Backend::OPENGL:
+                MATERIAL = ChunkType::MaterialGlsl;
+                DICTIONARY = ChunkType::DictionaryGlsl;
+                break;
+            case Backend::METAL:
+                MATERIAL = ChunkType::MaterialMetal;
+                DICTIONARY = ChunkType::DictionaryMetal;
+                break;
+            case Backend::VULKAN:
+                MATERIAL = ChunkType::MaterialSpirv;
+                DICTIONARY = ChunkType::DictionarySpirv;
+                break;
+            default:
+                break;
+        }
+    }
+
+    bool parse() noexcept {
+        return mChunkContainer.parse();
+    }
+
+    bool isShadingMaterial() const noexcept {
+        ChunkContainer const& cc = mChunkContainer;
+        return cc.hasChunk(MaterialName) && cc.hasChunk(MaterialVersion) &&
+               cc.hasChunk(MaterialUib) && cc.hasChunk(MaterialSib) &&
+               cc.hasChunk(MaterialShaderModels) && cc.hasChunk(MATERIAL);
+    }
+
+    bool isPostProcessMaterial() const noexcept {
+        ChunkContainer const& cc = mChunkContainer;
+        return cc.hasChunk(PostProcessVersion)
+               && cc.hasChunk(MATERIAL) && cc.hasChunk(DICTIONARY);
+    }
+
+    bool getShader(ShaderModel shaderModel,
+            uint8_t variant, ShaderType st, ShaderBuilder& shader) noexcept {
+
+        ChunkContainer const& cc = mChunkContainer;
+        if (!cc.hasChunk(MATERIAL) || !cc.hasChunk(DICTIONARY)) {
+            return false;
+        }
+
+        BlobDictionary blobDictionary;
+        if (mBackend == Backend::OPENGL) {
+            if (!TextDictionaryReader::unflatten(cc, blobDictionary, DICTIONARY)) {
+                return false;
+            }
+        } else {
+            if (!SpirvDictionaryReader::unflatten(cc, blobDictionary, DICTIONARY)) {
+                return false;
+            }
+        }
+
+        Unflattener unflattener(cc.getChunkStart(MATERIAL), cc.getChunkEnd(MATERIAL));
+        MaterialChunk materialChunk;
+        switch (mBackend) {
+            case Backend::OPENGL:
+                return materialChunk.getTextShader(unflattener, blobDictionary,
+                        shader, shaderModel, variant, st);
+            case Backend::METAL:
+                return materialChunk.getTextShader(unflattener, blobDictionary,
+                        shader, shaderModel, variant, st);
+            case Backend::VULKAN:
+                return materialChunk.getSpirvShader(unflattener, blobDictionary,
+                        shader, shaderModel, variant, st);
+            default:
+                return false;
+        }
+    }
+
+private:
+    ChunkContainer mChunkContainer;
+    filament::driver::Backend mBackend;
+    ChunkType MATERIAL = ChunkType::Unknown;
+    ChunkType DICTIONARY = ChunkType::Unknown;
+};
 
 struct Config {
     bool printGLSL = false;
