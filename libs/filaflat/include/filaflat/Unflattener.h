@@ -33,7 +33,9 @@ public:
             : mSrc(src), mCursor(src), mEnd(end) {
     }
 
-    ~Unflattener() {} // NOLINT(modernize-use-equals-default)
+    Unflattener(Unflattener const&) = default;
+
+    ~Unflattener() = default;
 
     bool hasData() const noexcept {
         return mCursor < mEnd;
