@@ -17,8 +17,6 @@
 #ifndef TNT_FILAFLAT_UNFLATTENER_H
 #define TNT_FILAFLAT_UNFLATTENER_H
 
-#include <filaflat/ChunkContainer.h>
-
 #include <utils/compiler.h>
 #include <utils/CString.h>
 
@@ -33,12 +31,6 @@ class UTILS_PUBLIC Unflattener {
 public:
     Unflattener(const uint8_t* src, const uint8_t* end)
             : mSrc(src), mCursor(src), mEnd(end) {
-    }
-
-    Unflattener(ChunkContainer const& container, ChunkContainer::Type type)
-            : mSrc(container.getChunkStart(type)),
-              mCursor(mSrc),
-              mEnd(container.getChunkEnd(type)) {
     }
 
     ~Unflattener() = default;

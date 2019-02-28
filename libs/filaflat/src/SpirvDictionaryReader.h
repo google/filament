@@ -30,7 +30,8 @@ struct SpirvDictionaryReader {
     static bool unflatten(
             ChunkContainer const& container, BlobDictionary& blobDictionary,
             ChunkContainer::Type chunkType) {
-        Unflattener dictionaryUnflattener(container, chunkType);
+        Unflattener dictionaryUnflattener(container.getChunkStart(chunkType),
+                container.getChunkEnd(chunkType));
         SpirvDictionaryReader dictionary;
         return dictionary.unflatten(dictionaryUnflattener, blobDictionary);
     }
