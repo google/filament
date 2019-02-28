@@ -288,7 +288,7 @@ void RenderPass::generateCommandsImpl(uint32_t,
     Command cmdColor;
 
     Command cmdDepth;
-    cmdDepth.primitive.materialVariant = { Variant::DEPTH_VARIANT };
+    cmdDepth.primitive.materialVariant = Variant{ Variant::DEPTH_VARIANT };
     cmdDepth.primitive.rasterState = Driver::RasterState();
     cmdDepth.primitive.rasterState.colorWrite = false;
     cmdDepth.primitive.rasterState.depthWrite = true;
