@@ -31,7 +31,7 @@
 #include <private/filament/SamplerInterfaceBlock.h>
 #include <private/filament/UniformInterfaceBlock.h>
 
-#include <filaflat/MaterialParser.h>
+#include <MaterialParser.h>
 
 #include <utils/Panic.h>
 
@@ -49,7 +49,7 @@ using namespace driver;
 struct Material::BuilderDetails {
     const void* mPayload = nullptr;
     size_t mSize = 0;
-    filaflat::MaterialParser* mMaterialParser = nullptr;
+    MaterialParser* mMaterialParser = nullptr;
     bool mDefaultMaterial = false;
 };
 

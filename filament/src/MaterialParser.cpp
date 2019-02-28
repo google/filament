@@ -15,18 +15,17 @@
  */
 
 
+#include "MaterialParser.h"
+
 #include <filaflat/BlobDictionary.h>
 #include <filaflat/ChunkContainer.h>
 #include <filaflat/MaterialChunk.h>
-#include <filaflat/MaterialParser.h>
 #include <filaflat/ShaderBuilder.h>
 #include <filaflat/SpirvDictionaryReader.h>
 #include <filaflat/TextDictionaryReader.h>
 #include <filaflat/Unflattener.h>
 
 #include <filament/MaterialChunkType.h>
-
-#include "ChunkInterfaceBlock.h"
 
 #include <private/filament/SamplerInterfaceBlock.h>
 #include <private/filament/UniformInterfaceBlock.h>
@@ -36,10 +35,10 @@
 #include <stdlib.h>
 
 using namespace utils;
-using namespace filament;
+using namespace filaflat;
 using namespace filamat;
 
-namespace filaflat {
+namespace filament {
 
 // Make a copy of content and own the allocated memory.
 class ManagedBuffer  {
@@ -61,7 +60,7 @@ public:
 };
 
 struct MaterialParserDetails {
-    MaterialParserDetails(filament::driver::Backend backend, const void* data, size_t size)
+    MaterialParserDetails(driver::Backend backend, const void* data, size_t size)
             : mUnflattenable(data, size),
               mChunkContainer(mUnflattenable.begin(), mUnflattenable.size()),
               mBackend(backend) {
@@ -70,21 +69,21 @@ struct MaterialParserDetails {
     ChunkContainer mChunkContainer;
 
     // Keep MaterialChunk alive between calls to getShader to avoid reload the shader index.
-    filament::driver::Backend mBackend;
+    driver::Backend mBackend;
     MaterialChunk mMaterialChunk;
     BlobDictionary mBlobDictionary;
 
     template<typename T>
     bool getFromSimpleChunk(filamat::ChunkType type, T* value) const noexcept;
 
-    bool getVkShader(filament::driver::ShaderModel shaderModel, uint8_t variant,
-            filament::driver::ShaderType st, ShaderBuilder& shader) noexcept;
+    bool getVkShader(driver::ShaderModel shaderModel, uint8_t variant,
+            driver::ShaderType st, ShaderBuilder& shader) noexcept;
 
-    bool getGlShader(filament::driver::ShaderModel shaderModel, uint8_t variant,
-            filament::driver::ShaderType st, ShaderBuilder& shader) noexcept;
+    bool getGlShader(driver::ShaderModel shaderModel, uint8_t variant,
+            driver::ShaderType st, ShaderBuilder& shader) noexcept;
 
-    bool getMtlShader(filament::driver::ShaderModel shaderModel, uint8_t variant,
-            filament::driver::ShaderType shaderType, ShaderBuilder& shaderBuilder) noexcept;
+    bool getMtlShader(driver::ShaderModel shaderModel, uint8_t variant,
+            driver::ShaderType shaderType, ShaderBuilder& shaderBuilder) noexcept;
 };
 
 template<typename T>
@@ -98,7 +97,7 @@ bool MaterialParserDetails::getFromSimpleChunk(filamat::ChunkType type, T* value
     return unflattener.read(value);
 }
 
-MaterialParser::MaterialParser(filament::driver::Backend backend, const void* data, size_t size)
+MaterialParser::MaterialParser(driver::Backend backend, const void* data, size_t size)
         : mImpl(new MaterialParserDetails(backend, data, size)) {
 }
 
@@ -163,7 +162,7 @@ bool MaterialParser::getName(utils::CString* cstring) const noexcept {
    }
 }
 
-bool MaterialParser::getUIB(filament::UniformInterfaceBlock* uib) const noexcept {
+bool MaterialParser::getUIB(UniformInterfaceBlock* uib) const noexcept {
     auto type = MaterialUib;
 
     const uint8_t* start = mImpl->mChunkContainer.getChunkStart(type);
@@ -173,7 +172,7 @@ bool MaterialParser::getUIB(filament::UniformInterfaceBlock* uib) const noexcept
     return ChunkUniformInterfaceBlock().unflatten(unflattener, uib);
 }
 
-bool MaterialParser::getSIB(filament::SamplerInterfaceBlock* sib) const noexcept {
+bool MaterialParser::getSIB(SamplerInterfaceBlock* sib) const noexcept {
     auto type = MaterialSib;
 
     const uint8_t* start = mImpl->mChunkContainer.getChunkStart(type);
@@ -273,22 +272,22 @@ bool MaterialParser::getRequiredAttributes(AttributeBitset* value) const noexcep
 }
 
 bool MaterialParser::getShader(
-        filament::driver::ShaderModel shaderModel, uint8_t variant, filament::driver::ShaderType st,
+        driver::ShaderModel shaderModel, uint8_t variant, driver::ShaderType st,
         ShaderBuilder& shader) noexcept {
-    if (mImpl->mBackend == filament::driver::Backend::VULKAN) {
+    if (mImpl->mBackend == driver::Backend::VULKAN) {
         return mImpl->getVkShader(shaderModel, variant, st, shader);
     }
-    if (mImpl->mBackend == filament::driver::Backend::OPENGL) {
+    if (mImpl->mBackend == driver::Backend::OPENGL) {
         return mImpl->getGlShader(shaderModel, variant, st, shader);
     }
-    if (mImpl->mBackend == filament::driver::Backend::METAL) {
+    if (mImpl->mBackend == driver::Backend::METAL) {
         return mImpl->getMtlShader(shaderModel, variant, st, shader);
     }
     return false;
 }
 
-bool MaterialParserDetails::getVkShader(filament::driver::ShaderModel shaderModel, uint8_t variant,
-        filament::driver::ShaderType st, ShaderBuilder& shader) noexcept {
+bool MaterialParserDetails::getVkShader(driver::ShaderModel shaderModel, uint8_t variant,
+        driver::ShaderType st, ShaderBuilder& shader) noexcept {
 
     ChunkContainer const& container = mChunkContainer;
     if (!container.hasChunk(ChunkType::MaterialSpirv) ||
@@ -307,8 +306,8 @@ bool MaterialParserDetails::getVkShader(filament::driver::ShaderModel shaderMode
     return mMaterialChunk.getSpirvShader(unflattener, mBlobDictionary, shader, shaderModel, variant, st);
 }
 
-bool MaterialParserDetails::getGlShader(filament::driver::ShaderModel shaderModel, uint8_t variant,
-        filament::driver::ShaderType st, ShaderBuilder& shader) noexcept {
+bool MaterialParserDetails::getGlShader(driver::ShaderModel shaderModel, uint8_t variant,
+        driver::ShaderType st, ShaderBuilder& shader) noexcept {
 
     ChunkContainer const& container = mChunkContainer;
     if (!container.hasChunk(ChunkType::MaterialGlsl) ||
@@ -329,8 +328,8 @@ bool MaterialParserDetails::getGlShader(filament::driver::ShaderModel shaderMode
     return mMaterialChunk.getTextShader(unflattener, mBlobDictionary, shader, shaderModel, variant, st);
 }
 
-bool MaterialParserDetails::getMtlShader(filament::driver::ShaderModel shaderModel, uint8_t variant,
-        filament::driver::ShaderType st, ShaderBuilder& shader) noexcept {
+bool MaterialParserDetails::getMtlShader(driver::ShaderModel shaderModel, uint8_t variant,
+        driver::ShaderType st, ShaderBuilder& shader) noexcept {
     ChunkContainer const& container = mChunkContainer;
     if (!container.hasChunk(ChunkType::MaterialMetal) ||
         !container.hasChunk(ChunkType::DictionaryMetal)) {
@@ -348,6 +347,111 @@ bool MaterialParserDetails::getMtlShader(filament::driver::ShaderModel shaderMod
     Unflattener unflattener(container.getChunkStart(ChunkType::MaterialMetal),
             container.getChunkEnd(ChunkType::MaterialMetal));
     return mMaterialChunk.getTextShader(unflattener, mBlobDictionary, shader, shaderModel, variant, st);
+}
+
+// ------------------------------------------------------------------------------------------------
+
+
+bool ChunkUniformInterfaceBlock::unflatten(Unflattener& unflattener,
+        filament::UniformInterfaceBlock* uib) {
+
+    UniformInterfaceBlock::Builder builder = UniformInterfaceBlock::Builder();
+
+    CString name;
+    if (!unflattener.read(&name)) {
+        return false;
+    }
+
+    builder.name(std::move(name));
+
+    // Read number of fields.
+    uint64_t numFields = 0;
+    if (!unflattener.read(&numFields)) {
+        return false;
+    }
+
+    for (uint64_t i = 0; i < numFields; i++) {
+        CString fieldName;
+        uint64_t fieldSize;
+        uint8_t fieldType;
+        uint8_t fieldPrecision;
+
+        if (!unflattener.read(&fieldName)) {
+            return false;
+        }
+
+        if (!unflattener.read(&fieldSize)) {
+            return false;
+        }
+
+        if (!unflattener.read(&fieldType)) {
+            return false;
+        }
+
+        if (!unflattener.read(&fieldPrecision)) {
+            return false;
+        }
+
+        builder.add(fieldName, fieldSize, UniformInterfaceBlock::Type(fieldType),
+                UniformInterfaceBlock::Precision(fieldPrecision));
+    }
+
+    *uib = builder.build();
+    return true;
+}
+
+bool ChunkSamplerInterfaceBlock::unflatten(Unflattener& unflattener,
+        filament::SamplerInterfaceBlock* sib) {
+
+    SamplerInterfaceBlock::Builder builder = SamplerInterfaceBlock::Builder();
+
+    CString name;
+    if (!unflattener.read(&name)) {
+        return false;
+    }
+    builder.name(name);
+
+    // Read number of fields.
+    uint64_t numFields = 0;
+    if (!unflattener.read(&numFields)) {
+        return false;
+    }
+
+    for (uint64_t i = 0; i < numFields; i++) {
+        CString fieldName;
+        uint8_t fieldType;
+        uint8_t fieldFormat;
+        uint8_t fieldPrecision;
+        bool fieldMultisample;
+
+        if (!unflattener.read(&fieldName)) {
+            return false;
+        }
+
+        if (!unflattener.read(&fieldType)) {
+            return false;
+        }
+
+        if (!unflattener.read(&fieldFormat)) {
+            return false;
+        }
+
+        if (!unflattener.read(&fieldPrecision)) {
+            return false;
+        }
+
+        if (!unflattener.read(&fieldMultisample)) {
+            return false;
+        }
+
+        builder.add(fieldName, SamplerInterfaceBlock::Type(fieldType),
+                SamplerInterfaceBlock::Format(fieldFormat),
+                SamplerInterfaceBlock::Precision(fieldPrecision),
+                fieldMultisample);
+    }
+
+    *sib = builder.build();
+    return true;
 }
 
 } // namespace filaflat

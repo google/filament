@@ -27,25 +27,25 @@
 
 #include <inttypes.h>
 
-namespace filament {
-class UniformInterfaceBlock;
-class SamplerInterfaceBlock;
-}
-
 namespace filaflat {
-
 class ChunkContainer;
 class ShaderBuilder;
+class Unflattener;
+}
 
+namespace filament {
+
+class UniformInterfaceBlock;
+class SamplerInterfaceBlock;
 struct MaterialParserDetails;
 
 class UTILS_PUBLIC MaterialParser {
 public:
-    MaterialParser(filament::driver::Backend backend, const void* data, size_t size);
+    MaterialParser(driver::Backend backend, const void* data, size_t size);
     ~MaterialParser();
 
     MaterialParser(MaterialParser const& rhs) noexcept = delete;
-    MaterialParser& operator = (MaterialParser const& rhs) noexcept  = delete;
+    MaterialParser& operator=(MaterialParser const& rhs) noexcept = delete;
 
     bool parse() noexcept;
     bool isShadingMaterial() const noexcept;
@@ -55,37 +55,45 @@ public:
     bool getMaterialVersion(uint32_t* value) const noexcept;
     bool getPostProcessVersion(uint32_t* value) const noexcept;
     bool getName(utils::CString*) const noexcept;
-    bool getUIB(filament::UniformInterfaceBlock* uib) const noexcept;
-    bool getSIB(filament::SamplerInterfaceBlock* sib) const noexcept;
+    bool getUIB(UniformInterfaceBlock* uib) const noexcept;
+    bool getSIB(SamplerInterfaceBlock* sib) const noexcept;
     bool getShaderModels(uint32_t* value) const noexcept;
 
     bool getDepthWriteSet(bool* value) const noexcept;
     bool getDepthWrite(bool* value) const noexcept;
     bool getDoubleSidedSet(bool* value) const noexcept;
     bool getDoubleSided(bool* value) const noexcept;
-    bool getCullingMode(filament::driver::CullingMode* value) const noexcept;
-    bool getTransparencyMode(filament::TransparencyMode* value) const noexcept;
+    bool getCullingMode(driver::CullingMode* value) const noexcept;
+    bool getTransparencyMode(TransparencyMode* value) const noexcept;
     bool getColorWrite(bool* value) const noexcept;
     bool getDepthTest(bool* value) const noexcept;
-    bool getInterpolation(filament::Interpolation* value) const noexcept;
-    bool getVertexDomain(filament::VertexDomain* value) const noexcept;
+    bool getInterpolation(Interpolation* value) const noexcept;
+    bool getVertexDomain(VertexDomain* value) const noexcept;
 
-    bool getShading(filament::Shading*) const noexcept;
-    bool getBlendingMode(filament::BlendingMode*) const noexcept;
+    bool getShading(Shading*) const noexcept;
+    bool getBlendingMode(BlendingMode*) const noexcept;
     bool getMaskThreshold(float*) const noexcept;
     bool hasShadowMultiplier(bool*) const noexcept;
-    bool getRequiredAttributes(filament::AttributeBitset*) const noexcept;
+    bool getRequiredAttributes(AttributeBitset*) const noexcept;
     bool hasCustomDepthShader(bool* value) const noexcept;
 
     bool getShader(
-            filament::driver::ShaderModel shaderModel, uint8_t variant,
-            filament::driver::ShaderType st,
-            ShaderBuilder& shader) noexcept;
+            driver::ShaderModel shaderModel, uint8_t variant,
+            driver::ShaderType st,
+            filaflat::ShaderBuilder& shader) noexcept;
 
 protected:
-    ChunkContainer& getChunkContainer() noexcept;
-    ChunkContainer const& getChunkContainer() const noexcept;
+    filaflat::ChunkContainer& getChunkContainer() noexcept;
+    filaflat::ChunkContainer const& getChunkContainer() const noexcept;
     MaterialParserDetails* mImpl = nullptr;
+};
+
+struct ChunkUniformInterfaceBlock {
+    bool unflatten(filaflat::Unflattener& unflattener, UniformInterfaceBlock* uib);
+};
+
+struct ChunkSamplerInterfaceBlock {
+    bool unflatten(filaflat::Unflattener& unflattener, SamplerInterfaceBlock* sib);
 };
 
 } // namespace filamat

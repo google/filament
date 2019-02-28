@@ -11,12 +11,10 @@ file(GLOB_RECURSE HDRS include/filaflat/*.h)
 
 set(SRCS
         src/ChunkContainer.cpp
-        src/ChunkInterfaceBlock.cpp
         src/TextDictionaryReader.cpp
         src/SpirvDictionaryReader.cpp
         src/MaterialChunk.cpp
         src/ShaderBuilder.cpp
-        src/MaterialParser.cpp
         src/Unflattener.cpp)
 
 # ==================================================================================================

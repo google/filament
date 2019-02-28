@@ -45,8 +45,6 @@ public:
 
     class Builder {
     public:
-        ~Builder() noexcept;
-
         // Give a name to this uniform interface block
         Builder& name(utils::CString const& interfaceBlockName);
         Builder& name(utils::CString&& interfaceBlockName);

@@ -38,7 +38,7 @@
 #include <filament/Exposure.h>
 #include <filament/MaterialEnums.h>
 
-#include <filaflat/MaterialParser.h>
+#include <MaterialParser.h>
 #include <filaflat/ShaderBuilder.h>
 
 #include <utils/compiler.h>
@@ -159,7 +159,7 @@ void FEngine::init() {
     DriverApi& driverApi = getDriverApi();
 
     // Parse all post process shaders now, but create them lazily
-    mPostProcessParser = std::make_unique<filaflat::MaterialParser>(mBackend,
+    mPostProcessParser = std::make_unique<MaterialParser>(mBackend,
             MATERIALS_POSTPROCESS_DATA, MATERIALS_POSTPROCESS_SIZE);
 
     UTILS_UNUSED_IN_RELEASE bool ppMaterialOk =

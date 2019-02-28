@@ -45,7 +45,6 @@
 #include <filament/Skybox.h>
 #include <filament/Stream.h>
 
-#include <filaflat/MaterialParser.h>
 #include <filaflat/ShaderBuilder.h>
 
 #include <utils/compiler.h>
@@ -65,6 +64,7 @@ namespace filament {
 class Renderer;
 class Driver;
 class Program;
+class MaterialParser;
 
 namespace details {
 
@@ -287,7 +287,7 @@ private:
     template<typename T, typename L>
     void cleanupResourceList(ResourceList<T, L>& list);
 
-    Handle<HwProgram> createPostProcessProgram(filaflat::MaterialParser& parser,
+    Handle<HwProgram> createPostProcessProgram(MaterialParser& parser,
             driver::ShaderModel model, PostProcessStage stage) const noexcept;
 
     Driver* mDriver = nullptr;
@@ -357,7 +357,7 @@ private:
     mutable FIndirectLight* mDefaultIbl = nullptr;
 
     mutable Handle<HwProgram> mPostProcessPrograms[POST_PROCESS_STAGES_COUNT];
-    mutable std::unique_ptr<filaflat::MaterialParser> mPostProcessParser;
+    mutable std::unique_ptr<MaterialParser> mPostProcessParser;
 
     mutable utils::CountDownLatch mDriverBarrier;
 

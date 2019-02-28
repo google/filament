@@ -82,6 +82,7 @@ set(SRCS
         src/IndexBuffer.cpp
         src/IndirectLight.cpp
         src/Material.cpp
+        src/MaterialParser.cpp
         src/MaterialInstance.cpp
         src/PostProcessManager.cpp
         src/Renderer.cpp
@@ -150,6 +151,7 @@ set(PRIVATE_HDRS
         src/FilamentAPI-impl.h
         src/FrameInfo.h
         src/Intersections.h
+        src/MaterialParser.h
         src/PostProcessManager.h
         src/RenderPass.h
         src/RenderTargetPool.h

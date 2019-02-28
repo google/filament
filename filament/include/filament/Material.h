@@ -34,15 +34,10 @@
 
 #include <stdint.h>
 
-namespace filaflat {
-class MaterialParser;
-}
-
 namespace filament {
 namespace details {
 class  FEngine;
 class  FMaterial;
-struct ShaderGenerator;
 } // namespace details
 
 class Engine;
