@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "SpirvDictionaryReader.h"
+#include <filaflat/SpirvDictionaryReader.h>
 
 #if defined (FILAMENT_DRIVER_SUPPORTS_VULKAN)
 #include <utils/Log.h>
