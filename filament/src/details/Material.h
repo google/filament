@@ -30,11 +30,10 @@
 #include <utils/compiler.h>
 
 
-namespace filaflat {
-    class MaterialParser;
-}
-
 namespace filament {
+
+class MaterialParser;
+
 namespace details {
 
 class  FEngine;
@@ -143,7 +142,7 @@ private:
     FEngine& mEngine;
     const uint32_t mMaterialId;
     mutable uint32_t mMaterialInstanceId = 0;
-    filaflat::MaterialParser* mMaterialParser = nullptr;
+    MaterialParser* mMaterialParser = nullptr;
 };
 
 

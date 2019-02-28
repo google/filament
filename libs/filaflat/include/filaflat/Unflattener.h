@@ -33,14 +33,14 @@ public:
             : mSrc(src), mCursor(src), mEnd(end) {
     }
 
-    ~Unflattener() = default;
+    ~Unflattener() {} // NOLINT(modernize-use-equals-default)
 
     bool hasData() const noexcept {
         return mCursor < mEnd;
     }
 
     inline bool willOverflow(size_t size) const noexcept {
-        return (mCursor + size) >  mEnd;
+        return (mCursor + size) > mEnd;
     }
 
     bool read(bool* b) noexcept {

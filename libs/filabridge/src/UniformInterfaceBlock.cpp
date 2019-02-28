@@ -68,8 +68,6 @@ UniformInterfaceBlock UniformInterfaceBlock::Builder::build() {
     return UniformInterfaceBlock(*this);
 }
 
-UniformInterfaceBlock::Builder::~Builder() noexcept = default;
-
 // --------------------------------------------------------------------------------------------------------------------
 
 UniformInterfaceBlock::UniformInterfaceBlock() = default;
