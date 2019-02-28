@@ -124,25 +124,27 @@ void MetalDriver::createProgramR(Driver::ProgramHandle rph, Program&& program) {
 }
 
 void MetalDriver::createDefaultRenderTargetR(Driver::RenderTargetHandle rth, int dummy) {
-    construct_handle<MetalRenderTarget>(mHandleMap, rth);
+    construct_handle<MetalRenderTarget>(mHandleMap, rth, mContext);
 }
 
 void MetalDriver::createRenderTargetR(Driver::RenderTargetHandle rth,
         Driver::TargetBufferFlags targetBufferFlags, uint32_t width, uint32_t height,
         uint8_t samples, Driver::TextureFormat format, Driver::TargetBufferInfo color,
         Driver::TargetBufferInfo depth, Driver::TargetBufferInfo stencil) {
-    auto renderTarget = construct_handle<MetalRenderTarget>(mHandleMap, rth, width, height);
+
+    id<MTLTexture> mtlColor = nil;
+    id<MTLTexture> mtlDepth = nil;
 
     if (color.handle) {
         auto colorTexture = handle_cast<MetalTexture>(mHandleMap, color.handle);
-        renderTarget->color = [colorTexture->texture retain];
+        mtlColor = colorTexture->texture;
     } else if (targetBufferFlags & TargetBufferFlags::COLOR) {
         ASSERT_POSTCONDITION(false, "A color buffer is required for a render target.");
     }
 
     if (depth.handle) {
         auto depthTexture = handle_cast<MetalTexture>(mHandleMap, depth.handle);
-        renderTarget->depth = [depthTexture->texture retain];
+        mtlDepth = depthTexture->texture;
     } else if (targetBufferFlags & TargetBufferFlags::DEPTH) {
         MTLTextureDescriptor* depthTextureDesc =
                 [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatDepth32Float
@@ -151,8 +153,11 @@ void MetalDriver::createRenderTargetR(Driver::RenderTargetHandle rth,
                                                                mipmapped:NO];
         depthTextureDesc.usage = MTLTextureUsageRenderTarget;
         depthTextureDesc.resourceOptions = MTLResourceStorageModePrivate;
-        renderTarget->depth = [mContext->device newTextureWithDescriptor:depthTextureDesc];
+        mtlDepth = [mContext->device newTextureWithDescriptor:depthTextureDesc];
     }
+
+    construct_handle<MetalRenderTarget>(mHandleMap, rth, mContext, width, height, samples, format,
+            mtlColor, mtlDepth);
 
     ASSERT_POSTCONDITION(
             !stencil.handle && !(targetBufferFlags & TargetBufferFlags::STENCIL),
@@ -402,13 +407,9 @@ void MetalDriver::beginRenderPass(Driver::RenderTargetHandle rth,
 
     // Color
 
-    if (renderTarget->isDefaultRenderTarget) {
-        descriptor.colorAttachments[0].texture = acquireDrawable(mContext).texture;
-        mContext->currentSurfacePixelFormat = mContext->currentDrawable.texture.pixelFormat;
-    } else {
-        descriptor.colorAttachments[0].texture = renderTarget->color;
-        mContext->currentSurfacePixelFormat = renderTarget->color.pixelFormat;
-    }
+    descriptor.colorAttachments[0].texture = renderTarget->getColor();
+    descriptor.colorAttachments[0].resolveTexture = renderTarget->getColorResolve();
+    mContext->currentSurfacePixelFormat = descriptor.colorAttachments[0].texture.pixelFormat;
 
     // Metal clears the entire attachment without respect to viewport or scissor.
     // TODO: Might need to clear the scissor area manually via a draw if we need that functionality.
@@ -424,20 +425,17 @@ void MetalDriver::beginRenderPass(Driver::RenderTargetHandle rth,
 
     // Depth
 
-    if (renderTarget->isDefaultRenderTarget) {
-        descriptor.depthAttachment.texture = mContext->currentSurface->depthTexture;
-        mContext->currentDepthPixelFormat = mContext->currentSurface->depthTexture.pixelFormat;
-    } else {
-        descriptor.depthAttachment.texture = renderTarget->depth;
-        if (renderTarget->depth) {
-            mContext->currentDepthPixelFormat = renderTarget->depth.pixelFormat;
-        } else {
-            mContext->currentDepthPixelFormat = MTLPixelFormatInvalid;
-        }
-    }
-
+    descriptor.depthAttachment.texture = renderTarget->getDepth();
+    descriptor.depthAttachment.resolveTexture = renderTarget->getDepthResolve();
     descriptor.depthAttachment.loadAction = clearDepth ? MTLLoadActionClear : MTLLoadActionDontCare;
     descriptor.depthAttachment.clearDepth = params.clearDepth;
+    mContext->currentDepthPixelFormat = descriptor.depthAttachment.texture.pixelFormat;
+
+    if (renderTarget->isMultisampled()) {
+        descriptor.colorAttachments[0].storeAction = MTLStoreActionMultisampleResolve;
+        // TODO: We don't need to resolve the depth texture if we don't need it.
+        descriptor.depthAttachment.storeAction = MTLStoreActionMultisampleResolve;
+    }
 
     mContext->currentCommandEncoder =
             [mContext->currentCommandBuffer renderCommandEncoderWithDescriptor:descriptor];
@@ -520,7 +518,7 @@ void MetalDriver::viewport(ssize_t left, ssize_t bottom, size_t width, size_t he
     ASSERT_PRECONDITION(mContext->currentCommandEncoder != nullptr, "currentCommandEncoder is null");
     // Flip the viewport, because Metal's screen space is vertically flipped that of Filament's.
     NSInteger renderTargetHeight =
-            mContext->currentRenderTarget->isDefaultRenderTarget ?
+            mContext->currentRenderTarget->isDefaultRenderTarget() ?
             mContext->currentSurface->surfaceHeight : mContext->currentRenderTarget->height;
     MTLViewport metalViewport {
         .originX = static_cast<double>(left),
@@ -581,6 +579,7 @@ void MetalDriver::readStreamPixels(Driver::StreamHandle sh, uint32_t x, uint32_t
 void MetalDriver::blit(Driver::TargetBufferFlags buffers,
         Driver::RenderTargetHandle dst, driver::Viewport dstRect,
         Driver::RenderTargetHandle src, driver::Viewport srcRect) {
+
 }
 
 void MetalDriver::draw(Driver::PipelineState ps, Driver::RenderPrimitiveHandle rph) {
@@ -597,6 +596,7 @@ void MetalDriver::draw(Driver::PipelineState ps, Driver::RenderPrimitiveHandle r
         .vertexDescription = primitive->vertexDescription,
         .colorAttachmentPixelFormat = mContext->currentSurfacePixelFormat,
         .depthAttachmentPixelFormat = mContext->currentDepthPixelFormat,
+        .sampleCount = mContext->currentRenderTarget->getSamples(),
         .blendState = BlendState {
             .blendingEnabled = rs.hasBlending(),
             .rgbBlendOperation = getMetalBlendOperation(rs.blendEquationRGB),

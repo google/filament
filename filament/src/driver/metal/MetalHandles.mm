@@ -21,6 +21,7 @@
 #include <details/Texture.h> // for FTexture::getFormatSize
 
 #include <utils/Panic.h>
+#include <utils/trap.h>
 
 namespace filament {
 namespace driver {
@@ -252,6 +253,7 @@ MetalTexture::MetalTexture(id<MTLDevice> device, driver::SamplerType target, uin
                                                                        height:height
                                                                     mipmapped:mipmapped];
         descriptor.mipmapLevelCount = levels;
+        descriptor.textureType = MTLTextureType2D;
     } else if (target == driver::SamplerType::SAMPLER_CUBEMAP) {
         ASSERT_POSTCONDITION(width == height, "Cubemap faces must be square.");
         descriptor = [MTLTextureDescriptor textureCubeDescriptorWithPixelFormat:pixelFormat
@@ -315,9 +317,73 @@ void MetalTexture::loadCubeImage(const PixelBufferDescriptor& data, const FaceOf
     }
 }
 
+MetalRenderTarget::MetalRenderTarget(MetalContext* context, uint32_t width, uint32_t height,
+        uint8_t samples, TextureFormat format, id<MTLTexture> color, id<MTLTexture> depth)
+        : HwRenderTarget(width, height), context(context), color(color), depth(depth),
+        samples(samples) {
+    [color retain];
+    [depth retain];
+
+    if (samples > 1) {
+        multisampledColor =
+                createMultisampledTexture(context->device, format, width, height, samples);
+
+        if (depth != nil) {
+            multisampledDepth = createMultisampledTexture(context->device, TextureFormat::DEPTH32F,
+                    width, height, samples);
+        }
+    }
+}
+
+id<MTLTexture> MetalRenderTarget::getColor() {
+    if (defaultRenderTarget) {
+        return acquireDrawable(context).texture;
+    }
+    return isMultisampled() ? multisampledColor : color;
+}
+
+id<MTLTexture> MetalRenderTarget::getColorResolve() {
+    return isMultisampled() ? color : nil;
+}
+
+id<MTLTexture> MetalRenderTarget::getDepthResolve() {
+    return isMultisampled() ? depth : nil;
+}
+
+id<MTLTexture> MetalRenderTarget::getDepth() {
+    if (defaultRenderTarget) {
+        return context->currentSurface->depthTexture;
+    }
+    return isMultisampled() ? multisampledDepth : depth;
+}
+
 MetalRenderTarget::~MetalRenderTarget() {
     [color release];
     [depth release];
+    [multisampledColor release];
+    [multisampledDepth release];
+}
+
+id<MTLTexture> MetalRenderTarget::createMultisampledTexture(id<MTLDevice> device,
+        TextureFormat format, uint32_t width, uint32_t height, uint8_t samples) {
+    MTLPixelFormat metalFormat = getMetalFormat(format);
+    ASSERT_POSTCONDITION(metalFormat != MTLPixelFormatInvalid, "Pixel format not supported.");
+
+    MTLTextureDescriptor* descriptor =
+            [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:metalFormat
+                                                               width:width
+                                                              height:height
+                                                            mipmapped:NO];
+    descriptor.textureType = MTLTextureType2DMultisample;
+    descriptor.sampleCount = samples;
+    descriptor.usage = MTLTextureUsageRenderTarget;
+#if defined(IOS)
+    descriptor.resourceOptions = MTLResourceStorageModeMemoryless;
+#else
+    descriptor.resourceOptions = MTLResourceStorageModePrivate;
+#endif
+
+    return [device newTextureWithDescriptor:descriptor];
 }
 
 } // namespace metal

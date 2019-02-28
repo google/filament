@@ -73,6 +73,9 @@ id<MTLRenderPipelineState> PipelineStateCreator::operator()(id<MTLDevice> device
     // Depth attachment
     descriptor.depthAttachmentPixelFormat = state.depthAttachmentPixelFormat;
 
+    // MSAA
+    descriptor.rasterSampleCount = state.sampleCount;
+
     NSError* error = nullptr;
     id<MTLRenderPipelineState> pipeline = [device newRenderPipelineStateWithDescriptor:descriptor
                                                                                  error:&error];
