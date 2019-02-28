@@ -293,6 +293,7 @@
 					"-lfilabridge",
 					"-lutils",
 					"-lsmol-v",
+					"-lgeometry",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "google.filament.hello-triangle";
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -328,6 +329,7 @@
 					"-lfilabridge",
 					"-lutils",
 					"-lsmol-v",
+					"-lgeometry",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "google.filament.hello-triangle";
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -363,6 +365,7 @@
 					"-lfilabridge",
 					"-lutils",
 					"-lsmol-v",
+					"-lgeometry",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "google.filament.hello-triangle";
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -398,6 +401,7 @@
 					"-lfilabridge",
 					"-lutils",
 					"-lsmol-v",
+					"-lgeometry",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "google.filament.hello-triangle";
 				PRODUCT_NAME = "$(TARGET_NAME)";
