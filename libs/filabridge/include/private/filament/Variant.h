@@ -26,7 +26,7 @@ namespace filament {
     // IMPORTANT: update filterVariant() when adding more variants
     struct Variant {
         Variant() noexcept = default;
-        constexpr Variant(uint8_t key) noexcept : key(key) { }
+        constexpr explicit Variant(uint8_t key) noexcept : key(key) { }
 
 
         // DIR: Directional Lighting

@@ -17,7 +17,6 @@
 #include "MaterialChunk.h"
 
 #include <utils/Log.h>
-#include <private/filament/Variant.h>
 
 using namespace filament::driver;
 
@@ -71,7 +70,6 @@ bool MaterialChunk::readIndex(Unflattener& unflattener) {
                 continue;
         }
 
-        variantValue &= filament::Variant::VERTEX_MASK | filament::Variant::FRAGMENT_MASK;
         pipelineStageValue = std::min(pipelineStageValue, uint8_t(filament::driver::PIPELINE_STAGE_COUNT));
 
         uint32_t key = makeKey(ShaderModel(shaderModelValue), variantValue, ShaderType(pipelineStageValue));
