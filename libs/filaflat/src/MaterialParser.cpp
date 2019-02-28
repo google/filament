@@ -301,7 +301,8 @@ bool MaterialParserDetails::getVkShader(filament::driver::ShaderModel shaderMode
         }
     }
 
-    Unflattener unflattener(container, ChunkType::MaterialSpirv);
+    Unflattener unflattener(container.getChunkStart(ChunkType::MaterialSpirv),
+            container.getChunkEnd(ChunkType::MaterialSpirv));
     return mMaterialChunk.getSpirvShader(unflattener, mBlobDictionary, shader, shaderModel, variant, st);
 }
 
@@ -322,7 +323,8 @@ bool MaterialParserDetails::getGlShader(filament::driver::ShaderModel shaderMode
         }
     }
 
-    Unflattener unflattener(container, ChunkType::MaterialGlsl);
+    Unflattener unflattener(container.getChunkStart(ChunkType::MaterialGlsl),
+            container.getChunkEnd(ChunkType::MaterialGlsl));
     return mMaterialChunk.getTextShader(unflattener, mBlobDictionary, shader, shaderModel, variant, st);
 }
 
@@ -342,7 +344,8 @@ bool MaterialParserDetails::getMtlShader(filament::driver::ShaderModel shaderMod
         }
     }
 
-    Unflattener unflattener(container, ChunkType::MaterialMetal);
+    Unflattener unflattener(container.getChunkStart(ChunkType::MaterialMetal),
+            container.getChunkEnd(ChunkType::MaterialMetal));
     return mMaterialChunk.getTextShader(unflattener, mBlobDictionary, shader, shaderModel, variant, st);
 }
 

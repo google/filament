@@ -31,7 +31,7 @@ class UTILS_PUBLIC ChunkContainer {
 public:
     using Type = uint64_t;      // this should come from some EIFF lib
 
-    ChunkContainer(void* data, size_t size) : mData(data), mSize(size) {}
+    ChunkContainer(void const* data, size_t size) : mData(data), mSize(size) {}
 
     ~ChunkContainer() = default;
 
@@ -78,7 +78,7 @@ public:
 private:
     bool parseChunk(Unflattener& unflattener);
 
-    void* mData;
+    void const* mData;
     size_t mSize;
     tsl::robin_map<Type, ChunkContainer::ChunkDesc> mChunks;
 };

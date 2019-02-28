@@ -17,15 +17,17 @@
 #include <getopt/getopt.h>
 
 #include <filaflat/ChunkContainer.h>
-#include <filament/MaterialChunkType.h>
 #include <filaflat/MaterialParser.h>
 #include <filaflat/Unflattener.h>
 #include <filaflat/ShaderBuilder.h>
 
-#include <filament/EngineEnums.h>
-#include <filament/MaterialEnums.h>
 #include <private/filament/SamplerInterfaceBlock.h>
 #include <private/filament/UniformInterfaceBlock.h>
+
+#include <filament/MaterialChunkType.h>
+#include <filament/EngineEnums.h>
+#include <filament/MaterialEnums.h>
+
 #include <filament/driver/DriverEnums.h>
 
 #include <utils/Path.h>
