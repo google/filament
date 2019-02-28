@@ -62,6 +62,7 @@ Here are a few sample materials rendered with Filament:
 
 - OpenGL 4.1+ for Linux, macOS and Windows
 - OpenGL ES 3.0+ for Android and iOS
+- Metal for macOS and iOS
 - Vulkan 1.0 for Android, Linux, macOS and iOS (with MoltenVk), and Windows
 - WebGL 2.0 for all platforms
 
@@ -90,7 +91,7 @@ Here are a few sample materials rendered with Filament:
 
 Many other features have been either prototyped or planned:
 
-- IES light profiles
+- IES light profiles/cookies
 - Area lights
 - Fog
 - Color grading
