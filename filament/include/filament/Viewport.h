@@ -34,7 +34,9 @@ namespace filament {
  */
 class UTILS_PUBLIC Viewport : public driver::Viewport {
 public:
-    Viewport() noexcept = default;
+    Viewport() noexcept : driver::Viewport{ 0, 0, 0, 0 } {
+    }
+
     Viewport(const Viewport& viewport) noexcept = default;
     Viewport(Viewport&& viewport) noexcept = default;
     Viewport& operator=(const Viewport& viewport) noexcept = default;
