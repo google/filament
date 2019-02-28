@@ -1,0 +1,9 @@
+This folder was created as follows:
+
+cd third_party
+curl -L -O https://github.com/jkuhlmann/cgltf/archive/55b161e.zip
+unzip 55b161e.zip
+mv cgltf-* cgltf_new
+rsync -r cgltf_new/ cgltf/ --delete --exclude tnt
+rm -rf 55b161e.zip cgltf_new
+git add cgltf ; git status

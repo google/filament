@@ -392,6 +392,7 @@ if (NOT ANDROID AND NOT WEBGL AND NOT IOS)
     add_subdirectory(${FILAMENT}/samples)
 
     add_subdirectory(${EXTERNAL}/astcenc/tnt)
+    add_subdirectory(${EXTERNAL}/cgltf/tnt)
     add_subdirectory(${EXTERNAL}/etc2comp)
     add_subdirectory(${EXTERNAL}/getopt)
     add_subdirectory(${EXTERNAL}/imgui/tnt)
