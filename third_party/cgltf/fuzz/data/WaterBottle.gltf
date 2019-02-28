@@ -1,0 +1,172 @@
+{
+  "accessors": [
+    {
+      "bufferView": 0,
+      "componentType": 5126,
+      "count": 2549,
+      "type": "VEC2"
+    },
+    {
+      "bufferView": 1,
+      "componentType": 5126,
+      "count": 2549,
+      "type": "VEC3"
+    },
+    {
+      "bufferView": 2,
+      "componentType": 5126,
+      "count": 2549,
+      "type": "VEC4"
+    },
+    {
+      "bufferView": 3,
+      "componentType": 5126,
+      "count": 2549,
+      "type": "VEC3",
+      "max": [
+        0.05445001,
+        0.130220339,
+        0.0544500239
+      ],
+      "min": [
+        -0.05445001,
+        -0.130220339,
+        -0.0544500239
+      ]
+    },
+    {
+      "bufferView": 4,
+      "componentType": 5123,
+      "count": 13530,
+      "type": "SCALAR"
+    }
+  ],
+  "asset": {
+    "generator": "glTF Tools for Unity",
+    "version": "2.0"
+  },
+  "bufferViews": [
+    {
+      "buffer": 0,
+      "byteLength": 20392
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 20392,
+      "byteLength": 30588
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 50980,
+      "byteLength": 40784
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 91764,
+      "byteLength": 30588
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 122352,
+      "byteLength": 27060
+    }
+  ],
+  "buffers": [
+    {
+      "uri": "WaterBottle.bin",
+      "byteLength": 149412
+    }
+  ],
+  "images": [
+    {
+      "uri": "WaterBottle_baseColor.png"
+    },
+    {
+      "uri": "WaterBottle_occlusionRoughnessMetallic.png"
+    },
+    {
+      "uri": "WaterBottle_normal.png"
+    },
+    {
+      "uri": "WaterBottle_emissive.png"
+    }
+  ],
+  "meshes": [
+    {
+      "primitives": [
+        {
+          "attributes": {
+            "TEXCOORD_0": 0,
+            "NORMAL": 1,
+            "TANGENT": 2,
+            "POSITION": 3
+          },
+          "indices": 4,
+          "material": 0
+        }
+      ],
+      "name": "WaterBottle"
+    }
+  ],
+  "materials": [
+    {
+      "pbrMetallicRoughness": {
+        "baseColorTexture": {
+          "index": 0
+        },
+        "metallicRoughnessTexture": {
+          "index": 1
+        }
+      },
+      "normalTexture": {
+        "index": 2
+      },
+      "occlusionTexture": {
+        "index": 1
+      },
+      "emissiveFactor": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "emissiveTexture": {
+        "index": 3
+      },
+      "name": "BottleMat"
+    }
+  ],
+  "nodes": [
+    {
+      "mesh": 0,
+      "rotation": [
+        0.0,
+        1.0,
+        0.0,
+        0.0
+      ],
+      "name": "WaterBottle"
+    }
+  ],
+  "scene": 0,
+  "scenes": [
+    {
+      "nodes": [
+        0
+      ]
+    }
+  ],
+  "textures": [
+    {
+      "source": 0
+    },
+    {
+      "source": 1
+    },
+    {
+      "source": 2
+    },
+    {
+      "source": 3
+    }
+  ]
+}
