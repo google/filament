@@ -181,23 +181,18 @@ SurfaceOrientation OrientationBuilderImpl::buildWithUvs() {
     ASSERT_PRECONDITION(this->tangentStride == 0, "Non-zero tangent stride not yet supported.");
     ASSERT_PRECONDITION(this->uvStride == 0, "Non-zero uv stride not yet supported.");
     ASSERT_PRECONDITION(this->positionStride == 0, "Non-zero positions stride not yet supported.");
-    ASSERT_PRECONDITION(this->triangles32 == nullptr, "32-bit indices not yet supported.");
-
     vector<float3> tan1(vertexCount);
     vector<float3> tan2(vertexCount);
     memset(tan1.data(), 0, sizeof(float3) * vertexCount);
     memset(tan2.data(), 0, sizeof(float3) * vertexCount);
-    const ushort3* triangle = triangles16;
-    for (size_t a = 0; a < triangleCount; ++a, ++triangle) {
-        size_t i1 = triangle->x;
-        size_t i2 = triangle->y;
-        size_t i3 = triangle->z;
-        const float3& v1 = positions[i1];
-        const float3& v2 = positions[i2];
-        const float3& v3 = positions[i3];
-        const float2& w1 = uvs[i1];
-        const float2& w2 = uvs[i2];
-        const float2& w3 = uvs[i3];
+    for (size_t a = 0; a < triangleCount; ++a) {
+        uint3 tri = triangles16 ? uint3(triangles16[a]) : triangles32[a];
+        const float3& v1 = positions[tri.x];
+        const float3& v2 = positions[tri.y];
+        const float3& v3 = positions[tri.z];
+        const float2& w1 = uvs[tri.x];
+        const float2& w2 = uvs[tri.y];
+        const float2& w3 = uvs[tri.z];
         float x1 = v2.x - v1.x;
         float x2 = v3.x - v1.x;
         float y1 = v2.y - v1.y;
@@ -213,12 +208,12 @@ SurfaceOrientation OrientationBuilderImpl::buildWithUvs() {
                 (t2 * z1 - t1 * z2) * r);
         float3 tdir((s1 * x2 - s2 * x1) * r, (s1 * y2 - s2 * y1) * r,
                 (s1 * z2 - s2 * z1) * r);
-        tan1[i1] += sdir;
-        tan1[i2] += sdir;
-        tan1[i3] += sdir;
-        tan2[i1] += tdir;
-        tan2[i2] += tdir;
-        tan2[i3] += tdir;
+        tan1[tri.x] += sdir;
+        tan1[tri.y] += sdir;
+        tan1[tri.z] += sdir;
+        tan2[tri.x] += tdir;
+        tan2[tri.y] += tdir;
+        tan2[tri.z] += tdir;
     }
 
     vector<quatf> quats(vertexCount);
