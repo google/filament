@@ -14,18 +14,19 @@
  * limitations under the License.
  */
 
-#include "filaflat/MaterialParser.h"
 
+#include <filaflat/BlobDictionary.h>
 #include <filaflat/ChunkContainer.h>
+#include <filaflat/MaterialChunk.h>
+#include <filaflat/MaterialParser.h>
 #include <filaflat/ShaderBuilder.h>
+#include <filaflat/SpirvDictionaryReader.h>
+#include <filaflat/TextDictionaryReader.h>
 #include <filaflat/Unflattener.h>
+
 #include <filament/MaterialChunkType.h>
 
-#include "BlobDictionary.h"
 #include "ChunkInterfaceBlock.h"
-#include "MaterialChunk.h"
-#include "TextDictionaryReader.h"
-#include "SpirvDictionaryReader.h"
 
 #include <private/filament/SamplerInterfaceBlock.h>
 #include <private/filament/UniformInterfaceBlock.h>

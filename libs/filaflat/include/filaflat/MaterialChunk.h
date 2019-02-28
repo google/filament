@@ -17,12 +17,12 @@
 #ifndef TNT_FILAMAT_MATERIAL_CHUNK_H
 #define TNT_FILAMAT_MATERIAL_CHUNK_H
 
-#include "BlobDictionary.h"
 
-#include <filament/driver/DriverEnums.h>
-
+#include <filaflat/BlobDictionary.h>
 #include <filaflat/ShaderBuilder.h>
 #include <filaflat/Unflattener.h>
+
+#include <filament/driver/DriverEnums.h>
 
 #include <tsl/robin_map.h>
 

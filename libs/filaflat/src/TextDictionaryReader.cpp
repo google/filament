@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "TextDictionaryReader.h"
+#include <filaflat/TextDictionaryReader.h>
 
 #include <utils/Log.h>
 

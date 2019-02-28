@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "MaterialChunk.h"
+#include <filaflat/MaterialChunk.h>
 
 #include <utils/Log.h>
 

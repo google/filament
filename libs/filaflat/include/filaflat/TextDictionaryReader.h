@@ -14,16 +14,12 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAFLAT_DIC_GLSL_CHUNK_H
-#define TNT_FILAFLAT_DIC_GLSL_CHUNK_H
+#ifndef TNT_FILAFLAT_TEXT_DICTIONARY_READER_H
+#define TNT_FILAFLAT_TEXT_DICTIONARY_READER_H
 
+#include <filaflat/BlobDictionary.h>
 #include <filaflat/ChunkContainer.h>
 #include <filaflat/Unflattener.h>
-
-#include "BlobDictionary.h"
-
-#include <vector>
-#include <stdint.h>
 
 namespace filaflat {
 
