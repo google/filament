@@ -385,6 +385,7 @@ endif()
 if (NOT ANDROID AND NOT WEBGL AND NOT IOS)
     add_subdirectory(${LIBRARIES}/bluegl)
     add_subdirectory(${LIBRARIES}/filagui)
+    add_subdirectory(${LIBRARIES}/gltfio)
     add_subdirectory(${LIBRARIES}/imageio)
 
     add_subdirectory(${FILAMENT}/java/filamat)

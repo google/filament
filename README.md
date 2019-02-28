@@ -125,8 +125,9 @@ and tools.
   - `filaflat`:            Serialization/deserialization library used for materials
   - `filagui`:             Helper library for [Dear ImGui](https://github.com/ocornut/imgui)
   - `filamat`:             Material generation library
-  - `filameshio`:          Tiny mesh parsing library (see also `tools/filamesh`)
+  - `filameshio`:          Tiny filamesh parsing library (see also `tools/filamesh`)
   - `geometry`:            Mesh-related utilities
+  - `gltfio`:              Loader for glTF 2.0
   - `image`:               Image filtering and simple transforms
   - `imageio`:             Image file reading / writing, only intended for internal use
   - `math`:                Math library
