@@ -318,6 +318,7 @@
 					"-lfilameshio",
 					"-lmeshoptimizer",
 					"-limage",
+					"-lgeometry",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "google.filament.hello-pbr";
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -356,6 +357,7 @@
 					"-lfilameshio",
 					"-lmeshoptimizer",
 					"-limage",
+					"-lgeometry",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "google.filament.hello-pbr";
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -394,6 +396,7 @@
 					"-lfilameshio",
 					"-lmeshoptimizer",
 					"-limage",
+					"-lgeometry",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "google.filament.hello-pbr";
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -432,6 +435,7 @@
 					"-lfilameshio",
 					"-lmeshoptimizer",
 					"-limage",
+					"-lgeometry",
 				);
 				PRODUCT_BUNDLE_IDENTIFIER = "google.filament.hello-pbr";
 				PRODUCT_NAME = "$(TARGET_NAME)";
