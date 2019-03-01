@@ -96,19 +96,11 @@ struct FAssetLoader : public AssetLoader {
             mMaterials(engine),
             mEngine(engine) {}
 
-    FFilamentAsset* createAssetFromJson(uint8_t const* bytes, uint32_t nbytes);
-    FilamentAsset* createAssetFromBinary(uint8_t const* bytes, uint32_t nbytes);
+    FFilamentAsset* createAssetFromJson(const uint8_t* bytes, uint32_t nbytes);
+    FilamentAsset* createAssetFromBinary(const uint8_t* bytes, uint32_t nbytes);
 
     void destroyAsset(const FFilamentAsset* asset) {
         delete asset;
-    }
-
-    void castShadowsByDefault(bool enable) {
-        mCastShadows = enable;
-    }
-
-    void receiveShadowsByDefault(bool enable) {
-        mReceiveShadows = enable;
     }
 
     size_t getMaterialsCount() const noexcept {
@@ -134,9 +126,6 @@ struct FAssetLoader : public AssetLoader {
     void importSkinningData(Skin& dstSkin, const cgltf_skin& srcSkin);
     bool primitiveHasVertexColor(const cgltf_primitive* inPrim) const;
 
-    bool mCastShadows = true;
-    bool mReceiveShadows = true;
-
     EntityManager& mEntityManager;
     RenderableManager& mRenderableManager;
     NameComponentManager* mNameManager;
@@ -157,7 +146,7 @@ FILAMENT_UPCAST(AssetLoader)
 
 using namespace details;
 
-FFilamentAsset* FAssetLoader::createAssetFromJson(uint8_t const* bytes, uint32_t nbytes) {
+FFilamentAsset* FAssetLoader::createAssetFromJson(const uint8_t* bytes, uint32_t nbytes) {
     cgltf_options options { cgltf_file_type_invalid };
     cgltf_data* sourceAsset;
     cgltf_result result = cgltf_parse(&options, bytes, nbytes, &sourceAsset);
@@ -168,7 +157,7 @@ FFilamentAsset* FAssetLoader::createAssetFromJson(uint8_t const* bytes, uint32_t
     return mResult;
 }
 
-FilamentAsset* FAssetLoader::createAssetFromBinary(uint8_t const* bytes, uint32_t nbytes) {
+FilamentAsset* FAssetLoader::createAssetFromBinary(const uint8_t* bytes, uint32_t nbytes) {
     cgltf_options options { cgltf_file_type_glb };
     cgltf_data* sourceAsset;
     cgltf_result result = cgltf_parse(&options, bytes, nbytes, &sourceAsset);
@@ -331,8 +320,8 @@ void FAssetLoader::createRenderable(const cgltf_node* node, Entity entity) {
     builder
         .boundingBox({aabb.min, aabb.max})
         .culling(true)
-        .castShadows(mCastShadows)
-        .receiveShadows(mReceiveShadows)
+        .castShadows(true)
+        .receiveShadows(true)
         .build(*mEngine, entity);
 
     // TODO: support vertex morphing by honoring mesh->weights and mesh->weight_count.
@@ -463,7 +452,7 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
     VertexBuffer* vertices = mResult->mPrimMap[inPrim] = vbb.build(*mEngine);
     mResult->mVertexBuffers.push_back(vertices);
 
-    for (int slot = 0; slot < inPrim->attributes_count; slot++) {
+    for (cgltf_size slot = 0; slot < inPrim->attributes_count; slot++) {
         const cgltf_attribute& inputAttribute = inPrim->attributes[slot];
         const cgltf_accessor* inputAccessor = inputAttribute.data;
         const cgltf_buffer_view* bv = inputAccessor->buffer_view;
@@ -477,8 +466,8 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
         }
         mResult->mBufferBindings.emplace_back(BufferBinding {
             .uri = bv->buffer->uri,
-            .totalSize = (uint32_t) bv->buffer->size,
-            .bufferIndex = slot,
+            .totalSize = uint32_t(bv->buffer->size),
+            .bufferIndex = uint8_t(slot),
             .offset = computeBindingOffset(inputAccessor),
             .size = computeBindingSize(inputAccessor),
             .data = &bv->buffer->data,
@@ -700,14 +689,6 @@ FilamentAsset* AssetLoader::createAssetFromBinary(uint8_t const* bytes, uint32_t
 
 void AssetLoader::destroyAsset(const FilamentAsset* asset) {
     upcast(this)->destroyAsset(upcast(asset));
-}
-
-void AssetLoader::castShadowsByDefault(bool enable) {
-    upcast(this)->castShadowsByDefault(enable);
-}
-
-void AssetLoader::receiveShadowsByDefault(bool enable) {
-    upcast(this)->receiveShadowsByDefault(enable);
 }
 
 size_t AssetLoader::getMaterialsCount() const noexcept {

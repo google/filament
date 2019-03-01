@@ -35,7 +35,9 @@ enum class AlphaMode : uint8_t {
     TRANSPARENT
 };
 
-struct MaterialKey {
+// NOTE: This key is processed by MurmurHashFn so please make padding explicit.
+struct alignas(8) MaterialKey {
+    // -- 32 bit boundary --
     bool doubleSided : 1;
     bool unlit : 1;
     bool hasVertexColors : 1;
@@ -47,11 +49,13 @@ struct MaterialKey {
     AlphaMode alphaMode;
     uint8_t baseColorUV;
     uint8_t metallicRoughnessUV;
+    // -- 32 bit boundary --
     uint8_t emissiveUV;
     uint8_t aoUV;
     uint8_t normalUV;
+    bool hasTextureTransforms : 8;
+    // -- 32 bit boundary --
     float alphaMaskThreshold;
-    bool hasTextureTransforms;
 };
 
 // Define a mapping from a uv set index in the source asset to one of Filament's uv sets.
@@ -65,6 +69,7 @@ using UvMap = std::array<UvSet, 8>;
 class MaterialGenerator final {
 public:
     MaterialGenerator(filament::Engine* engine);
+    ~MaterialGenerator();
 
     // Creates or fetches a compiled Filament material. The given configuration key might be mutated
     // due to resource constraints. The second argument is populated with a small table that maps

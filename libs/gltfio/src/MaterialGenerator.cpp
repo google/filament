@@ -52,6 +52,10 @@ MaterialGenerator::MaterialGenerator(Engine* engine) : mEngine(engine) {
     MaterialBuilder::init();
 }
 
+MaterialGenerator::~MaterialGenerator() {
+    MaterialBuilder::shutdown();
+}
+
 size_t MaterialGenerator::getMaterialsCount() const noexcept {
     return mMaterials.size();
 }
@@ -75,22 +79,10 @@ static std::string shaderFromKey(const MaterialKey& config, const UvMap& uvmap) 
     const auto emissiveUV = std::to_string(uvmap[config.emissiveUV] - 1);
     const auto aoUV = std::to_string(uvmap[config.aoUV] - 1);
 
-    std::string shader = R"SHADER(
-
-        // Sigh, assimp flips texture coords in its glTF2Importer, but we're not using assimp so we
-        // need to flip them here.
-        #if defined(HAS_ATTRIBUTE_UV0)
-        float2 uv0() { vec2 uv = getUV0(); uv.y = 1.0 - uv.y; return uv; }
-        #endif
-        #if defined(HAS_ATTRIBUTE_UV1)
-        float2 uv1() { vec2 uv = getUV1(); uv.y = 1.0 - uv.y; return uv; }
-        #endif
-
-        void material(inout MaterialInputs material) {
-    )SHADER";
+    std::string shader = "void material(inout MaterialInputs material) {\n";
 
     if (config.hasNormalTexture && !config.unlit) {
-        shader += "float2 normalUV = uv" + normalUV + "();\n";
+        shader += "float2 normalUV = getUV" + normalUV + "();\n";
         if (config.hasTextureTransforms) {
             shader += "normalUV = (vec3(normalUV, 1.0) * materialParams.normalUvMatrix).xy;\n";
         }
@@ -107,7 +99,7 @@ static std::string shaderFromKey(const MaterialKey& config, const UvMap& uvmap) 
     )SHADER";
 
     if (config.hasBaseColorTexture) {
-        shader += "float2 baseColorUV = uv" + baseColorUV + "();\n";
+        shader += "float2 baseColorUV = getUV" + baseColorUV + "();\n";
         if (config.hasTextureTransforms) {
             shader += "baseColorUV = (vec3(baseColorUV, 1.0) * materialParams.baseColorUvMatrix).xy;\n";
         }
@@ -133,7 +125,7 @@ static std::string shaderFromKey(const MaterialKey& config, const UvMap& uvmap) 
             material.emissive.rgb = materialParams.emissiveFactor.rgb;
         )SHADER";
         if (config.hasMetallicRoughnessTexture) {
-            shader += "float2 metallicRoughnessUV = uv" + metallicRoughnessUV + "();\n";
+            shader += "float2 metallicRoughnessUV = getUV" + metallicRoughnessUV + "();\n";
             if (config.hasTextureTransforms) {
                 shader += "metallicRoughnessUV = (vec3(metallicRoughnessUV, 1.0) * materialParams.metallicRoughnessUvMatrix).xy;\n";
             }
@@ -144,7 +136,7 @@ static std::string shaderFromKey(const MaterialKey& config, const UvMap& uvmap) 
             )SHADER";
         }
         if (config.hasOcclusionTexture) {
-            shader += "float2 aoUV = uv" + aoUV + "();\n";
+            shader += "float2 aoUV = getUV" + aoUV + "();\n";
             if (config.hasTextureTransforms) {
                 shader += "aoUV = (vec3(aoUV, 1.0) * materialParams.occlusionUvMatrix).xy;\n";
             }
@@ -154,7 +146,7 @@ static std::string shaderFromKey(const MaterialKey& config, const UvMap& uvmap) 
             )SHADER";
         }
         if (config.hasEmissiveTexture) {
-            shader += "float2 emissiveUV = uv" + emissiveUV + "();\n";
+            shader += "float2 emissiveUV = getUV" + emissiveUV + "();\n";
             if (config.hasTextureTransforms) {
                 shader += "aoUV = (vec3(emissiveUV, 1.0) * materialParams.emissiveUvMatrix).xy;\n";
             }
@@ -213,6 +205,7 @@ static Material* createMaterial(Engine* engine, const MaterialKey& config, const
     std::string shader = shaderFromKey(config, uvmap);
     MaterialBuilder builder = MaterialBuilder()
             .name(name)
+            .flipUV(true)
             .material(shader.c_str())
             .culling(config.doubleSided ? CullingMode::NONE : CullingMode::BACK)
             .doubleSided(config.doubleSided);
