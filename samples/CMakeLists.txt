@@ -147,6 +147,28 @@ endif()
 add_library(suzanne-resources ${DUMMY_SRC} ${RESGEN_SOURCE})
 
 # ==================================================================================================
+# Resources for gltf_viewer
+# ==================================================================================================
+
+get_resgen_vars(${RESOURCE_DIR} gltf)
+
+set(GLTF_RESOURCE_FILES
+    ${ROOT_DIR}/third_party/models/DamagedHelmet/DamagedHelmet.glb
+)
+
+add_custom_command(
+        OUTPUT ${RESGEN_OUTPUTS}
+        COMMAND resgen ${RESGEN_FLAGS} ${GLTF_RESOURCE_FILES}
+        DEPENDS resgen ${TEXTURE_FILES}
+)
+
+if (DEFINED RESGEN_SOURCE_FLAGS)
+    set_source_files_properties(${RESGEN_SOURCE} PROPERTIES COMPILE_FLAGS ${RESGEN_SOURCE_FLAGS})
+endif()
+
+add_library(gltf-resources ${DUMMY_SRC} ${RESGEN_SOURCE})
+
+# ==================================================================================================
 # Common library
 # ==================================================================================================
 
@@ -225,7 +247,6 @@ endfunction()
 
 if (NOT ANDROID)
     add_assimp_demo(frame_generator)
-    add_assimp_demo(gltf_viewer)
     add_assimp_demo(lightbulb)
     add_assimp_demo(material_sandbox)
     add_assimp_demo(sample_full_pbr)
@@ -233,10 +254,12 @@ if (NOT ANDROID)
     add_filamesh_demo(sample_cloth)
     add_filamesh_demo(sample_normal_map)
     add_filamesh_demo(suzanne)
+    add_filamesh_demo(gltf_viewer)
 
     # Sample app specific
     target_link_libraries(frame_generator PRIVATE imageio)
     target_link_libraries(suzanne PRIVATE suzanne-resources)
+    target_link_libraries(gltf_viewer PRIVATE gltf-resources gltfio)
 endif()
 
 # ==================================================================================================
