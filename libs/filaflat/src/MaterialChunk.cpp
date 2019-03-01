@@ -18,15 +18,10 @@
 
 #include <utils/Log.h>
 
-using namespace filament::driver;
-
 namespace filaflat {
 
-
-static inline uint32_t makeKey(ShaderModel shaderModel, uint8_t variant, ShaderType type) noexcept {
-    static_assert(sizeof(ShaderModel) == 1, "ShaderModel must not exceed 8 bits");
-    static_assert(sizeof(ShaderType) == 1, "ShaderType must not exceed 8 bits");
-    return (uint8_t(shaderModel) << 16) | (uint8_t(type) << 8) | variant;
+static inline uint32_t makeKey(uint8_t shaderModel, uint8_t variant, uint8_t type) noexcept {
+    return (shaderModel << 16) | (type << 8) | variant;
 }
 
 bool MaterialChunk::readIndex(Unflattener& unflattener) {
@@ -61,25 +56,14 @@ bool MaterialChunk::readIndex(Unflattener& unflattener) {
             return false;
         }
 
-        switch (ShaderModel(shaderModelValue)) {
-            case ShaderModel::GL_ES_30:
-            case ShaderModel::GL_CORE_41:
-                // skip unsupported shader models (needed for older materials that support GL4.5)
-                break;
-            default:
-                continue;
-        }
-
-        pipelineStageValue = std::min(pipelineStageValue, uint8_t(filament::driver::PIPELINE_STAGE_COUNT));
-
-        uint32_t key = makeKey(ShaderModel(shaderModelValue), variantValue, ShaderType(pipelineStageValue));
+        uint32_t key = makeKey(shaderModelValue, variantValue, pipelineStageValue);
         mOffsets[key] = offsetValue;
     }
     return true;
 }
 
 bool MaterialChunk::getTextShader(Unflattener unflattener, BlobDictionary& dictionary,
-        ShaderBuilder& shader, ShaderModel shaderModel, uint8_t variant, ShaderType ps) {
+        ShaderBuilder& shader, uint8_t shaderModel, uint8_t variant, uint8_t ps) {
 
     shader.reset();
     if (mBase == nullptr ) {
@@ -136,7 +120,7 @@ bool MaterialChunk::getTextShader(Unflattener unflattener, BlobDictionary& dicti
 
 
 bool MaterialChunk::getSpirvShader(Unflattener unflattener, BlobDictionary& dictionary,
-        ShaderBuilder& builder, ShaderModel shaderModel, uint8_t variant, ShaderType stage) {
+        ShaderBuilder& builder, uint8_t shaderModel, uint8_t variant, uint8_t stage) {
     if (mBase == nullptr ) {
         if (!readIndex(unflattener)) {
             return false;

@@ -22,23 +22,20 @@
 #include <filaflat/ShaderBuilder.h>
 #include <filaflat/Unflattener.h>
 
-#include <filament/driver/DriverEnums.h>
-
 #include <tsl/robin_map.h>
 
 namespace filaflat {
 
 class MaterialChunk {
 public:
+
     bool getTextShader(
             Unflattener unflattener, BlobDictionary& dictionary, ShaderBuilder& shaderBuilder,
-            filament::driver::ShaderModel shaderModel, uint8_t variant,
-            filament::driver::ShaderType stage);
+            uint8_t shaderModel, uint8_t variant, uint8_t stage);
 
     bool getSpirvShader(
             Unflattener unflattener, BlobDictionary& dictionary, ShaderBuilder& shaderBuilder,
-            filament::driver::ShaderModel shaderModel, uint8_t variant,
-            filament::driver::ShaderType stage);
+            uint8_t shaderModel, uint8_t variant, uint8_t stage);
 
 private:
     bool readIndex(Unflattener& unflattener);

@@ -113,13 +113,13 @@ public:
         switch (mBackend) {
             case Backend::OPENGL:
                 return materialChunk.getTextShader(unflattener, blobDictionary,
-                        shader, shaderModel, variant, st);
+                        shader, (uint8_t)shaderModel, variant, st);
             case Backend::METAL:
                 return materialChunk.getTextShader(unflattener, blobDictionary,
-                        shader, shaderModel, variant, st);
+                        shader, (uint8_t)shaderModel, variant, st);
             case Backend::VULKAN:
                 return materialChunk.getSpirvShader(unflattener, blobDictionary,
-                        shader, shaderModel, variant, st);
+                        shader, (uint8_t)shaderModel, variant, st);
             default:
                 return false;
         }
