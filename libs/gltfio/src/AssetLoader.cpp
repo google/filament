@@ -158,13 +158,26 @@ FFilamentAsset* FAssetLoader::createAssetFromJson(const uint8_t* bytes, uint32_t
 }
 
 FilamentAsset* FAssetLoader::createAssetFromBinary(const uint8_t* bytes, uint32_t nbytes) {
+
+    // The cgltf library handles GLB efficiently by pointing all buffer views into the source data.
+    // However, we wish our API to be simple and safe, allowing clients to free up their source blob
+    // immediately, without worrying about when all the data has finished uploading asynchronously
+    // to the GPU. To achieve this we create a copy of the source blob and stash it inside the
+    // asset, asking cgltf to parse the copy. This allows us to free it at the correct time (i.e.
+    // after all GPU uploads have completed). Although it incurs a copy, the added safety of this
+    // API seems worthwhile.
+    std::vector<uint8_t> glbdata(bytes, bytes + nbytes);
+
     cgltf_options options { cgltf_file_type_glb };
     cgltf_data* sourceAsset;
-    cgltf_result result = cgltf_parse(&options, bytes, nbytes, &sourceAsset);
+    cgltf_result result = cgltf_parse(&options, glbdata.data(), nbytes, &sourceAsset);
     if (result != cgltf_result_success) {
         return nullptr;
     }
     createAsset(sourceAsset);
+    if (mResult) {
+        glbdata.swap(mResult->mGlbData);
+    }
     return mResult;
 }
 
@@ -639,9 +652,10 @@ void FAssetLoader::addTextureBinding(MaterialInstance* materialInstance, const c
     auto bv = srcTexture->image->buffer_view;
     mResult->mTextureBindings.push_back(TextureBinding {
         .uri = srcTexture->image->uri,
-        .totalSize = uint32_t(bv ? bv->buffer->size : 0),
+        .totalSize = uint32_t(bv ? bv->size : 0),
         .mimeType = srcTexture->image->mime_type,
         .data = bv ? &bv->buffer->data : nullptr,
+        .offset = bv ? bv->offset : 0,
         .materialInstance = materialInstance,
         .materialParameter = parameterName,
         .sampler = dstSampler,

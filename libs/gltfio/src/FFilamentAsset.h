@@ -140,12 +140,15 @@ struct FFilamentAsset : public FilamentAsset {
 
     void releaseSourceAsset() {
         if (--mSourceAssetRefCount == 0) {
+            mGlbData.clear();
+            mGlbData.shrink_to_fit();
             cgltf_free((cgltf_data*) mSourceAsset);
             mSourceAsset = nullptr;
         }
     }
 
     filament::Engine* mEngine;
+    std::vector<uint8_t> mGlbData;
     std::vector<utils::Entity> mEntities;
     std::vector<filament::MaterialInstance*> mMaterialInstances;
     std::vector<filament::VertexBuffer*> mVertexBuffers;
