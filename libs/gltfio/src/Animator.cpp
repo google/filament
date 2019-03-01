@@ -26,7 +26,6 @@
 #include <utils/Log.h>
 
 #include <math/mat4.h>
-#include <math/norm.h>
 #include <math/quat.h>
 #include <math/scalar.h>
 #include <math/vec3.h>
@@ -63,65 +62,17 @@ struct Channel {
 struct Animation {
     float duration;
     std::string name;
-    std::vector<Sampler> samplers;
-    std::vector<Channel> channels;
+    vector<Sampler> samplers;
+    vector<Channel> channels;
 };
 
 struct AnimatorImpl {
-    std::vector<Animation> animations;
+    vector<Animation> animations;
+    vector<mat4f> boneMatrices;
     FFilamentAsset* asset;
     RenderableManager* renderableManager;
     TransformManager* transformManager;
 };
-
-static int numComponents(cgltf_type type) {
-    switch (type) {
-        case cgltf_type_vec3: return 3;
-        case cgltf_type_vec4: return 4;
-        default: return 1;
-    }
-}
-
-static void convert8(const cgltf_accessor* src, const uint8_t* srcBlob, SourceValues& dst) {
-    srcBlob += src->buffer_view->offset + src->offset;
-    dst.resize(src->count * numComponents(src->type));
-    auto srcValues = (const int8_t*) srcBlob;
-    for (size_t i = 0, n = dst.size(); i < n; ++i) {
-        dst[i] = unpackSnorm8(srcValues[i]);
-    }
-}
-
-static void convert8U(const cgltf_accessor* src, const uint8_t* srcBlob, SourceValues& dst) {
-    srcBlob += src->buffer_view->offset + src->offset;
-    dst.resize(src->count * numComponents(src->type));
-    for (size_t i = 0, n = dst.size(); i < n; ++i) {
-        dst[i] = unpackUnorm8(srcBlob[i]);
-    }
-}
-
-static void convert16(const cgltf_accessor* src, const uint8_t* srcBlob, SourceValues& dst) {
-    srcBlob += src->buffer_view->offset + src->offset;
-    dst.resize(src->count * numComponents(src->type));
-    auto srcValues = (const int16_t*) srcBlob;
-    for (size_t i = 0, n = dst.size(); i < n; ++i) {
-        dst[i] = unpackSnorm16(srcValues[i]);
-    }
-}
-
-static void convert16U(const cgltf_accessor* src, const uint8_t* srcBlob, SourceValues& dst) {
-    srcBlob += src->buffer_view->offset + src->offset;
-    dst.resize(src->count * numComponents(src->type));
-    auto srcValues = (const uint16_t*) srcBlob;
-    for (size_t i = 0, n = dst.size(); i < n; ++i) {
-        dst[i] = unpackUnorm16(srcValues[i]);
-    }
-}
-
-static void convert32F(const cgltf_accessor* src, const uint8_t* srcBlob, SourceValues& dst) {
-    srcBlob += src->buffer_view->offset + src->offset;
-    dst.resize(src->count * numComponents(src->type));
-    memcpy(dst.data(), srcBlob, dst.size() * sizeof(float));
-}
 
 static void createSampler(const cgltf_animation_sampler& src, Sampler& dst) {
     // Copy the time values into a red-black tree.
@@ -135,22 +86,18 @@ static void createSampler(const cgltf_animation_sampler& src, Sampler& dst) {
 
     // Convert source data to float.
     const cgltf_accessor* valuesAccessor = src.output;
-    const uint8_t* valuesBlob = (const uint8_t*) valuesAccessor->buffer_view->buffer->data;
-    switch (valuesAccessor->component_type) {
-        case cgltf_component_type_r_8:
-            convert8(valuesAccessor, valuesBlob, dst.values);
+    switch (valuesAccessor->type) {
+        case cgltf_type_vec3:
+            dst.values.resize(valuesAccessor->count * 3);
+            for (cgltf_size i = 0; i < valuesAccessor->count; ++i) {
+                cgltf_accessor_read_float(src.output, i, &dst.values[i * 3], 3);
+            }
             break;
-        case cgltf_component_type_r_8u:
-            convert8U(valuesAccessor, valuesBlob, dst.values);
-            break;
-        case cgltf_component_type_r_16:
-            convert16(valuesAccessor, valuesBlob, dst.values);
-            break;
-        case cgltf_component_type_r_16u:
-            convert16U(valuesAccessor, valuesBlob, dst.values);
-            break;
-        case cgltf_component_type_r_32f:
-            convert32F(valuesAccessor, valuesBlob, dst.values);
+        case cgltf_type_vec4:
+            dst.values.resize(valuesAccessor->count * 4);
+            for (cgltf_size i = 0; i < valuesAccessor->count; ++i) {
+                cgltf_accessor_read_float(src.output, i, &dst.values[i * 4], 4);
+            }
             break;
         default:
             slog.e << "Unknown animation type." << io::endl;
@@ -244,6 +191,7 @@ size_t Animator::getAnimationCount() const {
 
 void Animator::applyAnimation(size_t animationIndex, float time) const {
     const Animation& anim = mImpl->animations[animationIndex];
+    TransformManager* transformManager = mImpl->transformManager;
     time = fmod(time, anim.duration);
     for (const auto& channel : anim.channels) {
         const Sampler* sampler = channel.sourceData;
@@ -254,7 +202,7 @@ void Animator::applyAnimation(size_t animationIndex, float time) const {
         int cindex = &channel - &anim.channels.front();
         int sindex = sampler - &anim.samplers.front();
 
-        TransformManager::Instance node = mImpl->transformManager->getInstance(channel.targetEntity);
+        TransformManager::Instance node = transformManager->getInstance(channel.targetEntity);
         const TimeValues& times = sampler->times;
 
         // Find the first keyframe after the given time, or the keyframe that matches it exactly.
@@ -284,41 +232,69 @@ void Animator::applyAnimation(size_t animationIndex, float time) const {
 
         // Perform the interpolation. This is a simple but inefficient implementation; Filament
         // stores transforms as mat4's but glTF animation is based on TRS (translation rotation
-        // scale). TODO: honor channel.transformType and support STEP / CUBIC interpolation
+        // scale).
         size_t prevIndex = prevIter->second;
         size_t nextIndex = nextIter->second;
 
-        mat4f xform = mImpl->transformManager->getTransform(node);
+        mat4f xform = transformManager->getTransform(node);
         float3 scale;
         quatf rotation;
         float3 translation;
         decomposeMatrix(xform, &translation, &rotation, &scale);
 
+        if (sampler->interpolation == Sampler::STEP) {
+            t = 0.0f;
+        }
+
         switch (channel.transformType) {
             case Channel::SCALE: {
                 const float3* srcVec3 = (const float3*) sampler->values.data();
-                scale = ((1 - t) * srcVec3[prevIndex]) + (t * srcVec3[nextIndex]);
+                if (sampler->interpolation == Sampler::CUBIC) {
+                    float3 vert0 = srcVec3[prevIndex * 3 + 1];
+                    float3 tang0 = srcVec3[prevIndex * 3 + 2];
+                    float3 tang1 = srcVec3[nextIndex * 3];
+                    float3 vert1 = srcVec3[nextIndex * 3 + 1];
+                    scale = cubicSpline(vert0, tang0, vert1, tang1, t);
+                } else {
+                    scale = ((1 - t) * srcVec3[prevIndex]) + (t * srcVec3[nextIndex]);
+                }
                 break;
             }
             case Channel::TRANSLATION: {
                 const float3* srcVec3 = (const float3*) sampler->values.data();
-                translation = ((1 - t) * srcVec3[prevIndex]) + (t * srcVec3[nextIndex]);
+                if (sampler->interpolation == Sampler::CUBIC) {
+                    float3 vert0 = srcVec3[prevIndex * 3 + 1];
+                    float3 tang0 = srcVec3[prevIndex * 3 + 2];
+                    float3 tang1 = srcVec3[nextIndex * 3];
+                    float3 vert1 = srcVec3[nextIndex * 3 + 1];
+                    translation = cubicSpline(vert0, tang0, vert1, tang1, t);
+                } else {
+                    translation = ((1 - t) * srcVec3[prevIndex]) + (t * srcVec3[nextIndex]);
+                }
                 break;
             }
             case Channel::ROTATION: {
                 const quatf* srcQuat = (const quatf*) sampler->values.data();
-                rotation = slerp(srcQuat[prevIndex], srcQuat[nextIndex], t);
+                if (sampler->interpolation == Sampler::CUBIC) {
+                    quatf vert0 = srcQuat[prevIndex * 3 + 1];
+                    quatf tang0 = srcQuat[prevIndex * 3 + 2];
+                    quatf tang1 = srcQuat[nextIndex * 3];
+                    quatf vert1 = srcQuat[nextIndex * 3 + 1];
+                    rotation = normalize(cubicSpline(vert0, tang0, vert1, tang1, t));
+                } else {
+                    rotation = slerp(srcQuat[prevIndex], srcQuat[nextIndex], t);
+                }
                 break;
             }
         }
 
         xform = composeMatrix(translation, rotation, scale);
-        mImpl->transformManager->setTransform(node, xform);
+        transformManager->setTransform(node, xform);
     }
 }
 
 void Animator::updateBoneMatrices() {
-    vector<mat4f> boneMatrices;
+    vector<mat4f>& boneMatrices = mImpl->boneMatrices;
     FFilamentAsset* asset = mImpl->asset;
     auto renderableManager = mImpl->renderableManager;
     auto transformManager = mImpl->transformManager;
