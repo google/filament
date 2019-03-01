@@ -25,6 +25,18 @@
 
 namespace gltfio {
 
+template <typename T>
+T cubicSpline(const T& vert0, const T& tang0, const T& vert1, const T& tang1, float t) {
+    float tt = t * t, ttt = tt * t;
+    float s2 = -2 * ttt + 3 * tt, s3 = ttt - tt;
+    float s0 = 1 - s2, s1 = s3 - tt + t;
+    T p0 = vert0;
+    T m0 = tang0;
+    T p1 = vert1;
+    T m1 = tang1;
+    return s0 * p0 + s1 * m0 * t + s2 * p1 + s3 * m1 * t;
+}
+
 inline void decomposeMatrix(const filament::math::mat4f& mat, filament::math::float3* translation,
         filament::math::quatf* rotation, filament::math::float3* scale) {
     using namespace filament::math;
@@ -57,11 +69,13 @@ inline void decomposeMatrix(const filament::math::mat4f& mat, filament::math::fl
     }
     *scale = s;
 
-    // Remove scale from the matrix.
+    // Remove scale from the matrix if it is not close to zero.
     mat4f clone = mat;
-    clone[0] /= s.x;
-    clone[1] /= s.y;
-    clone[2] /= s.z;
+    if (std::abs(det) > std::numeric_limits<float>::epsilon()) {
+        clone[0] /= s.x;
+        clone[1] /= s.y;
+        clone[2] /= s.z;
+    }
 
     // Extract rotation.
     *rotation = clone.toQuaternion();
