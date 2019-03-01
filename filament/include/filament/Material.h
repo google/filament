@@ -46,7 +46,6 @@ class UTILS_PUBLIC Material : public FilamentAPI {
     struct BuilderDetails;
 
 public:
-    using Variable = filament::Variable;
     using BlendingMode = filament::BlendingMode;
     using Shading = filament::Shading;
     using Interpolation = filament::Interpolation;
