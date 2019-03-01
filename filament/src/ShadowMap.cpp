@@ -285,7 +285,12 @@ void ShadowMap::computeShadowCameraDirectional(
         // i.e. the -z axis (see: ortho)
         const float znear = -lsLightFrustum.max.z;
         const float zfar = -lsLightFrustum.min.z;
-        assert(znear < zfar);
+
+        // if znear >= zfar, it means we don't have any shadow caster in front of a shadow receiver
+        if (UTILS_UNLIKELY(znear >= zfar)) {
+            mHasVisibleShadows = false;
+            return;
+        }
 
         // The light's projection, ortho for directional lights, perspective otherwise
         const mat4f Mp = mat4f::ortho(-1, 1, -1, 1, znear, zfar);
