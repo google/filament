@@ -303,7 +303,8 @@ bool MaterialParserDetails::getVkShader(driver::ShaderModel shaderModel, uint8_t
 
     Unflattener unflattener(container.getChunkStart(ChunkType::MaterialSpirv),
             container.getChunkEnd(ChunkType::MaterialSpirv));
-    return mMaterialChunk.getSpirvShader(unflattener, mBlobDictionary, shader, shaderModel, variant, st);
+    return mMaterialChunk.getSpirvShader(unflattener, mBlobDictionary, shader,
+            (uint8_t)shaderModel, variant, st);
 }
 
 bool MaterialParserDetails::getGlShader(driver::ShaderModel shaderModel, uint8_t variant,
@@ -325,7 +326,8 @@ bool MaterialParserDetails::getGlShader(driver::ShaderModel shaderModel, uint8_t
 
     Unflattener unflattener(container.getChunkStart(ChunkType::MaterialGlsl),
             container.getChunkEnd(ChunkType::MaterialGlsl));
-    return mMaterialChunk.getTextShader(unflattener, mBlobDictionary, shader, shaderModel, variant, st);
+    return mMaterialChunk.getTextShader(unflattener, mBlobDictionary, shader,
+            (uint8_t)shaderModel, variant, st);
 }
 
 bool MaterialParserDetails::getMtlShader(driver::ShaderModel shaderModel, uint8_t variant,
@@ -346,7 +348,8 @@ bool MaterialParserDetails::getMtlShader(driver::ShaderModel shaderModel, uint8_
 
     Unflattener unflattener(container.getChunkStart(ChunkType::MaterialMetal),
             container.getChunkEnd(ChunkType::MaterialMetal));
-    return mMaterialChunk.getTextShader(unflattener, mBlobDictionary, shader, shaderModel, variant, st);
+    return mMaterialChunk.getTextShader(unflattener, mBlobDictionary, shader,
+            (uint8_t)shaderModel, variant, st);
 }
 
 // ------------------------------------------------------------------------------------------------
