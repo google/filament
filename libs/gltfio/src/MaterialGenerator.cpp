@@ -205,7 +205,7 @@ static Material* createMaterial(Engine* engine, const MaterialKey& config, const
     std::string shader = shaderFromKey(config, uvmap);
     MaterialBuilder builder = MaterialBuilder()
             .name(name)
-            .flipUV(true)
+            .flipUV(false)
             .material(shader.c_str())
             .culling(config.doubleSided ? CullingMode::NONE : CullingMode::BACK)
             .doubleSided(config.doubleSided);

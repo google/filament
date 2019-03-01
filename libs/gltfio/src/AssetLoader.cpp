@@ -523,13 +523,13 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_material* inp
         .hasOcclusionTexture = inputMat->occlusion_texture.texture,
         .hasEmissiveTexture = inputMat->emissive_texture.texture,
         .alphaMode = AlphaMode::OPAQUE,
-        .alphaMaskThreshold = 0.5f,
         .baseColorUV = (uint8_t) pbrConfig.base_color_texture.texcoord,
         .metallicRoughnessUV = (uint8_t) pbrConfig.metallic_roughness_texture.texcoord,
         .emissiveUV = (uint8_t) inputMat->emissive_texture.texcoord,
         .aoUV = (uint8_t) inputMat->occlusion_texture.texcoord,
         .normalUV = (uint8_t) inputMat->normal_texture.texcoord,
-        .hasTextureTransforms = hasTextureTransforms
+        .hasTextureTransforms = false,
+        .alphaMaskThreshold = 0.5f
     };
 
     switch (inputMat->alpha_mode) {
