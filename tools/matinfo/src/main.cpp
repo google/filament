@@ -23,9 +23,6 @@
 #include <filaflat/TextDictionaryReader.h>
 #include <filaflat/Unflattener.h>
 
-#include <private/filament/SamplerInterfaceBlock.h>
-#include <private/filament/UniformInterfaceBlock.h>
-
 #include <filament/MaterialChunkType.h>
 #include <filament/EngineEnums.h>
 #include <filament/MaterialEnums.h>
@@ -353,7 +350,7 @@ const char* toString(ShaderModel model) {
 }
 
 template<>
-const char* toString(UniformInterfaceBlock::Type type) {
+const char* toString(UniformType type) {
     switch (type) {
         case UniformType::BOOL:   return "bool";
         case UniformType::BOOL2:  return "bool2";
@@ -377,7 +374,7 @@ const char* toString(UniformInterfaceBlock::Type type) {
 }
 
 template<>
-const char* toString(SamplerInterfaceBlock::Type type) {
+const char* toString(SamplerType type) {
     switch (type) {
         case SamplerType::SAMPLER_2D: return "sampler2D";
         case SamplerType::SAMPLER_CUBEMAP: return "samplerCubemap";
@@ -386,7 +383,7 @@ const char* toString(SamplerInterfaceBlock::Type type) {
 }
 
 template<>
-const char* toString(SamplerInterfaceBlock::Precision precision) {
+const char* toString(Precision precision) {
     switch (precision) {
         case Precision::LOW: return "lowp";
         case Precision::MEDIUM: return "mediump";
@@ -396,7 +393,7 @@ const char* toString(SamplerInterfaceBlock::Precision precision) {
 }
 
 template<>
-const char* toString(SamplerInterfaceBlock::Format format) {
+const char* toString(SamplerFormat format) {
     switch (format) {
         case SamplerFormat::INT: return "int";
         case SamplerFormat::UINT: return "uint";
@@ -570,9 +567,9 @@ static bool printParametersInfo(ChunkContainer container) {
 
         std::cout << "    "
                   << std::setw(alignment) << fieldName.c_str()
-                  << std::setw(alignment) << toString(UniformInterfaceBlock::Type(fieldType))
+                  << std::setw(alignment) << toString(UniformType(fieldType))
                   << arraySizeToString(fieldSize)
-                  << std::setw(10) << toString(UniformInterfaceBlock::Precision(fieldPrecision))
+                  << std::setw(10) << toString(Precision(fieldPrecision))
                   << std::endl;
     }
 
@@ -604,9 +601,9 @@ static bool printParametersInfo(ChunkContainer container) {
 
         std::cout << "    "
                 << std::setw(alignment) << fieldName.c_str()
-                << std::setw(alignment) << toString(SamplerInterfaceBlock::Type(fieldType))
-                << std::setw(10) << toString(SamplerInterfaceBlock::Precision(fieldPrecision))
-                << toString(SamplerInterfaceBlock::Format(fieldFormat))
+                << std::setw(alignment) << toString(SamplerType(fieldType))
+                << std::setw(10) << toString(Precision(fieldPrecision))
+                << toString(SamplerFormat(fieldFormat))
                 << std::endl;
     }
 
