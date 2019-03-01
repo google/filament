@@ -65,6 +65,16 @@ enum class VertexDomain : uint8_t {
     // when adding more entries, make sure to update VERTEX_DOMAIN_COUNT
 };
 
+static constexpr size_t POST_PROCESS_STAGES_COUNT = 4;
+enum class PostProcessStage : uint8_t {
+    TONE_MAPPING_OPAQUE,           // Tone mapping post-process
+    TONE_MAPPING_TRANSLUCENT,      // Tone mapping post-process
+    ANTI_ALIASING_OPAQUE,          // Anti-aliasing stage
+    ANTI_ALIASING_TRANSLUCENT,     // Anti-aliasing stage
+};
+
+// ------------------------------------------------------------------------------------------------
+
 static constexpr size_t MATERIAL_VARIABLES_COUNT = 4;
 enum class Variable : uint8_t {
     CUSTOM0,
@@ -73,7 +83,6 @@ enum class Variable : uint8_t {
     CUSTOM3
     // when adding more variables, make sure to update MATERIAL_VARIABLES_COUNT
 };
-
 
 static constexpr size_t MATERIAL_PROPERTIES_COUNT = 16;
 enum class Property : uint8_t {
@@ -96,13 +105,6 @@ enum class Property : uint8_t {
     // when adding new Properties, make sure to update MATERIAL_PROPERTIES_COUNT
 };
 
-static constexpr size_t POST_PROCESS_STAGES_COUNT = 4;
-enum class PostProcessStage : uint8_t {
-    TONE_MAPPING_OPAQUE,           // Tone mapping post-process
-    TONE_MAPPING_TRANSLUCENT,      // Tone mapping post-process
-    ANTI_ALIASING_OPAQUE,          // Anti-aliasing stage
-    ANTI_ALIASING_TRANSLUCENT,     // Anti-aliasing stage
-};
 
 } // namespace filament
 
