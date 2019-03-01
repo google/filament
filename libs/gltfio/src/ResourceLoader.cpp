@@ -145,7 +145,7 @@ bool ResourceLoader::loadResources(FilamentAsset* asset) {
     const BufferBinding* bindings = asset->getBufferBindings();
     for (size_t i = 0, n = asset->getBufferBindingCount(); i < n; ++i) {
         auto bb = bindings[i];
-        const uint8_t* data8 = bb.data ? (bb.offset + (const uint8_t*) *bb.data) : nullptr;
+        const uint8_t* data8 = bb.offset + (const uint8_t*) *bb.data;
         if (bb.vertexBuffer) {
             mPool->addPendingUpload();
             VertexBuffer::BufferDescriptor bd(data8, bb.size, AssetPool::onLoadedResource, mPool);
@@ -213,23 +213,23 @@ bool ResourceLoader::createTextures(details::FFilamentAsset* asset) const {
     stbi_uc* texels;
     int width, height, comp;
     Texture* tex;
-    tsl::robin_map<void*, Texture*> textures;
+    tsl::robin_map<const void*, Texture*> textures;
     const TextureBinding* texbindings = asset->getTextureBindings();
     for (size_t i = 0, n = asset->getTextureBindingCount(); i < n; ++i) {
         auto tb = texbindings[i];
         if (tb.data) {
-            tex = textures[tb.data];
+            const uint8_t* data8 = tb.offset + (const uint8_t*) *tb.data;
+            tex = textures[data8];
             if (!tex) {
-                texels = stbi_load_from_memory((const stbi_uc*) *tb.data, tb.totalSize,
-                        &width, &height, &comp, 4);
+                texels = stbi_load_from_memory(data8, tb.totalSize, &width, &height, &comp, 4);
                 if (texels == nullptr) {
                     slog.e << "Unable to decode texture. " << io::endl;
                     return false;
                 }
-                textures[tb.data] = tex = createTexture(texels, width, height, tb.srgb);
+                textures[data8] = tex = createTexture(texels, width, height, tb.srgb);
             }
         } else {
-            tex = textures[(void*) tb.uri];
+            tex = textures[tb.uri];
             if (!tex) {
                 utils::Path fullpath = this->mConfig.basePath + tb.uri;
                 texels = stbi_load(fullpath.c_str(), &width, &height, &comp, 4);
@@ -237,7 +237,7 @@ bool ResourceLoader::createTextures(details::FFilamentAsset* asset) const {
                     slog.e << "Unable to decode texture: " << tb.uri << io::endl;
                     return false;
                 }
-                textures[(void*) tb.uri] = tex = createTexture(texels, width, height, tb.srgb);
+                textures[tb.uri] = tex = createTexture(texels, width, height, tb.srgb);
             }
         }
         tb.materialInstance->setParameter(tb.materialParameter, tex, tb.sampler);

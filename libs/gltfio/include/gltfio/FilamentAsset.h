@@ -137,6 +137,7 @@ struct TextureBinding {
     uint32_t totalSize;
     const char* mimeType;
     void** data;
+    size_t offset;
     filament::MaterialInstance* materialInstance;
     const char* materialParameter;
     filament::TextureSampler sampler;

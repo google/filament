@@ -199,9 +199,6 @@ void Animator::applyAnimation(size_t animationIndex, float time) const {
             continue;
         }
 
-        int cindex = &channel - &anim.channels.front();
-        int sindex = sampler - &anim.samplers.front();
-
         TransformManager::Instance node = transformManager->getInstance(channel.targetEntity);
         const TimeValues& times = sampler->times;
 
