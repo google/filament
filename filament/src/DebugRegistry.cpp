@@ -43,8 +43,11 @@ void *FDebugRegistry::getPropertyAddress(const char *name) noexcept {
 }
 
 void FDebugRegistry::registerProperty(utils::StaticString name, void *p, Type type) noexcept {
-    mProperties.push_back({name.c_str(), type});
-    mPropertyMap[name] = p;
+    auto& propertyMap = mPropertyMap;
+    if (propertyMap.find(name) == propertyMap.end()) {
+        mProperties.push_back({ name.c_str(), type });
+        propertyMap[name] = p;
+    }
 }
 
 inline std::pair<DebugRegistry::Property const *, size_t> FDebugRegistry::getProperties() const noexcept {

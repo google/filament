@@ -64,6 +64,10 @@ FView::FView(FEngine& engine)
       mDirectionalShadowMap(engine) {
     DriverApi& driver = engine.getDriverApi();
 
+    FDebugRegistry& debugRegistry = engine.getDebugRegistry();
+    debugRegistry.registerProperty("d.view.camera_at_origin",
+            &engine.debug.view.camera_at_origin);
+
     // set-up samplers
     mPerViewSb.setBuffer(PerViewSib::RECORDS, mFroxelizer.getRecordBuffer());
     mPerViewSb.setBuffer(PerViewSib::FROXELS, mFroxelizer.getFroxelBuffer());
@@ -425,6 +429,14 @@ void FView::prepare(FEngine& engine, driver::DriverApi& driver, ArenaScope& aren
      * Calculate all camera parameters needed to render this View for this frame.
      */
     FCamera const* const camera = mViewingCamera ? mViewingCamera : mCullingCamera;
+
+    if (engine.debug.view.camera_at_origin) {
+        // this moves the camera to the origin, effectively doing all shader computations in
+        // view-space, which improves floating point precision in the shader by staying around
+        // zero, where fp precision is highest. This also ensures that when the camera is placed
+        // very far from the origin, objects are still rendered and lit properly.
+        worldOriginScene[3].xyz -= camera->getPosition();
+    }
 
     // Note: for debugging (i.e. visualize what the camera / objects are doing, using
     // the viewing camera), we can set worldOriginCamera to identity when mViewingCamera
