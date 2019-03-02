@@ -17,20 +17,21 @@
 #ifndef TNT_FILAMENT_ENGINE_ENUM_H
 #define TNT_FILAMENT_ENGINE_ENUM_H
 
-#include <utils/bitset.h>
+#include <stddef.h>
+#include <stdint.h>
 
 namespace filament {
 
-// Update hasIntegerTarget() in VertexBuffer when adding an attribute that will
-// be read as integers in the shaders
-enum VertexAttribute : uint8_t {
-    POSITION        = 0, // XYZ position (float3)
-    TANGENTS        = 1, // tangent, bitangent and normal, encoded as a quaternion (float4)
-    COLOR           = 2, // vertex color (float4)
-    UV0             = 3, // texture coordinates (float2)
-    UV1             = 4, // texture coordinates (float2)
-    BONE_INDICES    = 5, // indices of 4 bones, as unsigned integers (uvec4)
-    BONE_WEIGHTS    = 6, // weights of the 4 bones (normalized float4)
+static constexpr size_t MATERIAL_VERSION = 2;
+
+static constexpr size_t VERTEX_DOMAIN_COUNT = 4;
+
+static constexpr size_t POST_PROCESS_STAGES_COUNT = 4;
+enum class PostProcessStage : uint8_t {
+    TONE_MAPPING_OPAQUE,           // Tone mapping post-process
+    TONE_MAPPING_TRANSLUCENT,      // Tone mapping post-process
+    ANTI_ALIASING_OPAQUE,          // Anti-aliasing stage
+    ANTI_ALIASING_TRANSLUCENT,     // Anti-aliasing stage
 };
 
 // Binding points for uniform buffers and sampler buffers.
@@ -61,9 +62,6 @@ constexpr size_t CONFIG_MAX_LIGHT_INDEX = CONFIG_MAX_LIGHT_COUNT - 1;
 // This value is also limited by UBO size, ES3.0 only guarantees 16 KiB.
 // We store 64 bytes per bone.
 constexpr size_t CONFIG_MAX_BONE_COUNT = 256;
-
-// can't really use std::underlying_type<AttributeIndex>::type because the driver takes a uint32_t
-using AttributeBitset = utils::bitset32;
 
 // TODO This should be injected by the engine as a define of the shader.
 static constexpr bool   CONFIG_IBL_RGBM  = true;

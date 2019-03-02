@@ -21,7 +21,7 @@
 
 #include "driver/Driver.h"
 
-#include <filament/EngineEnums.h>
+#include <private/filament/EngineEnums.h>
 
 #include <memory>
 #include <tsl/robin_map.h>

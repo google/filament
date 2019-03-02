@@ -21,7 +21,7 @@
 #include "../shaders/MaterialInfo.h"
 
 #include <private/filament/SamplerInterfaceBlock.h>
-#include <filament/SamplerBindingMap.h>
+#include <private/filament/SamplerBindingMap.h>
 #include <private/filament/UniformInterfaceBlock.h>
 
 namespace filamat {

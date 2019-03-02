@@ -17,7 +17,7 @@
 #ifndef TNT_FILAMENT_DRIVER_SAMPLERBINDINGMAP_H
 #define TNT_FILAMENT_DRIVER_SAMPLERBINDINGMAP_H
 
-#include <filament/EngineEnums.h>
+#include <private/filament/EngineEnums.h>
 
 #include <tsl/robin_map.h>
 #include <vector>

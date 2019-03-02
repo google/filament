@@ -382,7 +382,7 @@ std::ostream& CodeGenerator::generateFunction(std::ostream& out, const char* ret
 }
 
 std::ostream& CodeGenerator::generateMaterialProperty(std::ostream& out,
-        Property property, bool isSet) const {
+        MaterialBuilder::Property property, bool isSet) const {
     if (isSet) {
         out << "#define " << "MATERIAL_HAS_" << getConstantName(property) << "\n";
     }
@@ -480,7 +480,8 @@ std::ostream& CodeGenerator::generateShaderUnlit(std::ostream& out, ShaderType t
 }
 
 /* static */
-char const* CodeGenerator::getConstantName(Property property) noexcept {
+char const* CodeGenerator::getConstantName(MaterialBuilder::Property property) noexcept {
+    using Property = MaterialBuilder::Property;
     switch (property) {
         case Property::BASE_COLOR:           return "BASE_COLOR";
         case Property::ROUGHNESS:            return "ROUGHNESS";

@@ -24,7 +24,7 @@ using namespace ASTUtils;
 
 static ::testing::AssertionResult PropertyListsMatch(const MaterialBuilder::PropertyList& expected,
         const MaterialBuilder::PropertyList& actual) {
-    for (size_t i = 0; i < filament::MATERIAL_PROPERTIES_COUNT; i++) {
+    for (size_t i = 0; i < MaterialBuilder::MATERIAL_PROPERTIES_COUNT; i++) {
         if (expected[i] != actual[i]) {
             const auto& propString = Enums::toString<Property>(Property(i));
             return ::testing::AssertionFailure()

@@ -17,8 +17,8 @@
 #ifndef TNT_FILAMENT_VERTEXBUFFER_H
 #define TNT_FILAMENT_VERTEXBUFFER_H
 
-#include <filament/EngineEnums.h>
 #include <filament/FilamentAPI.h>
+#include <filament/MaterialEnums.h>
 
 #include <filament/driver/BufferDescriptor.h>
 #include <filament/driver/DriverEnums.h>

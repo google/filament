@@ -91,7 +91,7 @@ void MaterialBuilderBase::prepare() {
 }
 
 MaterialBuilder::MaterialBuilder() : mMaterialName("Unnamed") {
-    std::fill_n(mProperties, filament::MATERIAL_PROPERTIES_COUNT, false);
+    std::fill_n(mProperties, MATERIAL_PROPERTIES_COUNT, false);
     mShaderModels.reset();
 }
 
@@ -138,7 +138,7 @@ MaterialBuilder& MaterialBuilder::variable(Variable v, const char* name) noexcep
         case Variable::CUSTOM1:
         case Variable::CUSTOM2:
         case Variable::CUSTOM3:
-            assert(size_t(v) < filament::MATERIAL_VARIABLES_COUNT);
+            assert(size_t(v) < MATERIAL_VARIABLES_COUNT);
             mVariables[size_t(v)] = CString(name);
             break;
     }

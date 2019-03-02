@@ -17,7 +17,7 @@
 #ifndef TNT_FILAMENT_DRIVER_VULKANBINDER_H
 #define TNT_FILAMENT_DRIVER_VULKANBINDER_H
 
-#include <filament/EngineEnums.h>
+#include <private/filament/EngineEnums.h>
 
 #include <bluevk/BlueVK.h>
 #include <utils/Hash.h>

@@ -26,7 +26,7 @@
 #include <filamat/MaterialBuilder.h>
 
 #include <filament/driver/DriverEnums.h>
-#include <filament/EngineEnums.h>
+#include <private/filament/EngineEnums.h>
 #include <filament/MaterialEnums.h>
 #include <private/filament/SamplerInterfaceBlock.h>
 #include <private/filament/UniformInterfaceBlock.h>
@@ -96,7 +96,7 @@ public:
 
     // generate material properties getters
     std::ostream& generateMaterialProperty(std::ostream& out,
-            filament::Property property, bool isSet) const;
+            MaterialBuilder::Property property, bool isSet) const;
 
     std::ostream& generateFunction(std::ostream& out,
             const char* returnType, const char* name, const char* body) const;
@@ -126,7 +126,7 @@ private:
             filament::driver::SamplerFormat format, bool multisample) const noexcept;
 
     // return name of the material property (e.g.: "ROUGHNESS")
-    static char const* getConstantName(filament::Property property) noexcept;
+    static char const* getConstantName(MaterialBuilder::Property property) noexcept;
 
     static char const* getPrecisionQualifier(filament::driver::Precision precision,
             filament::driver::Precision defaultPrecision) noexcept;

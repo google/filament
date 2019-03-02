@@ -21,8 +21,8 @@
 #include "VulkanBinder.h"
 #include "VulkanBuffer.h"
 
-#include <filament/EngineEnums.h>
-#include <filament/SamplerBindingMap.h>
+#include <private/filament/EngineEnums.h>
+#include <private/filament/SamplerBindingMap.h>
 
 namespace filament {
 namespace driver {

@@ -18,7 +18,7 @@
 
 #include <cstring>
 
-#include <filament/EngineEnums.h>
+#include <private/filament/EngineEnums.h>
 #include <filament/MaterialEnums.h>
 #include <private/filament/UniformInterfaceBlock.h>
 #include <private/filament/SamplerInterfaceBlock.h>
@@ -150,7 +150,7 @@ bool GLSLTools::findProperties(const filamat::MaterialBuilder& builderIn,
     // for cloth shading model). Give our shader all properties. This will enable us to parse and
     // static code analyse the AST.
     MaterialBuilder::PropertyList allProperties;
-    std::fill_n(allProperties, filament::MATERIAL_PROPERTIES_COUNT, true);
+    std::fill_n(allProperties, MaterialBuilder::MATERIAL_PROPERTIES_COUNT, true);
 
     ShaderModel model;
     std::string shaderCode = builder.peek(ShaderType::FRAGMENT, model, allProperties);
