@@ -39,6 +39,8 @@ function print_help {
     echo "        Add iOS simulator support to the iOS build."
     echo "    -l"
     echo "        Add filamat support to the Android build."
+    echo "    -w"
+    echo "        Build Web documents (compiles .md.html files to .html)."
     echo ""
     echo "Build types:"
     echo "    release"
@@ -87,6 +89,8 @@ ISSUE_WEBGL_BUILD=false
 ISSUE_ARCHIVES=false
 
 ISSUE_CMAKE_ALWAYS=false
+
+ISSUE_WEB_DOCS=false
 
 RUN_TESTS=false
 
@@ -463,6 +467,22 @@ function build_ios {
     fi
 }
 
+function build_web_docs {
+    echo "Building Web documents..."
+
+    mkdir -p out/web-docs
+    cd out/web-docs
+
+    # Create an empty npm package to link markdeep-rasterizer into
+    npm list | grep web-docs@1.0.0 > /dev/null || npm init --yes > /dev/null
+    npm list | grep markdeep-rasterizer > /dev/null || npm install ../../build/web/markdeep-rasterizer > /dev/null
+
+    # Generate documents
+    npx markdeep-rasterizer ../../docs/Filament.md.html ../../docs/Materials.md.html  ../../docs/
+
+    cd ../..
+}
+
 function validate_build_command {
     set +e
     # Make sure CMake is installed
@@ -500,6 +520,16 @@ function validate_build_command {
         echo "Error: EMSDK is not set, exiting"
         exit 1
     fi
+    # Web documents require node and npm for processing
+    if [ "$ISSUE_WEB_DOCS" == "true" ]; then
+        node_binary=`which node`
+        npm_binary=`which npm`
+        npx_binary=`which npx`
+        if [ ! "$node_binary" ] || [ ! "$npm_binary" ] || [ ! "$npx_binary" ]; then
+            echo "Error: Web documents require node, npm and npx to be installed"
+            exit 1
+        fi
+    fi
     set -e
 }
 
@@ -531,7 +561,7 @@ function run_tests {
 
 pushd `dirname $0` > /dev/null
 
-while getopts ":hacfijmp:tuvsl" opt; do
+while getopts ":hacfijmp:tuvslw" opt; do
     case ${opt} in
         h)
             print_help
@@ -609,6 +639,9 @@ while getopts ":hacfijmp:tuvsl" opt; do
             IOS_BUILD_SIMULATOR=true
             echo "iOS simulator support enabled."
             ;;
+        w)
+            ISSUE_WEB_DOCS=true
+            ;;
         \?)
             echo "Invalid option: -$OPTARG" >&2
             echo ""
@@ -661,6 +694,10 @@ fi
 
 if [ "$ISSUE_WEBGL_BUILD" == "true" ]; then
     build_webgl
+fi
+
+if [ "$ISSUE_WEB_DOCS" == "true" ]; then
+    build_web_docs
 fi
 
 if [ "$RUN_TESTS" == "true" ]; then
