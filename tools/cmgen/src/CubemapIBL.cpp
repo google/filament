@@ -754,7 +754,7 @@ static double DFV_Charlie(double NoV, double linearRoughness, size_t numSamples)
     const double3 V(std::sqrt(1 - NoV * NoV), 0, NoV);
     for (size_t i = 0; i < numSamples; i++) {
         const double2 u = hammersley(uint32_t(i), 1.0f / numSamples);
-        const double3 H = hemisphereCosSample(u);
+        const double3 H = hemisphereUniformSample(u);
         const double3 L = 2 * dot(V, H) * H - V;
         const double VoH = saturate(dot(V, H));
         const double NoL = saturate(L.z);
