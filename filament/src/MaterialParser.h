@@ -17,7 +17,7 @@
 #ifndef TNT_FILAFLAT_MATERIAL_PARSER_H
 #define TNT_FILAFLAT_MATERIAL_PARSER_H
 
-#include <filament/EngineEnums.h>
+#include <private/filament/EngineEnums.h>
 #include <filament/MaterialEnums.h>
 
 #include <filament/driver/DriverEnums.h>

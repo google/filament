@@ -21,6 +21,7 @@
 
 #include "driver/Handle.h"
 
+#include <private/filament/EngineEnums.h>
 #include <filament/VertexBuffer.h>
 
 #include <utils/bitset.h>

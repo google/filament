@@ -24,7 +24,7 @@
 #include <filaflat/Unflattener.h>
 
 #include <filament/MaterialChunkType.h>
-#include <filament/EngineEnums.h>
+#include <private/filament/EngineEnums.h>
 #include <filament/MaterialEnums.h>
 
 #include <filament/driver/DriverEnums.h>

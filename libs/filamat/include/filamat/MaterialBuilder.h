@@ -25,7 +25,7 @@
 #include <vector>
 
 #include <filament/driver/DriverEnums.h>
-#include <filament/EngineEnums.h>
+#include <private/filament/EngineEnums.h>
 #include <filament/MaterialEnums.h>
 
 #include <filamat/Package.h>
@@ -98,8 +98,36 @@ class UTILS_PUBLIC MaterialBuilder : public MaterialBuilderBase {
 public:
     MaterialBuilder();
 
-    using Property = filament::Property;
-    using Variable = filament::Variable;
+    static constexpr size_t MATERIAL_VARIABLES_COUNT = 4;
+    enum class Variable : uint8_t {
+        CUSTOM0,
+        CUSTOM1,
+        CUSTOM2,
+        CUSTOM3
+        // when adding more variables, make sure to update MATERIAL_VARIABLES_COUNT
+    };
+
+    static constexpr size_t MATERIAL_PROPERTIES_COUNT = 16;
+    enum class Property : uint8_t {
+        BASE_COLOR,              // float4, all shading models
+        ROUGHNESS,               // float,  lit shading models only
+        METALLIC,                // float,  all shading models, except unlit and cloth
+        REFLECTANCE,             // float,  all shading models, except unlit and cloth
+        AMBIENT_OCCLUSION,       // float,  lit shading models only, except subsurface and cloth
+        CLEAR_COAT,              // float,  lit shading models only, except subsurface and cloth
+        CLEAR_COAT_ROUGHNESS,    // float,  lit shading models only, except subsurface and cloth
+        CLEAR_COAT_NORMAL,       // float,  lit shading models only, except subsurface and cloth
+        ANISOTROPY,              // float,  lit shading models only, except subsurface and cloth
+        ANISOTROPY_DIRECTION,    // float3, lit shading models only, except subsurface and cloth
+        THICKNESS,               // float,  subsurface shading model only
+        SUBSURFACE_POWER,        // float,  subsurface shading model only
+        SUBSURFACE_COLOR,        // float3, subsurface and cloth shading models only
+        SHEEN_COLOR,             // float3, cloth shading model only
+        EMISSIVE,                // float4, all shading models
+        NORMAL,                  // float3, all shading models only, except unlit
+        // when adding new Properties, make sure to update MATERIAL_PROPERTIES_COUNT
+    };
+
     using BlendingMode = filament::BlendingMode;
     using Shading = filament::Shading;
     using Interpolation = filament::Interpolation;
@@ -245,8 +273,8 @@ public:
         bool isSampler;
     };
 
-    using PropertyList = bool[filament::MATERIAL_PROPERTIES_COUNT];
-    using VariableList = utils::CString[filament::MATERIAL_VARIABLES_COUNT];
+    using PropertyList = bool[MATERIAL_PROPERTIES_COUNT];
+    using VariableList = utils::CString[MATERIAL_VARIABLES_COUNT];
 
     // Preview the first shader that would generated in the MaterialPackage.
     // This is used to run Static Code Analysis before generating a package.

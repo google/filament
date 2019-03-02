@@ -18,7 +18,6 @@
 #define TNT_FILAMENT_MATERIAL_H
 
 #include <filament/Color.h>
-#include <filament/EngineEnums.h>
 #include <filament/FilamentAPI.h>
 #include <filament/MaterialEnums.h>
 #include <filament/MaterialInstance.h>

@@ -47,6 +47,7 @@ static const char* getShadingDefine(filament::Shading shading) noexcept {
 
 static void generateMaterialDefines(std::ostream& os, const CodeGenerator& cg,
         MaterialBuilder::PropertyList const properties) noexcept {
+    using Property = MaterialBuilder::Property;
     cg.generateMaterialProperty(os, Property::BASE_COLOR,           properties[ 0]);
     cg.generateMaterialProperty(os, Property::ROUGHNESS,            properties[ 1]);
     cg.generateMaterialProperty(os, Property::METALLIC,             properties[ 2]);

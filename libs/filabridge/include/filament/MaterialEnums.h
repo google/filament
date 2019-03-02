@@ -17,11 +17,12 @@
 #ifndef TNT_FILAMENT_MATERIAL_ENUM_H
 #define TNT_FILAMENT_MATERIAL_ENUM_H
 
+#include <utils/bitset.h>
+
 #include <stddef.h>
 #include <stdint.h>
 
 namespace filament {
-static constexpr size_t MATERIAL_VERSION = 2;
 
 enum class Shading : uint8_t {
     UNLIT,                  // no lighting applied, emissive possible
@@ -56,7 +57,6 @@ enum class TransparencyMode : uint8_t {
                             // mode is ignored. Can be combined with two-sided lighting
 };
 
-static constexpr size_t VERTEX_DOMAIN_COUNT = 4;
 enum class VertexDomain : uint8_t {
     OBJECT,                 // vertices are in object space, default
     WORLD,                  // vertices are in world space
@@ -65,45 +65,20 @@ enum class VertexDomain : uint8_t {
     // when adding more entries, make sure to update VERTEX_DOMAIN_COUNT
 };
 
-static constexpr size_t POST_PROCESS_STAGES_COUNT = 4;
-enum class PostProcessStage : uint8_t {
-    TONE_MAPPING_OPAQUE,           // Tone mapping post-process
-    TONE_MAPPING_TRANSLUCENT,      // Tone mapping post-process
-    ANTI_ALIASING_OPAQUE,          // Anti-aliasing stage
-    ANTI_ALIASING_TRANSLUCENT,     // Anti-aliasing stage
+// Update hasIntegerTarget() in VertexBuffer when adding an attribute that will
+// be read as integers in the shaders
+enum VertexAttribute : uint8_t {
+    POSITION        = 0, // XYZ position (float3)
+    TANGENTS        = 1, // tangent, bitangent and normal, encoded as a quaternion (float4)
+    COLOR           = 2, // vertex color (float4)
+    UV0             = 3, // texture coordinates (float2)
+    UV1             = 4, // texture coordinates (float2)
+    BONE_INDICES    = 5, // indices of 4 bones, as unsigned integers (uvec4)
+    BONE_WEIGHTS    = 6, // weights of the 4 bones (normalized float4)
 };
 
-// ------------------------------------------------------------------------------------------------
-
-static constexpr size_t MATERIAL_VARIABLES_COUNT = 4;
-enum class Variable : uint8_t {
-    CUSTOM0,
-    CUSTOM1,
-    CUSTOM2,
-    CUSTOM3
-    // when adding more variables, make sure to update MATERIAL_VARIABLES_COUNT
-};
-
-static constexpr size_t MATERIAL_PROPERTIES_COUNT = 16;
-enum class Property : uint8_t {
-    BASE_COLOR,              // float4, all shading models
-    ROUGHNESS,               // float,  lit shading models only
-    METALLIC,                // float,  all shading models, except unlit and cloth
-    REFLECTANCE,             // float,  all shading models, except unlit and cloth
-    AMBIENT_OCCLUSION,       // float,  lit shading models only, except subsurface and cloth
-    CLEAR_COAT,              // float,  lit shading models only, except subsurface and cloth
-    CLEAR_COAT_ROUGHNESS,    // float,  lit shading models only, except subsurface and cloth
-    CLEAR_COAT_NORMAL,       // float,  lit shading models only, except subsurface and cloth
-    ANISOTROPY,              // float,  lit shading models only, except subsurface and cloth
-    ANISOTROPY_DIRECTION,    // float3, lit shading models only, except subsurface and cloth
-    THICKNESS,               // float,  subsurface shading model only
-    SUBSURFACE_POWER,        // float,  subsurface shading model only
-    SUBSURFACE_COLOR,        // float3, subsurface and cloth shading models only
-    SHEEN_COLOR,             // float3, cloth shading model only
-    EMISSIVE,                // float4, all shading models
-    NORMAL,                  // float3, all shading models only, except unlit
-    // when adding new Properties, make sure to update MATERIAL_PROPERTIES_COUNT
-};
+// can't really use std::underlying_type<AttributeIndex>::type because the driver takes a uint32_t
+using AttributeBitset = utils::bitset32;
 
 
 } // namespace filament

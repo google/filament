@@ -17,8 +17,8 @@
 #ifndef TNT_FILAMENT_DRIVER_PROGRAM_H
 #define TNT_FILAMENT_DRIVER_PROGRAM_H
 
-#include <filament/EngineEnums.h>
-#include <filament/SamplerBindingMap.h>
+#include <private/filament/EngineEnums.h>
+#include <private/filament/SamplerBindingMap.h>
 
 #include <private/filament/SamplerInterfaceBlock.h>
 #include <private/filament/UniformInterfaceBlock.h>

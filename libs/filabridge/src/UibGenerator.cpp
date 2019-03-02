@@ -18,7 +18,7 @@
 
 #include "private/filament/UniformInterfaceBlock.h"
 
-#include <filament/EngineEnums.h>
+#include <private/filament/EngineEnums.h>
 #include <filament/driver/DriverEnums.h>
 
 namespace filament {

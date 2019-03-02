@@ -19,7 +19,7 @@
 
 
 #include <filament/driver/DriverEnums.h>
-#include <filament/EngineEnums.h>
+#include <private/filament/EngineEnums.h>
 
 #include <utils/compiler.h>
 #include <utils/CString.h>

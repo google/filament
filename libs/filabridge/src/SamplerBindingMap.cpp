@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "filament/SamplerBindingMap.h"
+#include "private/filament/SamplerBindingMap.h"
 
 #include "private/filament/SamplerInterfaceBlock.h"
 
