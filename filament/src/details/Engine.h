@@ -375,6 +375,9 @@ public:
             float dzn = -1.0f;
             float dzf =  1.0f;
         } shadowmap;
+        struct {
+            bool camera_at_origin = true;
+        } view;
     } debug;
 };
 
