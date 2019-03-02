@@ -659,12 +659,21 @@ bool FrameGraph::isValid(FrameGraphResource handle) const noexcept {
     return node.version == node.resource->version;
 }
 
-bool FrameGraph::moveResource(FrameGraphResource from, FrameGraphResource to) {
-    if (!isValid(from) || !isValid(to)) {
-        return false;
-    }
+FrameGraphResource FrameGraph::createResourceNode(fg::Resource* resource) noexcept {
+    auto& resourceNodes = mResourceNodes;
+    size_t index = resourceNodes.size();
+    resourceNodes.emplace_back(resource, resource->version);
+    return FrameGraphResource{ (uint16_t)index };
+}
+
+FrameGraphResource FrameGraph::moveResource(FrameGraphResource from, FrameGraphResource to) {
+    // this is just used to validate the 'to' handle
+    getResource(to);
+    // validate and rename the 'from' handle
+    ResourceNode const& node = getResource(from);
+    ++node.resource->version;
     mAliases.push_back({from, to});
-    return true;
+    return createResourceNode(node.resource);
 }
 
 void FrameGraph::present(FrameGraphResource input) {
