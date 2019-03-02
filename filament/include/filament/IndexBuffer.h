@@ -41,6 +41,7 @@ public:
     using BufferDescriptor = driver::BufferDescriptor;
 
     enum class IndexType : uint8_t {
+        UBYTE = uint8_t(driver::ElementType::UBYTE),
         USHORT = uint8_t(driver::ElementType::USHORT),
         UINT = uint8_t(driver::ElementType::UINT),
     };

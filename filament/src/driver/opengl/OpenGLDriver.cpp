@@ -1725,7 +1725,7 @@ void OpenGLDriver::updateIndexBuffer(
     DEBUG_MARKER()
 
     GLIndexBuffer* ib = handle_cast<GLIndexBuffer *>(ibh);
-    assert(ib->elementSize == 2 || ib->elementSize == 4);
+    assert(ib->elementSize == 1 || ib->elementSize == 2 || ib->elementSize == 4);
 
     bindVertexArray(nullptr);
     bindBuffer(GL_ELEMENT_ARRAY_BUFFER, ib->gl.buffer);
@@ -2327,12 +2327,23 @@ void OpenGLDriver::setRenderPrimitiveBuffer(Driver::RenderPrimitiveHandle rph,
         GLVertexBuffer const* const eb = handle_cast<const GLVertexBuffer*>(vbh);
         GLIndexBuffer const* const ib = handle_cast<const GLIndexBuffer*>(ibh);
 
-        assert(ib->elementSize == 2 || ib->elementSize == 4);
+        assert(ib->elementSize == 1 || ib->elementSize == 2 || ib->elementSize == 4);
 
         bindVertexArray(rp);
         CHECK_GL_ERROR(utils::slog.e)
 
-        rp->gl.indicesType = ib->elementSize == 4 ? GL_UNSIGNED_INT : GL_UNSIGNED_SHORT;
+        switch (ib->elementSize) {
+            case 1:
+                rp->gl.indicesType = GL_UNSIGNED_BYTE;
+                break;
+            case 2:
+                rp->gl.indicesType = GL_UNSIGNED_SHORT;
+                break;
+            case 4:
+                rp->gl.indicesType = GL_UNSIGNED_INT;
+                break;
+        }
+
         rp->maxVertexCount = eb->vertexCount;
         for (size_t i = 0, n = eb->attributes.size(); i < n; i++) {
             if (enabledAttributes & (1U << i)) {
