@@ -171,8 +171,9 @@ public:
     // all handles referring to the resource 'to' are redirected to the resource 'from'
     // (including handles used in the past).
     // All writes to 'from' are disconnected (i.e. these passes loose a reference).
-    // Returns true on success, false if one of the handle was invalid.
-    bool moveResource(FrameGraphResource from, FrameGraphResource to);
+    // Return a new handle for the 'from' resource and makes the 'from' handle invalid (i.e. it's
+    // similar to if we had written to the 'from' resource)
+    FrameGraphResource moveResource(FrameGraphResource from, FrameGraphResource to);
 
     // allocates concrete resources and culls unreferenced passes
     FrameGraph& compile() noexcept;
@@ -208,6 +209,8 @@ private:
 
     fg::RenderTarget& createRenderTarget(const char* name,
             FrameGraphRenderTarget::Descriptor const& desc, bool imported) noexcept;
+
+    FrameGraphResource createResourceNode(fg::Resource* resource) noexcept;
 
     enum class DiscardPhase { START, END };
     uint8_t computeDiscardFlags(DiscardPhase phase,
