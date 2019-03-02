@@ -383,10 +383,7 @@ struct PassNode { // 200
             hasSideEffect = true;
         }
 
-        auto& resourceNodes = fg.mResourceNodes;
-        size_t index = resourceNodes.size();
-        resourceNodes.emplace_back(node.resource, node.resource->version);
-        FrameGraphResource r{ (uint16_t)index };
+        FrameGraphResource r = fg.createResourceNode(node.resource);
 
         // record the write
         //FrameGraphResource r{ resource->index, resource->version };
@@ -468,8 +465,8 @@ FrameGraph::Builder::~Builder() noexcept = default;
 
 FrameGraphResource FrameGraph::Builder::createTexture(
         const char* name, FrameGraphResource::Descriptor const& desc) noexcept {
-    ResourceNode& node = mFrameGraph.createResource(name, desc, false);
-    return { uint16_t(&node - mFrameGraph.mResourceNodes.data()) };
+    Resource* resource = mFrameGraph.createResource(name, desc, false);
+    return mFrameGraph.createResourceNode(resource);
 }
 
 FrameGraph::Builder::Attachments FrameGraph::Builder::useRenderTarget(const char* name,
@@ -699,13 +696,11 @@ fg::RenderTarget& FrameGraph::createRenderTarget(const char* name,
     return renderTargets.back();
 }
 
-ResourceNode& FrameGraph::createResource(const char* name,
+Resource* FrameGraph::createResource(const char* name,
         FrameGraphResource::Descriptor const& desc, bool imported) noexcept {
-    auto& resourceNodes = mResourceNodes;
     Resource* resource = mArena.make<Resource>(name, mId++, Resource::Type::TEXTURE, desc, imported);
     mResourceRegistry.emplace_back(resource, *this);
-    resourceNodes.emplace_back(resource, 0);
-    return resourceNodes.back();
+    return resource;
 }
 
 ResourceNode& FrameGraph::getResource(FrameGraphResource r) {
@@ -767,9 +762,9 @@ FrameGraphResource FrameGraph::importResource(const char* name,
 
     // create the resource that will be returned to the user
     FrameGraphResource::Descriptor desc{ .width = width, .height = height };
-    ResourceNode& node = createResource(name, desc, true);
-    node.resource->version = node.version;
-    FrameGraphResource rt { uint16_t(&node - mResourceNodes.data()) };
+
+    Resource* resource = createResource(name, desc, true);
+    FrameGraphResource rt = createResourceNode(resource);
     descriptor.attachments.textures[0] = rt;
 
     // Populate the cache with a RenderTargetResource
@@ -788,11 +783,9 @@ FrameGraphResource FrameGraph::importResource(const char* name,
 FrameGraphResource FrameGraph::importResource(
         const char* name, FrameGraphResource::Descriptor const& descriptor,
         Handle<HwTexture> color) {
-    FrameGraphResource rt{ (uint16_t)mResourceNodes.size() };
-    ResourceNode& node = createResource(name, descriptor, true);
-    node.resource->texture = color;
-    node.resource->version = node.version;
-    return rt;
+    Resource* resource = createResource(name, descriptor, true);
+    resource->texture = color;
+    return createResourceNode(resource);
 }
 
 uint8_t FrameGraph::computeDiscardFlags(DiscardPhase phase,

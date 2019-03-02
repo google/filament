@@ -196,15 +196,18 @@ private:
         Deleter(FrameGraph& fg) noexcept : fg(fg) {} // NOLINT(google-explicit-constructor)
         void operator()(T* object) noexcept { fg.mArena.destroy(object); }
     };
-    template <typename T> using UniquePtr = std::unique_ptr<T, Deleter<T>>;
-    template <typename T> using Allocator = utils::STLAllocator<T, details::LinearAllocatorArena>;
-    template <typename T> using Vector = std::vector<T, Allocator<T>>; // 32 bytes
+
+    template<typename T> using UniquePtr = std::unique_ptr<T, Deleter<T>>;
+    template<typename T> using Allocator = utils::STLAllocator<T, details::LinearAllocatorArena>;
+    template<typename T> using Vector = std::vector<T, Allocator<T>>; // 32 bytes
 
     auto& getArena() noexcept { return mArena; }
 
     fg::PassNode& createPass(const char* name, FrameGraphPassExecutor* base) noexcept;
-    fg::ResourceNode& createResource(const char* name,
+
+    fg::Resource* createResource(const char* name,
             FrameGraphResource::Descriptor const& desc, bool imported) noexcept;
+
     fg::ResourceNode& getResource(FrameGraphResource r);
 
     fg::RenderTarget& createRenderTarget(const char* name,
