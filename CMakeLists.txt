@@ -16,7 +16,7 @@ option(ENABLE_JAVA "Compile Java projects, requires a JDK and the JAVA_HOME env 
 
 option(USE_EXTERNAL_GLES3 "Experimental: Compile Filament against OpenGL ES 3" OFF)
 
-option(GENERATE_WEB_DOCS "Build WebGL documentation and tutorials" OFF)
+option(GENERATE_JS_DOCS "Build WebGL documentation and tutorials" OFF)
 
 # ==================================================================================================
 # OS specific
@@ -374,7 +374,7 @@ if (WEBGL)
     add_subdirectory(web/filament-js)
     add_subdirectory(web/samples)
 
-    if (GENERATE_WEB_DOCS)
+    if (GENERATE_JS_DOCS)
         add_subdirectory(web/docs)
     endif()
 
