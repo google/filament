@@ -135,7 +135,7 @@ static void setup(Engine* engine, View* view, Scene* scene) {
     center.z -= 4.0f / scaleFactor;
 
     auto rooti = tcm.getInstance(g_meshSet->rootEntity);
-    tcm.setTransform(rooti, mat4f::scale(float3(scaleFactor)) * mat4f::translate(center));
+    tcm.setTransform(rooti, mat4f::scaling(float3(scaleFactor)) * mat4f::translation(center));
 
     for (auto renderable : g_meshSet->getRenderables()) {
         if (rcm.hasComponent(renderable)) {

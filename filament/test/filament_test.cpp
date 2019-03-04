@@ -567,13 +567,13 @@ TEST(FilamentTest, Bones) {
         static mat3f normal(PerRenderableUibBone const& bone) noexcept {
             quatf q = bone.q;
             float3 is = bone.ns.xyz;
-            return mat3f(mat3(q) * mat3::scale(is));
+            return mat3f(mat3(q) * mat3::scaling(is));
         }
         static  mat4f vertice(PerRenderableUibBone const& bone) noexcept {
             quatf q = bone.q;
             float3 t = bone.t.xyz;
             float3 s = bone.s.xyz;
-            return mat4f(mat4::translate(t) * mat4(q) * mat4::scale(s));
+            return mat4f(mat4::translation(t) * mat4(q) * mat4::scaling(s));
         }
         static float3 normal(float3 n, PerRenderableUibBone const& bone) noexcept {
             quatf q = bone.q;
@@ -651,36 +651,36 @@ TEST(FilamentTest, Bones) {
     };
 
     Test::check(mat4f{});
-    Test::check(mat4f::translate(float3{1,2,3}));
+    Test::check(mat4f::translation(float3{ 1, 2, 3 }));
 
-    Test::check(mat4f::scale(float3{2,2,2}));
+    Test::check(mat4f::scaling(float3{ 2, 2, 2 }));
 
-    Test::check(mat4f::scale(float3{4,2,3}));
-    Test::check(mat4f::scale(float3{4,-2,-3}));
-    Test::check(mat4f::scale(float3{-4,2,-3}));
-    Test::check(mat4f::scale(float3{-4,-2,3}));
+    Test::check(mat4f::scaling(float3{ 4, 2, 3 }));
+    Test::check(mat4f::scaling(float3{ 4, -2, -3 }));
+    Test::check(mat4f::scaling(float3{ -4, 2, -3 }));
+    Test::check(mat4f::scaling(float3{ -4, -2, 3 }));
 
-    Test::check(mat4f::scale(float3{-4,-2,-3}));
-    Test::check(mat4f::scale(float3{-4,2,3}));
-    Test::check(mat4f::scale(float3{4,-2,3}));
-    Test::check(mat4f::scale(float3{4,2,-3}));
+    Test::check(mat4f::scaling(float3{ -4, -2, -3 }));
+    Test::check(mat4f::scaling(float3{ -4, 2, 3 }));
+    Test::check(mat4f::scaling(float3{ 4, -2, 3 }));
+    Test::check(mat4f::scaling(float3{ 4, 2, -3 }));
 
-    Test::check(mat4f::rotate(M_PI_2, float3{0,0,1}));
-    Test::check(mat4f::rotate(M_PI_2, float3{0,1,0}));
-    Test::check(mat4f::rotate(M_PI_2, float3{1,0,0}));
-    Test::check(mat4f::rotate(M_PI_2, float3{0,1,1}));
-    Test::check(mat4f::rotate(M_PI_2, float3{1,0,1}));
-    Test::check(mat4f::rotate(M_PI_2, float3{1,1,0}));
-    Test::check(mat4f::rotate(-M_PI_2, float3{0,0,1}));
-    Test::check(mat4f::rotate(-M_PI_2, float3{0,1,0}));
-    Test::check(mat4f::rotate(-M_PI_2, float3{1,0,0}));
-    Test::check(mat4f::rotate(-M_PI_2, float3{0,1,1}));
-    Test::check(mat4f::rotate(-M_PI_2, float3{1,0,1}));
-    Test::check(mat4f::rotate(-M_PI_2, float3{1,1,0}));
+    Test::check(mat4f::rotation(M_PI_2, float3{ 0, 0, 1 }));
+    Test::check(mat4f::rotation(M_PI_2, float3{ 0, 1, 0 }));
+    Test::check(mat4f::rotation(M_PI_2, float3{ 1, 0, 0 }));
+    Test::check(mat4f::rotation(M_PI_2, float3{ 0, 1, 1 }));
+    Test::check(mat4f::rotation(M_PI_2, float3{ 1, 0, 1 }));
+    Test::check(mat4f::rotation(M_PI_2, float3{ 1, 1, 0 }));
+    Test::check(mat4f::rotation(-M_PI_2, float3{ 0, 0, 1 }));
+    Test::check(mat4f::rotation(-M_PI_2, float3{ 0, 1, 0 }));
+    Test::check(mat4f::rotation(-M_PI_2, float3{ 1, 0, 0 }));
+    Test::check(mat4f::rotation(-M_PI_2, float3{ 0, 1, 1 }));
+    Test::check(mat4f::rotation(-M_PI_2, float3{ 1, 0, 1 }));
+    Test::check(mat4f::rotation(-M_PI_2, float3{ 1, 1, 0 }));
 
-    mat4f m = mat4f::translate(float3{1,2,3}) *
-              mat4f::rotate(-M_PI_2, float3{1,1,0}) *
-              mat4f::scale(float3{-2,3,0.04});
+    mat4f m = mat4f::translation(float3{ 1, 2, 3 }) *
+                                                    mat4f::rotation(-M_PI_2, float3{ 1, 1, 0 }) *
+                                                    mat4f::scaling(float3{ -2, 3, 0.04 });
 
     Test::check(m);
 

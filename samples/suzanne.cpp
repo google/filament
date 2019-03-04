@@ -108,7 +108,7 @@ int main(int argc, char** argv) {
 
         auto ibl = FilamentApp::get().getIBL()->getIndirectLight();
         ibl->setIntensity(100000);
-        ibl->setRotation(mat3f::rotate(0.5f, float3{ 0, 1, 0 }));
+        ibl->setRotation(mat3f::rotation(0.5f, float3{ 0, 1, 0 }));
 
         // Add geometry into the scene.
         app.mesh = filamesh::MeshReader::loadMeshFromBuffer(engine, RESOURCES_SUZANNE_DATA, nullptr,

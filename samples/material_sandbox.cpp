@@ -258,7 +258,7 @@ static void setup(Engine* engine, View*, Scene* scene) {
         scene->addEntity(planeRenderable);
 
         tcm.setTransform(tcm.getInstance(planeRenderable),
-                filament::math::mat4f::translate(float3{0, -1, -4}));
+                filament::math::mat4f::translation(float3{ 0, -1, -4 }));
     }
 }
 
@@ -373,7 +373,7 @@ static void gui(filament::Engine* engine, filament::View*) {
     if (ibl) {
         ibl->getIndirectLight()->setIntensity(params.iblIntensity);
         ibl->getIndirectLight()->setRotation(
-                mat3f::rotate(params.iblRotation, float3{ 0, 1, 0 }));
+                mat3f::rotation(params.iblRotation, float3{ 0, 1, 0 }));
     }
 }
 

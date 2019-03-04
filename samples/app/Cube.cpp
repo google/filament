@@ -121,7 +121,7 @@ void Cube::mapFrustum(filament::Engine& engine, filament::math::mat4 const& tran
 
 
 void Cube::mapAabb(filament::Engine& engine, filament::Box const& box) {
-    mat4 p = mat4::translate(box.center) * mat4::scale(box.halfExtent);
+    mat4 p = mat4::translation(box.center) * mat4::scaling(box.halfExtent);
     return mapFrustum(engine, p);
 }
 
