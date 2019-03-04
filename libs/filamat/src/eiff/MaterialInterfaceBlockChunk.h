@@ -18,33 +18,32 @@
 #define TNT_FILAMAT_MAT_INTEFFACE_BLOCK_CHUNK_H
 
 #include "Chunk.h"
-#include "../shaders/MaterialInfo.h"
 
 #include <private/filament/SamplerInterfaceBlock.h>
-#include <private/filament/SamplerBindingMap.h>
 #include <private/filament/UniformInterfaceBlock.h>
 
 namespace filamat {
 
 class MaterialUniformInterfaceBlockChunk : public Chunk {
 public:
-    MaterialUniformInterfaceBlockChunk(filament::UniformInterfaceBlock& uib);
-    virtual ~MaterialUniformInterfaceBlockChunk() = default;
+    explicit MaterialUniformInterfaceBlockChunk(filament::UniformInterfaceBlock& uib);
+    ~MaterialUniformInterfaceBlockChunk() override = default;
 
-    virtual void flatten(Flattener &) override;
+    void flatten(Flattener &) override;
 private:
     filament::UniformInterfaceBlock& mUib;
 };
 
 class MaterialSamplerInterfaceBlockChunk : public Chunk {
 public:
-    MaterialSamplerInterfaceBlockChunk(filament::SamplerInterfaceBlock& sib);
-    virtual ~MaterialSamplerInterfaceBlockChunk() = default;
+    explicit MaterialSamplerInterfaceBlockChunk(filament::SamplerInterfaceBlock& sib);
+    ~MaterialSamplerInterfaceBlockChunk() override = default;
 
-    virtual void flatten(Flattener &) override;
+    void flatten(Flattener &) override;
 private:
     filament::SamplerInterfaceBlock& mSib;
 };
 
 } // namespace filamat
-#endif // TNT_FILAMAT_MAT_INFO_CHUNK_H
+
+#endif // TNT_FILAMAT_MAT_INTEFFACE_BLOCK_CHUNK_H

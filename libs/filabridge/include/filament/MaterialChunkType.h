@@ -26,7 +26,7 @@
 namespace filamat {
 
 // Pack an eight character string into a 64 bit integer.
-constexpr inline uint64_t charTo64bitNum(const char str[9])  {
+constexpr inline uint64_t charTo64bitNum(const char str[9]) noexcept {
     return
         (  (static_cast<uint64_t >(str[0]) << 56))
         | ((static_cast<uint64_t >(str[1]) << 48) & 0x00FF000000000000U)
