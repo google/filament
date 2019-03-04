@@ -553,7 +553,7 @@ struct SamplerParams {
     static constexpr no_init NO_INIT = { };
 
     constexpr SamplerParams() noexcept : u(0) { }
-    SamplerParams(no_init) noexcept { }
+    explicit SamplerParams(no_init) noexcept { }
 
     union {
         struct {
