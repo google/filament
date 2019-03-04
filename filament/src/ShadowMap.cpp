@@ -462,7 +462,7 @@ mat4f ShadowMap::applyLISPSM(CameraInfo const& camera, float dzn, float dzf, mat
         };
 
         const mat4f Wp = warpFrustum(nopt, nopt + d);
-        const mat4f Wv = mat4f::translate(-p);
+        const mat4f Wv = mat4f::translation(-p);
         W = Wp * Wv;
     }
     return W;

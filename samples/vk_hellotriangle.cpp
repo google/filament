@@ -118,7 +118,7 @@ int main(int argc, char** argv) {
             -ZOOM, ZOOM, 0, 1);
         auto& tcm = engine->getTransformManager();
         tcm.setTransform(tcm.getInstance(app.renderable),
-             filament::math::mat4f::rotate(now, filament::math::float3{0, 0, 1}));
+                filament::math::mat4f::rotation(now, filament::math::float3{ 0, 0, 1 }));
     });
 
     FilamentApp::get().run(config, setup, cleanup);

@@ -131,7 +131,7 @@ int main(int argc, char** argv) {
                 -ZOOM, ZOOM, -5, 5);
         auto& tcm = engine->getTransformManager();
         tcm.setTransform(tcm.getInstance(app.colorTriangle),
-                filament::math::mat4f::rotate(now, filament::math::float3{0, 1, 0}));
+                filament::math::mat4f::rotation(now, filament::math::float3{ 0, 1, 0 }));
     });
 
     FilamentApp::get().run(config, setup, cleanup);

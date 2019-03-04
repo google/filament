@@ -449,8 +449,9 @@ public:
         static_assert(BASE<T>::NUM_ROWS == 3 || BASE<T>::NUM_ROWS == 4, "3x3 or 4x4 matrices only");
     }
 
-    template <typename A, typename VEC>
-    static BASE<T> rotate(A radian, const VEC& about) {
+    template<typename A, typename VEC,
+            typename = typename std::enable_if<std::is_arithmetic<A>::value>::type>
+    static BASE<T> rotation(A radian, const VEC& about) {
         BASE<T> r;
         T c = std::cos(radian);
         T s = std::sin(radian);

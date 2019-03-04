@@ -520,7 +520,7 @@ TYPED_TEST(MatTestT, Translation4) {
 
     V3T translateBy(-7.3, 1.1, 14.4);
     V3T translation(translateBy[0], translateBy[1], translateBy[2]);
-    M44T translation_matrix = M44T::translate(translation);
+    M44T translation_matrix = M44T::translation(translation);
 
     V4T p1(9.9, 3.1, 41.1, 1.0);
     V4T p2(-18.0, 0.0, 1.77, 1.0);
@@ -532,7 +532,7 @@ TYPED_TEST(MatTestT, Translation4) {
     EXPECT_VEC_EQ((translation_matrix * p3).xyz, translateBy + p3.xyz);
     EXPECT_VEC_EQ((translation_matrix * p4).xyz, translateBy + p4.xyz);
 
-    translation_matrix = M44T::translate(2.7);
+    translation_matrix = M44T::translation(V3T{2.7});
     EXPECT_VEC_EQ((translation_matrix * p1).xyz, V3T{2.7} + p1.xyz);
 }
 
@@ -545,7 +545,7 @@ TYPED_TEST(MatTestT, Scale4) {
 
     V3T scaleBy(2.0, 3.0, 4.0);
     V3T scale(scaleBy[0], scaleBy[1], scaleBy[2]);
-    M44T scale_matrix = M44T::scale(scale);
+    M44T scale_matrix = M44T::scaling(scale);
 
     V4T p1(9.9, 3.1, 41.1, 1.0);
     V4T p2(-18.0, 0.0, 1.77, 1.0);
@@ -557,7 +557,7 @@ TYPED_TEST(MatTestT, Scale4) {
     EXPECT_VEC_EQ((scale_matrix * p3).xyz, scaleBy * p3.xyz);
     EXPECT_VEC_EQ((scale_matrix * p4).xyz, scaleBy * p4.xyz);
 
-    scale_matrix = M44T::scale(3.0);
+    scale_matrix = M44T::scaling(3.0);
     EXPECT_VEC_EQ((scale_matrix * p1).xyz, V3T{3.0} * p1.xyz);
 }
 
@@ -632,7 +632,7 @@ TYPED_TEST(MatTestT, ToQuaternionPostTranslation) {
 
     for (size_t i = 0; i < 100; ++i) {
         M44T r = M44T::eulerZYX(rand_gen(), rand_gen(), rand_gen());
-        M44T t = M44T::translate(V3T(rand_gen(), rand_gen(), rand_gen()));
+        M44T t = M44T::translation(V3T(rand_gen(), rand_gen(), rand_gen()));
         QuatT qr = r.toQuaternion();
         M44T tr = t * r;
         QuatT qtr = tr.toQuaternion();
@@ -644,7 +644,7 @@ TYPED_TEST(MatTestT, ToQuaternionPostTranslation) {
     }
 
     M44T r = M44T::eulerZYX(1, 2, 3);
-    M44T t = M44T::translate(V3T(20, -15, 2));
+    M44T t = M44T::translation(V3T(20, -15, 2));
     QuatT qr = r.toQuaternion();
     M44T tr = t * r;
     QuatT qtr = tr.toQuaternion();
