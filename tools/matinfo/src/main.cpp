@@ -50,7 +50,7 @@ static const int alignment = 24;
 class MaterialParser {
 public:
     MaterialParser(Backend backend, const void* data, size_t size)
-            : mBackend(backend), mChunkContainer(data, size) {
+            : mBackend(backend), mChunkContainer(data, size), mMaterialChunk(mChunkContainer) {
         switch (mBackend) {
             case Backend::OPENGL:
                 mMaterialTag = ChunkType::MaterialGlsl;
@@ -87,7 +87,7 @@ public:
     }
 
     bool getShader(ShaderModel shaderModel,
-            uint8_t variant, ShaderType st, ShaderBuilder& shader) noexcept {
+            uint8_t variant, ShaderType stage, ShaderBuilder& shader) noexcept {
 
         ChunkContainer const& cc = mChunkContainer;
         if (!cc.hasChunk(mMaterialTag) || !cc.hasChunk(mDictionaryTag)) {
@@ -99,23 +99,13 @@ public:
             return false;
         }
 
-        Unflattener unflattener(cc.getChunkStart(mMaterialTag), cc.getChunkEnd(mMaterialTag));
-        MaterialChunk materialChunk;
-        switch (mBackend) {
-            case Backend::OPENGL:
-            case Backend::METAL:
-                return materialChunk.getTextShader(unflattener, blobDictionary,
-                        shader, (uint8_t)shaderModel, variant, st);
-            case Backend::VULKAN:
-                return materialChunk.getSpirvShader(unflattener, blobDictionary,
-                        shader, (uint8_t)shaderModel, variant, st);
-            default:
-                return false;
-        }
+        return mMaterialChunk.getShader(shader,
+                mMaterialTag, blobDictionary, (uint8_t)shaderModel, variant, stage);
     }
 
 private:
     ChunkContainer mChunkContainer;
+    MaterialChunk mMaterialChunk;
     Backend mBackend;
     ChunkType mMaterialTag = ChunkType::Unknown;
     ChunkType mDictionaryTag = ChunkType::Unknown;

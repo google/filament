@@ -69,10 +69,6 @@ public:
         return mChunks.at(type).start + mChunks.at(type).size;
     }
 
-    size_t getChunkSize(Type type) const noexcept {
-        return mChunks.at(type).size;
-    }
-
     bool hasChunk(Type type) const noexcept {
         return mChunks.find(type) != mChunks.end();
     }

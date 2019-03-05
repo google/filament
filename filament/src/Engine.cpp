@@ -435,8 +435,8 @@ Handle<HwProgram> FEngine::createPostProcessProgram(MaterialParser& parser,
         ShaderModel shaderModel, PostProcessStage stage) const noexcept {
     ShaderBuilder& vShaderBuilder = getVertexShaderBuilder();
     ShaderBuilder& fShaderBuilder = getFragmentShaderBuilder();
-    parser.getShader(shaderModel, (uint8_t) stage, ShaderType::VERTEX, vShaderBuilder);
-    parser.getShader(shaderModel, (uint8_t) stage, ShaderType::FRAGMENT, fShaderBuilder);
+    parser.getShader(vShaderBuilder, shaderModel, (uint8_t)stage, ShaderType::VERTEX);
+    parser.getShader(fShaderBuilder, shaderModel, (uint8_t)stage, ShaderType::FRAGMENT);
 
     // For the post-process program, we don't care about per-material sampler bindings but we still
     // need to populate a SamplerBindingMap and pass a weak reference to Program. Binding maps are

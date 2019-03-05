@@ -292,8 +292,8 @@ Handle<HwProgram> FMaterial::getProgramSlow(uint8_t variantKey) const noexcept {
 
     filaflat::ShaderBuilder& vsBuilder = mEngine.getVertexShaderBuilder();
 
-    UTILS_UNUSED_IN_RELEASE bool vsOK = mMaterialParser->getShader(sm,
-            vertexVariantKey, ShaderType::VERTEX, vsBuilder);
+    UTILS_UNUSED_IN_RELEASE bool vsOK = mMaterialParser->getShader(vsBuilder, sm,
+            vertexVariantKey, ShaderType::VERTEX);
 
     ASSERT_POSTCONDITION(vsOK && vsBuilder.size() > 0,
             "The material '%s' has not been compiled to include the required "
@@ -306,8 +306,8 @@ Handle<HwProgram> FMaterial::getProgramSlow(uint8_t variantKey) const noexcept {
 
     filaflat::ShaderBuilder& fsBuilder = mEngine.getFragmentShaderBuilder();
 
-    UTILS_UNUSED_IN_RELEASE bool fsOK = mMaterialParser->getShader(sm,
-            fragmentVariantKey, ShaderType::FRAGMENT, fsBuilder);
+    UTILS_UNUSED_IN_RELEASE bool fsOK = mMaterialParser->getShader(fsBuilder, sm,
+            fragmentVariantKey, ShaderType::FRAGMENT);
 
     ASSERT_POSTCONDITION(fsOK && fsBuilder.size() > 0,
             "The material '%s' has not been compiled to include the required "

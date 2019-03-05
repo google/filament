@@ -15,6 +15,7 @@
  */
 
 #include <filaflat/MaterialChunk.h>
+#include <filaflat/ChunkContainer.h>
 
 #include <utils/Log.h>
 
@@ -22,6 +23,10 @@ namespace filaflat {
 
 static inline uint32_t makeKey(uint8_t shaderModel, uint8_t variant, uint8_t type) noexcept {
     return (shaderModel << 16) | (type << 8) | variant;
+}
+
+MaterialChunk::MaterialChunk(ChunkContainer const& container)
+        : mContainer(container) {
 }
 
 bool MaterialChunk::readIndex(Unflattener& unflattener) {
@@ -62,7 +67,7 @@ bool MaterialChunk::readIndex(Unflattener& unflattener) {
     return true;
 }
 
-bool MaterialChunk::getTextShader(Unflattener unflattener, BlobDictionary& dictionary,
+bool MaterialChunk::getTextShader(Unflattener unflattener, BlobDictionary const& dictionary,
         ShaderBuilder& shader, uint8_t shaderModel, uint8_t variant, uint8_t ps) {
 
     shader.reset();
@@ -119,7 +124,7 @@ bool MaterialChunk::getTextShader(Unflattener unflattener, BlobDictionary& dicti
 }
 
 
-bool MaterialChunk::getSpirvShader(Unflattener unflattener, BlobDictionary& dictionary,
+bool MaterialChunk::getSpirvShader(Unflattener unflattener, BlobDictionary const& dictionary,
         ShaderBuilder& builder, uint8_t shaderModel, uint8_t variant, uint8_t stage) {
     if (mBase == nullptr ) {
         if (!readIndex(unflattener)) {
@@ -141,4 +146,22 @@ bool MaterialChunk::getSpirvShader(Unflattener unflattener, BlobDictionary& dict
     return true;
 }
 
+bool MaterialChunk::getShader(ShaderBuilder& shaderBuilder, filamat::ChunkType materialTag,
+        BlobDictionary const& dictionary, uint8_t shaderModel, uint8_t variant, uint8_t stage) {
+    Unflattener unflattener(
+            mContainer.getChunkStart(materialTag),
+            mContainer.getChunkEnd(materialTag));
+
+    switch (materialTag) {
+        case filamat::ChunkType::MaterialGlsl:
+        case filamat::ChunkType::MaterialMetal:
+            return getTextShader(unflattener, dictionary, shaderBuilder, shaderModel, variant, stage);
+        case filamat::ChunkType::MaterialSpirv:
+            return getSpirvShader(unflattener, dictionary, shaderBuilder, shaderModel, variant, stage);
+        default:
+            return false;
+    }
 }
+
+} // namespace filaflat
+

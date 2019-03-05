@@ -57,7 +57,6 @@ public:
         return (const char*) mBlobs[index].data();
     }
 
-
 private:
     std::vector<Blob> mBlobs;
 };
