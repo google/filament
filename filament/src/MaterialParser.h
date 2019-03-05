@@ -18,8 +18,8 @@
 #define TNT_FILAFLAT_MATERIAL_PARSER_H
 
 #include <private/filament/EngineEnums.h>
-#include <filament/MaterialEnums.h>
 
+#include <filament/MaterialEnums.h>
 #include <filament/driver/DriverEnums.h>
 
 #include <utils/compiler.h>
@@ -77,10 +77,8 @@ public:
     bool getRequiredAttributes(AttributeBitset*) const noexcept;
     bool hasCustomDepthShader(bool* value) const noexcept;
 
-    bool getShader(
-            driver::ShaderModel shaderModel, uint8_t variant,
-            driver::ShaderType st,
-            filaflat::ShaderBuilder& shader) noexcept;
+    bool getShader(filaflat::ShaderBuilder& shader, driver::ShaderModel shaderModel,
+            uint8_t variant, driver::ShaderType stage) noexcept;
 
 protected:
     filaflat::ChunkContainer& getChunkContainer() noexcept;

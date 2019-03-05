@@ -34,69 +34,91 @@
 #include <stdlib.h>
 
 using namespace utils;
+using namespace filament::driver;
 using namespace filaflat;
 using namespace filamat;
 
 namespace filament {
 
 // Make a copy of content and own the allocated memory.
-class ManagedBuffer  {
+class ManagedBuffer {
     void* mStart = nullptr;
     size_t mSize = 0;
+
 public:
     explicit ManagedBuffer(const void* start, size_t size)
             : mStart(malloc(size)), mSize(size) {
         memcpy(mStart, start, size);
     }
 
-    void* begin() const noexcept { return mStart; }
-    void* end() const noexcept { return (uint8_t*)mStart + mSize; }
-    size_t size() const noexcept { return mSize; }
-
     ~ManagedBuffer() noexcept {
         free(mStart);
     }
+
+    ManagedBuffer(ManagedBuffer const& rhs) = delete;
+    ManagedBuffer& operator=(ManagedBuffer const& rhs) = delete;
+
+    void* data() const noexcept { return mStart; }
+    void* begin() const noexcept { return mStart; }
+    void* end() const noexcept { return (uint8_t*)mStart + mSize; }
+    size_t size() const noexcept { return mSize; }
 };
 
-struct MaterialParserDetails {
-    MaterialParserDetails(driver::Backend backend, const void* data, size_t size)
-            : mUnflattenable(data, size),
-              mChunkContainer(mUnflattenable.begin(), mUnflattenable.size()),
-              mBackend(backend) {
-    }
-    ManagedBuffer mUnflattenable;
-    ChunkContainer mChunkContainer;
+// ------------------------------------------------------------------------------------------------
 
-    // Keep MaterialChunk alive between calls to getShader to avoid reload the shader index.
-    driver::Backend mBackend;
-    MaterialChunk mMaterialChunk;
-    BlobDictionary mBlobDictionary;
+struct MaterialParserDetails {
+    MaterialParserDetails(Backend backend, const void* data, size_t size)
+            : mManagedBuffer(data, size),
+              mChunkContainer(mManagedBuffer.data(), mManagedBuffer.size()),
+              mMaterialChunk(mChunkContainer) {
+        switch (backend) {
+            case Backend::OPENGL:
+                mMaterialTag = ChunkType::MaterialGlsl;
+                mDictionaryTag = ChunkType::DictionaryGlsl;
+                break;
+            case Backend::METAL:
+                mMaterialTag = ChunkType::MaterialMetal;
+                mDictionaryTag = ChunkType::DictionaryMetal;
+                break;
+            case Backend::VULKAN:
+                mMaterialTag = ChunkType::MaterialSpirv;
+                mDictionaryTag = ChunkType::DictionarySpirv;
+                break;
+            default:
+                break;
+        }
+    }
 
     template<typename T>
     bool getFromSimpleChunk(filamat::ChunkType type, T* value) const noexcept;
 
-    bool getVkShader(driver::ShaderModel shaderModel, uint8_t variant,
-            driver::ShaderType st, ShaderBuilder& shader) noexcept;
+private:
+    friend class MaterialParser;
 
-    bool getGlShader(driver::ShaderModel shaderModel, uint8_t variant,
-            driver::ShaderType st, ShaderBuilder& shader) noexcept;
+    ManagedBuffer mManagedBuffer;
+    ChunkContainer mChunkContainer;
 
-    bool getMtlShader(driver::ShaderModel shaderModel, uint8_t variant,
-            driver::ShaderType shaderType, ShaderBuilder& shaderBuilder) noexcept;
+    // Keep MaterialChunk alive between calls to getShader to avoid reload the shader index.
+    MaterialChunk mMaterialChunk;
+    BlobDictionary mBlobDictionary;
+    ChunkType mMaterialTag = ChunkType::Unknown;
+    ChunkType mDictionaryTag = ChunkType::Unknown;
 };
 
 template<typename T>
 bool MaterialParserDetails::getFromSimpleChunk(filamat::ChunkType type, T* value) const noexcept {
-    if (!mChunkContainer.hasChunk(type)) {
-        return false;
+    if (mChunkContainer.hasChunk(type)) {
+        Unflattener unflattener(
+                mChunkContainer.getChunkStart(type),
+                mChunkContainer.getChunkEnd(type));
+        return unflattener.read(value);
     }
-    const uint8_t* start = mChunkContainer.getChunkStart(type);
-    const uint8_t* end = mChunkContainer.getChunkEnd(type);
-    Unflattener unflattener(start, end);
-    return unflattener.read(value);
+    return false;
 }
 
-MaterialParser::MaterialParser(driver::Backend backend, const void* data, size_t size)
+// ------------------------------------------------------------------------------------------------
+
+MaterialParser::MaterialParser(Backend backend, const void* data, size_t size)
         : mImpl(new MaterialParserDetails(backend, data, size)) {
 }
 
@@ -114,7 +136,15 @@ ChunkContainer const& MaterialParser::getChunkContainer() const noexcept {
 
 bool MaterialParser::parse() noexcept {
     ChunkContainer& cc = getChunkContainer();
-    return cc.parse();
+    if (cc.parse()) {
+        if (!cc.hasChunk(mImpl->mMaterialTag) || !cc.hasChunk(mImpl->mDictionaryTag)) {
+            return false;
+        }
+        if (!DictionaryReader::unflatten(cc, mImpl->mDictionaryTag, mImpl->mBlobDictionary)) {
+            return false;
+        }
+    }
+    return true;
 }
 
 bool MaterialParser::isShadingMaterial() const noexcept {
@@ -196,8 +226,8 @@ bool MaterialParser::getDepthTest(bool* value) const noexcept {
     return mImpl->getFromSimpleChunk(ChunkType::MaterialDepthTest, value);
 }
 
-bool MaterialParser::getCullingMode(driver::CullingMode* value) const noexcept {
-    static_assert(sizeof(driver::CullingMode) == sizeof(uint8_t),
+bool MaterialParser::getCullingMode(CullingMode* value) const noexcept {
+    static_assert(sizeof(CullingMode) == sizeof(uint8_t),
             "CullingMode expected size is wrong");
     return mImpl->getFromSimpleChunk(ChunkType::MaterialCullingMode, reinterpret_cast<uint8_t*>(value));
 }
@@ -250,92 +280,15 @@ bool MaterialParser::getRequiredAttributes(AttributeBitset* value) const noexcep
     if (!mImpl->getFromSimpleChunk(ChunkType::MaterialRequiredAttributes, &rawAttributes)) {
         return false;
     }
-
     *value = AttributeBitset();
     value->setValue(rawAttributes);
-
     return true;
 }
 
-bool MaterialParser::getShader(
-        driver::ShaderModel shaderModel, uint8_t variant, driver::ShaderType st,
-        ShaderBuilder& shader) noexcept {
-    if (mImpl->mBackend == driver::Backend::VULKAN) {
-        return mImpl->getVkShader(shaderModel, variant, st, shader);
-    }
-    if (mImpl->mBackend == driver::Backend::OPENGL) {
-        return mImpl->getGlShader(shaderModel, variant, st, shader);
-    }
-    if (mImpl->mBackend == driver::Backend::METAL) {
-        return mImpl->getMtlShader(shaderModel, variant, st, shader);
-    }
-    return false;
-}
-
-bool MaterialParserDetails::getVkShader(driver::ShaderModel shaderModel, uint8_t variant,
-        driver::ShaderType st, ShaderBuilder& shader) noexcept {
-
-    ChunkContainer const& container = mChunkContainer;
-    if (!container.hasChunk(ChunkType::MaterialSpirv) ||
-        !container.hasChunk(ChunkType::DictionarySpirv)) {
-        return false;
-    }
-
-    if (UTILS_UNLIKELY(mBlobDictionary.isEmpty())) {
-        if (!DictionaryReader::unflatten(container, ChunkType::DictionarySpirv, mBlobDictionary)) {
-            return false;
-        }
-    }
-
-    Unflattener unflattener(container.getChunkStart(ChunkType::MaterialSpirv),
-            container.getChunkEnd(ChunkType::MaterialSpirv));
-    return mMaterialChunk.getSpirvShader(unflattener, mBlobDictionary, shader,
-            (uint8_t)shaderModel, variant, st);
-}
-
-bool MaterialParserDetails::getGlShader(driver::ShaderModel shaderModel, uint8_t variant,
-        driver::ShaderType st, ShaderBuilder& shader) noexcept {
-
-    ChunkContainer const& container = mChunkContainer;
-    if (!container.hasChunk(ChunkType::MaterialGlsl) ||
-        !container.hasChunk(ChunkType::DictionaryGlsl)) {
-        return false;
-    }
-
-    // Read the dictionary only if it has not been read yet.
-    if (UTILS_UNLIKELY(mBlobDictionary.isEmpty())) {
-        if (!DictionaryReader::unflatten(container,
-                filamat::ChunkType::DictionaryGlsl, mBlobDictionary)) {
-            return false;
-        }
-    }
-
-    Unflattener unflattener(container.getChunkStart(ChunkType::MaterialGlsl),
-            container.getChunkEnd(ChunkType::MaterialGlsl));
-    return mMaterialChunk.getTextShader(unflattener, mBlobDictionary, shader,
-            (uint8_t)shaderModel, variant, st);
-}
-
-bool MaterialParserDetails::getMtlShader(driver::ShaderModel shaderModel, uint8_t variant,
-        driver::ShaderType st, ShaderBuilder& shader) noexcept {
-    ChunkContainer const& container = mChunkContainer;
-    if (!container.hasChunk(ChunkType::MaterialMetal) ||
-        !container.hasChunk(ChunkType::DictionaryMetal)) {
-        return false;
-    }
-
-    // Read the dictionary only if it has not been read yet.
-    if (UTILS_UNLIKELY(mBlobDictionary.isEmpty())) {
-        if (!DictionaryReader::unflatten(container,
-                filamat::ChunkType::DictionaryMetal, mBlobDictionary)) {
-            return false;
-        }
-    }
-
-    Unflattener unflattener(container.getChunkStart(ChunkType::MaterialMetal),
-            container.getChunkEnd(ChunkType::MaterialMetal));
-    return mMaterialChunk.getTextShader(unflattener, mBlobDictionary, shader,
-            (uint8_t)shaderModel, variant, st);
+bool MaterialParser::getShader(ShaderBuilder& shader,
+        ShaderModel shaderModel, uint8_t variant, ShaderType stage) noexcept {
+    return mImpl->mMaterialChunk.getShader(shader,
+            mImpl->mMaterialTag, mImpl->mBlobDictionary, (uint8_t)shaderModel, variant, stage);
 }
 
 // ------------------------------------------------------------------------------------------------

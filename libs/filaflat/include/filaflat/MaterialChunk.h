@@ -18,6 +18,8 @@
 #define TNT_FILAMAT_MATERIAL_CHUNK_H
 
 
+#include <filament/MaterialChunkType.h>
+
 #include <filaflat/BlobDictionary.h>
 #include <filaflat/ShaderBuilder.h>
 #include <filaflat/Unflattener.h>
@@ -26,18 +28,27 @@
 
 namespace filaflat {
 
+class ChunkContainer;
+
 class MaterialChunk {
 public:
+    explicit MaterialChunk(ChunkContainer const& container);
 
-    bool getTextShader(
-            Unflattener unflattener, BlobDictionary& dictionary, ShaderBuilder& shaderBuilder,
-            uint8_t shaderModel, uint8_t variant, uint8_t stage);
-
-    bool getSpirvShader(
-            Unflattener unflattener, BlobDictionary& dictionary, ShaderBuilder& shaderBuilder,
+    bool getShader(ShaderBuilder& shaderBuilder,
+            filamat::ChunkType materialTag, BlobDictionary const& dictionary,
             uint8_t shaderModel, uint8_t variant, uint8_t stage);
 
 private:
+    ChunkContainer const& mContainer;
+
+    bool getTextShader(
+            Unflattener unflattener, BlobDictionary const& dictionary, ShaderBuilder& shaderBuilder,
+            uint8_t shaderModel, uint8_t variant, uint8_t stage);
+
+    bool getSpirvShader(
+            Unflattener unflattener, BlobDictionary const& dictionary, ShaderBuilder& shaderBuilder,
+            uint8_t shaderModel, uint8_t variant, uint8_t stage);
+
     bool readIndex(Unflattener& unflattener);
     const uint8_t* mBase = nullptr;
     tsl::robin_map<uint32_t, uint32_t> mOffsets;
