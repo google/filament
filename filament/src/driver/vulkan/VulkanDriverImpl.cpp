@@ -640,10 +640,11 @@ VkFormat getVkFormat(TextureFormat format) {
         case TextureFormat::DEPTH24_STENCIL8:  return VK_FORMAT_D24_UNORM_S8_UINT;
         case TextureFormat::DEPTH32F_STENCIL8: return VK_FORMAT_D32_SFLOAT_S8_UINT;
 
-        // 48 bits per element. Note that many GPU vendors do not support these.
-        case TextureFormat::RGB16F:            return VK_FORMAT_R16G16B16_SFLOAT;
-        case TextureFormat::RGB16UI:           return VK_FORMAT_R16G16B16_UINT;
-        case TextureFormat::RGB16I:            return VK_FORMAT_R16G16B16_SINT;
+        // 48 bits per element. In practice, very few GPU vendors support these. So, we simply
+        // always reshape them into 64-bit formats.
+        case TextureFormat::RGB16F:            return VK_FORMAT_R16G16B16A16_SFLOAT;
+        case TextureFormat::RGB16UI:           return VK_FORMAT_R16G16B16A16_UINT;
+        case TextureFormat::RGB16I:            return VK_FORMAT_R16G16B16A16_SINT;
 
         // 64 bits per element.
         case TextureFormat::RG32F:             return VK_FORMAT_R32G32_SFLOAT;
