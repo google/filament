@@ -16,10 +16,11 @@
 
 #include <getopt/getopt.h>
 
+#include <filaflat/BlobDictionary.h>
 #include <filaflat/ChunkContainer.h>
+#include <filaflat/DictionaryReader.h>
 #include <filaflat/MaterialChunk.h>
 #include <filaflat/ShaderBuilder.h>
-#include <filaflat/DictionaryReader.h>
 #include <filaflat/Unflattener.h>
 
 #include <filament/MaterialChunkType.h>
@@ -50,8 +51,8 @@ static const int alignment = 24;
 class MaterialParser {
 public:
     MaterialParser(Backend backend, const void* data, size_t size)
-            : mBackend(backend), mChunkContainer(data, size), mMaterialChunk(mChunkContainer) {
-        switch (mBackend) {
+            : mChunkContainer(data, size), mMaterialChunk(mChunkContainer) {
+        switch (backend) {
             case Backend::OPENGL:
                 mMaterialTag = ChunkType::MaterialGlsl;
                 mDictionaryTag = ChunkType::DictionaryGlsl;
@@ -70,7 +71,10 @@ public:
     }
 
     bool parse() noexcept {
-        return mChunkContainer.parse();
+        if (mChunkContainer.parse()) {
+            return mMaterialChunk.readIndex(mMaterialTag);
+        }
+        return false;
     }
 
     bool isShadingMaterial() const noexcept {
@@ -100,13 +104,12 @@ public:
         }
 
         return mMaterialChunk.getShader(shader,
-                mMaterialTag, blobDictionary, (uint8_t)shaderModel, variant, stage);
+                blobDictionary, (uint8_t)shaderModel, variant, stage);
     }
 
 private:
     ChunkContainer mChunkContainer;
     MaterialChunk mMaterialChunk;
-    Backend mBackend;
     ChunkType mMaterialTag = ChunkType::Unknown;
     ChunkType mDictionaryTag = ChunkType::Unknown;
 };
