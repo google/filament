@@ -37,7 +37,7 @@ public:
     }
 
     inline void addBlob(Blob&& blob) noexcept {
-        mBlobs.emplace_back(std::move(blob));
+        mBlobs.push_back(std::move(blob));
     }
 
     inline bool isEmpty() const noexcept {
@@ -54,8 +54,7 @@ public:
     }
 
     inline const char* getString(size_t index) const noexcept {
-        size_t size;
-        return getBlob(index, &size);
+        return (const char*) mBlobs[index].data();
     }
 
 
