@@ -452,8 +452,8 @@ Handle<HwProgram> FEngine::createPostProcessProgram(MaterialParser& parser,
     Program pb;
     pb      .diagnostics(CString("Post Process"))
             .withSamplerBindings(pBindings)
-            .withVertexShader(vShaderBuilder.getShader())
-            .withFragmentShader(fShaderBuilder.getShader())
+            .withVertexShader(vShaderBuilder.data(), vShaderBuilder.size())
+            .withFragmentShader(fShaderBuilder.data(), fShaderBuilder.size())
             .addUniformBlock(BindingPoints::PER_VIEW, &PerViewUib::getUib())
             .addUniformBlock(BindingPoints::POST_PROCESS, &PostProcessingUib::getUib())
             .addSamplerBlock(BindingPoints::POST_PROCESS, &PostProcessSib::getSib());
