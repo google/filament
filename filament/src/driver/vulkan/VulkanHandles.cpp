@@ -475,7 +475,8 @@ VulkanTexture::~VulkanTexture() {
 void VulkanTexture::update2DImage(const PixelBufferDescriptor& data, uint32_t width,
         uint32_t height, int miplevel) {
     assert(width <= this->width && height <= this->height);
-    const bool reshape = getBytesPerPixel(format) == 3;
+    const uint32_t srcBytesPerTexel = getBytesPerPixel(format);
+    const bool reshape = srcBytesPerTexel == 3 || srcBytesPerTexel == 6;
     const void* cpuData = data.buffer;
     const uint32_t numSrcBytes = data.size;
     const uint32_t numDstBytes = reshape ? (4 * numSrcBytes / 3) : numSrcBytes;
@@ -484,10 +485,19 @@ void VulkanTexture::update2DImage(const PixelBufferDescriptor& data, uint32_t wi
     VulkanStage const* stage = mStagePool.acquireStage(numDstBytes);
     void* mapped;
     vmaMapMemory(mContext.allocator, stage->memory, &mapped);
-    if (reshape) {
-        DataReshaper::reshape<uint8_t, 3, 4>(mapped, cpuData, numSrcBytes);
-    } else {
-        memcpy(mapped, cpuData, numSrcBytes);
+    switch (srcBytesPerTexel) {
+        case 3:
+            // Morph the data from 3 bytes per texel to 4 bytes per texel and set alpha to 1.
+            DataReshaper::reshape<uint8_t, 3, 4>(mapped, cpuData, numSrcBytes);
+            break;
+        case 6:
+            // Morph the data from 6 bytes per texel to 8 bytes per texel. Note that this does not
+            // set alpha to 1 for half-float formats, but in practice that's fine since alpha is
+            // just a dummy channel in this situation.
+            DataReshaper::reshape<uint16_t, 3, 4>(mapped, cpuData, numSrcBytes);
+            break;
+        default:
+            memcpy(mapped, cpuData, numSrcBytes);
     }
     vmaUnmapMemory(mContext.allocator, stage->memory);
     vmaFlushAllocation(mContext.allocator, stage->memory, 0, numDstBytes);
