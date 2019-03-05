@@ -20,38 +20,42 @@
 
 #include <filament/MaterialChunkType.h>
 
-#include <filaflat/BlobDictionary.h>
-#include <filaflat/ShaderBuilder.h>
 #include <filaflat/Unflattener.h>
 
 #include <tsl/robin_map.h>
 
 namespace filaflat {
 
+class BlobDictionary;
 class ChunkContainer;
+class ShaderBuilder;
 
 class MaterialChunk {
 public:
     explicit MaterialChunk(ChunkContainer const& container);
 
+    // call this once after container.parse() has been called
+    bool readIndex(filamat::ChunkType materialTag);
+
+    // call this as many times as needed
     bool getShader(ShaderBuilder& shaderBuilder,
-            filamat::ChunkType materialTag, BlobDictionary const& dictionary,
+            BlobDictionary const& dictionary,
             uint8_t shaderModel, uint8_t variant, uint8_t stage);
 
 private:
     ChunkContainer const& mContainer;
+    filamat::ChunkType mMaterialTag = filamat::ChunkType::Unknown;
+    Unflattener mUnflattener{nullptr, nullptr};
+    const uint8_t* mBase = nullptr;
+    tsl::robin_map<uint32_t, uint32_t> mOffsets;
 
-    bool getTextShader(
-            Unflattener unflattener, BlobDictionary const& dictionary, ShaderBuilder& shaderBuilder,
+    bool getTextShader(Unflattener unflattener,
+            BlobDictionary const& dictionary, ShaderBuilder& shaderBuilder,
             uint8_t shaderModel, uint8_t variant, uint8_t stage);
 
     bool getSpirvShader(
-            Unflattener unflattener, BlobDictionary const& dictionary, ShaderBuilder& shaderBuilder,
+            BlobDictionary const& dictionary, ShaderBuilder& shaderBuilder,
             uint8_t shaderModel, uint8_t variant, uint8_t stage);
-
-    bool readIndex(Unflattener& unflattener);
-    const uint8_t* mBase = nullptr;
-    tsl::robin_map<uint32_t, uint32_t> mOffsets;
 };
 
 } // namespace filamat

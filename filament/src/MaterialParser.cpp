@@ -143,6 +143,9 @@ bool MaterialParser::parse() noexcept {
         if (!DictionaryReader::unflatten(cc, mImpl->mDictionaryTag, mImpl->mBlobDictionary)) {
             return false;
         }
+        if (!mImpl->mMaterialChunk.readIndex(mImpl->mMaterialTag)) {
+            return false;
+        }
     }
     return true;
 }
@@ -288,7 +291,7 @@ bool MaterialParser::getRequiredAttributes(AttributeBitset* value) const noexcep
 bool MaterialParser::getShader(ShaderBuilder& shader,
         ShaderModel shaderModel, uint8_t variant, ShaderType stage) noexcept {
     return mImpl->mMaterialChunk.getShader(shader,
-            mImpl->mMaterialTag, mImpl->mBlobDictionary, (uint8_t)shaderModel, variant, stage);
+            mImpl->mBlobDictionary, (uint8_t)shaderModel, variant, stage);
 }
 
 // ------------------------------------------------------------------------------------------------
