@@ -19,15 +19,15 @@
 #include <filaflat/ChunkContainer.h>
 #include <filaflat/MaterialChunk.h>
 #include <filaflat/ShaderBuilder.h>
-#include <filaflat/SpirvDictionaryReader.h>
-#include <filaflat/TextDictionaryReader.h>
+#include <filaflat/DictionaryReader.h>
 #include <filaflat/Unflattener.h>
 
 #include <filament/MaterialChunkType.h>
-#include <private/filament/EngineEnums.h>
 #include <filament/MaterialEnums.h>
 
 #include <filament/driver/DriverEnums.h>
+
+#include <private/filament/EngineEnums.h>
 
 #include <utils/Path.h>
 
@@ -53,16 +53,16 @@ public:
             : mBackend(backend), mChunkContainer(data, size) {
         switch (mBackend) {
             case Backend::OPENGL:
-                MATERIAL = ChunkType::MaterialGlsl;
-                DICTIONARY = ChunkType::DictionaryGlsl;
+                mMaterialTag = ChunkType::MaterialGlsl;
+                mDictionaryTag = ChunkType::DictionaryGlsl;
                 break;
             case Backend::METAL:
-                MATERIAL = ChunkType::MaterialMetal;
-                DICTIONARY = ChunkType::DictionaryMetal;
+                mMaterialTag = ChunkType::MaterialMetal;
+                mDictionaryTag = ChunkType::DictionaryMetal;
                 break;
             case Backend::VULKAN:
-                MATERIAL = ChunkType::MaterialSpirv;
-                DICTIONARY = ChunkType::DictionarySpirv;
+                mMaterialTag = ChunkType::MaterialSpirv;
+                mDictionaryTag = ChunkType::DictionarySpirv;
                 break;
             default:
                 break;
@@ -77,40 +77,32 @@ public:
         ChunkContainer const& cc = mChunkContainer;
         return cc.hasChunk(MaterialName) && cc.hasChunk(MaterialVersion) &&
                cc.hasChunk(MaterialUib) && cc.hasChunk(MaterialSib) &&
-               cc.hasChunk(MaterialShaderModels) && cc.hasChunk(MATERIAL);
+               cc.hasChunk(MaterialShaderModels) && cc.hasChunk(mMaterialTag);
     }
 
     bool isPostProcessMaterial() const noexcept {
         ChunkContainer const& cc = mChunkContainer;
         return cc.hasChunk(PostProcessVersion)
-               && cc.hasChunk(MATERIAL) && cc.hasChunk(DICTIONARY);
+               && cc.hasChunk(mMaterialTag) && cc.hasChunk(mDictionaryTag);
     }
 
     bool getShader(ShaderModel shaderModel,
             uint8_t variant, ShaderType st, ShaderBuilder& shader) noexcept {
 
         ChunkContainer const& cc = mChunkContainer;
-        if (!cc.hasChunk(MATERIAL) || !cc.hasChunk(DICTIONARY)) {
+        if (!cc.hasChunk(mMaterialTag) || !cc.hasChunk(mDictionaryTag)) {
             return false;
         }
 
         BlobDictionary blobDictionary;
-        if (mBackend == Backend::OPENGL) {
-            if (!TextDictionaryReader::unflatten(cc, blobDictionary, DICTIONARY)) {
-                return false;
-            }
-        } else {
-            if (!SpirvDictionaryReader::unflatten(cc, blobDictionary, DICTIONARY)) {
-                return false;
-            }
+        if (!DictionaryReader::unflatten(cc, mDictionaryTag, blobDictionary)) {
+            return false;
         }
 
-        Unflattener unflattener(cc.getChunkStart(MATERIAL), cc.getChunkEnd(MATERIAL));
+        Unflattener unflattener(cc.getChunkStart(mMaterialTag), cc.getChunkEnd(mMaterialTag));
         MaterialChunk materialChunk;
         switch (mBackend) {
             case Backend::OPENGL:
-                return materialChunk.getTextShader(unflattener, blobDictionary,
-                        shader, (uint8_t)shaderModel, variant, st);
             case Backend::METAL:
                 return materialChunk.getTextShader(unflattener, blobDictionary,
                         shader, (uint8_t)shaderModel, variant, st);
@@ -125,8 +117,8 @@ public:
 private:
     ChunkContainer mChunkContainer;
     Backend mBackend;
-    ChunkType MATERIAL = ChunkType::Unknown;
-    ChunkType DICTIONARY = ChunkType::Unknown;
+    ChunkType mMaterialTag = ChunkType::Unknown;
+    ChunkType mDictionaryTag = ChunkType::Unknown;
 };
 
 struct Config {

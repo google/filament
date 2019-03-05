@@ -21,8 +21,7 @@
 #include <filaflat/ChunkContainer.h>
 #include <filaflat/MaterialChunk.h>
 #include <filaflat/ShaderBuilder.h>
-#include <filaflat/SpirvDictionaryReader.h>
-#include <filaflat/TextDictionaryReader.h>
+#include <filaflat/DictionaryReader.h>
 #include <filaflat/Unflattener.h>
 
 #include <filament/MaterialChunkType.h>
@@ -283,7 +282,7 @@ bool MaterialParserDetails::getVkShader(driver::ShaderModel shaderModel, uint8_t
     }
 
     if (UTILS_UNLIKELY(mBlobDictionary.isEmpty())) {
-        if (!SpirvDictionaryReader::unflatten(container, mBlobDictionary, ChunkType::DictionarySpirv)) {
+        if (!DictionaryReader::unflatten(container, ChunkType::DictionarySpirv, mBlobDictionary)) {
             return false;
         }
     }
@@ -305,8 +304,8 @@ bool MaterialParserDetails::getGlShader(driver::ShaderModel shaderModel, uint8_t
 
     // Read the dictionary only if it has not been read yet.
     if (UTILS_UNLIKELY(mBlobDictionary.isEmpty())) {
-        if (!TextDictionaryReader::unflatten(container, mBlobDictionary,
-                filamat::ChunkType::DictionaryGlsl)) {
+        if (!DictionaryReader::unflatten(container,
+                filamat::ChunkType::DictionaryGlsl, mBlobDictionary)) {
             return false;
         }
     }
@@ -327,8 +326,8 @@ bool MaterialParserDetails::getMtlShader(driver::ShaderModel shaderModel, uint8_
 
     // Read the dictionary only if it has not been read yet.
     if (UTILS_UNLIKELY(mBlobDictionary.isEmpty())) {
-        if (!TextDictionaryReader::unflatten(container, mBlobDictionary,
-                filamat::ChunkType::DictionaryMetal)) {
+        if (!DictionaryReader::unflatten(container,
+                filamat::ChunkType::DictionaryMetal, mBlobDictionary)) {
             return false;
         }
     }

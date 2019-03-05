@@ -20,6 +20,8 @@
 
 #include <utils/compiler.h>
 
+#include <filament/MaterialChunkType.h>
+
 #include <tsl/robin_map.h>
 
 namespace filaflat {
@@ -29,7 +31,7 @@ class Unflattener;
 // Allows to build a map of chunks in a Package and get direct individual access based on chunk ID.
 class UTILS_PUBLIC ChunkContainer {
 public:
-    using Type = uint64_t;      // this should come from some EIFF lib
+    using Type = filamat::ChunkType;
 
     ChunkContainer(void const* data, size_t size) : mData(data), mSize(size) {}
 
