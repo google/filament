@@ -20,16 +20,17 @@
 #include <private/filament/EngineEnums.h>
 #include <private/filament/SamplerBindingMap.h>
 
-#include <private/filament/SamplerInterfaceBlock.h>
-#include <private/filament/UniformInterfaceBlock.h>
-
 #include <utils/compiler.h>
 #include <utils/CString.h>
 #include <utils/Log.h>
 
 #include <array>
+#include <vector>
 
 namespace filament {
+
+class SamplerInterfaceBlock;
+class UniformInterfaceBlock;
 
 class Program {
 public:
@@ -55,8 +56,7 @@ public:
     Program& diagnostics(utils::CString&& name, uint8_t variantKey = 0) noexcept;
 
     // sets one of the program's shader (e.g. vertex, fragment)
-    Program& shader(Shader shader, utils::CString const& source);
-    Program& shader(Shader shader, utils::CString&& source) noexcept;
+    Program& shader(Shader shader, void const* data, size_t size) noexcept;
 
     // sets a uniform interface block for this program
     Program& addUniformBlock(size_t index, const UniformInterfaceBlock* ib);
@@ -64,20 +64,18 @@ public:
     // sets a sampler interface block for this program
     Program& addSamplerBlock(size_t index, const SamplerInterfaceBlock* ib);
 
-    template <typename T>
-    Program& withVertexShader(T&& source) {
-        return shader(Shader::VERTEX, std::forward<T>(source));
+    Program& withVertexShader(void const* data, size_t size) {
+        return shader(Shader::VERTEX, data, size);
     }
 
-    template <typename T>
-    Program& withFragmentShader(T&& source) {
-        return shader(Shader::FRAGMENT, std::forward<T>(source));
+    Program& withFragmentShader(void const* data, size_t size) {
+        return shader(Shader::FRAGMENT, data, size);
     }
 
     // sets up sampler bindings for this program
     Program& withSamplerBindings(const SamplerBindingMap* bindings);
 
-    std::array<utils::CString, NUM_SHADER_TYPES> const& getShadersSource() const noexcept {
+    std::array<std::vector<uint8_t>, NUM_SHADER_TYPES> const& getShadersSource() const noexcept {
         return mShadersSource;
     }
 
@@ -112,10 +110,12 @@ private:
     friend utils::io::ostream& operator<< (utils::io::ostream& out, const Program& builder);
 #endif
 
+    // FIXME: none of these fields should be public as this is a public API
+
     std::array<UniformInterfaceBlock const *, NUM_UNIFORM_BINDINGS> mUniformInterfaceBlocks;
     std::array<SamplerInterfaceBlock const *, NUM_SAMPLER_BINDINGS> mSamplerInterfaceBlocks;
     const SamplerBindingMap* mSamplerBindings = nullptr;
-    std::array<utils::CString, NUM_SHADER_TYPES> mShadersSource;
+    std::array<std::vector<uint8_t>, NUM_SHADER_TYPES> mShadersSource;
     size_t mSamplerCount = 0;
     utils::CString mName;
     uint8_t mVariant;

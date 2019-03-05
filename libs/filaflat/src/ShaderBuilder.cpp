@@ -33,17 +33,16 @@ ShaderBuilder::~ShaderBuilder() {
 
 void ShaderBuilder::reset() {
     mCursor = 0;
-    mShader[0] = '\0';
 }
 
 void ShaderBuilder::announce(size_t size) {
     if (size > mCapacity) {
         mCapacity = (uint32_t)size;
-        mShader = (char *)realloc(mShader, size);
+        mShader = (char*)realloc(mShader, size);
     }
 }
 
-void ShaderBuilder::appendPart(const char* data, size_t size) noexcept {
+void ShaderBuilder::append(const char* data, size_t size) noexcept {
     size_t available = mCapacity - mCursor;
     assert(size <= available);
     memcpy(mShader + mCursor, data, size);

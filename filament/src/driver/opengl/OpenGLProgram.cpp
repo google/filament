@@ -16,14 +16,16 @@
 
 #include "driver/opengl/OpenGLProgram.h"
 
-#include <cctype>
-#include <sstream>
+#include <private/filament/SamplerInterfaceBlock.h>
+#include <private/filament/UniformInterfaceBlock.h>
+
+#include "driver/opengl/OpenGLDriver.h"
 
 #include <utils/Log.h>
 #include <utils/compiler.h>
 #include <utils/Panic.h>
 
-#include "driver/opengl/OpenGLDriver.h"
+#include <cctype>
 
 namespace filament {
 
@@ -62,9 +64,9 @@ OpenGLProgram::OpenGLProgram(OpenGLDriver* gl, const Program& programBuilder) no
                 break;
         }
 
-        if (shadersSource[i].length()) {
+        if (!shadersSource[i].empty()) {
             GLint status;
-            char const* const source = shadersSource[i].c_str();
+            char const* const source = (const char*)shadersSource[i].data();
 
             GLuint shaderId = glCreateShader(glShaderType);
             glShaderSource(shaderId, 1, &source, nullptr);

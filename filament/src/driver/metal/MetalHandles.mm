@@ -204,7 +204,7 @@ MetalProgram::MetalProgram(id<MTLDevice> device, const Program& program) noexcep
         if (source.empty()) {
             continue;
         }
-        NSString* objcSource = [NSString stringWithCString:source.c_str()
+        NSString* objcSource = [NSString stringWithCString:(const char*)source.data()
                                                   encoding:NSUTF8StringEncoding];
         NSError* error = nil;
         id<MTLLibrary> library = [device newLibraryWithSource:objcSource

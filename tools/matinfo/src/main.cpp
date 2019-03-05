@@ -909,7 +909,7 @@ static bool parseChunks(Config config, void* data, size_t size) {
 
             const auto& item = info[config.shaderIndex];
             parser.getShader(item.shaderModel, item.variant, item.pipelineStage, builder);
-            std::cout << builder.c_str();
+            std::cout << builder.data();
 
             return true;
         }
@@ -935,7 +935,7 @@ static bool parseChunks(Config config, void* data, size_t size) {
             parser.getShader(item.shaderModel, item.variant, item.pipelineStage, builder);
 
             // Build std::vector<uint32_t> since that's what the Khronos libraries consume.
-            uint32_t const* words = reinterpret_cast<uint32_t const*>(builder.c_str());
+            uint32_t const* words = reinterpret_cast<uint32_t const*>(builder.data());
             assert(0 == (builder.size() % 4));
             const std::vector<uint32_t> spirv(words, words + builder.size() / 4);
 
@@ -969,7 +969,7 @@ static bool parseChunks(Config config, void* data, size_t size) {
 
             const auto& item = info[config.shaderIndex];
             parser.getShader(item.shaderModel, item.variant, item.pipelineStage, builder);
-            std::cout << builder.getShader().c_str();
+            std::cout << builder.data();
 
             return true;
         }

@@ -16,6 +16,9 @@
 
 #include "driver/Program.h"
 
+#include <private/filament/SamplerInterfaceBlock.h>
+#include <private/filament/UniformInterfaceBlock.h>
+
 using namespace utils;
 
 namespace filament {
@@ -49,13 +52,10 @@ Program& Program::withSamplerBindings(const SamplerBindingMap* bindings) {
     return *this;
 }
 
-Program& Program::shader(Program::Shader shader, CString const& source) {
-    mShadersSource[size_t(shader)] = source;
-    return *this;
-}
-
-Program& Program::shader(Program::Shader shader, CString&& source) noexcept {
-    source.swap(mShadersSource[size_t(shader)]);
+Program& Program::shader(Program::Shader shader, void const* data, size_t size) noexcept {
+    std::vector<uint8_t> blob(size);
+    std::copy_n((const uint8_t *)data, size, blob.data());
+    mShadersSource[size_t(shader)] = std::move(blob);
     return *this;
 }
 

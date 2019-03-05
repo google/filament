@@ -108,12 +108,12 @@ bool MaterialChunk::getTextShader(Unflattener unflattener, BlobDictionary& dicti
             return false;
         }
         const char* string = dictionary.getString(lineIndex);
-        shader.appendPart(string, strlen(string));
-        shader.appendPart("\n", 1);
+        shader.append(string, strlen(string));
+        shader.append("\n", 1);
     }
 
     // Write the terminating null character.
-    shader.appendPart("", 1);
+    shader.append("", 1);
 
     return true;
 }
@@ -137,7 +137,7 @@ bool MaterialChunk::getSpirvShader(Unflattener unflattener, BlobDictionary& dict
     const char* shaderContent = dictionary.getBlob(index, &shaderSize);
     builder.reset();
     builder.announce(shaderSize);
-    builder.appendPart(shaderContent, shaderSize);
+    builder.append(shaderContent, shaderSize);
     return true;
 }
 

@@ -61,7 +61,7 @@ VulkanProgram::VulkanProgram(VulkanContext& context, const Program& builder) noe
         VkShaderModuleCreateInfo moduleInfo = {};
         moduleInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
         moduleInfo.codeSize = blob.size();
-        moduleInfo.pCode = (uint32_t*) blob.c_str();
+        moduleInfo.pCode = (uint32_t*) blob.data();
         VkResult result = vkCreateShaderModule(context.device, &moduleInfo, VKALLOC, module);
         ASSERT_POSTCONDITION(result == VK_SUCCESS, "Unable to create shader module.");
     }

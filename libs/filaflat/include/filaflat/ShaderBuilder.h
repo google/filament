@@ -27,6 +27,8 @@ namespace filaflat {
 class ShaderBuilder {
 public:
     ShaderBuilder();
+    ShaderBuilder(ShaderBuilder const& rhs) = delete;
+    ShaderBuilder& operator=(ShaderBuilder const&rhs) = delete;
     ~ShaderBuilder();
 
     // Before using a shader buffer to create a shader you should reset it.
@@ -36,13 +38,10 @@ public:
     void announce(size_t size);
 
     // Append a data blob to the shader. Returns true if successful.
-    void appendPart(const char* data, size_t size) noexcept;
+    void append(const char* data, size_t size) noexcept;
 
-    // returns a copy of the shader string
-    utils::CString getShader() const { return { mShader, mCursor }; }
-
-    // returns the shader string. valid until next api call.
-    char const* c_str() const noexcept { return mShader; }
+    // returns the shader blob. valid until next api call.
+    void const* data() const noexcept { return mShader; }
 
     size_t size() const { return mCursor; }
 

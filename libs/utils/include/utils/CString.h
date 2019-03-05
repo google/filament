@@ -200,6 +200,7 @@ public:
 
     CString() noexcept = default;
 
+    // cstr must be a null terminated string and length == strlen(cstr)
     CString(const char* cstr, size_type length);
 
     template<size_t N>
