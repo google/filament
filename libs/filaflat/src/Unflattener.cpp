@@ -40,7 +40,7 @@ bool Unflattener::read(const char** blob, size_t* size) noexcept {
     mCursor += nbytes;
     bool overflowed = mCursor > mEnd;
     if (!overflowed) {
-        *blob = (const char*) start;
+        *blob = (const char*)start;
         *size = nbytes;
     }
     return !overflowed;
@@ -55,7 +55,7 @@ bool Unflattener::read(const char** s) noexcept {
     if (!overflowed) {
         mCursor++;
     }
-    *s = (char*) start;
+    *s = (char*)start;
     return !overflowed;
 }
 

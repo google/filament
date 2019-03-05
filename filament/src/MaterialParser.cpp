@@ -147,39 +147,26 @@ bool MaterialParser::getPostProcessVersion(uint32_t* value) const noexcept {
 
 bool MaterialParser::getName(utils::CString* cstring) const noexcept {
    ChunkType type = ChunkType::MaterialName;
-
    const uint8_t* start = mImpl->mChunkContainer.getChunkStart(type);
    const uint8_t* end = mImpl->mChunkContainer.getChunkEnd(type);
    Unflattener unflattener(start, end);
-
-   CString s;
-   if (unflattener.read(&s)) {
-       *cstring =  CString(s.c_str());
-       return true;
-   } else {
-       *cstring = CString("");
-       return false;
-   }
+   return unflattener.read(cstring);
 }
 
 bool MaterialParser::getUIB(UniformInterfaceBlock* uib) const noexcept {
     auto type = MaterialUib;
-
     const uint8_t* start = mImpl->mChunkContainer.getChunkStart(type);
     const uint8_t* end = mImpl->mChunkContainer.getChunkEnd(type);
     Unflattener unflattener(start, end);
-
-    return ChunkUniformInterfaceBlock().unflatten(unflattener, uib);
+    return ChunkUniformInterfaceBlock::unflatten(unflattener, uib);
 }
 
 bool MaterialParser::getSIB(SamplerInterfaceBlock* sib) const noexcept {
     auto type = MaterialSib;
-
     const uint8_t* start = mImpl->mChunkContainer.getChunkStart(type);
     const uint8_t* end = mImpl->mChunkContainer.getChunkEnd(type);
     Unflattener unflattener(start, end);
-
-    return ChunkSamplerInterfaceBlock().unflatten(unflattener, sib);
+    return ChunkSamplerInterfaceBlock::unflatten(unflattener, sib);
 }
 
 bool MaterialParser::getShaderModels(uint32_t* value) const noexcept {

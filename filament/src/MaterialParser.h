@@ -89,11 +89,11 @@ protected:
 };
 
 struct ChunkUniformInterfaceBlock {
-    bool unflatten(filaflat::Unflattener& unflattener, UniformInterfaceBlock* uib);
+    static bool unflatten(filaflat::Unflattener& unflattener, UniformInterfaceBlock* uib);
 };
 
 struct ChunkSamplerInterfaceBlock {
-    bool unflatten(filaflat::Unflattener& unflattener, SamplerInterfaceBlock* sib);
+    static bool unflatten(filaflat::Unflattener& unflattener, SamplerInterfaceBlock* sib);
 };
 
 } // namespace filamat
