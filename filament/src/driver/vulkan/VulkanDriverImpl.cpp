@@ -810,6 +810,11 @@ void waitForIdle(VulkanContext& context) {
         if (nfences > 0) {
             vkWaitForFences(context.device, nfences, fences, VK_FALSE, ~0ull);
         }
+
+        // Next flush the active command buffer and wait for it to finish.
+        if (context.cmdbuffer) {
+            flushCommandBuffer(context);
+        }
     }
 
     // If we don't have any pending work, we're done.
@@ -934,8 +939,7 @@ void performPendingWork(VulkanTaskQueue& work, VkCommandBuffer cmdbuf) {
     }
 }
 
-// Flushes the command buffer and waits for it to finish executing. Useful for diagnosing
-// sychronization issues.
+// Flushes the current command buffer and waits for it to finish executing.
 void flushCommandBuffer(VulkanContext& context) {
     VulkanSurfaceContext& surface = *context.currentSurface;
     const SwapContext& sc = surface.swapContexts[surface.currentSwapIndex];
