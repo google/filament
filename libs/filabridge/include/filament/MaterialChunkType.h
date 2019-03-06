@@ -14,14 +14,12 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMAT_FILAFLAT_DEFS_H
-#define TNT_FILAMAT_FILAFLAT_DEFS_H
+#ifndef TNT_FILAMAT_MATERIAL_CHUNK_TYPES_H
+#define TNT_FILAMAT_MATERIAL_CHUNK_TYPES_H
 
 #include <stdint.h>
-#include <functional>
 
 #include <utils/compiler.h>
-#include <utils/CString.h>
 
 namespace filamat {
 
@@ -36,17 +34,6 @@ constexpr inline uint64_t charTo64bitNum(const char str[9]) noexcept {
         | ((static_cast<uint64_t >(str[5]) << 16) & 0x0000000000FF0000U)
         | ((static_cast<uint64_t >(str[6]) <<  8) & 0x000000000000FF00U)
         | ( static_cast<uint64_t >(str[7])        & 0x00000000000000FFU);
-}
-
-// Unpack a 64 bit integer into a std::string
-inline utils::CString typeToString(uint64_t v) {
-    uint8_t* raw = (uint8_t*) &v;
-    char str[9];
-    for (size_t i = 0; i < 8; i++) {
-        str[7 - i] = raw[i];
-    }
-    str[8] = '\0';
-    return utils::CString(str, 7);
 }
 
 enum UTILS_PUBLIC ChunkType : uint64_t {
@@ -94,16 +81,4 @@ enum UTILS_PUBLIC ChunkType : uint64_t {
 
 } // namespace filamat
 
-// Custom specialization of std::hash can be injected in namespace std.
-// In some build environments, std::hash<filamat::ChunkType> doesn't default.
-// to std::hash<uint64_t>.
-namespace std {
-template<>
-struct hash<filamat::ChunkType> {
-    std::size_t operator()(filamat::ChunkType chunkType) const noexcept {
-        return std::hash<uint64_t>()(chunkType);
-    }
-};
-}
-
-#endif
+#endif // TNT_FILAMAT_MATERIAL_CHUNK_TYPES_H
