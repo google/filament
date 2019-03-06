@@ -41,7 +41,7 @@ void SamplerBindingMap::populate(uint8_t firstSamplerBinding,
         }
         if (sib) {
             auto sibFields = sib->getSamplerInfoList();
-            for (auto sInfo : sibFields) {
+            for (const auto& sInfo : sibFields) {
                 if (offset > maxSamplerIndex) {
                     overflow = true;
                 }
@@ -85,7 +85,6 @@ void SamplerBindingMap::addSampler(SamplerBindingInfo info) {
     if (info.globalOffset < mSamplerBlockOffsets[info.blockIndex]) {
         mSamplerBlockOffsets[info.blockIndex] = info.globalOffset;
     }
-    mBindingList.push_back(info);
     mBindingMap[getBindingKey(info.blockIndex, info.localOffset)] = info;
 }
 

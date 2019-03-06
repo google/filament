@@ -325,16 +325,17 @@ Handle<HwProgram> FMaterial::getProgramSlow(uint8_t variantKey) const noexcept {
 
     auto addSamplerGroup = [&pb]
             (uint8_t bindingPoint, SamplerInterfaceBlock const& sib, SamplerBindingMap const& map) {
-        if (sib.getSize()) {
-            std::vector<Program::Sampler> samplers;
+        const size_t samplerCount = sib.getSize();
+        if (samplerCount) {
+            std::vector<Program::Sampler> samplers(samplerCount);
             auto const& list = sib.getSamplerInfoList();
-            for (size_t i = 0, c = sib.getSize(); i < c; ++i) {
+            for (size_t i = 0, c = samplerCount; i < c; ++i) {
                 CString uniformName(
                         SamplerInterfaceBlock::getUniformName(sib.getName().c_str(),
                                 list[i].name.c_str()));
-                uint8_t binding, group;
-                map.getSamplerBinding(bindingPoint, (uint8_t)i, &binding, &group);
-                samplers.push_back({ uniformName, binding });
+                uint8_t binding;
+                map.getSamplerBinding(bindingPoint, (uint8_t)i, &binding);
+                samplers[i] = { uniformName, binding };
             }
             pb.addSamplerGroup(bindingPoint, samplers.data(), samplers.size());
         }
