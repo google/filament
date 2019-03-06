@@ -15,6 +15,8 @@
  */
 
 #include "driver/Program.h"
+#include "Program.h"
+
 
 #include <private/filament/SamplerInterfaceBlock.h>
 #include <private/filament/UniformInterfaceBlock.h>
@@ -42,11 +44,6 @@ Program& Program::diagnostics(utils::CString&& name, uint8_t variant) noexcept {
     return *this;
 }
 
-Program& Program::withSamplerBindings(const SamplerBindingMap* bindings) {
-    mSamplerBindings = bindings;
-    return *this;
-}
-
 Program& Program::shader(Program::Shader shader, void const* data, size_t size) noexcept {
     std::vector<uint8_t> blob(size);
     std::copy_n((const uint8_t *)data, size, blob.data());
@@ -59,11 +56,14 @@ Program& Program::addUniformBlock(size_t index, const UniformInterfaceBlock* ib)
     return *this;
 }
 
-Program& Program::addSamplerBlock(size_t index, const SamplerInterfaceBlock* sb) {
-    mSamplerInterfaceBlocks[index] = sb;
-    mSamplerCount++;
+Program& Program::addSamplerGroup(size_t bindingPoint, const Program::Sampler* samplers, size_t count) {
+    auto& samplerList = mSamplerGroups[bindingPoint];
+    samplerList.clear();
+    samplerList.insert(samplerList.begin(), samplers, samplers + count);
+    mHasSamplers = true;
     return *this;
 }
+
 
 #if !defined(NDEBUG)
 io::ostream& operator<<(io::ostream& out, const Program& builder) {

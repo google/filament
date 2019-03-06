@@ -449,12 +449,30 @@ Handle<HwProgram> FEngine::createPostProcessProgram(MaterialParser& parser,
 
     Program pb;
     pb      .diagnostics(CString("Post Process"))
-            .withSamplerBindings(pBindings)
             .withVertexShader(vShaderBuilder.data(), vShaderBuilder.size())
             .withFragmentShader(fShaderBuilder.data(), fShaderBuilder.size())
             .addUniformBlock(BindingPoints::PER_VIEW, &PerViewUib::getUib())
-            .addUniformBlock(BindingPoints::POST_PROCESS, &PostProcessingUib::getUib())
-            .addSamplerBlock(BindingPoints::POST_PROCESS, &SibGenerator::getPostProcessSib());
+            .addUniformBlock(BindingPoints::POST_PROCESS, &PostProcessingUib::getUib());
+
+    auto addSamplerGroup = [&pb]
+            (uint8_t bindingPoint, SamplerInterfaceBlock const& sib, SamplerBindingMap const& map) {
+        if (sib.getSize()) {
+            std::vector<Program::Sampler> samplers;
+            auto const& list = sib.getSamplerInfoList();
+            for (size_t i = 0, c = sib.getSize(); i < c; ++i) {
+                CString uniformName(
+                        SamplerInterfaceBlock::getUniformName(sib.getName().c_str(),
+                                list[i].name.c_str()));
+                uint8_t binding, group;
+                map.getSamplerBinding(bindingPoint, (uint8_t)i, &binding, &group);
+                samplers.push_back({ uniformName, binding });
+            }
+            pb.addSamplerGroup(bindingPoint, samplers.data(), samplers.size());
+        }
+    };
+
+    addSamplerGroup(BindingPoints::POST_PROCESS, SibGenerator::getPostProcessSib(), *pBindings);
+
     auto program = const_cast<DriverApi&>(mCommandStream).createProgram(std::move(pb));
     assert(program);
     return program;

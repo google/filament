@@ -23,6 +23,7 @@
 
 #include <filament/Material.h>
 
+#include <private/filament/SamplerBindingMap.h>
 #include <private/filament/SamplerInterfaceBlock.h>
 #include <private/filament/Variant.h>
 

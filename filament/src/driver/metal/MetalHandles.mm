@@ -222,7 +222,7 @@ MetalProgram::MetalProgram(id<MTLDevice> device, const Program& program) noexcep
         [library release];
     }
 
-    samplerBindings = *program.getSamplerBindings();
+    samplerBindings = program.getSamplerGroupInfo();
 }
 
 MetalProgram::~MetalProgram() {

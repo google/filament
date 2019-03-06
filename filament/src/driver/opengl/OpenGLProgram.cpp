@@ -32,17 +32,6 @@ namespace filament {
 using namespace filament::math;
 using namespace utils;
 
-// we just want a small, tight loop for our purpose here, so we avoid std::copy_n
-UTILS_NOINLINE
-static char* copy_n(char const* s, size_t n, char* d) noexcept {
-    char* const e = d + n;
-#pragma nounroll
-    while (d != e) {
-        *d++ = *s++;
-    }
-    return d;
-}
-
 OpenGLProgram::OpenGLProgram(OpenGLDriver* gl, const Program& programBuilder) noexcept
         :  HwProgram(programBuilder.getName()), mIsValid(false) {
 
@@ -127,60 +116,35 @@ OpenGLProgram::OpenGLProgram(OpenGLDriver* gl, const Program& programBuilder) no
             // activate this program so we can set all its samplers once and for all (glUniform1i)
             gl->useProgram(program);
 
-            auto const& samplerInterfaceBlocks = programBuilder.getSamplerInterfaceBlocks();
+            auto const& samplerGroupInfo = programBuilder.getSamplerGroupInfo();
             auto& indicesRun = mIndicesRuns;
             uint8_t numUsedBindings = 0;
             uint8_t tmu = 0;
 
-            char uniformName[256];
-
             #pragma nounroll
-            for (size_t i = 0, c = samplerInterfaceBlocks.size(); i < c; i++) {
-                auto const& sib = samplerInterfaceBlocks[i];
-                if (sib != nullptr) {
+            for (size_t i = 0, c = samplerGroupInfo.size(); i < c; i++) {
+                auto const& groupInfo = samplerGroupInfo[i];
+                if (!groupInfo.empty()) {
                     // Cache the sampler uniform locations for each interface block
-                    auto const& infos(sib->getSamplerInfoList());
-                    if (!infos.empty()) {
-                        BlockInfo& info = mBlockInfos[numUsedBindings];
-                        info.binding = uint8_t(i);
-
-                        // sampler interface block name
-                        CString const& sibName = sib->getName();
-                        char* const prefix = copy_n(sibName.begin(),
-                                std::min(sizeof(uniformName) / 2, (size_t)sibName.size()),
-                                uniformName);
-                        if (uniformName[0] >= 'A' && uniformName[0] <= 'Z') {
-                            uniformName[0] |= 0x20; // poor man's tolower()
+                    BlockInfo& info = mBlockInfos[numUsedBindings];
+                    info.binding = uint8_t(i);
+                    uint8_t count = 0;
+                    for (uint8_t j = 0, m = uint8_t(groupInfo.size()); j < m; ++j) {
+                        // find its location and associate a TMU to it
+                        GLint loc = glGetUniformLocation(program, groupInfo[j].name.c_str());
+                        if (loc >= 0) {
+                            glUniform1i(loc, tmu);
+                            indicesRun[tmu] = j;
+                            count++;
+                            tmu++;
+                        } else {
+                            // glGetUniformLocation could fail if the uniform is not used
+                            // in the program. We should just ignore the error in that case.
                         }
-                        *prefix = '_';
-
-                        uint8_t count = 0;
-                        for (uint8_t j = 0, m = uint8_t(infos.size()); j < m; ++j) {
-                            // build unique name for this uniform (sampler)
-                            auto const& e = infos[j];
-                            char* last = copy_n(e.name.begin(),
-                                    std::min(sizeof(uniformName) / 2 - 2, (size_t)e.name.size()),
-                                    prefix + 1);
-                            *last++ = 0; // null terminator
-                            assert(last <= std::end(uniformName));
-
-                            // find its location and associate a TMU to it
-                            GLint loc = glGetUniformLocation(program, uniformName);
-                            if (loc >= 0) {
-                                glUniform1i(loc, tmu);
-                                indicesRun[tmu] = j;
-                                count++;
-                                tmu++;
-                            } else {
-                                // glGetUniformLocation could fail if the uniform is not used
-                                // in the program. We should just ignore the error in that case.
-                            }
-                        }
-
-                        if (count > 0) {
-                            numUsedBindings++;
-                            info.count = uint8_t(count - 1);
-                        }
+                    }
+                    if (count > 0) {
+                        numUsedBindings++;
+                        info.count = uint8_t(count - 1);
                     }
                 }
             }

@@ -18,7 +18,6 @@
 #define TNT_FILAMENT_DRIVER_PROGRAM_H
 
 #include <private/filament/EngineEnums.h>
-#include <private/filament/SamplerBindingMap.h>
 
 #include <utils/compiler.h>
 #include <utils/CString.h>
@@ -29,7 +28,6 @@
 
 namespace filament {
 
-class SamplerInterfaceBlock;
 class UniformInterfaceBlock;
 
 class Program {
@@ -43,6 +41,13 @@ public:
         VERTEX = 0,
         FRAGMENT = 1
     };
+
+    struct Sampler {
+        utils::CString name = {};   // name of the sampler in the shader
+        size_t binding = 0;         // binding point of the sampler in the shader
+    };
+
+    using SamplerGroupInfo = std::array<std::vector<Sampler>, NUM_SAMPLER_BINDINGS>;
 
     Program() noexcept;
     Program(const Program& rhs) = delete;
@@ -62,13 +67,10 @@ public:
     // The lifetime of UniformInterfaceBlock* must be longer than Program's
     Program& addUniformBlock(size_t index, const UniformInterfaceBlock* ib);
 
-    // sets a sampler interface block for this program
-    // The lifetime of SamplerInterfaceBlock* must be longer than Program's
-    Program& addSamplerBlock(size_t index, const SamplerInterfaceBlock* ub);
-
-    // sets up sampler bindings for this program
-    // The lifetime of SamplerBindingMap* must be longer than Program's
-    Program& withSamplerBindings(const SamplerBindingMap* bindings);
+    // sets the 'index' sampler group descriptor for this program.
+    // 'samplers' can be destroyed after this call.
+    // This effectively associates a set of (BindingPoints, index) to a (shader-binding)
+    Program& addSamplerGroup(size_t bindingPoint, Sampler const* samplers, size_t count);
 
     Program& withVertexShader(void const* data, size_t size) {
         return shader(Shader::VERTEX, data, size);
@@ -87,13 +89,8 @@ public:
         return mUniformInterfaceBlocks;
     }
 
-    std::array<SamplerInterfaceBlock const*, NUM_SAMPLER_BINDINGS> const&
-    getSamplerInterfaceBlocks() const noexcept {
-        return mSamplerInterfaceBlocks;
-    }
-
-    const SamplerBindingMap* getSamplerBindings() const noexcept {
-        return mSamplerBindings;
+    SamplerGroupInfo const& getSamplerGroupInfo() const {
+        return mSamplerGroups;
     }
 
     const utils::CString& getName() const noexcept {
@@ -105,7 +102,7 @@ public:
     }
 
     bool hasSamplers() const noexcept {
-        return mSamplerCount > 0;
+        return mHasSamplers;
     }
 
 private:
@@ -116,11 +113,11 @@ private:
     // FIXME: none of these fields should be public as this is a public API
 
     std::array<UniformInterfaceBlock const*, NUM_UNIFORM_BINDINGS> mUniformInterfaceBlocks = {};
-    std::array<SamplerInterfaceBlock const*, NUM_SAMPLER_BINDINGS> mSamplerInterfaceBlocks = {};
-    const SamplerBindingMap* mSamplerBindings = nullptr;
+    SamplerGroupInfo mSamplerGroups = {};
+
     std::array<std::vector<uint8_t>, NUM_SHADER_TYPES> mShadersSource;
-    size_t mSamplerCount = 0;
     utils::CString mName;
+    bool mHasSamplers = false;
     uint8_t mVariant;
 };
 
