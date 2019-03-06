@@ -24,6 +24,7 @@
 #include <private/filament/UniformInterfaceBlock.h>
 #include <private/filament/SamplerInterfaceBlock.h>
 
+#include <private/filament/SibGenerator.h>
 #include <private/filament/Variant.h>
 
 #include "GLSLPostProcessor.h"

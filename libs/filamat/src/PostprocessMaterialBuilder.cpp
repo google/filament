@@ -18,6 +18,8 @@
 
 #include <filamat/Package.h>
 
+#include <private/filament/SibGenerator.h>
+
 #include "shaders/ShaderGenerator.h"
 
 #include "GLSLPostProcessor.h"
