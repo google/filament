@@ -52,7 +52,7 @@ private:
     void registerSizePasses(spvtools::Optimizer& optimizer) const;
     void registerPerformancePasses(spvtools::Optimizer& optimizer) const;
 
-    const filamat::MaterialBuilder::Optimization mOptimization;
+    const MaterialBuilder::Optimization mOptimization;
     const bool mPrintShaders;
     std::string* mGlslOutput = nullptr;
     SpirvBlob* mSpirvOutput = nullptr;

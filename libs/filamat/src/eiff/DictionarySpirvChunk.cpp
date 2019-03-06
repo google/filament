@@ -43,4 +43,4 @@ void DictionarySpirvChunk::flatten(Flattener& f) {
     }
 }
 
-} // namespace filaflat
+} // namespace filamat
