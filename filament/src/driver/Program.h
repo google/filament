@@ -45,9 +45,9 @@ public:
     };
 
     Program() noexcept;
-    Program(const Program& rhs);
+    Program(const Program& rhs) = delete;
+    Program& operator=(const Program& rhs) = delete;
     Program(Program&& rhs) noexcept;
-    Program& operator=(const Program& rhs);
     Program& operator=(Program&& rhs) noexcept;
     ~Program() noexcept;
 
@@ -59,10 +59,16 @@ public:
     Program& shader(Shader shader, void const* data, size_t size) noexcept;
 
     // sets a uniform interface block for this program
+    // The lifetime of UniformInterfaceBlock* must be longer than Program's
     Program& addUniformBlock(size_t index, const UniformInterfaceBlock* ib);
 
     // sets a sampler interface block for this program
-    Program& addSamplerBlock(size_t index, const SamplerInterfaceBlock* ib);
+    // The lifetime of SamplerInterfaceBlock* must be longer than Program's
+    Program& addSamplerBlock(size_t index, const SamplerInterfaceBlock* ub);
+
+    // sets up sampler bindings for this program
+    // The lifetime of SamplerBindingMap* must be longer than Program's
+    Program& withSamplerBindings(const SamplerBindingMap* bindings);
 
     Program& withVertexShader(void const* data, size_t size) {
         return shader(Shader::VERTEX, data, size);
@@ -71,9 +77,6 @@ public:
     Program& withFragmentShader(void const* data, size_t size) {
         return shader(Shader::FRAGMENT, data, size);
     }
-
-    // sets up sampler bindings for this program
-    Program& withSamplerBindings(const SamplerBindingMap* bindings);
 
     std::array<std::vector<uint8_t>, NUM_SHADER_TYPES> const& getShadersSource() const noexcept {
         return mShadersSource;
@@ -112,8 +115,8 @@ private:
 
     // FIXME: none of these fields should be public as this is a public API
 
-    std::array<UniformInterfaceBlock const *, NUM_UNIFORM_BINDINGS> mUniformInterfaceBlocks;
-    std::array<SamplerInterfaceBlock const *, NUM_SAMPLER_BINDINGS> mSamplerInterfaceBlocks;
+    std::array<UniformInterfaceBlock const*, NUM_UNIFORM_BINDINGS> mUniformInterfaceBlocks = {};
+    std::array<SamplerInterfaceBlock const*, NUM_SAMPLER_BINDINGS> mSamplerInterfaceBlocks = {};
     const SamplerBindingMap* mSamplerBindings = nullptr;
     std::array<std::vector<uint8_t>, NUM_SHADER_TYPES> mShadersSource;
     size_t mSamplerCount = 0;

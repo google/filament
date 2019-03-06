@@ -24,14 +24,9 @@ using namespace utils;
 namespace filament {
 
 // We want these in the .cpp file so they're not inlined (not worth it)
-Program::Program() noexcept {
-    std::fill(mUniformInterfaceBlocks.begin(), mUniformInterfaceBlocks.end(), nullptr);
-    std::fill(mSamplerInterfaceBlocks.begin(), mSamplerInterfaceBlocks.end(), nullptr);
-}
+Program::Program() noexcept = default;
 
-Program::Program(const Program& rhs) = default;
 Program::Program(Program&& rhs) noexcept = default;
-Program& Program::operator=(const Program& rhs) = default;
 Program& Program::operator=(Program&& rhs) noexcept = default;
 Program::~Program() noexcept = default;
 
