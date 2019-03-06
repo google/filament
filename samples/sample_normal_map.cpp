@@ -230,14 +230,23 @@ static void setup(Engine* engine, View*, Scene* scene) {
 
     std::string shader = R"SHADER(
         void material(inout MaterialInputs material) {
-        #if defined(MATERIAL_HAS_NORMAL)
+    )SHADER";
+
+    if (hasNormalMap) {
+        shader += R"SHADER(
             material.normal = texture(materialParams_normalMap, getUV0()).xyz * 2.0 - 1.0;
-        #endif
-        #if defined(MATERIAL_HAS_CLEAR_COAT_NORMAL)
+        )SHADER";
+    }
+
+    if (hasClearCoatNormalMap) {
+        shader += R"SHADER(
             material.clearCoatNormal =
                     texture(materialParams_clearCoatNormalMap, getUV0()).xyz * 2.0 - 1.0;
-        #endif
-            prepareMaterial(material);
+        )SHADER";
+    }
+
+    shader += R"SHADER(
+        prepareMaterial(material);
     )SHADER";
 
     if (hasBaseColorMap) {
@@ -248,8 +257,8 @@ static void setup(Engine* engine, View*, Scene* scene) {
         )SHADER";
     } else {
         shader += R"SHADER(
-            material.baseColor.rgb = float3(0.48, 0.0, 0.0);
-            material.metallic = 1.0;
+            material.baseColor.rgb = float3(0.6, 0.6, 0.6);
+            material.metallic = 0.0;
             material.roughness = 0.7;
         )SHADER";
     }
