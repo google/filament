@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_DRIVER_SAMPLERINTERFACEBLOCK_H
-#define TNT_FILAMENT_DRIVER_SAMPLERINTERFACEBLOCK_H
+#ifndef TNT_FILAMENT_SAMPLERINTERFACEBLOCK_H
+#define TNT_FILAMENT_SAMPLERINTERFACEBLOCK_H
 
 
 #include <filament/driver/DriverEnums.h>
@@ -24,13 +24,9 @@
 #include <utils/compiler.h>
 #include <utils/CString.h>
 
-#include <math/vec4.h>
-
 #include <tsl/robin_map.h>
 
 #include <vector>
-
-#include <assert.h>
 
 namespace filament {
 
@@ -68,9 +64,11 @@ public:
         Builder& add(utils::CString const& samplerName, Type type, Format format,
                 Precision precision = Precision::MEDIUM,
                 bool multisample = false) noexcept;
+
         Builder& add(utils::CString&& samplerName, Type type, Format format,
                 Precision precision = Precision::MEDIUM,
                 bool multisample = false) noexcept;
+
         Builder& add(utils::StaticString const& samplerName, Type type, Format format,
                 Precision precision = Precision::MEDIUM,
                 bool multisample = false) noexcept;
@@ -164,4 +162,4 @@ inline constexpr uint8_t getSamplerBindingsStart(driver::Backend api) noexcept {
 
 } // namespace filament
 
-#endif // TNT_FILAMENT_DRIVER_SAMPLERINTERFACEBLOCK_H
+#endif // TNT_FILAMENT_SAMPLERINTERFACEBLOCK_H

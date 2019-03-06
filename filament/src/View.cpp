@@ -60,7 +60,7 @@ static constexpr uint8_t VISIBLE_ALL = VISIBLE_RENDERABLE | VISIBLE_SHADOW_CASTE
 FView::FView(FEngine& engine)
     : mFroxelizer(engine),
       mPerViewUb(engine.getPerViewUib()),
-      mPerViewSb(engine.getPerViewSib().getSize()),
+      mPerViewSb(PerViewSib::SAMPLER_COUNT),
       mDirectionalShadowMap(engine) {
     DriverApi& driver = engine.getDriverApi();
 

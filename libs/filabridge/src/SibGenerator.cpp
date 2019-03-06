@@ -16,9 +16,10 @@
 
 #include "private/filament/SibGenerator.h"
 
-#include <private/filament/EngineEnums.h>
+#include <filament/driver/DriverEnums.h>
 
-#include "private/filament/SamplerInterfaceBlock.h"
+#include <private/filament/EngineEnums.h>
+#include <private/filament/SamplerInterfaceBlock.h>
 
 namespace filament {
 
@@ -27,6 +28,7 @@ SamplerInterfaceBlock const& SibGenerator::getPerViewSib() noexcept {
     using Format = SamplerInterfaceBlock::Format;
     using Precision = SamplerInterfaceBlock::Precision;
 
+    // TODO: ideally we'd want this to be constexpr, this is a compile time structure
     static SamplerInterfaceBlock sib = SamplerInterfaceBlock::Builder()
             .name("Light")
             .add("shadowMap",     Type::SAMPLER_2D,      Format::SHADOW,Precision::LOW)
@@ -35,6 +37,9 @@ SamplerInterfaceBlock const& SibGenerator::getPerViewSib() noexcept {
             .add("iblDFG",        Type::SAMPLER_2D,      Format::FLOAT, Precision::MEDIUM)
             .add("iblSpecular",   Type::SAMPLER_CUBEMAP, Format::FLOAT, Precision::MEDIUM)
             .build();
+
+    assert(sib.getSize() == PerViewSib::SAMPLER_COUNT);
+
     return sib;
 }
 
@@ -42,10 +47,15 @@ SamplerInterfaceBlock const & SibGenerator::getPostProcessSib() noexcept {
     using Type = SamplerInterfaceBlock::Type;
     using Format = SamplerInterfaceBlock::Format;
     using Precision = SamplerInterfaceBlock::Precision;
+
+    // TODO: ideally we'd want this to be constexpr, this is a compile time structure
     static SamplerInterfaceBlock sib = SamplerInterfaceBlock::Builder()
             .name("PostProcess")
             .add("colorBuffer", Type::SAMPLER_2D, Format::FLOAT, Precision::MEDIUM, false)
             .build();
+
+    assert(sib.getSize() == PostProcessSib::SAMPLER_COUNT);
+
     return sib;
 }
 

@@ -44,8 +44,6 @@
 #include <filament/Skybox.h>
 #include <filament/Stream.h>
 
-#include <private/filament/SamplerInterfaceBlock.h>
-
 #include <filaflat/ShaderBuilder.h>
 
 #include <utils/compiler.h>
@@ -123,10 +121,6 @@ public:
     // Uniforms...
     const UniformInterfaceBlock& getPerViewUib() const noexcept { return mPerViewUib; }
     const UniformInterfaceBlock& getPerPostProcessUib() const noexcept { return mPostProcessUib; }
-
-    // Samplers...
-    const SamplerInterfaceBlock& getPerViewSib() const noexcept { return mPerViewSib; }
-    const SamplerInterfaceBlock& getPostProcessSib() const noexcept { return mPostProcessSib; }
 
     // the per-frame Area is used by all Renderer, so they must run in sequence and
     // have freed all allocated memory when done. If this needs to change in the future,
@@ -324,12 +318,8 @@ private:
     // Per-view Uniform interface block
     UniformInterfaceBlock mPerViewUib;
 
-    // Per-view Sampler interface block
-    SamplerInterfaceBlock mPerViewSib;
-
     // post-process interface blocks
     UniformInterfaceBlock mPostProcessUib;
-    SamplerInterfaceBlock mPostProcessSib;
 
     std::thread mDriverThread;
     CommandBufferQueue mCommandBufferQueue;

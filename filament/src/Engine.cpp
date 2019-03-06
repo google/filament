@@ -133,9 +133,7 @@ FEngine::FEngine(Backend backend, Platform* platform, void* sharedGLContext) :
         mLightManager(*this),
         mCameraManager(*this),
         mPerViewUib(PerViewUib::getUib()),
-        mPerViewSib(PerViewSib::getSib()),
         mPostProcessUib(PostProcessingUib::getUib()),
-        mPostProcessSib(PostProcessSib::getSib()),
         mCommandBufferQueue(CONFIG_MIN_COMMAND_BUFFERS_SIZE, CONFIG_COMMAND_BUFFERS_SIZE),
         mPerRenderPassAllocator("per-renderpass allocator", CONFIG_PER_RENDER_PASS_ARENA_SIZE),
         mEngineEpoch(std::chrono::steady_clock::now()),
@@ -456,7 +454,7 @@ Handle<HwProgram> FEngine::createPostProcessProgram(MaterialParser& parser,
             .withFragmentShader(fShaderBuilder.data(), fShaderBuilder.size())
             .addUniformBlock(BindingPoints::PER_VIEW, &PerViewUib::getUib())
             .addUniformBlock(BindingPoints::POST_PROCESS, &PostProcessingUib::getUib())
-            .addSamplerBlock(BindingPoints::POST_PROCESS, &PostProcessSib::getSib());
+            .addSamplerBlock(BindingPoints::POST_PROCESS, &SibGenerator::getPostProcessSib());
     auto program = const_cast<DriverApi&>(mCommandStream).createProgram(std::move(pb));
     assert(program);
     return program;
