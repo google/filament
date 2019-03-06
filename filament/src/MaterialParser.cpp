@@ -85,6 +85,9 @@ struct MaterialParserDetails {
                 mDictionaryTag = ChunkType::DictionarySpirv;
                 break;
             default:
+                // this is for testing purpose -- for e.g.: with the NoopDriver
+                mMaterialTag = ChunkType::MaterialGlsl;
+                mDictionaryTag = ChunkType::DictionaryGlsl;
                 break;
         }
     }
