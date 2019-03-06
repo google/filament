@@ -61,6 +61,71 @@ static double3 __UNUSED hemisphereUniformSample(double2 u) { // pdf = 1.0 / (2.0
     return { sinTheta * std::cos(phi), sinTheta * std::sin(phi), cosTheta };
 }
 
+/*
+ *
+ * Importance sampling Charlie
+ * ------------------------------------------
+ *
+ * In order to pick the most significative samples and increase the convergence rate, we chose to rely on Charlie's distribution function
+ * for the pdf as we do in hemisphereImportanceSampleDggx.
+ *
+ * To determine the direction we then need to resolve the cdf associated to the chosen pdf for random inputs.
+ *
+ * Knowing pdf() = DCharlie(h) <n•h>
+ *
+ * We need to find the cdf:
+ *
+ * / 2pi     / pi/2
+ * |         |  (2 + (1 / a)) * sin(theta) ^ (1 / a) * cos(theta) * sin(theta)
+ * / phi=0   / theta=0
+ *
+ * We sample theta and phi independently.
+ *
+ * 1. as in all the other isotropic cases phi = 2 * pi * epsilon (https://www.tobias-franke.eu/log/2014/03/30/notes_on_importance_sampling.html)
+ *
+ * 2. we need to solve the integral on theta:
+ *
+ *             / sTheta
+ * P(sTheta) = |  (2 + (1 / a)) * sin(theta) ^ (1 / a + 1) * cos(theta) * dtheta
+ *             / theta=0
+ *
+ * By subsitution of u = sin(theta) and du = cos(theta) * dtheta
+ *
+ * /
+ * |  (2 + (1 / a)) * u ^ (1 / a + 1) * du
+ * /
+ *
+ * = (2 + (1 / a)) * u ^ (1 / a + 2) / (1 / a + 2)
+ *
+ * = u ^ (1 / a + 2)
+ *
+ * = sin(theta) ^ (1 / a + 2)
+ *
+ *             +-                          -+ sTheta
+ * P(sTheta) = |  sin(theta) ^ (1 / a + 2)  |
+ *             +-                          -+ 0
+ *
+ * P(sTheta) = sin(sTheta) ^ (1 / a + 2)
+ *
+ * We now need to resolve the cdf for an epsilon value:
+ *
+ * epsilon = sin(theta) ^ (a / ( 2 * a + 1))
+ *
+ *  +--------------------------------------------+
+ *  |                                            |
+ *  |  sin(theta) = epsilon ^ (a / ( 2 * a + 1)) |
+ *  |                                            |
+ *  +--------------------------------------------+
+ */
+static double3 __UNUSED hemisphereImportanceSampleDCharlie(double2 u, double a) { // pdf = DistributionCharlie() * cosTheta
+    const double phi = 2 * M_PI * u.x;
+
+    const double sinTheta = std::pow(u.y, a / (2 * a + 1));
+    const double cosTheta = std::sqrt(1 - sinTheta * sinTheta);
+
+    return { sinTheta * std::cos(phi), sinTheta * std::sin(phi), cosTheta };
+}
+
 static double DistributionGGX(double NoH, double linearRoughness) {
     // NOTE: (aa-1) == (a-1)(a+1) produces better fp accuracy
     double a = linearRoughness;
@@ -749,7 +814,7 @@ static double2 DFV_Multiscatter(double NoV, double linearRoughness, size_t numSa
     return r * (4.0 / numSamples);
 }
 
-static double DFV_Charlie(double NoV, double linearRoughness, size_t numSamples) {
+static double DFV_Charlie_Uniform(double NoV, double linearRoughness, size_t numSamples) {
     double r = 0.0;
     const double3 V(std::sqrt(1 - NoV * NoV), 0, NoV);
     for (size_t i = 0; i < numSamples; i++) {
@@ -767,6 +832,114 @@ static double DFV_Charlie(double NoV, double linearRoughness, size_t numSamples)
     }
     // uniform sampling, the PDF is 1/2pi, 4 comes from the Jacobian
     return r * (4.0 * 2.0 * M_PI / numSamples);
+}
+
+/*
+ *
+ * Importance sampling Charlie
+ * ------------------------------------------
+ *
+ * Important samples are chosen to integrate DCharlie() * cos(theta) over the hemisphere.
+ *
+ * All calculations are made in tangent space, with n = [0 0 1]
+ *
+ *                      h (important sample)
+ *                     /.
+ *                    / .
+ *                   /  .
+ *                  /   .
+ *         --------o----+-------> n
+ *                   cos(theta)
+ *                    = n•h
+ *
+ *  h is micro facet's normal
+ *  l is the reflection of v around h, l = reflect(-v, h)  ==>  v•h = l•h
+ *
+ *  n•v is given as an input parameter at runtime
+ *
+ *  Since n = [0 0 1], we also have v.z = n•v
+ *
+ *  Since we need to compute v•h, we chose v as below. This choice only affects the
+ *  computation of v•h (and therefore the fresnel term too), but doesn't affect
+ *  n•l, which only relies on l.z (which itself only relies on v.z, i.e.: n•v)
+ *
+ *      | sqrt(1 - (n•v)^2)     (sin)
+ *  v = | 0
+ *      | n•v                   (cos)
+ *
+ *
+ *  h = hemisphereImportanceSampleDCharlie()
+ *
+ *  l = reflect(-v, h) = 2 * v•h * h - v;
+ *
+ *  n•l = [0 0 1] • l = l.z
+ *
+ *  n•h = [0 0 1] • l = h.z
+ *
+ *
+ *  pdf() = DCharlie(h) <n•h> |J(h)|
+ *
+ *               1
+ *  |J(h)| = ----------
+ *            4 <v•h>
+ *
+ *
+ * Evaluating the integral
+ * -----------------------
+ *
+ * We are trying to evaluate the following integral:
+ *
+ *                    /
+ *             Er() = | fr(s) <n•l> ds
+ *                    /
+ *                    Ω
+ *
+ * For this, we're using importance sampling:
+ *
+ *                    1     fr(h)
+ *            Er() = --- ∑ ------- <n•l>
+ *                    N  h   pdf
+ *
+ * with:
+ *
+ *            fr() = DCharlie(h) V(v, l)
+ *
+ * Note that we are not relying on Fresnel term here as sheen already simulates Backward and Forward scattering
+ *
+ *
+ *  It results that:
+ *
+ *            1                        4 <v•h>
+ *    Er() = --- ∑ DCharlie(h) V(v, l) ------------ <n•l>
+ *            N  h                     DCharlie(h) <n•h>
+ *
+ *
+ *  +---------------------------------------+
+ *  |          4             <v•h>          |
+ *  |  Er() = --- ∑ V(v, l) --- <n•l>       |
+ *  |          N  h          <n•h>          |
+ *  +---------------------------------------+
+ *
+ */
+static double __UNUSED DFV_Charlie_IS(double NoV, double linearRoughness, size_t numSamples) {
+    double r = 0.0;
+    const double3 V(std::sqrt(1 - NoV * NoV), 0, NoV);
+    for (size_t i = 0; i < numSamples; i++) {
+        const double2 u = hammersley(uint32_t(i), 1.0f / numSamples);
+        const double3 H = hemisphereImportanceSampleDCharlie(u, linearRoughness);
+        const double3 L = 2 * dot(V, H) * H - V;
+        const double VoH = saturate(dot(V, H));
+        const double NoL = saturate(L.z);
+        const double NoH = saturate(H.z);
+        if (NoL > 0) {
+            const double J = 1.0 / (4.0 * VoH);
+            const double pdf = NoH; // D has been removed as it cancels out in the previous equation
+            const double v = VisibilityAshikhmin(NoV, NoL, linearRoughness);
+
+            r += v * NoL / (pdf * J);
+        }
+    }
+    return r / numSamples;
 }
 
 void CubemapIBL::brdf(Cubemap& dst, double linearRoughness) {
@@ -817,7 +990,7 @@ void CubemapIBL::DFG(Image& dst, bool multiscatter, bool cloth) {
                         const double NoV = saturate((x + 0.5) / width);
                         float3 r = { dfvFunction(NoV, linear_roughness, 1024), 0 };
                         if (cloth) {
-                            r.b = float(DFV_Charlie(NoV, linear_roughness, 4096));
+                            r.b = float(DFV_Charlie_Uniform(NoV, linear_roughness, 4096));
                         }
                         *data = r;
                     }
