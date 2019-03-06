@@ -20,7 +20,6 @@
 #include <private/filament/EngineEnums.h>
 
 #include <tsl/robin_map.h>
-#include <vector>
 
 namespace filament {
 
@@ -38,7 +37,6 @@ struct SamplerBindingInfo {
     uint8_t blockIndex;   // Binding point of the parent block (see filament::BindingPoints)
     uint8_t localOffset;  // Index of this sampler within the block
     uint8_t globalOffset; // Finalized binding point for the sampler
-    uint8_t groupIndex;   // Group index for the sampler
 };
 
 class SamplerInterfaceBlock;
@@ -57,26 +55,18 @@ public:
 
     // Given a valid Filament binding point and an offset with the block, returns true and sets
     // the output arguments: (1) the globally unique binding index, and (2) the grouping index.
-    bool getSamplerBinding(uint8_t blockIndex, uint8_t localOffset, uint8_t* globalOffset,
-            uint8_t* groupIndex) const {
+    bool getSamplerBinding(uint8_t blockIndex, uint8_t localOffset, uint8_t* globalOffset) const {
         assert(globalOffset);
-        assert(groupIndex);
         auto iter = mBindingMap.find(getBindingKey(blockIndex, localOffset));
         if (iter == mBindingMap.end()) {
             return false;
         }
         *globalOffset = iter->second.globalOffset;
-        *groupIndex = iter->second.groupIndex;
         return true;
     }
 
     // Adds the given sampler to the mapping. Useful for deserialization.
     void addSampler(SamplerBindingInfo info);
-
-    // Retrieves all samplers as a flat list. Useful for serialization.
-    const std::vector<SamplerBindingInfo>& getBindingList() const {
-        return mBindingList;
-    }
 
     // Gets the global offset of the first sampler in the given sampler block.
     uint8_t getBlockOffset(uint8_t bindingPoint) const {
@@ -90,7 +80,6 @@ private:
     static BindingKey getBindingKey(uint8_t blockIndex, uint8_t localOffset) {
         return ((uint32_t) blockIndex << 8) + localOffset;
     }
-    std::vector<SamplerBindingInfo> mBindingList;
     tsl::robin_map<BindingKey, SamplerBindingInfo> mBindingMap;
     uint8_t mSamplerBlockOffsets[filament::BindingPoints::COUNT] = { UNKNOWN_OFFSET };
 };
