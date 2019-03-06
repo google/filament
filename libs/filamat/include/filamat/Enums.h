@@ -25,11 +25,11 @@
 
 namespace filamat {
 
-using Property = filamat::MaterialBuilder::Property;
-using UniformType = filamat::MaterialBuilder::UniformType;
-using SamplerType = filamat::MaterialBuilder::SamplerType;
-using SamplerFormat = filamat::MaterialBuilder::SamplerFormat;
-using SamplerPrecision = filamat::MaterialBuilder::SamplerPrecision;
+using Property = MaterialBuilder::Property;
+using UniformType = MaterialBuilder::UniformType;
+using SamplerType = MaterialBuilder::SamplerType;
+using SamplerFormat = MaterialBuilder::SamplerFormat;
+using SamplerPrecision = MaterialBuilder::SamplerPrecision;
 
 // Convenience methods to convert std::string to Enum and also iterate over Enum values.
 class Enums {
