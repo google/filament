@@ -17,6 +17,9 @@
 #ifndef TNT_FILABRIDGE_SIBGENERATOR_H
 #define TNT_FILABRIDGE_SIBGENERATOR_H
 
+#include <private/filament/EngineEnums.h>
+#include <filament/driver/DriverEnums.h>
+
 #include <stdint.h>
 #include <stddef.h>
 
@@ -48,5 +51,23 @@ struct PostProcessSib {
 
     static constexpr size_t SAMPLER_COUNT = 1;
 };
+
+// Returns the binding point of the first sampler for the given backend API.
+inline constexpr uint8_t getSamplerBindingsStart(driver::Backend api) noexcept {
+    switch (api) {
+        default:
+        case driver::Backend::OPENGL:
+        case driver::Backend::VULKAN: {
+            // Vulkan and OpenGL have a single namespace for uniforms and samplers.
+            // To avoid collision, the sampler bindings start after the last UBO binding.
+            return filament::BindingPoints::COUNT;
+        }
+
+        case driver::Backend::METAL:
+            // Metal has a separate namespace for uniforms and samplers- collisions aren't an issue.
+            return 0;
+    }
+}
+
 }
 #endif // TNT_FILABRIDGE_SIBGENERATOR_H
