@@ -280,11 +280,12 @@ std::ostream& CodeGenerator::generateSamplers(
         return out;
     }
 
-    const CString& blockName = sib.getName();
-    std::string instanceName(blockName.c_str());
-    instanceName.front() = char(std::tolower((unsigned char) instanceName.front()));
-
     for (auto const& info : infos) {
+
+        CString uniformName =
+                SamplerInterfaceBlock::getUniformName(
+                        sib.getName().c_str(), info.name.c_str());
+
         auto type = info.type;
         if (type == SamplerType::SAMPLER_EXTERNAL && mShaderModel != ShaderModel::GL_ES_30) {
             // we're generating the shader for the desktop, where we assume external textures
@@ -297,8 +298,7 @@ std::ostream& CodeGenerator::generateSamplers(
             const uint32_t bindingIndex = (uint32_t) firstBinding + info.offset;
             out << "layout(binding = " << bindingIndex << ") ";
         }
-        out << "uniform " << precision << " " << typeName << " " <<
-                instanceName << "_" << info.name.c_str();
+        out << "uniform " << precision << " " << typeName << " " << uniformName.c_str();
         out << ";\n";
     }
     out << "\n";
@@ -313,23 +313,24 @@ void CodeGenerator::fixupExternalSamplers(
         return;
     }
 
-    const CString& blockName = sib.getName();
-    std::string instanceName(blockName.c_str());
-    instanceName.front() = char(std::tolower((unsigned char) instanceName.front()));
-
     bool hasExternalSampler = false;
 
     // Replace sampler2D declarations by samplerExternal declarations as they may have
     // been swapped during a previous optimization step
     for (auto const& info : infos) {
         if (info.type == SamplerType::SAMPLER_EXTERNAL) {
-            auto name = std::string("sampler2D ") + instanceName + '_' + info.name.c_str();
+
+            CString uniformName =
+                    SamplerInterfaceBlock::getUniformName(
+                            sib.getName().c_str(), info.name.c_str());
+
+            auto name = std::string("sampler2D ") + uniformName.c_str();
             size_t index = shader.find(name);
 
             if (index != std::string::npos) {
                 hasExternalSampler = true;
                 auto newName =
-                        std::string("samplerExternalOES ") + instanceName + '_' + info.name.c_str();
+                        std::string("samplerExternalOES ") + uniformName.c_str();
                 shader.replace(index, name.size(), newName);
             }
         }

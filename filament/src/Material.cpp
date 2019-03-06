@@ -318,13 +318,30 @@ Handle<HwProgram> FMaterial::getProgramSlow(uint8_t variantKey) const noexcept {
     pb      .diagnostics(mName, variantKey)
             .withVertexShader(vsBuilder.data(), vsBuilder.size())
             .withFragmentShader(fsBuilder.data(), fsBuilder.size())
-            .withSamplerBindings(&mSamplerBindings)
             .addUniformBlock(BindingPoints::PER_VIEW, &UibGenerator::getPerViewUib())
             .addUniformBlock(BindingPoints::LIGHTS, &UibGenerator::getLightsUib())
             .addUniformBlock(BindingPoints::PER_RENDERABLE, &UibGenerator::getPerRenderableUib())
-            .addUniformBlock(BindingPoints::PER_MATERIAL_INSTANCE, &mUniformInterfaceBlock)
-            .addSamplerBlock(BindingPoints::PER_VIEW, &SibGenerator::getPerViewSib())
-            .addSamplerBlock(BindingPoints::PER_MATERIAL_INSTANCE, &mSamplerInterfaceBlock);
+            .addUniformBlock(BindingPoints::PER_MATERIAL_INSTANCE, &mUniformInterfaceBlock);
+
+    auto addSamplerGroup = [&pb]
+            (uint8_t bindingPoint, SamplerInterfaceBlock const& sib, SamplerBindingMap const& map) {
+        if (sib.getSize()) {
+            std::vector<Program::Sampler> samplers;
+            auto const& list = sib.getSamplerInfoList();
+            for (size_t i = 0, c = sib.getSize(); i < c; ++i) {
+                CString uniformName(
+                        SamplerInterfaceBlock::getUniformName(sib.getName().c_str(),
+                                list[i].name.c_str()));
+                uint8_t binding, group;
+                map.getSamplerBinding(bindingPoint, (uint8_t)i, &binding, &group);
+                samplers.push_back({ uniformName, binding });
+            }
+            pb.addSamplerGroup(bindingPoint, samplers.data(), samplers.size());
+        }
+    };
+
+    addSamplerGroup(BindingPoints::PER_VIEW, SibGenerator::getPerViewSib(), mSamplerBindings);
+    addSamplerGroup(BindingPoints::PER_MATERIAL_INSTANCE, mSamplerInterfaceBlock, mSamplerBindings);
 
     if (Variant(variantKey).hasSkinning()) {
         pb.addUniformBlock(BindingPoints::PER_RENDERABLE_BONES, &UibGenerator::getPerRenderableBonesUib());

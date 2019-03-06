@@ -963,9 +963,10 @@ void VulkanDriver::draw(Driver::PipelineState pipelineState, Driver::RenderPrimi
             // Obtain the global sampler binding index and pass this to VulkanBinder. Note that
             // "binding" is an offset that is global to the shader, whereas "samplerIndex" is an
             // offset into the virtual sampler buffer.
-            uint8_t binding, group;
-            if (program->samplerBindings.getSamplerBinding(bufferIdx, samplerIndex, &binding,
-                    &group)) {
+            uint8_t binding;
+
+            if (!program->samplerBindings[bufferIdx].empty()) {
+                binding = (uint8_t)program->samplerBindings[bufferIdx][samplerIndex].binding;
                 const SamplerParams& samplerParams = sampler->s;
                 VkSampler vksampler = mSamplerCache.getSampler(samplerParams);
                 const auto* tex = handle_const_cast<VulkanTexture>(mHandleMap, sampler->t);

@@ -97,7 +97,7 @@ struct MetalProgram : public HwProgram {
 
     id<MTLFunction> vertexFunction;
     id<MTLFunction> fragmentFunction;
-    SamplerBindingMap samplerBindings;
+    Program::SamplerGroupInfo samplerBindings;
 };
 
 struct MetalTexture : public HwTexture {

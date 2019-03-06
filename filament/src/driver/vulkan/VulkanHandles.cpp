@@ -73,21 +73,16 @@ VulkanProgram::VulkanProgram(VulkanContext& context, const Program& builder) noe
         return;
     }
 
-    // Make a copy of the binding map that lives in filament::Material.
-    const SamplerBindingMap* pSamplerBindings = builder.getSamplerBindings();
-    if (pSamplerBindings) {
-        #if FILAMENT_VULKAN_VERBOSE
-        utils::slog.d << "Created VulkanProgram " << builder.getName().c_str()
+    // Make a copy of the binding map
+    samplerBindings = builder.getSamplerGroupInfo();
+#if FILAMENT_VULKAN_VERBOSE
+    utils::slog.d << "Created VulkanProgram " << builder.getName().c_str()
                 << ", variants = (0x" << utils::io::hex
                 << (builder.getVariant() & filament::Variant::VERTEX_MASK) << ", 0x"
                 << (builder.getVariant() & filament::Variant::FRAGMENT_MASK) << "), "
                 << "shaders = (" << bundle.vertex << ", " << bundle.fragment << ")"
                 << utils::io::endl;
-        #endif
-        samplerBindings = *pSamplerBindings;
-        return;
-    }
-    utils::slog.w << "Missing sampler bindings: " << builder.getName().c_str() << utils::io::endl;
+#endif
 }
 
 VulkanProgram::~VulkanProgram() {

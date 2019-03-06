@@ -130,6 +130,8 @@ public:
 
     bool isEmpty() const noexcept { return mSamplersInfoList.empty(); }
 
+    static utils::CString getUniformName(const char* group, const char* sampler) noexcept;
+
 private:
     friend class Builder;
 
