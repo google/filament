@@ -36,7 +36,7 @@ namespace filament {
 namespace driver {
 
 struct VulkanRenderTarget;
-struct VulkanSamplerBuffer;
+struct VulkanSamplerGroup;
 
 class VulkanDriver final : public DriverBase {
 public:
@@ -144,7 +144,7 @@ private:
     VulkanFboCache mFramebufferCache;
     VulkanSamplerCache mSamplerCache;
     VulkanRenderTarget* mCurrentRenderTarget = nullptr;
-    VulkanSamplerBuffer* mSamplerBindings[VulkanBinder::NUM_SAMPLER_BINDINGS] = {};
+    VulkanSamplerGroup* mSamplerBindings[VulkanBinder::NUM_SAMPLER_BINDINGS] = {};
     VkDebugReportCallbackEXT mDebugCallback = VK_NULL_HANDLE;
 };
 

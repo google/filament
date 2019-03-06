@@ -34,7 +34,7 @@
 #include "driver/Handle.h"
 #include "driver/DriverApiForward.h"
 #include "driver/Program.h"
-#include "driver/SamplerBuffer.h"
+#include "driver/SamplerGroup.h"
 
 namespace filament {
 
@@ -90,7 +90,7 @@ public:
     using IndexBufferHandle     = Handle<HwIndexBuffer>;
     using RenderPrimitiveHandle = Handle<HwRenderPrimitive>;
     using ProgramHandle         = Handle<HwProgram>;
-    using SamplerBufferHandle   = Handle<HwSamplerBuffer>;
+    using SamplerGroupHandle    = Handle<HwSamplerGroup>;
     using UniformBufferHandle   = Handle<HwUniformBuffer>;
     using TextureHandle         = Handle<HwTexture>;
     using RenderTargetHandle    = Handle<HwRenderTarget>;

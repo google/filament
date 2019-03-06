@@ -269,8 +269,8 @@ void VulkanDriver::createTextureR(Driver::TextureHandle th, SamplerType target, 
             w, h, depth, usage, mStagePool);
 }
 
-void VulkanDriver::createSamplerBufferR(Driver::SamplerBufferHandle sbh, size_t count) {
-    construct_handle<VulkanSamplerBuffer>(mHandleMap, sbh, mContext, count);
+void VulkanDriver::createSamplerGroupR(Driver::SamplerGroupHandle sbh, size_t count) {
+    construct_handle<VulkanSamplerGroup>(mHandleMap, sbh, mContext, count);
 }
 
 void VulkanDriver::createUniformBufferR(Driver::UniformBufferHandle ubh, size_t size,
@@ -356,8 +356,8 @@ Handle<HwTexture> VulkanDriver::createTextureS() noexcept {
     return alloc_handle<VulkanTexture, HwTexture>();
 }
 
-Handle<HwSamplerBuffer> VulkanDriver::createSamplerBufferS() noexcept {
-    return alloc_handle<VulkanSamplerBuffer, HwSamplerBuffer>();
+Handle<HwSamplerGroup> VulkanDriver::createSamplerGroupS() noexcept {
+    return alloc_handle<VulkanSamplerGroup, HwSamplerGroup>();
 }
 
 Handle<HwUniformBuffer> VulkanDriver::createUniformBufferS() noexcept {
@@ -420,19 +420,19 @@ void VulkanDriver::destroyProgram(Driver::ProgramHandle ph) {
     }
 }
 
-void VulkanDriver::destroySamplerBuffer(Driver::SamplerBufferHandle sbh) {
+void VulkanDriver::destroySamplerGroup(Driver::SamplerGroupHandle sbh) {
     if (sbh) {
         // Unlike most of the other "Hw" handles, the sampler buffer is an abstract concept and does
         // not map to any Vulkan objects. To handle destruction, the only thing we need to do is
         // ensure that the next draw call doesn't try to access a zombie sampler buffer. Therefore,
         // simply replace all weak references with null.
-        auto* hwsb = handle_cast<VulkanSamplerBuffer>(mHandleMap, sbh);
+        auto* hwsb = handle_cast<VulkanSamplerGroup>(mHandleMap, sbh);
         for (auto& binding : mSamplerBindings) {
             if (binding == hwsb) {
                 binding = nullptr;
             }
         }
-        destruct_handle<VulkanSamplerBuffer>(mHandleMap, sbh);
+        destruct_handle<VulkanSamplerGroup>(mHandleMap, sbh);
     }
 }
 
@@ -570,10 +570,10 @@ void VulkanDriver::updateUniformBuffer(Driver::UniformBufferHandle ubh, BufferDe
     }
 }
 
-void VulkanDriver::updateSamplerBuffer(Driver::SamplerBufferHandle sbh,
-        SamplerBuffer&& samplerBuffer) {
-    auto* sb = handle_cast<VulkanSamplerBuffer>(mHandleMap, sbh);
-    *sb->sb = samplerBuffer;
+void VulkanDriver::updateSamplerGroup(Driver::SamplerGroupHandle sbh,
+        SamplerGroup&& samplerGroup) {
+    auto* sb = handle_cast<VulkanSamplerGroup>(mHandleMap, sbh);
+    *sb->sb = samplerGroup;
 }
 
 void VulkanDriver::beginRenderPass(Driver::RenderTargetHandle rth,
@@ -779,8 +779,8 @@ void VulkanDriver::bindUniformBufferRange(size_t index, Driver::UniformBufferHan
     mBinder.bindUniformBuffer((uint32_t)index, buffer->getGpuBuffer(), offset, size);
 }
 
-void VulkanDriver::bindSamplers(size_t index, Driver::SamplerBufferHandle sbh) {
-    auto* hwsb = handle_cast<VulkanSamplerBuffer>(mHandleMap, sbh);
+void VulkanDriver::bindSamplers(size_t index, Driver::SamplerGroupHandle sbh) {
+    auto* hwsb = handle_cast<VulkanSamplerGroup>(mHandleMap, sbh);
     mSamplerBindings[index] = hwsb;
 }
 
@@ -949,13 +949,13 @@ void VulkanDriver::draw(Driver::PipelineState pipelineState, Driver::RenderPrimi
     // where "SamplerBinding" is the integer in the GLSL, and SamplerBufferBinding is the abstract
     // Filament concept used to form groups of samplers.
     for (uint8_t bufferIdx = 0; bufferIdx < VulkanBinder::NUM_SAMPLER_BINDINGS; bufferIdx++) {
-        VulkanSamplerBuffer* vksb = mSamplerBindings[bufferIdx];
+        VulkanSamplerGroup* vksb = mSamplerBindings[bufferIdx];
         if (!vksb) {
             continue;
         }
-        SamplerBuffer* sb = vksb->sb.get();
+        SamplerGroup* sb = vksb->sb.get();
         for (uint8_t samplerIndex = 0; samplerIndex < sb->getSize(); samplerIndex++) {
-            SamplerBuffer::Sampler const* sampler = sb->getBuffer() + samplerIndex;
+            SamplerGroup::Sampler const* sampler = sb->getSamplers() + samplerIndex;
             if (!sampler->t) {
                 continue;
             }

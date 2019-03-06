@@ -106,8 +106,8 @@ void MetalDriver::createTextureR(Driver::TextureHandle th, Driver::SamplerType t
             width, height, depth, usage);
 }
 
-void MetalDriver::createSamplerBufferR(Driver::SamplerBufferHandle sbh, size_t size) {
-    construct_handle<MetalSamplerBuffer>(mHandleMap, sbh, size);
+void MetalDriver::createSamplerGroupR(Driver::SamplerGroupHandle sbh, size_t size) {
+    construct_handle<MetalSamplerGroup>(mHandleMap, sbh, size);
 }
 
 void MetalDriver::createUniformBufferR(Driver::UniformBufferHandle ubh, size_t size,
@@ -190,8 +190,8 @@ Driver::TextureHandle MetalDriver::createTextureS() noexcept {
     return alloc_handle<MetalTexture, HwTexture>();
 }
 
-Driver::SamplerBufferHandle MetalDriver::createSamplerBufferS() noexcept {
-    return alloc_handle<MetalSamplerBuffer, HwSamplerBuffer>();
+Driver::SamplerGroupHandle MetalDriver::createSamplerGroupS() noexcept {
+    return alloc_handle<MetalSamplerGroup, HwSamplerGroup>();
 }
 
 Driver::UniformBufferHandle MetalDriver::createUniformBufferS() noexcept {
@@ -250,9 +250,9 @@ void MetalDriver::destroyProgram(Driver::ProgramHandle ph) {
     }
 }
 
-void MetalDriver::destroySamplerBuffer(Driver::SamplerBufferHandle sbh) {
+void MetalDriver::destroySamplerGroup(Driver::SamplerGroupHandle sbh) {
     if (sbh) {
-        destruct_handle<MetalSamplerBuffer>(mHandleMap, sbh);
+        destruct_handle<MetalSamplerGroup>(mHandleMap, sbh);
     }
 }
 
@@ -391,10 +391,10 @@ void MetalDriver::updateUniformBuffer(Driver::UniformBufferHandle ubh,
     scheduleDestroy(std::move(data));
 }
 
-void MetalDriver::updateSamplerBuffer(Driver::SamplerBufferHandle sbh,
-        SamplerBuffer&& samplerBuffer) {
-    auto sb = handle_cast<MetalSamplerBuffer>(mHandleMap, sbh);
-    *sb->sb = samplerBuffer;
+void MetalDriver::updateSamplerGroup(Driver::SamplerGroupHandle sbh,
+        SamplerGroup&& samplerGroup) {
+    auto sb = handle_cast<MetalSamplerGroup>(mHandleMap, sbh);
+    *sb->sb = samplerGroup;
 }
 
 void MetalDriver::beginRenderPass(Driver::RenderTargetHandle rth,
@@ -549,8 +549,8 @@ void MetalDriver::bindUniformBufferRange(size_t index, Driver::UniformBufferHand
     });
 }
 
-void MetalDriver::bindSamplers(size_t index, Driver::SamplerBufferHandle sbh) {
-    auto sb = handle_cast<MetalSamplerBuffer>(mHandleMap, sbh);
+void MetalDriver::bindSamplers(size_t index, Driver::SamplerGroupHandle sbh) {
+    auto sb = handle_cast<MetalSamplerGroup>(mHandleMap, sbh);
     mContext->samplerBindings[index] = sb;
 }
 
@@ -686,7 +686,8 @@ void MetalDriver::draw(Driver::PipelineState ps, Driver::RenderPrimitiveHandle r
 
     // Enumerate all the sampler buffers and check if a texture or sampler needs to be rebound.
     // If so, mark them dirty- we'll rebind all textures / samplers in a single call below.
-    enumerateSamplerBuffers(program, [this](const SamplerBuffer::Sampler* sampler,
+    enumerateSamplerGroups(program, [this](
+            const SamplerGroup::Sampler* sampler,
             uint8_t binding) {
         const auto metalTexture = handle_const_cast<MetalTexture>(mHandleMap, sampler->t);
         auto& textureSlot = mContext->boundTextures[binding];
@@ -695,7 +696,8 @@ void MetalDriver::draw(Driver::PipelineState ps, Driver::RenderPrimitiveHandle r
             mContext->texturesDirty = true;
         }
 
-        id<MTLSamplerState> samplerState = mContext->samplerStateCache.getOrCreateState(sampler->s);
+        id <MTLSamplerState> samplerState = mContext->samplerStateCache
+                                                    .getOrCreateState(sampler->s);
         auto& samplerSlot = mContext->boundSamplers[binding];
         if (samplerSlot != samplerState) {
             samplerSlot = samplerState;
@@ -741,16 +743,17 @@ void MetalDriver::draw(Driver::PipelineState ps, Driver::RenderPrimitiveHandle r
                                        indexBufferOffset:primitive->offset];
 }
 
-void MetalDriver::enumerateSamplerBuffers(const MetalProgram *program,
-        const std::function<void(const SamplerBuffer::Sampler*, uint8_t)>& f) {
+void MetalDriver::enumerateSamplerGroups(
+        const MetalProgram* program,
+        const std::function<void(const SamplerGroup::Sampler*, uint8_t)>& f) {
     for (uint8_t bufferIdx = 0; bufferIdx < NUM_SAMPLER_BINDINGS; bufferIdx++) {
-        MetalSamplerBuffer* metalSb = mContext->samplerBindings[bufferIdx];
+        MetalSamplerGroup* metalSb = mContext->samplerBindings[bufferIdx];
         if (!metalSb) {
             continue;
         }
-        SamplerBuffer* sb = metalSb->sb.get();
+        SamplerGroup* sb = metalSb->sb.get();
         for (uint8_t samplerIdx = 0; samplerIdx < sb->getSize(); samplerIdx++) {
-            const SamplerBuffer::Sampler* sampler = sb->getBuffer() + samplerIdx;
+            const SamplerGroup::Sampler* sampler = sb->getSamplers() + samplerIdx;
             if (!sampler->t) {
                 continue;
             }

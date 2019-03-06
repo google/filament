@@ -74,7 +74,7 @@ public:
     uint64_t getSortingKey() const noexcept { return mMaterialSortingKey; }
 
     UniformBuffer const& getUniformBuffer() const noexcept { return mUniforms; }
-    SamplerBuffer const& getSamplerBuffer() const noexcept { return mSamplers; }
+    SamplerGroup const& getSamplerGroup() const noexcept { return mSamplers; }
 
     void setScissor(int32_t left, int32_t bottom, uint32_t width, uint32_t height) noexcept {
         mScissorRect[0] = left;
@@ -106,10 +106,10 @@ private:
     // keep these grouped, they're accessed together in the render-loop
     FMaterial const* mMaterial = nullptr;
     Handle<HwUniformBuffer> mUbHandle;
-    Handle<HwSamplerBuffer> mSbHandle;
+    Handle<HwSamplerGroup> mSbHandle;
 
     UniformBuffer mUniforms;
-    SamplerBuffer mSamplers;
+    SamplerGroup mSamplers;
     Driver::PolygonOffset mPolygonOffset;
 
     uint64_t mMaterialSortingKey = 0;

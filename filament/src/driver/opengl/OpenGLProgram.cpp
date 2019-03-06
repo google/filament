@@ -229,16 +229,16 @@ void OpenGLProgram::updateSamplers(OpenGLDriver* gl) noexcept {
     UTILS_ASSUME(mUsedBindingsCount > 0);
     for (uint8_t i = 0, tmu = 0, n = mUsedBindingsCount; i < n; i++) {
         BlockInfo blockInfo = blockInfos[i];
-        HwSamplerBuffer const * const UTILS_RESTRICT hwsb = samplerBindings[blockInfo.binding];
-        SamplerBuffer const& UTILS_RESTRICT sb = *(hwsb->sb);
-        SamplerBuffer::Sampler const* const UTILS_RESTRICT samplers = sb.getBuffer();
+        HwSamplerGroup const * const UTILS_RESTRICT hwsb = samplerBindings[blockInfo.binding];
+        SamplerGroup const& UTILS_RESTRICT sb = *(hwsb->sb);
+        SamplerGroup::Sampler const* const UTILS_RESTRICT samplers = sb.getSamplers();
         for (uint8_t j = 0, m = blockInfo.count ; j <= m; ++j, ++tmu) { // "<=" on purpose here
             const uint8_t index = indicesRun[tmu];
             assert(index < sb.getSize());
 
             Driver::TextureHandle th = samplers[index].t;
             if (UTILS_UNLIKELY(!th)) {
-                continue; // this can happen if the SamplerBuffer isn't initialized
+                continue; // this can happen if the SamplerGroup isn't initialized
             }
 
             const GLTexture* const UTILS_RESTRICT t = gl->handle_cast<const GLTexture*>(th);

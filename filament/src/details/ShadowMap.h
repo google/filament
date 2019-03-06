@@ -23,7 +23,7 @@
 #include "details/Scene.h"
 
 #include "driver/DriverApiForward.h"
-#include "driver/SamplerBuffer.h"
+#include "driver/SamplerGroup.h"
 
 #include <filament/Viewport.h>
 
@@ -50,7 +50,7 @@ public:
     bool hasVisibleShadows() const noexcept { return mHasVisibleShadows; }
 
     // Allocates shadow texture based on user parameters (e.g. dimensions)
-    void prepare(driver::DriverApi& driver, SamplerBuffer& buffer) noexcept;
+    void prepare(driver::DriverApi& driver, SamplerGroup& buffer) noexcept;
 
     // Returns the shadow map's viewport. Valid after prepare().
     Viewport const& getViewport() const noexcept { return mViewport; }

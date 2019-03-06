@@ -113,8 +113,8 @@ private:
     VmaAllocation mGpuMemory;
 };
 
-struct VulkanSamplerBuffer : public HwSamplerBuffer {
-    VulkanSamplerBuffer(VulkanContext& context, uint32_t count) : HwSamplerBuffer(count) {}
+struct VulkanSamplerGroup : public HwSamplerGroup {
+    VulkanSamplerGroup(VulkanContext& context, uint32_t count) : HwSamplerGroup(count) {}
 };
 
 struct VulkanTexture : public HwTexture {

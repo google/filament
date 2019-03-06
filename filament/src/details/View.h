@@ -250,12 +250,12 @@ private:
             FScene::RenderableSoa::iterator begin, FScene::RenderableSoa::iterator end, uint8_t mask) noexcept;
 
     // these are accessed in the render loop, keep together
-    Handle<HwSamplerBuffer> mPerViewSbh;
+    Handle<HwSamplerGroup> mPerViewSbh;
     Handle<HwUniformBuffer> mPerViewUbh;
     Handle<HwUniformBuffer> mLightUbh;
     Handle<HwUniformBuffer> mRenderableUbh;
 
-    Handle<HwSamplerBuffer> getUsh() const noexcept { return mPerViewSbh; }
+    Handle<HwSamplerGroup> getUsh() const noexcept { return mPerViewSbh; }
     Handle<HwUniformBuffer> getUbh() const noexcept { return mPerViewUbh; }
     Handle<HwUniformBuffer> getLightUbh() const noexcept { return mLightUbh; }
 
@@ -295,9 +295,9 @@ private:
     RenderQuality mRenderQuality;
 
     mutable UniformBuffer mPerViewUb;
-    mutable SamplerBuffer mPerViewSb;
+    mutable SamplerGroup mPerViewSb;
 
-    SamplerBuffer& getUs() const noexcept { return mPerViewSb; }
+    SamplerGroup& getUs() const noexcept { return mPerViewSb; }
     UniformBuffer& getUb() const noexcept { return mPerViewUb; }
 
     utils::CString mName;

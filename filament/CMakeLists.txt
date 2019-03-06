@@ -63,7 +63,7 @@ set(SRCS
         src/driver/GPUBuffer.cpp
         src/driver/Handle.cpp
         src/driver/Program.cpp
-        src/driver/SamplerBuffer.cpp
+        src/driver/SamplerGroup.cpp
         src/driver/TextureReshaper.cpp
         src/Box.cpp
         src/Camera.cpp
@@ -146,7 +146,7 @@ set(PRIVATE_HDRS
         src/driver/GPUBuffer.h
         src/driver/Handle.h
         src/driver/Program.h
-        src/driver/SamplerBuffer.h
+        src/driver/SamplerGroup.h
         src/FilamentAPI-impl.h
         src/FrameInfo.h
         src/Intersections.h

@@ -30,7 +30,7 @@
 #include <filament/driver/DriverEnums.h>
 
 #include "driver/Driver.h"
-#include "driver/SamplerBuffer.h"
+#include "driver/SamplerGroup.h"
 
 namespace filament {
 
@@ -91,10 +91,10 @@ struct HwProgram : public HwBase {
 #endif
 };
 
-struct HwSamplerBuffer : public HwBase {
-    explicit HwSamplerBuffer(size_t size) noexcept : sb(new SamplerBuffer(size)) { }
+struct HwSamplerGroup : public HwBase {
+    explicit HwSamplerGroup(size_t size) noexcept : sb(new SamplerGroup(size)) { }
     // NOTE: we have to use out-of-line allocation here because the size of a Handle<> is limited
-    std::unique_ptr<SamplerBuffer> sb;
+    std::unique_ptr<SamplerGroup> sb; // FIXME: this shouldn't depend on filament::SamplerGroup
 };
 
 struct HwUniformBuffer : public HwBase {

@@ -27,7 +27,7 @@ namespace driver {
 namespace metal {
 
 class MetalRenderTarget;
-struct MetalSamplerBuffer;
+struct MetalSamplerGroup;
 struct MetalSwapChain;
 
 struct MetalContext {
@@ -64,7 +64,7 @@ struct MetalContext {
     bool samplersDirty = true;
     bool texturesDirty = true;
 
-    MetalSamplerBuffer* samplerBindings[NUM_SAMPLER_BINDINGS] = {};
+    MetalSamplerGroup* samplerBindings[NUM_SAMPLER_BINDINGS] = {};
 
     // Surface-related properties.
     MetalSwapChain* currentSurface = nullptr;
