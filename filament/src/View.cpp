@@ -60,7 +60,7 @@ static constexpr uint8_t VISIBLE_ALL = VISIBLE_RENDERABLE | VISIBLE_SHADOW_CASTE
 FView::FView(FEngine& engine)
     : mFroxelizer(engine),
       mPerViewUb(engine.getPerViewUib()),
-      mPerViewSb(engine.getPerViewSib()),
+      mPerViewSb(engine.getPerViewSib().getSize()),
       mDirectionalShadowMap(engine) {
     DriverApi& driver = engine.getDriverApi();
 
@@ -69,14 +69,14 @@ FView::FView(FEngine& engine)
             &engine.debug.view.camera_at_origin);
 
     // set-up samplers
-    mPerViewSb.setBuffer(PerViewSib::RECORDS, mFroxelizer.getRecordBuffer());
-    mPerViewSb.setBuffer(PerViewSib::FROXELS, mFroxelizer.getFroxelBuffer());
+    mPerViewSb.setSampler(PerViewSib::RECORDS, mFroxelizer.getRecordBuffer());
+    mPerViewSb.setSampler(PerViewSib::FROXELS, mFroxelizer.getFroxelBuffer());
     if (engine.getDFG()->isValid()) {
         TextureSampler sampler(TextureSampler::MagFilter::LINEAR);
         mPerViewSb.setSampler(PerViewSib::IBL_DFG_LUT,
                 engine.getDFG()->getTexture(), sampler.getSamplerParams());
     }
-    mPerViewSbh = driver.createSamplerBuffer(mPerViewSb.getSize());
+    mPerViewSbh = driver.createSamplerGroup(mPerViewSb.getSize());
 
     // allocate ubos
     mPerViewUbh = driver.createUniformBuffer(mPerViewUb.getSize(), driver::BufferUsage::DYNAMIC);
@@ -92,7 +92,7 @@ void FView::terminate(FEngine& engine) {
     DriverApi& driver = engine.getDriverApi();
     driver.destroyUniformBuffer(mPerViewUbh);
     driver.destroyUniformBuffer(mLightUbh);
-    driver.destroySamplerBuffer(mPerViewSbh);
+    driver.destroySamplerGroup(mPerViewSbh);
     driver.destroyUniformBuffer(mRenderableUbh);
     mDirectionalShadowMap.terminate(driver);
     mFroxelizer.terminate(driver);
@@ -646,7 +646,7 @@ void FView::commitUniforms(driver::DriverApi& driver) const noexcept {
     }
 
     if (mPerViewSb.isDirty()) {
-        driver.updateSamplerBuffer(mPerViewSbh, std::move(mPerViewSb.toCommandStream()));
+        driver.updateSamplerGroup(mPerViewSbh, std::move(mPerViewSb.toCommandStream()));
     }
 }
 

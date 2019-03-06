@@ -48,8 +48,8 @@ FMaterialInstance::FMaterialInstance(FEngine& engine, FMaterial const* material)
     }
 
     if (!material->getSamplerInterfaceBlock().isEmpty()) {
-        mSamplers.setSamplers(material->getDefaultInstance()->getSamplerBuffer());
-        mSbHandle = driver.createSamplerBuffer(mSamplers.getSize());
+        mSamplers.setSamplers(material->getDefaultInstance()->getSamplerGroup());
+        mSbHandle = driver.createSamplerGroup(mSamplers.getSize());
     }
 
     if (material->getBlendingMode() == BlendingMode::MASKED) {
@@ -71,8 +71,8 @@ void FMaterialInstance::initDefaultInstance(FEngine& engine, FMaterial const* ma
     }
 
     if (!material->getSamplerInterfaceBlock().isEmpty()) {
-        mSamplers = SamplerBuffer(material->getSamplerInterfaceBlock());
-        mSbHandle = driver.createSamplerBuffer(mSamplers.getSize());
+        mSamplers = SamplerGroup(material->getSamplerInterfaceBlock().getSize());
+        mSbHandle = driver.createSamplerGroup(mSamplers.getSize());
     }
 
     if (material->getBlendingMode() == BlendingMode::MASKED) {
@@ -86,7 +86,7 @@ FMaterialInstance::~FMaterialInstance() noexcept = default;
 void FMaterialInstance::terminate(FEngine& engine) {
     FEngine::DriverApi& driver = engine.getDriverApi();
     driver.destroyUniformBuffer(mUbHandle);
-    driver.destroySamplerBuffer(mSbHandle);
+    driver.destroySamplerGroup(mSbHandle);
 }
 
 void FMaterialInstance::commitSlow(FEngine& engine) const {
@@ -96,7 +96,7 @@ void FMaterialInstance::commitSlow(FEngine& engine) const {
         driver.updateUniformBuffer(mUbHandle, mUniforms.toBufferDescriptor(driver));
     }
     if (mSamplers.isDirty()) {
-        driver.updateSamplerBuffer(mSbHandle, std::move(mSamplers.toCommandStream()));
+        driver.updateSamplerGroup(mSbHandle, std::move(mSamplers.toCommandStream()));
     }
 }
 
@@ -115,8 +115,8 @@ inline void FMaterialInstance::setParameter(const char* name, const T* value, si
 
 void FMaterialInstance::setParameter(const char* name,
         Texture const* texture, TextureSampler const& sampler) noexcept {
-    mSamplers.setSampler(mMaterial->getSamplerInterfaceBlock(), name, 0,
-            { upcast(texture)->getHwHandle(), sampler.getSamplerParams() });
+    size_t index = mMaterial->getSamplerInterfaceBlock().getSamplerInfo(name)->offset;
+    mSamplers.setSampler(index, { upcast(texture)->getHwHandle(), sampler.getSamplerParams() });
 }
 
 } // namespace details

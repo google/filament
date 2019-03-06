@@ -63,7 +63,7 @@ ShadowMap::~ShadowMap() {
     mEngine.destroy(mDebugCamera->getEntity());
 }
 
-void ShadowMap::prepare(DriverApi& driver, SamplerBuffer& sb) noexcept {
+void ShadowMap::prepare(DriverApi& driver, SamplerGroup& sb) noexcept {
     assert(mShadowMapDimension);
 
     uint32_t dim = mShadowMapDimension;

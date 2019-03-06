@@ -44,6 +44,8 @@
 #include <filament/Skybox.h>
 #include <filament/Stream.h>
 
+#include <private/filament/SamplerInterfaceBlock.h>
+
 #include <filaflat/ShaderBuilder.h>
 
 #include <utils/compiler.h>

@@ -75,7 +75,7 @@ public:
 private:
     // this is really hidden implementation details (the fact we're using a texture should be
     // exposed as little as possible)
-    friend class SamplerBuffer;
+    friend class SamplerGroup;
     Handle<HwTexture> getHandle() const noexcept { return mTexture; }
     driver::SamplerParams getSamplerParams() const noexcept { return driver::SamplerParams{}; }
 

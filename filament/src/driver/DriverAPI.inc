@@ -245,7 +245,7 @@ DECL_DRIVER_API_R_8(Driver::TextureHandle, createTexture,
         uint32_t, depth,
         Driver::TextureUsage, usage)
 
-DECL_DRIVER_API_R_1(Driver::SamplerBufferHandle, createSamplerBuffer,
+DECL_DRIVER_API_R_1(Driver::SamplerGroupHandle, createSamplerGroup,
         size_t, size)
 
 DECL_DRIVER_API_R_2(Driver::UniformBufferHandle, createUniformBuffer,
@@ -284,7 +284,7 @@ DECL_DRIVER_API_1(destroyVertexBuffer,    Driver::VertexBufferHandle, vbh)
 DECL_DRIVER_API_1(destroyIndexBuffer,     Driver::IndexBufferHandle, ibh)
 DECL_DRIVER_API_1(destroyRenderPrimitive, Driver::RenderPrimitiveHandle, rph)
 DECL_DRIVER_API_1(destroyProgram,         Driver::ProgramHandle, ph)
-DECL_DRIVER_API_1(destroySamplerBuffer,   Driver::SamplerBufferHandle, sbh)
+DECL_DRIVER_API_1(destroySamplerGroup,   Driver::SamplerGroupHandle, sbh)
 DECL_DRIVER_API_1(destroyUniformBuffer,   Driver::UniformBufferHandle, ubh)
 DECL_DRIVER_API_1(destroyTexture,         Driver::TextureHandle, th)
 DECL_DRIVER_API_1(destroyRenderTarget,    Driver::RenderTargetHandle, rth)
@@ -340,9 +340,9 @@ DECL_DRIVER_API_2(updateUniformBuffer,
         Driver::UniformBufferHandle, ubh,
         Driver::BufferDescriptor&&, buffer)
 
-DECL_DRIVER_API_2(updateSamplerBuffer,
-        Driver::SamplerBufferHandle, ubh,
-        SamplerBuffer&&, samplerBuffer)
+DECL_DRIVER_API_2(updateSamplerGroup,
+        Driver::SamplerGroupHandle, ubh,
+        SamplerGroup&&, samplerGroup)
 
 DECL_DRIVER_API_7(update2DImage,
         Driver::TextureHandle, th,
@@ -445,7 +445,7 @@ DECL_DRIVER_API_4(bindUniformBufferRange,
 
 DECL_DRIVER_API_2(bindSamplers,
         size_t, index,
-        Driver::SamplerBufferHandle, sbh)
+        Driver::SamplerGroupHandle, sbh)
 
 DECL_DRIVER_API_2(insertEventMarker,
         const char*, string,

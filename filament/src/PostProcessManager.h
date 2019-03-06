@@ -55,7 +55,7 @@ private:
 
     // we need only one of these
     mutable UniformBuffer mPostProcessUb;
-    Handle<HwSamplerBuffer> mPostProcessSbh;
+    Handle<HwSamplerGroup> mPostProcessSbh;
     Handle<HwUniformBuffer> mPostProcessUbh;
 };
 

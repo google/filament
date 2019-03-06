@@ -118,7 +118,7 @@ public:
     // name of this sampler interface block
     const utils::CString& getName() const noexcept { return mName; }
 
-    // size needed to store the samplers described by this interface block in a SamplerBuffer
+    // size needed to store the samplers described by this interface block in a SamplerGroup
     size_t getSize() const noexcept { return mSize; }
 
     // list of information records for each sampler

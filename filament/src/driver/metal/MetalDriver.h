@@ -138,8 +138,8 @@ private:
         handleMap.erase(handle.getId());
     }
 
-    void enumerateSamplerBuffers(const MetalProgram *program,
-            const std::function<void(const SamplerBuffer::Sampler*, uint8_t)>& f);
+    void enumerateSamplerGroups(const MetalProgram* program,
+            const std::function<void(const SamplerGroup::Sampler*, uint8_t)>& f);
 };
 
 } // namespace metal

@@ -90,7 +90,7 @@ private:
     // information about each USED sampler buffer (no gaps)
     std::array<BlockInfo, Program::NUM_SAMPLER_BINDINGS> mBlockInfos;   // 8 bytes
 
-    // runs of indices into SamplerBuffer -- run start index and size given by BlockInfo
+    // runs of indices into SamplerGroup -- run start index and size given by BlockInfo
     std::array<uint8_t, NUM_TEXTURE_UNITS> mIndicesRuns;    // 16 bytes
 
     void updateSamplers(OpenGLDriver* gl) noexcept;

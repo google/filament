@@ -82,8 +82,8 @@ public:
         } gl;
     };
 
-    struct GLSamplerBuffer : public HwSamplerBuffer {
-        using HwSamplerBuffer::HwSamplerBuffer;
+    struct GLSamplerGroup : public HwSamplerGroup {
+        using HwSamplerGroup::HwSamplerGroup;
         struct {
         } gl;
     };
@@ -373,7 +373,7 @@ private:
         return pos->second;
     }
 
-    const std::array<HwSamplerBuffer*, Program::NUM_SAMPLER_BINDINGS>& getSamplerBindings() const {
+    const std::array<HwSamplerGroup*, Program::NUM_SAMPLER_BINDINGS>& getSamplerBindings() const {
         return mSamplerBindings;
     }
 
@@ -509,7 +509,7 @@ private:
             bool clearStencil, uint32_t stencil) noexcept;
 
     // sampler buffer binding points (nullptr if not used)
-    std::array<HwSamplerBuffer*, Program::NUM_SAMPLER_BINDINGS> mSamplerBindings;   // 8 pointers
+    std::array<HwSamplerGroup*, Program::NUM_SAMPLER_BINDINGS> mSamplerBindings;   // 8 pointers
 
     mutable tsl::robin_map<uint32_t, GLuint> mSamplerMap;
     mutable std::vector<GLTexture*> mExternalStreams;

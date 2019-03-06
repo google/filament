@@ -34,7 +34,7 @@ struct HwIndexBuffer;
 struct HwProgram;
 struct HwRenderPrimitive;
 struct HwRenderTarget;
-struct HwSamplerBuffer;
+struct HwSamplerGroup;
 struct HwTexture;
 struct HwUniformBuffer;
 struct HwSwapChain;

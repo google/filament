@@ -116,8 +116,8 @@ struct MetalTexture : public HwTexture {
     TextureReshaper reshaper;
 };
 
-struct MetalSamplerBuffer : public HwSamplerBuffer {
-    explicit MetalSamplerBuffer(size_t size) : HwSamplerBuffer(size) {}
+struct MetalSamplerGroup : public HwSamplerGroup {
+    explicit MetalSamplerGroup(size_t size) : HwSamplerGroup(size) {}
 };
 
 class MetalRenderTarget : public HwRenderTarget {

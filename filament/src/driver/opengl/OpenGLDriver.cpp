@@ -716,7 +716,7 @@ default_case:
 // For reference on a 64-bits machine:
 //    GLFence                   :  8
 //    GLIndexBuffer             : 12        moderate
-//    GLSamplerBuffer           : 16        moderate
+//    GLSamplerGroup           : 16        moderate
 // -- less than 16 bytes
 
 //    GLRenderPrimitive         : 40        many
@@ -742,7 +742,7 @@ OpenGLDriver::HandleAllocator::HandleAllocator(const utils::HeapArea& area)
 #ifndef NDEBUG
     slog.d << "HwFence: " << sizeof(HwFence) << io::endl;
     slog.d << "GLIndexBuffer: " << sizeof(GLIndexBuffer) << io::endl;
-    slog.d << "GLSamplerBuffer: " << sizeof(GLSamplerBuffer) << io::endl;
+    slog.d << "GLSamplerGroup: " << sizeof(GLSamplerGroup) << io::endl;
     slog.d << "GLRenderPrimitive: " << sizeof(GLRenderPrimitive) << io::endl;
     slog.d << "GLTexture: " << sizeof(GLTexture) << io::endl;
     slog.d << "OpenGLProgram: " << sizeof(OpenGLProgram) << io::endl;
@@ -824,8 +824,8 @@ Handle<HwProgram> OpenGLDriver::createProgramS() noexcept {
     return Handle<HwProgram>( allocateHandle(sizeof(OpenGLProgram)) );
 }
 
-Handle<HwSamplerBuffer> OpenGLDriver::createSamplerBufferS() noexcept {
-    return Handle<HwSamplerBuffer>( allocateHandle(sizeof(GLSamplerBuffer)) );
+Handle<HwSamplerGroup> OpenGLDriver::createSamplerGroupS() noexcept {
+    return Handle<HwSamplerGroup>( allocateHandle(sizeof(GLSamplerGroup)) );
 }
 
 Handle<HwUniformBuffer> OpenGLDriver::createUniformBufferS() noexcept {
@@ -919,10 +919,10 @@ void OpenGLDriver::createProgramR(Driver::ProgramHandle ph, Program&& program) {
     CHECK_GL_ERROR(utils::slog.e)
 }
 
-void OpenGLDriver::createSamplerBufferR(Driver::SamplerBufferHandle sbh, size_t size) {
+void OpenGLDriver::createSamplerGroupR(Driver::SamplerGroupHandle sbh, size_t size) {
     DEBUG_MARKER()
 
-    construct<GLSamplerBuffer>(sbh, size);
+    construct<GLSamplerGroup>(sbh, size);
 }
 
 void OpenGLDriver::createUniformBufferR(
@@ -1408,11 +1408,11 @@ void OpenGLDriver::destroyProgram(Driver::ProgramHandle ph) {
     }
 }
 
-void OpenGLDriver::destroySamplerBuffer(Driver::SamplerBufferHandle sbh) {
+void OpenGLDriver::destroySamplerGroup(Driver::SamplerGroupHandle sbh) {
     DEBUG_MARKER()
 
     if (sbh) {
-        GLSamplerBuffer* sb = handle_cast<GLSamplerBuffer*>(sbh);
+        GLSamplerGroup* sb = handle_cast<GLSamplerGroup*>(sbh);
         destruct(sbh, sb);
     }
 }
@@ -1810,12 +1810,12 @@ void OpenGLDriver::updateBuffer(GLenum target,
 }
 
 
-void OpenGLDriver::updateSamplerBuffer(Driver::SamplerBufferHandle sbh,
-        SamplerBuffer&& samplerBuffer) {
+void OpenGLDriver::updateSamplerGroup(Driver::SamplerGroupHandle sbh,
+        SamplerGroup&& samplerGroup) {
     DEBUG_MARKER()
 
-    GLSamplerBuffer* sb = handle_cast<GLSamplerBuffer *>(sbh);
-    *sb->sb = std::move(samplerBuffer); // NOLINT(performance-move-const-arg)
+    GLSamplerGroup* sb = handle_cast<GLSamplerGroup *>(sbh);
+    *sb->sb = std::move(samplerGroup); // NOLINT(performance-move-const-arg)
 }
 
 void OpenGLDriver::update2DImage(Driver::TextureHandle th,
@@ -2619,10 +2619,10 @@ void OpenGLDriver::bindUniformBufferRange(size_t index, Driver::UniformBufferHan
     CHECK_GL_ERROR(utils::slog.e)
 }
 
-void OpenGLDriver::bindSamplers(size_t index, Driver::SamplerBufferHandle sbh) {
+void OpenGLDriver::bindSamplers(size_t index, Driver::SamplerGroupHandle sbh) {
     DEBUG_MARKER()
 
-    GLSamplerBuffer* sb = handle_cast<GLSamplerBuffer *>(sbh);
+    GLSamplerGroup* sb = handle_cast<GLSamplerGroup *>(sbh);
     assert(index < Program::NUM_SAMPLER_BINDINGS);
     mSamplerBindings[index] = sb;
     CHECK_GL_ERROR(utils::slog.e)
