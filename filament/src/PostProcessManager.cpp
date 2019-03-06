@@ -40,7 +40,7 @@ void PostProcessManager::init(FEngine& engine) noexcept {
 
     // create sampler for post-process FBO
     DriverApi& driver = engine.getDriverApi();
-    mPostProcessSbh = driver.createSamplerGroup(engine.getPostProcessSib().getSize());
+    mPostProcessSbh = driver.createSamplerGroup(PostProcessSib::SAMPLER_COUNT);
     mPostProcessUbh = driver.createUniformBuffer(engine.getPerPostProcessUib().getSize(),
             driver::BufferUsage::DYNAMIC);
     driver.bindSamplers(BindingPoints::POST_PROCESS, mPostProcessSbh);
@@ -62,8 +62,8 @@ void PostProcessManager::setSource(uint32_t viewportWidth, uint32_t viewportHeig
     driver::SamplerParams params;
     params.filterMag = SamplerMagFilter::LINEAR;
     params.filterMin = SamplerMinFilter::LINEAR;
-    SamplerGroup sb(engine.getPostProcessSib().getSize());
-    sb.setSampler(PostProcessSib::COLOR_BUFFER, texture, params);
+    SamplerGroup group(PostProcessSib::SAMPLER_COUNT);
+    group.setSampler(PostProcessSib::COLOR_BUFFER, texture, params);
 
     auto duration = engine.getEngineTime();
     float fraction = (duration.count() % 1000000000) / 1000000000.0f;
@@ -79,7 +79,7 @@ void PostProcessManager::setSource(uint32_t viewportWidth, uint32_t viewportHeig
     const float yOffset = textureHeight - viewportHeight;
     ub.setUniform(offsetof(PostProcessingUib, yOffset), yOffset);
 
-    driver.updateSamplerGroup(mPostProcessSbh, std::move(sb));
+    driver.updateSamplerGroup(mPostProcessSbh, std::move(group));
     driver.updateUniformBuffer(mPostProcessUbh, ub.toBufferDescriptor(driver));
 }
 
