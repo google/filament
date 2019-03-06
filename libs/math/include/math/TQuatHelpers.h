@@ -256,6 +256,9 @@ public:
         const T a0 = a * (1 - t);
         const T a1 = a * t;
         const T sina = sin(a);
+        if (sina < value_eps) {
+            return lerp(p, q, t);
+        }
         const T isina = 1 / sina;
         const T s0 = std::sin(a0) * isina;
         const T s1 = std::sin(a1) * isina;
