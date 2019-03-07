@@ -18,7 +18,6 @@
 
 #include "VulkanDriver.h"
 
-#include <filament/SwapChain.h>
 #include <utils/Panic.h>
 
 #include <bluevk/BlueVK.h>
