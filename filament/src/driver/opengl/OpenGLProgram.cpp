@@ -16,7 +16,6 @@
 
 #include "driver/opengl/OpenGLProgram.h"
 
-#include <private/filament/SamplerInterfaceBlock.h>
 #include <private/filament/UniformInterfaceBlock.h>
 
 #include "driver/opengl/OpenGLDriver.h"

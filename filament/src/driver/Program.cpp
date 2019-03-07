@@ -15,10 +15,7 @@
  */
 
 #include "driver/Program.h"
-#include "Program.h"
 
-
-#include <private/filament/SamplerInterfaceBlock.h>
 #include <private/filament/UniformInterfaceBlock.h>
 
 using namespace utils;
