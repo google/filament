@@ -27,7 +27,6 @@
 #endif
 
 #include <bluevk/BlueVK.h>
-#include <filament/SwapChain.h>
 #include <utils/Panic.h>
 
 #ifndef VK_MVK_ios_surface

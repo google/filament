@@ -23,7 +23,6 @@
 #import <QuartzCore/CAMetalLayer.h>
 
 #include <bluevk/BlueVK.h>
-#include <filament/SwapChain.h>
 #include <utils/Panic.h>
 
 #ifndef VK_MVK_macos_surface
