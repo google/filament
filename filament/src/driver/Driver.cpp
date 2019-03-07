@@ -35,8 +35,6 @@ using namespace driver;
 
 DriverBase::DriverBase(Dispatcher* dispatcher) noexcept
         : mDispatcher(dispatcher) {
-    // make sure mTextureInfo entries are sorted
-    assert(checkTextureInfo());
 }
 
 DriverBase::~DriverBase() noexcept {
@@ -56,129 +54,8 @@ void DriverBase::scheduleDestroySlow(BufferDescriptor&& buffer) noexcept {
 }
 
 // ------------------------------------------------------------------------------------------------
-// Texture format data...
-// ------------------------------------------------------------------------------------------------
-
-/*
- * This array contains information we might need about each texture internal formats.
- *
- * All entries MUST be sorted by Driver::TextureFormat.
- */
-const DriverBase::Entry DriverBase::mTextureInfo[] = {
-        // 8-bits per element
-        { TF::R8,                SF::FLOAT,  SP::LOW    },
-        { TF::R8_SNORM,          SF::FLOAT,  SP::LOW    },
-        { TF::R8UI,              SF::UINT,   SP::LOW    },
-        { TF::R8I,               SF::INT,    SP::LOW    },
-
-        // 16-bits per element
-        { TF::R16F,              SF::FLOAT,  SP::MEDIUM },
-        { TF::R16UI,             SF::UINT,   SP::MEDIUM },
-        { TF::R16I,              SF::INT,    SP::MEDIUM },
-        { TF::RG8,               SF::FLOAT,  SP::LOW    },
-        { TF::RG8_SNORM,         SF::FLOAT,  SP::LOW    },
-        { TF::RG8UI,             SF::UINT,   SP::LOW    },
-        { TF::RG8I,              SF::INT,    SP::LOW    },
-        { TF::RGB565,            SF::FLOAT,  SP::LOW    },
-        { TF::RGB9_E5,           SF::FLOAT,  SP::MEDIUM }, // This one is actually 32 bpp.
-        { TF::RGB5_A1,           SF::FLOAT,  SP::LOW    },
-        { TF::RGBA4,             SF::FLOAT,  SP::LOW    },
-        { TF::DEPTH16,           SF::SHADOW, SP::MEDIUM },
-
-        // 24-bits per element
-        { TF::RGB8,              SF::FLOAT,  SP::LOW    },
-        { TF::SRGB8,             SF::FLOAT,  SP::LOW    },
-        { TF::RGB8_SNORM,        SF::FLOAT,  SP::LOW    },
-        { TF::RGB8UI,            SF::UINT,   SP::LOW    },
-        { TF::RGB8I,             SF::INT,    SP::LOW    },
-        { TF::DEPTH24,           SF::SHADOW, SP::HIGH   },
-
-        // 32-bits per element
-        { TF::R32F,              SF::FLOAT,  SP::HIGH   },
-        { TF::R32UI,             SF::UINT,   SP::HIGH   },
-        { TF::R32I,              SF::INT,    SP::HIGH   },
-        { TF::RG16F,             SF::FLOAT,  SP::MEDIUM },
-        { TF::RG16UI,            SF::UINT,   SP::MEDIUM },
-        { TF::RG16I,             SF::INT,    SP::MEDIUM },
-        { TF::R11F_G11F_B10F,    SF::FLOAT,  SP::MEDIUM },
-        { TF::RGBA8,             SF::FLOAT,  SP::LOW    },
-        { TF::SRGB8_A8,          SF::FLOAT,  SP::LOW    },
-        { TF::RGBA8_SNORM,       SF::FLOAT,  SP::LOW    },
-        { TF::RGB10_A2,          SF::FLOAT,  SP::MEDIUM },
-        { TF::RGBA8UI,           SF::UINT,   SP::LOW    },
-        { TF::RGBA8I,            SF::INT,    SP::LOW    },
-        { TF::DEPTH32F,          SF::SHADOW, SP::HIGH   },
-        { TF::DEPTH24_STENCIL8,  SF::SHADOW, SP::HIGH   },
-        { TF::DEPTH32F_STENCIL8, SF::SHADOW, SP::HIGH   },
-
-        // 48-bits per element
-        { TF::RGB16F,            SF::FLOAT,  SP::MEDIUM },
-        { TF::RGB16UI,           SF::UINT,   SP::MEDIUM },
-        { TF::RGB16I,            SF::INT,    SP::MEDIUM },
-
-        // 64-bits per element
-        { TF::RG32F,             SF::FLOAT,  SP::HIGH   },
-        { TF::RG32UI,            SF::UINT,   SP::HIGH   },
-        { TF::RG32I,             SF::INT,    SP::HIGH   },
-        { TF::RGBA16F,           SF::FLOAT,  SP::MEDIUM },
-        { TF::RGBA16UI,          SF::UINT,   SP::MEDIUM },
-        { TF::RGBA16I,           SF::INT,    SP::MEDIUM },
-
-        // 96-bits per element
-        { TF::RGB32F,            SF::FLOAT,  SP::HIGH   },
-        { TF::RGB32UI,           SF::UINT,   SP::HIGH   },
-        { TF::RGB32I,            SF::INT,    SP::HIGH   },
-
-        // 128-bits per element
-        { TF::RGBA32F,           SF::FLOAT,  SP::HIGH   },
-        { TF::RGBA32UI,          SF::UINT,   SP::HIGH   },
-        { TF::RGBA32I,           SF::INT,    SP::HIGH   },
-};
-
-bool DriverBase::checkTextureInfo() noexcept {
-    DriverBase::Entry const* first = mTextureInfo;
-    DriverBase::Entry const* const last = first + sizeof(mTextureInfo) / sizeof(*mTextureInfo);
-    DriverBase::Entry const* i = first;
-    while (++i != last) {
-        if (first->textureFormat >= i->textureFormat) {
-            return false;
-        }
-        first = i;
-    }
-    return true;
-}
-
-const DriverBase::Entry* DriverBase::findTextureInfo(TextureFormat format) noexcept {
-    static constexpr const size_t size = sizeof(mTextureInfo) / sizeof(mTextureInfo[0]);
-    Entry e = { format, SF::INT, SP::DEFAULT };
-    auto begin = &mTextureInfo[0];
-    auto end = &mTextureInfo[size];
-    auto pos = std::lower_bound(begin, end, e);
-    assert(pos < end && pos->textureFormat == format);
-    return pos;
-}
-
-Driver::SamplerPrecision DriverBase::getSamplerPrecision(TextureFormat format) noexcept {
-    return findTextureInfo(format)->samplerPrecision;
-}
-
-Driver::SamplerFormat DriverBase::getSamplerFormat(TextureFormat format) noexcept {
-    return findTextureInfo(format)->samplerFormat;
-}
-
-// ------------------------------------------------------------------------------------------------
 
 Driver::~Driver() noexcept = default;
-
-// forward to DriverBase, where the implementation really is
-Driver::SamplerPrecision Driver::getSamplerPrecision(TextureFormat format) noexcept {
-    return DriverBase::getSamplerPrecision(format);
-}
-
-// forward to DriverBase, where the implementation really is
-Driver::SamplerFormat Driver::getSamplerFormat(TextureFormat format) noexcept {
-    return DriverBase::getSamplerFormat(format);
-}
 
 size_t Driver::getElementTypeSize(ElementType type) noexcept {
     switch (type) {
