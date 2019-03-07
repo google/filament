@@ -67,6 +67,10 @@ Animator* FilamentAsset::getAnimator() noexcept {
     return upcast(this)->getAnimator();
 }
 
+utils::Entity FilamentAsset::getWireframe() noexcept {
+    return upcast(this)->getWireframe();
+}
+
 void FilamentAsset::releaseSourceData() noexcept {
     return upcast(this)->releaseSourceData();
 }

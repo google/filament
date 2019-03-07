@@ -36,6 +36,7 @@
 #include <cgltf.h>
 
 #include "upcast.h"
+#include "Wireframe.h"
 
 #include <tsl/robin_map.h>
 
@@ -59,6 +60,7 @@ struct FFilamentAsset : public FilamentAsset {
     ~FFilamentAsset() {
         releaseSourceData();
         delete mAnimator;
+        delete mWireframe;
         mEngine->destroy(mRoot);
         for (auto entity : mEntities) {
             mEngine->destroy(entity);
@@ -124,6 +126,13 @@ struct FFilamentAsset : public FilamentAsset {
         return mAnimator;
     }
 
+    utils::Entity getWireframe() noexcept {
+        if (!mWireframe) {
+            mWireframe = new Wireframe(this);
+        }
+        return mWireframe->mEntity;
+    }
+
     void releaseSourceData() noexcept {
         mBufferBindings.clear();
         mBufferBindings.shrink_to_fit();
@@ -158,6 +167,7 @@ struct FFilamentAsset : public FilamentAsset {
     utils::Entity mRoot;
     std::vector<Skin> mSkins;
     Animator* mAnimator = nullptr;
+    Wireframe* mWireframe = nullptr;
     int mSourceAssetRefCount = 0;
 
     /** @{

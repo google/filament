@@ -87,6 +87,12 @@ public:
     Animator* getAnimator() noexcept;
 
     /**
+     * Lazily creates a single LINES renderable that draws the transformed bounding-box hierarchy
+     * for diagnostic purposes. The wireframe is owned by the asset so clients should not delete it.
+    */
+    utils::Entity getWireframe() noexcept;
+
+    /**
      * Reclaims CPU-side memory for URI strings, binding lists, and raw animation data.
      *
      * This should only be called after ResourceLoader::loadResources().
