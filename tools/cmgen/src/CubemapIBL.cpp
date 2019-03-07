@@ -66,8 +66,8 @@ static double3 __UNUSED hemisphereUniformSample(double2 u) { // pdf = 1.0 / (2.0
  * Importance sampling Charlie
  * ------------------------------------------
  *
- * In order to pick the most significative samples and increase the convergence rate, we chose to rely on Charlie's distribution function
- * for the pdf as we do in hemisphereImportanceSampleDggx.
+ * In order to pick the most significative samples and increase the convergence rate, we chose to
+ * rely on Charlie's distribution function for the pdf as we do in hemisphereImportanceSampleDggx.
  *
  * To determine the direction we then need to resolve the cdf associated to the chosen pdf for random inputs.
  *
@@ -81,7 +81,8 @@ static double3 __UNUSED hemisphereUniformSample(double2 u) { // pdf = 1.0 / (2.0
  *
  * We sample theta and phi independently.
  *
- * 1. as in all the other isotropic cases phi = 2 * pi * epsilon (https://www.tobias-franke.eu/log/2014/03/30/notes_on_importance_sampling.html)
+ * 1. as in all the other isotropic cases phi = 2 * pi * epsilon
+ *    (https://www.tobias-franke.eu/log/2014/03/30/notes_on_importance_sampling.html)
  *
  * 2. we need to solve the integral on theta:
  *
@@ -400,8 +401,8 @@ void CubemapIBL::roughnessFilter(Cubemap& dst,
     }
 
     CubemapUtils::process<CubemapUtils::EmptyState>(dst,
-            [ &, quiet=g_quiet ](CubemapUtils::EmptyState&, size_t y, Cubemap::Face f, Cubemap::Texel* data,
-                    size_t dim) {
+            [ &, quiet=g_quiet ](CubemapUtils::EmptyState&, size_t y,
+                    Cubemap::Face f, Cubemap::Texel* data, size_t dim) {
 
         size_t p = progress.fetch_add(1, std::memory_order_relaxed) + 1;
         if (!quiet) {
@@ -577,8 +578,8 @@ void CubemapIBL::diffuseIrradiance(Cubemap& dst, const std::vector<Cubemap>& lev
     }
 
     CubemapUtils::process<CubemapUtils::EmptyState>(dst,
-            [ &, quiet=g_quiet ](CubemapUtils::EmptyState&, size_t y, Cubemap::Face f, Cubemap::Texel* data,
-                    size_t dim) {
+            [ &, quiet=g_quiet ](CubemapUtils::EmptyState&, size_t y,
+                    Cubemap::Face f, Cubemap::Texel* data, size_t dim) {
 
         size_t p = progress.fetch_add(1, std::memory_order_relaxed) + 1;
         if (!quiet) {
@@ -903,8 +904,6 @@ static double DFV_Charlie_Uniform(double NoV, double linearRoughness, size_t num
  * with:
  *
  *            fr() = DCharlie(h) V(v, l)
- *
- * Note that we are not relying on Fresnel term here as sheen already simulates Backward and Forward scattering
  *
  *
  *  It results that:
