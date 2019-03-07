@@ -147,9 +147,6 @@ public:
     explicit DriverBase(Dispatcher* dispatcher) noexcept;
     ~DriverBase() noexcept override;
 
-    static SamplerFormat getSamplerFormat(TextureFormat format) noexcept;
-    static SamplerPrecision getSamplerPrecision(TextureFormat format) noexcept;
-
     void purge() noexcept final;
 
     Dispatcher& getDispatcher() noexcept final { return *mDispatcher; }
@@ -170,24 +167,6 @@ protected:
     void scheduleDestroySlow(BufferDescriptor&& buffer) noexcept;
 
 private:
-    using TF = Driver::TextureFormat;
-    using SF = Driver::SamplerFormat;
-    using SP = Driver::SamplerPrecision;
-
-    struct Entry {
-        TF textureFormat;
-        SF samplerFormat;
-        SP samplerPrecision;
-
-        bool operator<(const Entry& rhs) const noexcept {
-            return textureFormat < rhs.textureFormat;
-        }
-    };
-
-    static const Entry mTextureInfo[];
-    static const Entry* findTextureInfo(TextureFormat format) noexcept;
-    static bool checkTextureInfo() noexcept;
-
     std::mutex mPurgeLock;
     std::vector<BufferDescriptor> mBufferToPurge;
 };

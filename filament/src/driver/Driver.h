@@ -216,8 +216,6 @@ public:
         PolygonOffset polygonOffset;
     };
 
-    static SamplerFormat getSamplerFormat(TextureFormat format) noexcept;
-    static SamplerPrecision getSamplerPrecision(TextureFormat format) noexcept;
     static size_t getElementTypeSize(ElementType type) noexcept;
 
     // This is here to be compatible with CommandStream (nice for debugging)
