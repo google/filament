@@ -16,8 +16,6 @@
 
 #include "driver/Program.h"
 
-#include <private/filament/UniformInterfaceBlock.h>
-
 using namespace utils;
 
 namespace filament {
@@ -48,13 +46,13 @@ Program& Program::shader(Program::Shader shader, void const* data, size_t size) 
     return *this;
 }
 
-Program& Program::addUniformBlock(size_t index, const UniformInterfaceBlock* ib) {
-    mUniformInterfaceBlocks[index] = ib;
+Program& Program::setUniformBlock(size_t bindingPoint, utils::CString uniformBlockName) noexcept {
+    mUniformBlocks[bindingPoint] = std::move(uniformBlockName);
     return *this;
 }
 
 Program& Program::setSamplerGroup(size_t bindingPoint,
-        const Program::Sampler* samplers, size_t count) {
+        const Program::Sampler* samplers, size_t count) noexcept {
     auto& samplerList = mSamplerGroups[bindingPoint];
     samplerList.clear();
     samplerList.insert(samplerList.begin(), samplers, samplers + count);
@@ -68,6 +66,7 @@ io::ostream& operator<<(io::ostream& out, const Program& builder) {
     // FIXME: maybe do better here!
     return out << "Program(" << builder.mName.c_str_safe() << ")";
 }
+
 #endif
 
 } // namespace filament

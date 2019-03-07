@@ -16,8 +16,6 @@
 
 #include "driver/opengl/OpenGLProgram.h"
 
-#include <private/filament/UniformInterfaceBlock.h>
-
 #include "driver/opengl/OpenGLDriver.h"
 
 #include <utils/Log.h>
@@ -96,13 +94,12 @@ OpenGLProgram::OpenGLProgram(OpenGLDriver* gl, const Program& programBuilder) no
         this->gl.program = program;
 
         // Associate each UniformBlock in the program to a known binding.
-        auto const& uniformInterfaceBlocks = programBuilder.getUniformInterfaceBlocks();
-        size_t n = uniformInterfaceBlocks.size();
+        auto const& uniformBlockInfo = programBuilder.getUniformBlockInfo();
         #pragma nounroll
-        for (GLuint binding = 0; binding < n; binding++) {
-            auto const& uib = uniformInterfaceBlocks[binding];
-            if (uib != nullptr) {
-                GLint index = glGetUniformBlockIndex(program, uib->getName().c_str());
+        for (GLuint binding = 0, n = uniformBlockInfo.size(); binding < n; binding++) {
+            auto const& name = uniformBlockInfo[binding];
+            if (!name.empty()) {
+                GLint index = glGetUniformBlockIndex(program, name.c_str());
                 if (index >= 0) {
                     glUniformBlockBinding(program, GLuint(index), binding);
                 }

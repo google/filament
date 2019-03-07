@@ -28,8 +28,6 @@
 
 namespace filament {
 
-class UniformInterfaceBlock;
-
 class Program {
 public:
 
@@ -42,12 +40,17 @@ public:
         FRAGMENT = 1
     };
 
+    struct UniformBlock {
+        utils::CString name = {};   // name of the uniform block in the shader
+    };
+
     struct Sampler {
         utils::CString name = {};   // name of the sampler in the shader
         size_t binding = 0;         // binding point of the sampler in the shader
     };
 
     using SamplerGroupInfo = std::array<std::vector<Sampler>, NUM_SAMPLER_BINDINGS>;
+    using UniformBlockInfo = std::array<utils::CString, NUM_UNIFORM_BINDINGS>;
 
     Program() noexcept;
     Program(const Program& rhs) = delete;
@@ -63,15 +66,19 @@ public:
     // sets one of the program's shader (e.g. vertex, fragment)
     Program& shader(Shader shader, void const* data, size_t size) noexcept;
 
-    // sets a uniform interface block for this program
-    // The lifetime of UniformInterfaceBlock* must be longer than Program's
-    Program& addUniformBlock(size_t index, const UniformInterfaceBlock* ib);
+    // sets the 'bindingPoint' uniform block's name for this program.
+    //
+    // Note: This is only needed for GLES3.0 backends, because the layout(binding=) syntax is
+    //       not permitted in glsl. The backend needs a way to associate a uniform block
+    //       to a binding point.
+    //
+    Program& setUniformBlock(size_t bindingPoint, utils::CString uniformBlockName) noexcept;
 
     // sets the 'bindingPoint' sampler group descriptor for this program.
     // 'samplers' can be destroyed after this call.
     // This effectively associates a set of (BindingPoints, index) to a texture unit in the shader.
     // Or more precisely, what layout(binding=) is set to in GLSL.
-    Program& setSamplerGroup(size_t bindingPoint, Sampler const* samplers, size_t count);
+    Program& setSamplerGroup(size_t bindingPoint, Sampler const* samplers, size_t count) noexcept;
 
     Program& withVertexShader(void const* data, size_t size) {
         return shader(Shader::VERTEX, data, size);
@@ -85,26 +92,15 @@ public:
         return mShadersSource;
     }
 
-    std::array<UniformInterfaceBlock const*, NUM_UNIFORM_BINDINGS> const&
-    getUniformInterfaceBlocks() const noexcept {
-        return mUniformInterfaceBlocks;
-    }
+    UniformBlockInfo const& getUniformBlockInfo() const noexcept { return mUniformBlocks; }
 
-    SamplerGroupInfo const& getSamplerGroupInfo() const {
-        return mSamplerGroups;
-    }
+    SamplerGroupInfo const& getSamplerGroupInfo() const { return mSamplerGroups; }
 
-    const utils::CString& getName() const noexcept {
-        return mName;
-    }
+    const utils::CString& getName() const noexcept { return mName; }
 
-    uint8_t getVariant() const noexcept {
-        return mVariant;
-    }
+    uint8_t getVariant() const noexcept { return mVariant; }
 
-    bool hasSamplers() const noexcept {
-        return mHasSamplers;
-    }
+    bool hasSamplers() const noexcept { return mHasSamplers; }
 
 private:
 #if !defined(NDEBUG)
@@ -112,10 +108,8 @@ private:
 #endif
 
     // FIXME: none of these fields should be public as this is a public API
-
-    std::array<UniformInterfaceBlock const*, NUM_UNIFORM_BINDINGS> mUniformInterfaceBlocks = {};
+    UniformBlockInfo mUniformBlocks = {};
     SamplerGroupInfo mSamplerGroups = {};
-
     std::array<std::vector<uint8_t>, NUM_SHADER_TYPES> mShadersSource;
     utils::CString mName;
     bool mHasSamplers = false;
