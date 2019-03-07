@@ -67,10 +67,11 @@ public:
     // The lifetime of UniformInterfaceBlock* must be longer than Program's
     Program& addUniformBlock(size_t index, const UniformInterfaceBlock* ib);
 
-    // sets the 'index' sampler group descriptor for this program.
+    // sets the 'bindingPoint' sampler group descriptor for this program.
     // 'samplers' can be destroyed after this call.
-    // This effectively associates a set of (BindingPoints, index) to a (shader-binding)
-    Program& addSamplerGroup(size_t bindingPoint, Sampler const* samplers, size_t count);
+    // This effectively associates a set of (BindingPoints, index) to a texture unit in the shader.
+    // Or more precisely, what layout(binding=) is set to in GLSL.
+    Program& setSamplerGroup(size_t bindingPoint, Sampler const* samplers, size_t count);
 
     Program& withVertexShader(void const* data, size_t size) {
         return shader(Shader::VERTEX, data, size);

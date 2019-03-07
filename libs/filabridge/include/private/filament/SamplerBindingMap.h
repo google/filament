@@ -53,8 +53,8 @@ public:
             const SamplerInterfaceBlock* perMaterialSib = nullptr,
             const char* materialName = nullptr);
 
-    // Given a valid Filament binding point and an offset with the block, returns true and sets
-    // the output arguments: (1) the globally unique binding index, and (2) the grouping index.
+    // Given a valid Filament binding point and an offset within the block, returns true and sets
+    // the output argument 'globalOffset' to the globally unique binding index.
     bool getSamplerBinding(uint8_t blockIndex, uint8_t localOffset, uint8_t* globalOffset) const {
         assert(globalOffset);
         auto iter = mBindingMap.find(getBindingKey(blockIndex, localOffset));

@@ -468,7 +468,7 @@ Handle<HwProgram> FEngine::createPostProcessProgram(MaterialParser& parser,
                 map.getSamplerBinding(bindingPoint, (uint8_t)i, &binding);
                 samplers[i] = { uniformName, binding };
             }
-            pb.addSamplerGroup(bindingPoint, samplers.data(), samplers.size());
+            pb.setSamplerGroup(bindingPoint, samplers.data(), samplers.size());
         }
     };
 

@@ -758,7 +758,7 @@ void MetalDriver::enumerateSamplerGroups(
                 continue;
             }
 
-            if (!program->samplerBindings[bufferIdx].empty()) {
+            if (samplerIdx < program->samplerBindings[bufferIdx].size()) {
                 uint8_t binding = (uint8_t)program->samplerBindings[bufferIdx][samplerIdx].binding;
                 f(sampler, binding);
             }

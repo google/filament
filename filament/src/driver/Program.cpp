@@ -53,7 +53,8 @@ Program& Program::addUniformBlock(size_t index, const UniformInterfaceBlock* ib)
     return *this;
 }
 
-Program& Program::addSamplerGroup(size_t bindingPoint, const Program::Sampler* samplers, size_t count) {
+Program& Program::setSamplerGroup(size_t bindingPoint,
+        const Program::Sampler* samplers, size_t count) {
     auto& samplerList = mSamplerGroups[bindingPoint];
     samplerList.clear();
     samplerList.insert(samplerList.begin(), samplers, samplers + count);
