@@ -138,7 +138,11 @@ bool ResourceLoader::loadResources(FilamentAsset* asset) {
     // feature, and instead simply require correct models. See also:
     // https://github.com/KhronosGroup/glTF-Sample-Models/issues/215
     if (mConfig.normalizeSkinningWeights) {
-        normalizeWeights(fasset);
+        normalizeSkinningWeights(fasset);
+    }
+
+    if (mConfig.recomputeBoundingBoxes) {
+        updateBoundingBoxes(fasset);
     }
 
     // Upload data to the GPU.
@@ -377,7 +381,7 @@ void ResourceLoader::computeTangents(FFilamentAsset* asset) const {
     }
 }
 
-void ResourceLoader::normalizeWeights(details::FFilamentAsset* asset) const {
+void ResourceLoader::normalizeSkinningWeights(details::FFilamentAsset* asset) const {
     auto normalize = [](cgltf_accessor* data) {
         if (data->type != cgltf_type_vec4 || data->component_type != cgltf_component_type_r_32f) {
             slog.w << "Cannot normalize weights, unsupported attribute type." << io::endl;
@@ -407,6 +411,64 @@ void ResourceLoader::normalizeWeights(details::FFilamentAsset* asset) const {
             }
         }
     }
+}
+
+void ResourceLoader::updateBoundingBoxes(details::FFilamentAsset* asset) const {
+    auto& rm = mConfig.engine->getRenderableManager();
+    auto& tm = mConfig.engine->getTransformManager();
+
+    auto computeBoundingBox = [&](const cgltf_primitive& prim) {
+        Aabb aabb;
+        for (cgltf_size slot = 0; slot < prim.attributes_count; slot++) {
+            const cgltf_attribute& attr = prim.attributes[slot];
+            if (attr.type == cgltf_attribute_type_position) {
+                const cgltf_accessor* accessor = attr.data;
+                float3 pt;
+                for (cgltf_size i = 0, n = accessor->count; i < n; ++i) {
+                    cgltf_accessor_read_float(accessor, i, &pt.x, 3);
+                    aabb.min = min(aabb.min, pt);
+                    aabb.max = max(aabb.max, pt);
+                }
+                break;
+            }
+        }
+        return aabb;
+    };
+
+    Aabb assetBounds;
+    for (auto iter : asset->mNodeMap) {
+        const cgltf_mesh* mesh = iter.first->mesh;
+        if (mesh) {
+            // Find the object-space bounds for the renderable by unioning the bounds of each prim.
+            Aabb aabb;
+            for (cgltf_size index = 0, nprims = mesh->primitives_count; index < nprims; ++index) {
+                Aabb primBounds = computeBoundingBox(mesh->primitives[index]);
+                aabb.min = min(aabb.min, primBounds.min);
+                aabb.max = max(aabb.max, primBounds.max);
+            }
+            auto renderable = rm.getInstance(iter.second);
+            rm.setAxisAlignedBoundingBox(renderable, Box().set(aabb.min, aabb.max));
+
+            // Transform all eight corners of the bounding box to world space and find the new AABB.
+            // This is used for the asset-level bounding box.
+            auto transformable = tm.getInstance(iter.second);
+            mat4f worldTransform = tm.getWorldTransform(transformable);
+            float3 a = (worldTransform * float4(aabb.min.x, aabb.min.y, aabb.min.z, 1.0)).xyz;
+            float3 b = (worldTransform * float4(aabb.min.x, aabb.min.y, aabb.max.z, 1.0)).xyz;
+            float3 c = (worldTransform * float4(aabb.min.x, aabb.max.y, aabb.min.z, 1.0)).xyz;
+            float3 d = (worldTransform * float4(aabb.min.x, aabb.max.y, aabb.max.z, 1.0)).xyz;
+            float3 e = (worldTransform * float4(aabb.max.x, aabb.min.y, aabb.min.z, 1.0)).xyz;
+            float3 f = (worldTransform * float4(aabb.max.x, aabb.min.y, aabb.max.z, 1.0)).xyz;
+            float3 g = (worldTransform * float4(aabb.max.x, aabb.max.y, aabb.min.z, 1.0)).xyz;
+            float3 h = (worldTransform * float4(aabb.max.x, aabb.max.y, aabb.max.z, 1.0)).xyz;
+            float3 minpt = min(min(min(min(min(min(min(a, b), c), d), e), f), g), h);
+            float3 maxpt = max(max(max(max(max(max(max(a, b), c), d), e), f), g), h);
+
+            assetBounds.min = min(assetBounds.min, minpt);
+            assetBounds.max = max(assetBounds.max, maxpt);
+        }
+    }
+    asset->mBoundingBox = assetBounds;
 }
 
 } // namespace gltfio

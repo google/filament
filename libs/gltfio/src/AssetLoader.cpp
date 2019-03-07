@@ -73,11 +73,12 @@ using MeshCache = tsl::robin_map<const cgltf_mesh*, std::vector<Primitive>>;
 // Filament materials are cached by the MaterialGenerator, but material instances are cached here.
 using MatInstanceCache = tsl::robin_map<intptr_t, MaterialInstance*>;
 
-// Filament automatically infers the size of driver-level vertex buffers from the attribute data
-// (stride, count, offset) and clients are expected to avoid uploading data blobs that exceed this
-// size. Since this information doesn't exist in the glTF we need to compute it manually. This is a
-// bit of a cheat, cgltf_calc_size is private but its implementation file is available in this cpp
-// file.
+// Sometimes a glTF bufferview includes unused data at the end (e.g. in skinning.gltf) so we need to
+// compute the correct size of the vertex buffer. Filament automatically infers the size of
+// driver-level vertex buffers from the attribute data (stride, count, offset) and clients are
+// expected to avoid uploading data blobs that exceed this size. Since this information doesn't
+// exist in the glTF we need to compute it manually. This is a bit of a cheat, cgltf_calc_size is
+// private but its implementation file is available in this cpp file.
 static uint32_t computeBindingSize(const cgltf_accessor* accessor){
     cgltf_size element_size = cgltf_calc_size(accessor->type, accessor->component_type);
     return uint32_t(accessor->stride * (accessor->count - 1) + element_size);
@@ -319,10 +320,19 @@ void FAssetLoader::createRenderable(const cgltf_node* node, Entity entity) {
         builder.geometry(index, primType, outputPrim->vertices, outputPrim->indices);
     }
 
-    // Expand the world-space bounding box.
-    float3 minpt = (worldTransform * float4(aabb.min, 1.0)).xyz;
-    float3 maxpt = (worldTransform * float4(aabb.max, 1.0)).xyz;
+    // Transform all eight corners of the bounding box and find the new AABB.
+    float3 a = (worldTransform * float4(aabb.min.x, aabb.min.y, aabb.min.z, 1.0)).xyz;
+    float3 b = (worldTransform * float4(aabb.min.x, aabb.min.y, aabb.max.z, 1.0)).xyz;
+    float3 c = (worldTransform * float4(aabb.min.x, aabb.max.y, aabb.min.z, 1.0)).xyz;
+    float3 d = (worldTransform * float4(aabb.min.x, aabb.max.y, aabb.max.z, 1.0)).xyz;
+    float3 e = (worldTransform * float4(aabb.max.x, aabb.min.y, aabb.min.z, 1.0)).xyz;
+    float3 f = (worldTransform * float4(aabb.max.x, aabb.min.y, aabb.max.z, 1.0)).xyz;
+    float3 g = (worldTransform * float4(aabb.max.x, aabb.max.y, aabb.min.z, 1.0)).xyz;
+    float3 h = (worldTransform * float4(aabb.max.x, aabb.max.y, aabb.max.z, 1.0)).xyz;
+    float3 minpt = min(min(min(min(min(min(min(a, b), c), d), e), f), g), h);
+    float3 maxpt = max(max(max(max(max(max(max(a, b), c), d), e), f), g), h);
 
+    // Expand the world-space bounding box.
     mResult->mBoundingBox.min = min(mResult->mBoundingBox.min, minpt);
     mResult->mBoundingBox.max = max(mResult->mBoundingBox.max, maxpt);
 
@@ -331,7 +341,7 @@ void FAssetLoader::createRenderable(const cgltf_node* node, Entity entity) {
     }
 
     builder
-        .boundingBox({aabb.min, aabb.max})
+        .boundingBox(Box().set(aabb.min, aabb.max))
         .culling(true)
         .castShadows(true)
         .receiveShadows(true)
