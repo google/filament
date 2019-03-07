@@ -179,7 +179,6 @@ enum class SamplerType : uint8_t {
 };
 
 enum class SamplerFormat : uint8_t {
-    // don't change values of enums (used w/ UniformInterfaceBlock::Type)
     INT = 0,
     UINT = 1,
     FLOAT = 2,
