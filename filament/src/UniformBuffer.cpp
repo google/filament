@@ -33,10 +33,6 @@ UniformBuffer::UniformBuffer(size_t size) noexcept
     memset(mBuffer, 0, size);
 }
 
-UniformBuffer::UniformBuffer(UniformInterfaceBlock const& uib) noexcept
-        : UniformBuffer(uib.getSize()) {
-}
-
 UniformBuffer::UniformBuffer(UniformBuffer&& rhs) noexcept
         : mBuffer(rhs.mBuffer),
           mSize(rhs.mSize),
