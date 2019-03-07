@@ -550,42 +550,6 @@ io::ostream& operator<<(io::ostream& out, filament::driver::PixelBufferDescripto
 }
 
 UTILS_PRIVATE
-io::ostream& operator<<(io::ostream& out, const filament::SamplerInterfaceBlock::SamplerInfo& info) {
-    out << "SamplerInfo{ " << info.name.c_str() << ", offset=" << info.offset
-        << ", type=" << info.type << ", precision=" << info.precision << " }";
-    return out;
-}
-
-UTILS_PRIVATE
-io::ostream& operator<<(io::ostream& out, const filament::UniformInterfaceBlock::UniformInfo& info) {
-    using Type = UniformInterfaceBlock::Type;
-    const char* type = "unknown";
-    switch (info.type) {
-        case Type::FLOAT:  type = "FLOAT";  break;
-        case Type::FLOAT2: type = "FLOAT2"; break;
-        case Type::FLOAT3: type = "FLOAT3"; break;
-        case Type::FLOAT4: type = "FLOAT4"; break;
-        case Type::INT:    type = "INT";    break;
-        case Type::INT2:   type = "INT2";   break;
-        case Type::INT3:   type = "INT3";   break;
-        case Type::INT4:   type = "INT4";   break;
-        case Type::UINT:   type = "UINT";   break;
-        case Type::UINT2:  type = "UINT2";  break;
-        case Type::UINT3:  type = "UINT3";  break;
-        case Type::UINT4:  type = "UINT4";  break;
-        case Type::MAT3:   type = "MAT3";   break;
-        case Type::MAT4:   type = "MAT4";   break;
-        case Type::BOOL:   type = "BOOL";   break;
-        case Type::BOOL2:  type = "BOOL2";  break;
-        case Type::BOOL3:  type = "BOOL3";  break;
-        case Type::BOOL4:  type = "BOOL4";  break;
-    }
-    out << "UniformInfo{ " << info.name.c_str() << ", offset=" << info.offset << ", size=" << info.size
-    << ", stride=" << info.stride << ", type=" << type << " }";
-    return out;
-}
-
-UTILS_PRIVATE
 io::ostream& operator<<(io::ostream& out, filament::driver::Viewport const& viewport) {
     out << "Viewport{"
         << ", left=" << viewport.left
