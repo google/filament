@@ -24,7 +24,6 @@
 #include <utils/compiler.h>
 #include <utils/Log.h>
 
-#include <private/filament/UniformInterfaceBlock.h>
 #include <filament/driver/BufferDescriptor.h>
 
 #include <math/mat3.h>
@@ -36,13 +35,12 @@
 
 namespace filament {
 
-class UniformBuffer {
+class UniformBuffer { // NOLINT(cppcoreguidelines-pro-type-member-init)
 public:
     UniformBuffer() noexcept = default;
 
     // create a uniform buffer of a given size in bytes
     explicit UniformBuffer(size_t size) noexcept;
-    explicit UniformBuffer(UniformInterfaceBlock const& uib) noexcept;
 
     // disallow copy-construction, since it's heavy.
     UniformBuffer(const UniformBuffer& rhs) = delete;
@@ -152,15 +150,6 @@ public:
     }
 
     // helper functions
-
-    // set uniform by name
-    template<typename T>
-    void setUniform(const UniformInterfaceBlock& uib, const char* name, size_t index, const T& v) {
-        ssize_t offset = uib.getUniformOffset(name, index);
-        if (offset >= 0) {
-            setUniform<T>(size_t(offset), v);  // handles specialization for mat3f
-        }
-    }
 
     driver::BufferDescriptor toBufferDescriptor(driver::DriverApi& driver) const noexcept {
         return toBufferDescriptor(driver, 0, getSize());

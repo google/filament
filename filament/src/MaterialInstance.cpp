@@ -20,6 +20,8 @@
 
 #include "RenderPass.h"
 
+#include <private/filament/UniformInterfaceBlock.h>
+
 #include "details/Engine.h"
 #include "details/Material.h"
 #include "details/Texture.h"
@@ -66,7 +68,7 @@ void FMaterialInstance::initDefaultInstance(FEngine& engine, FMaterial const* ma
             material->getId(), material->generateMaterialInstanceId());
 
     if (!material->getUniformInterfaceBlock().isEmpty()) {
-        mUniforms = UniformBuffer(material->getUniformInterfaceBlock());
+        mUniforms = UniformBuffer(material->getUniformInterfaceBlock().getSize());
         mUbHandle = driver.createUniformBuffer(mUniforms.getSize(), driver::BufferUsage::STATIC);
     }
 
@@ -100,9 +102,13 @@ void FMaterialInstance::commitSlow(FEngine& engine) const {
     }
 }
 
-template <typename T>
+template<typename T>
 inline void FMaterialInstance::setParameter(const char* name, T value) noexcept {
-    mUniforms.setUniform<T>(mMaterial->getUniformInterfaceBlock(), name, 0, value);
+    auto const& uib = mMaterial->getUniformInterfaceBlock();
+    ssize_t offset = uib.getUniformOffset(name, 0);
+    if (offset >= 0) {
+        mUniforms.setUniform<T>(size_t(offset), value);  // handles specialization for mat3f
+    }
 }
 
 template <typename T>
