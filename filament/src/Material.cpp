@@ -318,10 +318,15 @@ Handle<HwProgram> FMaterial::getProgramSlow(uint8_t variantKey) const noexcept {
     pb      .diagnostics(mName, variantKey)
             .withVertexShader(vsBuilder.data(), vsBuilder.size())
             .withFragmentShader(fsBuilder.data(), fsBuilder.size())
-            .addUniformBlock(BindingPoints::PER_VIEW, &UibGenerator::getPerViewUib())
-            .addUniformBlock(BindingPoints::LIGHTS, &UibGenerator::getLightsUib())
-            .addUniformBlock(BindingPoints::PER_RENDERABLE, &UibGenerator::getPerRenderableUib())
-            .addUniformBlock(BindingPoints::PER_MATERIAL_INSTANCE, &mUniformInterfaceBlock);
+            .setUniformBlock(BindingPoints::PER_VIEW, UibGenerator::getPerViewUib().getName())
+            .setUniformBlock(BindingPoints::LIGHTS, UibGenerator::getLightsUib().getName())
+            .setUniformBlock(BindingPoints::PER_RENDERABLE, UibGenerator::getPerRenderableUib().getName())
+            .setUniformBlock(BindingPoints::PER_MATERIAL_INSTANCE, mUniformInterfaceBlock.getName());
+
+    if (Variant(variantKey).hasSkinning()) {
+        pb.setUniformBlock(BindingPoints::PER_RENDERABLE_BONES,
+                UibGenerator::getPerRenderableBonesUib().getName());
+    }
 
     auto addSamplerGroup = [&pb]
             (uint8_t bindingPoint, SamplerInterfaceBlock const& sib, SamplerBindingMap const& map) {
@@ -335,7 +340,7 @@ Handle<HwProgram> FMaterial::getProgramSlow(uint8_t variantKey) const noexcept {
                                 list[i].name.c_str()));
                 uint8_t binding;
                 map.getSamplerBinding(bindingPoint, (uint8_t)i, &binding);
-                samplers[i] = { uniformName, binding };
+                samplers[i] = { std::move(uniformName), binding };
             }
             pb.setSamplerGroup(bindingPoint, samplers.data(), samplers.size());
         }
@@ -343,10 +348,6 @@ Handle<HwProgram> FMaterial::getProgramSlow(uint8_t variantKey) const noexcept {
 
     addSamplerGroup(BindingPoints::PER_VIEW, SibGenerator::getPerViewSib(), mSamplerBindings);
     addSamplerGroup(BindingPoints::PER_MATERIAL_INSTANCE, mSamplerInterfaceBlock, mSamplerBindings);
-
-    if (Variant(variantKey).hasSkinning()) {
-        pb.addUniformBlock(BindingPoints::PER_RENDERABLE_BONES, &UibGenerator::getPerRenderableBonesUib());
-    }
 
     auto program = mEngine.getDriverApi().createProgram(std::move(pb));
     assert(program);

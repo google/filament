@@ -451,8 +451,8 @@ Handle<HwProgram> FEngine::createPostProcessProgram(MaterialParser& parser,
     pb      .diagnostics(CString("Post Process"))
             .withVertexShader(vShaderBuilder.data(), vShaderBuilder.size())
             .withFragmentShader(fShaderBuilder.data(), fShaderBuilder.size())
-            .addUniformBlock(BindingPoints::PER_VIEW, &PerViewUib::getUib())
-            .addUniformBlock(BindingPoints::POST_PROCESS, &PostProcessingUib::getUib());
+            .setUniformBlock(BindingPoints::PER_VIEW, PerViewUib::getUib().getName())
+            .setUniformBlock(BindingPoints::POST_PROCESS, PostProcessingUib::getUib().getName());
 
     auto addSamplerGroup = [&pb]
             (uint8_t bindingPoint, SamplerInterfaceBlock const& sib, SamplerBindingMap const& map) {
@@ -466,7 +466,7 @@ Handle<HwProgram> FEngine::createPostProcessProgram(MaterialParser& parser,
                                 list[i].name.c_str()));
                 uint8_t binding;
                 map.getSamplerBinding(bindingPoint, (uint8_t)i, &binding);
-                samplers[i] = { uniformName, binding };
+                samplers[i] = { std::move(uniformName), binding };
             }
             pb.setSamplerGroup(bindingPoint, samplers.data(), samplers.size());
         }
