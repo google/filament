@@ -34,6 +34,8 @@ void SamplerBindingMap::populate(uint8_t firstSamplerBinding,
         filament::SamplerInterfaceBlock const* sib;
         if (blockIndex == filament::BindingPoints::PER_MATERIAL_INSTANCE) {
             sib = perMaterialSib;
+        } else if (perMaterialSib && blockIndex == filament::BindingPoints::POST_PROCESS) {
+            sib = nullptr;
         } else {
             sib = filament::SibGenerator::getSib(blockIndex);
         }
