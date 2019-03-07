@@ -58,45 +58,46 @@ public:
     using ShaderModel = driver::ShaderModel;
 
     // remap the public types into the Driver class
-    using PrimitiveType = driver::PrimitiveType;
-    using UniformType = driver::UniformType;
-    using ElementType = driver::ElementType;
-    using TextureFormat = driver::TextureFormat;
-    using TextureUsage = driver::TextureUsage;
-    using TextureCubemapFace = driver::TextureCubemapFace;
-    using SamplerType = driver::SamplerType;
-    using SamplerPrecision = driver::Precision;
-    using SamplerWrapMode = driver::SamplerWrapMode;
-    using SamplerMinFilter = driver::SamplerMinFilter;
-    using SamplerMagFilter = driver::SamplerMagFilter;
-    using SamplerCompareMode = driver::SamplerCompareMode;
-    using SamplerCompareFunc = driver::SamplerCompareFunc;
-    using SamplerParams = driver::SamplerParams;
-    using PixelDataFormat = driver::PixelDataFormat;
-    using PixelDataType = driver::PixelDataType;
     using BufferDescriptor = driver::BufferDescriptor;
-    using PixelBufferDescriptor = driver::PixelBufferDescriptor;
+    using BufferUsage = driver::BufferUsage;
+    using ElementType = driver::ElementType;
     using FaceOffsets = driver::FaceOffsets;
     using FenceStatus = driver::FenceStatus;
-    using TargetBufferFlags = driver::TargetBufferFlags;
+    using PixelBufferDescriptor = driver::PixelBufferDescriptor;
+    using PixelDataFormat = driver::PixelDataFormat;
+    using PixelDataType = driver::PixelDataType;
+    using PrimitiveType = driver::PrimitiveType;
     using RenderPassParams = driver::RenderPassParams;
-    using BufferUsage = driver::BufferUsage;
+    using SamplerCompareFunc = driver::SamplerCompareFunc;
+    using SamplerCompareMode = driver::SamplerCompareMode;
+    using SamplerFormat = driver::SamplerFormat;
+    using SamplerMagFilter = driver::SamplerMagFilter;
+    using SamplerMinFilter = driver::SamplerMinFilter;
+    using SamplerParams = driver::SamplerParams;
+    using SamplerPrecision = driver::Precision;
+    using SamplerType = driver::SamplerType;
+    using SamplerWrapMode = driver::SamplerWrapMode;
+    using TargetBufferFlags = driver::TargetBufferFlags;
+    using TextureCubemapFace = driver::TextureCubemapFace;
+    using TextureFormat = driver::TextureFormat;
+    using TextureUsage = driver::TextureUsage;
+    using UniformType = driver::UniformType;
 
     static constexpr uint64_t FENCE_WAIT_FOR_EVER = driver::FENCE_WAIT_FOR_EVER;
 
     // Types used by the command stream
     // (we use this renaming because the macro-system doesn't deal well with "<" and ">")
-    using VertexBufferHandle    = Handle<HwVertexBuffer>;
-    using IndexBufferHandle     = Handle<HwIndexBuffer>;
-    using RenderPrimitiveHandle = Handle<HwRenderPrimitive>;
-    using ProgramHandle         = Handle<HwProgram>;
-    using SamplerGroupHandle    = Handle<HwSamplerGroup>;
-    using UniformBufferHandle   = Handle<HwUniformBuffer>;
-    using TextureHandle         = Handle<HwTexture>;
-    using RenderTargetHandle    = Handle<HwRenderTarget>;
     using FenceHandle           = Handle<HwFence>;
-    using SwapChainHandle       = Handle<HwSwapChain>;
+    using IndexBufferHandle     = Handle<HwIndexBuffer>;
+    using ProgramHandle         = Handle<HwProgram>;
+    using RenderPrimitiveHandle = Handle<HwRenderPrimitive>;
+    using RenderTargetHandle    = Handle<HwRenderTarget>;
+    using SamplerGroupHandle    = Handle<HwSamplerGroup>;
     using StreamHandle          = Handle<HwStream>;
+    using SwapChainHandle       = Handle<HwSwapChain>;
+    using TextureHandle         = Handle<HwTexture>;
+    using UniformBufferHandle   = Handle<HwUniformBuffer>;
+    using VertexBufferHandle    = Handle<HwVertexBuffer>;
 
     struct Attribute {
         static constexpr uint8_t FLAG_NORMALIZED     = 0x1;
@@ -109,15 +110,6 @@ public:
     };
 
     using AttributeArray = std::array<Attribute, MAX_ATTRIBUTE_BUFFER_COUNT>;
-
-    // types of the data returned by samplers in the shaders
-    enum class SamplerFormat : uint8_t {
-        // don't change values of enums (used w/ UniformInterfaceBlock::Type)
-        INT = 0,
-        UINT = 1,
-        FLOAT = 2,
-        SHADOW = 3,
-    };
 
     struct TargetBufferInfo {
         // ctor for 2D textures
