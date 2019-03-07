@@ -34,6 +34,7 @@ struct ResourceConfiguration {
     class filament::Engine* engine;
     utils::Path basePath;
     bool normalizeSkinningWeights;
+    bool recomputeBoundingBoxes;
 };
 
 /**
@@ -60,7 +61,8 @@ public:
 private:
     bool createTextures(details::FFilamentAsset* asset) const;
     void computeTangents(details::FFilamentAsset* asset) const;
-    void normalizeWeights(details::FFilamentAsset* asset) const;
+    void normalizeSkinningWeights(details::FFilamentAsset* asset) const;
+    void updateBoundingBoxes(details::FFilamentAsset* asset) const;
     details::AssetPool* mPool;
     const ResourceConfiguration mConfig;
 };
