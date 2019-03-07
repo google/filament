@@ -17,12 +17,14 @@ set(PUBLIC_HDRS
 set(SRCS
         src/Animator.cpp
         src/AssetLoader.cpp
-        src/ResourceLoader.cpp
         src/FFilamentAsset.h
         src/FilamentAsset.cpp
         src/GltfEnums.h
         src/MaterialGenerator.cpp
         src/MaterialGenerator.h
+        src/ResourceLoader.cpp
+        src/Wireframe.cpp
+        src/Wireframe.h
         src/math.h
         src/upcast.h
 )
