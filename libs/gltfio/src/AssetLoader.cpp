@@ -572,11 +572,11 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_material* inp
             matkey.alphaMode = AlphaMode::OPAQUE;
             break;
         case cgltf_alpha_mode_mask:
-            matkey.alphaMode = AlphaMode::MASKED;
+            matkey.alphaMode = AlphaMode::MASK;
             matkey.alphaMaskThreshold = inputMat->alpha_cutoff;
             break;
         case cgltf_alpha_mode_blend:
-            matkey.alphaMode = AlphaMode::TRANSPARENT;
+            matkey.alphaMode = AlphaMode::BLEND;
             break;
     }
 

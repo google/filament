@@ -31,8 +31,8 @@ namespace details {
 
 enum class AlphaMode : uint8_t {
     OPAQUE,
-    MASKED,
-    TRANSPARENT
+    MASK,
+    BLEND
 };
 
 // NOTE: This key is processed by MurmurHashFn so please make padding explicit.
