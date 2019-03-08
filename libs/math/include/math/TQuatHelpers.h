@@ -249,7 +249,7 @@ public:
         static constexpr T value_eps = T(10) * std::numeric_limits<T>::epsilon();
         // Prevent blowing up when slerping between two quaternions that are very near each other.
         if ((T(1) - d) < value_eps) {
-            return lerp(p, q, t);
+            return normalize(lerp(p, q, t));
         }
         const T npq = sqrt(dot(p, p) * dot(q, q));  // ||p|| * ||q||
         const T a = std::acos(d / npq);
@@ -257,7 +257,7 @@ public:
         const T a1 = a * t;
         const T sina = sin(a);
         if (sina < value_eps) {
-            return lerp(p, q, t);
+            return normalize(lerp(p, q, t));
         }
         const T isina = 1 / sina;
         const T s0 = std::sin(a0) * isina;
