@@ -170,7 +170,7 @@ triangle by setting up a bounding box and passing in the vertex and index buffer
 <div class="highlight" style="background: #f8f8f8"><pre style="line-height: 125%"><span></span><span style="color: #008000; font-weight: bold">const</span> mat <span style="color: #666666">=</span> engine.createMaterial(<span style="color: #BA2121">&#39;triangle.filamat&#39;</span>);
 <span style="color: #008000; font-weight: bold">const</span> matinst <span style="color: #666666">=</span> mat.getDefaultInstance();
 Filament.RenderableManager.Builder(<span style="color: #666666">1</span>)
-    .boundingBox([[ <span style="color: #666666">-1</span>, <span style="color: #666666">-1</span>, <span style="color: #666666">-1</span> ], [ <span style="color: #666666">1</span>, <span style="color: #666666">1</span>, <span style="color: #666666">1</span> ]])
+    .boundingBox({ center<span style="color: #666666">:</span> [<span style="color: #666666">-1</span>, <span style="color: #666666">-1</span>, <span style="color: #666666">-1</span>], halfExtent<span style="color: #666666">:</span> [<span style="color: #666666">1</span>, <span style="color: #666666">1</span>, <span style="color: #666666">1</span>] })
     .material(<span style="color: #666666">0</span>, matinst)
     .geometry(<span style="color: #666666">0</span>, Filament.RenderableManager$PrimitiveType.TRIANGLES, <span style="color: #008000; font-weight: bold">this</span>.vb, <span style="color: #008000; font-weight: bold">this</span>.ib)
     .build(engine, <span style="color: #008000; font-weight: bold">this</span>.triangle);
