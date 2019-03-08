@@ -14,6 +14,7 @@ menu: main
 
 - [parquet](https://google.github.io/filament/webgl/parquet.html)
 - [suzanne](https://google.github.io/filament/webgl/suzanne.html)
+- [helmet](https://google.github.io/filament/webgl/helmet.html)
 - [knotess](https://prideout.net/knotess/)
 
 ## other documentation
