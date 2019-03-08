@@ -59,7 +59,7 @@ static constexpr uint8_t VISIBLE_ALL = VISIBLE_RENDERABLE | VISIBLE_SHADOW_CASTE
 
 FView::FView(FEngine& engine)
     : mFroxelizer(engine),
-      mPerViewUb(engine.getPerViewUib().getSize()),
+      mPerViewUb(PerViewUib::getUib().getSize()),
       mPerViewSb(PerViewSib::SAMPLER_COUNT),
       mDirectionalShadowMap(engine) {
     DriverApi& driver = engine.getDriverApi();
@@ -285,8 +285,6 @@ void FView::prepareShadowing(FEngine& engine, driver::DriverApi& driver,
     // TODO: for now we only consider THE directional light
 
     auto& lcm = engine.getLightManager();
-    UniformBuffer& u = getUb();
-    FScene* const scene = mScene;
 
     // dominant directional light is always as index 0
     FLightManager::Instance directionalLight = lightData.elementAt<FScene::LIGHT_INSTANCE>(0);
@@ -294,14 +292,15 @@ void FView::prepareShadowing(FEngine& engine, driver::DriverApi& driver,
     if (UTILS_UNLIKELY(mHasShadowing)) {
         // compute the frustum for this light
         ShadowMap& shadowMap = mDirectionalShadowMap;
-        shadowMap.update(lightData, 0, scene, mViewingCameraInfo, mVisibleLayers);
+        shadowMap.update(lightData, 0, mScene, mViewingCameraInfo, mVisibleLayers);
         if (shadowMap.hasVisibleShadows()) {
             // Cull shadow casters
+            UniformBuffer& u = mPerViewUb;
             Frustum const& frustum = shadowMap.getCamera().getFrustum();
             FView::prepareVisibleShadowCasters(engine.getJobSystem(), frustum, renderableData);
 
             // allocates shadowmap driver resources
-            shadowMap.prepare(driver, getUs());
+            shadowMap.prepare(driver, mPerViewSb);
 
             mat4f const& lightFromWorldMatrix = shadowMap.getLightSpaceMatrix();
             u.setUniform(offsetof(PerViewUib, lightFromWorldMatrix), lightFromWorldMatrix);
@@ -322,7 +321,7 @@ void FView::prepareLighting(FEngine& engine, FEngine::DriverApi& driver, ArenaSc
         filament::Viewport const& viewport) noexcept {
     SYSTRACE_CALL();
 
-    UniformBuffer& u = getUb();
+    UniformBuffer& u = mPerViewUb;
     const CameraInfo& camera = mViewingCameraInfo;
     FScene* const scene = mScene;
 
@@ -562,8 +561,8 @@ void FView::prepare(FEngine& engine, driver::DriverApi& driver, ArenaScope& aren
      */
 
     float fraction = (engine.getEngineTime().count() % 1000000000) / 1000000000.0f;
-    getUb().setUniform(offsetof(PerViewUib, time), fraction);
-    getUb().setUniform(offsetof(PerViewUib, userTime), userTime);
+    mPerViewUb.setUniform(offsetof(PerViewUib, time), fraction);
+    mPerViewUb.setUniform(offsetof(PerViewUib, userTime), userTime);
 
     // upload the renderables's dirty UBOs
     engine.getRenderableManager().prepare(driver,
@@ -615,7 +614,7 @@ void FView::prepareCamera(const CameraInfo& camera, const filament::Viewport& vi
     const mat4f clipFromWorld(clipFromView * viewFromWorld);
     const mat4f worldFromClip(worldFromView * viewFromClip);
 
-    UniformBuffer& u = getUb();
+    UniformBuffer& u = mPerViewUb;
     u.setUniform(offsetof(PerViewUib, viewFromWorldMatrix), viewFromWorld);    // view
     u.setUniform(offsetof(PerViewUib, worldFromViewMatrix), worldFromView);    // model
     u.setUniform(offsetof(PerViewUib, clipFromViewMatrix), clipFromView);      // projection

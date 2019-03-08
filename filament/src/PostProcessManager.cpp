@@ -35,13 +35,12 @@ using namespace filament::details;
 
 void PostProcessManager::init(FEngine& engine) noexcept {
     mEngine = &engine;
-
-    mPostProcessUb = UniformBuffer(engine.getPerPostProcessUib().getSize());
+    mPostProcessUb = UniformBuffer(PostProcessingUib::getUib().getSize());
 
     // create sampler for post-process FBO
     DriverApi& driver = engine.getDriverApi();
     mPostProcessSbh = driver.createSamplerGroup(PostProcessSib::SAMPLER_COUNT);
-    mPostProcessUbh = driver.createUniformBuffer(engine.getPerPostProcessUib().getSize(),
+    mPostProcessUbh = driver.createUniformBuffer(mPostProcessUb.getSize(),
             driver::BufferUsage::DYNAMIC);
     driver.bindSamplers(BindingPoints::POST_PROCESS, mPostProcessSbh);
     driver.bindUniformBuffer(BindingPoints::POST_PROCESS, mPostProcessUbh);

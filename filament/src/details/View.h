@@ -297,9 +297,6 @@ private:
     mutable UniformBuffer mPerViewUb;
     mutable SamplerGroup mPerViewSb;
 
-    SamplerGroup& getUs() const noexcept { return mPerViewSb; }
-    UniformBuffer& getUb() const noexcept { return mPerViewUb; }
-
     utils::CString mName;
 
     // the following values are set by prepare()

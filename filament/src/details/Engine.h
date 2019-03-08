@@ -53,9 +53,6 @@
 #include <utils/JobSystem.h>
 #include <utils/CountDownLatch.h>
 
-#include <math/mat4.h>
-#include <math/quat.h>
-
 #include <chrono>
 #include <memory>
 #include <unordered_map>
@@ -118,11 +115,6 @@ public:
     Driver& getDriver() const noexcept { return *mDriver; }
     DriverApi& getDriverApi() noexcept { return mCommandStream; }
     DFG* getDFG() const noexcept { return mDFG.get(); }
-
-
-    // Uniforms...
-    const UniformInterfaceBlock& getPerViewUib() const noexcept { return mPerViewUib; }
-    const UniformInterfaceBlock& getPerPostProcessUib() const noexcept { return mPostProcessUib; }
 
     // the per-frame Area is used by all Renderer, so they must run in sequence and
     // have freed all allocated memory when done. If this needs to change in the future,
@@ -316,12 +308,6 @@ private:
     std::unordered_map<const FMaterial*, ResourceList<FMaterialInstance>> mMaterialInstances;
 
     std::unique_ptr<DFG> mDFG;
-
-    // Per-view Uniform interface block
-    UniformInterfaceBlock mPerViewUib;
-
-    // post-process interface blocks
-    UniformInterfaceBlock mPostProcessUib;
 
     std::thread mDriverThread;
     CommandBufferQueue mCommandBufferQueue;
