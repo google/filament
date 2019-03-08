@@ -10,6 +10,6 @@ menu: main
 - [Materials Ref Sheet]
 
 [Build Instructions]: https://github.com/google/filament/blob/master/README.md
-[Filament Design]: https://google.github.io/filament/Filament.md.html
-[Materials Overview]: https://google.github.io/filament/Materials.md.html
+[Filament Design]: https://google.github.io/filament/Filament.html
+[Materials Overview]: https://google.github.io/filament/Materials.html
 [Materials Ref Sheet]: https://google.github.io/filament/Material%20Properties.pdf
