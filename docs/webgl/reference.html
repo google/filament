@@ -48,6 +48,10 @@
 <td align="left">Singleton used for constructing entities in Filament's ECS.</td>
 </tr>
 <tr>
+<td align="left"><a href="#Frustum">Frustum</a></td>
+<td align="left">Represents the six planes of a truncated viewing pyramid</td>
+</tr>
+<tr>
 <td align="left"><a href="#IcoSphere">IcoSphere</a></td>
 <td align="left">Utility class for constructing spheres (requires glMatrix).</td>
 </tr>
@@ -175,6 +179,10 @@
 </tr>
 <tr>
 <td align="left"><a href="#CompressedPixelDataType">CompressedPixelDataType</a></td>
+<td align="left"></td>
+</tr>
+<tr>
+<td align="left"><a href="#Frustum%24Plane">Frustum$Plane</a></td>
 <td align="left"></td>
 </tr>
 <tr>
@@ -420,6 +428,16 @@
 <li><em>view</em> an instance of <a href="#View">View</a></li>
 </ul>
 </li>
+<li><strong>engine.getLightManager()</strong>
+<ul>
+<li><em>returns</em> an instance of <a href="#LightManager">LightManager</a></li>
+</ul>
+</li>
+<li><strong>engine.getRenderableManager()</strong>
+<ul>
+<li><em>returns</em> an instance of <a href="#RenderableManager">RenderableManager</a></li>
+</ul>
+</li>
 <li><strong>engine.getTransformManager()</strong>
 <ul>
 <li><em>returns</em> an instance of <a href="#TransformManager">TransformManager</a></li>
@@ -430,7 +448,7 @@
 <li>Consumes the contents of a filamesh file and creates a renderable.</li>
 <li><em>buffer</em> asset string, or Uint8Array, or <a href="#Buffer">Buffer</a> with filamesh contents</li>
 <li><em>definstance</em> Optional default <a href="#MaterialInstance">MaterialInstance</a></li>
-<li><em>matinstances</em> Optional object that gets filled with name =&gt; <a href="#MaterialInstance">MaterialInstance</a></li>
+<li><em>matinstances</em> Optional in-out object that gets populated with a name-to-<a href="#MaterialInstance">MaterialInstance</a> mapping. Clients can also optionally provide individual material instances using this argument.</li>
 <li><em>returns</em> JavaScript object with keys <code>renderable</code>, <code>vertexBuffer</code>, and <code>indexBuffer</code>. These are of type <a href="#Entity">Entity</a>, <a href="#VertexBuffer">VertexBuffer</a>, and <a href="#IndexBuffer">IndexBuffer</a>.</li>
 </ul>
 </li>
@@ -457,6 +475,10 @@
 </ul>
 </li>
 </ul>
+</div>
+<div class='classdoc'>
+<h2>class <a id='Frustum' href='#Frustum'>Frustum</a></h2>
+<p>Represents the six planes of a truncated viewing pyramid</p>
 </div>
 <div class='classdoc'>
 <h2>class <a id='IcoSphere' href='#IcoSphere'>IcoSphere</a></h2>
@@ -894,6 +916,17 @@ This defines the following functions:</p>
 <li>SRGB8_ALPHA8_ASTC_10x10</li>
 <li>SRGB8_ALPHA8_ASTC_12x10</li>
 <li>SRGB8_ALPHA8_ASTC_12x12</li>
+</ul>
+</div>
+<div class='enumdoc'>
+<h2>enum <a id='Frustum$Plane' href='#Frustum$Plane'>Frustum$Plane</a></h2>
+<ul>
+<li>LEFT</li>
+<li>RIGHT</li>
+<li>BOTTOM</li>
+<li>TOP</li>
+<li>FAR</li>
+<li>NEAR</li>
 </ul>
 </div>
 <div class='enumdoc'>

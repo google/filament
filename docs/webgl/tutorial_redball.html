@@ -170,7 +170,7 @@ vb.setBufferAt(engine, <span style="color: #666666">1</span>, icosphere.tangents
 ib.setBuffer(engine, icosphere.triangles);
 
 Filament.RenderableManager.Builder(<span style="color: #666666">1</span>)
-  .boundingBox([ [<span style="color: #666666">-1</span>, <span style="color: #666666">-1</span>, <span style="color: #666666">-1</span>], [<span style="color: #666666">1</span>, <span style="color: #666666">1</span>, <span style="color: #666666">1</span>] ])
+  .boundingBox({ center<span style="color: #666666">:</span> [<span style="color: #666666">-1</span>, <span style="color: #666666">-1</span>, <span style="color: #666666">-1</span>], halfExtent<span style="color: #666666">:</span> [<span style="color: #666666">1</span>, <span style="color: #666666">1</span>, <span style="color: #666666">1</span>] })
   .material(<span style="color: #666666">0</span>, matinstance)
   .geometry(<span style="color: #666666">0</span>, PrimitiveType.TRIANGLES, vb, ib)
   .build(engine, renderable);
