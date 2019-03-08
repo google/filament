@@ -108,7 +108,7 @@ static std::string shaderFromKey(const MaterialKey& config, const UvMap& uvmap) 
         )SHADER";
     }
 
-    if (config.alphaMode == AlphaMode::TRANSPARENT) {
+    if (config.alphaMode == AlphaMode::BLEND) {
         shader += R"SHADER(
             material.baseColor.rgb *= material.baseColor.a;
         )SHADER";
@@ -207,7 +207,6 @@ static Material* createMaterial(Engine* engine, const MaterialKey& config, const
             .name(name)
             .flipUV(false)
             .material(shader.c_str())
-            .culling(config.doubleSided ? CullingMode::NONE : CullingMode::BACK)
             .doubleSided(config.doubleSided);
 
     auto uvset = (uint8_t*) &uvmap.front();
@@ -275,15 +274,16 @@ static Material* createMaterial(Engine* engine, const MaterialKey& config, const
     }
 
     switch(config.alphaMode) {
-        case AlphaMode::MASKED:
+        case AlphaMode::OPAQUE:
+            builder.blending(MaterialBuilder::BlendingMode::OPAQUE);
+            break;
+        case AlphaMode::MASK:
             builder.blending(MaterialBuilder::BlendingMode::MASKED);
             builder.maskThreshold(config.alphaMaskThreshold);
             break;
-        case AlphaMode::TRANSPARENT:
+        case AlphaMode::BLEND:
             builder.blending(MaterialBuilder::BlendingMode::TRANSPARENT);
-            break;
-        default:
-            builder.blending(MaterialBuilder::BlendingMode::OPAQUE);
+            builder.depthWrite(true);
     }
 
     builder.shading(config.unlit ? Shading::UNLIT : Shading::LIT);
