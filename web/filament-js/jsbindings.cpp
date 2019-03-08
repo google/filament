@@ -444,6 +444,7 @@ class_<View>("View")
 /// See also the [Engine] methods `createScene` and `destroyScene`.
 class_<Scene>("Scene")
     .function("addEntity", &Scene::addEntity)
+    .function("hasEntity", &Scene::hasEntity)
     .function("remove", &Scene::remove)
     .function("setSkybox", &Scene::setSkybox, allow_raw_pointers())
     .function("setIndirectLight", &Scene::setIndirectLight, allow_raw_pointers())
@@ -672,6 +673,14 @@ class_<TransformManager>("TransformManager")
     .function("create", &TransformManager::create)
     .function("destroy", &TransformManager::destroy)
     .function("setParent", &TransformManager::setParent)
+    .function("getParent", &TransformManager::getParent)
+
+    .function("getChidren", EMBIND_LAMBDA(std::vector<utils::Entity>,
+            (TransformManager* self, TransformManager::Instance instance), {
+        std::vector<utils::Entity> result(self->getChildCount(instance));
+        self->getChildren(instance, result.data(), result.size());
+        return result;
+    }), allow_raw_pointers())
 
     /// setTransform ::method:: Sets the mat4 value of a transform component.
     /// instance ::argument:: The transform instance of entity, obtained via `getInstance`.

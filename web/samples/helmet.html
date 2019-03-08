@@ -107,6 +107,11 @@ class App {
         const mats = { GlassPlasticMat, LeatherPartsMat, LensesMat, MetalPartsMat, RubberWoodMat };
         const mesh = engine.loadFilamesh(filamesh_url, null, mats);
 
+        let rm = engine.getRenderableManager();
+        let renderable = rm.getInstance(mesh.renderable);
+        rm.setCastShadows(renderable, true);
+        rm.setReceiveShadows(renderable, true);
+
         this.helmet = mesh.renderable;
         this.scene.addEntity(mesh.renderable);
 
