@@ -70,8 +70,18 @@ struct Primitive {
 };
 using MeshCache = tsl::robin_map<const cgltf_mesh*, std::vector<Primitive>>;
 
-// Filament materials are cached by the MaterialGenerator, but material instances are cached here.
-using MatInstanceCache = tsl::robin_map<intptr_t, MaterialInstance*>;
+// MatInstanceCache
+// ----------------
+// Each glTF material definition corresponds to a single filament::MaterialInstance, which are
+// cached here in the loader. The filament::Material objects that are used to create instances are
+// cached in MaterialGenerator. If a given glTF material is referenced by multiple glTF meshes, then
+// their corresponding filament primitives will share the same Filament MaterialInstance and UvMap.
+// The UvMap is a mapping from each texcoord slot in glTF to one of Filament's 2 texcoord sets.
+struct MaterialEntry {
+    MaterialInstance* instance;
+    UvMap uvmap;
+};
+using MatInstanceCache = tsl::robin_map<intptr_t, MaterialEntry>;
 
 // Sometimes a glTF bufferview includes unused data at the end (e.g. in skinning.gltf) so we need to
 // compute the correct size of the vertex buffer. Filament automatically infers the size of
@@ -298,7 +308,7 @@ void FAssetLoader::createRenderable(const cgltf_node* node, Entity entity) {
         }
 
         // Create a material instance for this primitive or fetch one from the cache.
-        UvMap uvmap;
+        UvMap uvmap {};
         bool hasVertexColor = primitiveHasVertexColor(inputPrim);
         MaterialInstance* mi = createMaterialInstance(inputPrim->material, &uvmap, hasVertexColor);
         builder.material(index, mi);
@@ -511,7 +521,8 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_material* inp
     intptr_t key = ((intptr_t) inputMat) ^ (vertexColor ? 1 : 0);
     auto iter = mMatInstanceCache.find(key);
     if (iter != mMatInstanceCache.end()) {
-        return iter->second;
+        *uvmap = iter->second.uvmap;
+        return iter->second.instance;
     }
 
     // The default glTF material is non-lit black.
@@ -522,7 +533,8 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_material* inp
         Material* mat = mMaterials.getOrCreateMaterial(&matkey, uvmap, "default");
         MaterialInstance* mi = mat->createInstance();
         mResult->mMaterialInstances.push_back(mi);
-        return mMatInstanceCache[0] = mi;
+        mMatInstanceCache[0] = {mi, *uvmap};
+        return mi;
     }
 
     if (inputMat->has_pbr_specular_glossiness) {
@@ -632,7 +644,8 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_material* inp
         }
     }
 
-    return mMatInstanceCache[key] = mi;
+    mMatInstanceCache[key] = {mi, *uvmap};
+    return mi;
 }
 
 void FAssetLoader::addTextureBinding(MaterialInstance* materialInstance, const char* parameterName,
