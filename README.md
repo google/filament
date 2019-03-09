@@ -235,8 +235,8 @@ Make sure you've installed the following dependencies:
 
 - `clang-7`
 - `libglu1-mesa-dev`
-- `libc++-7-dev` (`libcxx-devel` on Fedora)
-- `libc++abi-7-dev`
+- `libc++-7-dev` (`libcxx-devel` and `libcxx-static` on Fedora)
+- `libc++abi-7-dev` (`libcxxabi-static` on Fedora)
 - `ninja-build`
 - `libxi-dev`
 
