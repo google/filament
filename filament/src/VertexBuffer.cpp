@@ -36,7 +36,7 @@ using namespace details;
 using namespace filament::math;
 
 struct VertexBuffer::BuilderDetails {
-    VertexBuffer::Builder::AttributeData mAttributes[MAX_ATTRIBUTE_BUFFERS_COUNT];
+    FVertexBuffer::AttributeData mAttributes[MAX_ATTRIBUTE_BUFFERS_COUNT];
     AttributeBitset mDeclaredAttributes;
     uint32_t mVertexCount = 0;
     uint8_t mBufferCount = 0;
@@ -89,7 +89,7 @@ VertexBuffer::Builder& VertexBuffer::Builder::attribute(VertexAttribute attribut
         }
 #endif
 
-        AttributeData& entry = mImpl->mAttributes[attribute];
+        FVertexBuffer::AttributeData& entry = mImpl->mAttributes[attribute];
         entry.buffer = bufferIndex;
         entry.offset = byteOffset;
         entry.stride = byteStride;
@@ -105,7 +105,7 @@ VertexBuffer::Builder& VertexBuffer::Builder::attribute(VertexAttribute attribut
 VertexBuffer::Builder& VertexBuffer::Builder::normalized(VertexAttribute attribute,
         bool normalized) noexcept {
     if (size_t(attribute) < MAX_ATTRIBUTE_BUFFERS_COUNT) {
-        AttributeData& entry = mImpl->mAttributes[attribute];
+        FVertexBuffer::AttributeData& entry = mImpl->mAttributes[attribute];
         if (normalized) {
             entry.flags |= Driver::Attribute::FLAG_NORMALIZED;
         } else {
@@ -143,7 +143,7 @@ FVertexBuffer::FVertexBuffer(FEngine& engine, const VertexBuffer::Builder& build
     static_assert(attributeArray.size() == MAX_ATTRIBUTE_BUFFERS_COUNT,
             "Driver::Attribute and Builder::Attribute arrays must match");
 
-    static_assert(sizeof(Driver::Attribute) == sizeof(Builder::AttributeData),
+    static_assert(sizeof(Driver::Attribute) == sizeof(AttributeData),
             "Driver::Attribute and Builder::Attribute must match");
 
     auto const& declaredAttributes = mDeclaredAttributes;

@@ -82,13 +82,6 @@ public:
 
     private:
         friend class details::FVertexBuffer;
-        struct AttributeData {
-            uint32_t offset = 0;
-            uint8_t stride = 0;
-            uint8_t buffer = 0;
-            AttributeType type = AttributeType::FLOAT4;
-            uint8_t flags = 0x0; // See Driver::Attribute
-        };
     };
 
     /**
