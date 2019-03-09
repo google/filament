@@ -19,6 +19,7 @@
 
 #include "upcast.h"
 
+#include "driver/Driver.h"
 #include "driver/Handle.h"
 
 #include <private/filament/EngineEnums.h>
@@ -58,8 +59,12 @@ public:
 private:
     friend class VertexBuffer;
 
+    struct AttributeData : Driver::Attribute {
+        AttributeData() : Driver::Attribute{ .type = Driver::ElementType::FLOAT4 } {}
+    };
+
     Handle<HwVertexBuffer> mHandle;
-    std::array<Builder::AttributeData, MAX_ATTRIBUTE_BUFFERS_COUNT> mAttributes;
+    std::array<AttributeData, MAX_ATTRIBUTE_BUFFERS_COUNT> mAttributes;
     AttributeBitset mDeclaredAttributes;
     uint32_t mVertexCount = 0;
     uint8_t mBufferCount = 0;
