@@ -55,7 +55,7 @@ public:
         /**
          * Synchronization with the GPU
          *
-         * Calling wait() on a HARD fence will only wait for all commands prior to the Fence to
+         * Calling wait() on a HARD fence will wait for all commands prior to the Fence to
          * have completed on the GPU.
          */
         HARD

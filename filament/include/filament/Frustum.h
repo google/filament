@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+//! \file
+
 #ifndef TNT_FILAMENT_FRUSTUM_H
 #define TNT_FILAMENT_FRUSTUM_H
 
@@ -22,8 +24,6 @@
 #include <utils/compiler.h>
 
 #include <math/mat4.h>
-#include <math/vec4.h>
-#include <math/vec2.h>
 
 #include <utils/unwindows.h> // Because we define NEAR and FAR in the Plane enum.
 
@@ -33,6 +33,9 @@ namespace details {
 class Culler;
 } // namespace details;
 
+/**
+ * A frustum defined by six planes
+ */
 class UTILS_PUBLIC Frustum {
 public:
     enum class Plane : uint8_t {
@@ -50,24 +53,55 @@ public:
     Frustum& operator=(const Frustum& rhs) = default;
     Frustum& operator=(Frustum&& rhs) noexcept = default;
 
-    // create a frustum from a projection matrix (usually the projection * view matrix)
+    /**
+     * Create a frustum from a projection matrix (usually the projection * view matrix)
+     * @param pv a 4x4 projection matrix
+     */
     explicit Frustum(const filament::math::mat4f& pv);
 
-    // set the frustum from the given projection matrix
+    /**
+     * Set the frustum from the given projection matrix
+     * @param pv a 4x4 projection matrix
+     */
     void setProjection(const filament::math::mat4f& pv);
 
-    // return the plane equation parameters with normalized normals
+    /**
+     * Return the plane equation parameters with normalized normals
+     * @param plane Identifier of the plane to retrieve the equation of
+     * @return A plane equation encoded a float4 R such as R.x*x + R.y*y + R.z*z = R.w
+     */
     filament::math::float4 getNormalizedPlane(Plane plane) const noexcept;
 
-    // return frustum planes in left, right, bottom, top, far, near order
+    /**
+     * Return a copy of all six frustum planes in left, right, bottom, top, far, near order
+     * @param planes six plane equations encoded as in getNormalizedPlane() in
+     *              left, right, bottom, top, far, near order
+     */
     void getNormalizedPlanes(filament::math::float4 planes[6]) const noexcept;
 
+    /**
+     * Return all six frustum planes in left, right, bottom, top, far, near order
+     * @return six plane equations encoded as in getNormalizedPlane() in
+     *              left, right, bottom, top, far, near order
+     */
     filament::math::float4 const* getNormalizedPlanes() const noexcept { return mPlanes; }
 
-    // returns whether a box intersects the frustum (i.e. is visible)
+    /**
+     * Returns whether a box intersects the frustum (i.e. is visible)
+     * @param box The box to test against the frustum
+     * @return true if the box may intersects the frustum, false otherwise. In some situations
+     * a box that doesn't intersect the frustum might be reported as though it does. However,
+     * a box that does intersect the frustum is always reported correctly (true).
+     */
     bool intersects(const Box& box) const noexcept;
 
-    // returns whether a sphere intersects the frustum (i.e. is visible)
+    /**
+     * Returns whether a sphere intersects the frustum (i.e. is visible)
+     * @param sphere A sphere encoded as a center + radius.
+     * @return true if the sphere may intersects the frustum, false otherwise. In some situations
+     * a sphere that doesn't intersect the frustum might be reported as though it does. However,
+     * a sphere that does intersect the frustum is always reported correctly (true).
+     */
     bool intersects(const filament::math::float4& sphere) const noexcept;
 
 private:
