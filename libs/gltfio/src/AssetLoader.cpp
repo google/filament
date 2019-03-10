@@ -15,10 +15,10 @@
  */
 
 #include <gltfio/AssetLoader.h>
+#include <gltfio/MaterialProvider.h>
 
 #include "FFilamentAsset.h"
 #include "GltfEnums.h"
-#include "MaterialGenerator.h"
 
 #include <filament/Box.h>
 #include <filament/Engine.h>
@@ -74,7 +74,7 @@ using MeshCache = tsl::robin_map<const cgltf_mesh*, std::vector<Primitive>>;
 // ----------------
 // Each glTF material definition corresponds to a single filament::MaterialInstance, which are
 // cached here in the loader. The filament::Material objects that are used to create instances are
-// cached in MaterialGenerator. If a given glTF material is referenced by multiple glTF meshes, then
+// cached in MaterialProvider. If a given glTF material is referenced by multiple glTF meshes, then
 // their corresponding filament primitives will share the same Filament MaterialInstance and UvMap.
 // The UvMap is a mapping from each texcoord slot in glTF to one of Filament's 2 texcoord sets.
 struct MaterialEntry {
@@ -104,26 +104,30 @@ struct FAssetLoader : public AssetLoader {
             mRenderableManager(engine->getRenderableManager()),
             mNameManager(names),
             mTransformManager(engine->getTransformManager()),
-            mMaterials(engine),
+            mMaterials(MaterialProvider::createMaterialGenerator(engine)),
             mEngine(engine) {}
 
     FFilamentAsset* createAssetFromJson(const uint8_t* bytes, uint32_t nbytes);
     FilamentAsset* createAssetFromBinary(const uint8_t* bytes, uint32_t nbytes);
+
+    ~FAssetLoader() {
+        delete mMaterials;
+    }
 
     void destroyAsset(const FFilamentAsset* asset) {
         delete asset;
     }
 
     size_t getMaterialsCount() const noexcept {
-        return mMaterials.getMaterialsCount();
+        return mMaterials->getMaterialsCount();
     }
 
     const Material* const* getMaterials() const noexcept {
-        return mMaterials.getMaterials();
+        return mMaterials->getMaterials();
     }
 
     void destroyMaterials() {
-        mMaterials.destroyMaterials();
+        mMaterials->destroyMaterials();
     }
 
     void createAsset(const cgltf_data* srcAsset);
@@ -141,7 +145,7 @@ struct FAssetLoader : public AssetLoader {
     RenderableManager& mRenderableManager;
     NameComponentManager* mNameManager;
     TransformManager& mTransformManager;
-    MaterialGenerator mMaterials;
+    MaterialProvider* mMaterials;
     Engine* mEngine;
 
     // The loader owns a few transient mappings used only for the current asset being loaded.
@@ -530,8 +534,7 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_material* inp
         MaterialKey matkey {
             .unlit = true
         };
-        Material* mat = mMaterials.getOrCreateMaterial(&matkey, uvmap, "default");
-        MaterialInstance* mi = mat->createInstance();
+        MaterialInstance* mi = mMaterials->createMaterialInstance(&matkey, uvmap, "default");
         mResult->mMaterialInstances.push_back(mi);
         mMatInstanceCache[0] = {mi, *uvmap};
         return mi;
@@ -580,12 +583,9 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_material* inp
             break;
     }
 
-    // This not only creates (or fetches) a material, it modifies the material key according to
-    // our rendering constraints. For example, Filament only supports 2 sets of texture coordinates.
-    Material* mat = mMaterials.getOrCreateMaterial(&matkey, uvmap, inputMat->name);
-
-    // Create an instance of the material that has a unique set of texture bindings etc.
-    MaterialInstance* mi = mat->createInstance();
+    // This not only creates a material instnace, it modifies the material key according to our
+    // rendering constraints. For example, Filament only supports 2 sets of texture coordinates.
+    MaterialInstance* mi = mMaterials->createMaterialInstance(&matkey, uvmap, inputMat->name);
     mResult->mMaterialInstances.push_back(mi);
 
     const float* e = &inputMat->emissive_factor[0];

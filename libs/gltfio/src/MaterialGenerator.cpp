@@ -14,39 +14,41 @@
  * limitations under the License.
  */
 
-#include "MaterialGenerator.h"
+#include <gltfio/MaterialProvider.h>
 
 #include <filamat/MaterialBuilder.h>
 
 #include <utils/Log.h>
+#include <utils/Hash.h>
+
+#include <tsl/robin_map.h>
 
 #include <string>
 
 using namespace filamat;
 using namespace filament;
+using namespace gltfio;
 using namespace utils;
 
-namespace gltfio {
-namespace details {
+namespace {
 
-bool MaterialGenerator::EqualFn::operator()(const MaterialKey& k1, const MaterialKey& k2) const {
-    return
-        (k1.doubleSided == k2.doubleSided) &&
-        (k1.unlit == k2.unlit) &&
-        (k1.hasVertexColors == k2.hasVertexColors) &&
-        (k1.hasBaseColorTexture == k2.hasBaseColorTexture) &&
-        (k1.hasMetallicRoughnessTexture == k2.hasMetallicRoughnessTexture) &&
-        (k1.hasNormalTexture == k2.hasNormalTexture) &&
-        (k1.hasOcclusionTexture == k2.hasOcclusionTexture) &&
-        (k1.hasEmissiveTexture == k2.hasEmissiveTexture) &&
-        (k1.alphaMode == k2.alphaMode) &&
-        (k1.baseColorUV == k2.baseColorUV) &&
-        (k1.metallicRoughnessUV == k2.metallicRoughnessUV) &&
-        (k1.emissiveUV == k2.emissiveUV) &&
-        (k1.aoUV == k2.aoUV) &&
-        (k1.normalUV == k2.normalUV) &&
-        (k1.alphaMaskThreshold == k2.alphaMaskThreshold);
-}
+class MaterialGenerator : public MaterialProvider {
+public:
+    MaterialGenerator(filament::Engine* engine);
+    ~MaterialGenerator();
+
+    filament::MaterialInstance* createMaterialInstance(MaterialKey* config, UvMap* uvmap,
+            const char* label) override;
+
+    size_t getMaterialsCount() const noexcept override;
+    const filament::Material* const* getMaterials() const noexcept override;
+    void destroyMaterials() override;
+
+    using HashFn = utils::hash::MurmurHashFn<MaterialKey>;
+    tsl::robin_map<MaterialKey, filament::Material*, HashFn> mCache;
+    std::vector<filament::Material*> mMaterials;
+    filament::Engine* mEngine;
+};
 
 MaterialGenerator::MaterialGenerator(Engine* engine) : mEngine(engine) {
     MaterialBuilder::init();
@@ -292,7 +294,7 @@ static Material* createMaterial(Engine* engine, const MaterialKey& config, const
     return Material::Builder().package(pkg.getData(), pkg.getSize()).build(*engine);
 }
 
-Material* MaterialGenerator::getOrCreateMaterial(MaterialKey* config, UvMap* uvmap,
+MaterialInstance* MaterialGenerator::createMaterialInstance(MaterialKey* config, UvMap* uvmap,
         const char* label) {
     constrainMaterial(config, uvmap);
     auto iter = mCache.find(*config);
@@ -300,10 +302,17 @@ Material* MaterialGenerator::getOrCreateMaterial(MaterialKey* config, UvMap* uvm
         Material* mat = createMaterial(mEngine, *config, *uvmap, label);
         mCache.emplace(std::make_pair(*config, mat));
         mMaterials.push_back(mat);
-        return mat;
+        return mat->createInstance();
     }
-    return iter->second;
+    return iter->second->createInstance();
 }
 
-} // namespace details
+} // anonymous namespace
+
+namespace gltfio {
+
+MaterialProvider* MaterialProvider::createMaterialGenerator(filament::Engine* engine) {
+    return new MaterialGenerator(engine);
+}
+
 } // namespace gltfio
