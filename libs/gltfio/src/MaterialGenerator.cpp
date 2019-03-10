@@ -74,11 +74,11 @@ void MaterialGenerator::destroyMaterials() {
     mCache.clear();
 }
 
-static std::string shaderFromKey(const MaterialKey& config, const UvMap& uvmap) {
+static std::string shaderFromKey(const MaterialKey& config) {
     std::string shader = "void material(inout MaterialInputs material) {\n";
 
     if (config.hasNormalTexture && !config.unlit) {
-        shader += "float2 normalUV = getUV${normal}();\n";
+        shader += "float2 normalUV = ${normal};\n";
         if (config.hasTextureTransforms) {
             shader += "normalUV = (vec3(normalUV, 1.0) * materialParams.normalUvMatrix).xy;\n";
         }
@@ -95,7 +95,7 @@ static std::string shaderFromKey(const MaterialKey& config, const UvMap& uvmap) 
     )SHADER";
 
     if (config.hasBaseColorTexture) {
-        shader += "float2 baseColorUV = getUV${color}();\n";
+        shader += "float2 baseColorUV = ${color};\n";
         if (config.hasTextureTransforms) {
             shader += "baseColorUV = (vec3(baseColorUV, 1.0) * "
                     "materialParams.baseColorUvMatrix).xy;\n";
@@ -122,7 +122,7 @@ static std::string shaderFromKey(const MaterialKey& config, const UvMap& uvmap) 
             material.emissive.rgb = materialParams.emissiveFactor.rgb;
         )SHADER";
         if (config.hasMetallicRoughnessTexture) {
-            shader += "float2 metallicRoughnessUV = getUV${metallic}();\n";
+            shader += "float2 metallicRoughnessUV = ${metallic};\n";
             if (config.hasTextureTransforms) {
                 shader += "metallicRoughnessUV = (vec3(metallicRoughnessUV, 1.0) * "
                         "materialParams.metallicRoughnessUvMatrix).xy;\n";
@@ -134,7 +134,7 @@ static std::string shaderFromKey(const MaterialKey& config, const UvMap& uvmap) 
             )SHADER";
         }
         if (config.hasOcclusionTexture) {
-            shader += "float2 aoUV = getUV${ao}();\n";
+            shader += "float2 aoUV = ${ao};\n";
             if (config.hasTextureTransforms) {
                 shader += "aoUV = (vec3(aoUV, 1.0) * materialParams.occlusionUvMatrix).xy;\n";
             }
@@ -144,7 +144,7 @@ static std::string shaderFromKey(const MaterialKey& config, const UvMap& uvmap) 
             )SHADER";
         }
         if (config.hasEmissiveTexture) {
-            shader += "float2 emissiveUV = getUV${emissive}();\n";
+            shader += "float2 emissiveUV = ${emissive};\n";
             if (config.hasTextureTransforms) {
                 shader += "emissiveUV = (vec3(emissiveUV, 1.0) * "
                         "materialParams.emissiveUvMatrix).xy;\n";
@@ -157,71 +157,14 @@ static std::string shaderFromKey(const MaterialKey& config, const UvMap& uvmap) 
     }
 
     shader += "}\n";
-
-    auto replaceAll = [&shader](const std::string& from, const std::string& to) {
-        size_t pos = shader.find(from);
-        for (; pos != std::string::npos; pos = shader.find(from, pos)) {
-            shader.replace(pos, from.length(), to);
-        }
-    };
-
-    const auto normalUV = std::to_string(uvmap[config.normalUV] - 1);
-    const auto baseColorUV = std::to_string(uvmap[config.baseColorUV] - 1);
-    const auto metallicRoughnessUV = std::to_string(uvmap[config.metallicRoughnessUV] - 1);
-    const auto emissiveUV = std::to_string(uvmap[config.emissiveUV] - 1);
-    const auto aoUV = std::to_string(uvmap[config.aoUV] - 1);
-
-    replaceAll("${normal}", normalUV);
-    replaceAll("${color}", baseColorUV);
-    replaceAll("${metallic}", metallicRoughnessUV);
-    replaceAll("${ao}", aoUV);
-    replaceAll("${emissive}", emissiveUV);
-
     return shader;
-}
-
-// Filament supports up to 2 UV sets. glTF has arbitrary texcoord set indices, but it allows
-// implementations to support only 2 simultaneous sets. Here we build a mapping table with 1-based
-// indices where 0 means unused. Note that the order in which we drop textures can affect the look
-// of certain assets. This "order of degradation" is stipulated by the glTF 2.0 specification.
-static void constrainMaterial(MaterialKey* key, UvMap* uvmap) {
-    const int MAX_INDEX = 2;
-    UvMap retval {};
-    int index = 1;
-    if (key->hasBaseColorTexture) {
-        retval[key->baseColorUV] = (UvSet) index++;
-    }
-    if (key->hasMetallicRoughnessTexture && retval[key->metallicRoughnessUV] == UNUSED) {
-        retval[key->metallicRoughnessUV] = (UvSet) index++;
-    }
-    if (key->hasNormalTexture && retval[key->normalUV] == UNUSED) {
-        if (index > MAX_INDEX) {
-            key->hasNormalTexture = false;
-        } else {
-            retval[key->normalUV] = (UvSet) index++;
-        }
-    }
-    if (key->hasOcclusionTexture && retval[key->aoUV] == UNUSED) {
-        if (index > MAX_INDEX) {
-            key->hasOcclusionTexture = false;
-        } else {
-            retval[key->aoUV] = (UvSet) index++;
-        }
-    }
-    if (key->hasEmissiveTexture && retval[key->emissiveUV] == UNUSED) {
-        if (index > MAX_INDEX) {
-            key->hasEmissiveTexture = false;
-        } else {
-            retval[key->emissiveUV] = (UvSet) index++;
-        }
-    }
-    *uvmap = retval;
 }
 
 static Material* createMaterial(Engine* engine, const MaterialKey& config, const UvMap& uvmap,
         const char* name) {
     using CullingMode = MaterialBuilder::CullingMode;
-    std::string shader = shaderFromKey(config, uvmap);
+    std::string shader = shaderFromKey(config);
+    gltfio::details::processShaderString(&shader, uvmap, config);
     MaterialBuilder builder = MaterialBuilder()
             .name(name)
             .flipUV(false)
@@ -312,7 +255,7 @@ static Material* createMaterial(Engine* engine, const MaterialKey& config, const
 
 MaterialInstance* MaterialGenerator::createMaterialInstance(MaterialKey* config, UvMap* uvmap,
         const char* label) {
-    constrainMaterial(config, uvmap);
+    gltfio::details::constrainMaterial(config, uvmap);
     auto iter = mCache.find(*config);
     if (iter == mCache.end()) {
         Material* mat = createMaterial(mEngine, *config, *uvmap, label);

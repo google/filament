@@ -149,10 +149,16 @@ bool ResourceLoader::loadResources(FilamentAsset* asset) {
     const BufferBinding* bindings = asset->getBufferBindings();
     for (size_t i = 0, n = asset->getBufferBindingCount(); i < n; ++i) {
         auto bb = bindings[i];
-        const uint8_t* data8 = bb.offset + (const uint8_t*) *bb.data;
-        if (bb.vertexBuffer) {
+        if (bb.vertexBuffer && !bb.generateDummyData) {
+            const uint8_t* data8 = bb.offset + (const uint8_t*) *bb.data;
             mPool->addPendingUpload();
             VertexBuffer::BufferDescriptor bd(data8, bb.size, AssetPool::onLoadedResource, mPool);
+            bb.vertexBuffer->setBufferAt(*mConfig.engine, bb.bufferIndex, std::move(bd));
+        } else if (bb.vertexBuffer) {
+            uint32_t* dummyData = (uint32_t*) malloc(bb.size);
+            memset(dummyData, 0xff, bb.size);
+            auto callback = (VertexBuffer::BufferDescriptor::Callback) free;
+            VertexBuffer::BufferDescriptor bd(dummyData, bb.size, callback);
             bb.vertexBuffer->setBufferAt(*mConfig.engine, bb.bufferIndex, std::move(bd));
         } else if (bb.generateTrivialIndices) {
             uint32_t* data32 = (uint32_t*) malloc(bb.size);
@@ -161,6 +167,7 @@ bool ResourceLoader::loadResources(FilamentAsset* asset) {
             IndexBuffer::BufferDescriptor bd(data32, bb.size, callback);
             bb.indexBuffer->setBuffer(*mConfig.engine, std::move(bd));
         } else if (bb.convertBytesToShorts) {
+            const uint8_t* data8 = bb.offset + (const uint8_t*) *bb.data;
             size_t size16 = bb.size * 2;
             uint16_t* data16 = (uint16_t*) malloc(size16);
             convertBytesToShorts(data16, data8, bb.size);
@@ -168,6 +175,7 @@ bool ResourceLoader::loadResources(FilamentAsset* asset) {
             IndexBuffer::BufferDescriptor bd(data16, size16, callback);
             bb.indexBuffer->setBuffer(*mConfig.engine, std::move(bd));
         } else if (bb.indexBuffer) {
+            const uint8_t* data8 = bb.offset + (const uint8_t*) *bb.data;
             mPool->addPendingUpload();
             IndexBuffer::BufferDescriptor bd(data8, bb.size, AssetPool::onLoadedResource, mPool);
             bb.indexBuffer->setBuffer(*mConfig.engine, std::move(bd));

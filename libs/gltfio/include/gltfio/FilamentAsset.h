@@ -135,6 +135,7 @@ struct BufferBinding {
 
     bool convertBytesToShorts;   // the resource loader must convert the buffer from u8 to u16
     bool generateTrivialIndices; // the resource loader must generate indices like: 0, 1, 2, ...
+    bool generateDummyData;      // the resource loader should generate a sequence of 1.0 values
 };
 
 /** Describes a binding from a Texture to a MaterialInstance. */

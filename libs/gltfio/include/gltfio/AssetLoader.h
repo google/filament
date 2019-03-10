@@ -27,6 +27,21 @@
 namespace gltfio {
 
 /**
+ * AssetLoader can be configured to generate materials using filamat, or to use a small set of
+ * prebuilt ubershader materials.
+ */
+enum MaterialSource {
+    GENERATE_SHADERS,
+    LOAD_UBERSHADERS,
+};
+
+struct AssetConfiguration {
+    class filament::Engine* engine;
+    utils::NameComponentManager* names = nullptr;
+    MaterialSource materials = GENERATE_SHADERS;
+};
+
+/**
  * AssetLoader consumes a blob of glTF 2.0 content (either JSON or GLB) and produces an "asset",
  * which is a bundle of Filament entities, material instances, textures, vertex buffers, and index
  * buffers.
@@ -37,15 +52,11 @@ namespace gltfio {
  *
  * AssetLoader also owns a cache of Material objects that may be re-used across multiple loads.
  *
- * TODO: currently this uses filamat to generate materials on the fly, but we may wish to allow
- * clients to load a small set of precompiled ubershader materials to avoid the footprint of the
- * filamat library on resource-constrained platforms.
- *
  * Example usage:
  *
  * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  * auto engine = Engine::create();
- * auto loader = AssetLoader::create(engine);
+ * auto loader = AssetLoader::create({engine});
  *
  * // Parse the glTF content and create Filament entities.
  * std::vector<uint8_t> content(...);
@@ -84,12 +95,14 @@ class AssetLoader {
 public:
 
     /**
-     * Creates an asset loader for the given engine.
+     * Creates an asset loader for the given configuration, which specifies the Filament engine.
      *
      * The engine is held weakly, used only for the creation and destruction of Filament objects.
      * The optional name component manager can be used to assign names to renderables.
+     * The material source specifies whether to use filamat to generate materials on the fly, or to
+     * load a small set of precompiled ubershader materials.
      */
-    static AssetLoader* create(filament::Engine* engine, utils::NameComponentManager* = nullptr);
+    static AssetLoader* create(const AssetConfiguration& config);
 
     /**
      * Frees the loader.
