@@ -3,6 +3,9 @@ material {
     requires : [ uv0, uv1, color ],
     shadingModel : ${SHADINGMODEL},
     blending : ${BLENDING},
+    depthWrite : true,
+    doubleSided : true,
+    flipUV : false,
     parameters : [
         // Base Color
         { type : int, name : baseColorIndex },

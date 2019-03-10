@@ -98,14 +98,23 @@ static uint32_t computeBindingOffset(const cgltf_accessor* accessor) {
     return uint32_t(accessor->offset + accessor->buffer_view->offset);
 };
 
+static MaterialProvider* createMaterialProvider(const AssetConfiguration& config) {
+    if (config.materials == GENERATE_SHADERS) {
+        return MaterialProvider::createMaterialGenerator(config.engine);
+    } else {
+        return MaterialProvider::createUbershaderLoader(config.engine);
+    }
+}
+
 struct FAssetLoader : public AssetLoader {
-    FAssetLoader(Engine* engine, NameComponentManager* names) :
+    FAssetLoader(const AssetConfiguration& config) :
             mEntityManager(EntityManager::get()),
-            mRenderableManager(engine->getRenderableManager()),
-            mNameManager(names),
-            mTransformManager(engine->getTransformManager()),
-            mMaterials(MaterialProvider::createMaterialGenerator(engine)),
-            mEngine(engine) {}
+            mRenderableManager(config.engine->getRenderableManager()),
+            mNameManager(config.names),
+            mTransformManager(config.engine->getTransformManager()),
+            mMaterials(createMaterialProvider(config)),
+            mEngine(config.engine),
+            mMaterialSource(config.materials) {}
 
     FFilamentAsset* createAssetFromJson(const uint8_t* bytes, uint32_t nbytes);
     FilamentAsset* createAssetFromBinary(const uint8_t* bytes, uint32_t nbytes);
@@ -147,6 +156,7 @@ struct FAssetLoader : public AssetLoader {
     TransformManager& mTransformManager;
     MaterialProvider* mMaterials;
     Engine* mEngine;
+    MaterialSource mMaterialSource;
 
     // The loader owns a few transient mappings used only for the current asset being loaded.
     FFilamentAsset* mResult;
@@ -406,14 +416,12 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
     }
     mResult->mIndexBuffers.push_back(indices);
 
-    // We do not necessarily upload all glTF attribute buffers to the GPU. For example, we do not
-    // upload tangent vectors in their source format or more than two UV sets. However the buffer
-    // count that gets passed to the Builder should be equal to the glTF attribute count because we
-    // do not remap the slots.
     VertexBuffer::Builder vbb;
-    vbb.bufferCount(inPrim->attributes_count);
 
-    for (int slot = 0; slot < inPrim->attributes_count; slot++) {
+    int slot = 0;
+    bool hasUv0 = false, hasUv1 = false, hasVertexColor = false;
+    uint32_t vertexCount = 0;
+    for (; slot < inPrim->attributes_count; slot++) {
         const cgltf_attribute& inputAttribute = inPrim->attributes[slot];
         const cgltf_accessor* inputAccessor = inputAttribute.data;
 
@@ -430,6 +438,10 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
             continue;
         }
 
+        if (inputAttribute.type == cgltf_attribute_type_color) {
+            hasVertexColor = true;
+        }
+
         // Translate the cgltf attribute enum into a Filament enum and ignore all uv sets
         // that do not have entries in the mapping table.
         VertexAttribute semantic;
@@ -442,9 +454,11 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
             switch (uvset) {
                 case UV0:
                     semantic = VertexAttribute::UV0;
+                    hasUv0 = true;
                     break;
                 case UV1:
                     semantic = VertexAttribute::UV1;
+                    hasUv1 = true;
                     break;
                 case UNUSED:
                     // It is perfectly acceptable to drop unused texture coordinate sets. In fact
@@ -453,8 +467,7 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
             }
         }
 
-        // This will needlessly set the same vertex count multiple times, which should be fine.
-        vbb.vertexCount(inputAccessor->count);
+        vertexCount = inputAccessor->count;
 
         // The positions accessor is required to have min/max properties, use them to expand
         // the bounding box for this primitive.
@@ -486,6 +499,34 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
         }
     }
 
+    vbb.vertexCount(vertexCount);
+
+    // If an ubershader is used, then we provide a single dummy buffer for all unfulfilled vertex
+    // requirements. The color data should be a sequence of normalized UBYTE4, so dummy UVs are
+    // USHORT2 to make the sizes match.
+    int dummySlot = -1;
+    if (mMaterialSource == LOAD_UBERSHADERS) {
+        bool needsDummyData = false;
+        if (!hasUv0) {
+            needsDummyData = true;
+            vbb.attribute(VertexAttribute::UV0, slot, VertexBuffer::AttributeType::USHORT2);
+        }
+        if (!hasUv1) {
+            needsDummyData = true;
+            vbb.attribute(VertexAttribute::UV1, slot, VertexBuffer::AttributeType::USHORT2);
+        }
+        if (!hasVertexColor) {
+            needsDummyData = true;
+            vbb.attribute(VertexAttribute::COLOR, slot, VertexBuffer::AttributeType::UBYTE4);
+            vbb.normalized(VertexAttribute::COLOR);
+        }
+        if (needsDummyData) {
+            dummySlot = slot++;
+        }
+    }
+
+    vbb.bufferCount(slot);
+
     VertexBuffer* vertices = mResult->mPrimMap[inPrim] = vbb.build(*mEngine);
     mResult->mVertexBuffers.push_back(vertices);
 
@@ -501,7 +542,7 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
                 uvmap[inputAttribute.index] == UNUSED) {
             continue;
         }
-        mResult->mBufferBindings.emplace_back(BufferBinding {
+        mResult->mBufferBindings.push_back({
             .uri = bv->buffer->uri,
             .totalSize = uint32_t(bv->buffer->size),
             .bufferIndex = uint8_t(slot),
@@ -511,7 +552,24 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
             .vertexBuffer = vertices,
             .indexBuffer = nullptr,
             .convertBytesToShorts = false,
-            .generateTrivialIndices = false
+            .generateTrivialIndices = false,
+            .generateDummyData = false
+        });
+    }
+
+    if (dummySlot > 0) {
+        mResult->mBufferBindings.push_back({
+            .uri = "",
+            .totalSize = uint32_t(sizeof(ubyte4) * vertexCount),
+            .bufferIndex = uint8_t(dummySlot),
+            .offset = 0,
+            .size = uint32_t(sizeof(ubyte4) * vertexCount),
+            .data = nullptr,
+            .vertexBuffer = vertices,
+            .indexBuffer = nullptr,
+            .convertBytesToShorts = false,
+            .generateTrivialIndices = false,
+            .generateDummyData = true
         });
     }
 
@@ -711,8 +769,8 @@ bool FAssetLoader::primitiveHasVertexColor(const cgltf_primitive* inPrim) const 
     return false;
 }
 
-AssetLoader* AssetLoader::create(Engine* engine, NameComponentManager* names) {
-    return new FAssetLoader(engine, names);
+AssetLoader* AssetLoader::create(const AssetConfiguration& config) {
+    return new FAssetLoader(config);
 }
 
 void AssetLoader::destroy(AssetLoader** loader) {

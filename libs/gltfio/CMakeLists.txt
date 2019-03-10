@@ -22,7 +22,9 @@ set(SRCS
         src/FilamentAsset.cpp
         src/GltfEnums.h
         src/MaterialGenerator.cpp
+        src/MaterialProvider.cpp
         src/ResourceLoader.cpp
+        src/UbershaderLoader.cpp
         src/Wireframe.cpp
         src/Wireframe.h
         src/math.h
