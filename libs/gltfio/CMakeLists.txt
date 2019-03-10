@@ -10,6 +10,7 @@ set(PUBLIC_HDR_DIR include)
 set(PUBLIC_HDRS
         include/gltfio/Animator.h
         include/gltfio/AssetLoader.h
+        include/gltfio/MaterialProvider.h
         include/gltfio/ResourceLoader.h
         include/gltfio/FilamentAsset.h
 )
@@ -21,7 +22,6 @@ set(SRCS
         src/FilamentAsset.cpp
         src/GltfEnums.h
         src/MaterialGenerator.cpp
-        src/MaterialGenerator.h
         src/ResourceLoader.cpp
         src/Wireframe.cpp
         src/Wireframe.h
