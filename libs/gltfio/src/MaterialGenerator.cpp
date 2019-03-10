@@ -75,16 +75,10 @@ void MaterialGenerator::destroyMaterials() {
 }
 
 static std::string shaderFromKey(const MaterialKey& config, const UvMap& uvmap) {
-    const auto normalUV = std::to_string(uvmap[config.normalUV] - 1);
-    const auto baseColorUV = std::to_string(uvmap[config.baseColorUV] - 1);
-    const auto metallicRoughnessUV = std::to_string(uvmap[config.metallicRoughnessUV] - 1);
-    const auto emissiveUV = std::to_string(uvmap[config.emissiveUV] - 1);
-    const auto aoUV = std::to_string(uvmap[config.aoUV] - 1);
-
     std::string shader = "void material(inout MaterialInputs material) {\n";
 
     if (config.hasNormalTexture && !config.unlit) {
-        shader += "float2 normalUV = getUV" + normalUV + "();\n";
+        shader += "float2 normalUV = getUV${normal}();\n";
         if (config.hasTextureTransforms) {
             shader += "normalUV = (vec3(normalUV, 1.0) * materialParams.normalUvMatrix).xy;\n";
         }
@@ -101,9 +95,10 @@ static std::string shaderFromKey(const MaterialKey& config, const UvMap& uvmap) 
     )SHADER";
 
     if (config.hasBaseColorTexture) {
-        shader += "float2 baseColorUV = getUV" + baseColorUV + "();\n";
+        shader += "float2 baseColorUV = getUV${color}();\n";
         if (config.hasTextureTransforms) {
-            shader += "baseColorUV = (vec3(baseColorUV, 1.0) * materialParams.baseColorUvMatrix).xy;\n";
+            shader += "baseColorUV = (vec3(baseColorUV, 1.0) * "
+                    "materialParams.baseColorUvMatrix).xy;\n";
         }
         shader += R"SHADER(
             material.baseColor *= texture(materialParams_baseColorMap, baseColorUV);
@@ -127,9 +122,10 @@ static std::string shaderFromKey(const MaterialKey& config, const UvMap& uvmap) 
             material.emissive.rgb = materialParams.emissiveFactor.rgb;
         )SHADER";
         if (config.hasMetallicRoughnessTexture) {
-            shader += "float2 metallicRoughnessUV = getUV" + metallicRoughnessUV + "();\n";
+            shader += "float2 metallicRoughnessUV = getUV${metallic}();\n";
             if (config.hasTextureTransforms) {
-                shader += "metallicRoughnessUV = (vec3(metallicRoughnessUV, 1.0) * materialParams.metallicRoughnessUvMatrix).xy;\n";
+                shader += "metallicRoughnessUV = (vec3(metallicRoughnessUV, 1.0) * "
+                        "materialParams.metallicRoughnessUvMatrix).xy;\n";
             }
             shader += R"SHADER(
                 vec4 roughness = texture(materialParams_metallicRoughnessMap, metallicRoughnessUV);
@@ -138,7 +134,7 @@ static std::string shaderFromKey(const MaterialKey& config, const UvMap& uvmap) 
             )SHADER";
         }
         if (config.hasOcclusionTexture) {
-            shader += "float2 aoUV = getUV" + aoUV + "();\n";
+            shader += "float2 aoUV = getUV${ao}();\n";
             if (config.hasTextureTransforms) {
                 shader += "aoUV = (vec3(aoUV, 1.0) * materialParams.occlusionUvMatrix).xy;\n";
             }
@@ -148,9 +144,10 @@ static std::string shaderFromKey(const MaterialKey& config, const UvMap& uvmap) 
             )SHADER";
         }
         if (config.hasEmissiveTexture) {
-            shader += "float2 emissiveUV = getUV" + emissiveUV + "();\n";
+            shader += "float2 emissiveUV = getUV${emissive}();\n";
             if (config.hasTextureTransforms) {
-                shader += "aoUV = (vec3(emissiveUV, 1.0) * materialParams.emissiveUvMatrix).xy;\n";
+                shader += "emissiveUV = (vec3(emissiveUV, 1.0) * "
+                        "materialParams.emissiveUvMatrix).xy;\n";
             }
             shader += R"SHADER(
                 material.emissive.rgb *= texture(materialParams_emissiveMap, emissiveUV).rgb;
@@ -160,6 +157,26 @@ static std::string shaderFromKey(const MaterialKey& config, const UvMap& uvmap) 
     }
 
     shader += "}\n";
+
+    auto replaceAll = [&shader](const std::string& from, const std::string& to) {
+        size_t pos = shader.find(from);
+        for (; pos != std::string::npos; pos = shader.find(from, pos)) {
+            shader.replace(pos, from.length(), to);
+        }
+    };
+
+    const auto normalUV = std::to_string(uvmap[config.normalUV] - 1);
+    const auto baseColorUV = std::to_string(uvmap[config.baseColorUV] - 1);
+    const auto metallicRoughnessUV = std::to_string(uvmap[config.metallicRoughnessUV] - 1);
+    const auto emissiveUV = std::to_string(uvmap[config.emissiveUV] - 1);
+    const auto aoUV = std::to_string(uvmap[config.aoUV] - 1);
+
+    replaceAll("${normal}", normalUV);
+    replaceAll("${color}", baseColorUV);
+    replaceAll("${metallic}", metallicRoughnessUV);
+    replaceAll("${ao}", aoUV);
+    replaceAll("${emissive}", emissiveUV);
+
     return shader;
 }
 
@@ -211,11 +228,10 @@ static Material* createMaterial(Engine* engine, const MaterialKey& config, const
             .material(shader.c_str())
             .doubleSided(config.doubleSided);
 
-    auto uvset = (uint8_t*) &uvmap.front();
     static_assert(std::tuple_size<UvMap>::value == 8, "Badly sized uvset.");
     int numTextures = std::max({
-        uvset[0], uvset[1], uvset[2], uvset[3],
-        uvset[4], uvset[5], uvset[6], uvset[7],
+        uvmap[0], uvmap[1], uvmap[2], uvmap[3],
+        uvmap[4], uvmap[5], uvmap[6], uvmap[7],
     });
     if (numTextures > 0) {
         builder.require(VertexAttribute::UV0);

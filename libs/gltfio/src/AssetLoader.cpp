@@ -566,7 +566,7 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_material* inp
         .emissiveUV = (uint8_t) inputMat->emissive_texture.texcoord,
         .aoUV = (uint8_t) inputMat->occlusion_texture.texcoord,
         .normalUV = (uint8_t) inputMat->normal_texture.texcoord,
-        .hasTextureTransforms = false,
+        .hasTextureTransforms = hasTextureTransforms,
         .alphaMaskThreshold = 0.5f
     };
 
@@ -590,8 +590,6 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_material* inp
 
     const float* e = &inputMat->emissive_factor[0];
     mi->setParameter("emissiveFactor", float3(e[0], e[1], e[2]));
-    mi->setParameter("normalScale", inputMat->normal_texture.scale);
-    mi->setParameter("aoStrength", inputMat->occlusion_texture.scale);
 
     const float* c = &pbrConfig.base_color_factor[0];
     mi->setParameter("baseColorFactor", float4(c[0], c[1], c[2], c[3]));
@@ -624,6 +622,9 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_material* inp
             auto uvmat = matrixFromUvTransform(uvt.offset, uvt.rotation, uvt.scale);
             mi->setParameter("normalUvMatrix", uvmat);
         }
+        mi->setParameter("normalScale", inputMat->normal_texture.scale);
+    } else {
+        mi->setParameter("normalScale", 1.0f);
     }
 
     if (matkey.hasOcclusionTexture) {
@@ -633,6 +634,9 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_material* inp
             auto uvmat = matrixFromUvTransform(uvt.offset, uvt.rotation, uvt.scale);
             mi->setParameter("occlusionUvMatrix", uvmat);
         }
+        mi->setParameter("aoStrength", inputMat->occlusion_texture.scale);
+    } else {
+        mi->setParameter("aoStrength", 1.0f);
     }
 
     if (matkey.hasEmissiveTexture) {
