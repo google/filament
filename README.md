@@ -136,6 +136,7 @@ and tools.
 - `shaders`:               Shaders used by `filamat` and `matc`
 - `third_party`:           External libraries and assets
   - `environments`:        Environment maps under CC0 license that can be used with `cmgen`
+  - `models`:              Models under permissive licenses
   - `textures`:            Textures under CC0 license
 - `tools`:                 Host tools
   - `cmgen`:               Image-based lighting asset generator
