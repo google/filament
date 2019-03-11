@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.1)
-project(gltfio)
+project(gltfio C ASM)
 
 set(TARGET gltfio)
 set(PUBLIC_HDR_DIR include)
@@ -30,13 +30,84 @@ set(SRCS
 )
 
 # ==================================================================================================
+# Build materials
+# ==================================================================================================
+
+set(RESOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR})
+
+if (CMAKE_CROSSCOMPILING)
+    include(${IMPORT_EXECUTABLES})
+endif()
+
+if (ANDROID OR WEBGL OR IOS)
+    set(MATC_TARGET mobile)
+else()
+    set(MATC_TARGET desktop)
+endif()
+
+set(MATC_FLAGS -a all)
+if (NOT CMAKE_BUILD_TYPE MATCHES Release)
+    set(MATC_FLAGS -g ${MATC_FLAGS})
+endif()
+
+function(generate_mat SHADINGMODEL BLENDING)
+    set(GENERATED_MAT "${RESOURCE_DIR}/${SHADINGMODEL}_${BLENDING}.mat")
+    configure_file(materials/ubershader.mat.in ${GENERATED_MAT})
+    set(MATERIAL_SRCS ${MATERIAL_SRCS} ${GENERATED_MAT} PARENT_SCOPE)
+endfunction()
+
+set(MATERIAL_SRCS)
+generate_mat(lit transparent)
+generate_mat(lit opaque)
+generate_mat(lit masked)
+generate_mat(unlit transparent)
+generate_mat(unlit opaque)
+generate_mat(unlit masked)
+
+set(RESOURCE_BINS)
+foreach (input_path ${MATERIAL_SRCS})
+    get_filename_component(basename "${input_path}" NAME_WE)
+    set(output_path "${RESOURCE_DIR}/${basename}.filamat")
+    add_custom_command(
+            OUTPUT ${output_path}
+            COMMAND matc ${MATC_FLAGS} -p ${MATC_TARGET} -m material
+                    -o ${output_path} ${input_path}
+            MAIN_DEPENDENCY ${input_path}
+            DEPENDS matc
+            COMMENT "Compiling material ${mat_src} to ${output_path}"
+    )
+    list(APPEND RESOURCE_BINS ${output_path})
+endforeach()
+
+# ==================================================================================================
+# Build resources library
+# ==================================================================================================
+
+get_resgen_vars(${RESOURCE_DIR} gltfresources)
+
+add_custom_command(
+        OUTPUT ${RESGEN_OUTPUTS}
+        COMMAND resgen ${RESGEN_FLAGS} ${RESOURCE_BINS}
+        DEPENDS resgen ${RESOURCE_BINS}
+)
+
+if (DEFINED RESGEN_SOURCE_FLAGS)
+    set_source_files_properties(${RESGEN_SOURCE} PROPERTIES COMPILE_FLAGS ${RESGEN_SOURCE_FLAGS})
+endif()
+
+set(DUMMY_SRC "${RESOURCE_DIR}/dummy.c")
+add_custom_command(OUTPUT ${DUMMY_SRC} COMMAND echo "//" > ${DUMMY_SRC})
+
+add_library(gltfio_resources ${DUMMY_SRC} ${RESGEN_SOURCE})
+
+# ==================================================================================================
 # Include and target definitions
 # ==================================================================================================
-include_directories(${PUBLIC_HDR_DIR})
+include_directories(${PUBLIC_HDR_DIR} ${RESOURCE_DIR})
 
 add_library(${TARGET} STATIC ${PUBLIC_HDRS} ${SRCS})
 
-target_link_libraries(${TARGET} PUBLIC math utils filamat filament cgltf stb geometry)
+target_link_libraries(${TARGET} PUBLIC math utils filamat filament cgltf stb geometry gltfio_resources)
 
 target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
 
