@@ -26,7 +26,7 @@ if [ "$KOKORO_BUILD_ID" ]; then
         sudo wget https://github.com/Kitware/CMake/releases/download/v$CMAKE_VERSION/cmake-$CMAKE_VERSION-Linux-x86_64.sh
         sudo chmod +x ./cmake-$CMAKE_VERSION-Linux-x86_64.sh
         sudo ./cmake-$CMAKE_VERSION-Linux-x86_64.sh --skip-license > /dev/null
-        sudo update-alternatives --install /usr/bin/cmake cmake `pwd`/bin/cmake 1 --force
+        sudo update-alternatives --install /usr/bin/cmake cmake `pwd`/bin/cmake 1000 --force
 
         cd ..
     fi
