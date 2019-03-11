@@ -54,33 +54,33 @@ public:
     Frustum& operator=(Frustum&& rhs) noexcept = default;
 
     /**
-     * Create a frustum from a projection matrix (usually the projection * view matrix)
+     * Creates a frustum from a projection matrix (usually the projection * view matrix)
      * @param pv a 4x4 projection matrix
      */
     explicit Frustum(const filament::math::mat4f& pv);
 
     /**
-     * Set the frustum from the given projection matrix
+     * Sets the frustum from the given projection matrix
      * @param pv a 4x4 projection matrix
      */
     void setProjection(const filament::math::mat4f& pv);
 
     /**
-     * Return the plane equation parameters with normalized normals
+     * Returns the plane equation parameters with normalized normals
      * @param plane Identifier of the plane to retrieve the equation of
      * @return A plane equation encoded a float4 R such as R.x*x + R.y*y + R.z*z = R.w
      */
     filament::math::float4 getNormalizedPlane(Plane plane) const noexcept;
 
     /**
-     * Return a copy of all six frustum planes in left, right, bottom, top, far, near order
+     * Returns a copy of all six frustum planes in left, right, bottom, top, far, near order
      * @param planes six plane equations encoded as in getNormalizedPlane() in
      *              left, right, bottom, top, far, near order
      */
     void getNormalizedPlanes(filament::math::float4 planes[6]) const noexcept;
 
     /**
-     * Return all six frustum planes in left, right, bottom, top, far, near order
+     * Returns all six frustum planes in left, right, bottom, top, far, near order
      * @return six plane equations encoded as in getNormalizedPlane() in
      *              left, right, bottom, top, far, near order
      */

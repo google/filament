@@ -95,7 +95,7 @@ public:
     }
 
     /**
-     * Computes the smalest bounding sphere of the box.
+     * Computes the smallest bounding sphere of the box.
      * @return The smallest sphere defined by its center (.xyz) and radius (.w) that contains *this
      */
     filament::math::float4 getBoundingSphere() const noexcept {
