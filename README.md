@@ -157,7 +157,7 @@ and tools.
 
 To build Filament, you must first install the following tools:
 
-- CMake 3.13 (or more recent)
+- CMake 3.12 (or more recent)
 - clang 7.0 (or more recent)
 - [ninja 1.8](https://github.com/ninja-build/ninja/wiki/Pre-built-Ninja-packages) (or more recent)
 
