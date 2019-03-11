@@ -492,10 +492,13 @@ function validate_build_command {
         exit 1
     fi
 
-    if [[ `cmake --version` =~ ([0-9]+)\.([0-9]+)\.[0-9]+ ]]; then
-        if [[ "${BASH_REMATCH[1]}" -lt "3" ]] || [[ "${BASH_REMATCH[2]}" -lt "12" ]]; then
-            echo "Error: cmake version 3.12+ is required, exiting"
-            exit 1
+    # We allow CI builds to skip CMake version check
+    if [[ "$SKIP_CMAKE_VERSION_CHECK" != "true" ]]; then
+        if [[ `cmake --version` =~ ([0-9]+)\.([0-9]+)\.[0-9]+ ]]; then
+            if [[ "${BASH_REMATCH[1]}" -lt "3" ]] || [[ "${BASH_REMATCH[2]}" -lt "12" ]]; then
+                echo "Error: cmake version 3.12+ is required, ${BASH_REMATCH[1]}.${BASH_REMATCH[2]} installed, exiting"
+                exit 1
+            fi
         fi
     fi
 
