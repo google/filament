@@ -72,6 +72,10 @@ function print_help {
     echo ""
  }
 
+# Requirements
+CMAKE_MAJOR=3
+CMAKE_MINOR=10
+
 # Internal variables
 TARGET=release
 
@@ -492,12 +496,14 @@ function validate_build_command {
         exit 1
     fi
 
-    # We allow CI builds to skip CMake version check
-    if [[ "$SKIP_CMAKE_VERSION_CHECK" != "true" ]]; then
+    # Only check CMake's version number when building Android binaries
+    if [[ "$ISSUE_ANDROID_BUILD" == "true" ]]; then
         cmake_version=`cmake --version`
         if [[ "$cmake_version" =~ ([0-9]+)\.([0-9]+)\.[0-9]+ ]]; then
-            if [[ "${BASH_REMATCH[1]}" -lt "3" ]] || [[ "${BASH_REMATCH[2]}" -lt "10" ]]; then
-                echo "Error: cmake version 3.10+ is required, ${BASH_REMATCH[1]}.${BASH_REMATCH[2]} installed, exiting"
+            if [[ "${BASH_REMATCH[1]}" -lt "${CMAKE_MAJOR}" ]] || \
+               [[ "${BASH_REMATCH[2]}" -lt "${CMAKE_MINOR}" ]]; then
+                echo "Error: cmake version ${CMAKE_MAJOR}.${CMAKE_MINOR}+ is required," \
+                     "${BASH_REMATCH[1]}.${BASH_REMATCH[2]} installed, exiting"
                 exit 1
             fi
         fi
