@@ -492,6 +492,13 @@ function validate_build_command {
         exit 1
     fi
 
+    if [[ `cmake --version` =~ ([0-9]+)\.([0-9]+)\.[0-9]+ ]]; then
+        if [[ "${BASH_REMATCH[1]}" -lt "3" ]] || [[ "${BASH_REMATCH[2]}" -lt "10" ]]; then
+            echo "Error: cmake version 3.10+ is required, exiting"
+            exit 1
+        fi
+    fi
+
     # Make sure Ninja is installed
     if [[ "$BUILD_COMMAND" == "ninja" ]]; then
         ninja_binary=`which ninja`
