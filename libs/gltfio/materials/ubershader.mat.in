@@ -1,0 +1,96 @@
+material {
+    name : ubershader,
+    requires : [ uv0, uv1, color ],
+    shadingModel : ${SHADINGMODEL},
+    blending : ${BLENDING},
+    parameters : [
+        // Base Color
+        { type : int, name : baseColorIndex },
+        { type : float4, name : baseColorFactor },
+        { type : sampler2d, name : baseColorMap },
+        { type : mat3, name : baseColorUvMatrix },
+
+        // Metallic-Roughness Map
+        { type : int, name : metallicRoughnessIndex },
+        { type : float, name : metallicFactor },
+        { type : float, name : roughnessFactor },
+        { type : sampler2d, name : metallicRoughnessMap },
+        { type : mat3, name : metallicRoughnessUvMatrix },
+
+        // Normal Map
+        { type : int, name : normalIndex },
+        { type : float, name : normalScale },
+        { type : sampler2d, name : normalMap },
+        { type : mat3, name : normalUvMatrix },
+
+        // Ambient Occlusion
+        { type : int, name : aoIndex },
+        { type : float, name : aoStrength },
+        { type : sampler2d, name : occlusionMap },
+        { type : mat3, name : occlusionUvMatrix },
+
+        // Emissive Map
+        { type : int, name : emissiveIndex },
+        { type : float3, name : emissiveFactor },
+        { type : sampler2d, name : emissiveMap },
+        { type : mat3, name : emissiveUvMatrix }
+    ],
+}
+
+fragment {
+    void material(inout MaterialInputs material) {
+        float2 uvs[2];// = { getUV0(), getUV1() };
+        uvs[0] = getUV0();
+        uvs[1] = getUV1();
+
+        #if !defined(SHADING_MODEL_UNLIT)
+            if (materialParams.normalIndex > -1) {
+                float2 uv = uvs[materialParams.normalIndex];
+                uv = (vec3(uv, 1.0) * materialParams.normalUvMatrix).xy;
+                material.normal = texture(materialParams_normalMap, uv).xyz * 2.0 - 1.0;
+                material.normal.y = -material.normal.y;
+                material.normal.xy *= materialParams.normalScale;
+            }
+        #endif
+
+        prepareMaterial(material);
+        material.baseColor = materialParams.baseColorFactor;
+
+        if (materialParams.baseColorIndex > -1) {
+            float2 uv = uvs[materialParams.baseColorIndex];
+            uv = (vec3(uv, 1.0) * materialParams.baseColorUvMatrix).xy;
+            material.baseColor *= texture(materialParams_baseColorMap, uv);
+        }
+
+        #if defined(BLEND_MODE_TRANSPARENT)
+            material.baseColor.rgb *= material.baseColor.a;
+        #endif
+
+        material.baseColor *= getColor();
+
+        #if !defined(SHADING_MODEL_UNLIT)
+            material.roughness = materialParams.roughnessFactor;
+            material.metallic = materialParams.metallicFactor;
+            material.emissive.rgb = materialParams.emissiveFactor.rgb;
+            material.emissive.a = 3.0;
+            if (materialParams.metallicRoughnessIndex > -1) {
+                float2 uv = uvs[materialParams.metallicRoughnessIndex];
+                uv = (vec3(uv, 1.0) * materialParams.metallicRoughnessUvMatrix).xy;
+                vec4 roughness = texture(materialParams_metallicRoughnessMap, uv);
+                material.roughness *= roughness.g;
+                material.metallic *= roughness.b;
+            }
+            if (materialParams.aoIndex > -1) {
+                float2 uv = uvs[materialParams.aoIndex];
+                uv = (vec3(uv, 1.0) * materialParams.occlusionUvMatrix).xy;
+                material.ambientOcclusion = texture(materialParams_occlusionMap, uv).r *
+                        materialParams.aoStrength;
+            }
+            if (materialParams.emissiveIndex > -1) {
+                float2 uv = uvs[materialParams.emissiveIndex];
+                uv = (vec3(uv, 1.0) * materialParams.emissiveUvMatrix).xy;
+                material.emissive.rgb *= texture(materialParams_emissiveMap, uv).rgb;
+            }
+        #endif
+    }
+}
