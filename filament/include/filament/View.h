@@ -376,6 +376,20 @@ public:
     AntiAliasing getAntiAliasing() const noexcept;
 
     /**
+     * Enables or disables dithering in the post-processing stage. Enabled by default.
+     *
+     * @param dithering true to enable, false to disable
+     */
+    void setDithering(bool dithering) noexcept;
+
+    /**
+     * Queries whether dithering is enabled during the post-processing stage.
+     *
+     * @return true if post-processing dithering is enabled, false otherwise.
+     */
+    bool getDithering() const noexcept;
+
+    /**
      * Sets the dynamic resolution options for this view. Dynamic resolution options
      * controls whether dynamic resolution is enabled, and if it is, how it behaves.
      *

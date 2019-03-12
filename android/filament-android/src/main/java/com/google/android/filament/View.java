@@ -160,6 +160,14 @@ public class View {
         return AntiAliasing.values()[nGetAntiAliasing(getNativeObject())];
     }
 
+    public void setDithering(boolean dithering) {
+        nSetDithering(getNativeObject(), dithering);
+    }
+
+    public boolean getDithering() {
+        return nGetDithering(getNativeObject());
+    }
+
     public void setDynamicResolutionOptions(@NonNull DynamicResolutionOptions options) {
         mDynamicResolution = options;
         nSetDynamicResolutionOptions(getNativeObject(),
@@ -257,6 +265,8 @@ public class View {
     private static native int nGetSampleCount(long nativeView);
     private static native void nSetAntiAliasing(long nativeView, int type);
     private static native int nGetAntiAliasing(long nativeView);
+    private static native void nSetDithering(long nativeView, boolean dithering);
+    private static native boolean nGetDithering(long nativeView);
     private static native void nSetDynamicResolutionOptions(long nativeView,
             boolean enabled, boolean homogeneousScaling,
             float targetFrameTimeMilli, float headRoomRatio, float scaleRate,

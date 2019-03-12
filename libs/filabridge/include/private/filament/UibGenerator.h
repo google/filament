@@ -106,6 +106,7 @@ struct PostProcessingUib {
     filament::math::float2 uvScale;
     float time;             // time in seconds, with a 1 second period, used for dithering
     float yOffset;
+    int dithering;          // type of dithering 0=none, 1=enabled
 };
 
 // This is not the UBO proper, but just an element of a bone array.
