@@ -14,13 +14,18 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAFLAT_MATERIAL_PARSER_H
-#define TNT_FILAFLAT_MATERIAL_PARSER_H
+#ifndef TNT_FILAMENT_MATERIAL_PARSER_H
+#define TNT_FILAMENT_MATERIAL_PARSER_H
 
 #include <private/filament/EngineEnums.h>
 
+#include <filaflat/BlobDictionary.h>
+#include <filaflat/ChunkContainer.h>
+#include <filaflat/MaterialChunk.h>
+
 #include <filament/MaterialEnums.h>
 #include <filament/driver/DriverEnums.h>
+#include <filament/MaterialChunkType.h>
 
 #include <utils/compiler.h>
 #include <utils/CString.h>
@@ -37,12 +42,10 @@ namespace filament {
 
 class UniformInterfaceBlock;
 class SamplerInterfaceBlock;
-struct MaterialParserDetails;
 
-class UTILS_PUBLIC MaterialParser {
+class MaterialParser {
 public:
     MaterialParser(driver::Backend backend, const void* data, size_t size);
-    ~MaterialParser();
 
     MaterialParser(MaterialParser const& rhs) noexcept = delete;
     MaterialParser& operator=(MaterialParser const& rhs) noexcept = delete;
@@ -80,10 +83,46 @@ public:
     bool getShader(filaflat::ShaderBuilder& shader, driver::ShaderModel shaderModel,
             uint8_t variant, driver::ShaderType stage) noexcept;
 
-protected:
+private:
+    struct MaterialParserDetails {
+        MaterialParserDetails(driver::Backend backend, const void* data, size_t size);
+
+        template<typename T>
+        bool getFromSimpleChunk(filamat::ChunkType type, T* value) const noexcept;
+
+    private:
+        friend class MaterialParser;
+
+        class ManagedBuffer {
+            void* mStart = nullptr;
+            size_t mSize = 0;
+        public:
+            explicit ManagedBuffer(const void* start, size_t size)
+                    : mStart(malloc(size)), mSize(size) {
+                memcpy(mStart, start, size);
+            }
+            ~ManagedBuffer() noexcept { free(mStart); }
+            ManagedBuffer(ManagedBuffer const& rhs) = delete;
+            ManagedBuffer& operator=(ManagedBuffer const& rhs) = delete;
+            void* data() const noexcept { return mStart; }
+            void* begin() const noexcept { return mStart; }
+            void* end() const noexcept { return (uint8_t*)mStart + mSize; }
+            size_t size() const noexcept { return mSize; }
+        };
+
+        ManagedBuffer mManagedBuffer;
+        filaflat::ChunkContainer mChunkContainer;
+
+        // Keep MaterialChunk alive between calls to getShader to avoid reload the shader index.
+        filaflat::MaterialChunk mMaterialChunk;
+        filaflat::BlobDictionary mBlobDictionary;
+        filamat::ChunkType mMaterialTag = filamat::ChunkType::Unknown;
+        filamat::ChunkType mDictionaryTag = filamat::ChunkType::Unknown;
+    };
+
     filaflat::ChunkContainer& getChunkContainer() noexcept;
     filaflat::ChunkContainer const& getChunkContainer() const noexcept;
-    MaterialParserDetails* mImpl = nullptr;
+    MaterialParserDetails mImpl;
 };
 
 struct ChunkUniformInterfaceBlock {
@@ -94,5 +133,6 @@ struct ChunkSamplerInterfaceBlock {
     static bool unflatten(filaflat::Unflattener& unflattener, SamplerInterfaceBlock* sib);
 };
 
-} // namespace filamat
-#endif
+} // namespace filament
+
+#endif // TNT_FILAMENT_MATERIAL_PARSER_H
