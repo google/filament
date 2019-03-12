@@ -124,16 +124,16 @@ Java_com_google_android_filament_View_nGetAntiAliasing(JNIEnv*, jclass,
 
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_View_nSetDithering(JNIEnv*, jclass,
-        jlong nativeView, jboolean dithering) {
+        jlong nativeView, jint dithering) {
     View* view = (View*) nativeView;
-    view->setDithering((bool) dithering);
+    view->setDithering((View::Dithering) dithering);
 }
 
-extern "C" JNIEXPORT jboolean JNICALL
+extern "C" JNIEXPORT jint JNICALL
 Java_com_google_android_filament_View_nGetDithering(JNIEnv*, jclass,
         jlong nativeView) {
     View* view = (View*) nativeView;
-    return (jboolean)view->getDithering();
+    return (jint)view->getDithering();
 }
 
 extern "C" JNIEXPORT void JNICALL

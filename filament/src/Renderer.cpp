@@ -165,7 +165,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     const bool hasPostProcess = view.hasPostProcessPass();
     float2 scale = view.updateScale(mFrameInfoManager.getLastFrameTime());
     bool useFXAA = view.getAntiAliasing() == View::AntiAliasing::FXAA;
-    bool dithering = view.getDithering();
+    bool dithering = view.getDithering() == View::Dithering::TEMPORAL;
     if (!hasPostProcess) {
         // dynamic scaling and FXAA are part of the post-process phase and can't happen if
         // it's disabled.

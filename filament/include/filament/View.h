@@ -140,7 +140,7 @@ public:
     /**
      * List of available post-processing anti-aliasing techniques.
      */
-    enum AntiAliasing : uint8_t {
+    enum class AntiAliasing : uint8_t {
         NONE = 0,
         FXAA = 1
     };
@@ -149,6 +149,14 @@ public:
         DEFAULT = -1,
         DISABLED,
         ENABLED,
+    };
+
+    /**
+     * List of available post-processing dithering techniques.
+     */
+    enum class Dithering : uint8_t {
+        NONE = 0,       //!< No dithering
+        TEMPORAL = 1    //!< Temporal dithering (default)
     };
 
     /**
@@ -378,16 +386,16 @@ public:
     /**
      * Enables or disables dithering in the post-processing stage. Enabled by default.
      *
-     * @param dithering true to enable, false to disable
+     * @param dithering dithering type
      */
-    void setDithering(bool dithering) noexcept;
+    void setDithering(Dithering dithering) noexcept;
 
     /**
      * Queries whether dithering is enabled during the post-processing stage.
      *
-     * @return true if post-processing dithering is enabled, false otherwise.
+     * @return the current dithering type for this view.
      */
-    bool getDithering() const noexcept;
+    Dithering getDithering() const noexcept;
 
     /**
      * Sets the dynamic resolution options for this view. Dynamic resolution options

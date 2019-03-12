@@ -162,11 +162,11 @@ public:
         return mAntiAliasing;
     }
 
-    void setDithering(bool dithering) noexcept {
+    void setDithering(Dithering dithering) noexcept {
         mDithering = dithering;
     }
 
-    bool getDithering() const noexcept {
+    Dithering getDithering() const noexcept {
         return mDithering;
     }
 
@@ -287,7 +287,7 @@ private:
     uint8_t mVisibleLayers = 0x1;
     uint8_t mSampleCount = 1;
     AntiAliasing mAntiAliasing = AntiAliasing::FXAA;
-    bool mDithering = true;
+    Dithering mDithering = Dithering::TEMPORAL;
     bool mShadowingEnabled = true;
     bool mHasPostProcessPass = true;
     DepthPrepass mDepthPrepass = DepthPrepass::DEFAULT;
