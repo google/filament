@@ -136,7 +136,13 @@ SurfaceOrientation OrientationBuilderImpl::buildWithNormalsOnly() {
 
     for (size_t qindex = 0; qindex < vertexCount; ++qindex) {
         float3 n = *normal;
-        float3 b = normalize(cross(n, float3{1, 0, 0}));
+        float3 perp = cross(n, float3{1, 0, 0});
+        float sqrlen = dot(perp, perp);
+        if (sqrlen <= std::numeric_limits<float>::epsilon()) {
+            perp = cross(n, float3{0, 1, 0});
+            sqrlen = dot(perp, perp);
+        }
+        float3 b = perp / sqrlen;
         float3 t = cross(n, b);
         quats[qindex] = mat3f::packTangentFrame({t, b, n});
         normal = (const float3*) (((const uint8_t*) normal) + nstride);
