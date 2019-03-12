@@ -110,7 +110,7 @@ Java_com_google_android_filament_VertexBuffer_nSetBufferAt(JNIEnv *env, jclass t
     BufferDescriptor desc(data, sizeInBytes, &JniBufferCallback::invoke, callback);
 
     vertexBuffer->setBufferAt(*engine, (uint8_t) bufferIndex, std::move(desc),
-            (uint32_t) destOffsetInBytes, (uint32_t) sizeInBytes);
+            (uint32_t) destOffsetInBytes);
 
     return 0;
 }

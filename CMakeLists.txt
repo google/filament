@@ -303,7 +303,9 @@ endif()
 # ==================================================================================================
 
 # Sets the following variables: RESGEN_HEADER, RESGEN_SOURCE, RESGEN_FLAGS, RESGEN_SOURCE_FLAGS,
-# and RESGEN_OUTPUTS
+# and RESGEN_OUTPUTS. Please pass in an ARCHIVE_NAME that is unique to your project, otherwise the
+# incbin directive will happily consume a blob from the wrong project without warnings or errors.
+# Also be sure to include the ASM language in the CMake "project" directive for your project.
 function(get_resgen_vars ARCHIVE_DIR ARCHIVE_NAME)
     set(OUTPUTS
         ${ARCHIVE_DIR}/${ARCHIVE_NAME}.bin

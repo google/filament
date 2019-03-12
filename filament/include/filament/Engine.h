@@ -263,6 +263,23 @@ public:
     Camera* createCamera(utils::Entity entity) noexcept;
 
     /**
+     * Returns the Camera component of the given its entity.
+     *
+     * @param entity An entity.
+     * @return A pointer to the Camera component for this entity or nullptr if the entity didn't
+     *         have a Camera component. The pointer is valid until destroyCameraComponent()
+     *         (or destroyCamera()) is called or the entity itself is destroyed.
+     */
+    Camera* getCameraComponent(utils::Entity entity) noexcept;
+
+    /**
+     * Destroys the Camera component associated with the given entity.
+     *
+     * @param entity An entity.
+     */
+    void destroyCameraComponent(utils::Entity entity) noexcept;
+
+    /**
      * Creates a Fence.
      *
      * @param type Type of Fence to create
@@ -331,7 +348,9 @@ public:
     /**
      * helper for destroying the Camera component and its Entity in one call
      *
-     * @param camera Camera component to destroy. The associated entity is destroyed as well.
+     * @param camera Camera component to destroy. The associated entity as well as all its
+     *               components managed by filament are destroyed.
+     * @deprecated use destroyCameraComponent(Entity) instead
      */
     inline void destroy(const Camera* camera) {
         destroy(camera->getEntity());

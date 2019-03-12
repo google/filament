@@ -323,18 +323,16 @@ DECL_DRIVER_API_SYNCHRONOUS_0(bool, canGenerateMipmaps)
  * -----------------------
  */
 
-DECL_DRIVER_API_5(updateVertexBuffer,
+DECL_DRIVER_API_4(updateVertexBuffer,
         Driver::VertexBufferHandle, vbh,
         size_t, index,
         Driver::BufferDescriptor&&, data,
-        uint32_t, byteOffset,
-        uint32_t, byteSize)
+        uint32_t, byteOffset)
 
-DECL_DRIVER_API_4(updateIndexBuffer,
+DECL_DRIVER_API_3(updateIndexBuffer,
         Driver::IndexBufferHandle, ibh,
         Driver::BufferDescriptor&&, data,
-        uint32_t, byteOffset,
-        uint32_t, byteSize)
+        uint32_t, byteOffset)
 
 DECL_DRIVER_API_2(updateUniformBuffer,
         Driver::UniformBufferHandle, ubh,
