@@ -523,16 +523,16 @@ bool VulkanDriver::isFrameTimeSupported() {
 }
 
 void VulkanDriver::updateVertexBuffer(Driver::VertexBufferHandle vbh, size_t index,
-        BufferDescriptor&& p, uint32_t byteOffset, uint32_t byteSize) {
+        BufferDescriptor&& p, uint32_t byteOffset) {
     auto& vb = *handle_cast<VulkanVertexBuffer>(mHandleMap, vbh);
-    vb.buffers[index]->loadFromCpu(p.buffer, byteOffset, byteSize);
+    vb.buffers[index]->loadFromCpu(p.buffer, byteOffset, p.size);
     scheduleDestroy(std::move(p));
 }
 
 void VulkanDriver::updateIndexBuffer(Driver::IndexBufferHandle ibh, BufferDescriptor&& p,
-        uint32_t byteOffset, uint32_t byteSize) {
+        uint32_t byteOffset) {
     auto& ib = *handle_cast<VulkanIndexBuffer>(mHandleMap, ibh);
-    ib.buffer->loadFromCpu(p.buffer, byteOffset, byteSize);
+    ib.buffer->loadFromCpu(p.buffer, byteOffset, p.size);
     scheduleDestroy(std::move(p));
 }
 

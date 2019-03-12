@@ -60,8 +60,7 @@ public:
         // no-op if bufferIndex is out of bounds
         Builder& attribute(VertexAttribute attribute, uint8_t bufferIndex,
                 AttributeType attributeType,
-                uint32_t byteOffset = 0,
-                uint8_t byteStride = 0) noexcept;     // default is attribute size
+                uint32_t byteOffset = 0, uint8_t byteStride = 0) noexcept;
 
         // no-op if attribute is an invalid enum
         Builder& normalized(VertexAttribute attribute, bool normalize = true) noexcept;
@@ -96,8 +95,7 @@ public:
      */
     void setBufferAt(Engine& engine, uint8_t bufferIndex,
             BufferDescriptor&& buffer,
-            uint32_t byteOffset = 0,
-            uint32_t byteSize = 0);
+            uint32_t byteOffset = 0);
 
     /**
      * Specifies the quaternion type for the "populateTangentQuaternions" utility.

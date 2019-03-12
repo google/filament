@@ -174,15 +174,10 @@ size_t FVertexBuffer::getVertexCount() const noexcept {
 }
 
 void FVertexBuffer::setBufferAt(FEngine& engine, uint8_t bufferIndex,
-        driver::BufferDescriptor&& buffer, uint32_t byteOffset, uint32_t byteSize) {
-
-    if (byteSize == 0) {
-        byteSize = uint32_t(buffer.size);
-    }
-
+        driver::BufferDescriptor&& buffer, uint32_t byteOffset) {
     if (bufferIndex < mBufferCount) {
-        engine.getDriverApi().updateVertexBuffer(mHandle, bufferIndex,
-                std::move(buffer), byteOffset, byteSize);
+        engine.getDriverApi().updateVertexBuffer(mHandle,
+                bufferIndex, std::move(buffer), byteOffset);
     } else {
         ASSERT_PRECONDITION_NON_FATAL(bufferIndex < mBufferCount,
                 "bufferIndex must be < bufferCount");
@@ -202,9 +197,8 @@ size_t VertexBuffer::getVertexCount() const noexcept {
 }
 
 void VertexBuffer::setBufferAt(Engine& engine, uint8_t bufferIndex,
-        driver::BufferDescriptor&& buffer, uint32_t byteOffset, uint32_t byteSize) {
-    upcast(this)->setBufferAt(upcast(engine), bufferIndex,
-            std::move(buffer), byteOffset, byteSize);
+        driver::BufferDescriptor&& buffer, uint32_t byteOffset) {
+    upcast(this)->setBufferAt(upcast(engine), bufferIndex, std::move(buffer), byteOffset);
 }
 
 void VertexBuffer::populateTangentQuaternions(const QuatTangentContext& ctx) {
