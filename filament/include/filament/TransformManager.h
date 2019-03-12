@@ -130,7 +130,7 @@ public:
      * Gets a list of children for a transform component.
      *
      * @param i The instance of the transform component to query.
-     * @param chidren Pointer to array-of-Entity. The array must have at least "count" elements.
+     * @param children Pointer to array-of-Entity. The array must have at least "count" elements.
      * @param count The maximum number of children to retrieve.
      * @return The number of children written to the pointer.
      */
