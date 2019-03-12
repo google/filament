@@ -162,6 +162,14 @@ public:
         return mAntiAliasing;
     }
 
+    void setDithering(Dithering dithering) noexcept {
+        mDithering = dithering;
+    }
+
+    Dithering getDithering() const noexcept {
+        return mDithering;
+    }
+
     TargetBufferFlags getDiscardedTargetBuffers() const noexcept { return mDiscardedTargetBuffers; }
 
     bool hasPostProcessPass() const noexcept {
@@ -279,6 +287,7 @@ private:
     uint8_t mVisibleLayers = 0x1;
     uint8_t mSampleCount = 1;
     AntiAliasing mAntiAliasing = AntiAliasing::FXAA;
+    Dithering mDithering = Dithering::TEMPORAL;
     bool mShadowingEnabled = true;
     bool mHasPostProcessPass = true;
     DepthPrepass mDepthPrepass = DepthPrepass::DEFAULT;

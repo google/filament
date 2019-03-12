@@ -863,6 +863,14 @@ View::AntiAliasing View::getAntiAliasing() const noexcept {
     return upcast(this)->getAntiAliasing();
 }
 
+void View::setDithering(Dithering dithering) noexcept {
+    upcast(this)->setDithering(dithering);
+}
+
+View::Dithering View::getDithering() const noexcept {
+    return upcast(this)->getDithering();
+}
+
 void View::setDynamicResolutionOptions(const DynamicResolutionOptions& options) noexcept {
     upcast(this)->setDynamicResolutionOptions(options);
 }

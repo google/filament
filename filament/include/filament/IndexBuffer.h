@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+//! \file
+
 #ifndef TNT_FILAMENT_INDEXBUFFER_H
 #define TNT_FILAMENT_INDEXBUFFER_H
 
@@ -34,15 +36,27 @@ class FIndexBuffer;
 
 class Engine;
 
+/**
+ * A buffer containing vertex indices into a VertexBuffer. Indices can be 16 or 32 bit.
+ * The buffer itself is a GPU resource, therefore mutating the data can be relatively slow.
+ * Typically these buffers are constant.
+ *
+ * It is possible, and even encouraged, to use a single index buffer for several Renderable.
+ *
+ * @see VertexBuffer, RenderableManager
+ */
 class UTILS_PUBLIC IndexBuffer : public FilamentAPI {
     struct BuilderDetails;
 
 public:
     using BufferDescriptor = driver::BufferDescriptor;
 
+    /**
+     * Type of the index buffer
+     */
     enum class IndexType : uint8_t {
-        USHORT = uint8_t(driver::ElementType::USHORT),
-        UINT = uint8_t(driver::ElementType::UINT),
+        USHORT = uint8_t(driver::ElementType::USHORT),  //!< 16-bit indices
+        UINT = uint8_t(driver::ElementType::UINT),      //!< 32-bit indices
     };
 
     class Builder : public BuilderBase<BuilderDetails> {
@@ -55,11 +69,23 @@ public:
         Builder& operator=(Builder const& rhs) noexcept;
         Builder& operator=(Builder&& rhs) noexcept;
 
+        /**
+         * Size of the index buffer in element.
+         * @param indexCount Number of indices the IndexBuffer can hold.
+         * @return A reference to this Builder for chaining calls.
+         */
         Builder& indexCount(uint32_t indexCount) noexcept;
+
+        /**
+         * Type of the index buffer, 16-bit or 32-bit.
+         * @param indexType Type of indices stored in the IndexBuffer.
+         * @return A reference to this Builder for chaining calls.
+         */
         Builder& bufferType(IndexType indexType) noexcept;
 
         /**
-         * Creates the IndexBuffer object and returns a pointer to it.
+         * Creates the IndexBuffer object and returns a pointer to it. After creation, the index
+         * buffer is uninitialized. Use IndexBuffer::setBuffer() to initialized the IndexBuffer.
          *
          * @param engine Reference to the filament::Engine to associate this IndexBuffer with.
          *
@@ -69,6 +95,8 @@ public:
          * @exception utils::PostConditionPanic if a runtime error occurred, such as running out of
          *            memory or other resources.
          * @exception utils::PreConditionPanic if a parameter to a builder function was invalid.
+         *
+         * @see IndexBuffer::setBuffer
          */
         IndexBuffer* build(Engine& engine);
     private:

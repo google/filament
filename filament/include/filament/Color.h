@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+//! \file
+
 #ifndef TNT_FILAMENT_COLOR_H
 #define TNT_FILAMENT_COLOR_H
 
@@ -24,88 +26,103 @@
 
 namespace filament {
 
-// RGB color in linear space
+//! RGB color in linear space
 using LinearColor = filament::math::float3;
-// RGB color in sRGB space
+
+//! RGB color in sRGB space
 using sRGBColor  = filament::math::float3;
 
-// RGBA color in linear space, with alpha
+//! RGBA color in linear space, with alpha
 using LinearColorA = filament::math::float4;
-// RGBA color in sRGB space, with alpha
+
+//! RGBA color in sRGB space, with alpha
 using sRGBColorA  = filament::math::float4;
 
-// types of RGB colors
+//! types of RGB colors
 enum class UTILS_PUBLIC RgbType : uint8_t {
-    // the color is defined in sRGB space
-    sRGB,
-    // the color is defined in linear space
-    LINEAR,
+    sRGB,   //!< the color is defined in sRGB space
+    LINEAR, //!< the color is defined in linear space
 };
 
-// types of RGBA colors
+//! types of RGBA colors
 enum class UTILS_PUBLIC RgbaType : uint8_t {
-    // the color is defined in sRGB space and the RGB values
-    // have not been premultiplied by the alpha (for instance, a 50%
-    // transparent red is <1,0,0,0.5>)
+    /**
+     * the color is defined in sRGB space and the RGB values
+     * have not been premultiplied by the alpha (for instance, a 50%
+     * transparent red is <1,0,0,0.5>)
+     */
     sRGB,
-    // the color is defined in linear space and the RGB values
-    // have not been premultiplied by the alpha (for instance, a 50%
-    // transparent red is <1,0,0,0.5>)
+    /**
+     * the color is defined in linear space and the RGB values
+     * have not been premultiplied by the alpha (for instance, a 50%
+     * transparent red is <1,0,0,0.5>)
+     */
     LINEAR,
-    // the color is defined in sRGB space and the RGB values
-    // have been premultiplied by the alpha (for instance, a 50%
-    // transparent red is <0.5,0,0,0.5>)
+    /**
+     * the color is defined in sRGB space and the RGB values
+     * have been premultiplied by the alpha (for instance, a 50%
+     * transparent red is <0.5,0,0,0.5>)
+     */
     PREMULTIPLIED_sRGB,
-    // the color is defined in linear space and the RGB values
-    // have been premultiplied by the alpha (for instance, a 50%
-    // transparent red is <0.5,0,0,0.5>)
+    /**
+     * the color is defined in linear space and the RGB values
+     * have been premultiplied by the alpha (for instance, a 50%
+     * transparent red is <0.5,0,0,0.5>)
+     */
     PREMULTIPLIED_LINEAR
 };
 
-// type of color conversion to use when converting to/from sRGB and linear spaces
+//! type of color conversion to use when converting to/from sRGB and linear spaces
 enum UTILS_PUBLIC ColorConversion {
-    // accurate conversion using the sRGB standard
-    ACCURATE,
-    // fast conversion using a simple gamma 2.2 curve
-    FAST
+    ACCURATE,   //!< accurate conversion using the sRGB standard
+    FAST        //!< fast conversion using a simple gamma 2.2 curve
 };
 
+/**
+ * Utilities to manipulate and convert colors
+ */
 class UTILS_PUBLIC Color {
 public:
-    // converts an RGB color to linear space
-    // the conversion depends on the specified type
+    //! converts an RGB color to linear space, the conversion depends on the specified type
     static LinearColor toLinear(RgbType type, filament::math::float3 color);
 
-    // converts an RGBA color to linear space
-    // the conversion depends on the specified type
+    //! converts an RGBA color to linear space, the conversion depends on the specified type
     static LinearColorA toLinear(RgbaType type, filament::math::float4 color);
 
-    // converts an RGB color in sRGB space to an RGB color in linear space
+    //! converts an RGB color in sRGB space to an RGB color in linear space
     template<ColorConversion = ACCURATE>
     static LinearColor toLinear(sRGBColor const& color);
 
-    // converts an RGB color in linear space to an RGB color in sRGB space
+    //! converts an RGB color in linear space to an RGB color in sRGB space
     template<ColorConversion = ACCURATE>
     static sRGBColor toSRGB(LinearColor const& color);
 
-    // converts an RGBA color in sRGB space to an RGBA color in linear space
-    // the alpha component is left unmodified
+    /**
+     * converts an RGBA color in sRGB space to an RGBA color in linear space
+     * the alpha component is left unmodified
+     */
     template<ColorConversion = ACCURATE>
     static LinearColorA toLinear(sRGBColorA const& color);
 
-    // converts an RGBA color in linear space to an RGBA color in sRGB space
-    // the alpha component is left unmodified
+    /**
+     * converts an RGBA color in linear space to an RGBA color in sRGB space
+     * the alpha component is left unmodified
+     */
     template<ColorConversion = ACCURATE>
     static sRGBColorA toSRGB(LinearColorA const& color);
 
-    // converts a correlated color temperature to a linear RGB color in sRGB
-    // space the temperature must be expressed in kelvin and must be in the
-    // range 1,000K to 15,000K
+    /**
+     * converts a correlated color temperature to a linear RGB color in sRGB
+     * space the temperature must be expressed in kelvin and must be in the
+     * range 1,000K to 15,000K
+     */
     static LinearColor cct(float K);
 
-    // converts a CIE standard illuminant series D to a linear RGB color in
-    // sRGB space the temperature must be expressed in kelvin and must be in
-    // the range 4,000K to 25,000K
+    /**
+     * converts a CIE standard illuminant series D to a linear RGB color in
+     * sRGB space the temperature must be expressed in kelvin and must be in
+     * the range 4,000K to 25,000K
+     */
     static LinearColor illuminantD(float K);
 
 private:

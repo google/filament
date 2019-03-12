@@ -69,9 +69,12 @@ void PostProcessManager::setSource(uint32_t viewportWidth, uint32_t viewportHeig
 
     float2 uvScale = float2{ viewportWidth, viewportHeight } / float2{ textureWidth, textureHeight };
 
+    int32_t dithering = mDithering;
+
     UniformBuffer& ub = mPostProcessUb;
     ub.setUniform(offsetof(PostProcessingUib, time), fraction);
     ub.setUniform(offsetof(PostProcessingUib, uvScale), uvScale);
+    ub.setUniform(offsetof(PostProcessingUib, dithering), dithering);
 
     // The shader may need to know the offset between the top of the texture and the top
     // of the rectangle that it actually needs to sample from.

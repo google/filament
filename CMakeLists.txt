@@ -320,7 +320,7 @@ function(get_resgen_vars ARCHIVE_DIR ARCHIVE_NAME)
     set(RESGEN_HEADER "${ARCHIVE_DIR}/${ARCHIVE_NAME}.h" PARENT_SCOPE)
     # Visual Studio makes it difficult to use assembly without using MASM. MASM doesn't support
     # the equivalent of .incbin, so on Windows we'll just tell resgen to output a C file.
-    if (WEBGL OR WIN32)
+    if (WEBGL OR WIN32 OR ANDROID_ON_WINDOWS)
         set(RESGEN_OUTPUTS "${OUTPUTS};${ARCHIVE_DIR}/${ARCHIVE_NAME}.c" PARENT_SCOPE)
         set(RESGEN_FLAGS -cx ${ARCHIVE_DIR} -p ${ARCHIVE_NAME} PARENT_SCOPE)
         set(RESGEN_SOURCE "${ARCHIVE_DIR}/${ARCHIVE_NAME}.c" PARENT_SCOPE)
