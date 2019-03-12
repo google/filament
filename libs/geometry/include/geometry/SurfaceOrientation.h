@@ -36,6 +36,7 @@ public:
     /**
      * The Builder is used to construct an immutable surface orientation helper.
      *
+     * Clients provide pointers into their own data, which is synchronously consumed during build().
      * At a minimum, clients must supply a vertex count and normals buffer. They can supply data in
      * any of the following three combinations:
      *
