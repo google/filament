@@ -216,9 +216,13 @@ public:
 
     FScene* createScene() noexcept;
     FView* createView() noexcept;
-    FCamera* createCamera(utils::Entity entity) noexcept;
     FFence* createFence(Fence::Type type = Fence::Type::SOFT) noexcept;
     FSwapChain* createSwapChain(void* nativeWindow, uint64_t flags) noexcept;
+
+    FCamera* createCamera(utils::Entity entity) noexcept;
+    FCamera* getCameraComponent(utils::Entity entity) noexcept;
+    void destroyCameraComponent(utils::Entity entity) noexcept;
+
 
     void destroy(const FVertexBuffer* p);
     void destroy(const FFence* p);

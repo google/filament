@@ -62,6 +62,10 @@ public:
         return Instance(mManager.getInstance(e));
     }
 
+    FCamera* getCamera(Instance i) noexcept {
+        return mManager.elementAt<CAMERA>(i);
+    }
+
     FCamera* create(utils::Entity entity);
 
     void destroy(utils::Entity e) noexcept;
