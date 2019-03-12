@@ -40,8 +40,6 @@ using namespace filamat;
 
 namespace filament {
 
-// Make a copy of content and own the allocated memory.
-
 // ------------------------------------------------------------------------------------------------
 
 MaterialParser::MaterialParserDetails::MaterialParserDetails(Backend backend, const void* data, size_t size)
