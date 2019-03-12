@@ -138,18 +138,31 @@ Filament.IcoSphere = function(nsubdivs) {
         }
     }
     const nverts = this.vertices.length / 3;
-    this.tangents = new Uint16Array(4 * nverts);
-    for (var i = 0; i < nverts; ++i) {
-        const src = this.vertices.subarray(i * 3, i * 3 + 3);
-        const dst = this.tangents.subarray(i * 4, i * 4 + 4);
-        const n = vec3.normalize(vec3.create(), src);
-        const b = vec3.cross(vec3.create(), n, [0, 1, 0]);
-        vec3.normalize(b, b);
-        const t = vec3.cross(vec3.create(), b, n);
-        const q = quat.fromMat3(quat.create(), [
-                t[0], t[1], t[2], b[0], b[1], b[2], n[0], n[1], n[2]]);
-        vec4.packSnorm16(dst, q);
-    }
+
+    // Allocate room for normals in the heap, and copy position data into it (yay for unit spheres)
+    const normals = Filament._malloc(this.vertices.length * this.vertices.BYTES_PER_ELEMENT);
+    Module.HEAPU8.set(new Uint8Array(this.vertices.buffer), normals);
+
+    // Perform computations, then free up the normals.
+    const sob = new Filament.SurfaceOrientation$Builder();
+    sob.vertexCount(nverts);
+    sob.normals(normals, 0)
+    const orientation = sob.build();
+
+    Filament._free(normals);
+
+    // Allocate room for quaternions then populate it.
+    const quatsBufferSize = 8 * nverts;
+    const quatsBuffer = Filament._malloc(quatsBufferSize);
+    orientation.getQuats(quatsBuffer, nverts, Filament.VertexBuffer$AttributeType.SHORT4);
+
+    // Create a JavaScript typed array and copy the quat data into it.
+    const tangentsMemory = Module.HEAPU8.subarray(quatsBuffer, quatsBuffer + quatsBufferSize).slice().buffer;
+    Filament._free(quatsBuffer);
+    this.tangents = new Int16Array(tangentsMemory);
+
+    // Free up the surface orientation helper now that we're done with it.
+    orientation.delete();
 }
 
 Filament.IcoSphere.prototype.subdivide = function() {
