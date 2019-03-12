@@ -341,14 +341,14 @@ bool MetalDriver::isFrameTimeSupported() {
 // Dynamically updated vertex / index buffers will require synchronization.
 
 void MetalDriver::updateVertexBuffer(Driver::VertexBufferHandle vbh, size_t index,
-        Driver::BufferDescriptor&& data, uint32_t byteOffset, uint32_t byteSize) {
+        Driver::BufferDescriptor&& data, uint32_t byteOffset) {
     assert(byteOffset == 0);    // TODO: handle byteOffset for vertex buffers
     auto* vb = handle_cast<MetalVertexBuffer>(mHandleMap, vbh);
     memcpy(vb->buffers[index].contents, data.buffer, data.size);
 }
 
 void MetalDriver::updateIndexBuffer(Driver::IndexBufferHandle ibh, Driver::BufferDescriptor&& data,
-        uint32_t byteOffset, uint32_t byteSize) {
+        uint32_t byteOffset) {
     assert(byteOffset == 0);    // TODO: handle byteOffset for index buffers
     auto* ib = handle_cast<MetalIndexBuffer>(mHandleMap, ibh);
     memcpy(ib->buffer.contents, data.buffer, data.size);

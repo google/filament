@@ -53,8 +53,7 @@ public:
 
     // no-op if bufferIndex out of range
     void setBufferAt(FEngine& engine, uint8_t bufferIndex,
-            driver::BufferDescriptor&& buffer,
-            uint32_t byteOffset = 0, uint32_t byteSize = 0);
+            driver::BufferDescriptor&& buffer, uint32_t byteOffset = 0);
 
 private:
     friend class VertexBuffer;

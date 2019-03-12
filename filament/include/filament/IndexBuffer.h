@@ -75,11 +75,21 @@ public:
         friend class details::FIndexBuffer;
     };
 
-    void setBuffer(Engine& engine,
-            BufferDescriptor&& buffer,
-            uint32_t byteOffset = 0,
-            uint32_t byteSize = 0);
+    /**
+     * Asynchronously copy-initializes a region of this IndexBuffer from the data provided.
+     *
+     * @param engine Reference to the filament::Engine to associate this IndexBuffer with.
+     * @param buffer A BufferDescriptor representing the data used to initialize the IndexBuffer.
+     *               BufferDescriptor points to raw, untyped data that will be interpreted as
+     *               either 16-bit or 32-bits indices baed on the Type of this IndexBuffer.
+     * @param byteOffset Offset in *bytes* into the IndexBuffer
+     */
+    void setBuffer(Engine& engine, BufferDescriptor&& buffer, uint32_t byteOffset = 0);
 
+    /**
+     * Returns the size of this IndexBuffer in elements.
+     * @return The number of indices the IndexBuffer holds.
+     */
     size_t getIndexCount() const noexcept;
 };
 

@@ -41,8 +41,7 @@ public:
 
     size_t getIndexCount() const noexcept { return mIndexCount; }
 
-    void setBuffer(FEngine& engine,
-            BufferDescriptor&& buffer, uint32_t byteOffset = 0, uint32_t byteSize = 0);
+    void setBuffer(FEngine& engine, BufferDescriptor&& buffer, uint32_t byteOffset = 0);
 
 private:
     friend class IndexBuffer;

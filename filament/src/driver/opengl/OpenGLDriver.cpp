@@ -1701,18 +1701,14 @@ void OpenGLDriver::makeCurrent(Driver::SwapChainHandle schDraw, Driver::SwapChai
 // Updating driver objects
 // ------------------------------------------------------------------------------------------------
 
-void OpenGLDriver::updateVertexBuffer(
-        Driver::VertexBufferHandle vbh,
-        size_t index,
-        BufferDescriptor&& p,
-        uint32_t byteOffset,
-        uint32_t byteSize) {
+void OpenGLDriver::updateVertexBuffer(Driver::VertexBufferHandle vbh,
+        size_t index, BufferDescriptor&& p, uint32_t byteOffset) {
     DEBUG_MARKER()
 
     GLVertexBuffer* eb = handle_cast<GLVertexBuffer *>(vbh);
 
     bindBuffer(GL_ARRAY_BUFFER, eb->gl.buffers[index]);
-    glBufferSubData(GL_ARRAY_BUFFER, byteOffset, byteSize, p.buffer);
+    glBufferSubData(GL_ARRAY_BUFFER, byteOffset, p.size, p.buffer);
 
     scheduleDestroy(std::move(p));
 
@@ -1720,8 +1716,7 @@ void OpenGLDriver::updateVertexBuffer(
 }
 
 void OpenGLDriver::updateIndexBuffer(
-        Driver::IndexBufferHandle ibh,
-        BufferDescriptor&& p, uint32_t byteOffset, uint32_t byteSize) {
+        Driver::IndexBufferHandle ibh, BufferDescriptor&& p, uint32_t byteOffset) {
     DEBUG_MARKER()
 
     GLIndexBuffer* ib = handle_cast<GLIndexBuffer *>(ibh);
@@ -1729,7 +1724,7 @@ void OpenGLDriver::updateIndexBuffer(
 
     bindVertexArray(nullptr);
     bindBuffer(GL_ELEMENT_ARRAY_BUFFER, ib->gl.buffer);
-    glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, byteOffset, byteSize, p.buffer);
+    glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, byteOffset, p.size, p.buffer);
 
     scheduleDestroy(std::move(p));
 

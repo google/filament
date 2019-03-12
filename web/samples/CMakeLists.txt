@@ -115,7 +115,7 @@ endfunction()
 
 add_mesh("assets/models/monkey/monkey.obj" "suzanne.filamesh")
 add_mesh("third_party/models/helmet/FlightHelmet.gltf" "helmet.filamesh")
-add_mesh("third_party/shader_ball/shader_ball.obj" "shader_ball.filamesh")
+add_mesh("third_party/models/shader_ball/shader_ball.obj" "shader_ball.filamesh")
 
 # Generate IBL and skybox images using cmgen.
 set(CMGEN_ARGS -x . --format=ktx --size=256 --extract-blur=0.1)
