@@ -383,8 +383,8 @@ static void gui(filament::Engine* engine, filament::View*) {
 }
 
 static void preRender(filament::Engine*, filament::View* view, filament::Scene*, filament::Renderer*) {
-    view->setAntiAliasing(g_params.fxaa ? View::FXAA : View::NONE);
-    view->setDithering(g_params.dithering);
+    view->setAntiAliasing(g_params.fxaa ? View::AntiAliasing::FXAA : View::AntiAliasing::NONE);
+    view->setDithering(g_params.dithering ? View::Dithering::TEMPORAL : View::Dithering::NONE);
     view->setSampleCount((uint8_t) (g_params.msaa ? 4 : 1));
 }
 
