@@ -33,15 +33,16 @@ set(TOOLCHAIN $ENV{ANDROID_HOME}/ndk-bundle/toolchains/llvm/prebuilt/${HOST_NAME
 
 # specify the cross compiler
 set(COMPILER_SUFFIX)
+set(TOOL_SUFFIX)
 if(WIN32)
     set(COMPILER_SUFFIX ".cmd")
-    set(CMAKE_AR ${TOOLCHAIN}/bin/${ARCH}-ar.exe CACHE FILEPATH "Archiver")
+    set(TOOL_SUFFIX     ".exe")
 endif()
 set(CMAKE_C_COMPILER   ${TOOLCHAIN}/bin/${ARCH}${API_LEVEL}-clang${COMPILER_SUFFIX})
 set(CMAKE_CXX_COMPILER ${TOOLCHAIN}/bin/${ARCH}${API_LEVEL}-clang++${COMPILER_SUFFIX})
-set(CMAKE_AR           ${TOOLCHAIN}/bin/${ARCH}-ar${COMPILER_SUFFIX})
-set(CMAKE_RANLIB       ${TOOLCHAIN}/bin/${ARCH}-ranlib${COMPILER_SUFFIX})
-set(CMAKE_STRIP        ${TOOLCHAIN}/bin/${ARCH}-strip${COMPILER_SUFFIX})
+set(CMAKE_AR           ${TOOLCHAIN}/bin/${ARCH}-ar${TOOL_SUFFIX}  CACHE FILEPATH "Archiver")
+set(CMAKE_RANLIB       ${TOOLCHAIN}/bin/${ARCH}-ranlib${TOOL_SUFFIX})
+set(CMAKE_STRIP        ${TOOLCHAIN}/bin/${ARCH}-strip${TOOL_SUFFIX})
 
 # where is the target environment
 set(CMAKE_FIND_ROOT_PATH  ${TOOLCHAIN}/sysroot)
@@ -64,3 +65,9 @@ set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fPIE -pie -static-libstdc
 set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -static-libstdc++" CACHE STRING "Toolchain LDFLAGS")
 
 set(ANDROID TRUE)
+
+# we are compiling Android on Windows
+set(ANDROID_ON_WINDOWS FALSE)
+if(WIN32)
+    set(ANDROID_ON_WINDOWS TRUE)
+endif()
