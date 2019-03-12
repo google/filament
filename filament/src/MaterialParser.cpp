@@ -41,75 +41,36 @@ using namespace filamat;
 namespace filament {
 
 // Make a copy of content and own the allocated memory.
-class ManagedBuffer {
-    void* mStart = nullptr;
-    size_t mSize = 0;
-
-public:
-    explicit ManagedBuffer(const void* start, size_t size)
-            : mStart(malloc(size)), mSize(size) {
-        memcpy(mStart, start, size);
-    }
-
-    ~ManagedBuffer() noexcept {
-        free(mStart);
-    }
-
-    ManagedBuffer(ManagedBuffer const& rhs) = delete;
-    ManagedBuffer& operator=(ManagedBuffer const& rhs) = delete;
-
-    void* data() const noexcept { return mStart; }
-    void* begin() const noexcept { return mStart; }
-    void* end() const noexcept { return (uint8_t*)mStart + mSize; }
-    size_t size() const noexcept { return mSize; }
-};
 
 // ------------------------------------------------------------------------------------------------
 
-struct MaterialParserDetails {
-    MaterialParserDetails(Backend backend, const void* data, size_t size)
-            : mManagedBuffer(data, size),
-              mChunkContainer(mManagedBuffer.data(), mManagedBuffer.size()),
-              mMaterialChunk(mChunkContainer) {
-        switch (backend) {
-            case Backend::OPENGL:
-                mMaterialTag = ChunkType::MaterialGlsl;
-                mDictionaryTag = ChunkType::DictionaryGlsl;
-                break;
-            case Backend::METAL:
-                mMaterialTag = ChunkType::MaterialMetal;
-                mDictionaryTag = ChunkType::DictionaryMetal;
-                break;
-            case Backend::VULKAN:
-                mMaterialTag = ChunkType::MaterialSpirv;
-                mDictionaryTag = ChunkType::DictionarySpirv;
-                break;
-            default:
-                // this is for testing purpose -- for e.g.: with the NoopDriver
-                mMaterialTag = ChunkType::MaterialGlsl;
-                mDictionaryTag = ChunkType::DictionaryGlsl;
-                break;
-        }
+MaterialParser::MaterialParserDetails::MaterialParserDetails(Backend backend, const void* data, size_t size)
+        : mManagedBuffer(data, size),
+          mChunkContainer(mManagedBuffer.data(), mManagedBuffer.size()),
+          mMaterialChunk(mChunkContainer) {
+    switch (backend) {
+        case Backend::OPENGL:
+            mMaterialTag = ChunkType::MaterialGlsl;
+            mDictionaryTag = ChunkType::DictionaryGlsl;
+            break;
+        case Backend::METAL:
+            mMaterialTag = ChunkType::MaterialMetal;
+            mDictionaryTag = ChunkType::DictionaryMetal;
+            break;
+        case Backend::VULKAN:
+            mMaterialTag = ChunkType::MaterialSpirv;
+            mDictionaryTag = ChunkType::DictionarySpirv;
+            break;
+        default:
+            // this is for testing purpose -- for e.g.: with the NoopDriver
+            mMaterialTag = ChunkType::MaterialGlsl;
+            mDictionaryTag = ChunkType::DictionaryGlsl;
+            break;
     }
-
-    template<typename T>
-    bool getFromSimpleChunk(filamat::ChunkType type, T* value) const noexcept;
-
-private:
-    friend class MaterialParser;
-
-    ManagedBuffer mManagedBuffer;
-    ChunkContainer mChunkContainer;
-
-    // Keep MaterialChunk alive between calls to getShader to avoid reload the shader index.
-    MaterialChunk mMaterialChunk;
-    BlobDictionary mBlobDictionary;
-    ChunkType mMaterialTag = ChunkType::Unknown;
-    ChunkType mDictionaryTag = ChunkType::Unknown;
-};
+}
 
 template<typename T>
-bool MaterialParserDetails::getFromSimpleChunk(filamat::ChunkType type, T* value) const noexcept {
+bool MaterialParser::MaterialParserDetails::getFromSimpleChunk(filamat::ChunkType type, T* value) const noexcept {
     if (mChunkContainer.hasChunk(type)) {
         Unflattener unflattener(
                 mChunkContainer.getChunkStart(type),
@@ -122,31 +83,27 @@ bool MaterialParserDetails::getFromSimpleChunk(filamat::ChunkType type, T* value
 // ------------------------------------------------------------------------------------------------
 
 MaterialParser::MaterialParser(Backend backend, const void* data, size_t size)
-        : mImpl(new MaterialParserDetails(backend, data, size)) {
-}
-
-MaterialParser::~MaterialParser() {
-    delete mImpl;
+        : mImpl(backend, data, size) {
 }
 
 ChunkContainer& MaterialParser::getChunkContainer() noexcept {
-    return mImpl->mChunkContainer;
+    return mImpl.mChunkContainer;
 }
 
 ChunkContainer const& MaterialParser::getChunkContainer() const noexcept {
-    return mImpl->mChunkContainer;
+    return mImpl.mChunkContainer;
 }
 
 bool MaterialParser::parse() noexcept {
     ChunkContainer& cc = getChunkContainer();
     if (cc.parse()) {
-        if (!cc.hasChunk(mImpl->mMaterialTag) || !cc.hasChunk(mImpl->mDictionaryTag)) {
+        if (!cc.hasChunk(mImpl.mMaterialTag) || !cc.hasChunk(mImpl.mDictionaryTag)) {
             return false;
         }
-        if (!DictionaryReader::unflatten(cc, mImpl->mDictionaryTag, mImpl->mBlobDictionary)) {
+        if (!DictionaryReader::unflatten(cc, mImpl.mDictionaryTag, mImpl.mBlobDictionary)) {
             return false;
         }
-        if (!mImpl->mMaterialChunk.readIndex(mImpl->mMaterialTag)) {
+        if (!mImpl.mMaterialChunk.readIndex(mImpl.mMaterialTag)) {
             return false;
         }
     }
@@ -173,117 +130,117 @@ bool MaterialParser::isPostProcessMaterial() const noexcept {
 
 // Accessors
 bool MaterialParser::getMaterialVersion(uint32_t* value) const noexcept {
-    return mImpl->getFromSimpleChunk(ChunkType::MaterialVersion, value);
+    return mImpl.getFromSimpleChunk(ChunkType::MaterialVersion, value);
 }
 
 bool MaterialParser::getPostProcessVersion(uint32_t* value) const noexcept {
-    return mImpl->getFromSimpleChunk(ChunkType::PostProcessVersion, value);
+    return mImpl.getFromSimpleChunk(ChunkType::PostProcessVersion, value);
 }
 
 bool MaterialParser::getName(utils::CString* cstring) const noexcept {
    ChunkType type = ChunkType::MaterialName;
-   const uint8_t* start = mImpl->mChunkContainer.getChunkStart(type);
-   const uint8_t* end = mImpl->mChunkContainer.getChunkEnd(type);
+   const uint8_t* start = mImpl.mChunkContainer.getChunkStart(type);
+   const uint8_t* end = mImpl.mChunkContainer.getChunkEnd(type);
    Unflattener unflattener(start, end);
    return unflattener.read(cstring);
 }
 
 bool MaterialParser::getUIB(UniformInterfaceBlock* uib) const noexcept {
     auto type = MaterialUib;
-    const uint8_t* start = mImpl->mChunkContainer.getChunkStart(type);
-    const uint8_t* end = mImpl->mChunkContainer.getChunkEnd(type);
+    const uint8_t* start = mImpl.mChunkContainer.getChunkStart(type);
+    const uint8_t* end = mImpl.mChunkContainer.getChunkEnd(type);
     Unflattener unflattener(start, end);
     return ChunkUniformInterfaceBlock::unflatten(unflattener, uib);
 }
 
 bool MaterialParser::getSIB(SamplerInterfaceBlock* sib) const noexcept {
     auto type = MaterialSib;
-    const uint8_t* start = mImpl->mChunkContainer.getChunkStart(type);
-    const uint8_t* end = mImpl->mChunkContainer.getChunkEnd(type);
+    const uint8_t* start = mImpl.mChunkContainer.getChunkStart(type);
+    const uint8_t* end = mImpl.mChunkContainer.getChunkEnd(type);
     Unflattener unflattener(start, end);
     return ChunkSamplerInterfaceBlock::unflatten(unflattener, sib);
 }
 
 bool MaterialParser::getShaderModels(uint32_t* value) const noexcept {
-    return mImpl->getFromSimpleChunk(ChunkType::MaterialShaderModels, value);
+    return mImpl.getFromSimpleChunk(ChunkType::MaterialShaderModels, value);
 }
 
 bool MaterialParser::getDepthWriteSet(bool* value) const noexcept {
-    return mImpl->getFromSimpleChunk(ChunkType::MaterialDepthWriteSet, value);
+    return mImpl.getFromSimpleChunk(ChunkType::MaterialDepthWriteSet, value);
 }
 
 bool MaterialParser::getDepthWrite(bool* value) const noexcept {
-    return mImpl->getFromSimpleChunk(ChunkType::MaterialDepthWrite, value);
+    return mImpl.getFromSimpleChunk(ChunkType::MaterialDepthWrite, value);
 }
 
 bool MaterialParser::getDoubleSidedSet(bool* value) const noexcept {
-    return mImpl->getFromSimpleChunk(ChunkType::MaterialDoubleSidedSet, value);
+    return mImpl.getFromSimpleChunk(ChunkType::MaterialDoubleSidedSet, value);
 }
 
 bool MaterialParser::getDoubleSided(bool* value) const noexcept {
-    return mImpl->getFromSimpleChunk(ChunkType::MaterialDoubleSided, value);
+    return mImpl.getFromSimpleChunk(ChunkType::MaterialDoubleSided, value);
 }
 
 bool MaterialParser::getColorWrite(bool* value) const noexcept {
-    return mImpl->getFromSimpleChunk(ChunkType::MaterialColorWrite, value);
+    return mImpl.getFromSimpleChunk(ChunkType::MaterialColorWrite, value);
 }
 
 bool MaterialParser::getDepthTest(bool* value) const noexcept {
-    return mImpl->getFromSimpleChunk(ChunkType::MaterialDepthTest, value);
+    return mImpl.getFromSimpleChunk(ChunkType::MaterialDepthTest, value);
 }
 
 bool MaterialParser::getCullingMode(CullingMode* value) const noexcept {
     static_assert(sizeof(CullingMode) == sizeof(uint8_t),
             "CullingMode expected size is wrong");
-    return mImpl->getFromSimpleChunk(ChunkType::MaterialCullingMode, reinterpret_cast<uint8_t*>(value));
+    return mImpl.getFromSimpleChunk(ChunkType::MaterialCullingMode, reinterpret_cast<uint8_t*>(value));
 }
 
 bool MaterialParser::getTransparencyMode(TransparencyMode* value) const noexcept {
     static_assert(sizeof(TransparencyMode) == sizeof(uint8_t),
             "TransparencyMode expected size is wrong");
-    return mImpl->getFromSimpleChunk(ChunkType::MaterialTransparencyMode,
+    return mImpl.getFromSimpleChunk(ChunkType::MaterialTransparencyMode,
             reinterpret_cast<uint8_t*>(value));
 }
 
 bool MaterialParser::getInterpolation(Interpolation* value) const noexcept {
     static_assert(sizeof(Interpolation) == sizeof(uint8_t),
             "Interpolation expected size is wrong");
-    return mImpl->getFromSimpleChunk(ChunkType::MaterialInterpolation, reinterpret_cast<uint8_t*>(value));
+    return mImpl.getFromSimpleChunk(ChunkType::MaterialInterpolation, reinterpret_cast<uint8_t*>(value));
 }
 
 bool MaterialParser::getVertexDomain(VertexDomain* value) const noexcept {
     static_assert(sizeof(VertexDomain) == sizeof(uint8_t),
             "VertexDomain expected size is wrong");
-    return mImpl->getFromSimpleChunk(ChunkType::MaterialVertexDomain, reinterpret_cast<uint8_t*>(value));
+    return mImpl.getFromSimpleChunk(ChunkType::MaterialVertexDomain, reinterpret_cast<uint8_t*>(value));
 }
 
 bool MaterialParser::getBlendingMode(BlendingMode* value) const noexcept {
     static_assert(sizeof(BlendingMode) == sizeof(uint8_t),
             "BlendingMode expected size is wrong");
-    return mImpl->getFromSimpleChunk(ChunkType::MaterialBlendingMode, reinterpret_cast<uint8_t*>(value));
+    return mImpl.getFromSimpleChunk(ChunkType::MaterialBlendingMode, reinterpret_cast<uint8_t*>(value));
 }
 
 bool MaterialParser::getMaskThreshold(float* value) const noexcept {
-    return mImpl->getFromSimpleChunk(ChunkType::MaterialMaskThreshold, value);
+    return mImpl.getFromSimpleChunk(ChunkType::MaterialMaskThreshold, value);
 }
 
 bool MaterialParser::hasShadowMultiplier(bool* value) const noexcept {
-    return mImpl->getFromSimpleChunk(ChunkType::MaterialShadowMultiplier, value);
+    return mImpl.getFromSimpleChunk(ChunkType::MaterialShadowMultiplier, value);
 }
 
 bool MaterialParser::getShading(Shading* value) const noexcept {
     static_assert(sizeof(Shading) == sizeof(uint8_t),
             "Shading expected size is wrong");
-    return mImpl->getFromSimpleChunk(ChunkType::MaterialShading, reinterpret_cast<uint8_t*>(value));
+    return mImpl.getFromSimpleChunk(ChunkType::MaterialShading, reinterpret_cast<uint8_t*>(value));
 }
 
 bool MaterialParser::hasCustomDepthShader(bool* value) const noexcept {
-    return mImpl->getFromSimpleChunk(ChunkType::MaterialHasCustomDepthShader, value);
+    return mImpl.getFromSimpleChunk(ChunkType::MaterialHasCustomDepthShader, value);
 }
 
 bool MaterialParser::getRequiredAttributes(AttributeBitset* value) const noexcept {
     uint32_t rawAttributes = 0;
-    if (!mImpl->getFromSimpleChunk(ChunkType::MaterialRequiredAttributes, &rawAttributes)) {
+    if (!mImpl.getFromSimpleChunk(ChunkType::MaterialRequiredAttributes, &rawAttributes)) {
         return false;
     }
     *value = AttributeBitset();
@@ -293,8 +250,8 @@ bool MaterialParser::getRequiredAttributes(AttributeBitset* value) const noexcep
 
 bool MaterialParser::getShader(ShaderBuilder& shader,
         ShaderModel shaderModel, uint8_t variant, ShaderType stage) noexcept {
-    return mImpl->mMaterialChunk.getShader(shader,
-            mImpl->mBlobDictionary, (uint8_t)shaderModel, variant, stage);
+    return mImpl.mMaterialChunk.getShader(shader,
+            mImpl.mBlobDictionary, (uint8_t)shaderModel, variant, stage);
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -402,4 +359,4 @@ bool ChunkSamplerInterfaceBlock::unflatten(Unflattener& unflattener,
     return true;
 }
 
-} // namespace filaflat
+} // namespace filament
