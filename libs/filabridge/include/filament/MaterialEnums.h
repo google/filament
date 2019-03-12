@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+//! \file
+
 #ifndef TNT_FILAMENT_MATERIAL_ENUM_H
 #define TNT_FILAMENT_MATERIAL_ENUM_H
 
@@ -24,57 +26,88 @@
 
 namespace filament {
 
+/**
+ * Supported shading models
+ */
 enum class Shading : uint8_t {
-    UNLIT,                  // no lighting applied, emissive possible
-    LIT,                    // default, standard lighting
-    SUBSURFACE,             // subsurface lighting model
-    CLOTH,                  // cloth lighting model
+    UNLIT,                  //!< no lighting applied, emissive possible
+    LIT,                    //!< default, standard lighting
+    SUBSURFACE,             //!< subsurface lighting model
+    CLOTH,                  //!< cloth lighting model
 };
 
+/**
+ * Attribute interpolation types in the fragment shader
+ */
 enum class Interpolation : uint8_t {
-    SMOOTH,                 // default, smooth interpolation
-    FLAT                    // flat interpolation
+    SMOOTH,                 //!< default, smooth interpolation
+    FLAT                    //!< flat interpolation
 };
 
+/**
+ * Supported blending modes
+ */
 enum class BlendingMode : uint8_t {
-    OPAQUE,                 // material is opaque
-    TRANSPARENT,            // material is transparent and color is alpha-pre-multiplied,
-                            // affects diffuse lighting only
-    ADD,                    // material is additive (e.g.: hologram)
-    MASKED,                 // material is masked (i.e. alpha tested)
-    FADE                    // material is transparent and color is alpha-pre-multiplied,
-                            // affects specular lighting
-                            // when adding more entries, change the size of FRenderer::CommandKey::blending
+    //! material is opaque
+    OPAQUE,
+    //! material is transparent and color is alpha-pre-multiplied, affects diffuse lighting only
+    TRANSPARENT,
+    //! material is additive (e.g.: hologram)
+    ADD,
+    //! material is masked (i.e. alpha tested)
+    MASKED,
+    /**
+     * material is transparent and color is alpha-pre-multiplied, affects specular lighting
+     * when adding more entries, change the size of FRenderer::CommandKey::blending
+     */
+    FADE
 };
 
+/**
+ * How transparent objects are handled
+ */
 enum class TransparencyMode : uint8_t {
-    DEFAULT,                // the transparent object is drawn honoring the raster state
-    TWO_PASSES_ONE_SIDE,    // the transparent object is first drawn in the depth buffer,
-                            // then in the color buffer, honoring the culling mode, but
-                            // ignoring the depth test function
-    TWO_PASSES_TWO_SIDES    // the transparent object is drawn twice in the color buffer,
-                            // first with back faces only, then with front faces; the culling
-                            // mode is ignored. Can be combined with two-sided lighting
+    //! the transparent object is drawn honoring the raster state
+    DEFAULT,
+    /**
+     * the transparent object is first drawn in the depth buffer,
+     * then in the color buffer, honoring the culling mode, but ignoring the depth test function
+     */
+    TWO_PASSES_ONE_SIDE,
+
+    /**
+     * the transparent object is drawn twice in the color buffer,
+     * first with back faces only, then with front faces; the culling
+     * mode is ignored. Can be combined with two-sided lighting
+     */
+    TWO_PASSES_TWO_SIDES
 };
 
+/**
+ * Supported types of vertex domains.
+ */
 enum class VertexDomain : uint8_t {
-    OBJECT,                 // vertices are in object space, default
-    WORLD,                  // vertices are in world space
-    VIEW,                   // vertices are in view space
-    DEVICE                  // vertices are in normalized device space
+    OBJECT,                 //!< vertices are in object space, default
+    WORLD,                  //!< vertices are in world space
+    VIEW,                   //!< vertices are in view space
+    DEVICE                  //!< vertices are in normalized device space
     // when adding more entries, make sure to update VERTEX_DOMAIN_COUNT
 };
 
-// Update hasIntegerTarget() in VertexBuffer when adding an attribute that will
-// be read as integers in the shaders
+/**
+ * Vertex attribute types
+ */
 enum VertexAttribute : uint8_t {
-    POSITION        = 0, // XYZ position (float3)
-    TANGENTS        = 1, // tangent, bitangent and normal, encoded as a quaternion (float4)
-    COLOR           = 2, // vertex color (float4)
-    UV0             = 3, // texture coordinates (float2)
-    UV1             = 4, // texture coordinates (float2)
-    BONE_INDICES    = 5, // indices of 4 bones, as unsigned integers (uvec4)
-    BONE_WEIGHTS    = 6, // weights of the 4 bones (normalized float4)
+    // Update hasIntegerTarget() in VertexBuffer when adding an attribute that will
+    // be read as integers in the shaders
+
+    POSITION        = 0, //!< XYZ position (float3)
+    TANGENTS        = 1, //!< tangent, bitangent and normal, encoded as a quaternion (float4)
+    COLOR           = 2, //!< vertex color (float4)
+    UV0             = 3, //!< texture coordinates (float2)
+    UV1             = 4, //!< texture coordinates (float2)
+    BONE_INDICES    = 5, //!< indices of 4 bones, as unsigned integers (uvec4)
+    BONE_WEIGHTS    = 6, //!< weights of the 4 bones (normalized float4)
 };
 
 // can't really use std::underlying_type<AttributeIndex>::type because the driver takes a uint32_t

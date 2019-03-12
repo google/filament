@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+//! \file
+
 #ifndef TNT_FILAMENT_VIEWPORT_H
 #define TNT_FILAMENT_VIEWPORT_H
 
@@ -29,38 +31,71 @@
 
 namespace filament {
 
-/*
+/**
  * Viewport describes a view port in pixel coordinates
+ *
+ * A view port is represented by its left-bottom coordinate, width and height in pixels.
  */
 class UTILS_PUBLIC Viewport : public driver::Viewport {
 public:
-    Viewport() noexcept : driver::Viewport{ 0, 0, 0, 0 } {
-    }
+    /**
+     * Creates a Viewport of zero width and height at the origin.
+     */
+    Viewport() noexcept : driver::Viewport{} {}
 
     Viewport(const Viewport& viewport) noexcept = default;
     Viewport(Viewport&& viewport) noexcept = default;
     Viewport& operator=(const Viewport& viewport) noexcept = default;
     Viewport& operator=(Viewport&& viewport) noexcept = default;
 
-    /*
-     * Create a Viewport from its left-bottom coordinates and size in pixels
+    /**
+     * Creates a Viewport from its left-bottom coordinates, width and height in pixels
+     *
+     * @param left left coordinate in pixel
+     * @param bottom bottom coordinate in pixel
+     * @param width width in pixel
+     * @param height height in pixel
      */
     Viewport(int32_t left, int32_t bottom, uint32_t width, uint32_t height) noexcept
             : driver::Viewport{ left, bottom, width, height } {
     }
 
+    /**
+     * Returns whether the area of the view port is null.
+     *
+     * @return true if either width or height is 0 pixel.
+     */
     bool empty() const noexcept { return !width || !height; }
 
+    /**
+     * Computes a new scaled Viewport
+     * @param s scaling factor on the x and y axes.
+     * @return A new scaled Viewport. The coordinates and dimensions of the new Viewport are
+     * rounded to the nearest integer value.
+     */
     Viewport scale(filament::math::float2 s) const noexcept;
 
 private:
-    friend bool operator==(Viewport const& rhs, Viewport const& lhs) noexcept {
+
+    /**
+     * Compares two Viewports for equality
+     * @param lhs reference to the left hand side Viewport
+     * @param rhs reference to the rgiht hand side Viewport
+     * @return true if \p rhs and \p lhs are identical.
+     */
+    friend bool operator==(Viewport const& lhs, Viewport const& rhs) noexcept {
         return (&rhs == &lhs) ||
                (rhs.left == lhs.left && rhs.bottom == lhs.bottom &&
                 rhs.width == lhs.width && rhs.height == lhs.height);
     }
 
-    friend bool operator!=(Viewport const& rhs, Viewport const& lhs) noexcept {
+    /**
+     * Compares two Viewports for inequality
+     * @param lhs reference to the left hand side Viewport
+     * @param rhs reference to the rgiht hand side Viewport
+     * @return true if \p rhs and \p lhs are different.
+     */
+    friend bool operator!=(Viewport const& lhs, Viewport const& rhs) noexcept {
         return !(rhs == lhs);
     }
 };

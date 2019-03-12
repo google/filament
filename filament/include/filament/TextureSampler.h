@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+//! \file
+
 #ifndef TNT_FILAMENT_TEXTURESAMPLER_H
 #define TNT_FILAMENT_TEXTURESAMPLER_H
 
@@ -25,6 +27,9 @@
 
 namespace filament {
 
+/**
+ * TextureSampler defines how a texture is accessed.
+ */
 class UTILS_PUBLIC TextureSampler {
 public:
     using WrapMode = driver::SamplerWrapMode;
@@ -33,8 +38,25 @@ public:
     using CompareMode = driver::SamplerCompareMode;
     using CompareFunc = driver::SamplerCompareFunc;
 
+    /**
+     * Creates a default sampler.
+     * The default parameters are:
+     * - filterMag      : NEAREST
+     * - filterMin      : NEAREST
+     * - wrapS          : CLAMP_TO_EDGE
+     * - wrapT          : CLAMP_TO_EDGE
+     * - wrapR          : CLAMP_TO_EDGE
+     * - compareMode    : NONE
+     * - compareFunc    : Less or equal
+     * - no anisotropic filtering
+     */
     TextureSampler() noexcept = default;
 
+    /**
+     * Creates a TextureSampler with the default parameters but setting the filtering and wrap modes.
+     * @param minMag filtering for both minification and magnification
+     * @param str wrapping mode for all texture coordinate axes
+     */
     explicit TextureSampler(MagFilter minMag, WrapMode str = WrapMode::CLAMP_TO_EDGE) noexcept  {
         mSamplerParams.filterMin = MinFilter(minMag);
         mSamplerParams.filterMag = minMag;
@@ -43,6 +65,12 @@ public:
         mSamplerParams.wrapR = str;
     }
 
+    /**
+     * Creates a TextureSampler with the default parameters but setting the filtering and wrap modes.
+     * @param min filtering for minification
+     * @param mag filtering for magnification
+     * @param str wrapping mode for all texture coordinate axes
+     */
     TextureSampler(MinFilter min, MagFilter mag, WrapMode str = WrapMode::CLAMP_TO_EDGE) noexcept  {
         mSamplerParams.filterMin = min;
         mSamplerParams.filterMag = mag;
@@ -51,6 +79,14 @@ public:
         mSamplerParams.wrapR = str;
     }
 
+    /**
+     * Creates a TextureSampler with the default parameters but setting the filtering and wrap modes.
+     * @param min filtering for minification
+     * @param mag filtering for magnification
+     * @param s wrap mode for the s (horizontal)texture coordinate
+     * @param t wrap mode for the t (vertical) texture coordinate
+     * @param r wrap mode for the r (depth) texture coordinate
+     */
     TextureSampler(MinFilter min, MagFilter mag, WrapMode s, WrapMode t, WrapMode r) noexcept  {
         mSamplerParams.filterMin = min;
         mSamplerParams.filterMag = mag;
@@ -59,6 +95,11 @@ public:
         mSamplerParams.wrapR = r;
     }
 
+    /**
+     * Creates a TextureSampler with the default parameters but setting the compare mode and function
+     * @param mode Compare mode
+     * @param func Compare function
+     */
     explicit TextureSampler(CompareMode mode, CompareFunc func = CompareFunc::LE) noexcept  {
         mSamplerParams.compareMode = mode;
         mSamplerParams.compareFunc = func;
@@ -67,28 +108,61 @@ public:
     TextureSampler(const TextureSampler& rhs) noexcept = default;
     TextureSampler& operator=(const TextureSampler& rhs) noexcept = default;
 
+    /**
+     * Sets the minification filter
+     * @param v Minification filter
+     */
     void setMinFilter(MinFilter v) noexcept {
         mSamplerParams.filterMin = v;
     }
+
+    /**
+     * Sets the magnification filter
+     * @param v Magnification filter
+     */
     void setMagFilter(MagFilter v) noexcept {
         mSamplerParams.filterMag = v;
     }
+
+    /**
+     * Sets the wrap mode for the s (horizontal) texture coordinate
+     * @param v wrap mode
+     */
     void setWrapModeS(WrapMode v) noexcept {
         mSamplerParams.wrapS = v;
     }
+
+    /**
+     * Sets the wrap mode for the t (vertical) texture coordinate
+     * @param v wrap mode
+     */
     void setWrapModeT(WrapMode v) noexcept {
         mSamplerParams.wrapT = v;
     }
+
+    /**
+     * Sets the wrap mode for the r (depth, for 3D textures) texture coordinate
+     * @param v wrap mode
+     */
     void setWrapModeR(WrapMode v) noexcept {
         mSamplerParams.wrapR = v;
     }
 
-    // Amount of anisotropy, should be a power-of-two.
+    /**
+     * This controls anisotropic filtering.
+     * @param anisotropy Amount of anisotropy, should be a power-of-two. The default is 0.
+     *                   The maximum permissible value is 7.
+     */
     void setAnisotropy(float anisotropy) noexcept {
         const int log2 = ilogbf(fabsf(anisotropy));
         mSamplerParams.anisotropyLog2 = uint8_t(log2 < 7 ? log2 : 7);
     }
 
+    /**
+     * Sets the compare mode and function.
+     * @param mode Compare mode
+     * @param func Compare function
+     */
     void setCompareMode(CompareMode mode, CompareFunc func = CompareFunc::LE) noexcept {
         mSamplerParams.compareMode = mode;
         mSamplerParams.compareFunc = func;
