@@ -197,4 +197,11 @@ Filament.loadClassExtensions = function() {
         this._setImageCube(engine, level, pbd);
         pbd.delete();
     }
+
+    Filament.SurfaceOrientation$Builder.prototype.build = function() {
+        const result = this._build();
+        this.delete();
+        return result;
+    };
+
 };

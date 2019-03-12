@@ -51,6 +51,8 @@
 #include <filament/VertexBuffer.h>
 #include <filament/View.h>
 
+#include <geometry/SurfaceOrientation.h>
+
 #include <image/KtxBundle.h>
 #include <image/KtxUtility.h>
 
@@ -60,6 +62,7 @@
 #include <math/mat4.h>
 
 #include <utils/EntityManager.h>
+#include <utils/Log.h>
 
 #include <emscripten.h>
 #include <emscripten/bind.h>
@@ -72,6 +75,7 @@
 using namespace emscripten;
 using namespace filament;
 using namespace filamesh;
+using namespace geometry;
 using namespace image;
 
 // Many methods require a thin layer of C++ glue which is elegantly expressed with a lambda.
@@ -122,6 +126,7 @@ using TexBuilder = Texture::Builder;
 using LightBuilder = LightManager::Builder;
 using IblBuilder = IndirectLight::Builder;
 using SkyBuilder = Skybox::Builder;
+using SurfaceBuilder = SurfaceOrientation::Builder;
 
 // We avoid directly exposing driver::BufferDescriptor because embind does not support move
 // semantics and void* doesn't make sense to JavaScript anyway. This little wrapper class is exposed
@@ -1115,5 +1120,69 @@ class_<DecodedPng>("DecodedPng")
     .property("width", &DecodedPng::width)
     .property("height", &DecodedPng::height)
     .property("data", &DecodedPng::decoded_data);
+
+class_<SurfaceBuilder>("SurfaceOrientation$Builder")
+
+    .constructor<>()
+
+    .BUILDER_FUNCTION("vertexCount", SurfaceBuilder, (SurfaceBuilder* builder, size_t nverts), {
+        return &builder->vertexCount(nverts);
+    })
+
+    .BUILDER_FUNCTION("normals", SurfaceBuilder, (SurfaceBuilder* builder,
+            intptr_t data, int stride), {
+        return &builder->normals((const filament::math::float3*) data, stride);
+    })
+
+    .BUILDER_FUNCTION("tangents", SurfaceBuilder, (SurfaceBuilder* builder,
+            intptr_t data, int stride), {
+        return &builder->tangents((const filament::math::float4*) data, stride);
+    })
+
+    .BUILDER_FUNCTION("uvs", SurfaceBuilder, (SurfaceBuilder* builder, intptr_t data, int stride), {
+        return &builder->uvs((const filament::math::float2*) data, stride);
+    })
+
+    .BUILDER_FUNCTION("positions", SurfaceBuilder, (SurfaceBuilder* builder,
+            intptr_t data, int stride), {
+        return &builder->positions((const filament::math::float3*) data, stride);
+    })
+
+    .BUILDER_FUNCTION("triangleCount", SurfaceBuilder, (SurfaceBuilder* builder, size_t n), {
+        return &builder->triangleCount(n);
+    })
+
+    .BUILDER_FUNCTION("triangles16", SurfaceBuilder, (SurfaceBuilder* builder, intptr_t data), {
+        return &builder->triangles((filament::math::ushort3*) data);
+    })
+
+    .BUILDER_FUNCTION("triangles32", SurfaceBuilder, (SurfaceBuilder* builder, intptr_t data), {
+        return &builder->triangles((filament::math::uint3*) data);
+    })
+
+    .function("_build", EMBIND_LAMBDA(SurfaceOrientation*, (SurfaceBuilder* builder), {
+        return new SurfaceOrientation(builder->build());
+    }), allow_raw_pointers());
+
+class_<SurfaceOrientation>("SurfaceOrientation")
+    .function("getQuats", EMBIND_LAMBDA(void, (SurfaceOrientation* self,
+            intptr_t out, size_t quatCount, VertexBuffer::AttributeType attrtype), {
+        switch (attrtype) {
+            case VertexBuffer::AttributeType::FLOAT4: {
+                self->getQuats((filament::math::quatf*) out, quatCount);
+                break;
+            }
+            case VertexBuffer::AttributeType::HALF4: {
+                self->getQuats((filament::math::quath*) out, quatCount);
+                break;
+            }
+            case VertexBuffer::AttributeType::SHORT4: {
+                self->getQuats((filament::math::short4*) out, quatCount);
+                break;
+            }
+            default:
+                utils::slog.e << "Unsupported quaternion type." << utils::io::endl;
+        }
+    }), allow_raw_pointers());
 
 } // EMSCRIPTEN_BINDINGS
