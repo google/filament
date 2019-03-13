@@ -25,6 +25,9 @@
 #include <memory>
 #include <vector>
 
+namespace filament {
+namespace ibl {
+
 class Cubemap;
 
 /**
@@ -79,5 +82,8 @@ private:
     static double TSH(int l, int m, const filament::math::double3& d);
     static void printShBase(std::ostream& out, int l, int m);
 };
+
+} // namespace ibl
+} // namespace filament
 
 #endif /* IBL_CUBEMAPSH_H */

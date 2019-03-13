@@ -25,6 +25,9 @@
 
 #include <memory>
 
+namespace filament {
+namespace ibl {
+
 /**
  * \deprecated
  * We are phasing out this class in favor of LinearImage. The latter has a stable and well-defined
@@ -69,5 +72,8 @@ private:
 inline void* Image::getPixelRef(size_t x, size_t y) const {
     return static_cast<uint8_t*>(mData) + y * mBpr + x * mBpp;
 }
+
+} // namespace ibl
+} // namespace filament
 
 #endif /* IBL_IMAGE_H */

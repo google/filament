@@ -44,6 +44,7 @@
 
 
 using namespace filament::math;
+using namespace filament::ibl;
 using namespace image;
 
 // -----------------------------------------------------------------------------------------------

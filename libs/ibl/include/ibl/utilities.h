@@ -22,6 +22,9 @@
 #include <math/vec2.h>
 #include <math/vec3.h>
 
+namespace filament {
+namespace ibl {
+
 template<typename T>
 static inline constexpr T sq(T x) {
     return x * x;
@@ -49,4 +52,6 @@ inline filament::math::double2 hammersley(uint32_t i, float iN) {
     return { i * iN, bits * tof };
 }
 
+} // namespace ibl
+} // namespace filament
 #endif /* IBL_UTILITIES_H */

@@ -22,6 +22,9 @@
 
 #include <utils/JobSystem.h>
 
+namespace filament {
+namespace ibl {
+
 class CubemapIBL;
 
 /**
@@ -148,5 +151,7 @@ void CubemapUtils::process(
     }
 }
 
+} // namespace ibl
+} // namespace filament
 
 #endif /* IBL_CUBEMAP_UTILS_H */

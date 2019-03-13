@@ -32,6 +32,9 @@ using namespace filament::math;
 using namespace image;
 using namespace utils;
 
+namespace filament {
+namespace ibl {
+
 static double pow5(double x) {
     return (x*x)*(x*x)*x;
 }
@@ -942,7 +945,7 @@ void CubemapIBL::brdf(Cubemap& dst, double linearRoughness) {
 }
 
 void CubemapIBL::DFG(Image& dst, bool multiscatter, bool cloth) {
-    auto dfvFunction = multiscatter ? ::DFV_Multiscatter : ::DFV;
+    auto dfvFunction = multiscatter ? DFV_Multiscatter : DFV;
     JobSystem& js = CubemapUtils::getJobSystem();
     auto job = jobs::parallel_for<char>(js, nullptr, nullptr, uint32_t(dst.getHeight()),
             [&dst, dfvFunction, cloth](char* d, size_t c) {
@@ -972,3 +975,5 @@ void CubemapIBL::DFG(Image& dst, bool multiscatter, bool cloth) {
     js.runAndWait(job);
 }
 
+} // namespace ibl
+} // namespace filament
