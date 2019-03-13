@@ -14,23 +14,26 @@
  * limitations under the License.
  */
 
-#ifndef SRC_CUBEMAPUTILS_H_
-#define SRC_CUBEMAPUTILS_H_
+#ifndef IBL_CUBEMAP_UTILS_H
+#define IBL_CUBEMAP_UTILS_H
 
 #include <ibl/Cubemap.h>
 #include <ibl/Image.h>
 
 #include <utils/JobSystem.h>
 
+class CubemapIBL;
+
+/**
+ * Create and convert Cubemap formats
+ */
 class CubemapUtils {
 public:
-    struct EmptyState { };
+    //! Creates a cubemap object and its backing Image
+    static Cubemap create(Image& image, size_t dim, bool horizontal = true);
 
-    static utils::JobSystem& getJobSystem() {
-        static utils::JobSystem js;
-        js.adopt();
-        return js;
-    }
+    struct EmptyState {
+    };
 
     template<typename STATE>
     using ScanlineProc = std::function<
@@ -39,47 +42,52 @@ public:
     template<typename STATE>
     using ReduceProc = std::function<void(STATE& state)>;
 
+    //! process the cubemap using multithreading
     template<typename STATE>
-    static void process(
-            Cubemap& cm,
+    static void process(Cubemap& cm,
             ScanlineProc<STATE> proc,
-            ReduceProc<STATE> reduce = [](STATE&){},
+            ReduceProc<STATE> reduce = [](STATE&) {},
             const STATE& prototype = STATE());
 
-    // Convert equirectangular Image to a Cubemap
+    //! Converts equirectangular Image to a Cubemap
     static void equirectangularToCubemap(Cubemap& dst, const Image& src);
 
+    //! Converts a Cubemap to an equirectangular Image
     static void cubemapToEquirectangular(Image& dst, const Cubemap& src);
 
+    //! Converts a Cubemap to an octahedron
     static void cubemapToOctahedron(Image& dst, const Cubemap& src);
 
-    // Convert h or v cross Image to a Cubemap
+    //! Converts horizontal or vertical cross Image to a Cubemap
     static void crossToCubemap(Cubemap& dst, const Image& src);
 
-    // clamp image to acceptable range
+    //! clamps image to acceptable range for RGBM encoding.
     static void clamp(Image& src);
 
-    // Downsample a cubemap
+    //! Downsamples a cubemap by helf in x and y using a box filter
     static void downsampleCubemapLevelBoxFilter(Cubemap& dst, const Cubemap& src);
 
-    // Return the name of a face (suitable for a file name)
-    static std::string getFaceName(Cubemap::Face face);
+    //! Return the name of a face (suitable for a file name)
+    static const char* getFaceName(Cubemap::Face face);
 
-    // Create a cubemap object and its backing Image
-    static Cubemap create(Image& image, size_t dim, bool horizontal = true);
-
-    // Sets a Cubemap faces from a cross image
+    //! Sets a Cubemap faces from a cross image
     static void setAllFacesFromCross(Cubemap& cm, const Image& image);
 
+    //! mirror the cubemap in the horizontal direction
     static void mirrorCubemap(Cubemap& dst, const Cubemap& src);
 
+    //! computes the solid angle of a pixel of a face of a cubemap
     static double solidAngle(size_t dim, size_t u, size_t v);
 
+    //! generates a UV grid in the cubemap -- useful for debugging.
     static void generateUVGrid(Cubemap& cml, size_t gridFrequencyX, size_t gridFrequencyY);
 
 private:
     static void setFaceFromCross(Cubemap& cm, Cubemap::Face face, const Image& image);
     static Image createCubemapImage(size_t dim, bool horizontal = true);
+
+    friend class CubemapIBL;
+    static utils::JobSystem& getJobSystem();
 };
 
 // -----------------------------------------------------------------------------------------------
@@ -141,4 +149,4 @@ void CubemapUtils::process(
 }
 
 
-#endif /* SRC_CUBEMAPUTILS_H_ */
+#endif /* IBL_CUBEMAP_UTILS_H */

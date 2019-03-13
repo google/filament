@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef CUBEMAPIBL_H_
-#define CUBEMAPIBL_H_
+#ifndef IBL_CUBEMAPIBL_H
+#define IBL_CUBEMAPIBL_H
 
 #include <functional>
 #include <vector>
@@ -26,27 +26,46 @@
 class Cubemap;
 class Image;
 
+/**
+ * Generates cubemaps for the IBL.
+ */
 class CubemapIBL {
 public:
-    /*
-     * Compute roughness LOD using importance sampling GGX
-     */
-
     using Progress = std::function<void(size_t, float)>;
 
+    /**
+     * Computes a roughness LOD using prefiltered importance sampling GGX
+     *
+     * @param dst               the destination cubemap
+     * @param levels            a list of prefiltered lods of the source environment
+     * @param linearRoughness   roughness
+     * @param maxNumSamples     number of samples for importance sampling
+     * @param updater           a callback for the caller to track progress
+     */
     static void roughnessFilter(Cubemap& dst,
             const std::vector<Cubemap>& levels, double linearRoughness,
-            size_t maxNumSamples = 1024,
-            Progress progress = {});
+            size_t maxNumSamples = 1024,Progress updater = {});
 
-    static void diffuseIrradiance(Cubemap& dst,
-            const std::vector<Cubemap>& levels,
-            size_t maxNumSamples = 1024,
-            Progress progress = {});
-
+    //! Computes the "DFG" term of the "split-sum" approximation and stores it in a 2D image
     static void DFG(Image& dst, bool multiscatter, bool cloth);
 
+    /**
+     * Computes the diffuse irradiance using prefiltered importance sampling GGX
+     *
+     * @note Usually this is done using spherical harmonics instead.
+     *
+     * @param dst               the destination cubemap
+     * @param levels            a list of prefiltered lods of the source environment
+     * @param maxNumSamples     number of samples for importance sampling
+     * @param updater           a callback for the caller to track progress
+     *
+     * @see CubemapSH
+     */
+    static void diffuseIrradiance(Cubemap& dst, const std::vector<Cubemap>& levels,
+            size_t maxNumSamples = 1024, Progress updater = {});
+
+    // for debugging. ignore.
     static void brdf(Cubemap& dst, double linearRoughness);
 };
 
-#endif /* CUBEMAPIBL_H_ */
+#endif /* IBL_CUBEMAPIBL_H */

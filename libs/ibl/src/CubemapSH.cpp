@@ -355,7 +355,7 @@ void CubemapSH::renderPreScaledSH3Bands(
 // Only used for debugging
 // -----------------------------------------------------------------------------------------------
 
-double __UNUSED CubemapSH::Legendre(ssize_t l, ssize_t m, double x) {
+double UTILS_UNUSED CubemapSH::Legendre(ssize_t l, ssize_t m, double x) {
     // evaluate an Associated Legendre Polynomial P(l,m,x) at x
     double pmm = 1.0;
     if (m > 0) {
@@ -381,7 +381,7 @@ double __UNUSED CubemapSH::Legendre(ssize_t l, ssize_t m, double x) {
 }
 
 // Only used for debugging
-double __UNUSED CubemapSH::TSH(int l, int m, const double3& d) {
+double UTILS_UNUSED CubemapSH::TSH(int l, int m, const double3& d) {
     if (l==0 && m==0) {
         return 1 / (2*sqrt(M_PI));
     } else if (l==1 && m==-1) {
@@ -404,7 +404,7 @@ double __UNUSED CubemapSH::TSH(int l, int m, const double3& d) {
     return 0;
 }
 
-void __UNUSED CubemapSH::printShBase(std::ostream& out, int l, int m) {
+void UTILS_UNUSED CubemapSH::printShBase(std::ostream& out, int l, int m) {
     if (l<3 && std::abs(m) <= l) {
         const char* d = nullptr;
         double c = 0;

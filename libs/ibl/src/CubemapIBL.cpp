@@ -45,7 +45,7 @@ static double3 hemisphereImportanceSampleDggx(double2 u, double a) { // pdf = D(
     return { sinTheta * std::cos(phi), sinTheta * std::sin(phi), cosTheta };
 }
 
-static double3 __UNUSED hemisphereCosSample(double2 u) {  // pdf = cosTheta / M_PI;
+static double3 UTILS_UNUSED hemisphereCosSample(double2 u) {  // pdf = cosTheta / M_PI;
     const double phi = 2 * M_PI * u.x;
     const double cosTheta2 = 1 - u.y;
     const double cosTheta = std::sqrt(cosTheta2);
@@ -53,7 +53,7 @@ static double3 __UNUSED hemisphereCosSample(double2 u) {  // pdf = cosTheta / M_
     return { sinTheta * std::cos(phi), sinTheta * std::sin(phi), cosTheta };
 }
 
-static double3 __UNUSED hemisphereUniformSample(double2 u) { // pdf = 1.0 / (2.0 * M_PI);
+static double3 UTILS_UNUSED hemisphereUniformSample(double2 u) { // pdf = 1.0 / (2.0 * M_PI);
     const double phi = 2 * M_PI * u.x;
     const double cosTheta = 1 - u.y;
     const double sinTheta = std::sqrt(1 - cosTheta * cosTheta);
@@ -117,7 +117,7 @@ static double3 __UNUSED hemisphereUniformSample(double2 u) { // pdf = 1.0 / (2.0
  *  |                                            |
  *  +--------------------------------------------+
  */
-static double3 __UNUSED hemisphereImportanceSampleDCharlie(double2 u, double a) { // pdf = DistributionCharlie() * cosTheta
+static double3 UTILS_UNUSED hemisphereImportanceSampleDCharlie(double2 u, double a) { // pdf = DistributionCharlie() * cosTheta
     const double phi = 2 * M_PI * u.x;
 
     const double sinTheta = std::pow(u.y, a / (2 * a + 1));
@@ -133,7 +133,7 @@ static double DistributionGGX(double NoH, double linearRoughness) {
     return (a * a) / (M_PI * f * f);
 }
 
-static double __UNUSED DistributionAshikhmin(double NoH, double linearRoughness) {
+static double UTILS_UNUSED DistributionAshikhmin(double NoH, double linearRoughness) {
     double a = linearRoughness;
     double a2 = a * a;
     double cos2h = NoH * NoH;
@@ -142,7 +142,7 @@ static double __UNUSED DistributionAshikhmin(double NoH, double linearRoughness)
     return 1 / (M_PI * (1 + 4 * a2)) * (sin4h + 4 * std::exp(-cos2h / (a2 * sin2h)));
 }
 
-static double __UNUSED DistributionCharlie(double NoH, double linearRoughness) {
+static double UTILS_UNUSED DistributionCharlie(double NoH, double linearRoughness) {
     // Estevez and Kulla 2017, "Production Friendly Microfacet Sheen BRDF"
     double a = linearRoughness;
     double invAlpha = 1 / a;
@@ -165,7 +165,7 @@ static double Visibility(double NoV, double NoL, double a) {
     return 0.5 / (GGXV + GGXL);
 }
 
-static double __UNUSED VisibilityAshikhmin(double NoV, double NoL, double a) {
+static double UTILS_UNUSED VisibilityAshikhmin(double NoV, double NoL, double a) {
     // Neubelt and Pettineo 2013, "Crafting a Next-gen Material Pipeline for The Order: 1886"
     return 1 / (4 * (NoL + NoV - NoL * NoV));
 }
@@ -281,9 +281,8 @@ static double __UNUSED VisibilityAshikhmin(double NoV, double NoL, double a) {
  *
  */
 
-void CubemapIBL::roughnessFilter(Cubemap& dst,
-        const std::vector<Cubemap>& levels, double linearRoughness, size_t maxNumSamples,
-        Progress updater)
+void CubemapIBL::roughnessFilter(Cubemap& dst, const std::vector<Cubemap>& levels,
+        double linearRoughness, size_t maxNumSamples, CubemapIBL::Progress updater)
 {
     const float numSamples = maxNumSamples;
     const float inumSamples = 1.0f / numSamples;
@@ -510,7 +509,7 @@ void CubemapIBL::roughnessFilter(Cubemap& dst,
  */
 
 void CubemapIBL::diffuseIrradiance(Cubemap& dst, const std::vector<Cubemap>& levels,
-        size_t maxNumSamples, Progress updater)
+        size_t maxNumSamples, CubemapIBL::Progress updater)
 {
     const float numSamples = maxNumSamples;
     const float inumSamples = 1.0f / numSamples;
@@ -592,7 +591,7 @@ void CubemapIBL::diffuseIrradiance(Cubemap& dst, const std::vector<Cubemap>& lev
 }
 
 // Not importance-sampled
-static double2 __UNUSED DFV_NoIS(double NoV, double roughness, size_t numSamples) {
+static double2 UTILS_UNUSED DFV_NoIS(double NoV, double roughness, size_t numSamples) {
     double2 r = 0;
     const double linearRoughness = roughness * roughness;
     const double3 V(std::sqrt(1 - NoV * NoV), 0, NoV);
@@ -895,7 +894,7 @@ static double DFV_Charlie_Uniform(double NoV, double linearRoughness, size_t num
  *  +---------------------------------------+
  *
  */
-static double __UNUSED DFV_Charlie_IS(double NoV, double linearRoughness, size_t numSamples) {
+static double UTILS_UNUSED DFV_Charlie_IS(double NoV, double linearRoughness, size_t numSamples) {
     double r = 0.0;
     const double3 V(std::sqrt(1 - NoV * NoV), 0, NoV);
     for (size_t i = 0; i < numSamples; i++) {
@@ -972,3 +971,4 @@ void CubemapIBL::DFG(Image& dst, bool multiscatter, bool cloth) {
             }, jobs::CountSplitter<1, 8>());
     js.runAndWait(job);
 }
+
