@@ -16,6 +16,8 @@
 
 #include "CubemapUtils.h"
 
+#include "utilities.h"
+
 #include <utils/JobSystem.h>
 
 #include <math/mat4.h>

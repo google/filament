@@ -19,12 +19,13 @@
 
 #include <image/ColorTransform.h>
 
-#include <stdio.h>
-#include <memory>
-
 #include <math/scalar.h>
 #include <math/vec3.h>
 #include <math/vec4.h>
+
+#include <memory>
+
+#include <stdio.h>
 
 /**
  * \deprecated

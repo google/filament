@@ -17,13 +17,13 @@
 #ifndef SRC_PROGRESS_UPDATER_H
 #define SRC_PROGRESS_UPDATER_H
 
+#include "JobQueue.h"
+
 #include <condition_variable>
 #include <iomanip>
 #include <iostream>
 #include <vector>
 #include <thread>
-
-#include "JobQueue.h"
 
 class ProgressUpdater {
 public:

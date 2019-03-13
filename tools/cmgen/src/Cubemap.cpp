@@ -22,8 +22,7 @@ Cubemap::Cubemap(size_t dim) {
     resetDimensions(dim);
 }
 
-Cubemap::~Cubemap() {
-}
+Cubemap::~Cubemap() = default;
 
 size_t Cubemap::getDimensions() const {
     return mDimensions;
@@ -33,8 +32,8 @@ void Cubemap::resetDimensions(size_t dim) {
     mDimensions = dim;
     mScale = 2.0 / dim;
     mUpperBound = std::nextafter(mDimensions, 0);
-    for (size_t i = 0; i < 6; i++) {
-        mFaces[i].reset();
+    for (auto& mFace : mFaces) {
+        mFace.reset();
     }
 }
 

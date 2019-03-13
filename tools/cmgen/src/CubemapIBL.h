@@ -17,12 +17,13 @@
 #ifndef CUBEMAPIBL_H_
 #define CUBEMAPIBL_H_
 
-#include <stdint.h>
-#include <stddef.h>
+#include <functional>
 #include <vector>
 
-class Cubemap;
+#include <stdint.h>
+#include <stddef.h>
 
+class Cubemap;
 class Image;
 
 class CubemapIBL {
@@ -30,10 +31,18 @@ public:
     /*
      * Compute roughness LOD using importance sampling GGX
      */
-    static void roughnessFilter(Cubemap& dst,
-            const std::vector<Cubemap>& levels, double linearRoughness, size_t maxNumSamples = 1024);
 
-    static void diffuseIrradiance(Cubemap& dst, const std::vector<Cubemap>& levels, size_t maxNumSamples = 1024);
+    using Progress = std::function<void(size_t, float)>;
+
+    static void roughnessFilter(Cubemap& dst,
+            const std::vector<Cubemap>& levels, double linearRoughness,
+            size_t maxNumSamples = 1024,
+            Progress progress = {});
+
+    static void diffuseIrradiance(Cubemap& dst,
+            const std::vector<Cubemap>& levels,
+            size_t maxNumSamples = 1024,
+            Progress progress = {});
 
     static void DFG(Image& dst, bool multiscatter, bool cloth);
 
