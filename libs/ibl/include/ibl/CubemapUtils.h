@@ -17,10 +17,10 @@
 #ifndef SRC_CUBEMAPUTILS_H_
 #define SRC_CUBEMAPUTILS_H_
 
-#include <utils/JobSystem.h>
+#include <ibl/Cubemap.h>
+#include <ibl/Image.h>
 
-#include "Cubemap.h"
-#include "Image.h"
+#include <utils/JobSystem.h>
 
 class CubemapUtils {
 public:

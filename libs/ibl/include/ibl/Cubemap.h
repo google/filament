@@ -17,7 +17,7 @@
 #ifndef SRC_CUBEMAP_H_
 #define SRC_CUBEMAP_H_
 
-#include "Image.h"
+#include <ibl/Image.h>
 
 #include <utils/compiler.h>
 

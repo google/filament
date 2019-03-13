@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-#include "CubemapUtils.h"
+#include <ibl/CubemapUtils.h>
 
-#include "utilities.h"
+#include <ibl/utilities.h>
 
 #include <utils/JobSystem.h>
 

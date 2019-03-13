@@ -8,22 +8,11 @@ set(TARGET cmgen)
 # ==================================================================================================
 set(HDRS
     src/JobQueue.h
-    src/Cubemap.h
-    src/CubemapIBL.h
-    src/CubemapSH.h
-    src/CubemapUtils.h
-    src/Image.h
     src/ProgressUpdater.h
-    src/utilities.h
 )
 
 set(SRCS
     src/cmgen.cpp
-    src/Cubemap.cpp
-    src/CubemapIBL.cpp
-    src/CubemapSH.cpp
-    src/CubemapUtils.cpp
-    src/Image.cpp
     src/JobQueue.cpp
     src/ProgressUpdater.cpp
 )
@@ -33,7 +22,7 @@ set(SRCS
 # ==================================================================================================
 add_executable(${TARGET} ${HDRS} ${SRCS})
 
-target_link_libraries(${TARGET} PRIVATE math utils z image imageio getopt)
+target_link_libraries(${TARGET} PRIVATE math utils ibl z image imageio getopt)
 
 # ==================================================================================================
 # Compile options and optimizations
