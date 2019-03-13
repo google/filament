@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-#include "CubemapSH.h"
+#include <ibl/CubemapSH.h>
 
-#include "Cubemap.h"
-#include "CubemapUtils.h"
-#include "utilities.h"
+#include <ibl/Cubemap.h>
+#include <ibl/CubemapUtils.h>
+#include <ibl/utilities.h>
 
 #include <math/mat4.h>
 

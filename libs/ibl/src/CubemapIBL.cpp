@@ -15,11 +15,11 @@
  */
 
 
-#include "CubemapIBL.h"
+#include <ibl/CubemapIBL.h>
 
-#include "Cubemap.h"
-#include "CubemapUtils.h"
-#include "utilities.h"
+#include <ibl/Cubemap.h>
+#include <ibl/CubemapUtils.h>
+#include <ibl/utilities.h>
 
 #include <utils/JobSystem.h>
 

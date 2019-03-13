@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-#include "Cubemap.h"
-#include "CubemapIBL.h"
-#include "CubemapSH.h"
-#include "CubemapUtils.h"
 #include "ProgressUpdater.h"
-#include "Image.h"
 
-#include "utilities.h"
+#include <ibl/Cubemap.h>
+#include <ibl/CubemapIBL.h>
+#include <ibl/CubemapSH.h>
+#include <ibl/CubemapUtils.h>
+#include <ibl/Image.h>
+#include <ibl/utilities.h>
 
 #include <imageio/BlockCompression.h>
 #include <imageio/ImageDecoder.h>

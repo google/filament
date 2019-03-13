@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "Image.h"
+#include <ibl/Image.h>
 
 #include <utility>
 

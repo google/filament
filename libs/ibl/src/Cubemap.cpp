@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "Cubemap.h"
+#include <ibl/Cubemap.h>
 
 using namespace filament::math;
 
