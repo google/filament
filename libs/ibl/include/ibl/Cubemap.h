@@ -27,6 +27,10 @@
 
 #include <algorithm>
 
+
+namespace filament {
+namespace ibl {
+
 /**
  * Generic cubemap class. It handles writing / reading into the 6 faces of a cubemap.
  *
@@ -188,5 +192,8 @@ inline Cubemap::Texel Cubemap::filterAt(const filament::math::double3& direction
     addr.t = std::min(addr.t * mDimensions, mUpperBound);
     return filterAt(getImageForFace(addr.face), addr.s, addr.t);
 }
+
+} // namespace ibl
+} // namespace filament
 
 #endif /* IBL_CUBEMAP_H */

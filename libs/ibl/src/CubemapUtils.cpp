@@ -30,6 +30,9 @@ using namespace filament::math;
 using namespace image;
 using namespace utils;
 
+namespace filament {
+namespace ibl {
+
 utils::JobSystem& CubemapUtils::getJobSystem() {
     static utils::JobSystem js;
     js.adopt();
@@ -386,3 +389,6 @@ double CubemapUtils::solidAngle(size_t dim, size_t u, size_t v) {
                         sphereQuadrantArea(x1, y1);
     return solidAngle;
 }
+
+} // namespace ibl
+} // namespace filament

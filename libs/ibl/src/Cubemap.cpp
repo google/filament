@@ -18,6 +18,10 @@
 
 using namespace filament::math;
 
+namespace filament {
+namespace ibl {
+
+
 Cubemap::Cubemap(size_t dim) {
     resetDimensions(dim);
 }
@@ -200,3 +204,6 @@ Cubemap::Texel Cubemap::trilinearFilterAt(const Cubemap& l0, const Cubemap& l1, 
     }
     return c0;
 }
+
+} // namespace ibl
+} // namespace filament

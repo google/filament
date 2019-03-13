@@ -23,6 +23,9 @@
 #include <stdint.h>
 #include <stddef.h>
 
+namespace filament {
+namespace ibl {
+
 class Cubemap;
 class Image;
 
@@ -67,5 +70,8 @@ public:
     // for debugging. ignore.
     static void brdf(Cubemap& dst, double linearRoughness);
 };
+
+} // namespace ibl
+} // namespace filament
 
 #endif /* IBL_CUBEMAPIBL_H */

@@ -24,6 +24,9 @@
 
 using namespace filament::math;
 
+namespace filament {
+namespace ibl {
+
 // -----------------------------------------------------------------------------------------------
 // A few useful utilities
 // -----------------------------------------------------------------------------------------------
@@ -441,3 +444,6 @@ void UTILS_UNUSED CubemapSH::printShBase(std::ostream& out, int l, int m) {
         out << " // L" << l << m;
     }
 }
+
+} // namespace ibl
+} // namespace filament
