@@ -16,11 +16,11 @@
 
 #include "CubemapSH.h"
 
-#include <math/mat4.h>
-
 #include "Cubemap.h"
 #include "CubemapUtils.h"
 #include "utilities.h"
+
+#include <math/mat4.h>
 
 using namespace filament::math;
 

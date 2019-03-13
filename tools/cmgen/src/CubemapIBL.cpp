@@ -14,24 +14,23 @@
  * limitations under the License.
  */
 
-#include <vector>
 
 #include "CubemapIBL.h"
 
-#include "math/mat3.h"
-#include <math/scalar.h>
-#include <utils/JobSystem.h>
-
 #include "Cubemap.h"
 #include "CubemapUtils.h"
-#include "ProgressUpdater.h"
 #include "utilities.h"
+
+#include <utils/JobSystem.h>
+
+#include <math/mat3.h>
+#include <math/scalar.h>
+
+#include <vector>
 
 using namespace filament::math;
 using namespace image;
 using namespace utils;
-
-extern bool g_quiet;
 
 static double pow5(double x) {
     return (x*x)*(x*x)*x;
@@ -283,7 +282,8 @@ static double __UNUSED VisibilityAshikhmin(double NoV, double NoL, double a) {
  */
 
 void CubemapIBL::roughnessFilter(Cubemap& dst,
-        const std::vector<Cubemap>& levels, double linearRoughness, size_t maxNumSamples)
+        const std::vector<Cubemap>& levels, double linearRoughness, size_t maxNumSamples,
+        Progress updater)
 {
     const float numSamples = maxNumSamples;
     const float inumSamples = 1.0f / numSamples;
@@ -292,19 +292,14 @@ void CubemapIBL::roughnessFilter(Cubemap& dst,
     const Cubemap& base(levels[0]);
     const size_t dim0 = base.getDimensions();
     const float omegaP = float((4 * M_PI) / (6 * dim0 * dim0));
-
-    ProgressUpdater updater(1);
     std::atomic_uint progress = {0};
 
     if (linearRoughness == 0) {
-        if (!g_quiet) {
-            updater.start();
-        }
-        CubemapUtils::process<CubemapUtils::EmptyState>(dst, [&, quiet = g_quiet]
+        CubemapUtils::process<CubemapUtils::EmptyState>(dst, [&]
                 (CubemapUtils::EmptyState&, size_t y, Cubemap::Face f, Cubemap::Texel* data, size_t dim) {
                     size_t p = progress.fetch_add(1, std::memory_order_relaxed) + 1;
-                    if (!quiet) {
-                        updater.update(0, p, dim * 6);
+                    if (updater) {
+                        updater(0, (float)p / (dim * 6));
                     }
                     const Cubemap& cm = levels[0];
                     for (size_t x = 0; x < dim; ++x, ++data) {
@@ -314,9 +309,6 @@ void CubemapIBL::roughnessFilter(Cubemap& dst,
                         Cubemap::writeAt(data, cm.sampleAt(N));
                     }
                 });
-        if (!g_quiet) {
-            updater.stop();
-        }
         return;
     }
 
@@ -396,17 +388,13 @@ void CubemapIBL::roughnessFilter(Cubemap& dst,
         return lhs.brdf_NoL < rhs.brdf_NoL;
     });
 
-    if (!g_quiet) {
-        updater.start();
-    }
-
     CubemapUtils::process<CubemapUtils::EmptyState>(dst,
-            [ &, quiet=g_quiet ](CubemapUtils::EmptyState&, size_t y,
+            [&](CubemapUtils::EmptyState&, size_t y,
                     Cubemap::Face f, Cubemap::Texel* data, size_t dim) {
 
         size_t p = progress.fetch_add(1, std::memory_order_relaxed) + 1;
-        if (!quiet) {
-            updater.update(0, p, dim * 6);
+        if (updater) {
+            updater(0, (float)p / (dim * 6));
         }
 
         mat3 R;
@@ -433,10 +421,6 @@ void CubemapIBL::roughnessFilter(Cubemap& dst,
             Cubemap::writeAt(data, Cubemap::Texel(Li));
         }
     });
-
-    if (!g_quiet) {
-        updater.stop();
-    }
 }
 
 /*
@@ -525,7 +509,8 @@ void CubemapIBL::roughnessFilter(Cubemap& dst,
  *
  */
 
-void CubemapIBL::diffuseIrradiance(Cubemap& dst, const std::vector<Cubemap>& levels, size_t maxNumSamples)
+void CubemapIBL::diffuseIrradiance(Cubemap& dst, const std::vector<Cubemap>& levels,
+        size_t maxNumSamples, Progress updater)
 {
     const float numSamples = maxNumSamples;
     const float inumSamples = 1.0f / numSamples;
@@ -535,9 +520,7 @@ void CubemapIBL::diffuseIrradiance(Cubemap& dst, const std::vector<Cubemap>& lev
     const size_t dim0 = base.getDimensions();
     const float omegaP = float((4 * M_PI) / (6 * dim0 * dim0));
 
-    ProgressUpdater updater(1);
     std::atomic_uint progress = {0};
-
 
     struct CacheEntry {
         double3 L;
@@ -573,17 +556,13 @@ void CubemapIBL::diffuseIrradiance(Cubemap& dst, const std::vector<Cubemap>& lev
         }
     }
 
-    if (!g_quiet) {
-        updater.start();
-    }
-
     CubemapUtils::process<CubemapUtils::EmptyState>(dst,
-            [ &, quiet=g_quiet ](CubemapUtils::EmptyState&, size_t y,
+            [&](CubemapUtils::EmptyState&, size_t y,
                     Cubemap::Face f, Cubemap::Texel* data, size_t dim) {
 
         size_t p = progress.fetch_add(1, std::memory_order_relaxed) + 1;
-        if (!quiet) {
-            updater.update(0, p, dim * 6);
+        if (updater) {
+            updater(0, (float)p / (dim * 6));
         }
 
         mat3 R;
@@ -610,10 +589,6 @@ void CubemapIBL::diffuseIrradiance(Cubemap& dst, const std::vector<Cubemap>& lev
             Cubemap::writeAt(data, Cubemap::Texel(Li * inumSamples));
         }
     });
-
-    if (!g_quiet) {
-        updater.stop();
-    }
 }
 
 // Not importance-sampled

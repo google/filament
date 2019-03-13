@@ -18,12 +18,13 @@
 #define SRC_CUBEMAPSH_H_
 
 
-#include <memory>
-#include <vector>
-
 #include <utils/compiler.h>
 
 #include <math/vec3.h>
+
+#include <memory>
+#include <vector>
+
 
 class Cubemap;
 

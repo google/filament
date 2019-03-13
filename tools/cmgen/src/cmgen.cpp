@@ -14,30 +14,34 @@
  * limitations under the License.
  */
 
+#include "Cubemap.h"
+#include "CubemapIBL.h"
+#include "CubemapSH.h"
+#include "CubemapUtils.h"
+#include "ProgressUpdater.h"
+#include "Image.h"
+
+#include "utilities.h"
+
+#include <imageio/BlockCompression.h>
+#include <imageio/ImageDecoder.h>
+#include <imageio/ImageEncoder.h>
+
+#include <image/KtxBundle.h>
+
+#include <utils/Path.h>
+
+#include <math/scalar.h>
+#include <math/vec4.h>
+
 #include <cmath>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
 #include <sstream>
 
-#include <math/scalar.h>
-#include <math/vec4.h>
-
-#include <image/KtxBundle.h>
-
-#include <imageio/BlockCompression.h>
-#include <imageio/ImageDecoder.h>
-#include <imageio/ImageEncoder.h>
-
-#include <utils/Path.h>
-
 #include <getopt/getopt.h>
 
-#include "Cubemap.h"
-#include "CubemapIBL.h"
-#include "CubemapSH.h"
-#include "CubemapUtils.h"
-#include "Image.h"
 
 using namespace filament::math;
 using namespace image;
@@ -607,15 +611,23 @@ int main(int argc, char* argv[]) {
     if (g_extract_faces) {
         Cubemap const& cm(levels[0]);
         if (g_extract_blur != 0) {
+            ProgressUpdater updater(1);
             if (!g_quiet) {
                 std::cout << "Blurring..." << std::endl;
+                updater.start();
             }
             const double linear_roughness = g_extract_blur * g_extract_blur;
             const size_t dim = g_output_size ? g_output_size : cm.getDimensions();
             Image image;
             Cubemap blurred = CubemapUtils::create(image, dim);
-            CubemapIBL::roughnessFilter(blurred, levels, linear_roughness, g_num_samples);
+            CubemapIBL::roughnessFilter(blurred, levels, linear_roughness, g_num_samples,
+                    [&updater, quiet = g_quiet](size_t index, float v) {
+                        if (!quiet) {
+                            updater.update(index, v);
+                        }
+                    });
             if (!g_quiet) {
+                updater.stop();
                 std::cout << "Extract faces..." << std::endl;
             }
             extractCubemapFaces(iname, blurred, g_extract_dir);
@@ -851,7 +863,21 @@ void iblRoughnessPrefilter(const utils::Path& iname,
         }
         Image image;
         Cubemap dst = CubemapUtils::create(image, dim);
-        CubemapIBL::roughnessFilter(dst, levels, linear_roughness, numSamples);
+
+        ProgressUpdater updater(1);
+        if (!g_quiet) {
+            updater.start();
+        }
+        CubemapIBL::roughnessFilter(dst, levels, linear_roughness, numSamples,
+                [&updater, quiet = g_quiet](size_t index, float v) {
+            if (!quiet) {
+                updater.update(index, v);
+            }
+        });
+        if (!g_quiet) {
+            updater.stop();
+        }
+
         dst.makeSeamless();
 
         if (g_debug) {
@@ -928,7 +954,20 @@ void iblDiffuseIrradiance(const utils::Path& iname,
     const size_t dim = 1U << baseExp;
     Image image;
     Cubemap dst = CubemapUtils::create(image, dim);
-    CubemapIBL::diffuseIrradiance(dst, levels, numSamples);
+
+    ProgressUpdater updater(1);
+    if (!g_quiet) {
+        updater.start();
+    }
+    CubemapIBL::diffuseIrradiance(dst, levels, numSamples,
+            [&updater, quiet = g_quiet](size_t index, float v) {
+                if (!quiet) {
+                    updater.update(index, v);
+                }
+            });
+    if (!g_quiet) {
+        updater.stop();
+    }
 
     std::string ext = ImageEncoder::chooseExtension(g_format);
     for (size_t j = 0; j < 6; j++) {

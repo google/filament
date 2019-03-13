@@ -14,13 +14,12 @@
  * limitations under the License.
  */
 
-#include <cstring>
-#include <utility>
-
 #include "Image.h"
 
-Image::Image() {
-}
+#include <utility>
+
+
+Image::Image() = default;
 
 Image::Image(std::unique_ptr<uint8_t[]> data,
         size_t w, size_t h, size_t bpr, size_t bpp, size_t channels)

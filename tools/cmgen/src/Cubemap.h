@@ -17,16 +17,16 @@
 #ifndef SRC_CUBEMAP_H_
 #define SRC_CUBEMAP_H_
 
-#include <algorithm>
+#include "Image.h"
+
+#include <utils/compiler.h>
 
 #include <math/vec4.h>
 #include <math/vec3.h>
 #include <math/vec2.h>
 
-#include <utils/compiler.h>
+#include <algorithm>
 
-#include "Image.h"
-#include "utilities.h"
 
 class Cubemap {
 public:
