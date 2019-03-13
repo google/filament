@@ -17,8 +17,6 @@
 #ifndef IBL_IMAGE_H
 #define IBL_IMAGE_H
 
-#include <image/ColorTransform.h>
-
 #include <math/scalar.h>
 #include <math/vec3.h>
 #include <math/vec4.h>
