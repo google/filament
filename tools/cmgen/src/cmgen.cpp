@@ -489,12 +489,9 @@ int main(int argc, char* argv[]) {
         }
 
         // Convert from LinearImage to the deprecated Image object which is used throughout cmgen.
-        std::unique_ptr<uint8_t[]> buf(new uint8_t[
-                linputImage.getWidth() * linputImage.getHeight() * sizeof(float3)]);
         const size_t width = linputImage.getWidth(), height = linputImage.getHeight();
-        const size_t bpp = sizeof(float) * 3, bpr = bpp * width;
-        memcpy(buf.get(), linputImage.getPixelRef(), height * bpr);
-        Image inputImage(std::move(buf), width, height, bpr, bpp);
+        Image inputImage(width, height);
+        memcpy(inputImage.getData(), linputImage.getPixelRef(), height * inputImage.getBytesPerRow());
 
         CubemapUtils::clamp(inputImage);
 
@@ -782,8 +779,7 @@ void iblMipmapPrefilter(const utils::Path& iname,
 
         if (g_type == OutputType::EQUIRECT) {
             size_t dim = dst.getDimensions();
-            std::unique_ptr<uint8_t[]> buf(new uint8_t[dim * 2 * dim * sizeof(float3)]);
-            Image image(std::move(buf), dim * 2, dim, dim * 2 * sizeof(float3), sizeof(float3));
+            Image image(dim * 2, dim);
             CubemapUtils::cubemapToEquirectangular(image, dst);
             std::string filename = outputDir + ("is_m" + std::to_string(level) + ext);
             saveImage(filename, g_format, image, g_compression);
@@ -792,8 +788,7 @@ void iblMipmapPrefilter(const utils::Path& iname,
 
         if (g_type == OutputType::OCTAHEDRON) {
             size_t dim = dst.getDimensions();
-            std::unique_ptr<uint8_t[]> buf(new uint8_t[dim * dim * sizeof(float3)]);
-            Image image(std::move(buf), dim, dim, dim * sizeof(float3), sizeof(float3));
+            Image image(dim, dim);
             CubemapUtils::cubemapToOctahedron(image, dst);
             std::string filename = outputDir + ("is_m" + std::to_string(level) + ext);
             saveImage(filename, g_format, image, g_compression);
@@ -898,8 +893,7 @@ void iblRoughnessPrefilter(const utils::Path& iname,
         }
 
         if (g_type == OutputType::EQUIRECT) {
-            std::unique_ptr<uint8_t[]> buf(new uint8_t[dim * 2 * dim * sizeof(float3)]);
-            Image outImage(std::move(buf), dim * 2, dim, dim * 2 * sizeof(float3), sizeof(float3));
+            Image outImage(dim * 2, dim);
             CubemapUtils::cubemapToEquirectangular(outImage, dst);
             std::string filename = outputDir + ("m" + std::to_string(level) + ext);
             saveImage(filename, g_format, outImage, g_compression);
@@ -907,8 +901,7 @@ void iblRoughnessPrefilter(const utils::Path& iname,
         }
 
         if (g_type == OutputType::OCTAHEDRON) {
-            std::unique_ptr<uint8_t[]> buf(new uint8_t[dim * dim * sizeof(float3)]);
-            Image outImage(std::move(buf), dim, dim, dim * sizeof(float3), sizeof(float3));
+            Image outImage(dim, dim);
             CubemapUtils::cubemapToOctahedron(outImage, dst);
             std::string filename = outputDir + ("m" + std::to_string(level) + ext);
             saveImage(filename, g_format, outImage, g_compression);
@@ -1009,8 +1002,7 @@ static bool isIncludeFile(const utils::Path& filename) {
 }
 
 void iblLutDfg(const utils::Path& filename, size_t size, bool multiscatter, bool cloth) {
-    std::unique_ptr<uint8_t[]> buf(new uint8_t[size * size * sizeof(float3)]);
-    Image image(std::move(buf), size, size, size * sizeof(float3), sizeof(float3));
+    Image image(size, size);
     CubemapIBL::DFG(image, multiscatter, cloth);
 
     utils::Path outputDir(filename.getAbsolutePath().getParent());
@@ -1089,8 +1081,7 @@ void extractCubemapFaces(const utils::Path& iname, const Cubemap& cm, const util
 
     if (g_type == OutputType::EQUIRECT) {
         size_t dim = cm.getDimensions();
-        std::unique_ptr<uint8_t[]> buf(new uint8_t[dim * 2 * dim * sizeof(float3)]);
-        Image image(std::move(buf), dim * 2, dim, dim * 2 * sizeof(float3), sizeof(float3));
+        Image image(dim * 2, dim);
         CubemapUtils::cubemapToEquirectangular(image, cm);
         std::string filename = outputDir + ("skybox" + ext);
         saveImage(filename, g_format, image, g_compression);
@@ -1099,8 +1090,7 @@ void extractCubemapFaces(const utils::Path& iname, const Cubemap& cm, const util
 
     if (g_type == OutputType::OCTAHEDRON) {
         size_t dim = cm.getDimensions();
-        std::unique_ptr<uint8_t[]> buf(new uint8_t[dim * dim * sizeof(float3)]);
-        Image image(std::move(buf), dim, dim, dim * sizeof(float3), sizeof(float3));
+        Image image(dim, dim);
         CubemapUtils::cubemapToOctahedron(image, cm);
         std::string filename = outputDir + ("skybox" + ext);
         saveImage(filename, g_format, image, g_compression);

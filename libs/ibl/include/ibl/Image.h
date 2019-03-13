@@ -26,16 +26,10 @@
 namespace filament {
 namespace ibl {
 
-/**
- * \deprecated
- * We are phasing out this class in favor of LinearImage. The latter has a stable and well-defined
- * pixel format, making it easier to implement image-based algorithms.
- */
 class Image {
 public:
     Image();
-    Image(std::unique_ptr<uint8_t[]> data, size_t w, size_t h,
-            size_t bpr, size_t bpp, size_t channels = 3);
+    Image(size_t w, size_t h, size_t stride = 0);
 
     void reset();
 
@@ -51,24 +45,22 @@ public:
 
     size_t getBytesPerRow() const { return mBpr; }
 
-    size_t getBytesPerPixel() const { return mBpp; }
+    size_t getBytesPerPixel() const { return sizeof(math::float3); }
 
     void* getData() const { return mData; }
 
     void* getPixelRef(size_t x, size_t y) const;
 
 private:
-    std::unique_ptr<uint8_t[]> mOwnedData;
-    void* mData = nullptr;
+    size_t mBpr = 0;
     size_t mWidth = 0;
     size_t mHeight = 0;
-    size_t mBpr = 0;
-    size_t mBpp = 0;
-    size_t mChannels = 0;
+    std::unique_ptr<uint8_t[]> mOwnedData;
+    void* mData = nullptr;
 };
 
 inline void* Image::getPixelRef(size_t x, size_t y) const {
-    return static_cast<uint8_t*>(mData) + y * mBpr + x * mBpp;
+    return static_cast<uint8_t*>(mData) + y * getBytesPerRow() + x * getBytesPerPixel();
 }
 
 } // namespace ibl

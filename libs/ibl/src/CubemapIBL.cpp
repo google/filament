@@ -65,7 +65,7 @@ static double3 UTILS_UNUSED hemisphereUniformSample(double2 u) { // pdf = 1.0 / 
 /*
  *
  * Importance sampling Charlie
- * ------------------------------------------
+ * ---------------------------
  *
  * In order to pick the most significative samples and increase the convergence rate, we chose to
  * rely on Charlie's distribution function for the pdf as we do in hemisphereImportanceSampleDggx.
@@ -167,7 +167,7 @@ static double Visibility(double NoV, double NoL, double a) {
     return 0.5 / (GGXV + GGXL);
 }
 
-static double UTILS_UNUSED VisibilityAshikhmin(double NoV, double NoL, double a) {
+static double UTILS_UNUSED VisibilityAshikhmin(double NoV, double NoL, double /*a*/) {
     // Neubelt and Pettineo 2013, "Crafting a Next-gen Material Pipeline for The Order: 1886"
     return 1 / (4 * (NoL + NoV - NoL * NoV));
 }
@@ -814,7 +814,7 @@ static double DFV_Charlie_Uniform(double NoV, double linearRoughness, size_t num
 /*
  *
  * Importance sampling Charlie
- * ------------------------------------------
+ * ---------------------------
  *
  * Important samples are chosen to integrate DCharlie() * cos(theta) over the hemisphere.
  *
@@ -884,14 +884,14 @@ static double DFV_Charlie_Uniform(double NoV, double linearRoughness, size_t num
  *
  *  It results that:
  *
- *            1                        4 <v•h>
+ *            1                          4 <v•h>
  *    Er() = --- ∑ DCharlie(h) V(v, l) ------------ <n•l>
  *            N  h                     DCharlie(h) <n•h>
  *
  *
  *  +---------------------------------------+
  *  |          4             <v•h>          |
- *  |  Er() = --- ∑ V(v, l) --- <n•l>       |
+ *  |  Er() = --- ∑ V(v, l) ------- <n•l>   |
  *  |          N  h          <n•h>          |
  *  +---------------------------------------+
  *
@@ -947,7 +947,7 @@ void CubemapIBL::DFG(Image& dst, bool multiscatter, bool cloth) {
     auto dfvFunction = multiscatter ? DFV_Multiscatter : DFV;
     JobSystem& js = CubemapUtils::getJobSystem();
     auto job = jobs::parallel_for<char>(js, nullptr, nullptr, uint32_t(dst.getHeight()),
-            [&dst, dfvFunction, cloth](char* d, size_t c) {
+            [&dst, dfvFunction, cloth](char const* d, size_t c) {
                 const size_t width = dst.getWidth();
                 const size_t height = dst.getHeight();
                 size_t y0 = size_t(d);
