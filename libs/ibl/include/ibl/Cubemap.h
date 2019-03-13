@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef SRC_CUBEMAP_H_
-#define SRC_CUBEMAP_H_
+#ifndef IBL_CUBEMAP_H
+#define IBL_CUBEMAP_H
 
 #include <ibl/Image.h>
 
@@ -27,14 +27,33 @@
 
 #include <algorithm>
 
-
+/**
+ * Generic cubemap class. It handles writing / reading into the 6 faces of a cubemap.
+ *
+ * Seamless trilinear filtering is handled.
+ *
+ * This class doesn't own the face data, it's just a "view" on the 6 images.
+ *
+ * @see CubemapUtils
+ *
+ */
 class Cubemap {
 public:
+
+    /**
+     *  Initialize the cubemap with a given size, but no face is set and no memory is allocated.
+     *
+     *  Usually Cubemaps are created using CubemapUtils.
+     *
+     * @see CubemapUtils
+     */
     explicit Cubemap(size_t dim);
+
     Cubemap(Cubemap&&) = default;
+    Cubemap& operator=(Cubemap&&) = default;
+
     ~Cubemap();
 
-    Cubemap& operator = (Cubemap&&) = default;
 
     enum class Face : uint8_t {
         NX = 0,     // left            +----+
@@ -46,38 +65,62 @@ public:
                     //                 +----+
     };
 
-    typedef filament::math::float3 Texel;
+    using Texel = filament::math::float3;
 
 
+    //! releases all images and reset the cubemap size
     void resetDimensions(size_t dim);
 
+    //! assigns an image to a face.
     void setImageForFace(Face face, const Image& image);
+
+    //! retrieves the image attached to a face
     inline const Image& getImageForFace(Face face) const;
+
+    //! retrieves the image attached to a face
     inline Image& getImageForFace(Face face);
 
+    //! computes the center of a pixel at coordinate x, y
     inline filament::math::double2 center(size_t x, size_t y) const;
 
+    //! computes a direction vector from a face and a location of the center of pixel in an Image
     inline filament::math::double3 getDirectionFor(Face face, size_t x, size_t y) const;
+
+    //! computes a direction vector from a face and a location in pixel in an Image
     inline filament::math::double3 getDirectionFor(Face face, double x, double y) const;
 
+    //! samples the cubemap at the given direction using nearest neighbor filtering
     inline Texel const& sampleAt(const filament::math::double3& direction) const;
-    inline Texel        filterAt(const filament::math::double3& direction) const;
 
+    //! samples the cubemap at the given direction using bilinear filtering
+    inline Texel filterAt(const filament::math::double3& direction) const;
+
+    //! samples an image at the given location in pixel using bilinear filtering
     static Texel filterAt(const Image& image, double x, double y);
 
+    //! samples two cubemaps in a given direction and lerps the result by a given lerp factor
     static Texel trilinearFilterAt(const Cubemap& c0, const Cubemap& c1, double lerp,
             const filament::math::double3& direction);
 
+    //! reads a texel at a given address
     inline static const Texel& sampleAt(void const* data) {
-        return *static_cast<Texel const *>(data);
+        return *static_cast<Texel const*>(data);
     }
 
+    //! writes a texel at a given address
     inline static void writeAt(void* data, const Texel& texel) {
         *static_cast<Texel*>(data) = texel;
     }
 
+    //! returns the size of the cubemap in pixels
     size_t getDimensions() const;
 
+    /**
+     * Prepares a cubemap for seamless access to its faces.
+     *
+     * @warning All faces of the cubemap must be backed-up by the same Image, and must already
+     * be spaced by 2 lines/rows.
+     */
     void makeSeamless();
 
     struct Address {
@@ -86,8 +129,7 @@ public:
         double t = 0;
     };
 
-    // Note: this doesn't apply the Image's flips
-    // (this is why this is private)
+    //! returns the face and texture coordinates of the given direction
     static Address getAddressFor(const filament::math::double3& direction);
 
 private:
@@ -96,6 +138,8 @@ private:
     double mUpperBound = 0;
     Image mFaces[6];
 };
+
+// ------------------------------------------------------------------------------------------------
 
 inline const Image& Cubemap::getImageForFace(Face face) const {
     return mFaces[int(face)];
@@ -106,13 +150,11 @@ inline Image& Cubemap::getImageForFace(Face face) {
 }
 
 inline filament::math::double2 Cubemap::center(size_t x, size_t y) const {
-    // map [0, dim] to [-1,1] with (-1,-1) at bottom left
-     filament::math::double2 c(x+0.5, y+0.5);
-    return c;
+    return {x + 0.5, y + 0.5};
 }
 
 inline filament::math::double3 Cubemap::getDirectionFor(Face face, size_t x, size_t y) const {
-    return getDirectionFor(face, x+0.5, y+0.5);
+    return getDirectionFor(face, x + 0.5, y + 0.5);
 }
 
 inline filament::math::double3 Cubemap::getDirectionFor(Face face, double x, double y) const {
@@ -120,8 +162,8 @@ inline filament::math::double3 Cubemap::getDirectionFor(Face face, double x, dou
     double cx = (x * mScale) - 1;
     double cy = 1 - (y * mScale);
 
-     filament::math::double3 dir;
-    const double l = std::sqrt(cx*cx + cy*cy + 1);
+    filament::math::double3 dir;
+    const double l = std::sqrt(cx * cx + cy * cy + 1);
     switch (face) {
         case Face::PX:  dir = {   1, cy, -cx }; break;
         case Face::NX:  dir = {  -1, cy,  cx }; break;
@@ -135,8 +177,8 @@ inline filament::math::double3 Cubemap::getDirectionFor(Face face, double x, dou
 
 inline Cubemap::Texel const& Cubemap::sampleAt(const filament::math::double3& direction) const {
     Cubemap::Address addr(getAddressFor(direction));
-    const size_t x = std::min(size_t(addr.s * mDimensions), mDimensions-1);
-    const size_t y = std::min(size_t(addr.t * mDimensions), mDimensions-1);
+    const size_t x = std::min(size_t(addr.s * mDimensions), mDimensions - 1);
+    const size_t y = std::min(size_t(addr.t * mDimensions), mDimensions - 1);
     return sampleAt(getImageForFace(addr.face).getPixelRef(x, y));
 }
 
@@ -147,4 +189,4 @@ inline Cubemap::Texel Cubemap::filterAt(const filament::math::double3& direction
     return filterAt(getImageForFace(addr.face), addr.s, addr.t);
 }
 
-#endif /* SRC_CUBEMAP_H_ */
+#endif /* IBL_CUBEMAP_H */

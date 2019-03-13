@@ -86,13 +86,7 @@ Cubemap::Address Cubemap::getAddressFor(const double3& r) {
     addr.t = (tc / ma + 1) * 0.5f;
     return addr;
 }
-/*
- * We handle "seamless" cubemaps by duplicating a row to the bottom, or column to the right
- * of each faces that don't have an adjacent face in the image (the duplicate is taken from the
- * adjacent face in the cubemap).
- * This is because when accessing an image with bilinear filtering, we always overshoot to the
- * right or bottom. This works well with cubemaps stored as a cross in memory.
- */
+
 void Cubemap::makeSeamless() {
     size_t dim = getDimensions();
     size_t D = dim;

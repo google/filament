@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef CMGEN_IMAGE_H_
-#define CMGEN_IMAGE_H_
+#ifndef IBL_IMAGE_H
+#define IBL_IMAGE_H
 
 #include <image/ColorTransform.h>
 
@@ -24,8 +24,6 @@
 #include <math/vec4.h>
 
 #include <memory>
-
-#include <stdio.h>
 
 /**
  * \deprecated
@@ -36,7 +34,7 @@ class Image {
 public:
     Image();
     Image(std::unique_ptr<uint8_t[]> data, size_t w, size_t h,
-          size_t bpr, size_t bpp, size_t channels = 3);
+            size_t bpr, size_t bpp, size_t channels = 3);
 
     void reset();
 
@@ -45,11 +43,15 @@ public:
     void subset(Image const& image, size_t x, size_t y, size_t w, size_t h);
 
     bool isValid() const { return mData != nullptr; }
+
     size_t getWidth() const { return mWidth; }
+
     size_t getHeight() const { return mHeight; }
+
     size_t getBytesPerRow() const { return mBpr; }
+
     size_t getBytesPerPixel() const { return mBpp; }
-    size_t getChannelsCount() const { return mChannels; }
+
     void* getData() const { return mData; }
 
     void* getPixelRef(size_t x, size_t y) const;
@@ -65,66 +67,7 @@ private:
 };
 
 inline void* Image::getPixelRef(size_t x, size_t y) const {
-    return static_cast<uint8_t*>(mData) + y*mBpr + x*mBpp;
+    return static_cast<uint8_t*>(mData) + y * mBpr + x * mBpp;
 }
 
-template <typename T>
-std::unique_ptr<uint8_t[]> fromLinearTosRGB(const Image& image) {
-    using filament::math::float3;
-    size_t w = image.getWidth();
-    size_t h = image.getHeight();
-    size_t channels = image.getChannelsCount();
-    std::unique_ptr<uint8_t[]> dst(new uint8_t[w * h * 3 * sizeof(T)]);
-    T* d = reinterpret_cast<T*>(dst.get());
-    for (size_t y = 0; y < h; ++y) {
-        float3 const* p = static_cast<float3 const*>(image.getPixelRef(0, y));
-        for (size_t x = 0; x < w; ++x, ++p, d += channels) {
-            float3 l(image::linearTosRGB(saturate(*p)) * std::numeric_limits<T>::max());
-            for (size_t i = 0; i < 3; i++) {
-                d[i] = T(l[i]);
-            }
-        }
-    }
-    return dst;
-}
-
-template <typename T>
-std::unique_ptr<uint8_t[]> fromLinearToRGB(const Image& image) {
-    using filament::math::float3;
-    size_t w = image.getWidth();
-    size_t h = image.getHeight();
-    size_t channels = image.getChannelsCount();
-    std::unique_ptr<uint8_t[]> dst(new uint8_t[w * h * channels * sizeof(T)]);
-    T* d = reinterpret_cast<T*>(dst.get());
-    for (size_t y = 0; y < h; ++y) {
-        float3 const* p = static_cast<float3 const*>(image.getPixelRef(0, y));
-        for (size_t x = 0; x < w; ++x, ++p, d += channels) {
-            float3 l(saturate(*p) * std::numeric_limits<T>::max());
-            for (size_t i = 0; i < channels; i++) {
-                d[i] = T(l[i]);
-            }
-        }
-    }
-    return dst;
-}
-
-template <typename T>
-std::unique_ptr<uint8_t[]> fromLinearToRGBM(const Image& image) {
-    using namespace filament::math;
-    size_t w = image.getWidth();
-    size_t h = image.getHeight();
-    std::unique_ptr<uint8_t[]> dst(new uint8_t[w * h * 4 * sizeof(T)]);
-    T* d = reinterpret_cast<T*>(dst.get());
-    for (size_t y = 0; y < h; ++y) {
-        float3 const* p = static_cast<float3 const*>(image.getPixelRef(0, y));
-        for (size_t x = 0; x < w; ++x, ++p, d += 4) {
-            float4 l(image::linearToRGBM(*p) * std::numeric_limits<T>::max());
-            for (size_t i = 0; i < 4; i++) {
-                d[i] = T(l[i]);
-            }
-        }
-    }
-    return dst;
-}
-
-#endif /* CMGEN_IMAGE_H_ */
+#endif /* IBL_IMAGE_H */

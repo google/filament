@@ -972,7 +972,7 @@ void iblDiffuseIrradiance(const utils::Path& iname,
     std::string ext = ImageEncoder::chooseExtension(g_format);
     for (size_t j = 0; j < 6; j++) {
         Cubemap::Face face = (Cubemap::Face) j;
-        std::string filename = outputDir + ("i_" + CubemapUtils::getFaceName(face) + ext);
+        std::string filename = outputDir + ("i_" + std::string(CubemapUtils::getFaceName(face)) + ext);
         saveImage(filename, g_format, dst.getImageForFace(face), g_compression);
     }
 

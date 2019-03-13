@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef SRC_CUBEMAPSH_H_
-#define SRC_CUBEMAPSH_H_
+#ifndef IBL_CUBEMAPSH_H
+#define IBL_CUBEMAPSH_H
 
 
 #include <utils/compiler.h>
@@ -25,34 +25,36 @@
 #include <memory>
 #include <vector>
 
-
 class Cubemap;
 
+/**
+ * Computes spherical harmonics
+ */
 class CubemapSH {
-
 public:
-    /*
+    /**
      * Spherical Harmonics decomposition of the given cubemap
      */
-    static std::unique_ptr< filament::math::double3[]> computeSH(const Cubemap& cm, size_t numBands, bool irradiance);
+    static std::unique_ptr<filament::math::double3[]> computeSH(const Cubemap& cm, size_t numBands,
+            bool irradiance);
 
-    /*
+    /**
      * Render given spherical harmonics into a cubemap
      */
-    static void renderSH(
-            Cubemap& cm,
-            const std::unique_ptr< filament::math::double3[]>& sh, size_t numBands);
+    static void renderSH(Cubemap& cm,
+            const std::unique_ptr<filament::math::double3[]>& sh, size_t numBands);
 
-    /*
+    /**
      * Compute spherical harmonics of the irradiance of the given cubemap.
      * The SH basis are pre-scaled for easier rendering
      */
-    static std::unique_ptr< filament::math::double3[]> computeIrradianceSH3Bands(const Cubemap& cm);
+    static std::unique_ptr<filament::math::double3[]> computeIrradianceSH3Bands(const Cubemap& cm);
 
-    /*
+    /**
      * Render pre-scaled irrandiance SH
      */
-    static void renderPreScaledSH3Bands(Cubemap& cm, const std::unique_ptr< filament::math::double3[]>& sh);
+    static void renderPreScaledSH3Bands(Cubemap& cm,
+            const std::unique_ptr<filament::math::double3[]>& sh);
 
     static size_t getShIndex(ssize_t m, size_t l) {
         return SHindex(m, l);
@@ -78,4 +80,4 @@ private:
     static void printShBase(std::ostream& out, int l, int m);
 };
 
-#endif /* SRC_CUBEMAPSH_H_ */
+#endif /* IBL_CUBEMAPSH_H */
