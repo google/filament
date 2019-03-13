@@ -292,12 +292,8 @@ Image CubemapUtils::createCubemapImage(size_t dim, bool horizontal) {
         std::swap(width, height);
     }
 
-    size_t bpr = width * sizeof(Cubemap::Texel);
-    bpr = (bpr + 31) & ~31;
-    size_t bufSize = bpr * height;
-    std::unique_ptr<uint8_t[]> data(new uint8_t[bufSize]);
-    memset(data.get(), 0, bufSize);
-    Image image(std::move(data), width, height, bpr, sizeof(Cubemap::Texel));
+    Image image(width, height);
+    memset(image.getData(), 0, image.getBytesPerRow() * height);
     return image;
 }
 
