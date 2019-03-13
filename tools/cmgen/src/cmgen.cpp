@@ -28,6 +28,7 @@
 #include <imageio/ImageEncoder.h>
 
 #include <image/KtxBundle.h>
+#include <image/ColorTransform.h>
 
 #include <utils/Path.h>
 
@@ -69,7 +70,7 @@ static utils::Path g_extract_dir;
 
 static size_t g_output_size = 0;
 
-       bool g_quiet = false; // needed outside of this file
+static bool g_quiet = false;
 static bool g_debug = false;
 
 static size_t g_sh_compute = 0;

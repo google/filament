@@ -32,7 +32,7 @@ include_directories(${PUBLIC_HDR_DIR})
 add_library(${TARGET} ${PUBLIC_HDRS} ${SRCS})
 target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
 
-target_link_libraries(${TARGET} math utils image)
+target_link_libraries(${TARGET} math utils)
 
 # ==================================================================================================
 # Compile options and optimizations

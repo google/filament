@@ -27,7 +27,6 @@
 #include <math.h>
 
 using namespace filament::math;
-using namespace image;
 using namespace utils;
 
 namespace filament {
