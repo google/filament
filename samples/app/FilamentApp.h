@@ -57,12 +57,15 @@ public:
             filament::Scene*, filament::Renderer*)>;
     using ImGuiCallback = std::function<void(filament::Engine*, filament::View*)>;
     using AnimCallback = std::function<void(filament::Engine*, filament::View*, double now)>;
+    using DropCallback = std::function<void(std::string)>;
 
     static FilamentApp& get();
 
     ~FilamentApp();
 
     void animate(AnimCallback animation) { mAnimation = animation; }
+
+    void setDropHandler(DropCallback handler) { mDropHandler = handler; }
 
     void run(const Config& config, SetupCallback setup, CleanupCallback cleanup,
             ImGuiCallback imgui = ImGuiCallback(), PreRenderCallback preRender = PreRenderCallback(),
@@ -203,6 +206,7 @@ private:
     filament::MaterialInstance* mDepthMI = nullptr;
     std::unique_ptr<filagui::ImGuiHelper> mImGuiHelper;
     AnimCallback mAnimation;
+    DropCallback mDropHandler;
     int mSidebarWidth = 0;
 };
 
