@@ -199,6 +199,14 @@ int main(int argc, char** argv) {
 
         loadResources(filename);
 
+        app.viewer->setUiCallback([&app, scene] () {
+            if (ImGui::CollapsingHeader("Stats")) {
+                ImGui::Text("%zu entities in the asset", app.asset->getEntityCount());
+                ImGui::Text("%zu renderables (excluding UI)", scene->getRenderableCount());
+                ImGui::Text("%zu skipped frames", FilamentApp::get().getSkippedFrameCount());
+            }
+        });
+
         // Leave FXAA enabled but we also enable MSAA for a nice result. The wireframe looks
         // much better with MSAA enabled.
         view->setSampleCount(4);

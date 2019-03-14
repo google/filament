@@ -80,6 +80,8 @@ public:
 
     void setSidebarWidth(int width) { mSidebarWidth = width; }
 
+    size_t getSkippedFrameCount() const { return mSkippedFrames; }
+
     FilamentApp(const FilamentApp& rhs) = delete;
     FilamentApp(FilamentApp&& rhs) = delete;
     FilamentApp& operator=(const FilamentApp& rhs) = delete;
@@ -208,6 +210,7 @@ private:
     AnimCallback mAnimation;
     DropCallback mDropHandler;
     int mSidebarWidth = 0;
+    size_t mSkippedFrames = 0;
 };
 
 #endif // TNT_FILAMENT_SAMPLE_FILAMENTAPP_H

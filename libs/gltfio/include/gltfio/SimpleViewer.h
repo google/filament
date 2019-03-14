@@ -102,6 +102,11 @@ public:
      */
     int getSidebarWidth() const { return mSidebarWidth; }
 
+    /**
+     * Allows clients to inject custom UI.
+     */
+    void setUiCallback(std::function<void()> callback) { mCustomUI = callback; }
+
     static constexpr int INITIAL_SIDEBAR_WIDTH = 350;
 
 private:
@@ -116,6 +121,7 @@ private:
     utils::NameComponentManager* mNames = nullptr;
     Animator* mAnimator = nullptr;
     filament::IndirectLight* mIndirectLight = nullptr;
+    std::function<void()> mCustomUI;
 
     // Properties that can be changed from the UI.
     int mCurrentAnimation = 1;
@@ -125,6 +131,9 @@ private:
     bool mShowWireframe = false;
     bool mEnableSunlight = true;
     bool mEnableDithering = true;
+    bool mEnablePrepass = true;
+    bool mEnableFxaa = true;
+    bool mEnableMsaa = true;
     int mSidebarWidth = INITIAL_SIDEBAR_WIDTH;
 };
 
@@ -318,21 +327,35 @@ void SimpleViewer::updateUserInterface() {
     ImGui::SetNextWindowSizeConstraints(ImVec2(20, height), ImVec2(width, height));
 
     ImGui::Begin("Filament", nullptr, ImGuiWindowFlags_NoTitleBar);
+    if (mCustomUI) {
+        mCustomUI();
+    }
+
     if (ImGui::CollapsingHeader("View")) {
         ImGui::Checkbox("Dithering", &mEnableDithering);
-        auto mode = mEnableDithering ? View::Dithering::TEMPORAL : View::Dithering::NONE;
-        mView->setDithering(mode);
+        ImGui::Checkbox("Depth prepass", &mEnablePrepass);
+        ImGui::Checkbox("FXAA", &mEnableFxaa);
+        ImGui::Checkbox("MSAA 4x", &mEnableMsaa);
     }
+
+    mView->setDepthPrepass(
+            mEnablePrepass ? View::DepthPrepass::ENABLED : View::DepthPrepass::DISABLED);
+    mView->setDithering(mEnableDithering ? View::Dithering::TEMPORAL : View::Dithering::NONE);
+    mView->setAntiAliasing(mEnableFxaa ? View::AntiAliasing::FXAA : View::AntiAliasing::NONE);
+    mView->setSampleCount(mEnableMsaa ? 4 : 1);
+
     if (ImGui::CollapsingHeader("Light")) {
         ImGui::SliderFloat("IBL intensity", &mIblIntensity, 0.0f, 100000.0f);
         ImGui::SliderAngle("IBL rotation", &mIblRotation);
         ImGui::Checkbox("Sunlight", &mEnableSunlight);
-        if (mEnableSunlight) {
-            mScene->addEntity(mSunlight);
-        } else {
-            mScene->remove(mSunlight);
-        }
     }
+
+    if (mEnableSunlight) {
+        mScene->addEntity(mSunlight);
+    } else {
+        mScene->remove(mSunlight);
+    }
+
     if (ImGui::CollapsingHeader("Model", ImGuiTreeNodeFlags_DefaultOpen)) {
         if (mAnimator->getAnimationCount() > 0) {
             intptr_t animationsNodeId = -1;
@@ -343,13 +366,15 @@ void SimpleViewer::updateUserInterface() {
             }
         }
         ImGui::Checkbox("Wireframe", &mShowWireframe);
-        if (mShowWireframe) {
-            mScene->addEntity(mAsset->getWireframe());
-        } else {
-            mScene->remove(mAsset->getWireframe());
-        }
         treeNode(mAsset->getRoot());
     }
+
+    if (mShowWireframe) {
+        mScene->addEntity(mAsset->getWireframe());
+    } else {
+        mScene->remove(mAsset->getWireframe());
+    }
+
     mSidebarWidth = ImGui::GetWindowWidth();
     ImGui::End();
 
