@@ -31,7 +31,7 @@
 namespace {
 
 void reportLastWindowsError() {
-    LPSTR lpMessageBuffer;
+    LPSTR lpMessageBuffer = nullptr;
     DWORD dwError = GetLastError();
 
     if (dwError == 0) {
@@ -88,6 +88,8 @@ Driver* PlatformWGL::createDriver(void* const sharedGLContext) noexcept {
         0
     };
 
+    HGLRC tempContext = NULL;
+
     mHWnd = CreateWindowA("STATIC", "dummy", 0, 0, 0, 1, 1, NULL, NULL, NULL, NULL);
     HDC whdc = mWhdc = GetDC(mHWnd);
     if (whdc == NULL) {
@@ -99,9 +101,10 @@ Driver* PlatformWGL::createDriver(void* const sharedGLContext) noexcept {
     SetPixelFormat(whdc, pixelFormat, &mPfd);
 
     // We need a tmp context to retrieve and call wglCreateContextAttribsARB.
-    HGLRC tempContext = wglCreateContext(whdc);
+    tempContext = wglCreateContext(whdc);
     if (!wglMakeCurrent(whdc, tempContext)) {
-        utils::slog.e << "wglMakeCurrent() failed, whdc=" << whdc << ", tempContext=" << tempContext << utils::io::endl;
+        utils::slog.e << "wglMakeCurrent() failed, whdc=" << whdc << ", tempContext=" <<
+                tempContext << utils::io::endl;
         goto error;
     }
 
@@ -118,7 +121,8 @@ Driver* PlatformWGL::createDriver(void* const sharedGLContext) noexcept {
     tempContext = NULL;
 
     if (!wglMakeCurrent(whdc, mContext)) {
-        utils::slog.e << "wglMakeCurrent() failed, whdc=" << whdc << ", mContext=" << mContext << utils::io::endl;
+        utils::slog.e << "wglMakeCurrent() failed, whdc=" << whdc << ", mContext=" <<
+                mContext << utils::io::endl;
         goto error;
     }
 
