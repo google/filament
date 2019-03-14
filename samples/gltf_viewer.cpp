@@ -185,6 +185,7 @@ int main(int argc, char** argv) {
 
         // Add the renderables to the scene.
         app.viewer->setAsset(app.asset, app.names);
+        app.viewer->setIndirectLight(FilamentApp::get().getIBL()->getIndirectLight());
 
         // Leave FXAA enabled but we also enable MSAA for a nice result. The wireframe looks
         // much better with MSAA enabled.
