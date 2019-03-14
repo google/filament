@@ -77,6 +77,10 @@ public class Engine {
         clearNativeObject();
     }
 
+    public Backend getBackend() {
+        return Backend.values()[(int) nGetBackend(getNativeObject())];
+    }
+
     // SwapChain
 
     /**
@@ -279,6 +283,7 @@ public class Engine {
 
     private static native long nCreateEngine(long backend, long sharedContext);
     private static native void nDestroyEngine(long nativeEngine);
+    private static native long nGetBackend(long nativeEngine);
     private static native long nCreateSwapChain(long nativeEngine, Object nativeWindow, long flags);
     private static native long nCreateSwapChainFromRawPointer(long nativeEngine, long pointer, long flags);
     private static native void nDestroySwapChain(long nativeEngine, long nativeSwapChain);
