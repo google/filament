@@ -222,8 +222,8 @@ static constexpr uint8_t BAKED_COLOR_PACKAGE[] = {
     [self updateRotation];
 
     tcm.setTransform(tcm.getInstance(app.renderable),
-                     filament::math::mat4f::rotate(CACurrentMediaTime(), filament::math::float3{0, 0, 1}) *
-                     filament::math::mat4f::rotate(deviceRotation, filament::math::float3{0, 0, 1}));
+                     filament::math::mat4f::rotation(CACurrentMediaTime(), filament::math::float3{0, 0, 1}) *
+                     filament::math::mat4f::rotation(deviceRotation, filament::math::float3{0, 0, 1}));
 }
 
 - (void)didRotate:(NSNotification*)notification
