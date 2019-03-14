@@ -16,6 +16,25 @@
 
 #pragma once
 
+#if defined (WIN32)
+
+#ifdef max
+#undef max
+#endif
+
+#ifdef min
+#undef min
+#endif
+
+#ifdef far
+#undef far
+#endif
+
+#ifdef near
+#undef near
+#endif
+
+#endif
 
 // compatibility with non-clang compilers...
 #ifndef __has_attribute
