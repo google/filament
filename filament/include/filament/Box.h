@@ -81,7 +81,7 @@ public:
      * @return The boudning box of the union of *this and box
      */
     Box& unionSelf(const Box& box) noexcept {
-        set(std::min(getMin(), box.getMin()), std::max(getMax(), box.getMax()));
+        set(min(getMin(), box.getMin()), max(getMax(), box.getMax()));
         return *this;
     }
 
