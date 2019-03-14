@@ -128,8 +128,10 @@ AtomicFreeList::AtomicFreeList(void* begin, void* end,
 TrackingPolicy::HighWatermark::~HighWatermark() noexcept {
     size_t wm = mHighWaterMark;
     size_t wmpct = wm / (mSize / 100);
-    slog.d << mName << " arena: High watermark "
-           << wm / 1024 << " KiB (" << wmpct << "%)" << io::endl;
+    if (wmpct > 80) {
+        slog.d << mName << " arena: High watermark "
+            << wm / 1024 << " KiB (" << wmpct << "%)" << io::endl;
+    }
 }
 
 } // namespace utils
