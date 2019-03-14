@@ -69,6 +69,13 @@ public:
     void setAsset(FilamentAsset* asset, utils::NameComponentManager* names);
 
     /**
+     * Removes the current asset from the viewer.
+     *
+     * This removes all the asset entities from the Scene, but does not destroy them.
+     */
+    void removeAsset();
+
+    /**
      * Sets or changes the current scene's IBL to allow the UI manipulate it.
      * NOTE: this could be removed if we add a getter method to Scene.
      */
@@ -179,13 +186,7 @@ SimpleViewer::~SimpleViewer() {
 
 void SimpleViewer::setAsset(FilamentAsset* asset, utils::NameComponentManager* names) {
     using namespace filament::math;
-    if (mAsset) {
-        const auto begin = mAsset->getEntities();
-        const auto end = begin + mAsset->getEntityCount();
-        for (auto entity = begin; entity != end; ++entity) {
-            mScene->remove(*entity);
-        }
-    }
+    removeAsset();
     mAsset = asset;
     mAnimator = asset->getAnimator();
     mNames = names;
@@ -194,6 +195,19 @@ void SimpleViewer::setAsset(FilamentAsset* asset, utils::NameComponentManager* n
     mat4f transform = fitIntoUnitCube(mAsset->getBoundingBox());
     tcm.setTransform(root, transform);
     mScene->addEntities(mAsset->getEntities(), mAsset->getEntityCount());
+}
+
+void SimpleViewer::removeAsset() {
+    if (mAsset) {
+        const auto begin = mAsset->getEntities();
+        const auto end = begin + mAsset->getEntityCount();
+        for (auto entity = begin; entity != end; ++entity) {
+            mScene->remove(*entity);
+        }
+    }
+    mAsset = nullptr;
+    mAnimator = nullptr;
+    mNames = nullptr;
 }
 
 void SimpleViewer::setIndirectLight(filament::IndirectLight* ibl) {

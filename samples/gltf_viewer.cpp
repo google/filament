@@ -43,10 +43,11 @@ using namespace gltfio;
 using namespace utils;
 
 struct App {
+    Engine* engine;
     SimpleViewer* viewer;
     Config config;
     AssetLoader* loader;
-    FilamentAsset* asset;
+    FilamentAsset* asset = nullptr;
     NameComponentManager* names;
     MaterialSource materialSource = GENERATE_SHADERS;
 };
@@ -138,46 +139,41 @@ int main(int argc, char** argv) {
         }
     }
 
-    auto setup = [&app, filename](Engine* engine, View* view, Scene* scene) {
-        app.names = new NameComponentManager(EntityManager::get());
-        app.viewer = new SimpleViewer(engine, scene, view);
-        app.loader = AssetLoader::create({engine, app.names, app.materialSource});
-        if (filename.isEmpty()) {
-            app.asset = app.loader->createAssetFromBinary(GLTF_DAMAGEDHELMET_DATA,
-                    GLTF_DAMAGEDHELMET_SIZE);
-        } else {
-            // Peek at the file size to allow pre-allocation.
-            long contentSize = static_cast<long>(getFileSize(filename.c_str()));
-            if (contentSize <= 0) {
-                std::cerr << "Unable to open " << filename << std::endl;
-                exit(1);
-            }
-
-            // Consume the glTF file.
-            std::ifstream in(filename.c_str(), std::ifstream::in);
-            std::vector<uint8_t> buffer(static_cast<unsigned long>(contentSize));
-            if (!in.read((char*) buffer.data(), contentSize)) {
-                std::cerr << "Unable to read " << filename << std::endl;
-                exit(1);
-            }
-
-            // Parse the glTF file and create Filament entities.
-            if (filename.getExtension() == "glb") {
-                app.asset = app.loader->createAssetFromBinary(buffer.data(), buffer.size());
-            } else {
-                app.asset = app.loader->createAssetFromJson(buffer.data(), buffer.size());
-            }
-            buffer.clear();
-            buffer.shrink_to_fit();
+    auto loadAsset = [&app](utils::Path filename) {
+        // Peek at the file size to allow pre-allocation.
+        long contentSize = static_cast<long>(getFileSize(filename.c_str()));
+        if (contentSize <= 0) {
+            std::cerr << "Unable to open " << filename << std::endl;
+            exit(1);
         }
+
+        // Consume the glTF file.
+        std::ifstream in(filename.c_str(), std::ifstream::in);
+        std::vector<uint8_t> buffer(static_cast<unsigned long>(contentSize));
+        if (!in.read((char*) buffer.data(), contentSize)) {
+            std::cerr << "Unable to read " << filename << std::endl;
+            exit(1);
+        }
+
+        // Parse the glTF file and create Filament entities.
+        if (filename.getExtension() == "glb") {
+            app.asset = app.loader->createAssetFromBinary(buffer.data(), buffer.size());
+        } else {
+            app.asset = app.loader->createAssetFromJson(buffer.data(), buffer.size());
+        }
+        buffer.clear();
+        buffer.shrink_to_fit();
+
         if (!app.asset) {
             std::cerr << "Unable to parse " << filename << std::endl;
             exit(1);
         }
+    };
 
+    auto loadResources = [&app] (utils::Path filename) {
         // Load external textures and buffers.
         utils::Path assetFolder = filename.getParent();
-        gltfio::ResourceLoader({engine, assetFolder, true, false}).loadResources(app.asset);
+        gltfio::ResourceLoader({app.engine, assetFolder, true, false}).loadResources(app.asset);
 
         // Load animation data then free the source hierarchy.
         app.asset->getAnimator();
@@ -185,7 +181,23 @@ int main(int argc, char** argv) {
 
         // Add the renderables to the scene.
         app.viewer->setAsset(app.asset, app.names);
+
         app.viewer->setIndirectLight(FilamentApp::get().getIBL()->getIndirectLight());
+    };
+
+    auto setup = [&](Engine* engine, View* view, Scene* scene) {
+        app.engine = engine;
+        app.names = new NameComponentManager(EntityManager::get());
+        app.viewer = new SimpleViewer(engine, scene, view);
+        app.loader = AssetLoader::create({engine, app.names, app.materialSource});
+        if (filename.isEmpty()) {
+            app.asset = app.loader->createAssetFromBinary(GLTF_DAMAGEDHELMET_DATA,
+                    GLTF_DAMAGEDHELMET_SIZE);
+        } else {
+            loadAsset(filename);
+        }
+
+        loadResources(filename);
 
         // Leave FXAA enabled but we also enable MSAA for a nice result. The wireframe looks
         // much better with MSAA enabled.
@@ -212,6 +224,14 @@ int main(int argc, char** argv) {
 
     FilamentApp& filamentApp = FilamentApp::get();
     filamentApp.animate(animate);
+
+    filamentApp.setDropHandler([&] (std::string path) {
+        app.viewer->removeAsset();
+        app.loader->destroyAsset(app.asset);
+        loadAsset(path);
+        loadResources(path);
+    });
+
     filamentApp.run(app.config, setup, cleanup, gui);
 
     return 0;

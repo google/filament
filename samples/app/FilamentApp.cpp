@@ -194,6 +194,8 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
 
     int sidebarWidth = mSidebarWidth;
 
+    SDL_EventState(SDL_DROPFILE, SDL_ENABLE);
+
     while (!mClosed) {
 
         if (mSidebarWidth != sidebarWidth) {
@@ -283,6 +285,12 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
                 case SDL_MOUSEMOTION:
                     if (!io || !io->WantCaptureMouse)
                         window->mouseMoved(event.motion.x, event.motion.y);
+                    break;
+                case SDL_DROPFILE:
+                    if (mDropHandler) {
+                        mDropHandler(event.drop.file);
+                    }
+                    SDL_free(event.drop.file);
                     break;
                 case SDL_WINDOWEVENT:
                     switch (event.window.event) {
