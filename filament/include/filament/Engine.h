@@ -321,6 +321,10 @@ public:
      */
     const Material* getDefaultMaterial() const noexcept;
 
+    /**
+     * Returns the resolved backend.
+     */
+    Backend getBackend() const noexcept;
 
     /**
      * Allocate a small amount of memory directly in the command stream. The allocated memory is

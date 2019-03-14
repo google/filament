@@ -171,6 +171,21 @@ static Material* createMaterial(Engine* engine, const MaterialKey& config, const
             .material(shader.c_str())
             .doubleSided(config.doubleSided);
 
+    switch (engine->getBackend()) {
+        case Engine::Backend::OPENGL:
+            builder.targetApi(MaterialBuilder::TargetApi::OPENGL);
+            break;
+        case Engine::Backend::VULKAN:
+            builder.targetApi(MaterialBuilder::TargetApi::VULKAN);
+            break;
+        case Engine::Backend::METAL:
+            builder.targetApi(MaterialBuilder::TargetApi::METAL);
+            break;
+        default:
+            slog.e << "Unresolved backend, unable to use filamat." << io::endl;
+            return nullptr;
+    }
+
     static_assert(std::tuple_size<UvMap>::value == 8, "Badly sized uvset.");
     int numTextures = std::max({
         uvmap[0], uvmap[1], uvmap[2], uvmap[3],

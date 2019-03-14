@@ -45,6 +45,13 @@ extern void *getNativeWindow(JNIEnv *env, jclass, jobject surface);
 }
 
 extern "C" JNIEXPORT jlong JNICALL
+Java_com_google_android_filament_Engine_nGetBackend(JNIEnv* env,
+        jclass klass, jlong nativeEngine) {
+    Engine* engine = (Engine*) nativeEngine;
+    return (jlong) engine->getBackend();
+}
+
+extern "C" JNIEXPORT jlong JNICALL
 Java_com_google_android_filament_Engine_nCreateSwapChain(JNIEnv* env,
         jclass klass, jlong nativeEngine, jobject surface, jlong flags) {
     Engine* engine = (Engine*) nativeEngine;

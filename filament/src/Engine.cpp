@@ -817,6 +817,10 @@ const Material* Engine::getDefaultMaterial() const noexcept {
     return upcast(this)->getDefaultMaterial();
 }
 
+Backend Engine::getBackend() const noexcept {
+    return upcast(this)->getBackend();
+}
+
 Renderer* Engine::createRenderer() noexcept {
     return upcast(this)->createRenderer();
 }
