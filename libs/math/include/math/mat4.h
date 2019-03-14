@@ -24,6 +24,8 @@
 #include <math/vec4.h>
 #include <math/compiler.h>
 
+#include <utils/unwindows.h> // Because we use NEAR and FAR for projection matrices.
+
 #include <stdint.h>
 #include <sys/types.h>
 #include <limits>
