@@ -540,8 +540,8 @@ private:
 
     struct {
         // Some drivers have issues with UBOs in the fragment shader when
-        // early_fragment_tests is used.
-        bool disable_early_fragment_tests = false;
+        // glFlush() is called between draw calls.
+        bool disable_glFlush = false;
 
         // Some drivers seem to not store the GL_ELEMENT_ARRAY_BUFFER binding
         // in the VAO state.

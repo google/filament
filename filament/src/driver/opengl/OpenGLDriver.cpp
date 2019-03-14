@@ -144,7 +144,7 @@ OpenGLDriver::OpenGLDriver(OpenGLPlatform* platform) noexcept
     } else if (strstr(renderer, "Mali")) {
         bugs.vao_doesnt_store_element_array_buffer_binding = true;
         if (strstr(renderer, "Mali-T")) {
-            bugs.disable_early_fragment_tests = true;
+            bugs.disable_glFlush = true;
             bugs.disable_shared_context_draws = true;
             bugs.texture_external_needs_rebind = true;
         }
@@ -2772,7 +2772,9 @@ void OpenGLDriver::endFrame(uint32_t frameId) {
 
 void OpenGLDriver::flush(int) {
     DEBUG_MARKER()
-    glFlush();
+    if (!bugs.disable_glFlush) {
+        glFlush();
+    }
 }
 
 UTILS_NOINLINE
