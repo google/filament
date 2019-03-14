@@ -83,7 +83,7 @@ public:
 private:
     int mAttributeName;
     static int sGlobalAttribute;
-    staric constexpr int FOO_COUNT = 10;
+    static constexpr int FOO_COUNT = 10;
     enum {
         ONE, TWO, THREE
     };
