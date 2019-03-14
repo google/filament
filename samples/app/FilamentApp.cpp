@@ -365,6 +365,8 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
                 renderer->render(view->getView());
             }
             renderer->endFrame();
+        } else {
+            ++mSkippedFrames;
         }
 
         if (postRender) {
