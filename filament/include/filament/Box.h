@@ -143,7 +143,7 @@ struct Aabb {
      * @return true if min >= max, i.e: the volume of the box is null or negative
      */
     bool isEmpty() const noexcept {
-        return min >= max;
+        return any(greaterThanEqual(min, max));
     }
 };
 

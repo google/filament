@@ -270,44 +270,6 @@ public:
 
     template<typename RT>
     friend inline
-    bool MATH_PURE operator >(const VECTOR<T>& lv, const VECTOR<RT>& rv) {
-        // w/ inlining we end-up with many branches that will pollute the BPU cache
-        MATH_NOUNROLL
-        for (size_t i = 0; i < lv.size(); i++) {
-            if (lv[i] != rv[i]) {
-                return lv[i] > rv[i];
-            }
-        }
-        return false;
-    }
-
-    template<typename RT>
-    friend inline
-    constexpr bool MATH_PURE operator <=(const VECTOR<T>& lv, const VECTOR<RT>& rv) {
-        return !(lv > rv);
-    }
-
-    template<typename RT>
-    friend inline
-    bool MATH_PURE operator <(const VECTOR<T>& lv, const VECTOR<RT>& rv) {
-        // w/ inlining we end-up with many branches that will pollute the BPU cache
-        MATH_NOUNROLL
-        for (size_t i = 0; i < lv.size(); i++) {
-            if (lv[i] != rv[i]) {
-                return lv[i] < rv[i];
-            }
-        }
-        return false;
-    }
-
-    template<typename RT>
-    friend inline
-    constexpr bool MATH_PURE operator >=(const VECTOR<T>& lv, const VECTOR<RT>& rv) {
-        return !(lv < rv);
-    }
-
-    template<typename RT>
-    friend inline
     VECTOR<bool> MATH_PURE equal(const VECTOR<T>& lv, const VECTOR<RT>& rv) {
         VECTOR<bool> r;
         for (size_t i = 0; i < lv.size(); i++) {

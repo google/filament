@@ -30,6 +30,9 @@ struct TestFloat4 : public float4 {
         z = -3;
         w = -4;
     }
+    friend bool operator < (TestFloat4 const& lhs, TestFloat4 const& rhs) noexcept {
+        return any(lessThan(lhs, rhs));
+    }
 };
 
 using SoA = utils::StructureOfArrays<float, double, TestFloat4>;
