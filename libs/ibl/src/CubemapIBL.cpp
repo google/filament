@@ -21,6 +21,8 @@
 #include <ibl/CubemapUtils.h>
 #include <ibl/utilities.h>
 
+#include "CubemapUtilsImpl.h"
+
 #include <utils/JobSystem.h>
 
 #include <math/mat3.h>

@@ -16,6 +16,10 @@ set(PUBLIC_HDRS
     ${PUBLIC_HDR_DIR}/ibl/utilities.h
 )
 
+set(PRIVATE_HDRS
+    src/CubemapUtilsImpl.h
+)
+
 set(SRCS
     src/Cubemap.cpp
     src/CubemapIBL.cpp
@@ -29,7 +33,7 @@ set(SRCS
 # ==================================================================================================
 include_directories(${PUBLIC_HDR_DIR})
 
-add_library(${TARGET} ${PUBLIC_HDRS} ${SRCS})
+add_library(${TARGET} ${PUBLIC_HDRS} ${PRIVATE_HDRS} ${SRCS})
 target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
 
 target_link_libraries(${TARGET} math utils)
