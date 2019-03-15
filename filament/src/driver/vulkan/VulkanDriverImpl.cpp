@@ -786,31 +786,6 @@ void acquireCommandBuffer(VulkanContext& context) {
     swap.submitted = false;
 }
 
-void releaseCommandBuffer(VulkanContext& context) {
-    // Finalize the command buffer and set the cmdbuffer pointer to null.
-    VkResult result = vkEndCommandBuffer(context.cmdbuffer);
-    ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkEndCommandBuffer error.");
-    context.cmdbuffer = nullptr;
-
-    // Submit the command buffer.
-    VkPipelineStageFlags waitDestStageMask = VK_PIPELINE_STAGE_TRANSFER_BIT;
-    VulkanSurfaceContext& surfaceContext = *context.currentSurface;
-    SwapContext& swapContext = getSwapContext(context);
-    VkSubmitInfo submitInfo {
-        .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-        .waitSemaphoreCount = 1u,
-        .pWaitSemaphores = &surfaceContext.imageAvailable,
-        .pWaitDstStageMask = &waitDestStageMask,
-        .commandBufferCount = 1,
-        .pCommandBuffers = &swapContext.cmdbuffer,
-        .signalSemaphoreCount = 1u,
-        .pSignalSemaphores = &surfaceContext.renderingFinished,
-    };
-    result = vkQueueSubmit(context.graphicsQueue, 1, &submitInfo, swapContext.fence);
-    ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkQueueSubmit error.");
-    swapContext.submitted = true;
-}
-
 void performPendingWork(VulkanTaskQueue& work, VkCommandBuffer cmdbuf) {
     // Copy the tasks into a local queue first, which allows newly added tasks to be deferred until
     // the next frame.
