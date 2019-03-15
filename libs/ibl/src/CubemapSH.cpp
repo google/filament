@@ -20,6 +20,8 @@
 #include <ibl/CubemapUtils.h>
 #include <ibl/utilities.h>
 
+#include "CubemapUtilsImpl.h"
+
 #include <math/mat4.h>
 
 using namespace filament::math;
