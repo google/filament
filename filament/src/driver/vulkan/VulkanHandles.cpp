@@ -154,17 +154,11 @@ VkExtent2D VulkanRenderTarget::getExtent() const {
 }
 
 VulkanAttachment VulkanRenderTarget::getColor() const {
-    if (mOffscreen) {
-        return mColor;
-    }
-    return getSwapContext(mContext).attachment;
+    return mOffscreen ? mColor : getSwapContext(mContext).attachment;
 }
 
 VulkanAttachment VulkanRenderTarget::getDepth() const {
-    if (mOffscreen) {
-        return mDepth;
-    }
-    return mContext.currentSurface->depth;
+    return mOffscreen ? mDepth : VulkanAttachment {};
 }
 
 void VulkanRenderTarget::createColorImage(VkFormat format) {

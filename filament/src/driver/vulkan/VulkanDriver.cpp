@@ -33,8 +33,6 @@
 #pragma clang diagnostic ignored "-Wreturn-stack-address"
 #pragma clang diagnostic ignored "-Wunused-parameter"
 
-static constexpr bool SWAPCHAIN_HAS_DEPTH = true;
-
 namespace filament {
 namespace driver {
 
@@ -340,10 +338,6 @@ void VulkanDriver::createSwapChainR(Driver::SwapChainHandle sch, void* nativeWin
 
     // TODO: move the following line into makeCurrent.
     mContext.currentSurface = &sc;
-
-    if (SWAPCHAIN_HAS_DEPTH) {
-        transitionDepthBuffer(mContext, sc, mContext.depthFormat);
-    }
 }
 
 void VulkanDriver::createStreamFromTextureIdR(Driver::StreamHandle sh, intptr_t externalTextureId,

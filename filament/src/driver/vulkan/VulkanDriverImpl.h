@@ -102,7 +102,6 @@ struct VulkanSurfaceContext {
     VkQueue presentQueue;
     std::vector<SwapContext> swapContexts;
     uint32_t currentSwapIndex;
-    VulkanAttachment depth;
     VkSemaphore imageAvailable;
     VkSemaphore renderingFinished;
 };
@@ -113,8 +112,6 @@ void createSemaphore(VkDevice device, VkSemaphore* semaphore);
 void getPresentationQueue(VulkanContext& context, VulkanSurfaceContext& sc);
 void getSurfaceCaps(VulkanContext& context, VulkanSurfaceContext& sc);
 void createSwapChain(VulkanContext& context, VulkanSurfaceContext& sc);
-void createDepthBuffer(VulkanContext& context, VulkanSurfaceContext& sc, VkFormat depthFormat);
-void transitionDepthBuffer(VulkanContext& context, VulkanSurfaceContext& sc, VkFormat depthFormat);
 void destroySurfaceContext(VulkanContext& context, VulkanSurfaceContext& sc);
 uint32_t selectMemoryType(VulkanContext& context, uint32_t flags, VkFlags reqs);
 VkFormat getVkFormat(ElementType type, bool normalized);

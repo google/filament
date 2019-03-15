@@ -367,8 +367,6 @@ void createSwapChain(VulkanContext& context, VulkanSurfaceContext& surfaceContex
     createSemaphore(context.device, &surfaceContext.imageAvailable);
     createSemaphore(context.device, &surfaceContext.renderingFinished);
 
-    surfaceContext.depth = {};
-
     // Allocate command buffers.
     VkCommandBufferAllocateInfo allocateInfo = {};
     allocateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -393,112 +391,6 @@ void createSwapChain(VulkanContext& context, VulkanSurfaceContext& surfaceContex
     }
 }
 
-void createDepthBuffer(VulkanContext& context, VulkanSurfaceContext& surfaceContext,
-        VkFormat depthFormat) {
-    assert(context.cmdbuffer);
-
-    // Create an appropriately-sized device-only VkImage.
-    const auto size = surfaceContext.surfaceCapabilities.currentExtent;
-    VkImage depthImage;
-    VkImageCreateInfo imageInfo {
-        .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
-        .imageType = VK_IMAGE_TYPE_2D,
-        .extent = { size.width, size.height, 1 },
-        .format = depthFormat,
-        .mipLevels = 1,
-        .arrayLayers = 1,
-        .usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-        .samples = VK_SAMPLE_COUNT_1_BIT,
-    };
-    VkResult error = vkCreateImage(context.device, &imageInfo, VKALLOC, &depthImage);
-    ASSERT_POSTCONDITION(!error, "Unable to create depth image.");
-
-    // Allocate memory for the VkImage and bind it.
-    VkMemoryRequirements memReqs;
-    vkGetImageMemoryRequirements(context.device, depthImage, &memReqs);
-    VkMemoryAllocateInfo allocInfo {
-        .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-        .allocationSize = memReqs.size,
-        .memoryTypeIndex = selectMemoryType(context, memReqs.memoryTypeBits,
-                VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
-    };
-    error = vkAllocateMemory(context.device, &allocInfo, nullptr,
-            &surfaceContext.depth.memory);
-    ASSERT_POSTCONDITION(!error, "Unable to allocate depth memory.");
-    error = vkBindImageMemory(context.device, depthImage, surfaceContext.depth.memory, 0);
-    ASSERT_POSTCONDITION(!error, "Unable to bind depth memory.");
-
-    // Create a VkImageView so that we can attach depth to the framebuffer.
-    VkImageView depthView;
-    VkImageViewCreateInfo viewInfo {
-        .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-        .image = depthImage,
-        .viewType = VK_IMAGE_VIEW_TYPE_2D,
-        .format = depthFormat,
-        .subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
-        .subresourceRange.levelCount = 1,
-        .subresourceRange.layerCount = 1,
-    };
-    error = vkCreateImageView(context.device, &viewInfo, VKALLOC, &depthView);
-    ASSERT_POSTCONDITION(!error, "Unable to create depth view.");
-
-    // Transition the depth image into an optimal layout.
-    VkImageMemoryBarrier barrier {
-        .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-        .newLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-        .image = depthImage,
-        .subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
-        .subresourceRange.levelCount = 1,
-        .subresourceRange.layerCount = 1,
-        .dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT
-    };
-    vkCmdPipelineBarrier(context.cmdbuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-            VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
-
-    // Go ahead and set the depth attachment fields, which serves as a signal to VulkanDriver that
-    // it is now ready.
-    surfaceContext.depth.view = depthView;
-    surfaceContext.depth.image = depthImage;
-    surfaceContext.depth.format = depthFormat;
-}
-
-void transitionDepthBuffer(VulkanContext& context, VulkanSurfaceContext& sc, VkFormat depthFormat) {
-    // Begin a new command buffer solely for the purpose of transitioning the image layout.
-    SwapContext& swap = getSwapContext(context);
-    VkResult result = vkWaitForFences(context.device, 1, &swap.fence, VK_FALSE, UINT64_MAX);
-    ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkWaitForFences error.");
-    result = vkResetFences(context.device, 1, &swap.fence);
-    ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkResetFences error.");
-    VkCommandBuffer cmdbuffer = swap.cmdbuffer;
-    result = vkResetCommandBuffer(cmdbuffer, 0);
-    ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkResetCommandBuffer error.");
-    VkCommandBufferBeginInfo beginInfo = {
-        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-        .flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT,
-    };
-    result = vkBeginCommandBuffer(cmdbuffer, &beginInfo);
-    ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkBeginCommandBuffer error.");
-    context.cmdbuffer = cmdbuffer;
-
-    // Create the depth buffer and issue a pipeline barrier command.
-    createDepthBuffer(context, sc, depthFormat);
-
-    // Flush the command buffer.
-    result = vkEndCommandBuffer(context.cmdbuffer);
-    ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkEndCommandBuffer error.");
-    context.cmdbuffer = nullptr;
-    VkSubmitInfo submitInfo {
-        .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-        .commandBufferCount = 1,
-        .pCommandBuffers = &swap.cmdbuffer,
-    };
-    result = vkQueueSubmit(context.graphicsQueue, 1, &submitInfo, swap.fence);
-    ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkQueueSubmit error.");
-    swap.submitted = false;
-}
-
 void destroySurfaceContext(VulkanContext& context, VulkanSurfaceContext& surfaceContext) {
     for (SwapContext& swapContext : surfaceContext.swapContexts) {
         vkFreeCommandBuffers(context.device, context.commandPool, 1, &swapContext.cmdbuffer);
@@ -511,9 +403,6 @@ void destroySurfaceContext(VulkanContext& context, VulkanSurfaceContext& surface
     vkDestroySemaphore(context.device, surfaceContext.imageAvailable, VKALLOC);
     vkDestroySemaphore(context.device, surfaceContext.renderingFinished, VKALLOC);
     vkDestroySurfaceKHR(context.instance, surfaceContext.surface, VKALLOC);
-    vkDestroyImageView(context.device, surfaceContext.depth.view, VKALLOC);
-    vkDestroyImage(context.device, surfaceContext.depth.image, VKALLOC);
-    vkFreeMemory(context.device, surfaceContext.depth.memory, VKALLOC);
     if (context.currentSurface == &surfaceContext) {
         context.currentSurface = nullptr;
     }
