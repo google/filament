@@ -187,6 +187,13 @@ void VulkanDriver::terminate() {
         return;
     }
     waitForIdle(mContext);
+
+    // Destroy the work command buffer and fence.
+    WorkContext work = mContext.work;
+    VkDevice device = mContext.device;
+    vkFreeCommandBuffers(device, mContext.commandPool, 1, &work.cmdbuffer);
+    vkDestroyFence(device, work.fence, VKALLOC);
+
     mBinder.destroyCache();
     mStagePool.reset();
     mFramebufferCache.reset();
@@ -329,8 +336,7 @@ void VulkanDriver::createSwapChainR(Driver::SwapChainHandle sch, void* nativeWin
             mContext.instance, &sc.clientSize.width, &sc.clientSize.height);
     getPresentationQueue(mContext, sc);
     getSurfaceCaps(mContext, sc);
-    createSwapChainAndImages(mContext, sc);
-    createCommandBuffersAndFences(mContext, sc);
+    createSwapChain(mContext, sc);
 
     // TODO: move the following line into makeCurrent.
     mContext.currentSurface = &sc;
