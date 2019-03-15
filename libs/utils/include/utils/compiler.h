@@ -115,7 +115,7 @@
 #define UTILS_UNUSED_IN_RELEASE
 #endif
 
-#if defined _MSC_VER && _MSC_VER >= 1900
+#if defined(_MSC_VER) && _MSC_VER >= 1900
 #    define UTILS_RESTRICT __restrict
 #elif (defined(__clang__) || defined(__GNUC__))
 #    define UTILS_RESTRICT __restrict__
