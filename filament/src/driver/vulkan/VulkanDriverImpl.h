@@ -35,12 +35,19 @@ namespace driver {
 
 // All vkCreate* functions take an optional allocator. For now we select the default allocator by
 // passing in a null pointer, and we highlight the argument by using the VKALLOC constant.
-static constexpr VkAllocationCallbacks* VKALLOC = nullptr;
+constexpr VkAllocationCallbacks* VKALLOC = nullptr;
 
 using VulkanTask = std::function<void(VkCommandBuffer)>;
 using VulkanTaskQueue = std::vector<VulkanTask>;
 
 struct VulkanSurfaceContext;
+
+// The work context is used for activities unrelated to the swap chain or draw calls, such as
+// uploads, blits, and transitions.
+struct WorkContext {
+    VkCommandBuffer cmdbuffer;
+    VkFence fence;
+};
 
 // For now we only support a single-device, single-instance scenario. Our concept of "context" is a
 // bundle of state containing the Device, the Instance, and various globally-useful Vulkan objects.
@@ -63,6 +70,7 @@ struct VulkanContext {
     VkViewport viewport;
     VkFormat depthFormat;
     VmaAllocator allocator;
+    WorkContext work;
 };
 
 struct VulkanAttachment {
@@ -104,10 +112,9 @@ void createVirtualDevice(VulkanContext& context);
 void createSemaphore(VkDevice device, VkSemaphore* semaphore);
 void getPresentationQueue(VulkanContext& context, VulkanSurfaceContext& sc);
 void getSurfaceCaps(VulkanContext& context, VulkanSurfaceContext& sc);
-void createSwapChainAndImages(VulkanContext& context, VulkanSurfaceContext& sc);
+void createSwapChain(VulkanContext& context, VulkanSurfaceContext& sc);
 void createDepthBuffer(VulkanContext& context, VulkanSurfaceContext& sc, VkFormat depthFormat);
 void transitionDepthBuffer(VulkanContext& context, VulkanSurfaceContext& sc, VkFormat depthFormat);
-void createCommandBuffersAndFences(VulkanContext& context, VulkanSurfaceContext& sc);
 void destroySurfaceContext(VulkanContext& context, VulkanSurfaceContext& sc);
 uint32_t selectMemoryType(VulkanContext& context, uint32_t flags, VkFlags reqs);
 VkFormat getVkFormat(ElementType type, bool normalized);

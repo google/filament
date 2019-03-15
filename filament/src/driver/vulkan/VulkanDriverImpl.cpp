@@ -203,6 +203,17 @@ void createVirtualDevice(VulkanContext& context) {
         .pVulkanFunctions = &funcs
     };
     vmaCreateAllocator(&allocatorInfo, &context.allocator);
+
+    // Create the work command buffer and fence for work unrelated to the swap chain.
+    VkCommandBufferAllocateInfo allocateInfo = {
+        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+        .commandPool = context.commandPool,
+        .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+        .commandBufferCount = 1
+    };
+    VkFenceCreateInfo fenceCreateInfo { .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO, };
+    vkAllocateCommandBuffers(context.device, &allocateInfo, &context.work.cmdbuffer);
+    vkCreateFence(context.device, &fenceCreateInfo, VKALLOC, &context.work.fence);
 }
 
 void createSemaphore(VkDevice device, VkSemaphore *semaphore) {
@@ -266,7 +277,7 @@ void getSurfaceCaps(VulkanContext& context, VulkanSurfaceContext& sc) {
     ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkGetPhysicalDeviceSurfaceFormatsKHR error.");
 }
 
-void createSwapChainAndImages(VulkanContext& context, VulkanSurfaceContext& surfaceContext) {
+void createSwapChain(VulkanContext& context, VulkanSurfaceContext& surfaceContext) {
     // The general advice is to require one more than the minimum swap chain length, since the
     // absolute minimum could easily require waiting for a driver or presentation layer to release
     // the previous frame's buffer. The only situation in which we'd ask for the minimum length is
@@ -357,6 +368,29 @@ void createSwapChainAndImages(VulkanContext& context, VulkanSurfaceContext& surf
     createSemaphore(context.device, &surfaceContext.renderingFinished);
 
     surfaceContext.depth = {};
+
+    // Allocate command buffers.
+    VkCommandBufferAllocateInfo allocateInfo = {};
+    allocateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    allocateInfo.commandPool = context.commandPool;
+    allocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    allocateInfo.commandBufferCount = (uint32_t) surfaceContext.swapContexts.size();
+    std::vector<VkCommandBuffer> cmdbufs(allocateInfo.commandBufferCount);
+    result = vkAllocateCommandBuffers(context.device, &allocateInfo, cmdbufs.data());
+    ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkAllocateCommandBuffers error.");
+    for (uint32_t i = 0; i < allocateInfo.commandBufferCount; ++i) {
+        surfaceContext.swapContexts[i].cmdbuffer = cmdbufs[i];
+    }
+
+    // Create fences.
+    VkFenceCreateInfo fenceCreateInfo = {};
+    fenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    fenceCreateInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+    for (uint32_t i = 0; i < allocateInfo.commandBufferCount; i++) {
+        result = vkCreateFence(context.device, &fenceCreateInfo, VKALLOC,
+                &surfaceContext.swapContexts[i].fence);
+        ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkCreateFence error.");
+    }
 }
 
 void createDepthBuffer(VulkanContext& context, VulkanSurfaceContext& surfaceContext,
@@ -463,31 +497,6 @@ void transitionDepthBuffer(VulkanContext& context, VulkanSurfaceContext& sc, VkF
     result = vkQueueSubmit(context.graphicsQueue, 1, &submitInfo, swap.fence);
     ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkQueueSubmit error.");
     swap.submitted = false;
-}
-
-void createCommandBuffersAndFences(VulkanContext& context, VulkanSurfaceContext& surfaceContext) {
-    // Allocate command buffers.
-    VkCommandBufferAllocateInfo allocateInfo = {};
-    allocateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    allocateInfo.commandPool = context.commandPool;
-    allocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    allocateInfo.commandBufferCount = (uint32_t) surfaceContext.swapContexts.size();
-    std::vector<VkCommandBuffer> cmdbufs(allocateInfo.commandBufferCount);
-    VkResult result = vkAllocateCommandBuffers(context.device, &allocateInfo, cmdbufs.data());
-    ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkAllocateCommandBuffers error.");
-    for (uint32_t i = 0; i < allocateInfo.commandBufferCount; ++i) {
-        surfaceContext.swapContexts[i].cmdbuffer = cmdbufs[i];
-    }
-
-    // Create fences.
-    VkFenceCreateInfo fenceCreateInfo = {};
-    fenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-    fenceCreateInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-    for (uint32_t i = 0; i < allocateInfo.commandBufferCount; i++) {
-        result = vkCreateFence(context.device, &fenceCreateInfo, VKALLOC,
-                &surfaceContext.swapContexts[i].fence);
-        ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkCreateFence error.");
-    }
 }
 
 void destroySurfaceContext(VulkanContext& context, VulkanSurfaceContext& surfaceContext) {
@@ -825,52 +834,36 @@ void waitForIdle(VulkanContext& context) {
     // We cannot invoke arbitrary commands inside a render pass.
     assert(context.currentRenderPass.renderPass == VK_NULL_HANDLE);
 
-    // Create a one-off command buffer to avoid the cost of swap chain acquisition and to avoid
-    // the possibility of SURFACE_LOST. Note that Vulkan command buffers use the Allocate/Free
-    // model instead of Create/Destroy and are therefore okay to create at a high frequency.
-    VkCommandBuffer cmdbuffer;
-    VkFence fence;
-    VkCommandBufferBeginInfo beginInfo { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
-    VkCommandBufferAllocateInfo allocateInfo = {
-        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-        .commandPool = context.commandPool,
-        .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-        .commandBufferCount = 1
-    };
-    VkFenceCreateInfo fenceCreateInfo { .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO, };
-    vkAllocateCommandBuffers(context.device, &allocateInfo, &cmdbuffer);
-    vkCreateFence(context.device, &fenceCreateInfo, VKALLOC, &fence);
-
     // Keep performing work until there's nothing queued up. This should never iterate more than
     // a couple times because the only work we queue up is for resource transition / reclamation.
+    WorkContext work = context.work;
     VkPipelineStageFlags waitDestStageMask = VK_PIPELINE_STAGE_TRANSFER_BIT;
     VkSubmitInfo submitInfo {
         .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
         .pWaitDstStageMask = &waitDestStageMask,
         .commandBufferCount = 1,
-        .pCommandBuffers = &cmdbuffer,
+        .pCommandBuffers = &work.cmdbuffer,
     };
+    VkCommandBufferBeginInfo beginInfo { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
     int cycles = 0;
     while (hasPendingWork(context)) {
         if (cycles++ > 2) {
             utils::slog.e << "Unexpected daisychaining of pending work." << utils::io::endl;
             break;
         }
-        vkBeginCommandBuffer(cmdbuffer, &beginInfo);
+        vkBeginCommandBuffer(work.cmdbuffer, &beginInfo);
         if (context.currentSurface) {
             for (auto& swapContext : context.currentSurface->swapContexts) {
-                performPendingWork(swapContext.pendingWork, cmdbuffer);
+                performPendingWork(swapContext.pendingWork, work.cmdbuffer);
             }
         }
-        performPendingWork(context.pendingWork, cmdbuffer);
-        vkEndCommandBuffer(cmdbuffer);
-        vkQueueSubmit(context.graphicsQueue, 1, &submitInfo, fence);
-        vkWaitForFences(context.device, 1, &fence, VK_FALSE, UINT64_MAX);
-        vkResetFences(context.device, 1, &fence);
-        vkResetCommandBuffer(cmdbuffer, 0);
+        performPendingWork(context.pendingWork, work.cmdbuffer);
+        vkEndCommandBuffer(work.cmdbuffer);
+        vkQueueSubmit(context.graphicsQueue, 1, &submitInfo, work.fence);
+        vkWaitForFences(context.device, 1, &work.fence, VK_FALSE, UINT64_MAX);
+        vkResetFences(context.device, 1, &work.fence);
+        vkResetCommandBuffer(work.cmdbuffer, 0);
     }
-    vkFreeCommandBuffers(context.device, context.commandPool, 1, &cmdbuffer);
-    vkDestroyFence(context.device, fence, VKALLOC);
 }
 
 void acquireCommandBuffer(VulkanContext& context) {
