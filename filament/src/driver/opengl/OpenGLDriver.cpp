@@ -1083,6 +1083,7 @@ void OpenGLDriver::framebufferTexture(Driver::TargetBufferInfo& binfo,
                 // we shouldn't be here
                 break;
         }
+        CHECK_GL_ERROR(utils::slog.e)
     } else
 #if GLES31_HEADERS
     if (ext.EXT_multisampled_render_to_texture && t->depth <= 1) {
@@ -1118,6 +1119,8 @@ void OpenGLDriver::framebufferTexture(Driver::TargetBufferInfo& binfo,
                 // we shouldn't be here
                 break;
         }
+
+        CHECK_GL_ERROR(utils::slog.e)
 
         switch (attachment) {
             case GL_COLOR_ATTACHMENT0:

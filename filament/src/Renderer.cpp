@@ -242,7 +242,9 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 
                 if (colorPassNeedsDepthBuffer) {
                     data.depth = builder.createTexture("depth buffer",
-                            { .width = svp.width, .height = svp.height });
+                            { .width = svp.width, .height = svp.height,
+                              .format = TextureFormat::DEPTH24 // TODO: fg should figure that out automatically
+                            });
                 }
 
                 FrameGraphRenderTarget::Descriptor desc{
