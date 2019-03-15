@@ -2877,7 +2877,7 @@ void OpenGLDriver::blit(TargetBufferFlags buffers,
     if (mask) {
         GLRenderTarget const* s = handle_cast<GLRenderTarget const*>(src);
         GLRenderTarget const* d = handle_cast<GLRenderTarget const*>(dst);
-        bindFramebuffer(GL_READ_FRAMEBUFFER, s->gl.fbo);
+        bindFramebuffer(GL_READ_FRAMEBUFFER, s->gl.fbo_draw ? s->gl.fbo_draw : s->gl.fbo);
         bindFramebuffer(GL_DRAW_FRAMEBUFFER, d->gl.fbo);
         disable(GL_SCISSOR_TEST);
         glBlitFramebuffer(
