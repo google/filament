@@ -115,7 +115,13 @@
 #define UTILS_UNUSED_IN_RELEASE
 #endif
 
-#define UTILS_RESTRICT __restrict__
+#if defined _MSC_VER && _MSC_VER >= 1900
+#    define UTILS_RESTRICT __restrict
+#elif (defined(__clang__) || defined(__GNUC__))
+#    define UTILS_RESTRICT __restrict__
+#else
+#    define UTILS_RESTRICT
+#endif
 
 #if __has_feature(cxx_thread_local)
 #   ifdef ANDROID
