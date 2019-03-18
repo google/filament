@@ -850,6 +850,7 @@ FrameGraph& FrameGraph::compile() noexcept {
      */
 
     if (!mAliases.empty()) {
+        Vector<filament::fg::RenderTarget>& renderTargets = mRenderTargets;
         Vector<FrameGraphResource> sratch(mArena); // keep out of loops to avoid reallocations
         for (fg::Alias const& alias : mAliases) {
             // disconnect all writes to "from"
@@ -860,6 +861,25 @@ FrameGraph& FrameGraph::compile() noexcept {
             for (ResourceNode& cur : resourceNodes) {
                 if (cur.resource == to.resource) {
                     cur.resource = from.resource;
+                }
+            }
+
+            // TODO: make this better
+            //  When replacing a resource from an imported render-target, we find all existing
+            //  render-target that used that resource as the color attachment, and we clear
+            //  all other attachments -- we have to do this because the resource aliasing
+            //  must also alias the render targets.
+            //  For instance, if a render-target was declared with a color+depth attachment,
+            //  and the color attachment was aliased with an imported render-target, the
+            //  render-target cache (see: equals()) wouldn't match it (because the depth
+            //  attachment would be missing).
+            for (fg::RenderTarget& rt : renderTargets) {
+                auto& textures = rt.desc.attachments.textures;
+                ResourceNode const& node = resourceNodes[textures[0].index];
+                if (node.resource->imported && node.resource == from.resource) {
+                    for (size_t i = 1; i < textures.size(); ++i) {
+                        textures[i] = {};
+                    }
                 }
             }
 
