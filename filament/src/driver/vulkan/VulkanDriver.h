@@ -18,6 +18,7 @@
 #define TNT_FILAMENT_DRIVER_VULKANDRIVER_H
 
 #include "VulkanBinder.h"
+#include "VulkanDisposer.h"
 #include "VulkanDriverImpl.h"
 #include "VulkanFboCache.h"
 #include "VulkanSamplerCache.h"
@@ -127,7 +128,7 @@ private:
     }
 
     template<typename Dp, typename B>
-    void destruct_handle(HandleMap& handleMap, Handle<B>& handle) noexcept {
+    void destruct_handle(HandleMap& handleMap, const Handle<B>& handle) noexcept {
         std::lock_guard<std::mutex> lock(mHandleMapMutex);
         // Call the destructor, remove the blob, don't bother reclaiming the integer id.
         auto iter = handleMap.find(handle.getId());
@@ -143,6 +144,7 @@ private:
     VulkanStagePool mStagePool;
     VulkanFboCache mFramebufferCache;
     VulkanSamplerCache mSamplerCache;
+    VulkanDisposer mDisposer;
     VulkanRenderTarget* mCurrentRenderTarget = nullptr;
     VulkanSamplerGroup* mSamplerBindings[VulkanBinder::NUM_SAMPLER_BINDINGS] = {};
     VkDebugReportCallbackEXT mDebugCallback = VK_NULL_HANDLE;

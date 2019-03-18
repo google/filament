@@ -211,7 +211,7 @@ void createVirtualDevice(VulkanContext& context) {
         .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
         .commandBufferCount = 1
     };
-    VkFenceCreateInfo fenceCreateInfo { .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO, };
+    VkFenceCreateInfo fenceCreateInfo { .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
     vkAllocateCommandBuffers(context.device, &allocateInfo, &context.work.cmdbuffer);
     vkCreateFence(context.device, &fenceCreateInfo, VKALLOC, &context.work.fence);
 }
@@ -377,7 +377,7 @@ void createSwapChain(VulkanContext& context, VulkanSurfaceContext& surfaceContex
     result = vkAllocateCommandBuffers(context.device, &allocateInfo, cmdbufs.data());
     ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkAllocateCommandBuffers error.");
     for (uint32_t i = 0; i < allocateInfo.commandBufferCount; ++i) {
-        surfaceContext.swapContexts[i].cmdbuffer = cmdbufs[i];
+        surfaceContext.swapContexts[i].commands.cmdbuffer = cmdbufs[i];
     }
 
     // Create fences.
@@ -386,17 +386,18 @@ void createSwapChain(VulkanContext& context, VulkanSurfaceContext& surfaceContex
     fenceCreateInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
     for (uint32_t i = 0; i < allocateInfo.commandBufferCount; i++) {
         result = vkCreateFence(context.device, &fenceCreateInfo, VKALLOC,
-                &surfaceContext.swapContexts[i].fence);
+                &surfaceContext.swapContexts[i].commands.fence);
         ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkCreateFence error.");
     }
 }
 
 void destroySurfaceContext(VulkanContext& context, VulkanSurfaceContext& surfaceContext) {
     for (SwapContext& swapContext : surfaceContext.swapContexts) {
-        vkFreeCommandBuffers(context.device, context.commandPool, 1, &swapContext.cmdbuffer);
-        vkDestroyFence(context.device, swapContext.fence, VKALLOC);
+        vkFreeCommandBuffers(context.device, context.commandPool, 1,
+                &swapContext.commands.cmdbuffer);
+        vkDestroyFence(context.device, swapContext.commands.fence, VKALLOC);
         vkDestroyImageView(context.device, swapContext.attachment.view, VKALLOC);
-        swapContext.fence = VK_NULL_HANDLE;
+        swapContext.commands.fence = VK_NULL_HANDLE;
         swapContext.attachment.view = VK_NULL_HANDLE;
     }
     vkDestroySwapchainKHR(context.device, surfaceContext.swapchain, VKALLOC);
@@ -700,8 +701,8 @@ void waitForIdle(VulkanContext& context) {
         auto& surfaceContext = *context.currentSurface;
         for (auto& swapContext : surfaceContext.swapContexts) {
             assert(nfences < 4);
-            if (swapContext.submitted && swapContext.fence) {
-                fences[nfences++] = swapContext.fence;
+            if (swapContext.submitted && swapContext.commands.fence) {
+                fences[nfences++] = swapContext.commands.fence;
                 swapContext.submitted = false;
             }
         }
@@ -710,7 +711,7 @@ void waitForIdle(VulkanContext& context) {
         }
 
         // Next flush the active command buffer and wait for it to finish.
-        if (context.cmdbuffer) {
+        if (context.currentCommands) {
             flushCommandBuffer(context);
         }
     }
@@ -725,7 +726,7 @@ void waitForIdle(VulkanContext& context) {
 
     // Keep performing work until there's nothing queued up. This should never iterate more than
     // a couple times because the only work we queue up is for resource transition / reclamation.
-    WorkContext work = context.work;
+    VulkanCommandBuffer& work = context.work;
     VkPipelineStageFlags waitDestStageMask = VK_PIPELINE_STAGE_TRANSFER_BIT;
     VkSubmitInfo submitInfo {
         .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
@@ -767,13 +768,13 @@ void acquireCommandBuffer(VulkanContext& context) {
     SwapContext& swap = getSwapContext(context);
 
     // Ensure that the previous submission of this command buffer has finished.
-    result = vkWaitForFences(context.device, 1, &swap.fence, VK_FALSE, UINT64_MAX);
+    result = vkWaitForFences(context.device, 1, &swap.commands.fence, VK_FALSE, UINT64_MAX);
     ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkWaitForFences error.");
 
     // Restart the command buffer.
-    result = vkResetFences(context.device, 1, &swap.fence);
+    result = vkResetFences(context.device, 1, &swap.commands.fence);
     ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkResetFences error.");
-    VkCommandBuffer cmdbuffer = swap.cmdbuffer;
+    VkCommandBuffer cmdbuffer = swap.commands.cmdbuffer;
     VkResult error = vkResetCommandBuffer(cmdbuffer, 0);
     ASSERT_POSTCONDITION(not error, "vkResetCommandBuffer error.");
     VkCommandBufferBeginInfo beginInfo {
@@ -782,7 +783,7 @@ void acquireCommandBuffer(VulkanContext& context) {
     };
     error = vkBeginCommandBuffer(cmdbuffer, &beginInfo);
     ASSERT_POSTCONDITION(not error, "vkBeginCommandBuffer error.");
-    context.cmdbuffer = cmdbuffer;
+    context.currentCommands = &swap.commands;
     swap.submitted = false;
 }
 
@@ -802,30 +803,30 @@ void flushCommandBuffer(VulkanContext& context) {
     const SwapContext& sc = surface.swapContexts[surface.currentSwapIndex];
 
     // Submit the command buffer.
-    VkResult error = vkEndCommandBuffer(context.cmdbuffer);
+    VkResult error = vkEndCommandBuffer(context.currentCommands->cmdbuffer);
     ASSERT_POSTCONDITION(!error, "vkEndCommandBuffer error.");
     VkPipelineStageFlags waitDestStageMask = VK_PIPELINE_STAGE_TRANSFER_BIT;
     VkSubmitInfo submitInfo {
         .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
         .pWaitDstStageMask = &waitDestStageMask,
         .commandBufferCount = 1,
-        .pCommandBuffers = &context.cmdbuffer,
+        .pCommandBuffers = &context.currentCommands->cmdbuffer,
     };
-    error = vkQueueSubmit(context.graphicsQueue, 1, &submitInfo, sc.fence);
+    error = vkQueueSubmit(context.graphicsQueue, 1, &submitInfo, sc.commands.fence);
     ASSERT_POSTCONDITION(!error, "vkQueueSubmit error.");
 
     // Restart the command buffer.
-    error = vkWaitForFences(context.device, 1, &sc.fence, VK_FALSE, UINT64_MAX);
+    error = vkWaitForFences(context.device, 1, &sc.commands.fence, VK_FALSE, UINT64_MAX);
     ASSERT_POSTCONDITION(!error, "vkWaitForFences error.");
-    error = vkResetFences(context.device, 1, &sc.fence);
+    error = vkResetFences(context.device, 1, &sc.commands.fence);
     ASSERT_POSTCONDITION(!error, "vkResetFences error.");
-    error = vkResetCommandBuffer(context.cmdbuffer, 0);
+    error = vkResetCommandBuffer(context.currentCommands->cmdbuffer, 0);
     ASSERT_POSTCONDITION(!error, "vkResetCommandBuffer error.");
     VkCommandBufferBeginInfo beginInfo {
         .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
         .flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT,
     };
-    error = vkBeginCommandBuffer(context.cmdbuffer, &beginInfo);
+    error = vkBeginCommandBuffer(context.currentCommands->cmdbuffer, &beginInfo);
     ASSERT_POSTCONDITION(!error, "vkBeginCommandBuffer error.");
 }
 
