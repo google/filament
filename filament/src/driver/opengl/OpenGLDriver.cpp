@@ -1267,6 +1267,14 @@ void OpenGLDriver::createRenderTargetR(Driver::RenderTargetHandle rth,
             framebufferRenderbuffer(&rt->gl.color, GL_COLOR_ATTACHMENT0, internalFormat,
                     width, height, samples, rt->gl.fbo);
         }
+#ifndef NDEBUG
+        // clear the color buffer we just allocated to yellow
+        setClearColor(1, 1, 0, 1);
+        bindFramebuffer(GL_FRAMEBUFFER, rt->gl.fbo);
+        disable(GL_SCISSOR_TEST);
+        glClear(GL_COLOR_BUFFER_BIT);
+        enable(GL_SCISSOR_TEST);
+#endif
     } else {
         rt->gl.colorLevel = 0;
     }
@@ -2140,11 +2148,13 @@ void OpenGLDriver::beginRenderPass(Driver::RenderTargetHandle rth,
 
         // glInvalidateFramebuffer appeared on GLES 3.0 and GL4.3, for simplicity we just
         // ignore it on GL (rather than having to do a runtime check).
-        if (GLES31_HEADERS && !bugs.disable_invalidate_framebuffer) {
-            std::array<GLenum, 3> attachments; // NOLINT(cppcoreguidelines-pro-type-member-init)
-            GLsizei attachmentCount = getAttachments(attachments, rt, discardFlags);
-            if (attachmentCount) {
-                glInvalidateFramebuffer(GL_FRAMEBUFFER, attachmentCount, attachments.data());
+        if (GLES31_HEADERS) {
+            if (!bugs.disable_invalidate_framebuffer) {
+                std::array<GLenum, 3> attachments; // NOLINT(cppcoreguidelines-pro-type-member-init)
+                GLsizei attachmentCount = getAttachments(attachments, rt, discardFlags);
+                if (attachmentCount) {
+                    glInvalidateFramebuffer(GL_FRAMEBUFFER, attachmentCount, attachments.data());
+                }
                 CHECK_GL_ERROR(utils::slog.e)
             }
         }
@@ -2183,11 +2193,31 @@ void OpenGLDriver::endRenderPass(int) {
     DEBUG_MARKER()
     assert(mRenderPassTarget);
 
-    GLRenderTarget* const rt = handle_cast<GLRenderTarget*>(mRenderPassTarget);
+    GLRenderTarget const* const rt = handle_cast<GLRenderTarget*>(mRenderPassTarget);
 
     const TargetBufferFlags discardFlags = TargetBufferFlags(mRenderPassParams.flags.discardEnd);
-    const TargetBufferFlags resolve = TargetBufferFlags(rt->gl.resolve & ~discardFlags);
+    resolve(rt, discardFlags);
 
+    // glInvalidateFramebuffer appeared on GLES 3.0 and GL4.3, for simplicity we just
+    // ignore it on GL (rather than having to do a runtime check).
+    if (GLES31_HEADERS) {
+        if (!bugs.disable_invalidate_framebuffer) {
+            // we wouldn't have to bind the framebuffer if we had glInvalidateNamedFramebuffer()
+            bindFramebuffer(GL_FRAMEBUFFER, rt->gl.fbo);
+            std::array<GLenum, 3> attachments; // NOLINT(cppcoreguidelines-pro-type-member-init)
+            GLsizei attachmentCount = getAttachments(attachments, rt, discardFlags);
+            if (attachmentCount) {
+                glInvalidateFramebuffer(GL_FRAMEBUFFER, attachmentCount, attachments.data());
+            }
+           CHECK_GL_ERROR(utils::slog.e)
+        }
+    }
+
+    mRenderPassTarget.clear();
+}
+
+void OpenGLDriver::resolve(GLRenderTarget const* rt, TargetBufferFlags discardFlags) noexcept {
+    const TargetBufferFlags resolve = TargetBufferFlags(rt->gl.resolve & ~discardFlags);
     GLbitfield mask = 0;
     if (resolve & TargetBufferFlags::COLOR) {
         mask |= GL_COLOR_BUFFER_BIT;
@@ -2207,23 +2237,6 @@ void OpenGLDriver::endRenderPass(int) {
         enable(GL_SCISSOR_TEST);
         CHECK_GL_ERROR(utils::slog.e)
     }
-
-    // glInvalidateFramebuffer appeared on GLES 3.0 and GL4.3, for simplicity we just
-    // ignore it on GL (rather than having to do a runtime check).
-    if (GLES31_HEADERS && !bugs.disable_invalidate_framebuffer) {
-        // we wouldn't have to bind the framebuffer if we had glInvalidateNamedFramebuffer()
-        bindFramebuffer(GL_FRAMEBUFFER, rt->gl.fbo);
-
-        std::array<GLenum, 3> attachments; // NOLINT(cppcoreguidelines-pro-type-member-init)
-        GLsizei attachmentCount = getAttachments(attachments, rt, discardFlags);
-        if (attachmentCount) {
-            glInvalidateFramebuffer(GL_FRAMEBUFFER, attachmentCount, attachments.data());
-        }
-
-        CHECK_GL_ERROR(utils::slog.e)
-    }
-
-    mRenderPassTarget.clear();
 }
 
 void OpenGLDriver::discardSubRenderTargetBuffers(Driver::RenderTargetHandle rth,

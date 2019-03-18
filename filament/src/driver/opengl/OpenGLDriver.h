@@ -363,6 +363,8 @@ private:
     inline void setClearDepth(GLfloat depth) noexcept;
     inline void setClearStencil(GLint stencil) noexcept;
 
+    void resolve(GLRenderTarget const* rt, TargetBufferFlags discardFlags) noexcept;
+
     GLuint getSamplerSlow(driver::SamplerParams sp) const noexcept;
 
     inline GLuint getSampler(driver::SamplerParams sp) const noexcept {
