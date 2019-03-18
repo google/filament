@@ -221,13 +221,23 @@ endif()
 if (FILAMENT_SUPPORTS_VULKAN)
     list(APPEND SRCS
             src/driver/vulkan/VulkanBinder.cpp
+            src/driver/vulkan/VulkanBinder.h
             src/driver/vulkan/VulkanBuffer.cpp
+            src/driver/vulkan/VulkanBuffer.h
+            src/driver/vulkan/VulkanDisposer.cpp
+            src/driver/vulkan/VulkanDisposer.h
             src/driver/vulkan/VulkanDriver.cpp
+            src/driver/vulkan/VulkanDriver.h
             src/driver/vulkan/VulkanDriverImpl.cpp
+            src/driver/vulkan/VulkanDriverImpl.h
             src/driver/vulkan/VulkanFboCache.cpp
+            src/driver/vulkan/VulkanFboCache.h
             src/driver/vulkan/VulkanHandles.cpp
+            src/driver/vulkan/VulkanHandles.h
             src/driver/vulkan/VulkanSamplerCache.cpp
+            src/driver/vulkan/VulkanSamplerCache.h
             src/driver/vulkan/VulkanStagePool.cpp
+            src/driver/vulkan/VulkanStagePool.h
     )
     if (LINUX)
         list(APPEND SRCS src/driver/vulkan/PlatformVkLinux.cpp)

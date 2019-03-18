@@ -36,7 +36,6 @@ VulkanBuffer::VulkanBuffer(VulkanContext& context, VulkanStagePool& stagePool,
 }
 
 VulkanBuffer::~VulkanBuffer() {
-    assert(!hasPendingWork(mContext) && "Buffer destroyed while work is pending.");
     vmaDestroyBuffer(mContext.allocator, mGpuBuffer, mGpuMemory);
 }
 
@@ -71,8 +70,8 @@ void VulkanBuffer::loadFromCpu(const void* cpuData, uint32_t byteOffset, uint32_
     };
 
     // If possible, perform the upload immediately, otherwise queue up the work.
-    if (mContext.cmdbuffer) {
-        copyToDevice(mContext.cmdbuffer);
+    if (mContext.currentCommands) {
+        copyToDevice(mContext.currentCommands->cmdbuffer);
     } else {
         mContext.pendingWork.emplace_back(copyToDevice);
     }
