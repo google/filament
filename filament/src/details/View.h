@@ -162,6 +162,14 @@ public:
         return mAntiAliasing;
     }
 
+    void setToneMapping(ToneMapping type) noexcept {
+        mToneMapping = type;
+    }
+
+    ToneMapping getToneMapping() const noexcept {
+        return mToneMapping;
+    }
+
     void setDithering(Dithering dithering) noexcept {
         mDithering = dithering;
     }
@@ -287,6 +295,7 @@ private:
     uint8_t mVisibleLayers = 0x1;
     uint8_t mSampleCount = 1;
     AntiAliasing mAntiAliasing = AntiAliasing::FXAA;
+    ToneMapping mToneMapping = ToneMapping::ACES;
     Dithering mDithering = Dithering::TEMPORAL;
     bool mShadowingEnabled = true;
     bool mHasPostProcessPass = true;

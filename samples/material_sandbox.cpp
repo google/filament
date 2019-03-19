@@ -322,14 +322,13 @@ static void gui(filament::Engine* engine, filament::View*) {
             ImGui::SliderAngle("ibl rotation", &params.iblRotation);
         }
 
-        if (ImGui::CollapsingHeader("Anti-aliasing")) {
-            ImGui::Checkbox("fxaa", &params.fxaa);
+        if (ImGui::CollapsingHeader("Post-processing")) {
             ImGui::Checkbox("msaa 4x", &params.msaa);
-        }
-
-        if (ImGui::CollapsingHeader("Dithering")) {
-            DebugRegistry& debug = engine->getDebugRegistry();
-            ImGui::Checkbox("dithering", &params.dithering);
+            ImGui::Checkbox("tone-mapping", &params.tonemapping);
+            ImGui::Indent();
+                ImGui::Checkbox("dithering", &params.dithering);
+                ImGui::Unindent();
+            ImGui::Checkbox("fxaa", &params.fxaa);
         }
 
         if (ImGui::CollapsingHeader("Debug")) {
@@ -384,6 +383,7 @@ static void gui(filament::Engine* engine, filament::View*) {
 
 static void preRender(filament::Engine*, filament::View* view, filament::Scene*, filament::Renderer*) {
     view->setAntiAliasing(g_params.fxaa ? View::AntiAliasing::FXAA : View::AntiAliasing::NONE);
+    view->setToneMapping(g_params.tonemapping ? View::ToneMapping::ACES : View::ToneMapping::LINEAR);
     view->setDithering(g_params.dithering ? View::Dithering::TEMPORAL : View::Dithering::NONE);
     view->setSampleCount((uint8_t) (g_params.msaa ? 4 : 1));
 }

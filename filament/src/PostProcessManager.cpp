@@ -69,12 +69,9 @@ void PostProcessManager::setSource(uint32_t viewportWidth, uint32_t viewportHeig
 
     float2 uvScale = float2{ viewportWidth, viewportHeight } / float2{ textureWidth, textureHeight };
 
-    int32_t dithering = mDithering;
-
     UniformBuffer& ub = mPostProcessUb;
     ub.setUniform(offsetof(PostProcessingUib, time), fraction);
     ub.setUniform(offsetof(PostProcessingUib, uvScale), uvScale);
-    ub.setUniform(offsetof(PostProcessingUib, dithering), dithering);
 
     // The shader may need to know the offset between the top of the texture and the top
     // of the rectangle that it actually needs to sample from.
@@ -87,8 +84,8 @@ void PostProcessManager::setSource(uint32_t viewportWidth, uint32_t viewportHeig
 
 // ------------------------------------------------------------------------------------------------
 
-FrameGraphResource PostProcessManager::toneMapping(FrameGraph& fg,
-        FrameGraphResource input, driver::TextureFormat outFormat, bool translucent) noexcept {
+FrameGraphResource PostProcessManager::toneMapping(FrameGraph& fg, FrameGraphResource input,
+        driver::TextureFormat outFormat, bool dithering, bool translucent) noexcept {
 
     FEngine* engine = mEngine;
     Handle<HwRenderPrimitive> const& fullScreenRenderPrimitive = engine->getFullScreenRenderPrimitive();
@@ -128,6 +125,8 @@ FrameGraphResource PostProcessManager::toneMapping(FrameGraph& fg,
                 //       (as opposed to the size of the source texture). Currently we don't allow
                 //       the texture to be resized, so they match. We'll need something more
                 //       sofisticated in the future.
+
+                mPostProcessUb.setUniform(offsetof(PostProcessingUib, dithering), dithering);
                 setSource(textureDesc.width, textureDesc.height,
                         texture, textureDesc.width, textureDesc.height);
 
@@ -158,7 +157,6 @@ FrameGraphResource PostProcessManager::fxaa(FrameGraph& fg,
     auto& ppFXAA = fg.addPass<PostProcessFXAA>("fxaa",
             [&](FrameGraph::Builder& builder, PostProcessFXAA& data) {
                 auto* inputDesc = fg.getDescriptor(input);
-                inputDesc->format = TextureFormat::RGBA8;
                 data.input = builder.read(input);
 
                 FrameGraphResource::Descriptor outputDesc{

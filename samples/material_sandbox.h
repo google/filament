@@ -77,6 +77,7 @@ struct SandboxParameters {
     utils::Entity light;
     bool hasDirectionalLight = true;
     bool fxaa = true;
+    bool tonemapping = true;
     bool msaa = false;
     bool dithering = true;
 };
