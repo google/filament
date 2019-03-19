@@ -69,11 +69,13 @@ void VulkanBuffer::loadFromCpu(const void* cpuData, uint32_t byteOffset, uint32_
         });
     };
 
-    // If possible, perform the upload immediately, otherwise queue up the work.
+    // If inside beginFrame / endFrame, use the swap context, otherwise use the work cmdbuffer.
     if (mContext.currentCommands) {
         copyToDevice(mContext.currentCommands->cmdbuffer);
     } else {
-        mContext.pendingWork.emplace_back(copyToDevice);
+        VkCommandBuffer work = acquireWorkCommandBuffer(mContext);
+        copyToDevice(work);
+        flushWorkCommandBuffer(mContext);
     }
 }
 

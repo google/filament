@@ -47,6 +47,7 @@ struct VulkanCommandBuffer {
     VkCommandBuffer cmdbuffer;
     VkFence fence;
     VulkanDisposer::Set resources;
+    bool submitted;
 };
 
 // For now we only support a single-device, single-instance scenario. Our concept of "context" is a
@@ -89,7 +90,6 @@ struct SwapContext {
     VulkanAttachment attachment;
     VulkanCommandBuffer commands;
     VulkanTaskQueue pendingWork;
-    bool submitted;
 };
 
 // The SurfaceContext stores various state (including the swap chain) that we tightly associate
@@ -126,12 +126,14 @@ VkBlendFactor getBlendFactor(BlendFunction mode);
 VkCullModeFlags getCullMode(CullingMode mode);
 VkFrontFace getFrontFace(bool inverseFrontFaces);
 void waitForIdle(VulkanContext& context);
-void acquireCommandBuffer(VulkanContext& context);
+void acquireSwapCommandBuffer(VulkanContext& context);
 void releaseCommandBuffer(VulkanContext& context);
 void performPendingWork(VulkanTaskQueue& work, VkCommandBuffer cmdbuf);
 void flushCommandBuffer(VulkanContext& context);
 VkFormat findSupportedFormat(VulkanContext& context, const std::vector<VkFormat>& candidates,
         VkImageTiling tiling, VkFormatFeatureFlags features);
+VkCommandBuffer acquireWorkCommandBuffer(VulkanContext& context);
+void flushWorkCommandBuffer(VulkanContext& context);
 
 } // namespace filament
 } // namespace driver
