@@ -484,15 +484,19 @@ public:
      * Enable or disable post processing. Enabled by default.
      *
      * Post-processing includes:
-     *  - MSAA
+     *  - Dithering
      *  - Tone-mapping & gamma encoding
      *  - FXAA
      *  - Dynamic scaling
      *
-     * For now, disabling post-processing forgoes color correctness as well as anti-aliasing and
+     * Disabling post-processing forgoes color correctness as well as anti-aliasing and
      * should only be used experimentally (e.g., for UI overlays).
      *
+     * Only MSAA is independent from post-processing and can be controlled separately.
+     *
      * @param enabled true enables post processing, false disables it.
+     *
+     * @see setToneMapping, setAntiAliasing, setDithering, setSampleCount
      */
     void setPostProcessingEnabled(bool enabled) noexcept;
 
