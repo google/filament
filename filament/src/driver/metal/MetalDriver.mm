@@ -578,8 +578,8 @@ void MetalDriver::readStreamPixels(Driver::StreamHandle sh, uint32_t x, uint32_t
 
 void MetalDriver::blit(Driver::TargetBufferFlags buffers,
         Driver::RenderTargetHandle dst, driver::Viewport dstRect,
-        Driver::RenderTargetHandle src, driver::Viewport srcRect) {
-
+        Driver::RenderTargetHandle src, driver::Viewport srcRect,
+        Driver::SamplerMagFilter filter) {
 }
 
 void MetalDriver::draw(Driver::PipelineState ps, Driver::RenderPrimitiveHandle rph) {

@@ -844,7 +844,8 @@ void VulkanDriver::readStreamPixels(Driver::StreamHandle sh, uint32_t x, uint32_
 
 void VulkanDriver::blit(TargetBufferFlags buffers,
         Driver::RenderTargetHandle dst, driver::Viewport dstRect,
-        Driver::RenderTargetHandle src, driver::Viewport srcRect) {
+        Driver::RenderTargetHandle src, driver::Viewport srcRect,
+        Driver::SamplerMagFilter filter) {
     auto dstTarget = handle_cast<VulkanRenderTarget>(mHandleMap, dst);
     auto srcTarget = handle_cast<VulkanRenderTarget>(mHandleMap, src);
 
@@ -891,7 +892,8 @@ void VulkanDriver::blit(TargetBufferFlags buffers,
         // TODO: Issue vkCmdResolveImage for MSAA targets.
 
         vkCmdBlitImage(cmdbuffer, srcImage, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, dstImage,
-                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, blitRegions, VK_FILTER_LINEAR);
+                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, blitRegions,
+                filter == SamplerMagFilter::NEAREST ? VK_FILTER_NEAREST : VK_FILTER_LINEAR);
 
         VulkanTexture::transitionImageLayout(cmdbuffer, dstImage, VK_IMAGE_LAYOUT_UNDEFINED,
                 VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, dstLevel, 1);

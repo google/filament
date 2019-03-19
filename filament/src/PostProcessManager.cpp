@@ -219,7 +219,8 @@ FrameGraphResource PostProcessManager::dynamicScaling(FrameGraph& fg,
                 auto in = resources.getRenderTarget(data.input);
                 auto out = resources.getRenderTarget(data.output);
                 driver.blit(TargetBufferFlags::COLOR,
-                        out.target, out.params.viewport, in.target, in.params.viewport);
+                        out.target, out.params.viewport, in.target, in.params.viewport,
+                        SamplerMagFilter::LINEAR);
             });
 
     return ppScaling.getData().output;
