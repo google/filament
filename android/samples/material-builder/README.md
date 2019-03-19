@@ -14,11 +14,10 @@ library is slower and thus it is not built by the default `build.sh` command. To
 flag to the `build.sh` command:
 
 ```
-./build.sh -i -l -p android release
+./build.sh -i -p android release
 ```
 
 Explanation of flags:
 
 - The `-i` flag installs the libraries to `out/android-release/`, so this sample can find them.
-- The `-l` flag additionally builds the `filamat` library, needed by the `material-builder` sample.
 - The `-p` flag and `android` argument choose Android as the platform to build for.

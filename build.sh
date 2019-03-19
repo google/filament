@@ -37,8 +37,6 @@ function print_help {
     echo "        Add Vulkan support to the Android build."
     echo "    -s"
     echo "        Add iOS simulator support to the iOS build."
-    echo "    -l"
-    echo "        Add filamat support to the Android build."
     echo "    -w"
     echo "        Build Web documents (compiles .md.html files to .html)."
     echo ""
@@ -106,9 +104,6 @@ ENABLE_JAVA=ON
 INSTALL_COMMAND=
 
 VULKAN_ANDROID_OPTION="-DFILAMENT_SUPPORTS_VULKAN=OFF"
-
-BUILD_FILAMAT_ANDROID=false
-FILAMAT_ANDROID_OPTION="-DFILAMENT_BUILD_FILAMAT=OFF"
 
 IOS_BUILD_SIMULATOR=false
 
@@ -275,7 +270,6 @@ function build_android_target {
             -DCMAKE_INSTALL_PREFIX=../android-${LC_TARGET}/filament \
             -DCMAKE_TOOLCHAIN_FILE=../../build/toolchain-${ARCH}-linux-android.cmake \
             ${VULKAN_ANDROID_OPTION} \
-            ${FILAMAT_ANDROID_OPTION} \
             ../..
     fi
 
@@ -391,31 +385,27 @@ function build_android {
     cd ../..
 
 
-    if [[ "$BUILD_FILAMAT_ANDROID" == "true" ]]; then
+    cd android/filamat-android
 
-        cd android/filamat-android
+    if [[ "$ISSUE_DEBUG_BUILD" == "true" ]]; then
+        ./gradlew -Pfilament_dist_dir=../../out/android-debug/filament assembleDebug
 
-        if [[ "$ISSUE_DEBUG_BUILD" == "true" ]]; then
-            ./gradlew -Pfilament_dist_dir=../../out/android-debug/filament assembleDebug
-
-            if [[ "$INSTALL_COMMAND" ]]; then
-                echo "Installing out/filamat-android-debug.aar..."
-                cp build/outputs/aar/filamat-android-debug.aar ../../out/
-            fi
+        if [[ "$INSTALL_COMMAND" ]]; then
+            echo "Installing out/filamat-android-debug.aar..."
+            cp build/outputs/aar/filamat-android-debug.aar ../../out/
         fi
-
-        if [[ "$ISSUE_RELEASE_BUILD" == "true" ]]; then
-            ./gradlew -Pfilament_dist_dir=../../out/android-release/filament assembleRelease
-
-            if [[ "$INSTALL_COMMAND" ]]; then
-                echo "Installing out/filamat-android-release.aar..."
-                cp build/outputs/aar/filamat-android-release.aar ../../out/
-            fi
-        fi
-
-        cd ../..
-
     fi
+
+    if [[ "$ISSUE_RELEASE_BUILD" == "true" ]]; then
+        ./gradlew -Pfilament_dist_dir=../../out/android-release/filament assembleRelease
+
+        if [[ "$INSTALL_COMMAND" ]]; then
+            echo "Installing out/filamat-android-release.aar..."
+            cp build/outputs/aar/filamat-android-release.aar ../../out/
+        fi
+    fi
+
+    cd ../..
 }
 
 function ensure_ios_toolchain {
@@ -677,12 +667,6 @@ while getopts ":hacfijmp:tuvslw" opt; do
             echo "File > Settings > Build > Compiler. In the command-line options field, "
             echo "add -Pextra_cmake_args=-DFILAMENT_SUPPORTS_VULKAN=ON."
             echo "Also be sure to pass Engine.Backend.VULKAN to Engine.create."
-            echo ""
-            ;;
-        l)
-            FILAMAT_ANDROID_OPTION="-DFILAMENT_BUILD_FILAMAT=ON"
-            BUILD_FILAMAT_ANDROID=true
-            echo "Building filamat JNI library for Android."
             echo ""
             ;;
         s)

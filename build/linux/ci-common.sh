@@ -12,10 +12,10 @@ NINJA_VERSION=1.8.2
 # Steps specific to our CI environment
 # CI runs on Ubuntu 14.04, we need to install clang-7.0 and the
 # appropriate libc++ ourselves
-if [ "$KOKORO_BUILD_ID" ]; then
+if [[ "$KOKORO_BUILD_ID" ]]; then
     sudo ln -s /usr/include/x86_64-linux-gnu/asm /usr/include/asm
 
-    if [ "$FILAMENT_ANDROID_CI_BUILD" ]; then
+    if [[ "$FILAMENT_ANDROID_CI_BUILD" ]]; then
         # Update NDK
         yes | $ANDROID_HOME/tools/bin/sdkmanager "ndk-bundle" > /dev/null
 

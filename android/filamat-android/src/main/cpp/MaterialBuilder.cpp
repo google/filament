@@ -18,8 +18,6 @@
 
 #include <filamat/MaterialBuilder.h>
 
-#include <private/filament/EngineEnums.h>
-
 using namespace filament;
 using namespace filamat;
 

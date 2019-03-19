@@ -26,6 +26,8 @@
 
 namespace filament {
 
+static constexpr size_t MATERIAL_VERSION = 2;
+
 /**
  * Supported shading models
  */

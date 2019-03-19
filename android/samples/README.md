@@ -44,9 +44,6 @@ Demonstrates how to render into a `TextureView` instead of a `SurfaceView`:
 Demonstrates how to programatically generate Filament materials, as opposed to compiling them on the
 host machine:
 
-**Important:** The `material-builder` sample requires the `filamat` static library which can be compiled by adding
-the `-l` flag to the `./build.sh` command.
-
 ![Material Builder](../../docs/images/samples/sample_image_based_lighting.jpg)
 
 ## Prerequisites
