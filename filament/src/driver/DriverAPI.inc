@@ -482,12 +482,13 @@ DECL_DRIVER_API_6(readStreamPixels,
  * --------------------
  */
 
-DECL_DRIVER_API_5(blit,
+DECL_DRIVER_API_6(blit,
         Driver::TargetBufferFlags, buffers,
         Driver::RenderTargetHandle, dst,
         driver::Viewport, dstRect,
         Driver::RenderTargetHandle, src,
-        driver::Viewport, srcRect)
+        driver::Viewport, srcRect,
+        Driver::SamplerMagFilter, filter)
 
 DECL_DRIVER_API_2(draw,
         Driver::PipelineState, state,

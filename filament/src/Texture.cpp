@@ -227,7 +227,8 @@ void FTexture::generateMipmaps(FEngine& engine) const noexcept {
                     mFormat, { mHandle, level++, layer }, {}, {});
             driver.blit(TargetBufferFlags::COLOR,
                     dstrth, { 0, 0, dstw, dsth },
-                    srcrth, { 0, 0, srcw, srch });
+                    srcrth, { 0, 0, srcw, srch },
+                    SamplerMagFilter::LINEAR);
             driver.destroyRenderTarget(srcrth);
             srcrth = dstrth;
             srcw = dstw;

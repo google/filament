@@ -2876,7 +2876,8 @@ void OpenGLDriver::clearWithGeometryPipe(
 
 void OpenGLDriver::blit(TargetBufferFlags buffers,
         Driver::RenderTargetHandle dst, driver::Viewport dstRect,
-        Driver::RenderTargetHandle src, driver::Viewport srcRect) {
+        Driver::RenderTargetHandle src, driver::Viewport srcRect,
+        Driver::SamplerMagFilter filter) {
     DEBUG_MARKER()
 
     GLbitfield mask = 0;
@@ -2891,6 +2892,13 @@ void OpenGLDriver::blit(TargetBufferFlags buffers,
     }
 
     if (mask) {
+        GLenum glFilterMode = (filter == SamplerMagFilter::NEAREST) ? GL_NEAREST : GL_LINEAR;
+        if (mask & (GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT)) {
+            // GL_INVALID_OPERATION is generated if mask contains any of the GL_DEPTH_BUFFER_BIT or
+            // GL_STENCIL_BUFFER_BIT and filter is not GL_NEAREST.
+            glFilterMode = GL_NEAREST;
+        }
+
         GLRenderTarget const* s = handle_cast<GLRenderTarget const*>(src);
         GLRenderTarget const* d = handle_cast<GLRenderTarget const*>(dst);
         bindFramebuffer(GL_READ_FRAMEBUFFER, s->gl.fbo_draw ? s->gl.fbo_draw : s->gl.fbo);
@@ -2899,7 +2907,7 @@ void OpenGLDriver::blit(TargetBufferFlags buffers,
         glBlitFramebuffer(
                 srcRect.left, srcRect.bottom, srcRect.left + srcRect.width, srcRect.bottom + srcRect.height,
                 dstRect.left, dstRect.bottom, dstRect.left + dstRect.width, dstRect.bottom + dstRect.height,
-                mask, GL_LINEAR);
+                mask, glFilterMode);
         enable(GL_SCISSOR_TEST);
         CHECK_GL_ERROR(utils::slog.e)
 
