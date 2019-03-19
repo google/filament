@@ -205,15 +205,18 @@ void createVirtualDevice(VulkanContext& context) {
     vmaCreateAllocator(&allocatorInfo, &context.allocator);
 
     // Create the work command buffer and fence for work unrelated to the swap chain.
-    VkCommandBufferAllocateInfo allocateInfo = {
+    const VkCommandBufferAllocateInfo allocateInfo = {
         .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
         .commandPool = context.commandPool,
         .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
         .commandBufferCount = 1
     };
-    VkFenceCreateInfo fenceCreateInfo { .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
+    const VkFenceCreateInfo fenceCreateInfo { .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
+    const VkCommandBufferBeginInfo binfo { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
     vkAllocateCommandBuffers(context.device, &allocateInfo, &context.work.cmdbuffer);
     vkCreateFence(context.device, &fenceCreateInfo, VKALLOC, &context.work.fence);
+    vkBeginCommandBuffer(context.work.cmdbuffer, &binfo);
+    context.work.submitted = false;
 }
 
 void createSemaphore(VkDevice device, VkSemaphore *semaphore) {
@@ -393,6 +396,7 @@ void createSwapChain(VulkanContext& context, VulkanSurfaceContext& surfaceContex
 
 void destroySurfaceContext(VulkanContext& context, VulkanSurfaceContext& surfaceContext) {
     for (SwapContext& swapContext : surfaceContext.swapContexts) {
+        vkWaitForFences(context.device, 1, &swapContext.commands.fence, VK_FALSE, ~0ull);
         vkFreeCommandBuffers(context.device, context.commandPool, 1,
                 &swapContext.commands.cmdbuffer);
         vkDestroyFence(context.device, swapContext.commands.fence, VKALLOC);
@@ -701,9 +705,9 @@ void waitForIdle(VulkanContext& context) {
         auto& surfaceContext = *context.currentSurface;
         for (auto& swapContext : surfaceContext.swapContexts) {
             assert(nfences < 4);
-            if (swapContext.submitted && swapContext.commands.fence) {
+            if (swapContext.commands.submitted && swapContext.commands.fence) {
                 fences[nfences++] = swapContext.commands.fence;
-                swapContext.submitted = false;
+                swapContext.commands.submitted = false;
             }
         }
         if (nfences > 0) {
@@ -726,37 +730,24 @@ void waitForIdle(VulkanContext& context) {
 
     // Keep performing work until there's nothing queued up. This should never iterate more than
     // a couple times because the only work we queue up is for resource transition / reclamation.
-    VulkanCommandBuffer& work = context.work;
-    VkPipelineStageFlags waitDestStageMask = VK_PIPELINE_STAGE_TRANSFER_BIT;
-    VkSubmitInfo submitInfo {
-        .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-        .pWaitDstStageMask = &waitDestStageMask,
-        .commandBufferCount = 1,
-        .pCommandBuffers = &work.cmdbuffer,
-    };
-    VkCommandBufferBeginInfo beginInfo { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
     int cycles = 0;
     while (hasPendingWork(context)) {
         if (cycles++ > 2) {
             utils::slog.e << "Unexpected daisychaining of pending work." << utils::io::endl;
             break;
         }
-        vkBeginCommandBuffer(work.cmdbuffer, &beginInfo);
         if (context.currentSurface) {
             for (auto& swapContext : context.currentSurface->swapContexts) {
-                performPendingWork(swapContext.pendingWork, work.cmdbuffer);
+                performPendingWork(swapContext.pendingWork, context.work.cmdbuffer);
             }
         }
-        performPendingWork(context.pendingWork, work.cmdbuffer);
-        vkEndCommandBuffer(work.cmdbuffer);
-        vkQueueSubmit(context.graphicsQueue, 1, &submitInfo, work.fence);
-        vkWaitForFences(context.device, 1, &work.fence, VK_FALSE, UINT64_MAX);
-        vkResetFences(context.device, 1, &work.fence);
-        vkResetCommandBuffer(work.cmdbuffer, 0);
+        VkCommandBuffer cmdbuffer = acquireWorkCommandBuffer(context);
+        performPendingWork(context.pendingWork, cmdbuffer);
+        flushWorkCommandBuffer(context);
     }
 }
 
-void acquireCommandBuffer(VulkanContext& context) {
+void acquireSwapCommandBuffer(VulkanContext& context) {
     // Ask Vulkan for the next image in the swap chain and update the currentSwapIndex.
     VulkanSurfaceContext& surface = *context.currentSurface;
     VkResult result = vkAcquireNextImageKHR(context.device, surface.swapchain,
@@ -784,7 +775,7 @@ void acquireCommandBuffer(VulkanContext& context) {
     error = vkBeginCommandBuffer(cmdbuffer, &beginInfo);
     ASSERT_POSTCONDITION(not error, "vkBeginCommandBuffer error.");
     context.currentCommands = &swap.commands;
-    swap.submitted = false;
+    swap.commands.submitted = false;
 }
 
 void performPendingWork(VulkanTaskQueue& work, VkCommandBuffer cmdbuf) {
@@ -844,6 +835,34 @@ VkFormat findSupportedFormat(VulkanContext& context, const std::vector<VkFormat>
         }
     }
     return VK_FORMAT_UNDEFINED;
+}
+
+VkCommandBuffer acquireWorkCommandBuffer(VulkanContext& context) {
+    VulkanCommandBuffer& work = context.work;
+    const VkCommandBufferBeginInfo binfo { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
+    if (work.submitted) {
+        work.submitted = false;
+        vkWaitForFences(context.device, 1, &work.fence, VK_FALSE, UINT64_MAX);
+        vkResetFences(context.device, 1, &work.fence);
+        vkResetCommandBuffer(work.cmdbuffer, 0);
+        vkBeginCommandBuffer(work.cmdbuffer, &binfo);
+    }
+    return work.cmdbuffer;
+}
+
+void flushWorkCommandBuffer(VulkanContext& context) {
+    VulkanCommandBuffer& work = context.work;
+    ASSERT_PRECONDITION(!work.submitted, "Flushed the work buffer more than once.");
+    const VkPipelineStageFlags waitDestStageMask = VK_PIPELINE_STAGE_TRANSFER_BIT;
+    VkSubmitInfo submitInfo {
+        .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+        .pWaitDstStageMask = &waitDestStageMask,
+        .commandBufferCount = 1,
+        .pCommandBuffers = &work.cmdbuffer,
+    };
+    vkEndCommandBuffer(work.cmdbuffer);
+    vkQueueSubmit(context.graphicsQueue, 1, &submitInfo, work.fence);
+    work.submitted = true;
 }
 
 } // namespace filament

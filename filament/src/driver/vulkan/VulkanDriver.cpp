@@ -189,6 +189,7 @@ void VulkanDriver::terminate() {
     // Destroy the work command buffer and fence.
     VulkanCommandBuffer& work = mContext.work;
     VkDevice device = mContext.device;
+    vkWaitForFences(device, 1, &work.fence, VK_FALSE, UINT64_MAX);
     vkFreeCommandBuffers(device, mContext.commandPool, 1, &work.cmdbuffer);
     vkDestroyFence(device, work.fence, VKALLOC);
 
@@ -216,7 +217,8 @@ void VulkanDriver::beginFrame(int64_t monotonic_clock_ns, uint32_t frameId) {
         return;
     }
 
-    acquireCommandBuffer(mContext);
+    acquireWorkCommandBuffer(mContext);
+    acquireSwapCommandBuffer(mContext);
 
     // Now that we know that the previous submission of this command buffer has finished, decrement
     // the refcount for each of its referenced resources.
@@ -794,7 +796,7 @@ void VulkanDriver::commit(Driver::SwapChainHandle sch) {
     };
     result = vkQueueSubmit(mContext.graphicsQueue, 1, &submitInfo, swapContext.commands.fence);
     ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkQueueSubmit error.");
-    swapContext.submitted = true;
+    swapContext.commands.submitted = true;
 
     // Present the backbuffer.
     VulkanSurfaceContext& surface = handle_cast<VulkanSwapChain>(mHandleMap, sch)->surfaceContext;
@@ -925,8 +927,7 @@ void VulkanDriver::blit(TargetBufferFlags buffers,
     };
 
     if (!mContext.currentCommands) {
-        mContext.pendingWork.emplace_back(vkblit);
-        waitForIdle(mContext); // TODO: use the work cmd buffer directly.
+        vkblit(acquireWorkCommandBuffer(mContext));
     } else {
         vkblit(mContext.currentCommands->cmdbuffer);
     }

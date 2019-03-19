@@ -357,11 +357,13 @@ void VulkanUniformBuffer::loadFromCpu(const void* cpuData, uint32_t numBytes) {
         });
     };
 
-    // If possible, perform the upload immediately, otherwise queue up the work.
+    // If inside beginFrame / endFrame, use the swap context, otherwise use the work cmdbuffer.
     if (mContext.currentCommands) {
         copyToDevice(mContext.currentCommands->cmdbuffer);
     } else {
-        mContext.pendingWork.emplace_back(copyToDevice);
+        VkCommandBuffer work = acquireWorkCommandBuffer(mContext);
+        copyToDevice(work);
+        flushWorkCommandBuffer(mContext);
     }
 }
 
@@ -502,12 +504,13 @@ void VulkanTexture::update2DImage(const PixelBufferDescriptor& data, uint32_t wi
         });
     };
 
-    // If possible, perform the upload immediately, otherwise queue up the work.
+    // If inside beginFrame / endFrame, use the swap context, otherwise use the work cmdbuffer.
     if (mContext.currentCommands) {
         copyToDevice(mContext.currentCommands->cmdbuffer);
     } else {
-        mContext.pendingWork.emplace_back(copyToDevice);
-        waitForIdle(mContext); // TODO: use the work cmd buffer directly and flush it afterwards.
+        VkCommandBuffer work = acquireWorkCommandBuffer(mContext);
+        copyToDevice(work);
+        flushWorkCommandBuffer(mContext);
     }
 }
 
@@ -545,11 +548,13 @@ void VulkanTexture::updateCubeImage(const PixelBufferDescriptor& data,
         });
     };
 
-    // If possible, perform the upload immediately, otherwise queue up the work.
+    // If inside beginFrame / endFrame, use the swap context, otherwise use the work cmdbuffer.
     if (mContext.currentCommands) {
         copyToDevice(mContext.currentCommands->cmdbuffer);
     } else {
-        mContext.pendingWork.emplace_back(copyToDevice);
+        VkCommandBuffer work = acquireWorkCommandBuffer(mContext);
+        copyToDevice(work);
+        flushWorkCommandBuffer(mContext);
     }
 }
 
