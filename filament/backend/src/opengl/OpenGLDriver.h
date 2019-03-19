@@ -172,8 +172,8 @@ public:
         struct GL {
             struct RenderBuffer {
                 GLTexture* texture = nullptr;
-                GLenum internalFormat = 0; // when texture == nullptr
-                GLuint rb = 0;             // when texture == nullptr
+                GLenum internalFormat = 0;
+                GLuint rb = 0;
             };
             // field ordering to optimize size on 64-bits
             RenderBuffer color;

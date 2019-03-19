@@ -196,6 +196,38 @@ FrameGraphResource PostProcessManager::fxaa(FrameGraph& fg,
     return ppFXAA.getData().output;
 }
 
+FrameGraphResource PostProcessManager::resolve(
+        FrameGraph& fg, FrameGraphResource input) noexcept {
+    struct PostProcessResolve {
+        FrameGraphResource input;
+        FrameGraphResource output;
+    };
+
+    auto& ppResolve = fg.addPass<PostProcessResolve>("resolve",
+            [&](FrameGraph::Builder& builder, PostProcessResolve& data) {
+                auto* inputDesc = fg.getDescriptor(input);
+                data.input = builder.useRenderTarget(input).textures[0];
+
+                FrameGraphResource::Descriptor outputDesc{
+                        .width = inputDesc->width,
+                        .height = inputDesc->height,
+                        .format = inputDesc->format
+                };
+                data.output = builder.createTexture("resolve output", outputDesc);
+                data.output = builder.useRenderTarget(data.output).textures[0];
+            },
+            [=](FrameGraphPassResources const& resources,
+                    PostProcessResolve const& data, DriverApi& driver) {
+                auto in = resources.getRenderTarget(data.input);
+                auto out = resources.getRenderTarget(data.output);
+                driver.blit(TargetBufferFlags::COLOR,
+                        out.target, out.params.viewport, in.target, in.params.viewport,
+                        SamplerMagFilter::LINEAR);
+            });
+
+    return ppResolve.getData().output;
+}
+
 FrameGraphResource PostProcessManager::dynamicScaling(FrameGraph& fg,
         FrameGraphResource input, backend::TextureFormat outFormat) noexcept {
 

@@ -354,13 +354,19 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
         }
     }
 
-    // FIXME: viewRenderTarget doesn't have a depth or multisample buffer,
-    //        so if one is required by the colorPass,
-    //        we must use an intermediate buffer, we do this by forcing a blit -- this will
-    //        only happen if no other post-processing above took place (in which case we would
-    //        already be using an intermediate buffer)
-    if ((msaa > 1 || colorPassNeedsDepthBuffer) && input == colorPass.getData().color) {
-        input = ppm.dynamicScaling(fg, input, ldrFormat);
+    // If we're rendering into the default RenderTarget (viewRenderTarget), we must take care
+    // of a few things:
+    // - since viewRenderTarget doesn't have depth or multi-sample buffer, we have to use an
+    //   intermediate buffer which has one. We do this by forcing a blit.
+    // - however a blit operation cannot move or scale the source, so we must additionally
+    //   do a resolve pass in the multi-sample case.
+    if (input == colorPass.getData().color) {
+        if (msaa > 1) {
+            input = ppm.resolve(fg, input);
+            input = ppm.dynamicScaling(fg, input, ldrFormat);
+        } else if (colorPassNeedsDepthBuffer) {
+            input = ppm.dynamicScaling(fg, input, ldrFormat);
+        }
     }
 
     fg.present(input);

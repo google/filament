@@ -51,6 +51,9 @@ public:
     FrameGraphResource dynamicScaling(
             FrameGraph& fg, FrameGraphResource input, backend::TextureFormat outFormat) noexcept;
 
+    FrameGraphResource resolve(
+            FrameGraph& fg, FrameGraphResource input) noexcept;
+
 private:
     details::FEngine* mEngine = nullptr;
 
