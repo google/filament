@@ -39,11 +39,8 @@ public:
     void setSource(uint32_t viewportWidth, uint32_t viewportHeight, Handle<HwTexture> texture,
             uint32_t textureWidth, uint32_t textureHeight) const noexcept;
 
-    void setDithering(bool dithering) noexcept { mDithering = dithering; }
-
-    FrameGraphResource toneMapping(
-            FrameGraph& fg, FrameGraphResource input, driver::TextureFormat outFormat,
-            bool translucent) noexcept;
+    FrameGraphResource toneMapping(FrameGraph& fg, FrameGraphResource input,
+            driver::TextureFormat outFormat, bool dithering, bool translucent) noexcept;
 
     FrameGraphResource fxaa(
             FrameGraph& fg, FrameGraphResource input, driver::TextureFormat outFormat,
@@ -59,7 +56,6 @@ private:
     mutable UniformBuffer mPostProcessUb;
     Handle<HwSamplerGroup> mPostProcessSbh;
     Handle<HwUniformBuffer> mPostProcessUbh;
-    bool mDithering = true;
 };
 
 } // namespace filament

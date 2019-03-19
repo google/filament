@@ -164,6 +164,14 @@ public:
     };
 
     /**
+     * List of available tone-mapping operators
+     */
+    enum class ToneMapping : uint8_t {
+        LINEAR = 0,     //!< Linear tone mapping (i.e. no tone mapping)
+        ACES = 1,       //!< ACES tone mapping
+    };
+
+    /**
      * Sets whether this view is rendered with or without a depth pre-pass.
      *
      * By default, the system picks the most appropriate strategy, this method lets the
@@ -394,6 +402,19 @@ public:
      * @return The post-processing anti-aliasing method.
      */
     AntiAliasing getAntiAliasing() const noexcept;
+
+    /**
+     * Enables or disables tone-mapping in the post-processing stage. Enabled by default.
+     *
+     * @param type Tone-mapping function.
+     */
+    void setToneMapping(ToneMapping type) noexcept;
+
+    /**
+     * Returns the tone-mapping function.
+     * @return tone-mapping function.
+     */
+    ToneMapping getToneMapping() const noexcept;
 
     /**
      * Enables or disables dithering in the post-processing stage. Enabled by default.

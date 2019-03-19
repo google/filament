@@ -863,6 +863,14 @@ View::AntiAliasing View::getAntiAliasing() const noexcept {
     return upcast(this)->getAntiAliasing();
 }
 
+void View::setToneMapping(ToneMapping type) noexcept {
+    upcast(this)->setToneMapping(type);
+}
+
+View::ToneMapping View::getToneMapping() const noexcept {
+    return upcast(this)->getToneMapping();
+}
+
 void View::setDithering(Dithering dithering) noexcept {
     upcast(this)->setDithering(dithering);
 }

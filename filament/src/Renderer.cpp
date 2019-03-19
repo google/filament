@@ -163,13 +163,14 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 
     filament::Viewport const& vp = view.getViewport();
     const bool hasPostProcess = view.hasPostProcessPass();
-    float2 scale = view.updateScale(mFrameInfoManager.getLastFrameTime());
-    bool useFXAA = view.getAntiAliasing() == View::AntiAliasing::FXAA;
+    bool toneMapping = view.getToneMapping() == View::ToneMapping::ACES;
     bool dithering = view.getDithering() == View::Dithering::TEMPORAL;
+    bool fxaa = view.getAntiAliasing() == View::AntiAliasing::FXAA;
+    float2 scale = view.updateScale(mFrameInfoManager.getLastFrameTime());
     if (!hasPostProcess) {
         // dynamic scaling and FXAA are part of the post-process phase and can't happen if
         // it's disabled.
-        useFXAA = false;
+        fxaa = false;
         dithering = false;
         scale = 1.0f;
     }
@@ -213,7 +214,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     FrameGraph fg;
 
     const TextureFormat hdrFormat = getHdrFormat(view);
-    const uint8_t useMSAA = view.getSampleCount();
+    const uint8_t msaa = view.getSampleCount();
 
     // FIXME: we use "hasPostProcess" as a proxy for deciding if we need a depth-buffer or not
     //        historically this has been true, but it's definitely wrong.
@@ -248,7 +249,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
                 }
 
                 FrameGraphRenderTarget::Descriptor desc{
-                        .samples = useMSAA,
+                        .samples = msaa,
                         .attachments.color = data.color,
                         .attachments.depth = data.depth
                 };
@@ -259,8 +260,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
                             ColorPassData const& data, DriverApi& driver) {
                 auto out = resources.getRenderTarget(data.color);
                 ColorPass::renderColorPass(engine, js, jobFroxelize, out.target, view,
-                        static_cast<filament::Viewport const&>(out.params.viewport),
-                        commands);
+                        static_cast<filament::Viewport const&>(out.params.viewport), commands);
             });
 
     FrameGraphResource input = colorPass.getData().color;
@@ -269,19 +269,33 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
      * Post Processing...
      */
 
+    const bool translucent = mSwapChain->isTransparent();
+    const TextureFormat ldrFormat = (toneMapping && fxaa) ?
+            TextureFormat::RGBA8 : getLdrFormat(); // e.g. RGB8 or RGBA8
+
     if (hasPostProcess) {
-        const TextureFormat ldrFormat = getLdrFormat();
-        const bool translucent = mSwapChain->isTransparent();
 
-        ppm.setDithering(dithering);
+        // FIXME: currently we can't render a view on top of another one (with transparency) if
+        //        any post-processing is performed on that view -- this is because post processing
+        //        uses intermediary buffers which are not blended back (they're blitted).
 
-        input = ppm.toneMapping(fg, input, ldrFormat, translucent);
-        if (useFXAA) {
-            input = ppm.fxaa(fg, input, ldrFormat, translucent);
+        if (toneMapping) {
+            input = ppm.toneMapping(fg, input, ldrFormat, dithering, translucent);
+        }
+        if (fxaa) {
+            input = ppm.fxaa(fg, input, ldrFormat, !toneMapping || translucent);
         }
         if (scaled) {
             input = ppm.dynamicScaling(fg, input, ldrFormat);
         }
+    }
+
+    // FIXME: viewRenderTarget doesn't have a depth buffer, so if one is required by the colorPass,
+    //        we must use an intermediate buffer, we do this by forcing a blit -- this will
+    //        only happen if no other post-processing above took place (in which case we would
+    //        already be using an intermediate buffer)
+    if (colorPassNeedsDepthBuffer && input == colorPass.getData().color) {
+        input = ppm.dynamicScaling(fg, input, ldrFormat);
     }
 
     fg.present(input);

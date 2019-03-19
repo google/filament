@@ -60,6 +60,11 @@ public class View {
         FXAA
     }
 
+    public enum ToneMapping {
+        LINEAR,
+        ACES
+    }
+
     public enum Dithering {
         NONE,
         TEMPORAL
@@ -163,6 +168,15 @@ public class View {
     @NonNull
     public AntiAliasing getAntiAliasing() {
         return AntiAliasing.values()[nGetAntiAliasing(getNativeObject())];
+    }
+
+    public void setToneMapping(@NonNull ToneMapping type) {
+        nSetToneMapping(getNativeObject(), type.ordinal());
+    }
+
+    @NonNull
+    public ToneMapping getToneMapping() {
+        return ToneMapping.values()[nGetToneMapping(getNativeObject())];
     }
 
     public void setDithering(@NonNull Dithering dithering) {
@@ -271,6 +285,8 @@ public class View {
     private static native int nGetSampleCount(long nativeView);
     private static native void nSetAntiAliasing(long nativeView, int type);
     private static native int nGetAntiAliasing(long nativeView);
+    private static native void nSetToneMapping(long nativeView, int type);
+    private static native int nGetToneMapping(long nativeView);
     private static native void nSetDithering(long nativeView, int dithering);
     private static native int nGetDithering(long nativeView);
     private static native void nSetDynamicResolutionOptions(long nativeView,
