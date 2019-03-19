@@ -22,8 +22,6 @@
 
 namespace filament {
 
-static constexpr size_t MATERIAL_VERSION = 2;
-
 static constexpr size_t VERTEX_DOMAIN_COUNT = 4;
 
 static constexpr size_t POST_PROCESS_STAGES_COUNT = 4;

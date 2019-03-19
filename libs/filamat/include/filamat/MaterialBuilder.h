@@ -25,7 +25,6 @@
 #include <vector>
 
 #include <filament/driver/DriverEnums.h>
-#include <private/filament/EngineEnums.h>
 #include <filament/MaterialEnums.h>
 
 #include <filamat/Package.h>

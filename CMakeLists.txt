@@ -240,7 +240,7 @@ endif()
 
 # Building filamat increases build times and isn't required for non-desktop platforms, so turn it
 # off by default.
-if (NOT ANDROID AND NOT WEBGL AND NOT IOS)
+if (NOT WEBGL AND NOT IOS)
     option(FILAMENT_BUILD_FILAMAT "Build filamat and JNI buildings" ON)
 else()
     option(FILAMENT_BUILD_FILAMAT "Build filamat and JNI buildings" OFF)
