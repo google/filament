@@ -443,8 +443,20 @@ void MetalDriver::beginRenderPass(Driver::RenderTargetHandle rth,
     // Filament's default winding is counter clockwise.
     [mContext->currentCommandEncoder setFrontFacingWinding:MTLWindingCounterClockwise];
 
-    viewport(params.viewport.left, params.viewport.bottom, params.viewport.width,
-            params.viewport.height);
+    // Flip the viewport, because Metal's screen space is vertically flipped that of Filament's.
+    NSInteger renderTargetHeight =
+            mContext->currentRenderTarget->isDefaultRenderTarget() ?
+            mContext->currentSurface->surfaceHeight : mContext->currentRenderTarget->height;
+    MTLViewport metalViewport {
+            .originX = static_cast<double>(params.viewport.left),
+            .originY = renderTargetHeight - static_cast<double>(params.viewport.bottom) -
+                       static_cast<double>(params.viewport.height),
+            .width = static_cast<double>(params.viewport.width),
+            .height = static_cast<double>(params.viewport.height),
+            .znear = 0.0,
+            .zfar = 1.0
+    };
+    [mContext->currentCommandEncoder setViewport:metalViewport];
 
     // Metal requires a new command encoder for each render pass, and they cannot be reused.
     // We must bind certain states for each command encoder, so we dirty the states here to force a
@@ -512,24 +524,6 @@ void MetalDriver::commit(Driver::SwapChainHandle sch) {
     [mContext->currentCommandBuffer presentDrawable:mContext->currentDrawable];
     [mContext->currentCommandBuffer commit];
     mContext->currentDrawable = nil;
-}
-
-void MetalDriver::viewport(ssize_t left, ssize_t bottom, size_t width, size_t height) {
-    ASSERT_PRECONDITION(mContext->currentCommandEncoder != nullptr, "currentCommandEncoder is null");
-    // Flip the viewport, because Metal's screen space is vertically flipped that of Filament's.
-    NSInteger renderTargetHeight =
-            mContext->currentRenderTarget->isDefaultRenderTarget() ?
-            mContext->currentSurface->surfaceHeight : mContext->currentRenderTarget->height;
-    MTLViewport metalViewport {
-        .originX = static_cast<double>(left),
-        .originY = renderTargetHeight - static_cast<double>(bottom) -
-                   static_cast<double>(height),
-        .height = static_cast<double>(height),
-        .width = static_cast<double>(width),
-        .znear = 0.0,
-        .zfar = 1.0
-    };
-    [mContext->currentCommandEncoder setViewport:metalViewport];
 }
 
 void MetalDriver::bindUniformBuffer(size_t index, Driver::UniformBufferHandle ubh) {

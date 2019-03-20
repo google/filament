@@ -55,9 +55,8 @@ public:
         if (mSbHandle) {
             driver.bindSamplers(BindingPoints::PER_MATERIAL_INSTANCE, mSbHandle);
         }
-        driver.setViewportScissor(
-                mScissorRect[0], mScissorRect[1],
-                uint32_t(mScissorRect[2]), uint32_t(mScissorRect[3]));
+        driver.setViewportScissor(mScissorRect.left, mScissorRect.bottom,
+                mScissorRect.width, mScissorRect.height);
     }
 
     template <typename T>
@@ -77,15 +76,17 @@ public:
     SamplerGroup const& getSamplerGroup() const noexcept { return mSamplers; }
 
     void setScissor(int32_t left, int32_t bottom, uint32_t width, uint32_t height) noexcept {
-        mScissorRect[0] = left;
-        mScissorRect[1] = bottom;
-        mScissorRect[2] = (int32_t)std::min(width,  (uint32_t)std::numeric_limits<int32_t>::max());
-        mScissorRect[3] = (int32_t)std::min(height, (uint32_t)std::numeric_limits<int32_t>::max());
+        mScissorRect = { left, bottom,
+                std::min(width, (uint32_t)std::numeric_limits<int32_t>::max()),
+                std::min(height, (uint32_t)std::numeric_limits<int32_t>::max())
+        };
     }
 
     void unsetScissor() noexcept {
-        mScissorRect[0] = mScissorRect[1] = 0;
-        mScissorRect[2] = mScissorRect[3] = std::numeric_limits<int32_t>::max();
+        mScissorRect = { 0, 0,
+                (uint32_t)std::numeric_limits<int32_t>::max(),
+                (uint32_t)std::numeric_limits<int32_t>::max()
+        };
     }
 
     void setPolygonOffset(float scale, float constant) noexcept {
@@ -115,8 +116,9 @@ private:
     uint64_t mMaterialSortingKey = 0;
 
     // Scissor rectangle is specified as: Left Bottom Width Height.
-    int32_t mScissorRect[4] = {
-        0, 0, std::numeric_limits<int32_t>::max(), std::numeric_limits<int32_t>::max()
+    driver::Viewport mScissorRect = { 0, 0,
+            (uint32_t)std::numeric_limits<int32_t>::max(),
+            (uint32_t)std::numeric_limits<int32_t>::max()
     };
 };
 

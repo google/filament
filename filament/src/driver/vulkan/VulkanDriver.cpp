@@ -650,10 +650,25 @@ void VulkanDriver::beginRenderPass(Driver::RenderTargetHandle rth,
     renderPassInfo.pClearValues = &clearValues[0];
 
     vkCmdBeginRenderPass(swapContext.cmdbuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-    if (!(params.flags.clear & RenderPassFlags::IGNORE_VIEWPORT)) {
-        viewport(params.viewport.left, params.viewport.bottom,
-                params.viewport.width, params.viewport.height);
-    }
+
+    VkViewport viewport = mContext.viewport = {
+            .x = (float) params.viewport.left,
+            .y = (float) params.viewport.bottom,
+            .width = (float) params.viewport.width,
+            .height = (float) params.viewport.height,
+            .minDepth = 0.0f,
+            .maxDepth = 1.0f
+    };
+    VkRect2D scissor {
+            .extent = { (uint32_t) viewport.width, (uint32_t) viewport.height },
+            .offset = { std::max(0, (int32_t) viewport.x), std::max(0, (int32_t) viewport.y) }
+    };
+
+    mCurrentRenderTarget->transformClientRectToPlatform(&scissor);
+    vkCmdSetScissor(mContext.cmdbuffer, 0, 1, &scissor);
+
+    mCurrentRenderTarget->transformClientRectToPlatform(&viewport);
+    vkCmdSetViewport(mContext.cmdbuffer, 0, 1, &viewport);
 
     mContext.currentRenderPass = renderPassInfo;
 }
@@ -763,28 +778,6 @@ void VulkanDriver::commit(Driver::SwapChainHandle sch) {
     ASSERT_POSTCONDITION(result != VK_ERROR_OUT_OF_DATE_KHR && result != VK_SUBOPTIMAL_KHR,
             "Stale / resized swap chain not yet supported.");
     ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkQueuePresentKHR error.");
-}
-
-void VulkanDriver::viewport(ssize_t left, ssize_t bottom, size_t width, size_t height) {
-    assert(mContext.cmdbuffer && mCurrentRenderTarget);
-    VkViewport viewport = mContext.viewport = {
-        .x = (float) left,
-        .y = (float) bottom,
-        .height = (float) height,
-        .width = (float) width,
-        .minDepth = 0.0f,
-        .maxDepth = 1.0f
-    };
-    VkRect2D scissor {
-        .extent = { (uint32_t) width, (uint32_t) height },
-        .offset = { std::max(0, (int32_t) left), std::max(0, (int32_t) bottom) }
-    };
-
-    mCurrentRenderTarget->transformClientRectToPlatform(&scissor);
-    vkCmdSetScissor(mContext.cmdbuffer, 0, 1, &scissor);
-
-    mCurrentRenderTarget->transformClientRectToPlatform(&viewport);
-    vkCmdSetViewport(mContext.cmdbuffer, 0, 1, &viewport);
 }
 
 void VulkanDriver::bindUniformBuffer(size_t index, Driver::UniformBufferHandle ubh) {
