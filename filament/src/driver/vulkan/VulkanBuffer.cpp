@@ -48,9 +48,9 @@ void VulkanBuffer::loadFromCpu(const void* cpuData, uint32_t byteOffset, uint32_
     vmaUnmapMemory(mContext.allocator, stage->memory);
     vmaFlushAllocation(mContext.allocator, stage->memory, byteOffset, numBytes);
 
-    auto copyToDevice = [this, numBytes, stage] (VkCommandBuffer cmdbuffer) {
+    auto copyToDevice = [this, numBytes, stage] (VulkanCommandBuffer& commands) {
         VkBufferCopy region { .size = numBytes };
-        vkCmdCopyBuffer(cmdbuffer, stage->buffer, mGpuBuffer, 1, &region);
+        vkCmdCopyBuffer(commands.cmdbuffer, stage->buffer, mGpuBuffer, 1, &region);
 
         // Ensure that the copy finishes before the next draw call.
         VkBufferMemoryBarrier barrier {
@@ -62,19 +62,18 @@ void VulkanBuffer::loadFromCpu(const void* cpuData, uint32_t byteOffset, uint32_
             .buffer = mGpuBuffer,
             .size = VK_WHOLE_SIZE
         };
-        vkCmdPipelineBarrier(cmdbuffer, VK_PIPELINE_STAGE_TRANSFER_BIT,
+        vkCmdPipelineBarrier(commands.cmdbuffer, VK_PIPELINE_STAGE_TRANSFER_BIT,
                 VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, 0, 0, nullptr, 1, &barrier, 0, nullptr);
-        mContext.pendingWork.emplace_back([this, stage] (VkCommandBuffer)  {
-            mStagePool.releaseStage(stage);
-        });
+
+        mStagePool.releaseStage(stage, commands);
     };
 
     // If inside beginFrame / endFrame, use the swap context, otherwise use the work cmdbuffer.
     if (mContext.currentCommands) {
-        copyToDevice(mContext.currentCommands->cmdbuffer);
+        copyToDevice(*mContext.currentCommands);
     } else {
-        VkCommandBuffer work = acquireWorkCommandBuffer(mContext);
-        copyToDevice(work);
+        acquireWorkCommandBuffer(mContext);
+        copyToDevice(mContext.work);
         flushWorkCommandBuffer(mContext);
     }
 }

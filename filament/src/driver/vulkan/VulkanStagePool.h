@@ -19,6 +19,8 @@
 
 #include "VulkanDriverImpl.h"
 
+#include "VulkanDisposer.h"
+
 #include <map>
 #include <unordered_set>
 
@@ -36,13 +38,15 @@ struct VulkanStage {
 // Manages a pool of stages, periodically releasing stages that have been unused for a while.
 class VulkanStagePool {
 public:
-    explicit VulkanStagePool(VulkanContext& context) noexcept : mContext(context) {}
+    explicit VulkanStagePool(VulkanContext& context, VulkanDisposer& disposer) noexcept :
+            mContext(context), mDisposer(disposer) {}
 
     // Finds or creates a stage whose capacity is at least the given number of bytes.
-    VulkanStage const* acquireStage(uint32_t numBytes) noexcept;
+    VulkanStage const* acquireStage(uint32_t numBytes);
 
     // Returns the given stage back to the pool.
     void releaseStage(VulkanStage const* stage) noexcept;
+    void releaseStage(VulkanStage const* stage, VulkanCommandBuffer& cmd) noexcept;
 
     // Evicts old unused stages and bumps the current frame number.
     void gc() noexcept;
@@ -50,8 +54,10 @@ public:
     // Destroys all unused stages and asserts that there are no stages currently in use.
     // This should be called while the context's VkDevice is still alive.
     void reset() noexcept;
+
 private:
     VulkanContext& mContext;
+    VulkanDisposer& mDisposer;
 
     // Use an ordered multimap for quick (capacity => stage) lookups using lower_bound().
     std::multimap<uint32_t, VulkanStage const*> mFreeStages;

@@ -29,7 +29,6 @@
 #include "vk_mem_alloc.h"
 
 #include <vector>
-#include <functional>
 
 namespace filament {
 namespace driver {
@@ -37,9 +36,6 @@ namespace driver {
 // All vkCreate* functions take an optional allocator. For now we select the default allocator by
 // passing in a null pointer, and we highlight the argument by using the VKALLOC constant.
 constexpr VkAllocationCallbacks* VKALLOC = nullptr;
-
-using VulkanTask = std::function<void(VkCommandBuffer)>;
-using VulkanTaskQueue = std::vector<VulkanTask>;
 
 struct VulkanSurfaceContext;
 
@@ -63,7 +59,6 @@ struct VulkanContext {
     uint32_t graphicsQueueFamilyIndex;
     VkQueue graphicsQueue;
     bool debugMarkersSupported;
-    VulkanTaskQueue pendingWork;
     VulkanBinder::RasterState rasterState;
     VulkanCommandBuffer* currentCommands;
     VulkanSurfaceContext* currentSurface;
@@ -89,7 +84,6 @@ struct VulkanAttachment {
 struct SwapContext {
     VulkanAttachment attachment;
     VulkanCommandBuffer commands;
-    VulkanTaskQueue pendingWork;
 };
 
 // The SurfaceContext stores various state (including the swap chain) that we tightly associate
@@ -114,13 +108,11 @@ void createSemaphore(VkDevice device, VkSemaphore* semaphore);
 void getPresentationQueue(VulkanContext& context, VulkanSurfaceContext& sc);
 void getSurfaceCaps(VulkanContext& context, VulkanSurfaceContext& sc);
 void createSwapChain(VulkanContext& context, VulkanSurfaceContext& sc);
-void destroySurfaceContext(VulkanContext& context, VulkanSurfaceContext& sc);
 uint32_t selectMemoryType(VulkanContext& context, uint32_t flags, VkFlags reqs);
 VkFormat getVkFormat(ElementType type, bool normalized);
 VkFormat getVkFormat(TextureFormat format);
 uint32_t getBytesPerPixel(TextureFormat format);
 SwapContext& getSwapContext(VulkanContext& context);
-bool hasPendingWork(VulkanContext& context);
 VkCompareOp getCompareOp(SamplerCompareFunc func);
 VkBlendFactor getBlendFactor(BlendFunction mode);
 VkCullModeFlags getCullMode(CullingMode mode);
@@ -128,7 +120,6 @@ VkFrontFace getFrontFace(bool inverseFrontFaces);
 void waitForIdle(VulkanContext& context);
 void acquireSwapCommandBuffer(VulkanContext& context);
 void releaseCommandBuffer(VulkanContext& context);
-void performPendingWork(VulkanTaskQueue& work, VkCommandBuffer cmdbuf);
 void flushCommandBuffer(VulkanContext& context);
 VkFormat findSupportedFormat(VulkanContext& context, const std::vector<VkFormat>& candidates,
         VkImageTiling tiling, VkFormatFeatureFlags features);

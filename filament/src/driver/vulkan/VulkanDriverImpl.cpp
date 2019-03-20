@@ -394,25 +394,6 @@ void createSwapChain(VulkanContext& context, VulkanSurfaceContext& surfaceContex
     }
 }
 
-void destroySurfaceContext(VulkanContext& context, VulkanSurfaceContext& surfaceContext) {
-    for (SwapContext& swapContext : surfaceContext.swapContexts) {
-        vkWaitForFences(context.device, 1, &swapContext.commands.fence, VK_FALSE, ~0ull);
-        vkFreeCommandBuffers(context.device, context.commandPool, 1,
-                &swapContext.commands.cmdbuffer);
-        vkDestroyFence(context.device, swapContext.commands.fence, VKALLOC);
-        vkDestroyImageView(context.device, swapContext.attachment.view, VKALLOC);
-        swapContext.commands.fence = VK_NULL_HANDLE;
-        swapContext.attachment.view = VK_NULL_HANDLE;
-    }
-    vkDestroySwapchainKHR(context.device, surfaceContext.swapchain, VKALLOC);
-    vkDestroySemaphore(context.device, surfaceContext.imageAvailable, VKALLOC);
-    vkDestroySemaphore(context.device, surfaceContext.renderingFinished, VKALLOC);
-    vkDestroySurfaceKHR(context.instance, surfaceContext.surface, VKALLOC);
-    if (context.currentSurface == &surfaceContext) {
-        context.currentSurface = nullptr;
-    }
-}
-
 uint32_t selectMemoryType(VulkanContext& context, uint32_t flags, VkFlags reqs) {
     for (uint32_t i = 0; i < VK_MAX_MEMORY_TYPES; i++) {
         if (flags & 1) {
@@ -632,20 +613,6 @@ SwapContext& getSwapContext(VulkanContext& context) {
     return surface.swapContexts[surface.currentSwapIndex];
 }
 
-bool hasPendingWork(VulkanContext& context) {
-    if (!context.pendingWork.empty()) {
-        return true;
-    }
-    if (context.currentSurface) {
-        for (auto& swapContext : context.currentSurface->swapContexts) {
-            if (!swapContext.pendingWork.empty()) {
-                return true;
-            }
-        }
-    }
-    return false;
-}
-
 VkCompareOp getCompareOp(SamplerCompareFunc func) {
     using Compare = driver::SamplerCompareFunc;
     switch (func) {
@@ -698,7 +665,11 @@ void waitForIdle(VulkanContext& context) {
         return;
     }
 
-    // First, wait for submitted command buffer(s) to finish.
+    // Flush the work command buffer and wait for it to finish.
+    flushWorkCommandBuffer(context);
+    acquireWorkCommandBuffer(context);
+
+    // Wait for submitted command buffer(s) to finish.
     if (context.currentSurface) {
         VkFence fences[4];
         uint32_t nfences = 0;
@@ -718,32 +689,6 @@ void waitForIdle(VulkanContext& context) {
         if (context.currentCommands) {
             flushCommandBuffer(context);
         }
-    }
-
-    // If we don't have any pending work, we're done.
-    if (!hasPendingWork(context)) {
-        return;
-    }
-
-    // We cannot invoke arbitrary commands inside a render pass.
-    assert(context.currentRenderPass.renderPass == VK_NULL_HANDLE);
-
-    // Keep performing work until there's nothing queued up. This should never iterate more than
-    // a couple times because the only work we queue up is for resource transition / reclamation.
-    int cycles = 0;
-    while (hasPendingWork(context)) {
-        if (cycles++ > 2) {
-            utils::slog.e << "Unexpected daisychaining of pending work." << utils::io::endl;
-            break;
-        }
-        if (context.currentSurface) {
-            for (auto& swapContext : context.currentSurface->swapContexts) {
-                performPendingWork(swapContext.pendingWork, context.work.cmdbuffer);
-            }
-        }
-        VkCommandBuffer cmdbuffer = acquireWorkCommandBuffer(context);
-        performPendingWork(context.pendingWork, cmdbuffer);
-        flushWorkCommandBuffer(context);
     }
 }
 
@@ -776,16 +721,6 @@ void acquireSwapCommandBuffer(VulkanContext& context) {
     ASSERT_POSTCONDITION(not error, "vkBeginCommandBuffer error.");
     context.currentCommands = &swap.commands;
     swap.commands.submitted = false;
-}
-
-void performPendingWork(VulkanTaskQueue& work, VkCommandBuffer cmdbuf) {
-    // Copy the tasks into a local queue first, which allows newly added tasks to be deferred until
-    // the next frame.
-    VulkanTaskQueue tasks;
-    tasks.swap(work);
-    for (auto& callback : tasks) {
-        callback(cmdbuf);
-    }
 }
 
 // Flushes the current command buffer and waits for it to finish executing.

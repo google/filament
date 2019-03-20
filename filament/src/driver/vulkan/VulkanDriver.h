@@ -141,10 +141,10 @@ private:
 
     VulkanContext mContext = {};
     VulkanBinder mBinder;
+    VulkanDisposer mDisposer;
     VulkanStagePool mStagePool;
     VulkanFboCache mFramebufferCache;
     VulkanSamplerCache mSamplerCache;
-    VulkanDisposer mDisposer;
     VulkanRenderTarget* mCurrentRenderTarget = nullptr;
     VulkanSamplerGroup* mSamplerBindings[VulkanBinder::NUM_SAMPLER_BINDINGS] = {};
     VkDebugReportCallbackEXT mDebugCallback = VK_NULL_HANDLE;
