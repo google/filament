@@ -132,32 +132,35 @@ void MetalDriver::createRenderTargetR(Driver::RenderTargetHandle rth,
         uint8_t samples, Driver::TextureFormat format, Driver::TargetBufferInfo color,
         Driver::TargetBufferInfo depth, Driver::TargetBufferInfo stencil) {
 
-    id<MTLTexture> mtlColor = nil;
-    id<MTLTexture> mtlDepth = nil;
+    auto getColorTexture = [&]() -> id<MTLTexture> {
+        if (color.handle) {
+            auto colorTexture = handle_cast<MetalTexture>(mHandleMap, color.handle);
+            return colorTexture->texture;
+        } else if (targetBufferFlags & TargetBufferFlags::COLOR) {
+            ASSERT_POSTCONDITION(false, "A color buffer is required for a render target.");
+        }
+        return nil;
+    };
 
-    if (color.handle) {
-        auto colorTexture = handle_cast<MetalTexture>(mHandleMap, color.handle);
-        mtlColor = colorTexture->texture;
-    } else if (targetBufferFlags & TargetBufferFlags::COLOR) {
-        ASSERT_POSTCONDITION(false, "A color buffer is required for a render target.");
-    }
-
-    if (depth.handle) {
-        auto depthTexture = handle_cast<MetalTexture>(mHandleMap, depth.handle);
-        mtlDepth = depthTexture->texture;
-    } else if (targetBufferFlags & TargetBufferFlags::DEPTH) {
-        MTLTextureDescriptor* depthTextureDesc =
-                [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatDepth32Float
-                                                                   width:width
-                                                                  height:height
-                                                               mipmapped:NO];
-        depthTextureDesc.usage = MTLTextureUsageRenderTarget;
-        depthTextureDesc.resourceOptions = MTLResourceStorageModePrivate;
-        mtlDepth = [mContext->device newTextureWithDescriptor:depthTextureDesc];
-    }
+    auto getDepthTexture = [&]() -> id<MTLTexture> {
+        if (depth.handle) {
+            auto depthTexture = handle_cast<MetalTexture>(mHandleMap, depth.handle);
+            return depthTexture->texture;
+        } else if (targetBufferFlags & TargetBufferFlags::DEPTH) {
+            MTLTextureDescriptor *depthTextureDesc =
+                    [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatDepth32Float
+                                                                       width:width
+                                                                      height:height
+                                                                   mipmapped:NO];
+            depthTextureDesc.usage = MTLTextureUsageRenderTarget;
+            depthTextureDesc.resourceOptions = MTLResourceStorageModePrivate;
+            return [[mContext->device newTextureWithDescriptor:depthTextureDesc] autorelease];
+        }
+        return nil;
+    };
 
     construct_handle<MetalRenderTarget>(mHandleMap, rth, mContext, width, height, samples, format,
-            mtlColor, mtlDepth);
+            getColorTexture(), getDepthTexture());
 
     ASSERT_POSTCONDITION(
             !stencil.handle && !(targetBufferFlags & TargetBufferFlags::STENCIL),
