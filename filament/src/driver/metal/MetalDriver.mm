@@ -470,8 +470,6 @@ void MetalDriver::beginRenderPass(Driver::RenderTargetHandle rth,
     mContext->pipelineState.invalidate();
     mContext->depthStencilState.invalidate();
     mContext->cullModeState.invalidate();
-    mContext->samplersDirty = true;
-    mContext->texturesDirty = true;
 }
 
 void MetalDriver::endRenderPass(int dummy) {
@@ -681,25 +679,20 @@ void MetalDriver::draw(Driver::PipelineState ps, Driver::RenderPrimitiveHandle r
         }
     }
 
-    // Enumerate all the sampler buffers and check if a texture or sampler needs to be rebound.
-    // If so, mark them dirty- we'll rebind all textures / samplers in a single call below.
-    enumerateSamplerGroups(program, [this](
+    // Enumerate all the sampler buffers for the program and check which textures and samplers need
+    // to be bound.
+
+    id<MTLTexture> texturesToBind[NUM_SAMPLER_BINDINGS] = {};
+    id<MTLSamplerState> samplersToBind[NUM_SAMPLER_BINDINGS] = {};
+
+    enumerateSamplerGroups(program, [this, &texturesToBind, &samplersToBind](
             const SamplerGroup::Sampler* sampler,
             uint8_t binding) {
         const auto metalTexture = handle_const_cast<MetalTexture>(mHandleMap, sampler->t);
-        auto& textureSlot = mContext->boundTextures[binding];
-        if (textureSlot != metalTexture->texture) {
-            textureSlot = metalTexture->texture;
-            mContext->texturesDirty = true;
-        }
+        texturesToBind[binding] = metalTexture->texture;
 
-        id <MTLSamplerState> samplerState = mContext->samplerStateCache
-                                                    .getOrCreateState(sampler->s);
-        auto& samplerSlot = mContext->boundSamplers[binding];
-        if (samplerSlot != samplerState) {
-            samplerSlot = samplerState;
-            mContext->samplersDirty = true;
-        }
+        id <MTLSamplerState> samplerState = mContext->samplerStateCache.getOrCreateState(sampler->s);
+        samplersToBind[binding] = samplerState;
     });
 
     // Similar to uniforms, we can't tell which stage will use the textures / samplers, so bind
@@ -709,21 +702,14 @@ void MetalDriver::draw(Driver::PipelineState ps, Driver::RenderPrimitiveHandle r
         .length = NUM_SAMPLER_BINDINGS,
         .location = 0
     };
-    if (mContext->texturesDirty) {
-        [mContext->currentCommandEncoder setFragmentTextures:mContext->boundTextures
-                                                 withRange:range];
-        [mContext->currentCommandEncoder setVertexTextures:mContext->boundTextures
-                                               withRange:range];
-        mContext->texturesDirty = false;
-    }
-
-    if (mContext->samplersDirty) {
-        [mContext->currentCommandEncoder setFragmentSamplerStates:mContext->boundSamplers
-                                                      withRange:range];
-        [mContext->currentCommandEncoder setVertexSamplerStates:mContext->boundSamplers
-                                                    withRange:range];
-        mContext->samplersDirty = false;
-    }
+    [mContext->currentCommandEncoder setFragmentTextures:texturesToBind
+                                             withRange:range];
+    [mContext->currentCommandEncoder setVertexTextures:texturesToBind
+                                           withRange:range];
+    [mContext->currentCommandEncoder setFragmentSamplerStates:samplersToBind
+                                                  withRange:range];
+    [mContext->currentCommandEncoder setVertexSamplerStates:samplersToBind
+                                                withRange:range];
 
     // Bind the vertex buffers.
     NSRange bufferRange = NSMakeRange(VERTEX_BUFFER_START, primitive->buffers.size());
@@ -742,23 +728,31 @@ void MetalDriver::draw(Driver::PipelineState ps, Driver::RenderPrimitiveHandle r
 
 void MetalDriver::enumerateSamplerGroups(
         const MetalProgram* program,
-        const std::function<void(const SamplerGroup::Sampler*, uint8_t)>& f) {
-    for (uint8_t bufferIdx = 0; bufferIdx < NUM_SAMPLER_BINDINGS; bufferIdx++) {
-        MetalSamplerGroup* metalSb = mContext->samplerBindings[bufferIdx];
-        if (!metalSb) {
+        const std::function<void(const SamplerGroup::Sampler*, size_t)>& f) {
+    for (uint8_t samplerGroupIdx = 0; samplerGroupIdx < NUM_SAMPLER_GROUPS; samplerGroupIdx++) {
+        const auto& samplerGroup = program->samplerGroupInfo[samplerGroupIdx];
+        if (samplerGroup.empty()) {
             continue;
         }
-        SamplerGroup* sb = metalSb->sb.get();
-        for (uint8_t samplerIdx = 0; samplerIdx < sb->getSize(); samplerIdx++) {
-            const SamplerGroup::Sampler* sampler = sb->getSamplers() + samplerIdx;
-            if (!sampler->t) {
+        const auto* metalSamplerGroup = mContext->samplerBindings[samplerGroupIdx];
+        if (!metalSamplerGroup) {
+            utils::slog.w << "Program has non-empty samplerGroup (index " << samplerGroupIdx <<
+                    ") but has not bound any samplers." << utils::io::endl;
+            continue;
+        }
+        SamplerGroup* sb = metalSamplerGroup->sb.get();
+        assert(sb->getSize() == samplerGroup.size());
+        size_t samplerIdx = 0;
+        for (const auto& sampler : samplerGroup) {
+            size_t bindingPoint = sampler.binding;
+            const SamplerGroup::Sampler* boundSampler = sb->getSamplers() + samplerIdx;
+            samplerIdx++;
+
+            if (!boundSampler->t) {
                 continue;
             }
 
-            if (samplerIdx < program->samplerBindings[bufferIdx].size()) {
-                uint8_t binding = (uint8_t)program->samplerBindings[bufferIdx][samplerIdx].binding;
-                f(sampler, binding);
-            }
+            f(boundSampler, bindingPoint);
         }
     }
 }

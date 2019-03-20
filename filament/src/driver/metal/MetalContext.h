@@ -59,11 +59,6 @@ struct MetalContext {
     PipelineStateCache pipelineStateCache;
     SamplerStateCache samplerStateCache;
 
-    id<MTLSamplerState> boundSamplers[NUM_SAMPLER_BINDINGS] = {};
-    id<MTLTexture> boundTextures[NUM_SAMPLER_BINDINGS] = {};
-    bool samplersDirty = true;
-    bool texturesDirty = true;
-
     MetalSamplerGroup* samplerBindings[NUM_SAMPLER_BINDINGS] = {};
 
     // Surface-related properties.
