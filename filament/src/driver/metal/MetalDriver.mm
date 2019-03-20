@@ -54,8 +54,8 @@ MetalDriver::MetalDriver(driver::MetalPlatform* platform) noexcept
 }
 
 MetalDriver::~MetalDriver() noexcept {
-    delete mContext;
     [mContext->device release];
+    delete mContext;
 }
 
 #define METAL_DEBUG_COMMANDS 0
