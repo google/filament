@@ -143,6 +143,8 @@ Driver* PlatformEGL::createDriver(void* sharedContext) noexcept {
         return nullptr;
     }
 
+    importGLESExtensionsEntryPoints();
+
     auto extensions = split(eglQueryString(mEGLDisplay, EGL_EXTENSIONS));
 
     eglCreateSyncKHR = (PFNEGLCREATESYNCKHRPROC) eglGetProcAddress("eglCreateSyncKHR");

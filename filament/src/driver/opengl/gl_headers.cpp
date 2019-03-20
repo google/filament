@@ -19,6 +19,7 @@
 #include <EGL/egl.h>
 #include <GLES3/gl31.h>
 #include <GLES2/gl2ext.h>
+#include <mutex>
 
 namespace glext {
 #ifdef GL_QCOM_tiled_rendering
@@ -37,14 +38,11 @@ PFNGLPOPGROUPMARKEREXTPROC glPopGroupMarkerEXT;
 PFNGLRENDERBUFFERSTORAGEMULTISAMPLEEXTPROC glRenderbufferStorageMultisampleEXT;
 PFNGLFRAMEBUFFERTEXTURE2DMULTISAMPLEEXTPROC glFramebufferTexture2DMultisampleEXT;
 #endif
-}
 
-using namespace glext;
+static std::once_flag sGlExtInitialized;
 
-namespace filament {
-static class GLESExtInit {
-public:
-    GLESExtInit() noexcept {
+void importGLESExtensionsEntryPoints() {
+    std::call_once(sGlExtInitialized, []() {
 #ifdef GL_QCOM_tiled_rendering
         glStartTilingQCOM =
                 (PFNGLSTARTTILINGQCOMPROC)eglGetProcAddress(
@@ -82,9 +80,10 @@ public:
                 (PFNGLRENDERBUFFERSTORAGEMULTISAMPLEEXTPROC)eglGetProcAddress(
                         "glRenderbufferStorageMultisampleEXT");
 #endif
-    }
-} instance;
-} // namespace filament
+    });
+}
+
+} // namespace glext
 
 #endif
 
