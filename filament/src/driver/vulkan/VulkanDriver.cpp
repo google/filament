@@ -39,7 +39,7 @@ namespace driver {
 VulkanDriver::VulkanDriver(VulkanPlatform* platform,
         const char* const* ppEnabledExtensions, uint32_t enabledExtensionCount) noexcept :
         DriverBase(new ConcreteDispatcher<VulkanDriver>()),
-        mContextManager(*platform), mStagePool(mContext), mFramebufferCache(mContext),
+        mContextManager(*platform), mStagePool(mContext, mDisposer), mFramebufferCache(mContext),
         mSamplerCache(mContext) {
     mContext.rasterState = mBinder.getDefaultRasterState();
 
@@ -184,20 +184,25 @@ void VulkanDriver::terminate() {
     if (!mContext.instance) {
         return;
     }
-    waitForIdle(mContext);
+
+    // Flush the work command buffer.
+    acquireWorkCommandBuffer(mContext);
+    mDisposer.release(mContext.work.resources);
+
+    // Allow the stage pool and disposer to clean up.
+    mStagePool.gc();
+    mDisposer.reset();
 
     // Destroy the work command buffer and fence.
     VulkanCommandBuffer& work = mContext.work;
     VkDevice device = mContext.device;
-    vkWaitForFences(device, 1, &work.fence, VK_FALSE, UINT64_MAX);
     vkFreeCommandBuffers(device, mContext.commandPool, 1, &work.cmdbuffer);
     vkDestroyFence(device, work.fence, VKALLOC);
 
-    mBinder.destroyCache();
     mStagePool.reset();
+    mBinder.destroyCache();
     mFramebufferCache.reset();
     mSamplerCache.reset();
-    mDisposer.reset();
 
     vmaDestroyAllocator(mContext.allocator);
     vkDestroyCommandPool(mContext.device, mContext.commandPool, VKALLOC);
@@ -217,14 +222,15 @@ void VulkanDriver::beginFrame(int64_t monotonic_clock_ns, uint32_t frameId) {
         return;
     }
 
+    // After each command buffer acquisition, we know that the previous submission of the acquired
+    // command buffer has finished, so we can decrement the refcount for each of its referenced
+    // resources.
+
     acquireWorkCommandBuffer(mContext);
+    mDisposer.release(mContext.work.resources);
+
     acquireSwapCommandBuffer(mContext);
-
-    // Now that we know that the previous submission of this command buffer has finished, decrement
-    // the refcount for each of its referenced resources.
     mDisposer.release(mContext.currentCommands->resources);
-
-    SwapContext& swapContext = getSwapContext(mContext);
 
     // vkCmdBindPipeline and vkCmdBindDescriptorSets establish bindings to a specific command
     // buffer; they are not global to the device. Since VulkanBinder doesn't have context about the
@@ -237,13 +243,6 @@ void VulkanDriver::beginFrame(int64_t monotonic_clock_ns, uint32_t frameId) {
     // of allowing us to safely mutate descriptor sets. For now we're avoiding that strategy in the
     // interest of maintaining a small memory footprint.
     mBinder.resetBindings();
-
-    // Now that a command buffer is ready, perform any pending work that has been scheduled by
-    // VulkanDriver, such as reclaiming memory. There are two sets of work queues: one in the
-    // global context, and one in the per-cmdbuffer contexts. Crucially, we have begun the frame
-    // but not the render pass; we cannot perform arbitrary work during the render pass.
-    performPendingWork(swapContext.pendingWork, swapContext.commands.cmdbuffer);
-    performPendingWork(mContext.pendingWork, swapContext.commands.cmdbuffer);
 
     // Free old unused objects.
     mStagePool.gc();
@@ -494,9 +493,24 @@ void VulkanDriver::destroySamplerGroup(Driver::SamplerGroupHandle sbh) {
 
 void VulkanDriver::destroySwapChain(Driver::SwapChainHandle sch) {
     if (sch) {
+        VulkanSurfaceContext& surfaceContext = handle_cast<VulkanSwapChain>(mHandleMap, sch)->surfaceContext;
         waitForIdle(mContext);
-        VulkanSurfaceContext& sc = handle_cast<VulkanSwapChain>(mHandleMap, sch)->surfaceContext;
-        destroySurfaceContext(mContext, sc);
+        for (SwapContext& swapContext : surfaceContext.swapContexts) {
+            mDisposer.release(swapContext.commands.resources);
+            vkFreeCommandBuffers(mContext.device, mContext.commandPool, 1,
+                    &swapContext.commands.cmdbuffer);
+            vkDestroyFence(mContext.device, swapContext.commands.fence, VKALLOC);
+            vkDestroyImageView(mContext.device, swapContext.attachment.view, VKALLOC);
+            swapContext.commands.fence = VK_NULL_HANDLE;
+            swapContext.attachment.view = VK_NULL_HANDLE;
+        }
+        vkDestroySwapchainKHR(mContext.device, surfaceContext.swapchain, VKALLOC);
+        vkDestroySemaphore(mContext.device, surfaceContext.imageAvailable, VKALLOC);
+        vkDestroySemaphore(mContext.device, surfaceContext.renderingFinished, VKALLOC);
+        vkDestroySurfaceKHR(mContext.instance, surfaceContext.surface, VKALLOC);
+        if (mContext.currentSurface == &surfaceContext) {
+            mContext.currentSurface = nullptr;
+        }
         destruct_handle<VulkanSwapChain>(mHandleMap, sch);
     }
 }

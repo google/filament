@@ -336,9 +336,9 @@ void VulkanUniformBuffer::loadFromCpu(const void* cpuData, uint32_t numBytes) {
     vmaUnmapMemory(mContext.allocator, stage->memory);
     vmaFlushAllocation(mContext.allocator, stage->memory, 0, numBytes);
 
-    auto copyToDevice = [this, numBytes, stage] (VkCommandBuffer cmdbuffer) {
+    auto copyToDevice = [this, numBytes, stage] (VulkanCommandBuffer& commands) {
         VkBufferCopy region { .size = numBytes };
-        vkCmdCopyBuffer(cmdbuffer, stage->buffer, mGpuBuffer, 1, &region);
+        vkCmdCopyBuffer(commands.cmdbuffer, stage->buffer, mGpuBuffer, 1, &region);
 
         // Ensure that the copy finishes before the next draw call.
         VkBufferMemoryBarrier barrier {
@@ -350,25 +350,23 @@ void VulkanUniformBuffer::loadFromCpu(const void* cpuData, uint32_t numBytes) {
             .buffer = mGpuBuffer,
             .size = VK_WHOLE_SIZE
         };
-        vkCmdPipelineBarrier(cmdbuffer, VK_PIPELINE_STAGE_TRANSFER_BIT,
+        vkCmdPipelineBarrier(commands.cmdbuffer, VK_PIPELINE_STAGE_TRANSFER_BIT,
                 VK_PIPELINE_STAGE_VERTEX_INPUT_BIT, 0, 0, nullptr, 1, &barrier, 0, nullptr);
-        mContext.pendingWork.emplace_back([this, stage] (VkCommandBuffer)  {
-            mStagePool.releaseStage(stage);
-        });
+
+        mStagePool.releaseStage(stage, commands);
     };
 
     // If inside beginFrame / endFrame, use the swap context, otherwise use the work cmdbuffer.
     if (mContext.currentCommands) {
-        copyToDevice(mContext.currentCommands->cmdbuffer);
+        copyToDevice(*mContext.currentCommands);
     } else {
-        VkCommandBuffer work = acquireWorkCommandBuffer(mContext);
-        copyToDevice(work);
+        acquireWorkCommandBuffer(mContext);
+        copyToDevice(mContext.work);
         flushWorkCommandBuffer(mContext);
     }
 }
 
 VulkanUniformBuffer::~VulkanUniformBuffer() {
-    assert(!hasPendingWork(mContext) && "Buffer destroyed while work is pending.");
     vmaDestroyBuffer(mContext.allocator, mGpuBuffer, mGpuMemory);
 }
 
@@ -493,23 +491,24 @@ void VulkanTexture::update2DImage(const PixelBufferDescriptor& data, uint32_t wi
     vmaFlushAllocation(mContext.allocator, stage->memory, 0, numDstBytes);
 
     // Create a copy-to-device functor because we might need to defer it.
-    auto copyToDevice = [this, stage, width, height, miplevel] (VkCommandBuffer cmd) {
-        transitionImageLayout(cmd, textureImage, VK_IMAGE_LAYOUT_UNDEFINED,
+    auto copyToDevice = [this, stage, width, height, miplevel] (VulkanCommandBuffer& commands) {
+        transitionImageLayout(commands.cmdbuffer, textureImage, VK_IMAGE_LAYOUT_UNDEFINED,
                 VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, miplevel, 1);
-        copyBufferToImage(cmd, stage->buffer, textureImage, width, height, nullptr, miplevel);
-        transitionImageLayout(cmd, textureImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+        copyBufferToImage(commands.cmdbuffer, stage->buffer, textureImage, width, height, nullptr,
+                miplevel);
+        transitionImageLayout(commands.cmdbuffer, textureImage,
+                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                 VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, miplevel, 1);
-        mContext.pendingWork.emplace_back([this, stage] (VkCommandBuffer) {
-            mStagePool.releaseStage(stage);
-        });
+
+        mStagePool.releaseStage(stage, commands);
     };
 
     // If inside beginFrame / endFrame, use the swap context, otherwise use the work cmdbuffer.
     if (mContext.currentCommands) {
-        copyToDevice(mContext.currentCommands->cmdbuffer);
+        copyToDevice(*mContext.currentCommands);
     } else {
-        VkCommandBuffer work = acquireWorkCommandBuffer(mContext);
-        copyToDevice(work);
+        acquireWorkCommandBuffer(mContext);
+        copyToDevice(mContext.work);
         flushWorkCommandBuffer(mContext);
     }
 }
@@ -535,25 +534,26 @@ void VulkanTexture::updateCubeImage(const PixelBufferDescriptor& data,
     vmaFlushAllocation(mContext.allocator, stage->memory, 0, numDstBytes);
 
     // Create a copy-to-device functor because we might need to defer it.
-    auto copyToDevice = [this, faceOffsets, stage, miplevel] (VkCommandBuffer cmd) {
+    auto copyToDevice = [this, faceOffsets, stage, miplevel] (VulkanCommandBuffer& commands) {
         uint32_t width = std::max(1u, this->width >> miplevel);
         uint32_t height = std::max(1u, this->height >> miplevel);
-        transitionImageLayout(cmd, textureImage, VK_IMAGE_LAYOUT_UNDEFINED,
+        transitionImageLayout(commands.cmdbuffer, textureImage, VK_IMAGE_LAYOUT_UNDEFINED,
                 VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, miplevel, 6);
-        copyBufferToImage(cmd, stage->buffer, textureImage, width, height, &faceOffsets, miplevel);
-        transitionImageLayout(cmd, textureImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+        copyBufferToImage(commands.cmdbuffer, stage->buffer, textureImage, width, height,
+                &faceOffsets, miplevel);
+        transitionImageLayout(commands.cmdbuffer, textureImage,
+                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                 VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, miplevel, 6);
-        mContext.pendingWork.emplace_back([this, stage] (VkCommandBuffer) {
-            mStagePool.releaseStage(stage);
-        });
+
+        mStagePool.releaseStage(stage, commands);
     };
 
     // If inside beginFrame / endFrame, use the swap context, otherwise use the work cmdbuffer.
     if (mContext.currentCommands) {
-        copyToDevice(mContext.currentCommands->cmdbuffer);
+        copyToDevice(*mContext.currentCommands);
     } else {
-        VkCommandBuffer work = acquireWorkCommandBuffer(mContext);
-        copyToDevice(work);
+        acquireWorkCommandBuffer(mContext);
+        copyToDevice(mContext.work);
         flushWorkCommandBuffer(mContext);
     }
 }

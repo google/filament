@@ -59,10 +59,7 @@ void VulkanDisposer::gc() noexcept {
 
 void VulkanDisposer::reset() noexcept {
     gc();
-    for (auto& iter : mDisposables) {
-        iter.second.destructor();
-    }
-    mDisposables.clear();
+    assert(mDisposables.empty());
 }
 
 } // namespace filament
