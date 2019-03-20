@@ -16,22 +16,20 @@
 
 #include "driver/vulkan/VulkanDisposer.h"
 
-#include <utils/Panic.h>
-
 namespace filament {
 namespace driver {
 
 void VulkanDisposer::createDisposable(Key resource, std::function<void()> destructor) noexcept {
-    mDisposables[resource] = { 1, destructor };
+    mDisposables[resource].destructor = destructor;
 }
 
 void VulkanDisposer::addReference(Key resource) noexcept {
-    ASSERT_POSTCONDITION(mDisposables[resource].refcount > 0, "Unexpected ref count.");
+    assert(mDisposables[resource].refcount > 0);
     ++mDisposables[resource].refcount;
 }
 
 void VulkanDisposer::removeReference(Key resource) noexcept {
-    ASSERT_POSTCONDITION(mDisposables[resource].refcount > 0, "Unexpected ref count.");
+    assert(mDisposables[resource].refcount > 0);
     if (--mDisposables[resource].refcount == 0) {
         mGraveyard.emplace_back(std::move(mDisposables[resource]));
         mDisposables.erase(resource);
@@ -61,7 +59,7 @@ void VulkanDisposer::gc() noexcept {
 
 void VulkanDisposer::reset() noexcept {
     gc();
-    for (auto iter : mDisposables) {
+    for (auto& iter : mDisposables) {
         iter.second.destructor();
     }
     mDisposables.clear();
