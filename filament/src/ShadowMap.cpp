@@ -219,9 +219,13 @@ void ShadowMap::computeShadowCameraDirectional(
         /*
          * Compute the light's model matrix
          * (direction & position)
+         *
+         * The light's model matrix contains the light position and direction.
+         *
+         * For directional lights, we can choose any position.
          */
-        // the light's model matrix contains the light position and direction.
-        const mat4f M = mat4f::lookAt(float3{ 0, 0, 0 }, dir, float3{ 0, 1, 0 });
+        const float3 lightPosition = {}; // TODO: pick something better
+        const mat4f M = mat4f::lookAt(lightPosition, lightPosition + dir, float3{ 0, 1, 0 });
         const mat4f Mv = FCamera::rigidTransformInverse(M);
 
         // Orient the shadow map in the direction of the view vector by constructing a
@@ -402,7 +406,7 @@ mat4f ShadowMap::applyLISPSM(CameraInfo const& camera, float dzn, float dzf, mat
     // we pass it along here.
     //
     // We could get the light direction from the lightspace matrix as well.
-    // But it wold require a matrix inversion in the spotlight case.
+    // But it would require a matrix inversion in the spotlight case.
     //     e.g.: dir = normalize(inverse(LMpMv)[3].xyz))
 
     const float zn = camera.getNear();  // near plane distance

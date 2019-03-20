@@ -70,6 +70,7 @@ public:
      * @return
      */
     Box& set(const math::float3& min, const math::float3& max) noexcept {
+        // float3 ctor needed for visual studio
         center     = (max + min) * math::float3(0.5f);
         halfExtent = (max - min) * math::float3(0.5f);
         return *this;
@@ -134,9 +135,21 @@ struct Aabb {
 
     /**
      * Computes the center of the box.
-     * @return (min +max)/2
+     * @return (max + min)/2
      */
-    math::float3 center() const noexcept { return (min + max) * math::float3(0.5f); }
+    math::float3 center() const noexcept {
+        // float3 ctor needed for visual studio
+        return (max + min) * math::float3(0.5f);
+    }
+
+    /**
+     * Computes the half-extent of the box.
+     * @return (max - min)/2
+     */
+    math::float3 extent() const noexcept {
+        // float3 ctor needed for visual studio
+        return (max - min) * math::float3(0.5f);
+    }
 
     /**
      * Whether the box is empty, i.e.: it's volume is null or negative.
