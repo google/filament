@@ -1273,7 +1273,6 @@ void OpenGLDriver::createRenderTargetR(Driver::RenderTargetHandle rth,
         bindFramebuffer(GL_FRAMEBUFFER, rt->gl.fbo);
         disable(GL_SCISSOR_TEST);
         glClear(GL_COLOR_BUFFER_BIT);
-        enable(GL_SCISSOR_TEST);
 #endif
     } else {
         rt->gl.colorLevel = 0;
@@ -2160,15 +2159,21 @@ void OpenGLDriver::beginRenderPass(Driver::RenderTargetHandle rth,
         }
     }
 
-    if (!(clearFlags & RenderPassFlags::IGNORE_VIEWPORT)) {
-        viewport(params.viewport.left, params.viewport.bottom,
-                params.viewport.width, params.viewport.height);
-    }
+    setViewport(params.viewport.left, params.viewport.bottom,
+            params.viewport.width, params.viewport.height);
+
+    setScissor(params.viewport.left, params.viewport.bottom,
+            params.viewport.width, params.viewport.height);
 
     const bool respectScissor = !(clearFlags & RenderPassFlags::IGNORE_SCISSOR);
     const bool clearColor = clearFlags & TargetBufferFlags::COLOR;
     const bool clearDepth = clearFlags & TargetBufferFlags::DEPTH;
     const bool clearStencil = clearFlags & TargetBufferFlags::STENCIL;
+    if (respectScissor) {
+        enable(GL_SCISSOR_TEST);
+    } else {
+        disable(GL_SCISSOR_TEST);
+    }
     if (respectScissor && GLES31_HEADERS && bugs.clears_hurt_performance) {
         // With OpenGL ES, we clear the viewport using geometry to improve performance on certain
         // OpenGL drivers. e.g. on Adreno this avoids needless loads from the GMEM.
@@ -2176,16 +2181,10 @@ void OpenGLDriver::beginRenderPass(Driver::RenderTargetHandle rth,
                 clearDepth, params.clearDepth,
                 clearStencil, params.clearStencil);
     } else {
-        if (!respectScissor) {
-            disable(GL_SCISSOR_TEST);
-        }
         // With OpenGL we always clear using glClear()
         clearWithRasterPipe(clearColor, params.clearColor,
                 clearDepth, params.clearDepth,
                 clearStencil, params.clearStencil);
-        if (!respectScissor) {
-            enable(GL_SCISSOR_TEST);
-        }
     }
 }
 
@@ -2234,7 +2233,6 @@ void OpenGLDriver::resolve(GLRenderTarget const* rt, TargetBufferFlags discardFl
         bindFramebuffer(GL_DRAW_FRAMEBUFFER, rt->gl.fbo_draw);
         disable(GL_SCISSOR_TEST);
         glBlitFramebuffer(0, 0, rt->width, rt->height, 0, 0, rt->width, rt->height, mask, GL_NEAREST);
-        enable(GL_SCISSOR_TEST);
         CHECK_GL_ERROR(utils::slog.e)
     }
 }
@@ -2392,6 +2390,7 @@ void OpenGLDriver::setRenderPrimitiveRange(Driver::RenderPrimitiveHandle rph,
     }
 }
 
+// Sets up a scissor rectangle that automatically gets clipped against the viewport.
 void OpenGLDriver::setViewportScissor(
         int32_t left, int32_t bottom, uint32_t width, uint32_t height) {
     DEBUG_MARKER()
@@ -2416,9 +2415,7 @@ void OpenGLDriver::setViewportScissor(
     // rather than negative values to satisfy OpenGL requirements.
     scissor.z = std::max(0, right - scissor.x);
     scissor.w = std::max(0, top - scissor.y);
-    update_state(state.window.scissor, scissor, [scissor]() {
-        glScissor(scissor.x, scissor.y, scissor.z, scissor.w);
-    });
+    setScissor(scissor.x, scissor.y, scissor.z, scissor.w);
 }
 
 /*
@@ -2593,22 +2590,6 @@ void OpenGLDriver::readStreamPixels(Driver::StreamHandle sh,
 // ------------------------------------------------------------------------------------------------
 // Setting rendering state
 // ------------------------------------------------------------------------------------------------
-
-void OpenGLDriver::viewport(ssize_t left, ssize_t bottom, size_t width, size_t height) {
-    DEBUG_MARKER()
-
-    GLint l = (GLint)left;
-    GLint b = (GLint)bottom;
-    GLsizei w = (GLsizei)width;
-    GLsizei h = (GLsizei)height;
-
-    // Note that we also set the scissor when binding a material instance, but the following
-    // scissor call is still necessary, so that the post-process quad doesn't get clipped.
-    setScissor(l, b, w, h);
-
-    setViewport(l, b, w, h);
-    CHECK_GL_ERROR(utils::slog.e)
-}
 
 void OpenGLDriver::bindUniformBuffer(size_t index, Driver::UniformBufferHandle ubh) {
     DEBUG_MARKER()
@@ -2908,7 +2889,6 @@ void OpenGLDriver::blit(TargetBufferFlags buffers,
                 srcRect.left, srcRect.bottom, srcRect.left + srcRect.width, srcRect.bottom + srcRect.height,
                 dstRect.left, dstRect.bottom, dstRect.left + dstRect.width, dstRect.bottom + dstRect.height,
                 mask, glFilterMode);
-        enable(GL_SCISSOR_TEST);
         CHECK_GL_ERROR(utils::slog.e)
 
         // In a sense, blitting to a texture level is similar to calling setTextureData on it; in
@@ -2950,6 +2930,8 @@ void OpenGLDriver::draw(
     setRasterState(state.rasterState);
 
     polygonOffset(state.polygonOffset.slope, state.polygonOffset.constant);
+
+    enable(GL_SCISSOR_TEST);
 
     glDrawRangeElements(GLenum(rp->type), rp->minIndex, rp->maxIndex, rp->count,
             rp->gl.indicesType, reinterpret_cast<const void*>(rp->offset));

@@ -425,12 +425,6 @@ DECL_DRIVER_API_1(commit,
  * -----------------------
  */
 
-DECL_DRIVER_API_4(viewport,
-        ssize_t, left,
-        ssize_t, bottom,
-        size_t, width,
-        size_t, height)
-
 DECL_DRIVER_API_2(bindUniformBuffer,
         size_t, index,
         Driver::UniformBufferHandle, ubh)

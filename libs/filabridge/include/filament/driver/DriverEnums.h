@@ -95,7 +95,6 @@ struct RenderPassFlags {
 
     // Extra RenderPass-only flags stashed in the "clear" field.
     static const uint8_t IGNORE_SCISSOR = 0x10;
-    static const uint8_t IGNORE_VIEWPORT = 0x20;
 };
 
 struct RenderPassParams {

@@ -120,14 +120,11 @@ void ShadowMap::beginRenderPass(DriverApi& driver) const noexcept {
     params.flags.discardStart = TargetBufferFlags::DEPTH;
     params.flags.discardEnd = TargetBufferFlags::COLOR_AND_STENCIL;
     params.clearDepth = 1.0;
-    params.viewport.width = params.viewport.height = mShadowMapDimension;
-    // Disable scissor and viewport to avoid bugs in some drivers where the GPU memory is reloaded
-    // needlessly.
-    params.flags.clear |= RenderPassFlags::IGNORE_SCISSOR | RenderPassFlags::IGNORE_VIEWPORT;
+    params.viewport = mViewport;
+    // disable scissor for clearing so the whole surface is cleared, but set the viewport to the
+    // the inset-by-1 rectangle.
+    params.flags.clear |= RenderPassFlags::IGNORE_SCISSOR;
     driver.beginRenderPass(mShadowMapRenderTarget, params);
-
-    driver.viewport(mViewport.left, mViewport.bottom,
-            mViewport.width, mViewport.height);
 }
 
 void ShadowMap::update(
