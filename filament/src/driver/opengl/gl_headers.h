@@ -24,6 +24,10 @@
 
     /* The Android NDK doesn't exposes extensions, fake it with eglGetProcAddress */
     namespace glext {
+        // importGLESExtensionsEntryPoints is thread-safe and can be called multiple times.
+        // it is currently called from PlatformEGL.
+        void importGLESExtensionsEntryPoints();
+
 #ifdef GL_QCOM_tiled_rendering
         extern PFNGLSTARTTILINGQCOMPROC glStartTilingQCOM;
         extern PFNGLENDTILINGQCOMPROC glEndTilingQCOM;
