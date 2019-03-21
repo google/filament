@@ -53,9 +53,9 @@ public:
         if (std::is_same<T, bool>::value)           type = BOOL;
         if (std::is_same<T, int>::value)            type = INT;
         if (std::is_same<T, float>::value)          type = FLOAT;
-        if (std::is_same<T, filament::math::float2>::value)   type = FLOAT2;
-        if (std::is_same<T, filament::math::float3>::value)   type = FLOAT3;
-        if (std::is_same<T, filament::math::float4>::value)   type = FLOAT3;
+        if (std::is_same<T, math::float2>::value)   type = FLOAT2;
+        if (std::is_same<T, math::float3>::value)   type = FLOAT3;
+        if (std::is_same<T, math::float4>::value)   type = FLOAT3;
         registerProperty(name, p, type);
     }
 

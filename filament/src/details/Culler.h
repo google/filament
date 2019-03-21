@@ -53,8 +53,8 @@ public:
      */
     static void intersects(result_type* results,
             Frustum const& frustum,
-            filament::math::float3 const* center,
-            filament::math::float3 const* extent,
+            math::float3 const* center,
+            math::float3 const* extent,
             size_t count, size_t bit) noexcept;
 
     /*
@@ -63,7 +63,7 @@ public:
     static void intersects(
             result_type* results,
             Frustum const& frustum,
-            filament::math::float4 const* b,
+            math::float4 const* b,
             size_t count) noexcept;
 
     /*
@@ -78,19 +78,19 @@ public:
      */
     static bool intersects(
             Frustum const& frustum,
-            filament::math::float4 const& sphere) noexcept;
+            math::float4 const& sphere) noexcept;
 
 
     struct UTILS_PUBLIC Test {
         static void intersects(result_type* results,
                 Frustum const& frustum,
-                filament::math::float3 const* c,
-                filament::math::float3 const* e,
+                math::float3 const* c,
+                math::float3 const* e,
                 size_t count) noexcept;
 
         static void intersects(result_type* results,
                 Frustum const& frustum,
-                filament::math::float4 const* b,
+                math::float4 const* b,
                 size_t count) noexcept;
     };
 };

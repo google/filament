@@ -103,9 +103,9 @@ public:
     bool setProperty(const char* name, bool v) noexcept;
     bool setProperty(const char* name, int v) noexcept;
     bool setProperty(const char* name, float v) noexcept;
-    bool setProperty(const char* name, filament::math::float2 v) noexcept;
-    bool setProperty(const char* name, filament::math::float3 v) noexcept;
-    bool setProperty(const char* name, filament::math::float4 v) noexcept;
+    bool setProperty(const char* name, math::float2 v) noexcept;
+    bool setProperty(const char* name, math::float3 v) noexcept;
+    bool setProperty(const char* name, math::float4 v) noexcept;
     /** @}*/
 
     /**
@@ -118,9 +118,9 @@ public:
     bool getProperty(const char* name, bool* v) const noexcept;
     bool getProperty(const char* name, int* v) const noexcept;
     bool getProperty(const char* name, float* v) const noexcept;
-    bool getProperty(const char* name, filament::math::float2* v) const noexcept;
-    bool getProperty(const char* name, filament::math::float3* v) const noexcept;
-    bool getProperty(const char* name, filament::math::float4* v) const noexcept;
+    bool getProperty(const char* name, math::float2* v) const noexcept;
+    bool getProperty(const char* name, math::float3* v) const noexcept;
+    bool getProperty(const char* name, math::float4* v) const noexcept;
     /** @}*/
 
 };

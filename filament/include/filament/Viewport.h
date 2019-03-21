@@ -73,7 +73,7 @@ public:
      * @return A new scaled Viewport. The coordinates and dimensions of the new Viewport are
      * rounded to the nearest integer value.
      */
-    Viewport scale(filament::math::float2 s) const noexcept;
+    Viewport scale(math::float2 s) const noexcept;
 
 private:
 

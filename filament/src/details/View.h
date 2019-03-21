@@ -62,7 +62,7 @@ public:
     void terminate(FEngine& engine);
 
     void prepare(FEngine& engine, driver::DriverApi& driver, ArenaScope& arena,
-            Viewport const& viewport, filament::math::float4 const& userTime) noexcept;
+            Viewport const& viewport, math::float4 const& userTime) noexcept;
 
     void setScene(FScene* scene) { mScene = scene; }
     FScene const* getScene() const noexcept { return mScene; }
@@ -184,7 +184,7 @@ public:
         return mHasPostProcessPass;
     }
 
-    filament::math::float2 updateScale(std::chrono::duration<float, std::milli> frameTime) noexcept;
+    math::float2 updateScale(std::chrono::duration<float, std::milli> frameTime) noexcept;
 
     void setDynamicResolutionOptions(View::DynamicResolutionOptions const& options) noexcept;
 
@@ -306,7 +306,7 @@ private:
     std::array<duration, MAX_FRAMETIME_HISTORY> mFrameTimeHistory;
     size_t mFrameTimeHistorySize = 0;
 
-    filament::math::float2 mScale = 1.0f;
+    math::float2 mScale = 1.0f;
     float mDynamicWorkloadScale = 1.0f;
     bool mIsDynamicResolutionSupported = false;
 

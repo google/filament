@@ -206,7 +206,7 @@ void RenderPass::setupColorCommand(Command& cmdDraw, bool hasDepthPass,
 UTILS_NOINLINE
 void RenderPass::generateCommands(uint32_t commandTypeFlags, Command* const commands,
         FScene::RenderableSoa const& soa, utils::Range<uint32_t> range, RenderFlags renderFlags,
-        filament::math::float3 cameraPosition, filament::math::float3 cameraForward) noexcept {
+        float3 cameraPosition, float3 cameraForward) noexcept {
 
     // generateCommands() writes both the draw and depth commands simultaneously such that
     // we go throw the list of renderables just once.

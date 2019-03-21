@@ -57,14 +57,14 @@ public:
 
 
     // Sets a custom projection matrix (sets both the viewing and culling projections).
-    void setCustomProjection(filament::math::mat4 const& projection, double near, double far) noexcept;
+    void setCustomProjection(math::mat4 const& projection, double near, double far) noexcept;
 
     // returns the projection matrix
-    const filament::math::mat4& getProjectionMatrix() const noexcept {
+    const math::mat4& getProjectionMatrix() const noexcept {
         return mProjection;
     }
 
-    const filament::math::mat4& getCullingProjectionMatrix() const noexcept {
+    const math::mat4& getCullingProjectionMatrix() const noexcept {
         return mProjectionForCulling;
     }
 
@@ -72,41 +72,41 @@ public:
     float getCullingFar() const noexcept { return mFar; }
 
     // sets the camera's view matrix (must be a rigid transform)
-    void setModelMatrix(const filament::math::mat4f& modelMatrix) noexcept;
+    void setModelMatrix(const math::mat4f& modelMatrix) noexcept;
 
     // sets the camera's view matrix
-    void lookAt(const filament::math::float3& eye, const filament::math::float3& center, const filament::math::float3& up = { 0, 1, 0 })  noexcept;
+    void lookAt(const math::float3& eye, const math::float3& center, const math::float3& up = { 0, 1, 0 })  noexcept;
 
     // returns the view matrix
-    filament::math::mat4f const& getModelMatrix() const noexcept;
+    math::mat4f const& getModelMatrix() const noexcept;
 
     // returns the inverse of the view matrix
-    filament::math::mat4f getViewMatrix() const noexcept;
+    math::mat4f getViewMatrix() const noexcept;
 
     template <typename T>
-    static filament::math::details::TMat44<T> rigidTransformInverse(filament::math::details::TMat44<T> const& v) noexcept {
+    static math::details::TMat44<T> rigidTransformInverse(math::details::TMat44<T> const& v) noexcept {
         // The inverse of a rigid transform can be computed from the transpose
         //  | R T |^-1    | Rt -Rt*T |
         //  | 0 1 |     = |  0   1   |
 
-        const filament::math::details::TMat33<T> rt(transpose(v.upperLeft()));
-        const filament::math::details::TVec3<T> t(rt * v[3].xyz);
-        return filament::math::details::TMat44<T>(rt, -t);
+        const math::details::TMat33<T> rt(transpose(v.upperLeft()));
+        const math::details::TVec3<T> t(rt * v[3].xyz);
+        return math::details::TMat44<T>(rt, -t);
     }
 
-    filament::math::float3 const& getPosition() const noexcept {
+    math::float3 const& getPosition() const noexcept {
         return getModelMatrix()[3].xyz;
     }
 
-    filament::math::float3 getLeftVector() const noexcept {
+    math::float3 getLeftVector() const noexcept {
         return normalize(getModelMatrix()[0].xyz);
     }
 
-    filament::math::float3 getUpVector() const noexcept {
+    math::float3 getUpVector() const noexcept {
         return normalize(getModelMatrix()[1].xyz);
     }
 
-    filament::math::float3 getForwardVector() const noexcept {
+    math::float3 getForwardVector() const noexcept {
         // the camera looks towards -z
         return normalize(-getModelMatrix()[2].xyz);
     }
@@ -136,15 +136,15 @@ public:
         return mEntity;
     }
 
-    static filament::math::mat4f getViewMatrix(filament::math::mat4f const& model) noexcept;
-    static Frustum getFrustum(filament::math::mat4 const& projection, filament::math::mat4f const& viewMatrix) noexcept;
+    static math::mat4f getViewMatrix(math::mat4f const& model) noexcept;
+    static Frustum getFrustum(math::mat4 const& projection, math::mat4f const& viewMatrix) noexcept;
 
 private:
     FEngine& mEngine;
     utils::Entity mEntity;
 
-    filament::math::mat4 mProjection;            // projection matrix (infinite far)
-    filament::math::mat4 mProjectionForCulling;  // projection matrix (with far plane)
+    math::mat4 mProjection;            // projection matrix (infinite far)
+    math::mat4 mProjectionForCulling;  // projection matrix (with far plane)
 
     float mNear;
     float mFar;
@@ -155,18 +155,18 @@ private:
 };
 
 struct CameraInfo {
-    filament::math::mat4f projection;
-    filament::math::mat4f cullingProjection;
-    filament::math::mat4f model;
-    filament::math::mat4f view;
+    math::mat4f projection;
+    math::mat4f cullingProjection;
+    math::mat4f model;
+    math::mat4f view;
     float zn;
     float zf;
     float ev100 = 0.0f;
-    filament::math::float3 const& getPosition() const noexcept { return model[3].xyz; }
-    filament::math::float3 getForwardVector() const noexcept { return normalize(-model[2].xyz); }
+    math::float3 const& getPosition() const noexcept { return model[3].xyz; }
+    math::float3 getForwardVector() const noexcept { return normalize(-model[2].xyz); }
 
     // for debugging:
-    filament::math::mat4f worldOrigin; // this is already applied to model and view
+    math::mat4f worldOrigin; // this is already applied to model and view
 };
 
 FILAMENT_UPCAST(Camera)

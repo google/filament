@@ -27,7 +27,7 @@ namespace filament {
 // sphere radius must be squared
 // plane equation must be normalized, sphere radius must be squared
 // return float4.w <= 0 if no intersection
-inline constexpr filament::math::float4 spherePlaneIntersection(filament::math::float4 s, filament::math::float4 p) noexcept {
+inline constexpr math::float4 spherePlaneIntersection(math::float4 s, math::float4 p) noexcept {
     const float d = dot(s.xyz, p.xyz) + p.w;
     const float rr = s.w - d * d;
     s.x -= p.x * d;
@@ -40,21 +40,21 @@ inline constexpr filament::math::float4 spherePlaneIntersection(filament::math::
 // sphere radius must be squared
 // plane equation must be normalized and have the form {x,0,z,0}, sphere radius must be squared
 // return float4.w <= 0 if no intersection
-inline float spherePlaneDistanceSquared(filament::math::float4 s, float px, float pz) noexcept {
+inline float spherePlaneDistanceSquared(math::float4 s, float px, float pz) noexcept {
     return spherePlaneIntersection(s, { px, 0.f, pz, 0.f }).w;
 }
 
 // sphere radius must be squared
 // plane equation must be normalized and have the form {0,y,z,0}, sphere radius must be squared
 // return float4.w <= 0 if no intersection
-inline filament::math::float4 spherePlaneIntersection(filament::math::float4 s, float py, float pz) noexcept {
+inline math::float4 spherePlaneIntersection(math::float4 s, float py, float pz) noexcept {
     return spherePlaneIntersection(s, { 0.f, py, pz, 0.f });
 }
 
 // sphere radius must be squared
 // plane equation must be normalized and have the form {0,0,1,w}, sphere radius must be squared
 // return float4.w <= 0 if no intersection
-inline filament::math::float4 spherePlaneIntersection(filament::math::float4 s, float pw) noexcept {
+inline math::float4 spherePlaneIntersection(math::float4 s, float pw) noexcept {
     return spherePlaneIntersection(s, { 0.f, 0.f, 1.f, pw });
 }
 
@@ -62,13 +62,13 @@ inline filament::math::float4 spherePlaneIntersection(filament::math::float4 s, 
 // this version returns a false-positive intersection in a small area near the origin
 // of the cone extended outward by the sphere's radius.
 inline bool sphereConeIntersectionFast(
-        filament::math::float4 const& sphere,
-        filament::math::float3 const& conePosition,
-        filament::math::float3 const& coneAxis,
+        math::float4 const& sphere,
+        math::float3 const& conePosition,
+        math::float3 const& coneAxis,
         float coneSinInverse,
         float coneCosSquared) noexcept {
-    const filament::math::float3 u = conePosition - (sphere.w * coneSinInverse) * coneAxis;
-    filament::math::float3 d = sphere.xyz - u;
+    const math::float3 u = conePosition - (sphere.w * coneSinInverse) * coneAxis;
+    math::float3 d = sphere.xyz - u;
     float e = dot(coneAxis, d);
     float dd = dot(d, d);
     // we do the e>0 last here to avoid a branch
@@ -76,14 +76,14 @@ inline bool sphereConeIntersectionFast(
 }
 
 inline bool sphereConeIntersection(
-        filament::math::float4 const& sphere,
-        filament::math::float3 const& conePosition,
-        filament::math::float3 const& coneAxis,
+        math::float4 const& sphere,
+        math::float3 const& conePosition,
+        math::float3 const& coneAxis,
         float coneSinInverse,
         float coneCosSquared) noexcept {
     if (sphereConeIntersectionFast(sphere,
             conePosition, coneAxis, coneSinInverse, coneCosSquared)) {
-        filament::math::float3 d = sphere.xyz - conePosition;
+        math::float3 d = sphere.xyz - conePosition;
         float e = -dot(coneAxis, d);
         float dd = dot(d, d);
         if (e * e >= dd * (1 - coneCosSquared) && e > 0) {

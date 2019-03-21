@@ -188,7 +188,7 @@ public:
         mOut.resize(HISTORY);
     }
 
-    void push(T value, float b = 1.0f - filament::math::fast::exp(-0.125f)) noexcept {
+    void push(T value, float b = 1.0f - math::fast::exp(-0.125f)) noexcept {
         mIn.push_back(value);
         mIn.pop_front();
         std::array<T, MEDIAN> median;
