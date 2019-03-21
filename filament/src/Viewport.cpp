@@ -18,7 +18,7 @@
 
 namespace filament {
 
-Viewport Viewport::scale(filament::math::float2 s) const noexcept {
+Viewport Viewport::scale(math::float2 s) const noexcept {
 
     // round to nearest to avoid overlapping viewports
     // this could result to empty viewport, though.

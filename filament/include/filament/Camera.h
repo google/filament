@@ -201,7 +201,7 @@ public:
      * @param near        distance in world units from the camera to the near plane. \p near > 0.
      * @param far         distance in world units from the camera to the far plane. \p far > \p near.
      */
-    void setCustomProjection(filament::math::mat4 const& projection, double near, double far) noexcept;
+    void setCustomProjection(math::mat4 const& projection, double near, double far) noexcept;
 
     /** Returns the projection matrix used for rendering.
      *
@@ -212,7 +212,7 @@ public:
      *
      * @see setProjection, setLensProjection, setCustomProjection, getCullingProjectionMatrix
      */
-    const filament::math::mat4& getProjectionMatrix() const noexcept;
+    const math::mat4& getProjectionMatrix() const noexcept;
 
 
     /** Returns the projection matrix used for culling (far plane is finite).
@@ -221,7 +221,7 @@ public:
      *
      * @see setProjection, setLensProjection, getProjectionMatrix
      */
-    const filament::math::mat4& getCullingProjectionMatrix() const noexcept;
+    const math::mat4& getCullingProjectionMatrix() const noexcept;
 
 
     //! Returns the frustum's near plane
@@ -246,7 +246,7 @@ public:
      *
      * @warning \p view must be a rigid transform
      */
-    void setModelMatrix(const filament::math::mat4f& view) noexcept;
+    void setModelMatrix(const math::mat4f& view) noexcept;
 
     /** Sets the camera's view matrix
      *
@@ -254,9 +254,9 @@ public:
      * @param center    The position of the camera in world space.
      * @param up        A unit vector denoting the camera's "up" direction.
      */
-    void lookAt(const filament::math::float3& eye,
-                const filament::math::float3& center,
-                const filament::math::float3& up = { 0, 1, 0 }) noexcept;
+    void lookAt(const math::float3& eye,
+                const math::float3& center,
+                const math::float3& up = { 0, 1, 0 }) noexcept;
 
     /** Returns the camera's model matrix
      *
@@ -271,22 +271,22 @@ public:
      * @return The camera's pose in world space as a rigid transform. Parent transforms, if any,
      * are taken into account.
      */
-    filament::math::mat4f getModelMatrix() const noexcept;
+    math::mat4f getModelMatrix() const noexcept;
 
     //! Returns the camera's view matrix (inverse of the model matrix)
-    filament::math::mat4f getViewMatrix() const noexcept;
+    math::mat4f getViewMatrix() const noexcept;
 
     //! Returns the camera's position in world space
-    filament::math::float3 getPosition() const noexcept;
+    math::float3 getPosition() const noexcept;
 
     //! Returns the camera's normalized left vector
-    filament::math::float3 getLeftVector() const noexcept;
+    math::float3 getLeftVector() const noexcept;
 
     //! Returns the camera's normalized up vector
-    filament::math::float3 getUpVector() const noexcept;
+    math::float3 getUpVector() const noexcept;
 
     //! Returns the camera's forward vector
-    filament::math::float3 getForwardVector() const noexcept;
+    math::float3 getForwardVector() const noexcept;
 
     //! Returns a Frustum object in world space
     Frustum getFrustum() const noexcept;
@@ -362,13 +362,13 @@ public:
      *      \right)
      *      \f$
      */
-    static filament::math::mat4 inverseProjection(const filament::math::mat4& p) noexcept;
+    static math::mat4 inverseProjection(const math::mat4& p) noexcept;
 
     /**
      * Returns the inverse of a projection matrix.
-     * @see inverseProjection(const filament::math::mat4&)
+     * @see inverseProjection(const math::mat4&)
      */
-    static filament::math::mat4f inverseProjection(const filament::math::mat4f& p) noexcept;
+    static math::mat4f inverseProjection(const math::mat4f& p) noexcept;
 };
 
 } // namespace filament

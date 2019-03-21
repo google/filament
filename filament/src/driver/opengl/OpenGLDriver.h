@@ -265,7 +265,7 @@ private:
         return static_cast<Dp>(static_cast<void *>(base + offset));
     }
 
-    typedef filament::math::details::TVec4<GLint> vec4gli;
+    typedef math::details::TVec4<GLint> vec4gli;
 
     friend class OpenGLProgram;
 
@@ -475,7 +475,7 @@ private:
         } window;
 
         struct {
-            filament::math::float4 color = {};
+            math::float4 color = {};
             GLfloat depth = 1.0f;
             GLint stencil = 0;
         } clears;
@@ -500,13 +500,13 @@ private:
     GLuint mClearProgram;
     GLint mClearColorLocation;
     GLint mClearDepthLocation;
-    static const filament::math::float2 mClearTriangle[3];
+    static const math::float2 mClearTriangle[3];
     void initClearProgram() noexcept;
     void terminateClearProgram() noexcept;
-    void clearWithRasterPipe(bool clearColor, filament::math::float4 const& linearColor,
+    void clearWithRasterPipe(bool clearColor, math::float4 const& linearColor,
             bool clearDepth, double depth,
             bool clearStencil, uint32_t stencil) noexcept;
-    void clearWithGeometryPipe(bool clearColor, filament::math::float4 const& linearColor,
+    void clearWithGeometryPipe(bool clearColor, math::float4 const& linearColor,
             bool clearDepth, double depth,
             bool clearStencil, uint32_t stencil) noexcept;
 

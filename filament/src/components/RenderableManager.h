@@ -102,7 +102,7 @@ public:
     inline void setSkinning(Instance instance, bool enable) noexcept;
     inline void setPrimitives(Instance instance, utils::Slice<FRenderPrimitive> const& primitives) noexcept;
     inline void setBones(Instance instance, Bone const* transforms, size_t boneCount, size_t offset = 0) noexcept;
-    inline void setBones(Instance instance, filament::math::mat4f const* transforms, size_t boneCount, size_t offset = 0) noexcept;
+    inline void setBones(Instance instance, math::mat4f const* transforms, size_t boneCount, size_t offset = 0) noexcept;
 
 
     inline bool isShadowCaster(Instance instance) const noexcept;
@@ -146,7 +146,7 @@ private:
 
     friend class ::FilamentTest_Bones_Test;
 
-    static void makeBone(PerRenderableUibBone* out, filament::math::mat4f const& transforms) noexcept;
+    static void makeBone(PerRenderableUibBone* out, math::mat4f const& transforms) noexcept;
 
     enum {
         AABB,               // user data

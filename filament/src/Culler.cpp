@@ -26,10 +26,10 @@ namespace details {
 void Culler::intersects(
         result_type* UTILS_RESTRICT results,
         Frustum const& UTILS_RESTRICT frustum,
-        filament::math::float4 const* UTILS_RESTRICT b,
+        float4 const* UTILS_RESTRICT b,
         size_t count) noexcept {
 
-    filament::math::float4 const * const UTILS_RESTRICT planes = frustum.mPlanes;
+    float4 const * const UTILS_RESTRICT planes = frustum.mPlanes;
 
     // we use a vectorize width of 8 because, on ARMv8 it allow the compiler to write 8
     // 8-bits results in one go. Without this it has to do 4 separate byte writes, which
@@ -38,7 +38,7 @@ void Culler::intersects(
     #pragma clang loop vectorize_width(8)
     for (size_t i = 0; i < count; i++) {
         int visible = ~0;
-        filament::math::float4 const sphere(b[i]);
+        float4 const sphere(b[i]);
 
         #pragma clang loop unroll(full)
         for (size_t j = 0; j < 6; j++) {
@@ -57,11 +57,11 @@ void Culler::intersects(
 void Culler::intersects(
         result_type* UTILS_RESTRICT results,
         Frustum const& UTILS_RESTRICT frustum,
-        filament::math::float3 const* UTILS_RESTRICT center,
-        filament::math::float3 const* UTILS_RESTRICT extent,
+        float3 const* UTILS_RESTRICT center,
+        float3 const* UTILS_RESTRICT extent,
         size_t count, size_t bit) noexcept {
 
-    filament::math::float4 const * UTILS_RESTRICT const planes = frustum.mPlanes;
+    float4 const * UTILS_RESTRICT const planes = frustum.mPlanes;
 
     // we use a vectorize width of 8 because, on ARMv8 it allows the compiler to write eight
     // 8-bits results in one go. Without this it has to do 4 separate byte writes, which
@@ -107,7 +107,7 @@ bool Culler::intersects(Frustum const& frustum, Box const& box) noexcept {
 /*
  * returns whether an sphere intersects with the frustum
  */
-bool Culler::intersects(Frustum const& frustum, filament::math::float4 const& sphere) noexcept {
+bool Culler::intersects(Frustum const& frustum, float4 const& sphere) noexcept {
     // The main intersection routine assumes multiples of 8 items
     float4 spheres[MODULO];
     Culler::result_type results[MODULO];
@@ -122,8 +122,8 @@ bool Culler::intersects(Frustum const& frustum, filament::math::float4 const& sp
 void Culler::Test::intersects(
         result_type* UTILS_RESTRICT results,
         Frustum const& UTILS_RESTRICT frustum,
-        filament::math::float3 const* UTILS_RESTRICT c,
-        filament::math::float3 const* UTILS_RESTRICT e,
+        float3 const* UTILS_RESTRICT c,
+        float3 const* UTILS_RESTRICT e,
         size_t count) noexcept {
     Culler::intersects(results, frustum, c, e, count, 0);
 }
@@ -131,7 +131,7 @@ void Culler::Test::intersects(
 void Culler::Test::intersects(
         result_type* UTILS_RESTRICT results,
         Frustum const& UTILS_RESTRICT frustum,
-        filament::math::float4 const* UTILS_RESTRICT b, size_t count) noexcept {
+        float4 const* UTILS_RESTRICT b, size_t count) noexcept {
     Culler::intersects(results, frustum, b, count);
 }
 

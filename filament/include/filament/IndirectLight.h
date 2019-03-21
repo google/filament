@@ -141,7 +141,7 @@ public:
          * Because the coefficients are pre-scaled, `sh[0]` is the environment's
          * average irradiance.
          */
-        Builder& irradiance(uint8_t bands, filament::math::float3 const* sh) noexcept;
+        Builder& irradiance(uint8_t bands, math::float3 const* sh) noexcept;
 
         /**
          * Sets the irradiance as a cubemap.
@@ -158,7 +158,7 @@ public:
          * @note
          * This irradiance cubemap can be generated with the **cmgen** tool.
          *
-         * @see irradiance(uint8_t bands, filament::math::float3 const* sh)
+         * @see irradiance(uint8_t bands, math::float3 const* sh)
          */
         Builder& irradiance(Texture const* cubemap) noexcept;
 
@@ -182,7 +182,7 @@ public:
          *
          * @return This Builder, for chaining calls.
          */
-        Builder& rotation(filament::math::mat3f const& rotation) noexcept;
+        Builder& rotation(math::mat3f const& rotation) noexcept;
 
         /**
          * Creates the IndirectLight object and returns a pointer to it.
@@ -223,7 +223,7 @@ public:
      *
      * @param rotation 3x3 rotation matrix. Must be a rigid-body transform.
      */
-    void setRotation(filament::math::mat3f const& rotation) noexcept;
+    void setRotation(math::mat3f const& rotation) noexcept;
 };
 
 } // namespace filament

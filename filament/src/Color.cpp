@@ -24,8 +24,8 @@ using namespace filament::math;
 
 namespace filament {
 
-using xyY = filament::math::float3;
-using XYZ = filament::math::float3;
+using xyY = float3;
+using XYZ = float3;
 
 float3 Color::sRGBToLinear(float3 color) noexcept {
     return image::sRGBToLinear(color);

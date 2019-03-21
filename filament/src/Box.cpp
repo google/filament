@@ -20,12 +20,12 @@ using namespace filament::math;
 
 namespace filament {
 
-Box rigidTransform(Box const& UTILS_RESTRICT box, const filament::math::mat4f& UTILS_RESTRICT m) noexcept {
+Box rigidTransform(Box const& UTILS_RESTRICT box, const mat4f& UTILS_RESTRICT m) noexcept {
     const mat3f u(m.upperLeft());
     return { u * box.center + m[3].xyz, abs(u) * box.halfExtent };
 }
 
-Box rigidTransform(Box const& UTILS_RESTRICT box, const filament::math::mat3f& UTILS_RESTRICT u) noexcept {
+Box rigidTransform(Box const& UTILS_RESTRICT box, const mat3f& UTILS_RESTRICT u) noexcept {
     return { u * box.center, abs(u) * box.halfExtent };
 }
 

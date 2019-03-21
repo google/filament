@@ -195,7 +195,7 @@ void ShadowMap::update(
 }
 
 void ShadowMap::computeShadowCameraDirectional(
-        filament::math::float3 const& dir, FScene const* scene, CameraInfo const& camera,
+        float3 const& dir, FScene const* scene, CameraInfo const& camera,
         uint8_t visibleLayers) noexcept {
 
     // scene bounds in world space
@@ -498,7 +498,7 @@ mat4f ShadowMap::getTextureCoordsMapping() const noexcept {
     return Mb * Mt;
 }
 
-// This construct a frustum (similar to glFrustum or filament::math::frustum), except
+// This construct a frustum (similar to glFrustum or frustum), except
 // it looks towards the +y axis, and assumes -1,1 for the left/right and bottom/top planes.
 mat4f ShadowMap::warpFrustum(float n, float f) noexcept {
     const float d = 1 / (f - n);
@@ -705,7 +705,7 @@ size_t ShadowMap::intersectFrustumWithBox(
     return vertexCount;
 }
 
-void ShadowMap::snapLightFrustum(filament::math::float2& s, filament::math::float2& o,
+void ShadowMap::snapLightFrustum(float2& s, float2& o,
         uint32_t shadowMapDimension) noexcept {
     // TODO: we can also quantize the scaling value
     const float r = shadowMapDimension * 0.5f;
@@ -810,7 +810,7 @@ bool ShadowMap::intersectSegmentWithPlane(float3& UTILS_RESTRICT p,
     return false;
 }
 
-float ShadowMap::texelSizeWorldSpace(const filament::math::mat4f& lightSpaceMatrix) const noexcept {
+float ShadowMap::texelSizeWorldSpace(const mat4f& lightSpaceMatrix) const noexcept {
     // this version works only for orthographic projections
     const mat3f shadowmapToWorldMatrix(inverse(lightSpaceMatrix.upperLeft()));
     const float3 texelSizeWs = shadowmapToWorldMatrix * float3{ 1, 1, 0 };
@@ -818,7 +818,7 @@ float ShadowMap::texelSizeWorldSpace(const filament::math::mat4f& lightSpaceMatr
     return s;
 }
 
-float ShadowMap::texelSizeWorldSpace(const filament::math::mat4f& lightSpaceMatrix, float3 const& str) const noexcept {
+float ShadowMap::texelSizeWorldSpace(const mat4f& lightSpaceMatrix, float3 const& str) const noexcept {
     // for non-orthographic projection, the projection of a texel in world-space is not constant
     // therefore we need to specify which texel we want to back-project.
     const mat4f shadowmapToWorldMatrix(inverse(lightSpaceMatrix));

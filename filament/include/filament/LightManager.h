@@ -265,7 +265,7 @@ public:
          * @note
          * The Light's position is ignored for directional lights (Type.DIRECTIONAL or Type.SUN)
          */
-        Builder& position(const filament::math::float3& position) noexcept;
+        Builder& position(const math::float3& position) noexcept;
 
         /**
          * Sets the initial direction of a light in world space.
@@ -278,7 +278,7 @@ public:
          * @note
          * The Light's direction is ignored for Type.POINT lights.
          */
-        Builder& direction(const filament::math::float3& direction) noexcept;
+        Builder& direction(const math::float3& direction) noexcept;
 
         /**
          * Sets the initial color of a light.
@@ -477,10 +477,10 @@ public:
      *
      * @see Builder.position()
      */
-    void setPosition(Instance i, const filament::math::float3& position) noexcept;
+    void setPosition(Instance i, const math::float3& position) noexcept;
 
     //! returns the light's position in world space
-    const filament::math::float3& getPosition(Instance i) const noexcept;
+    const math::float3& getPosition(Instance i) const noexcept;
 
     /**
      * Dynamically updates the light's direction
@@ -491,10 +491,10 @@ public:
      *
      * @see Builder.direction()
      */
-    void setDirection(Instance i, const filament::math::float3& direction) noexcept;
+    void setDirection(Instance i, const math::float3& direction) noexcept;
 
     //! returns the light's direction in world space
-    const filament::math::float3& getDirection(Instance i) const noexcept;
+    const math::float3& getDirection(Instance i) const noexcept;
 
     /**
      * Dynamically updates the light's hue as linear sRGB
@@ -511,7 +511,7 @@ public:
      * @param i     Instance of the component obtained from getInstance().
      * @return the light's color in linear sRGB
      */
-    const filament::math::float3& getColor(Instance i) const noexcept;
+    const math::float3& getColor(Instance i) const noexcept;
 
     /**
      * Dynamically updates the light's intensity. The intensity can be negative.

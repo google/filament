@@ -78,7 +78,7 @@ public:
      * @param color     Array of read, green, blue channels values.
      * @throws utils::PreConditionPanic if name doesn't exist or no-op if exceptions are disabled.
      */
-    void setParameter(const char* name, RgbType type, filament::math::float3 color) noexcept;
+    void setParameter(const char* name, RgbType type, math::float3 color) noexcept;
 
     /**
      * Set an RGBA color as the named parameter.
@@ -89,7 +89,7 @@ public:
      * @param color     Array of read, green, blue and alpha channels values.
      * @throws utils::PreConditionPanic if name doesn't exist or no-op if exceptions are disabled.
      */
-    void setParameter(const char* name, RgbaType type, filament::math::float4 color) noexcept;
+    void setParameter(const char* name, RgbaType type, math::float4 color) noexcept;
 
     /**
      * Set up a custom scissor rectangle; by default this encompasses the View.

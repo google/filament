@@ -42,18 +42,18 @@ public:
 
     Handle<HwTexture> getReflectionMap() const noexcept { return mReflectionsMapHandle; }
     Handle<HwTexture> getIrradianceMap() const noexcept { return mIrradianceMapHandle; }
-    filament::math::float3 const* getSH() const noexcept{ return mIrradianceCoefs.data(); }
+    math::float3 const* getSH() const noexcept{ return mIrradianceCoefs.data(); }
     float getIntensity() const noexcept { return mIntensity; }
     void setIntensity(float intensity) noexcept { mIntensity = intensity; }
-    void setRotation(filament::math::mat3f const& rotation) noexcept { mRotation = rotation; }
-    const filament::math::mat3f& getRotation() const { return mRotation; }
+    void setRotation(math::mat3f const& rotation) noexcept { mRotation = rotation; }
+    const math::mat3f& getRotation() const { return mRotation; }
 
 private:
     Handle<HwTexture> mReflectionsMapHandle;
     Handle<HwTexture> mIrradianceMapHandle;
-    std::array<filament::math::float3, 9> mIrradianceCoefs;
+    std::array<math::float3, 9> mIrradianceCoefs;
     float mIntensity = DEFAULT_INTENSITY;
-    filament::math::mat3f mRotation;
+    math::mat3f mRotation;
 };
 
 FILAMENT_UPCAST(IndirectLight)

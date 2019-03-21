@@ -34,10 +34,10 @@ namespace filament {
 class UTILS_PUBLIC Box {
 public:
     /** Center of the 3D box */
-    filament::math::float3 center = {};
+    math::float3 center = {};
 
     /** Half extent from the center on all 3 axis */
-    filament::math::float3 halfExtent = {};
+    math::float3 halfExtent = {};
 
     /**
      * Whether the box is empty, i.e.: it's volume is null.
@@ -51,7 +51,7 @@ public:
      * Computes the lowest coordinates corner of the box.
      * @return center - halfExtent
      */
-    constexpr filament::math::float3 getMin() const noexcept {
+    constexpr math::float3 getMin() const noexcept {
         return center - halfExtent;
     }
 
@@ -59,7 +59,7 @@ public:
      * Computes the largest coordinates corner of the box.
      * @return center + halfExtent
      */
-    constexpr filament::math::float3 getMax() const noexcept {
+    constexpr math::float3 getMax() const noexcept {
         return center + halfExtent;
     }
 
@@ -69,9 +69,9 @@ public:
      * @param max largest coordinates corner of the box
      * @return
      */
-    Box& set(const filament::math::float3& min, const filament::math::float3& max) noexcept {
-        center     = (max + min) * filament::math::float3(0.5f);
-        halfExtent = (max - min) * filament::math::float3(0.5f);
+    Box& set(const math::float3& min, const math::float3& max) noexcept {
+        center     = (max + min) * math::float3(0.5f);
+        halfExtent = (max - min) * math::float3(0.5f);
         return *this;
     }
 
@@ -90,7 +90,7 @@ public:
      * @param tr position to translate the box to
      * @return A box centered in \p tr with the same extent than *this
      */
-    constexpr Box translateTo(const filament::math::float3& tr) const noexcept {
+    constexpr Box translateTo(const math::float3& tr) const noexcept {
         return Box{ tr, halfExtent };
     }
 
@@ -98,7 +98,7 @@ public:
      * Computes the smallest bounding sphere of the box.
      * @return The smallest sphere defined by its center (.xyz) and radius (.w) that contains *this
      */
-    filament::math::float4 getBoundingSphere() const noexcept {
+    math::float4 getBoundingSphere() const noexcept {
         return { center, length(halfExtent) };
     }
 
@@ -109,7 +109,7 @@ public:
      * @return the bounding box of the transformed box.
      *         Result is undefined if \p m is not a rigid transform
      */
-    friend Box rigidTransform(Box const& box, const filament::math::mat4f& m) noexcept;
+    friend Box rigidTransform(Box const& box, const math::mat4f& m) noexcept;
 
     /**
      * Computes the bounding box of a box transformed by a rigid transform
@@ -118,7 +118,7 @@ public:
      * @return the bounding box of the transformed box.
      *         Result is undefined if \p m is not a rigid transform
      */
-    friend Box rigidTransform(Box const& box, const filament::math::mat3f& m) noexcept;
+    friend Box rigidTransform(Box const& box, const math::mat3f& m) noexcept;
 };
 
 /**
@@ -127,16 +127,16 @@ public:
 struct Aabb {
 
     /** min coordinates */
-    filament::math::float3 min = std::numeric_limits<float>::max();
+    math::float3 min = std::numeric_limits<float>::max();
 
     /** max coordinates */
-    filament::math::float3 max = std::numeric_limits<float>::lowest();
+    math::float3 max = std::numeric_limits<float>::lowest();
 
     /**
      * Computes the center of the box.
      * @return (min +max)/2
      */
-    filament::math::float3 center() const noexcept { return (min + max) * filament::math::float3(0.5f); }
+    math::float3 center() const noexcept { return (min + max) * math::float3(0.5f); }
 
     /**
      * Whether the box is empty, i.e.: it's volume is null or negative.
