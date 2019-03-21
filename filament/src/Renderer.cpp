@@ -166,6 +166,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     bool toneMapping = view.getToneMapping() == View::ToneMapping::ACES;
     bool dithering = view.getDithering() == View::Dithering::TEMPORAL;
     bool fxaa = view.getAntiAliasing() == View::AntiAliasing::FXAA;
+    uint8_t msaa = view.getSampleCount();
     float2 scale = view.updateScale(mFrameInfoManager.getLastFrameTime());
     if (!hasPostProcess) {
         // dynamic scaling and FXAA are part of the post-process phase and can't happen if
@@ -173,6 +174,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
         fxaa = false;
         dithering = false;
         scale = 1.0f;
+        msaa = 1;
     }
 
     const bool scaled = any(notEqual(scale, float2(1.0f)));
@@ -214,7 +216,6 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     FrameGraph fg;
 
     const TextureFormat hdrFormat = getHdrFormat(view);
-    const uint8_t msaa = view.getSampleCount();
 
     // FIXME: we use "hasPostProcess" as a proxy for deciding if we need a depth-buffer or not
     //        historically this has been true, but it's definitely wrong.
@@ -274,7 +275,6 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
             TextureFormat::RGBA8 : getLdrFormat(); // e.g. RGB8 or RGBA8
 
     if (hasPostProcess) {
-
         // FIXME: currently we can't render a view on top of another one (with transparency) if
         //        any post-processing is performed on that view -- this is because post processing
         //        uses intermediary buffers which are not blended back (they're blitted).
@@ -290,11 +290,12 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
         }
     }
 
-    // FIXME: viewRenderTarget doesn't have a depth buffer, so if one is required by the colorPass,
+    // FIXME: viewRenderTarget doesn't have a depth or multisample buffer,
+    //        so if one is required by the colorPass,
     //        we must use an intermediate buffer, we do this by forcing a blit -- this will
     //        only happen if no other post-processing above took place (in which case we would
     //        already be using an intermediate buffer)
-    if (colorPassNeedsDepthBuffer && input == colorPass.getData().color) {
+    if ((msaa > 1 || colorPassNeedsDepthBuffer) && input == colorPass.getData().color) {
         input = ppm.dynamicScaling(fg, input, ldrFormat);
     }
 
