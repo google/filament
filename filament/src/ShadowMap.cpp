@@ -39,7 +39,6 @@ namespace details {
 // do this only if depth-clamp is available
 static constexpr bool USE_DEPTH_CLAMP = false;
 
-// currently disabled because it creates shadow acne problems at a distance
 static constexpr bool ENABLE_LISPSM = true;
 
 ShadowMap::ShadowMap(FEngine& engine) noexcept :
@@ -517,18 +516,8 @@ mat4f ShadowMap::warpFrustum(float n, float f) noexcept {
 float2 ShadowMap::computeNearFar(const mat4f& lightView,
         Aabb const& wsShadowCastersVolume) noexcept {
     float2 nearFar = { std::numeric_limits<float>::lowest(), std::numeric_limits<float>::max() };
-    const float3 bmin = wsShadowCastersVolume.min;
-    const float3 bmax = wsShadowCastersVolume.max;
-    const float3 wsSceneCastersCorners[8] = {
-            { bmin.x, bmin.y, bmin.z },
-            { bmax.x, bmin.y, bmin.z },
-            { bmin.x, bmax.y, bmin.z },
-            { bmax.x, bmax.y, bmin.z },
-            { bmin.x, bmin.y, bmax.z },
-            { bmax.x, bmin.y, bmax.z },
-            { bmin.x, bmax.y, bmax.z },
-            { bmax.x, bmax.y, bmax.z },
-    };
+    const Aabb::Corners wsSceneCastersCorners = wsShadowCastersVolume.getCorners();
+
     #pragma nounroll
     for (float3 corner : wsSceneCastersCorners) {
         float3 c = mat4f::project(lightView, corner);
@@ -638,18 +627,7 @@ size_t ShadowMap::intersectFrustumWithBox(
      */
 
     // world-space scene volume
-    const float3 bmin = wsBox.min;
-    const float3 bmax = wsBox.max;
-    const float3 wsSceneReceiversCorners[8] = {
-            { bmin.x, bmin.y, bmin.z },
-            { bmax.x, bmin.y, bmin.z },
-            { bmin.x, bmax.y, bmin.z },
-            { bmax.x, bmax.y, bmin.z },
-            { bmin.x, bmin.y, bmax.z },
-            { bmax.x, bmin.y, bmax.z },
-            { bmin.x, bmax.y, bmax.z },
-            { bmax.x, bmax.y, bmax.z },
-    };
+    const Aabb::Corners wsSceneReceiversCorners = wsBox.getCorners();
 
     // a) Keep the frustum's vertices that are known to be inside the scene's box
     #pragma nounroll
@@ -693,11 +671,11 @@ size_t ShadowMap::intersectFrustumWithBox(
         if (vertexCount < 8) {
             // c) intersect scene's volume edges with frustum planes
             vertexCount = intersectFrustums(outVertices.data(), vertexCount,
-                    wsSceneReceiversCorners, wsFrustumCorners);
+                    wsSceneReceiversCorners.vertices, wsFrustumCorners);
 
             // d) intersect frustum edges with the scene's volume planes
             vertexCount = intersectFrustums(outVertices.data(), vertexCount,
-                    wsFrustumCorners, wsSceneReceiversCorners);
+                    wsFrustumCorners, wsSceneReceiversCorners.vertices);
         }
     }
 

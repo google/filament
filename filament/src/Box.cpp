@@ -29,4 +29,17 @@ Box rigidTransform(Box const& UTILS_RESTRICT box, const mat3f& UTILS_RESTRICT u)
     return { u * box.center, abs(u) * box.halfExtent };
 }
 
+Aabb::Corners Aabb::getCorners() const {
+    return Aabb::Corners{ .vertices = {
+                { min.x, min.y, min.z },
+                { max.x, min.y, min.z },
+                { min.x, max.y, min.z },
+                { max.x, max.y, min.z },
+                { min.x, min.y, max.z },
+                { max.x, min.y, max.z },
+                { min.x, max.y, max.z },
+                { max.x, max.y, max.z },
+            }};
+}
+
 } // namespace filament
