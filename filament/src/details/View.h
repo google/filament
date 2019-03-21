@@ -29,8 +29,8 @@
 #include "details/ShadowMap.h"
 #include "details/Scene.h"
 
-#include "driver/DriverApi.h"
-#include "driver/Handle.h"
+#include "private/backend/DriverApi.h"
+#include "private/backend/Handle.h"
 
 #include <utils/compiler.h>
 #include <utils/Allocator.h>

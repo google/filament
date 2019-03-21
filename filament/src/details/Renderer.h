@@ -26,11 +26,11 @@
 #include "details/FrameSkipper.h"
 #include "details/SwapChain.h"
 
-#include "driver/DriverApiForward.h"
-#include "driver/Handle.h"
+#include "private/backend/DriverApiForward.h"
+#include "private/backend/Handle.h"
 
 #include <filament/Renderer.h>
-#include <filament/driver/DriverEnums.h>
+#include <filament/backend/DriverEnums.h>
 
 #include <utils/compiler.h>
 #include <utils/Allocator.h>

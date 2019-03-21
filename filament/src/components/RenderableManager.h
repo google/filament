@@ -21,8 +21,8 @@
 
 #include "UniformBuffer.h"
 
-#include "driver/DriverApiForward.h"
-#include "driver/Handle.h"
+#include "private/backend/DriverApiForward.h"
+#include "private/backend/Handle.h"
 
 #include <filament/Box.h>
 #include <filament/RenderableManager.h>

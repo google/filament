@@ -21,7 +21,7 @@
 
 #include <filament/FilamentAPI.h>
 
-#include <filament/driver/DriverEnums.h>
+#include <filament/backend/DriverEnums.h>
 
 #include <utils/compiler.h>
 

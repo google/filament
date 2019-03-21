@@ -23,7 +23,7 @@
 #include <android/bitmap.h>
 #endif
 
-#include <filament/driver/BufferDescriptor.h>
+#include <backend/BufferDescriptor.h>
 #include <filament/Engine.h>
 #include <filament/Stream.h>
 #include <filament/Texture.h>

@@ -19,12 +19,12 @@
 
 #include <algorithm>
 
-#include "driver/DriverApi.h"
+#include "private/backend/DriverApi.h"
 
 #include <utils/compiler.h>
 #include <utils/Log.h>
 
-#include <filament/driver/BufferDescriptor.h>
+#include <backend/BufferDescriptor.h>
 
 #include <math/mat3.h>
 #include <math/mat4.h>

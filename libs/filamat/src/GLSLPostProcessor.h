@@ -20,7 +20,7 @@
 #include <string>
 #include <vector>
 
-#include <filament/driver/DriverEnums.h>
+#include <filament/backend/DriverEnums.h>
 
 #include "filamat/MaterialBuilder.h"    // for MaterialBuilder:: enums
 

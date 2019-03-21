@@ -21,7 +21,7 @@
 
 #include "FilamentAPI-impl.h"
 
-#include <filament/driver/PixelBufferDescriptor.h>
+#include <backend/PixelBufferDescriptor.h>
 
 #include <utils/Panic.h>
 #include <filament/Stream.h>

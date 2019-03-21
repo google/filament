@@ -19,9 +19,9 @@
 
 #include "FrameGraphResource.h"
 
-#include <filament/driver/DriverEnums.h>
+#include <filament/backend/DriverEnums.h>
 
-#include "driver/Handle.h"
+#include "private/backend//Handle.h"
 
 namespace filament {
 

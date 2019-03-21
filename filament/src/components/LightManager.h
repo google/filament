@@ -19,7 +19,7 @@
 
 #include "upcast.h"
 
-#include "driver/DriverApiForward.h"
+#include "private/backend/DriverApiForward.h"
 
 #include <filament/LightManager.h>
 

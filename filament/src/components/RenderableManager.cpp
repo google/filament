@@ -24,7 +24,7 @@
 #include "details/Material.h"
 #include "details/RenderPrimitive.h"
 
-#include <filament/driver/DriverEnums.h>
+#include <filament/backend/DriverEnums.h>
 
 #include <utils/Log.h>
 #include <utils/Panic.h>

@@ -24,9 +24,9 @@
 
 #include "details/Allocators.h"
 
-#include "driver/DriverApiForward.h"
+#include "private/backend/DriverApiForward.h"
 
-#include <filament/driver/DriverEnums.h>
+#include <filament/backend/DriverEnums.h>
 
 #include <utils/Log.h>
 

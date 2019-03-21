@@ -27,7 +27,7 @@
 #include <filament/Scene.h>
 #include <filament/Renderer.h>
 
-#include <filament/driver/PixelBufferDescriptor.h>
+#include <backend/PixelBufferDescriptor.h>
 
 #include "fg/FrameGraph.h"
 #include "fg/FrameGraphResource.h"

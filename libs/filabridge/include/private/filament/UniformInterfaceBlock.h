@@ -17,7 +17,7 @@
 #ifndef TNT_FILAMENT_DRIVER_UNIFORMINTERFACEBLOCK_H
 #define TNT_FILAMENT_DRIVER_UNIFORMINTERFACEBLOCK_H
 
-#include <filament/driver/DriverEnums.h>
+#include <filament/backend/DriverEnums.h>
 
 #include <utils/CString.h>
 #include <utils/compiler.h>

@@ -18,11 +18,12 @@
 
 #include "details/Engine.h"
 #include "details/DFG.h"
-#include "driver/Program.h"
+
+#include "private/backend/Program.h"
 
 #include "FilamentAPI-impl.h"
 
-#include <filament/driver/DriverEnums.h>
+#include <filament/backend/DriverEnums.h>
 
 #include <private/filament/SibGenerator.h>
 #include <private/filament/UibGenerator.h>

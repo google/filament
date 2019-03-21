@@ -31,9 +31,9 @@
 #include "details/ResourceList.h"
 #include "details/Skybox.h"
 
-#include "driver/CommandStream.h"
-#include "driver/CommandBufferQueue.h"
-#include "driver/DriverApi.h"
+#include "private/backend/CommandStream.h"
+#include "private/backend/CommandBufferQueue.h"
+#include "private/backend/DriverApi.h"
 
 #include <filament/Engine.h>
 #include <filament/VertexBuffer.h>

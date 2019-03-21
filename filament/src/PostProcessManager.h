@@ -19,11 +19,11 @@
 
 #include "UniformBuffer.h"
 
-#include "driver/DriverApiForward.h"
+#include "private/backend/DriverApiForward.h"
 
 #include "fg/FrameGraphResource.h"
 
-#include <filament/driver/DriverEnums.h>
+#include <filament/backend/DriverEnums.h>
 
 namespace filament {
 

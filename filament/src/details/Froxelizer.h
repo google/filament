@@ -23,8 +23,8 @@
 #include "details/Scene.h"
 #include "details/Engine.h"
 
-#include "driver/Handle.h"
-#include "driver/GPUBuffer.h"
+#include "private/backend/Handle.h"
+#include "private/backend/GPUBuffer.h"
 
 #include <filament/Viewport.h>
 

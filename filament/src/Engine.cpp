@@ -31,7 +31,8 @@
 #include "details/SwapChain.h"
 #include "details/Texture.h"
 #include "details/View.h"
-#include "driver/Program.h"
+
+#include "private/backend/Program.h"
 
 #include <private/filament/SibGenerator.h>
 
@@ -39,6 +40,7 @@
 #include <filament/MaterialEnums.h>
 
 #include <MaterialParser.h>
+
 #include <filaflat/ShaderBuilder.h>
 
 #include <utils/compiler.h>
