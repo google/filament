@@ -360,7 +360,8 @@ public:
     void setRenderTarget(TargetBufferFlags discard = TargetBufferFlags::ALL) noexcept;
 
     /**
-     * Sets how many samples are to be used for MSAA. Default is 1 and disables MSAA.
+     * Sets how many samples are to be used for MSAA in the post-process stage.
+     * Default is 1 and disables MSAA.
      *
      * @param count number of samples to use for multi-sampled anti-aliasing.\n
      *              0: treated as 1
@@ -484,15 +485,14 @@ public:
      * Enable or disable post processing. Enabled by default.
      *
      * Post-processing includes:
-     *  - Dithering
      *  - Tone-mapping & gamma encoding
+     *  - Dithering
+     *  - MSAA
      *  - FXAA
      *  - Dynamic scaling
      *
      * Disabling post-processing forgoes color correctness as well as anti-aliasing and
      * should only be used experimentally (e.g., for UI overlays).
-     *
-     * Only MSAA is independent from post-processing and can be controlled separately.
      *
      * @param enabled true enables post processing, false disables it.
      *
