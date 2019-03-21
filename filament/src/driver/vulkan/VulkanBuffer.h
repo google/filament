@@ -17,7 +17,7 @@
 #ifndef TNT_FILAMENT_DRIVER_VULKANBUFFER_H
 #define TNT_FILAMENT_DRIVER_VULKANBUFFER_H
 
-#include "VulkanDriverImpl.h"
+#include "VulkanContext.h"
 #include "VulkanStagePool.h"
 
 namespace filament {

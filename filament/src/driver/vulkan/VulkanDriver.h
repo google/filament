@@ -19,10 +19,11 @@
 
 #include "VulkanBinder.h"
 #include "VulkanDisposer.h"
-#include "VulkanDriverImpl.h"
+#include "VulkanContext.h"
 #include "VulkanFboCache.h"
 #include "VulkanSamplerCache.h"
 #include "VulkanStagePool.h"
+#include "VulkanUtility.h"
 
 #include "driver/Driver.h"
 #include "driver/DriverBase.h"

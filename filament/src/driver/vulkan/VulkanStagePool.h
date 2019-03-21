@@ -17,7 +17,7 @@
 #ifndef TNT_FILAMENT_DRIVER_VULKANSTAGEPOOL_H
 #define TNT_FILAMENT_DRIVER_VULKANSTAGEPOOL_H
 
-#include "VulkanDriverImpl.h"
+#include "VulkanContext.h"
 
 #include "VulkanDisposer.h"
 
