@@ -51,22 +51,21 @@ void chooseAndSetPixelFormat(HDC dc) {
 }
 
 void* getNativeWindow(JNIEnv* env, jclass, jobject surface) {
-    void* win = nullptr;
     JAWT_DrawingSurface* ds = nullptr;
     JAWT_DrawingSurfaceInfo* dsi = nullptr;
 
     if (!acquireDrawingSurface(env, surface, &ds, &dsi)) {
-        return win;
+        return nullptr;
     }
 
     JAWT_Win32DrawingSurfaceInfo* dsi_win32 = (JAWT_Win32DrawingSurfaceInfo*) dsi->platformInfo;
-    HDC dc = dsi_win32->hdc;
+    HWND hWnd = dsi_win32->hwnd;
+
     chooseAndSetPixelFormat(dsi_win32->hdc);
 
-    win = (void*) dsi_win32->hdc;
     releaseDrawingSurface(ds, dsi);
 
-    return win;
+    return (void*) GetDC(hWnd);
 }
 
 
