@@ -19,8 +19,8 @@
 
 #include "upcast.h"
 
-#include "driver/Driver.h"
-#include "driver/Handle.h"
+#include "private/backend/Driver.h"
+#include "private/backend/Handle.h"
 
 #include <private/filament/EngineEnums.h>
 #include <filament/VertexBuffer.h>

@@ -19,7 +19,7 @@
 
 #include "upcast.h"
 
-#include "driver/DriverApi.h"
+#include "private/backend/DriverApi.h"
 
 #include <filament/SwapChain.h>
 

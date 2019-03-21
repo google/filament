@@ -23,7 +23,7 @@
 #include "details/Material.h"
 #include "details/Scene.h"
 
-#include "driver/DriverApiForward.h"
+#include "private/backend/DriverApiForward.h"
 
 #include <private/filament/Variant.h>
 

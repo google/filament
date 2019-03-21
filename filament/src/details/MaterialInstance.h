@@ -20,8 +20,9 @@
 #include "upcast.h"
 #include "UniformBuffer.h"
 #include "details/Engine.h"
-#include "driver/DriverApi.h"
-#include "driver/Handle.h"
+
+#include "private/backend/DriverApi.h"
+#include "private/backend/Handle.h"
 
 #include <utils/compiler.h>
 

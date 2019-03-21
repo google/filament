@@ -19,7 +19,7 @@
 
 #include "upcast.h"
 
-#include "driver/DriverBase.h"
+#include "private/backend/DriverBase.h"
 
 #include <filament/Fence.h>
 

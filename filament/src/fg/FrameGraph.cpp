@@ -18,12 +18,13 @@
 
 #include "FrameGraphPassResources.h"
 
-#include "driver/Driver.h"
-#include "driver/Handle.h"
-#include "driver/CommandStream.h"
+#include "private/backend/Driver.h"
+#include "private/backend/Handle.h"
+#include "private/backend/CommandStream.h"
+
 #include "FrameGraphResource.h"
 
-#include <filament/driver/DriverEnums.h>
+#include <filament/backend/DriverEnums.h>
 
 #include <utils/Panic.h>
 #include <utils/Log.h>

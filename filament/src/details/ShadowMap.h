@@ -22,8 +22,8 @@
 #include "details/Camera.h"
 #include "details/Scene.h"
 
-#include "driver/DriverApiForward.h"
-#include "driver/SamplerGroup.h"
+#include "private/backend/DriverApiForward.h"
+#include "private/backend/SamplerGroup.h"
 
 #include <filament/Viewport.h>
 

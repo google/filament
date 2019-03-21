@@ -19,7 +19,7 @@
 
 #include "upcast.h"
 
-#include "driver/Handle.h"
+#include "private/backend/Handle.h"
 
 #include <filament/Texture.h>
 

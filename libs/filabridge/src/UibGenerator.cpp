@@ -19,7 +19,7 @@
 #include "private/filament/UniformInterfaceBlock.h"
 
 #include <private/filament/EngineEnums.h>
-#include <filament/driver/DriverEnums.h>
+#include <filament/backend/DriverEnums.h>
 
 namespace filament {
 

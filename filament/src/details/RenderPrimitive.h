@@ -21,7 +21,7 @@
 
 #include "details/MaterialInstance.h"
 
-#include "driver/Handle.h"
+#include "private/backend/Handle.h"
 
 #include <utils/compiler.h>
 

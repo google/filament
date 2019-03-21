@@ -21,8 +21,9 @@
 
 #include <filament/FilamentAPI.h>
 
-#include <filament/driver/DriverEnums.h>
-#include <filament/driver/BufferDescriptor.h>
+#include <filament/backend/DriverEnums.h>
+
+#include <backend/BufferDescriptor.h>
 
 #include <utils/compiler.h>
 

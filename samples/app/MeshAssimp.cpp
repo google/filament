@@ -54,7 +54,7 @@
 
 #include <stb_image.h>
 
-#include <filament/driver/DriverEnums.h>
+#include <filament/backend/DriverEnums.h>
 
 #include "generated/resources/resources.h"
 

@@ -17,7 +17,7 @@
 #ifndef TNT_FILAMENT_FRAMEGRAPHRESOURCE_H
 #define TNT_FILAMENT_FRAMEGRAPHRESOURCE_H
 
-#include <filament/driver/DriverEnums.h>
+#include <filament/backend/DriverEnums.h>
 #include <filament/Viewport.h>
 
 #include <array>
