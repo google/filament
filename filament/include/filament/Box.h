@@ -158,6 +158,23 @@ struct Aabb {
     bool isEmpty() const noexcept {
         return any(greaterThanEqual(min, max));
     }
+
+    struct Corners {
+        using value_type = math::float3;
+        value_type const* begin() const { return vertices; }
+        value_type const* end() const { return vertices + 8; }
+        value_type * begin() { return vertices; }
+        value_type * end() { return vertices + 8; }
+        value_type const* data() const { return vertices; }
+        value_type * data() { return vertices; }
+        size_t size() const { return 8; }
+        value_type vertices[8];
+    };
+
+    /**
+     * Return the 8 corner vertices of the AABB
+     */
+    Corners getCorners() const;
 };
 
 } // namespace filament
