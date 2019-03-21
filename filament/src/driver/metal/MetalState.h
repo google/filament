@@ -37,6 +37,7 @@ inline bool operator==(const driver::SamplerParams& lhs, const driver::SamplerPa
 namespace metal {
 
 static constexpr uint32_t MAX_VERTEX_ATTRIBUTES = filament::ATTRIBUTE_INDEX_COUNT;
+static constexpr uint32_t NUM_SAMPLER_GROUPS = BindingPoints::COUNT;
 static constexpr uint32_t NUM_SAMPLER_BINDINGS = filament::MAX_SAMPLER_COUNT;
 static constexpr uint32_t VERTEX_BUFFER_START = BindingPoints::COUNT;
 

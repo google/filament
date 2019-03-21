@@ -139,7 +139,7 @@ private:
     }
 
     void enumerateSamplerGroups(const MetalProgram* program,
-            const std::function<void(const SamplerGroup::Sampler*, uint8_t)>& f);
+            const std::function<void(const SamplerGroup::Sampler*, size_t)>& f);
 };
 
 } // namespace metal
