@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 The Android Open Source Project
+ * Copyright (C) 2019 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_DRIVER_VULKANDRIVER_IMPL_H
-#define TNT_FILAMENT_DRIVER_VULKANDRIVER_IMPL_H
+#ifndef TNT_FILAMENT_DRIVER_VULKANCONTEXT_H
+#define TNT_FILAMENT_DRIVER_VULKANCONTEXT_H
 
 #include "VulkanBinder.h"
 #include "VulkanDisposer.h"
@@ -104,19 +104,11 @@ struct VulkanSurfaceContext {
 
 void selectPhysicalDevice(VulkanContext& context);
 void createVirtualDevice(VulkanContext& context);
-void createSemaphore(VkDevice device, VkSemaphore* semaphore);
 void getPresentationQueue(VulkanContext& context, VulkanSurfaceContext& sc);
 void getSurfaceCaps(VulkanContext& context, VulkanSurfaceContext& sc);
 void createSwapChain(VulkanContext& context, VulkanSurfaceContext& sc);
 uint32_t selectMemoryType(VulkanContext& context, uint32_t flags, VkFlags reqs);
-VkFormat getVkFormat(ElementType type, bool normalized);
-VkFormat getVkFormat(TextureFormat format);
-uint32_t getBytesPerPixel(TextureFormat format);
 SwapContext& getSwapContext(VulkanContext& context);
-VkCompareOp getCompareOp(SamplerCompareFunc func);
-VkBlendFactor getBlendFactor(BlendFunction mode);
-VkCullModeFlags getCullMode(CullingMode mode);
-VkFrontFace getFrontFace(bool inverseFrontFaces);
 void waitForIdle(VulkanContext& context);
 void acquireSwapCommandBuffer(VulkanContext& context);
 void releaseCommandBuffer(VulkanContext& context);
@@ -129,4 +121,4 @@ void flushWorkCommandBuffer(VulkanContext& context);
 } // namespace filament
 } // namespace driver
 
-#endif // TNT_FILAMENT_DRIVER_VULKANDRIVER_IMPL_H
+#endif // TNT_FILAMENT_DRIVER_VULKANCONTEXT_H

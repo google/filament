@@ -17,7 +17,7 @@
 #ifndef TNT_FILAMENT_DRIVER_VULKANFBOCACHE_H
 #define TNT_FILAMENT_DRIVER_VULKANFBOCACHE_H
 
-#include "VulkanDriverImpl.h"
+#include "VulkanContext.h"
 
 #include <utils/Hash.h>
 

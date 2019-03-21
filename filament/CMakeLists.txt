@@ -224,12 +224,12 @@ if (FILAMENT_SUPPORTS_VULKAN)
             src/driver/vulkan/VulkanBinder.h
             src/driver/vulkan/VulkanBuffer.cpp
             src/driver/vulkan/VulkanBuffer.h
+            src/driver/vulkan/VulkanContext.cpp
+            src/driver/vulkan/VulkanContext.h
             src/driver/vulkan/VulkanDisposer.cpp
             src/driver/vulkan/VulkanDisposer.h
             src/driver/vulkan/VulkanDriver.cpp
             src/driver/vulkan/VulkanDriver.h
-            src/driver/vulkan/VulkanDriverImpl.cpp
-            src/driver/vulkan/VulkanDriverImpl.h
             src/driver/vulkan/VulkanFboCache.cpp
             src/driver/vulkan/VulkanFboCache.h
             src/driver/vulkan/VulkanHandles.cpp
@@ -238,6 +238,8 @@ if (FILAMENT_SUPPORTS_VULKAN)
             src/driver/vulkan/VulkanSamplerCache.h
             src/driver/vulkan/VulkanStagePool.cpp
             src/driver/vulkan/VulkanStagePool.h
+            src/driver/vulkan/VulkanUtility.cpp
+            src/driver/vulkan/VulkanUtility.h
     )
     if (LINUX)
         list(APPEND SRCS src/driver/vulkan/PlatformVkLinux.cpp)

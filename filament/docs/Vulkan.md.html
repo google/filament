@@ -69,12 +69,11 @@ swap chain objects, but in practice the swap chain is basically a singleton.
 
 # Overview
 
-## VulkanDriver{Impl}
+## VulkanDriver and VulkanContext
 
 The `VulkanDriver` class is the bridge between the backend and the Filament engine, and is kept as
-minimal as possible. All utility methods are relegated to free functions in `VulkanDriverImpl`. Much
-of our Vulkan-specific logic lives in the handle types and cache managers rather than directly in
-`VulkanDriver`.
+minimal as possible. Most of the actual logic is contained in methods in `VulkanContext` and in the
+handle types rather than directly in `VulkanDriver`.
 
 In a self-imposed design constraint, we have decided that every method in `VulkanDriver` must be an
 override; it should have no private methods other than the handle allocators. This reins in

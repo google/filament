@@ -17,7 +17,8 @@
 #ifndef TNT_FILAMENT_DRIVER_VULKANSAMPLERCACHE_H
 #define TNT_FILAMENT_DRIVER_VULKANSAMPLERCACHE_H
 
-#include "VulkanDriverImpl.h"
+#include "VulkanContext.h"
+#include "VulkanUtility.h"
 
 #include <tsl/robin_map.h>
 
