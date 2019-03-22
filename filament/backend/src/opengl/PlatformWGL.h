@@ -23,7 +23,7 @@
 #include <utils/unwindows.h>
 
 #include <filament/backend/DriverEnums.h>
-#include <driver/Platform.h>
+#include <backend/Platform.h>
 
 namespace filament {
 
