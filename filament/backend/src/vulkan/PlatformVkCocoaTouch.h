@@ -19,8 +19,8 @@
 
 #include <stdint.h>
 
-#include <filament/driver/DriverEnums.h>
-#include <driver/Platform.h>
+#include <filament/backend/DriverEnums.h>
+#include <backend/Platform.h>
 
 namespace filament {
 
