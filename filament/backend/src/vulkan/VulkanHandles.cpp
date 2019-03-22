@@ -297,7 +297,7 @@ void VulkanRenderTarget::setDepthImage(VulkanAttachment d) {
 
 VulkanVertexBuffer::VulkanVertexBuffer(VulkanContext& context, VulkanStagePool& stagePool,
         uint8_t bufferCount, uint8_t attributeCount, uint32_t elementCount,
-        Driver::AttributeArray const& attributes) :
+        AttributeArray const& attributes) :
         HwVertexBuffer(bufferCount, attributeCount, elementCount, attributes) {
     buffers.reserve(bufferCount);
     for (uint8_t bufferIndex = 0; bufferIndex < bufferCount; ++bufferIndex) {
@@ -668,13 +668,13 @@ void VulkanRenderPrimitive::setBuffers(VulkanVertexBuffer* vertexBuffer,
         if (!(enabledAttributes & (1U << attribIndex))) {
             continue;
         }
-        const Driver::Attribute& attrib = vertexBuffer->attributes[attribIndex];
+        const Attribute& attrib = vertexBuffer->attributes[attribIndex];
         buffers.push_back(vertexBuffer->buffers[attrib.buffer]->getGpuBuffer());
         offsets.push_back(attrib.offset);
         varray.attributes[bufferIndex] = {
             .location = attribIndex, // matches the GLSL layout specifier
             .binding = bufferIndex,  // matches the position within vkCmdBindVertexBuffers
-            .format = getVkFormat(attrib.type, attrib.flags & Driver::Attribute::FLAG_NORMALIZED),
+            .format = getVkFormat(attrib.type, attrib.flags & Attribute::FLAG_NORMALIZED),
             .offset = 0
         };
         varray.buffers[bufferIndex] = {

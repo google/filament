@@ -28,24 +28,24 @@
 namespace filament {
 namespace driver {
 
-constexpr inline MTLCompareFunction getMetalCompareFunction(Driver::RasterState::DepthFunc func)
+constexpr inline MTLCompareFunction getMetalCompareFunction(RasterState::DepthFunc func)
         noexcept {
     switch (func) {
-        case Driver::RasterState::DepthFunc::LE:
+        case RasterState::DepthFunc::LE:
             return MTLCompareFunctionLessEqual;
-        case Driver::RasterState::DepthFunc::GE:
+        case RasterState::DepthFunc::GE:
             return MTLCompareFunctionGreaterEqual;
-        case Driver::RasterState::DepthFunc::L:
+        case RasterState::DepthFunc::L:
             return MTLCompareFunctionLess;
-        case Driver::RasterState::DepthFunc::G:
+        case RasterState::DepthFunc::G:
             return MTLCompareFunctionGreater;
-        case Driver::RasterState::DepthFunc::E:
+        case RasterState::DepthFunc::E:
             return MTLCompareFunctionEqual;
-        case Driver::RasterState::DepthFunc::NE:
+        case RasterState::DepthFunc::NE:
             return MTLCompareFunctionNotEqual;
-        case Driver::RasterState::DepthFunc::A:
+        case RasterState::DepthFunc::A:
             return MTLCompareFunctionAlways;
-        case Driver::RasterState::DepthFunc::N:
+        case RasterState::DepthFunc::N:
             return MTLCompareFunctionNever;
     }
 }

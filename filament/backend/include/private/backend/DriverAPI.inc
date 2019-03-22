@@ -227,7 +227,7 @@ DECL_DRIVER_API_R_5(driver::VertexBufferHandle, createVertexBuffer,
         uint8_t, bufferCount,
         uint8_t, attributeCount,
         uint32_t, vertexCount,
-        driver::Driver::AttributeArray, attributes,
+        driver::AttributeArray, attributes,
         driver::BufferUsage, usage)
 
 DECL_DRIVER_API_R_3(driver::IndexBufferHandle, createIndexBuffer,

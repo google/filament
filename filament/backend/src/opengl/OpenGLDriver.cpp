@@ -614,7 +614,7 @@ void OpenGLDriver::polygonOffset(GLfloat factor, GLfloat units) noexcept {
     });
 }
 
-void OpenGLDriver::setRasterStateSlow(Driver::RasterState rs) noexcept {
+void OpenGLDriver::setRasterStateSlow(RasterState rs) noexcept {
     mRasterState = rs;
 
     // culling state
@@ -861,7 +861,7 @@ void OpenGLDriver::createVertexBufferR(
     uint8_t bufferCount,
     uint8_t attributeCount,
     uint32_t elementCount,
-    Driver::AttributeArray attributes,
+    AttributeArray attributes,
     BufferUsage usage) {
     DEBUG_MARKER()
 
@@ -869,6 +869,8 @@ void OpenGLDriver::createVertexBufferR(
             bufferCount, attributeCount, elementCount, attributes);
 
     GLsizei n = GLsizei(vb->bufferCount);
+
+    assert(n <= (GLsizei)vb->gl.buffers.size());
     glGenBuffers(n, vb->gl.buffers.data());
 
     for (GLsizei i = 0; i < n; i++) {

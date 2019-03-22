@@ -48,16 +48,14 @@ struct HwBase {
 };
 
 struct HwVertexBuffer : public HwBase {
-    static constexpr size_t MAX_ATTRIBUTE_BUFFER_COUNT = Driver::MAX_ATTRIBUTE_BUFFER_COUNT;
-
-    Driver::AttributeArray attributes;    // 8*8
+    AttributeArray attributes;            // 8*8
     uint32_t vertexCount;                 //   4
     uint8_t bufferCount;                  //   1
     uint8_t attributeCount;               //   1
     uint8_t padding[2]{};                 //   2 -> 56 bytes
 
     HwVertexBuffer(uint8_t bufferCount, uint8_t attributeCount, uint32_t elementCount,
-            Driver::AttributeArray const& attributes) noexcept
+            AttributeArray const& attributes) noexcept
             : attributes(attributes),
               vertexCount(elementCount),
               bufferCount(bufferCount),

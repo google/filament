@@ -289,10 +289,10 @@ void RenderPass::generateCommandsImpl(uint32_t,
 
     Command cmdDepth;
     cmdDepth.primitive.materialVariant = Variant{ Variant::DEPTH_VARIANT };
-    cmdDepth.primitive.rasterState = Driver::RasterState();
+    cmdDepth.primitive.rasterState = {};
     cmdDepth.primitive.rasterState.colorWrite = false;
     cmdDepth.primitive.rasterState.depthWrite = true;
-    cmdDepth.primitive.rasterState.depthFunc = Driver::RasterState::DepthFunc::L;
+    cmdDepth.primitive.rasterState.depthFunc = RasterState::DepthFunc::L;
     cmdDepth.primitive.rasterState.alphaToCoverage = false;
     cmdDepth.primitive.rasterState.inverseFrontFaces = inverseFrontFaces;
 
@@ -439,7 +439,7 @@ void RenderPass::generateCommandsImpl(uint32_t,
             }
 
             if (depthPass) {
-                Driver::RasterState rs = mi->getMaterial()->getRasterState();
+                RasterState rs = mi->getMaterial()->getRasterState();
 
                 // unconditionally write the command
                 cmdDepth.primitive.primitiveHandle = primitive.getHwHandle();

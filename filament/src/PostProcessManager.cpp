@@ -114,9 +114,9 @@ FrameGraphResource PostProcessManager::toneMapping(FrameGraph& fg, FrameGraphRes
             [=](FrameGraphPassResources const& resources,
                     PostProcessToneMapping const& data, DriverApi& driver) {
                 Driver::PipelineState pipeline;
-                pipeline.rasterState.culling = Driver::RasterState::CullingMode::NONE;
+                pipeline.rasterState.culling = RasterState::CullingMode::NONE;
                 pipeline.rasterState.colorWrite = true;
-                pipeline.rasterState.depthFunc = Driver::RasterState::DepthFunc::A;
+                pipeline.rasterState.depthFunc = RasterState::DepthFunc::A;
                 pipeline.program = toneMappingProgram;
 
                 auto const& textureDesc = resources.getDescriptor(data.input);
@@ -170,9 +170,9 @@ FrameGraphResource PostProcessManager::fxaa(FrameGraph& fg,
             [=](FrameGraphPassResources const& resources,
                     PostProcessFXAA const& data, DriverApi& driver) {
                 Driver::PipelineState pipeline;
-                pipeline.rasterState.culling = Driver::RasterState::CullingMode::NONE;
+                pipeline.rasterState.culling = RasterState::CullingMode::NONE;
                 pipeline.rasterState.colorWrite = true;
-                pipeline.rasterState.depthFunc = Driver::RasterState::DepthFunc::A;
+                pipeline.rasterState.depthFunc = RasterState::DepthFunc::A;
                 pipeline.program = antiAliasingProgram;
 
                 auto const& textureDesc = resources.getDescriptor(data.input);

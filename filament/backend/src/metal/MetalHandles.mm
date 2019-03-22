@@ -82,7 +82,7 @@ MetalSwapChain::~MetalSwapChain() {
 }
 
 MetalVertexBuffer::MetalVertexBuffer(id<MTLDevice> device, uint8_t bufferCount, uint8_t attributeCount,
-            uint32_t vertexCount, Driver::AttributeArray const& attributes)
+            uint32_t vertexCount, AttributeArray const& attributes)
     : HwVertexBuffer(bufferCount, attributeCount, vertexCount, attributes) {
     buffers.reserve(bufferCount);
 
@@ -176,7 +176,7 @@ void MetalRenderPrimitive::setBuffers(MetalVertexBuffer* vertexBuffer, MetalInde
 
         vertexDescription.attributes[attributeIndex] = {
                 .format = getMetalFormat(attribute.type,
-                                         attribute.flags & Driver::Attribute::FLAG_NORMALIZED),
+                                         attribute.flags & Attribute::FLAG_NORMALIZED),
                 .buffer = bufferIndex,
                 .offset = 0
         };

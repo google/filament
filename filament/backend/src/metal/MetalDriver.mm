@@ -86,7 +86,7 @@ void MetalDriver::flush(int dummy) {
 }
 
 void MetalDriver::createVertexBufferR(Handle<HwVertexBuffer> vbh, uint8_t bufferCount,
-        uint8_t attributeCount, uint32_t vertexCount, Driver::AttributeArray attributes,
+        uint8_t attributeCount, uint32_t vertexCount, AttributeArray attributes,
         BufferUsage usage) {
     // TODO: Take BufferUsage into account when creating the buffer.
     construct_handle<MetalVertexBuffer>(mHandleMap, vbh, mContext->device, bufferCount,

@@ -86,7 +86,7 @@ public:
     bool isVariantLit() const noexcept { return mIsVariantLit; }
 
     const utils::CString& getName() const noexcept { return mName; }
-    driver::Driver::RasterState getRasterState() const noexcept  { return mRasterState; }
+    driver::RasterState getRasterState() const noexcept  { return mRasterState; }
     uint32_t getId() const noexcept { return mMaterialId; }
 
     Shading getShading() const noexcept { return mShading; }
@@ -99,7 +99,7 @@ public:
     bool isColorWriteEnabled() const noexcept { return mRasterState.colorWrite; }
     bool isDepthWriteEnabled() const noexcept { return mRasterState.depthWrite; }
     bool isDepthCullingEnabled() const noexcept {
-        return mRasterState.depthFunc != driver::Driver::RasterState::DepthFunc::A;
+        return mRasterState.depthFunc != driver::RasterState::DepthFunc::A;
     }
     bool isDoubleSided() const noexcept { return mDoubleSided; }
     float getMaskThreshold() const noexcept { return mMaskThreshold; }
@@ -118,7 +118,7 @@ private:
     // try to order by frequency of use
     mutable std::array<driver::Handle<driver::HwProgram>, VARIANT_COUNT> mCachedPrograms;
 
-    driver::Driver::RasterState mRasterState;
+    driver::RasterState mRasterState;
     BlendingMode mRenderBlendingMode;
     TransparencyMode mTransparencyMode;
     bool mIsVariantLit;

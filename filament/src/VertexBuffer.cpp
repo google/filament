@@ -96,7 +96,7 @@ VertexBuffer::Builder& VertexBuffer::Builder::attribute(VertexAttribute attribut
         entry.stride = byteStride;
         entry.type = attributeType;
         if (hasIntegerTarget(attribute)) {
-            entry.flags |= Driver::Attribute::FLAG_INTEGER_TARGET;
+            entry.flags |= Attribute::FLAG_INTEGER_TARGET;
         }
         mImpl->mDeclaredAttributes.set(attribute);
     }
@@ -108,9 +108,9 @@ VertexBuffer::Builder& VertexBuffer::Builder::normalized(VertexAttribute attribu
     if (size_t(attribute) < MAX_ATTRIBUTE_BUFFERS_COUNT) {
         FVertexBuffer::AttributeData& entry = mImpl->mAttributes[attribute];
         if (normalized) {
-            entry.flags |= Driver::Attribute::FLAG_NORMALIZED;
+            entry.flags |= Attribute::FLAG_NORMALIZED;
         } else {
-            entry.flags &= ~Driver::Attribute::FLAG_NORMALIZED;
+            entry.flags &= ~Attribute::FLAG_NORMALIZED;
         }
     }
     return *this;
@@ -139,13 +139,13 @@ FVertexBuffer::FVertexBuffer(FEngine& engine, const VertexBuffer::Builder& build
     mDeclaredAttributes = builder->mDeclaredAttributes;
     uint8_t attributeCount = (uint8_t) mDeclaredAttributes.count();
 
-    Driver::AttributeArray attributeArray;
+    AttributeArray attributeArray;
 
     static_assert(attributeArray.size() == MAX_ATTRIBUTE_BUFFERS_COUNT,
-            "Driver::Attribute and Builder::Attribute arrays must match");
+            "Attribute and Builder::Attribute arrays must match");
 
-    static_assert(sizeof(Driver::Attribute) == sizeof(AttributeData),
-            "Driver::Attribute and Builder::Attribute must match");
+    static_assert(sizeof(Attribute) == sizeof(AttributeData),
+            "Attribute and Builder::Attribute must match");
 
     auto const& declaredAttributes = mDeclaredAttributes;
     auto const& attributes = mAttributes;

@@ -160,8 +160,8 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder)
     mIsVariantLit = mShading != Shading::UNLIT || mHasShadowMultiplier;
 
     // create raster state
-    using BlendFunction = Driver::RasterState::BlendFunction;
-    using DepthFunc = Driver::RasterState::DepthFunc;
+    using BlendFunction = RasterState::BlendFunction;
+    using DepthFunc = RasterState::DepthFunc;
     switch (mBlendingMode) {
         case BlendingMode::OPAQUE:
         case BlendingMode::MASKED:

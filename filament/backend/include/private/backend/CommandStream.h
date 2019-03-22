@@ -20,7 +20,12 @@
 #define TNT_FILAMENT_DRIVER_COMMANDSTREAM_H
 
 #include "private/backend/CircularBuffer.h"
+#include "private/backend/Handle.h"
+#include "private/backend/Program.h"
 #include "private/backend/Driver.h"
+
+#include <filament/backend/DriverEnums.h>
+
 
 #include <utils/compiler.h>
 
@@ -39,6 +44,7 @@
 namespace filament {
 namespace driver {
 
+class Driver;
 class CommandBase;
 
 /*

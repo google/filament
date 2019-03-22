@@ -176,7 +176,7 @@ public:
         FMaterialInstance const* mi = nullptr;                      // 8 bytes (4)
         driver::Handle<driver::HwRenderPrimitive> primitiveHandle;  // 4 bytes
         driver::Handle<driver::HwUniformBuffer> perRenderableBones; // 4 bytes
-        driver::Driver::RasterState rasterState;                    // 4 bytes
+        driver::RasterState rasterState;                            // 4 bytes
         uint16_t index = 0;                                         // 2 bytes
         Variant materialVariant;                                    // 1 byte
         uint8_t reserved = { };                                     // 1 byte

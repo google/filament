@@ -94,7 +94,7 @@ public:
         mPolygonOffset = { scale, constant };
     }
 
-    driver::Driver::PolygonOffset getPolygonOffset() const noexcept { return mPolygonOffset; }
+    driver::PolygonOffset getPolygonOffset() const noexcept { return mPolygonOffset; }
 
 private:
     friend class FMaterial;
@@ -112,7 +112,7 @@ private:
 
     UniformBuffer mUniforms;
     driver::SamplerGroup mSamplers;
-    driver::Driver::PolygonOffset mPolygonOffset;
+    driver::PolygonOffset mPolygonOffset;
 
     uint64_t mMaterialSortingKey = 0;
 
