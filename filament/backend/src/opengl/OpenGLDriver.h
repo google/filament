@@ -61,7 +61,7 @@ public:
     struct GLVertexBuffer : public driver::HwVertexBuffer {
         using HwVertexBuffer::HwVertexBuffer;
         struct {
-            std::array<GLuint, MAX_ATTRIBUTE_BUFFER_COUNT> buffers;  // 4*6 bytes
+            std::array<GLuint, driver::MAX_ATTRIBUTE_BUFFER_COUNT> buffers;  // 4*6 bytes
         } gl;
     };
 
@@ -292,8 +292,8 @@ private:
     GLuint framebufferRenderbuffer(uint32_t width, uint32_t height, uint8_t samples,
             GLenum attachment, GLenum internalformat, GLuint fbo) noexcept;
 
-    void setRasterStateSlow(RasterState rs) noexcept;
-    void setRasterState(RasterState rs) noexcept {
+    void setRasterStateSlow(driver::RasterState rs) noexcept;
+    void setRasterState(driver::RasterState rs) noexcept {
         if (UTILS_UNLIKELY(rs != mRasterState)) {
             setRasterStateSlow(rs);
         }
@@ -485,7 +485,7 @@ private:
     static constexpr const size_t TEXTURE_TARGET_COUNT =
             sizeof(state.textures.units[0].targets) / sizeof(state.textures.units[0].targets[0]);
 
-    Driver::RasterState mRasterState;
+    driver::RasterState mRasterState;
 
     GLfloat mMaxAnisotropy = 0.0f;
     driver::ShaderModel mShaderModel;

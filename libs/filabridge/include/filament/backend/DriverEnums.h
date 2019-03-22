@@ -21,6 +21,8 @@
 
 #include <math/vec4.h>
 
+#include <array>
+
 #include <stddef.h>
 #include <stdint.h>
 
@@ -33,9 +35,14 @@ namespace filament {
  *
  * Effectively these types are public but should not be used directly. Instead use public classes
  * internal redeclaration of these types.
- * For e.g. Use Texture::Sampler instead of filament::driver::SamplerType.
+ * For e.g. Use Texture::Sampler instead of filament::SamplerType.
  */
 namespace driver {
+
+static constexpr uint64_t SWAP_CHAIN_CONFIG_TRANSPARENT = 0x1;
+static constexpr uint64_t SWAP_CHAIN_CONFIG_READABLE = 0x2;
+
+static constexpr size_t MAX_ATTRIBUTE_BUFFER_COUNT = 8;
 
 /**
  * Selects which driver a particular Engine should use.
@@ -600,8 +607,85 @@ enum ShaderType : uint8_t {
     FRAGMENT = 1
 };
 
-static constexpr uint64_t SWAP_CHAIN_CONFIG_TRANSPARENT = 0x1;
-static constexpr uint64_t SWAP_CHAIN_CONFIG_READABLE = 0x2;
+
+struct Attribute {
+    static constexpr uint8_t FLAG_NORMALIZED     = 0x1;
+    static constexpr uint8_t FLAG_INTEGER_TARGET = 0x2;
+    uint32_t offset = 0;
+    uint8_t stride = 0;
+    uint8_t buffer = 0xFF;
+    ElementType type = ElementType::BYTE;
+    uint8_t flags = 0x0;
+};
+
+using AttributeArray = std::array<Attribute, MAX_ATTRIBUTE_BUFFER_COUNT>;
+
+struct PolygonOffset {
+    float slope = 0;        // factor in GL-speak
+    float constant = 0;     // units in GL-speak
+};
+
+struct RasterState {
+    using CullingMode = CullingMode;
+    using DepthFunc = SamplerCompareFunc;
+    using BlendEquation = BlendEquation;
+    using BlendFunction = BlendFunction;
+
+    RasterState() noexcept { // NOLINT(cppcoreguidelines-pro-type-member-init)
+        static_assert(sizeof(RasterState) == sizeof(uint32_t),
+                "RasterState size not what was intended");
+        culling = CullingMode::BACK;
+        blendEquationRGB = BlendEquation::ADD;
+        blendEquationAlpha = BlendEquation::ADD;
+        blendFunctionSrcRGB = BlendFunction::ONE;
+        blendFunctionSrcAlpha = BlendFunction::ONE;
+        blendFunctionDstRGB = BlendFunction::ZERO;
+        blendFunctionDstAlpha = BlendFunction::ZERO;
+    }
+
+    bool operator == (RasterState rhs) const noexcept { return u == rhs.u; }
+    bool operator != (RasterState rhs) const noexcept { return u != rhs.u; }
+
+    void disableBlending() noexcept {
+        blendEquationRGB = BlendEquation::ADD;
+        blendEquationAlpha = BlendEquation::ADD;
+        blendFunctionSrcRGB = BlendFunction::ONE;
+        blendFunctionSrcAlpha = BlendFunction::ONE;
+        blendFunctionDstRGB = BlendFunction::ZERO;
+        blendFunctionDstAlpha = BlendFunction::ZERO;
+    }
+
+    // note: clang reduces this entire function to a simple load/mask/compare
+    bool hasBlending() const noexcept {
+        // there could be other cases where blending would end-up being disabled,
+        // but this is common and easy to check
+        return !(blendEquationRGB == BlendEquation::ADD &&
+                 blendEquationAlpha == BlendEquation::ADD &&
+                 blendFunctionSrcRGB == BlendFunction::ONE &&
+                 blendFunctionSrcAlpha == BlendFunction::ONE &&
+                 blendFunctionDstRGB == BlendFunction::ZERO &&
+                 blendFunctionDstAlpha == BlendFunction::ZERO);
+    }
+
+    union {
+        struct {
+            CullingMode culling                 : 2;        //  2
+            BlendEquation blendEquationRGB      : 3;        //  5
+            BlendEquation blendEquationAlpha    : 3;        //  8
+            BlendFunction blendFunctionSrcRGB   : 4;        // 12
+            BlendFunction blendFunctionSrcAlpha : 4;        // 16
+            BlendFunction blendFunctionDstRGB   : 4;        // 20
+            BlendFunction blendFunctionDstAlpha : 4;        // 24
+            bool depthWrite                     : 1;        // 25
+            DepthFunc depthFunc                 : 3;        // 28
+            bool colorWrite                     : 1;        // 29
+            bool alphaToCoverage                : 1;        // 30
+            bool inverseFrontFaces              : 1;        // 31
+            uint8_t padding                     : 1;        // 32
+        };
+        uint32_t u = 0;
+    };
+};
 
 } // namespace driver
 } // namespace filament

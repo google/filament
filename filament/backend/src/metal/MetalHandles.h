@@ -46,7 +46,7 @@ struct MetalSwapChain : public HwSwapChain {
 
 struct MetalVertexBuffer : public HwVertexBuffer {
     MetalVertexBuffer(id<MTLDevice> device, uint8_t bufferCount, uint8_t attributeCount,
-            uint32_t vertexCount, Driver::AttributeArray const& attributes);
+            uint32_t vertexCount, AttributeArray const& attributes);
     ~MetalVertexBuffer();
 
     std::vector<id<MTLBuffer>> buffers;

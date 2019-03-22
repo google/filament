@@ -298,7 +298,7 @@ void VulkanDriver::destroyRenderPrimitive(Handle<HwRenderPrimitive> rph) {
 }
 
 void VulkanDriver::createVertexBufferR(Handle<HwVertexBuffer> vbh, uint8_t bufferCount,
-        uint8_t attributeCount, uint32_t elementCount, Driver::AttributeArray attributes,
+        uint8_t attributeCount, uint32_t elementCount, AttributeArray attributes,
         BufferUsage usage) {
     auto vertexBuffer = construct_handle<VulkanVertexBuffer>(mHandleMap, vbh, mContext, mStagePool,
             bufferCount, attributeCount, elementCount, attributes);
@@ -954,8 +954,8 @@ void VulkanDriver::draw(Driver::PipelineState pipelineState, Handle<HwRenderPrim
     const VulkanRenderPrimitive& prim = *handle_cast<VulkanRenderPrimitive>(mHandleMap, rph);
 
     Handle<HwProgram> programHandle = pipelineState.program;
-    Driver::RasterState rasterState = pipelineState.rasterState;
-    Driver::PolygonOffset depthOffset = pipelineState.polygonOffset;
+    RasterState rasterState = pipelineState.rasterState;
+    PolygonOffset depthOffset = pipelineState.polygonOffset;
 
     auto* program = handle_cast<VulkanProgram>(mHandleMap, programHandle);
     mDisposer.acquire(program, commands->resources);

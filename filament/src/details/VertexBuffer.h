@@ -19,7 +19,6 @@
 
 #include "upcast.h"
 
-#include "private/backend/Driver.h"
 #include "private/backend/Handle.h"
 
 #include <private/filament/EngineEnums.h>
@@ -58,8 +57,8 @@ public:
 private:
     friend class VertexBuffer;
 
-    struct AttributeData : driver::Driver::Attribute {
-        AttributeData() : driver::Driver::Attribute{ .type = driver::ElementType::FLOAT4 } {}
+    struct AttributeData : driver::Attribute {
+        AttributeData() : driver::Attribute{ .type = driver::ElementType::FLOAT4 } {}
     };
 
     driver::Handle<driver::HwVertexBuffer> mHandle;

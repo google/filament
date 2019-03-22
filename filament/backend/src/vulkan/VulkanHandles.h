@@ -86,7 +86,7 @@ struct VulkanSwapChain : public HwSwapChain {
 struct VulkanVertexBuffer : public HwVertexBuffer {
     VulkanVertexBuffer(VulkanContext& context, VulkanStagePool& stagePool, uint8_t bufferCount,
             uint8_t attributeCount, uint32_t elementCount,
-            Driver::AttributeArray const& attributes);
+            AttributeArray const& attributes);
     std::vector<std::unique_ptr<VulkanBuffer>> buffers;
 };
 
