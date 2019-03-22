@@ -18,7 +18,7 @@
 #define TNT_FILAMENT_DRIVER_NOOPDRIVER_H
 
 #include "private/backend/Driver.h"
-#include "private/backend/DriverBase.h"
+#include "DriverBase.h"
 
 #include <utils/compiler.h>
 

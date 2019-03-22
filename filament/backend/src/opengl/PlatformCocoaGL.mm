@@ -22,7 +22,7 @@
 #include <OpenGL/OpenGL.h>
 #include <Cocoa/Cocoa.h>
 
-#include "private/backend/DriverBase.h"
+#include "DriverBase.h"
 
 #include <backend/Platform.h>
 

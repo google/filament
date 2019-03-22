@@ -14,9 +14,10 @@
  * limitations under the License.
  */
 
-#include "private/backend/DriverBase.h"
 #include "private/backend/Driver.h"
 #include "private/backend/CommandStream.h"
+
+#include "DriverBase.h"
 
 #include <math/half.h>
 #include <math/quat.h>

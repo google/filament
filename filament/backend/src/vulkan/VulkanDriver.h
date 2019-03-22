@@ -26,7 +26,7 @@
 #include "VulkanUtility.h"
 
 #include "private/backend/Driver.h"
-#include "private/backend/DriverBase.h"
+#include "DriverBase.h"
 
 #include <utils/compiler.h>
 #include <utils/Allocator.h>

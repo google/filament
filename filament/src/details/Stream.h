@@ -19,13 +19,16 @@
 
 #include "upcast.h"
 
-#include "private/backend/DriverBase.h"
-
 #include <filament/Stream.h>
+
+#include "private/backend/Handle.h"
 
 #include <utils/compiler.h>
 
 namespace filament {
+
+struct HwStream;
+
 namespace details {
 
 class FEngine;

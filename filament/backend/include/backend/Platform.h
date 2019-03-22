@@ -22,9 +22,6 @@
 #include <utils/compiler.h>
 
 namespace filament {
-namespace details {
-class FEngine;
-}
 
 class Driver;
 
@@ -39,20 +36,17 @@ public:
         uintptr_t image = 0;
     };
 
+    static Platform* create(driver::Backend* backendHint) noexcept;
+    static void destroy(Platform** context) noexcept;
+
     virtual int getOSVersion() const noexcept = 0;
 
     virtual ~Platform() noexcept;
 
-protected:
     // Creates and initializes the low-level API (e.g. an OpenGL context or Vulkan instance),
     // then creates the concrete Driver. Returns null on failure.
     // The caller takes ownership of the returned Driver* and must destroy it with delete.
     virtual Driver* createDriver(void* sharedContext) noexcept = 0;
-
-private:
-    friend class details::FEngine;
-    static Platform* create(driver::Backend* backendHint) noexcept;
-    static void destroy(Platform** context) noexcept;
 };
 
 class UTILS_PUBLIC OpenGLPlatform : public Platform {
