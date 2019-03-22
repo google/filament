@@ -58,6 +58,7 @@ set(SRCS
         src/FrameSkipper.cpp
         src/Froxelizer.cpp
         src/Frustum.cpp
+        src/GPUBuffer.cpp
         src/IndexBuffer.cpp
         src/IndirectLight.cpp
         src/Material.cpp
@@ -113,6 +114,7 @@ set(PRIVATE_HDRS
         src/details/View.h
         src/FilamentAPI-impl.h
         src/FrameInfo.h
+        src/GPUBuffer.h
         src/Intersections.h
         src/MaterialParser.h
         src/PostProcessManager.h

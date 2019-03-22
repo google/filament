@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "private/backend/GPUBuffer.h"
+#include "GPUBuffer.h"
 #include "private/backend/DriverApi.h"
 #include "private/backend/Driver.h"
 #include "private/backend/DriverBase.h"

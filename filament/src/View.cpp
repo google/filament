@@ -69,8 +69,8 @@ FView::FView(FEngine& engine)
             &engine.debug.view.camera_at_origin);
 
     // set-up samplers
-    mPerViewSb.setSampler(PerViewSib::RECORDS, mFroxelizer.getRecordBuffer());
-    mPerViewSb.setSampler(PerViewSib::FROXELS, mFroxelizer.getFroxelBuffer());
+    mFroxelizer.getRecordBuffer().setSampler(PerViewSib::RECORDS, mPerViewSb);
+    mFroxelizer.getFroxelBuffer().setSampler(PerViewSib::FROXELS, mPerViewSb);
     if (engine.getDFG()->isValid()) {
         TextureSampler sampler(TextureSampler::MagFilter::LINEAR);
         mPerViewSb.setSampler(PerViewSib::IBL_DFG_LUT,

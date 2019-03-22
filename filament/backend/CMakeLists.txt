@@ -28,7 +28,6 @@ set(SRCS
         src/Driver.cpp
         include/private/backend/DriverAPI.inc
         src/Platform.cpp
-        src/GPUBuffer.cpp
         src/Handle.cpp
         src/Program.cpp
         src/SamplerGroup.cpp
@@ -47,7 +46,6 @@ set(PRIVATE_HDRS
         include/private/backend/DriverApi.h
         include/private/backend/DriverApiForward.h
         include/private/backend/DriverBase.h
-        include/private/backend/GPUBuffer.h
         include/private/backend/Handle.h
         include/private/backend/Program.h
         include/private/backend/SamplerGroup.h
