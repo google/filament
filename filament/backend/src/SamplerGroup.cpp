@@ -15,7 +15,6 @@
  */
 
 #include "private/backend/SamplerGroup.h"
-#include "private/backend/GPUBuffer.h"
 
 namespace filament {
 
@@ -91,9 +90,5 @@ utils::io::ostream& operator<<(utils::io::ostream& out, const SamplerGroup& rhs)
     return out << "SamplerGroup(data=" << rhs.getSamplers() << ", size=" << rhs.getSize() << ")";
 }
 #endif
-
-void SamplerGroup::setSampler(size_t index, GPUBuffer const& buffer) noexcept {
-    setSampler(index, { buffer.getHandle(), buffer.getSamplerParams() });
-}
 
 } // namespace filament

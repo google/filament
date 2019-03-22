@@ -24,7 +24,7 @@
 #include "details/Engine.h"
 
 #include "private/backend/Handle.h"
-#include "private/backend/GPUBuffer.h"
+#include "GPUBuffer.h"
 
 #include <filament/Viewport.h>
 

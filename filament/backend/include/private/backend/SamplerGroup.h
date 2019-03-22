@@ -30,8 +30,6 @@
 
 namespace filament {
 
-class GPUBuffer;
-
 class SamplerGroup {
 public:
 
@@ -86,8 +84,6 @@ public:
     inline void setSampler(size_t index, Handle<HwTexture> t, SamplerParams s)  {
         setSampler(index, { t, s });
     }
-
-    void setSampler(size_t index, GPUBuffer const& buffer) noexcept;
 
 private:
 #if !defined(NDEBUG)

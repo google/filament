@@ -21,6 +21,7 @@
 
 #include "private/backend/DriverApiForward.h"
 #include "private/backend/Handle.h"
+#include "private/backend/SamplerGroup.h"
 
 #include <utils/Slice.h>
 
@@ -71,6 +72,11 @@ public:
     }
 
     void swap(GPUBuffer& rhs) noexcept;
+
+
+    void setSampler(size_t index, SamplerGroup& group) const noexcept {
+        group.setSampler(index, { getHandle(), getSamplerParams() });
+    }
 
 private:
     // this is really hidden implementation details (the fact we're using a texture should be
