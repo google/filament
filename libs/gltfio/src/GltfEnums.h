@@ -61,7 +61,7 @@ inline filament::TextureSampler::MinFilter getMinFilter(cgltf_int minFilter) {
         case GL_LINEAR_MIPMAP_LINEAR:
             return filament::TextureSampler::MinFilter::LINEAR_MIPMAP_LINEAR;
     }
-    return filament::TextureSampler::MinFilter::NEAREST;
+    return filament::TextureSampler::MinFilter::LINEAR_MIPMAP_LINEAR;
 }
 
 inline filament::TextureSampler::MagFilter getMagFilter(cgltf_int magFilter) {
@@ -71,7 +71,7 @@ inline filament::TextureSampler::MagFilter getMagFilter(cgltf_int magFilter) {
         case GL_LINEAR:
             return filament::TextureSampler::MagFilter::LINEAR;
     }
-    return filament::TextureSampler::MagFilter::NEAREST;
+    return filament::TextureSampler::MagFilter::LINEAR;
 }
 
 inline bool getVertexAttrType(cgltf_attribute_type atype, filament::VertexAttribute* attrType) {
