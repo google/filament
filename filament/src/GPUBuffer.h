@@ -27,6 +27,8 @@
 
 namespace filament {
 
+struct HwTexture;
+
 class GPUBuffer {
 public:
 

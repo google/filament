@@ -10,25 +10,24 @@ set(GENERATION_ROOT ${CMAKE_CURRENT_BINARY_DIR})
 # ==================================================================================================
 set(PUBLIC_HDRS
         include/backend/BufferDescriptor.h
-        include/backend/Platform.h
         include/backend/PixelBufferDescriptor.h
+        include/backend/Platform.h
 )
 
 set(SRCS
+        src/CircularBuffer.cpp
+        src/CommandBufferQueue.cpp
+        src/CommandStream.cpp
+        src/Driver.cpp
+        src/Handle.cpp
         src/noop/NoopDriver.cpp
         src/noop/PlatformNoop.cpp
         src/opengl/gl_headers.cpp
-        src/opengl/OpenGLBlitter.cpp
         src/opengl/GLUtils.cpp
+        src/opengl/OpenGLBlitter.cpp
         src/opengl/OpenGLDriver.cpp
         src/opengl/OpenGLProgram.cpp
-        src/CommandStream.cpp
-        src/CommandBufferQueue.cpp
-        src/CircularBuffer.cpp
-        src/Driver.cpp
-        include/private/backend/DriverAPI.inc
         src/Platform.cpp
-        src/Handle.cpp
         src/Program.cpp
         src/SamplerGroup.cpp
         src/TextureReshaper.cpp
@@ -38,17 +37,17 @@ set(PRIVATE_HDRS
         include/private/backend/CircularBuffer.h
         include/private/backend/CommandBufferQueue.h
         include/private/backend/CommandStream.h
-        src/CommandStreamDispatcher.h
-        src/DataReshaper.h
-        src/TextureReshaper.h
         include/private/backend/Driver.h
-        include/private/backend/DriverAPI.inc
         include/private/backend/DriverApi.h
+        include/private/backend/DriverAPI.inc
         include/private/backend/DriverApiForward.h
-        include/private/backend/DriverBase.h
         include/private/backend/Handle.h
         include/private/backend/Program.h
         include/private/backend/SamplerGroup.h
+        src/CommandStreamDispatcher.h
+        src/DataReshaper.h
+        src/DriverBase.h
+        src/TextureReshaper.h
 )
 
 # ==================================================================================================

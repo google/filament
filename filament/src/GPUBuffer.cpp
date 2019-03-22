@@ -17,7 +17,6 @@
 #include "GPUBuffer.h"
 #include "private/backend/DriverApi.h"
 #include "private/backend/Driver.h"
-#include "private/backend/DriverBase.h"
 
 #include <math/half.h>
 

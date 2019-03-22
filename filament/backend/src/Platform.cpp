@@ -63,9 +63,7 @@
     #include "metal/PlatformMetal.h"
 #endif
 
-#ifndef NDEBUG
-    #include "noop/PlatformNoop.h"
-#endif
+#include "noop/PlatformNoop.h"
 
 namespace filament {
 namespace driver {
@@ -87,11 +85,9 @@ Platform* Platform::create(Backend* backend) noexcept {
     if (*backend == Backend::DEFAULT) {
         *backend = Backend::OPENGL;
     }
-    #ifndef NDEBUG
     if (*backend == Backend::NOOP) {
         return new PlatformNoop();
     }
-    #endif
     if (*backend == Backend::VULKAN) {
         #if defined(FILAMENT_DRIVER_SUPPORTS_VULKAN)
             #if defined(ANDROID)

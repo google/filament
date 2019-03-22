@@ -19,15 +19,18 @@
 
 #include "upcast.h"
 
-#include "private/backend/DriverBase.h"
-
 #include <filament/Fence.h>
+
+#include "private/backend/Handle.h"
 
 #include <utils/compiler.h>
 #include <utils/Condition.h>
 #include <utils/Mutex.h>
 
 namespace filament {
+
+struct HwFence;
+
 namespace details {
 
 class FEngine;

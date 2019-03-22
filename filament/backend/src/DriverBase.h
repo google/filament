@@ -1,5 +1,3 @@
-#include <utility>
-
 /*
  * Copyright (C) 2015 The Android Open Source Project
  *
@@ -19,18 +17,20 @@
 #ifndef TNT_FILAMENT_DRIVER_DRIVERBASE_H
 #define TNT_FILAMENT_DRIVER_DRIVERBASE_H
 
-#include <array>
-#include <mutex>
-#include <assert.h>
-#include <stdint.h>
-
 #include <utils/compiler.h>
 #include <utils/CString.h>
 
 #include <filament/backend/DriverEnums.h>
 
 #include "private/backend/Driver.h"
-#include "SamplerGroup.h"
+#include "private/backend/SamplerGroup.h"
+
+#include <array>
+#include <mutex>
+#include <utility>
+
+#include <assert.h>
+#include <stdint.h>
 
 namespace filament {
 

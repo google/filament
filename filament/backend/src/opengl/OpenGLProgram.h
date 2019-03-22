@@ -27,7 +27,7 @@
 
 #include "opengl/gl_headers.h"
 #include "private/backend/Driver.h"
-#include "private/backend/DriverBase.h"
+#include "DriverBase.h"
 #include "private/backend/Program.h"
 #include "opengl/OpenGLDriver.h"
 

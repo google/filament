@@ -22,7 +22,7 @@
 
 #include <UIKit/UIKit.h>
 
-#include "private/backend/DriverBase.h"
+#include "DriverBase.h"
 
 #include <backend/Platform.h>
 
