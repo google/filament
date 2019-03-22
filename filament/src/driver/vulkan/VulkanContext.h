@@ -28,6 +28,7 @@
 
 #include "vk_mem_alloc.h"
 
+#include <memory>
 #include <vector>
 
 namespace filament {
@@ -39,9 +40,21 @@ constexpr VkAllocationCallbacks* VKALLOC = nullptr;
 
 struct VulkanSurfaceContext;
 
+// This wrapper exists so that we can use shared_ptr to implement shared ownership for low-level
+// Vulkan fences.
+struct VulkanCmdFence {
+    VulkanCmdFence(VkDevice device, bool signaled = false);
+    ~VulkanCmdFence();
+    const VkDevice device;
+    VkFence fence;
+};
+
+// The submission fence has shared ownership semantics because it is potentially wrapped by a
+// DriverApi fence object and should not be destroyed until both the DriverAPI object is freed and
+// we're done waiting on the most recent submission of the given command buffer.
 struct VulkanCommandBuffer {
     VkCommandBuffer cmdbuffer;
-    VkFence fence;
+    std::shared_ptr<VulkanCmdFence> fence;
     VulkanDisposer::Set resources;
     bool submitted;
 };
