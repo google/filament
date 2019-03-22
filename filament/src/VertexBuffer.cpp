@@ -33,6 +33,7 @@
 namespace filament {
 
 using namespace details;
+using namespace driver;
 using namespace filament::math;
 
 struct VertexBuffer::BuilderDetails {

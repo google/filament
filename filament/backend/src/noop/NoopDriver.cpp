@@ -19,6 +19,8 @@
 
 namespace filament {
 
+using namespace driver;
+
 Driver* NoopDriver::create() {
     return new NoopDriver();
 }
@@ -37,6 +39,6 @@ driver::ShaderModel NoopDriver::getShaderModel() const noexcept {
 }
 
 // explicit instantiation of the Dispatcher
-template class ConcreteDispatcher<NoopDriver>;
+template class driver::ConcreteDispatcher<NoopDriver>;
 
 } // namespace filament

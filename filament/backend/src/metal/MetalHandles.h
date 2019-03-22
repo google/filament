@@ -107,7 +107,7 @@ struct MetalTexture : public HwTexture {
     ~MetalTexture();
 
     void load2DImage(uint32_t level, uint32_t xoffset, uint32_t yoffset, uint32_t width,
-            uint32_t height, Driver::PixelBufferDescriptor& data) noexcept;
+            uint32_t height, PixelBufferDescriptor& data) noexcept;
     void loadCubeImage(const PixelBufferDescriptor& data, const FaceOffsets& faceOffsets,
             int miplevel);
 

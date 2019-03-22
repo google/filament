@@ -37,7 +37,7 @@ public:
     // frees driver resources, object becomes invalid
     void terminate(FEngine& engine);
 
-    Handle<HwIndexBuffer> getHwHandle() const noexcept { return mHandle; }
+    driver::Handle<driver::HwIndexBuffer> getHwHandle() const noexcept { return mHandle; }
 
     size_t getIndexCount() const noexcept { return mIndexCount; }
 
@@ -45,7 +45,7 @@ public:
 
 private:
     friend class IndexBuffer;
-    Handle<HwIndexBuffer> mHandle;
+    driver::Handle<driver::HwIndexBuffer> mHandle;
     uint32_t mIndexCount;
 };
 

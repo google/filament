@@ -115,7 +115,7 @@ public:
     inline uint8_t getLayerMask(Instance instance) const noexcept;
     inline uint8_t getPriority(Instance instance) const noexcept;
 
-    inline Handle<HwUniformBuffer> getBonesUbh(Instance instance) const noexcept;
+    inline driver::Handle<driver::HwUniformBuffer> getBonesUbh(Instance instance) const noexcept;
 
 
     inline size_t getLevelCount(Instance instance) const noexcept { return 1; }
@@ -139,7 +139,7 @@ private:
             utils::Slice<FRenderPrimitive>& primitives) noexcept;
 
     struct Bones {
-        filament::Handle<HwUniformBuffer> handle;
+        filament::driver::Handle<driver::HwUniformBuffer> handle;
         UniformBuffer bones;
         size_t count;
     };
@@ -289,9 +289,9 @@ Box const& FRenderableManager::getAABB(Instance instance) const noexcept {
     return mManager[instance].aabb;
 }
 
-Handle<HwUniformBuffer> FRenderableManager::getBonesUbh(Instance instance) const noexcept {
+driver::Handle<driver::HwUniformBuffer> FRenderableManager::getBonesUbh(Instance instance) const noexcept {
     std::unique_ptr<Bones> const& bones = mManager[instance].bones;
-    return bones ? bones->handle : Handle<HwUniformBuffer>{};
+    return bones ? bones->handle : driver::Handle<driver::HwUniformBuffer>{};
 }
 
 utils::Slice<FRenderPrimitive> const& FRenderableManager::getRenderPrimitives(

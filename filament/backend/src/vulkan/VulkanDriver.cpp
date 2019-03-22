@@ -262,12 +262,12 @@ void VulkanDriver::flush(int) {
     // Todo: equivalent of glFlush()
 }
 
-void VulkanDriver::createSamplerGroupR(Driver::SamplerGroupHandle sbh, size_t count) {
+void VulkanDriver::createSamplerGroupR(Handle<HwSamplerGroup> sbh, size_t count) {
     construct_handle<VulkanSamplerGroup>(mHandleMap, sbh, mContext, count);
 }
 
-void VulkanDriver::createUniformBufferR(Driver::UniformBufferHandle ubh, size_t size,
-        Driver::BufferUsage usage) {
+void VulkanDriver::createUniformBufferR(Handle<HwUniformBuffer> ubh, size_t size,
+        BufferUsage usage) {
     auto uniformBuffer = construct_handle<VulkanUniformBuffer>(mHandleMap, ubh, mContext,
             mStagePool, size, usage);
     mDisposer.createDisposable(uniformBuffer, [this, ubh] () {
@@ -275,7 +275,7 @@ void VulkanDriver::createUniformBufferR(Driver::UniformBufferHandle ubh, size_t 
     });
 }
 
-void VulkanDriver::destroyUniformBuffer(Driver::UniformBufferHandle ubh) {
+void VulkanDriver::destroyUniformBuffer(Handle<HwUniformBuffer> ubh) {
     if (ubh) {
         auto buffer = handle_cast<VulkanUniformBuffer>(mHandleMap, ubh);
         mBinder.unbindUniformBuffer(buffer->getGpuBuffer());
@@ -283,23 +283,23 @@ void VulkanDriver::destroyUniformBuffer(Driver::UniformBufferHandle ubh) {
     }
 }
 
-void VulkanDriver::createRenderPrimitiveR(Driver::RenderPrimitiveHandle rph, int) {
+void VulkanDriver::createRenderPrimitiveR(Handle<HwRenderPrimitive> rph, int) {
     auto renderPrimitive = construct_handle<VulkanRenderPrimitive>(mHandleMap, rph, mContext);
     mDisposer.createDisposable(renderPrimitive, [this, rph] () {
         destruct_handle<VulkanRenderPrimitive>(mHandleMap, rph);
     });
 }
 
-void VulkanDriver::destroyRenderPrimitive(Driver::RenderPrimitiveHandle rph) {
+void VulkanDriver::destroyRenderPrimitive(Handle<HwRenderPrimitive> rph) {
     if (rph) {
         auto renderPrimitive = handle_cast<VulkanRenderPrimitive>(mHandleMap, rph);
         mDisposer.removeReference(renderPrimitive);
     }
 }
 
-void VulkanDriver::createVertexBufferR(Driver::VertexBufferHandle vbh, uint8_t bufferCount,
+void VulkanDriver::createVertexBufferR(Handle<HwVertexBuffer> vbh, uint8_t bufferCount,
         uint8_t attributeCount, uint32_t elementCount, Driver::AttributeArray attributes,
-        Driver::BufferUsage usage) {
+        BufferUsage usage) {
     auto vertexBuffer = construct_handle<VulkanVertexBuffer>(mHandleMap, vbh, mContext, mStagePool,
             bufferCount, attributeCount, elementCount, attributes);
     mDisposer.createDisposable(vertexBuffer, [this, vbh] () {
@@ -307,15 +307,15 @@ void VulkanDriver::createVertexBufferR(Driver::VertexBufferHandle vbh, uint8_t b
     });
 }
 
-void VulkanDriver::destroyVertexBuffer(Driver::VertexBufferHandle vbh) {
+void VulkanDriver::destroyVertexBuffer(Handle<HwVertexBuffer> vbh) {
     if (vbh) {
         auto vertexBuffer = handle_cast<VulkanVertexBuffer>(mHandleMap, vbh);
         mDisposer.removeReference(vertexBuffer);
     }
 }
 
-void VulkanDriver::createIndexBufferR(Driver::IndexBufferHandle ibh,
-        Driver::ElementType elementType, uint32_t indexCount, Driver::BufferUsage usage) {
+void VulkanDriver::createIndexBufferR(Handle<HwIndexBuffer> ibh,
+        ElementType elementType, uint32_t indexCount, BufferUsage usage) {
     auto elementSize = (uint8_t) getElementTypeSize(elementType);
     auto indexBuffer = construct_handle<VulkanIndexBuffer>(mHandleMap, ibh, mContext, mStagePool,
             elementSize, indexCount);
@@ -324,14 +324,14 @@ void VulkanDriver::createIndexBufferR(Driver::IndexBufferHandle ibh,
     });
 }
 
-void VulkanDriver::destroyIndexBuffer(Driver::IndexBufferHandle ibh) {
+void VulkanDriver::destroyIndexBuffer(Handle<HwIndexBuffer> ibh) {
     if (ibh) {
         auto indexBuffer = handle_cast<VulkanIndexBuffer>(mHandleMap, ibh);
         mDisposer.removeReference(indexBuffer);
     }
 }
 
-void VulkanDriver::createTextureR(Driver::TextureHandle th, SamplerType target, uint8_t levels,
+void VulkanDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint8_t levels,
         TextureFormat format, uint8_t samples, uint32_t w, uint32_t h, uint32_t depth,
         TextureUsage usage) {
     auto vktexture = construct_handle<VulkanTexture>(mHandleMap, th, mContext, target, levels,
@@ -341,7 +341,7 @@ void VulkanDriver::createTextureR(Driver::TextureHandle th, SamplerType target, 
     });
 }
 
-void VulkanDriver::destroyTexture(Driver::TextureHandle th) {
+void VulkanDriver::destroyTexture(Handle<HwTexture> th) {
     if (th) {
         auto texture = handle_cast<VulkanTexture>(mHandleMap, th);
         mBinder.unbindImageView(texture->imageView);
@@ -349,28 +349,28 @@ void VulkanDriver::destroyTexture(Driver::TextureHandle th) {
     }
 }
 
-void VulkanDriver::createProgramR(Driver::ProgramHandle ph, Program&& program) {
+void VulkanDriver::createProgramR(Handle<HwProgram> ph, Program&& program) {
     auto vkprogram = construct_handle<VulkanProgram>(mHandleMap, ph, mContext, program);
     mDisposer.createDisposable(vkprogram, [this, ph] () {
         destruct_handle<VulkanProgram>(mHandleMap, ph);
     });
 }
 
-void VulkanDriver::destroyProgram(Driver::ProgramHandle ph) {
+void VulkanDriver::destroyProgram(Handle<HwProgram> ph) {
     if (ph) {
         mDisposer.removeReference(handle_cast<VulkanProgram>(mHandleMap, ph));
     }
 }
 
-void VulkanDriver::createDefaultRenderTargetR(Driver::RenderTargetHandle rth, int) {
+void VulkanDriver::createDefaultRenderTargetR(Handle<HwRenderTarget> rth, int) {
     auto renderTarget = construct_handle<VulkanRenderTarget>(mHandleMap, rth, mContext);
     mDisposer.createDisposable(renderTarget, [this, rth] () {
         destruct_handle<VulkanRenderTarget>(mHandleMap, rth);
     });
 }
 
-void VulkanDriver::createRenderTargetR(Driver::RenderTargetHandle rth,
-        Driver::TargetBufferFlags targets, uint32_t width, uint32_t height, uint8_t samples,
+void VulkanDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
+        TargetBufferFlags targets, uint32_t width, uint32_t height, uint8_t samples,
         TextureFormat format, Driver::TargetBufferInfo color, Driver::TargetBufferInfo depth,
         Driver::TargetBufferInfo stencil) {
     auto renderTarget = construct_handle<VulkanRenderTarget>(mHandleMap, rth, mContext,
@@ -400,16 +400,16 @@ void VulkanDriver::createRenderTargetR(Driver::RenderTargetHandle rth,
     });
 }
 
-void VulkanDriver::destroyRenderTarget(Driver::RenderTargetHandle rth) {
+void VulkanDriver::destroyRenderTarget(Handle<HwRenderTarget> rth) {
     if (rth) {
         mDisposer.removeReference(handle_cast<VulkanRenderTarget>(mHandleMap, rth));
     }
 }
 
-void VulkanDriver::createFenceR(Driver::FenceHandle fh, int) {
+void VulkanDriver::createFenceR(Handle<HwFence> fh, int) {
 }
 
-void VulkanDriver::createSwapChainR(Driver::SwapChainHandle sch, void* nativeWindow,
+void VulkanDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow,
         uint64_t flags) {
     auto* swapChain = construct_handle<VulkanSwapChain>(mHandleMap, sch);
     VulkanSurfaceContext& sc = swapChain->surfaceContext;
@@ -423,7 +423,7 @@ void VulkanDriver::createSwapChainR(Driver::SwapChainHandle sch, void* nativeWin
     mContext.currentSurface = &sc;
 }
 
-void VulkanDriver::createStreamFromTextureIdR(Driver::StreamHandle sh, intptr_t externalTextureId,
+void VulkanDriver::createStreamFromTextureIdR(Handle<HwStream> sh, intptr_t externalTextureId,
         uint32_t width, uint32_t height) {
 }
 
@@ -475,7 +475,7 @@ Handle<HwStream> VulkanDriver::createStreamFromTextureIdS() noexcept {
     return {};
 }
 
-void VulkanDriver::destroySamplerGroup(Driver::SamplerGroupHandle sbh) {
+void VulkanDriver::destroySamplerGroup(Handle<HwSamplerGroup> sbh) {
     if (sbh) {
         // Unlike most of the other "Hw" handles, the sampler buffer is an abstract concept and does
         // not map to any Vulkan objects. To handle destruction, the only thing we need to do is
@@ -491,7 +491,7 @@ void VulkanDriver::destroySamplerGroup(Driver::SamplerGroupHandle sbh) {
     }
 }
 
-void VulkanDriver::destroySwapChain(Driver::SwapChainHandle sch) {
+void VulkanDriver::destroySwapChain(Handle<HwSwapChain> sch) {
     if (sch) {
         VulkanSurfaceContext& surfaceContext = handle_cast<VulkanSwapChain>(mHandleMap, sch)->surfaceContext;
         waitForIdle(mContext);
@@ -515,33 +515,33 @@ void VulkanDriver::destroySwapChain(Driver::SwapChainHandle sch) {
     }
 }
 
-void VulkanDriver::destroyStream(Driver::StreamHandle sh) {
+void VulkanDriver::destroyStream(Handle<HwStream> sh) {
 }
 
 Handle<HwStream> VulkanDriver::createStream(void* nativeStream) {
     return {};
 }
 
-void VulkanDriver::setStreamDimensions(Driver::StreamHandle sh, uint32_t width, uint32_t height) {
+void VulkanDriver::setStreamDimensions(Handle<HwStream> sh, uint32_t width, uint32_t height) {
 }
 
-int64_t VulkanDriver::getStreamTimestamp(Driver::StreamHandle sh) {
+int64_t VulkanDriver::getStreamTimestamp(Handle<HwStream> sh) {
     return 0;
 }
 
 void VulkanDriver::updateStreams(CommandStream* driver) {
 }
 
-void VulkanDriver::destroyFence(Driver::FenceHandle fh) {
+void VulkanDriver::destroyFence(Handle<HwFence> fh) {
 }
 
-Driver::FenceStatus VulkanDriver::wait(Driver::FenceHandle fh, uint64_t timeout) {
+FenceStatus VulkanDriver::wait(Handle<HwFence> fh, uint64_t timeout) {
     return FenceStatus::ERROR;
 }
 
 // We create all textures using VK_IMAGE_TILING_OPTIMAL, so our definition of "supported" is that
 // the GPU supports the given texture format with non-zero optimal tiling features.
-bool VulkanDriver::isTextureFormatSupported(Driver::TextureFormat format) {
+bool VulkanDriver::isTextureFormatSupported(TextureFormat format) {
     assert(mContext.physicalDevice);
     VkFormat vkformat = getVkFormat(format);
     if (vkformat == VK_FORMAT_UNDEFINED) {
@@ -552,7 +552,7 @@ bool VulkanDriver::isTextureFormatSupported(Driver::TextureFormat format) {
     return info.optimalTilingFeatures != 0;
 }
 
-bool VulkanDriver::isRenderTargetFormatSupported(Driver::TextureFormat format) {
+bool VulkanDriver::isRenderTargetFormatSupported(TextureFormat format) {
     assert(mContext.physicalDevice);
     VkFormat vkformat = getVkFormat(format);
     if (vkformat == VK_FORMAT_UNDEFINED) {
@@ -567,21 +567,21 @@ bool VulkanDriver::isFrameTimeSupported() {
     return false;
 }
 
-void VulkanDriver::updateVertexBuffer(Driver::VertexBufferHandle vbh, size_t index,
+void VulkanDriver::updateVertexBuffer(Handle<HwVertexBuffer> vbh, size_t index,
         BufferDescriptor&& p, uint32_t byteOffset) {
     auto& vb = *handle_cast<VulkanVertexBuffer>(mHandleMap, vbh);
     vb.buffers[index]->loadFromCpu(p.buffer, byteOffset, p.size);
     scheduleDestroy(std::move(p));
 }
 
-void VulkanDriver::updateIndexBuffer(Driver::IndexBufferHandle ibh, BufferDescriptor&& p,
+void VulkanDriver::updateIndexBuffer(Handle<HwIndexBuffer> ibh, BufferDescriptor&& p,
         uint32_t byteOffset) {
     auto& ib = *handle_cast<VulkanIndexBuffer>(mHandleMap, ibh);
     ib.buffer->loadFromCpu(p.buffer, byteOffset, p.size);
     scheduleDestroy(std::move(p));
 }
 
-void VulkanDriver::update2DImage(Driver::TextureHandle th,
+void VulkanDriver::update2DImage(Handle<HwTexture> th,
         uint32_t level, uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
         PixelBufferDescriptor&& data) {
     assert(xoffset == 0 && yoffset == 0 && "Offsets not yet supported.");
@@ -589,25 +589,25 @@ void VulkanDriver::update2DImage(Driver::TextureHandle th,
     scheduleDestroy(std::move(data));
 }
 
-void VulkanDriver::updateCubeImage(Driver::TextureHandle th, uint32_t level,
+void VulkanDriver::updateCubeImage(Handle<HwTexture> th, uint32_t level,
         PixelBufferDescriptor&& data, FaceOffsets faceOffsets) {
     handle_cast<VulkanTexture>(mHandleMap, th)->updateCubeImage(data, faceOffsets, level);
     scheduleDestroy(std::move(data));
 }
 
-void VulkanDriver::setExternalImage(Driver::TextureHandle th, void* image) {
+void VulkanDriver::setExternalImage(Handle<HwTexture> th, void* image) {
 }
 
-void VulkanDriver::setExternalStream(Driver::TextureHandle th, Driver::StreamHandle sh) {
+void VulkanDriver::setExternalStream(Handle<HwTexture> th, Handle<HwStream> sh) {
 }
 
-void VulkanDriver::generateMipmaps(Driver::TextureHandle th) { }
+void VulkanDriver::generateMipmaps(Handle<HwTexture> th) { }
 
 bool VulkanDriver::canGenerateMipmaps() {
     return false;
 }
 
-void VulkanDriver::updateUniformBuffer(Driver::UniformBufferHandle ubh, BufferDescriptor&& data) {
+void VulkanDriver::updateUniformBuffer(Handle<HwUniformBuffer> ubh, BufferDescriptor&& data) {
     if (data.size > 0) {
         auto* buffer = handle_cast<VulkanUniformBuffer>(mHandleMap, ubh);
         buffer->loadFromCpu(data.buffer, (uint32_t) data.size);
@@ -615,14 +615,14 @@ void VulkanDriver::updateUniformBuffer(Driver::UniformBufferHandle ubh, BufferDe
     }
 }
 
-void VulkanDriver::updateSamplerGroup(Driver::SamplerGroupHandle sbh,
+void VulkanDriver::updateSamplerGroup(Handle<HwSamplerGroup> sbh,
         SamplerGroup&& samplerGroup) {
     auto* sb = handle_cast<VulkanSamplerGroup>(mHandleMap, sbh);
     *sb->sb = samplerGroup;
 }
 
-void VulkanDriver::beginRenderPass(Driver::RenderTargetHandle rth,
-        const Driver::RenderPassParams& params) {
+void VulkanDriver::beginRenderPass(Handle<HwRenderTarget> rth,
+        const RenderPassParams& params) {
 
     assert(mContext.currentCommands);
     assert(mContext.currentSurface);
@@ -730,25 +730,25 @@ void VulkanDriver::endRenderPass(int) {
     mContext.currentRenderPass.renderPass = VK_NULL_HANDLE;
 }
 
-void VulkanDriver::discardSubRenderTargetBuffers(Driver::RenderTargetHandle rth,
-        Driver::TargetBufferFlags buffers,
+void VulkanDriver::discardSubRenderTargetBuffers(Handle<HwRenderTarget> rth,
+        TargetBufferFlags buffers,
         uint32_t left, uint32_t bottom, uint32_t width, uint32_t height) {
 }
 
-void VulkanDriver::resizeRenderTarget(Driver::RenderTargetHandle rth,
+void VulkanDriver::resizeRenderTarget(Handle<HwRenderTarget> rth,
         uint32_t width, uint32_t height) {
 }
 
-void VulkanDriver::setRenderPrimitiveBuffer(Driver::RenderPrimitiveHandle rph,
-        Driver::VertexBufferHandle vbh, Driver::IndexBufferHandle ibh,
+void VulkanDriver::setRenderPrimitiveBuffer(Handle<HwRenderPrimitive> rph,
+        Handle<HwVertexBuffer> vbh, Handle<HwIndexBuffer> ibh,
         uint32_t enabledAttributes) {
     auto primitive = handle_cast<VulkanRenderPrimitive>(mHandleMap, rph);
     primitive->setBuffers(handle_cast<VulkanVertexBuffer>(mHandleMap, vbh),
             handle_cast<VulkanIndexBuffer>(mHandleMap, ibh), enabledAttributes);
 }
 
-void VulkanDriver::setRenderPrimitiveRange(Driver::RenderPrimitiveHandle rph,
-        Driver::PrimitiveType pt, uint32_t offset,
+void VulkanDriver::setRenderPrimitiveRange(Handle<HwRenderPrimitive> rph,
+        PrimitiveType pt, uint32_t offset,
         uint32_t minIndex, uint32_t maxIndex, uint32_t count) {
     auto& primitive = *handle_cast<VulkanRenderPrimitive>(mHandleMap, rph);
     primitive.setPrimitiveType(pt);
@@ -777,14 +777,14 @@ void VulkanDriver::setViewportScissor(
     vkCmdSetScissor(mContext.currentCommands->cmdbuffer, 0, 1, &scissor);
 }
 
-void VulkanDriver::makeCurrent(Driver::SwapChainHandle drawSch, Driver::SwapChainHandle readSch) {
+void VulkanDriver::makeCurrent(Handle<HwSwapChain> drawSch, Handle<HwSwapChain> readSch) {
     ASSERT_PRECONDITION_NON_FATAL(drawSch == readSch,
                                   "Vulkan driver does not support distinct draw/read swap chains.");
     VulkanSurfaceContext& sContext = handle_cast<VulkanSwapChain>(mHandleMap, drawSch)->surfaceContext;
     mContext.currentSurface = &sContext;
 }
 
-void VulkanDriver::commit(Driver::SwapChainHandle sch) {
+void VulkanDriver::commit(Handle<HwSwapChain> sch) {
     // Tell Vulkan we're done appending to the command buffer.
     ASSERT_POSTCONDITION(mContext.currentCommands,
             "Vulkan driver requires at least one frame before a commit.");
@@ -828,7 +828,7 @@ void VulkanDriver::commit(Driver::SwapChainHandle sch) {
     ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkQueuePresentKHR error.");
 }
 
-void VulkanDriver::bindUniformBuffer(size_t index, Driver::UniformBufferHandle ubh) {
+void VulkanDriver::bindUniformBuffer(size_t index, Handle<HwUniformBuffer> ubh) {
     auto* buffer = handle_cast<VulkanUniformBuffer>(mHandleMap, ubh);
     // The driver API does not currently expose offset / range, but it will do so in the future.
     const VkDeviceSize offset = 0;
@@ -836,13 +836,13 @@ void VulkanDriver::bindUniformBuffer(size_t index, Driver::UniformBufferHandle u
     mBinder.bindUniformBuffer((uint32_t) index, buffer->getGpuBuffer(), offset, size);
 }
 
-void VulkanDriver::bindUniformBufferRange(size_t index, Driver::UniformBufferHandle ubh,
+void VulkanDriver::bindUniformBufferRange(size_t index, Handle<HwUniformBuffer> ubh,
         size_t offset, size_t size) {
     auto* buffer = handle_cast<VulkanUniformBuffer>(mHandleMap, ubh);
     mBinder.bindUniformBuffer((uint32_t)index, buffer->getGpuBuffer(), offset, size);
 }
 
-void VulkanDriver::bindSamplers(size_t index, Driver::SamplerGroupHandle sbh) {
+void VulkanDriver::bindSamplers(size_t index, Handle<HwSamplerGroup> sbh) {
     auto* hwsb = handle_cast<VulkanSamplerGroup>(mHandleMap, sbh);
     mSamplerBindings[index] = hwsb;
 }
@@ -872,21 +872,21 @@ void VulkanDriver::popGroupMarker(int) {
     }
 }
 
-void VulkanDriver::readPixels(Driver::RenderTargetHandle src,
+void VulkanDriver::readPixels(Handle<HwRenderTarget> src,
         uint32_t x, uint32_t y, uint32_t width, uint32_t height,
         PixelBufferDescriptor&& p) {
     scheduleDestroy(std::move(p));
 }
 
-void VulkanDriver::readStreamPixels(Driver::StreamHandle sh, uint32_t x, uint32_t y, uint32_t width,
+void VulkanDriver::readStreamPixels(Handle<HwStream> sh, uint32_t x, uint32_t y, uint32_t width,
         uint32_t height, PixelBufferDescriptor&& p) {
     scheduleDestroy(std::move(p));
 }
 
 void VulkanDriver::blit(TargetBufferFlags buffers,
-        Driver::RenderTargetHandle dst, driver::Viewport dstRect,
-        Driver::RenderTargetHandle src, driver::Viewport srcRect,
-        Driver::SamplerMagFilter filter) {
+        Handle<HwRenderTarget> dst, driver::Viewport dstRect,
+        Handle<HwRenderTarget> src, driver::Viewport srcRect,
+        SamplerMagFilter filter) {
     auto dstTarget = handle_cast<VulkanRenderTarget>(mHandleMap, dst);
     auto srcTarget = handle_cast<VulkanRenderTarget>(mHandleMap, src);
 
@@ -947,13 +947,13 @@ void VulkanDriver::blit(TargetBufferFlags buffers,
     }
 }
 
-void VulkanDriver::draw(Driver::PipelineState pipelineState, Driver::RenderPrimitiveHandle rph) {
+void VulkanDriver::draw(Driver::PipelineState pipelineState, Handle<HwRenderPrimitive> rph) {
     VulkanCommandBuffer* commands = mContext.currentCommands;
     ASSERT_POSTCONDITION(commands, "Draw calls can occur only within a beginFrame / endFrame.");
     VkCommandBuffer cmdbuffer = commands->cmdbuffer;
     const VulkanRenderPrimitive& prim = *handle_cast<VulkanRenderPrimitive>(mHandleMap, rph);
 
-    Driver::ProgramHandle programHandle = pipelineState.program;
+    Handle<HwProgram> programHandle = pipelineState.program;
     Driver::RasterState rasterState = pipelineState.rasterState;
     Driver::PolygonOffset depthOffset = pipelineState.polygonOffset;
 
@@ -1107,11 +1107,10 @@ void VulkanDriver::debugCommand(const char* methodName) {
 }
 #endif
 
-} // namespace driver
-
 // explicit instantiation of the Dispatcher
-template class ConcreteDispatcher<driver::VulkanDriver>;
+template class ConcreteDispatcher<VulkanDriver>;
 
+} // namespace driver
 } // namespace filament
 
 #pragma clang diagnostic pop

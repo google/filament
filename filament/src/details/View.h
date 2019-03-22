@@ -266,14 +266,14 @@ private:
             FScene::RenderableSoa::iterator begin, FScene::RenderableSoa::iterator end, uint8_t mask) noexcept;
 
     // these are accessed in the render loop, keep together
-    Handle<HwSamplerGroup> mPerViewSbh;
-    Handle<HwUniformBuffer> mPerViewUbh;
-    Handle<HwUniformBuffer> mLightUbh;
-    Handle<HwUniformBuffer> mRenderableUbh;
+    driver::Handle<driver::HwSamplerGroup> mPerViewSbh;
+    driver::Handle<driver::HwUniformBuffer> mPerViewUbh;
+    driver::Handle<driver::HwUniformBuffer> mLightUbh;
+    driver::Handle<driver::HwUniformBuffer> mRenderableUbh;
 
-    Handle<HwSamplerGroup> getUsh() const noexcept { return mPerViewSbh; }
-    Handle<HwUniformBuffer> getUbh() const noexcept { return mPerViewUbh; }
-    Handle<HwUniformBuffer> getLightUbh() const noexcept { return mLightUbh; }
+    driver::Handle<driver::HwSamplerGroup> getUsh() const noexcept { return mPerViewSbh; }
+    driver::Handle<driver::HwUniformBuffer> getUbh() const noexcept { return mPerViewUbh; }
+    driver::Handle<driver::HwUniformBuffer> getLightUbh() const noexcept { return mLightUbh; }
 
     FScene* mScene = nullptr;
     FCamera* mCullingCamera = nullptr;
@@ -313,7 +313,7 @@ private:
     RenderQuality mRenderQuality;
 
     mutable UniformBuffer mPerViewUb;
-    mutable SamplerGroup mPerViewSb;
+    mutable driver::SamplerGroup mPerViewSb;
 
     utils::CString mName;
 

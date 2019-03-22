@@ -27,6 +27,7 @@
 #include <utils/Log.h>
 
 namespace filament {
+namespace driver {
 
 struct HwVertexBuffer;
 struct HwFence;
@@ -99,7 +100,21 @@ private:
 #endif
 };
 
+// Types used by the command stream
+// (we use this renaming because the macro-system doesn't deal well with "<" and ">")
+using FenceHandle           = Handle<HwFence>;
+using IndexBufferHandle     = Handle<HwIndexBuffer>;
+using ProgramHandle         = Handle<HwProgram>;
+using RenderPrimitiveHandle = Handle<HwRenderPrimitive>;
+using RenderTargetHandle    = Handle<HwRenderTarget>;
+using SamplerGroupHandle    = Handle<HwSamplerGroup>;
+using StreamHandle          = Handle<HwStream>;
+using SwapChainHandle       = Handle<HwSwapChain>;
+using TextureHandle         = Handle<HwTexture>;
+using UniformBufferHandle   = Handle<HwUniformBuffer>;
+using VertexBufferHandle    = Handle<HwVertexBuffer>;
 
+} // namespace driver
 } // namespace filament
 
 #endif // TNT_FILAMENT_DRIVER_HANDLE_H

@@ -43,7 +43,7 @@ public:
     // frees driver resources, object becomes invalid
     void terminate(FEngine& engine);
 
-    Handle<HwVertexBuffer> getHwHandle() const noexcept { return mHandle; }
+    driver::Handle<driver::HwVertexBuffer> getHwHandle() const noexcept { return mHandle; }
 
     size_t getVertexCount() const noexcept;
 
@@ -58,11 +58,11 @@ public:
 private:
     friend class VertexBuffer;
 
-    struct AttributeData : Driver::Attribute {
-        AttributeData() : Driver::Attribute{ .type = Driver::ElementType::FLOAT4 } {}
+    struct AttributeData : driver::Driver::Attribute {
+        AttributeData() : driver::Driver::Attribute{ .type = driver::ElementType::FLOAT4 } {}
     };
 
-    Handle<HwVertexBuffer> mHandle;
+    driver::Handle<driver::HwVertexBuffer> mHandle;
     std::array<AttributeData, MAX_ATTRIBUTE_BUFFERS_COUNT> mAttributes;
     AttributeBitset mDeclaredAttributes;
     uint32_t mVertexCount = 0;

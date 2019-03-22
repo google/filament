@@ -25,13 +25,13 @@ namespace filament {
 class PlatformNoop final : public driver::Platform {
 public:
 
-    int getOSVersion() const noexcept final override { return 0; }
+    int getOSVersion() const noexcept final { return 0; }
 
-    ~PlatformNoop() noexcept override { }
+    ~PlatformNoop() noexcept override = default;
 
 protected:
 
-    Driver* createDriver(void* sharedContext) noexcept override;
+    driver::Driver* createDriver(void* sharedContext) noexcept override;
 };
 
 } // namespace filament

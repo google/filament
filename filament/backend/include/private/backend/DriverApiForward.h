@@ -19,10 +19,9 @@
 
 
 namespace filament {
+namespace driver {
 
 class CommandStream;
-
-namespace driver {
 
 using DriverApi = CommandStream;
 

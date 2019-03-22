@@ -157,14 +157,14 @@ public:
     // Import a write-only render target from outside the framegraph and returns a handle to it.
     FrameGraphResource importResource(const char* name,
             FrameGraphRenderTarget::Descriptor descriptor,
-            Handle<HwRenderTarget> target, uint32_t width, uint32_t height,
+            driver::Handle<driver::HwRenderTarget> target, uint32_t width, uint32_t height,
             driver::TargetBufferFlags discardStart = driver::TargetBufferFlags::NONE,
             driver::TargetBufferFlags discardEnd = driver::TargetBufferFlags::NONE);
 
     // Import a read-only render target from outside the framegraph and returns a handle to it.
     FrameGraphResource importResource(
             const char* name, FrameGraphResource::Descriptor const& descriptor,
-            Handle<HwTexture> color);
+            driver::Handle<driver::HwTexture> color);
 
 
     // Moves the resource associated to the handle 'from' to the handle 'to'. After this call,

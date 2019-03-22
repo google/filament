@@ -175,7 +175,7 @@ void FTexture::setExternalStream(FEngine& engine, FStream* stream) noexcept {
         engine.getDriverApi().setExternalStream(mHandle, stream->getHandle());
     } else {
         mStream = nullptr;
-        engine.getDriverApi().setExternalStream(mHandle, Handle<HwStream>());
+        engine.getDriverApi().setExternalStream(mHandle, driver::Handle<driver::HwStream>());
     }
 }
 
@@ -215,11 +215,11 @@ void FTexture::generateMipmaps(FEngine& engine) const noexcept {
         uint8_t level = 0;
         uint32_t srcw = mWidth;
         uint32_t srch = mHeight;
-        Driver::RenderTargetHandle srcrth = driver.createRenderTarget(TargetBufferFlags::COLOR,
+        driver::Handle<driver::HwRenderTarget> srcrth = driver.createRenderTarget(TargetBufferFlags::COLOR,
                 srcw, srch, mSampleCount, mFormat, { mHandle, level++, layer }, {}, {});
 
         // Perform a blit for all miplevels down to 1x1.
-        Driver::RenderTargetHandle dstrth;
+        driver::Handle<driver::HwRenderTarget> dstrth;
         do {
             uint32_t dstw = std::max(srcw >> 1, 1u);
             uint32_t dsth = std::max(srch >> 1, 1u);

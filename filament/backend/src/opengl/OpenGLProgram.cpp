@@ -28,6 +28,7 @@ namespace filament {
 
 using namespace filament::math;
 using namespace utils;
+using namespace driver;
 
 OpenGLProgram::OpenGLProgram(OpenGLDriver* gl, const Program& programBuilder) noexcept
         :  HwProgram(programBuilder.getName()), mIsValid(false) {
@@ -196,7 +197,7 @@ void OpenGLProgram::updateSamplers(OpenGLDriver* gl) noexcept {
             const uint8_t index = indicesRun[tmu];
             assert(index < sb.getSize());
 
-            Driver::TextureHandle th = samplers[index].t;
+            Handle<HwTexture> th = samplers[index].t;
             if (UTILS_UNLIKELY(!th)) {
                 continue; // this can happen if the SamplerGroup isn't initialized
             }

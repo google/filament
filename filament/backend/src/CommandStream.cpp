@@ -23,9 +23,10 @@
 
 #include <functional>
 
-namespace filament {
-
 using namespace utils;
+
+namespace filament {
+namespace driver {
 
 // ------------------------------------------------------------------------------------------------
 // A few utility functions for debugging...
@@ -138,6 +139,7 @@ void CustomCommand::execute(Driver&, CommandBase* base, intptr_t* next) noexcept
     static_cast<CustomCommand*>(base)->~CustomCommand();
 }
 
+} // namespace driver
 } // namespace filament
 
 

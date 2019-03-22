@@ -24,22 +24,22 @@
 
 namespace filament {
 
-class NoopDriver final : public DriverBase {
+class NoopDriver final : public driver::DriverBase {
     NoopDriver() noexcept;
     ~NoopDriver() noexcept override;
 
 public:
-    static Driver* create();
+    static driver::Driver* create();
 
 private:
-    ShaderModel getShaderModel() const noexcept final;
+    driver::ShaderModel getShaderModel() const noexcept final;
 
     /*
      * Driver interface
      */
 
     template<typename T>
-    friend class ConcreteDispatcher;
+    friend class driver::ConcreteDispatcher;
 
 #define DECL_DRIVER_API(methodName, paramsDecl, params) \
     UTILS_ALWAYS_INLINE void methodName(paramsDecl) { }

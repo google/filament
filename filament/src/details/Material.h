@@ -73,20 +73,20 @@ public:
 
     FEngine& getEngine() const noexcept  { return mEngine; }
 
-    Handle<HwProgram> getProgramSlow(uint8_t variantKey) const noexcept;
-    Handle<HwProgram> getProgram(uint8_t variantKey) const noexcept {
+    driver::Handle<driver::HwProgram> getProgramSlow(uint8_t variantKey) const noexcept;
+    driver::Handle<driver::HwProgram> getProgram(uint8_t variantKey) const noexcept {
 
         // filterVariant() has already been applied in generateCommands(), shouldn't be needed here
         assert( variantKey == Variant::filterVariant(variantKey, isVariantLit()) );
 
-        Handle<HwProgram> const entry = mCachedPrograms[variantKey];
+        driver::Handle<driver::HwProgram> const entry = mCachedPrograms[variantKey];
         return UTILS_LIKELY(entry) ? entry : getProgramSlow(variantKey);
     }
 
     bool isVariantLit() const noexcept { return mIsVariantLit; }
 
     const utils::CString& getName() const noexcept { return mName; }
-    Driver::RasterState getRasterState() const noexcept  { return mRasterState; }
+    driver::Driver::RasterState getRasterState() const noexcept  { return mRasterState; }
     uint32_t getId() const noexcept { return mMaterialId; }
 
     Shading getShading() const noexcept { return mShading; }
@@ -99,7 +99,7 @@ public:
     bool isColorWriteEnabled() const noexcept { return mRasterState.colorWrite; }
     bool isDepthWriteEnabled() const noexcept { return mRasterState.depthWrite; }
     bool isDepthCullingEnabled() const noexcept {
-        return mRasterState.depthFunc != Driver::RasterState::DepthFunc::A;
+        return mRasterState.depthFunc != driver::Driver::RasterState::DepthFunc::A;
     }
     bool isDoubleSided() const noexcept { return mDoubleSided; }
     float getMaskThreshold() const noexcept { return mMaskThreshold; }
@@ -116,9 +116,9 @@ public:
 
 private:
     // try to order by frequency of use
-    mutable std::array<Handle<HwProgram>, VARIANT_COUNT> mCachedPrograms;
+    mutable std::array<driver::Handle<driver::HwProgram>, VARIANT_COUNT> mCachedPrograms;
 
-    Driver::RasterState mRasterState;
+    driver::Driver::RasterState mRasterState;
     BlendingMode mRenderBlendingMode;
     TransparencyMode mTransparencyMode;
     bool mIsVariantLit;

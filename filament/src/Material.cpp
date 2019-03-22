@@ -279,7 +279,7 @@ bool FMaterial::hasParameter(const char* name) const noexcept {
     return true;
 }
 
-Handle<HwProgram> FMaterial::getProgramSlow(uint8_t variantKey) const noexcept {
+driver::Handle<driver::HwProgram> FMaterial::getProgramSlow(uint8_t variantKey) const noexcept {
     const ShaderModel sm = mEngine.getDriver().getShaderModel();
 
     assert(!Variant::isReserved(variantKey));

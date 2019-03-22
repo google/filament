@@ -120,8 +120,8 @@ void RenderPass::recordDriverCommands(
     SYSTRACE_CALL();
 
     if (!commands.empty()) {
-        Driver::PipelineState pipeline;
-        Handle<HwUniformBuffer> uboHandle = scene.getRenderableUBO();
+        driver::Driver::PipelineState pipeline;
+        driver::Handle<driver::HwUniformBuffer> uboHandle = scene.getRenderableUBO();
         FMaterialInstance const* UTILS_RESTRICT mi = nullptr;
         FMaterial const* UTILS_RESTRICT ma = nullptr;
         Command const* UTILS_RESTRICT c;
@@ -485,7 +485,7 @@ void RenderPass::updateSummedPrimitiveCounts(
 // ------------------------------------------------------------------------------------------------
 
 FRenderer::ColorPass::ColorPass(const char* name,
-        JobSystem& js, JobSystem::Job* jobFroxelize, FView& view, Handle<HwRenderTarget> const rth)
+        JobSystem& js, JobSystem::Job* jobFroxelize, FView& view, driver::Handle<driver::HwRenderTarget> const rth)
         : RenderPass(name), js(js), jobFroxelize(jobFroxelize), view(view), rth(rth) {
 }
 
@@ -547,7 +547,7 @@ void FRenderer::ColorPass::endRenderPass(DriverApi& driver, filament::Viewport c
 
 void FRenderer::ColorPass::renderColorPass(FEngine& engine,
         JobSystem& js, JobSystem::Job* sync,
-        Handle<HwRenderTarget> const rth, FView& view, filament::Viewport const& scaledViewport,
+        driver::Handle<driver::HwRenderTarget> const rth, FView& view, filament::Viewport const& scaledViewport,
         GrowingSlice<Command>& commands) noexcept {
 
     CameraInfo const& cameraInfo = view.getCameraInfo();

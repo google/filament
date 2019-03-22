@@ -29,7 +29,7 @@ namespace filament {
 class PlatformVkLinux final : public driver::VulkanPlatform {
 public:
 
-    Driver* createDriver(void* const sharedContext) noexcept override;
+    driver::Driver* createDriver(void* const sharedContext) noexcept override;
 
     void* createVkSurfaceKHR(void* nativeWindow, void* instance,
             uint32_t* width, uint32_t* height) noexcept override;

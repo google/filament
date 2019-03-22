@@ -50,7 +50,7 @@ public:
     void terminate(FEngine& engine);
 
     const FMaterialInstance* getMaterialInstance() const noexcept { return mMaterialInstance; }
-    Handle<HwRenderPrimitive> getHwHandle() const noexcept { return mHandle; }
+    driver::Handle<driver::HwRenderPrimitive> getHwHandle() const noexcept { return mHandle; }
     driver::PrimitiveType getPrimitiveType() const noexcept { return mPrimitiveType; }
     AttributeBitset getEnabledAttributes() const noexcept { return mEnabledAttributes; }
     uint16_t getBlendOrder() const noexcept { return mBlendOrder; }
@@ -62,7 +62,7 @@ public:
 
 private:
     FMaterialInstance const* mMaterialInstance = nullptr;
-    Handle<HwRenderPrimitive> mHandle;
+    driver::Handle<driver::HwRenderPrimitive> mHandle;
     driver::PrimitiveType mPrimitiveType = driver::PrimitiveType::NONE;
     AttributeBitset mEnabledAttributes;
     uint16_t mBlendOrder = 0;

@@ -223,73 +223,73 @@ DECL_DRIVER_API_0(flush)
  * -----------------------
  */
 
-DECL_DRIVER_API_R_5(Driver::VertexBufferHandle, createVertexBuffer,
+DECL_DRIVER_API_R_5(driver::VertexBufferHandle, createVertexBuffer,
         uint8_t, bufferCount,
         uint8_t, attributeCount,
         uint32_t, vertexCount,
-        Driver::AttributeArray, attributes,
-        Driver::BufferUsage, usage)
+        driver::Driver::AttributeArray, attributes,
+        driver::BufferUsage, usage)
 
-DECL_DRIVER_API_R_3(Driver::IndexBufferHandle, createIndexBuffer,
-        Driver::ElementType, elementType,
+DECL_DRIVER_API_R_3(driver::IndexBufferHandle, createIndexBuffer,
+        driver::ElementType, elementType,
         uint32_t, indexCount,
-        Driver::BufferUsage, usage)
+        driver::BufferUsage, usage)
 
-DECL_DRIVER_API_R_8(Driver::TextureHandle, createTexture,
-        Driver::SamplerType, target,
+DECL_DRIVER_API_R_8(driver::TextureHandle, createTexture,
+        driver::SamplerType, target,
         uint8_t, levels,
-        Driver::TextureFormat, format,
+        driver::TextureFormat, format,
         uint8_t, samples,
         uint32_t, width,
         uint32_t, height,
         uint32_t, depth,
-        Driver::TextureUsage, usage)
+        driver::TextureUsage, usage)
 
-DECL_DRIVER_API_R_1(Driver::SamplerGroupHandle, createSamplerGroup,
+DECL_DRIVER_API_R_1(driver::SamplerGroupHandle, createSamplerGroup,
         size_t, size)
 
-DECL_DRIVER_API_R_2(Driver::UniformBufferHandle, createUniformBuffer,
+DECL_DRIVER_API_R_2(driver::UniformBufferHandle, createUniformBuffer,
         size_t, size,
-        Driver::BufferUsage, usage)
+        driver::BufferUsage, usage)
 
-DECL_DRIVER_API_R_0(Driver::RenderPrimitiveHandle, createRenderPrimitive)
+DECL_DRIVER_API_R_0(driver::RenderPrimitiveHandle, createRenderPrimitive)
 
-DECL_DRIVER_API_R_1(Driver::ProgramHandle, createProgram,
-        Program&&, program)
+DECL_DRIVER_API_R_1(driver::ProgramHandle, createProgram,
+        driver::Program&&, program)
 
-DECL_DRIVER_API_R_0(Driver::RenderTargetHandle, createDefaultRenderTarget)
+DECL_DRIVER_API_R_0(driver::RenderTargetHandle, createDefaultRenderTarget)
 
-DECL_DRIVER_API_R_8(Driver::RenderTargetHandle, createRenderTarget,
-        Driver::TargetBufferFlags, targetBufferFlags,
+DECL_DRIVER_API_R_8(driver::RenderTargetHandle, createRenderTarget,
+        driver::TargetBufferFlags, targetBufferFlags,
         uint32_t, width,
         uint32_t, height,
         uint8_t, samples,
-        Driver::TextureFormat, format,
-        Driver::TargetBufferInfo, color,
-        Driver::TargetBufferInfo, depth,
-        Driver::TargetBufferInfo, stencil)
+        driver::TextureFormat, format,
+        driver::Driver::TargetBufferInfo, color,
+        driver::Driver::TargetBufferInfo, depth,
+        driver::Driver::TargetBufferInfo, stencil)
 
-DECL_DRIVER_API_R_0(Driver::FenceHandle, createFence)
+DECL_DRIVER_API_R_0(driver::FenceHandle, createFence)
 
-DECL_DRIVER_API_R_2(Driver::SwapChainHandle, createSwapChain, void*, nativeWindow, uint64_t, flags)
+DECL_DRIVER_API_R_2(driver::SwapChainHandle, createSwapChain, void*, nativeWindow, uint64_t, flags)
 
-DECL_DRIVER_API_R_3(Driver::StreamHandle, createStreamFromTextureId, intptr_t, externalTextureId, uint32_t, width, uint32_t, height)
+DECL_DRIVER_API_R_3(driver::StreamHandle, createStreamFromTextureId, intptr_t, externalTextureId, uint32_t, width, uint32_t, height)
 
 /*
  * Destroying driver objects
  * -------------------------
  */
 
-DECL_DRIVER_API_1(destroyVertexBuffer,    Driver::VertexBufferHandle, vbh)
-DECL_DRIVER_API_1(destroyIndexBuffer,     Driver::IndexBufferHandle, ibh)
-DECL_DRIVER_API_1(destroyRenderPrimitive, Driver::RenderPrimitiveHandle, rph)
-DECL_DRIVER_API_1(destroyProgram,         Driver::ProgramHandle, ph)
-DECL_DRIVER_API_1(destroySamplerGroup,   Driver::SamplerGroupHandle, sbh)
-DECL_DRIVER_API_1(destroyUniformBuffer,   Driver::UniformBufferHandle, ubh)
-DECL_DRIVER_API_1(destroyTexture,         Driver::TextureHandle, th)
-DECL_DRIVER_API_1(destroyRenderTarget,    Driver::RenderTargetHandle, rth)
-DECL_DRIVER_API_1(destroySwapChain,       Driver::SwapChainHandle, sch)
-DECL_DRIVER_API_1(destroyStream,          Driver::StreamHandle, sh)
+DECL_DRIVER_API_1(destroyVertexBuffer,    driver::VertexBufferHandle, vbh)
+DECL_DRIVER_API_1(destroyIndexBuffer,     driver::IndexBufferHandle, ibh)
+DECL_DRIVER_API_1(destroyRenderPrimitive, driver::RenderPrimitiveHandle, rph)
+DECL_DRIVER_API_1(destroyProgram,         driver::ProgramHandle, ph)
+DECL_DRIVER_API_1(destroySamplerGroup,    driver::SamplerGroupHandle, sbh)
+DECL_DRIVER_API_1(destroyUniformBuffer,   driver::UniformBufferHandle, ubh)
+DECL_DRIVER_API_1(destroyTexture,         driver::TextureHandle, th)
+DECL_DRIVER_API_1(destroyRenderTarget,    driver::RenderTargetHandle, rth)
+DECL_DRIVER_API_1(destroySwapChain,       driver::SwapChainHandle, sch)
+DECL_DRIVER_API_1(destroyStream,          driver::StreamHandle, sh)
 
 /*
  * Synchronous APIs
@@ -298,21 +298,21 @@ DECL_DRIVER_API_1(destroyStream,          Driver::StreamHandle, sh)
 
 DECL_DRIVER_API_SYNCHRONOUS_0(void, terminate)
 
-DECL_DRIVER_API_SYNCHRONOUS_1(Driver::StreamHandle, createStream, void*, stream)
+DECL_DRIVER_API_SYNCHRONOUS_1(driver::StreamHandle, createStream, void*, stream)
 
-DECL_DRIVER_API_SYNCHRONOUS_3(void, setStreamDimensions, Driver::StreamHandle, stream, uint32_t, width, uint32_t, height)
+DECL_DRIVER_API_SYNCHRONOUS_3(void, setStreamDimensions, driver::StreamHandle, stream, uint32_t, width, uint32_t, height)
 
-DECL_DRIVER_API_SYNCHRONOUS_1(int64_t, getStreamTimestamp, Driver::StreamHandle, stream)
+DECL_DRIVER_API_SYNCHRONOUS_1(int64_t, getStreamTimestamp, driver::StreamHandle, stream)
 
 DECL_DRIVER_API_SYNCHRONOUS_1(void, updateStreams, driver::DriverApi*, driver)
 
-DECL_DRIVER_API_SYNCHRONOUS_1(void, destroyFence, Driver::FenceHandle, fh)
+DECL_DRIVER_API_SYNCHRONOUS_1(void, destroyFence, driver::FenceHandle, fh)
 
-DECL_DRIVER_API_SYNCHRONOUS_2(Driver::FenceStatus, wait, Driver::FenceHandle, fh, uint64_t, timeout)
+DECL_DRIVER_API_SYNCHRONOUS_2(driver::FenceStatus, wait, driver::FenceHandle, fh, uint64_t, timeout)
 
-DECL_DRIVER_API_SYNCHRONOUS_1(bool, isTextureFormatSupported, Driver::TextureFormat, format)
+DECL_DRIVER_API_SYNCHRONOUS_1(bool, isTextureFormatSupported, driver::TextureFormat, format)
 
-DECL_DRIVER_API_SYNCHRONOUS_1(bool, isRenderTargetFormatSupported, Driver::TextureFormat, format)
+DECL_DRIVER_API_SYNCHRONOUS_1(bool, isRenderTargetFormatSupported, driver::TextureFormat, format)
 
 DECL_DRIVER_API_SYNCHRONOUS_0(bool, isFrameTimeSupported)
 
@@ -324,78 +324,78 @@ DECL_DRIVER_API_SYNCHRONOUS_0(bool, canGenerateMipmaps)
  */
 
 DECL_DRIVER_API_4(updateVertexBuffer,
-        Driver::VertexBufferHandle, vbh,
+        driver::VertexBufferHandle, vbh,
         size_t, index,
-        Driver::BufferDescriptor&&, data,
+        driver::BufferDescriptor&&, data,
         uint32_t, byteOffset)
 
 DECL_DRIVER_API_3(updateIndexBuffer,
-        Driver::IndexBufferHandle, ibh,
-        Driver::BufferDescriptor&&, data,
+        driver::IndexBufferHandle, ibh,
+        driver::BufferDescriptor&&, data,
         uint32_t, byteOffset)
 
 DECL_DRIVER_API_2(updateUniformBuffer,
-        Driver::UniformBufferHandle, ubh,
-        Driver::BufferDescriptor&&, buffer)
+        driver::UniformBufferHandle, ubh,
+        driver::BufferDescriptor&&, buffer)
 
 DECL_DRIVER_API_2(updateSamplerGroup,
-        Driver::SamplerGroupHandle, ubh,
-        SamplerGroup&&, samplerGroup)
+        driver::SamplerGroupHandle, ubh,
+        driver::SamplerGroup&&, samplerGroup)
 
 DECL_DRIVER_API_7(update2DImage,
-        Driver::TextureHandle, th,
+        driver::TextureHandle, th,
         uint32_t, level,
         uint32_t, xoffset,
         uint32_t, yoffset,
         uint32_t, width,
         uint32_t, height,
-        Driver::PixelBufferDescriptor&&, data)
+        driver::PixelBufferDescriptor&&, data)
 
 DECL_DRIVER_API_4(updateCubeImage,
-        Driver::TextureHandle, th,
+        driver::TextureHandle, th,
         uint32_t, level,
-        Driver::PixelBufferDescriptor&&, data,
-        Driver::FaceOffsets, faceOffsets)
+        driver::PixelBufferDescriptor&&, data,
+        driver::FaceOffsets, faceOffsets)
 
 DECL_DRIVER_API_1(generateMipmaps,
-        Driver::TextureHandle, th)
+        driver::TextureHandle, th)
 
 DECL_DRIVER_API_2(setExternalImage,
-        Driver::TextureHandle, th,
+        driver::TextureHandle, th,
         void*, image)
 
 DECL_DRIVER_API_2(setExternalStream,
-        Driver::TextureHandle, th,
-        Driver::StreamHandle, sh)
+        driver::TextureHandle, th,
+        driver::StreamHandle, sh)
 
 DECL_DRIVER_API_2(beginRenderPass,
-        Driver::RenderTargetHandle, rth,
-        const Driver::RenderPassParams&, params)
+        driver::RenderTargetHandle, rth,
+        const driver::RenderPassParams&, params)
 
 DECL_DRIVER_API_0(endRenderPass)
 
 DECL_DRIVER_API_6(discardSubRenderTargetBuffers,
-        Driver::RenderTargetHandle, rth,
-        Driver::TargetBufferFlags, targetBufferFlags,
+        driver::RenderTargetHandle, rth,
+        driver::TargetBufferFlags, targetBufferFlags,
         uint32_t, left,
         uint32_t, bottom,
         uint32_t, width,
         uint32_t, height)
 
 DECL_DRIVER_API_3(resizeRenderTarget,
-        Driver::RenderTargetHandle, rth,
+        driver::RenderTargetHandle, rth,
         uint32_t, width,
         uint32_t, height)
 
 DECL_DRIVER_API_4(setRenderPrimitiveBuffer,
-        Driver::RenderPrimitiveHandle, rph,
-        Driver::VertexBufferHandle, vbh,
-        Driver::IndexBufferHandle, ibh,
+        driver::RenderPrimitiveHandle, rph,
+        driver::VertexBufferHandle, vbh,
+        driver::IndexBufferHandle, ibh,
         uint32_t, enabledAttributes)
 
 DECL_DRIVER_API_6(setRenderPrimitiveRange,
-        Driver::RenderPrimitiveHandle, rph,
-        Driver::PrimitiveType, pt,
+        driver::RenderPrimitiveHandle, rph,
+        driver::PrimitiveType, pt,
         uint32_t, offset,
         uint32_t, minIndex,
         uint32_t, maxIndex,
@@ -413,12 +413,12 @@ DECL_DRIVER_API_4(setViewportScissor,
  */
 
 DECL_DRIVER_API_2(makeCurrent,
-        Driver::SwapChainHandle, schDraw,
-        Driver::SwapChainHandle, schRead)
+        driver::SwapChainHandle, schDraw,
+        driver::SwapChainHandle, schRead)
 
 
 DECL_DRIVER_API_1(commit,
-        Driver::SwapChainHandle, sch)
+        driver::SwapChainHandle, sch)
 
 /*
  * Setting rendering state
@@ -427,17 +427,17 @@ DECL_DRIVER_API_1(commit,
 
 DECL_DRIVER_API_2(bindUniformBuffer,
         size_t, index,
-        Driver::UniformBufferHandle, ubh)
+        driver::UniformBufferHandle, ubh)
 
 DECL_DRIVER_API_4(bindUniformBufferRange,
         size_t, index,
-        Driver::UniformBufferHandle, ubh,
+        driver::UniformBufferHandle, ubh,
         size_t, offset,
         size_t, size)
 
 DECL_DRIVER_API_2(bindSamplers,
         size_t, index,
-        Driver::SamplerGroupHandle, sbh)
+        driver::SamplerGroupHandle, sbh)
 
 DECL_DRIVER_API_2(insertEventMarker,
         const char*, string,
@@ -456,20 +456,20 @@ DECL_DRIVER_API_0(popGroupMarker)
  */
 
 DECL_DRIVER_API_6(readPixels,
-        Driver::RenderTargetHandle, src,
+        driver::RenderTargetHandle, src,
         uint32_t, x,
         uint32_t, y,
         uint32_t, width,
         uint32_t, height,
-        Driver::PixelBufferDescriptor&&, data)
+        driver::PixelBufferDescriptor&&, data)
 
 DECL_DRIVER_API_6(readStreamPixels,
-        Driver::StreamHandle, sh,
+        driver::StreamHandle, sh,
         uint32_t, x,
         uint32_t, y,
         uint32_t, width,
         uint32_t, height,
-        Driver::PixelBufferDescriptor&&, data)
+        driver::PixelBufferDescriptor&&, data)
 
 /*
  * Rendering operations
@@ -477,16 +477,16 @@ DECL_DRIVER_API_6(readStreamPixels,
  */
 
 DECL_DRIVER_API_6(blit,
-        Driver::TargetBufferFlags, buffers,
-        Driver::RenderTargetHandle, dst,
+        driver::TargetBufferFlags, buffers,
+        driver::RenderTargetHandle, dst,
         driver::Viewport, dstRect,
-        Driver::RenderTargetHandle, src,
+        driver::RenderTargetHandle, src,
         driver::Viewport, srcRect,
-        Driver::SamplerMagFilter, filter)
+        driver::SamplerMagFilter, filter)
 
 DECL_DRIVER_API_2(draw,
-        Driver::PipelineState, state,
-        Driver::RenderPrimitiveHandle, rph)
+        driver::Driver::PipelineState, state,
+        driver::RenderPrimitiveHandle, rph)
 
 #pragma clang diagnostic pop
 

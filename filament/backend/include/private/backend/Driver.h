@@ -38,6 +38,7 @@
 #include "private/backend/SamplerGroup.h"
 
 namespace filament {
+namespace driver {
 
 template<typename T>
 class ConcreteDispatcher;
@@ -53,52 +54,7 @@ public:
     // constants
     static constexpr size_t MAX_ATTRIBUTE_BUFFER_COUNT = 8;
 
-    /*
-     * Driver types...
-     */
-    using ShaderModel = driver::ShaderModel;
-
-    // remap the public types into the Driver class
-    using BufferDescriptor = driver::BufferDescriptor;
-    using BufferUsage = driver::BufferUsage;
-    using ElementType = driver::ElementType;
-    using FaceOffsets = driver::FaceOffsets;
-    using FenceStatus = driver::FenceStatus;
-    using PixelBufferDescriptor = driver::PixelBufferDescriptor;
-    using PixelDataFormat = driver::PixelDataFormat;
-    using PixelDataType = driver::PixelDataType;
-    using PrimitiveType = driver::PrimitiveType;
-    using RenderPassParams = driver::RenderPassParams;
-    using SamplerCompareFunc = driver::SamplerCompareFunc;
-    using SamplerCompareMode = driver::SamplerCompareMode;
-    using SamplerFormat = driver::SamplerFormat;
-    using SamplerMagFilter = driver::SamplerMagFilter;
-    using SamplerMinFilter = driver::SamplerMinFilter;
-    using SamplerParams = driver::SamplerParams;
-    using SamplerPrecision = driver::Precision;
-    using SamplerType = driver::SamplerType;
-    using SamplerWrapMode = driver::SamplerWrapMode;
-    using TargetBufferFlags = driver::TargetBufferFlags;
-    using TextureCubemapFace = driver::TextureCubemapFace;
-    using TextureFormat = driver::TextureFormat;
-    using TextureUsage = driver::TextureUsage;
-    using UniformType = driver::UniformType;
-
     static constexpr uint64_t FENCE_WAIT_FOR_EVER = driver::FENCE_WAIT_FOR_EVER;
-
-    // Types used by the command stream
-    // (we use this renaming because the macro-system doesn't deal well with "<" and ">")
-    using FenceHandle           = Handle<HwFence>;
-    using IndexBufferHandle     = Handle<HwIndexBuffer>;
-    using ProgramHandle         = Handle<HwProgram>;
-    using RenderPrimitiveHandle = Handle<HwRenderPrimitive>;
-    using RenderTargetHandle    = Handle<HwRenderTarget>;
-    using SamplerGroupHandle    = Handle<HwSamplerGroup>;
-    using StreamHandle          = Handle<HwStream>;
-    using SwapChainHandle       = Handle<HwSwapChain>;
-    using TextureHandle         = Handle<HwTexture>;
-    using UniformBufferHandle   = Handle<HwUniformBuffer>;
-    using VertexBufferHandle    = Handle<HwVertexBuffer>;
 
     struct Attribute {
         static constexpr uint8_t FLAG_NORMALIZED     = 0x1;
@@ -114,17 +70,17 @@ public:
 
     struct TargetBufferInfo {
         // ctor for 2D textures
-        TargetBufferInfo(TextureHandle h, uint8_t level = 0) noexcept // NOLINT(google-explicit-constructor)
+        TargetBufferInfo(Handle<HwTexture> h, uint8_t level = 0) noexcept // NOLINT(google-explicit-constructor)
                 : handle(h), level(level) { }
         // ctor for cubemaps
-        TargetBufferInfo(TextureHandle h, uint8_t level, TextureCubemapFace face) noexcept
+        TargetBufferInfo(Handle<HwTexture> h, uint8_t level, TextureCubemapFace face) noexcept
                 : handle(h), level(level), face(face) { }
         // ctor for 3D textures
-        TargetBufferInfo(TextureHandle h, uint8_t level, uint16_t layer) noexcept
+        TargetBufferInfo(Handle<HwTexture> h, uint8_t level, uint16_t layer) noexcept
                 : handle(h), level(level), layer(layer) { }
 
         // texture to be used as render target
-        TextureHandle handle;
+        Handle<HwTexture> handle;
         // level to be used
         uint8_t level = 0;
         union {
@@ -204,7 +160,7 @@ public:
     };
 
     struct PipelineState {
-        ProgramHandle program;
+        Handle<HwProgram> program;
         RasterState rasterState;
         PolygonOffset polygonOffset;
     };
@@ -258,16 +214,17 @@ public:
 #include "private/backend/DriverAPI.inc"
 };
 
+} // namespace driver
 } // namespace filament
 
 #if !defined(NDEBUG)
-utils::io::ostream& operator<<(utils::io::ostream& out, const filament::Driver::AttributeArray& type);
-utils::io::ostream& operator<<(utils::io::ostream& out, const filament::Driver::FaceOffsets& type);
-utils::io::ostream& operator<<(utils::io::ostream& out, const filament::Driver::RasterState& rs);
-utils::io::ostream& operator<<(utils::io::ostream& out, const filament::Driver::TargetBufferInfo& tbi);
-utils::io::ostream& operator<<(utils::io::ostream& out, const filament::Driver::PolygonOffset& po);
-utils::io::ostream& operator<<(utils::io::ostream& out, const filament::Driver::PipelineState& ps);
+utils::io::ostream& operator<<(utils::io::ostream& out, const filament::driver::Driver::AttributeArray& type);
+utils::io::ostream& operator<<(utils::io::ostream& out, const filament::driver::Driver::RasterState& rs);
+utils::io::ostream& operator<<(utils::io::ostream& out, const filament::driver::Driver::TargetBufferInfo& tbi);
+utils::io::ostream& operator<<(utils::io::ostream& out, const filament::driver::Driver::PolygonOffset& po);
+utils::io::ostream& operator<<(utils::io::ostream& out, const filament::driver::Driver::PipelineState& ps);
 
+utils::io::ostream& operator<<(utils::io::ostream& out, const filament::driver::FaceOffsets& type);
 utils::io::ostream& operator<<(utils::io::ostream& out, filament::driver::ShaderModel model);
 utils::io::ostream& operator<<(utils::io::ostream& out, filament::driver::PrimitiveType type);
 utils::io::ostream& operator<<(utils::io::ostream& out, filament::driver::ElementType type);

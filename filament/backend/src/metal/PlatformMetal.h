@@ -26,7 +26,7 @@ namespace filament {
 
 class PlatformMetal final : public driver::MetalPlatform {
 public:
-    Driver* createDriver(void* sharedContext) noexcept override;
+    driver::Driver* createDriver(void* sharedContext) noexcept override;
     int getOSVersion() const noexcept override { return 0; }
 };
 

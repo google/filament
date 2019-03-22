@@ -27,13 +27,14 @@
 #include <vector>
 
 namespace filament {
+namespace driver {
 
 class Program {
 public:
 
     static constexpr size_t NUM_SHADER_TYPES = 2;
-    static constexpr size_t NUM_UNIFORM_BINDINGS = filament::BindingPoints::COUNT;
-    static constexpr size_t NUM_SAMPLER_BINDINGS = filament::BindingPoints::COUNT;
+    static constexpr size_t NUM_UNIFORM_BINDINGS = BindingPoints::COUNT;
+    static constexpr size_t NUM_SAMPLER_BINDINGS = BindingPoints::COUNT;
 
     enum class Shader : uint8_t {
         VERTEX = 0,
@@ -116,6 +117,7 @@ private:
     uint8_t mVariant;
 };
 
+} // namespace driver;
 } // namespace filament;
 
 #endif // TNT_FILAMENT_DRIVER_PROGRAM_H

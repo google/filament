@@ -20,6 +20,7 @@
 #include <stddef.h>
 
 namespace filament {
+namespace driver {
 
 // This little utility adds padding to multi-channel interleaved data by inserting dummy values.
 // This is very useful for platforms that only accept 4-component data, since users often wish to
@@ -36,7 +37,7 @@ public:
             for (size_t component = 0; component < numSrcChannels; ++component) {
                 out[component] = in[component];
             }
-            for (size_t component = numSrcChannels; component < numDstChannels; ++component) {
+            for (size_t component = (size_t)numSrcChannels; component < numDstChannels; ++component) {
                 out[component] = maxValue;
             }
             in += numSrcChannels;
@@ -45,6 +46,7 @@ public:
     }
 };
 
+} // namespace driver
 } // namespace filament
 
 #endif // TNT_FILAMENT_DRIVER_DATARESHAPER_H

@@ -36,7 +36,7 @@ struct MetalContext;
 struct MetalProgram;
 
 class MetalDriver final : public DriverBase {
-    MetalDriver(driver::MetalPlatform* const platform) noexcept;
+    MetalDriver(driver::MetalPlatform* platform) noexcept;
     virtual ~MetalDriver() noexcept;
 
 public:
@@ -59,7 +59,7 @@ private:
      */
 
     template<typename T>
-    friend class ::filament::ConcreteDispatcher;
+    friend class driver::ConcreteDispatcher;
 
 #define DECL_DRIVER_API(methodName, paramsDecl, params) \
     UTILS_ALWAYS_INLINE void methodName(paramsDecl);

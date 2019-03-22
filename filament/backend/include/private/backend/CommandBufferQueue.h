@@ -26,6 +26,7 @@
 #include <vector>
 
 namespace filament {
+namespace driver {
 
 /*
  * A producer-consumer command queue that uses a CircularBuffer as main storage
@@ -74,6 +75,7 @@ public:
     void requestExit();
 };
 
+} // namespace driver
 } // namespace filament
 
 #endif // TNT_FILAMENT_DRIVER_COMMANDBUFFERQUEUE_H

@@ -42,12 +42,12 @@ class PixelBufferDescriptor;
 class OpenGLProgram;
 class OpenGLBlitter;
 
-class OpenGLDriver final : public DriverBase {
+class OpenGLDriver final : public driver::DriverBase {
     inline explicit OpenGLDriver(driver::OpenGLPlatform* platform) noexcept;
     ~OpenGLDriver() noexcept final;
 
 public:
-    static Driver* create(driver::OpenGLPlatform* platform, void* sharedGLContext) noexcept;
+    static driver::Driver* create(driver::OpenGLPlatform* platform, void* sharedGLContext) noexcept;
 
     // OpenGLDriver specific fields
     struct GLBuffer {
@@ -58,21 +58,21 @@ public:
         driver::BufferUsage usage = {};
     };
 
-    struct GLVertexBuffer : public HwVertexBuffer {
+    struct GLVertexBuffer : public driver::HwVertexBuffer {
         using HwVertexBuffer::HwVertexBuffer;
         struct {
             std::array<GLuint, MAX_ATTRIBUTE_BUFFER_COUNT> buffers;  // 4*6 bytes
         } gl;
     };
 
-    struct GLIndexBuffer : public HwIndexBuffer {
+    struct GLIndexBuffer : public driver::HwIndexBuffer {
         using HwIndexBuffer::HwIndexBuffer;
         struct {
             GLuint buffer;
         } gl;
     };
 
-    struct GLUniformBuffer : public HwUniformBuffer {
+    struct GLUniformBuffer : public driver::HwUniformBuffer {
         GLUniformBuffer(uint32_t capacity, driver::BufferUsage usage) noexcept {
             gl.ubo.capacity = capacity;
             gl.ubo.usage = usage;
@@ -82,13 +82,13 @@ public:
         } gl;
     };
 
-    struct GLSamplerGroup : public HwSamplerGroup {
+    struct GLSamplerGroup : public driver::HwSamplerGroup {
         using HwSamplerGroup::HwSamplerGroup;
         struct {
         } gl;
     };
 
-    struct GLRenderPrimitive : public HwRenderPrimitive {
+    struct GLRenderPrimitive : public driver::HwRenderPrimitive {
         using HwRenderPrimitive::HwRenderPrimitive;
         struct {
             GLuint vao = 0;
@@ -98,7 +98,7 @@ public:
         } gl;
     };
 
-    struct GLTexture : public HwTexture {
+    struct GLTexture : public driver::HwTexture {
         using HwTexture::HwTexture;
         struct {
             GLuint texture_id;
@@ -127,7 +127,7 @@ public:
         }
     };
 
-    struct GLStream : public HwStream {
+    struct GLStream : public driver::HwStream {
         static constexpr size_t ROUND_ROBIN_TEXTURE_COUNT = 3;      // 3 maximum
         using HwStream::HwStream;
         bool isNativeStream() const { return gl.externalTextureId == 0; }
@@ -164,7 +164,7 @@ public:
         } user_thread;
     };
 
-    struct GLRenderTarget : public HwRenderTarget {
+    struct GLRenderTarget : public driver::HwRenderTarget {
         using HwRenderTarget::HwRenderTarget;
         struct GL {
             struct RenderBuffer {
@@ -178,7 +178,7 @@ public:
             RenderBuffer stencil;
             GLuint fbo = 0;
             GLuint fbo_draw = 0;
-            TargetBufferFlags resolve = TargetBufferFlags::NONE; // attachments in fbo_draw to resolve
+            driver::TargetBufferFlags resolve = driver::TargetBufferFlags::NONE; // attachments in fbo_draw to resolve
             uint8_t samples : 4;
             uint8_t colorLevel : 4; // Allows up to 15 levels (max texture size of 32768 x 32768)
         } gl;
@@ -190,14 +190,14 @@ public:
     OpenGLDriver& operator=(OpenGLDriver const&) = delete;
 
 private:
-    ShaderModel getShaderModel() const noexcept final;
+    driver::ShaderModel getShaderModel() const noexcept final;
 
     /*
      * Driver interface
      */
 
     template<typename T>
-    friend class ConcreteDispatcher;
+    friend class driver::ConcreteDispatcher;
 
 #define DECL_DRIVER_API(methodName, paramsDecl, params) \
     UTILS_ALWAYS_INLINE void methodName(paramsDecl);
@@ -237,15 +237,15 @@ private:
 
     HandleArena mHandleArena;
 
-    HandleBase::HandleId allocateHandle(size_t size) noexcept;
+    driver::HandleBase::HandleId allocateHandle(size_t size) noexcept;
 
     template<typename D, typename B, typename ... ARGS>
     typename std::enable_if<std::is_base_of<B, D>::value, D>::type*
-            construct(Handle<B> const& handle, ARGS&& ... args) noexcept;
+            construct(driver::Handle<B> const& handle, ARGS&& ... args) noexcept;
 
     template<typename B, typename D,
             typename = typename std::enable_if<std::is_base_of<B, D>::value, D>::type>
-    void destruct(Handle<B>& handle, D const* p) noexcept;
+    void destruct(driver::Handle<B>& handle, D const* p) noexcept;
 
 
     /*
@@ -259,7 +259,7 @@ private:
     typename std::enable_if<
             std::is_pointer<Dp>::value &&
             std::is_base_of<B, typename std::remove_pointer<Dp>::type>::value, Dp>::type
-    handle_cast(Handle<B>& handle) noexcept {
+    handle_cast(driver::Handle<B>& handle) noexcept {
         char* const base = (char *)mHandleArena.getArea().begin();
         size_t offset = handle.getId() << HandleAllocator::MIN_ALIGNMENT_SHIFT;
         return static_cast<Dp>(static_cast<void *>(base + offset));
@@ -303,13 +303,13 @@ private:
             uint32_t level,
             uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,
             uint32_t width, uint32_t height, uint32_t depth,
-            PixelBufferDescriptor&& data, FaceOffsets const* faceOffsets);
+            driver::PixelBufferDescriptor&& data, driver::FaceOffsets const* faceOffsets);
 
     void setCompressedTextureData(GLTexture* t,
             uint32_t level,
             uint32_t xoffset, uint32_t yoffset, uint32_t zoffset,
             uint32_t width, uint32_t height, uint32_t depth,
-            PixelBufferDescriptor&& data, FaceOffsets const* faceOffsets);
+            driver::PixelBufferDescriptor&& data, driver::FaceOffsets const* faceOffsets);
 
     void renderBufferStorage(GLuint rbo, GLenum internalformat, uint32_t width,
             uint32_t height, uint8_t samples) const noexcept;
@@ -363,7 +363,7 @@ private:
     inline void setClearDepth(GLfloat depth) noexcept;
     inline void setClearStencil(GLint stencil) noexcept;
 
-    void resolve(GLRenderTarget const* rt, TargetBufferFlags discardFlags) noexcept;
+    void resolve(GLRenderTarget const* rt, driver::TargetBufferFlags discardFlags) noexcept;
 
     GLuint getSamplerSlow(driver::SamplerParams sp) const noexcept;
 
@@ -375,7 +375,7 @@ private:
         return pos->second;
     }
 
-    const std::array<HwSamplerGroup*, Program::NUM_SAMPLER_BINDINGS>& getSamplerBindings() const {
+    const std::array<driver::HwSamplerGroup*, driver::Program::NUM_SAMPLER_BINDINGS>& getSamplerBindings() const {
         return mSamplerBindings;
     }
 
@@ -488,11 +488,11 @@ private:
     Driver::RasterState mRasterState;
 
     GLfloat mMaxAnisotropy = 0.0f;
-    ShaderModel mShaderModel;
+    driver::ShaderModel mShaderModel;
 
     // state required to represent the current render pass
-    Driver::RenderTargetHandle mRenderPassTarget;
-    Driver::RenderPassParams mRenderPassParams;
+    driver::Handle<driver::HwRenderTarget> mRenderPassTarget;
+    driver::RenderPassParams mRenderPassParams;
 
     // state needed for clearing the viewport "by hand", i.e. with a triangle
     GLuint mClearVertexShader;
@@ -511,7 +511,7 @@ private:
             bool clearStencil, uint32_t stencil) noexcept;
 
     // sampler buffer binding points (nullptr if not used)
-    std::array<HwSamplerGroup*, Program::NUM_SAMPLER_BINDINGS> mSamplerBindings;   // 8 pointers
+    std::array<driver::HwSamplerGroup*, driver::Program::NUM_SAMPLER_BINDINGS> mSamplerBindings;   // 8 pointers
 
     mutable tsl::robin_map<uint32_t, GLuint> mSamplerMap;
     mutable std::vector<GLTexture*> mExternalStreams;
@@ -573,7 +573,7 @@ private:
 
     OpenGLBlitter* mOpenGLBlitter = nullptr;
     void updateStream(GLTexture* t, driver::DriverApi* driver) noexcept;
-    void updateBuffer(GLenum target, GLBuffer* buffer, BufferDescriptor const& p, uint32_t alignment = 16) noexcept;
+    void updateBuffer(GLenum target, GLBuffer* buffer, driver::BufferDescriptor const& p, uint32_t alignment = 16) noexcept;
 };
 
 // ------------------------------------------------------------------------------------------------

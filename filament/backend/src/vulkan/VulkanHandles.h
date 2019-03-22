@@ -149,7 +149,7 @@ private:
 
 struct VulkanRenderPrimitive : public HwRenderPrimitive {
     explicit VulkanRenderPrimitive(VulkanContext& context) {}
-    void setPrimitiveType(Driver::PrimitiveType pt);
+    void setPrimitiveType(driver::PrimitiveType pt);
     void setBuffers(VulkanVertexBuffer* vertexBuffer, VulkanIndexBuffer* indexBuffer,
             uint32_t enabledAttributes);
     VulkanVertexBuffer* vertexBuffer = nullptr;

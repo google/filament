@@ -17,6 +17,7 @@
 #include "private/backend/SamplerGroup.h"
 
 namespace filament {
+namespace driver {
 
 // create a sampler buffer
 SamplerGroup::SamplerGroup(size_t count) noexcept : mSize(uint8_t(count)) {
@@ -91,4 +92,5 @@ utils::io::ostream& operator<<(utils::io::ostream& out, const SamplerGroup& rhs)
 }
 #endif
 
+} // namespace driver
 } // namespace filament

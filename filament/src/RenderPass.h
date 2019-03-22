@@ -173,13 +173,13 @@ public:
     }
 
     struct PrimitiveInfo { // 24 bytes
-        FMaterialInstance const* mi = nullptr;              // 8 bytes (4)
-        Handle<HwRenderPrimitive> primitiveHandle;          // 4 bytes
-        Handle<HwUniformBuffer> perRenderableBones;         // 4 bytes
-        Driver::RasterState rasterState;                    // 4 bytes
-        uint16_t index = 0;                                 // 2 bytes
-        Variant materialVariant;                            // 1 byte
-        uint8_t reserved = { };                             // 1 byte
+        FMaterialInstance const* mi = nullptr;                      // 8 bytes (4)
+        driver::Handle<driver::HwRenderPrimitive> primitiveHandle;  // 4 bytes
+        driver::Handle<driver::HwUniformBuffer> perRenderableBones; // 4 bytes
+        driver::Driver::RasterState rasterState;                    // 4 bytes
+        uint16_t index = 0;                                         // 2 bytes
+        Variant materialVariant;                                    // 1 byte
+        uint8_t reserved = { };                                     // 1 byte
     };
 
     struct alignas(8) Command {     // 32 bytes
