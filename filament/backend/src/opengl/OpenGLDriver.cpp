@@ -857,12 +857,12 @@ Handle<HwStream> OpenGLDriver::createStreamFromTextureIdS() noexcept {
 }
 
 void OpenGLDriver::createVertexBufferR(
-    Driver::VertexBufferHandle vbh,
+        Handle<HwVertexBuffer> vbh,
     uint8_t bufferCount,
     uint8_t attributeCount,
     uint32_t elementCount,
     Driver::AttributeArray attributes,
-    Driver::BufferUsage usage) {
+    BufferUsage usage) {
     DEBUG_MARKER()
 
     GLVertexBuffer* vb = construct<GLVertexBuffer>(vbh,
@@ -888,10 +888,10 @@ void OpenGLDriver::createVertexBufferR(
 }
 
 void OpenGLDriver::createIndexBufferR(
-        Driver::IndexBufferHandle ibh,
-        Driver::ElementType elementType,
+        Handle<HwIndexBuffer> ibh,
+        ElementType elementType,
         uint32_t indexCount,
-        Driver::BufferUsage usage) {
+        BufferUsage usage) {
     DEBUG_MARKER()
 
     uint8_t elementSize = static_cast<uint8_t>(getElementTypeSize(elementType));
@@ -904,7 +904,7 @@ void OpenGLDriver::createIndexBufferR(
     CHECK_GL_ERROR(utils::slog.e)
 }
 
-void OpenGLDriver::createRenderPrimitiveR(Driver::RenderPrimitiveHandle rph, int) {
+void OpenGLDriver::createRenderPrimitiveR(Handle<HwRenderPrimitive> rph, int) {
     DEBUG_MARKER()
 
     GLRenderPrimitive* rp = construct<GLRenderPrimitive>(rph);
@@ -912,23 +912,23 @@ void OpenGLDriver::createRenderPrimitiveR(Driver::RenderPrimitiveHandle rph, int
     CHECK_GL_ERROR(utils::slog.e)
 }
 
-void OpenGLDriver::createProgramR(Driver::ProgramHandle ph, Program&& program) {
+void OpenGLDriver::createProgramR(Handle<HwProgram> ph, Program&& program) {
     DEBUG_MARKER()
 
     construct<OpenGLProgram>(ph, this, program);
     CHECK_GL_ERROR(utils::slog.e)
 }
 
-void OpenGLDriver::createSamplerGroupR(Driver::SamplerGroupHandle sbh, size_t size) {
+void OpenGLDriver::createSamplerGroupR(Handle<HwSamplerGroup> sbh, size_t size) {
     DEBUG_MARKER()
 
     construct<GLSamplerGroup>(sbh, size);
 }
 
 void OpenGLDriver::createUniformBufferR(
-        Driver::UniformBufferHandle ubh,
+        Handle<HwUniformBuffer> ubh,
         size_t size,
-        Driver::BufferUsage usage) {
+        BufferUsage usage) {
     DEBUG_MARKER()
 
     GLUniformBuffer* ub = construct<GLUniformBuffer>(ubh, size, usage);
@@ -983,7 +983,7 @@ void OpenGLDriver::textureStorage(OpenGLDriver::GLTexture* t,
     t->depth = depth;
 }
 
-void OpenGLDriver::createTextureR(Driver::TextureHandle th, SamplerType target, uint8_t levels,
+void OpenGLDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint8_t levels,
         TextureFormat format, uint8_t samples, uint32_t w, uint32_t h, uint32_t depth,
         TextureUsage usage) {
     DEBUG_MARKER()
@@ -1192,7 +1192,7 @@ GLuint OpenGLDriver::framebufferRenderbuffer(uint32_t width, uint32_t height, ui
 }
 
 void OpenGLDriver::createDefaultRenderTargetR(
-        Driver::RenderTargetHandle rth, int) {
+        Handle<HwRenderTarget> rth, int) {
     DEBUG_MARKER()
 
     construct<GLRenderTarget>(rth, 0, 0);  // FIXME: we don't know the width/height
@@ -1208,8 +1208,8 @@ void OpenGLDriver::createDefaultRenderTargetR(
     rt->gl.depth.rb = depthbuffer;  // FIXME: populate format
 }
 
-void OpenGLDriver::createRenderTargetR(Driver::RenderTargetHandle rth,
-        Driver::TargetBufferFlags targets,
+void OpenGLDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
+        TargetBufferFlags targets,
         uint32_t width,
         uint32_t height,
         uint8_t samples,
@@ -1324,21 +1324,21 @@ void OpenGLDriver::createRenderTargetR(Driver::RenderTargetHandle rth,
     CHECK_GL_ERROR(utils::slog.e)
 }
 
-void OpenGLDriver::createFenceR(Driver::FenceHandle fh, int) {
+void OpenGLDriver::createFenceR(Handle<HwFence> fh, int) {
     DEBUG_MARKER()
 
     HwFence* f = construct<HwFence>(fh);
     f->fence = mPlatform.createFence();
 }
 
-void OpenGLDriver::createSwapChainR(Driver::SwapChainHandle sch, void* nativeWindow, uint64_t flags) {
+void OpenGLDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow, uint64_t flags) {
     DEBUG_MARKER()
 
     HwSwapChain* sc = construct<HwSwapChain>(sch);
     sc->swapChain = mPlatform.createSwapChain(nativeWindow, flags);
 }
 
-void OpenGLDriver::createStreamFromTextureIdR(Driver::StreamHandle sh,
+void OpenGLDriver::createStreamFromTextureIdR(Handle<HwStream> sh,
         intptr_t externalTextureId, uint32_t width, uint32_t height) {
     DEBUG_MARKER()
 
@@ -1359,7 +1359,7 @@ void OpenGLDriver::createStreamFromTextureIdR(Driver::StreamHandle sh,
 // Destroying driver objects
 // ------------------------------------------------------------------------------------------------
 
-void OpenGLDriver::destroyVertexBuffer(Driver::VertexBufferHandle vbh) {
+void OpenGLDriver::destroyVertexBuffer(Handle<HwVertexBuffer> vbh) {
     DEBUG_MARKER()
 
     if (vbh) {
@@ -1379,7 +1379,7 @@ void OpenGLDriver::destroyVertexBuffer(Driver::VertexBufferHandle vbh) {
     }
 }
 
-void OpenGLDriver::destroyIndexBuffer(Driver::IndexBufferHandle ibh) {
+void OpenGLDriver::destroyIndexBuffer(Handle<HwIndexBuffer> ibh) {
     DEBUG_MARKER()
 
     if (ibh) {
@@ -1395,7 +1395,7 @@ void OpenGLDriver::destroyIndexBuffer(Driver::IndexBufferHandle ibh) {
     }
 }
 
-void OpenGLDriver::destroyRenderPrimitive(Driver::RenderPrimitiveHandle rph) {
+void OpenGLDriver::destroyRenderPrimitive(Handle<HwRenderPrimitive> rph) {
     DEBUG_MARKER()
 
     if (rph) {
@@ -1409,7 +1409,7 @@ void OpenGLDriver::destroyRenderPrimitive(Driver::RenderPrimitiveHandle rph) {
     }
 }
 
-void OpenGLDriver::destroyProgram(Driver::ProgramHandle ph) {
+void OpenGLDriver::destroyProgram(Handle<HwProgram> ph) {
     DEBUG_MARKER()
 
     if (ph) {
@@ -1418,7 +1418,7 @@ void OpenGLDriver::destroyProgram(Driver::ProgramHandle ph) {
     }
 }
 
-void OpenGLDriver::destroySamplerGroup(Driver::SamplerGroupHandle sbh) {
+void OpenGLDriver::destroySamplerGroup(Handle<HwSamplerGroup> sbh) {
     DEBUG_MARKER()
 
     if (sbh) {
@@ -1427,7 +1427,7 @@ void OpenGLDriver::destroySamplerGroup(Driver::SamplerGroupHandle sbh) {
     }
 }
 
-void OpenGLDriver::destroyUniformBuffer(Driver::UniformBufferHandle ubh) {
+void OpenGLDriver::destroyUniformBuffer(Handle<HwUniformBuffer> ubh) {
     DEBUG_MARKER()
 
     if (ubh) {
@@ -1452,7 +1452,7 @@ void OpenGLDriver::destroyUniformBuffer(Driver::UniformBufferHandle ubh) {
     }
 }
 
-void OpenGLDriver::destroyTexture(Driver::TextureHandle th) {
+void OpenGLDriver::destroyTexture(Handle<HwTexture> th) {
     DEBUG_MARKER()
 
     if (th) {
@@ -1469,7 +1469,7 @@ void OpenGLDriver::destroyTexture(Driver::TextureHandle th) {
     }
 }
 
-void OpenGLDriver::destroyRenderTarget(Driver::RenderTargetHandle rth) {
+void OpenGLDriver::destroyRenderTarget(Handle<HwRenderTarget> rth) {
     DEBUG_MARKER()
 
     if (rth) {
@@ -1502,7 +1502,7 @@ void OpenGLDriver::destroyRenderTarget(Driver::RenderTargetHandle rth) {
     }
 }
 
-void OpenGLDriver::destroySwapChain(Driver::SwapChainHandle sch) {
+void OpenGLDriver::destroySwapChain(Handle<HwSwapChain> sch) {
     DEBUG_MARKER()
 
     if (sch) {
@@ -1512,7 +1512,7 @@ void OpenGLDriver::destroySwapChain(Driver::SwapChainHandle sch) {
     }
 }
 
-void OpenGLDriver::destroyStream(Driver::StreamHandle sh) {
+void OpenGLDriver::destroyStream(Handle<HwStream> sh) {
     DEBUG_MARKER()
 
     if (sh) {
@@ -1553,7 +1553,7 @@ Handle<HwStream> OpenGLDriver::createStream(void* nativeStream) {
     return sh;
 }
 
-void OpenGLDriver::updateStreams(driver::DriverApi* driver) {
+void OpenGLDriver::updateStreams(DriverApi* driver) {
     if (UTILS_UNLIKELY(!mExternalStreams.empty())) {
         OpenGLBlitter::State state;
         for (GLTexture* t : mExternalStreams) {
@@ -1574,7 +1574,7 @@ void OpenGLDriver::updateStreams(driver::DriverApi* driver) {
     }
 }
 
-void OpenGLDriver::setStreamDimensions(Driver::StreamHandle sh, uint32_t width, uint32_t height) {
+void OpenGLDriver::setStreamDimensions(Handle<HwStream> sh, uint32_t width, uint32_t height) {
     if (sh) {
         GLStream* s = handle_cast<GLStream*>(sh);
         s->width = width;
@@ -1582,7 +1582,7 @@ void OpenGLDriver::setStreamDimensions(Driver::StreamHandle sh, uint32_t width, 
     }
 }
 
-int64_t OpenGLDriver::getStreamTimestamp(Driver::StreamHandle sh) {
+int64_t OpenGLDriver::getStreamTimestamp(Handle<HwStream> sh) {
     if (sh) {
         GLStream* s = handle_cast<GLStream*>(sh);
         return s->user_thread.timestamp;
@@ -1590,7 +1590,7 @@ int64_t OpenGLDriver::getStreamTimestamp(Driver::StreamHandle sh) {
     return 0;
 }
 
-void OpenGLDriver::destroyFence(Driver::FenceHandle fh) {
+void OpenGLDriver::destroyFence(Handle<HwFence> fh) {
     if (fh) {
         HwFence* f = handle_cast<HwFence*>(fh);
         mPlatform.destroyFence(f->fence);
@@ -1598,7 +1598,7 @@ void OpenGLDriver::destroyFence(Driver::FenceHandle fh) {
     }
 }
 
-Driver::FenceStatus OpenGLDriver::wait(Driver::FenceHandle fh, uint64_t timeout) {
+FenceStatus OpenGLDriver::wait(Handle<HwFence> fh, uint64_t timeout) {
     if (fh) {
         HwFence* f = handle_cast<HwFence*>(fh);
         return mPlatform.waitFence(f->fence, timeout);
@@ -1606,17 +1606,17 @@ Driver::FenceStatus OpenGLDriver::wait(Driver::FenceHandle fh, uint64_t timeout)
     return FenceStatus::ERROR;
 }
 
-bool OpenGLDriver::isTextureFormatSupported(Driver::TextureFormat format) {
-    if (driver::isETC2Compression(format)) {
+bool OpenGLDriver::isTextureFormatSupported(TextureFormat format) {
+    if (isETC2Compression(format)) {
         return ext.texture_compression_etc2;
     }
-    if (driver::isS3TCCompression(format)) {
+    if (isS3TCCompression(format)) {
         return ext.texture_compression_s3tc;
     }
     return getInternalFormat(format) != 0;
 }
 
-bool OpenGLDriver::isRenderTargetFormatSupported(Driver::TextureFormat format) {
+bool OpenGLDriver::isRenderTargetFormatSupported(TextureFormat format) {
     // Supported formats per http://docs.gl/es3/glRenderbufferStorage, note that desktop OpenGL may
     // support more formats, but it requires querying GL_INTERNALFORMAT_SUPPORTED which is not
     // available in OpenGL ES.
@@ -1688,7 +1688,7 @@ bool OpenGLDriver::isFrameTimeSupported() {
 // ------------------------------------------------------------------------------------------------
 
 
-void OpenGLDriver::commit(Driver::SwapChainHandle sch) {
+void OpenGLDriver::commit(Handle<HwSwapChain> sch) {
     DEBUG_MARKER()
 
     if (sch) {
@@ -1697,7 +1697,7 @@ void OpenGLDriver::commit(Driver::SwapChainHandle sch) {
     }
 }
 
-void OpenGLDriver::makeCurrent(Driver::SwapChainHandle schDraw, Driver::SwapChainHandle schRead) {
+void OpenGLDriver::makeCurrent(Handle<HwSwapChain> schDraw, Handle<HwSwapChain> schRead) {
     DEBUG_MARKER()
 
     if (schDraw && schRead) {
@@ -1711,7 +1711,7 @@ void OpenGLDriver::makeCurrent(Driver::SwapChainHandle schDraw, Driver::SwapChai
 // Updating driver objects
 // ------------------------------------------------------------------------------------------------
 
-void OpenGLDriver::updateVertexBuffer(Driver::VertexBufferHandle vbh,
+void OpenGLDriver::updateVertexBuffer(Handle<HwVertexBuffer> vbh,
         size_t index, BufferDescriptor&& p, uint32_t byteOffset) {
     DEBUG_MARKER()
 
@@ -1726,7 +1726,7 @@ void OpenGLDriver::updateVertexBuffer(Driver::VertexBufferHandle vbh,
 }
 
 void OpenGLDriver::updateIndexBuffer(
-        Driver::IndexBufferHandle ibh, BufferDescriptor&& p, uint32_t byteOffset) {
+        Handle<HwIndexBuffer> ibh, BufferDescriptor&& p, uint32_t byteOffset) {
     DEBUG_MARKER()
 
     GLIndexBuffer* ib = handle_cast<GLIndexBuffer *>(ibh);
@@ -1741,7 +1741,7 @@ void OpenGLDriver::updateIndexBuffer(
     CHECK_GL_ERROR(utils::slog.e)
 }
 
-void OpenGLDriver::updateUniformBuffer(Driver::UniformBufferHandle ubh, BufferDescriptor&& p) {
+void OpenGLDriver::updateUniformBuffer(Handle<HwUniformBuffer> ubh, BufferDescriptor&& p) {
     DEBUG_MARKER()
 
     GLUniformBuffer* ub = handle_cast<GLUniformBuffer *>(ubh);
@@ -1760,7 +1760,7 @@ void OpenGLDriver::updateBuffer(GLenum target,
     assert(buffer->id);
 
     bindBuffer(target, buffer->id);
-    if (buffer->usage == driver::BufferUsage::STREAM) {
+    if (buffer->usage == BufferUsage::STREAM) {
 
         buffer->size = (uint32_t)p.size;
 
@@ -1815,7 +1815,7 @@ void OpenGLDriver::updateBuffer(GLenum target,
 }
 
 
-void OpenGLDriver::updateSamplerGroup(Driver::SamplerGroupHandle sbh,
+void OpenGLDriver::updateSamplerGroup(Handle<HwSamplerGroup> sbh,
         SamplerGroup&& samplerGroup) {
     DEBUG_MARKER()
 
@@ -1823,13 +1823,13 @@ void OpenGLDriver::updateSamplerGroup(Driver::SamplerGroupHandle sbh,
     *sb->sb = std::move(samplerGroup); // NOLINT(performance-move-const-arg)
 }
 
-void OpenGLDriver::update2DImage(Driver::TextureHandle th,
+void OpenGLDriver::update2DImage(Handle<HwTexture> th,
         uint32_t level, uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
         PixelBufferDescriptor&& data) {
     DEBUG_MARKER()
 
     GLTexture* t = handle_cast<GLTexture *>(th);
-    if (data.type == driver::PixelDataType::COMPRESSED) {
+    if (data.type == PixelDataType::COMPRESSED) {
         setCompressedTextureData(t,
                 level, xoffset, yoffset, 0, width, height, 1, std::move(data), nullptr);
     } else {
@@ -1838,19 +1838,19 @@ void OpenGLDriver::update2DImage(Driver::TextureHandle th,
     }
 }
 
-void OpenGLDriver::updateCubeImage(Driver::TextureHandle th, uint32_t level,
+void OpenGLDriver::updateCubeImage(Handle<HwTexture> th, uint32_t level,
         PixelBufferDescriptor&& data, FaceOffsets faceOffsets) {
     DEBUG_MARKER()
 
     GLTexture* t = handle_cast<GLTexture *>(th);
-    if (data.type == driver::PixelDataType::COMPRESSED) {
+    if (data.type == PixelDataType::COMPRESSED) {
         setCompressedTextureData(t, level, 0, 0, 0, 0, 0, 0, std::move(data), &faceOffsets);
     } else {
         setTextureData(t, level, 0, 0, 0, 0, 0, 0, std::move(data), &faceOffsets);
     }
 }
 
-void OpenGLDriver::generateMipmaps(Driver::TextureHandle th) {
+void OpenGLDriver::generateMipmaps(Handle<HwTexture> th) {
     DEBUG_MARKER()
 
     GLTexture* t = handle_cast<GLTexture *>(th);
@@ -2040,7 +2040,7 @@ void OpenGLDriver::setCompressedTextureData(GLTexture* t,
     CHECK_GL_ERROR(utils::slog.e)
 }
 
-void OpenGLDriver::setExternalImage(Driver::TextureHandle th, void* image) {
+void OpenGLDriver::setExternalImage(Handle<HwTexture> th, void* image) {
     if (ext.OES_EGL_image_external_essl3) {
         DEBUG_MARKER()
 
@@ -2058,7 +2058,7 @@ void OpenGLDriver::setExternalImage(Driver::TextureHandle th, void* image) {
     }
 }
 
-void OpenGLDriver::setExternalStream(Driver::TextureHandle th, Driver::StreamHandle sh) {
+void OpenGLDriver::setExternalStream(Handle<HwTexture> th, Handle<HwStream> sh) {
     if (ext.OES_EGL_image_external_essl3) {
         DEBUG_MARKER()
 
@@ -2132,8 +2132,8 @@ void OpenGLDriver::replaceStream(GLTexture* t, GLStream* hwStream) noexcept {
     t->hwStream = hwStream;
 }
 
-void OpenGLDriver::beginRenderPass(Driver::RenderTargetHandle rth,
-        const Driver::RenderPassParams& params) {
+void OpenGLDriver::beginRenderPass(Handle<HwRenderTarget> rth,
+        const RenderPassParams& params) {
     DEBUG_MARKER()
 
     mRenderPassTarget = rth;
@@ -2237,8 +2237,8 @@ void OpenGLDriver::resolve(GLRenderTarget const* rt, TargetBufferFlags discardFl
     }
 }
 
-void OpenGLDriver::discardSubRenderTargetBuffers(Driver::RenderTargetHandle rth,
-        Driver::TargetBufferFlags buffers,
+void OpenGLDriver::discardSubRenderTargetBuffers(Handle<HwRenderTarget> rth,
+        TargetBufferFlags buffers,
         uint32_t left, uint32_t bottom, uint32_t width, uint32_t height) {
     DEBUG_MARKER()
 
@@ -2284,7 +2284,7 @@ GLsizei OpenGLDriver::getAttachments(std::array<GLenum, 3>& attachments,
     return attachmentCount;
 }
 
-void OpenGLDriver::resizeRenderTarget(Driver::RenderTargetHandle rth,
+void OpenGLDriver::resizeRenderTarget(Handle<HwRenderTarget> rth,
         uint32_t width, uint32_t height) {
     DEBUG_MARKER()
 
@@ -2326,8 +2326,8 @@ void OpenGLDriver::resizeRenderTarget(Driver::RenderTargetHandle rth,
     }
 }
 
-void OpenGLDriver::setRenderPrimitiveBuffer(Driver::RenderPrimitiveHandle rph,
-        Driver::VertexBufferHandle vbh, Driver::IndexBufferHandle ibh,
+void OpenGLDriver::setRenderPrimitiveBuffer(Handle<HwRenderPrimitive> rph,
+        Handle<HwVertexBuffer> vbh, Handle<HwIndexBuffer> ibh,
         uint32_t enabledAttributes) {
     DEBUG_MARKER()
 
@@ -2375,8 +2375,8 @@ void OpenGLDriver::setRenderPrimitiveBuffer(Driver::RenderPrimitiveHandle rph,
     }
 }
 
-void OpenGLDriver::setRenderPrimitiveRange(Driver::RenderPrimitiveHandle rph,
-        Driver::PrimitiveType pt, uint32_t offset,
+void OpenGLDriver::setRenderPrimitiveRange(Handle<HwRenderPrimitive> rph,
+        PrimitiveType pt, uint32_t offset,
         uint32_t minIndex, uint32_t maxIndex, uint32_t count) {
     DEBUG_MARKER()
 
@@ -2424,7 +2424,7 @@ void OpenGLDriver::setViewportScissor(
 
 #define DEBUG_NO_EXTERNAL_STREAM_COPY false
 
-void OpenGLDriver::updateStream(GLTexture* t, driver::DriverApi* driver) noexcept {
+void OpenGLDriver::updateStream(GLTexture* t, DriverApi* driver) noexcept {
     SYSTRACE_CALL();
 
     GLStream* s = static_cast<GLStream*>(t->hwStream);
@@ -2517,7 +2517,7 @@ void OpenGLDriver::updateStream(GLTexture* t, driver::DriverApi* driver) noexcep
     }
 }
 
-void OpenGLDriver::readStreamPixels(Driver::StreamHandle sh,
+void OpenGLDriver::readStreamPixels(Handle<HwStream> sh,
         uint32_t x, uint32_t y, uint32_t width, uint32_t height,
         PixelBufferDescriptor&& p) {
     DEBUG_MARKER()
@@ -2591,7 +2591,7 @@ void OpenGLDriver::readStreamPixels(Driver::StreamHandle sh,
 // Setting rendering state
 // ------------------------------------------------------------------------------------------------
 
-void OpenGLDriver::bindUniformBuffer(size_t index, Driver::UniformBufferHandle ubh) {
+void OpenGLDriver::bindUniformBuffer(size_t index, Handle<HwUniformBuffer> ubh) {
     DEBUG_MARKER()
     GLUniformBuffer* ub = handle_cast<GLUniformBuffer *>(ubh);
     assert(ub->gl.ubo.base == 0);
@@ -2599,7 +2599,7 @@ void OpenGLDriver::bindUniformBuffer(size_t index, Driver::UniformBufferHandle u
     CHECK_GL_ERROR(utils::slog.e)
 }
 
-void OpenGLDriver::bindUniformBufferRange(size_t index, Driver::UniformBufferHandle ubh,
+void OpenGLDriver::bindUniformBufferRange(size_t index, Handle<HwUniformBuffer> ubh,
         size_t offset, size_t size) {
     DEBUG_MARKER()
 
@@ -2611,7 +2611,7 @@ void OpenGLDriver::bindUniformBufferRange(size_t index, Driver::UniformBufferHan
     CHECK_GL_ERROR(utils::slog.e)
 }
 
-void OpenGLDriver::bindSamplers(size_t index, Driver::SamplerGroupHandle sbh) {
+void OpenGLDriver::bindSamplers(size_t index, Handle<HwSamplerGroup> sbh) {
     DEBUG_MARKER()
 
     GLSamplerGroup* sb = handle_cast<GLSamplerGroup *>(sbh);
@@ -2621,7 +2621,7 @@ void OpenGLDriver::bindSamplers(size_t index, Driver::SamplerGroupHandle sbh) {
 }
 
 
-GLuint OpenGLDriver::getSamplerSlow(driver::SamplerParams params) const noexcept {
+GLuint OpenGLDriver::getSamplerSlow(SamplerParams params) const noexcept {
     assert(mSamplerMap.find(params.u) == mSamplerMap.end());
 
     GLuint s;
@@ -2673,7 +2673,7 @@ void OpenGLDriver::popGroupMarker(int) {
 // Read-back ops
 // ------------------------------------------------------------------------------------------------
 
-void OpenGLDriver::readPixels(Driver::RenderTargetHandle src,
+void OpenGLDriver::readPixels(Handle<HwRenderTarget> src,
         uint32_t x, uint32_t y, uint32_t width, uint32_t height,
         PixelBufferDescriptor&& p) {
     DEBUG_MARKER()
@@ -2742,7 +2742,7 @@ void OpenGLDriver::readPixels(Driver::RenderTargetHandle src,
 void OpenGLDriver::beginFrame(int64_t monotonic_clock_ns, uint32_t frameId) {
     insertEventMarker("beginFrame");
     if (UTILS_UNLIKELY(!mExternalStreams.empty())) {
-        driver::OpenGLPlatform& platform = mPlatform;
+        OpenGLPlatform& platform = mPlatform;
         const size_t index = getIndexForTextureTarget(GL_TEXTURE_EXTERNAL_OES);
         for (GLTexture const* t : mExternalStreams) {
             assert(t && t->hwStream);
@@ -2856,9 +2856,9 @@ void OpenGLDriver::clearWithGeometryPipe(
 }
 
 void OpenGLDriver::blit(TargetBufferFlags buffers,
-        Driver::RenderTargetHandle dst, driver::Viewport dstRect,
-        Driver::RenderTargetHandle src, driver::Viewport srcRect,
-        Driver::SamplerMagFilter filter) {
+        Handle<HwRenderTarget> dst, Viewport dstRect,
+        Handle<HwRenderTarget> src, Viewport srcRect,
+        SamplerMagFilter filter) {
     DEBUG_MARKER()
 
     GLbitfield mask = 0;
@@ -2918,7 +2918,7 @@ void OpenGLDriver::blit(TargetBufferFlags buffers,
 
 void OpenGLDriver::draw(
         Driver::PipelineState state,
-        Driver::RenderPrimitiveHandle rph) {
+        Handle<HwRenderPrimitive> rph) {
     DEBUG_MARKER()
 
     OpenGLProgram* p = handle_cast<OpenGLProgram*>(state.program);
@@ -2940,6 +2940,6 @@ void OpenGLDriver::draw(
 }
 
 // explicit instantiation of the Dispatcher
-template class ConcreteDispatcher<OpenGLDriver>;
+template class driver::ConcreteDispatcher<OpenGLDriver>;
 
 } // namespace filament

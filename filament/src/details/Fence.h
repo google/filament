@@ -63,7 +63,7 @@ private:
     };
 
     FEngine& mEngine;
-    Handle<HwFence> mFenceHandle;
+    driver::Handle<driver::HwFence> mFenceHandle;
     // TODO: use custom allocator for these small objects
     std::shared_ptr<FenceSignal> mFenceSignal;
 };

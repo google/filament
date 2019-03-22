@@ -50,7 +50,7 @@ public:
     bool hasVisibleShadows() const noexcept { return mHasVisibleShadows; }
 
     // Allocates shadow texture based on user parameters (e.g. dimensions)
-    void prepare(driver::DriverApi& driver, SamplerGroup& buffer) noexcept;
+    void prepare(driver::DriverApi& driver, driver::SamplerGroup& buffer) noexcept;
 
     // Returns the shadow map's viewport. Valid after prepare().
     Viewport const& getViewport() const noexcept { return mViewport; }
@@ -175,8 +175,8 @@ private:
 
     // set-up in prepare()
     Viewport mViewport;
-    Handle<HwTexture> mShadowMapHandle;
-    Handle<HwRenderTarget> mShadowMapRenderTarget;
+    driver::Handle<driver::HwTexture> mShadowMapHandle;
+    driver::Handle<driver::HwRenderTarget> mShadowMapRenderTarget;
 
     // set-up in update()
     uint32_t mShadowMapDimension = 0;

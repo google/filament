@@ -52,7 +52,7 @@ void PostProcessManager::terminate(driver::DriverApi& driver) noexcept {
 }
 
 void PostProcessManager::setSource(uint32_t viewportWidth, uint32_t viewportHeight,
-        Handle<HwTexture> texture, uint32_t textureWidth, uint32_t textureHeight) const noexcept {
+        driver::Handle<driver::HwTexture> texture, uint32_t textureWidth, uint32_t textureHeight) const noexcept {
     FEngine& engine = *mEngine;
     DriverApi& driver = engine.getDriverApi();
 
@@ -88,13 +88,13 @@ FrameGraphResource PostProcessManager::toneMapping(FrameGraph& fg, FrameGraphRes
         driver::TextureFormat outFormat, bool dithering, bool translucent) noexcept {
 
     FEngine* engine = mEngine;
-    Handle<HwRenderPrimitive> const& fullScreenRenderPrimitive = engine->getFullScreenRenderPrimitive();
+    driver::Handle<driver::HwRenderPrimitive> const& fullScreenRenderPrimitive = engine->getFullScreenRenderPrimitive();
 
     struct PostProcessToneMapping {
         FrameGraphResource input;
         FrameGraphResource output;
     };
-    Handle<HwProgram> toneMappingProgram = engine->getPostProcessProgram(
+    driver::Handle<driver::HwProgram> toneMappingProgram = engine->getPostProcessProgram(
             translucent ? PostProcessStage::TONE_MAPPING_TRANSLUCENT
                         : PostProcessStage::TONE_MAPPING_OPAQUE);
 
@@ -143,14 +143,14 @@ FrameGraphResource PostProcessManager::fxaa(FrameGraph& fg,
         FrameGraphResource input, driver::TextureFormat outFormat, bool translucent) noexcept {
 
     FEngine* engine = mEngine;
-    Handle<HwRenderPrimitive> const& fullScreenRenderPrimitive = engine->getFullScreenRenderPrimitive();
+    driver::Handle<driver::HwRenderPrimitive> const& fullScreenRenderPrimitive = engine->getFullScreenRenderPrimitive();
 
     struct PostProcessFXAA {
         FrameGraphResource input;
         FrameGraphResource output;
     };
 
-    Handle<HwProgram> antiAliasingProgram = engine->getPostProcessProgram(
+    driver::Handle<driver::HwProgram> antiAliasingProgram = engine->getPostProcessProgram(
             translucent ? PostProcessStage::ANTI_ALIASING_TRANSLUCENT
                         : PostProcessStage::ANTI_ALIASING_OPAQUE);
 

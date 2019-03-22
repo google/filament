@@ -268,7 +268,7 @@ using DepthStencilStateCache = StateCache<DepthStencilState, id<MTLDepthStencilS
 
 struct UniformBufferState {
     bool bound = false;
-    Driver::UniformBufferHandle ubh;
+    Handle<HwUniformBuffer> ubh;
     uint64_t offset = 0;
 
     bool operator==(const UniformBufferState& rhs) const noexcept {

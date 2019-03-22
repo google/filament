@@ -33,6 +33,7 @@
 #include <stdint.h>
 
 namespace filament {
+namespace driver {
 
 class Dispatcher;
 
@@ -79,7 +80,7 @@ struct HwRenderPrimitive : public HwBase {
     uint32_t maxIndex = 0;
     uint32_t count = 0;
     uint32_t maxVertexCount = 0;
-    Driver::PrimitiveType type = Driver::PrimitiveType::TRIANGLES;
+    PrimitiveType type = PrimitiveType::TRIANGLES;
 };
 
 struct HwProgram : public HwBase {
@@ -102,16 +103,16 @@ struct HwUniformBuffer : public HwBase {
 
 struct HwTexture : public HwBase {
     HwTexture(driver::SamplerType target, uint8_t levels, uint8_t samples,
-              uint32_t width, uint32_t height, uint32_t depth, Driver::TextureFormat fmt) noexcept
+              uint32_t width, uint32_t height, uint32_t depth, TextureFormat fmt) noexcept
             : width(width), height(height), depth(depth),
               target(target), levels(levels), samples(samples), format(fmt) { }
     uint32_t width;
     uint32_t height;
     uint32_t depth;
-    driver::SamplerType target;
+    SamplerType target;
     uint8_t levels : 4;  // This allows up to 15 levels (max texture size of 32768 x 32768)
     uint8_t samples : 4; // In practice this is always 1.
-    Driver::TextureFormat format;
+    TextureFormat format;
     HwStream* hwStream = nullptr;
 };
 
@@ -122,17 +123,17 @@ struct HwRenderTarget : public HwBase {
 };
 
 struct HwFence : public HwBase {
-    driver::Platform::Fence* fence = nullptr;
+    Platform::Fence* fence = nullptr;
 };
 
 struct HwSwapChain : public HwBase {
-    driver::Platform::SwapChain* swapChain = nullptr;
+    Platform::SwapChain* swapChain = nullptr;
 };
 
 struct HwStream : public HwBase {
     HwStream() = default;
-    explicit HwStream(driver::Platform::Stream* stream) : stream(stream) { }
-    driver::Platform::Stream* stream = nullptr;
+    explicit HwStream(Platform::Stream* stream) : stream(stream) { }
+    Platform::Stream* stream = nullptr;
     uint32_t width = 0;
     uint32_t height = 0;
 };
@@ -172,6 +173,7 @@ private:
 };
 
 
+} // namespace driver
 } // namespace filament
 
 #endif // TNT_FILAMENT_DRIVER_DRIVERBASE_H

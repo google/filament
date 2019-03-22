@@ -627,7 +627,7 @@ void VulkanTexture::copyBufferToImage(VkCommandBuffer cmd, VkBuffer buffer, VkIm
     vkCmdCopyBufferToImage(cmd, buffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 }
 
-void VulkanRenderPrimitive::setPrimitiveType(Driver::PrimitiveType pt) {
+void VulkanRenderPrimitive::setPrimitiveType(driver::PrimitiveType pt) {
     this->type = pt;
     switch (pt) {
         case driver::PrimitiveType::NONE:

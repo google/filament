@@ -223,7 +223,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     //        so when skipping post-process (which draws directly into it), we can't rely on it.
     const bool colorPassNeedsDepthBuffer = hasPostProcess;
 
-    const Handle<HwRenderTarget> viewRenderTarget = getRenderTarget();
+    const driver::Handle<driver::HwRenderTarget> viewRenderTarget = getRenderTarget();
     FrameGraphResource output = fg.importResource("viewRenderTarget",
             { .viewport = vp }, viewRenderTarget, vp.width, vp.height);
 
@@ -320,7 +320,7 @@ void FRenderer::mirrorFrame(FSwapChain* dstSwapChain, filament::Viewport const& 
     FEngine& engine = getEngine();
     FEngine::DriverApi& driver = engine.getDriverApi();
 
-    const Handle<HwRenderTarget> viewRenderTarget = getRenderTarget();
+    const driver::Handle<driver::HwRenderTarget> viewRenderTarget = getRenderTarget();
 
     // Set the current swap chain as the read surface, and the destination
     // swap chain as the draw surface so that blitting between default render

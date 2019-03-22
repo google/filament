@@ -76,7 +76,7 @@ public:
     void swap(GPUBuffer& rhs) noexcept;
 
 
-    void setSampler(size_t index, SamplerGroup& group) const noexcept {
+    void setSampler(size_t index, driver::SamplerGroup& group) const noexcept {
         group.setSampler(index, { getHandle(), getSamplerParams() });
     }
 
@@ -84,13 +84,13 @@ private:
     // this is really hidden implementation details (the fact we're using a texture should be
     // exposed as little as possible)
     friend class SamplerGroup;
-    Handle<HwTexture> getHandle() const noexcept { return mTexture; }
+    driver::Handle<driver::HwTexture> getHandle() const noexcept { return mTexture; }
     driver::SamplerParams getSamplerParams() const noexcept { return driver::SamplerParams{}; }
 
 private:
     void commitSlow(driver::DriverApi& driverApi, void const* begin, void const* end) noexcept;
 
-    Handle<HwTexture> mTexture;
+    driver::Handle<driver::HwTexture> mTexture;
     uint32_t mSize = 0;
     uint16_t mWidth;
     uint16_t mHeight;

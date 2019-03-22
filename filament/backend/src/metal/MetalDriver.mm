@@ -85,51 +85,51 @@ void MetalDriver::flush(int dummy) {
 
 }
 
-void MetalDriver::createVertexBufferR(Driver::VertexBufferHandle vbh, uint8_t bufferCount,
+void MetalDriver::createVertexBufferR(Handle<HwVertexBuffer> vbh, uint8_t bufferCount,
         uint8_t attributeCount, uint32_t vertexCount, Driver::AttributeArray attributes,
-        Driver::BufferUsage usage) {
+        BufferUsage usage) {
     // TODO: Take BufferUsage into account when creating the buffer.
     construct_handle<MetalVertexBuffer>(mHandleMap, vbh, mContext->device, bufferCount,
             attributeCount, vertexCount, attributes);
 }
 
-void MetalDriver::createIndexBufferR(Driver::IndexBufferHandle ibh, Driver::ElementType elementType,
-        uint32_t indexCount, Driver::BufferUsage usage) {
+void MetalDriver::createIndexBufferR(Handle<HwIndexBuffer> ibh, ElementType elementType,
+        uint32_t indexCount, BufferUsage usage) {
     auto elementSize = (uint8_t) getElementTypeSize(elementType);
     construct_handle<MetalIndexBuffer>(mHandleMap, ibh, mContext->device, elementSize, indexCount);
 }
 
-void MetalDriver::createTextureR(Driver::TextureHandle th, Driver::SamplerType target, uint8_t levels,
-        Driver::TextureFormat format, uint8_t samples, uint32_t width, uint32_t height,
-        uint32_t depth, Driver::TextureUsage usage) {
+void MetalDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint8_t levels,
+        TextureFormat format, uint8_t samples, uint32_t width, uint32_t height,
+        uint32_t depth, TextureUsage usage) {
     construct_handle<MetalTexture>(mHandleMap, th, mContext->device, target, levels, format, samples,
             width, height, depth, usage);
 }
 
-void MetalDriver::createSamplerGroupR(Driver::SamplerGroupHandle sbh, size_t size) {
+void MetalDriver::createSamplerGroupR(Handle<HwSamplerGroup> sbh, size_t size) {
     construct_handle<MetalSamplerGroup>(mHandleMap, sbh, size);
 }
 
-void MetalDriver::createUniformBufferR(Driver::UniformBufferHandle ubh, size_t size,
-        Driver::BufferUsage usage) {
+void MetalDriver::createUniformBufferR(Handle<HwUniformBuffer> ubh, size_t size,
+        BufferUsage usage) {
     construct_handle<MetalUniformBuffer>(mHandleMap, ubh, mContext->device, size);
 }
 
-void MetalDriver::createRenderPrimitiveR(Driver::RenderPrimitiveHandle rph, int dummy) {
+void MetalDriver::createRenderPrimitiveR(Handle<HwRenderPrimitive> rph, int dummy) {
     construct_handle<MetalRenderPrimitive>(mHandleMap, rph);
 }
 
-void MetalDriver::createProgramR(Driver::ProgramHandle rph, Program&& program) {
+void MetalDriver::createProgramR(Handle<HwProgram> rph, Program&& program) {
     construct_handle<MetalProgram>(mHandleMap, rph, mContext->device, program);
 }
 
-void MetalDriver::createDefaultRenderTargetR(Driver::RenderTargetHandle rth, int dummy) {
+void MetalDriver::createDefaultRenderTargetR(Handle<HwRenderTarget> rth, int dummy) {
     construct_handle<MetalRenderTarget>(mHandleMap, rth, mContext);
 }
 
-void MetalDriver::createRenderTargetR(Driver::RenderTargetHandle rth,
-        Driver::TargetBufferFlags targetBufferFlags, uint32_t width, uint32_t height,
-        uint8_t samples, Driver::TextureFormat format, Driver::TargetBufferInfo color,
+void MetalDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
+        TargetBufferFlags targetBufferFlags, uint32_t width, uint32_t height,
+        uint8_t samples, TextureFormat format, Driver::TargetBufferInfo color,
         Driver::TargetBufferInfo depth, Driver::TargetBufferInfo stencil) {
 
     auto getColorTexture = [&]() -> id<MTLTexture> {
@@ -167,123 +167,123 @@ void MetalDriver::createRenderTargetR(Driver::RenderTargetHandle rth,
             "Stencil buffer not supported.");
 }
 
-void MetalDriver::createFenceR(Driver::FenceHandle, int dummy) {
+void MetalDriver::createFenceR(Handle<HwFence>, int dummy) {
 
 }
 
-void MetalDriver::createSwapChainR(Driver::SwapChainHandle sch, void* nativeWindow, uint64_t flags) {
+void MetalDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow, uint64_t flags) {
     auto* metalLayer = (CAMetalLayer*) nativeWindow;
     construct_handle<MetalSwapChain>(mHandleMap, sch, mContext->device, metalLayer);
 }
 
-void MetalDriver::createStreamFromTextureIdR(Driver::StreamHandle, intptr_t externalTextureId,
+void MetalDriver::createStreamFromTextureIdR(Handle<HwStream>, intptr_t externalTextureId,
         uint32_t width, uint32_t height) {
 
 }
 
-Driver::VertexBufferHandle MetalDriver::createVertexBufferS() noexcept {
+Handle<HwVertexBuffer> MetalDriver::createVertexBufferS() noexcept {
     return alloc_handle<MetalVertexBuffer, HwVertexBuffer>();
 }
 
-Driver::IndexBufferHandle MetalDriver::createIndexBufferS() noexcept {
+Handle<HwIndexBuffer> MetalDriver::createIndexBufferS() noexcept {
     return alloc_handle<MetalIndexBuffer, HwIndexBuffer>();
 }
 
-Driver::TextureHandle MetalDriver::createTextureS() noexcept {
+Handle<HwTexture> MetalDriver::createTextureS() noexcept {
     return alloc_handle<MetalTexture, HwTexture>();
 }
 
-Driver::SamplerGroupHandle MetalDriver::createSamplerGroupS() noexcept {
+Handle<HwSamplerGroup> MetalDriver::createSamplerGroupS() noexcept {
     return alloc_handle<MetalSamplerGroup, HwSamplerGroup>();
 }
 
-Driver::UniformBufferHandle MetalDriver::createUniformBufferS() noexcept {
+Handle<HwUniformBuffer> MetalDriver::createUniformBufferS() noexcept {
     return alloc_handle<MetalUniformBuffer, HwUniformBuffer>();
 }
 
-Driver::RenderPrimitiveHandle MetalDriver::createRenderPrimitiveS() noexcept {
+Handle<HwRenderPrimitive> MetalDriver::createRenderPrimitiveS() noexcept {
     return alloc_handle<MetalRenderPrimitive, HwRenderPrimitive>();
 }
 
-Driver::ProgramHandle MetalDriver::createProgramS() noexcept {
+Handle<HwProgram> MetalDriver::createProgramS() noexcept {
     return alloc_handle<MetalProgram, HwProgram>();
 }
 
-Driver::RenderTargetHandle MetalDriver::createDefaultRenderTargetS() noexcept {
+Handle<HwRenderTarget> MetalDriver::createDefaultRenderTargetS() noexcept {
     return alloc_handle<MetalRenderTarget, HwRenderTarget>();
 }
 
-Driver::RenderTargetHandle MetalDriver::createRenderTargetS() noexcept {
+Handle<HwRenderTarget> MetalDriver::createRenderTargetS() noexcept {
     return alloc_handle<MetalRenderTarget, HwRenderTarget>();
 }
 
-Driver::FenceHandle MetalDriver::createFenceS() noexcept {
+Handle<HwFence> MetalDriver::createFenceS() noexcept {
     return {};
 }
 
-Driver::SwapChainHandle MetalDriver::createSwapChainS() noexcept {
+Handle<HwSwapChain> MetalDriver::createSwapChainS() noexcept {
     return alloc_handle<MetalSwapChain, HwSwapChain>();
 }
 
-Driver::StreamHandle MetalDriver::createStreamFromTextureIdS() noexcept {
+Handle<HwStream> MetalDriver::createStreamFromTextureIdS() noexcept {
     return {};
 }
 
-void MetalDriver::destroyVertexBuffer(Driver::VertexBufferHandle vbh) {
+void MetalDriver::destroyVertexBuffer(Handle<HwVertexBuffer> vbh) {
     if (vbh) {
         destruct_handle<MetalVertexBuffer>(mHandleMap, vbh);
     }
 }
 
-void MetalDriver::destroyIndexBuffer(Driver::IndexBufferHandle ibh) {
+void MetalDriver::destroyIndexBuffer(Handle<HwIndexBuffer> ibh) {
     if (ibh) {
         destruct_handle<MetalIndexBuffer>(mHandleMap, ibh);
     }
 }
 
-void MetalDriver::destroyRenderPrimitive(Driver::RenderPrimitiveHandle rph) {
+void MetalDriver::destroyRenderPrimitive(Handle<HwRenderPrimitive> rph) {
     if (rph) {
         destruct_handle<MetalRenderPrimitive>(mHandleMap, rph);
     }
 }
 
-void MetalDriver::destroyProgram(Driver::ProgramHandle ph) {
+void MetalDriver::destroyProgram(Handle<HwProgram> ph) {
     if (ph) {
         destruct_handle<MetalProgram>(mHandleMap, ph);
     }
 }
 
-void MetalDriver::destroySamplerGroup(Driver::SamplerGroupHandle sbh) {
+void MetalDriver::destroySamplerGroup(Handle<HwSamplerGroup> sbh) {
     if (sbh) {
         destruct_handle<MetalSamplerGroup>(mHandleMap, sbh);
     }
 }
 
-void MetalDriver::destroyUniformBuffer(Driver::UniformBufferHandle ubh) {
+void MetalDriver::destroyUniformBuffer(Handle<HwUniformBuffer> ubh) {
     if (ubh) {
         destruct_handle<MetalUniformBuffer>(mHandleMap, ubh);
     }
 }
 
-void MetalDriver::destroyTexture(Driver::TextureHandle th) {
+void MetalDriver::destroyTexture(Handle<HwTexture> th) {
     if (th) {
         destruct_handle<MetalTexture>(mHandleMap, th);
     }
 }
 
-void MetalDriver::destroyRenderTarget(Driver::RenderTargetHandle rth) {
+void MetalDriver::destroyRenderTarget(Handle<HwRenderTarget> rth) {
     if (rth) {
         destruct_handle<MetalRenderTarget>(mHandleMap, rth);
     }
 }
 
-void MetalDriver::destroySwapChain(Driver::SwapChainHandle sch) {
+void MetalDriver::destroySwapChain(Handle<HwSwapChain> sch) {
     if (sch) {
         destruct_handle<MetalSwapChain>(mHandleMap, sch);
     }
 }
 
-void MetalDriver::destroyStream(Driver::StreamHandle sh) {
+void MetalDriver::destroyStream(Handle<HwStream> sh) {
     // no-op
 }
 
@@ -300,16 +300,16 @@ ShaderModel MetalDriver::getShaderModel() const noexcept {
 #endif
 }
 
-Driver::StreamHandle MetalDriver::createStream(void* stream) {
+Handle<HwStream> MetalDriver::createStream(void* stream) {
     return {};
 }
 
-void MetalDriver::setStreamDimensions(Driver::StreamHandle stream, uint32_t width,
+void MetalDriver::setStreamDimensions(Handle<HwStream> stream, uint32_t width,
         uint32_t height) {
 
 }
 
-int64_t MetalDriver::getStreamTimestamp(Driver::StreamHandle stream) {
+int64_t MetalDriver::getStreamTimestamp(Handle<HwStream> stream) {
     return 0;
 }
 
@@ -317,20 +317,20 @@ void MetalDriver::updateStreams(driver::DriverApi* driver) {
 
 }
 
-void MetalDriver::destroyFence(Driver::FenceHandle fh) {
+void MetalDriver::destroyFence(Handle<HwFence> fh) {
 
 }
 
-Driver::FenceStatus MetalDriver::wait(Driver::FenceHandle fh, uint64_t timeout) {
+FenceStatus MetalDriver::wait(Handle<HwFence> fh, uint64_t timeout) {
     return FenceStatus::ERROR;
 }
 
-bool MetalDriver::isTextureFormatSupported(Driver::TextureFormat format) {
+bool MetalDriver::isTextureFormatSupported(TextureFormat format) {
     return getMetalFormat(format) != MTLPixelFormatInvalid ||
            TextureReshaper::canReshapeTextureFormat(format);
 }
 
-bool MetalDriver::isRenderTargetFormatSupported(Driver::TextureFormat format) {
+bool MetalDriver::isRenderTargetFormatSupported(TextureFormat format) {
     MTLPixelFormat mtlFormat = getMetalFormat(format);
     // RGB9E5 isn't supported on Mac as a color render target.
     return mtlFormat != MTLPixelFormatInvalid && mtlFormat != MTLPixelFormatRGB9E5Float;
@@ -343,43 +343,43 @@ bool MetalDriver::isFrameTimeSupported() {
 // TODO: the implementations here for updateVertexBuffer and updateIndexBuffer assume static usage.
 // Dynamically updated vertex / index buffers will require synchronization.
 
-void MetalDriver::updateVertexBuffer(Driver::VertexBufferHandle vbh, size_t index,
-        Driver::BufferDescriptor&& data, uint32_t byteOffset) {
+void MetalDriver::updateVertexBuffer(Handle<HwVertexBuffer> vbh, size_t index,
+        BufferDescriptor&& data, uint32_t byteOffset) {
     assert(byteOffset == 0);    // TODO: handle byteOffset for vertex buffers
     auto* vb = handle_cast<MetalVertexBuffer>(mHandleMap, vbh);
     memcpy(vb->buffers[index].contents, data.buffer, data.size);
 }
 
-void MetalDriver::updateIndexBuffer(Driver::IndexBufferHandle ibh, Driver::BufferDescriptor&& data,
+void MetalDriver::updateIndexBuffer(Handle<HwIndexBuffer> ibh, BufferDescriptor&& data,
         uint32_t byteOffset) {
     assert(byteOffset == 0);    // TODO: handle byteOffset for index buffers
     auto* ib = handle_cast<MetalIndexBuffer>(mHandleMap, ibh);
     memcpy(ib->buffer.contents, data.buffer, data.size);
 }
 
-void MetalDriver::update2DImage(Driver::TextureHandle th, uint32_t level, uint32_t xoffset,
-        uint32_t yoffset, uint32_t width, uint32_t height, Driver::PixelBufferDescriptor&& data) {
+void MetalDriver::update2DImage(Handle<HwTexture> th, uint32_t level, uint32_t xoffset,
+        uint32_t yoffset, uint32_t width, uint32_t height, PixelBufferDescriptor&& data) {
     auto tex = handle_cast<MetalTexture>(mHandleMap, th);
     tex->load2DImage(level, xoffset, yoffset, width, height, data);
     scheduleDestroy(std::move(data));
 }
 
-void MetalDriver::updateCubeImage(Driver::TextureHandle th, uint32_t level,
-        Driver::PixelBufferDescriptor&& data, Driver::FaceOffsets faceOffsets) {
+void MetalDriver::updateCubeImage(Handle<HwTexture> th, uint32_t level,
+        PixelBufferDescriptor&& data, FaceOffsets faceOffsets) {
     auto tex = handle_cast<MetalTexture>(mHandleMap, th);
     tex->loadCubeImage(data, faceOffsets, level);
     scheduleDestroy(std::move(data));
 }
 
-void MetalDriver::setExternalImage(Driver::TextureHandle th, void* image) {
+void MetalDriver::setExternalImage(Handle<HwTexture> th, void* image) {
 
 }
 
-void MetalDriver::setExternalStream(Driver::TextureHandle th, Driver::StreamHandle sh) {
+void MetalDriver::setExternalStream(Handle<HwTexture> th, Handle<HwStream> sh) {
 
 }
 
-void MetalDriver::generateMipmaps(Driver::TextureHandle th) {
+void MetalDriver::generateMipmaps(Handle<HwTexture> th) {
 
 }
 
@@ -387,21 +387,21 @@ bool MetalDriver::canGenerateMipmaps() {
     return false;
 }
 
-void MetalDriver::updateUniformBuffer(Driver::UniformBufferHandle ubh,
-        Driver::BufferDescriptor&& data) {
+void MetalDriver::updateUniformBuffer(Handle<HwUniformBuffer> ubh,
+        BufferDescriptor&& data) {
     auto buffer = handle_cast<MetalUniformBuffer>(mHandleMap, ubh);
     buffer->copyIntoBuffer(data.buffer, data.size);
     scheduleDestroy(std::move(data));
 }
 
-void MetalDriver::updateSamplerGroup(Driver::SamplerGroupHandle sbh,
+void MetalDriver::updateSamplerGroup(Handle<HwSamplerGroup> sbh,
         SamplerGroup&& samplerGroup) {
     auto sb = handle_cast<MetalSamplerGroup>(mHandleMap, sbh);
     *sb->sb = samplerGroup;
 }
 
-void MetalDriver::beginRenderPass(Driver::RenderTargetHandle rth,
-        const Driver::RenderPassParams& params) {
+void MetalDriver::beginRenderPass(Handle<HwRenderTarget> rth,
+        const RenderPassParams& params) {
     auto renderTarget = handle_cast<MetalRenderTarget>(mHandleMap, rth);
     mContext->currentRenderTarget = renderTarget;
     mContext->currentRenderPassFlags = params.flags;
@@ -479,27 +479,27 @@ void MetalDriver::endRenderPass(int dummy) {
     mContext->currentCommandEncoder = nullptr;
 }
 
-void MetalDriver::discardSubRenderTargetBuffers(Driver::RenderTargetHandle rth,
-        Driver::TargetBufferFlags targetBufferFlags, uint32_t left, uint32_t bottom, uint32_t width,
+void MetalDriver::discardSubRenderTargetBuffers(Handle<HwRenderTarget> rth,
+        TargetBufferFlags targetBufferFlags, uint32_t left, uint32_t bottom, uint32_t width,
         uint32_t height) {
 
 }
 
-void MetalDriver::resizeRenderTarget(Driver::RenderTargetHandle rth, uint32_t width,
+void MetalDriver::resizeRenderTarget(Handle<HwRenderTarget> rth, uint32_t width,
         uint32_t height) {
 
 }
 
-void MetalDriver::setRenderPrimitiveBuffer(Driver::RenderPrimitiveHandle rph,
-        Driver::VertexBufferHandle vbh, Driver::IndexBufferHandle ibh, uint32_t enabledAttributes) {
+void MetalDriver::setRenderPrimitiveBuffer(Handle<HwRenderPrimitive> rph,
+        Handle<HwVertexBuffer> vbh, Handle<HwIndexBuffer> ibh, uint32_t enabledAttributes) {
     auto primitive = handle_cast<MetalRenderPrimitive>(mHandleMap, rph);
     auto vertexBuffer = handle_cast<MetalVertexBuffer>(mHandleMap, vbh);
     auto indexBuffer = handle_cast<MetalIndexBuffer>(mHandleMap, ibh);
     primitive->setBuffers(vertexBuffer, indexBuffer, enabledAttributes);
 }
 
-void MetalDriver::setRenderPrimitiveRange(Driver::RenderPrimitiveHandle rph,
-        Driver::PrimitiveType pt, uint32_t offset, uint32_t minIndex, uint32_t maxIndex,
+void MetalDriver::setRenderPrimitiveRange(Handle<HwRenderPrimitive> rph,
+        PrimitiveType pt, uint32_t offset, uint32_t minIndex, uint32_t maxIndex,
         uint32_t count) {
     auto primitive = handle_cast<MetalRenderPrimitive>(mHandleMap, rph);
     primitive->type = pt;
@@ -514,20 +514,20 @@ void MetalDriver::setViewportScissor(int32_t left, int32_t bottom, uint32_t widt
 
 }
 
-void MetalDriver::makeCurrent(Driver::SwapChainHandle schDraw, Driver::SwapChainHandle schRead) {
+void MetalDriver::makeCurrent(Handle<HwSwapChain> schDraw, Handle<HwSwapChain> schRead) {
     ASSERT_PRECONDITION_NON_FATAL(schDraw == schRead,
                                   "Metal driver does not support distinct draw/read swap chains.");
     auto* swapChain = handle_cast<MetalSwapChain>(mHandleMap, schDraw);
     mContext->currentSurface = swapChain;
 }
 
-void MetalDriver::commit(Driver::SwapChainHandle sch) {
+void MetalDriver::commit(Handle<HwSwapChain> sch) {
     [mContext->currentCommandBuffer presentDrawable:mContext->currentDrawable];
     [mContext->currentCommandBuffer commit];
     mContext->currentDrawable = nil;
 }
 
-void MetalDriver::bindUniformBuffer(size_t index, Driver::UniformBufferHandle ubh) {
+void MetalDriver::bindUniformBuffer(size_t index, Handle<HwUniformBuffer> ubh) {
     mContext->uniformState[index].updateState(UniformBufferState {
         .bound = true,
         .ubh = ubh,
@@ -535,7 +535,7 @@ void MetalDriver::bindUniformBuffer(size_t index, Driver::UniformBufferHandle ub
     });
 }
 
-void MetalDriver::bindUniformBufferRange(size_t index, Driver::UniformBufferHandle ubh,
+void MetalDriver::bindUniformBufferRange(size_t index, Handle<HwUniformBuffer> ubh,
         size_t offset, size_t size) {
     mContext->uniformState[index].updateState(UniformBufferState {
         .bound = true,
@@ -544,7 +544,7 @@ void MetalDriver::bindUniformBufferRange(size_t index, Driver::UniformBufferHand
     });
 }
 
-void MetalDriver::bindSamplers(size_t index, Driver::SamplerGroupHandle sbh) {
+void MetalDriver::bindSamplers(size_t index, Handle<HwSamplerGroup> sbh) {
     auto sb = handle_cast<MetalSamplerGroup>(mHandleMap, sbh);
     mContext->samplerBindings[index] = sb;
 }
@@ -561,23 +561,23 @@ void MetalDriver::popGroupMarker(int dummy) {
 
 }
 
-void MetalDriver::readPixels(Driver::RenderTargetHandle src, uint32_t x, uint32_t y, uint32_t width,
-        uint32_t height, Driver::PixelBufferDescriptor&& data) {
+void MetalDriver::readPixels(Handle<HwRenderTarget> src, uint32_t x, uint32_t y, uint32_t width,
+        uint32_t height, PixelBufferDescriptor&& data) {
 
 }
 
-void MetalDriver::readStreamPixels(Driver::StreamHandle sh, uint32_t x, uint32_t y, uint32_t width,
-        uint32_t height, Driver::PixelBufferDescriptor&& data) {
+void MetalDriver::readStreamPixels(Handle<HwStream> sh, uint32_t x, uint32_t y, uint32_t width,
+        uint32_t height, PixelBufferDescriptor&& data) {
 
 }
 
-void MetalDriver::blit(Driver::TargetBufferFlags buffers,
-        Driver::RenderTargetHandle dst, driver::Viewport dstRect,
-        Driver::RenderTargetHandle src, driver::Viewport srcRect,
-        Driver::SamplerMagFilter filter) {
+void MetalDriver::blit(TargetBufferFlags buffers,
+        Handle<HwRenderTarget> dst, driver::Viewport dstRect,
+        Handle<HwRenderTarget> src, driver::Viewport srcRect,
+        SamplerMagFilter filter) {
 }
 
-void MetalDriver::draw(Driver::PipelineState ps, Driver::RenderPrimitiveHandle rph) {
+void MetalDriver::draw(PipelineState ps, Handle<HwRenderPrimitive> rph) {
     ASSERT_PRECONDITION(mContext->currentCommandEncoder != nullptr,
             "Attempted to draw without a valid command encoder.");
     auto primitive = handle_cast<MetalRenderPrimitive>(mHandleMap, rph);
@@ -758,11 +758,11 @@ void MetalDriver::enumerateSamplerGroups(
 }
 
 } // namespace metal
-} // namespace driver
 
 // explicit instantiation of the Dispatcher
-template class ConcreteDispatcher<driver::metal::MetalDriver>;
+template class ConcreteDispatcher<metal::MetalDriver>;
 
+} // namespace driver
 } // namespace filament
 
 #pragma clang diagnostic pop

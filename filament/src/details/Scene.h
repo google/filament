@@ -83,11 +83,11 @@ public:
     void terminate(FEngine& engine);
 
     void prepare(const math::mat4f& worldOriginTransform);
-    void prepareDynamicLights(const CameraInfo& camera, ArenaScope& arena, Handle<HwUniformBuffer> lightUbh) noexcept;
+    void prepareDynamicLights(const CameraInfo& camera, ArenaScope& arena, driver::Handle<driver::HwUniformBuffer> lightUbh) noexcept;
     void computeBounds(Aabb& castersBox, Aabb& receiversBox, uint32_t visibleLayers) const noexcept;
 
 
-    filament::Handle<HwUniformBuffer> getRenderableUBO() const noexcept {
+    filament::driver::Handle<driver::HwUniformBuffer> getRenderableUBO() const noexcept {
         return mRenderableViewUbh;
     }
 
@@ -116,7 +116,7 @@ public:
             utils::EntityInstance<RenderableManager>,
             math::mat4f,
             FRenderableManager::Visibility,
-            Handle<HwUniformBuffer>,
+            driver::Handle<driver::HwUniformBuffer>,
             math::float3,
             Culler::result_type,
             uint8_t,
@@ -163,7 +163,7 @@ public:
     LightSoa const& getLightData() const noexcept { return mLightData; }
     LightSoa& getLightData() noexcept { return mLightData; }
 
-    void updateUBOs(utils::Range<uint32_t> visibleRenderables, Handle<HwUniformBuffer> renderableUbh) noexcept;
+    void updateUBOs(utils::Range<uint32_t> visibleRenderables, driver::Handle<driver::HwUniformBuffer> renderableUbh) noexcept;
 
 private:
     static inline void computeLightRanges(math::float2* zrange,
@@ -192,7 +192,7 @@ private:
      */
     RenderableSoa mRenderableData;
     LightSoa mLightData;
-    Handle<HwUniformBuffer> mRenderableViewUbh; // This is actually owned by the view.
+    driver::Handle<driver::HwUniformBuffer> mRenderableViewUbh; // This is actually owned by the view.
 };
 
 FILAMENT_UPCAST(Scene)

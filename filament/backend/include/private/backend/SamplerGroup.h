@@ -29,6 +29,7 @@
 #include "private/backend/Handle.h"
 
 namespace filament {
+namespace driver {
 
 class SamplerGroup {
 public:
@@ -95,6 +96,7 @@ private:
     uint8_t mSize = 0;
 };
 
+} // namespace driver
 } // namespace filament
 
 #endif // TNT_FILAMENT_SAMPLERGROUP_H

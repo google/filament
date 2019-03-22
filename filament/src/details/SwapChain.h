@@ -55,12 +55,12 @@ public:
         return (mConfigFlags & CONFIG_READABLE) != 0;
     }
 
-    Handle<HwSwapChain> getHwHandle() const noexcept {
+    driver::Handle<driver::HwSwapChain> getHwHandle() const noexcept {
       return mSwapChain;
     }
 
 private:
-    Handle<HwSwapChain> mSwapChain;
+    driver::Handle<driver::HwSwapChain> mSwapChain;
     void* mNativeWindow = nullptr;
     uint64_t mConfigFlags = 0;
 };

@@ -16,15 +16,19 @@
 
 #include "private/backend/Handle.h"
 
-#include <string>
+#ifndef NDEBUG
+#   include <string>
+#endif
 
 #include <utils/CallStack.h>
 
 using namespace utils;
 
 namespace filament {
+namespace driver {
 
-#if !defined(NDEBUG)
+#ifndef NDEBUG
+
 static char const * const kOurNamespace = "filament::";
 
 // removes all occurrences of "what" from "str"
@@ -64,6 +68,8 @@ template io::ostream& operator<<(io::ostream& out, const Handle<HwRenderTarget>&
 template io::ostream& operator<<(io::ostream& out, const Handle<HwFence>& h) noexcept;
 template io::ostream& operator<<(io::ostream& out, const Handle<HwSwapChain>& h) noexcept;
 template io::ostream& operator<<(io::ostream& out, const Handle<HwStream>& h) noexcept;
+
 #endif
 
+} // namespace driver
 } // namespace filament

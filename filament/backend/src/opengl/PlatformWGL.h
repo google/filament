@@ -29,7 +29,7 @@ namespace filament {
 
 class PlatformWGL final : public driver::OpenGLPlatform {
 public:
-    Driver* createDriver(void* const sharedGLContext) noexcept override;
+    driver::Driver* createDriver(void* const sharedGLContext) noexcept override;
     void terminate() noexcept override;
 
     SwapChain* createSwapChain(void* nativewindow, uint64_t& flags) noexcept override;

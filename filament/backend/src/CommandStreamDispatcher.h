@@ -1,5 +1,3 @@
-#include <utility>
-
 /*
  * Copyright (C) 2018 The Android Open Source Project
  *
@@ -26,8 +24,9 @@
 #include <utils/Systrace.h>
 
 #include <cstddef>
-#include <stdint.h>
+#include <utility>
 
+#include <stdint.h>
 
 #define DEBUG_LEVEL_NONE       0
 #define DEBUG_LEVEL_SYSTRACE   1
@@ -45,6 +44,7 @@
 #endif
 
 namespace filament {
+namespace driver {
 
 template<typename ConcreteDriver>
 class ConcreteDispatcher final : public Dispatcher {
@@ -75,6 +75,7 @@ private:
 #include "private/backend/DriverAPI.inc"
 };
 
+} // namespace driver
 } // namespace filament
 
 #endif // TNT_FILAMENT_DRIVER_COMMANDSTREAM_DISPATCHER_H

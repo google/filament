@@ -23,7 +23,9 @@
 
 namespace filament {
 
+namespace driver {
 class Driver;
+} // namespace driver
 
 namespace driver {
 
@@ -46,7 +48,7 @@ public:
     // Creates and initializes the low-level API (e.g. an OpenGL context or Vulkan instance),
     // then creates the concrete Driver. Returns null on failure.
     // The caller takes ownership of the returned Driver* and must destroy it with delete.
-    virtual Driver* createDriver(void* sharedContext) noexcept = 0;
+    virtual driver::Driver* createDriver(void* sharedContext) noexcept = 0;
 };
 
 class UTILS_PUBLIC OpenGLPlatform : public Platform {

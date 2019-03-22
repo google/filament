@@ -59,7 +59,7 @@ private:
     ShaderModel getShaderModel() const noexcept final;
 
     template<typename T>
-    friend class ::filament::ConcreteDispatcher;
+    friend class driver::ConcreteDispatcher;
 
 #define DECL_DRIVER_API(methodName, paramsDecl, params) \
     UTILS_ALWAYS_INLINE void methodName(paramsDecl);

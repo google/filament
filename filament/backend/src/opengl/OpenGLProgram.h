@@ -33,10 +33,10 @@
 
 namespace filament {
 
-class OpenGLProgram : public HwProgram {
+class OpenGLProgram : public driver::HwProgram {
 public:
 
-    OpenGLProgram(OpenGLDriver* gl, const Program& builder) noexcept;
+    OpenGLProgram(OpenGLDriver* gl, const driver::Program& builder) noexcept;
     ~OpenGLProgram() noexcept;
 
     bool isValid() const noexcept { return mIsValid; }
@@ -60,7 +60,7 @@ public:
     }
 
     struct {
-        GLuint shaders[Program::NUM_SHADER_TYPES];
+        GLuint shaders[driver::Program::NUM_SHADER_TYPES];
         GLuint program;
     } gl; // 12 bytes
 
@@ -68,8 +68,8 @@ public:
 
 private:
     static constexpr uint8_t NUM_TEXTURE_UNITS = OpenGLDriver::MAX_TEXTURE_UNITS;
-    static constexpr uint8_t VERTEX_SHADER_BIT   = uint8_t(1) << size_t(Program::Shader::VERTEX);
-    static constexpr uint8_t FRAGMENT_SHADER_BIT = uint8_t(1) << size_t(Program::Shader::FRAGMENT);
+    static constexpr uint8_t VERTEX_SHADER_BIT   = uint8_t(1) << size_t(driver::Program::Shader::VERTEX);
+    static constexpr uint8_t FRAGMENT_SHADER_BIT = uint8_t(1) << size_t(driver::Program::Shader::FRAGMENT);
 
     struct BlockInfo {
         uint8_t binding : 3;    // binding (i.e.: index in mSamplerBindings)
@@ -80,7 +80,7 @@ private:
         static_assert(NUM_TEXTURE_UNITS <= 16, "NUM_TEXTURE_UNITS must be <= 16");
 
         // if NUM_SAMPLER_BINDINGS > 8, the binding bitfield must be increased accordingly
-        static_assert(Program::NUM_SAMPLER_BINDINGS <= 8, "NUM_SAMPLER_BINDINGS must be <= 8");
+        static_assert(driver::Program::NUM_SAMPLER_BINDINGS <= 8, "NUM_SAMPLER_BINDINGS must be <= 8");
     };
 
     uint8_t mUsedBindingsCount = 0;
@@ -88,7 +88,7 @@ private:
     bool mIsValid = false;
 
     // information about each USED sampler buffer (no gaps)
-    std::array<BlockInfo, Program::NUM_SAMPLER_BINDINGS> mBlockInfos;   // 8 bytes
+    std::array<BlockInfo, driver::Program::NUM_SAMPLER_BINDINGS> mBlockInfos;   // 8 bytes
 
     // runs of indices into SamplerGroup -- run start index and size given by BlockInfo
     std::array<uint8_t, NUM_TEXTURE_UNITS> mIndicesRuns;    // 16 bytes
