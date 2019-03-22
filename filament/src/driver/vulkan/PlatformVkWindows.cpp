@@ -43,8 +43,7 @@ void* PlatformVkWindows::createVkSurfaceKHR(void* nativeWindow, void* instance,
         uint32_t* width, uint32_t* height) noexcept {
     VkSurfaceKHR surface = nullptr;
 
-    HDC deviceContext = (HDC) nativeWindow;
-    HWND window = WindowFromDC(deviceContext);
+    HWND window = (HWND) nativeWindow;
 
     VkWin32SurfaceCreateInfoKHR createInfo = {};
     createInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;

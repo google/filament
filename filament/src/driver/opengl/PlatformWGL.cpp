@@ -158,8 +158,8 @@ void PlatformWGL::terminate() noexcept {
 }
 
 Platform::SwapChain* PlatformWGL::createSwapChain(void* nativeWindow, uint64_t& flags) noexcept {
-    // on Windows, the nativeWindow maps directly to a HDC
-    HDC hdc = (HDC) nativeWindow;
+    // on Windows, the nativeWindow maps to a HWND
+    HDC hdc = GetDC((HWND) nativeWindow);
     if (!ASSERT_POSTCONDITION_NON_FATAL(hdc,
             "Unable to create the SwapChain (nativeWindow = %p)", nativeWindow)) {
         reportLastWindowsError();
@@ -169,11 +169,14 @@ Platform::SwapChain* PlatformWGL::createSwapChain(void* nativeWindow, uint64_t& 
     int pixelFormat = ChoosePixelFormat(hdc, &mPfd);
     SetPixelFormat(hdc, pixelFormat, &mPfd);
 
-    SwapChain* swapChain = (SwapChain *)hdc;
+    SwapChain* swapChain = (SwapChain*) hdc;
     return swapChain;
 }
 
 void PlatformWGL::destroySwapChain(Platform::SwapChain* swapChain) noexcept {
+    HDC dc = (HDC) swapChain;
+    HWND window = WindowFromDC(dc);
+    ReleaseDC(window, dc);
     // make this swapChain not current (by making a dummy one current)
     wglMakeCurrent(mWhdc, mContext);
 }

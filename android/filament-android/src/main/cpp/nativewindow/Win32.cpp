@@ -27,29 +27,6 @@
 
 extern "C" {
 
-void chooseAndSetPixelFormat(HDC dc) {
-    PIXELFORMATDESCRIPTOR pfd = {
-            sizeof(PIXELFORMATDESCRIPTOR),
-            1,
-            PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL  | PFD_DOUBLEBUFFER,
-            PFD_TYPE_RGBA,
-            32,                   // Colordepth of the framebuffer.
-            0, 0, 0, 0, 0, 0,
-            0,
-            0,
-            0,
-            0, 0, 0, 0,
-            24,                   // Number of bits for the depthbuffer
-            0,                    // Number of bits for the stencilbuffer
-            0,                    // Number of aux buffers in the framebuffer.
-            PFD_MAIN_PLANE,
-            0,
-            0, 0, 0
-    };
-    int pixelFormat = ChoosePixelFormat(dc, &pfd);
-    SetPixelFormat(dc, pixelFormat, &pfd);
-}
-
 void* getNativeWindow(JNIEnv* env, jclass, jobject surface) {
     JAWT_DrawingSurface* ds = nullptr;
     JAWT_DrawingSurfaceInfo* dsi = nullptr;
@@ -61,11 +38,9 @@ void* getNativeWindow(JNIEnv* env, jclass, jobject surface) {
     JAWT_Win32DrawingSurfaceInfo* dsi_win32 = (JAWT_Win32DrawingSurfaceInfo*) dsi->platformInfo;
     HWND hWnd = dsi_win32->hwnd;
 
-    chooseAndSetPixelFormat(dsi_win32->hdc);
-
     releaseDrawingSurface(ds, dsi);
 
-    return (void*) GetDC(hWnd);
+    return (void*) hWnd;
 }
 
 
@@ -81,16 +56,11 @@ jlong createNativeSurface(jint width, jint height) {
     HWND window = CreateWindowA("STATIC", "dummy", 0, 0, 0, width, height, NULL, NULL, NULL, NULL);
     SetWindowLong(window, GWL_STYLE, 0); //remove all window styles
 
-    HDC dc = GetDC(window);
-    chooseAndSetPixelFormat(dc);
-
-    return (jlong) dc;
+    return (jlong) window;
 }
 
 void destroyNativeSurface(jlong surface) {
-    HDC dc = (HDC) surface;
-    HWND window = WindowFromDC(dc);
-    ReleaseDC(window, dc);
+    HWND window = (HWND) surface;
     DestroyWindow(window);
 }
 
