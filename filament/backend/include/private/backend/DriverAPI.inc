@@ -265,9 +265,9 @@ DECL_DRIVER_API_R_8(driver::RenderTargetHandle, createRenderTarget,
         uint32_t, height,
         uint8_t, samples,
         driver::TextureFormat, format,
-        driver::Driver::TargetBufferInfo, color,
-        driver::Driver::TargetBufferInfo, depth,
-        driver::Driver::TargetBufferInfo, stencil)
+        driver::TargetBufferInfo, color,
+        driver::TargetBufferInfo, depth,
+        driver::TargetBufferInfo, stencil)
 
 DECL_DRIVER_API_R_0(driver::FenceHandle, createFence)
 
@@ -485,7 +485,7 @@ DECL_DRIVER_API_6(blit,
         driver::SamplerMagFilter, filter)
 
 DECL_DRIVER_API_2(draw,
-        driver::Driver::PipelineState, state,
+        driver::PipelineState, state,
         driver::RenderPrimitiveHandle, rph)
 
 #pragma clang diagnostic pop

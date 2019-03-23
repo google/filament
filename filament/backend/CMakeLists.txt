@@ -11,7 +11,9 @@ set(GENERATION_ROOT ${CMAKE_CURRENT_BINARY_DIR})
 set(PUBLIC_HDRS
         include/backend/BufferDescriptor.h
         include/backend/PixelBufferDescriptor.h
+        include/backend/PipelineState.h
         include/backend/Platform.h
+        include/backend/TargetBufferInfo.h
 )
 
 set(SRCS

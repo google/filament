@@ -113,7 +113,7 @@ FrameGraphResource PostProcessManager::toneMapping(FrameGraph& fg, FrameGraphRes
             },
             [=](FrameGraphPassResources const& resources,
                     PostProcessToneMapping const& data, DriverApi& driver) {
-                Driver::PipelineState pipeline;
+                PipelineState pipeline;
                 pipeline.rasterState.culling = RasterState::CullingMode::NONE;
                 pipeline.rasterState.colorWrite = true;
                 pipeline.rasterState.depthFunc = RasterState::DepthFunc::A;
@@ -169,7 +169,7 @@ FrameGraphResource PostProcessManager::fxaa(FrameGraph& fg,
             },
             [=](FrameGraphPassResources const& resources,
                     PostProcessFXAA const& data, DriverApi& driver) {
-                Driver::PipelineState pipeline;
+                PipelineState pipeline;
                 pipeline.rasterState.culling = RasterState::CullingMode::NONE;
                 pipeline.rasterState.colorWrite = true;
                 pipeline.rasterState.depthFunc = RasterState::DepthFunc::A;
