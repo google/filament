@@ -37,6 +37,7 @@ namespace filament {
 
 namespace driver {
 class PixelBufferDescriptor;
+class TargetBufferInfo;
 } // namespace driver
 
 class OpenGLProgram;
@@ -284,7 +285,7 @@ private:
 
     /* Misc... */
 
-    void framebufferTexture(Driver::TargetBufferInfo& binfo, GLRenderTarget* rt, GLenum attachment) noexcept;
+    void framebufferTexture(driver::TargetBufferInfo& binfo, GLRenderTarget* rt, GLenum attachment) noexcept;
 
     void framebufferRenderbuffer(GLRenderTarget::GL::RenderBuffer* rb, GLenum attachment,
             GLenum internalformat, uint32_t width, uint32_t height, uint8_t samples, GLuint fbo) noexcept;

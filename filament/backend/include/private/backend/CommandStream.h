@@ -20,8 +20,18 @@
 #define TNT_FILAMENT_DRIVER_COMMANDSTREAM_H
 
 #include "private/backend/CircularBuffer.h"
+
+#include <backend/BufferDescriptor.h>
+#include <backend/PipelineState.h>
+#include <backend/PixelBufferDescriptor.h>
+#include <backend/TargetBufferInfo.h>
+
+#include "private/backend/DriverApi.h"
 #include "private/backend/Handle.h"
 #include "private/backend/Program.h"
+#include "private/backend/SamplerGroup.h"
+
+// FIXME: we'd like to not need this header here.
 #include "private/backend/Driver.h"
 
 #include <filament/backend/DriverEnums.h>

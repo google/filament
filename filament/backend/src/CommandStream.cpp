@@ -43,7 +43,7 @@ static void printParameterPack(io::ostream& out, const FIRST& first, const REMAI
 }
 
 static UTILS_NOINLINE UTILS_UNUSED std::string extractMethodName(std::string& command) noexcept {
-    constexpr const char startPattern[] = "::Command<&(filament::Driver::";
+    constexpr const char startPattern[] = "::Command<&(filament::driver::Driver::";
     auto pos = command.rfind(startPattern);
     auto end = command.rfind('(');
     pos += sizeof(startPattern) - 1;
@@ -128,7 +128,7 @@ void CommandType<void (Driver::*)(ARGS...)>::Command<METHOD>::log() noexcept  {
     template void CommandType<decltype(&Driver::methodName)>::Command<&Driver::methodName>::log();
 #define DECL_DRIVER_API_RETURN(RetType, methodName, paramsDecl, params) \
     template void CommandType<decltype(&Driver::methodName##R)>::Command<&Driver::methodName##R>::log();
-#include "DriverAPI.inc"
+#include "private/backend/DriverAPI.inc"
 #endif
 
 // ------------------------------------------------------------------------------------------------
@@ -483,11 +483,11 @@ io::ostream& operator<<(io::ostream& out, SamplerParams params) {
     return out;
 }
 
-io::ostream& operator<<(io::ostream& out, const Driver::AttributeArray& type) {
+io::ostream& operator<<(io::ostream& out, const AttributeArray& type) {
     return out << "AttributeArray[" << type.max_size() << "]{}";
 }
 
-io::ostream& operator<<(io::ostream& out, const Driver::FaceOffsets& type) {
+io::ostream& operator<<(io::ostream& out, const FaceOffsets& type) {
     return out << "FaceOffsets{"
            << type[0] << ", "
            << type[1] << ", "
@@ -497,7 +497,7 @@ io::ostream& operator<<(io::ostream& out, const Driver::FaceOffsets& type) {
            << type[5] << "}";
 }
 
-io::ostream& operator<<(io::ostream& out, const Driver::RasterState& rs) {
+io::ostream& operator<<(io::ostream& out, const RasterState& rs) {
     // TODO: implement decoding of enums
     return out << "RasterState{"
            << rs.culling << ", "
@@ -509,20 +509,20 @@ io::ostream& operator<<(io::ostream& out, const Driver::RasterState& rs) {
            << uint8_t(rs.blendFunctionDstAlpha) << "}";
 }
 
-io::ostream& operator<<(io::ostream& out, const Driver::TargetBufferInfo& tbi) {
+io::ostream& operator<<(io::ostream& out, const TargetBufferInfo& tbi) {
     return out << "TargetBufferInfo{"
            << "h=" << tbi.handle << ", "
            << "level=" << tbi.level << ", "
            << "face=" << tbi.face << "}";
 }
 
-io::ostream& operator<<(io::ostream& out, const Driver::PolygonOffset& po) {
+io::ostream& operator<<(io::ostream& out, const PolygonOffset& po) {
     return out << "PolygonOffset{"
            << "slope=" << po.slope << ", "
            << "constant=" << po.constant << "}";
 }
 
-io::ostream& operator<<(io::ostream& out, const Driver::PipelineState& ps) {
+io::ostream& operator<<(io::ostream& out, const PipelineState& ps) {
     return out << "PipelineState{"
            << "program=" << ps.program << ", "
            << "rasterState=" << ps.rasterState << ", "
@@ -530,7 +530,7 @@ io::ostream& operator<<(io::ostream& out, const Driver::PipelineState& ps) {
 }
 
 UTILS_PRIVATE
-io::ostream& operator<<(io::ostream& out, filament::driver::BufferDescriptor const& b) {
+io::ostream& operator<<(io::ostream& out, BufferDescriptor const& b) {
     out << "BufferDescriptor { buffer=" << b.buffer
     << ", size=" << b.size
     << ", callback=" << b.getCallback()
@@ -539,7 +539,7 @@ io::ostream& operator<<(io::ostream& out, filament::driver::BufferDescriptor con
 }
 
 UTILS_PRIVATE
-io::ostream& operator<<(io::ostream& out, filament::driver::PixelBufferDescriptor const& b) {
+io::ostream& operator<<(io::ostream& out, PixelBufferDescriptor const& b) {
     BufferDescriptor const& base = static_cast<BufferDescriptor const&>(b);
     out << "PixelBufferDescriptor { " << base
     << ", left=" << b.left
@@ -562,7 +562,7 @@ io::ostream& operator<<(io::ostream& out, filament::driver::Viewport const& view
 }
 
 UTILS_PRIVATE
-io::ostream& operator<<(io::ostream& out, filament::driver::RenderPassParams const& params) {
+io::ostream& operator<<(io::ostream& out, RenderPassParams const& params) {
     out << "RenderPassParams{"
         <<   "clear=" << params.flags.clear
         << ", discardStart=" << params.flags.discardStart

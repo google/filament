@@ -98,7 +98,7 @@ void RenderPass::render(
     }
 
     // Take care not to upload data within the render pass (synchronize can commit froxel data)
-    driver::DriverApi& driver = engine.getDriverApi();
+    DriverApi& driver = engine.getDriverApi();
     beginRenderPass(driver, viewport, camera);
 
     // Now, execute all commands
@@ -120,8 +120,8 @@ void RenderPass::recordDriverCommands(
     SYSTRACE_CALL();
 
     if (!commands.empty()) {
-        driver::Driver::PipelineState pipeline;
-        driver::Handle<driver::HwUniformBuffer> uboHandle = scene.getRenderableUBO();
+        PipelineState pipeline;
+        Handle<HwUniformBuffer> uboHandle = scene.getRenderableUBO();
         FMaterialInstance const* UTILS_RESTRICT mi = nullptr;
         FMaterial const* UTILS_RESTRICT ma = nullptr;
         Command const* UTILS_RESTRICT c;
@@ -485,12 +485,12 @@ void RenderPass::updateSummedPrimitiveCounts(
 // ------------------------------------------------------------------------------------------------
 
 FRenderer::ColorPass::ColorPass(const char* name,
-        JobSystem& js, JobSystem::Job* jobFroxelize, FView& view, driver::Handle<driver::HwRenderTarget> const rth)
+        JobSystem& js, JobSystem::Job* jobFroxelize, FView& view, Handle<HwRenderTarget> const rth)
         : RenderPass(name), js(js), jobFroxelize(jobFroxelize), view(view), rth(rth) {
 }
 
 void FRenderer::ColorPass::beginRenderPass(
-        driver::DriverApi& driver, filament::Viewport const& viewport, const CameraInfo& camera) noexcept {
+        DriverApi& driver, filament::Viewport const& viewport, const CameraInfo& camera) noexcept {
     // wait for froxelization to finish
     // (this could even be a special command between the depth and color passes)
     js.waitAndRelease(jobFroxelize);
@@ -547,7 +547,7 @@ void FRenderer::ColorPass::endRenderPass(DriverApi& driver, filament::Viewport c
 
 void FRenderer::ColorPass::renderColorPass(FEngine& engine,
         JobSystem& js, JobSystem::Job* sync,
-        driver::Handle<driver::HwRenderTarget> const rth, FView& view, filament::Viewport const& scaledViewport,
+        Handle<HwRenderTarget> const rth, FView& view, filament::Viewport const& scaledViewport,
         GrowingSlice<Command>& commands) noexcept {
 
     CameraInfo const& cameraInfo = view.getCameraInfo();
@@ -599,7 +599,7 @@ FRenderer::ShadowPass::ShadowPass(const char* name,
         : RenderPass(name), shadowMap(shadowMap) {
 }
 
-void FRenderer::ShadowPass::beginRenderPass(driver::DriverApi& driver,
+void FRenderer::ShadowPass::beginRenderPass(DriverApi& driver,
         filament::Viewport const&, const CameraInfo&) noexcept {
     shadowMap.beginRenderPass(driver);
 }
@@ -625,7 +625,7 @@ void FRenderer::ShadowPass::renderShadowMap(FEngine& engine, JobSystem& js,
     // populate the RenderPrimitive array with the proper LOD
     view.updatePrimitivesLod(engine, cameraInfo, soa, vr);
 
-    driver::DriverApi& driver = engine.getDriverApi();
+    DriverApi& driver = engine.getDriverApi();
     view.prepareCamera(cameraInfo, viewport);
     view.commitUniforms(driver);
 

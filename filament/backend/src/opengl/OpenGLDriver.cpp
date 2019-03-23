@@ -1044,7 +1044,7 @@ void OpenGLDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint
     CHECK_GL_ERROR(utils::slog.e)
 }
 
-void OpenGLDriver::framebufferTexture(Driver::TargetBufferInfo& binfo,
+void OpenGLDriver::framebufferTexture(driver::TargetBufferInfo& binfo,
         GLRenderTarget* rt, GLenum attachment) noexcept {
     GLTexture const* t = handle_cast<const GLTexture*>(binfo.handle);
 
@@ -1216,9 +1216,9 @@ void OpenGLDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
         uint32_t height,
         uint8_t samples,
         TextureFormat format,
-        Driver::TargetBufferInfo color,
-        Driver::TargetBufferInfo depth,
-        Driver::TargetBufferInfo stencil) {
+        TargetBufferInfo color,
+        TargetBufferInfo depth,
+        TargetBufferInfo stencil) {
     DEBUG_MARKER()
 
     GLRenderTarget* rt = construct<GLRenderTarget>(rth, width, height);
@@ -2918,9 +2918,7 @@ void OpenGLDriver::blit(TargetBufferFlags buffers,
     }
 }
 
-void OpenGLDriver::draw(
-        Driver::PipelineState state,
-        Handle<HwRenderPrimitive> rph) {
+void OpenGLDriver::draw(PipelineState state, Handle<HwRenderPrimitive> rph) {
     DEBUG_MARKER()
 
     OpenGLProgram* p = handle_cast<OpenGLProgram*>(state.program);

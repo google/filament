@@ -371,8 +371,8 @@ void VulkanDriver::createDefaultRenderTargetR(Handle<HwRenderTarget> rth, int) {
 
 void VulkanDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
         TargetBufferFlags targets, uint32_t width, uint32_t height, uint8_t samples,
-        TextureFormat format, Driver::TargetBufferInfo color, Driver::TargetBufferInfo depth,
-        Driver::TargetBufferInfo stencil) {
+        TextureFormat format, TargetBufferInfo color, TargetBufferInfo depth,
+        TargetBufferInfo stencil) {
     auto renderTarget = construct_handle<VulkanRenderTarget>(mHandleMap, rth, mContext,
             width, height, color.level);
     if (color.handle) {
@@ -947,7 +947,7 @@ void VulkanDriver::blit(TargetBufferFlags buffers,
     }
 }
 
-void VulkanDriver::draw(Driver::PipelineState pipelineState, Handle<HwRenderPrimitive> rph) {
+void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> rph) {
     VulkanCommandBuffer* commands = mContext.currentCommands;
     ASSERT_POSTCONDITION(commands, "Draw calls can occur only within a beginFrame / endFrame.");
     VkCommandBuffer cmdbuffer = commands->cmdbuffer;

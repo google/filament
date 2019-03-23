@@ -20,6 +20,8 @@
 #include <utils/compiler.h>
 #include <utils/CString.h>
 
+#include <backend/Platform.h>
+
 #include <filament/backend/DriverEnums.h>
 
 #include "private/backend/Driver.h"

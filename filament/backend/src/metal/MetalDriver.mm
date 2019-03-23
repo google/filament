@@ -129,8 +129,8 @@ void MetalDriver::createDefaultRenderTargetR(Handle<HwRenderTarget> rth, int dum
 
 void MetalDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
         TargetBufferFlags targetBufferFlags, uint32_t width, uint32_t height,
-        uint8_t samples, TextureFormat format, Driver::TargetBufferInfo color,
-        Driver::TargetBufferInfo depth, Driver::TargetBufferInfo stencil) {
+        uint8_t samples, TextureFormat format, TargetBufferInfo color,
+        TargetBufferInfo depth, TargetBufferInfo stencil) {
 
     auto getColorTexture = [&]() -> id<MTLTexture> {
         if (color.handle) {
@@ -577,7 +577,7 @@ void MetalDriver::blit(TargetBufferFlags buffers,
         SamplerMagFilter filter) {
 }
 
-void MetalDriver::draw(PipelineState ps, Handle<HwRenderPrimitive> rph) {
+void MetalDriver::draw(driver::PipelineState ps, Handle<HwRenderPrimitive> rph) {
     ASSERT_PRECONDITION(mContext->currentCommandEncoder != nullptr,
             "Attempted to draw without a valid command encoder.");
     auto primitive = handle_cast<MetalRenderPrimitive>(mHandleMap, rph);
