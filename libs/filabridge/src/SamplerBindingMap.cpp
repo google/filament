@@ -27,7 +27,7 @@ namespace filament {
 void SamplerBindingMap::populate(uint8_t firstSamplerBinding,
         const SamplerInterfaceBlock* perMaterialSib, const char* materialName) {
     uint8_t offset = firstSamplerBinding;
-    size_t maxSamplerIndex = firstSamplerBinding + filament::MAX_SAMPLER_COUNT - 1;
+    size_t maxSamplerIndex = firstSamplerBinding + driver::MAX_SAMPLER_COUNT - 1;
     bool overflow = false;
     for (uint8_t blockIndex = 0; blockIndex < filament::BindingPoints::COUNT; blockIndex++) {
         mSamplerBlockOffsets[blockIndex] = offset;
@@ -57,7 +57,7 @@ void SamplerBindingMap::populate(uint8_t firstSamplerBinding,
     // If an overflow occurred, go back through and list all sampler names. This is helpful to
     // material authors who need to understand where the samplers are coming from.
     if (overflow) {
-        utils::slog.e << "WARNING: Exceeded max sampler count of " << filament::MAX_SAMPLER_COUNT;
+        utils::slog.e << "WARNING: Exceeded max sampler count of " << driver::MAX_SAMPLER_COUNT;
         if (materialName) {
             utils::slog.e << " (" << materialName << ")";
         }

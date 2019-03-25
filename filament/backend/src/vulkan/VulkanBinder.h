@@ -17,7 +17,9 @@
 #ifndef TNT_FILAMENT_DRIVER_VULKANBINDER_H
 #define TNT_FILAMENT_DRIVER_VULKANBINDER_H
 
-#include <private/filament/EngineEnums.h>
+#include <filament/backend/DriverEnums.h>
+
+#include <private/backend/Program.h>
 
 #include <bluevk/BlueVK.h>
 #include <utils/Hash.h>
@@ -69,10 +71,10 @@ namespace driver {
 //
 class VulkanBinder {
 public:
-    static constexpr uint32_t NUM_UBUFFER_BINDINGS = filament::BindingPoints::COUNT;
-    static constexpr uint32_t NUM_SAMPLER_BINDINGS = filament::MAX_SAMPLER_COUNT;
+    static constexpr uint32_t NUM_UBUFFER_BINDINGS = Program::NUM_UNIFORM_BINDINGS;
+    static constexpr uint32_t NUM_SAMPLER_BINDINGS = driver::MAX_SAMPLER_COUNT;
     static constexpr uint32_t NUM_SHADER_MODULES = 2;
-    static constexpr uint32_t MAX_VERTEX_ATTRIBUTES = filament::ATTRIBUTE_INDEX_COUNT;
+    static constexpr uint32_t MAX_VERTEX_ATTRIBUTES = driver::MAX_VERTEX_ATTRIBUTE_COUNT;
 
     // The VertexArray POD is an array of buffer targets and an array of attributes that refer to
     // those targets. It does not include any references to actual buffers, so you can think of it
