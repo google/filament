@@ -197,7 +197,7 @@ void VulkanDriver::terminate() {
     VulkanCommandBuffer& work = mContext.work;
     VkDevice device = mContext.device;
     vkFreeCommandBuffers(device, mContext.commandPool, 1, &work.cmdbuffer);
-    vkDestroyFence(device, work.fence, VKALLOC);
+    work.fence.reset();
 
     mStagePool.reset();
     mBinder.destroyCache();
@@ -407,6 +407,16 @@ void VulkanDriver::destroyRenderTarget(Handle<HwRenderTarget> rth) {
 }
 
 void VulkanDriver::createFenceR(Handle<HwFence> fh, int) {
+    // We prefer the fence to be created inside a frame, otherwise there's no command buffer.
+    assert(mContext.currentCommands != nullptr && "Fences should be created within a frame.");
+
+     // As a fallback in release builds, trigger the fence based on the work command buffer.
+    if (mContext.currentCommands == nullptr) {
+        construct_handle<VulkanFence>(mHandleMap, fh, mContext.work);
+        return;
+    }
+
+     construct_handle<VulkanFence>(mHandleMap, fh, *mContext.currentCommands);
 }
 
 void VulkanDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow,
@@ -464,7 +474,7 @@ Handle<HwRenderTarget> VulkanDriver::createRenderTargetS() noexcept {
 }
 
 Handle<HwFence> VulkanDriver::createFenceS() noexcept {
-    return {};
+    return alloc_handle<VulkanFence, HwFence>();
 }
 
 Handle<HwSwapChain> VulkanDriver::createSwapChainS() noexcept {
@@ -499,7 +509,7 @@ void VulkanDriver::destroySwapChain(Handle<HwSwapChain> sch) {
             mDisposer.release(swapContext.commands.resources);
             vkFreeCommandBuffers(mContext.device, mContext.commandPool, 1,
                     &swapContext.commands.cmdbuffer);
-            vkDestroyFence(mContext.device, swapContext.commands.fence, VKALLOC);
+            swapContext.commands.fence.reset();
             vkDestroyImageView(mContext.device, swapContext.attachment.view, VKALLOC);
             swapContext.commands.fence = VK_NULL_HANDLE;
             swapContext.attachment.view = VK_NULL_HANDLE;
@@ -533,10 +543,13 @@ void VulkanDriver::updateStreams(CommandStream* driver) {
 }
 
 void VulkanDriver::destroyFence(Handle<HwFence> fh) {
+    destruct_handle<VulkanFence>(mHandleMap, fh);
 }
 
 FenceStatus VulkanDriver::wait(Handle<HwFence> fh, uint64_t timeout) {
-    return FenceStatus::ERROR;
+    VkFence fence = handle_cast<VulkanFence>(mHandleMap, fh)->fence->fence;
+    VkResult result = vkWaitForFences(mContext.device, 1, &fence, VK_FALSE, timeout);
+    return result == VK_SUCCESS ? FenceStatus::CONDITION_SATISFIED : FenceStatus::TIMEOUT_EXPIRED;
 }
 
 // We create all textures using VK_IMAGE_TILING_OPTIMAL, so our definition of "supported" is that
@@ -564,7 +577,7 @@ bool VulkanDriver::isRenderTargetFormatSupported(TextureFormat format) {
 }
 
 bool VulkanDriver::isFrameTimeSupported() {
-    return false;
+    return true;
 }
 
 void VulkanDriver::updateVertexBuffer(Handle<HwVertexBuffer> vbh, size_t index,
@@ -808,7 +821,8 @@ void VulkanDriver::commit(Handle<HwSwapChain> sch) {
             .signalSemaphoreCount = 1u,
             .pSignalSemaphores = &surfaceContext.renderingFinished,
     };
-    result = vkQueueSubmit(mContext.graphicsQueue, 1, &submitInfo, swapContext.commands.fence);
+    result = vkQueueSubmit(mContext.graphicsQueue, 1, &submitInfo,
+            swapContext.commands.fence->fence);
     ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkQueueSubmit error.");
     swapContext.commands.submitted = true;
 
