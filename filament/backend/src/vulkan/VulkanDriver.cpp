@@ -20,6 +20,7 @@
 
 #include "VulkanBuffer.h"
 #include "VulkanHandles.h"
+#include "VulkanPlatform.h"
 
 #include <utils/Panic.h>
 #include <utils/CString.h>

@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-#include "opengl/OpenGLProgram.h"
+#include "OpenGLProgram.h"
 
-#include "opengl/OpenGLDriver.h"
+#include "OpenGLDriver.h"
 
 #include <utils/Log.h>
 #include <utils/compiler.h>

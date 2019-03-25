@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "opengl/OpenGLDriver.h"
+#include "OpenGLDriver.h"
 
 #include <set>
 
@@ -25,10 +25,10 @@
 
 #include "private/backend/DriverApi.h"
 #include "CommandStreamDispatcher.h"
-#include "opengl/OpenGLProgram.h"
-#include "opengl/OpenGLBlitter.h"
+#include "OpenGLBlitter.h"
+#include "OpenGLPlatform.h"
+#include "OpenGLProgram.h"
 
-#include <backend/Platform.h>
 
 // change to true to display all GL extensions in the console on start-up
 #define DEBUG_PRINT_EXTENSIONS false

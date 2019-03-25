@@ -23,7 +23,8 @@
 #include <GL/glx.h>
 
 #include <filament/backend/DriverEnums.h>
-#include <backend/Platform.h>
+
+#include "OpenGLPlatform.h"
 
 namespace filament {
 

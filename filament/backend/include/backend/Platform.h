@@ -22,12 +22,9 @@
 #include <utils/compiler.h>
 
 namespace filament {
-
 namespace driver {
+
 class Driver;
-} // namespace driver
-
-namespace driver {
 
 class UTILS_PUBLIC Platform {
 public:
@@ -38,86 +35,55 @@ public:
         uintptr_t image = 0;
     };
 
-    static Platform* create(driver::Backend* backendHint) noexcept;
-    static void destroy(Platform** context) noexcept;
-
-    virtual int getOSVersion() const noexcept = 0;
-
     virtual ~Platform() noexcept;
 
-    // Creates and initializes the low-level API (e.g. an OpenGL context or Vulkan instance),
-    // then creates the concrete Driver. Returns null on failure.
-    // The caller takes ownership of the returned Driver* and must destroy it with delete.
+    /**
+     * Queries the underlying OS version.
+     * @return The OS version.
+     */
+    virtual int getOSVersion() const noexcept = 0;
+
+    /**
+     * Creates and initializes the low-level API (e.g. an OpenGL context or Vulkan instance),
+     * then creates the concrete Driver.
+     * The caller takes ownership of the returned Driver* and must destroy it with delete.
+     *
+     * @param sharedContext an optional shared context. This is not meaningful with all graphic
+     *                      APIs and platforms.
+     *                      For EGL platforms, this is an EGLContext.
+     *
+     * @return nullptr on failure, or a pointer to the newly created driver.
+     */
     virtual driver::Driver* createDriver(void* sharedContext) noexcept = 0;
 };
 
-class UTILS_PUBLIC OpenGLPlatform : public Platform {
+
+class UTILS_PUBLIC DefaultPlatform : public Platform {
 public:
-    ~OpenGLPlatform() noexcept override;
+    ~DefaultPlatform() noexcept override;
 
-    // Called to destroy the OpenGL context. This should clean up any windows
-    // or buffers from initialization.
-    virtual void terminate() noexcept = 0;
+    /**
+     * Creates a Platform configured for the requested backend if available
+     *
+     * @param backendHint Preferred backend, if not available the backend most suitable for the
+     *                    underlying platform is returned and \p backendHint is updated
+     *                    accordingly. Can't be nullptr.
+     *
+     * @return A pointer to the Plaform object.
+     *
+     * @see destroy
+     */
+    static DefaultPlatform* create(driver::Backend* backendHint) noexcept;
 
-    virtual SwapChain* createSwapChain(void* nativeWindow, uint64_t& flags) noexcept = 0;
-    virtual void destroySwapChain(SwapChain* swapChain) noexcept = 0;
-
-    virtual void createDefaultRenderTarget(uint32_t& framebuffer, uint32_t& colorbuffer,
-            uint32_t& depthbuffer) noexcept {
-        framebuffer = 0;
-        colorbuffer = 0;
-        depthbuffer = 0;
-    }
-
-    // Called to make the OpenGL context active on the calling thread.
-    virtual void makeCurrent(SwapChain* drawSwapChain, SwapChain* readSwapChain) noexcept = 0;
-
-    // Called once the current frame finishes drawing. Typically this should
-    // swap draw buffers (i.e. for double-buffered rendering).
-    virtual void commit(SwapChain* swapChain) noexcept = 0;
-
-    virtual void setPresentationTime(int64_t presentationTimeInNanosecond) noexcept = 0;
-
-    virtual bool canCreateFence() noexcept { return false; }
-    virtual Fence* createFence() noexcept = 0;
-    virtual void destroyFence(Fence* fence) noexcept = 0;
-    virtual driver::FenceStatus waitFence(Fence* fence, uint64_t timeout) noexcept = 0;
-
-    // this is called synchronously in the application thread (NOT the Driver thread)
-    virtual Stream* createStream(void* nativeStream) noexcept = 0;
-
-    virtual void destroyStream(Stream* stream) noexcept = 0;
-
-    // attach takes ownership of the texture (tname) object
-    virtual void attach(Stream* stream, intptr_t tname) noexcept = 0;
-
-    // detach destroys the texture associated to the stream
-    virtual void detach(Stream* stream) noexcept = 0;
-    virtual void updateTexImage(Stream* stream, int64_t* timestamp) noexcept = 0;
-
-    // external texture storage
-    virtual ExternalTexture* createExternalTextureStorage() noexcept = 0;
-
-    // this is called synchronously in the application thread (NOT the Driver thread)
-    virtual void reallocateExternalStorage(ExternalTexture* ets,
-            uint32_t w, uint32_t h, TextureFormat format) noexcept = 0;
-
-    virtual void destroyExternalTextureStorage(ExternalTexture* ets) noexcept = 0;
-};
-
-class UTILS_PUBLIC VulkanPlatform : public Platform {
-public:
-    ~VulkanPlatform() noexcept override;
-
-    // Given a Vulkan instance and native window handle, creates the platform-specific surface.
-    virtual void* createVkSurfaceKHR(void* nativeWindow, void* instance,
-            uint32_t* width, uint32_t* height) noexcept = 0;
-};
-
-class UTILS_PUBLIC MetalPlatform : public Platform {
-public:
-    ~MetalPlatform() noexcept override;
-
+    /**
+     * Destroys a Platform object returned by create()
+     *
+     * @param platform a reference (as a pointer) to the DefaultPlatform pointer to destroy.
+     *                 \p platform is cleared upon return.
+     *
+     * @see create
+     */
+    static void destroy(DefaultPlatform** platform) noexcept;
 };
 
 } // namespace driver

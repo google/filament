@@ -20,7 +20,7 @@
 #include <stdint.h>
 
 #include <filament/backend/DriverEnums.h>
-#include <backend/Platform.h>
+#include "VulkanPlatform.h"
 
 #include <X11/Xlib.h>
 

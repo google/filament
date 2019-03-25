@@ -18,7 +18,7 @@
 #define TNT_FILAMENT_DRIVER_OPENGLBLITTER_H
 
 #include <utils/compiler.h>
-#include "opengl/gl_headers.h"
+#include "gl_headers.h"
 
 namespace filament {
 
