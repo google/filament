@@ -162,6 +162,11 @@ struct VulkanRenderPrimitive : public HwRenderPrimitive {
     std::vector<VkDeviceSize> offsets;
 };
 
+struct VulkanFence : public HwFence {
+    VulkanFence(const VulkanCommandBuffer& commands) : fence(commands.fence) {}
+    std::shared_ptr<VulkanCmdFence> fence;
+};
+
 } // namespace filament
 } // namespace driver
 
