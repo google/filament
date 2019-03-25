@@ -39,7 +39,7 @@ id<MTLRenderPipelineState> PipelineStateCreator::operator()(id<MTLDevice> device
 
     const auto& vertexDescription = state.vertexDescription;
 
-    for (uint32_t i = 0; i < MAX_VERTEX_ATTRIBUTES; i++) {
+    for (uint32_t i = 0; i < MAX_VERTEX_ATTRIBUTE_COUNT; i++) {
         if (vertexDescription.attributes[i].format > MTLVertexFormatInvalid) {
             const auto& attribute = vertexDescription.attributes[i];
             vertex.attributes[i].format = attribute.format;
@@ -48,7 +48,7 @@ id<MTLRenderPipelineState> PipelineStateCreator::operator()(id<MTLDevice> device
         }
     }
 
-    for (uint32_t i = 0; i < MAX_VERTEX_ATTRIBUTES; i++) {
+    for (uint32_t i = 0; i < MAX_VERTEX_ATTRIBUTE_COUNT; i++) {
         if (vertexDescription.layouts[i].stride > 0) {
             const auto& layout = vertexDescription.layouts[i];
             vertex.layouts[VERTEX_BUFFER_START + i].stride = layout.stride;

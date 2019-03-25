@@ -71,18 +71,18 @@ namespace driver {
 //
 class VulkanBinder {
 public:
-    static constexpr uint32_t NUM_UBUFFER_BINDINGS = Program::NUM_UNIFORM_BINDINGS;
-    static constexpr uint32_t NUM_SAMPLER_BINDINGS = driver::MAX_SAMPLER_COUNT;
-    static constexpr uint32_t NUM_SHADER_MODULES = 2;
-    static constexpr uint32_t MAX_VERTEX_ATTRIBUTES = driver::MAX_VERTEX_ATTRIBUTE_COUNT;
+    static constexpr uint32_t UBUFFER_BINDING_COUNT = Program::UNIFORM_BINDING_COUNT;
+    static constexpr uint32_t SAMPLER_BINDING_COUNT = driver::MAX_SAMPLER_COUNT;
+    static constexpr uint32_t SHADER_MODULE_COUNT = 2;
+    static constexpr uint32_t VERTEX_ATTRIBUTE_COUNT = driver::MAX_VERTEX_ATTRIBUTE_COUNT;
 
     // The VertexArray POD is an array of buffer targets and an array of attributes that refer to
     // those targets. It does not include any references to actual buffers, so you can think of it
     // as a vertex assembler configuration. For simplicity it contains fixed-size arrays and does
     // not store sizes; all unused entries are simply zeroed out.
     struct VertexArray {
-        VkVertexInputAttributeDescription attributes[MAX_VERTEX_ATTRIBUTES];
-        VkVertexInputBindingDescription buffers[MAX_VERTEX_ATTRIBUTES];
+        VkVertexInputAttributeDescription attributes[VERTEX_ATTRIBUTE_COUNT];
+        VkVertexInputBindingDescription buffers[VERTEX_ATTRIBUTE_COUNT];
     };
 
     // The ProgramBundle contains weak references to the compiled vertex and fragment shaders.
@@ -105,7 +105,7 @@ public:
     // Encapsulates the arguments passed to vkUpdateDescriptorSets.
     struct DescriptorUpdateOp {
         uint32_t count;
-        VkWriteDescriptorSet writes[NUM_UBUFFER_BINDINGS + NUM_SAMPLER_BINDINGS];
+        VkWriteDescriptorSet writes[UBUFFER_BINDING_COUNT + SAMPLER_BINDING_COUNT];
     };
 
     // Upon construction, the binder initializes some internal state but does not make any Vulkan
@@ -167,12 +167,12 @@ private:
     // VkPipeline object. We apply a hash function to its contents only if has been mutated since
     // the previous call to getOrCreatePipeline.
     struct alignas(8) PipelineKey {
-        VkShaderModule shaders[NUM_SHADER_MODULES]; // 8*2 bytes
+        VkShaderModule shaders[SHADER_MODULE_COUNT]; // 8*2 bytes
         RasterState rasterState; // 248 bytes
         VkRenderPass renderPass; // 8 bytes
         VkPrimitiveTopology topology; // 4 bytes
-        VkVertexInputAttributeDescription vertexAttributes[MAX_VERTEX_ATTRIBUTES]; // 16*5 bytes
-        VkVertexInputBindingDescription vertexBuffers[MAX_VERTEX_ATTRIBUTES]; // 12*5 bytes
+        VkVertexInputAttributeDescription vertexAttributes[VERTEX_ATTRIBUTE_COUNT]; // 16*5 bytes
+        VkVertexInputBindingDescription vertexBuffers[VERTEX_ATTRIBUTE_COUNT]; // 12*5 bytes
     };
 
     static_assert(sizeof(PipelineKey) ==
@@ -207,10 +207,10 @@ private:
     // descriptor set. We apply a hash function to its contents only if has been mutated since
     // the previous call to getOrCreateDescriptor.
     struct alignas(8) DescriptorKey {
-        VkBuffer uniformBuffers[NUM_UBUFFER_BINDINGS];
-        VkDescriptorImageInfo samplers[NUM_SAMPLER_BINDINGS];
-        VkDeviceSize uniformBufferOffsets[NUM_UBUFFER_BINDINGS];
-        VkDeviceSize uniformBufferSizes[NUM_UBUFFER_BINDINGS];
+        VkBuffer uniformBuffers[UBUFFER_BINDING_COUNT];
+        VkDescriptorImageInfo samplers[SAMPLER_BINDING_COUNT];
+        VkDeviceSize uniformBufferOffsets[UBUFFER_BINDING_COUNT];
+        VkDeviceSize uniformBufferSizes[UBUFFER_BINDING_COUNT];
     };
 
     static_assert(sizeof(DescriptorKey) ==
@@ -247,10 +247,10 @@ private:
     const RasterState mDefaultRasterState;
 
     // Info structs used only in a transient way but they are stored for convenience.
-    VkPipelineShaderStageCreateInfo mShaderStages[NUM_SHADER_MODULES];
+    VkPipelineShaderStageCreateInfo mShaderStages[SHADER_MODULE_COUNT];
     VkPipelineColorBlendStateCreateInfo mColorBlendState;
-    VkDescriptorBufferInfo mDescriptorBuffers[NUM_UBUFFER_BINDINGS];
-    VkDescriptorImageInfo mDescriptorSamplers[NUM_SAMPLER_BINDINGS];
+    VkDescriptorBufferInfo mDescriptorBuffers[UBUFFER_BINDING_COUNT];
+    VkDescriptorImageInfo mDescriptorSamplers[SAMPLER_BINDING_COUNT];
     DescriptorUpdateOp mDescriptorUpdateOp;
 
     // Current bindings are divided into two "keys" which are composed of a mix of actual values

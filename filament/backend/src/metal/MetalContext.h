@@ -59,7 +59,7 @@ struct MetalContext {
     PipelineStateCache pipelineStateCache;
     SamplerStateCache samplerStateCache;
 
-    MetalSamplerGroup* samplerBindings[NUM_SAMPLER_BINDINGS] = {};
+    MetalSamplerGroup* samplerBindings[SAMPLER_BINDING_COUNT] = {};
 
     // Surface-related properties.
     MetalSwapChain* currentSurface = nullptr;
