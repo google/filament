@@ -368,9 +368,6 @@ bool FRenderer::beginFrame(FSwapChain* swapChain) {
     assert(swapChain);
 
     mFrameId++;
-    if (UTILS_HAS_THREADING) {
-        mFrameInfoManager.beginFrame(mFrameId);
-    }
 
     { // scope for frame id trace
         char buf[64];
@@ -389,6 +386,12 @@ bool FRenderer::beginFrame(FSwapChain* swapChain) {
 
     int64_t monotonic_clock_ns (std::chrono::steady_clock::now().time_since_epoch().count());
     driver.beginFrame(monotonic_clock_ns, mFrameId);
+
+    // This need to occur after the backend beginFrame() because some backends need to start
+    // a command buffer before creating a fence.
+    if (UTILS_HAS_THREADING) {
+        mFrameInfoManager.beginFrame(mFrameId);
+    }
 
     if (!mFrameSkipper.beginFrame()) {
         mFrameInfoManager.cancelFrame();
