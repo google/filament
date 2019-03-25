@@ -19,7 +19,7 @@
 #include <jni.h>
 
 #include <filament/Stream.h>
-#include <filament/driver/PixelBufferDescriptor.h>
+#include <backend/PixelBufferDescriptor.h>
 
 #include "NioUtils.h"
 #include "CallbackUtils.h"

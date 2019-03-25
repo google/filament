@@ -20,7 +20,7 @@
 #include <filament/Engine.h>
 #include <filament/Renderer.h>
 #include <filament/Viewport.h>
-#include <filament/driver/PixelBufferDescriptor.h>
+#include <backend/PixelBufferDescriptor.h>
 
 #include "CallbackUtils.h"
 #include "NioUtils.h"

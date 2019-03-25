@@ -49,7 +49,7 @@ static_assert(BindingPoints::PER_MATERIAL_INSTANCE == BindingPoints::COUNT - 1,
         "Dynamically sized sampler buffer must be the last binding point.");
 
 constexpr uint32_t ATTRIBUTE_INDEX_COUNT = 7;
-constexpr size_t MAX_ATTRIBUTE_BUFFERS_COUNT = 8; // FIXME: should match Driver::MAX_ATTRIBUTE_BUFFER_COUNT
+constexpr size_t MAX_ATTRIBUTE_BUFFERS_COUNT = 8; // FIXME: should match driver::MAX_ATTRIBUTE_BUFFER_COUNT
 constexpr size_t MAX_SAMPLER_COUNT = 16; // Matches the Adreno Vulkan driver.
 
 // This value is limited by UBO size, ES3.0 only guarantees 16 KiB.

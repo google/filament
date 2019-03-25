@@ -20,8 +20,9 @@
 #include "upcast.h"
 #include "UniformBuffer.h"
 #include "details/Engine.h"
-#include "driver/DriverApi.h"
-#include "driver/Handle.h"
+
+#include "private/backend/DriverApi.h"
+#include "private/backend/Handle.h"
 
 #include <utils/compiler.h>
 
@@ -73,7 +74,7 @@ public:
     uint64_t getSortingKey() const noexcept { return mMaterialSortingKey; }
 
     UniformBuffer const& getUniformBuffer() const noexcept { return mUniforms; }
-    SamplerGroup const& getSamplerGroup() const noexcept { return mSamplers; }
+    driver::SamplerGroup const& getSamplerGroup() const noexcept { return mSamplers; }
 
     void setScissor(int32_t left, int32_t bottom, uint32_t width, uint32_t height) noexcept {
         mScissorRect = { left, bottom,
@@ -93,7 +94,7 @@ public:
         mPolygonOffset = { scale, constant };
     }
 
-    Driver::PolygonOffset getPolygonOffset() const noexcept { return mPolygonOffset; }
+    driver::PolygonOffset getPolygonOffset() const noexcept { return mPolygonOffset; }
 
 private:
     friend class FMaterial;
@@ -106,12 +107,12 @@ private:
 
     // keep these grouped, they're accessed together in the render-loop
     FMaterial const* mMaterial = nullptr;
-    Handle<HwUniformBuffer> mUbHandle;
-    Handle<HwSamplerGroup> mSbHandle;
+    driver::Handle<driver::HwUniformBuffer> mUbHandle;
+    driver::Handle<driver::HwSamplerGroup> mSbHandle;
 
     UniformBuffer mUniforms;
-    SamplerGroup mSamplers;
-    Driver::PolygonOffset mPolygonOffset;
+    driver::SamplerGroup mSamplers;
+    driver::PolygonOffset mPolygonOffset;
 
     uint64_t mMaterialSortingKey = 0;
 

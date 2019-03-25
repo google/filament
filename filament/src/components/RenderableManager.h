@@ -21,8 +21,8 @@
 
 #include "UniformBuffer.h"
 
-#include "driver/DriverApiForward.h"
-#include "driver/Handle.h"
+#include "private/backend/DriverApiForward.h"
+#include "private/backend/Handle.h"
 
 #include <filament/Box.h>
 #include <filament/RenderableManager.h>
@@ -102,7 +102,7 @@ public:
     inline void setSkinning(Instance instance, bool enable) noexcept;
     inline void setPrimitives(Instance instance, utils::Slice<FRenderPrimitive> const& primitives) noexcept;
     inline void setBones(Instance instance, Bone const* transforms, size_t boneCount, size_t offset = 0) noexcept;
-    inline void setBones(Instance instance, filament::math::mat4f const* transforms, size_t boneCount, size_t offset = 0) noexcept;
+    inline void setBones(Instance instance, math::mat4f const* transforms, size_t boneCount, size_t offset = 0) noexcept;
 
 
     inline bool isShadowCaster(Instance instance) const noexcept;
@@ -115,7 +115,7 @@ public:
     inline uint8_t getLayerMask(Instance instance) const noexcept;
     inline uint8_t getPriority(Instance instance) const noexcept;
 
-    inline Handle<HwUniformBuffer> getBonesUbh(Instance instance) const noexcept;
+    inline driver::Handle<driver::HwUniformBuffer> getBonesUbh(Instance instance) const noexcept;
 
 
     inline size_t getLevelCount(Instance instance) const noexcept { return 1; }
@@ -139,14 +139,14 @@ private:
             utils::Slice<FRenderPrimitive>& primitives) noexcept;
 
     struct Bones {
-        filament::Handle<HwUniformBuffer> handle;
+        filament::driver::Handle<driver::HwUniformBuffer> handle;
         UniformBuffer bones;
         size_t count;
     };
 
     friend class ::FilamentTest_Bones_Test;
 
-    static void makeBone(PerRenderableUibBone* out, filament::math::mat4f const& transforms) noexcept;
+    static void makeBone(PerRenderableUibBone* out, math::mat4f const& transforms) noexcept;
 
     enum {
         AABB,               // user data
@@ -289,9 +289,9 @@ Box const& FRenderableManager::getAABB(Instance instance) const noexcept {
     return mManager[instance].aabb;
 }
 
-Handle<HwUniformBuffer> FRenderableManager::getBonesUbh(Instance instance) const noexcept {
+driver::Handle<driver::HwUniformBuffer> FRenderableManager::getBonesUbh(Instance instance) const noexcept {
     std::unique_ptr<Bones> const& bones = mManager[instance].bones;
-    return bones ? bones->handle : Handle<HwUniformBuffer>{};
+    return bones ? bones->handle : driver::Handle<driver::HwUniformBuffer>{};
 }
 
 utils::Slice<FRenderPrimitive> const& FRenderableManager::getRenderPrimitives(

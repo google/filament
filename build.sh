@@ -139,6 +139,7 @@ function build_desktop_target {
     if [[ ! -d "CMakeFiles" ]] || [[ "$ISSUE_CMAKE_ALWAYS" == "true" ]]; then
         cmake \
             -G "$BUILD_GENERATOR" \
+            -DIMPORT_EXECUTABLES_DIR=out \
             -DCMAKE_BUILD_TYPE=$1 \
             -DCMAKE_INSTALL_PREFIX=../${lc_target}/filament \
             -DFILAMENT_REQUIRES_CXXABI=${FILAMENT_REQUIRES_CXXABI} \
@@ -191,6 +192,7 @@ function build_webgl_with_target {
         source ${EMSDK}/emsdk_env.sh
         cmake \
             -G "$BUILD_GENERATOR" \
+            -DIMPORT_EXECUTABLES_DIR=out \
             -DCMAKE_TOOLCHAIN_FILE=${EMSCRIPTEN}/cmake/Modules/Platform/Emscripten.cmake \
             -DCMAKE_BUILD_TYPE=$1 \
             -DCMAKE_INSTALL_PREFIX=../webgl-${lc_target}/filament \
@@ -266,6 +268,7 @@ function build_android_target {
     if [[ ! -d "CMakeFiles" ]] || [[ "$ISSUE_CMAKE_ALWAYS" == "true" ]]; then
         cmake \
             -G "$BUILD_GENERATOR" \
+            -DIMPORT_EXECUTABLES_DIR=out \
             -DCMAKE_BUILD_TYPE=$1 \
             -DCMAKE_INSTALL_PREFIX=../android-${LC_TARGET}/filament \
             -DCMAKE_TOOLCHAIN_FILE=../../build/toolchain-${ARCH}-linux-android.cmake \
@@ -456,6 +459,7 @@ function build_ios_target {
     if [[ ! -d "CMakeFiles" ]] || [[ "$ISSUE_CMAKE_ALWAYS" == "true" ]]; then
         cmake \
             -G "$BUILD_GENERATOR" \
+            -DIMPORT_EXECUTABLES_DIR=out \
             -DCMAKE_BUILD_TYPE=$1 \
             -DCMAKE_INSTALL_PREFIX=../ios-${lc_target}/filament \
             -DIOS_ARCH=${arch} \

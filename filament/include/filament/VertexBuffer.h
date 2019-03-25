@@ -22,8 +22,9 @@
 #include <filament/FilamentAPI.h>
 #include <filament/MaterialEnums.h>
 
-#include <filament/driver/BufferDescriptor.h>
-#include <filament/driver/DriverEnums.h>
+#include <backend/BufferDescriptor.h>
+
+#include <filament/backend/DriverEnums.h>
 
 #include <utils/compiler.h>
 
@@ -185,9 +186,9 @@ public:
         size_t quatCount;                       //!< number of quaternions (required)
         void* outBuffer;                        //!< pre-allocated output buffer (required)
         size_t outStride;                       //!< desired stride in bytes (optional)
-        const filament::math::float3* normals;  //!< source normals (required)
+        const math::float3* normals;  //!< source normals (required)
         size_t normalsStride;                   //!< normals stride in bytes (optional)
-        const filament::math::float4* tangents; //!< source tangents (optional)
+        const math::float4* tangents; //!< source tangents (optional)
         size_t tangentsStride;                  //!< tangents stride in bytes (optional)
     };
 

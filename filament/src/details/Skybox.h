@@ -16,13 +16,13 @@
 
 #include "upcast.h"
 
-#include "driver/Handle.h"
+#include "private/backend/Handle.h"
 
 #include <components/RenderableManager.h>
 
 #include <filament/Skybox.h>
 
-#include <filament/driver/DriverEnums.h>
+#include <filament/backend/DriverEnums.h>
 
 #include <utils/compiler.h>
 #include <utils/Entity.h>

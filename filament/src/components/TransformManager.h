@@ -56,7 +56,7 @@ public:
 
     void create(utils::Entity entity);
 
-    void create(utils::Entity entity, Instance parent, const filament::math::mat4f& localTransform);
+    void create(utils::Entity entity, Instance parent, const math::mat4f& localTransform);
 
     void destroy(utils::Entity e) noexcept;
 
@@ -74,17 +74,17 @@ public:
 
     void gc(utils::EntityManager& em) noexcept;
 
-    utils::Slice<const filament::math::mat4f> getWorldTransforms() const noexcept {
+    utils::Slice<const math::mat4f> getWorldTransforms() const noexcept {
         return mManager.slice<WORLD>();
     }
 
-    void setTransform(Instance ci, const filament::math::mat4f& model) noexcept;
+    void setTransform(Instance ci, const math::mat4f& model) noexcept;
 
-    const filament::math::mat4f& getTransform(Instance ci) const noexcept {
+    const math::mat4f& getTransform(Instance ci) const noexcept {
         return mManager[ci].local;
     }
 
-    const filament::math::mat4f& getWorldTransform(Instance ci) const noexcept {
+    const math::mat4f& getWorldTransform(Instance ci) const noexcept {
         return mManager[ci].world;
     }
 
@@ -110,8 +110,8 @@ private:
     };
 
     using Base = utils::SingleInstanceComponentManager<
-            filament::math::mat4f,
-            filament::math::mat4f,
+            math::mat4f,
+            math::mat4f,
             Instance,
             Instance,
             Instance,

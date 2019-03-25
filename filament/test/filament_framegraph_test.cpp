@@ -19,14 +19,17 @@
 #include "fg/FrameGraph.h"
 #include "fg/FrameGraphPassResources.h"
 
-#include "driver/CommandStream.h"
-#include "driver/noop/NoopDriver.h"
+#include <backend/Platform.h>
+
+#include "private/backend/CommandStream.h"
 
 using namespace filament;
 using namespace driver;
 
 static CircularBuffer buffer(8192);
-static CommandStream driverApi(*NoopDriver::create(), buffer);
+static Backend backend = Backend::NOOP;
+static Platform* platform = Platform::create(&backend);
+static CommandStream driverApi(*platform->createDriver(nullptr), buffer);
 
 TEST(FrameGraphTest, SimpleRenderPass) {
 

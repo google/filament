@@ -23,8 +23,8 @@
 #include "details/Scene.h"
 #include "details/Engine.h"
 
-#include "driver/Handle.h"
-#include "driver/GPUBuffer.h"
+#include "private/backend/Handle.h"
+#include "GPUBuffer.h"
 
 #include <filament/Viewport.h>
 
@@ -51,7 +51,7 @@ public:
     enum Planes {
         LEFT, RIGHT, BOTTOM, TOP, NEAR, FAR
     };
-    filament::math::float4 planes[6];
+    math::float4 planes[6];
 };
 
 //
@@ -114,7 +114,7 @@ public:
      * return true if updateUniforms() needs to be called
      */
     bool prepare(driver::DriverApi& driverApi, ArenaScope& arena, Viewport const& viewport,
-            const filament::math::mat4f& projection, float projectionNear, float projectionFar) noexcept;
+            const math::mat4f& projection, float projectionNear, float projectionFar) noexcept;
 
     Froxel getFroxelAt(size_t x, size_t y, size_t z) const noexcept;
     size_t getFroxelCountX() const noexcept { return mFroxelCountX; }
@@ -174,9 +174,9 @@ private:
     };
 
     struct LightParams {
-        filament::math::float3 position;
+        math::float3 position;
         float cosSqr;
-        filament::math::float3 axis;
+        math::float3 axis;
         // this must be initialized to indicate this is a point light
         float invSin = std::numeric_limits<float>::infinity();
         // radius is not used in the hot loop, so leave it at the end
@@ -199,7 +199,7 @@ private:
     using FroxelThreadData = std::array<LightGroupType, FROXEL_BUFFER_ENTRY_COUNT_MAX + 1>;
 
     void setViewport(Viewport const& viewport) noexcept;
-    void setProjection(const filament::math::mat4f& projection, float near, float far) noexcept;
+    void setProjection(const math::mat4f& projection, float near, float far) noexcept;
     bool update() noexcept;
 
     void froxelizeLoop(FEngine& engine,
@@ -208,7 +208,7 @@ private:
     void froxelizeAssignRecordsCompress() noexcept;
 
     void froxelizePointAndSpotLight(FroxelThreadData& froxelThread, size_t bit,
-            filament::math::mat4f const& projection, const LightParams& light) const noexcept;
+            math::mat4f const& projection, const LightParams& light) const noexcept;
 
     static void computeLightTree(LightTreeNode* lightTree,
             utils::Slice<RecordBufferType> const& lightList,
@@ -220,19 +220,19 @@ private:
 
     size_t findSliceZ(float viewSpaceZ) const noexcept UTILS_PURE;
 
-    std::pair<size_t, size_t> clipToIndices(filament::math::float2 const& clip) const noexcept;
+    std::pair<size_t, size_t> clipToIndices(math::float2 const& clip) const noexcept;
 
     static void computeFroxelLayout(
-            filament::math::uint2* dim, uint16_t* countX, uint16_t* countY, uint16_t* countZ,
+            math::uint2* dim, uint16_t* countX, uint16_t* countY, uint16_t* countZ,
             Viewport const& viewport) noexcept;
 
     // internal state dependant on the viewport and needed for froxelizing
     LinearAllocatorArena mArena;                    // ~256 KiB
 
     float* mDistancesZ = nullptr;                   // max 2.1 MiB (actual: resolution dependant)
-    filament::math::float4* mPlanesX = nullptr;
-    filament::math::float4* mPlanesY = nullptr;
-    filament::math::float4* mBoundingSpheres = nullptr;
+    math::float4* mPlanesX = nullptr;
+    math::float4* mPlanesY = nullptr;
+    math::float4* mBoundingSpheres = nullptr;
 
     utils::Slice<FroxelThreadData> mFroxelShardedData;  // 256 KiB w/  256 lights
     utils::Slice<FroxelEntry> mFroxelBufferUser;        //  32 KiB w/ 8192 froxels
@@ -245,21 +245,21 @@ private:
     uint16_t mFroxelCountY = 0;
     uint16_t mFroxelCountZ = 0;
     uint16_t mFroxelCount = 0;
-    filament::math::uint2 mFroxelDimension = {};
+    math::uint2 mFroxelDimension = {};
 
-    filament::math::mat4f mProjection;
+    math::mat4f mProjection;
     float mLinearizer = 0.0f;
     float mLog2ZLightFar = 0.0f;
     float mClipToFroxelX = 0.0f;
     float mClipToFroxelY = 0.0f;
-    filament::math::float2 mOneOverDimension = {};
+    math::float2 mOneOverDimension = {};
     GPUBuffer mRecordsBuffer;
     GPUBuffer mFroxelBuffer;
 
     // needed for update()
     Viewport mViewport;
-    filament::math::float4 mParamsZ = {};
-    filament::math::uint3 mParamsF = {};
+    math::float4 mParamsZ = {};
+    math::uint3 mParamsF = {};
     float mNear = 0.0f;        // camera near
     float mZLightFar = FEngine::CONFIG_Z_LIGHT_FAR;
     float mZLightNear = FEngine::CONFIG_Z_LIGHT_NEAR;  // light near (first slice)

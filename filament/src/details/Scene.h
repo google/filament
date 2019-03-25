@@ -82,12 +82,12 @@ public:
     ~FScene() noexcept;
     void terminate(FEngine& engine);
 
-    void prepare(const filament::math::mat4f& worldOriginTransform);
-    void prepareDynamicLights(const CameraInfo& camera, ArenaScope& arena, Handle<HwUniformBuffer> lightUbh) noexcept;
+    void prepare(const math::mat4f& worldOriginTransform);
+    void prepareDynamicLights(const CameraInfo& camera, ArenaScope& arena, driver::Handle<driver::HwUniformBuffer> lightUbh) noexcept;
     void computeBounds(Aabb& castersBox, Aabb& receiversBox, uint32_t visibleLayers) const noexcept;
 
 
-    filament::Handle<HwUniformBuffer> getRenderableUBO() const noexcept {
+    filament::driver::Handle<driver::HwUniformBuffer> getRenderableUBO() const noexcept {
         return mRenderableViewUbh;
     }
 
@@ -114,13 +114,13 @@ public:
 
     using RenderableSoa = utils::StructureOfArrays<
             utils::EntityInstance<RenderableManager>,
-            filament::math::mat4f,
+            math::mat4f,
             FRenderableManager::Visibility,
-            Handle<HwUniformBuffer>,
-            filament::math::float3,
+            driver::Handle<driver::HwUniformBuffer>,
+            math::float3,
             Culler::result_type,
             uint8_t,
-            filament::math::float3,
+            math::float3,
             utils::Slice<FRenderPrimitive>,
             uint32_t
     >;
@@ -153,24 +153,24 @@ public:
     };
 
     using LightSoa = utils::StructureOfArrays<
-            filament::math::float4,
-            filament::math::float3,
+            math::float4,
+            math::float3,
             FLightManager::Instance,
             Culler::result_type,
-            filament::math::float2
+            math::float2
     >;
 
     LightSoa const& getLightData() const noexcept { return mLightData; }
     LightSoa& getLightData() noexcept { return mLightData; }
 
-    void updateUBOs(utils::Range<uint32_t> visibleRenderables, Handle<HwUniformBuffer> renderableUbh) noexcept;
+    void updateUBOs(utils::Range<uint32_t> visibleRenderables, driver::Handle<driver::HwUniformBuffer> renderableUbh) noexcept;
 
 private:
-    static inline void computeLightRanges(filament::math::float2* zrange,
-            CameraInfo const& camera, const filament::math::float4* spheres, size_t count) noexcept;
+    static inline void computeLightRanges(math::float2* zrange,
+            CameraInfo const& camera, const math::float4* spheres, size_t count) noexcept;
 
     static inline void computeLightCameraPlaneDistances(float* distances,
-            const CameraInfo& camera, const filament::math::float4* spheres, size_t count) noexcept;
+            const CameraInfo& camera, const math::float4* spheres, size_t count) noexcept;
 
     FEngine& mEngine;
     FSkybox const* mSkybox = nullptr;
@@ -192,7 +192,7 @@ private:
      */
     RenderableSoa mRenderableData;
     LightSoa mLightData;
-    Handle<HwUniformBuffer> mRenderableViewUbh; // This is actually owned by the view.
+    driver::Handle<driver::HwUniformBuffer> mRenderableViewUbh; // This is actually owned by the view.
 };
 
 FILAMENT_UPCAST(Scene)

@@ -23,7 +23,7 @@
 #include "details/Material.h"
 #include "details/Scene.h"
 
-#include "driver/DriverApiForward.h"
+#include "private/backend/DriverApiForward.h"
 
 #include <private/filament/Variant.h>
 
@@ -173,13 +173,13 @@ public:
     }
 
     struct PrimitiveInfo { // 24 bytes
-        FMaterialInstance const* mi = nullptr;              // 8 bytes (4)
-        Handle<HwRenderPrimitive> primitiveHandle;          // 4 bytes
-        Handle<HwUniformBuffer> perRenderableBones;         // 4 bytes
-        Driver::RasterState rasterState;                    // 4 bytes
-        uint16_t index = 0;                                 // 2 bytes
-        Variant materialVariant;                            // 1 byte
-        uint8_t reserved = { };                             // 1 byte
+        FMaterialInstance const* mi = nullptr;                      // 8 bytes (4)
+        driver::Handle<driver::HwRenderPrimitive> primitiveHandle;  // 4 bytes
+        driver::Handle<driver::HwUniformBuffer> perRenderableBones; // 4 bytes
+        driver::RasterState rasterState;                            // 4 bytes
+        uint16_t index = 0;                                         // 2 bytes
+        Variant materialVariant;                                    // 1 byte
+        uint8_t reserved = { };                                     // 1 byte
     };
 
     struct alignas(8) Command {     // 32 bytes
@@ -239,12 +239,12 @@ private:
 
     static inline void generateCommands(uint32_t commandTypeFlags, Command* commands,
             FScene::RenderableSoa const& soa, utils::Range<uint32_t> range, RenderFlags renderFlags,
-            filament::math::float3 cameraPosition, filament::math::float3 cameraForward) noexcept;
+            math::float3 cameraPosition, math::float3 cameraForward) noexcept;
 
     template<uint32_t commandTypeFlags>
     static inline void generateCommandsImpl(uint32_t, Command* commands, FScene::RenderableSoa const& soa,
-            utils::Range<uint32_t> range, RenderFlags renderFlags, filament::math::float3 cameraPosition,
-            filament::math::float3 cameraForward) noexcept;
+            utils::Range<uint32_t> range, RenderFlags renderFlags, math::float3 cameraPosition,
+            math::float3 cameraForward) noexcept;
 
     static void setupColorCommand(Command& cmdDraw, bool hasDepthPass,
             FMaterialInstance const* mi) noexcept;

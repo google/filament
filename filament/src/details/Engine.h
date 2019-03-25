@@ -31,9 +31,9 @@
 #include "details/ResourceList.h"
 #include "details/Skybox.h"
 
-#include "driver/CommandStream.h"
-#include "driver/CommandBufferQueue.h"
-#include "driver/DriverApi.h"
+#include "private/backend/CommandStream.h"
+#include "private/backend/CommandBufferQueue.h"
+#include "private/backend/DriverApi.h"
 
 #include <filament/Engine.h>
 #include <filament/VertexBuffer.h>
@@ -60,9 +60,16 @@
 namespace filament {
 
 class Renderer;
+class MaterialParser;
+
+
+namespace driver {
+
 class Driver;
 class Program;
-class MaterialParser;
+
+} // namespac driver
+
 
 namespace details {
 
@@ -112,7 +119,7 @@ public:
 
     ~FEngine() noexcept;
 
-    Driver& getDriver() const noexcept { return *mDriver; }
+    driver::Driver& getDriver() const noexcept { return *mDriver; }
     DriverApi& getDriverApi() noexcept { return mCommandStream; }
     DFG* getDFG() const noexcept { return mDFG.get(); }
 
@@ -128,16 +135,16 @@ public:
     const FMaterial* getSkyboxMaterial(bool rgbm) const noexcept;
     const FIndirectLight* getDefaultIndirectLight() const noexcept { return mDefaultIbl; }
 
-    Handle <HwProgram> getPostProcessProgramSlow(PostProcessStage stage) const noexcept;
-    Handle<HwProgram> getPostProcessProgram(PostProcessStage stage) const noexcept {
-        Handle<HwProgram> program = mPostProcessPrograms[uint8_t(stage)];
+    driver::Handle<driver::HwProgram> getPostProcessProgramSlow(PostProcessStage stage) const noexcept;
+    driver::Handle<driver::HwProgram> getPostProcessProgram(PostProcessStage stage) const noexcept {
+        driver::Handle<driver::HwProgram> program = mPostProcessPrograms[uint8_t(stage)];
         if (UTILS_UNLIKELY(!program)) {
             return getPostProcessProgramSlow(stage);
         }
         return program;
     }
 
-    Handle<HwRenderPrimitive> getFullScreenRenderPrimitive() const noexcept {
+    driver::Handle<driver::HwRenderPrimitive> getFullScreenRenderPrimitive() const noexcept {
         return mFullScreenTriangleRph;
     }
 
@@ -264,7 +271,7 @@ private:
     void init();
 
     int loop();
-    void flushCommandBuffer(CommandBufferQueue& commandBufferQueue);
+    void flushCommandBuffer(driver::CommandBufferQueue& commandBufferQueue);
 
     template<typename T, typename L>
     void terminateAndDestroy(const T* p, ResourceList<T, L>& list);
@@ -272,16 +279,16 @@ private:
     template<typename T, typename L>
     void cleanupResourceList(ResourceList<T, L>& list);
 
-    Handle<HwProgram> createPostProcessProgram(MaterialParser& parser,
+    driver::Handle<driver::HwProgram> createPostProcessProgram(MaterialParser& parser,
             driver::ShaderModel model, PostProcessStage stage) const noexcept;
 
-    Driver* mDriver = nullptr;
+    driver::Driver* mDriver = nullptr;
 
     Backend mBackend;
     Platform* mPlatform = nullptr;
     void* mSharedGLContext = nullptr;
     bool mTerminated = false;
-    Handle<HwRenderPrimitive> mFullScreenTriangleRph;
+    driver::Handle<driver::HwRenderPrimitive> mFullScreenTriangleRph;
     FVertexBuffer* mFullScreenTriangleVb = nullptr;
     FIndexBuffer* mFullScreenTriangleIb = nullptr;
 
@@ -314,7 +321,7 @@ private:
     std::unique_ptr<DFG> mDFG;
 
     std::thread mDriverThread;
-    CommandBufferQueue mCommandBufferQueue;
+    driver::CommandBufferQueue mCommandBufferQueue;
     DriverApi mCommandStream;
 
     LinearAllocatorArena mPerRenderPassAllocator;
@@ -330,7 +337,7 @@ private:
     mutable FTexture* mDefaultIblTexture = nullptr;
     mutable FIndirectLight* mDefaultIbl = nullptr;
 
-    mutable Handle<HwProgram> mPostProcessPrograms[POST_PROCESS_STAGES_COUNT];
+    mutable driver::Handle<driver::HwProgram> mPostProcessPrograms[POST_PROCESS_STAGES_COUNT];
     mutable std::unique_ptr<MaterialParser> mPostProcessParser;
 
     mutable utils::CountDownLatch mDriverBarrier;

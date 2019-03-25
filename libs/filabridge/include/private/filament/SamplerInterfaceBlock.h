@@ -18,7 +18,7 @@
 #define TNT_FILAMENT_SAMPLERINTERFACEBLOCK_H
 
 
-#include <filament/driver/DriverEnums.h>
+#include <filament/backend/DriverEnums.h>
 
 #include <utils/compiler.h>
 #include <utils/CString.h>

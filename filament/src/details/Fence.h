@@ -19,15 +19,18 @@
 
 #include "upcast.h"
 
-#include "driver/DriverBase.h"
-
 #include <filament/Fence.h>
+
+#include "private/backend/Handle.h"
 
 #include <utils/compiler.h>
 #include <utils/Condition.h>
 #include <utils/Mutex.h>
 
 namespace filament {
+
+struct HwFence;
+
 namespace details {
 
 class FEngine;
@@ -60,7 +63,7 @@ private:
     };
 
     FEngine& mEngine;
-    Handle<HwFence> mFenceHandle;
+    driver::Handle<driver::HwFence> mFenceHandle;
     // TODO: use custom allocator for these small objects
     std::shared_ptr<FenceSignal> mFenceSignal;
 };

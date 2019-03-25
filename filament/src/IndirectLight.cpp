@@ -38,7 +38,7 @@ using namespace details;
 struct IndirectLight::BuilderDetails {
     Texture const* mReflectionsMap = nullptr;
     Texture const* mIrradianceMap = nullptr;
-    filament::math::float3 mIrradianceCoefs[9] = {};
+    float3 mIrradianceCoefs[9] = {};
     mat3f mRotation;
     float mIntensity = 30000.0f;
     uint8_t mNumBands = 0;
@@ -57,7 +57,7 @@ IndirectLight::Builder& IndirectLight::Builder::reflections(Texture const* cubem
     return *this;
 }
 
-IndirectLight::Builder& IndirectLight::Builder::irradiance(uint8_t bands, filament::math::float3 const* sh) noexcept {
+IndirectLight::Builder& IndirectLight::Builder::irradiance(uint8_t bands, float3 const* sh) noexcept {
     // clamp to 3 bands for now
     bands = std::min(bands, uint8_t(3));
     size_t numCoefs = bands * bands;
@@ -77,7 +77,7 @@ IndirectLight::Builder& IndirectLight::Builder::intensity(float envIntensity) no
     return *this;
 }
 
-IndirectLight::Builder& IndirectLight::Builder::rotation(filament::math::mat3f const& rotation) noexcept {
+IndirectLight::Builder& IndirectLight::Builder::rotation(mat3f const& rotation) noexcept {
     mImpl->mRotation = rotation;
     return *this;
 }
@@ -164,7 +164,7 @@ float IndirectLight::getIntensity() const noexcept {
     return upcast(this)->getIntensity();
 }
 
-void IndirectLight::setRotation(filament::math::mat3f const& rotation) noexcept {
+void IndirectLight::setRotation(mat3f const& rotation) noexcept {
     upcast(this)->setRotation(rotation);
 }
 

@@ -26,7 +26,7 @@
 #include <filament/MaterialChunkType.h>
 #include <filament/MaterialEnums.h>
 
-#include <filament/driver/DriverEnums.h>
+#include <filament/backend/DriverEnums.h>
 
 #include <private/filament/EngineEnums.h>
 

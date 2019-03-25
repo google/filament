@@ -19,7 +19,7 @@
 #ifndef TNT_FILAMENT_VIEWPORT_H
 #define TNT_FILAMENT_VIEWPORT_H
 
-#include <filament/driver/DriverEnums.h>
+#include <filament/backend/DriverEnums.h>
 
 #include <utils/compiler.h>
 
@@ -73,7 +73,7 @@ public:
      * @return A new scaled Viewport. The coordinates and dimensions of the new Viewport are
      * rounded to the nearest integer value.
      */
-    Viewport scale(filament::math::float2 s) const noexcept;
+    Viewport scale(math::float2 s) const noexcept;
 
 private:
 

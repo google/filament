@@ -69,8 +69,8 @@ FView::FView(FEngine& engine)
             &engine.debug.view.camera_at_origin);
 
     // set-up samplers
-    mPerViewSb.setSampler(PerViewSib::RECORDS, mFroxelizer.getRecordBuffer());
-    mPerViewSb.setSampler(PerViewSib::FROXELS, mFroxelizer.getFroxelBuffer());
+    mFroxelizer.getRecordBuffer().setSampler(PerViewSib::RECORDS, mPerViewSb);
+    mFroxelizer.getFroxelBuffer().setSampler(PerViewSib::FROXELS, mPerViewSb);
     if (engine.getDFG()->isValid()) {
         TextureSampler sampler(TextureSampler::MagFilter::LINEAR);
         mPerViewSb.setSampler(PerViewSib::IBL_DFG_LUT,
@@ -159,7 +159,7 @@ void move_backward(InputIterator first, InputIterator last, OutputIterator resul
     }
 }
 
-math::float2 FView::updateScale(duration frameTime) noexcept {
+float2 FView::updateScale(duration frameTime) noexcept {
     DynamicResolutionOptions const& options = mDynamicResolution;
     if (options.enabled) {
 
@@ -400,7 +400,7 @@ void FView::prepareLighting(FEngine& engine, FEngine::DriverApi& driver, ArenaSc
 }
 
 void FView::prepare(FEngine& engine, driver::DriverApi& driver, ArenaScope& arena,
-        filament::Viewport const& viewport, filament::math::float4 const& userTime) noexcept {
+        filament::Viewport const& viewport, float4 const& userTime) noexcept {
     JobSystem& js = engine.getJobSystem();
 
     /*

@@ -19,7 +19,7 @@
 
 #include "details/Texture.h"
 
-#include "driver/Handle.h"
+#include "private/backend/Handle.h"
 
 #include <utils/compiler.h>
 
@@ -41,7 +41,7 @@ public:
         return mLUT != nullptr;
     }
 
-    Handle<HwTexture> getTexture() const noexcept {
+    driver::Handle<driver::HwTexture> getTexture() const noexcept {
         return mLUT->getHwHandle();
     }
 

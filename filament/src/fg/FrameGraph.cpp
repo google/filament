@@ -18,12 +18,12 @@
 
 #include "FrameGraphPassResources.h"
 
-#include "driver/Driver.h"
-#include "driver/Handle.h"
-#include "driver/CommandStream.h"
+#include "private/backend/Handle.h"
+#include "private/backend/CommandStream.h"
+
 #include "FrameGraphResource.h"
 
-#include <filament/driver/DriverEnums.h>
+#include <filament/backend/DriverEnums.h>
 
 #include <utils/Panic.h>
 #include <utils/Log.h>
@@ -88,7 +88,7 @@ struct Resource final : public VirtualResource { // 72
     uint32_t refs = 0;                      // final reference count
 
     // set during execute(), as needed
-    Handle<HwTexture> texture;
+    driver::Handle<driver::HwTexture> texture;
 };
 
 struct ResourceNode { // 24
@@ -152,7 +152,7 @@ struct RenderTargetResource final : public VirtualResource {  // 104
 
                 // devirtualize our texture handles. By this point these handles have been
                 // remapped to their alias if any.
-                Handle<HwTexture> textures[FrameGraphRenderTarget::Attachments::COUNT];
+                driver::Handle<driver::HwTexture> textures[FrameGraphRenderTarget::Attachments::COUNT];
                 for (size_t i = 0, c = desc.attachments.textures.size(); i < c; i++) {
                     FrameGraphResource r = desc.attachments.textures[i];
                     if (r.isValid()) {
@@ -223,7 +223,7 @@ struct RenderTarget { // 32
             uint32_t width = 0;
             uint32_t height = 0;
             TextureFormat colorFormat = {};
-            Handle<HwTexture> textures[FrameGraphRenderTarget::Attachments::COUNT];
+            driver::Handle<driver::HwTexture> textures[FrameGraphRenderTarget::Attachments::COUNT];
 
             static constexpr TargetBufferFlags flags[] = {
                     TargetBufferFlags::COLOR,
@@ -561,7 +561,7 @@ FrameGraphPassResources::FrameGraphPassResources(FrameGraph& fg, fg::PassNode co
         : mFrameGraph(fg), mPass(pass) {
 }
 
-Handle <HwTexture> FrameGraphPassResources::getTexture(FrameGraphResource r) const noexcept {
+driver::Handle<driver::HwTexture> FrameGraphPassResources::getTexture(FrameGraphResource r) const noexcept {
     Resource const* const pResource = mFrameGraph.mResourceNodes[r.index].resource;
     assert(pResource);
 
@@ -751,7 +751,7 @@ bool FrameGraph::equals(FrameGraphRenderTarget::Descriptor const& lhs,
 
 FrameGraphResource FrameGraph::importResource(const char* name,
         FrameGraphRenderTarget::Descriptor descriptor,
-        Handle<HwRenderTarget> target, uint32_t width, uint32_t height,
+        driver::Handle<driver::HwRenderTarget> target, uint32_t width, uint32_t height,
         TargetBufferFlags discardStart, TargetBufferFlags discardEnd) {
 
     // TODO: for now we don't allow imported targets to specify textures
@@ -782,7 +782,7 @@ FrameGraphResource FrameGraph::importResource(const char* name,
 
 FrameGraphResource FrameGraph::importResource(
         const char* name, FrameGraphResource::Descriptor const& descriptor,
-        Handle<HwTexture> color) {
+        driver::Handle<driver::HwTexture> color) {
     Resource* resource = createResource(name, descriptor, true);
     resource->texture = color;
     return createResourceNode(resource);

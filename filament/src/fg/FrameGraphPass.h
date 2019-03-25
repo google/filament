@@ -17,7 +17,7 @@
 #ifndef TNT_FILAMENT_FRAMEGRAPHPASS_H
 #define TNT_FILAMENT_FRAMEGRAPHPASS_H
 
-#include "driver/DriverApiForward.h"
+#include "private/backend/DriverApiForward.h"
 
 #include <utils/Allocator.h>
 

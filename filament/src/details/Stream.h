@@ -19,13 +19,16 @@
 
 #include "upcast.h"
 
-#include "driver/DriverBase.h"
-
 #include <filament/Stream.h>
+
+#include "private/backend/Handle.h"
 
 #include <utils/compiler.h>
 
 namespace filament {
+
+struct HwStream;
+
 namespace details {
 
 class FEngine;
@@ -35,7 +38,7 @@ public:
     FStream(FEngine& engine, const Builder& builder) noexcept;
     void terminate(FEngine& engine) noexcept;
 
-    Handle<HwStream> getHandle() const noexcept { return mStreamHandle; }
+    driver::Handle<driver::HwStream> getHandle() const noexcept { return mStreamHandle; }
 
     void setDimensions(uint32_t width, uint32_t height) noexcept;
 
@@ -54,7 +57,7 @@ public:
 
 private:
     FEngine& mEngine;
-    Handle<HwStream> mStreamHandle;
+    driver::Handle<driver::HwStream> mStreamHandle;
     void* mNativeStream = nullptr;
     intptr_t mExternalTextureId;
     uint32_t mWidth;

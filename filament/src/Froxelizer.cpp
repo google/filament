@@ -151,7 +151,7 @@ void Froxelizer::setProjection(const mat4f& projection, float near, float far) n
 
 bool Froxelizer::prepare(
         FEngine::DriverApi& driverApi, ArenaScope& arena, filament::Viewport const& viewport,
-        const filament::math::mat4f& projection, float projectionNear, float projectionFar) noexcept {
+        const mat4f& projection, float projectionNear, float projectionFar) noexcept {
     setViewport(viewport);
     setProjection(projection, projectionNear, projectionFar);
 

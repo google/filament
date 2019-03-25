@@ -98,7 +98,7 @@ void RenderPass::render(
     }
 
     // Take care not to upload data within the render pass (synchronize can commit froxel data)
-    driver::DriverApi& driver = engine.getDriverApi();
+    DriverApi& driver = engine.getDriverApi();
     beginRenderPass(driver, viewport, camera);
 
     // Now, execute all commands
@@ -120,7 +120,7 @@ void RenderPass::recordDriverCommands(
     SYSTRACE_CALL();
 
     if (!commands.empty()) {
-        Driver::PipelineState pipeline;
+        PipelineState pipeline;
         Handle<HwUniformBuffer> uboHandle = scene.getRenderableUBO();
         FMaterialInstance const* UTILS_RESTRICT mi = nullptr;
         FMaterial const* UTILS_RESTRICT ma = nullptr;
@@ -206,7 +206,7 @@ void RenderPass::setupColorCommand(Command& cmdDraw, bool hasDepthPass,
 UTILS_NOINLINE
 void RenderPass::generateCommands(uint32_t commandTypeFlags, Command* const commands,
         FScene::RenderableSoa const& soa, utils::Range<uint32_t> range, RenderFlags renderFlags,
-        filament::math::float3 cameraPosition, filament::math::float3 cameraForward) noexcept {
+        float3 cameraPosition, float3 cameraForward) noexcept {
 
     // generateCommands() writes both the draw and depth commands simultaneously such that
     // we go throw the list of renderables just once.
@@ -289,10 +289,10 @@ void RenderPass::generateCommandsImpl(uint32_t,
 
     Command cmdDepth;
     cmdDepth.primitive.materialVariant = Variant{ Variant::DEPTH_VARIANT };
-    cmdDepth.primitive.rasterState = Driver::RasterState();
+    cmdDepth.primitive.rasterState = {};
     cmdDepth.primitive.rasterState.colorWrite = false;
     cmdDepth.primitive.rasterState.depthWrite = true;
-    cmdDepth.primitive.rasterState.depthFunc = Driver::RasterState::DepthFunc::L;
+    cmdDepth.primitive.rasterState.depthFunc = RasterState::DepthFunc::L;
     cmdDepth.primitive.rasterState.alphaToCoverage = false;
     cmdDepth.primitive.rasterState.inverseFrontFaces = inverseFrontFaces;
 
@@ -439,7 +439,7 @@ void RenderPass::generateCommandsImpl(uint32_t,
             }
 
             if (depthPass) {
-                Driver::RasterState rs = mi->getMaterial()->getRasterState();
+                RasterState rs = mi->getMaterial()->getRasterState();
 
                 // unconditionally write the command
                 cmdDepth.primitive.primitiveHandle = primitive.getHwHandle();
@@ -490,7 +490,7 @@ FRenderer::ColorPass::ColorPass(const char* name,
 }
 
 void FRenderer::ColorPass::beginRenderPass(
-        driver::DriverApi& driver, filament::Viewport const& viewport, const CameraInfo& camera) noexcept {
+        DriverApi& driver, filament::Viewport const& viewport, const CameraInfo& camera) noexcept {
     // wait for froxelization to finish
     // (this could even be a special command between the depth and color passes)
     js.waitAndRelease(jobFroxelize);
@@ -599,7 +599,7 @@ FRenderer::ShadowPass::ShadowPass(const char* name,
         : RenderPass(name), shadowMap(shadowMap) {
 }
 
-void FRenderer::ShadowPass::beginRenderPass(driver::DriverApi& driver,
+void FRenderer::ShadowPass::beginRenderPass(DriverApi& driver,
         filament::Viewport const&, const CameraInfo&) noexcept {
     shadowMap.beginRenderPass(driver);
 }
@@ -625,7 +625,7 @@ void FRenderer::ShadowPass::renderShadowMap(FEngine& engine, JobSystem& js,
     // populate the RenderPrimitive array with the proper LOD
     view.updatePrimitivesLod(engine, cameraInfo, soa, vr);
 
-    driver::DriverApi& driver = engine.getDriverApi();
+    DriverApi& driver = engine.getDriverApi();
     view.prepareCamera(cameraInfo, viewport);
     view.commitUniforms(driver);
 

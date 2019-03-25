@@ -27,16 +27,16 @@
 namespace filament {
 
 //! RGB color in linear space
-using LinearColor = filament::math::float3;
+using LinearColor = math::float3;
 
 //! RGB color in sRGB space
-using sRGBColor  = filament::math::float3;
+using sRGBColor  = math::float3;
 
 //! RGBA color in linear space, with alpha
-using LinearColorA = filament::math::float4;
+using LinearColorA = math::float4;
 
 //! RGBA color in sRGB space, with alpha
-using sRGBColorA  = filament::math::float4;
+using sRGBColorA  = math::float4;
 
 //! types of RGB colors
 enum class UTILS_PUBLIC RgbType : uint8_t {
@@ -84,10 +84,10 @@ enum UTILS_PUBLIC ColorConversion {
 class UTILS_PUBLIC Color {
 public:
     //! converts an RGB color to linear space, the conversion depends on the specified type
-    static LinearColor toLinear(RgbType type, filament::math::float3 color);
+    static LinearColor toLinear(RgbType type, math::float3 color);
 
     //! converts an RGBA color to linear space, the conversion depends on the specified type
-    static LinearColorA toLinear(RgbaType type, filament::math::float4 color);
+    static LinearColorA toLinear(RgbaType type, math::float4 color);
 
     //! converts an RGB color in sRGB space to an RGB color in linear space
     template<ColorConversion = ACCURATE>
@@ -126,8 +126,8 @@ public:
     static LinearColor illuminantD(float K);
 
 private:
-    static filament::math::float3 sRGBToLinear(filament::math::float3 color) noexcept;
-    static filament::math::float3 linearToSRGB(filament::math::float3 color) noexcept;
+    static math::float3 sRGBToLinear(math::float3 color) noexcept;
+    static math::float3 linearToSRGB(math::float3 color) noexcept;
 };
 
 // Use the default implementation from the header
@@ -172,18 +172,18 @@ inline sRGBColorA Color::toSRGB<ACCURATE>(LinearColorA const& color) {
     return sRGBColorA{linearToSRGB(color.rgb), color.a};
 }
 
-inline LinearColor Color::toLinear(RgbType type, filament::math::float3 color) {
+inline LinearColor Color::toLinear(RgbType type, math::float3 color) {
     return (type == RgbType::LINEAR) ? color : Color::toLinear<ACCURATE>(color);
 }
 
 // converts an RGBA color to linear space
 // the conversion depends on the specified type
-inline LinearColorA Color::toLinear(RgbaType type, filament::math::float4 color) {
+inline LinearColorA Color::toLinear(RgbaType type, math::float4 color) {
     switch (type) {
         case RgbaType::sRGB:
-            return Color::toLinear<ACCURATE>(color) * filament::math::float4{color.a, color.a, color.a, 1};
+            return Color::toLinear<ACCURATE>(color) * math::float4{color.a, color.a, color.a, 1};
         case RgbaType::LINEAR:
-            return color * filament::math::float4{color.a, color.a, color.a, 1};
+            return color * math::float4{color.a, color.a, color.a, 1};
         case RgbaType::PREMULTIPLIED_sRGB:
             return Color::toLinear<ACCURATE>(color);
         case RgbaType::PREMULTIPLIED_LINEAR:

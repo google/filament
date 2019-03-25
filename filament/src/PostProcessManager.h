@@ -19,11 +19,11 @@
 
 #include "UniformBuffer.h"
 
-#include "driver/DriverApiForward.h"
+#include "private/backend/DriverApiForward.h"
 
 #include "fg/FrameGraphResource.h"
 
-#include <filament/driver/DriverEnums.h>
+#include <filament/backend/DriverEnums.h>
 
 namespace filament {
 
@@ -36,7 +36,7 @@ class PostProcessManager {
 public:
     void init(details::FEngine& engine) noexcept;
     void terminate(driver::DriverApi& driver) noexcept;
-    void setSource(uint32_t viewportWidth, uint32_t viewportHeight, Handle<HwTexture> texture,
+    void setSource(uint32_t viewportWidth, uint32_t viewportHeight, driver::Handle<driver::HwTexture> texture,
             uint32_t textureWidth, uint32_t textureHeight) const noexcept;
 
     FrameGraphResource toneMapping(FrameGraph& fg, FrameGraphResource input,
@@ -54,8 +54,8 @@ private:
 
     // we need only one of these
     mutable UniformBuffer mPostProcessUb;
-    Handle<HwSamplerGroup> mPostProcessSbh;
-    Handle<HwUniformBuffer> mPostProcessUbh;
+    driver::Handle<driver::HwSamplerGroup> mPostProcessSbh;
+    driver::Handle<driver::HwUniformBuffer> mPostProcessUbh;
 };
 
 } // namespace filament

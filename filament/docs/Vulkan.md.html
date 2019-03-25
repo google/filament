@@ -69,12 +69,11 @@ swap chain objects, but in practice the swap chain is basically a singleton.
 
 # Overview
 
-## VulkanDriver{Impl}
+## VulkanDriver and VulkanContext
 
 The `VulkanDriver` class is the bridge between the backend and the Filament engine, and is kept as
-minimal as possible. All utility methods are relegated to free functions in `VulkanDriverImpl`. Much
-of our Vulkan-specific logic lives in the handle types and cache managers rather than directly in
-`VulkanDriver`.
+minimal as possible. Most of the actual logic is contained in methods in `VulkanContext` and in the
+handle types rather than directly in `VulkanDriver`.
 
 In a self-imposed design constraint, we have decided that every method in `VulkanDriver` must be an
 override; it should have no private methods other than the handle allocators. This reins in
@@ -87,17 +86,8 @@ We persist one `VkCommandBuffer` for each element in the swap context. This allo
 populate command buffer "A" while the GPU is busy consuming command buffer "B".
 
 Note that we can receive DriverAPI requests before the SwapChain has been created. One typical
-example is uploading texture data. For these types of operations, we defer the work until a command
-buffer becomes available. If a subsequent DriverAPI command needs to use the data that was uploaded,
-there is no need to synchronize because it too will be deferred when there is no command buffer,
-using the same queue of lambda functions (look for `pendingWork` in the Vulkan driver).
-
-We sometimes create a one-off command buffer, which is necessary when a resource is created,
-populated, then immediately deleted, all before a swap chain has been created. One example of this
-is mipmap generation, which requires the construction of transient render targets. When any resource
-is deleted, VulkanDriver first waits for all pending work to finish. If there is no swap chain, it
-will create a one-off command buffer solely for performing pending work; see our `waitForIdle`
-function.
+example is uploading texture data. For these types of operations, we use a secondary "work" command
+buffer.
 
 ## Handle types
 

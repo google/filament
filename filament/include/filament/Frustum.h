@@ -57,34 +57,34 @@ public:
      * Creates a frustum from a projection matrix (usually the projection * view matrix)
      * @param pv a 4x4 projection matrix
      */
-    explicit Frustum(const filament::math::mat4f& pv);
+    explicit Frustum(const math::mat4f& pv);
 
     /**
      * Sets the frustum from the given projection matrix
      * @param pv a 4x4 projection matrix
      */
-    void setProjection(const filament::math::mat4f& pv);
+    void setProjection(const math::mat4f& pv);
 
     /**
      * Returns the plane equation parameters with normalized normals
      * @param plane Identifier of the plane to retrieve the equation of
      * @return A plane equation encoded a float4 R such as R.x*x + R.y*y + R.z*z = R.w
      */
-    filament::math::float4 getNormalizedPlane(Plane plane) const noexcept;
+    math::float4 getNormalizedPlane(Plane plane) const noexcept;
 
     /**
      * Returns a copy of all six frustum planes in left, right, bottom, top, far, near order
      * @param planes six plane equations encoded as in getNormalizedPlane() in
      *              left, right, bottom, top, far, near order
      */
-    void getNormalizedPlanes(filament::math::float4 planes[6]) const noexcept;
+    void getNormalizedPlanes(math::float4 planes[6]) const noexcept;
 
     /**
      * Returns all six frustum planes in left, right, bottom, top, far, near order
      * @return six plane equations encoded as in getNormalizedPlane() in
      *              left, right, bottom, top, far, near order
      */
-    filament::math::float4 const* getNormalizedPlanes() const noexcept { return mPlanes; }
+    math::float4 const* getNormalizedPlanes() const noexcept { return mPlanes; }
 
     /**
      * Returns whether a box intersects the frustum (i.e. is visible)
@@ -102,11 +102,11 @@ public:
      * a sphere that doesn't intersect the frustum might be reported as though it does. However,
      * a sphere that does intersect the frustum is always reported correctly (true).
      */
-    bool intersects(const filament::math::float4& sphere) const noexcept;
+    bool intersects(const math::float4& sphere) const noexcept;
 
 private:
     friend class details::Culler;
-    filament::math::float4 mPlanes[6];
+    math::float4 mPlanes[6];
 };
 
 

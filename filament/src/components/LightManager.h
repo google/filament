@@ -19,7 +19,7 @@
 
 #include "upcast.h"
 
-#include "driver/DriverApiForward.h"
+#include "private/backend/DriverApiForward.h"
 
 #include <filament/LightManager.h>
 
@@ -75,7 +75,7 @@ public:
         float cosOuterSquared = 1;
         float sinInverse = std::numeric_limits<float>::infinity();
         float luminousPower = 0;
-        filament::math::float2 scaleOffset = {};
+        math::float2 scaleOffset = {};
     };
 
     struct ShadowParams {
@@ -86,8 +86,8 @@ public:
         float shadowFarHint;
     };
 
-    UTILS_NOINLINE void setLocalPosition(Instance i, const filament::math::float3& position) noexcept;
-    UTILS_NOINLINE void setLocalDirection(Instance i, filament::math::float3 direction) noexcept;
+    UTILS_NOINLINE void setLocalPosition(Instance i, const math::float3& position) noexcept;
+    UTILS_NOINLINE void setLocalDirection(Instance i, math::float3 direction) noexcept;
     UTILS_NOINLINE void setColor(Instance i, const LinearColor& color) noexcept;
     UTILS_NOINLINE void setSpotLightCone(Instance i, float inner, float outer) noexcept;
     UTILS_NOINLINE void setIntensity(Instance i, float intensity) noexcept;
@@ -154,7 +154,7 @@ public:
         return getShadowParams(i).shadowFar;
     }
 
-    constexpr const filament::math::float3& getColor(Instance i) const noexcept {
+    constexpr const math::float3& getColor(Instance i) const noexcept {
         return mManager[i].color;
     }
 
@@ -194,11 +194,11 @@ public:
         return getSpotParams(i).radius;
     }
 
-    constexpr const filament::math::float3& getLocalPosition(Instance i) const noexcept {
+    constexpr const math::float3& getLocalPosition(Instance i) const noexcept {
         return mManager[i].position;
     }
 
-    constexpr const filament::math::float3& getLocalDirection(Instance i) const noexcept {
+    constexpr const math::float3& getLocalDirection(Instance i) const noexcept {
         return mManager[i].direction;
     }
 
@@ -221,9 +221,9 @@ private:
 
     using Base = utils::SingleInstanceComponentManager<  // 120 bytes
             LightType,      //  1
-            filament::math::float3,   // 12
-            filament::math::float3,   // 12
-            filament::math::float3,   // 12
+            math::float3,   // 12
+            math::float3,   // 12
+            math::float3,   // 12
             ShadowParams,   // 12
             SpotParams,     // 24
             float,          //  4

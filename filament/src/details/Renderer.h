@@ -26,11 +26,11 @@
 #include "details/FrameSkipper.h"
 #include "details/SwapChain.h"
 
-#include "driver/DriverApiForward.h"
-#include "driver/Handle.h"
+#include "private/backend/DriverApiForward.h"
+#include "private/backend/Handle.h"
 
 #include <filament/Renderer.h>
-#include <filament/driver/DriverEnums.h>
+#include <filament/backend/DriverEnums.h>
 
 #include <utils/compiler.h>
 #include <utils/Allocator.h>
@@ -39,7 +39,10 @@
 
 namespace filament {
 
+namespace driver {
 class Driver;
+} // namespace driver
+
 class View;
 
 namespace details {
@@ -60,7 +63,7 @@ public:
 
     FEngine& getEngine() const noexcept { return mEngine; }
 
-    filament::math::float4 getShaderUserTime() const { return mShaderUserTime; }
+    math::float4 getShaderUserTime() const { return mShaderUserTime; }
 
     // do all the work here!
     void render(FView const* view);
@@ -90,15 +93,15 @@ private:
         utils::JobSystem& js;
         utils::JobSystem::Job* jobFroxelize = nullptr;
         FView const& view;
-        Handle<HwRenderTarget> const rth;
+        driver::Handle<driver::HwRenderTarget> const rth;
         void beginRenderPass(driver::DriverApi& driver, Viewport const& viewport, const CameraInfo& camera) noexcept override;
         void endRenderPass(DriverApi& driver, Viewport const& viewport) noexcept override;
     public:
         ColorPass(const char* name, utils::JobSystem& js, utils::JobSystem::Job* jobFroxelize,
-                FView& view, Handle<HwRenderTarget> rth);
+                FView& view, driver::Handle<driver::HwRenderTarget> rth);
         static void renderColorPass(FEngine& engine,
                 utils::JobSystem& js, utils::JobSystem::Job* sync,
-                Handle<HwRenderTarget> rth,
+                driver::Handle<driver::HwRenderTarget> rth,
                 FView& view, Viewport const& scaledViewport,
                 utils::GrowingSlice<Command>& commands) noexcept;
     };
@@ -115,7 +118,7 @@ private:
                 FView& view, utils::GrowingSlice<Command>& commands) noexcept;
     };
 
-    Handle<HwRenderTarget> getRenderTarget() const noexcept { return mRenderTarget; }
+    driver::Handle<driver::HwRenderTarget> getRenderTarget() const noexcept { return mRenderTarget; }
 
     void recordHighWatermark(utils::Slice<Command> const& commands) noexcept {
 #ifndef NDEBUG
@@ -142,7 +145,7 @@ private:
     // keep a reference to our engine
     FEngine& mEngine;
     FrameSkipper mFrameSkipper;
-    Handle<HwRenderTarget> mRenderTarget;
+    driver::Handle<driver::HwRenderTarget> mRenderTarget;
     FSwapChain* mSwapChain = nullptr;
     size_t mCommandsHighWatermark = 0;
     uint32_t mFrameId = 0;
@@ -150,7 +153,7 @@ private:
     bool mIsRGB16FSupported : 1;
     bool mIsRGB8Supported : 1;
     Epoch mUserEpoch;
-    filament::math::float4 mShaderUserTime;
+    math::float4 mShaderUserTime;
 
     // per-frame arena for this Renderer
     LinearAllocatorArena& mPerRenderPassArena;

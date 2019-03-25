@@ -29,8 +29,8 @@
 #include "details/ShadowMap.h"
 #include "details/Scene.h"
 
-#include "driver/DriverApi.h"
-#include "driver/Handle.h"
+#include "private/backend/DriverApi.h"
+#include "private/backend/Handle.h"
 
 #include <utils/compiler.h>
 #include <utils/Allocator.h>
@@ -62,7 +62,7 @@ public:
     void terminate(FEngine& engine);
 
     void prepare(FEngine& engine, driver::DriverApi& driver, ArenaScope& arena,
-            Viewport const& viewport, filament::math::float4 const& userTime) noexcept;
+            Viewport const& viewport, math::float4 const& userTime) noexcept;
 
     void setScene(FScene* scene) { mScene = scene; }
     FScene const* getScene() const noexcept { return mScene; }
@@ -184,7 +184,7 @@ public:
         return mHasPostProcessPass;
     }
 
-    filament::math::float2 updateScale(std::chrono::duration<float, std::milli> frameTime) noexcept;
+    math::float2 updateScale(std::chrono::duration<float, std::milli> frameTime) noexcept;
 
     void setDynamicResolutionOptions(View::DynamicResolutionOptions const& options) noexcept;
 
@@ -266,14 +266,14 @@ private:
             FScene::RenderableSoa::iterator begin, FScene::RenderableSoa::iterator end, uint8_t mask) noexcept;
 
     // these are accessed in the render loop, keep together
-    Handle<HwSamplerGroup> mPerViewSbh;
-    Handle<HwUniformBuffer> mPerViewUbh;
-    Handle<HwUniformBuffer> mLightUbh;
-    Handle<HwUniformBuffer> mRenderableUbh;
+    driver::Handle<driver::HwSamplerGroup> mPerViewSbh;
+    driver::Handle<driver::HwUniformBuffer> mPerViewUbh;
+    driver::Handle<driver::HwUniformBuffer> mLightUbh;
+    driver::Handle<driver::HwUniformBuffer> mRenderableUbh;
 
-    Handle<HwSamplerGroup> getUsh() const noexcept { return mPerViewSbh; }
-    Handle<HwUniformBuffer> getUbh() const noexcept { return mPerViewUbh; }
-    Handle<HwUniformBuffer> getLightUbh() const noexcept { return mLightUbh; }
+    driver::Handle<driver::HwSamplerGroup> getUsh() const noexcept { return mPerViewSbh; }
+    driver::Handle<driver::HwUniformBuffer> getUbh() const noexcept { return mPerViewUbh; }
+    driver::Handle<driver::HwUniformBuffer> getLightUbh() const noexcept { return mLightUbh; }
 
     FScene* mScene = nullptr;
     FCamera* mCullingCamera = nullptr;
@@ -306,14 +306,14 @@ private:
     std::array<duration, MAX_FRAMETIME_HISTORY> mFrameTimeHistory;
     size_t mFrameTimeHistorySize = 0;
 
-    filament::math::float2 mScale = 1.0f;
+    math::float2 mScale = 1.0f;
     float mDynamicWorkloadScale = 1.0f;
     bool mIsDynamicResolutionSupported = false;
 
     RenderQuality mRenderQuality;
 
     mutable UniformBuffer mPerViewUb;
-    mutable SamplerGroup mPerViewSb;
+    mutable driver::SamplerGroup mPerViewSb;
 
     utils::CString mName;
 

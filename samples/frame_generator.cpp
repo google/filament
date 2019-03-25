@@ -27,7 +27,8 @@
 
 #include <utils/Path.h>
 
-#include <filament/driver/PixelBufferDescriptor.h>
+#include <backend/PixelBufferDescriptor.h>
+
 #include <filament/Color.h>
 #include <filament/Engine.h>
 #include <filament/LightManager.h>

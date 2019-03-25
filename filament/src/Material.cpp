@@ -18,11 +18,12 @@
 
 #include "details/Engine.h"
 #include "details/DFG.h"
-#include "driver/Program.h"
+
+#include "private/backend/Program.h"
 
 #include "FilamentAPI-impl.h"
 
-#include <filament/driver/DriverEnums.h>
+#include <filament/backend/DriverEnums.h>
 
 #include <private/filament/SibGenerator.h>
 #include <private/filament/UibGenerator.h>
@@ -159,8 +160,8 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder)
     mIsVariantLit = mShading != Shading::UNLIT || mHasShadowMultiplier;
 
     // create raster state
-    using BlendFunction = Driver::RasterState::BlendFunction;
-    using DepthFunc = Driver::RasterState::DepthFunc;
+    using BlendFunction = RasterState::BlendFunction;
+    using DepthFunc = RasterState::DepthFunc;
     switch (mBlendingMode) {
         case BlendingMode::OPAQUE:
         case BlendingMode::MASKED:
@@ -278,7 +279,7 @@ bool FMaterial::hasParameter(const char* name) const noexcept {
     return true;
 }
 
-Handle<HwProgram> FMaterial::getProgramSlow(uint8_t variantKey) const noexcept {
+driver::Handle<driver::HwProgram> FMaterial::getProgramSlow(uint8_t variantKey) const noexcept {
     const ShaderModel sm = mEngine.getDriver().getShaderModel();
 
     assert(!Variant::isReserved(variantKey));
