@@ -1017,7 +1017,7 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
     // Query the program for the mapping from (SamplerBufferBinding,Offset) to (SamplerBinding),
     // where "SamplerBinding" is the integer in the GLSL, and SamplerBufferBinding is the abstract
     // Filament concept used to form groups of samplers.
-    for (uint8_t bufferIdx = 0; bufferIdx < VulkanBinder::NUM_SAMPLER_BINDINGS; bufferIdx++) {
+    for (uint8_t bufferIdx = 0; bufferIdx < VulkanBinder::SAMPLER_BINDING_COUNT; bufferIdx++) {
         VulkanSamplerGroup* vksb = mSamplerBindings[bufferIdx];
         if (!vksb) {
             continue;

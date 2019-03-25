@@ -695,8 +695,8 @@ void MetalDriver::draw(driver::PipelineState ps, Handle<HwRenderPrimitive> rph) 
     // Enumerate all the sampler buffers for the program and check which textures and samplers need
     // to be bound.
 
-    id<MTLTexture> texturesToBind[NUM_SAMPLER_BINDINGS] = {};
-    id<MTLSamplerState> samplersToBind[NUM_SAMPLER_BINDINGS] = {};
+    id<MTLTexture> texturesToBind[SAMPLER_BINDING_COUNT] = {};
+    id<MTLSamplerState> samplersToBind[SAMPLER_BINDING_COUNT] = {};
 
     enumerateSamplerGroups(program, [this, &texturesToBind, &samplersToBind](
             const SamplerGroup::Sampler* sampler,
@@ -712,7 +712,7 @@ void MetalDriver::draw(driver::PipelineState ps, Handle<HwRenderPrimitive> rph) 
     // to both the vertex and fragment stages.
 
     NSRange range {
-        .length = NUM_SAMPLER_BINDINGS,
+        .length = SAMPLER_BINDING_COUNT,
         .location = 0
     };
     [mContext->currentCommandEncoder setFragmentTextures:texturesToBind
@@ -742,7 +742,7 @@ void MetalDriver::draw(driver::PipelineState ps, Handle<HwRenderPrimitive> rph) 
 void MetalDriver::enumerateSamplerGroups(
         const MetalProgram* program,
         const std::function<void(const SamplerGroup::Sampler*, size_t)>& f) {
-    for (uint8_t samplerGroupIdx = 0; samplerGroupIdx < NUM_SAMPLER_GROUPS; samplerGroupIdx++) {
+    for (uint8_t samplerGroupIdx = 0; samplerGroupIdx < SAMPLER_GROUP_COUNT; samplerGroupIdx++) {
         const auto& samplerGroup = program->samplerGroupInfo[samplerGroupIdx];
         if (samplerGroup.empty()) {
             continue;

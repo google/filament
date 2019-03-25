@@ -377,14 +377,14 @@ private:
         return pos->second;
     }
 
-    const std::array<driver::HwSamplerGroup*, driver::Program::NUM_SAMPLER_BINDINGS>& getSamplerBindings() const {
+    const std::array<driver::HwSamplerGroup*, driver::Program::SAMPLER_BINDING_COUNT>& getSamplerBindings() const {
         return mSamplerBindings;
     }
 
     GLsizei getAttachments(std::array<GLenum, 3>& attachments,
             GLRenderTarget const* rt, uint8_t buffers) const noexcept;
 
-    static constexpr const size_t MAX_TEXTURE_UNITS = 16;   // All mobile GPUs as of 2016
+    static constexpr const size_t MAX_TEXTURE_UNIT_COUNT = 16;   // All mobile GPUs as of 2016
     static constexpr const size_t MAX_BUFFER_BINDINGS = 32;
 
     GLRenderPrimitive mDefaultVAO;
@@ -454,7 +454,7 @@ private:
                 struct {
                     GLuint texture_id = 0;
                 } targets[5];
-            } units[MAX_TEXTURE_UNITS];
+            } units[MAX_TEXTURE_UNIT_COUNT];
         } textures;
 
         struct {
@@ -513,7 +513,7 @@ private:
             bool clearStencil, uint32_t stencil) noexcept;
 
     // sampler buffer binding points (nullptr if not used)
-    std::array<driver::HwSamplerGroup*, driver::Program::NUM_SAMPLER_BINDINGS> mSamplerBindings;   // 8 pointers
+    std::array<driver::HwSamplerGroup*, driver::Program::SAMPLER_BINDING_COUNT> mSamplerBindings;   // 8 pointers
 
     mutable tsl::robin_map<uint32_t, GLuint> mSamplerMap;
     mutable std::vector<GLTexture*> mExternalStreams;
@@ -634,7 +634,7 @@ constexpr size_t OpenGLDriver::getIndexForBufferTarget(GLenum target) noexcept {
 }
 
 void OpenGLDriver::activeTexture(GLuint unit) noexcept {
-    assert(unit < MAX_TEXTURE_UNITS);
+    assert(unit < MAX_TEXTURE_UNIT_COUNT);
     update_state(state.textures.active, unit, [&]() {
         glActiveTexture(GL_TEXTURE0 + unit);
     });
@@ -654,7 +654,7 @@ void UTILS_UNUSED OpenGLDriver::bindTexture(GLuint unit, GLuint target, GLuint t
 }
 
 void OpenGLDriver::bindSampler(GLuint unit, GLuint sampler) noexcept {
-    assert(unit < MAX_TEXTURE_UNITS);
+    assert(unit < MAX_TEXTURE_UNIT_COUNT);
     update_state(state.textures.units[unit].sampler, sampler, [&]() {
         glBindSampler(unit, sampler);
     });

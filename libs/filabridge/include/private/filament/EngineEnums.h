@@ -40,7 +40,7 @@ namespace BindingPoints {
     constexpr uint8_t POST_PROCESS            = 4;    // samplers for the post process pass
     constexpr uint8_t PER_MATERIAL_INSTANCE   = 5;    // uniforms/samplers updates per material
     constexpr uint8_t COUNT                   = 6;
-    // These are limited by Program::NUM_UNIFORM_BINDINGS (currently 6)
+    // These are limited by Program::UNIFORM_BINDING_COUNT (currently 6)
 }
 
 static_assert(BindingPoints::PER_MATERIAL_INSTANCE == BindingPoints::COUNT - 1,
