@@ -32,6 +32,10 @@ preBuild.dependsOn compileMaterials
 preBuild.dependsOn compileMesh
 preBuild.dependsOn generateIbl
 
+clean.doFirst {
+    delete "src/main/assets"
+}
+
 android {
     compileSdkVersion 28
     defaultConfig {
