@@ -20,8 +20,9 @@
 #include <Metal/Metal.h>
 
 #include "private/backend/Driver.h"
+#include "private/backend/Program.h"
 
-#include <private/filament/EngineEnums.h>
+#include <filament/backend/DriverEnums.h>
 
 #include <memory>
 #include <tsl/robin_map.h>
@@ -36,10 +37,10 @@ inline bool operator==(const driver::SamplerParams& lhs, const driver::SamplerPa
 
 namespace metal {
 
-static constexpr uint32_t MAX_VERTEX_ATTRIBUTES = filament::ATTRIBUTE_INDEX_COUNT;
-static constexpr uint32_t NUM_SAMPLER_GROUPS = BindingPoints::COUNT;
-static constexpr uint32_t NUM_SAMPLER_BINDINGS = filament::MAX_SAMPLER_COUNT;
-static constexpr uint32_t VERTEX_BUFFER_START = BindingPoints::COUNT;
+static constexpr uint32_t MAX_VERTEX_ATTRIBUTES = driver::MAX_VERTEX_ATTRIBUTE_COUNT;
+static constexpr uint32_t NUM_SAMPLER_GROUPS = Program::NUM_UNIFORM_BINDINGS;
+static constexpr uint32_t NUM_SAMPLER_BINDINGS = driver::MAX_SAMPLER_COUNT;
+static constexpr uint32_t VERTEX_BUFFER_START = Program::NUM_UNIFORM_BINDINGS;
 
 // Forward declarations necessary here, definitions at end of file.
 inline bool operator==(const MTLViewport& lhs, const MTLViewport& rhs);

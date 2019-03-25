@@ -28,8 +28,6 @@
 
 #include <filament/backend/DriverEnums.h>
 
-#include <private/filament/EngineEnums.h>
-
 #include <utils/Path.h>
 
 #include <spirv_glsl.hpp>

@@ -35,6 +35,8 @@
 #include "private/backend/CommandBufferQueue.h"
 #include "private/backend/DriverApi.h"
 
+#include <private/filament/EngineEnums.h>
+
 #include <filament/Engine.h>
 #include <filament/VertexBuffer.h>
 #include <filament/IndirectLight.h>

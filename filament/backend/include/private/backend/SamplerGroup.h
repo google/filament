@@ -91,7 +91,7 @@ private:
     friend utils::io::ostream& operator<<(utils::io::ostream& out, const SamplerGroup& rhs);
 #endif
 
-    std::array<Sampler, 16> mBuffer;    // 128 bytes
+    std::array<Sampler, driver::MAX_SAMPLER_COUNT> mBuffer;    // 128 bytes
     mutable utils::bitset32 mDirty;
     uint8_t mSize = 0;
 };

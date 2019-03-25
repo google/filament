@@ -17,8 +17,6 @@
 #ifndef TNT_FILAMENT_DRIVER_PROGRAM_H
 #define TNT_FILAMENT_DRIVER_PROGRAM_H
 
-#include <private/filament/EngineEnums.h>
-
 #include <utils/compiler.h>
 #include <utils/CString.h>
 #include <utils/Log.h>
@@ -33,16 +31,12 @@ class Program {
 public:
 
     static constexpr size_t NUM_SHADER_TYPES = 2;
-    static constexpr size_t NUM_UNIFORM_BINDINGS = BindingPoints::COUNT;
-    static constexpr size_t NUM_SAMPLER_BINDINGS = BindingPoints::COUNT;
+    static constexpr size_t NUM_UNIFORM_BINDINGS = 6; //BindingPoints::COUNT;
+    static constexpr size_t NUM_SAMPLER_BINDINGS = 6; //BindingPoints::COUNT;
 
     enum class Shader : uint8_t {
         VERTEX = 0,
         FRAGMENT = 1
-    };
-
-    struct UniformBlock {
-        utils::CString name = {};   // name of the uniform block in the shader
     };
 
     struct Sampler {

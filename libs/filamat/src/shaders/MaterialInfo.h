@@ -19,7 +19,6 @@
 
 #include <filament/backend/DriverEnums.h>
 #include <filament/MaterialEnums.h>
-#include <private/filament/EngineEnums.h>
 #include <private/filament/UniformInterfaceBlock.h>
 #include <private/filament/SamplerBindingMap.h>
 #include <private/filament/SamplerInterfaceBlock.h>

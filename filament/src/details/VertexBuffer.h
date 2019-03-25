@@ -21,7 +21,7 @@
 
 #include "private/backend/Handle.h"
 
-#include <private/filament/EngineEnums.h>
+#include <filament/backend/DriverEnums.h>
 #include <filament/VertexBuffer.h>
 
 #include <utils/bitset.h>
@@ -62,7 +62,7 @@ private:
     };
 
     driver::Handle<driver::HwVertexBuffer> mHandle;
-    std::array<AttributeData, MAX_ATTRIBUTE_BUFFERS_COUNT> mAttributes;
+    std::array<AttributeData, driver::MAX_ATTRIBUTE_BUFFER_COUNT> mAttributes;
     AttributeBitset mDeclaredAttributes;
     uint32_t mVertexCount = 0;
     uint8_t mBufferCount = 0;
