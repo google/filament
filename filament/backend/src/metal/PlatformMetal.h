@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_DRIVER_VULKAN_PLATFORM_METAL_H
-#define TNT_FILAMENT_DRIVER_VULKAN_PLATFORM_METAL_H
+#ifndef TNT_FILAMENT_DRIVER_PLATFORM_METAL_H
+#define TNT_FILAMENT_DRIVER_PLATFORM_METAL_H
 
 #include <stdint.h>
 
@@ -23,13 +23,22 @@
 #include <backend/Platform.h>
 
 namespace filament {
+namespace driver {
+
+class MetalPlatform : public DefaultPlatform {
+public:
+    ~MetalPlatform() override;
+};
+
+} // namespace driver
 
 class PlatformMetal final : public driver::MetalPlatform {
 public:
     driver::Driver* createDriver(void* sharedContext) noexcept override;
     int getOSVersion() const noexcept override { return 0; }
+    ~PlatformMetal() override;
 };
 
 } // namespace filament
 
-#endif // TNT_FILAMENT_DRIVER_VULKAN_PLATFORM_METAL_H
+#endif // TNT_FILAMENT_DRIVER_PLATFORM_METAL_H

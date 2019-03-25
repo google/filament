@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "opengl/PlatformGLX.h"
+#include "PlatformGLX.h"
 
 #include <utils/Log.h>
 #include <utils/Panic.h>
@@ -23,7 +23,7 @@
 #include <GL/glx.h>
 #include <GL/glxext.h>
 
-#include "opengl/OpenGLDriver.h"
+#include "OpenGLDriver.h"
 
 #include <dlfcn.h>
 

@@ -14,11 +14,11 @@
  * limitations under the License.
  */
 
-#include "opengl/PlatformWGL.h"
+#include "PlatformWGL.h"
 
 #include <Wingdi.h>
 
-#include "opengl/OpenGLDriver.h"
+#include "OpenGLDriver.h"
 
 #include "Windows.h"
 #include <GL/gl.h>

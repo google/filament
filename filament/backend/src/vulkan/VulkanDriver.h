@@ -37,6 +37,7 @@
 namespace filament {
 namespace driver {
 
+class VulkanPlatform;
 struct VulkanRenderTarget;
 struct VulkanSamplerGroup;
 

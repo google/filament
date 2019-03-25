@@ -23,7 +23,8 @@
 #include <EGL/eglext.h>
 
 #include <filament/backend/DriverEnums.h>
-#include <backend/Platform.h>
+
+#include "OpenGLPlatform.h"
 
 struct AHardwareBuffer;
 

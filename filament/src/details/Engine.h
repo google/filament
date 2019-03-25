@@ -286,6 +286,7 @@ private:
 
     Backend mBackend;
     Platform* mPlatform = nullptr;
+    bool mOwnPlatform = false;
     void* mSharedGLContext = nullptr;
     bool mTerminated = false;
     driver::Handle<driver::HwRenderPrimitive> mFullScreenTriangleRph;

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "opengl/PlatformEGL.h"
+#include "PlatformEGL.h"
 
 #include <jni.h>
 
@@ -33,7 +33,7 @@
 #include "android/ExternalStreamManagerAndroid.h"
 #include "android/VirtualMachineEnv.h"
 
-#include "opengl/OpenGLDriver.h"
+#include "OpenGLDriver.h"
 
 #include <android/api-level.h>
 #include <sys/system_properties.h>

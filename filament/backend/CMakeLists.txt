@@ -10,8 +10,8 @@ set(GENERATION_ROOT ${CMAKE_CURRENT_BINARY_DIR})
 # ==================================================================================================
 set(PUBLIC_HDRS
         include/backend/BufferDescriptor.h
-        include/backend/PixelBufferDescriptor.h
         include/backend/PipelineState.h
+        include/backend/PixelBufferDescriptor.h
         include/backend/Platform.h
         include/backend/TargetBufferInfo.h
 )
@@ -24,11 +24,6 @@ set(SRCS
         src/Handle.cpp
         src/noop/NoopDriver.cpp
         src/noop/PlatformNoop.cpp
-        src/opengl/gl_headers.cpp
-        src/opengl/GLUtils.cpp
-        src/opengl/OpenGLBlitter.cpp
-        src/opengl/OpenGLDriver.cpp
-        src/opengl/OpenGLProgram.cpp
         src/Platform.cpp
         src/Program.cpp
         src/SamplerGroup.cpp
@@ -53,29 +48,42 @@ set(PRIVATE_HDRS
 )
 
 # ==================================================================================================
-# OS specific
+# OpenGL / OpenGL ES Sources
 # ==================================================================================================
 
-# Here set the architecture specific sources
-if (USE_EXTERNAL_GLES3)
-    # Experimental feature; clients provide their own Context Manager.
-elseif (ANDROID)
-    list(APPEND SRCS src/android/ExternalStreamManagerAndroid.cpp)
-    list(APPEND SRCS src/android/ExternalTextureManagerAndroid.cpp)
-    list(APPEND SRCS src/android/VirtualMachineEnv.cpp)
-    list(APPEND SRCS src/opengl/PlatformEGL.cpp)
-elseif (IOS)
-    list(APPEND SRCS src/opengl/PlatformCocoaTouchGL.mm)
-elseif (APPLE)
-    list(APPEND SRCS src/opengl/PlatformCocoaGL.mm)
-elseif (WEBGL)
-    list(APPEND SRCS src/opengl/PlatformWebGL.cpp)
-elseif (LINUX)
-    list(APPEND SRCS src/opengl/PlatformGLX.cpp)
-elseif (WIN32)
-    list(APPEND SRCS src/opengl/PlatformWGL.cpp)
-else()
-    list(APPEND SRCS src/opengl/PlatformDummyGL.cpp)
+if (NOT USE_EXTERNAL_GLES3)
+    list(APPEND SRCS
+            src/opengl/gl_headers.cpp
+            src/opengl/gl_headers.h
+            src/opengl/GLUtils.cpp
+            src/opengl/GLUtils.h
+            src/opengl/OpenGLBlitter.cpp
+            src/opengl/OpenGLBlitter.h
+            src/opengl/OpenGLDriver.cpp
+            src/opengl/OpenGLDriver.h
+            src/opengl/OpenGLProgram.cpp
+            src/opengl/OpenGLProgram.h
+            src/opengl/OpenGLPlatform.cpp
+            src/opengl/OpenGLPlatform.h
+    )
+    if (ANDROID)
+        list(APPEND SRCS src/android/ExternalStreamManagerAndroid.cpp)
+        list(APPEND SRCS src/android/ExternalTextureManagerAndroid.cpp)
+        list(APPEND SRCS src/android/VirtualMachineEnv.cpp)
+        list(APPEND SRCS src/opengl/PlatformEGL.cpp)
+    elseif (IOS)
+        list(APPEND SRCS src/opengl/PlatformCocoaTouchGL.mm)
+    elseif (APPLE)
+        list(APPEND SRCS src/opengl/PlatformCocoaGL.mm)
+    elseif (WEBGL)
+        list(APPEND SRCS src/opengl/PlatformWebGL.cpp)
+    elseif (LINUX)
+        list(APPEND SRCS src/opengl/PlatformGLX.cpp)
+    elseif (WIN32)
+        list(APPEND SRCS src/opengl/PlatformWGL.cpp)
+    else()
+        list(APPEND SRCS src/opengl/PlatformDummyGL.cpp)
+    endif()
 endif()
 
 # ==================================================================================================
@@ -113,6 +121,8 @@ if (FILAMENT_SUPPORTS_VULKAN)
             src/vulkan/VulkanFboCache.h
             src/vulkan/VulkanHandles.cpp
             src/vulkan/VulkanHandles.h
+            src/vulkan/VulkanPlatform.cpp
+            src/vulkan/VulkanPlatform.h
             src/vulkan/VulkanSamplerCache.cpp
             src/vulkan/VulkanSamplerCache.h
             src/vulkan/VulkanStagePool.cpp

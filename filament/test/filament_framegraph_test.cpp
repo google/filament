@@ -28,7 +28,7 @@ using namespace driver;
 
 static CircularBuffer buffer(8192);
 static Backend backend = Backend::NOOP;
-static Platform* platform = Platform::create(&backend);
+static DefaultPlatform* platform = DefaultPlatform::create(&backend);
 static CommandStream driverApi(*platform->createDriver(nullptr), buffer);
 
 TEST(FrameGraphTest, SimpleRenderPass) {

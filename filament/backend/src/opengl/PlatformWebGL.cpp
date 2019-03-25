@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#include "opengl/PlatformWebGL.h"
-#include "opengl/OpenGLDriver.h"
+#include "PlatformWebGL.h"
+#include "OpenGLDriver.h"
 
 namespace filament {
 

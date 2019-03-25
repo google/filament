@@ -19,7 +19,7 @@
 
 #include "private/backend/Driver.h"
 #include "DriverBase.h"
-#include "opengl/GLUtils.h"
+#include "GLUtils.h"
 
 #include <utils/compiler.h>
 #include <utils/Allocator.h>
@@ -36,6 +36,7 @@
 namespace filament {
 
 namespace driver {
+class OpenGLPlatform;
 class PixelBufferDescriptor;
 class TargetBufferInfo;
 } // namespace driver

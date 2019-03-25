@@ -29,6 +29,9 @@
 
 namespace filament {
 namespace driver {
+
+class MetalPlatform;
+
 namespace metal {
 
 struct MetalContext;

@@ -25,11 +25,12 @@
 #include <utils/compiler.h>
 #include <utils/Log.h>
 
-#include "opengl/gl_headers.h"
-#include "private/backend/Driver.h"
 #include "DriverBase.h"
+#include "gl_headers.h"
+#include "OpenGLDriver.h"
+
+#include "private/backend/Driver.h"
 #include "private/backend/Program.h"
-#include "opengl/OpenGLDriver.h"
 
 namespace filament {
 
