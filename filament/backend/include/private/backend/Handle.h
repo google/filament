@@ -17,14 +17,10 @@
 #ifndef TNT_FILAMENT_DRIVER_HANDLE_H
 #define TNT_FILAMENT_DRIVER_HANDLE_H
 
-#include <assert.h>
-
-#include <algorithm>
-#include <limits>
-#include <type_traits>
-
 #include <utils/compiler.h>
 #include <utils/Log.h>
+
+#include <assert.h>
 
 namespace filament {
 namespace backend {
@@ -62,18 +58,17 @@ public:
     }
 
     HandleBase(HandleBase const& rhs) noexcept = default;
+
     HandleBase& operator = (HandleBase const& rhs) noexcept = default;
 
-#ifndef NDEBUG
-    // implement move ctor and copy operator for safety
-    HandleBase(HandleBase&& rhs) noexcept : object(nullid) {
-        std::swap(object, rhs.object);
+    HandleBase(HandleBase&& rhs) noexcept : object(rhs.object) {
+        rhs.object = nullid;
     }
+
     HandleBase& operator = (HandleBase&& rhs) noexcept {
         std::swap(object, rhs.object);
         return *this;
     }
-#endif
 
     void clear() noexcept { object = nullid; }
 

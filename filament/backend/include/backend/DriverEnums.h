@@ -19,14 +19,14 @@
 #ifndef TNT_FILAMENT_DRIVER_DRIVERENUMS_H
 #define TNT_FILAMENT_DRIVER_DRIVERENUMS_H
 
+#include <utils/unwindows.h> // Because we define ERROR in the FenceStatus enum.
+
 #include <math/vec4.h>
 
-#include <array>
+#include <array>    // FIXME: STL headers are not allowed in public headers
 
 #include <stddef.h>
 #include <stdint.h>
-
-#include <utils/unwindows.h> // Because we define ERROR in the FenceStatus enum.
 
 namespace filament {
 

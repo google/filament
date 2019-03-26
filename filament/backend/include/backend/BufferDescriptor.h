@@ -19,10 +19,10 @@
 #ifndef TNT_FILAMENT_DRIVER_BUFFERDESCRIPTOR_H
 #define TNT_FILAMENT_DRIVER_BUFFERDESCRIPTOR_H
 
+#include <utils/compiler.h>
+
 #include <stddef.h>
 #include <stdint.h>
-
-#include <utils/compiler.h>
 
 namespace filament {
 namespace backend {

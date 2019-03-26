@@ -19,15 +19,14 @@
 #ifndef TNT_FILAMENT_DRIVER_PIXEL_BUFFERDESCRIPTOR_H
 #define TNT_FILAMENT_DRIVER_PIXEL_BUFFERDESCRIPTOR_H
 
-#include <assert.h>
-#include <stddef.h>
-#include <stdint.h>
-
 #include <backend/BufferDescriptor.h>
-
 #include <backend/DriverEnums.h>
 
 #include <utils/compiler.h>
+
+#include <assert.h>
+#include <stddef.h>
+#include <stdint.h>
 
 namespace filament {
 namespace backend {
