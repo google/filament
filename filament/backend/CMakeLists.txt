@@ -64,7 +64,7 @@ if (NOT USE_EXTERNAL_GLES3)
             src/opengl/OpenGLProgram.cpp
             src/opengl/OpenGLProgram.h
             src/opengl/OpenGLPlatform.cpp
-            src/opengl/OpenGLPlatform.h
+            include/private/backend/OpenGLPlatform.h
     )
     if (ANDROID)
         list(APPEND SRCS src/android/ExternalStreamManagerAndroid.cpp)

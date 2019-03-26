@@ -14,12 +14,18 @@
  * limitations under the License.
  */
 
-#include "OpenGLPlatform.h"
+#include "private/backend/OpenGLPlatform.h"
+
+#include "OpenGLDriver.h"
 
 namespace filament {
 namespace backend {
 
 OpenGLPlatform::~OpenGLPlatform() noexcept = default;
+
+Driver* OpenGLPlatform::createDefaultDriver(OpenGLPlatform* platform, void* sharedContext) {
+    return OpenGLDriver::create(platform, sharedContext);
+}
 
 } // namespace backend
 } // namespace filament

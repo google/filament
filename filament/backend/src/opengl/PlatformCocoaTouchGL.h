@@ -21,7 +21,7 @@
 
 #include <backend/DriverEnums.h>
 
-#include "OpenGLPlatform.h"
+#include "private/backend/OpenGLPlatform.h"
 
 namespace filament {
 
