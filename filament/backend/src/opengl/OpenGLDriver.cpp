@@ -24,9 +24,9 @@
 #include <utils/Systrace.h>
 
 #include "private/backend/DriverApi.h"
+#include "private/backend/OpenGLPlatform.h"
 #include "CommandStreamDispatcher.h"
 #include "OpenGLBlitter.h"
-#include "OpenGLPlatform.h"
 #include "OpenGLProgram.h"
 
 
