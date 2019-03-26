@@ -59,6 +59,9 @@ constexpr size_t CONFIG_MAX_BONE_COUNT = 256;
 static constexpr bool   CONFIG_IBL_RGBM  = true;
 static constexpr size_t CONFIG_IBL_SIZE  = 256;
 
+static constexpr size_t CONFIG_UNIFORM_BINDING_COUNT = 6;
+static constexpr size_t CONFIG_SAMPLER_BINDING_COUNT = 6;
+
 } // namespace filament
 
 #endif // TNT_FILAMENT_driver/EngineEnums.h
