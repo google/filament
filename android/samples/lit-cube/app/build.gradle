@@ -14,6 +14,10 @@ compileMaterials {
 
 preBuild.dependsOn compileMaterials
 
+clean.doFirst {
+    delete "src/main/assets"
+}
+
 android {
     compileSdkVersion 28
     defaultConfig {

@@ -63,5 +63,10 @@ public class FilamentCanvas extends Canvas implements FilamentTarget  {
     }
 
     public void destroy(@NonNull Engine engine) {
+        if (mSwapChain == null) {
+            return;
+        }
+        engine.destroySwapChain(mSwapChain);
+        mSwapChain = null;
     }
 }

@@ -20,8 +20,9 @@
 #include <Metal/Metal.h>
 
 #include "private/backend/Driver.h"
+#include "private/backend/Program.h"
 
-#include <private/filament/EngineEnums.h>
+#include <filament/backend/DriverEnums.h>
 
 #include <memory>
 #include <tsl/robin_map.h>
@@ -36,10 +37,10 @@ inline bool operator==(const driver::SamplerParams& lhs, const driver::SamplerPa
 
 namespace metal {
 
-static constexpr uint32_t MAX_VERTEX_ATTRIBUTES = filament::ATTRIBUTE_INDEX_COUNT;
-static constexpr uint32_t NUM_SAMPLER_GROUPS = BindingPoints::COUNT;
-static constexpr uint32_t NUM_SAMPLER_BINDINGS = filament::MAX_SAMPLER_COUNT;
-static constexpr uint32_t VERTEX_BUFFER_START = BindingPoints::COUNT;
+static constexpr uint32_t MAX_VERTEX_ATTRIBUTE_COUNT = driver::MAX_VERTEX_ATTRIBUTE_COUNT;
+static constexpr uint32_t SAMPLER_GROUP_COUNT = Program::UNIFORM_BINDING_COUNT;
+static constexpr uint32_t SAMPLER_BINDING_COUNT = driver::MAX_SAMPLER_COUNT;
+static constexpr uint32_t VERTEX_BUFFER_START = Program::UNIFORM_BINDING_COUNT;
 
 // Forward declarations necessary here, definitions at end of file.
 inline bool operator==(const MTLViewport& lhs, const MTLViewport& rhs);
@@ -58,19 +59,19 @@ struct VertexDescription {
     struct Layout {
         uint32_t stride;
     };
-    Attribute attributes[MAX_VERTEX_ATTRIBUTES] = {};
-    Layout layouts[MAX_VERTEX_ATTRIBUTES] = {};
+    Attribute attributes[MAX_VERTEX_ATTRIBUTE_COUNT] = {};
+    Layout layouts[MAX_VERTEX_ATTRIBUTE_COUNT] = {};
 
     bool operator==(const VertexDescription& rhs) const noexcept {
         bool result = true;
-        for (uint32_t i = 0; i < MAX_VERTEX_ATTRIBUTES; i++) {
+        for (uint32_t i = 0; i < MAX_VERTEX_ATTRIBUTE_COUNT; i++) {
             result &= (
                     this->attributes[i].format == rhs.attributes[i].format &&
                     this->attributes[i].buffer == rhs.attributes[i].buffer &&
                     this->attributes[i].offset == rhs.attributes[i].offset
             );
         }
-        for (uint32_t i = 0; i < MAX_VERTEX_ATTRIBUTES; i++) {
+        for (uint32_t i = 0; i < MAX_VERTEX_ATTRIBUTE_COUNT; i++) {
             result &= this->layouts[i].stride == rhs.layouts[i].stride;
         }
         return result;

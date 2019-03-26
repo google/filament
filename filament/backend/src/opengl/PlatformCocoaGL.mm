@@ -17,7 +17,7 @@
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
 
-#include "opengl/PlatformCocoaGL.h"
+#include "PlatformCocoaGL.h"
 
 #include <OpenGL/OpenGL.h>
 #include <Cocoa/Cocoa.h>
@@ -28,7 +28,7 @@
 
 #include <utils/Panic.h>
 
-#include "opengl/OpenGLDriver.h"
+#include "OpenGLDriver.h"
 
 namespace filament {
 

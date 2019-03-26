@@ -51,7 +51,7 @@ VulkanProgram::VulkanProgram(VulkanContext& context, const Program& builder) noe
     auto const& blobs = builder.getShadersSource();
     VkShaderModule* modules[2] = { &bundle.vertex, &bundle.fragment };
     bool missing = false;
-    for (size_t i = 0; i < Program::NUM_SHADER_TYPES; i++) {
+    for (size_t i = 0; i < Program::SHADER_TYPE_COUNT; i++) {
         const auto& blob = blobs[i];
         VkShaderModule* module = modules[i];
         if (blob.empty()) {

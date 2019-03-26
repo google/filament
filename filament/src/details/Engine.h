@@ -35,6 +35,8 @@
 #include "private/backend/CommandBufferQueue.h"
 #include "private/backend/DriverApi.h"
 
+#include <private/filament/EngineEnums.h>
+
 #include <filament/Engine.h>
 #include <filament/VertexBuffer.h>
 #include <filament/IndirectLight.h>
@@ -286,6 +288,7 @@ private:
 
     Backend mBackend;
     Platform* mPlatform = nullptr;
+    bool mOwnPlatform = false;
     void* mSharedGLContext = nullptr;
     bool mTerminated = false;
     driver::Handle<driver::HwRenderPrimitive> mFullScreenTriangleRph;

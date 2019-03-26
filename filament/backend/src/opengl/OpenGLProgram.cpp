@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-#include "opengl/OpenGLProgram.h"
+#include "OpenGLProgram.h"
 
-#include "opengl/OpenGLDriver.h"
+#include "OpenGLDriver.h"
 
 #include <utils/Log.h>
 #include <utils/compiler.h>
@@ -39,7 +39,7 @@ OpenGLProgram::OpenGLProgram(OpenGLDriver* gl, const Program& programBuilder) no
 
     // build all shaders
     #pragma nounroll
-    for (size_t i = 0; i < Program::NUM_SHADER_TYPES; i++) {
+    for (size_t i = 0; i < Program::SHADER_TYPE_COUNT; i++) {
         GLenum glShaderType;
         Shader type = (Shader)i;
         switch (type) {
@@ -76,7 +76,7 @@ OpenGLProgram::OpenGLProgram(OpenGLDriver* gl, const Program& programBuilder) no
     if (UTILS_LIKELY((mValidShaderSet & mask) == mask)) {
         GLint status;
         GLuint program = glCreateProgram();
-        for (size_t i = 0; i < Program::NUM_SHADER_TYPES; i++) {
+        for (size_t i = 0; i < Program::SHADER_TYPE_COUNT; i++) {
             if (validShaderSet & (1U << i)) {
                 glAttachShader(program, this->gl.shaders[i]);
             }
@@ -164,7 +164,7 @@ OpenGLProgram::~OpenGLProgram() noexcept {
     GLuint program = gl.program;
     if (validShaderSet) {
         #pragma nounroll
-        for (size_t i = 0; i < Program::NUM_SHADER_TYPES; i++) {
+        for (size_t i = 0; i < Program::SHADER_TYPE_COUNT; i++) {
             if (validShaderSet & (1U << i)) {
                 const GLuint shader = gl.shaders[i];
                 if (isValid) {

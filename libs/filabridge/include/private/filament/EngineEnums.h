@@ -22,8 +22,6 @@
 
 namespace filament {
 
-static constexpr size_t VERTEX_DOMAIN_COUNT = 4;
-
 static constexpr size_t POST_PROCESS_STAGES_COUNT = 4;
 enum class PostProcessStage : uint8_t {
     TONE_MAPPING_OPAQUE,           // Tone mapping post-process
@@ -34,7 +32,6 @@ enum class PostProcessStage : uint8_t {
 
 // Binding points for uniform buffers and sampler buffers.
 // Effectively, these are just names.
-// These are limited by Program::NUM_UNIFORM_BINDINGS (currently 6)
 namespace BindingPoints {
     constexpr uint8_t PER_VIEW                = 0;    // uniforms/samplers updated per view
     constexpr uint8_t PER_RENDERABLE          = 1;    // uniforms/samplers updated per renderable
@@ -43,14 +40,11 @@ namespace BindingPoints {
     constexpr uint8_t POST_PROCESS            = 4;    // samplers for the post process pass
     constexpr uint8_t PER_MATERIAL_INSTANCE   = 5;    // uniforms/samplers updates per material
     constexpr uint8_t COUNT                   = 6;
+    // These are limited by Program::UNIFORM_BINDING_COUNT (currently 6)
 }
 
 static_assert(BindingPoints::PER_MATERIAL_INSTANCE == BindingPoints::COUNT - 1,
         "Dynamically sized sampler buffer must be the last binding point.");
-
-constexpr uint32_t ATTRIBUTE_INDEX_COUNT = 7;
-constexpr size_t MAX_ATTRIBUTE_BUFFERS_COUNT = 8; // FIXME: should match driver::MAX_ATTRIBUTE_BUFFER_COUNT
-constexpr size_t MAX_SAMPLER_COUNT = 16; // Matches the Adreno Vulkan driver.
 
 // This value is limited by UBO size, ES3.0 only guarantees 16 KiB.
 // Values <= 256, use less CPU and GPU resources.

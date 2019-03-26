@@ -17,8 +17,6 @@
 #ifndef TNT_FILAMENT_MATERIAL_PARSER_H
 #define TNT_FILAMENT_MATERIAL_PARSER_H
 
-#include <private/filament/EngineEnums.h>
-
 #include <filaflat/BlobDictionary.h>
 #include <filaflat/ChunkContainer.h>
 #include <filaflat/MaterialChunk.h>

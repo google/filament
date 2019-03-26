@@ -194,11 +194,11 @@ MetalProgram::MetalProgram(id<MTLDevice> device, const Program& program) noexcep
 
     using MetalFunctionPtr = id<MTLFunction>*;
 
-    static_assert(Program::NUM_SHADER_TYPES == 2, "Only vertex and fragment shaders expected.");
+    static_assert(Program::SHADER_TYPE_COUNT == 2, "Only vertex and fragment shaders expected.");
     MetalFunctionPtr shaderFunctions[2] = { &vertexFunction, &fragmentFunction };
 
     const auto& sources = program.getShadersSource();
-    for (size_t i = 0; i < Program::NUM_SHADER_TYPES; i++) {
+    for (size_t i = 0; i < Program::SHADER_TYPE_COUNT; i++) {
         const auto& source = sources[i];
         // It's okay for some shaders to be empty, they shouldn't be used in any draw calls.
         if (source.empty()) {

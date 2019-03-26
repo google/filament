@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "opengl/PlatformCocoaTouchGL.h"
+#include "PlatformCocoaTouchGL.h"
 
 #include <OpenGLES/EAGL.h>
 #include <OpenGLES/ES3/gl.h>
@@ -28,7 +28,7 @@
 
 #include <utils/Panic.h>
 
-#include "opengl/OpenGLDriver.h"
+#include "OpenGLDriver.h"
 
 namespace filament {
 

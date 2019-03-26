@@ -19,7 +19,6 @@
 
 #include <algorithm>
 
-#include <private/filament/EngineEnums.h>
 #include <filament/MaterialEnums.h>
 
 #include <filamat/MaterialBuilder.h>

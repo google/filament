@@ -42,7 +42,9 @@ namespace driver {
 static constexpr uint64_t SWAP_CHAIN_CONFIG_TRANSPARENT = 0x1;
 static constexpr uint64_t SWAP_CHAIN_CONFIG_READABLE = 0x2;
 
-static constexpr size_t MAX_ATTRIBUTE_BUFFER_COUNT = 8;
+static constexpr size_t MAX_ATTRIBUTE_BUFFER_COUNT = 8; // FIXME: what should this be?
+static constexpr size_t MAX_VERTEX_ATTRIBUTE_COUNT = 7; // FIXME: what should this be?
+static constexpr size_t MAX_SAMPLER_COUNT = 16;         // Matches the Adreno Vulkan driver.
 
 /**
  * Selects which driver a particular Engine should use.

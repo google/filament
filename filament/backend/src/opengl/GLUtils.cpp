@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "opengl/GLUtils.h"
+#include "GLUtils.h"
 
 #include <ostream>
 

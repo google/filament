@@ -71,16 +71,10 @@ namespace driver {
 // this generates the vtable in this translation unit
 Platform::~Platform() noexcept = default;
 
-OpenGLPlatform::~OpenGLPlatform() noexcept = default;
-
-VulkanPlatform::~VulkanPlatform() noexcept = default;
-
-MetalPlatform::~MetalPlatform() noexcept = default;
-
 // Creates the platform-specific Platform object. The caller takes ownership and is
 // responsible for destroying it. Initialization of the backend API is deferred until
 // createDriver(). The passed-in backend hint is replaced with the resolved backend.
-Platform* Platform::create(Backend* backend) noexcept {
+DefaultPlatform* DefaultPlatform::create(Backend* backend) noexcept {
     assert(backend);
     if (*backend == Backend::DEFAULT) {
         *backend = Backend::OPENGL;
@@ -135,10 +129,12 @@ Platform* Platform::create(Backend* backend) noexcept {
 }
 
 // destroys an Platform create by create()
-void Platform::destroy(Platform** context) noexcept {
-    delete *context;
-    *context = nullptr;
+void DefaultPlatform::destroy(DefaultPlatform** platform) noexcept {
+    delete *platform;
+    *platform = nullptr;
 }
+
+DefaultPlatform::~DefaultPlatform() noexcept = default;
 
 } // namespace driver
 } // namespace filament

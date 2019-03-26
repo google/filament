@@ -127,7 +127,7 @@ bool VulkanBinder::getOrCreateDescriptor(VkDescriptorSet* descriptor,
     uint32_t& nwrites = mDescriptorUpdateOp.count;
     VkWriteDescriptorSet* writes = &mDescriptorUpdateOp.writes[0];
     nwrites = 0;
-    for (uint32_t binding = 0; binding < NUM_UBUFFER_BINDINGS; binding++) {
+    for (uint32_t binding = 0; binding < UBUFFER_BINDING_COUNT; binding++) {
         if (mDescriptorKey.uniformBuffers[binding]) {
             VkDescriptorBufferInfo& bufferInfo = mDescriptorBuffers[binding];
             bufferInfo.buffer = mDescriptorKey.uniformBuffers[binding];
@@ -146,7 +146,7 @@ bool VulkanBinder::getOrCreateDescriptor(VkDescriptorSet* descriptor,
             writeInfo.pTexelBufferView = nullptr;
         }
     }
-    for (uint32_t binding = 0; binding < NUM_SAMPLER_BINDINGS; binding++) {
+    for (uint32_t binding = 0; binding < SAMPLER_BINDING_COUNT; binding++) {
         if (mDescriptorKey.samplers[binding].sampler) {
             VkDescriptorImageInfo& imageInfo = mDescriptorSamplers[binding];
             imageInfo = mDescriptorKey.samplers[binding];
@@ -154,7 +154,7 @@ bool VulkanBinder::getOrCreateDescriptor(VkDescriptorSet* descriptor,
             writeInfo.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
             writeInfo.pNext = nullptr;
             writeInfo.dstSet = mCurrentDescriptor->handle;
-            writeInfo.dstBinding = NUM_UBUFFER_BINDINGS + binding;
+            writeInfo.dstBinding = UBUFFER_BINDING_COUNT + binding;
             writeInfo.dstArrayElement = 0;
             writeInfo.descriptorCount = 1;
             writeInfo.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
@@ -211,7 +211,7 @@ bool VulkanBinder::getOrCreatePipeline(VkPipeline* pipeline) noexcept {
     // entries because these arrays have a small fixed-size capacity.
     uint32_t numVertexAttribs = 0;
     uint32_t numVertexBuffers = 0;
-    for (uint32_t i = 0; i < MAX_VERTEX_ATTRIBUTES; i++) {
+    for (uint32_t i = 0; i < VERTEX_ATTRIBUTE_COUNT; i++) {
         if (mPipelineKey.vertexAttributes[i].format > 0) {
             numVertexAttribs++;
         }
@@ -251,7 +251,7 @@ bool VulkanBinder::getOrCreatePipeline(VkPipeline* pipeline) noexcept {
     pipelineCreateInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
     pipelineCreateInfo.layout = mPipelineLayout;
     pipelineCreateInfo.renderPass = mPipelineKey.renderPass;
-    pipelineCreateInfo.stageCount = hasFragmentShader ? NUM_SHADER_MODULES : 1;
+    pipelineCreateInfo.stageCount = hasFragmentShader ? SHADER_MODULE_COUNT : 1;
     pipelineCreateInfo.pStages = mShaderStages;
     pipelineCreateInfo.pVertexInputState = &vertexInputState;
     pipelineCreateInfo.pInputAssemblyState = &inputAssemblyState;
@@ -288,7 +288,7 @@ bool VulkanBinder::getOrCreatePipeline(VkPipeline* pipeline) noexcept {
 
 void VulkanBinder::bindProgramBundle(const ProgramBundle& bundle) noexcept {
     const VkShaderModule shaders[2] = { bundle.vertex, bundle.fragment };
-    for (uint32_t ssi = 0; ssi < NUM_SHADER_MODULES; ssi++) {
+    for (uint32_t ssi = 0; ssi < SHADER_MODULE_COUNT; ssi++) {
         if (mPipelineKey.shaders[ssi] != shaders[ssi]) {
             mDirtyPipeline = true;
             mPipelineKey.shaders[ssi] = shaders[ssi];
@@ -341,7 +341,7 @@ void VulkanBinder::bindPrimitiveTopology(VkPrimitiveTopology topology) noexcept 
 }
 
 void VulkanBinder::bindVertexArray(const VertexArray& varray) noexcept {
-    for (size_t i = 0; i < MAX_VERTEX_ATTRIBUTES; i++) {
+    for (size_t i = 0; i < VERTEX_ATTRIBUTE_COUNT; i++) {
         VkVertexInputAttributeDescription& attrib0 = mPipelineKey.vertexAttributes[i];
         const VkVertexInputAttributeDescription& attrib1 = varray.attributes[i];
         if (attrib1.location != attrib0.location || attrib1.binding != attrib0.binding ||
@@ -365,7 +365,7 @@ void VulkanBinder::bindVertexArray(const VertexArray& varray) noexcept {
 
 void VulkanBinder::unbindUniformBuffer(VkBuffer uniformBuffer) noexcept {
     auto& key = mDescriptorKey;
-    for (uint32_t bindingIndex = 0u; bindingIndex < NUM_UBUFFER_BINDINGS; ++bindingIndex) {
+    for (uint32_t bindingIndex = 0u; bindingIndex < UBUFFER_BINDING_COUNT; ++bindingIndex) {
         if (key.uniformBuffers[bindingIndex] == uniformBuffer) {
             key.uniformBuffers[bindingIndex] = {};
             key.uniformBufferSizes[bindingIndex] = {};
@@ -423,9 +423,9 @@ void VulkanBinder::evictDescriptors(std::function<bool(const DescriptorKey&)> fi
 
 void VulkanBinder::bindUniformBuffer(uint32_t bindingIndex, VkBuffer uniformBuffer,
         VkDeviceSize offset, VkDeviceSize size) noexcept {
-    ASSERT_POSTCONDITION(bindingIndex < NUM_UBUFFER_BINDINGS,
+    ASSERT_POSTCONDITION(bindingIndex < UBUFFER_BINDING_COUNT,
             "Uniform bindings overflow: index = %d, capacity = %d.",
-            bindingIndex, NUM_UBUFFER_BINDINGS);
+            bindingIndex, UBUFFER_BINDING_COUNT);
     auto& key = mDescriptorKey;
     if (key.uniformBuffers[bindingIndex] != uniformBuffer ||
         key.uniformBufferOffsets[bindingIndex] != offset ||
@@ -438,11 +438,11 @@ void VulkanBinder::bindUniformBuffer(uint32_t bindingIndex, VkBuffer uniformBuff
 }
 
 void VulkanBinder::bindSampler(uint32_t bindingIndex, VkDescriptorImageInfo samplerInfo) noexcept {
-    const uint32_t offset = NUM_UBUFFER_BINDINGS;
+    const uint32_t offset = UBUFFER_BINDING_COUNT;
     assert(bindingIndex >= offset);
-    ASSERT_POSTCONDITION(bindingIndex < offset + NUM_SAMPLER_BINDINGS,
+    ASSERT_POSTCONDITION(bindingIndex < offset + SAMPLER_BINDING_COUNT,
             "Sampler bindings overflow: index = %d, capacity = %d.",
-            bindingIndex - offset, NUM_SAMPLER_BINDINGS);
+            bindingIndex - offset, SAMPLER_BINDING_COUNT);
     VkDescriptorImageInfo& imageInfo = mDescriptorKey.samplers[bindingIndex - offset];
     if (imageInfo.sampler != samplerInfo.sampler || imageInfo.imageView != samplerInfo.imageView ||
         imageInfo.imageLayout != samplerInfo.imageLayout) {
@@ -517,29 +517,29 @@ void VulkanBinder::gc() noexcept {
 }
 
 void VulkanBinder::createLayoutsAndDescriptors() noexcept {
-    VkDescriptorSetLayoutBinding bindings[NUM_UBUFFER_BINDINGS + NUM_SAMPLER_BINDINGS];
+    VkDescriptorSetLayoutBinding bindings[UBUFFER_BINDING_COUNT + SAMPLER_BINDING_COUNT];
     VkDescriptorSetLayoutBinding binding = {};
     binding.descriptorCount = 1; // NOTE: We never use arrays-of-blocks.
     binding.stageFlags = VK_SHADER_STAGE_ALL_GRAPHICS; // NOTE: This is potentially non-optimal.
 
     // The first range of binding slots is reserved for UBO's.
     binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    for (uint32_t i = 0; i < NUM_UBUFFER_BINDINGS; i++) {
+    for (uint32_t i = 0; i < UBUFFER_BINDING_COUNT; i++) {
         binding.binding = i;
         bindings[i] = binding;
     }
 
     // The second range of binding slots is reserved for samplers.
     binding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    for (uint32_t i = 0; i < NUM_SAMPLER_BINDINGS; i++) {
-        binding.binding = NUM_UBUFFER_BINDINGS + i;
+    for (uint32_t i = 0; i < SAMPLER_BINDING_COUNT; i++) {
+        binding.binding = UBUFFER_BINDING_COUNT + i;
         bindings[binding.binding] = binding;
     }
 
     // Create the one and only VkDescriptorSetLayout that we'll ever use.
     VkDescriptorSetLayoutCreateInfo dlinfo = {};
     dlinfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    dlinfo.bindingCount = NUM_UBUFFER_BINDINGS + NUM_SAMPLER_BINDINGS;
+    dlinfo.bindingCount = UBUFFER_BINDING_COUNT + SAMPLER_BINDING_COUNT;
     dlinfo.pBindings = &bindings[0];
     VkResult err = vkCreateDescriptorSetLayout(mDevice, &dlinfo, VKALLOC, &mDescriptorSetLayout);
     ASSERT_POSTCONDITION(!err, "Unable to create descriptor set layout.");
@@ -562,9 +562,9 @@ void VulkanBinder::createLayoutsAndDescriptors() noexcept {
         .flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT
     };
     poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    poolSizes[0].descriptorCount = poolInfo.maxSets * NUM_UBUFFER_BINDINGS;
+    poolSizes[0].descriptorCount = poolInfo.maxSets * UBUFFER_BINDING_COUNT;
     poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    poolSizes[1].descriptorCount = poolInfo.maxSets * NUM_SAMPLER_BINDINGS;
+    poolSizes[1].descriptorCount = poolInfo.maxSets * SAMPLER_BINDING_COUNT;
     err = vkCreateDescriptorPool(mDevice, &poolInfo, VKALLOC, &mDescriptorPool);
     ASSERT_POSTCONDITION(!err, "Unable to create descriptor pool.");
 }
@@ -599,14 +599,14 @@ bool VulkanBinder::PipelineEqual::operator()(const VulkanBinder::PipelineKey& k1
 
 bool VulkanBinder::DescEqual::operator()(const VulkanBinder::DescriptorKey& k1,
         const VulkanBinder::DescriptorKey& k2) const {
-    for (uint32_t i = 0; i < NUM_UBUFFER_BINDINGS; i++) {
+    for (uint32_t i = 0; i < UBUFFER_BINDING_COUNT; i++) {
         if (k1.uniformBuffers[i] != k2.uniformBuffers[i] ||
             k1.uniformBufferOffsets[i] != k2.uniformBufferOffsets[i] ||
             k1.uniformBufferSizes[i] != k2.uniformBufferSizes[i]) {
             return false;
         }
     }
-    for (uint32_t i = 0; i < NUM_SAMPLER_BINDINGS; i++) {
+    for (uint32_t i = 0; i < SAMPLER_BINDING_COUNT; i++) {
         if (k1.samplers[i].sampler != k2.samplers[i].sampler ||
             k1.samplers[i].imageView != k2.samplers[i].imageView ||
             k1.samplers[i].imageLayout != k2.samplers[i].imageLayout) {
