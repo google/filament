@@ -29,7 +29,7 @@ struct VulkanProgram : public HwProgram {
     ~VulkanProgram();
     VulkanContext& context;
     VulkanBinder::ProgramBundle bundle;
-    Program::SamplerGroupInfo samplerBindings;
+    Program::SamplerGroupInfo samplerGroupInfo;
 };
 
 struct VulkanTexture;

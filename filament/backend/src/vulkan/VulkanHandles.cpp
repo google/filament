@@ -72,7 +72,7 @@ VulkanProgram::VulkanProgram(VulkanContext& context, const Program& builder) noe
     }
 
     // Make a copy of the binding map
-    samplerBindings = builder.getSamplerGroupInfo();
+    samplerGroupInfo = builder.getSamplerGroupInfo();
 #if FILAMENT_VULKAN_VERBOSE
     utils::slog.d << "Created VulkanProgram " << builder.getName().c_str()
                 << ", variants = (0x" << utils::io::hex

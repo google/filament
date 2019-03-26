@@ -1028,39 +1028,42 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
     mBinder.bindPrimitiveTopology(prim.primitiveTopology);
     mBinder.bindVertexArray(prim.varray);
 
-    // Query the program for the mapping from (SamplerBufferBinding,Offset) to (SamplerBinding),
-    // where "SamplerBinding" is the integer in the GLSL, and SamplerBufferBinding is the abstract
+    // Query the program for the mapping from (SamplerGroupBinding,Offset) to (SamplerBinding),
+    // where "SamplerBinding" is the integer in the GLSL, and SamplerGroupBinding is the abstract
     // Filament concept used to form groups of samplers.
-    for (uint8_t bufferIdx = 0; bufferIdx < VulkanBinder::SAMPLER_BINDING_COUNT; bufferIdx++) {
-        VulkanSamplerGroup* vksb = mSamplerBindings[bufferIdx];
+
+    for (uint8_t samplerGroupIdx = 0; samplerGroupIdx < Program::SAMPLER_BINDING_COUNT; samplerGroupIdx++) {
+        const auto& samplerGroup = program->samplerGroupInfo[samplerGroupIdx];
+        if (samplerGroup.empty()) {
+            continue;
+        }
+        VulkanSamplerGroup* vksb = mSamplerBindings[samplerGroupIdx];
         if (!vksb) {
             continue;
         }
         SamplerGroup* sb = vksb->sb.get();
-        for (uint8_t samplerIndex = 0; samplerIndex < sb->getSize(); samplerIndex++) {
-            SamplerGroup::Sampler const* sampler = sb->getSamplers() + samplerIndex;
-            if (!sampler->t) {
+        assert(sb->getSize() == samplerGroup.size());
+        size_t samplerIdx = 0;
+        for (const auto& sampler : samplerGroup) {
+            size_t bindingPoint = sampler.binding;
+            const SamplerGroup::Sampler* boundSampler = sb->getSamplers() + samplerIdx;
+            samplerIdx++;
+
+            if (!boundSampler->t) {
                 continue;
             }
 
-            // Obtain the global sampler binding index and pass this to VulkanBinder. Note that
-            // "binding" is an offset that is global to the shader, whereas "samplerIndex" is an
-            // offset into the virtual sampler buffer.
-
-            if (samplerIndex < program->samplerBindings[bufferIdx].size()) {
-                uint8_t binding = (uint8_t)program->samplerBindings[bufferIdx][samplerIndex].binding;
-                const SamplerParams& samplerParams = sampler->s;
-                VkSampler vksampler = mSamplerCache.getSampler(samplerParams);
-                const auto* texture = handle_const_cast<VulkanTexture>(mHandleMap, sampler->t);
-                mDisposer.acquire(texture, commands->resources);
-                mBinder.bindSampler(binding, {
-                    .sampler = vksampler,
-                    .imageView = texture->imageView,
-                    .imageLayout = samplerParams.depthStencil ?
-                            VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL :
-                            VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-                });
-            }
+            const SamplerParams& samplerParams = boundSampler->s;
+            VkSampler vksampler = mSamplerCache.getSampler(samplerParams);
+            const auto* texture = handle_const_cast<VulkanTexture>(mHandleMap, boundSampler->t);
+            mDisposer.acquire(texture, commands->resources);
+            mBinder.bindSampler(bindingPoint, {
+                .sampler = vksampler,
+                .imageView = texture->imageView,
+                .imageLayout = samplerParams.depthStencil ?
+                        VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL :
+                        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+            });
         }
     }
 
