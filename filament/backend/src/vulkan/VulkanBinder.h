@@ -166,7 +166,8 @@ private:
     // The pipeline key is a POD that represents all currently bound states that form the immutable
     // VkPipeline object. We apply a hash function to its contents only if has been mutated since
     // the previous call to getOrCreatePipeline.
-    struct alignas(8) PipelineKey {
+    #pragma pack(push, 1)
+    struct PipelineKey {
         VkShaderModule shaders[SHADER_MODULE_COUNT]; // 8*2 bytes
         RasterState rasterState; // 248 bytes
         VkRenderPass renderPass; // 8 bytes
@@ -174,15 +175,7 @@ private:
         VkVertexInputAttributeDescription vertexAttributes[VERTEX_ATTRIBUTE_COUNT]; // 16*5 bytes
         VkVertexInputBindingDescription vertexBuffers[VERTEX_ATTRIBUTE_COUNT]; // 12*5 bytes
     };
-
-    static_assert(sizeof(PipelineKey) ==
-        sizeof(PipelineKey::shaders) +
-        sizeof(PipelineKey::rasterState) +
-        sizeof(PipelineKey::renderPass) +
-        sizeof(PipelineKey::topology) +
-        sizeof(PipelineKey::vertexAttributes) +
-        sizeof(PipelineKey::vertexBuffers),
-        "Implicit padding is not allowed for fast hashing");
+    #pragma pack(pop)
 
     static_assert(std::is_pod<PipelineKey>::value, "PipelineKey must be a POD for fast hashing.");
 
@@ -206,19 +199,14 @@ private:
     // The descriptor key is a POD that represents all currently bound states that go into the
     // descriptor set. We apply a hash function to its contents only if has been mutated since
     // the previous call to getOrCreateDescriptor.
-    struct alignas(8) DescriptorKey {
+    #pragma pack(push, 1)
+    struct DescriptorKey {
         VkBuffer uniformBuffers[UBUFFER_BINDING_COUNT];
         VkDescriptorImageInfo samplers[SAMPLER_BINDING_COUNT];
         VkDeviceSize uniformBufferOffsets[UBUFFER_BINDING_COUNT];
         VkDeviceSize uniformBufferSizes[UBUFFER_BINDING_COUNT];
     };
-
-    static_assert(sizeof(DescriptorKey) ==
-        sizeof(DescriptorKey::uniformBuffers) +
-        sizeof(DescriptorKey::samplers) +
-        sizeof(DescriptorKey::uniformBufferOffsets) +
-        sizeof(DescriptorKey::uniformBufferSizes),
-        "Implicit padding is not allowed for fast hashing");
+    #pragma pack(pop)
 
     static_assert(std::is_pod<DescriptorKey>::value, "DescriptorKey must be a POD.");
 

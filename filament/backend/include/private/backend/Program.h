@@ -21,6 +21,8 @@
 #include <utils/CString.h>
 #include <utils/Log.h>
 
+#include <private/filament/EngineEnums.h>
+
 #include <array>
 #include <vector>
 
@@ -31,8 +33,8 @@ class Program {
 public:
 
     static constexpr size_t SHADER_TYPE_COUNT = 2;
-    static constexpr size_t UNIFORM_BINDING_COUNT = 6; //BindingPoints::COUNT;
-    static constexpr size_t SAMPLER_BINDING_COUNT = 6; //BindingPoints::COUNT;
+    static constexpr size_t UNIFORM_BINDING_COUNT = filament::CONFIG_UNIFORM_BINDING_COUNT;
+    static constexpr size_t SAMPLER_BINDING_COUNT = filament::CONFIG_SAMPLER_BINDING_COUNT;
 
     enum class Shader : uint8_t {
         VERTEX = 0,
