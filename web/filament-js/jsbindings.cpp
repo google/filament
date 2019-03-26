@@ -128,7 +128,7 @@ using IblBuilder = IndirectLight::Builder;
 using SkyBuilder = Skybox::Builder;
 using SurfaceBuilder = SurfaceOrientation::Builder;
 
-// We avoid directly exposing driver::BufferDescriptor because embind does not support move
+// We avoid directly exposing backend::BufferDescriptor because embind does not support move
 // semantics and void* doesn't make sense to JavaScript anyway. This little wrapper class is exposed
 // to JavaScript as "driver$BufferDescriptor", but clients will normally use our "Filament.Buffer"
 // helper function (implemented in utilities.js)
@@ -137,12 +137,12 @@ struct BufferDescriptor {
     // This form is used when JavaScript sends a buffer into WASM.
     BufferDescriptor(val arrdata) {
         auto byteLength = arrdata["byteLength"].as<uint32_t>();
-        this->bd.reset(new driver::BufferDescriptor(malloc(byteLength), byteLength,
+        this->bd.reset(new backend::BufferDescriptor(malloc(byteLength), byteLength,
                 [](void* buffer, size_t size, void* user) { free(buffer); }));
     }
     // This form is used when WASM needs to return a buffer to JavaScript.
     BufferDescriptor(uint8_t* data, uint32_t size) {
-        this->bd.reset(new driver::BufferDescriptor(data, size));
+        this->bd.reset(new backend::BufferDescriptor(data, size));
     }
     val getBytes() {
         unsigned char *byteBuffer = (unsigned char*) bd->buffer;
@@ -151,26 +151,26 @@ struct BufferDescriptor {
     }
     // In order to match its JavaScript counterpart, the Buffer wrapper needs to use reference
     // counting, and the easiest way to achieve that is with shared_ptr.
-    std::shared_ptr<driver::BufferDescriptor> bd;
+    std::shared_ptr<backend::BufferDescriptor> bd;
 };
 
 // Exposed to JavaScript as "driver$PixelBufferDescriptor", but clients will normally use the
 // PixelBuffer or CompressedPixelBuffer helper functions (implemented in utilities.js)
 struct PixelBufferDescriptor {
-    PixelBufferDescriptor(val arrdata, driver::PixelDataFormat fmt, driver::PixelDataType dtype) {
+    PixelBufferDescriptor(val arrdata, backend::PixelDataFormat fmt, backend::PixelDataType dtype) {
         auto byteLength = arrdata["byteLength"].as<uint32_t>();
-        this->pbd.reset(new driver::PixelBufferDescriptor(malloc(byteLength), byteLength,
+        this->pbd.reset(new backend::PixelBufferDescriptor(malloc(byteLength), byteLength,
                 fmt, dtype, [](void* buffer, size_t size, void* user) { free(buffer); }));
     }
     // Note that embind allows overloading based on number of arguments, but not on types.
     // It's fine to have two constructors but they can't both have the same number of arguments.
-    PixelBufferDescriptor(val arrdata, driver::CompressedPixelDataType cdtype, int imageSize,
+    PixelBufferDescriptor(val arrdata, backend::CompressedPixelDataType cdtype, int imageSize,
             bool compressed) {
         auto byteLength = arrdata["byteLength"].as<uint32_t>();
         assert(compressed == true);
         // For compressed cubemaps, the image size should be one-sixth the size of the entire blob.
         assert(imageSize == byteLength || imageSize == byteLength / 6);
-        this->pbd.reset(new driver::PixelBufferDescriptor(malloc(byteLength), byteLength,
+        this->pbd.reset(new backend::PixelBufferDescriptor(malloc(byteLength), byteLength,
                 cdtype, imageSize, [](void* buffer, size_t size, void* user) { free(buffer); }));
     }
     val getBytes() {
@@ -180,7 +180,7 @@ struct PixelBufferDescriptor {
     };
     // In order to match its JavaScript counterpart, the Buffer wrapper needs to use reference
     // counting, and the easiest way to achieve that is with shared_ptr.
-    std::shared_ptr<driver::PixelBufferDescriptor> pbd;
+    std::shared_ptr<backend::PixelBufferDescriptor> pbd;
 };
 
 // Small structure whose sole purpose is to return decoded image data to JavaScript.
@@ -820,7 +820,7 @@ class_<MaterialInstance>("MaterialInstance")
     .function("setPolygonOffset", &MaterialInstance::setPolygonOffset);
 
 class_<TextureSampler>("TextureSampler")
-    .constructor<driver::SamplerMinFilter, driver::SamplerMagFilter, driver::SamplerWrapMode>();
+    .constructor<backend::SamplerMinFilter, backend::SamplerMagFilter, backend::SamplerWrapMode>();
 
 /// Texture ::core class:: 2D image or cubemap that can be sampled by the GPU, possibly mipmapped.
 class_<Texture>("Texture")
@@ -935,8 +935,8 @@ class_<BufferDescriptor>("driver$BufferDescriptor")
 /// PixelBufferDescriptor ::class:: Low level pixel buffer wrapper.
 /// Clients should use the [PixelBuffer] helper function to contruct PixelBufferDescriptor objects.
 class_<PixelBufferDescriptor>("driver$PixelBufferDescriptor")
-    .constructor<emscripten::val, driver::PixelDataFormat, driver::PixelDataType>()
-    .constructor<emscripten::val, driver::CompressedPixelDataType, int, bool>()
+    .constructor<emscripten::val, backend::PixelDataFormat, backend::PixelDataType>()
+    .constructor<emscripten::val, backend::CompressedPixelDataType, int, bool>()
     /// getBytes ::method:: Gets a view of the WASM heap referenced by the buffer descriptor.
     /// ::retval:: Uint8Array
     .function("getBytes", &PixelBufferDescriptor::getBytes);
@@ -983,7 +983,7 @@ class_<KtxBundle>("KtxBundle")
     /// ::retval:: [PixelDataFormat]
     /// Returns "undefined" if no valid Filament enumerant exists.
     .function("getPixelDataFormat",
-            EMBIND_LAMBDA(driver::PixelDataFormat, (KtxBundle* self, bool rgbm), {
+            EMBIND_LAMBDA(backend::PixelDataFormat, (KtxBundle* self, bool rgbm), {
         return KtxUtility::toPixelDataFormat(self->getInfo(), rgbm);
     }), allow_raw_pointers())
 
@@ -991,7 +991,7 @@ class_<KtxBundle>("KtxBundle")
     /// ::retval:: [PixelDataType]
     /// Returns "undefined" if no valid Filament enumerant exists.
     .function("getPixelDataType",
-            EMBIND_LAMBDA(driver::PixelDataType, (KtxBundle* self), {
+            EMBIND_LAMBDA(backend::PixelDataType, (KtxBundle* self), {
         return KtxUtility::toPixelDataType(self->getInfo());
     }), allow_raw_pointers())
 
@@ -999,7 +999,7 @@ class_<KtxBundle>("KtxBundle")
     /// ::retval:: [CompressedPixelDataType]
     /// Returns "undefined" if no valid Filament enumerant exists.
     .function("getCompressedPixelDataType",
-            EMBIND_LAMBDA(driver::CompressedPixelDataType, (KtxBundle* self), {
+            EMBIND_LAMBDA(backend::CompressedPixelDataType, (KtxBundle* self), {
         return KtxUtility::toCompressedPixelDataType(self->getInfo());
     }), allow_raw_pointers())
 
