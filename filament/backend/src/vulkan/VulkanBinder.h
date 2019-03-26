@@ -17,7 +17,7 @@
 #ifndef TNT_FILAMENT_DRIVER_VULKANBINDER_H
 #define TNT_FILAMENT_DRIVER_VULKANBINDER_H
 
-#include <filament/backend/DriverEnums.h>
+#include <backend/DriverEnums.h>
 
 #include <private/backend/Program.h>
 

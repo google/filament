@@ -20,7 +20,7 @@
 #include <filamat/Package.h>
 #include <filamat/MaterialBuilder.h>
 
-#include <filament/backend/DriverEnums.h>
+#include <backend/DriverEnums.h>
 
 #include <utils/bitset.h>
 

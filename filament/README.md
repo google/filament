@@ -21,7 +21,8 @@ You can refer to the individual documentation files in `docs/` for more informat
 
 Filament is distributed as a set of static libraries you must link against:
 
-- `bluegl`, Required to render with OpenGL
+- `backend`, Required, implements all backends
+- `bluegl`, Required to render with OpenGL or OpenGL ES
 - `bluevk`, Required to render with Vulkan
 - `filabridge`, Support library for Filament
 - `filaflat`, Support library for Filament

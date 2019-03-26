@@ -16,8 +16,6 @@
 
 #include "vulkan/VulkanHandles.h"
 
-#include <private/filament/Variant.h>
-
 #include "DataReshaper.h"
 
 #include <utils/Panic.h>

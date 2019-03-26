@@ -21,7 +21,7 @@
 
 #include "private/backend/Handle.h"
 
-#include <filament/backend/DriverEnums.h>
+#include <backend/DriverEnums.h>
 #include <filament/VertexBuffer.h>
 
 #include <utils/bitset.h>

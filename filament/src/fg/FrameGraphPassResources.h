@@ -19,7 +19,7 @@
 
 #include "FrameGraphResource.h"
 
-#include <filament/backend/DriverEnums.h>
+#include <backend/DriverEnums.h>
 
 #include "private/backend//Handle.h"
 

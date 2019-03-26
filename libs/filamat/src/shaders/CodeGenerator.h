@@ -25,7 +25,7 @@
 
 #include <filamat/MaterialBuilder.h>
 
-#include <filament/backend/DriverEnums.h>
+#include <backend/DriverEnums.h>
 #include <private/filament/EngineEnums.h>
 #include <filament/MaterialEnums.h>
 #include <private/filament/SamplerInterfaceBlock.h>

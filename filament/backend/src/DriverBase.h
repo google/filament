@@ -22,7 +22,7 @@
 
 #include <backend/Platform.h>
 
-#include <filament/backend/DriverEnums.h>
+#include <backend/DriverEnums.h>
 
 #include "private/backend/Driver.h"
 #include "private/backend/SamplerGroup.h"

@@ -22,7 +22,7 @@
 #include <EGL/egl.h>
 #include <EGL/eglext.h>
 
-#include <filament/backend/DriverEnums.h>
+#include <backend/DriverEnums.h>
 
 #include "OpenGLPlatform.h"
 

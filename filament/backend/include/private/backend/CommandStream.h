@@ -34,7 +34,7 @@
 // FIXME: we'd like to not need this header here.
 #include "private/backend/Driver.h"
 
-#include <filament/backend/DriverEnums.h>
+#include <backend/DriverEnums.h>
 
 
 #include <utils/compiler.h>

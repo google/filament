@@ -22,7 +22,7 @@
 #include <windows.h>
 #include <utils/unwindows.h>
 
-#include <filament/backend/DriverEnums.h>
+#include <backend/DriverEnums.h>
 
 #include "OpenGLPlatform.h"
 

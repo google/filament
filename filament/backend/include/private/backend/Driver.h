@@ -27,7 +27,7 @@
 #include "private/backend/Program.h"
 #include "private/backend/SamplerGroup.h"
 
-#include <filament/backend/DriverEnums.h>
+#include <backend/DriverEnums.h>
 
 #include <utils/compiler.h>
 #include <utils/Log.h>

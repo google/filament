@@ -22,7 +22,7 @@
 #include "private/backend/Driver.h"
 #include "private/backend/Program.h"
 
-#include <filament/backend/DriverEnums.h>
+#include <backend/DriverEnums.h>
 
 #include <memory>
 #include <tsl/robin_map.h>

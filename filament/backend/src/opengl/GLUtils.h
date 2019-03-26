@@ -20,7 +20,7 @@
 #include <utils/compiler.h>
 #include <utils/Log.h>
 
-#include <filament/backend/DriverEnums.h>
+#include <backend/DriverEnums.h>
 
 #include "gl_headers.h"
 

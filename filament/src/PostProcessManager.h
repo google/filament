@@ -23,7 +23,7 @@
 
 #include "fg/FrameGraphResource.h"
 
-#include <filament/backend/DriverEnums.h>
+#include <backend/DriverEnums.h>
 
 namespace filament {
 

@@ -22,7 +22,7 @@
 #include <filaflat/MaterialChunk.h>
 
 #include <filament/MaterialEnums.h>
-#include <filament/backend/DriverEnums.h>
+#include <backend/DriverEnums.h>
 #include <filament/MaterialChunkType.h>
 
 #include <utils/compiler.h>

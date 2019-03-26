@@ -177,7 +177,6 @@ endif()
 
 target_link_libraries(${TARGET} PUBLIC math)
 target_link_libraries(${TARGET} PUBLIC utils)
-target_link_libraries(${TARGET} PUBLIC filabridge)
 
 # Android, iOS, and WebGL do not use bluegl.
 if(NOT IOS AND NOT ANDROID AND NOT WEBGL)

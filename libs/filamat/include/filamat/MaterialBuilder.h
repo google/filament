@@ -24,7 +24,7 @@
 #include <string>
 #include <vector>
 
-#include <filament/backend/DriverEnums.h>
+#include <backend/DriverEnums.h>
 #include <filament/MaterialEnums.h>
 
 #include <filamat/Package.h>
