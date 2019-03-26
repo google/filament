@@ -23,7 +23,7 @@
 #include <utils/compiler.h>
 
 namespace filament {
-namespace driver {
+namespace backend {
 
 class CircularBuffer {
 public:
@@ -84,7 +84,7 @@ private:
     void* mHead = nullptr;
 };
 
-} // namespace driver
+} // namespace backend
 } // namespace filament
 
 #endif // TNT_FILAMENT_DRIVER_CIRCULARBUFFER_H

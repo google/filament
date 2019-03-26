@@ -32,7 +32,7 @@
 #include "NioUtils.h"
 
 using namespace filament;
-using namespace driver;
+using namespace backend;
 
 static size_t getTextureDataSize(const Texture *texture, size_t level,
         Texture::Format format, Texture::Type type, size_t stride, size_t alignment) {
@@ -191,8 +191,8 @@ Java_com_google_android_filament_Texture_nSetImage(JNIEnv* env, jclass, jlong na
     void *buffer = nioBuffer.getData();
     auto *callback = JniBufferCallback::make(engine, env, handler, runnable, std::move(nioBuffer));
 
-    Texture::PixelBufferDescriptor desc(buffer, sizeInBytes, (driver::PixelDataFormat) format,
-            (driver::PixelDataType) type, (uint8_t) alignment, (uint32_t) left, (uint32_t) bottom,
+    Texture::PixelBufferDescriptor desc(buffer, sizeInBytes, (backend::PixelDataFormat) format,
+            (backend::PixelDataType) type, (uint8_t) alignment, (uint32_t) left, (uint32_t) bottom,
             (uint32_t) stride, &JniBufferCallback::invoke, callback);
 
     texture->setImage(*engine, (size_t) level, (uint32_t) xoffset, (uint32_t) yoffset,
@@ -223,7 +223,7 @@ Java_com_google_android_filament_Texture_nSetImageCompressed(JNIEnv *env, jclass
     auto *callback = JniBufferCallback::make(engine, env, handler, runnable, std::move(nioBuffer));
 
     Texture::PixelBufferDescriptor desc(buffer, sizeInBytes,
-            (driver::CompressedPixelDataType) compressedFormat, (uint32_t) compressedSizeInBytes,
+            (backend::CompressedPixelDataType) compressedFormat, (uint32_t) compressedSizeInBytes,
             &JniBufferCallback::invoke, callback);
 
     texture->setImage(*engine, (size_t) level, (uint32_t) xoffset, (uint32_t) yoffset,
@@ -258,8 +258,8 @@ Java_com_google_android_filament_Texture_nSetImageCubemap(JNIEnv *env, jclass,
     void *buffer = nioBuffer.getData();
     auto *callback = JniBufferCallback::make(engine, env, handler, runnable, std::move(nioBuffer));
 
-    Texture::PixelBufferDescriptor desc(buffer, sizeInBytes, (driver::PixelDataFormat) format,
-            (driver::PixelDataType) type, (uint8_t) alignment, (uint32_t) left, (uint32_t) bottom,
+    Texture::PixelBufferDescriptor desc(buffer, sizeInBytes, (backend::PixelDataFormat) format,
+            (backend::PixelDataType) type, (uint8_t) alignment, (uint32_t) left, (uint32_t) bottom,
             (uint32_t) stride, &JniBufferCallback::invoke, callback);
 
     texture->setImage(*engine, (size_t) level, std::move(desc), faceOffsets);
@@ -294,7 +294,7 @@ Java_com_google_android_filament_Texture_nSetImageCubemapCompressed(JNIEnv *env,
     auto *callback = JniBufferCallback::make(engine, env, handler, runnable, std::move(nioBuffer));
 
     Texture::PixelBufferDescriptor desc(buffer, sizeInBytes,
-            (driver::CompressedPixelDataType) compressedFormat, (uint32_t) compressedSizeInBytes,
+            (backend::CompressedPixelDataType) compressedFormat, (uint32_t) compressedSizeInBytes,
             &JniBufferCallback::invoke, callback);
 
     texture->setImage(*engine, (size_t) level, std::move(desc), faceOffsets);

@@ -21,7 +21,7 @@
 #include <details/Texture.h> // for FTexture::getFormatSize
 
 namespace filament {
-namespace driver {
+namespace backend {
 
 void createSemaphore(VkDevice device, VkSemaphore *semaphore) {
     VkSemaphoreCreateInfo createInfo = {};
@@ -232,7 +232,7 @@ uint32_t getBytesPerPixel(TextureFormat format) {
 }
 
 VkCompareOp getCompareOp(SamplerCompareFunc func) {
-    using Compare = driver::SamplerCompareFunc;
+    using Compare = backend::SamplerCompareFunc;
     switch (func) {
         case Compare::LE: return VK_COMPARE_OP_LESS_OR_EQUAL;
         case Compare::GE: return VK_COMPARE_OP_GREATER_OR_EQUAL;
@@ -246,7 +246,7 @@ VkCompareOp getCompareOp(SamplerCompareFunc func) {
 }
 
 VkBlendFactor getBlendFactor(BlendFunction mode) {
-    using BlendFunction = filament::driver::BlendFunction;
+    using BlendFunction = filament::backend::BlendFunction;
     switch (mode) {
         case BlendFunction::ZERO:                  return VK_BLEND_FACTOR_ZERO;
         case BlendFunction::ONE:                   return VK_BLEND_FACTOR_ONE;
@@ -263,7 +263,7 @@ VkBlendFactor getBlendFactor(BlendFunction mode) {
 }
 
 VkCullModeFlags getCullMode(CullingMode mode) {
-    using CullingMode = filament::driver::CullingMode;
+    using CullingMode = filament::backend::CullingMode;
     switch (mode) {
         case CullingMode::NONE:           return VK_CULL_MODE_NONE;
         case CullingMode::FRONT:          return VK_CULL_MODE_FRONT_BIT;
@@ -278,4 +278,4 @@ VkFrontFace getFrontFace(bool inverseFrontFaces) {
 }
 
 } // namespace filament
-} // namespace driver
+} // namespace backend

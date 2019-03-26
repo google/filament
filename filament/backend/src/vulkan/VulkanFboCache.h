@@ -24,7 +24,7 @@
 #include <tsl/robin_map.h>
 
 namespace filament {
-namespace driver {
+namespace backend {
 
 // Simple manager for VkFramebuffer and VkRenderPass objects.
 //
@@ -36,7 +36,7 @@ class VulkanFboCache {
 public:
     // RenderPassKey is a small POD representing the immutable state that is used to construct
     // a VkRenderPass. It is hashed and used as a lookup key. Portions of this are extracted
-    // from driver::RenderPassParams.
+    // from backend::RenderPassParams.
     struct alignas(8) RenderPassKey {
         VkImageLayout finalLayout;  // 4 bytes
         VkFormat colorFormat; // 4 bytes
@@ -108,6 +108,6 @@ private:
 };
 
 } // namespace filament
-} // namespace driver
+} // namespace backend
 
 #endif // TNT_FILAMENT_DRIVER_VULKANFBOCACHE_H

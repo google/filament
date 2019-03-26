@@ -33,7 +33,7 @@
 #include <utils/Panic.h>
 
 namespace filament {
-namespace driver {
+namespace backend {
 
 VulkanCmdFence::VulkanCmdFence(VkDevice device, bool signaled) : device(device) {
     VkFenceCreateInfo fenceCreateInfo { .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
@@ -550,4 +550,4 @@ void flushWorkCommandBuffer(VulkanContext& context) {
 }
 
 } // namespace filament
-} // namespace driver
+} // namespace backend

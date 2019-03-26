@@ -27,7 +27,7 @@
 #pragma clang diagnostic ignored "-Wreturn-stack-address"
 
 namespace filament {
-namespace driver {
+namespace backend {
 
 // All vkCreate* and vkDestroy functions take an optional allocator. For now we select the default
 // allocator by passing in a null pointer, and we pinpoint the argument by using the VKALLOC macro.
@@ -660,6 +660,6 @@ static VulkanBinder::RasterState createDefaultRasterState() {
 }
 
 } // namespace filament
-} // namespace driver
+} // namespace backend
 
 #pragma clang diagnostic pop

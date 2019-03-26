@@ -19,7 +19,7 @@
 #include <utils/Panic.h>
 
 namespace filament {
-namespace driver {
+namespace backend {
 
 bool VulkanFboCache::RenderPassEq::operator()(const RenderPassKey& k1,
         const RenderPassKey& k2) const {
@@ -206,4 +206,4 @@ void VulkanFboCache::gc() noexcept {
 }
 
 } // namespace filament
-} // namespace driver
+} // namespace backend

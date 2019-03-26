@@ -46,7 +46,7 @@ using namespace utils;
 
 namespace filament {
 
-using namespace driver;
+using namespace backend;
 
 namespace details {
 
@@ -79,8 +79,8 @@ FView::FView(FEngine& engine)
     mPerViewSbh = driver.createSamplerGroup(mPerViewSb.getSize());
 
     // allocate ubos
-    mPerViewUbh = driver.createUniformBuffer(mPerViewUb.getSize(), driver::BufferUsage::DYNAMIC);
-    mLightUbh = driver.createUniformBuffer(CONFIG_MAX_LIGHT_COUNT * sizeof(LightsUib), driver::BufferUsage::DYNAMIC);
+    mPerViewUbh = driver.createUniformBuffer(mPerViewUb.getSize(), backend::BufferUsage::DYNAMIC);
+    mLightUbh = driver.createUniformBuffer(CONFIG_MAX_LIGHT_COUNT * sizeof(LightsUib), backend::BufferUsage::DYNAMIC);
 
     mIsDynamicResolutionSupported = driver.isFrameTimeSupported();
 }
@@ -277,7 +277,7 @@ bool FView::isSkyboxVisible() const noexcept {
     return skybox != nullptr && (skybox->getLayerMask() & mVisibleLayers);
 }
 
-void FView::prepareShadowing(FEngine& engine, driver::DriverApi& driver,
+void FView::prepareShadowing(FEngine& engine, backend::DriverApi& driver,
         FScene::RenderableSoa& renderableData, FScene::LightSoa const& lightData) noexcept {
     SYSTRACE_CALL();
 
@@ -399,7 +399,7 @@ void FView::prepareLighting(FEngine& engine, FEngine::DriverApi& driver, ArenaSc
     }
 }
 
-void FView::prepare(FEngine& engine, driver::DriverApi& driver, ArenaScope& arena,
+void FView::prepare(FEngine& engine, backend::DriverApi& driver, ArenaScope& arena,
         filament::Viewport const& viewport, float4 const& userTime) noexcept {
     JobSystem& js = engine.getJobSystem();
 
@@ -540,7 +540,7 @@ void FView::prepare(FEngine& engine, driver::DriverApi& driver, ArenaScope& aren
             mRenderableUBOSize = uint32_t(count * sizeof(PerRenderableUib));
             driver.destroyUniformBuffer(mRenderableUbh);
             mRenderableUbh = driver.createUniformBuffer(mRenderableUBOSize,
-                    driver::BufferUsage::STREAM);
+                    backend::BufferUsage::STREAM);
         } else {
             // TODO: should we shrink the underlying UBO at some point?
         }
@@ -639,7 +639,7 @@ void FView::froxelize(FEngine& engine) const noexcept {
     }
 }
 
-void FView::commitUniforms(driver::DriverApi& driver) const noexcept {
+void FView::commitUniforms(backend::DriverApi& driver) const noexcept {
     if (mPerViewUb.isDirty()) {
         driver.updateUniformBuffer(mPerViewUbh, mPerViewUb.toBufferDescriptor(driver));
     }
@@ -649,7 +649,7 @@ void FView::commitUniforms(driver::DriverApi& driver) const noexcept {
     }
 }
 
-void FView::commitFroxels(driver::DriverApi& driverApi) const noexcept {
+void FView::commitFroxels(backend::DriverApi& driverApi) const noexcept {
     if (mHasDynamicLighting) {
         mFroxelizer.commit(driverApi);
     }

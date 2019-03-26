@@ -25,7 +25,7 @@
 #include <vector>
 
 namespace filament {
-namespace driver {
+namespace backend {
 
 // VulkanDisposer tracks resources (such as textures or vertex buffers) that need deferred
 // destruction due to potential use by one or more reference holders. An example of a reference
@@ -69,6 +69,6 @@ private:
 };
 
 } // namespace filament
-} // namespace driver
+} // namespace backend
 
 #endif // TNT_FILAMENT_DRIVER_VULKANDISPOSER_H

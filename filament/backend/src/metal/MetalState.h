@@ -29,17 +29,17 @@
 #include <utils/Hash.h>
 
 namespace filament {
-namespace driver {
+namespace backend {
 
-inline bool operator==(const driver::SamplerParams& lhs, const driver::SamplerParams& rhs) {
+inline bool operator==(const backend::SamplerParams& lhs, const backend::SamplerParams& rhs) {
     return lhs.u == rhs.u;
 }
 
 namespace metal {
 
-static constexpr uint32_t MAX_VERTEX_ATTRIBUTE_COUNT = driver::MAX_VERTEX_ATTRIBUTE_COUNT;
+static constexpr uint32_t MAX_VERTEX_ATTRIBUTE_COUNT = backend::MAX_VERTEX_ATTRIBUTE_COUNT;
 static constexpr uint32_t SAMPLER_GROUP_COUNT = Program::UNIFORM_BINDING_COUNT;
-static constexpr uint32_t SAMPLER_BINDING_COUNT = driver::MAX_SAMPLER_COUNT;
+static constexpr uint32_t SAMPLER_BINDING_COUNT = backend::MAX_SAMPLER_COUNT;
 static constexpr uint32_t VERTEX_BUFFER_START = Program::UNIFORM_BINDING_COUNT;
 
 // Forward declarations necessary here, definitions at end of file.
@@ -288,11 +288,11 @@ using UniformBufferStateTracker = StateTracker<UniformBufferState>;
 // Sampler states
 
 struct SamplerStateCreator {
-    id<MTLSamplerState> operator()(id<MTLDevice> device, const driver::SamplerParams& state)
+    id<MTLSamplerState> operator()(id<MTLDevice> device, const backend::SamplerParams& state)
             noexcept;
 };
 
-using SamplerStateCache = StateCache<driver::SamplerParams, id<MTLSamplerState>,
+using SamplerStateCache = StateCache<backend::SamplerParams, id<MTLSamplerState>,
         SamplerStateCreator>;
 
 // Raster-related state
@@ -300,7 +300,7 @@ using SamplerStateCache = StateCache<driver::SamplerParams, id<MTLSamplerState>,
 using CullModeStateTracker = StateTracker<MTLCullMode>;
 
 } // namespace metal
-} // namespace driver
+} // namespace backend
 } // namespace filament
 
 #endif //TNT_METAL_STATE_H

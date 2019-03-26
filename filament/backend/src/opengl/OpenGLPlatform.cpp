@@ -17,9 +17,9 @@
 #include "OpenGLPlatform.h"
 
 namespace filament {
-namespace driver {
+namespace backend {
 
 OpenGLPlatform::~OpenGLPlatform() noexcept = default;
 
-} // namespace driver
+} // namespace backend
 } // namespace filament

@@ -59,7 +59,7 @@ void reportLastWindowsError() {
 
 namespace filament {
 
-using namespace driver;
+using namespace backend;
 
 Driver* PlatformWGL::createDriver(void* const sharedGLContext) noexcept {
     mPfd = {
@@ -210,8 +210,8 @@ Platform::Fence* PlatformWGL::createFence() noexcept {
 void PlatformWGL::destroyFence(Fence* fence) noexcept {
 }
 
-driver::FenceStatus PlatformWGL::waitFence(Fence* fence, uint64_t timeout) noexcept {
-    return driver::FenceStatus::ERROR;
+backend::FenceStatus PlatformWGL::waitFence(Fence* fence, uint64_t timeout) noexcept {
+    return backend::FenceStatus::ERROR;
 }
 
 } // namespace filament

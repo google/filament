@@ -21,7 +21,7 @@
 #include "VulkanStagePool.h"
 
 namespace filament {
-namespace driver {
+namespace backend {
 
 // Encapsulates a Vulkan buffer, its attached DeviceMemory and a staging area.
 class VulkanBuffer {
@@ -39,6 +39,6 @@ private:
 };
 
 } // namespace filament
-} // namespace driver
+} // namespace backend
 
 #endif // TNT_FILAMENT_DRIVER_VULKANBUFFER_H

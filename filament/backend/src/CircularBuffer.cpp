@@ -33,7 +33,7 @@
 using namespace utils;
 
 namespace filament {
-namespace driver {
+namespace backend {
 
 CircularBuffer::CircularBuffer(size_t size) {
 #if HAS_MMAP
@@ -153,5 +153,5 @@ void CircularBuffer::circularize() noexcept {
     mTail = mHead;
 }
 
-} // namespace driver
+} // namespace backend
 } // namespace filament

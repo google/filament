@@ -142,8 +142,8 @@ class TransformManager;
  */
 class UTILS_PUBLIC Engine {
 public:
-    using Platform = driver::Platform;
-    using Backend = driver::Backend;
+    using Platform = backend::Platform;
+    using Backend = backend::Backend;
 
     /**
      * Creates an instance of Engine

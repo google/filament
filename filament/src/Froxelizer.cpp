@@ -40,7 +40,7 @@ using namespace utils;
 
 namespace filament {
 
-using namespace driver;
+using namespace backend;
 
 namespace details {
 
@@ -522,7 +522,7 @@ std::pair<size_t, size_t> Froxelizer::clipToIndices(float2 const& clip) const no
 }
 
 
-void Froxelizer::commit(driver::DriverApi& driverApi) {
+void Froxelizer::commit(backend::DriverApi& driverApi) {
     // send data to GPU
     mFroxelBuffer.commit(driverApi, mFroxelBufferUser);
     mRecordsBuffer.commit(driverApi, mRecordBufferUser);

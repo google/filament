@@ -69,7 +69,7 @@ void MaterialBuilderBase::prepare() {
 
     // Build a list of codegen permutations, which is useful across all types of material builders.
     // The shader model loop starts at 1 to skip ShaderModel::UNKNOWN.
-    for (uint8_t i = 1; i < filament::driver::SHADER_MODEL_COUNT; i++) {
+    for (uint8_t i = 1; i < filament::backend::SHADER_MODEL_COUNT; i++) {
         if (!mShaderModels.test(i)) {
             continue; // skip this shader model since it was not requested.
         }
@@ -333,7 +333,7 @@ void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
 }
 
 bool MaterialBuilder::runStaticCodeAnalysis() noexcept {
-    using namespace filament::driver;
+    using namespace filament::backend;
 
     GLSLTools glslTools;
 
@@ -355,9 +355,9 @@ bool MaterialBuilder::runStaticCodeAnalysis() noexcept {
 }
 
 static void showErrorMessage(const char* materialName, uint8_t variant,
-        MaterialBuilder::TargetApi targetApi, filament::driver::ShaderType shaderType,
+        MaterialBuilder::TargetApi targetApi, filament::backend::ShaderType shaderType,
         const std::string& shaderCode) {
-    using ShaderType = filament::driver::ShaderType;
+    using ShaderType = filament::backend::ShaderType;
     using TargetApi = MaterialBuilder::TargetApi;
     utils::slog.e
             << "Error in \"" << materialName << "\""
@@ -509,7 +509,7 @@ Package MaterialBuilder::build() noexcept {
 
         // Re-populate the set of sampler bindings for this API.
         filament::SamplerBindingMap map;
-        auto backend = static_cast<filament::driver::Backend>(params.targetApi);
+        auto backend = static_cast<filament::backend::Backend>(params.targetApi);
         uint8_t offset = filament::getSamplerBindingsStart(backend);
         map.populate(offset, &info.sib, mMaterialName.c_str());
         info.samplerBindings = std::move(map);
@@ -551,11 +551,11 @@ Package MaterialBuilder::build() noexcept {
                 std::string vs = sg.createVertexProgram(
                         shaderModel, targetApi, codeGenTargetApi, info, k,
                         mInterpolation, mVertexDomain);
-                bool ok = postProcessor.process(vs, filament::driver::ShaderType::VERTEX,
+                bool ok = postProcessor.process(vs, filament::backend::ShaderType::VERTEX,
                         shaderModel, &vs, pSpirv, pMsl);
                 if (!ok) {
                     showErrorMessage(mMaterialName.c_str_safe(), k, targetApi,
-                            filament::driver::ShaderType::VERTEX, vs);
+                            filament::backend::ShaderType::VERTEX, vs);
                     errorOccured = true;
                     break;
                 }
@@ -565,7 +565,7 @@ Package MaterialBuilder::build() noexcept {
                         sg.fixupExternalSamplers(shaderModel, vs, info);
                     }
 
-                    glslEntry.stage = filament::driver::ShaderType::VERTEX;
+                    glslEntry.stage = filament::backend::ShaderType::VERTEX;
                     glslEntry.shaderSize = vs.size();
                     glslEntry.shader = (char*) malloc(glslEntry.shaderSize + 1);
                     strcpy(glslEntry.shader, vs.c_str());
@@ -575,7 +575,7 @@ Package MaterialBuilder::build() noexcept {
 
                 if (targetApi == TargetApi::VULKAN) {
                     assert(!spirv.empty());
-                    spirvEntry.stage = filament::driver::ShaderType::VERTEX;
+                    spirvEntry.stage = filament::backend::ShaderType::VERTEX;
                     spirvEntry.dictionaryIndex = spirvDictionary.addBlob(spirv);
                     spirv.clear();
                     spirvEntries.push_back(spirvEntry);
@@ -583,7 +583,7 @@ Package MaterialBuilder::build() noexcept {
                 if (targetApi == TargetApi::METAL) {
                     assert(spirv.size() > 0);
                     assert(msl.length() > 0);
-                    metalEntry.stage = filament::driver::ShaderType::VERTEX;
+                    metalEntry.stage = filament::backend::ShaderType::VERTEX;
                     metalEntry.shaderSize = msl.length();
                     metalEntry.shader = (char*)malloc(metalEntry.shaderSize + 1);
                     strcpy(metalEntry.shader, msl.c_str());
@@ -599,11 +599,11 @@ Package MaterialBuilder::build() noexcept {
                 std::string fs = sg.createFragmentProgram(
                         shaderModel, targetApi, codeGenTargetApi, info, k, mInterpolation);
 
-                bool ok = postProcessor.process(fs, filament::driver::ShaderType::FRAGMENT,
+                bool ok = postProcessor.process(fs, filament::backend::ShaderType::FRAGMENT,
                         shaderModel, &fs, pSpirv, pMsl);
                 if (!ok) {
                     showErrorMessage(mMaterialName.c_str_safe(), k, targetApi,
-                            filament::driver::ShaderType::FRAGMENT, fs);
+                            filament::backend::ShaderType::FRAGMENT, fs);
                     errorOccured = true;
                     break;
                 }
@@ -613,7 +613,7 @@ Package MaterialBuilder::build() noexcept {
                         sg.fixupExternalSamplers(shaderModel, fs, info);
                     }
 
-                    glslEntry.stage = filament::driver::ShaderType::FRAGMENT;
+                    glslEntry.stage = filament::backend::ShaderType::FRAGMENT;
                     glslEntry.shaderSize = fs.size();
                     glslEntry.shader = (char*) malloc(glslEntry.shaderSize + 1);
                     strcpy(glslEntry.shader, fs.c_str());
@@ -623,7 +623,7 @@ Package MaterialBuilder::build() noexcept {
 
                 if (targetApi == TargetApi::VULKAN) {
                     assert(!spirv.empty());
-                    spirvEntry.stage = filament::driver::ShaderType::FRAGMENT;
+                    spirvEntry.stage = filament::backend::ShaderType::FRAGMENT;
                     spirvEntry.dictionaryIndex = spirvDictionary.addBlob(spirv);
                     spirv.clear();
                     spirvEntries.push_back(spirvEntry);
@@ -631,7 +631,7 @@ Package MaterialBuilder::build() noexcept {
                 if (targetApi == TargetApi::METAL) {
                     assert(spirv.size() > 0);
                     assert(msl.length() > 0);
-                    metalEntry.stage = filament::driver::ShaderType::FRAGMENT;
+                    metalEntry.stage = filament::backend::ShaderType::FRAGMENT;
                     metalEntry.shaderSize = msl.length();
                     metalEntry.shader = (char*)malloc(metalEntry.shaderSize + 1);
                     strcpy(metalEntry.shader, msl.c_str());
@@ -685,8 +685,8 @@ Package MaterialBuilder::build() noexcept {
     return package;
 }
 
-const std::string MaterialBuilder::peek(filament::driver::ShaderType type,
-        filament::driver::ShaderModel& model, const PropertyList& properties) noexcept {
+const std::string MaterialBuilder::peek(filament::backend::ShaderType type,
+        filament::backend::ShaderModel& model, const PropertyList& properties) noexcept {
 
     ShaderGenerator sg(properties, mVariables,
             mMaterialCode, mMaterialLineOffset, mMaterialVertexCode, mMaterialVertexLineOffset);
@@ -701,12 +701,12 @@ const std::string MaterialBuilder::peek(filament::driver::ShaderType type,
 
         // Re-populate the set of sampler bindings for this API.
         filament::SamplerBindingMap map;
-        auto backend = static_cast<filament::driver::Backend>(params.targetApi);
+        auto backend = static_cast<filament::backend::Backend>(params.targetApi);
         uint8_t offset = filament::getSamplerBindingsStart(backend);
         map.populate(offset, &info.sib, mMaterialName.c_str());
         info.samplerBindings = std::move(map);
 
-        if (type == filament::driver::ShaderType::VERTEX) {
+        if (type == filament::backend::ShaderType::VERTEX) {
             return sg.createVertexProgram(model, targetApi, codeGenTargetApi,
                     info, 0, mInterpolation, mVertexDomain);
         } else {

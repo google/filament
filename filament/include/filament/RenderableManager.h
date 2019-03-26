@@ -47,7 +47,7 @@ class UTILS_PUBLIC RenderableManager : public FilamentAPI {
 
 public:
     using Instance = utils::EntityInstance<RenderableManager>;
-    using PrimitiveType = driver::PrimitiveType;
+    using PrimitiveType = backend::PrimitiveType;
 
     bool hasComponent(utils::Entity e) const noexcept;
 

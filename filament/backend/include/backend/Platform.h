@@ -22,7 +22,7 @@
 #include <utils/compiler.h>
 
 namespace filament {
-namespace driver {
+namespace backend {
 
 class Driver;
 
@@ -54,7 +54,7 @@ public:
      *
      * @return nullptr on failure, or a pointer to the newly created driver.
      */
-    virtual driver::Driver* createDriver(void* sharedContext) noexcept = 0;
+    virtual backend::Driver* createDriver(void* sharedContext) noexcept = 0;
 };
 
 
@@ -73,7 +73,7 @@ public:
      *
      * @see destroy
      */
-    static DefaultPlatform* create(driver::Backend* backendHint) noexcept;
+    static DefaultPlatform* create(backend::Backend* backendHint) noexcept;
 
     /**
      * Destroys a Platform object returned by create()
@@ -86,7 +86,7 @@ public:
     static void destroy(DefaultPlatform** platform) noexcept;
 };
 
-} // namespace driver
+} // namespace backend
 } // namespace filament
 
 #endif // TNT_FILAMENT_DRIVER_PLATFORM_H

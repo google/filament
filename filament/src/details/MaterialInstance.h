@@ -74,7 +74,7 @@ public:
     uint64_t getSortingKey() const noexcept { return mMaterialSortingKey; }
 
     UniformBuffer const& getUniformBuffer() const noexcept { return mUniforms; }
-    driver::SamplerGroup const& getSamplerGroup() const noexcept { return mSamplers; }
+    backend::SamplerGroup const& getSamplerGroup() const noexcept { return mSamplers; }
 
     void setScissor(int32_t left, int32_t bottom, uint32_t width, uint32_t height) noexcept {
         mScissorRect = { left, bottom,
@@ -94,7 +94,7 @@ public:
         mPolygonOffset = { scale, constant };
     }
 
-    driver::PolygonOffset getPolygonOffset() const noexcept { return mPolygonOffset; }
+    backend::PolygonOffset getPolygonOffset() const noexcept { return mPolygonOffset; }
 
 private:
     friend class FMaterial;
@@ -107,17 +107,17 @@ private:
 
     // keep these grouped, they're accessed together in the render-loop
     FMaterial const* mMaterial = nullptr;
-    driver::Handle<driver::HwUniformBuffer> mUbHandle;
-    driver::Handle<driver::HwSamplerGroup> mSbHandle;
+    backend::Handle<backend::HwUniformBuffer> mUbHandle;
+    backend::Handle<backend::HwSamplerGroup> mSbHandle;
 
     UniformBuffer mUniforms;
-    driver::SamplerGroup mSamplers;
-    driver::PolygonOffset mPolygonOffset;
+    backend::SamplerGroup mSamplers;
+    backend::PolygonOffset mPolygonOffset;
 
     uint64_t mMaterialSortingKey = 0;
 
     // Scissor rectangle is specified as: Left Bottom Width Height.
-    driver::Viewport mScissorRect = { 0, 0,
+    backend::Viewport mScissorRect = { 0, 0,
             (uint32_t)std::numeric_limits<int32_t>::max(),
             (uint32_t)std::numeric_limits<int32_t>::max()
     };

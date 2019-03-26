@@ -37,7 +37,7 @@ namespace filament {
  * internal redeclaration of these types.
  * For e.g. Use Texture::Sampler instead of filament::SamplerType.
  */
-namespace driver {
+namespace backend {
 
 static constexpr uint64_t SWAP_CHAIN_CONFIG_TRANSPARENT = 0x1;
 static constexpr uint64_t SWAP_CHAIN_CONFIG_READABLE = 0x2;
@@ -689,7 +689,7 @@ struct RasterState {
     };
 };
 
-} // namespace driver
+} // namespace backend
 } // namespace filament
 
 #endif // TNT_FILAMENT_DRIVER_DRIVERENUMS_H

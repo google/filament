@@ -24,7 +24,7 @@
 namespace filament {
 namespace details {
 
-void FRenderPrimitive::init(driver::DriverApi& driver,
+void FRenderPrimitive::init(backend::DriverApi& driver,
         const RenderableManager::Builder::Entry& entry) noexcept {
 
     assert(entry.materialInstance);

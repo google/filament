@@ -44,7 +44,7 @@ using namespace utils;
 
 namespace filament {
 
-using namespace driver;
+using namespace backend;
 
 namespace details {
 
@@ -62,8 +62,8 @@ void FRenderer::init() noexcept {
     DriverApi& driver = mEngine.getDriverApi();
     mUserEpoch = mEngine.getEngineEpoch();
     mRenderTarget = driver.createDefaultRenderTarget();
-    mIsRGB16FSupported = driver.isRenderTargetFormatSupported(driver::TextureFormat::RGB16F);
-    mIsRGB8Supported = driver.isRenderTargetFormatSupported(driver::TextureFormat::RGB8);
+    mIsRGB16FSupported = driver.isRenderTargetFormatSupported(backend::TextureFormat::RGB16F);
+    mIsRGB8Supported = driver.isRenderTargetFormatSupported(backend::TextureFormat::RGB8);
     if (UTILS_HAS_THREADING) {
         mFrameInfoManager.run();
     }
@@ -105,25 +105,25 @@ void FRenderer::resetUserTime() {
     mUserEpoch = std::chrono::steady_clock::now();
 }
 
-driver::TextureFormat FRenderer::getHdrFormat(const View& view) const noexcept {
+backend::TextureFormat FRenderer::getHdrFormat(const View& view) const noexcept {
     const bool translucent = mSwapChain->isTransparent();
-    if (translucent) return driver::TextureFormat::RGBA16F;
+    if (translucent) return backend::TextureFormat::RGBA16F;
 
     switch (view.getRenderQuality().hdrColorBuffer) {
         case View::QualityLevel::LOW:
         case View::QualityLevel::MEDIUM:
-            return driver::TextureFormat::R11F_G11F_B10F;
+            return backend::TextureFormat::R11F_G11F_B10F;
         case View::QualityLevel::HIGH:
         case View::QualityLevel::ULTRA:
-            return !mIsRGB16FSupported ? driver::TextureFormat::RGBA16F
-                                       : driver::TextureFormat::RGB16F;
+            return !mIsRGB16FSupported ? backend::TextureFormat::RGBA16F
+                                       : backend::TextureFormat::RGB16F;
     }
 }
 
-driver::TextureFormat FRenderer::getLdrFormat() const noexcept {
+backend::TextureFormat FRenderer::getLdrFormat() const noexcept {
     const bool translucent = mSwapChain->isTransparent();
-    return (translucent || !mIsRGB8Supported) ? driver::TextureFormat::RGBA8
-                                              : driver::TextureFormat::RGB8;
+    return (translucent || !mIsRGB8Supported) ? backend::TextureFormat::RGBA8
+                                              : backend::TextureFormat::RGB8;
 }
 
 void FRenderer::render(FView const* view) {
@@ -223,7 +223,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     //        so when skipping post-process (which draws directly into it), we can't rely on it.
     const bool colorPassNeedsDepthBuffer = hasPostProcess;
 
-    const driver::Handle<driver::HwRenderTarget> viewRenderTarget = getRenderTarget();
+    const backend::Handle<backend::HwRenderTarget> viewRenderTarget = getRenderTarget();
     FrameGraphResource output = fg.importResource("viewRenderTarget",
             { .viewport = vp }, viewRenderTarget, vp.width, vp.height);
 
@@ -320,7 +320,7 @@ void FRenderer::mirrorFrame(FSwapChain* dstSwapChain, filament::Viewport const& 
     FEngine& engine = getEngine();
     FEngine::DriverApi& driver = engine.getDriverApi();
 
-    const driver::Handle<driver::HwRenderTarget> viewRenderTarget = getRenderTarget();
+    const backend::Handle<backend::HwRenderTarget> viewRenderTarget = getRenderTarget();
 
     // Set the current swap chain as the read surface, and the destination
     // swap chain as the draw surface so that blitting between default render
@@ -464,7 +464,7 @@ void FRenderer::endFrame() {
 }
 
 void FRenderer::readPixels(uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
-        driver::PixelBufferDescriptor&& buffer) {
+        backend::PixelBufferDescriptor&& buffer) {
 
     if (!ASSERT_POSTCONDITION_NON_FATAL(
             buffer.type != PixelDataType::COMPRESSED,
@@ -526,7 +526,7 @@ void Renderer::mirrorFrame(SwapChain* dstSwapChain, filament::Viewport const& ds
 }
 
 void Renderer::readPixels(uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
-        driver::PixelBufferDescriptor&& buffer) {
+        backend::PixelBufferDescriptor&& buffer) {
     upcast(this)->readPixels(xoffset, yoffset, width, height, std::move(buffer));
 }
 

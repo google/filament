@@ -21,7 +21,7 @@
 #include <utils/Panic.h>
 
 namespace filament {
-namespace driver {
+namespace backend {
 namespace metal {
 
 id<CAMetalDrawable> acquireDrawable(MetalContext* context) {
@@ -33,5 +33,5 @@ id<CAMetalDrawable> acquireDrawable(MetalContext* context) {
 }
 
 } // namespace metal
-} // namespace driver
+} // namespace backend
 } // namespace filament

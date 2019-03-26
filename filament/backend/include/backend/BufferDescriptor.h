@@ -23,7 +23,7 @@
 #include <utils/compiler.h>
 
 namespace filament {
-namespace driver {
+namespace backend {
 
 class UTILS_PUBLIC BufferDescriptor {
 public:
@@ -98,7 +98,7 @@ private:
     void* user = nullptr;
 };
 
-} // namespace driver
+} // namespace backend
 } // namespace filament
 
 #endif // TNT_FILAMENT_DRIVER_BUFFERDESCRIPTOR_H

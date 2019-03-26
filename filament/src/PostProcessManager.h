@@ -35,27 +35,27 @@ class FView;
 class PostProcessManager {
 public:
     void init(details::FEngine& engine) noexcept;
-    void terminate(driver::DriverApi& driver) noexcept;
-    void setSource(uint32_t viewportWidth, uint32_t viewportHeight, driver::Handle<driver::HwTexture> texture,
+    void terminate(backend::DriverApi& driver) noexcept;
+    void setSource(uint32_t viewportWidth, uint32_t viewportHeight, backend::Handle<backend::HwTexture> texture,
             uint32_t textureWidth, uint32_t textureHeight) const noexcept;
 
     FrameGraphResource toneMapping(FrameGraph& fg, FrameGraphResource input,
-            driver::TextureFormat outFormat, bool dithering, bool translucent) noexcept;
+            backend::TextureFormat outFormat, bool dithering, bool translucent) noexcept;
 
     FrameGraphResource fxaa(
-            FrameGraph& fg, FrameGraphResource input, driver::TextureFormat outFormat,
+            FrameGraph& fg, FrameGraphResource input, backend::TextureFormat outFormat,
             bool translucent) noexcept;
 
     FrameGraphResource dynamicScaling(
-            FrameGraph& fg, FrameGraphResource input, driver::TextureFormat outFormat) noexcept;
+            FrameGraph& fg, FrameGraphResource input, backend::TextureFormat outFormat) noexcept;
 
 private:
     details::FEngine* mEngine = nullptr;
 
     // we need only one of these
     mutable UniformBuffer mPostProcessUb;
-    driver::Handle<driver::HwSamplerGroup> mPostProcessSbh;
-    driver::Handle<driver::HwUniformBuffer> mPostProcessUbh;
+    backend::Handle<backend::HwSamplerGroup> mPostProcessSbh;
+    backend::Handle<backend::HwUniformBuffer> mPostProcessUbh;
 };
 
 } // namespace filament

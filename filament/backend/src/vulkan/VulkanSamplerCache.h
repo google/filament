@@ -23,13 +23,13 @@
 #include <tsl/robin_map.h>
 
 namespace filament {
-namespace driver {
+namespace backend {
 
 // Simple manager for VkSampler objects.
 class VulkanSamplerCache {
 public:
     explicit VulkanSamplerCache(VulkanContext&);
-    VkSampler getSampler(driver::SamplerParams params) noexcept;
+    VkSampler getSampler(backend::SamplerParams params) noexcept;
     void reset() noexcept;
 private:
     VulkanContext& mContext;
@@ -37,6 +37,6 @@ private:
 };
 
 } // namespace filament
-} // namespace driver
+} // namespace backend
 
 #endif // TNT_FILAMENT_DRIVER_VULKANSAMPLERCACHE_H

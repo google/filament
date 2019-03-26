@@ -142,7 +142,7 @@ namespace filament {
  */
 class UTILS_PUBLIC SwapChain : public FilamentAPI {
 public:
-    static const uint64_t CONFIG_TRANSPARENT = driver::SWAP_CHAIN_CONFIG_TRANSPARENT;
+    static const uint64_t CONFIG_TRANSPARENT = backend::SWAP_CHAIN_CONFIG_TRANSPARENT;
     /**
      * This flag indicates that the swap chain may be used as a source surface
      * for reading back render results.  This config must be set when creating
@@ -151,7 +151,7 @@ public:
      * @see
      * Renderer.mirrorFrame()
      */
-    static const uint64_t CONFIG_READABLE = driver::SWAP_CHAIN_CONFIG_READABLE;
+    static const uint64_t CONFIG_READABLE = backend::SWAP_CHAIN_CONFIG_READABLE;
 
     void* getNativeWindow() const noexcept;
 };

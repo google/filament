@@ -30,7 +30,7 @@ namespace filament {
 
 using namespace utils;
 using namespace math;
-using namespace driver;
+using namespace backend;
 using namespace filament::details;
 
 void PostProcessManager::init(FEngine& engine) noexcept {
@@ -41,24 +41,24 @@ void PostProcessManager::init(FEngine& engine) noexcept {
     DriverApi& driver = engine.getDriverApi();
     mPostProcessSbh = driver.createSamplerGroup(PostProcessSib::SAMPLER_COUNT);
     mPostProcessUbh = driver.createUniformBuffer(mPostProcessUb.getSize(),
-            driver::BufferUsage::DYNAMIC);
+            backend::BufferUsage::DYNAMIC);
     driver.bindSamplers(BindingPoints::POST_PROCESS, mPostProcessSbh);
     driver.bindUniformBuffer(BindingPoints::POST_PROCESS, mPostProcessUbh);
 }
 
-void PostProcessManager::terminate(driver::DriverApi& driver) noexcept {
+void PostProcessManager::terminate(backend::DriverApi& driver) noexcept {
     driver.destroySamplerGroup(mPostProcessSbh);
     driver.destroyUniformBuffer(mPostProcessUbh);
 }
 
 void PostProcessManager::setSource(uint32_t viewportWidth, uint32_t viewportHeight,
-        driver::Handle<driver::HwTexture> texture, uint32_t textureWidth, uint32_t textureHeight) const noexcept {
+        backend::Handle<backend::HwTexture> texture, uint32_t textureWidth, uint32_t textureHeight) const noexcept {
     FEngine& engine = *mEngine;
     DriverApi& driver = engine.getDriverApi();
 
     // FXAA requires linear filtering. The post-processing stage however, doesn't
     // use samplers.
-    driver::SamplerParams params;
+    backend::SamplerParams params;
     params.filterMag = SamplerMagFilter::LINEAR;
     params.filterMin = SamplerMinFilter::LINEAR;
     SamplerGroup group(PostProcessSib::SAMPLER_COUNT);
@@ -85,16 +85,16 @@ void PostProcessManager::setSource(uint32_t viewportWidth, uint32_t viewportHeig
 // ------------------------------------------------------------------------------------------------
 
 FrameGraphResource PostProcessManager::toneMapping(FrameGraph& fg, FrameGraphResource input,
-        driver::TextureFormat outFormat, bool dithering, bool translucent) noexcept {
+        backend::TextureFormat outFormat, bool dithering, bool translucent) noexcept {
 
     FEngine* engine = mEngine;
-    driver::Handle<driver::HwRenderPrimitive> const& fullScreenRenderPrimitive = engine->getFullScreenRenderPrimitive();
+    backend::Handle<backend::HwRenderPrimitive> const& fullScreenRenderPrimitive = engine->getFullScreenRenderPrimitive();
 
     struct PostProcessToneMapping {
         FrameGraphResource input;
         FrameGraphResource output;
     };
-    driver::Handle<driver::HwProgram> toneMappingProgram = engine->getPostProcessProgram(
+    backend::Handle<backend::HwProgram> toneMappingProgram = engine->getPostProcessProgram(
             translucent ? PostProcessStage::TONE_MAPPING_TRANSLUCENT
                         : PostProcessStage::TONE_MAPPING_OPAQUE);
 
@@ -140,17 +140,17 @@ FrameGraphResource PostProcessManager::toneMapping(FrameGraph& fg, FrameGraphRes
 }
 
 FrameGraphResource PostProcessManager::fxaa(FrameGraph& fg,
-        FrameGraphResource input, driver::TextureFormat outFormat, bool translucent) noexcept {
+        FrameGraphResource input, backend::TextureFormat outFormat, bool translucent) noexcept {
 
     FEngine* engine = mEngine;
-    driver::Handle<driver::HwRenderPrimitive> const& fullScreenRenderPrimitive = engine->getFullScreenRenderPrimitive();
+    backend::Handle<backend::HwRenderPrimitive> const& fullScreenRenderPrimitive = engine->getFullScreenRenderPrimitive();
 
     struct PostProcessFXAA {
         FrameGraphResource input;
         FrameGraphResource output;
     };
 
-    driver::Handle<driver::HwProgram> antiAliasingProgram = engine->getPostProcessProgram(
+    backend::Handle<backend::HwProgram> antiAliasingProgram = engine->getPostProcessProgram(
             translucent ? PostProcessStage::ANTI_ALIASING_TRANSLUCENT
                         : PostProcessStage::ANTI_ALIASING_OPAQUE);
 
@@ -194,7 +194,7 @@ FrameGraphResource PostProcessManager::fxaa(FrameGraph& fg,
 }
 
 FrameGraphResource PostProcessManager::dynamicScaling(FrameGraph& fg,
-        FrameGraphResource input, driver::TextureFormat outFormat) noexcept {
+        FrameGraphResource input, backend::TextureFormat outFormat) noexcept {
 
     struct PostProcessScaling {
         FrameGraphResource input;

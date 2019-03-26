@@ -151,14 +151,14 @@ public:
 
     // helper functions
 
-    driver::BufferDescriptor toBufferDescriptor(driver::DriverApi& driver) const noexcept {
+    backend::BufferDescriptor toBufferDescriptor(backend::DriverApi& driver) const noexcept {
         return toBufferDescriptor(driver, 0, getSize());
     }
 
     // copy the UBO data and cleans the dirty bits
-    driver::BufferDescriptor toBufferDescriptor(
-            driver::DriverApi& driver, size_t offset, size_t size) const noexcept {
-        driver::BufferDescriptor p;
+    backend::BufferDescriptor toBufferDescriptor(
+            backend::DriverApi& driver, size_t offset, size_t size) const noexcept {
+        backend::BufferDescriptor p;
         p.size = size;
         p.buffer = driver.allocate(p.size); // TODO: use out-of-line buffer if too large
         memcpy(p.buffer, static_cast<const char*>(getBuffer()) + offset, p.size);

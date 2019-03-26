@@ -57,7 +57,7 @@ public:
 
     void destroy(utils::Entity e) noexcept;
 
-    void prepare(driver::DriverApi& driver) const noexcept;
+    void prepare(backend::DriverApi& driver) const noexcept;
 
     void gc(utils::EntityManager& em) noexcept {
         mManager.gc(em);

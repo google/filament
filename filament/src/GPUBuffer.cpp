@@ -21,7 +21,7 @@
 
 namespace filament {
 
-using namespace driver;
+using namespace backend;
 
 static size_t dataTypeToSize(GPUBuffer::Element element) noexcept {
     using ET = GPUBuffer::ElementType;
@@ -37,8 +37,8 @@ static size_t dataTypeToSize(GPUBuffer::Element element) noexcept {
     }
 }
 
-static driver::TextureFormat dataTypeToTextureFormat(GPUBuffer::Element element) noexcept {
-    using TF = driver::TextureFormat;
+static backend::TextureFormat dataTypeToTextureFormat(GPUBuffer::Element element) noexcept {
+    using TF = backend::TextureFormat;
     static const TF formats[8][4] = {
             { TF::R8UI,  TF::RG8UI,  TF::RGB8UI,  TF::RGBA8UI },
             { TF::R8I,   TF::RG8I,   TF::RGB8I,   TF::RGBA8I },
@@ -55,7 +55,7 @@ static driver::TextureFormat dataTypeToTextureFormat(GPUBuffer::Element element)
     return formats[index][element.size - 1];
 }
 
-GPUBuffer::GPUBuffer(driver::DriverApi& driverApi, Element element, size_t rowSize, size_t rowCount)
+GPUBuffer::GPUBuffer(backend::DriverApi& driverApi, Element element, size_t rowSize, size_t rowCount)
         : mElement(element) {
     size_t size = dataTypeToSize(element) * rowSize * rowCount;
     mSize = (uint32_t) size;
@@ -63,33 +63,33 @@ GPUBuffer::GPUBuffer(driver::DriverApi& driverApi, Element element, size_t rowSi
     mHeight = (uint16_t) rowCount;
     mRowSizeInBytes = uint16_t(dataTypeToSize(element) * rowSize);
 
-    driver::TextureFormat format = dataTypeToTextureFormat(element);
+    backend::TextureFormat format = dataTypeToTextureFormat(element);
     mTexture = driverApi.createTexture(SamplerType::SAMPLER_2D, 1, format, 1, mWidth, mHeight, 1,
             TextureUsage::DEFAULT);
 
 
     switch (mElement.size) {
         default: // cannot happen
-        case 1: mFormat = driver::PixelDataFormat::R;    break;
-        case 2: mFormat = driver::PixelDataFormat::RG;   break;
-        case 3: mFormat = driver::PixelDataFormat::RGB;  break;
-        case 4: mFormat = driver::PixelDataFormat::RGBA; break;
+        case 1: mFormat = backend::PixelDataFormat::R;    break;
+        case 2: mFormat = backend::PixelDataFormat::RG;   break;
+        case 3: mFormat = backend::PixelDataFormat::RGB;  break;
+        case 4: mFormat = backend::PixelDataFormat::RGBA; break;
     }
 
     if (mElement.type != ElementType::FLOAT && mElement.type != ElementType::HALF) {
         // change R to R_INTEGER, RG to RG_INTEGER, etc.
-        mFormat = driver::PixelDataFormat(uint8_t(mFormat) + 1);
+        mFormat = backend::PixelDataFormat(uint8_t(mFormat) + 1);
     }
 
     switch (mElement.type) {
-        case ElementType::UINT8:    mType = driver::PixelDataType::UBYTE;    break;
-        case ElementType::INT8:     mType = driver::PixelDataType::BYTE;     break;
-        case ElementType::UINT16:   mType = driver::PixelDataType::USHORT;   break;
-        case ElementType::INT16:    mType = driver::PixelDataType::SHORT;    break;
-        case ElementType::UINT32:   mType = driver::PixelDataType::UINT;     break;
-        case ElementType::INT32:    mType = driver::PixelDataType::INT;      break;
-        case ElementType::HALF:     mType = driver::PixelDataType::HALF;     break;
-        case ElementType::FLOAT:    mType = driver::PixelDataType::FLOAT;    break;
+        case ElementType::UINT8:    mType = backend::PixelDataType::UBYTE;    break;
+        case ElementType::INT8:     mType = backend::PixelDataType::BYTE;     break;
+        case ElementType::UINT16:   mType = backend::PixelDataType::USHORT;   break;
+        case ElementType::INT16:    mType = backend::PixelDataType::SHORT;    break;
+        case ElementType::UINT32:   mType = backend::PixelDataType::UINT;     break;
+        case ElementType::INT32:    mType = backend::PixelDataType::INT;      break;
+        case ElementType::HALF:     mType = backend::PixelDataType::HALF;     break;
+        case ElementType::FLOAT:    mType = backend::PixelDataType::FLOAT;    break;
     }
 }
 
@@ -113,11 +113,11 @@ void GPUBuffer::swap(GPUBuffer& rhs) noexcept {
     std::swap(mType, rhs.mType);
 }
 
-void GPUBuffer::terminate(driver::DriverApi& driverApi) noexcept {
+void GPUBuffer::terminate(backend::DriverApi& driverApi) noexcept {
     driverApi.destroyTexture(mTexture);
 }
 
-void GPUBuffer::commitSlow(driver::DriverApi& driverApi, void const* begin, void const* end) noexcept {
+void GPUBuffer::commitSlow(backend::DriverApi& driverApi, void const* begin, void const* end) noexcept {
     const uintptr_t sizeInBytes = uintptr_t(end) - uintptr_t(begin);
     assert(sizeInBytes <= mRowSizeInBytes * mHeight);
     driverApi.update2DImage(mTexture, 0, 0, 0, mWidth, mHeight,

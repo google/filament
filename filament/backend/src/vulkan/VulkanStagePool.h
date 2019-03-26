@@ -25,7 +25,7 @@
 #include <unordered_set>
 
 namespace filament {
-namespace driver {
+namespace backend {
 
 // Immutable POD representing a shared CPU-GPU staging area.
 struct VulkanStage {
@@ -72,6 +72,6 @@ private:
 };
 
 } // namespace filament
-} // namespace driver
+} // namespace backend
 
 #endif // TNT_FILAMENT_DRIVER_VULKANSTAGEPOOL_H

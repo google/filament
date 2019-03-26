@@ -21,11 +21,11 @@
 
 namespace filament {
 
-namespace driver {
+namespace backend {
 class Driver;
-} // namespace driver
+} // namespace backend
 
-namespace driver {
+namespace backend {
 
 class VulkanPlatform : public DefaultPlatform {
 public:
@@ -36,7 +36,7 @@ public:
    ~VulkanPlatform() override;
 };
 
-} // namespace driver
+} // namespace backend
 } // namespace filament
 
 #endif //TNT_FILAMENT_DRIVER_VULKANPLATFORM_H

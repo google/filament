@@ -26,7 +26,7 @@
 namespace filament {
 
 using namespace details;
-using namespace driver;
+using namespace backend;
 
 struct Texture::BuilderDetails {
     uint32_t mWidth = 1;
@@ -175,7 +175,7 @@ void FTexture::setExternalStream(FEngine& engine, FStream* stream) noexcept {
         engine.getDriverApi().setExternalStream(mHandle, stream->getHandle());
     } else {
         mStream = nullptr;
-        engine.getDriverApi().setExternalStream(mHandle, driver::Handle<driver::HwStream>());
+        engine.getDriverApi().setExternalStream(mHandle, backend::Handle<backend::HwStream>());
     }
 }
 
@@ -215,11 +215,11 @@ void FTexture::generateMipmaps(FEngine& engine) const noexcept {
         uint8_t level = 0;
         uint32_t srcw = mWidth;
         uint32_t srch = mHeight;
-        driver::Handle<driver::HwRenderTarget> srcrth = driver.createRenderTarget(TargetBufferFlags::COLOR,
+        backend::Handle<backend::HwRenderTarget> srcrth = driver.createRenderTarget(TargetBufferFlags::COLOR,
                 srcw, srch, mSampleCount, mFormat, { mHandle, level++, layer }, {}, {});
 
         // Perform a blit for all miplevels down to 1x1.
-        driver::Handle<driver::HwRenderTarget> dstrth;
+        backend::Handle<backend::HwRenderTarget> dstrth;
         do {
             uint32_t dstw = std::max(srcw >> 1, 1u);
             uint32_t dsth = std::max(srch >> 1, 1u);

@@ -23,7 +23,7 @@
 #include "MetalState.h"
 
 namespace filament {
-namespace driver {
+namespace backend {
 namespace metal {
 
 class MetalRenderTarget;
@@ -74,7 +74,7 @@ struct MetalContext {
 id<CAMetalDrawable> acquireDrawable(MetalContext* context);
 
 } // namespace metal
-} // namespace driver
+} // namespace backend
 } // namespace filament
 
 #endif //TNT_METALCONTEXT_H

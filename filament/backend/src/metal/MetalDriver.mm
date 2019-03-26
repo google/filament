@@ -33,7 +33,7 @@
 #pragma ide diagnostic ignored "HidingNonVirtualFunction"
 
 namespace filament {
-namespace driver {
+namespace backend {
 namespace metal {
 
 Driver* MetalDriver::create(MetalPlatform* const platform) {
@@ -41,7 +41,7 @@ Driver* MetalDriver::create(MetalPlatform* const platform) {
     return new MetalDriver(platform);
 }
 
-MetalDriver::MetalDriver(driver::MetalPlatform* platform) noexcept
+MetalDriver::MetalDriver(backend::MetalPlatform* platform) noexcept
         : DriverBase(new ConcreteDispatcher<MetalDriver>()),
         mPlatform(*platform),
         mContext(new MetalContext) {
@@ -313,7 +313,7 @@ int64_t MetalDriver::getStreamTimestamp(Handle<HwStream> stream) {
     return 0;
 }
 
-void MetalDriver::updateStreams(driver::DriverApi* driver) {
+void MetalDriver::updateStreams(backend::DriverApi* driver) {
 
 }
 
@@ -584,13 +584,13 @@ void MetalDriver::readStreamPixels(Handle<HwStream> sh, uint32_t x, uint32_t y, 
 }
 
 void MetalDriver::blit(TargetBufferFlags buffers,
-        Handle<HwRenderTarget> dst, driver::Viewport dstRect,
-        Handle<HwRenderTarget> src, driver::Viewport srcRect,
+        Handle<HwRenderTarget> dst, backend::Viewport dstRect,
+        Handle<HwRenderTarget> src, backend::Viewport srcRect,
         SamplerMagFilter filter) {
     ASSERT_POSTCONDITION(false, "Blitting not implemented.");
 }
 
-void MetalDriver::draw(driver::PipelineState ps, Handle<HwRenderPrimitive> rph) {
+void MetalDriver::draw(backend::PipelineState ps, Handle<HwRenderPrimitive> rph) {
     ASSERT_PRECONDITION(mContext->currentCommandEncoder != nullptr,
             "Attempted to draw without a valid command encoder.");
     auto primitive = handle_cast<MetalRenderPrimitive>(mHandleMap, rph);
@@ -775,7 +775,7 @@ void MetalDriver::enumerateSamplerGroups(
 // explicit instantiation of the Dispatcher
 template class ConcreteDispatcher<metal::MetalDriver>;
 
-} // namespace driver
+} // namespace backend
 } // namespace filament
 
 #pragma clang diagnostic pop

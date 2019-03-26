@@ -91,7 +91,7 @@ public:
     explicit Froxelizer(FEngine& engine);
     ~Froxelizer();
 
-    void terminate(driver::DriverApi& driverApi) noexcept;
+    void terminate(backend::DriverApi& driverApi) noexcept;
 
     // gpu buffer containing records. valid after construction.
     GPUBuffer const& getRecordBuffer() const noexcept { return mRecordsBuffer; }
@@ -113,7 +113,7 @@ public:
      *
      * return true if updateUniforms() needs to be called
      */
-    bool prepare(driver::DriverApi& driverApi, ArenaScope& arena, Viewport const& viewport,
+    bool prepare(backend::DriverApi& driverApi, ArenaScope& arena, Viewport const& viewport,
             const math::mat4f& projection, float projectionNear, float projectionFar) noexcept;
 
     Froxel getFroxelAt(size_t x, size_t y, size_t z) const noexcept;
@@ -135,7 +135,7 @@ public:
     }
 
     // send froxel data to GPU
-    void commit(driver::DriverApi& driverApi);
+    void commit(backend::DriverApi& driverApi);
 
 
     /*

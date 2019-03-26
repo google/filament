@@ -40,8 +40,8 @@ public:
 
     void terminate(FEngine& engine);
 
-    driver::Handle<driver::HwTexture> getReflectionMap() const noexcept { return mReflectionsMapHandle; }
-    driver::Handle<driver::HwTexture> getIrradianceMap() const noexcept { return mIrradianceMapHandle; }
+    backend::Handle<backend::HwTexture> getReflectionMap() const noexcept { return mReflectionsMapHandle; }
+    backend::Handle<backend::HwTexture> getIrradianceMap() const noexcept { return mIrradianceMapHandle; }
     math::float3 const* getSH() const noexcept{ return mIrradianceCoefs.data(); }
     float getIntensity() const noexcept { return mIntensity; }
     void setIntensity(float intensity) noexcept { mIntensity = intensity; }
@@ -49,8 +49,8 @@ public:
     const math::mat3f& getRotation() const { return mRotation; }
 
 private:
-    driver::Handle<driver::HwTexture> mReflectionsMapHandle;
-    driver::Handle<driver::HwTexture> mIrradianceMapHandle;
+    backend::Handle<backend::HwTexture> mReflectionsMapHandle;
+    backend::Handle<backend::HwTexture> mIrradianceMapHandle;
     std::array<math::float3, 9> mIrradianceCoefs;
     float mIntensity = DEFAULT_INTENSITY;
     math::mat3f mRotation;

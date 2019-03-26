@@ -28,7 +28,7 @@
 #include <mutex>
 
 namespace filament {
-namespace driver {
+namespace backend {
 
 class MetalPlatform;
 
@@ -39,15 +39,15 @@ struct MetalContext;
 struct MetalProgram;
 
 class MetalDriver final : public DriverBase {
-    MetalDriver(driver::MetalPlatform* platform) noexcept;
+    MetalDriver(backend::MetalPlatform* platform) noexcept;
     virtual ~MetalDriver() noexcept;
 
 public:
-    static Driver* create(driver::MetalPlatform* platform);
+    static Driver* create(backend::MetalPlatform* platform);
 
 private:
 
-    driver::MetalPlatform& mPlatform;
+    backend::MetalPlatform& mPlatform;
 
     MetalContext* mContext;
 
@@ -62,7 +62,7 @@ private:
      */
 
     template<typename T>
-    friend class driver::ConcreteDispatcher;
+    friend class backend::ConcreteDispatcher;
 
 #define DECL_DRIVER_API(methodName, paramsDecl, params) \
     UTILS_ALWAYS_INLINE void methodName(paramsDecl);
@@ -146,7 +146,7 @@ private:
 };
 
 } // namespace metal
-} // namespace driver
+} // namespace backend
 } // namespace filament
 
 #endif // TNT_FILAMENT_DRIVER_METALDRIVER_H

@@ -35,11 +35,11 @@ public:
     FSwapChain(FEngine& engine, void* nativeWindow, uint64_t flags);
     void terminate(FEngine& engine) noexcept;
 
-    void makeCurrent(driver::DriverApi& driverApi) noexcept {
+    void makeCurrent(backend::DriverApi& driverApi) noexcept {
         driverApi.makeCurrent(mSwapChain, mSwapChain);
     }
 
-    void commit(driver::DriverApi& driverApi) noexcept {
+    void commit(backend::DriverApi& driverApi) noexcept {
         driverApi.commit(mSwapChain);
     }
 
@@ -55,12 +55,12 @@ public:
         return (mConfigFlags & CONFIG_READABLE) != 0;
     }
 
-    driver::Handle<driver::HwSwapChain> getHwHandle() const noexcept {
+    backend::Handle<backend::HwSwapChain> getHwHandle() const noexcept {
       return mSwapChain;
     }
 
 private:
-    driver::Handle<driver::HwSwapChain> mSwapChain;
+    backend::Handle<backend::HwSwapChain> mSwapChain;
     void* mNativeWindow = nullptr;
     uint64_t mConfigFlags = 0;
 };

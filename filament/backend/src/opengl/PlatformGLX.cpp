@@ -99,7 +99,7 @@ static bool loadLibraries() {
 
 namespace filament {
 
-using namespace driver;
+using namespace backend;
 
 Driver* PlatformGLX::createDriver(void* const sharedGLContext) noexcept {
     loadLibraries();
@@ -163,7 +163,7 @@ Platform::SwapChain* PlatformGLX::createSwapChain(
         void* nativeWindow, uint64_t& flags) noexcept {
 
     // Transparent swap chain is not supported
-    flags &= ~driver::SWAP_CHAIN_CONFIG_TRANSPARENT;
+    flags &= ~backend::SWAP_CHAIN_CONFIG_TRANSPARENT;
     return (SwapChain*) nativeWindow;
 }
 
@@ -190,8 +190,8 @@ void PlatformGLX::destroyFence(Fence* fence) noexcept {
     delete fence;
 }
 
-driver::FenceStatus PlatformGLX::waitFence(Fence* fence, uint64_t timeout) noexcept {
-    return driver::FenceStatus::CONDITION_SATISFIED;
+backend::FenceStatus PlatformGLX::waitFence(Fence* fence, uint64_t timeout) noexcept {
+    return backend::FenceStatus::CONDITION_SATISFIED;
 }
 
 } // namespace filament

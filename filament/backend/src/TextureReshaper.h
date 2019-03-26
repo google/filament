@@ -20,7 +20,7 @@
 #include <backend/DriverEnums.h>
 
 namespace filament {
-namespace driver {
+namespace backend {
 
 class TextureReshaper {
 
@@ -67,7 +67,7 @@ private:
 
 };
 
-} // namespace driver
+} // namespace backend
 } // namespace filament
 
 #endif //TNT_TEXTURERESHAPER_H

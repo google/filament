@@ -59,9 +59,9 @@ FIndexBuffer::FIndexBuffer(FEngine& engine, const IndexBuffer::Builder& builder)
         : mIndexCount(builder->mIndexCount) {
     FEngine::DriverApi& driver = engine.getDriverApi();
     mHandle = driver.createIndexBuffer(
-            (driver::ElementType)builder->mIndexType,
+            (backend::ElementType)builder->mIndexType,
             uint32_t(builder->mIndexCount),
-            driver::BufferUsage::STATIC);
+            backend::BufferUsage::STATIC);
 }
 
 void FIndexBuffer::terminate(FEngine& engine) {

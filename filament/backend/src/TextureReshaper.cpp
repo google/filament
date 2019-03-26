@@ -21,7 +21,7 @@
 #include <utils/Panic.h>
 
 namespace filament {
-namespace driver {
+namespace backend {
 
 TextureReshaper::TextureReshaper(TextureFormat requestedFormat) noexcept {
     const auto freeDeleter = [](void* buffer) { free(buffer); };
@@ -68,5 +68,5 @@ bool TextureReshaper::canReshapeTextureFormat(TextureFormat format) noexcept {
     return format == TextureFormat::RGB16F || format == TextureFormat::RGB8;
 }
 
-} // namespace driver
+} // namespace backend
 } // namespace filament

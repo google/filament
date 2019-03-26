@@ -33,7 +33,7 @@
 namespace filament {
 
 using namespace details;
-using namespace driver;
+using namespace backend;
 using namespace filament::math;
 
 struct VertexBuffer::BuilderDetails {
@@ -162,7 +162,7 @@ FVertexBuffer::FVertexBuffer(FEngine& engine, const VertexBuffer::Builder& build
 
     FEngine::DriverApi& driver = engine.getDriverApi();
     mHandle = driver.createVertexBuffer(
-            mBufferCount, attributeCount, mVertexCount, attributeArray, driver::BufferUsage::STATIC);
+            mBufferCount, attributeCount, mVertexCount, attributeArray, backend::BufferUsage::STATIC);
 }
 
 void FVertexBuffer::terminate(FEngine& engine) {
@@ -175,7 +175,7 @@ size_t FVertexBuffer::getVertexCount() const noexcept {
 }
 
 void FVertexBuffer::setBufferAt(FEngine& engine, uint8_t bufferIndex,
-        driver::BufferDescriptor&& buffer, uint32_t byteOffset) {
+        backend::BufferDescriptor&& buffer, uint32_t byteOffset) {
     if (bufferIndex < mBufferCount) {
         engine.getDriverApi().updateVertexBuffer(mHandle,
                 bufferIndex, std::move(buffer), byteOffset);
@@ -198,7 +198,7 @@ size_t VertexBuffer::getVertexCount() const noexcept {
 }
 
 void VertexBuffer::setBufferAt(Engine& engine, uint8_t bufferIndex,
-        driver::BufferDescriptor&& buffer, uint32_t byteOffset) {
+        backend::BufferDescriptor&& buffer, uint32_t byteOffset) {
     upcast(this)->setBufferAt(upcast(engine), bufferIndex, std::move(buffer), byteOffset);
 }
 

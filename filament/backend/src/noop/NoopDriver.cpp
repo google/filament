@@ -19,7 +19,7 @@
 
 namespace filament {
 
-using namespace driver;
+using namespace backend;
 
 Driver* NoopDriver::create() {
     return new NoopDriver();
@@ -30,15 +30,15 @@ NoopDriver::NoopDriver() noexcept : DriverBase(new ConcreteDispatcher<NoopDriver
 
 NoopDriver::~NoopDriver() noexcept = default;
 
-driver::ShaderModel NoopDriver::getShaderModel() const noexcept {
+backend::ShaderModel NoopDriver::getShaderModel() const noexcept {
 #if defined(GLES31_HEADERS)
-    return driver::ShaderModel::GL_CORE_30;
+    return backend::ShaderModel::GL_CORE_30;
 #else
-    return driver::ShaderModel::GL_CORE_41;
+    return backend::ShaderModel::GL_CORE_41;
 #endif
 }
 
 // explicit instantiation of the Dispatcher
-template class driver::ConcreteDispatcher<NoopDriver>;
+template class backend::ConcreteDispatcher<NoopDriver>;
 
 } // namespace filament

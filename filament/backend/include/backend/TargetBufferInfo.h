@@ -24,7 +24,7 @@
 #include <stdint.h>
 
 namespace filament {
-namespace driver {
+namespace backend {
 
 class TargetBufferInfo {
 public:
@@ -51,7 +51,7 @@ public:
     TargetBufferInfo() noexcept { }
 };
 
-} // namespace driver
+} // namespace backend
 } // namespace filament
 
 #endif //TNT_FILAMENT_DRIVER_TARGETBUFFERINFO_H

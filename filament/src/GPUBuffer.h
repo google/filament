@@ -50,7 +50,7 @@ public:
 
     GPUBuffer() = default;
 
-    GPUBuffer(driver::DriverApi& driverApi, Element element, size_t rowSize, size_t rowCount);
+    GPUBuffer(backend::DriverApi& driverApi, Element element, size_t rowSize, size_t rowCount);
 
     GPUBuffer(const GPUBuffer&) = delete;
     GPUBuffer& operator=(const GPUBuffer&) = delete;
@@ -59,24 +59,24 @@ public:
 
     // no need to specify a destructor, we're trivially_destructible
 
-    void terminate(driver::DriverApi& driverApi) noexcept;
+    void terminate(backend::DriverApi& driverApi) noexcept;
 
     size_t getSize() const noexcept { return mSize; }
 
     // source data isn't copied and must stay valid until the command-buffer is executed
-    void commit(driver::DriverApi& driverApi, void const* begin, void const* end) noexcept {
+    void commit(backend::DriverApi& driverApi, void const* begin, void const* end) noexcept {
         commitSlow(driverApi, begin, end);
     }
 
     template<typename T>
-    void commit(driver::DriverApi& driverApi, utils::Slice<T> const& data) noexcept {
+    void commit(backend::DriverApi& driverApi, utils::Slice<T> const& data) noexcept {
         commit(driverApi, data.cbegin(), data.cend());
     }
 
     void swap(GPUBuffer& rhs) noexcept;
 
 
-    void setSampler(size_t index, driver::SamplerGroup& group) const noexcept {
+    void setSampler(size_t index, backend::SamplerGroup& group) const noexcept {
         group.setSampler(index, { getHandle(), getSamplerParams() });
     }
 
@@ -84,20 +84,20 @@ private:
     // this is really hidden implementation details (the fact we're using a texture should be
     // exposed as little as possible)
     friend class SamplerGroup;
-    driver::Handle<driver::HwTexture> getHandle() const noexcept { return mTexture; }
-    driver::SamplerParams getSamplerParams() const noexcept { return driver::SamplerParams{}; }
+    backend::Handle<backend::HwTexture> getHandle() const noexcept { return mTexture; }
+    backend::SamplerParams getSamplerParams() const noexcept { return backend::SamplerParams{}; }
 
 private:
-    void commitSlow(driver::DriverApi& driverApi, void const* begin, void const* end) noexcept;
+    void commitSlow(backend::DriverApi& driverApi, void const* begin, void const* end) noexcept;
 
-    driver::Handle<driver::HwTexture> mTexture;
+    backend::Handle<backend::HwTexture> mTexture;
     uint32_t mSize = 0;
     uint16_t mWidth;
     uint16_t mHeight;
     uint16_t mRowSizeInBytes;
     Element mElement;
-    driver::PixelDataFormat mFormat;
-    driver::PixelDataType mType;
+    backend::PixelDataFormat mFormat;
+    backend::PixelDataType mType;
 };
 
 } // namespace filament

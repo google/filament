@@ -19,7 +19,7 @@
 #include <utils/Panic.h>
 
 namespace filament {
-namespace driver {
+namespace backend {
 
 VulkanBuffer::VulkanBuffer(VulkanContext& context, VulkanStagePool& stagePool,
         VkBufferUsageFlags usage, uint32_t numBytes) : mContext(context), mStagePool(stagePool) {
@@ -79,4 +79,4 @@ void VulkanBuffer::loadFromCpu(const void* cpuData, uint32_t byteOffset, uint32_
 }
 
 } // namespace filament
-} // namespace driver
+} // namespace backend

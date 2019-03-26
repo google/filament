@@ -22,7 +22,7 @@
 
 namespace filament {
 
-class PlatformNoop final : public driver::DefaultPlatform {
+class PlatformNoop final : public backend::DefaultPlatform {
 public:
 
     int getOSVersion() const noexcept final { return 0; }
@@ -31,7 +31,7 @@ public:
 
 protected:
 
-    driver::Driver* createDriver(void* sharedContext) noexcept override;
+    backend::Driver* createDriver(void* sharedContext) noexcept override;
 };
 
 } // namespace filament

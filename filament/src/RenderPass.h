@@ -174,9 +174,9 @@ public:
 
     struct PrimitiveInfo { // 24 bytes
         FMaterialInstance const* mi = nullptr;                      // 8 bytes (4)
-        driver::Handle<driver::HwRenderPrimitive> primitiveHandle;  // 4 bytes
-        driver::Handle<driver::HwUniformBuffer> perRenderableBones; // 4 bytes
-        driver::RasterState rasterState;                            // 4 bytes
+        backend::Handle<backend::HwRenderPrimitive> primitiveHandle;  // 4 bytes
+        backend::Handle<backend::HwUniformBuffer> perRenderableBones; // 4 bytes
+        backend::RasterState rasterState;                            // 4 bytes
         uint16_t index = 0;                                         // 2 bytes
         Variant materialVariant;                                    // 1 byte
         uint8_t reserved = { };                                     // 1 byte
@@ -218,12 +218,12 @@ private:
     // Called just before rendering, make sure all needed asynchronous tasks are finished.
     // Set-up the render-target as needed. At least call driver.beginRenderPass().
     virtual void beginRenderPass(
-            driver::DriverApi& driver, Viewport const& viewport,
+            backend::DriverApi& driver, Viewport const& viewport,
             const CameraInfo& camera) noexcept = 0;
 
     // Called just after rendering. Do what you have to do,
     // but at least call driver.endRenderPass().
-    virtual void endRenderPass(driver::DriverApi& driver, Viewport const& viewport) noexcept = 0;
+    virtual void endRenderPass(backend::DriverApi& driver, Viewport const& viewport) noexcept = 0;
 
 private:
     friend class FRenderer;

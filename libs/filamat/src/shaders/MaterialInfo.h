@@ -27,9 +27,9 @@
 
 namespace filamat {
 
-using UniformType = filament::driver::UniformType;
-using SamplerType = filament::driver::SamplerType;
-using CullingMode = filament::driver::CullingMode;
+using UniformType = filament::backend::UniformType;
+using SamplerType = filament::backend::SamplerType;
+using CullingMode = filament::backend::CullingMode;
 
 struct UTILS_PUBLIC MaterialInfo {
     bool isLit;

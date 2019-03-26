@@ -52,7 +52,7 @@
 #define DEBUG_COMMAND_STREAM false
 
 namespace filament {
-namespace driver {
+namespace backend {
 
 class Driver;
 class CommandBase;
@@ -317,7 +317,7 @@ PodType* CommandStream::allocatePod(size_t count, size_t alignment) noexcept {
     return static_cast<PodType*>(allocate(count * sizeof(PodType), alignment));
 }
 
-} // namespace driver
+} // namespace backend
 } // namespace filament
 
 #endif // TNT_FILAMENT_DRIVER_COMMANDSTREAM_H

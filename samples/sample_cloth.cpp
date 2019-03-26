@@ -156,7 +156,7 @@ Texture* loadMap(Engine* engine, const char* name, bool sRGB = true) {
                     .build(*engine);
             Texture::PixelBufferDescriptor buffer(data, size_t(w * h * 3),
                     Texture::Format::RGB, Texture::Type::UBYTE,
-                    (driver::BufferDescriptor::Callback) &stbi_image_free);
+                    (Texture::PixelBufferDescriptor::Callback) &stbi_image_free);
             map->setImage(*engine, 0, std::move(buffer));
             map->generateMipmaps(*engine);
             g_maps[name] = map;

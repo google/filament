@@ -25,7 +25,7 @@ namespace filamat {
 
 // From driverEnum namespace
 using namespace filament;
-using namespace driver;
+using namespace backend;
 using namespace utils;
 
 std::ostream& CodeGenerator::generateSeparator(std::ostream& out) const {

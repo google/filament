@@ -26,7 +26,7 @@
 #include <Availability.h>
 
 namespace filament {
-namespace driver {
+namespace backend {
 
 constexpr inline MTLCompareFunction getMetalCompareFunction(RasterState::DepthFunc func)
         noexcept {
@@ -375,7 +375,7 @@ constexpr inline MTLCompareFunction getCompareFunction(SamplerCompareFunc compar
     }
 }
 
-} // namespace driver
+} // namespace backend
 } // namespace filament
 
 #endif //TNT_FILAMENT_DRIVER_METALENUMS_H

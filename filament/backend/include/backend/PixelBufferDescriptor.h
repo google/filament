@@ -28,12 +28,12 @@
 #include <utils/compiler.h>
 
 namespace filament {
-namespace driver {
+namespace backend {
 
 class UTILS_PUBLIC PixelBufferDescriptor : public BufferDescriptor {
 public:
-    using PixelDataFormat = driver::PixelDataFormat;
-    using PixelDataType = driver::PixelDataType;
+    using PixelDataFormat = backend::PixelDataFormat;
+    using PixelDataType = backend::PixelDataType;
 
     PixelBufferDescriptor(void const* buffer, size_t size,
             PixelDataFormat format, PixelDataType type, uint8_t alignment = 1,
@@ -52,7 +52,7 @@ public:
     }
 
     PixelBufferDescriptor(void const* buffer, size_t size,
-            driver::CompressedPixelDataType format, uint32_t imageSize,
+            backend::CompressedPixelDataType format, uint32_t imageSize,
             Callback callback, void* user = nullptr) noexcept
             : BufferDescriptor(buffer, size, callback, user),
               imageSize(imageSize), compressedFormat(format), type(PixelDataType::COMPRESSED),
@@ -124,14 +124,14 @@ public:
         };
         struct {
             uint32_t imageSize;
-            driver::CompressedPixelDataType compressedFormat;
+            backend::CompressedPixelDataType compressedFormat;
         };
     };
     PixelDataType type : 4;
     uint8_t alignment  : 4;
 };
 
-} // namespace driver
+} // namespace backend
 } // namespace filament
 
 #endif // TNT_FILAMENT_DRIVER_PIXEL_BUFFERDESCRIPTOR_H

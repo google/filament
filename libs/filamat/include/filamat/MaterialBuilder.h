@@ -72,7 +72,7 @@ protected:
     // Looks at platform and target API, then decides on shader models and output formats.
     void prepare();
 
-    using ShaderModel = filament::driver::ShaderModel;
+    using ShaderModel = filament::backend::ShaderModel;
     Platform mPlatform = Platform::DESKTOP;
     TargetApi mTargetApi = TargetApi::OPENGL;
     Optimization mOptimization = Optimization::PERFORMANCE;
@@ -133,11 +133,11 @@ public:
     using VertexDomain = filament::VertexDomain;
     using TransparencyMode = filament::TransparencyMode;
 
-    using UniformType = filament::driver::UniformType;
-    using SamplerType = filament::driver::SamplerType;
-    using SamplerFormat = filament::driver::SamplerFormat;
-    using SamplerPrecision = filament::driver::Precision;
-    using CullingMode = filament::driver::CullingMode;
+    using UniformType = filament::backend::UniformType;
+    using SamplerType = filament::backend::SamplerType;
+    using SamplerFormat = filament::backend::SamplerFormat;
+    using SamplerPrecision = filament::backend::Precision;
+    using CullingMode = filament::backend::CullingMode;
 
     // set name of this material
     MaterialBuilder& name(const char* name) noexcept;
@@ -278,8 +278,8 @@ public:
     // Preview the first shader that would generated in the MaterialPackage.
     // This is used to run Static Code Analysis before generating a package.
     // Outputs the chosen shader model in the model parameter
-    const std::string peek(filament::driver::ShaderType type,
-            filament::driver::ShaderModel& model, const PropertyList& properties) noexcept;
+    const std::string peek(filament::backend::ShaderType type,
+            filament::backend::ShaderModel& model, const PropertyList& properties) noexcept;
 
     // Returns true if any of the parameter samplers is of type samplerExternal
     bool hasExternalSampler() const noexcept;

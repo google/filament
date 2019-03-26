@@ -38,12 +38,12 @@ public:
     FStream(FEngine& engine, const Builder& builder) noexcept;
     void terminate(FEngine& engine) noexcept;
 
-    driver::Handle<driver::HwStream> getHandle() const noexcept { return mStreamHandle; }
+    backend::Handle<backend::HwStream> getHandle() const noexcept { return mStreamHandle; }
 
     void setDimensions(uint32_t width, uint32_t height) noexcept;
 
     void readPixels(uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
-            driver::PixelBufferDescriptor&& buffer) noexcept;
+            backend::PixelBufferDescriptor&& buffer) noexcept;
 
     bool isNativeStream() const noexcept { return mNativeStream != nullptr; }
 
@@ -57,7 +57,7 @@ public:
 
 private:
     FEngine& mEngine;
-    driver::Handle<driver::HwStream> mStreamHandle;
+    backend::Handle<backend::HwStream> mStreamHandle;
     void* mNativeStream = nullptr;
     intptr_t mExternalTextureId;
     uint32_t mWidth;

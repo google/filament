@@ -22,7 +22,7 @@
 #include <bluevk/BlueVK.h>
 
 namespace filament {
-namespace driver {
+namespace backend {
 
 void createSemaphore(VkDevice device, VkSemaphore* semaphore);
 VkFormat getVkFormat(ElementType type, bool normalized);
@@ -34,6 +34,6 @@ VkCullModeFlags getCullMode(CullingMode mode);
 VkFrontFace getFrontFace(bool inverseFrontFaces);
 
 } // namespace filament
-} // namespace driver
+} // namespace backend
 
 #endif // TNT_FILAMENT_DRIVER_VULKANUTILITY_H

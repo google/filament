@@ -84,11 +84,11 @@ public:
 
         Attachments useRenderTarget(const char* name,
                 FrameGraphRenderTarget::Descriptor const& desc,
-                driver::TargetBufferFlags clearFlags = {}) noexcept;
+                backend::TargetBufferFlags clearFlags = {}) noexcept;
 
         // helper for single color attachment
         Attachments useRenderTarget(FrameGraphResource texture,
-                driver::TargetBufferFlags clearFlags = {}) noexcept;
+                backend::TargetBufferFlags clearFlags = {}) noexcept;
 
         // Declare that this pass has side effects outside the framegraph (i.e. it can't be culled)
         // Calling write() on an imported resource automatically adds a side-effect.
@@ -157,14 +157,14 @@ public:
     // Import a write-only render target from outside the framegraph and returns a handle to it.
     FrameGraphResource importResource(const char* name,
             FrameGraphRenderTarget::Descriptor descriptor,
-            driver::Handle<driver::HwRenderTarget> target, uint32_t width, uint32_t height,
-            driver::TargetBufferFlags discardStart = driver::TargetBufferFlags::NONE,
-            driver::TargetBufferFlags discardEnd = driver::TargetBufferFlags::NONE);
+            backend::Handle<backend::HwRenderTarget> target, uint32_t width, uint32_t height,
+            backend::TargetBufferFlags discardStart = backend::TargetBufferFlags::NONE,
+            backend::TargetBufferFlags discardEnd = backend::TargetBufferFlags::NONE);
 
     // Import a read-only render target from outside the framegraph and returns a handle to it.
     FrameGraphResource importResource(
             const char* name, FrameGraphResource::Descriptor const& descriptor,
-            driver::Handle<driver::HwTexture> color);
+            backend::Handle<backend::HwTexture> color);
 
 
     // Moves the resource associated to the handle 'from' to the handle 'to'. After this call,
@@ -179,7 +179,7 @@ public:
     FrameGraph& compile() noexcept;
 
     // execute all referenced passes
-    void execute(driver::DriverApi& driver) noexcept;
+    void execute(backend::DriverApi& driver) noexcept;
 
     // for debugging
     void export_graphviz(utils::io::ostream& out);

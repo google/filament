@@ -63,7 +63,7 @@ using namespace utils;
 
 namespace filament {
 
-using namespace driver;
+using namespace backend;
 using namespace filaflat;
 
 namespace details {
@@ -369,19 +369,19 @@ int FEngine::loop() {
         mOwnPlatform = true;
         slog.d << "FEngine resolved backend: ";
         switch (mBackend) {
-            case driver::Backend::NOOP:
+            case backend::Backend::NOOP:
                 slog.d << "Noop";
                 break;
 
-            case driver::Backend::OPENGL:
+            case backend::Backend::OPENGL:
                 slog.d << "OpenGL";
                 break;
 
-            case driver::Backend::VULKAN:
+            case backend::Backend::VULKAN:
                 slog.d << "Vulkan";
                 break;
 
-            case driver::Backend::METAL:
+            case backend::Backend::METAL:
                 slog.d << "Metal";
                 break;
 
@@ -437,7 +437,7 @@ const FMaterial* FEngine::getSkyboxMaterial(bool rgbm) const noexcept {
 }
 
 
-driver::Handle<driver::HwProgram> FEngine::createPostProcessProgram(MaterialParser& parser,
+backend::Handle<backend::HwProgram> FEngine::createPostProcessProgram(MaterialParser& parser,
         ShaderModel shaderModel, PostProcessStage stage) const noexcept {
     ShaderBuilder& vShaderBuilder = getVertexShaderBuilder();
     ShaderBuilder& fShaderBuilder = getFragmentShaderBuilder();
@@ -487,8 +487,8 @@ driver::Handle<driver::HwProgram> FEngine::createPostProcessProgram(MaterialPars
     return program;
 }
 
-driver::Handle<driver::HwProgram> FEngine::getPostProcessProgramSlow(PostProcessStage stage) const noexcept {
-    driver::Handle<driver::HwProgram>* const postProcessPrograms = mPostProcessPrograms;
+backend::Handle<backend::HwProgram> FEngine::getPostProcessProgramSlow(PostProcessStage stage) const noexcept {
+    backend::Handle<backend::HwProgram>* const postProcessPrograms = mPostProcessPrograms;
     if (!postProcessPrograms[(uint8_t)stage]) {
         ShaderModel shaderModel = getDriver().getShaderModel();
         postProcessPrograms[(uint8_t)stage] = createPostProcessProgram(*mPostProcessParser, shaderModel, stage);

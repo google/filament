@@ -45,12 +45,12 @@ GLSLPostProcessor::GLSLPostProcessor(MaterialBuilder::Optimization optimization,
 GLSLPostProcessor::~GLSLPostProcessor() {
 }
 
-static uint32_t shaderVersionFromModel(filament::driver::ShaderModel model) {
+static uint32_t shaderVersionFromModel(filament::backend::ShaderModel model) {
     switch (model) {
-        case filament::driver::ShaderModel::UNKNOWN:
-        case filament::driver::ShaderModel::GL_ES_30:
+        case filament::backend::ShaderModel::UNKNOWN:
+        case filament::backend::ShaderModel::GL_ES_30:
             return 300;
-        case filament::driver::ShaderModel::GL_CORE_41:
+        case filament::backend::ShaderModel::GL_CORE_41:
             return 410;
     }
 }
@@ -137,7 +137,7 @@ void SpvToMsl(const SpirvBlob* spirv, std::string* outMsl) {
 }
 
 bool GLSLPostProcessor::process(const std::string& inputShader,
-        filament::driver::ShaderType shaderType, filament::driver::ShaderModel shaderModel,
+        filament::backend::ShaderType shaderType, filament::backend::ShaderModel shaderModel,
         std::string* outputGlsl, SpirvBlob* outputSpirv, std::string* outputMsl) {
 
     // If TargetApi is Vulkan, then we need post-processing even if there's no optimization.
@@ -155,7 +155,7 @@ bool GLSLPostProcessor::process(const std::string& inputShader,
     mSpirvOutput = outputSpirv;
     mMslOutput = outputMsl;
 
-    if (shaderType == filament::driver::VERTEX) {
+    if (shaderType == filament::backend::VERTEX) {
         mShLang = EShLangVertex;
     } else {
         mShLang = EShLangFragment;
@@ -219,7 +219,7 @@ bool GLSLPostProcessor::process(const std::string& inputShader,
 }
 
 void GLSLPostProcessor::preprocessOptimization(glslang::TShader& tShader,
-        filament::driver::ShaderModel shaderModel) const {
+        filament::backend::ShaderModel shaderModel) const {
     using TargetApi = MaterialBuilder::TargetApi;
 
     std::string glsl;
@@ -263,7 +263,7 @@ void GLSLPostProcessor::preprocessOptimization(glslang::TShader& tShader,
 }
 
 void GLSLPostProcessor::fullOptimization(const TShader& tShader,
-        filament::driver::ShaderModel shaderModel) const {
+        filament::backend::ShaderModel shaderModel) const {
     SpirvBlob spirv;
 
     // Compile GLSL to to SPIR-V
@@ -304,7 +304,7 @@ void GLSLPostProcessor::fullOptimization(const TShader& tShader,
     // Transpile back to GLSL
     if (mGlslOutput) {
         CompilerGLSL::Options glslOptions;
-        glslOptions.es = shaderModel == filament::driver::ShaderModel::GL_ES_30;
+        glslOptions.es = shaderModel == filament::backend::ShaderModel::GL_ES_30;
         glslOptions.version = shaderVersionFromModel(shaderModel);
         glslOptions.enable_420pack_extension = glslOptions.version >= 420;
         glslOptions.fragment.default_float_precision = glslOptions.es ?

@@ -32,11 +32,11 @@ namespace filament {
  */
 class UTILS_PUBLIC TextureSampler {
 public:
-    using WrapMode = driver::SamplerWrapMode;
-    using MinFilter = driver::SamplerMinFilter;
-    using MagFilter = driver::SamplerMagFilter;
-    using CompareMode = driver::SamplerCompareMode;
-    using CompareFunc = driver::SamplerCompareFunc;
+    using WrapMode = backend::SamplerWrapMode;
+    using MinFilter = backend::SamplerMinFilter;
+    using MagFilter = backend::SamplerMagFilter;
+    using CompareMode = backend::SamplerCompareMode;
+    using CompareFunc = backend::SamplerCompareFunc;
 
     /**
      * Creates a default sampler.
@@ -168,7 +168,7 @@ public:
         mSamplerParams.compareFunc = func;
     }
 
-    driver::SamplerParams getSamplerParams() const noexcept  { return mSamplerParams; }
+    backend::SamplerParams getSamplerParams() const noexcept  { return mSamplerParams; }
 
     MinFilter getMinFilter() const noexcept { return mSamplerParams.filterMin; }
     MagFilter getMagFilter() const noexcept { return mSamplerParams.filterMag; }
@@ -181,7 +181,7 @@ public:
 
 
 private:
-    driver::SamplerParams mSamplerParams;
+    backend::SamplerParams mSamplerParams;
 };
 
 } // namespace filament

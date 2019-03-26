@@ -40,8 +40,8 @@ public:
     UniformInterfaceBlock& operator=(UniformInterfaceBlock&& rhs) /*noexcept*/;
     ~UniformInterfaceBlock() noexcept;
 
-    using Type = driver::UniformType;
-    using Precision = driver::Precision;
+    using Type = backend::UniformType;
+    using Precision = backend::Precision;
 
     class Builder {
     public:

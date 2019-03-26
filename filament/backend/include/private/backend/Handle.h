@@ -27,7 +27,7 @@
 #include <utils/Log.h>
 
 namespace filament {
-namespace driver {
+namespace backend {
 
 struct HwVertexBuffer;
 struct HwFence;
@@ -114,7 +114,7 @@ using TextureHandle         = Handle<HwTexture>;
 using UniformBufferHandle   = Handle<HwUniformBuffer>;
 using VertexBufferHandle    = Handle<HwVertexBuffer>;
 
-} // namespace driver
+} // namespace backend
 } // namespace filament
 
 #endif // TNT_FILAMENT_DRIVER_HANDLE_H

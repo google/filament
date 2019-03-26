@@ -32,7 +32,7 @@ class FrameGraphPassResources;
 
 class FrameGraphPassExecutor {
     friend class FrameGraph;
-    virtual void execute(FrameGraphPassResources const& resources, driver::DriverApi& driver) noexcept = 0;
+    virtual void execute(FrameGraphPassResources const& resources, backend::DriverApi& driver) noexcept = 0;
 public:
     FrameGraphPassExecutor();
     virtual ~FrameGraphPassExecutor();
@@ -51,7 +51,7 @@ class FrameGraphPass final : private FrameGraphPassExecutor {
     explicit FrameGraphPass(Execute&& execute) noexcept
             : FrameGraphPassExecutor(), mExecute(std::forward<Execute>(execute)) {
     }
-    void execute(FrameGraphPassResources const& resources, driver::DriverApi& driver) noexcept final {
+    void execute(FrameGraphPassResources const& resources, backend::DriverApi& driver) noexcept final {
         mExecute(resources, mData, driver);
     }
     Execute mExecute;

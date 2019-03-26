@@ -66,7 +66,7 @@
 #include "noop/PlatformNoop.h"
 
 namespace filament {
-namespace driver {
+namespace backend {
 
 // this generates the vtable in this translation unit
 Platform::~Platform() noexcept = default;
@@ -136,5 +136,5 @@ void DefaultPlatform::destroy(DefaultPlatform** platform) noexcept {
 
 DefaultPlatform::~DefaultPlatform() noexcept = default;
 
-} // namespace driver
+} // namespace backend
 } // namespace filament

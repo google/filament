@@ -37,7 +37,7 @@ class FRenderPrimitive {
 public:
     FRenderPrimitive() noexcept = default;
 
-    void init(driver::DriverApi& driver, const RenderableManager::Builder::Entry& entry) noexcept;
+    void init(backend::DriverApi& driver, const RenderableManager::Builder::Entry& entry) noexcept;
 
     void set(FEngine& engine, RenderableManager::PrimitiveType type,
             FVertexBuffer* vertices, FIndexBuffer* indices, size_t offset,
@@ -50,8 +50,8 @@ public:
     void terminate(FEngine& engine);
 
     const FMaterialInstance* getMaterialInstance() const noexcept { return mMaterialInstance; }
-    driver::Handle<driver::HwRenderPrimitive> getHwHandle() const noexcept { return mHandle; }
-    driver::PrimitiveType getPrimitiveType() const noexcept { return mPrimitiveType; }
+    backend::Handle<backend::HwRenderPrimitive> getHwHandle() const noexcept { return mHandle; }
+    backend::PrimitiveType getPrimitiveType() const noexcept { return mPrimitiveType; }
     AttributeBitset getEnabledAttributes() const noexcept { return mEnabledAttributes; }
     uint16_t getBlendOrder() const noexcept { return mBlendOrder; }
 
@@ -62,8 +62,8 @@ public:
 
 private:
     FMaterialInstance const* mMaterialInstance = nullptr;
-    driver::Handle<driver::HwRenderPrimitive> mHandle;
-    driver::PrimitiveType mPrimitiveType = driver::PrimitiveType::NONE;
+    backend::Handle<backend::HwRenderPrimitive> mHandle;
+    backend::PrimitiveType mPrimitiveType = backend::PrimitiveType::NONE;
     AttributeBitset mEnabledAttributes;
     uint16_t mBlendOrder = 0;
 };

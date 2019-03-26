@@ -184,11 +184,11 @@ void loadTexture(Engine* engine, const std::string& filePath, Texture** map, boo
                         .width(uint32_t(w))
                         .height(uint32_t(h))
                         .levels(0xff)
-                        .format(sRGB ? driver::TextureFormat::SRGB8 : driver::TextureFormat::RGB8)
+                        .format(sRGB ? Texture::InternalFormat::SRGB8 : Texture::InternalFormat::RGB8)
                         .build(*engine);
                 Texture::PixelBufferDescriptor buffer(data, size_t(w * h * 3),
                         Texture::Format::RGB, Texture::Type::UBYTE,
-                        (driver::BufferDescriptor::Callback) &stbi_image_free);
+                        (Texture::PixelBufferDescriptor::Callback) &stbi_image_free);
                 (*map)->setImage(*engine, 0, std::move(buffer));
                 (*map)->generateMipmaps(*engine);
             } else {

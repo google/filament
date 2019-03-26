@@ -25,7 +25,7 @@
 #include <vector>
 
 namespace filament {
-namespace driver {
+namespace backend {
 
 class Program {
 public:
@@ -111,7 +111,7 @@ private:
     uint8_t mVariant;
 };
 
-} // namespace driver;
+} // namespace backend;
 } // namespace filament;
 
 #endif // TNT_FILAMENT_DRIVER_PROGRAM_H

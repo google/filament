@@ -19,7 +19,7 @@
 
 namespace filament {
 
-using namespace driver;
+using namespace backend;
 
 Driver* PlatformWebGL::createDriver(void* const sharedGLContext) noexcept {
     return OpenGLDriver::create(this, sharedGLContext);
@@ -52,8 +52,8 @@ void PlatformWebGL::destroyFence(Fence* fence) noexcept {
     delete fence;
 }
 
-driver::FenceStatus PlatformWebGL::waitFence(Fence* fence, uint64_t timeout) noexcept {
-    return driver::FenceStatus::CONDITION_SATISFIED;
+backend::FenceStatus PlatformWebGL::waitFence(Fence* fence, uint64_t timeout) noexcept {
+    return backend::FenceStatus::CONDITION_SATISFIED;
 }
 
 } // namespace filament

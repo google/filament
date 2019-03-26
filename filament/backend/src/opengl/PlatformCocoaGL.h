@@ -27,12 +27,12 @@ namespace filament {
 
 struct PlatformCocoaGLImpl;
 
-class PlatformCocoaGL final : public driver::OpenGLPlatform {
+class PlatformCocoaGL final : public backend::OpenGLPlatform {
 public:
     PlatformCocoaGL();
     ~PlatformCocoaGL() noexcept final;
 
-    driver::Driver* createDriver(void* sharedContext) noexcept override;
+    backend::Driver* createDriver(void* sharedContext) noexcept override;
     void terminate() noexcept final;
 
     SwapChain* createSwapChain(void* nativewindow, uint64_t& flags) noexcept final;
@@ -42,8 +42,8 @@ public:
 
     Fence* createFence() noexcept final { return nullptr; }
     void destroyFence(Fence* fence) noexcept final {}
-    driver::FenceStatus waitFence(Fence* fence, uint64_t timeout) noexcept final {
-        return driver::FenceStatus::ERROR;
+    backend::FenceStatus waitFence(Fence* fence, uint64_t timeout) noexcept final {
+        return backend::FenceStatus::ERROR;
     }
 
     void setPresentationTime(int64_t presentationTimeInNanosecond) noexcept final {}
@@ -56,7 +56,7 @@ public:
 
     ExternalTexture* createExternalTextureStorage() noexcept final { return nullptr; }
     void reallocateExternalStorage(ExternalTexture* ets,
-            uint32_t w, uint32_t h, driver::TextureFormat format) noexcept final { }
+            uint32_t w, uint32_t h, backend::TextureFormat format) noexcept final { }
     void destroyExternalTextureStorage(ExternalTexture* ets) noexcept final { }
 
     int getOSVersion() const noexcept final { return 0; }

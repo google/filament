@@ -32,7 +32,7 @@
 #include <vector>
 
 namespace filament {
-namespace driver {
+namespace backend {
 
 // All vkCreate* functions take an optional allocator. For now we select the default allocator by
 // passing in a null pointer, and we highlight the argument by using the VKALLOC constant.
@@ -132,6 +132,6 @@ VkCommandBuffer acquireWorkCommandBuffer(VulkanContext& context);
 void flushWorkCommandBuffer(VulkanContext& context);
 
 } // namespace filament
-} // namespace driver
+} // namespace backend
 
 #endif // TNT_FILAMENT_DRIVER_VULKANCONTEXT_H

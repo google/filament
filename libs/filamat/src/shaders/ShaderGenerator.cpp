@@ -32,7 +32,7 @@
 #include "CodeGenerator.h"
 
 using namespace filament;
-using namespace filament::driver;
+using namespace filament::backend;
 
 namespace filamat {
 
@@ -141,7 +141,7 @@ ShaderGenerator::ShaderGenerator(
     }
 }
 
-const std::string ShaderGenerator::createVertexProgram(filament::driver::ShaderModel shaderModel,
+const std::string ShaderGenerator::createVertexProgram(filament::backend::ShaderModel shaderModel,
         MaterialBuilder::TargetApi targetApi, MaterialBuilder::TargetApi codeGenTargetApi,
         MaterialInfo const& material, uint8_t variantKey, filament::Interpolation interpolation,
         filament::VertexDomain vertexDomain) const noexcept {
@@ -229,7 +229,7 @@ bool ShaderGenerator::hasCustomDepthShader() const noexcept {
     return false;
 }
 
-const std::string ShaderGenerator::createFragmentProgram(filament::driver::ShaderModel shaderModel,
+const std::string ShaderGenerator::createFragmentProgram(filament::backend::ShaderModel shaderModel,
         MaterialBuilder::TargetApi targetApi, MaterialBuilder::TargetApi codeGenTargetApi,
         MaterialInfo const& material, uint8_t variantKey,
         filament::Interpolation interpolation) const noexcept {
@@ -341,7 +341,7 @@ const std::string ShaderGenerator::createFragmentProgram(filament::driver::Shade
     return fs.str();
 }
 
-void ShaderGenerator::fixupExternalSamplers(filament::driver::ShaderModel sm,
+void ShaderGenerator::fixupExternalSamplers(filament::backend::ShaderModel sm,
         std::string& shader, MaterialInfo const& material) const noexcept {
     // External samplers are only supported on GL ES at the moment, we must
     // skip the fixup on desktop targets
@@ -351,7 +351,7 @@ void ShaderGenerator::fixupExternalSamplers(filament::driver::ShaderModel sm,
 }
 
 const std::string ShaderPostProcessGenerator::createPostProcessVertexProgram(
-        filament::driver::ShaderModel sm, MaterialBuilder::TargetApi targetApi,
+        filament::backend::ShaderModel sm, MaterialBuilder::TargetApi targetApi,
         MaterialBuilder::TargetApi codeGenTargetApi, filament::PostProcessStage variant,
         uint8_t firstSampler) noexcept {
     const CodeGenerator cg(sm, targetApi, codeGenTargetApi);
@@ -374,7 +374,7 @@ const std::string ShaderPostProcessGenerator::createPostProcessVertexProgram(
 }
 
 const std::string ShaderPostProcessGenerator::createPostProcessFragmentProgram(
-        filament::driver::ShaderModel sm, MaterialBuilder::TargetApi targetApi,
+        filament::backend::ShaderModel sm, MaterialBuilder::TargetApi targetApi,
         MaterialBuilder::TargetApi codeGenTargetApi, filament::PostProcessStage variant,
         uint8_t firstSampler) noexcept {
     const CodeGenerator cg(sm, targetApi, codeGenTargetApi);

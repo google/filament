@@ -23,7 +23,7 @@
 #include <utils/compiler.h>
 
 namespace filament {
-namespace driver {
+namespace backend {
 namespace metal {
 
 id<MTLRenderPipelineState> PipelineStateCreator::operator()(id<MTLDevice> device,
@@ -98,7 +98,7 @@ id<MTLDepthStencilState> DepthStateCreator::operator()(id<MTLDevice> device,
 }
 
 id<MTLSamplerState> SamplerStateCreator::operator()(id<MTLDevice> device,
-        const driver::SamplerParams& state) noexcept {
+        const backend::SamplerParams& state) noexcept {
     MTLSamplerDescriptor* samplerDescriptor = [[MTLSamplerDescriptor new] autorelease];
     samplerDescriptor.minFilter = getFilter(state.filterMin);
     samplerDescriptor.magFilter = getFilter(state.filterMag);
@@ -114,5 +114,5 @@ id<MTLSamplerState> SamplerStateCreator::operator()(id<MTLDevice> device,
 }
 
 } // namespace metal
-} // namespace driver
+} // namespace backend
 } // namespace filament
