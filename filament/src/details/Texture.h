@@ -42,7 +42,7 @@ public:
     // frees driver resources, object becomes invalid
     void terminate(FEngine& engine);
 
-    driver::Handle<driver::HwTexture> getHwHandle() const noexcept { return mHandle; }
+    backend::Handle<backend::HwTexture> getHwHandle() const noexcept { return mHandle; }
 
     size_t getWidth(size_t level = 0) const noexcept;
     size_t getHeight(size_t level = 0) const noexcept;
@@ -76,7 +76,7 @@ public:
 
 private:
     friend class Texture;
-    driver::Handle<driver::HwTexture> mHandle;
+    backend::Handle<backend::HwTexture> mHandle;
     uint32_t mWidth = 1;
     uint32_t mHeight = 1;
     uint32_t mDepth = 1;

@@ -60,7 +60,7 @@ class Scene;
  */
 class UTILS_PUBLIC View : public FilamentAPI {
 public:
-    using TargetBufferFlags = driver::TargetBufferFlags;
+    using TargetBufferFlags = backend::TargetBufferFlags;
 
     /**
      * Dynamic resolution can be used to either reach a desired target frame rate

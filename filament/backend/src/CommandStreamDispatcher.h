@@ -44,7 +44,7 @@
 #endif
 
 namespace filament {
-namespace driver {
+namespace backend {
 
 template<typename ConcreteDriver>
 class ConcreteDispatcher final : public Dispatcher {
@@ -75,7 +75,7 @@ private:
 #include "private/backend/DriverAPI.inc"
 };
 
-} // namespace driver
+} // namespace backend
 } // namespace filament
 
 #endif // TNT_FILAMENT_DRIVER_COMMANDSTREAM_DISPATCHER_H

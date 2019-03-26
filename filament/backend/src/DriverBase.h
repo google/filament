@@ -35,7 +35,7 @@
 #include <stdint.h>
 
 namespace filament {
-namespace driver {
+namespace backend {
 
 class Dispatcher;
 
@@ -102,7 +102,7 @@ struct HwUniformBuffer : public HwBase {
 };
 
 struct HwTexture : public HwBase {
-    HwTexture(driver::SamplerType target, uint8_t levels, uint8_t samples,
+    HwTexture(backend::SamplerType target, uint8_t levels, uint8_t samples,
               uint32_t width, uint32_t height, uint32_t depth, TextureFormat fmt) noexcept
             : width(width), height(height), depth(depth),
               target(target), levels(levels), samples(samples), format(fmt) { }
@@ -173,7 +173,7 @@ private:
 };
 
 
-} // namespace driver
+} // namespace backend
 } // namespace filament
 
 #endif // TNT_FILAMENT_DRIVER_DRIVERBASE_H

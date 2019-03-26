@@ -33,7 +33,7 @@ namespace filament {
 
 class ExternalStreamManagerAndroid {
 public:
-    using EGLStream = driver::Platform::Stream;
+    using EGLStream = backend::Platform::Stream;
 
     ExternalStreamManagerAndroid() noexcept;
     static ExternalStreamManagerAndroid& get() noexcept;

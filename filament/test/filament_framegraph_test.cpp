@@ -24,11 +24,11 @@
 #include "private/backend/CommandStream.h"
 
 using namespace filament;
-using namespace driver;
+using namespace backend;
 
 static CircularBuffer buffer(8192);
-static Backend backend = Backend::NOOP;
-static DefaultPlatform* platform = DefaultPlatform::create(&backend);
+static Backend gBackend = Backend::NOOP;
+static DefaultPlatform* platform = DefaultPlatform::create(&gBackend);
 static CommandStream driverApi(*platform->createDriver(nullptr), buffer);
 
 TEST(FrameGraphTest, SimpleRenderPass) {
@@ -215,7 +215,7 @@ TEST(FrameGraphTest, SimplePassCulling) {
             [=, &renderPassExecuted](
                     FrameGraphPassResources const& resources,
                     RenderPassData const& data,
-                    driver::DriverApi& driver) {
+                    backend::DriverApi& driver) {
                 renderPassExecuted = true;
                 auto const& rt = resources.getRenderTarget(data.output);
                 EXPECT_TRUE(rt.target);
@@ -238,7 +238,7 @@ TEST(FrameGraphTest, SimplePassCulling) {
             [=, &postProcessPassExecuted](
                     FrameGraphPassResources const& resources,
                     PostProcessPassData const& data,
-                    driver::DriverApi& driver) {
+                    backend::DriverApi& driver) {
                 postProcessPassExecuted = true;
                 auto const& rt = resources.getRenderTarget(data.output);
                 EXPECT_TRUE(rt.target);
@@ -261,7 +261,7 @@ TEST(FrameGraphTest, SimplePassCulling) {
             [=, &culledPassExecuted](
                     FrameGraphPassResources const& resources,
                     CulledPassData const& data,
-                    driver::DriverApi& driver) {
+                    backend::DriverApi& driver) {
                 culledPassExecuted = true;
             });
 

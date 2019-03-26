@@ -46,7 +46,7 @@
 using namespace utils;
 
 namespace filament {
-using namespace driver;
+using namespace backend;
 
 // The Android NDK doesn't exposes extensions, fake it with eglGetProcAddress
 namespace glext {
@@ -326,7 +326,7 @@ void PlatformEGL::terminate() noexcept {
 Platform::SwapChain* PlatformEGL::createSwapChain(
         void* nativeWindow, uint64_t& flags) noexcept {
     EGLSurface sur = eglCreateWindowSurface(mEGLDisplay,
-            (flags & driver::SWAP_CHAIN_CONFIG_TRANSPARENT) ? mEGLTransparentConfig : mEGLConfig,
+            (flags & backend::SWAP_CHAIN_CONFIG_TRANSPARENT) ? mEGLTransparentConfig : mEGLConfig,
             (EGLNativeWindowType)nativeWindow, nullptr);
     if (UTILS_UNLIKELY(sur == EGL_NO_SURFACE)) {
         logEglError("eglCreateWindowSurface");
@@ -396,7 +396,7 @@ void PlatformEGL::destroyFence(Platform::Fence* fence) noexcept {
 #endif
 }
 
-driver::FenceStatus PlatformEGL::waitFence(
+backend::FenceStatus PlatformEGL::waitFence(
         Platform::Fence* fence, uint64_t timeout) noexcept {
 #ifdef EGL_KHR_reusable_sync
     EGLSyncKHR sync = (EGLSyncKHR) fence;
@@ -439,7 +439,7 @@ Platform::ExternalTexture* PlatformEGL::createExternalTextureStorage() noexcept 
 
 void PlatformEGL::reallocateExternalStorage(
         Platform::ExternalTexture* externalTexture,
-        uint32_t w, uint32_t h, driver::TextureFormat format) noexcept {
+        uint32_t w, uint32_t h, backend::TextureFormat format) noexcept {
     if (externalTexture) {
         if ((EGLImageKHR)externalTexture->image != EGL_NO_IMAGE_KHR) {
             eglDestroyImageKHR(mEGLDisplay, (EGLImageKHR)externalTexture->image);

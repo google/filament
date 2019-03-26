@@ -32,7 +32,7 @@
 #include <vector>
 
 namespace filament {
-namespace driver {
+namespace backend {
 namespace metal {
 
 struct MetalSwapChain : public HwSwapChain {
@@ -101,7 +101,7 @@ struct MetalProgram : public HwProgram {
 };
 
 struct MetalTexture : public HwTexture {
-    MetalTexture(id<MTLDevice> device, driver::SamplerType target, uint8_t levels,
+    MetalTexture(id<MTLDevice> device, backend::SamplerType target, uint8_t levels,
             TextureFormat format, uint8_t samples, uint32_t width, uint32_t height, uint32_t depth,
             TextureUsage usage) noexcept;
     ~MetalTexture();
@@ -154,7 +154,7 @@ private:
 };
 
 } // namespace metal
-} // namespace driver
+} // namespace backend
 } // namespace filament
 
 #endif //TNT_FILAMENT_DRIVER_METALHANDLES_H

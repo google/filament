@@ -32,9 +32,9 @@ class Engine;
 class SwapChain;
 class View;
 
-namespace driver {
+namespace backend {
 class PixelBufferDescriptor;
-} // namespace driver
+} // namespace backend
 
 /**
  * A Renderer instance represents an operating system's window.
@@ -197,14 +197,14 @@ public:
      * @param buffer    Client-side buffer where the read-back will be written.
      *
      *                  The following format are always supported:
-     *                      - driver::PixelDataFormat::RGBA
-     *                      - driver::PixelDataFormat::RGBA_INTEGER
+     *                      - backend::PixelDataFormat::RGBA
+     *                      - backend::PixelDataFormat::RGBA_INTEGER
      *
      *                  The following types are always supported:
-     *                      - driver::PixelDataType::UBYTE
-     *                      - driver::PixelDataType::UINT
-     *                      - driver::PixelDataType::INT
-     *                      - driver::PixelDataType::FLOAT
+     *                      - backend::PixelDataType::UBYTE
+     *                      - backend::PixelDataType::UINT
+     *                      - backend::PixelDataType::INT
+     *                      - backend::PixelDataType::FLOAT
      *
      *                  Other combination of format/type may be supported. If a combination is
      *                  not supported, this operation may fail silently. Use a DEBUG build
@@ -243,7 +243,7 @@ public:
      *
      */
     void readPixels(uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
-            driver::PixelBufferDescriptor&& buffer);
+            backend::PixelBufferDescriptor&& buffer);
 
     /**
      * Set-up a frame for this Renderer.

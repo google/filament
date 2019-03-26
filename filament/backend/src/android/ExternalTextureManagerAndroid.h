@@ -34,7 +34,7 @@ namespace filament {
 class ExternalTextureManagerAndroid {
 public:
 
-    struct ExternalTexture : public driver::Platform::ExternalTexture {
+    struct ExternalTexture : public backend::Platform::ExternalTexture {
         void* clientBuffer = nullptr;
         AHardwareBuffer* hardwareBuffer = nullptr;
     };
@@ -48,23 +48,23 @@ public:
     ~ExternalTextureManagerAndroid() noexcept;
 
     // called on gl thread
-    driver::Platform::ExternalTexture* create() noexcept;
+    backend::Platform::ExternalTexture* create() noexcept;
 
     // called on app thread
     void reallocate(
-        driver::Platform::ExternalTexture* ets, uint32_t w, uint32_t h,
-        driver::TextureFormat format, uint64_t usage) noexcept;
+        backend::Platform::ExternalTexture* ets, uint32_t w, uint32_t h,
+        backend::TextureFormat format, uint64_t usage) noexcept;
 
     // called on gl thread
-    void destroy(driver::Platform::ExternalTexture* ets) noexcept;
+    void destroy(backend::Platform::ExternalTexture* ets) noexcept;
 
 private:
     // called on app thread
-    void alloc(driver::Platform::ExternalTexture* ets,
-               uint32_t w, uint32_t h, driver::TextureFormat format, uint64_t usage) noexcept;
+    void alloc(backend::Platform::ExternalTexture* ets,
+               uint32_t w, uint32_t h, backend::TextureFormat format, uint64_t usage) noexcept;
 
     // called on gl thread
-    void destroyStorage(driver::Platform::ExternalTexture* ets) noexcept;
+    void destroyStorage(backend::Platform::ExternalTexture* ets) noexcept;
 
     VirtualMachineEnv& mVm;
 

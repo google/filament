@@ -26,7 +26,7 @@
 #include "NioUtils.h"
 
 using namespace filament;
-using namespace driver;
+using namespace backend;
 
 extern "C" JNIEXPORT jlong JNICALL
 Java_com_google_android_filament_IndexBuffer_nCreateBuilder(JNIEnv *env, jclass type) {

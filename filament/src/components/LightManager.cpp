@@ -190,7 +190,7 @@ void FLightManager::create(const FLightManager::Builder& builder, utils::Entity 
     }
 }
 
-void FLightManager::prepare(driver::DriverApi& driver) const noexcept {
+void FLightManager::prepare(backend::DriverApi& driver) const noexcept {
 }
 
 void FLightManager::destroy(utils::Entity e) noexcept {

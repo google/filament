@@ -24,7 +24,7 @@
 #include <utils/trap.h>
 
 namespace filament {
-namespace driver {
+namespace backend {
 namespace metal {
 
 static inline MTLTextureUsage getMetalTextureUsage(TextureUsage usage) {
@@ -230,7 +230,7 @@ MetalProgram::~MetalProgram() {
     [fragmentFunction release];
 }
 
-MetalTexture::MetalTexture(id<MTLDevice> device, driver::SamplerType target, uint8_t levels,
+MetalTexture::MetalTexture(id<MTLDevice> device, backend::SamplerType target, uint8_t levels,
         TextureFormat format, uint8_t samples, uint32_t width, uint32_t height, uint32_t depth,
         TextureUsage usage) noexcept
     : HwTexture(target, levels, samples, width, height, depth, format), reshaper(format) {
@@ -247,14 +247,14 @@ MetalTexture::MetalTexture(id<MTLDevice> device, driver::SamplerType target, uin
     const BOOL mipmapped = levels > 1;
 
     MTLTextureDescriptor* descriptor;
-    if (target == driver::SamplerType::SAMPLER_2D) {
+    if (target == backend::SamplerType::SAMPLER_2D) {
         descriptor = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:pixelFormat
                                                                         width:width
                                                                        height:height
                                                                     mipmapped:mipmapped];
         descriptor.mipmapLevelCount = levels;
         descriptor.textureType = MTLTextureType2D;
-    } else if (target == driver::SamplerType::SAMPLER_CUBEMAP) {
+    } else if (target == backend::SamplerType::SAMPLER_CUBEMAP) {
         ASSERT_POSTCONDITION(width == height, "Cubemap faces must be square.");
         descriptor = [MTLTextureDescriptor textureCubeDescriptorWithPixelFormat:pixelFormat
                                                                            size:width
@@ -387,5 +387,5 @@ id<MTLTexture> MetalRenderTarget::createMultisampledTexture(id<MTLDevice> device
 }
 
 } // namespace metal
-} // namespace driver
+} // namespace backend
 } // namespace filament

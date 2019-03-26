@@ -93,13 +93,13 @@ int main(int argc, char** argv) {
         std::cout << "Loaded texture: " << w << "x" << h << std::endl;
         Texture::PixelBufferDescriptor buffer(data, size_t(w * h * 4),
                 Texture::Format::RGBA, Texture::Type::UBYTE,
-                (driver::BufferDescriptor::Callback) &stbi_image_free);
+                (Texture::PixelBufferDescriptor::Callback) &stbi_image_free);
         app.tex = Texture::Builder()
                 .width(uint32_t(w))
                 .height(uint32_t(h))
                 .levels(1)
                 .sampler(Texture::Sampler::SAMPLER_2D)
-                .format(driver::TextureFormat::RGBA8)
+                .format(Texture::InternalFormat::RGBA8)
                 .build(*engine);
                 app.tex->setImage(*engine, 0, std::move(buffer));
         TextureSampler sampler(MinFilter::LINEAR, MagFilter::LINEAR);

@@ -24,7 +24,7 @@
 #include <stdint.h>
 
 namespace filament {
-namespace driver {
+namespace backend {
 
 struct PipelineState {
     Handle<HwProgram> program;
@@ -33,7 +33,7 @@ struct PipelineState {
 };
 
 
-} // namespace driver
+} // namespace backend
 } // namespace filament
 
 #endif //TNT_FILAMENT_DRIVER_PIPELINESTATE_H

@@ -23,7 +23,7 @@
 #define FILAMENT_VULKAN_VERBOSE 0
 
 namespace filament {
-namespace driver {
+namespace backend {
 
 static void flipVertically(VkRect2D* rect, uint32_t framebufferHeight) {
     rect->offset.y = framebufferHeight - rect->offset.y - rect->extent.height;
@@ -312,7 +312,7 @@ VulkanVertexBuffer::VulkanVertexBuffer(VulkanContext& context, VulkanStagePool& 
 }
 
 VulkanUniformBuffer::VulkanUniformBuffer(VulkanContext& context, VulkanStagePool& stagePool,
-        uint32_t numBytes, driver::BufferUsage usage)
+        uint32_t numBytes, backend::BufferUsage usage)
         : mContext(context), mStagePool(stagePool) {
     // Create the VkBuffer.
     VkBufferCreateInfo bufferInfo {
@@ -625,17 +625,17 @@ void VulkanTexture::copyBufferToImage(VkCommandBuffer cmd, VkBuffer buffer, VkIm
     vkCmdCopyBufferToImage(cmd, buffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 }
 
-void VulkanRenderPrimitive::setPrimitiveType(driver::PrimitiveType pt) {
+void VulkanRenderPrimitive::setPrimitiveType(backend::PrimitiveType pt) {
     this->type = pt;
     switch (pt) {
-        case driver::PrimitiveType::NONE:
-        case driver::PrimitiveType::POINTS:
+        case backend::PrimitiveType::NONE:
+        case backend::PrimitiveType::POINTS:
             primitiveTopology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
             break;
-        case driver::PrimitiveType::LINES:
+        case backend::PrimitiveType::LINES:
             primitiveTopology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
             break;
-        case driver::PrimitiveType::TRIANGLES:
+        case backend::PrimitiveType::TRIANGLES:
             primitiveTopology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
             break;
     }
@@ -685,4 +685,4 @@ void VulkanRenderPrimitive::setBuffers(VulkanVertexBuffer* vertexBuffer,
 }
 
 } // namespace filament
-} // namespace driver
+} // namespace backend

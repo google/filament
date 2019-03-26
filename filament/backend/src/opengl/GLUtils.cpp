@@ -22,7 +22,7 @@
 
 namespace filament {
 
-using namespace driver;
+using namespace backend;
 using namespace utils;
 
 namespace GLUtils {

@@ -22,7 +22,7 @@
 #include "VulkanBuffer.h"
 
 namespace filament {
-namespace driver {
+namespace backend {
 
 struct VulkanProgram : public HwProgram {
     VulkanProgram(VulkanContext& context, const Program& builder) noexcept;
@@ -99,7 +99,7 @@ struct VulkanIndexBuffer : public HwIndexBuffer {
 
 struct VulkanUniformBuffer : public HwUniformBuffer {
     VulkanUniformBuffer(VulkanContext& context, VulkanStagePool& stagePool, uint32_t numBytes,
-            driver::BufferUsage usage);
+            backend::BufferUsage usage);
     ~VulkanUniformBuffer();
     void loadFromCpu(const void* cpuData, uint32_t numBytes);
     VkBuffer getGpuBuffer() const { return mGpuBuffer; }
@@ -146,7 +146,7 @@ private:
 
 struct VulkanRenderPrimitive : public HwRenderPrimitive {
     explicit VulkanRenderPrimitive(VulkanContext& context) {}
-    void setPrimitiveType(driver::PrimitiveType pt);
+    void setPrimitiveType(backend::PrimitiveType pt);
     void setBuffers(VulkanVertexBuffer* vertexBuffer, VulkanIndexBuffer* indexBuffer,
             uint32_t enabledAttributes);
     VulkanVertexBuffer* vertexBuffer = nullptr;
@@ -166,6 +166,6 @@ struct VulkanFence : public HwFence {
 };
 
 } // namespace filament
-} // namespace driver
+} // namespace backend
 
 #endif // TNT_FILAMENT_DRIVER_VULKANHANDLES_H

@@ -43,7 +43,7 @@ class SamplerInterfaceBlock;
 
 class MaterialParser {
 public:
-    MaterialParser(driver::Backend backend, const void* data, size_t size);
+    MaterialParser(backend::Backend backend, const void* data, size_t size);
 
     MaterialParser(MaterialParser const& rhs) noexcept = delete;
     MaterialParser& operator=(MaterialParser const& rhs) noexcept = delete;
@@ -64,7 +64,7 @@ public:
     bool getDepthWrite(bool* value) const noexcept;
     bool getDoubleSidedSet(bool* value) const noexcept;
     bool getDoubleSided(bool* value) const noexcept;
-    bool getCullingMode(driver::CullingMode* value) const noexcept;
+    bool getCullingMode(backend::CullingMode* value) const noexcept;
     bool getTransparencyMode(TransparencyMode* value) const noexcept;
     bool getColorWrite(bool* value) const noexcept;
     bool getDepthTest(bool* value) const noexcept;
@@ -78,12 +78,12 @@ public:
     bool getRequiredAttributes(AttributeBitset*) const noexcept;
     bool hasCustomDepthShader(bool* value) const noexcept;
 
-    bool getShader(filaflat::ShaderBuilder& shader, driver::ShaderModel shaderModel,
-            uint8_t variant, driver::ShaderType stage) noexcept;
+    bool getShader(filaflat::ShaderBuilder& shader, backend::ShaderModel shaderModel,
+            uint8_t variant, backend::ShaderType stage) noexcept;
 
 private:
     struct MaterialParserDetails {
-        MaterialParserDetails(driver::Backend backend, const void* data, size_t size);
+        MaterialParserDetails(backend::Backend backend, const void* data, size_t size);
 
         template<typename T>
         bool getFromSimpleChunk(filamat::ChunkType type, T* value) const noexcept;

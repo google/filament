@@ -35,7 +35,7 @@
 #pragma clang diagnostic ignored "-Wunused-parameter"
 
 namespace filament {
-namespace driver {
+namespace backend {
 
 VulkanDriver::VulkanDriver(VulkanPlatform* platform,
         const char* const* ppEnabledExtensions, uint32_t enabledExtensionCount) noexcept :
@@ -899,8 +899,8 @@ void VulkanDriver::readStreamPixels(Handle<HwStream> sh, uint32_t x, uint32_t y,
 }
 
 void VulkanDriver::blit(TargetBufferFlags buffers,
-        Handle<HwRenderTarget> dst, driver::Viewport dstRect,
-        Handle<HwRenderTarget> src, driver::Viewport srcRect,
+        Handle<HwRenderTarget> dst, backend::Viewport dstRect,
+        Handle<HwRenderTarget> src, backend::Viewport srcRect,
         SamplerMagFilter filter) {
     auto dstTarget = handle_cast<VulkanRenderTarget>(mHandleMap, dst);
     auto srcTarget = handle_cast<VulkanRenderTarget>(mHandleMap, src);
@@ -1125,7 +1125,7 @@ void VulkanDriver::debugCommand(const char* methodName) {
 // explicit instantiation of the Dispatcher
 template class ConcreteDispatcher<VulkanDriver>;
 
-} // namespace driver
+} // namespace backend
 } // namespace filament
 
 #pragma clang diagnostic pop

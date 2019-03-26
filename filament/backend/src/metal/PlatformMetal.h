@@ -23,18 +23,18 @@
 #include <backend/Platform.h>
 
 namespace filament {
-namespace driver {
+namespace backend {
 
 class MetalPlatform : public DefaultPlatform {
 public:
     ~MetalPlatform() override;
 };
 
-} // namespace driver
+} // namespace backend
 
-class PlatformMetal final : public driver::MetalPlatform {
+class PlatformMetal final : public backend::MetalPlatform {
 public:
-    driver::Driver* createDriver(void* sharedContext) noexcept override;
+    backend::Driver* createDriver(void* sharedContext) noexcept override;
     int getOSVersion() const noexcept override { return 0; }
     ~PlatformMetal() override;
 };

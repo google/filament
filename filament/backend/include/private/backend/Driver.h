@@ -35,7 +35,7 @@
 #include <stdint.h>
 
 namespace filament {
-namespace driver {
+namespace backend {
 
 template<typename T>
 class ConcreteDispatcher;
@@ -79,41 +79,41 @@ public:
 #include "private/backend/DriverAPI.inc"
 };
 
-} // namespace driver
+} // namespace backend
 } // namespace filament
 
 #if !defined(NDEBUG)
 
-utils::io::ostream& operator<<(utils::io::ostream& out, const filament::driver::AttributeArray& type);
-utils::io::ostream& operator<<(utils::io::ostream& out, const filament::driver::FaceOffsets& type);
-utils::io::ostream& operator<<(utils::io::ostream& out, const filament::driver::PolygonOffset& po);
-utils::io::ostream& operator<<(utils::io::ostream& out, const filament::driver::PipelineState& ps);
-utils::io::ostream& operator<<(utils::io::ostream& out, const filament::driver::RasterState& rs);
-utils::io::ostream& operator<<(utils::io::ostream& out, const filament::driver::TargetBufferInfo& tbi);
+utils::io::ostream& operator<<(utils::io::ostream& out, const filament::backend::AttributeArray& type);
+utils::io::ostream& operator<<(utils::io::ostream& out, const filament::backend::FaceOffsets& type);
+utils::io::ostream& operator<<(utils::io::ostream& out, const filament::backend::PolygonOffset& po);
+utils::io::ostream& operator<<(utils::io::ostream& out, const filament::backend::PipelineState& ps);
+utils::io::ostream& operator<<(utils::io::ostream& out, const filament::backend::RasterState& rs);
+utils::io::ostream& operator<<(utils::io::ostream& out, const filament::backend::TargetBufferInfo& tbi);
 
-utils::io::ostream& operator<<(utils::io::ostream& out, filament::driver::BufferDescriptor const& b);
-utils::io::ostream& operator<<(utils::io::ostream& out, filament::driver::BufferUsage usage);
-utils::io::ostream& operator<<(utils::io::ostream& out, filament::driver::CullingMode mode);
-utils::io::ostream& operator<<(utils::io::ostream& out, filament::driver::ElementType type);
-utils::io::ostream& operator<<(utils::io::ostream& out, filament::driver::PixelBufferDescriptor const& b);
-utils::io::ostream& operator<<(utils::io::ostream& out, filament::driver::PixelDataFormat format);
-utils::io::ostream& operator<<(utils::io::ostream& out, filament::driver::PixelDataType type);
-utils::io::ostream& operator<<(utils::io::ostream& out, filament::driver::Precision precision);
-utils::io::ostream& operator<<(utils::io::ostream& out, filament::driver::PrimitiveType type);
-utils::io::ostream& operator<<(utils::io::ostream& out, filament::driver::RenderPassParams const& b);
-utils::io::ostream& operator<<(utils::io::ostream& out, filament::driver::SamplerCompareFunc func);
-utils::io::ostream& operator<<(utils::io::ostream& out, filament::driver::SamplerCompareMode mode);
-utils::io::ostream& operator<<(utils::io::ostream& out, filament::driver::SamplerFormat format);
-utils::io::ostream& operator<<(utils::io::ostream& out, filament::driver::SamplerMagFilter filter);
-utils::io::ostream& operator<<(utils::io::ostream& out, filament::driver::SamplerMinFilter filter);
-utils::io::ostream& operator<<(utils::io::ostream& out, filament::driver::SamplerParams params);
-utils::io::ostream& operator<<(utils::io::ostream& out, filament::driver::SamplerType type);
-utils::io::ostream& operator<<(utils::io::ostream& out, filament::driver::SamplerWrapMode wrap);
-utils::io::ostream& operator<<(utils::io::ostream& out, filament::driver::ShaderModel model);
-utils::io::ostream& operator<<(utils::io::ostream& out, filament::driver::TextureCubemapFace face);
-utils::io::ostream& operator<<(utils::io::ostream& out, filament::driver::TextureFormat format);
-utils::io::ostream& operator<<(utils::io::ostream& out, filament::driver::TextureUsage usage);
-utils::io::ostream& operator<<(utils::io::ostream& out, filament::driver::Viewport const& v);
+utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::BufferDescriptor const& b);
+utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::BufferUsage usage);
+utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::CullingMode mode);
+utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::ElementType type);
+utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::PixelBufferDescriptor const& b);
+utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::PixelDataFormat format);
+utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::PixelDataType type);
+utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::Precision precision);
+utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::PrimitiveType type);
+utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::RenderPassParams const& b);
+utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::SamplerCompareFunc func);
+utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::SamplerCompareMode mode);
+utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::SamplerFormat format);
+utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::SamplerMagFilter filter);
+utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::SamplerMinFilter filter);
+utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::SamplerParams params);
+utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::SamplerType type);
+utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::SamplerWrapMode wrap);
+utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::ShaderModel model);
+utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::TextureCubemapFace face);
+utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::TextureFormat format);
+utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::TextureUsage usage);
+utils::io::ostream& operator<<(utils::io::ostream& out, filament::backend::Viewport const& v);
 #endif
 
 #endif // TNT_FILAMENT_DRIVER_DRIVER_H

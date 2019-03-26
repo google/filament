@@ -26,7 +26,7 @@
 using namespace utils;
 
 namespace filament {
-namespace driver {
+namespace backend {
 
 // ------------------------------------------------------------------------------------------------
 // A few utility functions for debugging...
@@ -43,7 +43,7 @@ static void printParameterPack(io::ostream& out, const FIRST& first, const REMAI
 }
 
 static UTILS_NOINLINE UTILS_UNUSED std::string extractMethodName(std::string& command) noexcept {
-    constexpr const char startPattern[] = "::Command<&(filament::driver::Driver::";
+    constexpr const char startPattern[] = "::Command<&(filament::backend::Driver::";
     auto pos = command.rfind(startPattern);
     auto end = command.rfind('(');
     pos += sizeof(startPattern) - 1;
@@ -139,7 +139,7 @@ void CustomCommand::execute(Driver&, CommandBase* base, intptr_t* next) noexcept
     static_cast<CustomCommand*>(base)->~CustomCommand();
 }
 
-} // namespace driver
+} // namespace backend
 } // namespace filament
 
 
@@ -149,7 +149,7 @@ void CustomCommand::execute(Driver&, CommandBase* base, intptr_t* next) noexcept
 // ------------------------------------------------------------------------------------------------
 
 using namespace filament;
-using namespace driver;
+using namespace backend;
 
 #if !defined(NDEBUG) && (DEBUG_COMMAND_STREAM != false)
 
@@ -552,7 +552,7 @@ io::ostream& operator<<(io::ostream& out, PixelBufferDescriptor const& b) {
 }
 
 UTILS_PRIVATE
-io::ostream& operator<<(io::ostream& out, filament::driver::Viewport const& viewport) {
+io::ostream& operator<<(io::ostream& out, filament::backend::Viewport const& viewport) {
     out << "Viewport{"
         << ", left=" << viewport.left
         << ", bottom=" << viewport.bottom

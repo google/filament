@@ -41,7 +41,7 @@ public:
         return mLUT != nullptr;
     }
 
-    driver::Handle<driver::HwTexture> getTexture() const noexcept {
+    backend::Handle<backend::HwTexture> getTexture() const noexcept {
         return mLUT->getHwHandle();
     }
 

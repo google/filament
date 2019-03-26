@@ -38,7 +38,7 @@ public:
     explicit ShadowMap(FEngine& engine) noexcept;
     ~ShadowMap();
 
-    void terminate(driver::DriverApi& driverApi) noexcept;
+    void terminate(backend::DriverApi& driverApi) noexcept;
 
     // Call once per frame if the light, scene (or visible layers) or camera changes.
     // This computes the light's camera.
@@ -50,7 +50,7 @@ public:
     bool hasVisibleShadows() const noexcept { return mHasVisibleShadows; }
 
     // Allocates shadow texture based on user parameters (e.g. dimensions)
-    void prepare(driver::DriverApi& driver, driver::SamplerGroup& buffer) noexcept;
+    void prepare(backend::DriverApi& driver, backend::SamplerGroup& buffer) noexcept;
 
     // Returns the shadow map's viewport. Valid after prepare().
     Viewport const& getViewport() const noexcept { return mViewport; }
@@ -69,7 +69,7 @@ public:
     FCamera const& getCamera() const noexcept { return *mCamera; }
 
     // Set-up the render target, call before rendering the shadow map.
-    void beginRenderPass(driver::DriverApi& driverApi) const noexcept;
+    void beginRenderPass(backend::DriverApi& driverApi) const noexcept;
 
     // use only for debugging
     FCamera const& getDebugCamera() const noexcept { return *mDebugCamera; }
@@ -175,8 +175,8 @@ private:
 
     // set-up in prepare()
     Viewport mViewport;
-    driver::Handle<driver::HwTexture> mShadowMapHandle;
-    driver::Handle<driver::HwRenderTarget> mShadowMapRenderTarget;
+    backend::Handle<backend::HwTexture> mShadowMapHandle;
+    backend::Handle<backend::HwRenderTarget> mShadowMapRenderTarget;
 
     // set-up in update()
     uint32_t mShadowMapDimension = 0;

@@ -38,16 +38,16 @@ public:
 
     ~GLSLPostProcessor();
 
-    bool process(const std::string& inputShader, filament::driver::ShaderType shaderType,
-            filament::driver::ShaderModel shaderModel, std::string* outputGlsl,
+    bool process(const std::string& inputShader, filament::backend::ShaderType shaderType,
+            filament::backend::ShaderModel shaderModel, std::string* outputGlsl,
             SpirvBlob* outputSpirv, std::string* outputMsl);
 
 private:
 
     void fullOptimization(const glslang::TShader& tShader,
-            filament::driver::ShaderModel shaderModel) const;
+            filament::backend::ShaderModel shaderModel) const;
     void preprocessOptimization(glslang::TShader& tShader,
-            filament::driver::ShaderModel shaderModel) const;
+            filament::backend::ShaderModel shaderModel) const;
 
     void registerSizePasses(spvtools::Optimizer& optimizer) const;
     void registerPerformancePasses(spvtools::Optimizer& optimizer) const;

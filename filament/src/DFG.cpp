@@ -35,7 +35,7 @@ DFG::DFG(FEngine& engine) noexcept : mEngine(engine) {
     Texture* lut = Texture::Builder()
             .width(DFG_LUT_SIZE)
             .height(DFG_LUT_SIZE)
-            .format(driver::TextureFormat::RGB16F)
+            .format(backend::TextureFormat::RGB16F)
             .build(mEngine);
 
     Texture::PixelBufferDescriptor buffer(DFG_LUT, byteCount,

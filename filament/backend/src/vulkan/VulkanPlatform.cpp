@@ -17,9 +17,9 @@
 #include "VulkanPlatform.h"
 
 namespace filament {
-namespace driver {
+namespace backend {
 
 VulkanPlatform::~VulkanPlatform() = default;
 
-} // namespace driver
+} // namespace backend
 } // namespace filament

@@ -36,7 +36,7 @@ using namespace filament::math;
 
 namespace filament {
 
-using namespace driver;
+using namespace backend;
 
 namespace details {
 

@@ -19,7 +19,7 @@
 #include <utils/Panic.h>
 
 namespace filament {
-namespace driver {
+namespace backend {
 
 VulkanStage const* VulkanStagePool::acquireStage(uint32_t numBytes) {
     // First check if a stage exists whose capacity is greater than or equal to the requested size.
@@ -98,4 +98,4 @@ void VulkanStagePool::reset() noexcept {
 }
 
 } // namespace filament
-} // namespace driver
+} // namespace backend

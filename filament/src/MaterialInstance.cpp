@@ -32,7 +32,7 @@ using namespace filament::math;
 
 namespace filament {
 
-using namespace driver;
+using namespace backend;
 
 namespace details {
 
@@ -46,7 +46,7 @@ FMaterialInstance::FMaterialInstance(FEngine& engine, FMaterial const* material)
 
     if (!material->getUniformInterfaceBlock().isEmpty()) {
         mUniforms.setUniforms(material->getDefaultInstance()->getUniformBuffer());
-        mUbHandle = driver.createUniformBuffer(mUniforms.getSize(), driver::BufferUsage::DYNAMIC);
+        mUbHandle = driver.createUniformBuffer(mUniforms.getSize(), backend::BufferUsage::DYNAMIC);
     }
 
     if (!material->getSamplerInterfaceBlock().isEmpty()) {
@@ -69,7 +69,7 @@ void FMaterialInstance::initDefaultInstance(FEngine& engine, FMaterial const* ma
 
     if (!material->getUniformInterfaceBlock().isEmpty()) {
         mUniforms = UniformBuffer(material->getUniformInterfaceBlock().getSize());
-        mUbHandle = driver.createUniformBuffer(mUniforms.getSize(), driver::BufferUsage::STATIC);
+        mUbHandle = driver.createUniformBuffer(mUniforms.getSize(), backend::BufferUsage::STATIC);
     }
 
     if (!material->getSamplerInterfaceBlock().isEmpty()) {

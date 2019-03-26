@@ -28,7 +28,7 @@ namespace filament {
 
 using namespace filament::math;
 using namespace utils;
-using namespace driver;
+using namespace backend;
 
 OpenGLProgram::OpenGLProgram(OpenGLDriver* gl, const Program& programBuilder) noexcept
         :  HwProgram(programBuilder.getName()), mIsValid(false) {

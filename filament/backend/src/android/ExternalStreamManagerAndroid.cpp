@@ -25,7 +25,7 @@ using namespace utils;
 
 namespace filament {
 
-using namespace driver;
+using namespace backend;
 using EGLStream = Platform::Stream;
 
 

@@ -294,7 +294,7 @@ void FRenderableManager::create(
             // large block of bones.
             bones = std::unique_ptr<Bones>(new Bones{
                     driver.createUniformBuffer(CONFIG_MAX_BONE_COUNT * sizeof(PerRenderableUibBone),
-                            driver::BufferUsage::DYNAMIC),
+                            backend::BufferUsage::DYNAMIC),
                     UniformBuffer{ count * sizeof(PerRenderableUibBone) },
                     count
             });
@@ -367,7 +367,7 @@ void FRenderableManager::destroyComponentPrimitives(
 
 
 void FRenderableManager::prepare(
-        driver::DriverApi& UTILS_RESTRICT driver,
+        backend::DriverApi& UTILS_RESTRICT driver,
         Instance const* UTILS_RESTRICT instances,
         utils::Range<uint32_t> list) const noexcept {
     auto& manager = mManager;

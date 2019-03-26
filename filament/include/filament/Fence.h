@@ -37,10 +37,10 @@ namespace filament {
 class UTILS_PUBLIC Fence : public FilamentAPI {
 public:
     //! Special \p timeout value to disable wait()'s timeout.
-    static constexpr uint64_t FENCE_WAIT_FOR_EVER = driver::FENCE_WAIT_FOR_EVER;
+    static constexpr uint64_t FENCE_WAIT_FOR_EVER = backend::FENCE_WAIT_FOR_EVER;
 
     //! Error codes for Fence::wait()
-    using FenceStatus = driver::FenceStatus;
+    using FenceStatus = backend::FenceStatus;
 
     //! Type of the Fence being created
     enum class Type : uint8_t {

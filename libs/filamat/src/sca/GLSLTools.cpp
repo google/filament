@@ -38,7 +38,7 @@
 using namespace utils;
 using namespace glslang;
 using namespace ASTUtils;
-using namespace filament::driver;
+using namespace filament::backend;
 
 namespace filamat {
 

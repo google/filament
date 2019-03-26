@@ -35,7 +35,7 @@
 #include <vector>
 
 namespace filament {
-namespace driver {
+namespace backend {
 
 class VulkanPlatform;
 struct VulkanRenderTarget;
@@ -43,7 +43,7 @@ struct VulkanSamplerGroup;
 
 class VulkanDriver final : public DriverBase {
 public:
-    static Driver* create(driver::VulkanPlatform* platform,
+    static Driver* create(backend::VulkanPlatform* platform,
             const char* const* ppEnabledExtensions, uint32_t enabledExtensionCount) noexcept;
 
 private:
@@ -52,7 +52,7 @@ private:
     void debugCommand(const char* methodName) override;
 #endif
 
-    inline VulkanDriver(driver::VulkanPlatform* platform,
+    inline VulkanDriver(backend::VulkanPlatform* platform,
             const char* const* ppEnabledExtensions, uint32_t enabledExtensionCount) noexcept;
 
     ~VulkanDriver() noexcept override;
@@ -60,7 +60,7 @@ private:
     ShaderModel getShaderModel() const noexcept final;
 
     template<typename T>
-    friend class driver::ConcreteDispatcher;
+    friend class backend::ConcreteDispatcher;
 
 #define DECL_DRIVER_API(methodName, paramsDecl, params) \
     UTILS_ALWAYS_INLINE void methodName(paramsDecl);
@@ -78,7 +78,7 @@ private:
     VulkanDriver& operator = (VulkanDriver const&) = delete;
 
 private:
-    driver::VulkanPlatform& mContextManager;
+    backend::VulkanPlatform& mContextManager;
 
     // For now we're not bothering to store handles in pools, just simple on-demand allocation.
     // We have a little map from integer handles to "blobs" which get replaced with the Hw objects.
@@ -152,7 +152,7 @@ private:
     VkDebugReportCallbackEXT mDebugCallback = VK_NULL_HANDLE;
 };
 
-} // namespace driver
+} // namespace backend
 } // namespace filament
 
 #endif // TNT_FILAMENT_DRIVER_VULKANDRIVER_H

@@ -50,14 +50,14 @@ class UTILS_PUBLIC IndexBuffer : public FilamentAPI {
     struct BuilderDetails;
 
 public:
-    using BufferDescriptor = driver::BufferDescriptor;
+    using BufferDescriptor = backend::BufferDescriptor;
 
     /**
      * Type of the index buffer
      */
     enum class IndexType : uint8_t {
-        USHORT = uint8_t(driver::ElementType::USHORT),  //!< 16-bit indices
-        UINT = uint8_t(driver::ElementType::UINT),      //!< 32-bit indices
+        USHORT = uint8_t(backend::ElementType::USHORT),  //!< 16-bit indices
+        UINT = uint8_t(backend::ElementType::UINT),      //!< 32-bit indices
     };
 
     class Builder : public BuilderBase<BuilderDetails> {

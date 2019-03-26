@@ -24,7 +24,7 @@
 
 namespace filament {
 
-using namespace driver;
+using namespace backend;
 
 Driver* PlatformVkWindows::createDriver(void* const sharedContext) noexcept {
     ASSERT_PRECONDITION(sharedContext == nullptr, "Vulkan does not support shared contexts.");

@@ -51,12 +51,12 @@ public:
     using VertexDomain = filament::VertexDomain;
     using TransparencyMode = filament::TransparencyMode;
 
-    using ParameterType = filament::driver::UniformType;
-    using Precision = filament::driver::Precision;
-    using SamplerType = filament::driver::SamplerType;
-    using SamplerFormat = filament::driver::SamplerFormat;
-    using CullingMode = filament::driver::CullingMode;
-    using ShaderModel = filament::driver::ShaderModel;
+    using ParameterType = filament::backend::UniformType;
+    using Precision = filament::backend::Precision;
+    using SamplerType = filament::backend::SamplerType;
+    using SamplerFormat = filament::backend::SamplerFormat;
+    using CullingMode = filament::backend::CullingMode;
+    using ShaderModel = filament::backend::ShaderModel;
 
     /**
      * Holds information about a material parameter.

@@ -31,7 +31,7 @@
 
 namespace filament {
 
-using namespace driver;
+using namespace backend;
 
 Driver* PlatformVkCocoa::createDriver(void* sharedContext) noexcept {
     ASSERT_PRECONDITION(sharedContext == nullptr, "Vulkan does not support shared contexts.");

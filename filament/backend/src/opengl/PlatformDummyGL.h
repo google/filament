@@ -25,10 +25,10 @@
 
 namespace filament {
 
-class PlatformDummyGL final : public driver::OpenGLPlatform {
+class PlatformDummyGL final : public backend::OpenGLPlatform {
 public:
 
-    driver::Driver* createDriver(void* const sharedGLContext) noexcept override;
+    backend::Driver* createDriver(void* const sharedGLContext) noexcept override;
     void terminate() noexcept override { }
 
     SwapChain* createSwapChain(void* nativewindow, uint64_t& flags) noexcept final override {
@@ -41,8 +41,8 @@ public:
 
     Fence* createFence() noexcept final override { return nullptr; }
     void destroyFence(Fence* fence) noexcept final override {}
-    driver::FenceStatus waitFence(Fence* fence, uint64_t timeout) noexcept final override {
-        return driver::FenceStatus::ERROR;
+    backend::FenceStatus waitFence(Fence* fence, uint64_t timeout) noexcept final override {
+        return backend::FenceStatus::ERROR;
     }
 
     Stream* createStream(void* nativeStream) noexcept final override { return nullptr; }
@@ -53,7 +53,7 @@ public:
 
     ExternalTexture* createExternalTextureStorage() noexcept final override { return nullptr; }
     void reallocateExternalStorage(ExternalTexture* ets,
-            uint32_t w, uint32_t h, driver::TextureFormat format) noexcept final override { }
+            uint32_t w, uint32_t h, backend::TextureFormat format) noexcept final override { }
     void destroyExternalTextureStorage(ExternalTexture* ets) noexcept final override { }
 
     int getOSVersion() const noexcept final override { return 0; }

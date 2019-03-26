@@ -25,7 +25,7 @@
 using namespace utils;
 
 namespace filament {
-using namespace driver;
+using namespace backend;
 
 template <typename T>
 static void loadSymbol(T*& pfn, const char *symbol) noexcept {
@@ -112,7 +112,7 @@ ExternalTextureManagerAndroid::~ExternalTextureManagerAndroid() noexcept {
 }
 
 // called on gl thread
-driver::Platform::ExternalTexture* ExternalTextureManagerAndroid::create() noexcept {
+backend::Platform::ExternalTexture* ExternalTextureManagerAndroid::create() noexcept {
 #ifndef PLATFORM_HAS_HARDWAREBUFFER
     if (!AHardwareBuffer_allocate) {
         // initialize java stuff on-demand
@@ -134,21 +134,21 @@ driver::Platform::ExternalTexture* ExternalTextureManagerAndroid::create() noexc
 
 // called on app thread
 void ExternalTextureManagerAndroid::reallocate(
-        driver::Platform::ExternalTexture* ets, uint32_t w, uint32_t h,
-        driver::TextureFormat format, uint64_t usage) noexcept {
+        backend::Platform::ExternalTexture* ets, uint32_t w, uint32_t h,
+        backend::TextureFormat format, uint64_t usage) noexcept {
     destroyStorage(ets);
     alloc(ets, w, h, format, usage);
 }
 
 // called on gl thread
-void ExternalTextureManagerAndroid::destroy(driver::Platform::ExternalTexture* ets) noexcept {
+void ExternalTextureManagerAndroid::destroy(backend::Platform::ExternalTexture* ets) noexcept {
     destroyStorage(ets);
     delete static_cast<EGLExternalTexture*>(ets);
 }
 
 // called on app thread
 void ExternalTextureManagerAndroid::alloc(
-        driver::Platform::ExternalTexture* t,
+        backend::Platform::ExternalTexture* t,
         uint32_t w, uint32_t h, TextureFormat format, uint64_t usage) noexcept {
 
     EGLExternalTexture* ets = static_cast<EGLExternalTexture*>(t);
@@ -206,7 +206,7 @@ void ExternalTextureManagerAndroid::alloc(
 }
 
 // called on gl thread
-void ExternalTextureManagerAndroid::destroyStorage(driver::Platform::ExternalTexture* t) noexcept {
+void ExternalTextureManagerAndroid::destroyStorage(backend::Platform::ExternalTexture* t) noexcept {
         EGLExternalTexture* ets = static_cast<EGLExternalTexture*>(t);
 
 #ifndef PLATFORM_HAS_HARDWAREBUFFER

@@ -163,7 +163,7 @@ void FScene::prepare(const mat4f& worldOriginTransform) {
     }
 }
 
-void FScene::updateUBOs(utils::Range<uint32_t> visibleRenderables, driver::Handle<driver::HwUniformBuffer> renderableUbh) noexcept {
+void FScene::updateUBOs(utils::Range<uint32_t> visibleRenderables, backend::Handle<backend::HwUniformBuffer> renderableUbh) noexcept {
     FEngine::DriverApi& driver = mEngine.getDriverApi();
     const size_t size = visibleRenderables.size() * sizeof(PerRenderableUib);
 
@@ -207,7 +207,7 @@ void FScene::terminate(FEngine& engine) {
     mRenderableViewUbh.clear();
 }
 
-void FScene::prepareDynamicLights(const CameraInfo& camera, ArenaScope& rootArena, driver::Handle<driver::HwUniformBuffer> lightUbh) noexcept {
+void FScene::prepareDynamicLights(const CameraInfo& camera, ArenaScope& rootArena, backend::Handle<backend::HwUniformBuffer> lightUbh) noexcept {
     FEngine::DriverApi& driver = mEngine.getDriverApi();
     FLightManager& lcm = mEngine.getLightManager();
     FScene::LightSoa& lightData = getLightData();

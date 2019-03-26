@@ -19,7 +19,7 @@
 using namespace utils;
 
 namespace filament {
-namespace driver {
+namespace backend {
 
 // We want these in the .cpp file so they're not inlined (not worth it)
 Program::Program() noexcept = default;
@@ -70,5 +70,5 @@ io::ostream& operator<<(io::ostream& out, const Program& builder) {
 
 #endif
 
-} // namespace driver
+} // namespace backend
 } // namespace filament

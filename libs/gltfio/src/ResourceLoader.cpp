@@ -203,14 +203,14 @@ bool ResourceLoader::createTextures(details::FFilamentAsset* asset) const {
                 .width(w)
                 .height(h)
                 .levels(0xff)
-                .format(srgb ? driver::TextureFormat::SRGB8_A8 : driver::TextureFormat::RGBA8)
+                .format(srgb ? Texture::InternalFormat::SRGB8_A8 : Texture::InternalFormat::RGBA8)
                 .build(*mConfig.engine);
 
         Texture::PixelBufferDescriptor pbd(texels,
                 size_t(w * h * 4),
                 Texture::Format::RGBA,
                 Texture::Type::UBYTE,
-                (driver::BufferDescriptor::Callback) &free);
+                (Texture::PixelBufferDescriptor::Callback) &free);
 
         tex->setImage(*mConfig.engine, 0, std::move(pbd));
         tex->generateMipmaps(*mConfig.engine);

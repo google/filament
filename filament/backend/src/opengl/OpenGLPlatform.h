@@ -20,7 +20,7 @@
 #include <backend/Platform.h>
 
 namespace filament {
-namespace driver {
+namespace backend {
 
 class Driver;
 
@@ -54,7 +54,7 @@ public:
     virtual bool canCreateFence() noexcept { return false; }
     virtual Fence* createFence() noexcept = 0;
     virtual void destroyFence(Fence* fence) noexcept = 0;
-    virtual driver::FenceStatus waitFence(Fence* fence, uint64_t timeout) noexcept = 0;
+    virtual backend::FenceStatus waitFence(Fence* fence, uint64_t timeout) noexcept = 0;
 
     // this is called synchronously in the application thread (NOT the Driver thread)
     virtual Stream* createStream(void* nativeStream) noexcept = 0;
@@ -78,7 +78,7 @@ public:
     virtual void destroyExternalTextureStorage(ExternalTexture* ets) noexcept = 0;
 };
 
-} // namespace driver
+} // namespace backend
 } // namespace filament
 
 #endif // TNT_FILAMENT_DRIVER_OPENGL_PLATFORM_H

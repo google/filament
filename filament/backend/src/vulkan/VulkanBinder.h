@@ -28,7 +28,7 @@
 #include <vector>
 
 namespace filament {
-namespace driver {
+namespace backend {
 
 // VulkanBinder manages a cache of descriptor sets and pipelines.
 //
@@ -72,9 +72,9 @@ namespace driver {
 class VulkanBinder {
 public:
     static constexpr uint32_t UBUFFER_BINDING_COUNT = Program::UNIFORM_BINDING_COUNT;
-    static constexpr uint32_t SAMPLER_BINDING_COUNT = driver::MAX_SAMPLER_COUNT;
+    static constexpr uint32_t SAMPLER_BINDING_COUNT = backend::MAX_SAMPLER_COUNT;
     static constexpr uint32_t SHADER_MODULE_COUNT = 2;
-    static constexpr uint32_t VERTEX_ATTRIBUTE_COUNT = driver::MAX_VERTEX_ATTRIBUTE_COUNT;
+    static constexpr uint32_t VERTEX_ATTRIBUTE_COUNT = backend::MAX_VERTEX_ATTRIBUTE_COUNT;
 
     // The VertexArray POD is an array of buffer targets and an array of attributes that refer to
     // those targets. It does not include any references to actual buffers, so you can think of it
@@ -282,6 +282,6 @@ private:
 };
 
 } // namespace filament
-} // namespace driver
+} // namespace backend
 
 #endif // TNT_FILAMENT_DRIVER_VULKANBINDER_H

@@ -31,7 +31,7 @@
 using namespace utils;
 
 namespace filament {
-namespace driver {
+namespace backend {
 
 DriverBase::DriverBase(Dispatcher* dispatcher) noexcept
         : mDispatcher(dispatcher) {
@@ -88,5 +88,5 @@ size_t Driver::getElementTypeSize(ElementType type) noexcept {
     }
 }
 
-} // namespace driver
+} // namespace backend
 } // namespace filament

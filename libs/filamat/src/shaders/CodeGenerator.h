@@ -36,10 +36,10 @@
 namespace filamat {
 
 class UTILS_PRIVATE CodeGenerator {
-    using ShaderType = filament::driver::ShaderType;
+    using ShaderType = filament::backend::ShaderType;
     using TargetApi = MaterialBuilder::TargetApi;
 public:
-    CodeGenerator(filament::driver::ShaderModel shaderModel,
+    CodeGenerator(filament::backend::ShaderModel shaderModel,
             TargetApi targetApi, TargetApi codeGenTargetApi) noexcept
             : mShaderModel(shaderModel), mTargetApi(targetApi), mCodeGenTargetApi(codeGenTargetApi) {
         if (targetApi == TargetApi::ALL) {
@@ -48,7 +48,7 @@ public:
         }
     }
 
-    filament::driver::ShaderModel getShaderModel() const noexcept { return mShaderModel; }
+    filament::backend::ShaderModel getShaderModel() const noexcept { return mShaderModel; }
 
     // insert a separator (can be a new line)
     std::ostream& generateSeparator(std::ostream& out) const;
@@ -113,25 +113,25 @@ public:
             std::string& shader, filament::SamplerInterfaceBlock const& sib) noexcept;
 
 private:
-    filament::driver::Precision getDefaultPrecision(ShaderType type) const;
-    filament::driver::Precision getDefaultUniformPrecision() const;
+    filament::backend::Precision getDefaultPrecision(ShaderType type) const;
+    filament::backend::Precision getDefaultUniformPrecision() const;
 
-    const char* getUniformPrecisionQualifier(filament::driver::UniformType type,
-            filament::driver::Precision precision,
-            filament::driver::Precision uniformPrecision,
-            filament::driver::Precision defaultPrecision) const noexcept;
+    const char* getUniformPrecisionQualifier(filament::backend::UniformType type,
+            filament::backend::Precision precision,
+            filament::backend::Precision uniformPrecision,
+            filament::backend::Precision defaultPrecision) const noexcept;
 
     // return type name of sampler  (e.g.: "sampler2D")
-    char const* getSamplerTypeName(filament::driver::SamplerType type,
-            filament::driver::SamplerFormat format, bool multisample) const noexcept;
+    char const* getSamplerTypeName(filament::backend::SamplerType type,
+            filament::backend::SamplerFormat format, bool multisample) const noexcept;
 
     // return name of the material property (e.g.: "ROUGHNESS")
     static char const* getConstantName(MaterialBuilder::Property property) noexcept;
 
-    static char const* getPrecisionQualifier(filament::driver::Precision precision,
-            filament::driver::Precision defaultPrecision) noexcept;
+    static char const* getPrecisionQualifier(filament::backend::Precision precision,
+            filament::backend::Precision defaultPrecision) noexcept;
 
-    filament::driver::ShaderModel mShaderModel;
+    filament::backend::ShaderModel mShaderModel;
     TargetApi mTargetApi;
     TargetApi mCodeGenTargetApi;
 

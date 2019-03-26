@@ -40,7 +40,7 @@
 using namespace filaflat;
 using namespace filamat;
 using namespace filament;
-using namespace driver;
+using namespace backend;
 using namespace utils;
 
 static const int alignment = 24;

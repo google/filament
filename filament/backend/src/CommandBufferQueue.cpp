@@ -26,7 +26,7 @@
 using namespace utils;
 
 namespace filament {
-namespace driver {
+namespace backend {
 
 CommandBufferQueue::CommandBufferQueue(size_t requiredSize, size_t bufferSize)
         : mRequiredSize((requiredSize + CircularBuffer::BLOCK_MASK) & ~CircularBuffer::BLOCK_MASK),
@@ -120,5 +120,5 @@ void CommandBufferQueue::releaseBuffer(CommandBufferQueue::Slice const& buffer) 
     mCondition.notify_one();
 }
 
-} // namespace driver
+} // namespace backend
 } // namespace filament

@@ -19,13 +19,13 @@
 
 
 namespace filament {
-namespace driver {
+namespace backend {
 
 class CommandStream;
 
 using DriverApi = CommandStream;
 
-} // namespace driver
+} // namespace backend
 } // namespace filament
 
 #endif // TNT_FILAMENT_DRIVER_DRIVERAPIFORWARD_H

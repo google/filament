@@ -17,7 +17,7 @@
 #include "vulkan/VulkanDisposer.h"
 
 namespace filament {
-namespace driver {
+namespace backend {
 
 void VulkanDisposer::createDisposable(Key resource, std::function<void()> destructor) noexcept {
     mDisposables[resource].destructor = destructor;
@@ -63,4 +63,4 @@ void VulkanDisposer::reset() noexcept {
 }
 
 } // namespace filament
-} // namespace driver
+} // namespace backend

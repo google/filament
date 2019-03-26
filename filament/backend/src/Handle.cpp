@@ -25,7 +25,7 @@
 using namespace utils;
 
 namespace filament {
-namespace driver {
+namespace backend {
 
 #ifndef NDEBUG
 
@@ -71,5 +71,5 @@ template io::ostream& operator<<(io::ostream& out, const Handle<HwStream>& h) no
 
 #endif
 
-} // namespace driver
+} // namespace backend
 } // namespace filament

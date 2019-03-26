@@ -176,11 +176,11 @@ void loadNormalMap(Engine* engine, Texture** normalMap, const std::string& path)
                         .width(uint32_t(w))
                         .height(uint32_t(h))
                         .levels(0xff)
-                        .format(driver::TextureFormat::RGB8)
+                        .format(Texture::InternalFormat::RGB8)
                         .build(*engine);
                 Texture::PixelBufferDescriptor buffer(data, size_t(w * h * 3),
                         Texture::Format::RGB, Texture::Type::UBYTE,
-                        (driver::BufferDescriptor::Callback)&stbi_image_free);
+                        (Texture::PixelBufferDescriptor::Callback)&stbi_image_free);
                 (*normalMap)->setImage(*engine, 0, std::move(buffer));
                 (*normalMap)->generateMipmaps(*engine);
             } else {
@@ -203,11 +203,11 @@ void loadBaseColorMap(Engine* engine) {
                         .width(uint32_t(w))
                         .height(uint32_t(h))
                         .levels(0xff)
-                        .format(driver::TextureFormat::SRGB8)
+                        .format(Texture::InternalFormat::SRGB8)
                         .build(*engine);
                 Texture::PixelBufferDescriptor buffer(data, size_t(w * h * 3),
                         Texture::Format::RGB, Texture::Type::UBYTE,
-                        (driver::BufferDescriptor::Callback)&stbi_image_free);
+                        (Texture::PixelBufferDescriptor::Callback)&stbi_image_free);
                 g_baseColorMap->setImage(*engine, 0, std::move(buffer));
                 g_baseColorMap->generateMipmaps(*engine);
             } else {

@@ -34,7 +34,7 @@
 #include <stdlib.h>
 
 using namespace utils;
-using namespace filament::driver;
+using namespace filament::backend;
 using namespace filaflat;
 using namespace filamat;
 

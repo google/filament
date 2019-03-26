@@ -36,12 +36,12 @@ namespace filament {
  *
  * A view port is represented by its left-bottom coordinate, width and height in pixels.
  */
-class UTILS_PUBLIC Viewport : public driver::Viewport {
+class UTILS_PUBLIC Viewport : public backend::Viewport {
 public:
     /**
      * Creates a Viewport of zero width and height at the origin.
      */
-    Viewport() noexcept : driver::Viewport{} {}
+    Viewport() noexcept : backend::Viewport{} {}
 
     Viewport(const Viewport& viewport) noexcept = default;
     Viewport(Viewport&& viewport) noexcept = default;
@@ -57,7 +57,7 @@ public:
      * @param height height in pixel
      */
     Viewport(int32_t left, int32_t bottom, uint32_t width, uint32_t height) noexcept
-            : driver::Viewport{ left, bottom, width, height } {
+            : backend::Viewport{ left, bottom, width, height } {
     }
 
     /**

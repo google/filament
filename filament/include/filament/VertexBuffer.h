@@ -57,8 +57,8 @@ class UTILS_PUBLIC VertexBuffer : public FilamentAPI {
     struct BuilderDetails;
 
 public:
-    using AttributeType = driver::ElementType;
-    using BufferDescriptor = driver::BufferDescriptor;
+    using AttributeType = backend::ElementType;
+    using BufferDescriptor = backend::BufferDescriptor;
 
     class Builder : public BuilderBase<BuilderDetails> {
         friend struct BuilderDetails;

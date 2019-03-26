@@ -57,7 +57,7 @@ using namespace utils;
 
 namespace filament {
 
-using namespace driver;
+using namespace backend;
 using namespace GLUtils;
 
 Driver* OpenGLDriver::create(
@@ -1044,7 +1044,7 @@ void OpenGLDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint
     CHECK_GL_ERROR(utils::slog.e)
 }
 
-void OpenGLDriver::framebufferTexture(driver::TargetBufferInfo& binfo,
+void OpenGLDriver::framebufferTexture(backend::TargetBufferInfo& binfo,
         GLRenderTarget* rt, GLenum attachment) noexcept {
     GLTexture const* t = handle_cast<const GLTexture*>(binfo.handle);
 
@@ -2940,6 +2940,6 @@ void OpenGLDriver::draw(PipelineState state, Handle<HwRenderPrimitive> rph) {
 }
 
 // explicit instantiation of the Dispatcher
-template class driver::ConcreteDispatcher<OpenGLDriver>;
+template class backend::ConcreteDispatcher<OpenGLDriver>;
 
 } // namespace filament

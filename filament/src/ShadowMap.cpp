@@ -32,7 +32,7 @@ using namespace filament::math;
 using namespace utils;
 
 namespace filament {
-using namespace driver;
+using namespace backend;
 
 namespace details {
 

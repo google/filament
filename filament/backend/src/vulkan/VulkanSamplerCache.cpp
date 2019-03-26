@@ -19,7 +19,7 @@
 #include <utils/Panic.h>
 
 namespace filament {
-namespace driver {
+namespace backend {
 
 constexpr inline VkSamplerAddressMode getWrapMode(SamplerWrapMode mode) noexcept {
     switch (mode) {
@@ -97,7 +97,7 @@ constexpr inline VkBool32 getCompareEnable(SamplerCompareMode mode) noexcept {
 
 VulkanSamplerCache::VulkanSamplerCache(VulkanContext& context) : mContext(context) {}
 
-VkSampler VulkanSamplerCache::getSampler(driver::SamplerParams params) noexcept {
+VkSampler VulkanSamplerCache::getSampler(backend::SamplerParams params) noexcept {
     auto iter = mCache.find(params.u);
     if (UTILS_LIKELY(iter != mCache.end())) {
         return iter->second;
@@ -134,4 +134,4 @@ void VulkanSamplerCache::reset() noexcept {
 }
 
 } // namespace filament
-} // namespace driver
+} // namespace backend

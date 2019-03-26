@@ -79,7 +79,7 @@ public:
 
     // - instances is a list of Instance (typically the list from a given scene)
     // - list is a list of index in 'instances' (typically the visible ones)
-    void prepare(driver::DriverApi& driver,
+    void prepare(backend::DriverApi& driver,
             RenderableManager::Instance const* instances,
             utils::Range<uint32_t> list) const noexcept;
 
@@ -115,7 +115,7 @@ public:
     inline uint8_t getLayerMask(Instance instance) const noexcept;
     inline uint8_t getPriority(Instance instance) const noexcept;
 
-    inline driver::Handle<driver::HwUniformBuffer> getBonesUbh(Instance instance) const noexcept;
+    inline backend::Handle<backend::HwUniformBuffer> getBonesUbh(Instance instance) const noexcept;
 
 
     inline size_t getLevelCount(Instance instance) const noexcept { return 1; }
@@ -139,7 +139,7 @@ private:
             utils::Slice<FRenderPrimitive>& primitives) noexcept;
 
     struct Bones {
-        filament::driver::Handle<driver::HwUniformBuffer> handle;
+        filament::backend::Handle<backend::HwUniformBuffer> handle;
         UniformBuffer bones;
         size_t count;
     };
@@ -289,9 +289,9 @@ Box const& FRenderableManager::getAABB(Instance instance) const noexcept {
     return mManager[instance].aabb;
 }
 
-driver::Handle<driver::HwUniformBuffer> FRenderableManager::getBonesUbh(Instance instance) const noexcept {
+backend::Handle<backend::HwUniformBuffer> FRenderableManager::getBonesUbh(Instance instance) const noexcept {
     std::unique_ptr<Bones> const& bones = mManager[instance].bones;
-    return bones ? bones->handle : driver::Handle<driver::HwUniformBuffer>{};
+    return bones ? bones->handle : backend::Handle<backend::HwUniformBuffer>{};
 }
 
 utils::Slice<FRenderPrimitive> const& FRenderableManager::getRenderPrimitives(

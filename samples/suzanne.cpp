@@ -61,11 +61,11 @@ static Texture* loadNormalMap(Engine* engine, const uint8_t* normals, size_t nby
             .width(uint32_t(w))
             .height(uint32_t(h))
             .levels(0xff)
-            .format(driver::TextureFormat::RGB8)
+            .format(Texture::InternalFormat::RGB8)
             .build(*engine);
     Texture::PixelBufferDescriptor buffer(data, size_t(w * h * 3),
             Texture::Format::RGB, Texture::Type::UBYTE,
-            (driver::BufferDescriptor::Callback) &stbi_image_free);
+            (Texture::PixelBufferDescriptor::Callback) &stbi_image_free);
     normalMap->setImage(*engine, 0, std::move(buffer));
     normalMap->generateMipmaps(*engine);
     return normalMap;

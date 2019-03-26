@@ -38,8 +38,8 @@ void checkFramebufferStatus(utils::io::ostream& out, const char* function, size_
 #define CHECK_GL_FRAMEBUFFER_STATUS(out) { GLUtils::checkFramebufferStatus(out, __PRETTY_FUNCTION__, __LINE__); }
 #endif
 
-constexpr inline GLuint getComponentCount(filament::driver::ElementType type) noexcept {
-    using ElementType = filament::driver::ElementType;
+constexpr inline GLuint getComponentCount(filament::backend::ElementType type) noexcept {
+    using ElementType = filament::backend::ElementType;
     switch (type) {
         case ElementType::BYTE:
         case ElementType::UBYTE:
@@ -78,12 +78,12 @@ constexpr inline GLuint getComponentCount(filament::driver::ElementType type) no
 // Our enums to GLenum conversions
 // ------------------------------------------------------------------------------------------------
 
-constexpr inline GLenum getBufferUsage(filament::driver::BufferUsage usage) noexcept {
+constexpr inline GLenum getBufferUsage(filament::backend::BufferUsage usage) noexcept {
     switch (usage) {
-        case driver::STATIC:
+        case backend::STATIC:
             return GL_STATIC_DRAW;
-        case driver::DYNAMIC:
-        case driver::STREAM:
+        case backend::DYNAMIC:
+        case backend::STREAM:
             return GL_DYNAMIC_DRAW;
     }
 }
@@ -92,8 +92,8 @@ constexpr inline GLboolean getNormalization(bool normalized) noexcept {
     return GLboolean(normalized ? GL_TRUE : GL_FALSE);
 }
 
-constexpr inline GLenum getComponentType(filament::driver::ElementType type) noexcept {
-    using ElementType = filament::driver::ElementType;
+constexpr inline GLenum getComponentType(filament::backend::ElementType type) noexcept {
+    using ElementType = filament::backend::ElementType;
     switch (type) {
         case ElementType::BYTE:
         case ElementType::BYTE2:
@@ -132,12 +132,12 @@ constexpr inline GLenum getComponentType(filament::driver::ElementType type) noe
     }
 }
 
-constexpr inline GLenum getCubemapTarget(filament::driver::TextureCubemapFace face) noexcept {
+constexpr inline GLenum getCubemapTarget(filament::backend::TextureCubemapFace face) noexcept {
     return GL_TEXTURE_CUBE_MAP_POSITIVE_X + GLenum(face);
 }
 
-constexpr inline GLenum getWrapMode(filament::driver::SamplerWrapMode mode) noexcept {
-    using SamplerWrapMode = filament::driver::SamplerWrapMode;
+constexpr inline GLenum getWrapMode(filament::backend::SamplerWrapMode mode) noexcept {
+    using SamplerWrapMode = filament::backend::SamplerWrapMode;
     switch (mode) {
         case SamplerWrapMode::REPEAT:
             return GL_REPEAT;
@@ -148,8 +148,8 @@ constexpr inline GLenum getWrapMode(filament::driver::SamplerWrapMode mode) noex
     }
 }
 
-constexpr inline GLenum getTextureFilter(filament::driver::SamplerMinFilter filter) noexcept {
-    using SamplerMinFilter = filament::driver::SamplerMinFilter;
+constexpr inline GLenum getTextureFilter(filament::backend::SamplerMinFilter filter) noexcept {
+    using SamplerMinFilter = filament::backend::SamplerMinFilter;
     switch (filter) {
         case SamplerMinFilter::NEAREST:
         case SamplerMinFilter::LINEAR:
@@ -163,13 +163,13 @@ constexpr inline GLenum getTextureFilter(filament::driver::SamplerMinFilter filt
     }
 }
 
-constexpr inline GLenum getTextureFilter(filament::driver::SamplerMagFilter filter) noexcept {
+constexpr inline GLenum getTextureFilter(filament::backend::SamplerMagFilter filter) noexcept {
     return GL_NEAREST + GLenum(filter);
 }
 
 
-constexpr inline GLenum getBlendEquationMode(filament::driver::BlendEquation mode) noexcept {
-    using BlendEquation = filament::driver::BlendEquation;
+constexpr inline GLenum getBlendEquationMode(filament::backend::BlendEquation mode) noexcept {
+    using BlendEquation = filament::backend::BlendEquation;
     switch (mode) {
         case BlendEquation::ADD:               return GL_FUNC_ADD;
         case BlendEquation::SUBTRACT:          return GL_FUNC_SUBTRACT;
@@ -179,8 +179,8 @@ constexpr inline GLenum getBlendEquationMode(filament::driver::BlendEquation mod
     }
 }
 
-constexpr inline GLenum getBlendFunctionMode(filament::driver::BlendFunction mode) noexcept {
-    using BlendFunction = filament::driver::BlendFunction;
+constexpr inline GLenum getBlendFunctionMode(filament::backend::BlendFunction mode) noexcept {
+    using BlendFunction = filament::backend::BlendFunction;
     switch (mode) {
         case BlendFunction::ZERO:                  return GL_ZERO;
         case BlendFunction::ONE:                   return GL_ONE;
@@ -196,13 +196,13 @@ constexpr inline GLenum getBlendFunctionMode(filament::driver::BlendFunction mod
     }
 }
 
-constexpr inline GLenum getTextureCompareMode(filament::driver::SamplerCompareMode mode) noexcept {
-    return mode == filament::driver::SamplerCompareMode::NONE ?
+constexpr inline GLenum getTextureCompareMode(filament::backend::SamplerCompareMode mode) noexcept {
+    return mode == filament::backend::SamplerCompareMode::NONE ?
            GL_NONE : GL_COMPARE_REF_TO_TEXTURE;
 }
 
-constexpr inline GLenum getTextureCompareFunc(filament::driver::SamplerCompareFunc func) noexcept {
-    using SamplerCompareFunc = filament::driver::SamplerCompareFunc;
+constexpr inline GLenum getTextureCompareFunc(filament::backend::SamplerCompareFunc func) noexcept {
+    using SamplerCompareFunc = filament::backend::SamplerCompareFunc;
     switch (func) {
         case SamplerCompareFunc::LE:    return GL_LEQUAL;
         case SamplerCompareFunc::GE:    return GL_GEQUAL;
@@ -215,12 +215,12 @@ constexpr inline GLenum getTextureCompareFunc(filament::driver::SamplerCompareFu
     }
 }
 
-constexpr inline GLenum getDepthFunc(driver::SamplerCompareFunc func) noexcept {
+constexpr inline GLenum getDepthFunc(backend::SamplerCompareFunc func) noexcept {
     return getTextureCompareFunc(func);
 }
 
-constexpr inline GLenum getFormat(filament::driver::PixelDataFormat format) noexcept {
-    using PixelDataFormat = filament::driver::PixelDataFormat;
+constexpr inline GLenum getFormat(filament::backend::PixelDataFormat format) noexcept {
+    using PixelDataFormat = filament::backend::PixelDataFormat;
     switch (format) {
         case PixelDataFormat::R:                return GL_RED;
         case PixelDataFormat::R_INTEGER:        return GL_RED_INTEGER;
@@ -237,8 +237,8 @@ constexpr inline GLenum getFormat(filament::driver::PixelDataFormat format) noex
     }
 }
 
-constexpr inline GLenum getType(filament::driver::PixelDataType type) noexcept {
-    using PixelDataType = filament::driver::PixelDataType;
+constexpr inline GLenum getType(filament::backend::PixelDataType type) noexcept {
+    using PixelDataType = filament::backend::PixelDataType;
     switch (type) {
         case PixelDataType::UBYTE:              return GL_UNSIGNED_BYTE;
         case PixelDataType::BYTE:               return GL_BYTE;
@@ -255,8 +255,8 @@ constexpr inline GLenum getType(filament::driver::PixelDataType type) noexcept {
 // clang looses it on this one, and generates a huge jump table when
 // inlined. So we don't  mark it as inline (only constexpr) which solves the problem,
 // strangely, when not inlined, clang simply generates an array lookup.
-constexpr /* inline */ GLenum getInternalFormat(filament::driver::TextureFormat format) noexcept {
-    using TextureFormat = filament::driver::TextureFormat;
+constexpr /* inline */ GLenum getInternalFormat(filament::backend::TextureFormat format) noexcept {
+    using TextureFormat = filament::backend::TextureFormat;
     switch (format) {
         // 8-bits per element
         case TextureFormat::R8:                return GL_R8;

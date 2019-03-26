@@ -34,12 +34,12 @@ class VirtualMachineEnv;
 class ExternalStreamManagerAndroid;
 class ExternalTextureManagerAndroid;
 
-class PlatformEGL final : public driver::OpenGLPlatform {
+class PlatformEGL final : public backend::OpenGLPlatform {
 public:
 
     PlatformEGL() noexcept;
 
-    driver::Driver* createDriver(void* sharedContext) noexcept override;
+    backend::Driver* createDriver(void* sharedContext) noexcept override;
     void terminate() noexcept override;
 
     SwapChain* createSwapChain(void* nativewindow, uint64_t& flags) noexcept final;
@@ -52,7 +52,7 @@ public:
     bool canCreateFence() noexcept final { return true; }
     Fence* createFence() noexcept final;
     void destroyFence(Fence* fence) noexcept final;
-    driver::FenceStatus waitFence(Fence* fence, uint64_t timeout) noexcept final;
+    backend::FenceStatus waitFence(Fence* fence, uint64_t timeout) noexcept final;
 
     Stream* createStream(void* nativeStream) noexcept final;
     void destroyStream(Stream* stream) noexcept final;
@@ -62,7 +62,7 @@ public:
 
     ExternalTexture* createExternalTextureStorage() noexcept final;
     void reallocateExternalStorage(ExternalTexture* ets,
-            uint32_t w, uint32_t h, driver::TextureFormat format) noexcept final;
+            uint32_t w, uint32_t h, backend::TextureFormat format) noexcept final;
     void destroyExternalTextureStorage(ExternalTexture* ets) noexcept final;
 
     int getOSVersion() const noexcept final;

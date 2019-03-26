@@ -61,7 +61,7 @@ public:
 
     void terminate(FEngine& engine);
 
-    void prepare(FEngine& engine, driver::DriverApi& driver, ArenaScope& arena,
+    void prepare(FEngine& engine, backend::DriverApi& driver, ArenaScope& arena,
             Viewport const& viewport, math::float4 const& userTime) noexcept;
 
     void setScene(FScene* scene) { mScene = scene; }
@@ -118,13 +118,13 @@ public:
     }
 
     void prepareCamera(const CameraInfo& camera, const Viewport& viewport) const noexcept;
-    void prepareShadowing(FEngine& engine, driver::DriverApi& driver,
+    void prepareShadowing(FEngine& engine, backend::DriverApi& driver,
             FScene::RenderableSoa& renderableData, FScene::LightSoa const& lightData) noexcept;
     void prepareLighting(
             FEngine& engine, FEngine::DriverApi& driver, ArenaScope& arena, Viewport const& viewport) noexcept;
     void froxelize(FEngine& engine) const noexcept;
-    void commitUniforms(driver::DriverApi& driver) const noexcept;
-    void commitFroxels(driver::DriverApi& driverApi) const noexcept;
+    void commitUniforms(backend::DriverApi& driver) const noexcept;
+    void commitFroxels(backend::DriverApi& driverApi) const noexcept;
 
     bool hasDirectionalLight() const noexcept { return mHasDirectionalLight; }
     bool hasDynamicLighting() const noexcept { return mHasDynamicLighting; }
@@ -266,14 +266,14 @@ private:
             FScene::RenderableSoa::iterator begin, FScene::RenderableSoa::iterator end, uint8_t mask) noexcept;
 
     // these are accessed in the render loop, keep together
-    driver::Handle<driver::HwSamplerGroup> mPerViewSbh;
-    driver::Handle<driver::HwUniformBuffer> mPerViewUbh;
-    driver::Handle<driver::HwUniformBuffer> mLightUbh;
-    driver::Handle<driver::HwUniformBuffer> mRenderableUbh;
+    backend::Handle<backend::HwSamplerGroup> mPerViewSbh;
+    backend::Handle<backend::HwUniformBuffer> mPerViewUbh;
+    backend::Handle<backend::HwUniformBuffer> mLightUbh;
+    backend::Handle<backend::HwUniformBuffer> mRenderableUbh;
 
-    driver::Handle<driver::HwSamplerGroup> getUsh() const noexcept { return mPerViewSbh; }
-    driver::Handle<driver::HwUniformBuffer> getUbh() const noexcept { return mPerViewUbh; }
-    driver::Handle<driver::HwUniformBuffer> getLightUbh() const noexcept { return mLightUbh; }
+    backend::Handle<backend::HwSamplerGroup> getUsh() const noexcept { return mPerViewSbh; }
+    backend::Handle<backend::HwUniformBuffer> getUbh() const noexcept { return mPerViewUbh; }
+    backend::Handle<backend::HwUniformBuffer> getLightUbh() const noexcept { return mLightUbh; }
 
     FScene* mScene = nullptr;
     FCamera* mCullingCamera = nullptr;
@@ -313,7 +313,7 @@ private:
     RenderQuality mRenderQuality;
 
     mutable UniformBuffer mPerViewUb;
-    mutable driver::SamplerGroup mPerViewSb;
+    mutable backend::SamplerGroup mPerViewSb;
 
     utils::CString mName;
 

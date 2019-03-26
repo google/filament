@@ -32,7 +32,7 @@
 
 namespace filament {
 
-using namespace driver;
+using namespace backend;
 
 struct PlatformCocoaTouchGLImpl {
     EAGLContext* mGLContext = nullptr;
@@ -87,7 +87,7 @@ void PlatformCocoaTouchGL::terminate() noexcept {
 
 Platform::SwapChain* PlatformCocoaTouchGL::createSwapChain(void* nativewindow, uint64_t& flags) noexcept {
     // Transparent swap chain is not supported
-    flags &= ~driver::SWAP_CHAIN_CONFIG_TRANSPARENT;
+    flags &= ~backend::SWAP_CHAIN_CONFIG_TRANSPARENT;
     return (SwapChain*) nativewindow;
 }
 

@@ -26,7 +26,7 @@
 
 namespace filament {
 
-using namespace driver;
+using namespace backend;
 
 static const char* LIBRARY_X11 = "libX11.so.6";
 

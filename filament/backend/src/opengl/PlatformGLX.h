@@ -28,10 +28,10 @@
 
 namespace filament {
 
-class PlatformGLX final : public driver::OpenGLPlatform {
+class PlatformGLX final : public backend::OpenGLPlatform {
 public:
 
-    driver::Driver* createDriver(void* const sharedGLContext) noexcept override;
+    backend::Driver* createDriver(void* const sharedGLContext) noexcept override;
 
     void terminate() noexcept override;
 
@@ -42,7 +42,7 @@ public:
 
     Fence* createFence() noexcept override;
     void destroyFence(Fence* fence) noexcept override;
-    driver::FenceStatus waitFence(Fence* fence, uint64_t timeout) noexcept override;
+    backend::FenceStatus waitFence(Fence* fence, uint64_t timeout) noexcept override;
 
     void setPresentationTime(int64_t time) noexcept final override {}
 
@@ -54,7 +54,7 @@ public:
 
     ExternalTexture* createExternalTextureStorage() noexcept final override { return nullptr; }
     void reallocateExternalStorage(ExternalTexture* ets,
-            uint32_t w, uint32_t h, driver::TextureFormat format) noexcept final override { }
+            uint32_t w, uint32_t h, backend::TextureFormat format) noexcept final override { }
     void destroyExternalTextureStorage(ExternalTexture* ets) noexcept final override { }
 
     int getOSVersion() const noexcept final override { return 0; }
