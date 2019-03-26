@@ -22,12 +22,12 @@
 #include "private/backend/CircularBuffer.h"
 
 #include <backend/BufferDescriptor.h>
+#include <backend/Handle.h>
 #include <backend/PipelineState.h>
 #include <backend/PixelBufferDescriptor.h>
 #include <backend/TargetBufferInfo.h>
 
 #include "private/backend/DriverApi.h"
-#include "private/backend/Handle.h"
 #include "private/backend/Program.h"
 #include "private/backend/SamplerGroup.h"
 

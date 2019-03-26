@@ -19,9 +19,9 @@
 
 #include "upcast.h"
 
-#include "private/backend/Handle.h"
-
 #include <backend/DriverEnums.h>
+#include <backend/Handle.h>
+
 #include <filament/VertexBuffer.h>
 
 #include <utils/bitset.h>

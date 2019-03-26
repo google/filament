@@ -10,6 +10,7 @@ set(GENERATION_ROOT ${CMAKE_CURRENT_BINARY_DIR})
 # ==================================================================================================
 set(PUBLIC_HDRS
         include/backend/BufferDescriptor.h
+        include/backend/Handle.h
         include/backend/PipelineState.h
         include/backend/PixelBufferDescriptor.h
         include/backend/Platform.h
@@ -38,7 +39,6 @@ set(PRIVATE_HDRS
         include/private/backend/DriverApi.h
         include/private/backend/DriverAPI.inc
         include/private/backend/DriverApiForward.h
-        include/private/backend/Handle.h
         include/private/backend/Program.h
         include/private/backend/SamplerGroup.h
         src/CommandStreamDispatcher.h

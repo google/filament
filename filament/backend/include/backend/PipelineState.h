@@ -17,9 +17,8 @@
 #ifndef TNT_FILAMENT_DRIVER_PIPELINESTATE_H
 #define TNT_FILAMENT_DRIVER_PIPELINESTATE_H
 
-#include "private/backend/Handle.h"
-
 #include <backend/DriverEnums.h>
+#include <backend/Handle.h>
 
 #include <stdint.h>
 

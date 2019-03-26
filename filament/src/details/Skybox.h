@@ -16,7 +16,7 @@
 
 #include "upcast.h"
 
-#include "private/backend/Handle.h"
+#include <backend/Handle.h>
 
 #include <components/RenderableManager.h>
 

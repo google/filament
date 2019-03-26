@@ -22,7 +22,8 @@
 #include "details/Engine.h"
 
 #include "private/backend/DriverApi.h"
-#include "private/backend/Handle.h"
+
+#include <backend/Handle.h>
 
 #include <utils/compiler.h>
 

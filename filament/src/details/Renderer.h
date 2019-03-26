@@ -27,10 +27,11 @@
 #include "details/SwapChain.h"
 
 #include "private/backend/DriverApiForward.h"
-#include "private/backend/Handle.h"
 
 #include <filament/Renderer.h>
+
 #include <backend/DriverEnums.h>
+#include <backend/Handle.h>
 
 #include <utils/compiler.h>
 #include <utils/Allocator.h>

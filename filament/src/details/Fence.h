@@ -21,7 +21,7 @@
 
 #include <filament/Fence.h>
 
-#include "private/backend/Handle.h"
+#include <backend/Handle.h>
 
 #include <utils/compiler.h>
 #include <utils/Condition.h>
