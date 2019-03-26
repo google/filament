@@ -23,7 +23,7 @@
 
 #include "FrameGraphResource.h"
 
-#include <filament/backend/DriverEnums.h>
+#include <backend/DriverEnums.h>
 
 #include <utils/Panic.h>
 #include <utils/Log.h>

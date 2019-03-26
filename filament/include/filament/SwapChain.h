@@ -18,7 +18,7 @@
 #define TNT_FILAMENT_SWAPCHAIN_H
 
 #include <filament/FilamentAPI.h>
-#include <filament/backend/DriverEnums.h>
+#include <backend/DriverEnums.h>
 
 #include <utils/compiler.h>
 

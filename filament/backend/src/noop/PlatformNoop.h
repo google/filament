@@ -17,7 +17,7 @@
 #ifndef TNT_FILAMENT_DRIVER_NOOP_PLATFORM_NOOP_H
 #define TNT_FILAMENT_DRIVER_NOOP_PLATFORM_NOOP_H
 
-#include <filament/backend/DriverEnums.h>
+#include <backend/DriverEnums.h>
 #include <backend/Platform.h>
 
 namespace filament {

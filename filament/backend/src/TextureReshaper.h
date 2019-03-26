@@ -17,7 +17,7 @@
 #ifndef TNT_TEXTURERESHAPER_H
 #define TNT_TEXTURERESHAPER_H
 
-#include <filament/backend/DriverEnums.h>
+#include <backend/DriverEnums.h>
 
 namespace filament {
 namespace driver {

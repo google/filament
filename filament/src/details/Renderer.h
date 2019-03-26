@@ -30,7 +30,7 @@
 #include "private/backend/Handle.h"
 
 #include <filament/Renderer.h>
-#include <filament/backend/DriverEnums.h>
+#include <backend/DriverEnums.h>
 
 #include <utils/compiler.h>
 #include <utils/Allocator.h>

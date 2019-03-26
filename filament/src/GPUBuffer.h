@@ -17,7 +17,7 @@
 #ifndef TNT_FILAMENT_DETAILS_GPUBUFFER_H
 #define TNT_FILAMENT_DETAILS_GPUBUFFER_H
 
-#include <filament/backend/DriverEnums.h>
+#include <backend/DriverEnums.h>
 
 #include "private/backend/DriverApiForward.h"
 #include "private/backend/Handle.h"

@@ -20,7 +20,7 @@
 #include "VulkanBinder.h"
 #include "VulkanDisposer.h"
 
-#include <filament/backend/DriverEnums.h>
+#include <backend/DriverEnums.h>
 
 #include <bluevk/BlueVK.h>
 

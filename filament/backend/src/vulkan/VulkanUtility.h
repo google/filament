@@ -17,7 +17,7 @@
 #ifndef TNT_FILAMENT_DRIVER_VULKANUTILITY_H
 #define TNT_FILAMENT_DRIVER_VULKANUTILITY_H
 
-#include <filament/backend/DriverEnums.h>
+#include <backend/DriverEnums.h>
 
 #include <bluevk/BlueVK.h>
 

@@ -17,7 +17,7 @@
 #ifndef TNT_FILAMAT_MATERIALINFO_H
 #define TNT_FILAMAT_MATERIALINFO_H
 
-#include <filament/backend/DriverEnums.h>
+#include <backend/DriverEnums.h>
 #include <filament/MaterialEnums.h>
 #include <private/filament/UniformInterfaceBlock.h>
 #include <private/filament/SamplerBindingMap.h>

@@ -14,6 +14,10 @@ add_library(filabridge STATIC IMPORTED)
 set_target_properties(filabridge PROPERTIES IMPORTED_LOCATION
         ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libfilabridge.a)
 
+add_library(backend STATIC IMPORTED)
+set_target_properties(backend PROPERTIES IMPORTED_LOCATION
+        ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libbackend.a)
+
 add_library(smol-v STATIC IMPORTED)
 set_target_properties(smol-v PROPERTIES IMPORTED_LOCATION
         ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libsmol-v.a)
@@ -42,6 +46,7 @@ add_library(filamat-jni SHARED
 target_link_libraries(filamat-jni
         filamat
         filabridge
+        backend
         shaders
         utils
         log

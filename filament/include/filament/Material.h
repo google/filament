@@ -24,7 +24,7 @@
 #include <filament/Texture.h>
 #include <filament/TextureSampler.h>
 
-#include <filament/backend/DriverEnums.h>
+#include <backend/DriverEnums.h>
 
 #include <utils/compiler.h>
 #include <utils/CString.h>

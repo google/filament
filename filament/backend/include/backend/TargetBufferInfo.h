@@ -19,7 +19,7 @@
 
 #include "private/backend/Handle.h"
 
-#include <filament/backend/DriverEnums.h>
+#include <backend/DriverEnums.h>
 
 #include <stdint.h>
 

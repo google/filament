@@ -24,7 +24,7 @@
 
 #include <private/filament/SibGenerator.h>
 
-#include <filament/backend/DriverEnums.h>
+#include <backend/DriverEnums.h>
 
 #include <limits>
 
