@@ -296,7 +296,17 @@ std::ostream& CodeGenerator::generateSamplers(
         char const* const precision = getPrecisionQualifier(info.precision, Precision::DEFAULT);
         if (mTargetLanguage == TargetLanguage::SPIRV) {
             const uint32_t bindingIndex = (uint32_t) firstBinding + info.offset;
-            out << "layout(binding = " << bindingIndex << ") ";
+            out << "layout(binding = " << bindingIndex;
+
+            // For Vulkan, we place uniforms in set 0 (the default set) and samplers in set 1. This
+            // allows the sampler bindings to live in a separate "namespace" that starts at zero.
+            // Note that the set specifier is not covered by the desktop GLSL spec, including
+            // recent versions. It is only documented in the GL_KHR_vulkan_glsl extension.
+            if (mTargetApi == TargetApi::VULKAN) {
+                out << ", set = 1";
+            }
+
+            out << ") ";
         }
         out << "uniform " << precision << " " << typeName << " " << uniformName.c_str();
         out << ";\n";

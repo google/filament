@@ -1067,12 +1067,12 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
         }
     }
 
-    // Bind a new descriptor set if it needs to change.
-    VkDescriptorSet descriptor;
+    // Bind new descriptor sets if they need to change.
+    VkDescriptorSet descriptors[2];
     VkPipelineLayout pipelineLayout;
-    if (mBinder.getOrCreateDescriptor(&descriptor, &pipelineLayout)) {
-        vkCmdBindDescriptorSets(cmdbuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1,
-                &descriptor, 0, nullptr);
+    if (mBinder.getOrCreateDescriptors(descriptors, &pipelineLayout)) {
+        vkCmdBindDescriptorSets(cmdbuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 2,
+                descriptors, 0, nullptr);
     }
 
     // Bind the pipeline if it changed. This can happen, for example, if the raster state changed.
