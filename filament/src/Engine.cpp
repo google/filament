@@ -87,8 +87,9 @@ FEngine* FEngine::create(Backend backend, Platform* platform, void* sharedGLCont
         // we don't own the external context at that point, set it to null
         instance->mPlatform = nullptr;
         if (platform == nullptr) {
-            platform = Platform::create(&instance->mBackend);
+            platform = DefaultPlatform::create(&instance->mBackend);
             instance->mPlatform = platform;
+            instance->mOwnPlatform = true;
         }
         instance->mDriver = platform->createDriver(sharedGLContext);
         instance->init();
@@ -228,7 +229,9 @@ void FEngine::init() {
 FEngine::~FEngine() noexcept {
     ASSERT_DESTRUCTOR(mTerminated, "Engine destroyed but not terminated!");
     delete mDriver;
-    Platform::destroy(&mPlatform);
+    if (mOwnPlatform) {
+        DefaultPlatform::destroy((DefaultPlatform**)&mPlatform);
+    }
 }
 
 void FEngine::shutdown() {
@@ -361,10 +364,15 @@ int FEngine::loop() {
     mPlatform = nullptr;
 
     if (platform == nullptr) {
-        platform = Platform::create(&mBackend);
+        platform = DefaultPlatform::create(&mBackend);
         mPlatform = platform;
+        mOwnPlatform = true;
         slog.d << "FEngine resolved backend: ";
         switch (mBackend) {
+            case driver::Backend::NOOP:
+                slog.d << "Noop";
+                break;
+
             case driver::Backend::OPENGL:
                 slog.d << "OpenGL";
                 break;

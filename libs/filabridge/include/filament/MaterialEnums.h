@@ -110,6 +110,7 @@ enum VertexAttribute : uint8_t {
     UV1             = 4, //!< texture coordinates (float2)
     BONE_INDICES    = 5, //!< indices of 4 bones, as unsigned integers (uvec4)
     BONE_WEIGHTS    = 6, //!< weights of the 4 bones (normalized float4)
+    // this is limited by driver::MAX_VERTEX_ATTRIBUTE_COUNT
 };
 
 // can't really use std::underlying_type<AttributeIndex>::type because the driver takes a uint32_t

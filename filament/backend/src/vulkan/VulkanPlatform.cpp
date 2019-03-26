@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 The Android Open Source Project
+ * Copyright (C) 2019 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,24 +14,12 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_DRIVER_VULKAN_PLATFORM_VK_COCOA_H
-#define TNT_FILAMENT_DRIVER_VULKAN_PLATFORM_VK_COCOA_H
-
-#include <stdint.h>
-
-#include <filament/backend/DriverEnums.h>
 #include "VulkanPlatform.h"
 
 namespace filament {
+namespace driver {
 
-class PlatformVkCocoa final : public driver::VulkanPlatform {
-public:
-    driver::Driver* createDriver(void* sharedContext) noexcept override;
-    void* createVkSurfaceKHR(void* nativeWindow, void* instance,
-            uint32_t* width, uint32_t* height) noexcept override;
-    int getOSVersion() const noexcept override { return 0; }
-};
+VulkanPlatform::~VulkanPlatform() = default;
 
+} // namespace driver
 } // namespace filament
-
-#endif // TNT_FILAMENT_DRIVER_VULKAN_PLATFORM_VK_COCOA_H

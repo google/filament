@@ -20,7 +20,8 @@
 #include <stdint.h>
 
 #include <filament/backend/DriverEnums.h>
-#include <backend/Platform.h>
+
+#include "OpenGLPlatform.h"
 
 #include <EGL/egl.h>
 #include <EGL/eglext.h>

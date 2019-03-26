@@ -18,7 +18,6 @@
 
 #include <filament/backend/DriverEnums.h>
 
-#include <private/filament/EngineEnums.h>
 #include <private/filament/SamplerInterfaceBlock.h>
 
 namespace filament {

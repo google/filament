@@ -281,7 +281,7 @@ bool ParametersProcessor::processParameter(filamat::MaterialBuilder& builder,
         }
 
         auto formatString = formatValue->toJsonString();
-        if (Enums::isValid<SamplerFormat>(formatString->getString())){
+        if (!Enums::isValid<SamplerFormat>(formatString->getString())){
             return logEnumIssue(PARAM_KEY_PARAMETERS, *formatString, Enums::map<SamplerFormat>());
         }
     }

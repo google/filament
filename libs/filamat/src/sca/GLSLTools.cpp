@@ -18,7 +18,6 @@
 
 #include <cstring>
 
-#include <private/filament/EngineEnums.h>
 #include <filament/MaterialEnums.h>
 #include <private/filament/UniformInterfaceBlock.h>
 #include <private/filament/SamplerInterfaceBlock.h>

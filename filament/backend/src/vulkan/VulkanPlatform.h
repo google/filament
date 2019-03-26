@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 The Android Open Source Project
+ * Copyright (C) 2019 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,26 +14,29 @@
  * limitations under the License.
  */
 
-#ifndef TNT_FILAMENT_DRIVER_NOOP_PLATFORM_NOOP_H
-#define TNT_FILAMENT_DRIVER_NOOP_PLATFORM_NOOP_H
+#ifndef TNT_FILAMENT_DRIVER_VULKANPLATFORM_H
+#define TNT_FILAMENT_DRIVER_VULKANPLATFORM_H
 
-#include <filament/backend/DriverEnums.h>
 #include <backend/Platform.h>
 
 namespace filament {
 
-class PlatformNoop final : public driver::DefaultPlatform {
+namespace driver {
+class Driver;
+} // namespace driver
+
+namespace driver {
+
+class VulkanPlatform : public DefaultPlatform {
 public:
+    // Given a Vulkan instance and native window handle, creates the platform-specific surface.
+    virtual void* createVkSurfaceKHR(void* nativeWindow, void* instance,
+            uint32_t* width, uint32_t* height) noexcept = 0;
 
-    int getOSVersion() const noexcept final { return 0; }
-
-    ~PlatformNoop() noexcept override = default;
-
-protected:
-
-    driver::Driver* createDriver(void* sharedContext) noexcept override;
+   ~VulkanPlatform() override;
 };
 
+} // namespace driver
 } // namespace filament
 
-#endif // TNT_FILAMENT_DRIVER_NOOP_PLATFORM_NOOP_H
+#endif //TNT_FILAMENT_DRIVER_VULKANPLATFORM_H

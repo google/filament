@@ -19,10 +19,18 @@
 
 namespace filament {
 
+namespace driver {
+MetalPlatform::~MetalPlatform() = default;
+} // namespace driver
+
+
 using namespace driver;
 
 Driver* PlatformMetal::createDriver(void* sharedContext) noexcept {
     return metal::MetalDriver::create(this);
 }
+
+PlatformMetal::~PlatformMetal() = default;
+
 
 } // namespace filament

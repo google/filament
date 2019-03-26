@@ -17,8 +17,6 @@
 #ifndef TNT_FILAMENT_DRIVER_PROGRAM_H
 #define TNT_FILAMENT_DRIVER_PROGRAM_H
 
-#include <private/filament/EngineEnums.h>
-
 #include <utils/compiler.h>
 #include <utils/CString.h>
 #include <utils/Log.h>
@@ -32,17 +30,13 @@ namespace driver {
 class Program {
 public:
 
-    static constexpr size_t NUM_SHADER_TYPES = 2;
-    static constexpr size_t NUM_UNIFORM_BINDINGS = BindingPoints::COUNT;
-    static constexpr size_t NUM_SAMPLER_BINDINGS = BindingPoints::COUNT;
+    static constexpr size_t SHADER_TYPE_COUNT = 2;
+    static constexpr size_t UNIFORM_BINDING_COUNT = 6; //BindingPoints::COUNT;
+    static constexpr size_t SAMPLER_BINDING_COUNT = 6; //BindingPoints::COUNT;
 
     enum class Shader : uint8_t {
         VERTEX = 0,
         FRAGMENT = 1
-    };
-
-    struct UniformBlock {
-        utils::CString name = {};   // name of the uniform block in the shader
     };
 
     struct Sampler {
@@ -50,8 +44,8 @@ public:
         size_t binding = 0;         // binding point of the sampler in the shader
     };
 
-    using SamplerGroupInfo = std::array<std::vector<Sampler>, NUM_SAMPLER_BINDINGS>;
-    using UniformBlockInfo = std::array<utils::CString, NUM_UNIFORM_BINDINGS>;
+    using SamplerGroupInfo = std::array<std::vector<Sampler>, SAMPLER_BINDING_COUNT>;
+    using UniformBlockInfo = std::array<utils::CString, UNIFORM_BINDING_COUNT>;
 
     Program() noexcept;
     Program(const Program& rhs) = delete;
@@ -89,7 +83,7 @@ public:
         return shader(Shader::FRAGMENT, data, size);
     }
 
-    std::array<std::vector<uint8_t>, NUM_SHADER_TYPES> const& getShadersSource() const noexcept {
+    std::array<std::vector<uint8_t>, SHADER_TYPE_COUNT> const& getShadersSource() const noexcept {
         return mShadersSource;
     }
 
@@ -111,7 +105,7 @@ private:
     // FIXME: none of these fields should be public as this is a public API
     UniformBlockInfo mUniformBlocks = {};
     SamplerGroupInfo mSamplerGroups = {};
-    std::array<std::vector<uint8_t>, NUM_SHADER_TYPES> mShadersSource;
+    std::array<std::vector<uint8_t>, SHADER_TYPE_COUNT> mShadersSource;
     utils::CString mName;
     bool mHasSamplers = false;
     uint8_t mVariant;

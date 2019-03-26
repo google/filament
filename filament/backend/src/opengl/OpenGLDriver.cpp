@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "opengl/OpenGLDriver.h"
+#include "OpenGLDriver.h"
 
 #include <set>
 
@@ -25,10 +25,10 @@
 
 #include "private/backend/DriverApi.h"
 #include "CommandStreamDispatcher.h"
-#include "opengl/OpenGLProgram.h"
-#include "opengl/OpenGLBlitter.h"
+#include "OpenGLBlitter.h"
+#include "OpenGLPlatform.h"
+#include "OpenGLProgram.h"
 
-#include <backend/Platform.h>
 
 // change to true to display all GL extensions in the console on start-up
 #define DEBUG_PRINT_EXTENSIONS false
@@ -385,7 +385,7 @@ void OpenGLDriver::unbindTexture(GLenum target, GLuint texture_id) noexcept {
     // no need unbind the texture from FBOs because we're not tracking that state (and there is
     // no need to).
     const size_t index = getIndexForTextureTarget(target);
-    for (GLuint unit = 0; unit < MAX_TEXTURE_UNITS; unit++) {
+    for (GLuint unit = 0; unit < MAX_TEXTURE_UNIT_COUNT; unit++) {
         if (state.textures.units[unit].targets[index].texture_id == texture_id) {
             bindTexture(unit, target, (GLuint)0, index);
         }
@@ -395,7 +395,7 @@ void OpenGLDriver::unbindTexture(GLenum target, GLuint texture_id) noexcept {
 void OpenGLDriver::unbindSampler(GLuint sampler) noexcept {
     // unbind this sampler from all the units it might be bound to
     #pragma nounroll    // clang generates >800B of code!!!
-    for (GLuint unit = 0; unit < MAX_TEXTURE_UNITS; unit++) {
+    for (GLuint unit = 0; unit < MAX_TEXTURE_UNIT_COUNT; unit++) {
         if (state.textures.units[unit].sampler == sampler) {
             bindSampler(unit, 0);
         }
@@ -945,8 +945,8 @@ UTILS_NOINLINE
 void OpenGLDriver::textureStorage(OpenGLDriver::GLTexture* t,
         uint32_t width, uint32_t height, uint32_t depth) noexcept {
 
-    bindTexture(MAX_TEXTURE_UNITS - 1, t->gl.target, t, t->gl.targetIndex);
-    activeTexture(MAX_TEXTURE_UNITS - 1);
+    bindTexture(MAX_TEXTURE_UNIT_COUNT - 1, t->gl.target, t, t->gl.targetIndex);
+    activeTexture(MAX_TEXTURE_UNIT_COUNT - 1);
 
     switch (t->gl.target) {
         case GL_TEXTURE_2D:
@@ -1859,8 +1859,8 @@ void OpenGLDriver::generateMipmaps(Handle<HwTexture> th) {
     assert(t->gl.target != GL_TEXTURE_2D_MULTISAMPLE);
     // Note: glGenerateMimap can also fail if the internal format is not both
     // color-renderable and filterable (i.e.: doesn't work for depth)
-    bindTexture(MAX_TEXTURE_UNITS - 1, t->gl.target, t, t->gl.targetIndex);
-    activeTexture(MAX_TEXTURE_UNITS - 1);
+    bindTexture(MAX_TEXTURE_UNIT_COUNT - 1, t->gl.target, t, t->gl.targetIndex);
+    activeTexture(MAX_TEXTURE_UNIT_COUNT - 1);
 
     t->gl.baseLevel = 0;
     t->gl.maxLevel = static_cast<uint8_t>(t->levels - 1);
@@ -1909,8 +1909,8 @@ void OpenGLDriver::setTextureData(GLTexture* t,
             // fallthrough...
         case SamplerType::SAMPLER_2D:
             // NOTE: GL_TEXTURE_2D_MULTISAMPLE is not allowed
-            bindTexture(MAX_TEXTURE_UNITS - 1, t->gl.target, t);
-            activeTexture(MAX_TEXTURE_UNITS - 1);
+            bindTexture(MAX_TEXTURE_UNIT_COUNT - 1, t->gl.target, t);
+            activeTexture(MAX_TEXTURE_UNIT_COUNT - 1);
             switch (t->gl.target) {
                 case GL_TEXTURE_2D:
                     glTexSubImage2D(t->gl.target, GLint(level),
@@ -1929,8 +1929,8 @@ void OpenGLDriver::setTextureData(GLTexture* t,
             break;
         case SamplerType::SAMPLER_CUBEMAP: {
             assert(t->gl.target == GL_TEXTURE_CUBE_MAP);
-            bindTexture(MAX_TEXTURE_UNITS - 1, GL_TEXTURE_CUBE_MAP, t);
-            activeTexture(MAX_TEXTURE_UNITS - 1);
+            bindTexture(MAX_TEXTURE_UNIT_COUNT - 1, GL_TEXTURE_CUBE_MAP, t);
+            activeTexture(MAX_TEXTURE_UNIT_COUNT - 1);
             FaceOffsets const& offsets = *faceOffsets;
 #pragma nounroll
             for (size_t face = 0; face < 6; face++) {
@@ -1990,8 +1990,8 @@ void OpenGLDriver::setCompressedTextureData(GLTexture* t,
             // fallthrough...
         case SamplerType::SAMPLER_2D:
             // NOTE: GL_TEXTURE_2D_MULTISAMPLE is not allowed
-            bindTexture(MAX_TEXTURE_UNITS - 1, t->gl.target, t);
-            activeTexture(MAX_TEXTURE_UNITS - 1);
+            bindTexture(MAX_TEXTURE_UNIT_COUNT - 1, t->gl.target, t);
+            activeTexture(MAX_TEXTURE_UNIT_COUNT - 1);
             switch (t->gl.target) {
                 case GL_TEXTURE_2D:
                     glCompressedTexSubImage2D(t->gl.target, GLint(level),
@@ -2011,8 +2011,8 @@ void OpenGLDriver::setCompressedTextureData(GLTexture* t,
         case SamplerType::SAMPLER_CUBEMAP: {
             assert(faceOffsets);
             assert(t->gl.target == GL_TEXTURE_CUBE_MAP);
-            bindTexture(MAX_TEXTURE_UNITS - 1, GL_TEXTURE_CUBE_MAP, t);
-            activeTexture(MAX_TEXTURE_UNITS - 1);
+            bindTexture(MAX_TEXTURE_UNIT_COUNT - 1, GL_TEXTURE_CUBE_MAP, t);
+            activeTexture(MAX_TEXTURE_UNIT_COUNT - 1);
             FaceOffsets const& offsets = *faceOffsets;
 #pragma nounroll
             for (size_t face = 0; face < 6; face++) {
@@ -2051,8 +2051,8 @@ void OpenGLDriver::setExternalImage(Handle<HwTexture> th, void* image) {
         assert(t->target == SamplerType::SAMPLER_EXTERNAL);
         assert(t->gl.target == GL_TEXTURE_EXTERNAL_OES);
 
-        bindTexture(MAX_TEXTURE_UNITS - 1, GL_TEXTURE_EXTERNAL_OES, t);
-        activeTexture(MAX_TEXTURE_UNITS - 1);
+        bindTexture(MAX_TEXTURE_UNIT_COUNT - 1, GL_TEXTURE_EXTERNAL_OES, t);
+        activeTexture(MAX_TEXTURE_UNIT_COUNT - 1);
 
 #ifdef GL_OES_EGL_image
         glEGLImageTargetTexture2DOES(GL_TEXTURE_EXTERNAL_OES, static_cast<GLeglImageOES>(image));
@@ -2617,7 +2617,7 @@ void OpenGLDriver::bindSamplers(size_t index, Handle<HwSamplerGroup> sbh) {
     DEBUG_MARKER()
 
     GLSamplerGroup* sb = handle_cast<GLSamplerGroup *>(sbh);
-    assert(index < Program::NUM_SAMPLER_BINDINGS);
+    assert(index < Program::SAMPLER_BINDING_COUNT);
     mSamplerBindings[index] = sb;
     CHECK_GL_ERROR(utils::slog.e)
 }
@@ -2903,8 +2903,8 @@ void OpenGLDriver::blit(TargetBufferFlags buffers,
             int8_t targetLevel = d->gl.colorLevel;
             if (targetLevel < baseLevel || targetLevel > maxLevel) {
                 GLenum target = dtexture->gl.target;
-                bindTexture(MAX_TEXTURE_UNITS - 1, target, dtexture, dtexture->gl.targetIndex);
-                activeTexture(MAX_TEXTURE_UNITS - 1);
+                bindTexture(MAX_TEXTURE_UNIT_COUNT - 1, target, dtexture, dtexture->gl.targetIndex);
+                activeTexture(MAX_TEXTURE_UNIT_COUNT - 1);
                 if (targetLevel < baseLevel) {
                     dtexture->gl.baseLevel = targetLevel;
                     glTexParameteri(target, GL_TEXTURE_BASE_LEVEL, targetLevel);

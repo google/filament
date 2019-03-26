@@ -80,7 +80,7 @@
 #define GL_TEXTURE_EXTERNAL_OES           0x8D65
 #endif
 
-#include "opengl/NullGLES.h"
+#include "NullGLES.h"
 
 #if (!defined(GL_ES_VERSION_3_1) && !defined(GL_VERSION_4_1))
 #error "Minimum header version must be OpenGL ES 3.1 or OpenGL 4.1"

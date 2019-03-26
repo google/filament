@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "opengl/OpenGLBlitter.h"
+#include "OpenGLBlitter.h"
 
 #include <assert.h>
 
@@ -23,8 +23,8 @@
 #include <utils/compiler.h>
 #include <utils/Log.h>
 
-#include "opengl/OpenGLDriver.h"
-#include "opengl/GLUtils.h"
+#include "OpenGLDriver.h"
+#include "GLUtils.h"
 
 using namespace filament::math;
 using namespace utils;
