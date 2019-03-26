@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+//! \file
+
 #ifndef TNT_FILAMENT_DRIVER_PIXEL_BUFFERDESCRIPTOR_H
 #define TNT_FILAMENT_DRIVER_PIXEL_BUFFERDESCRIPTOR_H
 

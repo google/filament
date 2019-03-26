@@ -154,3 +154,15 @@ FEngine (64 bits) created at 0x106471000 (threading is enabled)
 On Windows, you'll need to open up a Visual Studio Native Tools Command Prompt
 and invoke `nmake` instead of `make`.
 
+
+### Generating C++ documentation
+
+To generate the documentation you must first install `doxygen` and `graphviz`, then run the 
+following commands:
+
+```
+$ cd filament/filament
+$ doxygen docs/doxygen/filament.doxygen
+```
+
+Finally simply open `docs/html/index.html` in your web browser.
