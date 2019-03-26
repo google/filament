@@ -112,7 +112,7 @@ WARN_LOGFILE           =
 #---------------------------------------------------------------------------
 # Configuration options related to the input files
 #---------------------------------------------------------------------------
-INPUT                  = include ../libs/filabridge/include/filament
+INPUT                  = include backend/include ../libs/filabridge/include/filament
 INPUT_ENCODING         = UTF-8
 FILE_PATTERNS          = *.inl \
                          *.h \
