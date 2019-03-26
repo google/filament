@@ -18,16 +18,14 @@
 #define TNT_FILAMENT_DETAILS_GPUBUFFER_H
 
 #include <backend/DriverEnums.h>
+#include <backend/Handle.h>
 
 #include "private/backend/DriverApiForward.h"
-#include "private/backend/Handle.h"
 #include "private/backend/SamplerGroup.h"
 
 #include <utils/Slice.h>
 
 namespace filament {
-
-struct HwTexture;
 
 class GPUBuffer {
 public:
@@ -92,12 +90,12 @@ private:
 
     backend::Handle<backend::HwTexture> mTexture;
     uint32_t mSize = 0;
-    uint16_t mWidth;
-    uint16_t mHeight;
-    uint16_t mRowSizeInBytes;
-    Element mElement;
-    backend::PixelDataFormat mFormat;
-    backend::PixelDataType mType;
+    uint16_t mWidth = 0;
+    uint16_t mHeight = 0;
+    uint16_t mRowSizeInBytes = 0;
+    Element mElement{};
+    backend::PixelDataFormat mFormat{};
+    backend::PixelDataType mType{};
 };
 
 } // namespace filament

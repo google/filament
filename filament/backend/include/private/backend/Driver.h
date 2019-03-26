@@ -17,12 +17,12 @@
 #ifndef TNT_FILAMENT_DRIVER_DRIVER_H
 #define TNT_FILAMENT_DRIVER_DRIVER_H
 
+#include <backend/BufferDescriptor.h>
+#include <backend/Handle.h>
 #include <backend/PipelineState.h>
 #include <backend/PixelBufferDescriptor.h>
-#include <backend/BufferDescriptor.h>
 #include <backend/TargetBufferInfo.h>
 
-#include "private/backend/Handle.h"
 #include "private/backend/DriverApiForward.h"
 #include "private/backend/Program.h"
 #include "private/backend/SamplerGroup.h"

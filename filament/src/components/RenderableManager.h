@@ -22,7 +22,8 @@
 #include "UniformBuffer.h"
 
 #include "private/backend/DriverApiForward.h"
-#include "private/backend/Handle.h"
+
+#include <backend/Handle.h>
 
 #include <filament/Box.h>
 #include <filament/RenderableManager.h>

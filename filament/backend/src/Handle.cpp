@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "private/backend/Handle.h"
+#include <backend/Handle.h>
 
 #ifndef NDEBUG
 #   include <string>

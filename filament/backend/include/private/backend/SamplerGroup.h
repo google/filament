@@ -25,8 +25,7 @@
 #include <utils/bitset.h>
 
 #include <backend/DriverEnums.h>
-
-#include "private/backend/Handle.h"
+#include <backend/Handle.h>
 
 namespace filament {
 namespace backend {
