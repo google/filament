@@ -28,7 +28,7 @@ namespace filament {
 }
 
 namespace utils {
-  class Path;
+    class Path;
 }
 
 namespace filamesh {
