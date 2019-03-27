@@ -311,6 +311,7 @@
 				LIBRARY_SEARCH_PATHS = "../../../out/ios-debug/filament/lib/$(CURRENT_ARCH)";
 				OTHER_LDFLAGS = (
 					"-lfilament",
+					"-lbackend",
 					"-lfilaflat",
 					"-lfilabridge",
 					"-lutils",
@@ -350,6 +351,7 @@
 				LIBRARY_SEARCH_PATHS = "../../../out/ios-release/filament/lib/$(CURRENT_ARCH)";
 				OTHER_LDFLAGS = (
 					"-lfilament",
+					"-lbackend",
 					"-lfilaflat",
 					"-lfilabridge",
 					"-lutils",
@@ -389,6 +391,7 @@
 				LIBRARY_SEARCH_PATHS = "../../../out/ios-debug/filament/lib/$(CURRENT_ARCH)";
 				OTHER_LDFLAGS = (
 					"-lfilament",
+					"-lbackend",
 					"-lfilaflat",
 					"-lfilabridge",
 					"-lutils",
@@ -428,6 +431,7 @@
 				LIBRARY_SEARCH_PATHS = "../../../out/ios-release/filament/lib/$(CURRENT_ARCH)";
 				OTHER_LDFLAGS = (
 					"-lfilament",
+					"-lbackend",
 					"-lfilaflat",
 					"-lfilabridge",
 					"-lutils",
