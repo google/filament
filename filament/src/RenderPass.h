@@ -250,7 +250,7 @@ private:
             FMaterialInstance const* mi) noexcept;
 
     static void recordDriverCommands(FEngine::DriverApi& driver, FScene& scene,
-            utils::Slice<Command> const& commands) noexcept;
+            const Command* first, const Command* last) noexcept;
 
     static void updateSummedPrimitiveCounts(
             FScene::RenderableSoa& renderableData, utils::Range<uint32_t> vr) noexcept;

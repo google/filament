@@ -97,12 +97,18 @@ void RenderPass::render(
         std::sort(commands.begin(), commands.end());
     }
 
+    // find the last command
+    Command const* const last = std::partition_point(commands.begin(), commands.end(),
+            [](Command const& c) {
+                return ((c.key & PASS_MASK) >> PASS_SHIFT) != 0xFF;
+            });
+
     // Take care not to upload data within the render pass (synchronize can commit froxel data)
     DriverApi& driver = engine.getDriverApi();
     beginRenderPass(driver, viewport, camera);
 
     // Now, execute all commands
-    RenderPass::recordDriverCommands(driver, scene, commands);
+    RenderPass::recordDriverCommands(driver, scene, commands.begin(), last);
 
     endRenderPass(driver, viewport);
 
@@ -113,25 +119,24 @@ void RenderPass::render(
 }
 
 UTILS_NOINLINE // no need to be inlined
-void RenderPass::recordDriverCommands(
-        FEngine::DriverApi& UTILS_RESTRICT driver,  // using restrict here is very important
-        FScene& UTILS_RESTRICT scene,
-        Slice<Command> const& commands) noexcept {
+void RenderPass::recordDriverCommands(FEngine::DriverApi& driver, FScene& scene,
+        const Command* UTILS_RESTRICT first, const Command* last) noexcept {
     SYSTRACE_CALL();
 
-    if (!commands.empty()) {
+    if (first != last) {
+        SYSTRACE_VALUE32("commandCount", last - first);
+
         PipelineState pipeline;
         Handle<HwUniformBuffer> uboHandle = scene.getRenderableUBO();
         FMaterialInstance const* UTILS_RESTRICT mi = nullptr;
         FMaterial const* UTILS_RESTRICT ma = nullptr;
-        Command const* UTILS_RESTRICT c;
-        for (c = commands.cbegin(); c->key != -1LLU; ++c) {
+        while (first != last) {
             /*
              * Be careful when changing code below, this is the hot inner-loop
              */
 
             // per-renderable uniform
-            const PrimitiveInfo info = c->primitive;
+            const PrimitiveInfo info = first->primitive;
             pipeline.rasterState = info.rasterState;
             if (UTILS_UNLIKELY(mi != info.mi)) {
                 // this is always taken the first time
@@ -148,9 +153,8 @@ void RenderPass::recordDriverCommands(
             }
             driver.bindUniformBufferRange(BindingPoints::PER_RENDERABLE, uboHandle, offset, sizeof(PerRenderableUib));
             driver.draw(pipeline, info.primitiveHandle);
+            ++first;
         }
-
-        SYSTRACE_VALUE32("commandCount", c - commands.cbegin());
     }
 }
 
