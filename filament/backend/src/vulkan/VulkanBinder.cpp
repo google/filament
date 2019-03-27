@@ -37,10 +37,10 @@ static constexpr VkAllocationCallbacks* VKALLOC = nullptr;
 // TODO: Make VulkanBinder robust against a large number of descriptors.
 // There are several approaches we could take to deal with too many descriptors:
 // - Create another pool after hitting the limit of the first pool.
-// - Allow multiple descriptors to bind simultaneously; organize binding points into groups.
+// - Allow up to 3 uniform descriptors to bind simultaneously instead of just 1.
 static constexpr uint32_t MAX_NUM_DESCRIPTORS = 1000;
 
-static VulkanBinder::RasterState createDefaultRasterState();
+static const VulkanBinder::RasterState createDefaultRasterState();
 
 VulkanBinder::VulkanBinder() : mDefaultRasterState(createDefaultRasterState()) {
     mColorBlendState = VkPipelineColorBlendStateCreateInfo{};
@@ -64,8 +64,8 @@ VulkanBinder::~VulkanBinder() {
     destroyCache();
 }
 
-bool VulkanBinder::getOrCreateDescriptor(VkDescriptorSet* descriptor,
-        VkPipelineLayout* pipelineLayout, DescriptorUpdateOp** changes) noexcept {
+bool VulkanBinder::getOrCreateDescriptors(VkDescriptorSet descriptors[2],
+        VkPipelineLayout* pipelineLayout) noexcept {
     // If this method has never been called before, we need to create a new layout object.
     if (!mPipelineLayout) {
         createLayoutsAndDescriptors();
@@ -75,7 +75,8 @@ bool VulkanBinder::getOrCreateDescriptor(VkDescriptorSet* descriptor,
     // to indicate there's no need to re-bind.
     if (!mDirtyDescriptor) {
         assert(mCurrentDescriptor && mCurrentDescriptor->bound);
-        *descriptor = mCurrentDescriptor->handle;
+        descriptors[0] = mCurrentDescriptor->handles[0];
+        descriptors[1] = mCurrentDescriptor->handles[1];
         mCurrentDescriptor->timestamp = mCurrentTime;
         return false;
     }
@@ -92,14 +93,12 @@ bool VulkanBinder::getOrCreateDescriptor(VkDescriptorSet* descriptor,
     auto iter = mDescriptorSets.find(mDescriptorKey);
     if (UTILS_LIKELY(iter != mDescriptorSets.end())) {
         mCurrentDescriptor = &iter.value();
-        *descriptor = mCurrentDescriptor->handle;
+        descriptors[0] = mCurrentDescriptor->handles[0];
+        descriptors[1] = mCurrentDescriptor->handles[1];
         mCurrentDescriptor->timestamp = mCurrentTime;
         mCurrentDescriptor->bound = true;
         mDirtyDescriptor = false;
         *pipelineLayout = mPipelineLayout;
-        if (changes) {
-            *changes = nullptr;
-        }
         return true;
     }
 
@@ -110,9 +109,9 @@ bool VulkanBinder::getOrCreateDescriptor(VkDescriptorSet* descriptor,
     VkDescriptorSetAllocateInfo allocInfo = {};
     allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
     allocInfo.descriptorPool = mDescriptorPool;
-    allocInfo.descriptorSetCount = 1;
-    allocInfo.pSetLayouts = &mDescriptorSetLayout;
-    VkResult err = vkAllocateDescriptorSets(mDevice, &allocInfo, descriptor);
+    allocInfo.descriptorSetCount = 2;
+    allocInfo.pSetLayouts = mDescriptorSetLayouts;
+    VkResult err = vkAllocateDescriptorSets(mDevice, &allocInfo, descriptors);
     ASSERT_POSTCONDITION(!err, "Unable to allocate descriptor set.");
     *pipelineLayout = mPipelineLayout;
 
@@ -120,12 +119,15 @@ bool VulkanBinder::getOrCreateDescriptor(VkDescriptorSet* descriptor,
     // calls to getOrCreateDescriptor when nothing has been dirtied. Note that the robin_map
     // iterator type proffers a "value" method, which returns a stable reference.
     mCurrentDescriptor = &mDescriptorSets.emplace(std::make_pair(mDescriptorKey, DescriptorVal {
-        *descriptor, mCurrentTime, true })).first.value();
+        .handles = { descriptors[0], descriptors[1] },
+        .timestamp = mCurrentTime,
+        .bound = true
+    })).first.value();
     mDirtyDescriptor = false;
 
     // Mutate the descriptor by setting all non-null bindings.
-    uint32_t& nwrites = mDescriptorUpdateOp.count;
-    VkWriteDescriptorSet* writes = &mDescriptorUpdateOp.writes[0];
+    uint32_t nwrites = 0;
+    VkWriteDescriptorSet* writes = mDescriptorWrites;
     nwrites = 0;
     for (uint32_t binding = 0; binding < UBUFFER_BINDING_COUNT; binding++) {
         if (mDescriptorKey.uniformBuffers[binding]) {
@@ -136,7 +138,7 @@ bool VulkanBinder::getOrCreateDescriptor(VkDescriptorSet* descriptor,
             VkWriteDescriptorSet& writeInfo = writes[nwrites++];
             writeInfo.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
             writeInfo.pNext = nullptr;
-            writeInfo.dstSet = mCurrentDescriptor->handle;
+            writeInfo.dstSet = mCurrentDescriptor->handles[0];
             writeInfo.dstBinding = binding;
             writeInfo.dstArrayElement = 0;
             writeInfo.descriptorCount = 1;
@@ -153,8 +155,8 @@ bool VulkanBinder::getOrCreateDescriptor(VkDescriptorSet* descriptor,
             VkWriteDescriptorSet& writeInfo = writes[nwrites++];
             writeInfo.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
             writeInfo.pNext = nullptr;
-            writeInfo.dstSet = mCurrentDescriptor->handle;
-            writeInfo.dstBinding = UBUFFER_BINDING_COUNT + binding;
+            writeInfo.dstSet = mCurrentDescriptor->handles[1];
+            writeInfo.dstBinding = binding;
             writeInfo.dstArrayElement = 0;
             writeInfo.descriptorCount = 1;
             writeInfo.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
@@ -163,11 +165,7 @@ bool VulkanBinder::getOrCreateDescriptor(VkDescriptorSet* descriptor,
             writeInfo.pTexelBufferView = nullptr;
         }
     }
-    if (changes) {
-        *changes = &mDescriptorUpdateOp;
-    } else {
-        vkUpdateDescriptorSets(mDevice, nwrites, writes, 0, nullptr);
-    }
+    vkUpdateDescriptorSets(mDevice, nwrites, writes, 0, nullptr);
     return true;
 }
 
@@ -413,7 +411,11 @@ void VulkanBinder::evictDescriptors(std::function<bool(const DescriptorKey&)> fi
         auto& pair = *iter;
         if (filter(pair.first)) {
             auto& cacheEntry = iter->second;
-            mDescriptorGraveyard.push_back({ cacheEntry.handle, cacheEntry.timestamp, false });
+            mDescriptorGraveyard.push_back({
+                .handles = { cacheEntry.handles[0], cacheEntry.handles[1] },
+                .timestamp = cacheEntry.timestamp,
+                .bound = false
+            });
             iter = mDescriptorSets.erase(iter);
         } else {
             ++iter;
@@ -438,12 +440,10 @@ void VulkanBinder::bindUniformBuffer(uint32_t bindingIndex, VkBuffer uniformBuff
 }
 
 void VulkanBinder::bindSampler(uint32_t bindingIndex, VkDescriptorImageInfo samplerInfo) noexcept {
-    const uint32_t offset = UBUFFER_BINDING_COUNT;
-    assert(bindingIndex >= offset);
-    ASSERT_POSTCONDITION(bindingIndex < offset + SAMPLER_BINDING_COUNT,
+    ASSERT_POSTCONDITION(bindingIndex < SAMPLER_BINDING_COUNT,
             "Sampler bindings overflow: index = %d, capacity = %d.",
-            bindingIndex - offset, SAMPLER_BINDING_COUNT);
-    VkDescriptorImageInfo& imageInfo = mDescriptorKey.samplers[bindingIndex - offset];
+            bindingIndex, SAMPLER_BINDING_COUNT);
+    VkDescriptorImageInfo& imageInfo = mDescriptorKey.samplers[bindingIndex];
     if (imageInfo.sampler != samplerInfo.sampler || imageInfo.imageView != samplerInfo.imageView ||
         imageInfo.imageLayout != samplerInfo.imageLayout) {
         imageInfo = samplerInfo;
@@ -483,7 +483,7 @@ void VulkanBinder::gc() noexcept {
             iter != mDescriptorSets.end();) {
         auto& cacheEntry = iter->second;
         if (cacheEntry.timestamp < evictTime && !cacheEntry.bound) {
-            vkFreeDescriptorSets(mDevice, mDescriptorPool, 1, &cacheEntry.handle);
+            vkFreeDescriptorSets(mDevice, mDescriptorPool, 2, cacheEntry.handles);
             iter = mDescriptorSets.erase(iter);
         } else {
             ++iter;
@@ -506,10 +506,10 @@ void VulkanBinder::gc() noexcept {
     graveyard.swap(mDescriptorGraveyard);
     for (auto& val : graveyard) {
         if (val.timestamp < evictTime) {
-           vkFreeDescriptorSets(mDevice, mDescriptorPool, 1, &val.handle);
+           vkFreeDescriptorSets(mDevice, mDescriptorPool, 2, val.handles);
         } else {
             mDescriptorGraveyard.emplace_back(DescriptorVal {
-                .handle = val.handle,
+                .handles = { val.handles[0], val.handles[1] },
                 .timestamp = val.timestamp
             });
         }
@@ -517,39 +517,40 @@ void VulkanBinder::gc() noexcept {
 }
 
 void VulkanBinder::createLayoutsAndDescriptors() noexcept {
-    VkDescriptorSetLayoutBinding bindings[UBUFFER_BINDING_COUNT + SAMPLER_BINDING_COUNT];
     VkDescriptorSetLayoutBinding binding = {};
     binding.descriptorCount = 1; // NOTE: We never use arrays-of-blocks.
     binding.stageFlags = VK_SHADER_STAGE_ALL_GRAPHICS; // NOTE: This is potentially non-optimal.
 
-    // The first range of binding slots is reserved for UBO's.
+    // First create the descriptor set layout for UBO's.
+    VkDescriptorSetLayoutBinding ubindings[UBUFFER_BINDING_COUNT];
     binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     for (uint32_t i = 0; i < UBUFFER_BINDING_COUNT; i++) {
         binding.binding = i;
-        bindings[i] = binding;
+        ubindings[i] = binding;
     }
-
-    // The second range of binding slots is reserved for samplers.
-    binding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-    for (uint32_t i = 0; i < SAMPLER_BINDING_COUNT; i++) {
-        binding.binding = UBUFFER_BINDING_COUNT + i;
-        bindings[binding.binding] = binding;
-    }
-
-    // Create the one and only VkDescriptorSetLayout that we'll ever use.
     VkDescriptorSetLayoutCreateInfo dlinfo = {};
     dlinfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    dlinfo.bindingCount = UBUFFER_BINDING_COUNT + SAMPLER_BINDING_COUNT;
-    dlinfo.pBindings = &bindings[0];
-    VkResult err = vkCreateDescriptorSetLayout(mDevice, &dlinfo, VKALLOC, &mDescriptorSetLayout);
-    ASSERT_POSTCONDITION(!err, "Unable to create descriptor set layout.");
+    dlinfo.bindingCount = UBUFFER_BINDING_COUNT;
+    dlinfo.pBindings = ubindings;
+    vkCreateDescriptorSetLayout(mDevice, &dlinfo, VKALLOC, &mDescriptorSetLayouts[0]);
+
+    // Next create the descriptor set layout for samplers.
+    VkDescriptorSetLayoutBinding sbindings[SAMPLER_BINDING_COUNT];
+    binding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    for (uint32_t i = 0; i < SAMPLER_BINDING_COUNT; i++) {
+        binding.binding = i;
+        sbindings[i] = binding;
+    }
+    dlinfo.bindingCount = SAMPLER_BINDING_COUNT;
+    dlinfo.pBindings = sbindings;
+    vkCreateDescriptorSetLayout(mDevice, &dlinfo, VKALLOC, &mDescriptorSetLayouts[1]);
 
     // Create the one and only VkPipelineLayout that we'll ever use.
     VkPipelineLayoutCreateInfo pPipelineLayoutCreateInfo = {};
     pPipelineLayoutCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    pPipelineLayoutCreateInfo.setLayoutCount = 1;
-    pPipelineLayoutCreateInfo.pSetLayouts = &mDescriptorSetLayout;
-    err = vkCreatePipelineLayout(mDevice, &pPipelineLayoutCreateInfo, VKALLOC, &mPipelineLayout);
+    pPipelineLayoutCreateInfo.setLayoutCount = 2;
+    pPipelineLayoutCreateInfo.pSetLayouts = mDescriptorSetLayouts;
+    VkResult err = vkCreatePipelineLayout(mDevice, &pPipelineLayoutCreateInfo, VKALLOC, &mPipelineLayout);
     ASSERT_POSTCONDITION(!err, "Unable to create pipeline layout.");
 
     // Create the VkDescriptorPool.
@@ -584,8 +585,9 @@ void VulkanBinder::destroyLayoutsAndDescriptors() noexcept {
     mDescriptorSets.clear();
     vkDestroyPipelineLayout(mDevice, mPipelineLayout, VKALLOC);
     mPipelineLayout = VK_NULL_HANDLE;
-    vkDestroyDescriptorSetLayout(mDevice, mDescriptorSetLayout, VKALLOC);
-    mDescriptorSetLayout = VK_NULL_HANDLE;
+    vkDestroyDescriptorSetLayout(mDevice, mDescriptorSetLayouts[0], VKALLOC);
+    vkDestroyDescriptorSetLayout(mDevice, mDescriptorSetLayouts[1], VKALLOC);
+    mDescriptorSetLayouts[0] = mDescriptorSetLayouts[1] = {};
     vkDestroyDescriptorPool(mDevice, mDescriptorPool, VKALLOC);
     mDescriptorPool = VK_NULL_HANDLE;
     mCurrentDescriptor = nullptr;
@@ -616,7 +618,7 @@ bool VulkanBinder::DescEqual::operator()(const VulkanBinder::DescriptorKey& k1,
     return true;
 }
 
-static VulkanBinder::RasterState createDefaultRasterState() {
+static const VulkanBinder::RasterState createDefaultRasterState() {
     VkPipelineRasterizationStateCreateInfo rasterization = {};
     rasterization.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
     rasterization.polygonMode = VK_POLYGON_MODE_FILL;

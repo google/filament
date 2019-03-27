@@ -54,18 +54,7 @@ struct PostProcessSib {
 
 // Returns the binding point of the first sampler for the given backend API.
 inline constexpr uint8_t getSamplerBindingsStart(backend::Backend api) noexcept {
-    switch (api) {
-        default:
-        case backend::Backend::VULKAN:
-            // The Vulkan backend has single namespace for uniforms and samplers.
-            // To avoid collision, the sampler bindings start after the last UBO binding.
-            return backend::CONFIG_UNIFORM_BINDING_COUNT;
-
-        case backend::Backend::OPENGL:
-        case backend::Backend::METAL:
-            // Metal has a separate namespace for uniforms and samplers- collisions aren't an issue.
-            return 0;
-    }
+    return 0;
 }
 
 }

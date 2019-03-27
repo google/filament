@@ -34,9 +34,9 @@ namespace backend {
 
 // VulkanBinder manages a cache of descriptor sets and pipelines.
 //
-// The binder is the most important component of Filament's Vulkan driver. The interface has two
-// parts: the "bindFoo" methods (bindRasterState, bindUniformBuffer, etc), and the "getOrCreateFoo"
-// methods (getOrCreateDescriptor, getOrCreatePipeline).
+// The VulkanBinder interface has two parts: the "bindFoo" methods (bindRasterState,
+// bindUniformBuffer, etc), and the "getOrCreateFoo" methods (getOrCreateDescriptors,
+// getOrCreatePipeline).
 //
 // Abbreviated example usage:
 //
@@ -48,9 +48,9 @@ namespace backend {
 //     void Driver::draw(Geometry geo) {
 //        mBinder.bindPrimitiveTopology(geo.topology);
 //        mBinder.bindVertexArray(geo.varray);
-//        VkDescriptorSet descriptor;
-//        if (mBinder.getOrCreateDescriptor(&descriptor, ...)) {
-//            vkCmdBindDescriptorSets(... descriptor ...);
+//        VkDescriptorSet descriptors[2];
+//        if (mBinder.getOrCreateDescriptors(descriptors, ...)) {
+//            vkCmdBindDescriptorSets(... descriptors ...);
 //        }
 //        VkPipeline pipeline;
 //        if (mBinder.getOrCreatePipeline(&pipeline)) {
@@ -66,7 +66,7 @@ namespace backend {
 //
 // In the name of simplicity, VulkanBinder has the following limitations:
 // - Push constants are not supported. (if adding support, see VkPipelineLayoutCreateInfo)
-// - Only one descriptor set can be bound at a time.
+// - Only two descriptor sets are bound at a time: one for uniform buffers and one for samplers.
 // - Descriptor sets are never mutated using vkUpdateDescriptorSets, except upon creation.
 // - Assumes that viewport and scissor should be dynamic. (not baked into VkPipeline)
 // - Assumes that uniform buffers should be visible across all shader stages.
@@ -104,12 +104,6 @@ public:
     };
     static_assert(std::is_pod<RasterState>::value, "RasterState must be a POD for fast hashing.");
 
-    // Encapsulates the arguments passed to vkUpdateDescriptorSets.
-    struct DescriptorUpdateOp {
-        uint32_t count;
-        VkWriteDescriptorSet writes[UBUFFER_BINDING_COUNT + SAMPLER_BINDING_COUNT];
-    };
-
     // Upon construction, the binder initializes some internal state but does not make any Vulkan
     // calls. On destruction it will free any cached Vulkan objects that haven't already been freed
     // via resetBindings(). We don't pass the VkDevice to the constructor to allow the client to own
@@ -122,10 +116,9 @@ public:
     // mutate their copy and pass it back through bindRasterState().
     const RasterState& getDefaultRasterState() const { return mDefaultRasterState; }
 
-    // Returns true if vkCmdBindDescriptorSets is required. Additionally, if mutations to the set
-    // are required (i.e., vkUpdateDescriptorSets) then "changes" is set to non-null.
-    bool getOrCreateDescriptor(VkDescriptorSet* descriptor, VkPipelineLayout* pipelineLayout,
-            DescriptorUpdateOp** changes = nullptr) noexcept;
+    // Returns true if vkCmdBindDescriptorSets is required.
+    bool getOrCreateDescriptors(VkDescriptorSet descriptors[2], VkPipelineLayout* pipelineLayout)
+            noexcept;
 
     // Returns true if any pipeline bindings have changed. (i.e., vkCmdBindPipeline is required)
     bool getOrCreatePipeline(VkPipeline* pipeline) noexcept;
@@ -198,7 +191,7 @@ private:
 
     // The descriptor key is a POD that represents all currently bound states that go into the
     // descriptor set. We apply a hash function to its contents only if has been mutated since
-    // the previous call to getOrCreateDescriptor.
+    // the previous call to getOrCreateDescriptors.
     struct UTILS_PACKED DescriptorKey {
         VkBuffer uniformBuffers[UBUFFER_BINDING_COUNT];
         VkDescriptorImageInfo samplers[SAMPLER_BINDING_COUNT];
@@ -215,7 +208,7 @@ private:
     };
 
     struct DescriptorVal {
-        VkDescriptorSet handle;
+        VkDescriptorSet handles[2];
         uint32_t timestamp;
         bool bound;
         // move-only (disallow copy) to allow keeping a pointer to the "current" value in the map.
@@ -232,12 +225,12 @@ private:
     VkDevice mDevice = nullptr;
     const RasterState mDefaultRasterState;
 
-    // Info structs used only in a transient way but they are stored for convenience.
+    // These structs are used only in a transient way but are stored for convenience.
     VkPipelineShaderStageCreateInfo mShaderStages[SHADER_MODULE_COUNT];
     VkPipelineColorBlendStateCreateInfo mColorBlendState;
     VkDescriptorBufferInfo mDescriptorBuffers[UBUFFER_BINDING_COUNT];
     VkDescriptorImageInfo mDescriptorSamplers[SAMPLER_BINDING_COUNT];
-    DescriptorUpdateOp mDescriptorUpdateOp;
+    VkWriteDescriptorSet mDescriptorWrites[UBUFFER_BINDING_COUNT + SAMPLER_BINDING_COUNT];
 
     // Current bindings are divided into two "keys" which are composed of a mix of actual values
     // (e.g., blending is OFF) and weak references to Vulkan objects (e.g., shader programs and
@@ -255,7 +248,7 @@ private:
     bool mDirtyDescriptor = true;
 
     // Cached Vulkan objects. These objects are owned by the Binder.
-    VkDescriptorSetLayout mDescriptorSetLayout = VK_NULL_HANDLE;
+    VkDescriptorSetLayout mDescriptorSetLayouts[2] = {};
     VkPipelineLayout mPipelineLayout = VK_NULL_HANDLE;
     tsl::robin_map<PipelineKey, PipelineVal, PipelineHashFn, PipelineEqual> mPipelines;
     tsl::robin_map<DescriptorKey, DescriptorVal, DescHashFn, DescEqual> mDescriptorSets;

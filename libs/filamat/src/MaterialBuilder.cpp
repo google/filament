@@ -64,8 +64,8 @@ void MaterialBuilderBase::prepare() {
     }
 
     // OpenGL is a special case. If we're doing any optimization, then we need to go to Spir-V.
-    TargetApi glCodeGenTargetApi = mOptimization > MaterialBuilder::Optimization::PREPROCESSOR ?
-            TargetApi::VULKAN : TargetApi::OPENGL;
+    TargetLanguage glTargetLanguage = mOptimization > MaterialBuilder::Optimization::PREPROCESSOR ?
+            TargetLanguage::SPIRV : TargetLanguage::GLSL;
 
     // Build a list of codegen permutations, which is useful across all types of material builders.
     // The shader model loop starts at 1 to skip ShaderModel::UNKNOWN.
@@ -75,17 +75,17 @@ void MaterialBuilderBase::prepare() {
         }
         switch (mTargetApi) {
             case TargetApi::ALL:
-                mCodeGenPermutations.push_back({i, TargetApi::OPENGL, glCodeGenTargetApi});
-                mCodeGenPermutations.push_back({i, TargetApi::VULKAN, TargetApi::VULKAN});
-                mCodeGenPermutations.push_back({i, TargetApi::METAL, TargetApi::VULKAN});
+                mCodeGenPermutations.push_back({i, TargetApi::OPENGL, glTargetLanguage});
+                mCodeGenPermutations.push_back({i, TargetApi::VULKAN, TargetLanguage::SPIRV});
+                mCodeGenPermutations.push_back({i, TargetApi::METAL, TargetLanguage::SPIRV});
                 break;
             case TargetApi::OPENGL:
-                mCodeGenPermutations.push_back({i, TargetApi::OPENGL, glCodeGenTargetApi});
+                mCodeGenPermutations.push_back({i, TargetApi::OPENGL, glTargetLanguage});
                 break;
             case TargetApi::VULKAN:
-                mCodeGenPermutations.push_back({i, TargetApi::VULKAN, TargetApi::VULKAN});
+                mCodeGenPermutations.push_back({i, TargetApi::VULKAN, TargetLanguage::SPIRV});
             case TargetApi::METAL:
-                mCodeGenPermutations.push_back({i, TargetApi::METAL, TargetApi::VULKAN});
+                mCodeGenPermutations.push_back({i, TargetApi::METAL, TargetLanguage::SPIRV});
                 break;
         }
     }
@@ -505,7 +505,7 @@ Package MaterialBuilder::build() noexcept {
     for (const auto& params : mCodeGenPermutations) {
         const ShaderModel shaderModel = ShaderModel(params.shaderModel);
         const TargetApi targetApi = params.targetApi;
-        const TargetApi codeGenTargetApi = params.codeGenTargetApi;
+        const TargetLanguage targetLanguage = params.targetLanguage;
 
         // Re-populate the set of sampler bindings for this API.
         filament::SamplerBindingMap map;
@@ -549,7 +549,7 @@ Package MaterialBuilder::build() noexcept {
             if (filament::Variant::filterVariantVertex(v) == k) {
                 // Vertex Shader
                 std::string vs = sg.createVertexProgram(
-                        shaderModel, targetApi, codeGenTargetApi, info, k,
+                        shaderModel, targetApi, targetLanguage, info, k,
                         mInterpolation, mVertexDomain);
                 bool ok = postProcessor.process(vs, filament::backend::ShaderType::VERTEX,
                         shaderModel, &vs, pSpirv, pMsl);
@@ -561,7 +561,7 @@ Package MaterialBuilder::build() noexcept {
                 }
 
                 if (targetApi == TargetApi::OPENGL) {
-                    if (codeGenTargetApi == TargetApi::VULKAN) {
+                    if (targetLanguage == TargetLanguage::SPIRV) {
                         sg.fixupExternalSamplers(shaderModel, vs, info);
                     }
 
@@ -597,7 +597,7 @@ Package MaterialBuilder::build() noexcept {
             if (filament::Variant::filterVariantFragment(v) == k) {
                 // Fragment Shader
                 std::string fs = sg.createFragmentProgram(
-                        shaderModel, targetApi, codeGenTargetApi, info, k, mInterpolation);
+                        shaderModel, targetApi, targetLanguage, info, k, mInterpolation);
 
                 bool ok = postProcessor.process(fs, filament::backend::ShaderType::FRAGMENT,
                         shaderModel, &fs, pSpirv, pMsl);
@@ -609,7 +609,7 @@ Package MaterialBuilder::build() noexcept {
                 }
 
                 if (targetApi == TargetApi::OPENGL) {
-                    if (codeGenTargetApi == TargetApi::VULKAN) {
+                    if (targetLanguage == TargetLanguage::SPIRV) {
                         sg.fixupExternalSamplers(shaderModel, fs, info);
                     }
 
@@ -697,7 +697,7 @@ const std::string MaterialBuilder::peek(filament::backend::ShaderType type,
     for (const auto& params : mCodeGenPermutations) {
         model = ShaderModel(params.shaderModel);
         const TargetApi targetApi = params.targetApi;
-        const TargetApi codeGenTargetApi = params.codeGenTargetApi;
+        const TargetLanguage targetLanguage = params.targetLanguage;
 
         // Re-populate the set of sampler bindings for this API.
         filament::SamplerBindingMap map;
@@ -707,10 +707,10 @@ const std::string MaterialBuilder::peek(filament::backend::ShaderType type,
         info.samplerBindings = std::move(map);
 
         if (type == filament::backend::ShaderType::VERTEX) {
-            return sg.createVertexProgram(model, targetApi, codeGenTargetApi,
+            return sg.createVertexProgram(model, targetApi, targetLanguage,
                     info, 0, mInterpolation, mVertexDomain);
         } else {
-            return sg.createFragmentProgram(model, targetApi, codeGenTargetApi,
+            return sg.createFragmentProgram(model, targetApi, targetLanguage,
                     info, 0, mInterpolation);
         }
     }
