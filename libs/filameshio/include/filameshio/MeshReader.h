@@ -47,31 +47,34 @@ public:
     class MaterialRegistry
     {
     public:
-       MaterialRegistry();
-       MaterialRegistry(const MaterialRegistry& rhs);
-       MaterialRegistry& operator=(const MaterialRegistry& rhs);
-       ~MaterialRegistry();
-       MaterialRegistry(MaterialRegistry&&);
-       MaterialRegistry& operator=(MaterialRegistry&&);
+         MaterialRegistry();
+         MaterialRegistry(const MaterialRegistry& rhs);
+         MaterialRegistry& operator=(const MaterialRegistry& rhs);
+         ~MaterialRegistry();
+         MaterialRegistry(MaterialRegistry&&);
+         MaterialRegistry& operator=(MaterialRegistry&&);
 
-       filament::MaterialInstance* getMaterialInstance(const utils::CString& name);
-       void
-       registerMaterialInstance(const utils::CString& name,
-                                filament::MaterialInstance* materialInstance);
-       void unregisterMaterialInstance(const utils::CString& name);
-       void unregisterAll();
+         filament::MaterialInstance* getMaterialInstance(const utils::CString& name);
 
-       std::size_t numRegistered() const noexcept;
+         void registerMaterialInstance(const utils::CString& name,
+                 filament::MaterialInstance* materialInstance);
 
-       void getRegisteredMaterials(filament::MaterialInstance** materialList,
-                                   utils::CString* materialNameList) const;
-       void
-       getRegisteredMaterials(filament::MaterialInstance** materialList) const;
-       void getRegisteredMaterialNames(utils::CString* materialNameList) const;
+         void unregisterMaterialInstance(const utils::CString& name);
+
+         void unregisterAll();
+
+         std::size_t numRegistered() const noexcept;
+
+         void getRegisteredMaterials(filament::MaterialInstance** materialList,
+                 utils::CString* materialNameList) const;
+
+         void getRegisteredMaterials(filament::MaterialInstance** materialList) const;
+
+         void getRegisteredMaterialNames(utils::CString* materialNameList) const;
 
      private:
-       struct MaterialRegistryImpl;
-       MaterialRegistryImpl* impl;
+         struct MaterialRegistryImpl;
+         MaterialRegistryImpl* mImpl;
     };
 
     struct Mesh {

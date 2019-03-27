@@ -52,111 +52,88 @@ using namespace filament::math;
 //-------------------------Begin Material Registry------------------------------
 //------------------------------------------------------------------------------
 
-struct MeshReader::MaterialRegistry::MaterialRegistryImpl
-{
-  std::map<utils::CString, filament::MaterialInstance*> materialMap;
+struct MeshReader::MaterialRegistry::MaterialRegistryImpl {
+    std::map<utils::CString, filament::MaterialInstance*> materialMap;
 };
 
 // Create the implementation
 MeshReader::MaterialRegistry::MaterialRegistry()
-  : impl(new MaterialRegistryImpl)
-{
+    : mImpl(new MaterialRegistryImpl) {
 }
 // Deep copy the implementation
 MeshReader::MaterialRegistry::MaterialRegistry(const MaterialRegistry& rhs)
-  : impl(new MaterialRegistryImpl(*rhs.impl))
-{
+    : mImpl(new MaterialRegistryImpl(*rhs.mImpl)) {
 }
-MeshReader::MaterialRegistry& MeshReader::MaterialRegistry::
-operator=(const MaterialRegistry& rhs)
-{
-  *impl = *rhs.impl;
-  return *this;
+MeshReader::MaterialRegistry& MeshReader::MaterialRegistry::operator=(const MaterialRegistry& rhs) {
+    *mImpl = *rhs.mImpl;
+    return *this;
 }
 // Delete the implementation
-MeshReader::MaterialRegistry::~MaterialRegistry()
-{
-  delete impl;
+MeshReader::MaterialRegistry::~MaterialRegistry() {
+    delete mImpl;
 }
 
 // Default move construction
 MeshReader::MaterialRegistry::MaterialRegistry(MaterialRegistry&&) = default;
 
-MeshReader::MaterialRegistry& MeshReader::MaterialRegistry::
-operator=(MaterialRegistry&& rhs)
-{
-  *impl = std::move(*rhs.impl);
-  return *this;
+MeshReader::MaterialRegistry& MeshReader::MaterialRegistry::operator=(MaterialRegistry&& rhs) {
+    *mImpl = std::move(*rhs.mImpl);
+    return *this;
 }
 
-filament::MaterialInstance*
-MeshReader::MaterialRegistry::getMaterialInstance(const utils::CString& name)
-{
-  // Try to find the requested material
-  auto miter = impl->materialMap.find(name);
-  // If it exists, return it
-  if (miter != impl->materialMap.end())
-  {
-    return miter->second;
-  }
-  // If it doesn't exist, give a dummy value
-  return nullptr;
+filament::MaterialInstance* MeshReader::MaterialRegistry::getMaterialInstance(
+        const utils::CString& name) {
+    // Try to find the requested material
+    auto miter = mImpl->materialMap.find(name);
+    // If it exists, return it
+    if (miter != mImpl->materialMap.end()) {
+        return miter->second;
+    }
+    // If it doesn't exist, give a dummy value
+    return nullptr;
 }
 
-void MeshReader::MaterialRegistry::registerMaterialInstance(
-  const utils::CString& name, filament::MaterialInstance* materialInstance)
-{
-  // Add the material to our map
-  impl->materialMap[name] = materialInstance;
+void MeshReader::MaterialRegistry::registerMaterialInstance(const utils::CString& name,
+        filament::MaterialInstance* materialInstance) {
+    // Add the material to our map
+    mImpl->materialMap[name] = materialInstance;
 }
 
-void MeshReader::MaterialRegistry::unregisterMaterialInstance(
-  const utils::CString& name)
-{
-  auto miter = impl->materialMap.find(name);
-  // Remove it from the map if it existed
-  if (miter != impl->materialMap.end())
-  {
-    impl->materialMap.erase(miter);
-  }
+void MeshReader::MaterialRegistry::unregisterMaterialInstance(const utils::CString& name) {
+    auto miter = mImpl->materialMap.find(name);
+    // Remove it from the map if it existed
+    if (miter != mImpl->materialMap.end()) {
+        mImpl->materialMap.erase(miter);
+    }
 }
-void MeshReader::MaterialRegistry::unregisterAll()
-{
-  impl->materialMap.clear();
+void MeshReader::MaterialRegistry::unregisterAll() {
+    mImpl->materialMap.clear();
 }
 
-std::size_t MeshReader::MaterialRegistry::numRegistered() const noexcept
-{
-  return impl->materialMap.size();
+std::size_t MeshReader::MaterialRegistry::numRegistered() const noexcept {
+    return mImpl->materialMap.size();
+}
+
+void MeshReader::MaterialRegistry::getRegisteredMaterials(filament::MaterialInstance** materialList,
+        utils::CString* materialNameList) const {
+    for (const auto& materialPair : mImpl->materialMap) {
+        (*materialNameList++) = materialPair.first;
+        (*materialList++) = materialPair.second;
+    }
 }
 
 void MeshReader::MaterialRegistry::getRegisteredMaterials(
-  filament::MaterialInstance** materialList,
-  utils::CString* materialNameList) const
-{
-  for (const auto& materialPair : impl->materialMap)
-  {
-    (*materialNameList++) = materialPair.first;
-    (*materialList++) = materialPair.second;
-  }
-}
-
-void MeshReader::MaterialRegistry::getRegisteredMaterials(
-  filament::MaterialInstance** materialList) const
-{
-  for (const auto& materialPair : impl->materialMap)
-  {
-    (*materialList++) = materialPair.second;
-  }
+        filament::MaterialInstance** materialList) const {
+    for (const auto& materialPair : mImpl->materialMap) {
+        (*materialList++) = materialPair.second;
+    }
 }
 
 void MeshReader::MaterialRegistry::getRegisteredMaterialNames(
-  utils::CString* materialNameList) const
-{
-  for (const auto& materialPair : impl->materialMap)
-  {
-    (*materialNameList++) = materialPair.first;
-  }
+        utils::CString* materialNameList) const {
+    for (const auto& materialPair : mImpl->materialMap) {
+        (*materialNameList++) = materialPair.first;
+    }
 }
 
 //------------------------------------------------------------------------------
