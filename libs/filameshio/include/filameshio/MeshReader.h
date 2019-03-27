@@ -44,8 +44,7 @@ public:
     using Callback = void(*)(void* buffer, size_t size, void* user);
 
     // Class to track material instances
-    class MaterialRegistry
-    {
+    class MaterialRegistry {
     public:
          MaterialRegistry();
          MaterialRegistry(const MaterialRegistry& rhs);
