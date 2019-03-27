@@ -1061,12 +1061,25 @@ register_vector<std::string>("RegistryKeys");
 class_<MeshReader::MaterialRegistry>("MeshReader$MaterialRegistry")
     .constructor<>()
     .function("size", &MeshReader::MaterialRegistry::size)
-    .function("get", internal::MapAccess<MeshReader::MaterialRegistry>::get)
-    .function("set", internal::MapAccess<MeshReader::MaterialRegistry>::set)
+    .function("get", EMBIND_LAMBDA(val, (MeshReader::MaterialRegistry* self, std::string k), {
+          const utils::CString name(k.c_str(), k.size());
+          auto i = self->getMaterialInstance(name);
+          if (i == nullptr) {
+              return val::undefined();
+          } else {
+              return val(i);
+          }
+    }), allow_raw_pointers())
+    .function("set", EMBIND_LAMBDA(void, (MeshReader::MaterialRegistry* self, std::string k, filament::MaterialInstance* v), {
+          const utils::CString name(k.c_str(), k.size());
+          self->registerMaterialInstance(name, v);
+    }), allow_raw_pointers())
     .function("keys", EMBIND_LAMBDA(std::vector<std::string>, (MeshReader::MaterialRegistry* self), {
-        std::vector<std::string> result;
-        for (const auto& pair : *self) {
-            result.emplace_back(pair.first);
+        std::vector<utils::CString> names(self->numRegistered());
+        self->getMaterialNames(names.data());
+        std::vector<std::string> result(self->numRegistered());
+        for (const auto& name : names) {
+            result.emplace_back(name.c_str());
         }
         return result;
     }), allow_raw_pointers());

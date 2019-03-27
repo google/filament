@@ -53,7 +53,7 @@ using namespace utils;
 
 static std::vector<Path> g_filenames;
 
-static std::map<std::string, MaterialInstance*> g_materialInstances;
+static MeshReader::MaterialRegistry g_materialInstances;
 static std::vector<MeshReader::Mesh> g_meshes;
 static const Material* g_material;
 static Entity g_light;
@@ -127,9 +127,12 @@ static void cleanup(Engine* engine, View* view, Scene* scene) {
     for (auto map : g_maps) {
         engine->destroy(map.second);
     }
-    for (auto material : g_materialInstances) {
-        engine->destroy(material.second);
+    std::vector<filament::MaterialInstance*> materialList(g_materialInstances.numRegistered());
+    g_materialInstances.getRegisteredMaterials(materialList.data());
+    for (auto material : materialList) {
+        engine->destroy(material);
     }
+    g_materialInstances.unregisterAll();
     engine->destroy(g_material);
     EntityManager& em = EntityManager::get();
     for (auto mesh : g_meshes) {
@@ -207,14 +210,15 @@ static void setup(Engine* engine, View* view, Scene* scene) {
 
     g_material = Material::Builder().package(pkg.getData(), pkg.getSize())
             .build(*engine);
-    g_materialInstances["DefaultMaterial"] = g_material->createInstance();
+    const utils::CString defaultMaterialName("DefaultMaterial");
+    g_materialInstances.registerMaterialInstance(defaultMaterialName, g_material->createInstance());
 
     TextureSampler sampler(TextureSampler::MinFilter::LINEAR_MIPMAP_LINEAR,
             TextureSampler::MagFilter::LINEAR, TextureSampler::WrapMode::REPEAT);
     sampler.setAnisotropy(8.0f);
-    g_materialInstances["DefaultMaterial"]->setParameter("normalMap", normal, sampler);
-    g_materialInstances["DefaultMaterial"]->setParameter("basecolorMap", basecolor, sampler);
-    g_materialInstances["DefaultMaterial"]->setParameter("roughnessMap", roughness, sampler);
+    g_materialInstances.getMaterialInstance(defaultMaterialName)->setParameter("normalMap", normal, sampler);
+    g_materialInstances.getMaterialInstance(defaultMaterialName)->setParameter("basecolorMap", basecolor, sampler);
+    g_materialInstances.getMaterialInstance(defaultMaterialName)->setParameter("roughnessMap", roughness, sampler);
 
     auto& tcm = engine->getTransformManager();
     for (const auto& filename : g_filenames) {
