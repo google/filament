@@ -70,7 +70,7 @@ MeshReader::MaterialRegistry::MaterialRegistry(const MaterialRegistry& rhs)
 MeshReader::MaterialRegistry& MeshReader::MaterialRegistry::
 operator=(const MaterialRegistry& rhs)
 {
-  impl = new MaterialRegistryImpl(*rhs.impl);
+  *impl = *rhs.impl;
   return *this;
 }
 // Delete the implementation
@@ -79,10 +79,15 @@ MeshReader::MaterialRegistry::~MaterialRegistry()
   delete impl;
 }
 
-// Default move semantics
+// Default move construction
 MeshReader::MaterialRegistry::MaterialRegistry(MaterialRegistry&&) = default;
+
 MeshReader::MaterialRegistry& MeshReader::MaterialRegistry::
-operator=(MaterialRegistry&&) = default;
+operator=(MaterialRegistry&& rhs)
+{
+  *impl = std::move(*rhs.impl);
+  return *this;
+}
 
 filament::MaterialInstance*
 MeshReader::MaterialRegistry::getMaterialInstance(const utils::CString& name)
