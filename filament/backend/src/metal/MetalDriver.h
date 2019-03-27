@@ -34,9 +34,10 @@ class MetalPlatform;
 
 namespace metal {
 
+class MetalUniformBuffer;
 struct MetalContext;
-
 struct MetalProgram;
+struct UniformBufferState;
 
 class MetalDriver final : public DriverBase {
     MetalDriver(backend::MetalPlatform* platform) noexcept;
@@ -143,6 +144,9 @@ private:
 
     void enumerateSamplerGroups(const MetalProgram* program,
             const std::function<void(const SamplerGroup::Sampler*, size_t)>& f);
+    void enumerateBoundUniforms(const std::function<void(const UniformBufferState&,
+            const MetalUniformBuffer*, uint32_t)>& f);
+
 };
 
 } // namespace metal

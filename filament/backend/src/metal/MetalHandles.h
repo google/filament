@@ -59,20 +59,35 @@ struct MetalIndexBuffer : public HwIndexBuffer {
     id<MTLBuffer> buffer;
 };
 
-struct MetalUniformBuffer : public HwUniformBuffer {
-    // TODO: We aren't implementing triple-buffering for uniform buffers yet- i.e., a single
-    // Filament uniform buffer maps to a single MetalUniformBuffer. This could cause access
-    // conflicts between CPU / GPU.
-
-    MetalUniformBuffer(id<MTLDevice> device, size_t size);
+class MetalUniformBuffer : public HwUniformBuffer {
+public:
+    MetalUniformBuffer(MetalContext& context, size_t size);
     ~MetalUniformBuffer();
 
+    size_t getSize() const { return size; }
+
+    /**
+     * Update the uniform with data inside src. Potentially allocates a new buffer allocation to
+     * hold the bytes which will be released when the current frame is finished.
+     */
     void copyIntoBuffer(void* src, size_t size);
 
-    size_t size = 0;
+    /**
+     * @return The MTLBuffer representing the current state of the uniform to bind, or nil if there
+     * is no device allocation.
+     */
+    id<MTLBuffer> getGpuBuffer() const;
 
-    id <MTLBuffer> buffer;
-    void* cpuBuffer;
+    /**
+     * @return A pointer to the CPU buffer holding the uniform data or nullptr if there isn't one.
+     */
+    void* getCpuBuffer() const;
+
+private:
+    size_t size = 0;
+    const MetalBufferPoolEntry* bufferPoolEntry = nullptr;
+    void* cpuBuffer = nullptr;
+    MetalContext& context;
 };
 
 struct MetalRenderPrimitive : public HwRenderPrimitive {
