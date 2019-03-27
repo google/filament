@@ -502,17 +502,14 @@ Package MaterialBuilder::build() noexcept {
     SimpleFieldChunk<bool> hasCustomDepth(ChunkType::MaterialHasCustomDepthShader, customDepth);
     container.addChild(&hasCustomDepth);
 
+    filament::SamplerBindingMap map;
+    map.populate(&info.sib, mMaterialName.c_str());
+    info.samplerBindings = std::move(map);
+
     for (const auto& params : mCodeGenPermutations) {
         const ShaderModel shaderModel = ShaderModel(params.shaderModel);
         const TargetApi targetApi = params.targetApi;
         const TargetLanguage targetLanguage = params.targetLanguage;
-
-        // Re-populate the set of sampler bindings for this API.
-        filament::SamplerBindingMap map;
-        auto backend = static_cast<filament::backend::Backend>(params.targetApi);
-        uint8_t offset = filament::getSamplerBindingsStart(backend);
-        map.populate(offset, &info.sib, mMaterialName.c_str());
-        info.samplerBindings = std::move(map);
 
         // Metal Shading Language is cross-compiled from Vulkan.
         const bool targetApiNeedsSpirv =
@@ -694,23 +691,17 @@ const std::string MaterialBuilder::peek(filament::backend::ShaderType type,
     MaterialInfo info;
     prepareToBuild(info);
 
+    filament::SamplerBindingMap map;
+    map.populate(&info.sib, mMaterialName.c_str());
+    info.samplerBindings = std::move(map);
+
     for (const auto& params : mCodeGenPermutations) {
         model = ShaderModel(params.shaderModel);
-        const TargetApi targetApi = params.targetApi;
-        const TargetLanguage targetLanguage = params.targetLanguage;
-
-        // Re-populate the set of sampler bindings for this API.
-        filament::SamplerBindingMap map;
-        auto backend = static_cast<filament::backend::Backend>(params.targetApi);
-        uint8_t offset = filament::getSamplerBindingsStart(backend);
-        map.populate(offset, &info.sib, mMaterialName.c_str());
-        info.samplerBindings = std::move(map);
-
         if (type == filament::backend::ShaderType::VERTEX) {
-            return sg.createVertexProgram(model, targetApi, targetLanguage,
+            return sg.createVertexProgram(model, params.targetApi, params.targetLanguage,
                     info, 0, mInterpolation, mVertexDomain);
         } else {
-            return sg.createFragmentProgram(model, targetApi, targetLanguage,
+            return sg.createFragmentProgram(model, params.targetApi, params.targetLanguage,
                     info, 0, mInterpolation);
         }
     }
