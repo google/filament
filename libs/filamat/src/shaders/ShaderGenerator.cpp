@@ -142,12 +142,12 @@ ShaderGenerator::ShaderGenerator(
 }
 
 const std::string ShaderGenerator::createVertexProgram(filament::backend::ShaderModel shaderModel,
-        MaterialBuilder::TargetApi targetApi, MaterialBuilder::TargetApi codeGenTargetApi,
+        MaterialBuilder::TargetApi targetApi, MaterialBuilder::TargetLanguage targetLanguage,
         MaterialInfo const& material, uint8_t variantKey, filament::Interpolation interpolation,
         filament::VertexDomain vertexDomain) const noexcept {
     std::stringstream vs;
 
-    const CodeGenerator cg(shaderModel, targetApi, codeGenTargetApi);
+    const CodeGenerator cg(shaderModel, targetApi, targetLanguage);
     const bool lit = material.isLit;
     const filament::Variant variant(variantKey);
 
@@ -230,11 +230,11 @@ bool ShaderGenerator::hasCustomDepthShader() const noexcept {
 }
 
 const std::string ShaderGenerator::createFragmentProgram(filament::backend::ShaderModel shaderModel,
-        MaterialBuilder::TargetApi targetApi, MaterialBuilder::TargetApi codeGenTargetApi,
+        MaterialBuilder::TargetApi targetApi, MaterialBuilder::TargetLanguage targetLanguage,
         MaterialInfo const& material, uint8_t variantKey,
         filament::Interpolation interpolation) const noexcept {
 
-    const CodeGenerator cg(shaderModel, targetApi, codeGenTargetApi);
+    const CodeGenerator cg(shaderModel, targetApi, targetLanguage);
     const bool lit = material.isLit;
     const filament::Variant variant(variantKey);
 
@@ -352,9 +352,9 @@ void ShaderGenerator::fixupExternalSamplers(filament::backend::ShaderModel sm,
 
 const std::string ShaderPostProcessGenerator::createPostProcessVertexProgram(
         filament::backend::ShaderModel sm, MaterialBuilder::TargetApi targetApi,
-        MaterialBuilder::TargetApi codeGenTargetApi, filament::PostProcessStage variant,
+        MaterialBuilder::TargetLanguage targetLanguage, filament::PostProcessStage variant,
         uint8_t firstSampler) noexcept {
-    const CodeGenerator cg(sm, targetApi, codeGenTargetApi);
+    const CodeGenerator cg(sm, targetApi, targetLanguage);
     std::stringstream vs;
     cg.generateProlog(vs, ShaderType::VERTEX, false);
     cg.generateDefine(vs, "LOCATION_POSITION", uint32_t(VertexAttribute::POSITION));
@@ -375,9 +375,9 @@ const std::string ShaderPostProcessGenerator::createPostProcessVertexProgram(
 
 const std::string ShaderPostProcessGenerator::createPostProcessFragmentProgram(
         filament::backend::ShaderModel sm, MaterialBuilder::TargetApi targetApi,
-        MaterialBuilder::TargetApi codeGenTargetApi, filament::PostProcessStage variant,
+        MaterialBuilder::TargetLanguage targetLanguage, filament::PostProcessStage variant,
         uint8_t firstSampler) noexcept {
-    const CodeGenerator cg(sm, targetApi, codeGenTargetApi);
+    const CodeGenerator cg(sm, targetApi, targetLanguage);
     std::stringstream fs;
     cg.generateProlog(fs, ShaderType::FRAGMENT, false);
     generatePostProcessStageDefines(fs, cg, variant);

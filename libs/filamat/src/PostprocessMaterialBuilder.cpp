@@ -64,7 +64,7 @@ Package PostprocessMaterialBuilder::build() {
     for (const auto& params : mCodeGenPermutations) {
         const ShaderModel shaderModel = ShaderModel(params.shaderModel);
         const TargetApi targetApi = params.targetApi;
-        const TargetApi codeGenTargetApi = params.codeGenTargetApi;
+        const TargetLanguage targetLanguage = params.targetLanguage;
 
         // Populate a SamplerBindingMap for the sole purpose of finding where the post-process bindings
         // live within the global namespace of samplers.
@@ -97,7 +97,7 @@ Package PostprocessMaterialBuilder::build() {
 
             // Vertex Shader
             std::string vs = ShaderPostProcessGenerator::createPostProcessVertexProgram(
-                    shaderModel, targetApi, codeGenTargetApi,
+                    shaderModel, targetApi, targetLanguage,
                     filament::PostProcessStage(k), firstSampler);
 
             bool ok = postProcessor.process(vs, filament::backend::ShaderType::VERTEX, shaderModel,
@@ -138,7 +138,7 @@ Package PostprocessMaterialBuilder::build() {
 
             // Fragment Shader
             std::string fs = ShaderPostProcessGenerator::createPostProcessFragmentProgram(
-                    shaderModel, targetApi, codeGenTargetApi,
+                    shaderModel, targetApi, targetLanguage,
                     filament::PostProcessStage(k), firstSampler);
 
             ok = postProcessor.process(fs, filament::backend::ShaderType::FRAGMENT, shaderModel, &fs,
