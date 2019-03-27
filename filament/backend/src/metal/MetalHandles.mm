@@ -164,7 +164,6 @@ void MetalUniformBuffer::copyIntoBuffer(void* src, size_t size) {
     }];
 }
 
-
 id<MTLBuffer> MetalUniformBuffer::getGpuBuffer() const {
     if (bufferPoolEntry) {
         return bufferPoolEntry->buffer;
