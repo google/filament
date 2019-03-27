@@ -52,10 +52,5 @@ struct PostProcessSib {
     static constexpr size_t SAMPLER_COUNT = 1;
 };
 
-// Returns the binding point of the first sampler for the given backend API.
-inline constexpr uint8_t getSamplerBindingsStart(backend::Backend api) noexcept {
-    return 0;
-}
-
 }
 #endif // TNT_FILABRIDGE_SIBGENERATOR_H

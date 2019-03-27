@@ -132,8 +132,7 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder)
     assert(uibOK);
 
     // Populate sampler bindings for the backend that will consume this Material.
-    const uint8_t offset = getSamplerBindingsStart(engine.getBackend());
-    mSamplerBindings.populate(offset, &mSamplerInterfaceBlock);
+    mSamplerBindings.populate(&mSamplerInterfaceBlock);
 
     parser->getShading(&mShading);
     parser->getBlendingMode(&mBlendingMode);

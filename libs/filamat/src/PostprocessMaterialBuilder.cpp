@@ -69,9 +69,7 @@ Package PostprocessMaterialBuilder::build() {
         // Populate a SamplerBindingMap for the sole purpose of finding where the post-process bindings
         // live within the global namespace of samplers.
         filament::SamplerBindingMap samplerBindingMap;
-        auto backend = static_cast<filament::backend::Backend>(params.targetApi);
-        uint8_t offset = filament::getSamplerBindingsStart(backend);
-        samplerBindingMap.populate(offset);
+        samplerBindingMap.populate();
         const uint8_t firstSampler =
                 samplerBindingMap.getBlockOffset(filament::BindingPoints::POST_PROCESS);
 

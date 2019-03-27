@@ -24,10 +24,10 @@
 
 namespace filament {
 
-void SamplerBindingMap::populate(uint8_t firstSamplerBinding,
-        const SamplerInterfaceBlock* perMaterialSib, const char* materialName) {
-    uint8_t offset = firstSamplerBinding;
-    size_t maxSamplerIndex = firstSamplerBinding + backend::MAX_SAMPLER_COUNT - 1;
+void SamplerBindingMap::populate(const SamplerInterfaceBlock* perMaterialSib,
+            const char* materialName) {
+    uint8_t offset = 0;
+    size_t maxSamplerIndex = backend::MAX_SAMPLER_COUNT - 1;
     bool overflow = false;
     for (uint8_t blockIndex = 0; blockIndex < filament::BindingPoints::COUNT; blockIndex++) {
         mSamplerBlockOffsets[blockIndex] = offset;
