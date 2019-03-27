@@ -41,7 +41,7 @@ std::ostream& CodeGenerator::generateProlog(std::ostream& out, ShaderType type,
             break;
         case ShaderModel::GL_ES_30:
             // Vulkan requires version 310 or higher
-            if (mCodeGenTargetApi == TargetApi::VULKAN) {
+            if (mTargetLanguage == TargetLanguage::SPIRV) {
                 // Vulkan requires layout locations on ins and outs, which were not supported
                 // in the OpenGL 4.1 GLSL profile.
                 out << "#version 310 es\n\n";
@@ -54,7 +54,7 @@ std::ostream& CodeGenerator::generateProlog(std::ostream& out, ShaderType type,
             out << "#define TARGET_MOBILE\n";
             break;
         case ShaderModel::GL_CORE_41:
-            if (mCodeGenTargetApi == TargetApi::VULKAN) {
+            if (mTargetLanguage == TargetLanguage::SPIRV) {
                 // Vulkan requires binding specifiers on uniforms and samplers, which were not
                 // supported in the OpenGL 4.1 GLSL profile.
                 out << "#version 450 core\n\n";
@@ -70,8 +70,8 @@ std::ostream& CodeGenerator::generateProlog(std::ostream& out, ShaderType type,
     if (mTargetApi == TargetApi::METAL) {
         out << "#define TARGET_METAL_ENVIRONMENT\n";
     }
-    if (mCodeGenTargetApi == TargetApi::VULKAN) {
-        out << "#define CODEGEN_TARGET_VULKAN_ENVIRONMENT\n";
+    if (mTargetLanguage == TargetLanguage::SPIRV) {
+        out << "#define TARGET_LANGUAGE_SPIRV\n";
     }
 
     Precision defaultPrecision = getDefaultPrecision(type);
@@ -251,7 +251,7 @@ std::ostream& CodeGenerator::generateUniforms(std::ostream& out, ShaderType shad
     Precision defaultPrecision = getDefaultPrecision(shaderType);
 
     out << "\nlayout(";
-    if (mCodeGenTargetApi == TargetApi::VULKAN) {
+    if (mTargetLanguage == TargetLanguage::SPIRV) {
         uint32_t bindingIndex = (uint32_t) binding; // avoid char output
         out << "binding = " << bindingIndex << ", ";
     }
@@ -294,7 +294,7 @@ std::ostream& CodeGenerator::generateSamplers(
         }
         char const* const typeName = getSamplerTypeName(type, info.format, info.multisample);
         char const* const precision = getPrecisionQualifier(info.precision, Precision::DEFAULT);
-        if (mCodeGenTargetApi == TargetApi::VULKAN) {
+        if (mTargetLanguage == TargetLanguage::SPIRV) {
             const uint32_t bindingIndex = (uint32_t) firstBinding + info.offset;
             out << "layout(binding = " << bindingIndex << ") ";
         }
@@ -561,7 +561,7 @@ char const* CodeGenerator::getSamplerTypeName(SamplerType type, SamplerFormat fo
             // Vulkan doesn't have external textures in the sense as GL. Vulkan external textures
             // are created via VK_ANDROID_external_memory_android_hardware_buffer, but they are
             // backed by VkImage just like a normal texture, and sampled from normally.
-            return (mCodeGenTargetApi == TargetApi::VULKAN) ? "sampler2D" : "samplerExternalOES";
+            return (mTargetLanguage == TargetLanguage::SPIRV) ? "sampler2D" : "samplerExternalOES";
     }
 }
 

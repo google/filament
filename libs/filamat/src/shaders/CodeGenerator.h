@@ -38,10 +38,11 @@ namespace filamat {
 class UTILS_PRIVATE CodeGenerator {
     using ShaderType = filament::backend::ShaderType;
     using TargetApi = MaterialBuilder::TargetApi;
+    using TargetLanguage = MaterialBuilder::TargetLanguage;
 public:
     CodeGenerator(filament::backend::ShaderModel shaderModel,
-            TargetApi targetApi, TargetApi codeGenTargetApi) noexcept
-            : mShaderModel(shaderModel), mTargetApi(targetApi), mCodeGenTargetApi(codeGenTargetApi) {
+            TargetApi targetApi, TargetLanguage targetLanguage) noexcept
+            : mShaderModel(shaderModel), mTargetApi(targetApi), mTargetLanguage(targetLanguage) {
         if (targetApi == TargetApi::ALL) {
             utils::slog.e << "Must resolve target API before codegen." << utils::io::endl;
             std::terminate();
@@ -133,7 +134,7 @@ private:
 
     filament::backend::ShaderModel mShaderModel;
     TargetApi mTargetApi;
-    TargetApi mCodeGenTargetApi;
+    TargetLanguage mTargetLanguage;
 
     // return type name of uniform  (e.g.: "vec3", "vec4", "float")
     static char const* getUniformTypeName(filament::UniformInterfaceBlock::Type uniformType) noexcept;

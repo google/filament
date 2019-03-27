@@ -54,6 +54,11 @@ public:
         METAL
     };
 
+    enum class TargetLanguage {
+        GLSL,
+        SPIRV
+    };
+
     enum class Optimization {
         NONE,
         PREPROCESSOR,
@@ -81,7 +86,7 @@ protected:
     struct CodeGenParams {
         int shaderModel;
         TargetApi targetApi;
-        TargetApi codeGenTargetApi;
+        TargetLanguage targetLanguage;
     };
     std::vector<CodeGenParams> mCodeGenPermutations;
     uint8_t mVariantFilter = 0;
