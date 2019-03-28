@@ -11,7 +11,7 @@
 </style>
 
 **Vulkan Backend**
-          *Last updated: 6 Feb 2019*
+          *Last updated: 2 April 2019*
 
 ![](../../docs/images/filament_logo.png)
 
@@ -23,7 +23,7 @@ maintained, which is why it lives as a markdown document in our source tree.
 
 # Architecture
 
-At a high level, the Vulkan backend is composed of the **driver**, a set of **cache managers**, and
+At a high level, the Vulkan backend is composed of the **driver**, a set of **helpers**, and
 a set of **handle types**.
 
 The driver is responsible for implementing all `DriverAPI` entry points, as well as managing a
@@ -33,39 +33,42 @@ One of the handle types is the **swap chain**. This is a significant component b
 command buffers that we use to issue draw calls to Vulkan. We allow applications to create multiple
 swap chain objects, but in practice the swap chain is basically a singleton.
 
-***********************************************************************************************
-*                                                                                             *
-*   .---------------------------------------.                                                 *
-*  |            Client Application           |                                                *
-*   '------------------+--------------------'                                                 *
-*                      |                                                                      *
-*                      v                                                                      *
-*   .---------------------------------------.     .--------------------------------------.    *
-*  |        Filament Rendering Engine        |   |          filament::SwapChain           |   *
-*   '------------------+--------------------'     '------------------+-------------------'    *
-*                      |                                             |                        *
-*                      v                                             v                        *
-*   .--------------------------------------.      .---------------------------------------.   *
-*  |                                        |    |                                         |  *
-*  |       VulkanDriver : DriverBase        |    |   VulkanSurfaceContext : HwSwapChain    |  *
-*  |                                        |    |                                         |  *
-*  |----------------------------------------|    |-----------------------------------------|  *
-*  |                                        |    |                                         |  *
-*  |   Cache Managers      Driver State     |    |   .----------------+----------------.   |  *
-*  |  .--------------.    .-------------.   |    |  |   SwapContext   |   SwapContext   |  |  *
-*  |  | Binder       |   | VulkanContext |  |    |  |-----------------|-----------------|  |  *
-*  |  +--------------+   |---------------|  |    |  | VkCommandBuffer | VkCommandBuffer |  |  *
-*  |  | FboCache     |   | VkDevice      |  |    |  | VkImage         | VkImage         |  |  *
-*  |  +--------------+   | VkInstance    |  |    |   '----------------+----------------'   |  *
-*  |  | SamplerCache |    '-------------'   |    |                                         |  *
-*  |  +--------------+                      |     '---------------------------------------'   *
-*  |  | StagePool    |                      |                                                 *
-*  |  '--------------'                      |                                                 *
-*  |                                        |                                                 *
-*  |                                        |                                                 *
-*   '--------------------------------------'                                                  *
-*                                                                                             *
-***********************************************************************************************
+************************************************************************************************
+*                                                                                              *
+*   .---------------------------------------.                                                  *
+*  |            Client Application           |                                                 *
+*   '------------------+--------------------'                                                  *
+*                      |                                                                       *
+*                      v                                                                       *
+*   .----------------------------------------.     .--------------------------------------.    *
+*  |        Filament Rendering Engine         |   |          filament::SwapChain           |   *
+*   '------------------+---------------------'     '------------------+-------------------'    *
+*                      |                                              |                        *
+*                      v                                              v                        *
+*   .----------------------------------------.     .---------------------------------------.   *
+*  |                                          |   |                                         |  *
+*  |       VulkanDriver : DriverBase          |   |   VulkanSurfaceContext : HwSwapChain    |  *
+*  |                                          |   |                                         |  *
+*  |------------------------------------------|   |-----------------------------------------|  *
+*  |                                          |   |                                         |  *
+*  |    Helpers            VulkanContext      |   |    SwapContext       SwapContext        |  *
+*  |  .--------------.    .---------------.   |   |   .----------------+----------------.   |  *
+*  |  | Binder       |   | VkDevice        |  |   |  | VkImage         | VkImage         |  |  *
+*  |  +--------------+   | VkInstance      |  |   |  | VkImageView     | VkImageView     |  |  *
+*  |  | Disposer     |   |                 |  |   |  |                 |                 |  |  *
+*  |  +--------------+   +-----------------+  |   |  +-----------------+-----------------+  |  *
+*  |  | FboCache     |   | VkCommandBuffer |  |   |  | VkCommandBuffer | VkCommandBuffer |  |  *
+*  |  +--------------+   | VkFence         |  |   |  | VkFence         | VkFence         |  |  *
+*  |  | SamplerCache |    '---------------'   |   |   '----------------+----------------'   |  *
+*  |  +--------------+                        |   |                                         |  *
+*  |  | StagePool    |                        |    '---------------------------------------'   *
+*  |  '--------------'                        |                                                *
+*  |                                          |                                                *
+*  |                                          |                                                *
+*  |                                          |                                                *
+*   '----------------------------------------'                                                 *
+*                                                                                              *
+************************************************************************************************
 
 # Overview
 
@@ -129,14 +132,17 @@ VulkanRenderPrimitive
 One special case is `VulkanBuffer`, which is not a handle class. It encapulates functionality shared
 between `VulkanIndexBuffer` and `VulkanVertexBuffer`.
 
-## Cache managers
+## Helpers
 
-`VulkanDriver` owns one instance of each cache manager. They are not part of a class hierarchy but
+`VulkanDriver` owns one instance of each helper. They are not part of a class hierarchy but
 they do follow a common set of conventions. For example, most of them implement a `gc()` method
 that is called once per frame to free unused objects.
 
 VulkanBinder
 : Cache of VkDescriptorSet and VkPipeline.
+
+VulkanDisposer
+: Holds reference counts to Vulkan objects in order to defer their destruction.
 
 VulkanFboCache
 : Cache of VkRenderPass and VkFramebuffer. Contains weak references to VkImage handles, but does not
@@ -150,8 +156,8 @@ VulkanSamplerCache
 
 ## Folder layout and namespacing
 
-With the exception of BlueVK, all Vulkan-specific code lives in `filament/driver/vulkan`, which has
-no subfolders. All backend-specific types and functions live directly in the `filament::driver`
+With the exception of BlueVK, all Vulkan-specific code lives in `backend/src/vulkan`, which has
+no subfolders. All backend-specific types and functions live directly in the `filament::backend`
 namespace, and we simply prefix our names with "Vulkan" when necessary to avoid ambiguation with
 OpenGL.
 
@@ -188,10 +194,6 @@ once, so we consolidate these using a simple third-party library
 used each time the backend needs to create a `VkBuffer` or `VkImage`. See `VulkanStagePool` for a
 usage example.
 
-!!! Warning
-    vk_mem_alloc proffers a defrag function which we are not calling anywhere yet. This will likely
-    be necessary to avoid running up against memory limitations.
-
 # BlueVK
 
 BlueVK loads in functions for all Vulkan entry points and supported extensions. On Android, this
@@ -214,6 +216,15 @@ the BlueVK header, which in turn includes the Vulkan headers.
 
 Here we list some of the most significant issues and to-be-done items for the Vulkan backend.
 
+- We are breaking external synchronization rules with `VkFence`
+    - Try replacing this with a query API for timestamps
+- Fix "too many descriptor sets" (see bistro model)
+    - Consider a bgfx-like approach that grabs from a pool and does `vkUpdateDescriptorSets` before every draw call
+- Improve the UBO strategy
+    - Currently we use staging buffers and perform lots of copies (host-to-host, then host-to-device)
+    - Consider an approach similar to MetalDriver, which effectively implements double-buffering using a pool of shared mem buffers
+- Consider using subpasses for the depth prepass
+- EndRenderPass is missing an image barrier
 - We need to do more performance analysis
     - We don't have great stress tests, but we should at least:
         1. Try sponza on a Pixel 2
@@ -224,18 +235,10 @@ Here we list some of the most significant issues and to-be-done items for the Vu
         2. We do lots of state hashing for this
         3. Vulkan has special pipeline cache objects that we aren't using yet, but...
         4. It might be better to enhance our driver API to allow a priori construction
-- We create a large number of descriptor sets
-    - Might be hard to avoid
-    - We should look into dynamic uniforms
-- We might be able to improve our UBO strategy
-    - Currently we use staging buffers and perform lots of host-to-device copies
-    - Some engines (e.g. bgfx) use always-mapped shared memory instead
 - We have no automated tests
 - We don't *quite* have feature parity with the OpenGL backend
     - No support for streaming camera texture yet
         - This is possible, even in Android O, just haven't gotten around to it yet
-    - Filament fences don't map well to Vulkan semantics
-        - Higher level timing queries might make more sense
 
 <script src="https://casual-effects.com/markdeep/latest/markdeep.min.js"></script>
 <script>window.alreadyProcessedMarkdeep||(document.body.style.visibility="visible")</script>
