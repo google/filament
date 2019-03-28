@@ -208,8 +208,11 @@ public:
     void setCommandType(CommandTypeFlags commandType) noexcept;
     void setRenderFlags(RenderFlags flags) noexcept;
     void setExecuteSync(utils::JobSystem::Job* sync) noexcept;
-    void render(const char* name, backend::Handle <backend::HwRenderTarget> renderTarget,
-            backend::RenderPassParams params) noexcept;
+    void generateSortedCommands() noexcept;
+    void execute(const char* name,
+            backend::Handle <backend::HwRenderTarget> renderTarget,
+            backend::RenderPassParams params,
+            Command const* first, Command const* last) const noexcept;
 
     size_t getCommandsHighWatermark() const noexcept {
         return mCommandsHighWatermark * sizeof(Command);
