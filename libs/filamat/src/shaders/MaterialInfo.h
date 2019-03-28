@@ -42,6 +42,7 @@ struct UTILS_PUBLIC MaterialInfo {
     bool flipUV;
     filament::AttributeBitset requiredAttributes;
     filament::BlendingMode blendingMode;
+    filament::BlendingMode postLightingBlendingMode;
     filament::Shading shading;
     filament::UniformInterfaceBlock uib;
     filament::SamplerInterfaceBlock sib;

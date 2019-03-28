@@ -35,6 +35,7 @@ static constexpr const char* PARAM_KEY_PARAMETERS               = "parameters";
 static constexpr const char* PARAM_KEY_VARIABLES                = "variables";
 static constexpr const char* PARAM_KEY_REQUIRES                 = "requires";
 static constexpr const char* PARAM_KEY_BLENDING                 = "blending";
+static constexpr const char* PARAM_KEY_POST_LIGHTING_BLENDING   = "postLightingBlending";
 static constexpr const char* PARAM_KEY_VERTEX_DOMAIN            = "vertexDomain";
 static constexpr const char* PARAM_KEY_CULLING                  = "culling";
 static constexpr const char* PARAM_KEY_COLOR_WRITE              = "colorWrite";
@@ -58,6 +59,8 @@ ParametersProcessor::ParametersProcessor() {
     mConfigProcessor[PARAM_KEY_VARIABLES]         = &ParametersProcessor::processVariables;
     mConfigProcessor[PARAM_KEY_REQUIRES]          = &ParametersProcessor::processRequires;
     mConfigProcessor[PARAM_KEY_BLENDING]          = &ParametersProcessor::processBlending;
+    mConfigProcessor[PARAM_KEY_POST_LIGHTING_BLENDING]
+            = &ParametersProcessor::processPostLightingBlending;
     mConfigProcessor[PARAM_KEY_VERTEX_DOMAIN]     = &ParametersProcessor::processVertexDomain;
     mConfigProcessor[PARAM_KEY_CULLING]           = &ParametersProcessor::processCulling;
     mConfigProcessor[PARAM_KEY_COLOR_WRITE]       = &ParametersProcessor::processColorWrite;
@@ -83,6 +86,7 @@ ParametersProcessor::ParametersProcessor() {
     mRootAsserts[PARAM_KEY_VARIABLES]                = JsonishValue::Type::ARRAY;
     mRootAsserts[PARAM_KEY_REQUIRES]                 = JsonishValue::Type::ARRAY;
     mRootAsserts[PARAM_KEY_BLENDING]                 = JsonishValue::Type::STRING;
+    mRootAsserts[PARAM_KEY_POST_LIGHTING_BLENDING]   = JsonishValue::Type::STRING;
     mRootAsserts[PARAM_KEY_VERTEX_DOMAIN]            = JsonishValue::Type::STRING;
     mRootAsserts[PARAM_KEY_CULLING]                  = JsonishValue::Type::STRING;
     mRootAsserts[PARAM_KEY_COLOR_WRITE]              = JsonishValue::Type::BOOL;
@@ -384,6 +388,30 @@ bool ParametersProcessor::processBlending(filamat::MaterialBuilder& builder,
     }
 
     builder.blending(stringToEnum(mStringToBlendingMode, jsonString->getString()));
+    return true;
+}
+
+bool ParametersProcessor::processPostLightingBlending(filamat::MaterialBuilder& builder,
+        const JsonishValue& value) {
+    auto jsonString = value.toJsonString();
+    if (!isStringValidEnum(mStringToBlendingMode, jsonString->getString())) {
+        std::cerr << PARAM_KEY_BLENDING << ": value is not a valid BlendMode." << std::endl;
+        return false;
+    }
+
+    filament::BlendingMode postLightingBlending =
+            stringToEnum(mStringToBlendingMode, jsonString->getString());
+    switch (postLightingBlending) {
+        case filament::BlendingMode::FADE:
+        case filament::BlendingMode::MASKED:
+            std::cerr << PARAM_KEY_BLENDING <<
+                    ": value is not a valid post-lighting BlendMode."
+                    " Only OPAQUE, TRANSPARENT and FADE are supported." << std::endl;
+            return false;
+        default:
+            break;
+    }
+    builder.postLightingBlending(postLightingBlending);
     return true;
 }
 

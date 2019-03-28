@@ -36,7 +36,8 @@ std::unordered_map<std::string, Property> Enums::mStringToProperty = {
         { "subsurfaceColor",     Property::SUBSURFACE_COLOR },
         { "sheenColor",          Property::SHEEN_COLOR },
         { "emissive",            Property::EMISSIVE },
-        { "normal",              Property::NORMAL }
+        { "normal",              Property::NORMAL },
+        { "postLightingColor",   Property::POST_LIGHTING_COLOR },
 };
 
 template <>

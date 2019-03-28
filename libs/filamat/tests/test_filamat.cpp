@@ -496,6 +496,24 @@ TEST_F(MaterialCompiler, StaticCodeAnalyzerNormal) {
     expected[size_t(filamat::MaterialBuilder::Property::NORMAL)] = true;
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
+
+TEST_F(MaterialCompiler, StaticCodeAnalyzerOutputFactor) {
+    std::string shaderCode(R"(
+        void material(inout MaterialInputs material) {
+            prepareMaterial(material);
+            material.postLightingColor = vec4(1.0);
+        }
+    )");
+
+    filamat::MaterialBuilder builder = makeBuilder(shaderCode);
+    GLSLTools glslTools;
+    MaterialBuilder::PropertyList properties {false};
+    glslTools.findProperties(builder, properties);
+    MaterialBuilder::PropertyList expected {false};
+    expected[size_t(filamat::MaterialBuilder::Property::POST_LIGHTING_COLOR)] = true;
+    EXPECT_TRUE(PropertyListsMatch(expected, properties));
+}
+
 TEST_F(MaterialCompiler, EmptyName) {
     std::string shaderCode(R"(
         void material(inout MaterialInputs material) {

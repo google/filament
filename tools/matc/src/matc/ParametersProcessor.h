@@ -42,6 +42,7 @@ private:
     bool processVariables(filamat::MaterialBuilder &builder, const JsonishValue &value);
     bool processRequires(filamat::MaterialBuilder &builder, const JsonishValue &value);
     bool processBlending(filamat::MaterialBuilder &builder, const JsonishValue &value);
+    bool processPostLightingBlending(filamat::MaterialBuilder &builder, const JsonishValue &value);
     bool processVertexDomain(filamat::MaterialBuilder &builder, const JsonishValue &value);
     bool processCulling(filamat::MaterialBuilder &builder, const JsonishValue &value);
     bool processColorWrite(filamat::MaterialBuilder &builder, const JsonishValue &value);

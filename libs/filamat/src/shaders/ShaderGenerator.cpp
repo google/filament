@@ -47,23 +47,9 @@ static const char* getShadingDefine(filament::Shading shading) noexcept {
 
 static void generateMaterialDefines(std::ostream& os, const CodeGenerator& cg,
         MaterialBuilder::PropertyList const properties) noexcept {
-    using Property = MaterialBuilder::Property;
-    cg.generateMaterialProperty(os, Property::BASE_COLOR,           properties[ 0]);
-    cg.generateMaterialProperty(os, Property::ROUGHNESS,            properties[ 1]);
-    cg.generateMaterialProperty(os, Property::METALLIC,             properties[ 2]);
-    cg.generateMaterialProperty(os, Property::REFLECTANCE,          properties[ 3]);
-    cg.generateMaterialProperty(os, Property::AMBIENT_OCCLUSION,    properties[ 4]);
-    cg.generateMaterialProperty(os, Property::CLEAR_COAT,           properties[ 5]);
-    cg.generateMaterialProperty(os, Property::CLEAR_COAT_ROUGHNESS, properties[ 6]);
-    cg.generateMaterialProperty(os, Property::CLEAR_COAT_NORMAL,    properties[ 7]);
-    cg.generateMaterialProperty(os, Property::ANISOTROPY,           properties[ 8]);
-    cg.generateMaterialProperty(os, Property::ANISOTROPY_DIRECTION, properties[ 9]);
-    cg.generateMaterialProperty(os, Property::THICKNESS,            properties[10]);
-    cg.generateMaterialProperty(os, Property::SUBSURFACE_POWER,     properties[11]);
-    cg.generateMaterialProperty(os, Property::SUBSURFACE_COLOR,     properties[12]);
-    cg.generateMaterialProperty(os, Property::SHEEN_COLOR,          properties[13]);
-    cg.generateMaterialProperty(os, Property::EMISSIVE,             properties[14]);
-    cg.generateMaterialProperty(os, Property::NORMAL,               properties[15]);
+    for (size_t i = 0; i < MaterialBuilder::MATERIAL_PROPERTIES_COUNT; i++) {
+        cg.generateMaterialProperty(os, static_cast<MaterialBuilder::Property>(i), properties[i]);
+    }
 }
 
 static void generateVertexDomain(const CodeGenerator& cg, std::stringstream& vs,
@@ -278,6 +264,19 @@ const std::string ShaderGenerator::createFragmentProgram(filament::backend::Shad
             break;
         case BlendingMode::MASKED:
             cg.generateDefine(fs, "BLEND_MODE_MASKED", true);
+            break;
+    }
+    switch (material.postLightingBlendingMode) {
+        case BlendingMode::OPAQUE:
+            cg.generateDefine(fs, "POST_LIGHTING_BLEND_MODE_OPAQUE", true);
+            break;
+        case BlendingMode::TRANSPARENT:
+            cg.generateDefine(fs, "POST_LIGHTING_BLEND_MODE_TRANSPARENT", true);
+            break;
+        case BlendingMode::ADD:
+            cg.generateDefine(fs, "POST_LIGHTING_BLEND_MODE_ADD", true);
+            break;
+        default:
             break;
     }
     cg.generateDefine(fs, getShadingDefine(material.shading), true);
