@@ -43,12 +43,16 @@ Filament.loadClassExtensions = function() {
             alpha: false
         };
         options = Object.assign(defaults, options);
-        Filament.createContext(canvas, true, true, options);
+
+        // Create the WebGL 2.0 context and register it with emscripten.
+        const ctx = canvas.getContext("webgl2", options);
+        const handle = GL.registerContext(ctx, options);
+        GL.makeContextCurrent(handle);
 
         // Enable all desired extensions by calling getExtension on each one.
-        Filament.ctx.getExtension('WEBGL_compressed_texture_s3tc');
-        Filament.ctx.getExtension('WEBGL_compressed_texture_astc');
-        Filament.ctx.getExtension('WEBGL_compressed_texture_etc');
+        ctx.getExtension('WEBGL_compressed_texture_s3tc');
+        ctx.getExtension('WEBGL_compressed_texture_astc');
+        ctx.getExtension('WEBGL_compressed_texture_etc');
 
         return Filament.Engine._create();
     };
