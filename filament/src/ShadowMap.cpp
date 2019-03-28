@@ -113,19 +113,6 @@ void ShadowMap::terminate(DriverApi& driverApi) noexcept {
     }
 }
 
-void ShadowMap::beginRenderPass(DriverApi& driver) const noexcept {
-    RenderPassParams params = {};
-    params.flags.clear = TargetBufferFlags::SHADOW;
-    params.flags.discardStart = TargetBufferFlags::DEPTH;
-    params.flags.discardEnd = TargetBufferFlags::COLOR_AND_STENCIL;
-    params.clearDepth = 1.0;
-    params.viewport = mViewport;
-    // disable scissor for clearing so the whole surface is cleared, but set the viewport to the
-    // the inset-by-1 rectangle.
-    params.flags.clear |= RenderPassFlags::IGNORE_SCISSOR;
-    driver.beginRenderPass(mShadowMapRenderTarget, params);
-}
-
 void ShadowMap::update(
         const FScene::LightSoa& lightData, size_t index, FScene const* scene,
         details::CameraInfo const& camera, uint8_t visibleLayers) noexcept {

@@ -231,6 +231,14 @@ public:
         return mVisibleShadowCasters;
     }
 
+    TargetBufferFlags getClearFlags() const noexcept {
+        uint8_t clearFlags = 0;
+        if (getClearTargetColor())     clearFlags |= TargetBufferFlags::COLOR;
+        if (getClearTargetDepth())     clearFlags |= TargetBufferFlags::DEPTH;
+        if (getClearTargetStencil())   clearFlags |= TargetBufferFlags::STENCIL;
+        return TargetBufferFlags(clearFlags);
+    }
+
     FCamera& getCameraUser() noexcept { return *mCullingCamera; }
     void setCameraUser(FCamera* camera) noexcept { setCullingCamera(camera); }
 

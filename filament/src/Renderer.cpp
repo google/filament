@@ -193,20 +193,62 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
      * Allocate command buffer.
      */
 
+    FScene& scene = *view.getScene();
+
     const size_t commandsSize = FEngine::CONFIG_PER_FRAME_COMMANDS_SIZE;
     const size_t commandsCount = commandsSize / sizeof(Command);
     GrowingSlice<Command> commands(
             arena.allocate<Command>(commandsCount, CACHELINE_SIZE), commandsCount);
+
+
+    RenderPass pass(engine, commands);
+    RenderPass::RenderFlags renderFlags = 0;
+    if (view.hasShadowing())               renderFlags |= RenderPass::HAS_SHADOWING;
+    if (view.hasDirectionalLight())        renderFlags |= RenderPass::HAS_DIRECTIONAL_LIGHT;
+    if (view.hasDynamicLighting())         renderFlags |= RenderPass::HAS_DYNAMIC_LIGHTING;
+    if (view.isFrontFaceWindingInverted()) renderFlags |= RenderPass::HAS_INVERSE_FRONT_FACES;
+    pass.setRenderFlags(renderFlags);
+
 
     /*
      * Shadow pass
      */
 
     if (view.hasShadowing()) {
-        ShadowPass::renderShadowMap(engine, js, view, commands);
-        recordHighWatermark(commands); // for debugging
-        // reset the command buffer
-        commands.clear();
+        ShadowMap const& shadowMap = view.getShadowMap();
+        filament::Viewport const& viewport = shadowMap.getViewport();
+
+        // FIXME: in the future this will come from the framegraph
+        RenderPassParams params = {};
+        params.flags.clear = TargetBufferFlags::SHADOW;
+        params.flags.discardStart = TargetBufferFlags::DEPTH;
+        params.flags.discardEnd = TargetBufferFlags::COLOR_AND_STENCIL;
+        params.clearDepth = 1.0;
+        params.viewport = viewport;
+        // disable scissor for clearing so the whole surface, but set the viewport to the
+        // the inset-by-1 rectangle.
+        params.flags.clear |= RenderPassFlags::IGNORE_SCISSOR;
+
+        FCamera const& camera = shadowMap.getCamera();
+        CameraInfo cameraInfo = {
+                .projection         = mat4f{ camera.getProjectionMatrix() },
+                .cullingProjection  = mat4f{ camera.getCullingProjectionMatrix() },
+                .model              = camera.getModelMatrix(),
+                .view               = camera.getViewMatrix(),
+                .zn                 = camera.getNear(),
+                .zf                 = camera.getCullingFar(),
+        };
+
+        FView::Range visibleRenderables = view.getVisibleShadowCasters();
+        pass.setGeometry(scene, visibleRenderables);
+        pass.setCamera(cameraInfo);
+        pass.setCommandType(RenderPass::SHADOW);
+
+        // populate the RenderPrimitive array with the proper LOD
+        view.updatePrimitivesLod(engine, cameraInfo, scene.getRenderableData(), visibleRenderables);
+        view.prepareCamera(cameraInfo, viewport);
+        view.commitUniforms(driver);
+        pass.render("Shadow map Pass", shadowMap.getRenderTarget(), params);
     }
 
     /*
@@ -231,6 +273,39 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
      * Depth + Color passes
      */
 
+    TargetBufferFlags clearFlags = view.getClearFlags();
+    if (hasPostProcess) {
+        // When using a post-process pass, composition of Views is done during the post-process
+        // pass, which means it's NOT done here. For this reason, we need to clear the depth/stencil
+        // buffers unconditionally. The color buffer must be cleared to what the user asked for,
+        // since it's akin to a drawing command.
+        clearFlags = TargetBufferFlags(uint8_t(clearFlags) | TargetBufferFlags::DEPTH_AND_STENCIL);
+    }
+
+
+    RenderPass::CommandTypeFlags commandType;
+    switch (view.getDepthPrepass()) {
+        case View::DepthPrepass::DEFAULT:
+            // TODO: better default strategy (can even change on a per-frame basis)
+#if defined(ANDROID) || defined(__EMSCRIPTEN__)
+            commandType = COLOR;
+#else
+            commandType = RenderPass::DEPTH_AND_COLOR;
+#endif
+            break;
+        case View::DepthPrepass::DISABLED:
+            commandType = RenderPass::COLOR;
+            break;
+        case View::DepthPrepass::ENABLED:
+            commandType = RenderPass::DEPTH_AND_COLOR;
+            break;
+    }
+
+    pass.setGeometry(scene, view.getVisibleRenderables());
+    pass.setExecuteSync(jobFroxelize);
+    pass.setCamera(view.getCameraInfo());
+    pass.setCommandType(commandType);
+
     struct ColorPassData {
         FrameGraphResource color;
         FrameGraphResource depth;
@@ -254,14 +329,23 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
                         .attachments.color = data.color,
                         .attachments.depth = data.depth
                 };
-                data.color = builder.useRenderTarget("colorRenderTarget", desc).textures[0];
+
+                auto attachments = builder.useRenderTarget("colorRenderTarget", desc, clearFlags);
+                data.color = attachments.color;
+                data.depth = attachments.depth;
             },
-            [=, &engine, &js, &view, &commands]
+            [=, &pass, &engine, &view, &scene]
                     (FrameGraphPassResources const& resources,
                             ColorPassData const& data, DriverApi& driver) {
                 auto out = resources.getRenderTarget(data.color);
-                ColorPass::renderColorPass(engine, js, jobFroxelize, out.target, view,
-                        static_cast<filament::Viewport const&>(out.params.viewport), commands);
+
+                // populate the RenderPrimitive array with the proper LOD
+                CameraInfo const& cameraInfo = view.getCameraInfo();
+                view.updatePrimitivesLod(engine,
+                        cameraInfo, scene.getRenderableData(), view.getVisibleRenderables());
+                view.prepareCamera(cameraInfo, (filament::Viewport const&)out.params.viewport);
+                view.commitUniforms(driver);
+                pass.render("Color Pass", out.target, out.params);
             });
 
     FrameGraphResource input = colorPass.getData().color;
@@ -307,8 +391,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     //fg.export_graphviz(slog.d);
     fg.execute(driver);
 
-    // for debugging
-    recordHighWatermark(commands);
+    recordHighWatermark(pass.getCommandsHighWatermark());
 }
 
 void FRenderer::mirrorFrame(FSwapChain* dstSwapChain, filament::Viewport const& dstViewport,

@@ -55,6 +55,8 @@ public:
     // Returns the shadow map's viewport. Valid after prepare().
     Viewport const& getViewport() const noexcept { return mViewport; }
 
+    backend::Handle<backend::HwRenderTarget> getRenderTarget() const { return mShadowMapRenderTarget; }
+
     // Computes the transform to use in the shader to access the shadow map.
     // Valid after calling update().
     math::mat4f const& getLightSpaceMatrix() const noexcept { return mLightSpace; }
@@ -67,9 +69,6 @@ public:
 
     // Returns the light's projection. Valid after calling update().
     FCamera const& getCamera() const noexcept { return *mCamera; }
-
-    // Set-up the render target, call before rendering the shadow map.
-    void beginRenderPass(backend::DriverApi& driverApi) const noexcept;
 
     // use only for debugging
     FCamera const& getDebugCamera() const noexcept { return *mDebugCamera; }
