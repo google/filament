@@ -27,7 +27,10 @@ Filament is distributed as a set of static libraries you must link against:
 - `filabridge`, Support library for Filament
 - `filaflat`, Support library for Filament
 - `filament`, Main Filament library
+- `backend`, Filament render backend library
 - `utils`, Support library for Filament
+- `geometry`, Geometry helper library for Filament
+- `smol-v`, SPIR-V compression library
 
 To use Filament from Java you must use the following two libraries instead:
 - `filament-java.jar`, Contains Filament's Java classes
@@ -80,7 +83,7 @@ Copy your platform's Makefile below into a `Makefile` inside the same directory.
 ### Linux
 
 ```
-FILAMENT_LIBS=-lfilament -lbluegl -lbluevk -lfilabridge -lfilaflat -lutils
+FILAMENT_LIBS=-lfilament -lbackend -lbluegl -lbluevk -lfilabridge -lfilaflat -lutils -lgeometry -lsmol-v
 CC=clang++
 
 main: main.o
@@ -98,11 +101,12 @@ clean:
 ### macOS
 
 ```
-FILAMENT_LIBS=-lfilament -lbluegl -lbluevk -lfilabridge -lfilaflat -lutils
+FILAMENT_LIBS=-lfilament -lbackend -lbluegl -lbluevk -lfilabridge -lfilaflat -lutils -lgeometry -lsmol-v
+FRAMEWORKS=-framework Cocoa -framework Metal
 CC=clang++
 
 main: main.o
-	$(CC) -Llib/x86_64/ main.o $(FILAMENT_LIBS) -framework Cocoa -o main
+	$(CC) -Llib/x86_64/ main.o $(FILAMENT_LIBS) $(FRAMEWORKS) -o main
 
 main.o: main.cpp
 	$(CC) -Iinclude/ -std=c++14 -c main.cpp
@@ -124,8 +128,9 @@ When building Filament from source, the `USE_STATIC_CRT` CMake option can be
 used to change the run-time library version.
 
 ```
-FILAMENT_LIBS=lib/x86_64/mt/filament.lib lib/x86_64/mt/bluegl.lib \
-              lib/x86_64/mt/filabridge.lib lib/x86_64/mt/filaflat.lib lib/x86_64/mt/utils.lib
+FILAMENT_LIBS=lib/x86_64/mt/filament.lib lib/x86_64/mt/backend.lib lib/x86_64/mt/bluegl.lib \
+              lib/x86_64/mt/filabridge.lib lib/x86_64/mt/filaflat.lib lib/x86_64/mt/utils.lib \
+              lib/x86_64/mt/geometry.lib lib/x86_64/mt/smol-v.lib
 CC=clang-cl.exe
 
 main.exe: main.obj
