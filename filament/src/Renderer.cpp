@@ -240,15 +240,19 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
         };
 
         FView::Range visibleRenderables = view.getVisibleShadowCasters();
-        pass.setGeometry(scene, visibleRenderables);
-        pass.setCamera(cameraInfo);
-        pass.setCommandType(RenderPass::SHADOW);
-
-        // populate the RenderPrimitive array with the proper LOD
         view.updatePrimitivesLod(engine, cameraInfo, scene.getRenderableData(), visibleRenderables);
         view.prepareCamera(cameraInfo, viewport);
         view.commitUniforms(driver);
-        pass.render("Shadow map Pass", shadowMap.getRenderTarget(), params);
+
+        pass.setGeometry(scene, visibleRenderables);
+        pass.setCamera(cameraInfo);
+        pass.setCommandType(RenderPass::SHADOW);
+        pass.generateSortedCommands();
+
+        pass.execute("Shadow map Pass", shadowMap.getRenderTarget(), params,
+                commands.begin(), commands.end());
+
+        commands.clear();
     }
 
     /*
@@ -273,6 +277,12 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
      * Depth + Color passes
      */
 
+    CameraInfo const& cameraInfo = view.getCameraInfo();
+    view.updatePrimitivesLod(engine, cameraInfo,
+            scene.getRenderableData(), view.getVisibleRenderables());
+    view.prepareCamera(cameraInfo, svp);
+    view.commitUniforms(driver);
+
     TargetBufferFlags clearFlags = view.getClearFlags();
     if (hasPostProcess) {
         // When using a post-process pass, composition of Views is done during the post-process
@@ -282,15 +292,13 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
         clearFlags = TargetBufferFlags(uint8_t(clearFlags) | TargetBufferFlags::DEPTH_AND_STENCIL);
     }
 
-
     RenderPass::CommandTypeFlags commandType;
     switch (view.getDepthPrepass()) {
         case View::DepthPrepass::DEFAULT:
             // TODO: better default strategy (can even change on a per-frame basis)
-#if defined(ANDROID) || defined(__EMSCRIPTEN__)
-            commandType = COLOR;
-#else
             commandType = RenderPass::DEPTH_AND_COLOR;
+#if defined(ANDROID) || defined(__EMSCRIPTEN__)
+            commandType = RenderPass::COLOR;
 #endif
             break;
         case View::DepthPrepass::DISABLED:
@@ -305,6 +313,8 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     pass.setExecuteSync(jobFroxelize);
     pass.setCamera(view.getCameraInfo());
     pass.setCommandType(commandType);
+    pass.generateSortedCommands();
+
 
     struct ColorPassData {
         FrameGraphResource color;
@@ -312,7 +322,8 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     };
 
     auto& colorPass = fg.addPass<ColorPassData>("Color pass",
-            [&](FrameGraph::Builder& builder, ColorPassData& data) {
+            [&svp, hdrFormat, colorPassNeedsDepthBuffer, msaa, clearFlags]
+            (FrameGraph::Builder& builder, ColorPassData& data) {
 
                 data.color = builder.createTexture("color buffer",
                         { .width = svp.width, .height = svp.height, .format = hdrFormat });
@@ -334,18 +345,15 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
                 data.color = attachments.color;
                 data.depth = attachments.depth;
             },
-            [=, &pass, &engine, &view, &scene]
+            [pass, &commands]
                     (FrameGraphPassResources const& resources,
                             ColorPassData const& data, DriverApi& driver) {
                 auto out = resources.getRenderTarget(data.color);
 
-                // populate the RenderPrimitive array with the proper LOD
-                CameraInfo const& cameraInfo = view.getCameraInfo();
-                view.updatePrimitivesLod(engine,
-                        cameraInfo, scene.getRenderableData(), view.getVisibleRenderables());
-                view.prepareCamera(cameraInfo, (filament::Viewport const&)out.params.viewport);
-                view.commitUniforms(driver);
-                pass.render("Color Pass", out.target, out.params);
+                pass.execute("Color Pass", out.target, out.params,
+                        commands.begin(), commands.end());
+
+                commands.clear();
             });
 
     FrameGraphResource input = colorPass.getData().color;
