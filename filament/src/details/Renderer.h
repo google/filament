@@ -88,43 +88,10 @@ private:
     friend class Renderer;
     using Command = RenderPass::Command;
 
-    // this class is defined in RenderPass.cpp
-    class ColorPass final : public RenderPass {
-        using DriverApi = backend::DriverApi;
-        utils::JobSystem& js;
-        utils::JobSystem::Job* jobFroxelize = nullptr;
-        FView const& view;
-        backend::Handle<backend::HwRenderTarget> const rth;
-        void beginRenderPass(backend::DriverApi& driver, Viewport const& viewport, const CameraInfo& camera) noexcept override;
-        void endRenderPass(DriverApi& driver, Viewport const& viewport) noexcept override;
-    public:
-        ColorPass(const char* name, utils::JobSystem& js, utils::JobSystem::Job* jobFroxelize,
-                FView& view, backend::Handle<backend::HwRenderTarget> rth);
-        static void renderColorPass(FEngine& engine,
-                utils::JobSystem& js, utils::JobSystem::Job* sync,
-                backend::Handle<backend::HwRenderTarget> rth,
-                FView& view, Viewport const& scaledViewport,
-                utils::GrowingSlice<Command>& commands) noexcept;
-    };
-
-    // this class is defined in RenderPass.cpp
-    class ShadowPass final : public RenderPass {
-        using DriverApi = backend::DriverApi;
-        ShadowMap const& shadowMap;
-        void beginRenderPass(backend::DriverApi& driver, Viewport const& viewport, const CameraInfo& camera) noexcept override;
-        void endRenderPass(DriverApi& driver, Viewport const& viewport) noexcept override;
-    public:
-        ShadowPass(const char* name, ShadowMap const& shadowMap) noexcept;
-        static void renderShadowMap(FEngine& engine, utils::JobSystem& js,
-                FView& view, utils::GrowingSlice<Command>& commands) noexcept;
-    };
-
     backend::Handle<backend::HwRenderTarget> getRenderTarget() const noexcept { return mRenderTarget; }
 
-    void recordHighWatermark(utils::Slice<Command> const& commands) noexcept {
-#ifndef NDEBUG
-        mCommandsHighWatermark = std::max(mCommandsHighWatermark, size_t(commands.size()));
-#endif
+    void recordHighWatermark(size_t watermark) noexcept {
+        mCommandsHighWatermark = std::max(mCommandsHighWatermark, watermark);
     }
 
     size_t getCommandsHighWatermark() const noexcept {
