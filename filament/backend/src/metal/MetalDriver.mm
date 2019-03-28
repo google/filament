@@ -677,7 +677,7 @@ void MetalDriver::draw(backend::PipelineState ps, Handle<HwRenderPrimitive> rph)
     id<MTLBuffer> uniformsToBind[Program::UNIFORM_BINDING_COUNT] = { nil };
     NSUInteger offsets[Program::UNIFORM_BINDING_COUNT] = { 0 };
 
-    enumerateBoundUniforms([&uniformsToBind, &offsets](const UniformBufferState& state,
+    enumerateBoundUniformBuffers([&uniformsToBind, &offsets](const UniformBufferState& state,
             const MetalUniformBuffer* uniform, uint32_t index) {
         // getGpuBuffer() might return nil, which means there isn't a device allocation for this
         // uniform. In this case, we'll update the uniform below with our CPU-side buffer via
@@ -698,7 +698,7 @@ void MetalDriver::draw(backend::PipelineState ps, Handle<HwRenderPrimitive> rph)
                                                 offsets:offsets
                                               withRange:uniformRange];
 
-    enumerateBoundUniforms([commandEncoder = mContext->currentCommandEncoder](
+    enumerateBoundUniformBuffers([commandEncoder = mContext->currentCommandEncoder](
             const UniformBufferState& state, const MetalUniformBuffer* uniform, uint32_t index) {
         void* cpuBuffer = uniform->getCpuBuffer();
         if (!cpuBuffer) {
@@ -788,15 +788,15 @@ void MetalDriver::enumerateSamplerGroups(
     }
 }
 
-void MetalDriver::enumerateBoundUniforms(
+void MetalDriver::enumerateBoundUniformBuffers(
         const std::function<void(const UniformBufferState&, const MetalUniformBuffer*,
         uint32_t)>& f) {
     for (uint32_t i = 0; i < Program::UNIFORM_BINDING_COUNT; i++) {
-        auto &thisUniform = mContext->uniformState[i];
+        auto& thisUniform = mContext->uniformState[i];
         if (!thisUniform.bound) {
             continue;
         }
-        const auto *uniform = handle_const_cast<MetalUniformBuffer>(mHandleMap, thisUniform.ubh);
+        const auto* uniform = handle_const_cast<MetalUniformBuffer>(mHandleMap, thisUniform.ubh);
         f(thisUniform, uniform, i);
     }
 }
