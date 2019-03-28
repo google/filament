@@ -34,6 +34,7 @@ struct MetalBufferPoolEntry {
     id<MTLBuffer> buffer;
     size_t capacity;
     mutable uint64_t lastAccessed;
+    mutable uint32_t referenceCount;
 };
 
 // Manages a pool of Metal buffers, periodically releasing ones that have been unused for awhile.
@@ -44,7 +45,11 @@ public:
     // Finds or creates a buffer whose capacity is at least the given number of bytes.
     MetalBufferPoolEntry const* acquireBuffer(size_t numBytes);
 
-    // Returns the given buffer back to the pool.
+    // Increments the reference count of the buffer.
+    void retainBuffer(MetalBufferPoolEntry const *stage) noexcept;
+
+    // Decrements the reference count of the buffer, returning the given buffer back to the pool if
+    // the count is 0.
     void releaseBuffer(MetalBufferPoolEntry const *stage) noexcept;
 
     // Evicts old unused buffers and bumps the current frame number.
@@ -56,8 +61,9 @@ public:
 private:
     MetalContext& mContext;
 
-    // Synchronize access to mFreeStages and mUsedStages. acquireBuffer and releaseBuffer may be
-    // called on separate threads (the engine thread and a Metal callback thread, for example).
+    // Synchronizes access to mFreeStages, mUsedStages, and mutable data inside MetalBufferPoolEntrys.
+    // acquireBuffer and releaseBuffer may be called on separate threads (the engine thread and a
+    // Metal callback thread, for example).
     std::mutex mMutex;
 
     // Use an ordered multimap for quick (capacity => stage) lookups using lower_bound().

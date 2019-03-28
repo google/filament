@@ -36,6 +36,7 @@ MetalBufferPoolEntry const* MetalBufferPool::acquireBuffer(size_t numBytes) {
         auto stage = iter->second;
         mFreeStages.erase(iter);
         mUsedStages.insert(stage);
+        stage->referenceCount = 1;
         return stage;
     }
 
@@ -45,15 +46,27 @@ MetalBufferPoolEntry const* MetalBufferPool::acquireBuffer(size_t numBytes) {
     MetalBufferPoolEntry* stage = new MetalBufferPoolEntry({
         .buffer = buffer,
         .capacity = numBytes,
-        .lastAccessed = mCurrentFrame
+        .lastAccessed = mCurrentFrame,
+        .referenceCount = 1
     });
     mUsedStages.insert(stage);
 
     return stage;
 }
 
+void MetalBufferPool::retainBuffer(MetalBufferPoolEntry const *stage) noexcept {
+    std::lock_guard<std::mutex> lock(mMutex);
+
+    (stage->referenceCount)++;
+}
+
 void MetalBufferPool::releaseBuffer(MetalBufferPoolEntry const *stage) noexcept {
     std::lock_guard<std::mutex> lock(mMutex);
+
+    // Decrement the ref count. If it is at 0, move the buffer entry to the free list.
+    if (--(stage->referenceCount) > 0) {
+        return;
+    }
 
     auto iter = mUsedStages.find(stage);
     if (iter == mUsedStages.end()) {

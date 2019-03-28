@@ -136,6 +136,11 @@ MetalUniformBuffer::~MetalUniformBuffer() {
     if (cpuBuffer) {
         free(cpuBuffer);
     }
+    // This uniform buffer is being destroyed. If we have a buffer, release it as it is no longer
+    // needed.
+    if (bufferPoolEntry) {
+        context.bufferPool->releaseBuffer(bufferPoolEntry);
+    }
 }
 
 void MetalUniformBuffer::copyIntoBuffer(void* src, size_t size) {
@@ -151,8 +156,21 @@ void MetalUniformBuffer::copyIntoBuffer(void* src, size_t size) {
         return;
     }
 
+    // We're about to acquire a new buffer to hold the new contents of the uniform. If we previously
+    // had obtained a buffer we release it, decrementing its reference count, as this uniform no
+    // longer needs it.
+    if (bufferPoolEntry) {
+        context.bufferPool->releaseBuffer(bufferPoolEntry);
+    }
+
     bufferPoolEntry = context.bufferPool->acquireBuffer(size);
     memcpy(static_cast<uint8_t*>(bufferPoolEntry->buffer.contents), src, size);
+
+    // Retain the buffer, giving it a +2 reference count. It will be released twice:
+    // 1. When the frame has finished.
+    // 2. When this uniform has finished using the buffer (either upon the next update or when it
+    //    gets destroyed).
+    context.bufferPool->retainBuffer(bufferPoolEntry);
 
     const MetalBufferPoolEntry* entry = this->bufferPoolEntry;
     MetalBufferPool* pool = context.bufferPool;
@@ -212,7 +230,6 @@ void MetalRenderPrimitive::setBuffers(MetalVertexBuffer* vertexBuffer, MetalInde
         bufferIndex++;
     };
 }
-
 
 MetalProgram::MetalProgram(id<MTLDevice> device, const Program& program) noexcept
     : HwProgram(program.getName()) {
