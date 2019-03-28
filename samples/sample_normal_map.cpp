@@ -52,7 +52,7 @@ using namespace utils;
 
 static std::vector<Path> g_filenames;
 
-static std::map<std::string, MaterialInstance*> g_materialInstances;
+static MeshReader::MaterialRegistry g_materialInstances;
 static std::vector<MeshReader::Mesh> g_meshes;
 static const Material* g_material;
 static Entity g_light;
@@ -150,9 +150,12 @@ static int handleCommandLineArgments(int argc, char* argv[], Config* config) {
 static void cleanup(Engine* engine, View*, Scene*) {
     engine->destroy(g_normalMap);
     engine->destroy(g_clearCoatNormalMap);
-    for (auto material : g_materialInstances) {
-        engine->destroy(material.second);
+    std::vector<filament::MaterialInstance*> materialList(g_materialInstances.numRegistered());
+    g_materialInstances.getRegisteredMaterials(materialList.data());
+    for (auto material : materialList) {
+        engine->destroy(material);
     }
+    g_materialInstances.unregisterAll();
     engine->destroy(g_material);
     EntityManager& em = EntityManager::get();
     for (auto mesh : g_meshes) {
@@ -297,21 +300,22 @@ static void setup(Engine* engine, View*, Scene* scene) {
 
     g_material = Material::Builder().package(pkg.getData(), pkg.getSize())
             .build(*engine);
-    g_materialInstances["DefaultMaterial"] = g_material->createInstance();
+    const utils::CString defaultMaterialName("DefaultMaterial");
+    g_materialInstances.registerMaterialInstance(defaultMaterialName, g_material->createInstance());
 
     TextureSampler sampler(TextureSampler::MinFilter::LINEAR_MIPMAP_LINEAR,
             TextureSampler::MagFilter::LINEAR, TextureSampler::WrapMode::REPEAT);
     sampler.setAnisotropy(8.0f);
 
     if (hasNormalMap) {
-        g_materialInstances["DefaultMaterial"]->setParameter("normalMap", g_normalMap, sampler);
+        g_materialInstances.getMaterialInstance(defaultMaterialName)->setParameter("normalMap", g_normalMap, sampler);
     }
     if (hasClearCoatNormalMap) {
-        g_materialInstances["DefaultMaterial"]->setParameter(
+        g_materialInstances.getMaterialInstance(defaultMaterialName)->setParameter(
                 "clearCoatNormalMap", g_clearCoatNormalMap, sampler);
     }
     if (hasBaseColorMap) {
-        g_materialInstances["DefaultMaterial"]->setParameter(
+        g_materialInstances.getMaterialInstance(defaultMaterialName)->setParameter(
                 "baseColorMap", g_baseColorMap, sampler);
     }
 

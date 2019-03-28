@@ -18,10 +18,7 @@
 #define TNT_FILAMENT_FILAMESHIO_MESHREADER_H
 
 #include <utils/Entity.h>
-#include <utils/Path.h>
-
-#include <map>
-#include <string>
+#include <utils/CString.h>
 
 namespace filament {
     class Engine;
@@ -30,7 +27,12 @@ namespace filament {
     class MaterialInstance;
 }
 
+namespace utils {
+    class Path;
+}
+
 namespace filamesh {
+
 
 /**
  * This API can be used to read meshes stored in the "filamesh" format produced
@@ -40,7 +42,39 @@ namespace filamesh {
 class MeshReader {
 public:
     using Callback = void(*)(void* buffer, size_t size, void* user);
-    using MaterialRegistry = std::map<std::string, filament::MaterialInstance*>;
+
+    // Class to track material instances
+    class MaterialRegistry {
+    public:
+         MaterialRegistry();
+         MaterialRegistry(const MaterialRegistry& rhs);
+         MaterialRegistry& operator=(const MaterialRegistry& rhs);
+         ~MaterialRegistry();
+         MaterialRegistry(MaterialRegistry&&);
+         MaterialRegistry& operator=(MaterialRegistry&&);
+
+         filament::MaterialInstance* getMaterialInstance(const utils::CString& name);
+
+         void registerMaterialInstance(const utils::CString& name,
+                 filament::MaterialInstance* materialInstance);
+
+         void unregisterMaterialInstance(const utils::CString& name);
+
+         void unregisterAll();
+
+         std::size_t numRegistered() const noexcept;
+
+         void getRegisteredMaterials(filament::MaterialInstance** materialList,
+                 utils::CString* materialNameList) const;
+
+         void getRegisteredMaterials(filament::MaterialInstance** materialList) const;
+
+         void getRegisteredMaterialNames(utils::CString* materialNameList) const;
+
+     private:
+         struct MaterialRegistryImpl;
+         MaterialRegistryImpl* mImpl;
+    };
 
     struct Mesh {
         utils::Entity renderable;
