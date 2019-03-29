@@ -334,7 +334,7 @@ DECL_DRIVER_API_3(updateIndexBuffer,
         backend::BufferDescriptor&&, data,
         uint32_t, byteOffset)
 
-DECL_DRIVER_API_2(updateUniformBuffer,
+DECL_DRIVER_API_2(loadUniformBuffer,
         backend::UniformBufferHandle, ubh,
         backend::BufferDescriptor&&, buffer)
 

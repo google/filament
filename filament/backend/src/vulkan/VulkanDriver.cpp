@@ -621,7 +621,7 @@ bool VulkanDriver::canGenerateMipmaps() {
     return false;
 }
 
-void VulkanDriver::updateUniformBuffer(Handle<HwUniformBuffer> ubh, BufferDescriptor&& data) {
+void VulkanDriver::loadUniformBuffer(Handle<HwUniformBuffer> ubh, BufferDescriptor&& data) {
     if (data.size > 0) {
         auto* buffer = handle_cast<VulkanUniformBuffer>(mHandleMap, ubh);
         buffer->loadFromCpu(data.buffer, (uint32_t) data.size);
@@ -1102,7 +1102,7 @@ void VulkanDriver::draw(PipelineState pipelineState, Handle<HwRenderPrimitive> r
 #ifndef NDEBUG
 void VulkanDriver::debugCommand(const char* methodName) {
     static const std::set<utils::StaticString> OUTSIDE_COMMANDS = {
-        "updateUniformBuffer",
+        "loadUniformBuffer",
         "updateVertexBuffer",
         "updateIndexBuffer",
         "update2DImage",

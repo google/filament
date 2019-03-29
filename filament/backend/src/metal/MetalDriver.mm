@@ -399,7 +399,7 @@ bool MetalDriver::canGenerateMipmaps() {
     return true;
 }
 
-void MetalDriver::updateUniformBuffer(Handle<HwUniformBuffer> ubh,
+void MetalDriver::loadUniformBuffer(Handle<HwUniformBuffer> ubh,
         BufferDescriptor&& data) {
     auto buffer = handle_cast<MetalUniformBuffer>(mHandleMap, ubh);
     buffer->copyIntoBuffer(data.buffer, data.size);

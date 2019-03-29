@@ -1743,7 +1743,7 @@ void OpenGLDriver::updateIndexBuffer(
     CHECK_GL_ERROR(utils::slog.e)
 }
 
-void OpenGLDriver::updateUniformBuffer(Handle<HwUniformBuffer> ubh, BufferDescriptor&& p) {
+void OpenGLDriver::loadUniformBuffer(Handle<HwUniformBuffer> ubh, BufferDescriptor&& p) {
     DEBUG_MARKER()
 
     GLUniformBuffer* ub = handle_cast<GLUniformBuffer *>(ubh);
@@ -1808,8 +1808,11 @@ void OpenGLDriver::updateBuffer(GLenum target,
         // it looks like it's generally faster (or not worse) to use glBufferData()
         glBufferData(target, buffer->capacity, p.buffer, getBufferUsage(buffer->usage));
     } else {
+        // when loading less that the buffer size, it's okay to assume the back of the buffer
+        // is undefined.
         // glBufferSubData() could be catastrophically inefficient if several are issued
         // during the same frame. Currently, we're not doing that though.
+        // TODO: investigate if it'll be faster to use glBufferData().
         glBufferSubData(target, 0, p.size, p.buffer);
     }
 

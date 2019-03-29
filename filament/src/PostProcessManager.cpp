@@ -79,7 +79,7 @@ void PostProcessManager::setSource(uint32_t viewportWidth, uint32_t viewportHeig
     ub.setUniform(offsetof(PostProcessingUib, yOffset), yOffset);
 
     driver.updateSamplerGroup(mPostProcessSbh, std::move(group));
-    driver.updateUniformBuffer(mPostProcessUbh, ub.toBufferDescriptor(driver));
+    driver.loadUniformBuffer(mPostProcessUbh, ub.toBufferDescriptor(driver));
 }
 
 // ------------------------------------------------------------------------------------------------

@@ -199,7 +199,7 @@ void FScene::updateUBOs(utils::Range<uint32_t> visibleRenderables, backend::Hand
 
     // TODO: handle static objects separately
     mRenderableViewUbh = renderableUbh;
-    driver.updateUniformBuffer(renderableUbh, { buffer, size });
+    driver.loadUniformBuffer(renderableUbh, { buffer, size });
 }
 
 void FScene::terminate(FEngine& engine) {
@@ -258,7 +258,7 @@ void FScene::prepareDynamicLights(const CameraInfo& camera, ArenaScope& rootAren
         lp[gpuIndex].spotScaleOffset.xy   = { lcm.getSpotParams(li).scaleOffset };
     }
 
-    driver.updateUniformBuffer(lightUbh, { lp, positionalLightCount * sizeof(LightsUib) });
+    driver.loadUniformBuffer(lightUbh, { lp, positionalLightCount * sizeof(LightsUib) });
 }
 
 // These methods need to exist so clang honors the __restrict__ keyword, which in turn
