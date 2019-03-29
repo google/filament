@@ -84,7 +84,6 @@ static std::string shaderFromKey(const MaterialKey& config) {
         }
         shader += R"SHADER(
             material.normal = texture(materialParams_normalMap, normalUV).xyz * 2.0 - 1.0;
-            material.normal.y = -material.normal.y;
             material.normal.xy *= materialParams.normalScale;
         )SHADER";
     }
