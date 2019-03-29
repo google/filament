@@ -519,7 +519,7 @@ function build_web_docs {
 
     # Create an empty npm package to link markdeep-rasterizer into
     npm list | grep web-docs@1.0.0 > /dev/null || npm init --yes > /dev/null
-    npm list | grep markdeep-rasterizer > /dev/null || npm install ../../build/web/markdeep-rasterizer > /dev/null
+    npm list | grep markdeep-rasterizer > /dev/null || npm install ../../third_party/markdeep-rasterizer > /dev/null
 
     # Generate documents
     npx markdeep-rasterizer ../../docs/Filament.md.html ../../docs/Materials.md.html  ../../docs/

@@ -1,12 +1,13 @@
 {
   "name": "markdeep-rasterizer",
-  "version": "1.0.0",
-  "description": "Rasterizes Markdeep files to HTML using puppeteer",
+  "version": "1.0.1",
+  "description": "Rasterizes Markdeep (https://casual-effects.com/markdeep/) files to HTML using puppeteer",
+  "homepage": "https://github.com/romainguy/markdeep-rasterizer",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "author": "Romain Guy <romainguy@curious-creature.com>",
+  "author": "Romain Guy <romainguy@curious-creature.com> (http://www.curious-creature.com)",
   "license": "Apache-2.0",
   "bin": {
     "markdeep-rasterizer": "./cli.js"
