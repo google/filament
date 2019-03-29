@@ -52,7 +52,9 @@ void PostProcessManager::terminate(backend::DriverApi& driver) noexcept {
 }
 
 void PostProcessManager::setSource(uint32_t viewportWidth, uint32_t viewportHeight,
-        backend::Handle<backend::HwTexture> texture, uint32_t textureWidth, uint32_t textureHeight) const noexcept {
+        backend::Handle<backend::HwTexture> color,
+        backend::Handle<backend::HwTexture> depth,
+        uint32_t textureWidth, uint32_t textureHeight) const noexcept {
     FEngine& engine = *mEngine;
     DriverApi& driver = engine.getDriverApi();
 
@@ -62,7 +64,8 @@ void PostProcessManager::setSource(uint32_t viewportWidth, uint32_t viewportHeig
     params.filterMag = SamplerMagFilter::LINEAR;
     params.filterMin = SamplerMinFilter::LINEAR;
     SamplerGroup group(PostProcessSib::SAMPLER_COUNT);
-    group.setSampler(PostProcessSib::COLOR_BUFFER, texture, params);
+    group.setSampler(PostProcessSib::COLOR_BUFFER, color, params);
+    group.setSampler(PostProcessSib::DEPTH_BUFFER, depth, {});
 
     auto duration = engine.getEngineTime();
     float fraction = (duration.count() % 1000000000) / 1000000000.0f;
@@ -120,7 +123,7 @@ FrameGraphResource PostProcessManager::toneMapping(FrameGraph& fg, FrameGraphRes
                 pipeline.program = toneMappingProgram;
 
                 auto const& textureDesc = resources.getDescriptor(data.input);
-                auto const& texture = resources.getTexture(data.input);
+                auto const& color = resources.getTexture(data.input);
                 // TODO: the first parameters below are the *actual viewport* size
                 //       (as opposed to the size of the source texture). Currently we don't allow
                 //       the texture to be resized, so they match. We'll need something more
@@ -128,7 +131,7 @@ FrameGraphResource PostProcessManager::toneMapping(FrameGraph& fg, FrameGraphRes
 
                 mPostProcessUb.setUniform(offsetof(PostProcessingUib, dithering), dithering);
                 setSource(textureDesc.width, textureDesc.height,
-                        texture, textureDesc.width, textureDesc.height);
+                        color, {}, textureDesc.width, textureDesc.height);
 
                 auto const& target = resources.getRenderTarget(data.output);
                 driver.beginRenderPass(target.target, target.params);
@@ -182,7 +185,7 @@ FrameGraphResource PostProcessManager::fxaa(FrameGraph& fg,
                 //       the texture to be resized, so they match. We'll need something more
                 //       sofisticated in the future.
                 setSource(textureDesc.width, textureDesc.height,
-                        texture, textureDesc.width, textureDesc.height);
+                        texture, {}, textureDesc.width, textureDesc.height);
 
                 auto const& target = resources.getRenderTarget(data.output);
                 driver.beginRenderPass(target.target, target.params);

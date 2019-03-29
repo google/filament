@@ -35,7 +35,7 @@ public:
 };
 
 struct PerViewSib {
-    // indices of each samplers in this SamplerInterfaceBlock (see: getSib())
+    // indices of each samplers in this SamplerInterfaceBlock (see: getPerViewSib())
     static constexpr size_t SHADOW_MAP     = 0;
     static constexpr size_t RECORDS        = 1;
     static constexpr size_t FROXELS        = 2;
@@ -46,10 +46,11 @@ struct PerViewSib {
 };
 
 struct PostProcessSib {
-    // indices of each samplers in this SamplerInterfaceBlock (see: getSib())
+    // indices of each samplers in this SamplerInterfaceBlock (see: getPostProcessSib())
     static constexpr size_t COLOR_BUFFER   = 0;
+    static constexpr size_t DEPTH_BUFFER   = 1;
 
-    static constexpr size_t SAMPLER_COUNT = 1;
+    static constexpr size_t SAMPLER_COUNT = 2;
 };
 
 }
