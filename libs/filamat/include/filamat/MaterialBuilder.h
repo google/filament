@@ -190,7 +190,7 @@ public:
     MaterialBuilder& blending(BlendingMode blending) noexcept;
 
     // set blending mode of the post lighting color for this material
-    // only OPAQUE, TRANSPARENT and ADD are supported
+    // only OPAQUE, TRANSPARENT and ADD are supported, the default is TRANSPARENT
     // this setting requires the material property "postLightingColor" to be set
     MaterialBuilder& postLightingBlending(BlendingMode blending) noexcept;
 
@@ -327,7 +327,7 @@ private:
     VariableList mVariables;
 
     BlendingMode mBlendingMode = BlendingMode::OPAQUE;
-    BlendingMode mPostLightingBlendingMode = BlendingMode::OPAQUE;
+    BlendingMode mPostLightingBlendingMode = BlendingMode::TRANSPARENT;
     CullingMode mCullingMode = CullingMode::BACK;
     Shading mShading = Shading::LIT;
     Interpolation mInterpolation = Interpolation::SMOOTH;

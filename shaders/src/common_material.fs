@@ -143,6 +143,6 @@ void initMaterial(out MaterialInputs material) {
 #endif
 
 #if defined(MATERIAL_HAS_POST_LIGHTING_COLOR)
-    material.postLightingColor = vec4(1.0);
+    material.postLightingColor = vec4(0.0);
 #endif
 }

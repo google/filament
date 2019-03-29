@@ -885,7 +885,7 @@ Type
 :    `string`
 
 Value
-:     Any of `opaque`, `transparent`, `add`. Defaults to `opaque`.
+:     Any of `opaque`, `transparent`, `add`. Defaults to `transparent`.
 
 Description
 :     Defines how the `postLightingColor` material property is blended with the result of the
@@ -899,7 +899,7 @@ Description
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ JSON
 material {
-    postLightingBlending : transparent
+    postLightingBlending : add
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -1382,7 +1382,7 @@ fragment {
 struct MaterialInputs {
     float4 baseColor;           // default: float4(1.0)
     float4 emissive;            // default: float4(0.0)
-    float4 postLightingColor;   // default: float4(1.0)
+    float4 postLightingColor;   // default: float4(0.0)
 
     // no other field is available with the unlit shading model
     float  roughness;           // default: 1.0
