@@ -510,6 +510,7 @@ char const* CodeGenerator::getConstantName(MaterialBuilder::Property property) n
         case Property::SHEEN_COLOR:          return "SHEEN_COLOR";
         case Property::EMISSIVE:             return "EMISSIVE";
         case Property::NORMAL:               return "NORMAL";
+        case Property::POST_LIGHTING_COLOR:  return "POST_LIGHTING_COLOR";
     }
 }
 

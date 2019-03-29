@@ -111,7 +111,7 @@ public:
         // when adding more variables, make sure to update MATERIAL_VARIABLES_COUNT
     };
 
-    static constexpr size_t MATERIAL_PROPERTIES_COUNT = 16;
+    static constexpr size_t MATERIAL_PROPERTIES_COUNT = 17;
     enum class Property : uint8_t {
         BASE_COLOR,              // float4, all shading models
         ROUGHNESS,               // float,  lit shading models only
@@ -129,6 +129,7 @@ public:
         SHEEN_COLOR,             // float3, cloth shading model only
         EMISSIVE,                // float4, all shading models
         NORMAL,                  // float3, all shading models only, except unlit
+        POST_LIGHTING_COLOR,     // float4, all shading models
         // when adding new Properties, make sure to update MATERIAL_PROPERTIES_COUNT
     };
 
@@ -187,6 +188,11 @@ public:
 
     // set blending mode for this material
     MaterialBuilder& blending(BlendingMode blending) noexcept;
+
+    // set blending mode of the post lighting color for this material
+    // only OPAQUE, TRANSPARENT and ADD are supported, the default is TRANSPARENT
+    // this setting requires the material property "postLightingColor" to be set
+    MaterialBuilder& postLightingBlending(BlendingMode blending) noexcept;
 
     // set vertex domain for this material
     MaterialBuilder& vertexDomain(VertexDomain domain) noexcept;
@@ -321,6 +327,7 @@ private:
     VariableList mVariables;
 
     BlendingMode mBlendingMode = BlendingMode::OPAQUE;
+    BlendingMode mPostLightingBlendingMode = BlendingMode::TRANSPARENT;
     CullingMode mCullingMode = CullingMode::BACK;
     Shading mShading = Shading::LIT;
     Interpolation mInterpolation = Interpolation::SMOOTH;

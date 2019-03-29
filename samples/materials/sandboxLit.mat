@@ -30,7 +30,7 @@ material {
             type : float,
             name : anisotropy
         }
-    ],
+    ]
 }
 
 fragment {

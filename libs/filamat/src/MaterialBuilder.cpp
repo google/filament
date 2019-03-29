@@ -190,6 +190,11 @@ MaterialBuilder& MaterialBuilder::blending(BlendingMode blending) noexcept {
     return *this;
 }
 
+MaterialBuilder& MaterialBuilder::postLightingBlending(BlendingMode blending) noexcept {
+    mPostLightingBlendingMode = blending;
+    return *this;
+}
+
 MaterialBuilder& MaterialBuilder::vertexDomain(VertexDomain domain) noexcept {
     mVertexDomain = domain;
     return *this;
@@ -328,6 +333,7 @@ void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
     info.flipUV = mFlipUV;
     info.requiredAttributes = mRequiredAttributes;
     info.blendingMode = mBlendingMode;
+    info.postLightingBlendingMode = mPostLightingBlendingMode;
     info.shading = mShading;
     info.hasShadowMultiplier = mShadowMultiplier;
 }

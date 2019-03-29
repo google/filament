@@ -94,6 +94,10 @@ struct MaterialInputs {
 #if defined(MATERIAL_HAS_CLEAR_COAT) && defined(MATERIAL_HAS_CLEAR_COAT_NORMAL)
     vec3  clearCoatNormal;
 #endif
+
+#if defined(MATERIAL_HAS_POST_LIGHTING_COLOR)
+    vec4  postLightingColor;
+#endif
 };
 
 void initMaterial(out MaterialInputs material) {
@@ -136,5 +140,9 @@ void initMaterial(out MaterialInputs material) {
 #endif
 #if defined(MATERIAL_HAS_CLEAR_COAT) && defined(MATERIAL_HAS_CLEAR_COAT_NORMAL)
     material.clearCoatNormal = vec3(0.0, 0.0, 1.0);
+#endif
+
+#if defined(MATERIAL_HAS_POST_LIGHTING_COLOR)
+    material.postLightingColor = vec4(0.0);
 #endif
 }

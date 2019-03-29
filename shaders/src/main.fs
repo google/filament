@@ -1,3 +1,15 @@
+#if defined(MATERIAL_HAS_POST_LIGHTING_COLOR)
+void blendPostLightingColor(const MaterialInputs material, inout vec4 color) {
+#if defined(POST_LIGHTING_BLEND_MODE_OPAQUE)
+    color = material.postLightingColor;
+#elif defined(POST_LIGHTING_BLEND_MODE_TRANSPARENT)
+    color = material.postLightingColor + color * (1.0 - material.postLightingColor.a);
+#elif defined(POST_LIGHTING_BLEND_MODE_ADD)
+    color += material.postLightingColor;
+#endif
+}
+#endif
+
 void main() {
     // See shading_parameters.fs
     // Computes global variables we need to evaluate material and lighting
@@ -11,4 +23,8 @@ void main() {
     material(inputs);
 
     fragColor = evaluateMaterial(inputs);
+
+#if defined(MATERIAL_HAS_POST_LIGHTING_COLOR)
+    blendPostLightingColor(inputs, fragColor);
+#endif
 }

@@ -87,6 +87,7 @@ in table [standardProperties].
 **normal**              | A detail normal used to perturb the surface using _bump mapping_ (_normal mapping_)
 **clearCoatNormal**     | A detail normal used to perturb the clear coat layer using _bump mapping_ (_normal mapping_)
 **emissive**            | Additional diffuse albedo to simulate emissive surfaces (such as neons, etc.) This property is mostly useful in an HDR pipeline with a bloom pass
+**postLightingColor**   | Additional color that can be blended with the result of the lighting computations. See `postLightingBlending`
 [Table [standardProperties]: Properties of the standard model]
 
 The type and range of each property is described in table [standardPropertiesTypes].
@@ -105,6 +106,7 @@ The type and range of each property is described in table [standardPropertiesTyp
 **normal**              | float3   |  [0..1]                  | Linear RGB, encodes a direction vector in tangent space
 **clearCoatNormal**     | float3   |  [0..1]                  | Linear RGB, encodes a direction vector in tangent space
 **emissive**            | float4   |  rgb=[0..1], a=[-n..n]   | Alpha is the exposure compensation
+**postLightingColor**   | float4   |  [0..1]                  | Pre-multiplied linear RGB
 [Table [standardPropertiesTypes]: Range and type of the standard model's properties]
 
 
@@ -373,6 +375,21 @@ The exposure compensation value of the emissive property can be used to force th
 to be brighter (positive values) or darker (negative values) than the current exposure. If the bloom
 effect is enabled, using a positive exposure compensation can force the surface to bloom.
 
+### Post-lighting color
+
+The `postLightingColor` can be used to modify the surface color after lighting computations. This
+property has no physical meaning and only exists to implement specific effects or to help with
+debugging. This property is defined as a `float4` value containing a pre-multiplied RGB color in
+linear space.
+
+The post-lighting color is blended with the result of lighting according to the blending mode
+specified by the `postLightingBlending` material option. Please refer to the documentation of
+this option for more information.
+
+!!! Tip
+    `postLightingColor` can be used as a simpler `emissive` property by setting
+    `postLightingBlending` to `add` and by providing an RGB color with alpha set to `0.0`.
+
 ## Subsurface model
 
 ### Thickness
@@ -483,6 +500,7 @@ in table [unlitProperties].
 ---------------------:|:---------------------
 **baseColor**         | Surface diffuse color
 **emissive**          | Additional diffuse color to simulate emissive surfaces. This property is mostly useful in an HDR pipeline with a bloom pass
+**postLightingColor** | Additional color to blend with base color and emissive
 [Table [unlitProperties]: Properties of the standard model]
 
 The type and range of each property is described in table [unlitPropertiesTypes].
@@ -491,10 +509,13 @@ The type and range of each property is described in table [unlitPropertiesTypes]
 ---------------------:|:--------:|:------------------------:|:-------------------------
 **baseColor**         | float4   |  [0..1]                  | Pre-multiplied linear RGB
 **emissive**          | float4   |  rgb=[0..1], a=N/A       | Pre-multiplied linear RGB, alpha is ignored
+**postLightingColor** | float4   |  [0..1]                  | Pre-multiplied linear RGB
 [Table [unlitPropertiesTypes]: Range and type of the unlit model's properties]
 
 The value of `emissive` is simply added to `baseColor` when present. The main use of `emissive`
-is to force an unlit surface to bloom if the HDR pipeline is configured with a bloom pass.
+is to force an unlit surface to bloom if the HDR pipeline is configured with a bloom pass. The value
+of `postLightingColor` is blended with the sum of `emissive` and `baseColor` according to the
+blending mode specified by the `postLightingBlending` material option.
 
 Figure [materialUnlit] shows an example of the unlit material model
 (click on the image to see a larger version).
@@ -855,6 +876,30 @@ Description
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ JSON
 material {
     blending : transparent
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+### postLightingBlending
+
+Type
+:    `string`
+
+Value
+:     Any of `opaque`, `transparent`, `add`. Defaults to `transparent`.
+
+Description
+:     Defines how the `postLightingColor` material property is blended with the result of the
+      lighting computations. The possible blending modes are:
+
+    - **Opaque**: blending is disabled, the material will output `postLightingColor` directly.
+    - **Transparent**: blending is enabled. The material's computed color is alpha composited with
+      the `postLightingColor`, using Porter-Duff's `source over` rule. This blending mode assumes
+      pre-multiplied alpha.
+    - **Add**: blending is enabled. The material's computed color is added to `postLightingColor`.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ JSON
+material {
+    postLightingBlending : add
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -1337,6 +1382,7 @@ fragment {
 struct MaterialInputs {
     float4 baseColor;           // default: float4(1.0)
     float4 emissive;            // default: float4(0.0)
+    float4 postLightingColor;   // default: float4(0.0)
 
     // no other field is available with the unlit shading model
     float  roughness;           // default: 1.0
@@ -1357,12 +1403,12 @@ struct MaterialInputs {
     float3 subsurfaceColor;     // default: float3(1.0)
 
     // only available when the shading model is cloth
-    float3 sheenColor;         // default: sqrt(baseColor)
-    float3 subsurfaceColor;    // default: float3(0.0)
+    float3 sheenColor;          // default: sqrt(baseColor)
+    float3 subsurfaceColor;     // default: float3(0.0)
 
     // not available when the shading model is unlit
     // must be set before calling prepareMaterial()
-    float3 normal;             // default: float3(0.0, 0.0, 1.0)
+    float3 normal;              // default: float3(0.0, 0.0, 1.0)
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

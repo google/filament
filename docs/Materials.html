@@ -49,6 +49,7 @@ counter-increment: h6;margin-right:10px}</style><style>.hljs{display:block;overf
 &#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialmodels/litmodel/normal" class="level3"><span class="tocNumber">3.1.12&#xA0; </span>Normal</a><br>
 &#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialmodels/litmodel/clearcoatnormal" class="level3"><span class="tocNumber">3.1.13&#xA0; </span>Clear coat normal</a><br>
 &#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialmodels/litmodel/emissive" class="level3"><span class="tocNumber">3.1.14&#xA0; </span>Emissive</a><br>
+&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialmodels/litmodel/post-lightingcolor" class="level3"><span class="tocNumber">3.1.15&#xA0; </span>Post-lighting color</a><br>
 &#xA0;&#xA0;<a href="#materialmodels/subsurfacemodel" class="level2"><span class="tocNumber">3.2&#xA0; </span>Subsurface model</a><br>
 &#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialmodels/subsurfacemodel/thickness" class="level3"><span class="tocNumber">3.2.1&#xA0; </span>Thickness</a><br>
 &#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialmodels/subsurfacemodel/subsurfacecolor" class="level3"><span class="tocNumber">3.2.2&#xA0; </span>Subsurface color</a><br>
@@ -68,21 +69,22 @@ counter-increment: h6;margin-right:10px}</style><style>.hljs{display:block;overf
 &#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialdefinitions/materialblock/requires" class="level3"><span class="tocNumber">4.2.4&#xA0; </span>requires</a><br>
 &#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialdefinitions/materialblock/variables" class="level3"><span class="tocNumber">4.2.5&#xA0; </span>variables</a><br>
 &#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialdefinitions/materialblock/blending" class="level3"><span class="tocNumber">4.2.6&#xA0; </span>blending</a><br>
-&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialdefinitions/materialblock/vertexdomain" class="level3"><span class="tocNumber">4.2.7&#xA0; </span>vertexDomain</a><br>
-&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialdefinitions/materialblock/interpolation" class="level3"><span class="tocNumber">4.2.8&#xA0; </span>interpolation</a><br>
-&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialdefinitions/materialblock/culling" class="level3"><span class="tocNumber">4.2.9&#xA0; </span>culling</a><br>
-&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialdefinitions/materialblock/colorwrite" class="level3"><span class="tocNumber">4.2.10&#xA0; </span>colorWrite</a><br>
-&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialdefinitions/materialblock/depthwrite" class="level3"><span class="tocNumber">4.2.11&#xA0; </span>depthWrite</a><br>
-&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialdefinitions/materialblock/depthculling" class="level3"><span class="tocNumber">4.2.12&#xA0; </span>depthCulling</a><br>
-&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialdefinitions/materialblock/doublesided" class="level3"><span class="tocNumber">4.2.13&#xA0; </span>doubleSided</a><br>
-&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialdefinitions/materialblock/transparency" class="level3"><span class="tocNumber">4.2.14&#xA0; </span>transparency</a><br>
-&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialdefinitions/materialblock/maskthreshold" class="level3"><span class="tocNumber">4.2.15&#xA0; </span>maskThreshold</a><br>
-&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialdefinitions/materialblock/shadowmultiplier" class="level3"><span class="tocNumber">4.2.16&#xA0; </span>shadowMultiplier</a><br>
-&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialdefinitions/materialblock/curvaturetoroughness" class="level3"><span class="tocNumber">4.2.17&#xA0; </span>curvatureToRoughness</a><br>
-&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialdefinitions/materialblock/limitoverinterpolation" class="level3"><span class="tocNumber">4.2.18&#xA0; </span>limitOverInterpolation</a><br>
-&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialdefinitions/materialblock/clearcoatiorchange" class="level3"><span class="tocNumber">4.2.19&#xA0; </span>clearCoatIorChange</a><br>
-&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialdefinitions/materialblock/variantfilter" class="level3"><span class="tocNumber">4.2.20&#xA0; </span>variantFilter</a><br>
-&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialdefinitions/materialblock/flipuv" class="level3"><span class="tocNumber">4.2.21&#xA0; </span>flipUV</a><br>
+&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialdefinitions/materialblock/postlightingblending" class="level3"><span class="tocNumber">4.2.7&#xA0; </span>postLightingBlending</a><br>
+&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialdefinitions/materialblock/vertexdomain" class="level3"><span class="tocNumber">4.2.8&#xA0; </span>vertexDomain</a><br>
+&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialdefinitions/materialblock/interpolation" class="level3"><span class="tocNumber">4.2.9&#xA0; </span>interpolation</a><br>
+&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialdefinitions/materialblock/culling" class="level3"><span class="tocNumber">4.2.10&#xA0; </span>culling</a><br>
+&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialdefinitions/materialblock/colorwrite" class="level3"><span class="tocNumber">4.2.11&#xA0; </span>colorWrite</a><br>
+&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialdefinitions/materialblock/depthwrite" class="level3"><span class="tocNumber">4.2.12&#xA0; </span>depthWrite</a><br>
+&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialdefinitions/materialblock/depthculling" class="level3"><span class="tocNumber">4.2.13&#xA0; </span>depthCulling</a><br>
+&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialdefinitions/materialblock/doublesided" class="level3"><span class="tocNumber">4.2.14&#xA0; </span>doubleSided</a><br>
+&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialdefinitions/materialblock/transparency" class="level3"><span class="tocNumber">4.2.15&#xA0; </span>transparency</a><br>
+&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialdefinitions/materialblock/maskthreshold" class="level3"><span class="tocNumber">4.2.16&#xA0; </span>maskThreshold</a><br>
+&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialdefinitions/materialblock/shadowmultiplier" class="level3"><span class="tocNumber">4.2.17&#xA0; </span>shadowMultiplier</a><br>
+&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialdefinitions/materialblock/curvaturetoroughness" class="level3"><span class="tocNumber">4.2.18&#xA0; </span>curvatureToRoughness</a><br>
+&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialdefinitions/materialblock/limitoverinterpolation" class="level3"><span class="tocNumber">4.2.19&#xA0; </span>limitOverInterpolation</a><br>
+&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialdefinitions/materialblock/clearcoatiorchange" class="level3"><span class="tocNumber">4.2.20&#xA0; </span>clearCoatIorChange</a><br>
+&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialdefinitions/materialblock/variantfilter" class="level3"><span class="tocNumber">4.2.21&#xA0; </span>variantFilter</a><br>
+&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialdefinitions/materialblock/flipuv" class="level3"><span class="tocNumber">4.2.22&#xA0; </span>flipUV</a><br>
 &#xA0;&#xA0;<a href="#materialdefinitions/vertexblock" class="level2"><span class="tocNumber">4.3&#xA0; </span>Vertex block</a><br>
 &#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialdefinitions/vertexblock/materialvertexinputs" class="level3"><span class="tocNumber">4.3.1&#xA0; </span>Material vertex inputs</a><br>
 &#xA0;&#xA0;<a href="#materialdefinitions/fragmentblock" class="level2"><span class="tocNumber">4.4&#xA0; </span>Fragment block</a><br>
@@ -221,6 +223,7 @@ in <a href="#table_standardproperties">table&#xA0;1</a>.
 <tr><td style="text-align:right"> <strong class="asterisk">normal</strong> </td><td style="text-align:left"> A detail normal used to perturb the surface using <em class="underscore">bump mapping</em> (<em class="underscore">normal mapping</em>) </td></tr>
 <tr><td style="text-align:right"> <strong class="asterisk">clearCoatNormal</strong> </td><td style="text-align:left"> A detail normal used to perturb the clear coat layer using <em class="underscore">bump mapping</em> (<em class="underscore">normal mapping</em>) </td></tr>
 <tr><td style="text-align:right"> <strong class="asterisk">emissive</strong> </td><td style="text-align:left"> Additional diffuse albedo to simulate emissive surfaces (such as neons, etc.) This property is mostly useful in an HDR pipeline with a bloom pass </td></tr>
+<tr><td style="text-align:right"> <strong class="asterisk">postLightingColor</strong> </td><td style="text-align:left"> Additional color that can be blended with the result of the lighting computations. See <code>postLightingBlending</code> </td></tr>
 </tbody></table><div class="tablecaption"><a class="target" name="table_standardproperties">&#xA0;</a><b style="font-style:normal;">Table&#xA0;1:</b> Properties of the standard model</div></div>
 
 <p></p><p>
@@ -240,6 +243,7 @@ The type and range of each property is described in <a href="#table_standardprop
 <tr><td style="text-align:right"> <strong class="asterisk">normal</strong> </td><td style="text-align:center"> float3 </td><td style="text-align:center"> [0..1] </td><td style="text-align:left"> Linear RGB, encodes a direction vector in tangent space </td></tr>
 <tr><td style="text-align:right"> <strong class="asterisk">clearCoatNormal</strong> </td><td style="text-align:center"> float3 </td><td style="text-align:center"> [0..1] </td><td style="text-align:left"> Linear RGB, encodes a direction vector in tangent space </td></tr>
 <tr><td style="text-align:right"> <strong class="asterisk">emissive</strong> </td><td style="text-align:center"> float4 </td><td style="text-align:center"> rgb=[0..1], a=[-n..n] </td><td style="text-align:left"> Alpha is the exposure compensation </td></tr>
+<tr><td style="text-align:right"> <strong class="asterisk">postLightingColor</strong> </td><td style="text-align:center"> float4 </td><td style="text-align:center"> [0..1] </td><td style="text-align:left"> Pre-multiplied linear RGB </td></tr>
 </tbody></table><div class="tablecaption"><a class="target" name="table_standardpropertiestypes">&#xA0;</a><b style="font-style:normal;">Table&#xA0;2:</b> Range and type of the standard model&apos;s properties</div></div>
 
 <p></p><p>
@@ -631,6 +635,27 @@ to be brighter (positive values) or darker (negative values) than the current ex
 effect is enabled, using a positive exposure compensation can force the surface to bloom.
 
 </p>
+<a class="target" name="post-lightingcolor">&#xA0;</a><a class="target" name="materialmodels/litmodel/post-lightingcolor">&#xA0;</a><a class="target" name="toc3.1.15">&#xA0;</a><h3>Post-lighting color</h3>
+<p>
+
+
+The <code>postLightingColor</code> can be used to modify the surface color after lighting computations. This
+property has no physical meaning and only exists to implement specific effects or to help with
+debugging. This property is defined as a <code>float4</code> value containing a pre-multiplied RGB color in
+linear space.
+
+</p><p>
+
+The post-lighting color is blended with the result of lighting according to the blending mode
+specified by the <code>postLightingBlending</code> material option. Please refer to the documentation of
+this option for more information.
+
+</p><p>
+
+</p><div class="admonition tip"><code>postLightingColor</code> can be used as a simpler <code>emissive</code> property by setting
+    <code>postLightingBlending</code> to <code>add</code> and by providing an RGB color with alpha set to <code>0.0</code>.</div>
+
+<p></p>
 <a class="target" name="subsurfacemodel">&#xA0;</a><a class="target" name="materialmodels/subsurfacemodel">&#xA0;</a><a class="target" name="toc3.2">&#xA0;</a><h2>Subsurface model</h2>
 
 <a class="target" name="thickness">&#xA0;</a><a class="target" name="materialmodels/subsurfacemodel/thickness">&#xA0;</a><a class="target" name="toc3.2.1">&#xA0;</a><h3>Thickness</h3>
@@ -778,6 +803,7 @@ in <a href="#table_unlitproperties">table&#xA0;8</a>.
 <table class="table"><tbody><tr><th style="text-align:right"> Property </th><th style="text-align:left"> Definition </th></tr>
 <tr><td style="text-align:right"> <strong class="asterisk">baseColor</strong> </td><td style="text-align:left"> Surface diffuse color </td></tr>
 <tr><td style="text-align:right"> <strong class="asterisk">emissive</strong> </td><td style="text-align:left"> Additional diffuse color to simulate emissive surfaces. This property is mostly useful in an HDR pipeline with a bloom pass </td></tr>
+<tr><td style="text-align:right"> <strong class="asterisk">postLightingColor</strong> </td><td style="text-align:left"> Additional color to blend with base color and emissive </td></tr>
 </tbody></table><div class="tablecaption"><a class="target" name="table_unlitproperties">&#xA0;</a><b style="font-style:normal;">Table&#xA0;8:</b> Properties of the standard model</div></div>
 
 <p></p><p>
@@ -787,12 +813,15 @@ The type and range of each property is described in <a href="#table_unlitpropert
 <table class="table"><tbody><tr><th style="text-align:right"> Property </th><th style="text-align:center"> Type </th><th style="text-align:center"> Range </th><th style="text-align:left"> Note </th></tr>
 <tr><td style="text-align:right"> <strong class="asterisk">baseColor</strong> </td><td style="text-align:center"> float4 </td><td style="text-align:center"> [0..1] </td><td style="text-align:left"> Pre-multiplied linear RGB </td></tr>
 <tr><td style="text-align:right"> <strong class="asterisk">emissive</strong> </td><td style="text-align:center"> float4 </td><td style="text-align:center"> rgb=[0..1], a=N/A </td><td style="text-align:left"> Pre-multiplied linear RGB, alpha is ignored </td></tr>
+<tr><td style="text-align:right"> <strong class="asterisk">postLightingColor</strong> </td><td style="text-align:center"> float4 </td><td style="text-align:center"> [0..1] </td><td style="text-align:left"> Pre-multiplied linear RGB </td></tr>
 </tbody></table><div class="tablecaption"><a class="target" name="table_unlitpropertiestypes">&#xA0;</a><b style="font-style:normal;">Table&#xA0;9:</b> Range and type of the unlit model&apos;s properties</div></div>
 
 <p></p><p>
 
 The value of <code>emissive</code> is simply added to <code>baseColor</code> when present. The main use of <code>emissive</code>
-is to force an unlit surface to bloom if the HDR pipeline is configured with a bloom pass.
+is to force an unlit surface to bloom if the HDR pipeline is configured with a bloom pass. The value
+of <code>postLightingColor</code> is blended with the sum of <code>emissive</code> and <code>baseColor</code> according to the
+blending mode specified by the <code>postLightingBlending</code> material option.
 
 </p><p>
 
@@ -1170,7 +1199,32 @@ non-shader data.
 <p></p></dd></dl><p></p><pre class="listing tilde"><code><span class="line">material {</span>
 <span class="line">    blending : transparent</span>
 <span class="line">}</span></code></pre>
-<a class="target" name="vertexdomain">&#xA0;</a><a class="target" name="materialdefinitions/materialblock/vertexdomain">&#xA0;</a><a class="target" name="toc4.2.7">&#xA0;</a><h3>vertexDomain</h3>
+<a class="target" name="postlightingblending">&#xA0;</a><a class="target" name="materialdefinitions/materialblock/postlightingblending">&#xA0;</a><a class="target" name="toc4.2.7">&#xA0;</a><h3>postLightingBlending</h3>
+<p>
+
+
+</p><dl><dt>Type</dt><dd><p>     <code>string</code>
+
+</p></dd><dt>Value</dt><dd><p>      Any of <code>opaque</code>, <code>transparent</code>, <code>add</code>. Defaults to <code>transparent</code>.
+
+</p></dd><dt>Description</dt><dd><p>      Defines how the <code>postLightingColor</code> material property is blended with the result of the
+      lighting computations. The possible blending modes are:
+
+</p><p>
+
+</p><ul>
+    <li class="minus"><strong class="asterisk">Opaque</strong>: blending is disabled, the material will output <code>postLightingColor</code> directly.
+</li>
+    <li class="minus"><strong class="asterisk">Transparent</strong>: blending is enabled. The material&apos;s computed color is alpha composited with
+          the <code>postLightingColor</code>, using Porter-Duff&apos;s <code>source over</code> rule. This blending mode assumes
+          pre-multiplied alpha.
+</li>
+    <li class="minus"><strong class="asterisk">Add</strong>: blending is enabled. The material&apos;s computed color is added to <code>postLightingColor</code>.</li></ul>
+
+<p></p></dd></dl><p></p><pre class="listing tilde"><code><span class="line">material {</span>
+<span class="line">    postLightingBlending : add</span>
+<span class="line">}</span></code></pre>
+<a class="target" name="vertexdomain">&#xA0;</a><a class="target" name="materialdefinitions/materialblock/vertexdomain">&#xA0;</a><a class="target" name="toc4.2.8">&#xA0;</a><h3>vertexDomain</h3>
 <p>
 
 
@@ -1199,7 +1253,7 @@ non-shader data.
 <p></p></dd></dl><p></p><pre class="listing tilde"><code><span class="line">material {</span>
 <span class="line">    vertexDomain : device</span>
 <span class="line">}</span></code></pre>
-<a class="target" name="interpolation">&#xA0;</a><a class="target" name="materialdefinitions/materialblock/interpolation">&#xA0;</a><a class="target" name="toc4.2.8">&#xA0;</a><h3>interpolation</h3>
+<a class="target" name="interpolation">&#xA0;</a><a class="target" name="materialdefinitions/materialblock/interpolation">&#xA0;</a><a class="target" name="toc4.2.9">&#xA0;</a><h3>interpolation</h3>
 <p>
 
 
@@ -1215,7 +1269,7 @@ non-shader data.
 </p></dd></dl><p></p><pre class="listing tilde"><code><span class="line">material {</span>
 <span class="line">    interpolation : flat</span>
 <span class="line">}</span></code></pre>
-<a class="target" name="culling">&#xA0;</a><a class="target" name="materialdefinitions/materialblock/culling">&#xA0;</a><a class="target" name="toc4.2.9">&#xA0;</a><h3>culling</h3>
+<a class="target" name="culling">&#xA0;</a><a class="target" name="materialdefinitions/materialblock/culling">&#xA0;</a><a class="target" name="toc4.2.10">&#xA0;</a><h3>culling</h3>
 <p>
 
 
@@ -1229,7 +1283,7 @@ non-shader data.
 </p></dd></td></tr></tbody></table></dl><p></p><pre class="listing tilde"><code><span class="line">material {</span>
 <span class="line">    culling : none</span>
 <span class="line">}</span></code></pre>
-<a class="target" name="colorwrite">&#xA0;</a><a class="target" name="materialdefinitions/materialblock/colorwrite">&#xA0;</a><a class="target" name="toc4.2.10">&#xA0;</a><h3>colorWrite</h3>
+<a class="target" name="colorwrite">&#xA0;</a><a class="target" name="materialdefinitions/materialblock/colorwrite">&#xA0;</a><a class="target" name="toc4.2.11">&#xA0;</a><h3>colorWrite</h3>
 <p>
 
 
@@ -1242,7 +1296,7 @@ non-shader data.
 </p></dd></td></tr></tbody></table></dl><p></p><pre class="listing tilde"><code><span class="line">material {</span>
 <span class="line">    colorWrite : false</span>
 <span class="line">}</span></code></pre>
-<a class="target" name="depthwrite">&#xA0;</a><a class="target" name="materialdefinitions/materialblock/depthwrite">&#xA0;</a><a class="target" name="toc4.2.11">&#xA0;</a><h3>depthWrite</h3>
+<a class="target" name="depthwrite">&#xA0;</a><a class="target" name="materialdefinitions/materialblock/depthwrite">&#xA0;</a><a class="target" name="toc4.2.12">&#xA0;</a><h3>depthWrite</h3>
 <p>
 
 
@@ -1255,7 +1309,7 @@ non-shader data.
 </p></dd></td></tr></tbody></table></dl><p></p><pre class="listing tilde"><code><span class="line">material {</span>
 <span class="line">    depthWrite : false</span>
 <span class="line">}</span></code></pre>
-<a class="target" name="depthculling">&#xA0;</a><a class="target" name="materialdefinitions/materialblock/depthculling">&#xA0;</a><a class="target" name="toc4.2.12">&#xA0;</a><h3>depthCulling</h3>
+<a class="target" name="depthculling">&#xA0;</a><a class="target" name="materialdefinitions/materialblock/depthculling">&#xA0;</a><a class="target" name="toc4.2.13">&#xA0;</a><h3>depthCulling</h3>
 <p>
 
 
@@ -1269,7 +1323,7 @@ non-shader data.
 </p></dd></dl><p></p><pre class="listing tilde"><code><span class="line">material {</span>
 <span class="line">    depthCulling : false</span>
 <span class="line">}</span></code></pre>
-<a class="target" name="doublesided">&#xA0;</a><a class="target" name="materialdefinitions/materialblock/doublesided">&#xA0;</a><a class="target" name="toc4.2.13">&#xA0;</a><h3>doubleSided</h3>
+<a class="target" name="doublesided">&#xA0;</a><a class="target" name="materialdefinitions/materialblock/doublesided">&#xA0;</a><a class="target" name="toc4.2.14">&#xA0;</a><h3>doubleSided</h3>
 <p>
 
 
@@ -1284,7 +1338,7 @@ non-shader data.
 </p></dd></dl><p></p><pre class="listing tilde"><code><span class="line">material {</span>
 <span class="line">    doubleSided : true</span>
 <span class="line">}</span></code></pre>
-<a class="target" name="transparency">&#xA0;</a><a class="target" name="materialdefinitions/materialblock/transparency">&#xA0;</a><a class="target" name="toc4.2.14">&#xA0;</a><h3>transparency</h3>
+<a class="target" name="transparency">&#xA0;</a><a class="target" name="materialdefinitions/materialblock/transparency">&#xA0;</a><a class="target" name="toc4.2.15">&#xA0;</a><h3>transparency</h3>
 <p>
 
 
@@ -1331,7 +1385,7 @@ and correctly sorted</div></div></center>
 and sorting issues are minimized or eliminated</div></div></center>
 
 <p></p>
-<a class="target" name="maskthreshold">&#xA0;</a><a class="target" name="materialdefinitions/materialblock/maskthreshold">&#xA0;</a><a class="target" name="toc4.2.15">&#xA0;</a><h3>maskThreshold</h3>
+<a class="target" name="maskthreshold">&#xA0;</a><a class="target" name="materialdefinitions/materialblock/maskthreshold">&#xA0;</a><a class="target" name="toc4.2.16">&#xA0;</a><h3>maskThreshold</h3>
 <p>
 
 
@@ -1347,7 +1401,7 @@ and sorting issues are minimized or eliminated</div></div></center>
 <span class="line">    blending : masked,</span>
 <span class="line">    maskThreshold : 0.5</span>
 <span class="line">}</span></code></pre>
-<a class="target" name="shadowmultiplier">&#xA0;</a><a class="target" name="materialdefinitions/materialblock/shadowmultiplier">&#xA0;</a><a class="target" name="toc4.2.16">&#xA0;</a><h3>shadowMultiplier</h3>
+<a class="target" name="shadowmultiplier">&#xA0;</a><a class="target" name="materialdefinitions/materialblock/shadowmultiplier">&#xA0;</a><a class="target" name="toc4.2.17">&#xA0;</a><h3>shadowMultiplier</h3>
 <p>
 
 
@@ -1373,7 +1427,7 @@ and sorting issues are minimized or eliminated</div></div></center>
 <span class="line">        material.baseColor = vec4(0.0, 0.0, 0.0, 0.7);</span>
 <span class="line">    }</span>
 <span class="line">}</span></code></pre>
-<a class="target" name="curvaturetoroughness">&#xA0;</a><a class="target" name="materialdefinitions/materialblock/curvaturetoroughness">&#xA0;</a><a class="target" name="toc4.2.17">&#xA0;</a><h3>curvatureToRoughness</h3>
+<a class="target" name="curvaturetoroughness">&#xA0;</a><a class="target" name="materialdefinitions/materialblock/curvaturetoroughness">&#xA0;</a><a class="target" name="toc4.2.18">&#xA0;</a><h3>curvatureToRoughness</h3>
 <p>
 
 
@@ -1392,7 +1446,7 @@ and sorting issues are minimized or eliminated</div></div></center>
 with <code>curvatureToRoughness</code> (right).</div></div></center>
 
 <p></p>
-<a class="target" name="limitoverinterpolation">&#xA0;</a><a class="target" name="materialdefinitions/materialblock/limitoverinterpolation">&#xA0;</a><a class="target" name="toc4.2.18">&#xA0;</a><h3>limitOverInterpolation</h3>
+<a class="target" name="limitoverinterpolation">&#xA0;</a><a class="target" name="materialdefinitions/materialblock/limitoverinterpolation">&#xA0;</a><a class="target" name="toc4.2.19">&#xA0;</a><h3>limitOverInterpolation</h3>
 <p>
 
 
@@ -1409,7 +1463,7 @@ with <code>curvatureToRoughness</code> (right).</div></div></center>
 </p></dd></dl><p></p><pre class="listing tilde"><code><span class="line">material {</span>
 <span class="line">    limitOverInterpolation : true</span>
 <span class="line">}</span></code></pre>
-<a class="target" name="clearcoatiorchange">&#xA0;</a><a class="target" name="materialdefinitions/materialblock/clearcoatiorchange">&#xA0;</a><a class="target" name="toc4.2.19">&#xA0;</a><h3>clearCoatIorChange</h3>
+<a class="target" name="clearcoatiorchange">&#xA0;</a><a class="target" name="materialdefinitions/materialblock/clearcoatiorchange">&#xA0;</a><a class="target" name="toc4.2.20">&#xA0;</a><h3>clearCoatIorChange</h3>
 <p>
 
 
@@ -1431,7 +1485,7 @@ with <code>clearCoatIorChange</code> enabled (left) and disabled
 (right).</div></div></center>
 
 <p></p>
-<a class="target" name="variantfilter">&#xA0;</a><a class="target" name="materialdefinitions/materialblock/variantfilter">&#xA0;</a><a class="target" name="toc4.2.20">&#xA0;</a><h3>variantFilter</h3>
+<a class="target" name="variantfilter">&#xA0;</a><a class="target" name="materialdefinitions/materialblock/variantfilter">&#xA0;</a><a class="target" name="toc4.2.21">&#xA0;</a><h3>variantFilter</h3>
 <p>
 
 
@@ -1467,7 +1521,7 @@ with <code>clearCoatIorChange</code> enabled (left) and disabled
 <span class="line">    blending : transparent,</span>
 <span class="line">    variantFilter : [ skinning ]</span>
 <span class="line">}</span></code></pre>
-<a class="target" name="flipuv">&#xA0;</a><a class="target" name="materialdefinitions/materialblock/flipuv">&#xA0;</a><a class="target" name="toc4.2.21">&#xA0;</a><h3>flipUV</h3>
+<a class="target" name="flipuv">&#xA0;</a><a class="target" name="materialdefinitions/materialblock/flipuv">&#xA0;</a><a class="target" name="toc4.2.22">&#xA0;</a><h3>flipUV</h3>
 <p>
 
 
@@ -1619,6 +1673,7 @@ plastic with bump mapping:
 <pre class="listing tilde"><code><span class="line">struct MaterialInputs {</span>
 <span class="line">    float4 baseColor;           <span class="hljs-comment">// default: float4(1.0)</span></span>
 <span class="line">    float4 emissive;            <span class="hljs-comment">// default: float4(0.0)</span></span>
+<span class="line">    float4 postLightingColor;   <span class="hljs-comment">// default: float4(0.0)</span></span>
 <span class="line"></span>
 <span class="line">    <span class="hljs-comment">// no other field is available with the unlit shading model</span></span>
 <span class="line">    <span class="hljs-type">float</span>  roughness;           <span class="hljs-comment">// default: 1.0</span></span>
@@ -1639,12 +1694,12 @@ plastic with bump mapping:
 <span class="line">    float3 subsurfaceColor;     <span class="hljs-comment">// default: float3(1.0)</span></span>
 <span class="line"></span>
 <span class="line">    <span class="hljs-comment">// only available when the shading model is cloth</span></span>
-<span class="line">    float3 sheenColor;         <span class="hljs-comment">// default: sqrt(baseColor)</span></span>
-<span class="line">    float3 subsurfaceColor;    <span class="hljs-comment">// default: float3(0.0)</span></span>
+<span class="line">    float3 sheenColor;          <span class="hljs-comment">// default: sqrt(baseColor)</span></span>
+<span class="line">    float3 subsurfaceColor;     <span class="hljs-comment">// default: float3(0.0)</span></span>
 <span class="line"></span>
 <span class="line">    <span class="hljs-comment">// not available when the shading model is unlit</span></span>
 <span class="line">    <span class="hljs-comment">// must be set before calling prepareMaterial()</span></span>
-<span class="line">    float3 normal;             <span class="hljs-comment">// default: float3(0.0, 0.0, 1.0)</span></span>
+<span class="line">    float3 normal;              <span class="hljs-comment">// default: float3(0.0, 0.0, 1.0)</span></span>
 <span class="line">}</span></code></pre>
 <a class="target" name="shaderpublicapis">&#xA0;</a><a class="target" name="materialdefinitions/shaderpublicapis">&#xA0;</a><a class="target" name="toc4.5">&#xA0;</a><h2>Shader public APIs</h2>
 

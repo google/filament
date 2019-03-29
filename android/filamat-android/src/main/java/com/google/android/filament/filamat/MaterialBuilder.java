@@ -235,6 +235,12 @@ public class MaterialBuilder {
     }
 
     @NonNull
+    public MaterialBuilder postLightingBlending(@NonNull BlendingMode mode) {
+        nMaterialBuilderPostLightingBlending(mNativeObject, mode.ordinal());
+        return this;
+    }
+
+    @NonNull
     public MaterialBuilder vertexDomain(@NonNull VertexDomain vertexDomain) {
         nMaterialBuilderVertexDomain(mNativeObject, vertexDomain.ordinal());
         return this;
@@ -390,6 +396,7 @@ public class MaterialBuilder {
     private static native void nMaterialBuilderMaterial(long nativeBuilder, String code);
     private static native void nMaterialBuilderMaterialVertex(long nativeBuilder, String code);
     private static native void nMaterialBuilderBlending(long nativeBuilder, int mode);
+    private static native void nMaterialBuilderPostLightingBlending(long nativeBuilder, int mode);
     private static native void nMaterialBuilderVertexDomain(long nativeBuilder, int vertexDomain);
     private static native void nMaterialBuilderCulling(long nativeBuilder, int mode);
     private static native void nMaterialBuilderColorWrite(long nativeBuilder, boolean enable);
