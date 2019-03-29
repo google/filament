@@ -414,7 +414,7 @@ bool MetalDriver::canGenerateMipmaps() {
     return true;
 }
 
-void MetalDriver::updateUniformBuffer(Handle<HwUniformBuffer> ubh,
+void MetalDriver::loadUniformBuffer(Handle<HwUniformBuffer> ubh,
         BufferDescriptor&& data) {
    if (data.size <= 0) {
        return;

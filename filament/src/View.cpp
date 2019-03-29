@@ -641,7 +641,7 @@ void FView::froxelize(FEngine& engine) const noexcept {
 
 void FView::commitUniforms(backend::DriverApi& driver) const noexcept {
     if (mPerViewUb.isDirty()) {
-        driver.updateUniformBuffer(mPerViewUbh, mPerViewUb.toBufferDescriptor(driver));
+        driver.loadUniformBuffer(mPerViewUbh, mPerViewUb.toBufferDescriptor(driver));
     }
 
     if (mPerViewSb.isDirty()) {
