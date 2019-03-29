@@ -30,8 +30,7 @@ material {
             type : float,
             name : anisotropy
         }
-    ],
-    postLightingBlending : opaque
+    ]
 }
 
 fragment {
@@ -44,6 +43,5 @@ fragment {
         material.clearCoat = materialParams.clearCoat;
         material.clearCoatRoughness = materialParams.clearCoatRoughness;
         material.anisotropy = materialParams.anisotropy;
-        material.postLightingColor = vec4(0.5, 0.0, 0.0, 0.5);
     }
 }
