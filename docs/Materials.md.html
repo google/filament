@@ -1382,6 +1382,7 @@ fragment {
 struct MaterialInputs {
     float4 baseColor;           // default: float4(1.0)
     float4 emissive;            // default: float4(0.0)
+    float4 postLightingColor;   // default: float4(1.0)
 
     // no other field is available with the unlit shading model
     float  roughness;           // default: 1.0
@@ -1402,12 +1403,12 @@ struct MaterialInputs {
     float3 subsurfaceColor;     // default: float3(1.0)
 
     // only available when the shading model is cloth
-    float3 sheenColor;         // default: sqrt(baseColor)
-    float3 subsurfaceColor;    // default: float3(0.0)
+    float3 sheenColor;          // default: sqrt(baseColor)
+    float3 subsurfaceColor;     // default: float3(0.0)
 
     // not available when the shading model is unlit
     // must be set before calling prepareMaterial()
-    float3 normal;             // default: float3(0.0, 0.0, 1.0)
+    float3 normal;              // default: float3(0.0, 0.0, 1.0)
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
