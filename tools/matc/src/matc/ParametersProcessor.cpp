@@ -406,7 +406,7 @@ bool ParametersProcessor::processPostLightingBlending(filamat::MaterialBuilder& 
         case filament::BlendingMode::MASKED:
             std::cerr << PARAM_KEY_BLENDING <<
                     ": value is not a valid post-lighting BlendMode."
-                    " Only OPAQUE, TRANSPARENT and FADE are supported." << std::endl;
+                    " Only OPAQUE, TRANSPARENT and ADD are supported." << std::endl;
             return false;
         default:
             break;
