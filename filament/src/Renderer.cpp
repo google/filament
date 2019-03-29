@@ -357,6 +357,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
             });
 
     FrameGraphResource input = colorPass.getData().color;
+    UTILS_UNUSED FrameGraphResource depth = colorPass.getData().depth;
 
     /*
      * Post Processing...

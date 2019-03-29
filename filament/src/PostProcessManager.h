@@ -36,7 +36,9 @@ class PostProcessManager {
 public:
     void init(details::FEngine& engine) noexcept;
     void terminate(backend::DriverApi& driver) noexcept;
-    void setSource(uint32_t viewportWidth, uint32_t viewportHeight, backend::Handle<backend::HwTexture> texture,
+    void setSource(uint32_t viewportWidth, uint32_t viewportHeight,
+            backend::Handle<backend::HwTexture> color,
+            backend::Handle<backend::HwTexture> depth,
             uint32_t textureWidth, uint32_t textureHeight) const noexcept;
 
     FrameGraphResource toneMapping(FrameGraph& fg, FrameGraphResource input,
