@@ -96,8 +96,11 @@ MetalVertexBuffer::MetalVertexBuffer(id<MTLDevice> device, uint8_t bufferCount, 
             }
         }
 
-        id<MTLBuffer> buffer = [device newBufferWithLength:size
-                                                   options:MTLResourceStorageModeShared];
+        id<MTLBuffer> buffer = nil;
+        if (size > 0) {
+            buffer = [device newBufferWithLength:size
+                                         options:MTLResourceStorageModeShared];
+        }
         buffers.push_back(buffer);
     }
 }
@@ -116,38 +119,78 @@ MetalIndexBuffer::MetalIndexBuffer(id<MTLDevice> device, uint8_t elementSize, ui
 
 MetalIndexBuffer::~MetalIndexBuffer() {
     [buffer release];
-};
+}
 
-MetalUniformBuffer::MetalUniformBuffer(id<MTLDevice> device, size_t size) : HwUniformBuffer(),
-        size(size) {
+MetalUniformBuffer::MetalUniformBuffer(MetalContext& context, size_t size) : HwUniformBuffer(),
+        size(size), context(context) {
+    ASSERT_PRECONDITION(size > 0, "Cannot create Metal uniform with size %d.", size);
     // If the buffer is less than 4K in size, we don't use an explicit buffer and instead use
     // immediate command encoder methods like setVertexBytes:length:atIndex:.
     if (size <= 4 * 1024) {   // 4K
-        buffer = nil;
+        bufferPoolEntry = nullptr;
         cpuBuffer = malloc(size);
-    } else {
-        buffer = [device newBufferWithLength:size
-                                     options:MTLResourceStorageModeShared];
-        cpuBuffer = nullptr;
     }
 }
 
 MetalUniformBuffer::~MetalUniformBuffer() {
-    if (buffer) {
-        [buffer release];
-    } else if (cpuBuffer) {
+    if (cpuBuffer) {
         free(cpuBuffer);
+    }
+    // This uniform buffer is being destroyed. If we have a buffer, release it as it is no longer
+    // needed.
+    if (bufferPoolEntry) {
+        context.bufferPool->releaseBuffer(bufferPoolEntry);
     }
 }
 
 void MetalUniformBuffer::copyIntoBuffer(void* src, size_t size) {
-    // Either copy into the Metal buffer or into our cpu buffer.
-    if (buffer) {
-        memcpy(buffer.contents, src, size);
-    } else {
-        assert(cpuBuffer);
-        memcpy(cpuBuffer, src, size);
+    if (size <= 0) {
+        return;
     }
+    ASSERT_PRECONDITION(size <= this->size, "Attempting to copy %d bytes into a uniform of size %d",
+            size, this->size);
+
+    // Either copy into the Metal buffer or into our cpu buffer.
+    if (cpuBuffer) {
+        memcpy(cpuBuffer, src, size);
+        return;
+    }
+
+    // We're about to acquire a new buffer to hold the new contents of the uniform. If we previously
+    // had obtained a buffer we release it, decrementing its reference count, as this uniform no
+    // longer needs it.
+    if (bufferPoolEntry) {
+        context.bufferPool->releaseBuffer(bufferPoolEntry);
+    }
+
+    bufferPoolEntry = context.bufferPool->acquireBuffer(size);
+    memcpy(static_cast<uint8_t*>(bufferPoolEntry->buffer.contents), src, size);
+
+    // Retain the buffer, giving it a +2 reference count. It will be released twice:
+    // 1. When the frame has finished.
+    // 2. When this uniform has finished using the buffer (either upon the next update or when it
+    //    gets destroyed).
+    context.bufferPool->retainBuffer(bufferPoolEntry);
+
+    const MetalBufferPoolEntry* entry = this->bufferPoolEntry;
+    MetalBufferPool* pool = context.bufferPool;
+    // Important to copy the bufferPool and entry pointers into separate variables so that the block
+    // does not capture "this", which may not be valid by the time the frame has completed (if this
+    // uniform is destroyed, for example).
+    [context.currentCommandBuffer addCompletedHandler:^(id<MTLCommandBuffer> commandBuffer) {
+        pool->releaseBuffer(entry);
+    }];
+}
+
+id<MTLBuffer> MetalUniformBuffer::getGpuBuffer() const {
+    if (bufferPoolEntry) {
+        return bufferPoolEntry->buffer;
+    }
+    return nil;
+}
+
+void* MetalUniformBuffer::getCpuBuffer() const {
+    return cpuBuffer;
 }
 
 void MetalRenderPrimitive::setBuffers(MetalVertexBuffer* vertexBuffer, MetalIndexBuffer*
@@ -187,7 +230,6 @@ void MetalRenderPrimitive::setBuffers(MetalVertexBuffer* vertexBuffer, MetalInde
         bufferIndex++;
     };
 }
-
 
 MetalProgram::MetalProgram(id<MTLDevice> device, const Program& program) noexcept
     : HwProgram(program.getName()) {

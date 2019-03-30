@@ -17,18 +17,22 @@
 #ifndef TNT_METALCONTEXT_H
 #define TNT_METALCONTEXT_H
 
+#include "MetalBufferPool.h"
+#include "MetalState.h"
+
 #include <Metal/Metal.h>
 #include <QuartzCore/QuartzCore.h>
-
-#include "MetalState.h"
 
 namespace filament {
 namespace backend {
 namespace metal {
 
 class MetalRenderTarget;
+class MetalUniformBuffer;
+struct MetalIndexBuffer;
 struct MetalSamplerGroup;
 struct MetalSwapChain;
+struct MetalVertexBuffer;
 
 struct MetalContext {
     id<MTLDevice> device = nullptr;
@@ -51,7 +55,7 @@ struct MetalContext {
     // State trackers.
     PipelineStateTracker pipelineState;
     DepthStencilStateTracker depthStencilState;
-    UniformBufferStateTracker uniformState[VERTEX_BUFFER_START];
+    UniformBufferState uniformState[VERTEX_BUFFER_START];
     CullModeStateTracker cullModeState;
 
     // State caches.
@@ -60,6 +64,8 @@ struct MetalContext {
     SamplerStateCache samplerStateCache;
 
     MetalSamplerGroup* samplerBindings[SAMPLER_BINDING_COUNT] = {};
+
+    MetalBufferPool* bufferPool;
 
     // Surface-related properties.
     MetalSwapChain* currentSurface = nullptr;

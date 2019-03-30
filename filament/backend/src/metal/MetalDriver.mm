@@ -51,10 +51,12 @@ MetalDriver::MetalDriver(backend::MetalPlatform* platform) noexcept
     mContext->pipelineStateCache.setDevice(mContext->device);
     mContext->depthStencilStateCache.setDevice(mContext->device);
     mContext->samplerStateCache.setDevice(mContext->device);
+    mContext->bufferPool = new MetalBufferPool(*mContext);
 }
 
 MetalDriver::~MetalDriver() noexcept {
     [mContext->device release];
+    delete mContext->bufferPool;
     delete mContext;
 }
 
@@ -79,6 +81,7 @@ void MetalDriver::setPresentationTime(int64_t monotonic_clock_ns) {
 void MetalDriver::endFrame(uint32_t frameId) {
     // Release resources created during frame execution- like commandBuffer and currentDrawable.
     [mContext->framePool drain];
+    mContext->bufferPool->gc();
 }
 
 void MetalDriver::flush(int dummy) {
@@ -112,7 +115,7 @@ void MetalDriver::createSamplerGroupR(Handle<HwSamplerGroup> sbh, size_t size) {
 
 void MetalDriver::createUniformBufferR(Handle<HwUniformBuffer> ubh, size_t size,
         BufferUsage usage) {
-    construct_handle<MetalUniformBuffer>(mHandleMap, ubh, mContext->device, size);
+    construct_handle<MetalUniformBuffer>(mHandleMap, ubh, *mContext, size);
 }
 
 void MetalDriver::createRenderPrimitiveR(Handle<HwRenderPrimitive> rph, int dummy) {
@@ -262,6 +265,11 @@ void MetalDriver::destroySamplerGroup(Handle<HwSamplerGroup> sbh) {
 void MetalDriver::destroyUniformBuffer(Handle<HwUniformBuffer> ubh) {
     if (ubh) {
         destruct_handle<MetalUniformBuffer>(mHandleMap, ubh);
+        for (auto& thisUniform : mContext->uniformState) {
+            if (thisUniform.ubh == ubh) {
+                thisUniform.bound = false;
+            }
+        }
     }
 }
 
@@ -288,6 +296,13 @@ void MetalDriver::destroyStream(Handle<HwStream> sh) {
 }
 
 void MetalDriver::terminate() {
+    // Wait for all frames to finish by submitting and waiting on a dummy command buffer.
+    // This must be done before calling bufferPool->reset() to ensure no buffers are in flight.
+    id<MTLCommandBuffer> oneOffBuffer = [mContext->commandQueue commandBuffer];
+    [oneOffBuffer commit];
+    [oneOffBuffer waitUntilCompleted];
+
+    mContext->bufferPool->reset();
     [mContext->commandQueue release];
     [mContext->driverPool drain];
 }
@@ -401,7 +416,12 @@ bool MetalDriver::canGenerateMipmaps() {
 
 void MetalDriver::updateUniformBuffer(Handle<HwUniformBuffer> ubh,
         BufferDescriptor&& data) {
-    auto buffer = handle_cast<MetalUniformBuffer>(mHandleMap, ubh);
+   if (data.size <= 0) {
+       return;
+   }
+
+   auto buffer = handle_cast<MetalUniformBuffer>(mHandleMap, ubh);
+
     buffer->copyIntoBuffer(data.buffer, data.size);
     scheduleDestroy(std::move(data));
 }
@@ -476,9 +496,6 @@ void MetalDriver::beginRenderPass(Handle<HwRenderTarget> rth,
     // Metal requires a new command encoder for each render pass, and they cannot be reused.
     // We must bind certain states for each command encoder, so we dirty the states here to force a
     // rebinding at the first the draw call of this pass.
-    for (auto& i : mContext->uniformState) {
-        i.invalidate();
-    }
     mContext->pipelineState.invalidate();
     mContext->depthStencilState.invalidate();
     mContext->cullModeState.invalidate();
@@ -540,20 +557,20 @@ void MetalDriver::commit(Handle<HwSwapChain> sch) {
 }
 
 void MetalDriver::bindUniformBuffer(size_t index, Handle<HwUniformBuffer> ubh) {
-    mContext->uniformState[index].updateState(UniformBufferState {
+    mContext->uniformState[index] = UniformBufferState {
         .bound = true,
         .ubh = ubh,
         .offset = 0
-    });
+    };
 }
 
 void MetalDriver::bindUniformBufferRange(size_t index, Handle<HwUniformBuffer> ubh,
         size_t offset, size_t size) {
-    mContext->uniformState[index].updateState(UniformBufferState {
+    mContext->uniformState[index] = UniformBufferState {
         .bound = true,
         .ubh = ubh,
         .offset = offset
-    });
+    };
 }
 
 void MetalDriver::bindSamplers(size_t index, Handle<HwSamplerGroup> sbh) {
@@ -656,41 +673,45 @@ void MetalDriver::draw(backend::PipelineState ps, Handle<HwRenderPrimitive> rph)
                                               clamp:0.0];
     }
 
-    // Bind any uniform buffers that have changed since the last draw call.
-    for (uint32_t i = 0; i < VERTEX_BUFFER_START; i++) {
-        auto& thisUniform = mContext->uniformState[i];
-        if (thisUniform.stateChanged()) {
-            const auto& uniformState = thisUniform.getState();
-            if (!uniformState.bound) {
-                continue;
-            }
+    // Bind uniform buffers.
+    id<MTLBuffer> uniformsToBind[Program::UNIFORM_BINDING_COUNT] = { nil };
+    NSUInteger offsets[Program::UNIFORM_BINDING_COUNT] = { 0 };
 
-            const auto* uniform = handle_const_cast<MetalUniformBuffer>(mHandleMap,
-                    uniformState.ubh);
-
-            // We have no way of knowing which uniform buffers will be used by which shader stage
-            // so for now, bind the uniform buffer to both the vertex and fragment stages.
-
-            if (uniform->buffer) {
-                [mContext->currentCommandEncoder setVertexBuffer:uniform->buffer
-                                                        offset:uniformState.offset
-                                                       atIndex:i];
-
-                [mContext->currentCommandEncoder setFragmentBuffer:uniform->buffer
-                                                          offset:uniformState.offset
-                                                         atIndex:i];
-            } else {
-                assert(uniform->cpuBuffer);
-                uint8_t* bytes = static_cast<uint8_t*>(uniform->cpuBuffer) + uniformState.offset;
-                [mContext->currentCommandEncoder setVertexBytes:bytes
-                                                       length:(uniform->size - uniformState.offset)
-                                                      atIndex:i];
-                [mContext->currentCommandEncoder setFragmentBytes:bytes
-                                                         length:(uniform->size - uniformState.offset)
-                                                        atIndex:i];
-            }
+    enumerateBoundUniformBuffers([&uniformsToBind, &offsets](const UniformBufferState& state,
+            const MetalUniformBuffer* uniform, uint32_t index) {
+        // getGpuBuffer() might return nil, which means there isn't a device allocation for this
+        // uniform. In this case, we'll update the uniform below with our CPU-side buffer via
+        // setVertexBytes and setFragmentBytes.
+        id<MTLBuffer> gpuBuffer = uniform->getGpuBuffer();
+        if (gpuBuffer == nil) {
+            return;
         }
-    }
+        uniformsToBind[index] = gpuBuffer;
+        offsets[index] = state.offset;
+    });
+
+    NSRange uniformRange = NSMakeRange(0, Program::UNIFORM_BINDING_COUNT);
+    [mContext->currentCommandEncoder setVertexBuffers:uniformsToBind
+                                              offsets:offsets
+                                            withRange:uniformRange];
+    [mContext->currentCommandEncoder setFragmentBuffers:uniformsToBind
+                                                offsets:offsets
+                                              withRange:uniformRange];
+
+    enumerateBoundUniformBuffers([commandEncoder = mContext->currentCommandEncoder](
+            const UniformBufferState& state, const MetalUniformBuffer* uniform, uint32_t index) {
+        void* cpuBuffer = uniform->getCpuBuffer();
+        if (!cpuBuffer) {
+            return;
+        }
+        uint8_t* bytes = static_cast<uint8_t*>(cpuBuffer) + state.offset;
+        [commandEncoder setVertexBytes:bytes
+                                length:(uniform->getSize() - state.offset)
+                               atIndex:index];
+        [commandEncoder setFragmentBytes:bytes
+                                  length:(uniform->getSize() - state.offset)
+                                 atIndex:index];
+    });
 
     // Enumerate all the sampler buffers for the program and check which textures and samplers need
     // to be bound.
@@ -711,18 +732,15 @@ void MetalDriver::draw(backend::PipelineState ps, Handle<HwRenderPrimitive> rph)
     // Similar to uniforms, we can't tell which stage will use the textures / samplers, so bind
     // to both the vertex and fragment stages.
 
-    NSRange range {
-        .length = SAMPLER_BINDING_COUNT,
-        .location = 0
-    };
+    NSRange samplerRange = NSMakeRange(0, SAMPLER_BINDING_COUNT);
     [mContext->currentCommandEncoder setFragmentTextures:texturesToBind
-                                             withRange:range];
+                                             withRange:samplerRange];
     [mContext->currentCommandEncoder setVertexTextures:texturesToBind
-                                           withRange:range];
+                                           withRange:samplerRange];
     [mContext->currentCommandEncoder setFragmentSamplerStates:samplersToBind
-                                                  withRange:range];
+                                                  withRange:samplerRange];
     [mContext->currentCommandEncoder setVertexSamplerStates:samplersToBind
-                                                withRange:range];
+                                                withRange:samplerRange];
 
     // Bind the vertex buffers.
     NSRange bufferRange = NSMakeRange(VERTEX_BUFFER_START, primitive->buffers.size());
@@ -767,6 +785,19 @@ void MetalDriver::enumerateSamplerGroups(
 
             f(boundSampler, bindingPoint);
         }
+    }
+}
+
+void MetalDriver::enumerateBoundUniformBuffers(
+        const std::function<void(const UniformBufferState&, const MetalUniformBuffer*,
+        uint32_t)>& f) {
+    for (uint32_t i = 0; i < Program::UNIFORM_BINDING_COUNT; i++) {
+        auto& thisUniform = mContext->uniformState[i];
+        if (!thisUniform.bound) {
+            continue;
+        }
+        const auto* uniform = handle_const_cast<MetalUniformBuffer>(mHandleMap, thisUniform.ubh);
+        f(thisUniform, uniform, i);
     }
 }
 
