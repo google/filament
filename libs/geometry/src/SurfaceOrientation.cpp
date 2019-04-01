@@ -164,7 +164,7 @@ SurfaceOrientation OrientationBuilderImpl::buildWithSuppliedTangents() {
     for (size_t qindex = 0; qindex < vertexCount; ++qindex) {
         float3 n = *normal;
         float3 t = *tanvec;
-        float3 b = *tandir < 0 ? cross(t, n) : cross(n, t);
+        float3 b = *tandir > 0 ? cross(t, n) : cross(n, t);
         quats[qindex] = mat3f::packTangentFrame({t, b, n});
         normal = (const float3*) (((const uint8_t*) normal) + nstride);
         tanvec = (const float3*) (((const uint8_t*) tanvec) + tstride);
