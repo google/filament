@@ -39,7 +39,7 @@ struct IndirectLight::BuilderDetails {
     Texture const* mReflectionsMap = nullptr;
     Texture const* mIrradianceMap = nullptr;
     float3 mIrradianceCoefs[9] = {};
-    mat3f mRotation;
+    mat3f mRotation = {};
     float mIntensity = 30000.0f;
     uint8_t mNumBands = 0;
 };
@@ -133,6 +133,7 @@ FIndirectLight::FIndirectLight(FEngine& engine, const Builder& builder) noexcept
             std::end(builder->mIrradianceCoefs),
             mIrradianceCoefs.begin());
 
+    mRotation = builder->mRotation;
     mIntensity = builder->mIntensity;
     if (builder->mIrradianceMap) {
         mIrradianceMapHandle = upcast(builder->mIrradianceMap)->getHwHandle();
