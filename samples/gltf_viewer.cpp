@@ -50,6 +50,7 @@ struct App {
     FilamentAsset* asset = nullptr;
     NameComponentManager* names;
     MaterialSource materialSource = GENERATE_SHADERS;
+    bool actualSize = false;
 };
 
 static const char* DEFAULT_IBL = "envs/venetian_crossroads";
@@ -59,7 +60,7 @@ static void printUsage(char* name) {
     std::string usage(
         "SHOWCASE renders the specified glTF file, or a built-in file if none is specified\n"
         "Usage:\n"
-        "    SHOWCASE [options] <gltf file>\n"
+        "    SHOWCASE [options] <gltf path>\n"
         "Options:\n"
         "   --help, -h\n"
         "       Prints this message\n\n"
@@ -67,6 +68,8 @@ static void printUsage(char* name) {
         "       Specify the backend API: opengl (default), vulkan, or metal\n\n"
         "   --ibl=<path to cmgen IBL>, -i <path>\n"
         "       Override the built-in IBL\n\n"
+        "   --actual-size, -s\n"
+        "       Do not scale the model to fit into a unit cube\n\n"
         "   --ubershader, -u\n"
         "       Enable ubershaders (improves load time, adds shader complexity)\n\n"
     );
@@ -78,12 +81,13 @@ static void printUsage(char* name) {
 }
 
 static int handleCommandLineArguments(int argc, char* argv[], App* app) {
-    static constexpr const char* OPTSTR = "ha:i:u";
+    static constexpr const char* OPTSTR = "ha:i:us";
     static const struct option OPTIONS[] = {
         { "help",       no_argument,       nullptr, 'h' },
         { "api",        required_argument, nullptr, 'a' },
         { "ibl",        required_argument, nullptr, 'i' },
         { "ubershader", no_argument,       nullptr, 'u' },
+        { "actual-size", no_argument,      nullptr, 's' },
         { nullptr, 0, nullptr, 0 }
     };
     int opt;
@@ -112,6 +116,9 @@ static int handleCommandLineArguments(int argc, char* argv[], App* app) {
             case 'u':
                 app->materialSource = LOAD_UBERSHADERS;
                 break;
+            case 's':
+                app->actualSize = true;
+                break;
         }
     }
     return optind;
@@ -134,8 +141,21 @@ int main(int argc, char** argv) {
     if (num_args >= 1) {
         filename = argv[option_index];
         if (!filename.exists()) {
-            std::cerr << "file " << argv[option_index] << " not found!" << std::endl;
+            std::cerr << "file " << filename << " not found!" << std::endl;
             return 1;
+        }
+        if (filename.isDirectory()) {
+            auto files = filename.listContents();
+            for (auto file : files) {
+                if (file.getExtension() == "gltf" || file.getExtension() == "glb") {
+                    filename = file;
+                    break;
+                }
+            }
+            if (filename.isDirectory()) {
+                std::cerr << "no glTF file found in " << filename << std::endl;
+                return 1;
+            }
         }
     }
 
@@ -180,7 +200,7 @@ int main(int argc, char** argv) {
         app.asset->releaseSourceData();
 
         // Add the renderables to the scene.
-        app.viewer->setAsset(app.asset, app.names);
+        app.viewer->setAsset(app.asset, app.names, !app.actualSize);
 
         app.viewer->setIndirectLight(FilamentApp::get().getIBL()->getIndirectLight());
     };
