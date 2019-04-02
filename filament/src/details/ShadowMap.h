@@ -108,8 +108,8 @@ private:
             uint8_t visibleLayers) noexcept;
 
     static math::mat4f applyLISPSM(
-            CameraInfo const& camera, float dzn, float dzf, const math::mat4f& LMpMv,
-            Aabb const& wsShadowReceiversVolume, const math::float3 wsViewFrustumCorners[8],
+            CameraInfo const& camera, const math::mat4f& LMpMv,
+            FrustumBoxIntersection const& wsShadowReceiverVolume, size_t vertexCount,
             const math::float3& dir);
 
     static inline void snapLightFrustum(math::float2& s, math::float2& o,
@@ -121,11 +121,14 @@ private:
     static inline math::float2 computeNearFar(math::mat4f const& lightView,
             Aabb const& wsShadowCastersVolume) noexcept;
 
-    static inline void intersectWithShadowCasters(Aabb& lightFrustum, const math::mat4f& lightView,
+    static inline math::float2 computeNearFar(math::mat4f const& lightView,
+            math::float3 const* wsVertices, size_t count) noexcept;
+
+        static inline void intersectWithShadowCasters(Aabb& lightFrustum, const math::mat4f& lightView,
             Aabb const& wsShadowCastersVolume) noexcept;
 
     static inline math::float2 computeWpNearFarOfWarpSpace(math::mat4f const& lightView,
-            math::float3 const wsViewFrustumCorners[8]) noexcept;
+            math::float3 const* wsViewFrustumCorners, size_t count) noexcept;
 
     static inline bool intersectSegmentWithPlane(math::float3& p,
             math::float3 s0, math::float3 s1,

@@ -292,15 +292,7 @@ void ShadowMap::computeShadowCameraDirectional(
         // Compute the LiSPSM warping
         mat4f W;
         if (USE_LISPSM) {
-            // copmute the virtual near plane dynamically, but clamp to the user provided value
-            // i.e.:  we will never increase the resolution in the area in front of the camera
-            // the user said wasn't important.
-            const float zn = -computeNearFar(camera.view, wsShadowReceiversVolume).x;
-            const float dzn = std::max(camera.dzn, zn - camera.zn);
-
-            // wsViewFrustumCorners and dir MUST match camera and LMpMv respectively
-            W = applyLISPSM(camera, dzn, camera.dzf, LMpMv, wsShadowReceiversVolume,
-                    wsViewFrustumCorners, dir);
+            W = applyLISPSM(camera, LMpMv, mWsClippedShadowReceiverVolume, vertexCount, dir);
         }
 
         /*
@@ -382,37 +374,37 @@ void ShadowMap::computeShadowCameraDirectional(
     }
 }
 
-mat4f ShadowMap::applyLISPSM(CameraInfo const& camera, float dzn, float dzf, mat4f const& LMpMv,
-        Aabb const& wsShadowReceiversVolume, const float3 wsViewFrustumCorners[8],
+mat4f ShadowMap::applyLISPSM(CameraInfo const& camera, mat4f const& LMpMv,
+        FrustumBoxIntersection const& wsShadowReceiversVolume, size_t vertexCount,
         float3 const& dir) {
 
-    // note: wsViewFrustumCorners and dir MUST match camera and LMpMv respectively:
-    //
-    // We could get wsViewFrustumCorners from camera -- but we've already calculated this, so
-    // we pass it along here.
-    //
-    // We could get the light direction from the lightspace matrix as well.
-    // But it would require a matrix inversion in the spotlight case.
-    //     e.g.: dir = normalize(inverse(LMpMv)[3].xyz))
-
-    const float zn = camera.getNear();  // near plane distance
-    const float zf = camera.getFar();   // far plane distance
     const float LoV = dot(camera.getForwardVector(), dir);
     const float sinLV = std::sqrt(1.0f - LoV * LoV);
 
-    // compute n and f, the near and far planes of Wp (warp space).
+    // Virtual near plane -- the default is 1m, can be changed by the user.
+    // The virtual near plane prevents too much resolution to be wasted in the area near the eye
+    // where shadows might not be visible (e.g. a character standing won't see shadows at her feet).
+    const float dzn = camera.dzn;
+    const float dzf = camera.dzf;
+
+    // near/far plane's distance from the eye in view space of the shadow receiver volume
+    float2 znf = -computeNearFar(camera.view, wsShadowReceiversVolume.data(), vertexCount);
+    const float zn = znf[0]; // near plane distance from the eye
+    const float zf = znf[1]; // far plane distance from the eye
+
+    // compute n and f, the near and far planes coordinates of Wp (warp space).
     // It's found by looking down the Y axis in light space (i.e. -Z axis of Wp,
     // i.e. the axis orthogonal to the light direction) and taking the min/max
-    // of the camera frustum.
+    // of the shadow receivers volume.
     // Note: znear/zfar encoded in Mp has no influence here (b/c we're interested only by the y axis)
-    const float2 nf = computeWpNearFarOfWarpSpace(LMpMv, wsViewFrustumCorners);
+    const float2 nf = computeWpNearFarOfWarpSpace(LMpMv, wsShadowReceiversVolume.data(), vertexCount);
     const float n = nf[0];              // near plane coordinate of Mp (light space)
     const float f = nf[1];              // far plane coordinate of Mp (light space)
     const float d = std::abs(f - n);    // Wp's depth-range d (abs necessary because we're dealing with z-coordinates, not distances)
 
     // The simplification below is correct only for directional lights
-    const float z0 = zn;
-    const float z1 = zn + d * sinLV;    // btw, note that z1 doesn't depend on zf
+    const float z0 = zn;                // for directional lights, z0 = zn
+    const float z1 = z0 + d * sinLV;    // btw, note that z1 doesn't depend on zf
 
     mat4f W;
     // see nopt1 below for an explanation about this test
@@ -424,7 +416,7 @@ mat4f ShadowMap::applyLISPSM(CameraInfo const& camera, float dzn, float dzf, mat
         const float vz1 = std::min(zf - dzf, z1);
 
         // in the general case, nopt is computed as:
-        const float nopt0 = (d / (z1 - z0)) * (z0 + std::sqrt(vz0 * vz1));
+        const float nopt0 = (1.0f / sinLV) * (z0 + std::sqrt(vz0 * vz1));
 
         // however, if dzn becomes too large, the max error doesn't happen in the depth range,
         // and the equation below should be used instead. If dzn reaches 2/3 of the depth range
@@ -502,12 +494,16 @@ mat4f ShadowMap::warpFrustum(float n, float f) noexcept {
 
 float2 ShadowMap::computeNearFar(const mat4f& lightView,
         Aabb const& wsShadowCastersVolume) noexcept {
-    float2 nearFar = { std::numeric_limits<float>::lowest(), std::numeric_limits<float>::max() };
     const Aabb::Corners wsSceneCastersCorners = wsShadowCastersVolume.getCorners();
+    return computeNearFar(lightView, wsSceneCastersCorners.data(), wsSceneCastersCorners.size());
+}
 
+float2 ShadowMap::computeNearFar(const mat4f& lightView,
+        float3 const* wsVertices, size_t count) noexcept {
+    float2 nearFar = { std::numeric_limits<float>::lowest(), std::numeric_limits<float>::max() };
     #pragma nounroll
-    for (float3 corner : wsSceneCastersCorners) {
-        float3 c = mat4f::project(lightView, corner);
+    for (size_t i = 0; i < count; i++) {
+        float3 c = mat4f::project(lightView, wsVertices[i]);
         nearFar.x = std::max(nearFar.x, c.z);  // near
         nearFar.y = std::min(nearFar.y, c.z);  // far
     }
@@ -581,11 +577,11 @@ void ShadowMap::computeFrustumCorners(
 
 float2 ShadowMap::computeWpNearFarOfWarpSpace(
         mat4f const& lightView,
-        float3 const wsViewFrustumCorners[8]) noexcept {
+        float3 const* wsViewFrustumCorners, size_t count) noexcept {
     float ymin = std::numeric_limits<float>::max();
     float ymax = std::numeric_limits<float>::lowest();
     #pragma nounroll
-    for (size_t i = 0; i < 8; i++) {
+    for (size_t i = 0; i < count; i++) {
         float c = mat4f::project(lightView, wsViewFrustumCorners[i]).y;
         ymin = std::min(ymin, c);
         ymax = std::max(ymax, c);
