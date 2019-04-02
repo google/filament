@@ -488,7 +488,7 @@ void VulkanTexture::update2DImage(const PixelBufferDescriptor& data, uint32_t wi
     vmaUnmapMemory(mContext.allocator, stage->memory);
     vmaFlushAllocation(mContext.allocator, stage->memory, 0, numDstBytes);
 
-    // Create a copy-to-device functor because we might need to defer it.
+    // Create a copy-to-device functor.
     auto copyToDevice = [this, stage, width, height, miplevel] (VulkanCommandBuffer& commands) {
         transitionImageLayout(commands.cmdbuffer, textureImage, VK_IMAGE_LAYOUT_UNDEFINED,
                 VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, miplevel, 1);
@@ -531,7 +531,7 @@ void VulkanTexture::updateCubeImage(const PixelBufferDescriptor& data,
     vmaUnmapMemory(mContext.allocator, stage->memory);
     vmaFlushAllocation(mContext.allocator, stage->memory, 0, numDstBytes);
 
-    // Create a copy-to-device functor because we might need to defer it.
+    // Create a copy-to-device functor.
     auto copyToDevice = [this, faceOffsets, stage, miplevel] (VulkanCommandBuffer& commands) {
         uint32_t width = std::max(1u, this->width >> miplevel);
         uint32_t height = std::max(1u, this->height >> miplevel);
