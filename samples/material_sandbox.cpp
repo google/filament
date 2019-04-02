@@ -21,6 +21,7 @@
 #include <getopt/getopt.h>
 
 #include <imgui.h>
+#include <filagui/ImGuiExtensions.h>
 
 #include <utils/Path.h>
 
@@ -314,12 +315,12 @@ static void gui(filament::Engine* engine, filament::View*) {
             ImGui::Checkbox("enabled", &params.directionalLightEnabled);
             ImGui::ColorEdit3("color", &params.lightColor.r);
             ImGui::SliderFloat("lux", &params.lightIntensity, 0.0f, 150000.0f);
-            ImGui::SliderFloat3("direction", &params.lightDirection.x, -1.0f, 1.0f);
             ImGui::SliderFloat("sunSize", &params.sunAngularRadius, 0.1f, 10.0f);
             ImGui::SliderFloat("haloSize", &params.sunHaloSize, 1.01f, 40.0f);
             ImGui::SliderFloat("haloFalloff", &params.sunHaloFalloff, 0.0f, 2048.0f);
             ImGui::SliderFloat("ibl", &params.iblIntensity, 0.0f, 50000.0f);
             ImGui::SliderAngle("ibl rotation", &params.iblRotation);
+            ImGuiExt::DirectionWidget("direction", &params.lightDirection.x);
         }
 
         if (ImGui::CollapsingHeader("Post-processing")) {
