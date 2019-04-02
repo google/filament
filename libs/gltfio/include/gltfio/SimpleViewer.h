@@ -36,6 +36,8 @@
 #include <utils/Entity.h>
 #include <utils/NameComponentManager.h>
 
+#include <math/vec3.h>
+
 namespace gltfio {
 
 /**
@@ -133,6 +135,8 @@ private:
     bool mResetAnimation = true;
     float mIblIntensity = 30000.0f;
     float mIblRotation = 0.0f;
+    float mSunlightIntensity = 100000.0f;
+    filament::math::float3 mSunlightDirection = {0.6, -1.0, -0.8};
     bool mShowWireframe = false;
     bool mEnableSunlight = true;
     bool mEnableDithering = true;
@@ -157,6 +161,7 @@ filament::math::mat4f fitIntoUnitCube(const filament::Aabb& bounds);
 #include <math/vec3.h>
 
 #include <imgui.h>
+#include <filagui/ImGuiExtensions.h>
 
 #include <vector>
 
@@ -182,8 +187,8 @@ SimpleViewer::SimpleViewer(filament::Engine* engine, filament::Scene* scene, fil
     using namespace filament;
     LightManager::Builder(LightManager::Type::SUN)
         .color(Color::toLinear<ACCURATE>({0.98, 0.92, 0.89}))
-        .intensity(100000.0)
-        .direction({0.6, -1.0, -0.8})
+        .intensity(mSunlightIntensity)
+        .direction(normalize(mSunlightDirection))
         .castShadows(true)
         .sunAngularRadius(1.9)
         .sunHaloSize(10.0)
@@ -256,6 +261,7 @@ void SimpleViewer::updateUserInterface() {
 
     auto& tm = mEngine->getTransformManager();
     auto& rm = mEngine->getRenderableManager();
+    auto& lm = mEngine->getLightManager();
 
     // Show a common set of UI widgets for all renderables.
     auto renderableTreeItem = [this, &rm](utils::Entity entity) {
@@ -351,14 +357,19 @@ void SimpleViewer::updateUserInterface() {
     mView->setAntiAliasing(mEnableFxaa ? View::AntiAliasing::FXAA : View::AntiAliasing::NONE);
     mView->setSampleCount(mEnableMsaa ? 4 : 1);
 
-    if (ImGui::CollapsingHeader("Light")) {
+    if (ImGui::CollapsingHeader("Light", ImGuiTreeNodeFlags_DefaultOpen)) {
         ImGui::SliderFloat("IBL intensity", &mIblIntensity, 0.0f, 100000.0f);
         ImGui::SliderAngle("IBL rotation", &mIblRotation);
-        ImGui::Checkbox("Sunlight", &mEnableSunlight);
+        ImGui::SliderFloat("Sun intensity", &mSunlightIntensity, 50000.0, 150000.0f);
+        ImGuiExt::DirectionWidget("Sun direction", &mSunlightDirection.x);
+        ImGui::Checkbox("Enable sunlight", &mEnableSunlight);
     }
 
     if (mEnableSunlight) {
         mScene->addEntity(mSunlight);
+        auto sun = lm.getInstance(mSunlight);
+        lm.setIntensity(sun, mSunlightIntensity);
+        lm.setDirection(sun, normalize(mSunlightDirection));
     } else {
         mScene->remove(mSunlight);
     }

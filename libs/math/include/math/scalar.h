@@ -44,6 +44,11 @@ inline constexpr T MATH_PURE lerp(T x, T y, T a) noexcept {
     return mix(x, y, a);
 }
 
+template <typename T>
+inline constexpr int sign(T val) noexcept {
+    return (T(0) < val) - (val < T(0));
+}
+
 } // namespace math
 } // namespace filament
 
