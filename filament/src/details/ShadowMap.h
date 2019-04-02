@@ -150,7 +150,9 @@ private:
 
     static math::mat4f warpFrustum(float n, float f) noexcept;
 
-    math::mat4f getTextureCoordsMapping() const noexcept;
+    static math::mat4f directionalLightFrustum(float n, float f) noexcept;
+
+    math::mat4f getTextureCoordsMapping(math::mat4f const& S) const noexcept;
 
     float texelSizeWorldSpace(const math::mat4f& lightSpaceMatrix) const noexcept;
     float texelSizeWorldSpace(const math::mat4f& lightSpaceMatrix, math::float3 const& str) const noexcept;

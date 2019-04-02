@@ -280,7 +280,7 @@ void ShadowMap::computeShadowCameraDirectional(
         }
 
         // The light's projection, ortho for directional lights, perspective otherwise
-        const mat4f Mp = mat4f::ortho(-1, 1, -1, 1, znear, zfar);
+        const mat4f Mp = directionalLightFrustum(znear, zfar);
 
         /*
          * Compute warping (optional, improve quality)
@@ -358,11 +358,9 @@ void ShadowMap::computeShadowCameraDirectional(
         // Final shadow transform
         const mat4f S = F * WLMpMv;
 
-        // Compute shadow-map texture access transform
-        const mat4f MbMt = getTextureCoordsMapping();
-
-        // Final shadowmap texture transform
-        const mat4f St = mat4f(MbMt * S);
+        // Computes St the transform to use in the shader to access the shadow map texture
+        // i.e. it transform a world-space vertex to a texture coordinate in the shadow-map
+        const mat4f St = getTextureCoordsMapping(S);
 
         mTexelSizeWs = texelSizeWorldSpace(St, float3{ 0.5f });
         mLightSpace = St;
@@ -448,9 +446,7 @@ mat4f ShadowMap::applyLISPSM(CameraInfo const& camera, mat4f const& LMpMv,
 }
 
 
-mat4f ShadowMap::getTextureCoordsMapping() const noexcept {
-    // Computes St the transform to use in the shader to access the shadow map texture
-    // i.e. it transform a world-space vertex to a texture coordinate in the shadow-map
+mat4f ShadowMap::getTextureCoordsMapping(math::mat4f const& S) const noexcept {
     // remapping from NDC to texture coordinates (i.e. [-1,1] -> [0, 1])
     const mat4f Mt(mClipSpaceFlipped ? mat4f::row_major_init{
             0.5f,   0,    0,  0.5f,
@@ -474,7 +470,12 @@ mat4f ShadowMap::getTextureCoordsMapping() const noexcept {
              0, 0, 0, 1
     });
 
-    return Mb * Mt;
+    // Compute shadow-map texture access transform
+    const mat4f MbMt = Mb * Mt;
+
+    const mat4f St = mat4f(MbMt * S);
+
+    return St;
 }
 
 // This construct a frustum (similar to glFrustum or frustum), except
@@ -490,6 +491,14 @@ mat4f ShadowMap::warpFrustum(float n, float f) noexcept {
             0, 1, 0, 0
     });
     return Wp;
+}
+
+math::mat4f ShadowMap::directionalLightFrustum(float near, float far) noexcept {
+    const float d = far - near;
+    mat4f m;
+    m[2][2] = -2 / d;
+    m[3][2] = -(far + near)  / d;
+    return m;
 }
 
 float2 ShadowMap::computeNearFar(const mat4f& lightView,
