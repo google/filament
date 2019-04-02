@@ -125,9 +125,9 @@ void ShadowMap::update(
 
     FLightManager::ShadowParams params = lcm.getShadowParams(li);
     mat4f projection(camera.cullingProjection);
-    if (params.shadowFar > 0.0f) {
+    if (params.options.shadowFar > 0.0f) {
         float n = camera.zn;
-        float f = params.shadowFar;
+        float f = params.options.shadowFar;
         if (std::abs(projection[2].w) <= std::numeric_limits<float>::epsilon()) {
             // perspective projection
             projection[2].z =     (f + n) / (n - f);
@@ -145,8 +145,6 @@ void ShadowMap::update(
             .view = camera.view,
             .zn = camera.zn,
             .zf = camera.zf,
-            .dzn = std::max(0.0f, params.shadowNearHint - camera.zn),
-            .dzf = std::max(0.0f, camera.zf - params.shadowFarHint),
             .frustum = Frustum(projection * camera.view),
             .worldOrigin = camera.worldOrigin
     };
@@ -155,10 +153,10 @@ void ShadowMap::update(
     const float dz = cameraInfo.zf - cameraInfo.zn;
     float& dzn = mEngine.debug.shadowmap.dzn;
     float& dzf = mEngine.debug.shadowmap.dzf;
-    if (dzn < 0)    dzn = cameraInfo.dzn / dz;
-    else            cameraInfo.dzn = dzn * dz;
-    if (dzf > 0)    dzf =-cameraInfo.dzf / dz;
-    else            cameraInfo.dzf =-dzf * dz;
+    if (dzn < 0)    dzn = std::max(0.0f, params.options.shadowNearHint - camera.zn) / dz;
+    else            params.options.shadowNearHint = dzn * dz - camera.zn;
+    if (dzf > 0)    dzf =-std::max(0.0f, camera.zf - params.options.shadowFarHint) / dz;
+    else            params.options.shadowFarHint = dzf * dz + camera.zf;
 
 
     using Type = FLightManager::Type;
@@ -166,7 +164,7 @@ void ShadowMap::update(
         case Type::SUN:
         case Type::DIRECTIONAL:
             computeShadowCameraDirectional(
-                    lightData.elementAt<FScene::DIRECTION>(index), scene, cameraInfo,
+                    lightData.elementAt<FScene::DIRECTION>(index), scene, cameraInfo, params,
                     visibleLayers);
             break;
         case Type::FOCUSED_SPOT:
@@ -179,6 +177,7 @@ void ShadowMap::update(
 
 void ShadowMap::computeShadowCameraDirectional(
         float3 const& dir, FScene const* scene, CameraInfo const& camera,
+        FLightManager::ShadowParams const& params,
         uint8_t visibleLayers) noexcept {
 
     // scene bounds in world space
@@ -193,10 +192,18 @@ void ShadowMap::computeShadowCameraDirectional(
     computeFrustumCorners(wsViewFrustumCorners,
             camera.model * FCamera::inverseProjection(camera.projection));
 
-    // compute the intersection of the shadow receivers volume with the view volume
-    // in world space. This returns a set of points on the convex-hull of the intersection.
-    size_t vertexCount = intersectFrustumWithBox(mWsClippedShadowReceiverVolume,
-            camera.frustum, wsViewFrustumCorners, wsShadowReceiversVolume);
+    // compute the shadow receiver volume of interest
+    size_t vertexCount = 8;
+    if (params.options.stable) {
+        // in stable mode we simply take the shadow receivers volume
+        std::copy_n(wsShadowReceiversVolume.getCorners().data(), 8,
+                mWsClippedShadowReceiverVolume.data());
+    } else {
+        // compute the intersection of the shadow receivers volume with the view volume
+        // in world space. This returns a set of points on the convex-hull of the intersection.
+        vertexCount = intersectFrustumWithBox(mWsClippedShadowReceiverVolume,
+                camera.frustum, wsViewFrustumCorners, wsShadowReceiversVolume);
+    }
 
     mHasVisibleShadows = vertexCount >= 2;
     if (mHasVisibleShadows) {
@@ -208,28 +215,34 @@ void ShadowMap::computeShadowCameraDirectional(
          *
          * The light's model matrix contains the light position and direction.
          *
-         * For directional lights, we can choose any position.
+         * For directional lights, we could choose any position.
+         *
+         * TODO: The light position needs to be taken into account when computing L,
+         *       which is not the case right now.
          */
-        const float3 lightPosition = {}; // TODO: pick something better
+        const float3 lightPosition = {};
         const mat4f M = mat4f::lookAt(lightPosition, lightPosition + dir, float3{ 0, 1, 0 });
         const mat4f Mv = FCamera::rigidTransformInverse(M);
 
         // Orient the shadow map in the direction of the view vector by constructing a
         // rotation matrix around the z-axis, that aligns the y-axis with the camera's
         // forward vector (V) -- this gives the wrap direction for LiSPSM.
-        //
-        // If the light and view vector are parallel, this rotation becomes
-        // meaningless. Just use identity.
-        // (LdotV == (Mv*V).z, because L = {0,0,1} in light-space)
         mat4f L;
-        const float3 wsCameraFwd(camera.getForwardVector());
-        const float3 lsCameraFwd = mat4f::project(Mv, wsCameraFwd);
-        if (UTILS_LIKELY(std::abs(lsCameraFwd.z) < 0.9997f)) { // this is |dot(L, V)|
-            L[0].xyz = normalize(cross(lsCameraFwd, float3{ 0, 0, 1 }));
-            L[1].xyz = cross(float3{ 0, 0, 1 }, L[0].xyz);
-            L[2].xyz = { 0, 0, 1 };
+        if (params.options.stable) {
+            // We can't align the light space and view space in stable mode
+        } else {
+            // If the light and view vector are parallel, this rotation becomes
+            // meaningless. Just use identity.
+            // (LdotV == (Mv*V).z, because L = {0,0,1} in light-space)
+            const float3 wsCameraFwd(camera.getForwardVector());
+            const float3 lsCameraFwd = mat4f::project(Mv, wsCameraFwd);
+            if (UTILS_LIKELY(std::abs(lsCameraFwd.z) < 0.9997f)) { // this is |dot(L, V)|
+                L[0].xyz = normalize(cross(lsCameraFwd, float3{ 0, 0, 1 }));
+                L[1].xyz = cross(float3{ 0, 0, 1 }, L[0].xyz);
+                L[2].xyz = { 0, 0, 1 };
+                L = transpose(L);
+            }
         }
-        L = transpose(L);
 
         // lights space matrix used for finding the near and far planes
         const mat4f LMv(L * Mv);
@@ -291,8 +304,13 @@ void ShadowMap::computeShadowCameraDirectional(
 
         // Compute the LiSPSM warping
         mat4f W;
-        if (USE_LISPSM) {
-            W = applyLISPSM(camera, LMpMv, mWsClippedShadowReceiverVolume, vertexCount, dir);
+        if (params.options.stable) {
+            // We can't use LISPSM in stable mode
+        } else {
+            if (USE_LISPSM) {
+                W = applyLISPSM(camera, params, LMpMv,
+                        mWsClippedShadowReceiverVolume, vertexCount, dir);
+            }
         }
 
         /*
@@ -338,12 +356,6 @@ void ShadowMap::computeShadowCameraDirectional(
         // compute focus scale and offset
         float2 s = 2.0f / float2(lsLightFrustum.max.xy - lsLightFrustum.min.xy);
         float2 o =   -s * float2(lsLightFrustum.max.xy + lsLightFrustum.min.xy) * 0.5f;
-
-        // temporal aliasing stabilization
-        // 3) snap the light frustum (width & height) to texels, to stabilize the shadow map
-        snapLightFrustum(s, o, mShadowMapDimension);
-
-        // construct the Focus transform (scale + offset)
         const mat4f F(mat4f::row_major_init {
                  s.x,   0,  0, o.x,
                    0, s.y,  0, o.y,
@@ -372,7 +384,8 @@ void ShadowMap::computeShadowCameraDirectional(
     }
 }
 
-mat4f ShadowMap::applyLISPSM(CameraInfo const& camera, mat4f const& LMpMv,
+mat4f ShadowMap::applyLISPSM(CameraInfo const& camera, FLightManager::ShadowParams const& params,
+        mat4f const& LMpMv,
         FrustumBoxIntersection const& wsShadowReceiversVolume, size_t vertexCount,
         float3 const& dir) {
 
@@ -382,8 +395,8 @@ mat4f ShadowMap::applyLISPSM(CameraInfo const& camera, mat4f const& LMpMv,
     // Virtual near plane -- the default is 1m, can be changed by the user.
     // The virtual near plane prevents too much resolution to be wasted in the area near the eye
     // where shadows might not be visible (e.g. a character standing won't see shadows at her feet).
-    const float dzn = camera.dzn;
-    const float dzf = camera.dzf;
+    const float dzn = std::max(0.0f, params.options.shadowNearHint - camera.zn);
+    const float dzf = std::max(0.0f, camera.zf - params.options.shadowFarHint);
 
     // near/far plane's distance from the eye in view space of the shadow receiver volume
     float2 znf = -computeNearFar(camera.view, wsShadowReceiversVolume.data(), vertexCount);
@@ -676,9 +689,10 @@ size_t ShadowMap::intersectFrustumWithBox(
     return vertexCount;
 }
 
-void ShadowMap::snapLightFrustum(float2& s, float2& o,
-        uint32_t shadowMapDimension) noexcept {
-    // TODO: we can also quantize the scaling value
+void ShadowMap::snapLightFrustum(float2& s, float2& o, uint32_t shadowMapDimension) noexcept {
+    // This snaps the shadow map bounds to texels -- This can be used to stabilize the shadow-map
+    // when the scene is rendered in world-space and the light frustum is somewhat dependent on the
+    // camera position.
     const float r = shadowMapDimension * 0.5f;
     o = ceil(o * r) / r;
 }

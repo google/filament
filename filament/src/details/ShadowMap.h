@@ -81,8 +81,6 @@ private:
         math::mat4f worldOrigin;
         float zn = 0;
         float zf = 0;
-        float dzn = 0;
-        float dzf = 0;
         Frustum frustum;
         float getNear() const noexcept { return zn; }
         float getFar() const noexcept { return zf; }
@@ -104,11 +102,13 @@ private:
     using FrustumBoxIntersection = std::array<math::float3, 64>;
 
     void computeShadowCameraDirectional(
-            math::float3 const& direction, FScene const* scene, CameraInfo const& camera,
+            math::float3 const& direction, FScene const* scene,
+            CameraInfo const& camera, FLightManager::ShadowParams const& params,
             uint8_t visibleLayers) noexcept;
 
     static math::mat4f applyLISPSM(
-            CameraInfo const& camera, const math::mat4f& LMpMv,
+            CameraInfo const& camera, FLightManager::ShadowParams const& params,
+            const math::mat4f& LMpMv,
             FrustumBoxIntersection const& wsShadowReceiverVolume, size_t vertexCount,
             const math::float3& dir);
 

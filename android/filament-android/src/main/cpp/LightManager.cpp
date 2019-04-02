@@ -64,10 +64,17 @@ Java_com_google_android_filament_LightManager_nBuilderCastShadows(JNIEnv *env, j
 
 extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_LightManager_nBuilderShadowOptions(JNIEnv *env, jclass type,
-        jlong nativeBuilder, jint mapSize, jfloat constantBias, jfloat normalBias, jfloat shadowFar) {
+        jlong nativeBuilder, jint mapSize, jfloat constantBias, jfloat normalBias, jfloat shadowFar,
+        jfloat shadowNearHint, jfloat shadowFarHint, jboolean stable) {
     LightManager::Builder *builder = (LightManager::Builder *) nativeBuilder;
     builder->shadowOptions(
-            LightManager::ShadowOptions{(uint32_t) mapSize, constantBias, normalBias, shadowFar});
+            LightManager::ShadowOptions{.mapSize = (uint32_t)mapSize,
+                                        .constantBias = constantBias,
+                                        .normalBias = normalBias,
+                                        .shadowFar = shadowFar,
+                                        .shadowNearHint = shadowNearHint,
+                                        .shadowFarHint = shadowFarHint,
+                                        .stable = (bool)stable});
 }
 
 extern "C" JNIEXPORT void JNICALL

@@ -80,6 +80,7 @@ struct SandboxParameters {
     bool tonemapping = true;
     bool msaa = false;
     bool dithering = true;
+    bool stableShadowMap = false;
 };
 
 inline void createInstances(SandboxParameters& params, filament::Engine& engine) {

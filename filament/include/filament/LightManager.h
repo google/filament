@@ -210,6 +210,13 @@ public:
          * use the camera far distance.
          */
         float shadowFarHint = 100.0f;
+
+        /**
+         * Controls whether the shadow map should be optimized for resolution or stability.
+         * When set to true, all resolution enhancing features that can affect stability are
+         * disabling, resulting in significantly lower resolution shadows, albeit stable ones.
+         */
+        bool stable = false;
     };
 
     //! Use Builder to construct a Light object instance
@@ -638,6 +645,20 @@ public:
      * @return the halo falloff
      */
     float getSunHaloFalloff(Instance i) const noexcept;
+
+    /**
+     * returns the shadow-map options for a given light
+     * @param i     Instance of the component obtained from getInstance().
+     * @return      A ShadowOption structure
+     */
+    ShadowOptions const& getShadowOptions(Instance i) const noexcept;
+
+    /**
+     * sets the shadow-map options for a given light
+     * @param i     Instance of the component obtained from getInstance().
+     * @param options  A ShadowOption structure
+     */
+    void setShadowOptions(Instance i, ShadowOptions const& options) noexcept;
 };
 
 } // namespace filament
