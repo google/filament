@@ -62,11 +62,16 @@ public:
     /**
      * Sets or changes the asset that is being viewed.
      *
-     * The viewer automatically adds all the asset's entities into the scene. The viewer does not
-     * claim ownership over the asset or its entities. Clients should use AssetLoader and
-     * ResourceLoader to load an asset before passing it in.
+     * This adds all the asset's entities into the scene and optionally transforms the asset to make
+     * it fit into a unit cube at the origin. The viewer does not claim ownership over the asset or
+     * its entities. Clients should use AssetLoader and ResourceLoader to load an asset before
+     * passing it in.
+     *
+     * @param asset The asset to view.
+     * @param names Optional name manager used to add glTF mesh names to nodes.
+     * @param scale Adds a transform to the root to fit the asset into a unit cube at the origin.
      */
-    void setAsset(FilamentAsset* asset, utils::NameComponentManager* names);
+    void setAsset(FilamentAsset* asset, utils::NameComponentManager* names, bool scale);
 
     /**
      * Removes the current asset from the viewer.
@@ -193,16 +198,18 @@ SimpleViewer::~SimpleViewer() {
     mEngine->destroy(mSunlight);
 }
 
-void SimpleViewer::setAsset(FilamentAsset* asset, utils::NameComponentManager* names) {
+void SimpleViewer::setAsset(FilamentAsset* asset, utils::NameComponentManager* names, bool scale) {
     using namespace filament::math;
     removeAsset();
     mAsset = asset;
     mAnimator = asset->getAnimator();
     mNames = names;
-    auto& tcm = mEngine->getTransformManager();
-    auto root = tcm.getInstance(mAsset->getRoot());
-    mat4f transform = fitIntoUnitCube(mAsset->getBoundingBox());
-    tcm.setTransform(root, transform);
+    if (scale) {
+        auto& tcm = mEngine->getTransformManager();
+        auto root = tcm.getInstance(mAsset->getRoot());
+        mat4f transform = fitIntoUnitCube(mAsset->getBoundingBox());
+        tcm.setTransform(root, transform);
+    }
     mScene->addEntities(mAsset->getEntities(), mAsset->getEntityCount());
 }
 
