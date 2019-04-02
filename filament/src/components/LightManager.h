@@ -65,7 +65,6 @@ public:
 
     struct LightType {
         Type type : 3;
-        uint8_t shadowMapBits : 4;
         bool shadowCaster : 1;
         bool lightCaster : 1;
     };
@@ -79,11 +78,7 @@ public:
     };
 
     struct ShadowParams {
-        float shadowConstantBias;
-        float shadowNormalBias;
-        float shadowFar;
-        float shadowNearHint;
-        float shadowFarHint;
+        LightManager::ShadowOptions options;
     };
 
     UTILS_NOINLINE void setLocalPosition(Instance i, const math::float3& position) noexcept;
@@ -135,7 +130,7 @@ public:
     }
 
     constexpr uint32_t getShadowMapSize(Instance i) const noexcept {
-        return 1u << getLightType(i).shadowMapBits;
+        return getShadowParams(i).options.mapSize;
     }
 
     constexpr ShadowParams const& getShadowParams(Instance i) const noexcept {
@@ -143,15 +138,15 @@ public:
     }
 
     constexpr float getShadowConstantBias(Instance i) const noexcept {
-        return getShadowParams(i).shadowConstantBias;
+        return getShadowParams(i).options.constantBias;
     }
 
     constexpr float getShadowNormalBias(Instance i) const noexcept {
-        return getShadowParams(i).shadowNormalBias;
+        return getShadowParams(i).options.normalBias;
     }
 
     constexpr float getShadowFar(Instance i) const noexcept {
-        return getShadowParams(i).shadowFar;
+        return getShadowParams(i).options.shadowFar;
     }
 
     constexpr const math::float3& getColor(Instance i) const noexcept {
@@ -200,6 +195,14 @@ public:
 
     constexpr const math::float3& getLocalDirection(Instance i) const noexcept {
         return mManager[i].direction;
+    }
+
+    const ShadowOptions& getShadowOptions(Instance i) const noexcept {
+        return getShadowParams(i).options;
+    }
+
+    void setShadowOptions(Instance i, ShadowOptions const& options) noexcept {
+        static_cast<ShadowParams&>(mManager[i].shadowParams).options = options;
     }
 
 private:

@@ -335,6 +335,7 @@ static void gui(filament::Engine* engine, filament::View*) {
             DebugRegistry& debug = engine->getDebugRegistry();
             ImGui::Checkbox("Camera at origin",
                     debug.getPropertyAddress<bool>("d.view.camera_at_origin"));
+            ImGui::Checkbox("Stable Shadow Map", &params.stableShadowMap);
             ImGui::Checkbox("Light Far uses shadow casters",
                     debug.getPropertyAddress<bool>("d.shadowmap.far_uses_shadowcasters"));
             ImGui::Checkbox("Focus shadow casters",
@@ -372,6 +373,12 @@ static void gui(filament::Engine* engine, filament::View*) {
         g_scene->remove(params.light);
         params.hasDirectionalLight = false;
     }
+
+    auto& lcm = engine->getLightManager();
+    auto instance = lcm.getInstance(params.light);
+    LightManager::ShadowOptions options = lcm.getShadowOptions(instance);
+    options.stable = params.stableShadowMap;
+    lcm.setShadowOptions(instance, options);
 
     auto* ibl = FilamentApp::get().getIBL();
     if (ibl) {
