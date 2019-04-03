@@ -19,6 +19,7 @@
 
 #include <filament/Engine.h>
 #include <filament/IndirectLight.h>
+#include <filament/LightManager.h>
 #include <filament/RenderableManager.h>
 #include <filament/Renderer.h>
 #include <filament/Scene.h>
@@ -73,6 +74,7 @@ private:
         Texture* skyboxTexture = nullptr;
         Skybox* skybox = nullptr;
         Entity renderable;
+        Entity sun;
     } app;
 
     CameraManipulator cameraManipulator;

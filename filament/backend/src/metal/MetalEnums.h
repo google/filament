@@ -144,7 +144,10 @@ constexpr inline MTLPixelFormat getMetalFormat(TextureFormat format) noexcept {
         case TextureFormat::RG8UI: return MTLPixelFormatRG8Uint;
         case TextureFormat::RG8I: return MTLPixelFormatRG8Sint;
 
-#if !defined(IOS)
+#if defined(IOS)
+        // iOS does not support 16 bit depth textures.
+        case TextureFormat::DEPTH16: return MTLPixelFormatDepth32Float;
+#else
         case TextureFormat::DEPTH16: return MTLPixelFormatDepth16Unorm;
 #endif
 
