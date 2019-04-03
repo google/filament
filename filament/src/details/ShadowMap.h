@@ -124,7 +124,7 @@ private:
     static inline math::float2 computeNearFar(math::mat4f const& lightView,
             math::float3 const* wsVertices, size_t count) noexcept;
 
-        static inline void intersectWithShadowCasters(Aabb& lightFrustum, const math::mat4f& lightView,
+    static inline void intersectWithShadowCasters(Aabb& lightFrustum, const math::mat4f& lightView,
             Aabb const& wsShadowCastersVolume) noexcept;
 
     static inline math::float2 computeWpNearFarOfWarpSpace(math::mat4f const& lightView,
