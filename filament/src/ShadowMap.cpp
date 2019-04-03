@@ -215,61 +215,65 @@ void ShadowMap::computeShadowCameraDirectional(
          *
          * The light's model matrix contains the light position and direction.
          *
-         * For directional lights, we could choose any position.
-         *
-         * TODO: The light position needs to be taken into account when computing L,
-         *       which is not the case right now.
+         * For directional lights, we could choose any position; we pick the camera position
+         * so we have a fixed reference -- it really doesn't matter too much.
+         * We could also choose the worldOrigin, which is always fixed, and might be interesting
+         * in stable mode. It's not needed right now, because we don't have to snap the light
+         * frustum to texels.
          */
-        const float3 lightPosition = {};
+        const float3 lightPosition = camera.getPosition();
         const mat4f M = mat4f::lookAt(lightPosition, lightPosition + dir, float3{ 0, 1, 0 });
         const mat4f Mv = FCamera::rigidTransformInverse(M);
 
-        // Orient the shadow map in the direction of the view vector by constructing a
-        // rotation matrix around the z-axis, that aligns the y-axis with the camera's
-        // forward vector (V) -- this gives the wrap direction for LiSPSM.
-        mat4f L;
+        mat4f L; // Rotation matrix in light space
         if (params.options.stable) {
             // We can't align the light space and view space in stable mode
         } else {
+            // Orient the shadow map in the direction of the view vector by constructing a
+            // rotation matrix in light space around the z-axis, that aligns the y-axis with the camera's
+            // forward vector (V) -- this gives the wrap direction, vp, for LiSPSM.
+            const float3 wsCameraFwd = camera.getForwardVector();
+            const float3 lsCameraFwd = Mv.upperLeft() * wsCameraFwd;
             // If the light and view vector are parallel, this rotation becomes
             // meaningless. Just use identity.
             // (LdotV == (Mv*V).z, because L = {0,0,1} in light-space)
-            const float3 wsCameraFwd(camera.getForwardVector());
-            const float3 lsCameraFwd = mat4f::project(Mv, wsCameraFwd);
             if (UTILS_LIKELY(std::abs(lsCameraFwd.z) < 0.9997f)) { // this is |dot(L, V)|
-                L[0].xyz = normalize(cross(lsCameraFwd, float3{ 0, 0, 1 }));
-                L[1].xyz = cross(float3{ 0, 0, 1 }, L[0].xyz);
+                const float3 vp{ normalize(lsCameraFwd.xy), 0 }; // wrap direction in light-space
+                L[0].xyz = cross(vp, float3{ 0, 0, 1 });
+                L[1].xyz = vp;
                 L[2].xyz = { 0, 0, 1 };
                 L = transpose(L);
             }
         }
-
-        // lights space matrix used for finding the near and far planes
-        const mat4f LMv(L * Mv);
 
         /*
          * Compute the light's projection matrix
          * (directional/point lights, i.e. projection to use, including znear/zfar clip planes)
          */
 
-        // 1) compute scene zmax (i.e. Near plane) and zmin (i.e. Far plane) in light space.
-        //    (near/far correspond to max/min because the light looks down the -z axis).
-        //    - The Near plane is set to the shadow casters max z (i.e. closest to the light)
-        //    - The Far plane is set to the closest of the farthest shadow casters and receivers
-        //      i.e.: shadow casters behind the last receivers can't cast any shadows
-        //
-        //    If "depth clamp" is supported, we can further tighten the near plane to the
-        //    shadow receiver.
+        /*
+         *  compute scene zmax (i.e. Near plane) and zmin (i.e. Far plane) in light space.
+         *  (near/far correspond to max/min because the light looks down the -z axis).
+         *  - The Near plane is set to the shadow casters max z (i.e. closest to the light)
+         *  - The Far plane is set to the closest of the farthest shadow casters and receivers
+         *    i.e.: shadow casters behind the last receivers can't cast any shadows
+         *
+         *  If "depth clamp" is supported, we can further tighten the near plane to the
+         *  shadow receiver.
+         *
+         *  Note: L has no influence here, since we're only interested in z values
+         *        (L is a rotation around z)
+         */
 
         Aabb lsLightFrustum;
-        const float2 nearFar = computeNearFar(LMv, wsShadowCastersVolume);
+        const float2 nearFar = computeNearFar(Mv, wsShadowCastersVolume);
         if (!USE_DEPTH_CLAMP) {
             // near plane from shadow caster volume
             lsLightFrustum.max.z = nearFar[0];
         }
         for (size_t i = 0; i < vertexCount; ++i) {
             // far: figure out farthest shadow receivers
-            float3 v = mat4f::project(LMv, mWsClippedShadowReceiverVolume[i]);
+            float3 v = mat4f::project(Mv, mWsClippedShadowReceiverVolume[i]);
             lsLightFrustum.min.z = std::min(lsLightFrustum.min.z, v.z);
             if (USE_DEPTH_CLAMP) {
                 // further tighten to the shadow receiver volume
