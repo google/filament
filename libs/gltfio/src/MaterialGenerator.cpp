@@ -115,6 +115,9 @@ static std::string shaderFromKey(const MaterialKey& config) {
     }
 
     if (!config.unlit) {
+        if (config.useSpecularGlossiness) {
+            shader += "float glossiness = materialParams.glossinessFactor;\n";
+        }
         shader += R"SHADER(
             material.roughness = materialParams.roughnessFactor;
             material.metallic = materialParams.metallicFactor;
@@ -126,10 +129,42 @@ static std::string shaderFromKey(const MaterialKey& config) {
                 shader += "metallicRoughnessUV = (vec3(metallicRoughnessUV, 1.0) * "
                         "materialParams.metallicRoughnessUvMatrix).xy;\n";
             }
+            if (config.useSpecularGlossiness) {
+                shader += R"SHADER(
+                    vec4 sg = texture(materialParams_metallicRoughnessMap, metallicRoughnessUV);
+                    glossiness *= sg.a;
+                    vec3 specColor = sg.rgb;
+
+                    // NOTE: this conversion logic is a carry-over from MeshAssimp. According to the
+                    // spec: "The specular property from specular-glossiness material model is the
+                    // same as the base color value from the metallic-roughness material model for
+                    // metals."
+                    material.reflectance = 0.5;
+                    material.metallic = 0.0;
+                    if (specColor.r != specColor.g && specColor.r != specColor.b) {
+                        material.metallic = 1.0;
+                        material.baseColor.rgb = specColor;
+                    } else {
+                        vec4 color = material.baseColor;
+                        if (color.r == 0.0 && color.g == 0.0 && color.b == 0.0) {
+                            material.metallic = 1.0;
+                            material.baseColor.rgb = specColor;
+                        }
+                    }
+
+                )SHADER";
+            } else {
+                shader += R"SHADER(
+                    vec4 mr = texture(materialParams_metallicRoughnessMap, metallicRoughnessUV);
+                    material.roughness *= mr.g;
+                    material.metallic *= mr.b;
+                )SHADER";
+            }
+        }
+        if (config.useSpecularGlossiness) {
             shader += R"SHADER(
-                vec4 roughness = texture(materialParams_metallicRoughnessMap, metallicRoughnessUV);
-                material.roughness *= roughness.g;
-                material.metallic *= roughness.b;
+                // NOTE: this conversion logic is a carry-over from MeshAssimp
+                material.roughness = sqrt(2.0 / (glossiness + 2.0));
             )SHADER";
         }
         if (config.hasOcclusionTexture) {
@@ -217,6 +252,12 @@ static Material* createMaterial(Engine* engine, const MaterialKey& config, const
         if (config.hasTextureTransforms) {
             builder.parameter(MaterialBuilder::UniformType::MAT3, "metallicRoughnessUvMatrix");
         }
+    }
+
+    // SPECULAR-GLOSSINESS
+    if (config.useSpecularGlossiness) {
+        builder.parameter(MaterialBuilder::UniformType::FLOAT, "glossinessFactor");
+        builder.parameter(MaterialBuilder::UniformType::FLOAT3, "specularFactor");
     }
 
     // NORMAL MAP
