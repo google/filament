@@ -65,6 +65,14 @@ void FilamentApp::initialize() {
     scene->setIndirectLight(app.indirectLight);
     scene->setSkybox(app.skybox);
 
+    app.sun = EntityManager::get().create();
+    LightManager::Builder(LightManager::Type::SUN)
+        .castShadows(true)
+        // The direction is calibrated to match the IBL's sun.
+        .direction({0.548267, -0.473983, -0.689016})
+        .build(*engine, app.sun);
+    scene->addEntity(app.sun);
+
     app.mat = Material::Builder()
         .package(RESOURCES_CLEAR_COAT_DATA, RESOURCES_CLEAR_COAT_SIZE)
         .build(*engine);
@@ -76,6 +84,8 @@ void FilamentApp::initialize() {
 
     app.renderable = mesh.renderable;
     scene->addEntity(app.renderable);
+    auto& rcm = engine->getRenderableManager();
+    rcm.setCastShadows(rcm.getInstance(app.renderable), true);
 
     filaView->setScene(scene);
     filaView->setCamera(camera);
@@ -109,6 +119,7 @@ FilamentApp::~FilamentApp() {
     engine->destroy(app.skyboxTexture);
     engine->destroy(app.skybox);
     engine->destroy(app.renderable);
+    engine->destroy(app.sun);
 
     engine->destroy(renderer);
     engine->destroy(scene);
