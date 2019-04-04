@@ -118,7 +118,7 @@ MaterialInstance* UbershaderLoader::createMaterialInstance(MaterialKey* config, 
         mi->setMaskThreshold(config->alphaMaskThreshold);
     }
 
-    // TODO: honor config->doubleSided
+    mi->setDoubleSided(config->doubleSided);
 
     mat3f identity;
     mi->setParameter("baseColorUvMatrix", identity);

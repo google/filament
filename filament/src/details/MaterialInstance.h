@@ -101,6 +101,8 @@ public:
         setParameter("maskThreshold", threshold);
     }
 
+    void setDoubleSided(bool doubleSided) noexcept;
+
 private:
     friend class FMaterial;
     friend class MaterialInstance;

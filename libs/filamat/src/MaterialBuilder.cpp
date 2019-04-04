@@ -223,7 +223,7 @@ MaterialBuilder& MaterialBuilder::depthCulling(bool enable) noexcept {
 
 MaterialBuilder& MaterialBuilder::doubleSided(bool doubleSided) noexcept {
     mDoubleSided = doubleSided;
-    mDoubleSidedSet = true;
+    mDoubleSidedCapability = true;
     return *this;
 }
 
@@ -316,6 +316,10 @@ void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
         ibb.add("maskThreshold", 1, UniformType::FLOAT);
     }
 
+    if (mDoubleSidedCapability) {
+        ibb.add("doubleSided", 1, UniformType::BOOL);
+    }
+
     mRequiredAttributes.set(filament::VertexAttribute::POSITION);
     if (mShading != filament::Shading::UNLIT || mShadowMultiplier) {
         mRequiredAttributes.set(filament::VertexAttribute::TANGENTS);
@@ -325,6 +329,7 @@ void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
     info.uib = ibb.name("MaterialParams").build();
 
     info.isLit = isLit();
+    info.hasDoubleSidedCapability = mDoubleSidedCapability;
     info.isDoubleSided = mDoubleSided;
     info.hasExternalSamplers = hasExternalSampler();
     info.curvatureToRoughness = mCurvatureToRoughness;
@@ -458,7 +463,7 @@ Package MaterialBuilder::build() noexcept {
     SimpleFieldChunk<bool> matDepthWriteSet(ChunkType::MaterialDepthWriteSet, mDepthWriteSet);
     container.addChild(&matDepthWriteSet);
 
-    SimpleFieldChunk<bool> matDoubleSidedSet(ChunkType::MaterialDoubleSidedSet, mDoubleSidedSet);
+    SimpleFieldChunk<bool> matDoubleSidedSet(ChunkType::MaterialDoubleSidedSet, mDoubleSidedCapability);
     container.addChild(&matDoubleSidedSet);
 
     SimpleFieldChunk<bool> matDoubleSided(ChunkType::MaterialDoubleSided, mDoubleSided);

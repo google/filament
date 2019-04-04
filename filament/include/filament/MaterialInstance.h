@@ -129,6 +129,12 @@ public:
      * mode is MASKED. Defaults to 0.4 if it has not been set in the parent Material.
      */
     void setMaskThreshold(float threshold) noexcept;
+
+    /**
+     * Enables or disables double-sided lighting if the parent Material has double-sided capability,
+     * otherwise prints a warning.
+     */
+    void setDoubleSided(bool doubleSided) noexcept;
 };
 
 } // namespace filament

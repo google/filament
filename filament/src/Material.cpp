@@ -204,19 +204,8 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder)
     parser->getDepthTest(&depthTest);
 
     if (doubleSideSet) {
-        // double sided disables face culling
-        if (mDoubleSided) {
-            mRasterState.culling = CullingMode::NONE;
-        } else {
-            // the cull mode is double sided but we set the double-sided bit to false,
-            // revert culling to default
-            if (mCullingMode == CullingMode::NONE) {
-                mRasterState.culling = CullingMode::BACK;
-            } else {
-                // use the front/back/front&back mode set by the user
-                mRasterState.culling = mCullingMode;
-            }
-        }
+        mDoubleSidedCapability = true;
+        mRasterState.culling = mDoubleSided ? CullingMode::NONE : mCullingMode;
     } else {
         mRasterState.culling = mCullingMode;
     }
