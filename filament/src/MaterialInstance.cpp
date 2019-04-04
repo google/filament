@@ -209,4 +209,8 @@ void MaterialInstance::setPolygonOffset(float scale, float constant) noexcept {
     upcast(this)->setPolygonOffset(scale, constant);
 }
 
+void MaterialInstance::setMaskThreshold(float threshold) noexcept {
+    upcast(this)->setMaskThreshold(threshold);
+}
+
 } // namespace filament

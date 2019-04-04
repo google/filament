@@ -97,6 +97,10 @@ public:
 
     backend::PolygonOffset getPolygonOffset() const noexcept { return mPolygonOffset; }
 
+    void setMaskThreshold(float threshold) noexcept {
+        setParameter("maskThreshold", threshold);
+    }
+
 private:
     friend class FMaterial;
     friend class MaterialInstance;

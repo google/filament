@@ -311,11 +311,6 @@ const std::string ShaderGenerator::createFragmentProgram(filament::backend::Shad
     cg.generateCommonMaterial(fs, ShaderType::FRAGMENT);
     cg.generateParameters(fs, ShaderType::FRAGMENT);
 
-    if (material.blendingMode == BlendingMode::MASKED) {
-        cg.generateFunction(fs, "float", "getMaskThreshold",
-                "    return materialParams.maskThreshold;");
-    }
-
     // shading model
     if (variant.isDepthPass()) {
         if (material.blendingMode == BlendingMode::MASKED) {
