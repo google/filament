@@ -584,35 +584,54 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_material* inp
         return mi;
     }
 
-    if (inputMat->has_pbr_specular_glossiness) {
-        slog.e << "KHR_materials_pbrSpecularGlossiness is not supported." << io::endl;
-    }
+    auto mrConfig = inputMat->pbr_metallic_roughness;
+    auto sgConfig = inputMat->pbr_specular_glossiness;
 
-    auto pbrConfig = inputMat->pbr_metallic_roughness;
-    bool hasTextureTransforms = pbrConfig.base_color_texture.has_transform ||
-        pbrConfig.metallic_roughness_texture.has_transform ||
+    bool hasTextureTransforms =
+        sgConfig.diffuse_texture.has_transform ||
+        sgConfig.specular_glossiness_texture.has_transform ||
+        mrConfig.base_color_texture.has_transform ||
+        mrConfig.metallic_roughness_texture.has_transform ||
         inputMat->normal_texture.has_transform ||
         inputMat->occlusion_texture.has_transform ||
         inputMat->emissive_texture.has_transform;
+
+    cgltf_texture_view baseColorTexture = mrConfig.base_color_texture;
+    cgltf_texture_view metallicRoughnessTexture = mrConfig.metallic_roughness_texture;
 
     MaterialKey matkey {
         .doubleSided = (bool) inputMat->double_sided,
         .unlit = (bool) inputMat->unlit,
         .hasVertexColors = vertexColor,
-        .hasBaseColorTexture = pbrConfig.base_color_texture.texture,
-        .hasMetallicRoughnessTexture = pbrConfig.metallic_roughness_texture.texture,
+        .hasBaseColorTexture = baseColorTexture.texture,
         .hasNormalTexture = inputMat->normal_texture.texture,
         .hasOcclusionTexture = inputMat->occlusion_texture.texture,
         .hasEmissiveTexture = inputMat->emissive_texture.texture,
+        .useSpecularGlossiness = false,
         .alphaMode = AlphaMode::OPAQUE,
-        .baseColorUV = (uint8_t) pbrConfig.base_color_texture.texcoord,
-        .metallicRoughnessUV = (uint8_t) pbrConfig.metallic_roughness_texture.texcoord,
+        .hasMetallicRoughnessTexture = metallicRoughnessTexture.texture,
+        .metallicRoughnessUV = (uint8_t) metallicRoughnessTexture.texcoord,
+        .baseColorUV = (uint8_t) baseColorTexture.texcoord,
         .emissiveUV = (uint8_t) inputMat->emissive_texture.texcoord,
         .aoUV = (uint8_t) inputMat->occlusion_texture.texcoord,
         .normalUV = (uint8_t) inputMat->normal_texture.texcoord,
         .hasTextureTransforms = hasTextureTransforms,
         .alphaMaskThreshold = 0.5f
     };
+
+    if (inputMat->has_pbr_specular_glossiness) {
+        matkey.useSpecularGlossiness = true;
+        if (sgConfig.diffuse_texture.texture) {
+            baseColorTexture = sgConfig.diffuse_texture;
+            matkey.hasBaseColorTexture = true;
+            matkey.baseColorUV = (uint8_t) baseColorTexture.texcoord;
+        }
+        if (sgConfig.specular_glossiness_texture.texture) {
+            metallicRoughnessTexture = sgConfig.specular_glossiness_texture;
+            matkey.hasSpecularGlossinessTexture = true;
+            matkey.specularGlossinessUV = (uint8_t) metallicRoughnessTexture.texcoord;
+        }
+    }
 
     switch (inputMat->alpha_mode) {
         case cgltf_alpha_mode_opaque:
@@ -627,33 +646,45 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_material* inp
             break;
     }
 
-    // This not only creates a material instnace, it modifies the material key according to our
+    // This not only creates a material instance, it modifies the material key according to our
     // rendering constraints. For example, Filament only supports 2 sets of texture coordinates.
     MaterialInstance* mi = mMaterials->createMaterialInstance(&matkey, uvmap, inputMat->name);
     mResult->mMaterialInstances.push_back(mi);
 
-    const float* e = &inputMat->emissive_factor[0];
+    const float* e = inputMat->emissive_factor;
     mi->setParameter("emissiveFactor", float3(e[0], e[1], e[2]));
 
-    const float* c = &pbrConfig.base_color_factor[0];
+    const float* c = mrConfig.base_color_factor;
     mi->setParameter("baseColorFactor", float4(c[0], c[1], c[2], c[3]));
-    mi->setParameter("metallicFactor", pbrConfig.metallic_factor);
-    mi->setParameter("roughnessFactor", pbrConfig.roughness_factor);
+    mi->setParameter("metallicFactor", mrConfig.metallic_factor);
+    mi->setParameter("roughnessFactor", mrConfig.roughness_factor);
+
+    if (matkey.useSpecularGlossiness) {
+        const float* df = sgConfig.diffuse_factor;
+        const float* sf = sgConfig.specular_factor;
+        mi->setParameter("baseColorFactor", float4(df[0], df[1], df[2], df[3]));
+        mi->setParameter("specularFactor", float3(sf[0], sf[1], sf[2]));
+        mi->setParameter("glossinessFactor", sgConfig.glossiness_factor);
+    }
 
     if (matkey.hasBaseColorTexture) {
-        addTextureBinding(mi, "baseColorMap", pbrConfig.base_color_texture.texture, true);
+        addTextureBinding(mi, "baseColorMap", baseColorTexture.texture, true);
         if (matkey.hasTextureTransforms) {
-            const cgltf_texture_transform& uvt = pbrConfig.base_color_texture.transform;
+            const cgltf_texture_transform& uvt = baseColorTexture.transform;
             auto uvmat = matrixFromUvTransform(uvt.offset, uvt.rotation, uvt.scale);
             mi->setParameter("baseColorUvMatrix", uvmat);
         }
     }
 
     if (matkey.hasMetallicRoughnessTexture) {
-        addTextureBinding(mi, "metallicRoughnessMap",
-                pbrConfig.metallic_roughness_texture.texture, false);
+        // The "metallicRoughnessMap" is actually a specular-glossiness map when the extension is
+        // enabled. Note that KHR_materials_pbrSpecularGlossiness specifies that diffuseTexture and
+        // specularGlossinessTexture are both sRGB, whereas the core glTF spec stipulates that
+        // metallicRoughness is not sRGB.
+        bool srgb = inputMat->has_pbr_specular_glossiness;
+        addTextureBinding(mi, "metallicRoughnessMap", metallicRoughnessTexture.texture, srgb);
         if (matkey.hasTextureTransforms) {
-            const cgltf_texture_transform& uvt = pbrConfig.metallic_roughness_texture.transform;
+            const cgltf_texture_transform& uvt = metallicRoughnessTexture.transform;
             auto uvmat = matrixFromUvTransform(uvt.offset, uvt.rotation, uvt.scale);
             mi->setParameter("metallicRoughnessUvMatrix", uvmat);
         }

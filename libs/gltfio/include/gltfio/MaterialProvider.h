@@ -38,13 +38,22 @@ struct alignas(4) MaterialKey {
     bool unlit : 1;
     bool hasVertexColors : 1;
     bool hasBaseColorTexture : 1;
-    bool hasMetallicRoughnessTexture : 1;
     bool hasNormalTexture : 1;
     bool hasOcclusionTexture : 1;
     bool hasEmissiveTexture : 1;
+    bool useSpecularGlossiness : 1;
     AlphaMode alphaMode;
+    union {
+        struct {
+            bool hasMetallicRoughnessTexture : 1;
+            uint8_t metallicRoughnessUV : 7;
+        };
+        struct {
+            bool hasSpecularGlossinessTexture : 1;
+            uint8_t specularGlossinessUV : 7;
+        };
+    };
     uint8_t baseColorUV;
-    uint8_t metallicRoughnessUV;
     // -- 32 bit boundary --
     uint8_t emissiveUV;
     uint8_t aoUV;

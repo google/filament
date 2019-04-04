@@ -117,21 +117,45 @@ static std::string shaderFromKey(const MaterialKey& config) {
     }
 
     if (!config.unlit) {
-        shader += R"SHADER(
-            material.roughness = materialParams.roughnessFactor;
-            material.metallic = materialParams.metallicFactor;
-            material.emissive.rgb = materialParams.emissiveFactor.rgb;
-        )SHADER";
+        if (config.useSpecularGlossiness) {
+            shader += R"SHADER(
+                float glossiness = materialParams.glossinessFactor;
+                material.sheenColor = materialParams.specularFactor;
+                material.emissive.rgb = materialParams.emissiveFactor.rgb;
+            )SHADER";
+        } else {
+            shader += R"SHADER(
+                material.roughness = materialParams.roughnessFactor;
+                material.metallic = materialParams.metallicFactor;
+                material.emissive.rgb = materialParams.emissiveFactor.rgb;
+            )SHADER";
+        }
         if (config.hasMetallicRoughnessTexture) {
             shader += "float2 metallicRoughnessUV = ${metallic};\n";
             if (config.hasTextureTransforms) {
                 shader += "metallicRoughnessUV = (vec3(metallicRoughnessUV, 1.0) * "
                         "materialParams.metallicRoughnessUvMatrix).xy;\n";
             }
+            if (config.useSpecularGlossiness) {
+                shader += R"SHADER(
+                    vec4 sg = texture(materialParams_metallicRoughnessMap, metallicRoughnessUV);
+                    material.sheenColor *= sg.rgb;
+                    glossiness *= sg.a;
+                )SHADER";
+            } else {
+                shader += R"SHADER(
+                    vec4 mr = texture(materialParams_metallicRoughnessMap, metallicRoughnessUV);
+                    material.roughness *= mr.g;
+                    material.metallic *= mr.b;
+                )SHADER";
+            }
+        }
+        if (config.useSpecularGlossiness) {
             shader += R"SHADER(
-                vec4 roughness = texture(materialParams_metallicRoughnessMap, metallicRoughnessUV);
-                material.roughness *= roughness.g;
-                material.metallic *= roughness.b;
+                // According to the spec: "The glossiness property from specular-glossiness material
+                // model is related with the roughness property from the metallic-roughness material
+                // model and is defined as glossiness = 1 - roughness."
+                material.roughness = 1.0 - glossiness;
             )SHADER";
         }
         if (config.hasOcclusionTexture) {
@@ -220,6 +244,12 @@ static Material* createMaterial(Engine* engine, const MaterialKey& config, const
         }
     }
 
+    // SPECULAR-GLOSSINESS
+    if (config.useSpecularGlossiness) {
+        builder.parameter(MaterialBuilder::UniformType::FLOAT, "glossinessFactor");
+        builder.parameter(MaterialBuilder::UniformType::FLOAT3, "specularFactor");
+    }
+
     // NORMAL MAP
     // In the glTF spec normalScale is in normalTextureInfo; in cgltf it is part of texture_view.
     builder.parameter(MaterialBuilder::UniformType::FLOAT, "normalScale");
@@ -262,7 +292,13 @@ static Material* createMaterial(Engine* engine, const MaterialKey& config, const
             builder.depthWrite(true);
     }
 
-    builder.shading(config.unlit ? Shading::UNLIT : Shading::LIT);
+    if (config.unlit) {
+        builder.shading(Shading::UNLIT);
+    } else if (config.useSpecularGlossiness) {
+        builder.shading(Shading::SPECULAR_GLOSSINESS);
+    } else {
+        builder.shading(Shading::LIT);
+    }
 
     Package pkg = builder.build();
     return Material::Builder().package(pkg.getData(), pkg.getSize()).build(*engine);
