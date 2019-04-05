@@ -355,6 +355,7 @@ public:
         struct {
             bool far_uses_shadowcasters = true;
             bool focus_shadowcasters = true;
+            bool checkerboard = false;
             bool lispsm = true;
             float dzn = -1.0f;
             float dzf =  1.0f;

@@ -78,6 +78,8 @@ public:
 
     void render(backend::DriverApi& driver, RenderPass& pass, FView& view) noexcept;
 
+    void fillWithDebugPattern(backend::DriverApi& driverApi) const noexcept;
+
 private:
     struct CameraInfo {
         math::mat4f projection;

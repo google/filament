@@ -341,6 +341,8 @@ static void gui(filament::Engine* engine, filament::View*) {
                     debug.getPropertyAddress<bool>("d.shadowmap.far_uses_shadowcasters"));
             ImGui::Checkbox("Focus shadow casters",
                     debug.getPropertyAddress<bool>("d.shadowmap.focus_shadowcasters"));
+            ImGui::Checkbox("Show checker board",
+                    debug.getPropertyAddress<bool>("d.shadowmap.checkerboard"));
             bool* lispsm;
             if (debug.getPropertyAddress<bool>("d.shadowmap.lispsm", &lispsm)) {
                 ImGui::Checkbox("Enable LiSPSM", lispsm);
