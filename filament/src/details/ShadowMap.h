@@ -33,6 +33,9 @@
 namespace filament {
 namespace details {
 
+class FView;
+class RenderPass;
+
 class ShadowMap {
 public:
     explicit ShadowMap(FEngine& engine) noexcept;
@@ -72,6 +75,8 @@ public:
 
     // use only for debugging
     FCamera const& getDebugCamera() const noexcept { return *mDebugCamera; }
+
+    void render(backend::DriverApi& driver, RenderPass& pass, FView& view) noexcept;
 
 private:
     struct CameraInfo {

@@ -215,43 +215,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
      */
 
     if (view.hasShadowing()) {
-        ShadowMap const& shadowMap = view.getShadowMap();
-        filament::Viewport const& viewport = shadowMap.getViewport();
-
-        // FIXME: in the future this will come from the framegraph
-        RenderPassParams params = {};
-        params.flags.clear = TargetBufferFlags::SHADOW;
-        params.flags.discardStart = TargetBufferFlags::DEPTH;
-        params.flags.discardEnd = TargetBufferFlags::COLOR_AND_STENCIL;
-        params.clearDepth = 1.0;
-        params.viewport = viewport;
-        // disable scissor for clearing so the whole surface, but set the viewport to the
-        // the inset-by-1 rectangle.
-        params.flags.clear |= RenderPassFlags::IGNORE_SCISSOR;
-
-        FCamera const& camera = shadowMap.getCamera();
-        CameraInfo cameraInfo = {
-                .projection         = mat4f{ camera.getProjectionMatrix() },
-                .cullingProjection  = mat4f{ camera.getCullingProjectionMatrix() },
-                .model              = camera.getModelMatrix(),
-                .view               = camera.getViewMatrix(),
-                .zn                 = camera.getNear(),
-                .zf                 = camera.getCullingFar(),
-        };
-
-        FView::Range visibleRenderables = view.getVisibleShadowCasters();
-        view.updatePrimitivesLod(engine, cameraInfo, scene.getRenderableData(), visibleRenderables);
-        view.prepareCamera(cameraInfo, viewport);
-        view.commitUniforms(driver);
-
-        pass.setGeometry(scene, visibleRenderables);
-        pass.setCamera(cameraInfo);
-        pass.setCommandType(RenderPass::SHADOW);
-        pass.generateSortedCommands();
-
-        pass.execute("Shadow map Pass", shadowMap.getRenderTarget(), params,
-                commands.begin(), commands.end());
-
+        view.getShadowMap().render(driver, pass, view);
         commands.clear();
     }
 
@@ -278,6 +242,9 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
      */
 
     CameraInfo const& cameraInfo = view.getCameraInfo();
+    pass.setCamera(cameraInfo);
+    pass.setGeometry(scene, view.getVisibleRenderables());
+
     view.updatePrimitivesLod(engine, cameraInfo,
             scene.getRenderableData(), view.getVisibleRenderables());
     view.prepareCamera(cameraInfo, svp);
@@ -309,11 +276,8 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
             break;
     }
 
-    pass.setGeometry(scene, view.getVisibleRenderables());
     pass.setExecuteSync(jobFroxelize);
-    pass.setCamera(view.getCameraInfo());
-    pass.setCommandType(commandType);
-    pass.generateSortedCommands();
+    pass.generateSortedCommands(commandType);
 
 
     struct ColorPassData {
