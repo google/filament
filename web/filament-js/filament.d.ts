@@ -72,6 +72,8 @@ export class MaterialInstance {
     public setTextureParameter(name: string, value: Texture, sampler: TextureSampler): void;
     public setColorParameter(name: string, ctype: RgbType, value: float3): void;
     public setPolygonOffset(scale: number, constant: number): void;
+    public setMaskThreshold(threshold: number): void;
+    public setDoubleSided(doubleSided: boolean): void;
 }
 
 export class EntityManager {

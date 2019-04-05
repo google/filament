@@ -151,6 +151,14 @@ public class MaterialInstance {
         nSetPolygonOffset(getNativeObject(), scale, constant);
     }
 
+    public void setMaskThreshold(float threshold) {
+        nSetMaskThreshold(getNativeObject(), threshold);
+    }
+
+    public void setDoubleSided(boolean doubleSided) {
+        nSetDoubleSided(getNativeObject(), doubleSided);
+    }
+
     long getNativeObject() {
         if (mNativeObject == 0) {
             throw new IllegalStateException("Calling method on destroyed MaterialInstance");
@@ -211,4 +219,8 @@ public class MaterialInstance {
 
     private static native void nSetPolygonOffset(long nativeMaterialInstance,
         float scale, float constant);
+
+    private static native void nSetMaskThreshold(long nativeMaterialInstance, float threshold);
+
+    private static native void nSetDoubleSided(long nativeMaterialInstance, boolean doubleSided);
 }
