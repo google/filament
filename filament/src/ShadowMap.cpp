@@ -53,6 +53,7 @@ ShadowMap::ShadowMap(FEngine& engine) noexcept :
     FDebugRegistry& debugRegistry = engine.getDebugRegistry();
     debugRegistry.registerProperty("d.shadowmap.focus_shadowcasters", &engine.debug.shadowmap.focus_shadowcasters);
     debugRegistry.registerProperty("d.shadowmap.far_uses_shadowcasters", &engine.debug.shadowmap.far_uses_shadowcasters);
+    debugRegistry.registerProperty("d.shadowmap.checkerboard", &engine.debug.shadowmap.checkerboard);
     if (ENABLE_LISPSM) {
         debugRegistry.registerProperty("d.shadowmap.lispsm", &engine.debug.shadowmap.lispsm);
         debugRegistry.registerProperty("d.shadowmap.dzn", &engine.debug.shadowmap.dzn);
@@ -63,6 +64,20 @@ ShadowMap::ShadowMap(FEngine& engine) noexcept :
 ShadowMap::~ShadowMap() {
     mEngine.destroy(mCamera->getEntity());
     mEngine.destroy(mDebugCamera->getEntity());
+}
+
+void ShadowMap::fillWithDebugPattern(backend::DriverApi& driverApi) const noexcept {
+    const size_t dim = mShadowMapDimension;
+    size_t size = dim * dim;
+    uint8_t* ptr = (uint8_t*)malloc(size);
+    driverApi.update2DImage(mShadowMapHandle, 0, 0, 0, dim, dim, {
+        ptr, size, PixelDataFormat::DEPTH_COMPONENT, PixelDataType::UBYTE, (BufferDescriptor::Callback)&free
+    });
+    for (size_t y = 0; y < dim; ++y) {
+        for (size_t x = 0; x < dim; ++x) {
+            ptr[x + y * dim] = ((x ^ y) & 0x8) ? 0 : ~0;
+        }
+    }
 }
 
 void ShadowMap::prepare(DriverApi& driver, SamplerGroup& sb) noexcept {
@@ -109,8 +124,14 @@ void ShadowMap::prepare(DriverApi& driver, SamplerGroup& sb) noexcept {
 
 void ShadowMap::render(DriverApi& driver, RenderPass& pass, FView& view) noexcept {
     FEngine& engine = mEngine;
-    FScene& scene = *view.getScene();
 
+    if (UTILS_UNLIKELY(engine.debug.shadowmap.checkerboard)) {
+        // TODO: eventually this will be handled as a optional pass in the framefraph
+        fillWithDebugPattern(driver);
+        return;
+    }
+
+    FScene& scene = *view.getScene();
     filament::Viewport const& viewport = mViewport;
 
     // FIXME: in the future this will come from the framegraph
