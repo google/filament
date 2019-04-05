@@ -133,7 +133,7 @@ static std::string shaderFromKey(const MaterialKey& config) {
                 shader += R"SHADER(
                     vec4 sg = texture(materialParams_metallicRoughnessMap, metallicRoughnessUV);
                     glossiness *= sg.a;
-                    vec3 specColor = sg.rgb;
+                    vec3 specColor = sg.rgb * materialParams.specularFactor;
 
                     // NOTE: this conversion logic is a carry-over from MeshAssimp. According to the
                     // spec: "The specular property from specular-glossiness material model is the
@@ -151,7 +151,6 @@ static std::string shaderFromKey(const MaterialKey& config) {
                             material.baseColor.rgb = specColor;
                         }
                     }
-
                 )SHADER";
             } else {
                 shader += R"SHADER(

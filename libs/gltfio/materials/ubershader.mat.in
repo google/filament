@@ -7,6 +7,11 @@ material {
     doubleSided : true,
     flipUV : false,
     parameters : [
+
+        { type : int, name : useSpecularGlossiness },
+        { type : float3, name : specularFactor },
+        { type : float, name : glossinessFactor },
+
         // Base Color
         { type : int, name : baseColorIndex },
         { type : float4, name : baseColorFactor },
@@ -75,13 +80,48 @@ fragment {
             material.metallic = materialParams.metallicFactor;
             material.emissive.rgb = materialParams.emissiveFactor.rgb;
             material.emissive.a = 3.0;
+
+            float glossiness = materialParams.glossinessFactor;
+
             if (materialParams.metallicRoughnessIndex > -1) {
                 float2 uv = uvs[materialParams.metallicRoughnessIndex];
                 uv = (vec3(uv, 1.0) * materialParams.metallicRoughnessUvMatrix).xy;
-                vec4 roughness = texture(materialParams_metallicRoughnessMap, uv);
-                material.roughness *= roughness.g;
-                material.metallic *= roughness.b;
+
+                if (materialParams.useSpecularGlossiness == 1) {
+                    vec4 sg = texture(materialParams_metallicRoughnessMap, uv);
+                    glossiness *= sg.a;
+                    vec3 specColor = sg.rgb * materialParams.specularFactor;
+
+                    // NOTE: this conversion logic is a carry-over from MeshAssimp. According to the
+                    // spec: "The specular property from specular-glossiness material model is the
+                    // same as the base color value from the metallic-roughness material model for
+                    // metals."
+                    material.reflectance = 0.5;
+                    material.metallic = 0.0;
+                    if (specColor.r != specColor.g && specColor.r != specColor.b) {
+                        material.metallic = 1.0;
+                        material.baseColor.rgb = specColor;
+                    } else {
+                        vec4 color = material.baseColor;
+                        if (color.r == 0.0 && color.g == 0.0 && color.b == 0.0) {
+                            material.metallic = 1.0;
+                            material.baseColor.rgb = specColor;
+                        }
+                    }
+                } else {
+                    vec4 mr = texture(materialParams_metallicRoughnessMap, uv);
+                    material.roughness *= mr.g;
+                    material.metallic *= mr.b;
+                }
             }
+
+            if (materialParams.useSpecularGlossiness == 1) {
+                // According to the spec: "The glossiness property from specular-glossiness material
+                // model is related with the roughness property from the metallic-roughness material
+                // model and is defined as glossiness = 1 - roughness."
+                material.roughness = 1.0 - glossiness;
+            }
+
             if (materialParams.aoIndex > -1) {
                 float2 uv = uvs[materialParams.aoIndex];
                 uv = (vec3(uv, 1.0) * materialParams.occlusionUvMatrix).xy;

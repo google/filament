@@ -113,6 +113,7 @@ MaterialInstance* UbershaderLoader::createMaterialInstance(MaterialKey* config, 
             getUvIndex(config->metallicRoughnessUV, config->hasMetallicRoughnessTexture));
     mi->setParameter("aoIndex", getUvIndex(config->aoUV, config->hasOcclusionTexture));
     mi->setParameter("emissiveIndex", getUvIndex(config->emissiveUV, config->hasEmissiveTexture));
+    mi->setParameter("useSpecularGlossiness", config->useSpecularGlossiness ? 1 : 0);
 
     if (config->alphaMode == AlphaMode::MASK) {
         mi->setParameter("maskThreshold", config->alphaMaskThreshold);
