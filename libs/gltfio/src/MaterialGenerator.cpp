@@ -163,8 +163,10 @@ static std::string shaderFromKey(const MaterialKey& config) {
         }
         if (config.useSpecularGlossiness) {
             shader += R"SHADER(
-                // NOTE: this conversion logic is a carry-over from MeshAssimp
-                material.roughness = sqrt(2.0 / (glossiness + 2.0));
+                // According to the spec: "The glossiness property from specular-glossiness material
+                // model is related with the roughness property from the metallic-roughness material
+                // model and is defined as glossiness = 1 - roughness."
+                material.roughness = 1.0 - glossiness;
             )SHADER";
         }
         if (config.hasOcclusionTexture) {
