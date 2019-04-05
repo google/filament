@@ -135,22 +135,10 @@ static std::string shaderFromKey(const MaterialKey& config) {
                     glossiness *= sg.a;
                     vec3 specColor = sg.rgb * materialParams.specularFactor;
 
-                    // NOTE: this conversion logic is a carry-over from MeshAssimp. According to the
-                    // spec: "The specular property from specular-glossiness material model is the
-                    // same as the base color value from the metallic-roughness material model for
-                    // metals."
-                    material.reflectance = 0.5;
-                    material.metallic = 0.0;
-                    if (specColor.r != specColor.g && specColor.r != specColor.b) {
-                        material.metallic = 1.0;
-                        material.baseColor.rgb = specColor;
-                    } else {
-                        vec4 color = material.baseColor;
-                        if (color.r == 0.0 && color.g == 0.0 && color.b == 0.0) {
-                            material.metallic = 1.0;
-                            material.baseColor.rgb = specColor;
-                        }
-                    }
+                    // TODO: This is not correct, we need to override f0 and diffuseColor
+                    // separately, similar to cloth. This is reasonable approximation for now.
+                    material.metallic = 1.0;
+                    material.baseColor.rgb = specColor;
                 )SHADER";
             } else {
                 shader += R"SHADER(
