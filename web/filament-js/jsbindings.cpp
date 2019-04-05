@@ -490,7 +490,11 @@ class_<Camera>("Camera")
     }), allow_raw_pointers())
 
     .function("setLensProjection", &Camera::setLensProjection)
-    .function("setCustomProjection", &Camera::setCustomProjection)
+
+    .function("setCustomProjection", EMBIND_LAMBDA(void, (Camera* self,
+            flatmat4 m, double near, double far), {
+        self->setCustomProjection(filament::math::mat4(m.m), near, far);
+    }), allow_raw_pointers())
 
     .function("getProjectionMatrix", EMBIND_LAMBDA(flatmat4, (Camera* self), {
         return flatmat4 { filament::math::mat4f(self->getProjectionMatrix()) };
