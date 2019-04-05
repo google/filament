@@ -205,14 +205,15 @@ public:
     RenderPass(FEngine& engine, utils::GrowingSlice<Command>& commands) noexcept;
     void setGeometry(FScene& scene, utils::Range<uint32_t> vr) noexcept;
     void setCamera(const CameraInfo& camera) noexcept;
-    void setCommandType(CommandTypeFlags commandType) noexcept;
     void setRenderFlags(RenderFlags flags) noexcept;
     void setExecuteSync(utils::JobSystem::Job* sync) noexcept;
-    void generateSortedCommands() noexcept;
+    void generateSortedCommands(CommandTypeFlags commandType) noexcept;
     void execute(const char* name,
             backend::Handle <backend::HwRenderTarget> renderTarget,
             backend::RenderPassParams params,
             Command const* first, Command const* last) const noexcept;
+
+    utils::GrowingSlice<Command>& getCommands() { return mCommands; }
 
     size_t getCommandsHighWatermark() const noexcept {
         return mCommandsHighWatermark * sizeof(Command);
@@ -254,7 +255,6 @@ private:
     FScene* mScene = nullptr;
     utils::Range<uint32_t> mVisibleRenderables{};
     CameraInfo mCamera;
-    CommandTypeFlags mCommandType{};
     RenderFlags mFlags{};
     utils::JobSystem::Job* mSync = nullptr;
     size_t mCommandsHighWatermark = 0;

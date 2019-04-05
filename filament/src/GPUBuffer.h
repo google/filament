@@ -81,7 +81,6 @@ public:
 private:
     // this is really hidden implementation details (the fact we're using a texture should be
     // exposed as little as possible)
-    friend class SamplerGroup;
     backend::Handle<backend::HwTexture> getHandle() const noexcept { return mTexture; }
     backend::SamplerParams getSamplerParams() const noexcept { return backend::SamplerParams{}; }
 

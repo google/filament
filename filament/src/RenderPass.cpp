@@ -54,10 +54,6 @@ void RenderPass::setCamera(const CameraInfo& camera) noexcept {
     mCamera = camera;
 }
 
-void RenderPass::setCommandType(RenderPass::CommandTypeFlags commandType) noexcept {
-    mCommandType = commandType;
-}
-
 void RenderPass::setRenderFlags(RenderPass::RenderFlags flags) noexcept {
     mFlags = flags;
 }
@@ -66,13 +62,12 @@ void RenderPass::setExecuteSync(JobSystem::Job* sync) noexcept {
     mSync = sync;
 }
 
-void RenderPass::generateSortedCommands() noexcept {
+void RenderPass::generateSortedCommands(CommandTypeFlags const commandTypeFlags) noexcept {
     SYSTRACE_CONTEXT();
 
     FEngine& engine = mEngine;
     JobSystem& js = engine.getJobSystem();
     GrowingSlice<Command>& commands = mCommands;
-    const CommandTypeFlags commandTypeFlags = mCommandType;
     const RenderFlags renderFlags = mFlags;
     CameraInfo const& camera = mCamera;
     FScene& scene = *mScene;

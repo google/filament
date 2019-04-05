@@ -138,6 +138,7 @@ public:
     void setShadowsEnabled(bool enabled) noexcept { mShadowingEnabled = enabled; }
 
     ShadowMap const& getShadowMap() const { return mDirectionalShadowMap; }
+    ShadowMap& getShadowMap() { return mDirectionalShadowMap; }
 
     FCamera const* getDirectionalLightCamera() const noexcept {
         return &mDirectionalShadowMap.getDebugCamera();

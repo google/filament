@@ -21,6 +21,9 @@
 #include "details/Engine.h"
 #include "details/ShadowMap.h"
 #include "details/Scene.h"
+#include "details/View.h"
+
+#include "RenderPass.h"
 
 #include <private/filament/SibGenerator.h>
 
@@ -102,6 +105,46 @@ void ShadowMap::prepare(DriverApi& driver, SamplerGroup& sb) noexcept {
     s.compareMode = SamplerCompareMode::COMPARE_TO_TEXTURE;
     s.depthStencil = true;
     sb.setSampler(PerViewSib::SHADOW_MAP, { mShadowMapHandle, s });
+}
+
+void ShadowMap::render(DriverApi& driver, RenderPass& pass, FView& view) noexcept {
+    FEngine& engine = mEngine;
+    FScene& scene = *view.getScene();
+
+    filament::Viewport const& viewport = mViewport;
+
+    // FIXME: in the future this will come from the framegraph
+    RenderPassParams params = {};
+    params.flags.clear = TargetBufferFlags::SHADOW;
+    params.flags.discardStart = TargetBufferFlags::DEPTH;
+    params.flags.discardEnd = TargetBufferFlags::COLOR_AND_STENCIL;
+    params.clearDepth = 1.0;
+    params.viewport = viewport;
+    // disable scissor for clearing so the whole surface, but set the viewport to the
+    // the inset-by-1 rectangle.
+    params.flags.clear |= RenderPassFlags::IGNORE_SCISSOR;
+
+    FCamera const& camera = getCamera();
+    details::CameraInfo cameraInfo = {
+            .projection         = mat4f{ camera.getProjectionMatrix() },
+            .cullingProjection  = mat4f{ camera.getCullingProjectionMatrix() },
+            .model              = camera.getModelMatrix(),
+            .view               = camera.getViewMatrix(),
+            .zn                 = camera.getNear(),
+            .zf                 = camera.getCullingFar(),
+    };
+    pass.setCamera(cameraInfo);
+
+    FView::Range visibleRenderables = view.getVisibleShadowCasters();
+    pass.setGeometry(scene, visibleRenderables);
+
+    view.updatePrimitivesLod(engine, cameraInfo, scene.getRenderableData(), visibleRenderables);
+    view.prepareCamera(cameraInfo, viewport);
+    view.commitUniforms(driver);
+
+    pass.generateSortedCommands(RenderPass::SHADOW);
+    pass.execute("Shadow map Pass", getRenderTarget(), params,
+            pass.getCommands().begin(), pass.getCommands().end());
 }
 
 void ShadowMap::terminate(DriverApi& driverApi) noexcept {
