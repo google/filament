@@ -98,23 +98,14 @@ static uint32_t computeBindingOffset(const cgltf_accessor* accessor) {
     return uint32_t(accessor->offset + accessor->buffer_view->offset);
 };
 
-static MaterialProvider* createMaterialProvider(const AssetConfiguration& config) {
-    if (config.materials == GENERATE_SHADERS) {
-        return MaterialProvider::createMaterialGenerator(config.engine);
-    } else {
-        return MaterialProvider::createUbershaderLoader(config.engine);
-    }
-}
-
 struct FAssetLoader : public AssetLoader {
     FAssetLoader(const AssetConfiguration& config) :
             mEntityManager(EntityManager::get()),
             mRenderableManager(config.engine->getRenderableManager()),
             mNameManager(config.names),
             mTransformManager(config.engine->getTransformManager()),
-            mMaterials(createMaterialProvider(config)),
-            mEngine(config.engine),
-            mMaterialSource(config.materials) {}
+            mMaterials(config.materials),
+            mEngine(config.engine) {}
 
     FFilamentAsset* createAssetFromJson(const uint8_t* bytes, uint32_t nbytes);
     FilamentAsset* createAssetFromBinary(const uint8_t* bytes, uint32_t nbytes);
@@ -135,10 +126,6 @@ struct FAssetLoader : public AssetLoader {
         return mMaterials->getMaterials();
     }
 
-    void destroyMaterials() {
-        mMaterials->destroyMaterials();
-    }
-
     void createAsset(const cgltf_data* srcAsset);
     void createEntity(const cgltf_node* node, Entity parent);
     void createRenderable(const cgltf_node* node, Entity entity);
@@ -156,7 +143,6 @@ struct FAssetLoader : public AssetLoader {
     TransformManager& mTransformManager;
     MaterialProvider* mMaterials;
     Engine* mEngine;
-    MaterialSource mMaterialSource;
 
     // The loader owns a few transient mappings used only for the current asset being loaded.
     FFilamentAsset* mResult;
@@ -505,7 +491,7 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
     // requirements. The color data should be a sequence of normalized UBYTE4, so dummy UVs are
     // USHORT2 to make the sizes match.
     int dummySlot = -1;
-    if (mMaterialSource == LOAD_UBERSHADERS) {
+    if (mMaterials->getSource() == LOAD_UBERSHADERS) {
         bool needsDummyData = false;
         if (!hasUv0) {
             needsDummyData = true;
@@ -796,10 +782,6 @@ size_t AssetLoader::getMaterialsCount() const noexcept {
 
 const Material* const* AssetLoader::getMaterials() const noexcept {
     return upcast(this)->getMaterials();
-}
-
-void AssetLoader::destroyMaterials() {
-    upcast(this)->destroyMaterials();
 }
 
 } // namespace gltfio

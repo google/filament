@@ -62,6 +62,11 @@ bool operator==(const MaterialKey& k1, const MaterialKey& k2);
 enum UvSet : uint8_t { UNUSED, UV0, UV1 };
 using UvMap = std::array<UvSet, 8>;
 
+enum MaterialSource {
+    GENERATE_SHADERS,
+    LOAD_UBERSHADERS,
+};
+
 /**
  * MaterialProvider is an interface to a provider of glTF materials with two implementations.
  *
@@ -73,10 +78,9 @@ using UvMap = std::array<UvSet, 8>;
  */
 class MaterialProvider {
 public:
-    static MaterialProvider* createMaterialGenerator(filament::Engine* engine);
-    static MaterialProvider* createUbershaderLoader(filament::Engine* engine);
-
     virtual ~MaterialProvider() {}
+
+    virtual MaterialSource getSource() const noexcept = 0;
 
     // Creates or fetches a compiled Filament material, then creates an instance from it. The given
     // configuration key might be mutated due to resource constraints. The second argument is
@@ -95,6 +99,9 @@ namespace details {
     void processShaderString(std::string* shader, const UvMap& uvmap,
             const MaterialKey& config);
 }
+
+MaterialProvider* createMaterialGenerator(filament::Engine* engine);
+MaterialProvider* createUbershaderLoader(filament::Engine* engine);
 
 } // namespace gltfio
 

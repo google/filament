@@ -22,7 +22,6 @@ set(SRCS
         src/FFilamentAsset.h
         src/FilamentAsset.cpp
         src/GltfEnums.h
-        src/MaterialGenerator.cpp
         src/MaterialProvider.cpp
         src/ResourceLoader.cpp
         src/UbershaderLoader.cpp
@@ -104,29 +103,44 @@ add_custom_command(OUTPUT ${DUMMY_SRC} COMMAND echo "//" > ${DUMMY_SRC})
 add_library(gltfio_resources ${DUMMY_SRC} ${RESGEN_SOURCE})
 
 # ==================================================================================================
-# Include and target definitions
+# Build the "core" library (no filamat)
 # ==================================================================================================
 include_directories(${PUBLIC_HDR_DIR} ${RESOURCE_DIR})
+link_libraries(math utils filament cgltf stb geometry gltfio_resources)
 
-add_library(${TARGET} STATIC ${PUBLIC_HDRS} ${SRCS})
+add_library(gltfio_core STATIC ${PUBLIC_HDRS} ${SRCS})
 
-target_link_libraries(${TARGET} PUBLIC math utils filamat filament cgltf stb geometry gltfio_resources)
+target_include_directories(gltfio_core PUBLIC ${PUBLIC_HDR_DIR})
 
-target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
+if (NOT WEBGL AND NOT ANDROID AND NOT IOS)
 
-# ==================================================================================================
-# Compiler flags
-# ==================================================================================================
-target_compile_options(${TARGET} PRIVATE -Wno-deprecated-register)
+    # ==================================================================================================
+    # Link the core library against filamat to create the "full" library
+    # ==================================================================================================
+    add_library(${TARGET} STATIC ${PUBLIC_HDRS} src/MaterialGenerator.cpp)
+    target_link_libraries(${TARGET} PUBLIC filamat gltfio_core)
+    target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
 
-if (MSVC OR CLANG_CL)
-    target_compile_options(${TARGET} PRIVATE $<$<CONFIG:Release>:/fp:fast>)
+    # ==================================================================================================
+    # Compiler flags
+    # ==================================================================================================
+    target_compile_options(${TARGET} PRIVATE -Wno-deprecated-register)
+
+    if (MSVC OR CLANG_CL)
+        target_compile_options(${TARGET} PRIVATE $<$<CONFIG:Release>:/fp:fast>)
+    else()
+        target_compile_options(${TARGET} PRIVATE $<$<CONFIG:Release>:-ffast-math>)
+    endif()
+
+    # ==================================================================================================
+    # Installation
+    # ==================================================================================================
+    install(TARGETS ${TARGET} gltfio_core ARCHIVE DESTINATION lib/${DIST_DIR})
+    install(DIRECTORY ${PUBLIC_HDR_DIR}/gltfio DESTINATION include)
+
 else()
-    target_compile_options(${TARGET} PRIVATE $<$<CONFIG:Release>:-ffast-math>)
-endif()
 
-# ==================================================================================================
-# Installation
-# ==================================================================================================
-install(TARGETS ${TARGET} ARCHIVE DESTINATION lib/${DIST_DIR})
-install(DIRECTORY ${PUBLIC_HDR_DIR}/gltfio DESTINATION include)
+    install(TARGETS gltfio_core ARCHIVE DESTINATION lib/${DIST_DIR})
+    install(DIRECTORY ${PUBLIC_HDR_DIR}/gltfio DESTINATION include)
+
+endif()

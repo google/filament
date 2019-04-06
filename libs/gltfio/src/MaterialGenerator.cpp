@@ -37,6 +37,8 @@ public:
     MaterialGenerator(filament::Engine* engine);
     ~MaterialGenerator();
 
+    MaterialSource getSource() const noexcept override { return GENERATE_SHADERS; }
+
     filament::MaterialInstance* createMaterialInstance(MaterialKey* config, UvMap* uvmap,
             const char* label) override;
 
@@ -283,7 +285,7 @@ MaterialInstance* MaterialGenerator::createMaterialInstance(MaterialKey* config,
 
 namespace gltfio {
 
-MaterialProvider* MaterialProvider::createMaterialGenerator(filament::Engine* engine) {
+MaterialProvider* createMaterialGenerator(filament::Engine* engine) {
     return new MaterialGenerator(engine);
 }
 

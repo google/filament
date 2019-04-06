@@ -21,24 +21,16 @@
 #include <filament/Material.h>
 
 #include <gltfio/FilamentAsset.h>
+#include <gltfio/MaterialProvider.h>
 
 #include <utils/NameComponentManager.h>
 
 namespace gltfio {
 
-/**
- * AssetLoader can be configured to generate materials using filamat, or to use a small set of
- * prebuilt ubershader materials.
- */
-enum MaterialSource {
-    GENERATE_SHADERS,
-    LOAD_UBERSHADERS,
-};
-
 struct AssetConfiguration {
     class filament::Engine* engine;
+    MaterialProvider* materials;
     utils::NameComponentManager* names = nullptr;
-    MaterialSource materials = GENERATE_SHADERS;
 };
 
 /**
@@ -56,7 +48,8 @@ struct AssetConfiguration {
  *
  * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
  * auto engine = Engine::create();
- * auto loader = AssetLoader::create({engine});
+ * auto materials = createMaterialGenerator(engine);
+ * auto loader = AssetLoader::create({engine, materials});
  *
  * // Parse the glTF content and create Filament entities.
  * std::vector<uint8_t> content(...);
@@ -86,7 +79,8 @@ struct AssetConfiguration {
  * } while (!quit);
  *
  * loader->destroyAsset(asset);
- * loader->destroyMaterials();
+ * materials->destroyMaterials();
+ * delete materials;
  * AssetLoader::destroy(&loader);
  * Engine::destroy(&engine);
  * ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -107,7 +101,7 @@ public:
     /**
      * Frees the loader.
      *
-     * This does not not automatically free the cache of materials (see destroyMaterials), nor
+     * This does not not automatically free the cache of materials, nor
      * does it free the entities for created assets (see destroyAsset).
      */
     static void destroy(AssetLoader** loader);
@@ -130,9 +124,6 @@ public:
     /** Gets cached materials, used internally to create material instances for assets. */
     size_t getMaterialsCount() const noexcept;
     const filament::Material* const* getMaterials() const noexcept;
-
-    /** Destroys all cached materials. */
-    void destroyMaterials();
 
 protected:
     AssetLoader() noexcept = default;

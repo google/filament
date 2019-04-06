@@ -34,6 +34,8 @@ public:
     UbershaderLoader(filament::Engine* engine);
     ~UbershaderLoader() {}
 
+    MaterialSource getSource() const noexcept override { return LOAD_UBERSHADERS; }
+
     filament::MaterialInstance* createMaterialInstance(MaterialKey* config, UvMap* uvmap,
             const char* label) override;
 
@@ -133,7 +135,7 @@ MaterialInstance* UbershaderLoader::createMaterialInstance(MaterialKey* config, 
 
 namespace gltfio {
 
-MaterialProvider* MaterialProvider::createUbershaderLoader(filament::Engine* engine) {
+MaterialProvider* createUbershaderLoader(filament::Engine* engine) {
     return new UbershaderLoader(engine);
 }
 
