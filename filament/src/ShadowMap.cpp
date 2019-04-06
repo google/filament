@@ -105,12 +105,26 @@ void ShadowMap::prepare(DriverApi& driver, SamplerGroup& sb) noexcept {
     // see: computeLightSpaceMatrix()
     mViewport = { 1, 1, dim - 2, dim - 2 };
 
+    // 16-bits seems enough. TODO: make it an option.
+    TextureFormat format = TextureFormat::DEPTH16;
+    switch (format) {
+        default:
+            // this should not happen, for shadow maps, we want a linear depth
+        case TextureFormat::DEPTH16:
+            mShadowMapResolution = 1.0f / (1 << 16);
+            break;
+        case TextureFormat::DEPTH24:
+        case TextureFormat::DEPTH24_STENCIL8:
+            mShadowMapResolution = 1.0f / (1 << 24);
+            break;
+    }
+
     mShadowMapHandle = driver.createTexture(
-            SamplerType::SAMPLER_2D, 1, TextureFormat::DEPTH16, 1, dim, dim, 1,
+            SamplerType::SAMPLER_2D, 1, format, 1, dim, dim, 1,
             TextureUsage::DEPTH_ATTACHMENT);
 
     mShadowMapRenderTarget = driver.createRenderTarget(
-            TargetBufferFlags::SHADOW, dim, dim, 1, TextureFormat::DEPTH16,
+            TargetBufferFlags::SHADOW, dim, dim, 1, format,
             {}, { mShadowMapHandle }, {});
 
     SamplerParams s;
@@ -271,7 +285,8 @@ void ShadowMap::computeShadowCameraDirectional(
 
     mHasVisibleShadows = vertexCount >= 2;
     if (mHasVisibleShadows) {
-        const bool USE_LISPSM = ENABLE_LISPSM && mEngine.debug.shadowmap.lispsm;
+        // We can't use LISPSM in stable mode
+        const bool USE_LISPSM = ENABLE_LISPSM && mEngine.debug.shadowmap.lispsm && !params.options.stable;
 
         /*
          * Compute the light's model matrix
@@ -371,14 +386,10 @@ void ShadowMap::computeShadowCameraDirectional(
         const mat4f LMpMv(L * Mp * Mv);
 
         // Compute the LiSPSM warping
-        mat4f W;
-        if (params.options.stable) {
-            // We can't use LISPSM in stable mode
-        } else {
-            if (USE_LISPSM) {
-                W = applyLISPSM(camera, params, LMpMv,
-                        mWsClippedShadowReceiverVolume, vertexCount, dir);
-            }
+        mat4f W, Wp;
+        if (USE_LISPSM) {
+            W = applyLISPSM(Wp, camera, params, LMpMv,
+                    mWsClippedShadowReceiverVolume, vertexCount, dir);
         }
 
         /*
@@ -440,9 +451,17 @@ void ShadowMap::computeShadowCameraDirectional(
 
         // Computes St the transform to use in the shader to access the shadow map texture
         // i.e. it transform a world-space vertex to a texture coordinate in the shadow-map
-        const mat4f St = getTextureCoordsMapping(S);
+        const mat4f MbMt = getTextureCoordsMapping();
+        const mat4f St = MbMt * S;
 
-        mTexelSizeWs = texelSizeWorldSpace(St, float3{ 0.5f });
+        // note: in texelSizeWorldSpace() below, we could use Mb * Mt * F * W because
+        // L * Mp * Mv is a rigid transform (for directional lights)
+        if (USE_LISPSM) {
+            mTexelSizeWs = texelSizeWorldSpace(Wp, MbMt * F);
+        } else {
+            // We know we're using an ortho projection
+            mTexelSizeWs = texelSizeWorldSpace(St.upperLeft());
+        }
         mLightSpace = St;
 
         // We apply the constant bias in world space (as opposed to light-space) to account
@@ -457,7 +476,8 @@ void ShadowMap::computeShadowCameraDirectional(
     }
 }
 
-mat4f ShadowMap::applyLISPSM(CameraInfo const& camera, FLightManager::ShadowParams const& params,
+mat4f ShadowMap::applyLISPSM(math::mat4f& Wp,
+        CameraInfo const& camera, FLightManager::ShadowParams const& params,
         mat4f const& LMpMv,
         FrustumBoxIntersection const& wsShadowReceiversVolume, size_t vertexCount,
         float3 const& dir) {
@@ -524,15 +544,15 @@ mat4f ShadowMap::applyLISPSM(CameraInfo const& camera, FLightManager::ShadowPara
                 0,
         };
 
-        const mat4f Wp = warpFrustum(nopt, nopt + d);
         const mat4f Wv = mat4f::translation(-p);
+        Wp = warpFrustum(nopt, nopt + d);
         W = Wp * Wv;
     }
     return W;
 }
 
 
-mat4f ShadowMap::getTextureCoordsMapping(math::mat4f const& S) const noexcept {
+mat4f ShadowMap::getTextureCoordsMapping() const noexcept {
     // remapping from NDC to texture coordinates (i.e. [-1,1] -> [0, 1])
     const mat4f Mt(mClipSpaceFlipped ? mat4f::row_major_init{
             0.5f,   0,    0,  0.5f,
@@ -557,11 +577,7 @@ mat4f ShadowMap::getTextureCoordsMapping(math::mat4f const& S) const noexcept {
     });
 
     // Compute shadow-map texture access transform
-    const mat4f MbMt = Mb * Mt;
-
-    const mat4f St = mat4f(MbMt * S);
-
-    return St;
+    return Mb * Mt;
 }
 
 // This construct a frustum (similar to glFrustum or frustum), except
@@ -868,21 +884,80 @@ bool ShadowMap::intersectSegmentWithPlane(float3& UTILS_RESTRICT p,
     return false;
 }
 
-float ShadowMap::texelSizeWorldSpace(const mat4f& lightSpaceMatrix) const noexcept {
-    // this version works only for orthographic projections
-    const mat3f shadowmapToWorldMatrix(inverse(lightSpaceMatrix.upperLeft()));
-    const float3 texelSizeWs = shadowmapToWorldMatrix * float3{ 1, 1, 0 };
-    const float s = length(texelSizeWs) / mShadowMapDimension;
+float ShadowMap::texelSizeWorldSpace(const mat3f& worldToShadowTexture) const noexcept {
+    // The Jacobian of the transformation from texture-to-world is the matrix itself for
+    // orthographic projections. We just need to inverse worldToShadowTexture,
+    // which is guaranteed to be orthographic.
+    // The two first columns give us the how a texel maps in world-space.
+    const mat3f shadowTextureToWorld(inverse(worldToShadowTexture));
+    const float3 Jx = shadowTextureToWorld[0];
+    const float3 Jy = shadowTextureToWorld[1];
+    const float s = std::max(length(Jx), length(Jy)) / mShadowMapDimension;
     return s;
 }
 
-float ShadowMap::texelSizeWorldSpace(const mat4f& lightSpaceMatrix, float3 const& str) const noexcept {
-    // for non-orthographic projection, the projection of a texel in world-space is not constant
-    // therefore we need to specify which texel we want to back-project.
-    const mat4f shadowmapToWorldMatrix(inverse(lightSpaceMatrix));
-    const float3 p0 = mat4f::project(shadowmapToWorldMatrix, str);
-    const float3 p1 = mat4f::project(shadowmapToWorldMatrix, str + float3{ 1, 1, 0 } / mShadowMapDimension);
-    const float s = length(p1 - p0);
+float ShadowMap::texelSizeWorldSpace(const mat4f& Wp, const mat4f& MbMtF) const noexcept {
+    // Here we compute the Jacobian of inverse(MbMtF * Wp).
+    // The expression below has been computed with Mathematica. However, it's not very hard,
+    // albeit error prone, to do it by hand because MbMtF is a linear transform.
+    // So we really only need to calculate the Jacobian of inverse(Wp) at inverse(MbMtF).
+    //
+    // Because we're only interested in the length of the columns of the Jacobian, we can use
+    // Mb * Mt * F * Wp instead of the full expression Mb * Mt * F * Wp * Wv * L * Mp * Mv,
+    // because Wv * L * Mp * Mv is a rigid transform, which doesn't affect the length of
+    // the Jacobian's column vectors.
+
+    // The Jacobian is not constant, so we evaluate it in the center of the shadow-map texture.
+    // It might be better to do this computation in the vertex shader.
+    float3 p = {0.5, 0.5, 0.0};
+
+    const float ures = 1.0f / mShadowMapDimension;
+    const float vres = 1.0f / mShadowMapDimension;
+    const float dres = mShadowMapResolution;
+
+    constexpr bool JACOBIAN_ESTIMATE = false;
+    if (JACOBIAN_ESTIMATE) {
+        // this estimates the Jacobian -- this is a lot heavier. This is mostly for reference
+        // and testing.
+        const mat4f Si(inverse(MbMtF * Wp));
+        const float3 p0 = mat4f::project(Si, p);
+        const float3 p1 = mat4f::project(Si, p + float3{ 1, 0, 0 } * ures);
+        const float3 p2 = mat4f::project(Si, p + float3{ 0, 1, 0 } * vres);
+        const float3 p3 = mat4f::project(Si, p + float3{ 0, 0, 1 } * dres);
+        const float3 Jx = p1 - p0;
+        const float3 Jy = p2 - p0;
+        const float3 UTILS_UNUSED Jz = p3 - p0;
+        const float s = std::max(length(Jx), length(Jy));
+        return s;
+    }
+
+    const float n = Wp[0][0];
+    const float A = Wp[1][1];
+    const float B = Wp[3][1];
+    const float sx = MbMtF[0][0];
+    const float sy = MbMtF[1][1];
+    const float sz = MbMtF[2][2];
+    const float ox = MbMtF[3][0];
+    const float oy = MbMtF[3][1];
+    const float oz = MbMtF[3][2];
+
+    const float X = p.x - ox;
+    const float Y = p.y - oy;
+    const float Z = p.z - oz;
+
+    const float dz = A * sy - Y;
+    const float nsxsz = n * sx * sz;
+    const float j = -(B * sy) / (nsxsz * dz * dz);
+    const mat3f J(mat3f::row_major_init{
+            j * dz * sz,    j * X * sz,     0,
+            0,              j * nsxsz,      0,
+            0,              j * Z * sx,     j * dz * sx
+    });
+
+    float3 Jx = J[0] * ures;
+    float3 Jy = J[1] * vres;
+    UTILS_UNUSED float3 Jz = J[2] * dres;
+    const float s = std::max(length(Jx), length(Jy));
     return s;
 }
 
