@@ -211,6 +211,7 @@ public:
 
     // double-sided materials don't cull faces, equivalent to culling(CullingMode::NONE)
     // doubleSided() overrides culling() if called
+    // when called with "false", this enables the capability for a run-time toggle
     MaterialBuilder& doubleSided(bool doubleSided) noexcept;
 
     // any fragment with an alpha below this threshold is clipped (MASKED blending mode only)
@@ -342,7 +343,7 @@ private:
     uint8_t mParameterCount = 0;
 
     bool mDoubleSided = false;
-    bool mDoubleSidedSet = false;
+    bool mDoubleSidedCapability = false;
     bool mColorWrite = true;
     bool mDepthTest = true;
     bool mDepthWrite = true;

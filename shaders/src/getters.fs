@@ -1,5 +1,5 @@
 //------------------------------------------------------------------------------
-// Input access (varyings)
+// Input access
 //------------------------------------------------------------------------------
 
 #if defined(HAS_ATTRIBUTE_COLOR)
@@ -26,5 +26,17 @@ vec2 getUV1() {
 #if defined(HAS_SHADOWING) && defined(HAS_DIRECTIONAL_LIGHTING)
 HIGHP vec3 getLightSpacePosition() {
     return vertex_lightSpacePosition.xyz * (1.0 / vertex_lightSpacePosition.w);
+}
+#endif
+
+#if defined(BLEND_MODE_MASKED)
+float getMaskThreshold() {
+    return materialParams._maskThreshold;
+}
+#endif
+
+#if defined(MATERIAL_HAS_DOUBLE_SIDED_CAPABILITY)
+bool isDoubleSided() {
+    return materialParams._doubleSided;
 }
 #endif

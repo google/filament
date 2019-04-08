@@ -246,7 +246,7 @@ const std::string ShaderGenerator::createFragmentProgram(filament::backend::Shad
     cg.generateDefine(fs, "HAS_SHADOW_MULTIPLIER", material.hasShadowMultiplier);
 
     // material defines
-    cg.generateDefine(fs, "MATERIAL_IS_DOUBLE_SIDED", material.isDoubleSided);
+    cg.generateDefine(fs, "MATERIAL_HAS_DOUBLE_SIDED_CAPABILITY", material.hasDoubleSidedCapability);
     switch (material.blendingMode) {
         case BlendingMode::OPAQUE:
             cg.generateDefine(fs, "BLEND_MODE_OPAQUE", true);
@@ -310,11 +310,6 @@ const std::string ShaderGenerator::createFragmentProgram(filament::backend::Shad
     cg.generateGetters(fs, ShaderType::FRAGMENT);
     cg.generateCommonMaterial(fs, ShaderType::FRAGMENT);
     cg.generateParameters(fs, ShaderType::FRAGMENT);
-
-    if (material.blendingMode == BlendingMode::MASKED) {
-        cg.generateFunction(fs, "float", "getMaskThreshold",
-                "    return materialParams.maskThreshold;");
-    }
 
     // shading model
     if (variant.isDepthPass()) {

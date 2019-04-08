@@ -33,7 +33,7 @@ using CullingMode = filament::backend::CullingMode;
 
 struct UTILS_PUBLIC MaterialInfo {
     bool isLit;
-    bool isDoubleSided;
+    bool hasDoubleSidedCapability;
     bool hasExternalSamplers;
     bool hasShadowMultiplier;
     bool curvatureToRoughness;

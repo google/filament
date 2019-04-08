@@ -821,7 +821,9 @@ class_<MaterialInstance>("MaterialInstance")
     .function("setColorParameter", EMBIND_LAMBDA(void,
             (MaterialInstance* self, std::string name, RgbType type, filament::math::float3 value), {
         self->setParameter(name.c_str(), type, value); }), allow_raw_pointers())
-    .function("setPolygonOffset", &MaterialInstance::setPolygonOffset);
+    .function("setPolygonOffset", &MaterialInstance::setPolygonOffset)
+    .function("setMaskThreshold", &MaterialInstance::setMaskThreshold)
+    .function("setDoubleSided", &MaterialInstance::setDoubleSided);
 
 class_<TextureSampler>("TextureSampler")
     .constructor<backend::SamplerMinFilter, backend::SamplerMagFilter, backend::SamplerWrapMode>();

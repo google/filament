@@ -26,9 +26,12 @@
 #include "details/Material.h"
 #include "details/Texture.h"
 
+#include <utils/Log.h>
+
 #include <string.h>
 
 using namespace filament::math;
+using namespace utils;
 
 namespace filament {
 
@@ -56,7 +59,12 @@ FMaterialInstance::FMaterialInstance(FEngine& engine, FMaterial const* material)
 
     if (material->getBlendingMode() == BlendingMode::MASKED) {
         static_cast<MaterialInstance*>(this)->setParameter(
-                "maskThreshold", material->getMaskThreshold());
+                "_maskThreshold", material->getMaskThreshold());
+    }
+
+    if (material->hasDoubleSidedCapability()) {
+        static_cast<MaterialInstance*>(this)->setParameter(
+                "_doubleSided", material->isDoubleSided());
     }
 }
 
@@ -79,7 +87,12 @@ void FMaterialInstance::initDefaultInstance(FEngine& engine, FMaterial const* ma
 
     if (material->getBlendingMode() == BlendingMode::MASKED) {
         static_cast<MaterialInstance*>(this)->setParameter(
-                "maskThreshold", material->getMaskThreshold());
+                "_maskThreshold", material->getMaskThreshold());
+    }
+
+    if (material->hasDoubleSidedCapability()) {
+        static_cast<MaterialInstance*>(this)->setParameter(
+                "_doubleSided", material->isDoubleSided());
     }
 }
 
@@ -123,6 +136,14 @@ void FMaterialInstance::setParameter(const char* name,
         Texture const* texture, TextureSampler const& sampler) noexcept {
     size_t index = mMaterial->getSamplerInterfaceBlock().getSamplerInfo(name)->offset;
     mSamplers.setSampler(index, { upcast(texture)->getHwHandle(), sampler.getSamplerParams() });
+}
+
+void FMaterialInstance::setDoubleSided(bool doubleSided) noexcept {
+    if (!mMaterial->hasDoubleSidedCapability()) {
+        slog.w << "Parent material does not have double-sided capability." << io::endl;
+        return;
+    }
+    setParameter("_doubleSided", doubleSided);
 }
 
 } // namespace details
@@ -207,6 +228,14 @@ void MaterialInstance::unsetScissor() noexcept {
 
 void MaterialInstance::setPolygonOffset(float scale, float constant) noexcept {
     upcast(this)->setPolygonOffset(scale, constant);
+}
+
+void MaterialInstance::setMaskThreshold(float threshold) noexcept {
+    upcast(this)->setMaskThreshold(threshold);
+}
+
+void MaterialInstance::setDoubleSided(bool doubleSided) noexcept {
+    upcast(this)->setDoubleSided(doubleSided);
 }
 
 } // namespace filament

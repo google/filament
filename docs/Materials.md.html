@@ -1029,9 +1029,10 @@ Value
 :     `true` or `false`. Defaults to `false`.
 
 Description
-:     Enables or disables two-sided rendering. When set to `true`, `culling` is automatically set to
-      `none`; if the triangle is back-facing, the triangle's normal is automatically flipped to
-      become front-facing.
+:     Enables two-sided rendering and its capability to be toggled at run time. When set to `true`,
+      `culling` is automatically set to `none`; if the triangle is back-facing, the triangle's
+      normal is flipped to become front-facing. When explicitly set to `false`, this allows the
+      doubleSided property to be toggled at run time.
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ JSON
 material {

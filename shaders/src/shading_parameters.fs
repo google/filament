@@ -17,8 +17,10 @@ void computeShadingParams() {
     HIGHP vec3 n = vertex_worldNormal;
 #endif
 
-#if defined(MATERIAL_IS_DOUBLE_SIDED)
-    n = gl_FrontFacing ? n : -n;
+#if defined(MATERIAL_HAS_DOUBLE_SIDED_CAPABILITY)
+    if (isDoubleSided()) {
+        n = gl_FrontFacing ? n : -n;
+    }
 #endif
 
 #if defined(MATERIAL_HAS_ANISOTROPY) || defined(MATERIAL_HAS_NORMAL) || defined(MATERIAL_HAS_CLEAR_COAT_NORMAL)

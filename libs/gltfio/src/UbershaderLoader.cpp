@@ -115,10 +115,10 @@ MaterialInstance* UbershaderLoader::createMaterialInstance(MaterialKey* config, 
     mi->setParameter("emissiveIndex", getUvIndex(config->emissiveUV, config->hasEmissiveTexture));
 
     if (config->alphaMode == AlphaMode::MASK) {
-        mi->setParameter("maskThreshold", config->alphaMaskThreshold);
+        mi->setMaskThreshold(config->alphaMaskThreshold);
     }
 
-    // TODO: honor config->doubleSided
+    mi->setDoubleSided(config->doubleSided);
 
     mat3f identity;
     mi->setParameter("baseColorUvMatrix", identity);

@@ -217,3 +217,19 @@ Java_com_google_android_filament_MaterialInstance_nSetPolygonOffset(JNIEnv*,
     MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
     instance->setPolygonOffset(scale, constant);
 }
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_google_android_filament_MaterialInstance_nSetMaskThreshold(JNIEnv*,
+        jclass, jlong nativeMaterialInstance, jfloat threshold) {
+    MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
+    instance->setMaskThreshold(threshold);
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_google_android_filament_MaterialInstance_nSetDoubleSided(JNIEnv*,
+        jclass, jlong nativeMaterialInstance, jboolean doubleSided) {
+    MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
+    instance->setDoubleSided(doubleSided);
+}

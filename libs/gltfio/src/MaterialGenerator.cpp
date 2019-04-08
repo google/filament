@@ -161,7 +161,6 @@ static std::string shaderFromKey(const MaterialKey& config) {
 
 static Material* createMaterial(Engine* engine, const MaterialKey& config, const UvMap& uvmap,
         const char* name) {
-    using CullingMode = MaterialBuilder::CullingMode;
     std::string shader = shaderFromKey(config);
     gltfio::details::processShaderString(&shader, uvmap, config);
     MaterialBuilder builder = MaterialBuilder()

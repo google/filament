@@ -102,6 +102,7 @@ public:
         return mRasterState.depthFunc != backend::RasterState::DepthFunc::A;
     }
     bool isDoubleSided() const noexcept { return mDoubleSided; }
+    bool hasDoubleSidedCapability() const noexcept { return mDoubleSidedCapability; }
     float getMaskThreshold() const noexcept { return mMaskThreshold; }
     bool hasShadowMultiplier() const noexcept { return mHasShadowMultiplier; }
     AttributeBitset getRequiredAttributes() const noexcept { return mRequiredAttributes; }
@@ -131,6 +132,7 @@ private:
     AttributeBitset mRequiredAttributes;
     float mMaskThreshold;
     bool mDoubleSided;
+    bool mDoubleSidedCapability = false;
     bool mHasShadowMultiplier = false;
     bool mHasCustomDepthShader = false;
     bool mIsDefaultMaterial = false;
