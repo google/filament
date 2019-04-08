@@ -59,12 +59,12 @@ FMaterialInstance::FMaterialInstance(FEngine& engine, FMaterial const* material)
 
     if (material->getBlendingMode() == BlendingMode::MASKED) {
         static_cast<MaterialInstance*>(this)->setParameter(
-                "maskThreshold", material->getMaskThreshold());
+                "_maskThreshold", material->getMaskThreshold());
     }
 
     if (material->hasDoubleSidedCapability()) {
         static_cast<MaterialInstance*>(this)->setParameter(
-                "doubleSided", material->isDoubleSided());
+                "_doubleSided", material->isDoubleSided());
     }
 }
 
@@ -87,12 +87,12 @@ void FMaterialInstance::initDefaultInstance(FEngine& engine, FMaterial const* ma
 
     if (material->getBlendingMode() == BlendingMode::MASKED) {
         static_cast<MaterialInstance*>(this)->setParameter(
-                "maskThreshold", material->getMaskThreshold());
+                "_maskThreshold", material->getMaskThreshold());
     }
 
     if (material->hasDoubleSidedCapability()) {
         static_cast<MaterialInstance*>(this)->setParameter(
-                "doubleSided", material->isDoubleSided());
+                "_doubleSided", material->isDoubleSided());
     }
 }
 
@@ -143,7 +143,7 @@ void FMaterialInstance::setDoubleSided(bool doubleSided) noexcept {
         slog.w << "Parent material does not have double-sided capability." << io::endl;
         return;
     }
-    setParameter("doubleSided", doubleSided);
+    setParameter("_doubleSided", doubleSided);
 }
 
 } // namespace details

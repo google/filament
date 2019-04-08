@@ -18,7 +18,7 @@ void computeShadingParams() {
 #endif
 
 #if defined(MATERIAL_HAS_DOUBLE_SIDED_CAPABILITY)
-    if (materialParams.doubleSided) {
+    if (isDoubleSided()) {
         n = gl_FrontFacing ? n : -n;
     }
 #endif

@@ -313,11 +313,11 @@ void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
     }
 
     if (mBlendingMode == BlendingMode::MASKED) {
-        ibb.add("maskThreshold", 1, UniformType::FLOAT);
+        ibb.add("_maskThreshold", 1, UniformType::FLOAT);
     }
 
     if (mDoubleSidedCapability) {
-        ibb.add("doubleSided", 1, UniformType::BOOL);
+        ibb.add("_doubleSided", 1, UniformType::BOOL);
     }
 
     mRequiredAttributes.set(filament::VertexAttribute::POSITION);

@@ -98,7 +98,7 @@ public:
     backend::PolygonOffset getPolygonOffset() const noexcept { return mPolygonOffset; }
 
     void setMaskThreshold(float threshold) noexcept {
-        setParameter("maskThreshold", threshold);
+        setParameter("_maskThreshold", threshold);
     }
 
     void setDoubleSided(bool doubleSided) noexcept;
