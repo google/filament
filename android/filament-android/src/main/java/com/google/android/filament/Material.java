@@ -37,7 +37,8 @@ public class Material {
         UNLIT,
         LIT,
         SUBSURFACE,
-        CLOTH
+        CLOTH,
+        SPECULAR_GLOSSINESS
     }
 
     public enum Interpolation {

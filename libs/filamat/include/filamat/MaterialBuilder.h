@@ -126,7 +126,7 @@ public:
         THICKNESS,               // float,  subsurface shading model only
         SUBSURFACE_POWER,        // float,  subsurface shading model only
         SUBSURFACE_COLOR,        // float3, subsurface and cloth shading models only
-        SHEEN_COLOR,             // float3, cloth shading model only
+        SHEEN_COLOR,             // float3, cloth and specular-glossiness shading models only
         EMISSIVE,                // float4, all shading models
         NORMAL,                  // float3, all shading models only, except unlit
         POST_LIGHTING_COLOR,     // float4, all shading models

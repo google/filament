@@ -61,7 +61,7 @@ struct MaterialInputs {
     vec4  baseColor;
 #if !defined(SHADING_MODEL_UNLIT)
     float roughness;
-#if !defined(SHADING_MODEL_CLOTH)
+#if !defined(SHADING_MODEL_CLOTH) && !defined(SHADING_MODEL_SPECULAR_GLOSSINESS)
     float metallic;
     float reflectance;
 #endif
@@ -81,7 +81,7 @@ struct MaterialInputs {
     vec3  subsurfaceColor;
 #endif
 
-#if defined(SHADING_MODEL_CLOTH)
+#if defined(SHADING_MODEL_CLOTH) || defined(SHADING_MODEL_SPECULAR_GLOSSINESS)
     vec3  sheenColor;
 #if defined(MATERIAL_HAS_SUBSURFACE_COLOR)
     vec3  subsurfaceColor;
@@ -104,7 +104,7 @@ void initMaterial(out MaterialInputs material) {
     material.baseColor = vec4(1.0);
 #if !defined(SHADING_MODEL_UNLIT)
     material.roughness = 1.0;
-#if !defined(SHADING_MODEL_CLOTH)
+#if !defined(SHADING_MODEL_CLOTH) && !defined(SHADING_MODEL_SPECULAR_GLOSSINESS)
     material.metallic = 0.0;
     material.reflectance = 0.5;
 #endif
@@ -128,7 +128,7 @@ void initMaterial(out MaterialInputs material) {
     material.subsurfaceColor = vec3(1.0);
 #endif
 
-#if defined(SHADING_MODEL_CLOTH)
+#if defined(SHADING_MODEL_CLOTH) || defined(SHADING_MODEL_SPECULAR_GLOSSINESS)
     material.sheenColor = sqrt(material.baseColor.rgb);
 #if defined(MATERIAL_HAS_SUBSURFACE_COLOR)
     material.subsurfaceColor = vec3(0.0);

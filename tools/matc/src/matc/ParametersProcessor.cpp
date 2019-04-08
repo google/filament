@@ -136,6 +136,7 @@ ParametersProcessor::ParametersProcessor() {
     mStringToShading["lit"] = MaterialBuilder::Shading::LIT;
     mStringToShading["subsurface"] = MaterialBuilder::Shading::SUBSURFACE;
     mStringToShading["unlit"] = MaterialBuilder::Shading::UNLIT;
+    mStringToShading["specularGlossiness"] = MaterialBuilder::Shading::SPECULAR_GLOSSINESS;
 
     mStringToVariant["directionalLighting"] = filament::Variant::DIRECTIONAL_LIGHTING;
     mStringToVariant["dynamicLighting"] = filament::Variant::DYNAMIC_LIGHTING;

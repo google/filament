@@ -38,10 +38,11 @@ namespace filamat {
 
 static const char* getShadingDefine(filament::Shading shading) noexcept {
     switch (shading) {
-        case filament::Shading::LIT:         return "SHADING_MODEL_LIT";
-        case filament::Shading::UNLIT:       return "SHADING_MODEL_UNLIT";
-        case filament::Shading::SUBSURFACE:  return "SHADING_MODEL_SUBSURFACE";
-        case filament::Shading::CLOTH:       return "SHADING_MODEL_CLOTH";
+        case filament::Shading::LIT:                 return "SHADING_MODEL_LIT";
+        case filament::Shading::UNLIT:               return "SHADING_MODEL_UNLIT";
+        case filament::Shading::SUBSURFACE:          return "SHADING_MODEL_SUBSURFACE";
+        case filament::Shading::CLOTH:               return "SHADING_MODEL_CLOTH";
+        case filament::Shading::SPECULAR_GLOSSINESS: return "SHADING_MODEL_SPECULAR_GLOSSINESS";
     }
 }
 

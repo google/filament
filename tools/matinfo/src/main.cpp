@@ -243,6 +243,7 @@ const char* toString(Shading shadingModel) {
         case Shading::LIT: return "lit";
         case Shading::SUBSURFACE: return "subsurface";
         case Shading::CLOTH: return "cloth";
+        case Shading::SPECULAR_GLOSSINESS: return "specularGlossiness";
     }
 }
 

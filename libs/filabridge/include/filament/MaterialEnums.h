@@ -36,6 +36,7 @@ enum class Shading : uint8_t {
     LIT,                    //!< default, standard lighting
     SUBSURFACE,             //!< subsurface lighting model
     CLOTH,                  //!< cloth lighting model
+    SPECULAR_GLOSSINESS,    //!< legacy lighting model
 };
 
 /**

@@ -55,10 +55,11 @@ Material instance
 # Material models
 
 Filament materials can use one of the following material models:
-- Lit (or standard)
-- Subsurface
-- Cloth
-- Unlit
+- `lit` (or standard)
+- `subsurface`
+- `cloth`
+- `unlit`
+- `specularGlossiness` (legacy)
 
 ## Lit model
 
@@ -521,6 +522,13 @@ Figure [materialUnlit] shows an example of the unlit material model
 (click on the image to see a larger version).
 
 ![Figure [materialUnlit]: The unlit model is used to render debug information](images/screenshot_unlit.jpg)
+
+## Specular glossiness
+
+This alternative lighting model exists to comply with legacy standards.
+
+Similar to cloth, it encompasses all the parameters previously defined for the standard
+lit mode except for _metallic_ and _reflectance_, and adds a _sheenColor_ parameter.
 
 # Material definitions
 
