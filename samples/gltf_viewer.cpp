@@ -49,6 +49,7 @@ struct App {
     AssetLoader* loader;
     FilamentAsset* asset = nullptr;
     NameComponentManager* names;
+    MaterialProvider* materials;
     MaterialSource materialSource = GENERATE_SHADERS;
     bool actualSize = false;
 };
@@ -209,7 +210,9 @@ int main(int argc, char** argv) {
         app.engine = engine;
         app.names = new NameComponentManager(EntityManager::get());
         app.viewer = new SimpleViewer(engine, scene, view);
-        app.loader = AssetLoader::create({engine, app.names, app.materialSource});
+        app.materials = (app.materialSource == GENERATE_SHADERS) ?
+                createMaterialGenerator(engine) : createUbershaderLoader(engine);
+        app.loader = AssetLoader::create({engine, app.materials, app.names });
         if (filename.isEmpty()) {
             app.asset = app.loader->createAssetFromBinary(GLTF_DAMAGEDHELMET_DATA,
                     GLTF_DAMAGEDHELMET_SIZE);
@@ -236,7 +239,8 @@ int main(int argc, char** argv) {
         Fence::waitAndDestroy(engine->createFence());
         delete app.viewer;
         app.loader->destroyAsset(app.asset);
-        app.loader->destroyMaterials();
+        app.materials->destroyMaterials();
+        delete app.materials;
         AssetLoader::destroy(&app.loader);
         delete app.names;
     };

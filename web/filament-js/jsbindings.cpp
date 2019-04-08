@@ -53,6 +53,11 @@
 
 #include <geometry/SurfaceOrientation.h>
 
+#include <gltfio/Animator.h>
+#include <gltfio/AssetLoader.h>
+#include <gltfio/FilamentAsset.h>
+#include <gltfio/ResourceLoader.h>
+
 #include <image/KtxBundle.h>
 #include <image/KtxUtility.h>
 
@@ -76,6 +81,7 @@ using namespace emscripten;
 using namespace filament;
 using namespace filamesh;
 using namespace geometry;
+using namespace gltfio;
 using namespace image;
 
 // Many methods require a thin layer of C++ glue which is elegantly expressed with a lambda.
@@ -92,24 +98,26 @@ using namespace image;
 #define BIND(T) template<> void raw_destructor<T>(T* ptr) {}
 namespace emscripten {
     namespace internal {
-        BIND(Engine)
-        BIND(SwapChain)
-        BIND(Renderer)
-        BIND(View)
-        BIND(Scene)
+        BIND(Animator)
         BIND(Camera)
-        BIND(LightManager)
-        BIND(RenderableManager)
-        BIND(TransformManager)
-        BIND(VertexBuffer)
+        BIND(Engine)
+        BIND(FilamentAsset)
         BIND(IndexBuffer)
         BIND(IndirectLight)
+        BIND(LightManager)
         BIND(Material)
         BIND(MaterialInstance)
+        BIND(RenderableManager)
+        BIND(Renderer)
+        BIND(Scene)
         BIND(Skybox)
+        BIND(SwapChain)
         BIND(Texture)
+        BIND(TransformManager)
         BIND(utils::Entity)
         BIND(utils::EntityManager)
+        BIND(VertexBuffer)
+        BIND(View)
     }
 }
 #undef BIND
@@ -1203,5 +1211,35 @@ class_<SurfaceOrientation>("SurfaceOrientation")
                 utils::slog.e << "Unsupported quaternion type." << utils::io::endl;
         }
     }), allow_raw_pointers());
+
+class_<Animator>("Animator")
+    .function("applyAnimation", &Animator::applyAnimation)
+    .function("updateBoneMatrices", &Animator::updateBoneMatrices)
+    .function("getAnimationCount", &Animator::getAnimationCount)
+    .function("getAnimationDuration", &Animator::getAnimationDuration)
+    .function("getAnimationName", EMBIND_LAMBDA(std::string, (Animator* self, size_t index), {
+        return std::string(self->getAnimationName(index));
+    }), allow_raw_pointers());
+
+class_<FilamentAsset>("FilamentAsset")
+    .function("getEntities", EMBIND_LAMBDA(std::vector<utils::Entity>, (FilamentAsset* self), {
+        const utils::Entity* ptr = self->getEntities();
+        return std::vector<utils::Entity>(ptr, ptr + self->getEntityCount());
+    }), allow_raw_pointers())
+
+    .function("getRoot", &FilamentAsset::getRoot)
+
+    .function("getMaterialInstances", EMBIND_LAMBDA(std::vector<const MaterialInstance*>,
+            (FilamentAsset* self), {
+        const filament::MaterialInstance* const* ptr = self->getMaterialInstances();
+        return std::vector<const MaterialInstance*>(ptr, ptr + self->getMaterialInstanceCount());
+    }), allow_raw_pointers())
+
+    // TODO: expose buffer bindings and texture bindings
+
+    .function("getBoundingBox", &FilamentAsset::getBoundingBox)
+    .function("getAnimator", &FilamentAsset::getAnimator, allow_raw_pointers())
+    .function("getWireframe", &FilamentAsset::getWireframe)
+    .function("releaseSourceData", &FilamentAsset::releaseSourceData);
 
 } // EMSCRIPTEN_BINDINGS
