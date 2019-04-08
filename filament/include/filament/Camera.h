@@ -250,8 +250,8 @@ public:
 
     /** Sets the camera's view matrix
      *
-     * @param eye       The point in world space the camera is looking at.
-     * @param center    The position of the camera in world space.
+     * @param eye       The position of the camera in world space.
+     * @param center    The point in world space the camera is looking at.
      * @param up        A unit vector denoting the camera's "up" direction.
      */
     void lookAt(const math::float3& eye,

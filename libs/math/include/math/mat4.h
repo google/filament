@@ -503,7 +503,7 @@ constexpr TMat44<T> TMat44<T>::perspective(T fov, T aspect, T near, T far, TMat4
 
 /*
  * Returns a matrix representing the pose of a virtual camera looking towards -Z in its
- * local Y-up coordinate system. "eye" is where the camera is located, "center" is the points its
+ * local Y-up coordinate system. "eye" is where the camera is located, "center" is the point it's
  * looking at and "up" defines where the Y axis of the camera's local coordinate system is.
  */
 template <typename T>
