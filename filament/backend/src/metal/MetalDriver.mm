@@ -76,6 +76,10 @@ void MetalDriver::debugCommand(const char *methodName) {
 void MetalDriver::beginFrame(int64_t monotonic_clock_ns, uint32_t frameId) {
     mContext->framePool = [[NSAutoreleasePool alloc] init];
     mContext->currentCommandBuffer = [mContext->commandQueue commandBuffer];
+
+    [mContext->currentCommandBuffer addCompletedHandler:^(id <MTLCommandBuffer> buffer) {
+        mContext->resourceTracker.clearResources(buffer);
+    }];
 }
 
 void MetalDriver::setPresentationTime(int64_t monotonic_clock_ns) {
@@ -679,11 +683,11 @@ void MetalDriver::draw(backend::PipelineState ps, Handle<HwRenderPrimitive> rph)
     NSUInteger offsets[Program::UNIFORM_BINDING_COUNT] = { 0 };
 
     enumerateBoundUniformBuffers([&uniformsToBind, &offsets](const UniformBufferState& state,
-            const MetalUniformBuffer* uniform, uint32_t index) {
+            MetalUniformBuffer* uniform, uint32_t index) {
         // getGpuBuffer() might return nil, which means there isn't a device allocation for this
         // uniform. In this case, we'll update the uniform below with our CPU-side buffer via
         // setVertexBytes and setFragmentBytes.
-        id<MTLBuffer> gpuBuffer = uniform->getGpuBuffer();
+        id<MTLBuffer> gpuBuffer = uniform->getGpuBufferForDraw();
         if (gpuBuffer == nil) {
             return;
         }
@@ -790,14 +794,13 @@ void MetalDriver::enumerateSamplerGroups(
 }
 
 void MetalDriver::enumerateBoundUniformBuffers(
-        const std::function<void(const UniformBufferState&, const MetalUniformBuffer*,
-        uint32_t)>& f) {
+        const std::function<void(const UniformBufferState&, MetalUniformBuffer*, uint32_t)>& f) {
     for (uint32_t i = 0; i < Program::UNIFORM_BINDING_COUNT; i++) {
         auto& thisUniform = mContext->uniformState[i];
         if (!thisUniform.bound) {
             continue;
         }
-        const auto* uniform = handle_const_cast<MetalUniformBuffer>(mHandleMap, thisUniform.ubh);
+        auto* uniform = handle_cast<MetalUniformBuffer>(mHandleMap, thisUniform.ubh);
         f(thisUniform, uniform, i);
     }
 }

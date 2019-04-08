@@ -96,6 +96,7 @@ if (FILAMENT_SUPPORTS_METAL)
             src/metal/MetalContext.mm
             src/metal/MetalDriver.mm
             src/metal/MetalHandles.mm
+            src/metal/MetalResourceTracker.cpp
             src/metal/MetalState.mm
             src/metal/PlatformMetal.mm
     )

@@ -18,6 +18,8 @@
 #define TNT_METALCONTEXT_H
 
 #include "MetalBufferPool.h"
+#include "MetalResourceTracker.h"
+#include "MetalState.h"
 #include "MetalState.h"
 
 #include <Metal/Metal.h>
@@ -48,6 +50,9 @@ struct MetalContext {
     // Single use, re-created each frame.
     id<MTLCommandBuffer> currentCommandBuffer = nullptr;
     id<MTLRenderCommandEncoder> currentCommandEncoder = nullptr;
+
+    // Tracks resources used by command buffers.
+    MetalResourceTracker resourceTracker;
 
     RenderPassFlags currentRenderPassFlags;
     MetalRenderTarget* currentRenderTarget = nullptr;
