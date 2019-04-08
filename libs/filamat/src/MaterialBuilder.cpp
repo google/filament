@@ -330,7 +330,6 @@ void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
 
     info.isLit = isLit();
     info.hasDoubleSidedCapability = mDoubleSidedCapability;
-    info.isDoubleSided = mDoubleSided;
     info.hasExternalSamplers = hasExternalSampler();
     info.curvatureToRoughness = mCurvatureToRoughness;
     info.limitOverInterpolation = mLimitOverInterpolation;
