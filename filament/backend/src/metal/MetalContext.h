@@ -20,7 +20,6 @@
 #include "MetalBufferPool.h"
 #include "MetalResourceTracker.h"
 #include "MetalState.h"
-#include "MetalState.h"
 
 #include <Metal/Metal.h>
 #include <QuartzCore/QuartzCore.h>
