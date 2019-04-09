@@ -31,7 +31,7 @@ void getPixelParams(const MaterialInputs material, out PixelParams pixel) {
     // This is from KHR_materials_pbrSpecularGlossiness.
     vec3 specular = material.sheenColor;
     float maxSpecularComponent = max(max(specular.r, specular.g), specular.b);
-    pixel.diffuseColor =  baseColor.rgb * (1.0 - maxSpecularComponent);
+    pixel.diffuseColor = baseColor.rgb * (1.0 - maxSpecularComponent);
     pixel.f0 = specular;
 #elif !defined(SHADING_MODEL_CLOTH)
     float metallic = material.metallic;
