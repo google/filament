@@ -58,6 +58,7 @@ counter-increment: h6;margin-right:10px}</style><style>.hljs{display:block;overf
 &#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialmodels/clothmodel/sheencolor" class="level3"><span class="tocNumber">3.3.1&#xA0; </span>Sheen color</a><br>
 &#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialmodels/clothmodel/subsurfacecolor" class="level3"><span class="tocNumber">3.3.2&#xA0; </span>Subsurface color</a><br>
 &#xA0;&#xA0;<a href="#materialmodels/unlitmodel" class="level2"><span class="tocNumber">3.4&#xA0; </span>Unlit model</a><br>
+&#xA0;&#xA0;<a href="#materialmodels/specularglossiness" class="level2"><span class="tocNumber">3.5&#xA0; </span>Specular glossiness</a><br>
 <a href="#materialdefinitions" class="level1"><span class="tocNumber">4&#xA0; </span>Material definitions</a><br>
 &#xA0;&#xA0;<a href="#materialdefinitions/format" class="level2"><span class="tocNumber">4.1&#xA0; </span>Format</a><br>
 &#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialdefinitions/format/differenceswithjson" class="level3"><span class="tocNumber">4.1.1&#xA0; </span>Differences with JSON</a><br>
@@ -186,7 +187,9 @@ Filament materials can use one of the following material models:
 </li>
 <li class="minus">Cloth
 </li>
-<li class="minus">Unlit</li></ul>
+<li class="minus">Unlit
+</li>
+<li class="minus">Specular glossiness (legacy)</li></ul>
 
 <p></p>
 <a class="target" name="litmodel">&#xA0;</a><a class="target" name="materialmodels/litmodel">&#xA0;</a><a class="target" name="toc3.1">&#xA0;</a><h2>Lit model</h2>
@@ -833,6 +836,38 @@ blending mode specified by the <code>postLightingBlending</code> material option
 </p><center><div class="image" style><a href="images/screenshot_unlit.jpg" target="_blank"><img class="markdeep" src="images/screenshot_unlit.jpg"></a><div class="imagecaption"><a class="target" name="figure_materialunlit">&#xA0;</a><b style="font-style:normal;">Figure&#xA0;21:</b> The unlit model is used to render debug information</div></div></center>
 
 <p></p>
+<a class="target" name="specularglossiness">&#xA0;</a><a class="target" name="materialmodels/specularglossiness">&#xA0;</a><a class="target" name="toc3.5">&#xA0;</a><h2>Specular glossiness</h2>
+<p>
+
+
+This alternative lighting model exists to comply with legacy standards.
+
+</p><p>
+
+Similar to cloth, it encompasses all the parameters previously defined for the standard
+lit mode except for <code>metallic</code> and <code>reflectance</code>, and adds a <code>sheenColor</code> parameter. The sheen
+color to directly control the <em class="underscore">specular color</em> of the material.
+
+</p><p>
+
+This is not a physically-based formulation, so we do not recommend using the <code>specularGlossiness</code>
+model except when loading legacy assets.
+</p><div class="table">
+<table class="table"><tbody><tr><th style="text-align:right"> Parameter </th><th style="text-align:left"> Definition </th></tr>
+<tr><td style="text-align:right"> <strong class="asterisk">baseColor</strong> </td><td style="text-align:left"> Surface diffuse color </td></tr>
+<tr><td style="text-align:right"> <strong class="asterisk">sheenColor</strong> </td><td style="text-align:left"> Surface specular color </td></tr>
+</tbody></table><div class="tablecaption"><a class="target" name="table_glossinessproperties">&#xA0;</a><b style="font-style:normal;">Table&#xA0;10:</b> Properties of the specular-glossiness shading model</div></div>
+
+<p></p><p>
+
+The type and range of each property is described in <a href="#table_glossinesspropertiestypes">table&#xA0;11</a>.
+</p><div class="table">
+<table class="table"><tbody><tr><th style="text-align:right"> Property </th><th style="text-align:center"> Type </th><th style="text-align:center"> Range </th><th style="text-align:left"> Note </th></tr>
+<tr><td style="text-align:right"> <strong class="asterisk">baseColor</strong> </td><td style="text-align:center"> float4 </td><td style="text-align:center"> [0..1] </td><td style="text-align:left"> Pre-multiplied linear RGB </td></tr>
+<tr><td style="text-align:right"> <strong class="asterisk">sheenColor</strong> </td><td style="text-align:center"> float3 </td><td style="text-align:center"> [0..1] </td><td style="text-align:left"> Linear RGB </td></tr>
+</tbody></table><div class="tablecaption"><a class="target" name="table_glossinesspropertiestypes">&#xA0;</a><b style="font-style:normal;">Table&#xA0;11:</b> Range and type of the specular-glossiness model&apos;s properties</div></div>
+
+<p></p>
 <a class="target" name="materialdefinitions">&#xA0;</a><a class="target" name="materialdefinitions">&#xA0;</a><a class="target" name="toc4">&#xA0;</a><h1>Material definitions</h1>
 <p>
 
@@ -985,7 +1020,7 @@ non-shader data.
 
 </p><dl><table><tbody><tr valign="top"><td><dt>Type</dt></td><td><dd><p>     <code>string</code>
 
-</p></dd></td></tr><tr valign="top"><td><dt>Value</dt></td><td><dd><p>      Any of <code>lit</code>, <code>subsurface</code>, <code>cloth</code>, <code>unlit</code>. Defaults to <code>lit</code>.
+</p></dd></td></tr><tr valign="top"><td><dt>Value</dt></td><td><dd><p>      Any of <code>lit</code>, <code>subsurface</code>, <code>cloth</code>, <code>unlit</code>, <code>specularGlossiness</code>. Defaults to <code>lit</code>.
 
 </p></dd></td></tr><tr valign="top"><td><dt>Description</dt></td><td><dd><p>      Selects the material model as described in the <a href="#materialmodels">Material models</a> section.
 
@@ -1004,7 +1039,7 @@ non-shader data.
 
 </p></dd><dt>Value</dt><dd><p>      Each entry is an object with the properties <code>name</code> and <code>type</code>, both of <code>string</code> type. The
       name must be a valid GLSL identifier. The type must be one of the types described in
-      <a href="#table_materialparamstypes">table&#xA0;10</a>.
+      <a href="#table_materialparamstypes">table&#xA0;12</a>.
 
 </p></dd></dl><div class="table">
 <table class="table"><tbody><tr><th style="text-align:left"> Type </th><th style="text-align:left"> Description </th></tr>
@@ -1029,7 +1064,7 @@ non-shader data.
 <tr><td style="text-align:left"> sampler2d </td><td style="text-align:left"> 2D texture </td></tr>
 <tr><td style="text-align:left"> samplerExternal </td><td style="text-align:left"> External texture (platform-specific) </td></tr>
 <tr><td style="text-align:left"> samplerCubemap </td><td style="text-align:left"> Cubemap texture </td></tr>
-</tbody></table><div class="tablecaption"><a class="target" name="table_materialparamstypes">&#xA0;</a><b style="font-style:normal;">Table&#xA0;10:</b> Material parameter types</div></div>
+</tbody></table><div class="tablecaption"><a class="target" name="table_materialparamstypes">&#xA0;</a><b style="font-style:normal;">Table&#xA0;12:</b> Material parameter types</div></div>
 
 <p></p><p>
 
@@ -1331,9 +1366,10 @@ non-shader data.
 
 </p></dd><dt>Value</dt><dd><p>      <code>true</code> or <code>false</code>. Defaults to <code>false</code>.
 
-</p></dd><dt>Description</dt><dd><p>      Enables or disables two-sided rendering. When set to <code>true</code>, <code>culling</code> is automatically set to
-      <code>none</code>; if the triangle is back-facing, the triangle&apos;s normal is automatically flipped to
-      become front-facing.
+</p></dd><dt>Description</dt><dd><p>      Enables two-sided rendering and its capability to be toggled at run time. When set to <code>true</code>,
+      <code>culling</code> is automatically set to <code>none</code>; if the triangle is back-facing, the triangle&apos;s
+      normal is flipped to become front-facing. When explicitly set to <code>false</code>, this allows the
+      doubleSided property to be toggled at run time.
 
 </p></dd></dl><p></p><pre class="listing tilde"><code><span class="line">material {</span>
 <span class="line">    doubleSided : true</span>
@@ -1677,8 +1713,8 @@ plastic with bump mapping:
 <span class="line"></span>
 <span class="line">    <span class="hljs-comment">// no other field is available with the unlit shading model</span></span>
 <span class="line">    <span class="hljs-type">float</span>  roughness;           <span class="hljs-comment">// default: 1.0</span></span>
-<span class="line">    <span class="hljs-type">float</span>  metallic;            <span class="hljs-comment">// default: 0.0, not available with cloth</span></span>
-<span class="line">    <span class="hljs-type">float</span>  reflectance;         <span class="hljs-comment">// default: 0.5, not available with cloth</span></span>
+<span class="line"><span class="hljs-type">float</span>  metallic;            <span class="hljs-comment">// default: 0.0, not available with cloth or specularGlossiness</span></span>
+<span class="line"><span class="hljs-type">float</span>  reflectance;         <span class="hljs-comment">// default: 0.5, not available with cloth or specularGlossiness</span></span>
 <span class="line">    <span class="hljs-type">float</span>  ambientOcclusion;    <span class="hljs-comment">// default: 0.0</span></span>
 <span class="line"></span>
 <span class="line">    <span class="hljs-comment">// not available when the shading model is subsurface or cloth</span></span>
@@ -1694,8 +1730,11 @@ plastic with bump mapping:
 <span class="line">    float3 subsurfaceColor;     <span class="hljs-comment">// default: float3(1.0)</span></span>
 <span class="line"></span>
 <span class="line">    <span class="hljs-comment">// only available when the shading model is cloth</span></span>
-<span class="line">    float3 sheenColor;          <span class="hljs-comment">// default: sqrt(baseColor)</span></span>
+<span class="line">    float3 sheenColor;          <span class="hljs-comment">// default: sqrt(baseColor) for cloth</span></span>
 <span class="line">    float3 subsurfaceColor;     <span class="hljs-comment">// default: float3(0.0)</span></span>
+<span class="line"></span>
+<span class="line">    <span class="hljs-comment">// only available when the shading model is specularGlossiness</span></span>
+<span class="line">    float3 sheenColor;          <span class="hljs-comment">// default: float3(0.0)</span></span>
 <span class="line"></span>
 <span class="line">    <span class="hljs-comment">// not available when the shading model is unlit</span></span>
 <span class="line">    <span class="hljs-comment">// must be set before calling prepareMaterial()</span></span>
@@ -1828,7 +1867,7 @@ source material definition file.
 <p>
 
 
-The command line flags relevant to application development are described in <a href="#table_matcflags">table&#xA0;11</a>.
+The command line flags relevant to application development are described in <a href="#table_matcflags">table&#xA0;13</a>.
 </p><div class="table">
 <table class="table"><tbody><tr><th style="text-align:right"> Flag </th><th style="text-align:center"> Value </th><th style="text-align:left"> Usage </th></tr>
 <tr><td style="text-align:right"> <strong class="asterisk">-o</strong>, <strong class="asterisk">&#x2014;output</strong> </td><td style="text-align:center"> [path] </td><td style="text-align:left"> Specify the output file path </td></tr>
@@ -1837,7 +1876,7 @@ The command line flags relevant to application development are described in <a h
 <tr><td style="text-align:right"> <strong class="asterisk">-S</strong>, <strong class="asterisk">&#x2014;optimize-size</strong> </td><td style="text-align:center"> N/A </td><td style="text-align:left"> Optimize compiled material for size instead of just performance </td></tr>
 <tr><td style="text-align:right"> <strong class="asterisk">-r</strong>, <strong class="asterisk">&#x2014;reflect</strong> </td><td style="text-align:center"> parameters </td><td style="text-align:left"> Outputs the specified metadata as JSON </td></tr>
 <tr><td style="text-align:right"> <strong class="asterisk">-v</strong>, <strong class="asterisk">&#x2014;variant-filter</strong> </td><td style="text-align:center"> [variant] </td><td style="text-align:left"> Filters out the specified, comma-separated variants </td></tr>
-</tbody></table><div class="tablecaption"><a class="target" name="table_matcflags">&#xA0;</a><b style="font-style:normal;">Table&#xA0;11:</b> List of <code>matc</code> flags</div></div>
+</tbody></table><div class="tablecaption"><a class="target" name="table_matcflags">&#xA0;</a><b style="font-style:normal;">Table&#xA0;13:</b> List of <code>matc</code> flags</div></div>
 
 <p></p><p>
 

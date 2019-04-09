@@ -528,21 +528,16 @@ Figure [materialUnlit] shows an example of the unlit material model
 This alternative lighting model exists to comply with legacy standards.
 
 Similar to cloth, it encompasses all the parameters previously defined for the standard
-lit mode except for _metallic_ and _reflectance_, and adds a _sheenColor_ parameter. The sheen
-color is used to formulate the BRDF inputs as follows.
-
-```glsl
-pixel.diffuseColor = baseColor * (1.0 - max(sheen.r, sheen.g, sheen.b));
-pixel.f0 = sheen;
-```
+lit mode except for `metallic` and `reflectance`, and adds a `sheenColor` parameter. The sheen
+color to directly control the _specular color_ of the material.
 
 This is not a physically-based formulation, so we do not recommend using the `specularGlossiness`
 model except when loading legacy assets.
 
-Parameter      |      Definition
+Parameter             |      Definition
 ---------------------:|:---------------------
 **baseColor**         | Surface diffuse color
-**sheenColor**        | Specular tint (defaults to $\sqrt{baseColor}$)
+**sheenColor**        | Surface specular color
 [Table [glossinessProperties]: Properties of the specular-glossiness shading model]
 
 The type and range of each property is described in table [glossinessPropertiesTypes].
@@ -1435,11 +1430,11 @@ struct MaterialInputs {
     float3 subsurfaceColor;     // default: float3(1.0)
 
     // only available when the shading model is cloth
-    float3 sheenColor;          // default: sqrt(baseColor)
+    float3 sheenColor;          // default: sqrt(baseColor) for cloth
     float3 subsurfaceColor;     // default: float3(0.0)
 
     // only available when the shading model is specularGlossiness
-    float3 sheenColor;          // default: sqrt(baseColor)
+    float3 sheenColor;          // default: float3(0.0)
 
     // not available when the shading model is unlit
     // must be set before calling prepareMaterial()

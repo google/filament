@@ -128,11 +128,15 @@ void initMaterial(out MaterialInputs material) {
     material.subsurfaceColor = vec3(1.0);
 #endif
 
-#if defined(SHADING_MODEL_CLOTH) || defined(SHADING_MODEL_SPECULAR_GLOSSINESS)
+#if defined(SHADING_MODEL_CLOTH)
     material.sheenColor = sqrt(material.baseColor.rgb);
 #if defined(MATERIAL_HAS_SUBSURFACE_COLOR)
     material.subsurfaceColor = vec3(0.0);
 #endif
+#endif
+
+#if defined(SHADING_MODEL_SPECULAR_GLOSSINESS)
+    material.sheenColor = vec3(0.0);
 #endif
 
 #if defined(MATERIAL_HAS_NORMAL)
