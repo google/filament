@@ -7,6 +7,10 @@ material {
     doubleSided : false,
     flipUV : false,
     parameters : [
+
+        { type : float3, name : specularFactor },
+        { type : float, name : glossinessFactor },
+
         // Base Color
         { type : int, name : baseColorIndex },
         { type : float4, name : baseColorFactor },
@@ -42,7 +46,7 @@ material {
 
 fragment {
     void material(inout MaterialInputs material) {
-        float2 uvs[2];// = { getUV0(), getUV1() };
+        float2 uvs[2];
         uvs[0] = getUV0();
         uvs[1] = getUV1();
 
@@ -72,16 +76,41 @@ fragment {
 
         #if !defined(SHADING_MODEL_UNLIT)
             material.roughness = materialParams.roughnessFactor;
-            material.metallic = materialParams.metallicFactor;
+
+            #if defined(SHADING_MODEL_LIT)
+                material.metallic = materialParams.metallicFactor;
+            #endif
+
             material.emissive.rgb = materialParams.emissiveFactor.rgb;
             material.emissive.a = 3.0;
+
+            #if defined(SHADING_MODEL_SPECULAR_GLOSSINESS)
+                float glossiness = materialParams.glossinessFactor;
+                material.sheenColor = materialParams.specularFactor;
+            #endif
+
             if (materialParams.metallicRoughnessIndex > -1) {
                 float2 uv = uvs[materialParams.metallicRoughnessIndex];
                 uv = (vec3(uv, 1.0) * materialParams.metallicRoughnessUvMatrix).xy;
-                vec4 roughness = texture(materialParams_metallicRoughnessMap, uv);
-                material.roughness *= roughness.g;
-                material.metallic *= roughness.b;
+
+                #if defined(SHADING_MODEL_SPECULAR_GLOSSINESS)
+                    vec4 sg = texture(materialParams_metallicRoughnessMap, uv);
+                    material.sheenColor *= sg.rgb;
+                    glossiness *= sg.a;
+                #else
+                    vec4 mr = texture(materialParams_metallicRoughnessMap, uv);
+                    material.roughness *= mr.g;
+                    material.metallic *= mr.b;
+                #endif
             }
+
+            #if defined(SHADING_MODEL_SPECULAR_GLOSSINESS)
+                // According to the spec: "The glossiness property from specular-glossiness material
+                // model is related with the roughness property from the metallic-roughness material
+                // model and is defined as glossiness = 1 - roughness."
+                material.roughness = 1.0 - glossiness;
+            #endif
+
             if (materialParams.aoIndex > -1) {
                 float2 uv = uvs[materialParams.aoIndex];
                 uv = (vec3(uv, 1.0) * materialParams.occlusionUvMatrix).xy;
