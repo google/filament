@@ -21,7 +21,11 @@
 
 #include <gltfio/FilamentAsset.h>
 
+#include <backend/BufferDescriptor.h>
+
 #include <utils/Path.h>
+
+#include <tsl/robin_map.h>
 
 namespace gltfio {
 
@@ -55,9 +59,26 @@ struct ResourceConfiguration {
  */
 class ResourceLoader {
 public:
+    using BufferDescriptor = filament::backend::BufferDescriptor;
+
     ResourceLoader(const ResourceConfiguration& config);
     ~ResourceLoader();
+
+    /**
+     * Loads resources for the given asset from the filesystem or data cache and "finalizes" the
+     * asset by transforming the vertex data format if necessary, decoding image files, supplying
+     * tangent data, etc.
+     */
     bool loadResources(FilamentAsset* asset);
+
+    /**
+     * Adds raw resource data into a cache for platforms that do not have filesystem or network
+     * access.
+     */
+    void addResourceData(std::string url, BufferDescriptor&& buffer) {
+        mResourceCache.emplace(url, std::move(buffer));
+    }
+
 private:
     bool createTextures(details::FFilamentAsset* asset) const;
     void computeTangents(details::FFilamentAsset* asset) const;
@@ -65,6 +86,7 @@ private:
     void updateBoundingBoxes(details::FFilamentAsset* asset) const;
     details::AssetPool* mPool;
     const ResourceConfiguration mConfig;
+    tsl::robin_map<std::string, BufferDescriptor> mResourceCache;
 };
 
 } // namespace gltfio

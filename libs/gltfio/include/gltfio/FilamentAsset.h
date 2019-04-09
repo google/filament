@@ -83,14 +83,19 @@ public:
     /**
      * Lazily creates the animation engine or returns it from the cache.
      * The animator is owned by the asset and should not be manually deleted.
-    */
+     */
     Animator* getAnimator() noexcept;
 
     /**
      * Lazily creates a single LINES renderable that draws the transformed bounding-box hierarchy
      * for diagnostic purposes. The wireframe is owned by the asset so clients should not delete it.
-    */
+     */
     utils::Entity getWireframe() noexcept;
+
+    /**
+     * Returns the Filament engine associated with the AssetLoader that created this asset.
+     */
+    filament::Engine* getEngine() const noexcept;
 
     /**
      * Reclaims CPU-side memory for URI strings, binding lists, and raw animation data.

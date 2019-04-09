@@ -123,14 +123,64 @@ bool ResourceLoader::loadResources(FilamentAsset* asset) {
     FFilamentAsset* fasset = upcast(asset);
     mPool->addAsset(fasset);
     auto gltf = (cgltf_data*) fasset->mSourceAsset;
+    cgltf_options options {};
+
+    // For emscripten builds we have a custom implementation of cgltf_load_buffers which looks
+    // inside a cache of externally-supplied data blobs, rather than loading from the filesystem.
+
+    #if defined(__EMSCRIPTEN__)
+
+    if (gltf->buffers_count && !gltf->buffers[0].data && !gltf->buffers[0].uri && gltf->bin) {
+        if (gltf->bin_size < gltf->buffers[0].size) {
+            slog.e << "Bad size." << io::endl;
+            return false;
+        }
+        gltf->buffers[0].data = (void*) gltf->bin;
+    }
+
+    for (cgltf_size i = 0; i < gltf->buffers_count; ++i) {
+        if (gltf->buffers[i].data) {
+            continue;
+        }
+        const char* uri = gltf->buffers[i].uri;
+        if (uri == nullptr) {
+            continue;
+        }
+        if (strncmp(uri, "data:", 5) == 0) {
+            const char* comma = strchr(uri, ',');
+            if (comma && comma - uri >= 7 && strncmp(comma - 7, ";base64", 7) == 0) {
+                cgltf_result res = cgltf_load_buffer_base64(&options, gltf->buffers[i].size, comma + 1, &gltf->buffers[i].data);
+                if (res != cgltf_result_success) {
+                    slog.e << "Unable to load " << uri << io::endl;
+                    return false;
+                }
+            } else {
+                slog.e << "Unable to load " << uri << io::endl;
+                return false;
+            }
+        } else if (strstr(uri, "://") == nullptr) {
+            auto iter = mResourceCache.find(uri);
+            if (iter == mResourceCache.end()) {
+                slog.e << "Unable to load " << uri << io::endl;
+                return false;
+            }
+            gltf->buffers[i].data = iter->second.buffer;
+        } else {
+            slog.e << "Unable to load " << uri << io::endl;
+            return false;
+        }
+    }
+
+    #else
 
     // Read data from the file system and base64 URLs.
-    cgltf_options options {};
     cgltf_result result = cgltf_load_buffers(&options, gltf, mConfig.basePath.c_str());
     if (result != cgltf_result_success) {
         slog.e << "Unable to load resources." << io::endl;
         return false;
     }
+
+    #endif
 
     // To be robust against the glTF conformance suite, we optionally ensure that skinning weights
     // sum to 1.0 at every vertex. Note that if the same weights buffer is shared in multiple
@@ -219,39 +269,63 @@ bool ResourceLoader::createTextures(details::FFilamentAsset* asset) const {
     };
 
     // Decode textures and associate them with material instance parameters.
-    // To prevent needless re-decoding, we create a small map of Filament Texture objects where the
-    // map key is (usually) a pointer to a URI string. In the case of buffer view textures, the
-    // cache key is a data pointer.
+    // To prevent needless re-decoding, we create a couple maps of Filament Texture objects where
+    // the map keys are data pointers or URL strings.
     stbi_uc* texels;
     int width, height, comp;
     Texture* tex;
-    tsl::robin_map<const void*, Texture*> textures;
+
+    tsl::robin_map<const void*, Texture*> bufTextures;
+    tsl::robin_map<std::string, Texture*> urlTextures;
+
     const TextureBinding* texbindings = asset->getTextureBindings();
     for (size_t i = 0, n = asset->getTextureBindingCount(); i < n; ++i) {
         auto tb = texbindings[i];
+
+        // Check if the texture binding uses BufferView data (i.e. it does not have a URL).
         if (tb.data) {
             const uint8_t* data8 = tb.offset + (const uint8_t*) *tb.data;
-            tex = textures[data8];
+            tex = bufTextures[data8];
             if (!tex) {
                 texels = stbi_load_from_memory(data8, tb.totalSize, &width, &height, &comp, 4);
                 if (texels == nullptr) {
-                    slog.e << "Unable to decode texture. " << io::endl;
+                    slog.e << "Unable to decode texture." << io::endl;
                     return false;
                 }
-                textures[data8] = tex = createTexture(texels, width, height, tb.srgb);
+                bufTextures[data8] = tex = createTexture(texels, width, height, tb.srgb);
             }
+            tb.materialInstance->setParameter(tb.materialParameter, tex, tb.sampler);
+            continue;
+        }
+
+        // Check if we already created a Texture object for this URL.
+        tex = urlTextures[tb.uri];
+        if (tex) {
+            tb.materialInstance->setParameter(tb.materialParameter, tex, tb.sampler);
+            continue;
+        }
+
+        // Check the resource cache for this URL, otherwise load it from the file system.
+        auto iter = mResourceCache.find(tb.uri);
+        if (iter != mResourceCache.end()) {
+            const uint8_t* data8 = (const uint8_t*) iter->second.buffer;
+            texels = stbi_load_from_memory(data8, iter->second.size, &width, &height, &comp, 4);
         } else {
-            tex = textures[tb.uri];
-            if (!tex) {
+            #if defined(__EMSCRIPTEN__)
+                slog.e << "Unable to load texture: " << tb.uri << io::endl;
+                return false;
+            #else
                 utils::Path fullpath = this->mConfig.basePath + tb.uri;
                 texels = stbi_load(fullpath.c_str(), &width, &height, &comp, 4);
-                if (texels == nullptr) {
-                    slog.e << "Unable to decode texture: " << tb.uri << io::endl;
-                    return false;
-                }
-                textures[tb.uri] = tex = createTexture(texels, width, height, tb.srgb);
-            }
+            #endif
         }
+
+        if (texels == nullptr) {
+            slog.e << "Unable to decode texture: " << tb.uri << io::endl;
+            return false;
+        }
+
+        urlTextures[tb.uri] = tex = createTexture(texels, width, height, tb.srgb);
         tb.materialInstance->setParameter(tb.materialParameter, tex, tb.sampler);
     }
     return true;

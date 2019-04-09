@@ -71,6 +71,10 @@ utils::Entity FilamentAsset::getWireframe() noexcept {
     return upcast(this)->getWireframe();
 }
 
+Engine* FilamentAsset::getEngine() const noexcept {
+    return upcast(this)->getEngine();
+}
+
 void FilamentAsset::releaseSourceData() noexcept {
     return upcast(this)->releaseSourceData();
 }

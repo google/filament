@@ -522,6 +522,8 @@ void cgltf_node_transform_world(const cgltf_node* node, cgltf_float* out_matrix)
 cgltf_bool cgltf_accessor_read_float(const cgltf_accessor* accessor, cgltf_size index, cgltf_float* out, cgltf_size element_size);
 cgltf_size cgltf_accessor_read_index(const cgltf_accessor* accessor, cgltf_size index);
 
+cgltf_result cgltf_load_buffer_base64(const cgltf_options* options, cgltf_size size, const char* base64, void** out_data);
+
 #ifdef __cplusplus
 }
 #endif
@@ -876,7 +878,7 @@ static cgltf_result cgltf_load_buffer_file(const cgltf_options* options, cgltf_s
 	return cgltf_result_success;
 }
 
-static cgltf_result cgltf_load_buffer_base64(const cgltf_options* options, cgltf_size size, const char* base64, void** out_data)
+cgltf_result cgltf_load_buffer_base64(const cgltf_options* options, cgltf_size size, const char* base64, void** out_data)
 {
 	void* (*memory_alloc)(void*, cgltf_size) = options->memory_alloc ? options->memory_alloc : &cgltf_default_alloc;
 	void (*memory_free)(void*, void*) = options->memory_free ? options->memory_free : &cgltf_default_free;

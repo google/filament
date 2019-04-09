@@ -52,6 +52,7 @@ public:
     Material* mUnlitOpaqueMaterial;
     Material* mUnlitMaskedMaterial;
     Material* mUnlitTransparentMaterial;
+    Texture* mDummyTexture = nullptr;
 
     filament::Engine* mEngine;
 };
@@ -72,6 +73,17 @@ UbershaderLoader::UbershaderLoader(Engine* engine) : mEngine(engine) {
     mMaterials[i++] = mUnlitTransparentMaterial = Material::Builder()
         .package(GLTFRESOURCES_UNLIT_TRANSPARENT_DATA, GLTFRESOURCES_UNLIT_TRANSPARENT_SIZE)
         .build(*engine);
+
+    #ifdef EMSCRIPTEN
+    unsigned char texels[4] = {};
+    mDummyTexture = Texture::Builder()
+            .width(1).height(1)
+            .format(Texture::InternalFormat::RGBA8)
+            .build(*mEngine);
+    Texture::PixelBufferDescriptor pbd(texels, sizeof(texels), Texture::Format::RGBA,
+            Texture::Type::UBYTE);
+    mDummyTexture->setImage(*mEngine, 0, std::move(pbd));
+    #endif
 }
 
 size_t UbershaderLoader::getMaterialsCount() const noexcept {
@@ -87,6 +99,7 @@ void UbershaderLoader::destroyMaterials() {
         mEngine->destroy(material);
         material = nullptr;
     }
+    mEngine->destroy(mDummyTexture);
 }
 
 Material* UbershaderLoader::getMaterial(const MaterialKey& config) const {
@@ -128,6 +141,20 @@ MaterialInstance* UbershaderLoader::createMaterialInstance(MaterialKey* config, 
     mi->setParameter("normalUvMatrix", identity);
     mi->setParameter("occlusionUvMatrix", identity);
     mi->setParameter("emissiveUvMatrix", identity);
+
+    // Some WebGL implementations emit a warning at draw call time if the shader declares a sampler
+    // that has not been bound to a texture, even if the texture lookup is conditional. Therefore we
+    // need to ensure that every sampler parameter is bound to a dummy texture, even if it is never
+    // actually sampled from.
+    #ifdef EMSCRIPTEN
+    TextureSampler sampler;
+    mi->setParameter("normalMap", mDummyTexture, sampler);
+    mi->setParameter("baseColorMap", mDummyTexture, sampler);
+    mi->setParameter("metallicRoughnessMap", mDummyTexture, sampler);
+    mi->setParameter("occlusionMap", mDummyTexture, sampler);
+    mi->setParameter("emissiveMap", mDummyTexture, sampler);
+    #endif
+
     return mi;
 }
 
