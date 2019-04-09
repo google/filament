@@ -450,6 +450,7 @@ std::ostream& CodeGenerator::generateShaderLit(std::ostream& out, ShaderType typ
             case Shading::UNLIT:
                 assert("Lit shader generated with unlit shading model");
                 break;
+            case Shading::SPECULAR_GLOSSINESS:
             case Shading::LIT:
                 out << SHADERS_SHADING_MODEL_STANDARD_FS_DATA;
                 break;

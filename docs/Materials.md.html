@@ -59,6 +59,7 @@ Filament materials can use one of the following material models:
 - Subsurface
 - Cloth
 - Unlit
+- Specular glossiness (legacy)
 
 ## Lit model
 
@@ -522,6 +523,36 @@ Figure [materialUnlit] shows an example of the unlit material model
 
 ![Figure [materialUnlit]: The unlit model is used to render debug information](images/screenshot_unlit.jpg)
 
+## Specular glossiness
+
+This alternative lighting model exists to comply with legacy standards.
+
+Similar to cloth, it encompasses all the parameters previously defined for the standard
+lit mode except for _metallic_ and _reflectance_, and adds a _sheenColor_ parameter. The sheen
+color is used to formulate the BRDF inputs as follows.
+
+```glsl
+pixel.diffuseColor = baseColor * (1.0 - max(sheen.r, sheen.g, sheen.b));
+pixel.f0 = sheen;
+```
+
+This is not a physically-based formulation, so we do not recommend using the `specularGlossiness`
+model except when loading legacy assets.
+
+Parameter      |      Definition
+---------------------:|:---------------------
+**baseColor**         | Surface diffuse color
+**sheenColor**        | Specular tint (defaults to $\sqrt{baseColor}$)
+[Table [glossinessProperties]: Properties of the specular-glossiness shading model]
+
+The type and range of each property is described in table [glossinessPropertiesTypes].
+
+       Property       |   Type   |            Range         |           Note
+---------------------:|:--------:|:------------------------:|:-------------------------
+**baseColor**         | float4   |  [0..1]                  | Pre-multiplied linear RGB
+**sheenColor**        | float3   |  [0..1]                  | Linear RGB
+[Table [glossinessPropertiesTypes]: Range and type of the specular-glossiness model's properties]
+
 # Material definitions
 
 A material definition is a text file that describes all the information required by a material:
@@ -656,7 +687,7 @@ Type
 :    `string`
 
 Value
-:     Any of `lit`, `subsurface`, `cloth`, `unlit`. Defaults to `lit`.
+:     Any of `lit`, `subsurface`, `cloth`, `unlit`, `specularGlossiness`. Defaults to `lit`.
 
 Description
 :     Selects the material model as described in the Material models section.
@@ -1387,8 +1418,8 @@ struct MaterialInputs {
 
     // no other field is available with the unlit shading model
     float  roughness;           // default: 1.0
-    float  metallic;            // default: 0.0, not available with cloth
-    float  reflectance;         // default: 0.5, not available with cloth
+    float  metallic;            // default: 0.0, not available with cloth or specularGlossiness
+    float  reflectance;         // default: 0.5, not available with cloth or specularGlossiness
     float  ambientOcclusion;    // default: 0.0
 
     // not available when the shading model is subsurface or cloth
@@ -1406,6 +1437,9 @@ struct MaterialInputs {
     // only available when the shading model is cloth
     float3 sheenColor;          // default: sqrt(baseColor)
     float3 subsurfaceColor;     // default: float3(0.0)
+
+    // only available when the shading model is specularGlossiness
+    float3 sheenColor;          // default: sqrt(baseColor)
 
     // not available when the shading model is unlit
     // must be set before calling prepareMaterial()
