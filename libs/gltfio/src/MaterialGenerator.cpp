@@ -119,8 +119,8 @@ static std::string shaderFromKey(const MaterialKey& config) {
     if (!config.unlit) {
         if (config.useSpecularGlossiness) {
             shader += R"SHADER(
-                float glossiness = materialParams.glossinessFactor;
-                material.sheenColor = materialParams.specularFactor;
+                material.glossiness = materialParams.glossinessFactor;
+                material.specularColor = materialParams.specularFactor;
                 material.emissive.rgb = materialParams.emissiveFactor.rgb;
             )SHADER";
         } else {
@@ -139,8 +139,8 @@ static std::string shaderFromKey(const MaterialKey& config) {
             if (config.useSpecularGlossiness) {
                 shader += R"SHADER(
                     vec4 sg = texture(materialParams_metallicRoughnessMap, metallicRoughnessUV);
-                    material.sheenColor *= sg.rgb;
-                    glossiness *= sg.a;
+                    material.specularColor *= sg.rgb;
+                    material.glossiness *= sg.a;
                 )SHADER";
             } else {
                 shader += R"SHADER(
@@ -149,14 +149,6 @@ static std::string shaderFromKey(const MaterialKey& config) {
                     material.metallic *= mr.b;
                 )SHADER";
             }
-        }
-        if (config.useSpecularGlossiness) {
-            shader += R"SHADER(
-                // According to the spec: "The glossiness property from specular-glossiness material
-                // model is related with the roughness property from the metallic-roughness material
-                // model and is defined as glossiness = 1 - roughness."
-                material.roughness = 1.0 - glossiness;
-            )SHADER";
         }
         if (config.hasOcclusionTexture) {
             shader += "float2 aoUV = ${ao};\n";

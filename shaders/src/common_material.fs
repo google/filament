@@ -81,11 +81,16 @@ struct MaterialInputs {
     vec3  subsurfaceColor;
 #endif
 
-#if defined(SHADING_MODEL_CLOTH) || defined(SHADING_MODEL_SPECULAR_GLOSSINESS)
+#if defined(SHADING_MODEL_CLOTH)
     vec3  sheenColor;
 #if defined(MATERIAL_HAS_SUBSURFACE_COLOR)
     vec3  subsurfaceColor;
 #endif
+#endif
+
+#if defined(SHADING_MODEL_SPECULAR_GLOSSINESS)
+    vec3  specularColor;
+    float glossiness;
 #endif
 
 #if defined(MATERIAL_HAS_NORMAL)
@@ -136,7 +141,8 @@ void initMaterial(out MaterialInputs material) {
 #endif
 
 #if defined(SHADING_MODEL_SPECULAR_GLOSSINESS)
-    material.sheenColor = vec3(0.0);
+    material.glossiness = 0.0;
+    material.specularColor = vec3(0.0);
 #endif
 
 #if defined(MATERIAL_HAS_NORMAL)

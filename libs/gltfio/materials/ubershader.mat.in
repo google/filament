@@ -75,9 +75,9 @@ fragment {
         material.baseColor *= getColor();
 
         #if !defined(SHADING_MODEL_UNLIT)
-            material.roughness = materialParams.roughnessFactor;
 
             #if defined(SHADING_MODEL_LIT)
+                material.roughness = materialParams.roughnessFactor;
                 material.metallic = materialParams.metallicFactor;
             #endif
 
@@ -85,8 +85,8 @@ fragment {
             material.emissive.a = 3.0;
 
             #if defined(SHADING_MODEL_SPECULAR_GLOSSINESS)
-                float glossiness = materialParams.glossinessFactor;
-                material.sheenColor = materialParams.specularFactor;
+                material.glossiness = materialParams.glossinessFactor;
+                material.specularColor = materialParams.specularFactor;
             #endif
 
             if (materialParams.metallicRoughnessIndex > -1) {
@@ -95,21 +95,14 @@ fragment {
 
                 #if defined(SHADING_MODEL_SPECULAR_GLOSSINESS)
                     vec4 sg = texture(materialParams_metallicRoughnessMap, uv);
-                    material.sheenColor *= sg.rgb;
-                    glossiness *= sg.a;
+                    material.specularColor *= sg.rgb;
+                    material.glossiness *= sg.a;
                 #else
                     vec4 mr = texture(materialParams_metallicRoughnessMap, uv);
                     material.roughness *= mr.g;
                     material.metallic *= mr.b;
                 #endif
             }
-
-            #if defined(SHADING_MODEL_SPECULAR_GLOSSINESS)
-                // According to the spec: "The glossiness property from specular-glossiness material
-                // model is related with the roughness property from the metallic-roughness material
-                // model and is defined as glossiness = 1 - roughness."
-                material.roughness = 1.0 - glossiness;
-            #endif
 
             if (materialParams.aoIndex > -1) {
                 float2 uv = uvs[materialParams.aoIndex];
