@@ -40,19 +40,30 @@
 #   include <sys/ioctl.h>
 #   include <sys/stat.h>
 #   include <memory.h>
+#   include <dlfcn.h>
 #   include <linux/ashmem.h>
-#   define ASHMEM_DEVICE "/dev/ashmem"
+#   include <android/api-level.h>
+#   include <android/sharedmem.h>
 #endif
 
 namespace utils {
 
 #ifdef ANDROID
 
+#if __ANDROID_API__ >= 26
+
+// Starting with API 26 (Oreo) we have ASharedMemory
+int ashmem_create_region(const char *name, size_t size) {
+    return ASharedMemory_create(name, size);
+}
+
+#else
+
 static int __ashmem_open() {
     int ret;
     struct stat st;
 
-    int fd = open(ASHMEM_DEVICE, O_RDWR);
+    int fd = open("/dev/ashmem", O_RDWR);
     if (fd < 0) {
         return fd;
     }
@@ -74,8 +85,16 @@ static int __ashmem_open() {
 }
 
 int ashmem_create_region(const char *name, size_t size) {
-    int ret, save_errno;
 
+    // dynamically check if we have "ASharedMemory_create" (should be the case since 26 (Oreo))
+    using TASharedMemory_create = int(*)(const char *name, size_t size);
+    TASharedMemory_create pfnASharedMemory_create =
+            (TASharedMemory_create)dlsym(RTLD_DEFAULT, "ASharedMemory_create");
+    if (pfnASharedMemory_create) {
+        return pfnASharedMemory_create(name, size);
+    }
+
+    int ret, save_errno;
     int fd = __ashmem_open();
     if (fd < 0) {
         return fd;
@@ -104,6 +123,8 @@ error:
     errno = save_errno;
     return ret;
 }
+
+#endif // __ANDROID_API__ >= 26
 
 #elif defined(__unix__) || (defined(__APPLE__) && defined(__MACH__))
 
