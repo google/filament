@@ -51,6 +51,6 @@ void MetalResourceTracker::clearResources(CommandBuffer buffer) {
     mResources.erase(found);
 }
 
-}; // namespace metal
-}; // namespace backend
-}; // namespace filament
+} // namespace metal
+} // namespace backend
+} // namespace filament
