@@ -73,10 +73,13 @@ public:
     void copyIntoBuffer(void* src, size_t size);
 
     /**
+     * Denotes that this uniform is used for a draw call ensuring that its allocation remains valid
+     * until the end of the current frame.
+     *
      * @return The MTLBuffer representing the current state of the uniform to bind, or nil if there
      * is no device allocation.
      */
-    id<MTLBuffer> getGpuBuffer() const;
+    id<MTLBuffer> getGpuBufferForDraw();
 
     /**
      * @return A pointer to the CPU buffer holding the uniform data or nullptr if there isn't one.

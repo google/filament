@@ -145,7 +145,7 @@ private:
     void enumerateSamplerGroups(const MetalProgram* program,
             const std::function<void(const SamplerGroup::Sampler*, size_t)>& f);
     void enumerateBoundUniformBuffers(const std::function<void(const UniformBufferState&,
-            const MetalUniformBuffer*, uint32_t)>& f);
+            MetalUniformBuffer*, uint32_t)>& f);
 
 };
 
