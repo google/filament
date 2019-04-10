@@ -525,19 +525,11 @@ Figure [materialUnlit] shows an example of the unlit material model
 
 ## Specular glossiness
 
-This alternative lighting model exists to comply with legacy standards.
+This alternative lighting model exists to comply with legacy standards. Since it is not a
+physically-based formulation, we do not recommend using it except when loading legacy assets.
 
-This encompasses all the parameters previously defined for the standard lit mode except for
-_metallic_ and _reflectance_, and adds parameters for _specularColor_ and _glossiness_. The specular
-color is used to formulate the BRDF inputs as follows.
-
-```glsl
-pixel.diffuseColor = baseColor * (1.0 - max(specularColor.r, specularColor.g, specularColor.b));
-pixel.f0 = specularColor;
-```
-
-This is not a physically-based formulation, so we do not recommend using the `specularGlossiness`
-model except when loading legacy assets.
+This model encompasses the parameters previously defined for the standard lit mode except for
+_metallic_, _reflectance_, and _roughness_. It adds parameters for _specularColor_ and _glossiness_.
 
 Parameter             |      Definition
 ---------------------:|:---------------------

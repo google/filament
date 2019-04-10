@@ -60,7 +60,9 @@ float getNdotV() {
 struct MaterialInputs {
     vec4  baseColor;
 #if !defined(SHADING_MODEL_UNLIT)
+#if !defined(SHADING_MODEL_SPECULAR_GLOSSINESS)
     float roughness;
+#endif
 #if !defined(SHADING_MODEL_CLOTH) && !defined(SHADING_MODEL_SPECULAR_GLOSSINESS)
     float metallic;
     float reflectance;
@@ -108,7 +110,9 @@ struct MaterialInputs {
 void initMaterial(out MaterialInputs material) {
     material.baseColor = vec4(1.0);
 #if !defined(SHADING_MODEL_UNLIT)
+#if !defined(SHADING_MODEL_SPECULAR_GLOSSINESS)
     material.roughness = 1.0;
+#endif
 #if !defined(SHADING_MODEL_CLOTH) && !defined(SHADING_MODEL_SPECULAR_GLOSSINESS)
     material.metallic = 0.0;
     material.reflectance = 0.5;
