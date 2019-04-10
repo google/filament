@@ -423,11 +423,18 @@ static bool processShading(MaterialBuilder& builder, const JsonishValue& value) 
 }
 
 static bool processVariantFilter(MaterialBuilder& builder, const JsonishValue& value) {
+
+    // TODO: replace these with filament::Variant
+    static constexpr uint8_t DIRECTIONAL_LIGHTING   = 0x01;
+    static constexpr uint8_t DYNAMIC_LIGHTING       = 0x02;
+    static constexpr uint8_t SHADOW_RECEIVER        = 0x04;
+    static constexpr uint8_t SKINNING               = 0x08;
+
     static const std::unordered_map<std::string, uint8_t> strToEnum {
-        { "directionalLighting", filament::Variant::DIRECTIONAL_LIGHTING },
-        { "dynamicLighting", filament::Variant::DYNAMIC_LIGHTING },
-        { "shadowReceiver", filament::Variant::SHADOW_RECEIVER },
-        { "skinning", filament::Variant::SKINNING },
+        { "directionalLighting", DIRECTIONAL_LIGHTING },
+        { "dynamicLighting", DYNAMIC_LIGHTING },
+        { "shadowReceiver", SHADOW_RECEIVER },
+        { "skinning", SKINNING },
     };
     uint8_t variantFilter = 0;
     const JsonishArray* jsonArray = value.toJsonArray();
