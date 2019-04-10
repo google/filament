@@ -840,22 +840,18 @@ blending mode specified by the <code>postLightingBlending</code> material option
 <p>
 
 
-This alternative lighting model exists to comply with legacy standards.
+This alternative lighting model exists to comply with legacy standards. Since it is not a
+physically-based formulation, we do not recommend using it except when loading legacy assets.
 
 </p><p>
 
-Similar to cloth, it encompasses all the parameters previously defined for the standard
-lit mode except for <code>metallic</code> and <code>reflectance</code>, and adds a <code>sheenColor</code> parameter. The sheen
-color to directly control the <em class="underscore">specular color</em> of the material.
-
-</p><p>
-
-This is not a physically-based formulation, so we do not recommend using the <code>specularGlossiness</code>
-model except when loading legacy assets.
+This model encompasses the parameters previously defined for the standard lit mode except for
+<em class="underscore">metallic</em>, <em class="underscore">reflectance</em>, and <em class="underscore">roughness</em>. It adds parameters for <em class="underscore">specularColor</em> and <em class="underscore">glossiness</em>.
 </p><div class="table">
 <table class="table"><tbody><tr><th style="text-align:right"> Parameter </th><th style="text-align:left"> Definition </th></tr>
 <tr><td style="text-align:right"> <strong class="asterisk">baseColor</strong> </td><td style="text-align:left"> Surface diffuse color </td></tr>
-<tr><td style="text-align:right"> <strong class="asterisk">sheenColor</strong> </td><td style="text-align:left"> Surface specular color </td></tr>
+<tr><td style="text-align:right"> <strong class="asterisk">specularColor</strong> </td><td style="text-align:left"> Specular tint (defaults to black) </td></tr>
+<tr><td style="text-align:right"> <strong class="asterisk">glossiness</strong> </td><td style="text-align:left"> Glossiness (defaults to 0.0) </td></tr>
 </tbody></table><div class="tablecaption"><a class="target" name="table_glossinessproperties">&#xA0;</a><b style="font-style:normal;">Table&#xA0;10:</b> Properties of the specular-glossiness shading model</div></div>
 
 <p></p><p>
@@ -864,7 +860,8 @@ The type and range of each property is described in <a href="#table_glossinesspr
 </p><div class="table">
 <table class="table"><tbody><tr><th style="text-align:right"> Property </th><th style="text-align:center"> Type </th><th style="text-align:center"> Range </th><th style="text-align:left"> Note </th></tr>
 <tr><td style="text-align:right"> <strong class="asterisk">baseColor</strong> </td><td style="text-align:center"> float4 </td><td style="text-align:center"> [0..1] </td><td style="text-align:left"> Pre-multiplied linear RGB </td></tr>
-<tr><td style="text-align:right"> <strong class="asterisk">sheenColor</strong> </td><td style="text-align:center"> float3 </td><td style="text-align:center"> [0..1] </td><td style="text-align:left"> Linear RGB </td></tr>
+<tr><td style="text-align:right"> <strong class="asterisk">specularColor</strong> </td><td style="text-align:center"> float3 </td><td style="text-align:center"> [0..1] </td><td style="text-align:left"> Linear RGB </td></tr>
+<tr><td style="text-align:right"> <strong class="asterisk">glossiness</strong> </td><td style="text-align:center"> float </td><td style="text-align:center"> [0..1] </td><td style="text-align:left"> Inverse of roughness </td></tr>
 </tbody></table><div class="tablecaption"><a class="target" name="table_glossinesspropertiestypes">&#xA0;</a><b style="font-style:normal;">Table&#xA0;11:</b> Range and type of the specular-glossiness model&apos;s properties</div></div>
 
 <p></p>
@@ -1713,8 +1710,8 @@ plastic with bump mapping:
 <span class="line"></span>
 <span class="line">    <span class="hljs-comment">// no other field is available with the unlit shading model</span></span>
 <span class="line">    <span class="hljs-type">float</span>  roughness;           <span class="hljs-comment">// default: 1.0</span></span>
-<span class="line"><span class="hljs-type">float</span>  metallic;            <span class="hljs-comment">// default: 0.0, not available with cloth or specularGlossiness</span></span>
-<span class="line"><span class="hljs-type">float</span>  reflectance;         <span class="hljs-comment">// default: 0.5, not available with cloth or specularGlossiness</span></span>
+<span class="line">    <span class="hljs-type">float</span>  metallic;            <span class="hljs-comment">// default: 0.0, not available with cloth or specularGlossiness</span></span>
+<span class="line">    <span class="hljs-type">float</span>  reflectance;         <span class="hljs-comment">// default: 0.5, not available with cloth or specularGlossiness</span></span>
 <span class="line">    <span class="hljs-type">float</span>  ambientOcclusion;    <span class="hljs-comment">// default: 0.0</span></span>
 <span class="line"></span>
 <span class="line">    <span class="hljs-comment">// not available when the shading model is subsurface or cloth</span></span>
@@ -1730,11 +1727,12 @@ plastic with bump mapping:
 <span class="line">    float3 subsurfaceColor;     <span class="hljs-comment">// default: float3(1.0)</span></span>
 <span class="line"></span>
 <span class="line">    <span class="hljs-comment">// only available when the shading model is cloth</span></span>
-<span class="line">    float3 sheenColor;          <span class="hljs-comment">// default: sqrt(baseColor) for cloth</span></span>
+<span class="line">    float3 sheenColor;          <span class="hljs-comment">// default: sqrt(baseColor)</span></span>
 <span class="line">    float3 subsurfaceColor;     <span class="hljs-comment">// default: float3(0.0)</span></span>
 <span class="line"></span>
 <span class="line">    <span class="hljs-comment">// only available when the shading model is specularGlossiness</span></span>
-<span class="line">    float3 sheenColor;          <span class="hljs-comment">// default: float3(0.0)</span></span>
+<span class="line">    float3 specularColor;       <span class="hljs-comment">// default: float3(0.0)</span></span>
+<span class="line">    <span class="hljs-type">float</span>  glossiness;          <span class="hljs-comment">// default: 0.0</span></span>
 <span class="line"></span>
 <span class="line">    <span class="hljs-comment">// not available when the shading model is unlit</span></span>
 <span class="line">    <span class="hljs-comment">// must be set before calling prepareMaterial()</span></span>
