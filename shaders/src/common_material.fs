@@ -60,7 +60,9 @@ float getNdotV() {
 struct MaterialInputs {
     vec4  baseColor;
 #if !defined(SHADING_MODEL_UNLIT)
+#if !defined(SHADING_MODEL_SPECULAR_GLOSSINESS)
     float roughness;
+#endif
 #if !defined(SHADING_MODEL_CLOTH) && !defined(SHADING_MODEL_SPECULAR_GLOSSINESS)
     float metallic;
     float reflectance;
@@ -81,11 +83,16 @@ struct MaterialInputs {
     vec3  subsurfaceColor;
 #endif
 
-#if defined(SHADING_MODEL_CLOTH) || defined(SHADING_MODEL_SPECULAR_GLOSSINESS)
+#if defined(SHADING_MODEL_CLOTH)
     vec3  sheenColor;
 #if defined(MATERIAL_HAS_SUBSURFACE_COLOR)
     vec3  subsurfaceColor;
 #endif
+#endif
+
+#if defined(SHADING_MODEL_SPECULAR_GLOSSINESS)
+    vec3  specularColor;
+    float glossiness;
 #endif
 
 #if defined(MATERIAL_HAS_NORMAL)
@@ -103,7 +110,9 @@ struct MaterialInputs {
 void initMaterial(out MaterialInputs material) {
     material.baseColor = vec4(1.0);
 #if !defined(SHADING_MODEL_UNLIT)
+#if !defined(SHADING_MODEL_SPECULAR_GLOSSINESS)
     material.roughness = 1.0;
+#endif
 #if !defined(SHADING_MODEL_CLOTH) && !defined(SHADING_MODEL_SPECULAR_GLOSSINESS)
     material.metallic = 0.0;
     material.reflectance = 0.5;
@@ -136,7 +145,8 @@ void initMaterial(out MaterialInputs material) {
 #endif
 
 #if defined(SHADING_MODEL_SPECULAR_GLOSSINESS)
-    material.sheenColor = vec3(0.0);
+    material.glossiness = 0.0;
+    material.specularColor = vec3(0.0);
 #endif
 
 #if defined(MATERIAL_HAS_NORMAL)

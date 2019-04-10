@@ -46,7 +46,7 @@ struct PixelParams {
     float subsurfacePower;
 #endif
 
-#if (defined(SHADING_MODEL_CLOTH) || defined(SHADING_MODEL_SPECULAR_GLOSSINESS)) && defined(MATERIAL_HAS_SUBSURFACE_COLOR)
+#if defined(SHADING_MODEL_CLOTH) && defined(MATERIAL_HAS_SUBSURFACE_COLOR)
     vec3  subsurfaceColor;
 #endif
 };
