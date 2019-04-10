@@ -29,178 +29,56 @@ using namespace utils;
 
 namespace matc {
 
-static constexpr const char* PARAM_KEY_NAME                     = "name";
-static constexpr const char* PARAM_KEY_INTERPOLATION            = "interpolation";
-static constexpr const char* PARAM_KEY_PARAMETERS               = "parameters";
-static constexpr const char* PARAM_KEY_VARIABLES                = "variables";
-static constexpr const char* PARAM_KEY_REQUIRES                 = "requires";
-static constexpr const char* PARAM_KEY_BLENDING                 = "blending";
-static constexpr const char* PARAM_KEY_POST_LIGHTING_BLENDING   = "postLightingBlending";
-static constexpr const char* PARAM_KEY_VERTEX_DOMAIN            = "vertexDomain";
-static constexpr const char* PARAM_KEY_CULLING                  = "culling";
-static constexpr const char* PARAM_KEY_COLOR_WRITE              = "colorWrite";
-static constexpr const char* PARAM_KEY_DEPTH_WRITE              = "depthWrite";
-static constexpr const char* PARAM_KEY_DEPTH_CULL               = "depthCulling";
-static constexpr const char* PARAM_KEY_DOUBLE_SIDED             = "doubleSided";
-static constexpr const char* PARAM_KEY_TRANSPARENCY_MODE        = "transparency";
-static constexpr const char* PARAM_KEY_MASK_THRESHOLD           = "maskThreshold";
-static constexpr const char* PARAM_KEY_SHADOW_MULTIPLIER        = "shadowMultiplier";
-static constexpr const char* PARAM_KEY_SHADING                  = "shadingModel";
-static constexpr const char* PARAM_KEY_VARIANT_FILTER           = "variantFilter";
-static constexpr const char* PARAM_KEY_CURVATURE_TO_ROUGHNESS   = "curvatureToRoughness";
-static constexpr const char* PARAM_KEY_LIMIT_OVER_INTERPOLATION = "limitOverInterpolation";
-static constexpr const char* PARAM_KEY_CLEAR_COAT_IOR_CHANGE    = "clearCoatIorChange";
-static constexpr const char* PARAM_KEY_FLIP_UV                  = "flipUV";
-
-ParametersProcessor::ParametersProcessor() {
-    mConfigProcessor[PARAM_KEY_NAME]              = &ParametersProcessor::processName;
-    mConfigProcessor[PARAM_KEY_INTERPOLATION]     = &ParametersProcessor::processInterpolation;
-    mConfigProcessor[PARAM_KEY_PARAMETERS]        = &ParametersProcessor::processParameters;
-    mConfigProcessor[PARAM_KEY_VARIABLES]         = &ParametersProcessor::processVariables;
-    mConfigProcessor[PARAM_KEY_REQUIRES]          = &ParametersProcessor::processRequires;
-    mConfigProcessor[PARAM_KEY_BLENDING]          = &ParametersProcessor::processBlending;
-    mConfigProcessor[PARAM_KEY_POST_LIGHTING_BLENDING]
-            = &ParametersProcessor::processPostLightingBlending;
-    mConfigProcessor[PARAM_KEY_VERTEX_DOMAIN]     = &ParametersProcessor::processVertexDomain;
-    mConfigProcessor[PARAM_KEY_CULLING]           = &ParametersProcessor::processCulling;
-    mConfigProcessor[PARAM_KEY_COLOR_WRITE]       = &ParametersProcessor::processColorWrite;
-    mConfigProcessor[PARAM_KEY_DEPTH_WRITE]       = &ParametersProcessor::processDepthWrite;
-    mConfigProcessor[PARAM_KEY_DEPTH_CULL]        = &ParametersProcessor::processDepthCull;
-    mConfigProcessor[PARAM_KEY_DOUBLE_SIDED]      = &ParametersProcessor::processDoubleSided;
-    mConfigProcessor[PARAM_KEY_TRANSPARENCY_MODE] = &ParametersProcessor::processTransparencyMode;
-    mConfigProcessor[PARAM_KEY_MASK_THRESHOLD]    = &ParametersProcessor::processMaskThreshold;
-    mConfigProcessor[PARAM_KEY_SHADOW_MULTIPLIER] = &ParametersProcessor::processShadowMultiplier;
-    mConfigProcessor[PARAM_KEY_SHADING]           = &ParametersProcessor::processShading;
-    mConfigProcessor[PARAM_KEY_VARIANT_FILTER]    = &ParametersProcessor::processVariantFilter;
-    mConfigProcessor[PARAM_KEY_CURVATURE_TO_ROUGHNESS]
-            = &ParametersProcessor::processCurvatureToRoughness;
-    mConfigProcessor[PARAM_KEY_LIMIT_OVER_INTERPOLATION]
-            = &ParametersProcessor::processLimitOverInterpolation;
-    mConfigProcessor[PARAM_KEY_CLEAR_COAT_IOR_CHANGE]
-            = &ParametersProcessor::processClearCoatIorChange;
-    mConfigProcessor[PARAM_KEY_FLIP_UV]           = &ParametersProcessor::processFlipUV;
-
-    mRootAsserts[PARAM_KEY_NAME]                     = JsonishValue::Type::STRING;
-    mRootAsserts[PARAM_KEY_INTERPOLATION]            = JsonishValue::Type::STRING;
-    mRootAsserts[PARAM_KEY_PARAMETERS]               = JsonishValue::Type::ARRAY;
-    mRootAsserts[PARAM_KEY_VARIABLES]                = JsonishValue::Type::ARRAY;
-    mRootAsserts[PARAM_KEY_REQUIRES]                 = JsonishValue::Type::ARRAY;
-    mRootAsserts[PARAM_KEY_BLENDING]                 = JsonishValue::Type::STRING;
-    mRootAsserts[PARAM_KEY_POST_LIGHTING_BLENDING]   = JsonishValue::Type::STRING;
-    mRootAsserts[PARAM_KEY_VERTEX_DOMAIN]            = JsonishValue::Type::STRING;
-    mRootAsserts[PARAM_KEY_CULLING]                  = JsonishValue::Type::STRING;
-    mRootAsserts[PARAM_KEY_COLOR_WRITE]              = JsonishValue::Type::BOOL;
-    mRootAsserts[PARAM_KEY_DEPTH_WRITE]              = JsonishValue::Type::BOOL;
-    mRootAsserts[PARAM_KEY_DEPTH_CULL]               = JsonishValue::Type::BOOL;
-    mRootAsserts[PARAM_KEY_DOUBLE_SIDED]             = JsonishValue::Type::BOOL;
-    mRootAsserts[PARAM_KEY_TRANSPARENCY_MODE]        = JsonishValue::Type::STRING;
-    mRootAsserts[PARAM_KEY_MASK_THRESHOLD]           = JsonishValue::Type::NUMBER;
-    mRootAsserts[PARAM_KEY_SHADOW_MULTIPLIER]        = JsonishValue::Type::BOOL;
-    mRootAsserts[PARAM_KEY_SHADING]                  = JsonishValue::Type::STRING;
-    mRootAsserts[PARAM_KEY_VARIANT_FILTER]           = JsonishValue::Type::ARRAY;
-    mRootAsserts[PARAM_KEY_CURVATURE_TO_ROUGHNESS]   = JsonishValue::Type::BOOL;
-    mRootAsserts[PARAM_KEY_LIMIT_OVER_INTERPOLATION] = JsonishValue::Type::BOOL;
-    mRootAsserts[PARAM_KEY_CLEAR_COAT_IOR_CHANGE]    = JsonishValue::Type::BOOL;
-    mRootAsserts[PARAM_KEY_FLIP_UV]                  = JsonishValue::Type::BOOL;
-
-    mStringToInterpolation["smooth"] = MaterialBuilder::Interpolation::SMOOTH;
-    mStringToInterpolation["flat"] = MaterialBuilder::Interpolation::FLAT;
-
-    mStringToCullingMode["back"] = MaterialBuilder::CullingMode::BACK;
-    mStringToCullingMode["front"] = MaterialBuilder::CullingMode::FRONT;
-    mStringToCullingMode["frontAndBack"] = MaterialBuilder::CullingMode::FRONT_AND_BACK;
-    mStringToCullingMode["none"] = MaterialBuilder::CullingMode::NONE;
-
-    mStringToTransparencyMode["default"] = MaterialBuilder::TransparencyMode::DEFAULT;
-    mStringToTransparencyMode["twoPassesOneSide"] = MaterialBuilder::TransparencyMode::TWO_PASSES_ONE_SIDE;
-    mStringToTransparencyMode["twoPassesTwoSides"] = MaterialBuilder::TransparencyMode::TWO_PASSES_TWO_SIDES;
-
-    mStringToVertexDomain["device"] = MaterialBuilder::VertexDomain::DEVICE;
-    mStringToVertexDomain["object"] = MaterialBuilder::VertexDomain::OBJECT;
-    mStringToVertexDomain["world"] = MaterialBuilder::VertexDomain::WORLD;
-    mStringToVertexDomain["view"] = MaterialBuilder::VertexDomain::VIEW;
-
-    mStringToBlendingMode["add"] = MaterialBuilder::BlendingMode::ADD;
-    mStringToBlendingMode["masked"] = MaterialBuilder::BlendingMode::MASKED;
-    mStringToBlendingMode["opaque"] = MaterialBuilder::BlendingMode::OPAQUE;
-    mStringToBlendingMode["transparent"] = MaterialBuilder::BlendingMode::TRANSPARENT;
-    mStringToBlendingMode["fade"] = MaterialBuilder::BlendingMode::FADE;
-
-    mStringToAttributeIndex["color"] = filament::VertexAttribute::COLOR;
-    mStringToAttributeIndex["position"] = filament::VertexAttribute::POSITION;
-    mStringToAttributeIndex["tangents"] = filament::VertexAttribute::TANGENTS;
-    mStringToAttributeIndex["uv0"] = filament::VertexAttribute::UV0;
-    mStringToAttributeIndex["uv1"] = filament::VertexAttribute::UV1;
-
-    mStringToShading["cloth"] = MaterialBuilder::Shading::CLOTH;
-    mStringToShading["lit"] = MaterialBuilder::Shading::LIT;
-    mStringToShading["subsurface"] = MaterialBuilder::Shading::SUBSURFACE;
-    mStringToShading["unlit"] = MaterialBuilder::Shading::UNLIT;
-    mStringToShading["specularGlossiness"] = MaterialBuilder::Shading::SPECULAR_GLOSSINESS;
-
-    mStringToVariant["directionalLighting"] = filament::Variant::DIRECTIONAL_LIGHTING;
-    mStringToVariant["dynamicLighting"] = filament::Variant::DYNAMIC_LIGHTING;
-    mStringToVariant["shadowReceiver"] = filament::Variant::SHADOW_RECEIVER;
-    mStringToVariant["skinning"] = filament::Variant::SKINNING;
-}
-
-bool ParametersProcessor::process(filamat::MaterialBuilder& builder, const JsonishObject& jsonObject) {
-    for(const auto& entry : jsonObject.getEntries()) {
-        const std::string& key = entry.first;
-        const JsonishValue* field = entry.second;
-        if (mConfigProcessor.find(key) == mConfigProcessor.end()) {
-            std::cerr << "Ignoring config entry (unknown key): \"" << key << "\"" << std::endl;
-            continue;
-        }
-
-        // Verify type is what was expected.
-        if (mRootAsserts.at(key) != field->getType()) {
-            std::cerr << "Value for key:\"" << key << "\" is not what was expected" << std::endl;
-            std::cerr << "Got :\"" << JsonishValue::typeToString(field->getType())<< "\" but expected '"
-                   << JsonishValue::typeToString(mRootAsserts.at(key)) << "'" << std::endl;
-            return false;
-        }
-
-        auto fPointer = mConfigProcessor[key];
-        bool ok = (*this.*fPointer)(builder,*field);
-        if (!ok) {
-            std::cerr << "Error while processing material key:\"" << key << "\"" << std::endl;
-            return false;
-        }
+template <class T>
+static bool logEnumIssue(const std::string& key, const JsonishString& value,
+        const std::unordered_map<std::string, T>& map) noexcept {
+    std::cerr << "Error while processing key '" << key << "' value." << std::endl;
+    std::cerr << "Value '" << value.getString() << "' is invalid. Valid values are:"
+            << std::endl;
+    for (auto entries : map) {
+        std::cerr << "    " << entries.first  << std::endl;
     }
-    return true;
+    return false;
 }
 
-bool ParametersProcessor::processName(filamat::MaterialBuilder& builder, const JsonishValue& value) {
+template <class T>
+static bool isStringValidEnum(const std::unordered_map<std::string, T>& map,
+        const std::string& s) noexcept {
+    return map.find(s) != map.end();
+}
+
+template <class T>
+static T stringToEnum(const std::unordered_map<std::string, T>& map,
+        const std::string& s) noexcept {
+    return map.at(s);
+}
+
+static MaterialBuilder::Variable intToVariable(size_t i) noexcept {
+    switch (i) {
+        case 0:  return MaterialBuilder::Variable::CUSTOM0;
+        case 1:  return MaterialBuilder::Variable::CUSTOM1;
+        case 2:  return MaterialBuilder::Variable::CUSTOM2;
+        case 3:  return MaterialBuilder::Variable::CUSTOM3;
+        default: return MaterialBuilder::Variable::CUSTOM0;
+    }
+}
+
+static bool processName(MaterialBuilder& builder, const JsonishValue& value) {
     builder.name(value.toJsonString()->getString().c_str());
     return true;
 }
 
-bool ParametersProcessor::processInterpolation(filamat::MaterialBuilder& builder,
-        const JsonishValue& value) {
+static bool processInterpolation(MaterialBuilder& builder, const JsonishValue& value) {
+    static const std::unordered_map<std::string, MaterialBuilder::Interpolation> strToEnum {
+        { "smooth", MaterialBuilder::Interpolation::SMOOTH },
+        { "flat", MaterialBuilder::Interpolation::FLAT },
+    };
     auto interpolationString = value.toJsonString();
-    if (!isStringValidEnum(mStringToInterpolation, interpolationString->getString())) {
-        return logEnumIssue(PARAM_KEY_INTERPOLATION, *interpolationString, mStringToInterpolation);
+    if (!isStringValidEnum(strToEnum, interpolationString->getString())) {
+        return logEnumIssue("interpolation", *interpolationString, strToEnum);
     }
-
-    builder.interpolation(stringToEnum(mStringToInterpolation, interpolationString->getString()));
+    builder.interpolation(stringToEnum(strToEnum, interpolationString->getString()));
     return true;
-}
-
-bool ParametersProcessor::processParameters(filamat::MaterialBuilder& builder,
-        const JsonishValue& v) {
-    auto jsonArray = v.toJsonArray();
-
-    bool ok = true;
-    for (auto value : jsonArray->getElements()) {
-        if (value->getType() == JsonishValue::Type::OBJECT) {
-            ok |= processParameter(builder, *value->toJsonObject());
-            continue;
-        }
-        std::cerr << PARAM_KEY_PARAMETERS << " must be an array of OBJECTs." << std::endl;
-        return false;
-    }
-    return ok;
 }
 
 /**
@@ -241,53 +119,51 @@ static size_t extractArraySize(std::string& type) {
     return std::stoul(type.c_str() + start + 1, nullptr);
 }
 
-bool ParametersProcessor::processParameter(filamat::MaterialBuilder& builder,
-        const JsonishObject& jsonObject) const noexcept {
+static bool processParameter(MaterialBuilder& builder, const JsonishObject& jsonObject) noexcept {
 
     const JsonishValue* typeValue = jsonObject.getValue("type");
     if (!typeValue) {
-        std::cerr << PARAM_KEY_PARAMETERS << ": entry without key 'type'." << std::endl;
+        std::cerr << "parameters: entry without key 'type'." << std::endl;
         return false;
     }
     if (typeValue->getType() != JsonishValue::STRING) {
-        std::cerr << PARAM_KEY_PARAMETERS << ": type value must be STRING." << std::endl;
+        std::cerr << "parameters: type value must be STRING." << std::endl;
         return false;
     }
 
     const JsonishValue* nameValue = jsonObject.getValue("name");
     if (!nameValue) {
-        std::cerr << PARAM_KEY_PARAMETERS << ": entry without 'name' key." << std::endl;
+        std::cerr << "parameters: entry without 'name' key." << std::endl;
         return false;
     }
     if (nameValue->getType() != JsonishValue::STRING) {
-        std::cerr << PARAM_KEY_PARAMETERS << ": name value must be STRING." << std::endl;
+        std::cerr << "parameters: name value must be STRING." << std::endl;
         return false;
     }
 
     const JsonishValue* precisionValue = jsonObject.getValue("precision");
     if (precisionValue) {
         if (precisionValue->getType() != JsonishValue::STRING) {
-            std::cerr << PARAM_KEY_PARAMETERS << ": precision must be a STRING." << std::endl;
+            std::cerr << "parameters: precision must be a STRING." << std::endl;
             return false;
         }
 
         auto precisionString = precisionValue->toJsonString();
         if (!Enums::isValid<SamplerPrecision>(precisionString->getString())){
-            return logEnumIssue(PARAM_KEY_PARAMETERS,
-                    *precisionString, Enums::map<SamplerPrecision>());
+            return logEnumIssue("parameters", *precisionString, Enums::map<SamplerPrecision>());
         }
     }
 
     const JsonishValue* formatValue = jsonObject.getValue("format");
     if (formatValue) {
         if (formatValue->getType() != JsonishValue::STRING) {
-            std::cerr << PARAM_KEY_PARAMETERS<< ": format must be a STRING." << std::endl;
+            std::cerr << "parameters: format must be a STRING." << std::endl;
             return false;
         }
 
         auto formatString = formatValue->toJsonString();
         if (!Enums::isValid<SamplerFormat>(formatString->getString())){
-            return logEnumIssue(PARAM_KEY_PARAMETERS, *formatString, Enums::map<SamplerFormat>());
+            return logEnumIssue("parameters", *formatString, Enums::map<SamplerFormat>());
         }
     }
 
@@ -305,7 +181,7 @@ bool ParametersProcessor::processParameter(filamat::MaterialBuilder& builder,
         }
     } else if (Enums::isValid<SamplerType>(typeString)) {
         if (arraySize > 0) {
-            std::cerr << PARAM_KEY_PARAMETERS << ": the parameter with name '" << nameString << "'"
+            std::cerr << "parameters: the parameter with name '" << nameString << "'"
                     << " is an array of samplers of size " << arraySize << ". Arrays of samplers"
                     << " are currently not supported." << std::endl;
             return false;
@@ -328,7 +204,7 @@ bool ParametersProcessor::processParameter(filamat::MaterialBuilder& builder,
             builder.parameter(type, nameString.c_str());
         }
     } else {
-        std::cerr << PARAM_KEY_PARAMETERS << ": the type '" << typeString
+        std::cerr << "parameters: the type '" << typeString
                << "' for parameter with name '" << nameString << "' is neither a valid uniform "
                << "type nor a valid sampler type." << std::endl;
         return false;
@@ -337,21 +213,35 @@ bool ParametersProcessor::processParameter(filamat::MaterialBuilder& builder,
     return true;
 }
 
-bool ParametersProcessor::processVariables(filamat::MaterialBuilder& builder,
-        const JsonishValue& value) {
+static bool processParameters(MaterialBuilder& builder, const JsonishValue& v) {
+    auto jsonArray = v.toJsonArray();
+
+    bool ok = true;
+    for (auto value : jsonArray->getElements()) {
+        if (value->getType() == JsonishValue::Type::OBJECT) {
+            ok |= processParameter(builder, *value->toJsonObject());
+            continue;
+        }
+        std::cerr << "parameters must be an array of OBJECTs." << std::endl;
+        return false;
+    }
+    return ok;
+}
+
+static bool processVariables(MaterialBuilder& builder, const JsonishValue& value) {
     const JsonishArray* jsonArray = value.toJsonArray();
     const auto& elements = jsonArray->getElements();
 
     if (elements.size() > 4) {
-        std::cerr << PARAM_KEY_VARIABLES << ": Max array size is 4." << std::endl;
+        std::cerr << "variables: Max array size is 4." << std::endl;
         return false;
     }
 
     for (size_t i = 0; i < elements.size(); i++) {
         auto elementValue = elements[i];
-        filamat::MaterialBuilder::Variable v = intToVariable(i);
+        MaterialBuilder::Variable v = intToVariable(i);
         if (elementValue->getType() != JsonishValue::Type::STRING) {
-            std::cerr << PARAM_KEY_VARIABLES << ": array index " << i << " is not a STRING. found:" <<
+            std::cerr << "variables: array index " << i << " is not a STRING. found:" <<
                     JsonishValue::typeToString(elementValue->getType()) << std::endl;
             return false;
         }
@@ -361,167 +251,184 @@ bool ParametersProcessor::processVariables(filamat::MaterialBuilder& builder,
     return true;
 }
 
-bool ParametersProcessor::processRequires(filamat::MaterialBuilder& builder,
-        const JsonishValue& value) {
+static bool processRequires(MaterialBuilder& builder, const JsonishValue& value) {
+    static const std::unordered_map<std::string, filament::VertexAttribute> strToEnum {
+        { "color", filament::VertexAttribute::COLOR },
+        { "position", filament::VertexAttribute::POSITION },
+        { "tangents", filament::VertexAttribute::TANGENTS },
+        { "uv0", filament::VertexAttribute::UV0 },
+        { "uv1", filament::VertexAttribute::UV1 },
+    };
     for (auto v : value.toJsonArray()->getElements()) {
         if (v->getType() != JsonishValue::Type::STRING) {
-            std::cerr << PARAM_KEY_REQUIRES << ": entries must be STRINGs." << std::endl;
+            std::cerr << "requires: entries must be STRINGs." << std::endl;
             return false;
         }
 
         auto jsonString = v->toJsonString();
-        if (!isStringValidEnum(mStringToAttributeIndex, jsonString->getString())) {
-            return logEnumIssue(PARAM_KEY_REQUIRES, *jsonString, mStringToAttributeIndex);
+        if (!isStringValidEnum(strToEnum, jsonString->getString())) {
+            return logEnumIssue("requires", *jsonString, strToEnum);
         }
 
-        builder.require(stringToEnum(mStringToAttributeIndex, jsonString->getString()));
+        builder.require(stringToEnum(strToEnum, jsonString->getString()));
     }
 
     return true;
 }
 
-bool ParametersProcessor::processBlending(filamat::MaterialBuilder& builder,
-        const JsonishValue& value) {
+static bool processBlending(MaterialBuilder& builder, const JsonishValue& value) {
+    static const std::unordered_map<std::string, MaterialBuilder::BlendingMode> strToEnum {
+        { "add", MaterialBuilder::BlendingMode::ADD },
+        { "masked", MaterialBuilder::BlendingMode::MASKED },
+        { "opaque", MaterialBuilder::BlendingMode::OPAQUE },
+        { "transparent", MaterialBuilder::BlendingMode::TRANSPARENT },
+        { "fade", MaterialBuilder::BlendingMode::FADE },
+    };
     auto jsonString = value.toJsonString();
-    if (!isStringValidEnum(mStringToBlendingMode, jsonString->getString())) {
-        std::cerr << PARAM_KEY_BLENDING << ": value is not a valid BlendMode." << std::endl;
-        return false;
+    if (!isStringValidEnum(strToEnum, jsonString->getString())) {
+        return logEnumIssue("blending", *jsonString, strToEnum);
     }
 
-    builder.blending(stringToEnum(mStringToBlendingMode, jsonString->getString()));
+    builder.blending(stringToEnum(strToEnum, jsonString->getString()));
     return true;
 }
 
-bool ParametersProcessor::processPostLightingBlending(filamat::MaterialBuilder& builder,
-        const JsonishValue& value) {
+static bool processPostLightingBlending(MaterialBuilder& builder, const JsonishValue& value) {
+    static const std::unordered_map<std::string, MaterialBuilder::BlendingMode> strToEnum {
+        { "add", MaterialBuilder::BlendingMode::ADD },
+        { "opaque", MaterialBuilder::BlendingMode::OPAQUE },
+        { "transparent", MaterialBuilder::BlendingMode::TRANSPARENT },
+    };
     auto jsonString = value.toJsonString();
-    if (!isStringValidEnum(mStringToBlendingMode, jsonString->getString())) {
-        std::cerr << PARAM_KEY_BLENDING << ": value is not a valid BlendMode." << std::endl;
-        return false;
+    if (!isStringValidEnum(strToEnum, jsonString->getString())) {
+        return logEnumIssue("postLightingBlending", *jsonString, strToEnum);
     }
 
-    filament::BlendingMode postLightingBlending =
-            stringToEnum(mStringToBlendingMode, jsonString->getString());
-    switch (postLightingBlending) {
-        case filament::BlendingMode::FADE:
-        case filament::BlendingMode::MASKED:
-            std::cerr << PARAM_KEY_BLENDING <<
-                    ": value is not a valid post-lighting BlendMode."
-                    " Only OPAQUE, TRANSPARENT and ADD are supported." << std::endl;
-            return false;
-        default:
-            break;
-    }
-    builder.postLightingBlending(postLightingBlending);
+    builder.postLightingBlending(stringToEnum(strToEnum, jsonString->getString()));
     return true;
 }
 
-bool ParametersProcessor::processVertexDomain(filamat::MaterialBuilder& builder,
-        const JsonishValue& value) {
+static bool processVertexDomain(MaterialBuilder& builder, const JsonishValue& value) {
+    static const std::unordered_map<std::string, MaterialBuilder::VertexDomain> strToEnum {
+        { "device", MaterialBuilder::VertexDomain::DEVICE},
+        { "object", MaterialBuilder::VertexDomain::OBJECT},
+        { "world", MaterialBuilder::VertexDomain::WORLD},
+        { "view", MaterialBuilder::VertexDomain::VIEW},
+    };
     auto jsonString = value.toJsonString();
-    if (!isStringValidEnum(mStringToVertexDomain, jsonString->getString())) {
-        return logEnumIssue(PARAM_KEY_VERTEX_DOMAIN, *jsonString, mStringToVertexDomain);
+    if (!isStringValidEnum(strToEnum, jsonString->getString())) {
+        return logEnumIssue("vertex_domain", *jsonString, strToEnum);
     }
 
-    builder.vertexDomain(stringToEnum(mStringToVertexDomain, jsonString->getString()));
+    builder.vertexDomain(stringToEnum(strToEnum, jsonString->getString()));
     return true;
 }
 
-bool ParametersProcessor::processCulling(filamat::MaterialBuilder& builder,
-        const JsonishValue& value) {
+static bool processCulling(MaterialBuilder& builder, const JsonishValue& value) {
+    static const std::unordered_map<std::string, MaterialBuilder::CullingMode> strToEnum {
+        { "back", MaterialBuilder::CullingMode::BACK },
+        { "front", MaterialBuilder::CullingMode::FRONT },
+        { "frontAndBack", MaterialBuilder::CullingMode::FRONT_AND_BACK },
+        { "none", MaterialBuilder::CullingMode::NONE },
+    };
     auto jsonString = value.toJsonString();
-    if (!isStringValidEnum(mStringToCullingMode, jsonString->getString())) {
-        return logEnumIssue(PARAM_KEY_CULLING, *jsonString, mStringToCullingMode);
+    if (!isStringValidEnum(strToEnum, jsonString->getString())) {
+        return logEnumIssue("culling", *jsonString, strToEnum);
     }
 
-    builder.culling(stringToEnum(mStringToCullingMode, jsonString->getString()));
+    builder.culling(stringToEnum(strToEnum, jsonString->getString()));
     return true;
 }
 
-bool ParametersProcessor::processColorWrite(filamat::MaterialBuilder& builder,
-        const JsonishValue& value) {
+static bool processColorWrite(MaterialBuilder& builder, const JsonishValue& value) {
     builder.colorWrite(value.toJsonBool()->getBool());
     return true;
 }
 
-bool ParametersProcessor::processDepthWrite(filamat::MaterialBuilder& builder,
-        const JsonishValue& value) {
+static bool processDepthWrite(MaterialBuilder& builder, const JsonishValue& value) {
     builder.depthWrite(value.toJsonBool()->getBool());
     return true;
 }
 
-bool ParametersProcessor::processDepthCull(filamat::MaterialBuilder& builder,
-        const JsonishValue& value) {
+static bool processDepthCull(MaterialBuilder& builder, const JsonishValue& value) {
     builder.depthCulling(value.toJsonBool()->getBool());
     return true;
 }
 
-bool ParametersProcessor::processDoubleSided(filamat::MaterialBuilder& builder,
-        const JsonishValue& value) {
+static bool processDoubleSided(MaterialBuilder& builder, const JsonishValue& value) {
     builder.doubleSided(value.toJsonBool()->getBool());
     return true;
 }
 
-bool ParametersProcessor::processTransparencyMode(filamat::MaterialBuilder& builder,
-        const JsonishValue& value) {
+static bool processTransparencyMode(MaterialBuilder& builder, const JsonishValue& value) {
+    static const std::unordered_map<std::string, MaterialBuilder::TransparencyMode> strToEnum {
+        { "default", MaterialBuilder::TransparencyMode::DEFAULT },
+        { "twoPassesOneSide", MaterialBuilder::TransparencyMode::TWO_PASSES_ONE_SIDE },
+        { "twoPassesTwoSides", MaterialBuilder::TransparencyMode::TWO_PASSES_TWO_SIDES },
+    };
     auto jsonString = value.toJsonString();
-    if (!isStringValidEnum(mStringToTransparencyMode, jsonString->getString())) {
-        return logEnumIssue(PARAM_KEY_TRANSPARENCY_MODE, *jsonString, mStringToTransparencyMode);
+    if (!isStringValidEnum(strToEnum, jsonString->getString())) {
+        return logEnumIssue("transparency_mode", *jsonString, strToEnum);
     }
 
-    builder.transparencyMode(stringToEnum(mStringToTransparencyMode, jsonString->getString()));
+    builder.transparencyMode(stringToEnum(strToEnum, jsonString->getString()));
     return true;
 }
 
-bool ParametersProcessor::processMaskThreshold(filamat::MaterialBuilder& builder,
-        const JsonishValue& value) {
+static bool processMaskThreshold(MaterialBuilder& builder, const JsonishValue& value) {
     builder.maskThreshold(value.toJsonNumber()->getFloat());
     return true;
 }
 
-bool ParametersProcessor::processShadowMultiplier(filamat::MaterialBuilder& builder,
-        const JsonishValue& value) {
+static bool processShadowMultiplier(MaterialBuilder& builder, const JsonishValue& value) {
     builder.shadowMultiplier(value.toJsonBool()->getBool());
     return true;
 }
 
-bool ParametersProcessor::processCurvatureToRoughness(filamat::MaterialBuilder& builder,
-        const JsonishValue& value) {
+static bool processCurvatureToRoughness(MaterialBuilder& builder, const JsonishValue& value) {
     builder.curvatureToRoughness(value.toJsonBool()->getBool());
     return true;
 }
 
-bool ParametersProcessor::processLimitOverInterpolation(filamat::MaterialBuilder& builder,
-        const JsonishValue& value) {
+static bool processLimitOverInterpolation(MaterialBuilder& builder, const JsonishValue& value) {
     builder.limitOverInterpolation(value.toJsonBool()->getBool());
     return true;
 }
 
-bool ParametersProcessor::processClearCoatIorChange(filamat::MaterialBuilder& builder,
-        const JsonishValue& value) {
+static bool processClearCoatIorChange(MaterialBuilder& builder, const JsonishValue& value) {
     builder.clearCoatIorChange(value.toJsonBool()->getBool());
     return true;
 }
 
-bool ParametersProcessor::processFlipUV(filamat::MaterialBuilder& builder,
-        const JsonishValue& value) {
+static bool processFlipUV(MaterialBuilder& builder, const JsonishValue& value) {
     builder.flipUV(value.toJsonBool()->getBool());
     return true;
 }
 
-bool ParametersProcessor::processShading(filamat::MaterialBuilder& builder,
-        const JsonishValue& value) {
+static bool processShading(MaterialBuilder& builder, const JsonishValue& value) {
+    static const std::unordered_map<std::string, MaterialBuilder::Shading> strToEnum {
+        { "cloth", MaterialBuilder::Shading::CLOTH },
+        { "lit", MaterialBuilder::Shading::LIT },
+        { "subsurface", MaterialBuilder::Shading::SUBSURFACE },
+        { "unlit", MaterialBuilder::Shading::UNLIT },
+        { "specularGlossiness", MaterialBuilder::Shading::SPECULAR_GLOSSINESS },
+    };
     auto jsonString = value.toJsonString();
-    if (!isStringValidEnum(mStringToShading, jsonString->getString())) {
-        return logEnumIssue(PARAM_KEY_SHADING, *jsonString, mStringToShading);
+    if (!isStringValidEnum(strToEnum, jsonString->getString())) {
+        return logEnumIssue("shading", *jsonString, strToEnum);
     }
 
-    builder.shading(stringToEnum(mStringToShading, jsonString->getString()));
+    builder.shading(stringToEnum(strToEnum, jsonString->getString()));
     return true;
 }
 
-bool ParametersProcessor::processVariantFilter(filamat::MaterialBuilder& builder,
-        const JsonishValue& value) {
+static bool processVariantFilter(MaterialBuilder& builder, const JsonishValue& value) {
+    static const std::unordered_map<std::string, uint8_t> strToEnum {
+        { "directionalLighting", filament::Variant::DIRECTIONAL_LIGHTING },
+        { "dynamicLighting", filament::Variant::DYNAMIC_LIGHTING },
+        { "shadowReceiver", filament::Variant::SHADOW_RECEIVER },
+        { "skinning", filament::Variant::SKINNING },
+    };
     uint8_t variantFilter = 0;
     const JsonishArray* jsonArray = value.toJsonArray();
     const auto& elements = jsonArray->getElements();
@@ -529,33 +436,76 @@ bool ParametersProcessor::processVariantFilter(filamat::MaterialBuilder& builder
     for (size_t i = 0; i < elements.size(); i++) {
         auto elementValue = elements[i];
         if (elementValue->getType() != JsonishValue::Type::STRING) {
-            std::cerr << PARAM_KEY_VARIANT_FILTER << ": array index " << i <<
+            std::cerr << "variant_filter: array index " << i <<
                       " is not a STRING. found:" <<
                       JsonishValue::typeToString(elementValue->getType()) << std::endl;
             return false;
         }
 
         const std::string& s = elementValue->toJsonString()->getString();
-        if (!isStringValidEnum(mStringToVariant, s)) {
-            std::cerr << PARAM_KEY_VARIANT_FILTER << ": variant " << s <<
+        if (!isStringValidEnum(strToEnum, s)) {
+            std::cerr << "variant_filter: variant " << s <<
                       " is not a valid variant" << std::endl;
         }
 
-        variantFilter |= mStringToVariant[s];
+        variantFilter |= strToEnum.at(s);
     }
 
     builder.variantFilter(variantFilter);
     return true;
 }
 
-filamat::MaterialBuilder::Variable ParametersProcessor::intToVariable(size_t i) const noexcept {
-    switch (i) {
-        case 0:  return MaterialBuilder::Variable::CUSTOM0;
-        case 1:  return MaterialBuilder::Variable::CUSTOM1;
-        case 2:  return MaterialBuilder::Variable::CUSTOM2;
-        case 3:  return MaterialBuilder::Variable::CUSTOM3;
-        default: return MaterialBuilder::Variable::CUSTOM0;
+ParametersProcessor::ParametersProcessor() {
+    using Type = JsonishValue::Type;
+    mParameters["name"]                   = { &processName, Type::STRING };
+    mParameters["interpolation"]          = { &processInterpolation, Type::STRING };
+    mParameters["parameters"]             = { &processParameters, Type::ARRAY };
+    mParameters["variables"]              = { &processVariables, Type::ARRAY };
+    mParameters["requires"]               = { &processRequires, Type::ARRAY };
+    mParameters["blending"]               = { &processBlending, Type::STRING };
+    mParameters["postLightingBlending"]   = { &processPostLightingBlending, Type::STRING };
+    mParameters["vertexDomain"]           = { &processVertexDomain, Type::STRING };
+    mParameters["culling"]                = { &processCulling, Type::STRING };
+    mParameters["colorWrite"]             = { &processColorWrite, Type::BOOL };
+    mParameters["depthWrite"]             = { &processDepthWrite, Type::BOOL };
+    mParameters["depthCulling"]           = { &processDepthCull, Type::BOOL };
+    mParameters["doubleSided"]            = { &processDoubleSided, Type::BOOL };
+    mParameters["transparency"]           = { &processTransparencyMode, Type::STRING };
+    mParameters["maskThreshold"]          = { &processMaskThreshold, Type::NUMBER };
+    mParameters["shadowMultiplier"]       = { &processShadowMultiplier, Type::BOOL };
+    mParameters["shadingModel"]           = { &processShading, Type::STRING };
+    mParameters["variantFilter"]          = { &processVariantFilter, Type::ARRAY };
+    mParameters["curvatureToRoughness"]   = { &processCurvatureToRoughness, Type::BOOL };
+    mParameters["limitOverInterpolation"] = { &processLimitOverInterpolation, Type::BOOL };
+    mParameters["clearCoatIorChange"]     = { &processClearCoatIorChange, Type::BOOL };
+    mParameters["flipUV"]                 = { &processFlipUV, Type::BOOL };
+}
+
+bool ParametersProcessor::process(MaterialBuilder& builder, const JsonishObject& jsonObject) {
+    for(const auto& entry : jsonObject.getEntries()) {
+        const std::string& key = entry.first;
+        const JsonishValue* field = entry.second;
+        if (mParameters.find(key) == mParameters.end()) {
+            std::cerr << "Ignoring config entry (unknown key): \"" << key << "\"" << std::endl;
+            continue;
+        }
+
+        // Verify type is what was expected.
+        if (mParameters.at(key).rootAssert != field->getType()) {
+            std::cerr << "Value for key:\"" << key << "\" is not what was expected" << std::endl;
+            std::cerr << "Got :\"" << JsonishValue::typeToString(field->getType())<< "\" but expected '"
+                   << JsonishValue::typeToString(mParameters.at(key).rootAssert) << "'" << std::endl;
+            return false;
+        }
+
+        auto fPointer = mParameters[key].callback;
+        bool ok = fPointer(builder, *field);
+        if (!ok) {
+            std::cerr << "Error while processing material key:\"" << key << "\"" << std::endl;
+            return false;
+        }
     }
+    return true;
 }
 
 } // namespace matc
