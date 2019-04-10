@@ -423,19 +423,16 @@ static bool processShading(MaterialBuilder& builder, const JsonishValue& value) 
 }
 
 static bool processVariantFilter(MaterialBuilder& builder, const JsonishValue& value) {
-
-    // TODO: replace these with filament::Variant
-    static constexpr uint8_t DIRECTIONAL_LIGHTING   = 0x01;
-    static constexpr uint8_t DYNAMIC_LIGHTING       = 0x02;
-    static constexpr uint8_t SHADOW_RECEIVER        = 0x04;
-    static constexpr uint8_t SKINNING               = 0x08;
-
-    static const std::unordered_map<std::string, uint8_t> strToEnum {
-        { "directionalLighting", DIRECTIONAL_LIGHTING },
-        { "dynamicLighting", DYNAMIC_LIGHTING },
-        { "shadowReceiver", SHADOW_RECEIVER },
-        { "skinning", SKINNING },
-    };
+    // We avoid using an initializer list for this particular map to avoid build errors that are
+    // due to static initialization ordering.
+    static const std::unordered_map<std::string, uint8_t> strToEnum  = [] {
+        std::unordered_map<std::string, uint8_t> strToEnum;
+        strToEnum["directionalLighting"] = filament::Variant::DIRECTIONAL_LIGHTING;
+        strToEnum["dynamicLighting"] = filament::Variant::DYNAMIC_LIGHTING;
+        strToEnum["shadowReceiver"] = filament::Variant::SHADOW_RECEIVER;
+        strToEnum["skinning"] = filament::Variant::SKINNING;
+        return strToEnum;
+    }();
     uint8_t variantFilter = 0;
     const JsonishArray* jsonArray = value.toJsonArray();
     const auto& elements = jsonArray->getElements();
