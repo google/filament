@@ -28,6 +28,9 @@
 
 #include "vk_mem_alloc.h"
 
+#include <utils/Condition.h>
+#include <utils/Mutex.h>
+
 #include <memory>
 #include <vector>
 
@@ -47,6 +50,9 @@ struct VulkanCmdFence {
     ~VulkanCmdFence();
     const VkDevice device;
     VkFence fence;
+    utils::Condition condition;
+    utils::Mutex mutex;
+    bool submitted = false;
 };
 
  // The submission fence has shared ownership semantics because it is potentially wrapped by a
@@ -56,7 +62,6 @@ struct VulkanCommandBuffer {
     VkCommandBuffer cmdbuffer;
     std::shared_ptr<VulkanCmdFence> fence;
     VulkanDisposer::Set resources;
-    bool submitted;
 };
 
 // For now we only support a single-device, single-instance scenario. Our concept of "context" is a
