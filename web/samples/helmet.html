@@ -6,43 +6,31 @@
 <meta name="viewport" content="width=device-width,user-scalable=no,initial-scale=1">
 <link href="https://google.github.io/filament/favicon.png" rel="icon" type="image/x-icon" />
 <style>
-body { margin: 0; overflow: hidden; }
-canvas { touch-action: none; width: 100%; height: 100%; }
+html, body { height: 100%; }
+body       { margin: 0; overflow: hidden; }
+#container { position: relative; height: 100%; }
+canvas     { position: absolute; width: 100%; height: 100%; }
+#messages  { position: absolute; width: 100%; height: 100%; padding-left: 10px; }
 </style>
 </head>
 <body>
-<canvas></canvas>
+<div id="container">
+    <canvas></canvas>
+    <pre id="messages"></pre>
+</div>
 <script src="filament.js"></script>
 <script src="gl-matrix-min.js"></script>
 <script src="https://unpkg.com/gltumble"></script>
 <script>
 
 const ibl_suffix = Filament.getSupportedFormatSuffix('etc s3tc');
-
 const env = 'syferfontein_18d_clear_2k';
 const ibl_url = `${env}/${env}_ibl${ibl_suffix}.ktx`;
 const sky_url = `${env}/${env}_skybox.ktx`;
-const helmet_filamat_url = 'helmet.filamat';
-const filamesh_url = 'helmet.filamesh';
+const mesh_url = 'helmet.gltf';
 
-Filament.init([
-    'FlightHelmet_baseColor.png',
-    'FlightHelmet_occlusionRoughnessMetallic.png',
-    'FlightHelmet_normal.png',
-    'FlightHelmet_baseColor1.png',
-    'FlightHelmet_occlusionRoughnessMetallic1.png',
-    'FlightHelmet_normal1.png',
-    'FlightHelmet_baseColor2.png',
-    'FlightHelmet_occlusionRoughnessMetallic2.png',
-    'FlightHelmet_normal2.png',
-    'FlightHelmet_baseColor3.png',
-    'FlightHelmet_occlusionRoughnessMetallic3.png',
-    'FlightHelmet_normal3.png',
-    'FlightHelmet_baseColor4.png',
-    'FlightHelmet_occlusionRoughnessMetallic4.png',
-    'FlightHelmet_normal4.png',
-    helmet_filamat_url, filamesh_url, ibl_url, sky_url
-], () => {
+Filament.init([mesh_url, ibl_url, sky_url], () => {
+    window.gltfio = Filament.gltfio;
     window.Fov = Filament.Camera$Fov;
     window.LightType = Filament.LightManager$Type;
     window.app = new App(document.getElementsByTagName('canvas')[0]);
@@ -52,7 +40,7 @@ class App {
     constructor(canvas) {
         this.canvas = canvas;
         const engine = this.engine = Filament.Engine.create(this.canvas);
-        this.scene = engine.createScene();
+        const scene = this.scene = engine.createScene();
         this.trackball = new Trackball(canvas, {startSpin: 0.035});
 
         const sunlight = Filament.EntityManager.get().create();
@@ -60,7 +48,7 @@ class App {
             .color([0.98, 0.92, 0.89])
             .intensity(100000.0)
             .direction([0.6, -1.0, -0.8])
-            .castShadows(true)
+            .castShadows(false) // TODO: re-enable shadows after Chrome 74
             .sunAngularRadius(1.9)
             .sunHaloSize(10.0)
             .sunHaloFalloff(80.0)
@@ -74,46 +62,26 @@ class App {
         const skybox = engine.createSkyFromKtx(sky_url);
         this.scene.setSkybox(skybox);
 
-        const sampler = new Filament.TextureSampler(
-            Filament.MinFilter.LINEAR_MIPMAP_LINEAR,
-            Filament.MagFilter.LINEAR,
-            Filament.WrapMode.CLAMP_TO_EDGE);
+        const loader = engine.createAssetLoader();
+        const asset = this.asset = loader.createAssetFromJson(mesh_url);
 
-        const helmetMaterial = engine.createMaterial(helmet_filamat_url);
+        const messages = document.getElementById('messages');
 
-        const setTextures = function(minstance, suffix) {
-            const setParam = minstance.setTextureParameter.bind(minstance);
-            const createTex = engine.createTextureFromPng.bind(engine);
-            const baseColor = `FlightHelmet_baseColor${suffix}.png`;
-            const orm = `FlightHelmet_occlusionRoughnessMetallic${suffix}.png`;
-            const normal = `FlightHelmet_normal${suffix}.png`;
-            setParam('baseColor', createTex(baseColor, {srgb: true}), sampler);
-            setParam('occlusionRoughnessMetallic', createTex(orm), sampler);
-            setParam('normalMap', createTex(normal), sampler);
+        // Crudely indicate progress by printing the URL of each resource as it is loaded.
+        // Note that we wait 1 ms after the last asset has downloaded, but before finalization.
+        // This gives the browser time to display the latest status.
+        const onFetched = (uri) => messages.innerText += `Downloaded ${uri}\n`;
+        const onDone = (finalize) => {
+            messages.innerText += 'Finalizing...\n'
+            setTimeout(() => {
+                finalize();
+                loader.delete();
+                const entities = asset.getEntities();
+                scene.addEntities(entities);
+                messages.remove();
+            }, 1);
         };
-
-        const GlassPlasticMat = helmetMaterial.createInstance();
-        const LeatherPartsMat = helmetMaterial.createInstance();
-        const LensesMat = helmetMaterial.createInstance();
-        const MetalPartsMat = helmetMaterial.createInstance();
-        const RubberWoodMat = helmetMaterial.createInstance();
-
-        setTextures(GlassPlasticMat, '');
-        setTextures(LeatherPartsMat, '1');
-        setTextures(LensesMat, '2');
-        setTextures(MetalPartsMat, '3');
-        setTextures(RubberWoodMat, '4');
-
-        const mats = { GlassPlasticMat, LeatherPartsMat, LensesMat, MetalPartsMat, RubberWoodMat };
-        const mesh = engine.loadFilamesh(filamesh_url, null, mats);
-
-        let rm = engine.getRenderableManager();
-        let renderable = rm.getInstance(mesh.renderable);
-        rm.setCastShadows(renderable, true);
-        rm.setReceiveShadows(renderable, true);
-
-        this.helmet = mesh.renderable;
-        this.scene.addEntity(mesh.renderable);
+        asset.loadResources(onDone, onFetched);
 
         this.swapChain = engine.createSwapChain();
         this.renderer = engine.createRenderer();
@@ -130,7 +98,7 @@ class App {
 
     render() {
         const tcm = this.engine.getTransformManager();
-        const inst = tcm.getInstance(this.helmet);
+        const inst = tcm.getInstance(this.asset.getRoot());
         tcm.setTransform(inst, this.trackball.getMatrix());
         inst.delete();
         this.renderer.render(this.swapChain, this.view);
