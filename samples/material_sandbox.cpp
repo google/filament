@@ -270,7 +270,7 @@ static void gui(filament::Engine* engine, filament::View*) {
     {
         if (ImGui::CollapsingHeader("Material", ImGuiTreeNodeFlags_DefaultOpen)) {
             ImGui::Combo("model", &params.currentMaterialModel,
-                    "unlit\0lit\0subsurface\0cloth\0\0");
+                    "unlit\0lit\0subsurface\0cloth\0specularGlossiness\0\0");
 
             if (params.currentMaterialModel == MATERIAL_MODEL_LIT) {
                 ImGui::Combo("blending", &params.currentBlending,
@@ -284,8 +284,14 @@ static void gui(filament::Engine* engine, filament::View*) {
                         params.currentBlending == BLENDING_FADE) {
                     ImGui::SliderFloat("alpha", &params.alpha, 0.0f, 1.0f);
                 }
-                ImGui::SliderFloat("roughness", &params.roughness, 0.0f, 1.0f);
-                if (params.currentMaterialModel != MATERIAL_MODEL_CLOTH) {
+                if (params.currentMaterialModel != MATERIAL_MODEL_SPECGLOSS) {
+                    ImGui::SliderFloat("roughness", &params.roughness, 0.0f, 1.0f);
+                } else {
+                    ImGui::SliderFloat("glossiness", &params.glossiness, 0.0f, 1.0f);
+                    ImGui::ColorEdit3("specularColor", &params.specularColor.r);
+                }
+                if (params.currentMaterialModel != MATERIAL_MODEL_CLOTH &&
+                        params.currentMaterialModel != MATERIAL_MODEL_SPECGLOSS) {
                     ImGui::SliderFloat("metallic", &params.metallic, 0.0f, 1.0f);
                     ImGui::SliderFloat("reflectance", &params.reflectance, 0.0f, 1.0f);
                 }
