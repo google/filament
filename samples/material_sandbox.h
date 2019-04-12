@@ -85,6 +85,8 @@ struct SandboxParameters {
     bool msaa = false;
     bool dithering = true;
     bool stableShadowMap = false;
+    float normalBias = 0.4;
+    float constantBias = 0.01;
 };
 
 inline void createInstances(SandboxParameters& params, filament::Engine& engine) {
@@ -193,14 +195,6 @@ inline filament::MaterialInstance* updateInstances(SandboxParameters& params,
         materialInstance->setParameter("subsurfaceColor", RgbType::sRGB, params.subsurfaceColor);
     }
 
-    auto& lcm = engine.getLightManager();
-    auto lightInstance = lcm.getInstance(params.light);
-    lcm.setColor(lightInstance, params.lightColor);
-    lcm.setIntensity(lightInstance, params.lightIntensity);
-    lcm.setDirection(lightInstance, params.lightDirection);
-    lcm.setSunAngularRadius(lightInstance, params.sunAngularRadius);
-    lcm.setSunHaloSize(lightInstance, params.sunHaloSize);
-    lcm.setSunHaloFalloff(lightInstance, params.sunHaloFalloff);
     return materialInstance;
 }
 
