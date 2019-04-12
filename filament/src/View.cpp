@@ -305,14 +305,11 @@ void FView::prepareShadowing(FEngine& engine, backend::DriverApi& driver,
             mat4f const& lightFromWorldMatrix = shadowMap.getLightSpaceMatrix();
             u.setUniform(offsetof(PerViewUib, lightFromWorldMatrix), lightFromWorldMatrix);
 
-            // the 2x bias is needed in opengl because the depth maps to -1/1. It may not be
-            // needed with other APIs, but at least it won't worsen the acnee there.
-            const float sceneRange = shadowMap.getSceneRange();
             const float texelSizeWorldSpace = shadowMap.getTexelSizeWorldSpace();
             const float constantBias = lcm.getShadowConstantBias(directionalLight);
             const float normalBias = lcm.getShadowNormalBias(directionalLight);
             u.setUniform(offsetof(PerViewUib, shadowBias),
-                    float3{ 2 * constantBias / sceneRange, normalBias * texelSizeWorldSpace, 0 });
+                    float3{ constantBias, normalBias * texelSizeWorldSpace, 0 });
         }
     }
 }
