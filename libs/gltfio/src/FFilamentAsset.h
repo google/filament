@@ -133,6 +133,10 @@ struct FFilamentAsset : public FilamentAsset {
         return mWireframe->mEntity;
     }
 
+    filament::Engine* getEngine() const noexcept {
+        return mEngine;
+    }
+
     void releaseSourceData() noexcept {
         mBufferBindings.clear();
         mBufferBindings.shrink_to_fit();

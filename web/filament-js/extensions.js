@@ -136,6 +136,16 @@ Filament.loadClassExtensions = function() {
         return result;
     };
 
+    /// createAssetLoader ::static method::
+    /// engine ::argument:: an instance of [Engine]
+    /// ::retval:: an instance of [AssetLoader]
+    /// Clients should create only one asset loader for the lifetime of their app, this prevents
+    /// memory leaks and duplication of Material objects.
+    Filament.Engine.prototype.createAssetLoader = function() {
+        const materials = new Filament.gltfio$UbershaderLoader(this);
+        return new Filament.gltfio$AssetLoader(this, materials);
+    };
+
     /// VertexBuffer ::core class::
 
     /// setBufferAt ::method::
@@ -208,4 +218,60 @@ Filament.loadClassExtensions = function() {
         return result;
     };
 
+    Filament.gltfio$AssetLoader.prototype.createAssetFromJson = function(buffer) {
+        buffer = getBufferDescriptor(buffer);
+        const result = this._createAssetFromJson(buffer);
+        buffer.delete();
+        return result;
+    };
+
+    Filament.gltfio$AssetLoader.prototype.createAssetFromBinary = function(buffer) {
+        buffer = getBufferDescriptor(buffer);
+        const result = this._createAssetFromBinary(buffer);
+        buffer.delete();
+        return result;
+    };
+
+    // See the C++ documentation for ResourceLoader and AssetLoader. The JavaScript API differs in
+    // that it takes two optional callbacks:
+    //
+    // - onDone is called after all resources have been downloaded, but before the
+    //   asset has been finalized. The onDone callback is passed the finalize function.
+    //
+    // - onFetched is called after each resource has finished downloading.
+    //
+    // "Finalization" refers to decoding texture data, converting the format of the
+    // vertex data if needed, and potentially computing tangents.
+    Filament.gltfio$FilamentAsset.prototype.loadResources = function(onDone, onFetched) {
+        const asset = this;
+        const engine = this.getEngine();
+        const urlkeys = this.getResourceUrls();
+        const urlset = new Set();
+        for (let i = 0; i < urlkeys.size(); i++) {
+            const url = urlkeys.get(i);
+            if (url) {
+                urlset.add(url);
+            }
+        }
+        const resourceLoader = new Filament.gltfio$ResourceLoader(engine);
+        Filament.fetch([...urlset], function() {
+            resourceLoader.loadResources(asset);
+            const finalize = function() {
+                resourceLoader.loadResources(asset);
+                resourceLoader.delete();
+            };
+            if (onDone) {
+                onDone(finalize);
+            } else {
+                finalize();
+            }
+        }, function(name) {
+            let buffer = getBufferDescriptor(name);
+            resourceLoader.addResourceData(name, buffer);
+            buffer.delete();
+            if (onFetched) {
+                onFetched(name);
+            }
+        });
+    };
 };
