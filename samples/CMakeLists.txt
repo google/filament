@@ -40,6 +40,7 @@ set(MATERIAL_SRCS
         materials/sandboxLit.mat
         materials/sandboxLitFade.mat
         materials/sandboxLitTransparent.mat
+        materials/sandboxSpecGloss.mat
         materials/sandboxSubsurface.mat
         materials/sandboxUnlit.mat
         materials/texturedLit.mat
