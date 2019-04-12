@@ -548,8 +548,18 @@ void VulkanDriver::destroyFence(Handle<HwFence> fh) {
 }
 
 FenceStatus VulkanDriver::wait(Handle<HwFence> fh, uint64_t timeout) {
-    VkFence fence = handle_cast<VulkanFence>(mHandleMap, fh)->fence->fence;
-    VkResult result = vkWaitForFences(mContext.device, 1, &fence, VK_FALSE, timeout);
+    auto& cmdfence = handle_cast<VulkanFence>(mHandleMap, fh)->fence;
+
+    // The condition variable is used only to guarantee that we're calling vkWaitForFences *after*
+    // calling vkQueueSubmit.
+    std::unique_lock<utils::Mutex> lock(cmdfence->mutex);
+    if (!cmdfence->submitted) {
+        cmdfence->condition.wait(lock);
+        assert(cmdfence->submitted);
+    } else {
+        lock.unlock();
+    }
+    VkResult result = vkWaitForFences(mContext.device, 1, &cmdfence->fence, VK_FALSE, timeout);
     return result == VK_SUCCESS ? FenceStatus::CONDITION_SATISFIED : FenceStatus::TIMEOUT_EXPIRED;
 }
 
@@ -822,10 +832,14 @@ void VulkanDriver::commit(Handle<HwSwapChain> sch) {
             .signalSemaphoreCount = 1u,
             .pSignalSemaphores = &surfaceContext.renderingFinished,
     };
-    result = vkQueueSubmit(mContext.graphicsQueue, 1, &submitInfo,
-            swapContext.commands.fence->fence);
+
+    auto& cmdfence = swapContext.commands.fence;
+    std::unique_lock<utils::Mutex> lock(cmdfence->mutex);
+    result = vkQueueSubmit(mContext.graphicsQueue, 1, &submitInfo, cmdfence->fence);
+    cmdfence->submitted = true;
+    lock.unlock();
     ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkQueueSubmit error.");
-    swapContext.commands.submitted = true;
+    cmdfence->condition.notify_all();
 
     // Present the backbuffer.
     VulkanSurfaceContext& surface = handle_cast<VulkanSwapChain>(mHandleMap, sch)->surfaceContext;

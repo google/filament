@@ -225,7 +225,6 @@ void createVirtualDevice(VulkanContext& context) {
     const VkCommandBufferBeginInfo binfo { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
     vkAllocateCommandBuffers(context.device, &allocateInfo, &context.work.cmdbuffer);
     vkBeginCommandBuffer(context.work.cmdbuffer, &binfo);
-    context.work.submitted = false;
 }
 
 void getPresentationQueue(VulkanContext& context, VulkanSurfaceContext& sc) {
@@ -421,9 +420,9 @@ void waitForIdle(VulkanContext& context) {
         auto& surfaceContext = *context.currentSurface;
         for (auto& swapContext : surfaceContext.swapContexts) {
             assert(nfences < 4);
-            if (swapContext.commands.submitted && swapContext.commands.fence) {
+            if (swapContext.commands.fence && swapContext.commands.fence->submitted) {
                 fences[nfences++] = swapContext.commands.fence->fence;
-                swapContext.commands.submitted = false;
+                swapContext.commands.fence->submitted = false;
             }
         }
         if (nfences > 0) {
@@ -449,14 +448,13 @@ void acquireSwapCommandBuffer(VulkanContext& context) {
     SwapContext& swap = getSwapContext(context);
 
     // Ensure that the previous submission of this command buffer has finished.
-    if (swap.commands.fence) {
-        ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkWaitForFences error.");
-        result = vkWaitForFences(context.device, 1, &swap.commands.fence->fence, VK_FALSE,
-                    UINT64_MAX);
+    auto& cmdfence = swap.commands.fence;
+    if (cmdfence) {
+        result = vkWaitForFences(context.device, 1, &cmdfence->fence, VK_FALSE, UINT64_MAX);
         ASSERT_POSTCONDITION(result == VK_SUCCESS, "vkWaitForFences error.");
     }
 
-     swap.commands.fence.reset(new VulkanCmdFence(context.device));
+     cmdfence.reset(new VulkanCmdFence(context.device));
 
     // Restart the command buffer.
     VkCommandBuffer cmdbuffer = swap.commands.cmdbuffer;
@@ -469,7 +467,6 @@ void acquireSwapCommandBuffer(VulkanContext& context) {
     error = vkBeginCommandBuffer(cmdbuffer, &beginInfo);
     ASSERT_POSTCONDITION(not error, "vkBeginCommandBuffer error.");
     context.currentCommands = &swap.commands;
-    swap.commands.submitted = false;
 }
 
 // Flushes the current command buffer and waits for it to finish executing.
@@ -487,13 +484,18 @@ void flushCommandBuffer(VulkanContext& context) {
         .commandBufferCount = 1,
         .pCommandBuffers = &context.currentCommands->cmdbuffer,
     };
-    error = vkQueueSubmit(context.graphicsQueue, 1, &submitInfo, sc.commands.fence->fence);
+
+    auto& cmdfence = sc.commands.fence;
+    std::unique_lock<utils::Mutex> lock(cmdfence->mutex);
+    error = vkQueueSubmit(context.graphicsQueue, 1, &submitInfo, cmdfence->fence);
+    lock.unlock();
     ASSERT_POSTCONDITION(!error, "vkQueueSubmit error.");
+    cmdfence->condition.notify_all();
 
     // Restart the command buffer.
-    error = vkWaitForFences(context.device, 1, &sc.commands.fence->fence, VK_FALSE, UINT64_MAX);
+    error = vkWaitForFences(context.device, 1, &cmdfence->fence, VK_FALSE, UINT64_MAX);
     ASSERT_POSTCONDITION(!error, "vkWaitForFences error.");
-    error = vkResetFences(context.device, 1, &sc.commands.fence->fence);
+    error = vkResetFences(context.device, 1, &cmdfence->fence);
     ASSERT_POSTCONDITION(!error, "vkResetFences error.");
     error = vkResetCommandBuffer(context.currentCommands->cmdbuffer, 0);
     ASSERT_POSTCONDITION(!error, "vkResetCommandBuffer error.");
@@ -524,8 +526,8 @@ VkFormat findSupportedFormat(VulkanContext& context, const std::vector<VkFormat>
 VkCommandBuffer acquireWorkCommandBuffer(VulkanContext& context) {
     VulkanCommandBuffer& work = context.work;
     const VkCommandBufferBeginInfo binfo { .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
-    if (work.submitted) {
-        work.submitted = false;
+    if (work.fence && work.fence->submitted) {
+        work.fence->submitted = false;
         vkWaitForFences(context.device, 1, &work.fence->fence, VK_FALSE, UINT64_MAX);
         vkResetCommandBuffer(work.cmdbuffer, 0);
         vkBeginCommandBuffer(work.cmdbuffer, &binfo);
@@ -536,7 +538,7 @@ VkCommandBuffer acquireWorkCommandBuffer(VulkanContext& context) {
 
 void flushWorkCommandBuffer(VulkanContext& context) {
     VulkanCommandBuffer& work = context.work;
-    ASSERT_PRECONDITION(!work.submitted, "Flushed the work buffer more than once.");
+    ASSERT_PRECONDITION(!work.fence->submitted, "Flushed the work buffer more than once.");
     const VkPipelineStageFlags waitDestStageMask = VK_PIPELINE_STAGE_TRANSFER_BIT;
     VkSubmitInfo submitInfo {
         .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
@@ -546,7 +548,7 @@ void flushWorkCommandBuffer(VulkanContext& context) {
     };
     vkEndCommandBuffer(work.cmdbuffer);
     vkQueueSubmit(context.graphicsQueue, 1, &submitInfo, work.fence->fence);
-    work.submitted = true;
+    work.fence->submitted = true;
 }
 
 } // namespace filament
