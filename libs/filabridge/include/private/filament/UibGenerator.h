@@ -64,7 +64,7 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     filament::math::float3 lightDirection;
     uint32_t fParamsX; // stride-x
 
-    filament::math::float3 shadowBias; // constant bias, normal bias, unused
+    filament::math::float3 shadowBias; // unused, normal bias, unused
     float oneOverFroxelDimensionY;
 
     filament::math::float4 zParams; // froxel Z parameters
