@@ -41,10 +41,14 @@ vec2 computeReceiverPlaneDepthBias(const vec3 position) {
     // see: GDC '06: Shadow Mapping: GPU-based Tips and Techniques
     vec2 bias;
 #if SHADOW_RECEIVER_PLANE_DEPTH_BIAS == SHADOW_RECEIVER_PLANE_DEPTH_BIAS_ENABLED
-    vec3 dx = dFdx(position);
-    vec3 dy = dFdy(position);
-    bias = vec2(dy.y * dx.z - dx.y * dy.z, dx.x * dy.z - dy.x * dx.z);
-    bias *= 1.0 / ((dx.x * dy.y) - (dx.y * dy.x));
+    vec3 du = dFdx(position);
+    vec3 dv = dFdy(position);
+
+    // Chain rule we use:
+    //     | du.x   du.y |^-T      |  dv.y  -du.y |T    |  dv.y  -dv.x |
+    // D * | dv.x   dv.y |     =   | -dv.x   du.x |  =  | -du.y   du.x |
+
+    bias = inverse(mat2(du.xy, dv.xy)) * vec2(du.z, dv.z);
 #else
     bias = vec2(0.0);
 #endif
