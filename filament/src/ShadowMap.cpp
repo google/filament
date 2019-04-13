@@ -444,11 +444,16 @@ void ShadowMap::computeShadowCameraDirectional(
 
         mTexelSizeWs = texelSizeWorldSpace(St, float3{ 0.5f });
         mLightSpace = St;
-        mSceneRange = (zfar - znear);
-        mCamera->setCustomProjection(mat4(S), znear, zfar);
+
+        // We apply the constant bias in world space (as opposed to light-space) to account
+        // for perspective and lispsm shadow maps. This also allows us to do this at zero-cost
+        // by baking it in the shadow-map itself.
+
+        const mat4f Sb = S * mat4f::translation(dir * params.options.constantBias);
+        mCamera->setCustomProjection(mat4(Sb), znear, zfar);
 
         // for the debug camera, we need to undo the world origin
-        mDebugCamera->setCustomProjection(mat4(S * camera.worldOrigin), znear, zfar);
+        mDebugCamera->setCustomProjection(mat4(Sb * camera.worldOrigin), znear, zfar);
     }
 }
 

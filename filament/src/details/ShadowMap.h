@@ -67,9 +67,6 @@ public:
     // return the size of a texel in world space (pre-warping)
     float getTexelSizeWorldSpace() const noexcept { return mTexelSizeWs; }
 
-    // Returns the shadow map's depth range. Valid after init().
-    float getSceneRange() const noexcept { return mSceneRange; }
-
     // Returns the light's projection. Valid after calling update().
     FCamera const& getCamera() const noexcept { return *mCamera; }
 
@@ -181,7 +178,6 @@ private:
     FCamera* mCamera = nullptr;
     FCamera* mDebugCamera = nullptr;
     math::mat4f mLightSpace;
-    float mSceneRange = 0.0f;
     float mTexelSizeWs = 0.0f;
 
     // set-up in prepare()

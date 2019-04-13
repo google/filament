@@ -306,10 +306,9 @@ void FView::prepareShadowing(FEngine& engine, backend::DriverApi& driver,
             u.setUniform(offsetof(PerViewUib, lightFromWorldMatrix), lightFromWorldMatrix);
 
             const float texelSizeWorldSpace = shadowMap.getTexelSizeWorldSpace();
-            const float constantBias = lcm.getShadowConstantBias(directionalLight);
             const float normalBias = lcm.getShadowNormalBias(directionalLight);
             u.setUniform(offsetof(PerViewUib, shadowBias),
-                    float3{ constantBias, normalBias * texelSizeWorldSpace, 0 });
+                    float3{ 0, normalBias * texelSizeWorldSpace, 0 });
         }
     }
 }
