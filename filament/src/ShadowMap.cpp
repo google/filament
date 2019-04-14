@@ -109,13 +109,15 @@ void ShadowMap::prepare(DriverApi& driver, SamplerGroup& sb) noexcept {
     TextureFormat format = TextureFormat::DEPTH16;
     switch (format) {
         default:
-            // this should not happen, for shadow maps, we want a linear depth
+            // this should not happen
         case TextureFormat::DEPTH16:
-            mShadowMapResolution = 1.0f / (1 << 16);
+            mShadowMapResolution = 1.0f / (1u << 16u);
             break;
+        case TextureFormat::DEPTH32F:
+            // for 32-bits float assume 24-bits resolution. we shouldn't use that for shadow-maps.
         case TextureFormat::DEPTH24:
         case TextureFormat::DEPTH24_STENCIL8:
-            mShadowMapResolution = 1.0f / (1 << 24);
+            mShadowMapResolution = 1.0f / (1u << 24u);
             break;
     }
 
