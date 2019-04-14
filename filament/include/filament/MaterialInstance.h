@@ -120,7 +120,7 @@ public:
      *  absolutely necessary.
      *
      * @param scale scale factor used to create a variable depth offset for each triangle
-     * @param constant scale factore used to create a constant depth offset for each triangle
+     * @param constant scale factor used to create a constant depth offset for each triangle
      */
     void setPolygonOffset(float scale, float constant) noexcept;
 
