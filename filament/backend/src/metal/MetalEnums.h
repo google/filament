@@ -145,10 +145,14 @@ constexpr inline MTLPixelFormat getMetalFormat(TextureFormat format) noexcept {
         case TextureFormat::RG8I: return MTLPixelFormatRG8Sint;
 
 #if defined(IOS)
-        // iOS does not support 16 bit depth textures.
-        case TextureFormat::DEPTH16: return MTLPixelFormatDepth32Float;
+        // iOS does not support 16 bit or 24 bit depth textures.
+        case TextureFormat::DEPTH16:
+        case TextureFormat::DEPTH24:
+            return MTLPixelFormatDepth32Float;
 #else
         case TextureFormat::DEPTH16: return MTLPixelFormatDepth16Unorm;
+        // MacOS only supports 24 bit depth + 8 bits Stencil
+        case TextureFormat::DEPTH24: return MTLPixelFormatDepth24Unorm_Stencil8;
 #endif
 
         // TODO: Add packed 16 bit formats- only available on iOS
@@ -163,7 +167,6 @@ constexpr inline MTLPixelFormat getMetalFormat(TextureFormat format) noexcept {
         case TextureFormat::RGB8_SNORM:
         case TextureFormat::RGB8UI:
         case TextureFormat::RGB8I:
-        case TextureFormat::DEPTH24:
             return MTLPixelFormatInvalid;
 
         // 32-bits per element
