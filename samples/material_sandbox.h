@@ -85,8 +85,10 @@ struct SandboxParameters {
     bool msaa = false;
     bool dithering = true;
     bool stableShadowMap = false;
-    float normalBias = 0.4;
-    float constantBias = 0.01;
+    float normalBias = 1.0;
+    float constantBias = 0.001;
+    float polygonOffsetConstant = 0.5;
+    float polygonOffsetSlope = 2.0;
 };
 
 inline void createInstances(SandboxParameters& params, filament::Engine& engine) {

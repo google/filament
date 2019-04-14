@@ -189,6 +189,7 @@ private:
     uint32_t mShadowMapDimension = 0;
     float mShadowMapResolution = 0.0f;
     bool mHasVisibleShadows = false;
+    backend::PolygonOffset mPolygonOffset{};
 
     // use a member here (instead of stack) because we don't want to pay the
     // initialization of the float3 each time

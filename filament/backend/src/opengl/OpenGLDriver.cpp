@@ -214,9 +214,6 @@ OpenGLDriver::OpenGLDriver(OpenGLPlatform* platform) noexcept
     glHint(GL_FRAGMENT_SHADER_DERIVATIVE_HINT, GL_NICEST);
 #endif
 
-    // For the shadow pass
-    glPolygonOffset(1.0f, 1.0f);
-
     // On some implementation we need to clear the viewport with a triangle, for performance
     // reasons
     initClearProgram();
@@ -595,15 +592,6 @@ void OpenGLDriver::depthFunc(GLenum func) noexcept {
 }
 
 void OpenGLDriver::polygonOffset(GLfloat factor, GLfloat units) noexcept {
-    // if we're in the shadow-pass, the default polygon offset is factor = unit = 1
-    // TODO: this should be controlled by filament, instead of being a feature of the driver
-    if (factor == 0 && units == 0) {
-        TargetBufferFlags clearFlags = (TargetBufferFlags)mRenderPassParams.flags.clear;
-        if ((clearFlags & TargetBufferFlags::SHADOW) == TargetBufferFlags::SHADOW) {
-            factor = units = 1.0f;
-        }
-    }
-
     update_state(state.polygonOffset, { factor, units }, [&]() {
         if (factor != 0 || units != 0) {
             glPolygonOffset(factor, units);

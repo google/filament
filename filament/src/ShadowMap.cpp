@@ -75,7 +75,7 @@ void ShadowMap::fillWithDebugPattern(backend::DriverApi& driverApi) const noexce
     });
     for (size_t y = 0; y < dim; ++y) {
         for (size_t x = 0; x < dim; ++x) {
-            ptr[x + y * dim] = ((x ^ y) & 0x8) ? 0 : ~0;
+            ptr[x + y * dim] = ((x ^ y) & 0x8u) ? 0u : 0xFFu;
         }
     }
 }
@@ -179,9 +179,11 @@ void ShadowMap::render(DriverApi& driver, RenderPass& pass, FView& view) noexcep
     view.prepareCamera(cameraInfo, viewport);
     view.commitUniforms(driver);
 
+    pass.overridePolygonOffset(&mPolygonOffset);
     pass.generateSortedCommands(RenderPass::SHADOW);
     pass.execute("Shadow map Pass", getRenderTarget(), params,
             pass.getCommands().begin(), pass.getCommands().end());
+    pass.overridePolygonOffset(nullptr);
 }
 
 void ShadowMap::terminate(DriverApi& driverApi) noexcept {
@@ -204,6 +206,10 @@ void ShadowMap::update(
     mShadowMapDimension = std::max(1u, lcm.getShadowMapSize(li));
 
     FLightManager::ShadowParams params = lcm.getShadowParams(li);
+    mPolygonOffset = {
+            .constant = params.options.polygonOffsetConstant,
+            .slope = params.options.polygonOffsetSlope
+    };
     mat4f projection(camera.cullingProjection);
     if (params.options.shadowFar > 0.0f) {
         float n = camera.zn;
