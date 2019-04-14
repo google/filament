@@ -665,13 +665,6 @@ void MetalDriver::draw(backend::PipelineState ps, Handle<HwRenderPrimitive> rph)
         [mContext->currentCommandEncoder setDepthStencilState:state];
     }
 
-    // Depth bias. Use a depth bias of 1.0 / 1.0 for the shadow pass.
-    TargetBufferFlags clearFlags = (TargetBufferFlags) mContext->currentRenderPassFlags.clear;
-    if ((clearFlags & TargetBufferFlags::SHADOW) == TargetBufferFlags::SHADOW) {
-        [mContext->currentCommandEncoder setDepthBias:1.0f
-                                         slopeScale:1.0f
-                                              clamp:0.0];
-    }
     if (ps.polygonOffset.constant != 0.0 || ps.polygonOffset.slope != 0.0) {
         [mContext->currentCommandEncoder setDepthBias:ps.polygonOffset.constant
                                          slopeScale:ps.polygonOffset.slope

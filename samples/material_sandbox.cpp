@@ -349,10 +349,12 @@ static void gui(filament::Engine* engine, filament::View*) {
                     debug.getPropertyAddress<bool>("d.shadowmap.focus_shadowcasters"));
             ImGui::Checkbox("Show checker board",
                     debug.getPropertyAddress<bool>("d.shadowmap.checkerboard"));
-            ImGui::SliderFloat("Normal bias",
-                    &params.normalBias, 0.0f, 3.0f);
-            ImGui::SliderFloat("Constant bias",
-                    &params.constantBias, 0.0f, 2.0f);
+
+            ImGui::SliderFloat("Normal bias", &params.normalBias, 0.0f, 4.0f);
+            ImGui::SliderFloat("Constant bias", &params.constantBias, 0.0f, 1.0f);
+            ImGui::SliderFloat("Polygon Offset Scale", &params.polygonOffsetSlope, 0.0f, 10.0f);
+            ImGui::SliderFloat("Polygon Offset Constant", &params.polygonOffsetConstant, 0.0f, 10.0f);
+
             bool* lispsm;
             if (debug.getPropertyAddress<bool>("d.shadowmap.lispsm", &lispsm)) {
                 ImGui::Checkbox("Enable LiSPSM", lispsm);
@@ -400,6 +402,8 @@ static void gui(filament::Engine* engine, filament::View*) {
     options.stable = params.stableShadowMap;
     options.normalBias = params.normalBias;
     options.constantBias = params.constantBias;
+    options.polygonOffsetConstant = params.polygonOffsetConstant;
+    options.polygonOffsetSlope = params.polygonOffsetSlope;
     lcm.setShadowOptions(lightInstance, options);
 
     auto* ibl = FilamentApp::get().getIBL();

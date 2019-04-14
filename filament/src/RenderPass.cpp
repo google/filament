@@ -62,6 +62,12 @@ void RenderPass::setExecuteSync(JobSystem::Job* sync) noexcept {
     mSync = sync;
 }
 
+void RenderPass::overridePolygonOffset(backend::PolygonOffset* polygonOffset) noexcept {
+    if ((mPolygonOffsetOverride = (polygonOffset != nullptr))) {
+        mPolygonOffset = *polygonOffset;
+    }
+}
+
 void RenderPass::generateSortedCommands(CommandTypeFlags const commandTypeFlags) noexcept {
     SYSTRACE_CONTEXT();
 
@@ -156,16 +162,19 @@ void RenderPass::execute(const char* name,
     engine.flush(); // Wake-up the driver thread
 }
 
-/* static */
 UTILS_NOINLINE // no need to be inlined
 void RenderPass::recordDriverCommands(FEngine::DriverApi& driver, FScene& scene,
-        const Command* UTILS_RESTRICT first, const Command* last) noexcept {
+        const Command* UTILS_RESTRICT first, const Command* last)  const noexcept {
     SYSTRACE_CALL();
 
     if (first != last) {
         SYSTRACE_VALUE32("commandCount", last - first);
 
-        PipelineState pipeline;
+        PolygonOffset dummyPolyOffset;
+        PipelineState pipeline{ .polygonOffset = mPolygonOffset };
+        PolygonOffset* const pPipelinePolygonOffset =
+                mPolygonOffsetOverride ? &dummyPolyOffset : &pipeline.polygonOffset;
+
         Handle<HwUniformBuffer> uboHandle = scene.getRenderableUBO();
         FMaterialInstance const* UTILS_RESTRICT mi = nullptr;
         FMaterial const* UTILS_RESTRICT ma = nullptr;
@@ -180,7 +189,7 @@ void RenderPass::recordDriverCommands(FEngine::DriverApi& driver, FScene& scene,
             if (UTILS_UNLIKELY(mi != info.mi)) {
                 // this is always taken the first time
                 mi = info.mi;
-                pipeline.polygonOffset = mi->getPolygonOffset();
+                *pPipelinePolygonOffset = mi->getPolygonOffset();
                 ma = mi->getMaterial();
                 mi->use(driver);
             }

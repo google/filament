@@ -203,6 +203,7 @@ public:
 
 
     RenderPass(FEngine& engine, utils::GrowingSlice<Command>& commands) noexcept;
+    void overridePolygonOffset(backend::PolygonOffset* polygonOffset) noexcept;
     void setGeometry(FScene& scene, utils::Range<uint32_t> vr) noexcept;
     void setCamera(const CameraInfo& camera) noexcept;
     void setRenderFlags(RenderFlags flags) noexcept;
@@ -243,8 +244,8 @@ private:
     static void setupColorCommand(Command& cmdDraw, bool hasDepthPass,
             FMaterialInstance const* mi) noexcept;
 
-    static void recordDriverCommands(FEngine::DriverApi& driver, FScene& scene,
-            const Command* first, const Command* last) noexcept;
+    void recordDriverCommands(FEngine::DriverApi& driver, FScene& scene,
+            const Command* first, const Command* last) const noexcept;
 
     static void updateSummedPrimitiveCounts(
             FScene::RenderableSoa& renderableData, utils::Range<uint32_t> vr) noexcept;
@@ -256,6 +257,8 @@ private:
     utils::Range<uint32_t> mVisibleRenderables{};
     CameraInfo mCamera;
     RenderFlags mFlags{};
+    bool mPolygonOffsetOverride = false;
+    backend::PolygonOffset mPolygonOffset{};
     utils::JobSystem::Job* mSync = nullptr;
     size_t mCommandsHighWatermark = 0;
 };
