@@ -83,14 +83,14 @@ Copy your platform's Makefile below into a `Makefile` inside the same directory.
 ### Linux
 
 ```
-FILAMENT_LIBS=-lfilament -lfilabridge -lshaders -lutils -lsmol-v
+FILAMENT_LIBS=-lfilamat -lfilabridge -lshaders -lutils -lsmol-v
 CC=clang++
 
 main: main.o
-	$(CC) -Llib/x86_64/ main.o $(FILAMENT_LIBS) -lpthread -lc++ -ldl -o main
+	$(CC) -Llib/x86_64/ -stdlib=libc++ main.o $(FILAMENT_LIBS) -lpthread -ldl -o main
 
 main.o: main.cpp
-	$(CC) -Iinclude/ -std=c++14 -pthread -c main.cpp
+	$(CC) -Iinclude/ -std=c++14 -stdlib=libc++ -pthread -c main.cpp
 
 clean:
 	rm -f main main.o
