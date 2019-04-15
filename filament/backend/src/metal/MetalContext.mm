@@ -32,6 +32,13 @@ id<CAMetalDrawable> acquireDrawable(MetalContext* context) {
     return context->currentDrawable;
 }
 
+id<MTLCommandBuffer> acquireCommandBuffer(MetalContext* context) {
+    id<MTLCommandBuffer> commandBuffer = [context->commandQueue commandBuffer];
+    ASSERT_POSTCONDITION(commandBuffer != nil, "Could not obtain command buffer.");
+    context->currentCommandBuffer = commandBuffer;
+    return commandBuffer;
+}
+
 } // namespace metal
 } // namespace backend
 } // namespace filament

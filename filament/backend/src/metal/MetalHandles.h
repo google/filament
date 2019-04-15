@@ -19,11 +19,13 @@
 
 #include "metal/MetalDriver.h"
 
+#include <CoreVideo/CVPixelBuffer.h>
 #include <Metal/Metal.h>
 #include <QuartzCore/QuartzCore.h> // for CAMetalLayer
 
 #include "MetalContext.h"
 #include "MetalEnums.h"
+#include "MetalExternalImage.h"
 #include "MetalState.h" // for MetalState::VertexDescription
 #include "TextureReshaper.h"
 
@@ -119,7 +121,7 @@ struct MetalProgram : public HwProgram {
 };
 
 struct MetalTexture : public HwTexture {
-    MetalTexture(id<MTLDevice> device, backend::SamplerType target, uint8_t levels,
+    MetalTexture(MetalContext& context, backend::SamplerType target, uint8_t levels,
             TextureFormat format, uint8_t samples, uint32_t width, uint32_t height, uint32_t depth,
             TextureUsage usage) noexcept;
     ~MetalTexture();
@@ -129,7 +131,9 @@ struct MetalTexture : public HwTexture {
     void loadCubeImage(const PixelBufferDescriptor& data, const FaceOffsets& faceOffsets,
             int miplevel);
 
-    id<MTLTexture> texture;
+    MetalContext& context;
+    MetalExternalImage externalImage;
+    id<MTLTexture> texture = nil;
     uint8_t bytesPerPixel;
     TextureReshaper reshaper;
 };

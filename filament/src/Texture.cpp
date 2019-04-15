@@ -161,6 +161,9 @@ void FTexture::setImage(FEngine& engine, size_t level,
 
 void FTexture::setExternalImage(FEngine& engine, void* image) noexcept {
     if (mTarget == Sampler::SAMPLER_EXTERNAL) {
+        // The first call to setExternalImageS is synchronous, and allows the driver to take
+        // ownership of the external image on this thread, if necessary.
+        engine.getDriverApi().setExternalImageS(mHandle, image);
         engine.getDriverApi().setExternalImage(mHandle, image);
     }
 }

@@ -270,10 +270,11 @@ MetalProgram::~MetalProgram() {
     [fragmentFunction release];
 }
 
-MetalTexture::MetalTexture(id<MTLDevice> device, backend::SamplerType target, uint8_t levels,
+MetalTexture::MetalTexture(MetalContext& context, backend::SamplerType target, uint8_t levels,
         TextureFormat format, uint8_t samples, uint32_t width, uint32_t height, uint32_t depth,
         TextureUsage usage) noexcept
-    : HwTexture(target, levels, samples, width, height, depth, format), reshaper(format) {
+    : HwTexture(target, levels, samples, width, height, depth, format), context(context),
+        externalImage(context), reshaper(format) {
 
     // Metal does not natively support 3 component textures. We'll emulate support by reshaping the
     // image data and using a 4 component texture.
@@ -294,24 +295,31 @@ MetalTexture::MetalTexture(id<MTLDevice> device, backend::SamplerType target, ui
                                                                     mipmapped:mipmapped];
         descriptor.mipmapLevelCount = levels;
         descriptor.textureType = MTLTextureType2D;
+        descriptor.usage = getMetalTextureUsage(usage);
+        descriptor.storageMode = getMetalStorageMode(format);
+        texture = [context.device newTextureWithDescriptor:descriptor];
     } else if (target == backend::SamplerType::SAMPLER_CUBEMAP) {
         ASSERT_POSTCONDITION(width == height, "Cubemap faces must be square.");
         descriptor = [MTLTextureDescriptor textureCubeDescriptorWithPixelFormat:pixelFormat
                                                                            size:width
                                                                       mipmapped:mipmapped];
         descriptor.mipmapLevelCount = levels;
+        descriptor.usage = getMetalTextureUsage(usage);
+        descriptor.storageMode = getMetalStorageMode(format);
+        texture = [context.device newTextureWithDescriptor:descriptor];
+    } else if (target == backend::SamplerType::SAMPLER_EXTERNAL) {
+        // If we're using external textures (CVPixelBufferRefs), we don't need to make any texture
+        // allocations.
+        texture = nil;
     } else {
         ASSERT_POSTCONDITION(false, "Sampler type not supported.");
     }
 
-    descriptor.usage = getMetalTextureUsage(usage);
-    descriptor.storageMode = getMetalStorageMode(format);
-
-    texture = [device newTextureWithDescriptor:descriptor];
 }
 
 MetalTexture::~MetalTexture() {
     [texture release];
+    externalImage.set(nullptr);
 }
 
 void MetalTexture::load2DImage(uint32_t level, uint32_t xoffset, uint32_t yoffset, uint32_t width,

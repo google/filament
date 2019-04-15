@@ -2045,6 +2045,9 @@ void OpenGLDriver::setCompressedTextureData(GLTexture* t,
     CHECK_GL_ERROR(utils::slog.e)
 }
 
+void OpenGLDriver::setExternalImageS(Handle<HwTexture> th, void* image) {
+}
+
 void OpenGLDriver::setExternalImage(Handle<HwTexture> th, void* image) {
     if (ext.OES_EGL_image_external_essl3) {
         DEBUG_MARKER()

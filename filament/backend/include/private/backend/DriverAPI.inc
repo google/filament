@@ -318,6 +318,8 @@ DECL_DRIVER_API_SYNCHRONOUS_0(bool, isFrameTimeSupported)
 
 DECL_DRIVER_API_SYNCHRONOUS_0(bool, canGenerateMipmaps)
 
+DECL_DRIVER_API_SYNCHRONOUS_2(void, setExternalImageS, backend::TextureHandle, th, void*, image)
+
 /*
  * Updating driver objects
  * -----------------------

@@ -324,8 +324,12 @@ public:
      *   - the size and format of the texture is defined by the external image
      *
      * @param engine        Engine this texture is associated to.
-     * @param image         An opaque handle to a platform specific image. The only supported
-     *                      type is eglImageOES.
+     * @param image         An opaque handle to a platform specific image. Supported types are
+     *                      eglImageOES on Android and CVPixelBufferRef on iOS.
+     *
+     *                      On iOS the following pixel formats are supported:
+     *                        - kCVPixelFormatType_32BGRA
+     *                        - kCVPixelFormatType_420YpCbCr8BiPlanarFullRange
      *
      * @attention \p engine must be the instance passed to Builder::build()
      * @attention This Texture instance must use backend::SamplerType::SAMPLER_EXTERNAL or it has no effect
