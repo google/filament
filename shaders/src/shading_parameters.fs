@@ -1,4 +1,15 @@
 //------------------------------------------------------------------------------
+// Shading helpers
+//------------------------------------------------------------------------------
+
+#define MIN_N_DOT_V                1e-4
+
+float clampNoV(float NoV) {
+    // Neubelt and Pettineo 2013, "Crafting a Next-gen Material Pipeline for The Order: 1886"
+    return max(dot(shading_normal, shading_view), MIN_N_DOT_V);
+}
+
+//------------------------------------------------------------------------------
 // Material evaluation
 //------------------------------------------------------------------------------
 
@@ -52,7 +63,7 @@ void prepareMaterial(const MaterialInputs material) {
 #else
     shading_normal = shading_tangentToWorld[2];
 #endif
-    shading_NoV = abs(dot(shading_normal, shading_view)) + FLT_EPS;
+    shading_NoV = clampNoV(dot(shading_normal, shading_view));
     shading_reflected = reflect(-shading_view, shading_normal);
 
 #if defined(MATERIAL_HAS_CLEAR_COAT)
