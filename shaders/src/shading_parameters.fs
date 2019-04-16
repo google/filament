@@ -2,6 +2,25 @@
 // Material evaluation
 //------------------------------------------------------------------------------
 
+void flipTangents() {
+#if defined(MATERIAL_HAS_DOUBLE_SIDED_CAPABILITY)
+    if (isDoubleSided()) {
+        float sign = gl_FrontFacing ? 1.0 : -1.0;
+        shading_tangentToWorld[0] *= sign; // tangent
+        shading_tangentToWorld[1] *= sign; // bitangent
+        shading_tangentToWorld[2] *= sign; // normal
+    }
+#endif
+}
+
+void flipNormal() {
+#if defined(MATERIAL_HAS_DOUBLE_SIDED_CAPABILITY)
+    if (isDoubleSided()) {
+        shading_tangentToWorld[2] *= gl_FrontFacing ? 1.0 : -1.0;
+    }
+#endif
+}
+
 /**
  * Computes global shading parameters used to apply lighting, such as the view
  * vector in world space, the tangent frame at the shading point, etc.
@@ -17,19 +36,18 @@ void computeShadingParams() {
     HIGHP vec3 n = vertex_worldNormal;
 #endif
 
-#if defined(MATERIAL_HAS_DOUBLE_SIDED_CAPABILITY)
-    if (isDoubleSided()) {
-        n = gl_FrontFacing ? n : -n;
-    }
-#endif
-
 #if defined(MATERIAL_HAS_ANISOTROPY) || defined(MATERIAL_HAS_NORMAL) || defined(MATERIAL_HAS_CLEAR_COAT_NORMAL)
     // Re-normalize post-interpolation values
     shading_tangentToWorld = mat3(
-            normalize(vertex_worldTangent), normalize(vertex_worldBitangent), normalize(n));
+            normalize(vertex_worldTangent),
+            normalize(vertex_worldBitangent),
+            normalize(n)
+    );
+    flipTangents();
 #endif
     // Leave the tangent and bitangent uninitialized, we won't use them
     shading_tangentToWorld[2] = normalize(n);
+    flipNormal();
 #endif
 
     shading_position = vertex_worldPosition;
