@@ -2,6 +2,8 @@
 // Material parameters
 //------------------------------------------------------------------------------
 
+#define MIN_N_DOT_V 1e-4
+
 // Decide if we can skip lighting when dot(n, l) <= 0.0
 #if defined(SHADING_MODEL_CLOTH)
 #if !defined(MATERIAL_HAS_SUBSURFACE_COLOR)
@@ -21,7 +23,7 @@ HIGHP vec3  shading_position;         // position of the fragment in world space
       vec3  shading_view;             // normalized vector from the fragment to the eye
       vec3  shading_normal;           // normalized normal, in world space
       vec3  shading_reflected;        // reflection of view about normal
-      float shading_NoV;              // dot(normal, view), always strictly > 0
+      float shading_NoV;              // dot(normal, view), always strictly >= MIN_N_DOT_V
 
 #if defined(MATERIAL_HAS_CLEAR_COAT)
       vec3  shading_clearCoatNormal;  // normalized clear coat layer normal, in world space
@@ -55,6 +57,11 @@ vec3 getWorldReflectedVector() {
 /** @public-api */
 float getNdotV() {
     return shading_NoV;
+}
+
+float clampNoV(float NoV) {
+    // Neubelt and Pettineo 2013, "Crafting a Next-gen Material Pipeline for The Order: 1886"
+    return max(dot(shading_normal, shading_view), MIN_N_DOT_V);
 }
 
 struct MaterialInputs {
