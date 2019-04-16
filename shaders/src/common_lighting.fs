@@ -50,3 +50,9 @@ struct PixelParams {
     vec3  subsurfaceColor;
 #endif
 };
+
+float computeMicroShadowing(float NoL, float ao) {
+    // Brinck and Maximov 2016, "Technical Art of Uncharted 4"
+    float aperture = 2.0 * ao * ao;
+    return saturate(NoL + aperture - 1.0);
+}

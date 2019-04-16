@@ -283,7 +283,7 @@ void isEvaluateClearCoatIBL(const PixelParams pixel, float specularAO, inout vec
 #if defined(MATERIAL_HAS_CLEAR_COAT)
 #if defined(MATERIAL_HAS_NORMAL) || defined(MATERIAL_HAS_CLEAR_COAT_NORMAL)
     // We want to use the geometric normal for the clear coat layer
-    float clearCoatNoV = abs(dot(shading_clearCoatNormal, shading_view)) + FLT_EPS;
+    float clearCoatNoV = clampNoV(dot(shading_clearCoatNormal, shading_view));
     vec3 clearCoatNormal = shading_clearCoatNormal;
 #else
     float clearCoatNoV = shading_NoV;
@@ -335,7 +335,7 @@ void evaluateClearCoatIBL(const PixelParams pixel, float specularAO, inout vec3 
 #if defined(MATERIAL_HAS_CLEAR_COAT)
 #if defined(MATERIAL_HAS_NORMAL) || defined(MATERIAL_HAS_CLEAR_COAT_NORMAL)
     // We want to use the geometric normal for the clear coat layer
-    float clearCoatNoV = abs(dot(shading_clearCoatNormal, shading_view)) + FLT_EPS;
+    float clearCoatNoV = clampNoV(dot(shading_clearCoatNormal, shading_view));
     vec3 clearCoatR = reflect(-shading_view, shading_clearCoatNormal);
 #else
     float clearCoatNoV = shading_NoV;

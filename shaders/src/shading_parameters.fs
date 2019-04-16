@@ -52,7 +52,7 @@ void prepareMaterial(const MaterialInputs material) {
 #else
     shading_normal = shading_tangentToWorld[2];
 #endif
-    shading_NoV = abs(dot(shading_normal, shading_view)) + FLT_EPS;
+    shading_NoV = clampNoV(dot(shading_normal, shading_view));
     shading_reflected = reflect(-shading_view, shading_normal);
 
 #if defined(MATERIAL_HAS_CLEAR_COAT)
