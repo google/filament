@@ -117,7 +117,7 @@ private:
             const math::float3& dir);
 
     static inline void snapLightFrustum(math::float2& s, math::float2& o,
-            uint32_t shadowMapDimension) noexcept;
+            math::mat4f const& Mv, math::float3 worldOrigin, math::float2 shadowMapResolution) noexcept;
 
     static inline void computeFrustumCorners(math::float3* out,
             const math::mat4f& projectionViewInverse) noexcept;
@@ -128,11 +128,20 @@ private:
     static inline math::float2 computeNearFar(math::mat4f const& view,
             math::float3 const* wsVertices, size_t count) noexcept;
 
+    static inline math::float4 computeBoundingSphere(
+            math::float3 const* vertices, size_t count) noexcept;
+
+    static inline Aabb compute2DBounds(const math::mat4f& lightView,
+            math::float3 const* wsVertices, size_t count) noexcept;
+
+    static inline Aabb compute2DBounds(const math::mat4f& lightView,
+            math::float4 const& sphere) noexcept;
+
     static inline void intersectWithShadowCasters(Aabb& lightFrustum, const math::mat4f& lightView,
             Aabb const& wsShadowCastersVolume) noexcept;
 
-    static inline math::float2 computeWpNearFarOfWarpSpace(math::mat4f const& lightView,
-            math::float3 const* wsViewFrustumCorners, size_t count) noexcept;
+    static inline math::float2 computeNearFarOfWarpSpace(math::mat4f const& lightView,
+            math::float3 const* wsVertices, size_t count) noexcept;
 
     static inline bool intersectSegmentWithPlane(math::float3& p,
             math::double3 s0, math::double3 s1,
@@ -188,7 +197,7 @@ private:
 
     // set-up in update()
     uint32_t mShadowMapDimension = 0;
-    float mShadowMapResolution = 0.0f;
+    math::float3 mShadowMapResolution = {};     // 1 / effective resolution
     bool mHasVisibleShadows = false;
     backend::PolygonOffset mPolygonOffset{};
 
