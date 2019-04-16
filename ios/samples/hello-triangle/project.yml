@@ -2,11 +2,6 @@ name: hello-triangle
 options:
     bundleIdPrefix: google.filament
 include: ../app-template.yml
-configs:
-    Metal Debug: debug
-    Metal Release: release
-    OpenGL Debug: debug
-    OpenGL Release: release
 targets:
     hello-triangle:
         sources: hello-triangle/

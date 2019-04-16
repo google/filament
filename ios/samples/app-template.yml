@@ -1,3 +1,8 @@
+configs:
+    Metal Debug: debug
+    Metal Release: release
+    OpenGL Debug: debug
+    OpenGL Release: release
 targetTemplates:
     FilamentApp:
         type: application
