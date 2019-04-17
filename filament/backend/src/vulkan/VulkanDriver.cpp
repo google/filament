@@ -34,6 +34,41 @@
 #pragma clang diagnostic ignored "-Wreturn-stack-address"
 #pragma clang diagnostic ignored "-Wunused-parameter"
 
+// In debug builds, we enable validation layers and set up a debug callback if the extension is
+// available. Caution: the debug callback causes a null pointer dereference with optimized builds.
+//
+// To enable validation layers in Android, also be sure to set the jniLibs property in the gradle
+// file for filament-android as follows. This copies the appropriate libraries from the NDK to the
+// device. This makes the aar much larger, so it should be avoided in release builds.
+//
+// sourceSets { main { jniLibs {
+//   srcDirs = ["${android.ndkDirectory}/sources/third_party/vulkan/src/build-android/jniLibs"]
+// } } }
+//
+// Validation crashes on MoltenVK, so we disable it by default on MacOS.
+#define ENABLE_VALIDATION (!defined(NDEBUG) && !defined(__APPLE__))
+
+#if ENABLE_VALIDATION
+
+namespace {
+
+VKAPI_ATTR VkBool32 VKAPI_CALL debugReportCallback(VkDebugReportFlagsEXT flags,
+        VkDebugReportObjectTypeEXT objectType, uint64_t object, size_t location,
+        int32_t messageCode, const char* pLayerPrefix, const char* pMessage, void* pUserData) {
+    if (flags & VK_DEBUG_REPORT_ERROR_BIT_EXT) {
+        utils::slog.e << "VULKAN ERROR: (" << pLayerPrefix << ") " << pMessage << utils::io::endl;
+    } else {
+        utils::slog.w << "VULKAN WARNING: (" << pLayerPrefix << ") "
+                << pMessage << utils::io::endl;
+    }
+    // Return TRUE here if an abort is desired.
+    return VK_FALSE;
+}
+
+}
+
+#endif
+
 namespace filament {
 namespace backend {
 
@@ -47,10 +82,8 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform,
     // Load Vulkan entry points.
     ASSERT_POSTCONDITION(bluevk::initialize(), "BlueVK is unable to load entry points.");
 
-    // In debug builds, attempt to enable the following layers if they are available.
-    // Validation crashes on MoltenVK, so disable it by default on MacOS.
     VkInstanceCreateInfo instanceCreateInfo = {};
-#if !defined(NDEBUG) && !defined(__APPLE__)
+#if ENABLE_VALIDATION
     static utils::StaticString DESIRED_LAYERS[] = {
     // NOTE: sometimes we see a message: "Cannot activate layer VK_LAYER_GOOGLE_unique_objects
     // prior to activating VK_LAYER_LUNARG_core_validation." despite the fact that it is clearly
@@ -82,14 +115,6 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform,
         }
     }
 
-    // To enable validation layers in Android, set the jniLibs property in the gradle file for
-    // filament-android as follows. This copies the appropriate libraries from the NDK to the
-    // device. This makes the aar much larger, so it should be avoided in release builds.
-    //
-    // sourceSets { main { jniLibs {
-    //   srcDirs = ["${android.ndkDirectory}/sources/third_party/vulkan/src/build-android/jniLibs"]
-    // } } }
-
     if (!enabledLayers.empty()) {
         instanceCreateInfo.enabledLayerCount = (uint32_t) enabledLayers.size();
         instanceCreateInfo.ppEnabledLayerNames = enabledLayers.data();
@@ -102,7 +127,7 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform,
                 << "Please ensure that VK_LAYER_PATH is set correctly." << utils::io::endl;
 #endif
     }
-#endif
+#endif // ENABLE_VALIDATION
 
     // Create the Vulkan instance.
     VkApplicationInfo appInfo = {};
@@ -118,30 +143,14 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform,
     UTILS_UNUSED const PFN_vkCreateDebugReportCallbackEXT createDebugReportCallback =
             vkCreateDebugReportCallbackEXT;
 
-    // In debug builds, set up a debug callback if the extension is available.
-    // The debug callback seems to work properly only on 64-bit architectures.
-#if !defined(NDEBUG) && (ULONG_MAX != UINT_MAX)
+#if ENABLE_VALIDATION
     if (createDebugReportCallback) {
-        const PFN_vkDebugReportCallbackEXT cb = [] (VkDebugReportFlagsEXT flags,
-                VkDebugReportObjectTypeEXT objectType, uint64_t object,
-                size_t location, int32_t messageCode, const char* pLayerPrefix,
-                const char* pMessage, void* pUserData) -> VkBool32 {
-            if (flags & VK_DEBUG_REPORT_ERROR_BIT_EXT) {
-                utils::slog.e << "VULKAN ERROR: (" << pLayerPrefix << ") "
-                        << pMessage << utils::io::endl;
-                // This is a good spot for a breakpoint although a permanent std::raise(SIGTRAP) is
-                // a bit too aggressive since Mali drivers will emit ERROR reports for minor
-                // violations that are not fatal.
-            } else {
-                utils::slog.w << "VULKAN WARNING: (" << pLayerPrefix << ") "
-                        << pMessage << utils::io::endl;
-            }
-            return VK_FALSE;
-        };
-        VkDebugReportCallbackCreateInfoEXT cbinfo = {
-            .sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT,
-            .flags = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT,
-            .pfnCallback = cb
+        static VkDebugReportCallbackCreateInfoEXT cbinfo = {
+            VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT,
+            nullptr,
+            VK_DEBUG_REPORT_WARNING_BIT_EXT | VK_DEBUG_REPORT_ERROR_BIT_EXT,
+            debugReportCallback,
+            nullptr
         };
         result = createDebugReportCallback(mContext.instance, &cbinfo, VKALLOC, &mDebugCallback);
         ASSERT_POSTCONDITION(result == VK_SUCCESS, "Unable to create Vulkan debug callback.");

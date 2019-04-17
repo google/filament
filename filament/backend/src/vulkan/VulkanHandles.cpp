@@ -75,7 +75,7 @@ VulkanProgram::VulkanProgram(VulkanContext& context, const Program& builder) noe
     samplerGroupInfo = builder.getSamplerGroupInfo();
 #if FILAMENT_VULKAN_VERBOSE
     utils::slog.d << "Created VulkanProgram " << builder.getName().c_str()
-                << ", variant = (0x" << utils::io::hex
+                << ", variant = (" << utils::io::hex
                 << builder.getVariant() << utils::io::dec << "), "
                 << "shaders = (" << bundle.vertex << ", " << bundle.fragment << ")"
                 << utils::io::endl;
