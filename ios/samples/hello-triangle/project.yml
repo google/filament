@@ -1,0 +1,12 @@
+name: hello-triangle
+options:
+    bundleIdPrefix: google.filament
+include: ../app-template.yml
+targets:
+    hello-triangle:
+        sources: hello-triangle/
+        templates:
+            - FilamentApp
+        preBuildScripts:
+            - path: build-materials.sh
+              name: Build Materials

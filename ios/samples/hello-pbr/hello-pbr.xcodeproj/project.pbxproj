@@ -7,201 +7,141 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		43196CAA221E0A6000FC05C7 /* Resources.S in Sources */ = {isa = PBXBuildFile; fileRef = 43196CA9221E0A6000FC05C7 /* Resources.S */; };
-		43196CAB221E0A6000FC05C7 /* Resources.S in Sources */ = {isa = PBXBuildFile; fileRef = 43196CA9221E0A6000FC05C7 /* Resources.S */; };
-		4347019F2212195700B4A77A /* FilamentApp.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4347019E2212195700B4A77A /* FilamentApp.cpp */; };
-		434701A02212195700B4A77A /* FilamentApp.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4347019E2212195700B4A77A /* FilamentApp.cpp */; };
-		4366F7EC220E481600542309 /* ViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 43E4A535216006AF00E4AEA0 /* ViewController.m */; };
-		4366F7ED220E481600542309 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 43E4A540216006B100E4AEA0 /* main.m */; };
-		4366F7EE220E481600542309 /* FilamentView.mm in Sources */ = {isa = PBXBuildFile; fileRef = 43E4A5482160073300E4AEA0 /* FilamentView.mm */; };
-		4366F7EF220E481600542309 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 43E4A532216006AF00E4AEA0 /* AppDelegate.m */; };
-		4366F7F2220E481600542309 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 43E4A53C216006B100E4AEA0 /* LaunchScreen.storyboard */; };
-		4366F7F3220E481600542309 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 43E4A53A216006B100E4AEA0 /* Assets.xcassets */; };
-		4366F7F4220E481600542309 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 43E4A537216006AF00E4AEA0 /* Main.storyboard */; };
-		438423D4221345FF00A7CC5D /* CameraManipulator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 438423D2221345FF00A7CC5D /* CameraManipulator.cpp */; };
-		438423D5221345FF00A7CC5D /* CameraManipulator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 438423D2221345FF00A7CC5D /* CameraManipulator.cpp */; };
-		43CA3CAA2176AA6900B497B4 /* ViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = 43E4A535216006AF00E4AEA0 /* ViewController.m */; };
-		43CA3CAB2176AA6900B497B4 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 43E4A540216006B100E4AEA0 /* main.m */; };
-		43CA3CAC2176AA6900B497B4 /* FilamentView.mm in Sources */ = {isa = PBXBuildFile; fileRef = 43E4A5482160073300E4AEA0 /* FilamentView.mm */; };
-		43CA3CAD2176AA6900B497B4 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 43E4A532216006AF00E4AEA0 /* AppDelegate.m */; };
-		43CA3CB02176AA6900B497B4 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 43E4A53C216006B100E4AEA0 /* LaunchScreen.storyboard */; };
-		43CA3CB12176AA6900B497B4 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 43E4A53A216006B100E4AEA0 /* Assets.xcassets */; };
-		43CA3CB22176AA6900B497B4 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 43E4A537216006AF00E4AEA0 /* Main.storyboard */; };
+		32072E0FA93A0A4EEB06D632927C6438 /* ViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = DACB12BFCAAA3222E7D1E9BB80475894 /* ViewController.m */; };
+		3C183B77078317A8605B572491C58C3A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 1CAE8879115ECEC53FA0F052F48A970B /* Assets.xcassets */; };
+		5A501B519E880E71BFB22EEA3EA1809F /* Resources.S in Sources */ = {isa = PBXBuildFile; fileRef = AC02B019CB36611A7BCE5773FB111E50 /* Resources.S */; };
+		6AF26A82182F32DB06D1FB51AB97BF1B /* clear_coat.mat in Resources */ = {isa = PBXBuildFile; fileRef = 334B2796A65BE4E8666FCB5070CE0432 /* clear_coat.mat */; };
+		76A422929373887929994B3EE3063683 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 45C71AD43B55E58E0724364747DDEF25 /* LaunchScreen.storyboard */; };
+		92CA86A4C46EB5F4A45972614C19AC31 /* CameraManipulator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D57C53C47A84D05D23B652786E68F509 /* CameraManipulator.cpp */; };
+		9FD1994944C09B24149B78889931A474 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 7FE9A0CE98FB055F3478E1CCBC21EE6D /* AppDelegate.m */; };
+		A963FEA59DDB33506FE61F8B02A73B6C /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = A17327655C031D575A522AD1F9C196E8 /* main.m */; };
+		D8BDF196DEE56F50D2D15167B4CCC77F /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 43FDC2D4E6776749006FF5E8870102A5 /* Main.storyboard */; };
+		DE3E149E4DAE874CAFE5B50758A83A6D /* FilamentView.mm in Sources */ = {isa = PBXBuildFile; fileRef = 42B9073CE652C53E7F0A460285BB977D /* FilamentView.mm */; };
+		F663C27E69235CFE83DF61587325ED71 /* FilamentApp.cpp in Sources */ = {isa = PBXBuildFile; fileRef = F01D34676A81F3F367B9F6AFFA54E12A /* FilamentApp.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		43196CA6221DE43600FC05C7 /* clear_coat.mat */ = {isa = PBXFileReference; lastKnownFileType = text; path = clear_coat.mat; sourceTree = "<group>"; };
-		43196CA9221E0A6000FC05C7 /* Resources.S */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.asm; path = Resources.S; sourceTree = "<group>"; };
-		4347019D2212195700B4A77A /* FilamentApp.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = FilamentApp.h; sourceTree = "<group>"; };
-		4347019E2212195700B4A77A /* FilamentApp.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = FilamentApp.cpp; sourceTree = "<group>"; };
-		4366F7F8220E481600542309 /* hello-pbr-Metal.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "hello-pbr-Metal.app"; sourceTree = BUILT_PRODUCTS_DIR; };
-		438423D2221345FF00A7CC5D /* CameraManipulator.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = CameraManipulator.cpp; sourceTree = "<group>"; };
-		438423D3221345FF00A7CC5D /* CameraManipulator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CameraManipulator.h; sourceTree = "<group>"; };
-		43CA3CB82176AA6900B497B4 /* hello-pbr-OpenGL.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "hello-pbr-OpenGL.app"; sourceTree = BUILT_PRODUCTS_DIR; };
-		43E4A531216006AF00E4AEA0 /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
-		43E4A532216006AF00E4AEA0 /* AppDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AppDelegate.m; sourceTree = "<group>"; };
-		43E4A534216006AF00E4AEA0 /* ViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ViewController.h; sourceTree = "<group>"; };
-		43E4A535216006AF00E4AEA0 /* ViewController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = ViewController.m; sourceTree = "<group>"; };
-		43E4A538216006AF00E4AEA0 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
-		43E4A53A216006B100E4AEA0 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		43E4A53D216006B100E4AEA0 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
-		43E4A53F216006B100E4AEA0 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		43E4A540216006B100E4AEA0 /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
-		43E4A5472160073300E4AEA0 /* FilamentView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = FilamentView.h; sourceTree = "<group>"; };
-		43E4A5482160073300E4AEA0 /* FilamentView.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = FilamentView.mm; sourceTree = "<group>"; };
+		17ADA23252FA61486B05D5BA85F69741 /* ViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ViewController.h; sourceTree = "<group>"; };
+		1CAE8879115ECEC53FA0F052F48A970B /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		334B2796A65BE4E8666FCB5070CE0432 /* clear_coat.mat */ = {isa = PBXFileReference; path = clear_coat.mat; sourceTree = "<group>"; };
+		37CB2FCA6711AE57BD4B39F754C8F69D /* hello-pbr.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = "hello-pbr.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		42B9073CE652C53E7F0A460285BB977D /* FilamentView.mm */ = {isa = PBXFileReference; path = FilamentView.mm; sourceTree = "<group>"; };
+		4618C7511DE661F89B1147340F67BE11 /* FilamentView.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = FilamentView.h; sourceTree = "<group>"; };
+		7D60AE7BAB964978FAA0C84C403E489A /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
+		7FE9A0CE98FB055F3478E1CCBC21EE6D /* AppDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AppDelegate.m; sourceTree = "<group>"; };
+		A17327655C031D575A522AD1F9C196E8 /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
+		A3680F594905261290AEDB79A15F7AB2 /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
+		AC02B019CB36611A7BCE5773FB111E50 /* Resources.S */ = {isa = PBXFileReference; path = Resources.S; sourceTree = "<group>"; };
+		B35CDFC5B6E5142B5E57BE33045B4415 /* FilamentApp.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = FilamentApp.h; sourceTree = "<group>"; };
+		D57C53C47A84D05D23B652786E68F509 /* CameraManipulator.cpp */ = {isa = PBXFileReference; path = CameraManipulator.cpp; sourceTree = "<group>"; };
+		DACB12BFCAAA3222E7D1E9BB80475894 /* ViewController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = ViewController.m; sourceTree = "<group>"; };
+		E176563EAAB0B36EFA7D67FD93FFC7A9 /* CameraManipulator.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CameraManipulator.h; sourceTree = "<group>"; };
+		EC2A85E8863E17F68089B19862C04BD0 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		ED2321CED4601521B7D1D8492A43AF1E /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
+		F01D34676A81F3F367B9F6AFFA54E12A /* FilamentApp.cpp */ = {isa = PBXFileReference; path = FilamentApp.cpp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
-/* Begin PBXFrameworksBuildPhase section */
-		4366F7F0220E481600542309 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		43CA3CAE2176AA6900B497B4 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-/* End PBXFrameworksBuildPhase section */
-
 /* Begin PBXGroup section */
-		43E4A525216006AF00E4AEA0 = {
+		4A44033C70281A0FC58A64FE24F43E4F /* hello-pbr */ = {
 			isa = PBXGroup;
 			children = (
-				43E4A530216006AF00E4AEA0 /* hello-pbr */,
-				43E4A52F216006AF00E4AEA0 /* Products */,
-			);
-			sourceTree = "<group>";
-		};
-		43E4A52F216006AF00E4AEA0 /* Products */ = {
-			isa = PBXGroup;
-			children = (
-				43CA3CB82176AA6900B497B4 /* hello-pbr-OpenGL.app */,
-				4366F7F8220E481600542309 /* hello-pbr-Metal.app */,
-			);
-			name = Products;
-			sourceTree = "<group>";
-		};
-		43E4A530216006AF00E4AEA0 /* hello-pbr */ = {
-			isa = PBXGroup;
-			children = (
-				43196CA6221DE43600FC05C7 /* clear_coat.mat */,
-				43E4A531216006AF00E4AEA0 /* AppDelegate.h */,
-				43E4A532216006AF00E4AEA0 /* AppDelegate.m */,
-				43E4A534216006AF00E4AEA0 /* ViewController.h */,
-				43E4A535216006AF00E4AEA0 /* ViewController.m */,
-				43E4A5472160073300E4AEA0 /* FilamentView.h */,
-				43E4A5482160073300E4AEA0 /* FilamentView.mm */,
-				4347019D2212195700B4A77A /* FilamentApp.h */,
-				4347019E2212195700B4A77A /* FilamentApp.cpp */,
-				438423D3221345FF00A7CC5D /* CameraManipulator.h */,
-				438423D2221345FF00A7CC5D /* CameraManipulator.cpp */,
-				43E4A537216006AF00E4AEA0 /* Main.storyboard */,
-				43E4A53A216006B100E4AEA0 /* Assets.xcassets */,
-				43E4A53C216006B100E4AEA0 /* LaunchScreen.storyboard */,
-				43E4A53F216006B100E4AEA0 /* Info.plist */,
-				43E4A540216006B100E4AEA0 /* main.m */,
-				43196CA9221E0A6000FC05C7 /* Resources.S */,
+				A3680F594905261290AEDB79A15F7AB2 /* AppDelegate.h */,
+				7FE9A0CE98FB055F3478E1CCBC21EE6D /* AppDelegate.m */,
+				1CAE8879115ECEC53FA0F052F48A970B /* Assets.xcassets */,
+				D57C53C47A84D05D23B652786E68F509 /* CameraManipulator.cpp */,
+				E176563EAAB0B36EFA7D67FD93FFC7A9 /* CameraManipulator.h */,
+				334B2796A65BE4E8666FCB5070CE0432 /* clear_coat.mat */,
+				F01D34676A81F3F367B9F6AFFA54E12A /* FilamentApp.cpp */,
+				B35CDFC5B6E5142B5E57BE33045B4415 /* FilamentApp.h */,
+				4618C7511DE661F89B1147340F67BE11 /* FilamentView.h */,
+				42B9073CE652C53E7F0A460285BB977D /* FilamentView.mm */,
+				EC2A85E8863E17F68089B19862C04BD0 /* Info.plist */,
+				45C71AD43B55E58E0724364747DDEF25 /* LaunchScreen.storyboard */,
+				A17327655C031D575A522AD1F9C196E8 /* main.m */,
+				43FDC2D4E6776749006FF5E8870102A5 /* Main.storyboard */,
+				AC02B019CB36611A7BCE5773FB111E50 /* Resources.S */,
+				17ADA23252FA61486B05D5BA85F69741 /* ViewController.h */,
+				DACB12BFCAAA3222E7D1E9BB80475894 /* ViewController.m */,
 			);
 			path = "hello-pbr";
+			sourceTree = "<group>";
+		};
+		8B171658B4A1227B9CA444595AE38803 = {
+			isa = PBXGroup;
+			children = (
+				4A44033C70281A0FC58A64FE24F43E4F /* hello-pbr */,
+				A90A4582D4144797492F5C0806B8A1F5 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		A90A4582D4144797492F5C0806B8A1F5 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				37CB2FCA6711AE57BD4B39F754C8F69D /* hello-pbr.app */,
+			);
+			name = Products;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		4366F7E9220E481600542309 /* hello-pbr-Metal */ = {
+		FA84331FAD1A6DF4807B29A5E976265C /* hello-pbr */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 4366F7F5220E481600542309 /* Build configuration list for PBXNativeTarget "hello-pbr-Metal" */;
+			buildConfigurationList = D1ADA665A82BEAAC6DF56431E5BF1426 /* Build configuration list for PBXNativeTarget "hello-pbr" */;
 			buildPhases = (
-				4366F7EA220E481600542309 /* ShellScript */,
-				4366F7EB220E481600542309 /* Sources */,
-				4366F7F0220E481600542309 /* Frameworks */,
-				4366F7F1220E481600542309 /* Resources */,
+				18BC4E25ED5FC66EC7B77F9770FE2CD9 /* Build Resources */,
+				4EAE126B59B0A66AD866406A57C145C3 /* Sources */,
+				4C132EE193B59194A5C7572B28C6B385 /* Resources */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 			);
-			name = "hello-pbr-Metal";
+			name = "hello-pbr";
 			productName = "hello-pbr";
-			productReference = 4366F7F8220E481600542309 /* hello-pbr-Metal.app */;
-			productType = "com.apple.product-type.application";
-		};
-		43CA3CA72176AA6900B497B4 /* hello-pbr-OpenGL */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = 43CA3CB52176AA6900B497B4 /* Build configuration list for PBXNativeTarget "hello-pbr-OpenGL" */;
-			buildPhases = (
-				4366F7E7220930EF00542309 /* ShellScript */,
-				43CA3CA82176AA6900B497B4 /* Sources */,
-				43CA3CAE2176AA6900B497B4 /* Frameworks */,
-				43CA3CAF2176AA6900B497B4 /* Resources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-			);
-			name = "hello-pbr-OpenGL";
-			productName = "hello-pbr";
-			productReference = 43CA3CB82176AA6900B497B4 /* hello-pbr-OpenGL.app */;
+			productReference = 37CB2FCA6711AE57BD4B39F754C8F69D /* hello-pbr.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
-		43E4A526216006AF00E4AEA0 /* Project object */ = {
+		55C50CCB1B22D6D3E534BB592A4F34D8 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
 				LastUpgradeCheck = 1000;
-				ORGANIZATIONNAME = Google;
 			};
-			buildConfigurationList = 43E4A529216006AF00E4AEA0 /* Build configuration list for PBXProject "hello-pbr" */;
+			buildConfigurationList = 0479354FB8D9A411347D91A6AED24601 /* Build configuration list for PBXProject "hello-pbr" */;
 			compatibilityVersion = "Xcode 9.3";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
-				en,
 				Base,
 			);
-			mainGroup = 43E4A525216006AF00E4AEA0;
-			productRefGroup = 43E4A52F216006AF00E4AEA0 /* Products */;
+			mainGroup = 8B171658B4A1227B9CA444595AE38803;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				43CA3CA72176AA6900B497B4 /* hello-pbr-OpenGL */,
-				4366F7E9220E481600542309 /* hello-pbr-Metal */,
+				FA84331FAD1A6DF4807B29A5E976265C /* hello-pbr */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
-		4366F7F1220E481600542309 /* Resources */ = {
+		4C132EE193B59194A5C7572B28C6B385 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				4366F7F2220E481600542309 /* LaunchScreen.storyboard in Resources */,
-				4366F7F3220E481600542309 /* Assets.xcassets in Resources */,
-				4366F7F4220E481600542309 /* Main.storyboard in Resources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		43CA3CAF2176AA6900B497B4 /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				43CA3CB02176AA6900B497B4 /* LaunchScreen.storyboard in Resources */,
-				43CA3CB12176AA6900B497B4 /* Assets.xcassets in Resources */,
-				43CA3CB22176AA6900B497B4 /* Main.storyboard in Resources */,
+				3C183B77078317A8605B572491C58C3A /* Assets.xcassets in Resources */,
+				76A422929373887929994B3EE3063683 /* LaunchScreen.storyboard in Resources */,
+				D8BDF196DEE56F50D2D15167B4CCC77F /* Main.storyboard in Resources */,
+				6AF26A82182F32DB06D1FB51AB97BF1B /* clear_coat.mat in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
-		4366F7E7220930EF00542309 /* ShellScript */ = {
+		18BC4E25ED5FC66EC7B77F9770FE2CD9 /* Build Resources */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -210,77 +150,47 @@
 			);
 			inputPaths = (
 			);
+			name = "Build Resources";
 			outputFileListPaths = (
 			);
 			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "\"${PROJECT_DIR}/build-resources.sh\"\n";
-		};
-		4366F7EA220E481600542309 /* ShellScript */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputFileListPaths = (
-			);
-			inputPaths = (
-			);
-			outputFileListPaths = (
-			);
-			outputPaths = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "\"${PROJECT_DIR}/build-resources.sh\"\n";
+			shellScript = "#/usr/bin/env/bash\n\nset -e\n\n# Compile resources.\n\n# The hello-pbr app requires four resources:\n# 1. The material sphere mesh\n# 2. The Filament material definition\n# 3. The IBL image\n# 4. The skybox image\n# These will be compiled into the final binary via the resgen tool.\n\nfilamesh_path=\"../../../out/release/filament/bin/filamesh\"\nmatc_path=\"../../../out/release/filament/bin/matc\"\nresgen_path=\"../../../out/release/filament/bin/resgen\"\n\n# Ensure that the required tools are present in the out/ directory.\n# These can be built by running ./build.sh -p desktop -i release at Filament's root directory.\n\nif [[ ! -e \"${filamesh_path}\" ]]; then\n  echo \"No filamesh binary could be found in ../../../out/release/filament/bin/.\"\n  echo \"Ensure Filament has been built/installed before building this app.\"\n  exit 1\nfi\n\nif [[ ! -e \"${matc_path}\" ]]; then\n  echo \"No matc binary could be found in ../../../out/release/filament/bin/.\"\n  echo \"Ensure Filament has been built/installed before building this app.\"\n  exit 1\nfi\n\nif [[ ! -e \"${resgen_path}\" ]]; then\n  echo \"No resgen binary could be found in ../../../out/release/filament/bin/.\"\n  echo \"Ensure Filament has been built/installed before building this app.\"\n  exit 1\nfi\n\n# The filamesh tool converts the .obj file into a Filament-specific filamesh file that has been\n# optimized for loading into Filament.\nmkdir -p \"${PROJECT_DIR}/generated/\"\n\"${filamesh_path}\" \\\n    \"${PROJECT_DIR}/../../../assets/models/material_sphere/material_sphere.obj\" \\\n    \"${PROJECT_DIR}/generated/material_sphere.filamesh\"\n\n# The matc tool compiles the clear_coat.mat material into a Filament material BLOB.\n\"${matc_path}\" \\\n    --api all \\\n    --platform mobile \\\n    -o \"${PROJECT_DIR}/generated/clear_coat.filamat\" \\\n    \"${PROJECT_DIR}/hello-pbr/clear_coat.mat\"\n\n# The resgen tool generates an assembly file, resources.apple.S that gets compiled and linked\n# into the final binary. It contains all the resources consumed by the app.\n\"${resgen_path}\" \\\n    --deploy=\"${PROJECT_DIR}/generated\" \\\n    \"${PROJECT_DIR}/generated/material_sphere.filamesh\" \\\n    \"${PROJECT_DIR}/generated/clear_coat.filamat\" \\\n    \"${PROJECT_DIR}/../../../samples/envs/venetian_crossroads/venetian_crossroads_ibl.ktx\" \\\n    \"${PROJECT_DIR}/../../../samples/envs/venetian_crossroads/venetian_crossroads_skybox.ktx\"\n\n# FilamentApp.cpp and Resources.S include files generated by resgen.\n# Touch them to force Xcode to recompile.\ntouch \"${PROJECT_DIR}/hello-pbr/FilamentApp.cpp\"\ntouch \"${PROJECT_DIR}/hello-pbr/Resources.S\"\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
-		4366F7EB220E481600542309 /* Sources */ = {
+		4EAE126B59B0A66AD866406A57C145C3 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				434701A02212195700B4A77A /* FilamentApp.cpp in Sources */,
-				4366F7EC220E481600542309 /* ViewController.m in Sources */,
-				43196CAB221E0A6000FC05C7 /* Resources.S in Sources */,
-				4366F7ED220E481600542309 /* main.m in Sources */,
-				4366F7EE220E481600542309 /* FilamentView.mm in Sources */,
-				4366F7EF220E481600542309 /* AppDelegate.m in Sources */,
-				438423D5221345FF00A7CC5D /* CameraManipulator.cpp in Sources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		43CA3CA82176AA6900B497B4 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				4347019F2212195700B4A77A /* FilamentApp.cpp in Sources */,
-				43CA3CAA2176AA6900B497B4 /* ViewController.m in Sources */,
-				43196CAA221E0A6000FC05C7 /* Resources.S in Sources */,
-				43CA3CAB2176AA6900B497B4 /* main.m in Sources */,
-				43CA3CAC2176AA6900B497B4 /* FilamentView.mm in Sources */,
-				43CA3CAD2176AA6900B497B4 /* AppDelegate.m in Sources */,
-				438423D4221345FF00A7CC5D /* CameraManipulator.cpp in Sources */,
+				9FD1994944C09B24149B78889931A474 /* AppDelegate.m in Sources */,
+				92CA86A4C46EB5F4A45972614C19AC31 /* CameraManipulator.cpp in Sources */,
+				F663C27E69235CFE83DF61587325ED71 /* FilamentApp.cpp in Sources */,
+				DE3E149E4DAE874CAFE5B50758A83A6D /* FilamentView.mm in Sources */,
+				5A501B519E880E71BFB22EEA3EA1809F /* Resources.S in Sources */,
+				32072E0FA93A0A4EEB06D632927C6438 /* ViewController.m in Sources */,
+				A963FEA59DDB33506FE61F8B02A73B6C /* main.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXVariantGroup section */
-		43E4A537216006AF00E4AEA0 /* Main.storyboard */ = {
+		43FDC2D4E6776749006FF5E8870102A5 /* Main.storyboard */ = {
 			isa = PBXVariantGroup;
 			children = (
-				43E4A538216006AF00E4AEA0 /* Base */,
+				7D60AE7BAB964978FAA0C84C403E489A /* Base */,
 			);
 			name = Main.storyboard;
 			sourceTree = "<group>";
 		};
-		43E4A53C216006B100E4AEA0 /* LaunchScreen.storyboard */ = {
+		45C71AD43B55E58E0724364747DDEF25 /* LaunchScreen.storyboard */ = {
 			isa = PBXVariantGroup;
 			children = (
-				43E4A53D216006B100E4AEA0 /* Base */,
+				ED2321CED4601521B7D1D8492A43AF1E /* Base */,
 			);
 			name = LaunchScreen.storyboard;
 			sourceTree = "<group>";
@@ -288,167 +198,7 @@
 /* End PBXVariantGroup section */
 
 /* Begin XCBuildConfiguration section */
-		4366F7F6220E481600542309 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = FKDX3VDW82;
-				ENABLE_BITCODE = NO;
-				GCC_PREPROCESSOR_DEFINITIONS = (
-					"FILAMENT_APP_USE_METAL=1",
-					"$(inherited)",
-				);
-				HEADER_SEARCH_PATHS = (
-					"../../../out/ios-debug/filament/include",
-					generated/,
-				);
-				INFOPLIST_FILE = "$(SRCROOT)/hello-pbr/Info.plist";
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-				);
-				LIBRARY_SEARCH_PATHS = "../../../out/ios-debug/filament/lib/$(CURRENT_ARCH)";
-				OTHER_LDFLAGS = (
-					"-lfilament",
-					"-lbackend",
-					"-lfilaflat",
-					"-lfilabridge",
-					"-lutils",
-					"-lsmol-v",
-					"-lfilameshio",
-					"-lmeshoptimizer",
-					"-limage",
-					"-lgeometry",
-				);
-				PRODUCT_BUNDLE_IDENTIFIER = "google.filament.hello-pbr";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SYSTEM_HEADER_SEARCH_PATHS = "../../../out/ios-debug/filament/include";
-				TARGETED_DEVICE_FAMILY = "1,2";
-			};
-			name = Debug;
-		};
-		4366F7F7220E481600542309 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = FKDX3VDW82;
-				ENABLE_BITCODE = NO;
-				GCC_PREPROCESSOR_DEFINITIONS = (
-					"FILAMENT_APP_USE_METAL=1",
-					"$(inherited)",
-				);
-				HEADER_SEARCH_PATHS = (
-					"../../../out/ios-release/filament/include",
-					generated/,
-				);
-				INFOPLIST_FILE = "$(SRCROOT)/hello-pbr/Info.plist";
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-				);
-				LIBRARY_SEARCH_PATHS = "../../../out/ios-release/filament/lib/$(CURRENT_ARCH)";
-				OTHER_LDFLAGS = (
-					"-lfilament",
-					"-lbackend",
-					"-lfilaflat",
-					"-lfilabridge",
-					"-lutils",
-					"-lsmol-v",
-					"-lfilameshio",
-					"-lmeshoptimizer",
-					"-limage",
-					"-lgeometry",
-				);
-				PRODUCT_BUNDLE_IDENTIFIER = "google.filament.hello-pbr";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SYSTEM_HEADER_SEARCH_PATHS = "../../../out/ios-release/filament/include";
-				TARGETED_DEVICE_FAMILY = "1,2";
-			};
-			name = Release;
-		};
-		43CA3CB62176AA6900B497B4 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = "";
-				ENABLE_BITCODE = NO;
-				GCC_PREPROCESSOR_DEFINITIONS = (
-					"FILAMENT_APP_USE_OPENGL=1",
-					"$(inherited)",
-				);
-				HEADER_SEARCH_PATHS = (
-					"../../../out/ios-debug/filament/include",
-					generated/,
-				);
-				INFOPLIST_FILE = "hello-pbr/Info.plist";
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-				);
-				LIBRARY_SEARCH_PATHS = "../../../out/ios-debug/filament/lib/$(CURRENT_ARCH)";
-				OTHER_LDFLAGS = (
-					"-lfilament",
-					"-lbackend",
-					"-lfilaflat",
-					"-lfilabridge",
-					"-lutils",
-					"-lsmol-v",
-					"-lfilameshio",
-					"-lmeshoptimizer",
-					"-limage",
-					"-lgeometry",
-				);
-				PRODUCT_BUNDLE_IDENTIFIER = "google.filament.hello-pbr";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SYSTEM_HEADER_SEARCH_PATHS = "../../../out/ios-debug/filament/include";
-				TARGETED_DEVICE_FAMILY = "1,2";
-			};
-			name = Debug;
-		};
-		43CA3CB72176AA6900B497B4 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CODE_SIGN_STYLE = Automatic;
-				DEVELOPMENT_TEAM = "";
-				ENABLE_BITCODE = NO;
-				GCC_PREPROCESSOR_DEFINITIONS = (
-					"FILAMENT_APP_USE_OPENGL=1",
-					"$(inherited)",
-				);
-				HEADER_SEARCH_PATHS = (
-					"../../../out/ios-release/filament/include",
-					generated/,
-				);
-				INFOPLIST_FILE = "hello-pbr/Info.plist";
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-				);
-				LIBRARY_SEARCH_PATHS = "../../../out/ios-release/filament/lib/$(CURRENT_ARCH)";
-				OTHER_LDFLAGS = (
-					"-lfilament",
-					"-lbackend",
-					"-lfilaflat",
-					"-lfilabridge",
-					"-lutils",
-					"-lsmol-v",
-					"-lfilameshio",
-					"-lmeshoptimizer",
-					"-limage",
-					"-lgeometry",
-				);
-				PRODUCT_BUNDLE_IDENTIFIER = "google.filament.hello-pbr";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SYSTEM_HEADER_SEARCH_PATHS = "../../../out/ios-release/filament/include";
-				TARGETED_DEVICE_FAMILY = "1,2";
-			};
-			name = Release;
-		};
-		43E4A542216006B100E4AEA0 /* Debug */ = {
+		18467F5A2014916FCA07CA4E28546E18 /* OpenGL Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -458,7 +208,6 @@
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
-				CLANG_ENABLE_OBJC_WEAK = YES;
 				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
 				CLANG_WARN_BOOL_CONVERSION = YES;
 				CLANG_WARN_COMMA = YES;
@@ -480,7 +229,6 @@
 				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-				CODE_SIGN_IDENTITY = "iPhone Developer";
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -490,8 +238,8 @@
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_OPTIMIZATION_LEVEL = 0;
 				GCC_PREPROCESSOR_DEFINITIONS = (
-					"DEBUG=1",
 					"$(inherited)",
+					"DEBUG=1",
 				);
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
@@ -499,16 +247,134 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
-				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
-				MTL_FAST_MATH = YES;
+				MTL_ENABLE_DEBUG_INFO = YES;
 				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
-				VALID_ARCHS = arm64;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 4.2;
 			};
-			name = Debug;
+			name = "OpenGL Debug";
 		};
-		43E4A543216006B100E4AEA0 /* Release */ = {
+		1C96A07E090F1295806BE2A299F16EC3 /* OpenGL Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				ENABLE_BITCODE = NO;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"FILAMENT_APP_USE_OPENGL=1",
+					"$(inherited)",
+				);
+				HEADER_SEARCH_PATHS = (
+					"../../../out/ios-debug/filament/include",
+					generated,
+				);
+				INFOPLIST_FILE = "hello-pbr/Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 12.1;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+				LIBRARY_SEARCH_PATHS = (
+					"../../../out/ios-debug/filament/lib/$(CURRENT_ARCH)",
+				);
+				OTHER_LDFLAGS = (
+					"-lfilament",
+					"-lbackend",
+					"-lfilaflat",
+					"-lfilabridge",
+					"-lutils",
+					"-lsmol-v",
+					"-lgeometry",
+					"-lfilameshio",
+					"-lmeshoptimizer",
+					"-limage",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "google.filament.hello-pbr";
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = "OpenGL Debug";
+		};
+		25E8AC7D4EB663826F86752BBE699EF5 /* OpenGL Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				ENABLE_BITCODE = NO;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"FILAMENT_APP_USE_OPENGL=1",
+					"$(inherited)",
+				);
+				HEADER_SEARCH_PATHS = (
+					"../../../out/ios-release/filament/include",
+					generated,
+				);
+				INFOPLIST_FILE = "hello-pbr/Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 12.1;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+				LIBRARY_SEARCH_PATHS = (
+					"../../../out/ios-release/filament/lib/$(CURRENT_ARCH)",
+				);
+				OTHER_LDFLAGS = (
+					"-lfilament",
+					"-lbackend",
+					"-lfilaflat",
+					"-lfilabridge",
+					"-lutils",
+					"-lsmol-v",
+					"-lgeometry",
+					"-lfilameshio",
+					"-lmeshoptimizer",
+					"-limage",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "google.filament.hello-pbr";
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = "OpenGL Release";
+		};
+		479A8693795E7BA1B594E97CAD6DB2DA /* Metal Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				ENABLE_BITCODE = NO;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"FILAMENT_APP_USE_METAL=1",
+					"$(inherited)",
+				);
+				HEADER_SEARCH_PATHS = (
+					"../../../out/ios-debug/filament/include",
+					generated,
+				);
+				INFOPLIST_FILE = "hello-pbr/Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 12.1;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+				LIBRARY_SEARCH_PATHS = (
+					"../../../out/ios-debug/filament/lib/$(CURRENT_ARCH)",
+				);
+				OTHER_LDFLAGS = (
+					"-lfilament",
+					"-lbackend",
+					"-lfilaflat",
+					"-lfilabridge",
+					"-lutils",
+					"-lsmol-v",
+					"-lgeometry",
+					"-lfilameshio",
+					"-lmeshoptimizer",
+					"-limage",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "google.filament.hello-pbr";
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = "Metal Debug";
+		};
+		5743373CFC2752E704977EC1FE27A242 /* Metal Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -518,7 +384,6 @@
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
-				CLANG_ENABLE_OBJC_WEAK = YES;
 				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
 				CLANG_WARN_BOOL_CONVERSION = YES;
 				CLANG_WARN_COMMA = YES;
@@ -540,7 +405,6 @@
 				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-				CODE_SIGN_IDENTITY = "iPhone Developer";
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
@@ -553,46 +417,189 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 12.0;
-				MTL_ENABLE_DEBUG_INFO = NO;
-				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
+				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
+				SWIFT_VERSION = 4.2;
 				VALIDATE_PRODUCT = YES;
-				VALID_ARCHS = arm64;
 			};
-			name = Release;
+			name = "Metal Release";
+		};
+		9D091F8953B503F7ABB87E7B4B138B12 /* OpenGL Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_OPTIMIZATION_LEVEL = "-Owholemodule";
+				SWIFT_VERSION = 4.2;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = "OpenGL Release";
+		};
+		B6E0D9028B25E06659E338F865D91BEA /* Metal Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				ENABLE_BITCODE = NO;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"FILAMENT_APP_USE_METAL=1",
+					"$(inherited)",
+				);
+				HEADER_SEARCH_PATHS = (
+					"../../../out/ios-release/filament/include",
+					generated,
+				);
+				INFOPLIST_FILE = "hello-pbr/Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 12.1;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+				LIBRARY_SEARCH_PATHS = (
+					"../../../out/ios-release/filament/lib/$(CURRENT_ARCH)",
+				);
+				OTHER_LDFLAGS = (
+					"-lfilament",
+					"-lbackend",
+					"-lfilaflat",
+					"-lfilabridge",
+					"-lutils",
+					"-lsmol-v",
+					"-lgeometry",
+					"-lfilameshio",
+					"-lmeshoptimizer",
+					"-limage",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = "google.filament.hello-pbr";
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = "Metal Release";
+		};
+		E7F3076CC536650CD5E0A47D64C25D05 /* Metal Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MTL_ENABLE_DEBUG_INFO = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 4.2;
+			};
+			name = "Metal Debug";
 		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		4366F7F5220E481600542309 /* Build configuration list for PBXNativeTarget "hello-pbr-Metal" */ = {
+		0479354FB8D9A411347D91A6AED24601 /* Build configuration list for PBXProject "hello-pbr" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				4366F7F6220E481600542309 /* Debug */,
-				4366F7F7220E481600542309 /* Release */,
+				E7F3076CC536650CD5E0A47D64C25D05 /* Metal Debug */,
+				5743373CFC2752E704977EC1FE27A242 /* Metal Release */,
+				18467F5A2014916FCA07CA4E28546E18 /* OpenGL Debug */,
+				9D091F8953B503F7ABB87E7B4B138B12 /* OpenGL Release */,
 			);
 			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
+			defaultConfigurationName = "Metal Debug";
 		};
-		43CA3CB52176AA6900B497B4 /* Build configuration list for PBXNativeTarget "hello-pbr-OpenGL" */ = {
+		D1ADA665A82BEAAC6DF56431E5BF1426 /* Build configuration list for PBXNativeTarget "hello-pbr" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				43CA3CB62176AA6900B497B4 /* Debug */,
-				43CA3CB72176AA6900B497B4 /* Release */,
+				479A8693795E7BA1B594E97CAD6DB2DA /* Metal Debug */,
+				B6E0D9028B25E06659E338F865D91BEA /* Metal Release */,
+				1C96A07E090F1295806BE2A299F16EC3 /* OpenGL Debug */,
+				25E8AC7D4EB663826F86752BBE699EF5 /* OpenGL Release */,
 			);
 			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		43E4A529216006AF00E4AEA0 /* Build configuration list for PBXProject "hello-pbr" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				43E4A542216006B100E4AEA0 /* Debug */,
-				43E4A543216006B100E4AEA0 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
+			defaultConfigurationName = "";
 		};
 /* End XCConfigurationList section */
 	};
-	rootObject = 43E4A526216006AF00E4AEA0 /* Project object */;
+	rootObject = 55C50CCB1B22D6D3E534BB592A4F34D8 /* Project object */;
 }
