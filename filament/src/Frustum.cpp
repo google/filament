@@ -83,4 +83,20 @@ bool Frustum::intersects(const float4& sphere) const noexcept {
     return Culler::intersects(*this, sphere);
 }
 
+float Frustum::contains(math::float3 p) const noexcept {
+    float l = dot(mPlanes[0].xyz, p) + mPlanes[0].w;
+    float b = dot(mPlanes[1].xyz, p) + mPlanes[1].w;
+    float r = dot(mPlanes[2].xyz, p) + mPlanes[2].w;
+    float t = dot(mPlanes[3].xyz, p) + mPlanes[3].w;
+    float f = dot(mPlanes[4].xyz, p) + mPlanes[4].w;
+    float n = dot(mPlanes[5].xyz, p) + mPlanes[5].w;
+    float d = l;
+    d = std::max(d, b);
+    d = std::max(d, r);
+    d = std::max(d, t);
+    d = std::max(d, f);
+    d = std::max(d, n);
+    return d;
+}
+
 } // namespace filament

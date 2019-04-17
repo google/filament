@@ -104,6 +104,13 @@ public:
      */
     bool intersects(const math::float4& sphere) const noexcept;
 
+    /**
+     * Returns whether the frustum contains a given point.
+     * @param p the point to test
+     * @return the maximum signed distance to the frustum. Negative if p is inside.
+     */
+    float contains(math::float3 p) const noexcept;
+
 private:
     friend class details::Culler;
     math::float4 mPlanes[6];
