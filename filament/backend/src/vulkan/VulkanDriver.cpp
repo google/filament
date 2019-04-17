@@ -85,13 +85,12 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform,
     VkInstanceCreateInfo instanceCreateInfo = {};
 #if ENABLE_VALIDATION
     static utils::StaticString DESIRED_LAYERS[] = {
-    // NOTE: sometimes we see a message: "Cannot activate layer VK_LAYER_GOOGLE_unique_objects
-    // prior to activating VK_LAYER_LUNARG_core_validation." despite the fact that it is clearly
-    // last in the following list. Should we simply remove unique_objects from the list?
 #if defined(ANDROID)
-        "VK_LAYER_GOOGLE_threading",       "VK_LAYER_LUNARG_parameter_validation",
-        "VK_LAYER_LUNARG_object_tracker",  "VK_LAYER_LUNARG_image",
-        "VK_LAYER_LUNARG_core_validation", "VK_LAYER_LUNARG_swapchain",
+        // TODO: use VK_LAYER_KHRONOS_validation instead of these layers after it becomes available
+        "VK_LAYER_GOOGLE_threading",
+        "VK_LAYER_LUNARG_parameter_validation",
+        "VK_LAYER_LUNARG_object_tracker",
+        "VK_LAYER_LUNARG_core_validation",
         "VK_LAYER_GOOGLE_unique_objects"
 #else
         "VK_LAYER_LUNARG_standard_validation",
@@ -106,9 +105,9 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform,
     std::vector<VkLayerProperties> availableLayers(layerCount);
     vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
     std::vector<const char*> enabledLayers;
-    for (const VkLayerProperties& layer : availableLayers) {
-        const utils::CString availableLayer(layer.layerName);
-        for (const auto& desired : DESIRED_LAYERS) {
+    for (const auto& desired : DESIRED_LAYERS) {
+        for (const VkLayerProperties& layer : availableLayers) {
+            const utils::CString availableLayer(layer.layerName);
             if (availableLayer == desired) {
                 enabledLayers.push_back(desired.c_str());
             }
