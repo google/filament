@@ -72,10 +72,10 @@ the `out` directory.
 Before reporting build errors, please try cleaning the CMake directories first and building again
 from scratch.
 
-## xcodegen
+## XcodeGen
 
-[xcodegen](https://github.com/yonaskolb/XcodeGen) is used to generate the Xcode projects. While not
-required to run the samples, xcodegen makes modifying them easier. Each sample folder contains the
+[XcodeGen](https://github.com/yonaskolb/XcodeGen) is used to generate the Xcode projects. While not
+required to run the samples, XcodeGen makes modifying them easier. Each sample folder contains the
 `project.yml` file used for the sample, which includes a global `app-template.yml` file. Simply run
 
 ```
