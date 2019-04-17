@@ -2045,7 +2045,10 @@ void OpenGLDriver::setCompressedTextureData(GLTexture* t,
     CHECK_GL_ERROR(utils::slog.e)
 }
 
-void OpenGLDriver::setExternalImageS(Handle<HwTexture> th, void* image) {
+void OpenGLDriver::setupExternalImage(void* image) {
+}
+
+void OpenGLDriver::cancelExternalImage(void* image) {
 }
 
 void OpenGLDriver::setExternalImage(Handle<HwTexture> th, void* image) {

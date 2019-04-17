@@ -405,11 +405,16 @@ void MetalDriver::updateCubeImage(Handle<HwTexture> th, uint32_t level,
     scheduleDestroy(std::move(data));
 }
 
-void MetalDriver::setExternalImageS(Handle<HwTexture> th, void* image) {
+void MetalDriver::setupExternalImage(void* image) {
     // Take ownership of the passed in buffer. It will be released the next time
     // setExternalImage is called, or when the texture is destroyed.
     CVPixelBufferRef pixelBuffer = (CVPixelBufferRef) image;
     CVPixelBufferRetain(pixelBuffer);
+}
+
+void MetalDriver::cancelExternalImage(void* image) {
+    CVPixelBufferRef pixelBuffer = (CVPixelBufferRef) image;
+    CVPixelBufferRelease(pixelBuffer);
 }
 
 void MetalDriver::setExternalImage(Handle<HwTexture> th, void* image) {
