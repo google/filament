@@ -175,6 +175,13 @@ struct Aabb {
      * Return the 8 corner vertices of the AABB
      */
     Corners getCorners() const;
+
+    /**
+     * Returns whether the box contains a given point.
+     * @param p the point to test
+     * @return the maximum signed distance to the box. Negative if p is in the box
+     */
+    float contains(math::float3 p) const noexcept;
 };
 
 } // namespace filament

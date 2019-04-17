@@ -45,8 +45,8 @@ inline constexpr T MATH_PURE lerp(T x, T y, T a) noexcept {
 }
 
 template <typename T>
-inline constexpr int sign(T val) noexcept {
-    return (T(0) < val) - (val < T(0));
+inline constexpr T sign(T x) noexcept {
+    return x < T(0) ? T(-1) : T(1);
 }
 
 } // namespace math

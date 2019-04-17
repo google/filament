@@ -42,4 +42,14 @@ Aabb::Corners Aabb::getCorners() const {
             }};
 }
 
+float Aabb::contains(math::float3 p) const noexcept {
+    float d = min.x - p.x;
+    d = std::max(d, min.y - p.y);
+    d = std::max(d, min.z - p.z);
+    d = std::max(d, p.x - max.x);
+    d = std::max(d, p.y - max.y);
+    d = std::max(d, p.z - max.z);
+    return d;
+}
+
 } // namespace filament

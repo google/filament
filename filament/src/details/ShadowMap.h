@@ -122,10 +122,10 @@ private:
     static inline void computeFrustumCorners(math::float3* out,
             const math::mat4f& projectionViewInverse) noexcept;
 
-    static inline math::float2 computeNearFar(math::mat4f const& lightView,
+    static inline math::float2 computeNearFar(math::mat4f const& view,
             Aabb const& wsShadowCastersVolume) noexcept;
 
-    static inline math::float2 computeNearFar(math::mat4f const& lightView,
+    static inline math::float2 computeNearFar(math::mat4f const& view,
             math::float3 const* wsVertices, size_t count) noexcept;
 
     static inline void intersectWithShadowCasters(Aabb& lightFrustum, const math::mat4f& lightView,
@@ -135,16 +135,17 @@ private:
             math::float3 const* wsViewFrustumCorners, size_t count) noexcept;
 
     static inline bool intersectSegmentWithPlane(math::float3& p,
-            math::float3 s0, math::float3 s1,
-            math::float3 pn, math::float3 p0) noexcept;
+            math::double3 s0, math::double3 s1,
+            math::double3 pn, math::double3 p0) noexcept;
 
     static inline bool intersectSegmentWithPlanarQuad(math::float3& p,
-            math::float3 s0, math::float3 s1,
-            math::float3 t0, math::float3 t1,
-            math::float3 t2, math::float3 t3) noexcept;
+            math::double3 s0, math::double3 s1,
+            math::double3 t0, math::double3 t1,
+            math::double3 t2, math::double3 t3) noexcept;
 
-    static size_t intersectFrustums(math::float3* out, size_t vertexCount,
-            math::float3 const* segmentsVertices, math::float3 const* quadsVertices) noexcept;
+    static size_t intersectFrustum(math::float3* out, size_t vertexCount,
+            math::float3 const* segmentsVertices, math::float3 const* quadsVertices,
+            Frustum const& frustum) noexcept;
 
     static size_t intersectFrustumWithBox(
             FrustumBoxIntersection& outVertices,

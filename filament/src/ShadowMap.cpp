@@ -499,10 +499,10 @@ mat4f ShadowMap::applyLISPSM(math::mat4f& Wp,
     const float dzn = std::max(0.0f, params.options.shadowNearHint - camera.zn);
     const float dzf = std::max(0.0f, camera.zf - params.options.shadowFarHint);
 
-    // near/far plane's distance from the eye in view space of the shadow receiver volume
+    // near/far plane's distance from the eye in view space of the shadow receiver volume.
     float2 znf = -computeNearFar(camera.view, wsShadowReceiversVolume.data(), vertexCount);
-    const float zn = znf[0]; // near plane distance from the eye
-    const float zf = znf[1]; // far plane distance from the eye
+    const float zn = std::max(camera.zn, znf[0]); // near plane distance from the eye
+    const float zf = std::min(camera.zf, znf[1]); // far plane distance from the eye
 
     // compute n and f, the near and far planes coordinates of Wp (warp space).
     // It's found by looking down the Y axis in light space (i.e. -Z axis of Wp,
@@ -524,8 +524,8 @@ mat4f ShadowMap::applyLISPSM(math::mat4f& Wp,
         // nopt is the optimal near plane distance of Wp (i.e. distance from P).
 
         // virtual near and far planes
-        const float vz0 = std::max(zn + dzn, z0);
-        const float vz1 = std::min(zf - dzf, z1);
+        const float vz0 = std::max(0.0f, std::max(zn + dzn, z0));
+        const float vz1 = std::max(0.0f, std::min(zf - dzf, z1));
 
         // in the general case, nopt is computed as:
         const float nopt0 = (1.0f / sinLV) * (z0 + std::sqrt(vz0 * vz1));
@@ -611,18 +611,18 @@ math::mat4f ShadowMap::directionalLightFrustum(float near, float far) noexcept {
     return m;
 }
 
-float2 ShadowMap::computeNearFar(const mat4f& lightView,
+float2 ShadowMap::computeNearFar(const mat4f& view,
         Aabb const& wsShadowCastersVolume) noexcept {
     const Aabb::Corners wsSceneCastersCorners = wsShadowCastersVolume.getCorners();
-    return computeNearFar(lightView, wsSceneCastersCorners.data(), wsSceneCastersCorners.size());
+    return computeNearFar(view, wsSceneCastersCorners.data(), wsSceneCastersCorners.size());
 }
 
-float2 ShadowMap::computeNearFar(const mat4f& lightView,
+float2 ShadowMap::computeNearFar(const mat4f& view,
         float3 const* wsVertices, size_t count) noexcept {
     float2 nearFar = { std::numeric_limits<float>::lowest(), std::numeric_limits<float>::max() };
     #pragma nounroll
     for (size_t i = 0; i < count; i++) {
-        float3 c = mat4f::project(lightView, wsVertices[i]);
+        float3 c = mat4f::project(view, wsVertices[i]);
         nearFar.x = std::max(nearFar.x, c.z);  // near
         nearFar.y = std::min(nearFar.y, c.z);  // far
     }
@@ -742,6 +742,7 @@ size_t ShadowMap::intersectFrustumWithBox(
             vertexCount++;
         }
     }
+    constexpr const float EPSILON = 1.0f / 8192.0f; // ~0.012 mm
 
     // at this point if we have 8 vertices, we can skip the rest
     if (vertexCount < 8) {
@@ -752,7 +753,6 @@ size_t ShadowMap::intersectFrustumWithBox(
         // We need to handle the case where a corner of the box lies exactly on a plane of
         // the frustum. This actually happens often due to fitting light-space
         // We fudge the distance to the plane by a small amount.
-        constexpr const float EPSILON = 1.0f / 8192.0f; // ~0.012 mm
         #pragma nounroll
         for (float3 p : wsSceneReceiversCorners) {
             outVertices[vertexCount] = p;
@@ -772,16 +772,23 @@ size_t ShadowMap::intersectFrustumWithBox(
         // at this point if we have 8 vertices, we can skip the segments intersection tests
         if (vertexCount < 8) {
             // c) intersect scene's volume edges with frustum planes
-            vertexCount = intersectFrustums(outVertices.data(), vertexCount,
-                    wsSceneReceiversCorners.vertices, wsFrustumCorners);
+            vertexCount = intersectFrustum(outVertices.data(), vertexCount,
+                    wsSceneReceiversCorners.vertices, wsFrustumCorners, frustum);
 
             // d) intersect frustum edges with the scene's volume planes
-            vertexCount = intersectFrustums(outVertices.data(), vertexCount,
-                    wsFrustumCorners, wsSceneReceiversCorners.vertices);
+            vertexCount = intersectFrustum(outVertices.data(), vertexCount,
+                    wsFrustumCorners, wsSceneReceiversCorners.vertices, frustum);
         }
     }
 
+#ifdef NDEBUG
+    // Sanity check: all vertices should be inside the Frustum and inside the Box
     assert(vertexCount <= outVertices.size());
+    for (size_t i = 0; i < vertexCount; i++) {
+        assert(frustum.contains(outVertices[i]) <= EPSILON);
+        assert(wsBox.contains(outVertices[i]) <= 0);
+    }
+#endif
 
     return vertexCount;
 }
@@ -799,26 +806,32 @@ constexpr const ShadowMap::Segment ShadowMap::sBoxSegments[12];
 constexpr const ShadowMap::Quad ShadowMap::sBoxQuads[6];
 
 UTILS_NOINLINE
-size_t ShadowMap::intersectFrustums(
+size_t ShadowMap::intersectFrustum(
         float3* UTILS_RESTRICT out,
         size_t vertexCount,
         float3 const* segmentsVertices,
-        float3 const* quadsVertices) noexcept {
+        float3 const* quadsVertices,
+        Frustum const& frustum) noexcept {
 
 #pragma nounroll
     for (const Segment segment : sBoxSegments) {
-        const float3 s0 = segmentsVertices[segment.v0];
-        const float3 s1 = segmentsVertices[segment.v1];
+        const double3 s0{ segmentsVertices[segment.v0] };
+        const double3 s1{ segmentsVertices[segment.v1] };
         // each segment should only intersect with 2 quads at most
         size_t maxVertexCount = vertexCount + 2;
         for (size_t j = 0; j < 6 && vertexCount < maxVertexCount; ++j) {
             const Quad quad = sBoxQuads[j];
-            const float3 t0 = quadsVertices[quad.v0];
-            const float3 t1 = quadsVertices[quad.v1];
-            const float3 t2 = quadsVertices[quad.v2];
-            const float3 t3 = quadsVertices[quad.v3];
+            const double3 t0{ quadsVertices[quad.v0] };
+            const double3 t1{ quadsVertices[quad.v1] };
+            const double3 t2{ quadsVertices[quad.v2] };
+            const double3 t3{ quadsVertices[quad.v3] };
             if (intersectSegmentWithPlanarQuad(out[vertexCount], s0, s1, t0, t1, t2, t3)) {
-                vertexCount++;
+                // the test below shouldn't be necessary, but due to rounding errors, we've seen
+                // it happen -- and this breaks an invariant, so we discard those points
+                constexpr const float EPSILON = 1.0f / 8192.0f; // ~0.012 mm
+                if (frustum.contains(out[vertexCount]) <= EPSILON) {
+                    vertexCount++;
+                }
             }
         }
     }
@@ -827,65 +840,62 @@ size_t ShadowMap::intersectFrustums(
 
 UTILS_ALWAYS_INLINE
 bool ShadowMap::intersectSegmentWithPlanarQuad(float3& UTILS_RESTRICT p,
-        float3 s0, float3 s1,
-        float3 t0, float3 t1, float3 t2, float3 t3) noexcept {
-    constexpr float EPSILON = std::numeric_limits<float>::epsilon();
-    const float3 u = t1 - t0;
-    const float3 v = t2 - t0;
-    const float3 pn = cross(u, v);
+        double3 s0, double3 s1,
+        double3 t0, double3 t1, double3 t2, double3 t3) noexcept {
+    constexpr auto EPSILON = std::numeric_limits<double>::epsilon();
+    const auto u = t1 - t0;
+    const auto v = t2 - t0;
+    const auto pn = cross(u, v);
     if (!intersectSegmentWithPlane(p, s0, s1, pn, t0)) {
         return false;
     }
 
     // check if the segment intersects the first triangle
-    const float uu = dot(u, u);
-    const float uv = dot(u, v);
-    const float vv = dot(v, v);
-    const float ua = uv * uv - uu * vv;
+    const auto uu = dot(u, u);
+    const auto uv = dot(u, v);
+    const auto vv = dot(v, v);
+    const auto ua = uv * uv - uu * vv;
     if (UTILS_UNLIKELY(std::fabs(ua) < EPSILON)) {
         // degenerate triangle
         return false;
     }
 
-    const float3 k = p - t0;
-    const float ku = dot(k, u);
-    const float kv = dot(k, v);
-    float D = 1.0f / ua;
-    float s = (uv * kv - vv * ku) * D;
-    float t = (uv * ku - uu * kv) * D;
-    if ((s >= 0.0f && s <= 1.0f) && (t >= 0.0f && (s + t) <= 1.0f)) {
+    const auto k = p - t0;
+    const auto ku = dot(k, u);
+    const auto kv = dot(k, v);
+    auto s = (uv * kv - vv * ku) * sign(ua);
+    auto t = (uv * ku - uu * kv) * sign(ua);
+    if ((s >= 0.0f && s <= std::abs(ua)) && (t >= 0.0f && (s + t) <= std::abs(ua))) {
         return true;
     }
 
-
     // if not, check the second triangle
-    const float3 w = t3 - t0;
-    const float ww = dot(w, w);
-    const float wv = dot(w, v);
-    const float wa = wv * wv - ww * vv;
+    const auto w = t3 - t0;
+    const auto ww = dot(w, w);
+    const auto wv = dot(w, v);
+    const auto wa = wv * wv - ww * vv;
     if (UTILS_UNLIKELY(std::fabs(wa) < EPSILON)) {
         // degenerate triangle
         return false;
     }
 
-    const float kw = dot(k, w);
-    D = 1.0f / wa;
-    s = (wv * kv - vv * kw) * D;
-    t = (wv * kw - ww * kv) * D;
-    return (s >= 0.0f && s <= 1.0f) && (t >= 0.0f && (s + t) <= 1.0f);
+    const auto kw = dot(k, w);
+    s = (wv * kv - vv * kw) * sign(wa);
+    t = (wv * kw - ww * kv) * sign(wa);
+    return (s >= 0.0f && s <= std::abs(wa)) && (t >= 0.0f && (s + t) <= std::abs(wa));
 }
 
 UTILS_ALWAYS_INLINE
 bool ShadowMap::intersectSegmentWithPlane(float3& UTILS_RESTRICT p,
-        float3 s0, float3 s1,
-        float3 pn, float3 p0) noexcept {
+        double3 s0, double3 s1,
+        double3 pn, double3 p0) noexcept {
     constexpr const float EPSILON = 1.0f / 8192.0f; // ~0.012 mm
-    const float3 d = s1 - s0;
-    const float n = dot(pn, d);
+    const auto d = s1 - s0;
+    const auto n = dot(pn, d);
     if (std::fabs(n) >= EPSILON) {
-        const float t = -(dot(pn, s0 - p0)) / n;
+        const auto t = -(dot(pn, s0 - p0)) / n;
         if (t >= 0.0f && t <= 1.0f) {
-            p = s0 + t * d;
+            p = float3(s0 + t * d);
             return true;
         }
     }
