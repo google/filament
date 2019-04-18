@@ -69,6 +69,56 @@ void FilamentApp::setObjectTransform(const mat4f& transform) {
     meshTransform = transform;
 }
 
+void FilamentApp::updatePlaneGeometry(const FilamentArPlaneGeometry& geometry) {
+    auto& tcm = engine->getTransformManager();
+
+    if (!app.planeGeometry.isNull()) {
+        scene->remove(app.planeGeometry);
+        engine->destroy(app.planeGeometry);
+        tcm.destroy(app.planeGeometry);
+        EntityManager::get().destroy(1, &app.planeGeometry);
+    }
+
+    if (app.planeVertices) {
+        engine->destroy(app.planeVertices);
+    }
+
+    if (app.planeIndices) {
+        engine->destroy(app.planeIndices);
+    }
+
+    app.planeVertices = VertexBuffer::Builder()
+        .vertexCount((uint32_t) geometry.vertexCount)
+        .bufferCount(1)
+    .attribute(VertexAttribute::POSITION, 0, VertexBuffer::AttributeType::FLOAT3, 0, sizeof(float4))
+    .build(*engine);
+
+    app.planeIndices = IndexBuffer::Builder()
+        .indexCount((uint32_t) geometry.indexCount)
+        .bufferType(IndexBuffer::IndexType::USHORT)
+        .build(*engine);
+
+    VertexBuffer::BufferDescriptor vertexBuffer(geometry.vertices, geometry.vertexCount * sizeof(float4));
+    IndexBuffer::BufferDescriptor indexBuffer(geometry.indices, geometry.indexCount * sizeof(uint16_t));
+    app.planeVertices->setBufferAt(*engine, 0, std::move(vertexBuffer));
+    app.planeIndices->setBuffer(*engine, std::move(indexBuffer));
+
+    Box aabb = RenderableManager::computeAABB((float4*) geometry.vertices, (uint16_t*) geometry.indices, geometry.vertexCount);
+    EntityManager::get().create(1, &app.planeGeometry);
+    RenderableManager::Builder(1)
+        .boundingBox(aabb)
+        .receiveShadows(true)
+        .material(0, engine->getDefaultMaterial()->getDefaultInstance())
+        .geometry(0, RenderableManager::PrimitiveType::TRIANGLES, app.planeVertices, app.planeIndices, 0, geometry.indexCount)
+        .build(*engine, app.planeGeometry);
+
+    tcm.create(app.planeGeometry);
+    auto i = tcm.getInstance(app.planeGeometry);
+    tcm.setTransform(i, geometry.transform);
+
+    scene->addEntity(app.planeGeometry);
+}
+
 FilamentApp::~FilamentApp() {
     delete app.cameraFeedTriangle;
 

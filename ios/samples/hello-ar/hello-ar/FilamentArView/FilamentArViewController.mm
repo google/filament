@@ -65,6 +65,7 @@
     [super viewWillAppear:animated];
 
     ARWorldTrackingConfiguration* configuration = [ARWorldTrackingConfiguration new];
+    configuration.planeDetection = ARPlaneDetectionHorizontal;
     [self.session runWithConfiguration:configuration];
 }
 
@@ -141,11 +142,25 @@
     [self.session addAnchor:self.anchor];
 }
 
-- (void)session:(ARSession *)session didUpdateAnchors:(NSArray<ARAnchor *> *)anchors
+- (void)session:(ARSession *)session didUpdateAnchors:(NSArray<ARAnchor*>*)anchors
 {
-    ARAnchor* anchor = [anchors firstObject];
-    filament::math::mat4f transform = FILAMENT_MAT4F_FROM_SIMD(anchor.transform);
-    app->setObjectTransform(transform);
+    for (ARAnchor* anchor : anchors) {
+        if ([anchor isKindOfClass:[ARPlaneAnchor class]]) {
+            ARPlaneAnchor* planeAnchor = (ARPlaneAnchor*) anchor;
+            const auto& geometry = planeAnchor.geometry;
+            app->updatePlaneGeometry(FilamentApp::FilamentArPlaneGeometry {
+                .transform = FILAMENT_MAT4F_FROM_SIMD(planeAnchor.transform),
+                .vertices = (float3*) geometry.vertices,
+                .indices = (uint16_t*) geometry.triangleIndices,
+                .vertexCount = geometry.vertexCount,
+                .indexCount = geometry.triangleCount * 3
+            });
+            continue;
+        }
+
+        filament::math::mat4f transform = FILAMENT_MAT4F_FROM_SIMD(anchor.transform);
+        app->setObjectTransform(transform);
+    }
 }
 
 @end
