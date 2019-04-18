@@ -363,35 +363,6 @@ void FScene::setSkybox(FSkybox const* skybox) noexcept {
     }
 }
 
-void FScene::computeBounds(
-        Aabb& UTILS_RESTRICT castersBox,
-        Aabb& UTILS_RESTRICT receiversBox,
-        uint32_t visibleLayers) const noexcept {
-    using State = FRenderableManager::Visibility;
-
-    // Compute the scene bounding volume
-    RenderableSoa const& UTILS_RESTRICT soa = mRenderableData;
-    float3 const* const UTILS_RESTRICT worldAABBCenter = soa.data<WORLD_AABB_CENTER>();
-    float3 const* const UTILS_RESTRICT worldAABBExtent = soa.data<WORLD_AABB_EXTENT>();
-    uint8_t const* const UTILS_RESTRICT layers = soa.data<LAYERS>();
-    State const* const UTILS_RESTRICT visibility = soa.data<VISIBILITY_STATE>();
-    size_t c = soa.size();
-    for (size_t i = 0; i < c; i++) {
-        if (layers[i] & visibleLayers) {
-            const Aabb aabb{ worldAABBCenter[i] - worldAABBExtent[i],
-                             worldAABBCenter[i] + worldAABBExtent[i] };
-            if (visibility[i].castShadows) {
-                castersBox.min = min(castersBox.min, aabb.min);
-                castersBox.max = max(castersBox.max, aabb.max);
-            }
-            if (visibility[i].receiveShadows) {
-                receiversBox.min = min(receiversBox.min, aabb.min);
-                receiversBox.max = max(receiversBox.max, aabb.max);
-            }
-        }
-    }
-}
-
 } // namespace details
 
 // ------------------------------------------------------------------------------------------------

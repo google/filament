@@ -131,6 +131,10 @@ private:
     static inline math::float4 computeBoundingSphere(
             math::float3 const* vertices, size_t count) noexcept;
 
+    template<typename Casters, typename Receivers>
+    static void visitScene(FScene const& scene, uint32_t visibleLayers,
+            Casters casters, Receivers receivers) noexcept;
+
     static inline Aabb compute2DBounds(const math::mat4f& lightView,
             math::float3 const* wsVertices, size_t count) noexcept;
 

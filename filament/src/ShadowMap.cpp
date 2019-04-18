@@ -267,14 +267,6 @@ void ShadowMap::computeShadowCameraDirectional(
         FLightManager::ShadowParams const& params,
         uint8_t visibleLayers) noexcept {
 
-    // scene bounds in world space
-    Aabb wsShadowCastersVolume, wsShadowReceiversVolume;
-    scene->computeBounds(wsShadowCastersVolume, wsShadowReceiversVolume, visibleLayers);
-    if (wsShadowCastersVolume.isEmpty() || wsShadowReceiversVolume.isEmpty()) {
-        mHasVisibleShadows = false;
-        return;
-    }
-
     /*
      * Compute the light's model matrix
      * (direction & position)
@@ -288,14 +280,38 @@ void ShadowMap::computeShadowCameraDirectional(
     const mat4f M = mat4f::lookAt(lightPosition, lightPosition + dir, float3{ 0, 1, 0 });
     const mat4f Mv = FCamera::rigidTransformInverse(M);
 
-    float3 wsViewFrustumCorners[8];
-    computeFrustumCorners(wsViewFrustumCorners,
+
+    // Compute scene bounds in world space, as well as the light-space near/far planes
+    float2 nearFar = { std::numeric_limits<float>::lowest(), std::numeric_limits<float>::max() };
+    Aabb wsShadowCastersVolume, wsShadowReceiversVolume;
+    visitScene(*scene, visibleLayers,
+            [&wsShadowCastersVolume, &Mv, &nearFar](Aabb caster) {
+                wsShadowCastersVolume.min = min(wsShadowCastersVolume.min, caster.min);
+                wsShadowCastersVolume.max = max(wsShadowCastersVolume.max, caster.max);
+                float2 nf = computeNearFar(Mv, caster);
+                nearFar.x = std::max(nearFar.x, nf.x);  // near
+                nearFar.y = std::min(nearFar.y, nf.y);  // far
+            },
+            [&wsShadowReceiversVolume](Aabb receiver) {
+                wsShadowReceiversVolume.min = min(wsShadowReceiversVolume.min, receiver.min);
+                wsShadowReceiversVolume.max = max(wsShadowReceiversVolume.max, receiver.max);
+            }
+    );
+
+    if (wsShadowCastersVolume.isEmpty() || wsShadowReceiversVolume.isEmpty()) {
+        mHasVisibleShadows = false;
+        return;
+    }
+
+    // view frustum vertices in world-space
+    float3 wsViewFrustumVertices[8];
+    computeFrustumCorners(wsViewFrustumVertices,
             camera.model * FCamera::inverseProjection(camera.projection));
 
     // compute the intersection of the shadow receivers volume with the view volume
     // in world space. This returns a set of points on the convex-hull of the intersection.
     size_t vertexCount = intersectFrustumWithBox(mWsClippedShadowReceiverVolume,
-            camera.frustum, wsViewFrustumCorners, wsShadowReceiversVolume);
+            camera.frustum, wsViewFrustumVertices, wsShadowReceiversVolume);
 
     /*
      *  compute scene zmax (i.e. Near plane) and zmin (i.e. Far plane) in light space.
@@ -312,7 +328,6 @@ void ShadowMap::computeShadowCameraDirectional(
      */
 
     Aabb lsLightFrustumBounds;
-    const float2 nearFar = computeNearFar(Mv, wsShadowCastersVolume);
     if (!USE_DEPTH_CLAMP) {
         // near plane from shadow caster volume
         lsLightFrustumBounds.max.z = nearFar[0];
@@ -353,7 +368,7 @@ void ShadowMap::computeShadowCameraDirectional(
                 wsShadowReceiversVolume.getCorners().data(), 8);
 
         // in stable mode we simply take the view volume, bounding sphere
-        viewVolumeBoundingSphere = computeBoundingSphere(wsViewFrustumCorners, 8);
+        viewVolumeBoundingSphere = computeBoundingSphere(wsViewFrustumVertices, 8);
 
         if (shadowReceiverVolumeBoundingSphere.w < viewVolumeBoundingSphere.w) {
             viewVolumeBoundingSphere.w = 0;
@@ -640,7 +655,6 @@ float2 ShadowMap::computeNearFar(const mat4f& view,
 float2 ShadowMap::computeNearFar(const mat4f& view,
         float3 const* wsVertices, size_t count) noexcept {
     float2 nearFar = { std::numeric_limits<float>::lowest(), std::numeric_limits<float>::max() };
-    #pragma nounroll
     for (size_t i = 0; i < count; i++) {
         // we're on the z axis in light space (looking down to -z)
         float c = mat4f::project(view, wsVertices[i]).z;
@@ -1031,6 +1045,31 @@ float ShadowMap::texelSizeWorldSpace(const mat4f& Wp, const mat4f& MbMtF) const 
     UTILS_UNUSED float3 Jz = J[2] * dres;
     const float s = std::max(length(Jx), length(Jy));
     return s;
+}
+
+
+template<typename Casters, typename Receivers>
+void ShadowMap::visitScene(const FScene& scene, uint32_t visibleLayers,
+        Casters casters, Receivers receivers) noexcept {
+    using State = FRenderableManager::Visibility;
+    FScene::RenderableSoa const& UTILS_RESTRICT soa = scene.getRenderableData();
+    float3 const* const UTILS_RESTRICT worldAABBCenter = soa.data<FScene::WORLD_AABB_CENTER>();
+    float3 const* const UTILS_RESTRICT worldAABBExtent = soa.data<FScene::WORLD_AABB_EXTENT>();
+    uint8_t const* const UTILS_RESTRICT layers = soa.data<FScene::LAYERS>();
+    State const* const UTILS_RESTRICT visibility = soa.data<FScene::VISIBILITY_STATE>();
+    size_t c = soa.size();
+    for (size_t i = 0; i < c; i++) {
+        if (layers[i] & visibleLayers) {
+            const Aabb aabb{ worldAABBCenter[i] - worldAABBExtent[i],
+                             worldAABBCenter[i] + worldAABBExtent[i] };
+            if (visibility[i].castShadows) {
+                casters(aabb);
+            }
+            if (visibility[i].receiveShadows) {
+                receivers(aabb);
+            }
+        }
+    }
 }
 
 } // namespace details
