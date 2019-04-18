@@ -318,6 +318,10 @@ DECL_DRIVER_API_SYNCHRONOUS_0(bool, isFrameTimeSupported)
 
 DECL_DRIVER_API_SYNCHRONOUS_0(bool, canGenerateMipmaps)
 
+DECL_DRIVER_API_SYNCHRONOUS_1(void, setupExternalImage, void*, image)
+
+DECL_DRIVER_API_SYNCHRONOUS_1(void, cancelExternalImage, void*, image)
+
 /*
  * Updating driver objects
  * -----------------------

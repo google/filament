@@ -627,6 +627,12 @@ void VulkanDriver::updateCubeImage(Handle<HwTexture> th, uint32_t level,
     scheduleDestroy(std::move(data));
 }
 
+void VulkanDriver::setupExternalImage(void* image) {
+}
+
+void VulkanDriver::cancelExternalImage(void* image) {
+}
+
 void VulkanDriver::setExternalImage(Handle<HwTexture> th, void* image) {
 }
 

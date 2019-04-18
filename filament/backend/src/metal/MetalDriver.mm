@@ -23,6 +23,8 @@
 #include "MetalHandles.h"
 #include "MetalState.h"
 
+#include <CoreVideo/CVMetalTexture.h>
+#include <CoreVideo/CVPixelBuffer.h>
 #include <Metal/Metal.h>
 #include <QuartzCore/QuartzCore.h>
 
@@ -56,10 +58,15 @@ MetalDriver::MetalDriver(backend::MetalPlatform* platform) noexcept
     mContext->depthStencilStateCache.setDevice(mContext->device);
     mContext->samplerStateCache.setDevice(mContext->device);
     mContext->bufferPool = new MetalBufferPool(*mContext);
+
+    CVReturn success = CVMetalTextureCacheCreate(kCFAllocatorDefault, nullptr, mContext->device,
+            nullptr, &mContext->textureCache);
+    ASSERT_POSTCONDITION(success == kCVReturnSuccess, "Could not create Metal texture cache.");
 }
 
 MetalDriver::~MetalDriver() noexcept {
     [mContext->device release];
+    CFRelease(mContext->textureCache);
     delete mContext->bufferPool;
     delete mContext;
 }
@@ -75,9 +82,9 @@ void MetalDriver::debugCommand(const char *methodName) {
 
 void MetalDriver::beginFrame(int64_t monotonic_clock_ns, uint32_t frameId) {
     mContext->framePool = [[NSAutoreleasePool alloc] init];
-    mContext->currentCommandBuffer = [mContext->commandQueue commandBuffer];
 
-    [mContext->currentCommandBuffer addCompletedHandler:^(id <MTLCommandBuffer> buffer) {
+    id<MTLCommandBuffer> commandBuffer = acquireCommandBuffer(mContext);
+    [commandBuffer addCompletedHandler:^(id <MTLCommandBuffer> buffer) {
         mContext->resourceTracker.clearResources(buffer);
     }];
 }
@@ -90,6 +97,8 @@ void MetalDriver::endFrame(uint32_t frameId) {
     // Release resources created during frame execution- like commandBuffer and currentDrawable.
     [mContext->framePool drain];
     mContext->bufferPool->gc();
+
+    CVMetalTextureCacheFlush(mContext->textureCache, 0);
 }
 
 void MetalDriver::flush(int dummy) {
@@ -113,7 +122,7 @@ void MetalDriver::createIndexBufferR(Handle<HwIndexBuffer> ibh, ElementType elem
 void MetalDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint8_t levels,
         TextureFormat format, uint8_t samples, uint32_t width, uint32_t height,
         uint32_t depth, TextureUsage usage) {
-    construct_handle<MetalTexture>(mHandleMap, th, mContext->device, target, levels, format, samples,
+    construct_handle<MetalTexture>(mHandleMap, th, *mContext, target, levels, format, samples,
             width, height, depth, usage);
 }
 
@@ -313,6 +322,8 @@ void MetalDriver::terminate() {
     mContext->bufferPool->reset();
     [mContext->commandQueue release];
     [mContext->driverPool drain];
+
+    MetalExternalImage::shutdown();
 }
 
 ShaderModel MetalDriver::getShaderModel() const noexcept {
@@ -394,8 +405,21 @@ void MetalDriver::updateCubeImage(Handle<HwTexture> th, uint32_t level,
     scheduleDestroy(std::move(data));
 }
 
-void MetalDriver::setExternalImage(Handle<HwTexture> th, void* image) {
+void MetalDriver::setupExternalImage(void* image) {
+    // Take ownership of the passed in buffer. It will be released the next time
+    // setExternalImage is called, or when the texture is destroyed.
+    CVPixelBufferRef pixelBuffer = (CVPixelBufferRef) image;
+    CVPixelBufferRetain(pixelBuffer);
+}
 
+void MetalDriver::cancelExternalImage(void* image) {
+    CVPixelBufferRef pixelBuffer = (CVPixelBufferRef) image;
+    CVPixelBufferRelease(pixelBuffer);
+}
+
+void MetalDriver::setExternalImage(Handle<HwTexture> th, void* image) {
+    auto texture = handle_cast<MetalTexture>(mHandleMap, th);
+    texture->externalImage.set((CVPixelBufferRef) image);
 }
 
 void MetalDriver::setExternalStream(Handle<HwTexture> th, Handle<HwStream> sh) {
@@ -558,6 +582,7 @@ void MetalDriver::makeCurrent(Handle<HwSwapChain> schDraw, Handle<HwSwapChain> s
 void MetalDriver::commit(Handle<HwSwapChain> sch) {
     [mContext->currentCommandBuffer presentDrawable:mContext->currentDrawable];
     [mContext->currentCommandBuffer commit];
+    mContext->currentCommandBuffer = nil;
     mContext->currentDrawable = nil;
 }
 
@@ -722,6 +747,10 @@ void MetalDriver::draw(backend::PipelineState ps, Handle<HwRenderPrimitive> rph)
             uint8_t binding) {
         const auto metalTexture = handle_const_cast<MetalTexture>(mHandleMap, sampler->t);
         texturesToBind[binding] = metalTexture->texture;
+
+        if (metalTexture->externalImage.isValid()) {
+            texturesToBind[binding] = metalTexture->externalImage.getMetalTextureForDraw();
+        }
 
         id <MTLSamplerState> samplerState = mContext->samplerStateCache.getOrCreateState(sampler->s);
         samplersToBind[binding] = samplerState;
