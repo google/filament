@@ -856,14 +856,7 @@ size_t ShadowMap::intersectFrustumWithBox(
         }
     }
 
-#ifdef NDEBUG
-    // Sanity check: all vertices should be inside the Frustum and inside the Box
     assert(vertexCount <= outVertices.size());
-    for (size_t i = 0; i < vertexCount; i++) {
-        assert(frustum.contains(outVertices[i]) <= EPSILON);
-        assert(wsBox.contains(outVertices[i]) <= 0);
-    }
-#endif
 
     return vertexCount;
 }
@@ -879,7 +872,7 @@ size_t ShadowMap::intersectFrustum(
         float3 const* quadsVertices,
         Frustum const& frustum) noexcept {
 
-#pragma nounroll
+    #pragma nounroll
     for (const Segment segment : sBoxSegments) {
         const double3 s0{ segmentsVertices[segment.v0] };
         const double3 s1{ segmentsVertices[segment.v1] };
@@ -892,12 +885,7 @@ size_t ShadowMap::intersectFrustum(
             const double3 t2{ quadsVertices[quad.v2] };
             const double3 t3{ quadsVertices[quad.v3] };
             if (intersectSegmentWithPlanarQuad(out[vertexCount], s0, s1, t0, t1, t2, t3)) {
-                // the test below shouldn't be necessary, but due to rounding errors, we've seen
-                // it happen -- and this breaks an invariant, so we discard those points
-                constexpr const float EPSILON = 1.0f / 8192.0f; // ~0.012 mm
-                if (frustum.contains(out[vertexCount]) <= EPSILON) {
-                    vertexCount++;
-                }
+                vertexCount++;
             }
         }
     }
