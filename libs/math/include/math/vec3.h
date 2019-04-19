@@ -114,16 +114,19 @@ public:
 
 // ----------------------------------------------------------------------------------------
 
-typedef details::TVec3<double> double3;
-typedef details::TVec3<float> float3;
-typedef details::TVec3<half> half3;
-typedef details::TVec3<int32_t> int3;
-typedef details::TVec3<uint32_t> uint3;
-typedef details::TVec3<int16_t> short3;
-typedef details::TVec3<uint16_t> ushort3;
-typedef details::TVec3<int8_t> byte3;
-typedef details::TVec3<uint8_t> ubyte3;
-typedef details::TVec3<bool> bool3;
+template <typename T, typename = typename std::enable_if<std::is_arithmetic<T>::value >::type>
+using vec3 = details::TVec3<T>;
+
+using double3 = vec3<double>;
+using float3 = vec3<float>;
+using half3 = vec3<half>;
+using int3 = vec3<int32_t>;
+using uint3 = vec3<uint32_t>;
+using short3 = vec3<int16_t>;
+using ushort3 = vec3<uint16_t>;
+using byte3 = vec3<int8_t>;
+using ubyte3 = vec3<uint8_t>;
+using bool3 = vec3<bool>;
 
 // ----------------------------------------------------------------------------------------
 }  // namespace math

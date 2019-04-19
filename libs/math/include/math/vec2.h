@@ -95,16 +95,19 @@ public:
 
 // ----------------------------------------------------------------------------------------
 
-typedef details::TVec2<double> double2;
-typedef details::TVec2<float> float2;
-typedef details::TVec2<half> half2;
-typedef details::TVec2<int32_t> int2;
-typedef details::TVec2<uint32_t> uint2;
-typedef details::TVec2<int16_t> short2;
-typedef details::TVec2<uint16_t> ushort2;
-typedef details::TVec2<int8_t> byte2;
-typedef details::TVec2<uint8_t> ubyte2;
-typedef details::TVec2<bool> bool2;
+template <typename T, typename = typename std::enable_if<std::is_arithmetic<T>::value >::type>
+using vec2 = details::TVec2<T>;
+
+using double2 = vec2<double>;
+using float2 = vec2<float>;
+using half2 = vec2<half>;
+using int2 = vec2<int32_t>;
+using uint2 = vec2<uint32_t>;
+using short2 = vec2<int16_t>;
+using ushort2 = vec2<uint16_t>;
+using byte2 = vec2<int8_t>;
+using ubyte2 = vec2<uint8_t>;
+using bool2 = vec2<bool>;
 
 // ----------------------------------------------------------------------------------------
 }  // namespace math
