@@ -98,7 +98,6 @@ public:
     constexpr TVec4(const TVec3<A>& v, B w) : x(v.x), y(v.y), z(v.z), w(w) { }
 
     template<typename A>
-    explicit
     constexpr TVec4(const TVec4<A>& v) : x(v.x), y(v.y), z(v.z), w(v.w) { }
 };
 

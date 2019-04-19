@@ -96,7 +96,6 @@ public:
     constexpr TVec3(const TVec2<A>& v, B z) : x(v.x), y(v.y), z(z) { }
 
     template<typename A>
-    explicit
     constexpr TVec3(const TVec3<A>& v) : x(v.x), y(v.y), z(v.z) { }
 
     // cross product works only on vectors of size 3

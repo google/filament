@@ -80,7 +80,6 @@ public:
     constexpr TVec2(A x, B y) : x(x), y(y) { }
 
     template<typename A>
-    explicit
     constexpr TVec2(const TVec2<A>& v) : x(v.x), y(v.y) { }
 
     // cross product works only on vectors of size 2 or 3
