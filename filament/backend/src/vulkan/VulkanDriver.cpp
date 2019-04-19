@@ -46,7 +46,11 @@
 // } } }
 //
 // Validation crashes on MoltenVK, so we disable it by default on MacOS.
-#define ENABLE_VALIDATION (!defined(NDEBUG) && !defined(__APPLE__))
+#if !defined(NDEBUG) && !defined(__APPLE__)
+#define ENABLE_VALIDATION 1
+#else
+#define ENABLE_VALIDATION 0
+#endif
 
 #if ENABLE_VALIDATION
 
