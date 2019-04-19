@@ -874,16 +874,16 @@ size_t ShadowMap::intersectFrustum(
 
     #pragma nounroll
     for (const Segment segment : sBoxSegments) {
-        const double3 s0{ segmentsVertices[segment.v0] };
-        const double3 s1{ segmentsVertices[segment.v1] };
+        const float3 s0{ segmentsVertices[segment.v0] };
+        const float3 s1{ segmentsVertices[segment.v1] };
         // each segment should only intersect with 2 quads at most
         size_t maxVertexCount = vertexCount + 2;
         for (size_t j = 0; j < 6 && vertexCount < maxVertexCount; ++j) {
             const Quad quad = sBoxQuads[j];
-            const double3 t0{ quadsVertices[quad.v0] };
-            const double3 t1{ quadsVertices[quad.v1] };
-            const double3 t2{ quadsVertices[quad.v2] };
-            const double3 t3{ quadsVertices[quad.v3] };
+            const float3 t0{ quadsVertices[quad.v0] };
+            const float3 t1{ quadsVertices[quad.v1] };
+            const float3 t2{ quadsVertices[quad.v2] };
+            const float3 t3{ quadsVertices[quad.v3] };
             if (intersectSegmentWithPlanarQuad(out[vertexCount], s0, s1, t0, t1, t2, t3)) {
                 vertexCount++;
             }
@@ -893,67 +893,48 @@ size_t ShadowMap::intersectFrustum(
 }
 
 UTILS_ALWAYS_INLINE
-bool ShadowMap::intersectSegmentWithPlanarQuad(float3& UTILS_RESTRICT p,
-        double3 s0, double3 s1,
-        double3 t0, double3 t1, double3 t2, double3 t3) noexcept {
-    constexpr auto EPSILON = std::numeric_limits<double>::epsilon();
-    const auto u = t1 - t0;
-    const auto v = t2 - t0;
-    const auto pn = cross(u, v);
-    if (!intersectSegmentWithPlane(p, s0, s1, pn, t0)) {
-        return false;
-    }
-
-    // check if the segment intersects the first triangle
-    const auto uu = dot(u, u);
-    const auto uv = dot(u, v);
-    const auto vv = dot(v, v);
-    const auto ua = uv * uv - uu * vv;
-    if (UTILS_UNLIKELY(std::fabs(ua) < EPSILON)) {
+bool ShadowMap::intersectSegmentWithTriangle(float3& UTILS_RESTRICT p,
+        float3 s0, float3 s1,
+        float3 t0, float3 t1, float3 t2) noexcept {
+    // See Real-Time Rendering -- Tomas Akenine-Moller, Eric Haines, Naty Hoffman
+    constexpr const float EPSILON = 1.0f / 65536.0f;  // ~1e-5
+    const auto e1 = t1 - t0;
+    const auto e2 = t2 - t0;
+    const auto d = s1 - s0;
+    const auto q = cross(d, e2);
+    const auto a = dot(e1, q);
+    if (UTILS_UNLIKELY(std::abs(a) < EPSILON)) {
         // degenerate triangle
         return false;
     }
-
-    const auto k = p - t0;
-    const auto ku = dot(k, u);
-    const auto kv = dot(k, v);
-    auto s = (uv * kv - vv * ku) * sign(ua);
-    auto t = (uv * ku - uu * kv) * sign(ua);
-    if ((s >= 0.0f && s <= std::abs(ua)) && (t >= 0.0f && (s + t) <= std::abs(ua))) {
-        return true;
+    const auto s = s0 - t0;
+    const auto u = dot(s, q) * sign(a);
+    const auto r = cross(s, e1);
+    const auto v = dot(d, r) * sign(a);
+    if (u < 0 || v < 0 || u + v > std::abs(a)) {
+        // the ray doesn't intersect within the triangle
+        return false;
     }
-
-    // if not, check the second triangle
-    const auto w = t3 - t0;
-    const auto ww = dot(w, w);
-    const auto wv = dot(w, v);
-    const auto wa = wv * wv - ww * vv;
-    if (UTILS_UNLIKELY(std::fabs(wa) < EPSILON)) {
-        // degenerate triangle
+    const auto t = dot(e2, r) * sign(a);
+    if (t < 0 || t > std::abs(a)) {
+        // the intersection isn't on the segment
         return false;
     }
 
-    const auto kw = dot(k, w);
-    s = (wv * kv - vv * kw) * sign(wa);
-    t = (wv * kw - ww * kv) * sign(wa);
-    return (s >= 0.0f && s <= std::abs(wa)) && (t >= 0.0f && (s + t) <= std::abs(wa));
+    // compute the intersection point
+    //      Alternate computation: from barycentric coordinates on the triangle
+    //      const auto w = 1 - (u + v) / std::abs(a);
+    //      p = w * t0 + u / std::abs(a) * t1 + v / std::abs(a) * t2;
+
+    p = s0 + d * (t / std::abs(a));
+    return true;
 }
 
-UTILS_ALWAYS_INLINE
-bool ShadowMap::intersectSegmentWithPlane(float3& UTILS_RESTRICT p,
-        double3 s0, double3 s1,
-        double3 pn, double3 p0) noexcept {
-    constexpr const float EPSILON = 1.0f / 8192.0f; // ~0.012 mm
-    const auto d = s1 - s0;
-    const auto n = dot(pn, d);
-    if (std::fabs(n) >= EPSILON) {
-        const auto t = -(dot(pn, s0 - p0)) / n;
-        if (t >= 0.0f && t <= 1.0f) {
-            p = float3(s0 + t * d);
-            return true;
-        }
-    }
-    return false;
+bool ShadowMap::intersectSegmentWithPlanarQuad(float3& UTILS_RESTRICT p,
+        float3 s0, float3 s1, float3 t0, float3 t1, float3 t2, float3 t3) noexcept {
+    bool hit = intersectSegmentWithTriangle(p, s0, s1, t0, t1, t2) ||
+               intersectSegmentWithTriangle(p, s0, s1, t0, t2, t3);
+    return hit;
 }
 
 float ShadowMap::texelSizeWorldSpace(const mat3f& worldToShadowTexture) const noexcept {
