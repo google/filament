@@ -85,7 +85,7 @@ public:
     constexpr TVec4() = default;
 
     // handles implicit conversion to a tvec4. must not be explicit.
-    template<typename A, typename = typename std::enable_if<std::is_arithmetic<A>::value >::type>
+    template<typename A>
     constexpr TVec4(A v) : x(v), y(v), z(v), w(v) { }
 
     template<typename A, typename B, typename C, typename D>

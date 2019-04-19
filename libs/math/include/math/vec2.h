@@ -73,7 +73,7 @@ public:
     constexpr TVec2() = default;
 
     // handles implicit conversion to a tvec4. must not be explicit.
-    template<typename A, typename = typename std::enable_if<std::is_arithmetic<A>::value >::type>
+    template<typename A>
     constexpr TVec2(A v) : x(v), y(v) { }
 
     template<typename A, typename B>
