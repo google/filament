@@ -147,14 +147,14 @@ private:
     static inline math::float2 computeNearFarOfWarpSpace(math::mat4f const& lightView,
             math::float3 const* wsVertices, size_t count) noexcept;
 
-    static inline bool intersectSegmentWithPlane(math::float3& p,
-            math::double3 s0, math::double3 s1,
-            math::double3 pn, math::double3 p0) noexcept;
-
     static inline bool intersectSegmentWithPlanarQuad(math::float3& p,
-            math::double3 s0, math::double3 s1,
-            math::double3 t0, math::double3 t1,
-            math::double3 t2, math::double3 t3) noexcept;
+            math::float3 s0, math::float3 s1,
+            math::float3 t0, math::float3 t1,
+            math::float3 t2, math::float3 t3) noexcept;
+
+    static inline bool intersectSegmentWithTriangle(math::float3& UTILS_RESTRICT p,
+            math::float3 s0, math::float3 s1,
+            math::float3 t0, math::float3 t1, math::float3 t2) noexcept;
 
     static size_t intersectFrustum(math::float3* out, size_t vertexCount,
             math::float3 const* segmentsVertices, math::float3 const* quadsVertices,
