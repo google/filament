@@ -207,7 +207,7 @@ public:
     void setGeometry(FScene& scene, utils::Range<uint32_t> vr) noexcept;
     void setCamera(const CameraInfo& camera) noexcept;
     void setRenderFlags(RenderFlags flags) noexcept;
-    void setExecuteSync(utils::JobSystem::Job* sync) noexcept;
+    void setExecuteSync(std::function<void(backend::DriverApi& driver)> sync) noexcept;
     void generateSortedCommands(CommandTypeFlags commandType) noexcept;
     void execute(const char* name,
             backend::Handle <backend::HwRenderTarget> renderTarget,
@@ -259,7 +259,7 @@ private:
     RenderFlags mFlags{};
     bool mPolygonOffsetOverride = false;
     backend::PolygonOffset mPolygonOffset{};
-    utils::JobSystem::Job* mSync = nullptr;
+    mutable std::function<void(backend::DriverApi&)> mSync;
     size_t mCommandsHighWatermark = 0;
 };
 

@@ -31,6 +31,8 @@
 #include <utils/JobSystem.h>
 #include <utils/Systrace.h>
 
+#include <utility>
+
 using namespace utils;
 using namespace filament::math;
 
@@ -58,8 +60,8 @@ void RenderPass::setRenderFlags(RenderPass::RenderFlags flags) noexcept {
     mFlags = flags;
 }
 
-void RenderPass::setExecuteSync(JobSystem::Job* sync) noexcept {
-    mSync = sync;
+void RenderPass::setExecuteSync(std::function<void(DriverApi& driver)> sync) noexcept {
+    mSync = std::move(sync);
 }
 
 void RenderPass::overridePolygonOffset(backend::PolygonOffset* polygonOffset) noexcept {
@@ -132,11 +134,6 @@ void RenderPass::generateSortedCommands(CommandTypeFlags const commandTypeFlags)
                 return ((c.key & PASS_MASK) >> PASS_SHIFT) != 0xFF;
             });
 
-    // give a chance to dependant jobs to finish
-    if (mSync) {
-        js.waitAndRelease(mSync);
-    }
-
     commands.resize(uint32_t(last - commands.begin()));
 }
 
@@ -150,6 +147,12 @@ void RenderPass::execute(const char* name,
 
     // Take care not to upload data within the render pass (synchronize can commit froxel data)
     DriverApi& driver = engine.getDriverApi();
+
+    // give a chance to dependant jobs to finish
+    if (mSync) {
+        mSync(driver);
+        mSync = nullptr;
+    }
 
     // Now, execute all commands
     driver.pushGroupMarker(name);
