@@ -83,6 +83,7 @@ class MaterialCompiler extends DefaultTask {
         }
 
         inputs.outOfDate { InputFileDetails outOfDate ->
+            if (outOfDate.file.directory) return
             def file = outOfDate.file
 
             def out = new LogOutputStream(logger, LogLevel.LIFECYCLE)
