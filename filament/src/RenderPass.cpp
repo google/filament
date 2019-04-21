@@ -60,10 +60,6 @@ void RenderPass::setRenderFlags(RenderPass::RenderFlags flags) noexcept {
     mFlags = flags;
 }
 
-void RenderPass::setExecuteSync(std::function<void(DriverApi& driver)> sync) noexcept {
-    mSync = std::move(sync);
-}
-
 void RenderPass::overridePolygonOffset(backend::PolygonOffset* polygonOffset) noexcept {
     if ((mPolygonOffsetOverride = (polygonOffset != nullptr))) {
         mPolygonOffset = *polygonOffset;
@@ -147,12 +143,6 @@ void RenderPass::execute(const char* name,
 
     // Take care not to upload data within the render pass (synchronize can commit froxel data)
     DriverApi& driver = engine.getDriverApi();
-
-    // give a chance to dependant jobs to finish
-    if (mSync) {
-        mSync(driver);
-        mSync = nullptr;
-    }
 
     // Now, execute all commands
     driver.pushGroupMarker(name);
