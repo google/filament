@@ -277,7 +277,6 @@ static Material* createMaterial(Engine* engine, const MaterialKey& config, const
             break;
         case AlphaMode::MASK:
             builder.blending(MaterialBuilder::BlendingMode::MASKED);
-            builder.maskThreshold(config.alphaMaskThreshold);
             break;
         case AlphaMode::BLEND:
             builder.blending(MaterialBuilder::BlendingMode::TRANSPARENT);

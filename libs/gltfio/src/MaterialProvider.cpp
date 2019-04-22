@@ -33,8 +33,7 @@ bool gltfio::operator==(const MaterialKey& k1, const MaterialKey& k2) {
         (k1.metallicRoughnessUV == k2.metallicRoughnessUV) &&
         (k1.emissiveUV == k2.emissiveUV) &&
         (k1.aoUV == k2.aoUV) &&
-        (k1.normalUV == k2.normalUV) &&
-        (k1.alphaMaskThreshold == k2.alphaMaskThreshold);
+        (k1.normalUV == k2.normalUV);
 }
 
 // Filament supports up to 2 UV sets. glTF has arbitrary texcoord set indices, but it allows

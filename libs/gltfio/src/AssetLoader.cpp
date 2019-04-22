@@ -616,7 +616,6 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_material* inp
         .aoUV = (uint8_t) inputMat->occlusion_texture.texcoord,
         .normalUV = (uint8_t) inputMat->normal_texture.texcoord,
         .hasTextureTransforms = hasTextureTransforms,
-        .alphaMaskThreshold = 0.5f
     };
 
     if (inputMat->has_pbr_specular_glossiness) {
@@ -639,7 +638,6 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_material* inp
             break;
         case cgltf_alpha_mode_mask:
             matkey.alphaMode = AlphaMode::MASK;
-            matkey.alphaMaskThreshold = inputMat->alpha_cutoff;
             break;
         case cgltf_alpha_mode_blend:
             matkey.alphaMode = AlphaMode::BLEND;
@@ -650,6 +648,10 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_material* inp
     // rendering constraints. For example, Filament only supports 2 sets of texture coordinates.
     MaterialInstance* mi = mMaterials->createMaterialInstance(&matkey, uvmap, inputMat->name);
     mResult->mMaterialInstances.push_back(mi);
+
+    if (inputMat->alpha_mode == cgltf_alpha_mode_mask) {
+        mi->setMaskThreshold(inputMat->alpha_cutoff);
+    }
 
     const float* e = inputMat->emissive_factor;
     mi->setParameter("emissiveFactor", float3(e[0], e[1], e[2]));
