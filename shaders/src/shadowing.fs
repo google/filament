@@ -70,14 +70,17 @@ float sampleDepth(const lowp sampler2DShadow map, vec2 base, vec2 dudv, float de
     depth += dot(dudv, rpdb);
  #endif
 #endif
-    return texture(map, vec3(base + dudv, depth));
+    // depth must be clamped to support floating-point depth formats. This is to avoid comparing a
+    // value from the depth texture (which is never greater than 1.0) with a greater-than-one
+    // comparison value (which is possible with floating-point formats).
+    return texture(map, vec3(base + dudv, clamp(depth, 0.0, 1.0)));
 }
 
 #if SHADOW_SAMPLING_METHOD == SHADOW_SAMPLING_PCF_HARD
 float ShadowSample_Hard(const lowp sampler2DShadow map, const vec2 size, const vec3 position) {
     vec2 rpdb = computeReceiverPlaneDepthBias(position);
     float depth = samplingBias(position.z, rpdb, vec2(1.0) / size);
-    return texture(map, vec3(position.xy, depth));
+    return texture(map, vec3(position.xy, clamp(depth, 0.0, 1.0)));
 }
 #endif
 
