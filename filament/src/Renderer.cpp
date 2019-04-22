@@ -312,6 +312,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
                     (FrameGraphPassResources const& resources,
                             ColorPassData const& data, DriverApi& driver) {
                 auto out = resources.getRenderTarget(data.color);
+                out.params.clearColor = view.getClearColor();
 
                 if (jobFroxelize) {
                     auto sync = jobFroxelize;
