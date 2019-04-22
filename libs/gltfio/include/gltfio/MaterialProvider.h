@@ -59,11 +59,9 @@ struct alignas(4) MaterialKey {
     uint8_t aoUV;
     uint8_t normalUV;
     bool hasTextureTransforms : 8;
-    // -- 32 bit boundary --
-    float alphaMaskThreshold;
 };
 
-static_assert(sizeof(MaterialKey) == 12, "MaterialKey has unexpected padding.");
+static_assert(sizeof(MaterialKey) == 8, "MaterialKey has unexpected padding.");
 
 bool operator==(const MaterialKey& k1, const MaterialKey& k2);
 
