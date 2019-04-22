@@ -127,7 +127,7 @@ FrameGraphResource PostProcessManager::toneMapping(FrameGraph& fg, FrameGraphRes
                 // TODO: the first parameters below are the *actual viewport* size
                 //       (as opposed to the size of the source texture). Currently we don't allow
                 //       the texture to be resized, so they match. We'll need something more
-                //       sofisticated in the future.
+                //       sophisticated in the future.
 
                 mPostProcessUb.setUniform(offsetof(PostProcessingUib, dithering), dithering);
                 setSource(textureDesc.width, textureDesc.height,
@@ -183,7 +183,7 @@ FrameGraphResource PostProcessManager::fxaa(FrameGraph& fg,
                 // TODO: the first parameters below are the *actual viewport* size
                 //       (as opposed to the size of the source texture). Currently we don't allow
                 //       the texture to be resized, so they match. We'll need something more
-                //       sofisticated in the future.
+                //       sophisticated in the future.
                 setSource(textureDesc.width, textureDesc.height,
                         texture, {}, textureDesc.width, textureDesc.height);
 

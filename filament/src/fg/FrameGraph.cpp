@@ -582,7 +582,7 @@ FrameGraphPassResources::getRenderTarget(FrameGraphResource r) const noexcept {
 
     // find a rendertarget in this pass that has this resource has attachment
 
-    // TODO: for cubemaps/arrays, we'll need to be able to specifyt he face/index
+    // TODO: for cubemaps/arrays, we'll need to be able to specify the face/index
 
     for (RenderTarget const* renderTarget : mPass.renderTargets) {
         auto const& desc = renderTarget->desc;
