@@ -209,7 +209,7 @@ void OpenGLProgram::updateSamplers(OpenGLDriver* gl) noexcept {
                 t->gl.fence = nullptr;
             }
 
-            gl->bindTexture(tmu, t->gl.target, t, t->gl.targetIndex);
+            gl->bindTexture(tmu, t);
 
             // FIXME: getSampler() is expensive because it's a hashmap lookup
             GLuint sampler = gl->getSampler(samplers[index].s);
