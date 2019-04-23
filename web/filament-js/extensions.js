@@ -247,14 +247,14 @@ Filament.loadClassExtensions = function() {
         const engine = this.getEngine();
         const urlkeys = this.getResourceUrls();
         const urlset = new Set();
-        for (let i = 0; i < urlkeys.size(); i++) {
+        for (var i = 0; i < urlkeys.size(); i++) {
             const url = urlkeys.get(i);
             if (url) {
                 urlset.add(url);
             }
         }
         const resourceLoader = new Filament.gltfio$ResourceLoader(engine);
-        Filament.fetch([...urlset], function() {
+        Filament.fetch(Array.from(urlset), function() {
             const finalize = function() {
                 resourceLoader.loadResources(asset);
 
@@ -273,7 +273,7 @@ Filament.loadClassExtensions = function() {
                 finalize();
             }
         }, function(name) {
-            let buffer = getBufferDescriptor(name);
+            var buffer = getBufferDescriptor(name);
             resourceLoader.addResourceData(name, buffer);
             buffer.delete();
             if (onFetched) {
