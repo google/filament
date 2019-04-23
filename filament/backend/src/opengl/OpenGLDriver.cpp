@@ -2890,12 +2890,7 @@ void OpenGLDriver::blit(TargetBufferFlags buffers,
 
         GLRenderTarget const* s = handle_cast<GLRenderTarget const*>(src);
         GLRenderTarget const* d = handle_cast<GLRenderTarget const*>(dst);
-        // FIXME: it's not correct to use fbo_read here, because this fbo only exists for
-        //  performing the resolve -- in particular, if there were other attachments to this
-        //  FBO, ther would not be part of fbo_read. e.g.: the case of a multi-sampled
-        //  color renderbuffer + multi-sampled depth texture. fbo_read would only contain the
-        //  later.
-        bindFramebuffer(GL_READ_FRAMEBUFFER, s->gl.fbo_read ? s->gl.fbo_read : s->gl.fbo);
+        bindFramebuffer(GL_READ_FRAMEBUFFER, s->gl.fbo);
         bindFramebuffer(GL_DRAW_FRAMEBUFFER, d->gl.fbo);
         disable(GL_SCISSOR_TEST);
         glBlitFramebuffer(
