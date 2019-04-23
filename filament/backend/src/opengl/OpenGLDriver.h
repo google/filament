@@ -104,6 +104,7 @@ public:
         using HwTexture::HwTexture;
         struct {
             GLuint texture_id;
+            mutable GLuint rb = 0;  // multi-sample sidecar buffer
             GLenum target;
             GLenum internalFormat;
             mutable GLsync fence = nullptr;
@@ -179,7 +180,7 @@ public:
             RenderBuffer depth;
             RenderBuffer stencil;
             GLuint fbo = 0;
-            GLuint fbo_draw = 0;
+            GLuint fbo_read = 0;
             backend::TargetBufferFlags resolve = backend::TargetBufferFlags::NONE; // attachments in fbo_draw to resolve
             uint8_t samples : 4;
             uint8_t colorLevel : 4; // Allows up to 15 levels (max texture size of 32768 x 32768)
@@ -288,9 +289,6 @@ private:
 
     void framebufferTexture(backend::TargetBufferInfo& binfo, GLRenderTarget* rt, GLenum attachment) noexcept;
 
-    void framebufferRenderbuffer(GLRenderTarget::GL::RenderBuffer* rb, GLenum attachment,
-            GLenum internalformat, uint32_t width, uint32_t height, uint8_t samples, GLuint fbo) noexcept;
-
     GLuint framebufferRenderbuffer(uint32_t width, uint32_t height, uint8_t samples,
             GLenum attachment, GLenum internalformat, GLuint fbo) noexcept;
 
@@ -327,9 +325,7 @@ private:
 
     inline void pixelStore(GLenum, GLint) noexcept;
     inline void activeTexture(GLuint unit) noexcept;
-    inline void bindTexture(GLuint unit, GLuint target, GLTexture const* t) noexcept;
-    inline void bindTexture(GLuint unit, GLuint target, GLTexture const* t, size_t targetIndex) noexcept;
-    inline void UTILS_UNUSED bindTexture(GLuint unit, GLuint target, GLuint texId) noexcept;
+           void bindTexture(GLuint unit, GLTexture const* t) noexcept;
            void bindTexture(GLuint unit, GLuint target, GLuint texId, size_t targetIndex) noexcept;
 
     inline void unbindTexture(GLenum target, GLuint id) noexcept;
@@ -638,19 +634,6 @@ void OpenGLDriver::activeTexture(GLuint unit) noexcept {
     update_state(state.textures.active, unit, [&]() {
         glActiveTexture(GL_TEXTURE0 + unit);
     });
-}
-
-void OpenGLDriver::bindTexture(GLuint unit, GLuint target, GLTexture const* t) noexcept {
-    bindTexture(unit, target, t, getIndexForTextureTarget(target));
-}
-
-void OpenGLDriver::bindTexture(GLuint unit, GLuint target, GLTexture const* t, size_t targetIndex) noexcept {
-    assert(t != nullptr);
-    bindTexture(unit, target, t->gl.texture_id, targetIndex);
-}
-
-void UTILS_UNUSED OpenGLDriver::bindTexture(GLuint unit, GLuint target, GLuint texId) noexcept {
-    bindTexture(unit, target, texId, getIndexForTextureTarget(target));
 }
 
 void OpenGLDriver::bindSampler(GLuint unit, GLuint sampler) noexcept {
