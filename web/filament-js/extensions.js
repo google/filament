@@ -257,7 +257,15 @@ Filament.loadClassExtensions = function() {
         Filament.fetch([...urlset], function() {
             const finalize = function() {
                 resourceLoader.loadResources(asset);
-                resourceLoader.delete();
+
+                // The buffer data won't get sent to the GPU until the next call to
+                // "renderer.render()", so wait two frames before freeing the CPU-side data.
+                window.requestAnimationFrame(function() {
+                    window.requestAnimationFrame(function() {
+                        resourceLoader.delete();
+                    });
+                });
+
             };
             if (onDone) {
                 onDone(finalize);
