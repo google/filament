@@ -2225,17 +2225,7 @@ void OpenGLDriver::endRenderPass(int) {
 
 void OpenGLDriver::resolve(GLRenderTarget const* rt, TargetBufferFlags discardFlags) noexcept {
     const TargetBufferFlags resolve = TargetBufferFlags(rt->gl.resolve & ~discardFlags);
-    GLbitfield mask = 0;
-    if (resolve & TargetBufferFlags::COLOR) {
-        mask |= GL_COLOR_BUFFER_BIT;
-    }
-    if (resolve  & TargetBufferFlags::DEPTH) {
-        mask |= GL_DEPTH_BUFFER_BIT;
-    }
-    if (resolve  & TargetBufferFlags::STENCIL) {
-        mask |= GL_STENCIL_BUFFER_BIT;
-    }
-
+    GLbitfield mask = getDiscardBits(resolve);
     if (UTILS_UNLIKELY(mask)) {
         bindFramebuffer(GL_READ_FRAMEBUFFER, rt->gl.fbo);
         bindFramebuffer(GL_DRAW_FRAMEBUFFER, rt->gl.fbo_read);
@@ -2869,17 +2859,7 @@ void OpenGLDriver::blit(TargetBufferFlags buffers,
         SamplerMagFilter filter) {
     DEBUG_MARKER()
 
-    GLbitfield mask = 0;
-    if (buffers & TargetBufferFlags::COLOR) {
-        mask |= GL_COLOR_BUFFER_BIT;
-    }
-    if (buffers & TargetBufferFlags::DEPTH) {
-        mask |= GL_DEPTH_BUFFER_BIT;
-    }
-    if (buffers & TargetBufferFlags::STENCIL) {
-        mask |= GL_STENCIL_BUFFER_BIT;
-    }
-
+    GLbitfield mask = getDiscardBits(buffers);
     if (mask) {
         GLenum glFilterMode = (filter == SamplerMagFilter::NEAREST) ? GL_NEAREST : GL_LINEAR;
         if (mask & (GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT)) {
