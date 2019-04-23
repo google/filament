@@ -286,6 +286,12 @@
 <li><em>returns</em> an instance of <a href="#Engine">Engine</a></li>
 </ul>
 </li>
+<li><strong>Engine.createAssetLoader(engine)</strong>
+<ul>
+<li><em>engine</em> an instance of <a href="#Engine">Engine</a></li>
+<li><em>returns</em> an instance of <a href="#AssetLoader">AssetLoader</a></li>
+</ul>
+</li>
 <li><strong>engine.createCamera()</strong>
 <ul>
 <li><em>returns</em> an instance of <a href="#Camera">Camera</a></li>
@@ -567,6 +573,20 @@ wrapper rather than interacting with <code>KtxBundle</code> directly.</p>
 <div class='classdoc'>
 <h2>class <a id='KtxInfo' href='#KtxInfo'>KtxInfo</a></h2>
 <p>Property accessor for KTX header.</p>
+<ul>
+<li><strong>KtxInfo.createAssetFroBinary(buffer)</strong>
+<ul>
+<li><em>buffer</em> asset string, or Uint8Array, or <a href="#Buffer">Buffer</a></li>
+<li><em>returns</em> an instance of <a href="#FilamentAsset">FilamentAsset</a></li>
+</ul>
+</li>
+<li><strong>KtxInfo.createAssetFromJson(buffer)</strong>
+<ul>
+<li><em>buffer</em> asset string, or Uint8Array, or <a href="#Buffer">Buffer</a></li>
+<li><em>returns</em> an instance of <a href="#FilamentAsset">FilamentAsset</a></li>
+</ul>
+</li>
+</ul>
 <p>For example, <code>ktxbundle.info().pixelWidth</code>. See the
 <a href="https://www.khronos.org/opengles/sdk/tools/KTX/file_format_spec/">KTX spec</a> for the list of
 properties.</p>
