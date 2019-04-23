@@ -121,6 +121,10 @@ static void generateTrivialIndices(uint32_t* dst, size_t numVertices) {
 
 bool ResourceLoader::loadResources(FilamentAsset* asset) {
     FFilamentAsset* fasset = upcast(asset);
+    if (fasset->mResourcesLoaded) {
+        return false;
+    }
+    fasset->mResourcesLoaded = true;
     mPool->addAsset(fasset);
     auto gltf = (cgltf_data*) fasset->mSourceAsset;
     cgltf_options options {};

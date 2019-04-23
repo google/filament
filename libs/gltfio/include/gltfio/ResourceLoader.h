@@ -68,6 +68,9 @@ public:
      * Loads resources for the given asset from the filesystem or data cache and "finalizes" the
      * asset by transforming the vertex data format if necessary, decoding image files, supplying
      * tangent data, etc.
+     *
+     * Returns false if resources have already been loaded, or if one or more resources could not
+     * be loaded.
      */
     bool loadResources(FilamentAsset* asset);
 

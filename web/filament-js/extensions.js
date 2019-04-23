@@ -255,7 +255,6 @@ Filament.loadClassExtensions = function() {
         }
         const resourceLoader = new Filament.gltfio$ResourceLoader(engine);
         Filament.fetch([...urlset], function() {
-            resourceLoader.loadResources(asset);
             const finalize = function() {
                 resourceLoader.loadResources(asset);
                 resourceLoader.delete();
