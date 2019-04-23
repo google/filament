@@ -255,10 +255,17 @@ Filament.loadClassExtensions = function() {
         }
         const resourceLoader = new Filament.gltfio$ResourceLoader(engine);
         Filament.fetch([...urlset], function() {
-            resourceLoader.loadResources(asset);
             const finalize = function() {
                 resourceLoader.loadResources(asset);
-                resourceLoader.delete();
+
+                // The buffer data won't get sent to the GPU until the next call to
+                // "renderer.render()", so wait two frames before freeing the CPU-side data.
+                window.requestAnimationFrame(function() {
+                    window.requestAnimationFrame(function() {
+                        resourceLoader.delete();
+                    });
+                });
+
             };
             if (onDone) {
                 onDone(finalize);

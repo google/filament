@@ -173,6 +173,7 @@ struct FFilamentAsset : public FilamentAsset {
     Animator* mAnimator = nullptr;
     Wireframe* mWireframe = nullptr;
     int mSourceAssetRefCount = 0;
+    bool mResourcesLoaded = false;
 
     /** @{
      * Transient source data that can freed via releaseSourceData(). */
