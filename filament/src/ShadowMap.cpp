@@ -103,6 +103,10 @@ void ShadowMap::prepare(DriverApi& driver, SamplerGroup& sb) noexcept {
     // we set a viewport with a 1-texel border for when we index outside of the texture
     // DON'T CHANGE this unless computeLightSpaceMatrix() is updated too.
     // see: computeLightSpaceMatrix()
+    // For floating-point depth textures, the 1-texel border could be set to FLOAT_MAX to avoid
+    // clamping in the shadow shader (see sampleDepth inside shadowing.fs). Unfortunately, the APIs
+    // don't seem let us clear depth attachments to anything greater than 1.0, so we'd need a way to
+    // do this other than clearing.
     mViewport = { 1, 1, dim - 2, dim - 2 };
     mShadowMapResolution.xy = 1.0f / (dim - 2);
 
