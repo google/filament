@@ -1,0 +1,20 @@
+name: hello-ar
+options:
+    bundleIdPrefix: google.filament
+include: ../app-template.yml
+targets:
+    hello-ar:
+        sources: hello-ar/
+        templates:
+            - FilamentApp
+        scheme:
+            configVariants:REPLACE:
+                - Metal
+        dependencies:
+            - sdk: ARKit.framework
+        settings:
+            base:
+                OTHER_LDFLAGS: ["-lfilameshio", "-lmeshoptimizer", "-limage"]
+        preBuildScripts:
+            - path: build-resources.sh
+              name: Build Resources
