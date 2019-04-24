@@ -78,7 +78,7 @@ constexpr inline GLuint getComponentCount(backend::ElementType type) noexcept {
 // Our enums to GLenum conversions
 // ------------------------------------------------------------------------------------------------
 
-constexpr inline GLbitfield getDiscardBits(backend::TargetBufferFlags flags) noexcept {
+constexpr inline GLbitfield getAttachmentBitfield(backend::TargetBufferFlags flags) noexcept {
     GLbitfield mask = 0;
     if (flags & backend::TargetBufferFlags::COLOR) {
         mask |= GL_COLOR_BUFFER_BIT;
@@ -94,10 +94,10 @@ constexpr inline GLbitfield getDiscardBits(backend::TargetBufferFlags flags) noe
 
 constexpr inline GLenum getBufferUsage(backend::BufferUsage usage) noexcept {
     switch (usage) {
-        case backend::STATIC:
+        case backend::BufferUsage::STATIC:
             return GL_STATIC_DRAW;
-        case backend::DYNAMIC:
-        case backend::STREAM:
+        case backend::BufferUsage::DYNAMIC:
+        case backend::BufferUsage::STREAM:
             return GL_DYNAMIC_DRAW;
     }
 }

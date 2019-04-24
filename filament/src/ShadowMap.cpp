@@ -131,7 +131,7 @@ void ShadowMap::prepare(DriverApi& driver, SamplerGroup& sb) noexcept {
             TextureUsage::DEPTH_ATTACHMENT);
 
     mShadowMapRenderTarget = driver.createRenderTarget(
-            TargetBufferFlags::SHADOW, dim, dim, 1, format,
+            TargetBufferFlags::DEPTH, dim, dim, 1, format,
             {}, { mShadowMapHandle }, {});
 
     SamplerParams s;
@@ -157,7 +157,7 @@ void ShadowMap::render(DriverApi& driver, RenderPass& pass, FView& view) noexcep
 
     // FIXME: in the future this will come from the framegraph
     RenderPassParams params = {};
-    params.flags.clear = TargetBufferFlags::SHADOW;
+    params.flags.clear = TargetBufferFlags::DEPTH;
     params.flags.discardStart = TargetBufferFlags::DEPTH;
     params.flags.discardEnd = TargetBufferFlags::COLOR_AND_STENCIL;
     params.clearDepth = 1.0;

@@ -1129,17 +1129,17 @@ void OpenGLDriver::framebufferTexture(backend::TargetBufferInfo& binfo,
 
         switch (attachment) {
             case GL_COLOR_ATTACHMENT0:
-                rt->gl.resolve = TargetBufferFlags(rt->gl.resolve | TargetBufferFlags::COLOR);
+                rt->gl.resolve |= TargetBufferFlags::COLOR;
                 break;
             case GL_DEPTH_ATTACHMENT:
-                rt->gl.resolve = TargetBufferFlags(rt->gl.resolve | TargetBufferFlags::DEPTH);
+                rt->gl.resolve |= TargetBufferFlags::DEPTH;
                 break;
             case GL_STENCIL_ATTACHMENT:
-                rt->gl.resolve = TargetBufferFlags(rt->gl.resolve | TargetBufferFlags::STENCIL);
+                rt->gl.resolve |= TargetBufferFlags::STENCIL;
                 break;
             case GL_DEPTH_STENCIL_ATTACHMENT:
-                rt->gl.resolve = TargetBufferFlags(rt->gl.resolve | TargetBufferFlags::DEPTH);
-                rt->gl.resolve = TargetBufferFlags(rt->gl.resolve | TargetBufferFlags::STENCIL);
+                rt->gl.resolve |= TargetBufferFlags::DEPTH;
+                rt->gl.resolve |= TargetBufferFlags::STENCIL;
                 break;
             default:
                 break;
@@ -2146,8 +2146,8 @@ void OpenGLDriver::beginRenderPass(Handle<HwRenderTarget> rth,
 
     mRenderPassTarget = rth;
     mRenderPassParams = params;
-    const TargetBufferFlags clearFlags = (TargetBufferFlags) params.flags.clear;
-    const TargetBufferFlags discardFlags = (TargetBufferFlags) params.flags.discardStart;
+    const uint8_t clearFlags = params.flags.clear;
+    const TargetBufferFlags discardFlags = params.flags.discardStart;
 
     GLRenderTarget* rt = handle_cast<GLRenderTarget*>(rth);
     if (UTILS_UNLIKELY(state.draw_fbo != rt->gl.fbo)) {
@@ -2173,8 +2173,9 @@ void OpenGLDriver::beginRenderPass(Handle<HwRenderTarget> rth,
         // We need to perform a "backward" resolve, i.e. load the resolved texture into the tile,
         // everything must appear as though the multi-sample buffer was lost.
         // We only copy the non msaa buffers that were not discarded or cleared.
-        const TargetBufferFlags resolve = TargetBufferFlags(rt->gl.resolve & ~(discardFlags|clearFlags));
-        GLbitfield mask = getDiscardBits(TargetBufferFlags(resolve));
+        const TargetBufferFlags discarded = discardFlags | TargetBufferFlags(clearFlags & TargetBufferFlags::ALL);
+        const TargetBufferFlags resolve = rt->gl.resolve & ~discarded;
+        GLbitfield mask = getAttachmentBitfield(resolve);
         if (UTILS_UNLIKELY(mask)) {
             bindFramebuffer(GL_DRAW_FRAMEBUFFER, rt->gl.fbo);
             bindFramebuffer(GL_READ_FRAMEBUFFER, rt->gl.fbo_read);
@@ -2217,7 +2218,7 @@ void OpenGLDriver::beginRenderPass(Handle<HwRenderTarget> rth,
     setClearColor(1, 0, 0, 1);
     bindFramebuffer(GL_FRAMEBUFFER, rt->gl.fbo);
     disable(GL_SCISSOR_TEST);
-    glClear(getDiscardBits(TargetBufferFlags(discardFlags & ~clearFlags)));
+    glClear(getAttachmentBitfield(discardFlags & ~TargetBufferFlags(clearFlags)));
 #endif
 }
 
@@ -2227,7 +2228,7 @@ void OpenGLDriver::endRenderPass(int) {
 
     GLRenderTarget const* const rt = handle_cast<GLRenderTarget*>(mRenderPassTarget);
 
-    const TargetBufferFlags discardFlags = TargetBufferFlags(mRenderPassParams.flags.discardEnd);
+    const TargetBufferFlags discardFlags = mRenderPassParams.flags.discardEnd;
     resolve(rt, discardFlags);
 
     // glInvalidateFramebuffer appeared on GLES 3.0 and GL4.3, for simplicity we just
@@ -2250,15 +2251,15 @@ void OpenGLDriver::endRenderPass(int) {
     setClearColor(0, 1, 0, 1);
     bindFramebuffer(GL_FRAMEBUFFER, rt->gl.fbo);
     disable(GL_SCISSOR_TEST);
-    glClear(getDiscardBits(discardFlags));
+    glClear(getAttachmentBitfield(discardFlags));
 #endif
 
     mRenderPassTarget.clear();
 }
 
 void OpenGLDriver::resolve(GLRenderTarget const* rt, TargetBufferFlags discardFlags) noexcept {
-    const TargetBufferFlags resolve = TargetBufferFlags(rt->gl.resolve & ~discardFlags);
-    GLbitfield mask = getDiscardBits(resolve);
+    const TargetBufferFlags resolve = rt->gl.resolve & ~discardFlags;
+    GLbitfield mask = getAttachmentBitfield(resolve);
     if (UTILS_UNLIKELY(mask)) {
         bindFramebuffer(GL_READ_FRAMEBUFFER, rt->gl.fbo);
         bindFramebuffer(GL_DRAW_FRAMEBUFFER, rt->gl.fbo_read);
@@ -2892,7 +2893,7 @@ void OpenGLDriver::blit(TargetBufferFlags buffers,
         SamplerMagFilter filter) {
     DEBUG_MARKER()
 
-    GLbitfield mask = getDiscardBits(buffers);
+    GLbitfield mask = getAttachmentBitfield(buffers);
     if (mask) {
         GLenum glFilterMode = (filter == SamplerMagFilter::NEAREST) ? GL_NEAREST : GL_LINEAR;
         if (mask & (GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT)) {

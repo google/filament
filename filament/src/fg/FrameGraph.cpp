@@ -140,8 +140,8 @@ struct RenderTargetResource final : public VirtualResource {  // 104
     TextureFormat format;
     uint32_t width;
     uint32_t height;
-    uint8_t discardStart = TargetBufferFlags::NONE;
-    uint8_t discardEnd = TargetBufferFlags::NONE;
+    TargetBufferFlags discardStart = TargetBufferFlags::NONE;
+    TargetBufferFlags discardEnd = TargetBufferFlags::NONE;
 
     // updated during execute with the current pass' discard flags
     FrameGraphPassResources::RenderTargetInfo targetInfo;
@@ -199,7 +199,7 @@ struct RenderTarget { // 32
 
     // set by builder
     FrameGraphRenderTarget::Descriptor desc;
-    uint8_t userClearFlags{};
+    TargetBufferFlags userClearFlags{};
 
     // set in compile
     RenderPassFlags targetFlags{};
@@ -790,10 +790,10 @@ FrameGraphResource FrameGraph::importResource(
     return createResourceNode(resource);
 }
 
-uint8_t FrameGraph::computeDiscardFlags(DiscardPhase phase,
+TargetBufferFlags FrameGraph::computeDiscardFlags(DiscardPhase phase,
         PassNode const* curr, PassNode const* first, RenderTarget const& renderTarget) {
     auto& resourceNodes = mResourceNodes;
-    uint8_t discardFlags = TargetBufferFlags::ALL;
+    TargetBufferFlags discardFlags = TargetBufferFlags::ALL;
 
     static constexpr TargetBufferFlags flags[] = {
             TargetBufferFlags::COLOR,
@@ -1011,19 +1011,19 @@ FrameGraph& FrameGraph::compile() noexcept {
 
             // does anyone writes to this resource before us -- if so, don't discard those buffers on enter
             // (i.e. if nobody wrote, no need to load from memory)
-            uint8_t discardStart = computeDiscardFlags(
+            TargetBufferFlags discardStart = computeDiscardFlags(
                     DiscardPhase::START, first, &pass, *pRenderTarget);
 
             // does anyone reads this resource after us -- if so, don't discard those buffers on exit
             // (i.e. if nobody is going to read, no need to write back to memory)
-            uint8_t discardEnd = computeDiscardFlags(
+            TargetBufferFlags discardEnd = computeDiscardFlags(
                     DiscardPhase::END, &pass + 1, last, *pRenderTarget);
 
             pRenderTarget->targetFlags = {
-                    .clear = 0,  // this is eventually set by the user
+                    .clear = {},  // this is eventually set by the user
                     .discardStart = discardStart,
                     .discardEnd = discardEnd,
-                    .dependencies = 0
+                    .dependencies = {}
             };
         }
     }

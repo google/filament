@@ -68,21 +68,43 @@ enum TargetBufferFlags : uint8_t {
     COLOR = 0x1,                //!< Color buffer selected.
     DEPTH = 0x2,                //!< Depth buffer selected.
     STENCIL = 0x4,              //!< Stencil buffer selected.
-    SHADOW = DEPTH | 0x8,
     COLOR_AND_DEPTH = COLOR | DEPTH,
     COLOR_AND_STENCIL = COLOR | STENCIL,
     DEPTH_AND_STENCIL = DEPTH | STENCIL,
-    ALL = COLOR | DEPTH | STENCIL,
+    ALL = COLOR | DEPTH | STENCIL
 };
+
+// implement requirement of BitmaskType
+inline constexpr TargetBufferFlags operator~(TargetBufferFlags rhs) noexcept {
+    return TargetBufferFlags(~uint8_t(rhs) & uint8_t(TargetBufferFlags::ALL));
+}
+inline constexpr TargetBufferFlags operator|=(TargetBufferFlags& lhs, TargetBufferFlags rhs) noexcept {
+    return lhs = TargetBufferFlags(uint8_t(lhs) | uint8_t(rhs));
+}
+inline constexpr TargetBufferFlags operator&=(TargetBufferFlags& lhs, TargetBufferFlags rhs) noexcept {
+    return lhs = TargetBufferFlags(uint8_t(lhs) & uint8_t(rhs));
+}
+inline constexpr TargetBufferFlags operator^=(TargetBufferFlags& lhs, TargetBufferFlags rhs) noexcept {
+    return lhs = TargetBufferFlags(uint8_t(lhs) ^ uint8_t(rhs));
+}
+inline constexpr TargetBufferFlags operator|(TargetBufferFlags lhs, TargetBufferFlags rhs) noexcept {
+    return TargetBufferFlags(uint8_t(lhs) | uint8_t(rhs));
+}
+inline constexpr TargetBufferFlags operator&(TargetBufferFlags lhs, TargetBufferFlags rhs) noexcept {
+    return TargetBufferFlags(uint8_t(lhs) & uint8_t(rhs));
+}
+inline constexpr TargetBufferFlags operator^(TargetBufferFlags lhs, TargetBufferFlags rhs) noexcept {
+    return TargetBufferFlags(uint8_t(lhs) ^ uint8_t(rhs));
+}
 
 /**
  * Frequency at which a buffer is expected to be modified and used. This is used as an hint
  * for the driver to make better decisions about managing memory internally.
  */
-enum BufferUsage : uint8_t {
-    STATIC,                 //!< content modified once, used many times
-    DYNAMIC,                //!< content modified frequently, used many times
-    STREAM,                 //!< content invalidated and modified frequently, used many times
+enum class BufferUsage : uint8_t {
+    STATIC,      //!< content modified once, used many times
+    DYNAMIC,     //!< content modified frequently, used many times
+    STREAM,      //!< content invalidated and modified frequently, used many times
 };
 
 /**
@@ -99,8 +121,8 @@ struct Viewport {
 
 struct RenderPassFlags {
     uint8_t clear;
-    uint8_t discardStart;
-    uint8_t discardEnd;
+    TargetBufferFlags discardStart;
+    TargetBufferFlags discardEnd;
     uint8_t dependencies;
 
     static constexpr uint8_t DEPENDENCY_BY_REGION = 1; // see "framebuffer-local" in Vulkan spec.
