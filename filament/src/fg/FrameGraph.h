@@ -211,7 +211,7 @@ private:
     fg::ResourceNode& getResource(FrameGraphResource r);
 
     fg::RenderTarget& createRenderTarget(const char* name,
-            FrameGraphRenderTarget::Descriptor const& desc, bool imported) noexcept;
+            FrameGraphRenderTarget::Descriptor const& desc) noexcept;
 
     FrameGraphResource createResourceNode(fg::Resource* resource) noexcept;
 

@@ -140,6 +140,8 @@ struct RenderTargetResource final : public VirtualResource {  // 104
     TextureFormat format;
     uint32_t width;
     uint32_t height;
+    uint8_t discardStart = TargetBufferFlags::NONE;
+    uint8_t discardEnd = TargetBufferFlags::NONE;
 
     // updated during execute with the current pass' discard flags
     FrameGraphPassResources::RenderTargetInfo targetInfo;
@@ -184,8 +186,8 @@ RenderTargetResource::~RenderTargetResource() = default;
 
 struct RenderTarget { // 32
     RenderTarget(const char* name,
-            FrameGraphRenderTarget::Descriptor const& desc, bool imported, uint16_t index) noexcept
-            : name(name), imported(imported), index(index), desc(desc) {
+            FrameGraphRenderTarget::Descriptor const& desc, uint16_t index) noexcept
+            : name(name), index(index), desc(desc) {
     }
     RenderTarget(RenderTarget const&) = delete;
     RenderTarget(RenderTarget&&) noexcept = default;
@@ -193,12 +195,11 @@ struct RenderTarget { // 32
 
     // constants
     const char* const name;         // for debugging
-    bool imported;
     uint16_t index;
 
     // set by builder
     FrameGraphRenderTarget::Descriptor desc;
-    RenderPassFlags userTargetFlags{};
+    uint8_t userClearFlags{};
 
     // set in compile
     RenderPassFlags targetFlags{};
@@ -216,7 +217,7 @@ struct RenderTarget { // 32
 
         if (pos != renderTargetCache.end()) {
             cache = pos->get();
-            cache->targetInfo.params.flags.clear |= userTargetFlags.clear;
+            cache->targetInfo.params.flags.clear |= userClearFlags;
         } else {
             uint8_t attachments = 0;
             uint32_t width = 0;
@@ -236,12 +237,12 @@ struct RenderTarget { // 32
             uint32_t maxHeight = 0;
 
             for (FrameGraphResource const& attachment : desc.attachments.textures) {
-                size_t index = &attachment - desc.attachments.textures.data();
+                size_t i = &attachment - desc.attachments.textures.data();
                 if (attachment.isValid()) {
                     Resource const* const pResource = resourceNodes[attachment.index].resource;
                     assert(pResource);
 
-                    attachments |= flags[index];
+                    attachments |= flags[i];
 
                     // figure out the min/max dimensions across all attachments
                     minWidth  = std::min(minWidth,  pResource->desc.width);
@@ -249,8 +250,8 @@ struct RenderTarget { // 32
                     minHeight = std::min(minHeight, pResource->desc.height);
                     maxHeight = std::max(maxHeight, pResource->desc.height);
 
-                    textures[index] = pResource->texture;
-                    if (index == FrameGraphRenderTarget::Attachments::COLOR) {
+                    textures[i] = pResource->texture;
+                    if (i == FrameGraphRenderTarget::Attachments::COLOR) {
                         colorFormat = pResource->desc.format;
                     }
 
@@ -292,11 +293,11 @@ struct RenderTarget { // 32
 
                 // create the cache entry
                 RenderTargetResource* pRenderTargetResource =
-                        fg.mArena.make<RenderTargetResource>(desc, imported,
+                        fg.mArena.make<RenderTargetResource>(desc, false,
                                 TargetBufferFlags(attachments), width, height, colorFormat);
                 renderTargetCache.emplace_back(pRenderTargetResource, fg);
                 cache = pRenderTargetResource;
-                cache->targetInfo.params.flags.clear |= userTargetFlags.clear;
+                cache->targetInfo.params.flags.clear |= userClearFlags;
             }
         }
     }
@@ -478,8 +479,8 @@ FrameGraph::Builder::Attachments FrameGraph::Builder::useRenderTarget(const char
     Attachments rt{};
     FrameGraph& fg = mFrameGraph;
 
-    RenderTarget& renderTarget = fg.createRenderTarget(name, desc, false);
-    renderTarget.userTargetFlags.clear = clearFlags;
+    RenderTarget& renderTarget = fg.createRenderTarget(name, desc);
+    renderTarget.userClearFlags = clearFlags;
 
     mPass.declareRenderTarget(renderTarget);
 
@@ -688,10 +689,10 @@ PassNode& FrameGraph::createPass(const char* name, FrameGraphPassExecutor* base)
 }
 
 fg::RenderTarget& FrameGraph::createRenderTarget(const char* name,
-        FrameGraphRenderTarget::Descriptor const& desc, bool imported) noexcept {
+        FrameGraphRenderTarget::Descriptor const& desc) noexcept {
     auto& renderTargets = mRenderTargets;
     const uint16_t id = (uint16_t)renderTargets.size();
-    renderTargets.emplace_back(name, desc, imported, id);
+    renderTargets.emplace_back(name, desc, id);
     return renderTargets.back();
 }
 
@@ -771,6 +772,8 @@ FrameGraphResource FrameGraph::importResource(const char* name,
     RenderTargetResource* pRenderTargetResource = mArena.make<RenderTargetResource>(descriptor, true,
             TargetBufferFlags::COLOR, width, height, TextureFormat{});
     pRenderTargetResource->targetInfo.target = target;
+    pRenderTargetResource->discardStart = discardStart;
+    pRenderTargetResource->discardEnd = discardEnd;
     mRenderTargetCache.emplace_back(pRenderTargetResource, *this);
 
     // NOTE: we don't even need to create a fg::RenderTarget, all is needed is a cache entry
@@ -822,16 +825,16 @@ uint8_t FrameGraph::computeDiscardFlags(DiscardPhase phase,
 
     if (phase == DiscardPhase::START) {
         // clear implies discarding the content of the buffer
-        discardFlags |= (renderTarget.userTargetFlags.clear & TargetBufferFlags::ALL);
+        discardFlags |= (renderTarget.userClearFlags & TargetBufferFlags::ALL);
     }
 
-    if (renderTarget.imported) {
+    if (renderTarget.cache->imported) {
         // we never discard more than the user flags
         if (phase == DiscardPhase::START) {
-            discardFlags &= renderTarget.userTargetFlags.discardStart;
+            discardFlags &= renderTarget.cache->discardStart;
         }
         if (phase == DiscardPhase::END) {
-            discardFlags &= renderTarget.userTargetFlags.discardEnd;
+            discardFlags &= renderTarget.cache->discardEnd;
         }
     }
 
