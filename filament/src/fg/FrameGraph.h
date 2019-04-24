@@ -216,7 +216,7 @@ private:
     FrameGraphResource createResourceNode(fg::Resource* resource) noexcept;
 
     enum class DiscardPhase { START, END };
-    uint8_t computeDiscardFlags(DiscardPhase phase,
+    backend::TargetBufferFlags computeDiscardFlags(DiscardPhase phase,
             fg::PassNode const* curr, fg::PassNode const* first,
             fg::RenderTarget const& renderTarget);
 
