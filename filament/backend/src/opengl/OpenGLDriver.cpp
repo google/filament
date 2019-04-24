@@ -2194,6 +2194,14 @@ void OpenGLDriver::beginRenderPass(Handle<HwRenderTarget> rth,
                 clearDepth, params.clearDepth,
                 clearStencil, params.clearStencil);
     }
+
+#ifndef NDEBUG
+    // clear the discarded (but not the cleared ones) buffers in debug builds
+    setClearColor(1, 0, 0, 1);
+    bindFramebuffer(GL_FRAMEBUFFER, rt->gl.fbo);
+    disable(GL_SCISSOR_TEST);
+    glClear(getDiscardBits(TargetBufferFlags(discardFlags & ~clearFlags)));
+#endif
 }
 
 void OpenGLDriver::endRenderPass(int) {
@@ -2219,6 +2227,14 @@ void OpenGLDriver::endRenderPass(int) {
            CHECK_GL_ERROR(utils::slog.e)
         }
     }
+
+#ifndef NDEBUG
+    // clear the discarded buffers in debug builds
+    setClearColor(0, 1, 0, 1);
+    bindFramebuffer(GL_FRAMEBUFFER, rt->gl.fbo);
+    disable(GL_SCISSOR_TEST);
+    glClear(getDiscardBits(discardFlags));
+#endif
 
     mRenderPassTarget.clear();
 }
