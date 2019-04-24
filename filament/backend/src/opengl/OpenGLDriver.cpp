@@ -2167,6 +2167,23 @@ void OpenGLDriver::beginRenderPass(Handle<HwRenderTarget> rth,
         }
     }
 
+    if (rt->gl.fbo_read != rt->gl.fbo) {
+        // we have a multi-sample RenderTarget with non multi-sample attachments (i.e. this is the
+        // EXT_multisampled_render_to_texture emulation).
+        // We need to perform a "backward" resolve, i.e. load the resolved texture into the tile,
+        // everything must appear as though the multi-sample buffer was lost.
+        // We only copy the non msaa buffers that were not discarded or cleared.
+        const TargetBufferFlags resolve = TargetBufferFlags(rt->gl.resolve & ~(discardFlags|clearFlags));
+        GLbitfield mask = getDiscardBits(TargetBufferFlags(resolve));
+        if (UTILS_UNLIKELY(mask)) {
+            bindFramebuffer(GL_DRAW_FRAMEBUFFER, rt->gl.fbo);
+            bindFramebuffer(GL_READ_FRAMEBUFFER, rt->gl.fbo_read);
+            disable(GL_SCISSOR_TEST);
+            glBlitFramebuffer(0, 0, rt->width, rt->height, 0, 0, rt->width, rt->height, mask, GL_NEAREST);
+            CHECK_GL_ERROR(utils::slog.e)
+        }
+    }
+
     setViewport(params.viewport.left, params.viewport.bottom,
             params.viewport.width, params.viewport.height);
 
@@ -2884,6 +2901,12 @@ void OpenGLDriver::blit(TargetBufferFlags buffers,
             glFilterMode = GL_NEAREST;
         }
 
+        // note: for msaa RenderTargets withh non-msaa attachments, we copy from the msaa sidecar
+        // buffer -- this should produce the same output that if we copied from the resolved
+        // texture. EXT_multisampled_render_to_texture seems to allow both behaviours, and this
+        // is an emulation of that.  We cannot use the resolved texture easily because it's not
+        // actually attached to the this RenderTarget. Another implementation would be to do a
+        // reverse-resolve, but that wouldn't buy us anything.
         GLRenderTarget const* s = handle_cast<GLRenderTarget const*>(src);
         GLRenderTarget const* d = handle_cast<GLRenderTarget const*>(dst);
         bindFramebuffer(GL_READ_FRAMEBUFFER, s->gl.fbo);
