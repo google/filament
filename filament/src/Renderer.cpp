@@ -235,7 +235,8 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 
     const backend::Handle<backend::HwRenderTarget> viewRenderTarget = getRenderTarget();
     FrameGraphResource output = fg.importResource("viewRenderTarget",
-            { .viewport = vp }, viewRenderTarget, vp.width, vp.height);
+            { .viewport = vp }, viewRenderTarget, vp.width, vp.height,
+            view.getDiscardedTargetBuffers());
 
     /*
      * Depth + Color passes
