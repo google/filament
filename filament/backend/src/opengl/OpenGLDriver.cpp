@@ -2173,7 +2173,7 @@ void OpenGLDriver::beginRenderPass(Handle<HwRenderTarget> rth,
         }
     }
 
-    if (rt->gl.fbo_read != rt->gl.fbo) {
+    if (rt->gl.fbo_read) {
         // we have a multi-sample RenderTarget with non multi-sample attachments (i.e. this is the
         // EXT_multisampled_render_to_texture emulation).
         // We need to perform a "backward" resolve, i.e. load the resolved texture into the tile,
@@ -2197,26 +2197,28 @@ void OpenGLDriver::beginRenderPass(Handle<HwRenderTarget> rth,
     setScissor(params.viewport.left, params.viewport.bottom,
             params.viewport.width, params.viewport.height);
 
-    const bool respectScissor = !(clearFlags & RenderPassFlags::IGNORE_SCISSOR);
-    const bool clearColor = clearFlags & TargetBufferFlags::COLOR;
-    const bool clearDepth = clearFlags & TargetBufferFlags::DEPTH;
-    const bool clearStencil = clearFlags & TargetBufferFlags::STENCIL;
-    if (respectScissor) {
-        enable(GL_SCISSOR_TEST);
-    } else {
-        disable(GL_SCISSOR_TEST);
-    }
-    if (respectScissor && GLES31_HEADERS && bugs.clears_hurt_performance) {
-        // With OpenGL ES, we clear the viewport using geometry to improve performance on certain
-        // OpenGL drivers. e.g. on Adreno this avoids needless loads from the GMEM.
-        clearWithGeometryPipe(clearColor, params.clearColor,
-                clearDepth, params.clearDepth,
-                clearStencil, params.clearStencil);
-    } else {
-        // With OpenGL we always clear using glClear()
-        clearWithRasterPipe(clearColor, params.clearColor,
-                clearDepth, params.clearDepth,
-                clearStencil, params.clearStencil);
+    if (clearFlags & TargetBufferFlags::ALL) {
+        const bool respectScissor = !(clearFlags & RenderPassFlags::IGNORE_SCISSOR);
+        const bool clearColor = clearFlags & TargetBufferFlags::COLOR;
+        const bool clearDepth = clearFlags & TargetBufferFlags::DEPTH;
+        const bool clearStencil = clearFlags & TargetBufferFlags::STENCIL;
+        if (respectScissor) {
+            enable(GL_SCISSOR_TEST);
+        } else {
+            disable(GL_SCISSOR_TEST);
+        }
+        if (respectScissor && GLES31_HEADERS && bugs.clears_hurt_performance) {
+            // With OpenGL ES, we clear the viewport using geometry to improve performance on certain
+            // OpenGL drivers. e.g. on Adreno this avoids needless loads from the GMEM.
+            clearWithGeometryPipe(clearColor, params.clearColor,
+                    clearDepth, params.clearDepth,
+                    clearStencil, params.clearStencil);
+        } else {
+            // With OpenGL we always clear using glClear()
+            clearWithRasterPipe(clearColor, params.clearColor,
+                    clearDepth, params.clearDepth,
+                    clearStencil, params.clearStencil);
+        }
     }
 
 #ifndef NDEBUG
