@@ -180,8 +180,8 @@ public:
             RenderBuffer depth;
             RenderBuffer stencil;
             GLuint fbo = 0;
-            GLuint fbo_read = 0;
-            backend::TargetBufferFlags resolve = backend::TargetBufferFlags::NONE; // attachments in fbo_draw to resolve
+            mutable GLuint fbo_read = 0;
+            mutable backend::TargetBufferFlags resolve = backend::TargetBufferFlags::NONE; // attachments in fbo_draw to resolve
             uint8_t samples : 4;
             uint8_t colorLevel : 4; // Allows up to 15 levels (max texture size of 32768 x 32768)
         } gl;
@@ -268,6 +268,15 @@ private:
         return static_cast<Dp>(static_cast<void *>(base + offset));
     }
 
+    template<typename Dp, typename B>
+    inline
+    typename std::enable_if<
+            std::is_pointer<Dp>::value &&
+            std::is_base_of<B, typename std::remove_pointer<Dp>::type>::value, Dp>::type
+    handle_cast(backend::Handle<B> const& handle) noexcept {
+        return handle_cast<Dp>(const_cast<backend::Handle<B>&>(handle));
+    }
+
     typedef math::details::TVec4<GLint> vec4gli;
 
     friend class OpenGLProgram;
@@ -287,7 +296,7 @@ private:
 
     /* Misc... */
 
-    void framebufferTexture(backend::TargetBufferInfo& binfo, GLRenderTarget* rt, GLenum attachment) noexcept;
+    void framebufferTexture(backend::TargetBufferInfo const& binfo, GLRenderTarget const* rt, GLenum attachment) noexcept;
 
     GLuint framebufferRenderbuffer(uint32_t width, uint32_t height, uint8_t samples,
             GLenum attachment, GLenum internalformat, GLuint fbo) noexcept;
@@ -361,7 +370,9 @@ private:
     inline void setClearDepth(GLfloat depth) noexcept;
     inline void setClearStencil(GLint stencil) noexcept;
 
-    void resolve(GLRenderTarget const* rt, backend::TargetBufferFlags discardFlags) noexcept;
+    enum class ResolveAction { LOAD, STORE };
+    void resolvePass(ResolveAction action, GLRenderTarget const* rt,
+            backend::TargetBufferFlags discardFlags) noexcept;
 
     GLuint getSamplerSlow(backend::SamplerParams sp) const noexcept;
 
