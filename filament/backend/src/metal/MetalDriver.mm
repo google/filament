@@ -537,6 +537,11 @@ void MetalDriver::endRenderPass(int dummy) {
     mContext->currentCommandEncoder = nullptr;
 }
 
+void MetalDriver::resolve(Handle<HwRenderTarget> rth, TargetBufferFlags buffer,
+        TargetBufferInfo targetInfo) {
+    // TODO: implement resolve()
+}
+
 void MetalDriver::discardSubRenderTargetBuffers(Handle<HwRenderTarget> rth,
         TargetBufferFlags targetBufferFlags, uint32_t left, uint32_t bottom, uint32_t width,
         uint32_t height) {

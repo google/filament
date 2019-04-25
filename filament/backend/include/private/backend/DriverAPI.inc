@@ -39,6 +39,9 @@
  * DECL_DRIVER_API is automatically undefined.
  */
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-parameter"
+
 #ifndef DECL_DRIVER_API
 #error "The DECL_DRIVER_API() macro must be defined before including this file"
 #define DECL_DRIVER_API(M, D, P)
@@ -200,9 +203,6 @@
 /*
  * Driver API below...
  */
-
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wunused-parameter"
 
 DECL_DRIVER_API_2(beginFrame,
         int64_t, monotonic_clock_ns,
@@ -412,6 +412,11 @@ DECL_DRIVER_API_4(setViewportScissor,
         uint32_t, width,
         uint32_t, height)
 
+DECL_DRIVER_API_3(resolve,
+        backend::RenderTargetHandle, rth,
+        backend::TargetBufferFlags, attachment,
+        backend::TargetBufferInfo, target)
+
 /*
  * Swap chain
  */
@@ -492,8 +497,6 @@ DECL_DRIVER_API_2(draw,
         backend::PipelineState, state,
         backend::RenderPrimitiveHandle, rph)
 
-#pragma clang diagnostic pop
-
 #undef SINGLE_ARG
 #undef PARAM_LIST_ADD
 #undef ARG_LIST_ADD
@@ -555,3 +558,5 @@ DECL_DRIVER_API_2(draw,
 #undef DECL_DRIVER_API_RETURN
 
 // No include guard!!!
+
+#pragma clang diagnostic pop
