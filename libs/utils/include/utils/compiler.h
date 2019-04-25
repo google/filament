@@ -39,8 +39,6 @@
 #if __has_attribute(packed)
 #   define UTILS_PACKED __attribute__((packed))
 #else
-// If this happens, we may need to use "#pragma pack(push, 1)" instead.
-#   error Compiler does not support the packed attribute.
 #   define UTILS_PACKED
 #endif
 

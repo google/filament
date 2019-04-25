@@ -161,6 +161,7 @@ private:
     // The pipeline key is a POD that represents all currently bound states that form the immutable
     // VkPipeline object. We apply a hash function to its contents only if has been mutated since
     // the previous call to getOrCreatePipeline.
+    #pragma pack(push, 1)
     struct UTILS_PACKED PipelineKey {
         VkShaderModule shaders[SHADER_MODULE_COUNT]; // 8*2 bytes
         RasterState rasterState; // 248 bytes
@@ -169,6 +170,7 @@ private:
         VkVertexInputAttributeDescription vertexAttributes[VERTEX_ATTRIBUTE_COUNT]; // 16*5 bytes
         VkVertexInputBindingDescription vertexBuffers[VERTEX_ATTRIBUTE_COUNT]; // 12*5 bytes
     };
+    #pragma pack(pop)
 
     static_assert(std::is_pod<PipelineKey>::value, "PipelineKey must be a POD for fast hashing.");
 
@@ -192,12 +194,14 @@ private:
     // The descriptor key is a POD that represents all currently bound states that go into the
     // descriptor set. We apply a hash function to its contents only if has been mutated since
     // the previous call to getOrCreateDescriptors.
+    #pragma pack(push, 1)
     struct UTILS_PACKED DescriptorKey {
         VkBuffer uniformBuffers[UBUFFER_BINDING_COUNT];
         VkDescriptorImageInfo samplers[SAMPLER_BINDING_COUNT];
         VkDeviceSize uniformBufferOffsets[UBUFFER_BINDING_COUNT];
         VkDeviceSize uniformBufferSizes[UBUFFER_BINDING_COUNT];
     };
+    #pragma pack(pop)
 
     static_assert(std::is_pod<DescriptorKey>::value, "DescriptorKey must be a POD.");
 
