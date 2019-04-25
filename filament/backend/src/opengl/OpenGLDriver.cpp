@@ -1037,8 +1037,8 @@ void OpenGLDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint
     CHECK_GL_ERROR(utils::slog.e)
 }
 
-void OpenGLDriver::framebufferTexture(backend::TargetBufferInfo& binfo,
-        GLRenderTarget* rt, GLenum attachment) noexcept {
+void OpenGLDriver::framebufferTexture(backend::TargetBufferInfo const& binfo,
+        GLRenderTarget const* rt, GLenum attachment) noexcept {
     GLTexture const* t = handle_cast<const GLTexture*>(binfo.handle);
 
     assert(t->target != SamplerType::SAMPLER_EXTERNAL);
@@ -2174,15 +2174,7 @@ void OpenGLDriver::beginRenderPass(Handle<HwRenderTarget> rth,
         // everything must appear as though the multi-sample buffer was lost.
         // We only copy the non msaa buffers that were not discarded or cleared.
         const TargetBufferFlags discarded = discardFlags | TargetBufferFlags(clearFlags & TargetBufferFlags::ALL);
-        const TargetBufferFlags resolve = rt->gl.resolve & ~discarded;
-        GLbitfield mask = getAttachmentBitfield(resolve);
-        if (UTILS_UNLIKELY(mask)) {
-            bindFramebuffer(GL_DRAW_FRAMEBUFFER, rt->gl.fbo);
-            bindFramebuffer(GL_READ_FRAMEBUFFER, rt->gl.fbo_read);
-            disable(GL_SCISSOR_TEST);
-            glBlitFramebuffer(0, 0, rt->width, rt->height, 0, 0, rt->width, rt->height, mask, GL_NEAREST);
-            CHECK_GL_ERROR(utils::slog.e)
-        }
+        resolvePass(ResolveAction::LOAD, rt, discarded);
     }
 
     setViewport(params.viewport.left, params.viewport.bottom,
@@ -2229,7 +2221,7 @@ void OpenGLDriver::endRenderPass(int) {
     GLRenderTarget const* const rt = handle_cast<GLRenderTarget*>(mRenderPassTarget);
 
     const TargetBufferFlags discardFlags = mRenderPassParams.flags.discardEnd;
-    resolve(rt, discardFlags);
+    resolvePass(ResolveAction::STORE, rt, discardFlags);
 
     // glInvalidateFramebuffer appeared on GLES 3.0 and GL4.3, for simplicity we just
     // ignore it on GL (rather than having to do a runtime check).
@@ -2257,12 +2249,19 @@ void OpenGLDriver::endRenderPass(int) {
     mRenderPassTarget.clear();
 }
 
-void OpenGLDriver::resolve(GLRenderTarget const* rt, TargetBufferFlags discardFlags) noexcept {
+
+void OpenGLDriver::resolvePass(ResolveAction action, GLRenderTarget const* rt,
+        backend::TargetBufferFlags discardFlags) noexcept {
     const TargetBufferFlags resolve = rt->gl.resolve & ~discardFlags;
     GLbitfield mask = getAttachmentBitfield(resolve);
     if (UTILS_UNLIKELY(mask)) {
-        bindFramebuffer(GL_READ_FRAMEBUFFER, rt->gl.fbo);
-        bindFramebuffer(GL_DRAW_FRAMEBUFFER, rt->gl.fbo_read);
+        GLint read = rt->gl.fbo_read;
+        GLint draw = rt->gl.fbo;
+        if (action == ResolveAction::STORE) {
+            std::swap(read, draw);
+        }
+        bindFramebuffer(GL_READ_FRAMEBUFFER, read);
+        bindFramebuffer(GL_DRAW_FRAMEBUFFER, draw);
         disable(GL_SCISSOR_TEST);
         glBlitFramebuffer(0, 0, rt->width, rt->height, 0, 0, rt->width, rt->height, mask, GL_NEAREST);
         CHECK_GL_ERROR(utils::slog.e)
