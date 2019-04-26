@@ -580,7 +580,9 @@ void MetalDriver::makeCurrent(Handle<HwSwapChain> schDraw, Handle<HwSwapChain> s
 }
 
 void MetalDriver::commit(Handle<HwSwapChain> sch) {
-    [mContext->currentCommandBuffer presentDrawable:mContext->currentDrawable];
+    if (mContext->currentDrawable != nil) {
+        [mContext->currentCommandBuffer presentDrawable:mContext->currentDrawable];
+    }
     [mContext->currentCommandBuffer commit];
     mContext->currentCommandBuffer = nil;
     mContext->currentDrawable = nil;
