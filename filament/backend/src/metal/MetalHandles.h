@@ -39,10 +39,8 @@ namespace metal {
 
 struct MetalSwapChain : public HwSwapChain {
     MetalSwapChain(id<MTLDevice> device, CAMetalLayer* nativeWindow);
-    ~MetalSwapChain();
 
     CAMetalLayer* layer = nullptr;
-    id<MTLTexture> depthTexture = nullptr;
     NSUInteger surfaceHeight = 0;
 };
 
