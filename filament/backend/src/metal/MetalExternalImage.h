@@ -91,8 +91,8 @@ private:
 
 };
 
-#endif //TNT_METALEXTERNALIMAGE_H
-
 } // namespace metal
 } // namespace backend
 } // namespace filament
+
+#endif //TNT_METALEXTERNALIMAGE_H

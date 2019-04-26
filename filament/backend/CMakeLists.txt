@@ -93,6 +93,7 @@ endif()
 
 if (FILAMENT_SUPPORTS_METAL)
     list(APPEND SRCS
+            src/metal/MetalBlitter.mm
             src/metal/MetalBufferPool.mm
             src/metal/MetalContext.mm
             src/metal/MetalDriver.mm
