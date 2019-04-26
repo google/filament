@@ -17,6 +17,7 @@
 #ifndef TNT_METALCONTEXT_H
 #define TNT_METALCONTEXT_H
 
+#include "MetalBlitter.h"
 #include "MetalBufferPool.h"
 #include "MetalResourceTracker.h"
 #include "MetalState.h"
@@ -80,6 +81,8 @@ struct MetalContext {
 
     // External textures.
     CVMetalTextureCacheRef textureCache = nullptr;
+
+    MetalBlitter* blitter = nullptr;
 };
 
 // Acquire the current surface's CAMetalDrawable for the current frame if it has not already been

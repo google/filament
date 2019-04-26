@@ -18,10 +18,6 @@
 
 #include "MetalEnums.h"
 
-#include <tsl/robin_map.h>
-#include <utils/Hash.h>
-#include <utils/compiler.h>
-
 namespace filament {
 namespace backend {
 namespace metal {
@@ -79,7 +75,11 @@ id<MTLRenderPipelineState> PipelineStateCreator::operator()(id<MTLDevice> device
     NSError* error = nullptr;
     id<MTLRenderPipelineState> pipeline = [device newRenderPipelineStateWithDescriptor:descriptor
                                                                                  error:&error];
-    assert(error == nullptr);
+    if (error) {
+        auto description = [error.localizedDescription cStringUsingEncoding:NSUTF8StringEncoding];
+        utils::slog.e << description << utils::io::endl;
+    }
+    ASSERT_POSTCONDITION(error == nil, "Could not create Metal pipeline state.");
 
     [descriptor release];
 
