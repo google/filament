@@ -370,7 +370,7 @@ VulkanUniformBuffer::~VulkanUniformBuffer() {
 VulkanTexture::VulkanTexture(VulkanContext& context, SamplerType target, uint8_t levels,
         TextureFormat tformat, uint8_t samples, uint32_t w, uint32_t h, uint32_t depth,
         TextureUsage usage, VulkanStagePool& stagePool) :
-        HwTexture(target, levels, samples, w, h, depth, tformat),
+        HwTexture(target, levels, samples, w, h, depth, tformat, usage),
         vkformat(getVkFormat(tformat)), mContext(context), mStagePool(stagePool) {
     // Create an appropriately-sized device-only VkImage, but do not fill it yet.
     VkImageCreateInfo imageInfo {

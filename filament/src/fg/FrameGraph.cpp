@@ -79,7 +79,7 @@ struct Resource final : public VirtualResource { // 72
 
     // updated by builder
     uint8_t version = 0;
-    TextureUsage usage = (TextureUsage)0;
+    TextureUsage usage = TextureUsage::DEFAULT;
     bool needsTexture = false;
     FrameGraphResource::Descriptor desc;
 

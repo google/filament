@@ -128,7 +128,7 @@ void ShadowMap::prepare(DriverApi& driver, SamplerGroup& sb) noexcept {
 
     mShadowMapHandle = driver.createTexture(
             SamplerType::SAMPLER_2D, 1, format, 1, dim, dim, 1,
-            TextureUsage::DEPTH_ATTACHMENT);
+            TextureUsage::DEPTH_ATTACHMENT | TextureUsage::SAMPLEABLE);
 
     mShadowMapRenderTarget = driver.createRenderTarget(
             TargetBufferFlags::DEPTH, dim, dim, 1, format,

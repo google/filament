@@ -84,7 +84,8 @@ Texture::Builder& Texture::Builder::rgbm(bool enabled) noexcept {
 }
 
 Texture::Builder& Texture::Builder::usage(Texture::Usage usage) noexcept {
-    mImpl->mUsage = usage;
+    // for now, the public API only allows UPLOADABLE and SAMPLEABLE textures
+    mImpl->mUsage = Texture::Usage(Texture::Usage::DEFAULT | usage);
     return *this;
 }
 
