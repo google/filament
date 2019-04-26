@@ -28,17 +28,23 @@ namespace backend {
 namespace metal {
 
 static inline MTLTextureUsage getMetalTextureUsage(TextureUsage usage) {
-    switch (usage) {
-        case TextureUsage::DEFAULT:
-            return MTLTextureUsageShaderRead | MTLTextureUsageShaderWrite;
-
-        case TextureUsage::COLOR_ATTACHMENT:
-            return MTLTextureUsageShaderRead | MTLTextureUsageRenderTarget;
-
-        case TextureUsage::DEPTH_ATTACHMENT:
-        case TextureUsage::STENCIL_ATTACHMENT:
-            return MTLTextureUsageShaderRead | MTLTextureUsageRenderTarget;
+    int u = 0;
+    if (usage & TextureUsage::COLOR_ATTACHMENT) {
+        u |= MTLTextureUsageRenderTarget;
     }
+    if (usage & TextureUsage::DEPTH_ATTACHMENT) {
+        u |= MTLTextureUsageRenderTarget;
+    }
+    if (usage & TextureUsage::STENCIL_ATTACHMENT) {
+        u |= MTLTextureUsageRenderTarget;
+    }
+    if (usage & TextureUsage::UPLOADABLE) {
+        u |= MTLTextureUsageShaderWrite;
+    }
+    if (usage & TextureUsage::SAMPLEABLE) {
+        u |= MTLTextureUsageShaderRead;
+    }
+    return MTLTextureUsage(u);
 }
 
 static inline MTLStorageMode getMetalStorageMode(TextureFormat format) {
@@ -262,7 +268,7 @@ MetalProgram::~MetalProgram() {
 MetalTexture::MetalTexture(MetalContext& context, backend::SamplerType target, uint8_t levels,
         TextureFormat format, uint8_t samples, uint32_t width, uint32_t height, uint32_t depth,
         TextureUsage usage) noexcept
-    : HwTexture(target, levels, samples, width, height, depth, format), context(context),
+    : HwTexture(target, levels, samples, width, height, depth, format, usage), context(context),
         externalImage(context), reshaper(format) {
 
     // Metal does not natively support 3 component textures. We'll emulate support by reshaping the

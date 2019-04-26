@@ -103,9 +103,9 @@ struct HwUniformBuffer : public HwBase {
 
 struct HwTexture : public HwBase {
     HwTexture(backend::SamplerType target, uint8_t levels, uint8_t samples,
-              uint32_t width, uint32_t height, uint32_t depth, TextureFormat fmt) noexcept
+              uint32_t width, uint32_t height, uint32_t depth, TextureFormat fmt, TextureUsage usage) noexcept
             : width(width), height(height), depth(depth),
-              target(target), levels(levels), samples(samples), format(fmt) { }
+              target(target), levels(levels), samples(samples), format(fmt), usage(usage) { }
     uint32_t width;
     uint32_t height;
     uint32_t depth;
@@ -113,6 +113,7 @@ struct HwTexture : public HwBase {
     uint8_t levels : 4;  // This allows up to 15 levels (max texture size of 32768 x 32768)
     uint8_t samples : 4; // In practice this is always 1.
     TextureFormat format;
+    TextureUsage usage;
     HwStream* hwStream = nullptr;
 };
 

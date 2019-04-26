@@ -481,8 +481,32 @@ enum TextureUsage : uint8_t {
     DEPTH_ATTACHMENT    = 0x2,
     STENCIL_ATTACHMENT  = 0x4,
     UPLOADABLE          = 0x8,
-    DEFAULT = UPLOADABLE
+    SAMPLEABLE          = 0x10,
+    DEFAULT = UPLOADABLE | SAMPLEABLE
 };
+
+// implement requirement of BitmaskType
+inline constexpr TextureUsage operator~(TextureUsage rhs) noexcept {
+    return TextureUsage(~uint8_t(rhs) & uint8_t(TargetBufferFlags::ALL));
+}
+inline constexpr TextureUsage operator|=(TextureUsage& lhs, TextureUsage rhs) noexcept {
+    return lhs = TextureUsage(uint8_t(lhs) | uint8_t(rhs));
+}
+inline constexpr TextureUsage operator&=(TextureUsage& lhs, TextureUsage rhs) noexcept {
+    return lhs = TextureUsage(uint8_t(lhs) & uint8_t(rhs));
+}
+inline constexpr TextureUsage operator^=(TextureUsage& lhs, TextureUsage rhs) noexcept {
+    return lhs = TextureUsage(uint8_t(lhs) ^ uint8_t(rhs));
+}
+inline constexpr TextureUsage operator|(TextureUsage lhs, TextureUsage rhs) noexcept {
+    return TextureUsage(uint8_t(lhs) | uint8_t(rhs));
+}
+inline constexpr TextureUsage operator&(TextureUsage lhs, TextureUsage rhs) noexcept {
+    return TextureUsage(uint8_t(lhs) & uint8_t(rhs));
+}
+inline constexpr TextureUsage operator^(TextureUsage lhs, TextureUsage rhs) noexcept {
+    return TextureUsage(uint8_t(lhs) ^ uint8_t(rhs));
+}
 
 //! returns whether this format is an ETC2 compressed format
 static constexpr bool isETC2Compression(TextureFormat format) noexcept {
