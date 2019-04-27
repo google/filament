@@ -79,7 +79,7 @@ struct Resource final : public VirtualResource { // 72
 
     // updated by builder
     uint8_t version = 0;
-    TextureUsage usage = TextureUsage::DEFAULT;
+    TextureUsage usage = (TextureUsage)0;
     bool needsTexture = false;
     FrameGraphResource::Descriptor desc;
 
@@ -165,7 +165,7 @@ struct RenderTargetResource final : public VirtualResource {  // 104
 
                 // create the concrete rendertarget
                 targetInfo.target = driver.createRenderTarget(attachments,
-                        width, height, desc.samples, format,
+                        width, height, desc.samples,
                         { textures[0] }, { textures[1] }, {});
             }
         }
@@ -428,12 +428,17 @@ Resource::~Resource() noexcept {
 void Resource::create(FrameGraph&, DriverApi& driver) noexcept {
     // some sanity check
     if (!imported) {
+        assert(usage);
+        // (it means it's only used as an attachment for a rendertarget)
+        uint8_t samples = desc.samples;
+        auto effectiveUsage = usage;
         if (needsTexture) {
-            assert(usage);
-            // (it means it's only used as an attachment for a rendertarget)
-            texture = driver.createTexture(desc.type, desc.levels, desc.format, 1,
-                    desc.width, desc.height, desc.depth, usage);
+            effectiveUsage |= TextureUsage::SAMPLEABLE;
+            samples = 1; // sampleable textures can't be multi-sampled
         }
+        // FIXME: set the proper sampler count
+        texture = driver.createTexture(desc.type, desc.levels, desc.format, samples,
+                desc.width, desc.height, desc.depth, effectiveUsage);
     }
 }
 

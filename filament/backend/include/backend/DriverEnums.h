@@ -117,6 +117,8 @@ struct Viewport {
     int32_t bottom;
     uint32_t width;
     uint32_t height;
+    int32_t right() const noexcept { return left + width; }
+    int32_t top() const noexcept { return bottom + height; }
 };
 
 struct RenderPassFlags {
@@ -487,7 +489,7 @@ enum TextureUsage : uint8_t {
 
 // implement requirement of BitmaskType
 inline constexpr TextureUsage operator~(TextureUsage rhs) noexcept {
-    return TextureUsage(~uint8_t(rhs) & uint8_t(TargetBufferFlags::ALL));
+    return TextureUsage(~uint8_t(rhs) & 0x1Fu);
 }
 inline constexpr TextureUsage operator|=(TextureUsage& lhs, TextureUsage rhs) noexcept {
     return lhs = TextureUsage(uint8_t(lhs) | uint8_t(rhs));

@@ -384,7 +384,7 @@ void VulkanDriver::createDefaultRenderTargetR(Handle<HwRenderTarget> rth, int) {
 
 void VulkanDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
         TargetBufferFlags targets, uint32_t width, uint32_t height, uint8_t samples,
-        TextureFormat format, TargetBufferInfo color, TargetBufferInfo depth,
+        TargetBufferInfo color, TargetBufferInfo depth,
         TargetBufferInfo stencil) {
     auto renderTarget = construct_handle<VulkanRenderTarget>(mHandleMap, rth, mContext,
             width, height, color.level);
@@ -396,7 +396,7 @@ void VulkanDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
             .format = colorTexture->vkformat
         });
     } else if (targets & TargetBufferFlags::COLOR) {
-        renderTarget->createColorImage(getVkFormat(format));
+//        renderTarget->createColorImage(getVkFormat(format));
     }
     if (depth.handle) {
         auto depthTexture = handle_cast<VulkanTexture>(mHandleMap, depth.handle);
@@ -775,10 +775,6 @@ void VulkanDriver::endRenderPass(int) {
 void VulkanDriver::discardSubRenderTargetBuffers(Handle<HwRenderTarget> rth,
         TargetBufferFlags buffers,
         uint32_t left, uint32_t bottom, uint32_t width, uint32_t height) {
-}
-
-void VulkanDriver::resizeRenderTarget(Handle<HwRenderTarget> rth,
-        uint32_t width, uint32_t height) {
 }
 
 void VulkanDriver::setRenderPrimitiveBuffer(Handle<HwRenderPrimitive> rph,
