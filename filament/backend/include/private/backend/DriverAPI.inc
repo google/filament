@@ -259,12 +259,11 @@ DECL_DRIVER_API_R_1(backend::ProgramHandle, createProgram,
 
 DECL_DRIVER_API_R_0(backend::RenderTargetHandle, createDefaultRenderTarget)
 
-DECL_DRIVER_API_R_8(backend::RenderTargetHandle, createRenderTarget,
+DECL_DRIVER_API_R_7(backend::RenderTargetHandle, createRenderTarget,
         backend::TargetBufferFlags, targetBufferFlags,
         uint32_t, width,
         uint32_t, height,
         uint8_t, samples,
-        backend::TextureFormat, format,
         backend::TargetBufferInfo, color,
         backend::TargetBufferInfo, depth,
         backend::TargetBufferInfo, stencil)
@@ -383,11 +382,6 @@ DECL_DRIVER_API_6(discardSubRenderTargetBuffers,
         backend::TargetBufferFlags, targetBufferFlags,
         uint32_t, left,
         uint32_t, bottom,
-        uint32_t, width,
-        uint32_t, height)
-
-DECL_DRIVER_API_3(resizeRenderTarget,
-        backend::RenderTargetHandle, rth,
         uint32_t, width,
         uint32_t, height)
 

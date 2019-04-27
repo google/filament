@@ -220,15 +220,15 @@ void FTexture::generateMipmaps(FEngine& engine) const noexcept {
         uint32_t srcw = mWidth;
         uint32_t srch = mHeight;
         backend::Handle<backend::HwRenderTarget> srcrth = driver.createRenderTarget(TargetBufferFlags::COLOR,
-                srcw, srch, mSampleCount, mFormat, { mHandle, level++, layer }, {}, {});
+                srcw, srch, mSampleCount, { mHandle, level++, layer }, {}, {});
 
         // Perform a blit for all miplevels down to 1x1.
         backend::Handle<backend::HwRenderTarget> dstrth;
         do {
-            uint32_t dstw = std::max(srcw >> 1, 1u);
-            uint32_t dsth = std::max(srch >> 1, 1u);
+            uint32_t dstw = std::max(srcw >> 1u, 1u);
+            uint32_t dsth = std::max(srch >> 1u, 1u);
             dstrth = driver.createRenderTarget(TargetBufferFlags::COLOR, dstw, dsth, mSampleCount,
-                    mFormat, { mHandle, level++, layer }, {}, {});
+                    { mHandle, level++, layer }, {}, {});
             driver.blit(TargetBufferFlags::COLOR,
                     dstrth, { 0, 0, dstw, dsth },
                     srcrth, { 0, 0, srcw, srch },

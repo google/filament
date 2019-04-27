@@ -103,8 +103,8 @@ public:
     struct GLTexture : public backend::HwTexture {
         using HwTexture::HwTexture;
         struct {
-            GLuint texture_id;
-            mutable GLuint rb = 0;  // multi-sample sidecar buffer
+            GLuint id;              // texture or renderbuffer id
+            mutable GLuint rb = 0;  // multi-sample sidecar renderbuffer
             GLenum target;
             GLenum internalFormat;
             mutable GLsync fence = nullptr;
@@ -113,7 +113,7 @@ public:
             GLfloat anisotropy = 1.0;
             int8_t baseLevel = 127;
             int8_t maxLevel = -1;
-            uint8_t targetIndex = 0;
+            uint8_t targetIndex = 0;    // optimization: index corresponding to target
         } gl;
     };
 
@@ -172,8 +172,7 @@ public:
         struct GL {
             struct RenderBuffer {
                 GLTexture* texture = nullptr;
-                GLenum internalFormat = 0;
-                GLuint rb = 0;
+                uint8_t level = 0; // level when attached to a texture
             };
             // field ordering to optimize size on 64-bits
             RenderBuffer color;
@@ -183,7 +182,6 @@ public:
             mutable GLuint fbo_read = 0;
             mutable backend::TargetBufferFlags resolve = backend::TargetBufferFlags::NONE; // attachments in fbo_draw to resolve
             uint8_t samples : 4;
-            uint8_t colorLevel : 4; // Allows up to 15 levels (max texture size of 32768 x 32768)
         } gl;
     };
 
@@ -296,10 +294,11 @@ private:
 
     /* Misc... */
 
-    void framebufferTexture(backend::TargetBufferInfo const& binfo, GLRenderTarget const* rt, GLenum attachment) noexcept;
+    void framebufferTexture(backend::TargetBufferInfo const& binfo,
+            GLRenderTarget const* rt, GLenum attachment) noexcept;
 
-    GLuint framebufferRenderbuffer(uint32_t width, uint32_t height, uint8_t samples,
-            GLenum attachment, GLenum internalformat, GLuint fbo) noexcept;
+    void framebufferRenderbuffer(GLTexture const* t,
+            GLRenderTarget const* rt, GLenum attachment) noexcept;
 
     void setRasterStateSlow(backend::RasterState rs) noexcept;
     void setRasterState(backend::RasterState rs) noexcept {
@@ -583,6 +582,7 @@ private:
     OpenGLBlitter* mOpenGLBlitter = nullptr;
     void updateStream(GLTexture* t, backend::DriverApi* driver) noexcept;
     void updateBuffer(GLenum target, GLBuffer* buffer, backend::BufferDescriptor const& p, uint32_t alignment = 16) noexcept;
+    void updateTextureLodRange(GLTexture* texture, int8_t targetLevel) noexcept;
 };
 
 // ------------------------------------------------------------------------------------------------

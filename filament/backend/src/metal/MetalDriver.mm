@@ -149,7 +149,7 @@ void MetalDriver::createDefaultRenderTargetR(Handle<HwRenderTarget> rth, int dum
 
 void MetalDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
         TargetBufferFlags targetBufferFlags, uint32_t width, uint32_t height,
-        uint8_t samples, TextureFormat format, TargetBufferInfo color,
+        uint8_t samples, TargetBufferInfo color,
         TargetBufferInfo depth, TargetBufferInfo stencil) {
 
     auto getColorTexture = [&]() -> id<MTLTexture> {
@@ -179,8 +179,8 @@ void MetalDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
         return nil;
     };
 
-    construct_handle<MetalRenderTarget>(mHandleMap, rth, mContext, width, height, samples, format,
-            getColorTexture(), getDepthTexture());
+//    construct_handle<MetalRenderTarget>(mHandleMap, rth, mContext, width, height, samples, format,
+//            getColorTexture(), getDepthTexture());
 
     ASSERT_POSTCONDITION(
             !stencil.handle && !(targetBufferFlags & TargetBufferFlags::STENCIL),
@@ -539,11 +539,6 @@ void MetalDriver::endRenderPass(int dummy) {
 
 void MetalDriver::discardSubRenderTargetBuffers(Handle<HwRenderTarget> rth,
         TargetBufferFlags targetBufferFlags, uint32_t left, uint32_t bottom, uint32_t width,
-        uint32_t height) {
-
-}
-
-void MetalDriver::resizeRenderTarget(Handle<HwRenderTarget> rth, uint32_t width,
         uint32_t height) {
 
 }
