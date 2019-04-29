@@ -66,6 +66,7 @@ ShadowMap::~ShadowMap() {
     mEngine.destroy(mDebugCamera->getEntity());
 }
 
+UTILS_NOINLINE
 void ShadowMap::fillWithDebugPattern(backend::DriverApi& driverApi) const noexcept {
     const size_t dim = mShadowMapDimension;
     size_t size = dim * dim;
@@ -897,7 +898,7 @@ size_t ShadowMap::intersectFrustum(
 }
 
 UTILS_ALWAYS_INLINE
-bool ShadowMap::intersectSegmentWithTriangle(float3& UTILS_RESTRICT p,
+inline bool ShadowMap::intersectSegmentWithTriangle(float3& UTILS_RESTRICT p,
         float3 s0, float3 s1,
         float3 t0, float3 t1, float3 t2) noexcept {
     // See Real-Time Rendering -- Tomas Akenine-Moller, Eric Haines, Naty Hoffman
