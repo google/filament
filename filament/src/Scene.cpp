@@ -265,7 +265,7 @@ void FScene::prepareDynamicLights(const CameraInfo& camera, ArenaScope& rootAren
 // produces much better vectorization. The ALWAYS_INLINE keyword makes sure we actually don't
 // pay the price of the call!
 UTILS_ALWAYS_INLINE
-void FScene::computeLightCameraPlaneDistances(
+inline void FScene::computeLightCameraPlaneDistances(
         float* UTILS_RESTRICT const distances,
         CameraInfo const& UTILS_RESTRICT camera,
         float4 const* UTILS_RESTRICT const spheres, size_t count) noexcept {
@@ -285,7 +285,7 @@ void FScene::computeLightCameraPlaneDistances(
 // produces much better vectorization. The ALWAYS_INLINE keyword makes sure we actually don't
 // pay the price of the call!
 UTILS_ALWAYS_INLINE
-void FScene::computeLightRanges(
+inline void FScene::computeLightRanges(
         float2* UTILS_RESTRICT const zrange,
         CameraInfo const& UTILS_RESTRICT camera,
         float4 const* UTILS_RESTRICT const spheres, size_t count) noexcept {

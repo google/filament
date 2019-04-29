@@ -45,9 +45,10 @@ public:
 
     // Call once per frame if the light, scene (or visible layers) or camera changes.
     // This computes the light's camera.
-    void update(
-            const FScene::LightSoa& lightData, size_t index, FScene const* scene,
+    void update(const FScene::LightSoa& lightData, size_t index, FScene const* scene,
             details::CameraInfo const& camera, uint8_t visibleLayers) noexcept;
+
+    void render(backend::DriverApi& driver, RenderPass& pass, FView& view) noexcept;
 
     // Do we have visible shadows. Valid after calling update().
     bool hasVisibleShadows() const noexcept { return mHasVisibleShadows; }
@@ -72,10 +73,6 @@ public:
 
     // use only for debugging
     FCamera const& getDebugCamera() const noexcept { return *mDebugCamera; }
-
-    void render(backend::DriverApi& driver, RenderPass& pass, FView& view) noexcept;
-
-    void fillWithDebugPattern(backend::DriverApi& driverApi) const noexcept;
 
 private:
     struct CameraInfo {
@@ -174,6 +171,8 @@ private:
 
     float texelSizeWorldSpace(const math::mat3f& worldToShadowTexture) const noexcept;
     float texelSizeWorldSpace(const math::mat4f& W, const math::mat4f& MbMtF) const noexcept;
+
+    void fillWithDebugPattern(backend::DriverApi& driverApi) const noexcept;
 
     static constexpr const Segment sBoxSegments[12] = {
             { 0, 1 }, { 1, 3 }, { 3, 2 }, { 2, 0 },

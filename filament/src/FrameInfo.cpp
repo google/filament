@@ -101,7 +101,7 @@ void FrameInfoManager::cancelFrame() {
 }
 
 UTILS_ALWAYS_INLINE
-FrameInfo* FrameInfoManager::obtain() noexcept {
+inline FrameInfo* FrameInfoManager::obtain() noexcept {
     return mPoolArena.alloc<FrameInfo>(1);
 }
 
