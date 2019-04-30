@@ -20,7 +20,6 @@ set(PRIVATE_HDRS
         src/eiff/DictionaryTextChunk.h
         src/eiff/DictionarySpirvChunk.h
         src/eiff/Flattener.h
-        src/eiff/TextChunk.h
         src/eiff/LineDictionary.h
         src/eiff/MaterialTextChunk.h
         src/eiff/MaterialInterfaceBlockChunk.h

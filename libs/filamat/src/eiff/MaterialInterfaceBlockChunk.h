@@ -24,23 +24,25 @@
 
 namespace filamat {
 
-class MaterialUniformInterfaceBlockChunk : public Chunk {
+class MaterialUniformInterfaceBlockChunk final : public Chunk {
 public:
     explicit MaterialUniformInterfaceBlockChunk(filament::UniformInterfaceBlock& uib);
-    ~MaterialUniformInterfaceBlockChunk() override = default;
+    ~MaterialUniformInterfaceBlockChunk() = default;
 
-    void flatten(Flattener &) override;
 private:
+    void flatten(Flattener &) override;
+
     filament::UniformInterfaceBlock& mUib;
 };
 
-class MaterialSamplerInterfaceBlockChunk : public Chunk {
+class MaterialSamplerInterfaceBlockChunk final : public Chunk {
 public:
     explicit MaterialSamplerInterfaceBlockChunk(filament::SamplerInterfaceBlock& sib);
-    ~MaterialSamplerInterfaceBlockChunk() override = default;
+    ~MaterialSamplerInterfaceBlockChunk() = default;
 
-    void flatten(Flattener &) override;
 private:
+    void flatten(Flattener &) override;
+
     filament::SamplerInterfaceBlock& mSib;
 };
 
