@@ -16,19 +16,20 @@
 
 #include "OpenGLDriver.h"
 
-#include <set>
+#include "private/backend/DriverApi.h"
+#include "private/backend/OpenGLPlatform.h"
+
+#include "CommandStreamDispatcher.h"
+#include "OpenGLBlitter.h"
+#include "OpenGLDriverFactory.h"
+#include "OpenGLProgram.h"
 
 #include <utils/compiler.h>
 #include <utils/Log.h>
 #include <utils/Panic.h>
 #include <utils/Systrace.h>
 
-#include "private/backend/DriverApi.h"
-#include "private/backend/OpenGLPlatform.h"
-#include "CommandStreamDispatcher.h"
-#include "OpenGLBlitter.h"
-#include "OpenGLProgram.h"
-
+#include <set>
 
 // change to true to display all GL extensions in the console on start-up
 #define DEBUG_PRINT_EXTENSIONS false
@@ -62,10 +63,19 @@ using namespace filament::math;
 using namespace utils;
 
 namespace filament {
+namespace backend {
+
+Driver* OpenGLDriverFactory::create(
+        OpenGLPlatform* const platform, void* const sharedGLContext) noexcept {
+    return OpenGLDriver::create(platform, sharedGLContext);
+}
+
+} // namesapce backend
 
 using namespace backend;
 using namespace GLUtils;
 
+UTILS_NOINLINE
 Driver* OpenGLDriver::create(
         OpenGLPlatform* const platform, void* const sharedGLContext) noexcept {
     assert(platform);
@@ -102,6 +112,21 @@ Driver* OpenGLDriver::create(
     OpenGLDriver* const driver = new OpenGLDriver(ec);
     return driver;
 }
+
+// ------------------------------------------------------------------------------------------------
+
+OpenGLDriver::DebugMarker::DebugMarker(OpenGLDriver& driver, const char* string) noexcept
+: driver(driver) {
+        const char* const begin = string + sizeof("virtual void filament::OpenGLDriver::") - 1;
+        const char* const end = strchr(begin, '(');
+        driver.pushGroupMarker(begin, end - begin);
+}
+
+OpenGLDriver::DebugMarker::~DebugMarker() noexcept {
+    driver.popGroupMarker();
+}
+
+// ------------------------------------------------------------------------------------------------
 
 OpenGLDriver::OpenGLDriver(OpenGLPlatform* platform) noexcept
         : DriverBase(new ConcreteDispatcher<OpenGLDriver>()),
@@ -226,8 +251,9 @@ OpenGLDriver::OpenGLDriver(OpenGLPlatform* platform) noexcept
 
     // Initialize the blitter only if we have OES_EGL_image_external_essl3
     if (ext.OES_EGL_image_external_essl3) {
-        mOpenGLBlitter = new OpenGLBlitter(*this);
+        mOpenGLBlitter = new OpenGLBlitter();
         mOpenGLBlitter->init();
+        state.program.use = 0;
     }
 }
 

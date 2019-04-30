@@ -61,6 +61,7 @@ if (NOT USE_EXTERNAL_GLES3)
             src/opengl/OpenGLBlitter.h
             src/opengl/OpenGLDriver.cpp
             src/opengl/OpenGLDriver.h
+            src/opengl/OpenGLDriverFactory.h
             src/opengl/OpenGLProgram.cpp
             src/opengl/OpenGLProgram.h
             src/opengl/OpenGLPlatform.cpp
@@ -120,6 +121,7 @@ if (FILAMENT_SUPPORTS_VULKAN)
             src/vulkan/VulkanDisposer.h
             src/vulkan/VulkanDriver.cpp
             src/vulkan/VulkanDriver.h
+            src/vulkan/VulkanDriverFactory.h
             src/vulkan/VulkanFboCache.cpp
             src/vulkan/VulkanFboCache.h
             src/vulkan/VulkanHandles.cpp

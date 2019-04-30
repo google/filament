@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 The Android Open Source Project
+ * Copyright (C) 2019 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,14 +14,20 @@
  * limitations under the License.
  */
 
-#include "PlatformDummyGL.h"
+#ifndef TNT_FILAMENT_DRIVER_METALDRIVERFACTORY_H
+#define TNT_FILAMENT_DRIVER_METALDRIVERFACTORY_H
 
 namespace filament {
+namespace backend {
+class MetalPlatform;
+class Driver;
 
-Driver* PlatformDummyGL::createDriver(void* const sharedGLContext) noexcept {
-    return nullptr;
-}
+class MetalDriverFactory {
+public:
+    static Driver* create(backend::MetalPlatform* platform);
+};
 
+} // namespace backend
 } // namespace filament
 
-// ---------------------------------------------------------------------------------------------
+#endif //TNT_FILAMENT_DRIVER_METALDRIVERFACTORY_H

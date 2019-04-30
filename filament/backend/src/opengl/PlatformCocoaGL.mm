@@ -19,16 +19,14 @@
 
 #include "PlatformCocoaGL.h"
 
-#include <OpenGL/OpenGL.h>
-#include <Cocoa/Cocoa.h>
-
-#include "DriverBase.h"
-
-#include <backend/Platform.h>
+#include "OpenGLDriverFactory.h"
+#include "gl_headers.h"
 
 #include <utils/Panic.h>
 
-#include "OpenGLDriver.h"
+#include <OpenGL/OpenGL.h>
+#include <Cocoa/Cocoa.h>
+
 
 namespace filament {
 
@@ -70,7 +68,7 @@ Driver* PlatformCocoaGL::createDriver(void* sharedContext) noexcept {
 
     int result = bluegl::bind();
     ASSERT_POSTCONDITION(!result, "Unable to load OpenGL entry points.");
-    return OpenGLDriver::create(this, sharedContext);
+    return OpenGLDriverFactory::create(this, sharedContext);
 }
 
 void PlatformCocoaGL::terminate() noexcept {

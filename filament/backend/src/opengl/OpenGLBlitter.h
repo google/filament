@@ -22,11 +22,9 @@
 
 namespace filament {
 
-class OpenGLDriver;
-
 class OpenGLBlitter {
 public:
-    explicit OpenGLBlitter(OpenGLDriver& openGLDriver) noexcept : mOpenGLDriver(openGLDriver) {}
+    explicit OpenGLBlitter() noexcept {}
 
     void init() noexcept;
     void terminate() noexcept;
@@ -54,12 +52,11 @@ public:
     };
 
 private:
-    OpenGLDriver& mOpenGLDriver;
-    GLuint mSampler;
-    GLuint mVertexShader;
-    GLuint mFragmentShader;
-    GLuint mProgram;
-    GLuint mFBO;
+    GLuint mSampler{};
+    GLuint mVertexShader{};
+    GLuint mFragmentShader{};
+    GLuint mProgram{};
+    GLuint mFBO{};
 };
 
 } // namespace filament

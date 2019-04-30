@@ -16,7 +16,7 @@
 
 #include "vulkan/PlatformVkLinux.h"
 
-#include "VulkanDriver.h"
+#include "VulkanDriverFactory.h"
 
 #include <utils/Panic.h>
 
@@ -27,6 +27,10 @@
 namespace filament {
 
 using namespace backend;
+
+// All vkCreate* functions take an optional allocator. For now we select the default allocator by
+// passing in a null pointer, and we highlight the argument by using the VKALLOC constant.
+constexpr VkAllocationCallbacks* VKALLOC = nullptr;
 
 static const char* LIBRARY_X11 = "libX11.so.6";
 
@@ -58,7 +62,7 @@ Driver* PlatformVkLinux::createDriver(void* const sharedContext) noexcept {
     g_x11.getGeometry = (X11_GET_GEOMETRY) dlsym(g_x11.library, "XGetGeometry");
     mDisplay = g_x11.openDisplay(NULL);
     ASSERT_PRECONDITION(mDisplay, "Unable to open X11 display.");
-    return VulkanDriver::create(this, requestedExtensions,
+    return VulkanDriverFactory::create(this, requestedExtensions,
             sizeof(requestedExtensions) / sizeof(requestedExtensions[0]));
 }
 

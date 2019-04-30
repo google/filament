@@ -23,7 +23,7 @@
 #include <GL/glx.h>
 #include <GL/glxext.h>
 
-#include "OpenGLDriver.h"
+#include "OpenGLDriverFactory.h"
 
 #include <dlfcn.h>
 
@@ -148,7 +148,7 @@ Driver* PlatformGLX::createDriver(void* const sharedGLContext) noexcept {
     int result = bluegl::bind();
     ASSERT_POSTCONDITION(!result, "Unable to load OpenGL entry points.");
 
-    return OpenGLDriver::create(this, sharedGLContext);
+    return OpenGLDriverFactory::create(this, sharedGLContext);
 }
 
 void PlatformGLX::terminate() noexcept {

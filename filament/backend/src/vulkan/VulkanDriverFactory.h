@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 The Android Open Source Project
+ * Copyright (C) 2019 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,14 +14,24 @@
  * limitations under the License.
  */
 
-#include "PlatformDummyGL.h"
+#ifndef TNT_FILAMENT_DRIVER_VULKANDRIVERFACTORY_H
+#define TNT_FILAMENT_DRIVER_VULKANDRIVERFACTORY_H
+
+#include <stdint.h>
 
 namespace filament {
 
-Driver* PlatformDummyGL::createDriver(void* const sharedGLContext) noexcept {
-    return nullptr;
-}
+namespace backend {
+class VulkanPlatform;
+class Driver;
 
+class VulkanDriverFactory {
+public:
+    static backend::Driver* create(backend::VulkanPlatform* platform,
+            const char* const* ppEnabledExtensions, uint32_t enabledExtensionCount) noexcept;
+};
+
+} // namespace backend
 } // namespace filament
 
-// ---------------------------------------------------------------------------------------------
+#endif //TNT_FILAMENT_DRIVER_VULKANDRIVERFACTORY_H

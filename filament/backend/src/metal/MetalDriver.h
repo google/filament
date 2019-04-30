@@ -40,8 +40,8 @@ struct MetalProgram;
 struct UniformBufferState;
 
 class MetalDriver final : public DriverBase {
-    MetalDriver(backend::MetalPlatform* platform) noexcept;
-    virtual ~MetalDriver() noexcept;
+    explicit MetalDriver(backend::MetalPlatform* platform) noexcept;
+    ~MetalDriver() noexcept override;
 
 public:
     static Driver* create(backend::MetalPlatform* platform);
@@ -66,14 +66,14 @@ private:
     friend class backend::ConcreteDispatcher;
 
 #define DECL_DRIVER_API(methodName, paramsDecl, params) \
-    UTILS_ALWAYS_INLINE void methodName(paramsDecl);
+    UTILS_ALWAYS_INLINE inline void methodName(paramsDecl);
 
 #define DECL_DRIVER_API_SYNCHRONOUS(RetType, methodName, paramsDecl, params) \
     RetType methodName(paramsDecl) override;
 
 #define DECL_DRIVER_API_RETURN(RetType, methodName, paramsDecl, params) \
     RetType methodName##S() noexcept override; \
-    UTILS_ALWAYS_INLINE void methodName##R(RetType, paramsDecl);
+    UTILS_ALWAYS_INLINE inline void methodName##R(RetType, paramsDecl);
 
 #include "private/backend/DriverAPI.inc"
 

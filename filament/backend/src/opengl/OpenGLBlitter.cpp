@@ -16,15 +16,14 @@
 
 #include "OpenGLBlitter.h"
 
-#include <assert.h>
-
-#include <math/vec2.h>
+#include "GLUtils.h"
 
 #include <utils/compiler.h>
 #include <utils/Log.h>
 
-#include "OpenGLDriver.h"
-#include "GLUtils.h"
+#include <math/vec2.h>
+
+#include <assert.h>
 
 using namespace filament::math;
 using namespace utils;
@@ -96,7 +95,7 @@ void OpenGLBlitter::init() noexcept {
     glGetProgramiv(mProgram, GL_LINK_STATUS, &status);
     assert(status == GL_TRUE);
 
-    mOpenGLDriver.useProgram(mProgram);
+    glUseProgram(mProgram);
     GLint loc = glGetUniformLocation(mProgram, "sampler");
     GLuint tmu = 0;
     glUniform1i(loc, tmu);

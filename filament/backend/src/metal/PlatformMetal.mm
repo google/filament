@@ -15,7 +15,7 @@
  */
 
 #include "PlatformMetal.h"
-#include "MetalDriver.h"
+#include "MetalDriverFactory.h"
 
 namespace filament {
 
@@ -27,7 +27,7 @@ MetalPlatform::~MetalPlatform() = default;
 using namespace backend;
 
 Driver* PlatformMetal::createDriver(void* sharedContext) noexcept {
-    return metal::MetalDriver::create(this);
+    return MetalDriverFactory::create(this);
 }
 
 PlatformMetal::~PlatformMetal() = default;

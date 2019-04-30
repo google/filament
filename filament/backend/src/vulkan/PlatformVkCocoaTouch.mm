@@ -16,7 +16,7 @@
 
 #include "vulkan/PlatformVkCocoaTouch.h"
 
-#include "VulkanDriver.h"
+#include "VulkanDriverFactory.h"
 
 // Metal is not available when building for the iOS simulator on Desktop.
 #define METAL_AVAILABLE __has_include(<QuartzCore/CAMetalLayer.h>)
@@ -42,7 +42,7 @@ using namespace backend;
 Driver* PlatformVkCocoaTouch::createDriver(void* const sharedContext) noexcept {
     ASSERT_PRECONDITION(sharedContext == nullptr, "Vulkan does not support shared contexts.");
     static const char* requestedExtensions[] = {"VK_KHR_surface", "VK_MVK_ios_surface"};
-    return VulkanDriver::create(this, requestedExtensions,
+    return VulkanDriverFactory::create(this, requestedExtensions,
             sizeof(requestedExtensions) / sizeof(requestedExtensions[0]));
 }
 

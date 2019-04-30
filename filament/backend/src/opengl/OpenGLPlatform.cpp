@@ -16,7 +16,7 @@
 
 #include "private/backend/OpenGLPlatform.h"
 
-#include "OpenGLDriver.h"
+#include "OpenGLDriverFactory.h"
 
 namespace filament {
 namespace backend {
@@ -24,7 +24,7 @@ namespace backend {
 OpenGLPlatform::~OpenGLPlatform() noexcept = default;
 
 Driver* OpenGLPlatform::createDefaultDriver(OpenGLPlatform* platform, void* sharedContext) {
-    return OpenGLDriver::create(platform, sharedContext);
+    return OpenGLDriverFactory::create(platform, sharedContext);
 }
 
 } // namespace backend

@@ -120,14 +120,8 @@ public:
     class DebugMarker {
         OpenGLDriver& driver;
     public:
-        inline DebugMarker(OpenGLDriver& driver, const char* string) noexcept : driver(driver) {
-            const char* const begin = string + sizeof("virtual void filament::OpenGLDriver::") - 1;
-            const char* const end = strchr(begin, '(');
-            driver.pushGroupMarker(begin, end - begin);
-        }
-        inline ~DebugMarker() noexcept {
-            driver.popGroupMarker();
-        }
+        DebugMarker(OpenGLDriver& driver, const char* string) noexcept;
+        ~DebugMarker() noexcept;
     };
 
     struct GLStream : public backend::HwStream {
@@ -201,14 +195,14 @@ private:
     friend class backend::ConcreteDispatcher;
 
 #define DECL_DRIVER_API(methodName, paramsDecl, params) \
-    UTILS_ALWAYS_INLINE void methodName(paramsDecl);
+    UTILS_ALWAYS_INLINE inline void methodName(paramsDecl);
 
 #define DECL_DRIVER_API_SYNCHRONOUS(RetType, methodName, paramsDecl, params) \
     RetType methodName(paramsDecl) override;
 
 #define DECL_DRIVER_API_RETURN(RetType, methodName, paramsDecl, params) \
     RetType methodName##S() noexcept override; \
-    UTILS_ALWAYS_INLINE void methodName##R(RetType, paramsDecl);
+    UTILS_ALWAYS_INLINE inline void methodName##R(RetType, paramsDecl);
 
 #include "private/backend/DriverAPI.inc"
 
@@ -328,8 +322,8 @@ private:
     /* State tracking GL wrappers... */
 
     constexpr inline size_t getIndexForCap(GLenum cap) noexcept;
-    constexpr inline size_t getIndexForBufferTarget(GLenum target) noexcept;
-    constexpr inline size_t getIndexForTextureTarget(GLuint target) noexcept;
+    constexpr static inline size_t getIndexForBufferTarget(GLenum target) noexcept;
+    constexpr static inline size_t getIndexForTextureTarget(GLuint target) noexcept;
 
     inline void pixelStore(GLenum, GLint) noexcept;
     inline void activeTexture(GLuint unit) noexcept;

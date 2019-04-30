@@ -19,6 +19,7 @@
 #include "metal/MetalDriver.h"
 
 #include "MetalContext.h"
+#include "MetalDriverFactory.h"
 #include "MetalEnums.h"
 #include "MetalHandles.h"
 #include "MetalState.h"
@@ -36,12 +37,18 @@
 
 namespace filament {
 namespace backend {
+
+Driver* MetalDriverFactory::create(MetalPlatform* const platform) {
+    return metal::MetalDriver::create(platform);
+}
+
 namespace metal {
 
 static MTLLoadAction determineLoadAction(const RenderPassParams& params, TargetBufferFlags buffer);
 static MTLStoreAction determineStoreAction(const RenderPassParams& params, TargetBufferFlags buffer,
         bool isMultisampled);
 
+UTILS_NOINLINE
 Driver* MetalDriver::create(MetalPlatform* const platform) {
     assert(platform);
     return new MetalDriver(platform);
