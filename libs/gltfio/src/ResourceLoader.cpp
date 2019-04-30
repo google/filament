@@ -178,7 +178,7 @@ bool ResourceLoader::loadResources(FilamentAsset* asset) {
     #else
 
     // Read data from the file system and base64 URLs.
-    cgltf_result result = cgltf_load_buffers(&options, gltf, mConfig.basePath.c_str());
+    cgltf_result result = cgltf_load_buffers(&options, gltf, mConfig.gltfPath.c_str());
     if (result != cgltf_result_success) {
         slog.e << "Unable to load resources." << io::endl;
         return false;
@@ -319,7 +319,7 @@ bool ResourceLoader::createTextures(details::FFilamentAsset* asset) const {
                 slog.e << "Unable to load texture: " << tb.uri << io::endl;
                 return false;
             #else
-                utils::Path fullpath = this->mConfig.basePath + tb.uri;
+                utils::Path fullpath = this->mConfig.gltfPath.getParent() + tb.uri;
                 texels = stbi_load(fullpath.c_str(), &width, &height, &comp, 4);
             #endif
         }
