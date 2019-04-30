@@ -36,7 +36,7 @@ namespace details {
 
 struct ResourceConfiguration {
     class filament::Engine* engine;
-    utils::Path basePath;
+    utils::Path gltfPath;
     bool normalizeSkinningWeights;
     bool recomputeBoundingBoxes;
 };
