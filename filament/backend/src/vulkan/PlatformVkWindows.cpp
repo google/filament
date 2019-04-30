@@ -16,7 +16,7 @@
 
 #include "vulkan/PlatformVkWindows.h"
 
-#include "VulkanDriver.h"
+#include "VulkanDriverFactory.h"
 
 #include <utils/Panic.h>
 
@@ -35,7 +35,7 @@ Driver* PlatformVkWindows::createDriver(void* const sharedContext) noexcept {
         "VK_EXT_debug_report",
 #endif
     };
-    return VulkanDriver::create(this, requestedExtensions,
+    return VulkanDriverFactory::create(this, requestedExtensions,
         sizeof(requestedExtensions) / sizeof(requestedExtensions[0]));
 }
 

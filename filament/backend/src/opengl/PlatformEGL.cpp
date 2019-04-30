@@ -33,7 +33,8 @@
 #include "android/ExternalStreamManagerAndroid.h"
 #include "android/VirtualMachineEnv.h"
 
-#include "OpenGLDriver.h"
+#include "OpenGLDriverFactory.h"
+#include "gl_headers.h"
 
 #include <android/api-level.h>
 #include <sys/system_properties.h>
@@ -286,7 +287,7 @@ Driver* PlatformEGL::createDriver(void* sharedContext) noexcept {
     }
 
     // success!!
-    return OpenGLDriver::create(this, sharedContext);
+    return OpenGLDriverFactory::create(this, sharedContext);
 
 error:
     // if we're here, we've failed

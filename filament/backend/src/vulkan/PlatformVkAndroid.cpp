@@ -16,7 +16,7 @@
 
 #include "vulkan/PlatformVkAndroid.h"
 
-#include "VulkanDriver.h"
+#include "VulkanDriverFactory.h"
 
 #include <utils/Panic.h>
 
@@ -28,6 +28,10 @@ namespace filament {
 
 using namespace backend;
 
+// All vkCreate* functions take an optional allocator. For now we select the default allocator by
+// passing in a null pointer, and we highlight the argument by using the VKALLOC constant.
+constexpr VkAllocationCallbacks* VKALLOC = nullptr;
+
 Driver* PlatformVkAndroid::createDriver(void* const sharedContext) noexcept {
     ASSERT_PRECONDITION(sharedContext == nullptr, "Vulkan does not support shared contexts.");
     static const char* requestedExtensions[] = {
@@ -37,7 +41,7 @@ Driver* PlatformVkAndroid::createDriver(void* const sharedContext) noexcept {
         "VK_EXT_debug_report",
 #endif
     };
-    return VulkanDriver::create(this, requestedExtensions,
+    return VulkanDriverFactory::create(this, requestedExtensions,
             sizeof(requestedExtensions) / sizeof(requestedExtensions[0]));
 }
 

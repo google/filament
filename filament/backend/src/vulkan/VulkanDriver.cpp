@@ -19,6 +19,7 @@
 #include "CommandStreamDispatcher.h"
 
 #include "VulkanBuffer.h"
+#include "VulkanDriverFactory.h"
 #include "VulkanHandles.h"
 #include "VulkanPlatform.h"
 
@@ -75,6 +76,11 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debugReportCallback(VkDebugReportFlagsEXT flags,
 
 namespace filament {
 namespace backend {
+
+Driver* VulkanDriverFactory::create(VulkanPlatform* const platform,
+        const char* const* ppEnabledExtensions, uint32_t enabledExtensionCount) noexcept {
+    return VulkanDriver::create(platform, ppEnabledExtensions, enabledExtensionCount);
+}
 
 VulkanDriver::VulkanDriver(VulkanPlatform* platform,
         const char* const* ppEnabledExtensions, uint32_t enabledExtensionCount) noexcept :
@@ -177,6 +183,7 @@ VulkanDriver::VulkanDriver(VulkanPlatform* platform,
 
 VulkanDriver::~VulkanDriver() noexcept = default;
 
+UTILS_NOINLINE
 Driver* VulkanDriver::create(VulkanPlatform* const platform,
         const char* const* ppEnabledExtensions, uint32_t enabledExtensionCount) noexcept {
     assert(platform);

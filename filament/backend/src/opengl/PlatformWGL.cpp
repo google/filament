@@ -18,7 +18,8 @@
 
 #include <Wingdi.h>
 
-#include "OpenGLDriver.h"
+#include "OpenGLDriverFactory.h"
+#include "gl_headers.h"
 
 #include "Windows.h"
 #include <GL/gl.h>
@@ -128,7 +129,7 @@ Driver* PlatformWGL::createDriver(void* const sharedGLContext) noexcept {
 
     int result = bluegl::bind();
     ASSERT_POSTCONDITION(!result, "Unable to load OpenGL entry points.");
-    return OpenGLDriver::create(this, sharedGLContext);
+    return OpenGLDriverFactory::create(this, sharedGLContext);
 
 error:
     if (tempContext) {
