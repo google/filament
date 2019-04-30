@@ -21,7 +21,6 @@ namespace filamat {
 Chunk::Chunk(ChunkType type) : mType(type), mFlattenedSize(0) {
 }
 
-Chunk::~Chunk() {
-}
+Chunk::~Chunk() = default;
 
 } // namespace filamat

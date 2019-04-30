@@ -45,9 +45,10 @@ size_t BlobDictionary::addBlob(const std::vector<uint32_t>& vblob) noexcept {
         return iter->second;
     }
     mBlobIndices[blob] = mBlobs.size();
+    size_t size = blob.size();
     mBlobs.push_back(std::move(blob));
-    mStorageSize += blob.size();
-    return mBlobs.size() - 1;
+    mStorageSize += size;
+    return size - 1;
 }
 
 } // namespace filamat
