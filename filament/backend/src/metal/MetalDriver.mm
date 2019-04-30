@@ -157,7 +157,7 @@ void MetalDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
             auto colorTexture = handle_cast<MetalTexture>(mHandleMap, color.handle);
             return colorTexture->texture;
         } else if (targetBufferFlags & TargetBufferFlags::COLOR) {
-            ASSERT_POSTCONDITION(false, "A color buffer is required for a render target.");
+            ASSERT_POSTCONDITION(false, "The COLOR flag was specified, but no color texture provided.");
         }
         return nil;
     };
@@ -167,20 +167,13 @@ void MetalDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
             auto depthTexture = handle_cast<MetalTexture>(mHandleMap, depth.handle);
             return depthTexture->texture;
         } else if (targetBufferFlags & TargetBufferFlags::DEPTH) {
-            MTLTextureDescriptor *depthTextureDesc =
-                    [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatDepth32Float
-                                                                       width:width
-                                                                      height:height
-                                                                   mipmapped:NO];
-            depthTextureDesc.usage = MTLTextureUsageRenderTarget;
-            depthTextureDesc.resourceOptions = MTLResourceStorageModePrivate;
-            return [[mContext->device newTextureWithDescriptor:depthTextureDesc] autorelease];
+            ASSERT_POSTCONDITION(false, "The DEPTH flag was specified, but no depth texture provided.");
         }
         return nil;
     };
 
-//    construct_handle<MetalRenderTarget>(mHandleMap, rth, mContext, width, height, samples, format,
-//            getColorTexture(), getDepthTexture());
+    construct_handle<MetalRenderTarget>(mHandleMap, rth, mContext, width, height, samples,
+            getColorTexture(), getDepthTexture());
 
     ASSERT_POSTCONDITION(
             !stencil.handle && !(targetBufferFlags & TargetBufferFlags::STENCIL),
