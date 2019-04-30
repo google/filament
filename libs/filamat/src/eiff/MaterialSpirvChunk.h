@@ -26,10 +26,12 @@ namespace filamat {
 
 class MaterialSpirvChunk final : public Chunk {
 public:
-    MaterialSpirvChunk(const std::vector<SpirvEntry>& entries);
+    explicit MaterialSpirvChunk(const std::vector<SpirvEntry>& entries);
     ~MaterialSpirvChunk() = default;
-    void flatten(Flattener& f) override;
+
 private:
+    void flatten(Flattener& f) override;
+
     const std::vector<SpirvEntry>& mEntries;
 };
 

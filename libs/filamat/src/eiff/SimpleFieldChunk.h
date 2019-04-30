@@ -23,12 +23,14 @@
 namespace filamat {
 
 template <class T>
-class SimpleFieldChunk : public Chunk {
+class SimpleFieldChunk final : public Chunk {
 public:
     SimpleFieldChunk(ChunkType type, T value) : Chunk(type), t(value) {}
-    virtual ~SimpleFieldChunk() = default;
-    virtual void flatten(Flattener &f) override ;
+    ~SimpleFieldChunk() = default;
+
 private:
+    void flatten(Flattener &f) override;
+
     T t;
 };
 

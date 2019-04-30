@@ -30,13 +30,11 @@ namespace filamat {
 
 class UTILS_PUBLIC Package {
 public:
-
     Package() = default;
 
     // Regular constructor
     explicit Package(size_t size) : mSize(size) {
-        mPayload = (uint8_t*) calloc(1, size);
-        assert(mPayload != nullptr);
+        mPayload = new uint8_t[size];
     }
 
     Package(const void* src, size_t size) : Package(size) {
@@ -63,7 +61,7 @@ public:
     Package(const Package& other) = delete;
 
     ~Package() {
-        free(mPayload);
+        delete[] mPayload;
     }
 
     uint8_t* getData() const noexcept {

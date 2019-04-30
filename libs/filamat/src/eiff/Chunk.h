@@ -29,22 +29,23 @@ class Chunk{
 public:
     virtual ~Chunk();
 
-    ChunkType getType() {
+    ChunkType getType() const noexcept {
         return mType;
     }
 
-    size_t getFlattenedSize() {
+    size_t getFlattenedSize() const noexcept {
         return mFlattenedSize;
     }
 
-    void setFlattenedSize(size_t s) {
+    void setFlattenedSize(size_t s) noexcept {
         mFlattenedSize = s;
     }
 
     virtual void flatten(Flattener &f) = 0;
 
 protected:
-    Chunk(ChunkType type);
+    Chunk(ChunkType type) : mType(type), mFlattenedSize(0) {
+    }
 
 private:
     ChunkType mType;

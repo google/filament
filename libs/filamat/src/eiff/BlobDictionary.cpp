@@ -19,24 +19,6 @@
 #include <assert.h>
 
 namespace filamat {
-    BlobDictionary::BlobDictionary() : mStorageSize(0) {
-}
-
-const std::string& BlobDictionary::getBlob(size_t index) const noexcept {
-    assert(index < mBlobs.size());
-    return mBlobs[index];
-}
-
-size_t BlobDictionary::getBlobCount() const {
-    return mBlobs.size();
-}
-
-size_t BlobDictionary::getIndex(const std::string& s) const noexcept {
-    if (mBlobIndices.find(s) == mBlobIndices.end()) {
-        return SIZE_MAX;
-    }
-    return mBlobIndices.at(s);
-}
 
 size_t BlobDictionary::addBlob(const std::vector<uint32_t>& vblob) noexcept {
     std::string blob((char*) vblob.data(), vblob.size() * 4);
