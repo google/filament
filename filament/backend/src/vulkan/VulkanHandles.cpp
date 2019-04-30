@@ -158,130 +158,6 @@ VulkanAttachment VulkanRenderTarget::getDepth() const {
     return mOffscreen ? mDepth : VulkanAttachment {};
 }
 
-void VulkanRenderTarget::createColorImage(VkFormat format) {
-    assert(mOffscreen);
-    this->mColor.format = format;
-    mSharedColorImage = false;
-    // Create an appropriately-sized device-only VkImage for the color attachment.
-    VkImageCreateInfo colorImageInfo {
-        .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
-        .imageType = VK_IMAGE_TYPE_2D,
-        .extent = { width, height, 1 },
-        .format = mColor.format,
-        .mipLevels = 1,
-        .arrayLayers = 1,
-        .usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-        .samples = VK_SAMPLE_COUNT_1_BIT,
-    };
-    VkResult error = vkCreateImage(mContext.device, &colorImageInfo, VKALLOC, &mColor.image);
-    ASSERT_POSTCONDITION(!error, "Unable to create color attachment.");
-
-    // Allocate memory for the color image and bind it.
-    VkMemoryRequirements memReqs;
-    vkGetImageMemoryRequirements(mContext.device, mColor.image, &memReqs);
-    VkMemoryAllocateInfo allocInfo {
-        .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-        .allocationSize = memReqs.size,
-        .memoryTypeIndex = selectMemoryType(mContext, memReqs.memoryTypeBits,
-                VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
-    };
-    error = vkAllocateMemory(mContext.device, &allocInfo, nullptr, &mColor.memory);
-    ASSERT_POSTCONDITION(!error, "Unable to allocate color memory.");
-    error = vkBindImageMemory(mContext.device, mColor.image, mColor.memory, 0);
-    ASSERT_POSTCONDITION(!error, "Unable to bind color memory.");
-
-    // Transition the color image into an optimal layout.
-    VkImageMemoryBarrier barrier {
-        .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-        .newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-        .image = mColor.image,
-        .subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-        .subresourceRange.levelCount = 1,
-        .subresourceRange.layerCount = 1,
-        .dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT
-    };
-    vkCmdPipelineBarrier(mContext.currentCommands->cmdbuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
-
-    // Create a VkImageView so that we can attach it to the framebuffer.
-    VkImageViewCreateInfo colorViewInfo {
-        .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-        .image = mColor.image,
-        .viewType = VK_IMAGE_VIEW_TYPE_2D,
-        .format = mColor.format,
-        .subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-        .subresourceRange.levelCount = 1,
-        .subresourceRange.layerCount = 1,
-    };
-    error = vkCreateImageView(mContext.device, &colorViewInfo, VKALLOC, &mColor.view);
-    ASSERT_POSTCONDITION(!error, "Unable to create color attachment view.");
-}
-
-void VulkanRenderTarget::createDepthImage(VkFormat format) {
-    assert(mOffscreen);
-    this->mDepth.format = format;
-    mSharedDepthImage = false;
-    // Create an appropriately-sized device-only VkImage for the depth attachment.
-    // TODO: for depth, can we re-use the image associated with the swap chain?
-    VkImageCreateInfo depthImageInfo {
-        .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
-        .imageType = VK_IMAGE_TYPE_2D,
-        .extent = { width, height, 1 },
-        .format = mDepth.format,
-        .mipLevels = 1,
-        .arrayLayers = 1,
-        .usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-        .samples = VK_SAMPLE_COUNT_1_BIT,
-    };
-    VkResult error = vkCreateImage(mContext.device, &depthImageInfo, VKALLOC, &mDepth.image);
-    ASSERT_POSTCONDITION(!error, "Unable to create depth attachment.");
-
-    // Allocate memory for the depth image and bind it.
-    VkMemoryRequirements memReqs;
-    vkGetImageMemoryRequirements(mContext.device, mDepth.image, &memReqs);
-    VkMemoryAllocateInfo depthAllocInfo {
-        .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-        .allocationSize = memReqs.size,
-        .memoryTypeIndex = selectMemoryType(mContext, memReqs.memoryTypeBits,
-                VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT)
-    };
-    error = vkAllocateMemory(mContext.device, &depthAllocInfo, nullptr, &mDepth.memory);
-    ASSERT_POSTCONDITION(!error, "Unable to allocate depth memory.");
-    error = vkBindImageMemory(mContext.device, mDepth.image, mDepth.memory, 0);
-    ASSERT_POSTCONDITION(!error, "Unable to bind depth memory.");
-
-    // Transition the depth image into an optimal layout and assume there's no need to read from it.
-    VkImageMemoryBarrier depthBarrier {
-        .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
-        .newLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-        .image = mDepth.image,
-        .subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
-        .subresourceRange.levelCount = 1,
-        .subresourceRange.layerCount = 1,
-        .dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT
-    };
-    vkCmdPipelineBarrier(mContext.currentCommands->cmdbuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-            VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT, 0, 0, nullptr, 0, nullptr, 1,
-            &depthBarrier);
-
-    // Create a VkImageView so that we can attach it to the framebuffer.
-    VkImageViewCreateInfo depthViewInfo {
-        .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-        .image = mDepth.image,
-        .viewType = VK_IMAGE_VIEW_TYPE_2D,
-        .format = mDepth.format,
-        .subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT,
-        .subresourceRange.levelCount = 1,
-        .subresourceRange.layerCount = 1,
-    };
-    error = vkCreateImageView(mContext.device, &depthViewInfo, VKALLOC, &mDepth.view);
-    ASSERT_POSTCONDITION(!error, "Unable to create depth attachment view.");
-}
-
 void VulkanRenderTarget::setColorImage(VulkanAttachment c) {
     assert(mOffscreen);
     mColor = c;
@@ -372,6 +248,12 @@ VulkanTexture::VulkanTexture(VulkanContext& context, SamplerType target, uint8_t
         TextureUsage usage, VulkanStagePool& stagePool) :
         HwTexture(target, levels, samples, w, h, depth, tformat, usage),
         vkformat(getVkFormat(tformat)), mContext(context), mStagePool(stagePool) {
+
+    // Vulkan does not support 24-bit depth, use the official fallback format.
+    if (tformat == TextureFormat::DEPTH24) {
+        vkformat = mContext.depthFormat;
+    }
+
     // Create an appropriately-sized device-only VkImage, but do not fill it yet.
     VkImageCreateInfo imageInfo {
         .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
@@ -382,12 +264,15 @@ VulkanTexture::VulkanTexture(VulkanContext& context, SamplerType target, uint8_t
         .format = vkformat,
         .mipLevels = levels,
         .arrayLayers = 1,
-        .usage = VK_IMAGE_USAGE_SAMPLED_BIT,
+        .usage = 0,
         .samples = VK_SAMPLE_COUNT_1_BIT,
     };
     if (target == SamplerType::SAMPLER_CUBEMAP) {
         imageInfo.arrayLayers = 6;
         imageInfo.flags = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
+    }
+    if (usage & TextureUsage::SAMPLEABLE) {
+        imageInfo.usage |= VK_IMAGE_USAGE_SAMPLED_BIT;
     }
     if (usage & TextureUsage::COLOR_ATTACHMENT) {
         imageInfo.usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
