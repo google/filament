@@ -395,8 +395,6 @@ void VulkanDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
             .view = colorTexture->imageView,
             .format = colorTexture->vkformat
         });
-    } else if (targets & TargetBufferFlags::COLOR) {
-//        renderTarget->createColorImage(getVkFormat(format));
     }
     if (depth.handle) {
         auto depthTexture = handle_cast<VulkanTexture>(mHandleMap, depth.handle);
@@ -405,8 +403,6 @@ void VulkanDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
             .view = depthTexture->imageView,
             .format = depthTexture->vkformat
         });
-    } else if (targets & TargetBufferFlags::DEPTH) {
-        renderTarget->createDepthImage(mContext.depthFormat);
     }
     mDisposer.createDisposable(renderTarget, [this, rth] () {
         destruct_handle<VulkanRenderTarget>(mHandleMap, rth);
