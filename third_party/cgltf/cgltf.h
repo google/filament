@@ -35,8 +35,10 @@
  * variable.
  *
  * `cgltf_result cgltf_load_buffers(const cgltf_options*, cgltf_data*,
- * const char*)` can be optionally called to open and read buffer
- * files using the `FILE*` APIs.
+ * const char* base_path)` can be optionally called to open and read buffer
+ * files using the `FILE*` APIs. The specified base_path is the the path to
+ * the original glTF file, which allows the parser to resolve the path to
+ * buffer files.
  *
  * `cgltf_result cgltf_load_buffer_base64(const cgltf_options* options,
  * cgltf_size size, const char* base64, void** out_data)` decodes

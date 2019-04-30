@@ -353,6 +353,7 @@ add_subdirectory(${EXTERNAL}/smol-v/tnt)
 add_subdirectory(${EXTERNAL}/benchmark/tnt)
 add_subdirectory(${EXTERNAL}/meshoptimizer)
 add_subdirectory(${EXTERNAL}/cgltf/tnt)
+add_subdirectory(${EXTERNAL}/xatlas/tnt)
 add_subdirectory(${EXTERNAL}/stb/tnt)
 
 if (FILAMENT_BUILD_FILAMAT)
