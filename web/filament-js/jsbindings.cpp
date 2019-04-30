@@ -776,8 +776,8 @@ class_<VertexBuilder>("VertexBuffer$Builder")
             VertexAttribute attr,
             uint8_t bufferIndex,
             VertexBuffer::AttributeType attrType,
-            size_t byteOffset,
-            size_t byteStride), {
+            uint32_t byteOffset,
+            uint8_t byteStride), {
         return &builder->attribute(attr, bufferIndex, attrType, byteOffset, byteStride); })
     .BUILDER_FUNCTION("vertexCount", VertexBuilder, (VertexBuilder* builder, int count), {
         return &builder->vertexCount(count); })
