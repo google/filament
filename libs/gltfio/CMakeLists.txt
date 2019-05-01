@@ -11,6 +11,7 @@ set(PUBLIC_HDRS
         include/gltfio/Animator.h
         include/gltfio/AssetLoader.h
         include/gltfio/MaterialProvider.h
+        include/gltfio/AssetPipeline.h
         include/gltfio/ResourceLoader.h
         include/gltfio/SimpleViewer.h
         include/gltfio/FilamentAsset.h
@@ -106,7 +107,7 @@ add_custom_command(OUTPUT ${DUMMY_SRC} COMMAND echo "//" > ${DUMMY_SRC})
 add_library(gltfio_resources ${DUMMY_SRC} ${RESGEN_SOURCE})
 
 # ==================================================================================================
-# Build the "core" library (no filamat)
+# Build the "core" library (no filamat or pipeline)
 # ==================================================================================================
 include_directories(${PUBLIC_HDR_DIR} ${RESOURCE_DIR})
 link_libraries(math utils filament cgltf stb geometry gltfio_resources)
@@ -118,10 +119,12 @@ target_include_directories(gltfio_core PUBLIC ${PUBLIC_HDR_DIR})
 if (NOT WEBGL AND NOT ANDROID AND NOT IOS)
 
     # ==================================================================================================
-    # Link the core library against filamat to create the "full" library
+    # Link the core library with additional dependencies to create the "full" library
     # ==================================================================================================
-    add_library(${TARGET} STATIC ${PUBLIC_HDRS} src/MaterialGenerator.cpp)
-    target_link_libraries(${TARGET} PUBLIC filamat gltfio_core)
+    add_library(${TARGET} STATIC ${PUBLIC_HDRS}
+        src/MaterialGenerator.cpp
+        src/AssetPipeline.cpp)
+    target_link_libraries(${TARGET} PUBLIC filamat xatlas meshoptimizer gltfio_core)
     target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
 
     # ==================================================================================================
