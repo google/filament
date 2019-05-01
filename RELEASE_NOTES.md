@@ -6,6 +6,7 @@ A new header is inserted each time a *tag* is created.
 
 # Release notes
 
+- Improved `SurfaceOrientation` robustness when using UVs to generate tangents.
 - Created a `RELEASE_NOTES.md` file, to be updated with significant PRs.
 
 ## sceneform-1.9pr2
