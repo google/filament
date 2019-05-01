@@ -186,7 +186,7 @@ void ShadowMap::render(DriverApi& driver, RenderPass& pass, FView& view) noexcep
     view.commitUniforms(driver);
 
     pass.overridePolygonOffset(&mPolygonOffset);
-    pass.generateSortedCommands(RenderPass::SHADOW);
+    pass.appendSortedCommands(RenderPass::SHADOW);
     pass.execute("Shadow map Pass", getRenderTarget(), params,
             pass.getCommands().begin(), pass.getCommands().end());
     pass.overridePolygonOffset(nullptr);

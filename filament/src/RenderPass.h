@@ -207,7 +207,7 @@ public:
     void setGeometry(FScene& scene, utils::Range<uint32_t> vr) noexcept;
     void setCamera(const CameraInfo& camera) noexcept;
     void setRenderFlags(RenderFlags flags) noexcept;
-    void generateSortedCommands(CommandTypeFlags commandType) noexcept;
+    Command const* appendSortedCommands(CommandTypeFlags const commandTypeFlags) noexcept;
     void execute(const char* name,
             backend::Handle <backend::HwRenderTarget> renderTarget,
             backend::RenderPassParams params,
