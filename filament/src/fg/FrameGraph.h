@@ -64,6 +64,9 @@ public:
         Builder(Builder const&) = delete;
         Builder& operator=(Builder const&) = delete;
 
+        // Return the name of the pass being built
+        const char* getPassName() const noexcept;
+
         // Create a virtual resource that can eventually turn into a concrete texture or
         // render target
         FrameGraphResource createTexture(const char* name,
@@ -71,6 +74,8 @@ public:
 
         // Read from a resource (i.e. add a reference to that resource)
         FrameGraphResource read(FrameGraphResource const& input);
+
+        FrameGraphResource::Descriptor const& getDescriptor(FrameGraphResource const& r);
 
         /*
          * Use this resource as a render target.
