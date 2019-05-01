@@ -468,6 +468,10 @@ FrameGraph::Builder::Builder(FrameGraph& fg, PassNode& pass) noexcept
 
 FrameGraph::Builder::~Builder() noexcept = default;
 
+const char* FrameGraph::Builder::getPassName() const noexcept {
+    return mPass.name;
+}
+
 FrameGraphResource FrameGraph::Builder::createTexture(
         const char* name, FrameGraphResource::Descriptor const& desc) noexcept {
     Resource* resource = mFrameGraph.createResource(name, desc, false);
@@ -528,6 +532,12 @@ FrameGraph::Builder::Attachments FrameGraph::Builder::useRenderTarget(
     return useRenderTarget(pResource->name, desc, clearFlags);
 }
 
+FrameGraphResource::Descriptor const& FrameGraph::Builder::getDescriptor(FrameGraphResource const& r) {
+    FrameGraphResource::Descriptor const* desc = mFrameGraph.getDescriptor(r);
+    assert(desc);
+    return *desc;
+}
+
 FrameGraphResource FrameGraph::Builder::read(FrameGraphResource const& input, bool doesntNeedTexture) {
     return mPass.read(mFrameGraph, input, doesntNeedTexture);
 }
@@ -564,6 +574,10 @@ FrameGraph::Builder::getRenderTargetDescriptor(FrameGraphResource attachment) co
 
 FrameGraphPassResources::FrameGraphPassResources(FrameGraph& fg, fg::PassNode const& pass) noexcept
         : mFrameGraph(fg), mPass(pass) {
+}
+
+const char* FrameGraphPassResources::getPassName() const noexcept {
+    return mPass.name;
 }
 
 backend::Handle<backend::HwTexture> FrameGraphPassResources::getTexture(FrameGraphResource r) const noexcept {
