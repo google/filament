@@ -125,7 +125,7 @@ private:
     bool mIsRGB16FSupported : 1;
     bool mIsRGB8Supported : 1;
     Epoch mUserEpoch;
-    math::float4 mShaderUserTime;
+    math::float4 mShaderUserTime{};
 
     // per-frame arena for this Renderer
     LinearAllocatorArena& mPerRenderPassArena;

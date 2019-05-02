@@ -320,15 +320,16 @@ void FEngine::prepare() {
     // prepare() is called once per Renderer frame. Ideally we would upload the content of
     // UBOs that are visible only. It's not such a big issue because the actual upload() is
     // skipped is the UBO hasn't changed. Still we could have a lot of these.
+    FEngine::DriverApi& driver = getDriverApi();
     for (auto& materialInstanceList : mMaterialInstances) {
         for (auto& item : materialInstanceList.second) {
-            item->commit(*this);
+            item->commit(driver);
         }
     }
 
     // Commit default material instances.
     for (auto& material : mMaterials) {
-        material->getDefaultInstance()->commit(*this);
+        material->getDefaultInstance()->commit(driver);
     }
 }
 

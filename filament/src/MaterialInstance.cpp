@@ -104,9 +104,8 @@ void FMaterialInstance::terminate(FEngine& engine) {
     driver.destroySamplerGroup(mSbHandle);
 }
 
-void FMaterialInstance::commitSlow(FEngine& engine) const {
+void FMaterialInstance::commitSlow(DriverApi& driver) const {
     // update uniforms if needed
-    FEngine::DriverApi& driver = engine.getDriverApi();
     if (mUniforms.isDirty()) {
         driver.loadUniformBuffer(mUbHandle, mUniforms.toBufferDescriptor(driver));
     }
@@ -133,8 +132,13 @@ inline void FMaterialInstance::setParameter(const char* name, const T* value, si
 
 void FMaterialInstance::setParameter(const char* name,
         Texture const* texture, TextureSampler const& sampler) noexcept {
+    setParameter(name, upcast(texture)->getHwHandle(), sampler.getSamplerParams());
+}
+
+void FMaterialInstance::setParameter(const char* name,
+        backend::Handle<backend::HwTexture> texture, backend::SamplerParams params) noexcept {
     size_t index = mMaterial->getSamplerInterfaceBlock().getSamplerInfo(name)->offset;
-    mSamplers.setSampler(index, { upcast(texture)->getHwHandle(), sampler.getSamplerParams() });
+    mSamplers.setSampler(index, { texture, params });
 }
 
 void FMaterialInstance::setDoubleSided(bool doubleSided) noexcept {

@@ -28,6 +28,8 @@
 namespace filament {
 
 namespace details {
+class FMaterial;
+class FMaterialInstance;
 class FEngine;
 class FView;
 } // namespace details
@@ -54,6 +56,9 @@ public:
     FrameGraphResource resolve(
             FrameGraph& fg, FrameGraphResource input) noexcept;
 
+
+    FrameGraphResource ssao(FrameGraph& fg, FrameGraphResource depth) noexcept;
+
 private:
     details::FEngine* mEngine = nullptr;
 
@@ -61,6 +66,10 @@ private:
     mutable UniformBuffer mPostProcessUb;
     backend::Handle<backend::HwSamplerGroup> mPostProcessSbh;
     backend::Handle<backend::HwUniformBuffer> mPostProcessUbh;
+
+    details::FMaterial* mSSAOMaterial = nullptr;
+    details::FMaterialInstance* mSSAOMaterialInstance = nullptr;
+    backend::Handle<backend::HwProgram> mSSAOProgram;
 };
 
 } // namespace filament

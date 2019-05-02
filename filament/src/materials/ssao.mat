@@ -1,0 +1,125 @@
+material {
+    name : ssao,
+    parameters : [
+        {
+           type : sampler2d,
+           name : depth
+        }
+    ],
+    variables : [
+         vertex
+    ],
+    vertexDomain : device,
+    depthWrite : false,
+    depthCulling : false,
+    shadingModel : unlit,
+    variantFilter : [ skinning ],
+    culling: none
+}
+
+vertex {
+    void materialVertex(inout MaterialVertexInputs material) {
+        // far-plane in view space
+        vec4 position = getPosition(); // clip-space
+        material.vertex.xy = (position.xy * 0.5 + 0.5);
+        material.vertex.zw = position.xy;
+    }
+}
+
+fragment {
+    const uint kSphereSampleCount = 16u;
+    const vec3 kSphereSamples[16] = vec3[](
+        vec3(-1.60954e-06,3.93118e-07,1.51895e-06), vec3(-0.0950889,0.00458908,-0.0312535),
+        vec3(0.0151799,-0.0255864,0.00376453), vec3(0.0734262,0.0218022,0.0027781),
+        vec3(0.0945874,0.0432184,0.0891475), vec3(-0.00950861,0.0513686,0.019673),
+        vec3(0.139973,-0.101685,0.10857), vec3(-0.103804,0.219853,-0.0430164),
+        vec3(0.00484053,-0.0339878,0.0941868), vec3(0.0280114,0.0584662,-0.25711),
+        vec3(-0.0510306,0.074993,0.259843), vec3(0.118822,-0.186537,-0.134192),
+        vec3(0.0639494,-0.0948936,-0.072683), vec3(0.108176,0.327108,-0.254058),
+        vec3(-0.0471796,0.21918,0.263895), vec3(-0.407709,0.240834,-0.200352)
+    );
+
+    const uint kNoiseSampleCount = 16u;
+    const vec3 kNoiseSamples[kNoiseSampleCount] = vec3[](
+        vec3(-0.0782473,-0.749924,-0.65688), vec3(-0.572319,-0.102379,-0.813615), vec3(0.0486527,-0.380791,0.92338), vec3(0.281202,-0.656664,-0.699799),
+        vec3(0.711911,-0.235841,-0.661485), vec3(-0.445893,0.611063,0.65405), vec3(-0.703598,0.674837,0.222587), vec3(0.768236,0.507457,0.390257),
+        vec3(-0.670286,-0.470387,0.57398), vec3(0.199235,0.849336,-0.488808), vec3(-0.768068,-0.583633,-0.26352), vec3(-0.89733,0.328853,0.294372),
+        vec3(-0.57093,-0.531056,-0.626114), vec3(0.699014,0.0632826,-0.712303), vec3(0.207495,0.976129,-0.0641723), vec3(-0.0609008,-0.869738,-0.489742)
+    );
+
+    float random(const vec2 st) {
+        return fract(sin(dot(st.xy, vec2(12.9898,78.233)))* 43758.5453123);
+    }
+
+    vec3 getNoise(const vec2 uv) {
+        uint ix = uint(gl_FragCoord.x) & 3u;
+        uint iy = uint(gl_FragCoord.y) & 3u;
+        //vec3 noise = kNoiseSamples[ix + iy * 4];
+        vec3 noise = normalize(vec3(random(uv), random(uv*2.0), random(uv*4.0)));
+        return noise;
+    }
+
+    vec3 computeViewSpaceNormal(const vec3 position) {
+        vec3 dpdx = dFdx(position);
+        vec3 dpdy = dFdy(position);
+        return normalize(cross(dpdx, dpdy));
+    }
+
+    float linearizeDepth(float depth) {
+        mat4 projection = getClipFromViewMatrix();
+        float z = depth * 2.0 - 1.0; // depth in clip space
+        return -projection[3].z / (z + projection[2].z);
+    }
+
+    float sampleDepthLinear(const vec2 uv) {
+        return linearizeDepth(texture(materialParams_depth, uv, 0.0).r);
+    }
+
+    vec3 computeViewSpacePositionFromDepth(in vec2 p, float linearDepth) {
+        mat4 projection = getClipFromViewMatrix();
+        p.x = p.x * (-1.0 / projection[0].x);   // could be in a ubo
+        p.y = p.y * (-1.0 / projection[1].y);   // could be in a ubo
+        return vec3(p * linearDepth, linearDepth);
+    }
+
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+
+        const float radius = 0.1;
+        const float bias = 0.005; // this is to avoid self-occlusion
+        mat4 projection = getClipFromViewMatrix();
+
+        vec2 uv = variable_vertex.xy; // interpolated to pixel center
+        float depth = sampleDepthLinear(uv);
+        vec3 origin = computeViewSpacePositionFromDepth(variable_vertex.zw, depth);
+        vec3 normal = computeViewSpaceNormal(origin);
+
+        // rotation
+        vec3 noise = getNoise(uv);
+        float occlusion = 0.0;
+        for (uint i=0 ; i<kSphereSampleCount ; i++) {
+            vec3 r = kSphereSamples[i] * radius;
+            r = reflect(r, noise);
+            r = sign(dot(r, normal)) * r;
+            vec3 samplePos = origin + r;
+
+            vec4 samplePosScreen = projection * vec4(samplePos, 1.0);
+            samplePosScreen.xy = samplePosScreen.xy * (0.5 / samplePosScreen.w) + 0.5;
+
+            float occlusionDepth = sampleDepthLinear(samplePosScreen.xy);
+            float rangeCheck = smoothstep(0.0, 1.0, radius / abs(origin.z - occlusionDepth));
+
+            if (gl_FragCoord.x * frameUniforms.resolution.z < 0.5) {
+                float d = samplePos.z - occlusionDepth; // distance from depth to sample
+                occlusion += (d >= -bias ? 0.0 : rangeCheck);
+            } else {
+                vec3 v = computeViewSpacePositionFromDepth(samplePosScreen.xy * 2.0 - 1.0, occlusionDepth) - origin;
+                float NoV = max(dot(normal, normalize(v)), 0);
+                occlusion += (rangeCheck * NoV) / (1.0 + length(v));
+            }
+        }
+
+        float ao = 1.0 - occlusion / float(kSphereSampleCount);
+        material.baseColor = vec4(ao * ao);
+    }
+}

@@ -32,6 +32,7 @@
 #include "fg/FrameGraph.h"
 #include "fg/FrameGraphResource.h"
 
+
 #include <utils/Panic.h>
 #include <utils/Systrace.h>
 #include <utils/vector.h>
@@ -254,7 +255,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 
     RenderPass::CommandTypeFlags commandType = getCommandType(view.getDepthPrepass());
 
-    constexpr bool USE_SSAO = false;
+    constexpr bool USE_SSAO = true;
     constexpr bool REUSE_SSAO_DEPTH = true;
     Command const* depthPassBegin = nullptr;
     Command const* depthPassEnd = nullptr;
@@ -314,35 +315,8 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 
     FrameGraphResource depth = ssaoDepthPass.getData().depth;
 
-
-    struct SSAOPassData {
-        FrameGraphResource depth;
-        FrameGraphResource ssao;
-    };
-
-    auto& SSAODepthPass = fg.addPass<SSAOPassData>("SSAO Pass",
-            [depth](FrameGraph::Builder& builder, SSAOPassData& data) {
-
-                auto const& desc = builder.getDescriptor(depth);
-                data.depth = builder.read(depth);
-
-                data.ssao = builder.createTexture("SSAO Buffer", {
-                        .width = desc.width, .height = desc.height,
-                        .format = TextureFormat::R8 });
-
-                data.ssao = builder.useRenderTarget("SSAO Target",
-                        { .attachments.color = data.ssao }, TargetBufferFlags::COLOR).color;
-            },
-            [](FrameGraphPassResources const& resources,
-                    SSAOPassData const& data, DriverApi& driver) {
-                    UTILS_UNUSED auto depth  = resources.getTexture(data.depth);
-                    UTILS_UNUSED auto ssao = resources.getRenderTarget(data.ssao);
-                    // TODO: actually do the SSAO pass
-            });
-
-
     // SSAO pass -- automatically culled if not used
-    FrameGraphResource ssao = SSAODepthPass.getData().ssao;
+    FrameGraphResource ssao = ppm.ssao(fg, depth);
 
     // --------------------------------------------------------------------------------------------
 
@@ -395,7 +369,12 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
                     (FrameGraphPassResources const& resources,
                             ColorPassData const& data, DriverApi& driver) {
                 auto out = resources.getRenderTarget(data.color);
-                //UTILS_UNUSED auto ssao = resources.getTexture(data.ssao);
+                Handle<HwTexture> ssao;
+                if (data.ssao.isValid()) {
+                    ssao = resources.getTexture(data.ssao);
+                    view.prepareSSAO(ssao);
+                    view.commitUniforms(driver);
+                }
 
                 out.params.clearColor = view.getClearColor();
 
@@ -456,7 +435,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     fg.moveResource(output, input);
 
     fg.compile();
-    fg.export_graphviz(slog.d);
+    //fg.export_graphviz(slog.d);
 
     fg.execute(driver);
 
