@@ -413,7 +413,9 @@ id<MTLTexture> MetalRenderTarget::createMultisampledTexture(id<MTLDevice> device
     return [device newTextureWithDescriptor:descriptor];
 }
 
+
 MetalFence::MetalFence(MetalContext& context) : context(context) {
+#if METAL_FENCES_SUPPORTED
     cv = std::make_shared<std::condition_variable>();
     event = [context.device newSharedEvent];
     value = context.signalId++;
@@ -427,13 +429,17 @@ MetalFence::MetalFence(MetalContext& context) : context(context) {
             cv->notify_all();
         }
     }];
+#endif
 }
 
 MetalFence::~MetalFence() {
+#if METAL_FENCES_SUPPORTED
     [event release];
+#endif
 }
 
 FenceStatus MetalFence::wait(uint64_t timeoutNs) {
+#if METAL_FENCES_SUPPORTED
     std::unique_lock<std::mutex> guard(mutex);
     while (event.signaledValue != value) {
         if (timeoutNs == 0 ||
@@ -442,6 +448,9 @@ FenceStatus MetalFence::wait(uint64_t timeoutNs) {
         }
     }
     return FenceStatus::CONDITION_SATISFIED;
+#else
+    return FenceStatus::ERROR;
+#endif
 }
 
 } // namespace metal

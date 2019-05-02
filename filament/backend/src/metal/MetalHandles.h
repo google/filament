@@ -177,6 +177,9 @@ private:
 
 };
 
+#define METAL_FENCES_SUPPORTED (MAC_OS_X_VERSION_MAX_ALLOWED > 101400 || \
+                                IPHONE_OS_VERSION_MAX_ALLOWED > 120000)
+
 class MetalFence : public HwFence {
 public:
 
@@ -188,10 +191,13 @@ public:
 private:
 
     MetalContext& context;
+
+#if METAL_FENCES_SUPPORTED
     std::shared_ptr<std::condition_variable> cv;
     std::mutex mutex;
     id<MTLSharedEvent> event;
     uint64_t value;
+#endif
 };
 
 } // namespace metal

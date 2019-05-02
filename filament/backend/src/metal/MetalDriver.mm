@@ -392,7 +392,11 @@ bool MetalDriver::isRenderTargetFormatSupported(TextureFormat format) {
 
 bool MetalDriver::isFrameTimeSupported() {
     // Frame time is calculated via hard fences.
+#if METAL_FENCES_SUPPORTED
     return true;
+#else
+    return false;
+#endif
 }
 
 // TODO: the implementations here for updateVertexBuffer and updateIndexBuffer assume static usage.
