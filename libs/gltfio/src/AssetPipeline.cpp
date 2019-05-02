@@ -44,6 +44,9 @@ static const char* const NORMAL = "NORMAL";
 static const char* const TANGENT = "TANGENT";
 static const char* const GENERATOR_ID = "gltfio";
 
+static const char* const BAKE_UV_ATTRIB_NAME = "TEXCOORD_4";
+static const cgltf_int   BAKE_UV_ATTRIB_INDEX = 4;
+
 // Bookkeeping structure for baking a single primitive + node pair.
 struct BakedPrim {
     const cgltf_node* sourceNode;
@@ -93,6 +96,9 @@ private:
     void populateResult(const BakedPrim* prims, size_t numPrims, size_t numVerts);
     bool filterPrim(const cgltf_primitive& prim);
 
+    bool cgltfToXatlas(const cgltf_data* sourceAsset, xatlas::Atlas* atlas);
+    cgltf_data* xatlasToCgltf(const cgltf_data* source, const xatlas::Atlas* atlas);
+
     uint32_t mFlattenFlags;
     vector<cgltf_data*> mSourceAssets;
 
@@ -113,6 +119,20 @@ private:
         ArrayHolder<uint8_t> bufferData;
     } mStorage;
 };
+
+cgltf_size getNumFloats(cgltf_type type) {
+    switch (type) {
+        case cgltf_type_vec2: return 2;
+        case cgltf_type_vec3: return 3;
+        case cgltf_type_vec4: return 4;
+        case cgltf_type_mat2: return 4;
+        case cgltf_type_mat3: return 9;
+        case cgltf_type_mat4: return 16;
+        case cgltf_type_invalid:
+        case cgltf_type_scalar:
+        default: return 1;
+    }
+}
 
 // Returns true if the given cgltf asset has been flattened by the mesh pipeline and is therefore
 // amenable to subsequent pipeline operations like baking and exporting.
@@ -444,7 +464,8 @@ const cgltf_data* Pipeline::flattenPrims(const cgltf_data* sourceAsset, uint32_t
     cgltf_size indicesOffset = vertexDataSize;
 
     // Populate the fields of the cgltf structures.
-    for (size_t primIndex = 0, attrIndex = 0; primIndex < numPrims; ++primIndex) {
+    size_t attrIndex = 0;
+    for (size_t primIndex = 0; primIndex < numPrims; ++primIndex) {
         BakedPrim& bakedPrim = bakedPrims[primIndex];
 
         nodePointers[primIndex] = nodes + primIndex;
@@ -464,6 +485,7 @@ const cgltf_data* Pipeline::flattenPrims(const cgltf_data* sourceAsset, uint32_t
             .component_type = cgltf_component_type_r_32u,
             .type = cgltf_type_scalar,
             .count = bakedPrim.sourcePrimitive->indices->count,
+            .stride = sizeof(uint32_t),
             .buffer_view = indicesViews,
         };
         cgltf_buffer_view& indicesBufferView = *indicesViews++ = {
@@ -477,6 +499,7 @@ const cgltf_data* Pipeline::flattenPrims(const cgltf_data* sourceAsset, uint32_t
             .component_type = cgltf_component_type_r_32f,
             .type = cgltf_type_vec3,
             .count = bakedPrim.sourcePositions->data->count,
+            .stride = sizeof(float3),
             .buffer_view = positionsViews,
             .has_min = true,
             .has_max = true,
@@ -500,6 +523,7 @@ const cgltf_data* Pipeline::flattenPrims(const cgltf_data* sourceAsset, uint32_t
                 .component_type = cgltf_component_type_r_32f,
                 .type = cgltf_type_vec3,
                 .count = bakedPrim.sourceNormals->data->count,
+                .stride = sizeof(float3),
                 .buffer_view = normalsViews
             };
             cgltf_buffer_view& normalsBufferView = *normalsViews++ = {
@@ -520,6 +544,7 @@ const cgltf_data* Pipeline::flattenPrims(const cgltf_data* sourceAsset, uint32_t
                 .component_type = cgltf_component_type_r_32f,
                 .type = cgltf_type_vec4,
                 .count = bakedPrim.sourceTangents->data->count,
+                .stride = sizeof(float4),
                 .buffer_view = tangentsViews
             };
             cgltf_buffer_view& tangentsBufferView = *tangentsViews++ = {
@@ -555,6 +580,8 @@ const cgltf_data* Pipeline::flattenPrims(const cgltf_data* sourceAsset, uint32_t
             .attributes_count = attrCount,
         };
     }
+
+    assert(attrIndex == numAttributes);
 
     scene->name = sourceAsset->scene->name;
     scene->nodes = nodePointers;
@@ -679,14 +706,357 @@ void Pipeline::bakeTransform(BakedPrim* prim, const mat4f& transform, const mat3
     }
 }
 
+bool Pipeline::cgltfToXatlas(const cgltf_data* sourceAsset, xatlas::Atlas* atlas) {
+    for (size_t meshIndex = 0; meshIndex < sourceAsset->meshes_count; ++meshIndex) {
+        const cgltf_primitive& prim = sourceAsset->meshes[meshIndex].primitives[0];
+        const cgltf_attribute* positions = nullptr;
+        const cgltf_attribute* texcoords = nullptr;
+        const cgltf_attribute* normals = nullptr;
+
+        // Gather all vertex attributes of interest.
+        for (cgltf_size k = 0; k < prim.attributes_count; ++k) {
+            const cgltf_attribute& attr = prim.attributes[k];
+            if (attr.index != 0 || attr.data == nullptr || attr.data->buffer_view == nullptr) {
+                continue;
+            }
+            if (attr.data->component_type != cgltf_component_type_r_32f) {
+                continue;
+            }
+            switch (attr.type) {
+                case cgltf_attribute_type_position: positions = &attr; break;
+                case cgltf_attribute_type_normal:   normals = &attr;   break;
+                case cgltf_attribute_type_texcoord: texcoords = &attr; break;
+                default: break;
+            }
+        }
+
+        xatlas::MeshDecl decl {};
+
+        // xatlas can produce higher-quality results if it has normals, but they are optional.
+        if (normals) {
+            const auto& accessor = normals->data;
+            cgltf_size offset = accessor->offset + accessor->buffer_view->offset;
+            const uint8_t* data = (const uint8_t*) accessor->buffer_view->buffer->data;
+            decl.vertexNormalData = data + offset;
+            decl.vertexNormalStride = accessor->stride ? accessor->stride : sizeof(float3);
+        }
+
+        // Again, xatlas can produce higher-quality results if it has UVs, but they are optional.
+        if (texcoords) {
+            const auto& accessor = texcoords->data;
+            cgltf_size offset = accessor->offset + accessor->buffer_view->offset;
+            const uint8_t* data = (const uint8_t*) accessor->buffer_view->buffer->data;
+            decl.vertexUvData = data + offset;
+            decl.vertexUvStride = accessor->stride ? accessor->stride : sizeof(float2);
+        }
+
+        // The flattening process guarantees packed fp32 position data.
+        {
+            const auto& accessor = positions->data;
+            cgltf_size offset = accessor->offset + accessor->buffer_view->offset;
+            const uint8_t* data = (const uint8_t*) accessor->buffer_view->buffer->data;
+            decl.vertexCount = uint32_t(positions->data->count);
+            decl.vertexPositionData = data + offset;
+            decl.vertexPositionStride = sizeof(float3);
+        }
+
+        // The flattening process guarantees packed uint32 indices.
+        {
+            const auto& accessor = prim.indices;
+            cgltf_size offset = accessor->offset + accessor->buffer_view->offset;
+            const uint8_t* data = (const uint8_t*) accessor->buffer_view->buffer->data;
+            decl.indexFormat = xatlas::IndexFormat::UInt32;
+            decl.indexData = data + offset;
+            decl.indexCount = accessor->count;
+        }
+
+        xatlas::AddMeshError::Enum error = xatlas::AddMesh(atlas, decl);
+        if (error != xatlas::AddMeshError::Success) {
+            utils::slog.e << "Error parameterizing " << sourceAsset->meshes[meshIndex].name <<
+                    " -- " << xatlas::StringForEnum(error) << utils::io::endl;
+            return false;
+        }
+    }
+
+    return true;
+}
+
+cgltf_data* Pipeline::xatlasToCgltf(const cgltf_data* sourceAsset, const xatlas::Atlas* atlas) {
+    if (sourceAsset->buffers_count != 1 || sourceAsset->buffers[0].data == nullptr) {
+        utils::slog.e << "Parameterization requires a valid flattened asset." << utils::io::endl;
+        return nullptr;
+    }
+    if (atlas->meshCount != sourceAsset->meshes_count) {
+        utils::slog.e << "Unexpected mesh count." << utils::io::endl;
+        return nullptr;
+    }
+
+    // Determine the number of attributes that will be required, which is the same as the old number
+    // of attributes plus an extra UV set per prim.
+    size_t numAttributes = 0;
+    const size_t numPrims = atlas->meshCount;
+    for (cgltf_size i = 0; i < numPrims; ++i) {
+        const cgltf_mesh& mesh = sourceAsset->meshes[i];
+        const cgltf_primitive& sourcePrim = mesh.primitives[0];
+        numAttributes += sourcePrim.attributes_count + 1;
+    }
+
+    // The number of required accessors will be the same as the number of vertex attributes, plus
+    // an additional one for for the index buffer.
+    const size_t numAccessors = numAttributes + numPrims;
+
+    // We need two buffer views per primitive: one for vertex attributes and one for indices.
+    // We need a unique buffer view per primitive because the strides might be unique.
+    const size_t numBufferViews = numPrims * 2;
+
+    // Determine the number of node references.
+    size_t numNodePointers = 0;
+    for (cgltf_size i = 0; i < sourceAsset->scenes_count; ++i) {
+        const cgltf_scene& scene = sourceAsset->scenes[i];
+        numNodePointers += scene.nodes_count;
+    }
+
+    // Compute the size of the new vertex and index buffers (which are consolidated).
+    cgltf_size numIndices = 0;
+    cgltf_size numFloats = 0;
+    for (cgltf_size i = 0; i < numPrims; i++) {
+        const auto& atlasMesh = atlas->meshes[i];
+        const auto& sourceMesh = sourceAsset->meshes[i];
+        const cgltf_primitive& sourcePrim = sourceMesh.primitives[0];
+        numIndices += atlasMesh.indexCount;
+        cgltf_size floatsPerVert = 0;
+        for (size_t ai = 0; ai < sourcePrim.attributes_count; ++ai) {
+            cgltf_type attribType = sourcePrim.attributes[ai].data->type;
+            floatsPerVert += getNumFloats(attribType);
+        }
+        floatsPerVert += 2;
+        numFloats += atlasMesh.vertexCount * floatsPerVert;
+    }
+    cgltf_size resultBufferSize = 4 * (numIndices + numFloats);
+
+    // Allocate top-level structs.
+    cgltf_data* resultAsset = mStorage.resultAssets.alloc(1);
+    cgltf_scene* scenes = mStorage.scenes.alloc(sourceAsset->scenes_count);
+    cgltf_node** nodePointers = mStorage.nodePointers.alloc(numNodePointers);
+    cgltf_node* nodes = mStorage.nodes.alloc(numPrims);
+    cgltf_mesh* meshes = mStorage.meshes.alloc(numPrims);
+    cgltf_primitive* prims = mStorage.prims.alloc(numPrims);
+    cgltf_buffer_view* views = mStorage.views.alloc(numBufferViews);
+    cgltf_accessor* accessors = mStorage.accessors.alloc(numAccessors);
+    cgltf_attribute* attributes = mStorage.attributes.alloc(numAttributes);
+    cgltf_buffer* buffers = mStorage.buffers.alloc(1);
+    uint8_t* resultData = mStorage.bufferData.alloc(resultBufferSize);
+
+    buffers[0] = {
+        .size = resultBufferSize,
+        .data = resultData
+    };
+
+    // Clone the scenes and nodes. This is easy because the source asset has been flattened.
+    assert(numPrims == sourceAsset->nodes_count);
+    for (size_t i = 0, len = sourceAsset->scenes_count; i < len; ++i) {
+        cgltf_scene& scene = scenes[i] = sourceAsset->scenes[i];
+        for (size_t j = 0; j < scene.nodes_count; ++j) {
+            size_t nodeIndex = scene.nodes[j] - sourceAsset->nodes;
+            nodePointers[j] = nodes + nodeIndex;
+        }
+        scene.nodes = nodePointers;
+    }
+    for (cgltf_size i = 0; i < numPrims; i++) {
+        auto& node = nodes[i] = sourceAsset->nodes[i];
+        node.mesh = meshes + i;
+    }
+
+    // Convert all vertices from the source asset to fp32 and create a new interleaved buffer.
+    float* vertexWritePtr = (float*) resultData;
+    for (cgltf_size i = 0; i < numPrims; i++) {
+        const auto& atlasMesh = atlas->meshes[i];
+        const cgltf_mesh& sourceMesh = sourceAsset->meshes[i];
+        const cgltf_primitive& sourcePrim = sourceMesh.primitives[0];
+        for (uint32_t j = 0; j < atlasMesh.vertexCount; ++j) {
+            const xatlas::Vertex& atlasVertex = atlasMesh.vertexArray[j];
+            uint32_t sourceIndex = atlasVertex.xref;
+            for (size_t ai = 0; ai < sourcePrim.attributes_count; ++ai) {
+                const cgltf_accessor* accessor = sourcePrim.attributes[ai].data;
+                cgltf_type attribType = accessor->type;
+                cgltf_size elementSize = getNumFloats(attribType);
+                cgltf_accessor_read_float(accessor, sourceIndex, vertexWritePtr, elementSize);
+                vertexWritePtr += elementSize;
+            }
+            *vertexWritePtr++ = atlasVertex.uv[0];
+            *vertexWritePtr++ = atlasVertex.uv[1];
+        }
+    }
+
+    // Populate the index buffer.
+    uint32_t* indexWritePtr = (uint32_t*) vertexWritePtr;
+    for (cgltf_size i = 0; i < numPrims; i++) {
+        const auto& atlasMesh = atlas->meshes[i];
+        memcpy(indexWritePtr, atlasMesh.indexArray, atlasMesh.indexCount * sizeof(uint32_t));
+        indexWritePtr += atlasMesh.indexCount;
+    }
+
+    // Populate the two buffer views for each prim.
+    cgltf_size vertexBufferOffset = 0;
+    cgltf_size indexBufferOffset = numFloats * sizeof(float);
+    cgltf_buffer_view* resultBufferView = views;
+    for (cgltf_size i = 0; i < numPrims; i++) {
+        const auto& atlasMesh = atlas->meshes[i];
+        const cgltf_mesh& sourceMesh = sourceAsset->meshes[i];
+        const cgltf_primitive& sourcePrim = sourceMesh.primitives[0];
+
+        // Determine the vertex stride.
+        cgltf_size floatsPerVert = 0;
+        for (size_t ai = 0; ai < sourcePrim.attributes_count; ++ai) {
+            cgltf_type attribType = sourcePrim.attributes[ai].data->type;
+            floatsPerVert += getNumFloats(attribType);
+        }
+        floatsPerVert += 2;
+        const cgltf_size stride = floatsPerVert * sizeof(float);
+
+        // Populate the buffer view for the vertex attributes.
+        resultBufferView[0] = {
+            .buffer = buffers,
+            .offset = vertexBufferOffset,
+            .size = atlasMesh.vertexCount * stride,
+            .stride = stride,
+            .type = cgltf_buffer_view_type_vertices
+        };
+
+        // Populate the buffer view for the triangle indices.
+        resultBufferView[1] = {
+            .buffer = buffers,
+            .offset = indexBufferOffset,
+            .size = atlasMesh.indexCount * sizeof(uint32_t),
+            .type = cgltf_buffer_view_type_indices
+        };
+
+        vertexBufferOffset += resultBufferView[0].size;
+        indexBufferOffset += resultBufferView[1].size;
+        resultBufferView += 2;
+    }
+
+    // Populate the accessors and attributes for each prim.
+    cgltf_accessor* resultAccessor = accessors;
+    cgltf_attribute* resultAttribute = attributes;
+    for (cgltf_size i = 0; i < numPrims; i++) {
+        const auto& atlasMesh = atlas->meshes[i];
+        const cgltf_mesh& sourceMesh = sourceAsset->meshes[i];
+        const cgltf_primitive& sourcePrim = sourceMesh.primitives[0];
+        cgltf_mesh& resultMesh = meshes[i];
+        cgltf_primitive& resultPrim = prims[i];
+        resultMesh = sourceMesh;
+        resultMesh.primitives = &resultPrim;
+        resultPrim = sourcePrim;
+        resultPrim.attributes = resultAttribute;
+        resultPrim.attributes_count = sourcePrim.attributes_count + 1;
+        resultPrim.indices = resultAccessor + sourcePrim.attributes_count + 1;
+        cgltf_buffer_view* vertexBufferView = views + i * 2 + 0;
+        cgltf_buffer_view* indexBufferView = views + i * 2 + 1;
+        cgltf_size offset = 0;
+        for (size_t ai = 0; ai < sourcePrim.attributes_count; ++ai) {
+            const cgltf_attribute& sourceAttrib = sourcePrim.attributes[ai];
+            const cgltf_accessor* sourceAccessor = sourceAttrib.data;
+            *resultAttribute = {
+                .name = sourceAttrib.name,
+                .type = sourceAttrib.type,
+                .index = sourceAttrib.index,
+                .data = resultAccessor
+            };
+            *resultAccessor = {
+                .component_type = cgltf_component_type_r_32f,
+                .type = sourceAccessor->type,
+                .offset = offset,
+                .count = atlasMesh.vertexCount,
+                .stride = vertexBufferView->stride,
+                .buffer_view = vertexBufferView,
+                .has_min = sourceAccessor->has_min,
+                .has_max = sourceAccessor->has_max,
+            };
+            if (resultAccessor->has_min) {
+                memcpy(resultAccessor->min, sourceAccessor->min, sizeof(sourceAccessor->min));
+            }
+            if (resultAccessor->has_max) {
+                memcpy(resultAccessor->max, sourceAccessor->max, sizeof(sourceAccessor->max));
+            }
+            offset += sizeof(float) * getNumFloats(sourceAccessor->type);
+            ++resultAccessor;
+            ++resultAttribute;
+        }
+
+        // Create the new attribute for the baked UV's and point it to its corresponding accessor.
+        *resultAttribute++ = {
+            .name = (char*) BAKE_UV_ATTRIB_NAME,
+            .type = cgltf_attribute_type_texcoord,
+            .index = BAKE_UV_ATTRIB_INDEX,
+            .data = resultAccessor
+        };
+        *resultAccessor++ = {
+            .component_type = cgltf_component_type_r_32f,
+            .type = cgltf_type_vec2,
+            .offset = offset,
+            .count = atlasMesh.vertexCount,
+            .stride = vertexBufferView->stride,
+            .buffer_view = vertexBufferView,
+        };
+
+        // Accessor for index buffer.
+        *resultAccessor++ = {
+            .component_type = cgltf_component_type_r_32u,
+            .type = cgltf_type_scalar,
+            .count = atlasMesh.indexCount,
+            .stride = sizeof(uint32_t),
+            .buffer_view = indexBufferView,
+        };
+    }
+
+    // Clone the high-level asset structure, then substitute some of the top-level lists.
+    *resultAsset = *sourceAsset;
+    resultAsset->buffers = buffers;
+    resultAsset->buffer_views = views;
+    resultAsset->buffer_views_count = numBufferViews;
+    resultAsset->accessors = accessors;
+    resultAsset->accessors_count = numAccessors;
+    resultAsset->images = sourceAsset->images;
+    resultAsset->textures = sourceAsset->textures;
+    resultAsset->materials = sourceAsset->materials;
+    resultAsset->meshes = meshes;
+    resultAsset->nodes = nodes;
+    resultAsset->scenes = scenes;
+    resultAsset->scene = scenes + (sourceAsset->scene - sourceAsset->scenes);
+    return resultAsset;
+}
+
 const cgltf_data* Pipeline::parameterize(const cgltf_data* sourceAsset) {
-    auto atlas = xatlas::Create();
 
-    utils::slog.e << "parameterize is not yet implemented." << utils::io::endl;
+    if (!isFlattened(sourceAsset)) {
+        utils::slog.e << "Only flattened assets can be parameterized." << utils::io::endl;
+        return nullptr;
+    }
 
+    xatlas::Atlas* atlas = xatlas::Create();
+    if (!cgltfToXatlas(sourceAsset, atlas)) {
+        return nullptr;
+    }
+
+    utils::slog.i << "Computing charts..." << utils::io::endl;
+    xatlas::ChartOptions coptions;
+    xatlas::ComputeCharts(atlas, coptions);
+
+    utils::slog.i << "Parameterizing charts..." << utils::io::endl;
+    xatlas::ParameterizeCharts(atlas);
+
+    utils::slog.i << "Packing charts..." << utils::io::endl;
+    xatlas::PackCharts(atlas);
+
+    utils::slog.i << "Produced "
+            << atlas->atlasCount << " atlases, "
+            << atlas->chartCount << " charts, "
+            << atlas->meshCount  << " meshes." << utils::io::endl;
+
+    const cgltf_data* result = xatlasToCgltf(sourceAsset, atlas);
     xatlas::Destroy(atlas);
-    atlas = nullptr;
-    return nullptr;
+    return result;
 }
 
 void Pipeline::addSourceAsset(cgltf_data* asset) {
