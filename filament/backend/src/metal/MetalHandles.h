@@ -24,6 +24,7 @@
 #include <QuartzCore/QuartzCore.h> // for CAMetalLayer
 
 #include "MetalContext.h"
+#include "MetalDefines.h"
 #include "MetalEnums.h"
 #include "MetalExternalImage.h"
 #include "MetalState.h" // for MetalState::VertexDescription
@@ -176,9 +177,6 @@ private:
     id<MTLTexture> multisampledDepth = nil;
 
 };
-
-#define METAL_FENCES_SUPPORTED (MAC_OS_X_VERSION_MAX_ALLOWED > 101400 || \
-                                IPHONE_OS_VERSION_MAX_ALLOWED > 120000)
 
 class MetalFence : public HwFence {
 public:

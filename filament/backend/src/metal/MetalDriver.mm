@@ -19,6 +19,7 @@
 #include "metal/MetalDriver.h"
 
 #include "MetalContext.h"
+#include "MetalDefines.h"
 #include "MetalDriverFactory.h"
 #include "MetalEnums.h"
 #include "MetalHandles.h"
@@ -71,8 +72,10 @@ MetalDriver::MetalDriver(backend::MetalPlatform* platform) noexcept
             nullptr, &mContext->textureCache);
     ASSERT_POSTCONDITION(success == kCVReturnSuccess, "Could not create Metal texture cache.");
 
+#if METAL_FENCES_SUPPORTED
     dispatch_queue_t queue = dispatch_get_global_queue(QOS_CLASS_DEFAULT, 0);
     mContext->eventListener = [[MTLSharedEventListener alloc] initWithDispatchQueue:queue];
+#endif
 }
 
 MetalDriver::~MetalDriver() noexcept {
