@@ -27,6 +27,7 @@
 #include <math/vec3.h>
 #include <math/vec4.h>
 
+#include <memory>
 #include <vector>
 
 using namespace filament::math;
@@ -507,7 +508,7 @@ const cgltf_data* Pipeline::flattenPrims(const cgltf_data* sourceAsset, uint32_t
                 .size = normalsAccessor.count * sizeof(float3)
             };
             normalsOffset += normalsBufferView.size;
-            cgltf_attribute& normalsAttribute = attributes[attrIndex++] = {
+            attributes[attrIndex++] = {
                 .name = (char*) NORMAL,
                 .type = cgltf_attribute_type_normal,
                 .data = &normalsAccessor
@@ -527,7 +528,7 @@ const cgltf_data* Pipeline::flattenPrims(const cgltf_data* sourceAsset, uint32_t
                 .size = tangentsAccessor.count * sizeof(float4)
             };
             tangentsOffset += tangentsBufferView.size;
-            cgltf_attribute& tangentsAttribute = attributes[attrIndex++] = {
+            attributes[attrIndex++] = {
                 .name = (char*) TANGENT,
                 .type = cgltf_attribute_type_tangent,
                 .data = &tangentsAccessor
