@@ -175,7 +175,6 @@ bool ArrowWidget::draw() {
     }
 
     ImVec2 inner_pos = orient_pos;
-    float inner_size = sv_orient_size;
     quatf quat = normalize(mDirectionQuat);
     ImColor alpha(1.0f, 1.0f, 1.0f, highlighted ? 1.0f : 0.75f);
     float3 arrowDir = quat * float3(1, 0, 0);

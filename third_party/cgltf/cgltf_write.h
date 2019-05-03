@@ -59,7 +59,7 @@ cgltf_size cgltf_write(const cgltf_options* options, char* buffer, cgltf_size si
 typedef struct {
 	char* buffer;
 	size_t buffer_size;
-	ssize_t remaining;
+	size_t remaining;
 	char* cursor;
 	size_t tmp;
 	size_t chars_written;

@@ -30,7 +30,7 @@
 namespace gltfio {
 
 namespace details {
-    class FFilamentAsset;
+    struct FFilamentAsset;
     class AssetPool;
 }
 
