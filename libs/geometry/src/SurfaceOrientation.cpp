@@ -128,6 +128,16 @@ SurfaceOrientation Builder::build() {
     return mImpl->buildWithUvs();
 }
 
+static float3 randomPerp(const float3& n) {
+    float3 perp = cross(n, float3{1, 0, 0});
+    float sqrlen = dot(perp, perp);
+    if (sqrlen <= std::numeric_limits<float>::epsilon()) {
+        perp = cross(n, float3{0, 1, 0});
+        sqrlen = dot(perp, perp);
+    }
+    return perp / sqrlen;
+}
+
 SurfaceOrientation OrientationBuilderImpl::buildWithNormalsOnly() {
     vector<quatf> quats(vertexCount);
 
@@ -136,13 +146,7 @@ SurfaceOrientation OrientationBuilderImpl::buildWithNormalsOnly() {
 
     for (size_t qindex = 0; qindex < vertexCount; ++qindex) {
         float3 n = *normal;
-        float3 perp = cross(n, float3{1, 0, 0});
-        float sqrlen = dot(perp, perp);
-        if (sqrlen <= std::numeric_limits<float>::epsilon()) {
-            perp = cross(n, float3{0, 1, 0});
-            sqrlen = dot(perp, perp);
-        }
-        float3 b = perp / sqrlen;
+        float3 b = randomPerp(n);
         float3 t = cross(n, b);
         quats[qindex] = mat3f::packTangentFrame({t, b, n});
         normal = (const float3*) (((const uint8_t*) normal) + nstride);
@@ -209,11 +213,21 @@ SurfaceOrientation OrientationBuilderImpl::buildWithUvs() {
         float s2 = w3.x - w1.x;
         float t1 = w2.y - w1.y;
         float t2 = w3.y - w1.y;
-        float r = 1.0F / (s1 * t2 - s2 * t1);
-        float3 sdir((t2 * x1 - t1 * x2) * r, (t2 * y1 - t1 * y2) * r,
-                (t2 * z1 - t1 * z2) * r);
-        float3 tdir((s1 * x2 - s2 * x1) * r, (s1 * y2 - s2 * y1) * r,
-                (s1 * z2 - s2 * z1) * r);
+        float d = s1 * t2 - s2 * t1;
+        float3 sdir, tdir;
+        // In general we can't guarantee smooth tangents when the UV's are non-smooth, but let's at
+        // least avoid divide-by-zero and fall back to normals-only method.
+        if (d == 0.0) {
+            const float3& n1 = normals[tri.x];
+            sdir = randomPerp(n1);
+            tdir = cross(n1, sdir);
+        } else {
+            sdir = {t2 * x1 - t1 * x2, t2 * y1 - t1 * y2, t2 * z1 - t1 * z2};
+            tdir = {s1 * x2 - s2 * x1, s1 * y2 - s2 * y1, s1 * z2 - s2 * z1};
+            float r = 1.0f / d;
+            sdir *= r;
+            tdir *= r;
+        }
         tan1[tri.x] += sdir;
         tan1[tri.y] += sdir;
         tan1[tri.z] += sdir;
