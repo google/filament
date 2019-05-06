@@ -246,11 +246,13 @@ public:
     // (used to generate code) and final output representations (spirv and/or text).
     MaterialBuilder& platform(Platform platform) noexcept;
 
-    // specifies vulkan vs opengl; works in concert with Platform to determine the shader models
+    // specifies opengl, vulkan, or metal; works in concert with Platform to determine the shader models
     // (used to generate code) and final output representations (spirv and/or text).
+    // if linking against filamat_lite, only "opengl" is allowed.
     MaterialBuilder& targetApi(TargetApi targetApi) noexcept;
 
     // specifies the level of optimization to apply to the shaders (default is PERFORMANCE)
+    // if linking against filamat_lite, this _must_ be called with Optimization::NONE.
     MaterialBuilder& optimization(Optimization optimization) noexcept;
 
     // if true, will output the generated GLSL shader code to stdout
@@ -315,6 +317,8 @@ private:
     // Return true if:
     // The shader is syntactically and semantically valid
     bool runStaticCodeAnalysis() noexcept;
+
+    bool checkLiteRequirements() noexcept;
 
     bool isLit() const noexcept { return mShading != filament::Shading::UNLIT; }
 

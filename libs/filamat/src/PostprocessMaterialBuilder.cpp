@@ -22,15 +22,17 @@
 
 #include "shaders/ShaderGenerator.h"
 
-#include "GLSLPostProcessor.h"
-
 #include "eiff/ChunkContainer.h"
 #include "eiff/DictionarySpirvChunk.h"
 #include "eiff/DictionaryTextChunk.h"
 #include "eiff/MaterialSpirvChunk.h"
 #include "eiff/MaterialTextChunk.h"
 #include "eiff/SimpleFieldChunk.h"
+
+#ifndef FILAMAT_LITE
+#include "GLSLPostProcessor.h"
 #include "sca/GLSLTools.h"
+#endif
 
 #include <vector>
 
@@ -42,7 +44,9 @@ Package PostprocessMaterialBuilder::build() {
     prepare();
 
     // Create a postprocessor to optimize / compile to Spir-V if necessary.
+#ifndef FILAMAT_LITE
     GLSLPostProcessor postProcessor(mOptimization, mPrintShaders);
+#endif
 
     // Create chunk tree.
     ChunkContainer container;
@@ -54,8 +58,10 @@ Package PostprocessMaterialBuilder::build() {
     std::vector<SpirvEntry> spirvEntries;
     std::vector<TextEntry> metalEntries;
     LineDictionary glslDictionary;
+#ifndef FILAMAT_LITE
     BlobDictionary spirvDictionary;
     LineDictionary metalDictionary;
+#endif
     std::vector<uint32_t> spirv;
     std::string msl;
 
@@ -98,8 +104,12 @@ Package PostprocessMaterialBuilder::build() {
                     shaderModel, targetApi, targetLanguage,
                     filament::PostProcessStage(k), firstSampler);
 
+#ifndef FILAMAT_LITE
             bool ok = postProcessor.process(vs, filament::backend::ShaderType::VERTEX, shaderModel,
                     &vs, pSpirv, pMsl);
+#else
+            bool ok = true;
+#endif
             if (!ok) {
                 // An error occured while postProcessing, aborting.
                 errorOccured = true;
@@ -115,6 +125,7 @@ Package PostprocessMaterialBuilder::build() {
                 glslEntries.push_back(glslEntry);
             }
 
+#ifndef FILAMAT_LITE
             if (targetApi == TargetApi::VULKAN) {
                 spirvEntry.stage = filament::backend::ShaderType::VERTEX;
                 spirvEntry.dictionaryIndex = spirvDictionary.addBlob(spirv);
@@ -133,14 +144,19 @@ Package PostprocessMaterialBuilder::build() {
                 metalDictionary.addText(metalEntry.shader);
                 metalEntries.push_back(metalEntry);
             }
+#endif
 
             // Fragment Shader
             std::string fs = ShaderPostProcessGenerator::createPostProcessFragmentProgram(
                     shaderModel, targetApi, targetLanguage,
                     filament::PostProcessStage(k), firstSampler);
 
+#ifndef FILAMAT_LITE
             ok = postProcessor.process(fs, filament::backend::ShaderType::FRAGMENT, shaderModel, &fs,
                     pSpirv, pMsl);
+#else
+            ok = true;
+#endif
             if (!ok) {
                 // An error occured while postProcessing, aborting.
                 errorOccured = true;
@@ -156,6 +172,7 @@ Package PostprocessMaterialBuilder::build() {
                 glslEntries.push_back(glslEntry);
             }
 
+#ifndef FILAMAT_LITE
             if (targetApi == TargetApi::VULKAN) {
                 spirvEntry.stage = filament::backend::ShaderType::FRAGMENT;
                 spirvEntry.dictionaryIndex = spirvDictionary.addBlob(spirv);
@@ -174,6 +191,7 @@ Package PostprocessMaterialBuilder::build() {
                 metalDictionary.addText(metalEntry.shader);
                 metalEntries.push_back(metalEntry);
             }
+#endif
         }
     }
 
@@ -185,6 +203,7 @@ Package PostprocessMaterialBuilder::build() {
         container.addChild(&glslChunk);
     }
 
+#ifndef FILAMAT_LITE
     // Emit SPIRV chunks
     DictionarySpirvChunk dicSpirvChunk(spirvDictionary);
     MaterialSpirvChunk spirvChunk(spirvEntries);
@@ -200,6 +219,7 @@ Package PostprocessMaterialBuilder::build() {
         container.addChild(&dicMetalChunk);
         container.addChild(&metalChunk);
     }
+#endif
 
     // Flatten all chunks in the container into a Package.
     size_t packageSize = container.getSize();
