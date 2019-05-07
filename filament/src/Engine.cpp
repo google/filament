@@ -717,7 +717,7 @@ void FEngine::destroy(const FStream* p) {
 }
 
 
-inline void FEngine::destroy(const FMaterial* ptr) {
+void FEngine::destroy(const FMaterial* ptr) {
     if (ptr != nullptr) {
         auto pos = mMaterialInstances.find(ptr);
         if (pos != mMaterialInstances.cend()) {
@@ -732,7 +732,7 @@ inline void FEngine::destroy(const FMaterial* ptr) {
     }
 }
 
-inline void FEngine::destroy(const FMaterialInstance* ptr) {
+void FEngine::destroy(const FMaterialInstance* ptr) {
     if (ptr != nullptr) {
         auto pos = mMaterialInstances.find(ptr->getMaterial());
         assert(pos != mMaterialInstances.cend());
