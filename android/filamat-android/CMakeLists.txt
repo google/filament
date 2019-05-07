@@ -2,14 +2,14 @@ cmake_minimum_required(VERSION 3.4.1)
 
 set(FILAMENT_DIR ${FILAMENT_DIST_DIR})
 
-set(FILAMAT_VERSION "filamat")
+set(FILAMAT_FLAVOR "filamat")
 if(FILAMAT_LITE)
-    set(FILAMAT_VERSION "filamat_lite")
+    set(FILAMAT_FLAVOR "filamat_lite")
 endif()
 
-add_library(${FILAMAT_VERSION} STATIC IMPORTED)
-set_target_properties(${FILAMAT_VERSION} PROPERTIES IMPORTED_LOCATION
-        ${FILAMENT_DIR}/lib/${ANDROID_ABI}/lib${FILAMAT_VERSION}.a)
+add_library(${FILAMAT_FLAVOR} STATIC IMPORTED)
+set_target_properties(${FILAMAT_FLAVOR} PROPERTIES IMPORTED_LOCATION
+        ${FILAMENT_DIR}/lib/${ANDROID_ABI}/lib${FILAMAT_FLAVOR}.a)
 
 add_library(utils STATIC IMPORTED)
 set_target_properties(utils PROPERTIES IMPORTED_LOCATION
@@ -45,7 +45,7 @@ add_library(filamat-jni SHARED
 )
 
 target_link_libraries(filamat-jni
-        ${FILAMAT_VERSION}
+        ${FILAMAT_FLAVOR}
         filabridge
         shaders
         utils
