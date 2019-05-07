@@ -49,6 +49,14 @@ void PostProcessManager::init(FEngine& engine) noexcept {
     driver.bindSamplers(BindingPoints::POST_PROCESS, mPostProcessSbh);
     driver.bindUniformBuffer(BindingPoints::POST_PROCESS, mPostProcessUbh);
 
+    mNoSSAOTexture = driver.createTexture(SamplerType::SAMPLER_2D, 1,
+            TextureFormat::R8, 0, 1, 1, 1, TextureUsage::DEFAULT);
+
+
+    PixelBufferDescriptor data(driver.allocate(1), 1, PixelDataFormat::R, PixelDataType::UBYTE);
+    auto p = static_cast<uint8_t *>(data.buffer);
+    *p = 0xFFu;
+    driver.update2DImage(mNoSSAOTexture, 0, 0, 0, 1, 1, std::move(data));
 
     mSSAOMaterial = upcast(Material::Builder().package(
             MATERIALS_SSAO_DATA, MATERIALS_SSAO_SIZE).build(engine));
@@ -62,6 +70,7 @@ void PostProcessManager::terminate(backend::DriverApi& driver) noexcept {
     FEngine* const pEngine = mEngine;
     driver.destroySamplerGroup(mPostProcessSbh);
     driver.destroyUniformBuffer(mPostProcessUbh);
+    driver.destroyTexture(mNoSSAOTexture);
     pEngine->destroy(mSSAOMaterial);
 }
 
@@ -305,9 +314,12 @@ FrameGraphResource PostProcessManager::ssao(FrameGraph& fg, FrameGraphResource d
                 auto ssao = resources.getRenderTarget(data.ssao);
 
                 SamplerParams params;
-                mSSAOMaterialInstance->setParameter("depth", depth, params);
-                mSSAOMaterialInstance->commit(driver);
-                mSSAOMaterialInstance->use(driver);
+                FMaterialInstance* const pInstance = mSSAOMaterialInstance;
+                pInstance->setParameter("depth", depth, params);
+                pInstance->setParameter("radius", mEngine->debug.ssao.radius);
+                pInstance->setParameter("bias", mEngine->debug.ssao.bias);
+                pInstance->commit(driver);
+                pInstance->use(driver);
 
                 PipelineState pipeline;
                 pipeline.program = mSSAOProgram;
@@ -320,6 +332,5 @@ FrameGraphResource PostProcessManager::ssao(FrameGraph& fg, FrameGraphResource d
 
     return SSAODepthPass.getData().ssao;
 }
-
 
 } // namespace filament
