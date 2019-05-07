@@ -12,6 +12,10 @@ material {
         {
             type : float,
             name : bias
+        },
+        {
+            type : float,
+            name : power
         }
     ],
     variables : [
@@ -128,7 +132,10 @@ fragment {
         }
 
         float ao = 1.0 - occlusion / float(kSphereSampleCount);
-        // TODO: somthing like a pow(ao, user)
+
+        // simulate user-controled ao^n with n[1, 2]
+        ao = mix(ao, ao * ao, materialParams.power);
+
         material.baseColor.r = ao;
     }
 }

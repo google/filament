@@ -332,6 +332,7 @@ static void gui(filament::Engine* engine, filament::View*) {
                 ImGui::Checkbox("enabled###ssao", debug.getPropertyAddress<bool>("d.ssao.enabled"));
                 ImGui::SliderFloat("radius", debug.getPropertyAddress<float>("d.ssao.radius"), 0.1f, 10.0f);
                 ImGui::SliderFloat("bias", debug.getPropertyAddress<float>("d.ssao.bias"), 0.0f, 0.1f);
+                ImGui::SliderFloat("power", debug.getPropertyAddress<float>("d.ssao.power"), 0.0f, 1.0f);
             }
         }
 
