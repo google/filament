@@ -24,6 +24,7 @@
 #include <QuartzCore/QuartzCore.h> // for CAMetalLayer
 
 #include "MetalContext.h"
+#include "MetalDefines.h"
 #include "MetalEnums.h"
 #include "MetalExternalImage.h"
 #include "MetalState.h" // for MetalState::VertexDescription
@@ -31,6 +32,8 @@
 
 #include <utils/Panic.h>
 
+#include <condition_variable>
+#include <memory>
 #include <vector>
 
 namespace filament {
@@ -173,6 +176,26 @@ private:
     id<MTLTexture> multisampledColor = nil;
     id<MTLTexture> multisampledDepth = nil;
 
+};
+
+class MetalFence : public HwFence {
+public:
+
+    MetalFence(MetalContext& context);
+    ~MetalFence();
+
+    FenceStatus wait(uint64_t timeoutNs);
+
+private:
+
+    MetalContext& context;
+
+#if METAL_FENCES_SUPPORTED
+    std::shared_ptr<std::condition_variable> cv;
+    std::mutex mutex;
+    id<MTLSharedEvent> event;
+    uint64_t value;
+#endif
 };
 
 } // namespace metal

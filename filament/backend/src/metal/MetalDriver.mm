@@ -19,6 +19,7 @@
 #include "metal/MetalDriver.h"
 
 #include "MetalContext.h"
+#include "MetalDefines.h"
 #include "MetalDriverFactory.h"
 #include "MetalEnums.h"
 #include "MetalHandles.h"
@@ -70,6 +71,11 @@ MetalDriver::MetalDriver(backend::MetalPlatform* platform) noexcept
     CVReturn success = CVMetalTextureCacheCreate(kCFAllocatorDefault, nullptr, mContext->device,
             nullptr, &mContext->textureCache);
     ASSERT_POSTCONDITION(success == kCVReturnSuccess, "Could not create Metal texture cache.");
+
+#if METAL_FENCES_SUPPORTED
+    dispatch_queue_t queue = dispatch_get_global_queue(QOS_CLASS_DEFAULT, 0);
+    mContext->eventListener = [[MTLSharedEventListener alloc] initWithDispatchQueue:queue];
+#endif
 }
 
 MetalDriver::~MetalDriver() noexcept {
@@ -102,6 +108,14 @@ void MetalDriver::setPresentationTime(int64_t monotonic_clock_ns) {
 }
 
 void MetalDriver::endFrame(uint32_t frameId) {
+    // If we haven't commited the command buffer (if the frame was canceled), do it now. There may
+    // be commands in it (like fence signaling) that need to execute.
+    if (mContext->currentCommandBuffer) {
+        assert(mContext->currentCommandBuffer.status != MTLCommandBufferStatusCommitted);
+        [mContext->currentCommandBuffer commit];
+        mContext->currentCommandBuffer = nil;
+    }
+
     // Release resources created during frame execution- like commandBuffer and currentDrawable.
     [mContext->framePool drain];
     mContext->bufferPool->gc();
@@ -188,8 +202,9 @@ void MetalDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
             "Stencil buffer not supported.");
 }
 
-void MetalDriver::createFenceR(Handle<HwFence>, int dummy) {
-
+void MetalDriver::createFenceR(Handle<HwFence> fh, int dummy) {
+    ASSERT_PRECONDITION(mContext->currentCommandBuffer, "createFence must be called within a frame.");
+    construct_handle<MetalFence>(mHandleMap, fh, *mContext);
 }
 
 void MetalDriver::createSwapChainR(Handle<HwSwapChain> sch, void* nativeWindow, uint64_t flags) {
@@ -239,7 +254,7 @@ Handle<HwRenderTarget> MetalDriver::createRenderTargetS() noexcept {
 }
 
 Handle<HwFence> MetalDriver::createFenceS() noexcept {
-    return {};
+    return alloc_handle<MetalFence, HwFence>();
 }
 
 Handle<HwSwapChain> MetalDriver::createSwapChainS() noexcept {
@@ -354,11 +369,17 @@ void MetalDriver::updateStreams(backend::DriverApi* driver) {
 }
 
 void MetalDriver::destroyFence(Handle<HwFence> fh) {
-
+    if (fh) {
+        destruct_handle<MetalFence>(mHandleMap, fh);
+    }
 }
 
 FenceStatus MetalDriver::wait(Handle<HwFence> fh, uint64_t timeout) {
-    return FenceStatus::ERROR;
+    auto* fence = handle_cast<MetalFence>(mHandleMap, fh);
+    if (!fence) {
+        return FenceStatus::ERROR;
+    }
+    return fence->wait(timeout);
 }
 
 bool MetalDriver::isTextureFormatSupported(TextureFormat format) {
@@ -373,7 +394,12 @@ bool MetalDriver::isRenderTargetFormatSupported(TextureFormat format) {
 }
 
 bool MetalDriver::isFrameTimeSupported() {
+    // Frame time is calculated via hard fences.
+#if METAL_FENCES_SUPPORTED
+    return true;
+#else
     return false;
+#endif
 }
 
 // TODO: the implementations here for updateVertexBuffer and updateIndexBuffer assume static usage.
