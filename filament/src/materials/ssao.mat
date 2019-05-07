@@ -4,6 +4,14 @@ material {
         {
            type : sampler2d,
            name : depth
+        },
+        {
+            type : float,
+            name : radius
+        },
+        {
+            type : float,
+            name : bias
         }
     ],
     variables : [
@@ -82,44 +90,45 @@ fragment {
         return vec3(p * linearDepth, linearDepth);
     }
 
+    float computeAmbientOcclusion(const vec3 origin, const vec3 normal, const vec3 noise, const vec3 sphereSample) {
+        mat4 projection = getClipFromViewMatrix();
+        float radius = materialParams.radius;
+        float bias = materialParams.bias;
+
+        vec3 r = sphereSample * radius;
+        r = reflect(r, noise);
+        r = sign(dot(r, normal)) * r;
+        vec3 samplePos = origin + r;
+
+        vec4 samplePosScreen = projection * vec4(samplePos, 1.0);
+        samplePosScreen.xy = samplePosScreen.xy * (0.5 / samplePosScreen.w) + 0.5;
+
+        float occlusionDepth = sampleDepthLinear(samplePosScreen.xy);
+
+        // smoothstep() optimized for range 0 to 1
+        float t = saturate(radius / abs(origin.z - occlusionDepth));
+        float rangeCheck = t * t * (3.0 - 2.0 * t);
+
+        float d = samplePos.z - occlusionDepth; // distance from depth to sample
+        return (d >= -bias ? 0.0 : rangeCheck);
+    }
+
     void material(inout MaterialInputs material) {
         prepareMaterial(material);
 
-        const float radius = 0.1;
-        const float bias = 0.005; // this is to avoid self-occlusion
-        mat4 projection = getClipFromViewMatrix();
-
         vec2 uv = variable_vertex.xy; // interpolated to pixel center
+        vec3 noise = getNoise(uv);
         float depth = sampleDepthLinear(uv);
         vec3 origin = computeViewSpacePositionFromDepth(variable_vertex.zw, depth);
         vec3 normal = computeViewSpaceNormal(origin);
 
-        // rotation
-        vec3 noise = getNoise(uv);
         float occlusion = 0.0;
-        for (uint i=0 ; i<kSphereSampleCount ; i++) {
-            vec3 r = kSphereSamples[i] * radius;
-            r = reflect(r, noise);
-            r = sign(dot(r, normal)) * r;
-            vec3 samplePos = origin + r;
-
-            vec4 samplePosScreen = projection * vec4(samplePos, 1.0);
-            samplePosScreen.xy = samplePosScreen.xy * (0.5 / samplePosScreen.w) + 0.5;
-
-            float occlusionDepth = sampleDepthLinear(samplePosScreen.xy);
-            float rangeCheck = smoothstep(0.0, 1.0, radius / abs(origin.z - occlusionDepth));
-
-            if (gl_FragCoord.x * frameUniforms.resolution.z < 0.5) {
-                float d = samplePos.z - occlusionDepth; // distance from depth to sample
-                occlusion += (d >= -bias ? 0.0 : rangeCheck);
-            } else {
-                vec3 v = computeViewSpacePositionFromDepth(samplePosScreen.xy * 2.0 - 1.0, occlusionDepth) - origin;
-                float NoV = max(dot(normal, normalize(v)), 0);
-                occlusion += (rangeCheck * NoV) / (1.0 + length(v));
-            }
+        for (uint i = 0u; i < kSphereSampleCount; i++) {
+            occlusion += computeAmbientOcclusion(origin, normal, noise, kSphereSamples[i]);
         }
 
         float ao = 1.0 - occlusion / float(kSphereSampleCount);
-        material.baseColor = vec4(ao * ao);
+        // TODO: somthing like a pow(ao, user)
+        material.baseColor.r = ao;
     }
 }

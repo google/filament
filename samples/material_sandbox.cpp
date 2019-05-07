@@ -327,6 +327,12 @@ static void gui(filament::Engine* engine, filament::View*) {
             ImGui::SliderFloat("ibl", &params.iblIntensity, 0.0f, 50000.0f);
             ImGui::SliderAngle("ibl rotation", &params.iblRotation);
             ImGuiExt::DirectionWidget("direction", &params.lightDirection.x);
+            if (ImGui::CollapsingHeader("SSAO")) {
+                DebugRegistry& debug = engine->getDebugRegistry();
+                ImGui::Checkbox("enabled###ssao", debug.getPropertyAddress<bool>("d.ssao.enabled"));
+                ImGui::SliderFloat("radius", debug.getPropertyAddress<float>("d.ssao.radius"), 0.1f, 10.0f);
+                ImGui::SliderFloat("bias", debug.getPropertyAddress<float>("d.ssao.bias"), 0.0f, 0.1f);
+            }
         }
 
         if (ImGui::CollapsingHeader("Post-processing")) {

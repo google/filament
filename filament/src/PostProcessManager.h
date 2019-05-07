@@ -59,6 +59,10 @@ public:
 
     FrameGraphResource ssao(FrameGraph& fg, FrameGraphResource depth) noexcept;
 
+    backend::Handle<backend::HwTexture> getNoSSAOTexture() const {
+        return mNoSSAOTexture;
+    }
+
 private:
     details::FEngine* mEngine = nullptr;
 
@@ -70,6 +74,8 @@ private:
     details::FMaterial* mSSAOMaterial = nullptr;
     details::FMaterialInstance* mSSAOMaterialInstance = nullptr;
     backend::Handle<backend::HwProgram> mSSAOProgram;
+
+    backend::Handle<backend::HwTexture> mNoSSAOTexture;
 };
 
 } // namespace filament
