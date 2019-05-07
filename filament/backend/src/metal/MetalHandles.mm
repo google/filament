@@ -255,6 +255,18 @@ MetalProgram::~MetalProgram() {
     [fragmentFunction release];
 }
 
+static MTLPixelFormat decidePixelFormat(id<MTLDevice> device, TextureFormat format) {
+    const MTLPixelFormat metalFormat = getMetalFormat(format);
+#if !defined(IOS)
+    // Some devices do not support the Depth24_Stencil8 format, so we'll fallback to Depth32.
+    if (metalFormat == MTLPixelFormatDepth24Unorm_Stencil8 &&
+        !device.depth24Stencil8PixelFormatSupported) {
+        return MTLPixelFormatDepth32Float;
+    }
+#endif
+    return metalFormat;
+}
+
 MetalTexture::MetalTexture(MetalContext& context, backend::SamplerType target, uint8_t levels,
         TextureFormat format, uint8_t samples, uint32_t width, uint32_t height, uint32_t depth,
         TextureUsage usage) noexcept
@@ -264,7 +276,7 @@ MetalTexture::MetalTexture(MetalContext& context, backend::SamplerType target, u
     // Metal does not natively support 3 component textures. We'll emulate support by reshaping the
     // image data and using a 4 component texture.
     const TextureFormat reshapedFormat = reshaper.getReshapedFormat();
-    const MTLPixelFormat pixelFormat = getMetalFormat(reshapedFormat);
+    const MTLPixelFormat pixelFormat = decidePixelFormat(context.device, reshapedFormat);
 
     bytesPerPixel = static_cast<uint8_t>(details::FTexture::getFormatSize(reshapedFormat));
 

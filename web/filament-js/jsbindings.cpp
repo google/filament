@@ -695,7 +695,11 @@ class_<TransformManager>("TransformManager")
     /// ::retval:: a transform component that can be passed to `setTransform`.
     .function("getInstance", &TransformManager::getInstance)
 
-    .function("create", &TransformManager::create)
+    .function("create", EMBIND_LAMBDA(void,
+            (TransformManager* self, utils::Entity entity), {
+        self->create(entity);
+    }), allow_raw_pointers())
+
     .function("destroy", &TransformManager::destroy)
     .function("setParent", &TransformManager::setParent)
     .function("getParent", &TransformManager::getParent)
@@ -772,7 +776,7 @@ class_<VertexBuilder>("VertexBuffer$Builder")
             VertexAttribute attr,
             uint8_t bufferIndex,
             VertexBuffer::AttributeType attrType,
-            uint8_t byteOffset,
+            uint32_t byteOffset,
             uint8_t byteStride), {
         return &builder->attribute(attr, bufferIndex, attrType, byteOffset, byteStride); })
     .BUILDER_FUNCTION("vertexCount", VertexBuilder, (VertexBuilder* builder, int count), {

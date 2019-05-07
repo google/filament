@@ -205,9 +205,6 @@ void ImGuiHelper::renderDrawData(ImDrawData* imguiData) {
                 cmds->VtxBuffer.Size * sizeof(ImDrawVert), cmds->VtxBuffer.Data,
                 cmds->IdxBuffer.Size * sizeof(ImDrawIdx), cmds->IdxBuffer.Data);
         for (const auto& pcmd : cmds->CmdBuffer) {
-            const size_t capacity = mIndexBuffers[bufferIndex]->getIndexCount();
-            const size_t required = indexOffset + pcmd.ElemCount;
-            assert(required <= capacity);
             if (pcmd.UserCallback) {
                 pcmd.UserCallback(cmds, &pcmd);
             } else {
