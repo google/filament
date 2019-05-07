@@ -318,6 +318,7 @@ FrameGraphResource PostProcessManager::ssao(FrameGraph& fg, FrameGraphResource d
                 pInstance->setParameter("depth", depth, params);
                 pInstance->setParameter("radius", mEngine->debug.ssao.radius);
                 pInstance->setParameter("bias", mEngine->debug.ssao.bias);
+                pInstance->setParameter("power", mEngine->debug.ssao.power);
                 pInstance->commit(driver);
                 pInstance->use(driver);
 

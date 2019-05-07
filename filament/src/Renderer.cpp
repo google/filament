@@ -61,6 +61,7 @@ FRenderer::FRenderer(FEngine& engine) :
     debugRegistry.registerProperty("d.ssao.enabled", &engine.debug.ssao.enabled);
     debugRegistry.registerProperty("d.ssao.radius", &engine.debug.ssao.radius);
     debugRegistry.registerProperty("d.ssao.bias", &engine.debug.ssao.bias);
+    debugRegistry.registerProperty("d.ssao.power", &engine.debug.ssao.power);
 }
 
 void FRenderer::init() noexcept {
