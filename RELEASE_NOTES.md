@@ -6,6 +6,7 @@ A new header is inserted each time a *tag* is created.
 
 # Release notes
 
+- Implemented hard fences for the Metal backend, enablying dynamic resolution support.
 - Created a `RELEASE_NOTES.md` file, to be updated with significant PRs.
 
 ## sceneform-1.9pr2
