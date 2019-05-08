@@ -131,6 +131,27 @@ TEST_F(FilamatLite, StaticCodeAnalyzerNoSpace) {
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
 
+TEST_F(FilamatLite, StaticCodeAnalyzerWhitespace) {
+    utils::CString shaderCode(R"(
+        void material(inout MaterialInputs material) {
+            prepareMaterial(material);
+            material  .subsurfaceColor = vec3(1.0);
+            material    .   ambientOcclusion  = vec3(1.0);
+            material
+                .   baseColor  = vec3(1.0);
+        }
+    )");
+
+    GLSLToolsLite glslTools;
+    MaterialBuilder::PropertyList properties {false};
+    glslTools.findProperties(shaderCode, properties);
+    MaterialBuilder::PropertyList expected {false};
+    expected[size_t(MaterialBuilder::Property::SUBSURFACE_COLOR)] = true;
+    expected[size_t(MaterialBuilder::Property::AMBIENT_OCCLUSION)] = true;
+    expected[size_t(MaterialBuilder::Property::BASE_COLOR)] = true;
+    EXPECT_TRUE(PropertyListsMatch(expected, properties));
+}
+
 TEST_F(FilamatLite, StaticCodeAnalyzerEndOfShader) {
     utils::CString shaderCode(R"(
         void material(inout MaterialInputs material) {

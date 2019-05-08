@@ -34,13 +34,6 @@ public:
      *  2. The properties on "material" should be set directly, i.e., not passed via an inout qualifier
      *     to another function which sets properties (this only works if the argument to the
      *     function is also named "material").
-     *  3. The property access must not contain whitespace between tokens:
-     *
-     *  Correct:
-     *     material.baseColor = vec4(1.0, 0.0, 0.0, 1.0);
-     *
-     *  Incorrect:
-     *     material . baseColor = vec4(1.0, 0.0, 0.0, 1.0);
      */
     bool findProperties(const utils::CString& material,
             MaterialBuilder::PropertyList& properties) const noexcept;

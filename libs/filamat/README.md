@@ -183,9 +183,8 @@ The `filamat_lite` library is interchangeable with `filamat`, with a few caveats
 1. GLSL correctness is not checked.
 
 In addition, `filamat_lite` only performs a simple text match to determine which properties on the
-`MaterialInputs` structure are set. It does this by looking for instances of `material.`. Because of
-this, shaders must be careful with whitespace. The `material` input variable must also
-always be refered to by the name `material`.
+`MaterialInputs` structure are set. The `material` input variable must also always be refered to by
+the name `material`.
 
 ```
 void anotherFunction(inout MaterialInputs m) {
@@ -205,10 +204,6 @@ void material(inout MaterialInputs material) {
     // Good.
     material.roughness = materialParams.roughness;
     material.baseColor.rgb = vec3(1.0, 0.0, 1.0);
-
-    // Incorrect! While this line is technically correct GLSL code, the simple parser inside
-    // filamat_lite will not pick up the set to clearCoat due to the additional whitespace.
-    material . clearCoat  = 1.0;
 
     aFunction(material);
     anotherFunction(material);

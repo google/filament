@@ -29,6 +29,10 @@ static bool isVariableCharacter(char c) {
            (c == '_');
 }
 
+static bool isWhitespace(char c) {
+    return (c == ' ' || c == '\f' || c == '\n' || c == '\r' || c == '\t' || c == '\v');
+}
+
 static std::string stripComments(const std::string& code) {
     char* temp = (char*) malloc(code.size() + 1);
 
@@ -79,12 +83,28 @@ bool GLSLToolsLite::findProperties(const utils::CString& material,
 
     // Find all occurrences of "material.someProperty" in the shader string.
     size_t loc;
-    while ((loc = shaderCode.find("material.", start)) != std::string::npos) {
-        // Set start and end to the index of the first character after "material."
-        start = loc + 9;
-        end = start;
+    while ((loc = shaderCode.find("material", start)) != std::string::npos) {
+        // Set start to the index of the first character after "material"
+        start = loc + 8;
+
+        // Eat up any whitespace after "material"
+        while (start != shaderCode.length() && isWhitespace(shaderCode[start])) {
+            start++;
+        }
+
+        // If the next character isn't a '.', then this isn't a property set.
+        if (start == shaderCode.length() || shaderCode[start] != '.') {
+            continue;
+        }
+        start++;
+
+        // Eat up any whitespace after the '.'.
+        while (start != shaderCode.length() && isWhitespace(shaderCode[start])) {
+            start++;
+        }
 
         // Increment end until we reach a non-variable character.
+        end = start;
         while (end != shaderCode.length() && isVariableCharacter(shaderCode[end])) {
             end++;
         }
