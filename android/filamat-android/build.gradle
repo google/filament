@@ -65,6 +65,23 @@ android {
         }
     }
 
+    flavorDimensions "functionality"
+    productFlavors {
+        full {
+            dimension "functionality"
+        }
+
+        lite {
+            dimension "functionality"
+
+            externalNativeBuild {
+                cmake {
+                    arguments.add("-DFILAMAT_LITE=ON")
+                }
+            }
+        }
+    }
+
     externalNativeBuild {
         cmake {
             path "CMakeLists.txt"

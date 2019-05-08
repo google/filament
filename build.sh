@@ -395,7 +395,8 @@ function build_android {
 
         if [[ "$INSTALL_COMMAND" ]]; then
             echo "Installing out/filamat-android-debug.aar..."
-            cp build/outputs/aar/filamat-android-debug.aar ../../out/
+            cp build/outputs/aar/filamat-android-full-debug.aar ../../out/
+            cp build/outputs/aar/filamat-android-lite-debug.aar ../../out/
         fi
     fi
 
@@ -404,7 +405,8 @@ function build_android {
 
         if [[ "$INSTALL_COMMAND" ]]; then
             echo "Installing out/filamat-android-release.aar..."
-            cp build/outputs/aar/filamat-android-release.aar ../../out/
+            cp build/outputs/aar/filamat-android-full-release.aar ../../out/
+            cp build/outputs/aar/filamat-android-lite-release.aar ../../out/
         fi
     fi
 

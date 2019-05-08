@@ -4,6 +4,9 @@ Filamat allows for generating materials programatically on the device as opposed
 tool on the host machine. The cost is a binary size increase of your app due to the relatively
 larger size of the `filamat` library.
 
+For a smaller-sized library, see [`filamat_lite`](#filamat-lite). It has no dependencies on
+`glslang`, but can only compile materials for OpenGL and does no shader code optimization.
+
 The filamat package is included in the releases available on
 [GitHub](https://github.com/google/filament/releases).
 
@@ -170,3 +173,39 @@ material with Filament, pass the material package's data into a Filament Materia
 
 Note that this will require [linking against Filament's libraries](../../filament/README.md) in
 addition to Filamat's.
+
+## Filamat Lite
+
+The `filamat_lite` library is interchangeable with `filamat`, with a few caveats:
+
+1. Material compilation is only supported for the OpenGL backend.
+1. No shader-level optimization is performed.
+1. GLSL correctness is not checked.
+
+In addition, `filamat_lite` only performs a simple text match to determine which properties on the
+`MaterialInputs` structure are set. The `material` input variable must also always be refered to by
+the name `material`.
+
+```
+void anotherFunction(inout MaterialInputs m) {
+    // Incorrect! The MaterialInputs is being referred to by the name "m".
+    m.metallic = 0.0;
+}
+
+void aFunction(inout MaterialInputs material) {
+    // Works, but only because the variable name "material" is used.
+    material.reflectance = 0.5;
+}
+
+// The MaterialInputs variable must be named material.
+void material(inout MaterialInputs material) {
+    prepareMaterial(material);
+
+    // Good.
+    material.roughness = materialParams.roughness;
+    material.baseColor.rgb = vec3(1.0, 0.0, 1.0);
+
+    aFunction(material);
+    anotherFunction(material);
+}
+```
