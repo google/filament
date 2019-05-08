@@ -24,6 +24,7 @@
 #include "fg/FrameGraphResource.h"
 
 #include <backend/DriverEnums.h>
+#include <filament/View.h>
 
 namespace filament {
 
@@ -57,7 +58,8 @@ public:
             FrameGraph& fg, FrameGraphResource input) noexcept;
 
 
-    FrameGraphResource ssao(FrameGraph& fg, FrameGraphResource depth) noexcept;
+    FrameGraphResource ssao(FrameGraph& fg, FrameGraphResource depth,
+            View::SSAOOptions const& options) noexcept;
 
     backend::Handle<backend::HwTexture> getNoSSAOTexture() const {
         return mNoSSAOTexture;

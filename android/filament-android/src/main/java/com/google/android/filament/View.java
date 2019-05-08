@@ -32,6 +32,7 @@ public class View {
     private DynamicResolutionOptions mDynamicResolution;
     private RenderQuality mRenderQuality;
     private DepthPrepass mDepthPrepass = DepthPrepass.DEFAULT;
+    private SSAOOptions mSSAOOptions;
 
     public static class DynamicResolutionOptions {
         public boolean enabled = false;
@@ -44,6 +45,12 @@ public class View {
         public int history = 9;
     }
 
+    public static class SSAOOptions {
+        public float radius = 0.3f;
+        public float bias = 0.005f;
+        public float power = 0.0f;
+    }
+
     public enum QualityLevel {
         LOW,
         MEDIUM,
@@ -53,6 +60,11 @@ public class View {
 
     public static class RenderQuality {
         public QualityLevel hdrColorBuffer = QualityLevel.HIGH;
+    }
+
+    public enum SSAO {
+        NONE,
+        SSAO
     }
 
     public enum AntiAliasing {
@@ -252,6 +264,28 @@ public class View {
         nSetDynamicLightingOptions(getNativeObject(), zLightNear, zLightFar);
     }
 
+    public void setSSAO(@NonNull SSAO ssao) {
+        nSetSSAO(getNativeObject(), ssao.ordinal());
+    }
+
+    @NonNull
+    public SSAO getSSAO() {
+        return SSAO.values()[nGetSSAO(getNativeObject())];
+    }
+
+    public void setSSAOOptions(@NonNull SSAOOptions options) {
+        mSSAOOptions = options;
+        nSetSSAOOptions(getNativeObject(), options.radius, options.bias, options.power);
+    }
+
+    @NonNull
+    public SSAOOptions getSSAOOptions() {
+        if (mSSAOOptions == null) {
+            mSSAOOptions = new SSAOOptions();
+        }
+        return mSSAOOptions;
+    }
+
     long getNativeObject() {
         if (mNativeObject == 0) {
             throw new IllegalStateException("Calling method on destroyed View");
@@ -300,4 +334,7 @@ public class View {
     private static native boolean nIsPostProcessingEnabled(long nativeView);
     private static native void nSetFrontFaceWindingInverted(long nativeView, boolean inverted);
     private static native boolean nIsFrontFaceWindingInverted(long nativeView);
+    private static native void nSetSSAO(long nativeView, int ordinal);
+    private static native int nGetSSAO(long nativeView);
+    private static native void nSetSSAOOptions(long nativeView, float radius, float bias, float power);
 }

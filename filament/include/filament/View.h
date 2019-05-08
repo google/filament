@@ -140,6 +140,24 @@ public:
     };
 
     /**
+     * Options for Screen Space Ambient Occlusion (SSAO)
+     * @see setSSAO()
+     */
+    struct SSAOOptions {
+        float radius = 0.3f;    //!< SSAO radius in meters, between 0 and ~5.
+        float bias = 0.005f;    //!< Self-occlusion bias in meters. Use to avoid self-occlusion. Between 0 and a few mm.
+        float power = 0.0f;     //!< Controls ambient occlusion's contrast. Between 0 (linear) and 1 (squared)
+    };
+
+    /**
+     * List of available SSAO techniques
+    */
+    enum class SSAO : uint8_t {
+        NONE = 0,       //!< No SSAO
+        SSAO = 1        //!< Basic, sampling SSAO
+    };
+
+    /**
      * List of available post-processing anti-aliasing techniques.
      * @see setAntiAliasing, getAntiAliasing
      */
@@ -170,6 +188,34 @@ public:
         LINEAR = 0,     //!< Linear tone mapping (i.e. no tone mapping)
         ACES = 1,       //!< ACES tone mapping
     };
+
+    /**
+     * Activates or deactivates SSAO.
+     *
+     * @param ssao Type of SSAO to use.
+     */
+    void setSSAO(SSAO ssao) noexcept;
+
+    /**
+     * Query the type of SSAO active for this View.
+     *
+     * @return SSAO type.
+     */
+    SSAO getSSAO() const noexcept;
+
+    /**
+     * Sets SSAO options.
+     *
+     * @param options Options for SSAO.
+     */
+    void setSSAOOptions(SSAOOptions const& options) noexcept;
+
+    /**
+     * Gets the SSAO options.
+     *
+     * @return SSAO options currently set.
+     */
+    SSAOOptions const& getSSAOOptions() const noexcept;
 
     /**
      * Sets whether this view is rendered with or without a depth pre-pass.
