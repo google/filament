@@ -143,6 +143,50 @@ TEST_F(FilamatLite, StaticCodeAnalyzerEndOfShader) {
     EXPECT_TRUE(PropertyListsMatch(expected, properties));
 }
 
+TEST_F(FilamatLite, StaticCodeAnalyzerSlashComments) {
+    utils::CString shaderCode(R"(
+        void material(inout MaterialInputs material) {
+            prepareMaterial(material);
+            material.metallic = 1.0;
+            // material.baseColor = vec4(1.0); // material.baseColor = vec4(1.0);
+            // material.ambientOcclusion = vec3(1.0);
+            material.clearCoat = 0.5;
+            material.anisotropy = -1.0;
+        }
+    )");
+
+    GLSLToolsLite glslTools;
+    MaterialBuilder::PropertyList properties {false};
+    glslTools.findProperties(shaderCode, properties);
+    MaterialBuilder::PropertyList expected {false};
+    expected[size_t(MaterialBuilder::Property::METALLIC)] = true;
+    expected[size_t(MaterialBuilder::Property::CLEAR_COAT)] = true;
+    expected[size_t(MaterialBuilder::Property::ANISOTROPY)] = true;
+    EXPECT_TRUE(PropertyListsMatch(expected, properties));
+}
+
+TEST_F(FilamatLite, StaticCodeAnalyzerMultilineComments) {
+    utils::CString shaderCode(R"(
+        void material(inout MaterialInputs material) {
+            prepareMaterial(material);
+            material.metallic = 1.0;
+            /*
+            material.baseColor = vec4(1.0); // material.baseColor = vec4(1.0);
+            material.ambientOcclusion = vec3(1.0);
+            */
+            material.clearCoat = 0.5;
+        }
+    )");
+
+    GLSLToolsLite glslTools;
+    MaterialBuilder::PropertyList properties {false};
+    glslTools.findProperties(shaderCode, properties);
+    MaterialBuilder::PropertyList expected {false};
+    expected[size_t(MaterialBuilder::Property::METALLIC)] = true;
+    expected[size_t(MaterialBuilder::Property::CLEAR_COAT)] = true;
+    EXPECT_TRUE(PropertyListsMatch(expected, properties));
+}
+
 int main(int argc, char** argv) {
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();

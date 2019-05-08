@@ -184,7 +184,7 @@ The `filamat_lite` library is interchangeable with `filamat`, with a few caveats
 
 In addition, `filamat_lite` only performs a simple text match to determine which properties on the
 `MaterialInputs` structure are set. It does this by looking for instances of `material.`. Because of
-this, shaders must be careful with whitespace and comments. The `material` input variable must also
+this, shaders must be careful with whitespace. The `material` input variable must also
 always be refered to by the name `material`.
 
 ```
@@ -209,10 +209,6 @@ void material(inout MaterialInputs material) {
     // Incorrect! While this line is technically correct GLSL code, the simple parser inside
     // filamat_lite will not pick up the set to clearCoat due to the additional whitespace.
     material . clearCoat  = 1.0;
-
-    // Warning! The code is commented-out, but the parser still consideres the anisotropy
-    // parameter to be set. This may affect shader performance.
-    // material.anisotropy = 0.8;
 
     aFunction(material);
     anotherFunction(material);

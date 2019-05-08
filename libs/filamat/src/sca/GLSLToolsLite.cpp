@@ -29,9 +29,49 @@ static bool isVariableCharacter(char c) {
            (c == '_');
 }
 
+static std::string stripComments(const std::string& code) {
+    char* temp = (char*) malloc(code.size() + 1);
+
+    size_t r = 0;
+    bool insideSlashSlashComment = false, insideMultilineComment = false;
+
+    for (size_t loc = 0; loc < code.size(); loc++) {
+        char c = code[loc];
+        char lookahead = (loc + 1) < code.size() ? code[loc + 1] : 0;
+
+        // Handle slash slash comments.
+        if (!insideSlashSlashComment && c == '/' && lookahead == '/') {
+            insideSlashSlashComment = true;
+        }
+        if (insideSlashSlashComment && c == '\n') {
+            insideSlashSlashComment = false;
+        }
+
+        // Handle multiline comments.
+        if (!insideMultilineComment && c == '/' && lookahead == '*') {
+            insideMultilineComment = true;
+        }
+        if (insideMultilineComment && c == '*' && lookahead == '/') {
+            insideMultilineComment = false;
+        }
+
+        if (insideSlashSlashComment || insideMultilineComment) {
+            continue;
+        }
+
+        temp[r++] = c;
+    }
+
+    temp[r] = 0;
+    std::string result(temp);
+    free(temp);
+
+    return result;
+}
+
 bool GLSLToolsLite::findProperties(const utils::CString& material,
                     MaterialBuilder::PropertyList& properties) const noexcept {
-    const std::string shaderCode(material.c_str());
+    const std::string shaderCode = stripComments(material.c_str());
 
     size_t start = 0, end = 0;
 

@@ -41,8 +41,6 @@ public:
      *
      *  Incorrect:
      *     material . baseColor = vec4(1.0, 0.0, 0.0, 1.0);
-     *
-     * Also note that this method does not discount property sets that are inside commented-out code.
      */
     bool findProperties(const utils::CString& material,
             MaterialBuilder::PropertyList& properties) const noexcept;
