@@ -185,6 +185,10 @@ inline bool isPOT(size_t x) {
     return !(x & (x - 1));
 }
 
+float normalFiltering(float roughness, float variance, float threshold) {
+    return std::sqrt(roughness * roughness + std::min(2.0f * variance, threshold * threshold));
+}
+
 float solveVMF(const float2& pos, const size_t sampleCount, const float roughness,
         const LinearImage& normal) {
 
@@ -205,17 +209,19 @@ float solveVMF(const float2& pos, const size_t sampleCount, const float roughnes
     averageNormal /= (sampleCount * sampleCount);
 
     float r = length(averageNormal);
-    float kappa = 10000.0f;
+    float variance = 0.0f;
 
     if (r < 1.0f) {
-        kappa = (3.0f * r - r * r * r) / (1.0f - r * r);
+        float r2 = r * r;
+        float kappa = (3.0f * r - r * r2) / (1.0f - r2);
+        variance = 0.25f / kappa;
     }
 
     // See: Karis, 2018, "Normal map filtering using vMF (part 3)"
     // The original formulation in Neubelt et al. 2013,
     // "Crafting a Next-Gen Material Pipeline for The Order: 1886" contains an error
     // and defines alpha' = sqrt(alpha^2 + 1 / kappa)
-    return std::sqrt(roughness * roughness + (2.0f / kappa));
+    return normalFiltering(roughness, variance, 0.2f);
 }
 
 void prefilter(const LinearImage& normal, const size_t mipLevel, LinearImage& output) {

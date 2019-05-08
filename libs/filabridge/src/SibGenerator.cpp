@@ -35,6 +35,7 @@ SamplerInterfaceBlock const& SibGenerator::getPerViewSib() noexcept {
             .add("froxels",       Type::SAMPLER_2D,      Format::UINT,  Precision::MEDIUM)
             .add("iblDFG",        Type::SAMPLER_2D,      Format::FLOAT, Precision::MEDIUM)
             .add("iblSpecular",   Type::SAMPLER_CUBEMAP, Format::FLOAT, Precision::MEDIUM)
+            .add("ssao",          Type::SAMPLER_2D,      Format::FLOAT, Precision::MEDIUM)
             .build();
 
     assert(sib.getSize() == PerViewSib::SAMPLER_COUNT);

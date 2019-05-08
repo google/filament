@@ -169,7 +169,6 @@ Animator::Animator(FilamentAsset* publicAsset) {
         // Import each glTF channel into a custom data structure.
         cgltf_animation_channel* srcChannels = srcAnim.channels;
         dstAnim.channels.resize(srcAnim.channels_count);
-        auto& transformManager = *mImpl->transformManager;
         for (cgltf_size j = 0, nchans = srcAnim.channels_count; j < nchans; ++j) {
             const cgltf_animation_channel& srcChannel = srcChannels[j];
             utils::Entity targetEntity = asset->mNodeMap[srcChannel.target_node];

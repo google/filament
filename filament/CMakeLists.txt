@@ -126,6 +126,7 @@ set(MATERIAL_SRCS
         src/materials/defaultMaterial.mat
         src/materials/skybox.mat
         src/materials/skyboxRGBM.mat
+        src/materials/ssao.mat
 )
 
 # Embed the binary resource blob for materials.
@@ -339,3 +340,4 @@ install(FILES "README.md" DESTINATION .)
 add_subdirectory(backend)
 add_subdirectory(test)
 add_subdirectory(benchmark)
+add_subdirectory(tools)

@@ -21,7 +21,7 @@
 
 namespace gltfio {
 
-namespace details { class FFilamentAsset; }
+namespace details { struct FFilamentAsset; }
 
 struct AnimatorImpl;
 

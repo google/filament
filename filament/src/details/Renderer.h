@@ -29,6 +29,7 @@
 #include "private/backend/DriverApiForward.h"
 
 #include <filament/Renderer.h>
+#include <filament/View.h>
 
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
@@ -90,6 +91,9 @@ private:
 
     backend::Handle<backend::HwRenderTarget> getRenderTarget() const noexcept { return mRenderTarget; }
 
+    RenderPass::CommandTypeFlags getCommandType(View::DepthPrepass prepass) const noexcept;
+
+
     void recordHighWatermark(size_t watermark) noexcept {
         mCommandsHighWatermark = std::max(mCommandsHighWatermark, watermark);
     }
@@ -121,7 +125,7 @@ private:
     bool mIsRGB16FSupported : 1;
     bool mIsRGB8Supported : 1;
     Epoch mUserEpoch;
-    math::float4 mShaderUserTime;
+    math::float4 mShaderUserTime{};
 
     // per-frame arena for this Renderer
     LinearAllocatorArena& mPerRenderPassArena;

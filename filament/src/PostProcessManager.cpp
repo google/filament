@@ -20,6 +20,10 @@
 
 #include "fg/FrameGraph.h"
 
+#include "details/Material.h"
+#include "details/MaterialInstance.h"
+#include "generated/resources/materials.h"
+
 #include <private/filament/SibGenerator.h>
 
 #include <filament/MaterialEnums.h>
@@ -44,11 +48,30 @@ void PostProcessManager::init(FEngine& engine) noexcept {
             backend::BufferUsage::DYNAMIC);
     driver.bindSamplers(BindingPoints::POST_PROCESS, mPostProcessSbh);
     driver.bindUniformBuffer(BindingPoints::POST_PROCESS, mPostProcessUbh);
+
+    mNoSSAOTexture = driver.createTexture(SamplerType::SAMPLER_2D, 1,
+            TextureFormat::R8, 0, 1, 1, 1, TextureUsage::DEFAULT);
+
+
+    PixelBufferDescriptor data(driver.allocate(1), 1, PixelDataFormat::R, PixelDataType::UBYTE);
+    auto p = static_cast<uint8_t *>(data.buffer);
+    *p = 0xFFu;
+    driver.update2DImage(mNoSSAOTexture, 0, 0, 0, 1, 1, std::move(data));
+
+    mSSAOMaterial = upcast(Material::Builder().package(
+            MATERIALS_SSAO_DATA, MATERIALS_SSAO_SIZE).build(engine));
+
+    mSSAOMaterialInstance = mSSAOMaterial->getDefaultInstance();
+
+    mSSAOProgram = mSSAOMaterial->getProgram(0);
 }
 
 void PostProcessManager::terminate(backend::DriverApi& driver) noexcept {
+    FEngine* const pEngine = mEngine;
     driver.destroySamplerGroup(mPostProcessSbh);
     driver.destroyUniformBuffer(mPostProcessUbh);
+    driver.destroyTexture(mNoSSAOTexture);
+    pEngine->destroy(mSSAOMaterial);
 }
 
 void PostProcessManager::setSource(uint32_t viewportWidth, uint32_t viewportHeight,
@@ -261,5 +284,54 @@ FrameGraphResource PostProcessManager::dynamicScaling(FrameGraph& fg,
     return ppScaling.getData().output;
 }
 
+
+FrameGraphResource PostProcessManager::ssao(FrameGraph& fg, FrameGraphResource depth) noexcept {
+
+    FEngine* engine = mEngine;
+    Handle<HwRenderPrimitive> fullScreenRenderPrimitive = engine->getFullScreenRenderPrimitive();
+
+    struct SSAOPassData {
+        FrameGraphResource depth;
+        FrameGraphResource ssao;
+    };
+
+    auto& SSAODepthPass = fg.addPass<SSAOPassData>("SSAO Pass",
+            [depth](FrameGraph::Builder& builder, SSAOPassData& data) {
+
+                auto const& desc = builder.getDescriptor(depth);
+                data.depth = builder.read(depth);
+
+                data.ssao = builder.createTexture("SSAO Buffer", {
+                        .width = desc.width, .height = desc.height,
+                        .format = TextureFormat::R8 });
+
+                data.ssao = builder.useRenderTarget("SSAO Target",
+                        { .attachments.color = data.ssao }, TargetBufferFlags::NONE).color;
+            },
+            [this, fullScreenRenderPrimitive](FrameGraphPassResources const& resources,
+                    SSAOPassData const& data, DriverApi& driver) {
+                auto depth = resources.getTexture(data.depth);
+                auto ssao = resources.getRenderTarget(data.ssao);
+
+                SamplerParams params;
+                FMaterialInstance* const pInstance = mSSAOMaterialInstance;
+                pInstance->setParameter("depth", depth, params);
+                pInstance->setParameter("radius", mEngine->debug.ssao.radius);
+                pInstance->setParameter("bias", mEngine->debug.ssao.bias);
+                pInstance->setParameter("power", mEngine->debug.ssao.power);
+                pInstance->commit(driver);
+                pInstance->use(driver);
+
+                PipelineState pipeline;
+                pipeline.program = mSSAOProgram;
+                pipeline.rasterState = mSSAOMaterial->getRasterState();
+
+                driver.beginRenderPass(ssao.target, ssao.params);
+                driver.draw(pipeline, fullScreenRenderPrimitive);
+                driver.endRenderPass();
+            });
+
+    return SSAODepthPass.getData().ssao;
+}
 
 } // namespace filament

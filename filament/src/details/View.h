@@ -121,8 +121,9 @@ public:
     void prepareCamera(const CameraInfo& camera, const Viewport& viewport) const noexcept;
     void prepareShadowing(FEngine& engine, backend::DriverApi& driver,
             FScene::RenderableSoa& renderableData, FScene::LightSoa const& lightData) noexcept;
-    void prepareLighting(
-            FEngine& engine, FEngine::DriverApi& driver, ArenaScope& arena, Viewport const& viewport) noexcept;
+    void prepareLighting(FEngine& engine, FEngine::DriverApi& driver,
+            ArenaScope& arena, Viewport const& viewport) noexcept;
+    void prepareSSAO(backend::Handle<backend::HwTexture> ssao) const noexcept;
     void froxelize(FEngine& engine) const noexcept;
     void commitUniforms(backend::DriverApi& driver) const noexcept;
     void commitFroxels(backend::DriverApi& driverApi) const noexcept;

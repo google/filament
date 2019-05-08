@@ -19,6 +19,7 @@
 
 #include "MetalBlitter.h"
 #include "MetalBufferPool.h"
+#include "MetalDefines.h"
 #include "MetalResourceTracker.h"
 #include "MetalState.h"
 
@@ -83,6 +84,12 @@ struct MetalContext {
     CVMetalTextureCacheRef textureCache = nullptr;
 
     MetalBlitter* blitter = nullptr;
+
+    // Fences.
+#if METAL_FENCES_SUPPORTED
+    MTLSharedEventListener* eventListener = nil;
+    uint64_t signalId = 1;
+#endif
 };
 
 // Acquire the current surface's CAMetalDrawable for the current frame if it has not already been

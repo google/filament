@@ -626,6 +626,12 @@ void FView::prepareCamera(const CameraInfo& camera, const filament::Viewport& vi
     u.setUniform(offsetof(PerViewUib, cameraPosition), float3{camera.getPosition()});
 }
 
+void FView::prepareSSAO(Handle<HwTexture> ssao) const noexcept {
+    SamplerParams params;
+    params.filterMag = SamplerMagFilter::LINEAR;
+    mPerViewSb.setSampler(PerViewSib::SSAO, ssao, params);
+}
+
 void FView::froxelize(FEngine& engine) const noexcept {
     SYSTRACE_CALL();
 

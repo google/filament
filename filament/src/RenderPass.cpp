@@ -66,7 +66,7 @@ void RenderPass::overridePolygonOffset(backend::PolygonOffset* polygonOffset) no
     }
 }
 
-void RenderPass::generateSortedCommands(CommandTypeFlags const commandTypeFlags) noexcept {
+RenderPass::Command const* RenderPass::appendSortedCommands(CommandTypeFlags const commandTypeFlags) noexcept {
     SYSTRACE_CONTEXT();
 
     FEngine& engine = mEngine;
@@ -117,20 +117,20 @@ void RenderPass::generateSortedCommands(CommandTypeFlags const commandTypeFlags)
 
     { // sort all commands
         SYSTRACE_NAME("sort commands");
-        std::sort(commands.begin(), commands.end());
+        std::sort(curr, commands.end());
     }
 
     mCommandsHighWatermark = std::max(mCommandsHighWatermark, size_t(commands.size()));
 
-
-
     // find the last command
-    Command const* const last = std::partition_point(commands.begin(), commands.end(),
+    Command const* const last = std::partition_point(curr, commands.end(),
             [](Command const& c) {
                 return ((c.key & PASS_MASK) >> PASS_SHIFT) != 0xFF;
             });
 
     commands.resize(uint32_t(last - commands.begin()));
+
+    return commands.end();
 }
 
 void RenderPass::execute(const char* name,
@@ -286,6 +286,10 @@ void RenderPass::generateCommands(uint32_t commandTypeFlags, Command* const comm
         default: // squash IDE warning -- should never happen.
         case CommandTypeFlags::COLOR:
             generateCommandsImpl<CommandTypeFlags::COLOR>(commandTypeFlags, curr,
+                    soa, range, renderFlags, cameraPosition, cameraForward);
+            break;
+        case CommandTypeFlags::DEPTH:
+            generateCommandsImpl<CommandTypeFlags::DEPTH>(commandTypeFlags, curr,
                     soa, range, renderFlags, cameraPosition, cameraForward);
             break;
         case CommandTypeFlags::DEPTH_AND_COLOR:

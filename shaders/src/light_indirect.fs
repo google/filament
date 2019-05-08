@@ -315,7 +315,7 @@ void isEvaluateClearCoatIBL(const PixelParams pixel, float specularAO, inout vec
  * Computes a specular occlusion term from the ambient occlusion term.
  */
 float computeSpecularAO(float NoV, float ao, float roughness) {
-#if defined(IBL_SPECULAR_OCCLUSION) && defined(MATERIAL_HAS_AMBIENT_OCCLUSION)
+#if defined(IBL_SPECULAR_OCCLUSION)
     return saturate(pow(NoV + ao, exp2(-16.0 * roughness - 1.0)) - 1.0 + ao);
 #else
     return 1.0;
@@ -362,12 +362,18 @@ void evaluateSubsurfaceIBL(const PixelParams pixel, const vec3 diffuseIrradiance
 #endif
 }
 
+float evaluateSSAO() {
+    vec2 uv = gl_FragCoord.xy * frameUniforms.resolution.zw;
+    return texture(light_ssao, uv, 0.0).r;
+}
+
 void evaluateIBL(const MaterialInputs material, const PixelParams pixel, inout vec3 color) {
     // Apply transform here if we wanted to rotate the IBL
     vec3 n = shading_normal;
     vec3 r = getReflectedVector(pixel, n);
 
-    float ao = material.ambientOcclusion;
+    float ssao = evaluateSSAO();
+    float ao = min(material.ambientOcclusion, ssao);
     float specularAO = computeSpecularAO(shading_NoV, ao, pixel.roughness);
 
     // diffuse indirect
