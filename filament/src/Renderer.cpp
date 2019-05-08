@@ -59,9 +59,6 @@ FRenderer::FRenderer(FEngine& engine) :
 {
     FDebugRegistry& debugRegistry = engine.getDebugRegistry();
     debugRegistry.registerProperty("d.ssao.enabled", &engine.debug.ssao.enabled);
-    debugRegistry.registerProperty("d.ssao.radius", &engine.debug.ssao.radius);
-    debugRegistry.registerProperty("d.ssao.bias", &engine.debug.ssao.bias);
-    debugRegistry.registerProperty("d.ssao.power", &engine.debug.ssao.power);
 }
 
 void FRenderer::init() noexcept {
@@ -260,15 +257,19 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 
     RenderPass::CommandTypeFlags commandType = getCommandType(view.getDepthPrepass());
 
-    bool USE_SSAO = engine.debug.ssao.enabled;
+    // It's unclear if it's always better to reuse the depth pass, as it has to be saved and
+    // reloaded from memory -- as opposed to just regenerating it. Skinning is not an added concern,
+    // because either way, we have to go through the geometry twice.
     constexpr bool REUSE_SSAO_DEPTH = true;
+
+    const bool useSSAO = view.getSSAO() != View::SSAO::NONE;
     Command const* depthPassBegin = nullptr;
     Command const* depthPassEnd = nullptr;
     Command const* colorPassBegin = nullptr;
     Command const* colorPassEnd = nullptr;
 
-    const bool sharedDepthBuffer = USE_SSAO && REUSE_SSAO_DEPTH && msaa <= 1;
-    if (USE_SSAO && commandType == RenderPass::CommandTypeFlags::COLOR) {
+    const bool sharedDepthBuffer = useSSAO && REUSE_SSAO_DEPTH && msaa <= 1;
+    if (useSSAO && commandType == RenderPass::CommandTypeFlags::COLOR) {
         // We don't have a depth prepass, so we need to generate the depth for the SSAO pass
         depthPassBegin = commands.end();
         depthPassEnd = pass.appendSortedCommands(RenderPass::CommandTypeFlags::DEPTH);
@@ -278,7 +279,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     colorPassBegin = commands.end();
     colorPassEnd = pass.appendSortedCommands(commandType);
 
-    if (USE_SSAO && commandType == RenderPass::CommandTypeFlags::DEPTH_AND_COLOR) {
+    if (useSSAO && commandType == RenderPass::CommandTypeFlags::DEPTH_AND_COLOR) {
         // We have a depth prepass, isolate the depth-only commands
         depthPassBegin = commands.begin();
         depthPassEnd = std::partition_point(commands.begin(), commands.end(),
@@ -321,7 +322,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     FrameGraphResource depth = ssaoDepthPass.getData().depth;
 
     // SSAO pass -- automatically culled if not used
-    FrameGraphResource ssao = ppm.ssao(fg, depth);
+    FrameGraphResource ssao = ppm.ssao(fg, depth, view.getSSAOOptions());
 
     // --------------------------------------------------------------------------------------------
 
@@ -338,10 +339,10 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     };
 
     auto& colorPass = fg.addPass<ColorPassData>("Color Pass",
-            [&svp, hdrFormat, colorPassNeedsDepthBuffer, msaa, clearFlags, depth, USE_SSAO, ssao, sharedDepthBuffer]
+            [&svp, hdrFormat, colorPassNeedsDepthBuffer, msaa, clearFlags, depth, useSSAO, ssao, sharedDepthBuffer]
             (FrameGraph::Builder& builder, ColorPassData& data) {
 
-                if (USE_SSAO) {
+                if (useSSAO) {
                     data.ssao = builder.read(ssao);
                 }
 

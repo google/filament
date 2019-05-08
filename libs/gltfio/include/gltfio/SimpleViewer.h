@@ -143,6 +143,7 @@ private:
     bool mEnablePrepass = true;
     bool mEnableFxaa = true;
     bool mEnableMsaa = true;
+    bool mEnableSsao = true;
     int mSidebarWidth = INITIAL_SIDEBAR_WIDTH;
 };
 
@@ -349,6 +350,7 @@ void SimpleViewer::updateUserInterface() {
         ImGui::Checkbox("Depth prepass", &mEnablePrepass);
         ImGui::Checkbox("FXAA", &mEnableFxaa);
         ImGui::Checkbox("MSAA 4x", &mEnableMsaa);
+        ImGui::Checkbox("SSAO", &mEnableSsao);
     }
 
     mView->setDepthPrepass(
@@ -356,6 +358,7 @@ void SimpleViewer::updateUserInterface() {
     mView->setDithering(mEnableDithering ? View::Dithering::TEMPORAL : View::Dithering::NONE);
     mView->setAntiAliasing(mEnableFxaa ? View::AntiAliasing::FXAA : View::AntiAliasing::NONE);
     mView->setSampleCount(mEnableMsaa ? 4 : 1);
+    mView->setSSAO(mEnableSsao ? View::SSAO::SSAO : View::SSAO::NONE);
 
     if (ImGui::CollapsingHeader("Light", ImGuiTreeNodeFlags_DefaultOpen)) {
         ImGui::SliderFloat("IBL intensity", &mIblIntensity, 0.0f, 100000.0f);

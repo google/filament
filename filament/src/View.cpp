@@ -41,6 +41,7 @@
 
 #include <memory>
 
+
 using namespace filament::math;
 using namespace utils;
 
@@ -919,6 +920,22 @@ void View::setDepthPrepass(View::DepthPrepass prepass) noexcept {
 
 void View::setDynamicLightingOptions(float zLightNear, float zLightFar) noexcept {
     upcast(this)->setDynamicLightingOptions(zLightNear, zLightFar);
+}
+
+void View::setSSAO(View::SSAO ssao) noexcept {
+    upcast(this)->setSSAO(ssao);
+}
+
+View::SSAO View::getSSAO() const noexcept {
+    return upcast(this)->getSSAO();
+}
+
+void View::setSSAOOptions(View::SSAOOptions const& options) noexcept {
+    upcast(this)->setSSAOOptions(options);
+}
+
+View::SSAOOptions const& View::getSSAOOptions() const noexcept {
+    return upcast(this)->getSSAOOptions();
 }
 
 

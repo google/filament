@@ -39,6 +39,8 @@
 #include <utils/Slice.h>
 #include <utils/Range.h>
 
+#include <math/scalar.h>
+
 #include <array>
 
 namespace utils {
@@ -225,6 +227,25 @@ public:
         return mDepthPrepass;
     }
 
+    void setSSAO(SSAO ssao) noexcept {
+        mSSAOType = ssao;
+    }
+
+    SSAO getSSAO() const noexcept {
+        return mSSAOType;
+    }
+
+    void setSSAOOptions(SSAOOptions const& options) noexcept {
+        mSSAOOptions = options;
+        mSSAOOptions.radius = math::clamp(0.0f, 10.0f, mSSAOOptions.radius);
+        mSSAOOptions.bias = math::clamp(0.0f, 0.1f, mSSAOOptions.bias);
+        mSSAOOptions.power = math::clamp(0.0f, 1.0f, mSSAOOptions.power);
+    }
+
+    SSAOOptions const& getSSAOOptions() const noexcept {
+        return mSSAOOptions;
+    }
+
     Range const& getVisibleRenderables() const noexcept {
         return mVisibleRenderables;
     }
@@ -311,6 +332,8 @@ private:
     bool mShadowingEnabled = true;
     bool mHasPostProcessPass = true;
     DepthPrepass mDepthPrepass = DepthPrepass::DEFAULT;
+    SSAO mSSAOType = SSAO::NONE;
+    SSAOOptions mSSAOOptions{};
 
     using duration = std::chrono::duration<float, std::milli>;
     DynamicResolutionOptions mDynamicResolution;

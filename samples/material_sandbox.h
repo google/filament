@@ -22,6 +22,7 @@
 #include <filament/LightManager.h>
 #include <filament/Material.h>
 #include <filament/MaterialInstance.h>
+#include <filament/View.h>
 
 #include <utils/Entity.h>
 #include <utils/EntityManager.h>
@@ -89,6 +90,8 @@ struct SandboxParameters {
     float constantBias = 0.001;
     float polygonOffsetConstant = 0.5;
     float polygonOffsetSlope = 2.0;
+    bool ssao = false;
+    filament::View::SSAOOptions ssaoOptions;
 };
 
 inline void createInstances(SandboxParameters& params, filament::Engine& engine) {

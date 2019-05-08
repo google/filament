@@ -285,7 +285,8 @@ FrameGraphResource PostProcessManager::dynamicScaling(FrameGraph& fg,
 }
 
 
-FrameGraphResource PostProcessManager::ssao(FrameGraph& fg, FrameGraphResource depth) noexcept {
+FrameGraphResource PostProcessManager::ssao(FrameGraph& fg, FrameGraphResource depth,
+        View::SSAOOptions const& options) noexcept {
 
     FEngine* engine = mEngine;
     Handle<HwRenderPrimitive> fullScreenRenderPrimitive = engine->getFullScreenRenderPrimitive();
@@ -293,10 +294,13 @@ FrameGraphResource PostProcessManager::ssao(FrameGraph& fg, FrameGraphResource d
     struct SSAOPassData {
         FrameGraphResource depth;
         FrameGraphResource ssao;
+        View::SSAOOptions options;
     };
 
     auto& SSAODepthPass = fg.addPass<SSAOPassData>("SSAO Pass",
-            [depth](FrameGraph::Builder& builder, SSAOPassData& data) {
+            [depth, &options](FrameGraph::Builder& builder, SSAOPassData& data) {
+
+                data.options = options;
 
                 auto const& desc = builder.getDescriptor(depth);
                 data.depth = builder.read(depth);
@@ -316,9 +320,9 @@ FrameGraphResource PostProcessManager::ssao(FrameGraph& fg, FrameGraphResource d
                 SamplerParams params;
                 FMaterialInstance* const pInstance = mSSAOMaterialInstance;
                 pInstance->setParameter("depth", depth, params);
-                pInstance->setParameter("radius", mEngine->debug.ssao.radius);
-                pInstance->setParameter("bias", mEngine->debug.ssao.bias);
-                pInstance->setParameter("power", mEngine->debug.ssao.power);
+                pInstance->setParameter("radius", data.options.radius);
+                pInstance->setParameter("bias", data.options.bias);
+                pInstance->setParameter("power", data.options.power);
                 pInstance->commit(driver);
                 pInstance->use(driver);
 

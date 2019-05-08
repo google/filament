@@ -329,10 +329,10 @@ static void gui(filament::Engine* engine, filament::View*) {
             ImGuiExt::DirectionWidget("direction", &params.lightDirection.x);
             if (ImGui::CollapsingHeader("SSAO")) {
                 DebugRegistry& debug = engine->getDebugRegistry();
-                ImGui::Checkbox("enabled###ssao", debug.getPropertyAddress<bool>("d.ssao.enabled"));
-                ImGui::SliderFloat("radius", debug.getPropertyAddress<float>("d.ssao.radius"), 0.1f, 10.0f);
-                ImGui::SliderFloat("bias", debug.getPropertyAddress<float>("d.ssao.bias"), 0.0f, 0.1f);
-                ImGui::SliderFloat("power", debug.getPropertyAddress<float>("d.ssao.power"), 0.0f, 1.0f);
+                ImGui::Checkbox("enabled###ssao", &params.ssao);
+                ImGui::SliderFloat("radius", &params.ssaoOptions.radius, 0.05f, 5.0f);
+                ImGui::SliderFloat("bias", &params.ssaoOptions.bias, 0.0f, 0.1f);
+                ImGui::SliderFloat("power", &params.ssaoOptions.power, 0.0f, 1.0f);
             }
         }
 
@@ -426,6 +426,8 @@ static void preRender(filament::Engine*, filament::View* view, filament::Scene*,
     view->setToneMapping(g_params.tonemapping ? View::ToneMapping::ACES : View::ToneMapping::LINEAR);
     view->setDithering(g_params.dithering ? View::Dithering::TEMPORAL : View::Dithering::NONE);
     view->setSampleCount((uint8_t) (g_params.msaa ? 4 : 1));
+    view->setSSAO(g_params.ssao ? View::SSAO::SSAO : View::SSAO::NONE);
+    view->setSSAOOptions(g_params.ssaoOptions);
 }
 
 int main(int argc, char* argv[]) {

@@ -219,3 +219,23 @@ Java_com_google_android_filament_View_nIsFrontFaceWindingInverted(JNIEnv*,
     View* view = (View*) nativeView;
     return static_cast<jboolean>(view->isFrontFaceWindingInverted());
 }
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_View_nSetSSAO(JNIEnv*, jclass, jlong nativeView, jint ordinal) {
+    View* view = (View*) nativeView;
+    view->setSSAO((View::SSAO)ordinal);
+}
+
+extern "C" JNIEXPORT jint JNICALL
+Java_com_google_android_filament_View_nGetSSAO(JNIEnv*, jclass, jlong nativeView) {
+    View* view = (View*) nativeView;
+    return (jint)view->getSSAO();
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_View_nSetSSAOOptions(JNIEnv*, jclass,
+    jlong nativeView, jfloat radius, jfloat bias, jfloat power) {
+    View* view = (View*) nativeView;
+    View::SSAOOptions options = { .radius = radius, .bias = bias, .power = power};
+    view->setSSAOOptions(options);
+}
