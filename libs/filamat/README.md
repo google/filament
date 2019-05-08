@@ -4,7 +4,7 @@ Filamat allows for generating materials programatically on the device as opposed
 tool on the host machine. The cost is a binary size increase of your app due to the relatively
 larger size of the `filamat` library.
 
-For a smaller-sized library, see [`filamat_lite`](#filamat-lite). It has no no dependencies on
+For a smaller-sized library, see [`filamat_lite`](#filamat-lite). It has no dependencies on
 `glslang`, but can only compile materials for OpenGL and does no shader code optimization.
 
 The filamat package is included in the releases available on
