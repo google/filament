@@ -262,7 +262,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     // because either way, we have to go through the geometry twice.
     constexpr bool REUSE_SSAO_DEPTH = true;
 
-    const bool useSSAO = view.getSSAO() != View::SSAO::NONE;
+    const bool useSSAO = view.getAmbientOcclusion() != View::AmbientOcclusion::NONE;
     Command const* depthPassBegin = nullptr;
     Command const* depthPassEnd = nullptr;
     Command const* colorPassBegin = nullptr;
@@ -322,7 +322,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     FrameGraphResource depth = ssaoDepthPass.getData().depth;
 
     // SSAO pass -- automatically culled if not used
-    FrameGraphResource ssao = ppm.ssao(fg, depth, view.getSSAOOptions());
+    FrameGraphResource ssao = ppm.ssao(fg, depth, view.getAmbientOcclusionOptions());
 
     // --------------------------------------------------------------------------------------------
 

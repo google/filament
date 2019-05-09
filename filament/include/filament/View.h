@@ -140,20 +140,20 @@ public:
     };
 
     /**
-     * Options for Screen Space Ambient Occlusion (SSAO)
-     * @see setSSAO()
+     * Options for Ambient Occlusion
+     * @see setAmbientOcclusion()
      */
-    struct SSAOOptions {
-        float radius = 0.3f;    //!< SSAO radius in meters, between 0 and ~5.
+    struct AmbientOcclusionOptions {
+        float radius = 0.3f;    //!< Ambient Occlusion radius in meters, between 0 and ~10.
         float bias = 0.005f;    //!< Self-occlusion bias in meters. Use to avoid self-occlusion. Between 0 and a few mm.
         float power = 0.0f;     //!< Controls ambient occlusion's contrast. Between 0 (linear) and 1 (squared)
     };
 
     /**
-     * List of available SSAO techniques
+     * List of available ambient occlusion techniques
     */
-    enum class SSAO : uint8_t {
-        NONE = 0,       //!< No SSAO
+    enum class AmbientOcclusion : uint8_t {
+        NONE = 0,       //!< No Ambient Occlusion
         SSAO = 1        //!< Basic, sampling SSAO
     };
 
@@ -190,32 +190,32 @@ public:
     };
 
     /**
-     * Activates or deactivates SSAO.
+     * Activates or deactivates ambient occlusion.
      *
-     * @param ssao Type of SSAO to use.
+     * @param ambientOcclusion Type of ambient occlusion to use.
      */
-    void setSSAO(SSAO ssao) noexcept;
+    void setAmbientOcclusion(AmbientOcclusion ambientOcclusion) noexcept;
 
     /**
-     * Query the type of SSAO active for this View.
+     * Query the type of ambient occlusion active for this View.
      *
-     * @return SSAO type.
+     * @return ambient occlusion type.
      */
-    SSAO getSSAO() const noexcept;
+    AmbientOcclusion getAmbientOcclusion() const noexcept;
 
     /**
-     * Sets SSAO options.
+     * Sets ambient occlusion options.
      *
-     * @param options Options for SSAO.
+     * @param options Options for ambient occlusion.
      */
-    void setSSAOOptions(SSAOOptions const& options) noexcept;
+    void setAmbientOcclusionOptions(AmbientOcclusionOptions const& options) noexcept;
 
     /**
-     * Gets the SSAO options.
+     * Gets the ambient occlusion options.
      *
-     * @return SSAO options currently set.
+     * @return ambient occlusion options currently set.
      */
-    SSAOOptions const& getSSAOOptions() const noexcept;
+    AmbientOcclusionOptions const& getAmbientOcclusionOptions() const noexcept;
 
     /**
      * Sets whether this view is rendered with or without a depth pre-pass.

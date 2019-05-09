@@ -286,7 +286,7 @@ FrameGraphResource PostProcessManager::dynamicScaling(FrameGraph& fg,
 
 
 FrameGraphResource PostProcessManager::ssao(FrameGraph& fg, FrameGraphResource depth,
-        View::SSAOOptions const& options) noexcept {
+        View::AmbientOcclusionOptions const& options) noexcept {
 
     FEngine* engine = mEngine;
     Handle<HwRenderPrimitive> fullScreenRenderPrimitive = engine->getFullScreenRenderPrimitive();
@@ -294,7 +294,7 @@ FrameGraphResource PostProcessManager::ssao(FrameGraph& fg, FrameGraphResource d
     struct SSAOPassData {
         FrameGraphResource depth;
         FrameGraphResource ssao;
-        View::SSAOOptions options;
+        View::AmbientOcclusionOptions options;
     };
 
     auto& SSAODepthPass = fg.addPass<SSAOPassData>("SSAO Pass",
