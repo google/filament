@@ -32,6 +32,7 @@ public class View {
     private DynamicResolutionOptions mDynamicResolution;
     private RenderQuality mRenderQuality;
     private DepthPrepass mDepthPrepass = DepthPrepass.DEFAULT;
+    private AmbientOcclusionOptions mAmbientOcclusionOptions;
 
     public static class DynamicResolutionOptions {
         public boolean enabled = false;
@@ -44,6 +45,12 @@ public class View {
         public int history = 9;
     }
 
+    public static class AmbientOcclusionOptions {
+        public float radius = 0.3f;
+        public float bias = 0.005f;
+        public float power = 0.0f;
+    }
+
     public enum QualityLevel {
         LOW,
         MEDIUM,
@@ -53,6 +60,11 @@ public class View {
 
     public static class RenderQuality {
         public QualityLevel hdrColorBuffer = QualityLevel.HIGH;
+    }
+
+    public enum AmbientOcclusion {
+        NONE,
+        SSAO
     }
 
     public enum AntiAliasing {
@@ -252,6 +264,28 @@ public class View {
         nSetDynamicLightingOptions(getNativeObject(), zLightNear, zLightFar);
     }
 
+    public void setAmbientOcclusion(@NonNull AmbientOcclusion ao) {
+        nSetAmbientOcclusion(getNativeObject(), ao.ordinal());
+    }
+
+    @NonNull
+    public AmbientOcclusion getAmbientOcclusion() {
+        return AmbientOcclusion.values()[nGetAmbientOcclusion(getNativeObject())];
+    }
+
+    public void setAmbientOcclusionOptions(@NonNull AmbientOcclusionOptions options) {
+        mAmbientOcclusionOptions = options;
+        nSetAmbientOcclusionOptions(getNativeObject(), options.radius, options.bias, options.power);
+    }
+
+    @NonNull
+    public AmbientOcclusionOptions getAmbientOcclusionOptions() {
+        if (mAmbientOcclusionOptions == null) {
+            mAmbientOcclusionOptions = new AmbientOcclusionOptions();
+        }
+        return mAmbientOcclusionOptions;
+    }
+
     long getNativeObject() {
         if (mNativeObject == 0) {
             throw new IllegalStateException("Calling method on destroyed View");
@@ -300,4 +334,7 @@ public class View {
     private static native boolean nIsPostProcessingEnabled(long nativeView);
     private static native void nSetFrontFaceWindingInverted(long nativeView, boolean inverted);
     private static native boolean nIsFrontFaceWindingInverted(long nativeView);
+    private static native void nSetAmbientOcclusion(long nativeView, int ordinal);
+    private static native int nGetAmbientOcclusion(long nativeView);
+    private static native void nSetAmbientOcclusionOptions(long nativeView, float radius, float bias, float power);
 }

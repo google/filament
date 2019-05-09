@@ -140,6 +140,24 @@ public:
     };
 
     /**
+     * Options for Ambient Occlusion
+     * @see setAmbientOcclusion()
+     */
+    struct AmbientOcclusionOptions {
+        float radius = 0.3f;    //!< Ambient Occlusion radius in meters, between 0 and ~10.
+        float bias = 0.005f;    //!< Self-occlusion bias in meters. Use to avoid self-occlusion. Between 0 and a few mm.
+        float power = 0.0f;     //!< Controls ambient occlusion's contrast. Between 0 (linear) and 1 (squared)
+    };
+
+    /**
+     * List of available ambient occlusion techniques
+    */
+    enum class AmbientOcclusion : uint8_t {
+        NONE = 0,       //!< No Ambient Occlusion
+        SSAO = 1        //!< Basic, sampling SSAO
+    };
+
+    /**
      * List of available post-processing anti-aliasing techniques.
      * @see setAntiAliasing, getAntiAliasing
      */
@@ -170,6 +188,34 @@ public:
         LINEAR = 0,     //!< Linear tone mapping (i.e. no tone mapping)
         ACES = 1,       //!< ACES tone mapping
     };
+
+    /**
+     * Activates or deactivates ambient occlusion.
+     *
+     * @param ambientOcclusion Type of ambient occlusion to use.
+     */
+    void setAmbientOcclusion(AmbientOcclusion ambientOcclusion) noexcept;
+
+    /**
+     * Query the type of ambient occlusion active for this View.
+     *
+     * @return ambient occlusion type.
+     */
+    AmbientOcclusion getAmbientOcclusion() const noexcept;
+
+    /**
+     * Sets ambient occlusion options.
+     *
+     * @param options Options for ambient occlusion.
+     */
+    void setAmbientOcclusionOptions(AmbientOcclusionOptions const& options) noexcept;
+
+    /**
+     * Gets the ambient occlusion options.
+     *
+     * @return ambient occlusion options currently set.
+     */
+    AmbientOcclusionOptions const& getAmbientOcclusionOptions() const noexcept;
 
     /**
      * Sets whether this view is rendered with or without a depth pre-pass.
