@@ -13,6 +13,7 @@ set(PUBLIC_HDRS
         include/gltfio/MaterialProvider.h
         include/gltfio/AssetPipeline.h
         include/gltfio/ResourceLoader.h
+        include/gltfio/SimpleCamera.h
         include/gltfio/SimpleViewer.h
         include/gltfio/FilamentAsset.h
 )
@@ -107,9 +108,21 @@ add_custom_command(OUTPUT ${DUMMY_SRC} COMMAND echo "//" > ${DUMMY_SRC})
 add_library(gltfio_resources ${DUMMY_SRC} ${RESGEN_SOURCE})
 
 # ==================================================================================================
+# Check if embree is available.
+# This is an optional dependency and can be installed with homebrew, apt-get, etc.
+# ==================================================================================================
+
+find_package(embree 3.0)
+if (embree_FOUND)
+    message("Found embree in ${embree_DIR}")
+    add_definitions(-DFILAMENT_HAS_EMBREE)
+endif()
+
+# ==================================================================================================
 # Build the "core" library (no filamat or pipeline)
 # ==================================================================================================
-include_directories(${PUBLIC_HDR_DIR} ${RESOURCE_DIR})
+
+include_directories(${PUBLIC_HDR_DIR} ${RESOURCE_DIR} ${EMBREE_INCLUDE_DIRS})
 link_libraries(math utils filament cgltf stb geometry gltfio_resources)
 
 add_library(gltfio_core STATIC ${PUBLIC_HDRS} ${SRCS})
@@ -123,8 +136,15 @@ if (NOT WEBGL AND NOT ANDROID AND NOT IOS)
     # ==================================================================================================
     add_library(${TARGET} STATIC ${PUBLIC_HDRS}
         src/MaterialGenerator.cpp
-        src/AssetPipeline.cpp)
-    target_link_libraries(${TARGET} PUBLIC filamat xatlas meshoptimizer gltfio_core)
+        src/AssetPipeline.cpp
+        src/PathTracer.cpp
+        src/PathTracer.h)
+    target_link_libraries(${TARGET} PUBLIC
+        filamat
+        xatlas
+        meshoptimizer
+        gltfio_core
+        ${EMBREE_LIBRARY})
     target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
 
     # ==================================================================================================
