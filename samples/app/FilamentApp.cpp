@@ -64,6 +64,10 @@ FilamentApp::~FilamentApp() {
     SDL_Quit();
 }
 
+View* FilamentApp::getGuiView() const noexcept {
+    return mImGuiHelper->getView();
+}
+
 void FilamentApp::run(const Config& config, SetupCallback setupCallback,
         CleanupCallback cleanupCallback, ImGuiCallback imguiCallback,
         PreRenderCallback preRender, PostRenderCallback postRender,
@@ -515,6 +519,8 @@ FilamentApp::Window::Window(FilamentApp* filamentApp,
     mMainCameraMan.lookAt(at + double3{ 0, 0, 4 }, at);
     mDebugCameraMan.lookAt(at + double3{ 0, 0, 4 }, at);
     mOrthoCameraMan.lookAt(at + double3{ 0, 0, 4 }, at);
+
+    mMainCamera->lookAt({4, 0, -4}, {0, 0, -4}, {0, 1, 0});
 }
 
 FilamentApp::Window::~Window() {

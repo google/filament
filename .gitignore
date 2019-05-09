@@ -9,3 +9,4 @@ dist-*
 toolchains
 filament/docs/html/**
 .vscode
+gltf_baker.ini
