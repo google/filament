@@ -21,6 +21,8 @@
 #define CGLTF_WRITE_IMPLEMENTATION
 #include "cgltf_write.h"
 
+#include "PathTracer.h"
+
 #include <utils/Log.h>
 
 #include <math/mat4.h>
@@ -35,6 +37,9 @@ using namespace utils;
 
 using std::vector;
 
+const char* const gltfio::AssetPipeline::BAKED_UV_ATTRIB = "TEXCOORD_4";
+const int gltfio::AssetPipeline::BAKED_UV_ATTRIB_INDEX = 4;
+
 namespace {
 
 using AssetHandle = gltfio::AssetPipeline::AssetHandle;
@@ -43,9 +48,6 @@ static const char* const POSITION = "POSITION";
 static const char* const NORMAL = "NORMAL";
 static const char* const TANGENT = "TANGENT";
 static const char* const GENERATOR_ID = "gltfio";
-
-static const char* const BAKE_UV_ATTRIB_NAME = "TEXCOORD_4";
-static const cgltf_int   BAKE_UV_ATTRIB_INDEX = 4;
 
 // Bookkeeping structure for baking a single primitive + node pair.
 struct BakedPrim {
@@ -138,7 +140,7 @@ cgltf_size getNumFloats(cgltf_type type) {
 // amenable to subsequent pipeline operations like baking and exporting.
 bool isFlattened(const cgltf_data* asset) {
     return asset && asset->buffers_count == 1 && asset->nodes_count == asset->meshes_count &&
-            asset->asset.generator == GENERATOR_ID;
+            !strcmp(asset->asset.generator, GENERATOR_ID);
 }
 
 // Returns true if the given primitive should be baked out, false if it should be culled away.
@@ -986,9 +988,9 @@ cgltf_data* Pipeline::xatlasToCgltf(const cgltf_data* sourceAsset, const xatlas:
 
         // Create the new attribute for the baked UV's and point it to its corresponding accessor.
         *resultAttribute++ = {
-            .name = (char*) BAKE_UV_ATTRIB_NAME,
+            .name = (char*) gltfio::AssetPipeline::BAKED_UV_ATTRIB,
             .type = cgltf_attribute_type_texcoord,
-            .index = BAKE_UV_ATTRIB_INDEX,
+            .index = gltfio::AssetPipeline::BAKED_UV_ATTRIB_INDEX,
             .data = resultAccessor
         };
         *resultAccessor++ = {
@@ -1156,6 +1158,41 @@ void AssetPipeline::save(AssetHandle handle, const utils::Path& jsonPath,
 AssetHandle AssetPipeline::parameterize(AssetHandle source) {
     Pipeline* impl = (Pipeline*) mImpl;
     return impl->parameterize((const cgltf_data*) source);
+}
+
+void AssetPipeline::bakeAmbientOcclusion(AssetHandle source, image::LinearImage target,
+        RenderTileCallback onTile, RenderDoneCallback onDone, void* userData) {
+    auto sourceAsset = (const cgltf_data*) source;
+    if (!isFlattened(sourceAsset)) {
+        utils::slog.e << "Only flattened assets can be baked." << utils::io::endl;
+        return;
+    }
+    PathTracer pathtracer = PathTracer::Builder()
+        .renderTarget(target)
+        .uvCamera(BAKED_UV_ATTRIB)
+        .tileCallback(onTile, userData)
+        .doneCallback(onDone, userData)
+        .sourceAsset((cgltf_data*) source)
+        .build();
+    pathtracer.render();
+}
+
+void AssetPipeline::renderAmbientOcclusion(AssetHandle source, image::LinearImage target,
+        const SimpleCamera& camera, RenderTileCallback onTile,
+        RenderDoneCallback onDone, void* userData) {
+    auto sourceAsset = (const cgltf_data*) source;
+    if (!isFlattened(sourceAsset)) {
+        utils::slog.e << "Only flattened assets can be rendered." << utils::io::endl;
+        return;
+    }
+    PathTracer pathtracer = PathTracer::Builder()
+        .renderTarget(target)
+        .filmCamera(camera)
+        .tileCallback(onTile, userData)
+        .doneCallback(onDone, userData)
+        .sourceAsset((cgltf_data*) source)
+        .build();
+    pathtracer.render();
 }
 
 }  // namespace gltfio

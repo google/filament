@@ -17,9 +17,13 @@
 #ifndef GLTFIO_ASSETPIPELINE_H
 #define GLTFIO_ASSETPIPELINE_H
 
-#include <stdint.h>
+#include <gltfio/SimpleCamera.h>
+
+#include <image/LinearImage.h>
 
 #include <utils/Path.h>
+
+#include <stdint.h>
 
 namespace gltfio {
 
@@ -81,13 +85,52 @@ public:
     static constexpr uint32_t DISCARD_TEXTURES = 1 << 0;
     static constexpr uint32_t FILTER_TRIANGLES = 1 << 1;
 
+    static const char* const BAKED_UV_ATTRIB;
+    static const int BAKED_UV_ATTRIB_INDEX;
+
     /**
      * Generates atlases and UV data for a flattened asset that are suitable for baking lightmaps.
      *
      * The topology of the meshes in the resulting asset is potentially different from the source
-     * asset (e.g., new vertices might be inserted).
+     * asset (e.g., new vertices might be inserted). The newly generated UV set is placed into the
+     * attribute slot named BAKED_UV_ATTRIB.
      */
     AssetHandle parameterize(AssetHandle source);
+
+    /**
+     * Signals that a region of a path-traced image is available (used for progress notification).
+     * This can be called from any thread.
+     */
+    using RenderTileCallback = void(*)(image::LinearImage target,
+            filament::math::ushort2 topLeft, filament::math::ushort2 bottomRight,
+            void* userData);
+
+    /**
+     * Signals that a complete path-traced image has become available.
+     * This can be called from any thread.
+     */
+    using RenderDoneCallback = void(*)(image::LinearImage target, void* userData);
+
+    /**
+     * Consumes a parameterized glTF asset and produces a single-channel image with ambient
+     * occlusion. Requires the presence of BAKED_UV_ATTRIB in the source asset.
+     *
+     * This invokes a simple path tracer that operates on tiles of the target image. It spins
+     * up a number of threads and triggers a callback every time a new tile has been rendered.
+     */
+    void bakeAmbientOcclusion(AssetHandle source, image::LinearImage target,
+            RenderTileCallback progress, RenderDoneCallback done, void* userData);
+
+    /**
+     * Consumes a glTF asset and produces a single-channel image with ambient occlusion rendered
+     * from the given camera.
+     * 
+     * This method is not related to baking and was initially authored for diagnostic purposes.
+     * The progress callback is similar to bakeAmbientOcclusion.
+     */
+    void renderAmbientOcclusion(AssetHandle source, image::LinearImage target,
+            const SimpleCamera& camera, RenderTileCallback progress, RenderDoneCallback done,
+            void* userData);
 
     AssetPipeline();
     ~AssetPipeline();
