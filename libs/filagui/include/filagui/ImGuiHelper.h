@@ -60,6 +60,9 @@ public:
     // Helper method called after resolving fontPath; public so fonts can be added by caller.
     void createAtlasTexture(filament::Engine* engine);
 
+    // Return the ImGui view, useful for drawing 2D overlays.
+    filament::View* getView() const { return mView; }
+
   private:
       void renderDrawData(ImDrawData* imguiData);
       void createBuffers(int numRequiredBuffers);

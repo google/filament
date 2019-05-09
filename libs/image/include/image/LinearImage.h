@@ -59,6 +59,7 @@ public:
      * Creates an empty (invalid) image.
      */
     LinearImage() : mDataRef(nullptr), mData(nullptr), mWidth(0), mHeight(0), mChannels(0) {}
+    operator bool() const { return mData != nullptr; } 
 
     /**
      * Gets a pointer to the underlying pixel data.
