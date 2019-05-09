@@ -922,20 +922,20 @@ void View::setDynamicLightingOptions(float zLightNear, float zLightFar) noexcept
     upcast(this)->setDynamicLightingOptions(zLightNear, zLightFar);
 }
 
-void View::setSSAO(View::SSAO ssao) noexcept {
-    upcast(this)->setSSAO(ssao);
+void View::setAmbientOcclusion(View::AmbientOcclusion ambientOcclusion) noexcept {
+    upcast(this)->setAmbientOcclusion(ambientOcclusion);
 }
 
-View::SSAO View::getSSAO() const noexcept {
-    return upcast(this)->getSSAO();
+View::AmbientOcclusion View::getAmbientOcclusion() const noexcept {
+    return upcast(this)->getAmbientOcclusion();
 }
 
-void View::setSSAOOptions(View::SSAOOptions const& options) noexcept {
-    upcast(this)->setSSAOOptions(options);
+void View::setAmbientOcclusionOptions(View::AmbientOcclusionOptions const& options) noexcept {
+    upcast(this)->setAmbientOcclusionOptions(options);
 }
 
-View::SSAOOptions const& View::getSSAOOptions() const noexcept {
-    return upcast(this)->getSSAOOptions();
+View::AmbientOcclusionOptions const& View::getAmbientOcclusionOptions() const noexcept {
+    return upcast(this)->getAmbientOcclusionOptions();
 }
 
 

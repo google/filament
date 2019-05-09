@@ -227,23 +227,23 @@ public:
         return mDepthPrepass;
     }
 
-    void setSSAO(SSAO ssao) noexcept {
-        mSSAOType = ssao;
+    void setAmbientOcclusion(AmbientOcclusion ambientOcclusion) noexcept {
+        mAmbientOcclusion = ambientOcclusion;
     }
 
-    SSAO getSSAO() const noexcept {
-        return mSSAOType;
+    AmbientOcclusion getAmbientOcclusion() const noexcept {
+        return mAmbientOcclusion;
     }
 
-    void setSSAOOptions(SSAOOptions const& options) noexcept {
-        mSSAOOptions = options;
-        mSSAOOptions.radius = math::clamp(0.0f, 10.0f, mSSAOOptions.radius);
-        mSSAOOptions.bias = math::clamp(0.0f, 0.1f, mSSAOOptions.bias);
-        mSSAOOptions.power = math::clamp(0.0f, 1.0f, mSSAOOptions.power);
+    void setAmbientOcclusionOptions(AmbientOcclusionOptions const& options) noexcept {
+        mAmbientOcclusionOptions = options;
+        mAmbientOcclusionOptions.radius = math::clamp(0.0f, 10.0f, mAmbientOcclusionOptions.radius);
+        mAmbientOcclusionOptions.bias = math::clamp(0.0f, 0.1f, mAmbientOcclusionOptions.bias);
+        mAmbientOcclusionOptions.power = math::clamp(0.0f, 1.0f, mAmbientOcclusionOptions.power);
     }
 
-    SSAOOptions const& getSSAOOptions() const noexcept {
-        return mSSAOOptions;
+    AmbientOcclusionOptions const& getAmbientOcclusionOptions() const noexcept {
+        return mAmbientOcclusionOptions;
     }
 
     Range const& getVisibleRenderables() const noexcept {
@@ -332,8 +332,8 @@ private:
     bool mShadowingEnabled = true;
     bool mHasPostProcessPass = true;
     DepthPrepass mDepthPrepass = DepthPrepass::DEFAULT;
-    SSAO mSSAOType = SSAO::NONE;
-    SSAOOptions mSSAOOptions{};
+    AmbientOcclusion mAmbientOcclusion = AmbientOcclusion::NONE;
+    AmbientOcclusionOptions mAmbientOcclusionOptions{};
 
     using duration = std::chrono::duration<float, std::milli>;
     DynamicResolutionOptions mDynamicResolution;

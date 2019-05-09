@@ -59,7 +59,7 @@ public:
 
 
     FrameGraphResource ssao(FrameGraph& fg, FrameGraphResource depth,
-            View::SSAOOptions const& options) noexcept;
+            View::AmbientOcclusionOptions const& options) noexcept;
 
     backend::Handle<backend::HwTexture> getNoSSAOTexture() const {
         return mNoSSAOTexture;

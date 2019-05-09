@@ -221,21 +221,21 @@ Java_com_google_android_filament_View_nIsFrontFaceWindingInverted(JNIEnv*,
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_View_nSetSSAO(JNIEnv*, jclass, jlong nativeView, jint ordinal) {
+Java_com_google_android_filament_View_nSetAmbientOcclusion(JNIEnv*, jclass, jlong nativeView, jint ordinal) {
     View* view = (View*) nativeView;
-    view->setSSAO((View::SSAO)ordinal);
+    view->setAmbientOcclusion((View::AmbientOcclusion)ordinal);
 }
 
 extern "C" JNIEXPORT jint JNICALL
-Java_com_google_android_filament_View_nGetSSAO(JNIEnv*, jclass, jlong nativeView) {
+Java_com_google_android_filament_View_nGetAmbientOcclusion(JNIEnv*, jclass, jlong nativeView) {
     View* view = (View*) nativeView;
-    return (jint)view->getSSAO();
+    return (jint)view->getAmbientOcclusion();
 }
 
 extern "C" JNIEXPORT void JNICALL
-Java_com_google_android_filament_View_nSetSSAOOptions(JNIEnv*, jclass,
+Java_com_google_android_filament_View_nSetAmbientOcclusionOptions(JNIEnv*, jclass,
     jlong nativeView, jfloat radius, jfloat bias, jfloat power) {
     View* view = (View*) nativeView;
-    View::SSAOOptions options = { .radius = radius, .bias = bias, .power = power};
-    view->setSSAOOptions(options);
+    View::AmbientOcclusionOptions options = { .radius = radius, .bias = bias, .power = power};
+    view->setAmbientOcclusionOptions(options);
 }

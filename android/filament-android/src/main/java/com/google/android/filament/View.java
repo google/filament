@@ -32,7 +32,7 @@ public class View {
     private DynamicResolutionOptions mDynamicResolution;
     private RenderQuality mRenderQuality;
     private DepthPrepass mDepthPrepass = DepthPrepass.DEFAULT;
-    private SSAOOptions mSSAOOptions;
+    private AmbientOcclusionOptions mAmbientOcclusionOptions;
 
     public static class DynamicResolutionOptions {
         public boolean enabled = false;
@@ -45,7 +45,7 @@ public class View {
         public int history = 9;
     }
 
-    public static class SSAOOptions {
+    public static class AmbientOcclusionOptions {
         public float radius = 0.3f;
         public float bias = 0.005f;
         public float power = 0.0f;
@@ -62,7 +62,7 @@ public class View {
         public QualityLevel hdrColorBuffer = QualityLevel.HIGH;
     }
 
-    public enum SSAO {
+    public enum AmbientOcclusion {
         NONE,
         SSAO
     }
@@ -264,26 +264,26 @@ public class View {
         nSetDynamicLightingOptions(getNativeObject(), zLightNear, zLightFar);
     }
 
-    public void setSSAO(@NonNull SSAO ssao) {
-        nSetSSAO(getNativeObject(), ssao.ordinal());
+    public void setAmbientOcclusion(@NonNull AmbientOcclusion ao) {
+        nSetAmbientOcclusion(getNativeObject(), ao.ordinal());
     }
 
     @NonNull
-    public SSAO getSSAO() {
-        return SSAO.values()[nGetSSAO(getNativeObject())];
+    public AmbientOcclusion getAmbientOcclusion() {
+        return AmbientOcclusion.values()[nGetAmbientOcclusion(getNativeObject())];
     }
 
-    public void setSSAOOptions(@NonNull SSAOOptions options) {
-        mSSAOOptions = options;
-        nSetSSAOOptions(getNativeObject(), options.radius, options.bias, options.power);
+    public void setAmbientOcclusionOptions(@NonNull AmbientOcclusionOptions options) {
+        mAmbientOcclusionOptions = options;
+        nSetAmbientOcclusionOptions(getNativeObject(), options.radius, options.bias, options.power);
     }
 
     @NonNull
-    public SSAOOptions getSSAOOptions() {
-        if (mSSAOOptions == null) {
-            mSSAOOptions = new SSAOOptions();
+    public AmbientOcclusionOptions getAmbientOcclusionOptions() {
+        if (mAmbientOcclusionOptions == null) {
+            mAmbientOcclusionOptions = new AmbientOcclusionOptions();
         }
-        return mSSAOOptions;
+        return mAmbientOcclusionOptions;
     }
 
     long getNativeObject() {
@@ -334,7 +334,7 @@ public class View {
     private static native boolean nIsPostProcessingEnabled(long nativeView);
     private static native void nSetFrontFaceWindingInverted(long nativeView, boolean inverted);
     private static native boolean nIsFrontFaceWindingInverted(long nativeView);
-    private static native void nSetSSAO(long nativeView, int ordinal);
-    private static native int nGetSSAO(long nativeView);
-    private static native void nSetSSAOOptions(long nativeView, float radius, float bias, float power);
+    private static native void nSetAmbientOcclusion(long nativeView, int ordinal);
+    private static native int nGetAmbientOcclusion(long nativeView);
+    private static native void nSetAmbientOcclusionOptions(long nativeView, float radius, float bias, float power);
 }

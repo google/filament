@@ -426,8 +426,9 @@ static void preRender(filament::Engine*, filament::View* view, filament::Scene*,
     view->setToneMapping(g_params.tonemapping ? View::ToneMapping::ACES : View::ToneMapping::LINEAR);
     view->setDithering(g_params.dithering ? View::Dithering::TEMPORAL : View::Dithering::NONE);
     view->setSampleCount((uint8_t) (g_params.msaa ? 4 : 1));
-    view->setSSAO(g_params.ssao ? View::SSAO::SSAO : View::SSAO::NONE);
-    view->setSSAOOptions(g_params.ssaoOptions);
+    view->setAmbientOcclusion(
+            g_params.ssao ? View::AmbientOcclusion::SSAO : View::AmbientOcclusion::NONE);
+    view->setAmbientOcclusionOptions(g_params.ssaoOptions);
 }
 
 int main(int argc, char* argv[]) {

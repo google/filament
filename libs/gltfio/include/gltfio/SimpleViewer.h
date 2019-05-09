@@ -358,7 +358,8 @@ void SimpleViewer::updateUserInterface() {
     mView->setDithering(mEnableDithering ? View::Dithering::TEMPORAL : View::Dithering::NONE);
     mView->setAntiAliasing(mEnableFxaa ? View::AntiAliasing::FXAA : View::AntiAliasing::NONE);
     mView->setSampleCount(mEnableMsaa ? 4 : 1);
-    mView->setSSAO(mEnableSsao ? View::SSAO::SSAO : View::SSAO::NONE);
+    mView->setAmbientOcclusion(
+            mEnableSsao ? View::AmbientOcclusion::SSAO : View::AmbientOcclusion::NONE);
 
     if (ImGui::CollapsingHeader("Light", ImGuiTreeNodeFlags_DefaultOpen)) {
         ImGui::SliderFloat("IBL intensity", &mIblIntensity, 0.0f, 100000.0f);

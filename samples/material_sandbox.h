@@ -91,7 +91,7 @@ struct SandboxParameters {
     float polygonOffsetConstant = 0.5;
     float polygonOffsetSlope = 2.0;
     bool ssao = false;
-    filament::View::SSAOOptions ssaoOptions;
+    filament::View::AmbientOcclusionOptions ssaoOptions;
 };
 
 inline void createInstances(SandboxParameters& params, filament::Engine& engine) {
