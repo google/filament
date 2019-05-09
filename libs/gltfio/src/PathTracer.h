@@ -22,6 +22,8 @@
 
 #include <image/LinearImage.h>
 
+#include <limits>
+
 namespace gltfio {
 
 /**
@@ -48,6 +50,7 @@ public:
         Builder& uvCamera(const char* uvAttribute);
         Builder& tileCallback(TileCallback onTile, void* userData);
         Builder& doneCallback(DoneCallback onTile, void* userData);
+        Builder& samplesPerPixel(size_t numSamples);
         PathTracer build();
     private:
         PathTracer* mPathTracer;
@@ -65,6 +68,9 @@ private:
     void* mTileUserData = nullptr;
     DoneCallback mDoneCallback = nullptr;
     void* mDoneUserData = nullptr;
+    size_t mSamplesPerPixel = 256;
+    float mAoRayNear = std::numeric_limits<float>::epsilon() * 10.0f;
+    float mAoRayFar = std::numeric_limits<float>::infinity();
 };
 
 } // namespace gltfio
