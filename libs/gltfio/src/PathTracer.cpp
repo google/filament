@@ -40,12 +40,36 @@ struct PixelRectangle {
     ushort2 bottomRight;
 };
 
-static float3 sampleSphere() {
-    float z = 2.0f * rand() / RAND_MAX - 1.0f;
-    float t = 2.0f * rand() / RAND_MAX * M_PI;
-    float r = std::sqrt(1.0f - z * z);
-    return { r * std::cos(t), r * std::sin(t), z};
+// TODO: the following two functions should be shared with libs/ibl
+
+static double3 hemisphereCosSample(double2 u) {
+    const double phi = 2 * M_PI * u.x;
+    const double cosTheta2 = 1 - u.y;
+    const double cosTheta = std::sqrt(cosTheta2);
+    const double sinTheta = std::sqrt(1 - cosTheta2);
+    return { sinTheta * std::cos(phi), sinTheta * std::sin(phi), cosTheta };
 }
+
+inline filament::math::double2 hammersley(uint32_t i, float iN) {
+    constexpr float tof = 0.5f / 0x80000000U;
+    uint32_t bits = i;
+    bits = (bits << 16) | (bits >> 16);
+    bits = ((bits & 0x55555555) << 1) | ((bits & 0xAAAAAAAA) >> 1);
+    bits = ((bits & 0x33333333) << 2) | ((bits & 0xCCCCCCCC) >> 2);
+    bits = ((bits & 0x0F0F0F0F) << 4) | ((bits & 0xF0F0F0F0) >> 4);
+    bits = ((bits & 0x00FF00FF) << 8) | ((bits & 0xFF00FF00) >> 8);
+    return { i * iN, bits * tof };
+}
+
+static float3 randomPerp(float3 n) {
+    float3 perp = cross(n, float3{1, 0, 0});
+    float sqrlen = dot(perp, perp);
+    if (sqrlen <= std::numeric_limits<float>::epsilon()) {
+        perp = cross(n, float3{0, 1, 0});
+        sqrlen = dot(perp, perp);
+    }
+    return perp / sqrlen;
+};
 
 namespace gltfio {
 
@@ -93,6 +117,11 @@ PathTracer::Builder& PathTracer::Builder::doneCallback(DoneCallback onDone, void
     return *this;
 }
 
+PathTracer::Builder& PathTracer::Builder::samplesPerPixel(size_t numSamples) {
+    mPathTracer->mSamplesPerPixel = numSamples;
+    return *this;
+}
+
 PathTracer PathTracer::Builder::build() {
     return *mPathTracer;
 }
@@ -117,6 +146,9 @@ struct EmbreeContext {
     void* tileUserData;
     PathTracer::DoneCallback doneCallback;
     void* doneUserData;
+    size_t samplesPerPixel;
+    float aoRayNear;
+    float aoRayFar;
     std::atomic<int> numRemainingTiles;
     RTCDevice embreeDevice;
     RTCScene embreeScene;
@@ -124,9 +156,13 @@ struct EmbreeContext {
 
 static void renderTile(EmbreeContext* context, PixelRectangle rect) {
     image::LinearImage& image = context->renderTarget;
+    RTCScene embreeScene = context->embreeScene;
+    const float inverseSampleCount = 1.0f / context->samplesPerPixel;
 
     // Precompute some camera parameters.
     const SimpleCamera& camera = context->filmCamera;
+    const float tnear = context->aoRayNear;
+    const float tfar = context->aoRayFar;
     const float iw = 1.0f / image.getWidth();
     const float ih = 1.0f / image.getHeight();
     const float theta = camera.vfovDegrees * M_PI / 180;
@@ -168,10 +204,42 @@ static void renderTile(EmbreeContext* context, PixelRectangle rect) {
             rtcInitIntersectContext(&intersector);
             RTCRay ray = generateCameraRay(row, col);
 
-            // For now perform a simple visibility test and set the pixel to white or black.
-            rtcOccluded1(context->embreeScene, &intersector, &ray);
-            float* dst = image.getPixelRef(col, row);
-            *dst = (ray.tfar == -inf) ? 1.0f : 0.0f;
+            RTCRayHit rayhit { .ray = ray };
+            intersector.flags = RTC_INTERSECT_CONTEXT_FLAG_COHERENT;
+            rtcIntersect1(embreeScene, &intersector, &rayhit);
+            if (rayhit.ray.tfar != inf) {
+
+                intersector.flags = RTC_INTERSECT_CONTEXT_FLAG_INCOHERENT;
+
+                // TODO: For now we are using the geometric normal provided by embree which is not
+                // necessarily normalized.
+                float3 n = normalize(float3 { rayhit.hit.Ng_x, rayhit.hit.Ng_y, rayhit.hit.Ng_z });
+                float3 b = randomPerp(n);
+                float3 t = cross(n, b);
+                mat3 tangentFrame = {t, b, n};
+
+                RTCRay aoray {
+                    .org_x = rayhit.ray.org_x + rayhit.ray.dir_x * rayhit.ray.tfar,
+                    .org_y = rayhit.ray.org_y + rayhit.ray.dir_y * rayhit.ray.tfar,
+                    .org_z = rayhit.ray.org_z + rayhit.ray.dir_z * rayhit.ray.tfar
+                };
+
+                float sum = 0;
+                for (size_t nsamp = 0, len = context->samplesPerPixel; nsamp < len; nsamp++) {
+                    const double2 u = hammersley(nsamp, inverseSampleCount);
+                    const float3 dir = tangentFrame * hemisphereCosSample(u);
+                    aoray.dir_x = dir.x;
+                    aoray.dir_y = dir.y;
+                    aoray.dir_z = dir.z;
+                    aoray.tnear = tnear;
+                    aoray.tfar = tfar;
+                    rtcOccluded1(embreeScene, &intersector, &aoray);
+                    if (aoray.tfar == -inf) {
+                        sum += 1.0f;
+                    }
+                }
+                image.getPixelRef(col, row)[0] = 1.0f - sum * inverseSampleCount;
+            }
         }
     }
 
@@ -196,7 +264,10 @@ bool PathTracer::render() {
         .tileCallback = mTileCallback,
         .tileUserData = mTileUserData,
         .doneCallback = mDoneCallback,
-        .doneUserData = mDoneUserData
+        .doneUserData = mDoneUserData,
+        .samplesPerPixel = mSamplesPerPixel,
+        .aoRayNear = mAoRayNear,
+        .aoRayFar = mAoRayFar
     };
 
     // Create the embree device and scene.
