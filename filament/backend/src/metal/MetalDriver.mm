@@ -33,9 +33,6 @@
 #include <utils/Log.h>
 #include <utils/Panic.h>
 
-#pragma clang diagnostic push
-#pragma ide diagnostic ignored "HidingNonVirtualFunction"
-
 namespace filament {
 namespace backend {
 
@@ -929,5 +926,3 @@ template class ConcreteDispatcher<metal::MetalDriver>;
 
 } // namespace backend
 } // namespace filament
-
-#pragma clang diagnostic pop

@@ -426,7 +426,7 @@ id<MTLTexture> MetalRenderTarget::createMultisampledTexture(id<MTLDevice> device
 }
 
 
-MetalFence::MetalFence(MetalContext& context) : context(context) {
+MetalFence::MetalFence(MetalContext& context) {
 #if METAL_FENCES_SUPPORTED
     cv = std::make_shared<std::condition_variable>();
     event = [context.device newSharedEvent];
