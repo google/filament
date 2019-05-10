@@ -327,6 +327,7 @@ static void gui(filament::Engine* engine, filament::View*) {
             ImGui::SliderFloat("ibl", &params.iblIntensity, 0.0f, 50000.0f);
             ImGui::SliderAngle("ibl rotation", &params.iblRotation);
             ImGuiExt::DirectionWidget("direction", &params.lightDirection.x);
+            ImGui::Indent();
             if (ImGui::CollapsingHeader("SSAO")) {
                 DebugRegistry& debug = engine->getDebugRegistry();
                 ImGui::Checkbox("enabled###ssao", &params.ssao);
@@ -334,6 +335,7 @@ static void gui(filament::Engine* engine, filament::View*) {
                 ImGui::SliderFloat("bias", &params.ssaoOptions.bias, 0.0f, 0.1f);
                 ImGui::SliderFloat("power", &params.ssaoOptions.power, 0.0f, 1.0f);
             }
+            ImGui::Unindent();
         }
 
         if (ImGui::CollapsingHeader("Post-processing")) {
