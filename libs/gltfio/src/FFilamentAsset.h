@@ -147,6 +147,10 @@ struct FFilamentAsset : public FilamentAsset {
         releaseSourceAsset();
     }
 
+    const void* getSourceAsset() noexcept {
+        return mSourceAsset;
+    }
+
     void acquireSourceAsset() {
         ++mSourceAssetRefCount;
     }

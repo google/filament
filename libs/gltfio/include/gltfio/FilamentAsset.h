@@ -105,6 +105,12 @@ public:
      */
     void releaseSourceData() noexcept;
 
+    /**
+     * Returns a weak reference to the underlying cgltf hierarchy. This becomes invalid after
+     * calling releaseSourceData();
+     */
+    const void* getSourceAsset() noexcept;
+
 protected:
     FilamentAsset() noexcept = default;
     ~FilamentAsset() = default;
