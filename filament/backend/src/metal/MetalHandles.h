@@ -188,8 +188,6 @@ public:
 
 private:
 
-    MetalContext& context;
-
 #if METAL_FENCES_SUPPORTED
     std::shared_ptr<std::condition_variable> cv;
     std::mutex mutex;
