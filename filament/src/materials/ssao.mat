@@ -71,10 +71,10 @@ fragment {
         return noise;
     }
 
-    vec3 computeViewSpaceNormal(const vec3 position) {
+    vec3 computeViewSpaceNormalNotNormalized(const vec3 position) {
         vec3 dpdx = dFdx(position);
         vec3 dpdy = dFdy(position);
-        return normalize(cross(dpdx, dpdy));
+        return cross(dpdx, dpdy);
     }
 
     float linearizeDepth(float depth) {
@@ -124,8 +124,19 @@ fragment {
         vec3 noise = getNoise(uv);
         float depth = sampleDepthLinear(uv);
         vec3 origin = computeViewSpacePositionFromDepth(variable_vertex.zw, depth);
-        vec3 normal = computeViewSpaceNormal(origin);
+        vec3 normal = computeViewSpaceNormalNotNormalized(origin);
 
+        // attempt to reject "bad" normals that were reconstructed at an edge that cause
+        // false occlusion (black spots)
+        // Normal's length should be small before they're normalized, unless they're bad ones.
+        if (dot(normal, normal) >= (sq(origin.z * origin.z * 0.000061))) {
+            // For now we assume no occlusion, which is wrong in some case, but overall seem to
+            // look better.  Maybe those could be handled in the blur pass instead?
+            material.baseColor.r = 1.0;
+            return;
+        }
+
+        normal = normalize(normal);
         float occlusion = 0.0;
         for (uint i = 0u; i < kSphereSampleCount; i++) {
             occlusion += computeAmbientOcclusion(origin, normal, noise, kSphereSamples[i]);
