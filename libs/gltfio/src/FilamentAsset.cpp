@@ -79,4 +79,8 @@ void FilamentAsset::releaseSourceData() noexcept {
     return upcast(this)->releaseSourceData();
 }
 
+const void* FilamentAsset::getSourceAsset() noexcept {
+    return upcast(this)->getSourceAsset();
+}
+
 } // namespace gltfio

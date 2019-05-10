@@ -143,6 +143,30 @@ bool isFlattened(const cgltf_data* asset) {
             !strcmp(asset->asset.generator, GENERATOR_ID);
 }
 
+// Returns true if the given cgltf asset has been flattened and has BAKED_UV_ATTRIB.
+bool isParameterized(const cgltf_data* asset) {
+    if (!isFlattened(asset)) {
+        return false;
+    }
+    const size_t numPrims = asset->meshes_count;
+    for (cgltf_size i = 0; i < numPrims; i++) {
+        const cgltf_mesh& mesh = asset->meshes[i];
+        const cgltf_primitive& prim = mesh.primitives[0];
+        bool good = false;
+        for (cgltf_size k = 0; k < prim.attributes_count && !good; ++k) {
+            const cgltf_attribute& attr = prim.attributes[k];
+            if (attr.type == cgltf_attribute_type_texcoord &&
+                    attr.index == gltfio::AssetPipeline::BAKED_UV_ATTRIB_INDEX) {
+                good = true;
+            }
+        }
+        if (!good) {
+            return false;
+        }
+    }
+    return true;
+}
+
 // Returns true if the given primitive should be baked out, false if it should be culled away.
 bool Pipeline::filterPrim(const cgltf_primitive& prim) {
     const bool filterTriangles = mFlattenFlags & gltfio::AssetPipeline::FILTER_TRIANGLES;
@@ -1193,6 +1217,14 @@ void AssetPipeline::renderAmbientOcclusion(AssetHandle source, image::LinearImag
         .sourceAsset((cgltf_data*) source)
         .build();
     pathtracer.render();
+}
+
+bool AssetPipeline::isFlattened(AssetHandle source) {
+    return ::isFlattened((const cgltf_data*) source);
+}
+
+bool AssetPipeline::isParameterized(AssetHandle source) {
+    return ::isParameterized((const cgltf_data*) source);
 }
 
 }  // namespace gltfio

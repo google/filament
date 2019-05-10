@@ -295,6 +295,7 @@ static void loadAsset(App& app) {
     }
 
     // Parse the glTF file and create Filament entities.
+    app.loader->destroyAsset(app.asset);
     app.asset = app.loader->createAssetFromJson(buffer.data(), buffer.size());
     buffer.clear();
     buffer.shrink_to_fit();
@@ -314,27 +315,18 @@ static void loadAsset(App& app) {
 
     // Load animation data then free the source hierarchy.
     app.asset->getAnimator();
-    app.asset->releaseSourceData();
+    app.state = AssetPipeline::isParameterized(app.asset->getSourceAsset()) ? PREPPED : LOADED;
 
     // Add the renderables to the scene.
     app.viewer->setAsset(app.asset, app.names, !app.actualSize);
 
     app.viewer->setIndirectLight(FilamentApp::get().getIBL()->getIndirectLight());
-
-    app.state = LOADED;
 }
 
 static void renderAsset(App& app) {
     app.pushedState = app.state;
     app.state = RENDERING;
-
-    // Reload the asset from disk because we haven't bothered to retain it.
-    gltfio::AssetPipeline pipeline;
-    gltfio::AssetPipeline::AssetHandle asset = pipeline.load(app.filename);
-    if (!asset) {
-        std::cerr << "Unable to read " << app.filename << std::endl;
-        exit(1);
-    }
+    gltfio::AssetPipeline::AssetHandle asset = app.asset->getSourceAsset();
 
     // Allocate the render target for the path tracer as well as a GPU texture to display it.
     auto viewportSize = ImGui::GetIO().DisplaySize;
@@ -375,6 +367,7 @@ static void renderAsset(App& app) {
         App* app = (App*) userData;
         app->requestStatePop = true;
     };
+    gltfio::AssetPipeline pipeline;
     pipeline.renderAmbientOcclusion(asset, image, camera, onRenderTile, onRenderDone, &app);
 }
 

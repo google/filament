@@ -132,6 +132,10 @@ public:
             const SimpleCamera& camera, RenderTileCallback progress, RenderDoneCallback done,
             void* userData);
 
+
+    static bool isFlattened(AssetHandle source);
+    static bool isParameterized(AssetHandle source);
+
     AssetPipeline();
     ~AssetPipeline();
 
