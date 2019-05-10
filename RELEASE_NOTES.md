@@ -6,6 +6,7 @@ A new header is inserted each time a *tag* is created.
 
 # Release notes
 
+- Further reduced `filamat` binary size by removing reliance on stdlib.
 - Added a new, smaller, version of the `filamat` library, `filamat_lite`. Material optimization and
   compiling for non-OpenGL backends have been removed in favor of a smaller binary size.
 - Implemented hard fences for the Metal backend, enablying dynamic resolution support.
