@@ -30,7 +30,9 @@
 
 using namespace filament::math;
 
-static constexpr uint16_t TILE_SIZE = 32;
+static constexpr size_t MIN_TILE_SIZE = 32;
+static constexpr size_t MAX_TILES_COUNT = 2048;
+
 static constexpr float inf = std::numeric_limits<float>::infinity();
 
 struct PixelRectangle {
@@ -246,23 +248,30 @@ bool PathTracer::render() {
     }
     rtcCommitScene(scene);
 
-    // Compute the number of jobs by pre-running the loop.
+    // Compute a reasonable tile size that will not create too many jobs.
     const size_t width = mRenderTarget.getWidth();
     const size_t height = mRenderTarget.getHeight();
     int numTiles = 0;
-    for (size_t row = 0; row < height; row += TILE_SIZE) {
-        for (size_t col = 0; col < width; col += TILE_SIZE, ++numTiles);
+    size_t tileSize = MIN_TILE_SIZE;
+    while (true) {
+        int numCols = (width + tileSize - 1) / tileSize;
+        int numRows = (height + tileSize - 1) / tileSize;
+        numTiles = numCols * numRows;
+        if (numTiles <= MAX_TILES_COUNT) {
+            break;
+        }
+        tileSize *= 2;
     }
     context->numRemainingTiles = numTiles;
 
     // Kick off one job per tile.
     utils::JobSystem* js = utils::JobSystem::getJobSystem();
     utils::JobSystem::Job* parent = js->createJob();
-    for (size_t row = 0; row < height; row += TILE_SIZE) {
-        for (size_t col = 0; col < width; col += TILE_SIZE) {
+    for (size_t row = 0; row < height; row += tileSize) {
+        for (size_t col = 0; col < width; col += tileSize) {
             PixelRectangle rect;
             rect.topLeft = {col, row};
-            rect.bottomRight = {col + TILE_SIZE, row + TILE_SIZE};
+            rect.bottomRight = {col + tileSize, row + tileSize};
             rect.bottomRight.x = std::min(rect.bottomRight.x, (uint16_t) width);
             rect.bottomRight.y = std::min(rect.bottomRight.y, (uint16_t) height);
             utils::JobSystem::Job* tile = utils::jobs::createJob(*js, parent, [context, rect] {
