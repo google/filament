@@ -1,0 +1,224 @@
+material {
+    name : ssao,
+    parameters : [
+        {
+           type : sampler2d,
+           name : depth
+        },
+        {
+            type : float,
+            name : radius
+        },
+        {
+            type : float,
+            name : invRadiusSquared
+        },
+        {
+            type : float,
+            name : projectionScaleRadius
+        },
+        {
+            type : float,
+            name : bias
+        },
+        {
+            type : float,
+            name : power
+        }
+    ],
+    variables : [
+         vertex
+    ],
+    vertexDomain : device,
+    depthWrite : false,
+    depthCulling : false,
+    shadingModel : unlit,
+    variantFilter : [ skinning ],
+    culling: none
+}
+
+vertex {
+    void materialVertex(inout MaterialVertexInputs material) {
+        // far-plane in view space
+        vec4 position = getPosition(); // clip-space
+        material.vertex.xy = (position.xy * 0.5 + 0.5);
+        material.vertex.zw = position.xy;
+    }
+}
+
+fragment {
+    #define NOISE_NONE      0
+    #define NOISE_PATTERN   1
+    #define NOISE_RANDOM    2
+    #define NOISE_TYPE      NOISE_PATTERN
+
+    const uint kSpiralSampleCount = 7u;
+    const vec3 kSipralSamples[kSpiralSampleCount] = vec3[](
+        vec3(0.885456,0.464723,0.0769231), vec3(0.120537,0.992709,0.230769), vec3(-0.748511,0.663123,0.384615), vec3(-0.970942,-0.239316,0.538462),
+        vec3(-0.354605,-0.935016,0.692308), vec3(0.568065,-0.822984,0.846154), vec3(1,1.74846e-07,1)
+    );
+
+    const uint kTrigNoiseSampleCount = 16u;
+    const vec3 kTrigNoiseSamples[kTrigNoiseSampleCount] = vec3[](
+        vec3(0.0759449,0.997112,0.0317202), vec3(-0.53898,-0.842318,0.0879207), vec3(0.672069,0.740488,0.0176937), vec3(-0.323441,-0.946248,0.0930107),
+        vec3(0.330969,0.943642,0.026175), vec3(0.341023,-0.940055,0.107385), vec3(-0.197094,0.980384,0.0375434), vec3(0.106268,-0.994338,0.102259),
+        vec3(0.955394,0.295335,0.00636207), vec3(0.306817,0.951768,0.0267157), vec3(-0.882675,0.469983,0.056284), vec3(0.671194,-0.741282,0.115615),
+        vec3(-0.958342,0.285624,0.0605199), vec3(0.954541,-0.298078,0.12691), vec3(-0.586924,-0.809642,0.0866893), vec3(0.679755,-0.73344,0.115861)
+    );
+
+    vec2 sq(const vec2 a) {
+        return a * a;
+    }
+
+    // remaps to -1 and 1, repeating
+    float reduce(float x) {
+        return fract(0.5 * x + 0.5) * 2.0 - 1.0;
+    }
+
+    // very crude and fast sin/cos approximation
+    vec2 fast_cossin(float x) {
+        x *= 1.0/3.1415926;
+        vec2 a = vec2(reduce(x + 0.5), reduce(x));
+        vec2 xn = sq(a * 2.0 + 1.0) - 1.0;
+        vec2 xp = 1.0 - sq(a * 2.0 - 1.0);
+        return vec2(a.x < 0.0 ? xn.x : xp.x, a.y < 0.0 ? xn.y : xp.y);
+    }
+
+    // random number between 0 and 1
+    float random(HIGHP vec2 n) {
+        n  = fract(n * vec2(5.3987, 5.4421));
+        n += dot(n.yx, n.xy + vec2(21.5351, 14.3137));
+        HIGHP float xy = n.x * n.y;
+        // compute in [0..2[ and remap to [0.0..1.0[
+        return fract(xy * 95.4307) + fract(xy * 75.04961) * 0.5;
+    }
+
+    // see ssaogen.cpp
+    vec3 getTrigNoise(const vec2 uv) {
+        #if NOISE_TYPE == NOISE_RANDOM
+            const float kSpiralTurns = 7.0; // must match ssaogen.cpp
+            const float dalpha = 1.0f / (float(kSpiralSampleCount) - 0.5f);
+            float phi = random(uv);
+            float dr = phi * dalpha;
+            float dalpha2 = sq(dalpha);
+            float dphi = (6.28318 * kSpiralTurns) * sq(phi) * dalpha2
+                + phi * 6.28318 * (1.0 + kSpiralTurns * dalpha2)
+                + phi * (2.0 * 6.28318 * kSpiralTurns) * dalpha2;
+            return vec3(fast_cossin(dphi), dr);
+        #elif NOISE_TYPE == NOISE_PATTERN
+            uint ix = uint(gl_FragCoord.x) & 3u;
+            uint iy = uint(gl_FragCoord.y) & 3u;
+            return kTrigNoiseSamples[ix + iy * 4u];
+        #else
+            return vec3(0.0);
+        #endif
+    }
+
+    vec3 computeViewSpaceNormalNotNormalized(const vec3 position) {
+        vec3 dpdx = dFdx(position);
+        vec3 dpdy = dFdy(position);
+        return cross(dpdx, dpdy);
+    }
+
+    float linearizeDepth(float depth) {
+        mat4 projection = getClipFromViewMatrix();
+        float z = depth * 2.0 - 1.0; // depth in clip space
+        return -projection[3].z / (z + projection[2].z);
+    }
+
+    float sampleDepthLinear(const vec2 uv) {
+        return linearizeDepth(texture(materialParams_depth, uv, 0.0).r);
+    }
+
+    vec3 computeViewSpacePositionFromDepth(in vec2 p, float linearDepth) {
+        mat4 invProjection = getViewFromClipMatrix();
+        p.x *= invProjection[0].x;
+        p.y *= invProjection[1].y;
+        return vec3(p * -linearDepth, linearDepth);
+    }
+
+    // Ambient Occlusion, largely inspired from:
+    // "The Alchemy Screen-Space Ambient Obscurance Algorithm" by Morgan McGuire
+    // "Scalable Ambient Obscurance" by Morgan McGuire, Michael Mara and David Luebke
+
+    vec3 tapLocationReference(uint i) {
+        const float dalpha = 1.0f / (float(kSpiralSampleCount) - 0.5f);
+        float phi = random(variable_vertex.xy) * 0.5 + 0.5;
+        float radius = (float(i) + phi + 0.5) * dalpha;
+        radius *= radius;
+        float angle = radius * (7.0 * 6.28318) + phi * 6.28318;
+        return vec3(cos(angle), sin(angle), radius);
+    }
+
+    vec3 tapLocation(uint i, const vec3 noise) {
+        mat2 M = mat2(noise.xy, vec2(-noise.y, noise.x));
+        float radius = kSipralSamples[i].z + noise.z;
+        return vec3(M * kSipralSamples[i].xy, radius * radius);
+    }
+
+    ivec2 clampToEdge(ivec2 uv) {
+        return clamp(uv, ivec2(0), textureSize(materialParams_depth, 0) - ivec2(1));
+    }
+
+    float computeAmbientOcclusionSAO(uint i, float ssDiskRadius, const ivec2 ssOrigin, const vec3 origin, const vec3 normal, const vec3 noise) {
+        vec3 tap = tapLocation(i, noise);
+        float ssRadius = max(1.0, tap.z * ssDiskRadius); // at least 1 pixel screen-space radius
+        ivec2 ssSamplePos = ssOrigin + ivec2(ssRadius * tap.xy);
+
+        float occlusionDepth = linearizeDepth(texelFetch(materialParams_depth, clampToEdge(ssSamplePos), 0).r);
+
+        vec2 uvSamplePos = (vec2(ssSamplePos) + vec2(0.5)) * frameUniforms.resolution.zw;
+        vec3 p = computeViewSpacePositionFromDepth(uvSamplePos * 2.0 - 1.0, occlusionDepth);
+
+        // now we have the sample, compute AO
+        vec3 v = p - origin;        // sample vector
+        float vv = dot(v, v);       // squared distance
+        float vn = dot(v, normal);  // distance * cos(v, normal)
+        const float uu = 0.015;
+        float falloff = saturate(1.0 - vv * materialParams.invRadiusSquared);
+        float occlusion = falloff * max(0.0, vn - materialParams.bias) / (vv + uu);
+        return occlusion;
+    }
+
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+
+        vec2 uv = variable_vertex.xy; // interpolated to pixel center
+
+        vec3 noise = getTrigNoise(uv);
+        float depth = sampleDepthLinear(uv);
+        vec3 origin = computeViewSpacePositionFromDepth(variable_vertex.zw, depth);
+        ivec2 ssOrigin = ivec2(uv * frameUniforms.resolution.xy);
+        vec3 normal = computeViewSpaceNormalNotNormalized(origin);
+
+        // attempt to reject "bad" normals that were reconstructed at an edge that cause
+        // false occlusion (black spots)
+        // Normal's length should be small before they're normalized, unless they're bad ones.
+        if (dot(normal, normal) >= (sq(origin.z * origin.z * 0.000061))) {
+            // For now we assume no occlusion, which is wrong in some case, but overall seem to
+            // look better.  Maybe those could be handled in the blur pass instead?
+            material.baseColor.r = 1.0;
+            return;
+        }
+
+        // Choose the screen-space sample radius
+        // proportional to the projected area of the sphere
+        float ssDiskRadius = -materialParams.projectionScaleRadius / origin.z;
+        if (ssDiskRadius <= 1.0) {
+            // There is no way to compute AO at this radius
+            material.baseColor.r = 1.0;
+            return;
+        }
+
+        normal = normalize(normal);
+        float occlusion = 0.0;
+        for (uint i = 0u; i < kSpiralSampleCount; i++) {
+            occlusion += computeAmbientOcclusionSAO(i, ssDiskRadius, ssOrigin, origin, normal, noise);
+        }
+        float ao = 1.0 - occlusion / float(kSpiralSampleCount);
+
+        // simulate user-controled ao^n with n[1, 2]
+        ao = mix(ao, ao * ao, materialParams.power);
+        material.baseColor.r = ao;
+    }
+}

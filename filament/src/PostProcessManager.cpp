@@ -59,7 +59,7 @@ void PostProcessManager::init(FEngine& engine) noexcept {
     driver.update2DImage(mNoSSAOTexture, 0, 0, 0, 1, 1, std::move(data));
 
     mSSAOMaterial = upcast(Material::Builder().package(
-            MATERIALS_SSAO_DATA, MATERIALS_SSAO_SIZE).build(engine));
+            MATERIALS_SAO_DATA, MATERIALS_SAO_SIZE).build(engine));
 
     mSSAOMaterialInstance = mSSAOMaterial->getDefaultInstance();
 
@@ -321,6 +321,8 @@ FrameGraphResource PostProcessManager::ssao(FrameGraph& fg, FrameGraphResource d
                 FMaterialInstance* const pInstance = mSSAOMaterialInstance;
                 pInstance->setParameter("depth", depth, params);
                 pInstance->setParameter("radius", data.options.radius);
+                pInstance->setParameter("invRadiusSquared", 1.0f / (data.options.radius * data.options.radius));
+                pInstance->setParameter("projectionScaleRadius", 500.0f * data.options.radius);
                 pInstance->setParameter("bias", data.options.bias);
                 pInstance->setParameter("power", data.options.power);
                 pInstance->commit(driver);
