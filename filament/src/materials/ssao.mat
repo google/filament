@@ -11,6 +11,14 @@ material {
         },
         {
             type : float,
+            name : invRadiusSquared
+        },
+        {
+            type : float,
+            name : projectionScaleRadius
+        },
+        {
+            type : float,
             name : bias
         },
         {
@@ -39,6 +47,11 @@ vertex {
 }
 
 fragment {
+    #define NOISE_NONE      0
+    #define NOISE_PATTERN   1
+    #define NOISE_RANDOM    2
+    #define NOISE_TYPE      NOISE_PATTERN
+
     const uint kSphereSampleCount = 16u;
     const vec3 kSphereSamples[16] = vec3[](
         vec3(-1.60954e-06,3.93118e-07,1.51895e-06), vec3(-0.0950889,0.00458908,-0.0312535),
@@ -59,16 +72,26 @@ fragment {
         vec3(-0.57093,-0.531056,-0.626114), vec3(0.699014,0.0632826,-0.712303), vec3(0.207495,0.976129,-0.0641723), vec3(-0.0609008,-0.869738,-0.489742)
     );
 
-    float random(const vec2 st) {
-        return fract(sin(dot(st.xy, vec2(12.9898,78.233)))* 43758.5453123);
+    // random number between 0 and 1
+    float random(HIGHP vec2 n) {
+        n  = fract(n * vec2(5.3987, 5.4421));
+        n += dot(n.yx, n.xy + vec2(21.5351, 14.3137));
+        HIGHP float xy = n.x * n.y;
+        // compute in [0..2[ and remap to [0.0..1.0[
+        return fract(xy * 95.4307) + fract(xy * 75.04961) * 0.5;
     }
 
+    // noise vector between -1 and 1
     vec3 getNoise(const vec2 uv) {
-        uint ix = uint(gl_FragCoord.x) & 3u;
-        uint iy = uint(gl_FragCoord.y) & 3u;
-        //vec3 noise = kNoiseSamples[ix + iy * 4];
-        vec3 noise = normalize(vec3(random(uv), random(uv*2.0), random(uv*4.0)));
-        return noise;
+        #if NOISE_TYPE == NOISE_RANDOM
+            return normalize(2.0 * vec3(random(uv), random(uv * 2.0), random(uv * 4.0)) - vec3(1.0));
+        #elif NOISE_TYPE == NOISE_PATTERN
+            uint ix = uint(gl_FragCoord.x) & 3u;
+            uint iy = uint(gl_FragCoord.y) & 3u;
+            return kNoiseSamples[ix + iy * 4u];
+        #else
+            return vec3(0.0);
+        #endif
     }
 
     vec3 computeViewSpaceNormalNotNormalized(const vec3 position) {
@@ -88,13 +111,16 @@ fragment {
     }
 
     vec3 computeViewSpacePositionFromDepth(in vec2 p, float linearDepth) {
-        mat4 projection = getClipFromViewMatrix();
-        p.x = p.x * (-1.0 / projection[0].x);   // could be in a ubo
-        p.y = p.y * (-1.0 / projection[1].y);   // could be in a ubo
-        return vec3(p * linearDepth, linearDepth);
+        mat4 invProjection = getViewFromClipMatrix();
+        p.x *= invProjection[0].x;
+        p.y *= invProjection[1].y;
+        return vec3(p * -linearDepth, linearDepth);
     }
 
-    float computeAmbientOcclusion(const vec3 origin, const vec3 normal, const vec3 noise, const vec3 sphereSample) {
+    // Ambient Occlusion, largely inspired from:
+    // Hemisphere Crysis-style SSAO. See "Screen Space Ambient Occlusion" by John Chapman
+
+    float computeAmbientOcclusionSSAO(const vec3 origin, const vec3 normal, const vec3 noise, const vec3 sphereSample) {
         mat4 projection = getClipFromViewMatrix();
         float radius = materialParams.radius;
         float bias = materialParams.bias;
@@ -106,13 +132,10 @@ fragment {
 
         vec4 samplePosScreen = projection * vec4(samplePos, 1.0);
         samplePosScreen.xy = samplePosScreen.xy * (0.5 / samplePosScreen.w) + 0.5;
-
         float occlusionDepth = sampleDepthLinear(samplePosScreen.xy);
-
         // smoothstep() optimized for range 0 to 1
         float t = saturate(radius / abs(origin.z - occlusionDepth));
         float rangeCheck = t * t * (3.0 - 2.0 * t);
-
         float d = samplePos.z - occlusionDepth; // distance from depth to sample
         return (d >= -bias ? 0.0 : rangeCheck);
     }
@@ -121,6 +144,7 @@ fragment {
         prepareMaterial(material);
 
         vec2 uv = variable_vertex.xy; // interpolated to pixel center
+
         vec3 noise = getNoise(uv);
         float depth = sampleDepthLinear(uv);
         vec3 origin = computeViewSpacePositionFromDepth(variable_vertex.zw, depth);
@@ -139,14 +163,12 @@ fragment {
         normal = normalize(normal);
         float occlusion = 0.0;
         for (uint i = 0u; i < kSphereSampleCount; i++) {
-            occlusion += computeAmbientOcclusion(origin, normal, noise, kSphereSamples[i]);
+            occlusion += computeAmbientOcclusionSSAO(origin, normal, noise, kSphereSamples[i]);
         }
-
         float ao = 1.0 - occlusion / float(kSphereSampleCount);
 
         // simulate user-controled ao^n with n[1, 2]
         ao = mix(ao, ao * ao, materialParams.power);
-
         material.baseColor.r = ao;
     }
 }

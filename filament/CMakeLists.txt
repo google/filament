@@ -126,6 +126,7 @@ set(MATERIAL_SRCS
         src/materials/defaultMaterial.mat
         src/materials/skybox.mat
         src/materials/skyboxRGBM.mat
+        src/materials/sao.mat
         src/materials/ssao.mat
 )
 
