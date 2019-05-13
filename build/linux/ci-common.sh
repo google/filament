@@ -80,6 +80,15 @@ if [[ "$KOKORO_BUILD_ID" ]]; then
     (cd projects/libcxx && sudo make -j install)
     (cd projects/libcxxabi && sudo make -j install)
 
+    # install embree 3+ to test buildability of the light baking pipeline
+    sudo apt-get install -y alien libtbb-dev
+    curl -LO https://github.com/embree/embree/releases/download/v3.5.2/embree-3.5.2.x86_64.rpm.tar.gz
+    tar xzf embree-3.5.2.x86_64.rpm.tar.gz
+    sudo alien embree3-devel-3.5.2-1.noarch.rpm
+    sudo alien embree3-lib-3.5.2-1.x86_64.rpm
+    sudo dpkg -i embree3-lib_3.5.2-2_amd64.deb
+    sudo dpkg -i embree3-devel_3.5.2-2_all.deb
+
     cd ../..
 
     export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH

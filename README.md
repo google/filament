@@ -127,7 +127,7 @@ and tools.
   - `filamat`:             Material generation library
   - `filameshio`:          Tiny filamesh parsing library (see also `tools/filamesh`)
   - `geometry`:            Mesh-related utilities
-  - `gltfio`:              Loader for glTF 2.0
+  - `gltfio`:              Loader and optional pipeline for glTF 2.0
   - `ibl`:                 IBL generation tools
   - `image`:               Image filtering and simple transforms
   - `imageio`:             Image file reading / writing, only intended for internal use
@@ -169,6 +169,11 @@ To build the Java based components of the project you can optionally install (re
 
 Additional dependencies may be required for your operating system. Please refer to the appropriate
 section below.
+
+Building the light baking pipeline is optional and requires the following packages:
+
+- embree 3.0+
+- libtbb-dev
 
 To build Filament for Android you must also install the following:
 
