@@ -23,141 +23,40 @@
 #include <utils/bitset.h>
 #include <utils/compiler.h> // ssize_t is a POSIX type.
 
-// We always use TINY IO, it seems to work well enough and that a nice way to not
-// break the android builds
-#define UTILS_TINY_IO 1
-
-#ifndef UTILS_TINY_IO
-#   ifdef ANDROID
-#       define UTILS_TINY_IO 1
-#   else
-#       define UTILS_TINY_IO 0
-#   endif
-#endif
-
-#if !UTILS_TINY_IO
-#include <ios>
-#include <ostream>
-#endif
+#include <utils/ostream.h>
 
 namespace utils {
 namespace io {
 
-#if UTILS_TINY_IO
-
-class ostream {
+class LogStream : public ostream {
 public:
+
     enum Priority {
         DEBUG, ERROR, WARNING, INFO
     };
 
-    explicit ostream(Priority p) noexcept : mPriority(p) { }
+    explicit LogStream(Priority p) noexcept : mPriority(p) {}
 
-    ostream& operator<<(short value) noexcept;
-    ostream& operator<<(unsigned short value) noexcept;
-
-    ostream& operator<<(int value) noexcept;
-    ostream& operator<<(unsigned int value) noexcept;
-
-    ostream& operator<<(long value) noexcept;
-    ostream& operator<<(unsigned long value) noexcept;
-
-    ostream& operator<<(long long value) noexcept;
-    ostream& operator<<(unsigned long long value) noexcept;
-
-    ostream& operator<<(float value) noexcept;
-    ostream& operator<<(double value) noexcept;
-    ostream& operator<<(long double value) noexcept;
-
-    ostream& operator<<(bool value) noexcept;
-
-    ostream& operator<<(const void* value) noexcept;
-
-    ostream& operator<<(const char* string) noexcept;
-
-    ostream& operator<<(ostream& (* f)(ostream&)) noexcept { return f(*this); }
-
+    ostream& flush() noexcept override;
 
 private:
-    ostream& dec() noexcept;
-    ostream& hex() noexcept;
-    ostream& flush() noexcept;
-
-    friend ostream& hex(ostream& s) noexcept;
-    friend ostream& dec(ostream& s) noexcept;
-    friend ostream& endl(ostream& s) noexcept;
-    friend ostream& flush(ostream& s) noexcept;
-
-    enum type {
-        SHORT, USHORT, INT, UINT, LONG, ULONG, LONG_LONG, ULONG_LONG, DOUBLE, LONG_DOUBLE
-    };
-
-    bool mShowHex = false;
     Priority mPriority;
-    const char* getFormat(type t) const noexcept;
-
-    class Buffer {
-        char mStorage[16384];
-    public:
-        char* curr = mStorage;
-        size_t size = sizeof(mStorage);
-        const char* get() const noexcept { return mStorage; }
-        void advance(ssize_t n) noexcept;
-        void reset() noexcept;
-    };
-
-    Buffer& getBuffer() noexcept { return mData; }
-
-    static UTILS_DECLARE_TLS(Buffer) mData;
 };
 
-// handles std::string
-inline ostream& operator << (ostream& o, std::string const& s) noexcept { return o << s.c_str(); }
-
-// handles utils::bitset
-inline ostream& operator << (ostream& o, utils::bitset32 const& s) noexcept {
-    return o << (void*)uintptr_t(s.getValue());
-}
-
-// handles vectors from libmath (but we do this generically, without needing a dependency on libmath)
-template<template<typename T> class VECTOR, typename T>
-inline ostream& operator<<(ostream& stream, const VECTOR<T>& v) {
-    stream << "< ";
-    for (size_t i = 0; i < v.size() - 1; i++) {
-        stream << T(v[i]) << ", ";
-    }
-    stream << T(v[v.size() - 1]) << " >";
-    return stream;
-}
-
-inline ostream& hex(ostream& s) noexcept { return s.hex(); }
-inline ostream& dec(ostream& s) noexcept { return s.dec(); }
-inline ostream& endl(ostream& s) noexcept { s << "\n"; return s.flush(); }
-inline ostream& flush(ostream& s) noexcept { return s.flush(); }
-
-#else  // UTILS_TINY_IO
-
-using ostream = std::ostream;
-inline ostream& hex(ostream& s) noexcept { return s << std::hex; }
-inline ostream& dec(ostream& s) noexcept { return s << std::dec; }
-inline ostream& endl(ostream& s) noexcept { return s << std::endl; }
-inline ostream& flush(ostream& s) noexcept { return s << std::flush; }
-
-#endif // UTILS_TINY_IO
 } // namespace io
 
 struct Loggers {
     // DEBUG level logging stream
-    io::ostream& d;
+    io::LogStream& d;
 
     // ERROR level logging stream
-    io::ostream& e;
+    io::LogStream& e;
 
     // WARNING level logging stream
-    io::ostream& w;
+    io::LogStream& w;
 
     // INFORMATION level logging stream
-    io::ostream& i;
+    io::LogStream& i;
 };
 
 extern Loggers slog;

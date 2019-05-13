@@ -31,6 +31,8 @@
 #include <private/filament/SamplerInterfaceBlock.h>
 #include <private/filament/UniformInterfaceBlock.h>
 
+#include <utils/sstream.h>
+
 #include <private/filament/Variant.h>
 
 namespace filamat {
@@ -52,63 +54,63 @@ public:
     filament::backend::ShaderModel getShaderModel() const noexcept { return mShaderModel; }
 
     // insert a separator (can be a new line)
-    std::ostream& generateSeparator(std::ostream& out) const;
+    utils::io::sstream& generateSeparator(utils::io::sstream& out) const;
 
     // generate prolog for the given shader
-    std::ostream& generateProlog(std::ostream& out, ShaderType type, bool hasExternalSamplers) const;
+    utils::io::sstream& generateProlog(utils::io::sstream& out, ShaderType type, bool hasExternalSamplers) const;
 
-    std::ostream& generateEpilog(std::ostream& out) const;
+    utils::io::sstream& generateEpilog(utils::io::sstream& out) const;
 
     // generate common functions for the given shader
-    std::ostream& generateCommon(std::ostream& out, ShaderType type) const;
-    std::ostream& generateCommonMaterial(std::ostream& out, ShaderType type) const;
+    utils::io::sstream& generateCommon(utils::io::sstream& out, ShaderType type) const;
+    utils::io::sstream& generateCommonMaterial(utils::io::sstream& out, ShaderType type) const;
 
     // generate the shader's main()
-    std::ostream& generateShaderMain(std::ostream& out, ShaderType type) const;
-    std::ostream& generatePostProcessMain(std::ostream& out, ShaderType type,
+    utils::io::sstream& generateShaderMain(utils::io::sstream& out, ShaderType type) const;
+    utils::io::sstream& generatePostProcessMain(utils::io::sstream& out, ShaderType type,
             filament::PostProcessStage variant) const;
 
     // generate the shader's code for the lit shading model
-    std::ostream& generateShaderLit(std::ostream& out, ShaderType type,
+    utils::io::sstream& generateShaderLit(utils::io::sstream& out, ShaderType type,
             filament::Variant variant, filament::Shading shading) const;
 
     // generate the shader's code for the unlit shading model
-    std::ostream& generateShaderUnlit(std::ostream& out, ShaderType type,
+    utils::io::sstream& generateShaderUnlit(utils::io::sstream& out, ShaderType type,
             filament::Variant variant, bool hasShadowMultiplier) const;
 
     // generate declarations for custom interpolants
-    std::ostream& generateVariable(std::ostream& out, ShaderType type,
+    utils::io::sstream& generateVariable(utils::io::sstream& out, ShaderType type,
             const utils::CString& name, size_t index) const;
 
     // generate declarations for non-custom "in" variables
-    std::ostream& generateShaderInputs(std::ostream& out, ShaderType type,
+    utils::io::sstream& generateShaderInputs(utils::io::sstream& out, ShaderType type,
         const filament::AttributeBitset& attributes, filament::Interpolation interpolation) const;
 
     // generate no-op shader for depth prepass
-    std::ostream& generateDepthShaderMain(std::ostream& out, ShaderType type) const;
+    utils::io::sstream& generateDepthShaderMain(utils::io::sstream& out, ShaderType type) const;
 
     // generate uniforms
-    std::ostream& generateUniforms(std::ostream& out, ShaderType type, uint8_t binding,
+    utils::io::sstream& generateUniforms(utils::io::sstream& out, ShaderType type, uint8_t binding,
             const filament::UniformInterfaceBlock& uib) const;
 
     // generate samplers
-    std::ostream& generateSamplers(
-        std::ostream& out, uint8_t firstBinding, const filament::SamplerInterfaceBlock& sib) const;
+    utils::io::sstream& generateSamplers(
+        utils::io::sstream& out, uint8_t firstBinding, const filament::SamplerInterfaceBlock& sib) const;
 
     // generate material properties getters
-    std::ostream& generateMaterialProperty(std::ostream& out,
+    utils::io::sstream& generateMaterialProperty(utils::io::sstream& out,
             MaterialBuilder::Property property, bool isSet) const;
 
-    std::ostream& generateFunction(std::ostream& out,
+    utils::io::sstream& generateFunction(utils::io::sstream& out,
             const char* returnType, const char* name, const char* body) const;
 
-    std::ostream& generateDefine(std::ostream& out, const char* name, bool value) const;
-    std::ostream& generateDefine(std::ostream& out, const char* name, float value) const;
-    std::ostream& generateDefine(std::ostream& out, const char* name, uint32_t value) const;
-    std::ostream& generateDefine(std::ostream& out, const char* name, const char* string) const;
+    utils::io::sstream& generateDefine(utils::io::sstream& out, const char* name, bool value) const;
+    utils::io::sstream& generateDefine(utils::io::sstream& out, const char* name, float value) const;
+    utils::io::sstream& generateDefine(utils::io::sstream& out, const char* name, uint32_t value) const;
+    utils::io::sstream& generateDefine(utils::io::sstream& out, const char* name, const char* string) const;
 
-    std::ostream& generateGetters(std::ostream& out, ShaderType type) const;
-    std::ostream& generateParameters(std::ostream& out, ShaderType type) const;
+    utils::io::sstream& generateGetters(utils::io::sstream& out, ShaderType type) const;
+    utils::io::sstream& generateParameters(utils::io::sstream& out, ShaderType type) const;
 
     static void fixupExternalSamplers(
             std::string& shader, filament::SamplerInterfaceBlock const& sib) noexcept;

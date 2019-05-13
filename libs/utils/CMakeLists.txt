@@ -33,9 +33,11 @@ set(SRCS
         src/JobSystem.cpp
         src/Log.cpp
         src/NameComponentManager.cpp
+        src/ostream.cpp
         src/Panic.cpp
         src/Path.cpp
         src/Profiler.cpp
+        src/sstream.cpp
         src/Systrace.cpp
         )
 if (WIN32)
@@ -105,6 +107,7 @@ set(TEST_SRCS
         test/test_Entity.cpp
         test/test_JobSystem.cpp
         test/test_StructureOfArrays.cpp
+        test/test_sstream.cpp
         test/test_utils_main.cpp
         test/test_Zip2Iterator.cpp
         test/test_BinaryTreeArray.cpp

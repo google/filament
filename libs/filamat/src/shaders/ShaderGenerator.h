@@ -26,6 +26,7 @@
 #include "MaterialInfo.h"
 
 #include <utils/CString.h>
+#include <utils/sstream.h>
 
 namespace filamat {
 
@@ -79,7 +80,7 @@ struct ShaderPostProcessGenerator {
     static const std::string createPostProcessFragmentProgram(filament::backend::ShaderModel sm,
             MaterialBuilder::TargetApi targetApi, MaterialBuilder::TargetLanguage targetLanguage,
             filament::PostProcessStage variant, uint8_t firstSampler) noexcept;
-    static void generatePostProcessStageDefines(std::stringstream& vs, CodeGenerator const& cg,
+    static void generatePostProcessStageDefines(utils::io::sstream& vs, CodeGenerator const& cg,
             filament::PostProcessStage variant) noexcept;
 };
 
