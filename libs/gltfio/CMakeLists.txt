@@ -112,10 +112,12 @@ add_library(gltfio_resources ${DUMMY_SRC} ${RESGEN_SOURCE})
 # This is an optional dependency and can be installed with homebrew, apt-get, etc.
 # ==================================================================================================
 
-find_package(embree 3.0)
+find_package(embree 3.0 QUIET PATHS /usr/lib64/cmake)
 if (embree_FOUND)
     message("Found embree in ${embree_DIR}")
     add_definitions(-DFILAMENT_HAS_EMBREE)
+else()
+    message("Embree not found, pipeline features are disabled.")
 endif()
 
 # ==================================================================================================
