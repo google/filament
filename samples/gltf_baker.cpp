@@ -409,15 +409,19 @@ static void prepAsset(App& app) {
 }
 
 static void bakeAsset(App& app) {
+    app.pushedState = app.state;
     app.state = BAKING;
-    std::cout << "Baking..." << std::endl;
+    gltfio::AssetPipeline::AssetHandle asset = app.asset->getSourceAsset();
 
-    gltfio::AssetPipeline pipeline;
-    gltfio::AssetPipeline::AssetHandle asset = pipeline.load(app.filename);
+    // Allocate the render target for the path tracer as well as a GPU texture to display it.
+    auto viewportSize = ImGui::GetIO().DisplaySize;
+    viewportSize.x -= app.viewer->getSidebarWidth();
+    image::LinearImage image(1024, 1024, 1);
+    app.renderedImage = image;
+    app.showOverlay = true;
+    createOverlayTexture(app);
 
     using filament::math::ushort2;
-    image::LinearImage image(1024, 1024, 1);
-
     auto onRenderTile = [](image::LinearImage, ushort2, ushort2, void* userData) {
         App* app = (App*) userData;
         app->requestOverlayUpdate = true;
@@ -426,8 +430,8 @@ static void bakeAsset(App& app) {
         App* app = (App*) userData;
         app->requestStatePop = true;
     };
+    gltfio::AssetPipeline pipeline;
     pipeline.bakeAmbientOcclusion(asset, image, onRenderTile, onRenderDone, &app);
-
 }
 
 int main(int argc, char** argv) {

@@ -909,8 +909,9 @@ cgltf_data* Pipeline::xatlasToCgltf(const cgltf_data* sourceAsset, const xatlas:
                 cgltf_accessor_read_float(accessor, sourceIndex, vertexWritePtr, elementSize);
                 vertexWritePtr += elementSize;
             }
-            *vertexWritePtr++ = atlasVertex.uv[0];
-            *vertexWritePtr++ = atlasVertex.uv[1];
+            vertexWritePtr[0] = atlasVertex.uv[0] / atlas->width;
+            vertexWritePtr[1] = atlasVertex.uv[1] / atlas->height;
+            vertexWritePtr += 2;
         }
     }
 
