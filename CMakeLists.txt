@@ -60,6 +60,19 @@ if (WIN32)
 endif()
 
 # ==================================================================================================
+# Check if embree is available.
+# This is an optional dependency and can be installed with homebrew, apt-get, etc.
+# ==================================================================================================
+
+find_package(embree 3.0 QUIET PATHS /usr/lib64/cmake)
+if (embree_FOUND AND NOT ANDROID)
+    message("Found embree in ${embree_DIR}")
+    add_definitions(-DFILAMENT_HAS_EMBREE)
+else()
+    message("Embree not found, pipeline features are disabled.")
+endif()
+
+# ==================================================================================================
 #  Paths
 # ==================================================================================================
 # Where our external libs are
@@ -344,6 +357,7 @@ add_subdirectory(${LIBRARIES}/geometry)
 add_subdirectory(${LIBRARIES}/gltfio)
 add_subdirectory(${LIBRARIES}/ibl)
 add_subdirectory(${LIBRARIES}/image)
+add_subdirectory(${LIBRARIES}/rays)
 add_subdirectory(${LIBRARIES}/math)
 add_subdirectory(${LIBRARIES}/utils)
 add_subdirectory(${FILAMENT}/filament)

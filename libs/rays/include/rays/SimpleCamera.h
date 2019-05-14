@@ -14,14 +14,17 @@
  * limitations under the License.
  */
 
-#ifndef GLTFIO_SIMPLECAMERA_H
-#define GLTFIO_SIMPLECAMERA_H
+#ifndef RAYS_SIMPLECAMERA_H
+#define RAYS_SIMPLECAMERA_H
 
 #include <math/vec3.h>
 
-namespace gltfio {
+namespace filament {
+namespace rays {
 
-/** Used to configure the embedded path tracer in AssetPipeline. */
+/**
+ * SimpleCamera is used to configure "non-bake" rendering in PathTracer.
+ */
 struct SimpleCamera {
     float aspectRatio;
     filament::math::float3 eyePosition;
@@ -30,6 +33,7 @@ struct SimpleCamera {
     float vfovDegrees;
 };
 
-} // namespace gltfio
+} // namespace rays
+} // namespace filament
 
-#endif // GLTFIO_SIMPLECAMERA_H
+#endif // RAYS_SIMPLECAMERA_H

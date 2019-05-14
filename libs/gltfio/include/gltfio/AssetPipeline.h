@@ -17,7 +17,7 @@
 #ifndef GLTFIO_ASSETPIPELINE_H
 #define GLTFIO_ASSETPIPELINE_H
 
-#include <gltfio/SimpleCamera.h>
+#include <rays/PathTracer.h>
 
 #include <image/LinearImage.h>
 
@@ -101,15 +101,13 @@ public:
      * Signals that a region of a path-traced image is available (used for progress notification).
      * This can be called from any thread.
      */
-    using RenderTileCallback = void(*)(image::LinearImage target,
-            filament::math::ushort2 topLeft, filament::math::ushort2 bottomRight,
-            void* userData);
+    using RenderTileCallback = filament::rays::TileCallback;
 
     /**
      * Signals that a complete path-traced image has become available.
      * This can be called from any thread.
      */
-    using RenderDoneCallback = void(*)(image::LinearImage target, void* userData);
+    using RenderDoneCallback = filament::rays::DoneCallback;
 
     /**
      * Consumes a parameterized glTF asset and produces a single-channel image with ambient
@@ -117,6 +115,7 @@ public:
      *
      * This invokes a simple path tracer that operates on tiles of the target image. It spins
      * up a number of threads and triggers a callback every time a new tile has been rendered.
+     * Clients should not destroy the AssetPipeline before the done callback is triggered.
      */
     void bakeAmbientOcclusion(AssetHandle source, image::LinearImage target,
             RenderTileCallback progress, RenderDoneCallback done, void* userData);
@@ -127,10 +126,11 @@ public:
      * 
      * This method is not related to baking and was initially authored for diagnostic purposes.
      * The progress callback is similar to bakeAmbientOcclusion.
+     * Clients should not destroy the AssetPipeline before the done callback is triggered.
      */
     void renderAmbientOcclusion(AssetHandle source, image::LinearImage target,
-            const SimpleCamera& camera, RenderTileCallback progress, RenderDoneCallback done,
-            void* userData);
+            const filament::rays::SimpleCamera& camera, RenderTileCallback progress,
+            RenderDoneCallback done, void* userData);
 
 
     static bool isFlattened(AssetHandle source);

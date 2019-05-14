@@ -21,8 +21,6 @@
 #define CGLTF_WRITE_IMPLEMENTATION
 #include "cgltf_write.h"
 
-#include "PathTracer.h"
-
 #include <utils/Log.h>
 
 #include <math/mat4.h>
@@ -36,6 +34,7 @@ using namespace filament::math;
 using namespace utils;
 
 using std::vector;
+using filament::rays::SimpleMesh;
 
 const char* const gltfio::AssetPipeline::BAKED_UV_ATTRIB = "TEXCOORD_4";
 const int gltfio::AssetPipeline::BAKED_UV_ATTRIB_INDEX = 4;
@@ -93,6 +92,9 @@ public:
 
     ~Pipeline();
 
+    // Convert a flattened cgltf asset into a PathTracer scene (i.e. an array of SimpleMesh).
+    void cgltfToSimpleMesh(const cgltf_data* sourceAsset, SimpleMesh** meshes, size_t* numMeshes);
+
 private:
     void bakeTransform(BakedPrim* prim, const mat4f& transform, const mat3f& normalMatrix);
     void populateResult(const BakedPrim* prims, size_t numPrims, size_t numVerts);
@@ -119,6 +121,7 @@ private:
         ArrayHolder<cgltf_texture> textures;
         ArrayHolder<cgltf_material> materials;
         ArrayHolder<uint8_t> bufferData;
+        ArrayHolder<SimpleMesh> simpleMeshes;
     } mStorage;
 };
 
@@ -1054,6 +1057,76 @@ cgltf_data* Pipeline::xatlasToCgltf(const cgltf_data* sourceAsset, const xatlas:
     return resultAsset;
 }
 
+void Pipeline::cgltfToSimpleMesh(const cgltf_data* sourceAsset, SimpleMesh** meshes,
+        size_t* numMeshes) {
+    *numMeshes = sourceAsset->scene->nodes_count;
+    *meshes = mStorage.simpleMeshes.alloc(sourceAsset->scene->nodes_count);
+
+    const cgltf_node** nodes = (const cgltf_node**) sourceAsset->scene->nodes;
+    for (cgltf_size i = 0, len = sourceAsset->scene->nodes_count; i < len; ++i) {
+        const cgltf_primitive& prim = nodes[i]->mesh->primitives[0];
+
+        // Collect the attributes for positions, uvs, and normals.
+        const cgltf_accessor* positions = nullptr;
+        const cgltf_accessor* texcoords = nullptr;
+        const cgltf_accessor* normals = nullptr;
+        for (cgltf_size j = 0, len = prim.attributes_count; j < len; ++j) {
+            const cgltf_attribute& attr = prim.attributes[j];
+            if (attr.type == cgltf_attribute_type_position && attr.index == 0) {
+                positions = attr.data;
+            } else if (!strcmp(attr.name, gltfio::AssetPipeline::BAKED_UV_ATTRIB)) {
+                texcoords = attr.data;
+            } else if (attr.type == cgltf_attribute_type_normal && attr.index == 0) {
+                normals = attr.data;
+            }
+        }
+
+        // Allocate space for embree vertex data, then populate it.
+        if (positions && texcoords && normals) {
+            const size_t numBytes = sizeof(float) * 3 * positions->count;
+            float* pTexcoords = (float*) mStorage.bufferData.alloc(numBytes);
+            float* pPositions = (float*) mStorage.bufferData.alloc(numBytes);
+            float* pNormals = (float*) mStorage.bufferData.alloc(numBytes);
+            float* uvs = pTexcoords;
+            float* pos = pPositions;
+            float* nrm = pNormals;
+
+            // Note that SimpleMesh requires all vertex attributes to be float3, including texture
+            // coordinates. This is because baking uses UV as position data, and embree always
+            // requires 3D position data.
+            for (size_t i = 0; i < positions->count; ++i) {
+                cgltf_accessor_read_float(texcoords, i, uvs, 2);
+                cgltf_accessor_read_float(positions, i, pos, 3);
+                cgltf_accessor_read_float(normals, i, nrm, 3);
+                uvs[2] = 0.0f;
+                pos += 3;
+                uvs += 3;
+                nrm += 3;
+            }
+
+            // For indices, we simply reference the data directly, no need for conversion.
+            uint8_t* pIndices = ((uint8_t*) prim.indices->buffer_view->buffer->data) +
+                    prim.indices->offset + prim.indices->buffer_view->offset;
+
+            (*meshes)[i] = SimpleMesh {
+                .numVertices = positions->count,
+                .numIndices = prim.indices->count,
+                .positions = pPositions,
+                .positionsStride = sizeof(float) * 3,
+                .indices = (uint32_t*) pIndices,
+                .normals = pNormals,
+                .normalsStride = sizeof(float) * 3,
+                .uvs = pTexcoords,
+                .uvsStride = sizeof(float) * 3
+            };
+
+        } else {
+            utils::slog.w << "Complete attributes not found for mesh " << i << " of " << len
+                    << utils::io::endl;
+        }
+    }
+}
+
 const cgltf_data* Pipeline::parameterize(const cgltf_data* sourceAsset) {
 
     if (!isFlattened(sourceAsset)) {
@@ -1187,35 +1260,43 @@ AssetHandle AssetPipeline::parameterize(AssetHandle source) {
 
 void AssetPipeline::bakeAmbientOcclusion(AssetHandle source, image::LinearImage target,
         RenderTileCallback onTile, RenderDoneCallback onDone, void* userData) {
+    Pipeline* impl = (Pipeline*) mImpl;
     auto sourceAsset = (const cgltf_data*) source;
     if (!isFlattened(sourceAsset)) {
         utils::slog.e << "Only flattened assets can be baked." << utils::io::endl;
         return;
     }
-    PathTracer pathtracer = PathTracer::Builder()
+    SimpleMesh* meshes;
+    size_t numMeshes;
+    impl->cgltfToSimpleMesh(sourceAsset, &meshes, &numMeshes);
+    filament::rays::PathTracer pathtracer = filament::rays::PathTracer::Builder()
         .renderTarget(target)
-        .uvCamera(BAKED_UV_ATTRIB)
+        .uvCamera()
         .tileCallback(onTile, userData)
         .doneCallback(onDone, userData)
-        .sourceAsset((cgltf_data*) source)
+        .meshes(meshes, numMeshes)
         .build();
     pathtracer.render();
 }
 
 void AssetPipeline::renderAmbientOcclusion(AssetHandle source, image::LinearImage target,
-        const SimpleCamera& camera, RenderTileCallback onTile,
+        const filament::rays::SimpleCamera& camera, RenderTileCallback onTile,
         RenderDoneCallback onDone, void* userData) {
+    Pipeline* impl = (Pipeline*) mImpl;
     auto sourceAsset = (const cgltf_data*) source;
     if (!isFlattened(sourceAsset)) {
         utils::slog.e << "Only flattened assets can be rendered." << utils::io::endl;
         return;
     }
-    PathTracer pathtracer = PathTracer::Builder()
+    SimpleMesh* meshes;
+    size_t numMeshes;
+    impl->cgltfToSimpleMesh(sourceAsset, &meshes, &numMeshes);
+    filament::rays::PathTracer pathtracer = filament::rays::PathTracer::Builder()
         .renderTarget(target)
         .filmCamera(camera)
         .tileCallback(onTile, userData)
         .doneCallback(onDone, userData)
-        .sourceAsset((cgltf_data*) source)
+        .meshes(meshes, numMeshes)
         .build();
     pathtracer.render();
 }

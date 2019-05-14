@@ -132,6 +132,7 @@ and tools.
   - `image`:               Image filtering and simple transforms
   - `imageio`:             Image file reading / writing, only intended for internal use
   - `math`:                Math library
+  - `rays`:                Simple path tracer used for baking ambient occlusion, etc.
   - `utils`:               Utility library (threads, memory, data structures, etc.)
 - `samples`:               Sample desktop applications
 - `shaders`:               Shaders used by `filamat` and `matc`
@@ -170,7 +171,7 @@ To build the Java based components of the project you can optionally install (re
 Additional dependencies may be required for your operating system. Please refer to the appropriate
 section below.
 
-Building the light baking pipeline is optional and requires the following packages:
+Building the `rays` library (used for light baking) is optional and requires the following packages:
 
 - embree 3.0+
 - libtbb-dev
