@@ -465,6 +465,7 @@ io::sstream& CodeGenerator::generateShaderLit(io::sstream& out, ShaderType type,
         }
 
         if (shading != Shading::UNLIT) {
+            out << SHADERS_AMBIENT_OCCLUSION_FS_DATA;
             out << SHADERS_LIGHT_INDIRECT_FS_DATA;
         }
         if (variant.hasDirectionalLighting()) {

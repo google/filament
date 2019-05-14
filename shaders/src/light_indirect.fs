@@ -3,7 +3,6 @@
 //------------------------------------------------------------------------------
 
 #ifndef TARGET_MOBILE
-#define IBL_SPECULAR_OCCLUSION
 #define IBL_OFF_SPECULAR_PEAK
 #endif
 
@@ -311,17 +310,6 @@ void isEvaluateClearCoatIBL(const PixelParams pixel, float specularAO, inout vec
 // IBL evaluation
 //------------------------------------------------------------------------------
 
-/**
- * Computes a specular occlusion term from the ambient occlusion term.
- */
-float computeSpecularAO(float NoV, float ao, float roughness) {
-#if defined(IBL_SPECULAR_OCCLUSION)
-    return saturate(pow(NoV + ao, exp2(-16.0 * roughness - 1.0)) - 1.0 + ao);
-#else
-    return 1.0;
-#endif
-}
-
 void evaluateClothIndirectDiffuseBRDF(const PixelParams pixel, inout float diffuse) {
 #if defined(SHADING_MODEL_CLOTH)
 #if defined(MATERIAL_HAS_SUBSURFACE_COLOR)
@@ -363,6 +351,7 @@ void evaluateSubsurfaceIBL(const PixelParams pixel, const vec3 diffuseIrradiance
 }
 
 float evaluateSSAO() {
+    // TODO: Don't use gl_FragCoord.xy, use the view bounds
     vec2 uv = gl_FragCoord.xy * frameUniforms.resolution.zw;
     return texture(light_ssao, uv, 0.0).r;
 }
@@ -373,11 +362,11 @@ void evaluateIBL(const MaterialInputs material, const PixelParams pixel, inout v
     vec3 r = getReflectedVector(pixel, n);
 
     float ssao = evaluateSSAO();
-    float ao = min(material.ambientOcclusion, ssao);
-    float specularAO = computeSpecularAO(shading_NoV, ao, pixel.roughness);
+    float diffuseAO = min(material.ambientOcclusion, ssao);
+    float specularAO = computeSpecularAO(shading_NoV, diffuseAO, pixel.linearRoughness);
 
     // diffuse indirect
-    float diffuseBRDF = ao; // Fd_Lambert() is baked in the SH below
+    float diffuseBRDF = singleBounceAO(diffuseAO);// Fd_Lambert() is baked in the SH below
     evaluateClothIndirectDiffuseBRDF(pixel, diffuseBRDF);
 
     vec3 diffuseIrradiance = diffuseIrradiance(n);
@@ -387,14 +376,17 @@ void evaluateIBL(const MaterialInputs material, const PixelParams pixel, inout v
     vec3 Fr;
 #if IBL_INTEGRATION == IBL_INTEGRATION_PREFILTERED_CUBEMAP
     Fr = specularDFG(pixel) * prefilteredRadiance(r, pixel.roughness);
-    Fr *= specularAO * pixel.energyCompensation;
+    Fr *= singleBounceAO(specularAO) * pixel.energyCompensation;
     evaluateClearCoatIBL(pixel, specularAO, Fd, Fr);
 #elif IBL_INTEGRATION == IBL_INTEGRATION_IMPORTANCE_SAMPLING
     Fr = isEvaluateIBL(pixel, shading_normal, shading_view, shading_NoV);
-    Fr *= specularAO * pixel.energyCompensation;
+    Fr *= singleBounceAO(specularAO) * pixel.energyCompensation;
     isEvaluateClearCoatIBL(pixel, specularAO, Fd, Fr);
 #endif
     evaluateSubsurfaceIBL(pixel, diffuseIrradiance, Fd, Fr);
+
+    multiBounceAO(diffuseAO, pixel.diffuseColor, Fd);
+    multiBounceSpecularAO(specularAO, pixel.f0, Fr);
 
     // Note: iblLuminance is already premultiplied by the exposure
     color.rgb += (Fd + Fr) * frameUniforms.iblLuminance;

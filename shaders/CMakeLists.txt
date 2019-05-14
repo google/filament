@@ -11,6 +11,7 @@ endif()
 # Sources and headers
 # ==================================================================================================
 set(SHADERS
+        src/ambient_occlusion.fs
         src/brdf.fs
         src/common_getters.fs
         src/common_graphics.fs
