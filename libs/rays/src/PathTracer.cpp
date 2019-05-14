@@ -14,12 +14,10 @@
  * limitations under the License.
  */
 
-#include "PathTracer.h"
+#include <rays/PathTracer.h>
 
 #include <math/mat4.h>
 #include <math/vec2.h>
-
-#include <cgltf.h>
 
 #include <utils/JobSystem.h>
 
@@ -32,6 +30,10 @@ using namespace filament::math;
 
 static constexpr size_t MIN_TILE_SIZE = 32;
 static constexpr size_t MAX_TILES_COUNT = 2048;
+
+// The G-Buffer contains world-space positions followed by normal vectors.
+static constexpr size_t GBUFFER_CHANNELS_COUNT = 6;
+static constexpr size_t GBUFFER_NORMALS_OFFSET = 3;
 
 static constexpr float inf = std::numeric_limits<float>::infinity();
 
@@ -71,59 +73,49 @@ static float3 randomPerp(float3 n) {
     return perp / sqrlen;
 };
 
-namespace gltfio {
-
-PathTracer::Builder::Builder() {
-    mPathTracer = new PathTracer();
-}
-
-PathTracer::Builder::~Builder() {
-    delete mPathTracer;
-}
+namespace filament {
+namespace rays {
 
 PathTracer::Builder& PathTracer::Builder::renderTarget(image::LinearImage target) {
-    mPathTracer->mRenderTarget = target;
+    mConfig.renderTarget = target;
     return *this;
-
 }
 
-PathTracer::Builder& PathTracer::Builder::sourceAsset(AssetHandle asset) {
-    mPathTracer->mSourceAsset = asset;
+PathTracer::Builder& PathTracer::Builder::meshes(const SimpleMesh* meshes, size_t numMeshes) {
+    mConfig.meshes = meshes;
+    mConfig.numMeshes = numMeshes;
     return *this;
-
 }
 
 PathTracer::Builder& PathTracer::Builder::filmCamera(const SimpleCamera& filmCamera) {
-    mPathTracer->mFilmCamera = filmCamera;
+    mConfig.filmCamera = filmCamera;
     return *this;
-
 }
 
-PathTracer::Builder& PathTracer::Builder::uvCamera(const char* uvAttribute) {
-    mPathTracer->mUvCamera = uvAttribute;
+PathTracer::Builder& PathTracer::Builder::uvCamera() {
+    mConfig.uvCamera = true;
     return *this;
-
 }
 
 PathTracer::Builder& PathTracer::Builder::tileCallback(TileCallback onTile, void* userData) {
-    mPathTracer->mTileCallback = onTile;
-    mPathTracer->mTileUserData = userData;
+    mConfig.tileCallback = onTile;
+    mConfig.tileUserData = userData;
     return *this;
 }
 
 PathTracer::Builder& PathTracer::Builder::doneCallback(DoneCallback onDone, void* userData) {
-    mPathTracer->mDoneCallback = onDone;
-    mPathTracer->mDoneUserData = userData;
+    mConfig.doneCallback = onDone;
+    mConfig.doneUserData = userData;
     return *this;
 }
 
 PathTracer::Builder& PathTracer::Builder::samplesPerPixel(size_t numSamples) {
-    mPathTracer->mSamplesPerPixel = numSamples;
+    mConfig.samplesPerPixel = numSamples;
     return *this;
 }
 
 PathTracer PathTracer::Builder::build() {
-    return *mPathTracer;
+    return PathTracer(mConfig);
 }
 
 #ifndef FILAMENT_HAS_EMBREE
@@ -138,34 +130,22 @@ bool PathTracer::render() {
 // Note that the embree context can outlive the user-facing PathTracer object due to work
 // occuring on multiple background threads.
 struct EmbreeContext {
-    image::LinearImage renderTarget;
-    const cgltf_data* sourceAsset;
-    SimpleCamera filmCamera;
-    const char* uvCamera;
-    PathTracer::TileCallback tileCallback;
-    void* tileUserData;
-    PathTracer::DoneCallback doneCallback;
-    void* doneUserData;
-    size_t samplesPerPixel;
-    float aoRayNear;
-    float aoRayFar;
-    struct {
-        std::atomic<int> numRemainingTiles;
-        image::LinearImage gbuffer;
-        RTCDevice device;
-        RTCScene scene;
-    } details;
+    PathTracer::Config config;
+    std::atomic<int> numRemainingTiles;
+    image::LinearImage gbuffer;
+    RTCDevice device;
+    RTCScene scene;
 };
 
 static void renderTile(EmbreeContext* context, PixelRectangle rect) {
-    image::LinearImage& image = context->renderTarget;
-    RTCScene embreeScene = context->details.scene;
-    const float inverseSampleCount = 1.0f / context->samplesPerPixel;
+    image::LinearImage& image = context->config.renderTarget;
+    RTCScene embreeScene = context->scene;
+    const float inverseSampleCount = 1.0f / context->config.samplesPerPixel;
 
     // Precompute some camera parameters.
-    const SimpleCamera& camera = context->filmCamera;
-    const float tnear = context->aoRayNear;
-    const float tfar = context->aoRayFar;
+    const SimpleCamera& camera = context->config.filmCamera;
+    const float tnear = context->config.aoRayNear;
+    const float tfar = context->config.aoRayFar;
     const float iw = 1.0f / image.getWidth();
     const float ih = 1.0f / image.getHeight();
     const float theta = camera.vfovDegrees * M_PI / 180;
@@ -228,7 +208,7 @@ static void renderTile(EmbreeContext* context, PixelRectangle rect) {
                 };
 
                 float sum = 0;
-                for (size_t nsamp = 0, len = context->samplesPerPixel; nsamp < len; nsamp++) {
+                for (size_t nsamp = 0, len = context->config.samplesPerPixel; nsamp < len; nsamp++) {
                     const double2 u = hammersley(nsamp, inverseSampleCount);
                     const float3 dir = tangentFrame * hemisphereCosSample(u);
                     aoray.dir_x = dir.x;
@@ -248,12 +228,12 @@ static void renderTile(EmbreeContext* context, PixelRectangle rect) {
 }
 
 static void renderTileToGbuffer(EmbreeContext* context, PixelRectangle rect) {
-    image::LinearImage& image = context->renderTarget;
-    image::LinearImage& gbuffer = context->details.gbuffer;
-    RTCScene embreeScene = context->details.scene;
+    image::LinearImage& image = context->config.renderTarget;
+    image::LinearImage& gbuffer = context->gbuffer;
+    RTCScene embreeScene = context->scene;
 
-    const float tnear = context->aoRayNear;
-    const float tfar = context->aoRayFar;
+    const float tnear = context->config.aoRayNear;
+    const float tfar = context->config.aoRayFar;
     const float iw = 1.0f / image.getWidth();
     const float ih = 1.0f / image.getHeight();
 
@@ -283,9 +263,8 @@ static void renderTileToGbuffer(EmbreeContext* context, PixelRectangle rect) {
             rtcIntersect1(embreeScene, &intersector, &rayhit);
 
             if (rayhit.ray.tfar != inf) {
-                image.getPixelRef(col, row)[0] = 1.0f;
                 float* position = gbuffer.getPixelRef(col, row);
-                float* normal = position + 3;
+                float* normal = position + GBUFFER_NORMALS_OFFSET;
                 RTCGeometry geo = rtcGetGeometry(embreeScene, rayhit.hit.geomID);
                 rtcInterpolate0(geo, rayhit.hit.primID, rayhit.hit.u, rayhit.hit.v,
                         RTC_BUFFER_TYPE_VERTEX_ATTRIBUTE, 0, position, 3);
@@ -297,13 +276,14 @@ static void renderTileToGbuffer(EmbreeContext* context, PixelRectangle rect) {
 }
 
 static void renderTileFromGbuffer(EmbreeContext* context, PixelRectangle rect) {
-    image::LinearImage& image = context->renderTarget;
-    image::LinearImage& gbuffer = context->details.gbuffer;
-    RTCScene embreeScene = context->details.scene;
-    const float inverseSampleCount = 1.0f / context->samplesPerPixel;
+    image::LinearImage& image = context->config.renderTarget;
+    image::LinearImage& gbuffer = context->gbuffer;
+    RTCScene embreeScene = context->scene;
+    const float inverseSampleCount = 1.0f / context->config.samplesPerPixel;
 
-    const float tnear = context->aoRayNear;
-    const float tfar = context->aoRayFar;
+    const float tnear = context->config.aoRayNear;
+    const float tfar = context->config.aoRayFar;
+    const size_t spp = context->config.samplesPerPixel;
 
     for (size_t row = rect.topLeft.y, len = rect.bottomRight.y; row < len; ++row) {
         for (size_t col = rect.topLeft.x, len = rect.bottomRight.x; col < len; ++col) {
@@ -321,7 +301,7 @@ static void renderTileFromGbuffer(EmbreeContext* context, PixelRectangle rect) {
                 mat3 tangentFrame = {t, b, n};
                 RTCRay aoray { .org_x = position[0], .org_y = position[1], .org_z = position[2] };
                 float sum = 0;
-                for (size_t nsamp = 0, len = context->samplesPerPixel; nsamp < len; nsamp++) {
+                for (size_t nsamp = 0; nsamp < spp; nsamp++) {
                     const double2 u = hammersley(nsamp, inverseSampleCount);
                     const float3 dir = tangentFrame * hemisphereCosSample(u);
                     aoray.dir_x = dir.x;
@@ -342,8 +322,8 @@ static void renderTileFromGbuffer(EmbreeContext* context, PixelRectangle rect) {
 
 template <typename RenderFn, typename CompletionFn>
 void spawnTileJobs(EmbreeContext* context, RenderFn render, CompletionFn done) {
-    const size_t width = context->renderTarget.getWidth();
-    const size_t height = context->renderTarget.getHeight();
+    const size_t width = context->config.renderTarget.getWidth();
+    const size_t height = context->config.renderTarget.getHeight();
 
     // Compute a reasonable tile size that will not create too many jobs.
     int numTiles = 0;
@@ -357,7 +337,7 @@ void spawnTileJobs(EmbreeContext* context, RenderFn render, CompletionFn done) {
         }
         tileSize *= 2;
     }
-    context->details.numRemainingTiles = numTiles;
+    context->numRemainingTiles = numTiles;
 
     // Spawn one job per tile.
     utils::JobSystem* js = utils::JobSystem::getJobSystem();
@@ -372,7 +352,7 @@ void spawnTileJobs(EmbreeContext* context, RenderFn render, CompletionFn done) {
             utils::JobSystem::Job* tile = utils::jobs::createJob(*js, parent, [=] {
                 render(context, rect);
                 // Decrement an atomic tile count to know when we're done.
-                if (--context->details.numRemainingTiles == 0) {
+                if (--context->numRemainingTiles == 0) {
                     done(context);
                 }
 
@@ -384,183 +364,95 @@ void spawnTileJobs(EmbreeContext* context, RenderFn render, CompletionFn done) {
 }
 
 bool PathTracer::render() {
-    auto sourceAsset = (const cgltf_data*) mSourceAsset;
-    const size_t width = mRenderTarget.getWidth();
-    const size_t height = mRenderTarget.getHeight();
-    const cgltf_node** nodes = (const cgltf_node**) sourceAsset->scene->nodes;
+    const size_t width = mConfig.renderTarget.getWidth();
+    const size_t height = mConfig.renderTarget.getHeight();
 
-    EmbreeContext* context = new EmbreeContext {
-        .renderTarget = mRenderTarget,
-        .sourceAsset = sourceAsset,
-        .filmCamera = mFilmCamera,
-        .uvCamera = mUvCamera,
-        .tileCallback = mTileCallback,
-        .tileUserData = mTileUserData,
-        .doneCallback = mDoneCallback,
-        .doneUserData = mDoneUserData,
-        .samplesPerPixel = mSamplesPerPixel,
-        .aoRayNear = mAoRayNear,
-        .aoRayFar = mAoRayFar
-    };
+    EmbreeContext* context = new EmbreeContext { .config = mConfig };
+    
+    if (!context->config.tileCallback) {
+        context->config.tileCallback = [] (image::LinearImage target,
+                filament::math::ushort2 topLeft, filament::math::ushort2 bottomRight,
+                void* userData) {
+        };
+    }
+
+    if (!context->config.doneCallback) {
+        context->config.doneCallback = [] (image::LinearImage target, void* userData) {
+        };
+    }
 
     // Create the embree device.
-    auto device = context->details.device = rtcNewDevice(nullptr);
-    assert(device && "Unable to create embree device.");
-
+    RTCDevice device = context->device = rtcNewDevice(nullptr);
     rtcSetDeviceErrorFunction(device, [](void* userPtr, RTCError code, const char* str) {
         printf("Embree error: %s.\n", str);
     }, nullptr);
 
-    // Creates an embree Geometry object from 3D position data.
-    auto createGeo3D = [device](const cgltf_accessor* positions, const cgltf_accessor* indices) {
-        assert(positions->component_type == cgltf_component_type_r_32f);
-        assert(positions->type == cgltf_type_vec3);
-        assert(indices->component_type == cgltf_component_type_r_32u);
-        assert(indices->type == cgltf_type_scalar);
-
-        RTCGeometry geo = rtcNewGeometry(device, RTC_GEOMETRY_TYPE_TRIANGLE);
-
-        rtcSetSharedGeometryBuffer(geo, RTC_BUFFER_TYPE_VERTEX, 0, RTC_FORMAT_FLOAT3,
-                positions->buffer_view->buffer->data,
-                positions->offset + positions->buffer_view->offset,
-                positions->stride,
-                positions->count);
-
-        rtcSetSharedGeometryBuffer(geo, RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT3,
-                indices->buffer_view->buffer->data,
-                indices->offset + indices->buffer_view->offset,
-                indices->stride * 3,
-                indices->count / 3);
-
-        rtcCommitGeometry(geo);
-        return geo;
-    };
-
-    // Creates an embree Geometry object from 2D position data by setting Z = 0.
-    auto createGeo2D = [device](const cgltf_accessor* positions2d,
-            const cgltf_accessor* attrib0, const cgltf_accessor* attrib1,
-            const cgltf_accessor* indices) {
-
-        assert(positions2d->component_type == cgltf_component_type_r_32f);
-        assert(positions2d->type == cgltf_type_vec2);
-
-        assert(attrib0->component_type == cgltf_component_type_r_32f);
-        assert(attrib0->type == cgltf_type_vec3);
-
-        assert(attrib1->component_type == cgltf_component_type_r_32f);
-        assert(attrib1->type == cgltf_type_vec3);
-
-        assert(indices->component_type == cgltf_component_type_r_32u);
-        assert(indices->type == cgltf_type_scalar);
-
-        RTCGeometry geo = rtcNewGeometry(device, RTC_GEOMETRY_TYPE_TRIANGLE);
-        rtcSetGeometryVertexAttributeCount(geo, 2);
-
-        float* dstpositions = (float*) rtcSetNewGeometryBuffer(geo, RTC_BUFFER_TYPE_VERTEX, 0,
-                RTC_FORMAT_FLOAT3, sizeof(float3), positions2d->count);
-        float* dstattrib0 = (float*) rtcSetNewGeometryBuffer(geo, RTC_BUFFER_TYPE_VERTEX_ATTRIBUTE,
-                0, RTC_FORMAT_FLOAT3, sizeof(float3), attrib0->count);
-        float* dstattrib1 = (float*) rtcSetNewGeometryBuffer(geo, RTC_BUFFER_TYPE_VERTEX_ATTRIBUTE,
-                1, RTC_FORMAT_FLOAT3, sizeof(float3), attrib1->count);
-
-        for (size_t i = 0; i < positions2d->count; ++i) {
-            cgltf_accessor_read_float(positions2d, i, dstpositions, 2);
-            cgltf_accessor_read_float(attrib0, i, dstattrib0, 3);
-            cgltf_accessor_read_float(attrib1, i, dstattrib1, 3);
-            dstpositions[2] = 0.0f;
-            dstpositions += 3;
-            dstattrib0 += 3;
-            dstattrib1 += 3;
-        }
-
-        rtcSetSharedGeometryBuffer(geo, RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT3,
-                indices->buffer_view->buffer->data, indices->offset + indices->buffer_view->offset,
-                indices->stride * 3, indices->count / 3);
-
-        rtcCommitGeometry(geo);
-        return geo;
-    };
-
-    // Populates an embree scene from a flattened glTF asset, which is guaranteed to have only one
-    // mesh per node and only one primitive per mesh. 
+    // Populates an embree scene from 3D position data, ignoring normals and UVs.
     auto populate3DScene = [=] () {
-        RTCScene scene = context->details.scene;
-        for (cgltf_size i = 0, len = sourceAsset->scene->nodes_count; i < len; ++i) {
-            assert(nodes[i]->mesh);
-            assert(nodes[i]->mesh->primitives_count == 1);
-            const cgltf_primitive& prim = nodes[i]->mesh->primitives[0];
-            for (cgltf_size j = 0, len = prim.attributes_count; j < len; ++j) {
-                const cgltf_attribute& attr = prim.attributes[j];
-                if (attr.type == cgltf_attribute_type_position) {
-                    auto geo = createGeo3D(attr.data, prim.indices);
-                    rtcAttachGeometry(scene, geo);
-                    rtcReleaseGeometry(geo);
-                    break;
-                }
-            }
+        for (size_t i = 0; i < context->config.numMeshes; ++i) {
+            const SimpleMesh& mesh = context->config.meshes[i];
+            RTCGeometry geo = rtcNewGeometry(device, RTC_GEOMETRY_TYPE_TRIANGLE);
+            rtcSetSharedGeometryBuffer(geo, RTC_BUFFER_TYPE_VERTEX, 0, RTC_FORMAT_FLOAT3,
+                    mesh.positions, 0, mesh.positionsStride, mesh.numVertices);
+            rtcSetSharedGeometryBuffer(geo, RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT3,
+                    mesh.indices, 0, sizeof(uint32_t) * 3, mesh.numIndices / 3);
+            rtcCommitGeometry(geo);
+            rtcAttachGeometry(context->scene, geo);
+            rtcReleaseGeometry(geo);
         }
-        rtcCommitScene(scene);
+        rtcCommitScene(context->scene);
     };
 
-    // If we're baking (non-null UV camera) then we first use 2D position data sourced from UV
-    // rather than the standard 3D vertex positions.
-    if (mUvCamera) {
-
-        context->details.scene = rtcNewScene(device);
-        for (cgltf_size i = 0, len = sourceAsset->scene->nodes_count; i < len; ++i) {
-            assert(nodes[i]->mesh);
-            assert(nodes[i]->mesh->primitives_count == 1);
-            const cgltf_primitive& prim = nodes[i]->mesh->primitives[0];
-            RTCGeometry geo = nullptr;
-
-            // Collect UV positions, world-space positions, and normals.
-            const cgltf_attribute* pos2d = nullptr;
-            const cgltf_attribute* attr0 = nullptr;
-            const cgltf_attribute* attr1 = nullptr;
-            for (cgltf_size j = 0, len = prim.attributes_count; j < len; ++j) {
-                const cgltf_attribute& attr = prim.attributes[j];
-                if (!strcmp(attr.name, mUvCamera)) {
-                    pos2d = &attr;
-                }
-                if (attr.type == cgltf_attribute_type_position) {
-                    attr0 = &attr;
-                }
-                if (attr.type == cgltf_attribute_type_normal) {
-                    attr1 = &attr;
-                }
-            }
-            if (pos2d && attr0 && attr1) {
-                geo = createGeo2D(pos2d->data, attr0->data, attr1->data, prim.indices);
-                rtcAttachGeometry(context->details.scene, geo);
-                rtcReleaseGeometry(geo);
-            } else {
-                printf("Expected attributes not found for mesh %zu of %zu.\n", i, len);
-            }
+    // Populates an embree scene from 2D position data sourced from UV rather than the standard 3D
+    // vertex positions.
+    auto populate2DScene = [=] () {
+        for (size_t i = 0; i < context->config.numMeshes; ++i) {
+            const SimpleMesh& mesh = context->config.meshes[i];
+            RTCGeometry geo = rtcNewGeometry(device, RTC_GEOMETRY_TYPE_TRIANGLE);
+            rtcSetGeometryVertexAttributeCount(geo, 2);
+            rtcSetSharedGeometryBuffer(geo, RTC_BUFFER_TYPE_VERTEX, 0, RTC_FORMAT_FLOAT3,
+                    mesh.uvs, 0, mesh.uvsStride, mesh.numVertices);
+            rtcSetSharedGeometryBuffer(geo, RTC_BUFFER_TYPE_VERTEX_ATTRIBUTE, 0, RTC_FORMAT_FLOAT3,
+                    mesh.positions, 0, mesh.positionsStride, mesh.numVertices);
+            rtcSetSharedGeometryBuffer(geo, RTC_BUFFER_TYPE_VERTEX_ATTRIBUTE, 1, RTC_FORMAT_FLOAT3,
+                    mesh.normals, 0, mesh.normalsStride, mesh.numVertices);
+            rtcSetSharedGeometryBuffer(geo, RTC_BUFFER_TYPE_INDEX, 0, RTC_FORMAT_UINT3,
+                    mesh.indices, 0, sizeof(uint32_t) * 3, mesh.numIndices / 3);
+            rtcCommitGeometry(geo);
+            rtcAttachGeometry(context->scene, geo);
+            rtcReleaseGeometry(geo);
         }
-        rtcCommitScene(context->details.scene);
+        rtcCommitScene(context->scene);
+    };
 
-        context->details.gbuffer = image::LinearImage(width, height, 6);
+    if (mConfig.uvCamera) {
+
+        context->scene = rtcNewScene(device);
+        populate2DScene();
+
+        context->gbuffer = image::LinearImage(width, height, GBUFFER_CHANNELS_COUNT);
 
         // First render XYZ positions into the G-Buffer.
-        spawnTileJobs(context, [populate3DScene](EmbreeContext* context, PixelRectangle rect) {
+        spawnTileJobs(context, [](EmbreeContext* context, PixelRectangle rect) {
             renderTileToGbuffer(context, rect);
-            context->tileCallback(context->renderTarget, rect.topLeft, rect.bottomRight,
-                    context->tileUserData);
+            context->config.tileCallback(context->config.renderTarget, rect.topLeft,
+                    rect.bottomRight, context->config.tileUserData);
         }, [populate3DScene](EmbreeContext* context) {
 
-            rtcReleaseScene(context->details.scene);
+            rtcReleaseScene(context->scene);
 
             // Now that the G-Buffer is ready, render the 3D scene.
-            context->details.scene = rtcNewScene(context->details.device);
+            context->scene = rtcNewScene(context->device);
             populate3DScene();
             spawnTileJobs(context, [](EmbreeContext* context, PixelRectangle rect) {
                 renderTileFromGbuffer(context, rect);
-                context->tileCallback(context->renderTarget, rect.topLeft, rect.bottomRight,
-                        context->tileUserData);
+                context->config.tileCallback(context->config.renderTarget, rect.topLeft,
+                        rect.bottomRight, context->config.tileUserData);
             }, [](EmbreeContext* context) {
-                context->doneCallback(context->renderTarget, context->doneUserData);
-                rtcReleaseScene(context->details.scene);
-                rtcReleaseDevice(context->details.device);
+                context->config.doneCallback(context->config.renderTarget,
+                        context->config.doneUserData);
+                rtcReleaseScene(context->scene);
+                rtcReleaseDevice(context->device);
                 delete context;
             });
         });
@@ -568,16 +460,17 @@ bool PathTracer::render() {
     } else {
 
         // For the simple case of rendering from a film camera, we need only one pass.
-        context->details.scene = rtcNewScene(device);
+        context->scene = rtcNewScene(device);
         populate3DScene();
         spawnTileJobs(context, [](EmbreeContext* context, PixelRectangle rect) {
             renderTile(context, rect);
-            context->tileCallback(context->renderTarget, rect.topLeft, rect.bottomRight,
-                    context->tileUserData);
+            context->config.tileCallback(context->config.renderTarget, rect.topLeft,
+                    rect.bottomRight, context->config.tileUserData);
         }, [](EmbreeContext* context) {
-            context->doneCallback(context->renderTarget, context->doneUserData);
-            rtcReleaseScene(context->details.scene);
-            rtcReleaseDevice(context->details.device);
+            context->config.doneCallback(context->config.renderTarget,
+                    context->config.doneUserData);
+            rtcReleaseScene(context->scene);
+            rtcReleaseDevice(context->device);
             delete context;
         });
     }
@@ -587,4 +480,5 @@ bool PathTracer::render() {
 
 #endif // FILAMENT_HAS_EMBREE
 
-} // namespace gltfio
+} // namespace filament
+} // namespace rays

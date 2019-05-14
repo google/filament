@@ -83,6 +83,7 @@ struct App {
     AppState pushedState;
     std::atomic<bool> requestOverlayUpdate;
     std::atomic<bool> requestStatePop;
+    gltfio::AssetPipeline* pipeline;
 };
 
 struct OverlayVertex {
@@ -323,54 +324,6 @@ static void loadAsset(App& app) {
     app.viewer->setIndirectLight(FilamentApp::get().getIBL()->getIndirectLight());
 }
 
-static void renderAsset(App& app) {
-    app.pushedState = app.state;
-    app.state = RENDERING;
-    gltfio::AssetPipeline::AssetHandle asset = app.asset->getSourceAsset();
-
-    // Allocate the render target for the path tracer as well as a GPU texture to display it.
-    auto viewportSize = ImGui::GetIO().DisplaySize;
-    viewportSize.x -= app.viewer->getSidebarWidth();
-    image::LinearImage image(viewportSize.x, viewportSize.y, 1);
-    app.renderedImage = image;
-    app.showOverlay = true;
-    createOverlayTexture(app);
-
-    // Compute the camera paramaeters for the path tracer.
-    // ---------------------------------------------------
-    // The path tracer does not know about the top-level Filament transform that we use to fit the
-    // model into a unit cube (see the -s option), so here we do little trick by temporarily
-    // transforming the Filament camera before grabbing its lookAt vectors.
-    auto& tcm = app.engine->getTransformManager();
-    auto root = tcm.getInstance(app.asset->getRoot());
-    auto cam = tcm.getInstance(app.camera->getEntity());
-    filament::math::mat4f prev = tcm.getTransform(root);
-    tcm.setTransform(root, inverse(prev));
-    tcm.setParent(cam, root);
-    SimpleCamera camera = {
-        .aspectRatio = viewportSize.x / viewportSize.y,
-        .eyePosition = app.camera->getPosition(),
-        .targetPosition = app.camera->getPosition() + app.camera->getForwardVector(),
-        .upVector = app.camera->getUpVector(),
-        .vfovDegrees = 45, // NOTE: fov is not queryable, must match with FilamentApp
-    };
-    tcm.setParent(cam, {});
-    tcm.setTransform(root, prev);
-
-    // Finally, set up some callbacks and invoke the path tracer.
-    using filament::math::ushort2;
-    auto onRenderTile = [](image::LinearImage, ushort2, ushort2, void* userData) {
-        App* app = (App*) userData;
-        app->requestOverlayUpdate = true;
-    };
-    auto onRenderDone = [](image::LinearImage image, void* userData) {
-        App* app = (App*) userData;
-        app->requestStatePop = true;
-    };
-    gltfio::AssetPipeline pipeline;
-    pipeline.renderAmbientOcclusion(asset, image, camera, onRenderTile, onRenderDone, &app);
-}
-
 static void prepAsset(App& app) {
     app.state = PREPPING;
 
@@ -408,6 +361,56 @@ static void prepAsset(App& app) {
     app.state = PREPPED;
 }
 
+static void renderAsset(App& app) {
+    app.pushedState = app.state;
+    app.state = RENDERING;
+    gltfio::AssetPipeline::AssetHandle asset = app.asset->getSourceAsset();
+
+    // Allocate the render target for the path tracer as well as a GPU texture to display it.
+    auto viewportSize = ImGui::GetIO().DisplaySize;
+    viewportSize.x -= app.viewer->getSidebarWidth();
+    image::LinearImage image(viewportSize.x, viewportSize.y, 1);
+    app.renderedImage = image;
+    app.showOverlay = true;
+    createOverlayTexture(app);
+
+    // Compute the camera paramaeters for the path tracer.
+    // ---------------------------------------------------
+    // The path tracer does not know about the top-level Filament transform that we use to fit the
+    // model into a unit cube (see the -s option), so here we do little trick by temporarily
+    // transforming the Filament camera before grabbing its lookAt vectors.
+    auto& tcm = app.engine->getTransformManager();
+    auto root = tcm.getInstance(app.asset->getRoot());
+    auto cam = tcm.getInstance(app.camera->getEntity());
+    filament::math::mat4f prev = tcm.getTransform(root);
+    tcm.setTransform(root, inverse(prev));
+    tcm.setParent(cam, root);
+    filament::rays::SimpleCamera camera = {
+        .aspectRatio = viewportSize.x / viewportSize.y,
+        .eyePosition = app.camera->getPosition(),
+        .targetPosition = app.camera->getPosition() + app.camera->getForwardVector(),
+        .upVector = app.camera->getUpVector(),
+        .vfovDegrees = 45, // NOTE: fov is not queryable, must match with FilamentApp
+    };
+    tcm.setParent(cam, {});
+    tcm.setTransform(root, prev);
+
+    app.pipeline = new gltfio::AssetPipeline();
+
+    // Finally, set up some callbacks and invoke the path tracer.
+    using filament::math::ushort2;
+    auto onRenderTile = [](image::LinearImage, ushort2, ushort2, void* userData) {
+        App* app = (App*) userData;
+        app->requestOverlayUpdate = true;
+    };
+    auto onRenderDone = [](image::LinearImage image, void* userData) {
+        App* app = (App*) userData;
+        app->requestStatePop = true;
+        delete app->pipeline;
+    };
+    app.pipeline->renderAmbientOcclusion(asset, image, camera, onRenderTile, onRenderDone, &app);
+}
+
 static void bakeAsset(App& app) {
     app.pushedState = app.state;
     app.state = BAKING;
@@ -421,6 +424,8 @@ static void bakeAsset(App& app) {
     app.showOverlay = true;
     createOverlayTexture(app);
 
+    app.pipeline = new gltfio::AssetPipeline();
+
     using filament::math::ushort2;
     auto onRenderTile = [](image::LinearImage, ushort2, ushort2, void* userData) {
         App* app = (App*) userData;
@@ -428,10 +433,10 @@ static void bakeAsset(App& app) {
     };
     auto onRenderDone = [](image::LinearImage image, void* userData) {
         App* app = (App*) userData;
+        delete app->pipeline;
         app->requestStatePop = true;
     };
-    gltfio::AssetPipeline pipeline;
-    pipeline.bakeAmbientOcclusion(asset, image, onRenderTile, onRenderDone, &app);
+    app.pipeline->bakeAmbientOcclusion(asset, image, onRenderTile, onRenderDone, &app);
 }
 
 int main(int argc, char** argv) {
@@ -499,7 +504,11 @@ int main(int argc, char** argv) {
             ImGui::SameLine();
 
             // Render action (invokes path tracer).
+            #ifdef FILAMENT_HAS_EMBREE
             const bool canRender = app.state == PREPPED;
+            #else
+            const bool canRender = false;
+            #endif
             ImGui::PushStyleColor(ImGuiCol_Text, canRender ? enabled : disabled);
             if (ImGui::Button("Render", ImVec2(100, 50)) && canRender) {
                 renderAsset(app);
@@ -511,7 +520,11 @@ int main(int argc, char** argv) {
             ImGui::SameLine();
 
             // Bake action (invokes path tracer).
+            #ifdef FILAMENT_HAS_EMBREE
             const bool canBake = app.state == PREPPED;
+            #else
+            const bool canBake = false;
+            #endif
             ImGui::PushStyleColor(ImGuiCol_Text, canBake ? enabled : disabled);
             if (ImGui::Button("Bake", ImVec2(100, 50)) && canBake) {
                 bakeAsset(app);
