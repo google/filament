@@ -84,6 +84,7 @@ struct App {
     std::atomic<bool> requestOverlayUpdate;
     std::atomic<bool> requestStatePop;
     gltfio::AssetPipeline* pipeline;
+    std::string messageBoxText;
 };
 
 struct OverlayVertex {
@@ -333,19 +334,23 @@ static void prepAsset(App& app) {
     gltfio::AssetPipeline::AssetHandle asset = pipeline.load(app.filename);
     if (!asset) {
         std::cerr << "Unable to read " << app.filename << std::endl;
-        exit(1);
+        app.state = LOADED;
+        return;
     }
 
     asset = pipeline.flatten(asset);
     if (!asset) {
         std::cerr << "Unable to flatten " << app.filename << std::endl;
-        exit(1);
+        app.state = LOADED;
+        return;
     }
 
     asset = pipeline.parameterize(asset);
     if (!asset) {
         std::cerr << "Unable to parameterize " << app.filename << std::endl;
-        exit(1);
+        app.state = LOADED;
+        app.messageBoxText = "Unable to parameterize mesh, check terminal output for details.";
+        return;
     }
 
     const utils::Path folder = app.filename.getAbsolutePath().getParent();
@@ -536,6 +541,21 @@ int main(int argc, char** argv) {
 
             if (app.renderedImage) {
                 ImGui::Checkbox("Show embree result", &app.showOverlay);
+            }
+
+            if (!app.messageBoxText.empty()) {
+                ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, {10, 10} );
+                ImGui::OpenPopup("MessageBox");
+                if (ImGui::BeginPopupModal("MessageBox", nullptr,
+                        ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar)) {
+                    ImGui::TextUnformatted(app.messageBoxText.c_str());
+                    if (ImGui::Button("OK", ImVec2(120,0))) {
+                        app.messageBoxText.clear();
+                        ImGui::CloseCurrentPopup();
+                    }
+                    ImGui::EndPopup();
+                }
+                ImGui::PopStyleVar();
             }
         });
 

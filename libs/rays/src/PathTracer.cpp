@@ -270,6 +270,10 @@ static void renderTileToGbuffer(EmbreeContext* context, PixelRectangle rect) {
                         RTC_BUFFER_TYPE_VERTEX_ATTRIBUTE, 0, position, 3);
                 rtcInterpolate0(geo, rayhit.hit.primID, rayhit.hit.u, rayhit.hit.v,
                         RTC_BUFFER_TYPE_VERTEX_ATTRIBUTE, 1, normal, 3);
+
+                // AO won't be computed until the second pass, but we show an instant preview of
+                // the chart shapes by setting a placeholder value in the AO map.
+                image.getPixelRef(col, row)[0] = 0.5f;
             }
         }
     }
