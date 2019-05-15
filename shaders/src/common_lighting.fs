@@ -51,8 +51,9 @@ struct PixelParams {
 #endif
 };
 
-float computeMicroShadowing(float NoL, float visibility) {
+float computeMicroShadowing(float NoL, float visibility, float opacity) {
     // Brinck and Maximov 2016, "The Technical Art of Uncharted 4"
     float aperture = 2.0 * visibility * visibility;
-    return saturate(NoL + aperture - 1.0);
+    float microShadow = saturate(NoL + aperture - 1.0);
+    return microShadow * opacity + opacity;
 }
