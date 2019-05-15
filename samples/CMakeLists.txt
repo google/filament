@@ -263,7 +263,7 @@ if (NOT ANDROID)
     target_link_libraries(frame_generator PRIVATE imageio)
     target_link_libraries(suzanne PRIVATE suzanne-resources)
     target_link_libraries(gltf_viewer PRIVATE gltf-resources gltfio)
-    target_link_libraries(gltf_baker PRIVATE gltf-resources gltfio)
+    target_link_libraries(gltf_baker PRIVATE gltf-resources gltfio imageio)
 endif()
 
 # ==================================================================================================
