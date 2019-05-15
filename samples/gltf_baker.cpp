@@ -73,6 +73,7 @@ struct App {
     utils::Path filename;
     image::LinearImage renderedImage;
     bool showOverlay = false;
+    bool enablePrepScale = true;
     View* overlayView = nullptr;
     Scene* overlayScene = nullptr;
     VertexBuffer* overlayVb = nullptr;
@@ -338,7 +339,11 @@ static void prepAsset(App& app) {
         return;
     }
 
-    asset = pipeline.flatten(asset);
+    uint32_t flags = gltfio::AssetPipeline::FILTER_TRIANGLES;
+    if (app.enablePrepScale) {
+        flags |= gltfio::AssetPipeline::SCALE_TO_UNIT;
+    }
+    asset = pipeline.flatten(asset, flags);
     if (!asset) {
         std::cerr << "Unable to flatten " << app.filename << std::endl;
         app.state = LOADED;
@@ -541,6 +546,9 @@ int main(int argc, char** argv) {
 
             if (app.renderedImage) {
                 ImGui::Checkbox("Show embree result", &app.showOverlay);
+            }
+            if (canPrep) {
+                ImGui::Checkbox("Auto-scale before parameterization", &app.enablePrepScale);
             }
 
             if (!app.messageBoxText.empty()) {

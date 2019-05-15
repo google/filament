@@ -82,7 +82,7 @@ public:
      */
     AssetHandle flatten(AssetHandle source, uint32_t flags = ~0u);
 
-    static constexpr uint32_t DISCARD_TEXTURES = 1 << 0;
+    static constexpr uint32_t SCALE_TO_UNIT = 1 << 0;
     static constexpr uint32_t FILTER_TRIANGLES = 1 << 1;
 
     static const char* const BAKED_UV_ATTRIB;
