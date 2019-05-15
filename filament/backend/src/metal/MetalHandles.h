@@ -152,8 +152,9 @@ public:
     ~MetalRenderTarget();
 
     bool isDefaultRenderTarget() const { return defaultRenderTarget; }
-    bool isMultisampled() const { return samples > 1; }
     uint8_t getSamples() const { return samples; }
+    MTLLoadAction getLoadAction(const RenderPassParams& params, TargetBufferFlags buffer);
+    MTLStoreAction getStoreAction(const RenderPassParams& params, TargetBufferFlags buffer);
 
     id<MTLTexture> getColor();
     id<MTLTexture> getColorResolve();
@@ -166,16 +167,14 @@ private:
             uint32_t width, uint32_t height, uint8_t samples);
 
     MetalContext* context;
-    id<MTLTexture> color = nil;
-    id<MTLTexture> depth = nil;
     bool defaultRenderTarget = false;
     uint8_t samples = 1;
     uint8_t level = 0;
 
-    // These textures are only used if this render target is multisampled.
+    id<MTLTexture> color = nil;
+    id<MTLTexture> depth = nil;
     id<MTLTexture> multisampledColor = nil;
     id<MTLTexture> multisampledDepth = nil;
-
 };
 
 class MetalFence : public HwFence {
