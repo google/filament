@@ -426,6 +426,40 @@ const cgltf_data* Pipeline::flattenPrims(const cgltf_data* sourceAsset, uint32_t
     float4* bakedTangents = (float4*) (bufferData + positionsDataSize + normalsDataSize);
     uint32_t* bakedIndices = (uint32_t*) (bufferData + vertexDataSize);
 
+    // Find the overall bounds of the scene and compute a scaling factor. In some cases this
+    // provides a huge boost to the quality of the segmentation results.
+    mat4f scale;
+    if (flags & gltfio::AssetPipeline::SCALE_TO_UNIT) {
+        const cgltf_node* node = nullptr;
+        mat4f worldTransform;
+        float3 minpt = std::numeric_limits<float>::max();
+        float3 maxpt = std::numeric_limits<float>::lowest();
+        for (size_t i = 0; i < numPrims; ++i) {
+            BakedPrim& bakedPrim = bakedPrims[i];
+            if (bakedPrim.sourceNode != node) {
+                node = bakedPrim.sourceNode;
+                cgltf_node_transform_world(node, &worldTransform[0][0]);
+            }
+            float* pmin = bakedPrim.sourcePositions->data->min;
+            float* pmax = bakedPrim.sourcePositions->data->max;
+            float3 a = (worldTransform * float4(pmin[0], pmin[1], pmin[2], 1.0)).xyz;
+            float3 b = (worldTransform * float4(pmin[0], pmin[1], pmax[2], 1.0)).xyz;
+            float3 c = (worldTransform * float4(pmin[0], pmax[1], pmin[2], 1.0)).xyz;
+            float3 d = (worldTransform * float4(pmin[0], pmax[1], pmax[2], 1.0)).xyz;
+            float3 e = (worldTransform * float4(pmax[0], pmin[1], pmin[2], 1.0)).xyz;
+            float3 f = (worldTransform * float4(pmax[0], pmin[1], pmax[2], 1.0)).xyz;
+            float3 g = (worldTransform * float4(pmax[0], pmax[1], pmin[2], 1.0)).xyz;
+            float3 h = (worldTransform * float4(pmax[0], pmax[1], pmax[2], 1.0)).xyz;
+            minpt = min(minpt, min(min(min(min(min(min(min(a, b), c), d), e), f), g), h));
+            maxpt = max(maxpt, max(max(max(max(max(max(max(a, b), c), d), e), f), g), h));
+        }
+        const float3 extent = maxpt - minpt;
+        const float maxExtent = std::max(std::max(extent.x, extent.y), extent.z);
+        const float scaleFactor = 2.0f / maxExtent;
+        const float3 center = (minpt + maxpt) / 2.0f;
+        scale = mat4f::scaling(float3(scaleFactor)) * mat4f::translation(-center);
+    }
+
     // Next, perform the actual baking: convert all vertex positions to fp32, transform them by
     // their respective node matrix, etc.
     const cgltf_node* node = nullptr;
@@ -437,6 +471,7 @@ const cgltf_data* Pipeline::flattenPrims(const cgltf_data* sourceAsset, uint32_t
             node = bakedPrim.sourceNode;
             cgltf_node_transform_world(node, &matrix[0][0]);
             normalMatrix = transpose(inverse(matrix.upperLeft()));
+            matrix = scale * matrix;
         }
         const cgltf_primitive* sourcePrim = bakedPrim.sourcePrimitive;
 
@@ -1150,7 +1185,7 @@ const cgltf_data* Pipeline::parameterize(const cgltf_data* sourceAsset) {
     xatlas::PackCharts(atlas);
 
     if (atlas->atlasCount == 0) {
-        // When this occurs, try building in the debug configuration (xatlas has many asserts).
+        // If this occurs, try building the debug configuration (xatlas has many asserts).
         utils::slog.e << "Error: unable to generate atlas, mesh is not clean." << utils::io::endl;
         xatlas::Destroy(atlas);
         return nullptr;
