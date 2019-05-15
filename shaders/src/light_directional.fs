@@ -2,8 +2,12 @@
 // Directional light evaluation
 //------------------------------------------------------------------------------
 
-vec3 sampleSunAreaLight(const vec3 lightDirection) {
 #if !defined(TARGET_MOBILE)
+#define SUN_AS_AREA_LIGHT
+#endif
+
+vec3 sampleSunAreaLight(const vec3 lightDirection) {
+#if defined(SUN_AS_AREA_LIGHT)
     if (frameUniforms.sun.w >= 0.0) {
         // simulate sun as disc area light
         float LoR = dot(lightDirection, shading_reflected);
