@@ -1149,6 +1149,13 @@ const cgltf_data* Pipeline::parameterize(const cgltf_data* sourceAsset) {
     utils::slog.i << "Packing charts..." << utils::io::endl;
     xatlas::PackCharts(atlas);
 
+    if (atlas->atlasCount == 0) {
+        // When this occurs, try building in the debug configuration (xatlas has many asserts).
+        utils::slog.e << "Error: unable to generate atlas, mesh is not clean." << utils::io::endl;
+        xatlas::Destroy(atlas);
+        return nullptr;
+    }
+
     utils::slog.i << "Produced "
             << atlas->atlasCount << " atlases, "
             << atlas->chartCount << " charts, "
