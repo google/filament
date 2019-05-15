@@ -11,12 +11,18 @@
 #endif
 #endif
 
+float evaluateSSAO() {
+    // TODO: Don't use gl_FragCoord.xy, use the view bounds
+    vec2 uv = gl_FragCoord.xy * frameUniforms.resolution.zw;
+    return texture(light_ssao, uv, 0.0).r;
+}
+
 /**
  * Computes a specular occlusion term from the ambient occlusion term.
  */
-float computeSpecularAO(float NoV, float visibility, float roughness) {
+float computeSpecularAO(float NoV, float visibility, float linearRoughness) {
 #if defined(SPECULAR_OCCLUSION)
-    return saturate(pow(NoV + visibility, exp2(-16.0 * roughness - 1.0)) - 1.0 + visibility);
+    return saturate(pow(NoV + visibility, exp2(-16.0 * linearRoughness - 1.0)) - 1.0 + visibility);
 #else
     return 1.0;
 #endif
@@ -56,4 +62,10 @@ float singleBounceAO(float visibility) {
 #else
     return visibility;
 #endif
+}
+
+float computeMicroShadowing(float NoL, float visibility) {
+    // Brinck and Maximov 2016, "The Technical Art of Uncharted 4"
+    float aperture = 2.0 * visibility * visibility;
+    return saturate(NoL + aperture - 1.0);
 }

@@ -33,6 +33,9 @@ void evaluateDirectionalLight(const PixelParams pixel, inout vec3 color) {
 #if defined(HAS_SHADOWING)
     if (light.NoL > 0.0) {
         visibility = shadow(light_shadowMap, getLightSpacePosition());
+        if (gl_FragCoord.x < frameUniforms.resolution.x * 0.5) {
+            visibility *= computeMicroShadowing(light.NoL, pixel.diffuseAO);
+        }
     } else {
 #if defined(MATERIAL_CAN_SKIP_LIGHTING)
         return;

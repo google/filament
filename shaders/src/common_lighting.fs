@@ -26,6 +26,7 @@ struct PixelParams {
     vec3  f0;
     float linearRoughness;
     vec3  dfg;
+    float diffuseAO;
     vec3  energyCompensation;
 
 #if defined(MATERIAL_HAS_CLEAR_COAT)
@@ -50,9 +51,3 @@ struct PixelParams {
     vec3  subsurfaceColor;
 #endif
 };
-
-float computeMicroShadowing(float NoL, float ao) {
-    // Brinck and Maximov 2016, "Technical Art of Uncharted 4"
-    float aperture = 2.0 * ao * ao;
-    return saturate(NoL + aperture - 1.0);
-}

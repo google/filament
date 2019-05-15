@@ -350,19 +350,12 @@ void evaluateSubsurfaceIBL(const PixelParams pixel, const vec3 diffuseIrradiance
 #endif
 }
 
-float evaluateSSAO() {
-    // TODO: Don't use gl_FragCoord.xy, use the view bounds
-    vec2 uv = gl_FragCoord.xy * frameUniforms.resolution.zw;
-    return texture(light_ssao, uv, 0.0).r;
-}
-
 void evaluateIBL(const MaterialInputs material, const PixelParams pixel, inout vec3 color) {
     // Apply transform here if we wanted to rotate the IBL
     vec3 n = shading_normal;
     vec3 r = getReflectedVector(pixel, n);
 
-    float ssao = evaluateSSAO();
-    float diffuseAO = min(material.ambientOcclusion, ssao);
+    float diffuseAO = pixel.diffuseAO;
     float specularAO = computeSpecularAO(shading_NoV, diffuseAO, pixel.linearRoughness);
 
     // diffuse indirect

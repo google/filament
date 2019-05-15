@@ -2,15 +2,7 @@
 // Lighting
 //------------------------------------------------------------------------------
 
-/**
- * Computes all the parameters required to shade the current pixel/fragment.
- * These parameters are derived from the MaterialInputs structure computed
- * by the user's material code.
- *
- * This function is also responsible for discarding the fragment when alpha
- * testing fails.
- */
-void getPixelParams(const MaterialInputs material, out PixelParams pixel) {
+void getCommonPixelParams(const MaterialInputs material, inout PixelParams pixel) {
     vec4 baseColor = material.baseColor;
 #if defined(BLEND_MODE_MASKED)
     // Use derivatives to smooth alpha tested edges
@@ -47,14 +39,41 @@ void getPixelParams(const MaterialInputs material, out PixelParams pixel) {
     pixel.subsurfaceColor = material.subsurfaceColor;
 #endif
 #endif
+}
 
-    // Clamp the roughness to a minimum value to avoid divisions by 0 in the
-    // lighting code
+void getClearCoatPixelParams(const MaterialInputs material, inout PixelParams pixel) {
+#if defined(MATERIAL_HAS_CLEAR_COAT)
+    pixel.clearCoat = material.clearCoat;
+
+    // Clamp the clear coat roughness to avoid divisions by 0
+    float clearCoatRoughness = material.clearCoatRoughness;
+    clearCoatRoughness = mix(MIN_ROUGHNESS, MAX_CLEAR_COAT_ROUGHNESS, clearCoatRoughness);
+#if defined(GEOMETRIC_SPECULAR_AA_ROUGHNESS)
+    clearCoatRoughness = max(clearCoatRoughness, geometricRoughness);
+#endif
+
+    // Remap the roughness to perceptually linear roughness
+    pixel.clearCoatRoughness = clearCoatRoughness;
+    pixel.clearCoatLinearRoughness = clearCoatRoughness * clearCoatRoughness;
+#if defined(CLEAR_COAT_IOR_CHANGE)
+    // The base layer's f0 is computed assuming an interface from air to an IOR
+    // of 1.5, but the clear coat layer forms an interface from IOR 1.5 to IOR
+    // 1.5. We recompute f0 by first computing its IOR, then reconverting to f0
+    // by using the correct interface
+    pixel.f0 = mix(pixel.f0, f0ClearCoatToSurface(pixel.f0), pixel.clearCoat);
+#endif
+#endif
+}
+
+void getRoughnessPixelParams(const MaterialInputs material, inout PixelParams pixel) {
 #if defined(SHADING_MODEL_SPECULAR_GLOSSINESS)
     float roughness = 1.0 - material.glossiness;
 #else
     float roughness = material.roughness;
 #endif
+
+    // Clamp the roughness to a minimum value to avoid divisions by 0 in the
+    // lighting code
     roughness = clamp(roughness, MIN_ROUGHNESS, 1.0);
 
 #if defined(GEOMETRIC_SPECULAR_AA_ROUGHNESS)
@@ -67,50 +86,36 @@ void getPixelParams(const MaterialInputs material, out PixelParams pixel) {
     roughness = max(roughness, geometricRoughness);
 #endif
 
-#if defined(MATERIAL_HAS_CLEAR_COAT)
-    pixel.clearCoat = material.clearCoat;
-    // Clamp the clear coat roughness to avoid divisions by 0
-    float clearCoatRoughness = material.clearCoatRoughness;
-    clearCoatRoughness = mix(MIN_ROUGHNESS, MAX_CLEAR_COAT_ROUGHNESS, clearCoatRoughness);
-#if defined(GEOMETRIC_SPECULAR_AA_ROUGHNESS)
-    clearCoatRoughness = max(clearCoatRoughness, geometricRoughness);
-#endif
-    // Remap the roughness to perceptually linear roughness
-    pixel.clearCoatRoughness = clearCoatRoughness;
-    pixel.clearCoatLinearRoughness = clearCoatRoughness * clearCoatRoughness;
-#if defined(CLEAR_COAT_IOR_CHANGE)
-    // The base layer's f0 is computed assuming an interface from air to an IOR
-    // of 1.5, but the clear coat layer forms an interface from IOR 1.5 to IOR
-    // 1.5. We recompute f0 by first computing its IOR, then reconverting to f0
-    // by using the correct interface
-    pixel.f0 = mix(pixel.f0, f0ClearCoatToSurface(pixel.f0), pixel.clearCoat);
-#endif
-
-#if defined(MATERIAL_HAS_CLEAR_COAT_ROUGHNESS)
+#if defined(MATERIAL_HAS_CLEAR_COAT) && defined(MATERIAL_HAS_CLEAR_COAT_ROUGHNESS)
     // This is a hack but it will do: the base layer must be at least as rough
     // as the clear coat layer to take into account possible diffusion by the
     // top layer
     roughness = max(roughness, pixel.clearCoatRoughness);
 #endif
-#endif
 
     // Remaps the roughness to a perceptually linear roughness (roughness^2)
     pixel.roughness = roughness;
     pixel.linearRoughness = roughness * roughness;
+}
 
+void getSubsurfacePixelParams(const MaterialInputs material, inout PixelParams pixel) {
 #if defined(SHADING_MODEL_SUBSURFACE)
     pixel.subsurfacePower = material.subsurfacePower;
     pixel.subsurfaceColor = material.subsurfaceColor;
     pixel.thickness = saturate(material.thickness);
 #endif
+}
 
+void getAnisotropyPixelParams(const MaterialInputs material, inout PixelParams pixel) {
 #if defined(MATERIAL_HAS_ANISOTROPY)
     vec3 direction = material.anisotropyDirection;
     pixel.anisotropy = material.anisotropy;
     pixel.anisotropicT = normalize(shading_tangentToWorld * direction);
     pixel.anisotropicB = normalize(cross(shading_tangentToWorld[2], pixel.anisotropicT));
 #endif
+}
 
+void getEnergyCompensationPixelParams(inout PixelParams pixel) {
     // Pre-filtered DFG term used for image-based lighting
     pixel.dfg = prefilteredDFG(pixel.roughness, shading_NoV);
 
@@ -121,6 +126,29 @@ void getPixelParams(const MaterialInputs material, out PixelParams pixel) {
 #else
     pixel.energyCompensation = vec3(1.0);
 #endif
+}
+
+void getAmbientOcclusionPixelParams(const MaterialInputs material, inout PixelParams pixel) {
+    float ssao = evaluateSSAO();
+    pixel.diffuseAO = min(material.ambientOcclusion, ssao);
+}
+
+/**
+ * Computes all the parameters required to shade the current pixel/fragment.
+ * These parameters are derived from the MaterialInputs structure computed
+ * by the user's material code.
+ *
+ * This function is also responsible for discarding the fragment when alpha
+ * testing fails.
+ */
+void getPixelParams(const MaterialInputs material, out PixelParams pixel) {
+    getCommonPixelParams(material, pixel);
+    getClearCoatPixelParams(material, pixel);
+    getRoughnessPixelParams(material, pixel);
+    getSubsurfacePixelParams(material, pixel);
+    getAnisotropyPixelParams(material, pixel);
+    getEnergyCompensationPixelParams(pixel);
+    getAmbientOcclusionPixelParams(material, pixel);
 }
 
 float getDiffuseAlpha(float a) {
