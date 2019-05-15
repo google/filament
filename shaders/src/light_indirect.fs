@@ -355,7 +355,8 @@ void evaluateIBL(const MaterialInputs material, const PixelParams pixel, inout v
     vec3 n = shading_normal;
     vec3 r = getReflectedVector(pixel, n);
 
-    float diffuseAO = pixel.diffuseAO;
+    float ssao = evaluateSSAO();
+    float diffuseAO = min(material.ambientOcclusion, ssao);
     float specularAO = computeSpecularAO(shading_NoV, diffuseAO, pixel.linearRoughness);
 
     // diffuse indirect

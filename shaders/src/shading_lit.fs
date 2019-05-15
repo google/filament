@@ -128,11 +128,6 @@ void getEnergyCompensationPixelParams(inout PixelParams pixel) {
 #endif
 }
 
-void getAmbientOcclusionPixelParams(const MaterialInputs material, inout PixelParams pixel) {
-    float ssao = evaluateSSAO();
-    pixel.diffuseAO = min(material.ambientOcclusion, ssao);
-}
-
 /**
  * Computes all the parameters required to shade the current pixel/fragment.
  * These parameters are derived from the MaterialInputs structure computed
@@ -148,7 +143,6 @@ void getPixelParams(const MaterialInputs material, out PixelParams pixel) {
     getSubsurfacePixelParams(material, pixel);
     getAnisotropyPixelParams(material, pixel);
     getEnergyCompensationPixelParams(pixel);
-    getAmbientOcclusionPixelParams(material, pixel);
 }
 
 float getDiffuseAlpha(float a) {
@@ -183,7 +177,7 @@ vec4 evaluateLights(const MaterialInputs material) {
     evaluateIBL(material, pixel, color);
 
 #if defined(HAS_DIRECTIONAL_LIGHTING)
-    evaluateDirectionalLight(pixel, color);
+    evaluateDirectionalLight(material, pixel, color);
 #endif
 
 #if defined(HAS_DYNAMIC_LIGHTING)

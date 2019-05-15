@@ -354,6 +354,8 @@ static void setup(Engine* engine, View* view, Scene* scene) {
             auto ti = tcm.getInstance(renderable);
             tcm.setTransform(ti, mat4f{ mat3f(g_config.scale), float3(0.0f, 0.0f, -4.0f) } *
                     tcm.getWorldTransform(ti));
+            rcm.setReceiveShadows(rcm.getInstance(renderable), true);
+            rcm.setCastShadows(rcm.getInstance(renderable), true);
             scene->addEntity(renderable);
         }
     }
@@ -363,6 +365,7 @@ static void setup(Engine* engine, View* view, Scene* scene) {
             .color(Color::toLinear<ACCURATE>({0.98f, 0.92f, 0.89f}))
             .intensity(110000)
             .direction({0.6, -1, -0.8})
+            .castShadows(true)
             .build(*engine, g_light);
     scene->addEntity(g_light);
 }

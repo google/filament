@@ -30,16 +30,20 @@ Light getDirectionalLight() {
     return light;
 }
 
-void evaluateDirectionalLight(const PixelParams pixel, inout vec3 color) {
+void evaluateDirectionalLight(const MaterialInputs material,
+        const PixelParams pixel, inout vec3 color) {
+
     Light light = getDirectionalLight();
 
     float visibility = 1.0;
 #if defined(HAS_SHADOWING)
     if (light.NoL > 0.0) {
         visibility = shadow(light_shadowMap, getLightSpacePosition());
+        #if defined(MATERIAL_HAS_AMBIENT_OCCLUSION)
         if (gl_FragCoord.x < frameUniforms.resolution.x * 0.5) {
-            visibility *= computeMicroShadowing(light.NoL, pixel.diffuseAO);
+            visibility *= computeMicroShadowing(light.NoL, material.ambientOcclusion);
         }
+        #endif
     } else {
 #if defined(MATERIAL_CAN_SKIP_LIGHTING)
         return;
