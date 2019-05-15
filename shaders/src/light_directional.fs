@@ -40,9 +40,7 @@ void evaluateDirectionalLight(const MaterialInputs material,
     if (light.NoL > 0.0) {
         visibility = shadow(light_shadowMap, getLightSpacePosition());
         #if defined(MATERIAL_HAS_AMBIENT_OCCLUSION)
-        if (gl_FragCoord.x < frameUniforms.resolution.x * 0.5) {
-            visibility *= computeMicroShadowing(light.NoL, material.ambientOcclusion);
-        }
+        visibility *= computeMicroShadowing(light.NoL, material.ambientOcclusion);
         #endif
     } else {
 #if defined(MATERIAL_CAN_SKIP_LIGHTING)
