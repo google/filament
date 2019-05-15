@@ -98,6 +98,12 @@ public:
     AssetHandle parameterize(AssetHandle source);
 
     /**
+     * Strips all textures and materials from a flattened asset, replacing them with a nonlit
+     * material that samples from the texture at the given path.
+     */
+    AssetHandle generatePreview(AssetHandle source, const utils::Path& texture);
+
+    /**
      * Signals that a region of a path-traced image is available (used for progress notification).
      * This can be called from any thread.
      */

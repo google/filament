@@ -38,6 +38,7 @@ using filament::rays::SimpleMesh;
 
 const char* const gltfio::AssetPipeline::BAKED_UV_ATTRIB = "TEXCOORD_4";
 const int gltfio::AssetPipeline::BAKED_UV_ATTRIB_INDEX = 4;
+static const char* const PREVIEW_MATERIAL_NAME = "preview";
 
 namespace {
 
@@ -87,13 +88,16 @@ public:
     // Use xatlas to generate a new UV set and modify topology appropriately.
     const cgltf_data* parameterize(const cgltf_data* sourceAsset);
 
-    // Take ownership of the given asset and free it when the pipeline is destroyed.
-    void addSourceAsset(cgltf_data* asset);
+    // Strips materials from a flattened asset and replaces them a simple nonlit material.
+    const cgltf_data* generatePreview(const cgltf_data* sourceAsset, const Path& texturePath);
 
-    ~Pipeline();
+    // Take ownership of the given asset and free it when the pipeline is destroyed.
+    void retainSourceAsset(cgltf_data* asset);
 
     // Convert a flattened cgltf asset into a PathTracer scene (i.e. an array of SimpleMesh).
     void cgltfToSimpleMesh(const cgltf_data* sourceAsset, SimpleMesh** meshes, size_t* numMeshes);
+
+    ~Pipeline();
 
 private:
     void bakeTransform(BakedPrim* prim, const mat4f& transform, const mat3f& normalMatrix);
@@ -1082,9 +1086,6 @@ cgltf_data* Pipeline::xatlasToCgltf(const cgltf_data* sourceAsset, const xatlas:
     resultAsset->buffer_views_count = numBufferViews;
     resultAsset->accessors = accessors;
     resultAsset->accessors_count = numAccessors;
-    resultAsset->images = sourceAsset->images;
-    resultAsset->textures = sourceAsset->textures;
-    resultAsset->materials = sourceAsset->materials;
     resultAsset->meshes = meshes;
     resultAsset->nodes = nodes;
     resultAsset->scenes = scenes;
@@ -1163,7 +1164,6 @@ void Pipeline::cgltfToSimpleMesh(const cgltf_data* sourceAsset, SimpleMesh** mes
 }
 
 const cgltf_data* Pipeline::parameterize(const cgltf_data* sourceAsset) {
-
     if (!isFlattened(sourceAsset)) {
         utils::slog.e << "Only flattened assets can be parameterized." << utils::io::endl;
         return nullptr;
@@ -1201,7 +1201,157 @@ const cgltf_data* Pipeline::parameterize(const cgltf_data* sourceAsset) {
     return result;
 }
 
-void Pipeline::addSourceAsset(cgltf_data* asset) {
+const cgltf_data* Pipeline::generatePreview(const cgltf_data* sourceAsset, const Path& texture) {
+    if (!isFlattened(sourceAsset)) {
+        utils::slog.e << "Only flattened assets can be parameterized." << utils::io::endl;
+        return nullptr;
+    }
+    const std::string texturePath = texture;
+
+    // The only attributes we need are positions and UVs.
+    const size_t numPrims = sourceAsset->meshes_count;
+    const size_t numAttributes = numPrims * 2;
+
+    // The number of required accessors will be the same as the number of vertex attributes, plus
+    // an additional one for the index buffer.
+    const size_t numAccessors = numAttributes + numPrims;
+
+    // Determine the number of node references.
+    size_t numNodePointers = 0;
+    for (cgltf_size i = 0; i < sourceAsset->scenes_count; ++i) {
+        const cgltf_scene& scene = sourceAsset->scenes[i];
+        numNodePointers += scene.nodes_count;
+    }
+
+    // Allocate memory for new asset structures that will be retained by the pipeline.
+    cgltf_data* resultAsset = mStorage.resultAssets.alloc(1);
+    cgltf_scene* scenes = mStorage.scenes.alloc(sourceAsset->scenes_count);
+    cgltf_node** nodePointers = mStorage.nodePointers.alloc(numNodePointers);
+    cgltf_node* nodes = mStorage.nodes.alloc(numPrims);
+    cgltf_mesh* meshes = mStorage.meshes.alloc(numPrims);
+    cgltf_primitive* prims = mStorage.prims.alloc(numPrims);
+    cgltf_accessor* accessors = mStorage.accessors.alloc(numAccessors);
+    cgltf_attribute* attributes = mStorage.attributes.alloc(numAttributes);
+    cgltf_image* images = mStorage.images.alloc(1);
+    cgltf_texture* textures = mStorage.textures.alloc(1);
+    cgltf_material* materials = mStorage.materials.alloc(1);
+    char* pathString = (char*) mStorage.bufferData.alloc(texturePath.size() + 1);
+
+    // Clone the scenes and nodes. This is easy because the source asset has been flattened.
+    assert(numPrims == sourceAsset->nodes_count);
+    for (size_t i = 0, len = sourceAsset->scenes_count; i < len; ++i) {
+        cgltf_scene& scene = scenes[i] = sourceAsset->scenes[i];
+        for (size_t j = 0; j < scene.nodes_count; ++j) {
+            size_t nodeIndex = scene.nodes[j] - sourceAsset->nodes;
+            nodePointers[j] = nodes + nodeIndex;
+        }
+        scene.nodes = nodePointers;
+    }
+    for (cgltf_size i = 0; i < numPrims; i++) {
+        auto& node = nodes[i] = sourceAsset->nodes[i];
+        node.mesh = meshes + i;
+    }
+
+    // Populate the accessors and attributes for each prim by filtering out position and UV's.
+    cgltf_accessor* resultAccessor = accessors;
+    cgltf_attribute* resultAttribute = attributes;
+    for (cgltf_size i = 0; i < numPrims; i++) {
+        const cgltf_mesh& sourceMesh = sourceAsset->meshes[i];
+        const cgltf_primitive& sourcePrim = sourceMesh.primitives[0];
+        cgltf_mesh& resultMesh = meshes[i];
+        cgltf_primitive& resultPrim = prims[i];
+        resultMesh = sourceMesh;
+        resultMesh.primitives = &resultPrim;
+        resultPrim = sourcePrim;
+        resultPrim.attributes = resultAttribute;
+        resultPrim.attributes_count = 0;
+        resultPrim.material = materials;
+        for (size_t ai = 0; ai < sourcePrim.attributes_count; ++ai) {
+            const cgltf_attribute& sourceAttrib = sourcePrim.attributes[ai];
+            const cgltf_accessor* sourceAccessor = sourceAttrib.data;
+            if (sourceAttrib.type == cgltf_attribute_type_texcoord &&
+                    sourceAttrib.index == gltfio::AssetPipeline::BAKED_UV_ATTRIB_INDEX) {
+                *resultAttribute = sourceAttrib;
+                resultAttribute->data = resultAccessor;
+                *resultAccessor = *sourceAccessor;
+                if (resultAccessor->has_min) {
+                    memcpy(resultAccessor->min, sourceAccessor->min, sizeof(sourceAccessor->min));
+                }
+                if (resultAccessor->has_max) {
+                    memcpy(resultAccessor->max, sourceAccessor->max, sizeof(sourceAccessor->max));
+                }
+                resultAccessor++;
+                resultAttribute++;
+                resultPrim.attributes_count++;
+                continue;
+            }
+            if (sourceAttrib.type == cgltf_attribute_type_position && sourceAttrib.index == 0) {
+                *resultAttribute = sourceAttrib;
+                resultAttribute->data = resultAccessor;
+                *resultAccessor = *sourceAccessor;
+                if (resultAccessor->has_min) {
+                    memcpy(resultAccessor->min, sourceAccessor->min, sizeof(sourceAccessor->min));
+                }
+                if (resultAccessor->has_max) {
+                    memcpy(resultAccessor->max, sourceAccessor->max, sizeof(sourceAccessor->max));
+                }
+                resultAccessor++;
+                resultAttribute++;
+                resultPrim.attributes_count++;
+                continue;
+            }
+        }
+        assert(resultPrim.attributes_count == 2);
+        resultPrim.indices = resultAccessor;
+        *resultAccessor++ = *sourcePrim.indices;
+    }
+
+    // Create the new material, texture, and image.
+    materials[0] = {
+        .name = (char*) PREVIEW_MATERIAL_NAME,
+        .has_pbr_metallic_roughness = true,
+        .has_pbr_specular_glossiness = false,
+        .pbr_metallic_roughness = {
+            .base_color_texture = {
+                .texture = textures,
+                .texcoord = gltfio::AssetPipeline::BAKED_UV_ATTRIB_INDEX
+            },
+            .base_color_factor = {1, 1, 1, 1},
+            .metallic_factor = 0.0f,
+            .roughness_factor = 1.0f
+        },
+        .pbr_specular_glossiness = {},
+	    .normal_texture = {},
+	    .occlusion_texture = {},
+	    .emissive_texture = {},
+	    .emissive_factor = {},
+	    .alpha_mode = cgltf_alpha_mode_opaque,
+	    .alpha_cutoff = 0.5f,
+	    .double_sided = false,
+	    .unlit = true
+    };
+    textures[0] = { .image = images };
+    images[0] = { .uri = pathString };
+    strncpy(pathString, texturePath.c_str(), texturePath.size() + 1);
+
+    // Clone the high-level asset structure, then substitute some of the top-level lists.
+    *resultAsset = *sourceAsset;
+    resultAsset->accessors = accessors;
+    resultAsset->accessors_count = numAccessors;
+    resultAsset->images = images;
+    resultAsset->images_count = 1;
+    resultAsset->textures = textures;
+    resultAsset->textures_count = 1;
+    resultAsset->materials = materials;
+    resultAsset->materials_count = 1;
+    resultAsset->meshes = meshes;
+    resultAsset->nodes = nodes;
+    resultAsset->scenes = scenes;
+    resultAsset->scene = scenes + (sourceAsset->scene - sourceAsset->scenes);
+    return resultAsset;
+}
+
+void Pipeline::retainSourceAsset(cgltf_data* asset) {
     mSourceAssets.push_back(asset);
 }
 
@@ -1263,7 +1413,7 @@ AssetHandle AssetPipeline::load(const utils::Path& fileOrDirectory) {
         return nullptr;
     }
     Pipeline* impl = (Pipeline*) mImpl;
-    impl->addSourceAsset(sourceAsset);
+    impl->retainSourceAsset(sourceAsset);
 
     // Load external resources.
     utils::Path abspath = filename.getAbsolutePath();
@@ -1298,6 +1448,11 @@ void AssetPipeline::save(AssetHandle handle, const utils::Path& jsonPath,
 AssetHandle AssetPipeline::parameterize(AssetHandle source) {
     Pipeline* impl = (Pipeline*) mImpl;
     return impl->parameterize((const cgltf_data*) source);
+}
+
+AssetHandle AssetPipeline::generatePreview(AssetHandle source, const Path& texture) {
+    Pipeline* impl = (Pipeline*) mImpl;
+    return impl->generatePreview((const cgltf_data*) source, texture);
 }
 
 void AssetPipeline::bakeAmbientOcclusion(AssetHandle source, image::LinearImage target,

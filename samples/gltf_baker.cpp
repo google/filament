@@ -32,6 +32,8 @@
 
 #include <image/LinearImage.h>
 
+#include <imageio/ImageEncoder.h>
+
 #include <math/vec2.h>
 
 #include <getopt/getopt.h>
@@ -57,6 +59,7 @@ enum AppState {
     PREPPED,
     BAKING,
     BAKED,
+    EXPORTED,
 };
 
 struct App {
@@ -327,21 +330,13 @@ static void loadAsset(App& app) {
 
 static void prepAsset(App& app) {
     app.state = PREPPING;
-
-    std::cout << "Prepping..." << std::endl;
-
-    gltfio::AssetPipeline pipeline;
-    gltfio::AssetPipeline::AssetHandle asset = pipeline.load(app.filename);
-    if (!asset) {
-        std::cerr << "Unable to read " << app.filename << std::endl;
-        app.state = LOADED;
-        return;
-    }
+    gltfio::AssetPipeline::AssetHandle asset = app.asset->getSourceAsset();
 
     uint32_t flags = gltfio::AssetPipeline::FILTER_TRIANGLES;
     if (app.enablePrepScale) {
         flags |= gltfio::AssetPipeline::SCALE_TO_UNIT;
     }
+    gltfio::AssetPipeline pipeline;
     asset = pipeline.flatten(asset, flags);
     if (!asset) {
         std::cerr << "Unable to flatten " << app.filename << std::endl;
@@ -358,8 +353,8 @@ static void prepAsset(App& app) {
     }
 
     const utils::Path folder = app.filename.getAbsolutePath().getParent();
-    const utils::Path binPath = folder + "baked.bin";
-    const utils::Path outPath = folder + "baked.gltf";
+    const utils::Path binPath = folder + "prepped.bin";
+    const utils::Path outPath = folder + "prepped.gltf";
 
     pipeline.save(asset, outPath, binPath);
     std::cout << "Generated " << outPath << " and " << binPath << std::endl;
@@ -421,7 +416,6 @@ static void renderAsset(App& app) {
 }
 
 static void bakeAsset(App& app) {
-    app.pushedState = app.state;
     app.state = BAKING;
     gltfio::AssetPipeline::AssetHandle asset = app.asset->getSourceAsset();
 
@@ -443,9 +437,34 @@ static void bakeAsset(App& app) {
     auto onRenderDone = [](image::LinearImage image, void* userData) {
         App* app = (App*) userData;
         delete app->pipeline;
-        app->requestStatePop = true;
+        app->state = BAKED;
     };
     app.pipeline->bakeAmbientOcclusion(asset, image, onRenderTile, onRenderDone, &app);
+}
+
+static void exportAsset(App& app) {
+    using namespace image;
+
+    const utils::Path folder = app.filename.getAbsolutePath().getParent();
+    const utils::Path binPath = folder + "baked.bin";
+    const utils::Path outPath = folder + "baked.gltf";
+    const utils::Path texPath = folder + "baked.png";
+
+    std::ofstream out(texPath.c_str(), std::ios::binary | std::ios::trunc);
+    ImageEncoder::encode(out, ImageEncoder::Format::PNG_LINEAR, app.renderedImage, "",
+            texPath.c_str());
+
+    gltfio::AssetPipeline::AssetHandle asset = app.asset->getSourceAsset();
+    gltfio::AssetPipeline pipeline;
+    asset = pipeline.generatePreview(asset, "baked.png");
+    pipeline.save(asset, outPath, binPath);
+
+    std::cout << "Generated " << outPath << ", " << binPath << ", and " << texPath << std::endl;
+    app.filename = outPath;
+    loadAsset(app);
+
+    app.state = EXPORTED;
+    app.showOverlay = false;
 }
 
 int main(int argc, char** argv) {
@@ -499,6 +518,7 @@ int main(int argc, char** argv) {
         app.viewer->setUiCallback([&app, scene] () {
             const ImVec4 disabled = ImGui::GetStyle().Colors[ImGuiCol_TextDisabled];
             const ImVec4 enabled = ImGui::GetStyle().Colors[ImGuiCol_Text];
+            ImGui::GetStyle().FrameRounding = 5;
 
             // Prep action (flattening and parameterizing).
             const bool canPrep = app.state == LOADED;
@@ -510,7 +530,6 @@ int main(int argc, char** argv) {
                 ImGui::SetTooltip("Flattens the asset and generates a new set of UV coordinates.");
             }
             ImGui::PopStyleColor();
-            ImGui::SameLine();
 
             // Render action (invokes path tracer).
             #ifdef FILAMENT_HAS_EMBREE
@@ -526,7 +545,6 @@ int main(int argc, char** argv) {
                 ImGui::SetTooltip("Renders the asset using a pathtracer.");
             }
             ImGui::PopStyleColor();
-            ImGui::SameLine();
 
             // Bake action (invokes path tracer).
             #ifdef FILAMENT_HAS_EMBREE
@@ -543,6 +561,19 @@ int main(int argc, char** argv) {
             }
             ImGui::PopStyleColor();
 
+            // Export action
+            const bool canExport = app.state == BAKED;
+            ImGui::PushStyleColor(ImGuiCol_Text, canExport ? enabled : disabled);
+            if (ImGui::Button("Export", ImVec2(100, 50)) && canExport) {
+                exportAsset(app);
+            }
+            if (ImGui::IsItemHovered()) {
+                ImGui::SetTooltip("Saves the baked result to disk.");
+            }
+            ImGui::PopStyleColor();
+            ImGui::GetStyle().FrameRounding = 20;
+
+            // Options
             if (app.renderedImage) {
                 ImGui::Checkbox("Show embree result", &app.showOverlay);
             }
