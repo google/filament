@@ -283,6 +283,7 @@ MetalTexture::MetalTexture(MetalContext& context, backend::SamplerType target, u
     ASSERT_POSTCONDITION(pixelFormat != MTLPixelFormatInvalid, "Pixel format not supported.");
 
     const BOOL mipmapped = levels > 1;
+    const BOOL multisampled = samples > 1;
 
     MTLTextureDescriptor* descriptor;
     if (target == backend::SamplerType::SAMPLER_2D) {
@@ -291,11 +292,13 @@ MetalTexture::MetalTexture(MetalContext& context, backend::SamplerType target, u
                                                                        height:height
                                                                     mipmapped:mipmapped];
         descriptor.mipmapLevelCount = levels;
-        descriptor.textureType = MTLTextureType2D;
+        descriptor.textureType = multisampled ? MTLTextureType2DMultisample : MTLTextureType2D;
+        descriptor.sampleCount = multisampled ? samples : 1;
         descriptor.usage = getMetalTextureUsage(usage);
         descriptor.storageMode = getMetalStorageMode(usage);
         texture = [context.device newTextureWithDescriptor:descriptor];
     } else if (target == backend::SamplerType::SAMPLER_CUBEMAP) {
+        ASSERT_POSTCONDITION(!multisampled, "Multisampled cubemap faces not supported.");
         ASSERT_POSTCONDITION(width == height, "Cubemap faces must be square.");
         descriptor = [MTLTextureDescriptor textureCubeDescriptorWithPixelFormat:pixelFormat
                                                                            size:width
@@ -311,7 +314,6 @@ MetalTexture::MetalTexture(MetalContext& context, backend::SamplerType target, u
     } else {
         ASSERT_POSTCONDITION(false, "Sampler type not supported.");
     }
-
 }
 
 MetalTexture::~MetalTexture() {
@@ -364,16 +366,42 @@ void MetalTexture::loadCubeImage(const PixelBufferDescriptor& data, const FaceOf
 
 MetalRenderTarget::MetalRenderTarget(MetalContext* context, uint32_t width, uint32_t height,
         uint8_t samples, id<MTLTexture> color, id<MTLTexture> depth, uint8_t level)
-        : HwRenderTarget(width, height), context(context), color(color), depth(depth),
-        samples(samples), level(level) {
+        : HwRenderTarget(width, height), context(context), samples(samples), level(level) {
+    ASSERT_PRECONDITION(color || depth, "Must provide either a color or depth texture.");
+
     [color retain];
     [depth retain];
 
-    if (samples > 1) {
-        multisampledColor =
-                createMultisampledTexture(context->device, color.pixelFormat, width, height, samples);
+    if (color) {
+        if (color.textureType == MTLTextureType2DMultisample) {
+            this->multisampledColor = color;
+        } else {
+            this->color = color;
+        }
+    }
 
-        if (depth != nil) {
+    if (depth) {
+        if (depth.textureType == MTLTextureType2DMultisample) {
+            this->multisampledDepth = depth;
+        } else {
+            this->depth = depth;
+        }
+    }
+
+    ASSERT_PRECONDITION(samples > 1 || (!multisampledDepth && !multisampledColor),
+            "MetalRenderTarget was initialized with a MSAA texture, but sample count is %d.", samples);
+
+    // Handle special cases. If we were given a single-sampled texture but the samples parameter
+    // is > 1, we create multisampled textures and do a resolve automatically.
+    if (samples > 1) {
+        if (color && !multisampledColor) {
+            multisampledColor =
+                    createMultisampledTexture(context->device, color.pixelFormat, width, height,
+                            samples);
+        }
+
+        if (depth && !multisampledDepth) {
+            // TODO: we only need to resolve depth if the depth texture is not SAMPLEABLE.
             multisampledDepth = createMultisampledTexture(context->device, depth.pixelFormat, width,
                     height, samples);
         }
@@ -384,19 +412,57 @@ id<MTLTexture> MetalRenderTarget::getColor() {
     if (defaultRenderTarget) {
         return acquireDrawable(context).texture;
     }
-    return isMultisampled() ? multisampledColor : color;
-}
-
-id<MTLTexture> MetalRenderTarget::getColorResolve() {
-    return isMultisampled() ? color : nil;
-}
-
-id<MTLTexture> MetalRenderTarget::getDepthResolve() {
-    return isMultisampled() ? depth : nil;
+    if (multisampledColor) {
+        return multisampledColor;
+    }
+    return color;
 }
 
 id<MTLTexture> MetalRenderTarget::getDepth() {
-    return isMultisampled() ? multisampledDepth : depth;
+    if (multisampledDepth) {
+        return multisampledDepth;
+    }
+    return depth;
+}
+
+id<MTLTexture> MetalRenderTarget::getColorResolve() {
+    const bool shouldResolveColor = (multisampledColor && color);
+    return shouldResolveColor ? color : nil;
+}
+
+id<MTLTexture> MetalRenderTarget::getDepthResolve() {
+    const bool shouldResolveDepth = (multisampledDepth && depth);
+    return shouldResolveDepth ? depth : nil;
+}
+
+MTLLoadAction MetalRenderTarget::getLoadAction(const RenderPassParams& params,
+        TargetBufferFlags buffer) {
+    const auto clearFlags = (TargetBufferFlags) params.flags.clear;
+    const auto discardStartFlags = params.flags.discardStart;
+    if (clearFlags & buffer) {
+        return MTLLoadActionClear;
+    } else if (discardStartFlags & buffer) {
+        return MTLLoadActionDontCare;
+    }
+    return MTLLoadActionLoad;
+}
+
+MTLStoreAction MetalRenderTarget::getStoreAction(const RenderPassParams& params,
+        TargetBufferFlags buffer) {
+    const auto discardEndFlags = params.flags.discardEnd;
+    if (discardEndFlags & buffer) {
+        return MTLStoreActionDontCare;
+    }
+    if (buffer & TargetBufferFlags::COLOR) {
+        const bool shouldResolveColor = (multisampledColor && color);
+        return shouldResolveColor ? MTLStoreActionMultisampleResolve : MTLStoreActionStore;
+    }
+    if (buffer & TargetBufferFlags::DEPTH) {
+        const bool shouldResolveDepth = (multisampledDepth && depth);
+        return shouldResolveDepth ? MTLStoreActionMultisampleResolve : MTLStoreActionStore;
+    }
+    // Shouldn't get here.
+    return MTLStoreActionStore;
 }
 
 MetalRenderTarget::~MetalRenderTarget() {

@@ -42,10 +42,6 @@ Driver* MetalDriverFactory::create(MetalPlatform* const platform) {
 
 namespace metal {
 
-static MTLLoadAction determineLoadAction(const RenderPassParams& params, TargetBufferFlags buffer);
-static MTLStoreAction determineStoreAction(const RenderPassParams& params, TargetBufferFlags buffer,
-        bool isMultisampled);
-
 UTILS_NOINLINE
 Driver* MetalDriver::create(MetalPlatform* const platform) {
     assert(platform);
@@ -497,33 +493,33 @@ void MetalDriver::beginRenderPass(Handle<HwRenderTarget> rth,
 
     MTLRenderPassDescriptor* descriptor = [MTLRenderPassDescriptor renderPassDescriptor];
 
-    const auto discardFlags = (TargetBufferFlags) params.flags.discardEnd;
+    const auto discardFlags = params.flags.discardEnd;
     const auto discardColor = (discardFlags & TargetBufferFlags::COLOR);
     const auto discardDepth = (discardFlags & TargetBufferFlags::DEPTH);
 
     // Color
 
-    descriptor.colorAttachments[0].texture = renderTarget->getColor();
-    descriptor.colorAttachments[0].resolveTexture = discardColor ? nil : renderTarget->getColorResolve();
-    mContext->currentSurfacePixelFormat = descriptor.colorAttachments[0].texture.pixelFormat;
+    const auto& colorAttachment = descriptor.colorAttachments[0];
+    colorAttachment.texture = renderTarget->getColor();
+    colorAttachment.resolveTexture = discardColor ? nil : renderTarget->getColorResolve();
+    mContext->currentSurfacePixelFormat = colorAttachment.texture.pixelFormat;
 
     // Metal clears the entire attachment without respect to viewport or scissor.
     // TODO: Might need to clear the scissor area manually via a draw if we need that functionality.
 
-    descriptor.colorAttachments[0].loadAction = determineLoadAction(params, TargetBufferFlags::COLOR);
-    descriptor.colorAttachments[0].storeAction = determineStoreAction(params, TargetBufferFlags::COLOR,
-            renderTarget->isMultisampled());
-    descriptor.colorAttachments[0].clearColor = MTLClearColorMake(
+    colorAttachment.loadAction = renderTarget->getLoadAction(params, TargetBufferFlags::COLOR);
+    colorAttachment.storeAction = renderTarget->getStoreAction(params, TargetBufferFlags::COLOR);
+    colorAttachment.clearColor = MTLClearColorMake(
             params.clearColor.r, params.clearColor.g, params.clearColor.b, params.clearColor.a);
 
     // Depth
 
-    descriptor.depthAttachment.texture = renderTarget->getDepth();
-    descriptor.depthAttachment.resolveTexture = discardDepth ? nil : renderTarget->getDepthResolve();
-    descriptor.depthAttachment.loadAction = determineLoadAction(params, TargetBufferFlags::DEPTH);
-    descriptor.depthAttachment.storeAction = determineStoreAction(params, TargetBufferFlags::DEPTH,
-            renderTarget->isMultisampled());
-    descriptor.depthAttachment.clearDepth = params.clearDepth;
+    const auto& depthAttachment = descriptor.depthAttachment;
+    depthAttachment.texture = renderTarget->getDepth();
+    depthAttachment.resolveTexture = discardDepth ? nil : renderTarget->getDepthResolve();
+    depthAttachment.loadAction = renderTarget->getLoadAction(params, TargetBufferFlags::DEPTH);
+    depthAttachment.storeAction = renderTarget->getStoreAction(params, TargetBufferFlags::DEPTH);
+    depthAttachment.clearDepth = params.clearDepth;
     mContext->currentDepthPixelFormat = descriptor.depthAttachment.texture.pixelFormat;
 
     mContext->currentCommandEncoder =
@@ -897,26 +893,6 @@ void MetalDriver::enumerateBoundUniformBuffers(
         auto* uniform = handle_cast<MetalUniformBuffer>(mHandleMap, thisUniform.ubh);
         f(thisUniform, uniform, i);
     }
-}
-
-MTLLoadAction determineLoadAction(const RenderPassParams& params, TargetBufferFlags buffer) {
-    const auto clearFlags = (TargetBufferFlags) params.flags.clear;
-    const auto discardStartFlags = (TargetBufferFlags) params.flags.discardStart;
-    if (clearFlags & buffer) {
-        return MTLLoadActionClear;
-    } else if (discardStartFlags & buffer) {
-        return MTLLoadActionDontCare;
-    }
-    return MTLLoadActionLoad;
-}
-
-static MTLStoreAction determineStoreAction(const RenderPassParams& params, TargetBufferFlags buffer,
-        bool isMultisampled) {
-    const auto discardEndFlags = (TargetBufferFlags) params.flags.discardEnd;
-    if (discardEndFlags & buffer) {
-        return MTLStoreActionDontCare;
-    }
-    return isMultisampled ? MTLStoreActionMultisampleResolve : MTLStoreActionStore;
 }
 
 } // namespace metal
