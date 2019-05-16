@@ -298,7 +298,6 @@ static void loadAsset(App& app) {
     }
 
     // Parse the glTF file and create Filament entities.
-    app.loader->destroyAsset(app.asset);
     app.asset = app.loader->createAssetFromJson(buffer.data(), buffer.size());
     buffer.clear();
     buffer.shrink_to_fit();
@@ -320,7 +319,7 @@ static void loadAsset(App& app) {
     app.asset->getAnimator();
     app.state = AssetPipeline::isParameterized(app.asset->getSourceAsset()) ? PREPPED : LOADED;
 
-    // Add the renderables to the scene.
+    // Destroy the old asset and add the renderables to the scene.
     app.viewer->setAsset(app.asset, app.names, !app.actualSize);
 
     app.viewer->setIndirectLight(FilamentApp::get().getIBL()->getIndirectLight());

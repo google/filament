@@ -84,7 +84,7 @@ struct FFilamentAsset : public FilamentAsset {
     }
 
     const utils::Entity* getEntities() const noexcept {
-        return mEntities.data();
+        return mEntities.empty() ? nullptr : mEntities.data();
     }
 
     utils::Entity getRoot() const noexcept {
