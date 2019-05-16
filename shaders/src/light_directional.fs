@@ -2,8 +2,12 @@
 // Directional light evaluation
 //------------------------------------------------------------------------------
 
-vec3 sampleSunAreaLight(const vec3 lightDirection) {
 #if !defined(TARGET_MOBILE)
+#define SUN_AS_AREA_LIGHT
+#endif
+
+vec3 sampleSunAreaLight(const vec3 lightDirection) {
+#if defined(SUN_AS_AREA_LIGHT)
     if (frameUniforms.sun.w >= 0.0) {
         // simulate sun as disc area light
         float LoR = dot(lightDirection, shading_reflected);
@@ -26,13 +30,18 @@ Light getDirectionalLight() {
     return light;
 }
 
-void evaluateDirectionalLight(const PixelParams pixel, inout vec3 color) {
+void evaluateDirectionalLight(const MaterialInputs material,
+        const PixelParams pixel, inout vec3 color) {
+
     Light light = getDirectionalLight();
 
     float visibility = 1.0;
 #if defined(HAS_SHADOWING)
     if (light.NoL > 0.0) {
         visibility = shadow(light_shadowMap, getLightSpacePosition());
+        #if defined(MATERIAL_HAS_AMBIENT_OCCLUSION)
+        visibility *= computeMicroShadowing(light.NoL, material.ambientOcclusion);
+        #endif
     } else {
 #if defined(MATERIAL_CAN_SKIP_LIGHTING)
         return;
