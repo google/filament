@@ -40,8 +40,7 @@ void evaluateDirectionalLight(const MaterialInputs material,
     if (light.NoL > 0.0) {
         visibility = shadow(light_shadowMap, getLightSpacePosition());
         #if defined(MATERIAL_HAS_AMBIENT_OCCLUSION)
-        // TODO: Add microShadowOpacity uniform
-        visibility *= computeMicroShadowing(light.NoL, material.ambientOcclusion, 1.0);
+        visibility *= computeMicroShadowing(light.NoL, material.ambientOcclusion);
         #endif
     } else {
 #if defined(MATERIAL_CAN_SKIP_LIGHTING)
