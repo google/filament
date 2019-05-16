@@ -69,7 +69,7 @@ TEST(EmbreeTest, Smoke) { // NOLINT
     utils::Condition signal;
 
     PathTracer renderer = PathTracer::Builder()
-        .renderTarget(image)
+        .outputPlane(AMBIENT_OCCLUSION, image)
         .meshes(&mesh, 1)
         .filmCamera({
             .aspectRatio = 1.0f,
@@ -78,7 +78,7 @@ TEST(EmbreeTest, Smoke) { // NOLINT
             .upVector = {0, 1, 0},
             .vfovDegrees = 45
         })
-        .doneCallback([](LinearImage target, void* userData) {
+        .doneCallback([](void* userData) {
             utils::Condition* signal = (utils::Condition*) userData;
             signal->notify_all();
         }, &signal)

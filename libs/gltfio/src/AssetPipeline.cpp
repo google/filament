@@ -1467,7 +1467,7 @@ void AssetPipeline::bakeAmbientOcclusion(AssetHandle source, image::LinearImage 
     size_t numMeshes;
     impl->cgltfToSimpleMesh(sourceAsset, &meshes, &numMeshes);
     filament::rays::PathTracer pathtracer = filament::rays::PathTracer::Builder()
-        .renderTarget(target)
+        .outputPlane(filament::rays::AMBIENT_OCCLUSION, target)
         .uvCamera()
         .tileCallback(onTile, userData)
         .doneCallback(onDone, userData)
@@ -1489,7 +1489,7 @@ void AssetPipeline::renderAmbientOcclusion(AssetHandle source, image::LinearImag
     size_t numMeshes;
     impl->cgltfToSimpleMesh(sourceAsset, &meshes, &numMeshes);
     filament::rays::PathTracer pathtracer = filament::rays::PathTracer::Builder()
-        .renderTarget(target)
+        .outputPlane(filament::rays::AMBIENT_OCCLUSION, target)
         .filmCamera(camera)
         .tileCallback(onTile, userData)
         .doneCallback(onDone, userData)
