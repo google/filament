@@ -158,9 +158,11 @@ public:
 
     id<MTLTexture> getColor();
     id<MTLTexture> getColorResolve();
-    uint8_t getColorLevel() { return level; }
     id<MTLTexture> getDepth();
     id<MTLTexture> getDepthResolve();
+    id<MTLTexture> getBlitColorSource();
+    id<MTLTexture> getBlitDepthSource();
+    uint8_t getColorLevel() { return level; }
 
 private:
     static id<MTLTexture> createMultisampledTexture(id<MTLDevice> device, MTLPixelFormat format,

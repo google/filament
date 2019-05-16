@@ -435,6 +435,20 @@ id<MTLTexture> MetalRenderTarget::getDepthResolve() {
     return shouldResolveDepth ? depth : nil;
 }
 
+id<MTLTexture> MetalRenderTarget::getBlitColorSource() {
+    if (color) {
+        return color;
+    }
+    return multisampledColor;
+}
+
+id<MTLTexture> MetalRenderTarget::getBlitDepthSource() {
+    if (depth) {
+        return depth;
+    }
+    return multisampledDepth;
+}
+
 MTLLoadAction MetalRenderTarget::getLoadAction(const RenderPassParams& params,
         TargetBufferFlags buffer) {
     const auto clearFlags = (TargetBufferFlags) params.flags.clear;

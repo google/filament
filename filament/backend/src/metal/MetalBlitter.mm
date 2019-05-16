@@ -18,7 +18,6 @@
 
 #include "MetalContext.h"
 
-#include <math/vec4.h>
 #include <utils/Panic.h>
 
 #define NSERROR_CHECK(message)                                                                     \
@@ -32,11 +31,6 @@ namespace filament {
 namespace backend {
 namespace metal {
 
-static id<MTLFunction> gVertexFunction = nil;
-static id<MTLFunction> gFragmentColor = nil;
-static id<MTLFunction> gFragmentDepth = nil;
-static id<MTLFunction> gFragmentColorDepth = nil;
-
 static std::string functionLibrary (R"(
 #include <metal_stdlib>
 #include <simd/simd.h>
@@ -49,20 +43,15 @@ struct VertexOut
     float2 uv;
 };
 
-struct ColorFragmentOut
+struct FragmentOut
 {
+#ifdef BLIT_COLOR
     float4 color [[color(0)]];
-};
+#endif
 
-struct DepthFragmentOut
-{
+#ifdef BLIT_DEPTH
     float depth [[depth(any)]];
-};
-
-struct ColorDepthFragmentOut
-{
-    float4 color [[color(0)]];
-    float depth [[depth(any)]];
+#endif
 };
 
 vertex VertexOut
@@ -75,53 +64,78 @@ blitterVertex(uint vid [[vertex_id]],
     return out;
 }
 
-fragment ColorFragmentOut
-blitterFragColor(VertexOut in [[stage_in]],
-                 sampler sourceSampler [[sampler(0)]],
-                 texture2d<float, access::sample> sourceColor [[texture(0)]],
-                 constant uint8_t* lod [[buffer(0)]])
-{
-    ColorFragmentOut out = {};
-    out.color = sourceColor.sample(sourceSampler, in.uv, level(*lod));
-    return out;
-}
+fragment FragmentOut
+blitterFrag(VertexOut in [[stage_in]],
+            sampler sourceSampler [[sampler(0)]],
 
-fragment DepthFragmentOut
-blitterFragDepth(VertexOut in [[stage_in]],
-                 sampler sourceSampler [[sampler(0)]],
-                 texture2d<float, access::sample> sourceDepth [[texture(1)]],
-                 constant uint8_t* lod [[buffer(0)]])
-{
-    DepthFragmentOut out = {};
-    out.depth = sourceDepth.sample(sourceSampler, in.uv, level(*lod)).r;
-    return out;
-}
+#ifdef BLIT_COLOR
+#ifdef MSAA_COLOR_SOURCE
+            texture2d_ms<float, access::read> sourceColor [[texture(0)]],
+#else
+            texture2d<float, access::read> sourceColor [[texture(0)]],
+#endif
+#endif
 
-fragment ColorDepthFragmentOut
-blitterFragColorDepth(VertexOut in [[stage_in]],
-                      sampler sourceSampler [[sampler(0)]],
-                      texture2d<float, access::sample> sourceColor [[texture(0)]],
-                      texture2d<float, access::sample> sourceDepth [[texture(1)]],
-                      constant uint8_t* lod [[buffer(0)]])
+#ifdef BLIT_DEPTH
+#ifdef MSAA_DEPTH_SOURCE
+            texture2d_ms<float, access::read> sourceDepth [[texture(1)]],
+#else
+            texture2d<float, access::read> sourceDepth [[texture(1)]],
+#endif
+#endif
+
+            constant uint8_t* lod [[buffer(0)]])
 {
-    ColorDepthFragmentOut out = {};
-    out.color = sourceColor.sample(sourceSampler, in.uv, level(*lod));
-    out.depth = sourceDepth.sample(sourceSampler, in.uv, level(*lod)).r;
+    FragmentOut out = {};
+#ifdef BLIT_COLOR
+#ifdef MSAA_COLOR_SOURCE
+    out.color = float4(0.0);
+    for (uint s = 0; s < sourceColor.get_num_samples(); s++) {
+        out.color += sourceColor.read(static_cast<uint2>(in.uv), s);
+    }
+    out.color /= sourceColor.get_num_samples();
+#else
+    out.color += sourceColor.read(static_cast<uint2>(in.uv), *lod);
+#endif
+#endif
+
+#ifdef BLIT_DEPTH
+#ifdef MSAA_DEPTH_SOURCE
+    out.depth = 0.0;
+    for (uint s = 0; s < sourceDepth.get_num_samples(); s++) {
+        out.depth += sourceDepth.read(static_cast<uint2>(in.uv), s).r;
+    }
+    out.depth /= sourceDepth.get_num_samples();
+#else
+    out.depth = sourceDepth.read(static_cast<uint2>(in.uv), *lod).r;
+#endif
+#endif
     return out;
 }
 )");
 
 MetalBlitter::MetalBlitter(MetalContext& context) noexcept : mContext(context) { }
 
+#define MTLSizeEqual(a, b) (a.width == b.width && a.height == b.height && a.depth == b.depth)
+
 void MetalBlitter::blit(const BlitArgs& args) {
-    const bool blitColor = args.source.color != nil && args.destination.color != nil;
-    const bool blitDepth = args.source.depth != nil && args.destination.depth != nil;
+    bool blitColor = args.source.color != nil && args.destination.color != nil;
+    bool blitDepth = args.source.depth != nil && args.destination.depth != nil;
+
+    // Determine if the blit for color or depth are eligible to use a MTLBlitCommandEncoder.
+    // blitColor and / or blitDepth are set to false upon success, to indicate that no more work is
+    // necessary for that attachment.
+    blitFastPath(blitColor, blitDepth, args);
+
+    // If the destination is MSAA and we weren't able to use the fast path, report an error, as
+    // blitting to a MSAA texture isn't supported through the "slow path" yet.
+    ASSERT_PRECONDITION(args.destination.color.textureType != MTLTextureType2DMultisample &&
+        args.destination.depth.textureType != MTLTextureType2DMultisample,
+        "Blitting between MSAA render targets with differing pixel formats and/or regions is not supported.");
 
     if (!blitColor && !blitDepth) {
         return;
     }
-
-    ensureFunctions();
 
     MTLRenderPassDescriptor* descriptor = [MTLRenderPassDescriptor renderPassDescriptor];
 
@@ -137,20 +151,19 @@ void MetalBlitter::blit(const BlitArgs& args) {
             [mContext.currentCommandBuffer renderCommandEncoderWithDescriptor:descriptor];
     encoder.label = @"Blit";
 
-    id<MTLFunction> fragmentFunction = nil;
-    if (blitColor && blitDepth) {
-        fragmentFunction = gFragmentColorDepth;
-    } else if (blitColor) {
-        fragmentFunction = gFragmentColor;
-    } else if (blitDepth) {
-        fragmentFunction = gFragmentDepth;
-    }
+    BlitFunctionKey key;
+    key.blitColor = blitColor;
+    key.blitDepth = blitDepth;
+    key.msaaColorSource = args.source.color.textureType == MTLTextureType2DMultisample;
+    key.msaaDepthSource = args.source.depth.textureType == MTLTextureType2DMultisample;
+    id<MTLFunction> fragmentFunction = getBlitFragmentFunction(key);
 
     PipelineState pipelineState {
-        .vertexFunction = gVertexFunction,
+        .vertexFunction = getBlitVertexFunction(),
         .fragmentFunction = fragmentFunction,
         .vertexDescription = {},
-        .colorAttachmentPixelFormat = args.destination.color.pixelFormat,
+        .colorAttachmentPixelFormat =
+                blitColor ? args.destination.color.pixelFormat : MTLPixelFormatInvalid,
         .depthAttachmentPixelFormat =
                 blitDepth ? args.destination.depth.pixelFormat : MTLPixelFormatInvalid,
         .sampleCount = 1,
@@ -212,25 +225,11 @@ void MetalBlitter::blit(const BlitArgs& args) {
      *
      */
 
-    if (blitColor && blitDepth) {
-        // To keep the math simple, for now we'll assume the color and depth attachments of the
-        // source render target have the same dimensions.
-        ASSERT_PRECONDITION(args.source.color.width == args.source.depth.width &&
-                            args.source.color.height == args.source.depth.height,
-                            "Source color and depth attachments must be same dimensions.");
-    }
-
-    const NSUInteger sourceWidth = blitColor ? args.source.color.width : args.source.depth.width;
-    const NSUInteger sourceHeight = blitColor ? args.source.color.height : args.source.depth.height;
-
-    const float u = 1.0f / sourceWidth;
-    const float v = 1.0f / sourceHeight;
-
     const auto& sourceRegion = args.source.region;
-    const float left   = sourceRegion.origin.x * u;
-    const float top    = sourceRegion.origin.y * v;
-    const float right  = (sourceRegion.origin.x + sourceRegion.size.width) * u;
-    const float bottom = (sourceRegion.origin.y + sourceRegion.size.height) * v;
+    const float left   = sourceRegion.origin.x;
+    const float top    = sourceRegion.origin.y;
+    const float right  = (sourceRegion.origin.x + sourceRegion.size.width);
+    const float bottom = (sourceRegion.origin.y + sourceRegion.size.height);
 
     const math::float4 vertices[3] = {
         { -1.0f, -1.0f,  left,  bottom },
@@ -244,14 +243,57 @@ void MetalBlitter::blit(const BlitArgs& args) {
     [encoder endEncoding];
 }
 
+void MetalBlitter::blitFastPath(bool& blitColor, bool& blitDepth, const BlitArgs& args) {
+    if (blitColor) {
+        if (args.source.color.sampleCount == args.destination.color.sampleCount &&
+            args.source.color.pixelFormat == args.destination.color.pixelFormat &&
+            MTLSizeEqual(args.source.region.size, args.destination.region.size)) {
+
+            id<MTLBlitCommandEncoder> blitEncoder = [mContext.currentCommandBuffer blitCommandEncoder];
+            [blitEncoder copyFromTexture:args.source.color
+                             sourceSlice:0
+                             sourceLevel:args.source.level
+                            sourceOrigin:args.source.region.origin
+                              sourceSize:args.source.region.size
+                               toTexture:args.destination.color
+                        destinationSlice:0
+                        destinationLevel:args.destination.level
+                       destinationOrigin:args.destination.region.origin];
+            [blitEncoder endEncoding];
+
+            blitColor = false;
+        }
+    }
+
+    if (blitDepth) {
+        if (args.source.depth.sampleCount == args.destination.depth.sampleCount &&
+            args.source.depth.pixelFormat == args.destination.depth.pixelFormat &&
+            MTLSizeEqual(args.source.region.size, args.destination.region.size)) {
+
+            id<MTLBlitCommandEncoder> blitEncoder = [mContext.currentCommandBuffer blitCommandEncoder];
+            [blitEncoder copyFromTexture:args.source.depth
+                             sourceSlice:0
+                             sourceLevel:args.source.level
+                            sourceOrigin:args.source.region.origin
+                              sourceSize:args.source.region.size
+                               toTexture:args.destination.depth
+                        destinationSlice:0
+                        destinationLevel:args.destination.level
+                       destinationOrigin:args.destination.region.origin];
+            [blitEncoder endEncoding];
+
+            blitDepth = false;
+        }
+    }
+}
+
 void MetalBlitter::shutdown() noexcept {
-    [gVertexFunction release];
-    [gFragmentColor release];
-    [gFragmentDepth release];
-    [gFragmentColorDepth release];
-    gFragmentColor = nil;
-    gFragmentColorDepth = nil;
-    gVertexFunction = nil;
+    for (auto it = mBlitFunctions.begin(); it != mBlitFunctions.end(); ++it) {
+        [it.value() release];
+    }
+    mBlitFunctions.clear();
+    [mVertexFunction release];
+    mVertexFunction = nil;
 }
 
 void MetalBlitter::setupColorAttachment(const BlitArgs& args,
@@ -281,25 +323,66 @@ void MetalBlitter::setupDepthAttachment(const BlitArgs& args, MTLRenderPassDescr
     descriptor.depthAttachment.storeAction = MTLStoreActionStore;
 }
 
-void MetalBlitter::ensureFunctions() {
-    if (gFragmentColor != nil && gFragmentDepth != nil && gFragmentColorDepth != nil &&
-        gVertexFunction != nil) {
-        return;
+id<MTLFunction> MetalBlitter::compileFragmentFunction(BlitFunctionKey key) {
+    MTLCompileOptions* options = [MTLCompileOptions new];
+    NSMutableDictionary* macros = [NSMutableDictionary dictionary];
+    if (key.blitColor) {
+        macros[@"BLIT_COLOR"] = @"1";
     }
-
-    NSError* error = nil;
+    if (key.blitDepth) {
+        macros[@"BLIT_DEPTH"] = @"1";
+    }
+    if (key.msaaColorSource) {
+        macros[@"MSAA_COLOR_SOURCE"] = @"1";
+    }
+    if (key.msaaDepthSource) {
+        macros[@"MSAA_DEPTH_SOURCE"] = @"1";
+    }
+    options.preprocessorMacros = macros;
     NSString* objcSource = [NSString stringWithCString:functionLibrary.data()
                                               encoding:NSUTF8StringEncoding];
+    NSError* error = nil;
     id<MTLLibrary> library = [mContext.device newLibraryWithSource:objcSource
-                                                            options:nil
+                                                            options:options
                                                               error:&error];
+    id<MTLFunction> function = [library newFunctionWithName:@"blitterFrag"];
     NSERROR_CHECK("Unable to compile shading library for MetalBlitter.");
-
-    gVertexFunction = [library newFunctionWithName:@"blitterVertex"];
-    gFragmentColor = [library newFunctionWithName:@"blitterFragColor"];
-    gFragmentDepth = [library newFunctionWithName:@"blitterFragDepth"];
-    gFragmentColorDepth = [library newFunctionWithName:@"blitterFragColorDepth"];
+    [options release];
     [library release];
+
+    return function;
+}
+
+id<MTLFunction> MetalBlitter::getBlitVertexFunction() {
+    if (mVertexFunction != nil) {
+        return mVertexFunction;
+    }
+
+    NSString* objcSource = [NSString stringWithCString:functionLibrary.data()
+                                              encoding:NSUTF8StringEncoding];
+    NSError* error = nil;
+    id<MTLLibrary> library = [mContext.device newLibraryWithSource:objcSource
+                                                           options:nil
+                                                             error:&error];
+    id<MTLFunction> function = [library newFunctionWithName:@"blitterVertex"];
+    NSERROR_CHECK("Unable to compile shading library for MetalBlitter.");
+    [library release];
+
+    mVertexFunction = function;
+
+    return mVertexFunction;
+}
+
+id<MTLFunction> MetalBlitter::getBlitFragmentFunction(BlitFunctionKey key) {
+    auto iter = mBlitFunctions.find(key);
+    if (iter != mBlitFunctions.end()) {
+        return iter.value();
+    }
+
+    auto function = compileFragmentFunction(key);
+    mBlitFunctions.emplace(std::make_pair(key, function));
+
+    return function;
 }
 
 } // namespace metal
