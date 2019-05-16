@@ -30,18 +30,32 @@ namespace filament {
 namespace rays {
 
 /**
- * Signals that a region of the generated image has become available, typically used for progress
- * notification. This can be called from any thread.
+ * OutputPlane denotes a client-owned image that the PathTracer renders into.
+ *
+ * All output planes must have 3 channels except AMBIENT_OCCLUSION, which must have 1.
  */
-using TileCallback = void(*)(image::LinearImage target,
-        filament::math::ushort2 topLeft, filament::math::ushort2 bottomRight,
+enum OutputPlane {
+    AMBIENT_OCCLUSION = 0,
+    BENT_NORMALS = 1,
+    MESH_NORMALS = 2,
+    MESH_POSITIONS = 3
+};
+
+static constexpr size_t RENDERTARGET_COUNT = 4;
+
+struct Config;
+
+/**
+ * Signals that a region within each render target has become available, typically used for
+ * progress notification. This can be called from any thread.
+ */
+using TileCallback = void(*)(filament::math::ushort2 topLeft, filament::math::ushort2 bottomRight,
         void* userData);
 
 /**
- * Signals that the generated image is now completely rendered.  This can be called from any
- * thread.
+ * Signals that all render targets are now available.  This can be called from any thread.
  */
-using DoneCallback = void(*)(image::LinearImage target, void* userData);
+using DoneCallback = void(*)(void* userData);
 
 /**
  * PathTracer renders an asset by splitting the render target into tiles and invoking a JobSystem
@@ -57,8 +71,8 @@ class PathTracer {
 public:
 
     struct Config {
-        image::LinearImage renderTarget;
-        const SimpleMesh* meshes;
+        image::LinearImage renderTargets[RENDERTARGET_COUNT];
+        const SimpleMesh* meshes = nullptr;
         size_t numMeshes = 0;
         size_t samplesPerPixel = 256;
         SimpleCamera filmCamera;
@@ -73,7 +87,7 @@ public:
 
     class Builder {
     public:
-        Builder& renderTarget(image::LinearImage target);
+        Builder& outputPlane(OutputPlane target, image::LinearImage image);
         Builder& meshes(const SimpleMesh* meshes, size_t numMeshes);
         Builder& filmCamera(const SimpleCamera& camera);
         Builder& uvCamera();

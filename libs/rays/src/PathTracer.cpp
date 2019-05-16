@@ -16,6 +16,8 @@
 
 #include <rays/PathTracer.h>
 
+#include <image/LinearImage.h>
+
 #include <math/mat4.h>
 #include <math/vec2.h>
 
@@ -27,13 +29,10 @@
 #endif
 
 using namespace filament::math;
+using namespace image;
 
 static constexpr size_t MIN_TILE_SIZE = 32;
 static constexpr size_t MAX_TILES_COUNT = 2048;
-
-// The G-Buffer contains world-space positions followed by normal vectors.
-static constexpr size_t GBUFFER_CHANNELS_COUNT = 6;
-static constexpr size_t GBUFFER_NORMALS_OFFSET = 3;
 
 static constexpr float inf = std::numeric_limits<float>::infinity();
 
@@ -76,8 +75,8 @@ static float3 randomPerp(float3 n) {
 namespace filament {
 namespace rays {
 
-PathTracer::Builder& PathTracer::Builder::renderTarget(image::LinearImage target) {
-    mConfig.renderTarget = target;
+PathTracer::Builder& PathTracer::Builder::outputPlane(OutputPlane target, LinearImage image) {
+    mConfig.renderTargets[(int) target] = image;
     return *this;
 }
 
@@ -115,6 +114,7 @@ PathTracer::Builder& PathTracer::Builder::samplesPerPixel(size_t numSamples) {
 }
 
 PathTracer PathTracer::Builder::build() {
+    // TODO: check for valid configuration (consistent sizes etc)
     return PathTracer(mConfig);
 }
 
@@ -132,13 +132,12 @@ bool PathTracer::render() {
 struct EmbreeContext {
     PathTracer::Config config;
     std::atomic<int> numRemainingTiles;
-    image::LinearImage gbuffer;
     RTCDevice device;
     RTCScene scene;
 };
 
 static void renderTile(EmbreeContext* context, PixelRectangle rect) {
-    image::LinearImage& image = context->config.renderTarget;
+    LinearImage& ao = context->config.renderTargets[(int) AMBIENT_OCCLUSION];
     RTCScene embreeScene = context->scene;
     const float inverseSampleCount = 1.0f / context->config.samplesPerPixel;
 
@@ -146,13 +145,13 @@ static void renderTile(EmbreeContext* context, PixelRectangle rect) {
     const SimpleCamera& camera = context->config.filmCamera;
     const float tnear = context->config.aoRayNear;
     const float tfar = context->config.aoRayFar;
-    const float iw = 1.0f / image.getWidth();
-    const float ih = 1.0f / image.getHeight();
+    const float iw = 1.0f / ao.getWidth();
+    const float ih = 1.0f / ao.getHeight();
     const float theta = camera.vfovDegrees * M_PI / 180;
     const float f = tanf(theta / 2);
     const float a = camera.aspectRatio;
     const float3 org = camera.eyePosition;
-    const uint16_t hm1 = image.getHeight() - 1;
+    const uint16_t hm1 = ao.getHeight() - 1;
 
     // Compute the camera basis: view, right, and up vectors.
     const float3 v = normalize(camera.targetPosition - org);
@@ -221,21 +220,22 @@ static void renderTile(EmbreeContext* context, PixelRectangle rect) {
                         sum += 1.0f;
                     }
                 }
-                image.getPixelRef(col, row)[0] = 1.0f - sum * inverseSampleCount;
+                ao.getPixelRef(col, row)[0] = 1.0f - sum * inverseSampleCount;
             }
         }
     }
 }
 
 static void renderTileToGbuffer(EmbreeContext* context, PixelRectangle rect) {
-    image::LinearImage& image = context->config.renderTarget;
-    image::LinearImage& gbuffer = context->gbuffer;
+    LinearImage& ao = context->config.renderTargets[(int) AMBIENT_OCCLUSION];
+    LinearImage& meshNormals = context->config.renderTargets[(int) MESH_NORMALS];
+    LinearImage& meshPositions = context->config.renderTargets[(int) MESH_POSITIONS];
     RTCScene embreeScene = context->scene;
 
     const float tnear = context->config.aoRayNear;
     const float tfar = context->config.aoRayFar;
-    const float iw = 1.0f / image.getWidth();
-    const float ih = 1.0f / image.getHeight();
+    const float iw = 1.0f / ao.getWidth();
+    const float ih = 1.0f / ao.getHeight();
 
     auto generateOrthoCameraRay = [=] (uint16_t row, uint16_t col) {
         return RTCRay {
@@ -263,8 +263,8 @@ static void renderTileToGbuffer(EmbreeContext* context, PixelRectangle rect) {
             rtcIntersect1(embreeScene, &intersector, &rayhit);
 
             if (rayhit.ray.tfar != inf) {
-                float* position = gbuffer.getPixelRef(col, row);
-                float* normal = position + GBUFFER_NORMALS_OFFSET;
+                float* position = meshPositions.getPixelRef(col, row);
+                float* normal = meshNormals.getPixelRef(col, row);
                 RTCGeometry geo = rtcGetGeometry(embreeScene, rayhit.hit.geomID);
                 rtcInterpolate0(geo, rayhit.hit.primID, rayhit.hit.u, rayhit.hit.v,
                         RTC_BUFFER_TYPE_VERTEX_ATTRIBUTE, 0, position, 3);
@@ -273,15 +273,17 @@ static void renderTileToGbuffer(EmbreeContext* context, PixelRectangle rect) {
 
                 // AO won't be computed until the second pass, but we show an instant preview of
                 // the chart shapes by setting a placeholder value in the AO map.
-                image.getPixelRef(col, row)[0] = 0.5f;
+                ao.getPixelRef(col, row)[0] = 0.5f;
             }
         }
     }
 }
 
 static void renderTileFromGbuffer(EmbreeContext* context, PixelRectangle rect) {
-    image::LinearImage& image = context->config.renderTarget;
-    image::LinearImage& gbuffer = context->gbuffer;
+    LinearImage& ao = context->config.renderTargets[(int) AMBIENT_OCCLUSION];
+    LinearImage& meshNormals = context->config.renderTargets[(int) MESH_NORMALS];
+    LinearImage& meshPositions = context->config.renderTargets[(int) MESH_POSITIONS];
+    LinearImage& bentNormals = context->config.renderTargets[(int) BENT_NORMALS];
     RTCScene embreeScene = context->scene;
     const float inverseSampleCount = 1.0f / context->config.samplesPerPixel;
 
@@ -294,17 +296,16 @@ static void renderTileFromGbuffer(EmbreeContext* context, PixelRectangle rect) {
             RTCIntersectContext intersector;
             rtcInitIntersectContext(&intersector);
             intersector.flags = RTC_INTERSECT_CONTEXT_FLAG_INCOHERENT;
-            float* p = gbuffer.getPixelRef(col, row);
-            float* normal = p + 3;
+            float* position = meshPositions.getPixelRef(col, row);
+            float* normal = meshNormals.getPixelRef(col, row);
             if (normal[0] || normal[1] || normal[2]) {
-                float* position = gbuffer.getPixelRef(col, row);
-                float* normal = position + 3;
                 float3 n = { normal[0], normal[1], normal[2] };
                 float3 b = randomPerp(n);
                 float3 t = cross(n, b);
                 mat3 tangentFrame = {t, b, n};
                 RTCRay aoray { .org_x = position[0], .org_y = position[1], .org_z = position[2] };
                 float sum = 0;
+                float3 bentNormal = {0, 0, 0};
                 for (size_t nsamp = 0; nsamp < spp; nsamp++) {
                     const double2 u = hammersley(nsamp, inverseSampleCount);
                     const float3 dir = tangentFrame * hemisphereCosSample(u);
@@ -315,10 +316,18 @@ static void renderTileFromGbuffer(EmbreeContext* context, PixelRectangle rect) {
                     aoray.tfar = tfar;
                     rtcOccluded1(embreeScene, &intersector, &aoray);
                     if (aoray.tfar == -inf) {
+                        bentNormal += dir;
                         sum += 1.0f;
                     }
                 }
-                image.getPixelRef(col, row)[0] = 1.0f - sum * inverseSampleCount;
+                if (bentNormals) {
+                    bentNormal = normalize(bentNormal);
+                    float* pBentNormal = bentNormals.getPixelRef(col, row);
+                    pBentNormal[0] = bentNormal[0];
+                    pBentNormal[1] = bentNormal[1];
+                    pBentNormal[2] = bentNormal[2];
+                }
+                ao.getPixelRef(col, row)[0] = 1.0f - sum * inverseSampleCount;
             }
         }
     }
@@ -326,8 +335,9 @@ static void renderTileFromGbuffer(EmbreeContext* context, PixelRectangle rect) {
 
 template <typename RenderFn, typename CompletionFn>
 void spawnTileJobs(EmbreeContext* context, RenderFn render, CompletionFn done) {
-    const size_t width = context->config.renderTarget.getWidth();
-    const size_t height = context->config.renderTarget.getHeight();
+    LinearImage& ao = context->config.renderTargets[(int) AMBIENT_OCCLUSION];
+    const size_t width = ao.getWidth();
+    const size_t height = ao.getHeight();
 
     // Compute a reasonable tile size that will not create too many jobs.
     int numTiles = 0;
@@ -368,21 +378,26 @@ void spawnTileJobs(EmbreeContext* context, RenderFn render, CompletionFn done) {
 }
 
 bool PathTracer::render() {
-    const size_t width = mConfig.renderTarget.getWidth();
-    const size_t height = mConfig.renderTarget.getHeight();
+    const LinearImage& ao = mConfig.renderTargets[(int) AMBIENT_OCCLUSION];
+    const size_t width = ao.getWidth();
+    const size_t height = ao.getHeight();
 
     EmbreeContext* context = new EmbreeContext { .config = mConfig };
-    
+
+    if (!context->config.renderTargets[(int) MESH_NORMALS]) {
+        context->config.renderTargets[(int) MESH_NORMALS] = LinearImage(width, height, 3);
+    }
+
+    if (!context->config.renderTargets[(int) MESH_POSITIONS]) {
+        context->config.renderTargets[(int) MESH_POSITIONS] = LinearImage(width, height, 3);
+    }
+
     if (!context->config.tileCallback) {
-        context->config.tileCallback = [] (image::LinearImage target,
-                filament::math::ushort2 topLeft, filament::math::ushort2 bottomRight,
-                void* userData) {
-        };
+        context->config.tileCallback = [] (ushort2, ushort2, void* userData) {};
     }
 
     if (!context->config.doneCallback) {
-        context->config.doneCallback = [] (image::LinearImage target, void* userData) {
-        };
+        context->config.doneCallback = [] (void* userData) {};
     }
 
     // Create the embree device.
@@ -434,13 +449,11 @@ bool PathTracer::render() {
         context->scene = rtcNewScene(device);
         populate2DScene();
 
-        context->gbuffer = image::LinearImage(width, height, GBUFFER_CHANNELS_COUNT);
-
         // First render XYZ positions into the G-Buffer.
         spawnTileJobs(context, [](EmbreeContext* context, PixelRectangle rect) {
             renderTileToGbuffer(context, rect);
-            context->config.tileCallback(context->config.renderTarget, rect.topLeft,
-                    rect.bottomRight, context->config.tileUserData);
+            context->config.tileCallback(rect.topLeft, rect.bottomRight,
+                    context->config.tileUserData);
         }, [populate3DScene](EmbreeContext* context) {
 
             rtcReleaseScene(context->scene);
@@ -450,11 +463,10 @@ bool PathTracer::render() {
             populate3DScene();
             spawnTileJobs(context, [](EmbreeContext* context, PixelRectangle rect) {
                 renderTileFromGbuffer(context, rect);
-                context->config.tileCallback(context->config.renderTarget, rect.topLeft,
-                        rect.bottomRight, context->config.tileUserData);
+                context->config.tileCallback(rect.topLeft, rect.bottomRight,
+                        context->config.tileUserData);
             }, [](EmbreeContext* context) {
-                context->config.doneCallback(context->config.renderTarget,
-                        context->config.doneUserData);
+                context->config.doneCallback(context->config.doneUserData);
                 rtcReleaseScene(context->scene);
                 rtcReleaseDevice(context->device);
                 delete context;
@@ -468,11 +480,10 @@ bool PathTracer::render() {
         populate3DScene();
         spawnTileJobs(context, [](EmbreeContext* context, PixelRectangle rect) {
             renderTile(context, rect);
-            context->config.tileCallback(context->config.renderTarget, rect.topLeft,
-                    rect.bottomRight, context->config.tileUserData);
+            context->config.tileCallback(rect.topLeft, rect.bottomRight,
+                    context->config.tileUserData);
         }, [](EmbreeContext* context) {
-            context->config.doneCallback(context->config.renderTarget,
-                    context->config.doneUserData);
+            context->config.doneCallback(context->config.doneUserData);
             rtcReleaseScene(context->scene);
             rtcReleaseDevice(context->device);
             delete context;

@@ -402,12 +402,13 @@ static void renderAsset(App& app) {
     app.pipeline = new gltfio::AssetPipeline();
 
     // Finally, set up some callbacks and invoke the path tracer.
+
     using filament::math::ushort2;
-    auto onRenderTile = [](image::LinearImage, ushort2, ushort2, void* userData) {
+    auto onRenderTile = [](ushort2, ushort2, void* userData) {
         App* app = (App*) userData;
         app->requestOverlayUpdate = true;
     };
-    auto onRenderDone = [](image::LinearImage image, void* userData) {
+    auto onRenderDone = [](void* userData) {
         App* app = (App*) userData;
         app->requestStatePop = true;
         delete app->pipeline;
@@ -430,11 +431,11 @@ static void bakeAsset(App& app) {
     app.pipeline = new gltfio::AssetPipeline();
 
     using filament::math::ushort2;
-    auto onRenderTile = [](image::LinearImage, ushort2, ushort2, void* userData) {
+    auto onRenderTile = [](ushort2, ushort2, void* userData) {
         App* app = (App*) userData;
         app->requestOverlayUpdate = true;
     };
-    auto onRenderDone = [](image::LinearImage image, void* userData) {
+    auto onRenderDone = [](void* userData) {
         App* app = (App*) userData;
         delete app->pipeline;
         app->state = BAKED;
