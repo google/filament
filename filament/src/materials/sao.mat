@@ -2,8 +2,9 @@ material {
     name : ssao,
     parameters : [
         {
-           type : sampler2d,
-           name : depth
+            type : sampler2d,
+            name : depth,
+            precision: high
         },
         {
             type : float,
@@ -71,12 +72,12 @@ fragment {
     }
 
     // remaps to -1 and 1, repeating
-    float reduce(float x) {
+    float reduce(highp float x) {
         return fract(0.5 * x + 0.5) * 2.0 - 1.0;
     }
 
     // very crude and fast sin/cos approximation
-    vec2 fast_cossin(float x) {
+    vec2 fast_cossin(highp float x) {
         x *= 1.0/3.1415926;
         vec2 a = vec2(reduce(x + 0.5), reduce(x));
         vec2 xn = sq(a * 2.0 + 1.0) - 1.0;
@@ -85,10 +86,10 @@ fragment {
     }
 
     // random number between 0 and 1
-    float random(HIGHP vec2 n) {
+    float random(highp vec2 n) {
         n  = fract(n * vec2(5.3987, 5.4421));
         n += dot(n.yx, n.xy + vec2(21.5351, 14.3137));
-        HIGHP float xy = n.x * n.y;
+        highp float xy = n.x * n.y;
         // compute in [0..2[ and remap to [0.0..1.0[
         return fract(xy * 95.4307) + fract(xy * 75.04961) * 0.5;
     }
@@ -100,8 +101,8 @@ fragment {
             const float dalpha = 1.0f / (float(kSpiralSampleCount) - 0.5f);
             float phi = random(uv);
             float dr = phi * dalpha;
-            float dalpha2 = sq(dalpha);
-            float dphi = (6.28318 * kSpiralTurns) * sq(phi) * dalpha2
+            highp float dalpha2 = sq(dalpha);
+            highp float dphi = (6.28318 * kSpiralTurns) * sq(phi) * dalpha2
                 + phi * 6.28318 * (1.0 + kSpiralTurns * dalpha2)
                 + phi * (2.0 * 6.28318 * kSpiralTurns) * dalpha2;
             return vec3(fast_cossin(dphi), dr);
@@ -114,24 +115,24 @@ fragment {
         #endif
     }
 
-    vec3 computeViewSpaceNormalNotNormalized(const vec3 position) {
-        vec3 dpdx = dFdx(position);
-        vec3 dpdy = dFdy(position);
+    highp vec3 computeViewSpaceNormalNotNormalized(const highp vec3 position) {
+        highp vec3 dpdx = dFdx(position);
+        highp vec3 dpdy = dFdy(position);
         return cross(dpdx, dpdy);
     }
 
-    float linearizeDepth(float depth) {
-        mat4 projection = getClipFromViewMatrix();
-        float z = depth * 2.0 - 1.0; // depth in clip space
+    highp float linearizeDepth(highp float depth) {
+        highp mat4 projection = getClipFromViewMatrix();
+        highp float z = depth * 2.0 - 1.0; // depth in clip space
         return -projection[3].z / (z + projection[2].z);
     }
 
-    float sampleDepthLinear(const vec2 uv) {
+    highp float sampleDepthLinear(const vec2 uv) {
         return linearizeDepth(texture(materialParams_depth, uv, 0.0).r);
     }
 
-    vec3 computeViewSpacePositionFromDepth(in vec2 p, float linearDepth) {
-        mat4 invProjection = getViewFromClipMatrix();
+    highp vec3 computeViewSpacePositionFromDepth(in vec2 p, highp float linearDepth) {
+        highp mat4 invProjection = getViewFromClipMatrix();
         p.x *= invProjection[0].x;
         p.y *= invProjection[1].y;
         return vec3(p * -linearDepth, linearDepth);
@@ -160,15 +161,14 @@ fragment {
         return clamp(uv, ivec2(0), textureSize(materialParams_depth, 0) - ivec2(1));
     }
 
-    float computeAmbientOcclusionSAO(uint i, float ssDiskRadius, const ivec2 ssOrigin, const vec3 origin, const vec3 normal, const vec3 noise) {
+    float computeAmbientOcclusionSAO(uint i, float ssDiskRadius, const ivec2 ssOrigin, const highp vec3 origin, const vec3 normal, const vec3 noise) {
         vec3 tap = tapLocation(i, noise);
         float ssRadius = max(1.0, tap.z * ssDiskRadius); // at least 1 pixel screen-space radius
+
         ivec2 ssSamplePos = ssOrigin + ivec2(ssRadius * tap.xy);
-
-        float occlusionDepth = linearizeDepth(texelFetch(materialParams_depth, clampToEdge(ssSamplePos), 0).r);
-
         vec2 uvSamplePos = (vec2(ssSamplePos) + vec2(0.5)) * frameUniforms.resolution.zw;
-        vec3 p = computeViewSpacePositionFromDepth(uvSamplePos * 2.0 - 1.0, occlusionDepth);
+        highp float occlusionDepth = linearizeDepth(texelFetch(materialParams_depth, clampToEdge(ssSamplePos), 0).r);
+        highp vec3 p = computeViewSpacePositionFromDepth(uvSamplePos * 2.0 - 1.0, occlusionDepth);
 
         // now we have the sample, compute AO
         vec3 v = p - origin;        // sample vector
@@ -185,11 +185,11 @@ fragment {
 
         vec2 uv = variable_vertex.xy; // interpolated to pixel center
 
+        highp float depth = sampleDepthLinear(uv);
+        highp vec3 origin = computeViewSpacePositionFromDepth(variable_vertex.zw, depth);
+        highp vec3 normal = computeViewSpaceNormalNotNormalized(origin);
         vec3 noise = getTrigNoise(uv);
-        float depth = sampleDepthLinear(uv);
-        vec3 origin = computeViewSpacePositionFromDepth(variable_vertex.zw, depth);
-        ivec2 ssOrigin = ivec2(uv * frameUniforms.resolution.xy);
-        vec3 normal = computeViewSpaceNormalNotNormalized(origin);
+
 
         // attempt to reject "bad" normals that were reconstructed at an edge that cause
         // false occlusion (black spots)
@@ -211,6 +211,7 @@ fragment {
         }
 
         normal = normalize(normal);
+        ivec2 ssOrigin = ivec2(uv * frameUniforms.resolution.xy);
         float occlusion = 0.0;
         for (uint i = 0u; i < kSpiralSampleCount; i++) {
             occlusion += computeAmbientOcclusionSAO(i, ssDiskRadius, ssOrigin, origin, normal, noise);

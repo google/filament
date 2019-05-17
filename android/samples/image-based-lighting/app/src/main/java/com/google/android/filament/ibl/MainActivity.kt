@@ -117,6 +117,8 @@ class MainActivity : Activity() {
         // unnecessary when using a skybox
         view.setClearColor(0.035f, 0.035f, 0.035f, 1.0f)
 
+        view.ambientOcclusion = View.AmbientOcclusion.SSAO
+
         // NOTE: Try to disable post-processing (tone-mapping, etc.) to see the difference
         // view.isPostProcessingEnabled = false
 

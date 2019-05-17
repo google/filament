@@ -2,8 +2,9 @@ material {
     name : ssao,
     parameters : [
         {
-           type : sampler2d,
-           name : depth
+            type : sampler2d,
+            name : depth,
+            precision: high
         },
         {
             type : float,
@@ -73,10 +74,10 @@ fragment {
     );
 
     // random number between 0 and 1
-    float random(HIGHP vec2 n) {
+    float random(highp vec2 n) {
         n  = fract(n * vec2(5.3987, 5.4421));
         n += dot(n.yx, n.xy + vec2(21.5351, 14.3137));
-        HIGHP float xy = n.x * n.y;
+        highp float xy = n.x * n.y;
         // compute in [0..2[ and remap to [0.0..1.0[
         return fract(xy * 95.4307) + fract(xy * 75.04961) * 0.5;
     }
@@ -94,24 +95,24 @@ fragment {
         #endif
     }
 
-    vec3 computeViewSpaceNormalNotNormalized(const vec3 position) {
-        vec3 dpdx = dFdx(position);
-        vec3 dpdy = dFdy(position);
+    highp vec3 computeViewSpaceNormalNotNormalized(const highp vec3 position) {
+        highp vec3 dpdx = dFdx(position);
+        highp vec3 dpdy = dFdy(position);
         return cross(dpdx, dpdy);
     }
 
-    float linearizeDepth(float depth) {
-        mat4 projection = getClipFromViewMatrix();
-        float z = depth * 2.0 - 1.0; // depth in clip space
+    highp float linearizeDepth(highp float depth) {
+        highp mat4 projection = getClipFromViewMatrix();
+        highp float z = depth * 2.0 - 1.0; // depth in clip space
         return -projection[3].z / (z + projection[2].z);
     }
 
-    float sampleDepthLinear(const vec2 uv) {
+    highp float sampleDepthLinear(const vec2 uv) {
         return linearizeDepth(texture(materialParams_depth, uv, 0.0).r);
     }
 
-    vec3 computeViewSpacePositionFromDepth(in vec2 p, float linearDepth) {
-        mat4 invProjection = getViewFromClipMatrix();
+    highp vec3 computeViewSpacePositionFromDepth(in vec2 p, highp float linearDepth) {
+        highp mat4 invProjection = getViewFromClipMatrix();
         p.x *= invProjection[0].x;
         p.y *= invProjection[1].y;
         return vec3(p * -linearDepth, linearDepth);
@@ -120,19 +121,19 @@ fragment {
     // Ambient Occlusion, largely inspired from:
     // Hemisphere Crysis-style SSAO. See "Screen Space Ambient Occlusion" by John Chapman
 
-    float computeAmbientOcclusionSSAO(const vec3 origin, const vec3 normal, const vec3 noise, const vec3 sphereSample) {
-        mat4 projection = getClipFromViewMatrix();
+    float computeAmbientOcclusionSSAO(const highp vec3 origin, const vec3 normal, const vec3 noise, const vec3 sphereSample) {
+        highp mat4 projection = getClipFromViewMatrix();
         float radius = materialParams.radius;
         float bias = materialParams.bias;
 
         vec3 r = sphereSample * radius;
         r = reflect(r, noise);
         r = sign(dot(r, normal)) * r;
-        vec3 samplePos = origin + r;
+        highp vec3 samplePos = origin + r;
 
-        vec4 samplePosScreen = projection * vec4(samplePos, 1.0);
+        highp vec4 samplePosScreen = projection * vec4(samplePos, 1.0);
         samplePosScreen.xy = samplePosScreen.xy * (0.5 / samplePosScreen.w) + 0.5;
-        float occlusionDepth = sampleDepthLinear(samplePosScreen.xy);
+        highp float occlusionDepth = sampleDepthLinear(samplePosScreen.xy);
         // smoothstep() optimized for range 0 to 1
         float t = saturate(radius / abs(origin.z - occlusionDepth));
         float rangeCheck = t * t * (3.0 - 2.0 * t);
@@ -145,10 +146,10 @@ fragment {
 
         vec2 uv = variable_vertex.xy; // interpolated to pixel center
 
+        highp float depth = sampleDepthLinear(uv);
+        highp vec3 origin = computeViewSpacePositionFromDepth(variable_vertex.zw, depth);
+        highp vec3 normal = computeViewSpaceNormalNotNormalized(origin);
         vec3 noise = getNoise(uv);
-        float depth = sampleDepthLinear(uv);
-        vec3 origin = computeViewSpacePositionFromDepth(variable_vertex.zw, depth);
-        vec3 normal = computeViewSpaceNormalNotNormalized(origin);
 
         // attempt to reject "bad" normals that were reconstructed at an edge that cause
         // false occlusion (black spots)
