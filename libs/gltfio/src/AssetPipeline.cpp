@@ -94,8 +94,22 @@ public:
     // Take ownership of the given asset and free it when the pipeline is destroyed.
     void retainSourceAsset(cgltf_data* asset);
 
-    // Convert a flattened cgltf asset into a PathTracer scene (i.e. an array of SimpleMesh).
-    void cgltfToSimpleMesh(const cgltf_data* sourceAsset, SimpleMesh** meshes, size_t* numMeshes);
+    // Perform a two-pass baking operation (generate gbuffer, then use gbuffer).
+    void bakeAmbientOcclusion(const cgltf_data* sourceAsset, image::LinearImage target,
+            filament::rays::TileCallback onTile, filament::rays::DoneCallback onDone,
+            void* userData);
+
+    // Perform a non-bake render for diagnostic purposes.
+    void renderAmbientOcclusion(const cgltf_data* sourceAsset,
+            image::LinearImage target, const filament::rays::SimpleCamera& camera,
+            filament::rays::TileCallback onTile, filament::rays::DoneCallback onDone,
+            void* userData);
+
+    // Perform a two-pass baking operation and populate all channels. Useful for diagnostics.
+    void bakeAllOutputs(const cgltf_data* sourceAsset,
+            image::LinearImage targets[filament::rays::OUTPUTPLANE_COUNT],
+            filament::rays::TileCallback onTile, filament::rays::DoneCallback onDone,
+            void* userData);
 
     ~Pipeline();
 
@@ -106,6 +120,9 @@ private:
 
     bool cgltfToXatlas(const cgltf_data* sourceAsset, xatlas::Atlas* atlas);
     cgltf_data* xatlasToCgltf(const cgltf_data* source, const xatlas::Atlas* atlas);
+
+    // Convert a flattened cgltf asset into a PathTracer scene (i.e. an array of SimpleMesh).
+    void cgltfToSimpleMesh(const cgltf_data* sourceAsset, SimpleMesh** meshes, size_t* numMeshes);
 
     uint32_t mFlattenFlags;
     vector<cgltf_data*> mSourceAssets;
@@ -711,6 +728,63 @@ const cgltf_data* Pipeline::flattenPrims(const cgltf_data* sourceAsset, uint32_t
     }
 
     return resultAsset;
+}
+
+void Pipeline::bakeAmbientOcclusion(const cgltf_data* sourceAsset, image::LinearImage target,
+        filament::rays::TileCallback onTile, filament::rays::DoneCallback onDone, void* userData) {
+    SimpleMesh* meshes;
+    size_t numMeshes;
+    cgltfToSimpleMesh(sourceAsset, &meshes, &numMeshes);
+
+    filament::rays::PathTracer::Builder builder;
+    builder
+        .meshes(meshes, numMeshes)
+        .outputPlane(filament::rays::AMBIENT_OCCLUSION, target)
+        .uvCamera()
+        .tileCallback(onTile, userData)
+        .doneCallback(onDone, userData);
+
+    builder.build().render();
+}
+
+void Pipeline::renderAmbientOcclusion(const cgltf_data* sourceAsset, image::LinearImage target,
+        const filament::rays::SimpleCamera& camera,  filament::rays::TileCallback onTile,
+        filament::rays::DoneCallback onDone, void* userData) {
+    SimpleMesh* meshes;
+    size_t numMeshes;
+    cgltfToSimpleMesh(sourceAsset, &meshes, &numMeshes);
+
+    filament::rays::PathTracer::Builder builder;
+    builder
+        .meshes(meshes, numMeshes)
+        .outputPlane(filament::rays::AMBIENT_OCCLUSION, target)
+        .filmCamera(camera)
+        .tileCallback(onTile, userData)
+        .doneCallback(onDone, userData);
+
+    builder.build().render();
+}
+
+void Pipeline::bakeAllOutputs(const cgltf_data* sourceAsset,
+        image::LinearImage targets[filament::rays::OUTPUTPLANE_COUNT],
+        filament::rays::TileCallback onTile, filament::rays::DoneCallback onDone, void* userData) {
+    SimpleMesh* meshes;
+    size_t numMeshes;
+    cgltfToSimpleMesh(sourceAsset, &meshes, &numMeshes);
+
+    using namespace filament::rays;
+    PathTracer::Builder builder;
+    builder
+        .meshes(meshes, numMeshes)
+        .outputPlane(AMBIENT_OCCLUSION, targets[(int) AMBIENT_OCCLUSION])
+        .outputPlane(BENT_NORMALS, targets[(int) BENT_NORMALS])
+        .outputPlane(MESH_NORMALS, targets[(int) MESH_NORMALS])
+        .outputPlane(MESH_POSITIONS, targets[(int) MESH_POSITIONS])
+        .uvCamera()
+        .tileCallback(onTile, userData)
+        .doneCallback(onDone, userData);
+
+    builder.build().render();
 }
 
 void Pipeline::bakeTransform(BakedPrim* prim, const mat4f& transform, const mat3f& normalMatrix) {
@@ -1463,17 +1537,7 @@ void AssetPipeline::bakeAmbientOcclusion(AssetHandle source, image::LinearImage 
         utils::slog.e << "Only flattened assets can be baked." << utils::io::endl;
         return;
     }
-    SimpleMesh* meshes;
-    size_t numMeshes;
-    impl->cgltfToSimpleMesh(sourceAsset, &meshes, &numMeshes);
-    filament::rays::PathTracer pathtracer = filament::rays::PathTracer::Builder()
-        .outputPlane(filament::rays::AMBIENT_OCCLUSION, target)
-        .uvCamera()
-        .tileCallback(onTile, userData)
-        .doneCallback(onDone, userData)
-        .meshes(meshes, numMeshes)
-        .build();
-    pathtracer.render();
+    impl->bakeAmbientOcclusion(sourceAsset, target, onTile, onDone, userData);
 }
 
 void AssetPipeline::renderAmbientOcclusion(AssetHandle source, image::LinearImage target,
@@ -1485,17 +1549,19 @@ void AssetPipeline::renderAmbientOcclusion(AssetHandle source, image::LinearImag
         utils::slog.e << "Only flattened assets can be rendered." << utils::io::endl;
         return;
     }
-    SimpleMesh* meshes;
-    size_t numMeshes;
-    impl->cgltfToSimpleMesh(sourceAsset, &meshes, &numMeshes);
-    filament::rays::PathTracer pathtracer = filament::rays::PathTracer::Builder()
-        .outputPlane(filament::rays::AMBIENT_OCCLUSION, target)
-        .filmCamera(camera)
-        .tileCallback(onTile, userData)
-        .doneCallback(onDone, userData)
-        .meshes(meshes, numMeshes)
-        .build();
-    pathtracer.render();
+    impl->renderAmbientOcclusion(sourceAsset, target, camera, onTile, onDone, userData);
+}
+
+void AssetPipeline::bakeAllOutputs(AssetHandle source,
+        image::LinearImage targets[filament::rays::OUTPUTPLANE_COUNT],
+        RenderTileCallback onTile, RenderDoneCallback onDone, void* userData) {
+    Pipeline* impl = (Pipeline*) mImpl;
+    auto sourceAsset = (const cgltf_data*) source;
+    if (!isFlattened(sourceAsset)) {
+        utils::slog.e << "Only flattened assets can be baked." << utils::io::endl;
+        return;
+    }
+    impl->bakeAllOutputs(sourceAsset, targets, onTile, onDone, userData);
 }
 
 bool AssetPipeline::isFlattened(AssetHandle source) {

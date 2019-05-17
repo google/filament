@@ -138,6 +138,10 @@ public:
             const filament::rays::SimpleCamera& camera, RenderTileCallback progress,
             RenderDoneCallback done, void* userData);
 
+    /** Similar to bakeAmbientOcclusion but produces all outputs. */
+    void bakeAllOutputs(AssetHandle source,
+            image::LinearImage targets[filament::rays::OUTPUTPLANE_COUNT],
+            RenderTileCallback progress, RenderDoneCallback done, void* userData);
 
     static bool isFlattened(AssetHandle source);
     static bool isParameterized(AssetHandle source);

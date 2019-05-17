@@ -41,7 +41,7 @@ enum OutputPlane {
     MESH_POSITIONS = 3
 };
 
-static constexpr size_t RENDERTARGET_COUNT = 4;
+static constexpr size_t OUTPUTPLANE_COUNT = 4;
 
 struct Config;
 
@@ -71,7 +71,7 @@ class PathTracer {
 public:
 
     struct Config {
-        image::LinearImage renderTargets[RENDERTARGET_COUNT];
+        image::LinearImage renderTargets[OUTPUTPLANE_COUNT];
         const SimpleMesh* meshes = nullptr;
         size_t numMeshes = 0;
         size_t samplesPerPixel = 256;
@@ -87,13 +87,45 @@ public:
 
     class Builder {
     public:
+
+        /**
+         * Adds a client-owned output plane to the path tracer.
+         *
+         * The AMBIENT_OCCLUSION output is required, others are optional.
+         */
         Builder& outputPlane(OutputPlane target, image::LinearImage image);
+
+        /**
+         * Adds a set of geometry objects to the scene.
+         */
         Builder& meshes(const SimpleMesh* meshes, size_t numMeshes);
+
+        /**
+         * Enables a traditional 3D rendering camera (not used for baking).
+         */
         Builder& filmCamera(const SimpleCamera& camera);
+
+        /**
+         * Enables a UV-based cameras used for light map baking.
+         */
         Builder& uvCamera();
+
+        /**
+         * Signals that a region within each render target has become available, typically used for
+         * progress notification. This can be called from any thread.
+         */
         Builder& tileCallback(TileCallback onTile, void* userData);
+
+        /**
+         * Signals that all render targets are now available.  This can be called from any thread.
+         */
         Builder& doneCallback(DoneCallback onTile, void* userData);
+
+        /**
+         * Sets the number of secondary rays (samples per hemisphere), defaults to 256.
+         */
         Builder& samplesPerPixel(size_t numSamples);
+
         PathTracer build();
     private:
         Config mConfig;
