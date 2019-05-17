@@ -18,7 +18,8 @@
  * written out.
  *
  * `cgltf_write` writes JSON into the given memory buffer. Returns the number of bytes written to
- * "buffer". If buffer is null, returns the number of bytes that would have been written.
+ * "buffer", including a null terminator. If buffer is null, returns the number of bytes that would
+ * have been written.
  */
 #ifndef CGLTF_WRITE_H_INCLUDED__
 #define CGLTF_WRITE_H_INCLUDED__
@@ -56,6 +57,11 @@ cgltf_size cgltf_write(const cgltf_options* options, char* buffer, cgltf_size si
 
 #include <stdio.h>
 
+#define CGLTF_EXTENSION_FLAG_TEXTURE_TRANSFORM   (1 << 0)
+#define CGLTF_EXTENSION_FLAG_MATERIALS_UNLIT     (1 << 1)
+#define CGLTF_EXTENSION_FLAG_SPECULAR_GLOSSINESS (1 << 2)
+#define CGLTF_EXTENSION_FLAG_LIGHTS_PUNCTUAL     (1 << 3)
+
 typedef struct {
 	char* buffer;
 	size_t buffer_size;
@@ -67,6 +73,7 @@ typedef struct {
 	int depth;
 	const char* indent;
 	int needs_comma;
+	uint32_t extension_flags;
 } cgltf_write_context;
 
 #define CGLTF_SPRINTF(fmt, ...) { \
@@ -93,11 +100,15 @@ typedef struct {
 		CGLTF_SPRINTF(" ]"); \
 		context->needs_comma = 1; }
 
-// TODO: scale and transform
 #define CGLTF_WRITE_TEXTURE_INFO(label, info) if (info.texture) { \
 		cgltf_write_line(context, "\"" label "\": {"); \
 		CGLTF_WRITE_IDXPROP("index", info.texture, context->data->textures); \
 		cgltf_write_intprop(context, "texCoord", info.texcoord, 0); \
+		cgltf_write_floatprop(context, "scale", info.scale, 1.0f); \
+		if (info.has_transform) { \
+			context->extension_flags |= CGLTF_EXTENSION_FLAG_TEXTURE_TRANSFORM; \
+			cgltf_write_texture_transform(context, &info.transform); \
+		} \
 		cgltf_write_line(context, "}"); }
 
 static void cgltf_write_indent(cgltf_write_context* context)
@@ -146,6 +157,13 @@ static void cgltf_write_strprop(cgltf_write_context* context, const char* label,
 		CGLTF_SPRINTF("\"%s\": \"%s\"", label, val);
 		context->needs_comma = 1;
 	}
+}
+
+static void cgltf_write_stritem(cgltf_write_context* context, const char* item)
+{
+	cgltf_write_indent(context);
+	CGLTF_SPRINTF("\"%s\"", item);
+	context->needs_comma = 1;
 }
 
 static void cgltf_write_intprop(cgltf_write_context* context, const char* label, int val, int def)
@@ -212,13 +230,13 @@ static int cgltf_int_from_component_type(cgltf_component_type ctype)
 {
 	switch (ctype)
 	{
-		case cgltf_component_type_invalid: return 0;
 		case cgltf_component_type_r_8: return 5120;
 		case cgltf_component_type_r_8u: return 5121;
 		case cgltf_component_type_r_16: return 5122;
 		case cgltf_component_type_r_16u: return 5123;
 		case cgltf_component_type_r_32u: return 5125;
 		case cgltf_component_type_r_32f: return 5126;
+		default: return 0;
 	}
 }
 
@@ -226,9 +244,9 @@ static const char* cgltf_str_from_alpha_mode(cgltf_alpha_mode alpha_mode)
 {
 	switch (alpha_mode)
 	{
-		case cgltf_alpha_mode_opaque: return 0;
 		case cgltf_alpha_mode_mask: return "MASK";
 		case cgltf_alpha_mode_blend: return "BLEND";
+		default: return NULL;
 	}
 }
 
@@ -236,7 +254,6 @@ static const char* cgltf_str_from_type(cgltf_type type)
 {
 	switch (type)
 	{
-		case cgltf_type_invalid: return 0;
 		case cgltf_type_scalar: return "SCALAR";
 		case cgltf_type_vec2: return "VEC2";
 		case cgltf_type_vec3: return "VEC3";
@@ -244,6 +261,7 @@ static const char* cgltf_str_from_type(cgltf_type type)
 		case cgltf_type_mat2: return "MAT2";
 		case cgltf_type_mat3: return "MAT3";
 		case cgltf_type_mat4: return "MAT4";
+		default: return NULL;
 	}
 }
 
@@ -251,7 +269,6 @@ static int cgltf_dim_from_type(cgltf_type type)
 {
 	switch (type)
 	{
-		case cgltf_type_invalid: return 0;
 		case cgltf_type_scalar: return 1;
 		case cgltf_type_vec2: return 2;
 		case cgltf_type_vec3: return 3;
@@ -259,7 +276,26 @@ static int cgltf_dim_from_type(cgltf_type type)
 		case cgltf_type_mat2: return 4;
 		case cgltf_type_mat3: return 9;
 		case cgltf_type_mat4: return 16;
+		default: return 0;
 	}
+}
+
+static void cgltf_write_texture_transform(cgltf_write_context* context, const cgltf_texture_transform* transform)
+{
+	cgltf_write_line(context, "\"extensions\": {");
+	cgltf_write_line(context, "\"KHR_texture_transform\": {");
+	if (cgltf_check_floatarray(transform->offset, 2, 0.0f))
+	{
+		cgltf_write_floatarrayprop(context, "offset", transform->offset, 2);
+	}
+	cgltf_write_floatprop(context, "rotation", transform->rotation, 0.0f);
+	if (cgltf_check_floatarray(transform->scale, 2, 1.0f))
+	{
+		cgltf_write_floatarrayprop(context, "scale", transform->scale, 2);
+	}
+	cgltf_write_intprop(context, "texCoord", transform->texcoord, 0);
+	cgltf_write_line(context, "}");
+	cgltf_write_line(context, "}");
 }
 
 static void cgltf_write_asset(cgltf_write_context* context, const cgltf_asset* asset)
@@ -315,7 +351,6 @@ static void cgltf_write_buffer_view(cgltf_write_context* context, const cgltf_bu
 	cgltf_write_intprop(context, "byteOffset", view->offset, 0);
 	cgltf_write_intprop(context, "byteStride", view->stride, 0);
 	// NOTE: We skip writing "target" because the spec says its usage can be inferred.
-	// NOTE: The spec defines name / extensions / extras but cgltf does not read these.
 	cgltf_write_line(context, "}");
 }
 
@@ -325,7 +360,6 @@ static void cgltf_write_buffer(cgltf_write_context* context, const cgltf_buffer*
 	cgltf_write_line(context, "{");
 	cgltf_write_strprop(context, "uri", buffer->uri);
 	cgltf_write_intprop(context, "byteLength", buffer->size, -1);
-	// NOTE: The spec defines name / extensions / extras but cgltf does not read these.
 	cgltf_write_line(context, "}");
 }
 
@@ -335,7 +369,17 @@ static void cgltf_write_material(cgltf_write_context* context, const cgltf_mater
 	cgltf_write_strprop(context, "name", material->name);
 	cgltf_write_floatprop(context, "alphaCutoff", material->alpha_cutoff, 0.5f);
 	cgltf_write_boolprop_optional(context, "doubleSided", material->double_sided, false);
-	cgltf_write_boolprop_optional(context, "unlit", material->unlit, false);
+	// cgltf_write_boolprop_optional(context, "unlit", material->unlit, false);
+
+	if (material->unlit)
+	{
+		context->extension_flags |= CGLTF_EXTENSION_FLAG_MATERIALS_UNLIT;
+	}
+
+	if (material->has_pbr_specular_glossiness)
+	{
+		context->extension_flags |= CGLTF_EXTENSION_FLAG_SPECULAR_GLOSSINESS;
+	}
 
 	if (material->has_pbr_metallic_roughness)
 	{
@@ -352,23 +396,30 @@ static void cgltf_write_material(cgltf_write_context* context, const cgltf_mater
 		cgltf_write_line(context, "}");
 	}
 
-	if (material->has_pbr_specular_glossiness)
+	if (material->unlit || material->has_pbr_specular_glossiness)
 	{
-		const auto& params = material->pbr_specular_glossiness;
 		cgltf_write_line(context, "\"extensions\": {");
-		cgltf_write_line(context, "\"KHR_materials_pbrSpecularGlossiness\": {");
-		CGLTF_WRITE_TEXTURE_INFO("diffuseTexture", params.diffuse_texture);
-		CGLTF_WRITE_TEXTURE_INFO("specularGlossinessTexture", params.specular_glossiness_texture);
-		if (cgltf_check_floatarray(params.diffuse_factor, 4, 1.0f))
+		if (material->has_pbr_specular_glossiness)
 		{
-			cgltf_write_floatarrayprop(context, "dffuseFactor", params.diffuse_factor, 4);
+			const auto& params = material->pbr_specular_glossiness;
+			cgltf_write_line(context, "\"KHR_materials_pbrSpecularGlossiness\": {");
+			CGLTF_WRITE_TEXTURE_INFO("diffuseTexture", params.diffuse_texture);
+			CGLTF_WRITE_TEXTURE_INFO("specularGlossinessTexture", params.specular_glossiness_texture);
+			if (cgltf_check_floatarray(params.diffuse_factor, 4, 1.0f))
+			{
+				cgltf_write_floatarrayprop(context, "dffuseFactor", params.diffuse_factor, 4);
+			}
+			if (cgltf_check_floatarray(params.specular_factor, 3, 1.0f))
+			{
+				cgltf_write_floatarrayprop(context, "specularFactor", params.specular_factor, 3);
+			}
+			cgltf_write_floatprop(context, "glossinessFactor", params.glossiness_factor, 1.0f);
+			cgltf_write_line(context, "}");
 		}
-		if (cgltf_check_floatarray(params.specular_factor, 3, 1.0f))
+		if (material->unlit)
 		{
-			cgltf_write_floatarrayprop(context, "specularFactor", params.specular_factor, 3);
+			cgltf_write_line(context, "\"KHR_materials_unlit\": {}");
 		}
-		cgltf_write_floatprop(context, "glossinessFactor", params.glossiness_factor, 1.0f);
-		cgltf_write_line(context, "}");
 		cgltf_write_line(context, "}");
 	}
 
@@ -399,6 +450,104 @@ static void cgltf_write_texture(cgltf_write_context* context, const cgltf_textur
 	cgltf_write_strprop(context, "name", texture->name);
 	CGLTF_WRITE_IDXPROP("source", texture->image, context->data->images);
 	CGLTF_WRITE_IDXPROP("sampler", texture->sampler, context->data->samplers);
+	cgltf_write_line(context, "}");
+}
+
+static void cgltf_write_skin(cgltf_write_context* context, const cgltf_skin* skin)
+{
+	cgltf_write_line(context, "{");
+	CGLTF_WRITE_IDXPROP("skeleton", skin->skeleton, context->data->nodes);
+	CGLTF_WRITE_IDXPROP("inverseBindMatrices", skin->inverse_bind_matrices, context->data->accessors);
+	CGLTF_WRITE_IDXARRPROP("joints", skin->joints_count, skin->joints, context->data->nodes);
+	cgltf_write_strprop(context, "name", skin->name);
+	cgltf_write_line(context, "}");
+}
+
+static const char* cgltf_write_str_path_type(cgltf_animation_path_type path_type)
+{
+	switch (path_type)
+	{
+	case cgltf_animation_path_type_translation:
+		return "translation";
+	case cgltf_animation_path_type_rotation:
+		return "rotation";
+	case cgltf_animation_path_type_scale:
+		return "scale";
+	case cgltf_animation_path_type_weights:
+		return "weights";
+	case cgltf_animation_path_type_invalid:
+		break;
+	}
+	return "invalid";
+}
+
+static const char* cgltf_write_str_interpolation_type(cgltf_interpolation_type interpolation_type)
+{
+	switch (interpolation_type)
+	{
+	case cgltf_interpolation_type_linear:
+		return "LINEAR";
+	case cgltf_interpolation_type_step:
+		return "STEP";
+	case cgltf_interpolation_type_cubic_spline:
+		return "CUBICSPLINE";
+	}
+	return "invalid";
+}
+
+static void cgltf_write_path_type(cgltf_write_context* context, const char *label, cgltf_animation_path_type path_type)
+{
+	cgltf_write_strprop(context, label, cgltf_write_str_path_type(path_type));
+}
+
+static void cgltf_write_interpolation_type(cgltf_write_context* context, const char *label, cgltf_interpolation_type interpolation_type)
+{
+	cgltf_write_strprop(context, label, cgltf_write_str_interpolation_type(interpolation_type));
+}
+
+static void cgltf_write_animation_sampler(cgltf_write_context* context, const cgltf_animation_sampler* animation_sampler)
+{
+	cgltf_write_line(context, "{");
+	cgltf_write_interpolation_type(context, "interpolation", animation_sampler->interpolation);
+	CGLTF_WRITE_IDXPROP("input", animation_sampler->input, context->data->accessors);
+	CGLTF_WRITE_IDXPROP("output", animation_sampler->output, context->data->accessors);
+	cgltf_write_line(context, "}");
+}
+
+static void cgltf_write_animation_channel(cgltf_write_context* context, const cgltf_animation* animation, const cgltf_animation_channel* animation_channel)
+{
+	cgltf_write_line(context, "{");
+	CGLTF_WRITE_IDXPROP("sampler", animation_channel->sampler, animation->samplers);
+	cgltf_write_line(context, "\"target\": {");
+	CGLTF_WRITE_IDXPROP("node", animation_channel->target_node, context->data->nodes);
+	cgltf_write_path_type(context, "path", animation_channel->target_path);
+	cgltf_write_line(context, "}");
+	cgltf_write_line(context, "}");
+}
+
+static void cgltf_write_animation(cgltf_write_context* context, const cgltf_animation* animation)
+{
+	cgltf_write_line(context, "{");
+	cgltf_write_strprop(context, "name", animation->name);
+
+	if (animation->samplers_count > 0)
+	{
+		cgltf_write_line(context, "\"samplers\": [");
+		for (cgltf_size i = 0; i < animation->samplers_count; ++i)
+		{
+			cgltf_write_animation_sampler(context, animation->samplers + i);
+		}
+		cgltf_write_line(context, "]");
+	}
+	if (animation->channels_count > 0)
+	{
+		cgltf_write_line(context, "\"channels\": [");
+		for (cgltf_size i = 0; i < animation->channels_count; ++i)
+		{
+			cgltf_write_animation_channel(context, animation, animation->channels + i);
+		}
+		cgltf_write_line(context, "]");
+	}
 	cgltf_write_line(context, "}");
 }
 
@@ -434,7 +583,11 @@ static void cgltf_write_node(cgltf_write_context* context, const cgltf_node* nod
 	{
 		cgltf_write_floatarrayprop(context, "scale", node->scale, 3);
 	}
-	// TODO: skin, weights, light, camera
+	if (node->skin)
+	{
+		CGLTF_WRITE_IDXPROP("skin", node->skin, context->data->skins);
+	}
+	// TODO: weights, light, camera
 	cgltf_write_line(context, "}");
 }
 
@@ -465,7 +618,6 @@ static void cgltf_write_accessor(cgltf_write_context* context, const cgltf_acces
 		cgltf_write_floatarrayprop(context, "max", accessor->max, dim);
 	}
 	cgltf_write_line(context, "}");
-	// Note that stride is just an annotation and should not be written out.
 	// TODO: accessor->sparse
 }
 
@@ -475,7 +627,8 @@ cgltf_result cgltf_write_file(const cgltf_options* options, const char* path, co
 	char* buffer = (char*) malloc(size);
 	size = cgltf_write(options, buffer, size, data);
 	FILE* file = fopen(path, "wt");
-	fwrite(buffer, size, 1, file);
+	// Note that cgltf_write() includes a null terminator, which we omit from the file content.
+	fwrite(buffer, size - 1, 1, file);
 	fclose(file);
 	free(buffer);
 	return cgltf_result_success;
@@ -580,7 +733,10 @@ cgltf_size cgltf_write(const cgltf_options* options, char* buffer, cgltf_size si
 		cgltf_write_line(context, "]");
 	}
 
-	cgltf_write_intprop(context, "scene", data->scene - data->scenes, -1);
+	if (data->scene)
+	{
+		cgltf_write_intprop(context, "scene", data->scene - data->scenes, -1);
+	}
 
 	if (data->scenes_count > 0)
 	{
@@ -602,7 +758,44 @@ cgltf_size cgltf_write(const cgltf_options* options, char* buffer, cgltf_size si
 		cgltf_write_line(context, "]");
 	}
 
-	// TODO: skins, animations, cameras, extensions
+	if (data->skins_count > 0)
+	{
+		cgltf_write_line(context, "\"skins\": [");
+		for (cgltf_size i = 0; i < data->skins_count; ++i)
+		{
+			cgltf_write_skin(context, data->skins + i);
+		}
+		cgltf_write_line(context, "]");
+	}
+
+	if (data->animations_count > 0)
+	{
+		cgltf_write_line(context, "\"animations\": [");
+		for (cgltf_size i = 0; i < data->animations_count; ++i)
+		{
+			cgltf_write_animation(context, data->animations + i);
+		}
+		cgltf_write_line(context, "]");
+	}
+
+	// TODO: cameras
+
+	if (context->extension_flags != 0) {
+		cgltf_write_line(context, "\"extensionsUsed\": [");
+		if (context->extension_flags & CGLTF_EXTENSION_FLAG_TEXTURE_TRANSFORM) {
+			cgltf_write_stritem(context, "KHR_texture_transform");
+		}
+		if (context->extension_flags & CGLTF_EXTENSION_FLAG_MATERIALS_UNLIT) {
+			cgltf_write_stritem(context, "KHR_materials_unlit");
+		}
+		if (context->extension_flags & CGLTF_EXTENSION_FLAG_SPECULAR_GLOSSINESS) {
+			cgltf_write_stritem(context, "KHR_materials_pbrSpecularGlossiness");
+		}
+		if (context->extension_flags & CGLTF_EXTENSION_FLAG_LIGHTS_PUNCTUAL) {
+			cgltf_write_stritem(context, "KHR_lights_punctual");
+		}
+		cgltf_write_line(context, "]");
+	}
 
 	CGLTF_SPRINTF("\n}\n");
 
