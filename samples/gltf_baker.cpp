@@ -15,6 +15,7 @@
  */
 
 #define GLTFIO_SIMPLEVIEWER_IMPLEMENTATION
+#define DEBUG_PATHTRACER 0
 
 #include "app/Config.h"
 #include "app/FilamentApp.h"
@@ -30,6 +31,7 @@
 #include <gltfio/ResourceLoader.h>
 #include <gltfio/SimpleViewer.h>
 
+#include <image/ImageOps.h>
 #include <image/LinearImage.h>
 
 #include <imageio/ImageEncoder.h>
@@ -74,7 +76,10 @@ struct App {
     bool actualSize = false;
     AppState state = EMPTY;
     utils::Path filename;
-    image::LinearImage renderedImage;
+    image::LinearImage ambientOcclusion;
+    image::LinearImage bentNormals;
+    image::LinearImage meshNormals;
+    image::LinearImage meshPositions;
     bool showOverlay = false;
     bool enablePrepScale = true;
     View* overlayView = nullptr;
@@ -215,9 +220,9 @@ static void updateOverlay(App& app) {
 
 static void updateOverlayTexture(App& app) {
     Engine& engine = *app.engine;
-    int w = app.renderedImage.getWidth();
-    int h = app.renderedImage.getHeight();
-    void* data = app.renderedImage.getPixelRef();
+    int w = app.ambientOcclusion.getWidth();
+    int h = app.ambientOcclusion.getHeight();
+    void* data = app.ambientOcclusion.getPixelRef();
     Texture::PixelBufferDescriptor buffer(data, size_t(w * h * 4),
             Texture::Format::R, Texture::Type::FLOAT);
     app.overlayTexture->setImage(engine, 0, std::move(buffer));
@@ -228,9 +233,9 @@ static void createOverlayTexture(App& app) {
     using MinFilter = TextureSampler::MinFilter;
     using MagFilter = TextureSampler::MagFilter;
 
-    int w = app.renderedImage.getWidth();
-    int h = app.renderedImage.getHeight();
-    void* data = app.renderedImage.getPixelRef();
+    int w = app.ambientOcclusion.getWidth();
+    int h = app.ambientOcclusion.getHeight();
+    void* data = app.ambientOcclusion.getPixelRef();
     Texture::PixelBufferDescriptor buffer(data, size_t(w * h * 4),
             Texture::Format::R, Texture::Type::FLOAT);
     auto tex = Texture::Builder()
@@ -373,8 +378,7 @@ static void renderAsset(App& app) {
     // Allocate the render target for the path tracer as well as a GPU texture to display it.
     auto viewportSize = ImGui::GetIO().DisplaySize;
     viewportSize.x -= app.viewer->getSidebarWidth();
-    image::LinearImage image(viewportSize.x, viewportSize.y, 1);
-    app.renderedImage = image;
+    app.ambientOcclusion = image::LinearImage(viewportSize.x, viewportSize.y, 1);
     app.showOverlay = true;
     createOverlayTexture(app);
 
@@ -413,7 +417,8 @@ static void renderAsset(App& app) {
         app->requestStatePop = true;
         delete app->pipeline;
     };
-    app.pipeline->renderAmbientOcclusion(asset, image, camera, onRenderTile, onRenderDone, &app);
+    app.pipeline->renderAmbientOcclusion(asset, app.ambientOcclusion, camera, onRenderTile,
+            onRenderDone, &app);
 }
 
 static void bakeAsset(App& app) {
@@ -423,9 +428,8 @@ static void bakeAsset(App& app) {
     // Allocate the render target for the path tracer as well as a GPU texture to display it.
     auto viewportSize = ImGui::GetIO().DisplaySize;
     viewportSize.x -= app.viewer->getSidebarWidth();
-    image::LinearImage image(1024, 1024, 1);
-    app.renderedImage = image;
     app.showOverlay = true;
+    app.ambientOcclusion = image::LinearImage(1024, 1024, 1);
     createOverlayTexture(app);
 
     app.pipeline = new gltfio::AssetPipeline();
@@ -435,12 +439,44 @@ static void bakeAsset(App& app) {
         App* app = (App*) userData;
         app->requestOverlayUpdate = true;
     };
+
+#if DEBUG_PATHTRACER
+    image::LinearImage outputs[] = {
+        app.ambientOcclusion,
+        app.bentNormals = image::LinearImage(1024, 1024, 3),
+        app.meshNormals = image::LinearImage(1024, 1024, 3),
+        app.meshPositions = image::LinearImage(1024, 1024, 3)
+    };
+    auto onRenderDone = [](void* userData) {
+        App* app = (App*) userData;
+        using namespace image;
+        auto fmt = ImageEncoder::Format::PNG_LINEAR;
+
+        std::ofstream bn("bentNormals.png", std::ios::binary | std::ios::trunc);
+        image::LinearImage img = image::verticalFlip(image::vectorsToColors(app->bentNormals));
+        ImageEncoder::encode(bn, fmt, img, "", "bentNormals.png");
+
+        std::ofstream mn("meshNormals.png", std::ios::binary | std::ios::trunc);
+        img = image::verticalFlip(image::vectorsToColors(app->meshNormals));
+        ImageEncoder::encode(mn, fmt, img, "", "meshNormals.png");
+
+        std::ofstream mp("meshPositions.png", std::ios::binary | std::ios::trunc);
+        img = image::verticalFlip(image::vectorsToColors(app->meshPositions));
+        ImageEncoder::encode(mp, fmt, img, "", "meshPositions.png");
+
+        delete app->pipeline;
+        app->state = BAKED;
+    };
+    app.pipeline->bakeAllOutputs(asset, outputs, onRenderTile, onRenderDone, &app);
+#else
     auto onRenderDone = [](void* userData) {
         App* app = (App*) userData;
         delete app->pipeline;
         app->state = BAKED;
     };
-    app.pipeline->bakeAmbientOcclusion(asset, image, onRenderTile, onRenderDone, &app);
+    app.pipeline->bakeAmbientOcclusion(asset, app.ambientOcclusion, onRenderTile, onRenderDone,
+            &app);
+#endif
 }
 
 static void exportAsset(App& app) {
@@ -452,7 +488,7 @@ static void exportAsset(App& app) {
     const utils::Path texPath = folder + "baked.png";
 
     std::ofstream out(texPath.c_str(), std::ios::binary | std::ios::trunc);
-    ImageEncoder::encode(out, ImageEncoder::Format::PNG_LINEAR, app.renderedImage, "",
+    ImageEncoder::encode(out, ImageEncoder::Format::PNG_LINEAR, app.ambientOcclusion, "",
             texPath.c_str());
 
     gltfio::AssetPipeline::AssetHandle asset = app.asset->getSourceAsset();
@@ -575,7 +611,7 @@ int main(int argc, char** argv) {
             ImGui::GetStyle().FrameRounding = 20;
 
             // Options
-            if (app.renderedImage) {
+            if (app.ambientOcclusion) {
                 ImGui::Checkbox("Show embree result", &app.showOverlay);
             }
             if (canPrep) {
