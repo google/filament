@@ -681,11 +681,16 @@ void OpenGLDriver::setRasterStateSlow(RasterState rs) noexcept {
     }
 
     // depth test
-    depthFunc(getDepthFunc(rs.depthFunc));
+    if (rs.depthFunc == RasterState::DepthFunc::A && !rs.depthWrite) {
+        disable(GL_DEPTH_TEST);
+    } else {
+        enable(GL_DEPTH_TEST);
+        depthFunc(getDepthFunc(rs.depthFunc));
+        depthMask(GLboolean(rs.depthWrite));
+    }
 
     // write masks
     colorMask(GLboolean(rs.colorWrite));
-    depthMask(GLboolean(rs.depthWrite));
 
     // AA
     if (rs.alphaToCoverage) {
