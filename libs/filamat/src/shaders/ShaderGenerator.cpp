@@ -237,6 +237,9 @@ const std::string ShaderGenerator::createFragmentProgram(filament::backend::Shad
 
     cg.generateDefine(fs, "CLEAR_COAT_IOR_CHANGE", material.clearCoatIorChange);
 
+    cg.generateDefine(fs, "SPECULAR_AMBIENT_OCCLUSION", material.specularAO);
+    cg.generateDefine(fs, "MULTI_BOUNCE_AMBIENT_OCCLUSION", material.multiBounceAO);
+
     // lighting variants
     bool litVariants = lit || material.hasShadowMultiplier;
     cg.generateDefine(fs, "HAS_DIRECTIONAL_LIGHTING", litVariants && variant.hasDirectionalLighting());

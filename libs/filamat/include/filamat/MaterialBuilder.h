@@ -239,6 +239,12 @@ public:
     // enable/disable flipping of the Y coordinate of UV attributes, enabled by default
     MaterialBuilder& flipUV(bool flipUV) noexcept;
 
+    // enable/disable multi-bounce ambient occlusion, disabled by default on mobile
+    MaterialBuilder& multiBounceAmbientOcclusion(bool multiBounceAO) noexcept;
+
+    // enable/disable specular ambient occlusion, disabled by default on mobile
+    MaterialBuilder& specularAmbientOcclusion(bool specularAO) noexcept;
+
     // specifies how transparent objects should be rendered (default is DEFAULT)
     MaterialBuilder& transparencyMode(TransparencyMode mode) noexcept;
 
@@ -360,6 +366,9 @@ private:
     bool mClearCoatIorChange = true;
 
     bool mFlipUV = true;
+
+    bool mMultiBounceAO = true;
+    bool mSpecularAO = true;
 };
 
 } // namespace filamat

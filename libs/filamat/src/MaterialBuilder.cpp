@@ -264,6 +264,16 @@ MaterialBuilder& MaterialBuilder::flipUV(bool flipUV) noexcept {
     return *this;
 }
 
+MaterialBuilder& MaterialBuilder::multiBounceAmbientOcclusion(bool multiBounceAO) noexcept {
+    mMultiBounceAO = multiBounceAO;
+    return *this;
+}
+
+MaterialBuilder& MaterialBuilder::specularAmbientOcclusion(bool specularAO) noexcept {
+    mSpecularAO = specularAO;
+    return *this;
+}
+
 MaterialBuilder& MaterialBuilder::transparencyMode(TransparencyMode mode) noexcept {
     mTransparencyMode = mode;
     return *this;
@@ -347,6 +357,8 @@ void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
     info.postLightingBlendingMode = mPostLightingBlendingMode;
     info.shading = mShading;
     info.hasShadowMultiplier = mShadowMultiplier;
+    info.multiBounceAO = mMultiBounceAO;
+    info.specularAO = mSpecularAO;
 }
 
 bool MaterialBuilder::runStaticCodeAnalysis() noexcept {

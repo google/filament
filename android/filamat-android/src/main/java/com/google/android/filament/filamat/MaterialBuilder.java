@@ -314,6 +314,18 @@ public class MaterialBuilder {
     }
 
     @NonNull
+    public MaterialBuilder multiBounceAmbientOcclusion(boolean multiBounceAO) {
+        nMaterialBuilderMultiBounceAmbientOcclusion(mNativeObject, multiBounceAO);
+        return this;
+    }
+
+    @NonNull
+    public MaterialBuilder specularAmbientOcclusion(boolean specularAO) {
+        nMaterialBuilderSpecularAmbientOcclusion(mNativeObject, specularAO);
+        return this;
+    }
+
+    @NonNull
     public MaterialBuilder transparencyMode(@NonNull TransparencyMode mode) {
         nMaterialBuilderTransparencyMode(mNativeObject, mode.ordinal());
         return this;
@@ -415,6 +427,10 @@ public class MaterialBuilder {
     private static native void nMaterialBuilderClearCoatIorChange(long mNativeObject,
             boolean clearCoatIorChange);
     private static native void nMaterialBuilderFlipUV(long nativeBuilder, boolean flipUV);
+    private static native void nMaterialBuilderMultiBounceAmbientOcclusion(long nativeBuilder,
+            boolean multiBounceAO);
+    private static native void nMaterialBuilderSpecularAmbientOcclusion(long nativeBuilder,
+            boolean specularAO);
     private static native void nMaterialBuilderTransparencyMode(long nativeBuilder, int mode);
     private static native void nMaterialBuilderPlatform(long nativeBuilder, int platform);
     private static native void nMaterialBuilderTargetApi(long nativeBuilder, int api);
