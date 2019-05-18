@@ -254,6 +254,20 @@ Java_com_google_android_filament_filamat_MaterialBuilder_nMaterialBuilderFlipUV(
 }
 
 extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_filamat_MaterialBuilder_nMaterialBuilderMultiBounceAmbientOcclusion(
+        JNIEnv*, jclass, jlong nativeBuilder, jboolean multiBounceAO) {
+    auto builder = (MaterialBuilder*) nativeBuilder;
+    builder->multiBounceAmbientOcclusion(multiBounceAO);
+}
+
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_filamat_MaterialBuilder_nMaterialBuilderSpecularAmbientOcclusion(
+        JNIEnv*, jclass, jlong nativeBuilder, jboolean specularAO) {
+    auto builder = (MaterialBuilder*) nativeBuilder;
+    builder->specularAmbientOcclusion(specularAO);
+}
+
+extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_filamat_MaterialBuilder_nMaterialBuilderTransparencyMode(
         JNIEnv* env, jclass, jlong nativeBuilder, jint mode) {
     auto builder = (MaterialBuilder*) nativeBuilder;

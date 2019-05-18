@@ -3,8 +3,8 @@
 //------------------------------------------------------------------------------
 
 #ifndef TARGET_MOBILE
-#if !defined(SPECULAR_OCCLUSION)
-    #define SPECULAR_OCCLUSION
+#if !defined(SPECULAR_AMBIENT_OCCLUSION)
+    #define SPECULAR_AMBIENT_OCCLUSION
 #endif
 #if !defined(MULTI_BOUNCE_AMBIENT_OCCLUSION)
     #define MULTI_BOUNCE_AMBIENT_OCCLUSION
@@ -21,7 +21,7 @@ float evaluateSSAO() {
  * Computes a specular occlusion term from the ambient occlusion term.
  */
 float computeSpecularAO(float NoV, float visibility, float linearRoughness) {
-#if defined(SPECULAR_OCCLUSION)
+#if defined(SPECULAR_AMBIENT_OCCLUSION)
     return saturate(pow(NoV + visibility, exp2(-16.0 * linearRoughness - 1.0)) - 1.0 + visibility);
 #else
     return 1.0;
@@ -51,7 +51,7 @@ void multiBounceAO(float visibility, const vec3 albedo, inout vec3 color) {
 }
 
 void multiBounceSpecularAO(float visibility, const vec3 albedo, inout vec3 color) {
-#if defined(MULTI_BOUNCE_AMBIENT_OCCLUSION) && defined(SPECULAR_OCCLUSION)
+#if defined(MULTI_BOUNCE_AMBIENT_OCCLUSION) && defined(SPECULAR_AMBIENT_OCCLUSION)
     color *= gtaoMultiBounce(visibility, albedo);
 #endif
 }

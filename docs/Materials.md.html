@@ -654,7 +654,7 @@ fragment {
 The material block is mandatory block that contains a list of property pairs to describe all
 non-shader data.
 
-### name
+### General: name
 
 Type
 :    `string`
@@ -675,7 +675,7 @@ material {
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-### shadingModel
+### General: shadingModel
 
 Type
 :    `string`
@@ -696,7 +696,7 @@ material {
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-### parameters
+### General: parameters
 
 Type
 :    array of parameter objects
@@ -786,7 +786,60 @@ fragment {
     }
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-### requires
+
+### General: variantFilter
+
+Type
+:    array of `string`
+
+Value
+:     Each entry must be any of `dynamicLighting`, `directionalLighting`, `shadowReceiver` or `skinning`.
+
+Description
+:     Used to specify a list of shader variants that the application guarantees will never be
+      needed. These shader variants are skipped during the code generation phase, thus reducing
+      the overall size of the material.
+      Note that some variants may automatically be filtered out. For instance, all lighting related
+      variants (`directionalLighting`, etc.) are filtered out when compiling an `unlit` material.
+      Use the variant filter with caution, filtering out a variant required at runtime may lead
+      to crashes.
+
+Description of the variants:
+- `directionalLighting`, used when a directional light is present in the scene
+- `dynamicLighting`, used when a non-directional light (point, spot, etc.) is present in the scene
+- `shadowReceiver`, used when an object can receive shadows
+- `skinning`, used when an object is animated using GPU skinning
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ JSON
+material {
+    name : "Invisible shadow plane",
+    shadingModel : unlit,
+    shadowMultiplier : true,
+    blending : transparent,
+    variantFilter : [ skinning ]
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+### General: flipUV
+
+Type
+:    `boolean`
+
+Value
+:     `true` or `false`. Defaults to `true`.
+
+Description
+:    When set to `true` (default value), the Y coordinate of UV attributes will be flipped when
+     read by this material's vertex shader. Flipping is equivalent to `y = 1.0 - y`. When set
+     to `false`, flipping is disabled and the UV attributes are read as is.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ JSON
+material {
+    flipUV : false
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+### Vertex and attributes: requires
 
 Type
 :    array of `string`
@@ -822,7 +875,7 @@ fragment {
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-### variables
+### Vertex and attributes: variables
 
 Type
 :    array of `string`
@@ -873,7 +926,54 @@ vertex {
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-### blending
+### Vertex and attributes: vertexDomain
+
+Type
+:    `string`
+
+Value
+:     Any of `object`, `world`, `view`, `device`. Defaults to `object`.
+
+Description
+:     Defines the domain (or coordinate space) of the rendered mesh. The domain influences how the
+      vertices are transformed in the vertex shader. The possible domains are:
+
+     - **Object**: the vertices are defined in the object (or model) coordinate space. The
+       vertices are transformed using the rendered object's transform matrix
+     - **World**: the vertices are defined in world coordinate space. The vertices are not
+       transformed using the rendered object's transform.
+     - **View**: the vertices are defined in view (or eye or camera) coordinate space. The
+       vertices are not transformed using the rendered object's transform.
+     - **Device**:  the vertices are defined in normalized device (or clip) coordinate space.
+       The vertices are not transformed using the rendered object's transform.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ JSON
+material {
+    vertexDomain : device
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+### Vertex and attributes: interpolation
+
+Type
+:    `string`
+
+Value
+:     Any of `smooth`, `flat`. Defaults to `smooth`.
+
+Description
+:     Defines how interpolants (or variables) are interpolated between vertices. When this property
+      is set to `smooth`, a perspective correct interpolation is performed on each interpolant.
+      When set to `flat`, no interpolation is performed and all the fragments within a given
+      triangle will be shaded the same.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ JSON
+material {
+    interpolation : flat
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+### Blending and transparency: blending
 
 Type
 :    `string`
@@ -904,7 +1004,7 @@ material {
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-### postLightingBlending
+### Blending and transparency: postLightingBlending
 
 Type
 :    `string`
@@ -928,144 +1028,7 @@ material {
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-### vertexDomain
-
-Type
-:    `string`
-
-Value
-:     Any of `object`, `world`, `view`, `device`. Defaults to `object`.
-
-Description
-:     Defines the domain (or coordinate space) of the rendered mesh. The domain influences how the
-      vertices are transformed in the vertex shader. The possible domains are:
-
-     - **Object**: the vertices are defined in the object (or model) coordinate space. The
-       vertices are transformed using the rendered object's transform matrix
-     - **World**: the vertices are defined in world coordinate space. The vertices are not
-       transformed using the rendered object's transform.
-     - **View**: the vertices are defined in view (or eye or camera) coordinate space. The
-       vertices are not transformed using the rendered object's transform.
-     - **Device**:  the vertices are defined in normalized device (or clip) coordinate space.
-       The vertices are not transformed using the rendered object's transform.
-
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ JSON
-material {
-    vertexDomain : device
-}
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-### interpolation
-
-Type
-:    `string`
-
-Value
-:     Any of `smooth`, `flat`. Defaults to `smooth`.
-
-Description
-:     Defines how interpolants (or variables) are interpolated between vertices. When this property
-      is set to `smooth`, a perspective correct interpolation is performed on each interpolant.
-      When set to `flat`, no interpolation is performed and all the fragments within a given
-      triangle will be shaded the same.
-
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ JSON
-material {
-    interpolation : flat
-}
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-### culling
-
-Type
-:    `string`
-
-Value
-:     Any of `none`, `front`, `back`, `frontAndBack`. Defaults to `back`.
-
-Description
-:     Defines which triangles should be culled: none, front-facing triangles, back-facing
-      triangles or all.
-
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ JSON
-material {
-    culling : none
-}
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-### colorWrite
-
-Type
-:    `boolean`
-
-Value
-:     `true` or `false`. Defaults to `true`.
-
-Description
-:     Enables or disables writes to the color buffer.
-
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ JSON
-material {
-    colorWrite : false
-}
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-### depthWrite
-
-Type
-:    `boolean`
-
-Value
-:     `true` or `false`. Defaults to `true`.
-
-Description
-:     Enables or disables writes to the depth buffer.
-
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ JSON
-material {
-    depthWrite : false
-}
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-### depthCulling
-
-Type
-:    `boolean`
-
-Value
-:     `true` or `false`. Defaults to `true`.
-
-Description
-:     Enables or disables depth testing. When depth testing is disabled, an object rendered with
-      this material will always appear on top of other opaque objects.
-
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ JSON
-material {
-    depthCulling : false
-}
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-### doubleSided
-
-Type
-:    `boolean`
-
-Value
-:     `true` or `false`. Defaults to `false`.
-
-Description
-:     Enables two-sided rendering and its capability to be toggled at run time. When set to `true`,
-      `culling` is automatically set to `none`; if the triangle is back-facing, the triangle's
-      normal is flipped to become front-facing. When explicitly set to `false`, this allows the
-      doubleSided property to be toggled at run time.
-
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ JSON
-material {
-    doubleSided : true
-}
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-### transparency
+### Blending and transparency: transparency
 
 Type
 :    `string`
@@ -1104,7 +1067,7 @@ and correctly sorted](images/screenshot_twopasses_oneside.png)
 ![Figure [transparencyTwoPassesTwoSides]: In `twoPassesTwoSides` mode, both set of faces are visible
 and sorting issues are minimized or eliminated](images/screenshot_twopasses_twosides.png)
 
-### maskThreshold
+### Blending and transparency: maskThreshold
 
 Type
 :    `number`
@@ -1124,7 +1087,97 @@ material {
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-### shadowMultiplier
+### Rasterization: culling
+
+Type
+:    `string`
+
+Value
+:     Any of `none`, `front`, `back`, `frontAndBack`. Defaults to `back`.
+
+Description
+:     Defines which triangles should be culled: none, front-facing triangles, back-facing
+      triangles or all.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ JSON
+material {
+    culling : none
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+### Rasterization: colorWrite
+
+Type
+:    `boolean`
+
+Value
+:     `true` or `false`. Defaults to `true`.
+
+Description
+:     Enables or disables writes to the color buffer.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ JSON
+material {
+    colorWrite : false
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+### Rasterization: depthWrite
+
+Type
+:    `boolean`
+
+Value
+:     `true` or `false`. Defaults to `true`.
+
+Description
+:     Enables or disables writes to the depth buffer.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ JSON
+material {
+    depthWrite : false
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+### Rasterization: depthCulling
+
+Type
+:    `boolean`
+
+Value
+:     `true` or `false`. Defaults to `true`.
+
+Description
+:     Enables or disables depth testing. When depth testing is disabled, an object rendered with
+      this material will always appear on top of other opaque objects.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ JSON
+material {
+    depthCulling : false
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+### Rasterization: doubleSided
+
+Type
+:    `boolean`
+
+Value
+:     `true` or `false`. Defaults to `false`.
+
+Description
+:     Enables two-sided rendering and its capability to be toggled at run time. When set to `true`,
+      `culling` is automatically set to `none`; if the triangle is back-facing, the triangle's
+      normal is flipped to become front-facing. When explicitly set to `false`, this allows the
+      doubleSided property to be toggled at run time.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ JSON
+material {
+    doubleSided : true
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+### Lighting: shadowMultiplier
 
 Type
 :    `boolean`
@@ -1154,50 +1207,7 @@ fragment {
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-### curvatureToRoughness
-
-Type
-:    `boolean`
-
-Value
-:     `true` or `false`. Defaults to `false`.
-
-Description
-:    Reduces specular aliasing by increasing roughness based on the local geometric curvature.
-     This property is particularly effective if you only use MSAA as your anti-aliasing method.
-
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ JSON
-material {
-    curvatureToRoughness : true
-}
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-![Figure [curvatureToRoughness]: Close up of a glossy metallic surface rendered normally (left) and
-with `curvatureToRoughness` (right).](images/screenshot_curvature_to_roughness.jpg)
-
-### limitOverInterpolation
-
-Type
-:    `boolean`
-
-Value
-:     `true` or `false`. Defaults to `false`.
-
-Description
-:    Reduces specular aliasing by attempting to eliminate normal over-interpolation. When this
-     property is turned on, the material switches to centroid normal interpolation when the
-     interpolated normals are too long. This property should only be used if your anti-aliasing
-     method is MSAA. The effects are a lot more subtle than `curvatureToRoughness`, which should be
-     used first to eliminate specular aliasing.
-
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ JSON
-material {
-    limitOverInterpolation : true
-}
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-
-### clearCoatIorChange
+### Lighting: clearCoatIorChange
 
 Type
 :    `boolean`
@@ -1221,55 +1231,97 @@ material {
 with `clearCoatIorChange` enabled (left) and disabled
 (right).](images/screenshot_clear_coat_ior_change.jpg)
 
-### variantFilter
-
-Type
-:    array of `string`
-
-Value
-:     Each entry must be any of `dynamicLighting`, `directionalLighting`, `shadowReceiver` or `skinning`.
-
-Description
-:     Used to specify a list of shader variants that the application guarantees will never be
-      needed. These shader variants are skipped during the code generation phase, thus reducing
-      the overall size of the material.
-      Note that some variants may automatically be filtered out. For instance, all lighting related
-      variants (`directionalLighting`, etc.) are filtered out when compiling an `unlit` material.
-      Use the variant filter with caution, filtering out a variant required at runtime may lead
-      to crashes.
-
-Description of the variants:
-- `directionalLighting`, used when a directional light is present in the scene
-- `dynamicLighting`, used when a non-directional light (point, spot, etc.) is present in the scene
-- `shadowReceiver`, used when an object can receive shadows
-- `skinning`, used when an object is animated using GPU skinning
-
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ JSON
-material {
-    name : "Invisible shadow plane",
-    shadingModel : unlit,
-    shadowMultiplier : true,
-    blending : transparent,
-    variantFilter : [ skinning ]
-}
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-### flipUV
+### Lighting: multiBounceAmbientOcclusion
 
 Type
 :    `boolean`
 
 Value
-:     `true` or `false`. Defaults to `true`.
+:     `true` or `false`. Defaults to `false` on mobile, `true` on desktop.
 
 Description
-:    When set to `true` (default value), the Y coordinate of UV attributes will be flipped when
-     read by this material's vertex shader. Flipping is equivalent to `y = 1.0 - y`. When set
-     to `false`, flipping is disabled and the UV attributes are read as is.
+:    Multi-bounce ambient occlusion takes into account interreflections when applying ambient
+     occlusion to image-based lighting. Turning this feature on avoids over-darkening occluded
+     areas. It also takes the surface color into account to generate colored ambient occlusion.
+     Figure [multiBounceAO] compares the ambient occlusion term of a surface with and without
+     multi-bounce ambient occlusion. Notice how multi-bounce ambient occlusion introduces color
+     in the occluded areas. Figure [multiBounceAOAnimated] toggles between multi-bounce ambient
+     occlusion on and off on a lit brick material to highlight the effects of this property.
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ JSON
 material {
-    flipUV : false
+    multiBounceAmbientOcclusion : true
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+![Figure [multiBounceAO]: Brick texture amient occlusion map rendered with multi-bounce ambient
+occclusion enabled (left) and disabled (right).](images/screenshot_multi_bounce_ao.jpg)
+
+![Figure [multiBounceAOAnimated]: Brick texture rendered with multi-bounce ambient
+occclusion enabled and disabled.](images/screenshot_multi_bounce_ao.gif)
+
+### Lighting: specularAmbientOcclusion
+
+Type
+:    `boolean`
+
+Value
+:     `true` or `false`. Defaults to `false` on mobile, `true` on desktop.
+
+Description
+:    Static ambient occlusion maps and dynamic ambient occlusion (SSAO, etc.) apply to diffuse
+     indirect lighting. When setting this property to true, a new ambient occlusion term is
+     derived from the surface roughness and applied to specular indirec lighting. This effect
+     helps remove unwanted specular reflections as shown in figure [specularAO].
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ JSON
+material {
+    specularAmbientOcclusion : true
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+![Figure [specularAO]: Comparison of specular ambient occlusion on and off. The effect is
+particularly visible under the hose.](images/screenshot_specular_ao.gif)
+
+### Anti-aliasing: curvatureToRoughness
+
+Type
+:    `boolean`
+
+Value
+:     `true` or `false`. Defaults to `false`.
+
+Description
+:    Reduces specular aliasing by increasing roughness based on the local geometric curvature.
+     This property is particularly effective if you only use MSAA as your anti-aliasing method.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ JSON
+material {
+    curvatureToRoughness : true
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+![Figure [curvatureToRoughness]: Close up of a glossy metallic surface rendered normally (left) and
+with `curvatureToRoughness` (right).](images/screenshot_curvature_to_roughness.jpg)
+
+### Anti-aliasing: limitOverInterpolation
+
+Type
+:    `boolean`
+
+Value
+:     `true` or `false`. Defaults to `false`.
+
+Description
+:    Reduces specular aliasing by attempting to eliminate normal over-interpolation. When this
+     property is turned on, the material switches to centroid normal interpolation when the
+     interpolated normals are too long. This property should only be used if your anti-aliasing
+     method is MSAA. The effects are a lot more subtle than `curvatureToRoughness`, which should be
+     used first to eliminate specular aliasing.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ JSON
+material {
+    limitOverInterpolation : true
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

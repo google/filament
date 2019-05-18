@@ -40,6 +40,8 @@ struct UTILS_PUBLIC MaterialInfo {
     bool limitOverInterpolation;
     bool clearCoatIorChange;
     bool flipUV;
+    bool multiBounceAO;
+    bool specularAO;
     filament::AttributeBitset requiredAttributes;
     filament::BlendingMode blendingMode;
     filament::BlendingMode postLightingBlendingMode;
