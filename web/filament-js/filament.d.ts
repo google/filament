@@ -70,7 +70,8 @@ export class MaterialInstance {
     public setFloat3Parameter(name: string, value: float3): void;
     public setFloat4Parameter(name: string, value: float4): void;
     public setTextureParameter(name: string, value: Texture, sampler: TextureSampler): void;
-    public setColorParameter(name: string, ctype: RgbType, value: float3): void;
+    public setColor3Parameter(name: string, ctype: RgbType, value: float3): void;
+    public setColor4Parameter(name: string, ctype: RgbaType, value: float4): void;
     public setPolygonOffset(scale: number, constant: number): void;
     public setMaskThreshold(threshold: number): void;
     public setDoubleSided(doubleSided: boolean): void;

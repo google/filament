@@ -22,7 +22,7 @@ class App {
     const material = engine.createMaterial(filamat_url);
     const matinstance = material.createInstance();
     const red = [0.8, 0.0, 0.0];
-    matinstance.setColorParameter('baseColor', Filament.RgbType.sRGB, red);
+    matinstance.setColor3Parameter('baseColor', Filament.RgbType.sRGB, red);
     matinstance.setFloatParameter('roughness', 0.5);
     matinstance.setFloatParameter('clearCoat', 1.0);
     matinstance.setFloatParameter('clearCoatRoughness', 0.3);
