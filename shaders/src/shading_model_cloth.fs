@@ -16,14 +16,14 @@ vec3 surfaceShading(const PixelParams pixel, const Light light, float occlusion)
     float LoH = saturate(dot(light.l, h));
 
     // specular BRDF
-    float D = distributionCloth(pixel.linearRoughness, NoH);
+    float D = distributionCloth(pixel.roughness, NoH);
     float V = visibilityCloth(shading_NoV, NoL);
     vec3  F = pixel.f0;
     // Ignore pixel.energyCompensation since we use a different BRDF here
     vec3 Fr = (D * V) * F;
 
     // diffuse BRDF
-    float diffuse = diffuse(pixel.linearRoughness, shading_NoV, NoL, LoH);
+    float diffuse = diffuse(pixel.roughness, shading_NoV, NoL, LoH);
 #if defined(MATERIAL_HAS_SUBSURFACE_COLOR)
     // Energy conservative wrap diffuse to simulate subsurface scattering
     diffuse *= Fd_Wrap(dot(shading_normal, light.l), 0.5);

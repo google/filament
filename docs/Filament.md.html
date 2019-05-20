@@ -93,7 +93,7 @@ $h$                          | Half unit vector between $l$ and $v$
 $f$                          | BRDF
 $\fDiffuse$                  | Diffuse component of a BRDF
 $\fSpecular$                 | Specular component of a BRDF
-$\alpha$                     | Perceptually linear roughness
+$\alpha$                     | Roughness, remapped from using input `perceptualRoughness`
 $\sigma$                     | Diffuse reflectance
 $\Omega$                     | Spherical domain
 $\fNormal$                   | Reflectance at normal incidence
@@ -149,6 +149,9 @@ A microfacet BRDF is heavily influenced by a _roughness_ parameter which describ
 Figure [roughness] shows surfaces of different roughness and how light interacts with them.
 
 ![Figure [roughness]: Varying roughness (from left to right, rough to smooth) and the resulting BRDF specular component lobe](images/diagram_roughness.png)
+
+!!! Note: About roughness
+    The roughness parameter as set by the user is called `perceptualRoughness` in the shader snippets throughout this document. The variable called `roughness` is the `perceptualRoughness` with a remapping explained in section [Parameterization].
 
 A microfacet model is described by the following equation (where x stands for the specular or diffuse component):
 
@@ -216,9 +219,9 @@ D_{GGX}(h,\alpha) = \frac{\aa}{\pi ( (\NoH)^2 (\aa - 1) + 1)^2}
 The GLSL implementation of the NDF, shown in listing [specularD], is simple and efficient.
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-float D_GGX(float NoH, float linearRoughness) {
-    float a = NoH * linearRoughness;
-    float k = linearRoughness / (1.0 - NoH * NoH + a * a);
+float D_GGX(float NoH, float roughness) {
+    float a = NoH * roughness;
+    float k = roughness / (1.0 - NoH * NoH + a * a);
     return k * k * (1.0 / PI);
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -238,10 +241,10 @@ Since both $n$ and $h$ are unit vectors, $|n \times h|^2 = 1 - (\NoH)^2$. This a
 #define MEDIUMP_FLT_MAX    65504.0
 #define saturateMediump(x) min(x, MEDIUMP_FLT_MAX)
 
-float D_GGX(float linearRoughness, float NoH, const vec3 n, const vec3 h) {
+float D_GGX(float roughness, float NoH, const vec3 n, const vec3 h) {
     vec3 NxH = cross(n, h);
-    float a = NoH * linearRoughness;
-    float k = linearRoughness / (dot(NxH, NxH) + a * a);
+    float a = NoH * roughness;
+    float k = roughness / (dot(NxH, NxH) + a * a);
     float d = k * k * (1.0 / PI);
     return saturateMediump(d);
 }
@@ -311,8 +314,8 @@ V(v,l,\alpha) = \frac{0.5}{\NoL \sqrt{(\NoV)^2 (1 - \aa) + \aa} + \NoV \sqrt{(\N
 The GLSL implementation of the visibility term, shown in listing [specularV], is a bit more expensive than we would like since it requires two `sqrt` operations.
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-float V_SmithGGXCorrelated(float NoV, float NoL, float linearRoughness) {
-    float a2 = linearRoughness * linearRoughness;
+float V_SmithGGXCorrelated(float NoV, float NoL, float roughness) {
+    float a2 = roughness * roughness;
     float GGXV = NoL * sqrt(NoV * NoV * (1.0 - a2) + a2);
     float GGXL = NoV * sqrt(NoL * NoL * (1.0 - a2) + a2);
     return 0.5 / (GGXV + GGXL);
@@ -329,8 +332,8 @@ V(v,l,\alpha) = \frac{0.5}{\NoL (\NoV (1 - \alpha) + \alpha) + \NoV (\NoL (1 - \
 This approximation is mathematically wrong but saves two square root operations and is good enough for real-time mobile applications, as shown in listing [approximatedSpecularV].
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-float V_SmithGGXCorrelatedFast(float NoV, float NoL, float linearRoughness) {
-    float a = linearRoughness;
+float V_SmithGGXCorrelatedFast(float NoV, float NoL, float roughness) {
+    float a = roughness;
     float GGXV = NoL * (NoV * (1.0 - a) + a);
     float GGXL = NoV * (NoL * (1.0 - a) + a);
     return 0.5 / (GGXV + GGXL);
@@ -421,15 +424,13 @@ $$\begin{equation}
 \fGrazing=0.5 + 2 \cdot \alpha cos^2(\theta_d)
 \end{equation}$$
 
-It is important to note that the roughness used in this formula is the perceptually linear roughness (more on this in section [Parameterization]).
-
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 float F_Schlick(float VoH, float f0, float f90) {
     return f0 + (f90 - f0) * pow(1.0 - VoH, 5.0);
 }
 
-float Fd_Burley(float NoV, float NoL, float LoH, float linearRoughness) {
-    float f90 = 0.5 + 2.0 * linearRoughness * LoH * LoH;
+float Fd_Burley(float NoV, float NoL, float LoH, float roughness) {
+    float f90 = 0.5 + 2.0 * roughness * LoH * LoH;
     float lightScatter = F_Schlick(NoL, 1.0, f90);
     float viewScatter = F_Schlick(NoV, 1.0, f90);
     return lightScatter * viewScatter * (1.0 / PI);
@@ -481,12 +482,12 @@ void BRDF(...) {
     float NoH = clamp(dot(n, h), 0.0, 1.0);
     float LoH = clamp(dot(l, h), 0.0, 1.0);
 
-    // perceptually linear roughness (see parameterization)
-    float a = roughness * roughness;
+    // perceptually linear roughness to roughness (see parameterization)
+    float roughness = perceptualRoughness * perceptualRoughness;
 
     float D = D_GGX(NoH, a);
     vec3  F = F_Schlick(LoH, f0);
-    float V = V_SmithGGXCorrelated(NoV, NoL, a);
+    float V = V_SmithGGXCorrelated(NoV, NoL, roughness);
 
     // specular BRDF
     vec3 Fr = (D * V) * F;
@@ -737,13 +738,13 @@ vec3 f0 = 0.16 * reflectance * reflectance * (1.0 - metallic) + baseColor * meta
 
 #### Roughness remapping and clamping
 
-The roughness is remapped to a perceptually linear range using the following formulation:
+The roughness set by the user, called `perceptualRoughness` here, is remapped to a perceptually linear range using the following formulation:
 
 $$\begin{equation}
-\alpha = roughness^2
+\alpha = perceptualRoughness^2
 \end{equation}$$
 
-Figure [roughness_remap] shows a silver metallic surface with increasing roughness (from 0.0 to 1.0), using the unmodified roughness value (bottom) and the perceptually linear roughness value (top).
+Figure [roughness_remap] shows a silver metallic surface with increasing roughness (from 0.0 to 1.0), using the unmodified roughness value (bottom) and the remapped value (top).
 
 ![Figure [roughness_remap]: Roughness remapping comparison: perceptually linear roughness (top) and roughness (bottom)](images/material_roughness_remap.png)
 
@@ -753,7 +754,7 @@ Brent Burley made similar observations in his presentation [#Burley12]. After ex
 
 Last but not least, it is important to note that the roughness parameters is used in various computations at runtime where limited floating point precision can become an issue. For instance, _mediump_ precision floats are often implemented as half-floats (fp16) on mobile GPUs.
 
-This cause problems when computing small values like $\frac{1}{roughness^4}$ in our lighting equations (perceptually linear roughness squared in the GGX computation). The smallest value that can be represented as a half-float is $2^{-14}$ or $6.1 \times 10^{-5}$. To avoid divisions by 0 on devices that do not support denormals, the result of $\frac{1}{roughness^4}$ must therefore not be lower than $6.1 \times 10^{-5}$. To do so, we must clamp the roughness to 0.089, which gives us $6.274 \times 10^{-5}$. 
+This cause problems when computing small values like $\frac{1}{perceptualRoughness^4}$ in our lighting equations (roughness squared in the GGX computation). The smallest value that can be represented as a half-float is $2^{-14}$ or $6.1 \times 10^{-5}$. To avoid divisions by 0 on devices that do not support denormals, the result of $\frac{1}{roughness^4}$ must therefore not be lower than $6.1 \times 10^{-5}$. To do so, we must clamp the roughness to 0.089, which gives us $6.274 \times 10^{-5}$. 
 
 Denormals should also be avoided to prevent performance drops. The roughness can also not be set to 0 to avoid obvious divisions by 0.
 
@@ -881,12 +882,12 @@ void BRDF(...) {
     // compute Fd and Fr from standard model
 
     // remapping and linearization of clear coat roughness
-    clearCoatRoughness = mix(0.089, 0.6, clearCoatRoughness);
-    clearCoatLinearRoughness = clearCoatRoughness * clearCoatRoughness;
+    clearCoatPerceptualRoughness = mix(0.089, 0.6, clearCoatPerceptualRoughness);
+    clearCoatRoughness = clearCoatPerceptualRoughness * clearCoatPerceptualRoughness;
 
     // clear coat BRDF
-    float  Dc = D_GGX(clearCoatLinearRoughness, NoH);
-    float  Vc = V_Kelemen(clearCoatLinearRoughness, LoH);
+    float  Dc = D_GGX(clearCoatRoughness, NoH);
+    float  Vc = V_Kelemen(clearCoatRoughness, LoH);
     float  Fc = F_Schlick(0.04, LoH) * clearCoat; // clear coat strength
     float Frc = (Dc * Vc) * Fc;
 
@@ -968,8 +969,8 @@ Note that this NDF requires the tangent and bitangent directions in addition to 
 The resulting implementation is described in listing [anisotropicBRDF].
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-float at = max(linearRoughness * (1.0 + anisotropy), 0.001);
-float ab = max(linearRoughness * (1.0 - anisotropy), 0.001);
+float at = max(roughness * (1.0 + anisotropy), 0.001);
+float ab = max(roughness * (1.0 - anisotropy), 0.001);
 
 float D_GGX_Anisotropic(float NoH, const vec3 h,
         const vec3 t, const vec3 b, float at, float ab) {
@@ -1011,8 +1012,8 @@ V_{aniso}(\NoL,\NoV,\alpha) = \frac{1}{2((\NoL)\hat{\Lambda}_v+(\NoV)\hat{\Lambd
 The term $ \hat{\Lambda}_v $ is the same for every light and can be computed only once if needed. The resulting implementation is described in listing [anisotropicV].
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-float at = max(linearRoughness * (1.0 + anisotropy), 0.001);
-float ab = max(linearRoughness * (1.0 - anisotropy), 0.001);
+float at = max(roughness * (1.0 + anisotropy), 0.001);
+float ab = max(roughness * (1.0 - anisotropy), 0.001);
 
 float V_SmithGGXCorrelated_Anisotropic(float at, float ab, float ToV, float BoV,
         float ToL, float BoL, float NoV, float NoL) {
@@ -1089,9 +1090,9 @@ f_{r}(v,h,\alpha) = \frac{D_{velvet}(v,h,\alpha)}{4(\NoL + \NoV - (\NoL)(\NoV))}
 The implementation of the velvet NDF is presented in listing [clothBRDF], optimized to properly fit in half float formats and to avoid computing a costly cotangent, relying instead on trigonometric identities. Note that we removed the Fresnel component from this BRDF.
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-float D_Ashikhmin(float linearRoughness, float NoH) {
+float D_Ashikhmin(float roughness, float NoH) {
     // Ashikhmin 2007, "Distribution-based BRDFs"
-	float a2 = linearRoughness * linearRoughness;
+	float a2 = roughness * roughness;
 	float cos2h = NoH * NoH;
 	float sin2h = max(1.0 - cos2h, 0.0078125); // 2^(-14/2), so sin2h^2 > 0 in fp16
 	float sin4h = sin2h * sin2h;
@@ -1111,9 +1112,9 @@ D(m) = \frac{(2 + \frac{1}{\alpha}) sin(\theta)^{\frac{1}{\alpha}}}{2 \pi}
 The implementation of this NDF is presented in listing [clothCharlieBRDF], optimized to properly fit in half float formats.
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-float D_Charlie(float linearRoughness, float NoH) {
+float D_Charlie(float roughness, float NoH) {
     // Estevez and Kulla 2017, "Production Friendly Microfacet Sheen BRDF"
-    float invAlpha  = 1.0 / linearRoughness;
+    float invAlpha  = 1.0 / roughness;
     float cos2h = NoH * NoH;
     float sin2h = max(1.0 - cos2h, 0.0078125); // 2^(-14/2), so sin2h^2 > 0 in fp16
     return (2.0 + invAlpha) * pow(sin2h, invAlpha * 0.5) / (2.0 * PI);
@@ -1154,13 +1155,13 @@ The complete implementation of our cloth BRDF, including sheen color and optiona
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // specular BRDF
-float D = distributionCloth(linearRoughness, NoH);
+float D = distributionCloth(roughness, NoH);
 float V = visibilityCloth(NoV, NoL);
 vec3  F = sheenColor;
 vec3 Fr = (D * V) * F;
 
 // diffuse BRDF
-float diffuse = diffuse(linearRoughness, NoV, NoL, LoH);
+float diffuse = diffuse(roughness, NoV, NoL, LoH);
 #if defined(MATERIAL_HAS_SUBSURFACE_COLOR)
 // energy conservative wrap diffuse
 diffuse *= saturate((dot(n, light.l) + 0.5) / 2.25);
@@ -2160,8 +2161,8 @@ $\alpha$; we find that using a power remapping with $\gamma = 2$ works well and 
 
 $$
 \begin{align*}
-    \alpha       &= roughness^2                        \\
-    lod_{\alpha} &= \alpha^{\frac{1}{2}} = roughness   \\
+    \alpha       &= perceptualRoughness^2                        \\
+    lod_{\alpha} &= \alpha^{\frac{1}{2}} = perceptualRoughness   \\
 \end{align*}
 $$
 
@@ -2185,11 +2186,11 @@ Figure [iblVisualized] shows how indirect lighting interacts with dielectrics an
 Listing [iblEvaluation] presents a GLSL implementation to evaluate the IBL, using the various textures described in the previous sections. 
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-vec3 ibl(vec3 n, vec3 v, vec3 diffuseColor, vec3 f0, vec3 f90, float roughness) {
+vec3 ibl(vec3 n, vec3 v, vec3 diffuseColor, vec3 f0, vec3 f90, float perceptualRoughness) {
     vec3 r = reflect(n);
     vec3 Ld = textureCube(irradianceEnvMap, r) * diffuseColor;
-    vec3 Lld = textureCube(prefilteredEnvMap, r, computeLODFromRoughness(roughness));
-    vec2 Ldfg = textureLod(dfgLut, vec2(dot(n, v), roughness), 0.0).xy;
+    vec3 Lld = textureCube(prefilteredEnvMap, r, computeLODFromRoughness(perceptualRoughness));
+    vec2 Ldfg = textureLod(dfgLut, vec2(dot(n, v), perceptualRoughness), 0.0).xy;
     vec3 Lr =  (f0 * Ldfg.x + f90 * Ldfg.y) * Lld;
     return Ld + Lr;
 }
@@ -2218,7 +2219,7 @@ vec3 irradianceSH(vec3 n) {
 // NOTE: this approximation is not valid if the energy compensation term
 // for multiscattering is applied. We use the DFG LUT solution to implement
 // multiscattering
-vec2 prefilteredDFG(float NoV, float roughness) {
+vec2 prefilteredDFG(float NoV, float perceptualRoughness) {
     // Karis' approximation based on Lazarov's
     const vec4 c0 = vec4(-1.0, -0.0275, -0.572,  0.022);
     const vec4 c1 = vec4( 1.0,  0.0425,  1.040, -0.040);
@@ -2226,31 +2227,31 @@ vec2 prefilteredDFG(float NoV, float roughness) {
     float a004 = min(r.x * r.x, exp2(-9.28 * NoV)) * r.x + r.y;
     return vec2(-1.04, 1.04) * a004 + r.zw;
     // Zioma's approximation based on Karis
-    // return vec2(1.0, pow(1.0 - max(roughness, NoV), 3.0));
+    // return vec2(1.0, pow(1.0 - max(perceptualRoughness, NoV), 3.0));
 }
 
 // NOTE: this is the DFG LUT implementation of the function above
 vec2 prefilteredDFG_LUT(float coord, float NoV) {
-    // coord = sqrt(linear_roughness), which is the mapping used by the
+    // coord = sqrt(roughness), which is the mapping used by the
     // IBL prefiltering code when computing the mipmaps
     return textureLod(dfgLut, vec2(NoV, coord), 0.0).rg;
 }
 
-vec3 evaluateSpecularIBL(vec3 r, float roughness) {
+vec3 evaluateSpecularIBL(vec3 r, float perceptualRoughness) {
     // This assumes a 256x256 cubemap, with 9 mip levels
-    float lod = 8.0 * roughness;
+    float lod = 8.0 * perceptualRoughness;
     // decodeEnvironmentMap() either decodes RGBM or is a no-op if the
     // cubemap is stored in a float texture
     return decodeEnvironmentMap(textureCubeLodEXT(environmentMap, r, lod));
 }
 
-vec3 evaluateIBL(vec3 n, vec3 v, vec3 diffuseColor, vec3 f0, vec3 f90, float roughness) {
+vec3 evaluateIBL(vec3 n, vec3 v, vec3 diffuseColor, vec3 f0, vec3 f90, float perceptualRoughness) {
     float NoV = max(dot(n, v), 0.0);
     vec3 r = reflect(-v, n);
 
     // Specular indirect
-    vec3 indirectSpecular = evaluateSpecularIBL(r, roughness);
-    vec2 env = prefilteredDFG_LUT(roughness, NoV);
+    vec3 indirectSpecular = evaluateSpecularIBL(r, perceptualRoughness);
+    vec2 env = prefilteredDFG_LUT(perceptualRoughness, NoV);
     vec3 specularColor = f0 * env.x + f90 * env.y;
 
     // Diffuse indirect
@@ -2310,7 +2311,7 @@ r.y += Gv;
 To perform the reconstruction we need to slightly modify listing [multiscatterIBLEvaluation]:
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-vec2 dfg = textureLod(dfgLut, vec2(dot(n, v), roughness), 0.0).xy;
+vec2 dfg = textureLod(dfgLut, vec2(dot(n, v), perceptualRoughness), 0.0).xy;
 // (1 - f0) * dfg.x + f0 * dfg.y
 vec3 specularColor = mix(dfg.xxx, dfg.yyy, f0);
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -2374,7 +2375,7 @@ float Fc = F_Schlick(0.04, 1.0, clearCoat_NoV) * clearCoat;
 // base layer attenuation for energy compensation
 iblDiffuse  *= 1.0 - Fc;
 iblSpecular *= sq(1.0 - Fc);
-iblSpecular += specularIBL(r, clearCoatRoughness) * Fc;
+iblSpecular += specularIBL(r, clearCoatPerceptualRoughness) * Fc;
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 [Listing [clearCoatIBL]: GLSL implementation of the clear coat specular lobe for image-based lighting]
 
@@ -2588,7 +2589,7 @@ float computeSpecularAO(float NoV, float ao, float roughness) {
 }
 
 // specular indirect
-vec3 indirectSpecular = evaluateSpecularIBL(r, roughness);
+vec3 indirectSpecular = evaluateSpecularIBL(r, perceptualRoughness);
 // ambient occlusion
 float ao = texture2D(aoMap, outUV).r;
 indirectSpecular *= computeSpecularAO(NoV, ao, roughness);
@@ -2605,7 +2606,7 @@ The key idea is to occlude light coming from behind the surface. This can easily
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // specular indirect
-vec3 indirectSpecular = evaluateSpecularIBL(r, roughness);
+vec3 indirectSpecular = evaluateSpecularIBL(r, perceptualRoughness);
 
 // horizon occlusion with falloff, should be computed for direct specular too
 float horizon = min(1.0 + dot(r, n), 1.0);

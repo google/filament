@@ -86,7 +86,7 @@ float getSquareFalloffAttenuation(float distanceSquare, float falloff) {
     return smoothFactor * smoothFactor;
 }
 
-float getDistanceAttenuation(const HIGHP vec3 posToLight, float falloff) {
+float getDistanceAttenuation(const highp vec3 posToLight, float falloff) {
     float distanceSquare = dot(posToLight, posToLight);
     float attenuation = getSquareFalloffAttenuation(distanceSquare, falloff);
     // Assume a punctual light occupies a volume of 1cm to avoid a division by 0
@@ -105,9 +105,9 @@ float getAngleAttenuation(const vec3 lightDir, const vec3 l, const vec2 scaleOff
  * can be partial: it only takes distance attenuation into account. Spot lights
  * must compute an additional angle attenuation.
  */
-void setupPunctualLight(inout Light light, const HIGHP vec4 positionFalloff) {
-    HIGHP vec3 worldPosition = vertex_worldPosition;
-    HIGHP vec3 posToLight = positionFalloff.xyz - worldPosition;
+void setupPunctualLight(inout Light light, const highp vec4 positionFalloff) {
+    highp vec3 worldPosition = vertex_worldPosition;
+    highp vec3 posToLight = positionFalloff.xyz - worldPosition;
     light.l = normalize(posToLight);
     light.attenuation = getDistanceAttenuation(posToLight, positionFalloff.w);
     light.NoL = saturate(dot(shading_normal, light.l));
@@ -126,8 +126,8 @@ Light getSpotLight(uint index) {
     ivec2 texCoord = getRecordTexCoord(index);
     uint lightIndex = texelFetch(light_records, texCoord, 0).r;
 
-    HIGHP vec4 positionFalloff = lightsUniforms.lights[lightIndex][0];
-    HIGHP vec4 colorIntensity  = lightsUniforms.lights[lightIndex][1];
+    highp vec4 positionFalloff = lightsUniforms.lights[lightIndex][0];
+    highp vec4 colorIntensity  = lightsUniforms.lights[lightIndex][1];
           vec4 directionIES    = lightsUniforms.lights[lightIndex][2];
           vec2 scaleOffset     = lightsUniforms.lights[lightIndex][3].xy;
 
@@ -154,8 +154,8 @@ Light getPointLight(uint index) {
     ivec2 texCoord = getRecordTexCoord(index);
     uint lightIndex = texelFetch(light_records, texCoord, 0).r;
 
-    HIGHP vec4 positionFalloff = lightsUniforms.lights[lightIndex][0];
-    HIGHP vec4 colorIntensity  = lightsUniforms.lights[lightIndex][1];
+    highp vec4 positionFalloff = lightsUniforms.lights[lightIndex][0];
+    highp vec4 colorIntensity  = lightsUniforms.lights[lightIndex][1];
 
     light.colorIntensity.rgb = colorIntensity.rgb;
     light.colorIntensity.w = computePreExposedIntensity(colorIntensity.w, frameUniforms.exposure);

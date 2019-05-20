@@ -11,10 +11,10 @@ void computeShadingParams() {
 #if defined(GEOMETRIC_SPECULAR_AA_NORMAL)
     // Pick either the regular interpolated normal or the centroid interpolated
     // normal to reduce shading aliasing
-    HIGHP vec3 n = dot(vertex_worldNormal, vertex_worldNormal) >= 1.01 ?
+    highp vec3 n = dot(vertex_worldNormal, vertex_worldNormal) >= 1.01 ?
             vertex_worldNormalCentroid : vertex_worldNormal;
 #else
-    HIGHP vec3 n = vertex_worldNormal;
+    highp vec3 n = vertex_worldNormal;
 #endif
 
 #if defined(MATERIAL_HAS_DOUBLE_SIDED_CAPABILITY)

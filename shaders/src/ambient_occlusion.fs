@@ -20,9 +20,9 @@ float evaluateSSAO() {
 /**
  * Computes a specular occlusion term from the ambient occlusion term.
  */
-float computeSpecularAO(float NoV, float visibility, float linearRoughness) {
+float computeSpecularAO(float NoV, float visibility, float roughness) {
 #if defined(SPECULAR_AMBIENT_OCCLUSION)
-    return saturate(pow(NoV + visibility, exp2(-16.0 * linearRoughness - 1.0)) - 1.0 + visibility);
+    return saturate(pow(NoV + visibility, exp2(-16.0 * roughness - 1.0)) - 1.0 + visibility);
 #else
     return 1.0;
 #endif

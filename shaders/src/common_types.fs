@@ -1,11 +1,3 @@
-#if defined(TARGET_MOBILE)
-#define HIGHP highp
-#define MEDIUMP mediump
-#else
-#define HIGHP
-#define MEDIUMP
-#endif
-
 #if !defined(TARGET_MOBILE) || defined(TARGET_LANGUAGE_SPIRV)
 #define LAYOUT_LOCATION(x) layout(location = x)
 #else

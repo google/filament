@@ -24,7 +24,7 @@ vec2 getUV1() {
 #endif
 
 #if defined(HAS_SHADOWING) && defined(HAS_DIRECTIONAL_LIGHTING)
-HIGHP vec3 getLightSpacePosition() {
+highp vec3 getLightSpacePosition() {
     return vertex_lightSpacePosition.xyz * (1.0 / vertex_lightSpacePosition.w);
 }
 #endif

@@ -18,8 +18,8 @@
 
 // These variables should be in a struct but some GPU drivers ignore the
 // precision qualifier on individual struct members
-HIGHP mat3  shading_tangentToWorld;   // TBN matrix
-HIGHP vec3  shading_position;         // position of the fragment in world space
+highp mat3  shading_tangentToWorld;   // TBN matrix
+highp vec3  shading_position;         // position of the fragment in world space
       vec3  shading_view;             // normalized vector from the fragment to the eye
       vec3  shading_normal;           // normalized normal, in world space
       vec3  shading_reflected;        // reflection of view about normal
@@ -30,12 +30,12 @@ HIGHP vec3  shading_position;         // position of the fragment in world space
 #endif
 
 /** @public-api */
-HIGHP mat3 getWorldTangentFrame() {
+highp mat3 getWorldTangentFrame() {
     return shading_tangentToWorld;
 }
 
 /** @public-api */
-HIGHP vec3 getWorldPosition() {
+highp vec3 getWorldPosition() {
     return shading_position;
 }
 

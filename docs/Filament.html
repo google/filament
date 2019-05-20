@@ -263,7 +263,7 @@ The equations found throughout this document use the symbols described in <a hre
 <tr><td style="text-align:center"> \(f\) </td><td style="text-align:left"> BRDF </td></tr>
 <tr><td style="text-align:center"> \(\fDiffuse\) </td><td style="text-align:left"> Diffuse component of a BRDF </td></tr>
 <tr><td style="text-align:center"> \(\fSpecular\) </td><td style="text-align:left"> Specular component of a BRDF </td></tr>
-<tr><td style="text-align:center"> \(\alpha\) </td><td style="text-align:left"> Perceptually linear roughness </td></tr>
+<tr><td style="text-align:center"> \(\alpha\) </td><td style="text-align:left"> Roughness, remapped from using input <code>perceptualRoughness</code> </td></tr>
 <tr><td style="text-align:center"> \(\sigma\) </td><td style="text-align:left"> Diffuse reflectance </td></tr>
 <tr><td style="text-align:center"> \(\Omega\) </td><td style="text-align:left"> Spherical domain </td></tr>
 <tr><td style="text-align:center"> \(\fNormal\) </td><td style="text-align:left"> Reflectance at normal incidence </td></tr>
@@ -364,6 +364,14 @@ A microfacet BRDF is heavily influenced by a <em class="underscore">roughness</e
 </p><p>
 
 </p><center><div class="image" style><a href="images/diagram_roughness.png" target="_blank"><img class="markdeep" src="images/diagram_roughness.png"></a><div class="imagecaption"><a class="target" name="figure_roughness">&#xA0;</a><b style="font-style:normal;">Figure&#xA0;5:</b> Varying roughness (from left to right, rough to smooth) and the resulting BRDF specular component lobe</div></div></center>
+
+<p></p><p>
+
+</p><div class="admonition note"><div class="admonition-title"> About roughness</div>
+
+<p></p><p>
+
+    The roughness parameter as set by the user is called <code>perceptualRoughness</code> in the shader snippets throughout this document. The variable called <code>roughness</code> is the <code>perceptualRoughness</code> with a remapping explained in section  <a href="#toc4.8">4.8</a>.</p></div>
 
 <p></p><p>
 
@@ -484,9 +492,9 @@ D_{GGX}(h,\alpha) = \frac{\aa}{\pi ( (\NoH)^2 (\aa - 1) + 1)^2}
 
 The GLSL implementation of the NDF, shown in <a href="#listing_speculard">listing&#xA0;1</a>, is simple and efficient.
 
-</p><pre class="listing tilde"><code><span class="line"><span class="hljs-function"><span class="hljs-keyword">float</span> <span class="hljs-title">D_GGX</span><span class="hljs-params">(<span class="hljs-keyword">float</span> NoH, <span class="hljs-keyword">float</span> linearRoughness)</span> </span>{</span>
-<span class="line">    <span class="hljs-keyword">float</span> a = NoH * linearRoughness;</span>
-<span class="line">    <span class="hljs-keyword">float</span> k = linearRoughness / (<span class="hljs-number">1.0</span> - NoH * NoH + a * a);</span>
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-function"><span class="hljs-keyword">float</span> <span class="hljs-title">D_GGX</span><span class="hljs-params">(<span class="hljs-keyword">float</span> NoH, <span class="hljs-keyword">float</span> roughness)</span> </span>{</span>
+<span class="line">    <span class="hljs-keyword">float</span> a = NoH * roughness;</span>
+<span class="line">    <span class="hljs-keyword">float</span> k = roughness / (<span class="hljs-number">1.0</span> - NoH * NoH + a * a);</span>
 <span class="line">    <span class="hljs-keyword">return</span> k * k * (<span class="hljs-number">1.0</span> / PI);</span>
 <span class="line">}</span></code></pre><div class="listingcaption tilde"><a class="target" name="listing_speculard">&#xA0;</a><b style="font-style:normal;">Listing&#xA0;1:</b> Implementation of the specular D term in GLSL</div>
 <p>
@@ -511,10 +519,10 @@ Since both \(n\) and \(h\) are unit vectors, \(|n \times h|^2 = 1 - (\NoH)^2\). 
 </p><pre class="listing tilde"><code><span class="line"><span class="hljs-meta">#define MEDIUMP_FLT_MAX    65504.0</span></span>
 <span class="line"><span class="hljs-meta">#define saturateMediump(x) min(x, MEDIUMP_FLT_MAX)</span></span>
 <span class="line"></span>
-<span class="line"><span class="hljs-type">float</span> D_GGX(<span class="hljs-type">float</span> linearRoughness, <span class="hljs-type">float</span> NoH, <span class="hljs-keyword">const</span> <span class="hljs-type">vec3</span> n, <span class="hljs-keyword">const</span> <span class="hljs-type">vec3</span> h) {</span>
+<span class="line"><span class="hljs-type">float</span> D_GGX(<span class="hljs-type">float</span> roughness, <span class="hljs-type">float</span> NoH, <span class="hljs-keyword">const</span> <span class="hljs-type">vec3</span> n, <span class="hljs-keyword">const</span> <span class="hljs-type">vec3</span> h) {</span>
 <span class="line">    <span class="hljs-type">vec3</span> NxH = <span class="hljs-built_in">cross</span>(n, h);</span>
-<span class="line">    <span class="hljs-type">float</span> a = NoH * linearRoughness;</span>
-<span class="line">    <span class="hljs-type">float</span> k = linearRoughness / (<span class="hljs-built_in">dot</span>(NxH, NxH) + a * a);</span>
+<span class="line">    <span class="hljs-type">float</span> a = NoH * roughness;</span>
+<span class="line">    <span class="hljs-type">float</span> k = roughness / (<span class="hljs-built_in">dot</span>(NxH, NxH) + a * a);</span>
 <span class="line">    <span class="hljs-type">float</span> d = k * k * (<span class="hljs-number">1.0</span> / PI);</span>
 <span class="line">    <span class="hljs-keyword">return</span> saturateMediump(d);</span>
 <span class="line">}</span></code></pre><div class="listingcaption tilde"><a class="target" name="listing_speculardfp16">&#xA0;</a><b style="font-style:normal;">Listing&#xA0;2:</b> Implementation of the specular D term in GLSL optimized for fp16</div>
@@ -621,8 +629,8 @@ V(v,l,\alpha) = \frac{0.5}{\NoL \sqrt{(\NoV)^2 (1 - \aa) + \aa} + \NoV \sqrt{(\N
 
 The GLSL implementation of the visibility term, shown in <a href="#listing_specularv">listing&#xA0;3</a>, is a bit more expensive than we would like since it requires two <code>sqrt</code> operations.
 
-</p><pre class="listing tilde"><code><span class="line"><span class="hljs-function"><span class="hljs-keyword">float</span> <span class="hljs-title">V_SmithGGXCorrelated</span><span class="hljs-params">(<span class="hljs-keyword">float</span> NoV, <span class="hljs-keyword">float</span> NoL, <span class="hljs-keyword">float</span> linearRoughness)</span> </span>{</span>
-<span class="line">    <span class="hljs-keyword">float</span> a2 = linearRoughness * linearRoughness;</span>
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-function"><span class="hljs-keyword">float</span> <span class="hljs-title">V_SmithGGXCorrelated</span><span class="hljs-params">(<span class="hljs-keyword">float</span> NoV, <span class="hljs-keyword">float</span> NoL, <span class="hljs-keyword">float</span> roughness)</span> </span>{</span>
+<span class="line">    <span class="hljs-keyword">float</span> a2 = roughness * roughness;</span>
 <span class="line">    <span class="hljs-keyword">float</span> GGXV = NoL * <span class="hljs-built_in">sqrt</span>(NoV * NoV * (<span class="hljs-number">1.0</span> - a2) + a2);</span>
 <span class="line">    <span class="hljs-keyword">float</span> GGXL = NoV * <span class="hljs-built_in">sqrt</span>(NoL * NoL * (<span class="hljs-number">1.0</span> - a2) + a2);</span>
 <span class="line">    <span class="hljs-keyword">return</span> <span class="hljs-number">0.5</span> / (GGXV + GGXL);</span>
@@ -642,8 +650,8 @@ V(v,l,\alpha) = \frac{0.5}{\NoL (\NoV (1 - \alpha) + \alpha) + \NoV (\NoL (1 - \
 
 This approximation is mathematically wrong but saves two square root operations and is good enough for real-time mobile applications, as shown in <a href="#listing_approximatedspecularv">listing&#xA0;4</a>.
 
-</p><pre class="listing tilde"><code><span class="line"><span class="hljs-function"><span class="hljs-keyword">float</span> <span class="hljs-title">V_SmithGGXCorrelatedFast</span><span class="hljs-params">(<span class="hljs-keyword">float</span> NoV, <span class="hljs-keyword">float</span> NoL, <span class="hljs-keyword">float</span> linearRoughness)</span> </span>{</span>
-<span class="line">    <span class="hljs-keyword">float</span> a = linearRoughness;</span>
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-function"><span class="hljs-keyword">float</span> <span class="hljs-title">V_SmithGGXCorrelatedFast</span><span class="hljs-params">(<span class="hljs-keyword">float</span> NoV, <span class="hljs-keyword">float</span> NoL, <span class="hljs-keyword">float</span> roughness)</span> </span>{</span>
+<span class="line">    <span class="hljs-keyword">float</span> a = roughness;</span>
 <span class="line">    <span class="hljs-keyword">float</span> GGXV = NoL * (NoV * (<span class="hljs-number">1.0</span> - a) + a);</span>
 <span class="line">    <span class="hljs-keyword">float</span> GGXL = NoV * (NoL * (<span class="hljs-number">1.0</span> - a) + a);</span>
 <span class="line">    <span class="hljs-keyword">return</span> <span class="hljs-number">0.5</span> / (GGXV + GGXL);</span>
@@ -766,16 +774,12 @@ $$\begin{equation}
 \fGrazing=0.5 + 2 \cdot \alpha cos^2(\theta_d)
 \end{equation}$$
 
-</p><p>
-
-It is important to note that the roughness used in this formula is the perceptually linear roughness (more on this in section  <a href="#toc4.8">4.8</a>).
-
 </p><pre class="listing tilde"><code><span class="line"><span class="hljs-function"><span class="hljs-keyword">float</span> <span class="hljs-title">F_Schlick</span><span class="hljs-params">(<span class="hljs-keyword">float</span> VoH, <span class="hljs-keyword">float</span> f0, <span class="hljs-keyword">float</span> f90)</span> </span>{</span>
 <span class="line">    <span class="hljs-keyword">return</span> f0 + (f90 - f0) * <span class="hljs-built_in">pow</span>(<span class="hljs-number">1.0</span> - VoH, <span class="hljs-number">5.0</span>);</span>
 <span class="line">}</span>
 <span class="line"></span>
-<span class="line"><span class="hljs-function"><span class="hljs-keyword">float</span> <span class="hljs-title">Fd_Burley</span><span class="hljs-params">(<span class="hljs-keyword">float</span> NoV, <span class="hljs-keyword">float</span> NoL, <span class="hljs-keyword">float</span> LoH, <span class="hljs-keyword">float</span> linearRoughness)</span> </span>{</span>
-<span class="line">    <span class="hljs-keyword">float</span> f90 = <span class="hljs-number">0.5</span> + <span class="hljs-number">2.0</span> * linearRoughness * LoH * LoH;</span>
+<span class="line"><span class="hljs-function"><span class="hljs-keyword">float</span> <span class="hljs-title">Fd_Burley</span><span class="hljs-params">(<span class="hljs-keyword">float</span> NoV, <span class="hljs-keyword">float</span> NoL, <span class="hljs-keyword">float</span> LoH, <span class="hljs-keyword">float</span> roughness)</span> </span>{</span>
+<span class="line">    <span class="hljs-keyword">float</span> f90 = <span class="hljs-number">0.5</span> + <span class="hljs-number">2.0</span> * roughness * LoH * LoH;</span>
 <span class="line">    <span class="hljs-keyword">float</span> lightScatter = F_Schlick(NoL, <span class="hljs-number">1.0</span>, f90);</span>
 <span class="line">    <span class="hljs-keyword">float</span> viewScatter = F_Schlick(NoV, <span class="hljs-number">1.0</span>, f90);</span>
 <span class="line">    <span class="hljs-keyword">return</span> lightScatter * viewScatter * (<span class="hljs-number">1.0</span> / PI);</span>
@@ -837,12 +841,12 @@ The full GLSL implementation of the standard model is shown in <a href="#listing
 <span class="line">    <span class="hljs-type">float</span> NoH = <span class="hljs-built_in">clamp</span>(<span class="hljs-built_in">dot</span>(n, h), <span class="hljs-number">0.0</span>, <span class="hljs-number">1.0</span>);</span>
 <span class="line">    <span class="hljs-type">float</span> LoH = <span class="hljs-built_in">clamp</span>(<span class="hljs-built_in">dot</span>(l, h), <span class="hljs-number">0.0</span>, <span class="hljs-number">1.0</span>);</span>
 <span class="line"></span>
-<span class="line">    <span class="hljs-comment">// perceptually linear roughness (see parameterization)</span></span>
-<span class="line">    <span class="hljs-type">float</span> a = roughness * roughness;</span>
+<span class="line">    <span class="hljs-comment">// perceptually linear roughness to roughness (see parameterization)</span></span>
+<span class="line">    <span class="hljs-type">float</span> roughness = perceptualRoughness * perceptualRoughness;</span>
 <span class="line"></span>
 <span class="line">    <span class="hljs-type">float</span> D = D_GGX(NoH, a);</span>
 <span class="line">    <span class="hljs-type">vec3</span>  F = F_Schlick(LoH, f0);</span>
-<span class="line">    <span class="hljs-type">float</span> V = V_SmithGGXCorrelated(NoV, NoL, a);</span>
+<span class="line">    <span class="hljs-type">float</span> V = V_SmithGGXCorrelated(NoV, NoL, roughness);</span>
 <span class="line"></span>
 <span class="line">    <span class="hljs-comment">// specular BRDF</span></span>
 <span class="line">    <span class="hljs-type">vec3</span> Fr = (D * V) * F;</span>
@@ -1217,17 +1221,17 @@ $$\begin{equation}
 <p>
 
 
-The roughness is remapped to a perceptually linear range using the following formulation:
+The roughness set by the user, called <code>perceptualRoughness</code> here, is remapped to a perceptually linear range using the following formulation:
 
 </p><p>
 
 $$\begin{equation}
-\alpha = roughness^2
+\alpha = perceptualRoughness^2
 \end{equation}$$
 
 </p><p>
 
-<a href="#figure_roughness_remap">Figure&#xA0;20</a> shows a silver metallic surface with increasing roughness (from 0.0 to 1.0), using the unmodified roughness value (bottom) and the perceptually linear roughness value (top).
+<a href="#figure_roughness_remap">Figure&#xA0;20</a> shows a silver metallic surface with increasing roughness (from 0.0 to 1.0), using the unmodified roughness value (bottom) and the remapped value (top).
 
 </p><p>
 
@@ -1247,7 +1251,7 @@ Last but not least, it is important to note that the roughness parameters is use
 
 </p><p>
 
-This cause problems when computing small values like \(\frac{1}{roughness^4}\) in our lighting equations (perceptually linear roughness squared in the GGX computation). The smallest value that can be represented as a half-float is \(2^{-14}\) or \(6.1 \times 10^{-5}\). To avoid divisions by 0 on devices that do not support denormals, the result of \(\frac{1}{roughness^4}\) must therefore not be lower than \(6.1 \times 10^{-5}\). To do so, we must clamp the roughness to 0.089, which gives us \(6.274 \times 10^{-5}\). 
+This cause problems when computing small values like \(\frac{1}{perceptualRoughness^4}\) in our lighting equations (roughness squared in the GGX computation). The smallest value that can be represented as a half-float is \(2^{-14}\) or \(6.1 \times 10^{-5}\). To avoid divisions by 0 on devices that do not support denormals, the result of \(\frac{1}{roughness^4}\) must therefore not be lower than \(6.1 \times 10^{-5}\). To do so, we must clamp the roughness to 0.089, which gives us \(6.274 \times 10^{-5}\). 
 
 </p><p>
 
@@ -1457,12 +1461,12 @@ The clear coat roughness parameter is remapped and clamped in a similar way to t
 <span class="line">    <span class="hljs-comment">// compute Fd and Fr from standard model</span></span>
 <span class="line"></span>
 <span class="line">    <span class="hljs-comment">// remapping and linearization of clear coat roughness</span></span>
-<span class="line">    clearCoatRoughness = mix(<span class="hljs-number">0.089</span>, <span class="hljs-number">0.6</span>, clearCoatRoughness);</span>
-<span class="line">    clearCoatLinearRoughness = clearCoatRoughness * clearCoatRoughness;</span>
+<span class="line">    clearCoatPerceptualRoughness = mix(<span class="hljs-number">0.089</span>, <span class="hljs-number">0.6</span>, clearCoatPerceptualRoughness);</span>
+<span class="line">    clearCoatRoughness = clearCoatPerceptualRoughness * clearCoatPerceptualRoughness;</span>
 <span class="line"></span>
 <span class="line">    <span class="hljs-comment">// clear coat BRDF</span></span>
-<span class="line">    <span class="hljs-keyword">float</span>  Dc = D_GGX(clearCoatLinearRoughness, NoH);</span>
-<span class="line">    <span class="hljs-keyword">float</span>  Vc = V_Kelemen(clearCoatLinearRoughness, LoH);</span>
+<span class="line">    <span class="hljs-keyword">float</span>  Dc = D_GGX(clearCoatRoughness, NoH);</span>
+<span class="line">    <span class="hljs-keyword">float</span>  Vc = V_Kelemen(clearCoatRoughness, LoH);</span>
 <span class="line">    <span class="hljs-keyword">float</span>  Fc = F_Schlick(<span class="hljs-number">0.04</span>, LoH) * clearCoat; <span class="hljs-comment">// clear coat strength</span></span>
 <span class="line">    <span class="hljs-keyword">float</span> Frc = (Dc * Vc) * Fc;</span>
 <span class="line"></span>
@@ -1585,8 +1589,8 @@ Note that this NDF requires the tangent and bitangent directions in addition to 
 
 The resulting implementation is described in <a href="#listing_anisotropicbrdf">listing&#xA0;15</a>.
 
-</p><pre class="listing tilde"><code><span class="line"><span class="hljs-type">float</span> at = <span class="hljs-built_in">max</span>(linearRoughness * (<span class="hljs-number">1.0</span> + anisotropy), <span class="hljs-number">0.001</span>);</span>
-<span class="line"><span class="hljs-type">float</span> ab = <span class="hljs-built_in">max</span>(linearRoughness * (<span class="hljs-number">1.0</span> - anisotropy), <span class="hljs-number">0.001</span>);</span>
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-type">float</span> at = <span class="hljs-built_in">max</span>(roughness * (<span class="hljs-number">1.0</span> + anisotropy), <span class="hljs-number">0.001</span>);</span>
+<span class="line"><span class="hljs-type">float</span> ab = <span class="hljs-built_in">max</span>(roughness * (<span class="hljs-number">1.0</span> - anisotropy), <span class="hljs-number">0.001</span>);</span>
 <span class="line"></span>
 <span class="line"><span class="hljs-type">float</span> D_GGX_Anisotropic(<span class="hljs-type">float</span> NoH, <span class="hljs-keyword">const</span> <span class="hljs-type">vec3</span> h,</span>
 <span class="line">        <span class="hljs-keyword">const</span> <span class="hljs-type">vec3</span> t, <span class="hljs-keyword">const</span> <span class="hljs-type">vec3</span> b, <span class="hljs-type">float</span> at, <span class="hljs-type">float</span> ab) {</span>
@@ -1641,8 +1645,8 @@ V_{aniso}(\NoL,\NoV,\alpha) = \frac{1}{2((\NoL)\hat{\Lambda}_v+(\NoV)\hat{\Lambd
 
 The term \( \hat{\Lambda}_v \) is the same for every light and can be computed only once if needed. The resulting implementation is described in <a href="#listing_anisotropicv">listing&#xA0;16</a>.
 
-</p><pre class="listing tilde"><code><span class="line"><span class="hljs-type">float</span> at = <span class="hljs-built_in">max</span>(linearRoughness * (<span class="hljs-number">1.0</span> + anisotropy), <span class="hljs-number">0.001</span>);</span>
-<span class="line"><span class="hljs-type">float</span> ab = <span class="hljs-built_in">max</span>(linearRoughness * (<span class="hljs-number">1.0</span> - anisotropy), <span class="hljs-number">0.001</span>);</span>
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-type">float</span> at = <span class="hljs-built_in">max</span>(roughness * (<span class="hljs-number">1.0</span> + anisotropy), <span class="hljs-number">0.001</span>);</span>
+<span class="line"><span class="hljs-type">float</span> ab = <span class="hljs-built_in">max</span>(roughness * (<span class="hljs-number">1.0</span> - anisotropy), <span class="hljs-number">0.001</span>);</span>
 <span class="line"></span>
 <span class="line"><span class="hljs-type">float</span> V_SmithGGXCorrelated_Anisotropic(<span class="hljs-type">float</span> at, <span class="hljs-type">float</span> ab, <span class="hljs-type">float</span> ToV, <span class="hljs-type">float</span> BoV,</span>
 <span class="line">        <span class="hljs-type">float</span> ToL, <span class="hljs-type">float</span> BoL, <span class="hljs-type">float</span> NoV, <span class="hljs-type">float</span> NoL) {</span>
@@ -1762,9 +1766,9 @@ f_{r}(v,h,\alpha) = \frac{D_{velvet}(v,h,\alpha)}{4(\NoL + \NoV - (\NoL)(\NoV))}
 
 The implementation of the velvet NDF is presented in <a href="#listing_clothbrdf">listing&#xA0;17</a>, optimized to properly fit in half float formats and to avoid computing a costly cotangent, relying instead on trigonometric identities. Note that we removed the Fresnel component from this BRDF.
 
-</p><pre class="listing tilde"><code><span class="line"><span class="hljs-function"><span class="hljs-keyword">float</span> <span class="hljs-title">D_Ashikhmin</span><span class="hljs-params">(<span class="hljs-keyword">float</span> linearRoughness, <span class="hljs-keyword">float</span> NoH)</span> </span>{</span>
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-function"><span class="hljs-keyword">float</span> <span class="hljs-title">D_Ashikhmin</span><span class="hljs-params">(<span class="hljs-keyword">float</span> roughness, <span class="hljs-keyword">float</span> NoH)</span> </span>{</span>
 <span class="line">    <span class="hljs-comment">// Ashikhmin 2007, &quot;Distribution-based BRDFs&quot;</span></span>
-<span class="line">	<span class="hljs-keyword">float</span> a2 = linearRoughness * linearRoughness;</span>
+<span class="line">	<span class="hljs-keyword">float</span> a2 = roughness * roughness;</span>
 <span class="line">	<span class="hljs-keyword">float</span> cos2h = NoH * NoH;</span>
 <span class="line">	<span class="hljs-keyword">float</span> sin2h = max(<span class="hljs-number">1.0</span> - cos2h, <span class="hljs-number">0.0078125</span>); <span class="hljs-comment">// 2^(-14/2), so sin2h^2 &gt; 0 in fp16</span></span>
 <span class="line">	<span class="hljs-keyword">float</span> sin4h = sin2h * sin2h;</span>
@@ -1787,9 +1791,9 @@ D(m) = \frac{(2 + \frac{1}{\alpha}) sin(\theta)^{\frac{1}{\alpha}}}{2 \pi}
 [<a href="#citation-estevez17">Estevez17</a>] also presents a new shadowing term that we omit here because of its cost. We instead rely on the visibility term from [<a href="#citation-neubelt13">Neubelt13</a>] (shown in equation \(\ref{clothSpecularBRDF}\) above).
 The implementation of this NDF is presented in <a href="#listing_clothcharliebrdf">listing&#xA0;18</a>, optimized to properly fit in half float formats.
 
-</p><pre class="listing tilde"><code><span class="line"><span class="hljs-function"><span class="hljs-keyword">float</span> <span class="hljs-title">D_Charlie</span><span class="hljs-params">(<span class="hljs-keyword">float</span> linearRoughness, <span class="hljs-keyword">float</span> NoH)</span> </span>{</span>
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-function"><span class="hljs-keyword">float</span> <span class="hljs-title">D_Charlie</span><span class="hljs-params">(<span class="hljs-keyword">float</span> roughness, <span class="hljs-keyword">float</span> NoH)</span> </span>{</span>
 <span class="line">    <span class="hljs-comment">// Estevez and Kulla 2017, &quot;Production Friendly Microfacet Sheen BRDF&quot;</span></span>
-<span class="line">    <span class="hljs-keyword">float</span> invAlpha  = <span class="hljs-number">1.0</span> / linearRoughness;</span>
+<span class="line">    <span class="hljs-keyword">float</span> invAlpha  = <span class="hljs-number">1.0</span> / roughness;</span>
 <span class="line">    <span class="hljs-keyword">float</span> cos2h = NoH * NoH;</span>
 <span class="line">    <span class="hljs-keyword">float</span> sin2h = max(<span class="hljs-number">1.0</span> - cos2h, <span class="hljs-number">0.0078125</span>); <span class="hljs-comment">// 2^(-14/2), so sin2h^2 &gt; 0 in fp16</span></span>
 <span class="line">    <span class="hljs-keyword">return</span> (<span class="hljs-number">2.0</span> + invAlpha) * <span class="hljs-built_in">pow</span>(sin2h, invAlpha * <span class="hljs-number">0.5</span>) / (<span class="hljs-number">2.0</span> * PI);</span>
@@ -1850,13 +1854,13 @@ subsurface scattering approximation can be seen in <a href="#figure_materialclot
 The complete implementation of our cloth BRDF, including sheen color and optional subsurface scattering, can be found in <a href="#listing_clothfullbrdf">listing&#xA0;19</a>.
 
 </p><pre class="listing tilde"><code><span class="line">// specular BRDF</span>
-<span class="line">float D = distributionCloth(<span class="hljs-name">linearRoughness</span>, NoH)<span class="hljs-comment">;</span></span>
+<span class="line">float D = distributionCloth(<span class="hljs-name">roughness</span>, NoH)<span class="hljs-comment">;</span></span>
 <span class="line">float V = visibilityCloth(<span class="hljs-name">NoV</span>, NoL)<span class="hljs-comment">;</span></span>
 <span class="line">vec3  F = sheenColor<span class="hljs-comment">;</span></span>
 <span class="line">vec3 Fr = (<span class="hljs-name">D</span> * V) * F<span class="hljs-comment">;</span></span>
 <span class="line"></span>
 <span class="line">// diffuse BRDF</span>
-<span class="line">float diffuse = diffuse(<span class="hljs-name">linearRoughness</span>, NoV, NoL, LoH)<span class="hljs-comment">;</span></span>
+<span class="line">float diffuse = diffuse(<span class="hljs-name">roughness</span>, NoV, NoL, LoH)<span class="hljs-comment">;</span></span>
 <span class="line">#if defined(<span class="hljs-name">MATERIAL_HAS_SUBSURFACE_COLOR</span>)</span>
 <span class="line">// energy conservative wrap diffuse</span>
 <span class="line">diffuse *= saturate((dot(n, light.l) + 0.5) / 2.25);</span>
@@ -3337,8 +3341,8 @@ powerful low-pass filter. To make good use of each mipmap level, it is necessary
 
 $$
 \begin{align*}
-    \alpha       &amp;= roughness^2                        \\
-    lod_{\alpha} &amp;= \alpha^{\frac{1}{2}} = roughness   \\
+    \alpha       &amp;= perceptualRoughness^2                        \\
+    lod_{\alpha} &amp;= \alpha^{\frac{1}{2}} = perceptualRoughness   \\
 \end{align*}
 $$
 
@@ -3372,11 +3376,11 @@ See an example below:
 
 <a href="#listing_iblevaluation">Listing&#xA0;27</a> presents a GLSL implementation to evaluate the IBL, using the various textures described in the previous sections. 
 
-</p><pre class="listing tilde"><code><span class="line"><span class="hljs-type">vec3</span> ibl(<span class="hljs-type">vec3</span> n, <span class="hljs-type">vec3</span> v, <span class="hljs-type">vec3</span> diffuseColor, <span class="hljs-type">vec3</span> f0, <span class="hljs-type">vec3</span> f90, <span class="hljs-type">float</span> roughness) {</span>
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-type">vec3</span> ibl(<span class="hljs-type">vec3</span> n, <span class="hljs-type">vec3</span> v, <span class="hljs-type">vec3</span> diffuseColor, <span class="hljs-type">vec3</span> f0, <span class="hljs-type">vec3</span> f90, <span class="hljs-type">float</span> perceptualRoughness) {</span>
 <span class="line">    <span class="hljs-type">vec3</span> r = <span class="hljs-built_in">reflect</span>(n);</span>
 <span class="line">    <span class="hljs-type">vec3</span> Ld = <span class="hljs-built_in">textureCube</span>(irradianceEnvMap, r) * diffuseColor;</span>
-<span class="line">    <span class="hljs-type">vec3</span> Lld = <span class="hljs-built_in">textureCube</span>(prefilteredEnvMap, r, computeLODFromRoughness(roughness));</span>
-<span class="line">    <span class="hljs-type">vec2</span> Ldfg = <span class="hljs-built_in">textureLod</span>(dfgLut, <span class="hljs-type">vec2</span>(<span class="hljs-built_in">dot</span>(n, v), roughness), <span class="hljs-number">0.0</span>).xy;</span>
+<span class="line">    <span class="hljs-type">vec3</span> Lld = <span class="hljs-built_in">textureCube</span>(prefilteredEnvMap, r, computeLODFromRoughness(perceptualRoughness));</span>
+<span class="line">    <span class="hljs-type">vec2</span> Ldfg = <span class="hljs-built_in">textureLod</span>(dfgLut, <span class="hljs-type">vec2</span>(<span class="hljs-built_in">dot</span>(n, v), perceptualRoughness), <span class="hljs-number">0.0</span>).xy;</span>
 <span class="line">    <span class="hljs-type">vec3</span> Lr =  (f0 * Ldfg.x + f90 * Ldfg.y) * Lld;</span>
 <span class="line">    <span class="hljs-keyword">return</span> Ld + Lr;</span>
 <span class="line">}</span></code></pre><div class="listingcaption tilde"><a class="target" name="listing_iblevaluation">&#xA0;</a><b style="font-style:normal;">Listing&#xA0;27:</b> GLSL implementation of image based lighting evaluation</div>
@@ -3404,7 +3408,7 @@ irradiance cubemap and the analytical approximation of the \(DFG\) LUT, as shown
 <span class="line"><span class="hljs-comment">// <span class="hljs-doctag">NOTE:</span> this approximation is not valid if the energy compensation term</span></span>
 <span class="line"><span class="hljs-comment">// for multiscattering is applied. We use the DFG LUT solution to implement</span></span>
 <span class="line"><span class="hljs-comment">// multiscattering</span></span>
-<span class="line"><span class="hljs-type">vec2</span> prefilteredDFG(<span class="hljs-type">float</span> NoV, <span class="hljs-type">float</span> roughness) {</span>
+<span class="line"><span class="hljs-type">vec2</span> prefilteredDFG(<span class="hljs-type">float</span> NoV, <span class="hljs-type">float</span> perceptualRoughness) {</span>
 <span class="line">    <span class="hljs-comment">// Karis&apos; approximation based on Lazarov&apos;s</span></span>
 <span class="line">    <span class="hljs-keyword">const</span> <span class="hljs-type">vec4</span> c0 = <span class="hljs-type">vec4</span>(<span class="hljs-number">-1.0</span>, <span class="hljs-number">-0.0275</span>, <span class="hljs-number">-0.572</span>,  <span class="hljs-number">0.022</span>);</span>
 <span class="line">    <span class="hljs-keyword">const</span> <span class="hljs-type">vec4</span> c1 = <span class="hljs-type">vec4</span>( <span class="hljs-number">1.0</span>,  <span class="hljs-number">0.0425</span>,  <span class="hljs-number">1.040</span>, <span class="hljs-number">-0.040</span>);</span>
@@ -3412,31 +3416,31 @@ irradiance cubemap and the analytical approximation of the \(DFG\) LUT, as shown
 <span class="line">    <span class="hljs-type">float</span> a004 = <span class="hljs-built_in">min</span>(r.x * r.x, <span class="hljs-built_in">exp2</span>(<span class="hljs-number">-9.28</span> * NoV)) * r.x + r.y;</span>
 <span class="line">    <span class="hljs-keyword">return</span> <span class="hljs-type">vec2</span>(<span class="hljs-number">-1.04</span>, <span class="hljs-number">1.04</span>) * a004 + r.zw;</span>
 <span class="line">    <span class="hljs-comment">// Zioma&apos;s approximation based on Karis</span></span>
-<span class="line">    <span class="hljs-comment">// return vec2(1.0, pow(1.0 - max(roughness, NoV), 3.0));</span></span>
+<span class="line">    <span class="hljs-comment">// return vec2(1.0, pow(1.0 - max(perceptualRoughness, NoV), 3.0));</span></span>
 <span class="line">}</span>
 <span class="line"></span>
 <span class="line"><span class="hljs-comment">// <span class="hljs-doctag">NOTE:</span> this is the DFG LUT implementation of the function above</span></span>
 <span class="line"><span class="hljs-type">vec2</span> prefilteredDFG_LUT(<span class="hljs-type">float</span> coord, <span class="hljs-type">float</span> NoV) {</span>
-<span class="line">    <span class="hljs-comment">// coord = sqrt(linear_roughness), which is the mapping used by the</span></span>
+<span class="line">    <span class="hljs-comment">// coord = sqrt(roughness), which is the mapping used by the</span></span>
 <span class="line">    <span class="hljs-comment">// IBL prefiltering code when computing the mipmaps</span></span>
 <span class="line">    <span class="hljs-keyword">return</span> <span class="hljs-built_in">textureLod</span>(dfgLut, <span class="hljs-type">vec2</span>(NoV, coord), <span class="hljs-number">0.0</span>).rg;</span>
 <span class="line">}</span>
 <span class="line"></span>
-<span class="line"><span class="hljs-type">vec3</span> evaluateSpecularIBL(<span class="hljs-type">vec3</span> r, <span class="hljs-type">float</span> roughness) {</span>
+<span class="line"><span class="hljs-type">vec3</span> evaluateSpecularIBL(<span class="hljs-type">vec3</span> r, <span class="hljs-type">float</span> perceptualRoughness) {</span>
 <span class="line">    <span class="hljs-comment">// This assumes a 256x256 cubemap, with 9 mip levels</span></span>
-<span class="line">    <span class="hljs-type">float</span> lod = <span class="hljs-number">8.0</span> * roughness;</span>
+<span class="line">    <span class="hljs-type">float</span> lod = <span class="hljs-number">8.0</span> * perceptualRoughness;</span>
 <span class="line">    <span class="hljs-comment">// decodeEnvironmentMap() either decodes RGBM or is a no-op if the</span></span>
 <span class="line">    <span class="hljs-comment">// cubemap is stored in a float texture</span></span>
 <span class="line">    <span class="hljs-keyword">return</span> decodeEnvironmentMap(textureCubeLodEXT(environmentMap, r, lod));</span>
 <span class="line">}</span>
 <span class="line"></span>
-<span class="line"><span class="hljs-type">vec3</span> evaluateIBL(<span class="hljs-type">vec3</span> n, <span class="hljs-type">vec3</span> v, <span class="hljs-type">vec3</span> diffuseColor, <span class="hljs-type">vec3</span> f0, <span class="hljs-type">vec3</span> f90, <span class="hljs-type">float</span> roughness) {</span>
+<span class="line"><span class="hljs-type">vec3</span> evaluateIBL(<span class="hljs-type">vec3</span> n, <span class="hljs-type">vec3</span> v, <span class="hljs-type">vec3</span> diffuseColor, <span class="hljs-type">vec3</span> f0, <span class="hljs-type">vec3</span> f90, <span class="hljs-type">float</span> perceptualRoughness) {</span>
 <span class="line">    <span class="hljs-type">float</span> NoV = <span class="hljs-built_in">max</span>(<span class="hljs-built_in">dot</span>(n, v), <span class="hljs-number">0.0</span>);</span>
 <span class="line">    <span class="hljs-type">vec3</span> r = <span class="hljs-built_in">reflect</span>(-v, n);</span>
 <span class="line"></span>
 <span class="line">    <span class="hljs-comment">// Specular indirect</span></span>
-<span class="line">    <span class="hljs-type">vec3</span> indirectSpecular = evaluateSpecularIBL(r, roughness);</span>
-<span class="line">    <span class="hljs-type">vec2</span> env = prefilteredDFG_LUT(roughness, NoV);</span>
+<span class="line">    <span class="hljs-type">vec3</span> indirectSpecular = evaluateSpecularIBL(r, perceptualRoughness);</span>
+<span class="line">    <span class="hljs-type">vec2</span> env = prefilteredDFG_LUT(perceptualRoughness, NoV);</span>
 <span class="line">    <span class="hljs-type">vec3</span> specularColor = f0 * env.x + f90 * env.y;</span>
 <span class="line"></span>
 <span class="line">    <span class="hljs-comment">// Diffuse indirect</span></span>
@@ -3507,7 +3511,7 @@ These two new \(DFG\) terms simply need to replace the ones used in the implemen
 
 To perform the reconstruction we need to slightly modify <a href="#listing_multiscatteriblevaluation">listing&#xA0;30</a>:
 
-</p><pre class="listing tilde"><code><span class="line"><span class="hljs-type">vec2</span> dfg = <span class="hljs-built_in">textureLod</span>(dfgLut, <span class="hljs-type">vec2</span>(<span class="hljs-built_in">dot</span>(n, v), roughness), <span class="hljs-number">0.0</span>).xy;</span>
+</p><pre class="listing tilde"><code><span class="line"><span class="hljs-type">vec2</span> dfg = <span class="hljs-built_in">textureLod</span>(dfgLut, <span class="hljs-type">vec2</span>(<span class="hljs-built_in">dot</span>(n, v), perceptualRoughness), <span class="hljs-number">0.0</span>).xy;</span>
 <span class="line"><span class="hljs-comment">// (1 - f0) * dfg.x + f0 * dfg.y</span></span>
 <span class="line"><span class="hljs-type">vec3</span> specularColor = <span class="hljs-built_in">mix</span>(dfg.xxx, dfg.yyy, f0);</span></code></pre><div class="listingcaption tilde"><a class="target" name="listing_multiscatteriblevaluation">&#xA0;</a><b style="font-style:normal;">Listing&#xA0;30:</b> GLSL implementation of image based lighting evaluation, with multiscattering LUT</div>
 
@@ -3601,7 +3605,7 @@ When sampling the IBL, the clear coat layer is calculated as a second specular l
 <span class="line">// base layer attenuation for energy compensation</span>
 <span class="line">iblDiffuse  *= <span class="hljs-number">1.0</span> - Fc<span class="hljs-comment">;</span></span>
 <span class="line">iblSpecular *= sq(<span class="hljs-number">1.0</span> - Fc)<span class="hljs-comment">;</span></span>
-<span class="line">iblSpecular += specularIBL(<span class="hljs-name">r</span>, clearCoatRoughness) * Fc<span class="hljs-comment">;</span></span></code></pre><div class="listingcaption tilde"><a class="target" name="listing_clearcoatibl">&#xA0;</a><b style="font-style:normal;">Listing&#xA0;31:</b> GLSL implementation of the clear coat specular lobe for image-based lighting</div>
+<span class="line">iblSpecular += specularIBL(<span class="hljs-name">r</span>, clearCoatPerceptualRoughness) * Fc<span class="hljs-comment">;</span></span></code></pre><div class="listingcaption tilde"><a class="target" name="listing_clearcoatibl">&#xA0;</a><b style="font-style:normal;">Listing&#xA0;31:</b> GLSL implementation of the clear coat specular lobe for image-based lighting</div>
 
 <a class="target" name="anisotropy">&#xA0;</a><a class="target" name="lighting/imagebasedlights/anisotropy">&#xA0;</a><a class="target" name="toc5.3.6">&#xA0;</a><h3>Anisotropy </h3>
 <p>
@@ -3902,7 +3906,7 @@ S&#xE9;bastien Lagarde proposes an empirical approach to derive the specular occ
 <span class="line">}</span>
 <span class="line"></span>
 <span class="line"><span class="hljs-comment">// specular indirect</span></span>
-<span class="line"><span class="hljs-type">vec3</span> indirectSpecular = evaluateSpecularIBL(r, roughness);</span>
+<span class="line"><span class="hljs-type">vec3</span> indirectSpecular = evaluateSpecularIBL(r, perceptualRoughness);</span>
 <span class="line"><span class="hljs-comment">// ambient occlusion</span></span>
 <span class="line"><span class="hljs-type">float</span> ao = <span class="hljs-built_in">texture2D</span>(aoMap, outUV).r;</span>
 <span class="line">indirectSpecular *= computeSpecularAO(NoV, ao, roughness);</span></code></pre><div class="listingcaption tilde"><a class="target" name="listing_specularocclusion">&#xA0;</a><b style="font-style:normal;">Listing&#xA0;38:</b> Implementation of Lagarde&apos;s specular occlusion factor in GLSL</div>
@@ -3923,7 +3927,7 @@ When computing the specular IBL contribution for a surface that uses a normal ma
 The key idea is to occlude light coming from behind the surface. This can easily be achieved since a negative dot product between the reflected vector and the surface&apos;s normal indicates a reflection vector pointing towards the surface. Our implementation shown in <a href="#listing_horizonocclusion">listing&#xA0;39</a> is similar to Russell&apos;s, albeit without the artist controlled horizon fading factor.
 
 </p><pre class="listing tilde"><code><span class="line"><span class="hljs-comment">// specular indirect</span></span>
-<span class="line"><span class="hljs-type">vec3</span> indirectSpecular = evaluateSpecularIBL(r, roughness);</span>
+<span class="line"><span class="hljs-type">vec3</span> indirectSpecular = evaluateSpecularIBL(r, perceptualRoughness);</span>
 <span class="line"></span>
 <span class="line"><span class="hljs-comment">// horizon occlusion with falloff, should be computed for direct specular too</span></span>
 <span class="line"><span class="hljs-type">float</span> horizon = <span class="hljs-built_in">min</span>(<span class="hljs-number">1.0</span> + <span class="hljs-built_in">dot</span>(r, n), <span class="hljs-number">1.0</span>);</span>

@@ -16,8 +16,12 @@ float luminance(const vec3 linear) {
  * Computes the pre-exposed intensity using the specified intensity and exposure.
  * This function exists to force highp precision on the two parameters
  */
-float computePreExposedIntensity(const HIGHP float intensity, const HIGHP float exposure) {
+float computePreExposedIntensity(const highp float intensity, const highp float exposure) {
     return intensity * exposure;
+}
+
+void unpremultiply(inout vec4 color) {
+    color.rgb /= max(color.a, FLT_EPS);
 }
 
 //------------------------------------------------------------------------------

@@ -2,36 +2,65 @@
 // Lighting
 //------------------------------------------------------------------------------
 
-void getCommonPixelParams(const MaterialInputs material, inout PixelParams pixel) {
-    vec4 baseColor = material.baseColor;
+float computeDiffuseAlpha(float a) {
+#if defined(BLEND_MODE_TRANSPARENT) || defined(BLEND_MODE_FADE) || defined(BLEND_MODE_MASKED)
+    return a;
+#else
+    return 1.0;
+#endif
+}
+
+#if defined(BLEND_MODE_MASKED)
+float computeMaskedAlpha(float a) {
+    return (a - getMaskThreshold()) / max(fwidth(a), 1e-3) + 0.5;
+}
+#endif
+
+void applyAlphaMask(inout vec4 baseColor) {
 #if defined(BLEND_MODE_MASKED)
     // Use derivatives to smooth alpha tested edges
-    baseColor.a = (baseColor.a - getMaskThreshold()) / max(fwidth(baseColor.a), 1e-3) + 0.5;
+    baseColor.a = computeMaskedAlpha(baseColor.a);
     if (baseColor.a <= 0.0) {
         discard;
     }
 #endif
+}
+
+float geometricSpecularAntiAliasing(float perceptualRoughness, const vec3 n) {
+    // Increase the roughness based on the curvature of the geometry to reduce
+    // shading aliasing. The curvature is approximated using the derivatives
+    // of the geometric normal
+    vec3 ndFdx = dFdx(n);
+    vec3 ndFdy = dFdy(n);
+    float geometricRoughness = pow(saturate(max(dot(ndFdx, ndFdx), dot(ndFdy, ndFdy))), 0.333);
+    return max(perceptualRoughness, geometricRoughness);
+}
+
+void getCommonPixelParams(const MaterialInputs material, inout PixelParams pixel) {
+    vec4 baseColor = material.baseColor;
+    applyAlphaMask(baseColor);
 
 #if defined(BLEND_MODE_FADE) && !defined(SHADING_MODEL_UNLIT)
     // Since we work in premultiplied alpha mode, we need to un-premultiply
     // in fade mode so we can apply alpha to both the specular and diffuse
     // components at the end
-    baseColor.rgb /= max(baseColor.a, FLT_EPS);
+    unpremultiply(baseColor);
 #endif
 
 #if defined(SHADING_MODEL_SPECULAR_GLOSSINESS)
     // This is from KHR_materials_pbrSpecularGlossiness.
-    vec3 specular = material.specularColor;
-    float maxSpecularComponent = max(max(specular.r, specular.g), specular.b);
-    pixel.diffuseColor = baseColor.rgb * (1.0 - maxSpecularComponent);
-    pixel.f0 = specular;
+    vec3 specularColor = material.specularColor;
+    float metallic = computeMetallicFromSpecularColor(specularColor);
+
+    pixel.diffuseColor = computeDiffuseColor(baseColor, metallic);
+    pixel.f0 = specularColor;
 #elif !defined(SHADING_MODEL_CLOTH)
     float metallic = material.metallic;
-    float reflectance = material.reflectance;
-
-    pixel.diffuseColor = (1.0 - metallic) * baseColor.rgb;
     // Assumes an interface from air to an IOR of 1.5 for dielectrics
-    pixel.f0 = 0.16 * reflectance * reflectance * (1.0 - metallic) + baseColor.rgb * metallic;
+    float reflectance = computeDielectricF0(material.reflectance);
+
+    pixel.diffuseColor = computeDiffuseColor(baseColor, metallic);
+    pixel.f0 = computeF0(baseColor, metallic, reflectance);
 #else
     pixel.diffuseColor = baseColor.rgb;
     pixel.f0 = material.sheenColor;
@@ -46,15 +75,12 @@ void getClearCoatPixelParams(const MaterialInputs material, inout PixelParams pi
     pixel.clearCoat = material.clearCoat;
 
     // Clamp the clear coat roughness to avoid divisions by 0
-    float clearCoatRoughness = material.clearCoatRoughness;
-    clearCoatRoughness = mix(MIN_ROUGHNESS, MAX_CLEAR_COAT_ROUGHNESS, clearCoatRoughness);
-#if defined(GEOMETRIC_SPECULAR_AA_ROUGHNESS)
-    clearCoatRoughness = max(clearCoatRoughness, geometricRoughness);
-#endif
+    float clearCoatPerceptualRoughness = material.clearCoatRoughness;
+    clearCoatPerceptualRoughness = mix(MIN_PERCEPTUAL_ROUGHNESS,
+            MAX_CLEAR_COAT_PERCEPTUAL_ROUGHNESS, clearCoatPerceptualRoughness);
 
-    // Remap the roughness to perceptually linear roughness
-    pixel.clearCoatRoughness = clearCoatRoughness;
-    pixel.clearCoatLinearRoughness = clearCoatRoughness * clearCoatRoughness;
+    pixel.clearCoatPerceptualRoughness = clearCoatPerceptualRoughness;
+    pixel.clearCoatRoughness = perceptualRoughnessToRoughness(clearCoatPerceptualRoughness);
 #if defined(CLEAR_COAT_IOR_CHANGE)
     // The base layer's f0 is computed assuming an interface from air to an IOR
     // of 1.5, but the clear coat layer forms an interface from IOR 1.5 to IOR
@@ -67,35 +93,32 @@ void getClearCoatPixelParams(const MaterialInputs material, inout PixelParams pi
 
 void getRoughnessPixelParams(const MaterialInputs material, inout PixelParams pixel) {
 #if defined(SHADING_MODEL_SPECULAR_GLOSSINESS)
-    float roughness = 1.0 - material.glossiness;
+    float perceptualRoughness = computeRoughnessFromGlossiness(material.glossiness);
 #else
-    float roughness = material.roughness;
+    float perceptualRoughness = material.roughness;
 #endif
 
-    // Clamp the roughness to a minimum value to avoid divisions by 0 in the
-    // lighting code
-    roughness = clamp(roughness, MIN_ROUGHNESS, 1.0);
+    // Clamp the roughness to a minimum value to avoid divisions by 0 during lighting
+    perceptualRoughness = clamp(perceptualRoughness, MIN_PERCEPTUAL_ROUGHNESS, 1.0);
 
 #if defined(GEOMETRIC_SPECULAR_AA_ROUGHNESS)
-    // Increase the roughness based on the curvature of the geometry to reduce
-    // shading aliasing. The curvature is approximated using the derivatives
-    // of the geometric normal
-    vec3 ndFdx = dFdx(shading_tangentToWorld[2]);
-    vec3 ndFdy = dFdy(shading_tangentToWorld[2]);
-    float geometricRoughness = pow(saturate(max(dot(ndFdx, ndFdx), dot(ndFdy, ndFdy))), 0.333);
-    roughness = max(roughness, geometricRoughness);
+    perceptualRoughness = geometricSpecularAntiAliasing(perceptualRoughness, shading_tangentToWorld[2]);
+#if defined(MATERIAL_HAS_CLEAR_COAT)
+    pixel.clearCoatPerceptualRoughness = max(pixel.clearCoatPerceptualRoughness, geometricRoughness);
+    pixel.clearCoatRoughness = perceptualRoughnessToRoughness(pixel.clearCoatPerceptualRoughness);
+#endif
 #endif
 
 #if defined(MATERIAL_HAS_CLEAR_COAT) && defined(MATERIAL_HAS_CLEAR_COAT_ROUGHNESS)
     // This is a hack but it will do: the base layer must be at least as rough
     // as the clear coat layer to take into account possible diffusion by the
     // top layer
-    roughness = max(roughness, pixel.clearCoatRoughness);
+    perceptualRoughness = max(perceptualRoughness, pixel.clearCoatPerceptualRoughness);
 #endif
 
     // Remaps the roughness to a perceptually linear roughness (roughness^2)
-    pixel.roughness = roughness;
-    pixel.linearRoughness = roughness * roughness;
+    pixel.perceptualRoughness = perceptualRoughness;
+    pixel.roughness = perceptualRoughnessToRoughness(perceptualRoughness);
 }
 
 void getSubsurfacePixelParams(const MaterialInputs material, inout PixelParams pixel) {
@@ -117,7 +140,7 @@ void getAnisotropyPixelParams(const MaterialInputs material, inout PixelParams p
 
 void getEnergyCompensationPixelParams(inout PixelParams pixel) {
     // Pre-filtered DFG term used for image-based lighting
-    pixel.dfg = prefilteredDFG(pixel.roughness, shading_NoV);
+    pixel.dfg = prefilteredDFG(pixel.perceptualRoughness, shading_NoV);
 
 #if defined(USE_MULTIPLE_SCATTERING_COMPENSATION) && !defined(SHADING_MODEL_CLOTH)
     // Energy compensation for multiple scattering in a microfacet model
@@ -143,14 +166,6 @@ void getPixelParams(const MaterialInputs material, out PixelParams pixel) {
     getSubsurfacePixelParams(material, pixel);
     getAnisotropyPixelParams(material, pixel);
     getEnergyCompensationPixelParams(pixel);
-}
-
-float getDiffuseAlpha(float a) {
-#if defined(BLEND_MODE_TRANSPARENT) || defined(BLEND_MODE_FADE) || defined(BLEND_MODE_MASKED)
-    return a;
-#else
-    return 1.0;
-#endif
 }
 
 /**
@@ -189,7 +204,19 @@ vec4 evaluateLights(const MaterialInputs material) {
     // premultiply again at the end (affects diffuse and specular lighting)
     color *= material.baseColor.a;
 #endif
-    return vec4(color, getDiffuseAlpha(material.baseColor.a));
+
+    return vec4(color, computeDiffuseAlpha(material.baseColor.a));
+}
+
+void addEmissive(const MaterialInputs material, inout vec4 color) {
+#if defined(MATERIAL_HAS_EMISSIVE)
+    // The emissive property applies independently of the shading model
+    // It is defined as a color + exposure compensation
+    highp vec4 emissive = material.emissive;
+    highp float attenuation = computePreExposedIntensity(
+            pow(2.0, frameUniforms.ev100 + emissive.w - 3.0), frameUniforms.exposure);
+    color.rgb += emissive.rgb * attenuation;
+#endif
 }
 
 /**
@@ -200,15 +227,6 @@ vec4 evaluateLights(const MaterialInputs material) {
  */
 vec4 evaluateMaterial(const MaterialInputs material) {
     vec4 color = evaluateLights(material);
-
-#if defined(MATERIAL_HAS_EMISSIVE)
-    // The emissive property applies independently of the shading model
-    // It is defined as a color + exposure compensation
-    HIGHP vec4 emissive = material.emissive;
-    HIGHP float attenuation = computePreExposedIntensity(
-            pow(2.0, frameUniforms.ev100 + emissive.w - 3.0), frameUniforms.exposure);
-    color.rgb += emissive.rgb * attenuation;
-#endif
-
+    addEmissive(material, color);
     return color;
 }

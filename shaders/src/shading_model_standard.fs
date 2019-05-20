@@ -10,8 +10,8 @@ float clearCoatLobe(const PixelParams pixel, const vec3 h, float NoH, float LoH,
 #endif
 
     // clear coat specular lobe
-    float D = distributionClearCoat(pixel.clearCoatLinearRoughness, clearCoatNoH, h);
-    float V = visibilityClearCoat(pixel.clearCoatRoughness, pixel.clearCoatLinearRoughness, LoH);
+    float D = distributionClearCoat(pixel.clearCoatRoughness, clearCoatNoH, h);
+    float V = visibilityClearCoat(LoH);
     float F = F_Schlick(0.04, 1.0, LoH) * pixel.clearCoat; // fix IOR to 1.5
 
     Fcc = F;
@@ -38,12 +38,12 @@ vec3 anisotropicLobe(const PixelParams pixel, const Light light, const vec3 h,
     // Anisotropic parameters: at and ab are the roughness along the tangent and bitangent
     // to simplify materials, we derive them from a single roughness parameter
     // Kulla 2017, "Revisiting Physically Based Shading at Imageworks"
-    float at = max(pixel.linearRoughness * (1.0 + pixel.anisotropy), MIN_LINEAR_ROUGHNESS);
-    float ab = max(pixel.linearRoughness * (1.0 - pixel.anisotropy), MIN_LINEAR_ROUGHNESS);
+    float at = max(pixel.roughness * (1.0 + pixel.anisotropy), MIN_ROUGHNESS);
+    float ab = max(pixel.roughness * (1.0 - pixel.anisotropy), MIN_ROUGHNESS);
 
     // specular anisotropic BRDF
     float D = distributionAnisotropic(at, ab, ToH, BoH, NoH);
-    float V = visibilityAnisotropic(pixel.linearRoughness, at, ab, ToV, BoV, ToL, BoL, NoV, NoL);
+    float V = visibilityAnisotropic(pixel.roughness, at, ab, ToV, BoV, ToL, BoL, NoV, NoL);
     vec3  F = fresnel(pixel.f0, LoH);
 
     return (D * V) * F;
@@ -53,8 +53,8 @@ vec3 anisotropicLobe(const PixelParams pixel, const Light light, const vec3 h,
 vec3 isotropicLobe(const PixelParams pixel, const Light light, const vec3 h,
         float NoV, float NoL, float NoH, float LoH) {
 
-    float D = distribution(pixel.linearRoughness, NoH, h);
-    float V = visibility(pixel.linearRoughness, NoV, NoL, LoH);
+    float D = distribution(pixel.roughness, NoH, h);
+    float V = visibility(pixel.roughness, NoV, NoL, LoH);
     vec3  F = fresnel(pixel.f0, LoH);
 
     return (D * V) * F;
@@ -70,7 +70,7 @@ vec3 specularLobe(const PixelParams pixel, const Light light, const vec3 h,
 }
 
 vec3 diffuseLobe(const PixelParams pixel, float NoV, float NoL, float LoH) {
-    return pixel.diffuseColor * diffuse(pixel.linearRoughness, NoV, NoL, LoH);
+    return pixel.diffuseColor * diffuse(pixel.roughness, NoV, NoL, LoH);
 }
 
 /**
