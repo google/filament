@@ -26,14 +26,14 @@ void applyAlphaMask(inout vec4 baseColor) {
 #endif
 }
 
-float geometricSpecularAntiAliasing(float perceptualRoughness, const vec3 n) {
+float geometricSpecularAntiAliasing(const vec3 n) {
     // Increase the roughness based on the curvature of the geometry to reduce
     // shading aliasing. The curvature is approximated using the derivatives
     // of the geometric normal
     vec3 ndFdx = dFdx(n);
     vec3 ndFdy = dFdy(n);
     float geometricRoughness = pow(saturate(max(dot(ndFdx, ndFdx), dot(ndFdy, ndFdy))), 0.333);
-    return max(perceptualRoughness, geometricRoughness);
+    return geometricRoughness;
 }
 
 void getCommonPixelParams(const MaterialInputs material, inout PixelParams pixel) {
@@ -102,7 +102,8 @@ void getRoughnessPixelParams(const MaterialInputs material, inout PixelParams pi
     perceptualRoughness = clamp(perceptualRoughness, MIN_PERCEPTUAL_ROUGHNESS, 1.0);
 
 #if defined(GEOMETRIC_SPECULAR_AA_ROUGHNESS)
-    perceptualRoughness = geometricSpecularAntiAliasing(perceptualRoughness, shading_tangentToWorld[2]);
+    float geometricRoughness = geometricSpecularAntiAliasing(shading_tangentToWorld[2]);
+    perceptualRoughness = max(perceptualRoughness, geometricRoughness);
 #if defined(MATERIAL_HAS_CLEAR_COAT)
     pixel.clearCoatPerceptualRoughness = max(pixel.clearCoatPerceptualRoughness, geometricRoughness);
     pixel.clearCoatRoughness = perceptualRoughnessToRoughness(pixel.clearCoatPerceptualRoughness);
