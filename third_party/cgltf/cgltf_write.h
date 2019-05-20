@@ -623,12 +623,15 @@ static void cgltf_write_accessor(cgltf_write_context* context, const cgltf_acces
 
 cgltf_result cgltf_write_file(const cgltf_options* options, const char* path, const cgltf_data* data)
 {
-	size_t size = cgltf_write(options, NULL, 0, data);
-	char* buffer = (char*) malloc(size);
-	size = cgltf_write(options, buffer, size, data);
+	size_t expected = cgltf_write(options, NULL, 0, data);
+	char* buffer = (char*) malloc(expected);
+	size_t actual = cgltf_write(options, buffer, expected, data);
+	if (expected != actual) {
+		fprintf(stderr, "Error: expected %zu bytes but wrote %zu bytes.\n", expected, actual);
+	}
 	FILE* file = fopen(path, "wt");
 	// Note that cgltf_write() includes a null terminator, which we omit from the file content.
-	fwrite(buffer, size - 1, 1, file);
+	fwrite(buffer, actual - 1, 1, file);
 	fclose(file);
 	free(buffer);
 	return cgltf_result_success;
@@ -646,6 +649,7 @@ cgltf_size cgltf_write(const cgltf_options* options, char* buffer, cgltf_size si
 	ctx.depth = 1;
 	ctx.indent = "  ";
 	ctx.needs_comma = 0;
+	ctx.extension_flags = 0;
 
 	cgltf_write_context* context = &ctx;
 
