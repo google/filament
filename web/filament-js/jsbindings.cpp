@@ -838,8 +838,11 @@ class_<MaterialInstance>("MaterialInstance")
     .function("setTextureParameter", EMBIND_LAMBDA(void,
             (MaterialInstance* self, std::string name, Texture* value, TextureSampler sampler), {
         self->setParameter(name.c_str(), value, sampler); }), allow_raw_pointers())
-    .function("setColorParameter", EMBIND_LAMBDA(void,
+    .function("setColor3Parameter", EMBIND_LAMBDA(void,
             (MaterialInstance* self, std::string name, RgbType type, filament::math::float3 value), {
+        self->setParameter(name.c_str(), type, value); }), allow_raw_pointers())
+    .function("setColor4Parameter", EMBIND_LAMBDA(void,
+            (MaterialInstance* self, std::string name, RgbaType type, filament::math::float4 value), {
         self->setParameter(name.c_str(), type, value); }), allow_raw_pointers())
     .function("setPolygonOffset", &MaterialInstance::setPolygonOffset)
     .function("setMaskThreshold", &MaterialInstance::setMaskThreshold)

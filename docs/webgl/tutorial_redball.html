@@ -130,7 +130,7 @@ Replace the <strong>create material</strong> comment with the following snippet.
 <span style="color: #008000; font-weight: bold">const</span> matinstance <span style="color: #666666">=</span> material.createInstance();
 
 <span style="color: #008000; font-weight: bold">const</span> red <span style="color: #666666">=</span> [<span style="color: #666666">0.8</span>, <span style="color: #666666">0.0</span>, <span style="color: #666666">0.0</span>];
-matinstance.setColorParameter(<span style="color: #BA2121">&#39;baseColor&#39;</span>, Filament.RgbType.sRGB, red);
+matinstance.setColor3Parameter(<span style="color: #BA2121">&#39;baseColor&#39;</span>, Filament.RgbType.sRGB, red);
 matinstance.setFloatParameter(<span style="color: #BA2121">&#39;roughness&#39;</span>, <span style="color: #666666">0.5</span>);
 matinstance.setFloatParameter(<span style="color: #BA2121">&#39;clearCoat&#39;</span>, <span style="color: #666666">1.0</span>);
 matinstance.setFloatParameter(<span style="color: #BA2121">&#39;clearCoatRoughness&#39;</span>, <span style="color: #666666">0.3</span>);
