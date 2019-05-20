@@ -646,7 +646,7 @@ static Vector3 normalizeSafe(const Vector3 &v, const Vector3 &fallback, float ep
 
 static bool equal(const Vector3 &v0, const Vector3 &v1, float epsilon = XA_EPSILON)
 {
-	return fabs(v0.x - v1.x) <= epsilon && fabs(v0.y - v1.y) <= epsilon && fabs(v0.z - v1.z) <= epsilon;
+	return equal(v0.x, v1.x, epsilon) && equal(v0.y, v1.y, epsilon) && equal(v0.z, v1.z, epsilon);
 }
 
 static Vector3 min(const Vector3 &a, const Vector3 &b)
@@ -675,14 +675,6 @@ struct Vector3Hash
 		data[1] = (int32_t)(v.y * 100.0f);
 		data[2] = (int32_t)(v.z * 100.0f);
 		return sdbmHash(data, sizeof(data));
-	}
-};
-
-struct Vector3Equal
-{
-	bool operator()(const Vector3 &v0, const Vector3 &v1) const
-	{
-		return equal(v0, v1);
 	}
 };
 
@@ -2793,7 +2785,7 @@ public:
 	void createColocals()
 	{
 		const uint32_t vertexCount = m_positions.size();
-		HashMap<Vector3, uint32_t, Vector3Hash, Vector3Equal> positionMap(vertexCount);
+		HashMap<Vector3, uint32_t, Vector3Hash> positionMap(vertexCount);
 		for (uint32_t i = 0; i < m_positions.size(); i++)
 			positionMap.add(m_positions[i], i);
 		Array<uint32_t> colocals;
