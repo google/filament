@@ -81,3 +81,22 @@ float computeMicroShadowing(float NoL, float visibility) {
     float microShadow = saturate(NoL * aperture);
     return microShadow * microShadow;
 }
+
+float iorToF0(float transmittedIor, float incidentIor) {
+    return sq((transmittedIor - incidentIor) / (transmittedIor + incidentIor));
+}
+
+float f0ToIor(float f0) {
+    float r = sqrt(f0);
+    return (1.0 + r) / (1.0 - r);
+}
+
+vec3 f0ClearCoatToSurface(const vec3 f0) {
+    // Approximation of iorTof0(f0ToIor(f0), 1.5)
+    // This assumes that the clear coat layer has an IOR of 1.5
+#if defined(TARGET_MOBILE)
+    return saturate(f0 * (f0 * 0.526868 + 0.529324) - 0.0482256);
+#else
+    return saturate(f0 * (f0 * (0.941892 - 0.263008 * f0) + 0.346479) - 0.0285998);
+#endif
+}

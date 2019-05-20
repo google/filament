@@ -81,6 +81,7 @@ void getClearCoatPixelParams(const MaterialInputs material, inout PixelParams pi
 
     pixel.clearCoatPerceptualRoughness = clearCoatPerceptualRoughness;
     pixel.clearCoatRoughness = perceptualRoughnessToRoughness(clearCoatPerceptualRoughness);
+
 #if defined(CLEAR_COAT_IOR_CHANGE)
     // The base layer's f0 is computed assuming an interface from air to an IOR
     // of 1.5, but the clear coat layer forms an interface from IOR 1.5 to IOR
