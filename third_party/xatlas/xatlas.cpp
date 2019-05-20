@@ -1707,6 +1707,10 @@ public:
 		seed(s);
 	}
 
+	// The "next" pointer makes the default copy constructor unsafe, so delete it.
+	MTRand(const MTRand&) = delete;
+	MTRand& operator=(const MTRand&) = delete;
+
 	/// Provide a new seed.
 	void seed( uint32_t s )
 	{
@@ -7016,7 +7020,6 @@ struct AtlasPacker
 				XA_PRINT("   Estimating texelsPerUnit as %g\n", m_texelsPerUnit);
 			}
 		}
-		m_rand = MTRand();
 		Array<float> chartOrderArray;
 		chartOrderArray.resize(chartCount);
 		Array<Vector2> chartExtents;
