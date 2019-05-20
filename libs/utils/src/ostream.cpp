@@ -33,6 +33,8 @@ ostream::Buffer::Buffer() noexcept {
     constexpr size_t initialSize = 1024;
     buffer = (char*) malloc(initialSize);
     assert(buffer);
+    // Set the first byte to 0 as this buffer might be used as a C string.
+    buffer[0] = 0;
     curr = buffer;
     capacity = initialSize;
     size = initialSize;
