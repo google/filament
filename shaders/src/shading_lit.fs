@@ -12,13 +12,13 @@ float computeDiffuseAlpha(float a) {
 
 #if defined(BLEND_MODE_MASKED)
 float computeMaskedAlpha(float a) {
+    // Use derivatives to smooth alpha tested edges
     return (a - getMaskThreshold()) / max(fwidth(a), 1e-3) + 0.5;
 }
 #endif
 
 void applyAlphaMask(inout vec4 baseColor) {
 #if defined(BLEND_MODE_MASKED)
-    // Use derivatives to smooth alpha tested edges
     baseColor.a = computeMaskedAlpha(baseColor.a);
     if (baseColor.a <= 0.0) {
         discard;
