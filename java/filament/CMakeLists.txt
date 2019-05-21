@@ -137,6 +137,8 @@ set(JAVA_SOURCE_FILES
         ${FILAMENT_JAVA_DIR}/com/google/android/filament/VertexBuffer.java
         ${FILAMENT_JAVA_DIR}/com/google/android/filament/View.java
         ${FILAMENT_JAVA_DIR}/com/google/android/filament/Viewport.java
+        ${FILAMENT_JAVA_DIR}/com/google/android/filament/proguard/UsedByNative.java
+        ${FILAMENT_JAVA_DIR}/com/google/android/filament/proguard/UsedByReflection.java
         # Desktop specific
         src/java/com/google/android/filament/DesktopPlatform.java
         src/java/com/google/android/filament/FilamentCanvas.java

@@ -16,6 +16,8 @@
 
 package com.google.android.filament;
 
+import com.google.android.filament.proguard.UsedByReflection;
+
 import android.support.annotation.IntRange;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
@@ -470,6 +472,7 @@ public class Texture {
         nGenerateMipmaps(getNativeObject(), engine.getNativeObject());
     }
 
+    @UsedByReflection("TextureHelper.java")
     long getNativeObject() {
         if (mNativeObject == 0) {
             throw new IllegalStateException("Calling method on destroyed Texture");
