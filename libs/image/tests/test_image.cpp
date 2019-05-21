@@ -107,6 +107,58 @@ TEST_F(ImageTest, LuminanceFilters) { // NOLINT
     updateOrCompare(horizontalStack({grays0, grays1}), "grays.png");
 }
 
+TEST_F(ImageTest, DistanceField) { // NOLINT
+    auto tiny = createGrayFromAscii("100000 000000 001100 001100 000000 000000");
+    auto src = resampleImage(tiny, 256, 256, Filter::BOX);
+    auto presence = [] (const LinearImage& img, uint32_t col, uint32_t row, void*) {
+        return img.getPixelRef(col, row)[0] ? true : false;
+    };
+    auto cf = computeCoordField(src, presence, nullptr);
+    auto edt = edtFromCoordField(cf, true);
+
+    float maxdist = 0;
+    const uint32_t width = edt.getWidth();
+    const uint32_t height = edt.getHeight();
+    for (int32_t row = 0; row < height; ++row) {
+        float* dst = edt.getPixelRef(0, row);
+        for (uint32_t col = 0; col < width; ++col) {
+            maxdist = std::max(maxdist, dst[col]);
+        }
+    }
+    for (int32_t row = 0; row < height; ++row) {
+        float* dst = edt.getPixelRef(0, row);
+        for (uint32_t col = 0; col < width; ++col) {
+            dst[col] /= maxdist;
+        }
+    }
+    updateOrCompare(horizontalStack({src, edt}), "edt.png");
+
+    tiny = createColorFromAscii("00000 01020 00400 04000 00000");
+    src = resampleImage(tiny, 256, 256, Filter::MITCHELL);
+    for (int32_t row = 0; row < src.getHeight(); ++row) {
+        for (uint32_t col = 0; col < src.getWidth(); ++col) {
+            float& r = src.getPixelRef(col, row)[0];
+            float& g = src.getPixelRef(col, row)[1];
+            float& b = src.getPixelRef(col, row)[2];
+            bool inside = r > 0.4 || g > 0.4 || b > 0.4;
+            if (!inside) {
+                r = g = b = 0.4f;
+            }
+        }
+    }
+
+    auto isInside = [] (const LinearImage& img, uint32_t col, uint32_t row, void*) {
+        float r = img.getPixelRef(col, row)[0];
+        float g = img.getPixelRef(col, row)[1];
+        float b = img.getPixelRef(col, row)[2];
+        return !(r > 0.4 && g > 0.4 && b > 0.4);
+    };
+    cf = computeCoordField(src, isInside, nullptr);
+    auto voronoi = voronoiFromCoordField(cf, src);
+
+    updateOrCompare(horizontalStack({src, voronoi}), "voronoi.png");
+}
+
 TEST_F(ImageTest, ColorFilters) { // NOLINT
     // Test color space with a classic RED => GREEN color gradient.
     LinearImage color1 = createColorFromAscii("12");

@@ -251,4 +251,166 @@ void clearToValue(LinearImage& image, float value) {
     }
 }
 
+// Please avoid using numeric_limits::infinity here, it has undesireable properties in the context
+// of our EDT algorithm. We simply need a large number that represents the largest squared distance
+// that ever needs to be considered.
+static constexpr float INF = 4096.0f * 4096.f;
+
+// void edt(f, d, z, v, i, n)
+//
+// Finds the lower envelope of a sequence of parabolas, as per Felzenszwalb and Huttenlocher.
+// This operates on a single row of an image.
+//
+//   f...source data (returns the Y of the parabola vertex at X)
+//   d...destination data (final distance values are written here)
+//   z...temporary used to store X coords of parabola intersections
+//   v...temporary used to store X coords of parabola vertices
+//   i...resulting X coords of parabola vertices
+//   n...number of pixels in "f" to process
+//
+static void edt(const float* f, float* d, float* z, float* v, float* i, size_t n) {
+    int k = 0;
+    v[0] = 0;
+    z[0] = -INF;
+    z[1] = +INF;
+    for (size_t iq = 1; iq < n; ++iq) {
+        const float fq = iq;
+        float fp, s;
+        int ip;
+
+        // If the new parabola is lower than the right-most parabola in
+        // the envelope, remove it from the envelope. To make this
+        // determination, find the X coordinate of the intersection (s)
+        // between the parabolas with vertices at (q,f[q]) and (p,f[p]).
+        fp = v[k];
+        ip = fp;
+        s = ((f[iq] + fq * fq) - (f[ip] + fp * fp)) / (2.0f * fq - 2.0f * fp);
+        while (s <= z[k]) {
+            k = k - 1;
+            fp = v[k];
+            ip = fp;
+            s = ((f[iq] + fq * fq) - (f[ip] + fp * fp)) / (2.0f * fq - 2.0f * fp);
+        }
+
+        // Add the new parabola to the envelope.
+        ++k;
+        v[k] = fq;
+        z[k] = s;
+        z[k + 1] = +INF;
+    }
+
+    // Go back through the parabolas in the envelope and evaluate them
+    // in order to populate the distance values at each X coordinate.
+    k = 0;
+    for (size_t iq = 0; iq < n; ++iq) {
+        const float fq = iq;
+        while (z[k + 1] < fq) ++k;
+        const float dx = fq - v[k];
+        d[iq] = dx * dx + f[int(v[k])];
+        i[iq] = v[k];
+    }
+}
+
+static LinearImage computeHorizontalEdt(const LinearImage& src, LinearImage cx) {
+    const uint32_t width = src.getWidth();
+    const uint32_t height = src.getHeight();
+    LinearImage tmp0(width + 1, height + 1, 1);
+    LinearImage tmp1(width + 1, height + 1, 1);
+    LinearImage dst(width, height, 1);
+
+    // TODO: use utils::job::parallel_for.
+    for (uint32_t row = 0; row < height; ++row) {
+        const float* f = src.getPixelRef(0, row);
+        float* d = dst.getPixelRef(0, row);
+        float* z = tmp0.getPixelRef(0, row);
+        float* v = tmp1.getPixelRef(0, row);
+        float* i = cx.getPixelRef(0, row);
+        edt(f, d, z, v, i, width);
+    }
+
+    return dst;
+}
+
+// Implements the paper 'Distance Transforms of Sampled Functions' by Felzenszwalb and Huttenlocher
+// but generalized to compute a coordinate field rather than a distance field. Coordinate fields are
+// more broadly useful and transforming them into distance fields is extremely cheap.
+LinearImage computeCoordField(const LinearImage& src, PresenceCallback presence, void* user) {
+    const uint32_t width = src.getWidth();
+    const uint32_t height = src.getHeight();
+    LinearImage f0(width, height, 1);
+    for (uint32_t row = 0; row < height; ++row) {
+        float* pf = f0.getPixelRef(0, row);
+        for (uint32_t col = 0; col < width; ++col) {
+            pf[col] = presence(src, col, row, user) ? 0.0f : INF;
+        }
+    }
+
+    LinearImage cx(width, height, 1);
+    LinearImage cy(height, width, 1);
+
+    f0 = computeHorizontalEdt(f0, cx);
+    f0 = transpose(f0);
+    f0 = computeHorizontalEdt(f0, cy);
+    f0 = transpose(f0);
+
+    // NOTE: this could be extended to compute a volumetric distance field by transposing
+    // X with Z at this point (rather than X with Y) and re-invoking computeHorizontalEdt.
+
+    LinearImage coords(width, height, 2);
+    for (uint32_t row = 0; row < height; ++row) {
+        for (uint32_t col = 0; col < width; ++col) {
+            float y = cy.getPixelRef(row, col)[0];
+            float x = cx.getPixelRef(col, y)[0];
+            float* dst = coords.getPixelRef(col, row);
+            dst[0] = x;
+            dst[1] = y;
+        }
+    }
+
+    return coords;
+}
+
+LinearImage edtFromCoordField(const LinearImage& coordField, bool sqrt) {
+    const uint32_t width = coordField.getWidth();
+    const uint32_t height = coordField.getHeight();
+    LinearImage result(width, height, 1);
+    for (int32_t row = 0; row < height; ++row) {
+        const float frow = row;
+        float* dst = result.getPixelRef(0, row);
+        for (uint32_t col = 0; col < width; ++col) {
+            const float fcol = col;
+            const float* coord = coordField.getPixelRef(col, row);
+            const float dx = coord[0] - fcol;
+            const float dy = coord[1] - frow;
+            float distance = dx * dx + dy * dy;
+            if (sqrt) {
+                distance = std::sqrt(distance);
+            }
+            dst[col] = distance;
+        }
+    }
+    return result;
+}
+
+// Dereferences the given coordinate field. Useful for creating Voronoi diagrams or dilated images.
+LinearImage voronoiFromCoordField(const LinearImage& coordField, const LinearImage& src) {
+    const uint32_t width = src.getWidth();
+    const uint32_t height = src.getHeight();
+    const uint32_t channels = src.getChannels();
+    LinearImage result(width, height, channels);
+    for (int32_t row = 0; row < height; ++row) {
+        for (uint32_t col = 0; col < width; ++col) {
+            const float* coord = coordField.getPixelRef(col, row);
+            uint32_t srccol = coord[0];
+            uint32_t srcrow = coord[1];
+            float* presult = result.getPixelRef(col, row);
+            const float* psource = src.getPixelRef(srccol, srcrow);
+            for (uint32_t channel = 0; channel < channels; ++channel) {
+                presult[channel] = psource[channel];
+            }
+        }
+    }
+    return result;
+}
+
 } // namespace image
