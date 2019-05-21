@@ -64,6 +64,8 @@ struct SandboxParameters {
     float thickness = 1.0f;
     float subsurfacePower = 12.234f;
     float glossiness = 0.0f;
+    float specularAntiAliasingVariance = 0.0f;
+    float specularAntiAliasingThreshold = 0.0f;
     filament::sRGBColor specularColor = {0.0f, 0.0f, 0.0f};
     filament::sRGBColor subsurfaceColor = {0.0f};
     filament::sRGBColor sheenColor = {0.83f, 0.0f, 0.0f};
@@ -198,6 +200,10 @@ inline filament::MaterialInstance* updateInstances(SandboxParameters& params,
         materialInstance->setParameter("roughness", params.roughness);
         materialInstance->setParameter("sheenColor", RgbType::sRGB, params.sheenColor);
         materialInstance->setParameter("subsurfaceColor", RgbType::sRGB, params.subsurfaceColor);
+    }
+    if (params.currentMaterialModel != MATERIAL_MODEL_UNLIT) {
+        materialInstance->setSpecularAntiAliasingVariance(params.specularAntiAliasingVariance);
+        materialInstance->setSpecularAntiAliasingThreshold(params.specularAntiAliasingThreshold);
     }
 
     return materialInstance;

@@ -228,6 +228,22 @@ Java_com_google_android_filament_MaterialInstance_nSetMaskThreshold(JNIEnv*,
 
 extern "C"
 JNIEXPORT void JNICALL
+Java_com_google_android_filament_MaterialInstance_nSetSpecularAntiAliasingVariance(JNIEnv*,
+        jclass, jlong nativeMaterialInstance, jfloat variance) {
+    MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
+    instance->setSpecularAntiAliasingVariance(variance);
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_google_android_filament_MaterialInstance_nSetSpecularAntiAliasingThreshold(JNIEnv*,
+        jclass, jlong nativeMaterialInstance, jfloat threshold) {
+    MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
+    instance->setSpecularAntiAliasingThreshold(threshold);
+}
+
+extern "C"
+JNIEXPORT void JNICALL
 Java_com_google_android_filament_MaterialInstance_nSetDoubleSided(JNIEnv*,
         jclass, jlong nativeMaterialInstance, jboolean doubleSided) {
     MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;

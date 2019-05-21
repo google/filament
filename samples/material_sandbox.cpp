@@ -313,6 +313,11 @@ static void gui(filament::Engine* engine, filament::View*) {
             }
         }
 
+        if (ImGui::CollapsingHeader("Shading AA")) {
+            ImGui::SliderFloat("variance", &params.specularAntiAliasingVariance, 0.0f, 1.0f);
+            ImGui::SliderFloat("threshold", &params.specularAntiAliasingThreshold, 0.0f, 1.0f);
+        }
+
         if (ImGui::CollapsingHeader("Object")) {
             ImGui::Checkbox("castShadows", &params.castShadows);
         }

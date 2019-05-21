@@ -107,6 +107,10 @@ public:
     bool hasShadowMultiplier() const noexcept { return mHasShadowMultiplier; }
     AttributeBitset getRequiredAttributes() const noexcept { return mRequiredAttributes; }
 
+    bool hasSpecularAntiAliasing() const noexcept { return mSpecularAntiAliasing; }
+    float getSpecularAntiAliasingVariance() const noexcept { return mSpecularAntiAliasingVariance; }
+    float getSpecularAntiAliasingThreshold() const noexcept { return mSpecularAntiAliasingThreshold; }
+
     size_t getParameterCount() const noexcept {
         return mUniformInterfaceBlock.getUniformInfoList().size() +
                 mSamplerInterfaceBlock.getSamplerInfoList().size();
@@ -130,12 +134,17 @@ private:
     VertexDomain mVertexDomain;
     CullingMode mCullingMode;
     AttributeBitset mRequiredAttributes;
-    float mMaskThreshold;
+
+    float mMaskThreshold = 0.4f;
+    float mSpecularAntiAliasingVariance;
+    float mSpecularAntiAliasingThreshold;
+
     bool mDoubleSided;
     bool mDoubleSidedCapability = false;
     bool mHasShadowMultiplier = false;
     bool mHasCustomDepthShader = false;
     bool mIsDefaultMaterial = false;
+    bool mSpecularAntiAliasing = false;
 
     FMaterialInstance mDefaultInstance;
     SamplerInterfaceBlock mSamplerInterfaceBlock;

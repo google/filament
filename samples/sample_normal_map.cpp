@@ -260,9 +260,9 @@ static void setup(Engine* engine, View*, Scene* scene) {
         )SHADER";
     } else {
         shader += R"SHADER(
-            material.baseColor.rgb = float3(0.6, 0.6, 0.6);
+            material.baseColor.rgb = float3(0.3, 0.0, 0.0);
             material.metallic = 0.0;
-            material.roughness = 0.7;
+            material.roughness = 0.0;
         )SHADER";
     }
 
@@ -276,6 +276,7 @@ static void setup(Engine* engine, View*, Scene* scene) {
     MaterialBuilder builder = MaterialBuilder()
             .name("DefaultMaterial")
             .material(shader.c_str())
+            .specularAntiAliasing(true)
             .shading(Shading::LIT);
 
     if (hasNormalMap) {

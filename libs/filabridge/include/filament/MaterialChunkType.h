@@ -53,8 +53,9 @@ enum UTILS_PUBLIC ChunkType : uint64_t {
     MaterialTransparencyMode = charTo64bitNum("MAT_TRMD"),
     MaterialMaskThreshold = charTo64bitNum("MAT_THRS"),
     MaterialShadowMultiplier = charTo64bitNum("MAT_SHML"),
-    MaterialCurvatureToRoughness = charTo64bitNum("MAT_CV2R"),
-    MaterialLimitOverInterpolation = charTo64bitNum("MAT_LMOI"),
+    MaterialSpecularAntiAliasing = charTo64bitNum("MAT_SPAA"),
+    MaterialSpecularAntiAliasingVariance = charTo64bitNum("MAT_SVAR"),
+    MaterialSpecularAntiAliasingThreshold = charTo64bitNum("MAT_STHR"),
     MaterialClearCoatIorChange = charTo64bitNum("MAT_CIOR"),
 
     MaterialRequiredAttributes = charTo64bitNum("MAT_REQA"),

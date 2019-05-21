@@ -139,7 +139,6 @@ const std::string ShaderGenerator::createVertexProgram(filament::backend::Shader
     cg.generateProlog(vs, ShaderType::VERTEX, material.hasExternalSamplers);
 
     cg.generateDefine(vs, "FLIP_UV_ATTRIBUTE", material.flipUV);
-    cg.generateDefine(vs, "GEOMETRIC_SPECULAR_AA_NORMAL", material.limitOverInterpolation);
 
     bool litVariants = lit || material.hasShadowMultiplier;
     cg.generateDefine(vs, "HAS_DIRECTIONAL_LIGHTING", litVariants && variant.hasDirectionalLighting());
@@ -232,8 +231,7 @@ const std::string ShaderGenerator::createFragmentProgram(filament::backend::Shad
     // this should probably be a code generation option
     cg.generateDefine(fs, "USE_MULTIPLE_SCATTERING_COMPENSATION", true);
 
-    cg.generateDefine(fs, "GEOMETRIC_SPECULAR_AA_ROUGHNESS", material.curvatureToRoughness);
-    cg.generateDefine(fs, "GEOMETRIC_SPECULAR_AA_NORMAL", material.limitOverInterpolation);
+    cg.generateDefine(fs, "GEOMETRIC_SPECULAR_AA", material.specularAntiAliasing && lit);
 
     cg.generateDefine(fs, "CLEAR_COAT_IOR_CHANGE", material.clearCoatIorChange);
 

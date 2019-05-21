@@ -215,6 +215,14 @@ public class Material {
         return nGetMaskThreshold(getNativeObject());
     }
 
+    public float getSpecularAntiAliasingVariance() {
+        return nGetSpecularAntiAliasingVariance(getNativeObject());
+    }
+
+    public float getSpecularAntiAliasingThreshold() {
+        return nGetSpecularAntiAliasingThreshold(getNativeObject());
+    }
+
     public Set<VertexBuffer.VertexAttribute> getRequiredAttributes() {
         if (mRequiredAttributes == null) {
             int bitSet = nGetRequiredAttributes(getNativeObject());
@@ -356,6 +364,8 @@ public class Material {
     private static native boolean nIsDepthCullingEnabled(long nativeMaterial);
     private static native boolean nIsDoubleSided(long nativeMaterial);
     private static native float nGetMaskThreshold(long nativeMaterial);
+    private static native float nGetSpecularAntiAliasingVariance(long nativeMaterial);
+    private static native float nGetSpecularAntiAliasingThreshold(long nativeMaterial);
 
     private static native int nGetParameterCount(long nativeMaterial);
     private static native void nGetParameters(long nativeMaterial,

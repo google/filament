@@ -406,16 +406,18 @@ io::sstream& CodeGenerator::generateCommon(io::sstream& out, ShaderType type) co
     out << SHADERS_COMMON_MATH_FS_DATA;
     if (type == ShaderType::VERTEX) {
     } else if (type == ShaderType::FRAGMENT) {
+        out << SHADERS_COMMON_SHADING_FS_DATA;
         out << SHADERS_COMMON_GRAPHICS_FS_DATA;
+        out << SHADERS_COMMON_MATERIAL_FS_DATA;
     }
     return out;
 }
 
 io::sstream& CodeGenerator::generateCommonMaterial(io::sstream& out, ShaderType type) const {
     if (type == ShaderType::VERTEX) {
-        out << SHADERS_COMMON_MATERIAL_VS_DATA;
+        out << SHADERS_MATERIAL_INPUTS_VS_DATA;
     } else if (type == ShaderType::FRAGMENT) {
-        out << SHADERS_COMMON_MATERIAL_FS_DATA;
+        out << SHADERS_MATERIAL_INPUTS_FS_DATA;
     }
     return out;
 }

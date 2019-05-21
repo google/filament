@@ -141,6 +141,22 @@ Java_com_google_android_filament_Material_nGetMaskThreshold(JNIEnv*, jclass,
 }
 
 extern "C"
+JNIEXPORT jfloat JNICALL
+Java_com_google_android_filament_Material_nGetSpecularAntiAliasingVariance(JNIEnv*, jclass,
+        jlong nativeMaterial) {
+    Material* material = (Material*) nativeMaterial;
+    return material->getSpecularAntiAliasingVariance();
+}
+
+extern "C"
+JNIEXPORT jfloat JNICALL
+Java_com_google_android_filament_Material_nGetSpecularAntiAliasingThreshold(JNIEnv*, jclass,
+        jlong nativeMaterial) {
+    Material* material = (Material*) nativeMaterial;
+    return material->getSpecularAntiAliasingThreshold();
+}
+
+extern "C"
 JNIEXPORT jint JNICALL
 Java_com_google_android_filament_Material_nGetParameterCount(JNIEnv*, jclass,
         jlong nativeMaterial) {

@@ -77,6 +77,9 @@ public:
     bool hasShadowMultiplier(bool*) const noexcept;
     bool getRequiredAttributes(AttributeBitset*) const noexcept;
     bool hasCustomDepthShader(bool* value) const noexcept;
+    bool hasSpecularAntiAliasing(bool* value) const noexcept;
+    bool getSpecularAntiAliasingVariance(float* value) const noexcept;
+    bool getSpecularAntiAliasingThreshold(float* value) const noexcept;
 
     bool getShader(filaflat::ShaderBuilder& shader, backend::ShaderModel shaderModel,
             uint8_t variant, backend::ShaderType stage) noexcept;

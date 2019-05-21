@@ -230,6 +230,12 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder)
     mRasterState.depthFunc = depthTest ? DepthFunc::LE : DepthFunc::A;
     mRasterState.alphaToCoverage = mBlendingMode == BlendingMode::MASKED;
 
+    parser->hasSpecularAntiAliasing(&mSpecularAntiAliasing);
+    if (mSpecularAntiAliasing) {
+        parser->getSpecularAntiAliasingVariance(&mSpecularAntiAliasingVariance);
+        parser->getSpecularAntiAliasingThreshold(&mSpecularAntiAliasingThreshold);
+    }
+
     // we can only initialize the default instance once we're initialized ourselves
     mDefaultInstance.initDefaultInstance(engine, this);
 }
@@ -437,6 +443,18 @@ float Material::getMaskThreshold() const noexcept {
 
 bool Material::hasShadowMultiplier() const noexcept {
     return upcast(this)->hasShadowMultiplier();
+}
+
+bool Material::hasSpecularAntiAliasing() const noexcept {
+    return upcast(this)->hasSpecularAntiAliasing();
+}
+
+float Material::getSpecularAntiAliasingVariance() const noexcept {
+    return upcast(this)->getSpecularAntiAliasingVariance();
+}
+
+float Material::getSpecularAntiAliasingThreshold() const noexcept {
+    return upcast(this)->getSpecularAntiAliasingThreshold();
 }
 
 size_t Material::getParameterCount() const noexcept {
