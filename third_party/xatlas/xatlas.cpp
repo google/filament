@@ -7801,7 +7801,7 @@ AddMeshError::Enum AddMesh(Atlas *atlas, const MeshDecl &meshDecl)
 			const internal::Vector3 &b = mesh->position(tri[1]);
 			const internal::Vector3 &c = mesh->position(tri[2]);
 			const float area = internal::length(internal::cross(b - a, c - a)) * 0.5f;
-			if (area <= XA_EPSILON) {
+			if (area <= FLT_EPSILON) {
 				faceFlags |= internal::FaceFlags::Ignore;
 				XA_PRINT("   Zero area face: %d, indices (%d %d %d)\n", i, tri[0], tri[1], tri[2]);
 			}
