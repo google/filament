@@ -16,6 +16,8 @@
 
 package com.google.android.filament;
 
+import com.google.android.filament.proguard.UsedByReflection;
+
 import android.support.annotation.NonNull;
 
 public class Engine {
@@ -270,6 +272,7 @@ public class Engine {
         Fence.waitAndDestroy(createFence(Fence.Type.HARD), Fence.Mode.FLUSH);
     }
 
+    @UsedByReflection("TextureHelper.java")
     long getNativeObject() {
         if (mNativeObject == 0) {
             throw new IllegalStateException("Calling method on destroyed Engine");

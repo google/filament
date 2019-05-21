@@ -17,6 +17,7 @@
 package com.google.android.filament;
 
 import android.support.annotation.NonNull;
+import com.google.android.filament.proguard.UsedByNative;
 
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
@@ -26,6 +27,7 @@ import java.nio.IntBuffer;
 import java.nio.LongBuffer;
 import java.nio.ShortBuffer;
 
+@UsedByNative("NioUtils.cpp")
 final class NioUtils {
 
     enum BufferType {
@@ -41,18 +43,22 @@ final class NioUtils {
     private NioUtils() {
     }
 
+    @UsedByNative("NioUtils.cpp")
     static long getBasePointer(@NonNull Buffer b, long address, int sizeShift) {
         return address != 0 ? address + (b.position() << sizeShift) : 0;
     }
 
+    @UsedByNative("NioUtils.cpp")
     static Object getBaseArray(@NonNull Buffer b) {
         return b.hasArray() ? b.array() : null;
     }
 
+    @UsedByNative("NioUtils.cpp")
     static int getBaseArrayOffset(@NonNull Buffer b, int sizeShift) {
         return b.hasArray() ? ((b.arrayOffset() + b.position()) << sizeShift) : 0;
     }
 
+    @UsedByNative("NioUtils.cpp")
     static int getBufferType(@NonNull Buffer b) {
         if (b instanceof ByteBuffer) {
             return BufferType.BYTE.ordinal();
