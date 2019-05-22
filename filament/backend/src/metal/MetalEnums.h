@@ -63,7 +63,7 @@ constexpr inline MTLVertexFormat getMetalFormat(ElementType type, bool normalize
     if (normalized) {
         switch (type) {
             // Single Component Types
-#if MAC_OS_X_VERSION_MAX_ALLOWED > 101300 || IPHONE_OS_VERSION_MAX_ALLOWED > 110000
+#if MAC_OS_X_VERSION_MAX_ALLOWED > 101300 || __IPHONE_OS_VERSION_MAX_ALLOWED > 110000
             case ElementType::BYTE: return MTLVertexFormatCharNormalized;
             case ElementType::UBYTE: return MTLVertexFormatUCharNormalized;
             case ElementType::SHORT: return MTLVertexFormatShortNormalized;
@@ -91,7 +91,7 @@ constexpr inline MTLVertexFormat getMetalFormat(ElementType type, bool normalize
     }
     switch (type) {
         // Single Component Types
-#if MAC_OS_X_VERSION_MAX_ALLOWED > 101300 || IPHONE_OS_VERSION_MAX_ALLOWED > 110000
+#if MAC_OS_X_VERSION_MAX_ALLOWED > 101300 || __IPHONE_OS_VERSION_MAX_ALLOWED > 110000
         case ElementType::BYTE: return MTLVertexFormatChar;
         case ElementType::UBYTE: return MTLVertexFormatUChar;
         case ElementType::SHORT: return MTLVertexFormatShort;

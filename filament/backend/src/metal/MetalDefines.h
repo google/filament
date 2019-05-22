@@ -20,7 +20,7 @@
 // Filament fences are implemented with MTLSharedEvent, which are only available on
 // OSX 10.14+ and iOS 12.0+
 #if defined(IOS)
-#define METAL_FENCES_SUPPORTED (IPHONE_OS_VERSION_MAX_ALLOWED > 120000)
+#define METAL_FENCES_SUPPORTED (__IPHONE_OS_VERSION_MAX_ALLOWED > 120000)
 #else
 #define METAL_FENCES_SUPPORTED (MAC_OS_X_VERSION_MAX_ALLOWED > 101400)
 #endif
