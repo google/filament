@@ -824,6 +824,14 @@ void MetalDriver::draw(backend::PipelineState ps, Handle<HwRenderPrimitive> rph)
         samplersToBind[binding] = samplerState;
     });
 
+    // Assign a default sampler to empty slots, in case Filament hasn't bound all samplers.
+    // Metal requires all samplers referenced in shaders to be bound.
+    for (auto& sampler : samplersToBind) {
+        if (!sampler) {
+            sampler = mContext->samplerStateCache.getOrCreateState({});
+        }
+    }
+
     // Similar to uniforms, we can't tell which stage will use the textures / samplers, so bind
     // to both the vertex and fragment stages.
 
