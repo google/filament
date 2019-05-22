@@ -16,6 +16,7 @@
 
 #include <rays/PathTracer.h>
 
+#include <image/ImageOps.h>
 #include <image/LinearImage.h>
 
 #include <math/mat4.h>
@@ -35,6 +36,8 @@ static constexpr size_t MIN_TILE_SIZE = 32;
 static constexpr size_t MAX_TILES_COUNT = 2048;
 
 static constexpr float inf = std::numeric_limits<float>::infinity();
+
+static constexpr float EMPTY_SENTINEL = 2.0f;
 
 struct PixelRectangle {
     ushort2 topLeft;
@@ -262,9 +265,9 @@ static void renderTileToGbuffer(EmbreeContext* context, PixelRectangle rect) {
             intersector.flags = RTC_INTERSECT_CONTEXT_FLAG_COHERENT;
             rtcIntersect1(embreeScene, &intersector, &rayhit);
 
+            float* position = meshPositions.getPixelRef(col, row);
+            float* normal = meshNormals.getPixelRef(col, row);
             if (rayhit.ray.tfar != inf) {
-                float* position = meshPositions.getPixelRef(col, row);
-                float* normal = meshNormals.getPixelRef(col, row);
                 RTCGeometry geo = rtcGetGeometry(embreeScene, rayhit.hit.geomID);
                 rtcInterpolate0(geo, rayhit.hit.primID, rayhit.hit.u, rayhit.hit.v,
                         RTC_BUFFER_TYPE_VERTEX_ATTRIBUTE, 0, position, 3);
@@ -274,9 +277,22 @@ static void renderTileToGbuffer(EmbreeContext* context, PixelRectangle rect) {
                 // AO won't be computed until the second pass, but we show an instant preview of
                 // the chart shapes by setting a placeholder value in the AO map.
                 ao.getPixelRef(col, row)[0] = 0.5f;
+            } else {
+                normal[0] = EMPTY_SENTINEL;
             }
         }
     }
+}
+
+static void dilateCharts(EmbreeContext* context) {
+    LinearImage& ao = context->config.renderTargets[(int) AMBIENT_OCCLUSION];
+    LinearImage& meshNormals = context->config.renderTargets[(int) MESH_NORMALS];
+    auto presence = [] (const LinearImage& normals, uint32_t col, uint32_t row, void*) {
+        return normals.getPixelRef(col, row)[0] != EMPTY_SENTINEL;
+    };
+    auto coords = image::computeCoordField(meshNormals, presence, nullptr);
+    auto dilated = image::voronoiFromCoordField(coords, ao);
+    memcpy(ao.getPixelRef(), dilated.getPixelRef(), sizeof(float) * ao.getWidth() * ao.getHeight());
 }
 
 static void renderTileFromGbuffer(EmbreeContext* context, PixelRectangle rect) {
@@ -298,7 +314,7 @@ static void renderTileFromGbuffer(EmbreeContext* context, PixelRectangle rect) {
             intersector.flags = RTC_INTERSECT_CONTEXT_FLAG_INCOHERENT;
             float* position = meshPositions.getPixelRef(col, row);
             float* normal = meshNormals.getPixelRef(col, row);
-            if (normal[0] || normal[1] || normal[2]) {
+            if (normal[0] != EMPTY_SENTINEL) {
                 float3 n = { normal[0], normal[1], normal[2] };
                 float3 b = randomPerp(n);
                 float3 t = cross(n, b);
@@ -466,6 +482,7 @@ bool PathTracer::render() {
                 context->config.tileCallback(rect.topLeft, rect.bottomRight,
                         context->config.tileUserData);
             }, [](EmbreeContext* context) {
+                dilateCharts(context);
                 context->config.doneCallback(context->config.doneUserData);
                 rtcReleaseScene(context->scene);
                 rtcReleaseDevice(context->device);
