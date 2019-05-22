@@ -21,6 +21,9 @@
 
 #include <backend/DriverEnums.h>
 
+#include <tsl/robin_map.h>
+#include <utils/Hash.h>
+
 namespace filament {
 namespace backend {
 namespace metal {
@@ -58,18 +61,46 @@ public:
     void blit(const BlitArgs& args);
 
     /**
-     * Free global resources. Should be called at least once per process when no further calls to
-     * blit will occur.
+     * Free resources. Should be called at least once per process when no further calls to blit will
+     * occur.
      */
-    static void shutdown() noexcept;
+    void shutdown() noexcept;
 
 private:
 
     static void setupColorAttachment(const BlitArgs& args, MTLRenderPassDescriptor* descriptor);
     static void setupDepthAttachment(const BlitArgs& args, MTLRenderPassDescriptor* descriptor);
-    void ensureFunctions();
+
+    struct BlitFunctionKey {
+        bool blitColor;
+        bool blitDepth;
+        bool msaaColorSource;
+        bool msaaDepthSource;
+
+        bool operator==(const BlitFunctionKey& rhs) const noexcept {
+            return blitColor == rhs.blitColor &&
+                   blitDepth == rhs.blitDepth &&
+                   msaaColorSource == rhs.msaaDepthSource &&
+                   msaaDepthSource == rhs.msaaDepthSource;
+        }
+
+        BlitFunctionKey() {
+            std::memset(this, 0, sizeof(BlitFunctionKey));
+        }
+    };
+
+    void blitFastPath(bool& blitColor, bool& blitDepth, const BlitArgs& args);
+    id<MTLFunction> compileFragmentFunction(BlitFunctionKey key);
+    id<MTLFunction> getBlitVertexFunction();
+    id<MTLFunction> getBlitFragmentFunction(BlitFunctionKey key);
 
     MetalContext& mContext;
+
+    using HashFn = utils::hash::MurmurHashFn<BlitFunctionKey>;
+    using Function = id<MTLFunction>;
+    tsl::robin_map<BlitFunctionKey, Function, HashFn> mBlitFunctions;
+
+    id<MTLFunction> mVertexFunction = nil;
 
 };
 

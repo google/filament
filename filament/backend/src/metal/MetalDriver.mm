@@ -75,6 +75,7 @@ MetalDriver::~MetalDriver() noexcept {
     [mContext->device release];
     CFRelease(mContext->textureCache);
     delete mContext->bufferPool;
+    delete mContext->blitter;
     delete mContext;
 }
 
@@ -333,7 +334,7 @@ void MetalDriver::terminate() {
     [mContext->driverPool drain];
 
     MetalExternalImage::shutdown();
-    MetalBlitter::shutdown();
+    mContext->blitter->shutdown();
 }
 
 ShaderModel MetalDriver::getShaderModel() const noexcept {
@@ -663,7 +664,7 @@ void MetalDriver::blit(TargetBufferFlags buffers,
                         dstRect.left >= 0 && dstRect.bottom >= 0,
             "Source and destination rects must be positive.");
 
-    id<MTLTexture> srcTexture = srcTarget->getColor();
+    id<MTLTexture> srcTexture = srcTarget->getBlitColorSource();
     id<MTLTexture> dstTexture = dstTarget->getColor();
 
     // Metal's texture coordinates have (0, 0) at the top-left of the texture, but Filament's
@@ -681,9 +682,12 @@ void MetalDriver::blit(TargetBufferFlags buffers,
     const uint8_t srcLevel = srcTarget->getColorLevel();
     const uint8_t dstLevel = dstTarget->getColorLevel();
 
-    ASSERT_PRECONDITION(srcTexture.textureType == MTLTextureType2D &&
-                        dstTexture.textureType == MTLTextureType2D,
-                        "Metal does not support blitting to/from non-2D textures.");
+    auto isBlitableTextureType = [](MTLTextureType t) {
+        return t == MTLTextureType2D || t == MTLTextureType2DMultisample;
+    };
+    ASSERT_PRECONDITION(isBlitableTextureType(srcTexture.textureType) &&
+                        isBlitableTextureType(dstTexture.textureType),
+                       "Metal does not support blitting to/from non-2D textures.");
 
     MetalBlitter::BlitArgs args;
     args.filter = filter;
@@ -698,7 +702,7 @@ void MetalDriver::blit(TargetBufferFlags buffers,
     }
 
     if (buffers & TargetBufferFlags::DEPTH) {
-        args.source.depth = srcTarget->getDepth();
+        args.source.depth = srcTarget->getBlitDepthSource();
         args.destination.depth = dstTarget->getDepth();
     }
 
