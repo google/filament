@@ -94,6 +94,7 @@ struct App {
     std::atomic<bool> requestStatePop;
     gltfio::AssetPipeline* pipeline;
     std::string messageBoxText;
+    uint32_t bakeResolution = 1024;
 };
 
 struct OverlayVertex {
@@ -426,10 +427,11 @@ static void bakeAsset(App& app) {
     gltfio::AssetPipeline::AssetHandle asset = app.asset->getSourceAsset();
 
     // Allocate the render target for the path tracer as well as a GPU texture to display it.
-    auto viewportSize = ImGui::GetIO().DisplaySize;
+    ImVec2 viewportSize = ImGui::GetIO().DisplaySize;
+    const uint32_t res = app.bakeResolution;
     viewportSize.x -= app.viewer->getSidebarWidth();
     app.showOverlay = true;
-    app.ambientOcclusion = image::LinearImage(1024, 1024, 1);
+    app.ambientOcclusion = image::LinearImage(res, res, 1);
     createOverlayTexture(app);
 
     app.pipeline = new gltfio::AssetPipeline();
@@ -443,9 +445,9 @@ static void bakeAsset(App& app) {
 #if DEBUG_PATHTRACER
     image::LinearImage outputs[] = {
         app.ambientOcclusion,
-        app.bentNormals = image::LinearImage(1024, 1024, 3),
-        app.meshNormals = image::LinearImage(1024, 1024, 3),
-        app.meshPositions = image::LinearImage(1024, 1024, 3)
+        app.bentNormals = image::LinearImage(res, res, 3),
+        app.meshNormals = image::LinearImage(res, res, 3),
+        app.meshPositions = image::LinearImage(res, res, 3)
     };
     auto onRenderDone = [](void* userData) {
         App* app = (App*) userData;
@@ -617,6 +619,15 @@ int main(int argc, char** argv) {
             if (canPrep) {
                 ImGui::Checkbox("Auto-scale before parameterization", &app.enablePrepScale);
             }
+            if (canBake) {
+                static const int kFirstOption = std::log2(512);
+                int bakeOption = std::log2(app.bakeResolution) - kFirstOption;
+                ImGui::Combo("Bake Resolution", &bakeOption,
+                        "512 x 512\0"
+                        "1024 x 1024\0"
+                        "2048 x 2048\0");
+                app.bakeResolution = 1 << (bakeOption + kFirstOption);
+            }
 
             if (!app.messageBoxText.empty()) {
                 ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, {10, 10} );
@@ -650,8 +661,9 @@ int main(int argc, char** argv) {
     };
 
     auto animate = [&app](Engine* engine, View* view, double now) {
+        // The baker doesn't support animation, just use frame 0.
         if (app.state != EMPTY) {
-            app.viewer->applyAnimation(now);
+            app.viewer->applyAnimation(0.0);
         }
         if (!app.overlayScene && app.showOverlay) {
             app.overlayView = FilamentApp::get().getGuiView();
