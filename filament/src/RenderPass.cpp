@@ -88,7 +88,7 @@ RenderPass::Command const* RenderPass::appendSortedCommands(CommandTypeFlags con
     uint32_t growBy = FScene::getPrimitiveCount(soa, vr.last);
     // double the color pass for transparent objects that need to render twice
     const bool colorPass  = bool(commandTypeFlags & CommandTypeFlags::COLOR);
-    const bool depthPass  = bool(commandTypeFlags & (CommandTypeFlags::DEPTH | CommandTypeFlags::SHADOW));
+    const bool depthPass  = bool(commandTypeFlags & CommandTypeFlags::DEPTH);
     growBy *= uint32_t(colorPass * 2 + depthPass);
     Command* const curr = commands.grow(growBy);
 
@@ -262,28 +262,20 @@ void RenderPass::generateCommands(uint32_t commandTypeFlags, Command* const comm
     uint32_t offset = FScene::getPrimitiveCount(soa, range.first);
     // double the color pass for transparents that need to render twice
     const bool colorPass  = bool(commandTypeFlags & CommandTypeFlags::COLOR);
-    const bool depthPass  = bool(commandTypeFlags & (CommandTypeFlags::DEPTH | CommandTypeFlags::SHADOW));
+    const bool depthPass  = bool(commandTypeFlags & CommandTypeFlags::DEPTH);
     offset *= uint32_t(colorPass * 2 + depthPass);
     Command* const curr = commands + offset;
 
     /*
-     *
-     * The if {} below is to coerce the compiler into generating different versions of
+     * The switch {} below is to coerce the compiler into generating different versions of
      * "generateCommandsImpl" based on which pass we're processing.
      *
      *  We use a template function (as opposed to just inlining), so that the compiler is
      *  able to generate actual separate versions of generateCommandsImpl<>, which is much
      *  easier to debug and doesn't impact performance (it's just a predicted jump).
-     *
-     *  We also use a "dummy" first parameter in generateCommandsImpl<> so that the compiler
-     *  doesn't have to shuffle all registers, when calling (in case it doesn't inline the call
-     *  -- which, as stated above is fine and even preferable).
-     *  But we actually pass "commandTypeFlags" (doesn't matter, since it's unused), which saves
-     *  a few instructions for no cost to us.
      */
 
-    switch (commandTypeFlags) {
-        default: // squash IDE warning -- should never happen.
+    switch (commandTypeFlags & CommandTypeFlags::COLOR_AND_DEPTH) {
         case CommandTypeFlags::COLOR:
             generateCommandsImpl<CommandTypeFlags::COLOR>(commandTypeFlags, curr,
                     soa, range, renderFlags, cameraPosition, cameraForward);
@@ -292,12 +284,8 @@ void RenderPass::generateCommands(uint32_t commandTypeFlags, Command* const comm
             generateCommandsImpl<CommandTypeFlags::DEPTH>(commandTypeFlags, curr,
                     soa, range, renderFlags, cameraPosition, cameraForward);
             break;
-        case CommandTypeFlags::DEPTH_AND_COLOR:
-            generateCommandsImpl<CommandTypeFlags::DEPTH_AND_COLOR>(commandTypeFlags, curr,
-                    soa, range, renderFlags, cameraPosition, cameraForward);
-            break;
-        case CommandTypeFlags::SHADOW:
-            generateCommandsImpl<CommandTypeFlags::SHADOW>(commandTypeFlags, curr,
+        case CommandTypeFlags::COLOR_AND_DEPTH:
+            generateCommandsImpl<CommandTypeFlags::COLOR_AND_DEPTH>(commandTypeFlags, curr,
                     soa, range, renderFlags, cameraPosition, cameraForward);
             break;
     }
@@ -306,7 +294,7 @@ void RenderPass::generateCommands(uint32_t commandTypeFlags, Command* const comm
 /* static */
 template<uint32_t commandTypeFlags>
 UTILS_NOINLINE
-void RenderPass::generateCommandsImpl(uint32_t,
+void RenderPass::generateCommandsImpl(uint32_t extraFlags,
         Command* UTILS_RESTRICT curr,
         FScene::RenderableSoa const& UTILS_RESTRICT soa, Range<uint32_t> range,
         RenderFlags renderFlags,
@@ -318,8 +306,10 @@ void RenderPass::generateCommandsImpl(uint32_t,
     // the list twice)
 
     const bool colorPass  = bool(commandTypeFlags & CommandTypeFlags::COLOR);
-    const bool depthPass  = bool(commandTypeFlags & (CommandTypeFlags::DEPTH | CommandTypeFlags::SHADOW));
-    const bool shadowPass = bool(commandTypeFlags & CommandTypeFlags::SHADOW);
+    const bool depthPass  = bool(commandTypeFlags & CommandTypeFlags::DEPTH);
+    const bool depthContainsShadowCasters = bool(extraFlags & CommandTypeFlags::DEPTH_CONTAINS_SHADOW_CASTERS);
+    const bool depthFilterTranslucentObjects = bool(extraFlags & CommandTypeFlags::DEPTH_FILTER_TRANSLUCENT_OBJECTS);
+    const bool depthFilterAlphaMaskedObjects = bool(extraFlags & CommandTypeFlags::DEPTH_FILTER_ALPHA_MASKED_OBJECTS);
 
     auto const* const UTILS_RESTRICT soaWorldAABBCenter = soa.data<FScene::WORLD_AABB_CENTER>();
     auto const* const UTILS_RESTRICT soaVisibility      = soa.data<FScene::VISIBILITY_STATE>();
@@ -392,7 +382,7 @@ void RenderPass::generateCommandsImpl(uint32_t,
         cmdDepth.primitive.materialVariant.setSkinning(soaVisibility[i].skinning);
 
         const bool shadowCaster = soaVisibility[i].castShadows & hasShadowing;
-        const bool writeDepthForShadows = shadowPass & shadowCaster;
+        const bool writeDepthForShadowCasters = depthContainsShadowCasters & shadowCaster;
 
         const Slice<FRenderPrimitive>& primitives = soaPrimitives[i];
 
@@ -496,15 +486,12 @@ void RenderPass::generateCommandsImpl(uint32_t,
                 cmdDepth.primitive.rasterState.culling = rs.culling;
                 *curr = cmdDepth;
 
-                // If we are drawing depth+draw we don't want to put commands using
-                // alpha testing (indicated by the alpha to coverage flag) or blending in the
-                // depth prepass. What we do want is put those commands in the shadow map
-                // (when only drawDepth is true).
-                // Also, depth-write could be disabled by the material,
-                // in this case undo the command.
-                bool issueDepth =
-                        (rs.depthWrite & !(colorPass & (rs.alphaToCoverage | rs.hasBlending())))
-                        | writeDepthForShadows;
+                // FIXME: should writeDepthForShadowCasters take precedence over rs.depthWrite?
+                bool issueDepth = (rs.depthWrite
+                        & !(depthFilterTranslucentObjects & rs.hasBlending())
+                        & !(depthFilterAlphaMaskedObjects & rs.alphaToCoverage))
+                                | writeDepthForShadowCasters;
+
                 curr->key |= select(!issueDepth);
 
                 // handle the case where this primitive is empty / no-op

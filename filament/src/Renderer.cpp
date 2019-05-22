@@ -268,8 +268,24 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     Command const* colorPassBegin = nullptr;
     Command const* colorPassEnd = nullptr;
 
-    const bool sharedDepthBuffer = useSSAO && REUSE_SSAO_DEPTH && msaa <= 1;
-    if (useSSAO && commandType == RenderPass::CommandTypeFlags::COLOR) {
+    // We need an extra pass for SSAO if SSAO is enabled and:
+    // - we don't want to reuse the regular depth path for SSAO, or
+    // - we have MSAA (because SSAO is never done in MSAA), or
+    // - we don't have a depth prepass in the first place
+    const bool extraDepthPassForSSAO = useSSAO &&
+            (!REUSE_SSAO_DEPTH || msaa > 1 || !(commandType & RenderPass::CommandTypeFlags::DEPTH));
+
+    // depth buffer is shared between SSAO and the color pass
+    const bool sharedDepthPass = useSSAO && !extraDepthPassForSSAO;
+    if (sharedDepthPass) {
+        // When SSAO is active and it's sharing the depth pass with the color pass
+        // (meaning that we don't have MSAA), we add alpha tested objects to the scene, they're
+        // needed for SSAO and they won't hurt the color pass.
+        commandType = RenderPass::CommandTypeFlags(commandType &
+                ~RenderPass::CommandTypeFlags::DEPTH_FILTER_ALPHA_MASKED_OBJECTS);
+    }
+
+    if (extraDepthPassForSSAO) {
         // We don't have a depth prepass, so we need to generate the depth for the SSAO pass
         depthPassBegin = commands.end();
         depthPassEnd = pass.appendSortedCommands(RenderPass::CommandTypeFlags::DEPTH);
@@ -279,19 +295,14 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     colorPassBegin = commands.end();
     colorPassEnd = pass.appendSortedCommands(commandType);
 
-    if (useSSAO && commandType == RenderPass::CommandTypeFlags::DEPTH_AND_COLOR) {
-        // We have a depth prepass, isolate the depth-only commands
+    if (sharedDepthPass) {
+        assert(commandType & RenderPass::CommandTypeFlags::DEPTH);
+        // isolate the depth-only commands
         depthPassBegin = commands.begin();
         depthPassEnd = std::partition_point(commands.begin(), commands.end(),
                 [](Command const& command) {
                     return (command.key & RenderPass::PASS_MASK) == uint64_t(RenderPass::Pass::DEPTH);
                 });
-
-        // The SSAO depth is never generated with MSAA
-        if (sharedDepthBuffer) {
-            colorPassBegin = depthPassEnd;
-            colorPassEnd = commands.end();
-        }
     }
 
     // --------------------------------------------------------------------------------------------
@@ -328,7 +339,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 
     // We only honor the view's color buffer clear flags, depth/stencil are handled by the framefraph
     TargetBufferFlags clearFlags = view.getClearFlags() & TargetBufferFlags::COLOR;
-    if (!sharedDepthBuffer) {
+    if (!sharedDepthPass) {
         clearFlags |= TargetBufferFlags::DEPTH;
     }
 
@@ -339,7 +350,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     };
 
     auto& colorPass = fg.addPass<ColorPassData>("Color Pass",
-            [&svp, hdrFormat, colorPassNeedsDepthBuffer, msaa, clearFlags, depth, useSSAO, ssao, sharedDepthBuffer]
+            [&svp, hdrFormat, colorPassNeedsDepthBuffer, msaa, clearFlags, depth, useSSAO, ssao, sharedDepthPass]
             (FrameGraph::Builder& builder, ColorPassData& data) {
 
                 if (useSSAO) {
@@ -349,7 +360,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
                 data.color = builder.createTexture("Color Buffer",
                         { .width = svp.width, .height = svp.height, .format = hdrFormat, .samples = msaa });
 
-                if (sharedDepthBuffer) {
+                if (sharedDepthPass) {
                     data.depth = depth;
                 } else {
                     if (colorPassNeedsDepthBuffer) {
@@ -646,7 +657,7 @@ RenderPass::CommandTypeFlags FRenderer::getCommandType(View::DepthPrepass prepas
     switch (prepass) {
         case View::DepthPrepass::DEFAULT:
             // TODO: better default strategy (can even change on a per-frame basis)
-            commandType = RenderPass::DEPTH_AND_COLOR;
+            commandType = RenderPass::COLOR_WITH_DEPTH_PREPASS;
 #if defined(ANDROID) || defined(__EMSCRIPTEN__)
             commandType = RenderPass::COLOR;
 #endif
@@ -655,7 +666,7 @@ RenderPass::CommandTypeFlags FRenderer::getCommandType(View::DepthPrepass prepas
             commandType = RenderPass::COLOR;
             break;
         case View::DepthPrepass::ENABLED:
-            commandType = RenderPass::DEPTH_AND_COLOR;
+            commandType = RenderPass::COLOR_WITH_DEPTH_PREPASS;
             break;
     }
     return commandType;
