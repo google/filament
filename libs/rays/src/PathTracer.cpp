@@ -385,7 +385,6 @@ void spawnTileJobs(EmbreeContext* context, RenderFn render, CompletionFn done) {
                 if (--context->numRemainingTiles == 0) {
                     done(context);
                 }
-
             });
             js->run(tile);
         }

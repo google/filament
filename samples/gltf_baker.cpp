@@ -36,11 +36,12 @@
 
 #include <imageio/ImageEncoder.h>
 
+#include <utils/NameComponentManager.h>
+#include <utils/JobSystem.h>
+
 #include <math/vec2.h>
 
 #include <getopt/getopt.h>
-
-#include <utils/NameComponentManager.h>
 
 #include <atomic>
 #include <fstream>
@@ -90,11 +91,14 @@ struct App {
     MaterialInstance* overlayMaterial = nullptr;
     utils::Entity overlayEntity;
     AppState pushedState;
+    gltfio::AssetPipeline* pipeline;
+    uint32_t bakeResolution = 1024;
+
+    // Secondary threads might write to the following fields.
+    std::shared_ptr<std::string> statusText;
+    std::shared_ptr<std::string> messageBoxText;
     std::atomic<bool> requestOverlayUpdate;
     std::atomic<bool> requestStatePop;
-    gltfio::AssetPipeline* pipeline;
-    std::string messageBoxText;
-    uint32_t bakeResolution = 1024;
 };
 
 struct OverlayVertex {
@@ -336,39 +340,58 @@ static void loadAsset(App& app) {
 
 static void prepAsset(App& app) {
     app.state = PREPPING;
-    gltfio::AssetPipeline::AssetHandle asset = app.asset->getSourceAsset();
 
-    uint32_t flags = gltfio::AssetPipeline::FILTER_TRIANGLES;
-    if (app.enablePrepScale) {
-        flags |= gltfio::AssetPipeline::SCALE_TO_UNIT;
-    }
-    gltfio::AssetPipeline pipeline;
-    asset = pipeline.flatten(asset, flags);
-    if (!asset) {
-        std::cerr << "Unable to flatten " << app.filename << std::endl;
-        app.state = LOADED;
-        return;
-    }
+    utils::JobSystem* js = utils::JobSystem::getJobSystem();
+    utils::JobSystem::Job* parent = js->createJob();
+    utils::JobSystem::Job* prep = utils::jobs::createJob(*js, parent, [&app] {
+        gltfio::AssetPipeline::AssetHandle asset = app.asset->getSourceAsset();
+        uint32_t flags = gltfio::AssetPipeline::FILTER_TRIANGLES;
+        if (app.enablePrepScale) {
+            flags |= gltfio::AssetPipeline::SCALE_TO_UNIT;
+        }
+        gltfio::AssetPipeline pipeline;
 
-    asset = pipeline.parameterize(asset);
-    if (!asset) {
-        std::cerr << "Unable to parameterize " << app.filename << std::endl;
-        app.state = LOADED;
-        app.messageBoxText = "Unable to parameterize mesh, check terminal output for details.";
-        return;
-    }
+        {
+            app.statusText = std::make_shared<std::string>("Flattening");
+            asset = pipeline.flatten(asset, flags);
+            app.statusText.reset();
+        }
 
-    const utils::Path folder = app.filename.getAbsolutePath().getParent();
-    const utils::Path binPath = folder + "prepped.bin";
-    const utils::Path outPath = folder + "prepped.gltf";
+        if (!asset) {
+            app.messageBoxText = std::make_shared<std::string>("Unable to flatten model");
+            app.pushedState = LOADED;
+            app.requestStatePop = true;
+            return;
+        }
 
-    pipeline.save(asset, outPath, binPath);
-    std::cout << "Generated " << outPath << " and " << binPath << std::endl;
+        {
+            app.statusText = std::make_shared<std::string>("Parameterizing");
+            asset = pipeline.parameterize(asset);
+            app.statusText.reset();
+        }
 
-    app.filename = outPath;
-    loadAsset(app);
+        if (!asset) {
+            app.messageBoxText = std::make_shared<std::string>(
+                    "Unable to parameterize mesh, check terminal output for details.");
+            app.pushedState = LOADED;
+            app.requestStatePop = true;
+            return;
+        }
 
-    app.state = PREPPED;
+        const utils::Path folder = app.filename.getAbsolutePath().getParent();
+        const utils::Path binPath = folder + "prepped.bin";
+        const utils::Path outPath = folder + "prepped.gltf";
+
+        pipeline.save(asset, outPath, binPath);
+        std::cout << "Generated " << outPath << " and " << binPath << std::endl;
+
+        app.filename = outPath;
+        loadAsset(app);
+
+        app.pushedState = PREPPED;
+        app.requestStatePop = true;
+    });
+    js->run(prep);
 }
 
 static void renderAsset(App& app) {
@@ -629,14 +652,26 @@ int main(int argc, char** argv) {
                 app.bakeResolution = 1 << (bakeOption + kFirstOption);
             }
 
-            if (!app.messageBoxText.empty()) {
+            if (app.statusText) {
+                // Apply a poor man's animation to the ellipsis to indicate that work is being done.
+                static const char* suffixes[] = { "...", "......", "........." };
+                static float suffixAnim = 0;
+                suffixAnim += 0.05f;
+                const char* suffix = suffixes[int(suffixAnim) % 3];
+
+                ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, {10, 10} );
+                ImGui::Text("%s%s", app.statusText->c_str(), suffix);
+                ImGui::PopStyleVar();
+            }
+
+            if (app.messageBoxText) {
                 ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, {10, 10} );
                 ImGui::OpenPopup("MessageBox");
                 if (ImGui::BeginPopupModal("MessageBox", nullptr,
                         ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar)) {
-                    ImGui::TextUnformatted(app.messageBoxText.c_str());
+                    ImGui::TextUnformatted(app.messageBoxText->c_str());
                     if (ImGui::Button("OK", ImVec2(120,0))) {
-                        app.messageBoxText.clear();
+                        app.messageBoxText.reset();
                         ImGui::CloseCurrentPopup();
                     }
                     ImGui::EndPopup();
