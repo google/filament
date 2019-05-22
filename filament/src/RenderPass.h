@@ -84,11 +84,27 @@ public:
     };
 
     enum CommandTypeFlags : uint8_t {
-        COLOR  = 0x1, // generate the color pass
-        DEPTH  = 0x2, // generate the depth pass
-        SHADOW = 0x4, // generate the shadow-map pass
-        DEPTH_AND_COLOR = DEPTH | COLOR, // generate both depth and color pass
+        COLOR = 0x1,    // generate the color pass only (e.g. no depth-prepass)
+        DEPTH = 0x2,    // generate the depth pass only ( e.g. shadowmap)
+        COLOR_AND_DEPTH = COLOR | DEPTH,
+
+
+        // shadow-casters are rendered in the depth buffer, regardless of blending (or alpha masking)
+        DEPTH_CONTAINS_SHADOW_CASTERS = 0x4,
+        // alpha-blended objects are not rendered in the depth buffer
+        DEPTH_FILTER_TRANSLUCENT_OBJECTS = 0x8,
+        // alpha-tested objects are not rendered in the depth buffer
+        DEPTH_FILTER_ALPHA_MASKED_OBJECTS = 0x10,
+
+
+        // generate commands for color with depth pre-pass -- in this case, we want to put
+        // objects that use alpha-testing or blending in the depth prepass.
+        COLOR_WITH_DEPTH_PREPASS = DEPTH | COLOR | DEPTH_FILTER_TRANSLUCENT_OBJECTS | DEPTH_FILTER_ALPHA_MASKED_OBJECTS,
+        // generate commands for shadow map
+        SHADOW = DEPTH | DEPTH_CONTAINS_SHADOW_CASTERS
     };
+
+
 
     // Command key encoding
     // --------------------
