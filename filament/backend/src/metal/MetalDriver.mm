@@ -828,8 +828,7 @@ void MetalDriver::draw(backend::PipelineState ps, Handle<HwRenderPrimitive> rph)
     // Metal requires all samplers referenced in shaders to be bound.
     for (auto& sampler : samplersToBind) {
         if (!sampler) {
-            static SamplerParams defaultSampler;
-            sampler = mContext->samplerStateCache.getOrCreateState(defaultSampler);
+            sampler = mContext->samplerStateCache.getOrCreateState({});
         }
     }
 
