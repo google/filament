@@ -6,6 +6,10 @@ A new header is inserted each time a *tag* is created.
 
 # Release notes
 
+- Added specular ambient occlusion to compute a new AO term applied to specular reflections (see `specularAmbientOcclusion` property in materials)
+- Added multi-bounce ambient occlusion to brighten AO and preserve local color (see `multiBounceAmbientOcclusion` property in materials)
+- Micro-shadowing is now applied to material ambient occlusion
+- Use a smaller 64x64 DFG LUT on mobile to reduce binary size
 - Further reduced `filamat` binary size by removing reliance on stdlib.
 - Added a new, smaller, version of the `filamat` library, `filamat_lite`. Material optimization and
   compiling for non-OpenGL backends have been removed in favor of a smaller binary size.
