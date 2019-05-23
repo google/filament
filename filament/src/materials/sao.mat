@@ -7,6 +7,10 @@ material {
             precision: high
         },
         {
+            type : float4,
+            name : resolution
+        },
+        {
             type : float,
             name : radius
         },
@@ -166,7 +170,7 @@ fragment {
         float ssRadius = max(1.0, tap.z * ssDiskRadius); // at least 1 pixel screen-space radius
 
         ivec2 ssSamplePos = ssOrigin + ivec2(ssRadius * tap.xy);
-        vec2 uvSamplePos = (vec2(ssSamplePos) + vec2(0.5)) * frameUniforms.resolution.zw;
+        vec2 uvSamplePos = (vec2(ssSamplePos) + vec2(0.5)) * materialParams.resolution.zw;
         highp float occlusionDepth = linearizeDepth(texelFetch(materialParams_depth, clampToEdge(ssSamplePos), 0).r);
         highp vec3 p = computeViewSpacePositionFromDepth(uvSamplePos * 2.0 - 1.0, occlusionDepth);
 
@@ -211,7 +215,7 @@ fragment {
         }
 
         normal = normalize(normal);
-        ivec2 ssOrigin = ivec2(uv * frameUniforms.resolution.xy);
+        ivec2 ssOrigin = ivec2(uv * materialParams.resolution.xy);
         float occlusion = 0.0;
         for (uint i = 0u; i < kSpiralSampleCount; i++) {
             occlusion += computeAmbientOcclusionSAO(i, ssDiskRadius, ssOrigin, origin, normal, noise);

@@ -255,93 +255,26 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     view.commitUniforms(driver);
 
 
-    RenderPass::CommandTypeFlags commandType = getCommandType(view.getDepthPrepass());
-
-    // It's unclear if it's always better to reuse the depth pass, as it has to be saved and
-    // reloaded from memory -- as opposed to just regenerating it. Skinning is not an added concern,
-    // because either way, we have to go through the geometry twice.
-    constexpr bool REUSE_SSAO_DEPTH = true;
+    // --------------------------------------------------------------------------------------------
 
     const bool useSSAO = view.getAmbientOcclusion() != View::AmbientOcclusion::NONE;
-    Command const* depthPassBegin = nullptr;
-    Command const* depthPassEnd = nullptr;
-    Command const* colorPassBegin = nullptr;
-    Command const* colorPassEnd = nullptr;
-
-    // We need an extra pass for SSAO if SSAO is enabled and:
-    // - we don't want to reuse the regular depth path for SSAO, or
-    // - we have MSAA (because SSAO is never done in MSAA), or
-    // - we don't have a depth prepass in the first place
-    const bool extraDepthPassForSSAO = useSSAO &&
-            (!REUSE_SSAO_DEPTH || msaa > 1 || !(commandType & RenderPass::CommandTypeFlags::DEPTH));
-
-    // depth buffer is shared between SSAO and the color pass
-    const bool sharedDepthPass = useSSAO && !extraDepthPassForSSAO;
-    if (sharedDepthPass) {
-        // When SSAO is active and it's sharing the depth pass with the color pass
-        // (meaning that we don't have MSAA), we add alpha tested objects to the scene, they're
-        // needed for SSAO and they won't hurt the color pass.
-        commandType = RenderPass::CommandTypeFlags(commandType &
-                ~RenderPass::CommandTypeFlags::DEPTH_FILTER_ALPHA_MASKED_OBJECTS);
-    }
-
-    if (extraDepthPassForSSAO) {
-        // We don't have a depth prepass, so we need to generate the depth for the SSAO pass
-        depthPassBegin = commands.end();
-        depthPassEnd = pass.appendSortedCommands(RenderPass::CommandTypeFlags::DEPTH);
-    }
-
-    // generate the normal commands
-    colorPassBegin = commands.end();
-    colorPassEnd = pass.appendSortedCommands(commandType);
-
-    if (sharedDepthPass) {
-        assert(commandType & RenderPass::CommandTypeFlags::DEPTH);
-        // isolate the depth-only commands
-        depthPassBegin = commands.begin();
-        depthPassEnd = std::partition_point(commands.begin(), commands.end(),
-                [](Command const& command) {
-                    return (command.key & RenderPass::PASS_MASK) == uint64_t(RenderPass::Pass::DEPTH);
-                });
-    }
-
-    // --------------------------------------------------------------------------------------------
-
-    // SSAO depth pass -- automatically culled if not used
-    struct DepthPassData {
-        FrameGraphResource depth;
-    };
-
-    auto& ssaoDepthPass = fg.addPass<DepthPassData>("SSAO Depth Pass",
-            [&svp](FrameGraph::Builder& builder, DepthPassData& data) {
-
-                data.depth = builder.createTexture("Depth Buffer", {
-                        .width = svp.width, .height = svp.height,
-                        .format = TextureFormat::DEPTH24 });
-
-                data.depth = builder.useRenderTarget("SSAO Depth Target",
-                        { .attachments.depth = data.depth }, TargetBufferFlags::DEPTH).depth;
-            },
-            [&pass, depthPassBegin, depthPassEnd](FrameGraphPassResources const& resources,
-                    DepthPassData const& data, DriverApi& driver) {
-                assert(depthPassBegin && depthPassEnd);
-                auto out = resources.getRenderTarget(data.depth);
-                pass.execute(resources.getPassName(), out.target, out.params,
-                        depthPassBegin, depthPassEnd);
-            });
-
-    FrameGraphResource depth = ssaoDepthPass.getData().depth;
 
     // SSAO pass -- automatically culled if not used
-    FrameGraphResource ssao = ppm.ssao(fg, depth, view.getAmbientOcclusionOptions());
+    if (useSSAO) {
+        pass.appendSortedCommands(RenderPass::CommandTypeFlags::DEPTH);
+    }
+
+    FrameGraphResource ssao = ppm.ssao(fg, pass, svp, view.getAmbientOcclusionOptions());
 
     // --------------------------------------------------------------------------------------------
 
+    // generate the normal commands
+    RenderPass::CommandTypeFlags commandType = getCommandType(view.getDepthPrepass());
+    Command const* colorPassBegin = commands.end();
+    Command const* colorPassEnd = pass.appendSortedCommands(commandType);
+
     // We only honor the view's color buffer clear flags, depth/stencil are handled by the framefraph
-    TargetBufferFlags clearFlags = view.getClearFlags() & TargetBufferFlags::COLOR;
-    if (!sharedDepthPass) {
-        clearFlags |= TargetBufferFlags::DEPTH;
-    }
+    TargetBufferFlags clearFlags = view.getClearFlags() & TargetBufferFlags::COLOR | TargetBufferFlags::DEPTH;
 
     struct ColorPassData {
         FrameGraphResource color;
@@ -350,7 +283,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     };
 
     auto& colorPass = fg.addPass<ColorPassData>("Color Pass",
-            [&svp, hdrFormat, colorPassNeedsDepthBuffer, msaa, clearFlags, depth, useSSAO, ssao, sharedDepthPass]
+            [&svp, hdrFormat, colorPassNeedsDepthBuffer, msaa, clearFlags, useSSAO, ssao]
             (FrameGraph::Builder& builder, ColorPassData& data) {
 
                 if (useSSAO) {
@@ -360,16 +293,12 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
                 data.color = builder.createTexture("Color Buffer",
                         { .width = svp.width, .height = svp.height, .format = hdrFormat, .samples = msaa });
 
-                if (sharedDepthPass) {
-                    data.depth = depth;
-                } else {
-                    if (colorPassNeedsDepthBuffer) {
-                        data.depth = builder.createTexture("Depth Buffer", {
-                                .width = svp.width, .height = svp.height,
-                                .format = TextureFormat::DEPTH24,
-                                .samples = msaa
-                        });
-                    }
+                if (colorPassNeedsDepthBuffer) {
+                    data.depth = builder.createTexture("Depth Buffer", {
+                            .width = svp.width, .height = svp.height,
+                            .format = TextureFormat::DEPTH24,
+                            .samples = msaa
+                    });
                 }
 
                 FrameGraphRenderTarget::Descriptor desc{

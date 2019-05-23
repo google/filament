@@ -225,7 +225,7 @@ public:
     void setRenderFlags(RenderFlags flags) noexcept;
     Command const* appendSortedCommands(CommandTypeFlags const commandTypeFlags) noexcept;
     void execute(const char* name,
-            backend::Handle <backend::HwRenderTarget> renderTarget,
+            backend::Handle<backend::HwRenderTarget> renderTarget,
             backend::RenderPassParams params,
             Command const* first, Command const* last) const noexcept;
 
