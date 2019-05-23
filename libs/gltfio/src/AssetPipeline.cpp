@@ -91,6 +91,9 @@ public:
     // Strips materials from a flattened asset and replaces them a simple nonlit material.
     const cgltf_data* generatePreview(const cgltf_data* sourceAsset, const Path& texturePath);
 
+    // Replaces or adds the given occlusion texture to all primitives that have BAKED_UV_ATTRIB.
+    const cgltf_data* replaceOcclusion(const cgltf_data* sourceAsset, const utils::Path& texture);
+
     // Take ownership of the given asset and free it when the pipeline is destroyed.
     void retainSourceAsset(cgltf_data* asset);
 
@@ -1277,7 +1280,7 @@ const cgltf_data* Pipeline::parameterize(const cgltf_data* sourceAsset) {
 
 const cgltf_data* Pipeline::generatePreview(const cgltf_data* sourceAsset, const Path& texture) {
     if (!isFlattened(sourceAsset)) {
-        utils::slog.e << "Only flattened assets can be parameterized." << utils::io::endl;
+        utils::slog.e << "Only flattened assets can be modified." << utils::io::endl;
         return nullptr;
     }
     const std::string texturePath = texture;
@@ -1425,6 +1428,124 @@ const cgltf_data* Pipeline::generatePreview(const cgltf_data* sourceAsset, const
     return resultAsset;
 }
 
+const cgltf_data* Pipeline::replaceOcclusion(const cgltf_data* sourceAsset, const Path& texture) {
+    if (!isFlattened(sourceAsset)) {
+        utils::slog.e << "Only flattened assets can be modified." << utils::io::endl;
+        return nullptr;
+    }
+    const std::string texturePath = texture;
+    const size_t numPrims = sourceAsset->meshes_count;
+
+    // Count the total number of referenced nodes.
+    size_t nodePointersCount = 0;
+    for (size_t i = 0, len = sourceAsset->scenes_count; i < len; ++i) {
+        const auto& scene = sourceAsset->scenes[i];
+        nodePointersCount += scene.nodes_count;
+    }
+
+    // Allocate memory for new asset structures that will be retained by the pipeline.
+    cgltf_data* resultAsset = mStorage.resultAssets.alloc(1);
+    cgltf_image* images = mStorage.images.alloc(sourceAsset->images_count + 1);
+    cgltf_texture* textures = mStorage.textures.alloc(sourceAsset->textures_count + 1);
+    cgltf_material* materials = mStorage.materials.alloc(sourceAsset->materials_count);
+    cgltf_primitive* prims = mStorage.prims.alloc(numPrims);
+    cgltf_mesh* meshes = mStorage.meshes.alloc(sourceAsset->meshes_count);
+    cgltf_node* nodes = mStorage.nodes.alloc(sourceAsset->nodes_count);
+    cgltf_scene* scenes = mStorage.scenes.alloc(sourceAsset->scenes_count);
+    cgltf_node** nodePointers = mStorage.nodePointers.alloc(nodePointersCount);
+    char* pathString = (char*) mStorage.bufferData.alloc(texturePath.size() + 1);
+
+    // Clone the nodes.
+    for (size_t i = 0, len = sourceAsset->nodes_count; i < len; ++i) {
+        auto& node = nodes[i] = sourceAsset->nodes[i];
+        if (node.mesh) {
+            node.mesh = meshes + (node.mesh - sourceAsset->meshes);
+        }
+    }
+
+    // Clone the scenes.
+    for (size_t i = 0, len = sourceAsset->scenes_count; i < len; ++i) {
+        const auto& sourceScene = sourceAsset->scenes[i];
+        auto& resultScene = scenes[i] = sourceScene;
+        resultScene.nodes = nodePointers;
+        for (size_t j = 0; j < sourceScene.nodes_count; ++j) {
+            resultScene.nodes[j] = nodes + (sourceScene.nodes[j] - sourceAsset->nodes);
+        }
+        nodePointers += sourceScene.nodes_count;
+    }
+
+    // Clone the meshes and primitives; update the material pointers.
+    for (size_t i = 0, len = sourceAsset->meshes_count; i < len; ++i) {
+        const cgltf_mesh& sourceMesh = sourceAsset->meshes[i];
+        cgltf_mesh& resultMesh = meshes[i] = sourceMesh;
+        const cgltf_primitive& sourcePrim = sourceMesh.primitives[0];
+        cgltf_primitive& resultPrim = prims[i] = sourcePrim;
+        resultMesh.primitives = &resultPrim;
+        auto& mat = resultPrim.material;
+        mat = mat ? materials + (mat - sourceAsset->materials) : nullptr;
+    }
+
+    // Copy over existing textures and images.
+    for (size_t tindex = 0, len = sourceAsset->textures_count; tindex < len; ++tindex) {
+        const cgltf_texture& sourceTexture = sourceAsset->textures[tindex];
+        cgltf_texture& resultTexture = textures[tindex];
+        resultTexture = sourceTexture;
+        resultTexture.image = images + (resultTexture.image - sourceAsset->images);
+    }
+    for (size_t iindex = 0, len = sourceAsset->images_count; iindex < len; ++iindex) {
+        const cgltf_image& sourceImage = sourceAsset->images[iindex];
+        cgltf_image& resultImage = images[iindex];
+        resultImage = sourceImage;
+    }
+
+    // Populate the newly added texture and image.
+    cgltf_texture& newTexture = textures[sourceAsset->textures_count];
+    cgltf_image& newImage = images[sourceAsset->images_count];
+    newTexture = { .image = &newImage };
+    newImage = { .uri = pathString };
+    strncpy(pathString, texturePath.c_str(), texturePath.size() + 1);
+
+    // Clone the materials and update the texture pointers.
+    for (size_t mindex = 0, len = sourceAsset->materials_count; mindex < len; ++mindex) {
+        const cgltf_material& sourceMaterial = sourceAsset->materials[mindex];
+        cgltf_material& resultMaterial = materials[mindex];
+        resultMaterial = sourceMaterial;
+        if (!resultMaterial.unlit) {
+            resultMaterial.occlusion_texture = {
+                .has_transform = false,
+                .scale = 1.0f,
+                .texture = &newTexture,
+                .texcoord = gltfio::AssetPipeline::BAKED_UV_ATTRIB_INDEX
+            };
+        }
+        auto& t0 = resultMaterial.pbr_metallic_roughness.base_color_texture.texture;
+        auto& t1 = resultMaterial.pbr_metallic_roughness.metallic_roughness_texture.texture;
+        auto& t2 = resultMaterial.pbr_specular_glossiness.diffuse_texture.texture;
+        auto& t3 = resultMaterial.pbr_specular_glossiness.specular_glossiness_texture.texture;
+        auto& t4 = resultMaterial.normal_texture.texture;
+        auto& t5 = resultMaterial.emissive_texture.texture;
+        t0 = t0 ? textures + (t0 - sourceAsset->textures) : nullptr;
+        t1 = t1 ? textures + (t1 - sourceAsset->textures) : nullptr;
+        t2 = t2 ? textures + (t2 - sourceAsset->textures) : nullptr;
+        t3 = t3 ? textures + (t3 - sourceAsset->textures) : nullptr;
+        t4 = t4 ? textures + (t4 - sourceAsset->textures) : nullptr;
+        t5 = t5 ? textures + (t5 - sourceAsset->textures) : nullptr;
+    }
+
+    // Clone the high-level asset structure, then substitute some of the top-level lists.
+    *resultAsset = *sourceAsset;
+    resultAsset->images = images;
+    resultAsset->textures = textures;
+    resultAsset->materials = materials;
+    resultAsset->meshes = meshes;
+    resultAsset->nodes = nodes;
+    resultAsset->scenes = scenes;
+    resultAsset->scene = scenes + (sourceAsset->scene - sourceAsset->scenes);
+    resultAsset->images_count++;
+    resultAsset->textures_count++;
+    return resultAsset;
+}
+
 void Pipeline::retainSourceAsset(cgltf_data* asset) {
     mSourceAssets.push_back(asset);
 }
@@ -1527,6 +1648,11 @@ AssetHandle AssetPipeline::parameterize(AssetHandle source) {
 AssetHandle AssetPipeline::generatePreview(AssetHandle source, const Path& texture) {
     Pipeline* impl = (Pipeline*) mImpl;
     return impl->generatePreview((const cgltf_data*) source, texture);
+}
+
+AssetHandle AssetPipeline::replaceOcclusion(AssetHandle source, const Path& texture) {
+    Pipeline* impl = (Pipeline*) mImpl;
+    return impl->replaceOcclusion((const cgltf_data*) source, texture);
 }
 
 void AssetPipeline::bakeAmbientOcclusion(AssetHandle source, image::LinearImage target,
