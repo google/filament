@@ -10,6 +10,9 @@ targetTemplates:
         deploymentTarget: "12.1"
         sources:
             - path: $target_name
+            - path: Materials
+              buildPhase: none
+              optional: true
         scheme:
             configVariants:
                 - Metal
