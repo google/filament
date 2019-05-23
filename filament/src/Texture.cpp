@@ -123,10 +123,6 @@ void FTexture::terminate(FEngine& engine) {
     driver.destroyTexture(mHandle);
 }
 
-static inline size_t valueForLevel(size_t level, size_t value) {
-    return std::max(size_t(1), value >> level);
-}
-
 size_t FTexture::getWidth(size_t level) const noexcept {
     return valueForLevel(level, mWidth);
 }

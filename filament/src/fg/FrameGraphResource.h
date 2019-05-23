@@ -66,7 +66,6 @@ public:
         uint8_t samples = 1;
         backend::SamplerType type = backend::SamplerType::SAMPLER_2D;     // texture target type
         backend::TextureFormat format = backend::TextureFormat::RGBA8;    // resource internal format
-        bool relaxed = false; // dimensions can be slightly adjusted
     };
 
     bool isValid() const noexcept { return index != UNINITIALIZED; }
@@ -94,18 +93,29 @@ struct Attachments {
         READ_WRITE = READ | WRITE
     };
     struct AttachmentInfo {
-        AttachmentInfo() noexcept = default;
+        // auto convert from FrameGraphResource
         AttachmentInfo(FrameGraphResource handle) noexcept : mHandle(handle) {} // NOLINT
+
+        // auto convert to FrameGraphResource
+        operator FrameGraphResource() const noexcept { return mHandle; } // NOLINT
+
+        AttachmentInfo() noexcept = default;
+
         AttachmentInfo(FrameGraphResource handle, Access access) noexcept
                 : mHandle(handle), mAccess(access) {}
 
-        operator FrameGraphResource() const noexcept { return mHandle; } // NOLINT
+        AttachmentInfo(FrameGraphResource handle, uint8_t level, Access access) noexcept
+                : mHandle(handle), mLevel(level), mAccess(access) {}
 
         bool isValid() const noexcept { return mHandle.isValid(); }
+
         FrameGraphResource getHandle() const noexcept { return mHandle; }
+        uint8_t getLevel() const noexcept { return mLevel; }
         Access getAccess() const noexcept { return mAccess; }
+
     private:
         FrameGraphResource mHandle{};
+        uint8_t mLevel = 0;
         Access mAccess = Access::READ_WRITE;
     };
 
