@@ -50,6 +50,8 @@
 
 #elif defined(IOS)
 
+    #define GLES_SILENCE_DEPRECATION
+
     #include <OpenGLES/ES3/gl.h>
     #include <OpenGLES/ES3/glext.h>
 
