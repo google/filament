@@ -6,8 +6,14 @@ A new header is inserted each time a *tag* is created.
 
 # Release notes
 
-- Added specular ambient occlusion to compute a new AO term applied to specular reflections (see `specularAmbientOcclusion` property in materials)
-- Added multi-bounce ambient occlusion to brighten AO and preserve local color (see `multiBounceAmbientOcclusion` property in materials)
+- The material property `curvatureToRoughness` has been replaced with `specularAntiAliasing`.
+  This new specular anti-aliasing solution offers more control via two new properties:
+  `specularAntiAliasingVariance` and `specularAntiAliasingThreshold`. They can also be set on
+  material instances if needed
+- Added specular ambient occlusion to compute a new AO term applied to specular reflections
+  (see `specularAmbientOcclusion` property in materials)
+- Added multi-bounce ambient occlusion to brighten AO and preserve local color
+  (see `multiBounceAmbientOcclusion` property in materials)
 - Micro-shadowing is now applied to material ambient occlusion
 - Use a smaller 64x64 DFG LUT on mobile to reduce binary size
 - Added a distance field generator to libimage.
