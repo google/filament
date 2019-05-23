@@ -47,7 +47,7 @@ TEST(FrameGraphTest, SimpleRenderPass) {
                         .format = TextureFormat::RGBA16F
                 };
                 data.output = builder.createTexture("color buffer", desc);
-                data.output = builder.useRenderTarget(data.output).textures[0];
+                data.output = builder.useRenderTarget(data.output);
                 EXPECT_TRUE(fg.isValid(data.output));
             },
             [=, &renderPassExecuted](
@@ -210,7 +210,7 @@ TEST(FrameGraphTest, SimplePassCulling) {
     auto& renderPass = fg.addPass<RenderPassData>("Render",
             [&](FrameGraph::Builder& builder, RenderPassData& data) {
                 data.output = builder.createTexture("renderTarget");
-                data.output = builder.useRenderTarget(data.output).textures[0];
+                data.output = builder.useRenderTarget(data.output);
             },
             [=, &renderPassExecuted](
                     FrameGraphPassResources const& resources,
@@ -233,7 +233,7 @@ TEST(FrameGraphTest, SimplePassCulling) {
             [&](FrameGraph::Builder& builder, PostProcessPassData& data) {
                 data.input = builder.read(renderPass.getData().output);
                 data.output = builder.createTexture("postprocess-renderTarget");
-                data.output = builder.useRenderTarget(data.output).textures[0];
+                data.output = builder.useRenderTarget(data.output);
             },
             [=, &postProcessPassExecuted](
                     FrameGraphPassResources const& resources,
@@ -256,7 +256,7 @@ TEST(FrameGraphTest, SimplePassCulling) {
             [&](FrameGraph::Builder& builder, CulledPassData& data) {
                 data.input = builder.read(renderPass.getData().output);
                 data.output = builder.createTexture("unused-rendertarget");
-                data.output = builder.useRenderTarget(data.output).textures[0];
+                data.output = builder.useRenderTarget(data.output);
             },
             [=, &culledPassExecuted](
                     FrameGraphPassResources const& resources,
@@ -300,7 +300,7 @@ TEST(FrameGraphTest, RenderTargetLifetime) {
                         .format = TextureFormat::RGBA16F
                 };
                 data.output = builder.createTexture("color buffer", desc);
-                data.output = builder.useRenderTarget(data.output, (TargetBufferFlags)0x80).textures[0];
+                data.output = builder.useRenderTarget(data.output, (TargetBufferFlags)0x80);
                 EXPECT_TRUE(fg.isValid(data.output));
             },
             [=, &rt1, &renderPassExecuted1](
@@ -317,7 +317,7 @@ TEST(FrameGraphTest, RenderTargetLifetime) {
 
     auto& renderPass2 = fg.addPass<RenderPassData>("Render2",
             [&](FrameGraph::Builder& builder, RenderPassData& data) {
-                data.output = builder.useRenderTarget(renderPass1.getData().output, (TargetBufferFlags)0x40).textures[0];
+                data.output = builder.useRenderTarget(renderPass1.getData().output, (TargetBufferFlags)0x40);
                 EXPECT_TRUE(fg.isValid(data.output));
             },
             [=, &rt1, &renderPassExecuted2](

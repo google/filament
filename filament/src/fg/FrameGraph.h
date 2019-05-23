@@ -59,7 +59,7 @@ public:
 
     class Builder {
     public:
-        using Attachments = FrameGraphRenderTarget::Attachments;
+        using Attachments = FrameGraphRenderTarget::AttachmentResult;
 
         Builder(Builder const&) = delete;
         Builder& operator=(Builder const&) = delete;
@@ -77,6 +77,12 @@ public:
 
         FrameGraphResource::Descriptor const& getDescriptor(FrameGraphResource const& r);
 
+        // get resource's name
+        const char* getName(FrameGraphResource const& r) const noexcept;
+
+        // return resource's sample count
+        uint8_t getSamples(FrameGraphResource const& r) const noexcept;
+
         /*
          * Use this resource as a render target.
          * This implies both reading and writing to the resource -- but unlike Builder::read()
@@ -91,8 +97,8 @@ public:
                 FrameGraphRenderTarget::Descriptor const& desc,
                 backend::TargetBufferFlags clearFlags = {}) noexcept;
 
-        // helper for single color attachment
-        Attachments useRenderTarget(FrameGraphResource texture,
+        // helper for single color attachment with WRITE access
+        FrameGraphResource useRenderTarget(FrameGraphResource texture,
                 backend::TargetBufferFlags clearFlags = {}) noexcept;
 
         // Declare that this pass has side effects outside the framegraph (i.e. it can't be culled)
