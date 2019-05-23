@@ -314,7 +314,6 @@ FrameGraphResource PostProcessManager::ssao(FrameGraph& fg, RenderPass& pass,
             },
             [&pass, first, last](FrameGraphPassResources const& resources,
                     DepthPassData const& data, DriverApi& driver) {
-                assert(depthPassBegin && depthPassEnd);
                 auto out = resources.getRenderTarget(data.depth);
                 pass.execute(resources.getPassName(), out.target, out.params, first, last);
             });
