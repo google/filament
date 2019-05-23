@@ -126,6 +126,18 @@ struct Descriptor {
     uint8_t samples = 1;            // # of samples
 };
 
+struct AttachmentResult {
+    enum { COLOR = 0, DEPTH = 1 };
+    static constexpr size_t COUNT = 2;
+    union {
+        std::array<FrameGraphResource, COUNT> textures = {};
+        struct {
+            FrameGraphResource color;
+            FrameGraphResource depth;
+        };
+    };
+};
+
 } // namespace FrameGraphRenderTarget
 
 

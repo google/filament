@@ -137,7 +137,7 @@ FrameGraphResource PostProcessManager::toneMapping(FrameGraph& fg, FrameGraphRes
                         .format = outFormat
                 };
                 data.output = builder.createTexture("tonemapping output", outputDesc);
-                data.output = builder.useRenderTarget(data.output).textures[0];
+                data.output = builder.useRenderTarget(data.output);
             },
             [=](FrameGraphPassResources const& resources,
                     PostProcessToneMapping const& data, DriverApi& driver) {
@@ -193,7 +193,7 @@ FrameGraphResource PostProcessManager::fxaa(FrameGraph& fg,
                         .format = outFormat
                 };
                 data.output = builder.createTexture("fxaa output", outputDesc);
-                data.output = builder.useRenderTarget(data.output).textures[0];
+                data.output = builder.useRenderTarget(data.output);
             },
             [=](FrameGraphPassResources const& resources,
                     PostProcessFXAA const& data, DriverApi& driver) {
@@ -231,7 +231,10 @@ FrameGraphResource PostProcessManager::resolve(
     auto& ppResolve = fg.addPass<PostProcessResolve>("resolve",
             [&](FrameGraph::Builder& builder, PostProcessResolve& data) {
                 auto* inputDesc = fg.getDescriptor(input);
-                data.input = builder.useRenderTarget(input).textures[0];
+                data.input = builder.useRenderTarget(builder.getName(input),
+                        { .attachments.color = { input, FrameGraphRenderTarget::Attachments::READ },
+                          .samples = builder.getSamples(input)
+                        }).color;
 
                 FrameGraphResource::Descriptor outputDesc{
                         .width = inputDesc->width,
@@ -239,7 +242,7 @@ FrameGraphResource PostProcessManager::resolve(
                         .format = inputDesc->format
                 };
                 data.output = builder.createTexture("resolve output", outputDesc);
-                data.output = builder.useRenderTarget(data.output).textures[0];
+                data.output = builder.useRenderTarget(data.output);
             },
             [=](FrameGraphPassResources const& resources,
                     PostProcessResolve const& data, DriverApi& driver) {
@@ -264,7 +267,10 @@ FrameGraphResource PostProcessManager::dynamicScaling(FrameGraph& fg,
     auto& ppScaling = fg.addPass<PostProcessScaling>("scaling",
             [&](FrameGraph::Builder& builder, PostProcessScaling& data) {
                 auto* inputDesc = fg.getDescriptor(input);
-                data.input = builder.useRenderTarget(input).textures[0];
+                data.input = builder.useRenderTarget(builder.getName(input),
+                        { .attachments.color = { input, FrameGraphRenderTarget::Attachments::READ },
+                          .samples = builder.getSamples(input)
+                        }).color;
 
                 FrameGraphResource::Descriptor outputDesc{
                         .width = inputDesc->width,
@@ -272,7 +278,7 @@ FrameGraphResource PostProcessManager::dynamicScaling(FrameGraph& fg,
                         .format = outFormat
                 };
                 data.output = builder.createTexture("scale output", outputDesc);
-                data.output = builder.useRenderTarget(data.output).textures[0];
+                data.output = builder.useRenderTarget(data.output);
             },
             [=](FrameGraphPassResources const& resources,
                     PostProcessScaling const& data, DriverApi& driver) {
@@ -326,7 +332,7 @@ FrameGraphResource PostProcessManager::ssao(FrameGraph& fg, RenderPass& pass,
         View::AmbientOcclusionOptions options;
     };
 
-    auto& SSAODepthPass = fg.addPass<SSAOPassData>("SSAO Pass",
+    auto& SSAOPass = fg.addPass<SSAOPassData>("SSAO Pass",
             [depth, &options](FrameGraph::Builder& builder, SSAOPassData& data) {
 
                 data.options = options;
@@ -339,7 +345,7 @@ FrameGraphResource PostProcessManager::ssao(FrameGraph& fg, RenderPass& pass,
                         .format = TextureFormat::R8 });
 
                 data.ssao = builder.useRenderTarget("SSAO Target",
-                        { .attachments.color = data.ssao,
+                        { .attachments.color = { data.ssao, FrameGraphRenderTarget::Attachments::WRITE },
                           .attachments.depth = { data.depth, FrameGraphRenderTarget::Attachments::READ }
                         }, TargetBufferFlags::NONE).color;
             },
@@ -372,7 +378,7 @@ FrameGraphResource PostProcessManager::ssao(FrameGraph& fg, RenderPass& pass,
                 driver.endRenderPass();
             });
 
-    return SSAODepthPass.getData().ssao;
+    return SSAOPass.getData().ssao;
 }
 
 } // namespace filament
