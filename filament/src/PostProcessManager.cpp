@@ -20,6 +20,8 @@
 
 #include "fg/FrameGraph.h"
 
+#include "RenderPass.h"
+
 #include "details/Material.h"
 #include "details/MaterialInstance.h"
 #include "generated/resources/materials.h"
@@ -285,11 +287,39 @@ FrameGraphResource PostProcessManager::dynamicScaling(FrameGraph& fg,
 }
 
 
-FrameGraphResource PostProcessManager::ssao(FrameGraph& fg, FrameGraphResource depth,
-        View::AmbientOcclusionOptions const& options) noexcept {
+FrameGraphResource PostProcessManager::ssao(FrameGraph& fg, RenderPass& pass,
+        filament::Viewport const& svp, View::AmbientOcclusionOptions const& options) noexcept {
 
     FEngine* engine = mEngine;
     Handle<HwRenderPrimitive> fullScreenRenderPrimitive = engine->getFullScreenRenderPrimitive();
+
+    // SSAO depth pass -- automatically culled if not used
+    struct DepthPassData {
+        FrameGraphResource depth;
+    };
+
+    RenderPass::Command const* first = pass.getCommands().begin();
+    RenderPass::Command const* last = pass.getCommands().end();
+
+    // SSAO generates its own depth path at 1/4 resolution
+    auto& ssaoDepthPass = fg.addPass<DepthPassData>("SSAO Depth Pass",
+            [&svp](FrameGraph::Builder& builder, DepthPassData& data) {
+
+                data.depth = builder.createTexture("Depth Buffer", {
+                        .width = svp.width / 2, .height = svp.height / 2,
+                        .format = TextureFormat::DEPTH24 });
+
+                data.depth = builder.useRenderTarget("SSAO Depth Target",
+                        { .attachments.depth = data.depth }, TargetBufferFlags::DEPTH).depth;
+            },
+            [&pass, first, last](FrameGraphPassResources const& resources,
+                    DepthPassData const& data, DriverApi& driver) {
+                assert(depthPassBegin && depthPassEnd);
+                auto out = resources.getRenderTarget(data.depth);
+                pass.execute(resources.getPassName(), out.target, out.params, first, last);
+            });
+
+    FrameGraphResource depth = ssaoDepthPass.getData().depth;
 
     struct SSAOPassData {
         FrameGraphResource depth;
@@ -316,10 +346,13 @@ FrameGraphResource PostProcessManager::ssao(FrameGraph& fg, FrameGraphResource d
                     SSAOPassData const& data, DriverApi& driver) {
                 auto depth = resources.getTexture(data.depth);
                 auto ssao = resources.getRenderTarget(data.ssao);
+                auto const& desc = resources.getDescriptor(data.ssao);
 
                 SamplerParams params;
                 FMaterialInstance* const pInstance = mSSAOMaterialInstance;
                 pInstance->setParameter("depth", depth, params);
+                pInstance->setParameter("resolution",
+                        float4{ desc.width, desc.height, 1.0f / desc.width, 1.0f / desc.height });
                 pInstance->setParameter("radius", data.options.radius);
                 pInstance->setParameter("invRadiusSquared", 1.0f / (data.options.radius * data.options.radius));
                 pInstance->setParameter("projectionScaleRadius", 500.0f * data.options.radius);

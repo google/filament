@@ -7,6 +7,10 @@ material {
             precision: high
         },
         {
+            type : float4,
+            name : resolution
+        },
+        {
             type : float,
             name : radius
         },

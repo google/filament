@@ -33,6 +33,7 @@ class FMaterial;
 class FMaterialInstance;
 class FEngine;
 class FView;
+class RenderPass;
 } // namespace details
 
 class PostProcessManager {
@@ -58,7 +59,8 @@ public:
             FrameGraph& fg, FrameGraphResource input) noexcept;
 
 
-    FrameGraphResource ssao(FrameGraph& fg, FrameGraphResource depth,
+    FrameGraphResource ssao(FrameGraph& fg, details::RenderPass& pass,
+            filament::Viewport const& svp,
             View::AmbientOcclusionOptions const& options) noexcept;
 
     backend::Handle<backend::HwTexture> getNoSSAOTexture() const {
