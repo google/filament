@@ -4,7 +4,6 @@ options:
 include: ../app-template.yml
 targets:
     hello-triangle:
-        sources: hello-triangle/
         templates:
             - FilamentApp
         preBuildScripts:
