@@ -88,13 +88,34 @@ public:
 namespace FrameGraphRenderTarget {
 
 struct Attachments {
-    enum { COLOR, DEPTH };
+    enum Access : uint8_t {
+        READ = 0x1,
+        WRITE = 0x2,
+        READ_WRITE = READ | WRITE
+    };
+    struct AttachmentInfo {
+        AttachmentInfo() noexcept = default;
+        AttachmentInfo(FrameGraphResource handle) noexcept : mHandle(handle) {} // NOLINT
+        AttachmentInfo(FrameGraphResource handle, Access access) noexcept
+                : mHandle(handle), mAccess(access) {}
+
+        operator FrameGraphResource() const noexcept { return mHandle; } // NOLINT
+
+        bool isValid() const noexcept { return mHandle.isValid(); }
+        FrameGraphResource getHandle() const noexcept { return mHandle; }
+        Access getAccess() const noexcept { return mAccess; }
+    private:
+        FrameGraphResource mHandle{};
+        Access mAccess = Access::READ_WRITE;
+    };
+
+    enum { COLOR = 0, DEPTH = 1 };
     static constexpr size_t COUNT = 2;
     union {
-        std::array<FrameGraphResource, COUNT> textures = {};
+        std::array<AttachmentInfo, COUNT> textures = {};
         struct {
-            FrameGraphResource color;
-            FrameGraphResource depth;
+            AttachmentInfo color;
+            AttachmentInfo depth;
         };
     };
 };

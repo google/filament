@@ -236,8 +236,8 @@ struct RenderTarget { // 32
             uint32_t minHeight = std::numeric_limits<uint32_t>::max();
             uint32_t maxHeight = 0;
 
-            for (FrameGraphResource const& attachment : desc.attachments.textures) {
-                size_t i = &attachment - desc.attachments.textures.data();
+            for (size_t i = 0; i < desc.attachments.textures.size(); i++) {
+                FrameGraphResource attachment = desc.attachments.textures[i];
                 if (attachment.isValid()) {
                     Resource const* const pResource = resourceNodes[attachment.index].resource;
                     assert(pResource);
@@ -273,11 +273,11 @@ struct RenderTarget { // 32
                     // use the largest size.
                     // We also round dimensions up to avoid lots of small resizes in the driver.
                     // (this is assuming the driver uses some cache internally).
-                    width  = (maxWidth  + 31) & ~31;
-                    height = (maxHeight + 31) & ~31;
+                    width  = (maxWidth  + 31u) & ~31u;
+                    height = (maxHeight + 31u) & ~31u;
 
                     // and update the resource's descriptors that allow it
-                    for (FrameGraphResource const& attachment : desc.attachments.textures) {
+                    for (FrameGraphResource attachment : desc.attachments.textures) {
                         if (attachment.isValid()) {
                             Resource* const pResource = resourceNodes[attachment.index].resource;
                             if (pResource->desc.relaxed || !pResource->needsTexture) {
@@ -499,21 +499,25 @@ FrameGraph::Builder::Attachments FrameGraph::Builder::useRenderTarget(const char
             TextureUsage::DEPTH_ATTACHMENT,
             TextureUsage::STENCIL_ATTACHMENT
     };
-    for (FrameGraphResource const& attachment : desc.attachments.textures) {
-        const size_t index = &attachment - desc.attachments.textures.data();
-        if (attachment.isValid()) {
-            // using a resource as a RT implies reading (i.e. adds a reference to that resource) from it
-            rt.textures[index] = mPass.read(fg, attachment, true);
-            // using a resource as a RT implies writing (i.e. adds a reference to the pass) into it
-            rt.textures[index] = mPass.write(fg, rt.textures[index]);
-
-            ResourceNode& node = fg.getResource(rt.textures[index]);
+    for (size_t i = 0; i < desc.attachments.textures.size(); i++) {
+        Attachments::AttachmentInfo attachmentInfo = desc.attachments.textures[i];
+        if (attachmentInfo.isValid()) {
+            FrameGraphResource attachment = attachmentInfo.getHandle();
+            if (attachmentInfo.getAccess() & Attachments::Access::READ) {
+                attachment = mPass.read(fg, attachment, true);
+            }
+            if (attachmentInfo.getAccess() & Attachments::Access::WRITE) {
+                attachment = mPass.write(fg, attachment);
+            }
+            ResourceNode& node = fg.getResource(attachment);
             uint8_t usage = node.resource->usage;
-            usage |= usages[index];
+            usage |= usages[i];
             node.resource->usage = TextureUsage(usage);
 
             // renderTargetIndex is used to retrieve the Descriptor
             node.renderTargetIndex = renderTarget.index;
+
+            rt.textures[i] = attachment;
         }
     }
     return rt;
@@ -829,11 +833,11 @@ TargetBufferFlags FrameGraph::computeDiscardFlags(DiscardPhase phase,
         for (FrameGraphResource cur : ((phase == DiscardPhase::START) ? pass.writes : pass.reads)) {
             // for all possible attachments of our renderTarget...
             Resource const* const pResource = resourceNodes[cur.index].resource;
-            for (FrameGraphResource const& attachment : desc.attachments.textures) {
+            for (size_t i = 0; i < desc.attachments.textures.size(); i++) {
+                FrameGraphResource attachment = desc.attachments.textures[i];
                 if (attachment.isValid() && resourceNodes[attachment.index].resource == pResource) {
                     // we can't discard this attachment since it's read/written
-                    size_t index = &attachment - desc.attachments.textures.data();
-                    discardFlags &= ~flags[index];
+                    discardFlags &= ~flags[i];
                 }
             }
             if (!discardFlags) {
@@ -897,7 +901,8 @@ FrameGraph& FrameGraph::compile() noexcept {
             for (fg::RenderTarget& rt : renderTargets) {
                 auto& textures = rt.desc.attachments.textures;
                 if (textures[0].isValid()) {
-                    ResourceNode const& node = resourceNodes[textures[0].index];
+                    FrameGraphResource handle = textures[0];
+                    ResourceNode const& node = resourceNodes[handle.index];
                     if (node.resource->imported && node.resource == from.resource) {
                         for (size_t i = 1; i < textures.size(); ++i) {
                             textures[i] = {};
