@@ -74,6 +74,10 @@ public:
 
     static size_t getFormatSize(InternalFormat format) noexcept;
 
+    static inline size_t valueForLevel(size_t level, size_t value) {
+        return std::max(size_t(1), value >> level);
+    }
+
 private:
     friend class Texture;
     backend::Handle<backend::HwTexture> mHandle;

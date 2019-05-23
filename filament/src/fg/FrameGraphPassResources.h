@@ -43,7 +43,7 @@ public:
 
     backend::Handle<backend::HwTexture> getTexture(FrameGraphResource r) const noexcept;
 
-    RenderTargetInfo getRenderTarget(FrameGraphResource r) const noexcept;
+    RenderTargetInfo getRenderTarget(FrameGraphResource r, uint8_t level = 0) const noexcept;
 
     FrameGraphResource::Descriptor const& getDescriptor(FrameGraphResource r) const noexcept;
 

@@ -21,6 +21,8 @@
 
 #include "private/backend/CommandStream.h"
 
+#include "details/Texture.h"
+
 #include <backend/DriverEnums.h>
 #include <backend/Handle.h>
 
@@ -33,6 +35,7 @@ namespace filament {
 
 using namespace backend;
 using namespace fg;
+using namespace details;
 
 // ------------------------------------------------------------------------------------------------
 
@@ -114,14 +117,13 @@ struct RenderTargetResource final : public VirtualResource {  // 104
 
     RenderTargetResource(
             FrameGraphRenderTarget::Descriptor const& desc, bool imported,
-            TargetBufferFlags targets,
-            uint32_t width, uint32_t height, TextureFormat format)
-            : desc(desc), imported(imported),
-              attachments(targets), format(format), width(width), height(height)  {
-        targetInfo.params.viewport   = desc.viewport;
+            TargetBufferFlags targets, uint32_t width, uint32_t height, TextureFormat format)
+                : desc(desc), imported(imported),
+                  attachments(targets), format(format), width(width), height(height) {
+        targetInfo.params.viewport = desc.viewport;
         // if Descriptor was initialized with default values, set the viewport to width/height
         if (targetInfo.params.viewport.width == 0 && targetInfo.params.viewport.height == 0) {
-            targetInfo.params.viewport.width  = width;
+            targetInfo.params.viewport.width = width;
             targetInfo.params.viewport.height = height;
         }
     }
@@ -153,20 +155,20 @@ struct RenderTargetResource final : public VirtualResource {  // 104
 
                 // devirtualize our texture handles. By this point these handles have been
                 // remapped to their alias if any.
-                backend::Handle<backend::HwTexture> textures[FrameGraphRenderTarget::Attachments::COUNT];
+                TargetBufferInfo infos[FrameGraphRenderTarget::Attachments::COUNT];
                 for (size_t i = 0, c = desc.attachments.textures.size(); i < c; i++) {
-                    FrameGraphResource r = desc.attachments.textures[i];
+                    auto const& r = desc.attachments.textures[i];
                     if (r.isValid()) {
-                        ResourceNode const& node = resourceNodes[r.index];
+                        ResourceNode const& node = resourceNodes[r.getHandle().index];
                         assert(node.resource);
-                        textures[i] = node.resource->texture;
+                        infos[i].handle = node.resource->texture;
+                        infos[i].level = r.getLevel();
                     }
                 }
 
                 // create the concrete rendertarget
                 targetInfo.target = driver.createRenderTarget(attachments,
-                        width, height, desc.samples,
-                        { textures[0] }, { textures[1] }, {});
+                        width, height, desc.samples, infos[0], infos[1], {});
             }
         }
     }
@@ -223,72 +225,49 @@ struct RenderTarget { // 32
             uint32_t width = 0;
             uint32_t height = 0;
             TextureFormat colorFormat = {};
-            backend::Handle<backend::HwTexture> textures[FrameGraphRenderTarget::Attachments::COUNT];
 
             static constexpr TargetBufferFlags flags[] = {
                     TargetBufferFlags::COLOR,
                     TargetBufferFlags::DEPTH,
                     TargetBufferFlags::STENCIL };
 
-            bool relaxed = true;
             uint32_t minWidth = std::numeric_limits<uint32_t>::max();
             uint32_t maxWidth = 0;
             uint32_t minHeight = std::numeric_limits<uint32_t>::max();
             uint32_t maxHeight = 0;
 
             for (size_t i = 0; i < desc.attachments.textures.size(); i++) {
-                FrameGraphResource attachment = desc.attachments.textures[i];
+                FrameGraphRenderTarget::Attachments::AttachmentInfo attachment = desc.attachments.textures[i];
                 if (attachment.isValid()) {
-                    Resource const* const pResource = resourceNodes[attachment.index].resource;
+                    Resource const* const pResource = resourceNodes[attachment.getHandle().index].resource;
                     assert(pResource);
 
                     attachments |= flags[i];
 
                     // figure out the min/max dimensions across all attachments
-                    minWidth  = std::min(minWidth,  pResource->desc.width);
-                    maxWidth  = std::max(maxWidth,  pResource->desc.width);
-                    minHeight = std::min(minHeight, pResource->desc.height);
-                    maxHeight = std::max(maxHeight, pResource->desc.height);
+                    const size_t level = attachment.getLevel();
+                    const uint32_t w = FTexture::valueForLevel(level, pResource->desc.width);
+                    const uint32_t h = FTexture::valueForLevel(level, pResource->desc.height);
+                    minWidth  = std::min(minWidth,  w);
+                    maxWidth  = std::max(maxWidth,  w);
+                    minHeight = std::min(minHeight, h);
+                    maxHeight = std::max(maxHeight, h);
 
-                    textures[i] = pResource->texture;
                     if (i == FrameGraphRenderTarget::Attachments::COLOR) {
                         colorFormat = pResource->desc.format;
                     }
-
-                    // TODO: if the resource doesn't need an actual texture, we may be able to
-                    //       increase its size.
-                    relaxed = relaxed && pResource->desc.relaxed;
                 }
             }
 
             if (attachments) {
-                if (!relaxed && (minWidth == maxWidth && minHeight == maxHeight)) {
+                if (minWidth == maxWidth && minHeight == maxHeight) {
                     // All attachments' size match, we're good to go.
-                    // We don't take this path if all attachments allow to tweak their size,
-                    // as in that case we can round-up to take advantage of caching in the driver.
+                    width = minWidth;
+                    height = minHeight;
+                } else {
+                    // TODO: what should we do here? Is it a user-error?
                     width = maxWidth;
                     height = maxHeight;
-                } else {
-                    // Some attachments might not allow to be resized (i.e. the non relaxed textures),
-                    // use the largest size.
-                    // We also round dimensions up to avoid lots of small resizes in the driver.
-                    // (this is assuming the driver uses some cache internally).
-                    width  = (maxWidth  + 31u) & ~31u;
-                    height = (maxHeight + 31u) & ~31u;
-
-                    // and update the resource's descriptors that allow it
-                    for (FrameGraphResource attachment : desc.attachments.textures) {
-                        if (attachment.isValid()) {
-                            Resource* const pResource = resourceNodes[attachment.index].resource;
-                            if (pResource->desc.relaxed || !pResource->needsTexture) {
-                                pResource->desc.width = width;
-                                pResource->desc.height = height;
-                            }
-                        }
-                    }
-                    // at the end of this process, it's possible that some attachments won't match
-                    // but there is nothing more we can do, as these attachments require a texture
-                    // and don't have the relaxed flag.
                 }
 
                 // create the cache entry
@@ -604,7 +583,7 @@ backend::Handle<backend::HwTexture> FrameGraphPassResources::getTexture(FrameGra
 }
 
 FrameGraphPassResources::RenderTargetInfo
-FrameGraphPassResources::getRenderTarget(FrameGraphResource r) const noexcept {
+FrameGraphPassResources::getRenderTarget(FrameGraphResource r, uint8_t level) const noexcept {
 
     FrameGraphPassResources::RenderTargetInfo info{};
     FrameGraph& fg = mFrameGraph;
@@ -620,8 +599,8 @@ FrameGraphPassResources::getRenderTarget(FrameGraphResource r) const noexcept {
         auto pos = std::find_if(
                 desc.attachments.textures.begin(),
                 desc.attachments.textures.end(),
-                [pResource, &resourceNodes](FrameGraphResource const& r) {
-                    return r.isValid() && resourceNodes[r.index].resource == pResource;
+                [pResource, &resourceNodes, level](FrameGraphRenderTarget::Attachments::AttachmentInfo const& info) {
+                    return info.isValid() && resourceNodes[info.getHandle().index].resource == pResource && info.getLevel() == level;
                 });
         if (pos != std::end(desc.attachments.textures)) {
             assert(renderTarget->cache);
@@ -760,18 +739,26 @@ bool FrameGraph::equals(FrameGraphRenderTarget::Descriptor const& lhs,
     return std::equal(
             lhs.attachments.textures.begin(), lhs.attachments.textures.end(),
             rhs.attachments.textures.begin(), rhs.attachments.textures.end(),
-            [&resourceNodes](FrameGraphResource lhs, FrameGraphResource rhs) {
-                if (lhs.index == rhs.index) {
+            [&resourceNodes](
+                    FrameGraphRenderTarget::Attachments::AttachmentInfo lhs,
+                    FrameGraphRenderTarget::Attachments::AttachmentInfo rhs) {
+                // both resource must be the same level to match
+                if (lhs.getLevel() != rhs.getLevel()) {
+                    return false;
+                }
+                const FrameGraphResource lHandle = lhs.getHandle();
+                const FrameGraphResource rHandle = rhs.getHandle();
+                if (lHandle == rHandle) {
                     // obviously resources match if they're the same
                     return true;
                 }
-                if (lhs.isValid() && rhs.isValid()) {
-                    if (resourceNodes[lhs.index].resource == resourceNodes[rhs.index].resource) {
+                if (lHandle.isValid() && rHandle.isValid()) {
+                    if (resourceNodes[lHandle.index].resource == resourceNodes[rHandle.index].resource) {
                         // they also match if they're the same concrete resource
                         return true;
                     }
                 }
-                if (!rhs.isValid()) {
+                if (!rHandle.isValid()) {
                     // it's okay if the cached RT has more attachments than we require
                     return true;
                 }
