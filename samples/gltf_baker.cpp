@@ -93,6 +93,7 @@ struct App {
     AppState pushedState;
     gltfio::AssetPipeline* pipeline;
     uint32_t bakeResolution = 1024;
+    bool preserveMaterialsForExport = true;
 
     // Secondary threads might write to the following fields.
     std::shared_ptr<std::string> statusText;
@@ -626,8 +627,8 @@ int main(int argc, char** argv) {
             // Export action
             const bool canExport = app.state == BAKED;
             ImGui::PushStyleColor(ImGuiCol_Text, canExport ? enabled : disabled);
-            if (ImGui::Button("Export", ImVec2(100, 50)) && canExport) {
-                exportAsset(app);
+            if (ImGui::Button("Export...", ImVec2(100, 50)) && canExport) {
+                ImGui::OpenPopup("Export options");
             }
             if (ImGui::IsItemHovered()) {
                 ImGui::SetTooltip("Saves the baked result to disk.");
@@ -677,6 +678,16 @@ int main(int argc, char** argv) {
                     ImGui::EndPopup();
                 }
                 ImGui::PopStyleVar();
+            }
+
+            if (ImGui::BeginPopupModal("Export options", nullptr,
+                    ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar)) {
+                ImGui::Checkbox("Preserve materials", &app.preserveMaterialsForExport);
+                if (ImGui::Button("OK", ImVec2(120,0))) {
+                    ImGui::CloseCurrentPopup();
+                    exportAsset(app);
+                }
+                ImGui::EndPopup();
             }
         });
 
