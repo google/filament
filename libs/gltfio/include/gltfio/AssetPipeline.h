@@ -104,6 +104,11 @@ public:
     AssetHandle generatePreview(AssetHandle source, const utils::Path& texture);
 
     /**
+     * Replaces or adds the given occlusion texture to all primitives that have BAKED_UV_ATTRIB.
+     */
+    AssetHandle replaceOcclusion(AssetHandle source, const utils::Path& texture);
+
+    /**
      * Signals that a region of a path-traced image is available (used for progress notification).
      * This can be called from any thread.
      */

@@ -519,7 +519,11 @@ static void exportAsset(App& app) {
 
     gltfio::AssetPipeline::AssetHandle asset = app.asset->getSourceAsset();
     gltfio::AssetPipeline pipeline;
-    asset = pipeline.generatePreview(asset, "baked.png");
+    if (app.preserveMaterialsForExport) {
+        asset = pipeline.replaceOcclusion(asset, "baked.png");
+    } else {
+        asset = pipeline.generatePreview(asset, "baked.png");
+    }
     pipeline.save(asset, outPath, binPath);
 
     std::cout << "Generated " << outPath << ", " << binPath << ", and " << texPath << std::endl;
