@@ -1286,12 +1286,17 @@ void OpenGLDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
 
     rt->gl.samples = samples;
 
+    auto valueForLevel = [](size_t level, size_t value) {
+        return std::max(size_t(1), value >> level);
+    };
+
     if (targets & TargetBufferFlags::COLOR) {
         // TODO: handle multiple color attachments
         assert(color.handle);
         rt->gl.color.texture = handle_cast<GLTexture*>(color.handle);
         rt->gl.color.level = color.level;
-        assert(width == rt->gl.color.texture->width && height == rt->gl.color.texture->height);
+        assert(width == valueForLevel(color.level, rt->gl.color.texture->width) &&
+               height == valueForLevel(color.level, rt->gl.color.texture->height));
         if (rt->gl.color.texture->usage & TextureUsage::SAMPLEABLE) {
             framebufferTexture(color, rt, GL_COLOR_ATTACHMENT0);
         } else {
@@ -1313,7 +1318,8 @@ void OpenGLDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
         assert(!stencil.handle || stencil.handle == depth.handle);
         rt->gl.depth.texture = handle_cast<GLTexture*>(depth.handle);
         rt->gl.depth.level = depth.level;
-        assert(width == rt->gl.depth.texture->width && height == rt->gl.depth.texture->height);
+        assert(width == valueForLevel(depth.level, rt->gl.depth.texture->width) &&
+               height == valueForLevel(depth.level, rt->gl.depth.texture->height));
         if (rt->gl.depth.texture->usage & TextureUsage::SAMPLEABLE) {
             // special case: depth & stencil requested, and both provided as the same texture
             specialCased = true;
@@ -1330,7 +1336,8 @@ void OpenGLDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
             assert(depth.handle);
             rt->gl.depth.texture = handle_cast<GLTexture*>(depth.handle);
             rt->gl.depth.level = depth.level;
-            assert(width == rt->gl.depth.texture->width && height == rt->gl.depth.texture->height);
+            assert(width == valueForLevel(depth.level, rt->gl.depth.texture->width) &&
+                   height == valueForLevel(depth.level, rt->gl.depth.texture->height));
             if (rt->gl.depth.texture->usage & TextureUsage::SAMPLEABLE) {
                 framebufferTexture(depth, rt, GL_DEPTH_ATTACHMENT);
             } else {
@@ -1341,7 +1348,8 @@ void OpenGLDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
             assert(stencil.handle);
             rt->gl.stencil.texture = handle_cast<GLTexture*>(stencil.handle);
             rt->gl.stencil.level = stencil.level;
-            assert(width == rt->gl.stencil.texture->width && height == rt->gl.stencil.texture->height);
+            assert(width == valueForLevel(stencil.level, rt->gl.stencil.texture->width) &&
+                   height == valueForLevel(stencil.level, rt->gl.stencil.texture->height));
             if (rt->gl.stencil.texture->usage & TextureUsage::SAMPLEABLE) {
                 framebufferTexture(stencil, rt, GL_STENCIL_ATTACHMENT);
             } else {
