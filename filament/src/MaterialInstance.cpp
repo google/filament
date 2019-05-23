@@ -42,10 +42,11 @@ namespace details {
 FMaterialInstance::FMaterialInstance() noexcept = default;
 
 FMaterialInstance::FMaterialInstance(FEngine& engine, FMaterial const* material) {
-    FEngine::DriverApi& driver = engine.getDriverApi();
     mMaterial = material;
     mMaterialSortingKey = RenderPass::makeMaterialSortingKey(
             material->getId(), material->generateMaterialInstanceId());
+
+    FEngine::DriverApi& driver = engine.getDriverApi();
 
     if (!material->getUniformInterfaceBlock().isEmpty()) {
         mUniforms.setUniforms(material->getDefaultInstance()->getUniformBuffer());
@@ -57,23 +58,16 @@ FMaterialInstance::FMaterialInstance(FEngine& engine, FMaterial const* material)
         mSbHandle = driver.createSamplerGroup(mSamplers.getSize());
     }
 
-    if (material->getBlendingMode() == BlendingMode::MASKED) {
-        static_cast<MaterialInstance*>(this)->setParameter(
-                "_maskThreshold", material->getMaskThreshold());
-    }
-
-    if (material->hasDoubleSidedCapability()) {
-        static_cast<MaterialInstance*>(this)->setParameter(
-                "_doubleSided", material->isDoubleSided());
-    }
+    initParameters(material);
 }
 
 // This version is used to initialize the default material instance
 void FMaterialInstance::initDefaultInstance(FEngine& engine, FMaterial const* material) {
-    FEngine::DriverApi& driver = engine.getDriverApi();
     mMaterial = material;
     mMaterialSortingKey = RenderPass::makeMaterialSortingKey(
             material->getId(), material->generateMaterialInstanceId());
+
+    FEngine::DriverApi& driver = engine.getDriverApi();
 
     if (!material->getUniformInterfaceBlock().isEmpty()) {
         mUniforms = UniformBuffer(material->getUniformInterfaceBlock().getSize());
@@ -85,6 +79,19 @@ void FMaterialInstance::initDefaultInstance(FEngine& engine, FMaterial const* ma
         mSbHandle = driver.createSamplerGroup(mSamplers.getSize());
     }
 
+    initParameters(material);
+}
+
+FMaterialInstance::~FMaterialInstance() noexcept = default;
+
+void FMaterialInstance::terminate(FEngine& engine) {
+    FEngine::DriverApi& driver = engine.getDriverApi();
+    driver.destroyUniformBuffer(mUbHandle);
+    driver.destroySamplerGroup(mSbHandle);
+}
+
+void FMaterialInstance::initParameters(FMaterial const* material) {
+
     if (material->getBlendingMode() == BlendingMode::MASKED) {
         static_cast<MaterialInstance*>(this)->setParameter(
                 "_maskThreshold", material->getMaskThreshold());
@@ -94,14 +101,13 @@ void FMaterialInstance::initDefaultInstance(FEngine& engine, FMaterial const* ma
         static_cast<MaterialInstance*>(this)->setParameter(
                 "_doubleSided", material->isDoubleSided());
     }
-}
 
-FMaterialInstance::~FMaterialInstance() noexcept = default;
-
-void FMaterialInstance::terminate(FEngine& engine) {
-    FEngine::DriverApi& driver = engine.getDriverApi();
-    driver.destroyUniformBuffer(mUbHandle);
-    driver.destroySamplerGroup(mSbHandle);
+    if (material->hasSpecularAntiAliasing()) {
+        static_cast<MaterialInstance*>(this)->setParameter(
+                "_specularAntiAliasingVariance", material->getSpecularAntiAliasingVariance());
+        static_cast<MaterialInstance*>(this)->setParameter(
+                "_specularAntiAliasingThreshold", material->getSpecularAntiAliasingThreshold());
+    }
 }
 
 void FMaterialInstance::commitSlow(DriverApi& driver) const {
@@ -271,6 +277,14 @@ void MaterialInstance::setPolygonOffset(float scale, float constant) noexcept {
 
 void MaterialInstance::setMaskThreshold(float threshold) noexcept {
     upcast(this)->setMaskThreshold(threshold);
+}
+
+void MaterialInstance::setSpecularAntiAliasingVariance(float variance) noexcept {
+    upcast(this)->setSpecularAntiAliasingVariance(variance);
+}
+
+void MaterialInstance::setSpecularAntiAliasingThreshold(float threshold) noexcept {
+    upcast(this)->setSpecularAntiAliasingThreshold(threshold);
 }
 
 void MaterialInstance::setDoubleSided(bool doubleSided) noexcept {

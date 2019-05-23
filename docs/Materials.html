@@ -86,8 +86,9 @@ counter-increment: h6;margin-right:10px}</style><style>.hljs{display:block;overf
 &#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialdefinitions/materialblock/lighting:clearcoatiorchange" class="level3"><span class="tocNumber">4.2.20&#xA0; </span>Lighting: clearCoatIorChange</a><br>
 &#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialdefinitions/materialblock/lighting:multibounceambientocclusion" class="level3"><span class="tocNumber">4.2.21&#xA0; </span>Lighting: multiBounceAmbientOcclusion</a><br>
 &#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialdefinitions/materialblock/lighting:specularambientocclusion" class="level3"><span class="tocNumber">4.2.22&#xA0; </span>Lighting: specularAmbientOcclusion</a><br>
-&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialdefinitions/materialblock/anti-aliasing:curvaturetoroughness" class="level3"><span class="tocNumber">4.2.23&#xA0; </span>Anti-aliasing: curvatureToRoughness</a><br>
-&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialdefinitions/materialblock/anti-aliasing:limitoverinterpolation" class="level3"><span class="tocNumber">4.2.24&#xA0; </span>Anti-aliasing: limitOverInterpolation</a><br>
+&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialdefinitions/materialblock/anti-aliasing:specularantialiasing" class="level3"><span class="tocNumber">4.2.23&#xA0; </span>Anti-aliasing: specularAntiAliasing</a><br>
+&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialdefinitions/materialblock/anti-aliasing:specularantialiasingvariance" class="level3"><span class="tocNumber">4.2.24&#xA0; </span>Anti-aliasing: specularAntiAliasingVariance</a><br>
+&#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialdefinitions/materialblock/anti-aliasing:specularantialiasingthreshold" class="level3"><span class="tocNumber">4.2.25&#xA0; </span>Anti-aliasing: specularAntiAliasingThreshold</a><br>
 &#xA0;&#xA0;<a href="#materialdefinitions/vertexblock" class="level2"><span class="tocNumber">4.3&#xA0; </span>Vertex block</a><br>
 &#xA0;&#xA0;&#xA0;&#xA0;<a href="#materialdefinitions/vertexblock/materialvertexinputs" class="level3"><span class="tocNumber">4.3.1&#xA0; </span>Material vertex inputs</a><br>
 &#xA0;&#xA0;<a href="#materialdefinitions/fragmentblock" class="level2"><span class="tocNumber">4.4&#xA0; </span>Fragment block</a><br>
@@ -1586,7 +1587,7 @@ occclusion enabled and disabled.</div></div></center>
 particularly visible under the hose.</div></div></center>
 
 <p></p>
-<a class="target" name="anti-aliasing:curvaturetoroughness">&#xA0;</a><a class="target" name="materialdefinitions/materialblock/anti-aliasing:curvaturetoroughness">&#xA0;</a><a class="target" name="toc4.2.23">&#xA0;</a><h3>Anti-aliasing: curvatureToRoughness</h3>
+<a class="target" name="anti-aliasing:specularantialiasing">&#xA0;</a><a class="target" name="materialdefinitions/materialblock/anti-aliasing:specularantialiasing">&#xA0;</a><a class="target" name="toc4.2.23">&#xA0;</a><h3>Anti-aliasing: specularAntiAliasing</h3>
 <p>
 
 
@@ -1594,33 +1595,43 @@ particularly visible under the hose.</div></div></center>
 
 </p></dd><dt>Value</dt><dd><p>      <code>true</code> or <code>false</code>. Defaults to <code>false</code>.
 
-</p></dd><dt>Description</dt><dd><p>     Reduces specular aliasing by increasing roughness based on the local geometric curvature.
-     This property is particularly effective if you only use MSAA as your anti-aliasing method.
+</p></dd><dt>Description</dt><dd><p>     Reduces specular aliasing and preserves the shape of specular highlights as an object moves
+     away from the camera. This anti-aliasing solution is particularly effective on glossy materials
+     (low roughness) but increases the cost of the material. The strengthf of the anti-aliasing
+     effect can be controlled using two other properties: <code>specularAntiAliasingVariance</code> and
+     <code>specularAntiAliasingThreshold</code>.
 
 </p></dd></dl><p></p><pre class="listing tilde"><code><span class="line">material {</span>
-<span class="line">    curvatureToRoughness : true</span>
-<span class="line">}</span></code></pre><p>
-
-</p><center><div class="image" style><a href="images/screenshot_curvature_to_roughness.jpg" target="_blank"><img class="markdeep" src="images/screenshot_curvature_to_roughness.jpg"></a><div class="imagecaption"><a class="target" name="figure_curvaturetoroughness">&#xA0;</a><b style="font-style:normal;">Figure&#xA0;29:</b> Close up of a glossy metallic surface rendered normally (left) and
-with <code>curvatureToRoughness</code> (right).</div></div></center>
-
-<p></p>
-<a class="target" name="anti-aliasing:limitoverinterpolation">&#xA0;</a><a class="target" name="materialdefinitions/materialblock/anti-aliasing:limitoverinterpolation">&#xA0;</a><a class="target" name="toc4.2.24">&#xA0;</a><h3>Anti-aliasing: limitOverInterpolation</h3>
+<span class="line">    specularAntiAliasing : true</span>
+<span class="line">}</span></code></pre>
+<a class="target" name="anti-aliasing:specularantialiasingvariance">&#xA0;</a><a class="target" name="materialdefinitions/materialblock/anti-aliasing:specularantialiasingvariance">&#xA0;</a><a class="target" name="toc4.2.24">&#xA0;</a><h3>Anti-aliasing: specularAntiAliasingVariance</h3>
 <p>
 
 
-</p><dl><dt>Type</dt><dd><p>     <code>boolean</code>
+</p><dl><dt>Type</dt><dd><p>     <code>float</code>
 
-</p></dd><dt>Value</dt><dd><p>      <code>true</code> or <code>false</code>. Defaults to <code>false</code>.
+</p></dd><dt>Value</dt><dd><p>      A value between 0 and 1, set to 0.15 by default.
 
-</p></dd><dt>Description</dt><dd><p>     Reduces specular aliasing by attempting to eliminate normal over-interpolation. When this
-     property is turned on, the material switches to centroid normal interpolation when the
-     interpolated normals are too long. This property should only be used if your anti-aliasing
-     method is MSAA. The effects are a lot more subtle than <code>curvatureToRoughness</code>, which should be
-     used first to eliminate specular aliasing.
+</p></dd><dt>Description</dt><dd><p>     Sets the screen space variance of the filter kernel used when applying specular anti-aliasing.
+     Higher values will increase the effect of the filter but may increase roughness in unwanted
+     areas.
 
 </p></dd></dl><p></p><pre class="listing tilde"><code><span class="line">material {</span>
-<span class="line">    limitOverInterpolation : true</span>
+<span class="line">    specularAntiAliasingVariance : 0.2</span>
+<span class="line">}</span></code></pre>
+<a class="target" name="anti-aliasing:specularantialiasingthreshold">&#xA0;</a><a class="target" name="materialdefinitions/materialblock/anti-aliasing:specularantialiasingthreshold">&#xA0;</a><a class="target" name="toc4.2.25">&#xA0;</a><h3>Anti-aliasing: specularAntiAliasingThreshold</h3>
+<p>
+
+
+</p><dl><dt>Type</dt><dd><p>     <code>float</code>
+
+</p></dd><dt>Value</dt><dd><p>      A value between 0 and 1, set to 0.2 by default.
+
+</p></dd><dt>Description</dt><dd><p>     Sets the clamping threshold used to suppress estimation errors when applying specular
+     anti-aliasing. When set to 0, specular anti-aliasing is disabled.
+
+</p></dd></dl><p></p><pre class="listing tilde"><code><span class="line">material {</span>
+<span class="line">    specularAntiAliasingThreshold : 0.1</span>
 <span class="line">}</span></code></pre>
 <a class="target" name="vertexblock">&#xA0;</a><a class="target" name="materialdefinitions/vertexblock">&#xA0;</a><a class="target" name="toc4.3">&#xA0;</a><h2>Vertex block</h2>
 <p>
@@ -1880,11 +1891,13 @@ The following APIs are only available from the fragment block:
 <tr><td style="text-align:left"> <strong class="asterisk">getWorldPosition()</strong> </td><td style="text-align:center"> float3 </td><td style="text-align:left"> Position of the fragment in world space </td></tr>
 <tr><td style="text-align:left"> <strong class="asterisk">getWorldViewVector()</strong> </td><td style="text-align:center"> float3 </td><td style="text-align:left"> Normalized vector in world space from the fragment position to the eye </td></tr>
 <tr><td style="text-align:left"> <strong class="asterisk">getWorldNormalVector()</strong> </td><td style="text-align:center"> float3 </td><td style="text-align:left"> Normalized normal in world space, after bump mapping (must be used after <code>prepareMaterial()</code>) </td></tr>
+<tr><td style="text-align:left"> <strong class="asterisk">getWorldGeometricNormalVector()</strong> </td><td style="text-align:center"> float3 </td><td style="text-align:left"> Normalized normal in world space, before bump mapping (can be used before <code>prepareMaterial()</code>) </td></tr>
 <tr><td style="text-align:left"> <strong class="asterisk">getWorldReflectedVector()</strong> </td><td style="text-align:center"> float3 </td><td style="text-align:left"> Reflection of the view vector about the normal (must be used after <code>prepareMaterial()</code>) </td></tr>
 <tr><td style="text-align:left"> <strong class="asterisk">getNdotV()</strong> </td><td style="text-align:center"> float </td><td style="text-align:left"> The result of <code>dot(normal, view)</code>, always strictly greater than 0 (must be used after <code>prepareMaterial()</code>) </td></tr>
 <tr><td style="text-align:left"> <strong class="asterisk">getColor()</strong> </td><td style="text-align:center"> float4 </td><td style="text-align:left"> Interpolated color of the fragment, if the color attribute is required </td></tr>
-<tr><td style="text-align:left"> <strong class="asterisk">getUV0()</strong> </td><td style="text-align:center"> float2 </td><td style="text-align:left"> First interpolated set of UV coordinates, if the uv0 attribute is required </td></tr>
-<tr><td style="text-align:left"> <strong class="asterisk">getUV1()</strong> </td><td style="text-align:center"> float2 </td><td style="text-align:left"> First interpolated set of UV coordinates, if the uv1 attribute is required </td></tr>
+<tr><td style="text-align:left"> <strong class="asterisk">getUV0()</strong> </td><td style="text-align:center"> float2 </td><td style="text-align:left"> First interpolated set of UV coordinates, only available if the uv0 attribute is required </td></tr>
+<tr><td style="text-align:left"> <strong class="asterisk">getUV1()</strong> </td><td style="text-align:center"> float2 </td><td style="text-align:left"> First interpolated set of UV coordinates, only available if the uv1 attribute is required </td></tr>
+<tr><td style="text-align:left"> <strong class="asterisk">getMaskThreshold()</strong> </td><td style="text-align:center"> float </td><td style="text-align:left"> Returns the mask threshold, only available when <code>blending</code> is set to <code>masked</code> </td></tr>
 <tr><td style="text-align:left"> <strong class="asterisk">inverseTonemap(float3)</strong> </td><td style="text-align:center"> float3 </td><td style="text-align:left"> Applies the inverse tone mapping operator to the specified linear sRGB color and returns a linear sRGB color. This operation may be an approximation </td></tr>
 <tr><td style="text-align:left"> <strong class="asterisk">inverseTonemapSRGB(float3)</strong> </td><td style="text-align:center"> float3 </td><td style="text-align:left"> Applies the inverse tone mapping operator to the specified non-linear sRGB color and returns a linear sRGB color. This operation may be an approximation </td></tr>
 <tr><td style="text-align:left"> <strong class="asterisk">luminance(float3)</strong> </td><td style="text-align:center"> float </td><td style="text-align:left"> Computes the luminance of the specified linear sRGB color </td></tr>

@@ -36,6 +36,7 @@ material {
             name : anisotropy
         }
     ],
+    specularAntiAliasing : true
 }
 
 fragment {

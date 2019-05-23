@@ -25,6 +25,8 @@
 
 #include <backend/Handle.h>
 
+#include <math/scalar.h>
+
 #include <utils/compiler.h>
 
 #include <filament/MaterialInstance.h>
@@ -101,7 +103,15 @@ public:
     backend::PolygonOffset getPolygonOffset() const noexcept { return mPolygonOffset; }
 
     void setMaskThreshold(float threshold) noexcept {
-        setParameter("_maskThreshold", threshold);
+        setParameter("_maskThreshold", math::saturate(threshold));
+    }
+
+    void setSpecularAntiAliasingVariance(float variance) noexcept {
+        setParameter("_specularAntiAliasingVariance", math::saturate(variance));
+    }
+
+    void setSpecularAntiAliasingThreshold(float threshold) noexcept {
+        setParameter("_specularAntiAliasingThreshold", math::saturate(threshold * threshold));
     }
 
     void setDoubleSided(bool doubleSided) noexcept;
@@ -112,6 +122,7 @@ private:
 
     FMaterialInstance() noexcept;
     void initDefaultInstance(FEngine& engine, FMaterial const* material);
+    void initParameters(FMaterial const* material);
 
     void commitSlow(FEngine::DriverApi& driver) const;
 

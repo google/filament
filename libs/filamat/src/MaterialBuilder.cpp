@@ -244,13 +244,18 @@ MaterialBuilder& MaterialBuilder::shadowMultiplier(bool shadowMultiplier) noexce
     return *this;
 }
 
-MaterialBuilder& MaterialBuilder::curvatureToRoughness(bool curvatureToRoughness) noexcept {
-    mCurvatureToRoughness = curvatureToRoughness;
+MaterialBuilder& MaterialBuilder::specularAntiAliasing(bool specularAntiAliasing) noexcept {
+    mSpecularAntiAliasing = specularAntiAliasing;
     return *this;
 }
 
-MaterialBuilder& MaterialBuilder::limitOverInterpolation(bool limitOverInterpolation) noexcept {
-    mLimitOverInterpolation = limitOverInterpolation;
+MaterialBuilder& MaterialBuilder::specularAntiAliasingVariance(float screenSpaceVariance) noexcept {
+    mSpecularAntiAliasingVariance = screenSpaceVariance;
+    return *this;
+}
+
+MaterialBuilder& MaterialBuilder::specularAntiAliasingThreshold(float threshold) noexcept {
+    mSpecularAntiAliasingThreshold = threshold;
     return *this;
 }
 
@@ -329,6 +334,11 @@ void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
         }
     }
 
+    if (mSpecularAntiAliasing) {
+        ibb.add("_specularAntiAliasingVariance", 1, UniformType::FLOAT);
+        ibb.add("_specularAntiAliasingThreshold", 1, UniformType::FLOAT);
+    }
+
     if (mBlendingMode == BlendingMode::MASKED) {
         ibb.add("_maskThreshold", 1, UniformType::FLOAT);
     }
@@ -348,8 +358,7 @@ void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
     info.isLit = isLit();
     info.hasDoubleSidedCapability = mDoubleSidedCapability;
     info.hasExternalSamplers = hasExternalSampler();
-    info.curvatureToRoughness = mCurvatureToRoughness;
-    info.limitOverInterpolation = mLimitOverInterpolation;
+    info.specularAntiAliasing = mSpecularAntiAliasing;
     info.clearCoatIorChange = mClearCoatIorChange;
     info.flipUV = mFlipUV;
     info.requiredAttributes = mRequiredAttributes;
@@ -477,13 +486,17 @@ Package MaterialBuilder::build() noexcept {
         container.addChild(&matShadowMultiplier);
     }
 
-    SimpleFieldChunk<bool> matCurvatureToRoughness(
-            ChunkType::MaterialCurvatureToRoughness, mCurvatureToRoughness);
-    container.addChild(&matCurvatureToRoughness);
+    SimpleFieldChunk<bool> matSpecularAntiAliasing(
+            ChunkType::MaterialSpecularAntiAliasing, mSpecularAntiAliasing);
+    container.addChild(&matSpecularAntiAliasing);
 
-    SimpleFieldChunk<bool> matLimitOverInterpolation(
-            ChunkType::MaterialLimitOverInterpolation, mLimitOverInterpolation);
-    container.addChild(&matLimitOverInterpolation);
+    SimpleFieldChunk<float> matSpecularAntiAliasingVariance(
+            ChunkType::MaterialSpecularAntiAliasingVariance, mSpecularAntiAliasingVariance);
+    container.addChild(&matSpecularAntiAliasingVariance);
+
+    SimpleFieldChunk<float> matSpecularAntiAliasingThreshold(
+            ChunkType::MaterialSpecularAntiAliasingThreshold, mSpecularAntiAliasingThreshold);
+    container.addChild(&matSpecularAntiAliasingThreshold);
 
     SimpleFieldChunk<bool> matClearCoatIorChange(
             ChunkType::MaterialClearCoatIorChange, mClearCoatIorChange);

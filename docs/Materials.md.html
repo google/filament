@@ -1283,7 +1283,7 @@ material {
 ![Figure [specularAO]: Comparison of specular ambient occlusion on and off. The effect is
 particularly visible under the hose.](images/screenshot_specular_ao.gif)
 
-### Anti-aliasing: curvatureToRoughness
+### Anti-aliasing: specularAntiAliasing
 
 Type
 :    `boolean`
@@ -1292,36 +1292,52 @@ Value
 :     `true` or `false`. Defaults to `false`.
 
 Description
-:    Reduces specular aliasing by increasing roughness based on the local geometric curvature.
-     This property is particularly effective if you only use MSAA as your anti-aliasing method.
+:    Reduces specular aliasing and preserves the shape of specular highlights as an object moves
+     away from the camera. This anti-aliasing solution is particularly effective on glossy materials
+     (low roughness) but increases the cost of the material. The strengthf of the anti-aliasing
+     effect can be controlled using two other properties: `specularAntiAliasingVariance` and
+     `specularAntiAliasingThreshold`.
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ JSON
 material {
-    curvatureToRoughness : true
+    specularAntiAliasing : true
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-![Figure [curvatureToRoughness]: Close up of a glossy metallic surface rendered normally (left) and
-with `curvatureToRoughness` (right).](images/screenshot_curvature_to_roughness.jpg)
-
-### Anti-aliasing: limitOverInterpolation
+### Anti-aliasing: specularAntiAliasingVariance
 
 Type
-:    `boolean`
+:    `float`
 
 Value
-:     `true` or `false`. Defaults to `false`.
+:     A value between 0 and 1, set to 0.15 by default.
 
 Description
-:    Reduces specular aliasing by attempting to eliminate normal over-interpolation. When this
-     property is turned on, the material switches to centroid normal interpolation when the
-     interpolated normals are too long. This property should only be used if your anti-aliasing
-     method is MSAA. The effects are a lot more subtle than `curvatureToRoughness`, which should be
-     used first to eliminate specular aliasing.
+:    Sets the screen space variance of the filter kernel used when applying specular anti-aliasing.
+     Higher values will increase the effect of the filter but may increase roughness in unwanted
+     areas.
 
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ JSON
 material {
-    limitOverInterpolation : true
+    specularAntiAliasingVariance : 0.2
+}
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+### Anti-aliasing: specularAntiAliasingThreshold
+
+Type
+:    `float`
+
+Value
+:     A value between 0 and 1, set to 0.2 by default.
+
+Description
+:    Sets the clamping threshold used to suppress estimation errors when applying specular
+     anti-aliasing. When set to 0, specular anti-aliasing is disabled.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ JSON
+material {
+    specularAntiAliasingThreshold : 0.1
 }
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -1567,20 +1583,22 @@ The following APIs are only available from the vertex block:
 
 The following APIs are only available from the fragment block:
 
-               Name              |   Type   |            Description
-:--------------------------------|:--------:|:------------------------------------
-**getWorldTangentFrame()**       | float3x3 |  Matrix containing in each column the `tangent` (`frame[0]`), `bi-tangent` (`frame[1]`) and `normal` (`frame[2]`) of the vertex in world space. If the material does not compute a tangent space normal for bump mapping or if the shading is not anisotropic, only the `normal` is valid in this matrix.
-**getWorldPosition()**           | float3   |  Position of the fragment in world space
-**getWorldViewVector()**         | float3   |  Normalized vector in world space from the fragment position to the eye
-**getWorldNormalVector()**       | float3   |  Normalized normal in world space, after bump mapping (must be used after `prepareMaterial()`)
-**getWorldReflectedVector()**    | float3   |  Reflection of the view vector about the normal (must be used after `prepareMaterial()`)
-**getNdotV()**                   | float    |  The result of `dot(normal, view)`, always strictly greater than 0 (must be used after `prepareMaterial()`)
-**getColor()**                   | float4   |  Interpolated color of the fragment, if the color attribute is required
-**getUV0()**                     | float2   |  First interpolated set of UV coordinates, if the uv0 attribute is required
-**getUV1()**                     | float2   |  First interpolated set of UV coordinates, if the uv1 attribute is required
-**inverseTonemap(float3)**       | float3   |  Applies the inverse tone mapping operator to the specified linear sRGB color and returns a linear sRGB color. This operation may be an approximation
-**inverseTonemapSRGB(float3)**   | float3   |  Applies the inverse tone mapping operator to the specified non-linear sRGB color and returns a linear sRGB color. This operation may be an approximation
-**luminance(float3)**            | float    |  Computes the luminance of the specified linear sRGB color
+                 Name               |   Type   |            Description
+:-----------------------------------|:--------:|:------------------------------------
+**getWorldTangentFrame()**          | float3x3 |  Matrix containing in each column the `tangent` (`frame[0]`), `bi-tangent` (`frame[1]`) and `normal` (`frame[2]`) of the vertex in world space. If the material does not compute a tangent space normal for bump mapping or if the shading is not anisotropic, only the `normal` is valid in this matrix.
+**getWorldPosition()**              | float3   |  Position of the fragment in world space
+**getWorldViewVector()**            | float3   |  Normalized vector in world space from the fragment position to the eye
+**getWorldNormalVector()**          | float3   |  Normalized normal in world space, after bump mapping (must be used after `prepareMaterial()`)
+**getWorldGeometricNormalVector()** | float3   |  Normalized normal in world space, before bump mapping (can be used before `prepareMaterial()`)
+**getWorldReflectedVector()**       | float3   |  Reflection of the view vector about the normal (must be used after `prepareMaterial()`)
+**getNdotV()**                      | float    |  The result of `dot(normal, view)`, always strictly greater than 0 (must be used after `prepareMaterial()`)
+**getColor()**                      | float4   |  Interpolated color of the fragment, if the color attribute is required
+**getUV0()**                        | float2   |  First interpolated set of UV coordinates, only available if the uv0 attribute is required
+**getUV1()**                        | float2   |  First interpolated set of UV coordinates, only available if the uv1 attribute is required
+**getMaskThreshold()**              | float    |  Returns the mask threshold, only available when `blending` is set to `masked`
+**inverseTonemap(float3)**          | float3   |  Applies the inverse tone mapping operator to the specified linear sRGB color and returns a linear sRGB color. This operation may be an approximation
+**inverseTonemapSRGB(float3)**      | float3   |  Applies the inverse tone mapping operator to the specified non-linear sRGB color and returns a linear sRGB color. This operation may be an approximation
+**luminance(float3)**               | float    |  Computes the luminance of the specified linear sRGB color
 
 # Compiling materials
 

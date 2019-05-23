@@ -26,15 +26,31 @@ void applyAlphaMask(inout vec4 baseColor) {
 #endif
 }
 
-float geometricSpecularAntiAliasing(const vec3 n) {
-    // Increase the roughness based on the curvature of the geometry to reduce
-    // shading aliasing. The curvature is approximated using the derivatives
-    // of the geometric normal
-    vec3 ndFdx = dFdx(n);
-    vec3 ndFdy = dFdy(n);
-    float geometricRoughness = pow(saturate(max(dot(ndFdx, ndFdx), dot(ndFdy, ndFdy))), 0.333);
-    return geometricRoughness;
+#if defined(GEOMETRIC_SPECULAR_AA)
+float normalFiltering(float perceptualRoughness, const vec3 worldNormal) {
+    // Kaplanyan 2016, "Stable specular highlights"
+    // Tokuyoshi 2017, "Error Reduction and Simplification for Shading Anti-Aliasing"
+    // Tokuyoshi and Kaplanyan 2019, "Improved Geometric Specular Antialiasing"
+
+    // This implementation is meant for deferred rendering in the original paper but
+    // we use it in forward rendering as well (as discussed in Tokuyoshi and Kaplanyan
+    // 2019). The main reason is that the forward version requires an expensive transform
+    // of the half vector by the tangent frame for every light. This is therefore an
+    // approximation but it works well enough for our needs and provides an improvement
+    // over our original implementation based on Vlachos 2015, "Advanced VR Rendering".
+
+    vec3 du = dFdx(worldNormal);
+    vec3 dv = dFdy(worldNormal);
+
+    float variance = materialParams._specularAntiAliasingVariance * (dot(du, du) + dot(dv, dv));
+
+    float roughness = perceptualRoughnessToRoughness(perceptualRoughness);
+    float kernelRoughness = min(2.0 * variance, materialParams._specularAntiAliasingThreshold);
+    float squareRoughness = saturate(roughness * roughness + kernelRoughness);
+
+    return roughnessToPerceptualRoughness(sqrt(squareRoughness));
 }
+#endif
 
 void getCommonPixelParams(const MaterialInputs material, inout PixelParams pixel) {
     vec4 baseColor = material.baseColor;
@@ -79,6 +95,11 @@ void getClearCoatPixelParams(const MaterialInputs material, inout PixelParams pi
     clearCoatPerceptualRoughness = mix(MIN_PERCEPTUAL_ROUGHNESS,
             MAX_CLEAR_COAT_PERCEPTUAL_ROUGHNESS, clearCoatPerceptualRoughness);
 
+#if defined(GEOMETRIC_SPECULAR_AA)
+    clearCoatPerceptualRoughness =
+            normalFiltering(clearCoatPerceptualRoughness, getWorldGeometricNormalVector());
+#endif
+
     pixel.clearCoatPerceptualRoughness = clearCoatPerceptualRoughness;
     pixel.clearCoatRoughness = perceptualRoughnessToRoughness(clearCoatPerceptualRoughness);
 
@@ -102,13 +123,8 @@ void getRoughnessPixelParams(const MaterialInputs material, inout PixelParams pi
     // Clamp the roughness to a minimum value to avoid divisions by 0 during lighting
     perceptualRoughness = clamp(perceptualRoughness, MIN_PERCEPTUAL_ROUGHNESS, 1.0);
 
-#if defined(GEOMETRIC_SPECULAR_AA_ROUGHNESS)
-    float geometricRoughness = geometricSpecularAntiAliasing(shading_tangentToWorld[2]);
-    perceptualRoughness = max(perceptualRoughness, geometricRoughness);
-#if defined(MATERIAL_HAS_CLEAR_COAT)
-    pixel.clearCoatPerceptualRoughness = max(pixel.clearCoatPerceptualRoughness, geometricRoughness);
-    pixel.clearCoatRoughness = perceptualRoughnessToRoughness(pixel.clearCoatPerceptualRoughness);
-#endif
+#if defined(GEOMETRIC_SPECULAR_AA)
+    perceptualRoughness = normalFiltering(perceptualRoughness, getWorldGeometricNormalVector());
 #endif
 
 #if defined(MATERIAL_HAS_CLEAR_COAT) && defined(MATERIAL_HAS_CLEAR_COAT_ROUGHNESS)
@@ -136,7 +152,7 @@ void getAnisotropyPixelParams(const MaterialInputs material, inout PixelParams p
     vec3 direction = material.anisotropyDirection;
     pixel.anisotropy = material.anisotropy;
     pixel.anisotropicT = normalize(shading_tangentToWorld * direction);
-    pixel.anisotropicB = normalize(cross(shading_tangentToWorld[2], pixel.anisotropicT));
+    pixel.anisotropicB = normalize(cross(getWorldGeometricNormalVector(), pixel.anisotropicT));
 #endif
 }
 

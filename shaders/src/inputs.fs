@@ -12,9 +12,6 @@ LAYOUT_LOCATION(5) SHADING_INTERPOLATION in mediump vec3 vertex_worldNormal;
 LAYOUT_LOCATION(6) SHADING_INTERPOLATION in mediump vec3 vertex_worldTangent;
 LAYOUT_LOCATION(7) SHADING_INTERPOLATION in mediump vec3 vertex_worldBitangent;
 #endif
-#if defined(GEOMETRIC_SPECULAR_AA_NORMAL)
-LAYOUT_LOCATION(8) SHADING_INTERPOLATION centroid in highp vec3 vertex_worldNormalCentroid;
-#endif
 #endif
 
 #if defined(HAS_ATTRIBUTE_COLOR)

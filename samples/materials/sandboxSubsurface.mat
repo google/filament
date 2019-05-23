@@ -31,6 +31,7 @@ material {
             name : subsurfaceColor
         }
     ],
+    specularAntiAliasing : true
 }
 
 fragment {

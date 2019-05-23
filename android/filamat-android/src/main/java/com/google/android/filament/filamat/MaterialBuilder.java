@@ -290,14 +290,20 @@ public class MaterialBuilder {
     }
 
     @NonNull
-    public MaterialBuilder curvatureToRoughness(boolean curvatureToRoughness) {
-        nMaterialBuilderCurvatureToRoughness(mNativeObject, curvatureToRoughness);
+    public MaterialBuilder specularAntiAliasing(boolean specularAntiAliasing) {
+        nMaterialBuilderSpecularAntiAliasing(mNativeObject, specularAntiAliasing);
         return this;
     }
 
     @NonNull
-    public MaterialBuilder limitOverInterpolation(boolean limitOverInterpolation) {
-        nMaterialBuilderLimitOverInterpolation(mNativeObject, limitOverInterpolation);
+    public MaterialBuilder specularAntiAliasingVariance(float variance) {
+        nMaterialBuilderSpecularAntiAliasingVariance(mNativeObject, variance);
+        return this;
+    }
+
+    @NonNull
+    public MaterialBuilder specularAntiAliasingThreshold(float threshold) {
+        nMaterialBuilderSpecularAntiAliasingThreshold(mNativeObject, threshold);
         return this;
     }
 
@@ -420,10 +426,12 @@ public class MaterialBuilder {
 
     private static native void nMaterialBuilderShadowMultiplier(long mNativeObject,
             boolean shadowMultiplier);
-    private static native void nMaterialBuilderCurvatureToRoughness(long mNativeObject,
-            boolean curvatureToRoughness);
-    private static native void nMaterialBuilderLimitOverInterpolation(long mNativeObject,
-            boolean limitOverInterpolation);
+    private static native void nMaterialBuilderSpecularAntiAliasing(long mNativeObject,
+            boolean specularAntiAliasing);
+    private static native void nMaterialBuilderSpecularAntiAliasingVariance(long mNativeObject,
+            float variance);
+    private static native void nMaterialBuilderSpecularAntiAliasingThreshold(long mNativeObject,
+            float threshold);
     private static native void nMaterialBuilderClearCoatIorChange(long mNativeObject,
             boolean clearCoatIorChange);
     private static native void nMaterialBuilderFlipUV(long nativeBuilder, boolean flipUV);

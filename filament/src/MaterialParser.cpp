@@ -236,6 +236,18 @@ bool MaterialParser::hasCustomDepthShader(bool* value) const noexcept {
     return mImpl.getFromSimpleChunk(ChunkType::MaterialHasCustomDepthShader, value);
 }
 
+bool MaterialParser::hasSpecularAntiAliasing(bool* value) const noexcept {
+    return mImpl.getFromSimpleChunk(ChunkType::MaterialSpecularAntiAliasing, value);
+}
+
+bool MaterialParser::getSpecularAntiAliasingVariance(float* value) const noexcept {
+    return mImpl.getFromSimpleChunk(ChunkType::MaterialSpecularAntiAliasingVariance, value);
+}
+
+bool MaterialParser::getSpecularAntiAliasingThreshold(float* value) const noexcept {
+    return mImpl.getFromSimpleChunk(ChunkType::MaterialSpecularAntiAliasingThreshold, value);
+}
+
 bool MaterialParser::getRequiredAttributes(AttributeBitset* value) const noexcept {
     uint32_t rawAttributes = 0;
     if (!mImpl.getFromSimpleChunk(ChunkType::MaterialRequiredAttributes, &rawAttributes)) {

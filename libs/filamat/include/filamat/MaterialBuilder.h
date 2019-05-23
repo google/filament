@@ -217,18 +217,30 @@ public:
     MaterialBuilder& doubleSided(bool doubleSided) noexcept;
 
     // any fragment with an alpha below this threshold is clipped (MASKED blending mode only)
+    // the mask threshold can also be controlled by using the float material parameter
+    // called "_maskTrehshold", or by calling MaterialInstance::setMaskTreshold
     MaterialBuilder& maskThreshold(float threshold) noexcept;
 
     // the material output is multiplied by the shadowing factor (UNLIT model only)
     MaterialBuilder& shadowMultiplier(bool shadowMultiplier) noexcept;
 
-    // reduce specular aliasing by locally increasing roughness using geometric curvature
+    // reduces specular aliasing for materials that have low roughness. Turning this feature
+    // on also helps preserve the shapes of specular highlights as an object moves away from
+    // the camera. When turned on, two float material parameters are added to control the effect:
+    // "_specularAAScreenSpaceVariance" and "_specularAAThreshold". You can also use
+    // MaterialInstance::setSpecularAntiAliasingVariance and setSpecularAntiAliasingThreshold
     // disabled by default
-    MaterialBuilder& curvatureToRoughness(bool curvatureToRoughness) noexcept;
+    MaterialBuilder& specularAntiAliasing(bool specularAntiAliasing) noexcept;
 
-    // reduce specular aliasing at silhouette by preventing over-interpolation of geometric normals
-    // disabled by default
-    MaterialBuilder& limitOverInterpolation(bool limitOverInterpolation) noexcept;
+    // sets the screen space variance of the filter kernel used when applying specular
+    // anti-aliasing. The default value is set to 0.15. The specified value should be between
+    // 0 and 1 and will be clamped if necessary.
+    MaterialBuilder& specularAntiAliasingVariance(float screenSpaceVariance) noexcept;
+
+    // sets the clamping threshold used to suppress estimation errors when applying specular
+    // anti-aliasing. The default value is set to 0.2. The specified value should be between 0
+    // and 1 and will be clamped if necessary.
+    MaterialBuilder& specularAntiAliasingThreshold(float threshold) noexcept;
 
     // enables or disables the index of refraction (IoR) change caused by the clear coat layer when
     // present. When the IoR changes, the base color is darkened. Disabling this feature preserves
@@ -350,6 +362,9 @@ private:
     filament::AttributeBitset mRequiredAttributes;
 
     float mMaskThreshold = 0.4f;
+    float mSpecularAntiAliasingVariance = 0.15f;
+    float mSpecularAntiAliasingThreshold = 0.2f;
+
     bool mShadowMultiplier = false;
 
     uint8_t mParameterCount = 0;
@@ -361,8 +376,7 @@ private:
     bool mDepthWrite = true;
     bool mDepthWriteSet = false;
 
-    bool mCurvatureToRoughness = false;
-    bool mLimitOverInterpolation = false;
+    bool mSpecularAntiAliasing = false;
     bool mClearCoatIorChange = true;
 
     bool mFlipUV = true;

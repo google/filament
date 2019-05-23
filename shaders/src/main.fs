@@ -15,7 +15,7 @@ void main() {
     // Computes global variables we need to evaluate material and lighting
     computeShadingParams();
 
-    // Initialize the inputs to sensible default values, see common_material.fs
+    // Initialize the inputs to sensible default values, see material_inputs.fs
     MaterialInputs inputs;
     initMaterial(inputs);
 

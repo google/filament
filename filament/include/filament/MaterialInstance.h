@@ -126,9 +126,24 @@ public:
 
     /**
      * Overrides the minimum alpha value a fragment must have to not be discarded when the blend
-     * mode is MASKED. Defaults to 0.4 if it has not been set in the parent Material.
+     * mode is MASKED. Defaults to 0.4 if it has not been set in the parent Material. The specified
+     * value should be between 0 and 1 and will be clamped if necessary.
      */
     void setMaskThreshold(float threshold) noexcept;
+
+    /**
+     * Sets the screen space variance of the filter kernel used when applying specular
+     * anti-aliasing. The default value is set to 0.15. The specified value should be between
+     * 0 and 1 and will be clamped if necessary.
+     */
+    void setSpecularAntiAliasingVariance(float variance) noexcept;
+
+    /**
+     * Sets the clamping threshold used to suppress estimation errors when applying specular
+     * anti-aliasing. The default value is set to 0.2. The specified value should be between 0
+     * and 1 and will be clamped if necessary.
+     */
+    void setSpecularAntiAliasingThreshold(float threshold) noexcept;
 
     /**
      * Enables or disables double-sided lighting if the parent Material has double-sided capability,

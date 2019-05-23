@@ -163,6 +163,15 @@ public:
     //! This values only makes sense when the shading mode is unlit.
     bool hasShadowMultiplier() const noexcept;
 
+    //! Indicates whether this material has specular anti-aliasing enabled
+    bool hasSpecularAntiAliasing() const noexcept;
+
+    //! Returns the screen-space variance for specular-antialiasing, this value is between 0 and 1.
+    float getSpecularAntiAliasingVariance() const noexcept;
+
+    //! Returns the clamping threshold for specular-antialiasing, this value is between 0 and 1.
+    float getSpecularAntiAliasingThreshold() const noexcept;
+
     //! Returns the list of vertex attributes required by this material.
     AttributeBitset getRequiredAttributes() const noexcept;
 
