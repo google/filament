@@ -310,7 +310,9 @@ FrameGraphResource PostProcessManager::ssao(FrameGraph& fg, FrameGraphResource d
                         .format = TextureFormat::R8 });
 
                 data.ssao = builder.useRenderTarget("SSAO Target",
-                        { .attachments.color = data.ssao }, TargetBufferFlags::NONE).color;
+                        { .attachments.color = data.ssao,
+                          .attachments.depth = { data.depth, FrameGraphRenderTarget::Attachments::READ }
+                        }, TargetBufferFlags::NONE).color;
             },
             [this, fullScreenRenderPrimitive](FrameGraphPassResources const& resources,
                     SSAOPassData const& data, DriverApi& driver) {
@@ -331,6 +333,7 @@ FrameGraphResource PostProcessManager::ssao(FrameGraph& fg, FrameGraphResource d
                 PipelineState pipeline;
                 pipeline.program = mSSAOProgram;
                 pipeline.rasterState = mSSAOMaterial->getRasterState();
+                pipeline.rasterState.depthFunc = RasterState::DepthFunc::G;
 
                 driver.beginRenderPass(ssao.target, ssao.params);
                 driver.draw(pipeline, fullScreenRenderPrimitive);
