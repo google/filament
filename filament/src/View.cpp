@@ -633,6 +633,10 @@ void FView::prepareSSAO(Handle<HwTexture> ssao) const noexcept {
     mPerViewSb.setSampler(PerViewSib::SSAO, ssao, params);
 }
 
+void FView::cleanupSSAO() const noexcept {
+    mPerViewSb.setSampler(PerViewSib::SSAO, {}, {});
+}
+
 void FView::froxelize(FEngine& engine) const noexcept {
     SYSTRACE_CALL();
 

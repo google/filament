@@ -126,6 +126,7 @@ public:
     void prepareLighting(FEngine& engine, FEngine::DriverApi& driver,
             ArenaScope& arena, Viewport const& viewport) noexcept;
     void prepareSSAO(backend::Handle<backend::HwTexture> ssao) const noexcept;
+    void cleanupSSAO() const noexcept;
     void froxelize(FEngine& engine) const noexcept;
     void commitUniforms(backend::DriverApi& driver) const noexcept;
     void commitFroxels(backend::DriverApi& driverApi) const noexcept;

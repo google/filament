@@ -284,26 +284,49 @@ void MetalDriver::destroyProgram(Handle<HwProgram> ph) {
 }
 
 void MetalDriver::destroySamplerGroup(Handle<HwSamplerGroup> sbh) {
-    if (sbh) {
-        destruct_handle<MetalSamplerGroup>(mHandleMap, sbh);
+    if (!sbh) {
+        return;
     }
+    // Unbind this sampler group from our internal state.
+    auto* metalSampler = handle_cast<MetalSamplerGroup>(mHandleMap, sbh);
+    for (auto& samplerBinding : mContext->samplerBindings) {
+        if (samplerBinding == metalSampler) {
+            samplerBinding = {};
+        }
+    }
+    destruct_handle<MetalSamplerGroup>(mHandleMap, sbh);
 }
 
 void MetalDriver::destroyUniformBuffer(Handle<HwUniformBuffer> ubh) {
-    if (ubh) {
-        destruct_handle<MetalUniformBuffer>(mHandleMap, ubh);
-        for (auto& thisUniform : mContext->uniformState) {
-            if (thisUniform.ubh == ubh) {
-                thisUniform.bound = false;
-            }
+    if (!ubh) {
+        return;
+    }
+    destruct_handle<MetalUniformBuffer>(mHandleMap, ubh);
+    for (auto& thisUniform : mContext->uniformState) {
+        if (thisUniform.ubh == ubh) {
+            thisUniform.bound = false;
         }
     }
 }
 
 void MetalDriver::destroyTexture(Handle<HwTexture> th) {
-    if (th) {
-        destruct_handle<MetalTexture>(mHandleMap, th);
+    if (!th) {
+        return;
     }
+    // Unbind this texture from any sampler groups that currently reference it.
+    for (auto& samplerBinding : mContext->samplerBindings) {
+        if (!samplerBinding) {
+            continue;
+        }
+        const SamplerGroup::Sampler* samplers = samplerBinding->sb->getSamplers();
+        for (size_t i = 0; i < samplerBinding->sb->getSize(); i++) {
+            const SamplerGroup::Sampler* sampler = samplers + i;
+            if (sampler->t == th) {
+                samplerBinding->sb->setSampler(i, {{}, {}});
+            }
+        }
+    }
+    destruct_handle<MetalTexture>(mHandleMap, th);
 }
 
 void MetalDriver::destroyRenderTarget(Handle<HwRenderTarget> rth) {
