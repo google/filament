@@ -317,7 +317,10 @@ TEST(FrameGraphTest, RenderTargetLifetime) {
 
     auto& renderPass2 = fg.addPass<RenderPassData>("Render2",
             [&](FrameGraph::Builder& builder, RenderPassData& data) {
-                data.output = builder.useRenderTarget(renderPass1.getData().output, (TargetBufferFlags)0x40);
+                data.output = builder.useRenderTarget("color", {
+                                .attachments.color = {
+                                        renderPass1.getData().output, FrameGraphRenderTarget::Attachments::READ_WRITE }},
+                        (TargetBufferFlags)0x40).color;
                 EXPECT_TRUE(fg.isValid(data.output));
             },
             [=, &rt1, &renderPassExecuted2](
