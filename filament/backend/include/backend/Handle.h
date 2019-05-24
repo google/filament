@@ -74,8 +74,8 @@ public:
 
     explicit operator bool() const noexcept { return object != nullid; }
 
-    bool operator==(const HandleBase& rhs) noexcept { return object == rhs.object; }
-    bool operator!=(const HandleBase& rhs) noexcept { return object != rhs.object; }
+    bool operator==(const HandleBase& rhs) const noexcept { return object == rhs.object; }
+    bool operator!=(const HandleBase& rhs) const noexcept { return object != rhs.object; }
 
     // get this handle's handleId
     HandleId getId() const noexcept { return object; }
