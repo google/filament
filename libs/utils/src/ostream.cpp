@@ -73,8 +73,8 @@ const char* ostream::getFormat(ostream::type t) const noexcept {
     switch (t) {
         case type::SHORT:       return mShowHex ? "0x%hx"  : "%hd";
         case type::USHORT:      return mShowHex ? "0x%hx"  : "%hu";
-        case type::CHAR:        return mShowHex ? "0x%x"   : "%c";
-        case type::UCHAR:       return mShowHex ? "0x%x"   : "%c";
+        case type::CHAR:        return "%c";
+        case type::UCHAR:       return "%c";
         case type::INT:         return mShowHex ? "0x%x"   : "%d";
         case type::UINT:        return mShowHex ? "0x%x"   : "%u";
         case type::LONG:        return mShowHex ? "0x%lx"  : "%ld";
