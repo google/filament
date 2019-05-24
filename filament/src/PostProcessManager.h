@@ -79,6 +79,10 @@ private:
     details::FMaterialInstance* mSSAOMaterialInstance = nullptr;
     backend::Handle<backend::HwProgram> mSSAOProgram;
 
+    details::FMaterial* mMipmapDepthMaterial = nullptr;
+    details::FMaterialInstance* mMipmapDepthMaterialInstance = nullptr;
+    backend::Handle<backend::HwProgram> mMipmapDepthProgram;
+
     backend::Handle<backend::HwTexture> mNoSSAOTexture;
 };
 

@@ -1,5 +1,5 @@
 material {
-    name : ssao,
+    name : sao,
     parameters : [
         {
             type : sampler2d,
@@ -29,6 +29,10 @@ material {
         {
             type : float,
             name : power
+        },
+        {
+            type : int,
+            name : maxLevel
         }
     ],
     variables : [
@@ -53,6 +57,8 @@ vertex {
 }
 
 fragment {
+    #define LOG2_LOD_RATE   4
+
     #define NOISE_NONE      0
     #define NOISE_PATTERN   1
     #define NOISE_RANDOM    2
@@ -162,8 +168,8 @@ fragment {
         return vec3(M * kSipralSamples[i].xy, radius * radius);
     }
 
-    ivec2 clampToEdge(ivec2 uv) {
-        return clamp(uv, ivec2(0), textureSize(materialParams_depth, 0) - ivec2(1));
+    ivec2 clampToEdge(ivec2 uv, int level) {
+        return clamp(uv, ivec2(0), textureSize(materialParams_depth, level) - ivec2(1));
     }
 
     float computeAmbientOcclusionSAO(uint i, float ssDiskRadius, const ivec2 ssOrigin, const highp vec3 origin, const vec3 normal, const vec3 noise) {
@@ -172,7 +178,10 @@ fragment {
 
         ivec2 ssSamplePos = ssOrigin + ivec2(ssRadius * tap.xy);
         vec2 uvSamplePos = (vec2(ssSamplePos) + vec2(0.5)) * materialParams.resolution.zw;
-        highp float occlusionDepth = linearizeDepth(texelFetch(materialParams_depth, clampToEdge(ssSamplePos), 0).r);
+
+        // level = floor(log2(screenSpaceRadius/rate)))
+        int level = clamp(int(floor(log2(ssRadius))) - LOG2_LOD_RATE, 0, materialParams.maxLevel);
+        highp float occlusionDepth = linearizeDepth(texelFetch(materialParams_depth, clampToEdge(ssSamplePos >> level, level), level).r);
         highp vec3 p = computeViewSpacePositionFromDepth(uvSamplePos * 2.0 - 1.0, occlusionDepth);
 
         // now we have the sample, compute AO

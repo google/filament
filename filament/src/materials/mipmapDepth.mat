@@ -1,0 +1,46 @@
+material {
+    name : mipmapDepth,
+    parameters : [
+        {
+            type : sampler2d,
+            name : depth,
+            precision: high
+        },
+        {
+            type : int,
+            name : level
+        }
+    ],
+    variables : [
+    ],
+    vertexDomain : device,
+    depthWrite : true,
+    depthCulling : false,
+    shadingModel : unlit,
+    variantFilter : [ skinning ],
+    culling: none
+}
+
+fragment {
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+
+        int level = materialParams.level;
+        ivec2 xy = ivec2(gl_FragCoord.xy) * 2;
+        highp float d00 = texelFetch(materialParams_depth, xy + ivec2(0, 0), level).r;
+        highp float d10 = texelFetch(materialParams_depth, xy + ivec2(1, 0), level).r;
+        highp float d01 = texelFetch(materialParams_depth, xy + ivec2(0, 1), level).r;
+        highp float d11 = texelFetch(materialParams_depth, xy + ivec2(1, 1), level).r;
+
+        gl_FragDepth =
+
+        // conservative occlusion
+        //max(d00, max(d01, max(d10, d11)));
+
+        // conservative visibility
+        //min(d00, min(d01, min(d10, d11)));
+
+        // arithmetic mean: preserve screen-space area
+        (d00 + d01 + d10 + d11) * 0.25;
+    }
+}

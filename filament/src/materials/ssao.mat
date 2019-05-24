@@ -29,6 +29,10 @@ material {
         {
             type : float,
             name : power
+        },
+        {
+            type : int,
+            name : maxLevel
         }
     ],
     variables : [
