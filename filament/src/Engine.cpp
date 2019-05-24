@@ -215,15 +215,15 @@ void FEngine::init() {
             .intensity(1.0f)
             .build(*this));
 
-    mPostProcessManager.init(*this);
-    mLightManager.init(*this);
-    mDFG.reset(new DFG(*this));
-
     // Always initialize the default material, most materials' depth shaders fallback on it.
     mDefaultMaterial = upcast(
             FMaterial::DefaultMaterialBuilder()
                     .package(MATERIALS_DEFAULTMATERIAL_DATA, MATERIALS_DEFAULTMATERIAL_SIZE)
                     .build(*const_cast<FEngine*>(this)));
+
+    mPostProcessManager.init(*this);
+    mLightManager.init(*this);
+    mDFG.reset(new DFG(*this));
 }
 
 FEngine::~FEngine() noexcept {

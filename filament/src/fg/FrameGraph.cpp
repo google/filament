@@ -639,7 +639,7 @@ FrameGraphResource::Descriptor const& FrameGraphPassResources::getDescriptor(
 // ------------------------------------------------------------------------------------------------
 
 FrameGraph::FrameGraph()
-        : mArena("FrameGraph Arena", 16384), // TODO: the Area will eventually come from outside
+        : mArena("FrameGraph Arena", 32768), // TODO: the Area will eventually come from outside
           mPassNodes(mArena),
           mResourceNodes(mArena),
           mRenderTargets(mArena),
