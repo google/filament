@@ -1089,7 +1089,7 @@ void OpenGLDriver::createTextureR(Handle<HwTexture> th, SamplerType target, uint
 
 void OpenGLDriver::framebufferTexture(backend::TargetBufferInfo const& binfo,
         GLRenderTarget const* rt, GLenum attachment) noexcept {
-    GLTexture const* t = handle_cast<const GLTexture*>(binfo.handle);
+    GLTexture* t = handle_cast<GLTexture*>(binfo.handle);
 
     assert(t->target != SamplerType::SAMPLER_EXTERNAL);
 
@@ -1195,6 +1195,11 @@ void OpenGLDriver::framebufferTexture(backend::TargetBufferInfo const& binfo,
                 break;
         }
     }
+
+    // In a sense, drawing to a texture level is similar to calling setTextureData on it; in
+    // both cases, we update the base/max LOD to give shaders access to levels as they become
+    // available.
+    updateTextureLodRange(t, binfo.level);
 
     CHECK_GL_FRAMEBUFFER_STATUS(utils::slog.e)
 }
@@ -2925,19 +2930,6 @@ void OpenGLDriver::blit(TargetBufferFlags buffers,
                 dstRect.left, dstRect.bottom, dstRect.right(), dstRect.top(),
                 mask, glFilterMode);
         CHECK_GL_ERROR(utils::slog.e)
-
-        // In a sense, blitting to a texture level is similar to calling setTextureData on it; in
-        // both cases, we update the base/max LOD to give shaders access to levels as they become
-        // available.
-        if (mask & GL_COLOR_BUFFER_BIT) {
-            updateTextureLodRange(d->gl.color.texture, d->gl.color.level);
-        }
-        if (mask & GL_DEPTH_BUFFER_BIT) {
-            updateTextureLodRange(d->gl.depth.texture, d->gl.depth.level);
-        }
-        if (mask & GL_STENCIL_BUFFER_BIT) {
-            updateTextureLodRange(d->gl.stencil.texture, d->gl.stencil.level);
-        }
     }
 }
 
