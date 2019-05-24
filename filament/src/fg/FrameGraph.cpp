@@ -1126,8 +1126,8 @@ void FrameGraph::export_graphviz(utils::io::ostream& out) {
     out << "\n";
     for (ResourceNode const& node : registry) {
         Resource const* subresource = node.resource;
-        out << "\"R" << node.resource->id << "_" << node.version << "\""
-               "[label=\"" << node.resource->name << "\\n(version: " << node.version << ")"
+        out << "\"R" << node.resource->id << "_" << +node.version << "\""
+               "[label=\"" << node.resource->name << "\\n(version: " << +node.version << ")"
                "\\nid:" << node.resource->id <<
                "\\nrefs:" << node.resource->refs << ", texture: " << node.resource->needsTexture <<
                "\", style=filled, fillcolor="
@@ -1142,7 +1142,7 @@ void FrameGraph::export_graphviz(utils::io::ostream& out) {
     for (auto const& node : frameGraphPasses) {
         out << "P" << node.id << " -> { ";
         for (auto const& writer : node.writes) {
-            out << "R" << registry[writer.index].resource->id << "_" << registry[writer.index].version << " ";
+            out << "R" << registry[writer.index].resource->id << "_" << +registry[writer.index].version << " ";
         }
         out << "} [color=red2]\n";
     }
@@ -1150,7 +1150,7 @@ void FrameGraph::export_graphviz(utils::io::ostream& out) {
     // connect resources to passes
     out << "\n";
     for (ResourceNode const& node : registry) {
-        out << "R" << node.resource->id << "_" << node.version << " -> { ";
+        out << "R" << node.resource->id << "_" << +node.version << " -> { ";
 
         // who reads us...
         for (PassNode const& pass : frameGraphPasses) {
@@ -1168,8 +1168,8 @@ void FrameGraph::export_graphviz(utils::io::ostream& out) {
     if (!mAliases.empty()) {
         out << "\n";
         for (fg::Alias const& alias : mAliases) {
-            out << "R" << registry[alias.from.index].resource->id << "_" << registry[alias.from.index].version << " -> ";
-            out << "R" << registry[alias.to.index].resource->id << "_" << registry[alias.to.index].version;
+            out << "R" << registry[alias.from.index].resource->id << "_" << +registry[alias.from.index].version << " -> ";
+            out << "R" << registry[alias.to.index].resource->id << "_" << +registry[alias.to.index].version;
             out << " [color=yellow, style=dashed]\n";
         }
     }
