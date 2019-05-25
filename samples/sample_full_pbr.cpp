@@ -57,25 +57,28 @@ static std::unique_ptr<MeshAssimp> g_meshSet;
 static const Material* g_material;
 static Entity g_light;
 
-constexpr int MAP_COUNT     = 5;
+constexpr int MAP_COUNT     = 6;
 constexpr int MAP_COLOR     = 0;
 constexpr int MAP_AO        = 1;
-constexpr int MAP_METALLIC  = 2;
-constexpr int MAP_ROUGHNESS = 3;
+constexpr int MAP_ROUGHNESS = 2;
+constexpr int MAP_METALLIC  = 3;
 constexpr int MAP_NORMAL    = 4;
+constexpr int MAP_HEIGHT    = 5;
 
 struct PbrMap {
     const char* suffix;
+    const char* parameterName;
     bool sRGB;
     Texture* texture;
 };
 
 static std::array<PbrMap, MAP_COUNT> g_maps = {
-    PbrMap { "_color",     true, nullptr },
-    PbrMap { "_ao",        false, nullptr },
-    PbrMap { "_roughness", false, nullptr },
-    PbrMap { "_metallic",  false, nullptr },
-    PbrMap { "_normal",    false, nullptr },
+    PbrMap { "_color",     "baseColorMap", true,  nullptr },
+    PbrMap { "_ao",        "aoMap",        false, nullptr },
+    PbrMap { "_roughness", "roughnessMap", false, nullptr },
+    PbrMap { "_metallic",  "metallicMap",  false, nullptr },
+    PbrMap { "_normal",    "normalMap",    false, nullptr },
+    PbrMap { "_height",    "heightMap",    false, nullptr },
 };
 
 static Config g_config;
@@ -107,6 +110,8 @@ static void printUsage(char* name) {
             "           - Metallic\n"
             "           - Normal\n"
             "           - Roughness\n"
+            "           - Height\n"
+            "       All textures are optional"
             "\n"
             "   --clear-coat, -c\n"
             "       Add a clear coat layer to the material\n\n"
@@ -217,8 +222,10 @@ static void setup(Engine* engine, View*, Scene* scene) {
     Path path(g_pbrConfig.materialDir);
     std::string name(path.getName());
 
+    bool hasUV = false;
     for (auto& map: g_maps) {
         loadTexture(engine, path.concat(name + map.suffix + ".png"), &map.texture, map.sRGB);
+        if (map.texture != nullptr) hasUV = true;
     }
 
     bool hasBaseColorMap = g_maps[MAP_COLOR].texture != nullptr;
@@ -226,14 +233,61 @@ static void setup(Engine* engine, View*, Scene* scene) {
     bool hasRoughnessMap = g_maps[MAP_ROUGHNESS].texture != nullptr;
     bool hasAOMap        = g_maps[MAP_AO].texture != nullptr;
     bool hasNormalMap    = g_maps[MAP_NORMAL].texture != nullptr;
+    bool hasHeightMap    = g_maps[MAP_HEIGHT].texture != nullptr;
 
     std::string shader = R"SHADER(
         void material(inout MaterialInputs material) {
     )SHADER";
 
+    if (hasUV) {
+        shader += R"SHADER(
+            vec2 uv0 = getUV0();
+        )SHADER";
+    }
+
+    if (hasHeightMap) {
+        // Parallax Occlusion Mapping
+        shader += R"SHADER(
+            vec2 uvDx = dFdx(uv0);
+            vec2 uvDy = dFdy(uv0);
+
+            mat3 tangentFromWorld = transpose(getWorldTangentFrame());
+            vec3 tangentCameraPosition = tangentFromWorld * getWorldCameraPosition();
+            vec3 tangentFragPosition = tangentFromWorld * getWorldPosition();
+            vec3 v = normalize(tangentCameraPosition - tangentFragPosition);
+
+            float minLayers = 8.0;
+            float maxLayers = 48.0;
+            float numLayers = mix(maxLayers, minLayers,
+                    dot(getWorldGeometricNormalVector(), getWorldViewVector()));
+            float heightScale = 0.05;
+
+            float layerDepth = 1.0 / numLayers;
+            float currLayerDepth = 0.0;
+
+            vec2 deltaUV = v.xy * heightScale / (v.z * numLayers);
+            vec2 currUV = uv0;
+            float height = 1.0 - textureGrad(materialParams_heightMap, currUV, uvDx, uvDy).r;
+            for (int i = 0; i < numLayers; i++) {
+                currLayerDepth += layerDepth;
+                currUV -= deltaUV;
+                height = 1.0 - textureGrad(materialParams_heightMap, currUV, uvDx, uvDy).r;
+                if (height < currLayerDepth) {
+                    break;
+                }
+            }
+
+            vec2 prevUV = currUV + deltaUV;
+            float nextDepth = height - currLayerDepth;
+            float prevDepth = 1.0 - textureGrad(materialParams_heightMap, prevUV, uvDx, uvDy).r -
+                    currLayerDepth + layerDepth;
+            uv0 = mix(currUV, prevUV, nextDepth / (nextDepth - prevDepth));
+        )SHADER";
+    }
+
     if (hasNormalMap) {
         shader += R"SHADER(
-            material.normal = texture(materialParams_normalMap, getUV0()).xyz * 2.0 - 1.0;
+            material.normal = texture(materialParams_normalMap, uv0).xyz * 2.0 - 1.0;
             material.normal.y *= -1.0;
         )SHADER";
     }
@@ -244,7 +298,7 @@ static void setup(Engine* engine, View*, Scene* scene) {
 
     if (hasBaseColorMap) {
         shader += R"SHADER(
-            material.baseColor.rgb = texture(materialParams_baseColorMap, getUV0()).rgb;
+            material.baseColor.rgb = texture(materialParams_baseColorMap, uv0).rgb;
         )SHADER";
     } else {
         shader += R"SHADER(
@@ -253,7 +307,7 @@ static void setup(Engine* engine, View*, Scene* scene) {
     }
     if (hasMetallicMap) {
         shader += R"SHADER(
-            material.metallic = texture(materialParams_metallicMap, getUV0()).r;
+            material.metallic = texture(materialParams_metallicMap, uv0).r;
         )SHADER";
     } else {
         shader += R"SHADER(
@@ -262,7 +316,7 @@ static void setup(Engine* engine, View*, Scene* scene) {
     }
     if (hasRoughnessMap) {
         shader += R"SHADER(
-            material.roughness = texture(materialParams_roughnessMap, getUV0()).r;
+            material.roughness = texture(materialParams_roughnessMap, uv0).r;
         )SHADER";
     } else {
         shader += R"SHADER(
@@ -271,7 +325,7 @@ static void setup(Engine* engine, View*, Scene* scene) {
     }
     if (hasAOMap) {
         shader += R"SHADER(
-            material.ambientOcclusion = texture(materialParams_aoMap, getUV0()).r;
+            material.ambientOcclusion = texture(materialParams_aoMap, uv0).r;
         )SHADER";
     } else {
         shader += R"SHADER(
@@ -297,30 +351,14 @@ static void setup(Engine* engine, View*, Scene* scene) {
             .material(shader.c_str())
             .shading(Shading::LIT);
 
-    if (hasBaseColorMap) {
-        builder
-            .require(VertexAttribute::UV0)
-            .parameter(MaterialBuilder::SamplerType::SAMPLER_2D, "baseColorMap");
+    if (hasUV) {
+        builder.require(VertexAttribute::UV0);
     }
-    if (hasMetallicMap) {
-        builder
-            .require(VertexAttribute::UV0)
-            .parameter(MaterialBuilder::SamplerType::SAMPLER_2D, "metallicMap");
-    }
-    if (hasRoughnessMap) {
-        builder
-            .require(VertexAttribute::UV0)
-            .parameter(MaterialBuilder::SamplerType::SAMPLER_2D, "roughnessMap");
-    }
-    if (hasAOMap) {
-        builder
-            .require(VertexAttribute::UV0)
-            .parameter(MaterialBuilder::SamplerType::SAMPLER_2D, "aoMap");
-    }
-    if (hasNormalMap) {
-        builder
-            .require(VertexAttribute::UV0)
-            .parameter(MaterialBuilder::SamplerType::SAMPLER_2D, "normalMap");
+
+    for (auto& map: g_maps) {
+        if (map.texture != nullptr) {
+            builder.parameter(MaterialBuilder::SamplerType::SAMPLER_2D, map.parameterName);
+        }
     }
 
     Package pkg = builder.build();
@@ -332,25 +370,11 @@ static void setup(Engine* engine, View*, Scene* scene) {
             TextureSampler::MagFilter::LINEAR, TextureSampler::WrapMode::REPEAT);
     sampler.setAnisotropy(8.0f);
 
-    if (hasBaseColorMap) {
-        g_materialInstances["DefaultMaterial"]->setParameter(
-                "baseColorMap", g_maps[MAP_COLOR].texture, sampler);
-    }
-    if (hasMetallicMap) {
-        g_materialInstances["DefaultMaterial"]->setParameter(
-                "metallicMap", g_maps[MAP_METALLIC].texture, sampler);
-    }
-    if (hasRoughnessMap) {
-        g_materialInstances["DefaultMaterial"]->setParameter(
-                "roughnessMap", g_maps[MAP_ROUGHNESS].texture, sampler);
-    }
-    if (hasAOMap) {
-        g_materialInstances["DefaultMaterial"]->setParameter(
-                "aoMap", g_maps[MAP_AO].texture, sampler);
-    }
-    if (hasNormalMap) {
-        g_materialInstances["DefaultMaterial"]->setParameter(
-                "normalMap", g_maps[MAP_NORMAL].texture, sampler);
+    for (auto& map: g_maps) {
+        if (map.texture != nullptr) {
+            g_materialInstances["DefaultMaterial"]->setParameter(
+                    map.parameterName, map.texture, sampler);
+        }
     }
 
     g_meshSet = std::make_unique<MeshAssimp>(*engine);
@@ -372,7 +396,7 @@ static void setup(Engine* engine, View*, Scene* scene) {
     }
 
     g_light = EntityManager::get().create();
-    LightManager::Builder(LightManager::Type::DIRECTIONAL)
+    LightManager::Builder(LightManager::Type::SUN)
             .color(Color::toLinear<ACCURATE>({0.98f, 0.92f, 0.89f}))
             .intensity(110000)
             .direction({0.6, -1, -0.8})
