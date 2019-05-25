@@ -440,6 +440,7 @@ static void renderAsset(App& app) {
     auto onRenderDone = [](void* userData) {
         App* app = (App*) userData;
         app->requestStatePop = true;
+        app->requestOverlayUpdate = true;
         delete app->pipeline;
     };
     app.pipeline->renderAmbientOcclusion(asset, app.ambientOcclusion, camera, onRenderTile,
@@ -498,6 +499,7 @@ static void bakeAsset(App& app) {
     auto onRenderDone = [](void* userData) {
         App* app = (App*) userData;
         delete app->pipeline;
+        app->requestOverlayUpdate = true;
         app->state = BAKED;
     };
     app.pipeline->bakeAmbientOcclusion(asset, app.ambientOcclusion, onRenderTile, onRenderDone,

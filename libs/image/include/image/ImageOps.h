@@ -77,6 +77,9 @@ LinearImage edtFromCoordField(const LinearImage& coordField, bool sqrt);
 // Dereferences the given coordinate field. Useful for creating Voronoi diagrams or dilated images.
 LinearImage voronoiFromCoordField(const LinearImage& coordField, const LinearImage& src);
 
+// Copies content of a source image into a target image. Requires width/height/channels to match.
+void blitImage(LinearImage& target, const LinearImage& source);
+
 } // namespace image
 
 

@@ -23,7 +23,7 @@ set(SRCS
 
 include_directories(${PUBLIC_HDR_DIR} ${EMBREE_INCLUDE_DIRS})
 add_library(${TARGET} STATIC ${PUBLIC_HDRS} ${SRCS})
-target_link_libraries(${TARGET} PUBLIC math utils image ${EMBREE_LIBRARY})
+target_link_libraries(${TARGET} PUBLIC math utils image ${EMBREE_LIBRARY} ${DENOISE_LIBRARY})
 target_include_directories(${TARGET} PUBLIC ${PUBLIC_HDR_DIR})
 
 # ==================================================================================================
