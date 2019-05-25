@@ -27,6 +27,8 @@
 #ifdef FILAMENT_HAS_EMBREE
 #include <embree3/rtcore.h>
 #include <embree3/rtcore_ray.h>
+
+#include <OpenImageDenoise/oidn.h>
 #endif
 
 using namespace filament::math;
@@ -96,6 +98,11 @@ PathTracer::Builder& PathTracer::Builder::filmCamera(const SimpleCamera& filmCam
 
 PathTracer::Builder& PathTracer::Builder::uvCamera() {
     mConfig.uvCamera = true;
+    return *this;
+}
+
+PathTracer::Builder& PathTracer::Builder::denoise() {
+    mConfig.denoise = true;
     return *this;
 }
 
@@ -292,7 +299,57 @@ static void dilateCharts(EmbreeContext* context) {
     };
     auto coords = image::computeCoordField(meshNormals, presence, nullptr);
     auto dilated = image::voronoiFromCoordField(coords, ao);
-    memcpy(ao.getPixelRef(), dilated.getPixelRef(), sizeof(float) * ao.getWidth() * ao.getHeight());
+    blitImage(ao, dilated);
+}
+
+static void denoise(EmbreeContext* context) {
+    LinearImage ao = context->config.renderTargets[(int) AMBIENT_OCCLUSION];
+    const LinearImage& meshNormals = context->config.renderTargets[(int) MESH_NORMALS];
+
+    // The denoiser requires color inputs, so convert 1-chan to 3-chan.
+    const size_t width = ao.getWidth();
+    const size_t height = ao.getHeight();
+    LinearImage denoiseSource = combineChannels({ ao, ao, ao });
+
+    // Construct a fake albedo image, which for our purposes can be white everywhere that a surface
+    // is present. This is optional but the denoise library doesn't produce good results without it.
+    LinearImage fakeAlbedo(width, height, 3);
+    for (int32_t row = 0; row < height; ++row) {
+        for (uint32_t col = 0; col < width; ++col) {
+            const float* normal = meshNormals.getPixelRef(col, row);
+            float* albedo = fakeAlbedo.getPixelRef(col, row);
+            albedo[0] = albedo[1] = albedo[2] = (normal[0] == EMPTY_SENTINEL ? 0.0f : 1.0f);
+        }
+    }
+
+    // Invoke the denoiser.
+    LinearImage denoiseTarget(width, height, 3);
+    OIDNDevice device = oidnNewDevice(OIDN_DEVICE_TYPE_DEFAULT);
+    oidnCommitDevice(device);
+    OIDNFilter filter = oidnNewFilter(device, "RT");
+    oidnSetSharedFilterImage(filter, "color",  denoiseSource.getPixelRef(),
+                            OIDN_FORMAT_FLOAT3, width, height, 0, 0, 0);
+    oidnSetSharedFilterImage(filter, "normal",  (void*) meshNormals.getPixelRef(),
+                            OIDN_FORMAT_FLOAT3, width, height, 0, 0, 0);
+    oidnSetSharedFilterImage(filter, "albedo",  fakeAlbedo.getPixelRef(),
+                            OIDN_FORMAT_FLOAT3, width, height, 0, 0, 0);
+    oidnSetSharedFilterImage(filter, "output", denoiseTarget.getPixelRef(),
+                            OIDN_FORMAT_FLOAT3, width, height, 0, 0, 0);
+    oidnCommitFilter(filter);
+    oidnExecuteFilter(filter);
+
+    // Check for errors.
+    const char* errorMessage;
+    if (oidnGetDeviceError(device, &errorMessage) != OIDN_ERROR_NONE) {
+        printf("OpenImageDenoise Error: %s\n", errorMessage);
+        oidnReleaseFilter(filter);
+        oidnReleaseDevice(device);
+        return;
+    }
+    oidnReleaseFilter(filter);
+    oidnReleaseDevice(device);
+
+    blitImage(ao, extractChannel(denoiseTarget, 0));
 }
 
 static void renderTileFromGbuffer(EmbreeContext* context, PixelRectangle rect) {
@@ -482,6 +539,9 @@ bool PathTracer::render() {
                         context->config.tileUserData);
             }, [](EmbreeContext* context) {
                 dilateCharts(context);
+                if (context->config.denoise) {
+                    denoise(context);
+                }
                 context->config.doneCallback(context->config.doneUserData);
                 rtcReleaseScene(context->scene);
                 rtcReleaseDevice(context->device);
@@ -499,6 +559,9 @@ bool PathTracer::render() {
             context->config.tileCallback(rect.topLeft, rect.bottomRight,
                     context->config.tileUserData);
         }, [](EmbreeContext* context) {
+            if (context->config.denoise) {
+                denoise(context);
+            }
             context->config.doneCallback(context->config.doneUserData);
             rtcReleaseScene(context->scene);
             rtcReleaseDevice(context->device);

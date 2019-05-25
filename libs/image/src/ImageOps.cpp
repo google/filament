@@ -413,4 +413,13 @@ LinearImage voronoiFromCoordField(const LinearImage& coordField, const LinearIma
     return result;
 }
 
+void blitImage(LinearImage& target, const LinearImage& source) {
+    ASSERT_PRECONDITION(source.getWidth() == target.getWidth(), "Images must have same width.");
+    ASSERT_PRECONDITION(source.getHeight() == target.getHeight(), "Images must have same height.");
+    ASSERT_PRECONDITION(source.getChannels() == target.getChannels(),
+            "Images must have same number of channels.");
+    memcpy(target.getPixelRef(), source.getPixelRef(),
+            sizeof(float) * source.getWidth() * source.getHeight() * source.getChannels());
+}
+
 } // namespace image

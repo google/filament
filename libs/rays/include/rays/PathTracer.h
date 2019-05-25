@@ -77,6 +77,7 @@ public:
         size_t samplesPerPixel = 256;
         SimpleCamera filmCamera;
         bool uvCamera = false;
+        bool denoise = false;
         TileCallback tileCallback = nullptr;
         void* tileUserData = nullptr;
         DoneCallback doneCallback = nullptr;
@@ -109,6 +110,11 @@ public:
          * Enables a UV-based cameras used for light map baking.
          */
         Builder& uvCamera();
+
+        /**
+         * Executes OpenImageDenoise after rendering the complete image.
+         */
+        Builder& denoise();
 
         /**
          * Signals that a region within each render target has become available, typically used for

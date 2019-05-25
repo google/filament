@@ -744,6 +744,7 @@ void Pipeline::bakeAmbientOcclusion(const cgltf_data* sourceAsset, image::Linear
         .meshes(meshes, numMeshes)
         .outputPlane(filament::rays::AMBIENT_OCCLUSION, target)
         .uvCamera()
+        .denoise()
         .tileCallback(onTile, userData)
         .doneCallback(onDone, userData);
 
@@ -762,6 +763,7 @@ void Pipeline::renderAmbientOcclusion(const cgltf_data* sourceAsset, image::Line
         .meshes(meshes, numMeshes)
         .outputPlane(filament::rays::AMBIENT_OCCLUSION, target)
         .filmCamera(camera)
+        .denoise()
         .tileCallback(onTile, userData)
         .doneCallback(onDone, userData);
 
