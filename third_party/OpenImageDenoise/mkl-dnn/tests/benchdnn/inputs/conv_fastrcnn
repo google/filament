@@ -1,0 +1,7 @@
+# FastRCNN
+
+--batch=conv_fastrcnn_p1
+--batch=conv_fastrcnn_p2
+--batch=conv_fastrcnn_p3
+
+

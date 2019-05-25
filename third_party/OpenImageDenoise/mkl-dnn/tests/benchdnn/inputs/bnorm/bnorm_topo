@@ -1,0 +1,3 @@
+--batch=bnorm_resnet_50
+--batch=bnorm_googlenet_v2
+--batch=bnorm_googlenet_v3

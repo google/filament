@@ -1,0 +1,4 @@
+l2t2mb128sic512n"exp-gru-0"
+l1t7mb128sic512slc1024dic512dlc512n"exp-gru-1"
+l1t10mb32sic128slc512dic128dlc128n"exp-gru-2"
+
