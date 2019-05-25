@@ -2420,7 +2420,7 @@ Figure [anisotropicDirection] demonstrates this modified implementation in pract
 
 The IBL implementation for the cloth material model is more complicated than for the other material models. The main difference stems from the use of a different NDF ("Charlie" vs height-correlated Smith GGX). As described in this section, we use the split-sum approximation to compute the DFG term of the BRDF when computing an IBL. This DFG term is designed for a different BRDF and cannot be used for the cloth BRDF. Since we designed our  cloth BRDF to not need a Fresnel term, we can generate a single DG term in the 3rd channel of the DFG LUT. The result is shown in figure [dfgClothLUT].
 
-The DG term is generated using uniform sampling as recommended in [#Estevez17]. With uniform sampling the $pdf$ is simply $\frac{1}{2\pi}$ and we must still use the Jacobian $\frac{1}{\eft< 4 \VoH \right>}$.
+The DG term is generated using uniform sampling as recommended in [#Estevez17]. With uniform sampling the $pdf$ is simply $\frac{1}{2\pi}$ and we must still use the Jacobian $\frac{1}{4\left< \VoH \right>}$.
 
 ![Figure [dfgClothLUT]: DFG LUT with a 3rd channel encoding the DG term of the cloth BRDF](images/ibl/dfg_cloth.png)
 
