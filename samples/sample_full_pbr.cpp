@@ -56,11 +56,27 @@ static std::map<std::string, MaterialInstance*> g_materialInstances;
 static std::unique_ptr<MeshAssimp> g_meshSet;
 static const Material* g_material;
 static Entity g_light;
-static Texture* g_metallicMap = nullptr;
-static Texture* g_roughnessMap = nullptr;
-static Texture* g_aoMap = nullptr;
-static Texture* g_normalMap = nullptr;
-static Texture* g_baseColorMap = nullptr;
+
+constexpr int MAP_COUNT     = 5;
+constexpr int MAP_COLOR     = 0;
+constexpr int MAP_AO        = 1;
+constexpr int MAP_METALLIC  = 2;
+constexpr int MAP_ROUGHNESS = 3;
+constexpr int MAP_NORMAL    = 4;
+
+struct PbrMap {
+    const char* suffix;
+    bool sRGB;
+    Texture* texture;
+};
+
+static std::array<PbrMap, MAP_COUNT> g_maps = {
+    PbrMap { "_color",     true, nullptr },
+    PbrMap { "_ao",        false, nullptr },
+    PbrMap { "_roughness", false, nullptr },
+    PbrMap { "_metallic",  false, nullptr },
+    PbrMap { "_normal",    false, nullptr },
+};
 
 static Config g_config;
 static struct PbrConfig {
@@ -155,19 +171,16 @@ static int handleCommandLineArgments(int argc, char* argv[], Config* config) {
     return optind;
 }
 
-static void cleanup(Engine* engine, View* view, Scene* scene) {
+static void cleanup(Engine* engine, View*, Scene*) {
     for (auto& item : g_materialInstances) {
         auto materialInstance = item.second;
         engine->destroy(materialInstance);
     }
     g_meshSet.reset(nullptr);
     engine->destroy(g_material);
-    engine->destroy(g_baseColorMap);
-    engine->destroy(g_metallicMap);
-    engine->destroy(g_roughnessMap);
-    engine->destroy(g_aoMap);
-    engine->destroy(g_normalMap);
-
+    for (const auto& map : g_maps) {
+        engine->destroy(map.texture);
+    }
     EntityManager& em = EntityManager::get();
     engine->destroy(g_light);
     em.destroy(g_light);
@@ -200,21 +213,19 @@ void loadTexture(Engine* engine, const std::string& filePath, Texture** map, boo
     }
 }
 
-static void setup(Engine* engine, View* view, Scene* scene) {
+static void setup(Engine* engine, View*, Scene* scene) {
     Path path(g_pbrConfig.materialDir);
     std::string name(path.getName());
 
-    loadTexture(engine, path.concat(name + "_Color.png"), &g_baseColorMap);
-    loadTexture(engine, path.concat(name + "_Metallic.png"), &g_metallicMap, false);
-    loadTexture(engine, path.concat(name + "_Roughness.png"), &g_roughnessMap, false);
-    loadTexture(engine, path.concat(name + "_AO.png"), &g_aoMap, false);
-    loadTexture(engine, path.concat(name + "_Normal.png"), &g_normalMap, false);
+    for (auto& map: g_maps) {
+        loadTexture(engine, path.concat(name + map.suffix + ".png"), &map.texture, map.sRGB);
+    }
 
-    bool hasBaseColorMap = g_baseColorMap != nullptr;
-    bool hasMetallicMap = g_metallicMap != nullptr;
-    bool hasRoughnessMap = g_roughnessMap != nullptr;
-    bool hasAOMap = g_aoMap != nullptr;
-    bool hasNormalMap = g_normalMap != nullptr;
+    bool hasBaseColorMap = g_maps[MAP_COLOR].texture != nullptr;
+    bool hasMetallicMap  = g_maps[MAP_METALLIC].texture != nullptr;
+    bool hasRoughnessMap = g_maps[MAP_ROUGHNESS].texture != nullptr;
+    bool hasAOMap        = g_maps[MAP_AO].texture != nullptr;
+    bool hasNormalMap    = g_maps[MAP_NORMAL].texture != nullptr;
 
     std::string shader = R"SHADER(
         void material(inout MaterialInputs material) {
@@ -323,23 +334,23 @@ static void setup(Engine* engine, View* view, Scene* scene) {
 
     if (hasBaseColorMap) {
         g_materialInstances["DefaultMaterial"]->setParameter(
-                "baseColorMap", g_baseColorMap, sampler);
+                "baseColorMap", g_maps[MAP_COLOR].texture, sampler);
     }
     if (hasMetallicMap) {
         g_materialInstances["DefaultMaterial"]->setParameter(
-                "metallicMap", g_metallicMap, sampler);
+                "metallicMap", g_maps[MAP_METALLIC].texture, sampler);
     }
     if (hasRoughnessMap) {
         g_materialInstances["DefaultMaterial"]->setParameter(
-                "roughnessMap", g_roughnessMap, sampler);
+                "roughnessMap", g_maps[MAP_ROUGHNESS].texture, sampler);
     }
     if (hasAOMap) {
         g_materialInstances["DefaultMaterial"]->setParameter(
-                "aoMap", g_aoMap, sampler);
+                "aoMap", g_maps[MAP_AO].texture, sampler);
     }
     if (hasNormalMap) {
         g_materialInstances["DefaultMaterial"]->setParameter(
-                "normalMap", g_normalMap, sampler);
+                "normalMap", g_maps[MAP_NORMAL].texture, sampler);
     }
 
     g_meshSet = std::make_unique<MeshAssimp>(*engine);
