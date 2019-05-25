@@ -1,0 +1,5 @@
+# f32
+--reset --cfg=f32
+--dir=FWD_B  --batch=conv_3d
+--dir=BWD_D  --batch=conv_3d
+--dir=BWD_WB --batch=conv_3d

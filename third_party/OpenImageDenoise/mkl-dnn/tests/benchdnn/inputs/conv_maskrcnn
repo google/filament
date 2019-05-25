@@ -1,0 +1,6 @@
+# MaskRCNN
+
+--batch=conv_maskrcnn_p1
+--batch=conv_maskrcnn_p2
+
+
