@@ -65,6 +65,12 @@ enum AppState {
     EXPORTED,
 };
 
+enum ExportOption : int {
+    VISUALIZE_AO,
+    VISUALIZE_UV,
+    PRESERVE_MATERIALS,
+};
+
 struct App {
     Engine* engine;
     Camera* camera;
@@ -93,7 +99,7 @@ struct App {
     AppState pushedState;
     gltfio::AssetPipeline* pipeline;
     uint32_t bakeResolution = 1024;
-    bool preserveMaterialsForExport = true;
+    ExportOption exportOption = PRESERVE_MATERIALS;
 
     // Secondary threads might write to the following fields.
     std::shared_ptr<std::string> statusText;
@@ -447,6 +453,22 @@ static void renderAsset(App& app) {
             onRenderDone, &app);
 }
 
+static void generateUvVisualization(const utils::Path& pngOutputPath) {
+    using namespace image;
+    LinearImage uvimage(256, 256, 3);
+    for (int y = 0, h = uvimage.getHeight(); y < h; ++y) {
+        for (int x = 0, w = uvimage.getWidth(); x < w; ++x) {
+            float* dst = uvimage.getPixelRef(x, y);
+            dst[0] = float(x) / w;
+            dst[1] = float(y) / h;
+            dst[2] = 1.0f;
+        }
+    }
+    std::ofstream out(pngOutputPath.c_str(), std::ios::binary | std::ios::trunc);
+    ImageEncoder::encode(out, ImageEncoder::Format::PNG_LINEAR, uvimage, "",
+            pngOutputPath.c_str());
+}
+
 static void bakeAsset(App& app) {
     app.state = BAKING;
     gltfio::AssetPipeline::AssetHandle asset = app.asset->getSourceAsset();
@@ -521,10 +543,17 @@ static void exportAsset(App& app) {
 
     gltfio::AssetPipeline::AssetHandle asset = app.asset->getSourceAsset();
     gltfio::AssetPipeline pipeline;
-    if (app.preserveMaterialsForExport) {
-        asset = pipeline.replaceOcclusion(asset, "baked.png");
-    } else {
-        asset = pipeline.generatePreview(asset, "baked.png");
+    switch (app.exportOption) {
+        case VISUALIZE_AO:
+            asset = pipeline.generatePreview(asset, "baked.png");
+            break;
+        case VISUALIZE_UV:
+            generateUvVisualization(folder + "uvs.png");
+            asset = pipeline.generatePreview(asset, "uvs.png");
+            break;
+        case PRESERVE_MATERIALS:
+            asset = pipeline.replaceOcclusion(asset, "baked.png");
+            break;
     }
     pipeline.save(asset, outPath, binPath);
 
@@ -688,7 +717,9 @@ int main(int argc, char** argv) {
 
             if (ImGui::BeginPopupModal("Export options", nullptr,
                     ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar)) {
-                ImGui::Checkbox("Preserve materials", &app.preserveMaterialsForExport);
+                ImGui::RadioButton("Visualize ambient occlusion", (int*) &app.exportOption, 0);
+                ImGui::RadioButton("Visualize generated UVs", (int*) &app.exportOption, 1);
+                ImGui::RadioButton("Preserve materials", (int*) &app.exportOption, 2);
                 if (ImGui::Button("OK", ImVec2(120,0))) {
                     ImGui::CloseCurrentPopup();
                     exportAsset(app);
