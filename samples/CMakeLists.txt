@@ -184,7 +184,6 @@ set(APP_SRCS
         app/Cube.cpp
         app/FilamentApp.cpp
         app/IBL.cpp
-        app/Image.cpp
         app/IcoSphere.cpp
         app/Sphere.cpp)
 

@@ -46,6 +46,11 @@ using namespace filament::math;
 using namespace utils;
 
 namespace gltfio {
+
+struct ResourceLoader::Impl {
+    tsl::robin_map<std::string, BufferDescriptor> mResourceCache;
+};
+
 namespace details {
 
 // The AssetPool tracks references to raw source data (cgltf hierarchies) and frees them
@@ -91,10 +96,11 @@ private:
 using namespace details;
 
 ResourceLoader::ResourceLoader(const ResourceConfiguration& config) : mConfig(config),
-        mPool(new AssetPool) {}
+        mPool(new AssetPool), pImpl(new Impl) {}
 
 ResourceLoader::~ResourceLoader() {
     mPool->onLoaderDestroyed();
+    delete pImpl;
 }
 
 static void importSkinningData(Skin& dstSkin, const cgltf_skin& srcSkin) {
@@ -105,6 +111,10 @@ static void importSkinningData(Skin& dstSkin, const cgltf_skin& srcSkin) {
         auto srcBuffer = srcMatrices->buffer_view->buffer->data;
         memcpy(dstMatrices, srcBuffer, srcSkin.joints_count * sizeof(mat4f));
     }
+}
+
+void ResourceLoader::addResourceData(std::string url, BufferDescriptor&& buffer) {
+    pImpl->mResourceCache.emplace(url, std::move(buffer));
 }
 
 static void convertBytesToShorts(uint16_t* dst, const uint8_t* src, size_t count) {
@@ -163,8 +173,8 @@ bool ResourceLoader::loadResources(FilamentAsset* asset) {
                 return false;
             }
         } else if (strstr(uri, "://") == nullptr) {
-            auto iter = mResourceCache.find(uri);
-            if (iter == mResourceCache.end()) {
+            auto iter = pImpl->mResourceCache.find(uri);
+            if (iter == pImpl->mResourceCache.end()) {
                 slog.e << "Unable to load " << uri << io::endl;
                 return false;
             }
@@ -310,8 +320,8 @@ bool ResourceLoader::createTextures(details::FFilamentAsset* asset) const {
         }
 
         // Check the resource cache for this URL, otherwise load it from the file system.
-        auto iter = mResourceCache.find(tb.uri);
-        if (iter != mResourceCache.end()) {
+        auto iter = pImpl->mResourceCache.find(tb.uri);
+        if (iter != pImpl->mResourceCache.end()) {
             const uint8_t* data8 = (const uint8_t*) iter->second.buffer;
             texels = stbi_load_from_memory(data8, iter->second.size, &width, &height, &comp, 4);
         } else {

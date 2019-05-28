@@ -23,7 +23,9 @@
 #include <gltfio/FilamentAsset.h>
 #include <gltfio/MaterialProvider.h>
 
-#include <utils/NameComponentManager.h>
+namespace utils {
+    class NameComponentManager;
+}
 
 namespace gltfio {
 

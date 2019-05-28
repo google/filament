@@ -25,8 +25,6 @@
 
 #include <utils/Path.h>
 
-#include <tsl/robin_map.h>
-
 namespace gltfio {
 
 namespace details {
@@ -78,9 +76,7 @@ public:
      * Adds raw resource data into a cache for platforms that do not have filesystem or network
      * access.
      */
-    void addResourceData(std::string url, BufferDescriptor&& buffer) {
-        mResourceCache.emplace(url, std::move(buffer));
-    }
+    void addResourceData(std::string url, BufferDescriptor&& buffer);
 
 private:
     bool createTextures(details::FFilamentAsset* asset) const;
@@ -89,7 +85,9 @@ private:
     void updateBoundingBoxes(details::FFilamentAsset* asset) const;
     details::AssetPool* mPool;
     const ResourceConfiguration mConfig;
-    tsl::robin_map<std::string, BufferDescriptor> mResourceCache;
+
+    struct Impl;
+    Impl* pImpl;
 };
 
 } // namespace gltfio
