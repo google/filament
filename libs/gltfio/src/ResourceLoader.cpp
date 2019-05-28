@@ -173,8 +173,8 @@ bool ResourceLoader::loadResources(FilamentAsset* asset) {
                 return false;
             }
         } else if (strstr(uri, "://") == nullptr) {
-            auto iter = mResourceCache.find(uri);
-            if (iter == mResourceCache.end()) {
+            auto iter = pImpl->mResourceCache.find(uri);
+            if (iter == pImpl->mResourceCache.end()) {
                 slog.e << "Unable to load " << uri << io::endl;
                 return false;
             }
