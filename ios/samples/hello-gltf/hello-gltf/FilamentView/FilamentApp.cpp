@@ -132,7 +132,6 @@ void FilamentApp::setupMesh() {
 
     gltfio::ResourceLoader({
         .engine = engine,
-        .gltfPath = resourcePath.concat(utils::Path("DamagedHelmet.glb")),
         .normalizeSkinningWeights = true,
         .recomputeBoundingBoxes = false
     }).loadResources(app.asset);
