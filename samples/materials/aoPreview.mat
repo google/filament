@@ -4,6 +4,10 @@ material {
         {
             type : sampler2d,
             name : luma
+        },
+        {
+            type : bool,
+            name : grayscale
         }
     ],
     requires : [
@@ -11,17 +15,17 @@ material {
     ],
     shadingModel : unlit,
     culling : none,
-    depthCulling: false,
-    blending : transparent
+    depthCulling: false
 }
 
 fragment {
     void material(inout MaterialInputs material) {
         prepareMaterial(material);
-        float L = texture(materialParams_luma, getUV0()).r;
-        if (L == 0.0) {
-            discard;
+        if (materialParams.grayscale) {
+            float L = texture(materialParams_luma, getUV0()).r;
+            material.baseColor.rgb = vec3(L);
+        } else {
+            material.baseColor = texture(materialParams_luma, getUV0());
         }
-        material.baseColor.rgb = vec3(L);
     }
 }

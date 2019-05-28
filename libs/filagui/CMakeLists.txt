@@ -9,7 +9,8 @@ set(PUBLIC_HDR_DIR include)
 # ==================================================================================================
 set(PUBLIC_HDRS
         ${PUBLIC_HDR_DIR}/${TARGET}/ImGuiExtensions.h
-        ${PUBLIC_HDR_DIR}/${TARGET}/ImGuiHelper.h)
+        ${PUBLIC_HDR_DIR}/${TARGET}/ImGuiHelper.h
+        ${PUBLIC_HDR_DIR}/${TARGET}/ImGuiMath.h)
 
 set(SRCS
         src/ImGuiHelper.cpp

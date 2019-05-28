@@ -50,6 +50,7 @@ class SimpleViewer {
 public:
 
     static constexpr uint32_t FLAG_COLLAPSED = (1 << 0);
+    static constexpr int DEFAULT_SIDEBAR_WIDTH = 350;
 
     /**
      * Constructs a SimpleViewer that has a fixed association with the given Filament objects.
@@ -58,7 +59,7 @@ public:
      * light sources) that it owns.
      */
     SimpleViewer(filament::Engine* engine, filament::Scene* scene, filament::View* view,
-            uint32_t flags = 0);
+            uint32_t flags = 0, int sidebarWidth = DEFAULT_SIDEBAR_WIDTH);
 
     /**
      * Destroys the SimpleViewer and any Filament entities that it owns.
@@ -118,7 +119,14 @@ public:
      */
     void setUiCallback(std::function<void()> callback) { mCustomUI = callback; }
 
-    static constexpr int INITIAL_SIDEBAR_WIDTH = 350;
+    void enableWireframe(bool b) { mEnableWireframe = b; }
+    void enableSunlight(bool b) { mEnableSunlight = b; }
+    void enableDithering(bool b) { mEnableDithering = b; }
+    void enablePrepass(bool b) { mEnablePrepass = b; }
+    void enableFxaa(bool b) { mEnableFxaa = b; }
+    void enableMsaa(bool b) { mEnableMsaa = b; }
+    void enableSSAO(bool b) { mEnableSsao = b; }
+    void setIBLIntensity(float brightness) { mIblIntensity = brightness; }
 
 private:
     // Immutable properties set from the constructor.
@@ -141,14 +149,14 @@ private:
     float mIblRotation = 0.0f;
     float mSunlightIntensity = 100000.0f;
     filament::math::float3 mSunlightDirection = {0.6, -1.0, -0.8};
-    bool mShowWireframe = false;
+    bool mEnableWireframe = false;
     bool mEnableSunlight = true;
     bool mEnableDithering = true;
     bool mEnablePrepass = true;
     bool mEnableFxaa = true;
     bool mEnableMsaa = true;
     bool mEnableSsao = true;
-    int mSidebarWidth = INITIAL_SIDEBAR_WIDTH;
+    int mSidebarWidth;
     uint32_t mFlags;
 };
 
@@ -187,11 +195,11 @@ filament::math::mat4f fitIntoUnitCube(const filament::Aabb& bounds) {
 }
 
 SimpleViewer::SimpleViewer(filament::Engine* engine, filament::Scene* scene, filament::View* view,
-        uint32_t flags) :
+        uint32_t flags, int sidebarWidth) :
         mEngine(engine), mScene(scene), mView(view),
         mNames(new utils::NameComponentManager(utils::EntityManager::get())),
         mSunlight(utils::EntityManager::get().create()),
-        mFlags(flags) {
+        mFlags(flags), mSidebarWidth(sidebarWidth) {
     using namespace filament;
     LightManager::Builder(LightManager::Type::SUN)
         .color(Color::toLinear<ACCURATE>({0.98, 0.92, 0.89}))
@@ -346,7 +354,7 @@ void SimpleViewer::updateUserInterface() {
 
     const float width = ImGui::GetIO().DisplaySize.x;
     const float height = ImGui::GetIO().DisplaySize.y;
-    ImGui::SetNextWindowSize(ImVec2(INITIAL_SIDEBAR_WIDTH, height), ImGuiCond_Once);
+    ImGui::SetNextWindowSize(ImVec2(mSidebarWidth, height), ImGuiCond_Once);
     ImGui::SetNextWindowSizeConstraints(ImVec2(20, height), ImVec2(width, height));
 
     ImGui::Begin("Filament", nullptr, ImGuiWindowFlags_NoTitleBar);
@@ -397,11 +405,11 @@ void SimpleViewer::updateUserInterface() {
                     ImGui::TreePop();
                 }
             }
-            ImGui::Checkbox("Wireframe", &mShowWireframe);
+            ImGui::Checkbox("Wireframe", &mEnableWireframe);
             treeNode(mAsset->getRoot());
         }
 
-        if (mShowWireframe) {
+        if (mEnableWireframe) {
             mScene->addEntity(mAsset->getWireframe());
         } else {
             mScene->remove(mAsset->getWireframe());

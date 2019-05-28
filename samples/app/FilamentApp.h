@@ -80,6 +80,7 @@ public:
     void close() { mClosed = true; }
 
     void setSidebarWidth(int width) { mSidebarWidth = width; }
+    void setWindowTitle(const char* title) { mWindowTitle = title; }
 
     size_t getSkippedFrameCount() const { return mSkippedFrames; }
 
@@ -212,6 +213,7 @@ private:
     DropCallback mDropHandler;
     int mSidebarWidth = 0;
     size_t mSkippedFrames = 0;
+    std::string mWindowTitle;
 };
 
 #endif // TNT_FILAMENT_SAMPLE_FILAMENTAPP_H

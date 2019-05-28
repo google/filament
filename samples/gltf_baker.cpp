@@ -15,11 +15,12 @@
  */
 
 #define GLTFIO_SIMPLEVIEWER_IMPLEMENTATION
-#define DEBUG_PATHTRACER 0
 
 #include "app/Config.h"
 #include "app/FilamentApp.h"
 #include "app/IBL.h"
+
+#include <filagui/ImGuiMath.h>
 
 #include <filament/Engine.h>
 #include <filament/Scene.h>
@@ -44,6 +45,7 @@
 #include <getopt/getopt.h>
 
 #include <atomic>
+#include <functional>
 #include <fstream>
 #include <string>
 
@@ -53,98 +55,126 @@
 using namespace filament;
 using namespace gltfio;
 using namespace utils;
+using filament::math::ushort2;
 
-enum AppState {
-    EMPTY,
-    LOADED,
-    RENDERING,
-    PREPPING,
-    PREPPED,
-    BAKING,
-    BAKED,
-    EXPORTED,
+enum class Visualization : int {
+    MESH_CURRENT,
+    MESH_MODIFIED,
+    MESH_PREVIEW_AO,
+    MESH_PREVIEW_UV,
+    IMAGE_OCCLUSION,
+    IMAGE_BENT_NORMALS
 };
 
-enum ExportOption : int {
-    VISUALIZE_AO,
-    VISUALIZE_UV,
-    PRESERVE_MATERIALS,
-};
+static const char* DEFAULT_IBL = "envs/venetian_crossroads";
+static const char* INI_FILENAME = "gltf_baker.ini";
+static const char* UV_FILENAME = "gltf_baker_tmp_uv.png";
+static const char* AO_FILENAME = "gltf_baker_tmp_ao.png";
+static constexpr int PATH_SIZE = 256;
 
-struct App {
-    Engine* engine;
-    Camera* camera;
-    SimpleViewer* viewer;
+struct BakerApp;
+
+using BakerAppTask = std::function<void(BakerApp*)>;
+
+struct BakerApp {
     Config config;
-    AssetLoader* loader;
-    FilamentAsset* asset = nullptr;
-    NameComponentManager* names;
-    MaterialProvider* materials;
-    bool actualSize = false;
-    AppState state = EMPTY;
+    Engine* engine = nullptr;
+    Camera* camera = nullptr;
+    SimpleViewer* viewer = nullptr;
+    NameComponentManager* names = nullptr;
+    MaterialProvider* materials = nullptr;
+    AssetLoader* loader = nullptr;
+    gltfio::AssetPipeline* pipeline = nullptr;
+    bool viewerActualSize = false;
     utils::Path filename;
+    bool hasTestRender = false;
+    bool isWorking = false;
+    std::string statusText;
+    std::string messageBoxText;
+    bool requestViewerUpdate = false;
+    Visualization visualization = Visualization::MESH_CURRENT;
+
+    // Bundle of Filament entities (renderables, textures, etc.) for the currently displayed mesh.
+    FilamentAsset* viewerAsset = nullptr;
+
+    // Available glTF scenes suitable for display, depending on "visualization".
+    gltfio::AssetPipeline::AssetHandle currentAsset = nullptr;
+    gltfio::AssetPipeline::AssetHandle modifiedAsset = nullptr;
+    gltfio::AssetPipeline::AssetHandle previewAoAsset = nullptr;
+    gltfio::AssetPipeline::AssetHandle previewUvAsset = nullptr;
+
+    // Available 2D images suitable for display, depending on "visualization".
     image::LinearImage ambientOcclusion;
     image::LinearImage bentNormals;
     image::LinearImage meshNormals;
     image::LinearImage meshPositions;
-    bool showOverlay = false;
-    bool enablePrepScale = true;
-    View* overlayView = nullptr;
-    Scene* overlayScene = nullptr;
-    VertexBuffer* overlayVb = nullptr;
-    IndexBuffer* overlayIb = nullptr;
-    Texture* overlayTexture = nullptr;
-    MaterialInstance* overlayMaterial = nullptr;
-    utils::Entity overlayEntity;
-    AppState pushedState;
-    gltfio::AssetPipeline* pipeline;
-    uint32_t bakeResolution = 1024;
-    ExportOption exportOption = PRESERVE_MATERIALS;
 
-    // Secondary threads might write to the following fields.
-    std::shared_ptr<std::string> statusText;
-    std::shared_ptr<std::string> messageBoxText;
-    std::atomic<bool> requestOverlayUpdate;
-    std::atomic<bool> requestStatePop;
+    // AssetPipeline callbacks are triggered from outside the UI thread. To keep things simple, we
+    // defer their execution until the next iteration of the main loop. We store only one item per
+    // callback type, which provides the side benefit of skipping callbacks that occur more than
+    // once per frame. We use std::function rather than raw C function pointers to allow simple
+    // lambdas with captures.
+    std::atomic<BakerAppTask*> onDone;
+    std::atomic<BakerAppTask*> onTile;
+
+    struct {
+        uint32_t resolution = 1024;
+        int samplesPerPixel = 256;
+    } bakeOptions;
+
+    struct {
+        Visualization selection = Visualization::MESH_MODIFIED;
+        char outputFolder[PATH_SIZE];
+        char gltfPath[PATH_SIZE];
+        char binPath[PATH_SIZE];
+        char occlusionPath[PATH_SIZE];
+        char bentNormalsPath[PATH_SIZE];
+    } exportOptions;
+
+    struct {
+        View* view = nullptr;
+        Scene* scene = nullptr;
+        VertexBuffer* vb = nullptr;
+        IndexBuffer* ib = nullptr;
+        Texture* texture = nullptr;
+        MaterialInstance* material = nullptr;
+        utils::Entity entity;
+    } overlayQuad;
 };
 
-struct OverlayVertex {
-    filament::math::float2 position;
-    filament::math::float2 uv;
-};
+#define makeTileCallback(FN) [](ushort2,  ushort2, void* userData) { \
+    BakerApp* app = (BakerApp*) userData; \
+    BakerAppTask* previous = app->onTile.exchange(new BakerAppTask(FN)); \
+    delete previous; \
+}
 
-static OverlayVertex OVERLAY_VERTICES[4] = {
-    {{0, 0}, {0, 0}},
-    {{ 1000, 0}, {1, 0}},
-    {{0,  1000}, {0, 1}},
-    {{ 1000,  1000}, {1, 1}},
-};
-
-static const char* DEFAULT_IBL = "envs/venetian_crossroads";
-
-static const char* INI_FILENAME = "gltf_baker.ini";
+#define makeDoneCallback(FN) [](void* userData) { \
+    BakerApp* app = (BakerApp*) userData; \
+    BakerAppTask* previous = app->onDone.exchange(new BakerAppTask(FN)); \
+    delete previous; \
+}
 
 static void printUsage(char* name) {
     std::string exec_name(Path(name).getName());
     std::string usage(
-        "SHOWCASE can perform AO baking on the specified glTF file. If no file is specified,"
+        "BAKER can perform AO baking on the specified glTF file. If no file is specified,"
         "it loads the most recently-used glTF file.\n"
         "Usage:\n"
-        "    SHOWCASE [options] [gltf path]\n"
+        "    BAKER [options] [gltf path]\n"
         "Options:\n"
         "   --help, -h\n"
         "       Prints this message\n\n"
         "   --actual-size, -s\n"
-        "       Do not scale the model to fit into a unit cube\n\n"
+        "       Do not scale the model to fit into a unit cube in the viewer\n\n"
     );
-    const std::string from("SHOWCASE");
+    const std::string from("BAKER");
     for (size_t pos = usage.find(from); pos != std::string::npos; pos = usage.find(from, pos)) {
         usage.replace(pos, from.length(), exec_name);
     }
     std::cout << usage;
 }
 
-static int handleCommandLineArguments(int argc, char* argv[], App* app) {
+static int handleCommandLineArguments(int argc, char* argv[], BakerApp* app) {
     static constexpr const char* OPTSTR = "ha:i:us";
     static const struct option OPTIONS[] = {
         { "help",       no_argument,       nullptr, 'h' },
@@ -161,7 +191,7 @@ static int handleCommandLineArguments(int argc, char* argv[], App* app) {
                 printUsage(argv[0]);
                 exit(0);
             case 's':
-                app->actualSize = true;
+                app->viewerActualSize = true;
                 break;
         }
     }
@@ -173,13 +203,13 @@ static std::ifstream::pos_type getFileSize(const char* filename) {
     return in.tellg();
 }
 
-static void saveIniFile(App& app) {
+static void saveIniFile(BakerApp& app) {
     std::ofstream out(INI_FILENAME);
     out << "[recent]\n";
     out << "filename=" << app.filename.c_str() << "\n";
 }
 
-static void loadIniFile(App& app) {
+static void loadIniFile(BakerApp& app) {
     utils::Path iniPath(INI_FILENAME);
     if (!app.filename.isEmpty() || !iniPath.isFile()) {
         return;
@@ -201,225 +231,215 @@ static void loadIniFile(App& app) {
     }
 }
 
-static void updateOverlayVerts(App& app) {
-    auto viewportSize = ImGui::GetIO().DisplaySize;
-    viewportSize.x -= app.viewer->getSidebarWidth();
-    OVERLAY_VERTICES[0].position.x = app.viewer->getSidebarWidth();
-    OVERLAY_VERTICES[2].position.x = app.viewer->getSidebarWidth();
-    OVERLAY_VERTICES[1].position.x = app.viewer->getSidebarWidth() + viewportSize.x;
-    OVERLAY_VERTICES[3].position.x = app.viewer->getSidebarWidth() + viewportSize.x;
-    OVERLAY_VERTICES[2].position.y = viewportSize.y;
-    OVERLAY_VERTICES[3].position.y = viewportSize.y;
-};
-
-static void updateOverlay(App& app) {
+static void createQuadRenderable(BakerApp& app) {
     auto& rcm = app.engine->getRenderableManager();
-    auto vb = app.overlayVb;
-    auto ib = app.overlayIb;
-    updateOverlayVerts(app);
-    vb->setBufferAt(*app.engine, 0,
-            VertexBuffer::BufferDescriptor(OVERLAY_VERTICES, 64, nullptr));
-    rcm.destroy(app.overlayEntity);
+    Engine& engine = *app.engine;
+
+    struct OverlayVertex {
+        filament::math::float2 position;
+        filament::math::float2 uv;
+    };
+    static OverlayVertex kVertices[4] = {
+        {{0, 0}, {0, 0}}, {{ 1000, 0}, {1, 0}}, {{0,  1000}, {0, 1}}, {{ 1000,  1000}, {1, 1}}
+    };
+    static constexpr uint16_t kInidices[6] = { 0, 1, 2, 3, 2, 1 };
+
+    if (!app.overlayQuad.entity) {
+        app.overlayQuad.vb = VertexBuffer::Builder()
+                .vertexCount(4)
+                .bufferCount(1)
+                .attribute(VertexAttribute::POSITION, 0, VertexBuffer::AttributeType::FLOAT2, 0, 16)
+                .attribute(VertexAttribute::UV0, 0, VertexBuffer::AttributeType::FLOAT2, 8, 16)
+                .build(engine);
+        app.overlayQuad.ib = IndexBuffer::Builder()
+                .indexCount(6)
+                .bufferType(IndexBuffer::IndexType::USHORT)
+                .build(engine);
+        app.overlayQuad.ib->setBuffer(engine,
+                IndexBuffer::BufferDescriptor(kInidices, 12, nullptr));
+        auto mat = Material::Builder()
+                .package(RESOURCES_AOPREVIEW_DATA, RESOURCES_AOPREVIEW_SIZE)
+                .build(engine);
+        app.overlayQuad.material = mat->createInstance();
+        app.overlayQuad.entity = EntityManager::get().create();
+    }
+
+    constexpr int margin = 20;
+    const int sidebar = app.viewer->getSidebarWidth();
+    const auto size = ImGui::GetIO().DisplaySize - ImVec2(sidebar + margin * 2, margin * 2);
+    kVertices[0].position.x = sidebar + margin;
+    kVertices[1].position.x = sidebar + margin + size.x;
+    kVertices[2].position.x = sidebar + margin;
+    kVertices[3].position.x = sidebar + margin + size.x;
+    kVertices[0].position.y = margin;
+    kVertices[1].position.y = margin;
+    kVertices[2].position.y = margin + size.y;
+    kVertices[3].position.y = margin + size.y;
+
+    auto vb = app.overlayQuad.vb;
+    auto ib = app.overlayQuad.ib;
+    vb->setBufferAt(*app.engine, 0, VertexBuffer::BufferDescriptor(kVertices, 64, nullptr));
+    rcm.destroy(app.overlayQuad.entity);
     RenderableManager::Builder(1)
             .boundingBox({{ 0, 0, 0 }, { 1000, 1000, 1 }})
-            .material(0, app.overlayMaterial)
+            .material(0, app.overlayQuad.material)
             .geometry(0, RenderableManager::PrimitiveType::TRIANGLES, vb, ib, 0, 6)
             .culling(false)
             .receiveShadows(false)
             .castShadows(false)
-            .build(*app.engine, app.overlayEntity);
+            .build(*app.engine, app.overlayQuad.entity);
 }
 
-static void updateOverlayTexture(App& app) {
-    Engine& engine = *app.engine;
-    int w = app.ambientOcclusion.getWidth();
-    int h = app.ambientOcclusion.getHeight();
-    void* data = app.ambientOcclusion.getPixelRef();
-    Texture::PixelBufferDescriptor buffer(data, size_t(w * h * 4),
-            Texture::Format::R, Texture::Type::FLOAT);
-    app.overlayTexture->setImage(engine, 0, std::move(buffer));
+static void updateViewerMesh(BakerApp& app) {
+    gltfio::AssetPipeline::AssetHandle handle;
+    switch (app.visualization) {
+        case Visualization::MESH_CURRENT: handle = app.currentAsset; break;
+        case Visualization::MESH_MODIFIED: handle = app.modifiedAsset; break;
+        case Visualization::MESH_PREVIEW_AO: handle = app.previewAoAsset; break;
+        case Visualization::MESH_PREVIEW_UV: handle = app.previewUvAsset; break;
+        default: return;
+    }
+
+    if (!app.viewerAsset || app.viewerAsset->getSourceAsset() != handle) {
+        app.viewerAsset = app.loader->createAssetFromHandle(handle);
+
+        // Load external textures and buffers.
+        gltfio::ResourceLoader({
+            .engine = app.engine,
+            .gltfPath = app.filename.getAbsolutePath(),
+            .normalizeSkinningWeights = true,
+            .recomputeBoundingBoxes = false
+        }).loadResources(app.viewerAsset);
+
+        // Load animation data then free the source hierarchy.
+        app.viewerAsset->getAnimator();
+
+        // Destroy the old currentAsset and add the renderables to the scene.
+        app.viewer->setAsset(app.viewerAsset, app.names, !app.viewerActualSize);
+    }
 }
 
-static void createOverlayTexture(App& app) {
+static void updateViewerImage(BakerApp& app) {
     Engine& engine = *app.engine;
     using MinFilter = TextureSampler::MinFilter;
     using MagFilter = TextureSampler::MagFilter;
 
-    int w = app.ambientOcclusion.getWidth();
-    int h = app.ambientOcclusion.getHeight();
-    void* data = app.ambientOcclusion.getPixelRef();
-    Texture::PixelBufferDescriptor buffer(data, size_t(w * h * 4),
-            Texture::Format::R, Texture::Type::FLOAT);
-    auto tex = Texture::Builder()
-            .width(uint32_t(w))
-            .height(uint32_t(h))
-            .levels(1)
-            .sampler(Texture::Sampler::SAMPLER_2D)
-            .format(Texture::InternalFormat::R8)
-            .build(engine);
-    tex->setImage(engine, 0, std::move(buffer));
+    // Gather information about the displayed image.
+    image::LinearImage image;
+    switch (app.visualization) {
+        case Visualization::IMAGE_OCCLUSION:
+            image = app.ambientOcclusion;
+            break;
+        case Visualization::IMAGE_BENT_NORMALS:
+            image = app.bentNormals;
+            break;
+        default:
+            return;
+    }
+    const int width = image.getWidth();
+    const int height = image.getHeight();
+    const int channels = image.getChannels();
+    const void* data = image.getPixelRef();
+    const Texture::InternalFormat internalFormat = channels == 1 ?
+            Texture::InternalFormat::R8 : Texture::InternalFormat::RGB8;
+    const Texture::Format format = channels == 1 ? Texture::Format::R : Texture::Format::RGB;
 
-    TextureSampler sampler(MinFilter::LINEAR, MagFilter::LINEAR);
-    app.overlayMaterial->setParameter("luma", tex, sampler);
+    // Create a brand new texture object if necessary.
+    const Texture* tex = app.overlayQuad.texture;
+    if (!tex || tex->getWidth() != width || tex->getHeight() != height ||
+            tex->getFormat() != internalFormat) {
+        engine.destroy(tex);
+        app.overlayQuad.texture = Texture::Builder()
+                .width(width)
+                .height(height)
+                .levels(1)
+                .sampler(Texture::Sampler::SAMPLER_2D)
+                .format(internalFormat)
+                .build(engine);
+        TextureSampler sampler(MinFilter::LINEAR, MagFilter::LINEAR);
+        app.overlayQuad.material->setParameter("luma", app.overlayQuad.texture, sampler);
+        app.overlayQuad.material->setParameter("grayscale", channels == 1);
+    }
 
-    engine.destroy(app.overlayTexture);
-    app.overlayTexture = tex;
+    // Upload texture data.
+    Texture::PixelBufferDescriptor buffer(data, size_t(width * height * channels * sizeof(float)),
+            format, Texture::Type::FLOAT);
+    app.overlayQuad.texture->setImage(engine, 0, std::move(buffer));
 }
 
-static void createOverlay(App& app) {
-    Engine& engine = *app.engine;
-
-    static constexpr uint16_t OVERLAY_INDICES[6] = { 0, 1, 2, 3, 2, 1 };
-
-    auto vb = VertexBuffer::Builder()
-            .vertexCount(4)
-            .bufferCount(1)
-            .attribute(VertexAttribute::POSITION, 0, VertexBuffer::AttributeType::FLOAT2, 0, 16)
-            .attribute(VertexAttribute::UV0, 0, VertexBuffer::AttributeType::FLOAT2, 8, 16)
-            .build(engine);
-    auto ib = IndexBuffer::Builder()
-            .indexCount(6)
-            .bufferType(IndexBuffer::IndexType::USHORT)
-            .build(engine);
-    ib->setBuffer(engine,
-            IndexBuffer::BufferDescriptor(OVERLAY_INDICES, 12, nullptr));
-    auto mat = Material::Builder()
-            .package(RESOURCES_AOPREVIEW_DATA, RESOURCES_AOPREVIEW_SIZE)
-            .build(engine);
-    auto matInstance = mat->createInstance();
-
-    app.overlayVb = vb;
-    app.overlayIb = ib;
-    app.overlayEntity = EntityManager::get().create();
-    app.overlayMaterial = matInstance;
+static void updateViewer(BakerApp& app) {
+    switch (app.visualization) {
+        case Visualization::MESH_CURRENT:
+        case Visualization::MESH_MODIFIED:
+        case Visualization::MESH_PREVIEW_AO:
+        case Visualization::MESH_PREVIEW_UV:
+            updateViewerMesh(app);
+            break;
+        case Visualization::IMAGE_OCCLUSION:
+        case Visualization::IMAGE_BENT_NORMALS:
+            updateViewerImage(app);
+            break;
+    }
 }
 
-static void loadAsset(App& app) {
+static void loadAssetFromDisk(BakerApp& app) {
     std::cout << "Loading " << app.filename << "..." << std::endl;
-
     if (app.filename.getExtension() == "glb") {
         std::cerr << "GLB files are not yet supported." << std::endl;
         exit(1);
     }
 
-    // Peek at the file size to allow pre-allocation.
-    long contentSize = static_cast<long>(getFileSize(app.filename.c_str()));
-    if (contentSize <= 0) {
-        std::cerr << "Unable to open " << app.filename << std::endl;
+    auto pipeline = new gltfio::AssetPipeline();
+    gltfio::AssetPipeline::AssetHandle handle = pipeline->load(app.filename);
+    if (!handle) {
+        delete pipeline;
+        puts("Unable to load model");
         exit(1);
     }
 
-    // Consume the glTF file.
-    std::ifstream in(app.filename.c_str(), std::ifstream::in);
-    std::vector<uint8_t> buffer(static_cast<unsigned long>(contentSize));
-    if (!in.read((char*) buffer.data(), contentSize)) {
-        std::cerr << "Unable to read " << app.filename << std::endl;
-        exit(1);
+    if (!gltfio::AssetPipeline::isFlattened(handle)) {
+        handle = pipeline->flatten(handle, AssetPipeline::FILTER_TRIANGLES);
+        if (!handle) {
+            delete pipeline;
+            puts("Unable to flatten model");
+            exit(1);
+        }
     }
 
-    // Parse the glTF file and create Filament entities.
-    app.asset = app.loader->createAssetFromJson(buffer.data(), buffer.size());
-    buffer.clear();
-    buffer.shrink_to_fit();
-
-    if (!app.asset) {
-        std::cerr << "Unable to parse " << app.filename << std::endl;
-        exit(1);
-    }
-
-    // Load external textures and buffers.
-    gltfio::ResourceLoader({
-        .engine = app.engine,
-        .gltfPath = app.filename.getAbsolutePath(),
-        .normalizeSkinningWeights = true,
-        .recomputeBoundingBoxes = false
-    }).loadResources(app.asset);
-
-    // Load animation data then free the source hierarchy.
-    app.asset->getAnimator();
-    app.state = AssetPipeline::isParameterized(app.asset->getSourceAsset()) ? PREPPED : LOADED;
-
-    // Destroy the old asset and add the renderables to the scene.
-    app.viewer->setAsset(app.asset, app.names, !app.actualSize);
+    // Destroy the previous pipeline to free up resources used by the previous asset.
+    delete app.pipeline;
+    app.pipeline = pipeline;
 
     app.viewer->setIndirectLight(FilamentApp::get().getIBL()->getIndirectLight());
+    app.currentAsset = handle;
+    app.requestViewerUpdate = true;
+
+    // Update the window title bar and the default output path.
+    const utils::Path defaultFolder = app.filename.getAbsolutePath().getParent();
+    strncpy(app.exportOptions.outputFolder, defaultFolder.c_str(), PATH_SIZE);
+    FilamentApp::get().setWindowTitle(app.filename.getName().c_str());
 }
 
-static void prepAsset(App& app) {
-    app.state = PREPPING;
-
-    utils::JobSystem* js = utils::JobSystem::getJobSystem();
-    utils::JobSystem::Job* parent = js->createJob();
-    utils::JobSystem::Job* prep = utils::jobs::createJob(*js, parent, [&app] {
-        gltfio::AssetPipeline::AssetHandle asset = app.asset->getSourceAsset();
-        uint32_t flags = gltfio::AssetPipeline::FILTER_TRIANGLES;
-        if (app.enablePrepScale) {
-            flags |= gltfio::AssetPipeline::SCALE_TO_UNIT;
-        }
-        gltfio::AssetPipeline pipeline;
-
-        {
-            app.statusText = std::make_shared<std::string>("Flattening");
-            asset = pipeline.flatten(asset, flags);
-            app.statusText.reset();
-        }
-
-        if (!asset) {
-            app.messageBoxText = std::make_shared<std::string>("Unable to flatten model");
-            app.pushedState = LOADED;
-            app.requestStatePop = true;
-            return;
-        }
-
-        {
-            app.statusText = std::make_shared<std::string>("Parameterizing");
-            asset = pipeline.parameterize(asset);
-            app.statusText.reset();
-        }
-
-        if (!asset) {
-            app.messageBoxText = std::make_shared<std::string>(
-                    "Unable to parameterize mesh, check terminal output for details.");
-            app.pushedState = LOADED;
-            app.requestStatePop = true;
-            return;
-        }
-
-        const utils::Path folder = app.filename.getAbsolutePath().getParent();
-        const utils::Path binPath = folder + "prepped.bin";
-        const utils::Path outPath = folder + "prepped.gltf";
-
-        pipeline.save(asset, outPath, binPath);
-        std::cout << "Generated " << outPath << " and " << binPath << std::endl;
-
-        app.filename = outPath;
-        loadAsset(app);
-
-        app.pushedState = PREPPED;
-        app.requestStatePop = true;
-    });
-    js->run(prep);
-}
-
-static void renderAsset(App& app) {
-    app.pushedState = app.state;
-    app.state = RENDERING;
-    gltfio::AssetPipeline::AssetHandle asset = app.asset->getSourceAsset();
+static void executeTestRender(BakerApp& app) {
+    app.isWorking = true;
+    app.hasTestRender = true;
+    gltfio::AssetPipeline::AssetHandle currentAsset = app.currentAsset;
 
     // Allocate the render target for the path tracer as well as a GPU texture to display it.
     auto viewportSize = ImGui::GetIO().DisplaySize;
     viewportSize.x -= app.viewer->getSidebarWidth();
-    app.ambientOcclusion = image::LinearImage(viewportSize.x, viewportSize.y, 1);
-    app.showOverlay = true;
-    createOverlayTexture(app);
+    app.ambientOcclusion = image::LinearImage((uint32_t) viewportSize.x,
+            (uint32_t) viewportSize.y, 1);
+    app.statusText.clear();
+    app.visualization = Visualization::IMAGE_OCCLUSION;
 
-    // Compute the camera paramaeters for the path tracer.
+    // Compute the camera parameters for the path tracer.
     // ---------------------------------------------------
     // The path tracer does not know about the top-level Filament transform that we use to fit the
     // model into a unit cube (see the -s option), so here we do little trick by temporarily
     // transforming the Filament camera before grabbing its lookAt vectors.
     auto& tcm = app.engine->getTransformManager();
-    auto root = tcm.getInstance(app.asset->getRoot());
+    auto root = tcm.getInstance(app.viewerAsset->getRoot());
     auto cam = tcm.getInstance(app.camera->getEntity());
     filament::math::mat4f prev = tcm.getTransform(root);
     tcm.setTransform(root, inverse(prev));
@@ -434,22 +454,15 @@ static void renderAsset(App& app) {
     tcm.setParent(cam, {});
     tcm.setTransform(root, prev);
 
-    app.pipeline = new gltfio::AssetPipeline();
-
     // Finally, set up some callbacks and invoke the path tracer.
-
-    using filament::math::ushort2;
-    auto onRenderTile = [](ushort2, ushort2, void* userData) {
-        App* app = (App*) userData;
-        app->requestOverlayUpdate = true;
-    };
-    auto onRenderDone = [](void* userData) {
-        App* app = (App*) userData;
-        app->requestStatePop = true;
-        app->requestOverlayUpdate = true;
-        delete app->pipeline;
-    };
-    app.pipeline->renderAmbientOcclusion(asset, app.ambientOcclusion, camera, onRenderTile,
+    auto onRenderTile = makeTileCallback([](BakerApp* app) {
+        app->requestViewerUpdate = true;
+    });
+    auto onRenderDone = makeDoneCallback([](BakerApp* app) {
+        app->requestViewerUpdate = true;
+        app->isWorking = false;
+    });
+    app.pipeline->renderAmbientOcclusion(currentAsset, app.ambientOcclusion, camera, onRenderTile,
             onRenderDone, &app);
 }
 
@@ -469,245 +482,343 @@ static void generateUvVisualization(const utils::Path& pngOutputPath) {
             pngOutputPath.c_str());
 }
 
-static void bakeAsset(App& app) {
-    app.state = BAKING;
-    gltfio::AssetPipeline::AssetHandle asset = app.asset->getSourceAsset();
-
-    // Allocate the render target for the path tracer as well as a GPU texture to display it.
-    ImVec2 viewportSize = ImGui::GetIO().DisplaySize;
-    const uint32_t res = app.bakeResolution;
-    viewportSize.x -= app.viewer->getSidebarWidth();
-    app.showOverlay = true;
-    app.ambientOcclusion = image::LinearImage(res, res, 1);
-    createOverlayTexture(app);
-
-    app.pipeline = new gltfio::AssetPipeline();
-
-    using filament::math::ushort2;
-    auto onRenderTile = [](ushort2, ushort2, void* userData) {
-        App* app = (App*) userData;
-        app->requestOverlayUpdate = true;
-    };
-
-#if DEBUG_PATHTRACER
-    image::LinearImage outputs[] = {
-        app.ambientOcclusion,
-        app.bentNormals = image::LinearImage(res, res, 3),
-        app.meshNormals = image::LinearImage(res, res, 3),
-        app.meshPositions = image::LinearImage(res, res, 3)
-    };
-    auto onRenderDone = [](void* userData) {
-        App* app = (App*) userData;
-        using namespace image;
-        auto fmt = ImageEncoder::Format::PNG_LINEAR;
-
-        std::ofstream bn("bentNormals.png", std::ios::binary | std::ios::trunc);
-        image::LinearImage img = image::verticalFlip(image::vectorsToColors(app->bentNormals));
-        ImageEncoder::encode(bn, fmt, img, "", "bentNormals.png");
-
-        std::ofstream mn("meshNormals.png", std::ios::binary | std::ios::trunc);
-        img = image::verticalFlip(image::vectorsToColors(app->meshNormals));
-        ImageEncoder::encode(mn, fmt, img, "", "meshNormals.png");
-
-        std::ofstream mp("meshPositions.png", std::ios::binary | std::ios::trunc);
-        img = image::verticalFlip(image::vectorsToColors(app->meshPositions));
-        ImageEncoder::encode(mp, fmt, img, "", "meshPositions.png");
-
-        delete app->pipeline;
-        app->state = BAKED;
-    };
-    app.pipeline->bakeAllOutputs(asset, outputs, onRenderTile, onRenderDone, &app);
-#else
-    auto onRenderDone = [](void* userData) {
-        App* app = (App*) userData;
-        delete app->pipeline;
-        app->requestOverlayUpdate = true;
-        app->state = BAKED;
-    };
-    app.pipeline->bakeAmbientOcclusion(asset, app.ambientOcclusion, onRenderTile, onRenderDone,
-            &app);
-#endif
-}
-
-static void exportAsset(App& app) {
+static void executeBakeAo(BakerApp& app) {
     using namespace image;
 
-    const utils::Path folder = app.filename.getAbsolutePath().getParent();
-    const utils::Path binPath = folder + "baked.bin";
-    const utils::Path outPath = folder + "baked.gltf";
-    const utils::Path texPath = folder + "baked.png";
+    app.hasTestRender = false;
+    app.isWorking = true;
 
-    std::ofstream out(texPath.c_str(), std::ios::binary | std::ios::trunc);
-    ImageEncoder::encode(out, ImageEncoder::Format::PNG_LINEAR, app.ambientOcclusion, "",
-            texPath.c_str());
+    auto onRenderTile = makeTileCallback([](BakerApp* app) {
+        app->requestViewerUpdate = true;
+    });
 
-    gltfio::AssetPipeline::AssetHandle asset = app.asset->getSourceAsset();
-    gltfio::AssetPipeline pipeline;
-    switch (app.exportOption) {
-        case VISUALIZE_AO:
-            asset = pipeline.generatePreview(asset, "baked.png");
-            break;
-        case VISUALIZE_UV:
-            generateUvVisualization(folder + "uvs.png");
-            asset = pipeline.generatePreview(asset, "uvs.png");
-            break;
-        case PRESERVE_MATERIALS:
-            asset = pipeline.replaceOcclusion(asset, "baked.png");
-            break;
+    auto onRenderDone = makeDoneCallback([](BakerApp* app) {
+        app->requestViewerUpdate = true;
+
+        // TODO: users can preview bent normals as they are being rendered so we should
+        // consider doing the vector-to-colors conversion in real time rather than waiting
+        // till the end.
+        app->bentNormals = vectorsToColors(app->bentNormals);
+
+        // Generate a simple red-green UV visualization texture.
+        const utils::Path folder = app->filename.getAbsolutePath().getParent();
+        generateUvVisualization(folder + UV_FILENAME);
+        app->previewUvAsset = app->pipeline->generatePreview(app->currentAsset, UV_FILENAME);
+
+        // Export the generated AO texture.
+        const utils::Path tmpOcclusionPath = folder + AO_FILENAME;
+        std::ofstream out(tmpOcclusionPath.c_str(), std::ios::binary | std::ios::trunc);
+        ImageEncoder::encode(out, ImageEncoder::Format::PNG_LINEAR, app->ambientOcclusion,
+                "", tmpOcclusionPath.c_str());
+
+        app->previewAoAsset = app->pipeline->generatePreview(app->currentAsset, AO_FILENAME);
+        app->modifiedAsset = app->pipeline->replaceOcclusion(app->currentAsset, AO_FILENAME);
+        app->isWorking = false;
+    });
+
+    auto doRender = [&app, onRenderTile, onRenderDone] {
+        const uint32_t res = app.bakeOptions.resolution;
+        app.statusText.clear();
+        app.visualization = Visualization::IMAGE_OCCLUSION;
+        app.ambientOcclusion = image::LinearImage(res, res, 1);
+        app.bentNormals = image::LinearImage(res, res, 3);
+        app.meshNormals = image::LinearImage(res, res, 3);
+        app.meshPositions = image::LinearImage(res, res, 3);
+        image::LinearImage outputs[] = {
+            app.ambientOcclusion, app.bentNormals, app.meshNormals, app.meshPositions
+        };
+        app.pipeline->setSamplesPerPixel(app.bakeOptions.samplesPerPixel);
+        app.pipeline->bakeAllOutputs(app.currentAsset, outputs, onRenderTile, onRenderDone, &app);
+    };
+
+    if (AssetPipeline::isParameterized(app.currentAsset)) {
+        puts("Already parameterized.");
+        doRender();
+        return;
     }
-    pipeline.save(asset, outPath, binPath);
 
-    std::cout << "Generated " << outPath << ", " << binPath << ", and " << texPath << std::endl;
-    app.filename = outPath;
-    loadAsset(app);
+    app.previewAoAsset = nullptr;
+    app.modifiedAsset = nullptr;
+    app.previewUvAsset = nullptr;
+    app.ambientOcclusion = LinearImage();
+    app.statusText = "Parameterizing...";
 
-    app.state = EXPORTED;
-    app.showOverlay = false;
+    utils::JobSystem* js = utils::JobSystem::getJobSystem();
+    utils::JobSystem::Job* parent = js->createJob();
+    utils::JobSystem::Job* prep = utils::jobs::createJob(*js, parent, [&app, doRender] {
+        auto parameterized = app.pipeline->parameterize(app.currentAsset);
+        auto callback = new BakerAppTask([doRender, parameterized](BakerApp* app) {
+            if (!parameterized) {
+                app->messageBoxText = "Unable to parameterize, check terminal output for details.";
+                app->isWorking = false;
+                return;
+            }
+            app->currentAsset = parameterized;
+            app->requestViewerUpdate = true;
+            doRender();
+        });
+        BakerAppTask* previous = app.onDone.exchange(callback);
+        delete previous;
+    });
+    js->run(prep);
+}
+
+static void executeExport(BakerApp& app) {
+    const auto& options = app.exportOptions;
+    const utils::Path folder = options.outputFolder;
+    const utils::Path binPath = folder + options.binPath;
+    const utils::Path gltfPath = folder + options.gltfPath;
+    const utils::Path occlusionPath = folder + options.occlusionPath;
+    const utils::Path bentNormalsPath = folder + options.bentNormalsPath;
+
+    auto exportOcclusion = [&app, occlusionPath]() {
+        using namespace image;
+        std::ofstream out(occlusionPath.c_str(), std::ios::binary | std::ios::trunc);
+        ImageEncoder::encode(out, ImageEncoder::Format::PNG_LINEAR, app.ambientOcclusion, "",
+                occlusionPath.c_str());
+    };
+
+    auto exportBentNormals = [&app, bentNormalsPath]() {
+        using namespace image;
+        std::ofstream out(bentNormalsPath.c_str(), std::ios::binary | std::ios::trunc);
+        ImageEncoder::encode(out, ImageEncoder::Format::PNG_LINEAR, app.bentNormals, "",
+                bentNormalsPath.c_str());
+    };
+
+    std::string msg = "Exported ";
+    const std::string join = ", ";
+    switch (options.selection) {
+        case Visualization::MESH_CURRENT:
+            app.pipeline->save(app.currentAsset, gltfPath, binPath);
+            msg += options.gltfPath + join + options.binPath;
+            break;
+        case Visualization::MESH_MODIFIED:
+            exportOcclusion();
+            app.pipeline->setOcclusionUri(app.modifiedAsset, options.occlusionPath);
+            app.pipeline->save(app.modifiedAsset, gltfPath, binPath);
+            msg += options.gltfPath + join + options.binPath + join + options.occlusionPath;
+            break;
+        case Visualization::MESH_PREVIEW_AO:
+            exportOcclusion();
+            app.pipeline->setOcclusionUri(app.previewAoAsset, options.occlusionPath);
+            app.pipeline->save(app.previewAoAsset, gltfPath, binPath);
+            msg += options.gltfPath + join + options.binPath + join + options.occlusionPath;
+            break;
+        case Visualization::IMAGE_OCCLUSION:
+            exportOcclusion();
+            msg += options.occlusionPath;
+            break;
+        case Visualization::IMAGE_BENT_NORMALS:
+            exportBentNormals();
+            msg += options.bentNormalsPath;
+            break;
+        default:
+            return;
+    }
+    app.statusText = msg;
 }
 
 int main(int argc, char** argv) {
-    App app;
+    BakerApp app;
+
+    app.onDone.exchange(nullptr);
+    app.onTile.exchange(nullptr);
+
+    strncpy(app.exportOptions.gltfPath, "baked.gltf", PATH_SIZE);
+    strncpy(app.exportOptions.binPath, "baked.bin", PATH_SIZE);
+    strncpy(app.exportOptions.occlusionPath, "occlusion.png", PATH_SIZE);
+    strncpy(app.exportOptions.bentNormalsPath, "bentNormals.png", PATH_SIZE);
 
     app.config.title = "gltf_baker";
     app.config.iblDirectory = FilamentApp::getRootPath() + DEFAULT_IBL;
-    app.requestOverlayUpdate = false;
-    app.requestStatePop = false;
 
+    utils::Path filename;
     int option_index = handleCommandLineArguments(argc, argv, &app);
     int num_args = argc - option_index;
     if (num_args >= 1) {
-        app.filename = argv[option_index];
-        if (!app.filename.exists()) {
+        filename = argv[option_index];
+        if (!filename.exists()) {
             std::cerr << "file " << app.filename << " not found!" << std::endl;
             return 1;
         }
-        if (app.filename.isDirectory()) {
-            auto files = app.filename.listContents();
-            for (auto file : files) {
+        if (filename.isDirectory()) {
+            auto files = filename.listContents();
+            for (const auto& file : files) {
                 if (file.getExtension() == "gltf") {
                     app.filename = file;
                     break;
                 }
             }
-            if (app.filename.isDirectory()) {
-                std::cerr << "no glTF file found in " << app.filename << std::endl;
+            if (filename.isDirectory()) {
+                std::cerr << "no glTF file found in " << filename << std::endl;
                 return 1;
             }
         }
     }
 
+    app.filename = filename;
     loadIniFile(app);
 
     auto setup = [&](Engine* engine, View* view, Scene* scene) {
         app.engine = engine;
         app.names = new NameComponentManager(EntityManager::get());
-        app.viewer = new SimpleViewer(engine, scene, view, SimpleViewer::FLAG_COLLAPSED);
+
+        const int kInitialSidebarWidth = 322;
+        app.viewer = new SimpleViewer(engine, scene, view, SimpleViewer::FLAG_COLLAPSED,
+                kInitialSidebarWidth);
+        app.viewer->enableSunlight(false);
+        app.viewer->enableSSAO(false);
+        app.viewer->setIBLIntensity(50000.0f);
+
         app.materials = createMaterialGenerator(engine);
         app.loader = AssetLoader::create({engine, app.materials, app.names });
         app.camera = &view->getCamera();
 
         if (!app.filename.isEmpty()) {
-            loadAsset(app);
+            loadAssetFromDisk(app);
             saveIniFile(app);
         }
 
-        createOverlay(app);
-
         app.viewer->setUiCallback([&app, scene] () {
-            const ImVec4 disabled = ImGui::GetStyle().Colors[ImGuiCol_TextDisabled];
-            const ImVec4 enabled = ImGui::GetStyle().Colors[ImGuiCol_Text];
-            ImGui::GetStyle().FrameRounding = 5;
+            const ImU32 disabledColor = ImColor(ImGui::GetStyle().Colors[ImGuiCol_TextDisabled]);
+            const ImU32 hoveredColor = ImColor(ImGui::GetStyle().Colors[ImGuiCol_ButtonHovered]);
+            const ImU32 enabledColor = ImColor(0.5f, 0.5f, 0.0f);
+            const ImVec2 buttonSize(100, 50);
+            const float buttonPositions[] = { 0, 2 + buttonSize.x, 4 + buttonSize.x * 2 };
+            ImVec2 pos;
+            ImU32 color;
+            bool enabled;
 
-            // Prep action (flattening and parameterizing).
-            const bool canPrep = app.state == LOADED;
-            ImGui::PushStyleColor(ImGuiCol_Text, canPrep ? enabled : disabled);
-            if (ImGui::Button("Prep", ImVec2(100, 50)) && canPrep) {
-                prepAsset(app);
-            }
+            // Begin action buttons
+            ImGui::GetStyle().ItemSpacing.x = 1;
+            ImGui::GetStyle().FrameRounding = 10;
+            ImGui::PushStyleColor(ImGuiCol_Button, enabledColor);
+            ImGui::Spacing();
+            ImGui::Spacing();
+            ImGui::BeginGroup();
+
+            using OnClick = void(*)(BakerApp& app);
+            auto showActonButton = [&](const char* label, int cornerFlags, OnClick fn) {
+                pos = ImGui::GetCursorScreenPos();
+                color = enabled ? enabledColor : disabledColor;
+                color = ImGui::IsMouseHoveringRect(pos, pos + buttonSize) ? hoveredColor : color;
+                ImGui::GetWindowDrawList()->AddRectFilled(pos, pos + buttonSize, color,
+                        ImGui::GetStyle().FrameRounding, cornerFlags);
+                ImGui::PushStyleColor(ImGuiCol_Button, color);
+                ImGui::PushStyleColor(ImGuiCol_ButtonHovered, color);
+                if (ImGui::Button(label, buttonSize) && enabled) {
+                    fn(app);
+                }
+                ImGui::PopStyleColor();
+                ImGui::PopStyleColor();
+            };
+
+            // TEST RENDER
+            ImGui::SameLine(buttonPositions[0]);
+            enabled = !app.isWorking;
+            showActonButton("Test Render", ImDrawCornerFlags_Left, [](BakerApp& app) {
+                executeTestRender(app);
+            });
             if (ImGui::IsItemHovered()) {
-                ImGui::SetTooltip("Flattens the asset and generates a new set of UV coordinates.");
+                ImGui::SetTooltip("Renders the asset from the current camera using a pathtracer.");
             }
-            ImGui::PopStyleColor();
 
-            // Render action (invokes path tracer).
-            #ifdef FILAMENT_HAS_EMBREE
-            const bool canRender = app.state == PREPPED;
-            #else
-            const bool canRender = false;
-            #endif
-            ImGui::PushStyleColor(ImGuiCol_Text, canRender ? enabled : disabled);
-            if (ImGui::Button("Render", ImVec2(100, 50)) && canRender) {
-                renderAsset(app);
-            }
+            // BAKE
+            ImGui::SameLine(buttonPositions[1]);
+            enabled = !app.isWorking;
+            showActonButton("Bake AO", 0, [](BakerApp& app) {
+                executeBakeAo(app);
+            });
             if (ImGui::IsItemHovered()) {
-                ImGui::SetTooltip("Renders the asset using a pathtracer.");
+                ImGui::SetTooltip("Generates a new set of UVs and invokes a pathtracer.");
             }
-            ImGui::PopStyleColor();
 
-            // Bake action (invokes path tracer).
-            #ifdef FILAMENT_HAS_EMBREE
-            const bool canBake = app.state == PREPPED;
-            #else
-            const bool canBake = false;
-            #endif
-            ImGui::PushStyleColor(ImGuiCol_Text, canBake ? enabled : disabled);
-            if (ImGui::Button("Bake", ImVec2(100, 50)) && canBake) {
-                bakeAsset(app);
-            }
-            if (ImGui::IsItemHovered()) {
-                ImGui::SetTooltip("Invokes an embree-based pathtracer.");
-            }
-            ImGui::PopStyleColor();
-
-            // Export action
-            const bool canExport = app.state == BAKED;
-            ImGui::PushStyleColor(ImGuiCol_Text, canExport ? enabled : disabled);
-            if (ImGui::Button("Export...", ImVec2(100, 50)) && canExport) {
+            // EXPORT
+            ImGui::SameLine(buttonPositions[2]);
+            enabled = !app.isWorking && !app.hasTestRender && app.modifiedAsset;
+            showActonButton("Export...", ImDrawCornerFlags_Right, [](BakerApp& app) {
                 ImGui::OpenPopup("Export options");
-            }
+            });
             if (ImGui::IsItemHovered()) {
                 ImGui::SetTooltip("Saves the baked result to disk.");
             }
+
+            // End action buttons
+            ImGui::EndGroup();
+            ImGui::Spacing();
+            ImGui::Spacing();
             ImGui::PopStyleColor();
             ImGui::GetStyle().FrameRounding = 20;
+            ImGui::GetStyle().ItemSpacing.x = 8;
+
+            // Status text
+            if (app.statusText.size()) {
+                ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, {10, 10} );
+                ImGui::TextColored({0, 1, 0, 1}, "%s", app.statusText.c_str());
+                ImGui::PopStyleVar();
+                if (app.isWorking) {
+                    static float fraction = 0;
+                    fraction = fmod(fraction + 0.1f, 2.0f * M_PI);
+                    ImGui::ProgressBar(sin(fraction) * 0.5f + 0.5f, {buttonSize.x * 3, 5.0f}, "");
+                }
+                ImGui::Spacing();
+            }
+
+            // Results
+            auto addOption = [&app](const char* msg, char num, Visualization e) {
+                ImGuiIO& io = ImGui::GetIO();
+                int* ptr = (int*) &app.visualization;
+                if (io.InputCharacters[0] == num) { app.visualization = e; }
+                ImGui::RadioButton(msg, ptr, (int) e);
+                ImGui::SameLine();
+                ImGui::TextColored({1, 1, 0,1 }, "%c", num);
+            };
+            if (app.ambientOcclusion && ImGui::CollapsingHeader("Results",
+                    ImGuiTreeNodeFlags_DefaultOpen)) {
+                ImGui::Indent();
+                const Visualization previousVisualization = app.visualization;
+                using RV = Visualization;
+                addOption("3D model with original materials", '1', RV::MESH_CURRENT);
+                if (app.hasTestRender) {
+                    addOption("Rendered AO test image", '2', RV::IMAGE_OCCLUSION);
+                } else if (!app.modifiedAsset) {
+                    addOption("2D texture with occlusion", '2', RV::IMAGE_OCCLUSION);
+                    addOption("2D texture with bent normals", '3', RV::IMAGE_BENT_NORMALS);
+                } else {
+                    addOption("3D model with modified materials", '2', RV::MESH_MODIFIED);
+                    addOption("3D model with new occlusion only", '3', RV::MESH_PREVIEW_AO);
+                    addOption("3D model with UV visualization", '4', RV::MESH_PREVIEW_UV);
+                    addOption("2D texture with occlusion", '5', RV::IMAGE_OCCLUSION);
+                    addOption("2D texture with bent normals", '6', RV::IMAGE_BENT_NORMALS);
+                }
+                if (app.visualization != previousVisualization) {
+                    app.requestViewerUpdate = true;
+                }
+                ImGui::Unindent();
+                ImGui::Spacing();
+            }
 
             // Options
-            if (app.ambientOcclusion) {
-                ImGui::Checkbox("Show embree result", &app.showOverlay);
-            }
-            if (canPrep) {
-                ImGui::Checkbox("Auto-scale before parameterization", &app.enablePrepScale);
-            }
-            if (canBake) {
-                static const int kFirstOption = std::log2(512);
-                int bakeOption = std::log2(app.bakeResolution) - kFirstOption;
-                ImGui::Combo("Bake Resolution", &bakeOption,
+            if (ImGui::CollapsingHeader("Bake Options")) {
+                ImGui::InputInt("Samples per pixel", &app.bakeOptions.samplesPerPixel);
+                static const int kFirstOption = (int) std::log2(512);
+                int bakeOption = (int) std::log2(app.bakeOptions.resolution) - kFirstOption;
+                ImGui::Combo("Texture size", &bakeOption,
                         "512 x 512\0"
                         "1024 x 1024\0"
                         "2048 x 2048\0");
-                app.bakeResolution = 1 << (bakeOption + kFirstOption);
+                app.bakeOptions.resolution = 1u << uint32_t(bakeOption + kFirstOption);
             }
 
-            if (app.statusText) {
-                // Apply a poor man's animation to the ellipsis to indicate that work is being done.
-                static const char* suffixes[] = { "...", "......", "........." };
-                static float suffixAnim = 0;
-                suffixAnim += 0.05f;
-                const char* suffix = suffixes[int(suffixAnim) % 3];
-
-                ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, {10, 10} );
-                ImGui::Text("%s%s", app.statusText->c_str(), suffix);
-                ImGui::PopStyleVar();
-            }
-
-            if (app.messageBoxText) {
+            // Modals
+            if (app.messageBoxText.size()) {
                 ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, {10, 10} );
                 ImGui::OpenPopup("MessageBox");
                 if (ImGui::BeginPopupModal("MessageBox", nullptr,
                         ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar)) {
-                    ImGui::TextUnformatted(app.messageBoxText->c_str());
+                    ImGui::TextUnformatted(app.messageBoxText.c_str());
                     if (ImGui::Button("OK", ImVec2(120,0))) {
-                        app.messageBoxText.reset();
+                        app.messageBoxText.clear();
                         ImGui::CloseCurrentPopup();
                     }
                     ImGui::EndPopup();
@@ -716,13 +827,27 @@ int main(int argc, char** argv) {
             }
 
             if (ImGui::BeginPopupModal("Export options", nullptr,
-                    ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar)) {
-                ImGui::RadioButton("Visualize ambient occlusion", (int*) &app.exportOption, 0);
-                ImGui::RadioButton("Visualize generated UVs", (int*) &app.exportOption, 1);
-                ImGui::RadioButton("Preserve materials", (int*) &app.exportOption, 2);
+                    ImGuiWindowFlags_AlwaysAutoResize)) {
+                using RV = Visualization;
+                auto& options = app.exportOptions;
+                ImGui::InputText("Output folder", options.outputFolder, PATH_SIZE);
+                ImGui::InputText("glTF filename", options.gltfPath, PATH_SIZE);
+                ImGui::InputText("Buffer data filename", options.binPath, PATH_SIZE);
+                ImGui::InputText("Occlusion image", options.occlusionPath, PATH_SIZE);
+                ImGui::InputText("Bent normals image", options.bentNormalsPath, PATH_SIZE);
+
+                auto radio = [&app](const char* name, RV value) {
+                    int* ptr = (int*) &app.exportOptions.selection;
+                    ImGui::RadioButton(name, ptr, (int) value);
+                };
+                radio("Export flattened glTF with original materials", RV::MESH_CURRENT);
+                radio("Export flattened glTF with modified materials", RV::MESH_MODIFIED);
+                radio("Export flattened glTF with new occlusion only", RV::MESH_PREVIEW_AO);
+                radio("Export occlusion image only", RV::IMAGE_OCCLUSION);
+                radio("Export bent normals image only", RV::IMAGE_BENT_NORMALS);
                 if (ImGui::Button("OK", ImVec2(120,0))) {
                     ImGui::CloseCurrentPopup();
-                    exportAsset(app);
+                    executeExport(app);
                 }
                 ImGui::EndPopup();
             }
@@ -736,7 +861,6 @@ int main(int argc, char** argv) {
     auto cleanup = [&app](Engine* engine, View*, Scene*) {
         Fence::waitAndDestroy(engine->createFence());
         delete app.viewer;
-        app.loader->destroyAsset(app.asset);
         app.materials->destroyMaterials();
         delete app.materials;
         AssetLoader::destroy(&app.loader);
@@ -745,28 +869,31 @@ int main(int argc, char** argv) {
 
     auto animate = [&app](Engine* engine, View* view, double now) {
         // The baker doesn't support animation, just use frame 0.
-        if (app.state != EMPTY) {
+        if (app.viewerAsset) {
             app.viewer->applyAnimation(0.0);
         }
-        if (!app.overlayScene && app.showOverlay) {
-            app.overlayView = FilamentApp::get().getGuiView();
-            app.overlayScene = app.overlayView->getScene();
+
+        // Perform pending work.
+        BakerAppTask* tile = app.onTile.exchange(nullptr);
+        BakerAppTask* done = app.onDone.exchange(nullptr);
+        if (tile) { (*tile)(&app); delete tile; }
+        if (done) { (*done)(&app); delete done; }
+
+        // Update the overlay quad geometry just in case the window size changed.
+        app.overlayQuad.view = FilamentApp::get().getGuiView();
+        app.overlayQuad.scene = app.overlayQuad.view->getScene();
+        app.overlayQuad.scene->remove(app.overlayQuad.entity);
+        const bool showOverlay = app.visualization == Visualization::IMAGE_OCCLUSION
+                || app.visualization == Visualization::IMAGE_BENT_NORMALS;
+        if (showOverlay) {
+            createQuadRenderable(app);
+            app.overlayQuad.scene->addEntity(app.overlayQuad.entity);
         }
-        if (app.overlayScene) {
-            app.overlayScene->remove(app.overlayEntity);
-            if (app.showOverlay) {
-                updateOverlay(app);
-                app.overlayScene->addEntity(app.overlayEntity);
-            }
-        }
-        if (app.requestOverlayUpdate) {
-            updateOverlayTexture(app);
-            app.requestOverlayUpdate = false;
-        }
-        if (app.requestStatePop) {
-            app.state = app.pushedState;
-            app.pushedState = EMPTY;
-            app.requestStatePop = false;
+
+        // If requested update the overlay quad texture or 3D mesh data.
+        if (app.requestViewerUpdate) {
+            updateViewer(app);
+            app.requestViewerUpdate = false;
         }
     };
 
@@ -780,9 +907,8 @@ int main(int argc, char** argv) {
 
     filamentApp.setDropHandler([&] (std::string path) {
         app.viewer->removeAsset();
-        app.loader->destroyAsset(app.asset);
         app.filename = path;
-        loadAsset(app);
+        loadAssetFromDisk(app);
         saveIniFile(app);
     });
 

@@ -805,6 +805,12 @@ FilamentAsset* AssetLoader::createAssetFromBinary(uint8_t const* bytes, uint32_t
     return upcast(this)->createAssetFromBinary(bytes, nbytes);
 }
 
+FilamentAsset* AssetLoader::createAssetFromHandle(const void* handle) {
+    const cgltf_data* sourceAsset = (const cgltf_data*) handle;
+    upcast(this)->createAsset(sourceAsset);
+    return upcast(this)->mResult;
+}
+
 void AssetLoader::destroyAsset(const FilamentAsset* asset) {
     upcast(this)->destroyAsset(upcast(asset));
 }
