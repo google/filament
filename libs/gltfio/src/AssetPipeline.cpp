@@ -92,7 +92,10 @@ public:
     const cgltf_data* generatePreview(const cgltf_data* sourceAsset, const Path& texturePath);
 
     // Replaces or adds the given occlusion texture to all primitives that have BAKED_UV_ATTRIB.
-    const cgltf_data* replaceOcclusion(const cgltf_data* sourceAsset, const utils::Path& texture);
+    const cgltf_data* replaceOcclusion(const cgltf_data* sourceAsset, const Path& texturePath);
+
+    // Replaces the texture URI for all primitives that have BAKED_UV_ATTRIB.
+    void setOcclusionUri(cgltf_data* asset, const Path& texturePath);
 
     // Take ownership of the given asset and free it when the pipeline is destroyed.
     void retainSourceAsset(cgltf_data* asset);
@@ -114,6 +117,8 @@ public:
             filament::rays::TileCallback onTile, filament::rays::DoneCallback onDone,
             void* userData);
 
+    void setSamplesPerPixel(size_t spp) { mSamplesPerPixel = spp; }
+
     ~Pipeline();
 
 private:
@@ -125,10 +130,12 @@ private:
     cgltf_data* xatlasToCgltf(const cgltf_data* source, const xatlas::Atlas* atlas);
 
     // Convert a flattened cgltf asset into a PathTracer scene (i.e. an array of SimpleMesh).
-    void cgltfToSimpleMesh(const cgltf_data* sourceAsset, SimpleMesh** meshes, size_t* numMeshes);
+    void cgltfToSimpleMesh(const cgltf_data* sourceAsset, SimpleMesh** meshes, size_t* numMeshes,
+            bool provideDummyTexCoords = false);
 
     uint32_t mFlattenFlags;
     vector<cgltf_data*> mSourceAssets;
+    size_t mSamplesPerPixel = 256;
 
     struct {
         ArrayHolder<cgltf_data> resultAssets;
@@ -561,6 +568,7 @@ const cgltf_data* Pipeline::flattenPrims(const cgltf_data* sourceAsset, uint32_t
         nodes[primIndex] = {
             .name = bakedPrim.sourceNode->name,
             .mesh = meshes + primIndex,
+            .scale = {1.0f, 1.0f, 1.0f},
         };
 
         meshes[primIndex] = {
@@ -745,6 +753,7 @@ void Pipeline::bakeAmbientOcclusion(const cgltf_data* sourceAsset, image::Linear
         .outputPlane(filament::rays::AMBIENT_OCCLUSION, target)
         .uvCamera()
         .denoise()
+        .samplesPerPixel(mSamplesPerPixel)
         .tileCallback(onTile, userData)
         .doneCallback(onDone, userData);
 
@@ -756,7 +765,7 @@ void Pipeline::renderAmbientOcclusion(const cgltf_data* sourceAsset, image::Line
         filament::rays::DoneCallback onDone, void* userData) {
     SimpleMesh* meshes;
     size_t numMeshes;
-    cgltfToSimpleMesh(sourceAsset, &meshes, &numMeshes);
+    cgltfToSimpleMesh(sourceAsset, &meshes, &numMeshes, true);
 
     filament::rays::PathTracer::Builder builder;
     builder
@@ -764,6 +773,7 @@ void Pipeline::renderAmbientOcclusion(const cgltf_data* sourceAsset, image::Line
         .outputPlane(filament::rays::AMBIENT_OCCLUSION, target)
         .filmCamera(camera)
         .denoise()
+        .samplesPerPixel(mSamplesPerPixel)
         .tileCallback(onTile, userData)
         .doneCallback(onDone, userData);
 
@@ -786,6 +796,8 @@ void Pipeline::bakeAllOutputs(const cgltf_data* sourceAsset,
         .outputPlane(MESH_NORMALS, targets[(int) MESH_NORMALS])
         .outputPlane(MESH_POSITIONS, targets[(int) MESH_POSITIONS])
         .uvCamera()
+        .denoise()
+        .samplesPerPixel(mSamplesPerPixel)
         .tileCallback(onTile, userData)
         .doneCallback(onDone, userData);
 
@@ -848,7 +860,7 @@ void Pipeline::bakeTransform(BakedPrim* prim, const mat4f& transform, const mat3
         float4* bakedTangents = prim->bakedTangents;
         for (cgltf_size index = 0; index < numTangents; ++index) {
             float3& t = bakedTangents[index].xyz;
-            t = normalMatrix * t;
+            t = normalize(normalMatrix * t);
         }
     }
 }
@@ -1173,7 +1185,7 @@ cgltf_data* Pipeline::xatlasToCgltf(const cgltf_data* sourceAsset, const xatlas:
 }
 
 void Pipeline::cgltfToSimpleMesh(const cgltf_data* sourceAsset, SimpleMesh** meshes,
-        size_t* numMeshes) {
+        size_t* numMeshes, bool provideDummyTexCoords) {
     *numMeshes = sourceAsset->scene->nodes_count;
     *meshes = mStorage.simpleMeshes.alloc(sourceAsset->scene->nodes_count);
 
@@ -1194,6 +1206,10 @@ void Pipeline::cgltfToSimpleMesh(const cgltf_data* sourceAsset, SimpleMesh** mes
             } else if (attr.type == cgltf_attribute_type_normal && attr.index == 0) {
                 normals = attr.data;
             }
+        }
+
+        if (!texcoords && provideDummyTexCoords) {
+            texcoords = positions;
         }
 
         // Allocate space for embree vertex data, then populate it.
@@ -1548,6 +1564,22 @@ const cgltf_data* Pipeline::replaceOcclusion(const cgltf_data* sourceAsset, cons
     return resultAsset;
 }
 
+void Pipeline::setOcclusionUri(cgltf_data* asset, const Path& texturePath) {
+    if (!isFlattened(asset)) {
+        utils::slog.e << "Only flattened assets can be modified." << utils::io::endl;
+    }
+    std::string uri = texturePath;
+    char* pathString = (char*) mStorage.bufferData.alloc(uri.size() + 1);
+    strncpy(pathString, uri.c_str(), uri.size() + 1);
+    const cgltf_int kAttribIndex = gltfio::AssetPipeline::BAKED_UV_ATTRIB_INDEX;
+    for (size_t mindex = 0, len = asset->materials_count; mindex < len; ++mindex) {
+        auto& occlusion = asset->materials[mindex].occlusion_texture;
+        if (occlusion.texture && occlusion.texcoord == kAttribIndex) {
+            occlusion.texture->image->uri = pathString;
+        }
+    }
+}
+
 void Pipeline::retainSourceAsset(cgltf_data* asset) {
     mSourceAssets.push_back(asset);
 }
@@ -1657,6 +1689,11 @@ AssetHandle AssetPipeline::replaceOcclusion(AssetHandle source, const Path& text
     return impl->replaceOcclusion((const cgltf_data*) source, texture);
 }
 
+void AssetPipeline::setOcclusionUri(AssetHandle asset, const Path& texture) {
+    Pipeline* impl = (Pipeline*) mImpl;
+    impl->setOcclusionUri((cgltf_data*) asset, texture);
+}
+
 void AssetPipeline::bakeAmbientOcclusion(AssetHandle source, image::LinearImage target,
         RenderTileCallback onTile, RenderDoneCallback onDone, void* userData) {
     Pipeline* impl = (Pipeline*) mImpl;
@@ -1690,6 +1727,11 @@ void AssetPipeline::bakeAllOutputs(AssetHandle source,
         return;
     }
     impl->bakeAllOutputs(sourceAsset, targets, onTile, onDone, userData);
+}
+
+void AssetPipeline::setSamplesPerPixel(size_t spp) {
+    Pipeline* impl = (Pipeline*) mImpl;
+    impl->setSamplesPerPixel(spp);
 }
 
 bool AssetPipeline::isFlattened(AssetHandle source) {

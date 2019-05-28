@@ -109,6 +109,11 @@ public:
     AssetHandle replaceOcclusion(AssetHandle source, const utils::Path& texture);
 
     /**
+     * Modifies the occlusion texture URI for all primitives that have BAKED_UV_ATTRIB.
+     */
+    void setOcclusionUri(AssetHandle source, const utils::Path& texture);
+
+    /**
      * Signals that a region of a path-traced image is available (used for progress notification).
      * This can be called from any thread.
      */
@@ -147,6 +152,13 @@ public:
     void bakeAllOutputs(AssetHandle source,
             image::LinearImage targets[filament::rays::OUTPUTPLANE_COUNT],
             RenderTileCallback progress, RenderDoneCallback done, void* userData);
+
+    /**
+     * Sets the number of occlusion rays emitted for each pixel in the target image.
+     *
+     * This has an effect on subsequent calls to bake*() and render*().
+     */
+    void setSamplesPerPixel(size_t spp);
 
     static bool isFlattened(AssetHandle source);
     static bool isParameterized(AssetHandle source);

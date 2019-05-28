@@ -72,6 +72,7 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
         CleanupCallback cleanupCallback, ImGuiCallback imguiCallback,
         PreRenderCallback preRender, PostRenderCallback postRender,
         size_t width, size_t height) {
+    mWindowTitle = config.title;
     std::unique_ptr<FilamentApp::Window> window(
             new FilamentApp::Window(this, config, config.title, width, height));
 
@@ -199,8 +200,13 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
     int sidebarWidth = mSidebarWidth;
 
     SDL_EventState(SDL_DROPFILE, SDL_ENABLE);
+    SDL_Window* sdlWindow = window->getSDLWindow();
 
     while (!mClosed) {
+
+        if (mWindowTitle != SDL_GetWindowTitle(sdlWindow)) {
+            SDL_SetWindowTitle(sdlWindow, mWindowTitle.c_str());
+        }
 
         if (mSidebarWidth != sidebarWidth) {
             window->configureCamerasForWindow();

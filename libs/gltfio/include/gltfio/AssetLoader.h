@@ -120,6 +120,14 @@ public:
      */
     FilamentAsset* createAssetFromBinary(const uint8_t* bytes, uint32_t nbytes);
 
+    /**
+     * Takes a pointer to an opaque pipeline object and returns a bundle of Filament objects.
+     *
+     * This exists solely for interop with AssetPipeline, which is optional according to the build
+     * configuration.
+     */
+    FilamentAsset* createAssetFromHandle(const void* cgltf);
+
     /** Destroys the given asset and all of its associated Filament objects. */
     void destroyAsset(const FilamentAsset* asset);
 
