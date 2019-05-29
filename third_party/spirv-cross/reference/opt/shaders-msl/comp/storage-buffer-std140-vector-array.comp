@@ -1,0 +1,48 @@
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct Sub
+{
+    float4 f[2];
+    float4 f2[2];
+    float3 f3[2];
+    float4 f4[2];
+};
+
+struct SSBO
+{
+    Sub sub[2];
+};
+
+kernel void main0(device SSBO& _27 [[buffer(0)]], uint3 gl_WorkGroupID [[threadgroup_position_in_grid]], uint3 gl_GlobalInvocationID [[thread_position_in_grid]])
+{
+    float _153[2];
+    _153[0] = _27.sub[gl_WorkGroupID.x].f[0].x;
+    _153[1] = _27.sub[gl_WorkGroupID.x].f[1].x;
+    float2 _154[2];
+    _154[0] = _27.sub[gl_WorkGroupID.x].f2[0].xy;
+    _154[1] = _27.sub[gl_WorkGroupID.x].f2[1].xy;
+    float3 _155[2];
+    _155[0] = _27.sub[gl_WorkGroupID.x].f3[0];
+    _155[1] = _27.sub[gl_WorkGroupID.x].f3[1];
+    float4 _156[2];
+    _156[0] = _27.sub[gl_WorkGroupID.x].f4[0];
+    _156[1] = _27.sub[gl_WorkGroupID.x].f4[1];
+    _153[gl_GlobalInvocationID.x] += 1.0;
+    _154[gl_GlobalInvocationID.x] += float2(2.0);
+    _155[gl_GlobalInvocationID.x] += float3(3.0);
+    _156[gl_GlobalInvocationID.x] += float4(4.0);
+    _27.sub[gl_WorkGroupID.x].f[0].x = _153[0];
+    _27.sub[gl_WorkGroupID.x].f[1].x = _153[1];
+    _27.sub[gl_WorkGroupID.x].f2[0].xy = _154[0];
+    _27.sub[gl_WorkGroupID.x].f2[1].xy = _154[1];
+    _27.sub[gl_WorkGroupID.x].f3[0] = _155[0];
+    _27.sub[gl_WorkGroupID.x].f3[1] = _155[1];
+    _27.sub[gl_WorkGroupID.x].f4[0] = _156[0];
+    _27.sub[gl_WorkGroupID.x].f4[1] = _156[1];
+    _27.sub[0].f[0].x += 5.0;
+    _27.sub[0].f2[1].xy += float2(5.0);
+}
+

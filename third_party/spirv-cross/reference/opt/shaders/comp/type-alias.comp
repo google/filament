@@ -6,14 +6,19 @@ struct S0
     vec4 a;
 };
 
+struct S1
+{
+    vec4 a;
+};
+
 layout(binding = 0, std430) buffer SSBO0
 {
     S0 s0s[];
 } _36;
 
-layout(binding = 1, std430) buffer _34_55
+layout(binding = 1, std430) buffer SSBO1
 {
-    S0 s0s[];
+    S1 s1s[];
 } _55;
 
 layout(binding = 2, std430) buffer SSBO2
@@ -23,6 +28,6 @@ layout(binding = 2, std430) buffer SSBO2
 
 void main()
 {
-    _66.outputs[gl_GlobalInvocationID.x] = _36.s0s[gl_GlobalInvocationID.x].a + _55.s0s[gl_GlobalInvocationID.x].a;
+    _66.outputs[gl_GlobalInvocationID.x] = _36.s0s[gl_GlobalInvocationID.x].a + _55.s1s[gl_GlobalInvocationID.x].a;
 }
 

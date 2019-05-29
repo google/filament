@@ -9,9 +9,9 @@ layout(binding = 0, std430) buffer inputData
     float inputDataArray[];
 } _12;
 
-layout(binding = 1, std430) buffer _10_74
+layout(binding = 1, std430) buffer outputData
 {
-    float inputDataArray[];
+    float outputDataArray[];
 } _74;
 
 void main()
@@ -22,7 +22,7 @@ void main()
     uint _44 = mbcntAMD(packUint2x32(uvec2(_37.xy)));
     if (_31)
     {
-        _74.inputDataArray[_44] = _25;
+        _74.outputDataArray[_44] = _25;
     }
 }
 

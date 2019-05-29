@@ -27,10 +27,10 @@ vertex void main0(main0_in in [[stage_in]], constant _40& _42 [[buffer(0)]], dev
 {
     main0_out out = {};
     out.gl_Position = in.m_17;
-    for (int _51 = 0; _51 < 1024; )
+    for (int _52 = 0; _52 < 1024; )
     {
-        _37._m0[_51] = _42._m0[_51];
-        _51++;
+        _37._m0[_52] = _42._m0[_52];
+        _52++;
         continue;
     }
 }

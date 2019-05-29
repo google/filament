@@ -6,10 +6,11 @@ struct B
 
 static const B _80 = { 10.0f, 20.0f };
 
-cbuffer _42 : register(b0)
+cbuffer UBO : register(b0)
 {
     int _42_some_value : packoffset(c0);
 };
+
 
 void partial_inout(inout float4 x)
 {

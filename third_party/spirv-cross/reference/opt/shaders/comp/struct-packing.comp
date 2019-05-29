@@ -49,17 +49,40 @@ struct S0_1
     float b;
 };
 
+struct S1_1
+{
+    vec3 a;
+    float b;
+};
+
+struct S2_1
+{
+    vec3 a[1];
+    float b;
+};
+
+struct S3_1
+{
+    vec2 a;
+    float b;
+};
+
+struct S4_1
+{
+    vec2 c;
+};
+
 struct Content_1
 {
     S0_1 m0s[1];
-    S1 m1s[1];
-    S2 m2s[1];
+    S1_1 m1s[1];
+    S2_1 m2s[1];
     S0_1 m0;
-    S1 m1;
-    S2 m2;
-    S3 m3;
+    S1_1 m1;
+    S2_1 m2;
+    S3_1 m3;
     float m4;
-    S4 m3s[8];
+    S4_1 m3s[8];
 };
 
 layout(binding = 1, std430) restrict buffer SSBO1

@@ -59,14 +59,14 @@ struct Globals
     float4 ShadowMatrix2;
 };
 
-struct Params
-{
-    float4 LqmatFarTilingFactor;
-};
-
 struct CB0
 {
     Globals CB0;
+};
+
+struct Params
+{
+    float4 LqmatFarTilingFactor;
 };
 
 struct CB2
@@ -133,7 +133,7 @@ fragment main0_out main0(main0_in in [[stage_in]], constant CB0& _19 [[buffer(0)
     SurfaceInput _156 = _151;
     _156.UvStuds.y = (fract(_151.UvStuds.y) + in.IN_studIndex) * 0.25;
     float _163 = _146.View_Depth.w * _19.CB0.RefractionBias_FadeDistance_GlowFactor.y;
-    float _165 = clamp(1.0 - _163, 0.0, 1.0);
+    float _165 = fast::clamp(1.0 - _163, 0.0, 1.0);
     float2 _166 = in.IN_Uv_EdgeDistance1.xy * 1.0;
     bool _173;
     float4 _193;
@@ -148,7 +148,7 @@ fragment main0_out main0(main0_in in [[stage_in]], constant CB0& _19 [[buffer(0)
         else
         {
             float _180 = 1.0 / (1.0 - 0.0);
-            _193 = mix(DiffuseMapTexture.sample(DiffuseMapSampler, (_166 * 0.25)), DiffuseMapTexture.sample(DiffuseMapSampler, _166), float4(clamp((clamp(1.0 - (_146.View_Depth.w * 0.00333332992158830165863037109375), 0.0, 1.0) * _180) - (0.0 * _180), 0.0, 1.0)));
+            _193 = mix(DiffuseMapTexture.sample(DiffuseMapSampler, (_166 * 0.25)), DiffuseMapTexture.sample(DiffuseMapSampler, _166), float4(fast::clamp((fast::clamp(1.0 - (_146.View_Depth.w * 0.00333332992158830165863037109375), 0.0, 1.0) * _180) - (0.0 * _180), 0.0, 1.0)));
             break;
         }
         _193 = _192;
@@ -166,7 +166,7 @@ fragment main0_out main0(main0_in in [[stage_in]], constant CB0& _19 [[buffer(0)
         else
         {
             float _207 = 1.0 / (1.0 - 0.0);
-            _220 = mix(NormalMapTexture.sample(NormalMapSampler, (_166 * 0.25)), NormalMapTexture.sample(NormalMapSampler, _166), float4(clamp((_165 * _207) - (0.0 * _207), 0.0, 1.0)));
+            _220 = mix(NormalMapTexture.sample(NormalMapSampler, (_166 * 0.25)), NormalMapTexture.sample(NormalMapSampler, _166), float4(fast::clamp((_165 * _207) - (0.0 * _207), 0.0, 1.0)));
             break;
         }
         _220 = _219;
@@ -174,9 +174,9 @@ fragment main0_out main0(main0_in in [[stage_in]], constant CB0& _19 [[buffer(0)
     } while (false);
     float2 _223 = float2(1.0);
     float2 _224 = (_220.wy * 2.0) - _223;
-    float3 _232 = float3(_224, sqrt(clamp(1.0 + dot(-_224, _224), 0.0, 1.0)));
+    float3 _232 = float3(_224, sqrt(fast::clamp(1.0 + dot(-_224, _224), 0.0, 1.0)));
     float2 _240 = (NormalDetailMapTexture.sample(NormalDetailMapSampler, (_166 * 0.0)).wy * 2.0) - _223;
-    float2 _252 = _232.xy + (float3(_240, sqrt(clamp(1.0 + dot(-_240, _240), 0.0, 1.0))).xy * 0.0);
+    float2 _252 = _232.xy + (float3(_240, sqrt(fast::clamp(1.0 + dot(-_240, _240), 0.0, 1.0))).xy * 0.0);
     float3 _253 = float3(_252.x, _252.y, _232.z);
     float2 _255 = _253.xy * _165;
     float3 _256 = float3(_255.x, _255.y, _253.z);
@@ -192,7 +192,7 @@ fragment main0_out main0(main0_in in [[stage_in]], constant CB0& _19 [[buffer(0)
         else
         {
             float _285 = 1.0 / (1.0 - 0.75);
-            _298 = mix(SpecularMapTexture.sample(SpecularMapSampler, (_166 * 0.25)), SpecularMapTexture.sample(SpecularMapSampler, _166), float4(clamp((_165 * _285) - (0.75 * _285), 0.0, 1.0)));
+            _298 = mix(SpecularMapTexture.sample(SpecularMapSampler, (_166 * 0.25)), SpecularMapTexture.sample(SpecularMapSampler, _166), float4(fast::clamp((_165 * _285) - (0.75 * _285), 0.0, 1.0)));
             break;
         }
         _298 = _297;
@@ -216,20 +216,20 @@ fragment main0_out main0(main0_in in [[stage_in]], constant CB0& _19 [[buffer(0)
     float3 _329 = normalize(((in.IN_Tangent * _313.normal.x) + (cross(in.IN_Normal_SpecPower.xyz, in.IN_Tangent) * _313.normal.y)) + (in.IN_Normal_SpecPower.xyz * _313.normal.z));
     float3 _332 = -_19.CB0.Lamp0Dir;
     float _333 = dot(_329, _332);
-    float _357 = clamp(dot(step(_19.CB0.LightConfig3.xyz, abs(in.IN_LightPosition_Fog.xyz - _19.CB0.LightConfig2.xyz)), float3(1.0)), 0.0, 1.0);
+    float _357 = fast::clamp(dot(step(_19.CB0.LightConfig3.xyz, abs(in.IN_LightPosition_Fog.xyz - _19.CB0.LightConfig2.xyz)), float3(1.0)), 0.0, 1.0);
     float4 _368 = mix(LightMapTexture.sample(LightMapSampler, (in.IN_LightPosition_Fog.xyz.yzx - (in.IN_LightPosition_Fog.xyz.yzx * _357))), _19.CB0.LightBorder, float4(_357));
     float2 _376 = ShadowMapTexture.sample(ShadowMapSampler, in.IN_PosLightSpace_Reflectance.xyz.xy).xy;
-    float _392 = (1.0 - (((step(_376.x, in.IN_PosLightSpace_Reflectance.xyz.z) * clamp(9.0 - (20.0 * abs(in.IN_PosLightSpace_Reflectance.xyz.z - 0.5)), 0.0, 1.0)) * _376.y) * _19.CB0.OutlineBrightness_ShadowInfo.w)) * _368.w;
+    float _392 = (1.0 - (((step(_376.x, in.IN_PosLightSpace_Reflectance.xyz.z) * fast::clamp(9.0 - (20.0 * abs(in.IN_PosLightSpace_Reflectance.xyz.z - 0.5)), 0.0, 1.0)) * _376.y) * _19.CB0.OutlineBrightness_ShadowInfo.w)) * _368.w;
     float3 _403 = mix(_318.xyz, EnvironmentMapTexture.sample(EnvironmentMapSampler, reflect(-in.IN_View_Depth.xyz, _329)).xyz, float3(_312));
     float4 _404 = float4(_403.x, _403.y, _403.z, _318.w);
-    float3 _422 = (((_19.CB0.AmbientColor + (((_19.CB0.Lamp0Color * clamp(_333, 0.0, 1.0)) + (_19.CB0.Lamp1Color * max(-_333, 0.0))) * _392)) + _368.xyz) * _404.xyz) + (_19.CB0.Lamp0Color * (((step(0.0, _333) * _306) * _392) * pow(clamp(dot(_329, normalize(_332 + normalize(in.IN_View_Depth.xyz))), 0.0, 1.0), _308)));
+    float3 _422 = (((_19.CB0.AmbientColor + (((_19.CB0.Lamp0Color * fast::clamp(_333, 0.0, 1.0)) + (_19.CB0.Lamp1Color * fast::max(-_333, 0.0))) * _392)) + _368.xyz) * _404.xyz) + (_19.CB0.Lamp0Color * (((step(0.0, _333) * _306) * _392) * pow(fast::clamp(dot(_329, normalize(_332 + normalize(in.IN_View_Depth.xyz))), 0.0, 1.0), _308)));
     float4 _425 = float4(_422.x, _422.y, _422.z, _124.w);
     _425.w = _404.w;
-    float2 _435 = min(in.IN_Uv_EdgeDistance1.wz, in.IN_UvStuds_EdgeDistance2.wz);
-    float _439 = min(_435.x, _435.y) / _163;
-    float3 _445 = _425.xyz * clamp((clamp((_163 * _19.CB0.OutlineBrightness_ShadowInfo.x) + _19.CB0.OutlineBrightness_ShadowInfo.y, 0.0, 1.0) * (1.5 - _439)) + _439, 0.0, 1.0);
+    float2 _435 = fast::min(in.IN_Uv_EdgeDistance1.wz, in.IN_UvStuds_EdgeDistance2.wz);
+    float _439 = fast::min(_435.x, _435.y) / _163;
+    float3 _445 = _425.xyz * fast::clamp((fast::clamp((_163 * _19.CB0.OutlineBrightness_ShadowInfo.x) + _19.CB0.OutlineBrightness_ShadowInfo.y, 0.0, 1.0) * (1.5 - _439)) + _439, 0.0, 1.0);
     float4 _446 = float4(_445.x, _445.y, _445.z, _425.w);
-    float3 _453 = mix(_19.CB0.FogColor, _446.xyz, float3(clamp(_146.LightPosition_Fog.w, 0.0, 1.0)));
+    float3 _453 = mix(_19.CB0.FogColor, _446.xyz, float3(fast::clamp(_146.LightPosition_Fog.w, 0.0, 1.0)));
     out._entryPointOutput = float4(_453.x, _453.y, _453.z, _446.w);
     return out;
 }

@@ -1,7 +1,8 @@
-cbuffer _104 : register(b0)
+cbuffer Block : register(b0)
 {
     column_major float2x3 _104_var[3][4] : packoffset(c0);
 };
+
 
 static float4 gl_Position;
 static float4 a_position;

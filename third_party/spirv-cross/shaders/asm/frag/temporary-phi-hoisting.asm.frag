@@ -21,6 +21,7 @@
                OpMemberDecorate %MyStruct_CB 0 Offset 0
                OpDecorate %MyStruct_CB Block
                OpDecorate %_ DescriptorSet 0
+			   OpDecorate %_ Binding 0
                OpDecorate %_entryPointOutput Location 0
        %void = OpTypeVoid
           %3 = OpTypeFunction %void

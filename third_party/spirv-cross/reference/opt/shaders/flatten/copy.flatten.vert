@@ -18,9 +18,8 @@ void main()
     vColor = vec4(0.0);
     for (int _96 = 0; _96 < 4; )
     {
-        Light _52 = Light(UBO[_96 * 2 + 4].xyz, UBO[_96 * 2 + 4].w, UBO[_96 * 2 + 5]);
-        vec3 _68 = aVertex.xyz - _52.Position;
-        vColor += ((UBO[_96 * 2 + 5] * clamp(1.0 - (length(_68) / _52.Radius), 0.0, 1.0)) * dot(aNormal, normalize(_68)));
+        vec3 _68 = aVertex.xyz - Light(UBO[_96 * 2 + 4].xyz, UBO[_96 * 2 + 4].w, UBO[_96 * 2 + 5]).Position;
+        vColor += ((UBO[_96 * 2 + 5] * clamp(1.0 - (length(_68) / Light(UBO[_96 * 2 + 4].xyz, UBO[_96 * 2 + 4].w, UBO[_96 * 2 + 5]).Radius), 0.0, 1.0)) * dot(aNormal, normalize(_68)));
         _96++;
         continue;
     }

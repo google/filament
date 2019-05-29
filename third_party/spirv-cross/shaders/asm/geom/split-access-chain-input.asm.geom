@@ -6,7 +6,7 @@
                OpCapability Geometry
           %1 = OpExtInstImport "GLSL.std.450"
                OpMemoryModel Logical GLSL450
-               OpEntryPoint Geometry %main "main" %gl_in
+               OpEntryPoint Geometry %main "main" %gl_in %position
                OpExecutionMode %main Triangles
                OpExecutionMode %main Invocations 1
                OpExecutionMode %main OutputTriangleStrip

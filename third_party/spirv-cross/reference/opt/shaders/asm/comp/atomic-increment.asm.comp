@@ -1,0 +1,16 @@
+#version 450
+layout(local_size_x = 4, local_size_y = 1, local_size_z = 1) in;
+
+layout(binding = 0, std430) buffer u0_counters
+{
+    uint c;
+} u0_counter;
+
+layout(binding = 0, r32ui) uniform writeonly uimageBuffer u0;
+
+void main()
+{
+    uint _29 = atomicAdd(u0_counter.c, 1u);
+    imageStore(u0, floatBitsToInt(uintBitsToFloat(_29)), uvec4(uint(int(gl_GlobalInvocationID.x))));
+}
+

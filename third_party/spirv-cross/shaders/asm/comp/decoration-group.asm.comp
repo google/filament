@@ -1,0 +1,99 @@
+; SPIR-V
+; Version: 1.0
+; Generator: Khronos SPIR-V Tools Assembler; 0
+; Bound: 58
+; Schema: 0
+               OpCapability Shader
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %1 "main" %2
+               OpExecutionMode %1 LocalSize 1 1 1
+               OpSource GLSL 430
+               OpName %1 "main"
+               OpName %2 "gl_GlobalInvocationID"
+               OpDecorate %2 BuiltIn GlobalInvocationId
+               OpDecorate %3 ArrayStride 4
+               OpDecorate %4 BufferBlock
+               OpDecorate %5 Offset 0
+          %4 = OpDecorationGroup
+          %5 = OpDecorationGroup
+               OpGroupDecorate %4 %6 %7 %8 %9 %10 %11
+               OpGroupMemberDecorate %5 %6 0 %7 0 %8 0 %9 0 %10 0 %11 0
+               OpDecorate %12 DescriptorSet 0
+               OpDecorate %13 DescriptorSet 0
+               OpDecorate %13 NonWritable
+               OpDecorate %13 Restrict
+         %14 = OpDecorationGroup
+         %12 = OpDecorationGroup
+         %13 = OpDecorationGroup
+               OpGroupDecorate %12 %15
+               OpGroupDecorate %12 %15
+               OpGroupDecorate %12 %15
+               OpDecorate %15 DescriptorSet 0
+               OpDecorate %15 Binding 5
+               OpGroupDecorate %14 %16
+               OpDecorate %16 DescriptorSet 0
+               OpDecorate %16 Binding 0
+               OpGroupDecorate %12 %17
+               OpDecorate %17 Binding 1
+               OpGroupDecorate %13 %18 %19
+               OpDecorate %18 Binding 2
+               OpDecorate %19 Binding 3
+               OpGroupDecorate %14 %20
+               OpGroupDecorate %12 %20
+               OpGroupDecorate %13 %20
+               OpDecorate %20 Binding 4
+         %21 = OpTypeBool
+         %22 = OpTypeVoid
+         %23 = OpTypeFunction %22
+         %24 = OpTypeInt 32 0
+         %25 = OpTypeInt 32 1
+         %26 = OpTypeFloat 32
+         %27 = OpTypeVector %24 3
+         %28 = OpTypeVector %26 3
+         %29 = OpTypePointer Input %27
+         %30 = OpTypePointer Uniform %25
+         %31 = OpTypePointer Uniform %26
+         %32 = OpTypeRuntimeArray %25
+          %3 = OpTypeRuntimeArray %26
+          %2 = OpVariable %29 Input
+         %33 = OpConstant %25 0
+          %6 = OpTypeStruct %3
+         %34 = OpTypePointer Uniform %6
+         %15 = OpVariable %34 Uniform
+          %7 = OpTypeStruct %3
+         %35 = OpTypePointer Uniform %7
+         %16 = OpVariable %35 Uniform
+          %8 = OpTypeStruct %3
+         %36 = OpTypePointer Uniform %8
+         %17 = OpVariable %36 Uniform
+          %9 = OpTypeStruct %3
+         %37 = OpTypePointer Uniform %9
+         %18 = OpVariable %37 Uniform
+         %10 = OpTypeStruct %3
+         %38 = OpTypePointer Uniform %10
+         %19 = OpVariable %38 Uniform
+         %11 = OpTypeStruct %3
+         %39 = OpTypePointer Uniform %11
+         %20 = OpVariable %39 Uniform
+          %1 = OpFunction %22 None %23
+         %40 = OpLabel
+         %41 = OpLoad %27 %2
+         %42 = OpCompositeExtract %24 %41 0
+         %43 = OpAccessChain %31 %16 %33 %42
+         %44 = OpAccessChain %31 %17 %33 %42
+         %45 = OpAccessChain %31 %18 %33 %42
+         %46 = OpAccessChain %31 %19 %33 %42
+         %47 = OpAccessChain %31 %20 %33 %42
+         %48 = OpAccessChain %31 %15 %33 %42
+         %49 = OpLoad %26 %43
+         %50 = OpLoad %26 %44
+         %51 = OpLoad %26 %45
+         %52 = OpLoad %26 %46
+         %53 = OpLoad %26 %47
+         %54 = OpFAdd %26 %49 %50
+         %55 = OpFAdd %26 %54 %51
+         %56 = OpFAdd %26 %55 %52
+         %57 = OpFAdd %26 %56 %53
+               OpStore %48 %57
+               OpReturn
+               OpFunctionEnd

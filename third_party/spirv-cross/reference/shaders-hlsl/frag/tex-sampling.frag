@@ -42,40 +42,28 @@ struct SPIRV_Cross_Output
     float4 FragColor : SV_Target0;
 };
 
-float SPIRV_Cross_projectTextureCoordinate(float2 coord)
-{
-    return coord.x / coord.y;
-}
-
-float2 SPIRV_Cross_projectTextureCoordinate(float3 coord)
-{
-    return float2(coord.x, coord.y) / coord.z;
-}
-
-float3 SPIRV_Cross_projectTextureCoordinate(float4 coord)
-{
-    return float3(coord.x, coord.y, coord.z) / coord.w;
-}
-
 void frag_main()
 {
     float4 texcolor = tex1d.Sample(_tex1d_sampler, texCoord1d);
     texcolor += tex1d.Sample(_tex1d_sampler, texCoord1d, 1);
     texcolor += tex1d.SampleLevel(_tex1d_sampler, texCoord1d, 2.0f);
     texcolor += tex1d.SampleGrad(_tex1d_sampler, texCoord1d, 1.0f, 2.0f);
-    texcolor += tex1d.Sample(_tex1d_sampler, SPIRV_Cross_projectTextureCoordinate(float2(texCoord1d, 2.0f)));
+    float2 _41 = float2(texCoord1d, 2.0f);
+    texcolor += tex1d.Sample(_tex1d_sampler, _41.x / _41.y);
     texcolor += tex1d.SampleBias(_tex1d_sampler, texCoord1d, 1.0f);
     texcolor += tex2d.Sample(_tex2d_sampler, texCoord2d);
     texcolor += tex2d.Sample(_tex2d_sampler, texCoord2d, int2(1, 2));
     texcolor += tex2d.SampleLevel(_tex2d_sampler, texCoord2d, 2.0f);
     texcolor += tex2d.SampleGrad(_tex2d_sampler, texCoord2d, float2(1.0f, 2.0f), float2(3.0f, 4.0f));
-    texcolor += tex2d.Sample(_tex2d_sampler, SPIRV_Cross_projectTextureCoordinate(float3(texCoord2d, 2.0f)));
+    float3 _88 = float3(texCoord2d, 2.0f);
+    texcolor += tex2d.Sample(_tex2d_sampler, _88.xy / _88.z);
     texcolor += tex2d.SampleBias(_tex2d_sampler, texCoord2d, 1.0f);
     texcolor += tex3d.Sample(_tex3d_sampler, texCoord3d);
     texcolor += tex3d.Sample(_tex3d_sampler, texCoord3d, int3(1, 2, 3));
     texcolor += tex3d.SampleLevel(_tex3d_sampler, texCoord3d, 2.0f);
     texcolor += tex3d.SampleGrad(_tex3d_sampler, texCoord3d, float3(1.0f, 2.0f, 3.0f), float3(4.0f, 5.0f, 6.0f));
-    texcolor += tex3d.Sample(_tex3d_sampler, SPIRV_Cross_projectTextureCoordinate(float4(texCoord3d, 2.0f)));
+    float4 _135 = float4(texCoord3d, 2.0f);
+    texcolor += tex3d.Sample(_tex3d_sampler, _135.xyz / _135.w);
     texcolor += tex3d.SampleBias(_tex3d_sampler, texCoord3d, 1.0f);
     texcolor += texCube.Sample(_texCube_sampler, texCoord3d);
     texcolor += texCube.SampleLevel(_texCube_sampler, texCoord3d, 2.0f);

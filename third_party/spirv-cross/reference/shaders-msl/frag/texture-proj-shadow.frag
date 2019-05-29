@@ -20,7 +20,7 @@ fragment main0_out main0(main0_in in [[stage_in]], depth2d<float> uShadow2D [[te
     main0_out out = {};
     float4 _20 = in.vClip4;
     _20.z = in.vClip4.w;
-    out.FragColor = uShadow2D.sample_compare(uShadow2DSmplr, _20.xy / _20.z, in.vClip4.z);
+    out.FragColor = uShadow2D.sample_compare(uShadow2DSmplr, _20.xy / _20.z, in.vClip4.z / _20.z);
     out.FragColor = uSampler1D.sample(uSampler1DSmplr, in.vClip2.x / in.vClip2.y).x;
     out.FragColor = uSampler2D.sample(uSampler2DSmplr, in.vClip3.xy / in.vClip3.z).x;
     out.FragColor = uSampler3D.sample(uSampler3DSmplr, in.vClip4.xyz / in.vClip4.w).x;

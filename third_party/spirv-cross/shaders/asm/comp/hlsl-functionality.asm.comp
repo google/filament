@@ -26,6 +26,7 @@
                OpMemberDecorate %Buf_count 0 Offset 0
                OpDecorate %Buf_count BufferBlock
                OpDecorate %Buf_count_0 DescriptorSet 0
+               OpDecorate %Buf_count_0 Binding 1
                OpDecorateId %Buf_0 HlslCounterBufferGOOGLE %Buf_count_0
        %void = OpTypeVoid
           %3 = OpTypeFunction %void

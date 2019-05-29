@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2018 ARM Limited
+ * Copyright 2015-2019 Arm Limited
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,20 +19,29 @@
 
 #include "spirv_glsl.hpp"
 #include <utility>
-#include <vector>
 
-namespace spirv_cross
+namespace SPIRV_CROSS_NAMESPACE
 {
 class CompilerCPP : public CompilerGLSL
 {
 public:
-	CompilerCPP(std::vector<uint32_t> spirv_)
-	    : CompilerGLSL(move(spirv_))
+	explicit CompilerCPP(std::vector<uint32_t> spirv_)
+	    : CompilerGLSL(std::move(spirv_))
 	{
 	}
 
-	CompilerCPP(const uint32_t *ir, size_t word_count)
-	    : CompilerGLSL(ir, word_count)
+	CompilerCPP(const uint32_t *ir_, size_t word_count)
+	    : CompilerGLSL(ir_, word_count)
+	{
+	}
+
+	explicit CompilerCPP(const ParsedIR &ir_)
+	    : CompilerGLSL(ir_)
+	{
+	}
+
+	explicit CompilerCPP(ParsedIR &&ir_)
+	    : CompilerGLSL(std::move(ir_))
 	{
 	}
 
@@ -65,13 +74,13 @@ private:
 
 	std::string argument_decl(const SPIRFunction::Parameter &arg);
 
-	std::vector<std::string> resource_registrations;
+	SmallVector<std::string> resource_registrations;
 	std::string impl_type;
 	std::string resource_type;
 	uint32_t shared_counter = 0;
 
 	std::string interface_name;
 };
-} // namespace spirv_cross
+} // namespace SPIRV_CROSS_NAMESPACE
 
 #endif

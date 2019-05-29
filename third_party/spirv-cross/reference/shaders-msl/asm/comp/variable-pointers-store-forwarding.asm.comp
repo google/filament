@@ -1,0 +1,31 @@
+#pragma clang diagnostic ignored "-Wmissing-prototypes"
+
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct foo
+{
+    int a;
+};
+
+struct bar
+{
+    int b;
+};
+
+device int* _24(device foo& a, device bar& b, thread uint3& gl_GlobalInvocationID)
+{
+    return (gl_GlobalInvocationID.x != 0u) ? &a.a : &b.b;
+}
+
+kernel void main0(device foo& x [[buffer(0)]], device bar& y [[buffer(1)]], uint3 gl_GlobalInvocationID [[thread_position_in_grid]])
+{
+    device int* _34 = _24(x, y, gl_GlobalInvocationID);
+    device int* _33 = _34;
+    int _37 = x.a;
+    *_33 = 0;
+    y.b = _37 + _37;
+}
+

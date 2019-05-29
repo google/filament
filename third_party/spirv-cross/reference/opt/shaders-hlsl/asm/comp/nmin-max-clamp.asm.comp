@@ -1,0 +1,87 @@
+RWByteAddressBuffer _4 : register(u0);
+
+void comp_main()
+{
+    _4.Store(0, asuint(isnan(asfloat(_4.Load(96))) ? asfloat(_4.Load(48)) : (isnan(asfloat(_4.Load(48))) ? asfloat(_4.Load(96)) : min(asfloat(_4.Load(48)), asfloat(_4.Load(96))))));
+    bool2 _146 = isnan(asfloat(_4.Load2(56)));
+    bool2 _147 = isnan(asfloat(_4.Load2(104)));
+    float2 _148 = min(asfloat(_4.Load2(56)), asfloat(_4.Load2(104)));
+    float2 _149 = float2(_146.x ? asfloat(_4.Load2(104)).x : _148.x, _146.y ? asfloat(_4.Load2(104)).y : _148.y);
+    _4.Store2(8, asuint(float2(_147.x ? asfloat(_4.Load2(56)).x : _149.x, _147.y ? asfloat(_4.Load2(56)).y : _149.y)));
+    bool3 _151 = isnan(asfloat(_4.Load3(64)));
+    bool3 _152 = isnan(asfloat(_4.Load3(112)));
+    float3 _153 = min(asfloat(_4.Load3(64)), asfloat(_4.Load3(112)));
+    float3 _154 = float3(_151.x ? asfloat(_4.Load3(112)).x : _153.x, _151.y ? asfloat(_4.Load3(112)).y : _153.y, _151.z ? asfloat(_4.Load3(112)).z : _153.z);
+    _4.Store3(16, asuint(float3(_152.x ? asfloat(_4.Load3(64)).x : _154.x, _152.y ? asfloat(_4.Load3(64)).y : _154.y, _152.z ? asfloat(_4.Load3(64)).z : _154.z)));
+    bool4 _156 = isnan(asfloat(_4.Load4(80)));
+    bool4 _157 = isnan(asfloat(_4.Load4(128)));
+    float4 _158 = min(asfloat(_4.Load4(80)), asfloat(_4.Load4(128)));
+    float4 _159 = float4(_156.x ? asfloat(_4.Load4(128)).x : _158.x, _156.y ? asfloat(_4.Load4(128)).y : _158.y, _156.z ? asfloat(_4.Load4(128)).z : _158.z, _156.w ? asfloat(_4.Load4(128)).w : _158.w);
+    _4.Store4(32, asuint(float4(_157.x ? asfloat(_4.Load4(80)).x : _159.x, _157.y ? asfloat(_4.Load4(80)).y : _159.y, _157.z ? asfloat(_4.Load4(80)).z : _159.z, _157.w ? asfloat(_4.Load4(80)).w : _159.w)));
+    _4.Store(0, asuint(isnan(asfloat(_4.Load(96))) ? asfloat(_4.Load(48)) : (isnan(asfloat(_4.Load(48))) ? asfloat(_4.Load(96)) : max(asfloat(_4.Load(48)), asfloat(_4.Load(96))))));
+    bool2 _166 = isnan(asfloat(_4.Load2(56)));
+    bool2 _167 = isnan(asfloat(_4.Load2(104)));
+    float2 _168 = max(asfloat(_4.Load2(56)), asfloat(_4.Load2(104)));
+    float2 _169 = float2(_166.x ? asfloat(_4.Load2(104)).x : _168.x, _166.y ? asfloat(_4.Load2(104)).y : _168.y);
+    _4.Store2(8, asuint(float2(_167.x ? asfloat(_4.Load2(56)).x : _169.x, _167.y ? asfloat(_4.Load2(56)).y : _169.y)));
+    bool3 _171 = isnan(asfloat(_4.Load3(64)));
+    bool3 _172 = isnan(asfloat(_4.Load3(112)));
+    float3 _173 = max(asfloat(_4.Load3(64)), asfloat(_4.Load3(112)));
+    float3 _174 = float3(_171.x ? asfloat(_4.Load3(112)).x : _173.x, _171.y ? asfloat(_4.Load3(112)).y : _173.y, _171.z ? asfloat(_4.Load3(112)).z : _173.z);
+    _4.Store3(16, asuint(float3(_172.x ? asfloat(_4.Load3(64)).x : _174.x, _172.y ? asfloat(_4.Load3(64)).y : _174.y, _172.z ? asfloat(_4.Load3(64)).z : _174.z)));
+    bool4 _176 = isnan(asfloat(_4.Load4(80)));
+    bool4 _177 = isnan(asfloat(_4.Load4(128)));
+    float4 _178 = max(asfloat(_4.Load4(80)), asfloat(_4.Load4(128)));
+    float4 _179 = float4(_176.x ? asfloat(_4.Load4(128)).x : _178.x, _176.y ? asfloat(_4.Load4(128)).y : _178.y, _176.z ? asfloat(_4.Load4(128)).z : _178.z, _176.w ? asfloat(_4.Load4(128)).w : _178.w);
+    _4.Store4(32, asuint(float4(_177.x ? asfloat(_4.Load4(80)).x : _179.x, _177.y ? asfloat(_4.Load4(80)).y : _179.y, _177.z ? asfloat(_4.Load4(80)).z : _179.z, _177.w ? asfloat(_4.Load4(80)).w : _179.w)));
+    float _180 = isnan(asfloat(_4.Load(48))) ? asfloat(_4.Load(0)) : (isnan(asfloat(_4.Load(0))) ? asfloat(_4.Load(48)) : max(asfloat(_4.Load(0)), asfloat(_4.Load(48))));
+    _4.Store(0, asuint(isnan(asfloat(_4.Load(96))) ? _180 : (isnan(_180) ? asfloat(_4.Load(96)) : min(_180, asfloat(_4.Load(96))))));
+    bool2 _193 = isnan(asfloat(_4.Load2(8)));
+    bool2 _194 = isnan(asfloat(_4.Load2(56)));
+    float2 _195 = max(asfloat(_4.Load2(8)), asfloat(_4.Load2(56)));
+    float2 _196 = float2(_193.x ? asfloat(_4.Load2(56)).x : _195.x, _193.y ? asfloat(_4.Load2(56)).y : _195.y);
+    float2 _191 = float2(_194.x ? asfloat(_4.Load2(8)).x : _196.x, _194.y ? asfloat(_4.Load2(8)).y : _196.y);
+    bool2 _198 = isnan(_191);
+    bool2 _199 = isnan(asfloat(_4.Load2(104)));
+    float2 _200 = min(_191, asfloat(_4.Load2(104)));
+    float2 _201 = float2(_198.x ? asfloat(_4.Load2(104)).x : _200.x, _198.y ? asfloat(_4.Load2(104)).y : _200.y);
+    _4.Store2(8, asuint(float2(_199.x ? _191.x : _201.x, _199.y ? _191.y : _201.y)));
+    bool3 _204 = isnan(asfloat(_4.Load3(16)));
+    bool3 _205 = isnan(asfloat(_4.Load3(64)));
+    float3 _206 = max(asfloat(_4.Load3(16)), asfloat(_4.Load3(64)));
+    float3 _207 = float3(_204.x ? asfloat(_4.Load3(64)).x : _206.x, _204.y ? asfloat(_4.Load3(64)).y : _206.y, _204.z ? asfloat(_4.Load3(64)).z : _206.z);
+    float3 _202 = float3(_205.x ? asfloat(_4.Load3(16)).x : _207.x, _205.y ? asfloat(_4.Load3(16)).y : _207.y, _205.z ? asfloat(_4.Load3(16)).z : _207.z);
+    bool3 _209 = isnan(_202);
+    bool3 _210 = isnan(asfloat(_4.Load3(112)));
+    float3 _211 = min(_202, asfloat(_4.Load3(112)));
+    float3 _212 = float3(_209.x ? asfloat(_4.Load3(112)).x : _211.x, _209.y ? asfloat(_4.Load3(112)).y : _211.y, _209.z ? asfloat(_4.Load3(112)).z : _211.z);
+    _4.Store3(16, asuint(float3(_210.x ? _202.x : _212.x, _210.y ? _202.y : _212.y, _210.z ? _202.z : _212.z)));
+    bool4 _215 = isnan(asfloat(_4.Load4(32)));
+    bool4 _216 = isnan(asfloat(_4.Load4(80)));
+    float4 _217 = max(asfloat(_4.Load4(32)), asfloat(_4.Load4(80)));
+    float4 _218 = float4(_215.x ? asfloat(_4.Load4(80)).x : _217.x, _215.y ? asfloat(_4.Load4(80)).y : _217.y, _215.z ? asfloat(_4.Load4(80)).z : _217.z, _215.w ? asfloat(_4.Load4(80)).w : _217.w);
+    float4 _213 = float4(_216.x ? asfloat(_4.Load4(32)).x : _218.x, _216.y ? asfloat(_4.Load4(32)).y : _218.y, _216.z ? asfloat(_4.Load4(32)).z : _218.z, _216.w ? asfloat(_4.Load4(32)).w : _218.w);
+    bool4 _220 = isnan(_213);
+    bool4 _221 = isnan(asfloat(_4.Load4(128)));
+    float4 _222 = min(_213, asfloat(_4.Load4(128)));
+    float4 _223 = float4(_220.x ? asfloat(_4.Load4(128)).x : _222.x, _220.y ? asfloat(_4.Load4(128)).y : _222.y, _220.z ? asfloat(_4.Load4(128)).z : _222.z, _220.w ? asfloat(_4.Load4(128)).w : _222.w);
+    _4.Store4(32, asuint(float4(_221.x ? _213.x : _223.x, _221.y ? _213.y : _223.y, _221.z ? _213.z : _223.z, _221.w ? _213.w : _223.w)));
+    for (int _139 = 0; _139 < 2; )
+    {
+        bool2 _225 = isnan(asfloat(_4.Load2(56)));
+        bool2 _226 = isnan(asfloat(_4.Load2(104)));
+        float2 _227 = min(asfloat(_4.Load2(56)), asfloat(_4.Load2(104)));
+        float2 _228 = float2(_225.x ? asfloat(_4.Load2(104)).x : _227.x, _225.y ? asfloat(_4.Load2(104)).y : _227.y);
+        _4.Store2(8, asuint(float2(_226.x ? asfloat(_4.Load2(56)).x : _228.x, _226.y ? asfloat(_4.Load2(56)).y : _228.y)));
+        float _229 = isnan(asfloat(_4.Load(56))) ? asfloat(_4.Load(0)) : (isnan(asfloat(_4.Load(0))) ? asfloat(_4.Load(56)) : max(asfloat(_4.Load(0)), asfloat(_4.Load(56))));
+        _4.Store(0, asuint(isnan(asfloat(_4.Load(60))) ? _229 : (isnan(_229) ? asfloat(_4.Load(60)) : min(_229, asfloat(_4.Load(60))))));
+        _139++;
+        continue;
+    }
+}
+
+[numthreads(1, 1, 1)]
+void main()
+{
+    comp_main();
+}

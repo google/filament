@@ -2,13 +2,14 @@
 layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
 
 const vec4 _66[2] = vec4[](vec4(10.0), vec4(30.0));
-const float _94[2][3] = float[][](float[](1.0, 1.0, 1.0), float[](2.0, 2.0, 2.0));
 
 struct Composite
 {
     vec4 a[2];
     vec4 b[2];
 };
+
+const float _94[2][3] = float[][](float[](1.0, 1.0, 1.0), float[](2.0, 2.0, 2.0));
 
 layout(binding = 0, std430) buffer SSBO0
 {

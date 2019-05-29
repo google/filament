@@ -22,26 +22,11 @@ struct SPIRV_Cross_Output
     float FragColor : SV_Target0;
 };
 
-float SPIRV_Cross_projectTextureCoordinate(float2 coord)
-{
-    return coord.x / coord.y;
-}
-
-float2 SPIRV_Cross_projectTextureCoordinate(float3 coord)
-{
-    return float2(coord.x, coord.y) / coord.z;
-}
-
-float3 SPIRV_Cross_projectTextureCoordinate(float4 coord)
-{
-    return float3(coord.x, coord.y, coord.z) / coord.w;
-}
-
 void frag_main()
 {
     float4 _80 = vDirRef;
     _80.z = vDirRef.w;
-    FragColor = (((((((uSampler2D.SampleCmp(_uSampler2D_sampler, vUVRef.xy, vUVRef.z, int2(-1, -1)) + uSampler2DArray.SampleCmp(_uSampler2DArray_sampler, vDirRef.xyz, vDirRef.w, int2(-1, -1))) + uSamplerCube.SampleCmp(_uSamplerCube_sampler, vDirRef.xyz, vDirRef.w)) + uSamplerCubeArray.SampleCmp(_uSamplerCubeArray_sampler, vDirRef, 0.5f)) + uSampler2D.SampleCmpLevelZero(_uSampler2D_sampler, vUVRef.xy, vUVRef.z, int2(-1, -1))) + uSampler2DArray.SampleCmpLevelZero(_uSampler2DArray_sampler, vDirRef.xyz, vDirRef.w, int2(-1, -1))) + uSamplerCube.SampleCmpLevelZero(_uSamplerCube_sampler, vDirRef.xyz, vDirRef.w)) + uSampler2D.SampleCmp(_uSampler2D_sampler, SPIRV_Cross_projectTextureCoordinate(_80.xyz), vDirRef.z, int2(1, 1))) + uSampler2D.SampleCmpLevelZero(_uSampler2D_sampler, SPIRV_Cross_projectTextureCoordinate(_80.xyz), vDirRef.z, int2(1, 1));
+    FragColor = (((((((uSampler2D.SampleCmp(_uSampler2D_sampler, vUVRef.xy, vUVRef.z, int2(-1, -1)) + uSampler2DArray.SampleCmp(_uSampler2DArray_sampler, vDirRef.xyz, vDirRef.w, int2(-1, -1))) + uSamplerCube.SampleCmp(_uSamplerCube_sampler, vDirRef.xyz, vDirRef.w)) + uSamplerCubeArray.SampleCmp(_uSamplerCubeArray_sampler, vDirRef, 0.5f)) + uSampler2D.SampleCmpLevelZero(_uSampler2D_sampler, vUVRef.xy, vUVRef.z, int2(-1, -1))) + uSampler2DArray.SampleCmpLevelZero(_uSampler2DArray_sampler, vDirRef.xyz, vDirRef.w, int2(-1, -1))) + uSamplerCube.SampleCmpLevelZero(_uSamplerCube_sampler, vDirRef.xyz, vDirRef.w)) + uSampler2D.SampleCmp(_uSampler2D_sampler, _80.xy / _80.z, vDirRef.z / _80.z, int2(1, 1))) + uSampler2D.SampleCmpLevelZero(_uSampler2D_sampler, _80.xy / _80.z, vDirRef.z / _80.z, int2(1, 1));
 }
 
 SPIRV_Cross_Output main(SPIRV_Cross_Input stage_input)

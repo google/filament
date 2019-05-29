@@ -29,9 +29,9 @@ fragment main0_out main0(main0_in in [[stage_in]], texturecube<float> samplerCol
     inInvModelView[3] = in.inInvModelView_3;
     float4 _31 = inInvModelView * float4(reflect(normalize(in.inPos), normalize(in.inNormal)), 0.0);
     float _33 = _31.x;
-    float3 _60 = float3(_33, _31.yz);
-    _60.x = _33 * (-1.0);
-    out.outFragColor = samplerColor.sample(samplerColorSmplr, _60, bias(in.inLodBias));
+    float3 _59 = float3(_33, _31.yz);
+    _59.x = _33 * (-1.0);
+    out.outFragColor = samplerColor.sample(samplerColorSmplr, _59, bias(in.inLodBias));
     return out;
 }
 

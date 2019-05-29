@@ -1,0 +1,9 @@
+#version 450
+
+layout(binding = 0) uniform sampler2D foo;
+layout(binding = 1, rgba8) uniform image2D bar;
+
+void main() {
+	vec4 a = texture(foo, vec2(1, 1));
+	imageStore(bar, ivec2(0, 0), a);
+}

@@ -1,0 +1,38 @@
+#version 430
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+
+layout(binding = 5, std430) buffer _6_15
+{
+    float _m0[];
+} _15;
+
+layout(binding = 0, std430) buffer _7_16
+{
+    float _m0[];
+} _16;
+
+layout(binding = 1, std430) buffer _8_17
+{
+    float _m0[];
+} _17;
+
+layout(binding = 2, std430) restrict readonly buffer _9_18
+{
+    float _m0[];
+} _18;
+
+layout(binding = 3, std430) restrict readonly buffer _10_19
+{
+    float _m0[];
+} _19;
+
+layout(binding = 4, std430) restrict readonly buffer _11_20
+{
+    float _m0[];
+} _20;
+
+void main()
+{
+    _15._m0[gl_GlobalInvocationID.x] = (((_16._m0[gl_GlobalInvocationID.x] + _17._m0[gl_GlobalInvocationID.x]) + _18._m0[gl_GlobalInvocationID.x]) + _19._m0[gl_GlobalInvocationID.x]) + _20._m0[gl_GlobalInvocationID.x];
+}
+

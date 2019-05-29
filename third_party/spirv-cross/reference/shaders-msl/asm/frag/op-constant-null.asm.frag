@@ -9,7 +9,7 @@ struct D
     float b;
 };
 
-constant float4 _14[4] = {float4(0.0), float4(0.0), float4(0.0), float4(0.0)};
+constant float4 _14[4] = { float4(0.0), float4(0.0), float4(0.0), float4(0.0) };
 
 struct main0_out
 {
@@ -22,7 +22,7 @@ fragment main0_out main0()
     float a = 0.0;
     float4 b = float4(0.0);
     float2x3 c = float2x3(float3(0.0), float3(0.0));
-    D d = {float4(0.0), 0.0};
+    D d = D{ float4(0.0), 0.0 };
     out.FragColor = a;
     return out;
 }

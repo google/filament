@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 ARM Limited
+ * Copyright 2015-2019 Arm Limited
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@
 #include "spirv_glsl.hpp"
 #include "spirv_hlsl.hpp"
 #include "spirv_msl.hpp"
+#include "spirv_parser.hpp"
 #include "spirv_reflect.hpp"
 #include <algorithm>
 #include <cstdio>
@@ -30,12 +31,16 @@
 #include <unordered_map>
 #include <unordered_set>
 
+#ifdef HAVE_SPIRV_CROSS_GIT_VERSION
+#include "gitversion.h"
+#endif
+
 #ifdef _MSC_VER
 #pragma warning(disable : 4996)
 #endif
 
 using namespace spv;
-using namespace spirv_cross;
+using namespace SPIRV_CROSS_NAMESPACE;
 using namespace std;
 
 #ifdef SPIRV_CROSS_EXCEPTIONS_TO_ASSERTIONS
@@ -190,7 +195,7 @@ static vector<uint32_t> read_spirv_file(const char *path)
 	FILE *file = fopen(path, "rb");
 	if (!file)
 	{
-		fprintf(stderr, "Failed to open SPIRV file: %s\n", path);
+		fprintf(stderr, "Failed to open SPIR-V file: %s\n", path);
 		return {};
 	}
 
@@ -220,7 +225,7 @@ static bool write_string_to_file(const char *path, const char *string)
 	return true;
 }
 
-static void print_resources(const Compiler &compiler, const char *tag, const vector<Resource> &resources)
+static void print_resources(const Compiler &compiler, const char *tag, const SmallVector<Resource> &resources)
 {
 	fprintf(stderr, "%s\n", tag);
 	fprintf(stderr, "=============\n\n");
@@ -244,8 +249,14 @@ static void print_resources(const Compiler &compiler, const char *tag, const vec
 		uint32_t fallback_id = !is_push_constant && is_block ? res.base_type_id : res.id;
 
 		uint32_t block_size = 0;
+		uint32_t runtime_array_stride = 0;
 		if (is_sized_block)
-			block_size = uint32_t(compiler.get_declared_struct_size(compiler.get_type(res.base_type_id)));
+		{
+			auto &base_type = compiler.get_type(res.base_type_id);
+			block_size = uint32_t(compiler.get_declared_struct_size(base_type));
+			runtime_array_stride = uint32_t(compiler.get_declared_struct_size_runtime_array(base_type, 1) -
+			                                compiler.get_declared_struct_size_runtime_array(base_type, 0));
+		}
 
 		Bitset mask;
 		if (print_ssbo)
@@ -273,7 +284,11 @@ static void print_resources(const Compiler &compiler, const char *tag, const vec
 		if (mask.get(DecorationNonWritable))
 			fprintf(stderr, " readonly");
 		if (is_sized_block)
+		{
 			fprintf(stderr, " (BlockSize : %u bytes)", block_size);
+			if (runtime_array_stride)
+				fprintf(stderr, " (Unsized array stride: %u bytes)", runtime_array_stride);
+		}
 
 		uint32_t counter_id = 0;
 		if (print_ssbo && compiler.buffer_get_hlsl_counter_buffer(res.id, counter_id))
@@ -299,6 +314,18 @@ static const char *execution_model_to_str(spv::ExecutionModel model)
 		return "fragment";
 	case ExecutionModelGLCompute:
 		return "compute";
+	case ExecutionModelRayGenerationNV:
+		return "raygenNV";
+	case ExecutionModelIntersectionNV:
+		return "intersectionNV";
+	case ExecutionModelCallableNV:
+		return "callableNV";
+	case ExecutionModelAnyHitNV:
+		return "anyhitNV";
+	case ExecutionModelClosestHitNV:
+		return "closesthitNV";
+	case ExecutionModelMissNV:
+		return "missNV";
 	default:
 		return "???";
 	}
@@ -385,9 +412,10 @@ static void print_resources(const Compiler &compiler, const ShaderResources &res
 	print_resources(compiler, "ubos", res.uniform_buffers);
 	print_resources(compiler, "push", res.push_constant_buffers);
 	print_resources(compiler, "counters", res.atomic_counters);
+	print_resources(compiler, "acceleration structures", res.acceleration_structures);
 }
 
-static void print_push_constant_resources(const Compiler &compiler, const vector<Resource> &res)
+static void print_push_constant_resources(const Compiler &compiler, const SmallVector<Resource> &res)
 {
 	for (auto &block : res)
 	{
@@ -479,13 +507,24 @@ struct CLIArguments
 	bool yflip = false;
 	bool sso = false;
 	bool support_nonzero_baseinstance = true;
-	vector<PLSArg> pls_in;
-	vector<PLSArg> pls_out;
-	vector<Remap> remaps;
-	vector<string> extensions;
-	vector<VariableTypeRemap> variable_type_remaps;
-	vector<InterfaceVariableRename> interface_variable_renames;
-	vector<HLSLVertexAttributeRemap> hlsl_attr_remap;
+	bool msl_capture_output_to_buffer = false;
+	bool msl_swizzle_texture_samples = false;
+	bool msl_ios = false;
+	bool msl_pad_fragment_output = false;
+	bool msl_domain_lower_left = false;
+	bool msl_argument_buffers = false;
+	bool msl_texture_buffer_native = false;
+	bool glsl_emit_push_constant_as_ubo = false;
+	bool glsl_emit_ubo_as_plain_uniforms = false;
+	bool emit_line_directives = false;
+	SmallVector<uint32_t> msl_discrete_descriptor_sets;
+	SmallVector<PLSArg> pls_in;
+	SmallVector<PLSArg> pls_out;
+	SmallVector<Remap> remaps;
+	SmallVector<string> extensions;
+	SmallVector<VariableTypeRemap> variable_type_remaps;
+	SmallVector<InterfaceVariableRename> interface_variable_renames;
+	SmallVector<HLSLVertexAttributeRemap> hlsl_attr_remap;
 	string entry;
 	string entry_stage;
 
@@ -495,7 +534,7 @@ struct CLIArguments
 		string new_name;
 		ExecutionModel execution_model;
 	};
-	vector<Rename> entry_point_rename;
+	SmallVector<Rename> entry_point_rename;
 
 	uint32_t iterations = 1;
 	bool cpp = false;
@@ -503,6 +542,7 @@ struct CLIArguments
 	bool msl = false;
 	bool hlsl = false;
 	bool hlsl_compat = false;
+	bool hlsl_support_nonzero_base = false;
 	bool vulkan_semantics = false;
 	bool flatten_multidimensional_arrays = false;
 	bool use_420pack_extension = true;
@@ -510,8 +550,19 @@ struct CLIArguments
 	bool combined_samplers_inherit_bindings = false;
 };
 
+static void print_version()
+{
+#ifdef HAVE_SPIRV_CROSS_GIT_VERSION
+	fprintf(stderr, "%s\n", SPIRV_CROSS_GIT_REVISION);
+#else
+	fprintf(stderr, "Git revision unknown. Build with CMake to create timestamp and revision info.\n");
+#endif
+}
+
 static void print_help()
 {
+	print_version();
+
 	fprintf(stderr, "Usage: spirv-cross\n"
 	                "\t[--output <output path>]\n"
 	                "\t[SPIR-V file]\n"
@@ -520,6 +571,7 @@ static void print_help()
 	                "\t[--version <GLSL version>]\n"
 	                "\t[--dump-resources]\n"
 	                "\t[--help]\n"
+	                "\t[--revision]\n"
 	                "\t[--force-temporary]\n"
 	                "\t[--vulkan-semantics]\n"
 	                "\t[--flatten-ubo]\n"
@@ -528,12 +580,23 @@ static void print_help()
 	                "\t[--iterations iter]\n"
 	                "\t[--cpp]\n"
 	                "\t[--cpp-interface-name <name>]\n"
+	                "\t[--glsl-emit-push-constant-as-ubo]\n"
+	                "\t[--glsl-emit-ubo-as-plain-uniforms]\n"
 	                "\t[--msl]\n"
 	                "\t[--msl-version <MMmmpp>]\n"
+	                "\t[--msl-capture-output]\n"
+	                "\t[--msl-swizzle-texture-samples]\n"
+	                "\t[--msl-ios]\n"
+	                "\t[--msl-pad-fragment-output]\n"
+	                "\t[--msl-domain-lower-left]\n"
+	                "\t[--msl-argument-buffers]\n"
+	                "\t[--msl-texture-buffer-native]\n"
+	                "\t[--msl-discrete-descriptor-set <index>]\n"
 	                "\t[--hlsl]\n"
 	                "\t[--reflect]\n"
 	                "\t[--shader-model]\n"
 	                "\t[--hlsl-enable-compat]\n"
+	                "\t[--hlsl-support-nonzero-basevertex-baseinstance]\n"
 	                "\t[--separate-shader-objects]\n"
 	                "\t[--pls-in format input-name]\n"
 	                "\t[--pls-out format output-name]\n"
@@ -550,10 +613,11 @@ static void print_help()
 	                "\t[--rename-entry-point <old> <new> <stage>]\n"
 	                "\t[--combined-samplers-inherit-bindings]\n"
 	                "\t[--no-support-nonzero-baseinstance]\n"
+	                "\t[--emit-line-directives]\n"
 	                "\n");
 }
 
-static bool remap_generic(Compiler &compiler, const vector<Resource> &resources, const Remap &remap)
+static bool remap_generic(Compiler &compiler, const SmallVector<Resource> &resources, const Remap &remap)
 {
 	auto itr =
 	    find_if(begin(resources), end(resources), [&remap](const Resource &res) { return res.name == remap.src_name; });
@@ -569,8 +633,8 @@ static bool remap_generic(Compiler &compiler, const vector<Resource> &resources,
 		return false;
 }
 
-static vector<PlsRemap> remap_pls(const vector<PLSArg> &pls_variables, const vector<Resource> &resources,
-                                  const vector<Resource> *secondary_resources)
+static vector<PlsRemap> remap_pls(const SmallVector<PLSArg> &pls_variables, const SmallVector<Resource> &resources,
+                                  const SmallVector<Resource> *secondary_resources)
 {
 	vector<PlsRemap> ret;
 
@@ -655,6 +719,301 @@ static ExecutionModel stage_to_execution_model(const std::string &stage)
 		SPIRV_CROSS_THROW("Invalid stage.");
 }
 
+static string compile_iteration(const CLIArguments &args, std::vector<uint32_t> spirv_file)
+{
+	Parser spirv_parser(move(spirv_file));
+	spirv_parser.parse();
+
+	unique_ptr<CompilerGLSL> compiler;
+	bool combined_image_samplers = false;
+	bool build_dummy_sampler = false;
+
+	if (args.cpp)
+	{
+		compiler.reset(new CompilerCPP(move(spirv_parser.get_parsed_ir())));
+		if (args.cpp_interface_name)
+			static_cast<CompilerCPP *>(compiler.get())->set_interface_name(args.cpp_interface_name);
+	}
+	else if (args.msl)
+	{
+		compiler.reset(new CompilerMSL(move(spirv_parser.get_parsed_ir())));
+
+		auto *msl_comp = static_cast<CompilerMSL *>(compiler.get());
+		auto msl_opts = msl_comp->get_msl_options();
+		if (args.set_msl_version)
+			msl_opts.msl_version = args.msl_version;
+		msl_opts.capture_output_to_buffer = args.msl_capture_output_to_buffer;
+		msl_opts.swizzle_texture_samples = args.msl_swizzle_texture_samples;
+		if (args.msl_ios)
+			msl_opts.platform = CompilerMSL::Options::iOS;
+		msl_opts.pad_fragment_output_components = args.msl_pad_fragment_output;
+		msl_opts.tess_domain_origin_lower_left = args.msl_domain_lower_left;
+		msl_opts.argument_buffers = args.msl_argument_buffers;
+		msl_opts.texture_buffer_native = args.msl_texture_buffer_native;
+		msl_comp->set_msl_options(msl_opts);
+		for (auto &v : args.msl_discrete_descriptor_sets)
+			msl_comp->add_discrete_descriptor_set(v);
+	}
+	else if (args.hlsl)
+		compiler.reset(new CompilerHLSL(move(spirv_parser.get_parsed_ir())));
+	else
+	{
+		combined_image_samplers = !args.vulkan_semantics;
+		if (!args.vulkan_semantics)
+			build_dummy_sampler = true;
+		compiler.reset(new CompilerGLSL(move(spirv_parser.get_parsed_ir())));
+	}
+
+	if (!args.variable_type_remaps.empty())
+	{
+		auto remap_cb = [&](const SPIRType &, const string &name, string &out) -> void {
+			for (const VariableTypeRemap &remap : args.variable_type_remaps)
+				if (name == remap.variable_name)
+					out = remap.new_variable_type;
+		};
+
+		compiler->set_variable_type_remap_callback(move(remap_cb));
+	}
+
+	for (auto &rename : args.entry_point_rename)
+		compiler->rename_entry_point(rename.old_name, rename.new_name, rename.execution_model);
+
+	auto entry_points = compiler->get_entry_points_and_stages();
+	auto entry_point = args.entry;
+	ExecutionModel model = ExecutionModelMax;
+
+	if (!args.entry_stage.empty())
+	{
+		model = stage_to_execution_model(args.entry_stage);
+		if (entry_point.empty())
+		{
+			// Just use the first entry point with this stage.
+			for (auto &e : entry_points)
+			{
+				if (e.execution_model == model)
+				{
+					entry_point = e.name;
+					break;
+				}
+			}
+
+			if (entry_point.empty())
+			{
+				fprintf(stderr, "Could not find an entry point with stage: %s\n", args.entry_stage.c_str());
+				exit(EXIT_FAILURE);
+			}
+		}
+		else
+		{
+			// Make sure both stage and name exists.
+			bool exists = false;
+			for (auto &e : entry_points)
+			{
+				if (e.execution_model == model && e.name == entry_point)
+				{
+					exists = true;
+					break;
+				}
+			}
+
+			if (!exists)
+			{
+				fprintf(stderr, "Could not find an entry point %s with stage: %s\n", entry_point.c_str(),
+				        args.entry_stage.c_str());
+				exit(EXIT_FAILURE);
+			}
+		}
+	}
+	else if (!entry_point.empty())
+	{
+		// Make sure there is just one entry point with this name, or the stage
+		// is ambiguous.
+		uint32_t stage_count = 0;
+		for (auto &e : entry_points)
+		{
+			if (e.name == entry_point)
+			{
+				stage_count++;
+				model = e.execution_model;
+			}
+		}
+
+		if (stage_count == 0)
+		{
+			fprintf(stderr, "There is no entry point with name: %s\n", entry_point.c_str());
+			exit(EXIT_FAILURE);
+		}
+		else if (stage_count > 1)
+		{
+			fprintf(stderr, "There is more than one entry point with name: %s. Use --stage.\n", entry_point.c_str());
+			exit(EXIT_FAILURE);
+		}
+	}
+
+	if (!entry_point.empty())
+		compiler->set_entry_point(entry_point, model);
+
+	if (!args.set_version && !compiler->get_common_options().version)
+	{
+		fprintf(stderr, "Didn't specify GLSL version and SPIR-V did not specify language.\n");
+		print_help();
+		exit(EXIT_FAILURE);
+	}
+
+	CompilerGLSL::Options opts = compiler->get_common_options();
+	if (args.set_version)
+		opts.version = args.version;
+	if (args.set_es)
+		opts.es = args.es;
+	opts.force_temporary = args.force_temporary;
+	opts.separate_shader_objects = args.sso;
+	opts.flatten_multidimensional_arrays = args.flatten_multidimensional_arrays;
+	opts.enable_420pack_extension = args.use_420pack_extension;
+	opts.vulkan_semantics = args.vulkan_semantics;
+	opts.vertex.fixup_clipspace = args.fixup;
+	opts.vertex.flip_vert_y = args.yflip;
+	opts.vertex.support_nonzero_base_instance = args.support_nonzero_baseinstance;
+	opts.emit_push_constant_as_uniform_buffer = args.glsl_emit_push_constant_as_ubo;
+	opts.emit_uniform_buffer_as_plain_uniforms = args.glsl_emit_ubo_as_plain_uniforms;
+	opts.emit_line_directives = args.emit_line_directives;
+	compiler->set_common_options(opts);
+
+	// Set HLSL specific options.
+	if (args.hlsl)
+	{
+		auto *hlsl = static_cast<CompilerHLSL *>(compiler.get());
+		auto hlsl_opts = hlsl->get_hlsl_options();
+		if (args.set_shader_model)
+		{
+			if (args.shader_model < 30)
+			{
+				fprintf(stderr, "Shader model earlier than 30 (3.0) not supported.\n");
+				exit(EXIT_FAILURE);
+			}
+
+			hlsl_opts.shader_model = args.shader_model;
+		}
+
+		if (args.hlsl_compat)
+		{
+			// Enable all compat options.
+			hlsl_opts.point_size_compat = true;
+			hlsl_opts.point_coord_compat = true;
+		}
+
+		if (hlsl_opts.shader_model <= 30)
+		{
+			combined_image_samplers = true;
+			build_dummy_sampler = true;
+		}
+
+		hlsl_opts.support_nonzero_base_vertex_base_instance = args.hlsl_support_nonzero_base;
+		hlsl->set_hlsl_options(hlsl_opts);
+	}
+
+	if (build_dummy_sampler)
+	{
+		uint32_t sampler = compiler->build_dummy_sampler_for_combined_images();
+		if (sampler != 0)
+		{
+			// Set some defaults to make validation happy.
+			compiler->set_decoration(sampler, DecorationDescriptorSet, 0);
+			compiler->set_decoration(sampler, DecorationBinding, 0);
+		}
+	}
+
+	ShaderResources res;
+	if (args.remove_unused)
+	{
+		auto active = compiler->get_active_interface_variables();
+		res = compiler->get_shader_resources(active);
+		compiler->set_enabled_interface_variables(move(active));
+	}
+	else
+		res = compiler->get_shader_resources();
+
+	if (args.flatten_ubo)
+	{
+		for (auto &ubo : res.uniform_buffers)
+			compiler->flatten_buffer_block(ubo.id);
+		for (auto &ubo : res.push_constant_buffers)
+			compiler->flatten_buffer_block(ubo.id);
+	}
+
+	auto pls_inputs = remap_pls(args.pls_in, res.stage_inputs, &res.subpass_inputs);
+	auto pls_outputs = remap_pls(args.pls_out, res.stage_outputs, nullptr);
+	compiler->remap_pixel_local_storage(move(pls_inputs), move(pls_outputs));
+
+	for (auto &ext : args.extensions)
+		compiler->require_extension(ext);
+
+	for (auto &remap : args.remaps)
+	{
+		if (remap_generic(*compiler, res.stage_inputs, remap))
+			continue;
+		if (remap_generic(*compiler, res.stage_outputs, remap))
+			continue;
+		if (remap_generic(*compiler, res.subpass_inputs, remap))
+			continue;
+	}
+
+	for (auto &rename : args.interface_variable_renames)
+	{
+		if (rename.storageClass == StorageClassInput)
+			spirv_cross_util::rename_interface_variable(*compiler, res.stage_inputs, rename.location,
+			                                            rename.variable_name);
+		else if (rename.storageClass == StorageClassOutput)
+			spirv_cross_util::rename_interface_variable(*compiler, res.stage_outputs, rename.location,
+			                                            rename.variable_name);
+		else
+		{
+			fprintf(stderr, "error at --rename-interface-variable <in|out> ...\n");
+			exit(EXIT_FAILURE);
+		}
+	}
+
+	if (args.dump_resources)
+	{
+		print_resources(*compiler, res);
+		print_push_constant_resources(*compiler, res.push_constant_buffers);
+		print_spec_constants(*compiler);
+		print_capabilities_and_extensions(*compiler);
+	}
+
+	if (combined_image_samplers)
+	{
+		compiler->build_combined_image_samplers();
+		if (args.combined_samplers_inherit_bindings)
+			spirv_cross_util::inherit_combined_sampler_bindings(*compiler);
+
+		// Give the remapped combined samplers new names.
+		for (auto &remap : compiler->get_combined_image_samplers())
+		{
+			compiler->set_name(remap.combined_id, join("SPIRV_Cross_Combined", compiler->get_name(remap.image_id),
+			                                           compiler->get_name(remap.sampler_id)));
+		}
+	}
+
+	if (args.hlsl)
+	{
+		auto *hlsl_compiler = static_cast<CompilerHLSL *>(compiler.get());
+		uint32_t new_builtin = hlsl_compiler->remap_num_workgroups_builtin();
+		if (new_builtin)
+		{
+			hlsl_compiler->set_decoration(new_builtin, DecorationDescriptorSet, 0);
+			hlsl_compiler->set_decoration(new_builtin, DecorationBinding, 0);
+		}
+	}
+
+	if (args.hlsl)
+	{
+		for (auto &remap : args.hlsl_attr_remap)
+			static_cast<CompilerHLSL *>(compiler.get())->add_vertex_attribute_remap(remap);
+	}
+
+	return compiler->compile();
+}
+
 static int main_inner(int argc, char *argv[])
 {
 	CLIArguments args;
@@ -662,6 +1021,10 @@ static int main_inner(int argc, char *argv[])
 
 	cbs.add("--help", [](CLIParser &parser) {
 		print_help();
+		parser.end();
+	});
+	cbs.add("--revision", [](CLIParser &parser) {
+		print_version();
 		parser.end();
 	});
 	cbs.add("--output", [&args](CLIParser &parser) { args.output = parser.next_string(); });
@@ -687,12 +1050,25 @@ static int main_inner(int argc, char *argv[])
 	cbs.add("--reflect", [&args](CLIParser &parser) { args.reflect = parser.next_value_string("json"); });
 	cbs.add("--cpp-interface-name", [&args](CLIParser &parser) { args.cpp_interface_name = parser.next_string(); });
 	cbs.add("--metal", [&args](CLIParser &) { args.msl = true; }); // Legacy compatibility
+	cbs.add("--glsl-emit-push-constant-as-ubo", [&args](CLIParser &) { args.glsl_emit_push_constant_as_ubo = true; });
+	cbs.add("--glsl-emit-ubo-as-plain-uniforms", [&args](CLIParser &) { args.glsl_emit_ubo_as_plain_uniforms = true; });
 	cbs.add("--msl", [&args](CLIParser &) { args.msl = true; });
 	cbs.add("--hlsl", [&args](CLIParser &) { args.hlsl = true; });
 	cbs.add("--hlsl-enable-compat", [&args](CLIParser &) { args.hlsl_compat = true; });
+	cbs.add("--hlsl-support-nonzero-basevertex-baseinstance",
+	        [&args](CLIParser &) { args.hlsl_support_nonzero_base = true; });
 	cbs.add("--vulkan-semantics", [&args](CLIParser &) { args.vulkan_semantics = true; });
 	cbs.add("--flatten-multidimensional-arrays", [&args](CLIParser &) { args.flatten_multidimensional_arrays = true; });
 	cbs.add("--no-420pack-extension", [&args](CLIParser &) { args.use_420pack_extension = false; });
+	cbs.add("--msl-capture-output", [&args](CLIParser &) { args.msl_capture_output_to_buffer = true; });
+	cbs.add("--msl-swizzle-texture-samples", [&args](CLIParser &) { args.msl_swizzle_texture_samples = true; });
+	cbs.add("--msl-ios", [&args](CLIParser &) { args.msl_ios = true; });
+	cbs.add("--msl-pad-fragment-output", [&args](CLIParser &) { args.msl_pad_fragment_output = true; });
+	cbs.add("--msl-domain-lower-left", [&args](CLIParser &) { args.msl_domain_lower_left = true; });
+	cbs.add("--msl-argument-buffers", [&args](CLIParser &) { args.msl_argument_buffers = true; });
+	cbs.add("--msl-discrete-descriptor-set",
+	        [&args](CLIParser &parser) { args.msl_discrete_descriptor_sets.push_back(parser.next_uint()); });
+	cbs.add("--msl-texture-buffer-native", [&args](CLIParser &) { args.msl_texture_buffer_native = true; });
 	cbs.add("--extension", [&args](CLIParser &parser) { args.extensions.push_back(parser.next_string()); });
 	cbs.add("--rename-entry-point", [&args](CLIParser &parser) {
 		auto old_name = parser.next_string();
@@ -760,19 +1136,16 @@ static int main_inner(int argc, char *argv[])
 	        [&args](CLIParser &) { args.combined_samplers_inherit_bindings = true; });
 
 	cbs.add("--no-support-nonzero-baseinstance", [&](CLIParser &) { args.support_nonzero_baseinstance = false; });
+	cbs.add("--emit-line-directives", [&args](CLIParser &) { args.emit_line_directives = true; });
 
 	cbs.default_handler = [&args](const char *value) { args.input = value; };
 	cbs.error_handler = [] { print_help(); };
 
 	CLIParser parser{ move(cbs), argc - 1, argv + 1 };
 	if (!parser.parse())
-	{
 		return EXIT_FAILURE;
-	}
 	else if (parser.ended_state)
-	{
 		return EXIT_SUCCESS;
-	}
 
 	if (!args.input)
 	{
@@ -781,10 +1154,17 @@ static int main_inner(int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
 
+	auto spirv_file = read_spirv_file(args.input);
+	if (spirv_file.empty())
+		return EXIT_FAILURE;
+
 	// Special case reflection because it has little to do with the path followed by code-outputting compilers
 	if (!args.reflect.empty())
 	{
-		CompilerReflection compiler(read_spirv_file(args.input));
+		Parser spirv_parser(move(spirv_file));
+		spirv_parser.parse();
+
+		CompilerReflection compiler(move(spirv_parser.get_parsed_ir()));
 		compiler.set_format(args.reflect);
 		auto json = compiler.compile();
 		if (args.output)
@@ -794,278 +1174,20 @@ static int main_inner(int argc, char *argv[])
 		return EXIT_SUCCESS;
 	}
 
-	unique_ptr<CompilerGLSL> compiler;
-	bool combined_image_samplers = false;
-	bool build_dummy_sampler = false;
+	string compiled_output;
 
-	if (args.cpp)
-	{
-		compiler = unique_ptr<CompilerGLSL>(new CompilerCPP(read_spirv_file(args.input)));
-		if (args.cpp_interface_name)
-			static_cast<CompilerCPP *>(compiler.get())->set_interface_name(args.cpp_interface_name);
-	}
-	else if (args.msl)
-	{
-		compiler = unique_ptr<CompilerMSL>(new CompilerMSL(read_spirv_file(args.input)));
-
-		auto *msl_comp = static_cast<CompilerMSL *>(compiler.get());
-		auto msl_opts = msl_comp->get_msl_options();
-		if (args.set_msl_version)
-			msl_opts.msl_version = args.msl_version;
-		msl_comp->set_msl_options(msl_opts);
-	}
-	else if (args.hlsl)
-		compiler = unique_ptr<CompilerHLSL>(new CompilerHLSL(read_spirv_file(args.input)));
+	if (args.iterations == 1)
+		compiled_output = compile_iteration(args, move(spirv_file));
 	else
 	{
-		combined_image_samplers = !args.vulkan_semantics;
-		build_dummy_sampler = true;
-		compiler = unique_ptr<CompilerGLSL>(new CompilerGLSL(read_spirv_file(args.input)));
-	}
-
-	if (!args.variable_type_remaps.empty())
-	{
-		auto remap_cb = [&](const SPIRType &, const string &name, string &out) -> void {
-			for (const VariableTypeRemap &remap : args.variable_type_remaps)
-				if (name == remap.variable_name)
-					out = remap.new_variable_type;
-		};
-
-		compiler->set_variable_type_remap_callback(move(remap_cb));
-	}
-
-	for (auto &rename : args.entry_point_rename)
-		compiler->rename_entry_point(rename.old_name, rename.new_name, rename.execution_model);
-
-	auto entry_points = compiler->get_entry_points_and_stages();
-	auto entry_point = args.entry;
-	ExecutionModel model = ExecutionModelMax;
-
-	if (!args.entry_stage.empty())
-	{
-		model = stage_to_execution_model(args.entry_stage);
-		if (entry_point.empty())
-		{
-			// Just use the first entry point with this stage.
-			for (auto &e : entry_points)
-			{
-				if (e.execution_model == model)
-				{
-					entry_point = e.name;
-					break;
-				}
-			}
-
-			if (entry_point.empty())
-			{
-				fprintf(stderr, "Could not find an entry point with stage: %s\n", args.entry_stage.c_str());
-				return EXIT_FAILURE;
-			}
-		}
-		else
-		{
-			// Make sure both stage and name exists.
-			bool exists = false;
-			for (auto &e : entry_points)
-			{
-				if (e.execution_model == model && e.name == entry_point)
-				{
-					exists = true;
-					break;
-				}
-			}
-
-			if (!exists)
-			{
-				fprintf(stderr, "Could not find an entry point %s with stage: %s\n", entry_point.c_str(),
-				        args.entry_stage.c_str());
-				return EXIT_FAILURE;
-			}
-		}
-	}
-	else if (!entry_point.empty())
-	{
-		// Make sure there is just one entry point with this name, or the stage
-		// is ambiguous.
-		uint32_t stage_count = 0;
-		for (auto &e : entry_points)
-		{
-			if (e.name == entry_point)
-			{
-				stage_count++;
-				model = e.execution_model;
-			}
-		}
-
-		if (stage_count == 0)
-		{
-			fprintf(stderr, "There is no entry point with name: %s\n", entry_point.c_str());
-			return EXIT_FAILURE;
-		}
-		else if (stage_count > 1)
-		{
-			fprintf(stderr, "There is more than one entry point with name: %s. Use --stage.\n", entry_point.c_str());
-			return EXIT_FAILURE;
-		}
-	}
-
-	if (!entry_point.empty())
-		compiler->set_entry_point(entry_point, model);
-
-	if (!args.set_version && !compiler->get_common_options().version)
-	{
-		fprintf(stderr, "Didn't specify GLSL version and SPIR-V did not specify language.\n");
-		print_help();
-		return EXIT_FAILURE;
-	}
-
-	CompilerGLSL::Options opts = compiler->get_common_options();
-	if (args.set_version)
-		opts.version = args.version;
-	if (args.set_es)
-		opts.es = args.es;
-	opts.force_temporary = args.force_temporary;
-	opts.separate_shader_objects = args.sso;
-	opts.flatten_multidimensional_arrays = args.flatten_multidimensional_arrays;
-	opts.enable_420pack_extension = args.use_420pack_extension;
-	opts.vulkan_semantics = args.vulkan_semantics;
-	opts.vertex.fixup_clipspace = args.fixup;
-	opts.vertex.flip_vert_y = args.yflip;
-	opts.vertex.support_nonzero_base_instance = args.support_nonzero_baseinstance;
-	compiler->set_common_options(opts);
-
-	// Set HLSL specific options.
-	if (args.hlsl)
-	{
-		auto *hlsl = static_cast<CompilerHLSL *>(compiler.get());
-		auto hlsl_opts = hlsl->get_hlsl_options();
-		if (args.set_shader_model)
-		{
-			if (args.shader_model < 30)
-			{
-				fprintf(stderr, "Shader model earlier than 30 (3.0) not supported.\n");
-				return EXIT_FAILURE;
-			}
-
-			hlsl_opts.shader_model = args.shader_model;
-		}
-
-		if (args.hlsl_compat)
-		{
-			// Enable all compat options.
-			hlsl_opts.point_size_compat = true;
-			hlsl_opts.point_coord_compat = true;
-		}
-		hlsl->set_hlsl_options(hlsl_opts);
-	}
-
-	if (build_dummy_sampler)
-	{
-		uint32_t sampler = compiler->build_dummy_sampler_for_combined_images();
-		if (sampler != 0)
-		{
-			// Set some defaults to make validation happy.
-			compiler->set_decoration(sampler, DecorationDescriptorSet, 0);
-			compiler->set_decoration(sampler, DecorationBinding, 0);
-		}
-	}
-
-	ShaderResources res;
-	if (args.remove_unused)
-	{
-		auto active = compiler->get_active_interface_variables();
-		res = compiler->get_shader_resources(active);
-		compiler->set_enabled_interface_variables(move(active));
-	}
-	else
-		res = compiler->get_shader_resources();
-
-	if (args.flatten_ubo)
-	{
-		for (auto &ubo : res.uniform_buffers)
-			compiler->flatten_buffer_block(ubo.id);
-		for (auto &ubo : res.push_constant_buffers)
-			compiler->flatten_buffer_block(ubo.id);
-	}
-
-	auto pls_inputs = remap_pls(args.pls_in, res.stage_inputs, &res.subpass_inputs);
-	auto pls_outputs = remap_pls(args.pls_out, res.stage_outputs, nullptr);
-	compiler->remap_pixel_local_storage(move(pls_inputs), move(pls_outputs));
-
-	for (auto &ext : args.extensions)
-		compiler->require_extension(ext);
-
-	for (auto &remap : args.remaps)
-	{
-		if (remap_generic(*compiler, res.stage_inputs, remap))
-			continue;
-		if (remap_generic(*compiler, res.stage_outputs, remap))
-			continue;
-		if (remap_generic(*compiler, res.subpass_inputs, remap))
-			continue;
-	}
-
-	for (auto &rename : args.interface_variable_renames)
-	{
-		if (rename.storageClass == StorageClassInput)
-			spirv_cross_util::rename_interface_variable(*compiler, res.stage_inputs, rename.location,
-			                                            rename.variable_name);
-		else if (rename.storageClass == StorageClassOutput)
-			spirv_cross_util::rename_interface_variable(*compiler, res.stage_outputs, rename.location,
-			                                            rename.variable_name);
-		else
-		{
-			fprintf(stderr, "error at --rename-interface-variable <in|out> ...\n");
-			return EXIT_FAILURE;
-		}
-	}
-
-	if (args.dump_resources)
-	{
-		print_resources(*compiler, res);
-		print_push_constant_resources(*compiler, res.push_constant_buffers);
-		print_spec_constants(*compiler);
-		print_capabilities_and_extensions(*compiler);
-	}
-
-	if (combined_image_samplers)
-	{
-		compiler->build_combined_image_samplers();
-		if (args.combined_samplers_inherit_bindings)
-			spirv_cross_util::inherit_combined_sampler_bindings(*compiler);
-
-		// Give the remapped combined samplers new names.
-		for (auto &remap : compiler->get_combined_image_samplers())
-		{
-			compiler->set_name(remap.combined_id, join("SPIRV_Cross_Combined", compiler->get_name(remap.image_id),
-			                                           compiler->get_name(remap.sampler_id)));
-		}
-	}
-
-	if (args.hlsl)
-	{
-		auto *hlsl_compiler = static_cast<CompilerHLSL *>(compiler.get());
-		uint32_t new_builtin = hlsl_compiler->remap_num_workgroups_builtin();
-		if (new_builtin)
-		{
-			hlsl_compiler->set_decoration(new_builtin, DecorationDescriptorSet, 0);
-			hlsl_compiler->set_decoration(new_builtin, DecorationBinding, 0);
-		}
-	}
-
-	string glsl;
-	for (uint32_t i = 0; i < args.iterations; i++)
-	{
-		if (args.hlsl)
-			glsl = static_cast<CompilerHLSL *>(compiler.get())->compile(move(args.hlsl_attr_remap));
-		else
-			glsl = compiler->compile();
+		for (unsigned i = 0; i < args.iterations; i++)
+			compiled_output = compile_iteration(args, spirv_file);
 	}
 
 	if (args.output)
-		write_string_to_file(args.output, glsl.c_str());
+		write_string_to_file(args.output, compiled_output.c_str());
 	else
-		printf("%s", glsl.c_str());
+		printf("%s", compiled_output.c_str());
 
 	return EXIT_SUCCESS;
 }

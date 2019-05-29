@@ -1,0 +1,19 @@
+#version 450
+layout(local_size_x_id = 10, local_size_y = 20) in;
+
+layout(constant_id = 0) const int a = 1;
+layout(constant_id = 1) const int b = 2;
+
+layout(set = 1, binding = 0) writeonly buffer SSBO
+{
+	int v[];
+};
+
+void main()
+{
+	int spec_const_array_size[b];
+	spec_const_array_size[0] = 10;
+	spec_const_array_size[1] = 40;
+	spec_const_array_size[a] = a;
+	v[a + gl_WorkGroupSize.x + gl_WorkGroupSize.y + gl_GlobalInvocationID.x] = b + spec_const_array_size[1 - a];
+}

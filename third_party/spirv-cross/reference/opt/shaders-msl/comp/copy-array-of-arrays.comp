@@ -1,0 +1,18 @@
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct BUF
+{
+    int a;
+    float b;
+    float c;
+};
+
+kernel void main0(device BUF& o [[buffer(0)]])
+{
+    o.a = 4;
+    o.b = o.c;
+}
+

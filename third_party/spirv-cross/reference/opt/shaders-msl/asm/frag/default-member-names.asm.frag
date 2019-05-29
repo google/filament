@@ -3,7 +3,7 @@
 
 using namespace metal;
 
-constant float _57 = {};
+constant float _49 = {};
 
 struct main0_out
 {
@@ -13,7 +13,7 @@ struct main0_out
 fragment main0_out main0()
 {
     main0_out out = {};
-    out.m_3 = float4(_57);
+    out.m_3 = float4(_49);
     return out;
 }
 

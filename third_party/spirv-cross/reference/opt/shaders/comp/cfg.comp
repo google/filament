@@ -40,6 +40,5 @@ void main()
         continue;
     }
     _11.data = _180;
-    _11.data = _183;
 }
 

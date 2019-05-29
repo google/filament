@@ -8,7 +8,7 @@ layout(location = 0) in vec4 accum;
 void main()
 {
     result = vec4(0.0);
-    for (int _48 = 0; _48 < 4; )
+    for (mediump int _48 = 0; _48 < 4; )
     {
         result += accum;
         _48 += int((accum.y > 10.0) ? 40u : 30u);

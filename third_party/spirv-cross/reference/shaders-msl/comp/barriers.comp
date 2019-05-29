@@ -5,7 +5,7 @@
 
 using namespace metal;
 
-constant uint3 gl_WorkGroupSize = uint3(4u, 1u, 1u);
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(4u, 1u, 1u);
 
 void barrier_shared()
 {
@@ -14,17 +14,22 @@ void barrier_shared()
 
 void full_barrier()
 {
-    threadgroup_barrier(mem_flags::mem_threadgroup);
+    threadgroup_barrier(mem_flags::mem_device | mem_flags::mem_threadgroup | mem_flags::mem_texture);
+}
+
+void image_barrier()
+{
+    threadgroup_barrier(mem_flags::mem_texture);
 }
 
 void buffer_barrier()
 {
-    threadgroup_barrier(mem_flags::mem_none);
+    threadgroup_barrier(mem_flags::mem_device);
 }
 
 void group_barrier()
 {
-    threadgroup_barrier(mem_flags::mem_threadgroup);
+    threadgroup_barrier(mem_flags::mem_device | mem_flags::mem_threadgroup | mem_flags::mem_texture);
 }
 
 void barrier_shared_exec()
@@ -34,17 +39,22 @@ void barrier_shared_exec()
 
 void full_barrier_exec()
 {
-    threadgroup_barrier(mem_flags::mem_threadgroup);
+    threadgroup_barrier(mem_flags::mem_device | mem_flags::mem_threadgroup | mem_flags::mem_texture);
+}
+
+void image_barrier_exec()
+{
+    threadgroup_barrier(mem_flags::mem_texture);
 }
 
 void buffer_barrier_exec()
 {
-    threadgroup_barrier(mem_flags::mem_none);
+    threadgroup_barrier(mem_flags::mem_device);
 }
 
 void group_barrier_exec()
 {
-    threadgroup_barrier(mem_flags::mem_threadgroup);
+    threadgroup_barrier(mem_flags::mem_device | mem_flags::mem_threadgroup | mem_flags::mem_texture);
 }
 
 void exec_barrier()
@@ -56,10 +66,12 @@ kernel void main0()
 {
     barrier_shared();
     full_barrier();
+    image_barrier();
     buffer_barrier();
     group_barrier();
     barrier_shared_exec();
     full_barrier_exec();
+    image_barrier_exec();
     buffer_barrier_exec();
     group_barrier_exec();
     exec_barrier();

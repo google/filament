@@ -16,7 +16,7 @@ struct _42
     float4x4 _m0;
     float4x4 _m1;
     float _m2;
-    char pad3[12];
+    char _m3_pad[12];
     packed_float3 _m3;
     float _m4;
     packed_float3 _m5;

@@ -1,0 +1,34 @@
+#version 450
+#if defined(GL_AMD_gpu_shader_half_float)
+#extension GL_AMD_gpu_shader_half_float : require
+#elif defined(GL_NV_gpu_shader5)
+#extension GL_NV_gpu_shader5 : require
+#else
+#error No extension available for FP16.
+#endif
+#if defined(GL_AMD_gpu_shader_int16)
+#extension GL_AMD_gpu_shader_int16 : require
+#else
+#error No extension available for Int16.
+#endif
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+
+layout(binding = 0, std430) buffer SSBO0
+{
+    i16vec4 inputs[];
+} _25;
+
+layout(binding = 1, std430) buffer SSBO1
+{
+    ivec4 outputs[];
+} _39;
+
+void main()
+{
+    uint ident = gl_GlobalInvocationID.x;
+    f16vec2 a = int16BitsToFloat16(_25.inputs[ident].xy);
+    _39.outputs[ident].x = int(packFloat2x16(a + f16vec2(float16_t(1.0))));
+    _39.outputs[ident].y = packInt2x16(_25.inputs[ident].zw);
+    _39.outputs[ident].z = int(packUint2x16(u16vec2(_25.inputs[ident].xy)));
+}
+

@@ -5,7 +5,7 @@ struct MyStruct
     vec4 color;
 };
 
-layout(std140) uniform MyStruct_CB
+layout(binding = 0, std140) uniform MyStruct_CB
 {
     MyStruct g_MyStruct[4];
 } _6;

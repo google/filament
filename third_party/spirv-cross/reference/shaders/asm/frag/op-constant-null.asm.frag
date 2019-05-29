@@ -2,13 +2,13 @@
 precision mediump float;
 precision highp int;
 
-const vec4 _14[4] = vec4[](vec4(0.0), vec4(0.0), vec4(0.0), vec4(0.0));
-
 struct D
 {
     vec4 a;
     float b;
 };
+
+const vec4 _14[4] = vec4[](vec4(0.0), vec4(0.0), vec4(0.0), vec4(0.0));
 
 layout(location = 0) out float FragColor;
 

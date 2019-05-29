@@ -6,7 +6,7 @@ layout(binding = 0, std430) buffer Buf
     vec4 _data[];
 } Buf_1;
 
-layout(std430) buffer Buf_count
+layout(binding = 1, std430) buffer Buf_count
 {
     int _count;
 } Buf_count_1;

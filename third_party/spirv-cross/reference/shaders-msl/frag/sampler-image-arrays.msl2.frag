@@ -12,7 +12,7 @@ struct main0_out
 
 struct main0_in
 {
-    float2 vTex [[user(locn0)]];
+    float2 vTex [[user(locn0), flat]];
     int vIndex [[user(locn1)]];
 };
 

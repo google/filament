@@ -3,7 +3,6 @@
 *.txt
 /test
 /spirv-cross
-*.spv
 /obj
 /msvc/x64
 /msvc/Debug
@@ -15,5 +14,7 @@
 *.a
 *.bc
 /external
+.vs/
+*.vcxproj.user
 
 !CMakeLists.txt

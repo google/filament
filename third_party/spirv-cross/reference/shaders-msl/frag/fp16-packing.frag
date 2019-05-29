@@ -12,7 +12,7 @@ struct main0_out
 struct main0_in
 {
     uint FP16 [[user(locn0)]];
-    float2 FP32 [[user(locn1)]];
+    float2 FP32 [[user(locn1), flat]];
 };
 
 fragment main0_out main0(main0_in in [[stage_in]])

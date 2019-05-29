@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2018 ARM Limited
+ * Copyright 2015-2019 Arm Limited
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,9 +21,10 @@
 
 namespace spirv_cross_util
 {
-void rename_interface_variable(spirv_cross::Compiler &compiler, const std::vector<spirv_cross::Resource> &resources,
+void rename_interface_variable(SPIRV_CROSS_NAMESPACE::Compiler &compiler,
+                               const SPIRV_CROSS_NAMESPACE::SmallVector<SPIRV_CROSS_NAMESPACE::Resource> &resources,
                                uint32_t location, const std::string &name);
-void inherit_combined_sampler_bindings(spirv_cross::Compiler &compiler);
+void inherit_combined_sampler_bindings(SPIRV_CROSS_NAMESPACE::Compiler &compiler);
 } // namespace spirv_cross_util
 
 #endif

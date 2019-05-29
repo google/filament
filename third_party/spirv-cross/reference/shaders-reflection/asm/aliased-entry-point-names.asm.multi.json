@@ -1,19 +1,19 @@
 {
     "entryPoints" : [
         {
-            "name" : "main",
-            "mode" : "vert"
-        },
-        {
-            "name" : "main2",
+            "name" : "maim",
             "mode" : "vert"
         },
         {
             "name" : "main",
+            "mode" : "vert"
+        },
+        {
+            "name" : "maim",
             "mode" : "frag"
         },
         {
-            "name" : "main2",
+            "name" : "main",
             "mode" : "frag"
         }
     ],

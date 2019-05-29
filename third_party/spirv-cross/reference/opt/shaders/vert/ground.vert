@@ -56,25 +56,25 @@ void main()
     uint _307 = uint(_302);
     uvec2 _309 = uvec2(Position);
     uvec2 _316 = (uvec2(1u) << uvec2(_307, _307 + 1u)) - uvec2(1u);
-    uint _395;
+    uint _382;
     if (_309.x < 32u)
     {
-        _395 = _316.x;
+        _382 = _316.x;
     }
     else
     {
-        _395 = 0u;
+        _382 = 0u;
     }
-    uint _396;
+    uint _383;
     if (_309.y < 32u)
     {
-        _396 = _316.y;
+        _383 = _316.y;
     }
     else
     {
-        _396 = 0u;
+        _383 = 0u;
     }
-    vec4 _344 = vec4((_309 + uvec2(_395, _396)).xyxy & (~_316).xxyy);
+    vec4 _344 = vec4((_309 + uvec2(_382, _383)).xyxy & (~_316).xxyy);
     vec2 _173 = ((_53.Patches[(gl_InstanceID + SPIRV_Cross_BaseInstance)].Position.xz * _156.InvGroundSize_PatchScale.zw) + mix(_344.xy, _344.zw, vec2(_300 - _302))) * _156.InvGroundSize_PatchScale.xy;
     mediump float _360 = textureLod(TexLOD, _173, 0.0).x * 7.96875;
     float _362 = floor(_360);

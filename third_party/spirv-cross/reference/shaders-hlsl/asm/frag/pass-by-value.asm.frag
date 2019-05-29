@@ -1,7 +1,8 @@
-cbuffer registers
+cbuffer Registers
 {
     float registers_foo : packoffset(c0);
 };
+
 
 static float FragColor;
 

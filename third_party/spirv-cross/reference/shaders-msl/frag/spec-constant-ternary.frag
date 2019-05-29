@@ -6,7 +6,7 @@ using namespace metal;
 constant uint s_tmp [[function_constant(0)]];
 constant uint s = is_function_constant_defined(s_tmp) ? s_tmp : 10u;
 constant bool _13 = (s > 20u);
-constant uint _16 = _13 ? 30u : 50u;
+constant uint f = _13 ? 30u : 50u;
 
 struct main0_out
 {
@@ -16,7 +16,7 @@ struct main0_out
 fragment main0_out main0()
 {
     main0_out out = {};
-    out.FragColor = float(_16);
+    out.FragColor = float(f);
     return out;
 }
 

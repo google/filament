@@ -1,0 +1,45 @@
+struct A
+{
+    int a;
+    int b;
+};
+
+struct A_1
+{
+    int a;
+    int b;
+};
+
+RWByteAddressBuffer C1 : register(u1);
+cbuffer C2 : register(b2)
+{
+    A_1 C2_1_Data[1024] : packoffset(c0);
+};
+
+RWByteAddressBuffer C3 : register(u0);
+cbuffer B : register(b3)
+{
+    A_1 C4_Data[1024] : packoffset(c0);
+};
+
+
+static uint3 gl_GlobalInvocationID;
+struct SPIRV_Cross_Input
+{
+    uint3 gl_GlobalInvocationID : SV_DispatchThreadID;
+};
+
+void comp_main()
+{
+    C1.Store(gl_GlobalInvocationID.x * 8 + 0, uint(C2_1_Data[gl_GlobalInvocationID.x].a));
+    C1.Store(gl_GlobalInvocationID.x * 8 + 4, uint(C2_1_Data[gl_GlobalInvocationID.x].b));
+    C3.Store(gl_GlobalInvocationID.x * 8 + 0, uint(C4_Data[gl_GlobalInvocationID.x].a));
+    C3.Store(gl_GlobalInvocationID.x * 8 + 4, uint(C4_Data[gl_GlobalInvocationID.x].b));
+}
+
+[numthreads(1, 1, 1)]
+void main(SPIRV_Cross_Input stage_input)
+{
+    gl_GlobalInvocationID = stage_input.gl_GlobalInvocationID;
+    comp_main();
+}
