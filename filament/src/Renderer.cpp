@@ -264,7 +264,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
         pass.appendSortedCommands(RenderPass::CommandTypeFlags::DEPTH);
     }
 
-    FrameGraphResource ssao = ppm.ssao(fg, pass, svp, view.getAmbientOcclusionOptions());
+    FrameGraphResource ssao = ppm.ssao(fg, pass, svp, cameraInfo, view.getAmbientOcclusionOptions());
 
     // --------------------------------------------------------------------------------------------
 

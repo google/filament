@@ -34,6 +34,7 @@ class FMaterialInstance;
 class FEngine;
 class FView;
 class RenderPass;
+struct CameraInfo;
 } // namespace details
 
 class PostProcessManager {
@@ -61,6 +62,7 @@ public:
 
     FrameGraphResource ssao(FrameGraph& fg, details::RenderPass& pass,
             filament::Viewport const& svp,
+            details::CameraInfo const& cameraInfo,
             View::AmbientOcclusionOptions const& options) noexcept;
 
     backend::Handle<backend::HwTexture> getNoSSAOTexture() const {
