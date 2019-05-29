@@ -1,0 +1,27 @@
+#version 310 es
+layout(local_size_x = 2, local_size_y = 1, local_size_z = 1) in;
+
+struct Data
+{
+    float a;
+    float b;
+};
+
+const Data _25[2] = Data[](Data(1.0, 2.0), Data(3.0, 4.0));
+#ifndef SPIRV_CROSS_CONSTANT_ID_0
+#define SPIRV_CROSS_CONSTANT_ID_0 4.0
+#endif
+const float X = SPIRV_CROSS_CONSTANT_ID_0;
+
+layout(binding = 0, std430) buffer SSBO
+{
+    Data outdata[];
+} _53;
+
+void main()
+{
+    Data data2[2] = Data[](Data(X, 2.0), Data(3.0, 5.0));
+    _53.outdata[gl_WorkGroupID.x].a = _25[gl_LocalInvocationID.x].a + data2[gl_LocalInvocationID.x].a;
+    _53.outdata[gl_WorkGroupID.x].b = _25[gl_LocalInvocationID.x].b + data2[gl_LocalInvocationID.x].b;
+}
+

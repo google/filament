@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2018 ARM Limited
+ * Copyright 2016-2019 Arm Limited
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@
 #include "spirv_common.hpp"
 #include <assert.h>
 
-namespace spirv_cross
+namespace SPIRV_CROSS_NAMESPACE
 {
 class Compiler;
 class CFG
@@ -45,26 +45,40 @@ public:
 
 	uint32_t get_immediate_dominator(uint32_t block) const
 	{
-		return immediate_dominators[block];
+		auto itr = immediate_dominators.find(block);
+		if (itr != std::end(immediate_dominators))
+			return itr->second;
+		else
+			return 0;
 	}
 
 	uint32_t get_visit_order(uint32_t block) const
 	{
-		int v = visit_order[block];
+		auto itr = visit_order.find(block);
+		assert(itr != std::end(visit_order));
+		int v = itr->second.get();
 		assert(v > 0);
 		return uint32_t(v);
 	}
 
 	uint32_t find_common_dominator(uint32_t a, uint32_t b) const;
 
-	const std::vector<uint32_t> &get_preceding_edges(uint32_t block) const
+	const SmallVector<uint32_t> &get_preceding_edges(uint32_t block) const
 	{
-		return preceding_edges[block];
+		auto itr = preceding_edges.find(block);
+		if (itr != std::end(preceding_edges))
+			return itr->second;
+		else
+			return empty_vector;
 	}
 
-	const std::vector<uint32_t> &get_succeeding_edges(uint32_t block) const
+	const SmallVector<uint32_t> &get_succeeding_edges(uint32_t block) const
 	{
-		return succeeding_edges[block];
+		auto itr = succeeding_edges.find(block);
+		if (itr != std::end(succeeding_edges))
+			return itr->second;
+		else
+			return empty_vector;
 	}
 
 	template <typename Op>
@@ -75,18 +89,34 @@ public:
 		seen_blocks.insert(block);
 
 		op(block);
-		for (auto b : succeeding_edges[block])
+		for (auto b : get_succeeding_edges(block))
 			walk_from(seen_blocks, b, op);
 	}
 
 private:
+	struct VisitOrder
+	{
+		int &get()
+		{
+			return v;
+		}
+
+		const int &get() const
+		{
+			return v;
+		}
+
+		int v = -1;
+	};
+
 	Compiler &compiler;
 	const SPIRFunction &func;
-	std::vector<std::vector<uint32_t>> preceding_edges;
-	std::vector<std::vector<uint32_t>> succeeding_edges;
-	std::vector<uint32_t> immediate_dominators;
-	std::vector<int> visit_order;
-	std::vector<uint32_t> post_order;
+	std::unordered_map<uint32_t, SmallVector<uint32_t>> preceding_edges;
+	std::unordered_map<uint32_t, SmallVector<uint32_t>> succeeding_edges;
+	std::unordered_map<uint32_t, uint32_t> immediate_dominators;
+	std::unordered_map<uint32_t, VisitOrder> visit_order;
+	SmallVector<uint32_t> post_order;
+	SmallVector<uint32_t> empty_vector;
 
 	void add_branch(uint32_t from, uint32_t to);
 	void build_post_order_visit_order();
@@ -114,6 +144,6 @@ private:
 	const CFG &cfg;
 	uint32_t dominator = 0;
 };
-} // namespace spirv_cross
+} // namespace SPIRV_CROSS_NAMESPACE
 
 #endif

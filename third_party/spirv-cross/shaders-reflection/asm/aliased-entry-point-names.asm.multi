@@ -7,9 +7,9 @@
           %1 = OpExtInstImport "GLSL.std.450"
                OpMemoryModel Logical GLSL450
                OpEntryPoint Vertex %main "main" %_
-               OpEntryPoint Vertex %main2 "main2" %_
+               OpEntryPoint Vertex %main2 "maim" %_
                OpEntryPoint Fragment %main3 "main" %FragColor
-               OpEntryPoint Fragment %main4 "main2" %FragColor
+               OpEntryPoint Fragment %main4 "maim" %FragColor
                OpSource GLSL 450
                OpMemberDecorate %gl_PerVertex 0 BuiltIn Position
                OpMemberDecorate %gl_PerVertex 1 BuiltIn PointSize

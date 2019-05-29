@@ -11,9 +11,11 @@ struct SPIRV_Cross_Output
     float4 FragColor : SV_Target0;
 };
 
+bool _47;
+
 void frag_main()
 {
-    bool2 _25 = bool2(value.x == 0.0f, value.y == 0.0f);
+    bool2 _25 = bool2(value.x == 0.0f, _47);
     FragColor = float4(1.0f, 0.0f, float(bool2(!_25.x, !_25.y).x), float(bool2(value.x <= float2(1.5f, 0.5f).x, value.y <= float2(1.5f, 0.5f).y).x));
 }
 

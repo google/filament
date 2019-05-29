@@ -27,7 +27,7 @@ kernel void main0(device SSBO& ssbo [[buffer(2)]])
     do
     {
         _32 = 10u;
-    } while (!atomic_compare_exchange_weak_explicit((volatile device atomic_uint*)&ssbo.u32, &_32, 2u, memory_order_relaxed, memory_order_relaxed));
+    } while (!atomic_compare_exchange_weak_explicit((volatile device atomic_uint*)&ssbo.u32, &_32, 2u, memory_order_relaxed, memory_order_relaxed) && _32 == 10u);
     int _36 = atomic_fetch_add_explicit((volatile device atomic_int*)&ssbo.i32, 1, memory_order_relaxed);
     int _38 = atomic_fetch_or_explicit((volatile device atomic_int*)&ssbo.i32, 1, memory_order_relaxed);
     int _40 = atomic_fetch_xor_explicit((volatile device atomic_int*)&ssbo.i32, 1, memory_order_relaxed);
@@ -39,7 +39,7 @@ kernel void main0(device SSBO& ssbo [[buffer(2)]])
     do
     {
         _52 = 10;
-    } while (!atomic_compare_exchange_weak_explicit((volatile device atomic_int*)&ssbo.i32, &_52, 2, memory_order_relaxed, memory_order_relaxed));
+    } while (!atomic_compare_exchange_weak_explicit((volatile device atomic_int*)&ssbo.i32, &_52, 2, memory_order_relaxed, memory_order_relaxed) && _52 == 10);
     shared_u32 = 10u;
     shared_i32 = 10;
     uint _57 = atomic_fetch_add_explicit((volatile threadgroup atomic_uint*)&shared_u32, 1u, memory_order_relaxed);
@@ -53,7 +53,7 @@ kernel void main0(device SSBO& ssbo [[buffer(2)]])
     do
     {
         _64 = 10u;
-    } while (!atomic_compare_exchange_weak_explicit((volatile threadgroup atomic_uint*)&shared_u32, &_64, 2u, memory_order_relaxed, memory_order_relaxed));
+    } while (!atomic_compare_exchange_weak_explicit((volatile threadgroup atomic_uint*)&shared_u32, &_64, 2u, memory_order_relaxed, memory_order_relaxed) && _64 == 10u);
     int _65 = atomic_fetch_add_explicit((volatile threadgroup atomic_int*)&shared_i32, 1, memory_order_relaxed);
     int _66 = atomic_fetch_or_explicit((volatile threadgroup atomic_int*)&shared_i32, 1, memory_order_relaxed);
     int _67 = atomic_fetch_xor_explicit((volatile threadgroup atomic_int*)&shared_i32, 1, memory_order_relaxed);
@@ -65,6 +65,6 @@ kernel void main0(device SSBO& ssbo [[buffer(2)]])
     do
     {
         _72 = 10;
-    } while (!atomic_compare_exchange_weak_explicit((volatile threadgroup atomic_int*)&shared_i32, &_72, 2, memory_order_relaxed, memory_order_relaxed));
+    } while (!atomic_compare_exchange_weak_explicit((volatile threadgroup atomic_int*)&shared_i32, &_72, 2, memory_order_relaxed, memory_order_relaxed) && _72 == 10);
 }
 

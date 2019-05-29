@@ -9,6 +9,7 @@
                OpEntryPoint Fragment %func_alt "main2" %frag_in %frag_out
                OpEntryPoint GLCompute %func "main"
                OpExecutionMode %func LocalSize 1 1 1
+               OpExecutionMode %func_alt OriginUpperLeft
                OpSource ESSL 310
                OpSourceExtension "GL_GOOGLE_cpp_style_line_directive"
                OpSourceExtension "GL_GOOGLE_include_directive"

@@ -1,0 +1,69 @@
+#version 450
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+
+layout(binding = 0, std430) buffer BUF
+{
+    int a;
+    int b;
+    int d;
+} o;
+
+void main()
+{
+    int _44;
+    _44 = o.a;
+    int _48;
+    for (;;)
+    {
+        bool _22_ladder_break = false;
+        switch (_44)
+        {
+            case 5:
+            {
+                for (;;)
+                {
+                    bool _30_ladder_break = false;
+                    switch (o.d)
+                    {
+                        case 10:
+                        case 20:
+                        {
+                            _30_ladder_break = true;
+                            break;
+                        }
+                        default:
+                        {
+                            continue;
+                        }
+                    }
+                    if (_30_ladder_break)
+                    {
+                        break;
+                    }
+                }
+                _48 = _44 + _44;
+                break;
+            }
+            case 1:
+            case 2:
+            case 3:
+            {
+                _22_ladder_break = true;
+                break;
+            }
+            default:
+            {
+                _48 = _44;
+                break;
+            }
+        }
+        if (_22_ladder_break)
+        {
+            break;
+        }
+        _44 = _48 + 1;
+        continue;
+    }
+    o.b = _44;
+}
+

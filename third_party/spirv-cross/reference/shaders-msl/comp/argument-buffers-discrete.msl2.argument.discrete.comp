@@ -1,0 +1,40 @@
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct SSBO3
+{
+    float4 v;
+};
+
+struct SSBO0
+{
+    float4 v;
+};
+
+struct SSBO1
+{
+    float4 v;
+};
+
+struct SSBO2
+{
+    float4 v;
+};
+
+struct spvDescriptorSetBuffer0
+{
+    const device SSBO0* ssbo0 [[id(0)]];
+};
+
+struct spvDescriptorSetBuffer1
+{
+    const device SSBO1* ssbo1 [[id(0)]];
+};
+
+kernel void main0(constant spvDescriptorSetBuffer0& spvDescriptorSet0 [[buffer(0)]], constant spvDescriptorSetBuffer1& spvDescriptorSet1 [[buffer(1)]], const device SSBO2& ssbo2 [[buffer(5)]], device SSBO3& ssbo3 [[buffer(6)]])
+{
+    ssbo3.v = ((*spvDescriptorSet0.ssbo0).v + (*spvDescriptorSet1.ssbo1).v) + ssbo2.v;
+}
+

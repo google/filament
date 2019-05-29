@@ -1,0 +1,42 @@
+#pragma clang diagnostic ignored "-Wmissing-prototypes"
+
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct foo
+{
+    int a[128];
+    uint b;
+    float2 c;
+};
+
+struct bar
+{
+    int d;
+};
+
+device foo* select_buffer(device foo& a, constant bar& cb)
+{
+    return (cb.d != 0) ? &a : nullptr;
+}
+
+thread uint3* select_input(thread uint3& gl_GlobalInvocationID, thread uint3& gl_LocalInvocationID, constant bar& cb)
+{
+    return (cb.d != 0) ? &gl_GlobalInvocationID : &gl_LocalInvocationID;
+}
+
+kernel void main0(device foo& buf [[buffer(0)]], constant bar& cb [[buffer(1)]], uint3 gl_GlobalInvocationID [[thread_position_in_grid]], uint3 gl_LocalInvocationID [[thread_position_in_threadgroup]])
+{
+    device foo* _46 = select_buffer(buf, cb);
+    device foo* _45 = _46;
+    for (device int* _52 = &_45->a[0u], * _55 = &buf.a[0u]; (*_52) != (*_55); _52 = &_52[1u], _55 = &_55[1u])
+    {
+        int _66 = ((*_52) + (*_55)) + int((*select_input(gl_GlobalInvocationID, gl_LocalInvocationID, cb)).x);
+        *_52 = _66;
+        *_55 = _66;
+        continue;
+    }
+}
+

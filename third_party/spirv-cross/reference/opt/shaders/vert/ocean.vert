@@ -50,7 +50,7 @@ layout(location = 0) in vec4 Position;
 layout(location = 0) out vec3 EyeVec;
 layout(location = 1) out vec4 TexCoord;
 
-uvec4 _484;
+uvec4 _474;
 
 void main()
 {
@@ -60,52 +60,52 @@ void main()
     uvec4 _359 = uvec4(Position);
     uvec2 _366 = (uvec2(1u) << uvec2(_357, _357 + 1u)) - uvec2(1u);
     bool _369 = _359.x < 32u;
-    uint _482;
+    uint _465;
     if (_369)
     {
-        _482 = _366.x;
+        _465 = _366.x;
     }
     else
     {
-        _482 = 0u;
+        _465 = 0u;
     }
-    uvec4 _445 = _484;
-    _445.x = _482;
+    uvec4 _443 = _474;
+    _443.x = _465;
     bool _379 = _359.y < 32u;
-    uint _485;
+    uint _468;
     if (_379)
     {
-        _485 = _366.x;
+        _468 = _366.x;
     }
     else
     {
-        _485 = 0u;
+        _468 = 0u;
     }
-    uvec4 _451 = _445;
-    _451.y = _485;
-    uint _487;
+    uvec4 _447 = _443;
+    _447.y = _468;
+    uint _470;
     if (_369)
     {
-        _487 = _366.y;
+        _470 = _366.y;
     }
     else
     {
-        _487 = 0u;
+        _470 = 0u;
     }
-    uvec4 _457 = _451;
-    _457.z = _487;
-    uint _489;
+    uvec4 _451 = _447;
+    _451.z = _470;
+    uint _472;
     if (_379)
     {
-        _489 = _366.y;
+        _472 = _366.y;
     }
     else
     {
-        _489 = 0u;
+        _472 = 0u;
     }
-    uvec4 _463 = _457;
-    _463.w = _489;
-    vec4 _415 = vec4((_359.xyxy + _463) & (~_366).xxyy);
+    uvec4 _455 = _451;
+    _455.w = _472;
+    vec4 _415 = vec4((_359.xyxy + _455) & (~_366).xxyy);
     vec2 _197 = ((_53.Patches[(gl_InstanceID + SPIRV_Cross_BaseInstance)].Position.xz * _180.InvOceanSize_PatchScale.zw) + mix(_415.xy, _415.zw, vec2(_350 - _352))) * _180.InvOceanSize_PatchScale.xy;
     vec2 _204 = _197 * _180.NormalTexCoordScale.zw;
     mediump float _431 = textureLod(TexLOD, _197, 0.0).x * 7.96875;

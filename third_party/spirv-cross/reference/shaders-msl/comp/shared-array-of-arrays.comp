@@ -5,12 +5,12 @@
 
 using namespace metal;
 
-constant uint3 gl_WorkGroupSize = uint3(4u, 4u, 1u);
-
 struct SSBO
 {
     float out_data[1];
 };
+
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(4u, 4u, 1u);
 
 void work(threadgroup float (&foo)[4][4], thread uint3& gl_LocalInvocationID, thread uint& gl_LocalInvocationIndex, device SSBO& v_67, thread uint3& gl_GlobalInvocationID)
 {

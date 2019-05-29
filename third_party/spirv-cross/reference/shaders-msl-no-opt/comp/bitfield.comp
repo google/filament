@@ -39,7 +39,7 @@ kernel void main0()
     s = reverse_bits(s);
     int v0 = popcount(u);
     int v1 = popcount(s);
-    int v2 = findUMSB(u);
+    int v2 = int(findUMSB(u));
     int v3 = findSMSB(s);
     int v4 = findLSB(u);
     int v5 = findLSB(s);

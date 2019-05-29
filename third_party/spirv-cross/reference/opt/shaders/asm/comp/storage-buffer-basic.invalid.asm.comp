@@ -1,5 +1,13 @@
 #version 450
-layout(local_size_x = 1, local_size_y = 2, local_size_z = 3) in;
+
+#ifndef SPIRV_CROSS_CONSTANT_ID_0
+#define SPIRV_CROSS_CONSTANT_ID_0 1u
+#endif
+#ifndef SPIRV_CROSS_CONSTANT_ID_2
+#define SPIRV_CROSS_CONSTANT_ID_2 3u
+#endif
+
+layout(local_size_x = SPIRV_CROSS_CONSTANT_ID_0, local_size_y = 2, local_size_z = SPIRV_CROSS_CONSTANT_ID_2) in;
 
 layout(binding = 0, std430) buffer _6_8
 {

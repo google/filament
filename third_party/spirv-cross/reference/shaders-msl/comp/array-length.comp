@@ -1,0 +1,36 @@
+#pragma clang diagnostic ignored "-Wmissing-prototypes"
+
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct SSBO
+{
+    uint size;
+    float4 v[1];
+};
+
+struct SSBO1
+{
+    float bz[1];
+};
+
+uint get_size(device SSBO& v_14, constant uint& v_14BufferSize, device SSBO1* (&ssbos)[2], constant uint* ssbosBufferSize)
+{
+    return uint(int((v_14BufferSize - 16) / 16) + int((ssbosBufferSize[1] - 0) / 4));
+}
+
+kernel void main0(constant uint* spvBufferSizeConstants [[buffer(25)]], device SSBO& v_14 [[buffer(1)]], device SSBO1* ssbos_0 [[buffer(2)]], device SSBO1* ssbos_1 [[buffer(3)]])
+{
+    device SSBO1* ssbos[] =
+    {
+        ssbos_0,
+        ssbos_1,
+    };
+
+    constant uint& v_14BufferSize = spvBufferSizeConstants[1];
+    constant uint* ssbosBufferSize = &spvBufferSizeConstants[2];
+    v_14.size = get_size(v_14, v_14BufferSize, ssbos, ssbosBufferSize);
+}
+

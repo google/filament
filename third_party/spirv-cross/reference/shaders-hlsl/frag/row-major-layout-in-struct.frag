@@ -10,10 +10,11 @@ struct Foo
     row_major float4x4 w;
 };
 
-cbuffer _17 : register(b0)
+cbuffer UBO : register(b0)
 {
     Foo _17_foo : packoffset(c0);
 };
+
 
 static float4 FragColor;
 static float4 vUV;

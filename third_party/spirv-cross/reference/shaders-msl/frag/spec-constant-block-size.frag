@@ -3,9 +3,14 @@
 
 using namespace metal;
 
+#ifndef SPIRV_CROSS_CONSTANT_ID_10
+#define SPIRV_CROSS_CONSTANT_ID_10 2
+#endif
+constant int Value = SPIRV_CROSS_CONSTANT_ID_10;
+
 struct SpecConstArray
 {
-    float4 samples[2];
+    float4 samples[Value];
 };
 
 struct main0_out

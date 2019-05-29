@@ -1,16 +1,34 @@
-static const float a = 1.0f;
-static const float b = 2.0f;
-static const int c = 3;
+#ifndef SPIRV_CROSS_CONSTANT_ID_1
+#define SPIRV_CROSS_CONSTANT_ID_1 1.0f
+#endif
+static const float a = SPIRV_CROSS_CONSTANT_ID_1;
+#ifndef SPIRV_CROSS_CONSTANT_ID_2
+#define SPIRV_CROSS_CONSTANT_ID_2 2.0f
+#endif
+static const float b = SPIRV_CROSS_CONSTANT_ID_2;
+#ifndef SPIRV_CROSS_CONSTANT_ID_3
+#define SPIRV_CROSS_CONSTANT_ID_3 3
+#endif
+static const int c = SPIRV_CROSS_CONSTANT_ID_3;
 static const uint _18 = (uint(c) + 0u);
 static const int _21 = (-c);
 static const int _23 = (~c);
-static const int d = 4;
+#ifndef SPIRV_CROSS_CONSTANT_ID_4
+#define SPIRV_CROSS_CONSTANT_ID_4 4
+#endif
+static const int d = SPIRV_CROSS_CONSTANT_ID_4;
 static const int _26 = (c + d);
 static const int _28 = (c - d);
 static const int _30 = (c * d);
 static const int _32 = (c / d);
-static const uint e = 5u;
-static const uint f = 6u;
+#ifndef SPIRV_CROSS_CONSTANT_ID_5
+#define SPIRV_CROSS_CONSTANT_ID_5 5u
+#endif
+static const uint e = SPIRV_CROSS_CONSTANT_ID_5;
+#ifndef SPIRV_CROSS_CONSTANT_ID_6
+#define SPIRV_CROSS_CONSTANT_ID_6 6u
+#endif
+static const uint f = SPIRV_CROSS_CONSTANT_ID_6;
 static const uint _36 = (e / f);
 static const int _38 = (c % d);
 static const uint _40 = (e % f);
@@ -20,8 +38,14 @@ static const int _46 = (c << d);
 static const int _48 = (c | d);
 static const int _50 = (c ^ d);
 static const int _52 = (c & d);
-static const bool g = false;
-static const bool h = true;
+#ifndef SPIRV_CROSS_CONSTANT_ID_7
+#define SPIRV_CROSS_CONSTANT_ID_7 false
+#endif
+static const bool g = SPIRV_CROSS_CONSTANT_ID_7;
+#ifndef SPIRV_CROSS_CONSTANT_ID_8
+#define SPIRV_CROSS_CONSTANT_ID_8 true
+#endif
+static const bool h = SPIRV_CROSS_CONSTANT_ID_8;
 static const bool _58 = (g || h);
 static const bool _60 = (g && h);
 static const bool _62 = (!g);

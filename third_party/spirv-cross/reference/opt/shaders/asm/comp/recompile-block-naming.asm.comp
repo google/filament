@@ -1,0 +1,35 @@
+#version 450
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+
+layout(binding = 0, std430) buffer MyFirstBuffer
+{
+    uint _data[];
+} MyFirstBuffer_1;
+
+layout(binding = 0, std430) buffer MySecondBuffer
+{
+    uint _data[];
+} MySecondBuffer_1;
+
+layout(binding = 0, std430) buffer MyThirdBuffer
+{
+    uint _data[];
+} MyThirdBuffer_1;
+
+void main()
+{
+    uint _105 = MyFirstBuffer_1._data[0];
+    uint _109 = MyFirstBuffer_1._data[1];
+    uint _113 = MyFirstBuffer_1._data[2];
+    uint _117 = MyFirstBuffer_1._data[3];
+    uint _122 = MySecondBuffer_1._data[1];
+    uint _126 = MySecondBuffer_1._data[2];
+    uint _130 = MySecondBuffer_1._data[3];
+    uint _134 = MySecondBuffer_1._data[4];
+    uvec4 _140 = uvec4(_105, _109, _113, _117) + uvec4(_122, _126, _130, _134);
+    MyThirdBuffer_1._data[0] = _140.x;
+    MyThirdBuffer_1._data[1] = _140.y;
+    MyThirdBuffer_1._data[2] = _140.z;
+    MyThirdBuffer_1._data[3] = _140.w;
+}
+

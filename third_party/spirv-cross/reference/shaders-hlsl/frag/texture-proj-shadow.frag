@@ -26,32 +26,17 @@ struct SPIRV_Cross_Output
     float FragColor : SV_Target0;
 };
 
-float SPIRV_Cross_projectTextureCoordinate(float2 coord)
-{
-    return coord.x / coord.y;
-}
-
-float2 SPIRV_Cross_projectTextureCoordinate(float3 coord)
-{
-    return float2(coord.x, coord.y) / coord.z;
-}
-
-float3 SPIRV_Cross_projectTextureCoordinate(float4 coord)
-{
-    return float3(coord.x, coord.y, coord.z) / coord.w;
-}
-
 void frag_main()
 {
     float4 _20 = vClip4;
     _20.y = vClip4.w;
-    FragColor = uShadow1D.SampleCmp(_uShadow1D_sampler, SPIRV_Cross_projectTextureCoordinate(_20.xy), vClip4.z);
+    FragColor = uShadow1D.SampleCmp(_uShadow1D_sampler, _20.x / _20.y, vClip4.z / _20.y);
     float4 _30 = vClip4;
     _30.z = vClip4.w;
-    FragColor = uShadow2D.SampleCmp(_uShadow2D_sampler, SPIRV_Cross_projectTextureCoordinate(_30.xyz), vClip4.z);
-    FragColor = uSampler1D.Sample(_uSampler1D_sampler, SPIRV_Cross_projectTextureCoordinate(vClip2)).x;
-    FragColor = uSampler2D.Sample(_uSampler2D_sampler, SPIRV_Cross_projectTextureCoordinate(vClip3)).x;
-    FragColor = uSampler3D.Sample(_uSampler3D_sampler, SPIRV_Cross_projectTextureCoordinate(vClip4)).x;
+    FragColor = uShadow2D.SampleCmp(_uShadow2D_sampler, _30.xy / _30.z, vClip4.z / _30.z);
+    FragColor = uSampler1D.Sample(_uSampler1D_sampler, vClip2.x / vClip2.y).x;
+    FragColor = uSampler2D.Sample(_uSampler2D_sampler, vClip3.xy / vClip3.z).x;
+    FragColor = uSampler3D.Sample(_uSampler3D_sampler, vClip4.xyz / vClip4.w).x;
 }
 
 SPIRV_Cross_Output main(SPIRV_Cross_Input stage_input)

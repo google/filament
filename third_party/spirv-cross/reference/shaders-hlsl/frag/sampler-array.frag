@@ -29,7 +29,8 @@ void frag_main()
 {
     float4 color = uCombined[vIndex].Sample(_uCombined_sampler[vIndex], vTex);
     color += uTex[vIndex].Sample(uSampler[vIndex], vTex);
-    color += sample_in_function(uCombined[vIndex + 1], _uCombined_sampler[vIndex + 1]);
+    int _72 = vIndex + 1;
+    color += sample_in_function(uCombined[_72], _uCombined_sampler[_72]);
     color += sample_in_function2(uTex[vIndex + 1], uSampler[vIndex + 1]);
     uImage[vIndex][int2(gl_FragCoord.xy)] = color;
 }

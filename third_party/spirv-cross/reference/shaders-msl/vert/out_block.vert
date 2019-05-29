@@ -8,6 +8,12 @@ struct Transform
     float4x4 transform;
 };
 
+struct VertexOut
+{
+    float4 color;
+    float4 color2;
+};
+
 struct main0_out
 {
     float4 VertexOut_color [[user(locn2)]];
@@ -24,9 +30,12 @@ struct main0_in
 vertex main0_out main0(main0_in in [[stage_in]], constant Transform& block [[buffer(0)]])
 {
     main0_out out = {};
+    VertexOut outputs = {};
     out.gl_Position = block.transform * float4(in.position, 1.0);
-    out.VertexOut_color = in.color;
-    out.VertexOut_color2 = in.color + float4(1.0);
+    outputs.color = in.color;
+    outputs.color2 = in.color + float4(1.0);
+    out.VertexOut_color = outputs.color;
+    out.VertexOut_color2 = outputs.color2;
     return out;
 }
 

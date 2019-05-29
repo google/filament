@@ -1,0 +1,45 @@
+#version 450
+#extension GL_ARB_gpu_shader_int64 : require
+#extension GL_EXT_buffer_reference : require
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+
+layout(buffer_reference) buffer Node;
+layout(buffer_reference, std430) buffer Node
+{
+    layout(offset = 0) int value;
+    layout(offset = 16) Node next;
+    layout(offset = 32) Node prev;
+};
+
+layout(set = 0, binding = 0, std430) restrict buffer LinkedList
+{
+    Node head1;
+    Node head2;
+} _50;
+
+void main()
+{
+    Node _45;
+    if (gl_WorkGroupID.x < 4u)
+    {
+        _45 = _50.head1;
+    }
+    else
+    {
+        _45 = _50.head2;
+    }
+    restrict Node n = _45;
+    Node param = n.next;
+    Node param_1 = _50.head1;
+    Node param_2 = _50.head2;
+    param.value = param_1.value + param_2.value;
+    Node param_4 = _50.head1;
+    Node param_3 = param_4;
+    n = param_3;
+    int v = _50.head2.value;
+    n.value = 20;
+    n.value = v * 10;
+    uint64_t uptr = uint64_t(_50.head2.next);
+    Node unode = Node(uptr);
+}
+

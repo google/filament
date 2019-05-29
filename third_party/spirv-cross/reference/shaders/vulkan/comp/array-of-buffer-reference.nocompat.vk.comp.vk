@@ -1,0 +1,25 @@
+#version 450
+#extension GL_EXT_buffer_reference : require
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+
+layout(buffer_reference) buffer Block;
+layout(buffer_reference, std430) buffer Block
+{
+    float v;
+};
+
+layout(set = 0, binding = 0, std140) uniform UBO
+{
+    Block blocks[4];
+} ubo;
+
+void main()
+{
+    Block blocks[4];
+    blocks[0] = ubo.blocks[0];
+    blocks[1] = ubo.blocks[1];
+    blocks[2] = ubo.blocks[2];
+    blocks[3] = ubo.blocks[3];
+    blocks[gl_WorkGroupID.x].v = 20.0;
+}
+

@@ -1,0 +1,28 @@
+#pragma clang diagnostic ignored "-Wmissing-prototypes"
+#pragma clang diagnostic ignored "-Wunused-variable"
+
+#include <metal_stdlib>
+#include <simd/simd.h>
+#include <metal_atomic>
+
+using namespace metal;
+
+struct u0_counters
+{
+    uint c;
+};
+
+// Returns 2D texture coords corresponding to 1D texel buffer coords
+uint2 spvTexelBufferCoord(uint tc)
+{
+    return uint2(tc % 4096, tc / 4096);
+}
+
+kernel void main0(device u0_counters& u0_counter [[buffer(0)]], texture2d<uint, access::write> u0 [[texture(0)]], uint3 gl_GlobalInvocationID [[thread_position_in_grid]])
+{
+    uint _29 = atomic_fetch_sub_explicit((volatile device atomic_uint*)&u0_counter.c, 1, memory_order_relaxed);
+    float4 r0;
+    r0.x = as_type<float>(_29);
+    u0.write(uint4(uint(int(gl_GlobalInvocationID.x))), spvTexelBufferCoord(((uint(as_type<int>(r0.x)) * 1u) + (uint(0) >> 2u))));
+}
+

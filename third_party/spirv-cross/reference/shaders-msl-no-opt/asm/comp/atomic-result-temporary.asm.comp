@@ -1,0 +1,23 @@
+#pragma clang diagnostic ignored "-Wunused-variable"
+
+#include <metal_stdlib>
+#include <simd/simd.h>
+#include <metal_atomic>
+
+using namespace metal;
+
+struct SSBO
+{
+    uint count;
+    uint data[1];
+};
+
+kernel void main0(device SSBO& _5 [[buffer(0)]], uint3 gl_GlobalInvocationID [[thread_position_in_grid]])
+{
+    uint _24 = atomic_fetch_add_explicit((volatile device atomic_uint*)&_5.count, 1u, memory_order_relaxed);
+    if (_24 < 1024u)
+    {
+        _5.data[_24] = gl_GlobalInvocationID.x;
+    }
+}
+

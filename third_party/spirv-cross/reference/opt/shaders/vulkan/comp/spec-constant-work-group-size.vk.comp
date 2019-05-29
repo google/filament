@@ -1,0 +1,34 @@
+#version 450
+
+#ifndef SPIRV_CROSS_CONSTANT_ID_1
+#define SPIRV_CROSS_CONSTANT_ID_1 2
+#endif
+const int b = SPIRV_CROSS_CONSTANT_ID_1;
+#ifndef SPIRV_CROSS_CONSTANT_ID_0
+#define SPIRV_CROSS_CONSTANT_ID_0 1
+#endif
+const int a = SPIRV_CROSS_CONSTANT_ID_0;
+const uint _21 = (uint(a) + 0u);
+#ifndef SPIRV_CROSS_CONSTANT_ID_10
+#define SPIRV_CROSS_CONSTANT_ID_10 1u
+#endif
+const uint _27 = gl_WorkGroupSize.x;
+const uint _28 = (_21 + _27);
+const uint _29 = gl_WorkGroupSize.y;
+const uint _30 = (_28 + _29);
+const int _32 = (1 - a);
+
+layout(local_size_x = SPIRV_CROSS_CONSTANT_ID_10, local_size_y = 20, local_size_z = 1) in;
+
+layout(binding = 0, std430) writeonly buffer SSBO
+{
+    int v[];
+} _17;
+
+void main()
+{
+    int spec_const_array_size[b];
+    spec_const_array_size[a] = a;
+    _17.v[_30] = b + spec_const_array_size[_32];
+}
+

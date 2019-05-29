@@ -21,26 +21,27 @@ void main()
     uvec2 _264 = uvec2(64u, 1u) * gl_NumWorkGroups.xy;
     uvec2 _269 = _264 - gl_GlobalInvocationID.xy;
     bvec2 _271 = equal(gl_GlobalInvocationID.xy, uvec2(0u));
-    uint _475;
+    uint _454;
     if (_271.x)
     {
-        _475 = 0u;
+        _454 = 0u;
     }
     else
     {
-        _475 = _269.x;
+        _454 = _269.x;
     }
-    uint _476;
+    uint _455;
     if (_271.y)
     {
-        _476 = 0u;
+        _455 = 0u;
     }
     else
     {
-        _476 = _269.y;
+        _455 = _269.y;
     }
-    uint _448 = _264.x;
-    uint _280 = (gl_GlobalInvocationID.y * _448) + gl_GlobalInvocationID.x;
+    uint _276 = _264.x;
+    uint _280 = (gl_GlobalInvocationID.y * _276) + gl_GlobalInvocationID.x;
+    uint _290 = (_455 * _276) + _454;
     vec2 _297 = vec2(gl_GlobalInvocationID.xy);
     vec2 _299 = vec2(_264);
     float _309 = sqrt(9.81000041961669921875 * length(_166.uModTime.xy * mix(_297, _297 - _299, greaterThan(_297, _299 * 0.5)))) * _166.uModTime.z;
@@ -48,8 +49,8 @@ void main()
     vec2 _387 = _316.xx;
     vec2 _392 = _316.yy;
     vec2 _395 = _392 * _137.distribution[_280].yx;
-    vec2 _421 = _392 * _137.distribution[(_476 * _448) + _475].yx;
-    vec2 _429 = (_137.distribution[(_476 * _448) + _475] * _387) + vec2(-_421.x, _421.y);
+    vec2 _421 = _392 * _137.distribution[_290].yx;
+    vec2 _429 = (_137.distribution[_290] * _387) + vec2(-_421.x, _421.y);
     _225.heights[_280] = packHalf2x16(((_137.distribution[_280] * _387) + vec2(-_395.x, _395.y)) + vec2(_429.x, -_429.y));
 }
 

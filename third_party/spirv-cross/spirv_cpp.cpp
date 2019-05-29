@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2018 ARM Limited
+ * Copyright 2015-2019 Arm Limited
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@
 #include "spirv_cpp.hpp"
 
 using namespace spv;
-using namespace spirv_cross;
+using namespace SPIRV_CROSS_NAMESPACE;
 using namespace std;
 
 void CompilerCPP::emit_buffer_block(const SPIRVariable &var)
@@ -27,8 +27,8 @@ void CompilerCPP::emit_buffer_block(const SPIRVariable &var)
 	auto &type = get<SPIRType>(var.basetype);
 	auto instance_name = to_name(var.self);
 
-	uint32_t descriptor_set = meta[var.self].decoration.set;
-	uint32_t binding = meta[var.self].decoration.binding;
+	uint32_t descriptor_set = ir.meta[var.self].decoration.set;
+	uint32_t binding = ir.meta[var.self].decoration.binding;
 
 	emit_block_struct(type);
 	auto buffer_name = to_name(type.self);
@@ -49,10 +49,10 @@ void CompilerCPP::emit_interface_block(const SPIRVariable &var)
 	const char *qual = var.storage == StorageClassInput ? "StageInput" : "StageOutput";
 	const char *lowerqual = var.storage == StorageClassInput ? "stage_input" : "stage_output";
 	auto instance_name = to_name(var.self);
-	uint32_t location = meta[var.self].decoration.location;
+	uint32_t location = ir.meta[var.self].decoration.location;
 
 	string buffer_name;
-	auto flags = meta[type.self].decoration.decoration_flags;
+	auto flags = ir.meta[type.self].decoration.decoration_flags;
 	if (flags.get(DecorationBlock))
 	{
 		emit_block_struct(type);
@@ -83,9 +83,9 @@ void CompilerCPP::emit_uniform(const SPIRVariable &var)
 	auto &type = get<SPIRType>(var.basetype);
 	auto instance_name = to_name(var.self);
 
-	uint32_t descriptor_set = meta[var.self].decoration.set;
-	uint32_t binding = meta[var.self].decoration.binding;
-	uint32_t location = meta[var.self].decoration.location;
+	uint32_t descriptor_set = ir.meta[var.self].decoration.set;
+	uint32_t binding = ir.meta[var.self].decoration.binding;
+	uint32_t location = ir.meta[var.self].decoration.location;
 
 	string type_name = type_to_glsl(type);
 	remap_variable_type_name(type, instance_name, type_name);
@@ -114,7 +114,7 @@ void CompilerCPP::emit_push_constant_block(const SPIRVariable &var)
 	add_resource_name(var.self);
 
 	auto &type = get<SPIRType>(var.basetype);
-	auto &flags = meta[var.self].decoration.decoration_flags;
+	auto &flags = ir.meta[var.self].decoration.decoration_flags;
 	if (flags.get(DecorationBinding) || flags.get(DecorationDescriptorSet))
 		SPIRV_CROSS_THROW("Push constant blocks cannot be compiled to GLSL with Binding or Set syntax. "
 		                  "Remap to location with reflection API first or disable these decorations.");
@@ -143,16 +143,40 @@ void CompilerCPP::emit_block_struct(SPIRType &type)
 
 void CompilerCPP::emit_resources()
 {
+	for (auto &id : ir.ids)
+	{
+		if (id.get_type() == TypeConstant)
+		{
+			auto &c = id.get<SPIRConstant>();
+
+			bool needs_declaration = c.specialization || c.is_used_as_lut;
+
+			if (needs_declaration)
+			{
+				if (!options.vulkan_semantics && c.specialization)
+				{
+					c.specialization_constant_macro_name =
+					    constant_value_macro_name(get_decoration(c.self, DecorationSpecId));
+				}
+				emit_constant(c);
+			}
+		}
+		else if (id.get_type() == TypeConstantOp)
+		{
+			emit_specialization_constant_op(id.get<SPIRConstantOp>());
+		}
+	}
+
 	// Output all basic struct types which are not Block or BufferBlock as these are declared inplace
 	// when such variables are instantiated.
-	for (auto &id : ids)
+	for (auto &id : ir.ids)
 	{
 		if (id.get_type() == TypeType)
 		{
 			auto &type = id.get<SPIRType>();
 			if (type.basetype == SPIRType::Struct && type.array.empty() && !type.pointer &&
-			    (!meta[type.self].decoration.decoration_flags.get(DecorationBlock) &&
-			     !meta[type.self].decoration.decoration_flags.get(DecorationBufferBlock)))
+			    (!ir.meta[type.self].decoration.decoration_flags.get(DecorationBlock) &&
+			     !ir.meta[type.self].decoration.decoration_flags.get(DecorationBufferBlock)))
 			{
 				emit_struct(type);
 			}
@@ -163,7 +187,7 @@ void CompilerCPP::emit_resources()
 	begin_scope();
 
 	// Output UBOs and SSBOs
-	for (auto &id : ids)
+	for (auto &id : ir.ids)
 	{
 		if (id.get_type() == TypeVariable)
 		{
@@ -172,8 +196,8 @@ void CompilerCPP::emit_resources()
 
 			if (var.storage != StorageClassFunction && type.pointer && type.storage == StorageClassUniform &&
 			    !is_hidden_variable(var) &&
-			    (meta[type.self].decoration.decoration_flags.get(DecorationBlock) ||
-			     meta[type.self].decoration.decoration_flags.get(DecorationBufferBlock)))
+			    (ir.meta[type.self].decoration.decoration_flags.get(DecorationBlock) ||
+			     ir.meta[type.self].decoration.decoration_flags.get(DecorationBufferBlock)))
 			{
 				emit_buffer_block(var);
 			}
@@ -181,7 +205,7 @@ void CompilerCPP::emit_resources()
 	}
 
 	// Output push constant blocks
-	for (auto &id : ids)
+	for (auto &id : ir.ids)
 	{
 		if (id.get_type() == TypeVariable)
 		{
@@ -196,7 +220,7 @@ void CompilerCPP::emit_resources()
 	}
 
 	// Output in/out interfaces.
-	for (auto &id : ids)
+	for (auto &id : ir.ids)
 	{
 		if (id.get_type() == TypeVariable)
 		{
@@ -213,7 +237,7 @@ void CompilerCPP::emit_resources()
 	}
 
 	// Output Uniform Constants (values, samplers, images, etc).
-	for (auto &id : ids)
+	for (auto &id : ir.ids)
 	{
 		if (id.get_type() == TypeVariable)
 		{
@@ -282,9 +306,6 @@ void CompilerCPP::emit_resources()
 
 string CompilerCPP::compile()
 {
-	// Force a classic "C" locale, reverts when function returns
-	ClassicLocale classic_locale;
-
 	// Do not deal with ES-isms like precision, older extensions and such.
 	options.es = false;
 	options.version = 450;
@@ -296,10 +317,12 @@ string CompilerCPP::compile()
 	backend.basic_uint_type = "uint32_t";
 	backend.swizzle_is_function = true;
 	backend.shared_is_implied = true;
-	backend.flexible_member_array_supported = false;
+	backend.unsized_array_supported = false;
 	backend.explicit_struct_type = true;
 	backend.use_initializer_list = true;
 
+	fixup_type_alias();
+	reorder_type_alias();
 	build_function_control_flow_graphs_and_analyze();
 	update_active_builtins();
 
@@ -313,15 +336,15 @@ string CompilerCPP::compile()
 		reset();
 
 		// Move constructor for this type is broken on GCC 4.9 ...
-		buffer = unique_ptr<ostringstream>(new ostringstream());
+		buffer.reset();
 
 		emit_header();
 		emit_resources();
 
-		emit_function(get<SPIRFunction>(entry_point), Bitset());
+		emit_function(get<SPIRFunction>(ir.default_entry_point), Bitset());
 
 		pass_count++;
-	} while (force_recompile);
+	} while (is_forcing_recompilation());
 
 	// Match opening scope of emit_header().
 	end_scope_decl();
@@ -334,7 +357,7 @@ string CompilerCPP::compile()
 	// Entry point in CPP is always main() for the time being.
 	get_entry_point().name = "main";
 
-	return buffer->str();
+	return buffer.str();
 }
 
 void CompilerCPP::emit_c_linkage()
@@ -376,7 +399,7 @@ void CompilerCPP::emit_c_linkage()
 
 void CompilerCPP::emit_function_prototype(SPIRFunction &func, const Bitset &)
 {
-	if (func.self != entry_point)
+	if (func.self != ir.default_entry_point)
 		add_function_overload(func);
 
 	local_variable_names = resource_names;
@@ -387,7 +410,7 @@ void CompilerCPP::emit_function_prototype(SPIRFunction &func, const Bitset &)
 	decl += type_to_glsl(type);
 	decl += " ";
 
-	if (func.self == entry_point)
+	if (func.self == ir.default_entry_point)
 	{
 		decl += "main";
 		processing_entry_point = true;

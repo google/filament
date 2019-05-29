@@ -1,0 +1,93 @@
+#pragma clang diagnostic ignored "-Wmissing-prototypes"
+
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct BUF
+{
+    int a;
+    float b;
+    float c;
+};
+
+constant float _16[2] = { 1.0, 2.0 };
+constant float _19[2] = { 3.0, 4.0 };
+constant float _20[2][2] = { { 1.0, 2.0 }, { 3.0, 4.0 } };
+constant float _21[2][2][2] = { { { 1.0, 2.0 }, { 3.0, 4.0 } }, { { 1.0, 2.0 }, { 3.0, 4.0 } } };
+
+// Implementation of an array copy function to cover GLSL's ability to copy an array via assignment.
+template<typename T, uint N>
+void spvArrayCopyFromStack1(thread T (&dst)[N], thread const T (&src)[N])
+{
+    for (uint i = 0; i < N; dst[i] = src[i], i++);
+}
+
+template<typename T, uint N>
+void spvArrayCopyFromConstant1(thread T (&dst)[N], constant T (&src)[N])
+{
+    for (uint i = 0; i < N; dst[i] = src[i], i++);
+}
+
+template<typename T, uint A, uint B>
+void spvArrayCopyFromStack2(thread T (&dst)[A][B], thread const T (&src)[A][B])
+{
+    for (uint i = 0; i < A; i++)
+    {
+        spvArrayCopyFromStack1(dst[i], src[i]);
+    }
+}
+
+template<typename T, uint A, uint B>
+void spvArrayCopyFromConstant2(thread T (&dst)[A][B], constant T (&src)[A][B])
+{
+    for (uint i = 0; i < A; i++)
+    {
+        spvArrayCopyFromConstant1(dst[i], src[i]);
+    }
+}
+
+template<typename T, uint A, uint B, uint C>
+void spvArrayCopyFromStack3(thread T (&dst)[A][B][C], thread const T (&src)[A][B][C])
+{
+    for (uint i = 0; i < A; i++)
+    {
+        spvArrayCopyFromStack2(dst[i], src[i]);
+    }
+}
+
+template<typename T, uint A, uint B, uint C>
+void spvArrayCopyFromConstant3(thread T (&dst)[A][B][C], constant T (&src)[A][B][C])
+{
+    for (uint i = 0; i < A; i++)
+    {
+        spvArrayCopyFromConstant2(dst[i], src[i]);
+    }
+}
+
+kernel void main0(device BUF& o [[buffer(0)]])
+{
+    float c[2][2][2];
+    spvArrayCopyFromConstant3(c, _21);
+    o.a = int(c[1][1][1]);
+    float _43[2] = { o.b, o.c };
+    float _48[2] = { o.b, o.b };
+    float _49[2][2];
+    spvArrayCopyFromStack1(_49[0], _43);
+    spvArrayCopyFromStack1(_49[1], _48);
+    float _54[2] = { o.c, o.c };
+    float _59[2] = { o.c, o.b };
+    float _60[2][2];
+    spvArrayCopyFromStack1(_60[0], _54);
+    spvArrayCopyFromStack1(_60[1], _59);
+    float _61[2][2][2];
+    spvArrayCopyFromStack2(_61[0], _49);
+    spvArrayCopyFromStack2(_61[1], _60);
+    float d[2][2][2];
+    spvArrayCopyFromStack3(d, _61);
+    float e[2][2][2];
+    spvArrayCopyFromStack3(e, d);
+    o.b = e[1][0][1];
+}
+

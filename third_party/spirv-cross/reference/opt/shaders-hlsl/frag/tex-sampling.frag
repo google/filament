@@ -42,30 +42,18 @@ struct SPIRV_Cross_Output
     float4 FragColor : SV_Target0;
 };
 
-float SPIRV_Cross_projectTextureCoordinate(float2 coord)
-{
-    return coord.x / coord.y;
-}
-
-float2 SPIRV_Cross_projectTextureCoordinate(float3 coord)
-{
-    return float2(coord.x, coord.y) / coord.z;
-}
-
-float3 SPIRV_Cross_projectTextureCoordinate(float4 coord)
-{
-    return float3(coord.x, coord.y, coord.z) / coord.w;
-}
-
 void frag_main()
 {
-    float4 _162 = (((((((((((((((((((tex1d.Sample(_tex1d_sampler, texCoord1d) + tex1d.Sample(_tex1d_sampler, texCoord1d, 1)) + tex1d.SampleLevel(_tex1d_sampler, texCoord1d, 2.0f)) + tex1d.SampleGrad(_tex1d_sampler, texCoord1d, 1.0f, 2.0f)) + tex1d.Sample(_tex1d_sampler, SPIRV_Cross_projectTextureCoordinate(float2(texCoord1d, 2.0f)))) + tex1d.SampleBias(_tex1d_sampler, texCoord1d, 1.0f)) + tex2d.Sample(_tex2d_sampler, texCoord2d)) + tex2d.Sample(_tex2d_sampler, texCoord2d, int2(1, 2))) + tex2d.SampleLevel(_tex2d_sampler, texCoord2d, 2.0f)) + tex2d.SampleGrad(_tex2d_sampler, texCoord2d, float2(1.0f, 2.0f), float2(3.0f, 4.0f))) + tex2d.Sample(_tex2d_sampler, SPIRV_Cross_projectTextureCoordinate(float3(texCoord2d, 2.0f)))) + tex2d.SampleBias(_tex2d_sampler, texCoord2d, 1.0f)) + tex3d.Sample(_tex3d_sampler, texCoord3d)) + tex3d.Sample(_tex3d_sampler, texCoord3d, int3(1, 2, 3))) + tex3d.SampleLevel(_tex3d_sampler, texCoord3d, 2.0f)) + tex3d.SampleGrad(_tex3d_sampler, texCoord3d, float3(1.0f, 2.0f, 3.0f), float3(4.0f, 5.0f, 6.0f))) + tex3d.Sample(_tex3d_sampler, SPIRV_Cross_projectTextureCoordinate(float4(texCoord3d, 2.0f)))) + tex3d.SampleBias(_tex3d_sampler, texCoord3d, 1.0f)) + texCube.Sample(_texCube_sampler, texCoord3d)) + texCube.SampleLevel(_texCube_sampler, texCoord3d, 2.0f)) + texCube.SampleBias(_texCube_sampler, texCoord3d, 1.0f);
-    float4 _335 = _162;
-    _335.w = ((_162.w + tex1dShadow.SampleCmp(_tex1dShadow_sampler, float3(texCoord1d, 0.0f, 0.0f).x, 0.0f)) + tex2dShadow.SampleCmp(_tex2dShadow_sampler, float3(texCoord2d, 0.0f).xy, 0.0f)) + texCubeShadow.SampleCmp(_texCubeShadow_sampler, float4(texCoord3d, 0.0f).xyz, 0.0f);
-    float4 _308 = ((((((((((((((_335 + tex1dArray.Sample(_tex1dArray_sampler, texCoord2d)) + tex2dArray.Sample(_tex2dArray_sampler, texCoord3d)) + texCubeArray.Sample(_texCubeArray_sampler, texCoord4d)) + tex2d.GatherRed(_tex2d_sampler, texCoord2d)) + tex2d.GatherRed(_tex2d_sampler, texCoord2d)) + tex2d.GatherGreen(_tex2d_sampler, texCoord2d)) + tex2d.GatherBlue(_tex2d_sampler, texCoord2d)) + tex2d.GatherAlpha(_tex2d_sampler, texCoord2d)) + tex2d.GatherRed(_tex2d_sampler, texCoord2d, int2(1, 1))) + tex2d.GatherRed(_tex2d_sampler, texCoord2d, int2(1, 1))) + tex2d.GatherGreen(_tex2d_sampler, texCoord2d, int2(1, 1))) + tex2d.GatherBlue(_tex2d_sampler, texCoord2d, int2(1, 1))) + tex2d.GatherAlpha(_tex2d_sampler, texCoord2d, int2(1, 1))) + tex2d.Load(int3(int2(1, 2), 0))) + separateTex2d.Sample(samplerNonDepth, texCoord2d);
-    float4 _339 = _308;
-    _339.w = _308.w + separateTex2dDepth.SampleCmp(samplerDepth, texCoord3d.xy, texCoord3d.z);
-    FragColor = _339;
+    float2 _41 = float2(texCoord1d, 2.0f);
+    float3 _88 = float3(texCoord2d, 2.0f);
+    float4 _135 = float4(texCoord3d, 2.0f);
+    float4 _162 = (((((((((((((((((((tex1d.Sample(_tex1d_sampler, texCoord1d) + tex1d.Sample(_tex1d_sampler, texCoord1d, 1)) + tex1d.SampleLevel(_tex1d_sampler, texCoord1d, 2.0f)) + tex1d.SampleGrad(_tex1d_sampler, texCoord1d, 1.0f, 2.0f)) + tex1d.Sample(_tex1d_sampler, _41.x / _41.y)) + tex1d.SampleBias(_tex1d_sampler, texCoord1d, 1.0f)) + tex2d.Sample(_tex2d_sampler, texCoord2d)) + tex2d.Sample(_tex2d_sampler, texCoord2d, int2(1, 2))) + tex2d.SampleLevel(_tex2d_sampler, texCoord2d, 2.0f)) + tex2d.SampleGrad(_tex2d_sampler, texCoord2d, float2(1.0f, 2.0f), float2(3.0f, 4.0f))) + tex2d.Sample(_tex2d_sampler, _88.xy / _88.z)) + tex2d.SampleBias(_tex2d_sampler, texCoord2d, 1.0f)) + tex3d.Sample(_tex3d_sampler, texCoord3d)) + tex3d.Sample(_tex3d_sampler, texCoord3d, int3(1, 2, 3))) + tex3d.SampleLevel(_tex3d_sampler, texCoord3d, 2.0f)) + tex3d.SampleGrad(_tex3d_sampler, texCoord3d, float3(1.0f, 2.0f, 3.0f), float3(4.0f, 5.0f, 6.0f))) + tex3d.Sample(_tex3d_sampler, _135.xyz / _135.w)) + tex3d.SampleBias(_tex3d_sampler, texCoord3d, 1.0f)) + texCube.Sample(_texCube_sampler, texCoord3d)) + texCube.SampleLevel(_texCube_sampler, texCoord3d, 2.0f)) + texCube.SampleBias(_texCube_sampler, texCoord3d, 1.0f);
+    float4 _333 = _162;
+    _333.w = ((_162.w + tex1dShadow.SampleCmp(_tex1dShadow_sampler, float3(texCoord1d, 0.0f, 0.0f).x, 0.0f)) + tex2dShadow.SampleCmp(_tex2dShadow_sampler, float3(texCoord2d, 0.0f).xy, 0.0f)) + texCubeShadow.SampleCmp(_texCubeShadow_sampler, float4(texCoord3d, 0.0f).xyz, 0.0f);
+    float4 _308 = ((((((((((((((_333 + tex1dArray.Sample(_tex1dArray_sampler, texCoord2d)) + tex2dArray.Sample(_tex2dArray_sampler, texCoord3d)) + texCubeArray.Sample(_texCubeArray_sampler, texCoord4d)) + tex2d.GatherRed(_tex2d_sampler, texCoord2d)) + tex2d.GatherRed(_tex2d_sampler, texCoord2d)) + tex2d.GatherGreen(_tex2d_sampler, texCoord2d)) + tex2d.GatherBlue(_tex2d_sampler, texCoord2d)) + tex2d.GatherAlpha(_tex2d_sampler, texCoord2d)) + tex2d.GatherRed(_tex2d_sampler, texCoord2d, int2(1, 1))) + tex2d.GatherRed(_tex2d_sampler, texCoord2d, int2(1, 1))) + tex2d.GatherGreen(_tex2d_sampler, texCoord2d, int2(1, 1))) + tex2d.GatherBlue(_tex2d_sampler, texCoord2d, int2(1, 1))) + tex2d.GatherAlpha(_tex2d_sampler, texCoord2d, int2(1, 1))) + tex2d.Load(int3(int2(1, 2), 0))) + separateTex2d.Sample(samplerNonDepth, texCoord2d);
+    float4 _336 = _308;
+    _336.w = _308.w + separateTex2dDepth.SampleCmp(samplerDepth, texCoord3d.xy, texCoord3d.z);
+    FragColor = _336;
 }
 
 SPIRV_Cross_Output main(SPIRV_Cross_Input stage_input)

@@ -1,0 +1,36 @@
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct foo
+{
+    int a[128];
+    uint b;
+    float2 c;
+};
+
+struct bar
+{
+    int d;
+};
+
+kernel void main0(device foo& buf [[buffer(0)]], constant bar& cb [[buffer(1)]], uint3 gl_GlobalInvocationID [[thread_position_in_grid]], uint3 gl_LocalInvocationID [[thread_position_in_threadgroup]])
+{
+    bool _70 = cb.d != 0;
+    device foo* _71 = _70 ? &buf : nullptr;
+    device foo* _67 = _71;
+    device foo* _45 = _71;
+    thread uint3* _77 = _70 ? &gl_GlobalInvocationID : &gl_LocalInvocationID;
+    thread uint3* _73 = _77;
+    for (device int* _52 = &_71->a[0u], * _55 = &buf.a[0u]; (*_52) != (*_55); )
+    {
+        int _66 = ((*_52) + (*_55)) + int((*_77).x);
+        *_52 = _66;
+        *_55 = _66;
+        _52 = &_52[1u];
+        _55 = &_55[1u];
+        continue;
+    }
+}
+

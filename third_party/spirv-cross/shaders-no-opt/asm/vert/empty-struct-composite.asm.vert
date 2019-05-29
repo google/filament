@@ -7,7 +7,6 @@
           %1 = OpExtInstImport "GLSL.std.450"
                OpMemoryModel Logical GLSL450
                OpEntryPoint Vertex %2 "main"
-               OpExecutionMode %2 OriginUpperLeft
                OpName %Test "Test"
                OpName %t "t"
                OpName %retvar "retvar"

@@ -2,7 +2,7 @@
 #extension GL_EXT_tessellation_shader : require
 layout(vertices = 1) out;
 
-layout(std140) uniform UBO
+layout(binding = 0, std140) uniform UBO
 {
     vec4 uScale;
     vec3 uCamPos;

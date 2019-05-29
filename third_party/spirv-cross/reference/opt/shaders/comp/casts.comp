@@ -6,13 +6,13 @@ layout(binding = 1, std430) buffer SSBO1
     ivec4 outputs[];
 } _21;
 
-layout(binding = 0, std430) buffer _19_27
+layout(binding = 0, std430) buffer SSBO0
 {
-    ivec4 outputs[];
+    ivec4 inputs[];
 } _27;
 
 void main()
 {
-    _21.outputs[gl_GlobalInvocationID.x] = mix(ivec4(0), ivec4(1), notEqual((_27.outputs[gl_GlobalInvocationID.x] & ivec4(3)), ivec4(uvec4(0u))));
+    _21.outputs[gl_GlobalInvocationID.x] = mix(ivec4(0), ivec4(1), notEqual((_27.inputs[gl_GlobalInvocationID.x] & ivec4(3)), ivec4(uvec4(0u))));
 }
 

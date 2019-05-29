@@ -10,7 +10,7 @@ STATIC_LIB := lib$(TARGET).a
 
 DEPS := $(OBJECTS:.o=.d) $(CLI_OBJECTS:.o=.d)
 
-CXXFLAGS += -std=c++11 -Wall -Wextra -Wshadow -D__STDC_LIMIT_MACROS
+CXXFLAGS += -std=c++11 -Wall -Wextra -Wshadow
 
 ifeq ($(DEBUG), 1)
 	CXXFLAGS += -O0 -g

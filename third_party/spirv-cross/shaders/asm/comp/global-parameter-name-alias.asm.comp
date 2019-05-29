@@ -1,0 +1,102 @@
+; SPIR-V
+; Version: 1.0
+; Generator: Khronos Glslang Reference Front End; 6
+; Bound: 61
+; Schema: 0
+               OpCapability Shader
+          %1 = OpExtInstImport "GLSL.std.450"
+               OpMemoryModel Logical GLSL450
+               OpEntryPoint GLCompute %main "main" %id_1
+               OpExecutionMode %main LocalSize 1 1 1
+               OpSource HLSL 500
+               OpName %main "main"
+               OpName %Load_u1_ "Load(u1;"
+               OpName %size "size"
+               OpName %_main_vu3_ "@main(vu3;"
+               OpName %id "id"
+               OpName %data "data"
+               OpName %byteAddrTemp "byteAddrTemp"
+               OpName %ssbo "ssbo"
+               OpMemberName %ssbo 0 "@data"
+               OpName %ssbo_0 "ssbo"
+               OpName %param "param"
+               OpName %id_0 "id"
+               OpName %id_1 "id"
+               OpName %param_0 "param"
+               OpDecorate %_runtimearr_uint ArrayStride 4
+               OpMemberDecorate %ssbo 0 NonWritable
+               OpMemberDecorate %ssbo 0 Offset 0
+               OpDecorate %ssbo BufferBlock
+               OpDecorate %ssbo_0 DescriptorSet 0
+               OpDecorate %ssbo_0 Binding 1
+               OpDecorate %id_1 BuiltIn GlobalInvocationId
+       %void = OpTypeVoid
+          %3 = OpTypeFunction %void
+       %uint = OpTypeInt 32 0
+%_ptr_Function_uint = OpTypePointer Function %uint
+          %8 = OpTypeFunction %void %_ptr_Function_uint
+     %v3uint = OpTypeVector %uint 3
+%_ptr_Function_v3uint = OpTypePointer Function %v3uint
+         %14 = OpTypeFunction %void %_ptr_Function_v3uint
+     %v4uint = OpTypeVector %uint 4
+%_ptr_Function_v4uint = OpTypePointer Function %v4uint
+        %int = OpTypeInt 32 1
+%_ptr_Function_int = OpTypePointer Function %int
+      %int_2 = OpConstant %int 2
+%_runtimearr_uint = OpTypeRuntimeArray %uint
+       %ssbo = OpTypeStruct %_runtimearr_uint
+%_ptr_Uniform_ssbo = OpTypePointer Uniform %ssbo
+     %ssbo_0 = OpVariable %_ptr_Uniform_ssbo Uniform
+      %int_0 = OpConstant %int 0
+%_ptr_Uniform_uint = OpTypePointer Uniform %uint
+      %int_1 = OpConstant %int 1
+      %int_3 = OpConstant %int 3
+     %uint_4 = OpConstant %uint 4
+%_ptr_Input_v3uint = OpTypePointer Input %v3uint
+       %id_1 = OpVariable %_ptr_Input_v3uint Input
+       %main = OpFunction %void None %3
+          %5 = OpLabel
+       %id_0 = OpVariable %_ptr_Function_v3uint Function
+    %param_0 = OpVariable %_ptr_Function_v3uint Function
+         %57 = OpLoad %v3uint %id_1
+               OpStore %id_0 %57
+         %59 = OpLoad %v3uint %id_0
+               OpStore %param_0 %59
+         %60 = OpFunctionCall %void %_main_vu3_ %param_0
+               OpReturn
+               OpFunctionEnd
+   %Load_u1_ = OpFunction %void None %8
+       %size = OpFunctionParameter %_ptr_Function_uint
+         %11 = OpLabel
+       %data = OpVariable %_ptr_Function_v4uint Function
+%byteAddrTemp = OpVariable %_ptr_Function_int Function
+         %24 = OpLoad %uint %size
+         %26 = OpShiftRightLogical %int %24 %int_2
+               OpStore %byteAddrTemp %26
+         %32 = OpLoad %int %byteAddrTemp
+         %34 = OpAccessChain %_ptr_Uniform_uint %ssbo_0 %int_0 %32
+         %35 = OpLoad %uint %34
+         %36 = OpLoad %int %byteAddrTemp
+         %38 = OpIAdd %int %36 %int_1
+         %39 = OpAccessChain %_ptr_Uniform_uint %ssbo_0 %int_0 %38
+         %40 = OpLoad %uint %39
+         %41 = OpLoad %int %byteAddrTemp
+         %42 = OpIAdd %int %41 %int_2
+         %43 = OpAccessChain %_ptr_Uniform_uint %ssbo_0 %int_0 %42
+         %44 = OpLoad %uint %43
+         %45 = OpLoad %int %byteAddrTemp
+         %47 = OpIAdd %int %45 %int_3
+         %48 = OpAccessChain %_ptr_Uniform_uint %ssbo_0 %int_0 %47
+         %49 = OpLoad %uint %48
+         %50 = OpCompositeConstruct %v4uint %35 %40 %44 %49
+               OpStore %data %50
+               OpReturn
+               OpFunctionEnd
+ %_main_vu3_ = OpFunction %void None %14
+         %id = OpFunctionParameter %_ptr_Function_v3uint
+         %17 = OpLabel
+      %param = OpVariable %_ptr_Function_uint Function
+               OpStore %param %uint_4
+         %53 = OpFunctionCall %void %Load_u1_ %param
+               OpReturn
+               OpFunctionEnd

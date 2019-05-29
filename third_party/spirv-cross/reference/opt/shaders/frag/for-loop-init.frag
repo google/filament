@@ -4,72 +4,64 @@ precision highp int;
 
 layout(location = 0) out mediump int FragColor;
 
-ivec2 _184;
-int _199;
-
 void main()
 {
-    FragColor = 16;
-    for (int _168 = 0; _168 < 25; )
+    mediump int _145;
+    for (;;)
     {
-        FragColor += 10;
-        _168++;
-        continue;
-    }
-    for (int _169 = 1; _169 < 30; )
-    {
-        FragColor += 11;
-        _169++;
-        continue;
-    }
-    int _170;
-    _170 = 0;
-    for (; _170 < 20; )
-    {
-        FragColor += 12;
-        _170++;
-        continue;
-    }
-    mediump int _62 = _170 + 3;
-    FragColor += _62;
-    bool _68 = _62 == 40;
-    if (_68)
-    {
-        for (int _171 = 0; _171 < 40; )
+        FragColor = 16;
+        _145 = 0;
+        for (; _145 < 25; )
         {
-            FragColor += 13;
-            _171++;
+            FragColor += 10;
+            _145++;
             continue;
         }
-    }
-    else
-    {
+        for (mediump int _146 = 1; _146 < 30; )
+        {
+            FragColor += 11;
+            _146++;
+            continue;
+        }
+        mediump int _147;
+        _147 = 0;
+        for (; _147 < 20; )
+        {
+            FragColor += 12;
+            _147++;
+            continue;
+        }
+        mediump int _62 = _147 + 3;
         FragColor += _62;
-    }
-    bool _213 = _68 ? true : false;
-    if (!_213)
-    {
-        ivec2 _177;
-        _177 = mix(ivec2(0), mix(_184, _184, bvec2(_68)), bvec2(_213));
-        for (; _177.x < 10; )
+        if (_62 == 40)
         {
-            FragColor += _177.y;
-            ivec2 _167 = _177;
-            _167.x = _177.x + 4;
-            _177 = _167;
+            for (mediump int _151 = 0; _151 < 40; )
+            {
+                FragColor += 13;
+                _151++;
+                continue;
+            }
+            break;
+        }
+        FragColor += _62;
+        mediump ivec2 _148;
+        _148 = ivec2(0);
+        for (; _148.x < 10; )
+        {
+            FragColor += _148.y;
+            mediump ivec2 _144 = _148;
+            _144.x = _148.x + 4;
+            _148 = _144;
             continue;
         }
-    }
-    int _216 = _213 ? (_68 ? _199 : _199) : _62;
-    if (!_213)
-    {
-        for (int _191 = _216; _191 < 40; )
+        for (mediump int _150 = _62; _150 < 40; )
         {
-            FragColor += _191;
-            _191++;
+            FragColor += _150;
+            _150++;
             continue;
         }
-        FragColor += _216;
+        FragColor += _62;
+        break;
     }
 }
 

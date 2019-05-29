@@ -16,21 +16,21 @@ struct main0_in
 fragment main0_out main0(main0_in in [[stage_in]])
 {
     main0_out out = {};
-    bool _29;
+    float4 _33;
     for (;;)
     {
-        _29 = in.counter == 10;
-        if (_29)
+        if (in.counter == 10)
         {
+            _33 = float4(10.0);
             break;
         }
         else
         {
+            _33 = float4(30.0);
             break;
         }
     }
-    bool4 _35 = bool4(_29);
-    out.FragColor = float4(_35.x ? float4(10.0).x : float4(30.0).x, _35.y ? float4(10.0).y : float4(30.0).y, _35.z ? float4(10.0).z : float4(30.0).z, _35.w ? float4(10.0).w : float4(30.0).w);
+    out.FragColor = _33;
     return out;
 }
 

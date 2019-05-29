@@ -5,15 +5,15 @@ using namespace metal;
 
 constant int _7_tmp [[function_constant(201)]];
 constant int _7 = is_function_constant_defined(_7_tmp) ? _7_tmp : -10;
+constant int _20 = (_7 + 2);
 constant uint _8_tmp [[function_constant(202)]];
 constant uint _8 = is_function_constant_defined(_8_tmp) ? _8_tmp : 100u;
-constant float _9_tmp [[function_constant(200)]];
-constant float _9 = is_function_constant_defined(_9_tmp) ? _9_tmp : 3.141590118408203125;
-constant int _20 = (_7 + 2);
 constant uint _25 = (_8 % 5u);
 constant int4 _30 = int4(20, 30, _20, _20);
 constant int2 _32 = int2(_30.y, _30.x);
 constant int _33 = _30.y;
+constant float _9_tmp [[function_constant(200)]];
+constant float _9 = is_function_constant_defined(_9_tmp) ? _9_tmp : 3.141590118408203125;
 
 struct main0_out
 {

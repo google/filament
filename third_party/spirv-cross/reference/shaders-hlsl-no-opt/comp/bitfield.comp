@@ -92,7 +92,7 @@ void comp_main()
     s = reversebits(s);
     int v0 = countbits(u);
     int v1 = countbits(s);
-    int v2 = firstbithigh(u);
+    int v2 = int(firstbithigh(u));
     int v3 = firstbitlow(s);
     int3 s_1 = SPIRV_Cross_bitfieldSExtract(signed_values, 5, 20);
     uint3 u_1 = SPIRV_Cross_bitfieldUExtract(unsigned_values, 6, 21);
@@ -102,7 +102,7 @@ void comp_main()
     s_1 = reversebits(s_1);
     int3 v0_1 = countbits(u_1);
     int3 v1_1 = countbits(s_1);
-    int3 v2_1 = firstbithigh(u_1);
+    int3 v2_1 = int3(firstbithigh(u_1));
     int3 v3_1 = firstbitlow(s_1);
 }
 

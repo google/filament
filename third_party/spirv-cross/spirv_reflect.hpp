@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 Bradley Austin Davis
+ * Copyright 2018-2019 Bradley Austin Davis
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,28 +19,39 @@
 
 #include "spirv_glsl.hpp"
 #include <utility>
-#include <vector>
 
 namespace simple_json
 {
 class Stream;
 }
 
-namespace spirv_cross
+namespace SPIRV_CROSS_NAMESPACE
 {
 class CompilerReflection : public CompilerGLSL
 {
 	using Parent = CompilerGLSL;
 
 public:
-	CompilerReflection(std::vector<uint32_t> spirv_)
-	    : Parent(move(spirv_))
+	explicit CompilerReflection(std::vector<uint32_t> spirv_)
+	    : Parent(std::move(spirv_))
 	{
 		options.vulkan_semantics = true;
 	}
 
-	CompilerReflection(const uint32_t *ir, size_t word_count)
-	    : Parent(ir, word_count)
+	CompilerReflection(const uint32_t *ir_, size_t word_count)
+	    : Parent(ir_, word_count)
+	{
+		options.vulkan_semantics = true;
+	}
+
+	explicit CompilerReflection(const ParsedIR &ir_)
+	    : CompilerGLSL(ir_)
+	{
+		options.vulkan_semantics = true;
+	}
+
+	explicit CompilerReflection(ParsedIR &&ir_)
+	    : CompilerGLSL(std::move(ir_))
 	{
 		options.vulkan_semantics = true;
 	}
@@ -60,13 +71,13 @@ private:
 	void emit_type_member(const SPIRType &type, uint32_t index);
 	void emit_type_member_qualifiers(const SPIRType &type, uint32_t index);
 	void emit_type_array(const SPIRType &type);
-	void emit_resources(const char *tag, const std::vector<Resource> &resources);
+	void emit_resources(const char *tag, const SmallVector<Resource> &resources);
 
 	std::string to_member_name(const SPIRType &type, uint32_t index) const;
 
 	std::shared_ptr<simple_json::Stream> json_stream;
 };
 
-} // namespace spirv_cross
+} // namespace SPIRV_CROSS_NAMESPACE
 
 #endif

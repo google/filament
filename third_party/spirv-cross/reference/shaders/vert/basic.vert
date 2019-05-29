@@ -1,6 +1,6 @@
 #version 310 es
 
-layout(std140) uniform UBO
+layout(binding = 0, std140) uniform UBO
 {
     mat4 uMVP;
 } _16;

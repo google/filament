@@ -1,11 +1,13 @@
-cbuffer cbuf : register(b3)
+cbuffer CBuffer : register(b3)
 {
     float4 cbuf_a : packoffset(c0);
 };
-cbuffer registers
+
+cbuffer PushMe
 {
     float4 registers_d : packoffset(c0);
 };
+
 Texture2D<float4> uSampledImage : register(t4);
 SamplerState _uSampledImage_sampler : register(s4);
 Texture2D<float4> uTexture : register(t5);

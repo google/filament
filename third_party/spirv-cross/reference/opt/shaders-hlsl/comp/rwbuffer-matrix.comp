@@ -1,9 +1,10 @@
 RWByteAddressBuffer _28 : register(u0);
-cbuffer _68 : register(b1)
+cbuffer UBO : register(b1)
 {
     int _68_index0 : packoffset(c0);
     int _68_index1 : packoffset(c0.y);
 };
+
 
 void comp_main()
 {

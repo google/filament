@@ -3,7 +3,7 @@
 
 using namespace metal;
 
-constant float _17[5] = {1.0, 2.0, 3.0, 4.0, 5.0};
+constant float _17[5] = { 1.0, 2.0, 3.0, 4.0, 5.0 };
 
 struct main0_out
 {

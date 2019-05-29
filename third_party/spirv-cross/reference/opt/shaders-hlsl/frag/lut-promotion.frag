@@ -42,9 +42,7 @@ void frag_main()
     }
     int _91 = index & 3;
     FragColor += foobar[_91].z;
-    float4 baz[4] = _60;
-    baz = _104;
-    FragColor += baz[_91].z;
+    FragColor += _104[_91].z;
 }
 
 SPIRV_Cross_Output main(SPIRV_Cross_Input stage_input)

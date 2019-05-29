@@ -1,0 +1,28 @@
+#include <metal_stdlib>
+#include <simd/simd.h>
+
+using namespace metal;
+
+struct SSBO1
+{
+    short4 outputs[1];
+};
+
+struct SSBO0
+{
+    int4 inputs[1];
+};
+
+struct UBO
+{
+    half4 const0;
+};
+
+kernel void main0(device SSBO0& _29 [[buffer(0)]], device SSBO1& _21 [[buffer(1)]], constant UBO& _40 [[buffer(2)]], uint3 gl_GlobalInvocationID [[thread_position_in_grid]])
+{
+    short2 _47 = as_type<short2>(_29.inputs[gl_GlobalInvocationID.x].x) + as_type<short2>(_40.const0.xy);
+    _21.outputs[gl_GlobalInvocationID.x] = short4(_47.x, _47.y, _21.outputs[gl_GlobalInvocationID.x].z, _21.outputs[gl_GlobalInvocationID.x].w);
+    short2 _66 = short2(as_type<ushort2>(uint(_29.inputs[gl_GlobalInvocationID.x].y)) - as_type<ushort2>(_40.const0.zw));
+    _21.outputs[gl_GlobalInvocationID.x] = short4(_21.outputs[gl_GlobalInvocationID.x].x, _21.outputs[gl_GlobalInvocationID.x].y, _66.x, _66.y);
+}
+

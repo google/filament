@@ -3,8 +3,6 @@
 
 using namespace metal;
 
-constant uint3 gl_WorkGroupSize = uint3(32u, 1u, 1u);
-
 struct T1
 {
     packed_float3 a;
@@ -20,6 +18,8 @@ struct Buffer1
 {
     float buf1[1];
 };
+
+constant uint3 gl_WorkGroupSize [[maybe_unused]] = uint3(32u, 1u, 1u);
 
 kernel void main0(device Buffer0& _15 [[buffer(1)]], device Buffer1& _34 [[buffer(2)]], uint3 gl_GlobalInvocationID [[thread_position_in_grid]])
 {
