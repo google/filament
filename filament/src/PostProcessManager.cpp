@@ -87,6 +87,7 @@ void PostProcessManager::init() noexcept {
 
     mSSAO = PostProcessMaterial(mEngine, MATERIALS_SAO_DATA, MATERIALS_SAO_SIZE);
     mMipmapDepth = PostProcessMaterial(mEngine, MATERIALS_MIPMAPDEPTH_DATA, MATERIALS_MIPMAPDEPTH_SIZE);
+    mBlur = PostProcessMaterial(mEngine, MATERIALS_BLUR_DATA, MATERIALS_BLUR_SIZE);
 
     // create sampler for post-process FBO
     DriverApi& driver = mEngine.getDriverApi();
@@ -112,6 +113,7 @@ void PostProcessManager::terminate(backend::DriverApi& driver) noexcept {
     driver.destroyTexture(mNoSSAOTexture);
     mSSAO.terminate(mEngine);
     mMipmapDepth.terminate(mEngine);
+    mBlur.terminate(mEngine);
 }
 
 void PostProcessManager::setSource(uint32_t viewportWidth, uint32_t viewportHeight,
@@ -338,79 +340,25 @@ FrameGraphResource PostProcessManager::ssao(FrameGraph& fg, RenderPass& pass,
     FEngine& engine = mEngine;
     Handle<HwRenderPrimitive> fullScreenRenderPrimitive = engine.getFullScreenRenderPrimitive();
 
-    // SSAO depth pass -- automatically culled if not used
-    struct DepthPassData {
-        FrameGraphResource depth;
-    };
+    /*
+     * SSAO depth pass -- automatically culled if not used
+     */
 
-    RenderPass::Command const* first = pass.getCommands().begin();
-    RenderPass::Command const* last = pass.getCommands().end();
+    FrameGraphResource depth = depthPass(fg, pass, svp.width, svp.height, options);
 
-    // We limit the level size to 32 pixels (which is where the -5 comes from)
-    const size_t levelCount = std::max(1, std::ilogbf(std::max(svp.width, svp.height) / 2) + 1 - 5);
-
-    // SSAO generates its own depth path at 1/4 resolution
-    auto& ssaoDepthPass = fg.addPass<DepthPassData>("SSAO Depth Pass",
-            [&svp, levelCount](FrameGraph::Builder& builder, DepthPassData& data) {
-
-                data.depth = builder.createTexture("Depth Buffer", {
-                        .width = svp.width / 2, .height = svp.height / 2,
-                        .levels = uint8_t(levelCount),
-                        .format = TextureFormat::DEPTH24 });
-
-                data.depth = builder.useRenderTarget("SSAO Depth Target",
-                        { .attachments.depth = data.depth }, TargetBufferFlags::DEPTH).depth;
-            },
-            [&pass, first, last](FrameGraphPassResources const& resources,
-                    DepthPassData const& data, DriverApi& driver) {
-                auto out = resources.getRenderTarget(data.depth);
-                pass.execute(resources.getPassName(), out.target, out.params, first, last);
-            });
-
-    FrameGraphResource depth = ssaoDepthPass.getData().depth;
+    /*
+     * create depth mipmap chain
+     */
 
     // The first mip already exists, so we process n-1 lods
+    const size_t levelCount = fg.getDescriptor(depth)->levels;
     for (size_t level = 0; level < levelCount - 1; level++) {
-        struct DepthMipData {
-            FrameGraphResource in;
-            FrameGraphResource out;
-        };
-
-        auto& depthMipmappass = fg.addPass<DepthMipData>("Depth Mipmap Pass",
-                [depth, level](FrameGraph::Builder& builder, DepthMipData& data) {
-                    const char* name = builder.getName(depth);
-                    data.in = builder.useRenderTarget(name, {
-                            .attachments.depth = {
-                                    depth, uint8_t(level), FrameGraphRenderTarget::Attachments::READ }}).depth;
-
-                    data.out = builder.useRenderTarget(name, {
-                            .attachments.depth = {
-                                    depth, uint8_t(level + 1), FrameGraphRenderTarget::Attachments::WRITE }}).depth;
-                },
-                [this, fullScreenRenderPrimitive, level](FrameGraphPassResources const& resources,
-                        DepthMipData const& data, DriverApi& driver) {
-
-                    auto in = resources.getTexture(data.in);
-                    auto out = resources.getRenderTarget(data.out, level + 1u);
-
-                    SamplerParams params;
-                    FMaterialInstance* const pInstance = mMipmapDepth.getMaterialInstance();
-                    pInstance->setParameter("depth", in, params);
-                    pInstance->setParameter("level", uint32_t(level));
-                    pInstance->commit(driver);
-                    pInstance->use(driver);
-
-                    PipelineState pipeline;
-                    pipeline.program = mMipmapDepth.getProgram();
-                    pipeline.rasterState = mMipmapDepth.getMaterial()->getRasterState();
-
-                    driver.beginRenderPass(out.target, out.params);
-                    driver.draw(pipeline, fullScreenRenderPrimitive);
-                    driver.endRenderPass();
-                });
-
-        depth = depthMipmappass.getData().out;
+        depth = mipmapPass(fg, depth, level);
     }
+
+    /*
+     * Our main SSAO pass
+     */
 
     struct SSAOPassData {
         FrameGraphResource depth;
@@ -419,7 +367,7 @@ FrameGraphResource PostProcessManager::ssao(FrameGraph& fg, RenderPass& pass,
     };
 
     auto& SSAOPass = fg.addPass<SSAOPassData>("SSAO Pass",
-            [depth, &options](FrameGraph::Builder& builder, SSAOPassData& data) {
+            [&](FrameGraph::Builder& builder, SSAOPassData& data) {
 
                 data.options = options;
 
@@ -435,7 +383,7 @@ FrameGraphResource PostProcessManager::ssao(FrameGraph& fg, RenderPass& pass,
                           .attachments.depth = { data.depth, FrameGraphRenderTarget::Attachments::READ }
                         }, TargetBufferFlags::NONE).color;
             },
-            [this, levelCount, cameraInfo, fullScreenRenderPrimitive](FrameGraphPassResources const& resources,
+            [=](FrameGraphPassResources const& resources,
                     SSAOPassData const& data, DriverApi& driver) {
                 auto depth = resources.getTexture(data.depth);
                 auto ssao = resources.getRenderTarget(data.ssao);
@@ -470,7 +418,158 @@ FrameGraphResource PostProcessManager::ssao(FrameGraph& fg, RenderPass& pass,
                 driver.endRenderPass();
             });
 
-    return SSAOPass.getData().ssao;
+    FrameGraphResource ssao = SSAOPass.getData().ssao;
+
+    /*
+     * Final separable blur pass
+     */
+
+    // horizontal separable blur pass
+    ssao = blurPass(fg, ssao, depth, {1, 0});
+
+    // vertical separable blur pass
+    ssao = blurPass(fg, ssao, depth, {0, 1});
+    return ssao;
+}
+
+FrameGraphResource PostProcessManager::depthPass(FrameGraph& fg, RenderPass& pass,
+        uint32_t width, uint32_t height,
+        View::AmbientOcclusionOptions const& options) noexcept {
+
+    // SSAO depth pass -- automatically culled if not used
+    struct DepthPassData {
+        FrameGraphResource depth;
+    };
+
+    RenderPass::Command const* first = pass.getCommands().begin();
+    RenderPass::Command const* last = pass.getCommands().end();
+
+    // We limit the level size to 32 pixels (which is where the -5 comes from)
+    const size_t levelCount = std::max(1, std::ilogbf(std::max(width, height) / 2) + 1 - 5);
+
+    // SSAO generates its own depth path at 1/4 resolution
+    auto& ssaoDepthPass = fg.addPass<DepthPassData>("SSAO Depth Pass",
+            [&](FrameGraph::Builder& builder, DepthPassData& data) {
+                data.depth = builder.createTexture("Depth Buffer", {
+                        .width = width / 2, .height = height / 2,
+                        .levels = uint8_t(levelCount),
+                        .format = TextureFormat::DEPTH24 });
+
+                data.depth = builder.useRenderTarget("SSAO Depth Target",
+                        { .attachments.depth = data.depth }, TargetBufferFlags::DEPTH).depth;
+            },
+            [=, &pass](FrameGraphPassResources const& resources,
+                    DepthPassData const& data, DriverApi& driver) {
+                auto out = resources.getRenderTarget(data.depth);
+                pass.execute(resources.getPassName(), out.target, out.params, first, last);
+            });
+
+    return ssaoDepthPass.getData().depth;
+}
+
+FrameGraphResource PostProcessManager::mipmapPass(FrameGraph& fg,
+        FrameGraphResource input, size_t level) noexcept {
+
+    Handle<HwRenderPrimitive> fullScreenRenderPrimitive = mEngine.getFullScreenRenderPrimitive();
+
+    struct DepthMipData {
+        FrameGraphResource in;
+        FrameGraphResource out;
+    };
+
+    auto& depthMipmapPass = fg.addPass<DepthMipData>("Depth Mipmap Pass",
+            [&](FrameGraph::Builder& builder, DepthMipData& data) {
+                const char* name = builder.getName(input);
+                data.in = builder.useRenderTarget(name, {
+                        .attachments.depth = {
+                                input, uint8_t(level), FrameGraphRenderTarget::Attachments::READ
+                        }}).depth;
+
+                data.out = builder.useRenderTarget(name, {
+                        .attachments.depth = {
+                                input, uint8_t(level + 1), FrameGraphRenderTarget::Attachments::WRITE
+                        }}).depth;
+            },
+            [=](FrameGraphPassResources const& resources,
+                    DepthMipData const& data, DriverApi& driver) {
+
+                auto in = resources.getTexture(data.in);
+                auto out = resources.getRenderTarget(data.out, level + 1u);
+
+                SamplerParams params;
+                FMaterialInstance* const pInstance = mMipmapDepth.getMaterialInstance();
+                pInstance->setParameter("depth", in, params);
+                pInstance->setParameter("level", uint32_t(level));
+                pInstance->commit(driver);
+                pInstance->use(driver);
+
+                PipelineState pipeline;
+                pipeline.program = mMipmapDepth.getProgram();
+                pipeline.rasterState = mMipmapDepth.getMaterial()->getRasterState();
+
+                driver.beginRenderPass(out.target, out.params);
+                driver.draw(pipeline, fullScreenRenderPrimitive);
+                driver.endRenderPass();
+            });
+
+    return depthMipmapPass.getData().out;
+}
+
+FrameGraphResource PostProcessManager::blurPass(FrameGraph& fg, FrameGraphResource input,
+        FrameGraphResource depth, math::int2 axis) noexcept {
+
+    Handle<HwRenderPrimitive> fullScreenRenderPrimitive = mEngine.getFullScreenRenderPrimitive();
+
+    struct BlurPassData {
+        FrameGraphResource input;
+        FrameGraphResource depth;
+        FrameGraphResource blurred;
+    };
+
+    auto& blurPass = fg.addPass<BlurPassData>("Separable Blur Pass",
+            [&](FrameGraph::Builder& builder, BlurPassData& data) {
+
+                auto const& desc = builder.getDescriptor(input);
+
+                data.input = builder.read(input);
+                data.depth = builder.read(depth);
+
+                data.blurred = builder.createTexture("Blurred output", {
+                        .width = desc.width, .height = desc.height, .format = desc.format });
+
+                data.blurred = builder.useRenderTarget("Blurred target",
+                        { .attachments.color = { data.blurred, FrameGraphRenderTarget::Attachments::WRITE },
+                          .attachments.depth = { depth, FrameGraphRenderTarget::Attachments::READ }
+                        }, TargetBufferFlags::NONE).color;
+            },
+            [=](FrameGraphPassResources const& resources,
+                    BlurPassData const& data, DriverApi& driver) {
+                auto ssao = resources.getTexture(data.input);
+                auto depth = resources.getTexture(data.depth);
+                auto blurred = resources.getRenderTarget(data.blurred);
+                auto const& desc = resources.getDescriptor(data.blurred);
+
+                SamplerParams params;
+                FMaterialInstance* const pInstance = mBlur.getMaterialInstance();
+                pInstance->setParameter("ssao", ssao, params);
+                pInstance->setParameter("depth", depth, params);
+                pInstance->setParameter("axis", axis);
+                pInstance->setParameter("resolution",
+                        float4{ desc.width, desc.height, 1.0f / desc.width, 1.0f / desc.height });
+                pInstance->commit(driver);
+                pInstance->use(driver);
+
+                PipelineState pipeline;
+                pipeline.program = mBlur.getProgram();
+                pipeline.rasterState = mBlur.getMaterial()->getRasterState();
+                pipeline.rasterState.depthFunc = RasterState::DepthFunc::G;
+
+                driver.beginRenderPass(blurred.target, blurred.params);
+                driver.draw(pipeline, fullScreenRenderPrimitive);
+                driver.endRenderPass();
+            });
+
+    return blurPass.getData().blurred;
 }
 
 } // namespace filament

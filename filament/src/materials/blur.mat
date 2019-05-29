@@ -1,0 +1,94 @@
+material {
+    name : blur,
+    parameters : [
+        {
+            type : sampler2d,
+            name : ssao,
+        },
+        {
+            type : sampler2d,
+            name : depth,
+            precision: high
+        },
+        {
+            type : float4,
+            name : resolution
+        },
+        {
+            type : int2,
+            name : axis
+        }
+    ],
+    variables : [
+        vertex
+    ],
+    vertexDomain : device,
+    depthWrite : false,
+    depthCulling : true,
+    shadingModel : unlit,
+    variantFilter : [ skinning, shadowReceiver ],
+    culling: none
+}
+
+vertex {
+    void materialVertex(inout MaterialVertexInputs material) {
+        // far-plane in view space
+        vec4 position = getPosition(); // clip-space
+        position.z = 1.0; // far plane
+        material.vertex.xy = (position.xy * 0.5 + 0.5);
+        material.vertex.zw = position.xy;
+    }
+}
+
+fragment {
+    // z-distance (in m) that constitute an edge for bilateral filtering
+    #define EDGE_DISTANCE   0.1
+
+    const int kGaussianCount = 5;
+    const int kRadius = kGaussianCount - 1;
+    const float kGaussianSamples[kGaussianCount] = float[](
+        0.239365, 0.199935, 0.116512, 0.0473701, 0.0134367
+    );
+    const float kGaussianWeightSum = 0.993872;
+
+    highp float linearizeDepth(highp float depth) {
+        highp mat4 projection = getClipFromViewMatrix();
+        highp float z = depth * 2.0 - 1.0; // depth in clip space
+        return -projection[3].z / (z + projection[2].z);
+    }
+
+    ivec2 clampToEdge(const sampler2D s, ivec2 uv, int level) {
+        return clamp(uv, ivec2(0), textureSize(s, level) - ivec2(1));
+    }
+
+    void material(inout MaterialInputs material) {
+        prepareMaterial(material);
+
+        ivec2 uv = ivec2(floor(variable_vertex.xy * materialParams.resolution.xy));
+
+        highp float depth = linearizeDepth(texelFetch(materialParams_depth, clampToEdge(materialParams_depth, uv, 0), 0).r);
+
+        float sum = 0.0;
+        float totalWeight = 0.0;
+        for (int i = -kRadius ; i <= kRadius ; i++) {
+            // sample position
+            ivec2 p = uv + 2 * i * materialParams.axis;
+            p = clampToEdge(materialParams_ssao, p, 0);
+
+            // ambiant occlusion sample
+            float ao = texelFetch(materialParams_ssao, p, 0).r;
+            float weight = kGaussianSamples[abs(i)];
+
+            // bilateral sample
+            highp float sampleDepth = linearizeDepth(texelFetch(materialParams_depth, p, 0).r);
+            float diff = (1.0 / EDGE_DISTANCE) * (sampleDepth - depth);
+            float bilateral = max(0.0, 1.0 - (diff * diff));
+
+            weight *= bilateral;
+            sum += ao * weight;
+            totalWeight += weight;
+        }
+
+        material.baseColor.r = sum * (1.0 / totalWeight);
+    }
+}
