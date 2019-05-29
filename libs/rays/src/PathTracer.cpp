@@ -27,7 +27,9 @@
 #ifdef FILAMENT_HAS_EMBREE
 #include <embree3/rtcore.h>
 #include <embree3/rtcore_ray.h>
+#endif
 
+#ifdef FILAMENT_HAS_DENOISE
 #include <OpenImageDenoise/oidn.h>
 #endif
 
@@ -303,6 +305,7 @@ static void dilateCharts(EmbreeContext* context) {
 }
 
 static void denoise(EmbreeContext* context) {
+#ifdef FILAMENT_HAS_DENOISE
     LinearImage ao = context->config.renderTargets[(int) AMBIENT_OCCLUSION];
     const LinearImage& meshNormals = context->config.renderTargets[(int) MESH_NORMALS];
 
@@ -350,6 +353,7 @@ static void denoise(EmbreeContext* context) {
     oidnReleaseDevice(device);
 
     blitImage(ao, extractChannel(denoiseTarget, 0));
+#endif
 }
 
 static void renderTileFromGbuffer(EmbreeContext* context, PixelRectangle rect) {
