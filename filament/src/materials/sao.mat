@@ -66,22 +66,22 @@ fragment {
 
     const uint kSpiralSampleCount = 7u;
     const vec3 kSpiralSamples[kSpiralSampleCount] = vec3[](
-        vec3( 0.885456, 0.464723, 0.0769231), vec3( 0.120537,  0.992709, 0.230769),
-        vec3(-0.748511, 0.663123, 0.3846150), vec3(-0.970942, -0.239316, 0.538462),
-        vec3(-0.354605,-0.935016, 0.6923080), vec3( 0.568065, -0.822984, 0.846154),
-        vec3(1, 1.74846e-07, 1)
+        vec3(0.966326, 0.257322, 0.0769231), vec3(-0.69718, 0.716896, 0.230769),
+        vec3(0.975223, 0.221226, 0.384615), vec3(0.982771, 0.184826, 0.538462),
+        vec3(-0.613055, 0.79004, 0.692308), vec3(0.997237, 0.0742889, 0.846154),
+        vec3(1, -1.16027e-06, 1)
     );
 
     const uint kTrigNoiseSampleCount = 16u;
     const vec3 kTrigNoiseSamples[kTrigNoiseSampleCount] = vec3[](
-        vec3( 0.0759449,  0.997112, 0.03172020), vec3(-0.538980, -0.842318, 0.0879207),
-        vec3( 0.6720690,  0.740488, 0.01769370), vec3(-0.323441, -0.946248, 0.0930107),
-        vec3( 0.3309690,  0.943642, 0.02617500), vec3( 0.341023, -0.940055, 0.1073850),
-        vec3(-0.1970940,  0.980384, 0.03754340), vec3( 0.106268, -0.994338, 0.1022590),
-        vec3( 0.9553940,  0.295335, 0.00636207), vec3( 0.306817,  0.951768, 0.0267157),
-        vec3(-0.8826750,  0.469983, 0.05628400), vec3( 0.671194, -0.741282, 0.1156150),
-        vec3(-0.9583420,  0.285624, 0.06051990), vec3( 0.954541, -0.298078, 0.1269100),
-        vec3(-0.5869240, -0.809642, 0.08668930), vec3( 0.679755, -0.733440, 0.1158610)
+        vec3(-0.401209, 0.915987, 0.0317202), vec3(0.843133, -0.537704, 0.0879207),
+        vec3(0.457543, 0.889188, 0.0176937), vec3(0.976762, -0.214325, 0.0930107),
+        vec3(-0.0596454, 0.99822, 0.026175), vec3(0.704176, 0.710025, 0.107385),
+        vec3(-0.707961, 0.706251, 0.0375434), vec3(0.909426, 0.415866, 0.102259),
+        vec3(0.92462, 0.38089, 0.00636207), vec3(-0.0938624, 0.995585, 0.0267157),
+        vec3(-0.905196, -0.424993, 0.056284), vec3(0.196104, 0.980583, 0.115615),
+        vec3(-0.752002, -0.659161, 0.0605199), vec3(-0.575921, 0.817505, 0.12691),
+        vec3(0.794595, -0.60714, 0.0866893), vec3(0.178844, 0.983877, 0.115861)
     );
 
     vec2 sq(const vec2 a) {
@@ -161,7 +161,7 @@ fragment {
 
     vec3 tapLocationReference(uint i) {
         const float dalpha = 1.0f / (float(kSpiralSampleCount) - 0.5f);
-        float phi = random(variable_vertex.xy) * 0.5 + 0.5;
+        float phi = random(variable_vertex.xy);
         float radius = (float(i) + phi + 0.5) * dalpha;
         radius *= radius;
         float angle = radius * (7.0 * 6.28318) + phi * 6.28318;
@@ -202,6 +202,20 @@ fragment {
         return occlusion;
     }
 
+    vec4 initQuadGather() {
+        vec4 qv;
+        qv = fract(gl_FragCoord.xy * 0.5 - 0.25).xyxy;
+        qv = qv * vec4(4, 4, -4, -4) + vec4(-1, -1, 1, 1);
+        return qv;
+    }
+
+    vec4 quadGather(in float v, const vec4 qv) {
+        vec4 v4 = vec4(v);
+        v4.y =  v4.x  + dFdx(v4.x)  * qv.z;
+        v4.zw = v4.xy + dFdy(v4.xy) * qv.w;
+        return v4;
+    }
+
     void material(inout MaterialInputs material) {
         prepareMaterial(material);
 
@@ -211,16 +225,6 @@ fragment {
         highp vec3 origin = computeViewSpacePositionFromDepth(variable_vertex.zw, depth);
         highp vec3 normal = computeViewSpaceNormalNotNormalized(origin);
         vec3 noise = getTrigNoise(uv);
-
-        // attempt to reject "bad" normals that were reconstructed at an edge that cause
-        // false occlusion (black spots)
-        // Normal's length should be small before they're normalized, unless they're bad ones.
-        if (dot(normal, normal) >= (sq(origin.z * origin.z * 0.000061))) {
-            // For now we assume no occlusion, which is wrong in some case, but overall seem to
-            // look better.  Maybe those could be handled in the blur pass instead?
-            material.baseColor.r = 1.0;
-            return;
-        }
 
         // Choose the screen-space sample radius
         // proportional to the projected area of the sphere
@@ -242,6 +246,12 @@ fragment {
         float ao = 1.0 - occlusion / float(kSpiralSampleCount);
         // simulate user-controled ao^n with n[1, 2]
         ao = mix(ao, ao * ao, materialParams.power);
+
+        // "free" 2x2 blur using quad message passing -- this works only with "fine" derivatives
+        vec4 qv = initQuadGather();
+        vec4 ao4 = quadGather(ao, qv);
+        ao = 0.25 * (ao4.x + ao4.y + ao4.z + ao4.w);
+
         material.baseColor.r = ao;
     }
 }

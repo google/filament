@@ -124,6 +124,7 @@ set(PRIVATE_HDRS
 
 set(MATERIAL_SRCS
         src/materials/defaultMaterial.mat
+        src/materials/blur.mat
         src/materials/mipmapDepth.mat
         src/materials/skybox.mat
         src/materials/skyboxRGBM.mat

@@ -17,7 +17,7 @@ material {
     depthWrite : true,
     depthCulling : false,
     shadingModel : unlit,
-    variantFilter : [ skinning ],
+    variantFilter : [ skinning, shadowReceiver ],
     culling: none
 }
 

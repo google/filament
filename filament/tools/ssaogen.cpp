@@ -45,7 +45,7 @@ int main(int argc, char** argv) {
         d = normalize(d);
         d = d * r * lerp(0.1f, 1.0f, s * s);
         if (!(i & 1)) {
-            std::cout << "   ";
+            std::cout << "    ";
         }
         std::cout << " vec3(" << d.x << ", " << d.y << ", " << d.z << "),";
         if (i & 1) {
@@ -65,11 +65,11 @@ int main(int argc, char** argv) {
                 random(generator) * 2 - 1,
         };
         d = normalize(d);
-        if ((i & 0x3) == 0) {
-            std::cout << "   ";
+        if ((i & 0x1) == 0) {
+            std::cout << "    ";
         }
         std::cout << " vec3(" << d.x << ", " << d.y << ", " << d.z << "),";
-        if ((i & 0x3) == 0x3) {
+        if ((i & 0x1) == 0x1) {
             std::cout << std::endl;
         }
     }
@@ -118,16 +118,16 @@ int main(int argc, char** argv) {
     const float kSpiralTurns = 7.0;
     const size_t spiralSampleCount = 7;
     std::cout << "const uint kSpiralSampleCount = " << spiralSampleCount << "u;" << std::endl;
-    std::cout << "const vec3 kSipralSamples[kSpiralSampleCount] = vec3[](" << std::endl;
+    std::cout << "const vec3 kSpiralSamples[kSpiralSampleCount] = vec3[](" << std::endl;
     const float dalpha = 1.0f / (spiralSampleCount - 0.5f);
     for (size_t i = 0; i < spiralSampleCount; i++) {
-        float radius = 0.5f * dalpha + i * dalpha;
+        float radius = (i + 0.5f) * dalpha;
         float angle = radius * radius * (2 * M_PI * kSpiralTurns);
-        if ((i & 0x3) == 0) {
-            std::cout << "   ";
+        if ((i & 0x1) == 0) {
+            std::cout << "    ";
         }
         std::cout << " vec3(" << std::cos(angle) << ", " << std::sin(angle) << ", " << radius << "),";
-        if ((i & 0x3) == 0x3) {
+        if ((i & 0x1) == 0x1) {
             std::cout << std::endl;
         }
     }
@@ -144,15 +144,50 @@ int main(int argc, char** argv) {
                 + phi * 2.0 * M_PI * (1.0 + kSpiralTurns * dalpha * dalpha)
                 + phi * 4.0 * M_PI * kSpiralTurns * dalpha * dalpha;
         float3 d = { std::cos(dphi), std::sin(dphi), dr };
-        if ((i & 0x3) == 0) {
-            std::cout << "   ";
+        if ((i & 0x1) == 0) {
+            std::cout << "    ";
         }
         std::cout << " vec3(" << d.x << ", " << d.y << ", " << d.z << "),";
-        if ((i & 0x3) == 0x3) {
+        if ((i & 0x1) == 0x1) {
             std::cout << std::endl;
         }
     }
     std::cout << ");" << std::endl;
+
+
+    float weightSum = 0;
+    size_t gaussianWidth = 9;   // must be odd
+    const size_t gaussianSampleCount = (gaussianWidth + 1) / 2;
+    std::cout << "const int kGaussianCount = " << gaussianSampleCount << ";" << std::endl;
+    std::cout << "const int kRadius = kGaussianCount - 1;" << std::endl;
+    std::cout << "const float kGaussianSamples[kGaussianCount] = float[](" << std::endl;
+    for (size_t i = 0; i < gaussianSampleCount; i++) {
+        float x = i;
+
+        // q: standard deviation
+        // A gaussian filter requires 6q-1 values to keep its gaussian nature
+        // (see en.wikipedia.org/wiki/Gaussian_filter)
+        //
+        // Cut-off frequency definition:
+        //      fc = 1.1774 / (2pi * q)       (half power frequency or 0.707 amplitude)
+
+        // By choosing q = 2.0, we increase bluring, but we're moving away from a "true"
+        // gaussian filter (we'd need 11 taps to retain the gaussianness of the filter).
+        // float q = (gaussianWidth + 1) / 6.0;  // ~1.667 for 9 taps
+        float q = 2.0;
+        float g = (1.0 / (std::sqrt(2.0 * M_PI) * q)) * std::exp(-(x * x) / (2.0 * q * q));
+        weightSum += g * (i == 0 ? 1.0f : 2.0f);
+
+        if ((i & 0x7) == 0) {
+            std::cout << "    ";
+        }
+        std::cout << g << ", ";
+        if ((i & 0x7) == 0x7) {
+            std::cout << std::endl;
+        }
+    }
+    std::cout << ");" << std::endl;
+    std::cout << "const float kGaussianWeightSum = " << weightSum << ";" << std::endl;
 
     return 0;
 }

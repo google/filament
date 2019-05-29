@@ -74,6 +74,14 @@ public:
 private:
     details::FEngine& mEngine;
 
+    FrameGraphResource depthPass(FrameGraph& fg, details::RenderPass& pass,
+            uint32_t width, uint32_t height, View::AmbientOcclusionOptions const& options) noexcept;
+
+    FrameGraphResource mipmapPass(FrameGraph& fg, FrameGraphResource input, size_t level) noexcept;
+
+    FrameGraphResource blurPass(FrameGraph& fg,
+            FrameGraphResource input, FrameGraphResource depth, math::int2 axis) noexcept;
+
     // we need only one of these
     mutable UniformBuffer mPostProcessUb;
     backend::Handle<backend::HwSamplerGroup> mPostProcessSbh;
@@ -106,6 +114,7 @@ private:
 
     PostProcessMaterial mSSAO;
     PostProcessMaterial mMipmapDepth;
+    PostProcessMaterial mBlur;
 
     backend::Handle<backend::HwTexture> mNoSSAOTexture;
 };
