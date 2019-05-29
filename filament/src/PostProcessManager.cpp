@@ -22,6 +22,7 @@
 
 #include "RenderPass.h"
 
+#include "details/Camera.h"
 #include "details/Material.h"
 #include "details/MaterialInstance.h"
 #include "generated/resources/materials.h"
@@ -297,7 +298,8 @@ FrameGraphResource PostProcessManager::dynamicScaling(FrameGraph& fg,
 
 
 FrameGraphResource PostProcessManager::ssao(FrameGraph& fg, RenderPass& pass,
-        filament::Viewport const& svp, View::AmbientOcclusionOptions const& options) noexcept {
+        filament::Viewport const& svp,
+        CameraInfo const& cameraInfo, View::AmbientOcclusionOptions const& options) noexcept {
 
     FEngine* engine = mEngine;
     Handle<HwRenderPrimitive> fullScreenRenderPrimitive = engine->getFullScreenRenderPrimitive();
@@ -399,11 +401,16 @@ FrameGraphResource PostProcessManager::ssao(FrameGraph& fg, RenderPass& pass,
                           .attachments.depth = { data.depth, FrameGraphRenderTarget::Attachments::READ }
                         }, TargetBufferFlags::NONE).color;
             },
-            [this, levelCount, fullScreenRenderPrimitive](FrameGraphPassResources const& resources,
+            [this, levelCount, cameraInfo, fullScreenRenderPrimitive](FrameGraphPassResources const& resources,
                     SSAOPassData const& data, DriverApi& driver) {
                 auto depth = resources.getTexture(data.depth);
                 auto ssao = resources.getRenderTarget(data.ssao);
                 auto const& desc = resources.getDescriptor(data.ssao);
+
+                // estimate of the size in pixel of a 1m tall/wide object viewed from 1m away (i.e. at z=-1)
+                const float projectionScale = std::min(
+                        0.5f * cameraInfo.projection[0].x * desc.width,
+                        0.5f * cameraInfo.projection[1].y * desc.height);
 
                 SamplerParams params;
                 FMaterialInstance* const pInstance = mSSAOMaterialInstance;
@@ -412,7 +419,7 @@ FrameGraphResource PostProcessManager::ssao(FrameGraph& fg, RenderPass& pass,
                         float4{ desc.width, desc.height, 1.0f / desc.width, 1.0f / desc.height });
                 pInstance->setParameter("radius", data.options.radius);
                 pInstance->setParameter("invRadiusSquared", 1.0f / (data.options.radius * data.options.radius));
-                pInstance->setParameter("projectionScaleRadius", 500.0f * data.options.radius);
+                pInstance->setParameter("projectionScaleRadius", projectionScale * data.options.radius);
                 pInstance->setParameter("bias", data.options.bias);
                 pInstance->setParameter("power", data.options.power);
                 pInstance->setParameter("maxLevel", uint32_t(levelCount - 1));
