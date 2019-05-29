@@ -130,6 +130,7 @@ FEngine::FEngine(Backend backend, Platform* platform, void* sharedGLContext) :
         mBackend(backend),
         mPlatform(platform),
         mSharedGLContext(sharedGLContext),
+        mPostProcessManager(*this),
         mEntityManager(EntityManager::get()),
         mRenderableManager(*this),
         mTransformManager(),
@@ -221,7 +222,7 @@ void FEngine::init() {
                     .package(MATERIALS_DEFAULTMATERIAL_DATA, MATERIALS_DEFAULTMATERIAL_SIZE)
                     .build(*const_cast<FEngine*>(this)));
 
-    mPostProcessManager.init(*this);
+    mPostProcessManager.init();
     mLightManager.init(*this);
     mDFG.reset(new DFG(*this));
 }

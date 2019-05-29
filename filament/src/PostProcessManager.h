@@ -39,7 +39,9 @@ struct CameraInfo;
 
 class PostProcessManager {
 public:
-    void init(details::FEngine& engine) noexcept;
+    explicit PostProcessManager(details::FEngine& engine) noexcept;
+
+    void init() noexcept;
     void terminate(backend::DriverApi& driver) noexcept;
     void setSource(uint32_t viewportWidth, uint32_t viewportHeight,
             backend::Handle<backend::HwTexture> color,
@@ -70,20 +72,40 @@ public:
     }
 
 private:
-    details::FEngine* mEngine = nullptr;
+    details::FEngine& mEngine;
 
     // we need only one of these
     mutable UniformBuffer mPostProcessUb;
     backend::Handle<backend::HwSamplerGroup> mPostProcessSbh;
     backend::Handle<backend::HwUniformBuffer> mPostProcessUbh;
 
-    details::FMaterial* mSSAOMaterial = nullptr;
-    details::FMaterialInstance* mSSAOMaterialInstance = nullptr;
-    backend::Handle<backend::HwProgram> mSSAOProgram;
+    class PostProcessMaterial {
+    public:
+        PostProcessMaterial() noexcept = default;
+        PostProcessMaterial(details::FEngine& engine, uint8_t const* data, size_t size) noexcept;
 
-    details::FMaterial* mMipmapDepthMaterial = nullptr;
-    details::FMaterialInstance* mMipmapDepthMaterialInstance = nullptr;
-    backend::Handle<backend::HwProgram> mMipmapDepthProgram;
+        PostProcessMaterial(PostProcessMaterial const& rhs) = delete;
+        PostProcessMaterial& operator=(PostProcessMaterial const& rhs) = delete;
+
+        PostProcessMaterial(PostProcessMaterial&& rhs) noexcept;
+        PostProcessMaterial& operator=(PostProcessMaterial&& rhs) noexcept;
+
+        ~PostProcessMaterial();
+
+        void terminate(details::FEngine& engine) noexcept;
+
+        details::FMaterial* getMaterial() const { return mMaterial; }
+        details::FMaterialInstance* getMaterialInstance() const { return mMaterialInstance; }
+        backend::Handle<backend::HwProgram> const& getProgram() const { return mProgram; }
+
+    private:
+        details::FMaterial* mMaterial = nullptr;
+        details::FMaterialInstance* mMaterialInstance = nullptr;
+        backend::Handle<backend::HwProgram> mProgram;
+    };
+
+    PostProcessMaterial mSSAO;
+    PostProcessMaterial mMipmapDepth;
 
     backend::Handle<backend::HwTexture> mNoSSAOTexture;
 };
