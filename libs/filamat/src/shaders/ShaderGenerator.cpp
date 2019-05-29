@@ -254,16 +254,22 @@ const std::string ShaderGenerator::createFragmentProgram(filament::backend::Shad
         case BlendingMode::TRANSPARENT:
             cg.generateDefine(fs, "BLEND_MODE_TRANSPARENT", true);
             break;
-        case BlendingMode::FADE:
-            // Fade is a special case of transparent
-            cg.generateDefine(fs, "BLEND_MODE_TRANSPARENT", true);
-            cg.generateDefine(fs, "BLEND_MODE_FADE", true);
-            break;
         case BlendingMode::ADD:
             cg.generateDefine(fs, "BLEND_MODE_ADD", true);
             break;
         case BlendingMode::MASKED:
             cg.generateDefine(fs, "BLEND_MODE_MASKED", true);
+            break;
+        case BlendingMode::FADE:
+            // Fade is a special case of transparent
+            cg.generateDefine(fs, "BLEND_MODE_TRANSPARENT", true);
+            cg.generateDefine(fs, "BLEND_MODE_FADE", true);
+            break;
+        case BlendingMode::MULTIPLY:
+            cg.generateDefine(fs, "BLEND_MODE_MULTIPLY", true);
+            break;
+        case BlendingMode::SCREEN:
+            cg.generateDefine(fs, "BLEND_MODE_SCREEN", true);
             break;
     }
     switch (material.postLightingBlendingMode) {
@@ -275,6 +281,12 @@ const std::string ShaderGenerator::createFragmentProgram(filament::backend::Shad
             break;
         case BlendingMode::ADD:
             cg.generateDefine(fs, "POST_LIGHTING_BLEND_MODE_ADD", true);
+            break;
+        case BlendingMode::MULTIPLY:
+            cg.generateDefine(fs, "POST_LIGHTING_BLEND_MODE_MULTIPLY", true);
+            break;
+        case BlendingMode::SCREEN:
+            cg.generateDefine(fs, "POST_LIGHTING_BLEND_MODE_SCREEN", true);
             break;
         default:
             break;

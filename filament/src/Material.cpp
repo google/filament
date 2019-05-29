@@ -185,6 +185,20 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder)
             mRasterState.blendFunctionDstAlpha = BlendFunction::ONE;
             mRasterState.depthWrite = false;
             break;
+        case BlendingMode::MULTIPLY:
+            mRasterState.blendFunctionSrcRGB   = BlendFunction::ZERO;
+            mRasterState.blendFunctionSrcAlpha = BlendFunction::ZERO;
+            mRasterState.blendFunctionDstRGB   = BlendFunction::SRC_COLOR;
+            mRasterState.blendFunctionDstAlpha = BlendFunction::SRC_COLOR;
+            mRasterState.depthWrite = false;
+            break;
+        case BlendingMode::SCREEN:
+            mRasterState.blendFunctionSrcRGB   = BlendFunction::ONE;
+            mRasterState.blendFunctionSrcAlpha = BlendFunction::ONE;
+            mRasterState.blendFunctionDstRGB   = BlendFunction::ONE_MINUS_SRC_COLOR;
+            mRasterState.blendFunctionDstAlpha = BlendFunction::ONE_MINUS_SRC_COLOR;
+            mRasterState.depthWrite = false;
+            break;
     }
 
     bool depthWriteSet;

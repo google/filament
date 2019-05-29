@@ -1303,7 +1303,7 @@ non-shader data.
 
 </p><dl><dt>Type</dt><dd><p>     <code>string</code>
 
-</p></dd><dt>Value</dt><dd><p>      Any of <code>opaque</code>, <code>transparent</code>, <code>fade</code>, <code>add</code>, <code>masked</code>. Defaults to <code>opaque</code>.
+</p></dd><dt>Value</dt><dd><p>      Any of <code>opaque</code>, <code>transparent</code>, <code>fade</code>, <code>add</code>, <code>masked</code>, <code>multiply</code>, <code>screen</code>. Defaults to <code>opaque</code>.
 
 </p></dd><dt>Description</dt><dd><p>      Defines how/if the rendered object is blended with the content of the render target.
       The possible blending modes are:
@@ -1323,6 +1323,12 @@ non-shader data.
 </li>
     <li class="minus"><strong class="asterisk">Add</strong>: blending is enabled. The material&apos;s output is added to the content of the
           render target.
+</li>
+    <li class="minus"><strong class="asterisk">Multiply</strong>: blending is enabled. The material&apos;s output is multiplied with the content of the
+          render target, darkening the content.
+</li>
+    <li class="minus"><strong class="asterisk">Screen</strong>: blending is enabled. Effectively the opposite of the <code>multiply</code>, the content of the
+          render target is brightened.
 </li>
     <li class="minus"><strong class="asterisk">Masked</strong>: blending is disabled. This blending mode enables alpha masking. The alpha channel
           of the material&apos;s output defines whether a fragment is discarded or not. See the maskThreshold
@@ -1351,7 +1357,12 @@ non-shader data.
           the <code>postLightingColor</code>, using Porter-Duff&apos;s <code>source over</code> rule. This blending mode assumes
           pre-multiplied alpha.
 </li>
-    <li class="minus"><strong class="asterisk">Add</strong>: blending is enabled. The material&apos;s computed color is added to <code>postLightingColor</code>.</li></ul>
+    <li class="minus"><strong class="asterisk">Add</strong>: blending is enabled. The material&apos;s computed color is added to <code>postLightingColor</code>.
+</li>
+    <li class="minus"><strong class="asterisk">Multiply</strong>: blending is enabled. The material&apos;s computed color is multiplied with <code>postLightingColor</code>.
+</li>
+    <li class="minus"><strong class="asterisk">Screen</strong>: blending is enabled. The material&apos;s computed color is inverted and multiplied with <code>postLightingColor</code>,
+          and the result is added to the material&apos;s computed color.</li></ul>
 
 <p></p></dd></dl><p></p><pre class="listing tilde"><code><span class="line">material {</span>
 <span class="line">    postLightingBlending : add</span>
