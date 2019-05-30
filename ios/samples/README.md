@@ -50,11 +50,12 @@ When building for the simulator, the sample will then link against the libraries
 ## Xcode
 
 Open up one of the Xcode projects:
-    - hello-ar/hello-ar.xcodeproj
-    - hello-gltf/hello-gltf.xcodeproj
-    - hello-pbr/hello-pbr.xcodeproj
-    - hello-triangle/hello-triangle.xcodeproj
-    - transparent-rendering/transparent-rendering.xcodeproj
+
+- hello-ar/hello-ar.xcodeproj
+- hello-gltf/hello-gltf.xcodeproj
+- hello-pbr/hello-pbr.xcodeproj
+- hello-triangle/hello-triangle.xcodeproj
+- transparent-rendering/transparent-rendering.xcodeproj
 
 Each project contains two schemes, `<sample> Metal` and `<sample> OpenGL`, which use the Metal and
 OpenGL backends respectively. Before building you will need to select one of the schemes, sign in to
