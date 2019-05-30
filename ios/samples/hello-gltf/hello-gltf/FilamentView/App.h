@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef FilamentApp_h
-#define FilamentApp_h
+#ifndef App_h
+#define App_h
 
 #include <filament/Engine.h>
 #include <filament/IndirectLight.h>
@@ -41,14 +41,13 @@ namespace gltfio {
     class FilamentAsset;
 }
 
-class FilamentApp {
+class App {
 public:
 
-    FilamentApp(void* nativeLayer, uint32_t width, uint32_t height,
-                const utils::Path& resourcePath);
-    ~FilamentApp();
-    FilamentApp(const FilamentApp&) = delete;
-    FilamentApp& operator=(const FilamentApp&) = delete;
+    App(void* nativeLayer, uint32_t width, uint32_t height, const utils::Path& resourcePath);
+    ~App();
+    App(const App&) = delete;
+    App& operator=(const App&) = delete;
 
     void render();
     void pan(float deltaX, float deltaY);
@@ -91,4 +90,4 @@ private:
 
 };
 
-#endif /* FilamentApp_h */
+#endif /* App_h */

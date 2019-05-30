@@ -16,7 +16,7 @@
 
 #import "FilamentViewController.h"
 
-#import "FilamentApp.h"
+#import "App.h"
 
 #define METAL_AVAILABLE __has_include(<QuartzCore/CAMetalLayer.h>)
 
@@ -25,7 +25,7 @@
 #endif
 
 @interface FilamentViewController () {
-    FilamentApp* app;
+    App* app;
     CADisplayLink* displayLink;
     CGPoint previousLocation;
     UIPanGestureRecognizer* panRecognizer;
@@ -41,7 +41,7 @@
 
     CGRect nativeBounds = [[UIScreen mainScreen] nativeBounds];
     NSString* resourcePath = [NSBundle mainBundle].bundlePath;
-    app = new FilamentApp((__bridge void*) self.view.layer, nativeBounds.size.width,
+    app = new App((__bridge void*) self.view.layer, nativeBounds.size.width,
             nativeBounds.size.height, utils::Path([resourcePath cStringUsingEncoding:NSUTF8StringEncoding]));
 
     // Call render 60 times a second.
