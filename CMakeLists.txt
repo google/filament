@@ -150,6 +150,8 @@ if (LINUX)
     # To distribute our binaries, we must remove the dependency on libc++ and libgcc.
     if (CMAKE_BUILD_TYPE STREQUAL "Release")
         link_libraries("-static-libgcc -static-libstdc++")
+        # Some Linux distributions require explicit static linking against libc++:
+        link_libraries(libc++.a)
     endif()
 else()
     if (FILAMENT_REQUIRES_CXXABI)
