@@ -109,6 +109,8 @@ public class MaterialBuilder {
         MASKED,                 // material is masked (i.e. alpha tested)
         FADE                    // material is transparent and color is alpha-pre-multiplied,
                                 // affects specular lighting
+        MULTIPLY                // material darkens what's behind it
+        SCREN                   // material brightens what's behind it
     }
 
     public enum VertexDomain {

@@ -6,6 +6,8 @@ A new header is inserted each time a *tag* is created.
 
 # Release notes
 
+- New blending modes: `multiply` and `screen`
+- Fixed an issue when sorting blended objects with different blending modes
 - The material property `curvatureToRoughness` has been replaced with `specularAntiAliasing`.
   This new specular anti-aliasing solution offers more control via two new properties:
   `specularAntiAliasingVariance` and `specularAntiAliasingThreshold`. They can also be set on
