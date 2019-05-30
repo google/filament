@@ -241,10 +241,10 @@ If you use CMake directly instead of the build script, pass `-DENABLE_JAVA=OFF` 
 
 Make sure you've installed the following dependencies:
 
-- `clang-7`
+- `clang-7` or higher
 - `libglu1-mesa-dev`
-- `libc++-7-dev` (`libcxx-devel` and `libcxx-static` on Fedora)
-- `libc++abi-7-dev` (`libcxxabi-static` on Fedora)
+- `libc++-7-dev` (`libcxx-devel` and `libcxx-static` on Fedora) or higher
+- `libc++abi-7-dev` (`libcxxabi-static` on Fedora) or higher
 - `ninja-build`
 - `libxi-dev`
 
@@ -258,13 +258,6 @@ follows, with some caveats that are explained further down.
 $ mkdir out/cmake-release
 $ cd out/cmake-release
 $ cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=../release/filament ../..
-```
-
-If you experience link errors you must ensure that you are using `libc++abi` by passing this
-extra parameter to `cmake`:
-
-```
--DFILAMENT_REQUIRES_CXXABI=true
 ```
 
 Your Linux distribution might default to `gcc` instead of `clang`, if that's the case invoke

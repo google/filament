@@ -93,9 +93,6 @@ if [[ "$KOKORO_BUILD_ID" ]]; then
 
     export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
     export LIBRARY_PATH=/usr/local/lib:$LIBRARY_PATH
-
-    # set to true to link against libc++abi
-    export FILAMENT_REQUIRES_CXXABI=false
 fi
 
 wget -q https://github.com/ninja-build/ninja/releases/download/v$NINJA_VERSION/ninja-linux.zip
