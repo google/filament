@@ -6,6 +6,10 @@ void blendPostLightingColor(const MaterialInputs material, inout vec4 color) {
     color = material.postLightingColor + color * (1.0 - material.postLightingColor.a);
 #elif defined(POST_LIGHTING_BLEND_MODE_ADD)
     color += material.postLightingColor;
+#elif defined(POST_LIGHTING_BLEND_MODE_MULTIPLY)
+    color *= material.postLightingColor;
+#elif defined(POST_LIGHTING_BLEND_MODE_SCREEN)
+    color += material.postLightingColor * (1.0 - color);
 #endif
 }
 #endif

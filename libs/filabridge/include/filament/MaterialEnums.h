@@ -63,7 +63,11 @@ enum class BlendingMode : uint8_t {
      * material is transparent and color is alpha-pre-multiplied, affects specular lighting
      * when adding more entries, change the size of FRenderer::CommandKey::blending
      */
-    FADE
+    FADE,
+    //! material darkens what's behind it
+    MULTIPLY,
+    //! material brightens what's behind it
+    SCREEN,
 };
 
 /**

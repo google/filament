@@ -107,8 +107,10 @@ public class MaterialBuilder {
                                 // affects diffuse lighting only
         ADD,                    // material is additive (e.g.: hologram)
         MASKED,                 // material is masked (i.e. alpha tested)
-        FADE                    // material is transparent and color is alpha-pre-multiplied,
+        FADE,                   // material is transparent and color is alpha-pre-multiplied,
                                 // affects specular lighting
+        MULTIPLY,               // material darkens what's behind it
+        SCREN                   // material brightens what's behind it
     }
 
     public enum VertexDomain {

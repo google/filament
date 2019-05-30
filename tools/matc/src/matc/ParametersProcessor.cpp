@@ -283,6 +283,8 @@ static bool processBlending(MaterialBuilder& builder, const JsonishValue& value)
         { "opaque", MaterialBuilder::BlendingMode::OPAQUE },
         { "transparent", MaterialBuilder::BlendingMode::TRANSPARENT },
         { "fade", MaterialBuilder::BlendingMode::FADE },
+        { "multiply", MaterialBuilder::BlendingMode::MULTIPLY },
+        { "screen", MaterialBuilder::BlendingMode::SCREEN },
     };
     auto jsonString = value.toJsonString();
     if (!isStringValidEnum(strToEnum, jsonString->getString())) {
@@ -298,6 +300,8 @@ static bool processPostLightingBlending(MaterialBuilder& builder, const JsonishV
         { "add", MaterialBuilder::BlendingMode::ADD },
         { "opaque", MaterialBuilder::BlendingMode::OPAQUE },
         { "transparent", MaterialBuilder::BlendingMode::TRANSPARENT },
+        { "multiply", MaterialBuilder::BlendingMode::MULTIPLY },
+        { "screen", MaterialBuilder::BlendingMode::SCREEN },
     };
     auto jsonString = value.toJsonString();
     if (!isStringValidEnum(strToEnum, jsonString->getString())) {

@@ -252,9 +252,11 @@ const char* toString(BlendingMode blendingMode) {
     switch (blendingMode) {
         case BlendingMode::OPAQUE: return "opaque";
         case BlendingMode::TRANSPARENT: return "transparent";
-        case BlendingMode::FADE: return "fade";
         case BlendingMode::ADD: return "add";
         case BlendingMode::MASKED: return "masked";
+        case BlendingMode::FADE: return "fade";
+        case BlendingMode::MULTIPLY: return "multiply";
+        case BlendingMode::SCREEN: return "screen";
     }
 }
 
