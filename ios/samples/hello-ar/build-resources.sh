@@ -50,13 +50,13 @@ mkdir -p "${PROJECT_DIR}/generated/"
     --api all \
     --platform mobile \
     -o "${PROJECT_DIR}/generated/clear_coat.filamat" \
-    "${PROJECT_DIR}/hello-ar/Materials/clear_coat.mat"
+    "${PROJECT_DIR}/Materials/clear_coat.mat"
 
 "${matc_path}" \
     --api all \
     --platform mobile \
     -o "${PROJECT_DIR}/generated/camera_feed.filamat" \
-    "${PROJECT_DIR}/hello-ar/Materials/camera_feed.mat"
+    "${PROJECT_DIR}/Materials/camera_feed.mat"
 
 # The resgen tool generates an assembly file, resources.apple.S that gets compiled and linked
 # into the final binary. It contains all the resources consumed by the app.

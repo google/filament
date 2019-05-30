@@ -10,7 +10,7 @@ mkdir -p "${PROJECT_DIR}/generated/"
     --api all \
     -f header \
     -o "${PROJECT_DIR}/generated/bakedColor.inc" \
-    "${PROJECT_DIR}/hello-triangle/bakedColor.mat"
+    "${PROJECT_DIR}/Materials/bakedColor.mat"
 
 # FilamentView.mm includes bakedColor.filamat, so touch it to force Xcode to
 # recompile it.

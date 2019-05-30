@@ -4,7 +4,6 @@ options:
 include: ../app-template.yml
 targets:
     hello-ar:
-        sources: hello-ar/
         templates:
             - FilamentApp
         scheme:

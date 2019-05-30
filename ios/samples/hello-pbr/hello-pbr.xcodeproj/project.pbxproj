@@ -10,7 +10,6 @@
 		32072E0FA93A0A4EEB06D632927C6438 /* ViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = DACB12BFCAAA3222E7D1E9BB80475894 /* ViewController.m */; };
 		3C183B77078317A8605B572491C58C3A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 1CAE8879115ECEC53FA0F052F48A970B /* Assets.xcassets */; };
 		5A501B519E880E71BFB22EEA3EA1809F /* Resources.S in Sources */ = {isa = PBXBuildFile; fileRef = AC02B019CB36611A7BCE5773FB111E50 /* Resources.S */; };
-		6AF26A82182F32DB06D1FB51AB97BF1B /* clear_coat.mat in Resources */ = {isa = PBXBuildFile; fileRef = 334B2796A65BE4E8666FCB5070CE0432 /* clear_coat.mat */; };
 		76A422929373887929994B3EE3063683 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 45C71AD43B55E58E0724364747DDEF25 /* LaunchScreen.storyboard */; };
 		92CA86A4C46EB5F4A45972614C19AC31 /* CameraManipulator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = D57C53C47A84D05D23B652786E68F509 /* CameraManipulator.cpp */; };
 		9FD1994944C09B24149B78889931A474 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 7FE9A0CE98FB055F3478E1CCBC21EE6D /* AppDelegate.m */; };
@@ -23,7 +22,6 @@
 /* Begin PBXFileReference section */
 		17ADA23252FA61486B05D5BA85F69741 /* ViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ViewController.h; sourceTree = "<group>"; };
 		1CAE8879115ECEC53FA0F052F48A970B /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		334B2796A65BE4E8666FCB5070CE0432 /* clear_coat.mat */ = {isa = PBXFileReference; path = clear_coat.mat; sourceTree = "<group>"; };
 		37CB2FCA6711AE57BD4B39F754C8F69D /* hello-pbr.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = "hello-pbr.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		42B9073CE652C53E7F0A460285BB977D /* FilamentView.mm */ = {isa = PBXFileReference; path = FilamentView.mm; sourceTree = "<group>"; };
 		4618C7511DE661F89B1147340F67BE11 /* FilamentView.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = FilamentView.h; sourceTree = "<group>"; };
@@ -32,6 +30,7 @@
 		A17327655C031D575A522AD1F9C196E8 /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
 		A3680F594905261290AEDB79A15F7AB2 /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
 		AC02B019CB36611A7BCE5773FB111E50 /* Resources.S */ = {isa = PBXFileReference; path = Resources.S; sourceTree = "<group>"; };
+		ADF252527D202BB9D53E29C86DEEB0F3 /* clear_coat.mat */ = {isa = PBXFileReference; path = clear_coat.mat; sourceTree = "<group>"; };
 		B35CDFC5B6E5142B5E57BE33045B4415 /* FilamentApp.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = FilamentApp.h; sourceTree = "<group>"; };
 		D57C53C47A84D05D23B652786E68F509 /* CameraManipulator.cpp */ = {isa = PBXFileReference; path = CameraManipulator.cpp; sourceTree = "<group>"; };
 		DACB12BFCAAA3222E7D1E9BB80475894 /* ViewController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = ViewController.m; sourceTree = "<group>"; };
@@ -50,7 +49,6 @@
 				1CAE8879115ECEC53FA0F052F48A970B /* Assets.xcassets */,
 				D57C53C47A84D05D23B652786E68F509 /* CameraManipulator.cpp */,
 				E176563EAAB0B36EFA7D67FD93FFC7A9 /* CameraManipulator.h */,
-				334B2796A65BE4E8666FCB5070CE0432 /* clear_coat.mat */,
 				F01D34676A81F3F367B9F6AFFA54E12A /* FilamentApp.cpp */,
 				B35CDFC5B6E5142B5E57BE33045B4415 /* FilamentApp.h */,
 				4618C7511DE661F89B1147340F67BE11 /* FilamentView.h */,
@@ -70,6 +68,7 @@
 			isa = PBXGroup;
 			children = (
 				4A44033C70281A0FC58A64FE24F43E4F /* hello-pbr */,
+				D92946BE29B34E951A7E0714F8414C19 /* Materials */,
 				A90A4582D4144797492F5C0806B8A1F5 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -80,6 +79,14 @@
 				37CB2FCA6711AE57BD4B39F754C8F69D /* hello-pbr.app */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		D92946BE29B34E951A7E0714F8414C19 /* Materials */ = {
+			isa = PBXGroup;
+			children = (
+				ADF252527D202BB9D53E29C86DEEB0F3 /* clear_coat.mat */,
+			);
+			path = Materials;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -134,7 +141,6 @@
 				3C183B77078317A8605B572491C58C3A /* Assets.xcassets in Resources */,
 				76A422929373887929994B3EE3063683 /* LaunchScreen.storyboard in Resources */,
 				D8BDF196DEE56F50D2D15167B4CCC77F /* Main.storyboard in Resources */,
-				6AF26A82182F32DB06D1FB51AB97BF1B /* clear_coat.mat in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -157,7 +163,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "#/usr/bin/env/bash\n\nset -e\n\n# Compile resources.\n\n# The hello-pbr app requires four resources:\n# 1. The material sphere mesh\n# 2. The Filament material definition\n# 3. The IBL image\n# 4. The skybox image\n# These will be compiled into the final binary via the resgen tool.\n\nfilamesh_path=\"../../../out/release/filament/bin/filamesh\"\nmatc_path=\"../../../out/release/filament/bin/matc\"\nresgen_path=\"../../../out/release/filament/bin/resgen\"\n\n# Ensure that the required tools are present in the out/ directory.\n# These can be built by running ./build.sh -p desktop -i release at Filament's root directory.\n\nif [[ ! -e \"${filamesh_path}\" ]]; then\n  echo \"No filamesh binary could be found in ../../../out/release/filament/bin/.\"\n  echo \"Ensure Filament has been built/installed before building this app.\"\n  exit 1\nfi\n\nif [[ ! -e \"${matc_path}\" ]]; then\n  echo \"No matc binary could be found in ../../../out/release/filament/bin/.\"\n  echo \"Ensure Filament has been built/installed before building this app.\"\n  exit 1\nfi\n\nif [[ ! -e \"${resgen_path}\" ]]; then\n  echo \"No resgen binary could be found in ../../../out/release/filament/bin/.\"\n  echo \"Ensure Filament has been built/installed before building this app.\"\n  exit 1\nfi\n\n# The filamesh tool converts the .obj file into a Filament-specific filamesh file that has been\n# optimized for loading into Filament.\nmkdir -p \"${PROJECT_DIR}/generated/\"\n\"${filamesh_path}\" \\\n    \"${PROJECT_DIR}/../../../assets/models/material_sphere/material_sphere.obj\" \\\n    \"${PROJECT_DIR}/generated/material_sphere.filamesh\"\n\n# The matc tool compiles the clear_coat.mat material into a Filament material BLOB.\n\"${matc_path}\" \\\n    --api all \\\n    --platform mobile \\\n    -o \"${PROJECT_DIR}/generated/clear_coat.filamat\" \\\n    \"${PROJECT_DIR}/hello-pbr/clear_coat.mat\"\n\n# The resgen tool generates an assembly file, resources.apple.S that gets compiled and linked\n# into the final binary. It contains all the resources consumed by the app.\n\"${resgen_path}\" \\\n    --deploy=\"${PROJECT_DIR}/generated\" \\\n    \"${PROJECT_DIR}/generated/material_sphere.filamesh\" \\\n    \"${PROJECT_DIR}/generated/clear_coat.filamat\" \\\n    \"${PROJECT_DIR}/../../../samples/envs/venetian_crossroads/venetian_crossroads_ibl.ktx\" \\\n    \"${PROJECT_DIR}/../../../samples/envs/venetian_crossroads/venetian_crossroads_skybox.ktx\"\n\n# FilamentApp.cpp and Resources.S include files generated by resgen.\n# Touch them to force Xcode to recompile.\ntouch \"${PROJECT_DIR}/hello-pbr/FilamentApp.cpp\"\ntouch \"${PROJECT_DIR}/hello-pbr/Resources.S\"\n";
+			shellScript = "#/usr/bin/env/bash\n\nset -e\n\n# Compile resources.\n\n# The hello-pbr app requires four resources:\n# 1. The material sphere mesh\n# 2. The Filament material definition\n# 3. The IBL image\n# 4. The skybox image\n# These will be compiled into the final binary via the resgen tool.\n\nfilamesh_path=\"../../../out/release/filament/bin/filamesh\"\nmatc_path=\"../../../out/release/filament/bin/matc\"\nresgen_path=\"../../../out/release/filament/bin/resgen\"\n\n# Ensure that the required tools are present in the out/ directory.\n# These can be built by running ./build.sh -p desktop -i release at Filament's root directory.\n\nif [[ ! -e \"${filamesh_path}\" ]]; then\n  echo \"No filamesh binary could be found in ../../../out/release/filament/bin/.\"\n  echo \"Ensure Filament has been built/installed before building this app.\"\n  exit 1\nfi\n\nif [[ ! -e \"${matc_path}\" ]]; then\n  echo \"No matc binary could be found in ../../../out/release/filament/bin/.\"\n  echo \"Ensure Filament has been built/installed before building this app.\"\n  exit 1\nfi\n\nif [[ ! -e \"${resgen_path}\" ]]; then\n  echo \"No resgen binary could be found in ../../../out/release/filament/bin/.\"\n  echo \"Ensure Filament has been built/installed before building this app.\"\n  exit 1\nfi\n\n# The filamesh tool converts the .obj file into a Filament-specific filamesh file that has been\n# optimized for loading into Filament.\nmkdir -p \"${PROJECT_DIR}/generated/\"\n\"${filamesh_path}\" \\\n    \"${PROJECT_DIR}/../../../assets/models/material_sphere/material_sphere.obj\" \\\n    \"${PROJECT_DIR}/generated/material_sphere.filamesh\"\n\n# The matc tool compiles the clear_coat.mat material into a Filament material BLOB.\n\"${matc_path}\" \\\n    --api all \\\n    --platform mobile \\\n    -o \"${PROJECT_DIR}/generated/clear_coat.filamat\" \\\n    \"${PROJECT_DIR}/Materials/clear_coat.mat\"\n\n# The resgen tool generates an assembly file, resources.apple.S that gets compiled and linked\n# into the final binary. It contains all the resources consumed by the app.\n\"${resgen_path}\" \\\n    --deploy=\"${PROJECT_DIR}/generated\" \\\n    \"${PROJECT_DIR}/generated/material_sphere.filamesh\" \\\n    \"${PROJECT_DIR}/generated/clear_coat.filamat\" \\\n    \"${PROJECT_DIR}/../../../samples/envs/venetian_crossroads/venetian_crossroads_ibl.ktx\" \\\n    \"${PROJECT_DIR}/../../../samples/envs/venetian_crossroads/venetian_crossroads_skybox.ktx\"\n\n# FilamentApp.cpp and Resources.S include files generated by resgen.\n# Touch them to force Xcode to recompile.\ntouch \"${PROJECT_DIR}/hello-pbr/FilamentApp.cpp\"\ntouch \"${PROJECT_DIR}/hello-pbr/Resources.S\"\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 

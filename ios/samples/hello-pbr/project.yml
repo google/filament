@@ -4,7 +4,6 @@ options:
 include: ../app-template.yml
 targets:
     hello-pbr:
-        sources: hello-pbr/
         templates:
             - FilamentApp
         settings:

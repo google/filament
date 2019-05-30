@@ -9,7 +9,6 @@
 /* Begin PBXBuildFile section */
 		25391681B7E1FAD8C35259C2FB43AA0C /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 46A2FAD3D476FDADF45F70F88D39B377 /* LaunchScreen.storyboard */; };
 		4831F43B77D0E8C437B64E0CD223DD61 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 45FE9476D47ECFFEA65D7146A57C5807 /* AppDelegate.m */; };
-		9078116F98F9162EEF6347D5290B48D7 /* bakedColor.mat in Resources */ = {isa = PBXBuildFile; fileRef = 6EF92F8A748584AC50D8BE1AFE8BF8FD /* bakedColor.mat */; };
 		CD70F3CC948993A3E182EEAE716413C0 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = E56C70616FF30C50DFA8238B177D825B /* main.m */; };
 		E00008AE8D480B194E25A0D98AB97F2D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 524293A0A8CDE9047347EF48D0651A12 /* Assets.xcassets */; };
 		E69F0688FDC3C597E6A02DC66C949C82 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = DDE4A219AEB5B4507F51B8735787157D /* Main.storyboard */; };
@@ -22,9 +21,9 @@
 		2620C967534D81CFFAB5D3FFC47A66A3 /* ViewController.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = ViewController.m; sourceTree = "<group>"; };
 		350DC65C7EE8D98D8FE181DC993DCB2C /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/Main.storyboard; sourceTree = "<group>"; };
 		3BB2247EC7FE4EFB2C3ED10A5046333B /* hello-triangle.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = "hello-triangle.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		41033B581E89DF4B33A2EB534A7020C3 /* bakedColor.mat */ = {isa = PBXFileReference; path = bakedColor.mat; sourceTree = "<group>"; };
 		45FE9476D47ECFFEA65D7146A57C5807 /* AppDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AppDelegate.m; sourceTree = "<group>"; };
 		524293A0A8CDE9047347EF48D0651A12 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		6EF92F8A748584AC50D8BE1AFE8BF8FD /* bakedColor.mat */ = {isa = PBXFileReference; path = bakedColor.mat; sourceTree = "<group>"; };
 		761A2C7D6295697614AD3434356B8E9E /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		C16E9A84F33BDFAEDC1E483774DF336C /* AppDelegate.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AppDelegate.h; sourceTree = "<group>"; };
 		C311F8DEBEFEB185F0A7E4CCC6733265 /* ViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ViewController.h; sourceTree = "<group>"; };
@@ -46,8 +45,17 @@
 			isa = PBXGroup;
 			children = (
 				C54ABC8D31D1863EF16253A04649C424 /* hello-triangle */,
+				8F55D652979868A470D724FA650F6B6B /* Materials */,
 				39FD47E0213E1FFE59609A06BA1585EA /* Products */,
 			);
+			sourceTree = "<group>";
+		};
+		8F55D652979868A470D724FA650F6B6B /* Materials */ = {
+			isa = PBXGroup;
+			children = (
+				41033B581E89DF4B33A2EB534A7020C3 /* bakedColor.mat */,
+			);
+			path = Materials;
 			sourceTree = "<group>";
 		};
 		C54ABC8D31D1863EF16253A04649C424 /* hello-triangle */ = {
@@ -56,7 +64,6 @@
 				C16E9A84F33BDFAEDC1E483774DF336C /* AppDelegate.h */,
 				45FE9476D47ECFFEA65D7146A57C5807 /* AppDelegate.m */,
 				524293A0A8CDE9047347EF48D0651A12 /* Assets.xcassets */,
-				6EF92F8A748584AC50D8BE1AFE8BF8FD /* bakedColor.mat */,
 				CDBB6BE341D1C708FCB687507015103B /* FilamentView.h */,
 				0CDCD26337640C57D07E41ED006B9C6D /* FilamentView.mm */,
 				761A2C7D6295697614AD3434356B8E9E /* Info.plist */,
@@ -121,7 +128,6 @@
 				E00008AE8D480B194E25A0D98AB97F2D /* Assets.xcassets in Resources */,
 				25391681B7E1FAD8C35259C2FB43AA0C /* LaunchScreen.storyboard in Resources */,
 				E69F0688FDC3C597E6A02DC66C949C82 /* Main.storyboard in Resources */,
-				9078116F98F9162EEF6347D5290B48D7 /* bakedColor.mat in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -144,7 +150,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "# Compile bakedColor material.\nmatc_path=\"../../../out/release/filament/bin/matc\"\nif [[ ! -e \"${matc_path}\" ]]; then\n  echo \"No matc binary could be found in ../../../out/release/filament/bin/.\"\n  echo \"Ensure Filament has been built/installed before building this app.\"\n  exit 1\nfi\nmkdir -p \"${PROJECT_DIR}/generated/\"\n\"${matc_path}\" \\\n    --api all \\\n    -f header \\\n    -o \"${PROJECT_DIR}/generated/bakedColor.inc\" \\\n    \"${PROJECT_DIR}/hello-triangle/bakedColor.mat\"\n\n# FilamentView.mm includes bakedColor.filamat, so touch it to force Xcode to\n# recompile it.\ntouch \"${PROJECT_DIR}/hello-triangle/FilamentView.mm\"\n";
+			shellScript = "# Compile bakedColor material.\nmatc_path=\"../../../out/release/filament/bin/matc\"\nif [[ ! -e \"${matc_path}\" ]]; then\n  echo \"No matc binary could be found in ../../../out/release/filament/bin/.\"\n  echo \"Ensure Filament has been built/installed before building this app.\"\n  exit 1\nfi\nmkdir -p \"${PROJECT_DIR}/generated/\"\n\"${matc_path}\" \\\n    --api all \\\n    -f header \\\n    -o \"${PROJECT_DIR}/generated/bakedColor.inc\" \\\n    \"${PROJECT_DIR}/Materials/bakedColor.mat\"\n\n# FilamentView.mm includes bakedColor.filamat, so touch it to force Xcode to\n# recompile it.\ntouch \"${PROJECT_DIR}/hello-triangle/FilamentView.mm\"\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
