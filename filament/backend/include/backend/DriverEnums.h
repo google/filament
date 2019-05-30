@@ -679,10 +679,11 @@ struct PolygonOffset {
 };
 
 struct RasterState {
-    using CullingMode = CullingMode;
-    using DepthFunc = SamplerCompareFunc;
-    using BlendEquation = BlendEquation;
-    using BlendFunction = BlendFunction;
+
+    using CullingMode = filament::backend::CullingMode;
+    using DepthFunc = filament::backend::SamplerCompareFunc;
+    using BlendEquation = filament::backend::BlendEquation;
+    using BlendFunction = filament::backend::BlendFunction;
 
     RasterState() noexcept { // NOLINT(cppcoreguidelines-pro-type-member-init)
         static_assert(sizeof(RasterState) == sizeof(uint32_t),
