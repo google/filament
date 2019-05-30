@@ -105,8 +105,7 @@ filament::MaterialInstance* MeshReader::MaterialRegistry::getMaterialInstance(
 void MeshReader::MaterialRegistry::registerMaterialInstance(const utils::CString& name,
         filament::MaterialInstance* materialInstance) {
     // Add the material to our map
-    //mImpl->materialMap[name] = materialInstance;
-    mImpl->materialMap.insert({name, materialInstance});
+    mImpl->materialMap[name] = materialInstance;
 }
 
 void MeshReader::MaterialRegistry::unregisterMaterialInstance(const utils::CString& name) {
