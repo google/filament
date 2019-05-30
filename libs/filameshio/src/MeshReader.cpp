@@ -58,26 +58,35 @@ struct MeshReader::MaterialRegistry::MaterialRegistryImpl {
 
 // Create the implementation
 MeshReader::MaterialRegistry::MaterialRegistry()
-    : mImpl(new MaterialRegistryImpl) {
+    : mImpl(new MaterialRegistryImpl()) {
 }
+
 // Deep copy the implementation
 MeshReader::MaterialRegistry::MaterialRegistry(const MaterialRegistry& rhs)
     : mImpl(new MaterialRegistryImpl(*rhs.mImpl)) {
 }
+
 MeshReader::MaterialRegistry& MeshReader::MaterialRegistry::operator=(const MaterialRegistry& rhs) {
     *mImpl = *rhs.mImpl;
     return *this;
 }
 // Delete the implementation
 MeshReader::MaterialRegistry::~MaterialRegistry() {
-    delete mImpl;
+    if (mImpl != nullptr) {
+        delete mImpl;
+    }
 }
 
 // Default move construction
-MeshReader::MaterialRegistry::MaterialRegistry(MaterialRegistry&&) = default;
+MeshReader::MaterialRegistry::MaterialRegistry(MaterialRegistry&& rhs) 
+    : mImpl(nullptr) {
+    std::swap(mImpl, rhs.mImpl);
+}
 
 MeshReader::MaterialRegistry& MeshReader::MaterialRegistry::operator=(MaterialRegistry&& rhs) {
-    *mImpl = std::move(*rhs.mImpl);
+    delete mImpl;
+    mImpl = nullptr;
+    std::swap(mImpl, rhs.mImpl);
     return *this;
 }
 
@@ -96,7 +105,8 @@ filament::MaterialInstance* MeshReader::MaterialRegistry::getMaterialInstance(
 void MeshReader::MaterialRegistry::registerMaterialInstance(const utils::CString& name,
         filament::MaterialInstance* materialInstance) {
     // Add the material to our map
-    mImpl->materialMap[name] = materialInstance;
+    //mImpl->materialMap[name] = materialInstance;
+    mImpl->materialMap.insert({name, materialInstance});
 }
 
 void MeshReader::MaterialRegistry::unregisterMaterialInstance(const utils::CString& name) {
