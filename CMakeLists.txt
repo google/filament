@@ -326,7 +326,9 @@ function(get_resgen_vars ARCHIVE_DIR ARCHIVE_NAME)
         ${ARCHIVE_DIR}/${ARCHIVE_NAME}.apple.S
         ${ARCHIVE_DIR}/${ARCHIVE_NAME}.h
     )
-    set(ASM_ARCH_FLAG "-arch ${DIST_ARCH}")
+    if (IOS)
+        set(ASM_ARCH_FLAG "-arch ${DIST_ARCH}")
+    endif()
     if (APPLE)
         set(ASM_SUFFIX ".apple")
     endif()
