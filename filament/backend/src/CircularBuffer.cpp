@@ -36,28 +36,14 @@ namespace filament {
 namespace backend {
 
 CircularBuffer::CircularBuffer(size_t size) {
-#if HAS_MMAP
     mData = alloc(size);
-#else
-    mData = malloc(2 * size);
-    mUsesAshmem = -1; // piggybag on soft circular buffer for circulatize()
-#endif
     mSize = size;
     mTail = mData;
     mHead = mData;
 }
 
 CircularBuffer::~CircularBuffer() noexcept {
-#if HAS_MMAP
-    if (mData) {
-        munmap(mData, mSize * 2 + BLOCK_SIZE);
-        if (mUsesAshmem >= 0) {
-            close(mUsesAshmem);
-        }
-    }
-#else
-    free(mData);
-#endif
+    dealloc();
 }
 
 // If the system support mmap(), use it for creating a "hard circular buffer" where two virtual
@@ -70,9 +56,7 @@ CircularBuffer::~CircularBuffer() noexcept {
 // to each others and a special case in circularize()
 
 void* CircularBuffer::alloc(size_t size) noexcept {
-#if !HAS_MMAP
-    return nullptr;
-#else
+#if HAS_MMAP
     void* data = nullptr;
     void* vaddr = MAP_FAILED;
     void* vaddr_shadow = MAP_FAILED;
@@ -120,19 +104,38 @@ void* CircularBuffer::alloc(size_t size) noexcept {
 
         data = mmap(nullptr, size * 2 + BLOCK_SIZE, PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
 
-        ASSERT_POSTCONDITION(mData,
+        ASSERT_POSTCONDITION(data,
                 "couldn't allocate %u KiB of memory for the command buffer",
                 (size * 2 / 1024));
 
-        slog.d << "WARNING: Using soft CircularBuffer (" << (size*2 / 1024) << " KiB)" << io::endl;
+        slog.d << "WARNING: Using soft CircularBuffer (" << (size * 2 / 1024) << " KiB)"
+               << io::endl;
 
         // guard page at the end
-        void* guard = (void*)(uintptr_t(mData) + size * 2);
+        void* guard = (void*)(uintptr_t(data) + size * 2);
         mprotect(guard, BLOCK_SIZE, PROT_NONE);
     }
     return data;
+#else
+    return ::malloc(2 * size);
 #endif
 }
+
+void CircularBuffer::dealloc() noexcept {
+#if HAS_MMAP
+    if (mData) {
+        munmap(mData, mSize * 2 + BLOCK_SIZE);
+        if (mUsesAshmem >= 0) {
+            close(mUsesAshmem);
+            mUsesAshmem = -1;
+        }
+    }
+#else
+    ::free(mData);
+#endif
+    mData = nullptr;
+}
+
 
 void CircularBuffer::circularize() noexcept {
     if (mUsesAshmem > 0) {

@@ -69,6 +69,7 @@ public:
 
 private:
     void* alloc(size_t size) noexcept;
+    void dealloc() noexcept;
 
     // pointer to the beginning of the circular buffer (constant)
     void* mData = nullptr;
