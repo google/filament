@@ -72,9 +72,7 @@ MeshReader::MaterialRegistry& MeshReader::MaterialRegistry::operator=(const Mate
 }
 // Delete the implementation
 MeshReader::MaterialRegistry::~MaterialRegistry() {
-    if (mImpl != nullptr) {
-        delete mImpl;
-    }
+    delete mImpl;
 }
 
 // Default move construction
