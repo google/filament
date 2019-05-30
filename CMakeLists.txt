@@ -143,18 +143,9 @@ endif()
 
 if (LINUX)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -stdlib=libc++")
-    if (FILAMENT_REQUIRES_CXXABI)
-        # Required in CI environment with custom libc++ and libc++abi
-        link_libraries(libc++abi.a)
-    endif()
-    # To distribute our binaries, we must remove the dependency on libc++ and libgcc.
-    if (CMAKE_BUILD_TYPE STREQUAL "Release")
-        link_libraries("-static-libgcc -static-libstdc++")
-    endif()
-else()
-    if (FILAMENT_REQUIRES_CXXABI)
-        message("The option FILAMENT_REQUIRES_CXXABI is unsupported on this platform")
-    endif()
+    link_libraries("-static-libgcc -static-libstdc++")
+    link_libraries(libc++.a)
+    link_libraries(libc++abi.a)
 endif()
 
 if (CYGWIN)
