@@ -18,7 +18,7 @@
 
 namespace filamat {
 
-MaterialSpirvChunk::MaterialSpirvChunk(const std::vector<SpirvEntry>& entries) :
+MaterialSpirvChunk::MaterialSpirvChunk(const std::vector<SpirvEntry>&& entries) :
         Chunk(ChunkType::MaterialSpirv), mEntries(entries) {}
 
 void MaterialSpirvChunk::flatten(Flattener &f) {

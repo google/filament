@@ -18,8 +18,8 @@
 
 namespace filamat {
 
-void ChunkContainer::addChild(Chunk* chunk) {
-    mChildren.push_back(chunk);
+void ChunkContainer::addChild(ChunkPtr&& chunk) {
+    mChildren.push_back(std::move(chunk));
 }
 
 // This calls is relatively expensive since it performs a dry run of the flattering process,
@@ -30,7 +30,7 @@ size_t ChunkContainer::getSize() const {
 }
 
 size_t ChunkContainer::flatten(Flattener& f) const {
-    for (Chunk* chunk: mChildren) {
+    for (auto& chunk: mChildren) {
         f.writeUint64(static_cast<uint64_t>(chunk->getType()));
         f.writeSizePlaceholder();
         chunk->flatten(f);

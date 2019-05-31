@@ -18,7 +18,7 @@
 
 namespace filamat {
 
-DictionaryTextChunk::DictionaryTextChunk(LineDictionary& dictionary, ChunkType chunkType) :
+DictionaryTextChunk::DictionaryTextChunk(LineDictionary&& dictionary, ChunkType chunkType) :
         Chunk(chunkType), mDictionary(dictionary) {
 }
 

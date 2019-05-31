@@ -469,95 +469,7 @@ Package MaterialBuilder::build() noexcept {
 
     // Create chunk tree.
     ChunkContainer container;
-
-    SimpleFieldChunk<uint32_t> matVersion(ChunkType::MaterialVersion, filament::MATERIAL_VERSION);
-    container.addChild(&matVersion);
-
-    SimpleFieldChunk<const char*> matName(ChunkType::MaterialName, mMaterialName.c_str_safe());
-    container.addChild(&matName);
-
-    SimpleFieldChunk<uint8_t> matShading(ChunkType::MaterialShading, static_cast<uint8_t>(mShading));
-    container.addChild(&matShading);
-
-    SimpleFieldChunk<uint8_t> matBlendingMode(ChunkType::MaterialBlendingMode,
-            static_cast<uint8_t>(mBlendingMode));
-    container.addChild(&matBlendingMode);
-
-    SimpleFieldChunk<float> matMaskThreshold(ChunkType::MaterialMaskThreshold, mMaskThreshold);
-    if (mBlendingMode == BlendingMode::MASKED) {
-        container.addChild(&matMaskThreshold);
-    }
-
-    SimpleFieldChunk<bool> matShadowMultiplier(ChunkType::MaterialShadowMultiplier, mShadowMultiplier);
-    if (mShading == Shading::UNLIT) {
-        container.addChild(&matShadowMultiplier);
-    }
-
-    SimpleFieldChunk<bool> matSpecularAntiAliasing(
-            ChunkType::MaterialSpecularAntiAliasing, mSpecularAntiAliasing);
-    container.addChild(&matSpecularAntiAliasing);
-
-    SimpleFieldChunk<float> matSpecularAntiAliasingVariance(
-            ChunkType::MaterialSpecularAntiAliasingVariance, mSpecularAntiAliasingVariance);
-    container.addChild(&matSpecularAntiAliasingVariance);
-
-    SimpleFieldChunk<float> matSpecularAntiAliasingThreshold(
-            ChunkType::MaterialSpecularAntiAliasingThreshold, mSpecularAntiAliasingThreshold);
-    container.addChild(&matSpecularAntiAliasingThreshold);
-
-    SimpleFieldChunk<bool> matClearCoatIorChange(
-            ChunkType::MaterialClearCoatIorChange, mClearCoatIorChange);
-    container.addChild(&matClearCoatIorChange);
-
-    SimpleFieldChunk<uint8_t> matTransparency(ChunkType::MaterialTransparencyMode,
-            static_cast<uint8_t>(mTransparencyMode));
-    container.addChild(&matTransparency);
-
-    SimpleFieldChunk<uint32_t> matRequiredAttributes(ChunkType::MaterialRequiredAttributes,
-            mRequiredAttributes.getValue());
-    container.addChild(&matRequiredAttributes);
-
-    // UIB
-    MaterialUniformInterfaceBlockChunk matUib = MaterialUniformInterfaceBlockChunk(info.uib);
-    container.addChild(&matUib);
-
-    // SIB
-    MaterialSamplerInterfaceBlockChunk matSib = MaterialSamplerInterfaceBlockChunk(info.sib);
-    container.addChild(&matSib);
-
-    SimpleFieldChunk<bool> matDepthWriteSet(ChunkType::MaterialDepthWriteSet, mDepthWriteSet);
-    container.addChild(&matDepthWriteSet);
-
-    SimpleFieldChunk<bool> matDoubleSidedSet(ChunkType::MaterialDoubleSidedSet, mDoubleSidedCapability);
-    container.addChild(&matDoubleSidedSet);
-
-    SimpleFieldChunk<bool> matDoubleSided(ChunkType::MaterialDoubleSided, mDoubleSided);
-    container.addChild(&matDoubleSided);
-
-    SimpleFieldChunk<bool> matColorWrite(ChunkType::MaterialColorWrite, mColorWrite);
-    container.addChild(&matColorWrite);
-
-    SimpleFieldChunk<bool> matDepthWrite(ChunkType::MaterialDepthWrite, mDepthWrite);
-    container.addChild(&matDepthWrite);
-
-    SimpleFieldChunk<bool> matDepthTest(ChunkType::MaterialDepthTest, mDepthTest);
-    container.addChild(&matDepthTest);
-
-    SimpleFieldChunk<uint8_t> matCullingMode(ChunkType::MaterialCullingMode,
-            static_cast<uint8_t>(mCullingMode));
-    container.addChild(&matCullingMode);
-
-    SimpleFieldChunk<uint8_t> matVertexDomain(ChunkType::MaterialVertexDomain,
-            static_cast<uint8_t>(mVertexDomain));
-    container.addChild(&matVertexDomain);
-
-    SimpleFieldChunk<uint8_t> matInterpolation(ChunkType::MaterialInterpolation,
-            static_cast<uint8_t>(mInterpolation));
-    container.addChild(&matInterpolation);
-
-    SimpleFieldChunk<uint32_t> matShaderModels(ChunkType::MaterialShaderModels,
-            mShaderModels.getValue());
-    container.addChild(&matShaderModels);
+    writeChunks(container, info);
 
     // Generate all shaders.
     std::vector<TextEntry> glslEntries;
@@ -577,8 +489,9 @@ Package MaterialBuilder::build() noexcept {
     bool emptyVertexCode = mMaterialVertexCode.empty();
     bool customDepth = sg.hasCustomDepthShader() ||
             mBlendingMode == BlendingMode::MASKED || !emptyVertexCode;
-    SimpleFieldChunk<bool> hasCustomDepth(ChunkType::MaterialHasCustomDepthShader, customDepth);
-    container.addChild(&hasCustomDepth);
+    auto hasCustomDepth = std::make_unique<SimpleFieldChunk<bool>>(
+            ChunkType::MaterialHasCustomDepthShader, customDepth);
+    container.addChild(std::move(hasCustomDepth));
 
     filament::SamplerBindingMap map;
     map.populate(&info.sib, mMaterialName.c_str());
@@ -645,9 +558,7 @@ Package MaterialBuilder::build() noexcept {
                     }
 
                     glslEntry.stage = filament::backend::ShaderType::VERTEX;
-                    glslEntry.shaderSize = vs.size();
-                    glslEntry.shader = (char*) malloc(glslEntry.shaderSize + 1);
-                    strcpy(glslEntry.shader, vs.c_str());
+                    glslEntry.shader = vs;
                     glslDictionary.addText(glslEntry.shader);
                     glslEntries.push_back(glslEntry);
                 }
@@ -664,9 +575,7 @@ Package MaterialBuilder::build() noexcept {
                     assert(spirv.size() > 0);
                     assert(msl.length() > 0);
                     metalEntry.stage = filament::backend::ShaderType::VERTEX;
-                    metalEntry.shaderSize = msl.length();
-                    metalEntry.shader = (char*)malloc(metalEntry.shaderSize + 1);
-                    strcpy(metalEntry.shader, msl.c_str());
+                    metalEntry.shader = msl;
                     spirv.clear();
                     msl.clear();
                     metalDictionary.addText(metalEntry.shader);
@@ -699,9 +608,7 @@ Package MaterialBuilder::build() noexcept {
                     }
 
                     glslEntry.stage = filament::backend::ShaderType::FRAGMENT;
-                    glslEntry.shaderSize = fs.size();
-                    glslEntry.shader = (char*) malloc(glslEntry.shaderSize + 1);
-                    strcpy(glslEntry.shader, fs.c_str());
+                    glslEntry.shader = fs;
                     glslDictionary.addText(glslEntry.shader);
                     glslEntries.push_back(glslEntry);
                 }
@@ -718,9 +625,7 @@ Package MaterialBuilder::build() noexcept {
                     assert(spirv.size() > 0);
                     assert(msl.length() > 0);
                     metalEntry.stage = filament::backend::ShaderType::FRAGMENT;
-                    metalEntry.shaderSize = msl.length();
-                    metalEntry.shader = (char*)malloc(metalEntry.shaderSize + 1);
-                    strcpy(metalEntry.shader, msl.c_str());
+                    metalEntry.shader = msl;
                     spirv.clear();
                     msl.clear();
                     metalDictionary.addText(metalEntry.shader);
@@ -732,28 +637,29 @@ Package MaterialBuilder::build() noexcept {
     }
 
     // Emit GLSL chunks (TextDictionaryReader and MaterialTextChunk).
-    filamat::DictionaryTextChunk dicGlslChunk(glslDictionary, ChunkType::DictionaryGlsl);
-    MaterialTextChunk glslChunk(glslEntries, glslDictionary, ChunkType::MaterialGlsl);
+    using namespace std;
+    auto dicGlslChunk = make_unique<filamat::DictionaryTextChunk>(std::move(glslDictionary), ChunkType::DictionaryGlsl);
+    auto glslChunk = make_unique<MaterialTextChunk>(std::move(glslEntries), std::move(glslDictionary), ChunkType::MaterialGlsl);
     if (!glslEntries.empty()) {
-        container.addChild(&dicGlslChunk);
-        container.addChild(&glslChunk);
+        container.addChild(std::move(dicGlslChunk));
+        container.addChild(std::move(glslChunk));
     }
 
     // Emit SPIRV chunks (SpirvDictionaryReader and MaterialSpirvChunk).
 #ifndef FILAMAT_LITE
-    filamat::DictionarySpirvChunk dicSpirvChunk(spirvDictionary);
-    MaterialSpirvChunk spirvChunk(spirvEntries);
+    auto dicSpirvChunk = make_unique<filamat::DictionarySpirvChunk>(std::move(spirvDictionary));
+    auto spirvChunk = make_unique<MaterialSpirvChunk>(std::move(spirvEntries));
     if (!spirvEntries.empty()) {
-        container.addChild(&dicSpirvChunk);
-        container.addChild(&spirvChunk);
+        container.addChild(std::move(dicSpirvChunk));
+        container.addChild(std::move(spirvChunk));
     }
 
     // Emit Metal chunks (MetalDictionaryReader and MaterialMetalChunk).
-    filamat::DictionaryTextChunk dicMetalChunk(metalDictionary, ChunkType::DictionaryMetal);
-    MaterialTextChunk metalChunk(metalEntries, metalDictionary, ChunkType::MaterialMetal);
+    auto dicMetalChunk = make_unique<filamat::DictionaryTextChunk>(std::move(metalDictionary), ChunkType::DictionaryMetal);
+    auto metalChunk = make_unique<MaterialTextChunk>(std::move(metalEntries), std::move(metalDictionary), ChunkType::MaterialMetal);
     if (!metalEntries.empty()) {
-        container.addChild(&dicMetalChunk);
-        container.addChild(&metalChunk);
+        container.addChild(std::move(dicMetalChunk));
+        container.addChild(std::move(metalChunk));
     }
 #endif
 
@@ -764,13 +670,6 @@ Package MaterialBuilder::build() noexcept {
     container.flatten(f);
     package.setValid(!errorOccured);
 
-    // Free all shaders that were created earlier.
-    for (TextEntry entry : glslEntries) {
-        free(entry.shader);
-    }
-    for (TextEntry entry : metalEntries) {
-        free(entry.shader);
-    }
     return package;
 }
 
@@ -799,6 +698,110 @@ const std::string MaterialBuilder::peek(filament::backend::ShaderType type,
     }
 
     return std::string("");
+}
+
+void MaterialBuilder::writeChunks(ChunkContainer& container, MaterialInfo& info) const noexcept {
+    using namespace std;
+
+    auto matVersion = make_unique<SimpleFieldChunk<uint32_t>>(
+            ChunkType::MaterialVersion, filament::MATERIAL_VERSION);
+    container.addChild(std::move(matVersion));
+
+    auto matName = make_unique<SimpleFieldChunk<const char*>>(
+            ChunkType::MaterialName, mMaterialName.c_str_safe());
+    container.addChild(std::move(matName));
+
+    auto matShading = make_unique<SimpleFieldChunk<uint8_t>>(
+            ChunkType::MaterialShading, static_cast<uint8_t>(mShading));
+    container.addChild(std::move(matShading));
+
+    auto matBlendingMode = make_unique<SimpleFieldChunk<uint8_t>>(
+            ChunkType::MaterialBlendingMode, static_cast<uint8_t>(mBlendingMode));
+    container.addChild(std::move(matBlendingMode));
+
+    auto matMaskThreshold = make_unique<SimpleFieldChunk<float>>(
+            ChunkType::MaterialMaskThreshold, mMaskThreshold);
+    if (mBlendingMode == BlendingMode::MASKED) {
+        container.addChild(std::move(matMaskThreshold));
+    }
+
+    auto matShadowMultiplier = make_unique<SimpleFieldChunk<bool>>(
+            ChunkType::MaterialShadowMultiplier, mShadowMultiplier);
+    if (mShading == Shading::UNLIT) {
+        container.addChild(std::move(matShadowMultiplier));
+    }
+
+    auto matSpecularAntiAliasing = make_unique<SimpleFieldChunk<bool>>(
+            ChunkType::MaterialSpecularAntiAliasing, mSpecularAntiAliasing);
+    container.addChild(std::move(matSpecularAntiAliasing));
+
+    auto matSpecularAntiAliasingVariance = make_unique<SimpleFieldChunk<float>>(
+            ChunkType::MaterialSpecularAntiAliasingVariance, mSpecularAntiAliasingVariance);
+    container.addChild(std::move(matSpecularAntiAliasingVariance));
+
+    auto matSpecularAntiAliasingThreshold = make_unique<SimpleFieldChunk<float>>(
+            ChunkType::MaterialSpecularAntiAliasingThreshold, mSpecularAntiAliasingThreshold);
+    container.addChild(std::move(matSpecularAntiAliasingThreshold));
+
+    auto matClearCoatIorChange = make_unique<SimpleFieldChunk<bool>>(
+            ChunkType::MaterialClearCoatIorChange, mClearCoatIorChange);
+    container.addChild(std::move(matClearCoatIorChange));
+
+    auto matTransparency =  make_unique<SimpleFieldChunk<uint8_t>>(
+            ChunkType::MaterialTransparencyMode, static_cast<uint8_t>(mTransparencyMode));
+    container.addChild(std::move(matTransparency));
+
+    auto matRequiredAttributes = make_unique<SimpleFieldChunk<uint32_t>>(
+            ChunkType::MaterialRequiredAttributes, mRequiredAttributes.getValue());
+    container.addChild(std::move(matRequiredAttributes));
+
+    // UIB
+    auto matUib = make_unique<MaterialUniformInterfaceBlockChunk>(info.uib);
+    container.addChild(std::move(matUib));
+
+    // SIB
+    auto matSib = make_unique<MaterialSamplerInterfaceBlockChunk>(info.sib);
+    container.addChild(std::move(matSib));
+
+    auto matDepthWriteSet = make_unique<SimpleFieldChunk<bool>>(
+            ChunkType::MaterialDepthWriteSet, mDepthWriteSet);
+    container.addChild(std::move(matDepthWriteSet));
+
+    auto matDoubleSidedSet = make_unique<SimpleFieldChunk<bool>>(
+            ChunkType::MaterialDoubleSidedSet, mDoubleSidedCapability);
+    container.addChild(std::move(matDoubleSidedSet));
+
+    auto matDoubleSided = make_unique<SimpleFieldChunk<bool>>(
+            ChunkType::MaterialDoubleSided, mDoubleSided);
+    container.addChild(std::move(matDoubleSided));
+
+    auto matColorWrite = make_unique<SimpleFieldChunk<bool>>(
+            ChunkType::MaterialColorWrite, mColorWrite);
+    container.addChild(std::move(matColorWrite));
+
+    auto matDepthWrite = make_unique<SimpleFieldChunk<bool>>(
+            ChunkType::MaterialDepthWrite, mDepthWrite);
+    container.addChild(std::move(matDepthWrite));
+
+    auto matDepthTest = make_unique<SimpleFieldChunk<bool>>(
+            ChunkType::MaterialDepthTest, mDepthTest);
+    container.addChild(std::move(matDepthTest));
+
+    auto matCullingMode = make_unique<SimpleFieldChunk<uint8_t>>(
+            ChunkType::MaterialCullingMode, static_cast<uint8_t>(mCullingMode));
+    container.addChild(std::move(matCullingMode));
+
+    auto matVertexDomain = make_unique<SimpleFieldChunk<uint8_t>>(
+            ChunkType::MaterialVertexDomain, static_cast<uint8_t>(mVertexDomain));
+    container.addChild(std::move(matVertexDomain));
+
+    auto matInterpolation = make_unique<SimpleFieldChunk<uint8_t>>(
+            ChunkType::MaterialInterpolation, static_cast<uint8_t>(mInterpolation));
+    container.addChild(std::move(matInterpolation));
+
+    auto matShaderModels = make_unique<SimpleFieldChunk<uint32_t>>(
+            ChunkType::MaterialShaderModels, mShaderModels.getValue());
+    container.addChild(std::move(matShaderModels));
 }
 
 } // namespace filamat

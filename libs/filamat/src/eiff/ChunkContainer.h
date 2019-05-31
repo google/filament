@@ -17,6 +17,7 @@
 #ifndef TNT_FILAMAT_CHUNK_CONTAINER_H
 #define TNT_FILAMAT_CHUNK_CONTAINER_H
 
+#include <memory>
 #include <vector>
 
 #include "Chunk.h"
@@ -28,15 +29,16 @@ namespace filamat {
 
 class ChunkContainer {
 public:
+    using ChunkPtr = std::unique_ptr<Chunk>;
+
     ChunkContainer() = default;
     ~ChunkContainer() = default;
-    // Copy the POINTER to the chunk and doesn't make a copy. The Chunk* is used later when flattening
-    // The Chunk object must be valid until flatten is called (so for the life duration of ChunkContainer).
-    void addChild(Chunk* chunk);
+    void addChild(ChunkPtr&& chunk);
     size_t getSize() const;
+
     size_t flatten(Flattener& f) const;
 private:
-    std::vector<Chunk*> mChildren;
+    std::vector<ChunkPtr> mChildren;
 };
 
 } // namespace filamat

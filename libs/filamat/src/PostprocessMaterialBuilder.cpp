@@ -51,8 +51,9 @@ Package PostprocessMaterialBuilder::build() {
     // Create chunk tree.
     ChunkContainer container;
 
-    SimpleFieldChunk<uint32_t> version(ChunkType::PostProcessVersion, filament::MATERIAL_VERSION);
-    container.addChild(&version);
+    auto version = std::make_unique<SimpleFieldChunk<uint32_t>>(
+            ChunkType::PostProcessVersion, filament::MATERIAL_VERSION);
+    container.addChild(std::move(version));
 
     std::vector<TextEntry> glslEntries;
     std::vector<SpirvEntry> spirvEntries;
@@ -118,9 +119,7 @@ Package PostprocessMaterialBuilder::build() {
 
             if (targetApi == TargetApi::OPENGL) {
                 glslEntry.stage = filament::backend::ShaderType::VERTEX;
-                glslEntry.shaderSize = vs.size();
-                glslEntry.shader = (char*)malloc(glslEntry.shaderSize + 1);
-                strcpy(glslEntry.shader, vs.c_str());
+                glslEntry.shader = vs;
                 glslDictionary.addText(glslEntry.shader);
                 glslEntries.push_back(glslEntry);
             }
@@ -136,9 +135,7 @@ Package PostprocessMaterialBuilder::build() {
                 assert(spirv.size() > 0);
                 assert(msl.length() > 0);
                 metalEntry.stage = filament::backend::ShaderType::VERTEX;
-                metalEntry.shaderSize = msl.length();
-                metalEntry.shader = (char*)malloc(metalEntry.shaderSize + 1);
-                strcpy(metalEntry.shader, msl.c_str());
+                metalEntry.shader = msl;
                 spirv.clear();
                 msl.clear();
                 metalDictionary.addText(metalEntry.shader);
@@ -165,9 +162,7 @@ Package PostprocessMaterialBuilder::build() {
 
             if (targetApi == TargetApi::OPENGL) {
                 glslEntry.stage = filament::backend::ShaderType::FRAGMENT;
-                glslEntry.shaderSize = fs.size();
-                glslEntry.shader = (char*) malloc(glslEntry.shaderSize + 1);
-                strcpy(glslEntry.shader, fs.c_str());
+                glslEntry.shader = fs;
                 glslDictionary.addText(glslEntry.shader);
                 glslEntries.push_back(glslEntry);
             }
@@ -183,9 +178,7 @@ Package PostprocessMaterialBuilder::build() {
                 assert(spirv.size() > 0);
                 assert(msl.length() > 0);
                 metalEntry.stage = filament::backend::ShaderType::FRAGMENT;
-                metalEntry.shaderSize = msl.length();
-                metalEntry.shader = (char*)malloc(metalEntry.shaderSize + 1);
-                strcpy(metalEntry.shader, msl.c_str());
+                metalEntry.shader = msl;
                 spirv.clear();
                 msl.clear();
                 metalDictionary.addText(metalEntry.shader);
@@ -196,28 +189,29 @@ Package PostprocessMaterialBuilder::build() {
     }
 
     // Emit GLSL chunks
-    DictionaryTextChunk dicGlslChunk(glslDictionary, ChunkType::DictionaryGlsl);
-    MaterialTextChunk glslChunk(glslEntries, glslDictionary, ChunkType::MaterialGlsl);
+    using namespace std;
+    auto dicGlslChunk = make_unique<filamat::DictionaryTextChunk>(std::move(glslDictionary), ChunkType::DictionaryGlsl);
+    auto glslChunk = make_unique<MaterialTextChunk>(std::move(glslEntries), std::move(glslDictionary), ChunkType::MaterialGlsl);
     if (!glslEntries.empty()) {
-        container.addChild(&dicGlslChunk);
-        container.addChild(&glslChunk);
+        container.addChild(std::move(dicGlslChunk));
+        container.addChild(std::move(glslChunk));
     }
 
 #ifndef FILAMAT_LITE
     // Emit SPIRV chunks
-    DictionarySpirvChunk dicSpirvChunk(spirvDictionary);
-    MaterialSpirvChunk spirvChunk(spirvEntries);
+    auto dicSpirvChunk = make_unique<filamat::DictionarySpirvChunk>(std::move(spirvDictionary));
+    auto spirvChunk = make_unique<MaterialSpirvChunk>(std::move(spirvEntries));
     if (!spirvEntries.empty()) {
-        container.addChild(&dicSpirvChunk);
-        container.addChild(&spirvChunk);
+        container.addChild(std::move(dicSpirvChunk));
+        container.addChild(std::move(spirvChunk));
     }
 
     // Emit Metal chunks
-    filamat::DictionaryTextChunk dicMetalChunk(metalDictionary, ChunkType::DictionaryMetal);
-    MaterialTextChunk metalChunk(metalEntries, metalDictionary, ChunkType::MaterialMetal);
+    auto dicMetalChunk = make_unique<filamat::DictionaryTextChunk>(std::move(metalDictionary), ChunkType::DictionaryMetal);
+    auto metalChunk = make_unique<MaterialTextChunk>(std::move(metalEntries), std::move(metalDictionary), ChunkType::MaterialMetal);
     if (!metalEntries.empty()) {
-        container.addChild(&dicMetalChunk);
-        container.addChild(&metalChunk);
+        container.addChild(std::move(dicMetalChunk));
+        container.addChild(std::move(metalChunk));
     }
 #endif
 
@@ -228,13 +222,6 @@ Package PostprocessMaterialBuilder::build() {
     container.flatten(f);
     package.setValid(!errorOccured);
 
-    // Free all shaders that were created earlier.
-    for (TextEntry entry : glslEntries) {
-        free(entry.shader);
-    }
-    for (TextEntry entry : metalEntries) {
-        free(entry.shader);
-    }
     return package;
 }
 
