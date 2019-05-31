@@ -130,11 +130,13 @@ public:
 
     // Public for unit tests.
     using Property = MaterialBuilder::Property;
+    using ShaderModel = filament::backend::ShaderModel;
     // Use static code analysis on the fragment shader AST to guess properties used in user provided
     // glgl code. Populate properties accordingly.
-    bool findProperties(const MaterialBuilder& builder,
+    bool findProperties(const std::string& shaderCode,
             MaterialBuilder::PropertyList& properties,
-            MaterialBuilder::TargetApi targetApi = MaterialBuilder::TargetApi::OPENGL) const noexcept;
+            MaterialBuilder::TargetApi targetApi = MaterialBuilder::TargetApi::OPENGL,
+            ShaderModel model = ShaderModel::GL_CORE_41) const noexcept;
 
     static int glslangVersionFromShaderModel(filament::backend::ShaderModel model);
 

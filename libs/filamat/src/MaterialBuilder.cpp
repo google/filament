@@ -376,13 +376,20 @@ bool MaterialBuilder::runStaticCodeAnalysis() noexcept {
 #ifndef FILAMAT_LITE
     GLSLTools glslTools;
 
+    // Some fields in MaterialInputs only exist if the property is set (e.g: normal, subsurface
+    // for cloth shading model). Give our shader all properties. This will enable us to parse and
+    // static code analyse the AST.
+    MaterialBuilder::PropertyList allProperties;
+    std::fill_n(allProperties, MATERIAL_PROPERTIES_COUNT, true);
+    ShaderModel model;
+    std::string shaderCodeAllProperties = peek(ShaderType::FRAGMENT, model, allProperties);
+
     // Populate mProperties with the properties set in the shader.
-    if (!glslTools.findProperties(*this, mProperties, mTargetApi)) {
+    if (!glslTools.findProperties(shaderCodeAllProperties, mProperties, mTargetApi, model)) {
         return false;
     }
 
     // At this point the shader is syntactically correct. Perform semantic analysis now.
-    ShaderModel model;
 
     std::string shaderCode = peek(ShaderType::VERTEX, model, mProperties);
     bool result = glslTools.analyzeVertexShader(shaderCode, model, mTargetApi);

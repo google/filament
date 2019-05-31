@@ -140,19 +140,10 @@ void GLSLTools::shutdown() {
     FinalizeProcess();
 }
 
-bool GLSLTools::findProperties(const filamat::MaterialBuilder& builderIn,
+bool GLSLTools::findProperties(const std::string& shaderCode,
         MaterialBuilder::PropertyList& properties,
-        MaterialBuilder::TargetApi targetApi) const noexcept {
-    filamat::MaterialBuilder builder(builderIn);
-
-    // Some fields in MaterialInputs only exist if the property is set (e.g: normal, subsurface
-    // for cloth shading model). Give our shader all properties. This will enable us to parse and
-    // static code analyse the AST.
-    MaterialBuilder::PropertyList allProperties;
-    std::fill_n(allProperties, MaterialBuilder::MATERIAL_PROPERTIES_COUNT, true);
-
-    ShaderModel model;
-    std::string shaderCode = builder.peek(ShaderType::FRAGMENT, model, allProperties);
+        MaterialBuilder::TargetApi targetApi,
+        ShaderModel model) const noexcept {
     const char* shaderCString = shaderCode.c_str();
 
     TShader tShader(EShLanguage::EShLangFragment);
