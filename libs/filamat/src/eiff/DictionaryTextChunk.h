@@ -28,7 +28,7 @@ namespace filamat {
 
 class DictionaryTextChunk final : public Chunk {
 public:
-    DictionaryTextChunk(LineDictionary&& dictionary, ChunkType chunkType);
+    DictionaryTextChunk(const LineDictionary& dictionary, ChunkType chunkType);
     ~DictionaryTextChunk() = default;
 
 private:
