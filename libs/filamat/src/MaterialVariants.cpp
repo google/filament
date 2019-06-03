@@ -16,9 +16,11 @@
 
 #include "MaterialVariants.h"
 
+#include <private/filament/EngineEnums.h>
+
 namespace filamat {
 
-std::vector<Variant> determineVariants(uint8_t variantFilter, bool isLit,
+std::vector<Variant> determineSurfaceVariants(uint8_t variantFilter, bool isLit,
         bool shadowMultiplier) {
     std::vector<Variant> variants;
     uint8_t variantMask = ~variantFilter;
@@ -38,6 +40,15 @@ std::vector<Variant> determineVariants(uint8_t variantFilter, bool isLit,
         if (filament::Variant::filterVariantFragment(v) == k) {
             variants.emplace_back(k, filament::backend::ShaderType::FRAGMENT);
         }
+    }
+    return variants;
+}
+
+std::vector<Variant> determinePostProcessVariants() {
+    std::vector<Variant> variants;
+    for (size_t k = 0; k < filament::POST_PROCESS_VARIANT_COUNT; k++) {
+        variants.emplace_back(k, filament::backend::ShaderType::VERTEX);
+        variants.emplace_back(k, filament::backend::ShaderType::FRAGMENT);
     }
     return variants;
 }

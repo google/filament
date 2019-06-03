@@ -639,7 +639,7 @@ Package MaterialBuilder::build() noexcept {
     }
 
     // Generate all shaders and write the shader chunks.
-    auto variants = determineVariants(mVariantFilter, isLit(), mShadowMultiplier);
+    auto variants = determineSurfaceVariants(mVariantFilter, isLit(), mShadowMultiplier);
     bool success = generateShaders(variants, container, info);
 
     // Flatten all chunks in the container into a Package.

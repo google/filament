@@ -34,7 +34,10 @@ struct Variant {
     Stage stage;
 };
 
-std::vector<Variant> determineVariants(uint8_t variantFilter, bool isLit, bool shadowMultiplier);
+std::vector<Variant> determineSurfaceVariants(uint8_t variantFilter, bool isLit,
+        bool shadowMultiplier);
+
+std::vector<Variant> determinePostProcessVariants();
 
 } // namespace filamat
 
