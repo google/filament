@@ -29,7 +29,7 @@ function(generate_cpp_resources out_sources namespace)
       OUTPUT ${out_path}
       COMMAND ${CMAKE_COMMAND} -E make_directory ${out_dir}
       COMMAND ${PYTHON_EXECUTABLE}
-      ARGS ${PROJECT_SOURCE_DIR}/scripts/resource_to_cpp.py ${in_path} -o ${out_path} -n ${namespace}
+      ARGS ${PROJECT_SOURCE_DIR}/../scripts/resource_to_cpp.py ${in_path} -o ${out_path} -n ${namespace}
       DEPENDS ${in_path}
       COMMENT "Generating CXX resource object ${out_path}"
       VERBATIM)

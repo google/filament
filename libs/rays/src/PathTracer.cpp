@@ -27,6 +27,7 @@
 #ifdef FILAMENT_HAS_EMBREE
 #include <embree3/rtcore.h>
 #include <embree3/rtcore_ray.h>
+#define FILAMENT_HAS_DENOISE 1
 #endif
 
 #ifdef FILAMENT_HAS_DENOISE
