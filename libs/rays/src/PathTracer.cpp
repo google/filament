@@ -99,8 +99,9 @@ PathTracer::Builder& PathTracer::Builder::filmCamera(const SimpleCamera& filmCam
     return *this;
 }
 
-PathTracer::Builder& PathTracer::Builder::uvCamera() {
+PathTracer::Builder& PathTracer::Builder::uvCamera(bool dilate) {
     mConfig.uvCamera = true;
+    mConfig.dilate = dilate;
     return *this;
 }
 
@@ -549,7 +550,9 @@ bool PathTracer::render() {
                 context->config.tileCallback(rect.topLeft, rect.bottomRight,
                         context->config.tileUserData);
             }, [](EmbreeContext* context) {
-                dilateCharts(context);
+                if (context->config.dilate) {
+                    dilateCharts(context);
+                }
                 if (context->config.denoise) {
                     denoise(context);
                 }

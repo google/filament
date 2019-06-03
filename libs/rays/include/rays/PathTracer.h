@@ -77,6 +77,7 @@ public:
         size_t samplesPerPixel = 256;
         SimpleCamera filmCamera;
         bool uvCamera = false;
+        bool dilate = true;
         bool denoise = false;
         TileCallback tileCallback = nullptr;
         void* tileUserData = nullptr;
@@ -109,7 +110,7 @@ public:
         /**
          * Enables a UV-based cameras used for light map baking.
          */
-        Builder& uvCamera();
+        Builder& uvCamera(bool dilate = true);
 
         /**
          * Executes OpenImageDenoise after rendering the complete image.
