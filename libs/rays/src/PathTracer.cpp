@@ -126,6 +126,12 @@ PathTracer::Builder& PathTracer::Builder::samplesPerPixel(size_t numSamples) {
     return *this;
 }
 
+PathTracer::Builder& PathTracer::Builder::occlusionRayBounds(float aoRayNear, float aoRayFar) {
+    mConfig.aoRayNear = aoRayNear;
+    mConfig.aoRayFar = aoRayFar;
+    return *this;
+}
+
 PathTracer PathTracer::Builder::build() {
     // TODO: check for valid configuration (consistent sizes etc)
     return PathTracer(mConfig);
