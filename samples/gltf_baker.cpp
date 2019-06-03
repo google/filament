@@ -755,6 +755,14 @@ int main(int argc, char** argv) {
             ImGui::GetStyle().FrameRounding = 20;
             ImGui::GetStyle().ItemSpacing.x = 8;
 
+            // Model stats
+            if (app.viewerAsset) {
+                filament::Aabb aabb = app.viewerAsset->getBoundingBox();
+                ImGui::TextColored({1, 0, 1, 1}, "min (%g, %g, %g)", aabb.min.x, aabb.min.y, aabb.min.z);
+                ImGui::TextColored({1, 0, 1, 1}, "max (%g, %g, %g)", aabb.max.x, aabb.max.y, aabb.max.z);
+                ImGui::Spacing();
+            }
+
             // Status text
             if (app.statusText.size()) {
                 ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, {10, 10} );
