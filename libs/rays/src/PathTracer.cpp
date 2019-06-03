@@ -304,12 +304,15 @@ static void renderTileToGbuffer(EmbreeContext* context, PixelRectangle rect) {
 static void dilateCharts(EmbreeContext* context) {
     LinearImage& ao = context->config.renderTargets[(int) AMBIENT_OCCLUSION];
     LinearImage& meshNormals = context->config.renderTargets[(int) MESH_NORMALS];
+    LinearImage& bentNormals = context->config.renderTargets[(int) BENT_NORMALS];
     auto presence = [] (const LinearImage& normals, uint32_t col, uint32_t row, void*) {
         return normals.getPixelRef(col, row)[0] != EMPTY_SENTINEL;
     };
-    auto coords = image::computeCoordField(meshNormals, presence, nullptr);
-    auto dilated = image::voronoiFromCoordField(coords, ao);
+    LinearImage coords = image::computeCoordField(meshNormals, presence, nullptr);
+    LinearImage dilated = image::voronoiFromCoordField(coords, ao);
     blitImage(ao, dilated);
+    dilated = image::voronoiFromCoordField(coords, bentNormals);
+    blitImage(bentNormals, dilated);
 }
 
 static void denoise(EmbreeContext* context) {
