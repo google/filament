@@ -120,6 +120,7 @@ public:
     void setSamplesPerPixel(size_t spp) { mSamplesPerPixel = spp; }
     void setAoRayNear(float tmin) { mAoRayNear = tmin; }
     void setChartDilation(bool dilate) { mChartDilation = dilate; }
+    void setDenoiser(bool denoise) { mApplyDenoiser = denoise; }
 
     ~Pipeline();
 
@@ -140,6 +141,7 @@ private:
     size_t mSamplesPerPixel = 256;
     float mAoRayNear = std::numeric_limits<float>::epsilon() * 10.0f;
     bool mChartDilation = true;
+    bool mApplyDenoiser = true;
 
     struct {
         ArrayHolder<cgltf_data> resultAssets;
@@ -756,7 +758,7 @@ void Pipeline::bakeAmbientOcclusion(const cgltf_data* sourceAsset, image::Linear
         .meshes(meshes, numMeshes)
         .outputPlane(filament::rays::AMBIENT_OCCLUSION, target)
         .uvCamera(mChartDilation)
-        .denoise()
+        .denoise(mApplyDenoiser)
         .samplesPerPixel(mSamplesPerPixel)
         .occlusionRayBounds(mAoRayNear, std::numeric_limits<float>::infinity())
         .tileCallback(onTile, userData)
@@ -777,7 +779,7 @@ void Pipeline::renderAmbientOcclusion(const cgltf_data* sourceAsset, image::Line
         .meshes(meshes, numMeshes)
         .outputPlane(filament::rays::AMBIENT_OCCLUSION, target)
         .filmCamera(camera)
-        .denoise()
+        .denoise(mApplyDenoiser)
         .samplesPerPixel(mSamplesPerPixel)
         .occlusionRayBounds(mAoRayNear, std::numeric_limits<float>::infinity())
         .tileCallback(onTile, userData)
@@ -1749,6 +1751,11 @@ void AssetPipeline::setAoRayNear(float tmin) {
 void AssetPipeline::setChartDilation(bool dilate) {
     Pipeline* impl = (Pipeline*) mImpl;
     impl->setChartDilation(dilate);
+}
+
+void AssetPipeline::setDenoiser(bool denoise) {
+    Pipeline* impl = (Pipeline*) mImpl;
+    impl->setDenoiser(denoise);
 }
 
 bool AssetPipeline::isFlattened(AssetHandle source) {

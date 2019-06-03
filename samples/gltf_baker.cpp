@@ -126,6 +126,7 @@ struct BakerApp {
         int samplesPerPixel = 256;
         float aoRayNear = std::numeric_limits<float>::epsilon() * 10.0f;
         bool dilateCharts = true;
+        bool applyDenoiser = true;
     } bakeOptions;
 
     struct {
@@ -476,6 +477,7 @@ static void executeTestRender(BakerApp& app) {
     });
     app.pipeline->setSamplesPerPixel(app.bakeOptions.samplesPerPixel);
     app.pipeline->setAoRayNear(app.bakeOptions.aoRayNear);
+    app.pipeline->setDenoiser(app.bakeOptions.applyDenoiser);
     app.pipeline->renderAmbientOcclusion(currentAsset, app.ambientOcclusion, camera, onRenderTile,
             onRenderDone, &app);
 }
@@ -546,6 +548,7 @@ static void executeBakeAo(BakerApp& app) {
         app.pipeline->setSamplesPerPixel(app.bakeOptions.samplesPerPixel);
         app.pipeline->setAoRayNear(app.bakeOptions.aoRayNear);
         app.pipeline->setChartDilation(app.bakeOptions.dilateCharts);
+        app.pipeline->setDenoiser(app.bakeOptions.applyDenoiser);
         app.pipeline->bakeAllOutputs(app.currentAsset, outputs, onRenderTile, onRenderDone, &app);
     };
 
@@ -844,6 +847,7 @@ int main(int argc, char** argv) {
                         std::numeric_limits<float>::epsilon() * 10.0f, 10);
 
                 ImGui::Checkbox("Dilate charts", &app.bakeOptions.dilateCharts);
+                ImGui::Checkbox("Apply denoiser", &app.bakeOptions.applyDenoiser);
             }
 
             // Modals

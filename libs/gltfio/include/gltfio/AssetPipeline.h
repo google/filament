@@ -175,6 +175,13 @@ public:
      */
     void setChartDilation(bool dilate);
 
+    /**
+     * If false, disables the denoise pass after path tracing.
+     *
+     * This has an effect on subsequent calls to bake*() and render*().
+     */
+    void setDenoiser(bool denoise);
+
     static bool isFlattened(AssetHandle source);
     static bool isParameterized(AssetHandle source);
 
