@@ -115,7 +115,7 @@ public:
         /**
          * Executes OpenImageDenoise after rendering the complete image.
          */
-        Builder& denoise();
+        Builder& denoise(bool enable = true);
 
         /**
          * Signals that a region within each render target has become available, typically used for

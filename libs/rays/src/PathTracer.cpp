@@ -105,8 +105,8 @@ PathTracer::Builder& PathTracer::Builder::uvCamera(bool dilate) {
     return *this;
 }
 
-PathTracer::Builder& PathTracer::Builder::denoise() {
-    mConfig.denoise = true;
+PathTracer::Builder& PathTracer::Builder::denoise(bool enable) {
+    mConfig.denoise = enable;
     return *this;
 }
 
