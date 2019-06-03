@@ -123,7 +123,7 @@ struct BakerApp {
 
     struct {
         uint32_t resolution = 1024;
-        int samplesPerPixel = 256;
+        size_t samplesPerPixel = 256;
         float aoRayNear = std::numeric_limits<float>::epsilon() * 10.0f;
         bool dilateCharts = true;
         bool applyDenoiser = true;
@@ -475,11 +475,14 @@ static void executeTestRender(BakerApp& app) {
         app->requestViewerUpdate = true;
         app->isWorking = false;
     });
-    app.pipeline->setSamplesPerPixel(app.bakeOptions.samplesPerPixel);
-    app.pipeline->setAoRayNear(app.bakeOptions.aoRayNear);
-    app.pipeline->setDenoiser(app.bakeOptions.applyDenoiser);
-    app.pipeline->renderAmbientOcclusion(currentAsset, app.ambientOcclusion, camera, onRenderTile,
-            onRenderDone, &app);
+    app.pipeline->renderAmbientOcclusion(currentAsset, app.ambientOcclusion, camera, {
+        .progress = onRenderTile,
+        .done = onRenderDone,
+        .userData = &app,
+        .samplesPerPixel = app.bakeOptions.samplesPerPixel,
+        .aoRayNear = app.bakeOptions.aoRayNear,
+        .enableDenoise = app.bakeOptions.applyDenoiser
+    });
 }
 
 static void generateUvVisualization(const utils::Path& pngOutputPath) {
@@ -545,11 +548,15 @@ static void executeBakeAo(BakerApp& app) {
         image::LinearImage outputs[] = {
             app.ambientOcclusion, app.bentNormals, app.meshNormals, app.meshPositions
         };
-        app.pipeline->setSamplesPerPixel(app.bakeOptions.samplesPerPixel);
-        app.pipeline->setAoRayNear(app.bakeOptions.aoRayNear);
-        app.pipeline->setChartDilation(app.bakeOptions.dilateCharts);
-        app.pipeline->setDenoiser(app.bakeOptions.applyDenoiser);
-        app.pipeline->bakeAllOutputs(app.currentAsset, outputs, onRenderTile, onRenderDone, &app);
+        app.pipeline->bakeAllOutputs(app.currentAsset, outputs, {
+            .progress = onRenderTile,
+            .done = onRenderDone,
+            .userData = &app,
+            .samplesPerPixel = app.bakeOptions.samplesPerPixel,
+            .aoRayNear = app.bakeOptions.aoRayNear,
+            .enableDenoise = app.bakeOptions.applyDenoiser,
+            .enableDilation = app.bakeOptions.dilateCharts
+        });
     };
 
     if (AssetPipeline::isParameterized(app.currentAsset)) {
@@ -832,7 +839,9 @@ int main(int argc, char** argv) {
 
             // Options
             if (ImGui::CollapsingHeader("Bake Options")) {
-                ImGui::InputInt("Samples per pixel", &app.bakeOptions.samplesPerPixel);
+                int spp = app.bakeOptions.samplesPerPixel;
+                ImGui::InputInt("Samples per pixel", &spp);
+                app.bakeOptions.samplesPerPixel = spp;
 
                 static const int kFirstOption = (int) std::log2(512);
                 int bakeOption = (int) std::log2(app.bakeOptions.resolution) - kFirstOption;

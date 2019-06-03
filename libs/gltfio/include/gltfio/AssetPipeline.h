@@ -125,6 +125,16 @@ public:
      */
     using RenderDoneCallback = filament::rays::DoneCallback;
 
+    struct RenderOptions {
+        RenderTileCallback progress = nullptr;
+        RenderDoneCallback done = nullptr;
+        void* userData = nullptr;
+        size_t samplesPerPixel = 256;
+        float aoRayNear = std::numeric_limits<float>::epsilon() * 100.0f;
+        bool enableDenoise = true;
+        bool enableDilation = true;
+    };
+
     /**
      * Consumes a parameterized glTF asset and produces a single-channel image with ambient
      * occlusion. Requires the presence of BAKED_UV_ATTRIB in the source asset.
@@ -134,7 +144,7 @@ public:
      * Clients should not destroy the AssetPipeline before the done callback is triggered.
      */
     void bakeAmbientOcclusion(AssetHandle source, image::LinearImage target,
-            RenderTileCallback progress, RenderDoneCallback done, void* userData);
+            const RenderOptions& options);
 
     /**
      * Consumes a glTF asset and produces a single-channel image with ambient occlusion rendered
@@ -145,42 +155,13 @@ public:
      * Clients should not destroy the AssetPipeline before the done callback is triggered.
      */
     void renderAmbientOcclusion(AssetHandle source, image::LinearImage target,
-            const filament::rays::SimpleCamera& camera, RenderTileCallback progress,
-            RenderDoneCallback done, void* userData);
+            const filament::rays::SimpleCamera& camera,
+            const RenderOptions& options);
 
     /** Similar to bakeAmbientOcclusion but produces all outputs. */
     void bakeAllOutputs(AssetHandle source,
             image::LinearImage targets[filament::rays::OUTPUTPLANE_COUNT],
-            RenderTileCallback progress, RenderDoneCallback done, void* userData);
-
-    /**
-     * Sets the number of occlusion rays emitted for each pixel in the target image.
-     *
-     * This has an effect on subsequent calls to bake*() and render*().
-     */
-    void setSamplesPerPixel(size_t spp);
-
-    /**
-     * Sets the ray "tmin" for occlusion rays; if this value is too small, self-intersections can
-     * occur. If it is too large then nearby surfaces might be skipped over.
-     *
-     * This has an effect on subsequent calls to bake*() and render*().
-     */
-    void setAoRayNear(float tmin);
-
-    /**
-     * If false, disables the flood-fill that the baker performs after generating charts.
-     *
-     * This has an effect on subsequent calls to bake*().
-     */
-    void setChartDilation(bool dilate);
-
-    /**
-     * If false, disables the denoise pass after path tracing.
-     *
-     * This has an effect on subsequent calls to bake*() and render*().
-     */
-    void setDenoiser(bool denoise);
+            const RenderOptions& options);
 
     static bool isFlattened(AssetHandle source);
     static bool isParameterized(AssetHandle source);

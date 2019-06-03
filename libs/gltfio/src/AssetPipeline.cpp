@@ -79,6 +79,8 @@ public:
 // Private implementation for AssetPipeline.
 class Pipeline {
 public:
+    using RenderOptions = gltfio::AssetPipeline::RenderOptions;
+
     // Aggregate all buffers into a single buffer.
     const cgltf_data* flattenBuffers(const cgltf_data* sourceAsset);
 
@@ -102,25 +104,17 @@ public:
 
     // Perform a two-pass baking operation (generate gbuffer, then use gbuffer).
     void bakeAmbientOcclusion(const cgltf_data* sourceAsset, image::LinearImage target,
-            filament::rays::TileCallback onTile, filament::rays::DoneCallback onDone,
-            void* userData);
+            const RenderOptions& options);
 
     // Perform a non-bake render for diagnostic purposes.
     void renderAmbientOcclusion(const cgltf_data* sourceAsset,
             image::LinearImage target, const filament::rays::SimpleCamera& camera,
-            filament::rays::TileCallback onTile, filament::rays::DoneCallback onDone,
-            void* userData);
+            const RenderOptions& options);
 
     // Perform a two-pass baking operation and populate all channels. Useful for diagnostics.
     void bakeAllOutputs(const cgltf_data* sourceAsset,
             image::LinearImage targets[filament::rays::OUTPUTPLANE_COUNT],
-            filament::rays::TileCallback onTile, filament::rays::DoneCallback onDone,
-            void* userData);
-
-    void setSamplesPerPixel(size_t spp) { mSamplesPerPixel = spp; }
-    void setAoRayNear(float tmin) { mAoRayNear = tmin; }
-    void setChartDilation(bool dilate) { mChartDilation = dilate; }
-    void setDenoiser(bool denoise) { mApplyDenoiser = denoise; }
+            const RenderOptions& options);
 
     ~Pipeline();
 
@@ -138,10 +132,6 @@ private:
 
     uint32_t mFlattenFlags;
     vector<cgltf_data*> mSourceAssets;
-    size_t mSamplesPerPixel = 256;
-    float mAoRayNear = std::numeric_limits<float>::epsilon() * 10.0f;
-    bool mChartDilation = true;
-    bool mApplyDenoiser = true;
 
     struct {
         ArrayHolder<cgltf_data> resultAssets;
@@ -748,7 +738,7 @@ const cgltf_data* Pipeline::flattenPrims(const cgltf_data* sourceAsset, uint32_t
 }
 
 void Pipeline::bakeAmbientOcclusion(const cgltf_data* sourceAsset, image::LinearImage target,
-        filament::rays::TileCallback onTile, filament::rays::DoneCallback onDone, void* userData) {
+        const RenderOptions& options) {
     SimpleMesh* meshes;
     size_t numMeshes;
     cgltfToSimpleMesh(sourceAsset, &meshes, &numMeshes);
@@ -757,19 +747,18 @@ void Pipeline::bakeAmbientOcclusion(const cgltf_data* sourceAsset, image::Linear
     builder
         .meshes(meshes, numMeshes)
         .outputPlane(filament::rays::AMBIENT_OCCLUSION, target)
-        .uvCamera(mChartDilation)
-        .denoise(mApplyDenoiser)
-        .samplesPerPixel(mSamplesPerPixel)
-        .occlusionRayBounds(mAoRayNear, std::numeric_limits<float>::infinity())
-        .tileCallback(onTile, userData)
-        .doneCallback(onDone, userData);
+        .uvCamera(options.enableDilation)
+        .denoise(options.enableDilation)
+        .samplesPerPixel(options.samplesPerPixel)
+        .occlusionRayBounds(options.aoRayNear, std::numeric_limits<float>::infinity())
+        .tileCallback(options.progress, options.userData)
+        .doneCallback(options.done, options.userData);
 
     builder.build().render();
 }
 
 void Pipeline::renderAmbientOcclusion(const cgltf_data* sourceAsset, image::LinearImage target,
-        const filament::rays::SimpleCamera& camera,  filament::rays::TileCallback onTile,
-        filament::rays::DoneCallback onDone, void* userData) {
+        const filament::rays::SimpleCamera& camera, const RenderOptions& options) {
     SimpleMesh* meshes;
     size_t numMeshes;
     cgltfToSimpleMesh(sourceAsset, &meshes, &numMeshes, true);
@@ -779,18 +768,18 @@ void Pipeline::renderAmbientOcclusion(const cgltf_data* sourceAsset, image::Line
         .meshes(meshes, numMeshes)
         .outputPlane(filament::rays::AMBIENT_OCCLUSION, target)
         .filmCamera(camera)
-        .denoise(mApplyDenoiser)
-        .samplesPerPixel(mSamplesPerPixel)
-        .occlusionRayBounds(mAoRayNear, std::numeric_limits<float>::infinity())
-        .tileCallback(onTile, userData)
-        .doneCallback(onDone, userData);
+        .denoise(options.enableDenoise)
+        .samplesPerPixel(options.samplesPerPixel)
+        .occlusionRayBounds(options.aoRayNear, std::numeric_limits<float>::infinity())
+        .tileCallback(options.progress, options.userData)
+        .doneCallback(options.done, options.userData);
 
     builder.build().render();
 }
 
 void Pipeline::bakeAllOutputs(const cgltf_data* sourceAsset,
         image::LinearImage targets[filament::rays::OUTPUTPLANE_COUNT],
-        filament::rays::TileCallback onTile, filament::rays::DoneCallback onDone, void* userData) {
+        const RenderOptions& options) {
     SimpleMesh* meshes;
     size_t numMeshes;
     cgltfToSimpleMesh(sourceAsset, &meshes, &numMeshes);
@@ -803,12 +792,12 @@ void Pipeline::bakeAllOutputs(const cgltf_data* sourceAsset,
         .outputPlane(BENT_NORMALS, targets[(int) BENT_NORMALS])
         .outputPlane(MESH_NORMALS, targets[(int) MESH_NORMALS])
         .outputPlane(MESH_POSITIONS, targets[(int) MESH_POSITIONS])
-        .uvCamera(mChartDilation)
+        .uvCamera(options.enableDilation)
         .denoise()
-        .samplesPerPixel(mSamplesPerPixel)
-        .occlusionRayBounds(mAoRayNear, std::numeric_limits<float>::infinity())
-        .tileCallback(onTile, userData)
-        .doneCallback(onDone, userData);
+        .samplesPerPixel(options.samplesPerPixel)
+        .occlusionRayBounds(options.aoRayNear, std::numeric_limits<float>::infinity())
+        .tileCallback(options.progress, options.userData)
+        .doneCallback(options.done, options.userData);
 
     builder.build().render();
 }
@@ -1704,58 +1693,37 @@ void AssetPipeline::setOcclusionUri(AssetHandle asset, const Path& texture) {
 }
 
 void AssetPipeline::bakeAmbientOcclusion(AssetHandle source, image::LinearImage target,
-        RenderTileCallback onTile, RenderDoneCallback onDone, void* userData) {
+        const RenderOptions& options) {
     Pipeline* impl = (Pipeline*) mImpl;
     auto sourceAsset = (const cgltf_data*) source;
     if (!isFlattened(sourceAsset)) {
         utils::slog.e << "Only flattened assets can be baked." << utils::io::endl;
         return;
     }
-    impl->bakeAmbientOcclusion(sourceAsset, target, onTile, onDone, userData);
+    impl->bakeAmbientOcclusion(sourceAsset, target, options);
 }
 
 void AssetPipeline::renderAmbientOcclusion(AssetHandle source, image::LinearImage target,
-        const filament::rays::SimpleCamera& camera, RenderTileCallback onTile,
-        RenderDoneCallback onDone, void* userData) {
+        const filament::rays::SimpleCamera& camera, const RenderOptions& options) {
     Pipeline* impl = (Pipeline*) mImpl;
     auto sourceAsset = (const cgltf_data*) source;
     if (!isFlattened(sourceAsset)) {
         utils::slog.e << "Only flattened assets can be rendered." << utils::io::endl;
         return;
     }
-    impl->renderAmbientOcclusion(sourceAsset, target, camera, onTile, onDone, userData);
+    impl->renderAmbientOcclusion(sourceAsset, target, camera, options);
 }
 
 void AssetPipeline::bakeAllOutputs(AssetHandle source,
         image::LinearImage targets[filament::rays::OUTPUTPLANE_COUNT],
-        RenderTileCallback onTile, RenderDoneCallback onDone, void* userData) {
+        const RenderOptions& options) {
     Pipeline* impl = (Pipeline*) mImpl;
     auto sourceAsset = (const cgltf_data*) source;
     if (!isFlattened(sourceAsset)) {
         utils::slog.e << "Only flattened assets can be baked." << utils::io::endl;
         return;
     }
-    impl->bakeAllOutputs(sourceAsset, targets, onTile, onDone, userData);
-}
-
-void AssetPipeline::setSamplesPerPixel(size_t spp) {
-    Pipeline* impl = (Pipeline*) mImpl;
-    impl->setSamplesPerPixel(spp);
-}
-
-void AssetPipeline::setAoRayNear(float tmin) {
-    Pipeline* impl = (Pipeline*) mImpl;
-    impl->setAoRayNear(tmin);
-}
-
-void AssetPipeline::setChartDilation(bool dilate) {
-    Pipeline* impl = (Pipeline*) mImpl;
-    impl->setChartDilation(dilate);
-}
-
-void AssetPipeline::setDenoiser(bool denoise) {
-    Pipeline* impl = (Pipeline*) mImpl;
-    impl->setDenoiser(denoise);
+    impl->bakeAllOutputs(sourceAsset, targets, options);
 }
 
 bool AssetPipeline::isFlattened(AssetHandle source) {
