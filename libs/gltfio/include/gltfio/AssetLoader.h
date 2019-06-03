@@ -128,6 +128,11 @@ public:
      */
     FilamentAsset* createAssetFromHandle(const void* cgltf);
 
+    /**
+     * Allows clients to enable diagnostic shading on newly-loaded assets.
+     */
+    void enableDiagnostics(bool enable = true);
+
     /** Destroys the given asset and all of its associated Filament objects. */
     void destroyAsset(const FilamentAsset* asset);
 

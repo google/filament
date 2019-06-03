@@ -149,6 +149,7 @@ struct FAssetLoader : public AssetLoader {
     MatInstanceCache mMatInstanceCache;
     MeshCache mMeshCache;
     bool mError = false;
+    bool mDiagnosticsEnabled = false;
 };
 
 FILAMENT_UPCAST(AssetLoader)
@@ -609,6 +610,7 @@ MaterialInstance* FAssetLoader::createMaterialInstance(const cgltf_material* inp
         .hasEmissiveTexture = inputMat->emissive_texture.texture,
         .useSpecularGlossiness = false,
         .alphaMode = AlphaMode::OPAQUE,
+        .enableDiagnostics = mDiagnosticsEnabled,
         .hasMetallicRoughnessTexture = metallicRoughnessTexture.texture,
         .metallicRoughnessUV = (uint8_t) metallicRoughnessTexture.texcoord,
         .baseColorUV = (uint8_t) baseColorTexture.texcoord,
@@ -809,6 +811,10 @@ FilamentAsset* AssetLoader::createAssetFromHandle(const void* handle) {
     const cgltf_data* sourceAsset = (const cgltf_data*) handle;
     upcast(this)->createAsset(sourceAsset);
     return upcast(this)->mResult;
+}
+
+void AssetLoader::enableDiagnostics(bool enable) {
+    upcast(this)->mDiagnosticsEnabled = enable;
 }
 
 void AssetLoader::destroyAsset(const FilamentAsset* asset) {

@@ -42,7 +42,8 @@ struct alignas(4) MaterialKey {
     bool hasOcclusionTexture : 1;
     bool hasEmissiveTexture : 1;
     bool useSpecularGlossiness : 1;
-    AlphaMode alphaMode;
+    AlphaMode alphaMode : 4;
+    bool enableDiagnostics : 4;
     union {
         struct {
             bool hasMetallicRoughnessTexture : 1;

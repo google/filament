@@ -68,6 +68,7 @@ public:
     /** Gets all material instances. These are already bound to renderables. */
     size_t getMaterialInstanceCount() const noexcept;
     const filament::MaterialInstance* const* getMaterialInstances() const noexcept;
+    filament::MaterialInstance* const* getMaterialInstances() noexcept;
 
     /** Gets loading instructions for vertex buffers and index buffers. */
     size_t getBufferBindingCount() const noexcept;

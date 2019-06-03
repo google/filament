@@ -90,6 +90,14 @@ static std::string shaderFromKey(const MaterialKey& config) {
         )SHADER";
     }
 
+    if (config.enableDiagnostics && !config.unlit) {
+        shader += R"SHADER(
+            if (materialParams.enableDiagnostics) {
+                material.normal = vec3(0, 0, 1);
+            }
+        )SHADER";
+    }
+
     shader += R"SHADER(
         prepareMaterial(material);
         material.baseColor = materialParams.baseColorFactor;
@@ -103,6 +111,16 @@ static std::string shaderFromKey(const MaterialKey& config) {
         }
         shader += R"SHADER(
             material.baseColor *= texture(materialParams_baseColorMap, baseColorUV);
+        )SHADER";
+    }
+
+    if (config.enableDiagnostics) {
+        shader += R"SHADER(
+           #if defined(HAS_ATTRIBUTE_TANGENTS)
+            if (materialParams.enableDiagnostics) {
+                material.baseColor.rgb = vertex_worldNormal * 0.5 + 0.5;
+            }
+          #endif
         )SHADER";
     }
 
@@ -212,6 +230,10 @@ static Material* createMaterial(Engine* engine, const MaterialKey& config, const
     }
     if (numTextures > 1) {
         builder.require(VertexAttribute::UV1);
+    }
+
+    if (config.enableDiagnostics) {
+        builder.parameter(MaterialBuilder::UniformType::BOOL, "enableDiagnostics");
     }
 
     // BASE COLOR

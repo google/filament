@@ -43,6 +43,10 @@ const MaterialInstance* const* FilamentAsset::getMaterialInstances() const noexc
     return upcast(this)->getMaterialInstances();
 }
 
+MaterialInstance* const* FilamentAsset::getMaterialInstances() noexcept {
+    return upcast(this)->getMaterialInstances();
+}
+
 size_t FilamentAsset::getBufferBindingCount() const noexcept {
     return upcast(this)->getBufferBindingCount();
 }
