@@ -125,6 +125,7 @@ struct BakerApp {
         uint32_t resolution = 1024;
         int samplesPerPixel = 256;
         float aoRayNear = std::numeric_limits<float>::epsilon() * 10.0f;
+        bool dilateCharts = true;
     } bakeOptions;
 
     struct {
@@ -544,6 +545,7 @@ static void executeBakeAo(BakerApp& app) {
         };
         app.pipeline->setSamplesPerPixel(app.bakeOptions.samplesPerPixel);
         app.pipeline->setAoRayNear(app.bakeOptions.aoRayNear);
+        app.pipeline->setChartDilation(app.bakeOptions.dilateCharts);
         app.pipeline->bakeAllOutputs(app.currentAsset, outputs, onRenderTile, onRenderDone, &app);
     };
 
@@ -840,6 +842,8 @@ int main(int argc, char** argv) {
                 ImGui::InputFloat("Secondary ray tmin", &app.bakeOptions.aoRayNear,
                         std::numeric_limits<float>::epsilon(),
                         std::numeric_limits<float>::epsilon() * 10.0f, 10);
+
+                ImGui::Checkbox("Dilate charts", &app.bakeOptions.dilateCharts);
             }
 
             // Modals

@@ -168,6 +168,13 @@ public:
      */
     void setAoRayNear(float tmin);
 
+    /**
+     * If false, disables the flood-fill that the baker performs after generating charts.
+     *
+     * This has an effect on subsequent calls to bake*().
+     */
+    void setChartDilation(bool dilate);
+
     static bool isFlattened(AssetHandle source);
     static bool isParameterized(AssetHandle source);
 
