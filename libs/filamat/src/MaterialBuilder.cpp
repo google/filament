@@ -25,7 +25,8 @@
 #include <private/filament/SamplerInterfaceBlock.h>
 
 #include <private/filament/SibGenerator.h>
-#include <private/filament/Variant.h>
+
+#include "MaterialVariants.h"
 
 #include "shaders/MaterialInfo.h"
 #include "shaders/ShaderGenerator.h"
@@ -439,7 +440,8 @@ static void showErrorMessage(const char* materialName, uint8_t variant,
             << shaderCode;
 }
 
-bool MaterialBuilder::generateShaders(ChunkContainer& container, MaterialInfo& info) const noexcept {
+bool MaterialBuilder::generateShaders(const std::vector<Variant>& variants, ChunkContainer& container,
+        MaterialInfo& info) const noexcept {
     // Create a postprocessor to optimize / compile to Spir-V if necessary.
 #ifndef FILAMAT_LITE
     GLSLPostProcessor postProcessor(mOptimization, mPrintShaders);
@@ -489,120 +491,62 @@ bool MaterialBuilder::generateShaders(ChunkContainer& container, MaterialInfo& i
         spirvEntry.shaderModel = static_cast<uint8_t>(params.shaderModel);
         metalEntry.shaderModel = static_cast<uint8_t>(params.shaderModel);
 
-        // apply custom variants filters
-        uint8_t variantMask = ~mVariantFilter;
+        for (const auto& v : variants) {
+            glslEntry.variant = v.variant;
+            spirvEntry.variant = v.variant;
+            metalEntry.variant = v.variant;
 
-        for (uint8_t k = 0; k < filament::VARIANT_COUNT; k++) {
-
-            if (filament::Variant::isReserved(k)) {
-                continue;
-            }
-
-            glslEntry.variant = k;
-            spirvEntry.variant = k;
-            metalEntry.variant = k;
-
-            // Remove variants for unlit materials
-            uint8_t v = filament::Variant::filterVariant(
-                    k & variantMask, isLit() || mShadowMultiplier);
-
-            if (filament::Variant::filterVariantVertex(v) == k) {
-                // Vertex Shader
-                std::string vs = sg.createVertexProgram(
-                        shaderModel, targetApi, targetLanguage, info, k,
+            // Generate raw shader code.
+            std::string shader;
+            if (v.stage == filament::backend::ShaderType::VERTEX) {
+                shader = sg.createVertexProgram(
+                        shaderModel, targetApi, targetLanguage, info, v.variant,
                         mInterpolation, mVertexDomain);
-#ifndef FILAMAT_LITE
-                bool ok = postProcessor.process(vs, filament::backend::ShaderType::VERTEX,
-                        shaderModel, &vs, pSpirv, pMsl);
-#else
-                bool ok = true;
-#endif
-                if (!ok) {
-                    showErrorMessage(mMaterialName.c_str_safe(), k, targetApi,
-                            filament::backend::ShaderType::VERTEX, vs);
-                    return false;
-                }
-
-                if (targetApi == TargetApi::OPENGL) {
-                    if (targetLanguage == TargetLanguage::SPIRV) {
-                        sg.fixupExternalSamplers(shaderModel, vs, info);
-                    }
-
-                    glslEntry.stage = filament::backend::ShaderType::VERTEX;
-                    glslEntry.shader = vs;
-                    glslDictionary.addText(glslEntry.shader);
-                    glslEntries.push_back(glslEntry);
-                }
-
-#ifndef FILAMAT_LITE
-                if (targetApi == TargetApi::VULKAN) {
-                    assert(!spirv.empty());
-                    spirvEntry.stage = filament::backend::ShaderType::VERTEX;
-                    spirvEntry.dictionaryIndex = spirvDictionary.addBlob(spirv);
-                    spirv.clear();
-                    spirvEntries.push_back(spirvEntry);
-                }
-                if (targetApi == TargetApi::METAL) {
-                    assert(spirv.size() > 0);
-                    assert(msl.length() > 0);
-                    metalEntry.stage = filament::backend::ShaderType::VERTEX;
-                    metalEntry.shader = msl;
-                    spirv.clear();
-                    msl.clear();
-                    metalDictionary.addText(metalEntry.shader);
-                    metalEntries.push_back(metalEntry);
-                }
-#endif
+            } else if (v.stage == filament::backend::ShaderType::FRAGMENT) {
+                shader = sg.createFragmentProgram(
+                        shaderModel, targetApi, targetLanguage, info, v.variant, mInterpolation);
             }
 
-            if (filament::Variant::filterVariantFragment(v) == k) {
-                // Fragment Shader
-                std::string fs = sg.createFragmentProgram(
-                        shaderModel, targetApi, targetLanguage, info, k, mInterpolation);
-
 #ifndef FILAMAT_LITE
-                bool ok = postProcessor.process(fs, filament::backend::ShaderType::FRAGMENT,
-                        shaderModel, &fs, pSpirv, pMsl);
+            bool ok = postProcessor.process(shader, v.stage, shaderModel, &shader, pSpirv, pMsl);
 #else
-                bool ok = true;
+            bool ok = true;
 #endif
-                if (!ok) {
-                    showErrorMessage(mMaterialName.c_str_safe(), k, targetApi,
-                            filament::backend::ShaderType::FRAGMENT, fs);
-                    return false;
+            if (!ok) {
+                showErrorMessage(mMaterialName.c_str_safe(), v.variant, targetApi, v.stage, shader);
+                return false;
+            }
+
+            if (targetApi == TargetApi::OPENGL) {
+                if (targetLanguage == TargetLanguage::SPIRV) {
+                    sg.fixupExternalSamplers(shaderModel, shader, info);
                 }
 
-                if (targetApi == TargetApi::OPENGL) {
-                    if (targetLanguage == TargetLanguage::SPIRV) {
-                        sg.fixupExternalSamplers(shaderModel, fs, info);
-                    }
-
-                    glslEntry.stage = filament::backend::ShaderType::FRAGMENT;
-                    glslEntry.shader = fs;
-                    glslDictionary.addText(glslEntry.shader);
-                    glslEntries.push_back(glslEntry);
-                }
+                glslEntry.stage = v.stage;
+                glslEntry.shader = shader;
+                glslDictionary.addText(glslEntry.shader);
+                glslEntries.push_back(glslEntry);
+            }
 
 #ifndef FILAMAT_LITE
-                if (targetApi == TargetApi::VULKAN) {
-                    assert(!spirv.empty());
-                    spirvEntry.stage = filament::backend::ShaderType::FRAGMENT;
-                    spirvEntry.dictionaryIndex = spirvDictionary.addBlob(spirv);
-                    spirv.clear();
-                    spirvEntries.push_back(spirvEntry);
-                }
-                if (targetApi == TargetApi::METAL) {
-                    assert(spirv.size() > 0);
-                    assert(msl.length() > 0);
-                    metalEntry.stage = filament::backend::ShaderType::FRAGMENT;
-                    metalEntry.shader = msl;
-                    spirv.clear();
-                    msl.clear();
-                    metalDictionary.addText(metalEntry.shader);
-                    metalEntries.push_back(metalEntry);
-                }
-#endif
+            if (targetApi == TargetApi::VULKAN) {
+                assert(!spirv.empty());
+                spirvEntry.stage = v.stage;
+                spirvEntry.dictionaryIndex = spirvDictionary.addBlob(spirv);
+                spirv.clear();
+                spirvEntries.push_back(spirvEntry);
             }
+            if (targetApi == TargetApi::METAL) {
+                assert(spirv.size() > 0);
+                assert(msl.length() > 0);
+                metalEntry.stage = v.stage;
+                metalEntry.shader = msl;
+                spirv.clear();
+                msl.clear();
+                metalDictionary.addText(metalEntry.shader);
+                metalEntries.push_back(metalEntry);
+            }
+#endif
         }
     }
 
@@ -655,7 +599,8 @@ Package MaterialBuilder::build() noexcept {
     writeChunks(container, info);
 
     // Generate all shaders and write the shader chunks.
-    bool success = generateShaders(container, info);
+    auto variants = determineVariants(mVariantFilter, isLit(), mShadowMultiplier);
+    bool success = generateShaders(variants, container, info);
 
     // Flatten all chunks in the container into a Package.
     size_t packageSize = container.getSize();
