@@ -193,6 +193,11 @@ MaterialBuilder& MaterialBuilder::require(filament::VertexAttribute attribute) n
     return *this;
 }
 
+MaterialBuilder& MaterialBuilder::materialDomain(MaterialDomain materialDomain) noexcept {
+    mMaterialDomain = materialDomain;
+    return *this;
+}
+
 MaterialBuilder& MaterialBuilder::blending(BlendingMode blending) noexcept {
     mBlendingMode = blending;
     return *this;

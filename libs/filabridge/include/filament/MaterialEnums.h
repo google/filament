@@ -118,6 +118,14 @@ enum VertexAttribute : uint8_t {
     // this is limited by driver::MAX_VERTEX_ATTRIBUTE_COUNT
 };
 
+/**
+ * Material domains
+ */
+enum MaterialDomain : uint8_t {
+    SURFACE         = 0, //!< shaders applied to renderables
+    POST_PROCESS    = 1, //!< shaders applied to rendered buffers
+};
+
 // can't really use std::underlying_type<AttributeIndex>::type because the driver takes a uint32_t
 using AttributeBitset = utils::bitset32;
 
