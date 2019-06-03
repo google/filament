@@ -62,6 +62,7 @@ enum class Visualization : int {
     MESH_MODIFIED,
     MESH_PREVIEW_AO,
     MESH_PREVIEW_UV,
+    MESH_NORMALS,
     IMAGE_OCCLUSION,
     IMAGE_BENT_NORMALS,
     IMAGE_MESH_NORMALS
@@ -69,8 +70,9 @@ enum class Visualization : int {
 
 static const char* DEFAULT_IBL = "envs/venetian_crossroads";
 static const char* INI_FILENAME = "gltf_baker.ini";
-static const char* UV_FILENAME = "gltf_baker_tmp_uv.png";
-static const char* AO_FILENAME = "gltf_baker_tmp_ao.png";
+static const char* TMP_UV_FILENAME = "gltf_baker_tmp_uv.png";
+static const char* TMP_AO_FILENAME = "gltf_baker_tmp_ao.png";
+static const char* TMP_NORMALS_FILENAME = "gltf_baker_tmp_mn.png";
 static constexpr int PATH_SIZE = 256;
 
 struct BakerApp;
@@ -103,6 +105,7 @@ struct BakerApp {
     gltfio::AssetPipeline::AssetHandle modifiedAsset = nullptr;
     gltfio::AssetPipeline::AssetHandle previewAoAsset = nullptr;
     gltfio::AssetPipeline::AssetHandle previewUvAsset = nullptr;
+    gltfio::AssetPipeline::AssetHandle normalsAsset = nullptr;
 
     // Available 2D images suitable for display, depending on "visualization".
     image::LinearImage ambientOcclusion;
@@ -299,6 +302,7 @@ static void updateViewerMesh(BakerApp& app) {
         case Visualization::MESH_MODIFIED: handle = app.modifiedAsset; break;
         case Visualization::MESH_PREVIEW_AO: handle = app.previewAoAsset; break;
         case Visualization::MESH_PREVIEW_UV: handle = app.previewUvAsset; break;
+        case Visualization::MESH_NORMALS: handle = app.normalsAsset; break;
         default: return;
     }
 
@@ -378,6 +382,7 @@ static void updateViewer(BakerApp& app) {
         case Visualization::MESH_MODIFIED:
         case Visualization::MESH_PREVIEW_AO:
         case Visualization::MESH_PREVIEW_UV:
+        case Visualization::MESH_NORMALS:
             updateViewerMesh(app);
             break;
         case Visualization::IMAGE_OCCLUSION:
@@ -505,17 +510,24 @@ static void executeBakeAo(BakerApp& app) {
 
         // Generate a simple red-green UV visualization texture.
         const utils::Path folder = app->filename.getAbsolutePath().getParent();
-        generateUvVisualization(folder + UV_FILENAME);
-        app->previewUvAsset = app->pipeline->generatePreview(app->currentAsset, UV_FILENAME);
+        generateUvVisualization(folder + TMP_UV_FILENAME);
+        app->previewUvAsset = app->pipeline->generatePreview(app->currentAsset, TMP_UV_FILENAME);
 
         // Export the generated AO texture.
-        const utils::Path tmpOcclusionPath = folder + AO_FILENAME;
+        const utils::Path tmpOcclusionPath = folder + TMP_AO_FILENAME;
         std::ofstream out(tmpOcclusionPath.c_str(), std::ios::binary | std::ios::trunc);
         ImageEncoder::encode(out, ImageEncoder::Format::PNG_LINEAR, app->ambientOcclusion,
                 "", tmpOcclusionPath.c_str());
 
-        app->previewAoAsset = app->pipeline->generatePreview(app->currentAsset, AO_FILENAME);
-        app->modifiedAsset = app->pipeline->replaceOcclusion(app->currentAsset, AO_FILENAME);
+        // Export the mesh normals texture.
+        const utils::Path tmpNormalsPath = folder + TMP_NORMALS_FILENAME;
+        out = std::ofstream(tmpNormalsPath.c_str(), std::ios::binary | std::ios::trunc);
+        ImageEncoder::encode(out, ImageEncoder::Format::PNG_LINEAR, app->meshNormals,
+                "", tmpNormalsPath.c_str());
+
+        app->previewAoAsset = app->pipeline->generatePreview(app->currentAsset, TMP_AO_FILENAME);
+        app->modifiedAsset = app->pipeline->replaceOcclusion(app->currentAsset, TMP_AO_FILENAME);
+        app->normalsAsset = app->pipeline->generatePreview(app->currentAsset, TMP_NORMALS_FILENAME);
         app->isWorking = false;
     });
 
@@ -801,9 +813,10 @@ int main(int argc, char** argv) {
                     addOption("3D model with modified materials", '2', RV::MESH_MODIFIED);
                     addOption("3D model with new occlusion only", '3', RV::MESH_PREVIEW_AO);
                     addOption("3D model with UV visualization", '4', RV::MESH_PREVIEW_UV);
-                    addOption("2D texture with occlusion", '5', RV::IMAGE_OCCLUSION);
-                    addOption("2D texture with bent normals", '6', RV::IMAGE_BENT_NORMALS);
-                    addOption("2D texture with mesh normals", '7', RV::IMAGE_MESH_NORMALS);
+                    addOption("3D model with normals visualization", '5', RV::MESH_NORMALS);
+                    addOption("2D texture with occlusion", '6', RV::IMAGE_OCCLUSION);
+                    addOption("2D texture with bent normals", '7', RV::IMAGE_BENT_NORMALS);
+                    addOption("2D texture with mesh normals", '8', RV::IMAGE_MESH_NORMALS);
                 }
                 if (app.visualization != previousVisualization) {
                     app.requestViewerUpdate = true;
