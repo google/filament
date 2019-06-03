@@ -99,6 +99,10 @@ struct FFilamentAsset : public FilamentAsset {
         return mMaterialInstances.data();
     }
 
+    filament::MaterialInstance* const* getMaterialInstances() noexcept {
+        return mMaterialInstances.data();
+    }
+
     size_t getBufferBindingCount() const noexcept {
         return mBufferBindings.size();
     }
