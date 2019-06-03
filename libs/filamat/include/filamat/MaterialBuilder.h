@@ -341,6 +341,8 @@ private:
 
     void writeChunks(ChunkContainer& container, MaterialInfo& info) const noexcept;
 
+    bool generateShaders(ChunkContainer& container, MaterialInfo& info) const noexcept;
+
     bool isLit() const noexcept { return mShading != filament::Shading::UNLIT; }
 
     utils::CString mMaterialName;

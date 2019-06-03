@@ -439,37 +439,11 @@ static void showErrorMessage(const char* materialName, uint8_t variant,
             << shaderCode;
 }
 
-Package MaterialBuilder::build() noexcept {
-    if (materialBuilderClients == 0) {
-        utils::slog.e << "Error: MaterialBuilder::init() must be called before build()."
-            << utils::io::endl;
-        // Return an empty package to signal a failure to build the material.
-        Package package(0);
-        package.setValid(false);
-        return package;
-    }
-
-    if (!checkLiteRequirements() ||
-        !runStaticCodeAnalysis()) {
-        // Return an empty package to signal a failure to build the material.
-        Package package(0);
-        package.setValid(false);
-        return package;
-    }
-
-    bool errorOccured = false;
-
-    MaterialInfo info;
-    prepareToBuild(info);
-
+bool MaterialBuilder::generateShaders(ChunkContainer& container, MaterialInfo& info) const noexcept {
     // Create a postprocessor to optimize / compile to Spir-V if necessary.
 #ifndef FILAMAT_LITE
     GLSLPostProcessor postProcessor(mOptimization, mPrintShaders);
 #endif
-
-    // Create chunk tree.
-    ChunkContainer container;
-    writeChunks(container, info);
 
     // Generate all shaders.
     std::vector<TextEntry> glslEntries;
@@ -546,8 +520,7 @@ Package MaterialBuilder::build() noexcept {
                 if (!ok) {
                     showErrorMessage(mMaterialName.c_str_safe(), k, targetApi,
                             filament::backend::ShaderType::VERTEX, vs);
-                    errorOccured = true;
-                    break;
+                    return false;
                 }
 
                 if (targetApi == TargetApi::OPENGL) {
@@ -596,8 +569,7 @@ Package MaterialBuilder::build() noexcept {
                 if (!ok) {
                     showErrorMessage(mMaterialName.c_str_safe(), k, targetApi,
                             filament::backend::ShaderType::FRAGMENT, fs);
-                    errorOccured = true;
-                    break;
+                    return false;
                 }
 
                 if (targetApi == TargetApi::OPENGL) {
@@ -654,12 +626,43 @@ Package MaterialBuilder::build() noexcept {
     }
 #endif
 
+    return true;
+}
+
+Package MaterialBuilder::build() noexcept {
+    if (materialBuilderClients == 0) {
+        utils::slog.e << "Error: MaterialBuilder::init() must be called before build()."
+            << utils::io::endl;
+        // Return an empty package to signal a failure to build the material.
+        Package package(0);
+        package.setValid(false);
+        return package;
+    }
+
+    if (!checkLiteRequirements() ||
+        !runStaticCodeAnalysis()) {
+        // Return an empty package to signal a failure to build the material.
+        Package package(0);
+        package.setValid(false);
+        return package;
+    }
+
+    MaterialInfo info;
+    prepareToBuild(info);
+
+    // Create chunk tree.
+    ChunkContainer container;
+    writeChunks(container, info);
+
+    // Generate all shaders and write the shader chunks.
+    bool success = generateShaders(container, info);
+
     // Flatten all chunks in the container into a Package.
     size_t packageSize = container.getSize();
     Package package(packageSize);
     Flattener f(package);
     container.flatten(f);
-    package.setValid(!errorOccured);
+    package.setValid(success);
 
     return package;
 }
