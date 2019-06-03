@@ -63,7 +63,8 @@ enum class Visualization : int {
     MESH_PREVIEW_AO,
     MESH_PREVIEW_UV,
     IMAGE_OCCLUSION,
-    IMAGE_BENT_NORMALS
+    IMAGE_BENT_NORMALS,
+    IMAGE_MESH_NORMALS
 };
 
 static const char* DEFAULT_IBL = "envs/venetian_crossroads";
@@ -334,6 +335,9 @@ static void updateViewerImage(BakerApp& app) {
         case Visualization::IMAGE_BENT_NORMALS:
             image = app.bentNormals;
             break;
+        case Visualization::IMAGE_MESH_NORMALS:
+            image = app.meshNormals;
+            break;
         default:
             return;
     }
@@ -378,6 +382,7 @@ static void updateViewer(BakerApp& app) {
             break;
         case Visualization::IMAGE_OCCLUSION:
         case Visualization::IMAGE_BENT_NORMALS:
+        case Visualization::IMAGE_MESH_NORMALS:
             updateViewerImage(app);
             break;
     }
@@ -796,12 +801,14 @@ int main(int argc, char** argv) {
                 } else if (!app.modifiedAsset) {
                     addOption("2D texture with occlusion", '2', RV::IMAGE_OCCLUSION);
                     addOption("2D texture with bent normals", '3', RV::IMAGE_BENT_NORMALS);
+                    addOption("2D texture with mesh normals", '4', RV::IMAGE_MESH_NORMALS);
                 } else {
                     addOption("3D model with modified materials", '2', RV::MESH_MODIFIED);
                     addOption("3D model with new occlusion only", '3', RV::MESH_PREVIEW_AO);
                     addOption("3D model with UV visualization", '4', RV::MESH_PREVIEW_UV);
                     addOption("2D texture with occlusion", '5', RV::IMAGE_OCCLUSION);
                     addOption("2D texture with bent normals", '6', RV::IMAGE_BENT_NORMALS);
+                    addOption("2D texture with mesh normals", '7', RV::IMAGE_MESH_NORMALS);
                 }
                 if (app.visualization != previousVisualization) {
                     app.requestViewerUpdate = true;
@@ -901,7 +908,8 @@ int main(int argc, char** argv) {
         app.overlayQuad.scene = app.overlayQuad.view->getScene();
         app.overlayQuad.scene->remove(app.overlayQuad.entity);
         const bool showOverlay = app.visualization == Visualization::IMAGE_OCCLUSION
-                || app.visualization == Visualization::IMAGE_BENT_NORMALS;
+                || app.visualization == Visualization::IMAGE_BENT_NORMALS
+                || app.visualization == Visualization::IMAGE_MESH_NORMALS;
         if (showOverlay) {
             createQuadRenderable(app);
             app.overlayQuad.scene->addEntity(app.overlayQuad.entity);
