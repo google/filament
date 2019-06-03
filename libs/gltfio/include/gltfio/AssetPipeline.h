@@ -160,6 +160,14 @@ public:
      */
     void setSamplesPerPixel(size_t spp);
 
+    /**
+     * Sets the ray "tmin" for occlusion rays; if this value is too small, self-intersections can
+     * occur. If it is too large then nearby surfaces might be skipped over.
+     *
+     * This has an effect on subsequent calls to bake*() and render*().
+     */
+    void setAoRayNear(float tmin);
+
     static bool isFlattened(AssetHandle source);
     static bool isParameterized(AssetHandle source);
 

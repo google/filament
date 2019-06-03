@@ -120,6 +120,7 @@ struct BakerApp {
     struct {
         uint32_t resolution = 1024;
         int samplesPerPixel = 256;
+        float aoRayNear = std::numeric_limits<float>::epsilon() * 10.0f;
     } bakeOptions;
 
     struct {
@@ -462,6 +463,8 @@ static void executeTestRender(BakerApp& app) {
         app->requestViewerUpdate = true;
         app->isWorking = false;
     });
+    app.pipeline->setSamplesPerPixel(app.bakeOptions.samplesPerPixel);
+    app.pipeline->setAoRayNear(app.bakeOptions.aoRayNear);
     app.pipeline->renderAmbientOcclusion(currentAsset, app.ambientOcclusion, camera, onRenderTile,
             onRenderDone, &app);
 }
@@ -528,6 +531,7 @@ static void executeBakeAo(BakerApp& app) {
             app.ambientOcclusion, app.bentNormals, app.meshNormals, app.meshPositions
         };
         app.pipeline->setSamplesPerPixel(app.bakeOptions.samplesPerPixel);
+        app.pipeline->setAoRayNear(app.bakeOptions.aoRayNear);
         app.pipeline->bakeAllOutputs(app.currentAsset, outputs, onRenderTile, onRenderDone, &app);
     };
 
@@ -801,6 +805,7 @@ int main(int argc, char** argv) {
             // Options
             if (ImGui::CollapsingHeader("Bake Options")) {
                 ImGui::InputInt("Samples per pixel", &app.bakeOptions.samplesPerPixel);
+
                 static const int kFirstOption = (int) std::log2(512);
                 int bakeOption = (int) std::log2(app.bakeOptions.resolution) - kFirstOption;
                 ImGui::Combo("Texture size", &bakeOption,
@@ -808,6 +813,10 @@ int main(int argc, char** argv) {
                         "1024 x 1024\0"
                         "2048 x 2048\0");
                 app.bakeOptions.resolution = 1u << uint32_t(bakeOption + kFirstOption);
+
+                ImGui::InputFloat("Secondary ray tmin", &app.bakeOptions.aoRayNear,
+                        std::numeric_limits<float>::epsilon(),
+                        std::numeric_limits<float>::epsilon() * 10.0f, 10);
             }
 
             // Modals

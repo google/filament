@@ -132,6 +132,11 @@ public:
          */
         Builder& samplesPerPixel(size_t numSamples);
 
+        /**
+         * Sets the tmin and tfar for secondary rays.
+         */
+        Builder& occlusionRayBounds(float aoRayNear, float aoRayFar);
+
         PathTracer build();
     private:
         Config mConfig;
