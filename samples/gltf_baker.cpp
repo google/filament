@@ -346,7 +346,7 @@ static void updateViewerImage(BakerApp& app) {
     const int channels = image.getChannels();
     const void* data = image.getPixelRef();
     const Texture::InternalFormat internalFormat = channels == 1 ?
-            Texture::InternalFormat::R8 : Texture::InternalFormat::RGB8;
+            Texture::InternalFormat::R32F : Texture::InternalFormat::RGB32F;
     const Texture::Format format = channels == 1 ? Texture::Format::R : Texture::Format::RGB;
 
     // Create a brand new texture object if necessary.
@@ -502,11 +502,6 @@ static void executeBakeAo(BakerApp& app) {
 
     auto onRenderDone = makeDoneCallback([](BakerApp* app) {
         app->requestViewerUpdate = true;
-
-        // TODO: users can preview bent normals as they are being rendered so we should
-        // consider doing the vector-to-colors conversion in real time rather than waiting
-        // till the end.
-        app->bentNormals = vectorsToColors(app->bentNormals);
 
         // Generate a simple red-green UV visualization texture.
         const utils::Path folder = app->filename.getAbsolutePath().getParent();
