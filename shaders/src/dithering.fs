@@ -10,9 +10,9 @@
 #define DITHERING_TRIANGLE_NOISE_RGB   4
 
 #ifdef TARGET_MOBILE
-  #define DITHERING_OPERATOR           DITHERING_INTERLEAVED_NOISE
+    #define DITHERING_OPERATOR         DITHERING_INTERLEAVED_NOISE
 #else
-  #define DITHERING_OPERATOR           DITHERING_TRIANGLE_NOISE_RGB
+    #define DITHERING_OPERATOR         DITHERING_VLACHOS
 #endif
 
 //------------------------------------------------------------------------------
