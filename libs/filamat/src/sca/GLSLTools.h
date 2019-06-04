@@ -122,10 +122,12 @@ public:
     // prepareMaterial() is called at some point in material() call chain.
     bool analyzeFragmentShader(const std::string& shaderCode,
             filament::backend::ShaderModel model,
+            MaterialBuilder::MaterialDomain materialDomain,
             MaterialBuilder::TargetApi targetApi) const noexcept;
 
     bool analyzeVertexShader(const std::string& shaderCode,
             filament::backend::ShaderModel model,
+            MaterialBuilder::MaterialDomain materialDomain,
             MaterialBuilder::TargetApi targetApi) const noexcept;
 
     // Public for unit tests.
