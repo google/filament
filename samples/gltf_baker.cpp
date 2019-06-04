@@ -59,13 +59,14 @@ using filament::math::ushort2;
 
 enum class Visualization : int {
     MESH_CURRENT,
+    MESH_VERTEX_NORMALS,
     MESH_MODIFIED,
     MESH_PREVIEW_AO,
     MESH_PREVIEW_UV,
-    MESH_NORMALS,
+    MESH_GBUFFER_NORMALS,
     IMAGE_OCCLUSION,
     IMAGE_BENT_NORMALS,
-    IMAGE_MESH_NORMALS
+    IMAGE_GBUFFER_NORMALS
 };
 
 static const char* DEFAULT_IBL = "envs/venetian_crossroads";
@@ -301,10 +302,11 @@ static void updateViewerMesh(BakerApp& app) {
     gltfio::AssetPipeline::AssetHandle handle;
     switch (app.visualization) {
         case Visualization::MESH_CURRENT: handle = app.currentAsset; break;
+        case Visualization::MESH_VERTEX_NORMALS: handle = app.currentAsset; break;
         case Visualization::MESH_MODIFIED: handle = app.modifiedAsset; break;
         case Visualization::MESH_PREVIEW_AO: handle = app.previewAoAsset; break;
         case Visualization::MESH_PREVIEW_UV: handle = app.previewUvAsset; break;
-        case Visualization::MESH_NORMALS: handle = app.normalsAsset; break;
+        case Visualization::MESH_GBUFFER_NORMALS: handle = app.normalsAsset; break;
         default: return;
     }
 
@@ -341,7 +343,7 @@ static void updateViewerImage(BakerApp& app) {
         case Visualization::IMAGE_BENT_NORMALS:
             image = app.bentNormals;
             break;
-        case Visualization::IMAGE_MESH_NORMALS:
+        case Visualization::IMAGE_GBUFFER_NORMALS:
             image = app.meshNormals;
             break;
         default:
@@ -381,15 +383,16 @@ static void updateViewerImage(BakerApp& app) {
 static void updateViewer(BakerApp& app) {
     switch (app.visualization) {
         case Visualization::MESH_CURRENT:
+        case Visualization::MESH_VERTEX_NORMALS:
         case Visualization::MESH_MODIFIED:
         case Visualization::MESH_PREVIEW_AO:
         case Visualization::MESH_PREVIEW_UV:
-        case Visualization::MESH_NORMALS:
+        case Visualization::MESH_GBUFFER_NORMALS:
             updateViewerMesh(app);
             break;
         case Visualization::IMAGE_OCCLUSION:
         case Visualization::IMAGE_BENT_NORMALS:
-        case Visualization::IMAGE_MESH_NORMALS:
+        case Visualization::IMAGE_GBUFFER_NORMALS:
             updateViewerImage(app);
             break;
     }
@@ -700,6 +703,7 @@ int main(int argc, char** argv) {
 
         app.materials = createMaterialGenerator(engine);
         app.loader = AssetLoader::create({engine, app.materials, app.names });
+        app.loader->enableDiagnostics();
         app.camera = &view->getCamera();
 
         if (!app.filename.isEmpty()) {
@@ -815,20 +819,21 @@ int main(int argc, char** argv) {
                 const Visualization previousVisualization = app.visualization;
                 using RV = Visualization;
                 addOption("3D model with original materials", '1', RV::MESH_CURRENT);
+                addOption("3D model with vertex normals", '2', RV::MESH_VERTEX_NORMALS);
                 if (app.hasTestRender) {
-                    addOption("Rendered AO test image", '2', RV::IMAGE_OCCLUSION);
+                    addOption("Rendered AO test image", '3', RV::IMAGE_OCCLUSION);
                 } else if (!app.modifiedAsset) {
-                    addOption("2D texture with occlusion", '2', RV::IMAGE_OCCLUSION);
-                    addOption("2D texture with bent normals", '3', RV::IMAGE_BENT_NORMALS);
-                    addOption("2D texture with mesh normals", '4', RV::IMAGE_MESH_NORMALS);
+                    addOption("2D texture with occlusion", '3', RV::IMAGE_OCCLUSION);
+                    addOption("2D texture with bent normals", '4', RV::IMAGE_BENT_NORMALS);
+                    addOption("2D texture with mesh normals", '5', RV::IMAGE_GBUFFER_NORMALS);
                 } else {
-                    addOption("3D model with modified materials", '2', RV::MESH_MODIFIED);
-                    addOption("3D model with new occlusion only", '3', RV::MESH_PREVIEW_AO);
-                    addOption("3D model with UV visualization", '4', RV::MESH_PREVIEW_UV);
-                    addOption("3D model with normals visualization", '5', RV::MESH_NORMALS);
-                    addOption("2D texture with occlusion", '6', RV::IMAGE_OCCLUSION);
-                    addOption("2D texture with bent normals", '7', RV::IMAGE_BENT_NORMALS);
-                    addOption("2D texture with mesh normals", '8', RV::IMAGE_MESH_NORMALS);
+                    addOption("3D model with modified materials", '4', RV::MESH_MODIFIED);
+                    addOption("3D model with new occlusion only", '5', RV::MESH_PREVIEW_AO);
+                    addOption("3D model with UV visualization", '6', RV::MESH_PREVIEW_UV);
+                    addOption("3D model with gbuffer normals", '7', RV::MESH_GBUFFER_NORMALS);
+                    addOption("2D texture with occlusion", '8', RV::IMAGE_OCCLUSION);
+                    addOption("2D texture with bent normals", '9', RV::IMAGE_BENT_NORMALS);
+                    addOption("2D texture with gbuffer normals", '0', RV::IMAGE_GBUFFER_NORMALS);
                 }
                 if (app.visualization != previousVisualization) {
                     app.requestViewerUpdate = true;
@@ -917,9 +922,17 @@ int main(int argc, char** argv) {
     };
 
     auto animate = [&app](Engine* engine, View* view, double now) {
-        // The baker doesn't support animation, just use frame 0.
         if (app.viewerAsset) {
+
+            // The baker doesn't support animation, just use frame 0.
             app.viewer->applyAnimation(0.0);
+
+            const bool enableDiagnostics = app.visualization == Visualization::MESH_VERTEX_NORMALS;
+            auto begin = app.viewerAsset->getMaterialInstances();
+            auto end = begin + app.viewerAsset->getMaterialInstanceCount();
+            for (auto iter = begin; iter != end; ++iter) {
+                (*iter)->setParameter("enableDiagnostics", enableDiagnostics);
+            }
         }
 
         // Perform pending work.
@@ -934,7 +947,7 @@ int main(int argc, char** argv) {
         app.overlayQuad.scene->remove(app.overlayQuad.entity);
         const bool showOverlay = app.visualization == Visualization::IMAGE_OCCLUSION
                 || app.visualization == Visualization::IMAGE_BENT_NORMALS
-                || app.visualization == Visualization::IMAGE_MESH_NORMALS;
+                || app.visualization == Visualization::IMAGE_GBUFFER_NORMALS;
         if (showOverlay) {
             createQuadRenderable(app);
             app.overlayQuad.scene->addEntity(app.overlayQuad.entity);
