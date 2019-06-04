@@ -948,6 +948,12 @@ cgltf_data* Pipeline::xatlasToCgltf(const cgltf_data* sourceAsset, const xatlas:
         return nullptr;
     }
 
+    // Check if baked UVs already exist, in which case they are replaced rather than added.
+    auto skipAttribute = [](const cgltf_attribute& attr) {
+        const cgltf_int uvindex = gltfio::AssetPipeline::BAKED_UV_ATTRIB_INDEX;
+        return attr.type == cgltf_attribute_type_texcoord && attr.index == uvindex;
+    };
+
     // Determine the number of attributes that will be required, which is the same as the old number
     // of attributes plus an extra UV set per prim.
     size_t numAttributes = 0;
@@ -956,6 +962,12 @@ cgltf_data* Pipeline::xatlasToCgltf(const cgltf_data* sourceAsset, const xatlas:
         const cgltf_mesh& mesh = sourceAsset->meshes[i];
         const cgltf_primitive& sourcePrim = mesh.primitives[0];
         numAttributes += sourcePrim.attributes_count + 1;
+        for (size_t ai = 0; ai < sourcePrim.attributes_count; ++ai) {
+            if (skipAttribute(sourcePrim.attributes[ai])) {
+                numAttributes--;
+                break;
+            }
+        }
     }
 
     // The number of required accessors will be the same as the number of vertex attributes, plus
@@ -983,8 +995,11 @@ cgltf_data* Pipeline::xatlasToCgltf(const cgltf_data* sourceAsset, const xatlas:
         numIndices += atlasMesh.indexCount;
         cgltf_size floatsPerVert = 0;
         for (size_t ai = 0; ai < sourcePrim.attributes_count; ++ai) {
-            cgltf_type attribType = sourcePrim.attributes[ai].data->type;
-            floatsPerVert += getNumFloats(attribType);
+            const cgltf_attribute& attr = sourcePrim.attributes[ai];
+            if (skipAttribute(attr)) {
+                continue;
+            }
+            floatsPerVert += getNumFloats(attr.data->type);
         }
         floatsPerVert += 2;
         numFloats += atlasMesh.vertexCount * floatsPerVert;
@@ -1034,7 +1049,11 @@ cgltf_data* Pipeline::xatlasToCgltf(const cgltf_data* sourceAsset, const xatlas:
             const xatlas::Vertex& atlasVertex = atlasMesh.vertexArray[j];
             uint32_t sourceIndex = atlasVertex.xref;
             for (size_t ai = 0; ai < sourcePrim.attributes_count; ++ai) {
-                const cgltf_accessor* accessor = sourcePrim.attributes[ai].data;
+                const cgltf_attribute& attr = sourcePrim.attributes[ai];
+                if (skipAttribute(attr)) {
+                    continue;
+                }
+                const cgltf_accessor* accessor = attr.data;
                 cgltf_type attribType = accessor->type;
                 cgltf_size elementSize = getNumFloats(attribType);
                 cgltf_accessor_read_float(accessor, sourceIndex, vertexWritePtr, elementSize);
@@ -1066,8 +1085,11 @@ cgltf_data* Pipeline::xatlasToCgltf(const cgltf_data* sourceAsset, const xatlas:
         // Determine the vertex stride.
         cgltf_size floatsPerVert = 0;
         for (size_t ai = 0; ai < sourcePrim.attributes_count; ++ai) {
-            cgltf_type attribType = sourcePrim.attributes[ai].data->type;
-            floatsPerVert += getNumFloats(attribType);
+            const cgltf_attribute& attr = sourcePrim.attributes[ai];
+            if (skipAttribute(attr)) {
+                continue;
+            }
+            floatsPerVert += getNumFloats(attr.data->type);
         }
         floatsPerVert += 2;
         const cgltf_size stride = floatsPerVert * sizeof(float);
@@ -1106,19 +1128,30 @@ cgltf_data* Pipeline::xatlasToCgltf(const cgltf_data* sourceAsset, const xatlas:
         resultMesh = sourceMesh;
         resultMesh.primitives = &resultPrim;
         resultPrim = sourcePrim;
+
         resultPrim.attributes = resultAttribute;
         resultPrim.attributes_count = sourcePrim.attributes_count + 1;
-        resultPrim.indices = resultAccessor + sourcePrim.attributes_count + 1;
+        for (size_t ai = 0; ai < sourcePrim.attributes_count; ++ai) {
+            if (skipAttribute(sourcePrim.attributes[ai])) {
+                resultPrim.attributes_count--;
+                break;
+            }
+        }
+
+        resultPrim.indices = resultAccessor + resultPrim.attributes_count;
         cgltf_buffer_view* vertexBufferView = views + i * 2 + 0;
         cgltf_buffer_view* indexBufferView = views + i * 2 + 1;
         cgltf_size offset = 0;
         for (size_t ai = 0; ai < sourcePrim.attributes_count; ++ai) {
-            const cgltf_attribute& sourceAttrib = sourcePrim.attributes[ai];
-            const cgltf_accessor* sourceAccessor = sourceAttrib.data;
+            const cgltf_attribute& attr = sourcePrim.attributes[ai];
+            if (skipAttribute(attr)) {
+                continue;
+            }
+            const cgltf_accessor* sourceAccessor = attr.data;
             *resultAttribute = {
-                .name = sourceAttrib.name,
-                .type = sourceAttrib.type,
-                .index = sourceAttrib.index,
+                .name = attr.name,
+                .type = attr.type,
+                .index = attr.index,
                 .data = resultAccessor
             };
             *resultAccessor = {
