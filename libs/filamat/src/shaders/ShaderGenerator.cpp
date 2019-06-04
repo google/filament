@@ -106,8 +106,8 @@ ShaderGenerator::ShaderGenerator(
         MaterialBuilder::PropertyList const& properties,
         MaterialBuilder::VariableList const& variables,
         utils::CString const& materialCode, size_t lineOffset,
-        utils::CString const& materialVertexCode, size_t vertexLineOffset) noexcept {
-
+        utils::CString const& materialVertexCode, size_t vertexLineOffset,
+        MaterialBuilder::MaterialDomain materialDomain) noexcept {
     std::copy(std::begin(properties), std::end(properties), std::begin(mProperties));
     std::copy(std::begin(variables), std::end(variables), std::begin(mVariables));
 
@@ -115,10 +115,16 @@ ShaderGenerator::ShaderGenerator(
     mMaterialVertexCode = materialVertexCode;
     mMaterialLineOffset = lineOffset;
     mMaterialVertexLineOffset = vertexLineOffset;
+    mMaterialDomain = materialDomain;
 
     if (mMaterialCode.empty()) {
-        mMaterialCode =
-                utils::CString("void material(inout MaterialInputs m) {\n    prepareMaterial(m);\n}\n");
+        if (mMaterialDomain == MaterialBuilder::MaterialDomain::SURFACE) {
+            mMaterialCode =
+                    utils::CString("void material(inout MaterialInputs m) {\n    prepareMaterial(m);\n}\n");
+        } else if (mMaterialDomain == MaterialBuilder::MaterialDomain::POST_PROCESS) {
+            mMaterialCode =
+                    utils::CString("void postProcess(inout PostProcessInputs p) {\n}\n");
+        }
     }
     if (mMaterialVertexCode.empty()) {
         mMaterialVertexCode =
@@ -130,6 +136,11 @@ const std::string ShaderGenerator::createVertexProgram(filament::backend::Shader
         MaterialBuilder::TargetApi targetApi, MaterialBuilder::TargetLanguage targetLanguage,
         MaterialInfo const& material, uint8_t variantKey, filament::Interpolation interpolation,
         filament::VertexDomain vertexDomain) const noexcept {
+    if (mMaterialDomain == MaterialBuilder::MaterialDomain::POST_PROCESS) {
+        return ShaderPostProcessGenerator::createPostProcessVertexProgram(shaderModel, targetApi,
+                targetLanguage, material, material.samplerBindings, mMaterialVertexCode);
+    }
+
     utils::io::sstream vs;
 
     const CodeGenerator cg(shaderModel, targetApi, targetLanguage);
@@ -228,6 +239,10 @@ const std::string ShaderGenerator::createFragmentProgram(filament::backend::Shad
         MaterialBuilder::TargetApi targetApi, MaterialBuilder::TargetLanguage targetLanguage,
         MaterialInfo const& material, uint8_t variantKey,
         filament::Interpolation interpolation) const noexcept {
+    if (mMaterialDomain == MaterialBuilder::MaterialDomain::POST_PROCESS) {
+        return ShaderPostProcessGenerator::createPostProcessFragmentProgram(shaderModel,
+                targetApi, targetLanguage, material, material.samplerBindings, mMaterialCode);
+    }
 
     const CodeGenerator cg(shaderModel, targetApi, targetLanguage);
     const bool lit = material.isLit;

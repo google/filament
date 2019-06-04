@@ -493,8 +493,8 @@ bool MaterialBuilder::generateShaders(const std::vector<Variant>& variants, Chun
     std::vector<uint32_t> spirv;
     std::string msl;
 
-    ShaderGenerator sg(mProperties, mVariables,
-            mMaterialCode, mMaterialLineOffset, mMaterialVertexCode, mMaterialVertexLineOffset);
+    ShaderGenerator sg(mProperties, mVariables, mMaterialCode, mMaterialLineOffset,
+            mMaterialVertexCode, mMaterialVertexLineOffset, mMaterialDomain);
 
     bool emptyVertexCode = mMaterialVertexCode.empty();
     bool customDepth = sg.hasCustomDepthShader() ||
@@ -657,8 +657,8 @@ Package MaterialBuilder::build() noexcept {
 const std::string MaterialBuilder::peek(filament::backend::ShaderType type,
         const CodeGenParams& params, const PropertyList& properties) noexcept {
 
-    ShaderGenerator sg(properties, mVariables,
-            mMaterialCode, mMaterialLineOffset, mMaterialVertexCode, mMaterialVertexLineOffset);
+    ShaderGenerator sg(properties, mVariables, mMaterialCode, mMaterialLineOffset,
+            mMaterialVertexCode, mMaterialVertexLineOffset, mMaterialDomain);
 
     MaterialInfo info;
     prepareToBuild(info);

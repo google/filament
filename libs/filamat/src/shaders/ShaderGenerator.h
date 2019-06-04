@@ -40,7 +40,8 @@ public:
             utils::CString const& materialCode,
             size_t lineOffset,
             utils::CString const& materialVertexCode,
-            size_t vertexLineOffset) noexcept;
+            size_t vertexLineOffset,
+            MaterialBuilder::MaterialDomain materialDomain) noexcept;
 
     const std::string createVertexProgram(filament::backend::ShaderModel sm,
             MaterialBuilder::TargetApi targetApi, MaterialBuilder::TargetLanguage targetLanguage,
@@ -67,6 +68,7 @@ public:
 private:
     MaterialBuilder::PropertyList mProperties;
     MaterialBuilder::VariableList mVariables;
+    MaterialBuilder::MaterialDomain mMaterialDomain;
     utils::CString mMaterialCode;
     utils::CString mMaterialVertexCode;
     size_t mMaterialLineOffset;
