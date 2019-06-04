@@ -1,14 +1,16 @@
 // ES 3.0/3.1 gives us the ARB_gpu_shader5 bits we need
 #define gpu_shader5        1
+
 // ES 3.0 does not have gather though
 #if defined(TARGET_VULKAN_ENVIRONMENT) || !defined(TARGET_MOBILE)
 #define FXAA_GATHER4_ALPHA 1
 #else
 #define FXAA_GATHER4_ALPHA 0
 #endif
-#define G3D_FXAA_PATCHES   1
 #define FXAA_PC_CONSOLE    1
 #define FXAA_GLSL_130      1
+
+#define G3D_FXAA_PATCHES   1
 
 #if POST_PROCESS_OPAQUE
 #   define FXAA_GREEN_AS_LUMA 0
@@ -16,9 +18,9 @@
 #   define FXAA_GREEN_AS_LUMA 1
 #endif
 
-// This substitute for the built-in "mix" function exists to work around #732, seen with Vulkan
-// on the Pixel 3 + Android P.
-vec4 lerp(vec4 x, vec4 y, float a) {
+// This substitute for the built-in "mix" function exists to work around #732,
+// seen with Vulkan on the Pixel 3 + Android P.
+vec4 lerp(const vec4 x, const vec4 y, float a) {
     return x * (1.0 - a) + y * a;
 }
 

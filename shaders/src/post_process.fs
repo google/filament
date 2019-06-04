@@ -38,10 +38,9 @@ vec4 PostProcess_ToneMapping() {
 
 #if POST_PROCESS_ANTI_ALIASING
 vec4 PostProcess_AntiAliasing() {
-
-    // First, compute an exact upper bound for the area we need to sample from. The render target
-    // may be larger than the viewport that was used for scene rendering, so we cannot rely on the
-    // wrap mode alone.
+    // First, compute an exact upper bound for the area we need to sample from.
+    // The render target may be larger than the viewport that was used for scene
+    // rendering, so we cannot rely on the wrap mode alone.
     highp vec2 fboSize = vec2(textureSize(postProcess_colorBuffer, 0));
     highp vec2 invSize = 1.0 / fboSize;
     highp vec2 halfTexel = 0.5 * invSize;
@@ -51,8 +50,9 @@ vec4 PostProcess_AntiAliasing() {
     highp vec2 excessSize = 0.5 + fboSize - viewportSize;
     highp vec2 upperBound = 1.0 - excessSize * invSize;
 
-    // Next, compute the coordinates of the texel center and its bounding box. There is no need to
-    // clamp the min corner since the wrap mode will do it automatically.
+    // Next, compute the coordinates of the texel center and its bounding box.
+    // There is no need to clamp the min corner since the wrap mode will do
+    // it automatically.
 
     // vertex_uv is already interpolated to pixel center by the GPU
     highp vec2 texelCenter = min(vertex_uv, upperBound);
