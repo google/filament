@@ -88,7 +88,7 @@ public:
     const cgltf_data* flattenPrims(const cgltf_data* sourceAsset, uint32_t flags);
 
     // Use xatlas to generate a new UV set and modify topology appropriately.
-    const cgltf_data* parameterize(const cgltf_data* sourceAsset);
+    const cgltf_data* parameterize(const cgltf_data* sourceAsset, int maxIterations);
 
     // Strips materials from a flattened asset and replaces them a simple nonlit material.
     const cgltf_data* generatePreview(const cgltf_data* sourceAsset, const Path& texturePath);
@@ -174,6 +174,7 @@ bool isFlattened(const cgltf_data* asset) {
 }
 
 // Returns true if the given cgltf asset has been flattened and has BAKED_UV_ATTRIB.
+// This can produce false positives in some cases so should be used only as a workflow hint.
 bool isParameterized(const cgltf_data* asset) {
     if (!isFlattened(asset)) {
         return false;
@@ -1289,7 +1290,7 @@ void Pipeline::cgltfToSimpleMesh(const cgltf_data* sourceAsset, SimpleMesh** mes
     }
 }
 
-const cgltf_data* Pipeline::parameterize(const cgltf_data* sourceAsset) {
+const cgltf_data* Pipeline::parameterize(const cgltf_data* sourceAsset, int maxIterations) {
     if (!isFlattened(sourceAsset)) {
         utils::slog.e << "Only flattened assets can be parameterized." << utils::io::endl;
         return nullptr;
@@ -1302,6 +1303,7 @@ const cgltf_data* Pipeline::parameterize(const cgltf_data* sourceAsset) {
 
     utils::slog.i << "Computing charts..." << utils::io::endl;
     xatlas::ChartOptions coptions;
+    coptions.maxIterations = maxIterations;
     xatlas::ComputeCharts(atlas, coptions);
 
     utils::slog.i << "Parameterizing charts..." << utils::io::endl;
@@ -1705,9 +1707,9 @@ void AssetPipeline::save(AssetHandle handle, const utils::Path& jsonPath,
     fclose(binFile);
 }
 
-AssetHandle AssetPipeline::parameterize(AssetHandle source) {
+AssetHandle AssetPipeline::parameterize(AssetHandle source, int maxIterations) {
     Pipeline* impl = (Pipeline*) mImpl;
-    return impl->parameterize((const cgltf_data*) source);
+    return impl->parameterize((const cgltf_data*) source, maxIterations);
 }
 
 AssetHandle AssetPipeline::generatePreview(AssetHandle source, const Path& texture) {

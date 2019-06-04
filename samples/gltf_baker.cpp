@@ -128,6 +128,7 @@ struct BakerApp {
         float aoRayNear = std::numeric_limits<float>::epsilon() * 10.0f;
         bool dilateCharts = true;
         bool applyDenoiser = true;
+        int maxIterations = 2;
     } bakeOptions;
 
     struct {
@@ -562,6 +563,7 @@ static void executeBakeAo(BakerApp& app) {
         });
     };
 
+    // TODO: allow re-parameterization
     if (AssetPipeline::isParameterized(app.currentAsset)) {
         puts("Already parameterized.");
         doRender();
@@ -577,7 +579,8 @@ static void executeBakeAo(BakerApp& app) {
     utils::JobSystem* js = utils::JobSystem::getJobSystem();
     utils::JobSystem::Job* parent = js->createJob();
     utils::JobSystem::Job* prep = utils::jobs::createJob(*js, parent, [&app, doRender] {
-        auto parameterized = app.pipeline->parameterize(app.currentAsset);
+        auto parameterized = app.pipeline->parameterize(app.currentAsset,
+                app.bakeOptions.maxIterations);
         auto callback = new BakerAppTask([doRender, parameterized](BakerApp* app) {
             if (!parameterized) {
                 app->messageBoxText = "Unable to parameterize, check terminal output for details.";
@@ -860,6 +863,7 @@ int main(int argc, char** argv) {
                         std::numeric_limits<float>::epsilon(),
                         std::numeric_limits<float>::epsilon() * 10.0f, 10);
 
+                ImGui::InputInt("Max segmentation attempts", &app.bakeOptions.maxIterations);
                 ImGui::Checkbox("Dilate charts", &app.bakeOptions.dilateCharts);
                 ImGui::Checkbox("Apply denoiser", &app.bakeOptions.applyDenoiser);
             }
