@@ -124,6 +124,10 @@ VertexBuffer* VertexBuffer::Builder::build(Engine& engine) {
     if (!ASSERT_PRECONDITION_NON_FATAL(mImpl->mBufferCount > 0, "bufferCount cannot be 0")) {
         return nullptr;
     }
+    if (!ASSERT_PRECONDITION_NON_FATAL(mImpl->mBufferCount <= MAX_ATTRIBUTE_BUFFER_COUNT,
+            "bufferCount cannot be more than %d", MAX_ATTRIBUTE_BUFFER_COUNT)) {
+        return nullptr;
+    }
 
     return upcast(engine).createVertexBuffer(*this);
 }
