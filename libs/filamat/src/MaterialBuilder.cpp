@@ -441,7 +441,7 @@ static void showErrorMessage(const char* materialName, uint8_t variant,
 }
 
 bool MaterialBuilder::generateShaders(const std::vector<Variant>& variants, ChunkContainer& container,
-        MaterialInfo& info) const noexcept {
+        const MaterialInfo& info) const noexcept {
     // Create a postprocessor to optimize / compile to Spir-V if necessary.
 #ifndef FILAMAT_LITE
     GLSLPostProcessor postProcessor(mOptimization, mPrintShaders);
@@ -466,10 +466,6 @@ bool MaterialBuilder::generateShaders(const std::vector<Variant>& variants, Chun
     bool customDepth = sg.hasCustomDepthShader() ||
             mBlendingMode == BlendingMode::MASKED || !emptyVertexCode;
     container.addSimpleChild<bool>(ChunkType::MaterialHasCustomDepthShader, customDepth);
-
-    filament::SamplerBindingMap map;
-    map.populate(&info.sib, mMaterialName.c_str());
-    info.samplerBindings = std::move(map);
 
     for (const auto& params : mCodeGenPermutations) {
         const ShaderModel shaderModel = ShaderModel(params.shaderModel);
@@ -593,6 +589,10 @@ Package MaterialBuilder::build() noexcept {
 
     MaterialInfo info;
     prepareToBuild(info);
+
+    filament::SamplerBindingMap map;
+    map.populate(&info.sib, mMaterialName.c_str());
+    info.samplerBindings = std::move(map);
 
     // Create chunk tree.
     ChunkContainer container;
