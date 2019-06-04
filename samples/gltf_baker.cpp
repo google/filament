@@ -827,13 +827,13 @@ int main(int argc, char** argv) {
                     addOption("2D texture with bent normals", '4', RV::IMAGE_BENT_NORMALS);
                     addOption("2D texture with mesh normals", '5', RV::IMAGE_GBUFFER_NORMALS);
                 } else {
-                    addOption("3D model with modified materials", '4', RV::MESH_MODIFIED);
-                    addOption("3D model with new occlusion only", '5', RV::MESH_PREVIEW_AO);
-                    addOption("3D model with UV visualization", '6', RV::MESH_PREVIEW_UV);
-                    addOption("3D model with gbuffer normals", '7', RV::MESH_GBUFFER_NORMALS);
-                    addOption("2D texture with occlusion", '8', RV::IMAGE_OCCLUSION);
-                    addOption("2D texture with bent normals", '9', RV::IMAGE_BENT_NORMALS);
-                    addOption("2D texture with gbuffer normals", '0', RV::IMAGE_GBUFFER_NORMALS);
+                    addOption("3D model with modified materials", '3', RV::MESH_MODIFIED);
+                    addOption("3D model with new occlusion only", '4', RV::MESH_PREVIEW_AO);
+                    addOption("3D model with UV visualization", '5', RV::MESH_PREVIEW_UV);
+                    addOption("3D model with gbuffer normals", '6', RV::MESH_GBUFFER_NORMALS);
+                    addOption("2D texture with occlusion", '7', RV::IMAGE_OCCLUSION);
+                    addOption("2D texture with bent normals", '8', RV::IMAGE_BENT_NORMALS);
+                    addOption("2D texture with gbuffer normals", '9', RV::IMAGE_GBUFFER_NORMALS);
                 }
                 if (app.visualization != previousVisualization) {
                     app.requestViewerUpdate = true;
