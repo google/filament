@@ -211,9 +211,12 @@ bool ResourceLoader::loadResources(FilamentAsset* asset) {
 
     // Upload data to the GPU.
     const BufferBinding* bindings = asset->getBufferBindings();
+    int tangentsSlot = -1;
     for (size_t i = 0, n = asset->getBufferBindingCount(); i < n; ++i) {
         auto bb = bindings[i];
-        if (bb.vertexBuffer && !bb.generateDummyData) {
+        if (bb.vertexBuffer && bb.generateTangents) {
+            tangentsSlot = bb.bufferIndex;
+        } else if (bb.vertexBuffer && !bb.generateDummyData) {
             const uint8_t* data8 = bb.offset + (const uint8_t*) *bb.data;
             mPool->addPendingUpload();
             VertexBuffer::BufferDescriptor bd(data8, bb.size, AssetPool::onLoadedResource, mPool);
@@ -252,7 +255,9 @@ bool ResourceLoader::loadResources(FilamentAsset* asset) {
     }
 
     // Compute surface orientation quaternions if necessary.
-    computeTangents(fasset);
+    if (tangentsSlot > -1) {
+        computeTangents(fasset, tangentsSlot);
+    }
 
     // Finally, load image files and create Filament Textures.
     return createTextures(fasset);
@@ -345,7 +350,7 @@ bool ResourceLoader::createTextures(details::FFilamentAsset* asset) const {
     return true;
 }
 
-void ResourceLoader::computeTangents(FFilamentAsset* asset) const {
+void ResourceLoader::computeTangents(FFilamentAsset* asset, int tangentsSlot) const {
     // Declare vectors of normals and tangents, which we'll extract & convert from the source.
     std::vector<float3> fp32Normals;
     std::vector<float4> fp32Tangents;
@@ -357,19 +362,19 @@ void ResourceLoader::computeTangents(FFilamentAsset* asset) const {
 
         cgltf_size vertexCount = 0;
 
-        // Collect accessors for normals, tangents, etc.
+        // Build a mapping from cgltf_attribute_type to cgltf_accessor*.
         const int NUM_ATTRIBUTES = 8;
-        int slots[NUM_ATTRIBUTES] = {};
         const cgltf_accessor* accessors[NUM_ATTRIBUTES] = {};
-        for (cgltf_size slot = 0; slot < prim.attributes_count; slot++) {
-            const cgltf_attribute& attr = prim.attributes[slot];
-            // Ignore the second set of UV's.
-            if (attr.index != 0) {
-                continue;
+
+        // Collect accessors for normals, tangents, etc.
+        int slot = 0;
+        for (cgltf_size aindex = 0; aindex < prim.attributes_count; aindex++) {
+            const cgltf_attribute& attr = prim.attributes[aindex];
+            if (attr.index == 0) {
+                accessors[attr.type] = attr.data;
+                vertexCount = attr.data->count;
             }
-            vertexCount = attr.data->count;
-            slots[attr.type] = slot;
-            accessors[attr.type] = attr.data;
+
         }
 
         // At a minimum we need normals to generate tangents.
@@ -463,7 +468,7 @@ void ResourceLoader::computeTangents(FFilamentAsset* asset) const {
         auto callback = (VertexBuffer::BufferDescriptor::Callback) free;
         VertexBuffer::BufferDescriptor bd(quats, vertexCount * sizeof(short4), callback);
         VertexBuffer* vb = asset->mPrimMap.at(&prim);
-        vb->setBufferAt(*mConfig.engine, slots[cgltf_attribute_type_normal], std::move(bd));
+        vb->setBufferAt(*mConfig.engine, tangentsSlot, std::move(bd));
     };
 
     for (auto iter : asset->mNodeMap) {

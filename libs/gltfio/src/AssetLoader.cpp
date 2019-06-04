@@ -408,14 +408,14 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
     int slot = 0;
     bool hasUv0 = false, hasUv1 = false, hasVertexColor = false;
     uint32_t vertexCount = 0;
-    for (; slot < inPrim->attributes_count; slot++) {
-        const cgltf_attribute& inputAttribute = inPrim->attributes[slot];
+    for (cgltf_size aindex = 0; aindex < inPrim->attributes_count; aindex++) {
+        const cgltf_attribute& inputAttribute = inPrim->attributes[aindex];
         const cgltf_accessor* inputAccessor = inputAttribute.data;
 
         // At a minimum, surface orientation requires normals to be present in the source data.
         // Here we re-purpose the normals slot to point to the quats that get computed later.
         if (inputAttribute.type == cgltf_attribute_type_normal) {
-            vbb.attribute(VertexAttribute::TANGENTS, slot, VertexBuffer::AttributeType::SHORT4);
+            vbb.attribute(VertexAttribute::TANGENTS, slot++, VertexBuffer::AttributeType::SHORT4);
             vbb.normalized(VertexAttribute::TANGENTS);
             continue;
         }
@@ -479,7 +479,7 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
         // The cgltf library provides a stride value for all accessors, even though they do not
         // exist in the glTF file. It is computed from the type and the stride of the buffer view.
         // As a convenience, cgltf also replaces zero (default) stride with the actual stride.
-        vbb.attribute(semantic, slot, atype, 0, inputAccessor->stride);
+        vbb.attribute(semantic, slot++, atype, 0, inputAccessor->stride);
 
         if (inputAccessor->normalized) {
             vbb.normalized(semantic);
@@ -491,48 +491,57 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
     // If an ubershader is used, then we provide a single dummy buffer for all unfulfilled vertex
     // requirements. The color data should be a sequence of normalized UBYTE4, so dummy UVs are
     // USHORT2 to make the sizes match.
-    int dummySlot = -1;
+    bool needsDummyData = false;
     if (mMaterials->getSource() == LOAD_UBERSHADERS) {
-        bool needsDummyData = false;
         if (!hasUv0) {
             needsDummyData = true;
-            vbb.attribute(VertexAttribute::UV0, slot, VertexBuffer::AttributeType::USHORT2);
+            vbb.attribute(VertexAttribute::UV0, slot++, VertexBuffer::AttributeType::USHORT2);
         }
         if (!hasUv1) {
             needsDummyData = true;
-            vbb.attribute(VertexAttribute::UV1, slot, VertexBuffer::AttributeType::USHORT2);
+            vbb.attribute(VertexAttribute::UV1, slot++, VertexBuffer::AttributeType::USHORT2);
         }
         if (!hasVertexColor) {
             needsDummyData = true;
-            vbb.attribute(VertexAttribute::COLOR, slot, VertexBuffer::AttributeType::UBYTE4);
+            vbb.attribute(VertexAttribute::COLOR, slot++, VertexBuffer::AttributeType::UBYTE4);
             vbb.normalized(VertexAttribute::COLOR);
-        }
-        if (needsDummyData) {
-            dummySlot = slot++;
         }
     }
 
-    vbb.bufferCount(slot);
+    int bufferCount = slot;
+    vbb.bufferCount(bufferCount);
 
     VertexBuffer* vertices = mResult->mPrimMap[inPrim] = vbb.build(*mEngine);
     mResult->mVertexBuffers.push_back(vertices);
 
-    for (cgltf_size slot = 0; slot < inPrim->attributes_count; slot++) {
-        const cgltf_attribute& inputAttribute = inPrim->attributes[slot];
+    slot = 0;
+    for (cgltf_size aindex = 0; aindex < inPrim->attributes_count; aindex++) {
+        const cgltf_attribute& inputAttribute = inPrim->attributes[aindex];
         const cgltf_accessor* inputAccessor = inputAttribute.data;
         const cgltf_buffer_view* bv = inputAccessor->buffer_view;
-        if (inputAttribute.type == cgltf_attribute_type_normal ||
-                inputAttribute.type == cgltf_attribute_type_tangent) {
+        if (inputAttribute.type == cgltf_attribute_type_tangent ||
+                (inputAttribute.type == cgltf_attribute_type_texcoord &&
+                uvmap[inputAttribute.index] == UNUSED)) {
             continue;
         }
-        if (inputAttribute.type == cgltf_attribute_type_texcoord &&
-                uvmap[inputAttribute.index] == UNUSED) {
+        if (inputAttribute.type == cgltf_attribute_type_normal) {
+            mResult->mBufferBindings.push_back({
+                .uri = bv->buffer->uri,
+                .totalSize = uint32_t(bv->buffer->size),
+                .bufferIndex = uint8_t(slot++),
+                .vertexBuffer = vertices,
+                .indexBuffer = nullptr,
+                .convertBytesToShorts = false,
+                .generateTrivialIndices = false,
+                .generateDummyData = false,
+                .generateTangents = true,
+            });
             continue;
         }
         mResult->mBufferBindings.push_back({
             .uri = bv->buffer->uri,
             .totalSize = uint32_t(bv->buffer->size),
-            .bufferIndex = uint8_t(slot),
+            .bufferIndex = uint8_t(slot++),
             .offset = computeBindingOffset(inputAccessor),
             .size = computeBindingSize(inputAccessor),
             .data = &bv->buffer->data,
@@ -540,15 +549,16 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
             .indexBuffer = nullptr,
             .convertBytesToShorts = false,
             .generateTrivialIndices = false,
-            .generateDummyData = false
+            .generateDummyData = false,
+            .generateTangents = false
         });
     }
 
-    if (dummySlot > 0) {
+    if (needsDummyData) {
         mResult->mBufferBindings.push_back({
             .uri = "",
             .totalSize = uint32_t(sizeof(ubyte4) * vertexCount),
-            .bufferIndex = uint8_t(dummySlot),
+            .bufferIndex = uint8_t(slot++),
             .offset = 0,
             .size = uint32_t(sizeof(ubyte4) * vertexCount),
             .data = nullptr,
@@ -559,6 +569,8 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
             .generateDummyData = true
         });
     }
+
+    assert(bufferCount == slot);
 
     outPrim->indices = indices;
     outPrim->vertices = vertices;
