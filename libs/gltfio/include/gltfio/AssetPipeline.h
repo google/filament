@@ -94,8 +94,11 @@ public:
      * The topology of the meshes in the resulting asset is potentially different from the source
      * asset (e.g., new vertices might be inserted). The newly generated UV set is placed into the
      * attribute slot named BAKED_UV_ATTRIB.
+     *
+     * If some of the generated charts are badly sized, increasing the maxIterations argument can
+     * help by allowing xatlas to try different seed points.
      */
-    AssetHandle parameterize(AssetHandle source);
+    AssetHandle parameterize(AssetHandle source, int maxIterations = 2);
 
     /**
      * Strips all textures and materials from a flattened asset, replacing them with a nonlit
