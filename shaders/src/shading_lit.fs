@@ -71,12 +71,11 @@ void getCommonPixelParams(const MaterialInputs material, inout PixelParams pixel
     pixel.diffuseColor = computeDiffuseColor(baseColor, metallic);
     pixel.f0 = specularColor;
 #elif !defined(SHADING_MODEL_CLOTH)
-    float metallic = material.metallic;
+    pixel.diffuseColor = computeDiffuseColor(baseColor, material.metallic);
+
     // Assumes an interface from air to an IOR of 1.5 for dielectrics
     float reflectance = computeDielectricF0(material.reflectance);
-
-    pixel.diffuseColor = computeDiffuseColor(baseColor, metallic);
-    pixel.f0 = computeF0(baseColor, metallic, reflectance);
+    pixel.f0 = computeF0(baseColor, material.metallic, reflectance);
 #else
     pixel.diffuseColor = baseColor.rgb;
     pixel.f0 = material.sheenColor;
