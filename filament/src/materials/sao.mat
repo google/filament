@@ -65,17 +65,23 @@ fragment {
     #define NOISE_TYPE      NOISE_PATTERN
 
     const uint kSpiralSampleCount = 7u;
-    const vec3 kSipralSamples[kSpiralSampleCount] = vec3[](
-        vec3(0.885456,0.464723,0.0769231), vec3(0.120537,0.992709,0.230769), vec3(-0.748511,0.663123,0.384615), vec3(-0.970942,-0.239316,0.538462),
-        vec3(-0.354605,-0.935016,0.692308), vec3(0.568065,-0.822984,0.846154), vec3(1,1.74846e-07,1)
+    const vec3 kSpiralSamples[kSpiralSampleCount] = vec3[](
+        vec3( 0.885456, 0.464723, 0.0769231), vec3( 0.120537,  0.992709, 0.230769),
+        vec3(-0.748511, 0.663123, 0.3846150), vec3(-0.970942, -0.239316, 0.538462),
+        vec3(-0.354605,-0.935016, 0.6923080), vec3( 0.568065, -0.822984, 0.846154),
+        vec3(1, 1.74846e-07, 1)
     );
 
     const uint kTrigNoiseSampleCount = 16u;
     const vec3 kTrigNoiseSamples[kTrigNoiseSampleCount] = vec3[](
-        vec3(0.0759449,0.997112,0.0317202), vec3(-0.53898,-0.842318,0.0879207), vec3(0.672069,0.740488,0.0176937), vec3(-0.323441,-0.946248,0.0930107),
-        vec3(0.330969,0.943642,0.026175), vec3(0.341023,-0.940055,0.107385), vec3(-0.197094,0.980384,0.0375434), vec3(0.106268,-0.994338,0.102259),
-        vec3(0.955394,0.295335,0.00636207), vec3(0.306817,0.951768,0.0267157), vec3(-0.882675,0.469983,0.056284), vec3(0.671194,-0.741282,0.115615),
-        vec3(-0.958342,0.285624,0.0605199), vec3(0.954541,-0.298078,0.12691), vec3(-0.586924,-0.809642,0.0866893), vec3(0.679755,-0.73344,0.115861)
+        vec3( 0.0759449,  0.997112, 0.03172020), vec3(-0.538980, -0.842318, 0.0879207),
+        vec3( 0.6720690,  0.740488, 0.01769370), vec3(-0.323441, -0.946248, 0.0930107),
+        vec3( 0.3309690,  0.943642, 0.02617500), vec3( 0.341023, -0.940055, 0.1073850),
+        vec3(-0.1970940,  0.980384, 0.03754340), vec3( 0.106268, -0.994338, 0.1022590),
+        vec3( 0.9553940,  0.295335, 0.00636207), vec3( 0.306817,  0.951768, 0.0267157),
+        vec3(-0.8826750,  0.469983, 0.05628400), vec3( 0.671194, -0.741282, 0.1156150),
+        vec3(-0.9583420,  0.285624, 0.06051990), vec3( 0.954541, -0.298078, 0.1269100),
+        vec3(-0.5869240, -0.809642, 0.08668930), vec3( 0.679755, -0.733440, 0.1158610)
     );
 
     vec2 sq(const vec2 a) {
@@ -113,7 +119,7 @@ fragment {
             float phi = random(uv);
             float dr = phi * dalpha;
             highp float dalpha2 = sq(dalpha);
-            highp float dphi = (6.28318 * kSpiralTurns) * sq(phi) * dalpha2
+            highp float dphi =(6.28318 * kSpiralTurns) * sq(phi) * dalpha2
                 + phi * 6.28318 * (1.0 + kSpiralTurns * dalpha2)
                 + phi * (2.0 * 6.28318 * kSpiralTurns) * dalpha2;
             return vec3(fast_cossin(dphi), dr);
@@ -164,15 +170,17 @@ fragment {
 
     vec3 tapLocation(uint i, const vec3 noise) {
         mat2 M = mat2(noise.xy, vec2(-noise.y, noise.x));
-        float radius = kSipralSamples[i].z + noise.z;
-        return vec3(M * kSipralSamples[i].xy, radius * radius);
+        float radius = kSpiralSamples[i].z + noise.z;
+        return vec3(M * kSpiralSamples[i].xy, radius * radius);
     }
 
     ivec2 clampToEdge(ivec2 uv, int level) {
         return clamp(uv, ivec2(0), textureSize(materialParams_depth, level) - ivec2(1));
     }
 
-    float computeAmbientOcclusionSAO(uint i, float ssDiskRadius, const ivec2 ssOrigin, const highp vec3 origin, const vec3 normal, const vec3 noise) {
+    float computeAmbientOcclusionSAO(uint i, float ssDiskRadius, const ivec2 ssOrigin,
+            const highp vec3 origin, const vec3 normal, const vec3 noise) {
+
         vec3 tap = tapLocation(i, noise);
         float ssRadius = max(1.0, tap.z * ssDiskRadius); // at least 1 pixel screen-space radius
 
@@ -204,7 +212,6 @@ fragment {
         highp vec3 normal = computeViewSpaceNormalNotNormalized(origin);
         vec3 noise = getTrigNoise(uv);
 
-
         // attempt to reject "bad" normals that were reconstructed at an edge that cause
         // false occlusion (black spots)
         // Normal's length should be small before they're normalized, unless they're bad ones.
@@ -225,13 +232,14 @@ fragment {
         }
 
         normal = normalize(normal);
+
         ivec2 ssOrigin = ivec2(uv * materialParams.resolution.xy);
         float occlusion = 0.0;
         for (uint i = 0u; i < kSpiralSampleCount; i++) {
             occlusion += computeAmbientOcclusionSAO(i, ssDiskRadius, ssOrigin, origin, normal, noise);
         }
-        float ao = 1.0 - occlusion / float(kSpiralSampleCount);
 
+        float ao = 1.0 - occlusion / float(kSpiralSampleCount);
         // simulate user-controled ao^n with n[1, 2]
         ao = mix(ao, ao * ao, materialParams.power);
         material.baseColor.r = ao;
