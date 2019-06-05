@@ -39,7 +39,9 @@ size_t LineDictionary::getIndex(const std::string& s) const noexcept {
     return mLineIndices.at(s);
 }
 
-void LineDictionary::addText(const char* s) noexcept {
+void LineDictionary::addText(const std::string& line) noexcept {
+    const char* s = line.c_str();
+
     assert(s != nullptr);
 
     size_t cur = 0;

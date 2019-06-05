@@ -36,6 +36,7 @@
 namespace filamat {
 
 struct MaterialInfo;
+class ChunkContainer;
 
 class UTILS_PUBLIC MaterialBuilderBase {
 public:
@@ -337,6 +338,8 @@ private:
     bool runStaticCodeAnalysis() noexcept;
 
     bool checkLiteRequirements() noexcept;
+
+    void writeChunks(ChunkContainer& container, MaterialInfo& info) const noexcept;
 
     bool isLit() const noexcept { return mShading != filament::Shading::UNLIT; }
 

@@ -26,7 +26,7 @@ void MaterialTextChunk::writeEntryAttributes(size_t entryIndex, Flattener& f) co
 }
 
 const char* MaterialTextChunk::getShaderText(size_t entryIndex) const noexcept {
-    return mEntries[entryIndex].shader;
+    return mEntries[entryIndex].shader.c_str();
 }
 
 void compressShader(const char *s, Flattener &f, const LineDictionary& dictionary) {

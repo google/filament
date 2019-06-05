@@ -17,6 +17,8 @@
 #ifndef TNT_FILAMAT_SHADER_ENTRY_H
 #define TNT_FILAMAT_SHADER_ENTRY_H
 
+#include <string>
+
 namespace filamat {
 
 // TextEntry stores a shader in ASCII text format, like GLSL.
@@ -24,8 +26,7 @@ struct TextEntry {
     uint8_t shaderModel;
     uint8_t variant;
     uint8_t stage;
-    char* shader;
-    size_t shaderSize;
+    std::string shader;
 };
 
 struct SpirvEntry {
