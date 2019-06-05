@@ -336,7 +336,8 @@ private:
 
     // Return true if:
     // The shader is syntactically and semantically valid
-    bool runStaticCodeAnalysis() noexcept;
+    bool findProperties() noexcept;
+    bool runSemanticAnalysis() noexcept;
 
     bool checkLiteRequirements() noexcept;
 
