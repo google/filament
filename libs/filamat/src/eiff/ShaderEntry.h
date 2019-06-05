@@ -27,7 +27,6 @@ struct TextEntry {
     uint8_t variant;
     uint8_t stage;
     std::string shader;
-    size_t shaderSize;
 };
 
 struct SpirvEntry {

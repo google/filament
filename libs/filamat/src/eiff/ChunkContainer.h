@@ -25,19 +25,33 @@
 
 #include <filament/MaterialChunkType.h>
 
+#include "SimpleFieldChunk.h"
+
 namespace filamat {
 
 class ChunkContainer {
 public:
-    using ChunkPtr = std::unique_ptr<Chunk>;
-
     ChunkContainer() = default;
     ~ChunkContainer() = default;
-    void addChild(ChunkPtr&& chunk);
-    size_t getSize() const;
 
+    template <typename T,
+             std::enable_if_t<std::is_base_of<Chunk, T>::value, int> = 0,
+             typename... Args>
+    void addChild(Args&&... args) {
+        mChildren.emplace_back(new T(std::forward<Args>(args)...));
+    }
+
+    // Helper method to add a SimpleFieldChunk to this ChunkContainer.
+    template <typename T, typename... Args>
+    void addSimpleChild(Args&&... args) {
+        addChild<SimpleFieldChunk<T>>(std::forward<Args>(args)...);
+    }
+
+    size_t getSize() const;
     size_t flatten(Flattener& f) const;
+
 private:
+    using ChunkPtr = std::unique_ptr<Chunk>;
     std::vector<ChunkPtr> mChildren;
 };
 

@@ -51,9 +51,7 @@ Package PostprocessMaterialBuilder::build() {
     // Create chunk tree.
     ChunkContainer container;
 
-    auto version = std::make_unique<SimpleFieldChunk<uint32_t>>(
-            ChunkType::PostProcessVersion, filament::MATERIAL_VERSION);
-    container.addChild(std::move(version));
+    container.addSimpleChild<uint32_t>(ChunkType::PostProcessVersion, filament::MATERIAL_VERSION);
 
     std::vector<TextEntry> glslEntries;
     std::vector<SpirvEntry> spirvEntries;
@@ -189,29 +187,22 @@ Package PostprocessMaterialBuilder::build() {
     }
 
     // Emit GLSL chunks
-    using namespace std;
-    auto dicGlslChunk = make_unique<filamat::DictionaryTextChunk>(std::move(glslDictionary), ChunkType::DictionaryGlsl);
-    auto glslChunk = make_unique<MaterialTextChunk>(std::move(glslEntries), std::move(glslDictionary), ChunkType::MaterialGlsl);
     if (!glslEntries.empty()) {
-        container.addChild(std::move(dicGlslChunk));
-        container.addChild(std::move(glslChunk));
+        container.addChild<filamat::DictionaryTextChunk>(std::move(glslDictionary), ChunkType::DictionaryGlsl);
+        container.addChild<MaterialTextChunk>(std::move(glslEntries), std::move(glslDictionary), ChunkType::MaterialGlsl);
     }
 
 #ifndef FILAMAT_LITE
     // Emit SPIRV chunks
-    auto dicSpirvChunk = make_unique<filamat::DictionarySpirvChunk>(std::move(spirvDictionary));
-    auto spirvChunk = make_unique<MaterialSpirvChunk>(std::move(spirvEntries));
     if (!spirvEntries.empty()) {
-        container.addChild(std::move(dicSpirvChunk));
-        container.addChild(std::move(spirvChunk));
+        container.addChild<filamat::DictionarySpirvChunk>(std::move(spirvDictionary));
+        container.addChild<MaterialSpirvChunk>(std::move(spirvEntries));
     }
 
     // Emit Metal chunks
-    auto dicMetalChunk = make_unique<filamat::DictionaryTextChunk>(std::move(metalDictionary), ChunkType::DictionaryMetal);
-    auto metalChunk = make_unique<MaterialTextChunk>(std::move(metalEntries), std::move(metalDictionary), ChunkType::MaterialMetal);
     if (!metalEntries.empty()) {
-        container.addChild(std::move(dicMetalChunk));
-        container.addChild(std::move(metalChunk));
+        container.addChild<filamat::DictionaryTextChunk>(std::move(metalDictionary), ChunkType::DictionaryMetal);
+        container.addChild<MaterialTextChunk>(std::move(metalEntries), std::move(metalDictionary), ChunkType::MaterialMetal);
     }
 #endif
 
