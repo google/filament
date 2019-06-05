@@ -102,7 +102,8 @@ struct BakerApp {
     FilamentAsset* viewerAsset = nullptr;
 
     // Available glTF scenes suitable for display, depending on "visualization".
-    gltfio::AssetPipeline::AssetHandle currentAsset = nullptr;
+    gltfio::AssetPipeline::AssetHandle flattenedAsset = nullptr;
+    gltfio::AssetPipeline::AssetHandle parameterizedAsset = nullptr;
     gltfio::AssetPipeline::AssetHandle modifiedAsset = nullptr;
     gltfio::AssetPipeline::AssetHandle previewAoAsset = nullptr;
     gltfio::AssetPipeline::AssetHandle previewUvAsset = nullptr;
@@ -302,8 +303,8 @@ static void createQuadRenderable(BakerApp& app) {
 static void updateViewerMesh(BakerApp& app) {
     gltfio::AssetPipeline::AssetHandle handle;
     switch (app.visualization) {
-        case Visualization::MESH_CURRENT: handle = app.currentAsset; break;
-        case Visualization::MESH_VERTEX_NORMALS: handle = app.currentAsset; break;
+        case Visualization::MESH_CURRENT: handle = app.flattenedAsset; break;
+        case Visualization::MESH_VERTEX_NORMALS: handle = app.flattenedAsset; break;
         case Visualization::MESH_MODIFIED: handle = app.modifiedAsset; break;
         case Visualization::MESH_PREVIEW_AO: handle = app.previewAoAsset; break;
         case Visualization::MESH_PREVIEW_UV: handle = app.previewUvAsset; break;
@@ -410,7 +411,7 @@ static void loadAssetFromDisk(BakerApp& app) {
     gltfio::AssetPipeline::AssetHandle handle = pipeline->load(app.filename);
     if (!handle) {
         delete pipeline;
-        puts("Unable to load model");
+        std::cerr << "Unable to load model" << std::endl;
         exit(1);
     }
 
@@ -418,7 +419,7 @@ static void loadAssetFromDisk(BakerApp& app) {
         handle = pipeline->flatten(handle, AssetPipeline::FILTER_TRIANGLES);
         if (!handle) {
             delete pipeline;
-            puts("Unable to flatten model");
+            std::cerr << "Unable to flatten model" << std::endl;
             exit(1);
         }
     }
@@ -428,7 +429,7 @@ static void loadAssetFromDisk(BakerApp& app) {
     app.pipeline = pipeline;
 
     app.viewer->setIndirectLight(FilamentApp::get().getIBL()->getIndirectLight());
-    app.currentAsset = handle;
+    app.flattenedAsset = handle;
     app.requestViewerUpdate = true;
 
     // Update the window title bar and the default output path.
@@ -440,7 +441,7 @@ static void loadAssetFromDisk(BakerApp& app) {
 static void executeTestRender(BakerApp& app) {
     app.isWorking = true;
     app.hasTestRender = true;
-    gltfio::AssetPipeline::AssetHandle currentAsset = app.currentAsset;
+    gltfio::AssetPipeline::AssetHandle currentAsset = app.flattenedAsset;
 
     // Allocate the render target for the path tracer as well as a GPU texture to display it.
     auto viewportSize = ImGui::GetIO().DisplaySize;
@@ -516,12 +517,14 @@ static void executeBakeAo(BakerApp& app) {
     });
 
     auto onRenderDone = makeDoneCallback([](BakerApp* app) {
+        gltfio::AssetPipeline* pipeline = app->pipeline;
+        gltfio::AssetPipeline::AssetHandle asset = app->parameterizedAsset;
         app->requestViewerUpdate = true;
 
         // Generate a simple red-green UV visualization texture.
         const utils::Path folder = app->filename.getAbsolutePath().getParent();
         generateUvVisualization(folder + TMP_UV_FILENAME);
-        app->previewUvAsset = app->pipeline->generatePreview(app->currentAsset, TMP_UV_FILENAME);
+        app->previewUvAsset = pipeline->generatePreview(asset, TMP_UV_FILENAME);
 
         // Export the generated AO texture.
         const utils::Path tmpOcclusionPath = folder + TMP_AO_FILENAME;
@@ -535,9 +538,9 @@ static void executeBakeAo(BakerApp& app) {
         ImageEncoder::encode(out, ImageEncoder::Format::PNG_LINEAR, app->meshNormals,
                 "", tmpNormalsPath.c_str());
 
-        app->previewAoAsset = app->pipeline->generatePreview(app->currentAsset, TMP_AO_FILENAME);
-        app->modifiedAsset = app->pipeline->replaceOcclusion(app->currentAsset, TMP_AO_FILENAME);
-        app->normalsAsset = app->pipeline->generatePreview(app->currentAsset, TMP_NORMALS_FILENAME);
+        app->previewAoAsset = pipeline->generatePreview(asset, TMP_AO_FILENAME);
+        app->modifiedAsset = pipeline->replaceOcclusion(asset, TMP_AO_FILENAME);
+        app->normalsAsset = pipeline->generatePreview(asset, TMP_NORMALS_FILENAME);
         app->isWorking = false;
     });
 
@@ -552,7 +555,7 @@ static void executeBakeAo(BakerApp& app) {
         image::LinearImage outputs[] = {
             app.ambientOcclusion, app.bentNormals, app.meshNormals, app.meshPositions
         };
-        app.pipeline->bakeAllOutputs(app.currentAsset, outputs, {
+        app.pipeline->bakeAllOutputs(app.parameterizedAsset, outputs, {
             .progress = onRenderTile,
             .done = onRenderDone,
             .userData = &app,
@@ -563,13 +566,6 @@ static void executeBakeAo(BakerApp& app) {
         });
     };
 
-    // TODO: allow re-parameterization
-    if (AssetPipeline::isParameterized(app.currentAsset)) {
-        puts("Already parameterized.");
-        doRender();
-        return;
-    }
-
     app.previewAoAsset = nullptr;
     app.modifiedAsset = nullptr;
     app.previewUvAsset = nullptr;
@@ -579,7 +575,7 @@ static void executeBakeAo(BakerApp& app) {
     utils::JobSystem* js = utils::JobSystem::getJobSystem();
     utils::JobSystem::Job* parent = js->createJob();
     utils::JobSystem::Job* prep = utils::jobs::createJob(*js, parent, [&app, doRender] {
-        auto parameterized = app.pipeline->parameterize(app.currentAsset,
+        auto parameterized = app.pipeline->parameterize(app.flattenedAsset,
                 app.bakeOptions.maxIterations);
         auto callback = new BakerAppTask([doRender, parameterized](BakerApp* app) {
             if (!parameterized) {
@@ -587,7 +583,7 @@ static void executeBakeAo(BakerApp& app) {
                 app->isWorking = false;
                 return;
             }
-            app->currentAsset = parameterized;
+            app->parameterizedAsset = parameterized;
             app->requestViewerUpdate = true;
             doRender();
         });
@@ -623,7 +619,7 @@ static void executeExport(BakerApp& app) {
     const std::string join = ", ";
     switch (options.selection) {
         case Visualization::MESH_CURRENT:
-            app.pipeline->save(app.currentAsset, gltfPath, binPath);
+            app.pipeline->save(app.flattenedAsset, gltfPath, binPath);
             msg += options.gltfPath + join + options.binPath;
             break;
         case Visualization::MESH_MODIFIED:
