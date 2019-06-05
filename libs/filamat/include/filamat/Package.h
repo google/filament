@@ -84,6 +84,12 @@ public:
         return mValid;
     }
 
+    static Package invalidPackage() {
+        Package package(0);
+        package.setValid(false);
+        return package;
+    }
+
 private:
     uint8_t* mPayload = nullptr;
     size_t mSize = 0;

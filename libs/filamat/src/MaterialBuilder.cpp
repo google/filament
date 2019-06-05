@@ -583,18 +583,14 @@ Package MaterialBuilder::build() noexcept {
         utils::slog.e << "Error: MaterialBuilder::init() must be called before build()."
             << utils::io::endl;
         // Return an empty package to signal a failure to build the material.
-        Package package(0);
-        package.setValid(false);
-        return package;
+        return Package::invalidPackage();
     }
 
     if (!checkLiteRequirements() ||
         !findProperties() ||
         !runSemanticAnalysis()) {
         // Return an empty package to signal a failure to build the material.
-        Package package(0);
-        package.setValid(false);
-        return package;
+        return Package::invalidPackage();
     }
 
     MaterialInfo info;
