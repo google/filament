@@ -163,7 +163,9 @@ struct FFilamentAsset : public FilamentAsset {
         if (--mSourceAssetRefCount == 0) {
             mGlbData.clear();
             mGlbData.shrink_to_fit();
-            cgltf_free((cgltf_data*) mSourceAsset);
+            if (!mSharedSourceAsset) {
+                cgltf_free((cgltf_data*) mSourceAsset);
+            }
             mSourceAsset = nullptr;
         }
     }
@@ -190,6 +192,7 @@ struct FFilamentAsset : public FilamentAsset {
     const cgltf_data* mSourceAsset = nullptr;
     tsl::robin_map<const cgltf_node*, utils::Entity> mNodeMap;
     tsl::robin_map<const cgltf_primitive*, filament::VertexBuffer*> mPrimMap;
+    bool mSharedSourceAsset = false;
     /** @} */
 };
 

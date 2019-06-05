@@ -630,6 +630,10 @@ cgltf_result cgltf_write_file(const cgltf_options* options, const char* path, co
 		fprintf(stderr, "Error: expected %zu bytes but wrote %zu bytes.\n", expected, actual);
 	}
 	FILE* file = fopen(path, "wt");
+	if (!file)
+	{
+		return cgltf_result_file_not_found;
+	}
 	// Note that cgltf_write() includes a null terminator, which we omit from the file content.
 	fwrite(buffer, actual - 1, 1, file);
 	fclose(file);

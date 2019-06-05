@@ -822,6 +822,7 @@ FilamentAsset* AssetLoader::createAssetFromBinary(uint8_t const* bytes, uint32_t
 FilamentAsset* AssetLoader::createAssetFromHandle(const void* handle) {
     const cgltf_data* sourceAsset = (const cgltf_data*) handle;
     upcast(this)->createAsset(sourceAsset);
+    upcast(this)->mResult->mSharedSourceAsset = true;
     return upcast(this)->mResult;
 }
 

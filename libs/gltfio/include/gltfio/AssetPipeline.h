@@ -65,11 +65,11 @@ public:
 
     /**
      * Saves a flattened asset to the filesystem as a JSON-based glTF 2.0 file, as well as a sidecar
-     * bin file that only contains buffer data.
+     * bin file that only contains buffer data. Returns false if an error occurred.
      *
      * The supplied binPath should live in the same folder as the jsonPath.
      */
-    void save(AssetHandle, const utils::Path& jsonPath, const utils::Path& binPath);
+    bool save(AssetHandle, const utils::Path& jsonPath, const utils::Path& binPath);
 
     /**
      * Flattens and sanitizes a scene by baking transforms, dereferencing shared meshes, providing
@@ -79,6 +79,8 @@ public:
      * resulting mesh has only one primitive. The triangles in the resulting asset should be
      * visually equivalent to the source, although the underlying scene structure and
      * resource-sharing will be lost.
+     *
+     * Assets with animation, skins, and morph targets are not supported.
      */
     AssetHandle flatten(AssetHandle source, uint32_t flags = ~0u);
 
@@ -115,6 +117,11 @@ public:
      * Modifies the occlusion texture URI for all primitives that have BAKED_UV_ATTRIB.
      */
     void setOcclusionUri(AssetHandle source, const utils::Path& texture);
+
+    /**
+     * Modifies the baseColor texture URI for all materials.
+     */
+    void setBaseColorUri(AssetHandle source, const utils::Path& texture);
 
     /**
      * Signals that a region of a path-traced image is available (used for progress notification).
@@ -167,7 +174,6 @@ public:
             const RenderOptions& options);
 
     static bool isFlattened(AssetHandle source);
-    static bool isParameterized(AssetHandle source);
 
     AssetPipeline();
     ~AssetPipeline();
