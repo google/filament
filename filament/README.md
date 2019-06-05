@@ -102,7 +102,7 @@ clean:
 
 ```
 FILAMENT_LIBS=-lfilament -lbackend -lbluegl -lbluevk -lfilabridge -lfilaflat -lutils -lgeometry -lsmol-v
-FRAMEWORKS=-framework Cocoa -framework Metal
+FRAMEWORKS=-framework Cocoa -framework Metal -framework CoreVideo
 CC=clang++
 
 main: main.o
