@@ -171,10 +171,7 @@ int main(int argc, char** argv) {
         // Cut-off frequency definition:
         //      fc = 1.1774 / (2pi * q)       (half power frequency or 0.707 amplitude)
 
-        // By choosing q = 2.0, we increase bluring, but we're moving away from a "true"
-        // gaussian filter (we'd need 11 taps to retain the gaussianness of the filter).
-        // float q = (gaussianWidth + 1) / 6.0;  // ~1.667 for 9 taps
-        float q = 2.0;
+        float q = (gaussianWidth + 1) / 6.0;  // ~1.667 for 9 taps
         float g = (1.0 / (std::sqrt(2.0 * M_PI) * q)) * std::exp(-(x * x) / (2.0 * q * q));
         weightSum += g * (i == 0 ? 1.0f : 2.0f);
 

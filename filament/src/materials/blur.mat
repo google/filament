@@ -4,11 +4,12 @@ material {
         {
             type : sampler2d,
             name : ssao,
+            precision: medium
         },
         {
             type : sampler2d,
             name : depth,
-            precision: high
+            precision: medium
         },
         {
             type : float4,
@@ -51,42 +52,55 @@ fragment {
     );
     const float kGaussianWeightSum = 0.993872;
 
-    highp float linearizeDepth(highp float depth) {
-        highp mat4 projection = getClipFromViewMatrix();
-        highp float z = depth * 2.0 - 1.0; // depth in clip space
-        return -projection[3].z / (z + projection[2].z);
+    ivec2 clampToEdge(const sampler2D s, ivec2 uv) {
+        ivec2 size = textureSize(s, 0);
+        return clamp(uv, ivec2(0), size - ivec2(1));
     }
 
-    ivec2 clampToEdge(const sampler2D s, ivec2 uv, int level) {
-        return clamp(uv, ivec2(0), textureSize(s, level) - ivec2(1));
+    float linearizeDepthDifference(float d0, float d1) {
+        mat4 projection = getClipFromViewMatrix();
+        float A = -projection[3].z;
+        float B =  projection[2].z;
+        float K = (2.0 * A) / (d0 * 2.0 + (B - 1.0)); // this is actually a constant
+        float d = K * (d0 - d1) / (d1 * 2.0 + (B - 1.0));
+        return d;
+    }
+
+    float bilateralWeight(const ivec2 p, in float depth) {
+        float sampleDepth = texelFetch(materialParams_depth, p, 0).r;
+        float ddepth = linearizeDepthDifference(depth, sampleDepth); // result in mediump
+        float diff = (1.0 / EDGE_DISTANCE) * ddepth;
+        return max(0.0, 1.0 - diff * diff);
+    }
+
+    void tap(inout float sum, inout float totalWeight, float weight, float depth, ivec2 position) {
+        position = clampToEdge(materialParams_ssao, position);
+        // ambiant occlusion sample
+        float ao = texelFetch(materialParams_ssao, position, 0).r;
+        // bilateral sample
+        float bilateral = bilateralWeight(position, depth);
+        bilateral *= weight;
+        sum += ao * bilateral;
+        totalWeight += bilateral;
     }
 
     void material(inout MaterialInputs material) {
         prepareMaterial(material);
 
-        ivec2 uv = ivec2(floor(variable_vertex.xy * materialParams.resolution.xy));
+        ivec2 uv = ivec2(variable_vertex.xy * materialParams.resolution.xy);
 
-        highp float depth = linearizeDepth(texelFetch(materialParams_depth, clampToEdge(materialParams_depth, uv, 0), 0).r);
+        float depth = texelFetch(materialParams_depth, uv, 0).r;
 
-        float sum = 0.0;
-        float totalWeight = 0.0;
-        for (int i = -kRadius ; i <= kRadius ; i++) {
-            // sample position
-            ivec2 p = uv + 2 * i * materialParams.axis;
-            p = clampToEdge(materialParams_ssao, p, 0);
+        // we handle the center pixel separately because it doesn't participate in
+        // bilateral filtering
+        float totalWeight = kGaussianSamples[0];
+        float sum = texelFetch(materialParams_ssao, uv, 0).r * totalWeight;
 
-            // ambiant occlusion sample
-            float ao = texelFetch(materialParams_ssao, p, 0).r;
-            float weight = kGaussianSamples[abs(i)];
-
-            // bilateral sample
-            highp float sampleDepth = linearizeDepth(texelFetch(materialParams_depth, p, 0).r);
-            float diff = (1.0 / EDGE_DISTANCE) * (sampleDepth - depth);
-            float bilateral = max(0.0, 1.0 - (diff * diff));
-
-            weight *= bilateral;
-            sum += ao * weight;
-            totalWeight += weight;
+        for (int i = 1; i <= kRadius; i++) {
+            float weight = kGaussianSamples[i];
+            ivec2 offset = i * materialParams.axis;
+            tap(sum, totalWeight, weight, depth, uv + offset);
+            tap(sum, totalWeight, weight, depth, uv - offset);
         }
 
         material.baseColor.r = sum * (1.0 / totalWeight);
