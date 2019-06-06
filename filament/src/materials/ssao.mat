@@ -156,20 +156,6 @@ fragment {
         return (d >= -bias ? 0.0 : rangeCheck);
     }
 
-    vec4 initQuadGather() {
-        vec4 qv;
-        qv = fract(gl_FragCoord.xy * 0.5 - 0.25).xyxy;
-        qv = qv * vec4(4, 4, -4, -4) + vec4(-1, -1, 1, 1);
-        return qv;
-    }
-
-    vec4 quadGather(in float v, const vec4 qv) {
-        vec4 v4 = vec4(v);
-        v4.y =  v4.x  + dFdx(v4.x)  * qv.z;
-        v4.zw = v4.xy + dFdy(v4.xy) * qv.w;
-        return v4;
-    }
-
     void material(inout MaterialInputs material) {
         prepareMaterial(material);
 
@@ -189,11 +175,6 @@ fragment {
         float ao = 1.0 - occlusion / float(kSphereSampleCount);
         // simulate user-controled ao^n with n[1, 2]
         ao = mix(ao, ao * ao, materialParams.power);
-
-        // "free" 2x2 blur using quad message passing -- this works only with "fine" derivatives
-        vec4 qv = initQuadGather();
-        vec4 ao4 = quadGather(ao, qv);
-        ao = 0.25 * (ao4.x + ao4.y + ao4.z + ao4.w);
 
         material.baseColor.r = ao;
     }

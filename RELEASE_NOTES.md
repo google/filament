@@ -6,6 +6,7 @@ A new header is inserted each time a *tag* is created.
 
 # Release notes
 
+- Added Screen Space Ambient Occlusion support (SAO)
 - New blending modes: `multiply` and `screen`
 - Fixed an issue when sorting blended objects with different blending modes
 - The material property `curvatureToRoughness` has been replaced with `specularAntiAliasing`.

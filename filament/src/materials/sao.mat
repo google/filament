@@ -57,7 +57,7 @@ vertex {
 }
 
 fragment {
-    #define LOG2_LOD_RATE   4
+    #define LOG2_LOD_RATE   3
 
     #define NOISE_NONE      0
     #define NOISE_PATTERN   1
@@ -175,7 +175,8 @@ fragment {
     }
 
     ivec2 clampToEdge(ivec2 uv, int level) {
-        return clamp(uv, ivec2(0), textureSize(materialParams_depth, level) - ivec2(1));
+        ivec2 size = textureSize(materialParams_depth, level);
+        return clamp(uv, ivec2(0), size - ivec2(1));
     }
 
     float computeAmbientOcclusionSAO(uint i, float ssDiskRadius, const ivec2 ssOrigin,
@@ -202,20 +203,6 @@ fragment {
         return occlusion;
     }
 
-    vec4 initQuadGather() {
-        vec4 qv;
-        qv = fract(gl_FragCoord.xy * 0.5 - 0.25).xyxy;
-        qv = qv * vec4(4, 4, -4, -4) + vec4(-1, -1, 1, 1);
-        return qv;
-    }
-
-    vec4 quadGather(in float v, const vec4 qv) {
-        vec4 v4 = vec4(v);
-        v4.y =  v4.x  + dFdx(v4.x)  * qv.z;
-        v4.zw = v4.xy + dFdy(v4.xy) * qv.w;
-        return v4;
-    }
-
     void material(inout MaterialInputs material) {
         prepareMaterial(material);
 
@@ -223,34 +210,25 @@ fragment {
 
         highp float depth = sampleDepthLinear(uv);
         highp vec3 origin = computeViewSpacePositionFromDepth(variable_vertex.zw, depth);
-        highp vec3 normal = computeViewSpaceNormalNotNormalized(origin);
+        highp vec3 normalNotNormalized = computeViewSpaceNormalNotNormalized(origin);
+
+        vec3 normal = normalize(normalNotNormalized);
         vec3 noise = getTrigNoise(uv);
 
         // Choose the screen-space sample radius
         // proportional to the projected area of the sphere
-        float ssDiskRadius = -materialParams.projectionScaleRadius / origin.z;
-        if (ssDiskRadius <= 1.0) {
-            // There is no way to compute AO at this radius
-            material.baseColor.r = 1.0;
-            return;
-        }
-
-        normal = normalize(normal);
-
+        float ssDiskRadius = -(materialParams.projectionScaleRadius / origin.z);
         ivec2 ssOrigin = ivec2(uv * materialParams.resolution.xy);
+
         float occlusion = 0.0;
         for (uint i = 0u; i < kSpiralSampleCount; i++) {
             occlusion += computeAmbientOcclusionSAO(i, ssDiskRadius, ssOrigin, origin, normal, noise);
         }
 
         float ao = 1.0 - occlusion / float(kSpiralSampleCount);
+
         // simulate user-controled ao^n with n[1, 2]
         ao = mix(ao, ao * ao, materialParams.power);
-
-        // "free" 2x2 blur using quad message passing -- this works only with "fine" derivatives
-        vec4 qv = initQuadGather();
-        vec4 ao4 = quadGather(ao, qv);
-        ao = 0.25 * (ao4.x + ao4.y + ao4.z + ao4.w);
 
         material.baseColor.r = ao;
     }

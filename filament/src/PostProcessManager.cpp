@@ -445,13 +445,14 @@ FrameGraphResource PostProcessManager::depthPass(FrameGraph& fg, RenderPass& pas
     RenderPass::Command const* last = pass.getCommands().end();
 
     // We limit the level size to 32 pixels (which is where the -5 comes from)
-    const size_t levelCount = std::max(1, std::ilogbf(std::max(width, height) / 2) + 1 - 5);
+    const size_t shift = 1;
+    const size_t levelCount = std::max(1, std::ilogbf(std::max(width, height) >> shift) + 1 - 5);
 
     // SSAO generates its own depth path at 1/4 resolution
     auto& ssaoDepthPass = fg.addPass<DepthPassData>("SSAO Depth Pass",
             [&](FrameGraph::Builder& builder, DepthPassData& data) {
                 data.depth = builder.createTexture("Depth Buffer", {
-                        .width = width / 2, .height = height / 2,
+                        .width = width >> shift, .height = height >> shift,
                         .levels = uint8_t(levelCount),
                         .format = TextureFormat::DEPTH24 });
 
