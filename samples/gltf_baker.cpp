@@ -253,7 +253,7 @@ static void createQuadRenderable(BakerApp& app) {
     static OverlayVertex kVertices[4] = {
         {{0, 0}, {0, 0}}, {{ 1000, 0}, {1, 0}}, {{0,  1000}, {0, 1}}, {{ 1000,  1000}, {1, 1}}
     };
-    static constexpr uint16_t kInidices[6] = { 0, 1, 2, 3, 2, 1 };
+    static constexpr uint16_t kIndices[6] = { 0, 1, 2, 3, 2, 1 };
 
     if (!app.overlayQuad.entity) {
         app.overlayQuad.vb = VertexBuffer::Builder()
@@ -267,7 +267,7 @@ static void createQuadRenderable(BakerApp& app) {
                 .bufferType(IndexBuffer::IndexType::USHORT)
                 .build(engine);
         app.overlayQuad.ib->setBuffer(engine,
-                IndexBuffer::BufferDescriptor(kInidices, 12, nullptr));
+                IndexBuffer::BufferDescriptor(kIndices, 12, nullptr));
         auto mat = Material::Builder()
                 .package(RESOURCES_AOPREVIEW_DATA, RESOURCES_AOPREVIEW_SIZE)
                 .build(engine);

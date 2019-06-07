@@ -27,6 +27,7 @@ struct Config {
     float scale = 1.0f;
     bool splitView = false;
     filament::Engine::Backend backend = filament::Engine::Backend::OPENGL;
+    bool resizeable = true;
 };
 
 #endif // TNT_FILAMENT_SAMPLE_CONFIG_H

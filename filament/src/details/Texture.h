@@ -50,6 +50,7 @@ public:
     size_t getLevels() const noexcept { return mLevels; }
     Sampler getTarget() const noexcept { return mTarget; }
     InternalFormat getFormat() const noexcept { return mFormat; }
+    Usage getUsage() const noexcept { return mUsage; }
     bool isRgbm() const noexcept { return mRgbm; }
 
     void setImage(FEngine& engine, size_t level,

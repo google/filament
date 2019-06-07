@@ -76,6 +76,7 @@ public:
         Builder& material(size_t index, MaterialInstance const* materialInstance) noexcept;
         // The axis aligned bounding box of the Renderable. Mandatory unless culling is disabled.
         Builder& boundingBox(const Box& axisAlignedBoundingBox) noexcept;
+        // See View::setVisibleLayers().
         Builder& layerMask(uint8_t select, uint8_t values) noexcept;
         // The priority is clamped to the range [0..7], defaults to 4; 7 is lowest priority
         Builder& priority(uint8_t priority) noexcept;
@@ -130,7 +131,10 @@ public:
     void destroy(utils::Entity e) noexcept;
 
     void setAxisAlignedBoundingBox(Instance instance, const Box& aabb) noexcept;
+
+    // See View::setVisibleLayers
     void setLayerMask(Instance instance, uint8_t select, uint8_t values) noexcept;
+
     void setPriority(Instance instance, uint8_t priority) noexcept;
     void setCastShadows(Instance instance, bool enable) noexcept;
     void setReceiveShadows(Instance instance, bool enable) noexcept;

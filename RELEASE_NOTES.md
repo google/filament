@@ -6,6 +6,8 @@ A new header is inserted each time a *tag* is created.
 
 # Release notes
 
+- Introduced `RenderTarget` API that allows View to reference an offscreen render target.
+- Added `lucy_bloom` sample to demonstrate the new `RenderTarget` API.
 - Added Screen Space Ambient Occlusion support (SAO)
 - New blending modes: `multiply` and `screen`
 - Fixed an issue when sorting blended objects with different blending modes
