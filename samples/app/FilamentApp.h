@@ -82,6 +82,8 @@ public:
     void setSidebarWidth(int width) { mSidebarWidth = width; }
     void setWindowTitle(const char* title) { mWindowTitle = title; }
 
+    void addOffscreenView(filament::View* view) { mOffscreenViews.push_back(view); }
+
     size_t getSkippedFrameCount() const { return mSkippedFrames; }
 
     FilamentApp(const FilamentApp& rhs) = delete;
@@ -214,6 +216,7 @@ private:
     int mSidebarWidth = 0;
     size_t mSkippedFrames = 0;
     std::string mWindowTitle;
+    std::vector<filament::View*> mOffscreenViews;
 };
 
 #endif // TNT_FILAMENT_SAMPLE_FILAMENTAPP_H

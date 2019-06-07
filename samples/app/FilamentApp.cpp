@@ -371,6 +371,9 @@ void FilamentApp::run(const Config& config, SetupCallback setupCallback,
         }
 
         if (renderer->beginFrame(window->getSwapChain())) {
+            for (filament::View* offscreenView : mOffscreenViews) {
+                renderer->render(offscreenView);
+            }
             for (auto const& view : window->mViews) {
                 renderer->render(view->getView());
             }
@@ -442,7 +445,10 @@ FilamentApp::Window::Window(FilamentApp* filamentApp,
         : mFilamentApp(filamentApp) {
     const int x = SDL_WINDOWPOS_CENTERED;
     const int y = SDL_WINDOWPOS_CENTERED;
-    const uint32_t windowFlags = SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI;
+    uint32_t windowFlags = SDL_WINDOW_SHOWN | SDL_WINDOW_ALLOW_HIGHDPI;
+    if (config.resizeable) {
+        windowFlags |= SDL_WINDOW_RESIZABLE;
+    }
     mWindow = SDL_CreateWindow(title.c_str(), x, y, (int) w, (int) h, windowFlags);
 
     // Create the Engine after the window in case this happens to be a single-threaded platform.
