@@ -108,12 +108,6 @@ fragment {
         #endif
     }
 
-    highp vec3 computeViewSpaceNormalNotNormalized(const highp vec3 position) {
-        highp vec3 dpdx = dFdx(position);
-        highp vec3 dpdy = dFdy(position);
-        return cross(dpdx, dpdy);
-    }
-
     highp float linearizeDepth(highp float depth) {
         highp mat4 projection = getClipFromViewMatrix();
         highp float z = depth * 2.0 - 1.0; // depth in clip space
@@ -125,10 +119,30 @@ fragment {
     }
 
     highp vec3 computeViewSpacePositionFromDepth(in vec2 p, highp float linearDepth) {
+        p = p * 2.0 - 1.0; // to clip space
         highp mat4 invProjection = getViewFromClipMatrix();
         p.x *= invProjection[0].x;
         p.y *= invProjection[1].y;
         return vec3(p * -linearDepth, linearDepth);
+    }
+
+    // compute normals using derivatives, which essentially results in half-resolution normals
+    // this creates arifacts around geometry edges
+    highp vec3 computeViewSpaceNormalNotNormalized(const highp vec3 position) {
+        highp vec3 dpdx = dFdx(position);
+        highp vec3 dpdy = dFdy(position);
+        return cross(dpdx, dpdy);
+    }
+
+    // compute normals directly from the depth texture, resulting in full resolution normals
+    highp vec3 computeViewSpaceNormalNotNormalized(const highp vec3 position, const vec2 uv) {
+        vec2 uvdx = uv + vec2(materialParams.resolution.z, 0.0);
+        vec2 uvdy = uv + vec2(0.0, materialParams.resolution.w);
+        highp vec3 px = computeViewSpacePositionFromDepth(uvdx, sampleDepthLinear(uvdx));
+        highp vec3 py = computeViewSpacePositionFromDepth(uvdy, sampleDepthLinear(uvdy));
+        highp vec3 dpdx = px - position;
+        highp vec3 dpdy = py - position;
+        return cross(dpdx, dpdy);
     }
 
     // Ambient Occlusion, largely inspired from:
@@ -162,11 +176,12 @@ fragment {
         vec2 uv = variable_vertex.xy; // interpolated to pixel center
 
         highp float depth = sampleDepthLinear(uv);
-        highp vec3 origin = computeViewSpacePositionFromDepth(variable_vertex.zw, depth);
-        highp vec3 normal = computeViewSpaceNormalNotNormalized(origin);
-        vec3 noise = getNoise(uv);
+        highp vec3 origin = computeViewSpacePositionFromDepth(uv, depth);
+        highp vec3 normal = computeViewSpaceNormalNotNormalized(origin, uv);
 
         normal = normalize(normal);
+        vec3 noise = getNoise(uv);
+
         float occlusion = 0.0;
         for (uint i = 0u; i < kSphereSampleCount; i++) {
             occlusion += computeAmbientOcclusionSSAO(origin, normal, noise, kSphereSamples[i]);
