@@ -378,6 +378,11 @@ FrameGraphResource PostProcessManager::ssao(FrameGraph& fg, RenderPass& pass,
                         .width = desc.width, .height = desc.height,
                         .format = TextureFormat::R8 });
 
+                // Here we use the depth test to skip pixels at infinity (i.e. the skybox)
+                // Note that we're not clearing the SAO buffer, which will leave skipped pixels
+                // in an undefined state -- this doesn't matter because the skybox material
+                // doesn't use SSAO and the bilateral filter in the blur pass will ignore those
+                // pixels at infinity.
                 data.ssao = builder.useRenderTarget("SSAO Target",
                         { .attachments.color = { data.ssao, FrameGraphRenderTarget::Attachments::WRITE },
                           .attachments.depth = { data.depth, FrameGraphRenderTarget::Attachments::READ }
@@ -457,7 +462,8 @@ FrameGraphResource PostProcessManager::depthPass(FrameGraph& fg, RenderPass& pas
                         .format = TextureFormat::DEPTH24 });
 
                 data.depth = builder.useRenderTarget("SSAO Depth Target",
-                        { .attachments.depth = data.depth }, TargetBufferFlags::DEPTH).depth;
+                        { .attachments.depth = data.depth },
+                        TargetBufferFlags::DEPTH).depth;
             },
             [=, &pass](FrameGraphPassResources const& resources,
                     DepthPassData const& data, DriverApi& driver) {
@@ -538,6 +544,10 @@ FrameGraphResource PostProcessManager::blurPass(FrameGraph& fg, FrameGraphResour
                 data.blurred = builder.createTexture("Blurred output", {
                         .width = desc.width, .height = desc.height, .format = desc.format });
 
+                // Here we use the depth test to skip pixels at infinity (i.e. the skybox)
+                // Note that we're not clearing the SAO buffer, which will leave skipped pixels
+                // in an undefined state -- this doesn't matter because the skybox material
+                // doesn't use SSAO.
                 data.blurred = builder.useRenderTarget("Blurred target",
                         { .attachments.color = { data.blurred, FrameGraphRenderTarget::Attachments::WRITE },
                           .attachments.depth = { depth, FrameGraphRenderTarget::Attachments::READ }

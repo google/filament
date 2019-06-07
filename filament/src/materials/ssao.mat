@@ -63,7 +63,7 @@ fragment {
     #define NOISE_TYPE      NOISE_PATTERN
 
     const uint kSphereSampleCount = 16u;
-    const vec3 kSphereSamples[16] = vec3[](
+    const vec3 kSphereSamples[] = vec3[](
         vec3(-1.60954e-06,  3.93118e-07,  1.51895e-06), vec3(-0.09508890,  0.00458908, -0.0312535),
         vec3( 0.015179900, -0.025586400,  0.003764530), vec3( 0.07342620,  0.02180220,  0.0027781),
         vec3( 0.094587400,  0.043218400,  0.089147500), vec3(-0.00950861,  0.05136860,  0.0196730),
@@ -75,7 +75,7 @@ fragment {
     );
 
     const uint kNoiseSampleCount = 16u;
-    const vec3 kNoiseSamples[kNoiseSampleCount] = vec3[](
+    const vec3 kNoiseSamples[] = vec3[](
         vec3(-0.0782473, -0.749924, -0.6568800), vec3(-0.5723190, -0.1023790, -0.813615),
         vec3( 0.0486527, -0.380791,  0.9233800), vec3( 0.2812020, -0.6566640, -0.699799),
         vec3( 0.7119110, -0.235841, -0.6614850), vec3(-0.4458930,  0.6110630,  0.654050),

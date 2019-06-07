@@ -33,7 +33,7 @@ int main(int argc, char** argv) {
 
     size_t sphereSampleCount = 16;
     std::cout << "const uint kSphereSampleCount = " << sphereSampleCount << "u;" << std::endl;
-    std::cout << "const vec3 kSphereSamples[kSphereSampleCount] = vec3[](" << std::endl;
+    std::cout << "const vec3 kSphereSamples[] = vec3[](" << std::endl;
     for (size_t i = 0; i < sphereSampleCount; i++) {
         float s = float(i) / sphereSampleCount;
         float r = random(generator);
@@ -57,7 +57,7 @@ int main(int argc, char** argv) {
 
     size_t noiseSampleCount = 16;
     std::cout << "const uint kNoiseSampleCount = " << sphereSampleCount << "u;" << std::endl;
-    std::cout << "const vec3 kNoiseSamples[kNoiseSampleCount] = vec3[](" << std::endl;
+    std::cout << "const vec3 kNoiseSamples[] = vec3[](" << std::endl;
     for (size_t i = 0; i < noiseSampleCount; i++) {
         float3 d = {
                 random(generator) * 2 - 1,
@@ -118,7 +118,7 @@ int main(int argc, char** argv) {
     const float kSpiralTurns = 7.0;
     const size_t spiralSampleCount = 7;
     std::cout << "const uint kSpiralSampleCount = " << spiralSampleCount << "u;" << std::endl;
-    std::cout << "const vec3 kSpiralSamples[kSpiralSampleCount] = vec3[](" << std::endl;
+    std::cout << "const vec3 kSpiralSamples[] = vec3[](" << std::endl;
     const float dalpha = 1.0f / (spiralSampleCount - 0.5f);
     for (size_t i = 0; i < spiralSampleCount; i++) {
         float radius = (i + 0.5f) * dalpha;
@@ -136,7 +136,7 @@ int main(int argc, char** argv) {
 
     size_t trigNoiseSampleCount = 16;
     std::cout << "const uint kTrigNoiseSampleCount = " << sphereSampleCount << "u;" << std::endl;
-    std::cout << "const vec3 kTrigNoiseSamples[kTrigNoiseSampleCount] = vec3[](" << std::endl;
+    std::cout << "const vec3 kTrigNoiseSamples[] = vec3[](" << std::endl;
     for (size_t i = 0; i < trigNoiseSampleCount; i++) {
         float phi = random(generator);
         float dr = phi * dalpha;
@@ -160,7 +160,7 @@ int main(int argc, char** argv) {
     const size_t gaussianSampleCount = (gaussianWidth + 1) / 2;
     std::cout << "const int kGaussianCount = " << gaussianSampleCount << ";" << std::endl;
     std::cout << "const int kRadius = kGaussianCount - 1;" << std::endl;
-    std::cout << "const float kGaussianSamples[kGaussianCount] = float[](" << std::endl;
+    std::cout << "const float kGaussianSamples[] = float[](" << std::endl;
     for (size_t i = 0; i < gaussianSampleCount; i++) {
         float x = i;
 

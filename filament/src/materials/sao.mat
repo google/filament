@@ -57,6 +57,11 @@ vertex {
 }
 
 fragment {
+    #define IMPLEMENTATION_REF          0
+    #define IMPLEMENTATION_REF_TAP      1
+    #define IMPLEMENTATION_LUT_TAP      2
+    #define IMPLEMENTATION              IMPLEMENTATION_LUT_TAP
+
     #define LOG2_LOD_RATE   3
 
     #define NOISE_NONE      0
@@ -64,8 +69,9 @@ fragment {
     #define NOISE_RANDOM    2
     #define NOISE_TYPE      NOISE_PATTERN
 
+    const float kSpiralTurns = 7.0; // must match ssaogen.cpp
     const uint kSpiralSampleCount = 7u;
-    const vec3 kSpiralSamples[kSpiralSampleCount] = vec3[](
+    const vec3 kSpiralSamples[] = vec3[](
         vec3(0.966326, 0.257322, 0.0769231), vec3(-0.69718, 0.716896, 0.230769),
         vec3(0.975223, 0.221226, 0.384615), vec3(0.982771, 0.184826, 0.538462),
         vec3(-0.613055, 0.79004, 0.692308), vec3(0.997237, 0.0742889, 0.846154),
@@ -73,7 +79,7 @@ fragment {
     );
 
     const uint kTrigNoiseSampleCount = 16u;
-    const vec3 kTrigNoiseSamples[kTrigNoiseSampleCount] = vec3[](
+    const vec3 kTrigNoiseSamples[] = vec3[](
         vec3(-0.401209, 0.915987, 0.0317202), vec3(0.843133, -0.537704, 0.0879207),
         vec3(0.457543, 0.889188, 0.0176937), vec3(0.976762, -0.214325, 0.0930107),
         vec3(-0.0596454, 0.99822, 0.026175), vec3(0.704176, 0.710025, 0.107385),
@@ -114,7 +120,6 @@ fragment {
     // see ssaogen.cpp
     vec3 getTrigNoise(const vec2 uv) {
         #if NOISE_TYPE == NOISE_RANDOM
-            const float kSpiralTurns = 7.0; // must match ssaogen.cpp
             const float dalpha = 1.0f / (float(kSpiralSampleCount) - 0.5f);
             float phi = random(uv);
             float dr = phi * dalpha;
@@ -177,15 +182,30 @@ fragment {
         const float dalpha = 1.0f / (float(kSpiralSampleCount) - 0.5f);
         float phi = random(variable_vertex.xy);
         float radius = (float(i) + phi + 0.5) * dalpha;
-        radius *= radius;
-        float angle = radius * (7.0 * 6.28318) + phi * 6.28318;
+        float angle = (radius * radius) * (kSpiralTurns * 6.28318) + phi * 6.28318;
+        return vec3(cos(angle), sin(angle), radius * radius);
+    }
+
+    vec3 tapLocationReferenceNoNoise(uint i) {
+        const float dalpha = 1.0f / (float(kSpiralSampleCount) - 0.5f);
+        float radius = (float(i) + 0.5) * dalpha;
+        float angle = (radius * radius) * (kSpiralTurns * 6.28318);
         return vec3(cos(angle), sin(angle), radius);
     }
 
     vec3 tapLocation(uint i, const vec3 noise) {
-        mat2 M = mat2(noise.xy, vec2(-noise.y, noise.x));
-        float radius = kSpiralSamples[i].z + noise.z;
-        return vec3(M * kSpiralSamples[i].xy, radius * radius);
+        #if IMPLEMENTATION == IMPLEMENTATION_REF
+            return tapLocationReference(i);
+        #else
+            #if IMPLEMENTATION == IMPLEMENTATION_REF_TAP
+                vec3 tap = tapLocationReferenceNoNoise(i);
+            #elif IMPLEMENTATION == IMPLEMENTATION_LUT_TAP
+                vec3 tap = kSpiralSamples[i];
+            #endif
+            mat2 M = mat2(noise.xy, vec2(-noise.y, noise.x));
+            float radius = tap.z + noise.z;
+            return vec3(M * tap.xy, radius * radius);
+        #endif
     }
 
     ivec2 clampToEdge(ivec2 uv, int level) {

@@ -47,7 +47,7 @@ fragment {
 
     const int kGaussianCount = 5;
     const int kRadius = kGaussianCount - 1;
-    const float kGaussianSamples[kGaussianCount] = float[](
+    const float kGaussianSamples[] = float[](
         0.239365, 0.199935, 0.116512, 0.0473701, 0.0134367
     );
     const float kGaussianWeightSum = 0.993872;
