@@ -49,6 +49,7 @@ public class View {
         public float radius = 0.3f;
         public float bias = 0.005f;
         public float power = 0.0f;
+        public float resolution = 0.5f;
     }
 
     public enum QualityLevel {
@@ -275,7 +276,7 @@ public class View {
 
     public void setAmbientOcclusionOptions(@NonNull AmbientOcclusionOptions options) {
         mAmbientOcclusionOptions = options;
-        nSetAmbientOcclusionOptions(getNativeObject(), options.radius, options.bias, options.power);
+        nSetAmbientOcclusionOptions(getNativeObject(), options.radius, options.bias, options.power, options.resolution);
     }
 
     @NonNull
@@ -336,5 +337,5 @@ public class View {
     private static native boolean nIsFrontFaceWindingInverted(long nativeView);
     private static native void nSetAmbientOcclusion(long nativeView, int ordinal);
     private static native int nGetAmbientOcclusion(long nativeView);
-    private static native void nSetAmbientOcclusionOptions(long nativeView, float radius, float bias, float power);
+    private static native void nSetAmbientOcclusionOptions(long nativeView, float radius, float bias, float power, float resolution);
 }
