@@ -89,8 +89,7 @@ void MeshWriter::optimize(Mesh& mesh) {
 }
 
 bool MeshWriter::serialize(ostream& out, Mesh& mesh) {
-    const uint32_t maxint = numeric_limits<uint32_t>::max();
-    const bool hasIndex16 = mesh.vertexCount < maxint;
+    const bool hasIndex16 = mesh.vertexCount <= numeric_limits<uint16_t>::max();
     const bool hasUV1 = !mesh.uv1.empty();
     const size_t vertexSize = sizeof(Vertex) + (hasUV1 ? sizeof(ushort2) : 0);
     if ((mFlags & INTERLEAVED) && hasUV1) {
@@ -178,23 +177,23 @@ bool MeshWriter::serialize(ostream& out, Mesh& mesh) {
         header.offsetTangents = offsetof(Vertex, tangents);
         header.offsetColor    = offsetof(Vertex, color);
         header.offsetUV0      = offsetof(Vertex, uv0);
-        header.offsetUV1      = maxint;
+        header.offsetUV1      = numeric_limits<uint32_t>::max();
         header.stridePosition = sizeof(Vertex);
         header.strideTangents = sizeof(Vertex);
         header.strideColor    = sizeof(Vertex);
         header.strideUV0      = sizeof(Vertex);
-        header.strideUV1      = maxint;
+        header.strideUV1      = numeric_limits<uint32_t>::max();;
     } else {
         header.offsetPosition = 0;
         header.offsetTangents = mesh.vertexCount * sizeof(Vertex::position);
         header.offsetColor    = header.offsetTangents + mesh.vertexCount * sizeof(Vertex::tangents);
         header.offsetUV0      = header.offsetColor + mesh.vertexCount * sizeof(Vertex::color);
-        header.offsetUV1      = maxint;
+        header.offsetUV1      = numeric_limits<uint32_t>::max();;
         header.stridePosition = 0;
         header.strideTangents = 0;
         header.strideColor    = 0;
         header.strideUV0      = 0;
-        header.strideUV1      = maxint;
+        header.strideUV1      = numeric_limits<uint32_t>::max();;
         if (hasUV1) {
             header.offsetUV1  = header.offsetUV0 + mesh.vertexCount * sizeof(Vertex::uv0);
             header.strideUV1  = 0;

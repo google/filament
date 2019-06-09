@@ -32,9 +32,7 @@ namespace metal {
  * associated resources.
  */
 class MetalResourceTracker {
-
 public:
-
     using CommandBuffer = void*;
     using Resource = const void*;
     using ResourceDeleter = std::function<void(Resource)>;
@@ -53,7 +51,6 @@ public:
     void clearResources(CommandBuffer buffer);
 
 private:
-
     struct ResourceEntry {
         Resource resource;
         ResourceDeleter deleter;
@@ -77,11 +74,10 @@ private:
     // trackResource and clearResources may be called on separate threads (the engine thread and a
     // Metal callback thread, for example).
     std::mutex mMutex;
-
 };
 
-}; // namespace metal
-}; // namespace backend
-}; // namespace filament
+} // namespace metal
+} // namespace backend
+} // namespace filament
 
 #endif //TNT_METALRESOURCETRACKER_H
