@@ -201,7 +201,6 @@ RenderableManager::Builder::Result RenderableManager::Builder::build(Engine& eng
             return Error;
         }
 
-#ifndef NDEBUG
         // this can't be an error because (1) those values are not immutable, so the caller
         // could fix later, and (2) the material's shader will work (i.e. compile), and
         // use the default values for this attribute, which maybe be acceptable.
@@ -212,7 +211,6 @@ RenderableManager::Builder::Result RenderableManager::Builder::build(Engine& eng
                    << "] missing required attributes ("
                    << required << "), declared=" << declared << io::endl;
         }
-#endif
 
         // we have at least one valid primitive
         isEmpty = false;
@@ -390,7 +388,6 @@ void FRenderableManager::setMaterialInstanceAt(Instance instance, uint8_t level,
         Slice<FRenderPrimitive>& primitives = getRenderPrimitives(instance, level);
         if (primitiveIndex < primitives.size()) {
             primitives[primitiveIndex].setMaterialInstance(upcast(mi));
-#ifndef NDEBUG
             AttributeBitset required = mi->getMaterial()->getRequiredAttributes();
             AttributeBitset declared = primitives[primitiveIndex].getEnabledAttributes();
             if (UTILS_UNLIKELY((declared & required) != required)) {
@@ -398,7 +395,6 @@ void FRenderableManager::setMaterialInstanceAt(Instance instance, uint8_t level,
                        << "] missing required attributes ("
                        << required << "), declared=" << declared << io::endl;
             }
-#endif
         }
     }
 }
