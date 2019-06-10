@@ -21,6 +21,7 @@
 
 #include "private/backend/DriverApi.h"
 
+#include <utils/Allocator.h>
 #include <utils/compiler.h>
 #include <utils/Log.h>
 
@@ -123,8 +124,15 @@ public:
     // offset in bytes, and count is the number of elements to invalidate
     template <typename T, typename = typename is_supported_type<T>::type>
     void setUniformArray(size_t offset, T const* UTILS_RESTRICT begin, size_t count) noexcept {
-        T* UTILS_RESTRICT p = static_cast<T*>(invalidateUniforms(offset, sizeof(T) * count));
-        std::copy_n(begin, count, p);
+        // we need to align array elements to the size of a vec4 (see std140 layout)
+        constexpr size_t stride = (sizeof(T) + 0xF) & ~0xF;
+        T* UTILS_RESTRICT p = static_cast<T*>(invalidateUniforms(offset, stride * count));
+        for (size_t i = 0; i < count; i++) {
+            *p++ = begin[i];
+            if (sizeof(T) & 0xF) {
+                p = utils::pointermath::align(p, 0x10);
+            }
+        }
     }
 
     template <typename T, typename = typename is_supported_type<T>::type>
