@@ -35,10 +35,10 @@ class Engine;
 class Texture;
 
 /**
- * An offscreen render target that can be associated with a View.
+ * An offscreen render target that can be associated with a View and contains
+ * weak references to a set of attached Texture objects.
  *
- * RenderTarget objects do not own their associated Texture attachments;
- * clients must explicitly create & destroy these.
+ * Clients are responsible for the lifetime of all associated Texture attachments.
  *
  * @see View
  */
@@ -47,6 +47,13 @@ class UTILS_PUBLIC RenderTarget : public FilamentAPI {
 
 public:
     using CubemapFace = backend::TextureCubemapFace;
+
+    enum AttachmentPoint {
+        COLOR = 0,
+        DEPTH = 1,
+    };
+
+    static constexpr size_t ATTACHMENT_COUNT = 2;
 
     class Builder : public BuilderBase<BuilderDetails> {
         friend struct BuilderDetails;
@@ -58,43 +65,45 @@ public:
         Builder& operator=(Builder const& rhs) noexcept;
         Builder& operator=(Builder&& rhs) noexcept;
 
-        /** 
-         * Sets the color attachment.
+        /**
+         * Sets a texture to a given attachment point.
          *
-         * All RenderTargets must have a non-null color attachment.
+         * All RenderTargets must have a non-null COLOR attachment.
          *
-         * @param texture The associated color attachment.
+         * @param attachment The attachment point of the texture.
+         * @param texture The associated texture object.
          * @return A reference to this Builder for chaining calls.
          */
-        Builder& color(Texture* texture) noexcept;
+        Builder& texture(AttachmentPoint attachment, Texture* texture) noexcept;
 
-        /** 
-         * Sets the depth attachment.
+        /**
+         * Sets the mipmap level for a given attachment point.
          *
-         * @param texture The associated depth attachment, nullptr by default.
-         * @return A reference to this Builder for chaining calls.
-         */
-        Builder& depth(Texture* texture) noexcept;
-
-        /** 
-         * Sets the associated mipmap level.
-         *
+         * @param attachment The attachment point of the texture.
          * @param level The associated mipmap level, 0 by default.
          * @return A reference to this Builder for chaining calls.
          */
-        Builder& miplevel(uint8_t level) noexcept;
+        Builder& mipLevel(AttachmentPoint attachment, uint8_t level) noexcept;
 
-        /** 
-         * Sets the associated cubemap face.
+        /**
+         * Sets the cubemap face for a given attachment point.
          *
          * @param face The associated cubemap face, POSITIVE_X by default.
          * @return A reference to this Builder for chaining calls.
          */
-        Builder& face(CubemapFace face) noexcept;
+        Builder& face(AttachmentPoint attachment, CubemapFace face) noexcept;
+
+        /**
+         * Sets the layer for a given attachment point (for 3D textures).
+         *
+         * @param attachment The associated cubemap face, POSITIVE_X by default.
+         * @return A reference to this Builder for chaining calls.
+         */
+        Builder& layer(AttachmentPoint attachment, uint32_t layer) noexcept;
 
         /**
          * Creates the RenderTarget object and returns a pointer to it.
-         * 
+         *
          * @return pointer to the newly created object or nullptr if exceptions are disabled and
          *         an error occurred.
          */
@@ -104,10 +113,10 @@ public:
         friend class details::FRenderTarget;
     };
 
-    Texture* getColor() const noexcept;
-    Texture* getDepth() const noexcept;
-    uint8_t getMiplevel() const noexcept;
-    CubemapFace getFace() const noexcept;
+    Texture* getTexture(AttachmentPoint attachment) const noexcept;
+    uint8_t getMipLevel(AttachmentPoint attachment) const noexcept;
+    CubemapFace getFace(AttachmentPoint attachment) const noexcept;
+    uint32_t getLayer(AttachmentPoint attachment) const noexcept;
 };
 
 } // namespace filament

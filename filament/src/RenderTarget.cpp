@@ -28,10 +28,7 @@ namespace filament {
 using namespace details;
 
 struct RenderTarget::BuilderDetails {
-    Texture* mColorTexture = nullptr;
-    Texture* mDepthTexture = nullptr;
-    CubemapFace mCubemapFace = CubemapFace::POSITIVE_X;
-    uint8_t mMiplevel = 0;
+    FRenderTarget::Attachment mAttachments[RenderTarget::ATTACHMENT_COUNT];
 };
 
 using BuilderType = RenderTarget::Builder;
@@ -42,43 +39,53 @@ BuilderType::Builder(Builder&& rhs) noexcept = default;
 BuilderType& BuilderType::operator=(BuilderType const& rhs) noexcept = default;
 BuilderType& BuilderType::operator=(BuilderType&& rhs) noexcept = default;
 
-RenderTarget::Builder& RenderTarget::Builder::color(Texture* texture) noexcept {
-    mImpl->mColorTexture = texture;
+BuilderType& BuilderType::texture(AttachmentPoint pt, Texture* texture) noexcept {
+    mImpl->mAttachments[pt].texture = upcast(texture);
     return *this;
 }
 
-RenderTarget::Builder& RenderTarget::Builder::depth(Texture* texture) noexcept {
-    mImpl->mDepthTexture = texture;
+BuilderType& BuilderType::mipLevel(AttachmentPoint pt, uint8_t level) noexcept {
+    mImpl->mAttachments[pt].mipLevel = level;
     return *this;
 }
 
-RenderTarget::Builder& RenderTarget::Builder::miplevel(uint8_t level) noexcept {
-    mImpl->mMiplevel = level;
+BuilderType& BuilderType::face(AttachmentPoint pt, CubemapFace face) noexcept {
+    mImpl->mAttachments[pt].face = face;
     return *this;
 }
 
-RenderTarget::Builder& RenderTarget::Builder::face(CubemapFace face) noexcept {
-    mImpl->mCubemapFace = face;
+BuilderType& BuilderType::layer(AttachmentPoint pt, uint32_t layer) noexcept {
+    mImpl->mAttachments[pt].layer = layer;
     return *this;
 }
 
 RenderTarget* RenderTarget::Builder::build(Engine& engine) {
     using backend::TextureUsage;
-    FTexture* color = upcast(mImpl->mColorTexture);
-    FTexture* depth = upcast(mImpl->mDepthTexture);
-
-    if (!ASSERT_PRECONDITION_NON_FATAL(color, "color attachment not set")) {
+    const FRenderTarget::Attachment& color = mImpl->mAttachments[COLOR];
+    const FRenderTarget::Attachment& depth = mImpl->mAttachments[DEPTH];
+    const FTexture* cTexture = color.texture;
+    const FTexture* dTexture = depth.texture;
+    if (!ASSERT_PRECONDITION_NON_FATAL(cTexture, "color attachment not set")) {
         return nullptr;
     }
-    if (!ASSERT_PRECONDITION_NON_FATAL(color->getUsage() & TextureUsage::COLOR_ATTACHMENT,
+    if (!ASSERT_PRECONDITION_NON_FATAL(cTexture->getUsage() & TextureUsage::COLOR_ATTACHMENT,
             "Texture usage must contain COLOR_ATTACHMENT")) {
         return nullptr;
     }
-    if (depth && !ASSERT_PRECONDITION_NON_FATAL(depth->getUsage() & TextureUsage::DEPTH_ATTACHMENT,
-            "Texture usage must contain DEPTH_ATTACHMENT")) {
-        return nullptr;
+    if (depth.texture) {
+        if (!ASSERT_PRECONDITION_NON_FATAL(dTexture->getUsage() & TextureUsage::DEPTH_ATTACHMENT,
+                "Texture usage must contain DEPTH_ATTACHMENT")) {
+            return nullptr;
+        }
+        const uint32_t cWidth = FTexture::valueForLevel(color.mipLevel, cTexture->getWidth());
+        const uint32_t cHeight = FTexture::valueForLevel(color.mipLevel, cTexture->getHeight());
+        const uint32_t dWidth = FTexture::valueForLevel(depth.mipLevel, dTexture->getWidth());
+        const uint32_t dHeight = FTexture::valueForLevel(depth.mipLevel, dTexture->getHeight());
+        if (!ASSERT_PRECONDITION_NON_FATAL(cWidth == dWidth && cHeight == dHeight,
+                "Attachment dimensions must match")) {
+            return nullptr;
+        }
     }
-
     return upcast(engine).createRenderTarget(*this);
 }
 
@@ -88,31 +95,32 @@ namespace details {
 
 FRenderTarget::HwHandle FRenderTarget::createHandle(FEngine& engine, const Builder& builder) {
     FEngine::DriverApi& driver = engine.getDriverApi();
-    const Texture* depth = builder.mImpl->mDepthTexture;
-    const Texture* color = builder.mImpl->mColorTexture;
-    const uint8_t level = builder.mImpl->mMiplevel;
-    const CubemapFace face = builder.mImpl->mCubemapFace;
-    const backend::TargetBufferFlags flags = depth ? backend::COLOR_AND_DEPTH : backend::COLOR;
-    const uint32_t width = FTexture::valueForLevel(level, color->getWidth());
-    const uint32_t height = FTexture::valueForLevel(level, color->getHeight());
+    const Attachment& color = builder.mImpl->mAttachments[COLOR];
+    const Attachment& depth = builder.mImpl->mAttachments[DEPTH];
+    const backend::TargetBufferFlags flags =
+            depth.texture ? backend::COLOR_AND_DEPTH : backend::COLOR;
 
     // For now we do not support multisampled render targets in the public-facing API, but please
     // note that post-processing includes FXAA by default.
     const uint8_t samples = 1;
 
-    const backend::TargetBufferInfo cinfo(upcast(color)->getHwHandle(), level, face);
+    const backend::TargetBufferInfo cinfo(upcast(color.texture)->getHwHandle(),
+            color.mipLevel, color.face);
+
     const backend::TargetBufferInfo dinfo(
-            depth ? upcast(depth)->getHwHandle() : backend::TextureHandle(),
-            level, face);
+            depth.texture ? upcast(depth.texture)->getHwHandle() : backend::TextureHandle(),
+            color.mipLevel, color.face);
+
+    const uint32_t width = FTexture::valueForLevel(color.mipLevel, color.texture->getWidth());
+    const uint32_t height = FTexture::valueForLevel(color.mipLevel, color.texture->getHeight());
+
     return driver.createRenderTarget(flags, width, height, samples, cinfo, dinfo, {});
 }
 
-FRenderTarget::FRenderTarget(FEngine& engine, const RenderTarget::Builder& builder)
-        : mColorTexture(upcast(builder->mColorTexture)),
-          mDepthTexture(upcast(builder->mDepthTexture)),
-          mMiplevel(builder->mMiplevel),
-          mCubemapFace(builder->mCubemapFace),
-          mHandle(createHandle(engine, builder)) {
+FRenderTarget::FRenderTarget(FEngine& engine, const RenderTarget::Builder& builder) :
+    mHandle(createHandle(engine, builder)) {
+    mAttachments[COLOR] = builder.mImpl->mAttachments[COLOR];
+    mAttachments[DEPTH] = builder.mImpl->mAttachments[DEPTH];
 }
 
 void FRenderTarget::terminate(FEngine& engine) {
@@ -127,20 +135,20 @@ void FRenderTarget::terminate(FEngine& engine) {
 
 using namespace details;
 
-Texture* RenderTarget::getColor() const noexcept {
-    return upcast(this)->getColor();
+Texture* RenderTarget::getTexture(AttachmentPoint attachment) const noexcept {
+    return upcast(this)->getAttachment(attachment).texture;
 }
 
-Texture* RenderTarget::getDepth() const noexcept {
-    return upcast(this)->getDepth();
+uint8_t RenderTarget::getMipLevel(AttachmentPoint attachment) const noexcept {
+    return upcast(this)->getAttachment(attachment).mipLevel;
 }
 
-uint8_t RenderTarget::getMiplevel() const noexcept {
-    return upcast(this)->getMiplevel();
+RenderTarget::CubemapFace RenderTarget::getFace(AttachmentPoint attachment) const noexcept {
+    return upcast(this)->getAttachment(attachment).face;
 }
 
-RenderTarget::CubemapFace RenderTarget::getFace() const noexcept {
-    return upcast(this)->getFace();
+uint32_t RenderTarget::getLayer(AttachmentPoint attachment) const noexcept {
+    return upcast(this)->getAttachment(attachment).layer;
 }
 
 } // namespace filament

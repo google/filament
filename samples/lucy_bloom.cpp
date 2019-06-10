@@ -94,7 +94,9 @@ static void setup(LucyApp& app, Engine* engine, View* finalView, Scene* finalSce
         .usage(Texture::Usage::DEPTH_ATTACHMENT)
         .format(Texture::InternalFormat::DEPTH24).build(*engine);
     app.reflection.target = RenderTarget::Builder()
-        .color(app.reflection.color) .depth(app.reflection.depth) .build(*engine);
+        .texture(RenderTarget::COLOR, app.reflection.color)
+        .texture(RenderTarget::DEPTH, app.reflection.depth)
+        .build(*engine);
 
     app.primary.color = Texture::Builder()
         .width(FBO_WIDTH).height(FBO_HEIGHT).levels(1)
@@ -105,19 +107,27 @@ static void setup(LucyApp& app, Engine* engine, View* finalView, Scene* finalSce
         .usage(Texture::Usage::DEPTH_ATTACHMENT)
         .format(Texture::InternalFormat::DEPTH24).build(*engine);
     app.primary.target = RenderTarget::Builder()
-        .color(app.primary.color) .depth(app.primary.depth) .build(*engine);
+        .texture(RenderTarget::COLOR, app.primary.color)
+        .texture(RenderTarget::DEPTH, app.primary.depth)
+        .build(*engine);
 
     app.hblur.color = Texture::Builder()
         .width(FBO_WIDTH).height(FBO_HEIGHT).levels(1)
         .usage(Texture::Usage::COLOR_ATTACHMENT | Texture::Usage::SAMPLEABLE)
         .format(Texture::InternalFormat::RGBA16F).build(*engine);
-    app.hblur.target = RenderTarget::Builder().color(app.hblur.color).build(*engine);
+    app.hblur.target = RenderTarget::Builder()
+        .texture(RenderTarget::COLOR, app.hblur.color)
+        .texture(RenderTarget::DEPTH, app.hblur.depth)
+        .build(*engine);
 
     app.vblur.color = Texture::Builder()
         .width(FBO_WIDTH).height(FBO_HEIGHT).levels(1)
         .usage(Texture::Usage::COLOR_ATTACHMENT | Texture::Usage::SAMPLEABLE)
         .format(Texture::InternalFormat::RGBA16F).build(*engine);
-    app.vblur.target = RenderTarget::Builder().color(app.vblur.color).build(*engine);
+    app.vblur.target = RenderTarget::Builder()
+        .texture(RenderTarget::COLOR, app.vblur.color)
+        .texture(RenderTarget::DEPTH, app.vblur.depth)
+        .build(*engine);
 
     // Create lights.
     auto* ibl = FilamentApp::get().getIBL();

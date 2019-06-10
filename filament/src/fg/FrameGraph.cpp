@@ -302,7 +302,7 @@ struct PassNode { // 200
     ~PassNode() = default;
 
     // for Builder
-    void declareRenderTarget(RenderTarget& renderTarget) noexcept {
+    void declareRenderTarget(fg::RenderTarget& renderTarget) noexcept {
         renderTargets.push_back(&renderTarget);
     }
 
@@ -379,7 +379,7 @@ struct PassNode { // 200
     // set by the builder
     Vector<FrameGraphResource> reads;               // resources we're reading from
     Vector<FrameGraphResource> writes;              // resources we're writing to
-    Vector<RenderTarget*> renderTargets;
+    Vector<fg::RenderTarget*> renderTargets;
 
     // computed during compile()
     Vector<VirtualResource*> devirtualize;         // resources we need to create before executing
@@ -479,7 +479,7 @@ FrameGraph::Builder::Attachments FrameGraph::Builder::useRenderTarget(const char
     FrameGraphRenderTarget::AttachmentResult rt{};
     FrameGraph& fg = mFrameGraph;
 
-    RenderTarget& renderTarget = fg.createRenderTarget(name, desc);
+    fg::RenderTarget& renderTarget = fg.createRenderTarget(name, desc);
     renderTarget.userClearFlags = clearFlags;
 
     mPass.declareRenderTarget(renderTarget);
@@ -595,7 +595,7 @@ FrameGraphPassResources::getRenderTarget(FrameGraphResource r, uint8_t level) co
 
     // TODO: for cubemaps/arrays, we'll need to be able to specify the face/index
 
-    for (RenderTarget const* renderTarget : mPass.renderTargets) {
+    for (fg::RenderTarget const* renderTarget : mPass.renderTargets) {
         auto const& desc = renderTarget->desc;
         auto pos = std::find_if(
                 desc.attachments.textures.begin(),
@@ -650,7 +650,7 @@ FrameGraph::FrameGraph()
 //    slog.d << "PassNode: " << sizeof(PassNode) << io::endl;
 //    slog.d << "ResourceNode: " << sizeof(ResourceNode) << io::endl;
 //    slog.d << "Resource: " << sizeof(Resource) << io::endl;
-//    slog.d << "RenderTarget: " << sizeof(RenderTarget) << io::endl;
+//    slog.d << "RenderTarget: " << sizeof(fg::RenderTarget) << io::endl;
 //    slog.d << "RenderTargetResource: " << sizeof(RenderTargetResource) << io::endl;
 //    slog.d << "Alias: " << sizeof(Alias) << io::endl;
 //    slog.d << "Vector: " << sizeof(Vector<fg::PassNode>) << io::endl;
@@ -809,7 +809,7 @@ FrameGraphResource FrameGraph::importResource(
 }
 
 TargetBufferFlags FrameGraph::computeDiscardFlags(DiscardPhase phase,
-        PassNode const* curr, PassNode const* first, RenderTarget const& renderTarget) {
+        PassNode const* curr, PassNode const* first, fg::RenderTarget const& renderTarget) {
     auto& resourceNodes = mResourceNodes;
     TargetBufferFlags discardFlags = TargetBufferFlags::ALL;
 
@@ -870,7 +870,7 @@ FrameGraph& FrameGraph::compile() noexcept {
      */
 
     if (!mAliases.empty()) {
-        Vector<filament::fg::RenderTarget>& renderTargets = mRenderTargets;
+        Vector<fg::RenderTarget>& renderTargets = mRenderTargets;
         Vector<FrameGraphResource> sratch(mArena); // keep out of loops to avoid reallocations
         for (fg::Alias const& alias : mAliases) {
             // disconnect all writes to "from"
@@ -989,7 +989,7 @@ FrameGraph& FrameGraph::compile() noexcept {
 
     // resolve render targets
     for (PassNode& pass : passNodes) {
-        for (RenderTarget* pRenderTarget : pass.renderTargets) {
+        for (fg::RenderTarget* pRenderTarget : pass.renderTargets) {
             pRenderTarget->resolve(*this);
         }
     }
@@ -1019,7 +1019,7 @@ FrameGraph& FrameGraph::compile() noexcept {
             // figure out which is the last pass to need this resource
             pResource->last = &pass;
         }
-        for (RenderTarget* const pRenderTarget : pass.renderTargets) {
+        for (fg::RenderTarget* const pRenderTarget : pass.renderTargets) {
             VirtualResource* const pResource = pRenderTarget->cache;
             // figure out which is the first pass to need this resource
             pResource->first = pResource->first ? pResource->first : &pass;
