@@ -36,6 +36,7 @@ class IndirectLight;
 class Material;
 class MaterialInstance;
 class Renderer;
+class RenderTarget;
 class Scene;
 class Skybox;
 class Stream;
@@ -309,6 +310,7 @@ public:
     void destroy(const SwapChain* p);           //!< Destroys a SwapChain object.
     void destroy(const Stream* p);              //!< Destroys a Stream object.
     void destroy(const Texture* p);             //!< Destroys a Texture object.
+    void destroy(const RenderTarget* p);        //!< Destroys a RenderTarget object.
     void destroy(const View* p);                //!< Destroys a View object.
     void destroy(utils::Entity e);              //!< Destroys all filament-known components from this entity
 
