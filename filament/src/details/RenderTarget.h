@@ -35,26 +35,29 @@ class FRenderTarget : public RenderTarget {
 public:
     using HwHandle = backend::Handle<backend::HwRenderTarget>;
 
+    struct Attachment {
+        FTexture* texture = nullptr;
+        uint8_t mipLevel = 0;
+        CubemapFace face = RenderTarget::CubemapFace::POSITIVE_X;
+        uint32_t layer = 0;
+    };
+
     FRenderTarget(FEngine& engine, const Builder& builder);
 
     void terminate(FEngine& engine);
 
     HwHandle getHwHandle() const noexcept { return mHandle; }
 
-    FTexture* getColor() const noexcept { return mColorTexture; }
-    FTexture* getDepth() const noexcept { return mDepthTexture; }
-    uint8_t getMiplevel() const noexcept { return mMiplevel; }
-    CubemapFace getFace() const noexcept { return mCubemapFace; }
+    Attachment getAttachment(AttachmentPoint attachment) const noexcept {
+        return mAttachments[(int) attachment];
+    }
 
 private:
     friend class RenderTarget;
 
     static HwHandle createHandle(FEngine& engine, const Builder& builder);
 
-    FTexture* const mColorTexture;
-    FTexture* const mDepthTexture;
-    const uint8_t mMiplevel;
-    const CubemapFace mCubemapFace;
+    Attachment mAttachments[RenderTarget::ATTACHMENT_COUNT];
     const HwHandle mHandle;
 };
 

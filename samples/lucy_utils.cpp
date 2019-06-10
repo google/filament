@@ -45,7 +45,7 @@ constexpr float M_PIf = float(M_PI);
 
 Entity createQuad(Engine* engine, Texture* tex, ImageOp op, Texture* secondary) {
 
-    static VertexBuffer* vb = [](Engine& engine) {
+    static VertexBuffer* vertexBuffer = [](Engine& engine) {
         struct OverlayVertex {
             float2 position;
             float2 uv;
@@ -79,7 +79,7 @@ Entity createQuad(Engine* engine, Texture* tex, ImageOp op, Texture* secondary) 
         return vb;
     }(*engine);
 
-    static IndexBuffer* ib = [](Engine& engine) {
+    static IndexBuffer* indexBuffer = [](Engine& engine) {
         static constexpr uint16_t indices[6] = { 2, 1, 0, 1, 2, 3 };
         auto ib = IndexBuffer::Builder()
             .indexCount(6)
@@ -192,41 +192,41 @@ Entity createQuad(Engine* engine, Texture* tex, ImageOp op, Texture* secondary) 
         return Material::Builder().package(pkg.getData(), pkg.getSize()).build(engine);
     }(*engine);
 
-    TextureSampler::MinFilter minfilt;
-    TextureSampler::MagFilter magfilt;
-    MaterialInstance* matinstance;
+    TextureSampler::MinFilter minFilter;
+    TextureSampler::MagFilter magFilter;
+    MaterialInstance* matInstance;
     switch (op) {
         case BLIT:
-            minfilt = TextureSampler::MinFilter::LINEAR;
-            magfilt = TextureSampler::MagFilter::LINEAR;
-            matinstance = blit->createInstance();
+            minFilter = TextureSampler::MinFilter::LINEAR;
+            magFilter = TextureSampler::MagFilter::LINEAR;
+            matInstance = blit->createInstance();
             break;
         case HBLUR:
-            minfilt = TextureSampler::MinFilter::NEAREST;
-            magfilt = TextureSampler::MagFilter::NEAREST;
-            matinstance = blur->createInstance();
-            matinstance->setParameter("weights", hweights, FILTER_SIZE);
+            minFilter = TextureSampler::MinFilter::NEAREST;
+            magFilter = TextureSampler::MagFilter::NEAREST;
+            matInstance = blur->createInstance();
+            matInstance->setParameter("weights", hweights, FILTER_SIZE);
             break;
         case VBLUR:
-            minfilt = TextureSampler::MinFilter::NEAREST;
-            magfilt = TextureSampler::MagFilter::NEAREST;
-            matinstance = blur->createInstance();
-            matinstance->setParameter("weights", vweights, FILTER_SIZE);
+            minFilter = TextureSampler::MinFilter::NEAREST;
+            magFilter = TextureSampler::MagFilter::NEAREST;
+            matInstance = blur->createInstance();
+            matInstance->setParameter("weights", vweights, FILTER_SIZE);
             break;
         case MIX:
-            minfilt = TextureSampler::MinFilter::LINEAR;
-            magfilt = TextureSampler::MagFilter::LINEAR;
-            matinstance = mix->createInstance();
-            matinstance->setParameter("secondary", secondary, TextureSampler(minfilt, magfilt));
+            minFilter = TextureSampler::MinFilter::LINEAR;
+            magFilter = TextureSampler::MagFilter::LINEAR;
+            matInstance = mix->createInstance();
+            matInstance->setParameter("secondary", secondary, TextureSampler(minFilter, magFilter));
             break;
     }
-    matinstance->setParameter("color", tex, TextureSampler(minfilt, magfilt));
+    matInstance->setParameter("color", tex, TextureSampler(minFilter, magFilter));
 
     Entity entity = EntityManager::get().create();
     RenderableManager::Builder(1)
         .boundingBox({{ 0, 0, 0 }, { 9000, 9000, 9000 }})
-        .material(0, matinstance)
-        .geometry(0, RenderableManager::PrimitiveType::TRIANGLES, vb, ib)
+        .material(0, matInstance)
+        .geometry(0, RenderableManager::PrimitiveType::TRIANGLES, vertexBuffer, indexBuffer)
         .build(*engine, entity);
 
     return entity;
@@ -237,38 +237,38 @@ Entity createDisk(Engine* engine, Texture* reflection) {
     constexpr int nverts = nslices + 2;
 
     static float4 verts[nverts];
-    int i = 0;
-    while (i < nslices + 1) {
-        float theta = 2.0f * M_PI * i / nslices;
-        verts[i++] = float4 {
+    int slice = 0;
+    while (slice < nslices + 1) {
+        float theta = 2.0f * M_PI * slice / nslices;
+        verts[slice++] = float4 {
             std::cos(theta), std::sin(theta),
             0.5 + 0.5 * std::cos(theta), 0.5 + 0.5 * std::sin(theta)
         };
     }
-    verts[i] = {0.0f, 0.0f, 0.5f, 0.5f};
+    verts[slice] = {0.0f, 0.0f, 0.5f, 0.5f};
 
     static uint16_t indices[nslices * 3];
-    for (int i = 0, j = 0; i < nslices; ++i) {
+    for (int slice = 0, j = 0; slice < nslices; ++slice) {
         indices[j++] = nverts - 1;
-        indices[j++] = i;
-        indices[j++] = (i + 1) % (nslices + 1);
+        indices[j++] = slice;
+        indices[j++] = (slice + 1) % (nslices + 1);
     }
 
-    VertexBuffer* vb = VertexBuffer::Builder()
+    VertexBuffer* vbuffer = VertexBuffer::Builder()
         .vertexCount(nverts)
         .bufferCount(1)
         .attribute(VertexAttribute::POSITION, 0, VertexBuffer::AttributeType::FLOAT2, 0, 16)
         .attribute(VertexAttribute::UV0, 0, VertexBuffer::AttributeType::FLOAT2, 8, 16)
         .build(*engine);
 
-    vb->setBufferAt(*engine, 0, VertexBuffer::BufferDescriptor(verts, sizeof(verts), nullptr));
+    vbuffer->setBufferAt(*engine, 0, VertexBuffer::BufferDescriptor(verts, sizeof(verts), nullptr));
 
-    IndexBuffer* ib = IndexBuffer::Builder()
+    IndexBuffer* ibuffer = IndexBuffer::Builder()
         .indexCount(nslices * 3)
         .bufferType(IndexBuffer::IndexType::USHORT)
         .build(*engine);
 
-    ib->setBuffer(*engine, IndexBuffer::BufferDescriptor(indices, sizeof(indices), nullptr));
+    ibuffer->setBuffer(*engine, IndexBuffer::BufferDescriptor(indices, sizeof(indices), nullptr));
 
     filamat::Package pkg = filamat::MaterialBuilder()
         .name("podium")
@@ -285,10 +285,10 @@ Entity createDisk(Engine* engine, Texture* reflection) {
                 material.ambientOcclusion = texture(materialParams_ao, getUV0()).r;
 
                 float2 uv = gl_FragCoord.xy * getResolution().zw; uv.y = 1.0 - uv.y;
-                vec3 reflectance = texture(materialParams_reflection, uv).xyz;
+                vec3 reflection = texture(materialParams_reflection, uv).xyz;
 
                 // HACK: blend the reflection with the baseColor.
-                material.baseColor.rgb = mix(reflectance, material.baseColor.rgb, 0.75);
+                material.baseColor.rgb = mix(reflection, material.baseColor.rgb, 0.75);
             }
         )SHADER")
         .require(VertexAttribute::UV0)
@@ -302,8 +302,8 @@ Entity createDisk(Engine* engine, Texture* reflection) {
         .shading(Shading::LIT)
         .build();
 
-    Material* mat = Material::Builder().package(pkg.getData(), pkg.getSize()).build(*engine);
-    MaterialInstance* matinstance = mat->createInstance();
+    Material* material = Material::Builder().package(pkg.getData(), pkg.getSize()).build(*engine);
+    MaterialInstance* matInstance = material->createInstance();
 
     auto createTexture4 = [engine](const uint8_t* data, int size, bool srgb) {
         int width, height, nchan;
@@ -340,23 +340,23 @@ Entity createDisk(Engine* engine, Texture* reflection) {
     auto normal = createTexture4(RESOURCE_ARGS(BLUE_TILES_01_NORMAL), false);
     auto color = createTexture4(RESOURCE_ARGS(BLUE_TILES_01_COLOR), true);
     auto roughness = createTexture1(RESOURCE_ARGS(BLUE_TILES_01_ROUGHNESS));
-    auto ao = createTexture1(RESOURCE_ARGS(BLUE_TILES_01_AO));
+    auto occlusion = createTexture1(RESOURCE_ARGS(BLUE_TILES_01_AO));
 
     TextureSampler sampler(TextureSampler::MinFilter::LINEAR_MIPMAP_LINEAR,
             TextureSampler::MagFilter::LINEAR);
 
-    matinstance->setParameter("normal", normal, sampler);
-    matinstance->setParameter("color", color, sampler);
-    matinstance->setParameter("roughness", roughness, sampler);
-    matinstance->setParameter("ao", ao, sampler);
-    matinstance->setParameter("reflection", reflection,
+    matInstance->setParameter("normal", normal, sampler);
+    matInstance->setParameter("color", color, sampler);
+    matInstance->setParameter("roughness", roughness, sampler);
+    matInstance->setParameter("ao", occlusion, sampler);
+    matInstance->setParameter("reflection", reflection,
             TextureSampler(TextureSampler::MagFilter::LINEAR));
 
     auto entity = EntityManager::get().create();
     RenderableManager::Builder(1)
         .boundingBox({{ -1, -1, 1 }, { 1, 1, 1 }})
-        .material(0, matinstance)
-        .geometry(0, RenderableManager::PrimitiveType::TRIANGLES, vb, ib)
+        .material(0, matInstance)
+        .geometry(0, RenderableManager::PrimitiveType::TRIANGLES, vbuffer, ibuffer)
         .culling(false)
         .receiveShadows(true)
         .castShadows(false)
@@ -369,13 +369,13 @@ Entity createDisk(Engine* engine, Texture* reflection) {
 }
 
 mat4f fitIntoUnitCube(const Aabb& bounds) {
-    auto minpt = bounds.min;
-    auto maxpt = bounds.max;
+    auto minPoint = bounds.min;
+    auto maxPoint = bounds.max;
     float maxExtent = 0;
-    maxExtent = std::max(maxpt.x - minpt.x, maxpt.y - minpt.y);
-    maxExtent = std::max(maxExtent, maxpt.z - minpt.z);
+    maxExtent = std::max(maxPoint.x - minPoint.x, maxPoint.y - minPoint.y);
+    maxExtent = std::max(maxExtent, maxPoint.z - minPoint.z);
     float scaleFactor = 2.0f / maxExtent;
-    float3 center = (minpt + maxpt) / 2.0f;
+    float3 center = (minPoint + maxPoint) / 2.0f;
     return mat4f::scaling(float3(scaleFactor)) * mat4f::translation(-center);
 }
 
