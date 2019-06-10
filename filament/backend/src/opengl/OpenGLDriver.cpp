@@ -1402,13 +1402,14 @@ void OpenGLDriver::destroyVertexBuffer(Handle<HwVertexBuffer> vbh) {
     if (vbh) {
         GLVertexBuffer const* eb = handle_cast<const GLVertexBuffer*>(vbh);
         GLsizei n = GLsizei(eb->bufferCount);
-        glDeleteBuffers(n, eb->gl.buffers.data());
+        auto& buffers = eb->gl.buffers;
+        glDeleteBuffers(n, buffers.data());
         // bindings of bound buffers are reset to 0
         const size_t targetIndex = getIndexForBufferTarget(GL_ARRAY_BUFFER);
         auto& target = state.buffers.genericBinding[targetIndex];
         #pragma nounroll
-        for (GLuint b : eb->gl.buffers) {
-            if (target == b) {
+        for (GLsizei i = 0; i < n; ++i) {
+            if (target == buffers[i]) {
                 target = 0;
             }
         }
