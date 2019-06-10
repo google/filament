@@ -75,16 +75,17 @@ Here are a few sample materials rendered with Filament:
 - Metallic workflow
 - Clear coat
 - Anisotropic lighting
-- Approximated translucent (subsurface) materials (direct and indirect lighting)
+- Approximated translucent (subsurface) materials
 - Cloth shading
 - Normal mapping & ambient occlusion mapping
 - Image-based lighting
 - Physically-based camera (shutter speed, sensitivity and aperture)
 - Physical light units
 - Point light, spot light and directional light
+- SSAO
 - ACES-like tone-mapping
 - Temporal dithering
-- FXAA or MSAA
+- FXAA, MSAA and specular anti-aliasing
 - Dynamic resolution (on Android)
 
 ### Future
