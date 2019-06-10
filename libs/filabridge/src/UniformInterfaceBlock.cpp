@@ -91,7 +91,7 @@ UniformInterfaceBlock::UniformInterfaceBlock(Builder const& builder) noexcept
         size_t alignment = baseAlignmentForType(e.type);
         uint8_t stride = strideForType(e.type);
         if (e.size > 1) { // this is an array
-            // round the alignment up to that of a double4
+            // round the alignment up to that of a float4
             alignment = (alignment + 3) & ~3;
             stride = (stride + uint8_t(3)) & ~uint8_t(3);
         }
