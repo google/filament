@@ -147,7 +147,7 @@ public:
         float radius = 0.3f;    //!< Ambient Occlusion radius in meters, between 0 and ~10.
         float bias = 0.005f;    //!< Self-occlusion bias in meters. Use to avoid self-occlusion. Between 0 and a few mm.
         float power = 0.0f;     //!< Controls ambient occlusion's contrast. Between 0 (linear) and 1 (squared)
-        float resolution = 0.5; //!< How each dimension of the AO buffer is scaled. Must be < 1.
+        float resolution = 0.5; //!< How each dimension of the AO buffer is scaled. Must be positive and <= 1.
     };
 
     /**
