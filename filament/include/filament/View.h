@@ -35,6 +35,7 @@ namespace filament {
 
 class Camera;
 class MaterialInstance;
+class RenderTarget;
 class Scene;
 
 /**
@@ -365,7 +366,7 @@ public:
      *
      * Renderable objects can have one or several layers associated to them. Layers are
      * represented with an 8-bits bitmask, where each bit corresponds to a layer.
-     * @see Renderable::setLayer().
+     * @see RenderableManager::setLayerMask().
      *
      * This call sets which of those layers are visible, Renderable in invisible layers won't be
      * rendered.
@@ -391,6 +392,18 @@ public:
     void setShadowsEnabled(bool enabled) noexcept;
 
     /**
+     * Specifies an offscreen render target to render into.
+     *
+     * By default, the view's associated render target is nullptr, which corresponds to the
+     * SwapChain associated with the engine.
+     *
+     * @param renderTarget Render target associated with view, or nullptr for the swap chain.
+     * @param discard Buffers that need to be discarded before rendering.
+     */
+    void setRenderTarget(RenderTarget* renderTarget,
+            TargetBufferFlags discard = TargetBufferFlags::ALL) noexcept;
+
+    /**
      * Specifies which buffers can be discarded before rendering.
      *
      * For performance reasons, the default is to discard all buffers, which is generally
@@ -400,9 +413,6 @@ public:
      * it is necessary to indicate that the color buffer cannot be discarded.
      *
      * @param discard Buffers that need to be discarded before rendering.
-     *
-     * @note
-     * In the future this API will also allow to set the render target.
      */
     void setRenderTarget(TargetBufferFlags discard = TargetBufferFlags::ALL) noexcept;
 

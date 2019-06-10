@@ -23,6 +23,7 @@
 #include "details/IndirectLight.h"
 #include "details/MaterialInstance.h"
 #include "details/Renderer.h"
+#include "details/RenderTarget.h"
 #include "details/Scene.h"
 #include "details/Skybox.h"
 
@@ -32,9 +33,9 @@
 #include <private/filament/UibGenerator.h>
 
 #include <utils/Allocator.h>
-#include <utils/Systrace.h>
 #include <utils/Profiler.h>
 #include <utils/Slice.h>
+#include <utils/Systrace.h>
 
 #include <math/scalar.h>
 #include <math/fast.h>
@@ -848,6 +849,10 @@ Camera const* View::getDirectionalLightCamera() const noexcept {
 
 void View::setShadowsEnabled(bool enabled) noexcept {
     upcast(this)->setShadowsEnabled(enabled);
+}
+
+void View::setRenderTarget(RenderTarget* renderTarget, TargetBufferFlags discard) noexcept {
+    upcast(this)->setRenderTarget(upcast(renderTarget), discard);
 }
 
 void View::setRenderTarget(TargetBufferFlags discard) noexcept {
