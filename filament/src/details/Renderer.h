@@ -89,10 +89,9 @@ private:
     friend class Renderer;
     using Command = RenderPass::Command;
 
-    backend::Handle<backend::HwRenderTarget> getRenderTarget() const noexcept { return mRenderTarget; }
+    backend::Handle<backend::HwRenderTarget> getRenderTarget(FView& view) const noexcept;
 
     RenderPass::CommandTypeFlags getCommandType(View::DepthPrepass prepass) const noexcept;
-
 
     void recordHighWatermark(size_t watermark) noexcept {
         mCommandsHighWatermark = std::max(mCommandsHighWatermark, watermark);
