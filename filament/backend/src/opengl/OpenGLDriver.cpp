@@ -1286,9 +1286,12 @@ void OpenGLDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
 
     rt->gl.samples = samples;
 
+#if !defined(NDEBUG)
+    // Only used by assert() checks below
     auto valueForLevel = [](size_t level, size_t value) {
         return std::max(size_t(1), value >> level);
     };
+#endif
 
     if (targets & TargetBufferFlags::COLOR) {
         // TODO: handle multiple color attachments
