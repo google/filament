@@ -28,6 +28,7 @@
 #include "details/Allocators.h"
 #include "details/Camera.h"
 #include "details/DebugRegistry.h"
+#include "details/RenderTarget.h"
 #include "details/ResourceList.h"
 #include "details/Skybox.h"
 
@@ -216,6 +217,7 @@ public:
     FTexture* createTexture(const Texture::Builder& builder) noexcept;
     FSkybox* createSkybox(const Skybox::Builder& builder) noexcept;
     FStream* createStream(const Stream::Builder& builder) noexcept;
+    FRenderTarget* createRenderTarget(const RenderTarget::Builder& builder) noexcept;
 
     void createRenderable(const RenderableManager::Builder& builder, utils::Entity entity);
     void createLight(const LightManager::Builder& builder, utils::Entity entity);
@@ -244,6 +246,7 @@ public:
     void destroy(const FSkybox* p);
     void destroy(const FStream* p);
     void destroy(const FTexture* p);
+    void destroy(const FRenderTarget* p);
     void destroy(const FSwapChain* p);
     void destroy(const FView* p);
     void destroy(utils::Entity e);
@@ -315,6 +318,7 @@ private:
     ResourceList<FMaterial> mMaterials{ "Material" };
     ResourceList<FTexture> mTextures{ "Texture" };
     ResourceList<FSkybox> mSkyboxes{ "Skybox" };
+    ResourceList<FRenderTarget> mRenderTargets{ "RenderTarget" };
 
     mutable uint32_t mMaterialId = 0;
 

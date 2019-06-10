@@ -26,6 +26,7 @@ set(PUBLIC_HDRS
         include/filament/Material.h
         include/filament/MaterialInstance.h
         include/filament/RenderableManager.h
+        include/filament/RenderTarget.h
         include/filament/Renderer.h
         include/filament/Scene.h
         include/filament/Skybox.h
@@ -68,6 +69,7 @@ set(SRCS
         src/Renderer.cpp
         src/RenderPass.cpp
         src/RenderPrimitive.cpp
+        src/RenderTarget.cpp
         src/Scene.cpp
         src/ShadowMap.cpp
         src/Skybox.cpp
@@ -103,6 +105,7 @@ set(PRIVATE_HDRS
         src/details/MaterialInstance.h
         src/details/RenderPrimitive.h
         src/details/Renderer.h
+        src/details/RenderTarget.h
         src/details/ResourceList.h
         src/details/Scene.h
         src/details/ShadowMap.h
