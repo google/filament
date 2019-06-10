@@ -85,6 +85,7 @@ PostProcessManager::PostProcessManager(FEngine& engine) noexcept : mEngine(engin
 void PostProcessManager::init() noexcept {
     mPostProcessUb = UniformBuffer(PostProcessingUib::getUib().getSize());
 
+    // TODO: load materials lazily as to reduce start-up time and memory usage
     mSSAO = PostProcessMaterial(mEngine, MATERIALS_SAO_DATA, MATERIALS_SAO_SIZE);
     mMipmapDepth = PostProcessMaterial(mEngine, MATERIALS_MIPMAPDEPTH_DATA, MATERIALS_MIPMAPDEPTH_SIZE);
     mBlur = PostProcessMaterial(mEngine, MATERIALS_BLUR_DATA, MATERIALS_BLUR_SIZE);

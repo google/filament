@@ -35,7 +35,6 @@ vertex {
     void materialVertex(inout MaterialVertexInputs material) {
         // far-plane in view space
         vec4 position = getPosition(); // clip-space
-        position.z = 1.0; // far plane
         material.vertex.xy = (position.xy * 0.5 + 0.5);
         material.vertex.zw = position.xy;
     }
@@ -61,21 +60,21 @@ fragment {
         mat4 projection = getClipFromViewMatrix();
         float A = -projection[3].z;
         float B =  projection[2].z;
-        float K = (2.0 * A) / (d0 * 2.0 + (B - 1.0)); // this is actually a constant
+        float K = (2.0 * A) / (d0 * 2.0 + (B - 1.0)); // actually a constant for this fragment
         float d = K * (d0 - d1) / (d1 * 2.0 + (B - 1.0));
         return d;
     }
 
     float bilateralWeight(const ivec2 p, in float depth) {
         float sampleDepth = texelFetch(materialParams_depth, p, 0).r;
-        float ddepth = linearizeDepthDifference(depth, sampleDepth); // result in mediump
+        float ddepth = linearizeDepthDifference(depth, sampleDepth);
         float diff = (1.0 / EDGE_DISTANCE) * ddepth;
         return max(0.0, 1.0 - diff * diff);
     }
 
     void tap(inout float sum, inout float totalWeight, float weight, float depth, ivec2 position) {
         position = clampToEdge(materialParams_ssao, position);
-        // ambiant occlusion sample
+        // ambient occlusion sample
         float ao = texelFetch(materialParams_ssao, position, 0).r;
         // bilateral sample
         float bilateral = bilateralWeight(position, depth);
