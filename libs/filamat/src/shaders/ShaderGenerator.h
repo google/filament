@@ -87,10 +87,12 @@ struct ShaderPostProcessGenerator {
 
     static const std::string createPostProcessVertexProgram(filament::backend::ShaderModel sm,
             MaterialBuilder::TargetApi targetApi, MaterialBuilder::TargetLanguage targetLanguage, MaterialInfo const& material,
-            const filament::SamplerBindingMap& samplerBindingMap, utils::CString const& postProcessCode) noexcept;
+            uint8_t variant, const filament::SamplerBindingMap& samplerBindingMap,
+            utils::CString const& postProcessCode) noexcept;
     static const std::string createPostProcessFragmentProgram(filament::backend::ShaderModel sm,
             MaterialBuilder::TargetApi targetApi, MaterialBuilder::TargetLanguage targetLanguage, MaterialInfo const& material,
-            const filament::SamplerBindingMap& samplerBindingMap, utils::CString const& postProcessCode) noexcept;
+            uint8_t variant, const filament::SamplerBindingMap& samplerBindingMap,
+            utils::CString const& postProcessCode) noexcept;
 };
 
 } // namespace filament

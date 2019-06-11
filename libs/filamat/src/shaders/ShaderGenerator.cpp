@@ -150,7 +150,7 @@ const std::string ShaderGenerator::createVertexProgram(filament::backend::Shader
         filament::VertexDomain vertexDomain) const noexcept {
     if (mMaterialDomain == MaterialBuilder::MaterialDomain::POST_PROCESS) {
         return ShaderPostProcessGenerator::createPostProcessVertexProgram(shaderModel, targetApi,
-                targetLanguage, material, material.samplerBindings, mMaterialVertexCode);
+                targetLanguage, material, variantKey, material.samplerBindings, mMaterialVertexCode);
     }
 
     utils::io::sstream vs;
@@ -253,7 +253,7 @@ const std::string ShaderGenerator::createFragmentProgram(filament::backend::Shad
         filament::Interpolation interpolation) const noexcept {
     if (mMaterialDomain == MaterialBuilder::MaterialDomain::POST_PROCESS) {
         return ShaderPostProcessGenerator::createPostProcessFragmentProgram(shaderModel,
-                targetApi, targetLanguage, material, material.samplerBindings, mMaterialCode);
+                targetApi, targetLanguage, material, variantKey, material.samplerBindings, mMaterialCode);
     }
 
     const CodeGenerator cg(shaderModel, targetApi, targetLanguage);
@@ -482,7 +482,7 @@ void ShaderPostProcessGenerator::generatePostProcessStageDefines(utils::io::sstr
 const std::string ShaderPostProcessGenerator::createPostProcessVertexProgram(
         filament::backend::ShaderModel sm, MaterialBuilder::TargetApi targetApi,
         MaterialBuilder::TargetLanguage targetLanguage, MaterialInfo const& material,
-        const filament::SamplerBindingMap& samplerBindingMap,
+        uint8_t variant, const filament::SamplerBindingMap& samplerBindingMap,
         utils::CString const& postProcessCode) noexcept {
     const CodeGenerator cg(sm, targetApi, targetLanguage);
     utils::io::sstream vs;
@@ -511,7 +511,7 @@ const std::string ShaderPostProcessGenerator::createPostProcessVertexProgram(
 const std::string ShaderPostProcessGenerator::createPostProcessFragmentProgram(
         filament::backend::ShaderModel sm, MaterialBuilder::TargetApi targetApi,
         MaterialBuilder::TargetLanguage targetLanguage, MaterialInfo const& material,
-        const filament::SamplerBindingMap& samplerBindingMap,
+        uint8_t variant, const filament::SamplerBindingMap& samplerBindingMap,
         utils::CString const& postProcessCode) noexcept {
     const CodeGenerator cg(sm, targetApi, targetLanguage);
     utils::io::sstream fs;
