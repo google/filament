@@ -3,26 +3,18 @@
 //------------------------------------------------------------------------------
 
 // Defines the set of opto-electronic and electro-optical conversion functions
-#define CONVERSION_FUNCTION_LINEAR          0
-#define CONVERSION_FUNCTION_sRGB            1 // ~15 cycles
-#define CONVERSION_FUNCTION_sRGB_FAST       2 //  ~8 cycles
+#define CONVERSION_FUNCTION_LINEAR     0
+#define CONVERSION_FUNCTION_sRGB       1
+#define CONVERSION_FUNCTION_sRGB_FAST  2
 
-#ifdef TARGET_MOBILE
-  #ifdef HAS_HARDWARE_CONVERSION_FUNCTION
-    #define CONVERSION_FUNCTION             CONVERSION_FUNCTION_LINEAR
-  #else
-    #if TONE_MAPPING_OPERATOR == TONE_MAPPING_UNREAL
-      #define CONVERSION_FUNCTION           CONVERSION_FUNCTION_LINEAR
-    #else
-      #define CONVERSION_FUNCTION           CONVERSION_FUNCTION_sRGB_FAST
-    #endif
-  #endif
+#if TONE_MAPPING_OPERATOR <= TONE_MAPPING_FILMIC_ALU
+    #define CONVERSION_FUNCTION        CONVERSION_FUNCTION_LINEAR
 #else
-  #if TONE_MAPPING_OPERATOR == TONE_MAPPING_UNREAL
-    #define CONVERSION_FUNCTION             CONVERSION_FUNCTION_LINEAR
-  #else
-    #define CONVERSION_FUNCTION             CONVERSION_FUNCTION_sRGB
-  #endif
+    #ifdef TARGET_MOBILE
+    #define CONVERSION_FUNCTION        CONVERSION_FUNCTION_sRGB_FAST
+    #else
+    #define CONVERSION_FUNCTION        CONVERSION_FUNCTION_sRGB
+    #endif
 #endif
 
 //------------------------------------------------------------------------------

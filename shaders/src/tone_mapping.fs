@@ -3,23 +3,20 @@
 //------------------------------------------------------------------------------
 
 // Operators for LDR output
-#define TONE_MAPPING_LINEAR           0
-#define TONE_MAPPING_REINHARD         1
-#define TONE_MAPPING_UNREAL           2
-#define TONE_MAPPING_ACES             3
+#define TONE_MAPPING_UNREAL           0
+#define TONE_MAPPING_FILMIC_ALU       1
+#define TONE_MAPPING_LINEAR           2 // Operators with built-in sRGB go above
+#define TONE_MAPPING_REINHARD         3
+#define TONE_MAPPING_ACES             4
 
 // Operators for HDR output
-#define TONE_MAPPING_ACES_REC2020_1K  4
+#define TONE_MAPPING_ACES_REC2020_1K  5
 
 // Debug operators
 #define TONE_MAPPING_DISPLAY_RANGE    9
 
 #ifdef TARGET_MOBILE
-    #ifdef HAS_HARDWARE_CONVERSION_FUNCTION
-        #define TONE_MAPPING_OPERATOR TONE_MAPPING_ACES
-    #else
-        #define TONE_MAPPING_OPERATOR TONE_MAPPING_UNREAL
-    #endif
+    #define TONE_MAPPING_OPERATOR     TONE_MAPPING_UNREAL
 #else
     #define TONE_MAPPING_OPERATOR     TONE_MAPPING_ACES
 #endif
@@ -42,6 +39,14 @@ vec3 Tonemap_Unreal(const vec3 x) {
     // Adapted to be close to Tonemap_ACES, with similar range
     // Gamma 2.2 correction is baked in, don't use with sRGB conversion!
     return x / (x + 0.155) * 1.019;
+}
+
+vec3 Tonemap_FilmicALU(const vec3 x) {
+    // Hable 2010, "Filmic Tonemapping Operators"
+    // Based on Duiker's curve, optimized by Hejl and Burgess-Dawson
+    // Gamma 2.2 correction is baked in, don't use with sRGB conversion!
+    vec3 c = max(vec3(0.0), x - 0.004);
+    return (c * (c * 6.2 + 0.5)) / (c * (c * 6.2 + 1.7) + 0.06);
 }
 
 vec3 Tonemap_ACES(const vec3 x) {
@@ -141,12 +146,14 @@ vec3 Tonemap_DisplayRange(const vec3 x) {
  * the range [0..~8] to [0..1].
  */
 vec3 tonemap(const vec3 x) {
-#if TONE_MAPPING_OPERATOR == TONE_MAPPING_LINEAR
+#if TONE_MAPPING_OPERATOR == TONE_MAPPING_UNREAL
+    return Tonemap_Unreal(x);
+#elif TONE_MAPPING_OPERATOR == TONE_MAPPING_FILMIC_ALU
+    return Tonemap_FilmicALU(x);
+#elif TONE_MAPPING_OPERATOR == TONE_MAPPING_LINEAR
     return Tonemap_Linear(x);
 #elif TONE_MAPPING_OPERATOR == TONE_MAPPING_REINHARD
     return Tonemap_Reinhard(x);
-#elif TONE_MAPPING_OPERATOR == TONE_MAPPING_UNREAL
-    return Tonemap_Unreal(x);
 #elif TONE_MAPPING_OPERATOR == TONE_MAPPING_ACES
     return Tonemap_ACES(x);
 #elif TONE_MAPPING_OPERATOR == TONE_MAPPING_ACES_REC2020_1K
