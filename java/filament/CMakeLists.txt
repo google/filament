@@ -52,6 +52,7 @@ set(JNI_SOURCE_FILES
         ${FILAMENT_DIR}/src/main/cpp/NativeSurface.cpp
         ${FILAMENT_DIR}/src/main/cpp/RenderableManager.cpp
         ${FILAMENT_DIR}/src/main/cpp/Renderer.cpp
+        ${FILAMENT_DIR}/src/main/cpp/RenderTarget.cpp
         ${FILAMENT_DIR}/src/main/cpp/Scene.cpp
         ${FILAMENT_DIR}/src/main/cpp/SkyBox.cpp
         ${FILAMENT_DIR}/src/main/cpp/Stream.cpp
@@ -127,6 +128,7 @@ set(JAVA_SOURCE_FILES
         ${FILAMENT_JAVA_DIR}/com/google/android/filament/Platform.java
         ${FILAMENT_JAVA_DIR}/com/google/android/filament/RenderableManager.java
         ${FILAMENT_JAVA_DIR}/com/google/android/filament/Renderer.java
+        ${FILAMENT_JAVA_DIR}/com/google/android/filament/RenderTarget.java
         ${FILAMENT_JAVA_DIR}/com/google/android/filament/Scene.java
         ${FILAMENT_JAVA_DIR}/com/google/android/filament/Skybox.java
         ${FILAMENT_JAVA_DIR}/com/google/android/filament/Stream.java
