@@ -219,6 +219,8 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
 
     if (view.hasShadowing()) {
         view.getShadowMap().render(driver, pass, view);
+        driver.flush(); // Kick the GPU since we're done with this render target
+        engine.flush(); // Wake-up the driver thread
         commands.clear();
     }
 
@@ -389,7 +391,7 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     fg.compile();
     //fg.export_graphviz(slog.d);
 
-    fg.execute(driver);
+    fg.execute(engine, driver);
 
     commands.clear();
 

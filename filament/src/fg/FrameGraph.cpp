@@ -21,6 +21,7 @@
 
 #include "private/backend/CommandStream.h"
 
+#include "details/Engine.h"
 #include "details/Texture.h"
 
 #include <backend/DriverEnums.h>
@@ -1069,26 +1070,24 @@ FrameGraph& FrameGraph::compile() noexcept {
     return *this;
 }
 
-void FrameGraph::execute(DriverApi& driver) noexcept {
-    for (PassNode const& node : mPassNodes) {
-        if (!node.refCount) continue;
-        assert(node.base);
-
-        // create concrete resources and rendertargets
-        for (VirtualResource* resource : node.devirtualize) {
-            resource->create(*this, driver);
-        }
-
-        // execute the pass
-        FrameGraphPassResources resources(*this, node);
-        node.base->execute(resources, driver);
-
-        // destroy concrete resources
-        for (VirtualResource* resource : node.destroy) {
-            resource->destroy(*this, driver);
-        }
+void FrameGraph::executeInternal(PassNode const& node, DriverApi& driver) noexcept {
+    assert(node.base);
+    // create concrete resources and rendertargets
+    for (VirtualResource* resource : node.devirtualize) {
+        resource->create(*this, driver);
     }
 
+    // execute the pass
+    FrameGraphPassResources resources(*this, node);
+    node.base->execute(resources, driver);
+
+    // destroy concrete resources
+    for (VirtualResource* resource : node.destroy) {
+        resource->destroy(*this, driver);
+    }
+}
+
+void FrameGraph::reset() noexcept {
     // reset the frame graph state
     mPassNodes.clear();
     mResourceNodes.clear();
@@ -1096,6 +1095,37 @@ void FrameGraph::execute(DriverApi& driver) noexcept {
     mAliases.clear();
     mRenderTargetCache.clear();
     mId = 0;
+}
+
+void FrameGraph::execute(FEngine& engine, DriverApi& driver) noexcept {
+    auto const& passNodes = mPassNodes;
+    for (PassNode const& node : passNodes) {
+        if (node.refCount) {
+            executeInternal(node, driver);
+            if (&node != &passNodes.back()) {
+                // wake-up the driver thread and consume data in the command queue, this helps with
+                // latency, parallelism and memory pressure in the command queue.
+                // As an optimization, we don't do this on the last execute() because
+                // 1) we're adding a driver flush command (below) and
+                // 2) an engine.flush() is always performed by Renderer at the end of a renderJob.
+                engine.flush();
+            }
+        }
+    }
+    // this is a good place to kick the GPU, since we've just done a bunch of work
+    driver.flush();
+    reset();
+}
+
+void FrameGraph::execute(DriverApi& driver) noexcept {
+    for (PassNode const& node : mPassNodes) {
+        if (node.refCount) {
+            executeInternal(node, driver);
+        }
+    }
+    // this is a good place to kick the GPU, since we've just done a bunch of work
+    driver.flush();
+    reset();
 }
 
 void FrameGraph::export_graphviz(utils::io::ostream& out) {

@@ -150,9 +150,6 @@ void RenderPass::execute(const char* name,
     RenderPass::recordDriverCommands(driver, scene, first, last);
     driver.endRenderPass();
     driver.popGroupMarker();
-
-    driver.flush(); // Kick the GPU since we're done with this render target
-    engine.flush(); // Wake-up the driver thread
 }
 
 UTILS_NOINLINE // no need to be inlined

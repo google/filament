@@ -43,6 +43,10 @@
 
 namespace filament {
 
+namespace details {
+class FEngine;
+} // namespace details
+
 namespace fg {
 struct Resource;
 struct ResourceNode;
@@ -189,10 +193,19 @@ public:
     // allocates concrete resources and culls unreferenced passes
     FrameGraph& compile() noexcept;
 
-    // execute all referenced passes
+    // execute all referenced passes and flush the command queue after each pass
+    void execute(details::FEngine& engine, backend::DriverApi& driver) noexcept;
+
+
+    /*
+     * Debugging...
+     */
+
+    // execute all referenced passes -- this version is for unit-testing, where we don't have
+    // an engine necessarily.
     void execute(backend::DriverApi& driver) noexcept;
 
-    // for debugging
+    // print the frame graph as a graphviz file in the log
     void export_graphviz(utils::io::ostream& out);
 
 private:
@@ -233,6 +246,10 @@ private:
 
     bool equals(FrameGraphRenderTarget::Descriptor const& lhs,
             FrameGraphRenderTarget::Descriptor const& rhs) const noexcept;
+
+    void executeInternal(fg::PassNode const& node, backend::DriverApi& driver) noexcept;
+
+    void reset() noexcept;
 
     details::LinearAllocatorArena mArena;
     Vector<fg::PassNode> mPassNodes;                    // list of frame graph passes
