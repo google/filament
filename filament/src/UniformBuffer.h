@@ -128,10 +128,8 @@ public:
         constexpr size_t stride = (sizeof(T) + 0xF) & ~0xF;
         T* UTILS_RESTRICT p = static_cast<T*>(invalidateUniforms(offset, stride * count));
         for (size_t i = 0; i < count; i++) {
-            *p++ = begin[i];
-            if (sizeof(T) & 0xF) {
-                p = utils::pointermath::align(p, 0x10);
-            }
+            *p = begin[i];
+            p = utils::pointermath::add(p, stride);
         }
     }
 
@@ -191,19 +189,6 @@ private:
     uint32_t mSize = 0;
     mutable bool mSomethingDirty = false;
 };
-
-// specialization for float3 (which has a different alignment)
-template<>
-inline void
-UniformBuffer::setUniformArray(size_t offset, math::float3 const* begin, size_t count) noexcept {
-    math::float4* p = static_cast<math::float4*>(invalidateUniforms(offset,
-            sizeof(math::float4) * count));
-    math::float3 const* const end = begin + count;
-    while (begin != end) {
-        p->xyz = *begin++;
-        ++p;
-    }
-}
 
 // specialization for mat3f (which has a different alignment, see std140 layout rules)
 template<>
