@@ -56,13 +56,20 @@ public class Renderer {
     /**
      * This method MUST be called before endFrame.
      */
-    public void mirrorFrame(
+    public void copyFrame(
             @NonNull SwapChain dstSwapChain, @NonNull Viewport dstViewport,
             @NonNull Viewport srcViewport, int flags) {
-        nMirrorFrame(getNativeObject(), dstSwapChain.getNativeObject(),
+        nCopyFrame(getNativeObject(), dstSwapChain.getNativeObject(),
                 dstViewport.left, dstViewport.bottom, dstViewport.width, dstViewport.height,
                 srcViewport.left, srcViewport.bottom, srcViewport.width, srcViewport.height,
                 flags);
+    }
+
+    /** @deprecated */
+    public void mirrorFrame(
+            @NonNull SwapChain dstSwapChain, @NonNull Viewport dstViewport,
+            @NonNull Viewport srcViewport, int flags) {
+        copyFrame(dstSwapChain, dstViewport, srcViewport, flags);
     }
 
     /**
@@ -111,7 +118,7 @@ public class Renderer {
     private static native boolean nBeginFrame(long nativeRenderer, long nativeSwapChain);
     private static native void nEndFrame(long nativeRenderer);
     private static native void nRender(long nativeRenderer, long nativeView);
-    private static native void nMirrorFrame(long nativeRenderer, long nativeDstSwapChain,
+    private static native void nCopyFrame(long nativeRenderer, long nativeDstSwapChain,
             int dstLeft, int dstBottom, int dstWidth, int dstHeight,
             int srcLeft, int srcBottom, int srcWidth, int srcHeight,
             int flags);

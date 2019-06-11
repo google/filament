@@ -396,8 +396,8 @@ void FRenderer::renderJob(ArenaScope& arena, FView& view) {
     recordHighWatermark(pass.getCommandsHighWatermark());
 }
 
-void FRenderer::mirrorFrame(FSwapChain* dstSwapChain, filament::Viewport const& dstViewport,
-        filament::Viewport const& srcViewport, MirrorFrameFlag flags) {
+void FRenderer::copyFrame(FSwapChain* dstSwapChain, filament::Viewport const& dstViewport,
+        filament::Viewport const& srcViewport, CopyFrameFlag flags) {
     SYSTRACE_CALL();
 
     assert(mSwapChain);
@@ -625,9 +625,9 @@ bool Renderer::beginFrame(SwapChain* swapChain) {
     return upcast(this)->beginFrame(upcast(swapChain));
 }
 
-void Renderer::mirrorFrame(SwapChain* dstSwapChain, filament::Viewport const& dstViewport,
-        filament::Viewport const& srcViewport, MirrorFrameFlag flags) {
-    upcast(this)->mirrorFrame(upcast(dstSwapChain), dstViewport, srcViewport, flags);
+void Renderer::copyFrame(SwapChain* dstSwapChain, filament::Viewport const& dstViewport,
+        filament::Viewport const& srcViewport, CopyFrameFlag flags) {
+    upcast(this)->copyFrame(upcast(dstSwapChain), dstViewport, srcViewport, flags);
 }
 
 void Renderer::readPixels(uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,

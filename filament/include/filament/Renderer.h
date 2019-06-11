@@ -138,54 +138,54 @@ public:
     void render(View const* view);
 
     /**
-     * Flags used to configure the behavior of mirrorFrame().
+     * Flags used to configure the behavior of copyFrame().
      *
      * @see
-     * mirrorFrame()
+     * copyFrame()
      */
-    using MirrorFrameFlag = uint32_t;
+    using CopyFrameFlag = uint32_t;
 
     /**
-     * Indicates that the dstSwapChain passed into mirrorFrame() should be
-     * committed after the frame has been mirrored.
+     * Indicates that the dstSwapChain passed into copyFrame() should be
+     * committed after the frame has been copied.
      *
      * @see
-     * mirrorFrame()
+     * copyFrame()
      */
-    static constexpr MirrorFrameFlag COMMIT = 0x1;
+    static constexpr CopyFrameFlag COMMIT = 0x1;
     /**
      * Indicates that the presentation time should be set on the dstSwapChain
-     * passed into mirrorFrame to the monotonic clock time when the frame is
-     * mirrored.
+     * passed into copyFrame to the monotonic clock time when the frame is
+     * copied.
      *
      * @see
-     * mirrorFrame()
+     * copyFrame()
      */
-    static constexpr MirrorFrameFlag SET_PRESENTATION_TIME = 0x2;
+    static constexpr CopyFrameFlag SET_PRESENTATION_TIME = 0x2;
     /**
-     * Indicates that the dstSwapChain passed into mirrorFrame() should be
-     * cleared to black before the frame is mirrored into the specified viewport.
+     * Indicates that the dstSwapChain passed into copyFrame() should be
+     * cleared to black before the frame is copied into the specified viewport.
      *
      * @see
-     * mirrorFrame()
+     * copyFrame()
      */
-    static constexpr MirrorFrameFlag CLEAR = 0x4;
+    static constexpr CopyFrameFlag CLEAR = 0x4;
 
     /**
-     * Mirror the currently rendered view to the indicated swap chain, using the
+     * Copy the currently rendered view to the indicated swap chain, using the
      * indicated source and destination rectangle.
      *
-     * @param dstSwapChain The swap chain into which the frame should be mirrored.
+     * @param dstSwapChain The swap chain into which the frame should be copied.
      * @param dstViewport The destination rectangle in which to draw the view.
-     * @param srcViewport The source rectangle to be mirrored.
-     * @param flags One or more MirrorFrameFlag behavior configuration flags.
+     * @param srcViewport The source rectangle to be copied.
+     * @param flags One or more CopyFrameFlag behavior configuration flags.
      *
      * @remark
-     * mirrorFrame() should be called after a frame is rendered using render()
+     * copyFrame() should be called after a frame is rendered using render()
      * but before endFrame() is called.
      */
-    void mirrorFrame(SwapChain* dstSwapChain, Viewport const& dstViewport, Viewport const& srcViewport,
-                     uint32_t flags=0);
+    void copyFrame(SwapChain* dstSwapChain, Viewport const& dstViewport,
+            Viewport const& srcViewport, uint32_t flags = 0);
 
     /**
      * Read-back the content of the SwapChain associated with this Renderer.
