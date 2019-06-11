@@ -149,15 +149,6 @@ public:
     const FMaterial* getSkyboxMaterial() const noexcept;
     const FIndirectLight* getDefaultIndirectLight() const noexcept { return mDefaultIbl; }
 
-    backend::Handle<backend::HwProgram> getPostProcessProgramSlow(PostProcessStage stage) const noexcept;
-    backend::Handle<backend::HwProgram> getPostProcessProgram(PostProcessStage stage) const noexcept {
-        backend::Handle<backend::HwProgram> program = mPostProcessPrograms[uint8_t(stage)];
-        if (UTILS_UNLIKELY(!program)) {
-            return getPostProcessProgramSlow(stage);
-        }
-        return program;
-    }
-
     backend::Handle<backend::HwRenderPrimitive> getFullScreenRenderPrimitive() const noexcept {
         return mFullScreenTriangleRph;
     }
@@ -300,9 +291,6 @@ private:
     template<typename T, typename L>
     void cleanupResourceList(ResourceList<T, L>& list);
 
-    backend::Handle<backend::HwProgram> createPostProcessProgram(MaterialParser& parser,
-            backend::ShaderModel model, PostProcessStage stage) const noexcept;
-
     backend::Driver* mDriver = nullptr;
 
     Backend mBackend;
@@ -360,9 +348,6 @@ private:
 
     mutable FTexture* mDefaultIblTexture = nullptr;
     mutable FIndirectLight* mDefaultIbl = nullptr;
-
-    mutable backend::Handle<backend::HwProgram> mPostProcessPrograms[POST_PROCESS_STAGES_COUNT];
-    mutable std::unique_ptr<MaterialParser> mPostProcessParser;
 
     mutable utils::CountDownLatch mDriverBarrier;
 

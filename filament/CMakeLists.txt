@@ -193,21 +193,12 @@ foreach (mat_src ${MATERIAL_SRCS})
 
     add_custom_command(
             OUTPUT ${output_path}
-            COMMAND matc ${MATC_BASE_FLAGS} -m material -o ${output_path} ${fullname}
+            COMMAND matc ${MATC_BASE_FLAGS} -o ${output_path} ${fullname}
             DEPENDS ${fullname} matc
             COMMENT "Compiling material ${mat_src} to ${output_path}"
     )
     list(APPEND MATERIAL_BINS ${output_path})
 endforeach()
-
-set(output_path "${MATERIAL_DIR}/postprocess.filamat")
-add_custom_command(
-        OUTPUT ${output_path}
-        COMMAND matc ${MATC_BASE_FLAGS} -m postprocess -o ${output_path}
-        DEPENDS matc
-        COMMENT "Compiling post-process material ${output_path}"
-)
-list(APPEND MATERIAL_BINS ${output_path})
 
 add_custom_command(
         OUTPUT ${RESGEN_OUTPUTS}
