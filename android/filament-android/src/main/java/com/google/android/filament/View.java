@@ -166,6 +166,10 @@ public class View {
         nSetShadowsEnabled(getNativeObject(), enabled);
     }
 
+    public void setRenderTarget(@Nullable RenderTarget target) {
+        nSetRenderTarget(getNativeObject(), target != null ? target.getNativeObject() : 0);
+    }
+
     public void setSampleCount(int count) {
         nSetSampleCount(getNativeObject(), count);
     }
@@ -316,6 +320,7 @@ public class View {
     private static native void nSetClearTargets(long nativeView, boolean color, boolean depth, boolean stencil);
     private static native void nSetVisibleLayers(long nativeView, int select, int value);
     private static native void nSetShadowsEnabled(long nativeView, boolean enabled);
+    private static native void nSetRenderTarget(long nativeView, long nativeRenderTarget);
     private static native void nSetSampleCount(long nativeView, int count);
     private static native int nGetSampleCount(long nativeView);
     private static native void nSetAntiAliasing(long nativeView, int type);

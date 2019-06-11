@@ -237,6 +237,14 @@ Java_com_google_android_filament_Engine_nDestroyTexture(JNIEnv*, jclass,
 }
 
 extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_Engine_nDestroyRenderTarget(JNIEnv*, jclass,
+        jlong nativeEngine, jlong nativeTarget) {
+    Engine* engine = (Engine*) nativeEngine;
+    RenderTarget* target = (RenderTarget*) nativeTarget;
+    engine->destroy(target);
+}
+
+extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_Engine_nDestroyEntity(JNIEnv*, jclass,
         jlong nativeEngine, jint entity_) {
     Engine* engine = (Engine*) nativeEngine;

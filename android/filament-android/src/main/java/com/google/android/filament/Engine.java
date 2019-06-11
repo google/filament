@@ -247,6 +247,11 @@ public class Engine {
         texture.clearNativeObject();
     }
 
+    public void destroyRenderTarget(@NonNull RenderTarget target) {
+        nDestroyRenderTarget(getNativeObject(), target.getNativeObject());
+        target.clearNativeObject();
+    }
+
     public void destroyEntity(@Entity int entity) {
         nDestroyEntity(getNativeObject(), entity);
     }
@@ -309,6 +314,7 @@ public class Engine {
     private static native void nDestroyMaterialInstance(long nativeEngine, long nativeMaterialInstance);
     private static native void nDestroySkybox(long nativeEngine, long nativeSkybox);
     private static native void nDestroyTexture(long nativeEngine, long nativeTexture);
+    private static native void nDestroyRenderTarget(long nativeEngine, long nativeTarget);
     private static native void nDestroyEntity(long nativeEngine, int entity);
     private static native long nGetTransformManager(long nativeEngine);
     private static native long nGetLightManager(long nativeEngine);
