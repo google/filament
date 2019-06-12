@@ -586,6 +586,8 @@ Package MaterialBuilder::build() noexcept {
         return Package::invalidPackage();
     }
 
+    // Run checks, in order.
+    // The call to findProperties populates mProperties and must come before runSemanticAnalysis.
     if (!checkLiteRequirements() ||
         !findProperties() ||
         !runSemanticAnalysis()) {
