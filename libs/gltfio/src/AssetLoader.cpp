@@ -495,17 +495,19 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
     if (mMaterials->getSource() == LOAD_UBERSHADERS) {
         if (!hasUv0) {
             needsDummyData = true;
-            vbb.attribute(VertexAttribute::UV0, slot++, VertexBuffer::AttributeType::USHORT2);
+            vbb.attribute(VertexAttribute::UV0, slot, VertexBuffer::AttributeType::USHORT2);
         }
         if (!hasUv1) {
             needsDummyData = true;
-            vbb.attribute(VertexAttribute::UV1, slot++, VertexBuffer::AttributeType::USHORT2);
+            vbb.attribute(VertexAttribute::UV1, slot, VertexBuffer::AttributeType::USHORT2);
         }
         if (!hasVertexColor) {
             needsDummyData = true;
-            vbb.attribute(VertexAttribute::COLOR, slot++, VertexBuffer::AttributeType::UBYTE4);
+            vbb.attribute(VertexAttribute::COLOR, slot, VertexBuffer::AttributeType::UBYTE4);
             vbb.normalized(VertexAttribute::COLOR);
         }
+    if (needsDummyData) {
+        slot++;
     }
 
     int bufferCount = slot;
