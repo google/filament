@@ -221,14 +221,11 @@ static Material* createMaterial(Engine* engine, const MaterialKey& config, const
     }
 
     static_assert(std::tuple_size<UvMap>::value == 8, "Badly sized uvset.");
-    int numTextures = std::max({
-        uvmap[0], uvmap[1], uvmap[2], uvmap[3],
-        uvmap[4], uvmap[5], uvmap[6], uvmap[7],
-    });
-    if (numTextures > 0) {
+    int numUvSets = getNumUvSets(uvmap);
+    if (numUvSets > 0) {
         builder.require(VertexAttribute::UV0);
     }
-    if (numTextures > 1) {
+    if (numUvSets > 1) {
         builder.require(VertexAttribute::UV1);
     }
 
