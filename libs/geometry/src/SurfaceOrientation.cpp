@@ -169,6 +169,13 @@ SurfaceOrientation OrientationBuilderImpl::buildWithSuppliedTangents() {
         float3 n = *normal;
         float3 t = *tanvec;
         float3 b = *tandir > 0 ? cross(t, n) : cross(n, t);
+
+        // Some assets do not provide perfectly orthogonal tangents and normals, so we adjust the
+        // tangent to enforce orthonormality. We would rather honor the exact normal vector than
+        // the exact tangent vector since the latter is only used for bump mapping and anisotropic
+        // lighting.
+        t = *tandir > 0 ? cross(n, b) : cross(b, n);
+
         quats[qindex] = mat3f::packTangentFrame({t, b, n});
         normal = (const float3*) (((const uint8_t*) normal) + nstride);
         tanvec = (const float3*) (((const uint8_t*) tanvec) + tstride);
