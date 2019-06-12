@@ -129,7 +129,8 @@ struct FAssetLoader : public AssetLoader {
     void createAsset(const cgltf_data* srcAsset);
     void createEntity(const cgltf_node* node, Entity parent);
     void createRenderable(const cgltf_node* node, Entity entity);
-    bool createPrimitive(const cgltf_primitive* inPrim, Primitive* outPrim, const UvMap& uvmap);
+    bool createPrimitive(const cgltf_primitive* inPrim, Primitive* outPrim, const UvMap& uvmap,
+            const char* name);
     MaterialInstance* createMaterialInstance(const cgltf_material* inputMat, UvMap* uvmap,
             bool vertexColor);
     void addTextureBinding(MaterialInstance* materialInstance, const char* parameterName,
@@ -298,6 +299,7 @@ void FAssetLoader::createRenderable(const cgltf_node* node, Entity entity) {
         mNameManager->addComponent(entity);
         mNameManager->setName(mNameManager->getInstance(entity), mesh->name);
     }
+    const char* name = mesh->name ? mesh->name : (node->name ? node->name : "mesh");
 
     Aabb aabb;
 
@@ -315,7 +317,7 @@ void FAssetLoader::createRenderable(const cgltf_node* node, Entity entity) {
         builder.material(index, mi);
 
         // Create a Filament VertexBuffer and IndexBuffer for this prim if we haven't already.
-        if (!outputPrim->vertices && !createPrimitive(inputPrim, outputPrim, uvmap)) {
+        if (!outputPrim->vertices && !createPrimitive(inputPrim, outputPrim, uvmap, name)) {
             mError = true;
             continue;
         }
@@ -362,7 +364,7 @@ void FAssetLoader::createRenderable(const cgltf_node* node, Entity entity) {
 }
 
 bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* outPrim,
-        const UvMap& uvmap) {
+        const UvMap& uvmap, const char* name) {
 
     // In glTF, each primitive may or may not have an index buffer. If a primitive does not have an
     // index buffer, we ask the ResourceLoader to generate a trivial index buffer.
@@ -373,7 +375,7 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
         ibb.indexCount(indicesAccessor->count);
         IndexBuffer::IndexType indexType;
         if (!getIndexType(indicesAccessor->component_type, &indexType)) {
-            utils::slog.e << "Unrecognized index type." << utils::io::endl;
+            utils::slog.e << "Unrecognized index type in " << name << utils::io::endl;
             return false;
         }
         ibb.bufferType(indexType);
@@ -433,7 +435,7 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
         // that do not have entries in the mapping table.
         VertexAttribute semantic;
         if (!getVertexAttrType(inputAttribute.type, &semantic)) {
-            utils::slog.e << "Unrecognized vertex semantic." << utils::io::endl;
+            utils::slog.e << "Unrecognized vertex semantic in " << name << utils::io::endl;
             return false;
         }
         UvSet uvset = uvmap[inputAttribute.index];
@@ -467,12 +469,12 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
 
         VertexBuffer::AttributeType atype;
         if (!getElementType(inputAccessor->type, inputAccessor->component_type, &atype)) {
-            slog.e << "Unsupported accessor type." << io::endl;
+            slog.e << "Unsupported accessor type in " << name << io::endl;
             return false;
         }
 
         if (inputAccessor->is_sparse) {
-            slog.e << "Sparse accessors not yet supported." << io::endl;
+            slog.e << "Sparse accessors not yet supported in " << name << io::endl;
             return false;
         }
 
@@ -506,6 +508,20 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
             vbb.attribute(VertexAttribute::COLOR, slot, VertexBuffer::AttributeType::UBYTE4);
             vbb.normalized(VertexAttribute::COLOR);
         }
+    } else {
+        int numUvSets = getNumUvSets(uvmap);
+        if (!hasUv0 && numUvSets > 0) {
+            needsDummyData = true;
+            vbb.attribute(VertexAttribute::UV0, slot, VertexBuffer::AttributeType::USHORT2);
+            slog.w << "Missing UV0 data in " << name << io::endl;
+        }
+        if (!hasUv1 && numUvSets > 1) {
+            needsDummyData = true;
+            vbb.attribute(VertexAttribute::UV1, slot, VertexBuffer::AttributeType::USHORT2);
+            slog.w << "Missing UV1 data in " << name << io::endl;
+        }
+    }
+
     if (needsDummyData) {
         slot++;
     }

@@ -70,6 +70,13 @@ bool operator==(const MaterialKey& k1, const MaterialKey& k2);
 enum UvSet : uint8_t { UNUSED, UV0, UV1 };
 using UvMap = std::array<UvSet, 8>;
 
+inline uint8_t getNumUvSets(const UvMap& uvmap) {
+    return std::max({
+        uvmap[0], uvmap[1], uvmap[2], uvmap[3],
+        uvmap[4], uvmap[5], uvmap[6], uvmap[7],
+    });
+};
+
 enum MaterialSource {
     GENERATE_SHADERS,
     LOAD_UBERSHADERS,
