@@ -371,10 +371,9 @@ void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
     info.specularAO = mSpecularAO;
 }
 
-bool MaterialBuilder::runStaticCodeAnalysis() noexcept {
-    using namespace filament::backend;
-
+bool MaterialBuilder::findProperties() noexcept {
 #ifndef FILAMAT_LITE
+    using namespace filament::backend;
     GLSLTools glslTools;
 
     // Some fields in MaterialInputs only exist if the property is set (e.g: normal, subsurface
@@ -390,8 +389,19 @@ bool MaterialBuilder::runStaticCodeAnalysis() noexcept {
         return false;
     }
 
-    // At this point the shader is syntactically correct. Perform semantic analysis now.
+    return true;
+#else
+    GLSLToolsLite glslTools;
+    return glslTools.findProperties(mMaterialCode, mProperties);
+#endif
+}
 
+bool MaterialBuilder::runSemanticAnalysis() noexcept {
+#ifndef FILAMAT_LITE
+    using namespace filament::backend;
+    GLSLTools glslTools;
+
+    ShaderModel model;
     std::string shaderCode = peek(ShaderType::VERTEX, model, mProperties);
     bool result = glslTools.analyzeVertexShader(shaderCode, model, mTargetApi);
     if (!result) return false;
@@ -400,8 +410,7 @@ bool MaterialBuilder::runStaticCodeAnalysis() noexcept {
     result = glslTools.analyzeFragmentShader(shaderCode, model, mTargetApi);
     return result;
 #else
-    GLSLToolsLite glslTools;
-    return glslTools.findProperties(mMaterialCode, mProperties);
+    return true;
 #endif
 }
 
@@ -574,17 +583,16 @@ Package MaterialBuilder::build() noexcept {
         utils::slog.e << "Error: MaterialBuilder::init() must be called before build()."
             << utils::io::endl;
         // Return an empty package to signal a failure to build the material.
-        Package package(0);
-        package.setValid(false);
-        return package;
+        return Package::invalidPackage();
     }
 
+    // Run checks, in order.
+    // The call to findProperties populates mProperties and must come before runSemanticAnalysis.
     if (!checkLiteRequirements() ||
-        !runStaticCodeAnalysis()) {
+        !findProperties() ||
+        !runSemanticAnalysis()) {
         // Return an empty package to signal a failure to build the material.
-        Package package(0);
-        package.setValid(false);
-        return package;
+        return Package::invalidPackage();
     }
 
     MaterialInfo info;
