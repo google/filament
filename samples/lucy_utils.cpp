@@ -38,6 +38,7 @@ using namespace utils;
 using filament::geometry::SurfaceOrientation;
 
 #define FILTER_SIZE 17
+#define SAMPLE_COUNT (1 + FILTER_SIZE / 2)
 
 namespace LucyUtils {
 
@@ -136,10 +137,9 @@ Entity createQuad(Engine* engine, Texture* tex, ImageOp op, Texture* secondary) 
     //       [WEIGHT, OFFSET_X, OFFSET_Y, DONT_CARE]
     // The first sequence is for the horizontal pass, the second sequence is for the vertical pass.
     static const float4* weights = []() {
-        static float4 weights[FILTER_SIZE * 2];
+        static float4 weights[SAMPLE_COUNT * 2];
         float4* hweights = weights;
-        float4* vweights = weights + FILTER_SIZE;
-        static const float radius = 1;
+        float4* vweights = weights + SAMPLE_COUNT;
         const auto filter = [](float t) {
             t /= 2.0;
             if (t >= 1.0) return 0.0f;
@@ -148,21 +148,43 @@ Entity createQuad(Engine* engine, Texture* tex, ImageOp op, Texture* secondary) 
         };
         constexpr float pixelWidth = 2.0f / float(FILTER_SIZE);
         float sum = 0.0f;
-        for (int i = 0; i < FILTER_SIZE; i++) {
-            float x = -1.0f + pixelWidth / 2.0f + pixelWidth * i;
-            hweights[i].x = vweights[i].x = filter(std::abs(x));
-            hweights[i].y = vweights[i].z = radius * (i - (FILTER_SIZE - 1) / 2);
-            hweights[i].z = vweights[i].y = 0.0f;
-            sum += weights[i].x;
+        for (int s = 0; s < SAMPLE_COUNT; s++) {
+
+            // Determine which two texels to sample from.
+            int i, j;
+            if (s < SAMPLE_COUNT / 2) {
+                i = s * 2;
+                j = i + 1;
+            } else if (s == SAMPLE_COUNT / 2) {
+                i = j = s * 2;
+            } else {
+                j = s * 2;
+                i = j - 1;
+            }
+
+            // Determine the normalized (x,y) along the Gaussian curve for each of the two samples.
+            float weighti = filter(std::abs(-1.0f + pixelWidth / 2.0f + pixelWidth * i));
+            float weightj = filter(std::abs(-1.0f + pixelWidth / 2.0f + pixelWidth * j));
+            float offseti = i - (FILTER_SIZE - 1) / 2;
+
+            // Leverage hardware interpolation by sampling between the texel centers.
+            // Nudge the left sample rightward by an amount proportional to its weight.
+            const float offset = offseti + weightj / (weighti + weightj);
+            const float weight = weighti + weightj;
+
+            hweights[s].x = vweights[s].x = weight;
+            hweights[s].y = vweights[s].z = offset;
+            hweights[s].z = vweights[s].y = 0.0f;
+            sum += weights[s].x;
         }
-        for (int i = 0; i < FILTER_SIZE; i++) {
-            hweights[i].x /= sum;
-            vweights[i].x /= sum;
+        for (int s = 0; s < SAMPLE_COUNT; s++) {
+            hweights[s].x /= sum;
+            vweights[s].x /= sum;
         }
         return weights;
     }();
     static const float4* hweights = weights;
-    static const float4* vweights = weights + FILTER_SIZE;
+    static const float4* vweights = weights + SAMPLE_COUNT;
 
     static Material* blur = [](Engine& engine) {
         std::string txt = R"SHADER(
@@ -170,15 +192,15 @@ Entity createQuad(Engine* engine, Texture* tex, ImageOp op, Texture* secondary) 
                 prepareMaterial(material);
                 float2 uv = gl_FragCoord.xy;
                 vec4 c = vec4(0);
-                for (int i = 0; i < FILTER_SIZE; i++) {
+                for (int i = 0; i < SAMPLE_COUNT; i++) {
                     float2 st = (uv + materialParams.weights[i].yz) * getResolution().zw;
                     c += texture(materialParams_color, st) * materialParams.weights[i].x;
                 }
                 material.baseColor = c;
             }
         )SHADER";
-        const std::string from("FILTER_SIZE");
-        const std::string to = std::to_string(FILTER_SIZE);
+        const std::string from("SAMPLE_COUNT");
+        const std::string to = std::to_string(SAMPLE_COUNT);
         size_t pos = txt.find(from);
         txt.replace(pos, from.length(), to.c_str());
         filamat::Package pkg = filamat::MaterialBuilder()
@@ -186,7 +208,7 @@ Entity createQuad(Engine* engine, Texture* tex, ImageOp op, Texture* secondary) 
             .material(txt.c_str())
             .require(VertexAttribute::UV0)
             .parameter(filamat::MaterialBuilder::SamplerType::SAMPLER_2D, "color")
-            .parameter(filamat::MaterialBuilder::UniformType::FLOAT4, FILTER_SIZE, "weights")
+            .parameter(filamat::MaterialBuilder::UniformType::FLOAT4, SAMPLE_COUNT, "weights")
             .targetApi(filamat::MaterialBuilder::TargetApi::OPENGL)
             .shading(Shading::UNLIT)
             .depthWrite(false)
@@ -195,35 +217,29 @@ Entity createQuad(Engine* engine, Texture* tex, ImageOp op, Texture* secondary) 
         return Material::Builder().package(pkg.getData(), pkg.getSize()).build(engine);
     }(*engine);
 
-    TextureSampler::MinFilter minFilter;
-    TextureSampler::MagFilter magFilter;
+    TextureSampler::MinFilter minFilter = TextureSampler::MinFilter::LINEAR;
+    TextureSampler::MagFilter magFilter = TextureSampler::MagFilter::LINEAR;
+    TextureSampler sampler(minFilter, magFilter);
+
     MaterialInstance* matInstance;
     switch (op) {
         case BLIT:
-            minFilter = TextureSampler::MinFilter::LINEAR;
-            magFilter = TextureSampler::MagFilter::LINEAR;
             matInstance = blit->createInstance();
             break;
         case HBLUR:
-            minFilter = TextureSampler::MinFilter::NEAREST;
-            magFilter = TextureSampler::MagFilter::NEAREST;
             matInstance = blur->createInstance();
-            matInstance->setParameter("weights", hweights, FILTER_SIZE);
+            matInstance->setParameter("weights", hweights, SAMPLE_COUNT);
             break;
         case VBLUR:
-            minFilter = TextureSampler::MinFilter::NEAREST;
-            magFilter = TextureSampler::MagFilter::NEAREST;
             matInstance = blur->createInstance();
-            matInstance->setParameter("weights", vweights, FILTER_SIZE);
+            matInstance->setParameter("weights", vweights, SAMPLE_COUNT);
             break;
         case MIX:
-            minFilter = TextureSampler::MinFilter::LINEAR;
-            magFilter = TextureSampler::MagFilter::LINEAR;
             matInstance = mix->createInstance();
-            matInstance->setParameter("secondary", secondary, TextureSampler(minFilter, magFilter));
+            matInstance->setParameter("secondary", secondary, sampler);
             break;
     }
-    matInstance->setParameter("color", tex, TextureSampler(minFilter, magFilter));
+    matInstance->setParameter("color", tex, sampler);
 
     Entity entity = EntityManager::get().create();
     RenderableManager::Builder(1)
