@@ -58,6 +58,15 @@ Java_com_google_android_filament_IndirectLight_nIrradiance(JNIEnv* env, jclass,
 }
 
 extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_IndirectLight_nRadiance(JNIEnv* env, jclass,
+        jlong nativeBuilder, jint bands, jfloatArray sh_) {
+    IndirectLight::Builder* builder = (IndirectLight::Builder*) nativeBuilder;
+    jfloat* sh = env->GetFloatArrayElements(sh_, NULL);
+    builder->radiance((uint8_t) bands, (const filament::math::float3*) sh);
+    env->ReleaseFloatArrayElements(sh_, sh, JNI_ABORT);
+}
+
+extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_IndirectLight_nIrradianceAsTexture(JNIEnv*, jclass,
         jlong nativeBuilder, jlong nativeTexture) {
     IndirectLight::Builder* builder = (IndirectLight::Builder*) nativeBuilder;

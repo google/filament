@@ -62,6 +62,24 @@ public class IndirectLight {
         }
 
         @NonNull
+        public Builder radiance(@IntRange(from=1, to=3) int bands, @NonNull float[] sh) {
+            switch (bands) {
+                case 1: if (sh.length < 3)
+                        throw new ArrayIndexOutOfBoundsException(
+                            "1 band SH, array must be at least 1 x float3"); else break;
+                case 2: if (sh.length < 4 * 3)
+                        throw new ArrayIndexOutOfBoundsException(
+                            "2 bands SH, array must be at least 4 x float3"); else break;
+                case 3: if (sh.length < 9 * 3)
+                        throw new ArrayIndexOutOfBoundsException(
+                            "3 bands SH, array must be at least 9 x float3"); else break;
+                default: throw new IllegalArgumentException("bands must be 1, 2 or 3");
+            }
+            nRadiance(mNativeBuilder, bands, sh);
+            return this;
+        }
+
+        @NonNull
         public Builder irradiance(@NonNull Texture cubemap) {
             nIrradianceAsTexture(mNativeBuilder, cubemap.getNativeObject());
             return this;
@@ -138,6 +156,7 @@ public class IndirectLight {
     private static native long nBuilderBuild(long nativeBuilder, long nativeEngine);
     private static native void nBuilderReflections(long nativeBuilder, long nativeTexture);
     private static native void nIrradiance(long nativeBuilder, int bands, float[] sh);
+    private static native void nRadiance(long nativeBuilder, int bands, float[] sh);
     private static native void nIrradianceAsTexture(long nativeBuilder, long nativeTexture);
     private static native void nIntensity(long nativeBuilder, float envIntensity);
     private static native void nRotation(long nativeBuilder, float v0, float v1, float v2, float v3, float v4, float v5, float v6, float v7, float v8) ;
