@@ -74,14 +74,16 @@ public:
     FEngine& getEngine() const noexcept  { return mEngine; }
 
     backend::Handle<backend::HwProgram> getProgramSlow(uint8_t variantKey) const noexcept;
+    backend::Handle<backend::HwProgram> getSurfaceProgramSlow(uint8_t variantKey) const noexcept;
+    backend::Handle<backend::HwProgram> getPostProcessProgramSlow(uint8_t variantKey) const noexcept;
     backend::Handle<backend::HwProgram> getProgram(uint8_t variantKey) const noexcept {
-
-        // filterVariant() has already been applied in generateCommands(), shouldn't be needed here
-        assert( variantKey == Variant::filterVariant(variantKey, isVariantLit()) );
-
         backend::Handle<backend::HwProgram> const entry = mCachedPrograms[variantKey];
         return UTILS_LIKELY(entry) ? entry : getProgramSlow(variantKey);
     }
+    backend::Program getProgramBuilderWithVariants(uint8_t variantKey, uint8_t vertexVariantKey,
+            uint8_t fragmentVariantKey) const noexcept;
+    backend::Handle<backend::HwProgram> createAndCacheProgram(backend::Program&& p,
+            uint8_t variantKey) const noexcept;
 
     bool isVariantLit() const noexcept { return mIsVariantLit; }
 
