@@ -214,6 +214,7 @@ static void setup(LucyApp& app, Engine* engine, View* finalView, Scene* finalSce
     app.reflection.view->setScene(app.reflection.scene);
     app.reflection.view->setCamera(app.reflection.camera);
     app.reflection.view->setToneMapping(View::ToneMapping::LINEAR);
+    app.reflection.view->setDithering(View::Dithering::NONE);
     FilamentApp::get().addOffscreenView(app.reflection.view);
 
     app.primary.camera = engine->createCamera();
@@ -224,6 +225,7 @@ static void setup(LucyApp& app, Engine* engine, View* finalView, Scene* finalSce
     app.primary.view->setScene(app.primary.scene);
     app.primary.view->setCamera(app.primary.camera);
     app.primary.view->setToneMapping(View::ToneMapping::LINEAR);
+    app.reflection.view->setDithering(View::Dithering::NONE);
     FilamentApp::get().addOffscreenView(app.primary.view);
 
     app.hblur.camera = engine->createCamera();
