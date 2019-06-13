@@ -367,7 +367,8 @@ private:
 
     bool checkLiteRequirements() noexcept;
 
-    void writeChunks(ChunkContainer& container, MaterialInfo& info) const noexcept;
+    void writeCommonChunks(ChunkContainer& container, MaterialInfo& info) const noexcept;
+    void writeSurfaceChunks(ChunkContainer& container) const noexcept;
 
     bool generateShaders(const std::vector<Variant>& variants, ChunkContainer& container,
             const MaterialInfo& info) const noexcept;
