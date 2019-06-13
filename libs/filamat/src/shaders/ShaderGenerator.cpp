@@ -69,6 +69,18 @@ static void generateVertexDomain(const CodeGenerator& cg, utils::io::sstream& vs
     }
 }
 
+static void generatePostProcessMaterialVariantDefines(const CodeGenerator& cg,
+        utils::io::sstream& shader, PostProcessVariant variant) noexcept {
+    switch (variant) {
+        case PostProcessVariant::OPAQUE:
+            cg.generateDefine(shader, "POST_PROCESS_OPAQUE", 1u);
+            break;
+        case PostProcessVariant::TRANSLUCENT:
+            cg.generateDefine(shader, "POST_PROCESS_OPAQUE", 0u);
+            break;
+    }
+}
+
 static size_t countLines(const char* s) noexcept {
     size_t lines = 0;
     size_t i = 0;
@@ -476,6 +488,7 @@ const std::string ShaderPostProcessGenerator::createPostProcessVertexProgram(
     utils::io::sstream vs;
     cg.generateProlog(vs, ShaderType::VERTEX, false);
     cg.generateDefine(vs, "LOCATION_POSITION", uint32_t(VertexAttribute::POSITION));
+    generatePostProcessMaterialVariantDefines(cg, vs, PostProcessVariant(variant));
 
     cg.generateUniforms(vs, ShaderType::VERTEX,
             BindingPoints::PER_VIEW, UibGenerator::getPerViewUib());
@@ -503,6 +516,7 @@ const std::string ShaderPostProcessGenerator::createPostProcessFragmentProgram(
     const CodeGenerator cg(sm, targetApi, targetLanguage);
     utils::io::sstream fs;
     cg.generateProlog(fs, ShaderType::FRAGMENT, false);
+    generatePostProcessMaterialVariantDefines(cg, fs, PostProcessVariant(variant));
 
     cg.generateUniforms(fs, ShaderType::FRAGMENT,
             BindingPoints::PER_VIEW, UibGenerator::getPerViewUib());
