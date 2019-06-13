@@ -231,10 +231,13 @@ MetalProgram::MetalProgram(id<MTLDevice> device, const Program& program) noexcep
                                                         length:source.size()
                                                       encoding:NSUTF8StringEncoding];
         NSError* error = nil;
+        MTLCompileOptions* options = [MTLCompileOptions new];
+        options.languageVersion = MTLLanguageVersion1_1;
         id<MTLLibrary> library = [device newLibraryWithSource:objcSource
                                                       options:nil
                                                         error:&error];
         [objcSource release];
+        [options release];
         if (error) {
             auto description =
                     [error.localizedDescription cStringUsingEncoding:NSUTF8StringEncoding];
