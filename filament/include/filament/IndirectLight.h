@@ -125,8 +125,38 @@ public:
          * Sets the irradiance as Spherical Harmonics.
          *
          * The irradiance must be pre-convolved by \f$ \langle n \cdot l \rangle \f$ and
-         * specified as Spherical Harmonics coefficients pre-scaled by the basis
-         * coefficients \f$ K_{l}^{m} \f$.
+         * specified as Spherical Harmonics coefficients \f$ L_{l}^{m} \f$ pre-scaled by the
+         * normalization factors \f$ \hat{K_{l}^{m}} \f$ and pre-multiplied by the Lambertian diffuse
+         * BRDF \f$ \frac{1}{\pi} \f$. The final coefficients can be generated using the `cmgen` tool.
+         *
+         * The index in the \p sh array is given by:
+         *
+         *  `index(l, m) = l * (l + 1) + m`
+         *
+         * and:
+         *
+         * \f$ \hat{K_{l}^{m}}  =
+         * \begin{cases}
+         *      K_{l}^{m}          & \text{ if } m = 0 \\
+         *      \sqrt{2}K_{l}^{m}  & \text{ if } m \neq 0
+         * \end{cases}\f$
+         *
+         *  With \f$ K_{l}^{m} \f$ the SH basis normalization factors,
+         *
+         *  \f$ sh[index(l,m)] = L_{l}^{m} \frac{1}{\pi} \hat{K_{l}^{m}} \hat{C_{l}} \f$
+         *
+         *   index |  l  |  m  |  \f$ \hat{K_{l}^{m}} \f$ |  \f$ \hat{C_{l}} \f$  |  \f$ \frac{1}{\pi} \hat{K_{l}^{m}}\hat{C_{l}} \f$ |
+         *  :-----:|:---:|:---:|:------------------------:|:---------------------:|:-------------------------------------------------:
+         *     0   |  0  |  0  |         0.282095         |       3.1415926       |  0.282095
+         *     1   |  1  | -1  |         0.488603         |       2.0943951       |  0.325735
+         *     2   |  ^  |  0  |         0.488603         |       ^               |  0.325735
+         *     3   |  ^  |  1  |         0.488603         |       ^               |  0.325735
+         *     4   |  2  | -2  |         0.182091         |       0.785398        |  0.045523
+         *     5   |  ^  | -1  |         0.364183         |       ^               |  0.091046
+         *     6   |  ^  |  0  |         0.630783         |       ^               |  0.157696
+         *     7   |  ^  |  1  |         0.364183         |       ^               |  0.091046
+         *     8   |  ^  |  2  |         0.182091         |       ^               |  0.045523
+         *
          *
          * Only 1, 2 or 3 bands are allowed.
          *
