@@ -50,31 +50,18 @@ Entity createQuad(Engine* engine, Texture* tex, ImageOp op, Texture* secondary) 
         struct OverlayVertex {
             float2 position;
             float2 uv;
-            quath tangent;
         };
         static OverlayVertex verts[4] = {
-            {{0, 0}, {0, 0}, {0, 0, 0, 1}},
-            {{1, 0}, {1, 0}, {0, 0, 0, 1}},
-            {{0, 1}, {0, 1}, {0, 0, 0, 1}},
-            {{1, 1}, {1, 1}, {0, 0, 0, 1}}
+            {{0, 0}, {0, 0} },
+            {{1, 0}, {1, 0} },
+            {{0, 1}, {0, 1} },
+            {{1, 1}, {1, 1} }
         };
-        static float3 normals[4] = {
-            {0, 0, 1},
-            {0, 0, 1},
-            {0, 0, 1},
-            {0, 0, 1},
-        };
-        SurfaceOrientation::Builder()
-            .vertexCount(4)
-            .normals(normals)
-            .build()
-            .getQuats(2 + (quath*) verts, 4, 24);
         auto vb = VertexBuffer::Builder()
             .vertexCount(4)
             .bufferCount(1)
-            .attribute(VertexAttribute::POSITION, 0, VertexBuffer::AttributeType::FLOAT2, 0, 24)
-            .attribute(VertexAttribute::UV0, 0, VertexBuffer::AttributeType::FLOAT2, 8, 24)
-            .attribute(VertexAttribute::TANGENTS, 0, VertexBuffer::AttributeType::HALF4, 16, 24)
+            .attribute(VertexAttribute::POSITION, 0, VertexBuffer::AttributeType::FLOAT2, 0, 16)
+            .attribute(VertexAttribute::UV0, 0, VertexBuffer::AttributeType::FLOAT2, 8, 16)
             .build(engine);
         vb->setBufferAt(engine, 0, VertexBuffer::BufferDescriptor(verts, sizeof(verts), nullptr));
         return vb;
@@ -266,6 +253,13 @@ Entity createDisk(Engine* engine, Texture* reflection) {
     }
     verts[slice] = {0.0f, 0.0f, 0.5f, 0.5f};
 
+    static quath quats[nverts];
+    static float3 normals[1] = { float3(0, 0, 1) };
+    SurfaceOrientation::Builder().vertexCount(1).normals(normals).build().getQuats(quats, 1);
+    for (int i = 1; i < nverts; i++) {
+        quats[i] = quats[0];
+    }
+
     static uint16_t indices[nslices * 3];
     for (int slice = 0, j = 0; slice < nslices; ++slice) {
         indices[j++] = nverts - 1;
@@ -275,12 +269,14 @@ Entity createDisk(Engine* engine, Texture* reflection) {
 
     VertexBuffer* vbuffer = VertexBuffer::Builder()
         .vertexCount(nverts)
-        .bufferCount(1)
+        .bufferCount(2)
         .attribute(VertexAttribute::POSITION, 0, VertexBuffer::AttributeType::FLOAT2, 0, 16)
         .attribute(VertexAttribute::UV0, 0, VertexBuffer::AttributeType::FLOAT2, 8, 16)
+        .attribute(VertexAttribute::TANGENTS, 1, VertexBuffer::AttributeType::HALF4)
         .build(*engine);
 
     vbuffer->setBufferAt(*engine, 0, VertexBuffer::BufferDescriptor(verts, sizeof(verts), nullptr));
+    vbuffer->setBufferAt(*engine, 1, VertexBuffer::BufferDescriptor(quats, sizeof(quats), nullptr));
 
     IndexBuffer* ibuffer = IndexBuffer::Builder()
         .indexCount(nslices * 3)

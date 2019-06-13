@@ -66,7 +66,7 @@ struct LucyApp {
     Config config;
     bool showQuads;
     bool showImgui;
-    float iblIntensity = 40000;
+    float iblIntensity = 15000;
     float iblRotation = M_PI * 1.5f;
     AssetLoader* loader;
     FilamentAsset* asset;
@@ -225,7 +225,7 @@ static void setup(LucyApp& app, Engine* engine, View* finalView, Scene* finalSce
     app.primary.view->setScene(app.primary.scene);
     app.primary.view->setCamera(app.primary.camera);
     app.primary.view->setToneMapping(View::ToneMapping::LINEAR);
-    app.reflection.view->setDithering(View::Dithering::NONE);
+    app.primary.view->setDithering(View::Dithering::NONE);
     FilamentApp::get().addOffscreenView(app.primary.view);
 
     app.hblur.camera = engine->createCamera();
