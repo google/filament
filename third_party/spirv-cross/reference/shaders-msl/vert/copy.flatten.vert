@@ -40,9 +40,9 @@ vertex main0_out main0(main0_in in [[stage_in]], constant UBO& _21 [[buffer(0)]]
     main0_out out = {};
     out.gl_Position = _21.uMVP * in.aVertex;
     out.vColor = float4(0.0);
+    Light_1 light;
     for (int i = 0; i < 4; i++)
     {
-        Light_1 light;
         light.Position = float3(_21.lights[i].Position);
         light.Radius = _21.lights[i].Radius;
         light.Color = _21.lights[i].Color;

@@ -69,13 +69,13 @@ float4 fetch_attr(thread const attr_desc& desc, thread const int& vertex_id, thr
     float4 result = float4(0.0, 0.0, 0.0, 1.0);
     bool reverse_order = false;
     int first_byte = (vertex_id * desc.stride) + desc.starting_offset;
+    uint4 tmp;
     for (int n = 0; n < 4; n++)
     {
         if (n == desc.attribute_size)
         {
             break;
         }
-        uint4 tmp;
         switch (desc.type)
         {
             case 0:

@@ -3,7 +3,7 @@
 
 using namespace metal;
 
-kernel void main0(uint gl_LocalInvocationIndex [[thread_index_in_threadgroup]])
+kernel void main0()
 {
 }
 

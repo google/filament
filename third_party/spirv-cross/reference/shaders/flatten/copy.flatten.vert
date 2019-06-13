@@ -16,10 +16,10 @@ void main()
 {
     gl_Position = mat4(UBO[0], UBO[1], UBO[2], UBO[3]) * aVertex;
     vColor = vec4(0.0);
+    Light light;
     for (int i = 0; i < 4; i++)
     {
         Light _52 = Light(UBO[i * 2 + 4].xyz, UBO[i * 2 + 4].w, UBO[i * 2 + 5]);
-        Light light;
         light.Position = _52.Position;
         light.Radius = _52.Radius;
         light.Color = _52.Color;

@@ -93,6 +93,8 @@ public:
 			walk_from(seen_blocks, b, op);
 	}
 
+	uint32_t find_loop_dominator(uint32_t block) const;
+
 private:
 	struct VisitOrder
 	{

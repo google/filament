@@ -1,0 +1,52 @@
+{
+    "entryPoints" : [
+        {
+            "name" : "main",
+            "mode" : "comp"
+        }
+    ],
+    "types" : {
+        "_4" : {
+            "name" : "SSBO0",
+            "members" : [
+                {
+                    "name" : "a",
+                    "type" : "vec4",
+                    "array" : [
+                        0
+                    ],
+                    "offset" : 0
+                }
+            ]
+        },
+        "_6" : {
+            "name" : "SSBO1",
+            "members" : [
+                {
+                    "name" : "b",
+                    "type" : "vec4",
+                    "array" : [
+                        0
+                    ],
+                    "offset" : 0
+                }
+            ]
+        }
+    },
+    "ssbos" : [
+        {
+            "type" : "_4",
+            "name" : "SSBO0",
+            "block_size" : 0,
+            "set" : 0,
+            "binding" : 0
+        },
+        {
+            "type" : "_6",
+            "name" : "SSBO1",
+            "block_size" : 0,
+            "set" : 0,
+            "binding" : 1
+        }
+    ]
+}
