@@ -37,7 +37,7 @@ using namespace utils;
 
 using filament::geometry::SurfaceOrientation;
 
-#define FILTER_SIZE 9
+#define FILTER_SIZE 17
 
 namespace LucyUtils {
 
@@ -139,7 +139,7 @@ Entity createQuad(Engine* engine, Texture* tex, ImageOp op, Texture* secondary) 
         static float4 weights[FILTER_SIZE * 2];
         float4* hweights = weights;
         float4* vweights = weights + FILTER_SIZE;
-        static const float radius = 2;
+        static const float radius = 1;
         const auto filter = [](float t) {
             t /= 2.0;
             if (t >= 1.0) return 0.0f;
