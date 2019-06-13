@@ -212,6 +212,12 @@ bool MaterialParser::getVertexDomain(VertexDomain* value) const noexcept {
     return mImpl.getFromSimpleChunk(ChunkType::MaterialVertexDomain, reinterpret_cast<uint8_t*>(value));
 }
 
+bool MaterialParser::getMaterialDomain(MaterialDomain* value) const noexcept {
+    static_assert(sizeof(MaterialDomain) == sizeof(uint8_t),
+            "MaterialDomain expected size is wrong");
+    return mImpl.getFromSimpleChunk(ChunkType::MaterialDomain, reinterpret_cast<uint8_t*>(value));
+}
+
 bool MaterialParser::getBlendingMode(BlendingMode* value) const noexcept {
     static_assert(sizeof(BlendingMode) == sizeof(uint8_t),
             "BlendingMode expected size is wrong");

@@ -94,6 +94,7 @@ public:
     BlendingMode getBlendingMode() const noexcept { return mBlendingMode; }
     BlendingMode getRenderBlendingMode() const noexcept { return mRenderBlendingMode; }
     VertexDomain getVertexDomain() const noexcept { return mVertexDomain; }
+    MaterialDomain getMaterialDomain() const noexcept { return mMaterialDomain; }
     CullingMode getCullingMode() const noexcept { return mCullingMode; }
     TransparencyMode getTransparencyMode() const noexcept { return mTransparencyMode; }
     bool isColorWriteEnabled() const noexcept { return mRasterState.colorWrite; }
@@ -132,6 +133,7 @@ private:
     BlendingMode mBlendingMode;
     Interpolation mInterpolation;
     VertexDomain mVertexDomain;
+    MaterialDomain mMaterialDomain;
     CullingMode mCullingMode;
     AttributeBitset mRequiredAttributes;
 
