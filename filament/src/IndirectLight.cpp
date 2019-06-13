@@ -67,6 +67,26 @@ IndirectLight::Builder& IndirectLight::Builder::irradiance(uint8_t bands, float3
     return *this;
 }
 
+IndirectLight::Builder& IndirectLight::Builder::radiance(uint8_t bands, float3 const* sh) noexcept {
+    float3 irradiance[9];
+    if (bands >= 1) {
+        irradiance[0] = sh[0] * 0.282095;
+        if (bands >= 2) {
+            irradiance[1] = sh[1] * 0.325735;
+            irradiance[2] = sh[2] * 0.325735;
+            irradiance[3] = sh[3] * 0.325735;
+            if (bands >= 3) {
+                irradiance[4] = sh[4] * 0.045523;
+                irradiance[5] = sh[5] * 0.091046;
+                irradiance[6] = sh[6] * 0.157696;
+                irradiance[7] = sh[7] * 0.091046;
+                irradiance[8] = sh[8] * 0.045523;
+            }
+        }
+    }
+    return this->irradiance(bands, irradiance);
+}
+
 IndirectLight::Builder& IndirectLight::Builder::irradiance(Texture const* cubemap) noexcept {
     mImpl->mIrradianceMap = cubemap;
     return *this;

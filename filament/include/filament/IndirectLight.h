@@ -174,6 +174,38 @@ public:
         Builder& irradiance(uint8_t bands, math::float3 const* sh) noexcept;
 
         /**
+         * Sets the irradiance from the radiance expressed as Spherical Harmonics.
+         *
+         * The radiance must be specified as Spherical Harmonics coefficients \f$ L_{l}^{m}
+         *
+         * The index in the \p sh array is given by:
+         *
+         *  `index(l, m) = l * (l + 1) + m`
+         *
+         *  \f$ sh[index(l,m)] = L_{l}^{m} \f$
+         *
+         *   index |  l  |  m
+         *  :-----:|:---:|:---:
+         *     0   |  0  |  0
+         *     1   |  1  | -1
+         *     2   |  ^  |  0
+         *     3   |  ^  |  1
+         *     4   |  2  | -2
+         *     5   |  ^  | -1
+         *     6   |  ^  |  0
+         *     7   |  ^  |  1
+         *     8   |  ^  |  2
+         *
+         * @param bands     Number of spherical harmonics bands. Must be 1, 2 or 3.
+         * @param sh        Array containing the spherical harmonics coefficients.
+         *                  The size of the array must be \f$ bands^{2} \f$.
+         *                  (i.e. 1, 4 or 9 coefficients respectively).
+         *
+         * @return This Builder, for chaining calls.
+         */
+        Builder& radiance(uint8_t bands, math::float3 const* sh) noexcept;
+
+        /**
          * Sets the irradiance as a cubemap.
          *
          * The irradiance can alternatively be specified as a cubemap instead of Spherical
