@@ -132,6 +132,9 @@ Entity createQuad(Engine* engine, Texture* tex, ImageOp op, Texture* secondary) 
         return Material::Builder().package(pkg.getData(), pkg.getSize()).build(engine);
     }(*engine);
 
+    // Compute the "weights" array, which is composed of two consective sequences of 4-tuples:
+    //       [WEIGHT, OFFSET_X, OFFSET_Y, DONT_CARE]
+    // The first sequence is for the horizontal pass, the second sequence is for the vertical pass.
     static const float4* weights = []() {
         static float4 weights[FILTER_SIZE * 2];
         float4* hweights = weights;
