@@ -33,7 +33,7 @@ extern "C" {
 /* Bumped if ABI or API breaks backwards compatibility. */
 #define SPVC_C_API_VERSION_MAJOR 0
 /* Bumped if APIs or enumerations are added in a backwards compatible way. */
-#define SPVC_C_API_VERSION_MINOR 12
+#define SPVC_C_API_VERSION_MINOR 13
 /* Bumped if internal implementation details change. */
 #define SPVC_C_API_VERSION_PATCH 0
 
@@ -548,6 +548,7 @@ SPVC_PUBLIC_API spvc_bool spvc_compiler_msl_is_resource_used(spvc_compiler compi
                                                              unsigned set,
                                                              unsigned binding);
 SPVC_PUBLIC_API spvc_result spvc_compiler_msl_remap_constexpr_sampler(spvc_compiler compiler, spvc_variable_id id, const spvc_msl_constexpr_sampler *sampler);
+SPVC_PUBLIC_API spvc_result spvc_compiler_msl_remap_constexpr_sampler_by_binding(spvc_compiler compiler, unsigned desc_set, unsigned binding, const spvc_msl_constexpr_sampler *sampler);
 SPVC_PUBLIC_API spvc_result spvc_compiler_msl_set_fragment_output_components(spvc_compiler compiler, unsigned location, unsigned components);
 
 /*

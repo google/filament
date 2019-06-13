@@ -97,6 +97,8 @@ def path_to_msl_standard(shader):
             return '-std=ios-metal2.0'
         elif '.msl21.' in shader:
             return '-std=ios-metal2.1'
+        elif '.msl22.' in shader:
+            return '-std=ios-metal2.2'
         elif '.msl11.' in shader:
             return '-std=ios-metal1.1'
         elif '.msl10.' in shader:
@@ -108,6 +110,8 @@ def path_to_msl_standard(shader):
             return '-std=macos-metal2.0'
         elif '.msl21.' in shader:
             return '-std=macos-metal2.1'
+        elif '.msl22.' in shader:
+            return '-std=macos-metal2.2'
         elif '.msl11.' in shader:
             return '-std=macos-metal1.1'
         else:
@@ -118,6 +122,8 @@ def path_to_msl_standard_cli(shader):
         return '20000'
     elif '.msl21.' in shader:
         return '20100'
+    elif '.msl22.' in shader:
+        return '20200'
     elif '.msl11.' in shader:
         return '10100'
     else:

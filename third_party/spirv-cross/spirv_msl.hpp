@@ -22,6 +22,7 @@
 #include <set>
 #include <unordered_map>
 #include <unordered_set>
+#include <stddef.h>
 
 namespace SPIRV_CROSS_NAMESPACE
 {
@@ -306,6 +307,11 @@ public:
 
 	// Query after compilation is done. This allows you to check if a location or set/binding combination was used by the shader.
 	bool is_msl_vertex_attribute_used(uint32_t location);
+
+	// NOTE: Only resources which are remapped using add_msl_resource_binding will be reported here.
+	// Constexpr samplers are always assumed to be emitted.
+	// No specific MSLResourceBinding remapping is required for constexpr samplers as long as they are remapped
+	// by remap_constexpr_sampler(_by_binding).
 	bool is_msl_resource_binding_used(spv::ExecutionModel model, uint32_t set, uint32_t binding);
 
 	// Compiles the SPIR-V code into Metal Shading Language.
@@ -317,7 +323,12 @@ public:
 	// The sampler will not consume a binding, but be declared in the entry point as a constexpr sampler.
 	// This can be used on both combined image/samplers (sampler2D) or standalone samplers.
 	// The remapped sampler must not be an array of samplers.
+	// Prefer remap_constexpr_sampler_by_binding unless you're also doing reflection anyways.
 	void remap_constexpr_sampler(uint32_t id, const MSLConstexprSampler &sampler);
+
+	// Same as remap_constexpr_sampler, except you provide set/binding, rather than variable ID.
+	// Remaps based on ID take priority over set/binding remaps.
+	void remap_constexpr_sampler_by_binding(uint32_t desc_set, uint32_t binding, const MSLConstexprSampler &sampler);
 
 	// If using CompilerMSL::Options::pad_fragment_output_components, override the number of components we expect
 	// to use for a particular location. The default is 4 if number of components is not overridden.
@@ -512,6 +523,8 @@ protected:
 	bool emit_tessellation_access_chain(const uint32_t *ops, uint32_t length);
 	bool is_out_of_bounds_tessellation_level(uint32_t id_lhs);
 
+	void mark_implicit_builtin(spv::StorageClass storage, spv::BuiltIn builtin, uint32_t id);
+
 	Options msl_options;
 	std::set<SPVFuncImpl> spv_function_implementations;
 	std::unordered_map<uint32_t, MSLVertexAttr> vtx_attrs_by_location;
@@ -523,7 +536,28 @@ protected:
 	std::set<std::string> typedef_lines;
 	SmallVector<uint32_t> vars_needing_early_declaration;
 
-	SmallVector<std::pair<MSLResourceBinding, bool>> resource_bindings;
+	struct SetBindingPair
+	{
+		uint32_t desc_set;
+		uint32_t binding;
+		bool operator==(const SetBindingPair &other) const;
+	};
+
+	struct StageSetBinding
+	{
+		spv::ExecutionModel model;
+		uint32_t desc_set;
+		uint32_t binding;
+		bool operator==(const StageSetBinding &other) const;
+	};
+
+	struct InternalHasher
+	{
+		size_t operator()(const SetBindingPair &value) const;
+		size_t operator()(const StageSetBinding &value) const;
+	};
+
+	std::unordered_map<StageSetBinding, std::pair<MSLResourceBinding, bool>, InternalHasher> resource_bindings;
 	uint32_t next_metal_resource_index_buffer = 0;
 	uint32_t next_metal_resource_index_texture = 0;
 	uint32_t next_metal_resource_index_sampler = 0;
@@ -557,7 +591,11 @@ protected:
 	std::string tess_factor_buffer_var_name = "spvTessLevel";
 	spv::Op previous_instruction_opcode = spv::OpNop;
 
-	std::unordered_map<uint32_t, MSLConstexprSampler> constexpr_samplers;
+	// Must be ordered since declaration is in a specific order.
+	std::map<uint32_t, MSLConstexprSampler> constexpr_samplers_by_id;
+	std::unordered_map<SetBindingPair, MSLConstexprSampler, InternalHasher> constexpr_samplers_by_binding;
+	const MSLConstexprSampler *find_constexpr_sampler(uint32_t id) const;
+
 	std::unordered_set<uint32_t> buffers_requiring_array_length;
 	SmallVector<uint32_t> buffer_arrays;
 

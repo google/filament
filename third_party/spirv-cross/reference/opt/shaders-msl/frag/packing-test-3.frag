@@ -19,7 +19,7 @@ struct main0_out
     float4 _entryPointOutput [[color(0)]];
 };
 
-fragment main0_out main0(constant CB0& _26 [[buffer(0)]], float4 gl_FragCoord [[position]])
+fragment main0_out main0(constant CB0& _26 [[buffer(0)]])
 {
     main0_out out = {};
     out._entryPointOutput = float4(_26.CB0[1].position[0], _26.CB0[1].position[1], _26.CB0[1].position[2], _26.CB0[1].radius);

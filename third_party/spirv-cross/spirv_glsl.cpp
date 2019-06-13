@@ -1410,6 +1410,8 @@ string CompilerGLSL::layout_for_variable(const SPIRVariable &var)
 
 	if (options.vulkan_semantics && var.storage == StorageClassPushConstant)
 		attr.push_back("push_constant");
+	else if (var.storage == StorageClassShaderRecordBufferNV)
+		attr.push_back("shaderRecordNV");
 
 	if (flags.get(DecorationRowMajor))
 		attr.push_back("row_major");
@@ -1455,14 +1457,14 @@ string CompilerGLSL::layout_for_variable(const SPIRVariable &var)
 
 	// Do not emit set = decoration in regular GLSL output, but
 	// we need to preserve it in Vulkan GLSL mode.
-	if (var.storage != StorageClassPushConstant)
+	if (var.storage != StorageClassPushConstant && var.storage != StorageClassShaderRecordBufferNV)
 	{
 		if (flags.get(DecorationDescriptorSet) && options.vulkan_semantics)
 			attr.push_back(join("set = ", dec.set));
 	}
 
 	bool push_constant_block = options.vulkan_semantics && var.storage == StorageClassPushConstant;
-	bool ssbo_block = var.storage == StorageClassStorageBuffer ||
+	bool ssbo_block = var.storage == StorageClassStorageBuffer || var.storage == StorageClassShaderRecordBufferNV ||
 	                  (var.storage == StorageClassUniform && typeflags.get(DecorationBufferBlock));
 	bool emulated_ubo = var.storage == StorageClassPushConstant && options.emit_push_constant_as_uniform_buffer;
 	bool ubo_block = var.storage == StorageClassUniform && typeflags.get(DecorationBlock);
@@ -1482,6 +1484,9 @@ string CompilerGLSL::layout_for_variable(const SPIRVariable &var)
 
 	// Make sure we don't emit binding layout for a classic uniform on GLSL 1.30.
 	if (!can_use_buffer_blocks && var.storage == StorageClassUniform)
+		can_use_binding = false;
+
+	if (var.storage == StorageClassShaderRecordBufferNV)
 		can_use_binding = false;
 
 	if (can_use_binding && flags.get(DecorationBinding))
@@ -1745,7 +1750,7 @@ void CompilerGLSL::emit_buffer_block_native(const SPIRVariable &var)
 	auto &type = get<SPIRType>(var.basetype);
 
 	Bitset flags = ir.get_buffer_block_flags(var);
-	bool ssbo = var.storage == StorageClassStorageBuffer ||
+	bool ssbo = var.storage == StorageClassStorageBuffer || var.storage == StorageClassShaderRecordBufferNV ||
 	            ir.meta[type.self].decoration.decoration_flags.get(DecorationBufferBlock);
 	bool is_restrict = ssbo && flags.get(DecorationRestrict);
 	bool is_writeonly = ssbo && flags.get(DecorationNonReadable);
@@ -1861,6 +1866,14 @@ const char *CompilerGLSL::to_storage_qualifiers_glsl(const SPIRVariable &var)
 	else if (var.storage == StorageClassHitAttributeNV)
 	{
 		return "hitAttributeNV ";
+	}
+	else if (var.storage == StorageClassCallableDataNV)
+	{
+		return "callableDataNV ";
+	}
+	else if (var.storage == StorageClassIncomingCallableDataNV)
+	{
+		return "callableDataInNV ";
 	}
 
 	return "";
@@ -2563,7 +2576,8 @@ void CompilerGLSL::emit_resources()
 	ir.for_each_typed_id<SPIRVariable>([&](uint32_t, SPIRVariable &var) {
 		auto &type = this->get<SPIRType>(var.basetype);
 
-		bool is_block_storage = type.storage == StorageClassStorageBuffer || type.storage == StorageClassUniform;
+		bool is_block_storage = type.storage == StorageClassStorageBuffer || type.storage == StorageClassUniform ||
+		                        type.storage == StorageClassShaderRecordBufferNV;
 		bool has_block_flags = ir.meta[type.self].decoration.decoration_flags.get(DecorationBlock) ||
 		                       ir.meta[type.self].decoration.decoration_flags.get(DecorationBufferBlock);
 
@@ -2603,8 +2617,9 @@ void CompilerGLSL::emit_resources()
 
 		if (var.storage != StorageClassFunction && type.pointer &&
 		    (type.storage == StorageClassUniformConstant || type.storage == StorageClassAtomicCounter ||
-		     type.storage == StorageClassRayPayloadNV || type.storage == StorageClassHitAttributeNV ||
-		     type.storage == StorageClassIncomingRayPayloadNV) &&
+		     type.storage == StorageClassRayPayloadNV || type.storage == StorageClassIncomingRayPayloadNV ||
+		     type.storage == StorageClassCallableDataNV || type.storage == StorageClassIncomingCallableDataNV ||
+		     type.storage == StorageClassHitAttributeNV) &&
 		    !is_hidden_variable(var))
 		{
 			emit_uniform(var);
@@ -6140,6 +6155,17 @@ string CompilerGLSL::builtin_to_glsl(BuiltIn builtin, StorageClass storage)
 		return "gl_HitKindNV";
 	case BuiltInIncomingRayFlagsNV:
 		return "gl_IncomingRayFlagsNV";
+
+	case BuiltInFragStencilRefEXT:
+	{
+		if (!options.es)
+		{
+			require_extension_internal("GL_ARB_shader_stencil_export");
+			return "gl_FragStencilRefARB";
+		}
+		else
+			SPIRV_CROSS_THROW("Stencil export not supported in GLES.");
+	}
 
 	default:
 		return join("gl_BuiltIn_", convert_to_string(builtin));
@@ -10558,6 +10584,8 @@ void CompilerGLSL::emit_function(SPIRFunction &func, const Bitset &return_flags)
 	for (auto &v : func.local_variables)
 	{
 		auto &var = get<SPIRVariable>(v);
+		var.deferred_declaration = false;
+
 		if (var.storage == StorageClassWorkgroup)
 		{
 			// Special variable type which cannot have initializer,
@@ -10617,15 +10645,29 @@ void CompilerGLSL::emit_function(SPIRFunction &func, const Bitset &return_flags)
 			var.deferred_declaration = false;
 	}
 
+	// Enforce declaration order for regression testing purposes.
+	for (auto &block_id : func.blocks)
+	{
+		auto &block = get<SPIRBlock>(block_id);
+		sort(begin(block.dominated_variables), end(block.dominated_variables));
+	}
+
 	for (auto &line : current_function->fixup_hooks_in)
 		line();
 
-	entry_block.loop_dominator = SPIRBlock::NoDominator;
 	emit_block_chain(entry_block);
 
 	end_scope();
 	processing_entry_point = false;
 	statement("");
+
+	// Make sure deferred declaration state for local variables is cleared when we are done with function.
+	// We risk declaring Private/Workgroup variables in places we are not supposed to otherwise.
+	for (auto &v : func.local_variables)
+	{
+		auto &var = get<SPIRVariable>(v);
+		var.deferred_declaration = false;
+	}
 }
 
 void CompilerGLSL::emit_fixup()
@@ -10879,44 +10921,6 @@ void CompilerGLSL::branch(uint32_t from, uint32_t cond, uint32_t true_block, uin
 	}
 }
 
-void CompilerGLSL::propagate_loop_dominators(const SPIRBlock &block)
-{
-	// Propagate down the loop dominator block, so that dominated blocks can back trace.
-	if (block.merge == SPIRBlock::MergeLoop || block.loop_dominator)
-	{
-		uint32_t dominator = block.merge == SPIRBlock::MergeLoop ? block.self : block.loop_dominator;
-
-		auto set_dominator = [this](uint32_t self, uint32_t new_dominator) {
-			auto &dominated_block = this->get<SPIRBlock>(self);
-
-			// If we already have a loop dominator, we're trying to break out to merge targets
-			// which should not update the loop dominator.
-			if (!dominated_block.loop_dominator)
-				dominated_block.loop_dominator = new_dominator;
-		};
-
-		// After merging a loop, we inherit the loop dominator always.
-		if (block.merge_block)
-			set_dominator(block.merge_block, block.loop_dominator);
-
-		if (block.true_block)
-			set_dominator(block.true_block, dominator);
-		if (block.false_block)
-			set_dominator(block.false_block, dominator);
-		if (block.next_block)
-			set_dominator(block.next_block, dominator);
-		if (block.default_block)
-			set_dominator(block.default_block, dominator);
-
-		for (auto &c : block.cases)
-			set_dominator(c.block, dominator);
-
-		// In older glslang output continue_block can be == loop header.
-		if (block.continue_block && block.continue_block != block.self)
-			set_dominator(block.continue_block, dominator);
-	}
-}
-
 // FIXME: This currently cannot handle complex continue blocks
 // as in do-while.
 // This should be seen as a "trivial" continue block.
@@ -10937,7 +10941,6 @@ string CompilerGLSL::emit_continue_block(uint32_t continue_block, bool follow_tr
 	// Stamp out all blocks one after each other.
 	while ((ir.block_meta[block->self] & ParsedIR::BLOCK_META_LOOP_HEADER_BIT) == 0)
 	{
-		propagate_loop_dominators(*block);
 		// Write out all instructions we have in this block.
 		emit_block_instructions(*block);
 
@@ -11181,7 +11184,6 @@ bool CompilerGLSL::attempt_emit_loop_header(SPIRBlock &block, SPIRBlock::Method 
 
 		if (current_count == statement_count && condition_is_temporary)
 		{
-			propagate_loop_dominators(child);
 			uint32_t target_block = child.true_block;
 
 			switch (continue_type)
@@ -11245,8 +11247,6 @@ bool CompilerGLSL::attempt_emit_loop_header(SPIRBlock &block, SPIRBlock::Method 
 
 void CompilerGLSL::flush_undeclared_variables(SPIRBlock &block)
 {
-	// Enforce declaration order for regression testing purposes.
-	sort(begin(block.dominated_variables), end(block.dominated_variables));
 	for (auto &v : block.dominated_variables)
 		flush_variable_declaration(v);
 }
@@ -11275,8 +11275,6 @@ void CompilerGLSL::emit_hoisted_temporaries(SmallVector<pair<uint32_t, uint32_t>
 
 void CompilerGLSL::emit_block_chain(SPIRBlock &block)
 {
-	propagate_loop_dominators(block);
-
 	bool select_branch_to_true_block = false;
 	bool select_branch_to_false_block = false;
 	bool skip_direct_branch = false;
@@ -11292,6 +11290,15 @@ void CompilerGLSL::emit_block_chain(SPIRBlock &block)
 	// If we have loop variables, stop masking out access to the variable now.
 	for (auto var : block.loop_variables)
 		get<SPIRVariable>(var).loop_variable_enable = true;
+
+	// Remember deferred declaration state. We will restore it before returning.
+	SmallVector<bool, 64> rearm_dominated_variables(block.dominated_variables.size());
+	for (size_t i = 0; i < block.dominated_variables.size(); i++)
+	{
+		uint32_t var_id = block.dominated_variables[i];
+		auto &var = get<SPIRVariable>(var_id);
+		rearm_dominated_variables[i] = var.deferred_declaration;
+	}
 
 	// This is the method often used by spirv-opt to implement loops.
 	// The loop header goes straight into the continue block.
@@ -11671,6 +11678,15 @@ void CompilerGLSL::emit_block_chain(SPIRBlock &block)
 
 	// Forget about control dependent expressions now.
 	block.invalidate_expressions.clear();
+
+	// After we return, we must be out of scope, so if we somehow have to re-emit this function,
+	// re-declare variables if necessary.
+	assert(rearm_dominated_variables.size() == block.dominated_variables.size());
+	for (size_t i = 0; i < block.dominated_variables.size(); i++)
+	{
+		uint32_t var = block.dominated_variables[i];
+		get<SPIRVariable>(var).deferred_declaration = rearm_dominated_variables[i];
+	}
 }
 
 void CompilerGLSL::begin_scope()
@@ -11828,6 +11844,7 @@ void CompilerGLSL::bitcast_from_builtin_load(uint32_t source_id, std::string &ex
 	case BuiltInBaseVertex:
 	case BuiltInBaseInstance:
 	case BuiltInDrawIndex:
+	case BuiltInFragStencilRefEXT:
 		expected_type = SPIRType::Int;
 		break;
 
@@ -11863,6 +11880,7 @@ void CompilerGLSL::bitcast_to_builtin_store(uint32_t target_id, std::string &exp
 	case BuiltInLayer:
 	case BuiltInPrimitiveId:
 	case BuiltInViewportIndex:
+	case BuiltInFragStencilRefEXT:
 		expected_type = SPIRType::Int;
 		break;
 

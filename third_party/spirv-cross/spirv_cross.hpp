@@ -947,6 +947,7 @@ protected:
 	void analyze_variable_scope(SPIRFunction &function, AnalyzeVariableScopeAccessHandler &handler);
 	void find_function_local_luts(SPIRFunction &function, const AnalyzeVariableScopeAccessHandler &handler,
 	                              bool single_function);
+	bool may_read_undefined_variable_in_block(const SPIRBlock &block, uint32_t var);
 
 	void make_constant_null(uint32_t id, uint32_t type);
 
@@ -974,6 +975,9 @@ protected:
 	bool type_is_array_of_pointers(const SPIRType &type) const;
 	bool type_is_block_like(const SPIRType &type) const;
 	bool type_is_opaque_value(const SPIRType &type) const;
+
+	bool reflection_ssbo_instance_name_is_significant() const;
+	std::string get_remapped_declared_block_name(uint32_t id, bool fallback_prefer_instance_name) const;
 
 private:
 	// Used only to implement the old deprecated get_entry_point() interface.

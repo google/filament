@@ -9,9 +9,9 @@ struct SceneOut
 
 void _main(vec4 positions[3], SceneOut OUT)
 {
+    SceneOut o;
     for (int i = 0; i < 3; i++)
     {
-        SceneOut o;
         o.pos = positions[i];
         gl_Position = o.pos;
         EmitVertex();
