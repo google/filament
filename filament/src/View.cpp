@@ -609,7 +609,7 @@ void FView::prepareCamera(const CameraInfo& camera, const filament::Viewport& vi
     const mat4f projectionMatrix(camera.projection);
 
     const mat4f clipFromView(projectionMatrix);
-    const mat4f viewFromClip(Camera::inverseProjection(clipFromView));
+    const mat4f viewFromClip(inverse(clipFromView));
     const mat4f clipFromWorld(clipFromView * viewFromWorld);
     const mat4f worldFromClip(worldFromView * viewFromClip);
 
