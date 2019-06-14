@@ -134,14 +134,14 @@ public:
      * @param buffer    Client-side buffer where the read-back will be written.
      *
      *                  The following format are always supported:
-     *                      - backend::PixelDataFormat::RGBA
-     *                      - backend::PixelDataFormat::RGBA_INTEGER
+     *                      - PixelBufferDescriptor::PixelDataFormat::RGBA
+     *                      - PixelBufferDescriptor::PixelDataFormat::RGBA_INTEGER
      *
      *                  The following types are always supported:
-     *                      - backend::PixelDataType::UBYTE
-     *                      - backend::PixelDataType::UINT
-     *                      - backend::PixelDataType::INT
-     *                      - backend::PixelDataType::FLOAT
+     *                      - PixelBufferDescriptor::PixelDataType::UBYTE
+     *                      - PixelBufferDescriptor::PixelDataType::UINT
+     *                      - PixelBufferDescriptor::PixelDataType::INT
+     *                      - PixelBufferDescriptor::PixelDataType::FLOAT
      *
      *                  Other combination of format/type may be supported. If a combination is
      *                  not supported, this operation may fail silently. Use a DEBUG build

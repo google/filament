@@ -129,8 +129,8 @@ public:
 
         /**
          * Specifies whether this texture is a cubemap
-         * @param target either backend::SamplerType::SAMPLER_2D or
-         *                      backend::SamplerType::SAMPLER_CUBEMAP
+         * @param target either Sampler::SAMPLER_2D or
+         *                      Sampler::SAMPLER_CUBEMAP
          * @return This Builder, for chaining calls.
          * @see Sampler
          */
@@ -192,7 +192,7 @@ public:
      * Returns the width of a 2D or 3D texture level
      * @param level texture level.
      * @return Width in texel of the specified \p level, clamped to 1.
-     * @attention If this texture is using backend::SamplerType::SAMPLER_EXTERNAL, the dimension
+     * @attention If this texture is using Sampler::SAMPLER_EXTERNAL, the dimension
      * of the texture are unknown and this method always returns whatever was set on the Builder.
      */
     size_t getWidth(size_t level = BASE_LEVEL) const noexcept;
@@ -201,7 +201,7 @@ public:
      * Returns the height of a 2D or 3D texture level
      * @param level texture level.
      * @return Height in texel of the specified \p level, clamped to 1.
-     * @attention If this texture is using backend::SamplerType::SAMPLER_EXTERNAL, the dimension
+     * @attention If this texture is using Sampler::SAMPLER_EXTERNAL, the dimension
      * of the texture are unknown and this method always returns whatever was set on the Builder.
      */
     size_t getHeight(size_t level = BASE_LEVEL) const noexcept;
@@ -210,7 +210,7 @@ public:
      * Returns the depth of a 3D texture level
      * @param level texture level.
      * @return Depth in texel of the specified \p level, clamped to 1.
-     * @attention If this texture is using backend::SamplerType::SAMPLER_EXTERNAL, the dimension
+     * @attention If this texture is using Sampler::SAMPLER_EXTERNAL, the dimension
      * of the texture are unknown and this method always returns whatever was set on the Builder.
      */
     size_t getDepth(size_t level = BASE_LEVEL) const noexcept;
@@ -218,7 +218,7 @@ public:
     /**
      * Returns the maximum number of levels this texture can have.
      * @return maximum number of levels this texture can have.
-     * @attention If this texture is using backend::SamplerType::SAMPLER_EXTERNAL, the dimension
+     * @attention If this texture is using Sampler::SAMPLER_EXTERNAL, the dimension
      * of the texture are unknown and this method always returns whatever was set on the Builder.
      */
     size_t getLevels() const noexcept;
@@ -250,9 +250,9 @@ public:
      *
      * @attention \p engine must be the instance passed to Builder::build()
      * @attention \p level must be less than getLevels().
-     * @attention \p buffer's backend::PixelDataFormat must match that of getFormat().
-     * @attention This Texture instance must use backend::SamplerType::SAMPLER_2D or
-     *            backend::SamplerType::SAMPLER_EXTERNAL. IF the later is specified
+     * @attention \p buffer's Texture::Format must match that of getFormat().
+     * @attention This Texture instance must use Sampler::SAMPLER_2D or
+     *            Sampler::SAMPLER_EXTERNAL. IF the later is specified
      *            and external textures are supported by the driver implementation,
      *            this method will have no effect, otherwise it will behave as if the
      *            texture was specified with driver::SamplerType::SAMPLER_2D.
@@ -280,12 +280,12 @@ public:
      *
      * @attention \p engine must be the instance passed to Builder::build()
      * @attention \p level must be less than getLevels().
-     * @attention \p buffer's backend::PixelDataFormat must match that of getFormat().
-     * @attention This Texture instance must use backend::SamplerType::SAMPLER_2D or
-     *            backend::SamplerType::SAMPLER_EXTERNAL. IF the later is specified
+     * @attention \p buffer's Texture::Format must match that of getFormat().
+     * @attention This Texture instance must use Sampler::SAMPLER_2D or
+     *            Sampler::SAMPLER_EXTERNAL. IF the later is specified
      *            and external textures are supported by the driver implementation,
      *            this method will have no effect, otherwise it will behave as if the
-     *            texture was specified with backend::SamplerType::SAMPLER_2D.
+     *            texture was specified with Sampler::SAMPLER_2D.
      *
      * @see Builder::sampler()
      */
@@ -306,10 +306,10 @@ public:
      *
      * @attention \p engine must be the instance passed to Builder::build()
      * @attention \p level must be less than getLevels().
-     * @attention \p buffer's backend::PixelDataFormat must match that of getFormat().
-     * @attention This Texture instance must use backend::SamplerType::SAMPLER_CUBEMAP or it has no effect
+     * @attention \p buffer's Texture::Format must match that of getFormat().
+     * @attention This Texture instance must use Sampler::SAMPLER_CUBEMAP or it has no effect
      *
-     * @see backend::TextureCubemapFace, Builder::sampler()
+     * @see Texture::CubemapFace, Builder::sampler()
      */
     void setImage(Engine& engine, size_t level,
             PixelBufferDescriptor&& buffer, const FaceOffsets& faceOffsets) const noexcept;
@@ -332,7 +332,7 @@ public:
      *                        - kCVPixelFormatType_420YpCbCr8BiPlanarFullRange
      *
      * @attention \p engine must be the instance passed to Builder::build()
-     * @attention This Texture instance must use backend::SamplerType::SAMPLER_EXTERNAL or it has no effect
+     * @attention This Texture instance must use Sampler::SAMPLER_EXTERNAL or it has no effect
      *
      * @see Builder::sampler()
      *
@@ -352,7 +352,7 @@ public:
      * @param stream        A Stream object
      *
      * @attention \p engine must be the instance passed to Builder::build()
-     * @attention This Texture instance must use backend::SamplerType::SAMPLER_EXTERNAL or it has no effect
+     * @attention This Texture instance must use Sampler::SAMPLER_EXTERNAL or it has no effect
      *
      * @see Builder::sampler(), Stream
      *
@@ -366,7 +366,7 @@ public:
      * @param engine        Engine this texture is associated to.
      *
      * @attention \p engine must be the instance passed to Builder::build()
-     * @attention This Texture instance must NOT use backend::SamplerType::SAMPLER_CUBEMAP or it has no effect
+     * @attention This Texture instance must NOT use Sampler::SAMPLER_CUBEMAP or it has no effect
      */
     void generateMipmaps(Engine& engine) const noexcept;
 };
