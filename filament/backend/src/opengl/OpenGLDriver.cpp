@@ -1114,6 +1114,12 @@ void OpenGLDriver::framebufferTexture(backend::TargetBufferInfo const& binfo,
         // still work, albeit without MSAA.
         bindFramebuffer(GL_FRAMEBUFFER, rt->gl.fbo);
         switch (target) {
+            case GL_TEXTURE_CUBE_MAP_POSITIVE_X:
+            case GL_TEXTURE_CUBE_MAP_NEGATIVE_X:
+            case GL_TEXTURE_CUBE_MAP_POSITIVE_Y:
+            case GL_TEXTURE_CUBE_MAP_NEGATIVE_Y:
+            case GL_TEXTURE_CUBE_MAP_POSITIVE_Z:
+            case GL_TEXTURE_CUBE_MAP_NEGATIVE_Z:
             case GL_TEXTURE_2D:
             case GL_TEXTURE_2D_MULTISAMPLE:
                 glFramebufferTexture2D(GL_FRAMEBUFFER, attachment,
@@ -1162,6 +1168,12 @@ void OpenGLDriver::framebufferTexture(backend::TargetBufferInfo const& binfo,
         }
         bindFramebuffer(GL_FRAMEBUFFER, rt->gl.fbo_read);
         switch (target) {
+            case GL_TEXTURE_CUBE_MAP_POSITIVE_X:
+            case GL_TEXTURE_CUBE_MAP_NEGATIVE_X:
+            case GL_TEXTURE_CUBE_MAP_POSITIVE_Y:
+            case GL_TEXTURE_CUBE_MAP_NEGATIVE_Y:
+            case GL_TEXTURE_CUBE_MAP_POSITIVE_Z:
+            case GL_TEXTURE_CUBE_MAP_NEGATIVE_Z:
             case GL_TEXTURE_2D:
                 glFramebufferTexture2D(GL_FRAMEBUFFER, attachment,
                         target, t->gl.id, binfo.level);
