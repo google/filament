@@ -28,8 +28,8 @@
 #include <filament/Stream.h>
 #include <filament/Texture.h>
 
-#include "CallbackUtils.h"
-#include "NioUtils.h"
+#include "common/CallbackUtils.h"
+#include "common/NioUtils.h"
 
 using namespace filament;
 using namespace backend;

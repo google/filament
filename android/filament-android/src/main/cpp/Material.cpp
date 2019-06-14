@@ -18,7 +18,7 @@
 
 #include <filament/Material.h>
 
-#include "NioUtils.h"
+#include "common/NioUtils.h"
 
 using namespace filament;
 

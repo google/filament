@@ -18,8 +18,8 @@
 
 #include <jni.h>
 
-#include "CallbackUtils.h"
-#include "NioUtils.h"
+#include "common/CallbackUtils.h"
+#include "common/NioUtils.h"
 
 #include <filament/Engine.h>
 

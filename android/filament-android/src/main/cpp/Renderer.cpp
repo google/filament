@@ -22,8 +22,8 @@
 #include <filament/Viewport.h>
 #include <backend/PixelBufferDescriptor.h>
 
-#include "CallbackUtils.h"
-#include "NioUtils.h"
+#include "common/CallbackUtils.h"
+#include "common/NioUtils.h"
 
 using namespace filament;
 using namespace backend;
