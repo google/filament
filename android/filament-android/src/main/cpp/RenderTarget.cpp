@@ -22,9 +22,6 @@
 
 #include <filament/RenderTarget.h>
 
-#include "CallbackUtils.h"
-#include "NioUtils.h"
-
 using namespace filament;
 using namespace backend;
 

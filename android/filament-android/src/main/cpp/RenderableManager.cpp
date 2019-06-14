@@ -18,7 +18,7 @@
 #include <jni.h>
 
 #include <filament/RenderableManager.h>
-#include "NioUtils.h"
+#include "common/NioUtils.h"
 
 using namespace filament;
 using namespace utils;

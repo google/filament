@@ -21,8 +21,8 @@
 #include <filament/Stream.h>
 #include <backend/PixelBufferDescriptor.h>
 
-#include "NioUtils.h"
-#include "CallbackUtils.h"
+#include "common/NioUtils.h"
+#include "common/CallbackUtils.h"
 
 using namespace filament;
 using namespace backend;

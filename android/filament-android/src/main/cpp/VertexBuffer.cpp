@@ -24,8 +24,8 @@
 #include <math/vec3.h>
 #include <math/vec4.h>
 
-#include "CallbackUtils.h"
-#include "NioUtils.h"
+#include "common/CallbackUtils.h"
+#include "common/NioUtils.h"
 
 using namespace filament;
 using namespace filament::math;

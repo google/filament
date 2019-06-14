@@ -28,14 +28,16 @@ endif()
 # ==================================================================================================
 set(TARGET filament-jni)
 
-include_directories(${JNI_INCLUDE_DIRS})
-
 set(CXX_STANDARD "-std=c++14")
 if (WIN32)
     set(CXX_STANDARD "/std:c++14")
 endif()
 
-set(FILAMENT_DIR ../../android/filament-android)
+set(ANDROID_DIR ../../android)
+set(FILAMENT_DIR ${ANDROID_DIR}/filament-android)
+set(COMMON_DIR ${ANDROID_DIR}/common)
+
+include_directories(${JNI_INCLUDE_DIRS} ${ANDROID_DIR})
 
 set(JNI_SOURCE_FILES
         ${FILAMENT_DIR}/src/main/cpp/Camera.cpp
@@ -61,11 +63,12 @@ set(JNI_SOURCE_FILES
         ${FILAMENT_DIR}/src/main/cpp/TransformManager.cpp
         ${FILAMENT_DIR}/src/main/cpp/View.cpp
         # Private utils
-        ${FILAMENT_DIR}/src/main/cpp/CallbackUtils.cpp
         ${FILAMENT_DIR}/src/main/cpp/Filament.cpp
-        ${FILAMENT_DIR}/src/main/cpp/NioUtils.cpp
         # Desktop specific
         ${FILAMENT_DIR}/src/main/cpp/nativewindow/JAWTUtils.cpp
+        # Common utils
+        ${COMMON_DIR}/CallbackUtils.cpp
+        ${COMMON_DIR}/NioUtils.cpp
 )
 
 if (LINUX)
