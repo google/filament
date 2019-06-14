@@ -20,6 +20,7 @@
 #include "details/Texture.h"
 #include "details/VertexBuffer.h"
 #include "details/IndexBuffer.h"
+#include "details/IndirectLight.h"
 #include "details/Material.h"
 #include "details/MaterialInstance.h"
 
@@ -39,6 +40,7 @@ using namespace details;
 
 struct Skybox::BuilderDetails {
     Texture* mEnvironmentMap = nullptr;
+    float mIntensity = FIndirectLight::DEFAULT_INTENSITY;
     bool mShowSun = false;
 };
 
@@ -53,6 +55,11 @@ BuilderType::Builder& BuilderType::Builder::operator=(BuilderType::Builder&& rhs
 
 Skybox::Builder& Skybox::Builder::environment(Texture* cubemap) noexcept {
     mImpl->mEnvironmentMap = cubemap;
+    return *this;
+}
+
+Skybox::Builder& Skybox::Builder::intensity(float envIntensity) noexcept {
+    mImpl->mIntensity = envIntensity;
     return *this;
 }
 
@@ -81,7 +88,8 @@ namespace details {
 
 FSkybox::FSkybox(FEngine& engine, const Builder& builder) noexcept
         : mSkyboxTexture(upcast(builder->mEnvironmentMap)),
-          mRenderableManager(engine.getRenderableManager()) {
+          mRenderableManager(engine.getRenderableManager()),
+          mIntensity(builder->mIntensity) {
 
     FMaterial const* material = engine.getSkyboxMaterial(mSkyboxTexture->isRgbm());
     mSkyboxMaterialInstance = material->createInstance();
@@ -150,6 +158,10 @@ void Skybox::setLayerMask(uint8_t select, uint8_t values) noexcept {
 
 uint8_t Skybox::getLayerMask() const noexcept {
     return upcast(this)->getLayerMask();
+}
+
+float Skybox::getIntensity() const noexcept {
+    return upcast(this)->getIntensity();
 }
 
 } // namespace filament

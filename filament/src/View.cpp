@@ -339,7 +339,7 @@ void FView::prepareLighting(FEngine& engine, FEngine::DriverApi& driver, ArenaSc
 
     // IBL
     FIndirectLight const* const ibl = scene->getIndirectLight();
-    if (ibl) {
+    if (UTILS_LIKELY(ibl)) {
         u.setUniform(offsetof(PerViewUib, iblLuminance), ibl->getIntensity() * exposure);
         u.setUniformArray(offsetof(PerViewUib, iblSH), ibl->getSH(), 9);
         if (ibl->getReflectionMap()) {
@@ -350,8 +350,9 @@ void FView::prepareLighting(FEngine& engine, FEngine::DriverApi& driver, ArenaSc
                     { ibl->getReflectionMap(), reflectionSamplerParams });
         }
     } else {
-        u.setUniform(offsetof(PerViewUib, iblLuminance),
-                FIndirectLight::DEFAULT_INTENSITY * exposure);
+        FSkybox const* const skybox = scene->getSkybox();
+        const float intensity = skybox ? skybox->getIntensity() : FIndirectLight::DEFAULT_INTENSITY;
+        u.setUniform(offsetof(PerViewUib, iblLuminance), intensity * exposure);
     }
 
     // Directional light (always at index 0)
