@@ -137,9 +137,13 @@ fragment {
     }
 
     highp float linearizeDepth(highp float depth) {
+        // Our far plane is at infinity, which causes a division by zero below, which in turn
+        // causes some issues on some GPU. We workaround it by replacing "infinity" by the closest
+        // value representable in  a 24 bit depth buffer.
+        const float preventDiv0 = -1.0 / 16777216.0;
         highp mat4 projection = getClipFromViewMatrix();
         highp float z = depth * 2.0 - 1.0; // depth in clip space
-        return -projection[3].z / (z + projection[2].z);
+        return -projection[3].z / min(preventDiv0, z + projection[2].z);
     }
 
     highp float sampleDepthLinear(const vec2 uv) {
@@ -223,7 +227,8 @@ fragment {
 
         // level = floor(log2(screenSpaceRadius/rate)))
         int level = clamp(int(floor(log2(ssRadius))) - LOG2_LOD_RATE, 0, materialParams.maxLevel);
-        highp float occlusionDepth = linearizeDepth(texelFetch(materialParams_depth, clampToEdge(ssSamplePos >> level, level), level).r);
+        highp float depth = texelFetch(materialParams_depth, clampToEdge(ssSamplePos >> level, level), level).r;
+        highp float occlusionDepth = linearizeDepth(depth);
         highp vec3 p = computeViewSpacePositionFromDepth(uvSamplePos, occlusionDepth);
 
         // now we have the sample, compute AO
