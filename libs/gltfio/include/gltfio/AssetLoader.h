@@ -33,6 +33,7 @@ struct AssetConfiguration {
     class filament::Engine* engine;
     MaterialProvider* materials;
     utils::NameComponentManager* names = nullptr;
+    utils::EntityManager* entities = nullptr;
 };
 
 /**

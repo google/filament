@@ -100,7 +100,7 @@ static uint32_t computeBindingOffset(const cgltf_accessor* accessor) {
 
 struct FAssetLoader : public AssetLoader {
     FAssetLoader(const AssetConfiguration& config) :
-            mEntityManager(EntityManager::get()),
+            mEntityManager(config.entities ? *config.entities : EntityManager::get()),
             mRenderableManager(config.engine->getRenderableManager()),
             mNameManager(config.names),
             mTransformManager(config.engine->getTransformManager()),
