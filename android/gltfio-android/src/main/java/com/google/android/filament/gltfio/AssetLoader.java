@@ -21,23 +21,40 @@ import android.support.annotation.Nullable;
 
 import com.google.android.filament.Engine;
 import com.google.android.filament.EntityManager;
+import com.google.android.filament.IndirectLight;
+import com.google.android.filament.Skybox;
+import com.google.android.filament.Texture;
 
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.nio.Buffer;
 
 public class AssetLoader {
     private long mNativeObject;
 
-    private static Method sEngineGetNativeObject;
-    private static Method sEntityManagerGetNativeObject;
+    static Method sEngineGetNativeObject;
+    static Method sEntityManagerGetNativeObject;
+    static Constructor<Texture> sTextureConstructor;
+    static Constructor<IndirectLight> sIndirectLightConstructor;
+    static Constructor<Skybox> sSkyboxConstructor;
 
     public static void init() {
         System.loadLibrary("gltfio-jni");
         try {
             sEngineGetNativeObject = Engine.class.getDeclaredMethod("getNativeObject");
             sEngineGetNativeObject.setAccessible(true);
+
             sEntityManagerGetNativeObject = EntityManager.class.getDeclaredMethod("getNativeObject");
             sEntityManagerGetNativeObject.setAccessible(true);
+
+            sTextureConstructor = Texture.class.getDeclaredConstructor(long.class);
+            sTextureConstructor.setAccessible(true);
+
+            sIndirectLightConstructor = IndirectLight.class.getDeclaredConstructor(long.class);
+            sIndirectLightConstructor.setAccessible(true);
+
+            sSkyboxConstructor = Skybox.class.getDeclaredConstructor(long.class);
+            sSkyboxConstructor.setAccessible(true);
         } catch (NoSuchMethodException e) {
             // Cannot happen
         }

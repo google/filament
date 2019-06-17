@@ -32,6 +32,7 @@ import static com.google.android.filament.Texture.Type.COMPRESSED;
 public class Texture {
     private long mNativeObject;
 
+    @UsedByReflection("KtxLoader.java")
     Texture(long nativeTexture) {
         mNativeObject = nativeTexture;
     }
