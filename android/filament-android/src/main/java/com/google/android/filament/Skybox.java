@@ -16,13 +16,16 @@
 
 package com.google.android.filament;
 
+import com.google.android.filament.proguard.UsedByReflection;
+
 import android.support.annotation.IntRange;
 import android.support.annotation.NonNull;
 
 public class Skybox {
     private long mNativeObject;
 
-    private Skybox(long nativeSkybox) {
+    @UsedByReflection("KtxLoader.java")
+    Skybox(long nativeSkybox) {
         mNativeObject = nativeSkybox;
     }
 

@@ -18,6 +18,10 @@ add_library(filaflat SHARED IMPORTED)
 set_target_properties(filaflat PROPERTIES IMPORTED_LOCATION
         ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libfilaflat.a)
 
+add_library(image STATIC IMPORTED)
+set_target_properties(image PROPERTIES IMPORTED_LOCATION
+        ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libimage.a)
+
 add_library(ibl STATIC IMPORTED)
 set_target_properties(ibl PROPERTIES IMPORTED_LOCATION
         ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libibl.a)
@@ -56,6 +60,7 @@ set(CMAKE_SHARED_LINKER_FLAGS_RELEASE "${CMAKE_SHARED_LINKER_FLAGS_RELEASE} -Wl,
 add_library(gltfio-jni SHARED
         src/main/cpp/AssetLoader.cpp
         src/main/cpp/FilamentAsset.cpp
+        src/main/cpp/KtxLoader.cpp
         src/main/cpp/MaterialProvider.cpp
         src/main/cpp/ResourceLoader.cpp
         ../common/CallbackUtils.cpp
@@ -74,6 +79,7 @@ target_link_libraries(gltfio-jni
         backend
         filaflat
         geometry
+        image
         ibl
         utils
         GLESv3

@@ -26,11 +26,7 @@ import android.view.animation.LinearInterpolator
 
 import com.google.android.filament.*
 import com.google.android.filament.android.UiHelper
-
-import com.google.android.filament.gltfio.AssetLoader
-import com.google.android.filament.gltfio.FilamentAsset
-import com.google.android.filament.gltfio.MaterialProvider
-import com.google.android.filament.gltfio.ResourceLoader
+import com.google.android.filament.gltfio.*
 
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -89,7 +85,6 @@ class MainActivity : Activity() {
     private lateinit var mixMaterial: Material
     private lateinit var blurMaterial: Material
 
-    private lateinit var ibl: Ibl
     @Entity private var light = 0
 
     private var swapChain: SwapChain? = null
@@ -160,11 +155,14 @@ class MainActivity : Activity() {
         // IndirectLight and SkyBox
         // ------------------------
 
-        ibl = loadIbl(assets, "envs/venetian_crossroads_2k", engine)
-        ibl.indirectLight.intensity = 50_000.0f
+        readUncompressedAsset("envs/venetian_crossroads_ibl.ktx").let {
+            primary.scene.indirectLight = KtxLoader.createIndirectLight(engine, it, KtxLoader.Options())
+            primary.scene.indirectLight!!.intensity = 50_000.0f
+        }
 
-        primary.scene.skybox = ibl.skybox
-        primary.scene.indirectLight = ibl.indirectLight
+        readUncompressedAsset("envs/venetian_crossroads_skybox.ktx").let {
+            primary.scene.skybox = KtxLoader.createSkybox(engine, it, KtxLoader.Options())
+        }
 
         val theta = PI * 2.7
         val distance = 5.0
