@@ -47,7 +47,8 @@ public:
     size_t getWidth(size_t level = 0) const noexcept;
     size_t getHeight(size_t level = 0) const noexcept;
     size_t getDepth(size_t level = 0) const noexcept;
-    size_t getLevels() const noexcept { return mLevels; }
+    size_t getLevelCount() const noexcept { return mLevelCount; }
+    size_t getMaxLevelCount() const noexcept { return std::ilogbf(std::max(mWidth, mHeight)) + 1; }
     Sampler getTarget() const noexcept { return mTarget; }
     InternalFormat getFormat() const noexcept { return mFormat; }
     Usage getUsage() const noexcept { return mUsage; }
@@ -88,7 +89,7 @@ private:
     InternalFormat mFormat = InternalFormat::RGBA8;
     bool mRgbm = false;
     Sampler mTarget = Sampler::SAMPLER_2D;
-    uint8_t mLevels = 1;
+    uint8_t mLevelCount = 1;
     uint8_t mSampleCount = 1;
     FStream* mStream = nullptr;
     Usage mUsage = Usage::DEFAULT;

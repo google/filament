@@ -108,12 +108,12 @@ FTexture::FTexture(FEngine& engine, const Builder& builder) {
     mUsage = builder->mUsage;
     mTarget = builder->mTarget;
     mDepth  = static_cast<uint32_t>(builder->mDepth);
-    mLevels = std::min(builder->mLevels,
+    mLevelCount = std::min(builder->mLevels,
             static_cast<uint8_t>(std::ilogbf(std::max(mWidth, mHeight)) + 1));
 
     FEngine::DriverApi& driver = engine.getDriverApi();
     mHandle = driver.createTexture(
-            mTarget, mLevels, mFormat, mSampleCount, mWidth, mHeight, mDepth, mUsage);
+            mTarget, mLevelCount, mFormat, mSampleCount, mWidth, mHeight, mDepth, mUsage);
 }
 
 // frees driver resources, object becomes invalid
@@ -137,7 +137,7 @@ size_t FTexture::getDepth(size_t level) const noexcept {
 void FTexture::setImage(FEngine& engine,
         size_t level, uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
         Texture::PixelBufferDescriptor&& buffer) const noexcept {
-    if (!mStream && mTarget != Sampler::SAMPLER_CUBEMAP && level < mLevels) {
+    if (!mStream && mTarget != Sampler::SAMPLER_CUBEMAP && level < mLevelCount) {
         if (buffer.buffer) {
             engine.getDriverApi().update2DImage(mHandle,
                     uint8_t(level), xoffset, yoffset, width, height, std::move(buffer));
@@ -147,7 +147,7 @@ void FTexture::setImage(FEngine& engine,
 
 void FTexture::setImage(FEngine& engine, size_t level,
         Texture::PixelBufferDescriptor&& buffer, const FaceOffsets& faceOffsets) const noexcept {
-    if (!mStream && mTarget == Sampler::SAMPLER_CUBEMAP && level < mLevels) {
+    if (!mStream && mTarget == Sampler::SAMPLER_CUBEMAP && level < mLevelCount) {
         if (buffer.buffer) {
             engine.getDriverApi().updateCubeImage(mHandle, uint8_t(level),
                     std::move(buffer), faceOffsets);
@@ -198,7 +198,7 @@ void FTexture::generateMipmaps(FEngine& engine) const noexcept {
             "Texture format must be color renderable")) {
         return;
     }
-    if (mLevels == 1 || (mWidth == 1 && mHeight == 1)) {
+    if (mLevelCount == 1 || (mWidth == 1 && mHeight == 1)) {
         return;
     }
 
@@ -232,7 +232,7 @@ void FTexture::generateMipmaps(FEngine& engine) const noexcept {
             srcrth = dstrth;
             srcw = dstw;
             srch = dsth;
-        } while ((srcw > 1 || srch > 1) && level < mLevels);
+        } while ((srcw > 1 || srch > 1) && level < mLevelCount);
         driver.destroyRenderTarget(dstrth);
     };
 
@@ -362,7 +362,7 @@ size_t Texture::getDepth(size_t level) const noexcept {
 }
 
 size_t Texture::getLevels() const noexcept {
-    return upcast(this)->getLevels();
+    return upcast(this)->getLevelCount();
 }
 
 Texture::Sampler Texture::getTarget() const noexcept {

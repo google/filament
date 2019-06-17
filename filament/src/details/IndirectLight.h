@@ -47,6 +47,7 @@ public:
     void setIntensity(float intensity) noexcept { mIntensity = intensity; }
     void setRotation(math::mat3f const& rotation) noexcept { mRotation = rotation; }
     const math::mat3f& getRotation() const { return mRotation; }
+    size_t getMaxMipLevel() const noexcept { return mMaxMipLevel; }
 
 private:
     backend::Handle<backend::HwTexture> mReflectionsMapHandle;
@@ -54,6 +55,7 @@ private:
     std::array<math::float3, 9> mIrradianceCoefs;
     float mIntensity = DEFAULT_INTENSITY;
     math::mat3f mRotation;
+    uint8_t mMaxMipLevel = 0;
 };
 
 FILAMENT_UPCAST(IndirectLight)

@@ -226,7 +226,6 @@ const std::string ShaderGenerator::createFragmentProgram(filament::backend::Shad
     cg.generateProlog(fs, ShaderType::FRAGMENT, material.hasExternalSamplers);
 
     cg.generateDefine(fs, "IBL_USE_RGBM", filament::CONFIG_IBL_RGBM);
-    cg.generateDefine(fs, "IBL_MAX_MIP_LEVEL", std::log2f(filament::CONFIG_IBL_SIZE));
 
     // this should probably be a code generation option
     cg.generateDefine(fs, "USE_MULTIPLE_SCATTERING_COMPENSATION", true);
