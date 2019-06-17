@@ -1,0 +1,96 @@
+// This script accepts the following parameters:
+//
+// filament_dist_dir
+//     Path to the Filament distribution/install directory for Android
+//     (produced by make/ninja install). This directory must contain lib/arm64-v8a/ etc.
+//
+// Example:
+//     ./gradlew -Pfilament_dist_dir=../../dist-android-release assembleRelease
+
+ext {
+    filament_tools_dir = "../../out/release/filament"
+}
+
+apply from: '../build/filament-tasks.gradle'
+
+buildscript {
+    repositories {
+        google()
+        jcenter()
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:3.4.0'
+    }
+}
+
+allprojects {
+    repositories {
+        google()
+        jcenter()
+    }
+}
+
+group = "com.google.android.filament"
+version = "0.1"
+
+apply plugin: 'com.android.library'
+
+def filament_path = file("../../out/android-release/filament").absolutePath
+if (project.hasProperty("filament_dist_dir")) {
+    filament_path = file("$filament_dist_dir").absolutePath
+}
+
+android {
+    compileSdkVersion 28
+    defaultConfig {
+        minSdkVersion 14
+        targetSdkVersion 28
+        versionCode 1
+        versionName "1.0"
+
+        testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+
+        externalNativeBuild {
+            cmake {
+                arguments.add("-DANDROID_PIE=ON")
+                arguments.add("-DANDROID_PLATFORM=android-21")
+                arguments.add("-DANDROID_STL=c++_static")
+                arguments.add("-DFILAMENT_DIST_DIR=${filament_path}".toString())
+                cppFlags.add("-std=c++14")
+                if (project.hasProperty('extra_cmake_args')) {
+                    arguments.add(extra_cmake_args)
+                }
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    externalNativeBuild {
+        cmake {
+            path "CMakeLists.txt"
+        }
+    }
+
+    sourceSets {
+        main {
+            jni.srcDirs "src/main/cpp"
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+}
+
+dependencies {
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    implementation 'com.android.support:support-annotations:28.0.0'
+    implementation 'com.google.android.filament:filament-android'
+}
