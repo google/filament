@@ -172,8 +172,8 @@ private:
     MetalContext* context;
     bool defaultRenderTarget = false;
     uint8_t samples = 1;
-    uint8_t colorLevel;
-    uint8_t depthLevel;
+    uint8_t colorLevel = 0;
+    uint8_t depthLevel = 0;
 
     id<MTLTexture> color = nil;
     id<MTLTexture> depth = nil;
