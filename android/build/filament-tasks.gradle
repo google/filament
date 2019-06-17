@@ -33,6 +33,7 @@ List<File> getBinaries(String name, File toolsPath) {
 ext.matcFullPath = getBinaries('matc', filamentToolsPath)
 ext.cmgenFullPath = getBinaries('cmgen', filamentToolsPath)
 ext.filameshFullPath = getBinaries('filamesh', filamentToolsPath)
+ext.resgenFullPath = getBinaries('resgen', filamentToolsPath)
 
 class LogOutputStream extends ByteArrayOutputStream {
     private final Logger logger;

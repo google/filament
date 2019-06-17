@@ -6,6 +6,7 @@ A new header is inserted each time a *tag* is created.
 
 # Release notes
 
+- Added `gltf_bloom` Android sample to show gltfio and the `RenderTarget` API.
 - Added `getMaterialInstanceAt` to the Java version of RenderableManager.
 - Fix JNI bindings for setting values in parameter arrays.
 - Added JNI bindings for the gltfio library.
