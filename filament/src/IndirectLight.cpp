@@ -115,9 +115,10 @@ IndirectLight* IndirectLight::Builder::build(Engine& engine) {
             return nullptr;
         }
 
-        if (!ASSERT_POSTCONDITION_NON_FATAL(mImpl->mReflectionsMap->getLevels() == 9 ||
-                mImpl->mReflectionsMap->getLevels() == 1,
-                "reflection map must be 256x256 and have 9 mipmap levels")) {
+        if (!ASSERT_POSTCONDITION_NON_FATAL(mImpl->mReflectionsMap->getLevels() ==
+                upcast(mImpl->mReflectionsMap)->getMaxLevelCount(),
+                "reflection map must have %u mipmap levels",
+                upcast(mImpl->mReflectionsMap)->getMaxLevelCount())) {
             return nullptr;
         }
         if (IBL_INTEGRATION == IBL_INTEGRATION_IMPORTANCE_SAMPLING) {
@@ -146,6 +147,7 @@ FIndirectLight::FIndirectLight(FEngine& engine, const Builder& builder) noexcept
 
     if (builder->mReflectionsMap) {
         mReflectionsMapHandle = upcast(builder->mReflectionsMap)->getHwHandle();
+        mMaxMipLevel = builder->mReflectionsMap->getLevels();
     }
 
     std::copy(

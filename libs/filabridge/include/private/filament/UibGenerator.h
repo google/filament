@@ -80,6 +80,12 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
     alignas(16) filament::math::float4 iblSH[9]; // actually float3 entries (std140 requires float4 alignment)
 
     filament::math::float4 userTime;  // time(s), (double)time - (float)time, 0, 0
+
+    uint32_t iblMaxMipLevel;
+    uint32_t padding0[3];
+
+    // bring PerViewUib to 1 KiB
+    filament::math::float4 padding1[16];
 };
 
 

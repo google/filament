@@ -57,7 +57,6 @@ constexpr size_t CONFIG_MAX_BONE_COUNT = 256;
 
 // TODO This should be injected by the engine as a define of the shader.
 static constexpr bool   CONFIG_IBL_RGBM  = true;
-static constexpr size_t CONFIG_IBL_SIZE  = 256;
 
 } // namespace filament
 
