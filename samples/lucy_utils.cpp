@@ -191,7 +191,7 @@ Entity createQuad(Engine* engine, Texture* tex, ImageOp op, Texture* secondary) 
         size_t pos = txt.find(from);
         txt.replace(pos, from.length(), to.c_str());
         filamat::Package pkg = filamat::MaterialBuilder()
-            .name("hblur")
+            .name("blur")
             .material(txt.c_str())
             .require(VertexAttribute::UV0)
             .parameter(filamat::MaterialBuilder::SamplerType::SAMPLER_2D, "color")

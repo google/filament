@@ -117,7 +117,6 @@ static void setup(LucyApp& app, Engine* engine, View* finalView, Scene* finalSce
         .format(Texture::InternalFormat::RGBA16F).build(*engine);
     app.hblur.target = RenderTarget::Builder()
         .texture(RenderTarget::COLOR, app.hblur.color)
-        .texture(RenderTarget::DEPTH, app.hblur.depth)
         .build(*engine);
 
     app.vblur.color = Texture::Builder()
@@ -126,7 +125,6 @@ static void setup(LucyApp& app, Engine* engine, View* finalView, Scene* finalSce
         .format(Texture::InternalFormat::RGBA16F).build(*engine);
     app.vblur.target = RenderTarget::Builder()
         .texture(RenderTarget::COLOR, app.vblur.color)
-        .texture(RenderTarget::DEPTH, app.vblur.depth)
         .build(*engine);
 
     // Create lights.
