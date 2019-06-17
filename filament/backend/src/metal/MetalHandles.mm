@@ -368,8 +368,9 @@ void MetalTexture::loadCubeImage(const PixelBufferDescriptor& data, const FaceOf
 }
 
 MetalRenderTarget::MetalRenderTarget(MetalContext* context, uint32_t width, uint32_t height,
-        uint8_t samples, id<MTLTexture> color, id<MTLTexture> depth, uint8_t level)
-        : HwRenderTarget(width, height), context(context), samples(samples), level(level) {
+        uint8_t samples, id<MTLTexture> color, id<MTLTexture> depth, uint8_t colorLevel,
+        uint8_t depthLevel) : HwRenderTarget(width, height), context(context), samples(samples),
+        colorLevel(colorLevel), depthLevel(depthLevel) {
     ASSERT_PRECONDITION(color || depth, "Must provide either a color or depth texture.");
 
     [color retain];

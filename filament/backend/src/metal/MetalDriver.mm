@@ -189,7 +189,7 @@ void MetalDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
     };
 
     construct_handle<MetalRenderTarget>(mHandleMap, rth, mContext, width, height, samples,
-            getColorTexture(), getDepthTexture(), color.level);
+            getColorTexture(), getDepthTexture(), color.level, depth.level);
 
     ASSERT_POSTCONDITION(
             !stencil.handle && !(targetBufferFlags & TargetBufferFlags::STENCIL),
@@ -526,6 +526,7 @@ void MetalDriver::beginRenderPass(Handle<HwRenderTarget> rth,
     const auto& colorAttachment = descriptor.colorAttachments[0];
     colorAttachment.texture = renderTarget->getColor();
     colorAttachment.resolveTexture = discardColor ? nil : renderTarget->getColorResolve();
+    colorAttachment.level = renderTarget->getColorLevel();
     mContext->currentSurfacePixelFormat = colorAttachment.texture.pixelFormat;
 
     // Metal clears the entire attachment without respect to viewport or scissor.
@@ -544,6 +545,7 @@ void MetalDriver::beginRenderPass(Handle<HwRenderTarget> rth,
     depthAttachment.loadAction = renderTarget->getLoadAction(params, TargetBufferFlags::DEPTH);
     depthAttachment.storeAction = renderTarget->getStoreAction(params, TargetBufferFlags::DEPTH);
     depthAttachment.clearDepth = params.clearDepth;
+    depthAttachment.level = renderTarget->getDepthLevel();
     mContext->currentDepthPixelFormat = descriptor.depthAttachment.texture.pixelFormat;
 
     mContext->currentCommandEncoder =
