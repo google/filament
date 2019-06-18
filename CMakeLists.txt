@@ -130,14 +130,14 @@ endif()
 # Link time optimizations (LTO)
 # ==================================================================================================
 if (ENABLE_LTO)
-	include(CheckIPOSupported)
+    include(CheckIPOSupported)
 
-	check_ipo_supported(RESULT IPO_SUPPORT)
+    check_ipo_supported(RESULT IPO_SUPPORT)
 
-	if (IPO_SUPPORT)
-		message(STATUS "LTO support is enabled")
-		set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
-	endif()
+    if (IPO_SUPPORT)
+        message(STATUS "LTO support is enabled")
+        set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+    endif()
 endif()
 
 # ==================================================================================================

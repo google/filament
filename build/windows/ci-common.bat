@@ -6,8 +6,8 @@ if defined KOKORO_BUILD_ID (
         choco install cmake -y
         if errorlevel 1 exit /b %errorlevel%
     )
-	
-	choco install llvm --version 8.0.0 -y
+    
+    choco install llvm --version 8.0.0 -y
 
     :: retry if choco install failed
     if errorlevel 1 (
