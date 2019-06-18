@@ -26,7 +26,6 @@ public class MaterialProvider {
     private static Method sEngineGetNativeObject;
 
     static {
-        System.loadLibrary("gltfio-jni");
         try {
             sEngineGetNativeObject = Engine.class.getDeclaredMethod("getNativeObject");
             sEngineGetNativeObject.setAccessible(true);
