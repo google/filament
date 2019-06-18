@@ -45,6 +45,15 @@ Java_com_google_android_filament_Scene_nAddEntity(JNIEnv *env, jclass type, jlon
 }
 
 extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_Scene_nAddEntities(JNIEnv *env, jclass type, jlong nativeScene,
+        jintArray entities) {
+    Scene* scene = (Scene*) nativeScene;
+    Entity* nativeEntities = (Entity*) env->GetIntArrayElements(entities, nullptr);
+    scene->addEntities(nativeEntities, env->GetArrayLength(entities));
+    env->ReleaseIntArrayElements(entities, (jint*) nativeEntities, JNI_ABORT);
+}
+
+extern "C" JNIEXPORT void JNICALL
 Java_com_google_android_filament_Scene_nRemove(JNIEnv *env, jclass type, jlong nativeScene,
         jint entity) {
     Scene* scene = (Scene*) nativeScene;
