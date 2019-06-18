@@ -415,7 +415,7 @@ function build_android {
     cd android/gltfio-android
 
     if [[ "$ISSUE_DEBUG_BUILD" == "true" ]]; then
-        ./gradlew -Pfilament_tools_dir=../../out/release/filament -Pfilament_dist_dir=../../out/android-debug/filament assembleDebug
+        ./gradlew -Pfilament_dist_dir=../../out/android-debug/filament assembleDebug
 
         if [[ "$INSTALL_COMMAND" ]]; then
             echo "Installing out/gltfio-android-debug.aar..."
@@ -424,7 +424,7 @@ function build_android {
     fi
 
     if [[ "$ISSUE_RELEASE_BUILD" == "true" ]]; then
-        ./gradlew -Pfilament_tools_dir=../../out/release/filament -Pfilament_dist_dir=../../out/android-release/filament assembleRelease
+        ./gradlew -Pfilament_dist_dir=../../out/android-release/filament assembleRelease
 
         if [[ "$INSTALL_COMMAND" ]]; then
             echo "Installing out/gltfio-android-release.aar..."

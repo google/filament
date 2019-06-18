@@ -40,15 +40,13 @@ set(RESOURCE_DIR ${CMAKE_CURRENT_BINARY_DIR})
 
 if (CMAKE_CROSSCOMPILING)
     include(${IMPORT_EXECUTABLES})
-endif()
-
-if (ANDROID OR WEBGL OR IOS)
     set(MATC_TARGET mobile)
+    set(MATC_FLAGS -a opengl)
 else()
     set(MATC_TARGET desktop)
+    set(MATC_FLAGS -a all)
 endif()
 
-set(MATC_FLAGS -a all)
 if (NOT CMAKE_BUILD_TYPE MATCHES Release)
     set(MATC_FLAGS -g ${MATC_FLAGS})
 endif()
