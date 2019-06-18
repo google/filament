@@ -7,12 +7,6 @@
 // Example:
 //     ./gradlew -Pfilament_dist_dir=../../dist-android-release assembleRelease
 
-ext {
-    filament_tools_dir = "../../out/release/filament"
-}
-
-apply from: '../build/filament-tasks.gradle'
-
 buildscript {
     repositories {
         google()

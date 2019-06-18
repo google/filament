@@ -6,6 +6,10 @@ A new header is inserted each time a *tag* is created.
 
 # Release notes
 
+- Added JNI bindings for the gltfio library.
+
+## sceneform-1.9pr3
+
 - Added `Scene.addEntities()` to the Java / Kotlin bindings.
 - Improved robustness in the tangents utility for meshes that have tangents *and* normals.
 - Introduced `RenderTarget` API that allows View to reference an offscreen render target.
