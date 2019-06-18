@@ -187,6 +187,10 @@ public:
 private:
     backend::ShaderModel getShaderModel() const noexcept final;
 
+#ifndef NDEBUG
+    void debugCommand(const char* methodName) override;
+#endif
+
     /*
      * Driver interface
      */

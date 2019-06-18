@@ -304,6 +304,10 @@ void OpenGLDriver::terminate() {
     mPlatform.terminate();
 }
 
+void OpenGLDriver::debugCommand(const char* methodName) {
+    utils::slog.d << methodName << utils::io::endl;
+}
+
 ShaderModel OpenGLDriver::getShaderModel() const noexcept {
     return mShaderModel;
 }
