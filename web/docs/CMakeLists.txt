@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.4)
+cmake_minimum_required(VERSION 3.10)
 project(webdocs)
 
 # We do not use CMake's find_package facility because it can't find homebrew-installed python3,

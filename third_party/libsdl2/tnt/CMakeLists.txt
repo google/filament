@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.1)
+cmake_minimum_required(VERSION 3.10)
 project(sdl2 C)
 
 # This is necessary on Windows, so the sdl2.dll lives next to the sample apps that use it

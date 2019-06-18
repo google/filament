@@ -14,7 +14,7 @@
 ## limitations under the License.                                           ##
 ## ======================================================================== ##
 
-cmake_minimum_required(VERSION 3.1)
+cmake_minimum_required(VERSION 3.10)
 
 set(OIDN_VERSION_MAJOR 0)
 set(OIDN_VERSION_MINOR 9)
