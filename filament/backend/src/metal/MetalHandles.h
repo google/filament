@@ -146,7 +146,7 @@ struct MetalSamplerGroup : public HwSamplerGroup {
 class MetalRenderTarget : public HwRenderTarget {
 public:
     MetalRenderTarget(MetalContext* context, uint32_t width, uint32_t height, uint8_t samples,
-            id<MTLTexture> color, id<MTLTexture> depth, uint8_t level);
+            id<MTLTexture> color, id<MTLTexture> depth, uint8_t colorLevel, uint8_t depthLevel);
     explicit MetalRenderTarget(MetalContext* context)
             : HwRenderTarget(0, 0), context(context), defaultRenderTarget(true) {}
     ~MetalRenderTarget();
@@ -162,7 +162,8 @@ public:
     id<MTLTexture> getDepthResolve();
     id<MTLTexture> getBlitColorSource();
     id<MTLTexture> getBlitDepthSource();
-    uint8_t getColorLevel() { return level; }
+    uint8_t getColorLevel() { return colorLevel; }
+    uint8_t getDepthLevel() { return depthLevel; }
 
 private:
     static id<MTLTexture> createMultisampledTexture(id<MTLDevice> device, MTLPixelFormat format,
@@ -171,7 +172,8 @@ private:
     MetalContext* context;
     bool defaultRenderTarget = false;
     uint8_t samples = 1;
-    uint8_t level = 0;
+    uint8_t colorLevel = 0;
+    uint8_t depthLevel = 0;
 
     id<MTLTexture> color = nil;
     id<MTLTexture> depth = nil;
