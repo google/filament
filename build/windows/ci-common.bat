@@ -15,7 +15,7 @@ if defined KOKORO_BUILD_ID (
         if errorlevel 1 exit /b %errorlevel%
     )
 
-    :: refreshenv is necessary to put Cm=Make and LLVM on path
+    :: refreshenv is necessary to put CMake and LLVM on path
     refreshenv
 )
 
