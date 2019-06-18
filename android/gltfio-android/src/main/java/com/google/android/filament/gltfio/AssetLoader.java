@@ -31,7 +31,7 @@ public class AssetLoader {
     private static Method sEngineGetNativeObject;
     private static Method sEntityManagerGetNativeObject;
 
-    static {
+    public static void init() {
         System.loadLibrary("gltfio-jni");
         try {
             sEngineGetNativeObject = Engine.class.getDeclaredMethod("getNativeObject");

@@ -2,35 +2,35 @@ cmake_minimum_required(VERSION 3.4.1)
 
 set(FILAMENT_DIR ${FILAMENT_DIST_DIR})
 
-add_library(filament STATIC IMPORTED)
+add_library(filament SHARED IMPORTED)
 set_target_properties(filament PROPERTIES IMPORTED_LOCATION
         ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libfilament.a)
 
-add_library(backend STATIC IMPORTED)
+add_library(backend SHARED IMPORTED)
 set_target_properties(backend PROPERTIES IMPORTED_LOCATION
         ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libbackend.a)
 
-add_library(utils STATIC IMPORTED)
+add_library(utils SHARED IMPORTED)
 set_target_properties(utils PROPERTIES IMPORTED_LOCATION
         ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libutils.a)
 
-add_library(filaflat STATIC IMPORTED)
+add_library(filaflat SHARED IMPORTED)
 set_target_properties(filaflat PROPERTIES IMPORTED_LOCATION
         ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libfilaflat.a)
 
-add_library(geometry STATIC IMPORTED)
+add_library(geometry SHARED IMPORTED)
 set_target_properties(geometry PROPERTIES IMPORTED_LOCATION
         ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libgeometry.a)
 
-add_library(filabridge STATIC IMPORTED)
+add_library(filabridge SHARED IMPORTED)
 set_target_properties(filabridge PROPERTIES IMPORTED_LOCATION
         ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libfilabridge.a)
 
-add_library(gltfio STATIC IMPORTED)
+add_library(gltfio SHARED IMPORTED)
 set_target_properties(gltfio PROPERTIES IMPORTED_LOCATION
         ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libgltfio_core.a)
 
-add_library(gltfio_resources STATIC IMPORTED)
+add_library(gltfio_resources SHARED IMPORTED)
 set_target_properties(gltfio_resources PROPERTIES IMPORTED_LOCATION
         ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libgltfio_resources.a)
 
@@ -57,6 +57,9 @@ add_library(gltfio-jni SHARED
         ../common/CallbackUtils.cpp
         ../common/NioUtils.cpp
 )
+
+set_target_properties(gltfio-jni PROPERTIES LINK_DEPENDS
+        ${CMAKE_CURRENT_SOURCE_DIR}/libgltfio-jni.symbols)
 
 # The ordering in the following list is important because CMake does not have dependency information.
 target_link_libraries(gltfio-jni
