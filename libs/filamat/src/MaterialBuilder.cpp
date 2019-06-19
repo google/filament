@@ -272,11 +272,13 @@ MaterialBuilder& MaterialBuilder::flipUV(bool flipUV) noexcept {
 
 MaterialBuilder& MaterialBuilder::multiBounceAmbientOcclusion(bool multiBounceAO) noexcept {
     mMultiBounceAO = multiBounceAO;
+    mMultiBounceAOSet = true;
     return *this;
 }
 
 MaterialBuilder& MaterialBuilder::specularAmbientOcclusion(bool specularAO) noexcept {
     mSpecularAO = specularAO;
+    mSpecularAOSet = true;
     return *this;
 }
 
@@ -368,7 +370,9 @@ void MaterialBuilder::prepareToBuild(MaterialInfo& info) noexcept {
     info.shading = mShading;
     info.hasShadowMultiplier = mShadowMultiplier;
     info.multiBounceAO = mMultiBounceAO;
+    info.multiBounceAOSet = mMultiBounceAOSet;
     info.specularAO = mSpecularAO;
+    info.specularAOSet = mSpecularAOSet;
 }
 
 bool MaterialBuilder::findProperties() noexcept {
