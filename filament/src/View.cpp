@@ -340,7 +340,8 @@ void FView::prepareLighting(FEngine& engine, FEngine::DriverApi& driver, ArenaSc
     // IBL
     FIndirectLight const* const ibl = scene->getIndirectLight();
     if (UTILS_LIKELY(ibl)) {
-        u.setUniform(offsetof(PerViewUib, iblMaxMipLevel), (uint32_t)ibl->getMaxMipLevel());
+        float2 iblMaxMipLevel{ ibl->getMaxMipLevel(), 1u << ibl->getMaxMipLevel() };
+        u.setUniform(offsetof(PerViewUib, iblMaxMipLevel), iblMaxMipLevel);
         u.setUniform(offsetof(PerViewUib, iblLuminance), ibl->getIntensity() * exposure);
         u.setUniformArray(offsetof(PerViewUib, iblSH), ibl->getSH(), 9);
         if (ibl->getReflectionMap()) {
