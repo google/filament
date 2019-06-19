@@ -107,6 +107,7 @@ public:
             case PixelDataType::UINT:
             case PixelDataType::INT:
             case PixelDataType::FLOAT:
+            case PixelDataType::UINT_10F_11F_11F_REV:
                 bpp *= 4;
                 break;
         }

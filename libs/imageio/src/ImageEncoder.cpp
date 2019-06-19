@@ -50,9 +50,10 @@ namespace image {
 class PNGEncoder : public ImageEncoder::Encoder {
 public:
     enum class PixelFormat {
-        sRGB,       // 8-bits sRGB
-        RGBM,       // 8-bits RGBM
-        LINEAR_RGB, // 8-bits RGB
+        sRGB,           // 8-bits sRGB
+        RGBM,           // 8-bits RGBM
+        LINEAR_RGB,     // 8-bits RGB
+        RGB_10_11_11_REV,
     };
 
     static PNGEncoder* create(std::ostream& stream, PixelFormat format = PixelFormat::sRGB);
@@ -197,6 +198,9 @@ bool ImageEncoder::encode(std::ostream& stream, Format format, const LinearImage
         case Format::PNG_LINEAR:
             encoder.reset(PNGEncoder::create(stream, PNGEncoder::PixelFormat::LINEAR_RGB));
             break;
+        case Format::RGB_10_11_11_REV:
+            encoder.reset(PNGEncoder::create(stream, PNGEncoder::PixelFormat::RGB_10_11_11_REV));
+            break;
         case Format::HDR:
             encoder.reset(HDREncoder::create(stream));
             break;
@@ -232,6 +236,8 @@ ImageEncoder::Format ImageEncoder::chooseFormat(const std::string& name, bool fo
 
     if (ext == "rgbm") return Format::PNG;
 
+    if (ext == "rgb32f") return Format::RGB_10_11_11_REV;
+
     if (ext == "hdr") return Format::HDR;
 
     if (ext == "psd") return Format::PSD;
@@ -249,6 +255,8 @@ std::string ImageEncoder::chooseExtension(ImageEncoder::Format format) {
         case Format::PNG:
         case Format::PNG_LINEAR:
             return ".png";
+        case Format::RGB_10_11_11_REV:
+            return ".rgb32f";
         case Format::RGBM:
             return ".rgbm";
         case Format::HDR:
@@ -295,6 +303,7 @@ int PNGEncoder::chooseColorType(const LinearImage& image) const {
         case 3:
             switch (mFormat) {
                 case PixelFormat::RGBM:
+                case PixelFormat::RGB_10_11_11_REV:
                     return PNG_COLOR_TYPE_RGBA;
                 default:
                     return PNG_COLOR_TYPE_RGB;
@@ -305,6 +314,7 @@ int PNGEncoder::chooseColorType(const LinearImage& image) const {
 uint32_t PNGEncoder::getChannelsCount() const {
     switch (mFormat) {
         case PixelFormat::RGBM:
+        case PixelFormat::RGB_10_11_11_REV:
             return 4;
         default:
             return 3;
@@ -313,10 +323,21 @@ uint32_t PNGEncoder::getChannelsCount() const {
 
 bool PNGEncoder::encode(const LinearImage& image) {
     size_t srcChannels = image.getChannels();
-    if ((mFormat == PixelFormat::RGBM && srcChannels != 3) ||
-            (srcChannels != 1 && srcChannels != 3)) {
-        std::cerr << "Cannot encode PNG: " << srcChannels << " channels." << std::endl;
-        return false;
+
+    switch (mFormat) {
+        case PixelFormat::RGBM:
+        case PixelFormat::RGB_10_11_11_REV:
+            if (srcChannels != 3) {
+                std::cerr << "Cannot encode PNG: " << srcChannels << " channels." << std::endl;
+                return false;
+            }
+            break;
+        default:
+            if (srcChannels != 1 && srcChannels != 3) {
+                std::cerr << "Cannot encode PNG: " << srcChannels << " channels." << std::endl;
+                return false;
+            }
+            break;
     }
 
     try {
@@ -329,7 +350,7 @@ bool PNGEncoder::encode(const LinearImage& image) {
               8, chooseColorType(image), PNG_INTERLACE_NONE,
               PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE);
 
-        if (mFormat == PixelFormat::LINEAR_RGB) {
+        if (mFormat == PixelFormat::LINEAR_RGB || mFormat == PixelFormat::RGB_10_11_11_REV) {
             png_set_gAMA(mPNG, mInfo, 1.0);
         } else {
             png_set_sRGB_gAMA_and_cHRM(mPNG, mInfo, PNG_sRGB_INTENT_PERCEPTUAL);
@@ -353,6 +374,9 @@ bool PNGEncoder::encode(const LinearImage& image) {
                 case PixelFormat::sRGB:
                 case PixelFormat::LINEAR_RGB:
                     data = fromLinearToRGB<uint8_t>(image);
+                    break;
+                case PixelFormat::RGB_10_11_11_REV:
+                    data = fromLinearToRGB_10_11_11_REV(image);
                     break;
             }
         }

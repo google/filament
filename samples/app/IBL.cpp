@@ -78,8 +78,8 @@ bool IBL::loadFromKtx(const std::string& prefix) {
     KtxBundle* iblKtx = createKtx(iblPath);
     KtxBundle* skyKtx = createKtx(skyPath);
 
-    mSkyboxTexture = KtxUtility::createTexture(&mEngine, skyKtx, false, true);
-    mTexture = KtxUtility::createTexture(&mEngine, iblKtx, false, true);
+    mSkyboxTexture = KtxUtility::createTexture(&mEngine, skyKtx, false);
+    mTexture = KtxUtility::createTexture(&mEngine, iblKtx, false);
 
     std::istringstream shstring(iblKtx->getMetadata("sh"));
     for (float3& band : mBands) {
@@ -149,7 +149,7 @@ bool IBL::loadCubemapLevel(filament::Texture** texture, const utils::Path& path,
 
     { // this is just a scope to avoid variable name hidding below
         int w, h;
-        std::string faceName = levelPrefix + faceSuffix[0] + ".rgbm";
+        std::string faceName = levelPrefix + faceSuffix[0] + ".rgb32f";
         Path facePath(Path::concat(path, faceName));
         if (!facePath.exists()) {
             std::cerr << "The face " << faceName << " does not exist" << std::endl;
@@ -172,20 +172,19 @@ bool IBL::loadCubemapLevel(filament::Texture** texture, const utils::Path& path,
                     .width((uint32_t)size)
                     .height((uint32_t)size)
                     .levels((uint8_t)numLevels)
-                    .format(Texture::InternalFormat::RGBA8)
-                    .rgbm(true)
+                    .format(Texture::InternalFormat::R11F_G11F_B10F)
                     .sampler(Texture::Sampler::SAMPLER_CUBEMAP)
                     .build(mEngine);
         }
     }
 
-    // RGBM encoding: 4 bytes per pixel
-    const size_t faceSize = size * size * 4;
+    // RGB_10_11_11_REV encoding: 4 bytes per pixel
+    const size_t faceSize = size * size * sizeof(uint32_t);
 
     Texture::FaceOffsets offsets;
     Texture::PixelBufferDescriptor buffer(
             malloc(faceSize * 6), faceSize * 6,
-            Texture::Format::RGBM, Texture::Type::UBYTE,
+            Texture::Format::RGB, Texture::Type::UINT_10F_11F_11F_REV,
             (Texture::PixelBufferDescriptor::Callback) &free);
 
     bool success = true;
@@ -194,7 +193,7 @@ bool IBL::loadCubemapLevel(filament::Texture** texture, const utils::Path& path,
     for (size_t j = 0; j < 6; j++) {
         offsets[j] = faceSize * j;
 
-        std::string faceName = levelPrefix + faceSuffix[j] + ".rgbm";
+        std::string faceName = levelPrefix + faceSuffix[j] + ".rgb32f";
         Path facePath(Path::concat(path, faceName));
         if (!facePath.exists()) {
             std::cerr << "The face " << faceName << " does not exist" << std::endl;
@@ -216,7 +215,9 @@ bool IBL::loadCubemapLevel(filament::Texture** texture, const utils::Path& path,
             success = false;
             break;
         }
-        memcpy(p + offsets[j], data, size_t(w * h * 4));
+
+        memcpy(p + offsets[j], data, w * h * sizeof(uint32_t));
+
         stbi_image_free(data);
     }
 
