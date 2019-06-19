@@ -389,8 +389,10 @@ private:
 
     bool mFlipUV = true;
 
-    bool mMultiBounceAO = true;
-    bool mSpecularAO = true;
+    bool mMultiBounceAO = false;
+    bool mMultiBounceAOSet = false;
+    bool mSpecularAO = false;
+    bool mSpecularAOSet = false;
 };
 
 } // namespace filamat

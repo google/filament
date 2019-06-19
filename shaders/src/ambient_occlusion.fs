@@ -2,15 +2,6 @@
 // Ambient occlusion helpers
 //------------------------------------------------------------------------------
 
-#ifndef TARGET_MOBILE
-#if !defined(SPECULAR_AMBIENT_OCCLUSION)
-    #define SPECULAR_AMBIENT_OCCLUSION
-#endif
-#if !defined(MULTI_BOUNCE_AMBIENT_OCCLUSION)
-    #define MULTI_BOUNCE_AMBIENT_OCCLUSION
-#endif
-#endif
-
 float evaluateSSAO() {
     // TODO: Don't use gl_FragCoord.xy, use the view bounds
     vec2 uv = gl_FragCoord.xy * frameUniforms.resolution.zw;
@@ -21,14 +12,14 @@ float evaluateSSAO() {
  * Computes a specular occlusion term from the ambient occlusion term.
  */
 float computeSpecularAO(float NoV, float visibility, float roughness) {
-#if defined(SPECULAR_AMBIENT_OCCLUSION)
+#if SPECULAR_AMBIENT_OCCLUSION == 1
     return saturate(pow(NoV + visibility, exp2(-16.0 * roughness - 1.0)) - 1.0 + visibility);
 #else
     return 1.0;
 #endif
 }
 
-#if defined(MULTI_BOUNCE_AMBIENT_OCCLUSION)
+#if MULTI_BOUNCE_AMBIENT_OCCLUSION == 1
 /**
  * Returns a color ambient occlusion based on a pre-computed visibility term.
  * The albedo term is meant to be the diffuse color or f0 for the diffuse and
@@ -45,19 +36,19 @@ vec3 gtaoMultiBounce(float visibility, const vec3 albedo) {
 #endif
 
 void multiBounceAO(float visibility, const vec3 albedo, inout vec3 color) {
-#if defined(MULTI_BOUNCE_AMBIENT_OCCLUSION)
+#if MULTI_BOUNCE_AMBIENT_OCCLUSION == 1
     color *= gtaoMultiBounce(visibility, albedo);
 #endif
 }
 
 void multiBounceSpecularAO(float visibility, const vec3 albedo, inout vec3 color) {
-#if defined(MULTI_BOUNCE_AMBIENT_OCCLUSION) && defined(SPECULAR_AMBIENT_OCCLUSION)
+#if MULTI_BOUNCE_AMBIENT_OCCLUSION == 1 && SPECULAR_AMBIENT_OCCLUSION == 1
     color *= gtaoMultiBounce(visibility, albedo);
 #endif
 }
 
 float singleBounceAO(float visibility) {
-#if defined(MULTI_BOUNCE_AMBIENT_OCCLUSION)
+#if MULTI_BOUNCE_AMBIENT_OCCLUSION == 1
     return 1.0;
 #else
     return visibility;
