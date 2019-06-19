@@ -7,6 +7,7 @@ A new header is inserted each time a *tag* is created.
 # Release notes
 
 - Added JNI bindings for the gltfio library.
+- Fix support for parameter arrays in `.mat` files.
 
 ## sceneform-1.9pr3
 

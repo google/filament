@@ -266,6 +266,7 @@ private:
     JsonishValue* parseValue() noexcept;
     JsonishObject* parseMembers() noexcept;
     JsonishArray* parseElements() noexcept;
+    JsonishValue* parseString() noexcept;
 
     const JsonLexeme* consumeLexeme(JsonType type) noexcept;
     const JsonLexeme* peekNextLexemeType() const noexcept;
