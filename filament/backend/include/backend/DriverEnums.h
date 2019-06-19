@@ -281,7 +281,8 @@ enum class PixelDataType : uint8_t {
     INT,
     HALF,
     FLOAT,
-    COMPRESSED
+    COMPRESSED,
+    UINT_10F_11F_11F_REV,
 };
 
 enum class CompressedPixelDataType : uint16_t {

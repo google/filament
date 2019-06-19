@@ -24,10 +24,24 @@
 #include <math/scalar.h>
 #include <math/vec3.h>
 #include <math/vec4.h>
+#include <math/half.h>
 
 #include <memory>
 
 namespace image {
+
+template <typename T>
+uint32_t linearToRGB_10_11_11_REV(const T& linear) {
+    using fp11 = filament::math::fp<0, 5, 6>;
+    using fp10 = filament::math::fp<0, 5, 5>;
+    fp11 r = fp11::fromf(linear[0]);
+    fp11 g = fp11::fromf(linear[1]);
+    fp10 b = fp10::fromf(linear[2]);
+    uint32_t ir = r.bits & 0x7FF;
+    uint32_t ig = g.bits & 0x7FF;
+    uint32_t ib = b.bits & 0x3FF;
+    return (ib << 22) | (ig << 11) | ir;
+}
 
 template <typename T>
 inline filament::math::float4 linearToRGBM(const T& linear) {
@@ -205,6 +219,26 @@ std::unique_ptr<uint8_t[]> fromLinearToRGBM(const LinearImage& image) {
             for (size_t i = 0; i < 4; i++) {
                 d[i] = T(l[i]);
             }
+        }
+    }
+    return dst;
+}
+
+// Creates a 3-channel RGB_10_11_11_REV image from a f32 image.
+// The source image can have three or more channels, but only the first three are honored.
+std::unique_ptr<uint8_t[]> fromLinearToRGB_10_11_11_REV(const LinearImage& image) {
+    using namespace filament::math;
+    size_t w = image.getWidth();
+    size_t h = image.getHeight();
+    UTILS_UNUSED_IN_RELEASE size_t channels = image.getChannels();
+    assert(channels >= 3);
+    std::unique_ptr<uint8_t[]> dst(new uint8_t[w * h * sizeof(uint32_t)]);
+    uint8_t* d = dst.get();
+    for (size_t y = 0; y < h; ++y) {
+        for (size_t x = 0; x < w; ++x, d += sizeof(uint32_t)) {
+            auto src = image.get<float3>((uint32_t)x, (uint32_t)y);
+            uint32_t v = linearToRGB_10_11_11_REV(*src);
+            *reinterpret_cast<uint32_t*>(d) = v;
         }
     }
     return dst;

@@ -151,7 +151,7 @@ namespace KtxUtility {
      * @param srgb Forces the KTX-specified format into an SRGB format if possible
      * @param rgbm Interpret alpha as an HDR multiplier
      */
-    inline Texture* createTexture(Engine* engine, KtxBundle* ktx, bool srgb, bool rgbm) {
+    inline Texture* createTexture(Engine* engine, KtxBundle* ktx, bool srgb, bool rgbm = false) {
         auto freeKtx = [] (void* userdata) {
             KtxBundle* ktx = (KtxBundle*) userdata;
             delete ktx;
@@ -218,6 +218,7 @@ namespace KtxUtility {
             case KtxBundle::UNSIGNED_SHORT: return PixelDataType::USHORT;
             case KtxBundle::HALF_FLOAT: return PixelDataType::HALF;
             case KtxBundle::FLOAT: return PixelDataType::FLOAT;
+            case KtxBundle::R11F_G11F_B10F: return PixelDataType::UINT_10F_11F_11F_REV;
         }
         return (PixelDataType) 0xff;
     }
@@ -230,6 +231,7 @@ namespace KtxUtility {
             case KtxBundle::RGB: return PixelDataFormat::RGB;
             case KtxBundle::RGBA:
                 return rgbm ? PixelDataFormat::RGBM : PixelDataFormat::RGBA;
+            case KtxBundle::R11F_G11F_B10F: return PixelDataFormat::RGB;
         }
         return (PixelDataFormat) 0xff;
     }
