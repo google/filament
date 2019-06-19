@@ -90,3 +90,25 @@ TEST_F(HalfTest, Vec) {
     EXPECT_EQ(f4.xyz, h3);
     EXPECT_EQ(f4.xy, h2);
 }
+
+
+using fp10 = fp<0, 5, 5>;
+using fp11 = fp<0, 5, 6>;
+
+TEST_F(HalfTest, fp10) {
+    // test all exactly representable integers
+    #pragma nounroll
+    for (int i = 0; i <= 64; ++i) {
+        fp10 h = fp10::fromf(float(i));
+        EXPECT_EQ(i, fp10::tof(h));
+    }
+}
+
+TEST_F(HalfTest, fp11) {
+    // test all exactly representable integers
+    #pragma nounroll
+    for (int i = 0; i <= 128; ++i) {
+        fp11 h = fp11::fromf(float(i));
+        EXPECT_EQ(i, fp11::tof(h));
+    }
+}
