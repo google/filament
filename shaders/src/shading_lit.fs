@@ -130,7 +130,8 @@ void getRoughnessPixelParams(const MaterialInputs material, inout PixelParams pi
     // This is a hack but it will do: the base layer must be at least as rough
     // as the clear coat layer to take into account possible diffusion by the
     // top layer
-    perceptualRoughness = max(perceptualRoughness, pixel.clearCoatPerceptualRoughness);
+    float basePerceptualRoughness = max(perceptualRoughness, pixel.clearCoatPerceptualRoughness);
+    perceptualRoughness = mix(perceptualRoughness, basePerceptualRoughness, pixel.clearCoat);
 #endif
 
     // Remaps the roughness to a perceptually linear roughness (roughness^2)
