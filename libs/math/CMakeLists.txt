@@ -35,7 +35,7 @@ install(DIRECTORY ${PUBLIC_HDR_DIR}/math DESTINATION include)
 # ==================================================================================================
 add_executable(test_${TARGET}
         tests/test_fast.cpp
-#        tests/test_half.cpp
+        tests/test_half.cpp
         tests/test_mat.cpp
         tests/test_vec.cpp
         tests/test_quat.cpp
