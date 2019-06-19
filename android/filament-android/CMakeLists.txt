@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.6)
 
 set(FILAMENT_DIR ${FILAMENT_DIST_DIR})
 
