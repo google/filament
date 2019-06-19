@@ -135,7 +135,7 @@ public:
     uint32_t getMaterialId() const noexcept { return mMaterialId++; }
 
     const FMaterial* getDefaultMaterial() const noexcept { return mDefaultMaterial; }
-    const FMaterial* getSkyboxMaterial(bool rgbm) const noexcept;
+    const FMaterial* getSkyboxMaterial() const noexcept;
     const FIndirectLight* getDefaultIndirectLight() const noexcept { return mDefaultIbl; }
 
     backend::Handle<backend::HwProgram> getPostProcessProgramSlow(PostProcessStage stage) const noexcept;
@@ -339,7 +339,7 @@ private:
     Epoch mEngineEpoch;
 
     mutable FMaterial const* mDefaultMaterial = nullptr;
-    mutable FMaterial const* mSkyboxMaterials[2] = { nullptr, nullptr };
+    mutable FMaterial const* mSkyboxMaterial = nullptr;
 
     mutable FTexture* mDefaultIblTexture = nullptr;
     mutable FIndirectLight* mDefaultIbl = nullptr;

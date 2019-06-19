@@ -91,7 +91,7 @@ FSkybox::FSkybox(FEngine& engine, const Builder& builder) noexcept
           mRenderableManager(engine.getRenderableManager()),
           mIntensity(builder->mIntensity) {
 
-    FMaterial const* material = engine.getSkyboxMaterial(mSkyboxTexture->isRgbm());
+    FMaterial const* material = engine.getSkyboxMaterial();
     mSkyboxMaterialInstance = material->createInstance();
 
     TextureSampler sampler(TextureSampler::MagFilter::LINEAR, TextureSampler::WrapMode::REPEAT);
@@ -112,14 +112,7 @@ FSkybox::FSkybox(FEngine& engine, const Builder& builder) noexcept
             .build(engine, mSkybox);
 }
 
-FMaterial const* FSkybox::createMaterial(FEngine& engine, bool rgbm) {
-    // TODO: Merge the two skybox materials into one.
-    if (rgbm) {
-        FMaterial const* material = upcast(Material::Builder().package(
-                MATERIALS_SKYBOXRGBM_DATA, MATERIALS_SKYBOXRGBM_SIZE).build(engine));
-        return material;
-    }
-
+FMaterial const* FSkybox::createMaterial(FEngine& engine) {
     FMaterial const* material = upcast(Material::Builder().package(
             MATERIALS_SKYBOX_DATA, MATERIALS_SKYBOX_SIZE).build(engine));
     return material;

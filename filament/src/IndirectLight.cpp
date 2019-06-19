@@ -110,11 +110,6 @@ IndirectLight* IndirectLight::Builder::build(Engine& engine) {
             return nullptr;
         }
 
-        if (!ASSERT_POSTCONDITION_NON_FATAL( mImpl->mReflectionsMap->isRgbm(),
-                "reflection map must have RGBM enabled")) {
-            return nullptr;
-        }
-
         if (!ASSERT_POSTCONDITION_NON_FATAL(mImpl->mReflectionsMap->getLevels() ==
                 upcast(mImpl->mReflectionsMap)->getMaxLevelCount(),
                 "reflection map must have %u mipmap levels",
@@ -122,8 +117,6 @@ IndirectLight* IndirectLight::Builder::build(Engine& engine) {
             return nullptr;
         }
         if (IBL_INTEGRATION == IBL_INTEGRATION_IMPORTANCE_SAMPLING) {
-            // FIXME: this doesn't work because IBLs are encoded as RGBM with a gamma of 0.5
-            // this produces mipmap levels that are too dark
             mImpl->mReflectionsMap->generateMipmaps(engine);
         }
     }

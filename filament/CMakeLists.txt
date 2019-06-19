@@ -130,7 +130,6 @@ set(MATERIAL_SRCS
         src/materials/blur.mat
         src/materials/mipmapDepth.mat
         src/materials/skybox.mat
-        src/materials/skyboxRGBM.mat
         src/materials/sao.mat
         src/materials/ssao.mat
 )
