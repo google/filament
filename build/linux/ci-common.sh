@@ -18,18 +18,18 @@ if [[ "$KOKORO_BUILD_ID" ]]; then
     if [[ "$FILAMENT_ANDROID_CI_BUILD" ]]; then
         # Update NDK
         yes | $ANDROID_HOME/tools/bin/sdkmanager "ndk-bundle" > /dev/null
-
-        # Install CMake
-        mkdir -p cmake
-        cd cmake
-
-        sudo wget https://github.com/Kitware/CMake/releases/download/v$CMAKE_VERSION/cmake-$CMAKE_VERSION-Linux-x86_64.sh
-        sudo chmod +x ./cmake-$CMAKE_VERSION-Linux-x86_64.sh
-        sudo ./cmake-$CMAKE_VERSION-Linux-x86_64.sh --skip-license > /dev/null
-        sudo update-alternatives --install /usr/bin/cmake cmake `pwd`/bin/cmake 1000 --force
-
-        cd ..
     fi
+
+    # Install CMake
+    mkdir -p cmake
+    cd cmake
+
+    sudo wget https://github.com/Kitware/CMake/releases/download/v$CMAKE_VERSION/cmake-$CMAKE_VERSION-Linux-x86_64.sh
+    sudo chmod +x ./cmake-$CMAKE_VERSION-Linux-x86_64.sh
+    sudo ./cmake-$CMAKE_VERSION-Linux-x86_64.sh --skip-license > /dev/null
+    sudo update-alternatives --install /usr/bin/cmake cmake `pwd`/bin/cmake 1000 --force
+
+    cd ..
 
     # Install clang
     # This may or may not be needed...

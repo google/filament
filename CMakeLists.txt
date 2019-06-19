@@ -1,7 +1,7 @@
 # ==================================================================================================
 # CMake
 # ==================================================================================================
-cmake_minimum_required(VERSION 3.1)
+cmake_minimum_required(VERSION 3.10)
 
 # ==================================================================================================
 # Project declaration
@@ -17,6 +17,8 @@ option(ENABLE_JAVA "Compile Java projects, requires a JDK and the JAVA_HOME env 
 option(USE_EXTERNAL_GLES3 "Experimental: Compile Filament against OpenGL ES 3" OFF)
 
 option(GENERATE_JS_DOCS "Build WebGL documentation and tutorials" OFF)
+
+option(ENABLE_LTO "Enable link-time optimizations if supported by the compiler" OFF)
 
 # ==================================================================================================
 # OS specific
@@ -101,7 +103,7 @@ set(TOOLS ${CMAKE_CURRENT_SOURCE_DIR}/tools)
 # ==================================================================================================
 # Compiler check
 # ==================================================================================================
-set(MIN_CLANG_VERSION "5.0")
+set(MIN_CLANG_VERSION "6.0")
 
 if (CMAKE_C_COMPILER_ID MATCHES "Clang")
     if (CMAKE_C_COMPILER_VERSION VERSION_LESS MIN_CLANG_VERSION)
@@ -122,6 +124,20 @@ endif()
 # Detect use of the clang-cl.exe frontend, which does not support all of clangs normal options
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" AND "${CMAKE_CXX_SIMULATE_ID}" STREQUAL "MSVC")
     set(CLANG_CL true)
+endif()
+
+# ==================================================================================================
+# Link time optimizations (LTO)
+# ==================================================================================================
+if (ENABLE_LTO)
+    include(CheckIPOSupported)
+
+    check_ipo_supported(RESULT IPO_SUPPORT)
+
+    if (IPO_SUPPORT)
+        message(STATUS "LTO support is enabled")
+        set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+    endif()
 endif()
 
 # ==================================================================================================
