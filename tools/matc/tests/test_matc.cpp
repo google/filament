@@ -209,6 +209,10 @@ static std::string jsonMaterialSource(R"(
             {
             "name": "emissiveFactor",
             "type": "float4"
+            },
+            {
+            "name": "weights2d",
+            "type": "float[9]"
             }
         ],
         "requires": [
@@ -220,6 +224,43 @@ static std::string jsonMaterialSource(R"(
     }
 }
 )");
+
+static std::string jsonMaterialSourceNoQuotes(R"({
+
+material: {
+    blending: opaque,
+    name: albertCamus,
+    parameters: [
+        {
+            name: baseColorFactor,
+            type: float4
+        },
+        {
+            name: metallicFactor,
+            type: float
+        },
+        {
+            name: roughnessFactor,
+            type: float
+        },
+        {
+            name: emissiveFactor,
+            type: float4
+        },
+        {
+            name: weights2d,
+            type: float[9]
+        }
+    ],
+    requires: [
+        position,
+        tangents,
+        uv0
+    ],
+    shadingModel: lit
+}
+
+})");
 
 TEST_F(MaterialLexer, JsonMaterialLexingAndParsing) {
     matc::JsonishLexer jsonishLexer;
@@ -234,6 +275,21 @@ TEST_F(MaterialLexer, JsonMaterialLexingAndParsing) {
     auto entries = root->getEntries();
     EXPECT_TRUE(entries.size() == 2);
     EXPECT_TRUE(entries.find("fragment") != entries.end());
+    EXPECT_TRUE(entries.find("material") != entries.end());
+}
+
+TEST_F(MaterialLexer, JsonMaterialLexingAndParsingNoQuotes) {
+    matc::JsonishLexer jsonishLexer;
+    jsonishLexer.lex(jsonMaterialSourceNoQuotes.c_str(), jsonMaterialSourceNoQuotes.size(), 1);
+    auto lexemes = jsonishLexer.getLexemes();
+
+    EXPECT_TRUE(!lexemes.empty());
+
+    matc::JsonishParser jsonishParser(lexemes);
+    std::unique_ptr<matc::JsonishObject> root = jsonishParser.parse();
+
+    auto entries = root->getEntries();
+    EXPECT_TRUE(entries.size() == 1);
     EXPECT_TRUE(entries.find("material") != entries.end());
 }
 

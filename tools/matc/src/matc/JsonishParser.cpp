@@ -239,27 +239,42 @@ JsonishArray* JsonishParser::parseElements() noexcept {
     return array;
 }
 
+// Strings optionally have an array suffix, as in: "float[9]". To handle this we parse the array
+// value (which might be multidimensional), discard the parsed value, and append it to the string.
+JsonishValue* JsonishParser::parseString() noexcept {
+    std::string tmp;
+    const JsonLexeme* strLexeme = consumeLexeme(STRING);
+    const JsonLexeme* arrLexeme = peekNextLexemeType();
+    JsonishValue* arrValue;
+    if (arrLexeme && arrLexeme->getType() == ARRAY_START && (arrValue = parseArray())) {
+        delete arrValue;
+        size_t length = mLexemes[mCursor].getStart() - strLexeme->getStart();
+        tmp = std::string(strLexeme->getStart(), length);
+    } else {
+        tmp = std::string(strLexeme->getStart(), strLexeme->getSize());
+    }
+    return new JsonishString(std::move(tmp));
+}
+
 JsonishValue* JsonishParser::parseValue() noexcept {
     const JsonLexeme* next = peekNextLexemeType();
     if (next == nullptr) {
         return nullptr;
     }
 
-    std::string tmp(next->getStart(), next->getSize());
     switch (next->getType()) {
         case STRING:
-            consumeLexeme(STRING);
-            return new JsonishString(std::move(tmp));
+            return parseString();
         case NUMBER:
             consumeLexeme(NUMBER);
-            return new JsonishNumber(static_cast<float>(atof(tmp.c_str())));
+            return new JsonishNumber(strtof(next->getStart(), nullptr));
         case BLOCK_START:
             return parseObject();
         case ARRAY_START:
             return parseArray();
         case BOOLEAN:
             consumeLexeme(BOOLEAN);
-            return new JsonishBool(tmp == "true");
+            return new JsonishBool(!strncmp(next->getStart(), "true", next->getSize()));
         case NUll:
             consumeLexeme(NUll);
             return new JsonishNull();
