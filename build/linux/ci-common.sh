@@ -16,8 +16,9 @@ if [[ "$KOKORO_BUILD_ID" ]]; then
     sudo ln -s /usr/include/x86_64-linux-gnu/asm /usr/include/asm
 
     if [[ "$FILAMENT_ANDROID_CI_BUILD" ]]; then
-        # Update NDK
+        # Update NDK and CMake
         yes | $ANDROID_HOME/tools/bin/sdkmanager "ndk-bundle" > /dev/null
+        yes | $ANDROID_HOME/tools/bin/sdkmanager "cmake;3.10.2.4988404" > /dev/null
     fi
 
     # Install CMake
