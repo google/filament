@@ -341,6 +341,17 @@ public class Texture {
             return this;
         }
 
+        /**
+         * Sets the usage flags, which is necessary when attaching to {@link RenderTarget}.
+         *
+         * The flags argument much be a combination of {@link Usage} flags.
+         */
+        @NonNull
+        public Builder usage(int flags) {
+            nBuilderUsage(mNativeBuilder, flags);
+            return this;
+        }
+
         @NonNull
         public Texture build(@NonNull Engine engine) {
             long nativeTexture = nBuilderBuild(mNativeBuilder, engine.getNativeObject());
@@ -365,6 +376,15 @@ public class Texture {
                 }
             }
         }
+    }
+
+    public static class Usage {
+        public static final int COLOR_ATTACHMENT = 0x1;
+        public static final int DEPTH_ATTACHMENT = 0x2;
+        public static final int STENCIL_ATTACHMENT = 0x4;
+        public static final int UPLOADABLE = 0x8;
+        public static final int SAMPLEABLE = 0x10;
+        public static final int DEFAULT = UPLOADABLE | SAMPLEABLE;
     }
 
     public static final int BASE_LEVEL = 0;
@@ -496,6 +516,7 @@ public class Texture {
     private static native void nBuilderSampler(long nativeBuilder, int sampler);
     private static native void nBuilderFormat(long nativeBuilder, int format);
     private static native void nBuilderRgbm(long nativeBuilder, boolean enabled);
+    private static native void nBuilderUsage(long nativeBuilder, int flags);
     private static native long nBuilderBuild(long nativeBuilder, long nativeEngine);
 
     private static native int nGetWidth(long nativeTexture, int level);

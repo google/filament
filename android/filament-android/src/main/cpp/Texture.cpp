@@ -113,6 +113,13 @@ Java_com_google_android_filament_Texture_nBuilderRgbm(JNIEnv*, jclass,
     builder->rgbm(enable);
 }
 
+extern "C" JNIEXPORT void JNICALL
+Java_com_google_android_filament_Texture_nBuilderUsage(JNIEnv*, jclass,
+        jlong nativeBuilder, jint flags) {
+    Texture::Builder *builder = (Texture::Builder *) nativeBuilder;
+    builder->usage((Texture::Usage) flags);
+}
+
 extern "C" JNIEXPORT jlong JNICALL
 Java_com_google_android_filament_Texture_nBuilderBuild(JNIEnv*, jclass,
         jlong nativeBuilder, jlong nativeEngine) {
