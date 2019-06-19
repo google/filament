@@ -74,8 +74,8 @@ UniformInterfaceBlock const& UibGenerator::getPerViewUib() noexcept  {
             // user time
             .add("userTime",                1, UniformInterfaceBlock::Type::FLOAT4)
             // ibl max mip level
-            .add("iblMaxMipLevel",          1, UniformInterfaceBlock::Type::UINT)
-            // 3 more uint can go here
+            .add("iblMaxMipLevel",          1, UniformInterfaceBlock::Type::FLOAT2)
+            .add("padding10",               1, UniformInterfaceBlock::Type::FLOAT2)
             // bring size to 1 KiB
             .add("padding1",                16, UniformInterfaceBlock::Type::FLOAT4)
             .build();

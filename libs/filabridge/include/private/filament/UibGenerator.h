@@ -81,8 +81,8 @@ struct PerViewUib { // NOLINT(cppcoreguidelines-pro-type-member-init)
 
     filament::math::float4 userTime;  // time(s), (double)time - (float)time, 0, 0
 
-    uint32_t iblMaxMipLevel;
-    uint32_t padding0[3];
+    filament::math::float2 iblMaxMipLevel; // maxlevel, float(1<<maxlevel)
+    filament::math::float2 padding0;
 
     // bring PerViewUib to 1 KiB
     filament::math::float4 padding1[16];
