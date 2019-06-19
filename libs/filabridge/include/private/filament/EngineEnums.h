@@ -55,9 +55,6 @@ constexpr size_t CONFIG_MAX_LIGHT_INDEX = CONFIG_MAX_LIGHT_COUNT - 1;
 // We store 64 bytes per bone.
 constexpr size_t CONFIG_MAX_BONE_COUNT = 256;
 
-// TODO This should be injected by the engine as a define of the shader.
-static constexpr bool   CONFIG_IBL_RGBM  = true;
-
 } // namespace filament
 
 #endif // TNT_FILAMENT_driver/EngineEnums.h

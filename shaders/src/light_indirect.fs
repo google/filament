@@ -26,11 +26,7 @@
 //------------------------------------------------------------------------------
 
 vec3 decodeDataForIBL(const vec4 data) {
-#if defined(IBL_USE_RGBM)
-    return decodeRGBM(data);
-#else
     return data.rgb;
-#endif
 }
 
 //------------------------------------------------------------------------------

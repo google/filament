@@ -37,7 +37,7 @@ class FSkybox : public Skybox {
 public:
     FSkybox(FEngine& engine, const Builder& builder) noexcept;
 
-    static FMaterial const* createMaterial(FEngine& engine, bool rgbm);
+    static FMaterial const* createMaterial(FEngine& engine);
 
     void terminate(FEngine& engine) noexcept;
 
