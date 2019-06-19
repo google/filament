@@ -103,7 +103,7 @@ set(TOOLS ${CMAKE_CURRENT_SOURCE_DIR}/tools)
 # ==================================================================================================
 # Compiler check
 # ==================================================================================================
-set(MIN_CLANG_VERSION "7.0")
+set(MIN_CLANG_VERSION "6.0")
 
 if (CMAKE_C_COMPILER_ID MATCHES "Clang")
     if (CMAKE_C_COMPILER_VERSION VERSION_LESS MIN_CLANG_VERSION)
