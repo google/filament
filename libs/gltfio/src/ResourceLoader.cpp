@@ -211,11 +211,11 @@ bool ResourceLoader::loadResources(FilamentAsset* asset) {
 
     // Upload data to the GPU.
     const BufferBinding* bindings = asset->getBufferBindings();
-    int tangentsSlot = -1;
+    bool needsTangents = false;
     for (size_t i = 0, n = asset->getBufferBindingCount(); i < n; ++i) {
         auto bb = bindings[i];
         if (bb.vertexBuffer && bb.generateTangents) {
-            tangentsSlot = bb.bufferIndex;
+            needsTangents = true;
         } else if (bb.vertexBuffer && !bb.generateDummyData) {
             const uint8_t* data8 = bb.offset + (const uint8_t*) *bb.data;
             mPool->addPendingUpload();
@@ -255,8 +255,8 @@ bool ResourceLoader::loadResources(FilamentAsset* asset) {
     }
 
     // Compute surface orientation quaternions if necessary.
-    if (tangentsSlot > -1) {
-        computeTangents(fasset, tangentsSlot);
+    if (needsTangents) {
+        computeTangents(fasset);
     }
 
     // Finally, load image files and create Filament Textures.
@@ -350,7 +350,7 @@ bool ResourceLoader::createTextures(details::FFilamentAsset* asset) const {
     return true;
 }
 
-void ResourceLoader::computeTangents(FFilamentAsset* asset, int tangentsSlot) const {
+void ResourceLoader::computeTangents(FFilamentAsset* asset) const {
     // Declare vectors of normals and tangents, which we'll extract & convert from the source.
     std::vector<float3> fp32Normals;
     std::vector<float4> fp32Tangents;
@@ -358,7 +358,7 @@ void ResourceLoader::computeTangents(FFilamentAsset* asset, int tangentsSlot) co
     std::vector<float2> fp32TexCoords;
     std::vector<uint3> ui32Triangles;
 
-    auto computeQuats = [&](const cgltf_primitive& prim) {
+    auto computeQuats = [&](const cgltf_primitive& prim, VertexBuffer* vb, uint8_t slot) {
 
         cgltf_size vertexCount = 0;
 
@@ -367,14 +367,12 @@ void ResourceLoader::computeTangents(FFilamentAsset* asset, int tangentsSlot) co
         const cgltf_accessor* accessors[NUM_ATTRIBUTES] = {};
 
         // Collect accessors for normals, tangents, etc.
-        int slot = 0;
         for (cgltf_size aindex = 0; aindex < prim.attributes_count; aindex++) {
             const cgltf_attribute& attr = prim.attributes[aindex];
             if (attr.index == 0) {
                 accessors[attr.type] = attr.data;
                 vertexCount = attr.data->count;
             }
-
         }
 
         // At a minimum we need normals to generate tangents.
@@ -467,16 +465,30 @@ void ResourceLoader::computeTangents(FFilamentAsset* asset, int tangentsSlot) co
         // Upload quaternions to the GPU.
         auto callback = (VertexBuffer::BufferDescriptor::Callback) free;
         VertexBuffer::BufferDescriptor bd(quats, vertexCount * sizeof(short4), callback);
-        VertexBuffer* vb = asset->mPrimMap.at(&prim);
-        vb->setBufferAt(*mConfig.engine, tangentsSlot, std::move(bd));
+        vb->setBufferAt(*mConfig.engine, slot, std::move(bd));
     };
 
+    // Collect all TANGENT vertex attribute slots that need to be populated.
+    tsl::robin_map<VertexBuffer*, uint8_t> tangents;
+    const BufferBinding* bindings = asset->getBufferBindings();
+    for (size_t i = 0, n = asset->getBufferBindingCount(); i < n; ++i) {
+        auto bb = bindings[i];
+        if (bb.vertexBuffer && bb.generateTangents) {
+            tangents[bb.vertexBuffer] = bb.bufferIndex;
+        }
+    }
+
+    // Go through all cgltf primitives and populate their tangents if requested.
     for (auto iter : asset->mNodeMap) {
         const cgltf_mesh* mesh = iter.first->mesh;
         if (mesh) {
             cgltf_size nprims = mesh->primitives_count;
             for (cgltf_size index = 0; index < nprims; ++index) {
-                computeQuats(mesh->primitives[index]);
+                VertexBuffer* vb = asset->mPrimMap.at(mesh->primitives + index);
+                auto iter = tangents.find(vb);
+                if (iter != tangents.end()) {
+                    computeQuats(mesh->primitives[index], vb, iter->second);
+                }
             }
         }
     }
