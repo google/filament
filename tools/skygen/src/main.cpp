@@ -178,6 +178,7 @@ static void generateSky(LinearImage image) {
         case ImageEncoder::Format::PNG_LINEAR: break;
         case ImageEncoder::Format::HDR: break;
         case ImageEncoder::Format::RGBM: break;
+        case ImageEncoder::Format::RGB_10_11_11_REV: break;
         case ImageEncoder::Format::PSD:
             if (g_compression != "32") {
                 hdrScale = 1.0f / maxValue;
@@ -242,7 +243,7 @@ static void printUsage(const char* name) {
             "       print this message\n\n"
             "   --license\n"
             "       Print copyright and license information\n\n"
-            "   --format=[exr|hdr|rgbm|psd|png|dds], -f [exr|hdr|rgbm|psd|png|dds]\n"
+            "   --format=[exr|hdr|rgbm|rgb32f|psd|png|dds], -f [exr|hdr|rgbm|rgb32f|psd|png|dds]\n"
             "       specify output file format, inferred from file name if omitted\n\n"
             "   --compression=COMPRESSION, -c COMPRESSION\n"
             "       format specific compression:\n"
@@ -327,6 +328,10 @@ static int handleArguments(int argc, char* argv[]) {
                 }
                 if (arg == "rgbm") {
                     g_format = ImageEncoder::Format::RGBM;
+                    g_formatSpecified = true;
+                }
+                if (arg == "rgb32f") {
+                    g_format = ImageEncoder::Format::RGB_10_11_11_REV;
                     g_formatSpecified = true;
                 }
                 if (arg == "exr") {
