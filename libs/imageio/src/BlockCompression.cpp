@@ -366,10 +366,10 @@ static void extract4x4RGBA(uint8_t* dst, const LinearImage& source, uint32_t x0,
             int clamped_x = imin(maxx, x);
             int clamped_y = imin(maxy, y);
             float const* rgba = source.getPixelRef(clamped_x, clamped_y);
-            dst[0] = (uint8_t) (rgba[0] * 255.0f);
-            dst[1] = (uint8_t) (rgba[1] * 255.0f);
-            dst[2] = (uint8_t) (rgba[2] * 255.0f);
-            dst[3] = (uint8_t) (rgba[3] * 255.0f);
+            dst[0] = (uint8_t) std::min(255.0f, std::max(0.0f, (rgba[0] * 255.0f)));
+            dst[1] = (uint8_t) std::min(255.0f, std::max(0.0f, (rgba[1] * 255.0f)));
+            dst[2] = (uint8_t) std::min(255.0f, std::max(0.0f, (rgba[2] * 255.0f)));
+            dst[3] = (uint8_t) std::min(255.0f, std::max(0.0f, (rgba[3] * 255.0f)));
         }
     }
 }
