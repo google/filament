@@ -180,4 +180,3 @@ BENCHMARK_TEMPLATE(BM_func, Scalar, FastPow2dot2);
 BENCHMARK_TEMPLATE(BM_func, Vector, FastPow2dot2);
 
 BENCHMARK_TEMPLATE(BM_func, Scalar, Float16);
-BENCHMARK_TEMPLATE(BM_func, Vector, Float16);
