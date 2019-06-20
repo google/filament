@@ -85,9 +85,9 @@ public:
             case PixelDataFormat::RGB_INTEGER:
                 n = 3;
                 break;
+            case PixelDataFormat::UNUSED: // shouldn't happen (used to be rgbm)
             case PixelDataFormat::RGBA:
             case PixelDataFormat::RGBA_INTEGER:
-            case PixelDataFormat::RGBM:
                 n = 4;
                 break;
         }

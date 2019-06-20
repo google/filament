@@ -45,7 +45,7 @@ namespace KtxUtility {
 
     CompressedPixelDataType toCompressedPixelDataType(const KtxInfo& info);
     PixelDataType toPixelDataType(const KtxInfo& info);
-    PixelDataFormat toPixelDataFormat(const KtxInfo& info, bool rgbm);
+    PixelDataFormat toPixelDataFormat(const KtxInfo& info);
     bool isCompressed(const KtxInfo& info);
     TextureFormat toTextureFormat(const KtxInfo& info);
 
@@ -66,7 +66,7 @@ namespace KtxUtility {
         const uint32_t nmips = ktx.getNumMipLevels();
         const auto cdatatype = toCompressedPixelDataType(ktxinfo);
         const auto datatype = toPixelDataType(ktxinfo);
-        const auto dataformat = toPixelDataFormat(ktxinfo, rgbm);
+        const auto dataformat = toPixelDataFormat(ktxinfo);
 
         auto texformat = toTextureFormat(ktxinfo);
         if (srgb) {
@@ -83,7 +83,6 @@ namespace KtxUtility {
             .height(ktxinfo.pixelHeight)
             .levels(static_cast<uint8_t>(nmips))
             .sampler(ktx.isCubemap() ? Sampler::SAMPLER_CUBEMAP : Sampler::SAMPLER_2D)
-            .rgbm(rgbm)
             .format(texformat)
             .build(*engine);
 
@@ -223,14 +222,13 @@ namespace KtxUtility {
         return (PixelDataType) 0xff;
     }
 
-    inline PixelDataFormat toPixelDataFormat(const KtxInfo& info, bool rgbm) {
+    inline PixelDataFormat toPixelDataFormat(const KtxInfo& info) {
         switch (info.glFormat) {
             case KtxBundle::LUMINANCE:
             case KtxBundle::RED: return PixelDataFormat::R;
             case KtxBundle::RG: return PixelDataFormat::RG;
             case KtxBundle::RGB: return PixelDataFormat::RGB;
-            case KtxBundle::RGBA:
-                return rgbm ? PixelDataFormat::RGBM : PixelDataFormat::RGBA;
+            case KtxBundle::RGBA: return PixelDataFormat::RGBA;
             case KtxBundle::R11F_G11F_B10F: return PixelDataFormat::RGB;
         }
         return (PixelDataFormat) 0xff;

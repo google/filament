@@ -161,16 +161,6 @@ public:
         Builder& usage(Usage usage) noexcept;
 
         /**
-         * Specifies that the alpha channel contains a color multiplier (e.g. for HDR)
-         * The default value is false.
-         *
-         * @param enabled True if the shader should interpret alpha as a color multiplier
-         *
-         * @return This Builder, for chaining calls.
-         */
-        Builder& rgbm(bool enabled) noexcept;
-
-        /**
          * Creates the Texture object and returns a pointer to it.
          *
          * @param engine Reference to the filament::Engine to associate this Texture with.
@@ -234,12 +224,6 @@ public:
      * @return this texture InternalFormat as set by Builder::format().
      */
     InternalFormat getFormat() const noexcept;
-
-    /**
-     * Return if this texture has RGBM data as set by Builder::rgbm().
-     * @return if this texture has RGBM data as set by Builder::rgbm().
-     */
-    bool isRgbm() const noexcept;
 
     /**
      * Specify the image of a 2D texture for a level.

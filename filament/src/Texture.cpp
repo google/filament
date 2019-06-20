@@ -35,7 +35,6 @@ struct Texture::BuilderDetails {
     uint8_t mLevels = 1;
     Sampler mTarget = Sampler::SAMPLER_2D;
     InternalFormat mFormat = InternalFormat::RGBA8;
-    bool mRgbm = false;
     Usage mUsage = Usage::DEFAULT;
 };
 
@@ -78,11 +77,6 @@ Texture::Builder& Texture::Builder::format(Texture::InternalFormat format) noexc
     return *this;
 }
 
-Texture::Builder& Texture::Builder::rgbm(bool enabled) noexcept {
-    mImpl->mRgbm = enabled;
-    return *this;
-}
-
 Texture::Builder& Texture::Builder::usage(Texture::Usage usage) noexcept {
     mImpl->mUsage = Texture::Usage(usage);
     return *this;
@@ -104,7 +98,6 @@ FTexture::FTexture(FEngine& engine, const Builder& builder) {
     mWidth  = static_cast<uint32_t>(builder->mWidth);
     mHeight = static_cast<uint32_t>(builder->mHeight);
     mFormat = builder->mFormat;
-    mRgbm = builder->mRgbm;
     mUsage = builder->mUsage;
     mTarget = builder->mTarget;
     mDepth  = static_cast<uint32_t>(builder->mDepth);
@@ -371,10 +364,6 @@ Texture::Sampler Texture::getTarget() const noexcept {
 
 Texture::InternalFormat Texture::getFormat() const noexcept {
     return upcast(this)->getFormat();
-}
-
-bool Texture::isRgbm() const noexcept {
-    return upcast(this)->isRgbm();
 }
 
 void Texture::setImage(Engine& engine, size_t level,

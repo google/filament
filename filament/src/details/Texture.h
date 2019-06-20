@@ -52,7 +52,6 @@ public:
     Sampler getTarget() const noexcept { return mTarget; }
     InternalFormat getFormat() const noexcept { return mFormat; }
     Usage getUsage() const noexcept { return mUsage; }
-    bool isRgbm() const noexcept { return mRgbm; }
 
     void setImage(FEngine& engine, size_t level,
             uint32_t xoffset, uint32_t yoffset, uint32_t width, uint32_t height,
@@ -87,7 +86,6 @@ private:
     uint32_t mHeight = 1;
     uint32_t mDepth = 1;
     InternalFormat mFormat = InternalFormat::RGBA8;
-    bool mRgbm = false;
     Sampler mTarget = Sampler::SAMPLER_2D;
     uint8_t mLevelCount = 1;
     uint8_t mSampleCount = 1;

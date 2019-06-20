@@ -8,6 +8,9 @@ A new header is inserted each time a *tag* is created.
 
 - Added JNI bindings for the gltfio library.
 - Fix support for parameter arrays in `.mat` files.
+- Added support for `RGB_11_11_10`
+- Removed support for `RGBM` (**warning:** source compatibility breakage)
+- IBL cubemap can now be of any size
 
 ## sceneform-1.9pr3
 

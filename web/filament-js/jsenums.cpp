@@ -238,7 +238,6 @@ enum_<backend::PixelDataFormat>("PixelDataFormat")
     .value("RGB_INTEGER", backend::PixelDataFormat::RGB_INTEGER)
     .value("RGBA", backend::PixelDataFormat::RGBA)
     .value("RGBA_INTEGER", backend::PixelDataFormat::RGBA_INTEGER)
-    .value("RGBM", backend::PixelDataFormat::RGBM)
     .value("DEPTH_COMPONENT", backend::PixelDataFormat::DEPTH_COMPONENT)
     .value("DEPTH_STENCIL", backend::PixelDataFormat::DEPTH_STENCIL)
     .value("ALPHA", backend::PixelDataFormat::ALPHA);
