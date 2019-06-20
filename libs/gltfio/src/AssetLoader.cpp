@@ -408,7 +408,7 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
     VertexBuffer::Builder vbb;
 
     int slot = 0;
-    bool hasUv0 = false, hasUv1 = false, hasVertexColor = false;
+    bool hasUv0 = false, hasUv1 = false, hasVertexColor = false, hasNormals = false;
     uint32_t vertexCount = 0;
     for (cgltf_size aindex = 0; aindex < inPrim->attributes_count; aindex++) {
         const cgltf_attribute& inputAttribute = inPrim->attributes[aindex];
@@ -419,6 +419,7 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
         if (inputAttribute.type == cgltf_attribute_type_normal) {
             vbb.attribute(VertexAttribute::TANGENTS, slot++, VertexBuffer::AttributeType::SHORT4);
             vbb.normalized(VertexAttribute::TANGENTS);
+            hasNormals = true;
             continue;
         }
 
@@ -520,6 +521,10 @@ bool FAssetLoader::createPrimitive(const cgltf_primitive* inPrim, Primitive* out
             vbb.attribute(VertexAttribute::UV1, slot, VertexBuffer::AttributeType::USHORT2);
             slog.w << "Missing UV1 data in " << name << io::endl;
         }
+    }
+
+    if (inPrim->material && !inPrim->material->unlit && !hasNormals) {
+        slog.w << "Missing normals in " << name << io::endl;
     }
 
     if (needsDummyData) {
