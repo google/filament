@@ -882,9 +882,7 @@ class_<TexBuilder>("Texture$Builder")
     .BUILDER_FUNCTION("format", TexBuilder, (TexBuilder* builder, Texture::InternalFormat fmt), {
         return &builder->format(fmt); })
     .BUILDER_FUNCTION("usage", TexBuilder, (TexBuilder* builder, Texture::Usage usage), {
-        return &builder->usage(usage); })
-    .BUILDER_FUNCTION("rgbm", TexBuilder, (TexBuilder* builder, bool rgbm), {
-        return &builder->rgbm(rgbm); });
+        return &builder->usage(usage); });
 
 class_<IndirectLight>("IndirectLight")
     .class_function("Builder", (IblBuilder (*)()) [] { return IblBuilder(); })
@@ -1012,7 +1010,7 @@ class_<KtxBundle>("KtxBundle")
     /// Returns "undefined" if no valid Filament enumerant exists.
     .function("getPixelDataFormat",
             EMBIND_LAMBDA(backend::PixelDataFormat, (KtxBundle* self, bool rgbm), {
-        return KtxUtility::toPixelDataFormat(self->getInfo(), rgbm);
+        return KtxUtility::toPixelDataFormat(self->getInfo());
     }), allow_raw_pointers())
 
     /// getPixelDataType ::method::

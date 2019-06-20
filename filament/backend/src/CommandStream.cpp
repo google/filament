@@ -269,7 +269,6 @@ io::ostream& operator<<(io::ostream& out, PixelDataFormat format) {
         CASE(PixelDataFormat, RGB_INTEGER)
         CASE(PixelDataFormat, RGBA)
         CASE(PixelDataFormat, RGBA_INTEGER)
-        CASE(PixelDataFormat, RGBM)
         CASE(PixelDataFormat, DEPTH_COMPONENT)
         CASE(PixelDataFormat, DEPTH_STENCIL)
         CASE(PixelDataFormat, ALPHA)

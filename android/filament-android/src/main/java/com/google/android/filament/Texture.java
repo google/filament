@@ -62,7 +62,7 @@ public class Texture {
         RG16F, RG16UI, RG16I,
         R11F_G11F_B10F,
         RGBA8, SRGB8_A8, RGBA8_SNORM,
-        UNUSED, // The RGBM InternalFormat has been replaced with a flag (Texture.Builder.rgbm)
+        UNUSED, // used to be rgbm
         RGB10_A2, RGBA8UI, RGBA8I,
         DEPTH32F, DEPTH24_STENCIL8, DEPTH32F_STENCIL8,
 
@@ -120,7 +120,7 @@ public class Texture {
         RGB_INTEGER,
         RGBA,
         RGBA_INTEGER,
-        RGBM,
+        UNUSED,
         DEPTH_COMPONENT,
         DEPTH_STENCIL,
         STENCIL_INDEX,
@@ -254,7 +254,6 @@ public class Texture {
                     break;
                 case RGBA:
                 case RGBA_INTEGER:
-                case RGBM:
                     n = 4;
                     break;
             }
@@ -332,12 +331,6 @@ public class Texture {
         @NonNull
         public Builder format(@NonNull InternalFormat format) {
             nBuilderFormat(mNativeBuilder, format.ordinal());
-            return this;
-        }
-
-        @NonNull
-        public Builder rgbm(boolean enabled) {
-            nBuilderRgbm(mNativeBuilder, enabled);
             return this;
         }
 
@@ -515,7 +508,6 @@ public class Texture {
     private static native void nBuilderLevels(long nativeBuilder, int levels);
     private static native void nBuilderSampler(long nativeBuilder, int sampler);
     private static native void nBuilderFormat(long nativeBuilder, int format);
-    private static native void nBuilderRgbm(long nativeBuilder, boolean enabled);
     private static native void nBuilderUsage(long nativeBuilder, int flags);
     private static native long nBuilderBuild(long nativeBuilder, long nativeEngine);
 
