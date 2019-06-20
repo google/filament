@@ -1300,7 +1300,7 @@ void OpenGLDriver::createRenderTargetR(Handle<HwRenderTarget> rth,
 
 #if !defined(NDEBUG)
     // Only used by assert() checks below
-    auto valueForLevel = [](size_t level, size_t value) {
+    UTILS_UNUSED_IN_RELEASE auto valueForLevel = [](size_t level, size_t value) {
         return std::max(size_t(1), value >> level);
     };
 #endif
