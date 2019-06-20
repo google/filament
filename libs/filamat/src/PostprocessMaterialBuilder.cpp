@@ -40,6 +40,12 @@ using namespace filament::backend;
 
 namespace filamat {
 
+inline void assertSingleTargetApi(MaterialBuilderBase::TargetApi api) {
+    // Assert that a single bit is set.
+    uint8_t bits = (uint8_t) api;
+    assert(bits && !(bits & bits - 1));
+}
+
 Package PostprocessMaterialBuilder::build() {
     prepare();
 
@@ -70,6 +76,8 @@ Package PostprocessMaterialBuilder::build() {
         const ShaderModel shaderModel = ShaderModel(params.shaderModel);
         const TargetApi targetApi = params.targetApi;
         const TargetLanguage targetLanguage = params.targetLanguage;
+
+        assertSingleTargetApi(targetApi);
 
         // Populate a SamplerBindingMap for the sole purpose of finding where the post-process bindings
         // live within the global namespace of samplers.
