@@ -156,7 +156,7 @@ class IblGenerator extends DefaultTask {
                 standardOutput out
                 errorOutput err
                 executable "${cmgenPath}"
-                args('--format=rgbm', '--extract-blur=0.08', "--extract=${outputDir.absolutePath}", file)
+                args('--format=rgb32f', '--extract-blur=0.08', "--extract=${outputDir.absolutePath}", file)
             }
         }
 

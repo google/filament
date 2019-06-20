@@ -136,7 +136,8 @@ public class Texture {
         INT,
         HALF,
         FLOAT,
-        COMPRESSED
+        COMPRESSED,
+        UINT_10F_11F_11F_REV
     }
 
     public static class PixelBufferDescriptor {
@@ -273,6 +274,10 @@ public class Texture {
                 case INT:
                 case FLOAT:
                     bpp *= 4;
+                    break;
+                case UINT_10F_11F_11F_REV:
+                    // Special case, format must be RGB and uses 4 bytes
+                    bpp = 4;
                     break;
             }
 

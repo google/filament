@@ -26,7 +26,7 @@ preBuild.dependsOn generateIbl
 android {
     compileSdkVersion 28
     defaultConfig {
-        applicationId "com.google.android.filament.ibl"
+        applicationId "com.google.android.filament.material_builder"
         minSdkVersion 21
         targetSdkVersion 28
         versionCode 1
