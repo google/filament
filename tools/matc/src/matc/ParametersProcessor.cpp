@@ -441,6 +441,20 @@ static bool processShading(MaterialBuilder& builder, const JsonishValue& value) 
     return true;
 }
 
+static bool processDomain(MaterialBuilder& builder, const JsonishValue& value) {
+    static const std::unordered_map<std::string, MaterialBuilder::MaterialDomain> strToEnum {
+        { "surface",            MaterialBuilder::MaterialDomain::SURFACE },
+        { "postprocess",        MaterialBuilder::MaterialDomain::POST_PROCESS },
+    };
+    auto jsonString = value.toJsonString();
+    if (!isStringValidEnum(strToEnum, jsonString->getString())) {
+        return logEnumIssue("domain", *jsonString, strToEnum);
+    }
+
+    builder.materialDomain(stringToEnum(strToEnum, jsonString->getString()));
+    return true;
+}
+
 static bool processVariantFilter(MaterialBuilder& builder, const JsonishValue& value) {
     // We avoid using an initializer list for this particular map to avoid build errors that are
     // due to static initialization ordering.
@@ -505,6 +519,7 @@ ParametersProcessor::ParametersProcessor() {
     mParameters["flipUV"]                        = { &processFlipUV, Type::BOOL };
     mParameters["multiBounceAmbientOcclusion"]   = { &processMultiBounceAO, Type::BOOL };
     mParameters["specularAmbientOcclusion"]      = { &processSpecularAmbientOcclusion, Type::BOOL };
+    mParameters["domain"]                        = { &processDomain, Type::STRING };
 }
 
 bool ParametersProcessor::process(MaterialBuilder& builder, const JsonishObject& jsonObject) {

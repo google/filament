@@ -193,6 +193,11 @@ MaterialBuilder& MaterialBuilder::require(filament::VertexAttribute attribute) n
     return *this;
 }
 
+MaterialBuilder& MaterialBuilder::materialDomain(MaterialDomain materialDomain) noexcept {
+    mMaterialDomain = materialDomain;
+    return *this;
+}
+
 MaterialBuilder& MaterialBuilder::blending(BlendingMode blending) noexcept {
     mBlendingMode = blending;
     return *this;
@@ -656,6 +661,7 @@ void MaterialBuilder::writeChunks(ChunkContainer& container, MaterialInfo& info)
     container.addSimpleChild<const char*>(ChunkType::MaterialName, mMaterialName.c_str_safe());
     container.addSimpleChild<uint8_t>(ChunkType::MaterialShading, static_cast<uint8_t>(mShading));
     container.addSimpleChild<uint8_t>(ChunkType::MaterialBlendingMode, static_cast<uint8_t>(mBlendingMode));
+    container.addSimpleChild<uint8_t>(ChunkType::MaterialDomain, static_cast<uint8_t>(mMaterialDomain));
 
     if (mBlendingMode == BlendingMode::MASKED) {
         container.addSimpleChild<float>(ChunkType::MaterialMaskThreshold, mMaskThreshold);

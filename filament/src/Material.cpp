@@ -138,6 +138,7 @@ FMaterial::FMaterial(FEngine& engine, const Material::Builder& builder)
     parser->getBlendingMode(&mBlendingMode);
     parser->getInterpolation(&mInterpolation);
     parser->getVertexDomain(&mVertexDomain);
+    parser->getMaterialDomain(&mMaterialDomain);
     parser->getRequiredAttributes(&mRequiredAttributes);
 
     if (mBlendingMode == BlendingMode::MASKED) {
@@ -425,6 +426,10 @@ BlendingMode Material::getBlendingMode() const noexcept {
 
 VertexDomain Material::getVertexDomain() const noexcept {
     return upcast(this)->getVertexDomain();
+}
+
+MaterialDomain Material::getMaterialDomain() const noexcept {
+    return upcast(this)->getMaterialDomain();
 }
 
 CullingMode Material::getCullingMode() const noexcept {
