@@ -226,7 +226,7 @@ std::unique_ptr<uint8_t[]> fromLinearToRGBM(const LinearImage& image) {
 
 // Creates a 3-channel RGB_10_11_11_REV image from a f32 image.
 // The source image can have three or more channels, but only the first three are honored.
-std::unique_ptr<uint8_t[]> fromLinearToRGB_10_11_11_REV(const LinearImage& image) {
+inline std::unique_ptr<uint8_t[]> fromLinearToRGB_10_11_11_REV(const LinearImage& image) {
     using namespace filament::math;
     size_t w = image.getWidth();
     size_t h = image.getHeight();
