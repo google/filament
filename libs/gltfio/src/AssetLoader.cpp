@@ -307,7 +307,7 @@ void FAssetLoader::createRenderable(const cgltf_node* node, Entity entity) {
     for (cgltf_size index = 0; index < nprims; ++index, ++outputPrim, ++inputPrim) {
         RenderableManager::PrimitiveType primType;
         if (!getPrimitiveType(inputPrim->type, &primType)) {
-            slog.e << "Unsupported primitive type." << io::endl;
+            slog.e << "Unsupported primitive type in " << name << io::endl;
         }
 
         // Create a material instance for this primitive or fetch one from the cache.
@@ -353,8 +353,17 @@ void FAssetLoader::createRenderable(const cgltf_node* node, Entity entity) {
        builder.skinning(node->skin->joints_count);
     }
 
+    // Per the spec, glTF models must have valid mix / max annotations for position attributes.
+    // However in practice these can be missing and we should be as robust as other glTF viewers.
+    // If desired, clients can enable the "recomputeBoundingBoxes" feature in ResourceLoader.
+    Box box = Box().set(aabb.min, aabb.max);
+    if (box.isEmpty()) {
+        slog.w << "Missing bounding box in " << name << io::endl;
+        box = Box().set(std::numeric_limits<float>::lowest(), std::numeric_limits<float>::max());
+    }
+
     builder
-        .boundingBox(Box().set(aabb.min, aabb.max))
+        .boundingBox(box)
         .culling(true)
         .castShadows(true)
         .receiveShadows(true)
