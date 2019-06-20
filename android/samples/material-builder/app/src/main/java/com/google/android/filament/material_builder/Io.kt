@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.google.android.filament.ibl
+package com.google.android.filament.material_builder
 
 import java.io.InputStream
 import java.nio.ByteBuffer

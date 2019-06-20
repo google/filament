@@ -706,8 +706,9 @@ filamesh ./assets/models/monkey/monkey.obj monkey.filamesh
 ```
 
 Most samples accept an IBL that must be generated using the `cmgen` tool (`./tools/filamesh/cmgen`
-in your build directory). These sample apps expect a path to a directory containing the RGBM files
-for the IBL. To generate an IBL simply use this command:
+in your build directory). These sample apps expect a path to a directory containing the '.rgb32f'
+files for the IBL (which are PNGs containing `R11F_G11F_B10F` data). To generate an IBL simply use
+this command:
 
 ```
 cmgen -x ./ibls/ my_ibl.exr
@@ -723,7 +724,7 @@ pre-filtered environment map (one file per cubemap face and per mip level), the 
 texture for the skybox and a text file containing the spherical harmonics for indirect diffuse
 lighting.
 
-If you prefer a blurred background, run `cmgen` with this flag: `--extract-blur=0.5`. The numerical
+If you prefer a blurred background, run `cmgen` with this flag: `--extract-blur=0.1`. The numerical
 value is the desired roughness between 0 and 1.
 
 ## Rendering with Filament

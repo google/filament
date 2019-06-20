@@ -107,8 +107,12 @@ public:
             case PixelDataType::UINT:
             case PixelDataType::INT:
             case PixelDataType::FLOAT:
-            case PixelDataType::UINT_10F_11F_11F_REV:
                 bpp *= 4;
+                break;
+            case PixelDataType::UINT_10F_11F_11F_REV:
+                // Special case, format must be RGB and uses 4 bytes
+                assert(format == PixelDataFormat::RGB);
+                bpp = 4;
                 break;
         }
 
