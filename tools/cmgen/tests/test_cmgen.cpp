@@ -95,7 +95,7 @@ static void processEnvMap(string inputPath, string resultPath, string goldenPath
     resultPath = Path::getCurrentExecutable().getParent() + resultPath;
     goldenPath = Path::getCurrentDirectory() + goldenPath;
 
-    launchTool(std::move(inputPath), "-x " + executableFolder);
+    launchTool(std::move(inputPath), "-f rgbm -x " + executableFolder);
 
     std::cout << "Reading result image from " << resultPath << std::endl;
     checkFileExistence(resultPath);
