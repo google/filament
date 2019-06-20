@@ -153,6 +153,7 @@ public:
     MaterialBuilder& name(const char* name) noexcept;
 
     // set the shading model
+    using MaterialDomain = filament::MaterialDomain;
     MaterialBuilder& shading(Shading shading) noexcept;
 
     // set the interpolation mode
@@ -181,13 +182,22 @@ public:
     // depends on the shading model
     MaterialBuilder& require(filament::VertexAttribute attribute) noexcept;
 
+    // specify the domain that this material will operate in
+    MaterialBuilder& materialDomain(MaterialDomain materialDomain) noexcept;
+
     // set the code content of this material
-    // must declare a function "void material(inout MaterialInputs material)"
-    // this function *must* call "prepareMaterial(material)" before it returns
+    // for materials in the SURFACE domain:
+    //     must declare a function "void material(inout MaterialInputs material)"
+    //     this function *must* call "prepareMaterial(material)" before it returns
+    // for materials in the POST_PROCESS domain:
+    //     must declare a function "void postProcess(inout PostProcessInputs postProcess)"
     MaterialBuilder& material(const char* code, size_t line = 0) noexcept;
 
     // set the vertex code content of this material
-    // must declare a function "void materialVertex(inout MaterialVertexInputs material)"
+    // for materials in the SURFACE domain:
+    //     must declare a function "void materialVertex(inout MaterialVertexInputs material)"
+    // for materials in the POST_PROCESS domain:
+    //     must declare a function "void postProcessVertex(inout PostProcessVertexInputs postProcess)"
     MaterialBuilder& materialVertex(const char* code, size_t line = 0) noexcept;
 
     // set blending mode for this material
@@ -363,6 +373,7 @@ private:
     BlendingMode mPostLightingBlendingMode = BlendingMode::TRANSPARENT;
     CullingMode mCullingMode = CullingMode::BACK;
     Shading mShading = Shading::LIT;
+    MaterialDomain mMaterialDomain = MaterialDomain::SURFACE;
     Interpolation mInterpolation = Interpolation::SMOOTH;
     VertexDomain mVertexDomain = VertexDomain::OBJECT;
     TransparencyMode mTransparencyMode = TransparencyMode::DEFAULT;

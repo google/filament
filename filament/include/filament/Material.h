@@ -137,6 +137,9 @@ public:
     //! Returns the vertex domain of this material.
     VertexDomain getVertexDomain() const noexcept;
 
+    //! Returns the material domain of this material.
+    MaterialDomain getMaterialDomain() const noexcept;
+
     //! Returns the culling mode of this material.
     CullingMode getCullingMode() const noexcept;
 

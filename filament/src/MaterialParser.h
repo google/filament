@@ -70,6 +70,7 @@ public:
     bool getDepthTest(bool* value) const noexcept;
     bool getInterpolation(Interpolation* value) const noexcept;
     bool getVertexDomain(VertexDomain* value) const noexcept;
+    bool getMaterialDomain(MaterialDomain* domain) const noexcept;
 
     bool getShading(Shading*) const noexcept;
     bool getBlendingMode(BlendingMode*) const noexcept;

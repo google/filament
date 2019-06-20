@@ -114,6 +114,7 @@ link_libraries(math utils filament cgltf stb geometry gltfio_resources)
 add_library(gltfio_core STATIC ${PUBLIC_HDRS} ${SRCS})
 
 target_include_directories(gltfio_core PUBLIC ${PUBLIC_HDR_DIR})
+target_compile_options(gltfio_core PRIVATE $<$<PLATFORM_ID:Linux>:-fPIC>)
 
 if (NOT WEBGL AND NOT ANDROID AND NOT IOS)
 
@@ -141,6 +142,7 @@ if (NOT WEBGL AND NOT ANDROID AND NOT IOS)
     else()
         target_compile_options(${TARGET} PRIVATE $<$<CONFIG:Release>:-ffast-math>)
     endif()
+    target_compile_options(${TARGET} PRIVATE $<$<PLATFORM_ID:Linux>:-fPIC>)
 
     # ==================================================================================================
     # Installation
