@@ -80,7 +80,7 @@ public:
 
 private:
     bool createTextures(details::FFilamentAsset* asset) const;
-    void computeTangents(details::FFilamentAsset* asset, int tangentsSlot) const;
+    void computeTangents(details::FFilamentAsset* asset) const;
     void normalizeSkinningWeights(details::FFilamentAsset* asset) const;
     void updateBoundingBoxes(details::FFilamentAsset* asset) const;
     details::AssetPool* mPool;
