@@ -56,6 +56,9 @@ cgltf_size cgltf_write(const cgltf_options* options, char* buffer, cgltf_size si
 #ifdef CGLTF_WRITE_IMPLEMENTATION
 
 #include <stdio.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
 
 #define CGLTF_EXTENSION_FLAG_TEXTURE_TRANSFORM   (1 << 0)
 #define CGLTF_EXTENSION_FLAG_MATERIALS_UNLIT     (1 << 1)
@@ -181,8 +184,18 @@ static void cgltf_write_floatprop(cgltf_write_context* context, const char* labe
 	if (val != def)
 	{
 		cgltf_write_indent(context);
-		CGLTF_SPRINTF("\"%s\": %g", label, val);
+		CGLTF_SPRINTF("\"%s\": ", label);
+		CGLTF_SPRINTF("%g", val);
 		context->needs_comma = 1;
+
+		if (context->cursor)
+		{
+			char *decimal_comma = strchr(context->cursor - context->tmp, ',');
+			if (decimal_comma)
+			{
+				*decimal_comma = '.';
+			}
+		}
 	}
 }
 
@@ -816,7 +829,7 @@ cgltf_size cgltf_write(const cgltf_options* options, char* buffer, cgltf_size si
 
 /* cgltf is distributed under MIT license:
  *
- * Copyright (c) 2018 Johannes Kuhlmann
+ * Copyright (c) 2019 Philip Rideout
 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
