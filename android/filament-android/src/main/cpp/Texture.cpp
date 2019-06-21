@@ -329,6 +329,48 @@ Java_com_google_android_filament_Texture_nIsStreamValidForTexture(JNIEnv*, jclas
     return (jboolean) (texture->getTarget() == SamplerType::SAMPLER_EXTERNAL);
 }
 
+extern "C" JNIEXPORT jint JNICALL
+Java_com_google_android_filament_Texture_nGeneratePrefilterMipmap(JNIEnv *env, jclass,
+        jlong nativeTexture, jlong nativeEngine, jint width, jint height,
+        jobject storage, jint remaining, jint left,
+        jint top, jint type, jint alignment, jint stride, jint format,
+        jintArray faceOffsetsInBytes_, jobject handler, jobject runnable, jint sampleCount,
+        jboolean mirror) {
+
+    Texture *texture = (Texture *) nativeTexture;
+    Engine *engine = (Engine *) nativeEngine;
+
+    jint *faceOffsetsInBytes = env->GetIntArrayElements(faceOffsetsInBytes_, NULL);
+    Texture::FaceOffsets faceOffsets;
+    std::copy_n(faceOffsetsInBytes, 6, faceOffsets.offsets);
+    env->ReleaseIntArrayElements(faceOffsetsInBytes_, faceOffsetsInBytes, JNI_ABORT);
+
+    stride = stride ? stride : width;
+    size_t sizeInBytes = 6 *
+                         Texture::computeTextureDataSize((Texture::Format) format, (Texture::Type) type,
+                                 (size_t) stride, (size_t) height, (size_t) alignment);
+
+    AutoBuffer nioBuffer(env, storage, 0);
+    if (sizeInBytes > (remaining << nioBuffer.getShift())) {
+        // BufferOverflowException
+        return -1;
+    }
+
+    void *buffer = nioBuffer.getData();
+    auto *callback = JniBufferCallback::make(engine, env, handler, runnable, std::move(nioBuffer));
+
+    Texture::PixelBufferDescriptor desc(buffer, sizeInBytes, (backend::PixelDataFormat) format,
+            (backend::PixelDataType) type, (uint8_t) alignment, (uint32_t)0, (uint32_t)0,
+            (uint32_t) stride, &JniBufferCallback::invoke, callback);
+
+    Texture::PrefilterOptions options;
+    options.sampleCount = sampleCount;
+    options.mirror = mirror;
+    texture->generatePrefilterMipmap(*engine, std::move(desc), faceOffsets, &options);
+
+    return 0;
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // ANDROID SPECIFIC BITS
 ////////////////////////////////////////////////////////////////////////////////////////////////////

@@ -22,6 +22,7 @@
 #include <backend/Handle.h>
 
 #include <filament/IndirectLight.h>
+#include <filament/Texture.h>
 
 #include <utils/compiler.h>
 

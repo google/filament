@@ -121,6 +121,7 @@ bool IBL::loadFromDirectory(const utils::Path& path) {
     // Read mip-mapped cubemap
     const std::string prefix = "m";
     if (!loadCubemapLevel(&mTexture, path, 0, prefix + "0_")) return false;
+
     size_t numLevels = mTexture->getLevels();
     for (size_t i = 1; i<numLevels; i++) {
         const std::string levelPrefix = prefix + std::to_string(i) + "_";
@@ -142,6 +143,19 @@ bool IBL::loadFromDirectory(const utils::Path& path) {
 
 bool IBL::loadCubemapLevel(filament::Texture** texture, const utils::Path& path, size_t level,
         std::string const& levelPrefix) const {
+    Texture::FaceOffsets offsets;
+    Texture::PixelBufferDescriptor buffer;
+    bool success = loadCubemapLevel(texture, &buffer, &offsets, path, level, levelPrefix);
+    if (!success) return false;
+    (*texture)->setImage(mEngine, level, std::move(buffer), offsets);
+    return true;
+}
+
+bool IBL::loadCubemapLevel(
+        filament::Texture** texture,
+        Texture::PixelBufferDescriptor* outBuffer,
+        Texture::FaceOffsets* outOffsets,
+        const utils::Path& path, size_t level, std::string const& levelPrefix) const {
     static const char* faceSuffix[6] = { "px", "nx", "py", "ny", "pz", "nz" };
 
     size_t size = 0;
@@ -223,7 +237,8 @@ bool IBL::loadCubemapLevel(filament::Texture** texture, const utils::Path& path,
 
     if (!success) return false;
 
-    (*texture)->setImage(mEngine, level, std::move(buffer), offsets);
+    *outBuffer = std::move(buffer);
+    *outOffsets = offsets;
 
     return true;
 }

@@ -17,15 +17,16 @@
 #ifndef IBL_CUBEMAPIBL_H
 #define IBL_CUBEMAPIBL_H
 
-namespace utils {
-class JobSystem;
-} // namespace utils
 
 #include <functional>
 #include <vector>
 
 #include <stdint.h>
 #include <stddef.h>
+
+namespace utils {
+class JobSystem;
+} // namespace utils
 
 namespace filament {
 namespace ibl {

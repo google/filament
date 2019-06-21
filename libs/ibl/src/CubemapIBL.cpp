@@ -300,8 +300,8 @@ void CubemapIBL::roughnessFilter(JobSystem& js, Cubemap& dst, const std::vector<
     if (linearRoughness == 0) {
         CubemapUtils::process<CubemapUtils::EmptyState>(dst, js, [&]
                 (CubemapUtils::EmptyState&, size_t y, Cubemap::Face f, Cubemap::Texel* data, size_t dim) {
-                    size_t p = progress.fetch_add(1, std::memory_order_relaxed) + 1;
                     if (updater) {
+                        size_t p = progress.fetch_add(1, std::memory_order_relaxed) + 1;
                         updater(0, (float)p / (dim * 6));
                     }
                     const Cubemap& cm = levels[0];
@@ -395,8 +395,8 @@ void CubemapIBL::roughnessFilter(JobSystem& js, Cubemap& dst, const std::vector<
             [&](CubemapUtils::EmptyState&, size_t y,
                     Cubemap::Face f, Cubemap::Texel* data, size_t dim) {
 
-        size_t p = progress.fetch_add(1, std::memory_order_relaxed) + 1;
         if (updater) {
+            size_t p = progress.fetch_add(1, std::memory_order_relaxed) + 1;
             updater(0, (float)p / (dim * 6));
         }
 
@@ -563,8 +563,8 @@ void CubemapIBL::diffuseIrradiance(JobSystem& js, Cubemap& dst, const std::vecto
             [&](CubemapUtils::EmptyState&, size_t y,
                     Cubemap::Face f, Cubemap::Texel* data, size_t dim) {
 
-        size_t p = progress.fetch_add(1, std::memory_order_relaxed) + 1;
         if (updater) {
+            size_t p = progress.fetch_add(1, std::memory_order_relaxed) + 1;
             updater(0, (float)p / (dim * 6));
         }
 

@@ -92,6 +92,7 @@ class UTILS_PUBLIC IndirectLight : public FilamentAPI {
     struct BuilderDetails;
 
 public:
+
     //! Use Builder to construct an IndirectLight object instance
     class Builder : public BuilderBase<BuilderDetails> {
         friend struct BuilderDetails;

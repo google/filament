@@ -274,6 +274,7 @@ target_link_libraries(${TARGET} PUBLIC geometry) # TODO: remove this dependency 
 target_link_libraries(${TARGET} PUBLIC filaflat)
 target_link_libraries(${TARGET} PUBLIC filabridge)
 target_link_libraries(${TARGET} PUBLIC image_headers)
+target_link_libraries(${TARGET} PUBLIC ibl)
 
 # Android, iOS, and WebGL do not use bluegl.
 if(NOT IOS AND NOT ANDROID AND NOT WEBGL)

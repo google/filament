@@ -60,6 +60,10 @@ public:
     void setImage(FEngine& engine, size_t level,
             PixelBufferDescriptor&& buffer, const FaceOffsets& faceOffsets) const noexcept;
 
+    void generatePrefilterMipmap(FEngine& engine,
+            PixelBufferDescriptor&& buffer, const FaceOffsets& faceOffsets,
+            PrefilterOptions const* options);
+
     void setExternalImage(FEngine& engine, void* image) noexcept;
     void setExternalStream(FEngine& engine, FStream* stream) noexcept;
 
@@ -68,6 +72,7 @@ public:
     void setSampleCount(size_t sampleCount) noexcept { mSampleCount = uint8_t(sampleCount); }
     size_t getSampleCount() const noexcept { return mSampleCount; }
     bool isMultisample() const noexcept { return mSampleCount > 1; }
+    bool isCompressed() const noexcept { return backend::isCompressedFormat(mFormat); }
 
     bool isCubemap() const noexcept { return mTarget == Sampler::SAMPLER_CUBEMAP; }
 

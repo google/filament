@@ -41,6 +41,8 @@ public:
 
     size_t getWidth() const { return mWidth; }
 
+    size_t getStride() const { return mBpr / getBytesPerPixel(); }
+
     size_t getHeight() const { return mHeight; }
 
     size_t getBytesPerRow() const { return mBpr; }
@@ -49,7 +51,11 @@ public:
 
     void* getData() const { return mData; }
 
+    size_t getSize() const { return mBpr * mHeight; }
+
     void* getPixelRef(size_t x, size_t y) const;
+
+    std::unique_ptr<uint8_t[]> detach() { return std::move(mOwnedData); }
 
 private:
     size_t mBpr = 0;

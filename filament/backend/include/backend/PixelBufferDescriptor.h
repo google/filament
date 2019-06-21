@@ -36,6 +36,8 @@ public:
     using PixelDataFormat = backend::PixelDataFormat;
     using PixelDataType = backend::PixelDataType;
 
+    PixelBufferDescriptor() = default;
+
     PixelBufferDescriptor(void const* buffer, size_t size,
             PixelDataFormat format, PixelDataType type, uint8_t alignment = 1,
             uint32_t left = 0, uint32_t top = 0, uint32_t stride = 0,

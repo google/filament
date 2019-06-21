@@ -241,7 +241,7 @@ void CubemapUtils::downsampleCubemapLevelBoxFilter(JobSystem& js, Cubemap& dst, 
 // ------------------------------------------------------------------------------------------------
 
 void CubemapUtils::setFaceFromCross(Cubemap& cm, Cubemap::Face face, const Image& image) {
-    size_t dim = cm.getDimensions() + 2; // 2 extra per image, for seemlessness
+    size_t dim = cm.getDimensions() + 2; // 2 extra per image, for seamlessness
     size_t x = 0;
     size_t y = 0;
     switch (face) {
@@ -322,12 +322,12 @@ void CubemapUtils::mirrorCubemap(JobSystem& js, Cubemap& dst, const Cubemap& src
 
 void CubemapUtils::generateUVGrid(JobSystem& js, Cubemap& cml, size_t gridFrequencyX, size_t gridFrequencyY) {
     Cubemap::Texel const colors[6] = {
-            { 1, 0, 0 }, // -X /  l  - red
             { 1, 1, 1 }, // +X /  r  - white
-            { 0, 1, 0 }, // -Y /  b  - green
+            { 1, 0, 0 }, // -X /  l  - red
             { 0, 0, 1 }, // +Y /  t  - blue
-            { 1, 0, 1 }, // -Z / bk - magenta
+            { 0, 1, 0 }, // -Y /  b  - green
             { 1, 1, 0 }, // +z / fr - yellow
+            { 1, 0, 1 }, // -Z / bk - magenta
     };
     const float uvGridHDRIntensity = 5.0f;
     size_t gridSizeX = cml.getDimensions() / gridFrequencyX;

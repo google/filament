@@ -511,6 +511,11 @@ inline constexpr TextureUsage operator^(TextureUsage lhs, TextureUsage rhs) noex
     return TextureUsage(uint8_t(lhs) ^ uint8_t(rhs));
 }
 
+//! returns whether this format a compressed format
+static constexpr bool isCompressedFormat(TextureFormat format) noexcept {
+    return format >= TextureFormat::EAC_R11;
+}
+
 //! returns whether this format is an ETC2 compressed format
 static constexpr bool isETC2Compression(TextureFormat format) noexcept {
     return format >= TextureFormat::EAC_R11 && format <= TextureFormat::ETC2_EAC_SRGBA8;

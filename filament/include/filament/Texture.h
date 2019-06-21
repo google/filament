@@ -85,6 +85,20 @@ public:
     static size_t computeTextureDataSize(Texture::Format format, Texture::Type type,
             size_t stride, size_t height, size_t alignment) noexcept;
 
+
+    /**
+     * Options for enviornment prefiltering into reflection map
+     *
+     * @see generatePrefilterMipmap()
+     */
+    struct UTILS_PUBLIC PrefilterOptions {
+        uint16_t sampleCount = 8;   //!< sample count used for filtering
+        bool mirror = true;         //!< whether the environment must be mirrored
+    private:
+        UTILS_UNUSED uintptr_t reserved[3] = {};
+    };
+
+
     //! Use Builder to construct a Texture object instance
     class Builder : public BuilderBase<BuilderDetails> {
         friend struct BuilderDetails;
@@ -353,6 +367,42 @@ public:
      * @attention This Texture instance must NOT use Sampler::SAMPLER_CUBEMAP or it has no effect
      */
     void generateMipmaps(Engine& engine) const noexcept;
+
+    /**
+     * Creates a reflection map from an environment map.
+     *
+     * This is a utility function that replaces calls to Texture::setImage().
+     * The provided environment map is processed and all mipmap levels are populated. The
+     * processing is similar to the offline tool `cmgen` as a lower quality setting.
+     *
+     * This function is intended to be used when the environment cannot be processed offline,
+     * for instance if it's generated at runtime.
+     *
+     * The source data must obey to some constraints:
+     *   - the data type must be PixelDataFormat::RGB
+     *   - the data format must be one of
+     *          - PixelDataType::FLOAT
+     *          - PixelDataType::HALF
+     *
+     * The current texture must be a cubemap
+     *
+     * The reflections cubemap's internal format cannot be a compressed format.
+     *
+     * The reflections cubemap's dimension must be a power-of-two.
+     *
+     * @warning This operation is computationally intensive, especially with large environments.
+     *
+     * @param engine        Reference to the filament::Engine to associate this IndirectLight with.
+     * @param buffer        Client-side buffer containing the images to set.
+     * @param faceOffsets   Offsets in bytes into \p buffer for all six images. The offsets
+     *                      are specified in the following order: +x, -x, +y, -y, +z, -z
+     *
+     * @exception utils::PreConditionPanic if the source data constraints are not respected.
+     *
+     */
+    void generatePrefilterMipmap(Engine& engine,
+            PixelBufferDescriptor&& buffer, const FaceOffsets& faceOffsets,
+            PrefilterOptions const* options = nullptr);
 };
 
 } // namespace filament

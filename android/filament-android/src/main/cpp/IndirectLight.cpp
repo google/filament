@@ -17,6 +17,9 @@
 #include <jni.h>
 
 #include <filament/IndirectLight.h>
+#include <filament/Texture.h>
+#include <common/NioUtils.h>
+#include <common/CallbackUtils.h>
 
 using namespace filament;
 
