@@ -26,6 +26,12 @@ struct MaterialVertexInputs {
     vec4 worldPosition;
 };
 
+// Workaround for a driver bug on ARM Bifrost GPUs. Assigning a structure member
+// (directly or inside an expression) to an invariant causes a driver crash.
+vec4 getWorldPosition(const MaterialVertexInputs material) {
+    return material.worldPosition;
+}
+
 void initMaterialVertex(out MaterialVertexInputs material) {
 #ifdef HAS_ATTRIBUTE_COLOR
     material.color = mesh_color;
