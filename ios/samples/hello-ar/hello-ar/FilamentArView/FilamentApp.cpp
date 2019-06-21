@@ -183,7 +183,11 @@ FilamentApp::~FilamentApp() {
 }
 
 void FilamentApp::setupFilament() {
+#if FILAMENT_APP_USE_OPENGL
+    engine = Engine::create(filament::Engine::Backend::OPENGL);
+#elif FILAMENT_APP_USE_METAL
     engine = Engine::create(filament::Engine::Backend::METAL);
+#endif
     swapChain = engine->createSwapChain(nativeLayer);
     renderer = engine->createRenderer();
     scene = engine->createScene();

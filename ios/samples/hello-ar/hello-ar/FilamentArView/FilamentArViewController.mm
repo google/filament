@@ -46,8 +46,15 @@
     [super viewDidLoad];
 
     CGRect nativeBounds = [[UIScreen mainScreen] nativeBounds];
-    app = new FilamentApp((__bridge void*) self.view.layer, nativeBounds.size.width,
-            nativeBounds.size.height);
+    uint32_t nativeWidth = (uint32_t) nativeBounds.size.width;
+    uint32_t nativeHeight = (uint32_t) nativeBounds.size.height;
+#if FILAMENT_APP_USE_OPENGL
+    // Flip width and height; OpenGL layers are oriented "sideways"
+    const uint32_t tmp = nativeWidth;
+    nativeWidth = nativeHeight;
+    nativeHeight = tmp;
+#endif
+    app = new FilamentApp((__bridge void*) self.view.layer, nativeWidth, nativeHeight);
 
     self.session = [ARSession new];
     self.session.delegate = self;

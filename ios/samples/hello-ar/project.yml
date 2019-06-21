@@ -6,9 +6,6 @@ targets:
     hello-ar:
         templates:
             - FilamentApp
-        scheme:
-            configVariants:REPLACE:
-                - Metal
         dependencies:
             - sdk: ARKit.framework
         settings:
