@@ -23,6 +23,9 @@
 
 #include <utils/Panic.h>
 
+#include <backend/DriverEnums.h>
+#include <filament/IndirectLight.h>
+
 #define IBL_INTEGRATION_PREFILTERED_CUBEMAP         0
 #define IBL_INTEGRATION_IMPORTANCE_SAMPLING         1
 #define IBL_INTEGRATION                             IBL_INTEGRATION_PREFILTERED_CUBEMAP

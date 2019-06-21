@@ -92,7 +92,7 @@ public class IndirectLight {
         }
 
         @NonNull
-        public Builder rotation(@NonNull @Size(min = 9) float rotation[]) {
+        public Builder rotation(@NonNull @Size(min = 9) float[] rotation) {
             nRotation(mNativeBuilder,
                     rotation[0], rotation[1], rotation[2],
                     rotation[3], rotation[4], rotation[5],
@@ -132,7 +132,7 @@ public class IndirectLight {
         return nGetIntensity(getNativeObject());
     }
 
-    public void setRotation(@NonNull @Size(min = 9) float rotation[]) {
+    public void setRotation(@NonNull @Size(min = 9) float[] rotation) {
         nSetRotation(getNativeObject(),
                 rotation[0], rotation[1], rotation[2],
                 rotation[3], rotation[4], rotation[5],
@@ -164,5 +164,4 @@ public class IndirectLight {
     private static native void nSetIntensity(long nativeIndirectLight, float intensity);
     private static native float nGetIntensity(long nativeIndirectLight);
     private static native void nSetRotation(long nativeIndirectLight, float v0, float v1, float v2, float v3, float v4, float v5, float v6, float v7, float v8);
-
 }

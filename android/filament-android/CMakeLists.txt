@@ -14,6 +14,10 @@ add_library(utils STATIC IMPORTED)
 set_target_properties(utils PROPERTIES IMPORTED_LOCATION
         ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libutils.a)
 
+add_library(ibl STATIC IMPORTED)
+set_target_properties(ibl PROPERTIES IMPORTED_LOCATION
+        ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libibl.a)
+
 add_library(filaflat STATIC IMPORTED)
 set_target_properties(filaflat PROPERTIES IMPORTED_LOCATION
         ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libfilaflat.a)
@@ -86,6 +90,7 @@ target_link_libraries(filament-jni
       filaflat
       filabridge
       geometry
+      ibl
       utils
       log
       GLESv3

@@ -287,6 +287,11 @@ public class Texture {
         }
     }
 
+    public static class PrefilterOptions {
+        public int sampleCount = 8;
+        public boolean mirror = true;
+    }
+
     public static boolean isTextureFormatSupported(@NonNull Engine engine,
             @NonNull InternalFormat format) {
         return nIsTextureFormatSupported(engine.getNativeObject(), format.ordinal());
@@ -490,6 +495,33 @@ public class Texture {
         nGenerateMipmaps(getNativeObject(), engine.getNativeObject());
     }
 
+    public void generatePrefilterMipmap(@NonNull Engine engine,
+        @NonNull PixelBufferDescriptor buffer, @NonNull @Size(min = 6) int[] faceOffsetsInBytes,
+            PrefilterOptions options) {
+
+        int width = getWidth(0);
+        int height= getHeight(0);
+        int sampleCount = 8;
+        boolean mirror = true;
+        if (options != null) {
+            sampleCount = options.sampleCount;
+            mirror = options.mirror;
+        }
+
+        int result = nGeneratePrefilterMipmap(getNativeObject(), engine.getNativeObject(),
+            width, height,
+            buffer.storage, buffer.storage.remaining(),
+            buffer.left, buffer.top, buffer.type.ordinal(), buffer.alignment,
+            buffer.stride, buffer.format.ordinal(), faceOffsetsInBytes,
+            buffer.handler, buffer.callback,
+            sampleCount, mirror);
+
+        if (result < 0) {
+            throw new BufferOverflowException();
+        }
+    }
+
+
     @UsedByReflection("TextureHelper.java")
     long getNativeObject() {
         if (mNativeObject == 0) {
@@ -554,4 +586,9 @@ public class Texture {
     private static native void nGenerateMipmaps(long nativeTexture, long nativeEngine);
 
     private static native boolean nIsStreamValidForTexture(long nativeTexture, long nativeStream);
+
+    private static native int nGeneratePrefilterMipmap(long nativeIndirectLight, long nativeEngine,
+        int width, int height, Buffer storage, int remaining, int left, int top,
+        int type, int alignment, int stride, int format, int[] faceOffsetsInBytes,
+        Object handler, Runnable callback, int sampleCount, boolean mirror);
 }

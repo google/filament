@@ -27,7 +27,6 @@
 
 #include <algorithm>
 
-
 namespace filament {
 namespace ibl {
 
@@ -60,12 +59,12 @@ public:
 
 
     enum class Face : uint8_t {
-        NX = 0,     // left            +----+
-        PX,         // right           | PY |
-        NY,         // bottom     +----+----+----+----+
-        PY,         // top        | NX | PZ | PX | NZ |
-        NZ,         // back       +----+----+----+----+
-        PZ          // front           | NY |
+        PX = 0,     // left            +----+
+        NX,         // right           | PY |
+        PY,         // bottom     +----+----+----+----+
+        NY,         // top        | NX | PZ | PX | NZ |
+        PZ,         // back       +----+----+----+----+
+        NZ          // front           | NY |
                     //                 +----+
     };
 
