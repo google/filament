@@ -9,7 +9,7 @@ void main() {
     MaterialVertexInputs material;
     initMaterialVertex(material);
     materialVertex(material);
-    gl_Position = getClipFromWorldMatrix() * material.worldPosition;
+    gl_Position = getClipFromWorldMatrix() * getWorldPosition(material);
 #endif
 
 #if defined(TARGET_VULKAN_ENVIRONMENT)
