@@ -196,6 +196,14 @@ bool ResourceLoader::loadResources(FilamentAsset* asset) {
 
     #endif
 
+    #ifndef NDEBUG
+    result = cgltf_validate(gltf);
+    if (result != cgltf_result_success) {
+        slog.e << "Failed cgltf validation." << io::endl;
+        return false;
+    }
+    #endif
+
     // To be robust against the glTF conformance suite, we optionally ensure that skinning weights
     // sum to 1.0 at every vertex. Note that if the same weights buffer is shared in multiple
     // places, this will needlessly repeat the work. In the future we would like to remove this

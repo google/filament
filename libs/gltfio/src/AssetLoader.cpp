@@ -195,6 +195,14 @@ FilamentAsset* FAssetLoader::createAssetFromBinary(const uint8_t* bytes, uint32_
 }
 
 void FAssetLoader::createAsset(const cgltf_data* srcAsset) {
+    for (cgltf_size i = 0; i < srcAsset->extensions_required_count; i++) {
+        if (!strcmp(srcAsset->extensions_required[i], "KHR_draco_mesh_compression")) {
+            slog.e << "KHR_draco_mesh_compression is not supported." << io::endl;
+            mResult = nullptr;
+            return;
+        }
+    }
+
     mResult = new FFilamentAsset(mEngine);
     mResult->mSourceAsset = srcAsset;
     mResult->acquireSourceAsset();
