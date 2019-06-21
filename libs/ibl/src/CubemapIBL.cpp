@@ -285,7 +285,7 @@ static double UTILS_UNUSED VisibilityAshikhmin(double NoV, double NoL, double /*
  *
  */
 
-void CubemapIBL::roughnessFilter(Cubemap& dst, const std::vector<Cubemap>& levels,
+void CubemapIBL::roughnessFilter(JobSystem& js, Cubemap& dst, const std::vector<Cubemap>& levels,
         double linearRoughness, size_t maxNumSamples, CubemapIBL::Progress updater)
 {
     const float numSamples = maxNumSamples;
@@ -298,7 +298,7 @@ void CubemapIBL::roughnessFilter(Cubemap& dst, const std::vector<Cubemap>& level
     std::atomic_uint progress = {0};
 
     if (linearRoughness == 0) {
-        CubemapUtils::process<CubemapUtils::EmptyState>(dst, [&]
+        CubemapUtils::process<CubemapUtils::EmptyState>(dst, js, [&]
                 (CubemapUtils::EmptyState&, size_t y, Cubemap::Face f, Cubemap::Texel* data, size_t dim) {
                     size_t p = progress.fetch_add(1, std::memory_order_relaxed) + 1;
                     if (updater) {
@@ -391,7 +391,7 @@ void CubemapIBL::roughnessFilter(Cubemap& dst, const std::vector<Cubemap>& level
         return lhs.brdf_NoL < rhs.brdf_NoL;
     });
 
-    CubemapUtils::process<CubemapUtils::EmptyState>(dst,
+    CubemapUtils::process<CubemapUtils::EmptyState>(dst, js,
             [&](CubemapUtils::EmptyState&, size_t y,
                     Cubemap::Face f, Cubemap::Texel* data, size_t dim) {
 
@@ -512,7 +512,7 @@ void CubemapIBL::roughnessFilter(Cubemap& dst, const std::vector<Cubemap>& level
  *
  */
 
-void CubemapIBL::diffuseIrradiance(Cubemap& dst, const std::vector<Cubemap>& levels,
+void CubemapIBL::diffuseIrradiance(JobSystem& js, Cubemap& dst, const std::vector<Cubemap>& levels,
         size_t maxNumSamples, CubemapIBL::Progress updater)
 {
     const float numSamples = maxNumSamples;
@@ -559,7 +559,7 @@ void CubemapIBL::diffuseIrradiance(Cubemap& dst, const std::vector<Cubemap>& lev
         }
     }
 
-    CubemapUtils::process<CubemapUtils::EmptyState>(dst,
+    CubemapUtils::process<CubemapUtils::EmptyState>(dst, js,
             [&](CubemapUtils::EmptyState&, size_t y,
                     Cubemap::Face f, Cubemap::Texel* data, size_t dim) {
 
@@ -919,8 +919,8 @@ static double UTILS_UNUSED DFV_Charlie_IS(double NoV, double linearRoughness, si
     return r / numSamples;
 }
 
-void CubemapIBL::brdf(Cubemap& dst, double linearRoughness) {
-    CubemapUtils::process<CubemapUtils::EmptyState>(dst,
+void CubemapIBL::brdf(utils::JobSystem& js, Cubemap& dst, double linearRoughness) {
+    CubemapUtils::process<CubemapUtils::EmptyState>(dst, js,
             [ & ](CubemapUtils::EmptyState&, size_t y,
                     Cubemap::Face f, Cubemap::Texel* data, size_t dim) {
                 for (size_t x=0 ; x<dim ; ++x, ++data) {
@@ -945,9 +945,8 @@ void CubemapIBL::brdf(Cubemap& dst, double linearRoughness) {
             });
 }
 
-void CubemapIBL::DFG(Image& dst, bool multiscatter, bool cloth) {
+void CubemapIBL::DFG(JobSystem& js, Image& dst, bool multiscatter, bool cloth) {
     auto dfvFunction = multiscatter ? DFV_Multiscatter : DFV;
-    JobSystem& js = CubemapUtils::getJobSystem();
     auto job = jobs::parallel_for<char>(js, nullptr, nullptr, uint32_t(dst.getHeight()),
             [&dst, dfvFunction, cloth](char const* d, size_t c) {
                 const size_t width = dst.getWidth();

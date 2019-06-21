@@ -50,27 +50,28 @@ public:
     //! process the cubemap using multithreading
     template<typename STATE>
     static void process(Cubemap& cm,
+            utils::JobSystem& js,
             ScanlineProc<STATE> proc,
             ReduceProc<STATE> reduce = [](STATE&) {},
             const STATE& prototype = STATE());
 
     //! Converts equirectangular Image to a Cubemap
-    static void equirectangularToCubemap(Cubemap& dst, const Image& src);
+    static void equirectangularToCubemap(utils::JobSystem& js, Cubemap& dst, const Image& src);
 
     //! Converts a Cubemap to an equirectangular Image
-    static void cubemapToEquirectangular(Image& dst, const Cubemap& src);
+    static void cubemapToEquirectangular(utils::JobSystem& js, Image& dst, const Cubemap& src);
 
     //! Converts a Cubemap to an octahedron
-    static void cubemapToOctahedron(Image& dst, const Cubemap& src);
+    static void cubemapToOctahedron(utils::JobSystem& js, Image& dst, const Cubemap& src);
 
     //! Converts horizontal or vertical cross Image to a Cubemap
-    static void crossToCubemap(Cubemap& dst, const Image& src);
+    static void crossToCubemap(utils::JobSystem& js, Cubemap& dst, const Image& src);
 
     //! clamps image to acceptable range
     static void clamp(Image& src);
 
     //! Downsamples a cubemap by helf in x and y using a box filter
-    static void downsampleCubemapLevelBoxFilter(Cubemap& dst, const Cubemap& src);
+    static void downsampleCubemapLevelBoxFilter(utils::JobSystem& js, Cubemap& dst, const Cubemap& src);
 
     //! Return the name of a face (suitable for a file name)
     static const char* getFaceName(Cubemap::Face face);
@@ -79,20 +80,19 @@ public:
     static void setAllFacesFromCross(Cubemap& cm, const Image& image);
 
     //! mirror the cubemap in the horizontal direction
-    static void mirrorCubemap(Cubemap& dst, const Cubemap& src);
+    static void mirrorCubemap(utils::JobSystem& js, Cubemap& dst, const Cubemap& src);
 
     //! computes the solid angle of a pixel of a face of a cubemap
     static double solidAngle(size_t dim, size_t u, size_t v);
 
     //! generates a UV grid in the cubemap -- useful for debugging.
-    static void generateUVGrid(Cubemap& cml, size_t gridFrequencyX, size_t gridFrequencyY);
+    static void generateUVGrid(utils::JobSystem& js, Cubemap& cml, size_t gridFrequencyX, size_t gridFrequencyY);
 
 private:
     static void setFaceFromCross(Cubemap& cm, Cubemap::Face face, const Image& image);
     static Image createCubemapImage(size_t dim, bool horizontal = true);
 
     friend class CubemapIBL;
-    static utils::JobSystem& getJobSystem();
 };
 
 

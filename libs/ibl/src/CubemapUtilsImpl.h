@@ -27,12 +27,11 @@ namespace ibl {
 template<typename STATE>
 void CubemapUtils::process(
         Cubemap& cm,
+        utils::JobSystem& js,
         CubemapUtils::ScanlineProc<STATE> proc,
         ReduceProc<STATE> reduce,
         const STATE& prototype) {
     using namespace utils;
-
-    JobSystem& js = getJobSystem();
 
     const size_t dim = cm.getDimensions();
 

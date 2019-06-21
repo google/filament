@@ -30,6 +30,7 @@
 #include <image/KtxBundle.h>
 #include <image/ColorTransform.h>
 
+#include <utils/JobSystem.h>
 #include <utils/Path.h>
 
 #include <math/scalar.h>
@@ -102,16 +103,22 @@ static bool g_mirror = false;
 
 // -----------------------------------------------------------------------------------------------
 
-static void generateMipmaps(std::vector<Cubemap>& levels, std::vector<Image>& images);
-static void sphericalHarmonics(const utils::Path& iname, const Cubemap& inputCubemap);
-static void iblRoughnessPrefilter(const utils::Path& iname, const std::vector<Cubemap>& levels,
-        const utils::Path& dir);
-static void iblDiffuseIrradiance(const utils::Path& iname, const std::vector<Cubemap>& levels,
-        const utils::Path& dir);
-static void iblMipmapPrefilter(const utils::Path& iname, const std::vector<Image>& images,
+static void generateMipmaps(utils::JobSystem& js, std::vector<Cubemap>& levels,
+        std::vector<Image>& images);
+static void sphericalHarmonics(utils::JobSystem& js, const utils::Path& iname,
+        const Cubemap& inputCubemap);
+static void iblRoughnessPrefilter(utils::JobSystem& js, const utils::Path& iname,
         const std::vector<Cubemap>& levels, const utils::Path& dir);
-static void iblLutDfg(const utils::Path& filename, size_t size, bool multiscatter, bool cloth);
-static void extractCubemapFaces(const utils::Path& iname, const Cubemap& cm, const utils::Path& dir);
+static void iblDiffuseIrradiance(utils::JobSystem& js, const utils::Path& iname,
+        const std::vector<Cubemap>& levels, const utils::Path& dir);
+static void iblMipmapPrefilter(utils::JobSystem& js, const utils::Path& iname,
+        const std::vector<Image>& images, const std::vector<Cubemap>& levels,
+        const utils::Path& dir);
+static void iblLutDfg(utils::JobSystem& js, const utils::Path& filename, size_t size,
+        bool multiscatter,
+        bool cloth);
+static void extractCubemapFaces(utils::JobSystem& js, const utils::Path& iname, const Cubemap& cm,
+        const utils::Path& dir);
 static void outputSh(std::ostream& out, const std::unique_ptr<filament::math::double3[]>& sh, size_t numBands);
 static void UTILS_UNUSED outputSpectrum(std::ostream& out,
         const std::unique_ptr<filament::math::double3[]>& sh, size_t numBands);
@@ -424,6 +431,9 @@ static int handleCommandLineArgments(int argc, char* argv[]) {
 }
 
 int main(int argc, char* argv[]) {
+    utils::JobSystem js;
+    js.adopt();
+
     int option_index = handleCommandLineArgments(argc, argv);
     int num_args = argc - option_index;
     if (!g_dfg && num_args < 1) {
@@ -436,7 +446,7 @@ int main(int argc, char* argv[]) {
             std::cout << "Generating IBL DFG LUT..." << std::endl;
         }
         size_t size = g_output_size ? g_output_size : DFG_LUT_DEFAULT_SIZE;
-        iblLutDfg(g_dfg_filename, size, g_dfg_multiscatter, g_dfg_cloth);
+        iblLutDfg(js, g_dfg_filename, size, g_dfg_multiscatter, g_dfg_cloth);
         if (num_args < 1) return 0;
     }
 
@@ -509,7 +519,7 @@ int main(int argc, char* argv[]) {
 
             Image temp;
             Cubemap cml = CubemapUtils::create(temp, dim);
-            CubemapUtils::crossToCubemap(cml, inputImage);
+            CubemapUtils::crossToCubemap(js, cml, inputImage);
             images.push_back(std::move(temp));
             levels.push_back(std::move(cml));
         } else if (width == 2 * height) {
@@ -520,7 +530,7 @@ int main(int argc, char* argv[]) {
             }
             Image temp;
             Cubemap cml = CubemapUtils::create(temp, dim);
-            CubemapUtils::equirectangularToCubemap(cml, inputImage);
+            CubemapUtils::equirectangularToCubemap(js, cml, inputImage);
             images.push_back(std::move(temp));
             levels.push_back(std::move(cml));
         } else {
@@ -543,16 +553,16 @@ int main(int argc, char* argv[]) {
         unsigned int p = 0;
         std::string name = iname.getNameWithoutExtension();
         if (sscanf(name.c_str(), "uv%u", &p) == 1) { // NOLINT
-            CubemapUtils::generateUVGrid(cml, p, p);
+            CubemapUtils::generateUVGrid(js, cml, p, p);
         } else if (sscanf(name.c_str(), "u%u", &p) == 1) { // NOLINT
-            CubemapUtils::generateUVGrid(cml, p, 1);
+            CubemapUtils::generateUVGrid(js, cml, p, 1);
         } else if (sscanf(name.c_str(), "v%u", &p) == 1) { // NOLINT
-            CubemapUtils::generateUVGrid(cml, 1, p);
+            CubemapUtils::generateUVGrid(js, cml, 1, p);
         } else if (sscanf(name.c_str(), "brdf%u", &p) == 1) { // NOLINT
             double linear_roughness = sq(p / std::log2(dim));
-            CubemapIBL::brdf(cml, linear_roughness);
+            CubemapIBL::brdf(js, cml, linear_roughness);
         } else {
-            CubemapUtils::generateUVGrid(cml, 1, 1);
+            CubemapUtils::generateUVGrid(js, cml, 1, 1);
         }
 
         images.push_back(std::move(temp));
@@ -567,7 +577,7 @@ int main(int argc, char* argv[]) {
         }
         Image temp;
         Cubemap cml = CubemapUtils::create(temp, levels[0].getDimensions());
-        CubemapUtils::mirrorCubemap(cml, levels[0]);
+        CubemapUtils::mirrorCubemap(js, cml, levels[0]);
         std::swap(levels[0], cml);
         std::swap(images[0], temp);
     } else {
@@ -580,35 +590,35 @@ int main(int argc, char* argv[]) {
     levels[0].makeSeamless();
 
     // Now generate all the mipmap levels
-    generateMipmaps(levels, images);
+    generateMipmaps(js, levels, images);
 
     if (g_sh_compute) {
         if (!g_quiet) {
             std::cout << "Spherical harmonics..." << std::endl;
         }
         Cubemap const& cm(levels[0]);
-        sphericalHarmonics(iname, cm);
+        sphericalHarmonics(js, iname, cm);
     }
 
     if (g_is_mipmap) {
         if (!g_quiet) {
             std::cout << "IBL mipmaps for prefiltered importance sampling..." << std::endl;
         }
-        iblMipmapPrefilter(iname, images, levels, g_is_mipmap_dir);
+        iblMipmapPrefilter(js, iname, images, levels, g_is_mipmap_dir);
     }
 
     if (g_prefilter) {
         if (!g_quiet) {
             std::cout << "IBL prefiltering..." << std::endl;
         }
-        iblRoughnessPrefilter(iname, levels, g_prefilter_dir);
+        iblRoughnessPrefilter(js, iname, levels, g_prefilter_dir);
     }
 
     if (g_ibl_irradiance) {
         if (!g_quiet) {
             std::cout << "IBL diffuse irradiance..." << std::endl;
         }
-        iblDiffuseIrradiance(iname, levels, g_ibl_irradiance_dir);
+        iblDiffuseIrradiance(js, iname, levels, g_ibl_irradiance_dir);
     }
 
     if (g_extract_faces) {
@@ -623,7 +633,7 @@ int main(int argc, char* argv[]) {
             const size_t dim = g_output_size ? g_output_size : cm.getDimensions();
             Image image;
             Cubemap blurred = CubemapUtils::create(image, dim);
-            CubemapIBL::roughnessFilter(blurred, levels, linear_roughness, g_num_samples,
+            CubemapIBL::roughnessFilter(js, blurred, levels, linear_roughness, g_num_samples,
                     [&updater, quiet = g_quiet](size_t index, float v) {
                         if (!quiet) {
                             updater.update(index, v);
@@ -633,19 +643,20 @@ int main(int argc, char* argv[]) {
                 updater.stop();
                 std::cout << "Extract faces..." << std::endl;
             }
-            extractCubemapFaces(iname, blurred, g_extract_dir);
+            extractCubemapFaces(js, iname, blurred, g_extract_dir);
         } else {
             if (!g_quiet) {
                 std::cout << "Extract faces..." << std::endl;
             }
-            extractCubemapFaces(iname, cm, g_extract_dir);
+            extractCubemapFaces(js, iname, cm, g_extract_dir);
         }
     }
 
     return 0;
 }
 
-void generateMipmaps(std::vector<Cubemap>& levels, std::vector<Image>& images) {
+void generateMipmaps(utils::JobSystem& js, std::vector<Cubemap>& levels,
+        std::vector<Image>& images) {
     Image temp;
     const Cubemap& base(levels[0]);
     size_t dim = base.getDimensions();
@@ -654,19 +665,19 @@ void generateMipmaps(std::vector<Cubemap>& levels, std::vector<Image>& images) {
         dim >>= 1;
         Cubemap dst = CubemapUtils::create(temp, dim);
         const Cubemap& src(levels[mipLevel++]);
-        CubemapUtils::downsampleCubemapLevelBoxFilter(dst, src);
+        CubemapUtils::downsampleCubemapLevelBoxFilter(js, dst, src);
         dst.makeSeamless();
         images.push_back(std::move(temp));
         levels.push_back(std::move(dst));
     }
 }
 
-void sphericalHarmonics(const utils::Path& iname, const Cubemap& inputCubemap) {
+void sphericalHarmonics(utils::JobSystem& js, const utils::Path& iname, const Cubemap& inputCubemap) {
     std::unique_ptr<filament::math::double3[]> sh;
     if (g_sh_shader) {
-        sh = CubemapSH::computeIrradianceSH3Bands(inputCubemap);
+        sh = CubemapSH::computeIrradianceSH3Bands(js, inputCubemap);
     } else {
-        sh = CubemapSH::computeSH(inputCubemap, g_sh_compute, g_sh_irradiance);
+        sh = CubemapSH::computeSH(js, inputCubemap, g_sh_compute, g_sh_irradiance);
     }
 
     if (!g_quiet && g_sh_output) {
@@ -685,9 +696,9 @@ void sphericalHarmonics(const utils::Path& iname, const Cubemap& inputCubemap) {
             }
 
             if (g_sh_shader) {
-                CubemapSH::renderPreScaledSH3Bands(cm, sh);
+                CubemapSH::renderPreScaledSH3Bands(js, cm, sh);
             } else {
-                CubemapSH::renderSH(cm, sh, g_sh_compute);
+                CubemapSH::renderSH(js, cm, sh, g_sh_compute);
             }
 
             if (g_sh_file == ShFile::SH_CROSS) {
@@ -714,8 +725,8 @@ void sphericalHarmonics(const utils::Path& iname, const Cubemap& inputCubemap) {
             }
 
             { // save a file with the "other one" (irradiance or radiance)
-                sh = CubemapSH::computeSH(inputCubemap, g_sh_compute, !g_sh_irradiance);
-                CubemapSH::renderSH(cm, sh, g_sh_compute);
+                sh = CubemapSH::computeSH(js, inputCubemap, g_sh_compute, !g_sh_irradiance);
+                CubemapSH::renderSH(js, cm, sh, g_sh_compute);
                 std::string basename = iname.getNameWithoutExtension();
                 utils::Path filePath =
                         outputDir + (basename + "_sh" + (!g_sh_irradiance ? "_i" : "_r") + ".hdr");
@@ -759,7 +770,7 @@ void UTILS_UNUSED outputSpectrum(std::ostream& out,
     }
 }
 
-void iblMipmapPrefilter(const utils::Path& iname,
+void iblMipmapPrefilter(utils::JobSystem& js, const utils::Path& iname,
         const std::vector<Image>& images, const std::vector<Cubemap>& levels,
         const utils::Path& dir) {
     utils::Path outputDir(dir.getAbsolutePath() + iname.getNameWithoutExtension());
@@ -784,7 +795,7 @@ void iblMipmapPrefilter(const utils::Path& iname,
         if (g_type == OutputType::EQUIRECT) {
             size_t dim = dst.getDimensions();
             Image image(dim * 2, dim);
-            CubemapUtils::cubemapToEquirectangular(image, dst);
+            CubemapUtils::cubemapToEquirectangular(js, image, dst);
             std::string filename = outputDir + ("is_m" + std::to_string(level) + ext);
             saveImage(filename, g_format, image, g_compression);
             continue;
@@ -793,7 +804,7 @@ void iblMipmapPrefilter(const utils::Path& iname,
         if (g_type == OutputType::OCTAHEDRON) {
             size_t dim = dst.getDimensions();
             Image image(dim, dim);
-            CubemapUtils::cubemapToOctahedron(image, dst);
+            CubemapUtils::cubemapToOctahedron(js, image, dst);
             std::string filename = outputDir + ("is_m" + std::to_string(level) + ext);
             saveImage(filename, g_format, image, g_compression);
             continue;
@@ -808,7 +819,7 @@ void iblMipmapPrefilter(const utils::Path& iname,
     }
 }
 
-void iblRoughnessPrefilter(const utils::Path& iname,
+void iblRoughnessPrefilter(utils::JobSystem& js, const utils::Path& iname,
         const std::vector<Cubemap>& levels, const utils::Path& dir) {
     utils::Path outputDir(dir.getAbsolutePath() + iname.getNameWithoutExtension());
     if (!outputDir.exists()) {
@@ -869,7 +880,7 @@ void iblRoughnessPrefilter(const utils::Path& iname,
         if (!g_quiet) {
             updater.start();
         }
-        CubemapIBL::roughnessFilter(dst, levels, linear_roughness, numSamples,
+        CubemapIBL::roughnessFilter(js, dst, levels, linear_roughness, numSamples,
                 [&updater, quiet = g_quiet](size_t index, float v) {
             if (!quiet) {
                 updater.update(index, v);
@@ -898,7 +909,7 @@ void iblRoughnessPrefilter(const utils::Path& iname,
 
         if (g_type == OutputType::EQUIRECT) {
             Image outImage(dim * 2, dim);
-            CubemapUtils::cubemapToEquirectangular(outImage, dst);
+            CubemapUtils::cubemapToEquirectangular(js, outImage, dst);
             std::string filename = outputDir + ("m" + std::to_string(level) + ext);
             saveImage(filename, g_format, outImage, g_compression);
             continue;
@@ -906,7 +917,7 @@ void iblRoughnessPrefilter(const utils::Path& iname,
 
         if (g_type == OutputType::OCTAHEDRON) {
             Image outImage(dim, dim);
-            CubemapUtils::cubemapToOctahedron(outImage, dst);
+            CubemapUtils::cubemapToOctahedron(js, outImage, dst);
             std::string filename = outputDir + ("m" + std::to_string(level) + ext);
             saveImage(filename, g_format, outImage, g_compression);
             continue;
@@ -941,7 +952,7 @@ void iblRoughnessPrefilter(const utils::Path& iname,
     }
 }
 
-void iblDiffuseIrradiance(const utils::Path& iname,
+void iblDiffuseIrradiance(utils::JobSystem& js, const utils::Path& iname,
         const std::vector<Cubemap>& levels, const utils::Path& dir) {
     utils::Path outputDir(dir.getAbsolutePath() + iname.getNameWithoutExtension());
     if (!outputDir.exists()) {
@@ -958,7 +969,7 @@ void iblDiffuseIrradiance(const utils::Path& iname,
     if (!g_quiet) {
         updater.start();
     }
-    CubemapIBL::diffuseIrradiance(dst, levels, numSamples,
+    CubemapIBL::diffuseIrradiance(js, dst, levels, numSamples,
             [&updater, quiet = g_quiet](size_t index, float v) {
                 if (!quiet) {
                     updater.update(index, v);
@@ -986,8 +997,8 @@ void iblDiffuseIrradiance(const utils::Path& iname,
         // to compare the resuts and see if the later is better.
         Image outImage;
         Cubemap cm = CubemapUtils::create(outImage, dim);
-        auto sh = CubemapSH::computeSH(dst, g_sh_compute, false);
-        CubemapSH::renderSH(cm, sh, g_sh_compute);
+        auto sh = CubemapSH::computeSH(js, dst, g_sh_compute, false);
+        CubemapSH::renderSH(js, cm, sh, g_sh_compute);
         filePath = outputDir + (basename + "_diffuse_irradiance_sh" + fileExt);
         saveImage(filePath, debug_format, outImage, "");
     }
@@ -1005,9 +1016,10 @@ static bool isIncludeFile(const utils::Path& filename) {
     return extension == "inc";
 }
 
-void iblLutDfg(const utils::Path& filename, size_t size, bool multiscatter, bool cloth) {
+void iblLutDfg(utils::JobSystem& js, const utils::Path& filename, size_t size, bool multiscatter,
+        bool cloth) {
     Image image(size, size);
-    CubemapIBL::DFG(image, multiscatter, cloth);
+    CubemapIBL::DFG(js, image, multiscatter, cloth);
 
     utils::Path outputDir(filename.getAbsolutePath().getParent());
     if (!outputDir.exists()) {
@@ -1050,7 +1062,8 @@ void iblLutDfg(const utils::Path& filename, size_t size, bool multiscatter, bool
     }
 }
 
-void extractCubemapFaces(const utils::Path& iname, const Cubemap& cm, const utils::Path& dir) {
+void extractCubemapFaces(utils::JobSystem& js, const utils::Path& iname, const Cubemap& cm,
+        const utils::Path& dir) {
     utils::Path outputDir(dir.getAbsolutePath() + iname.getNameWithoutExtension());
     if (!outputDir.exists()) {
         outputDir.mkdirRecursive();
@@ -1086,7 +1099,7 @@ void extractCubemapFaces(const utils::Path& iname, const Cubemap& cm, const util
     if (g_type == OutputType::EQUIRECT) {
         size_t dim = cm.getDimensions();
         Image image(dim * 2, dim);
-        CubemapUtils::cubemapToEquirectangular(image, cm);
+        CubemapUtils::cubemapToEquirectangular(js, image, cm);
         std::string filename = outputDir + ("skybox" + ext);
         saveImage(filename, g_format, image, g_compression);
         return;
@@ -1095,7 +1108,7 @@ void extractCubemapFaces(const utils::Path& iname, const Cubemap& cm, const util
     if (g_type == OutputType::OCTAHEDRON) {
         size_t dim = cm.getDimensions();
         Image image(dim, dim);
-        CubemapUtils::cubemapToOctahedron(image, cm);
+        CubemapUtils::cubemapToOctahedron(js, image, cm);
         std::string filename = outputDir + ("skybox" + ext);
         saveImage(filename, g_format, image, g_compression);
         return;

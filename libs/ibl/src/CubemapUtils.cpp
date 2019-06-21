@@ -34,12 +34,6 @@ using namespace utils;
 namespace filament {
 namespace ibl {
 
-utils::JobSystem& CubemapUtils::getJobSystem() {
-    static utils::JobSystem js;
-    js.adopt();
-    return js;
-}
-
 void CubemapUtils::clamp(Image& src) {
     // We clamp all values to 256 which correspond to the maximum value (before
     // gamma compression) that we can store.
@@ -59,7 +53,7 @@ void CubemapUtils::clamp(Image& src) {
     }
 }
 
-void CubemapUtils::equirectangularToCubemap(Cubemap& dst, const Image& src) {
+void CubemapUtils::equirectangularToCubemap(JobSystem& js, Cubemap& dst, const Image& src) {
     const size_t width = src.getWidth();
     const size_t height = src.getHeight();
     const double r = width * 0.5 * M_1_PI;
@@ -72,7 +66,7 @@ void CubemapUtils::equirectangularToCubemap(Cubemap& dst, const Image& src) {
         return double2(xf, yf);
     };
 
-    process<EmptyState>(dst,
+    process<EmptyState>(dst, js,
             [&](EmptyState&, size_t y, Cubemap::Face f, Cubemap::Texel* data, size_t dim) {
         for (size_t x=0 ; x<dim ; ++x, ++data) {
             // calculate how many samples we need based on dx, dy in the source
@@ -118,7 +112,7 @@ void CubemapUtils::equirectangularToCubemap(Cubemap& dst, const Image& src) {
     });
 }
 
-void CubemapUtils::cubemapToEquirectangular(Image& dst, const Cubemap& src) {
+void CubemapUtils::cubemapToEquirectangular(JobSystem& js, Image& dst, const Cubemap& src) {
     const double w = dst.getWidth();
     const double h = dst.getHeight();
     auto parallelJobTask = [&](size_t j0, size_t count) {
@@ -143,13 +137,12 @@ void CubemapUtils::cubemapToEquirectangular(Image& dst, const Cubemap& src) {
         }
     };
 
-    JobSystem& js = getJobSystem();
     auto job = jobs::parallel_for(js, nullptr, 0, uint32_t(h),
             std::ref(parallelJobTask), jobs::CountSplitter<1, 8>());
     js.runAndWait(job);
 }
 
-void CubemapUtils::cubemapToOctahedron(Image& dst, const Cubemap& src) {
+void CubemapUtils::cubemapToOctahedron(JobSystem& js, Image& dst, const Cubemap& src) {
     const double w = dst.getWidth();
     const double h = dst.getHeight();
     auto parallelJobTask = [&](size_t j0, size_t count) {
@@ -178,14 +171,13 @@ void CubemapUtils::cubemapToOctahedron(Image& dst, const Cubemap& src) {
         }
     };
 
-    JobSystem& js = getJobSystem();
     auto job = jobs::parallel_for(js, nullptr, 0, uint32_t(h),
             std::ref(parallelJobTask), jobs::CountSplitter<1, 8>());
     js.runAndWait(job);
 }
 
-void CubemapUtils::crossToCubemap(Cubemap& dst, const Image& src) {
-    process<EmptyState>(dst,
+void CubemapUtils::crossToCubemap(JobSystem& js, Cubemap& dst, const Image& src) {
+    process<EmptyState>(dst, js,
             [&](EmptyState&, size_t iy, Cubemap::Face f, Cubemap::Texel* data, size_t dimension) {
                 for (size_t ix = 0; ix < dimension; ++ix, ++data) {
                     // find offsets from face
@@ -235,9 +227,9 @@ void CubemapUtils::crossToCubemap(Cubemap& dst, const Image& src) {
 }
 
 
-void CubemapUtils::downsampleCubemapLevelBoxFilter(Cubemap& dst, const Cubemap& src) {
+void CubemapUtils::downsampleCubemapLevelBoxFilter(JobSystem& js, Cubemap& dst, const Cubemap& src) {
     size_t scale = src.getDimensions() / dst.getDimensions();
-    process<EmptyState>(dst,
+    process<EmptyState>(dst, js,
             [&](EmptyState&, size_t y, Cubemap::Face f, Cubemap::Texel* data, size_t dim) {
         const Image& image(src.getImageForFace(f));
         for (size_t x=0 ; x<dim ; ++x, ++data) {
@@ -318,8 +310,8 @@ Cubemap CubemapUtils::create(Image& image, size_t dim, bool horizontal) {
     return cm;
 }
 
-void CubemapUtils::mirrorCubemap(Cubemap& dst, const Cubemap& src) {
-    process<EmptyState>(dst,
+void CubemapUtils::mirrorCubemap(JobSystem& js, Cubemap& dst, const Cubemap& src) {
+    process<EmptyState>(dst, js,
             [&](EmptyState&, size_t y, Cubemap::Face f, Cubemap::Texel* data, size_t dim) {
         for (size_t x=0 ; x<dim ; ++x, ++data) {
             const double3 N(dst.getDirectionFor(f, x, y));
@@ -328,7 +320,7 @@ void CubemapUtils::mirrorCubemap(Cubemap& dst, const Cubemap& src) {
     });
 }
 
-void CubemapUtils::generateUVGrid(Cubemap& cml, size_t gridFrequencyX, size_t gridFrequencyY) {
+void CubemapUtils::generateUVGrid(JobSystem& js, Cubemap& cml, size_t gridFrequencyX, size_t gridFrequencyY) {
     Cubemap::Texel const colors[6] = {
             { 1, 0, 0 }, // -X /  l  - red
             { 1, 1, 1 }, // +X /  r  - white
@@ -340,7 +332,7 @@ void CubemapUtils::generateUVGrid(Cubemap& cml, size_t gridFrequencyX, size_t gr
     const float uvGridHDRIntensity = 5.0f;
     size_t gridSizeX = cml.getDimensions() / gridFrequencyX;
     size_t gridSizeY = cml.getDimensions() / gridFrequencyY;
-    CubemapUtils::process<CubemapUtils::EmptyState>(cml,
+    CubemapUtils::process<CubemapUtils::EmptyState>(cml, js,
             [ & ](CubemapUtils::EmptyState&,
                     size_t y, Cubemap::Face f, Cubemap::Texel* data, size_t dim) {
                 for (size_t x = 0; x < dim; ++x, ++data) {

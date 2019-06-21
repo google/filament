@@ -25,6 +25,10 @@
 #include <memory>
 #include <vector>
 
+namespace utils {
+class JobSystem;
+} // namespace utils
+
 namespace filament {
 namespace ibl {
 
@@ -38,25 +42,25 @@ public:
     /**
      * Spherical Harmonics decomposition of the given cubemap
      */
-    static std::unique_ptr<filament::math::double3[]> computeSH(const Cubemap& cm, size_t numBands,
+    static std::unique_ptr<filament::math::double3[]> computeSH(utils::JobSystem& js, const Cubemap& cm, size_t numBands,
             bool irradiance);
 
     /**
      * Render given spherical harmonics into a cubemap
      */
-    static void renderSH(Cubemap& cm,
+    static void renderSH(utils::JobSystem& js, Cubemap& cm,
             const std::unique_ptr<filament::math::double3[]>& sh, size_t numBands);
 
     /**
      * Compute spherical harmonics of the irradiance of the given cubemap.
      * The SH basis are pre-scaled for easier rendering
      */
-    static std::unique_ptr<filament::math::double3[]> computeIrradianceSH3Bands(const Cubemap& cm);
+    static std::unique_ptr<filament::math::double3[]> computeIrradianceSH3Bands(utils::JobSystem& js, const Cubemap& cm);
 
     /**
      * Render pre-scaled irrandiance SH
      */
-    static void renderPreScaledSH3Bands(Cubemap& cm,
+    static void renderPreScaledSH3Bands(utils::JobSystem& js, Cubemap& cm,
             const std::unique_ptr<filament::math::double3[]>& sh);
 
     static size_t getShIndex(ssize_t m, size_t l) {
