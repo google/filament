@@ -17,6 +17,10 @@
 #ifndef IBL_CUBEMAPIBL_H
 #define IBL_CUBEMAPIBL_H
 
+namespace utils {
+class JobSystem;
+} // namespace utils
+
 #include <functional>
 #include <vector>
 
@@ -45,12 +49,12 @@ public:
      * @param maxNumSamples     number of samples for importance sampling
      * @param updater           a callback for the caller to track progress
      */
-    static void roughnessFilter(Cubemap& dst,
+    static void roughnessFilter(utils::JobSystem& js, Cubemap& dst,
             const std::vector<Cubemap>& levels, double linearRoughness,
             size_t maxNumSamples = 1024,Progress updater = {});
 
     //! Computes the "DFG" term of the "split-sum" approximation and stores it in a 2D image
-    static void DFG(Image& dst, bool multiscatter, bool cloth);
+    static void DFG(utils::JobSystem& js, Image& dst, bool multiscatter, bool cloth);
 
     /**
      * Computes the diffuse irradiance using prefiltered importance sampling GGX
@@ -64,11 +68,11 @@ public:
      *
      * @see CubemapSH
      */
-    static void diffuseIrradiance(Cubemap& dst, const std::vector<Cubemap>& levels,
+    static void diffuseIrradiance(utils::JobSystem& js, Cubemap& dst, const std::vector<Cubemap>& levels,
             size_t maxNumSamples = 1024, Progress updater = {});
 
     // for debugging. ignore.
-    static void brdf(Cubemap& dst, double linearRoughness);
+    static void brdf(utils::JobSystem& js, Cubemap& dst, double linearRoughness);
 };
 
 } // namespace ibl

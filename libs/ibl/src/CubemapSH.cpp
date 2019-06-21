@@ -22,9 +22,12 @@
 
 #include "CubemapUtilsImpl.h"
 
+#include <utils/JobSystem.h>
+
 #include <math/mat4.h>
 
 using namespace filament::math;
+using namespace utils;
 
 namespace filament {
 namespace ibl {
@@ -184,7 +187,7 @@ void CubemapSH::computeShBasis(
     }
 }
 
-std::unique_ptr<double3[]> CubemapSH::computeSH(const Cubemap& cm, size_t numBands, bool irradiance) {
+std::unique_ptr<double3[]> CubemapSH::computeSH(JobSystem& js, const Cubemap& cm, size_t numBands, bool irradiance) {
 
     const size_t numCoefs = numBands*numBands;
     std::unique_ptr<double3[]> SH(new double3[numCoefs]{});
@@ -203,7 +206,7 @@ std::unique_ptr<double3[]> CubemapSH::computeSH(const Cubemap& cm, size_t numBan
         std::unique_ptr<double[]> SHb;
     } prototype(numCoefs);
 
-    CubemapUtils::process<State>(const_cast<Cubemap&>(cm),
+    CubemapUtils::process<State>(const_cast<Cubemap&>(cm), js,
             [&](State& state, size_t y, Cubemap::Face f, Cubemap::Texel const* data, size_t dim) {
         for (size_t x=0 ; x<dim ; ++x, ++data) {
 
@@ -244,7 +247,7 @@ std::unique_ptr<double3[]> CubemapSH::computeSH(const Cubemap& cm, size_t numBan
     return SH;
 }
 
-void CubemapSH::renderSH(Cubemap& cm,
+void CubemapSH::renderSH(JobSystem& js, Cubemap& cm,
         const std::unique_ptr<double3[]>& sh, size_t numBands)
 {
     const size_t numCoefs = numBands*numBands;
@@ -258,7 +261,7 @@ void CubemapSH::renderSH(Cubemap& cm,
         }
     }
 
-    CubemapUtils::process<CubemapUtils::EmptyState>(cm,
+    CubemapUtils::process<CubemapUtils::EmptyState>(cm, js,
             [&](CubemapUtils::EmptyState&, size_t y,
                     Cubemap::Face f, Cubemap::Texel* data, size_t dim) {
        std::vector<double> SHb(numCoefs);
@@ -279,7 +282,7 @@ void CubemapSH::renderSH(Cubemap& cm,
  * truncated cos(theta) (i.e.: saturate(s.z)), pre-scaled by the reconstruction
  * factors.
  */
-std::unique_ptr<double3[]> CubemapSH::computeIrradianceSH3Bands(const Cubemap& cm) {
+std::unique_ptr<double3[]> CubemapSH::computeIrradianceSH3Bands(JobSystem& js, const Cubemap& cm) {
 
     const size_t numCoefs = 9;
 
@@ -303,7 +306,7 @@ std::unique_ptr<double3[]> CubemapSH::computeIrradianceSH3Bands(const Cubemap& c
         double3 SH[9] = { };
     };
 
-    CubemapUtils::process<State>(const_cast<Cubemap&>(cm),
+    CubemapUtils::process<State>(const_cast<Cubemap&>(cm), js,
             [&](State& state, size_t y, Cubemap::Face f, Cubemap::Texel const* data, size_t dim) {
         for (size_t x=0 ; x<dim ; ++x, ++data) {
 
@@ -335,9 +338,9 @@ std::unique_ptr<double3[]> CubemapSH::computeIrradianceSH3Bands(const Cubemap& c
     return SH;
 }
 
-void CubemapSH::renderPreScaledSH3Bands(
+void CubemapSH::renderPreScaledSH3Bands(JobSystem& js,
         Cubemap& cm, const std::unique_ptr<filament::math::double3[]>& sh) {
-    CubemapUtils::process<CubemapUtils::EmptyState>(cm,
+    CubemapUtils::process<CubemapUtils::EmptyState>(cm, js,
             [&](CubemapUtils::EmptyState&, size_t y, Cubemap::Face f, Cubemap::Texel* data, size_t dim) {
         for (size_t x=0 ; x<dim ; ++x, ++data) {
             double3 s(cm.getDirectionFor(f, x, y));
