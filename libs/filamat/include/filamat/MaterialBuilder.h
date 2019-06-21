@@ -281,9 +281,11 @@ public:
     // (used to generate code) and final output representations (spirv and/or text).
     MaterialBuilder& platform(Platform platform) noexcept;
 
-    // specifies opengl, vulkan, or metal; works in concert with Platform to determine the shader models
-    // (used to generate code) and final output representations (spirv and/or text).
-    // if linking against filamat_lite, only "opengl" is allowed.
+    // specifies opengl, vulkan, or metal
+    // This can be called repeatedly to build for multiple APIs.
+    // Works in concert with Platform to determine the shader models (used to generate code) and
+    // final output representations (spirv and/or text).
+    // If linking against filamat_lite, only "opengl" is allowed.
     MaterialBuilder& targetApi(TargetApi targetApi) noexcept;
 
     // specifies the level of optimization to apply to the shaders (default is PERFORMANCE)
