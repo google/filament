@@ -46,8 +46,9 @@ std::string shaderWithAllProperties(const std::string shaderCode,
     MaterialBuilder::PropertyList allProperties;
     std::fill_n(allProperties, MaterialBuilder::MATERIAL_PROPERTIES_COUNT, true);
 
-    ShaderModel model;
-    return builder.peek(ShaderType::FRAGMENT, model, allProperties);
+    return builder.peek(ShaderType::FRAGMENT,
+            {1, MaterialBuilder::TargetApi::OPENGL, MaterialBuilder::TargetLanguage::GLSL},
+            allProperties);
 }
 
 TEST(StaticCodeAnalysisHelper, getFunctionName) {

@@ -144,9 +144,16 @@ public class MaterialBuilder {
     }
 
     public enum TargetApi {
-        ALL,
-        OPENGL,
-        VULKAN,
+        OPENGL      (0x1),
+        VULKAN      (0x2),
+        METAL       (0x4),
+        ALL         (0x7);
+
+        final int number;
+
+        private TargetApi(int number) {
+            this.number = number;
+        }
     }
 
     public enum Optimization {
@@ -347,7 +354,7 @@ public class MaterialBuilder {
 
     @NonNull
     public MaterialBuilder targetApi(@NonNull TargetApi api) {
-        nMaterialBuilderTargetApi(mNativeObject, api.ordinal());
+        nMaterialBuilderTargetApi(mNativeObject, api.number);
         return this;
     }
 

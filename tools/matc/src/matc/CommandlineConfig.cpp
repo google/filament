@@ -249,10 +249,6 @@ bool CommandlineConfig::parse() {
         mInput = new FilesystemInput(mArgv[optind]);
     }
 
-    // Select OpenGL as the default TargetApi if none was specified.
-    if (mTargetApi == (TargetApi) 0) {
-        mTargetApi = TargetApi::OPENGL;
-    }
     return true;
 }
 

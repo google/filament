@@ -77,6 +77,11 @@ void MaterialBuilderBase::prepare() {
     TargetLanguage glTargetLanguage = mOptimization > MaterialBuilder::Optimization::PREPROCESSOR ?
             TargetLanguage::SPIRV : TargetLanguage::GLSL;
 
+    // Select OpenGL as the default TargetApi if none was specified.
+    if (mTargetApi == (TargetApi) 0) {
+        mTargetApi = TargetApi::OPENGL;
+    }
+
     // Build a list of codegen permutations, which is useful across all types of material builders.
     // The shader model loop starts at 1 to skip ShaderModel::UNKNOWN.
     for (uint8_t i = 1; i < filament::backend::SHADER_MODEL_COUNT; i++) {
@@ -293,7 +298,7 @@ MaterialBuilder& MaterialBuilder::platform(Platform platform) noexcept {
 }
 
 MaterialBuilder& MaterialBuilder::targetApi(TargetApi targetApi) noexcept {
-    mTargetApi = targetApi;
+    mTargetApi |= targetApi;
     return *this;
 }
 
