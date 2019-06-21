@@ -70,6 +70,8 @@ class MaterialCompiler extends DefaultTask {
     @OutputDirectory
     File outputDir
 
+    String api = 'all'
+
     MaterialCompiler() {
         matcPath = OperatingSystem.current().isWindows() ?
                 project.ext.matcFullPath[0] : project.ext.matcFullPath[1]
@@ -97,7 +99,7 @@ class MaterialCompiler extends DefaultTask {
                 standardOutput out
                 errorOutput err
                 executable "${matcPath}"
-                args('-a', 'all', '-p', 'mobile', '-o', getOutputFile(file), file)
+                args('-a', api, '-p', 'mobile', '-o', getOutputFile(file), file)
             }
         }
 
