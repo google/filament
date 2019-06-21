@@ -54,6 +54,12 @@ namespace filamat {
 
 std::atomic<int> MaterialBuilderBase::materialBuilderClients(0);
 
+inline void assertSingleTargetApi(MaterialBuilderBase::TargetApi api) {
+    // Assert that a single bit is set.
+    uint8_t bits = (uint8_t) api;
+    assert(bits && !(bits & bits - 1));
+}
+
 void MaterialBuilderBase::prepare() {
     mCodeGenPermutations.clear();
     mShaderModels.reset();
@@ -71,26 +77,25 @@ void MaterialBuilderBase::prepare() {
     TargetLanguage glTargetLanguage = mOptimization > MaterialBuilder::Optimization::PREPROCESSOR ?
             TargetLanguage::SPIRV : TargetLanguage::GLSL;
 
+    // Select OpenGL as the default TargetApi if none was specified.
+    if (mTargetApi == (TargetApi) 0) {
+        mTargetApi = TargetApi::OPENGL;
+    }
+
     // Build a list of codegen permutations, which is useful across all types of material builders.
     // The shader model loop starts at 1 to skip ShaderModel::UNKNOWN.
     for (uint8_t i = 1; i < filament::backend::SHADER_MODEL_COUNT; i++) {
         if (!mShaderModels.test(i)) {
             continue; // skip this shader model since it was not requested.
         }
-        switch (mTargetApi) {
-            case TargetApi::ALL:
-                mCodeGenPermutations.push_back({i, TargetApi::OPENGL, glTargetLanguage});
-                mCodeGenPermutations.push_back({i, TargetApi::VULKAN, TargetLanguage::SPIRV});
-                mCodeGenPermutations.push_back({i, TargetApi::METAL, TargetLanguage::SPIRV});
-                break;
-            case TargetApi::OPENGL:
-                mCodeGenPermutations.push_back({i, TargetApi::OPENGL, glTargetLanguage});
-                break;
-            case TargetApi::VULKAN:
-                mCodeGenPermutations.push_back({i, TargetApi::VULKAN, TargetLanguage::SPIRV});
-            case TargetApi::METAL:
-                mCodeGenPermutations.push_back({i, TargetApi::METAL, TargetLanguage::SPIRV});
-                break;
+        if (mTargetApi & TargetApi::OPENGL) {
+            mCodeGenPermutations.push_back({i, TargetApi::OPENGL, glTargetLanguage});
+        }
+        if (mTargetApi & TargetApi::VULKAN) {
+            mCodeGenPermutations.push_back({i, TargetApi::VULKAN, TargetLanguage::SPIRV});
+        }
+        if (mTargetApi & TargetApi::METAL) {
+            mCodeGenPermutations.push_back({i, TargetApi::METAL, TargetLanguage::SPIRV});
         }
     }
 }
@@ -298,7 +303,7 @@ MaterialBuilder& MaterialBuilder::platform(Platform platform) noexcept {
 }
 
 MaterialBuilder& MaterialBuilder::targetApi(TargetApi targetApi) noexcept {
-    mTargetApi = targetApi;
+    mTargetApi |= targetApi;
     return *this;
 }
 
@@ -390,11 +395,15 @@ bool MaterialBuilder::findProperties() noexcept {
     // static code analyse the AST.
     MaterialBuilder::PropertyList allProperties;
     std::fill_n(allProperties, MATERIAL_PROPERTIES_COUNT, true);
-    ShaderModel model;
-    std::string shaderCodeAllProperties = peek(ShaderType::FRAGMENT, model, allProperties);
+
+    // Use the first permutation to generate the shader code.
+    assert(mCodeGenPermutations.size() > 0);
+    CodeGenParams params = mCodeGenPermutations[0];
+    std::string shaderCodeAllProperties = peek(ShaderType::FRAGMENT, params, allProperties);
 
     // Populate mProperties with the properties set in the shader.
-    if (!glslTools.findProperties(shaderCodeAllProperties, mProperties, mTargetApi, model)) {
+    if (!glslTools.findProperties(shaderCodeAllProperties, mProperties, params.targetApi,
+                ShaderModel(params.shaderModel))) {
         return false;
     }
 
@@ -410,12 +419,16 @@ bool MaterialBuilder::runSemanticAnalysis() noexcept {
     using namespace filament::backend;
     GLSLTools glslTools;
 
+    // Use the first permutation to generate the shader code.
+    assert(mCodeGenPermutations.size() > 0);
+    CodeGenParams params = mCodeGenPermutations[0];
+
     ShaderModel model;
-    std::string shaderCode = peek(ShaderType::VERTEX, model, mProperties);
+    std::string shaderCode = peek(ShaderType::VERTEX, params, mProperties);
     bool result = glslTools.analyzeVertexShader(shaderCode, model, mTargetApi);
     if (!result) return false;
 
-    shaderCode = peek(ShaderType::FRAGMENT, model, mProperties);
+    shaderCode = peek(ShaderType::FRAGMENT, params, mProperties);
     result = glslTools.analyzeFragmentShader(shaderCode, model, mTargetApi);
     return result;
 #else
@@ -489,6 +502,8 @@ bool MaterialBuilder::generateShaders(const std::vector<Variant>& variants, Chun
         const ShaderModel shaderModel = ShaderModel(params.shaderModel);
         const TargetApi targetApi = params.targetApi;
         const TargetLanguage targetLanguage = params.targetLanguage;
+
+        assertSingleTargetApi(targetApi);
 
         // Metal Shading Language is cross-compiled from Vulkan.
         const bool targetApiNeedsSpirv =
@@ -595,6 +610,10 @@ Package MaterialBuilder::build() noexcept {
         return Package::invalidPackage();
     }
 
+    // prepareToBuild must be called first, to populate mCodeGenPermutations.
+    MaterialInfo info;
+    prepareToBuild(info);
+
     // Run checks, in order.
     // The call to findProperties populates mProperties and must come before runSemanticAnalysis.
     if (!checkLiteRequirements() ||
@@ -603,9 +622,6 @@ Package MaterialBuilder::build() noexcept {
         // Return an empty package to signal a failure to build the material.
         return Package::invalidPackage();
     }
-
-    MaterialInfo info;
-    prepareToBuild(info);
 
     filament::SamplerBindingMap map;
     map.populate(&info.sib, mMaterialName.c_str());
@@ -630,7 +646,7 @@ Package MaterialBuilder::build() noexcept {
 }
 
 const std::string MaterialBuilder::peek(filament::backend::ShaderType type,
-        filament::backend::ShaderModel& model, const PropertyList& properties) noexcept {
+        const CodeGenParams& params, const PropertyList& properties) noexcept {
 
     ShaderGenerator sg(properties, mVariables,
             mMaterialCode, mMaterialLineOffset, mMaterialVertexCode, mMaterialVertexLineOffset);
@@ -642,15 +658,12 @@ const std::string MaterialBuilder::peek(filament::backend::ShaderType type,
     map.populate(&info.sib, mMaterialName.c_str());
     info.samplerBindings = std::move(map);
 
-    for (const auto& params : mCodeGenPermutations) {
-        model = ShaderModel(params.shaderModel);
-        if (type == filament::backend::ShaderType::VERTEX) {
-            return sg.createVertexProgram(model, params.targetApi, params.targetLanguage,
-                    info, 0, mInterpolation, mVertexDomain);
-        } else {
-            return sg.createFragmentProgram(model, params.targetApi, params.targetLanguage,
-                    info, 0, mInterpolation);
-        }
+    if (type == filament::backend::ShaderType::VERTEX) {
+        return sg.createVertexProgram(ShaderModel(params.shaderModel),
+                params.targetApi, params.targetLanguage, info, 0, mInterpolation, mVertexDomain);
+    } else {
+        return sg.createFragmentProgram(ShaderModel(params.shaderModel), params.targetApi,
+                params.targetLanguage, info, 0, mInterpolation);
     }
 
     return std::string("");
