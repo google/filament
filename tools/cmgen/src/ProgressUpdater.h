@@ -17,17 +17,16 @@
 #ifndef SRC_PROGRESS_UPDATER_H
 #define SRC_PROGRESS_UPDATER_H
 
-#include "JobQueue.h"
-
 #include <condition_variable>
+#include <functional>
 #include <iomanip>
 #include <iostream>
-#include <vector>
 #include <thread>
+#include <vector>
 
 class ProgressUpdater {
 public:
-    explicit ProgressUpdater(size_t numProgressBars) : m_numBars(numProgressBars) {
+    explicit ProgressUpdater(size_t numProgressBars) : mNumBars(numProgressBars) {
     }
 
     /**
@@ -44,18 +43,25 @@ public:
     void update(size_t progressBarIndex, size_t value, size_t max);
 
 private:
+    struct Update {
+        size_t index;
+        float value;
+    };
+
     void initProgressValues();
     void printProgressBars();
+    void printUpdates();
+    void printUpdates(const std::vector<Update>& updates);
 
-    size_t m_numBars;
-    std::vector<float> m_progress;
+    size_t mNumBars;
+    std::vector<float> mProgress;
 
-    std::mutex m_mutex;
-    std::condition_variable m_condition;
+    std::mutex mMutex;
+    std::condition_variable mCondition;
 
-    JobQueue m_jobQueue;
-    std::thread m_thread;
+    std::vector<Update> mUpdates;
+    std::thread mThread;
     bool mExitRequested = false;
 };
 
-#endif //SRC_PROGRESS_UPDATER_H
+#endif // SRC_PROGRESS_UPDATER_H
