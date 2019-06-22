@@ -197,8 +197,7 @@ bool ResourceLoader::loadResources(FilamentAsset* asset) {
     #endif
 
     #ifndef NDEBUG
-    result = cgltf_validate(gltf);
-    if (result != cgltf_result_success) {
+    if (cgltf_validate(gltf) != cgltf_result_success) {
         slog.e << "Failed cgltf validation." << io::endl;
         return false;
     }
