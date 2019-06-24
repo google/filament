@@ -55,11 +55,10 @@ namespace KtxUtility {
      * @param engine Used to create the Filament Texture
      * @param ktx In-memory representation of a KTX file
      * @param srgb Forces the KTX-specified format into an SRGB format if possible
-     * @param rgbm Interpret alpha as an HDR multiplier
      * @param callback Gets called after all texture data has been uploaded to the GPU
      * @param userdata Passed into the callback
      */
-    inline Texture* createTexture(Engine* engine, const KtxBundle& ktx, bool srgb, bool rgbm,
+    inline Texture* createTexture(Engine* engine, const KtxBundle& ktx, bool srgb,
             Callback callback, void* userdata) {
         using Sampler = Texture::Sampler;
         const auto& ktxinfo = ktx.getInfo();
@@ -148,14 +147,13 @@ namespace KtxUtility {
      * @param engine Used to create the Filament Texture
      * @param ktx In-memory representation of a KTX file
      * @param srgb Forces the KTX-specified format into an SRGB format if possible
-     * @param rgbm Interpret alpha as an HDR multiplier
      */
-    inline Texture* createTexture(Engine* engine, KtxBundle* ktx, bool srgb, bool rgbm = false) {
+    inline Texture* createTexture(Engine* engine, KtxBundle* ktx, bool srgb) {
         auto freeKtx = [] (void* userdata) {
             KtxBundle* ktx = (KtxBundle*) userdata;
             delete ktx;
         };
-        return createTexture(engine, *ktx, srgb, rgbm, freeKtx, ktx);
+        return createTexture(engine, *ktx, srgb, freeKtx, ktx);
     }
 
     template<typename T>

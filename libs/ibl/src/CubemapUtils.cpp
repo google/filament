@@ -42,7 +42,7 @@ utils::JobSystem& CubemapUtils::getJobSystem() {
 
 void CubemapUtils::clamp(Image& src) {
     // We clamp all values to 256 which correspond to the maximum value (before
-    // gamma compression) that we can store in RGBM.
+    // gamma compression) that we can store.
     // This clamping is necessary because:
     // - our importance-sampling (when calculating the pre-filtered mipmaps)
     //   behaves badly with with very strong high-frequencies.
