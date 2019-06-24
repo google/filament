@@ -66,7 +66,7 @@ public:
     //! Converts horizontal or vertical cross Image to a Cubemap
     static void crossToCubemap(Cubemap& dst, const Image& src);
 
-    //! clamps image to acceptable range for RGBM encoding.
+    //! clamps image to acceptable range
     static void clamp(Image& src);
 
     //! Downsamples a cubemap by helf in x and y using a box filter

@@ -69,7 +69,7 @@ Filament.loadClassExtensions = function() {
 
     /// createTextureFromKtx ::method:: Utility function that creates a [Texture] from a KTX file.
     /// buffer ::argument:: asset string, or Uint8Array, or [Buffer] with KTX file contents
-    /// options ::argument:: Options dictionary. For now, the `rgbm` boolean is the only option.
+    /// options ::argument:: Options dictionary.
     /// ::retval:: [Texture]
     Filament.Engine.prototype.createTextureFromKtx = function(buffer, options) {
         buffer = getBufferDescriptor(buffer);
@@ -80,7 +80,7 @@ Filament.loadClassExtensions = function() {
 
     /// createIblFromKtx ::method:: Utility that creates an [IndirectLight] from a KTX file.
     /// buffer ::argument:: asset string, or Uint8Array, or [Buffer] with KTX file contents
-    /// options ::argument:: Options dictionary. For now, the `rgbm` boolean is the only option.
+    /// options ::argument:: Options dictionary.
     /// ::retval:: [IndirectLight]
     Filament.Engine.prototype.createIblFromKtx = function(buffer, options) {
         buffer = getBufferDescriptor(buffer);
@@ -91,17 +91,16 @@ Filament.loadClassExtensions = function() {
 
     /// createSkyFromKtx ::method:: Utility function that creates a [Skybox] from a KTX file.
     /// buffer ::argument:: asset string, or Uint8Array, or [Buffer] with KTX file contents
-    /// options ::argument:: Options dictionary. For now, the `rgbm` boolean is the only option.
+    /// options ::argument:: Options dictionary.
     /// ::retval:: [Skybox]
     Filament.Engine.prototype.createSkyFromKtx = function(buffer, options) {
-        options = options || {'rgbm': true};
         const skytex = this.createTextureFromKtx(buffer, options);
         return Filament.Skybox.Builder().environment(skytex).build(this);
     };
 
     /// createTextureFromPng ::method:: Creates a 2D [Texture] from the raw contents of a PNG file.
     /// buffer ::argument:: asset string, or Uint8Array, or [Buffer] with PNG file contents
-    /// options ::argument:: object with optional `srgb`, `rgbm`, `noalpha`, and `nomips` keys.
+    /// options ::argument:: object with optional `srgb`, `noalpha`, and `nomips` keys.
     /// ::retval:: [Texture]
     Filament.Engine.prototype.createTextureFromPng = function(buffer, options) {
         buffer = getBufferDescriptor(buffer);
@@ -115,6 +114,7 @@ Filament.loadClassExtensions = function() {
     /// options ::argument:: JavaScript object with optional `srgb` and `nomips` keys.
     /// ::retval:: [Texture]
     Filament.Engine.prototype.createTextureFromJpeg = function(image, options) {
+        options = options || {};
         if ('string' == typeof image || image instanceof String) {
             image = Filament.assets[image];
         }

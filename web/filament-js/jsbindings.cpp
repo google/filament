@@ -1005,11 +1005,10 @@ class_<KtxBundle>("KtxBundle")
     }), allow_raw_pointers())
 
     /// getPixelDataFormat ::method::
-    /// rgbm ::argument:: boolean that configures the alpha channel into an HDR scale.
     /// ::retval:: [PixelDataFormat]
     /// Returns "undefined" if no valid Filament enumerant exists.
     .function("getPixelDataFormat",
-            EMBIND_LAMBDA(backend::PixelDataFormat, (KtxBundle* self, bool rgbm), {
+            EMBIND_LAMBDA(backend::PixelDataFormat, (KtxBundle* self), {
         return KtxUtility::toPixelDataFormat(self->getInfo());
     }), allow_raw_pointers())
 
@@ -1063,8 +1062,8 @@ class_<KtxBundle>("KtxBundle")
     }), allow_raw_pointers());
 
 function("KtxUtility$createTexture", EMBIND_LAMBDA(Texture*,
-        (Engine* engine, const KtxBundle& ktx, bool srgb, bool rgbm), {
-    return KtxUtility::createTexture(engine, ktx, srgb, rgbm, nullptr, nullptr);
+        (Engine* engine, const KtxBundle& ktx, bool srgb), {
+    return KtxUtility::createTexture(engine, ktx, srgb, nullptr, nullptr);
 }), allow_raw_pointers());
 
 /// KtxInfo ::class:: Property accessor for KTX header.

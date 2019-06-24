@@ -383,7 +383,7 @@ export enum PixelDataFormat {
     RGB_INTEGER,
     RGBA,
     RGBA_INTEGER,
-    RGBM,
+    UNUSED,
     DEPTH_COMPONENT,
     DEPTH_STENCIL,
     ALPHA,
