@@ -88,10 +88,10 @@ int main(int argc, char** argv) {
         auto ao = new image::KtxBundle(TEXTURES_AO_DATA, TEXTURES_AO_SIZE);
         auto metallic = new image::KtxBundle(TEXTURES_METALLIC_DATA, TEXTURES_METALLIC_SIZE);
         auto roughness = new image::KtxBundle(TEXTURES_ROUGHNESS_DATA, TEXTURES_ROUGHNESS_SIZE);
-        app.albedo = KtxUtility::createTexture(engine, albedo, true, false);
-        app.ao = KtxUtility::createTexture(engine, ao, false, false);
-        app.metallic = KtxUtility::createTexture(engine, metallic, false, false);
-        app.roughness = KtxUtility::createTexture(engine, roughness, false, false);
+        app.albedo = KtxUtility::createTexture(engine, albedo, true);
+        app.ao = KtxUtility::createTexture(engine, ao, false);
+        app.metallic = KtxUtility::createTexture(engine, metallic, false);
+        app.roughness = KtxUtility::createTexture(engine, roughness, false);
         app.normal = loadNormalMap(engine, TEXTURES_NORMAL_DATA, TEXTURES_NORMAL_SIZE);
         TextureSampler sampler(TextureSampler::MinFilter::LINEAR_MIPMAP_LINEAR,
                 TextureSampler::MagFilter::LINEAR);
