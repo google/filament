@@ -36,6 +36,22 @@ void CubemapUtils::process(
     const size_t dim = cm.getDimensions();
 
     // multithread only on large-ish cubemaps
+    if (dim < 64) {
+        // 64 pixels occupies 12 cache lines exactly
+        STATE s;
+        for (size_t faceIndex = 0; faceIndex < 6; faceIndex++) {
+            const Cubemap::Face f = (Cubemap::Face)faceIndex;
+            Image& image(cm.getImageForFace(f));
+            for (size_t y = 0; y < dim; y++) {
+                Cubemap::Texel* data = static_cast<Cubemap::Texel*>(image.getPixelRef(0, y));
+                proc(s, y, f, data, dim);
+            }
+        }
+        reduce(s);
+        return;
+    }
+
+
     STATE states[6];
     for (STATE& s : states) {
         s = prototype;
@@ -60,7 +76,7 @@ void CubemapUtils::process(
 
                     if (std::is_same<STATE, CubemapUtils::EmptyState>::value) {
                         auto job = jobs::parallel_for(js, parent, 0, uint32_t(dim),
-                                std::ref(parallelJobTask), jobs::CountSplitter<1, 8>());
+                                std::ref(parallelJobTask), jobs::CountSplitter<64, 8>());
 
                         // we need to wait here because parallelJobTask is passed by reference
                         js.runAndWait(job);
@@ -78,6 +94,30 @@ void CubemapUtils::process(
         reduce(s);
     }
 }
+
+template<typename STATE>
+void CubemapUtils::processSingleThreaded(
+        Cubemap& cm,
+        utils::JobSystem& js,
+        CubemapUtils::ScanlineProc<STATE> proc,
+        ReduceProc<STATE> reduce,
+        const STATE& prototype) {
+    using namespace utils;
+
+    const size_t dim = cm.getDimensions();
+
+    STATE s;
+    for (size_t faceIndex = 0; faceIndex < 6; faceIndex++) {
+        const Cubemap::Face f = (Cubemap::Face)faceIndex;
+        Image& image(cm.getImageForFace(f));
+        for (size_t y = 0; y < dim; y++) {
+            Cubemap::Texel* data = static_cast<Cubemap::Texel*>(image.getPixelRef(0, y));
+            proc(s, y, f, data, dim);
+        }
+    }
+    reduce(s);
+}
+
 
 } // namespace ibl
 } // namespace filament
