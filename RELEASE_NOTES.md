@@ -6,6 +6,7 @@ A new header is inserted each time a *tag* is created.
 
 # Release notes
 
+- Fix JNI bindings for setting values in parameter arrays.
 - Added JNI bindings for the gltfio library.
 - Fix support for parameter arrays in `.mat` files.
 - Added support for `RGB_11_11_10`

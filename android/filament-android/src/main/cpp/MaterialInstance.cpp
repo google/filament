@@ -27,6 +27,30 @@
 #include <math/vec4.h>
 
 using namespace filament;
+using namespace filament::math;
+
+enum BooleanElement {
+    BOOL,
+    BOOL2,
+    BOOL3,
+    BOOL4
+};
+
+enum IntElement {
+    INT,
+    INT2,
+    INT3,
+    INT4
+};
+
+enum FloatElement {
+    FLOAT,
+    FLOAT2,
+    FLOAT3,
+    FLOAT4,
+    MAT3,
+    MAT4
+};
 
 template<typename T>
 static void setParameter(JNIEnv* env, jlong nativeMaterialInstance, jstring name_, T v) {
@@ -47,14 +71,14 @@ extern "C"
 JNIEXPORT void JNICALL
 Java_com_google_android_filament_MaterialInstance_nSetParameterBool2(JNIEnv *env, jclass,
         jlong nativeMaterialInstance, jstring name_, jboolean x, jboolean y) {
-    setParameter(env, nativeMaterialInstance, name_, filament::math::bool2{x, y});
+    setParameter(env, nativeMaterialInstance, name_, bool2{x, y});
 }
 
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_google_android_filament_MaterialInstance_nSetParameterBool3(JNIEnv *env, jclass,
         jlong nativeMaterialInstance, jstring name_, jboolean x, jboolean y, jboolean z) {
-    setParameter(env, nativeMaterialInstance, name_, filament::math::bool3{x, y, z});
+    setParameter(env, nativeMaterialInstance, name_, bool3{x, y, z});
 }
 
 extern "C"
@@ -62,7 +86,7 @@ JNIEXPORT void JNICALL
 Java_com_google_android_filament_MaterialInstance_nSetParameterBool4(JNIEnv *env, jclass,
         jlong nativeMaterialInstance, jstring name_,
         jboolean x, jboolean y, jboolean z, jboolean w) {
-    setParameter(env, nativeMaterialInstance, name_, filament::math::bool4{x, y, z, w});
+    setParameter(env, nativeMaterialInstance, name_, bool4{x, y, z, w});
 }
 
 extern "C"
@@ -76,14 +100,14 @@ extern "C"
 JNIEXPORT void JNICALL
 Java_com_google_android_filament_MaterialInstance_nSetParameterInt2(JNIEnv *env, jclass,
         jlong nativeMaterialInstance, jstring name_, jint x, jint y) {
-    setParameter(env, nativeMaterialInstance, name_, filament::math::int2{x, y});
+    setParameter(env, nativeMaterialInstance, name_, int2{x, y});
 }
 
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_google_android_filament_MaterialInstance_nSetParameterInt3(JNIEnv *env, jclass,
         jlong nativeMaterialInstance, jstring name_, jint x, jint y, jint z) {
-    setParameter(env, nativeMaterialInstance, name_, filament::math::int3{x, y, z});
+    setParameter(env, nativeMaterialInstance, name_, int3{x, y, z});
 }
 
 extern "C"
@@ -91,7 +115,7 @@ JNIEXPORT void JNICALL
 Java_com_google_android_filament_MaterialInstance_nSetParameterInt4(JNIEnv *env, jclass,
         jlong nativeMaterialInstance, jstring name_,
         jint x, jint y, jint z, jint w) {
-    setParameter(env, nativeMaterialInstance, name_, filament::math::int4{x, y, z, w});
+    setParameter(env, nativeMaterialInstance, name_, int4{x, y, z, w});
 }
 
 extern "C"
@@ -105,14 +129,14 @@ extern "C"
 JNIEXPORT void JNICALL
 Java_com_google_android_filament_MaterialInstance_nSetParameterFloat2(JNIEnv *env, jclass,
         jlong nativeMaterialInstance, jstring name_, jfloat x, jfloat y) {
-    setParameter(env, nativeMaterialInstance, name_, filament::math::float2{x, y});
+    setParameter(env, nativeMaterialInstance, name_, float2{x, y});
 }
 
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_google_android_filament_MaterialInstance_nSetParameterFloat3(JNIEnv *env, jclass,
         jlong nativeMaterialInstance, jstring name_, jfloat x, jfloat y, jfloat z) {
-    setParameter(env, nativeMaterialInstance, name_, filament::math::float3{x, y, z});
+    setParameter(env, nativeMaterialInstance, name_, float3{x, y, z});
 }
 
 extern "C"
@@ -120,7 +144,7 @@ JNIEXPORT void JNICALL
 Java_com_google_android_filament_MaterialInstance_nSetParameterFloat4(JNIEnv *env, jclass,
         jlong nativeMaterialInstance, jstring name_,
         jfloat x, jfloat y, jfloat z, jfloat w) {
-    setParameter(env, nativeMaterialInstance, name_, filament::math::float4{x, y, z, w});
+    setParameter(env, nativeMaterialInstance, name_, float4{x, y, z, w});
 }
 
 extern "C"
@@ -131,9 +155,26 @@ Java_com_google_android_filament_MaterialInstance_nSetBooleanParameterArray(JNIE
     MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
 
     const char* name = env->GetStringUTFChars(name_, 0);
-    size_t size = (size_t) element + 1;
     jboolean* v = env->GetBooleanArrayElements(v_, NULL);
-    instance->setParameter(name, (bool*) (v + offset * size), (size_t) (count * size));
+
+    // NOTE: In C++, bool has an implementation-defined size. Here we assume
+    // it has the same size as jboolean, which is 1 byte.
+
+    switch ((BooleanElement) element) {
+        case BOOL:
+            instance->setParameter(name, ((const bool*) v) + offset, count);
+            break;
+        case BOOL2:
+            instance->setParameter(name, ((const bool2*) v) + offset, count);
+            break;
+        case BOOL3:
+            instance->setParameter(name, ((const bool3*) v) + offset, count);
+            break;
+        case BOOL4:
+            instance->setParameter(name, ((const bool4*) v) + offset, count);
+            break;
+    }
+
     env->ReleaseBooleanArrayElements(v_, v, 0);
 
     env->ReleaseStringUTFChars(name_, name);
@@ -147,10 +188,23 @@ Java_com_google_android_filament_MaterialInstance_nSetIntParameterArray(JNIEnv *
     MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
 
     const char* name = env->GetStringUTFChars(name_, 0);
-    size_t size = (size_t) element + 1;
     jint* v = env->GetIntArrayElements(v_, NULL);
-    instance->setParameter(name, reinterpret_cast<int32_t*>(v + offset * size),
-           (size_t) (count * size));
+
+    switch ((IntElement) element) {
+        case INT:
+            instance->setParameter(name, ((const int32_t*) v) + offset, count);
+            break;
+        case INT2:
+            instance->setParameter(name, ((const int2*) v) + offset, count);
+            break;
+        case INT3:
+            instance->setParameter(name, ((const int3*) v) + offset, count);
+            break;
+        case INT4:
+            instance->setParameter(name, ((const int4*) v) + offset, count);
+            break;
+    }
+
     env->ReleaseIntArrayElements(v_, v, 0);
 
     env->ReleaseStringUTFChars(name_, name);
@@ -164,16 +218,29 @@ Java_com_google_android_filament_MaterialInstance_nSetFloatParameterArray(JNIEnv
     MaterialInstance* instance = (MaterialInstance*) nativeMaterialInstance;
 
     const char* name = env->GetStringUTFChars(name_, 0);
-    size_t size = (size_t) element + 1;
-    if (size == 5) {
-        // mat3
-        size = 9;
-    } else if (size == 6) {
-        // mat4
-        size = 16;
-    }
     jfloat* v = env->GetFloatArrayElements(v_, NULL);
-    instance->setParameter(name, v + offset * size, (size_t) (count * size));
+
+    switch ((FloatElement) element) {
+        case FLOAT:
+            instance->setParameter(name, ((const float*) v) + offset, count);
+            break;
+        case FLOAT2:
+            instance->setParameter(name, ((const float2*) v) + offset, count);
+            break;
+        case FLOAT3:
+            instance->setParameter(name, ((const float3*) v) + offset, count);
+            break;
+        case FLOAT4:
+            instance->setParameter(name, ((const float4*) v) + offset, count);
+            break;
+        case MAT3:
+            instance->setParameter(name, ((const mat3f*) v) + offset, count);
+            break;
+        case MAT4:
+            instance->setParameter(name, ((const mat4f*) v) + offset, count);
+            break;
+    }
+
     env->ReleaseFloatArrayElements(v_, v, 0);
 
     env->ReleaseStringUTFChars(name_, name);
