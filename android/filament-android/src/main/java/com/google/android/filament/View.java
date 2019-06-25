@@ -33,6 +33,7 @@ public class View {
     private RenderQuality mRenderQuality;
     private DepthPrepass mDepthPrepass = DepthPrepass.DEFAULT;
     private AmbientOcclusionOptions mAmbientOcclusionOptions;
+    private RenderTarget mRenderTarget;
 
     public static class DynamicResolutionOptions {
         public boolean enabled = false;
@@ -167,7 +168,13 @@ public class View {
     }
 
     public void setRenderTarget(@Nullable RenderTarget target) {
+        mRenderTarget = target;
         nSetRenderTarget(getNativeObject(), target != null ? target.getNativeObject() : 0);
+    }
+
+    @Nullable
+    public RenderTarget getRenderTarget() {
+        return mRenderTarget;
     }
 
     public void setSampleCount(int count) {
