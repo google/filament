@@ -18,6 +18,10 @@ add_library(filaflat SHARED IMPORTED)
 set_target_properties(filaflat PROPERTIES IMPORTED_LOCATION
         ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libfilaflat.a)
 
+add_library(ibl STATIC IMPORTED)
+set_target_properties(ibl PROPERTIES IMPORTED_LOCATION
+        ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libibl.a)
+
 add_library(geometry SHARED IMPORTED)
 set_target_properties(geometry PROPERTIES IMPORTED_LOCATION
         ${FILAMENT_DIR}/lib/${ANDROID_ABI}/libgeometry.a)
@@ -70,6 +74,7 @@ target_link_libraries(gltfio-jni
         backend
         filaflat
         geometry
+        ibl
         utils
         GLESv3
         EGL
