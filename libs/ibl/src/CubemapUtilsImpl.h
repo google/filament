@@ -35,23 +35,6 @@ void CubemapUtils::process(
 
     const size_t dim = cm.getDimensions();
 
-    // multithread only on large-ish cubemaps
-    if (dim < 64) {
-        // 64 pixels occupies 12 cache lines exactly
-        STATE s;
-        for (size_t faceIndex = 0; faceIndex < 6; faceIndex++) {
-            const Cubemap::Face f = (Cubemap::Face)faceIndex;
-            Image& image(cm.getImageForFace(f));
-            for (size_t y = 0; y < dim; y++) {
-                Cubemap::Texel* data = static_cast<Cubemap::Texel*>(image.getPixelRef(0, y));
-                proc(s, y, f, data, dim);
-            }
-        }
-        reduce(s);
-        return;
-    }
-
-
     STATE states[6];
     for (STATE& s : states) {
         s = prototype;
